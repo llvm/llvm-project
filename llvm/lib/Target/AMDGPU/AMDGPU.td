@@ -229,7 +229,7 @@ def FeatureNSAtoVMEMBug : SubtargetFeature<"nsa-to-vmem-bug",
 def FeatureFlatSegmentOffsetBug : SubtargetFeature<"flat-segment-offset-bug",
   "HasFlatSegmentOffsetBug",
   "true",
-  "GFX10 bug, inst_offset ignored in flat segment"
+  "GFX10 bug where inst_offset is ignored when flat instructions access global memory"
 >;
 
 def FeatureOffset3fBug : SubtargetFeature<"offset-3f-bug",

@@ -7300,25 +7300,29 @@ bool SIInstrInfo::isBufferSMRD(const MachineInstr &MI) const {
 }
 
 bool SIInstrInfo::isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
-                                    bool Signed) const {
+                                    uint64_t FlatVariant) const {
   // TODO: Should 0 be special cased?
   if (!ST.hasFlatInstOffsets())
     return false;
 
-  if (ST.hasFlatSegmentOffsetBug() && AddrSpace == AMDGPUAS::FLAT_ADDRESS)
+  if (ST.hasFlatSegmentOffsetBug() && FlatVariant == SIInstrFlags::FLAT &&
+      (AddrSpace == AMDGPUAS::FLAT_ADDRESS ||
+       AddrSpace == AMDGPUAS::GLOBAL_ADDRESS))
     return false;
 
+  bool Signed = FlatVariant != SIInstrFlags::FLAT;
   unsigned N = AMDGPU::getNumFlatOffsetBits(ST, Signed);
   return Signed ? isIntN(N, Offset) : isUIntN(N, Offset);
 }
 
-std::pair<int64_t, int64_t> SIInstrInfo::splitFlatOffset(int64_t COffsetVal,
-                                                         unsigned AddrSpace,
-                                                         bool IsSigned) const {
+std::pair<int64_t, int64_t>
+SIInstrInfo::splitFlatOffset(int64_t COffsetVal, unsigned AddrSpace,
+                             uint64_t FlatVariant) const {
   int64_t RemainderOffset = COffsetVal;
   int64_t ImmField = 0;
-  const unsigned NumBits = AMDGPU::getNumFlatOffsetBits(ST, IsSigned);
-  if (IsSigned) {
+  bool Signed = FlatVariant != SIInstrFlags::FLAT;
+  const unsigned NumBits = AMDGPU::getNumFlatOffsetBits(ST, Signed);
+  if (Signed) {
     // Use signed division by a power of two to truncate towards 0.
     int64_t D = 1LL << (NumBits - 1);
     RemainderOffset = (COffsetVal / D) * D;
@@ -7328,7 +7332,7 @@ std::pair<int64_t, int64_t> SIInstrInfo::splitFlatOffset(int64_t COffsetVal,
     RemainderOffset = COffsetVal - ImmField;
   }
 
-  assert(isLegalFLATOffset(ImmField, AddrSpace, IsSigned));
+  assert(isLegalFLATOffset(ImmField, AddrSpace, FlatVariant));
   assert(RemainderOffset + ImmField == COffsetVal);
   return {ImmField, RemainderOffset};
 }

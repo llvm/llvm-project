@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-def FLATOffset : ComplexPattern<i64, 2, "SelectFlatOffset<false>", [], [SDNPWantRoot], -10>;
-def FLATOffsetSigned : ComplexPattern<i64, 2, "SelectFlatOffset<true>", [], [SDNPWantRoot], -10>;
-def ScratchOffset : ComplexPattern<i32, 2, "SelectFlatOffset<true>", [], [SDNPWantRoot], -10>;
+def FlatOffset : ComplexPattern<i64, 2, "SelectFlatOffset", [], [SDNPWantRoot], -10>;
+def GlobalOffset : ComplexPattern<i64, 2, "SelectGlobalOffset", [], [SDNPWantRoot], -10>;
+def ScratchOffset : ComplexPattern<i32, 2, "SelectScratchOffset", [], [SDNPWantRoot], -10>;
 
 def GlobalSAddr : ComplexPattern<i64, 3, "SelectGlobalSAddr", [], [SDNPWantRoot], -10>;
 def ScratchSAddr : ComplexPattern<i32, 2, "SelectScratchSAddr", [], [SDNPWantRoot], -10>;
@@ -392,7 +392,7 @@ multiclass FLAT_Atomic_Pseudo<
     (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
     " $vdst, $vaddr, $vdata$offset$cpol",
     [(set vt:$vdst,
-      (atomic (FLATOffset i64:$vaddr, i16:$offset), data_vt:$vdata))]>,
+      (atomic (FlatOffset i64:$vaddr, i16:$offset), data_vt:$vdata))]>,
        GlobalSaddrTable<0, opName#"_rtn">,
        AtomicNoRet <opName, 1>{
     let FPAtomic = isFP;
@@ -450,7 +450,7 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
       (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
     " $vdst, $vaddr, $vdata, off$offset$cpol",
     [(set vt:$vdst,
-      (atomic (FLATOffsetSigned i64:$vaddr, i16:$offset), data_vt:$vdata))]>,
+      (atomic (GlobalOffset i64:$vaddr, i16:$offset), data_vt:$vdata))]>,
       GlobalSaddrTable<0, opName#"_rtn">,
       AtomicNoRet <opName, 1> {
     let has_saddr = 1;
@@ -817,17 +817,17 @@ let OtherPredicates = [isGFX90APlus] in {
 
 // Patterns for global loads with no offset.
 class FlatLoadPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (FLATOffset i64:$vaddr, i16:$offset))),
+  (vt (node (FlatOffset i64:$vaddr, i16:$offset))),
   (inst $vaddr, $offset)
 >;
 
 class FlatLoadPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (node (FLATOffset (i64 VReg_64:$vaddr), i16:$offset), vt:$in),
+  (node (FlatOffset (i64 VReg_64:$vaddr), i16:$offset), vt:$in),
   (inst $vaddr, $offset, 0, $in)
 >;
 
 class FlatSignedLoadPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (node (FLATOffsetSigned (i64 VReg_64:$vaddr), i16:$offset), vt:$in),
+  (node (GlobalOffset (i64 VReg_64:$vaddr), i16:$offset), vt:$in),
   (inst $vaddr, $offset, 0, $in)
 >;
 
@@ -837,7 +837,7 @@ class GlobalLoadSaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueTyp
 >;
 
 class FlatLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (FLATOffsetSigned (i64 VReg_64:$vaddr), i16:$offset))),
+  (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i16:$offset))),
   (inst $vaddr, $offset)
 >;
 
@@ -871,19 +871,19 @@ class GlobalAtomicNoRtnSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
 >;
 
 class FlatStorePat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (node vt:$data, (FLATOffset i64:$vaddr, i16:$offset)),
+  (node vt:$data, (FlatOffset i64:$vaddr, i16:$offset)),
   (inst $vaddr, getVregSrcForVT<vt>.ret:$data, $offset)
 >;
 
 class FlatStoreSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (node vt:$data, (FLATOffsetSigned i64:$vaddr, i16:$offset)),
+  (node vt:$data, (GlobalOffset i64:$vaddr, i16:$offset)),
   (inst $vaddr, getVregSrcForVT<vt>.ret:$data, $offset)
 >;
 
 class FlatStoreAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   // atomic store follows atomic binop convention so the address comes
   // first.
-  (node (FLATOffset i64:$vaddr, i16:$offset), vt:$data),
+  (node (FlatOffset i64:$vaddr, i16:$offset), vt:$data),
   (inst $vaddr, getVregSrcForVT<vt>.ret:$data, $offset)
 >;
 
@@ -891,29 +891,29 @@ class FlatStoreSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node,
                                 ValueType vt, ValueType data_vt = vt> : GCNPat <
   // atomic store follows atomic binop convention so the address comes
   // first.
-  (node (FLATOffset i64:$vaddr, i16:$offset), data_vt:$data),
+  (node (GlobalOffset i64:$vaddr, i16:$offset), data_vt:$data),
   (inst $vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)
 >;
 
 class FlatAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt,
                      ValueType data_vt = vt> : GCNPat <
-  (vt (node (FLATOffset i64:$vaddr, i16:$offset), data_vt:$data)),
+  (vt (node (FlatOffset i64:$vaddr, i16:$offset), data_vt:$data)),
   (inst $vaddr, $data, $offset)
 >;
 
 class FlatAtomicPatNoRtn <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (node (FLATOffset i64:$vaddr, i16:$offset), vt:$data),
+  (node (FlatOffset i64:$vaddr, i16:$offset), vt:$data),
   (inst VReg_64:$vaddr, getVregSrcForVT<vt>.ret:$data, $offset)
 >;
 
 class FlatSignedAtomicPatNoRtn <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (node (FLATOffsetSigned i64:$vaddr, i16:$offset), vt:$data),
+  (node (GlobalOffset i64:$vaddr, i16:$offset), vt:$data),
   (inst VReg_64:$vaddr, getVregSrcForVT<vt>.ret:$data, $offset)
 >;
 
 class FlatSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt,
                            ValueType data_vt = vt> : GCNPat <
-  (vt (node (FLATOffsetSigned i64:$vaddr, i16:$offset), data_vt:$data)),
+  (vt (node (GlobalOffset i64:$vaddr, i16:$offset), data_vt:$data)),
   (inst $vaddr, $data, $offset)
 >;
 
