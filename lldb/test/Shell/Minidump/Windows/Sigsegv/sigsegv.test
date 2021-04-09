@@ -1,3 +1,5 @@
+// REQUIRES: x86
+
 // RUN: cd %p/Inputs
 // RUN: env LLDB_USE_NATIVE_PDB_READER=1 \
 // RUN:   %lldb -c sigsegv.dmp -s sigsegv.lldbinit | FileCheck %s
