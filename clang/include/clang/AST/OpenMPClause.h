@@ -8225,6 +8225,77 @@ public:
   }
 };
 
+/// This represents 'filter' clause in the '#pragma omp ...' directive.
+///
+/// \code
+/// #pragma omp masked filter(tid)
+/// \endcode
+/// In this example directive '#pragma omp masked' has 'filter' clause with
+/// thread id.
+class OMPFilterClause final : public OMPClause, public OMPClauseWithPreInit {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Express of the 'filter' clause.
+  Stmt *ThreadID = nullptr;
+
+  /// Sets the thread identifier.
+  void setThreadID(Expr *TID) { ThreadID = TID; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+public:
+  /// Build 'filter' clause with thread-id \a ThreadID.
+  ///
+  /// \param ThreadID Thread identifier.
+  /// \param HelperE Helper expression associated with this clause.
+  /// \param CaptureRegion Innermost OpenMP region where expressions in this
+  /// clause must be captured.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPFilterClause(Expr *ThreadID, Stmt *HelperE,
+                  OpenMPDirectiveKind CaptureRegion, SourceLocation StartLoc,
+                  SourceLocation LParenLoc, SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_filter, StartLoc, EndLoc),
+        OMPClauseWithPreInit(this), LParenLoc(LParenLoc), ThreadID(ThreadID) {
+    setPreInitStmt(HelperE, CaptureRegion);
+  }
+
+  /// Build an empty clause.
+  OMPFilterClause()
+      : OMPClause(llvm::omp::OMPC_filter, SourceLocation(), SourceLocation()),
+        OMPClauseWithPreInit(this) {}
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Return thread identifier.
+  Expr *getThreadID() { return cast<Expr>(ThreadID); }
+
+  /// Return thread identifier.
+  Expr *getThreadID() const { return cast<Expr>(ThreadID); }
+
+  child_range children() { return child_range(&ThreadID, &ThreadID + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&ThreadID, &ThreadID + 1);
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_filter;
+  }
+};
+
 /// This class implements a simple visitor for OMPClause
 /// subclasses.
 template<class ImplClass, template <typename> class Ptr, typename RetTy>
