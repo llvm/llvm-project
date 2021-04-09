@@ -18,6 +18,7 @@ set(files
   __memory/auto_ptr.h
   __memory/base.h
   __memory/pointer_traits.h
+  __memory/temporary_buffer.h
   __memory/utilities.h
   __mutex_base
   __node_handle
