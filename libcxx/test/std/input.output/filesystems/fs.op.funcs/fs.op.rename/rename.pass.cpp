@@ -127,4 +127,31 @@ TEST_CASE(basic_rename_test)
     }
 }
 
+TEST_CASE(basic_rename_dir_test)
+{
+    static_test_env env;
+    const std::error_code set_ec = std::make_error_code(std::errc::address_in_use);
+    const path new_dir = env.makePath("new_dir");
+    { // dir -> dir (with contents)
+        std::error_code ec = set_ec;
+        rename(env.Dir, new_dir, ec);
+        TEST_CHECK(!ec);
+        TEST_CHECK(!exists(env.Dir));
+        TEST_CHECK(is_directory(new_dir));
+        TEST_CHECK(exists(new_dir / "file1"));
+    }
+#ifdef _WIN32
+    // On Windows, renaming a directory over a file isn't an error (this
+    // case is skipped in test_error_reporting above).
+    { // dir -> file
+        std::error_code ec = set_ec;
+        rename(new_dir, env.NonEmptyFile, ec);
+        TEST_CHECK(!ec);
+        TEST_CHECK(!exists(new_dir));
+        TEST_CHECK(is_directory(env.NonEmptyFile));
+        TEST_CHECK(exists(env.NonEmptyFile / "file1"));
+    }
+#endif
+}
+
 TEST_SUITE_END()
