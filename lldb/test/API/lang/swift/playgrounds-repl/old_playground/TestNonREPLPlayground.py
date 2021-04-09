@@ -46,15 +46,11 @@ class TestNonREPLPlayground(TestBase):
     def test_playgrounds(self):
         """Test that playgrounds work"""
         self.build()
-
-        target = self.dbg.CreateTarget(self.getBuildArtifact("PlaygroundStub"))
-        self.assertTrue(target, VALID_TARGET)
-        self.registerSharedLibrariesWithTarget(target, ['libPlaygroundsRuntime.dylib'])
-
         lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here',
             lldb.SBFileSpec('PlaygroundStub.swift'),
-            exe_name = "PlaygroundStub")
+            exe_name = "PlaygroundStub",
+            extra_images=['libPlaygroundsRuntime.dylib'])
 
         contents = ""
 

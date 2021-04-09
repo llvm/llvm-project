@@ -21,9 +21,7 @@ class TestSwiftMissingVFSOverlay(TestBase):
         """Test that a broken Clang command line option is diagnosed
            in the expression evaluator"""
         self.build()
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.registerSharedLibrariesWithTarget(target, ['Foo'])
-
         lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'))
+            self, 'break here', lldb.SBFileSpec('main.swift'),
+            extra_images=['Foo'])
         self.expect("expr y", error=True, substrs=["overlay.yaml", "IRGen"])

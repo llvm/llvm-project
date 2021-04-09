@@ -38,27 +38,17 @@ class TestSwiftObjCMainConflictingDylibs(TestBase):
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
                     % mod_cache)
         self.build()
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
+        target, process, _, foo_breakpoint = lldbutil.run_to_source_breakpoint(
+            self, 'break here', lldb.SBFileSpec('Foo.swift'),
+            extra_images=['Foo', 'Bar'])
 
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        self.registerSharedLibrariesWithTarget(target, ['Foo', 'Bar'])
-
-        # Set the breakpoints
-        bar_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', lldb.SBFileSpec('Bar.swift'))
-        foo_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', lldb.SBFileSpec('Foo.swift'))
-
-        process = target.LaunchSimple(None, None, os.getcwd())
-        process.Continue()
         # Prime the module cache with the Foo variant.
         self.expect("fr var baz", "correct baz", substrs=["i_am_from_Foo"])
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
 
+        bar_breakpoint = target.BreakpointCreateBySourceRegex(
+            'break here', lldb.SBFileSpec('Bar.swift'))
+        
         # Restart.
         process = target.LaunchSimple(None, None, os.getcwd())
         # This is failing because the Target-SwiftASTContext uses the

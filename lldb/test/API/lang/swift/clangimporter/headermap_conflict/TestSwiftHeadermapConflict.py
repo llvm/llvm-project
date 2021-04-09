@@ -40,12 +40,9 @@ class TestSwiftHeadermapConflict(TestBase):
                     % mod_cache)
         self.build()
 
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.assertTrue(target, VALID_TARGET)
-        self.registerSharedLibrariesWithTarget(target, ['dylib'])
-
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'))
+            self, 'break here', lldb.SBFileSpec('main.swift'),
+            extra_images=['dylib'])
         b_breakpoint = target.BreakpointCreateBySourceRegex(
             'break here', lldb.SBFileSpec('dylib.swift'))
 
