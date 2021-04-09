@@ -97,8 +97,6 @@ public:
 
   void printMemRegImm(const MCInst *MI, unsigned OpNo,
                       const MCSubtargetInfo &STI, raw_ostream &O);
-  void printMemRegImmHash(const MCInst *MI, unsigned OpNo,
-                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printMemRegImm34PCRel(const MCInst *MI, unsigned OpNo,
                              const MCSubtargetInfo &STI, raw_ostream &O);
   void printMemRegImm34(const MCInst *MI, unsigned OpNo,
