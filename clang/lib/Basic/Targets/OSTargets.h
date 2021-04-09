@@ -242,6 +242,7 @@ public:
       break;
     case llvm::Triple::mips:
     case llvm::Triple::mipsel:
+    case llvm::Triple::nanomips:
     case llvm::Triple::ppc:
     case llvm::Triple::ppcle:
     case llvm::Triple::ppc64:
@@ -406,6 +407,7 @@ public:
     case llvm::Triple::mipsel:
     case llvm::Triple::mips64:
     case llvm::Triple::mips64el:
+    case llvm::Triple::nanomips:
     case llvm::Triple::ppc:
     case llvm::Triple::ppcle:
     case llvm::Triple::ppc64:
@@ -605,6 +607,7 @@ public:
       break;
     case llvm::Triple::mips:
     case llvm::Triple::mipsel:
+    case llvm::Triple::nanomips:
     case llvm::Triple::ppc:
     case llvm::Triple::ppc64:
     case llvm::Triple::ppc64le:

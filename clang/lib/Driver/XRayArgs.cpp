@@ -45,6 +45,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
     case llvm::Triple::mipsel:
     case llvm::Triple::mips64:
     case llvm::Triple::mips64el:
+    case llvm::Triple::nanomips:
       break;
     default:
       D.Diag(diag::err_drv_clang_unsupported)

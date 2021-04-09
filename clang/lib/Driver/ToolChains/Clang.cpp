@@ -318,6 +318,7 @@ static void getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
+  case llvm::Triple::nanomips:
     mips::getMIPSTargetFeatures(D, Triple, Args, Features);
     break;
 
@@ -563,6 +564,7 @@ static bool useFramePointerForTargetByDefault(const ArgList &Args,
     case llvm::Triple::mips64el:
     case llvm::Triple::mips:
     case llvm::Triple::mipsel:
+    case llvm::Triple::nanomips:
     case llvm::Triple::systemz:
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
@@ -1681,6 +1683,7 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
+  case llvm::Triple::nanomips:
     AddMIPSTargetArgs(Args, CmdArgs);
     break;
 
@@ -2469,6 +2472,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       case llvm::Triple::mipsel:
       case llvm::Triple::mips64:
       case llvm::Triple::mips64el:
+      case llvm::Triple::nanomips:
         if (Value == "--trap") {
           CmdArgs.push_back("-target-feature");
           CmdArgs.push_back("+use-tcc-in-div");
@@ -7533,6 +7537,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
+  case llvm::Triple::nanomips:
     AddMIPSTargetArgs(Args, CmdArgs);
     break;
 

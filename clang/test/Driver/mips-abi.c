@@ -54,6 +54,12 @@
 // MIPS-ABI-N32: "-target-cpu" "mips64r2"
 // MIPS-ABI-N32: "-target-abi" "n32"
 //
+// RUN: %clang -target nanomips-linux-gnu -### -c %s \
+// RUN:        -mabi=p32 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS-ABI-P32 %s
+// MIPS-ABI-P32: "-target-cpu" "nanomips"
+// MIPS-ABI-P32: "-target-abi" "p32"
+//
 // RUN: %clang -target mips64-linux-gnu -### -c %s \
 // RUN:        -mabi=64 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-ABI-64 %s
@@ -193,3 +199,9 @@
 // TARGET-N64: "-target-abi" "n64"
 // TARGET-N64: ld{{(.exe)?}}"
 // TARGET-N64: "-m" "elf64btsmip"
+
+// RUN: %clang -target nanomips -mabi=p32 -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=TARGET-P32 %s
+// TARGET-P32: "-triple" "nanomips"
+// TARGET-P32: "-target-cpu" "nanomips"
+// TARGET-P32: "-target-abi" "p32"
