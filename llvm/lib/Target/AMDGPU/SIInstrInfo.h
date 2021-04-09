@@ -1070,13 +1070,13 @@ public:
   /// encoded instruction. If \p Signed, this is for an instruction that
   /// interprets the offset as signed.
   bool isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
-                         bool Signed) const;
+                         uint64_t FlatVariant) const;
 
   /// Split \p COffsetVal into {immediate offset field, remainder offset}
   /// values.
   std::pair<int64_t, int64_t> splitFlatOffset(int64_t COffsetVal,
                                               unsigned AddrSpace,
-                                              bool IsSigned) const;
+                                              uint64_t FlatVariant) const;
 
   /// \brief Return a target-specific opcode if Opcode is a pseudo instruction.
   /// Return -1 if the target-specific opcode for the pseudo instruction does
