@@ -1778,6 +1778,14 @@ public:
     auto tempRes = temp.getResult();
     builder.create<fir::ArrayMergeStoreOp>(loc, arrLd, fir::getBase(loopRes),
                                            tempRes);
+    if (auto charTy =
+            arrTy.getEleTy().template dyn_cast<fir::CharacterType>()) {
+      if (charTy.getLen() <= 0)
+        TODO(loc, "CHARACTER does not have constant LEN");
+      auto len = builder.createIntegerConstant(
+          loc, builder.getCharacterLengthType(), charTy.getLen());
+      return fir::CharArrayBoxValue(tempRes, len, exprShape);
+    }
     return fir::ArrayBoxValue(tempRes, exprShape);
   }
 
@@ -2584,8 +2592,7 @@ public:
 
   /// Get the declared lower bound value of the array `x` in dimension `dim`.
   /// The argument `one` must be an ssa-value for the constant 1.
-  mlir::Value getLBound(const Fortran::lower::SymbolBox &x, unsigned dim,
-                        mlir::Value one) {
+  mlir::Value getLBound(const ExtValue &x, unsigned dim, mlir::Value one) {
     auto loc = getLoc();
     auto getLB = [&](const fir::AbstractArrayBox &box) -> mlir::Value {
       return box.lboundsAllOne() ? one : box.getLBounds()[dim];
@@ -2605,8 +2612,7 @@ public:
 
   /// Get the declared upper bound value of the array `x` in dimension `dim`.
   /// The argument `one` must be an ssa-value for the constant 1.
-  mlir::Value getUBound(const Fortran::lower::SymbolBox &x, unsigned dim,
-                        mlir::Value one) {
+  mlir::Value getUBound(const ExtValue &x, unsigned dim, mlir::Value one) {
     auto lb = getLBound(x, dim, one);
     auto loc = getLoc();
     auto adjustExtent = [&](const fir::AbstractArrayBox &box) -> mlir::Value {
@@ -2628,7 +2634,7 @@ public:
   }
 
   /// Return the extent of the boxed array `x` in dimesion `dim`.
-  mlir::Value getExtent(const Fortran::lower::SymbolBox &x, unsigned dim) {
+  mlir::Value getExtent(const ExtValue &x, unsigned dim) {
     auto loc = getLoc();
     auto getRange = [&](const fir::AbstractArrayBox &box) -> mlir::Value {
       return box.getExtents()[dim];
@@ -2659,8 +2665,22 @@ public:
     auto loc = getLoc();
     auto idxTy = builder.getIndexType();
     auto one = builder.createIntegerConstant(loc, idxTy, 1);
-    const auto &arrSym = x.GetFirstSymbol();
-    LLVM_DEBUG(llvm::dbgs() << "array symbol: " << arrSym << '\n');
+    auto arrExt = [&]() {
+      auto arrBase = x.base();
+      if (arrBase.IsSymbol())
+        return symMap.lookupSymbol(arrBase.GetFirstSymbol())
+            .match(
+                [=](const Fortran::lower::SymbolBox::None &) -> ExtValue {
+                  fir::emitFatalError(loc, "symbol not available");
+                },
+                [=](const fir::AbstractBox &x) -> ExtValue {
+                  fir::emitFatalError(loc, "array has incorrect symbol box");
+                },
+                [](const auto &x) -> ExtValue { return x; });
+      llvm::SmallVector<mlir::Value> components;
+      return buildComponentsPath(components, arrBase.GetComponent()).first;
+    }();
+    LLVM_DEBUG(llvm::dbgs() << "array: " << arrExt << '\n');
     PC pc = [=](IterSpace s) { return s; };
     for (auto sub : llvm::enumerate(x.subscript())) {
       std::visit(
@@ -2673,13 +2693,11 @@ public:
                 if (auto optLo = t.lower())
                   trips.push_back(fir::getBase(asScalar(*optLo)));
                 else
-                  trips.push_back(
-                      getLBound(symMap.lookupSymbol(arrSym), sub.index(), one));
+                  trips.push_back(getLBound(arrExt, sub.index(), one));
                 if (auto optUp = t.upper())
                   trips.push_back(fir::getBase(asScalar(*optUp)));
                 else
-                  trips.push_back(
-                      getUBound(symMap.lookupSymbol(arrSym), sub.index(), one));
+                  trips.push_back(getUBound(arrExt, sub.index(), one));
                 trips.push_back(fir::getBase(asScalar(t.stride())));
               },
               [&](const Fortran::evaluate::IndirectSubscriptIntegerExpr &ie) {
@@ -2717,8 +2735,7 @@ public:
                   auto useInexactRange = [&]() {
                     // Get the range of the array in this dimension, [1:n:1].
                     trips.push_back(one);
-                    trips.push_back(
-                        getExtent(symMap.lookupSymbol(arrSym), sub.index()));
+                    trips.push_back(getExtent(arrExt, sub.index()));
                     trips.push_back(one);
                   };
                   if (const auto *sym = extractSubscriptSymbol(arrExpr)) {

@@ -169,7 +169,13 @@ public:
                  u);
     }
   }
-  void declareFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
+
+  /// Declare a function.
+  void declareFunction(
+      Fortran::lower::pft::FunctionLikeUnit &funit,
+      llvm::SetVector<const Fortran::semantics::Symbol *> hosted = {}) {
+    if (!hosted.empty())
+      TODO(toLocation(), "internal procedure has host associated variables");
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
@@ -184,8 +190,26 @@ public:
       Fortran::lower::CalleeInterface{funit, *this};
     }
     funit.setActiveEntry(0);
+
+    llvm::SetVector<const Fortran::semantics::Symbol *> escapeHost;
     for (auto &f : funit.nestedFunctions)
-      declareFunction(f); // internal procedure
+      collectHostAssociatedVariables(f, escapeHost);
+    for (auto &f : funit.nestedFunctions)
+      declareFunction(f, escapeHost); // internal procedure
+  }
+
+  /// Collects the canonical list of all host associated symbols. These bindings
+  /// must be aggregated into a tuple which can then be added to each of the
+  /// internal procedure declarations and passed at each call site.
+  void collectHostAssociatedVariables(
+      Fortran::lower::pft::FunctionLikeUnit &funit,
+      llvm::SetVector<const Fortran::semantics::Symbol *> &escapees) {
+    for (const auto &var : funit.varList[0]) {
+      const auto &sym = var.getSymbol();
+      if (const auto *details =
+              sym.detailsIf<Fortran::semantics::HostAssocDetails>())
+        escapees.insert(&details->symbol());
+    }
   }
 
   /// Loop through modules defined in this file to generate the fir::globalOp
