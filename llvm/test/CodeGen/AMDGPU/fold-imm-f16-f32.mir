@@ -375,7 +375,6 @@ body:             |
 ...
 ---
 # CHECK-LABEL: name: add_i32_1_multi_f16_use
-# CHECK: %13:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
 # CHECK: %14:vgpr_32 = V_ADD_F16_e32 1, killed %11, implicit $mode, implicit $exec
 # CHECK: %15:vgpr_32 = V_ADD_F16_e32 1, killed %12, implicit $mode, implicit $exec
 
@@ -440,7 +439,6 @@ body:             |
 ---
 
 # CHECK-LABEL: name: add_i32_m2_one_f32_use_multi_f16_use
-# CHECK: %14:vgpr_32 = V_MOV_B32_e32 -2, implicit $exec
 # CHECK: %15:vgpr_32 = V_ADD_F16_e32 -2, %11, implicit $mode, implicit $exec
 # CHECK: %16:vgpr_32 = V_ADD_F16_e32 -2, %12, implicit $mode, implicit $exec
 # CHECK: %17:vgpr_32 = V_ADD_F32_e32 -2, killed %13, implicit $mode, implicit $exec
