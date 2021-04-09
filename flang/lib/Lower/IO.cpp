@@ -223,11 +223,7 @@ static mlir::FuncOp getOutputFunc(mlir::Location loc,
   // Use descriptors for arrays
   if (auto refTy = type.dyn_cast<fir::ReferenceType>())
     type = refTy.getEleTy();
-  if (type.isa<fir::SequenceType>())
-    return getIORuntimeFunc<mkIOKey(OutputDescriptor)>(loc, builder);
-  // Any unaccounted for types are to be handled here.
-  mlir::emitError(loc, "output for entity type ") << type << " not implemented";
-  TODO(loc, "derived type IO");
+  return getIORuntimeFunc<mkIOKey(OutputDescriptor)>(loc, builder);
 }
 
 /// Generate a sequence of output data transfer calls.
@@ -316,11 +312,7 @@ static mlir::FuncOp getInputFunc(mlir::Location loc,
     return getIORuntimeFunc<mkIOKey(InputDescriptor)>(loc, builder);
   if (Fortran::lower::CharacterExprHelper::isCharacterScalar(type))
     return getIORuntimeFunc<mkIOKey(InputAscii)>(loc, builder);
-  if (type.isa<fir::SequenceType>())
-    return getIORuntimeFunc<mkIOKey(InputDescriptor)>(loc, builder);
-  // Any unaccounted for types are to be handled here.
-  mlir::emitError(loc, "input for entity type ") << type << " not implemented";
-  TODO(loc, "derived type IO");
+  return getIORuntimeFunc<mkIOKey(InputDescriptor)>(loc, builder);
 }
 
 /// Generate a sequence of input data transfer calls.

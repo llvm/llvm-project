@@ -763,7 +763,11 @@ static void genDeallocate(Fortran::lower::FirOpBuilder &builder,
   // Deallocate intrinsic types inline.
   if (!box.isDerived() && !errorManager.hasStatSpec() && !useAllocateRuntime) {
     auto addr = MutablePropertyReader(builder, loc, box).readBaseAddress();
-    builder.create<fir::FreeMemOp>(loc, addr);
+    // A heap (ALLOCATABLE) object may have been converted to a ptr (POINTER),
+    // so make sure the heap type is restored before deallocation.
+    auto cast = builder.createConvert(
+        loc, fir::HeapType::get(fir::dyn_cast_ptrEleTy(addr.getType())), addr);
+    builder.create<fir::FreeMemOp>(loc, cast);
     MutablePropertyWriter{builder, loc, box}.setUnallocatedStatus();
     return;
   }

@@ -277,15 +277,16 @@ public:
 
   fir::MutableBoxValue
   genMutableBoxValue(const Fortran::lower::SomeExpr &expr) {
-    // TODO: GetLastSymbol is not the right thing to do if expr if an
-    // allocatable or pointer derived type component.
-    auto *sym = Fortran::evaluate::GetLastSymbol(expr);
+    // TODO: expr may not be a scalar variable here, it could be an allocatable
+    // or pointer derived type component, and this will fail.
+    auto *sym = Fortran::evaluate::UnwrapWholeSymbolDataRef(expr);
     if (!sym)
-      fir::emitFatalError(getLoc(), "trying to get descriptor address of an "
-                                    "expression that is not a variable");
+      TODO(getLoc(), "trying to get descriptor address of an expression that "
+                     "is not a simple scalar variable");
     return symMap.lookupSymbol(*sym).match(
-        [&](const Fortran::lower::SymbolBox::PointerOrAllocatable &boxAddr)
-            -> fir::MutableBoxValue { return boxAddr; },
+        [&](const Fortran::lower::SymbolBox::PointerOrAllocatable &boxAddr) {
+          return boxAddr;
+        },
         [&](auto &) -> fir::MutableBoxValue {
           fir::emitFatalError(getLoc(),
                               "symbol was not lowered to MutableBoxValue");
@@ -467,9 +468,53 @@ public:
   fir::ExtendedValue genval(const Fortran::evaluate::NullPointer &) {
     return builder.createNullConstant(getLoc());
   }
-  fir::ExtendedValue genval(const Fortran::evaluate::StructureConstructor &) {
-    TODO(getLoc(), "struct ctor");
+
+  fir::ExtendedValue
+  genval(const Fortran::evaluate::StructureConstructor &ctor) {
+    auto loc = getLoc();
+    auto ty = translateSomeExprToFIRType(converter, toEvExpr(ctor));
+    auto recTy = ty.cast<fir::RecordType>();
+    mlir::Value res = builder.createTemporary(loc, ty);
+    auto fieldTy = fir::FieldType::get(ty.getContext());
+    for (auto [sym, expr] : ctor.values()) {
+      auto val = genval(expr.value());
+      auto valTy = fir::getBase(val).getType();
+      auto name = toStringRef(sym->name());
+      // FIXME: type parameters must come from the derived-type-spec
+      mlir::Value field = builder.create<fir::FieldIndexOp>(
+          loc, fieldTy, name, ty,
+          /*typeParams=*/mlir::ValueRange{} /*TODO*/);
+      if (fir::isa_ref_type(valTy)) {
+        auto fldType = fir::dyn_cast_ptrEleTy(valTy);
+        if (fir::isa_char(fldType)) {
+          auto fldCharTy = fldType.cast<fir::CharacterType>();
+          if (!fldCharTy.hasConstantLen())
+            TODO(loc, "CHARACTER LEN type parameter not constant");
+          mlir::Value field = builder.create<fir::FieldIndexOp>(
+              loc, fieldTy, name, fldType,
+              /*typeParams=*/mlir::ValueRange{} /*TODO*/);
+          auto fldRefTy = builder.getRefType(fldType);
+          auto lenVal = builder.createIntegerConstant(loc, builder.getI64Type(),
+                                                      fldCharTy.getLen());
+          mlir::Value from = builder.create<fir::CoordinateOp>(
+              loc, fldRefTy, fir::getBase(val), field);
+          fir::ExtendedValue fromPtr{fir::CharBoxValue{from, lenVal}};
+          mlir::Value to = builder.create<fir::CoordinateOp>(
+              loc, fldRefTy, fir::getBase(res), field);
+          fir::ExtendedValue toPtr{fir::CharBoxValue{to, lenVal}};
+          Fortran::lower::CharacterExprHelper{builder, loc}.createAssign(
+              toPtr, fromPtr);
+          continue;
+        }
+      }
+      auto coorTy = builder.getRefType(recTy.getType(name));
+      auto coor = builder.create<fir::CoordinateOp>(loc, coorTy,
+                                                    fir::getBase(res), field);
+      builder.create<fir::StoreOp>(loc, fir::getBase(val), coor);
+    }
+    return builder.create<fir::LoadOp>(loc, res);
   }
+
   fir::ExtendedValue genval(const Fortran::evaluate::ImpliedDoIndex &) {
     TODO(getLoc(), "implied do index");
   }
@@ -974,6 +1019,11 @@ public:
       auto attr = builder.getIntegerAttr(type, opt);
       auto res = builder.create<mlir::ConstantOp>(getLoc(), type, attr);
       return res.getResult();
+    } else if constexpr (TC == Fortran::common::TypeCategory::Derived) {
+      if (auto ctor = con.GetScalarValue())
+        return genval(ctor.value());
+      fir::emitFatalError(getLoc(),
+                          "constant of derived type has no constructor");
     } else {
       fir::emitFatalError(getLoc(), "unhandled constant of unknown kind");
     }
@@ -2464,9 +2514,10 @@ public:
     auto exv = Fortran::lower::createSomeInitializerExpression(
         loc, converter, toEvExpr(x), symMap, stmtCtx);
     auto val = fir::getBase(exv);
-    mlir::Value mem = builder.create<fir::AllocMemOp>(loc, val.getType());
-    stmtCtx.attachCleanup([=]() { builder.create<fir::FreeMemOp>(loc, mem); });
-    builder.create<fir::StoreOp>(loc, val, mem);
+    auto *bldr = &converter.getFirOpBuilder();
+    mlir::Value mem = bldr->create<fir::AllocMemOp>(loc, val.getType());
+    stmtCtx.attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, mem); });
+    bldr->create<fir::StoreOp>(loc, val, mem);
     auto lambda = genarr(fir::substBase(exv, mem));
     return [=](IterSpace iters) { return lambda(iters); };
   }
@@ -3204,15 +3255,12 @@ fir::AllocMemOp Fortran::lower::createSomeArrayTemp(
   auto seqTy = ty.dyn_cast<fir::SequenceType>();
   assert(seqTy && "must be an array");
   auto loc = converter.getCurrentLocation();
-  if (seqTy.hasConstantShape()) {
-    auto result = bldr->create<fir::AllocMemOp>(loc, ty);
-    auto res = result.getResult();
-    stmtCtx.attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, res); });
-    return result;
-  }
-  auto result = bldr->create<fir::AllocMemOp>(
-      loc, ty, ".array.expr", llvm::None,
-      scavengeShapeFromSomeExpr(converter, expr, stmtCtx));
+  fir::AllocMemOp result =
+      seqTy.hasConstantShape()
+          ? bldr->create<fir::AllocMemOp>(loc, ty)
+          : bldr->create<fir::AllocMemOp>(
+                loc, ty, ".array.expr", llvm::None,
+                scavengeShapeFromSomeExpr(converter, expr, stmtCtx));
   auto res = result.getResult();
   stmtCtx.attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, res); });
   return result;
