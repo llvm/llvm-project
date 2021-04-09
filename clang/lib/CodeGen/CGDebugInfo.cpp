@@ -305,6 +305,7 @@ StringRef CGDebugInfo::getClassName(const RecordDecl *RD) {
     llvm::raw_svector_ostream OS(Name);
     PrintingPolicy PP = getPrintingPolicy();
     PP.PrintCanonicalTypes = true;
+    PP.SuppressInlineNamespace = false;
     RD->getNameForDiagnostic(OS, PP,
                              /*Qualified*/ false);
 
