@@ -89,7 +89,7 @@ struct TestCustomAAResult : AAResultBase<TestCustomAAResult> {
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
                     AAQueryInfo &AAQI) {
     CB();
-    return MayAlias;
+    return AliasResult::MayAlias;
   }
 };
 }
@@ -247,19 +247,19 @@ TEST_F(AliasAnalysisTest, BatchAAPhiCycles) {
   MemoryLocation S2Loc(S2, LocationSize::precise(1));
 
   auto &AA = getAAResults(*F);
-  EXPECT_EQ(NoAlias, AA.alias(A1Loc, A2Loc));
-  EXPECT_EQ(MayAlias, AA.alias(PhiLoc, A1Loc));
-  EXPECT_EQ(MayAlias, AA.alias(S1Loc, S2Loc));
+  EXPECT_EQ(AliasResult::NoAlias, AA.alias(A1Loc, A2Loc));
+  EXPECT_EQ(AliasResult::MayAlias, AA.alias(PhiLoc, A1Loc));
+  EXPECT_EQ(AliasResult::MayAlias, AA.alias(S1Loc, S2Loc));
 
   BatchAAResults BatchAA(AA);
-  EXPECT_EQ(NoAlias, BatchAA.alias(A1Loc, A2Loc));
-  EXPECT_EQ(MayAlias, BatchAA.alias(PhiLoc, A1Loc));
-  EXPECT_EQ(MayAlias, BatchAA.alias(S1Loc, S2Loc));
+  EXPECT_EQ(AliasResult::NoAlias, BatchAA.alias(A1Loc, A2Loc));
+  EXPECT_EQ(AliasResult::MayAlias, BatchAA.alias(PhiLoc, A1Loc));
+  EXPECT_EQ(AliasResult::MayAlias, BatchAA.alias(S1Loc, S2Loc));
 
   BatchAAResults BatchAA2(AA);
-  EXPECT_EQ(NoAlias, BatchAA2.alias(A1Loc, A2Loc));
-  EXPECT_EQ(MayAlias, BatchAA2.alias(S1Loc, S2Loc));
-  EXPECT_EQ(MayAlias, BatchAA2.alias(PhiLoc, A1Loc));
+  EXPECT_EQ(AliasResult::NoAlias, BatchAA2.alias(A1Loc, A2Loc));
+  EXPECT_EQ(AliasResult::MayAlias, BatchAA2.alias(S1Loc, S2Loc));
+  EXPECT_EQ(AliasResult::MayAlias, BatchAA2.alias(PhiLoc, A1Loc));
 }
 
 TEST_F(AliasAnalysisTest, BatchAAPhiAssumption) {
@@ -290,12 +290,12 @@ TEST_F(AliasAnalysisTest, BatchAAPhiAssumption) {
   MemoryLocation BNextLoc(BNext, LocationSize::precise(1));
 
   auto &AA = getAAResults(*F);
-  EXPECT_EQ(MayAlias, AA.alias(ALoc, BLoc));
-  EXPECT_EQ(MayAlias, AA.alias(ANextLoc, BNextLoc));
+  EXPECT_EQ(AliasResult::MayAlias, AA.alias(ALoc, BLoc));
+  EXPECT_EQ(AliasResult::MayAlias, AA.alias(ANextLoc, BNextLoc));
 
   BatchAAResults BatchAA(AA);
-  EXPECT_EQ(MayAlias, BatchAA.alias(ALoc, BLoc));
-  EXPECT_EQ(MayAlias, BatchAA.alias(ANextLoc, BNextLoc));
+  EXPECT_EQ(AliasResult::MayAlias, BatchAA.alias(ALoc, BLoc));
+  EXPECT_EQ(AliasResult::MayAlias, BatchAA.alias(ANextLoc, BNextLoc));
 }
 
 // Check that two aliased GEPs with non-constant offsets are correctly
@@ -329,7 +329,7 @@ TEST_F(AliasAnalysisTest, PartialAliasOffset) {
   auto &AA = getAAResults(*F);
 
   BatchAAResults BatchAA(AA, /*CacheOffsets =*/true);
-  EXPECT_EQ(PartialAlias, BatchAA.alias(Loc1, Loc2));
+  EXPECT_EQ(AliasResult::PartialAlias, BatchAA.alias(Loc1, Loc2));
   EXPECT_EQ(-4, BatchAA.getClobberOffset(Loc1, Loc2).getValueOr(0));
   EXPECT_EQ(4, BatchAA.getClobberOffset(Loc2, Loc1).getValueOr(0));
 
