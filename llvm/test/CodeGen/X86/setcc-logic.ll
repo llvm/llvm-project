@@ -612,8 +612,8 @@ define i1 @and_icmps_const_1bit_diff_common_op(i32 %x, i32 %y) {
 define i1 @or_cmp_eq_i64(i64 %x, i64 %y) {
 ; NOBMI-LABEL: or_cmp_eq_i64:
 ; NOBMI:       # %bb.0:
-; NOBMI-NEXT:    orq %rdi, %rsi
-; NOBMI-NEXT:    cmpq %rdi, %rsi
+; NOBMI-NEXT:    notq %rdi
+; NOBMI-NEXT:    testq %rsi, %rdi
 ; NOBMI-NEXT:    sete %al
 ; NOBMI-NEXT:    retq
 ;
@@ -630,8 +630,8 @@ define i1 @or_cmp_eq_i64(i64 %x, i64 %y) {
 define i1 @or_cmp_ne_i32(i32 %x, i32 %y) {
 ; NOBMI-LABEL: or_cmp_ne_i32:
 ; NOBMI:       # %bb.0:
-; NOBMI-NEXT:    orl %esi, %edi
-; NOBMI-NEXT:    cmpl %esi, %edi
+; NOBMI-NEXT:    notl %esi
+; NOBMI-NEXT:    testl %edi, %esi
 ; NOBMI-NEXT:    setne %al
 ; NOBMI-NEXT:    retq
 ;
@@ -646,38 +646,24 @@ define i1 @or_cmp_ne_i32(i32 %x, i32 %y) {
 }
 
 define i1 @or_cmp_eq_i16(i16 zeroext %x, i16 zeroext %y) {
-; NOBMI-LABEL: or_cmp_eq_i16:
-; NOBMI:       # %bb.0:
-; NOBMI-NEXT:    orl %edi, %esi
-; NOBMI-NEXT:    cmpw %si, %di
-; NOBMI-NEXT:    sete %al
-; NOBMI-NEXT:    retq
-;
-; BMI-LABEL: or_cmp_eq_i16:
-; BMI:       # %bb.0:
-; BMI-NEXT:    notl %edi
-; BMI-NEXT:    testw %si, %di
-; BMI-NEXT:    sete %al
-; BMI-NEXT:    retq
+; CHECK-LABEL: or_cmp_eq_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    testw %si, %di
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
   %o = or i16 %x, %y
   %c = icmp eq i16 %x, %o
   ret i1 %c
 }
 
 define i1 @or_cmp_ne_i8(i8 zeroext %x, i8 zeroext %y) {
-; NOBMI-LABEL: or_cmp_ne_i8:
-; NOBMI:       # %bb.0:
-; NOBMI-NEXT:    orl %esi, %edi
-; NOBMI-NEXT:    cmpb %dil, %sil
-; NOBMI-NEXT:    setne %al
-; NOBMI-NEXT:    retq
-;
-; BMI-LABEL: or_cmp_ne_i8:
-; BMI:       # %bb.0:
-; BMI-NEXT:    notb %sil
-; BMI-NEXT:    testb %dil, %sil
-; BMI-NEXT:    setne %al
-; BMI-NEXT:    retq
+; CHECK-LABEL: or_cmp_ne_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    notb %sil
+; CHECK-NEXT:    testb %dil, %sil
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
   %o = or i8 %x, %y
   %c = icmp ne i8 %y, %o
   ret i1 %c
