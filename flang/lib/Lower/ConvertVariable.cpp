@@ -983,6 +983,9 @@ void Fortran::lower::mapSymbolAttributes(
     }
   }
 
+  if (Fortran::semantics::IsHostAssociated(sym, sym.owner()))
+    TODO(loc, "host associated variables and internal procedures");
+
   // Helper to generate scalars for the symbol properties.
   auto genValue = [&](const Fortran::lower::SomeExpr &expr) {
     return genScalarValue(converter, loc, expr, symMap, stmtCtx);
