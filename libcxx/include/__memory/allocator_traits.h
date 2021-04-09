@@ -13,6 +13,7 @@
 #include <__config>
 #include <__memory/base.h>
 #include <__memory/pointer_traits.h>
+#include <limits>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
