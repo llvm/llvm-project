@@ -18,6 +18,7 @@
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
+#include "AArch64GlobalISelUtils.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/ADT/Optional.h"
@@ -4577,37 +4578,10 @@ MachineInstr *AArch64InstructionSelector::tryFoldIntegerCompare(
   //
   // cmn z, y
 
-  // Helper lambda to detect the subtract followed by the compare.
-  // Takes in the def of the LHS or RHS, and checks if it's a subtract from 0.
-  auto IsCMN = [&](MachineInstr *DefMI, const AArch64CC::CondCode &CC) {
-    if (!DefMI || DefMI->getOpcode() != TargetOpcode::G_SUB)
-      return false;
-
-    // Need to make sure NZCV is the same at the end of the transformation.
-    if (CC != AArch64CC::EQ && CC != AArch64CC::NE)
-      return false;
-
-    // We want to match against SUBs.
-    if (DefMI->getOpcode() != TargetOpcode::G_SUB)
-      return false;
-
-    // Make sure that we're getting
-    // x = G_SUB 0, y
-    auto ValAndVReg =
-        getConstantVRegValWithLookThrough(DefMI->getOperand(1).getReg(), MRI);
-    if (!ValAndVReg || ValAndVReg->Value != 0)
-      return false;
-
-    // This can safely be represented as a CMN.
-    return true;
-  };
-
   // Check if the RHS or LHS of the G_ICMP is defined by a SUB
   MachineInstr *LHSDef = getDefIgnoringCopies(LHS.getReg(), MRI);
   MachineInstr *RHSDef = getDefIgnoringCopies(RHS.getReg(), MRI);
-  CmpInst::Predicate P = (CmpInst::Predicate)Predicate.getPredicate();
-  const AArch64CC::CondCode CC = changeICMPPredToAArch64CC(P);
-
+  auto P = static_cast<CmpInst::Predicate>(Predicate.getPredicate());
   // Given this:
   //
   // x = G_SUB 0, y
@@ -4616,7 +4590,7 @@ MachineInstr *AArch64InstructionSelector::tryFoldIntegerCompare(
   // Produce this:
   //
   // cmn y, z
-  if (IsCMN(LHSDef, CC))
+  if (isCMN(LHSDef, P, MRI))
     return emitCMN(LHSDef->getOperand(2), RHS, MIRBuilder);
 
   // Same idea here, but with the RHS of the compare instead:
@@ -4629,7 +4603,7 @@ MachineInstr *AArch64InstructionSelector::tryFoldIntegerCompare(
   // Produce this:
   //
   // cmn z, y
-  if (IsCMN(RHSDef, CC))
+  if (isCMN(RHSDef, P, MRI))
     return emitCMN(LHS, RHSDef->getOperand(2), MIRBuilder);
 
   // Given this:
