@@ -288,7 +288,7 @@ protected:
                  DeleteValueTy DeleteValue, Instruction *MI, BasicBlock *BB,
                  unsigned NumOperands)
       : MemoryAccess(C, Vty, DeleteValue, BB, NumOperands),
-        MemoryInstruction(MI), OptimizedAccessAlias(MayAlias) {
+        MemoryInstruction(MI), OptimizedAccessAlias(AliasResult::MayAlias) {
     setDefiningAccess(DMA);
   }
 
@@ -299,8 +299,9 @@ protected:
     OptimizedAccessAlias = AR;
   }
 
-  void setDefiningAccess(MemoryAccess *DMA, bool Optimized = false,
-                         Optional<AliasResult> AR = MayAlias) {
+  void setDefiningAccess(
+      MemoryAccess *DMA, bool Optimized = false,
+      Optional<AliasResult> AR = AliasResult(AliasResult::MayAlias)) {
     if (!Optimized) {
       setOperand(0, DMA);
       return;

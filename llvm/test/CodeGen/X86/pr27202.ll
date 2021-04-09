@@ -33,8 +33,7 @@ define i1 @foo_pgso(i32 %i) !prof !14 {
 define zeroext i1 @g(i32 %x) optsize {
 ; CHECK-LABEL: g:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orl $1, %edi
-; CHECK-NEXT:    cmpl $1, %edi
+; CHECK-NEXT:    testl $-2, %edi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %t0 = or i32 %x, 1

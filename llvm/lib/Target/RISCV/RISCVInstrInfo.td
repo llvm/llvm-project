@@ -34,8 +34,14 @@ def SDT_RISCVSwapCSR  : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>,
                                              SDTCisInt<2>]>;
 def SDT_RISCVReadCycleWide : SDTypeProfile<2, 0, [SDTCisVT<0, i32>,
                                                   SDTCisVT<1, i32>]>;
+def SDT_RISCVIntUnaryOpW : SDTypeProfile<1, 1, [
+  SDTCisSameAs<0, 1>, SDTCisVT<0, i64>
+]>;
 def SDT_RISCVIntBinOpW : SDTypeProfile<1, 2, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i64>
+]>;
+def SDT_RISCVIntShiftDOpW : SDTypeProfile<1, 3, [
+  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i64>, SDTCisVT<3, i64>
 ]>;
 
 // Target-independent nodes, but with target-specific formats.

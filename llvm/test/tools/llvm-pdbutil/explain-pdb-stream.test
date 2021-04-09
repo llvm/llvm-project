@@ -39,7 +39,7 @@ CHECK-NEXT:   Address is at offset 12/202 of Stream 1 (PDB Stream).
 CHECK-NEXT:   Within the PDB stream:
 CHECK-NEXT:     address is at offset 12/28 of the PDB Stream Header.
 CHECK-NEXT:     which contains the guid of the PDB.
-CHECK-NEXT:     The current value is {826BE46E-02ED-7043-9C27-20CCC07E92A7}.
+CHECK-NEXT:     The current value is {6EE46B82-ED02-4370-9C27-20CCC07E92A7}.
 
 CHECK:      Block:Offset = 11:001C.
 CHECK-NEXT: Address is in block 17 (allocated).

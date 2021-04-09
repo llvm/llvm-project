@@ -29,15 +29,17 @@ os_log_t *LogCreator() {
   *X = os_log_create("org.llvm.signposts", OS_LOG_CATEGORY_POINTS_OF_INTEREST);
   return X;
 }
-void LogDeleter(os_log_t *X) {
-  os_release(*X);
-  delete X;
-}
+struct LogDeleter {
+  void operator()(os_log_t *X) const {
+    os_release(*X);
+    delete X;
+  }
+};
 } // end anonymous namespace
 
 namespace llvm {
 class SignpostEmitterImpl {
-  using LogPtrTy = std::unique_ptr<os_log_t, std::function<void(os_log_t *)>>;
+  using LogPtrTy = std::unique_ptr<os_log_t, LogDeleter>;
   using LogTy = LogPtrTy::element_type;
 
   LogPtrTy SignpostLog;
@@ -59,7 +61,7 @@ class SignpostEmitterImpl {
   }
 
 public:
-  SignpostEmitterImpl() : SignpostLog(LogCreator(), LogDeleter), Signposts() {}
+  SignpostEmitterImpl() : SignpostLog(LogCreator()) {}
 
   bool isEnabled() const {
     if (SIGNPOSTS_AVAILABLE())
@@ -88,6 +90,9 @@ public:
   }
 };
 } // end namespace llvm
+#else
+/// Definition necessary for use of std::unique_ptr in SignpostEmitter::Impl.
+class llvm::SignpostEmitterImpl {};
 #endif // if LLVM_SUPPORT_XCODE_SIGNPOSTS
 
 #if LLVM_SUPPORT_XCODE_SIGNPOSTS
@@ -98,17 +103,11 @@ public:
 
 SignpostEmitter::SignpostEmitter() {
 #if HAVE_ANY_SIGNPOST_IMPL
-  Impl = new SignpostEmitterImpl();
-#else  // if HAVE_ANY_SIGNPOST_IMPL
-  Impl = nullptr;
+  Impl = std::make_unique<SignpostEmitterImpl>();
 #endif // if !HAVE_ANY_SIGNPOST_IMPL
 }
 
-SignpostEmitter::~SignpostEmitter() {
-#if HAVE_ANY_SIGNPOST_IMPL
-  delete Impl;
-#endif // if HAVE_ANY_SIGNPOST_IMPL
-}
+SignpostEmitter::~SignpostEmitter() = default;
 
 bool SignpostEmitter::isEnabled() const {
 #if HAVE_ANY_SIGNPOST_IMPL

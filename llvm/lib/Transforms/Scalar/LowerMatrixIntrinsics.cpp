@@ -1092,10 +1092,8 @@ public:
     MemoryLocation StoreLoc = MemoryLocation::get(Store);
     MemoryLocation LoadLoc = MemoryLocation::get(Load);
 
-    AliasResult LdAliased = AA->alias(LoadLoc, StoreLoc);
-
     // If we can statically determine noalias we're good.
-    if (!LdAliased)
+    if (AA->isNoAlias(LoadLoc, StoreLoc))
       return Load->getPointerOperand();
 
     // Create code to check if the memory locations of the Load and Store
