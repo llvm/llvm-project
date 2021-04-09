@@ -692,10 +692,9 @@ define i8 @umin_negation(i8 %x) {
 
 define i8 @smax_negation_uses(i8 %x, i8 %y) {
 ; CHECK-LABEL: @smax_negation_uses(
-; CHECK-NEXT:    [[S1:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[S2:%.*]] = sub i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[S2:%.*]] = sub i8 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[S2]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.abs.i8(i8 [[S1]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.abs.i8(i8 [[S2]], i1 false)
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %s1 = sub i8 %x, %y
