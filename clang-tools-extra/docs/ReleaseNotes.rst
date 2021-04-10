@@ -74,6 +74,13 @@ Improvements to clang-tidy
   attached to warnings. These are typically cases where we are less confident
   the fix will have the desired effect.
 
+- libToolingCore and Clang-Tidy was refactored and now checks can produce
+  highlights (`^~~~~` under fragments of the source code) in diagnostics.
+  Existing and new checks in the future can be expected to start implementing
+  this functionality.
+  This change only affects the visual rendering of diagnostics, and does not
+  alter the behavior of generated fixes.
+
 New checks
 ^^^^^^^^^^
 

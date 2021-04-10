@@ -84,7 +84,7 @@ TEST(TransformerClangTidyCheckTest, DiagnosticsCorrectlyGenerated) {
   EXPECT_EQ(Input, test::runCheckOnCode<DiagOnlyCheck>(Input, &Errors));
   EXPECT_EQ(Errors.size(), 1U);
   EXPECT_EQ(Errors[0].Message.Message, "message");
-  EXPECT_THAT(Errors[0].Ranges, testing::IsEmpty());
+  EXPECT_THAT(Errors[0].Message.Ranges, testing::IsEmpty());
 
   // The diagnostic is anchored to the match, "return 5".
   EXPECT_EQ(Errors[0].Message.FileOffset, 10U);
