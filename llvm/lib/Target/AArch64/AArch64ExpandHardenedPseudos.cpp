@@ -60,7 +60,7 @@ private:
 
 char AArch64ExpandHardenedPseudos::ID = 0;
 
-INITIALIZE_PASS(AArch64ExpandHardenedPseudos, DEBUG_TYPE, PASS_NAME, false, false);
+INITIALIZE_PASS(AArch64ExpandHardenedPseudos, DEBUG_TYPE, PASS_NAME, false, false)
 
 bool AArch64ExpandHardenedPseudos::expandMI(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
