@@ -620,14 +620,14 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
 static bool isNonNegative(Value *V, LazyValueInfo *LVI, Instruction *CxtI) {
   Constant *Zero = ConstantInt::get(V->getType(), 0);
   auto Result = LVI->getPredicateAt(ICmpInst::ICMP_SGE, V, Zero, CxtI,
-                                    /*UseBlockValue=*/false);
+                                    /*UseBlockValue=*/true);
   return Result == LazyValueInfo::True;
 }
 
 static bool isNonPositive(Value *V, LazyValueInfo *LVI, Instruction *CxtI) {
   Constant *Zero = ConstantInt::get(V->getType(), 0);
   auto Result = LVI->getPredicateAt(ICmpInst::ICMP_SLE, V, Zero, CxtI,
-                                    /*UseBlockValue=*/false);
+                                    /*UseBlockValue=*/true);
   return Result == LazyValueInfo::True;
 }
 
