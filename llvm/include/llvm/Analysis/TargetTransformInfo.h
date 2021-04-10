@@ -1103,9 +1103,10 @@ public:
                                unsigned Index = -1) const;
 
   /// \return The expected cost of control-flow related instructions such as
-  /// Phi, Ret, Br.
+  /// Phi, Ret, Br, Switch.
   int getCFInstrCost(unsigned Opcode,
-                     TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) const;
+                     TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
+                     const Instruction *I = nullptr) const;
 
   /// \returns The expected cost of compare and select instructions. If there
   /// is an existing instruction that holds Opcode, it may be passed in the
@@ -1573,8 +1574,8 @@ public:
                                const Instruction *I) = 0;
   virtual int getExtractWithExtendCost(unsigned Opcode, Type *Dst,
                                        VectorType *VecTy, unsigned Index) = 0;
-  virtual int getCFInstrCost(unsigned Opcode,
-                             TTI::TargetCostKind CostKind) = 0;
+  virtual int getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                             const Instruction *I = nullptr) = 0;
   virtual int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                                  CmpInst::Predicate VecPred,
                                  TTI::TargetCostKind CostKind,
@@ -2040,8 +2041,9 @@ public:
                                unsigned Index) override {
     return Impl.getExtractWithExtendCost(Opcode, Dst, VecTy, Index);
   }
-  int getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind) override {
-    return Impl.getCFInstrCost(Opcode, CostKind);
+  int getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                     const Instruction *I = nullptr) override {
+    return Impl.getCFInstrCost(Opcode, CostKind, I);
   }
   int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                          CmpInst::Predicate VecPred,
