@@ -7328,10 +7328,13 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     auto AllowedRegion =
         ConstantRange::makeAllowedICmpRegion(CmpI->getPredicate(), RHSAARange);
 
+    auto SatisfyingRegion = ConstantRange::makeSatisfyingICmpRegion(
+        CmpI->getPredicate(), RHSAARange);
+
     if (AllowedRegion.intersectWith(LHSAARange).isEmptySet())
       MustFalse = true;
 
-    if (LHSAARange.icmp(CmpI->getPredicate(), RHSAARange))
+    if (SatisfyingRegion.contains(LHSAARange))
       MustTrue = true;
 
     assert((!MustTrue || !MustFalse) &&

@@ -3451,10 +3451,13 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       auto LHS_CR = getConstantRangeFromMetadata(
           *LHS_Instr->getMetadata(LLVMContext::MD_range));
 
-      if (LHS_CR.icmp(Pred, RHS_CR))
+      auto Satisfied_CR = ConstantRange::makeSatisfyingICmpRegion(Pred, RHS_CR);
+      if (Satisfied_CR.contains(LHS_CR))
         return ConstantInt::getTrue(RHS->getContext());
 
-      if (LHS_CR.icmp(CmpInst::getInversePredicate(Pred), RHS_CR))
+      auto InversedSatisfied_CR = ConstantRange::makeSatisfyingICmpRegion(
+                CmpInst::getInversePredicate(Pred), RHS_CR);
+      if (InversedSatisfied_CR.contains(LHS_CR))
         return ConstantInt::getFalse(RHS->getContext());
     }
   }
