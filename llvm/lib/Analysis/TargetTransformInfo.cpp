@@ -783,8 +783,11 @@ int TargetTransformInfo::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
 }
 
 int TargetTransformInfo::getCFInstrCost(unsigned Opcode,
-                                        TTI::TargetCostKind CostKind) const {
-  int Cost = TTIImpl->getCFInstrCost(Opcode, CostKind);
+                                        TTI::TargetCostKind CostKind,
+                                        const Instruction *I) const {
+  assert((I == nullptr || I->getOpcode() == Opcode) &&
+         "Opcode should reflect passed instruction.");
+  int Cost = TTIImpl->getCFInstrCost(Opcode, CostKind, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -1374,6 +1377,7 @@ TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
   case Instruction::ExtractValue:
   case Instruction::ShuffleVector:
   case Instruction::Call:
+  case Instruction::Switch:
     return getUserCost(I, CostKind);
   default:
     // We don't have any information on this instruction.

@@ -653,7 +653,8 @@ int AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
 }
 
 unsigned AArch64TTIImpl::getCFInstrCost(unsigned Opcode,
-                                        TTI::TargetCostKind CostKind) {
+                                        TTI::TargetCostKind CostKind,
+                                        const Instruction *I) {
   if (CostKind != TTI::TCK_RecipThroughput)
     return Opcode == Instruction::PHI ? 0 : 1;
   assert(CostKind == TTI::TCK_RecipThroughput && "unexpected CostKind");
