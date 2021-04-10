@@ -124,6 +124,10 @@ public:
   static ConstantRange makeExactICmpRegion(CmpInst::Predicate Pred,
                                            const APInt &Other);
 
+  /// Does the predicate \p Pred hold between ranges this and \p Other?
+  /// NOTE: false does not mean that inverse predicate holds!
+  bool icmp(CmpInst::Predicate Pred, const ConstantRange &Other) const;
+
   /// Produce the largest range containing all X such that "X BinOp Y" is
   /// guaranteed not to wrap (overflow) for *all* Y in Other. However, there may
   /// be *some* Y in Other for which additional X not contained in the result
