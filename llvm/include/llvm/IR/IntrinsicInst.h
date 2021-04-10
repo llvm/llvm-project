@@ -458,6 +458,47 @@ public:
   }
 };
 
+/// This class represents min/max intrinsics.
+class LimitingIntrinsic : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    switch (I->getIntrinsicID()) {
+    case Intrinsic::umin:
+    case Intrinsic::umax:
+    case Intrinsic::smin:
+    case Intrinsic::smax:
+      return true;
+    default:
+      return false;
+    }
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  Value *getLHS() const { return const_cast<Value *>(getArgOperand(0)); }
+  Value *getRHS() const { return const_cast<Value *>(getArgOperand(1)); }
+
+  /// Returns the comparison predicate underlying the intrinsic.
+  ICmpInst::Predicate getPredicate() const {
+    switch (getIntrinsicID()) {
+    case Intrinsic::umin:
+      return ICmpInst::Predicate::ICMP_ULT;
+    case Intrinsic::umax:
+      return ICmpInst::Predicate::ICMP_UGT;
+    case Intrinsic::smin:
+      return ICmpInst::Predicate::ICMP_SLT;
+    case Intrinsic::smax:
+      return ICmpInst::Predicate::ICMP_SGT;
+    default:
+      llvm_unreachable("Invalid intrinsic");
+    }
+  }
+
+  /// Whether the intrinsic is signed or unsigned.
+  bool isSigned() const { return ICmpInst::isSigned(getPredicate()); };
+};
+
 /// This class represents an intrinsic that is based on a binary operation.
 /// This includes op.with.overflow and saturating add/sub intrinsics.
 class BinaryOpIntrinsic : public IntrinsicInst {
