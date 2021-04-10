@@ -68,11 +68,12 @@ protected:
     // into a real CharRange for the diagnostic printer later.
     // Whatever we store here gets decoupled from the current SourceManager, so
     // we **have to** know the exact position and length of the highlight.
-    const auto &ToCharRange = [this, &Loc](const CharSourceRange &SourceRange) {
+    auto ToCharRange = [this, &Loc](const CharSourceRange &SourceRange) {
       if (SourceRange.isCharRange())
         return SourceRange;
+      assert(SourceRange.isTokenRange());
       SourceLocation End = Lexer::getLocForEndOfToken(
-          SourceRange.getEnd(), 1, Loc.getManager(), LangOpts);
+          SourceRange.getEnd(), 0, Loc.getManager(), LangOpts);
       return CharSourceRange::getCharRange(SourceRange.getBegin(), End);
     };
 
