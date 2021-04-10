@@ -101,12 +101,12 @@ static bool isSimplifiedLoopNest(BasicBlock *BB, const DominatorTree *DT,
     BasicBlock *DomBB = Rung->getBlock();
     Loop *DomLoop = LI->getLoopFor(DomBB);
     if (DomLoop && DomLoop->getHeader() == DomBB) {
-      // If the domtree walk reaches a loop with no preheader, return false.
-      if (!DomLoop->isLoopSimplifyForm())
-        return false;
       // If we have already checked this loop nest, stop checking.
       if (SimpleLoopNests.count(DomLoop))
         break;
+      // If the domtree walk reaches a loop with no preheader, return false.
+      if (!DomLoop->isLoopSimplifyForm())
+        return false;
       // If we have not already checked this loop nest, remember the loop
       // header nearest to BB. The nearest loop may not contain BB.
       if (!NearestLoop)
