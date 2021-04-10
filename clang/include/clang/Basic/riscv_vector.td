@@ -378,6 +378,55 @@ multiclass RVVIndexedLoad<string op> {
   }
 }
 
+multiclass RVVVLEFFBuiltin<list<string> types> {
+  let Name = NAME # "_v",
+      IRName = "vleff",
+      IRNameMask = "vleff_mask",
+      HasNoMaskedOverloaded = false,
+      ManualCodegen = [{
+      {
+        IntrinsicTypes = {ResultType, Ops[2]->getType()};
+        Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
+        Value *NewVL = Ops[1];
+        Ops.erase(Ops.begin() + 1);
+        llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+        llvm::Value *LoadValue = Builder.CreateCall(F, Ops, "");
+        llvm::Value *V = Builder.CreateExtractValue(LoadValue, {0});
+        // Store new_vl.
+        clang::CharUnits Align =
+            CGM.getNaturalTypeAlignment(getContext().getSizeType());
+        Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {1}),
+                            Address(NewVL, Align));
+        return V;
+      }
+      }],
+      ManualCodegenMask = [{
+      {
+        IntrinsicTypes = {ResultType, Ops[4]->getType()};
+        Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
+        Value *NewVL = Ops[2];
+        Ops.erase(Ops.begin() + 2);
+        llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+        llvm::Value *LoadValue = Builder.CreateCall(F, Ops, "");
+        llvm::Value *V = Builder.CreateExtractValue(LoadValue, {0});
+        // Store new_vl.
+        clang::CharUnits Align =
+            CGM.getNaturalTypeAlignment(getContext().getSizeType());
+        Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {1}),
+                            Address(NewVL, Align));
+        return V;
+      }
+      }] in {
+    foreach type = types in {
+      def : RVVBuiltin<"v", "vPCePz", type>;
+      // Skip floating types for unsigned versions.
+      if !not(IsFloat<type>.val) then {
+        def : RVVBuiltin<"Uv", "UvPCUePz", type>;
+      }
+    }
+  }
+}
+
 multiclass RVVVSEBuiltin<list<string> types> {
   let Name = NAME # "_v",
       IRName = "vse",
@@ -479,6 +528,11 @@ defm vle8: RVVVLEBuiltin<["c"]>;
 defm vle16: RVVVLEBuiltin<["s"]>;
 defm vle32: RVVVLEBuiltin<["i","f"]>;
 defm vle64: RVVVLEBuiltin<["l","d"]>;
+
+defm vle8ff: RVVVLEFFBuiltin<["c"]>;
+defm vle16ff: RVVVLEFFBuiltin<["s"]>;
+defm vle32ff: RVVVLEFFBuiltin<["i", "f"]>;
+defm vle64ff: RVVVLEFFBuiltin<["l", "d"]>;
 
 defm vse8 : RVVVSEBuiltin<["c"]>;
 defm vse16: RVVVSEBuiltin<["s"]>;

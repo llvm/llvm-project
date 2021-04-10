@@ -369,6 +369,8 @@ void RVVType::initBuiltinStr() {
     BuiltinStr = "z";
     if (IsImmediate)
       BuiltinStr = "I" + BuiltinStr;
+    if (IsPointer)
+      BuiltinStr += "*";
     return;
   case ScalarTypeKind::Ptrdiff_t:
     BuiltinStr = "Y";
@@ -473,6 +475,8 @@ void RVVType::initTypeStr() {
     return;
   case ScalarTypeKind::Size_t:
     Str = "size_t";
+    if (IsPointer)
+      Str += " *";
     return;
   case ScalarTypeKind::Ptrdiff_t:
     Str = "ptrdiff_t";
