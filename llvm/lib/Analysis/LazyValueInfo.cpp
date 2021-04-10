@@ -1812,6 +1812,24 @@ LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
   return Unknown;
 }
 
+LazyValueInfo::Tristate LazyValueInfo::getPredicateAt(unsigned P, Value *LHS,
+                                                      Value *RHS,
+                                                      Instruction *CxtI,
+                                                      bool UseBlockValue) {
+  CmpInst::Predicate Pred = (CmpInst::Predicate)P;
+
+  if (auto *C = dyn_cast<Constant>(RHS))
+    return getPredicateAt(P, LHS, C, CxtI, UseBlockValue);
+  if (auto *C = dyn_cast<Constant>(LHS))
+    return getPredicateAt(CmpInst::getSwappedPredicate(Pred), RHS, C, CxtI,
+                          UseBlockValue);
+
+  // Got two non-Constant values. While we could handle them somewhat,
+  // by getting their constant ranges, and applying ConstantRange::icmp(),
+  // so far it did not appear to be profitable.
+  return LazyValueInfo::Unknown;
+}
+
 void LazyValueInfo::threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc,
                                BasicBlock *NewSucc) {
   if (PImpl) {
