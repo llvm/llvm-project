@@ -561,6 +561,9 @@ void PutObjectEntity(llvm::raw_ostream &os, const Symbol &symbol) {
 void PutProcEntity(llvm::raw_ostream &os, const Symbol &symbol) {
   if (symbol.attrs().test(Attr::INTRINSIC)) {
     os << "intrinsic::" << symbol.name() << '\n';
+    if (symbol.attrs().test(Attr::PRIVATE)) {
+      os << "private::" << symbol.name() << '\n';
+    }
     return;
   }
   const auto &details{symbol.get<ProcEntityDetails>()};
