@@ -29,7 +29,7 @@ define i8 @test2(i8 %x) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp sge i8 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 false)
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 true)
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 
@@ -56,8 +56,7 @@ define i8 @test4(i8 %x) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp sge i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 false)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
 
   %lim = icmp sge i8 %x, 0
@@ -69,8 +68,7 @@ define i8 @test5(i8 %x) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp sge i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 true)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
 
   %lim = icmp sge i8 %x, 0
@@ -83,8 +81,7 @@ define i8 @test6(i8 %x) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp sge i8 [[X:%.*]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 false)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
 
   %lim = icmp sge i8 %x, 1
@@ -96,8 +93,7 @@ define i8 @test7(i8 %x) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp sge i8 [[X:%.*]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 true)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
 
   %lim = icmp sge i8 %x, 1
@@ -112,8 +108,7 @@ define i8 @test8(i8 %x) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp ule i8 [[X:%.*]], 127
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 false)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
 
   %lim = icmp ule i8 %x, 127
@@ -125,8 +120,7 @@ define i8 @test9(i8 %x) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp ule i8 [[X:%.*]], 127
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 true)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
 
   %lim = icmp ule i8 %x, 127
@@ -139,8 +133,7 @@ define i8 @test10(i8 %x) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp ule i8 [[X:%.*]], -128
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 false)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
 
   %lim = icmp ule i8 %x, 128
@@ -152,8 +145,7 @@ define i8 @test11(i8 %x) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp ule i8 [[X:%.*]], -128
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 true)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
 
   %lim = icmp ule i8 %x, 128
@@ -197,8 +189,8 @@ define i8 @test14(i8 %x) {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp sle i8 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 false)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = sub i8 0, [[X]]
+; CHECK-NEXT:    ret i8 [[R1]]
 ;
 
   %lim = icmp sle i8 %x, -1
@@ -210,8 +202,8 @@ define i8 @test15(i8 %x) {
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp sle i8 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 true)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = sub nsw i8 0, [[X]]
+; CHECK-NEXT:    ret i8 [[R1]]
 ;
 
   %lim = icmp sle i8 %x, -1
@@ -224,8 +216,8 @@ define i8 @test16(i8 %x) {
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp sle i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 false)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = sub i8 0, [[X]]
+; CHECK-NEXT:    ret i8 [[R1]]
 ;
 
   %lim = icmp sle i8 %x, 0
@@ -237,8 +229,8 @@ define i8 @test17(i8 %x) {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp sle i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 true)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = sub nsw i8 0, [[X]]
+; CHECK-NEXT:    ret i8 [[R1]]
 ;
 
   %lim = icmp sle i8 %x, 0
@@ -307,8 +299,8 @@ define i8 @test22(i8 %x) {
 ; CHECK-LABEL: @test22(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp uge i8 [[X:%.*]], -128
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 false)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = sub i8 0, [[X]]
+; CHECK-NEXT:    ret i8 [[R1]]
 ;
 
   %lim = icmp uge i8 %x, 128
@@ -320,8 +312,8 @@ define i8 @test23(i8 %x) {
 ; CHECK-LABEL: @test23(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp uge i8 [[X:%.*]], -128
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 true)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = sub nsw i8 0, [[X]]
+; CHECK-NEXT:    ret i8 [[R1]]
 ;
 
   %lim = icmp uge i8 %x, 128
@@ -334,8 +326,8 @@ define i8 @test24(i8 %x) {
 ; CHECK-LABEL: @test24(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp uge i8 [[X:%.*]], -127
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 false)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = sub nsw i8 0, [[X]]
+; CHECK-NEXT:    ret i8 [[R1]]
 ;
 
   %lim = icmp uge i8 %x, 129
@@ -347,8 +339,8 @@ define i8 @test25(i8 %x) {
 ; CHECK-LABEL: @test25(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp uge i8 [[X:%.*]], -127
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 true)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = sub nsw i8 0, [[X]]
+; CHECK-NEXT:    ret i8 [[R1]]
 ;
 
   %lim = icmp uge i8 %x, 129
@@ -363,7 +355,7 @@ define i8 @test26(i8 %x) {
 ; CHECK-LABEL: @test26(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp ne i8 [[X:%.*]], -128
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 false)
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 true)
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lim = icmp ne i8 %x, 128
