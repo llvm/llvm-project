@@ -75,7 +75,7 @@ public:
   /// \p Pred is a CmpInst predicate. If \p UseBlockValue is true, the block
   /// value is also taken into account.
   Tristate getPredicateAt(unsigned Pred, Value *V, Constant *C,
-                          Instruction *CxtI, bool UseBlockValue = false);
+                          Instruction *CxtI, bool UseBlockValue);
 
   /// Determine whether the specified value is known to be a constant at the
   /// specified instruction. Return null if not.

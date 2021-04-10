@@ -1155,8 +1155,8 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
       assert(CondBr->isConditional() && "Threading on unconditional terminator");
 
       LazyValueInfo::Tristate Ret =
-        LVI->getPredicateAt(CondCmp->getPredicate(), CondCmp->getOperand(0),
-                            CondConst, CondBr);
+          LVI->getPredicateAt(CondCmp->getPredicate(), CondCmp->getOperand(0),
+                              CondConst, CondBr, /*UseBlockValue=*/false);
       if (Ret != LazyValueInfo::Unknown) {
         unsigned ToRemove = Ret == LazyValueInfo::True ? 1 : 0;
         unsigned ToKeep = Ret == LazyValueInfo::True ? 0 : 1;
