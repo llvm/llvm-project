@@ -459,7 +459,7 @@ public:
 };
 
 /// This class represents min/max intrinsics.
-class LimitingIntrinsic : public IntrinsicInst {
+class MinMaxIntrinsic : public IntrinsicInst {
 public:
   static bool classof(const IntrinsicInst *I) {
     switch (I->getIntrinsicID()) {
