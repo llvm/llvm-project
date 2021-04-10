@@ -8108,6 +8108,19 @@ public:
   AVRTargetCodeGenInfo(CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
 
+  LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
+                                  const VarDecl *D) const override {
+    // Check if a global/static variable is defined within address space 1
+    // but not constant.
+    LangAS AS = D->getType().getAddressSpace();
+    if (isTargetAddressSpace(AS) && toTargetAddressSpace(AS) == 1 &&
+        !D->getType().isConstQualified())
+      CGM.getDiags().Report(D->getLocation(),
+                            diag::err_verify_nonconst_addrspace)
+          << "__flash";
+    return TargetCodeGenInfo::getGlobalVarAddressSpace(CGM, D);
+  }
+
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
     if (GV->isDeclaration())
