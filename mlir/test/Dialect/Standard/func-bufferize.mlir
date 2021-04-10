@@ -67,3 +67,25 @@ func @unable_to_update_terminator(%arg0: tensor<f32>) -> tensor<f32> {
   ^bb2(%bbarg1: tensor<f32>):
     return %bbarg1 : tensor<f32>
 }
+
+// -----
+
+// There was a bug in func-bufferize pass which caused terminators without
+// ReturnLike and BranchOpInterface traits (e.g. scf.condition) to always
+// fail to legalize even if bufferization doesn't needed.
+// Check the pass succedeed.
+// CHECK: bufferize_while
+// CHECK: scf.while
+// CHECK: scf.condition
+func @bufferize_while(%arg0: i64, %arg1: i64) -> i64 {
+  %c2_i64 = constant 2 : i64
+  %0:2 = scf.while (%arg2 = %arg0) : (i64) -> (i64, i64) {
+    %1 = cmpi slt, %arg2, %arg1 : i64
+    scf.condition(%1) %arg2, %arg2 : i64, i64
+  } do {
+  ^bb0(%arg2: i64, %arg3: i64):
+    %1 = muli %arg3, %c2_i64 : i64
+    scf.yield %1 : i64
+  }
+  return %0#1 : i64
+}
