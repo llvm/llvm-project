@@ -474,11 +474,9 @@ public:
 
     const auto &CR = getConstantRange();
     const auto &OtherCR = Other.getConstantRange();
-    if (ConstantRange::makeSatisfyingICmpRegion(Pred, OtherCR).contains(CR))
+    if (CR.icmp(Pred, OtherCR))
       return ConstantInt::getTrue(Ty);
-    if (ConstantRange::makeSatisfyingICmpRegion(
-            CmpInst::getInversePredicate(Pred), OtherCR)
-            .contains(CR))
+    if (CR.icmp(CmpInst::getInversePredicate(Pred), OtherCR))
       return ConstantInt::getFalse(Ty);
 
     return nullptr;
