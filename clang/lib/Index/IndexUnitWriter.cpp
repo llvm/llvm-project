@@ -200,7 +200,7 @@ bool IndexUnitWriter::addInclude(const FileEntry *Source, unsigned Line,
   int TargetIndex = It->getSecond();
   Files[SourceIndex].Includes.emplace_back(FileInclude{TargetIndex, Line});
   return true;
-};
+}
 
 void IndexUnitWriter::getUnitNameForOutputFile(StringRef FilePath,
                                                SmallVectorImpl<char> &Str) {

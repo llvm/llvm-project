@@ -865,7 +865,7 @@ static void printInitializerExpressionUsingOriginalSyntax(
     E->printPretty(OS, nullptr, PP);
   else
     OS << Text;
-};
+}
 
 /// Traverses the extracted code and rewrites the declaration statements that
 /// declare variables that are used after the extracted code.
