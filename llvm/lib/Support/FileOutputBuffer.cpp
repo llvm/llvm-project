@@ -33,21 +33,20 @@ namespace {
 // with the temporary file on commit().
 class OnDiskBuffer : public FileOutputBuffer {
 public:
-  OnDiskBuffer(StringRef Path, fs::TempFile Temp,
-               std::unique_ptr<fs::mapped_file_region> Buf)
+  OnDiskBuffer(StringRef Path, fs::TempFile Temp, fs::mapped_file_region Buf)
       : FileOutputBuffer(Path), Buffer(std::move(Buf)), Temp(std::move(Temp)) {}
 
-  uint8_t *getBufferStart() const override { return (uint8_t *)Buffer->data(); }
+  uint8_t *getBufferStart() const override { return (uint8_t *)Buffer.data(); }
 
   uint8_t *getBufferEnd() const override {
-    return (uint8_t *)Buffer->data() + Buffer->size();
+    return (uint8_t *)Buffer.data() + Buffer.size();
   }
 
-  size_t getBufferSize() const override { return Buffer->size(); }
+  size_t getBufferSize() const override { return Buffer.size(); }
 
   Error commit() override {
     // Unmap buffer, letting OS flush dirty pages to file on disk.
-    Buffer.reset();
+    Buffer.unmap();
 
     // Atomically replace the existing file with the new one.
     return Temp.keep(FinalPath);
@@ -56,7 +55,7 @@ public:
   ~OnDiskBuffer() override {
     // Close the mapping before deleting the temp file, so that the removal
     // succeeds.
-    Buffer.reset();
+    Buffer.unmap();
     consumeError(Temp.discard());
   }
 
@@ -67,7 +66,7 @@ public:
   }
 
 private:
-  std::unique_ptr<fs::mapped_file_region> Buffer;
+  fs::mapped_file_region Buffer;
   fs::TempFile Temp;
 };
 
@@ -139,9 +138,9 @@ createOnDiskBuffer(StringRef Path, size_t Size, unsigned Mode) {
 
   // Mmap it.
   std::error_code EC;
-  auto MappedFile = std::make_unique<fs::mapped_file_region>(
-      fs::convertFDToNativeFile(File.FD), fs::mapped_file_region::readwrite,
-      Size, 0, EC);
+  fs::mapped_file_region MappedFile =
+      fs::mapped_file_region(fs::convertFDToNativeFile(File.FD),
+                             fs::mapped_file_region::readwrite, Size, 0, EC);
 
   // mmap(2) can fail if the underlying filesystem does not support it.
   // If that happens, we fall back to in-memory buffer as the last resort.

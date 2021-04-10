@@ -1341,6 +1341,8 @@ TEST_F(FileSystemTest, FileMapping) {
   // Map in temp file and add some content
   std::error_code EC;
   StringRef Val("hello there");
+  fs::mapped_file_region MaybeMFR;
+  EXPECT_FALSE(MaybeMFR);
   {
     fs::mapped_file_region mfr(fs::convertFDToNativeFile(FileDescriptor),
                                fs::mapped_file_region::readwrite, Size, 0, EC);
@@ -1348,8 +1350,23 @@ TEST_F(FileSystemTest, FileMapping) {
     std::copy(Val.begin(), Val.end(), mfr.data());
     // Explicitly add a 0.
     mfr.data()[Val.size()] = 0;
-    // Unmap temp file
+
+    // Move it out of the scope and confirm mfr is reset.
+    MaybeMFR = std::move(mfr);
+    EXPECT_FALSE(mfr);
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+    EXPECT_DEATH(mfr.data(), "Mapping failed but used anyway!");
+    EXPECT_DEATH(mfr.size(), "Mapping failed but used anyway!");
+#endif
   }
+
+  // Check that the moved-to region is still valid.
+  EXPECT_EQ(Val, StringRef(MaybeMFR.data()));
+  EXPECT_EQ(Size, MaybeMFR.size());
+
+  // Unmap temp file.
+  MaybeMFR.unmap();
+
   ASSERT_EQ(close(FileDescriptor), 0);
 
   // Map it back in read-only
