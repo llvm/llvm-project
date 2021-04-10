@@ -316,6 +316,85 @@ std::error_code ProfileSymbolList::read(const uint8_t *Data,
   return sampleprof_error::success;
 }
 
+void SampleContextTrimmer::trimAndMergeColdContextProfiles(
+    uint64_t ColdCountThreshold, bool TrimColdContext, bool MergeColdContext) {
+  if (!TrimColdContext && !MergeColdContext)
+    return;
+
+  // Nothing to merge if sample threshold is zero
+  if (ColdCountThreshold == 0)
+    return;
+
+  // Filter the cold profiles from ProfileMap and move them into a tmp
+  // container
+  std::vector<std::pair<StringRef, const FunctionSamples *>> ColdProfiles;
+  for (const auto &I : ProfileMap) {
+    const FunctionSamples &FunctionProfile = I.second;
+    if (FunctionProfile.getTotalSamples() >= ColdCountThreshold)
+      continue;
+    ColdProfiles.emplace_back(I.getKey(), &I.second);
+  }
+
+  // Remove the cold profile from ProfileMap and merge them into BaseProileMap
+  StringMap<FunctionSamples> BaseProfileMap;
+  for (const auto &I : ColdProfiles) {
+    if (MergeColdContext) {
+      auto Ret = BaseProfileMap.try_emplace(
+          I.second->getContext().getNameWithoutContext(), FunctionSamples());
+      FunctionSamples &BaseProfile = Ret.first->second;
+      BaseProfile.merge(*I.second);
+    }
+    ProfileMap.erase(I.first);
+  }
+
+  // Merge the base profiles into ProfileMap;
+  for (const auto &I : BaseProfileMap) {
+    // Filter the cold base profile
+    if (TrimColdContext && I.second.getTotalSamples() < ColdCountThreshold &&
+        ProfileMap.find(I.getKey()) == ProfileMap.end())
+      continue;
+    // Merge the profile if the original profile exists, otherwise just insert
+    // as a new profile
+    auto Ret = ProfileMap.try_emplace(I.getKey(), FunctionSamples());
+    if (Ret.second) {
+      SampleContext FContext(Ret.first->first(), RawContext);
+      FunctionSamples &FProfile = Ret.first->second;
+      FProfile.setContext(FContext);
+      FProfile.setName(FContext.getNameWithoutContext());
+    }
+    FunctionSamples &OrigProfile = Ret.first->second;
+    OrigProfile.merge(I.second);
+  }
+}
+
+void SampleContextTrimmer::canonicalizeContextProfiles() {
+  StringSet<> ProfilesToBeRemoved;
+  // Note that StringMap order is guaranteed to be top-down order,
+  // this makes sure we make room for promoted/merged context in the
+  // map, before we move profiles in the map.
+  for (auto &I : ProfileMap) {
+    FunctionSamples &FProfile = I.second;
+    StringRef ContextStr = FProfile.getNameWithContext();
+    if (I.first() == ContextStr)
+      continue;
+
+    // Use the context string from FunctionSamples to update the keys of
+    // ProfileMap. They can get out of sync after context profile promotion
+    // through pre-inliner.
+    auto Ret = ProfileMap.try_emplace(ContextStr, FProfile);
+    assert(Ret.second && "Conext conflict during canonicalization");
+    FProfile = Ret.first->second;
+
+    // Track the context profile to remove
+    ProfilesToBeRemoved.erase(ContextStr);
+    ProfilesToBeRemoved.insert(I.first());
+  }
+
+  for (auto &I : ProfilesToBeRemoved) {
+    ProfileMap.erase(I.first());
+  }
+}
+
 std::error_code ProfileSymbolList::write(raw_ostream &OS) {
   // Sort the symbols before output. If doing compression.
   // It will make the compression much more effective.

@@ -710,7 +710,7 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
           Remapper ? remapSamples(I->second, *Remapper, Result)
                    : FunctionSamples();
       FunctionSamples &Samples = Remapper ? Remapped : I->second;
-      StringRef FName = Samples.getNameWithContext(true);
+      StringRef FName = Samples.getNameWithContext();
       MergeResult(Result, ProfileMap[FName].merge(Samples, Input.Weight));
       if (Result != sampleprof_error::success) {
         std::error_code EC = make_error_code(Result);
@@ -734,7 +734,8 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
   auto Buffer = getInputFileBuf(ProfileSymbolListFile);
   handleExtBinaryWriter(*Writer, OutputFormat, Buffer.get(), WriterList,
                         CompressAllSections, UseMD5, GenPartialProfile);
-  Writer->write(ProfileMap);
+  if (std::error_code EC = Writer->write(ProfileMap))
+    exitWithErrorCode(std::move(EC));
 }
 
 static WeightedFile parseWeightedFile(const StringRef &WeightedFilename) {
