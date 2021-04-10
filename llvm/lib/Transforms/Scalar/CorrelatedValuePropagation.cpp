@@ -86,6 +86,7 @@ STATISTIC(NumAbs,       "Number of llvm.abs intrinsics removed");
 STATISTIC(NumOverflows, "Number of overflow checks removed");
 STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
+STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
 
 namespace {
 
@@ -608,6 +609,7 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
   if (ArgNos.empty())
     return Changed;
 
+  NumNonNull += ArgNos.size();
   AttributeList AS = CB.getAttributes();
   LLVMContext &Ctx = CB.getContext();
   AS = AS.addParamAttribute(Ctx, ArgNos,
