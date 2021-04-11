@@ -48163,9 +48163,9 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
                            DAG.getNode(X86ISD::SETCC, DL, MVT::i8, X86CC, V));
     }
 
-    // cmpeq(or(X,Y),X) --> cmpeq(and(~X,Y),0)
-    // cmpne(or(X,Y),X) --> cmpne(and(~X,Y),0)
     if (OpVT.isScalarInteger()) {
+      // cmpeq(or(X,Y),X) --> cmpeq(and(~X,Y),0)
+      // cmpne(or(X,Y),X) --> cmpne(and(~X,Y),0)
       auto MatchOrCmpEq = [&](SDValue N0, SDValue N1) {
         if (N0.getOpcode() == ISD::OR && N0->hasOneUse()) {
           if (N0.getOperand(0) == N1)
@@ -48180,6 +48180,24 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
       if (SDValue AndN = MatchOrCmpEq(LHS, RHS))
         return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
       if (SDValue AndN = MatchOrCmpEq(RHS, LHS))
+        return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
+
+      // cmpeq(and(X,Y),Y) --> cmpeq(and(~X,Y),0)
+      // cmpne(and(X,Y),Y) --> cmpne(and(~X,Y),0)
+      auto MatchAndCmpEq = [&](SDValue N0, SDValue N1) {
+        if (N0.getOpcode() == ISD::AND && N0->hasOneUse()) {
+          if (N0.getOperand(0) == N1)
+            return DAG.getNode(ISD::AND, DL, OpVT, N1,
+                               DAG.getNOT(DL, N0.getOperand(1), OpVT));
+          if (N0.getOperand(1) == N1)
+            return DAG.getNode(ISD::AND, DL, OpVT, N1,
+                               DAG.getNOT(DL, N0.getOperand(0), OpVT));
+        }
+        return SDValue();
+      };
+      if (SDValue AndN = MatchAndCmpEq(LHS, RHS))
+        return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
+      if (SDValue AndN = MatchAndCmpEq(RHS, LHS))
         return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
     }
   }
