@@ -119,6 +119,14 @@ concept input_iterator =
   requires { typename _ITER_CONCEPT<_Ip>; } &&
   derived_from<_ITER_CONCEPT<_Ip>, input_iterator_tag>;
 
+// [iterator.concept.forward]
+template<class _Ip>
+concept forward_iterator =
+  input_iterator<_Ip> &&
+  derived_from<_ITER_CONCEPT<_Ip>, forward_iterator_tag> &&
+  incrementable<_Ip> &&
+  sentinel_for<_Ip, _Ip>;
+
 // clang-format on
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)

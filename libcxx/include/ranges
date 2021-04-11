@@ -51,6 +51,9 @@ namespace std::ranges {
   template<class T>
     concept input_range = see below;
 
+  template<class T>
+    concept forward_range = see below;
+
   template <class _Tp>
     concept common_range = see below;
 }
