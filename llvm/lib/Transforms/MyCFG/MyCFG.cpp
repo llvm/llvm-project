@@ -18,7 +18,7 @@
 
 using namespace llvm;
 PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
-  outs() << "===============================================\n";
+  outs() << "XZZ===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in df_iterator:\n";
   for (df_iterator<BasicBlock *> iterator = df_begin(&F.getEntryBlock()),
            IE = df_end(&F.getEntryBlock());
@@ -129,6 +129,8 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
   outs() << "===============================================\n";
   outs() << "Trying to be customized GrapTraits #######################\n";
   GraphHelper<DOTFuncInfo*>::wg(outs(), &CFGInfo);
+
+  outs() << "My update\n";
 
   return PreservedAnalyses::all();
 }
