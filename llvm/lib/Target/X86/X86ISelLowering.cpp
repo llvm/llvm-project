@@ -46961,14 +46961,16 @@ static SDValue foldXor1SetCC(SDNode *N, SelectionDAG &DAG) {
 static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
 
   // If this is SSE1 only convert to FXOR to avoid scalarization.
   if (Subtarget.hasSSE1() && !Subtarget.hasSSE2() && VT == MVT::v4i32) {
-    return DAG.getBitcast(
-        MVT::v4i32, DAG.getNode(X86ISD::FXOR, SDLoc(N), MVT::v4f32,
-                                DAG.getBitcast(MVT::v4f32, N->getOperand(0)),
-                                DAG.getBitcast(MVT::v4f32, N->getOperand(1))));
+    return DAG.getBitcast(MVT::v4i32,
+                          DAG.getNode(X86ISD::FXOR, SDLoc(N), MVT::v4f32,
+                                      DAG.getBitcast(MVT::v4f32, N0),
+                                      DAG.getBitcast(MVT::v4f32, N1)));
   }
 
   if (SDValue Cmp = foldVectorXorShiftIntoCmp(N, DAG, Subtarget))
@@ -46989,17 +46991,16 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   // Fold xor(zext(xor(x,c1)),c2) -> xor(zext(x),xor(zext(c1),c2))
   // Fold xor(truncate(xor(x,c1)),c2) -> xor(truncate(x),xor(truncate(c1),c2))
   // TODO: Under what circumstances could this be performed in DAGCombine?
-  if ((N->getOperand(0).getOpcode() == ISD::TRUNCATE ||
-       N->getOperand(0).getOpcode() == ISD::ZERO_EXTEND) &&
-      N->getOperand(0).getOperand(0).getOpcode() == N->getOpcode() &&
-      isa<ConstantSDNode>(N->getOperand(1)) &&
-      isa<ConstantSDNode>(N->getOperand(0).getOperand(0).getOperand(1))) {
+  if ((N0.getOpcode() == ISD::TRUNCATE || N0.getOpcode() == ISD::ZERO_EXTEND) &&
+      N0.getOperand(0).getOpcode() == N->getOpcode() &&
+      isa<ConstantSDNode>(N1) &&
+      isa<ConstantSDNode>(N0.getOperand(0).getOperand(1))) {
     SDLoc DL(N);
-    SDValue TruncExtSrc = N->getOperand(0).getOperand(0);
+    SDValue TruncExtSrc = N0.getOperand(0);
     SDValue LHS = DAG.getZExtOrTrunc(TruncExtSrc.getOperand(0), DL, VT);
     SDValue RHS = DAG.getZExtOrTrunc(TruncExtSrc.getOperand(1), DL, VT);
     return DAG.getNode(ISD::XOR, DL, VT, LHS,
-                       DAG.getNode(ISD::XOR, DL, VT, RHS, N->getOperand(1)));
+                       DAG.getNode(ISD::XOR, DL, VT, RHS, N1));
   }
 
   if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, Subtarget))
