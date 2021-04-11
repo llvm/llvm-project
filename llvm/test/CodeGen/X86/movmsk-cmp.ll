@@ -1019,8 +1019,8 @@ define i1 @allzeros_v2i64_not(<2 x i64> %a0) {
 ; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; KNL-NEXT:    vptestnmq %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    andb $3, %al
-; KNL-NEXT:    cmpb $3, %al
+; KNL-NEXT:    notb %al
+; KNL-NEXT:    testb $3, %al
 ; KNL-NEXT:    setne %al
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -1840,8 +1840,8 @@ define i1 @allones_v4i32_and1(<4 x i32> %arg) {
 ; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; KNL-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    andb $15, %al
-; KNL-NEXT:    cmpb $15, %al
+; KNL-NEXT:    notb %al
+; KNL-NEXT:    testb $15, %al
 ; KNL-NEXT:    sete %al
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -2156,8 +2156,8 @@ define i1 @allones_v2i64_and1(<2 x i64> %arg) {
 ; KNL-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,1]
 ; KNL-NEXT:    vptestmq %zmm1, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    andb $3, %al
-; KNL-NEXT:    cmpb $3, %al
+; KNL-NEXT:    notb %al
+; KNL-NEXT:    testb $3, %al
 ; KNL-NEXT:    sete %al
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -2254,8 +2254,8 @@ define i1 @allones_v4i64_and1(<4 x i64> %arg) {
 ; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; KNL-NEXT:    vptestmq {{.*}}(%rip){1to8}, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    andb $15, %al
-; KNL-NEXT:    cmpb $15, %al
+; KNL-NEXT:    notb %al
+; KNL-NEXT:    testb $15, %al
 ; KNL-NEXT:    sete %al
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -3161,8 +3161,8 @@ define i1 @allones_v4i32_and4(<4 x i32> %arg) {
 ; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; KNL-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    andb $15, %al
-; KNL-NEXT:    cmpb $15, %al
+; KNL-NEXT:    notb %al
+; KNL-NEXT:    testb $15, %al
 ; KNL-NEXT:    sete %al
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -3477,8 +3477,8 @@ define i1 @allones_v2i64_and4(<2 x i64> %arg) {
 ; KNL-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,4]
 ; KNL-NEXT:    vptestmq %zmm1, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    andb $3, %al
-; KNL-NEXT:    cmpb $3, %al
+; KNL-NEXT:    notb %al
+; KNL-NEXT:    testb $3, %al
 ; KNL-NEXT:    sete %al
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -3575,8 +3575,8 @@ define i1 @allones_v4i64_and4(<4 x i64> %arg) {
 ; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; KNL-NEXT:    vptestmq {{.*}}(%rip){1to8}, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    andb $15, %al
-; KNL-NEXT:    cmpb $15, %al
+; KNL-NEXT:    notb %al
+; KNL-NEXT:    testb $15, %al
 ; KNL-NEXT:    sete %al
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -3999,8 +3999,8 @@ define i1 @movmsk_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; SSE-NEXT:    pcmpgtw %xmm1, %xmm0
 ; SSE-NEXT:    packsswb %xmm0, %xmm0
 ; SSE-NEXT:    pmovmskb %xmm0, %eax
-; SSE-NEXT:    andb $-109, %al
-; SSE-NEXT:    cmpb $-109, %al
+; SSE-NEXT:    notb %al
+; SSE-NEXT:    testb $-109, %al
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;
@@ -4009,8 +4009,8 @@ define i1 @movmsk_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; AVX1OR2-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
 ; AVX1OR2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX1OR2-NEXT:    vpmovmskb %xmm0, %eax
-; AVX1OR2-NEXT:    andb $-109, %al
-; AVX1OR2-NEXT:    cmpb $-109, %al
+; AVX1OR2-NEXT:    notb %al
+; AVX1OR2-NEXT:    testb $-109, %al
 ; AVX1OR2-NEXT:    sete %al
 ; AVX1OR2-NEXT:    retq
 ;
@@ -4020,8 +4020,8 @@ define i1 @movmsk_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    andb $-109, %al
-; KNL-NEXT:    cmpb $-109, %al
+; KNL-NEXT:    notb %al
+; KNL-NEXT:    testb $-109, %al
 ; KNL-NEXT:    sete %al
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -4030,8 +4030,8 @@ define i1 @movmsk_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpcmpgtw %xmm1, %xmm0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    andb $-109, %al
-; SKX-NEXT:    cmpb $-109, %al
+; SKX-NEXT:    notb %al
+; SKX-NEXT:    testb $-109, %al
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    retq
   %cmp = icmp sgt <8 x i16> %x, %y
@@ -4138,8 +4138,8 @@ define i1 @movmsk_and_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; KNL-NEXT:    vpcmpneqq %zmm1, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    andb $3, %al
-; KNL-NEXT:    cmpb $3, %al
+; KNL-NEXT:    notb %al
+; KNL-NEXT:    testb $3, %al
 ; KNL-NEXT:    sete %al
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -4279,8 +4279,8 @@ define i1 @movmsk_and_v2f64(<2 x double> %x, <2 x double> %y) {
 ; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; KNL-NEXT:    vcmplepd %zmm0, %zmm1, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    andb $3, %al
-; KNL-NEXT:    cmpb $3, %al
+; KNL-NEXT:    notb %al
+; KNL-NEXT:    testb $3, %al
 ; KNL-NEXT:    sete %al
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
