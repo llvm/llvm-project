@@ -280,7 +280,8 @@ main:
     # CHECK: v128.bitselect # encoding: [0xfd,0x52]
     v128.bitselect
 
-    # TODO: v128.any_true # encoding: [0xfd,0x53]
+    # CHECK: v128.any_true # encoding: [0xfd,0x53]
+    v128.any_true
 
     # CHECK: v128.load8_lane 32, 1 # encoding: [0xfd,0x54,0x00,0x20,0x01]
     v128.load8_lane 32, 1

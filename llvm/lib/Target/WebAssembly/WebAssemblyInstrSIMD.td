@@ -800,20 +800,6 @@ multiclass SIMDUnaryInt<SDPatternOperator node, string name, bits<32> baseInst> 
   defm "" : SIMDUnary<I64x2, node, name, !add(baseInst, 96)>;
 }
 
-multiclass SIMDReduceVec<Vec vec, SDPatternOperator op, string name, bits<32> simdop> {
-  defm _#vec : SIMD_I<(outs I32:$dst), (ins V128:$vec), (outs), (ins),
-                      [(set I32:$dst, (i32 (op (vec.vt V128:$vec))))],
-                      vec.prefix#"."#name#"\t$dst, $vec", vec.prefix#"."#name,
-                      simdop>;
-}
-
-multiclass SIMDReduce<SDPatternOperator op, string name, bits<32> baseInst> {
-  defm "" : SIMDReduceVec<I8x16, op, name, baseInst>;
-  defm "" : SIMDReduceVec<I16x8, op, name, !add(baseInst, 32)>;
-  defm "" : SIMDReduceVec<I32x4, op, name, !add(baseInst, 64)>;
-  defm "" : SIMDReduceVec<I64x2, op, name, !add(baseInst, 96)>;
-}
-
 // Integer vector negation
 def ivneg : PatFrag<(ops node:$in), (sub immAllZerosV, $in)>;
 
@@ -823,22 +809,44 @@ defm ABS : SIMDUnaryInt<abs, "abs", 96>;
 // Integer negation: neg
 defm NEG : SIMDUnaryInt<ivneg, "neg", 97>;
 
-// Any lane true: any_true
-defm ANYTRUE : SIMDReduce<int_wasm_anytrue, "any_true", 98>;
-
-// All lanes true: all_true
-defm ALLTRUE : SIMDReduce<int_wasm_alltrue, "all_true", 99>;
-
 // Population count: popcnt
 defm POPCNT : SIMDUnary<I8x16, int_wasm_popcnt, "popcnt", 0x62>;
+
+// Any lane true: any_true
+defm ANYTRUE : SIMD_I<(outs I32:$dst), (ins V128:$vec), (outs), (ins), [],
+                      "v128.any_true\t$dst, $vec", "v128.any_true", 0x53>;
+
+foreach vec = IntVecs in
+def : Pat<(int_wasm_anytrue (vec.vt V128:$vec)), (ANYTRUE V128:$vec)>;
+
+// All lanes true: all_true
+multiclass SIMDAllTrue<Vec vec, bits<32> simdop> {
+  defm ALLTRUE_#vec : SIMD_I<(outs I32:$dst), (ins V128:$vec), (outs), (ins),
+                             [(set I32:$dst,
+                               (i32 (int_wasm_alltrue (vec.vt V128:$vec))))],
+                             vec.prefix#".all_true\t$dst, $vec",
+                             vec.prefix#".all_true", simdop>;
+}
+
+defm "" : SIMDAllTrue<I8x16, 0x63>;
+defm "" : SIMDAllTrue<I16x8, 0x83>;
+defm "" : SIMDAllTrue<I32x4, 0xa3>;
+defm "" : SIMDAllTrue<I64x2, 0xc3>;
 
 // Reductions already return 0 or 1, so and 1, setne 0, and seteq 1
 // can be folded out
 foreach reduction =
-  [["int_wasm_anytrue", "ANYTRUE"], ["int_wasm_alltrue", "ALLTRUE"]] in
-foreach vec = IntVecs in {
+  [["int_wasm_anytrue", "ANYTRUE", "I8x16"],
+   ["int_wasm_anytrue", "ANYTRUE", "I16x8"],
+   ["int_wasm_anytrue", "ANYTRUE", "I32x4"],
+   ["int_wasm_anytrue", "ANYTRUE", "I64x2"],
+   ["int_wasm_alltrue", "ALLTRUE_I8x16", "I8x16"],
+   ["int_wasm_alltrue", "ALLTRUE_I16x8", "I16x8"],
+   ["int_wasm_alltrue", "ALLTRUE_I32x4", "I32x4"],
+   ["int_wasm_alltrue", "ALLTRUE_I64x2", "I64x2"]] in {
 defvar intrinsic = !cast<Intrinsic>(reduction[0]);
-defvar inst = !cast<NI>(reduction[1]#"_"#vec);
+defvar inst = !cast<NI>(reduction[1]);
+defvar vec = !cast<Vec>(reduction[2]);
 def : Pat<(i32 (and (i32 (intrinsic (vec.vt V128:$x))), (i32 1))), (inst $x)>;
 def : Pat<(i32 (setne (i32 (intrinsic (vec.vt V128:$x))), (i32 0))), (inst $x)>;
 def : Pat<(i32 (seteq (i32 (intrinsic (vec.vt V128:$x))), (i32 1))), (inst $x)>;
