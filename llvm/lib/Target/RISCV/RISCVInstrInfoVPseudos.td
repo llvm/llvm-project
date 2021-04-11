@@ -1598,16 +1598,14 @@ multiclass VPseudoBinaryW_WV {
 
 multiclass VPseudoBinaryW_WX {
   foreach m = MxList.m[0-5] in
-    defm "_WX" : VPseudoBinary<m.wvrclass, m.wvrclass, GPR, m,
-                               "@earlyclobber $rd">;
+    defm "_WX" : VPseudoBinary<m.wvrclass, m.wvrclass, GPR, m>;
 }
 
 multiclass VPseudoBinaryW_WF {
   foreach m = MxList.m[0-5] in
     foreach f = FPList.fpinfo[0-1] in
       defm "_W" # f.FX : VPseudoBinary<m.wvrclass, m.wvrclass,
-                                       f.fprclass, m,
-                                       "@earlyclobber $rd">;
+                                       f.fprclass, m>;
 }
 
 multiclass VPseudoBinaryV_WV {
