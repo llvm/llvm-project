@@ -22,4 +22,7 @@ using range = std::map<int, int>;
 namespace stdr = std::ranges;
 
 static_assert(std::same_as<stdr::iterator_t<range>, range::iterator>);
+static_assert(stdr::common_range<range>);
+
 static_assert(std::same_as<stdr::iterator_t<range const>, range::const_iterator>);
+static_assert(stdr::common_range<range const>);
