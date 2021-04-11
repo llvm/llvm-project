@@ -6,9 +6,8 @@ declare void @use8(i8)
 ; Basic test
 define i8 @t0(i8 %x) {
 ; CHECK-LABEL: @t0(
-; CHECK-NEXT:    [[BITMASK:%.*]] = shl i8 1, [[X:%.*]]
-; CHECK-NEXT:    [[LOWBITMASK:%.*]] = add i8 [[BITMASK]], -1
-; CHECK-NEXT:    [[MASK:%.*]] = or i8 [[LOWBITMASK]], [[BITMASK]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 7, [[X:%.*]]
+; CHECK-NEXT:    [[MASK:%.*]] = lshr i8 -1, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MASK]]
 ;
   %bitmask = shl i8 1, %x
@@ -20,9 +19,8 @@ define i8 @t0(i8 %x) {
 ; Same, but different bit width
 define i16 @t1(i16 %x) {
 ; CHECK-LABEL: @t1(
-; CHECK-NEXT:    [[BITMASK:%.*]] = shl i16 1, [[X:%.*]]
-; CHECK-NEXT:    [[LOWBITMASK:%.*]] = add i16 [[BITMASK]], -1
-; CHECK-NEXT:    [[MASK:%.*]] = or i16 [[LOWBITMASK]], [[BITMASK]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i16 15, [[X:%.*]]
+; CHECK-NEXT:    [[MASK:%.*]] = lshr i16 -1, [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[MASK]]
 ;
   %bitmask = shl i16 1, %x
@@ -34,9 +32,8 @@ define i16 @t1(i16 %x) {
 ; Vectors
 define <2 x i8> @t2_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @t2_vec(
-; CHECK-NEXT:    [[BITMASK:%.*]] = shl <2 x i8> <i8 1, i8 1>, [[X:%.*]]
-; CHECK-NEXT:    [[LOWBITMASK:%.*]] = add <2 x i8> [[BITMASK]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[MASK:%.*]] = or <2 x i8> [[LOWBITMASK]], [[BITMASK]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i8> <i8 7, i8 7>, [[X:%.*]]
+; CHECK-NEXT:    [[MASK:%.*]] = lshr <2 x i8> <i8 -1, i8 -1>, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[MASK]]
 ;
   %bitmask = shl <2 x i8> <i8 1, i8 1>, %x
@@ -46,9 +43,8 @@ define <2 x i8> @t2_vec(<2 x i8> %x) {
 }
 define <3 x i8> @t3_vec_undef0(<3 x i8> %x) {
 ; CHECK-LABEL: @t3_vec_undef0(
-; CHECK-NEXT:    [[BITMASK:%.*]] = shl <3 x i8> <i8 1, i8 undef, i8 1>, [[X:%.*]]
-; CHECK-NEXT:    [[LOWBITMASK:%.*]] = add <3 x i8> [[BITMASK]], <i8 -1, i8 -1, i8 -1>
-; CHECK-NEXT:    [[MASK:%.*]] = or <3 x i8> [[LOWBITMASK]], [[BITMASK]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <3 x i8> <i8 7, i8 7, i8 7>, [[X:%.*]]
+; CHECK-NEXT:    [[MASK:%.*]] = lshr <3 x i8> <i8 -1, i8 -1, i8 -1>, [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i8> [[MASK]]
 ;
   %bitmask = shl <3 x i8> <i8 1, i8 undef, i8 1>, %x
@@ -58,9 +54,8 @@ define <3 x i8> @t3_vec_undef0(<3 x i8> %x) {
 }
 define <3 x i8> @t4_vec_undef1(<3 x i8> %x) {
 ; CHECK-LABEL: @t4_vec_undef1(
-; CHECK-NEXT:    [[BITMASK:%.*]] = shl <3 x i8> <i8 1, i8 1, i8 1>, [[X:%.*]]
-; CHECK-NEXT:    [[LOWBITMASK:%.*]] = add <3 x i8> [[BITMASK]], <i8 -1, i8 undef, i8 -1>
-; CHECK-NEXT:    [[MASK:%.*]] = or <3 x i8> [[LOWBITMASK]], [[BITMASK]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <3 x i8> <i8 7, i8 7, i8 7>, [[X:%.*]]
+; CHECK-NEXT:    [[MASK:%.*]] = lshr <3 x i8> <i8 -1, i8 -1, i8 -1>, [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i8> [[MASK]]
 ;
   %bitmask = shl <3 x i8> <i8 1, i8 1, i8 1>, %x
@@ -70,9 +65,8 @@ define <3 x i8> @t4_vec_undef1(<3 x i8> %x) {
 }
 define <3 x i8> @t5_vec_undef2(<3 x i8> %x) {
 ; CHECK-LABEL: @t5_vec_undef2(
-; CHECK-NEXT:    [[BITMASK:%.*]] = shl <3 x i8> <i8 1, i8 1, i8 undef>, [[X:%.*]]
-; CHECK-NEXT:    [[LOWBITMASK:%.*]] = add <3 x i8> [[BITMASK]], <i8 -1, i8 undef, i8 -1>
-; CHECK-NEXT:    [[MASK:%.*]] = or <3 x i8> [[LOWBITMASK]], [[BITMASK]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <3 x i8> <i8 7, i8 7, i8 7>, [[X:%.*]]
+; CHECK-NEXT:    [[MASK:%.*]] = lshr <3 x i8> <i8 -1, i8 -1, i8 -1>, [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i8> [[MASK]]
 ;
   %bitmask = shl <3 x i8> <i8 1, i8 1, i8 undef>, %x
@@ -86,8 +80,8 @@ define i8 @t6_extrause0(i8 %x) {
 ; CHECK-LABEL: @t6_extrause0(
 ; CHECK-NEXT:    [[BITMASK:%.*]] = shl i8 1, [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[BITMASK]])
-; CHECK-NEXT:    [[LOWBITMASK:%.*]] = add i8 [[BITMASK]], -1
-; CHECK-NEXT:    [[MASK:%.*]] = or i8 [[LOWBITMASK]], [[BITMASK]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 7, [[X]]
+; CHECK-NEXT:    [[MASK:%.*]] = lshr i8 -1, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MASK]]
 ;
   %bitmask = shl i8 1, %x
@@ -148,9 +142,8 @@ define i8 @t10_nocse_extrause0(i8 %x) {
 ; CHECK-LABEL: @t10_nocse_extrause0(
 ; CHECK-NEXT:    [[BITMASK0:%.*]] = shl i8 1, [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[BITMASK0]])
-; CHECK-NEXT:    [[BITMASK1:%.*]] = shl i8 1, [[X]]
-; CHECK-NEXT:    [[LOWBITMASK:%.*]] = add i8 [[BITMASK0]], -1
-; CHECK-NEXT:    [[MASK:%.*]] = or i8 [[LOWBITMASK]], [[BITMASK1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 7, [[X]]
+; CHECK-NEXT:    [[MASK:%.*]] = lshr i8 -1, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MASK]]
 ;
   %bitmask0 = shl i8 1, %x
@@ -198,8 +191,8 @@ define i8 @t13_nocse_extrause3(i8 %x) {
 ; CHECK-NEXT:    call void @use8(i8 [[BITMASK0]])
 ; CHECK-NEXT:    [[BITMASK1:%.*]] = shl i8 1, [[X]]
 ; CHECK-NEXT:    call void @use8(i8 [[BITMASK1]])
-; CHECK-NEXT:    [[LOWBITMASK:%.*]] = add i8 [[BITMASK0]], -1
-; CHECK-NEXT:    [[MASK:%.*]] = or i8 [[LOWBITMASK]], [[BITMASK1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 7, [[X]]
+; CHECK-NEXT:    [[MASK:%.*]] = lshr i8 -1, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MASK]]
 ;
   %bitmask0 = shl i8 1, %x
@@ -214,10 +207,10 @@ define i8 @t14_nocse_extrause4(i8 %x) {
 ; CHECK-LABEL: @t14_nocse_extrause4(
 ; CHECK-NEXT:    [[BITMASK0:%.*]] = shl i8 1, [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[BITMASK0]])
-; CHECK-NEXT:    [[BITMASK1:%.*]] = shl i8 1, [[X]]
 ; CHECK-NEXT:    [[LOWBITMASK:%.*]] = add i8 [[BITMASK0]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[LOWBITMASK]])
-; CHECK-NEXT:    [[MASK:%.*]] = or i8 [[LOWBITMASK]], [[BITMASK1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 7, [[X]]
+; CHECK-NEXT:    [[MASK:%.*]] = lshr i8 -1, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MASK]]
 ;
   %bitmask0 = shl i8 1, %x
