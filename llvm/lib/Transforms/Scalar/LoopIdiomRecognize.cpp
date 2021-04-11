@@ -2133,6 +2133,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
 
   Intrinsic::ID IntrID = Intrinsic::ctlz;
   Type *Ty = X->getType();
+  unsigned Bitwidth = Ty->getScalarSizeInBits();
 
   TargetTransformInfo::TargetCostKind CostKind =
       TargetTransformInfo::TCK_SizeAndLatency;
@@ -2169,18 +2170,22 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
       /*FMFSource=*/nullptr, XMasked->getName() + ".numleadingzeros");
   Value *XMaskedNumActiveBits = Builder.CreateSub(
       ConstantInt::get(Ty, Ty->getScalarSizeInBits()), XMaskedNumLeadingZeros,
-      XMasked->getName() + ".numactivebits");
+      XMasked->getName() + ".numactivebits", /*HasNUW=*/true,
+      /*HasNSW=*/Bitwidth != 2);
   Value *XMaskedLeadingOnePos =
       Builder.CreateAdd(XMaskedNumActiveBits, Constant::getAllOnesValue(Ty),
-                        XMasked->getName() + ".leadingonepos");
+                        XMasked->getName() + ".leadingonepos", /*HasNUW=*/false,
+                        /*HasNSW=*/Bitwidth > 2);
 
   Value *LoopBackedgeTakenCount = Builder.CreateSub(
-      BitPos, XMaskedLeadingOnePos, CurLoop->getName() + ".backedgetakencount");
+      BitPos, XMaskedLeadingOnePos, CurLoop->getName() + ".backedgetakencount",
+      /*HasNUW=*/true, /*HasNSW=*/true);
   // We know loop's backedge-taken count, but what's loop's trip count?
   // Note that while NUW is always safe, while NSW is only for bitwidths != 2.
   Value *LoopTripCount =
-      Builder.CreateNUWAdd(LoopBackedgeTakenCount, ConstantInt::get(Ty, 1),
-                           CurLoop->getName() + ".tripcount");
+      Builder.CreateAdd(LoopBackedgeTakenCount, ConstantInt::get(Ty, 1),
+                        CurLoop->getName() + ".tripcount", /*HasNUW=*/true,
+                        /*HasNSW=*/Bitwidth != 2);
 
   // Step 2: Compute the recurrence's final value without a loop.
 
@@ -2228,8 +2233,9 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   // The induction itself.
   // Note that while NUW is always safe, while NSW is only for bitwidths != 2.
   Builder.SetInsertPoint(LoopHeaderBB->getTerminator());
-  auto *IVNext = Builder.CreateNUWAdd(IV, ConstantInt::get(Ty, 1),
-                                      IV->getName() + ".next");
+  auto *IVNext =
+      Builder.CreateAdd(IV, ConstantInt::get(Ty, 1), IV->getName() + ".next",
+                        /*HasNUW=*/true, /*HasNSW=*/Bitwidth != 2);
 
   // The loop trip count check.
   auto *IVCheck = Builder.CreateICmpEQ(IVNext, LoopTripCount,
