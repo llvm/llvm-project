@@ -777,7 +777,7 @@ G_DYN_STACKALLOC
 ^^^^^^^^^^^^^^^^
 
 Dynamically realigns the stack pointer to the specified size and alignment.
-An alignment value of `0` or `1` mean no specific alignment.
+An alignment value of `0` or `1` means no specific alignment.
 
 .. code-block:: none
 
@@ -792,7 +792,7 @@ hints for various combines.
 G_ASSERT_SEXT, G_ASSERT_ZEXT
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Signifies that the contents of a register were previously extended from a
+This signifies that the contents of a register were previously extended from a
 smaller type.
 
 The smaller type is denoted using an immediate operand. For scalars, this is the
