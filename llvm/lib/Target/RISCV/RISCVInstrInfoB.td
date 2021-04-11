@@ -827,7 +827,7 @@ def : Pat<(i64 (or (and GPR:$rs2, 0xFFFFFFFF00000000), (srl GPR:$rs1, (i64 32)))
           (PACKU GPR:$rs1, GPR:$rs2)>;
 }
 let Predicates = [HasStdExtZbp] in
-def : Pat<(or (and (shl GPR:$rs2, (XLenVT 8)), 0xFF00),
+def : Pat<(or (and (shl GPR:$rs2, (XLenVT 8)), 0xFFFF),
               (and GPR:$rs1, 0x00FF)),
           (PACKH GPR:$rs1, GPR:$rs2)>;
 

@@ -675,20 +675,20 @@ define i16 @srli_i16(i16 %a) nounwind {
 ;
 ; RV64IB-LABEL: srli_i16:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    slliw a0, a0, 16
-; RV64IB-NEXT:    srliw a0, a0, 22
+; RV64IB-NEXT:    zext.h a0, a0
+; RV64IB-NEXT:    srli a0, a0, 6
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: srli_i16:
 ; RV64IBB:       # %bb.0:
-; RV64IBB-NEXT:    slliw a0, a0, 16
-; RV64IBB-NEXT:    srliw a0, a0, 22
+; RV64IBB-NEXT:    zext.h a0, a0
+; RV64IBB-NEXT:    srli a0, a0, 6
 ; RV64IBB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: srli_i16:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    slliw a0, a0, 16
-; RV64IBP-NEXT:    srliw a0, a0, 22
+; RV64IBP-NEXT:    zext.h a0, a0
+; RV64IBP-NEXT:    srli a0, a0, 6
 ; RV64IBP-NEXT:    ret
   %1 = lshr i16 %a, 6
   ret i16 %1
