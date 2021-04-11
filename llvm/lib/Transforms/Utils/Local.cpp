@@ -738,12 +738,15 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB,
   SmallVector<DominatorTree::UpdateType, 32> Updates;
 
   if (DTU) {
-    for (BasicBlock *PredPredBB : predecessors(PredBB)) {
+    SmallPtrSet<BasicBlock *, 2> PredsOfPredBB(pred_begin(PredBB),
+                                               pred_end(PredBB));
+    Updates.reserve(Updates.size() + 2 * PredsOfPredBB.size() + 1);
+    for (BasicBlock *PredOfPredBB : PredsOfPredBB)
       // This predecessor of PredBB may already have DestBB as a successor.
-      if (!llvm::is_contained(successors(PredPredBB), DestBB))
-        Updates.push_back({DominatorTree::Insert, PredPredBB, DestBB});
-      Updates.push_back({DominatorTree::Delete, PredPredBB, PredBB});
-    }
+      if (PredOfPredBB != PredBB)
+        Updates.push_back({DominatorTree::Insert, PredOfPredBB, DestBB});
+    for (BasicBlock *PredOfPredBB : PredsOfPredBB)
+      Updates.push_back({DominatorTree::Delete, PredOfPredBB, PredBB});
     Updates.push_back({DominatorTree::Delete, PredBB, DestBB});
   }
 
