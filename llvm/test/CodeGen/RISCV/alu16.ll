@@ -127,8 +127,8 @@ define i16 @srli(i16 %a) nounwind {
 ;
 ; RV64I-LABEL: srli:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a0, a0, 16
-; RV64I-NEXT:    srliw a0, a0, 22
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 54
 ; RV64I-NEXT:    ret
   %1 = lshr i16 %a, 6
   ret i16 %1
