@@ -87,7 +87,7 @@ define <16 x i8> @popcnt_v16i8(<16 x i8> %x) {
 
 ; CHECK-LABEL: any_v16i8:
 ; CHECK-NEXT: .functype any_v16i8 (v128) -> (i32){{$}}
-; CHECK-NEXT: i8x16.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare i32 @llvm.wasm.anytrue.v16i8(<16 x i8>)
 define i32 @any_v16i8(<16 x i8> %x) {
@@ -319,7 +319,7 @@ define <8 x i16> @extadd_pairwise_u_v8i16(<16 x i8> %x) {
 
 ; CHECK-LABEL: any_v8i16:
 ; CHECK-NEXT: .functype any_v8i16 (v128) -> (i32){{$}}
-; CHECK-NEXT: i16x8.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare i32 @llvm.wasm.anytrue.v8i16(<8 x i16>)
 define i32 @any_v8i16(<8 x i16> %x) {
@@ -468,7 +468,7 @@ define <4 x i32> @extadd_pairwise_u_v4i32(<8 x i16> %x) {
 
 ; CHECK-LABEL: any_v4i32:
 ; CHECK-NEXT: .functype any_v4i32 (v128) -> (i32){{$}}
-; CHECK-NEXT: i32x4.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare i32 @llvm.wasm.anytrue.v4i32(<4 x i32>)
 define i32 @any_v4i32(<4 x i32> %x) {
@@ -643,7 +643,7 @@ define <2 x i64> @extmul_high_u_v2i64(<4 x i32> %x, <4 x i32> %y) {
 
 ; CHECK-LABEL: any_v2i64:
 ; CHECK-NEXT: .functype any_v2i64 (v128) -> (i32){{$}}
-; CHECK-NEXT: i64x2.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare i32 @llvm.wasm.anytrue.v2i64(<2 x i64>)
 define i32 @any_v2i64(<2 x i64> %x) {
