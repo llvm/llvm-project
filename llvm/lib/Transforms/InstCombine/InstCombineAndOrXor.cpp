@@ -2843,6 +2843,17 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (sinkNotIntoOtherHandOfAndOrOr(I))
     return &I;
 
+  // Improve "get low bit mask up to and including bit X" pattern:
+  //   (1 << X) | ((1 << X) + -1)  -->  -1 l>> (bitwidth(x) - 1 - X)
+  if (match(&I, m_c_Or(m_Add(m_Shl(m_One(), m_Value(X)), m_AllOnes()),
+                       m_Shl(m_One(), m_Deferred(X)))) &&
+      match(&I, m_c_Or(m_OneUse(m_Value()), m_Value()))) {
+    Type *Ty = X->getType();
+    Value *Sub = Builder.CreateSub(
+        ConstantInt::get(Ty, Ty->getScalarSizeInBits() - 1), X);
+    return BinaryOperator::CreateLShr(Constant::getAllOnesValue(Ty), Sub);
+  }
+
   // An or recurrence w/loop invariant step is equivelent to (or start, step)
   PHINode *PN = nullptr;
   Value *Start = nullptr, *Step = nullptr;
