@@ -423,7 +423,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // We don't need this transform if zext.h is supported.
     if (Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbp())
       break;
-    // Optimize (srl (and X, 0xffff), C) -> (srli (slli X, 16), 16 + C).
+    // Optimize (srl (and X, 0xffff), C) ->
+    //          (srli (slli X, (XLen-16), (XLen-16) + C)
     // Taking into account that the 0xffff may have had lower bits unset by
     // SimplifyDemandedBits. This avoids materializing the 0xffff immediate.
     // This pattern occurs when type legalizing i16 right shifts.
@@ -437,14 +438,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         uint64_t Mask = N0.getConstantOperandVal(1);
         Mask |= maskTrailingOnes<uint64_t>(ShAmt);
         if (Mask == 0xffff) {
-          unsigned SLLOpc = Subtarget->is64Bit() ? RISCV::SLLIW : RISCV::SLLI;
-          unsigned SRLOpc = Subtarget->is64Bit() ? RISCV::SRLIW : RISCV::SRLI;
+          unsigned LShAmt = Subtarget->getXLen() - 16;
           SDNode *SLLI =
-              CurDAG->getMachineNode(SLLOpc, DL, VT, N0->getOperand(0),
-                                     CurDAG->getTargetConstant(16, DL, VT));
+              CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0->getOperand(0),
+                                     CurDAG->getTargetConstant(LShAmt, DL, VT));
           SDNode *SRLI = CurDAG->getMachineNode(
-              SRLOpc, DL, VT, SDValue(SLLI, 0),
-              CurDAG->getTargetConstant(16 + ShAmt, DL, VT));
+              RISCV::SRLI, DL, VT, SDValue(SLLI, 0),
+              CurDAG->getTargetConstant(LShAmt + ShAmt, DL, VT));
           ReplaceNode(Node, SRLI);
           return;
         }
