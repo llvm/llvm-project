@@ -1358,8 +1358,7 @@ define i32 @lshr_add_use2_sexts(i1 %x, i1 %y, i32* %p) {
 define i8 @add_like_or_t0(i8 %x) {
 ; CHECK-LABEL: @add_like_or_t0(
 ; CHECK-NEXT:    [[I0:%.*]] = shl i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[I1:%.*]] = or i8 [[I0]], 15
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[I1]], 42
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[I0]], 57
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %i0 = shl i8 %x, 4
@@ -1384,7 +1383,7 @@ define i8 @add_like_or_t2_extrause(i8 %x) {
 ; CHECK-NEXT:    [[I0:%.*]] = shl i8 [[X:%.*]], 4
 ; CHECK-NEXT:    [[I1:%.*]] = or i8 [[I0]], 15
 ; CHECK-NEXT:    call void @use(i8 [[I1]])
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[I1]], 42
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[I0]], 57
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %i0 = shl i8 %x, 4

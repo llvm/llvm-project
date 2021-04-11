@@ -1407,9 +1407,9 @@ define void @PR27626_5(i32 *%a, i32 %x, i32 %y, i32 %z, i64 %n) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 3, i64 5, i64 7, i64 9>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = or i64 [[TMP4]], 3
-; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[OFFSET_IDX]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[TMP4]], 5
 ; CHECK-NEXT:    [[TMP6:%.*]] = or i64 [[TMP4]], 7
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 6
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP4]], 9
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[VEC_IND]], <i64 -1, i64 -1, i64 -1, i64 -1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i64> [[VEC_IND]], <i64 -3, i64 -3, i64 -3, i64 -3>
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[OFFSET_IDX]]
