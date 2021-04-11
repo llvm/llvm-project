@@ -31,9 +31,8 @@ define i1 @trunc_v2i64_v2i1(<2 x i64>) {
 ; AVX512F-LABEL: trunc_v2i64_v2i1:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpsllq $63, %xmm0, %xmm0
-; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    notb %al
 ; AVX512F-NEXT:    testb $3, %al
 ; AVX512F-NEXT:    sete %al
 ; AVX512F-NEXT:    vzeroupper
@@ -42,9 +41,8 @@ define i1 @trunc_v2i64_v2i1(<2 x i64>) {
 ; AVX512BW-LABEL: trunc_v2i64_v2i1:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpsllq $63, %xmm0, %xmm0
-; AVX512BW-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; AVX512BW-NEXT:    vptestnmq %zmm0, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    notb %al
 ; AVX512BW-NEXT:    testb $3, %al
 ; AVX512BW-NEXT:    sete %al
 ; AVX512BW-NEXT:    vzeroupper
@@ -53,9 +51,8 @@ define i1 @trunc_v2i64_v2i1(<2 x i64>) {
 ; AVX512VL-LABEL: trunc_v2i64_v2i1:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpsllq $63, %xmm0, %xmm0
-; AVX512VL-NEXT:    vptestmq %xmm0, %xmm0, %k0
+; AVX512VL-NEXT:    vptestnmq %xmm0, %xmm0, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
-; AVX512VL-NEXT:    notb %al
 ; AVX512VL-NEXT:    testb $3, %al
 ; AVX512VL-NEXT:    sete %al
 ; AVX512VL-NEXT:    retq
@@ -84,9 +81,8 @@ define i1 @trunc_v4i32_v4i1(<4 x i32>) {
 ; AVX512F-LABEL: trunc_v4i32_v4i1:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    notb %al
 ; AVX512F-NEXT:    testb $15, %al
 ; AVX512F-NEXT:    sete %al
 ; AVX512F-NEXT:    vzeroupper
@@ -95,9 +91,8 @@ define i1 @trunc_v4i32_v4i1(<4 x i32>) {
 ; AVX512BW-LABEL: trunc_v4i32_v4i1:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX512BW-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; AVX512BW-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    notb %al
 ; AVX512BW-NEXT:    testb $15, %al
 ; AVX512BW-NEXT:    sete %al
 ; AVX512BW-NEXT:    vzeroupper
@@ -106,9 +101,8 @@ define i1 @trunc_v4i32_v4i1(<4 x i32>) {
 ; AVX512VL-LABEL: trunc_v4i32_v4i1:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX512VL-NEXT:    vptestmd %xmm0, %xmm0, %k0
+; AVX512VL-NEXT:    vptestnmd %xmm0, %xmm0, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
-; AVX512VL-NEXT:    notb %al
 ; AVX512VL-NEXT:    testb $15, %al
 ; AVX512VL-NEXT:    sete %al
 ; AVX512VL-NEXT:    retq
@@ -244,9 +238,8 @@ define i1 @trunc_v4i64_v4i1(<4 x i64>) {
 ; AVX512F-LABEL: trunc_v4i64_v4i1:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpsllq $63, %ymm0, %ymm0
-; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    notb %al
 ; AVX512F-NEXT:    testb $15, %al
 ; AVX512F-NEXT:    sete %al
 ; AVX512F-NEXT:    vzeroupper
@@ -255,9 +248,8 @@ define i1 @trunc_v4i64_v4i1(<4 x i64>) {
 ; AVX512BW-LABEL: trunc_v4i64_v4i1:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpsllq $63, %ymm0, %ymm0
-; AVX512BW-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; AVX512BW-NEXT:    vptestnmq %zmm0, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    notb %al
 ; AVX512BW-NEXT:    testb $15, %al
 ; AVX512BW-NEXT:    sete %al
 ; AVX512BW-NEXT:    vzeroupper
@@ -266,9 +258,8 @@ define i1 @trunc_v4i64_v4i1(<4 x i64>) {
 ; AVX512VL-LABEL: trunc_v4i64_v4i1:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpsllq $63, %ymm0, %ymm0
-; AVX512VL-NEXT:    vptestmq %ymm0, %ymm0, %k0
+; AVX512VL-NEXT:    vptestnmq %ymm0, %ymm0, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
-; AVX512VL-NEXT:    notb %al
 ; AVX512VL-NEXT:    testb $15, %al
 ; AVX512VL-NEXT:    sete %al
 ; AVX512VL-NEXT:    vzeroupper
@@ -875,9 +866,8 @@ define i1 @icmp_v2i64_v2i1(<2 x i64>) {
 ; AVX512F-LABEL: icmp_v2i64_v2i1:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vptestnmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    notb %al
 ; AVX512F-NEXT:    testb $3, %al
 ; AVX512F-NEXT:    sete %al
 ; AVX512F-NEXT:    vzeroupper
@@ -886,9 +876,8 @@ define i1 @icmp_v2i64_v2i1(<2 x i64>) {
 ; AVX512BW-LABEL: icmp_v2i64_v2i1:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512BW-NEXT:    vptestnmq %zmm0, %zmm0, %k0
+; AVX512BW-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    notb %al
 ; AVX512BW-NEXT:    testb $3, %al
 ; AVX512BW-NEXT:    sete %al
 ; AVX512BW-NEXT:    vzeroupper
@@ -931,9 +920,8 @@ define i1 @icmp_v4i32_v4i1(<4 x i32>) {
 ; AVX512F-LABEL: icmp_v4i32_v4i1:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    notb %al
 ; AVX512F-NEXT:    testb $15, %al
 ; AVX512F-NEXT:    sete %al
 ; AVX512F-NEXT:    vzeroupper
@@ -942,9 +930,8 @@ define i1 @icmp_v4i32_v4i1(<4 x i32>) {
 ; AVX512BW-LABEL: icmp_v4i32_v4i1:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512BW-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; AVX512BW-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    notb %al
 ; AVX512BW-NEXT:    testb $15, %al
 ; AVX512BW-NEXT:    sete %al
 ; AVX512BW-NEXT:    vzeroupper
@@ -1110,9 +1097,8 @@ define i1 @icmp_v4i64_v4i1(<4 x i64>) {
 ; AVX512F-LABEL: icmp_v4i64_v4i1:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512F-NEXT:    vptestnmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    notb %al
 ; AVX512F-NEXT:    testb $15, %al
 ; AVX512F-NEXT:    sete %al
 ; AVX512F-NEXT:    vzeroupper
@@ -1121,9 +1107,8 @@ define i1 @icmp_v4i64_v4i1(<4 x i64>) {
 ; AVX512BW-LABEL: icmp_v4i64_v4i1:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512BW-NEXT:    vptestnmq %zmm0, %zmm0, %k0
+; AVX512BW-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    notb %al
 ; AVX512BW-NEXT:    testb $15, %al
 ; AVX512BW-NEXT:    sete %al
 ; AVX512BW-NEXT:    vzeroupper
