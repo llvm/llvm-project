@@ -18,7 +18,11 @@
 
 using namespace llvm;
 PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
-  outs() << "XZZ===============================================\n";
+  if (F.getName() != "main") {
+    return PreservedAnalyses::all();
+  }
+
+  outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in df_iterator:\n";
   for (df_iterator<BasicBlock *> iterator = df_begin(&F.getEntryBlock()),
            IE = df_end(&F.getEntryBlock());
@@ -115,22 +119,6 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
       }
     }
   }
-
-  outs() << "\n\n";
-  outs() << "===============================================\n";
-  outs() << "Trying GrapTraits #######################\n";
-  auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
-  auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
-
-  DOTFuncInfo CFGInfo(&F, BFI, BPI, getMaxFreq(F, BFI));
-  WriteGraph(outs(), &CFGInfo);
-
-  outs() << "\n\n";
-  outs() << "===============================================\n";
-  outs() << "Trying to be customized GrapTraits #######################\n";
-  GraphHelper<DOTFuncInfo*>::wg(outs(), &CFGInfo);
-
-  outs() << "My update\n";
 
   return PreservedAnalyses::all();
 }
