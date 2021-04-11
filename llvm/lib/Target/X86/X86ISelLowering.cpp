@@ -46988,6 +46988,28 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   if (SDValue RV = foldXorTruncShiftIntoCmp(N, DAG))
     return RV;
 
+  // Fold not(iX bitcast(vXi1)) -> (iX bitcast(not(vec))) for legal boolvecs.
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (llvm::isAllOnesConstant(N1) && N0.getOpcode() == ISD::BITCAST &&
+      N0.getOperand(0).getValueType().isVector() &&
+      N0.getOperand(0).getValueType().getVectorElementType() == MVT::i1 &&
+      TLI.isTypeLegal(N0.getOperand(0).getValueType()) && N0.hasOneUse()) {
+    return DAG.getBitcast(VT, DAG.getNOT(SDLoc(N), N0.getOperand(0),
+                                         N0.getOperand(0).getValueType()));
+  }
+
+  // Handle AVX512 mask widening.
+  // Fold not(insert_subvector(undef,sub)) -> insert_subvector(undef,not(sub))
+  if (ISD::isBuildVectorAllOnes(N1.getNode()) && VT.isVector() &&
+      VT.getVectorElementType() == MVT::i1 &&
+      N0.getOpcode() == ISD::INSERT_SUBVECTOR && N0.getOperand(0).isUndef() &&
+      TLI.isTypeLegal(N0.getOperand(1).getValueType())) {
+    return DAG.getNode(
+        ISD::INSERT_SUBVECTOR, SDLoc(N), VT, N0.getOperand(0),
+        DAG.getNOT(SDLoc(N), N0.getOperand(1), N0.getOperand(1).getValueType()),
+        N0.getOperand(2));
+  }
+
   // Fold xor(zext(xor(x,c1)),c2) -> xor(zext(x),xor(zext(c1),c2))
   // Fold xor(truncate(xor(x,c1)),c2) -> xor(truncate(x),xor(truncate(c1),c2))
   // TODO: Under what circumstances could this be performed in DAGCombine?
