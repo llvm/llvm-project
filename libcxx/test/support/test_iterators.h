@@ -632,6 +632,43 @@ template <typename T>
 bool operator!= (const NonThrowingIterator<T>& a, const NonThrowingIterator<T>& b) TEST_NOEXCEPT
 {   return !a.operator==(b); }
 
+#ifdef TEST_SUPPORTS_RANGES
+
+template <class I>
+struct cpp20_input_iterator {
+  using value_type = std::iter_value_t<I>;
+  using difference_type = std::iter_difference_t<I>;
+  using iterator_concept = std::input_iterator_tag;
+
+  cpp20_input_iterator() = default;
+
+  cpp20_input_iterator(cpp20_input_iterator&&) = default;
+  cpp20_input_iterator& operator=(cpp20_input_iterator&&) = default;
+
+  cpp20_input_iterator(cpp20_input_iterator const&) = delete;
+  cpp20_input_iterator& operator=(cpp20_input_iterator const&) = delete;
+
+  explicit constexpr cpp20_input_iterator(I base) : base_(std::move(base)) {}
+
+  constexpr decltype(auto) operator*() const { return *base_; }
+
+  cpp20_input_iterator& operator++() {
+    ++base_;
+    return *this;
+  }
+
+  void operator++(int) { ++base_; }
+
+  [[nodiscard]] I const& base() const& { return base_; }
+
+  [[nodiscard]] I base() && { return std::move(base_); }
+
+private:
+  I base_ = I();
+};
+
+#endif // TEST_STD_VER > 17 && defined(__cpp_lib_concepts)
+
 #undef DELETE_FUNCTION
 
 #endif // ITERATORS_H

@@ -22,6 +22,8 @@ namespace stdr = std::ranges;
 
 static_assert(std::same_as<stdr::iterator_t<std::cmatch>, std::cmatch::iterator>);
 static_assert(stdr::common_range<std::cmatch>);
+static_assert(stdr::input_range<std::cmatch>);
 
 static_assert(std::same_as<stdr::iterator_t<std::cmatch const>, std::cmatch::const_iterator>);
 static_assert(stdr::common_range<std::cmatch const>);
+static_assert(stdr::input_range<std::cmatch const>);
