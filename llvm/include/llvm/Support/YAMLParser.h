@@ -325,10 +325,14 @@ private:
 ///
 /// BaseT must have a ValueT* member named CurrentEntry and a member function
 /// increment() which must set CurrentEntry to 0 to create an end iterator.
-template <class BaseT, class ValueT>
-class basic_collection_iterator
-    : public std::iterator<std::input_iterator_tag, ValueT> {
+template <class BaseT, class ValueT> class basic_collection_iterator {
 public:
+  using iterator_category = std::input_iterator_tag;
+  using value_type = ValueT;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type *;
+  using reference = value_type &;
+
   basic_collection_iterator() = default;
   basic_collection_iterator(BaseT *B) : Base(B) {}
 
