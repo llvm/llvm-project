@@ -404,6 +404,29 @@ class RVVConvToNarrowingSignedBuiltin<string mangled_name>
 class RVVConvToNarrowingUnsignedBuiltin<string mangled_name>
     : RVVConvBuiltin<"Uv", "UvFw", "si", mangled_name>;
 
+let HasMaskedOffOperand = false in {
+  multiclass RVVSignedReductionBuiltin {
+    defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
+                                  [["vs", "vSv", "SvSvvSv"]]>;
+  }
+  multiclass RVVUnsignedReductionBuiltin {
+    defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
+                                  [["vs", "UvUSv", "USvUSvUvUSv"]]>;
+  }
+  multiclass RVVFloatingReductionBuiltin {
+    defm "" : RVVOutOp1BuiltinSet<NAME, "fd",
+                                  [["vs", "vSv", "SvSvvSv"]]>;
+  }
+  multiclass RVVFloatingWidenReductionBuiltin {
+    defm "" : RVVOutOp1BuiltinSet<NAME, "f",
+                                  [["vs", "vSw", "SwSwvSw"]]>;
+  }
+}
+
+multiclass RVVIntReductionBuiltinSet
+    : RVVSignedReductionBuiltin,
+      RVVUnsignedReductionBuiltin;
+
 // For widen operation which has different mangling name.
 multiclass RVVWidenBuiltinSet<string intrinsic_name, string type_range,
                               list<list<string>> suffixes_prototypes> {
@@ -961,3 +984,33 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vfncvt_f_f_w : RVVConvBuiltin<"v", "vw", "f", "vfncvt_f">;
   def vfncvt_rod_f_f_w : RVVConvBuiltin<"v", "vw", "f", "vfncvt_rod_f">;
 }
+
+// 15. Vector Reduction Operations
+// 15.1. Vector Single-Width Integer Reduction Instructions
+defm vredsum : RVVIntReductionBuiltinSet;
+defm vredmaxu : RVVUnsignedReductionBuiltin;
+defm vredmax : RVVSignedReductionBuiltin;
+defm vredminu : RVVUnsignedReductionBuiltin;
+defm vredmin : RVVSignedReductionBuiltin;
+defm vredand : RVVIntReductionBuiltinSet;
+defm vredor : RVVIntReductionBuiltinSet;
+defm vredxor : RVVIntReductionBuiltinSet;
+
+// 15.2. Vector Widening Integer Reduction Instructions
+// Vector Widening Integer Reduction Operations
+let HasMaskedOffOperand = false in {
+  defm vwredsum : RVVOutOp1BuiltinSet<"vwredsum", "csi",
+                                      [["vs", "vSw", "SwSwvSw"]]>;
+  defm vwredsumu : RVVOutOp1BuiltinSet<"vwredsumu", "csi",
+                                       [["vs", "UvUSw", "USwUSwUvUSw"]]>;
+}
+
+// 15.3. Vector Single-Width Floating-Point Reduction Instructions
+defm vfredmax : RVVFloatingReductionBuiltin;
+defm vfredmin : RVVFloatingReductionBuiltin;
+defm vfredsum : RVVFloatingReductionBuiltin;
+defm vfredosum : RVVFloatingReductionBuiltin;
+
+// 15.4. Vector Widening Floating-Point Reduction Instructions
+defm vfwredsum : RVVFloatingWidenReductionBuiltin;
+defm vfwredosum : RVVFloatingWidenReductionBuiltin;
