@@ -244,7 +244,7 @@ public:
       return open(__p.c_str(), __mode);
     }
 #endif
-    inline _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY
     basic_filebuf* __open(int __fd, ios_base::openmode __mode);
 #endif
     basic_filebuf* close();
@@ -574,7 +574,7 @@ basic_filebuf<_CharT, _Traits>::open(const char* __s, ios_base::openmode __mode)
 }
 
 template <class _CharT, class _Traits>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_filebuf<_CharT, _Traits>*
 basic_filebuf<_CharT, _Traits>::__open(int __fd, ios_base::openmode __mode) {
   basic_filebuf<_CharT, _Traits>* __rt = nullptr;
@@ -1326,6 +1326,7 @@ basic_ifstream<_CharT, _Traits>::open(const string& __s, ios_base::openmode __mo
 }
 
 template <class _CharT, class _Traits>
+inline
 void basic_ifstream<_CharT, _Traits>::__open(int __fd,
                                              ios_base::openmode __mode) {
   if (__sb_.__open(__fd, __mode | ios_base::in))
@@ -1539,6 +1540,7 @@ basic_ofstream<_CharT, _Traits>::open(const string& __s, ios_base::openmode __mo
 }
 
 template <class _CharT, class _Traits>
+inline
 void basic_ofstream<_CharT, _Traits>::__open(int __fd,
                                              ios_base::openmode __mode) {
   if (__sb_.__open(__fd, __mode | ios_base::out))
