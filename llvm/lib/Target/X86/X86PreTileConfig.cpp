@@ -6,31 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file Pass to pre-config the shape of AMX register
-/// AMX register need to be configured before use. The shape of AMX register
-/// is encoded in the 1st and 2nd machine operand of AMX pseudo instructions.
-/// The pldtilecfg is to config tile registers. It should dominator all AMX
-/// instructions. The pldtilecfg produce a virtual cfg register and the cfg
-/// register is used by all AMX instructions.
-/// This pass is to find the common dominator of all AMX instructions and
-/// insert the pldtilecfg instruction. Besides the cfg register that pldtilecfg
-/// produces is inserted as the last operand of each AMX instruction. We use
-/// this scheme to model the def-use relationship between AMX config instruction
-/// and other AMX instructions. Below is an example.
+/// \file Pass to pre-config the shapes of AMX registers
+/// AMX register needs to be configured before use. The shapes of AMX register
+/// are encoded in the 1st and 2nd machine operand of AMX pseudo instructions.
 ///
-///                        ----B1----
-///                       /           \
-///                      /             \
-///                    B2               B3
-///    %1:tile = PTILELOADDV        %2:tile = PTILELOADDV
+/// The instruction ldtilecfg is used to config the shapes. It must be reachable
+/// for all variable shapes. ldtilecfg will be inserted more than once if we
+/// cannot find a dominating point for all AMX instructions.
 ///
-///  is transformed to
+/// The configure register is caller saved according to ABI. We need to insert
+/// ldtilecfg again after the call instruction if callee clobbers any AMX
+/// registers.
 ///
-///                            B1
-///                 %25:tilecfg = PLDTILECFG
-///                       /           \
-///                      /             \
-///  %1:tile = PTILELOADDV %25    %2:tile = PTILELOADDV %25
+/// This pass calculates all points that ldtilecfg need to be inserted to and
+/// insert them. It reports error if the reachability conditions aren't met.
 //
 //===----------------------------------------------------------------------===//
 
@@ -38,32 +27,107 @@
 #include "X86InstrBuilder.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/CodeGen/TileShapeInfo.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "tile-pre-config"
+#define ASSERT_VALID_COMPARE                                                   \
+  assert((!MBB || !RHS.MBB || MBB == RHS.MBB) &&                               \
+         "Cannot compare between different BBs");
+#define REPORT_CONFIG_FAIL                                                     \
+  report_fatal_error(                                                          \
+      MF.getName() +                                                           \
+      ": Failed to config tile register, please define the shape earlier");
 
 namespace {
 
-class X86PreTileConfig : public MachineFunctionPass {
-  // context
-  MachineFunction *MF = nullptr;
-  const X86Subtarget *ST = nullptr;
-  const TargetRegisterInfo *TRI;
-  const TargetInstrInfo *TII;
-  MachineDominatorTree *DomTree = nullptr;
-  MachineRegisterInfo *MRI = nullptr;
+struct MIRef {
+  MachineInstr *MI = nullptr;
+  MachineBasicBlock *MBB = nullptr;
+  // A virtual position for instruction that will be inserted after MI.
+  size_t Pos = 0;
+  MIRef() = default;
+  MIRef(MachineBasicBlock *MBB) : MBB(MBB) {
+    for (auto I = MBB->begin(), E = MBB->end(); I != E && I->isPHI();
+         ++I, ++Pos)
+      MI = &*I;
+  }
+  MIRef(MachineInstr *MI, MachineBasicBlock *MBB)
+      : MI(MI), MBB(MBB),
+        Pos(std::distance(MBB->instr_begin(), ++MI->getIterator())) {}
+  MIRef(MachineInstr *MI, MachineBasicBlock *MBB, size_t Pos)
+      : MI(MI), MBB(MBB), Pos(Pos) {}
+  operator bool() const { return MBB != nullptr; }
+  bool operator==(const MIRef &RHS) const {
+    return MI == RHS.MI && MBB == RHS.MBB;
+  }
+  bool operator<(const MIRef &RHS) const {
+    ASSERT_VALID_COMPARE;
+    return Pos < RHS.Pos;
+  }
+  bool operator>(const MIRef &RHS) const {
+    ASSERT_VALID_COMPARE;
+    return Pos > RHS.Pos;
+  }
+};
 
-  MachineInstr *getTileConfigPoint();
+struct BBInfo {
+  MIRef FirstAMX;
+  MIRef LastCall;
+  MIRef LastShape;
+  bool NeedTileCfgLiveIn = false;
+  unsigned ShapeReachedCount = 0;
+};
+
+class X86PreTileConfig : public MachineFunctionPass {
+  MachineRegisterInfo *MRI;
+  const MachineLoopInfo *MLI;
+  SmallSet<MachineInstr *, 8> DefVisited;
+  SmallSet<MachineBasicBlock *, 8> ShapeBBs;
+  DenseMap<MachineBasicBlock *, BBInfo> BBVisitedInfo;
+
+  /// Check if the callee will clobber AMX registers.
+  bool isDestructiveCall(MachineInstr &MI, BitVector UsableRegs) {
+    auto Iter = llvm::find_if(
+        MI.operands(), [](MachineOperand &MO) { return MO.isRegMask(); });
+    if (Iter == MI.operands_end())
+      return false;
+    UsableRegs.clearBitsInMask(Iter->getRegMask());
+    return !UsableRegs.none();
+  }
+
+  /// Check if MI is AMX pseudo instruction.
+  bool isAMXInstruction(MachineInstr &MI) {
+    if (MI.isPHI() || MI.isDebugInstr() || MI.getNumOperands() < 3)
+      return false;
+    MachineOperand &MO = MI.getOperand(0);
+    // We can simply check if it is AMX instruction by its def.
+    // But we should exclude old API which uses physical registers.
+    if (MO.isReg() && MO.getReg().isVirtual() &&
+        MRI->getRegClass(MO.getReg())->getID() == X86::TILERegClassID) {
+      collectShapeInfo(MI);
+      return true;
+    }
+    // PTILESTOREDV is the only exception that doesn't def a AMX register.
+    return MI.getOpcode() == X86::PTILESTOREDV;
+  }
+
+  /// Check if it is an edge from loop bottom to loop head.
+  bool isLoopBackEdge(MachineBasicBlock *Header, MachineBasicBlock *Bottom) {
+    return MLI->isLoopHeader(Header) &&
+           MLI->getLoopFor(Header)->getBottomBlock() == Bottom;
+  }
+
+  /// Collect the shape def information for later use.
+  void collectShapeInfo(MachineInstr &MI);
 
 public:
   X86PreTileConfig() : MachineFunctionPass(ID) {}
@@ -74,10 +138,21 @@ public:
   }
 
   /// X86PreTileConfig analysis usage.
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    AU.addRequired<MachineLoopInfo>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
-  /// Perform register allocation.
-  bool runOnMachineFunction(MachineFunction &mf) override;
+  /// Clear MF related structures.
+  void releaseMemory() override {
+    ShapeBBs.clear();
+    DefVisited.clear();
+    BBVisitedInfo.clear();
+  }
+
+  /// Perform ldtilecfg instructions inserting.
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
   static char ID;
 };
@@ -88,284 +163,199 @@ char X86PreTileConfig::ID = 0;
 
 INITIALIZE_PASS_BEGIN(X86PreTileConfig, "tilepreconfig",
                       "Tile Register Pre-configure", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_END(X86PreTileConfig, "tilepreconfig",
                     "Tile Register Pre-configure", false, false)
 
-void X86PreTileConfig::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesAll();
-  AU.addRequired<MachineDominatorTree>();
-  MachineFunctionPass::getAnalysisUsage(AU);
-}
+void X86PreTileConfig::collectShapeInfo(MachineInstr &MI) {
+  auto RecordShape = [&](MachineInstr *MI, MachineBasicBlock *MBB) {
+    MIRef MIR(MI, MBB);
+    if (BBVisitedInfo[MBB].LastShape < MIR)
+      BBVisitedInfo[MBB].LastShape = MIR;
+    ShapeBBs.insert(MBB);
+  };
 
-static void buildConfigMI(MachineBasicBlock::iterator MI, int FrameIdx,
-                          const TargetInstrInfo *TII, MachineRegisterInfo *MRI,
-                          const X86Subtarget *ST) {
-  auto *MBB = MI->getParent();
-
-  // Zero stack slot.
-  if (ST->hasAVX512()) {
-    Register Zmm = MRI->createVirtualRegister(&X86::VR512RegClass);
-    BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::VPXORDZrr), Zmm)
-        .addReg(Zmm, RegState::Undef)
-        .addReg(Zmm, RegState::Undef);
-    addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::VMOVUPSZmr)),
-                      FrameIdx)
-        .addReg(Zmm);
-  } else if (ST->hasAVX2()) {
-    Register Ymm = MRI->createVirtualRegister(&X86::VR256RegClass);
-    BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::VPXORYrr), Ymm)
-        .addReg(Ymm, RegState::Undef)
-        .addReg(Ymm, RegState::Undef);
-    addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::VMOVUPSYmr)),
-                      FrameIdx)
-        .addReg(Ymm);
-    addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::VMOVUPSYmr)),
-                      FrameIdx, 32)
-        .addReg(Ymm);
-  } else {
-    assert(ST->hasSSE2() && "AMX should assume SSE2 enabled");
-    Register Xmm = MRI->createVirtualRegister(&X86::VR128RegClass);
-    BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::PXORrr), Xmm)
-        .addReg(Xmm, RegState::Undef)
-        .addReg(Xmm, RegState::Undef);
-    addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::MOVUPSmr)),
-                      FrameIdx)
-        .addReg(Xmm);
-    addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::MOVUPSmr)),
-                      FrameIdx, 16)
-        .addReg(Xmm);
-    addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::MOVUPSmr)),
-                      FrameIdx, 32)
-        .addReg(Xmm);
-    addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::MOVUPSmr)),
-                      FrameIdx, 48)
-        .addReg(Xmm);
-  }
-
-  // build psuedo ldtilecfg
-  addFrameReference(BuildMI(*MBB, MI, DebugLoc(), TII->get(X86::LDTILECFG)),
-                    FrameIdx);
-}
-
-static ShapeT getShape(const MachineInstr &MI, MachineRegisterInfo *MRI) {
-  unsigned Opcode = MI.getOpcode();
-  switch (Opcode) {
-  default:
-    llvm_unreachable("Unexpected machine instruction on tile");
-  case X86::PTILELOADDV:
-  case X86::PTDPBSSDV:
-  case X86::PTDPBSUDV:
-  case X86::PTDPBUSDV:
-  case X86::PTDPBUUDV:
-  case X86::PTILEZEROV:
-  case X86::PTDPBF16PSV:
-    MachineOperand &MO1 = const_cast<MachineOperand &>(MI.getOperand(1));
-    MachineOperand &MO2 = const_cast<MachineOperand &>(MI.getOperand(2));
-    ShapeT Shape(&MO1, &MO2, MRI);
-    return Shape;
+  SmallVector<Register, 8> WorkList(
+      {MI.getOperand(1).getReg(), MI.getOperand(2).getReg()});
+  while (!WorkList.empty()) {
+    Register R = WorkList.pop_back_val();
+    MachineInstr *DefMI = MRI->getVRegDef(R);
+    MachineBasicBlock *DefMBB = DefMI->getParent();
+    if (!DefMI || DefMI->isMoveImmediate() || !DefVisited.insert(DefMI).second)
+      continue;
+    if (DefMI->isPHI()) {
+      for (unsigned I = 1; I < DefMI->getNumOperands(); I += 2)
+        if (isLoopBackEdge(DefMBB, DefMI->getOperand(I + 1).getMBB()))
+          RecordShape(DefMI, DefMBB); // In this case, PHI is also a shape def.
+        else
+          WorkList.push_back(DefMI->getOperand(I).getReg());
+    } else {
+      RecordShape(DefMI, DefMBB);
+    }
   }
 }
 
-MachineInstr *X86PreTileConfig::getTileConfigPoint() {
-  DenseMap<Register, ShapeT> PhysShapeInfo;
-  MachineBasicBlock *MBB = nullptr;
-  DenseSet<const MachineInstr *> MIs;
-  for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
-    Register VirtReg = Register::index2VirtReg(i);
-    if (MRI->reg_nodbg_empty(VirtReg))
-      continue;
-    const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
-    if (RC.getID() != X86::TILERegClassID)
-      continue;
+bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  const TargetInstrInfo *TII = ST.getInstrInfo();
+  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+  const TargetRegisterClass *RC = TRI->getRegClass(X86::TILERegClassID);
 
-    // Find the common dominator for all MI that define tile register.
-    for (const MachineOperand &MO : MRI->def_operands(VirtReg)) {
-      if (MO.isUndef())
-        continue;
-      const auto *MI = MO.getParent();
-      // PHI or IMPLICIT_DEF instructiion.
-      // There must be a input tile before PHI instruction.
-      if (MI->isTransient())
-        continue;
-      if (!MBB)
-        MBB = const_cast<MachineBasicBlock *>(MI->getParent());
-      MBB = DomTree->findNearestCommonDominator(
-          MBB, const_cast<MachineBasicBlock *>(MI->getParent()));
+  BitVector AMXRegs(TRI->getNumRegs());
+  for (unsigned I = 0; I < RC->getNumRegs(); I++)
+    AMXRegs.set(X86::TMM0 + I);
 
-      // Collect the instructions that define shape.
-      ShapeT Shape = getShape(*MI, MRI);
-      std::array<MachineOperand *, 2> ShapeMOs = {Shape.getRow(),
-                                                  Shape.getCol()};
-      for (auto *ShapeMO : ShapeMOs) {
-        Register ShapeReg = ShapeMO->getReg();
-        for (const MachineOperand &MO : MRI->def_operands(ShapeReg)) {
-          const auto *ShapeMI = MO.getParent();
-          MIs.insert(ShapeMI);
+  // Iterate MF to collect information.
+  MRI = &MF.getRegInfo();
+  MLI = &getAnalysis<MachineLoopInfo>();
+  SmallSet<MIRef, 8> CfgNeedInsert;
+  SmallVector<MachineBasicBlock *, 8> CfgLiveInBBs;
+  for (auto &MBB : MF) {
+    size_t Pos = 0;
+    for (auto &MI : MBB) {
+      ++Pos;
+      if (isAMXInstruction(MI)) {
+        // If there's call before the AMX, we need to reload tile config.
+        if (BBVisitedInfo[&MBB].LastCall)
+          CfgNeedInsert.insert(BBVisitedInfo[&MBB].LastCall);
+        else // Otherwise, we need tile config to live in this BB.
+          BBVisitedInfo[&MBB].NeedTileCfgLiveIn = true;
+        // Always record the first AMX in case there's shape def after it.
+        if (!BBVisitedInfo[&MBB].FirstAMX)
+          BBVisitedInfo[&MBB].FirstAMX = MIRef(&MI, &MBB, Pos);
+      } else if (MI.isCall() && isDestructiveCall(MI, AMXRegs)) {
+        // Record the call only if the callee clobbers all AMX registers.
+        BBVisitedInfo[&MBB].LastCall = MIRef(&MI, &MBB, Pos);
+      }
+    }
+    if (BBVisitedInfo[&MBB].NeedTileCfgLiveIn) {
+      if (&MBB == &MF.front())
+        CfgNeedInsert.insert(MIRef(&MBB));
+      else
+        CfgLiveInBBs.push_back(&MBB);
+    }
+  }
+
+  // Update NeedTileCfgLiveIn for predecessors.
+  while (!CfgLiveInBBs.empty()) {
+    MachineBasicBlock *MBB = CfgLiveInBBs.pop_back_val();
+    for (auto *Pred : MBB->predecessors()) {
+      if (BBVisitedInfo[Pred].LastCall) {
+        CfgNeedInsert.insert(BBVisitedInfo[Pred].LastCall);
+      } else if (!BBVisitedInfo[Pred].NeedTileCfgLiveIn) {
+        BBVisitedInfo[Pred].NeedTileCfgLiveIn = true;
+        if (Pred == &MF.front())
+          CfgNeedInsert.insert(MIRef(Pred));
+        else
+          CfgLiveInBBs.push_back(Pred);
+      }
+    }
+  }
+
+  // There's no AMX instruction if we didn't find a tile config live in point.
+  if (CfgNeedInsert.empty())
+    return false;
+
+  // Calculate how many times the ShapeBB can reach to this BB.
+  unsigned ShapeBBNum = 0;
+  for (auto *MBB : ShapeBBs) {
+    SmallSet<MachineBasicBlock *, 8> VistedBB;
+    SmallVector<MachineBasicBlock *, 8> WorkList({MBB});
+    while (!WorkList.empty()) {
+      MachineBasicBlock *MBB = WorkList.pop_back_val();
+      ++BBVisitedInfo[MBB].ShapeReachedCount;
+      for (auto *Succ : MBB->successors())
+        if (VistedBB.insert(Succ).second && !isLoopBackEdge(Succ, MBB))
+          WorkList.push_back(Succ);
+    }
+    ++ShapeBBNum;
+  }
+
+  DebugLoc DL;
+  SmallSet<MIRef, 8> VisitedOrInserted;
+  int SS = MF.getFrameInfo().CreateStackObject(
+      ST.getTileConfigSize(), ST.getTileConfigAlignment(), false);
+
+  // Try to insert for the tile config live in points.
+  for (auto I : CfgNeedInsert) {
+    SmallSet<MIRef, 8> InsertPoints;
+    SmallVector<MIRef, 8> WorkList({I});
+    while (!WorkList.empty()) {
+      MIRef I = WorkList.pop_back_val();
+      if (!VisitedOrInserted.count(I)) {
+        if (BBVisitedInfo[I.MBB].ShapeReachedCount == ShapeBBNum) {
+          // If the BB is all shapes reachable, stop sink and try to insert.
+          InsertPoints.insert(I);
+        } else {
+          // Avoid the BB to be multi visited.
+          VisitedOrInserted.insert(I);
+          // We cannot sink it across any AMX instruction.
+          if (BBVisitedInfo[I.MBB].FirstAMX)
+            REPORT_CONFIG_FAIL;
+          // Sink the inserting point along the chain with NeedTileCfgLiveIn =
+          // true when MBB isn't all shapes reachable.
+          for (auto *Succ : I.MBB->successors())
+            if (BBVisitedInfo[Succ].NeedTileCfgLiveIn)
+              WorkList.push_back(MIRef(Succ));
         }
       }
     }
-  }
-  if (!MBB)
-    return nullptr;
-  // This pass is before the pass of eliminating PHI node, so it
-  // is in SSA form.
-  assert(MRI->isSSA() && "Not SSA form in pre-tile config");
-  // Shape def should dominate tile config MBB.
-  //    def s           s1    s2
-  //     / \             \   /
-  //    /   \             \ /
-  //  conf               s3=phi(s1,s2)
-  //                       |
-  //                       c
-  //
-  for (const auto *MI : MIs) {
-    const MachineBasicBlock *ShapeMBB = MI->getParent();
-    if (DomTree->dominates(ShapeMBB, MBB))
-      continue;
-    if (MI->isMoveImmediate())
-      continue;
-    report_fatal_error(MF->getName() + ": Failed to config tile register, "
-                                       "please define the shape earlier");
-  }
 
-  // ldtilecfg should be inserted after the MI that define the shape.
-  MachineBasicBlock::reverse_instr_iterator I, E;
-  for (I = MBB->instr_rbegin(), E = MBB->instr_rend(); I != E; ++I) {
-    auto *MI = &*I;
-    if (MIs.count(MI) && (!MI->isMoveImmediate()))
-      break;
-  }
-  MachineBasicBlock::iterator MII;
-  if (I == E)
-    MII = MBB->getFirstNonPHI();
-  else {
-    MII = MachineBasicBlock::iterator(&*I);
-    MII++;
-  }
-  return &*MII;
-}
-
-static bool isAMXInstruction(MachineBasicBlock::iterator MII) {
-  switch (MII->getOpcode()) {
-  default:
-    return false;
-  case X86::PTILELOADDV:
-  case X86::PTILESTOREDV:
-  case X86::PTDPBSSDV:
-  case X86::PTDPBSUDV:
-  case X86::PTDPBUSDV:
-  case X86::PTDPBUUDV:
-  case X86::PTILEZEROV:
-  case X86::PTDPBF16PSV:
-    return true;
-  }
-}
-
-struct BBInfo {
-  bool HasAMX = false;
-  bool HasCallBeforeAMX = false;
-  bool HasAMXBeforeCallInSuccs = false;
-  MachineInstr *LastCall = nullptr;
-
-  BBInfo() = default;
-  BBInfo(SmallSet<MachineInstr *, 8> &CfgNeedInsert, MachineBasicBlock *MBB,
-         MachineInstr *MI = nullptr) {
-    MachineBasicBlock::iterator MII = MI ? MI->getIterator() : MBB->begin();
-    for (auto E = MBB->end(); MII != E; ++MII) {
-      if (isAMXInstruction(MII)) {
-        HasAMX = true;
-        if (LastCall)
-          CfgNeedInsert.insert(LastCall);
-      } else if (MII->isCall()) {
-        LastCall = &*MII;
-        if (!HasAMX)
-          HasCallBeforeAMX = true;
-      }
-    }
-  }
-};
-
-static void reloadTileConfig(MachineInstr *MI, int FI,
-                             const TargetInstrInfo *TII,
-                             const TargetRegisterInfo *TRI) {
-  SmallSet<MachineInstr *, 8> CfgNeedInsert;
-  SmallVector<MachineBasicBlock *, 8> WorkList;
-  DenseMap<MachineBasicBlock *, BBInfo> BBVisitedInfo;
-
-  MachineBasicBlock *MBB = MI->getParent();
-  BBVisitedInfo[MBB] = BBInfo(CfgNeedInsert, MBB, MI);
-
-  // The entry BB is special, since it always has a ldtilecfg before AMX
-  // instruction. We don't need to check if its predecessor BBs have call.
-  // FIXME: This case happens only when the entry BB is in a loop. We need to
-  // hoist the first tile config point out of the loop in future.
-  BBVisitedInfo[MBB].HasCallBeforeAMX = true;
-
-  WorkList.push_back(MBB);
-  while (!WorkList.empty()) {
-    MBB = WorkList.pop_back_val();
-    for (auto I = MBB->succ_begin(), E = MBB->succ_end(); I != E; ++I) {
-      if (!BBVisitedInfo.count(*I)) {
-        BBVisitedInfo[*I] = BBInfo(CfgNeedInsert, *I);
-        WorkList.push_back(*I);
+    // A given point might be forked due to shape conditions are not met.
+    for (MIRef I : InsertPoints) {
+      // Even MBB is all shapes reachable, we still need to check if there's
+      // AMX that intersects with shapes in the same MBB.
+      if (BBVisitedInfo[I.MBB].FirstAMX &&
+          BBVisitedInfo[I.MBB].FirstAMX < BBVisitedInfo[I.MBB].LastShape)
+        REPORT_CONFIG_FAIL;
+      // Make sure we insert ldtilecfg after the last shape def in MBB.
+      if (I < BBVisitedInfo[I.MBB].LastShape)
+        I = BBVisitedInfo[I.MBB].LastShape;
+      // There're chances the MBB is sunk more than once. Record it to avoid
+      // multi insert.
+      if (VisitedOrInserted.insert(I).second) {
+        auto II = I.MI ? I.MI->getIterator() : I.MBB->instr_begin();
+        addFrameReference(BuildMI(*I.MBB, ++II, DL, TII->get(X86::LDTILECFG)),
+                          SS);
       }
     }
   }
 
-  WorkList.clear();
-  for (auto I : BBVisitedInfo) {
-    WorkList.push_back(I.first);
-    while (!WorkList.empty()) {
-      MBB = WorkList.pop_back_val();
-      if (BBVisitedInfo[MBB].HasCallBeforeAMX ||
-          (!BBVisitedInfo[MBB].HasAMX &&
-           !BBVisitedInfo[MBB].HasAMXBeforeCallInSuccs))
-        continue;
-      for (auto I = MBB->pred_begin(), E = MBB->pred_end(); I != E; ++I) {
-        if (!BBVisitedInfo.count(*I) ||
-            BBVisitedInfo[*I].HasAMXBeforeCallInSuccs)
-          continue;
-        if (BBVisitedInfo[*I].LastCall)
-          CfgNeedInsert.insert(BBVisitedInfo[*I].LastCall);
-        BBVisitedInfo[*I].HasAMXBeforeCallInSuccs = true;
-        WorkList.push_back(*I);
-      }
-    }
+  // Zero stack slot.
+  MachineBasicBlock &MBB = MF.front();
+  MachineInstr *MI = &*MBB.begin();
+  if (ST.hasAVX512()) {
+    Register Zmm = MRI->createVirtualRegister(&X86::VR512RegClass);
+    BuildMI(MBB, MI, DL, TII->get(X86::VPXORDZrr), Zmm)
+        .addReg(Zmm, RegState::Undef)
+        .addReg(Zmm, RegState::Undef);
+    addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::VMOVUPSZmr)), SS)
+        .addReg(Zmm);
+  } else if (ST.hasAVX2()) {
+    Register Ymm = MRI->createVirtualRegister(&X86::VR256RegClass);
+    BuildMI(MBB, MI, DL, TII->get(X86::VPXORYrr), Ymm)
+        .addReg(Ymm, RegState::Undef)
+        .addReg(Ymm, RegState::Undef);
+    addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::VMOVUPSYmr)), SS)
+        .addReg(Ymm);
+    addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::VMOVUPSYmr)), SS, 32)
+        .addReg(Ymm);
+  } else {
+    assert(ST.hasSSE2() && "AMX should assume SSE2 enabled");
+    Register Xmm = MRI->createVirtualRegister(&X86::VR128RegClass);
+    BuildMI(MBB, MI, DL, TII->get(X86::PXORrr), Xmm)
+        .addReg(Xmm, RegState::Undef)
+        .addReg(Xmm, RegState::Undef);
+    addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::MOVUPSmr)), SS)
+        .addReg(Xmm);
+    addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::MOVUPSmr)), SS, 16)
+        .addReg(Xmm);
+    addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::MOVUPSmr)), SS, 32)
+        .addReg(Xmm);
+    addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::MOVUPSmr)), SS, 48)
+        .addReg(Xmm);
   }
 
-  for (auto *I : CfgNeedInsert) {
-    BitVector UsableRegs(TRI->getNumRegs());
-    const TargetRegisterClass *RC = TRI->getRegClass(X86::TILERegClassID);
-    for (unsigned J = 0; J < RC->getNumRegs(); J++)
-      UsableRegs.set(X86::TMM0 + J);
-    for (MachineOperand &CallMO : I->operands()) {
-      if (CallMO.isRegMask())
-        UsableRegs.clearBitsInMask(CallMO.getRegMask());
-    }
-    if (!UsableRegs.none())
-      addFrameReference(BuildMI(*I->getParent(), ++I->getIterator(), DebugLoc(),
-                                TII->get(X86::LDTILECFG)),
-                        FI);
-  }
-}
-
-bool X86PreTileConfig::runOnMachineFunction(MachineFunction &mf) {
-  MF = &mf;
-  MRI = &mf.getRegInfo();
-  ST = &mf.getSubtarget<X86Subtarget>();
-  TRI = ST->getRegisterInfo();
-  TII = mf.getSubtarget().getInstrInfo();
-  DomTree = &getAnalysis<MachineDominatorTree>();
-
-  MachineInstr *MI = getTileConfigPoint();
-  if (!MI)
-    return false;
-  unsigned Size = ST->getTileConfigSize();
-  Align Alignment = ST->getTileConfigAlignment();
-  int SS = mf.getFrameInfo().CreateStackObject(Size, Alignment, false);
-  buildConfigMI(MI, SS, TII, MRI, ST);
-  reloadTileConfig(MI, SS, TII, TRI);
   return true;
 }
 
