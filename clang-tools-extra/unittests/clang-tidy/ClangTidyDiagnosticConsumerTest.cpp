@@ -57,13 +57,13 @@ TEST(ClangTidyDiagnosticConsumer, HandlesSourceRangeHighlight) {
   // int abc;
   // ____^
   // 01234
-  EXPECT_EQ(4, Errors[0].Message.FileOffset);
+  EXPECT_EQ(4ul, Errors[0].Message.FileOffset);
 
   // int abc
   // ~~~~~~~   -> Length 7. (0-length highlights are nonsensical.)
-  EXPECT_EQ(1, Errors[0].Message.Ranges.size());
-  EXPECT_EQ(0, Errors[0].Message.Ranges[0].FileOffset);
-  EXPECT_EQ(7, Errors[0].Message.Ranges[0].Length);
+  EXPECT_EQ(1ul, Errors[0].Message.Ranges.size());
+  EXPECT_EQ(0ul, Errors[0].Message.Ranges[0].FileOffset);
+  EXPECT_EQ(7ul, Errors[0].Message.Ranges[0].Length);
 }
 
 } // namespace test
