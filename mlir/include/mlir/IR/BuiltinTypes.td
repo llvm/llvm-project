@@ -636,9 +636,10 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "TensorType"> {
     Syntax:
 
     ```
-    tensor-type ::= `tensor` `<` dimension-list type `>`
+    tensor-type ::= `tensor` `<` dimension-list type (`,` encoding)? `>`
     dimension-list ::= (dimension `x`)*
     dimension ::= `?` | decimal-literal
+    encoding ::= attribute-value
     ```
 
     Values with tensor type represents aggregate N-dimensional data values, and
@@ -653,6 +654,14 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "TensorType"> {
     as information about the (potentially dynamic) shape of the tensor. The
     [`dim` operation](Dialects/Standard.md#dim-operation) returns the size of a
     dimension from a value of tensor type.
+
+    The `encoding` attribute provides additional information on the tensor.
+    An empty attribute denotes a straightforward tensor without any specific
+    structure. But particular properties, like sparsity or other specific
+    characteristics of the data of the tensor can be encoded through this
+    attribute. The semantics are defined by a type and attribute interface
+    and must be respected by all passes that operate on tensor types.
+    TODO: provide this interface, and document it further.
 
     Note: hexadecimal integer literals are not allowed in tensor type
     declarations to avoid confusion between `0xf32` and `0 x f32`. Zero sizes
@@ -681,18 +690,24 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "TensorType"> {
 
     // Zero-element tensor of f32 type (hexadecimal literals not allowed here).
     tensor<0xf32>
+
+    // Tensor with an encoding attribute (where #ENCODING is a named alias).
+    tensor<?x?xf64, #ENCODING>
     ```
   }];
   let parameters = (ins
     ArrayRefParameter<"int64_t">:$shape,
-    "Type":$elementType
+    "Type":$elementType,
+    "Attribute":$encoding
   );
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "ArrayRef<int64_t>":$shape, "Type":$elementType
+      "ArrayRef<int64_t>":$shape,
+      "Type":$elementType,
+      CArg<"Attribute", "{}">:$encoding
     ), [{
-      return $_get(elementType.getContext(), shape, elementType);
+      return $_get(elementType.getContext(), shape, elementType, encoding);
     }]>
   ];
   let skipDefaultBuilders = 1;

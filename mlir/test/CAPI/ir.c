@@ -438,8 +438,8 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   mlirOperationSetAttributeByName(
       operation, mlirStringRefCreateFromCString("elts"),
       mlirDenseElementsAttrInt32Get(
-          mlirRankedTensorTypeGet(1, eltsShape, mlirIntegerTypeGet(ctx, 32)), 4,
-          eltsData));
+          mlirRankedTensorTypeGet(1, eltsShape, mlirIntegerTypeGet(ctx, 32),
+                                  mlirAttributeGetNull()), 4, eltsData));
   MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
   mlirOpPrintingFlagsElideLargeElementsAttrs(flags, 2);
   mlirOpPrintingFlagsPrintGenericOpForm(flags);
@@ -687,8 +687,8 @@ static int printBuiltinTypes(MlirContext ctx) {
   // CHECK: vector<2x3xf32>
 
   // Ranked tensor type.
-  MlirType rankedTensor =
-      mlirRankedTensorTypeGet(sizeof(shape) / sizeof(int64_t), shape, f32);
+  MlirType rankedTensor = mlirRankedTensorTypeGet(
+      sizeof(shape) / sizeof(int64_t), shape, f32, mlirAttributeGetNull());
   if (!mlirTypeIsATensor(rankedTensor) ||
       !mlirTypeIsARankedTensor(rankedTensor))
     return 16;
@@ -889,24 +889,30 @@ int printBuiltinAttributes(MlirContext ctx) {
   int64_t ints64[] = {0, 1};
   float floats[] = {0.0f, 1.0f};
   double doubles[] = {0.0, 1.0};
+  MlirAttribute encoding = mlirAttributeGetNull();
   MlirAttribute boolElements = mlirDenseElementsAttrBoolGet(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 1)), 2, bools);
+      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 1), encoding),
+      2, bools);
   MlirAttribute uint32Elements = mlirDenseElementsAttrUInt32Get(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeUnsignedGet(ctx, 32)), 2,
-      uints32);
+      mlirRankedTensorTypeGet(2, shape,
+                              mlirIntegerTypeUnsignedGet(ctx, 32), encoding),
+      2, uints32);
   MlirAttribute int32Elements = mlirDenseElementsAttrInt32Get(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 32)), 2,
-      ints32);
+      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 32), encoding),
+      2, ints32);
   MlirAttribute uint64Elements = mlirDenseElementsAttrUInt64Get(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeUnsignedGet(ctx, 64)), 2,
-      uints64);
+      mlirRankedTensorTypeGet(2, shape,
+                              mlirIntegerTypeUnsignedGet(ctx, 64), encoding),
+      2, uints64);
   MlirAttribute int64Elements = mlirDenseElementsAttrInt64Get(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 64)), 2,
-      ints64);
+      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 64), encoding),
+      2, ints64);
   MlirAttribute floatElements = mlirDenseElementsAttrFloatGet(
-      mlirRankedTensorTypeGet(2, shape, mlirF32TypeGet(ctx)), 2, floats);
+      mlirRankedTensorTypeGet(2, shape, mlirF32TypeGet(ctx), encoding),
+      2, floats);
   MlirAttribute doubleElements = mlirDenseElementsAttrDoubleGet(
-      mlirRankedTensorTypeGet(2, shape, mlirF64TypeGet(ctx)), 2, doubles);
+      mlirRankedTensorTypeGet(2, shape, mlirF64TypeGet(ctx), encoding),
+      2, doubles);
 
   if (!mlirAttributeIsADenseElements(boolElements) ||
       !mlirAttributeIsADenseElements(uint32Elements) ||
@@ -943,19 +949,24 @@ int printBuiltinAttributes(MlirContext ctx) {
   // CHECK: dense<{{\[}}[0.000000e+00, 1.000000e+00]]> : tensor<1x2xf64>
 
   MlirAttribute splatBool = mlirDenseElementsAttrBoolSplatGet(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 1)), 1);
+      mlirRankedTensorTypeGet(2, shape,
+                              mlirIntegerTypeGet(ctx, 1), encoding), 1);
   MlirAttribute splatUInt32 = mlirDenseElementsAttrUInt32SplatGet(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 32)), 1);
+      mlirRankedTensorTypeGet(2, shape,
+                              mlirIntegerTypeGet(ctx, 32), encoding), 1);
   MlirAttribute splatInt32 = mlirDenseElementsAttrInt32SplatGet(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 32)), 1);
+      mlirRankedTensorTypeGet(2, shape,
+                              mlirIntegerTypeGet(ctx, 32), encoding), 1);
   MlirAttribute splatUInt64 = mlirDenseElementsAttrUInt64SplatGet(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 64)), 1);
+      mlirRankedTensorTypeGet(2, shape,
+                              mlirIntegerTypeGet(ctx, 64), encoding), 1);
   MlirAttribute splatInt64 = mlirDenseElementsAttrInt64SplatGet(
-      mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 64)), 1);
+      mlirRankedTensorTypeGet(2, shape,
+                              mlirIntegerTypeGet(ctx, 64), encoding), 1);
   MlirAttribute splatFloat = mlirDenseElementsAttrFloatSplatGet(
-      mlirRankedTensorTypeGet(2, shape, mlirF32TypeGet(ctx)), 1.0f);
+      mlirRankedTensorTypeGet(2, shape, mlirF32TypeGet(ctx), encoding), 1.0f);
   MlirAttribute splatDouble = mlirDenseElementsAttrDoubleSplatGet(
-      mlirRankedTensorTypeGet(2, shape, mlirF64TypeGet(ctx)), 1.0);
+      mlirRankedTensorTypeGet(2, shape, mlirF64TypeGet(ctx), encoding), 1.0);
 
   if (!mlirAttributeIsADenseElements(splatBool) ||
       !mlirDenseElementsAttrIsSplat(splatBool) ||
@@ -1024,13 +1035,14 @@ int printBuiltinAttributes(MlirContext ctx) {
   int64_t indices[] = {4, 7};
   int64_t two = 2;
   MlirAttribute indicesAttr = mlirDenseElementsAttrInt64Get(
-      mlirRankedTensorTypeGet(1, &two, mlirIntegerTypeGet(ctx, 64)), 2,
-      indices);
+      mlirRankedTensorTypeGet(1, &two, mlirIntegerTypeGet(ctx, 64), encoding),
+      2, indices);
   MlirAttribute valuesAttr = mlirDenseElementsAttrFloatGet(
-      mlirRankedTensorTypeGet(1, &two, mlirF32TypeGet(ctx)), 2, floats);
+      mlirRankedTensorTypeGet(1, &two, mlirF32TypeGet(ctx), encoding),
+      2, floats);
   MlirAttribute sparseAttr = mlirSparseElementsAttribute(
-      mlirRankedTensorTypeGet(2, shape, mlirF32TypeGet(ctx)), indicesAttr,
-      valuesAttr);
+      mlirRankedTensorTypeGet(2, shape, mlirF32TypeGet(ctx), encoding),
+      indicesAttr, valuesAttr);
   mlirAttributeDump(sparseAttr);
   // CHECK: sparse<[4, 7], [0.000000e+00, 1.000000e+00]> : tensor<1x2xf32>
 
