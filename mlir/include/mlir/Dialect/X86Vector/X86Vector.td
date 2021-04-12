@@ -1,4 +1,4 @@
-//===-- AVX512Ops.td - AVX512 dialect operation definitions *- tablegen -*-===//
+//===-- X86VectorOps.td - X86Vector dialect operation defs -*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,23 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the basic operations for the AVX512 dialect.
+// This file defines the basic operations for the X86Vector dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef AVX512_OPS
-#define AVX512_OPS
+#ifndef X86VECTOR_OPS
+#define X86VECTOR_OPS
 
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 
 //===----------------------------------------------------------------------===//
-// AVX512 dialect definition
+// X86Vector dialect definition
 //===----------------------------------------------------------------------===//
 
-def AVX512_Dialect : Dialect {
-  let name = "avx512";
-  let cppNamespace = "::mlir::avx512";
+def X86Vector_Dialect : Dialect {
+  let name = "x86vector";
+  let cppNamespace = "::mlir::x86vector";
 }
 
 //===----------------------------------------------------------------------===//
@@ -30,10 +30,10 @@ def AVX512_Dialect : Dialect {
 //===----------------------------------------------------------------------===//
 
 class AVX512_Op<string mnemonic, list<OpTrait> traits = []> :
-  Op<AVX512_Dialect, mnemonic, traits> {}
+  Op<X86Vector_Dialect, "avx512." # mnemonic, traits> {}
 
 class AVX512_IntrOp<string mnemonic, int numResults, list<OpTrait> traits = []> :
-  LLVM_IntrOpBase<AVX512_Dialect, "intr." # mnemonic,
+  LLVM_IntrOpBase<X86Vector_Dialect, "avx512.intr." # mnemonic,
                   "x86_avx512_" # !subst(".", "_", mnemonic),
                   [], [], traits, numResults>;
 
@@ -41,7 +41,7 @@ class AVX512_IntrOp<string mnemonic, int numResults, list<OpTrait> traits = []> 
 // instructions in the future.
 class AVX512_IntrOverloadedOp<string mnemonic,
                               list<OpTrait> traits = []> :
-  LLVM_IntrOpBase<AVX512_Dialect, "intr." # mnemonic,
+  LLVM_IntrOpBase<X86Vector_Dialect, "avx512.intr." # mnemonic,
                   "x86_avx512_" # !subst(".", "_", mnemonic),
                   /*list<int> overloadedResults=*/[0],
                   /*list<int> overloadedOperands=*/[],
@@ -267,4 +267,4 @@ def Vp2IntersectQIntrOp : AVX512_IntrOp<"vp2intersect.q.512", 2, [
                    VectorOfLengthAndType<[8], [I64]>:$b);
 }
 
-#endif // AVX512_OPS
+#endif // X86VECTOR_OPS

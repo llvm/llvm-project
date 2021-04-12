@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-scf-to-std -convert-vector-to-llvm="enable-avx512" -convert-std-to-llvm  | \
+// RUN: mlir-opt %s -convert-scf-to-std -convert-vector-to-llvm="enable-x86vector" -convert-std-to-llvm  | \
 // RUN: mlir-translate  --mlir-to-llvmir | \
 // RUN: %lli --entry-function=entry --mattr="avx512bw,avx512vp2intersect" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
@@ -35,11 +35,11 @@
 func @vector_dot(%v_A : vector<8xi64>, %v_B : vector<8xf64>,
                  %v_C : vector<8xi64>, %v_D : vector<8xf64>) -> f64 {
   // Compute intersection of indices.
-  %k0, %k1 = avx512.vp2intersect %v_A, %v_C : vector<8xi64>
+  %k0, %k1 = x86vector.avx512.vp2intersect %v_A, %v_C : vector<8xi64>
 
   // Filter out values without match and compress vector.
-  %p0 = avx512.mask.compress %k0, %v_B : vector<8xf64>
-  %p1 = avx512.mask.compress %k1, %v_D : vector<8xf64>
+  %p0 = x86vector.avx512.mask.compress %k0, %v_B : vector<8xf64>
+  %p1 = x86vector.avx512.mask.compress %k1, %v_D : vector<8xf64>
 
   // Dense vector dot product.
   %acc = std.constant 0.0 : f64
