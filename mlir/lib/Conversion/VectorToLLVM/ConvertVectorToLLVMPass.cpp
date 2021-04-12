@@ -15,8 +15,6 @@
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/AMX/AMXDialect.h"
 #include "mlir/Dialect/AMX/Transforms.h"
-#include "mlir/Dialect/AVX512/AVX512Dialect.h"
-#include "mlir/Dialect/AVX512/Transforms.h"
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
 #include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMArmSVEDialect.h"
@@ -24,6 +22,8 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/X86Vector/Transforms.h"
+#include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
@@ -38,7 +38,7 @@ struct LowerVectorToLLVMPass
     this->enableArmNeon = options.enableArmNeon;
     this->enableArmSVE = options.enableArmSVE;
     this->enableAMX = options.enableAMX;
-    this->enableAVX512 = options.enableAVX512;
+    this->enableX86Vector = options.enableX86Vector;
   }
   // Override explicitly to allow conditional dialect dependence.
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -50,8 +50,8 @@ struct LowerVectorToLLVMPass
       registry.insert<LLVM::LLVMArmSVEDialect>();
     if (enableAMX)
       registry.insert<amx::AMXDialect>();
-    if (enableAVX512)
-      registry.insert<avx512::AVX512Dialect>();
+    if (enableX86Vector)
+      registry.insert<x86vector::X86VectorDialect>();
   }
   void runOnOperation() override;
 };
@@ -115,9 +115,9 @@ void LowerVectorToLLVMPass::runOnOperation() {
     configureAMXLegalizeForExportTarget(target);
     populateAMXLegalizeForLLVMExportPatterns(converter, patterns);
   }
-  if (enableAVX512) {
-    configureAVX512LegalizeForExportTarget(target);
-    populateAVX512LegalizeForLLVMExportPatterns(converter, patterns);
+  if (enableX86Vector) {
+    configureX86VectorLegalizeForExportTarget(target);
+    populateX86VectorLegalizeForLLVMExportPatterns(converter, patterns);
   }
 
   if (failed(

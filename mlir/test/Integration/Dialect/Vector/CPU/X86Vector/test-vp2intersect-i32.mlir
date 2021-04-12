@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-scf-to-std -convert-vector-to-llvm="enable-avx512" -convert-std-to-llvm  | \
+// RUN: mlir-opt %s -convert-scf-to-std -convert-vector-to-llvm="enable-x86vector" -convert-std-to-llvm  | \
 // RUN: mlir-translate  --mlir-to-llvmir | \
 // RUN: %lli --entry-function=entry --mattr="avx512bw,avx512vp2intersect" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
@@ -40,7 +40,7 @@ func @entry() -> i32 {
   vector.print %w9 : vector<16xi32>
   // CHECK: ( 1, 1, 1, 1, 2, 1, 1, -219, 12, 12, 12, 0, 0, 0, 1, 0 )
 
-  %k1, %k2 = avx512.vp2intersect %v9, %w9 : vector<16xi32>
+  %k1, %k2 = x86vector.avx512.vp2intersect %v9, %w9 : vector<16xi32>
 
   vector.print %k1 : vector<16xi1>
   // CHECK: ( 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1 )
