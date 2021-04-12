@@ -30,15 +30,15 @@ static inline long double nextafter(long double from, long double to) {
     return to;
 
   // Convert pseudo subnormal number to normal number.
-  if (fromBits.implicitBit == 1 && fromBits.exponent == 0) {
-    fromBits.exponent = 1;
+  if (fromBits.encoding.implicitBit == 1 && fromBits.encoding.exponent == 0) {
+    fromBits.encoding.exponent = 1;
   }
 
   using UIntType = FPBits::UIntType;
   constexpr UIntType signVal = (UIntType(1) << 79);
   constexpr UIntType mantissaMask =
       (UIntType(1) << MantissaWidth<long double>::value) - 1;
-  auto intVal = fromBits.bitsAsUInt();
+  UIntType intVal = fromBits.uintval();
   if (from < 0.0l) {
     if (from > to) {
       if (intVal == (signVal + FPBits::maxSubnormal)) {
@@ -46,11 +46,11 @@ static inline long double nextafter(long double from, long double to) {
         // dealing with the implicit bit.
         intVal = signVal + FPBits::minNormal;
       } else if ((intVal & mantissaMask) == mantissaMask) {
-        fromBits.mantissa = 0;
+        fromBits.encoding.mantissa = 0;
         // Incrementing exponent might overflow the value to infinity,
         // which is what is expected. Since NaNs are handling separately,
         // it will never overflow "beyond" infinity.
-        ++fromBits.exponent;
+        ++fromBits.encoding.exponent;
         return fromBits;
       } else {
         ++intVal;
@@ -61,10 +61,10 @@ static inline long double nextafter(long double from, long double to) {
         // dealing with the implicit bit.
         intVal = signVal + FPBits::maxSubnormal;
       } else if ((intVal & mantissaMask) == 0) {
-        fromBits.mantissa = mantissaMask;
+        fromBits.encoding.mantissa = mantissaMask;
         // from == 0 is handled separately so decrementing the exponent will not
         // lead to underflow.
-        --fromBits.exponent;
+        --fromBits.encoding.exponent;
         return fromBits;
       } else {
         --intVal;
@@ -80,10 +80,10 @@ static inline long double nextafter(long double from, long double to) {
       if (intVal == FPBits::minNormal) {
         intVal = FPBits::maxSubnormal;
       } else if ((intVal & mantissaMask) == 0) {
-        fromBits.mantissa = mantissaMask;
+        fromBits.encoding.mantissa = mantissaMask;
         // from == 0 is handled separately so decrementing the exponent will not
         // lead to underflow.
-        --fromBits.exponent;
+        --fromBits.encoding.exponent;
         return fromBits;
       } else {
         --intVal;
@@ -92,11 +92,11 @@ static inline long double nextafter(long double from, long double to) {
       if (intVal == FPBits::maxSubnormal) {
         intVal = FPBits::minNormal;
       } else if ((intVal & mantissaMask) == mantissaMask) {
-        fromBits.mantissa = 0;
+        fromBits.encoding.mantissa = 0;
         // Incrementing exponent might overflow the value to infinity,
         // which is what is expected. Since NaNs are handling separately,
         // it will never overflow "beyond" infinity.
-        ++fromBits.exponent;
+        ++fromBits.encoding.exponent;
         return fromBits;
       } else {
         ++intVal;
