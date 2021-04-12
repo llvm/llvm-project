@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %f18 -fopenmp
+! RUN: %S/test_symbols.sh %s %t %flang_fc1 -fopenmp
 
 ! 1.4.1 Structure of the OpenMP Memory Model
 
