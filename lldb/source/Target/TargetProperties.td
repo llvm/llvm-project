@@ -239,6 +239,10 @@ let Definition = "process" in {
   def VirtualAddressableBits: Property<"virtual-addressable-bits", "UInt64">,
     DefaultUnsignedValue<0>,
     Desc<"The number of bits used for addressing. If the value is 39, then bits 0..38 are used for addressing. The default value of 0 means unspecified.">;
+  def FollowForkMode: Property<"follow-fork-mode", "Enum">,
+    DefaultEnumValue<"eFollowParent">,
+    EnumValues<"OptionEnumValues(g_follow_fork_mode_values)">,
+    Desc<"Debugger's behavior upon fork or vfork.">;
 }
 
 let Definition = "platform" in {
