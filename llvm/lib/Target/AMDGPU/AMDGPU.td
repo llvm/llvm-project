@@ -731,6 +731,12 @@ def FeaturePackedTID : SubtargetFeature<"packed-tid",
   "Workitem IDs are packed into v0 at kernel launch"
 >;
 
+def FeatureArchitectedFlatScratch : SubtargetFeature<"architected-flat-scratch",
+  "HasArchitectedFlatScratch",
+  "true",
+  "Flat Scratch register is a readonly SPI initialized architected register"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
