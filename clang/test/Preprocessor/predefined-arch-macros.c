@@ -1298,7 +1298,7 @@
 // CHECK_ICL_M32: #define __BMI2__ 1
 // CHECK_ICL_M32: #define __BMI__ 1
 // CHECK_ICL_M32: #define __CLFLUSHOPT__ 1
-// CHECK_ICL_M32: #define __CLWB__ 1
+// CHECK_ICL_M32-NOT: #define __CLWB__ 1
 // CHECK_ICL_M32: #define __F16C__ 1
 // CHECK_ICL_M32: #define __FMA__ 1
 // CHECK_ICL_M32: #define __GFNI__ 1
@@ -1355,7 +1355,7 @@
 // CHECK_ICL_M64: #define __BMI2__ 1
 // CHECK_ICL_M64: #define __BMI__ 1
 // CHECK_ICL_M64: #define __CLFLUSHOPT__ 1
-// CHECK_ICL_M64: #define __CLWB__ 1
+// CHECK_ICL_M64-NOT: #define __CLWB__ 1
 // CHECK_ICL_M64: #define __F16C__ 1
 // CHECK_ICL_M64: #define __FMA__ 1
 // CHECK_ICL_M64: #define __GFNI__ 1
