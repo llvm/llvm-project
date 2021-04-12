@@ -1103,6 +1103,12 @@ public:
           linalgOp.indexing_maps().getAsValueRange<AffineMapAttr>());
       fusedIndexMaps.erase(std::next(fusedIndexMaps.begin(), operand.index()));
 
+      // Check if the operation shapes to loops map is computable.
+      if (!inversePermutation(concatAffineMaps(fusedIndexMaps))) {
+        return rewriter.notifyMatchFailure(
+            linalgOp, "fused op loop bound computation failed");
+      }
+
       // The operands list is same as the linalgOp with the argument for
       // constant index dropped.
       SmallVector<Value, 4> fusedOperands(linalgOp.getInputs());
