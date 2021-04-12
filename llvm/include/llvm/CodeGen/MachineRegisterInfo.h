@@ -970,10 +970,17 @@ public:
   /// when incrementing.
   template <bool ReturnUses, bool ReturnDefs, bool SkipDebug, bool ByOperand,
             bool ByInstr, bool ByBundle>
-  class defusechain_iterator : public std::iterator<std::forward_iterator_tag,
-                                                    MachineOperand, ptrdiff_t> {
+  class defusechain_iterator {
     friend class MachineRegisterInfo;
 
+  public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = MachineOperand;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
+  private:
     MachineOperand *Op = nullptr;
 
     explicit defusechain_iterator(MachineOperand *op) : Op(op) {
@@ -1008,11 +1015,6 @@ public:
     }
 
   public:
-    using reference = std::iterator<std::forward_iterator_tag, MachineOperand,
-                                    ptrdiff_t>::reference;
-    using pointer = std::iterator<std::forward_iterator_tag, MachineOperand,
-                                  ptrdiff_t>::pointer;
-
     defusechain_iterator() = default;
 
     bool operator==(const defusechain_iterator &x) const {
@@ -1074,12 +1076,19 @@ public:
   /// returns defs.  If neither are true then you are silly and it always
   /// returns end().  If SkipDebug is true it skips uses marked Debug
   /// when incrementing.
-  template<bool ReturnUses, bool ReturnDefs, bool SkipDebug,
-           bool ByOperand, bool ByInstr, bool ByBundle>
-  class defusechain_instr_iterator
-    : public std::iterator<std::forward_iterator_tag, MachineInstr, ptrdiff_t> {
+  template <bool ReturnUses, bool ReturnDefs, bool SkipDebug, bool ByOperand,
+            bool ByInstr, bool ByBundle>
+  class defusechain_instr_iterator {
     friend class MachineRegisterInfo;
 
+  public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = MachineInstr;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
+  private:
     MachineOperand *Op = nullptr;
 
     explicit defusechain_instr_iterator(MachineOperand *op) : Op(op) {
@@ -1114,11 +1123,6 @@ public:
     }
 
   public:
-    using reference = std::iterator<std::forward_iterator_tag,
-                                    MachineInstr, ptrdiff_t>::reference;
-    using pointer = std::iterator<std::forward_iterator_tag,
-                                  MachineInstr, ptrdiff_t>::pointer;
-
     defusechain_instr_iterator() = default;
 
     bool operator==(const defusechain_instr_iterator &x) const {

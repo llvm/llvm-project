@@ -286,8 +286,7 @@ void DOTGraphTraits<DOTFuncInfo *>::computeHiddenNodes(const Function *F) {
   };
   /// The post order traversal iteration is done to know the status of
   /// isHiddenBasicBlock for all the successors on the current BB.
-  for_each(po_begin(&F->getEntryBlock()), po_end(&F->getEntryBlock()),
-           evaluateBB);
+  llvm::for_each(post_order(&F->getEntryBlock()), evaluateBB);
 }
 
 bool DOTGraphTraits<DOTFuncInfo *>::isNodeHidden(const BasicBlock *Node,
