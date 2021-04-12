@@ -740,7 +740,6 @@ def ProcessorFeatures {
                                                   FeatureVPCLMULQDQ,
                                                   FeatureVPOPCNTDQ,
                                                   FeatureGFNI,
-                                                  FeatureCLWB,
                                                   FeatureRDPID,
                                                   FeatureFSRM];
   list<SubtargetFeature> ICLTuning = CNLTuning;
@@ -749,6 +748,7 @@ def ProcessorFeatures {
 
   // Icelake Server
   list<SubtargetFeature> ICXAdditionalFeatures = [FeaturePCONFIG,
+                                                  FeatureCLWB,
                                                   FeatureWBNOINVD];
   list<SubtargetFeature> ICXTuning = CNLTuning;
   list<SubtargetFeature> ICXFeatures =
@@ -756,6 +756,7 @@ def ProcessorFeatures {
 
   //Tigerlake
   list<SubtargetFeature> TGLAdditionalFeatures = [FeatureVP2INTERSECT,
+                                                  FeatureCLWB,
                                                   FeatureMOVDIRI,
                                                   FeatureMOVDIR64B,
                                                   FeatureSHSTK];
