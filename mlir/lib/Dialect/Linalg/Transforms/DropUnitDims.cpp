@@ -177,6 +177,10 @@ struct FoldUnitDimLoops : public OpRewritePattern<GenericOpTy> {
   using OpRewritePattern<GenericOpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(GenericOpTy op,
                                 PatternRewriter &rewriter) const override {
+    // TODO: remove once index ops are supported.
+    if (op.hasIndexSemantics())
+      return failure();
+
     SmallVector<AffineMap, 4> indexingMaps = op.getIndexingMaps();
     if (indexingMaps.empty())
       return failure();
@@ -321,6 +325,10 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOpTy> {
   using OpRewritePattern<GenericOpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(GenericOpTy op,
                                 PatternRewriter &rewriter) const override {
+    // TODO: remove once index ops are supported.
+    if (op.hasIndexSemantics())
+      return failure();
+
     if (!op.hasTensorSemantics())
       return failure();
 

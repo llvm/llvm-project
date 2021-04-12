@@ -377,3 +377,18 @@ func @pointwise(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memre
 //       TILE-234:     for
 //   TILE-234-NOT:   for
 //       TILE-234:       linalg.generic
+
+// TILE-2-LABEL: func @index_op
+//   TILE-2-NOT:   for
+//       TILE-2:   linalg.generic
+func @index_op(%arg0: memref<?x?xindex>) {
+  linalg.generic {
+    indexing_maps = [affine_map<(i, j) -> (i, j)>],
+    iterator_types = ["parallel", "parallel"]}
+  outs(%arg0 : memref<?x?xindex>) {
+  ^bb0(%arg1: index):   // no predecessors
+    %0 = linalg.index 1 : index
+    linalg.yield %0 : index
+  }
+  return
+}
