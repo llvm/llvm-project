@@ -329,11 +329,10 @@ struct FragmentCompiler {
     }
 #endif
     // Make sure exactly one of the Sources is set.
-    unsigned SourceCount = External.File.hasValue() +
-                           External.Server.hasValue() + *External.IsNone;
+    unsigned SourceCount =
+        External.File.hasValue() + External.Server.hasValue();
     if (SourceCount != 1) {
-      diag(Error, "Exactly one of File, Server or None must be set.",
-           BlockRange);
+      diag(Error, "Exactly one of File or Server must be set.", BlockRange);
       return;
     }
     Config::ExternalIndexSpec Spec;
@@ -347,29 +346,20 @@ struct FragmentCompiler {
       if (!AbsPath)
         return;
       Spec.Location = std::move(*AbsPath);
-    } else {
-      assert(*External.IsNone);
-      Spec.Kind = Config::ExternalIndexSpec::None;
     }
-    if (Spec.Kind != Config::ExternalIndexSpec::None) {
-      // Make sure MountPoint is an absolute path with forward slashes.
-      if (!External.MountPoint)
-        External.MountPoint.emplace(FragmentDirectory);
-      if ((**External.MountPoint).empty()) {
-        diag(Error, "A mountpoint is required.", BlockRange);
-        return;
-      }
-      auto AbsPath = makeAbsolute(std::move(*External.MountPoint), "MountPoint",
-                                  llvm::sys::path::Style::posix);
-      if (!AbsPath)
-        return;
-      Spec.MountPoint = std::move(*AbsPath);
+    // Make sure MountPoint is an absolute path with forward slashes.
+    if (!External.MountPoint)
+      External.MountPoint.emplace(FragmentDirectory);
+    if ((**External.MountPoint).empty()) {
+      diag(Error, "A mountpoint is required.", BlockRange);
+      return;
     }
+    auto AbsPath = makeAbsolute(std::move(*External.MountPoint), "MountPoint",
+                                llvm::sys::path::Style::posix);
+    if (!AbsPath)
+      return;
+    Spec.MountPoint = std::move(*AbsPath);
     Out.Apply.push_back([Spec(std::move(Spec))](const Params &P, Config &C) {
-      if (Spec.Kind == Config::ExternalIndexSpec::None) {
-        C.Index.External.reset();
-        return;
-      }
       if (P.Path.empty() || !pathStartsWith(Spec.MountPoint, P.Path,
                                             llvm::sys::path::Style::posix))
         return;
