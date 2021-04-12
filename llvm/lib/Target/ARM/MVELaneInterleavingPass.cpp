@@ -123,17 +123,20 @@ static bool isProfitableToInterleave(SmallSetVector<Instruction *, 4> &Exts,
   //  T=VLDRH.16; A=VMOVNB T; B=VMOVNT T
   // But those VMOVL may be folded into a VMULL.
 
-  // But expensive extends/truncs are always good to remove.
-  for (auto *E : Exts)
-    if (!isa<LoadInst>(E->getOperand(0))) {
+  // But expensive extends/truncs are always good to remove. FPExts always
+  // involve extra VCVT's so are always considered to be beneficial to convert.
+  for (auto *E : Exts) {
+    if (isa<FPExtInst>(E) || !isa<LoadInst>(E->getOperand(0))) {
       LLVM_DEBUG(dbgs() << "Beneficial due to " << *E << "\n");
       return true;
     }
-  for (auto *T : Truncs)
+  }
+  for (auto *T : Truncs) {
     if (T->hasOneUse() && !isa<StoreInst>(*T->user_begin())) {
       LLVM_DEBUG(dbgs() << "Beneficial due to " << *T << "\n");
       return true;
     }
+  }
 
   // Otherwise, we know we have a load(ext), see if any of the Extends are a
   // vmull. This is a simple heuristic and certainly not perfect.
@@ -172,6 +175,7 @@ static bool tryInterleave(Instruction *Start,
     switch (I->getOpcode()) {
     // Truncs
     case Instruction::Trunc:
+    case Instruction::FPTrunc:
       if (Truncs.count(I))
         continue;
       Truncs.insert(I);
@@ -181,6 +185,7 @@ static bool tryInterleave(Instruction *Start,
     // Extend leafs
     case Instruction::SExt:
     case Instruction::ZExt:
+    case Instruction::FPExt:
       if (Exts.count(I))
         continue;
       for (auto *Use : I->users())
@@ -196,6 +201,9 @@ static bool tryInterleave(Instruction *Start,
     case Instruction::LShr:
     case Instruction::Shl:
     case Instruction::ICmp:
+    case Instruction::FCmp:
+    case Instruction::FAdd:
+    case Instruction::FMul:
     case Instruction::Select:
       if (Ops.count(I))
         continue;
@@ -297,9 +305,11 @@ static bool tryInterleave(Instruction *Start,
     LLVM_DEBUG(dbgs() << "Replacing ext " << *I << "\n");
     Builder.SetInsertPoint(I);
     Value *Shuffle = Builder.CreateShuffleVector(I->getOperand(0), LeafMask);
+    bool FPext = isa<FPExtInst>(I);
     bool Sext = isa<SExtInst>(I);
-    Value *Ext = Sext ? Builder.CreateSExt(Shuffle, I->getType())
-                      : Builder.CreateZExt(Shuffle, I->getType());
+    Value *Ext = FPext ? Builder.CreateFPExt(Shuffle, I->getType())
+                       : Sext ? Builder.CreateSExt(Shuffle, I->getType())
+                              : Builder.CreateZExt(Shuffle, I->getType());
     I->replaceAllUsesWith(Ext);
     LLVM_DEBUG(dbgs() << "  with " << *Shuffle << "\n");
   }

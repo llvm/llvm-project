@@ -360,16 +360,14 @@ define void @both_8(half* nocapture readonly %x, half* noalias nocapture %y) {
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
 ; CHECK-NEXT:  .LBB7_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u32 q1, [r0, #8]
-; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
+; CHECK-NEXT:    vldrh.u16 q1, [r0], #16
+; CHECK-NEXT:    vcvtb.f32.f16 q2, q1
+; CHECK-NEXT:    vcvtt.f32.f16 q1, q1
+; CHECK-NEXT:    vmul.f32 q2, q2, q0
 ; CHECK-NEXT:    vmul.f32 q1, q1, q0
-; CHECK-NEXT:    vcvtb.f16.f32 q1, q1
-; CHECK-NEXT:    vstrh.32 q1, [r1, #8]
-; CHECK-NEXT:    vldrh.u32 q1, [r0], #16
-; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
-; CHECK-NEXT:    vmul.f32 q1, q1, q0
-; CHECK-NEXT:    vcvtb.f16.f32 q1, q1
-; CHECK-NEXT:    vstrh.32 q1, [r1], #16
+; CHECK-NEXT:    vcvtb.f16.f32 q2, q2
+; CHECK-NEXT:    vcvtt.f16.f32 q2, q1
+; CHECK-NEXT:    vstrb.8 q2, [r1], #16
 ; CHECK-NEXT:    le lr, .LBB7_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -412,26 +410,22 @@ define void @both_16(half* nocapture readonly %x, half* noalias nocapture %y) {
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
 ; CHECK-NEXT:  .LBB8_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u32 q1, [r0, #24]
-; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
+; CHECK-NEXT:    vldrh.u16 q1, [r0, #16]
+; CHECK-NEXT:    vcvtb.f32.f16 q2, q1
+; CHECK-NEXT:    vcvtt.f32.f16 q1, q1
+; CHECK-NEXT:    vmul.f32 q2, q2, q0
 ; CHECK-NEXT:    vmul.f32 q1, q1, q0
-; CHECK-NEXT:    vcvtb.f16.f32 q1, q1
-; CHECK-NEXT:    vstrh.32 q1, [r1, #24]
-; CHECK-NEXT:    vldrh.u32 q1, [r0, #16]
-; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
+; CHECK-NEXT:    vcvtb.f16.f32 q2, q2
+; CHECK-NEXT:    vcvtt.f16.f32 q2, q1
+; CHECK-NEXT:    vldrh.u16 q1, [r0], #32
+; CHECK-NEXT:    vstrh.16 q2, [r1, #16]
+; CHECK-NEXT:    vcvtb.f32.f16 q2, q1
+; CHECK-NEXT:    vcvtt.f32.f16 q1, q1
+; CHECK-NEXT:    vmul.f32 q2, q2, q0
 ; CHECK-NEXT:    vmul.f32 q1, q1, q0
-; CHECK-NEXT:    vcvtb.f16.f32 q1, q1
-; CHECK-NEXT:    vstrh.32 q1, [r1, #16]
-; CHECK-NEXT:    vldrh.u32 q1, [r0, #8]
-; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
-; CHECK-NEXT:    vmul.f32 q1, q1, q0
-; CHECK-NEXT:    vcvtb.f16.f32 q1, q1
-; CHECK-NEXT:    vstrh.32 q1, [r1, #8]
-; CHECK-NEXT:    vldrh.u32 q1, [r0], #32
-; CHECK-NEXT:    vcvtb.f32.f16 q1, q1
-; CHECK-NEXT:    vmul.f32 q1, q1, q0
-; CHECK-NEXT:    vcvtb.f16.f32 q1, q1
-; CHECK-NEXT:    vstrh.32 q1, [r1], #32
+; CHECK-NEXT:    vcvtb.f16.f32 q2, q2
+; CHECK-NEXT:    vcvtt.f16.f32 q2, q1
+; CHECK-NEXT:    vstrh.16 q2, [r1], #32
 ; CHECK-NEXT:    le lr, .LBB8_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
