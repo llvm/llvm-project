@@ -13,6 +13,7 @@ set(files
   __hash_table
   __libcpp_version
   __locale
+  __memory/allocator.h
   __memory/allocator_traits.h
   __memory/auto_ptr.h
   __memory/base.h
