@@ -396,7 +396,6 @@ multiclass VPatIntegerSetCCVL_VX_Swappable<VTypeInfo vti, string instruction_nam
 multiclass VPatIntegerSetCCVL_VI_Swappable<VTypeInfo vti, string instruction_name,
                                            CondCode cc, CondCode invcc> {
   defvar instruction = !cast<Instruction>(instruction_name#"_VI_"#vti.LMul.MX);
-  defvar ImmPat = !cast<ComplexPattern>("sew"#vti.SEW#"simm5");
   def : Pat<(vti.Mask (riscv_setcc_vl (vti.Vector vti.RegClass:$rs1),
                                       (SplatPat_simm5 simm5:$rs2), cc,
                                       (vti.Mask true_mask),
@@ -407,6 +406,17 @@ multiclass VPatIntegerSetCCVL_VI_Swappable<VTypeInfo vti, string instruction_nam
                                       (vti.Mask true_mask),
                                       (VLOp GPR:$vl))),
             (instruction vti.RegClass:$rs1, simm5:$rs2, GPR:$vl, vti.SEW)>;
+}
+
+multiclass VPatIntegerSetCCVL_VIPlus1<VTypeInfo vti, string instruction_name,
+                                      CondCode cc, ComplexPattern splatpat_kind> {
+  defvar instruction = !cast<Instruction>(instruction_name#"_VI_"#vti.LMul.MX);
+  def : Pat<(vti.Mask (riscv_setcc_vl (vti.Vector vti.RegClass:$rs1),
+                                      (splatpat_kind simm5:$rs2), cc,
+                                      (vti.Mask true_mask),
+                                      (XLenVT (VLOp GPR:$vl)))),
+            (instruction vti.RegClass:$rs1, (DecImm simm5:$rs2),
+                         GPR:$vl, vti.SEW)>;
 }
 
 multiclass VPatFPSetCCVL_VV_VF_FV<CondCode cc,
@@ -637,12 +647,19 @@ foreach vti = AllIntegerVectors in {
   defm : VPatIntegerSetCCVL_VX_Swappable<vti, "PseudoVMSGTU", SETUGT, SETULT>;
   // There is no VMSGE(U)_VX instruction
 
-  // FIXME: Support immediate forms of these by choosing SGT and decrementing
-  // the immediate
   defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSEQ",  SETEQ,  SETEQ>;
   defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSNE",  SETNE,  SETNE>;
   defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSLE",  SETLE,  SETGE>;
   defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSLEU", SETULE, SETUGE>;
+
+  defm : VPatIntegerSetCCVL_VIPlus1<vti, "PseudoVMSLE",  SETLT,
+                                    SplatPat_simm5_plus1>;
+  defm : VPatIntegerSetCCVL_VIPlus1<vti, "PseudoVMSLEU", SETULT,
+                                    SplatPat_simm5_plus1_nonzero>;
+  defm : VPatIntegerSetCCVL_VIPlus1<vti, "PseudoVMSGT",  SETGE,
+                                    SplatPat_simm5_plus1>;
+  defm : VPatIntegerSetCCVL_VIPlus1<vti, "PseudoVMSGTU", SETUGE,
+                                    SplatPat_simm5_plus1_nonzero>;
 } // foreach vti = AllIntegerVectors
 
 // 12.9. Vector Integer Min/Max Instructions
