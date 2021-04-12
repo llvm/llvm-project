@@ -403,7 +403,9 @@ private:
                                mlir::ValueRange extents,
                                mlir::ValueRange lengths) {
     const auto &mutableProperties = box.getMutableProperties();
-    builder.create<fir::StoreOp>(loc, addr, mutableProperties.addr);
+    auto eleTy = fir::dyn_cast_ptrEleTy(mutableProperties.addr.getType());
+    builder.create<fir::StoreOp>(loc, builder.createConvert(loc, eleTy, addr),
+                                 mutableProperties.addr);
     for (auto [extent, extentVar] :
          llvm::zip(extents, mutableProperties.extents))
       builder.create<fir::StoreOp>(loc, extent, extentVar);
