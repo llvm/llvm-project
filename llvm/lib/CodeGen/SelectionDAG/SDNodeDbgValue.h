@@ -131,14 +131,17 @@ private:
 /// We do not use SDValue here to avoid including its header.
 class SDDbgValue {
 public:
-  // FIXME: These SmallVector sizes were chosen without any kind of performance
-  // testing.
-  using LocOpVector = SmallVector<SDDbgOperand, 2>;
-  using SDNodeVector = SmallVector<SDNode *, 2>;
 
 private:
-  LocOpVector LocationOps;
-  SDNodeVector SDNodes;
+  // SDDbgValues are allocated by a BumpPtrAllocator, which means the destructor
+  // may not be called; therefore all member arrays must also be allocated by
+  // that BumpPtrAllocator, to ensure that they are correctly freed.
+  size_t NumLocationOps;
+  SDDbgOperand *LocationOps;
+  // SDNode dependencies will be calculated as SDNodes that appear in
+  // LocationOps plus these AdditionalDependencies.
+  size_t NumAdditionalDependencies;
+  SDNode **AdditionalDependencies;
   DIVariable *Var;
   DIExpression *Expr;
   DebugLoc DL;
@@ -149,15 +152,28 @@ private:
   bool Emitted = false;
 
 public:
-  SDDbgValue(DIVariable *Var, DIExpression *Expr, ArrayRef<SDDbgOperand> L,
-             ArrayRef<SDNode *> Dependencies, bool IsIndirect, DebugLoc DL,
-             unsigned O, bool IsVariadic)
-      : LocationOps(L.begin(), L.end()),
-        SDNodes(Dependencies.begin(), Dependencies.end()), Var(Var), Expr(Expr),
-        DL(DL), Order(O), IsIndirect(IsIndirect), IsVariadic(IsVariadic) {
+  SDDbgValue(BumpPtrAllocator &Alloc, DIVariable *Var, DIExpression *Expr,
+             ArrayRef<SDDbgOperand> L, ArrayRef<SDNode *> Dependencies,
+             bool IsIndirect, DebugLoc DL, unsigned O, bool IsVariadic)
+      : NumLocationOps(L.size()),
+        LocationOps(Alloc.Allocate<SDDbgOperand>(L.size())),
+        NumAdditionalDependencies(Dependencies.size()),
+        AdditionalDependencies(Alloc.Allocate<SDNode *>(Dependencies.size())),
+        Var(Var), Expr(Expr), DL(DL), Order(O), IsIndirect(IsIndirect),
+        IsVariadic(IsVariadic) {
     assert(IsVariadic || L.size() == 1);
     assert(!(IsVariadic && IsIndirect));
+    std::copy(L.begin(), L.end(), LocationOps);
+    std::copy(Dependencies.begin(), Dependencies.end(), AdditionalDependencies);
   }
+
+  // We allocate arrays with the BumpPtrAllocator and never free or copy them,
+  // for LocationOps and AdditionalDependencies, as we never expect to copy or
+  // destroy an SDDbgValue. If we ever start copying or destroying instances, we
+  // should manage the allocated memory appropriately.
+  SDDbgValue(const SDDbgValue &Other) = delete;
+  SDDbgValue &operator=(const SDDbgValue &Other) = delete;
+  ~SDDbgValue() = delete;
 
   /// Returns the DIVariable pointer for the variable.
   DIVariable *getVariable() const { return Var; }
@@ -165,14 +181,29 @@ public:
   /// Returns the DIExpression pointer for the expression.
   DIExpression *getExpression() const { return Expr; }
 
-  ArrayRef<SDDbgOperand> getLocationOps() const { return LocationOps; }
+  ArrayRef<SDDbgOperand> getLocationOps() const {
+    return ArrayRef<SDDbgOperand>(LocationOps, NumLocationOps);
+  }
 
-  LocOpVector copyLocationOps() const { return LocationOps; }
+  SmallVector<SDDbgOperand> copyLocationOps() const {
+    return SmallVector<SDDbgOperand>(LocationOps, LocationOps + NumLocationOps);
+  }
 
   // Returns the SDNodes which this SDDbgValue depends on.
-  ArrayRef<SDNode *> getSDNodes() const { return SDNodes; }
+  SmallVector<SDNode *> getSDNodes() const {
+    SmallVector<SDNode *> Dependencies;
+    for (SDDbgOperand DbgOp : getLocationOps())
+      if (DbgOp.getKind() == SDDbgOperand::SDNODE)
+        Dependencies.push_back(DbgOp.getSDNode());
+    for (SDNode *Node : getAdditionalDependencies())
+      Dependencies.push_back(Node);
+    return Dependencies;
+  }
 
-  SDNodeVector copySDNodes() const { return SDNodes; }
+  ArrayRef<SDNode *> getAdditionalDependencies() const {
+    return ArrayRef<SDNode *>(AdditionalDependencies,
+                              NumAdditionalDependencies);
+  }
 
   /// Returns whether this is an indirect value.
   bool isIndirect() const { return IsIndirect; }
