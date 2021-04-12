@@ -66,7 +66,8 @@
 //   0: void type, ignores "t"
 //   z: size_t, ignores "t"
 //   t: ptrdiff_t, ignores "t"
-//   c: uint8_t, ignores "t"
+//   u: unsigned long, ignores "t"
+//   l: long, ignores "t"
 //
 // So for instance if t is "i", i.e. int, then "e" will yield int again. "v"
 // will yield an RVV vector type (assume LMUL=1), so __rvv_int32m1_t.
@@ -241,6 +242,10 @@ multiclass RVVOutOp0Op1BuiltinSet<string intrinsic_name, string type_range,
     : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes,
                             [-1, 0, 1]>;
 
+multiclass RVVOutBuiltinSet<string intrinsic_name, string type_range,
+                            list<list<string>> suffixes_prototypes>
+    : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [-1]>;
+
 // IntrinsicTypes is output, op1 [-1, 1]
 multiclass RVVOutOp1BuiltinSet<string intrinsic_name, string type_range,
                                list<list<string>> suffixes_prototypes>
@@ -370,6 +375,27 @@ multiclass RVVFloatingMaskOutBuiltinSet
 multiclass RVVFloatingMaskOutVFBuiltinSet
     : RVVOp0Op1BuiltinSet<NAME, "fd",
                           [["vf", "vm", "mve"]]>;
+
+class RVVMaskBinBuiltin : RVVOutBuiltin<"m", "mmm", "c"> {
+  let Name = NAME # "_mm";
+  let HasMask = false;
+}
+
+class RVVMaskUnaryBuiltin : RVVOutBuiltin<"m", "mm", "c"> {
+  let Name = NAME # "_m";
+}
+
+class RVVMaskNullaryBuiltin : RVVOutBuiltin<"m", "m", "c"> {
+  let Name = NAME # "_m";
+  let HasMask = false;
+  let HasNoMaskedOverloaded = false;
+}
+
+class RVVMaskOp0Builtin<string prototype> : RVVOp0Builtin<"m", prototype, "c"> {
+  let Name = NAME # "_m";
+  let HasMaskedOffOperand = false;
+}
+
 
 class RVVFloatingUnaryBuiltin<string builtin_suffix, string ir_suffix,
                               string prototype>
@@ -1114,3 +1140,41 @@ defm vfredosum : RVVFloatingReductionBuiltin;
 // 15.4. Vector Widening Floating-Point Reduction Instructions
 defm vfwredsum : RVVFloatingWidenReductionBuiltin;
 defm vfwredosum : RVVFloatingWidenReductionBuiltin;
+
+// 16. Vector Mask Instructions
+// 16.1. Vector Mask-Register Logical Instructions
+def vmand    : RVVMaskBinBuiltin;
+def vmnand   : RVVMaskBinBuiltin;
+def vmandnot : RVVMaskBinBuiltin;
+def vmxor    : RVVMaskBinBuiltin;
+def vmor     : RVVMaskBinBuiltin;
+def vmnor    : RVVMaskBinBuiltin;
+def vmornot  : RVVMaskBinBuiltin;
+def vmxnor   : RVVMaskBinBuiltin;
+// pseudoinstructions
+def vmclr    : RVVMaskNullaryBuiltin;
+def vmset    : RVVMaskNullaryBuiltin;
+
+// 16.2. Vector mask population count vpopc
+def vpopc : RVVMaskOp0Builtin<"um">;
+
+// 16.3. vfirst find-first-set mask bit
+def vfirst : RVVMaskOp0Builtin<"lm">;
+
+// 16.4. vmsbf.m set-before-first mask bit
+def vmsbf : RVVMaskUnaryBuiltin;
+
+// 16.5. vmsif.m set-including-first mask bit
+def vmsif : RVVMaskUnaryBuiltin;
+
+// 16.6. vmsof.m set-only-first mask bit
+def vmsof : RVVMaskUnaryBuiltin;
+
+let HasNoMaskedOverloaded = false in {
+  // 16.8. Vector Iota Instruction
+  defm viota : RVVOutBuiltinSet<"viota", "csil", [["m", "Uv", "Uvm"]]>;
+
+  // 16.9. Vector Element Index Instruction
+  defm vid : RVVOutBuiltinSet<"vid", "csil", [["v", "v", "v"],
+                                              ["v", "Uv", "Uv"]]>;
+}
