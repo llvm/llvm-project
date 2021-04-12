@@ -780,6 +780,27 @@ TEST_F(RenameClassTest, UsingAlias) {
   CompareSnippets(Expected, After);
 }
 
+TEST_F(ClangRenameTest, FieldDesignatedInitializers) {
+  std::string Before = R"(
+      struct S {
+        int a;
+      };
+      void foo() {
+        S s = { .a = 10 };
+        s.a = 20;
+      })";
+  std::string Expected = R"(
+      struct S {
+        int b;
+      };
+      void foo() {
+        S s = { .b = 10 };
+        s.b = 20;
+      })";
+  std::string After = runClangRenameOnCode(Before, "S::a", "S::b");
+  CompareSnippets(Expected, After);
+}
+
 // FIXME: investigate why the test fails when adding a new USR to the USRSet.
 TEST_F(ClangRenameTest, DISABLED_NestedTemplates) {
   std::string Before = R"(
