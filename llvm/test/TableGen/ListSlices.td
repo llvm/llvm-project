@@ -9,14 +9,14 @@
 // CHECK:   list<int> ShowVar1 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 // CHECK:   int ShowVar2 = 0
 // CHECK:   list<int> ShowVar3 = [2, 3, 4, 5]
-// CHECK:   int ShowVar4 = 0
+// CHECK:   int ShowVar4 = 2
 // CHECK:   list<int> ShowVar5 = [2, 3, 4, 5]
 
 defvar Var1 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 defvar Var2 = Var1[0];
 defvar Var3 = Var1[2...5];
 
-defvar Var4 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][0];
+defvar Var4 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][2];
 defvar Var5 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][2...5];
 
 def Rec00 { // Display the defvars.
@@ -96,12 +96,30 @@ def Rec07 {
 
 // CHECK: def Rec08
 // CHECK:   list<list<string>> Array = {{.*}}"foo", "bar", "snork"], ["zoo", "quux", "flarp"]]
-// CHECK:   string Snork = "snork"
+// CHECK:   string Flarp = "flarp"
 // CHECK:   list<string> ZooQuux = ["zoo", "quux"]
 
 def Rec08 {
   list<list<string>> Array = [["foo", "bar", "snork"],
                               ["zoo", "quux", "flarp"]];
-  string Snork = Array[0][2];
+  string Flarp = Array[1][2];
   list<string> ZooQuux = Array[1][0...1];
 }
+
+// Test uninitialized list elements.
+
+// CHECK: def Rec09
+// CHECK:   int Zero = ?;
+// CHECK:   list<int> TwoFive = [2, 3, ?, 5];
+// CHECK: def Rec10
+// CHECK:   list<int> TwoFive = [2, 3, ?, 5];
+
+def Rec09 : Class1<[?, ?, 2, 3, ?, 5, ?]>;
+
+def Rec10 {
+  int Zero = Class1<[?, ?, 2, 3, ?, 5, ?]>.Zero;
+  list<int> TwoFive = Class1<[?, ?, 2, 3, ?, 5, ?]>.TwoFive;
+}
+
+// TO-DO: Notice that the first field in Rec10 is not checked. 
+// It is not fully resolved for reasons that need to be investigated.
