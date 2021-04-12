@@ -376,7 +376,7 @@ struct FragmentCompiler {
     }
     Out.Apply.push_back([Spec(std::move(Spec))](const Params &P, Config &C) {
       if (Spec.Kind == Config::ExternalIndexSpec::None) {
-        C.Index.External.reset();
+        C.Index.External = Spec;
         return;
       }
       if (P.Path.empty() || !pathStartsWith(Spec.MountPoint, P.Path,

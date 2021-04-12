@@ -328,7 +328,7 @@ TEST_F(ConfigCompileTests, ExternalServerNeedsTrusted) {
       ElementsAre(DiagMessage(
           "Remote index may not be specified by untrusted configuration. "
           "Copy this into user config to use it.")));
-  EXPECT_FALSE(Conf.Index.External.hasValue());
+  EXPECT_EQ(Conf.Index.External.Kind, Config::ExternalIndexSpec::None);
 }
 
 TEST_F(ConfigCompileTests, ExternalBlockWarnOnMultipleSource) {
@@ -351,11 +351,14 @@ TEST_F(ConfigCompileTests, ExternalBlockWarnOnMultipleSource) {
 }
 
 TEST_F(ConfigCompileTests, ExternalBlockDisableWithNone) {
+  compileAndApply();
+  EXPECT_EQ(Conf.Index.External.Kind, Config::ExternalIndexSpec::None);
+
   Fragment::IndexBlock::ExternalBlock External;
   External.IsNone = true;
   Frag.Index.External = std::move(External);
   compileAndApply();
-  EXPECT_FALSE(Conf.Index.External.hasValue());
+  EXPECT_EQ(Conf.Index.External.Kind, Config::ExternalIndexSpec::None);
 }
 
 TEST_F(ConfigCompileTests, ExternalBlockErrOnNoSource) {
@@ -406,7 +409,7 @@ TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
           AllOf(DiagMessage("MountPoint must be an absolute path, because this "
                             "fragment is not associated with any directory."),
                 DiagKind(llvm::SourceMgr::DK_Error))));
-  ASSERT_FALSE(Conf.Index.External);
+  EXPECT_EQ(Conf.Index.External.Kind, Config::ExternalIndexSpec::None);
 
   auto FooPath = testPath("foo/", llvm::sys::path::Style::posix);
   FooPath = llvm::sys::path::convert_to_slash(FooPath);
@@ -414,22 +417,22 @@ TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
   Frag = GetFrag(testRoot(), "foo/");
   compileAndApply();
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
-  ASSERT_TRUE(Conf.Index.External);
-  EXPECT_THAT(Conf.Index.External->MountPoint, FooPath);
+  ASSERT_EQ(Conf.Index.External.Kind, Config::ExternalIndexSpec::File);
+  EXPECT_THAT(Conf.Index.External.MountPoint, FooPath);
 
   // None defaults to ".".
   Frag = GetFrag(FooPath, llvm::None);
   compileAndApply();
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
-  ASSERT_TRUE(Conf.Index.External);
-  EXPECT_THAT(Conf.Index.External->MountPoint, FooPath);
+  ASSERT_EQ(Conf.Index.External.Kind, Config::ExternalIndexSpec::File);
+  EXPECT_THAT(Conf.Index.External.MountPoint, FooPath);
 
   // Without a file, external index is empty.
   Parm.Path = "";
   Frag = GetFrag("", FooPath.c_str());
   compileAndApply();
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
-  ASSERT_FALSE(Conf.Index.External);
+  ASSERT_EQ(Conf.Index.External.Kind, Config::ExternalIndexSpec::None);
 
   // File outside MountPoint, no index.
   auto BazPath = testPath("bar/baz.h", llvm::sys::path::Style::posix);
@@ -438,7 +441,7 @@ TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
   Frag = GetFrag("", FooPath.c_str());
   compileAndApply();
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
-  ASSERT_FALSE(Conf.Index.External);
+  ASSERT_EQ(Conf.Index.External.Kind, Config::ExternalIndexSpec::None);
 
   // File under MountPoint, index should be set.
   BazPath = testPath("foo/baz.h", llvm::sys::path::Style::posix);
@@ -447,8 +450,8 @@ TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
   Frag = GetFrag("", FooPath.c_str());
   compileAndApply();
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
-  ASSERT_TRUE(Conf.Index.External);
-  EXPECT_THAT(Conf.Index.External->MountPoint, FooPath);
+  ASSERT_EQ(Conf.Index.External.Kind, Config::ExternalIndexSpec::File);
+  EXPECT_THAT(Conf.Index.External.MountPoint, FooPath);
 
   // Only matches case-insensitively.
   BazPath = testPath("fOo/baz.h", llvm::sys::path::Style::posix);
@@ -461,10 +464,10 @@ TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
   compileAndApply();
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
 #ifdef CLANGD_PATH_CASE_INSENSITIVE
-  ASSERT_TRUE(Conf.Index.External);
-  EXPECT_THAT(Conf.Index.External->MountPoint, FooPath);
+  ASSERT_EQ(Conf.Index.External.Kind, Config::ExternalIndexSpec::File);
+  EXPECT_THAT(Conf.Index.External.MountPoint, FooPath);
 #else
-  ASSERT_FALSE(Conf.Index.External);
+  ASSERT_EQ(Conf.Index.External.Kind, Config::ExternalIndexSpec::None);
 #endif
 }
 
