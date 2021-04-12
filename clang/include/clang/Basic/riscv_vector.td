@@ -200,6 +200,16 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
 // Basic classes with automatic codegen.
 //===----------------------------------------------------------------------===//
 
+class RVVOutOp1Builtin<string suffix, string prototype, string type_range>
+    : RVVBuiltin<suffix, prototype, type_range> {
+  let IntrinsicTypes = [-1, 1];
+}
+
+class RVVOutOp0Op1Builtin<string suffix, string prototype, string type_range>
+    : RVVBuiltin<suffix, prototype, type_range> {
+  let IntrinsicTypes = [-1, 0, 1];
+}
+
 multiclass RVVBuiltinSet<string intrinsic_name, string type_range,
                          list<list<string>> suffixes_prototypes,
                          list<int> intrinsic_types> {
@@ -321,6 +331,58 @@ class RVVIntExt<string intrinsic_name, string suffix, string prototype,
   let MangledName = NAME;
   let IntrinsicTypes = [-1, 0];
 }
+
+// For widen operation which has different mangling name.
+multiclass RVVWidenBuiltinSet<string intrinsic_name, string type_range,
+                              list<list<string>> suffixes_prototypes> {
+  let Log2LMUL = [-3, -2, -1, 0, 1, 2],
+      IRName = intrinsic_name, IRNameMask = intrinsic_name # "_mask" in {
+    foreach s_p = suffixes_prototypes in {
+      let Name = NAME # "_" # s_p[0],
+          MangledName = NAME # "_" # s_p[0] in {
+        defvar suffix = s_p[1];
+        defvar prototype = s_p[2];
+        def : RVVOutOp0Op1Builtin<suffix, prototype, type_range>;
+      }
+    }
+  }
+}
+
+// For widen operation with widen operand which has different mangling name.
+multiclass RVVWidenWOp0BuiltinSet<string intrinsic_name, string type_range,
+                                  list<list<string>> suffixes_prototypes> {
+  let Log2LMUL = [-3, -2, -1, 0, 1, 2],
+      IRName = intrinsic_name, IRNameMask = intrinsic_name # "_mask" in {
+    foreach s_p = suffixes_prototypes in {
+      let Name = NAME # "_" # s_p[0],
+          MangledName = NAME # "_" # s_p[0] in {
+        defvar suffix = s_p[1];
+        defvar prototype = s_p[2];
+        def : RVVOutOp1Builtin<suffix, prototype, type_range>;
+      }
+    }
+  }
+}
+
+multiclass RVVSignedWidenBinBuiltinSet
+    : RVVWidenBuiltinSet<NAME, "csi",
+                         [["vv", "w", "wvv"],
+                          ["vx", "w", "wve"]]>;
+
+multiclass RVVSignedWidenOp0BinBuiltinSet
+    : RVVWidenWOp0BuiltinSet<NAME # "_w", "csi",
+                             [["wv", "w", "wwv"],
+                              ["wx", "w", "wwe"]]>;
+
+multiclass RVVUnsignedWidenBinBuiltinSet
+    : RVVWidenBuiltinSet<NAME, "csi",
+                         [["vv", "Uw", "UwUvUv"],
+                          ["vx", "Uw", "UwUvUe"]]>;
+
+multiclass RVVUnsignedWidenOp0BinBuiltinSet
+    : RVVWidenWOp0BuiltinSet<NAME # "_w", "csi",
+                             [["wv", "Uw", "UwUwUv"],
+                              ["wx", "Uw", "UwUwUe"]]>;
 
 defvar TypeList = ["c","s","i","l","f","d"];
 defvar EEWList = [["8", "(Log2EEW:3)"],
@@ -552,7 +614,18 @@ defm vrsub : RVVOutOp1BuiltinSet<"vrsub", "csil",
                                   ["vx", "Uv", "UvUvUe"]]>;
 
 // 12.2. Vector Widening Integer Add/Subtract
-// TODO
+// Widening unsigned integer add/subtract, 2*SEW = SEW +/- SEW
+defm vwaddu : RVVUnsignedWidenBinBuiltinSet;
+defm vwsubu : RVVUnsignedWidenBinBuiltinSet;
+// Widening signed integer add/subtract, 2*SEW = SEW +/- SEW
+defm vwadd : RVVSignedWidenBinBuiltinSet;
+defm vwsub : RVVSignedWidenBinBuiltinSet;
+// Widening unsigned integer add/subtract, 2*SEW = 2*SEW +/- SEW
+defm vwaddu : RVVUnsignedWidenOp0BinBuiltinSet;
+defm vwsubu : RVVUnsignedWidenOp0BinBuiltinSet;
+// Widening signed integer add/subtract, 2*SEW = 2*SEW +/- SEW
+defm vwadd : RVVSignedWidenOp0BinBuiltinSet;
+defm vwsub : RVVSignedWidenOp0BinBuiltinSet;
 
 // 12.3. Vector Integer Extension
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
