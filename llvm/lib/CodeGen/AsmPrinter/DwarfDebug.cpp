@@ -717,7 +717,7 @@ static void interpretValues(const MachineInstr *CurMI,
     for (const MachineOperand &MO : MI.operands()) {
       if (MO.isReg() && MO.isDef() &&
           Register::isPhysicalRegister(MO.getReg())) {
-        for (auto FwdReg : ForwardedRegWorklist)
+        for (auto &FwdReg : ForwardedRegWorklist)
           if (TRI.regsOverlap(FwdReg.first, MO.getReg()))
             Defs.insert(FwdReg.first);
       }
@@ -766,7 +766,7 @@ static void interpretValues(const MachineInstr *CurMI,
 
   // Now that we are done handling this instruction, add items from the
   // temporary worklist to the real one.
-  for (auto New : TmpWorklistItems)
+  for (auto &New : TmpWorklistItems)
     addToFwdRegWorklist(ForwardedRegWorklist, New.first, EmptyExpr, New.second);
   TmpWorklistItems.clear();
 }
@@ -801,7 +801,7 @@ static bool interpretNextInstr(const MachineInstr *CurMI,
 static void collectCallSiteParameters(const MachineInstr *CallMI,
                                       ParamSet &Params) {
   const MachineFunction *MF = CallMI->getMF();
-  auto CalleesMap = MF->getCallSitesInfo();
+  const auto &CalleesMap = MF->getCallSitesInfo();
   auto CallFwdRegsInfo = CalleesMap.find(CallMI);
 
   // There is no information for the call instruction.
@@ -819,7 +819,7 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
       DIExpression::get(MF->getFunction().getContext(), {});
 
   // Add all the forwarding registers into the ForwardedRegWorklist.
-  for (auto ArgReg : CallFwdRegsInfo->second) {
+  for (const auto &ArgReg : CallFwdRegsInfo->second) {
     bool InsertedReg =
         ForwardedRegWorklist.insert({ArgReg.Reg, {{ArgReg.Reg, EmptyExpr}}})
             .second;
@@ -867,7 +867,7 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     // Create an expression where the register's entry value is used.
     DIExpression *EntryExpr = DIExpression::get(
         MF->getFunction().getContext(), {dwarf::DW_OP_LLVM_entry_value, 1});
-    for (auto RegEntry : ForwardedRegWorklist) {
+    for (auto &RegEntry : ForwardedRegWorklist) {
       MachineLocation MLoc(RegEntry.first);
       finishCallSiteParams(MLoc, EntryExpr, RegEntry.second, Params);
     }
