@@ -293,6 +293,7 @@ define void @spill_bp_to_memory_scratch_reg_needed_mubuf_offset(<32 x i32> %a, i
 ; GCN: s_or_saveexec_b64 s[4:5], -1
 ; GCN-NEXT: s_add_u32 s6, s32, 0x42100
 ; GCN-NEXT: buffer_store_dword v39, off, s[0:3], s6 ; 4-byte Folded Spill
+; GCN-NEXT: s_mov_b64 exec, s[4:5]
 ; GCN-NEXT: v_mov_b32_e32 v0, s33
 ; GCN-NOT: v_mov_b32_e32 v0, 0x1088
 ; GCN-NEXT: s_add_u32 s6, s32, 0x42200
