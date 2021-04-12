@@ -701,12 +701,8 @@ static llvm::Optional<llvm::Error> AddVariableInfo(
     // Not realizing self is a fatal error for an expression and the
     // Swift compiler error alone is not particularly useful.
     if (is_self)
-      return make_error<StringError>(
-          inconvertibleErrorCode(),
-          llvm::Twine("Couldn't realize type of self.") +
-              (use_dynamic
-                   ? ""
-                   : " Try evaluating the expression with -d run-target"));
+      return make_error<StringError>(inconvertibleErrorCode(),
+                                     "Couldn't realize type of self.");
     return {};
   }
 
