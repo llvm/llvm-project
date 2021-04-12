@@ -61,7 +61,7 @@
 # WHYOBJCALLFORCE-DAG: -force_load forced load of lib.a(objc.o)
 
 #--- objc.s
-.section	__DATA,__objc_catlist
+.section __DATA,__objc_catlist
 .quad 0x1234
 
 #--- foo.s
