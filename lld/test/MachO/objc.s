@@ -40,11 +40,11 @@
 _OBJC_CLASS_$_MyObject:
 
 #--- has-objc-category.s
-.section	__DATA,__objc_catlist
+.section __DATA,__objc_catlist
 .quad 0x1234
 
 #--- has-swift.s
-.section	__TEXT,__swift
+.section __TEXT,__swift
 .quad 0x1234
 
 #--- no-objc.s

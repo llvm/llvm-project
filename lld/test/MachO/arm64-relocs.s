@@ -13,17 +13,17 @@
 
 # CHECK-LABEL: _foo:
 ## BRANCH26 relocations are 4-byte aligned, so 123 is truncated to 120
-# CHECK-NEXT:  bl	0x[[#BAR+120]]
+# CHECK-NEXT:  bl   0x[[#BAR+120]]
 ## PAGE21 relocations are aligned to 4096 bytes
-# CHECK-NEXT:  adrp	x2, [[#]] ; 0x[[#BAZ+4096-128]]
-# CHECK-NEXT:  ldr	x2, [x2, #128]
-# CHECK-NEXT:  adrp     x3, 8 ; 0x8000
-# CHECK-NEXT:  ldr      q0, [x3, #144]
+# CHECK-NEXT:  adrp x2, [[#]] ; 0x[[#BAZ+4096-128]]
+# CHECK-NEXT:  ldr  x2, [x2, #128]
+# CHECK-NEXT:  adrp x3, 8 ; 0x8000
+# CHECK-NEXT:  ldr  q0, [x3, #144]
 # CHECK-NEXT:  ret
 
 # CHECK-LABEL: Contents of (__DATA_CONST,__const) section
-# CHECK:       [[#PTR_1]]	{{0*}}[[#BAZ]]     00000000 00000000 00000000
-# CHECK:       [[#PTR_2]]	{{0*}}[[#BAZ+123]] 00000000 00000000 00000000
+# CHECK:       [[#PTR_1]]  {{0*}}[[#BAZ]]     00000000 00000000 00000000
+# CHECK:       [[#PTR_2]]  {{0*}}[[#BAZ+123]] 00000000 00000000 00000000
 
 .text
 .globl _foo, _bar, _baz, _quux
