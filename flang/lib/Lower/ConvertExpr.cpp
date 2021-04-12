@@ -1736,6 +1736,22 @@ public:
   bool isScalar(const A &x) {
     return x.Rank() == 0;
   }
+
+  /// Helper to detect Transformational function reference.
+  template <typename T>
+  bool isTransformationalRef(const T &) {
+    return false;
+  }
+  template <typename T>
+  bool isTransformationalRef(const Fortran::evaluate::FunctionRef<T> &funcRef) {
+    return !funcRef.IsElemental() && funcRef.Rank();
+  }
+  template <typename T>
+  bool isTransformationalRef(Fortran::evaluate::Expr<T> expr) {
+    return std::visit([&](const auto &e) { return isTransformationalRef(e); },
+                      expr.u);
+  }
+
   template <typename A>
   fir::ExtendedValue asArray(const A &x) {
     auto temp = createSomeArrayTemp(converter, toEvExpr(x), symMap, stmtCtx);
@@ -1793,7 +1809,11 @@ public:
 
   template <typename A>
   fir::ExtendedValue gen(const Fortran::evaluate::Expr<A> &x) {
-    if (isScalar(x) || Fortran::evaluate::UnwrapWholeSymbolDataRef(x))
+    // Whole array symbols and results of transformational functions already
+    // have a storage and the scalar expression lowering path is used to not
+    // create a new temporary storage.
+    if (isScalar(x) || Fortran::evaluate::UnwrapWholeSymbolDataRef(x) ||
+        isTransformationalRef(x))
       return std::visit([&](const auto &e) { return genref(e); }, x.u);
     if (useBoxArg)
       return asArrayArg(x);
@@ -2293,9 +2313,10 @@ public:
 
     // Transformational call.
     // The procedure is called once and produces a value of rank > 0.
-    if (const auto *intrin = procRef.proc().GetSpecificIntrinsic()) {
-      (void)intrin;
-      TODO(loc, "non-elemental intrinsic ref");
+    if (const auto *intrinsic = procRef.proc().GetSpecificIntrinsic()) {
+      auto resultBox = ScalarExprLowering{getLoc(), converter, symMap, stmtCtx}
+                           .genIntrinsicRef(procRef, *intrinsic, retTy);
+      return genarr(resultBox);
     }
     TODO(loc, "non-elemental procedure ref");
   }
