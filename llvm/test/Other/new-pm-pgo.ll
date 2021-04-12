@@ -20,10 +20,10 @@
 ; USE_POST_LINK: Running pass: PGOMemOPSizeOpt
 ; SAMPLE_USE_O: Running pass: AddDiscriminatorsPass
 ; SAMPLE_USE_PRE_LINK: Running pass: AddDiscriminatorsPass
+; SAMPLE_USE: Running pass: LowerExpectIntrinsicPass
 ; SAMPLE_USE: Running pass: SimplifyCFGPass
 ; SAMPLE_USE: Running pass: SROA
 ; SAMPLE_USE: Running pass: EarlyCSEPass
-; SAMPLE_USE: Running pass: LowerExpectIntrinsicPass
 ; SAMPLE_USE_POST_LINK: Running pass: InstCombinePass
 ; SAMPLE_USE: Running pass: SampleProfileLoaderPass
 ; SAMPLE_USE_O: Running pass: PGOIndirectCallPromotion
