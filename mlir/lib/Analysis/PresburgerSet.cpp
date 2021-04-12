@@ -297,7 +297,6 @@ bool PresburgerSet::isEqual(const PresburgerSet &set) const {
 /// Return true if all the sets in the union are known to be integer empty,
 /// false otherwise.
 bool PresburgerSet::isIntegerEmpty() const {
-  assert(nSym == 0 && "isIntegerEmpty is intended for non-symbolic sets");
   // The set is empty iff all of the disjuncts are empty.
   for (const FlatAffineConstraints &fac : flatAffineConstraints) {
     if (!fac.isIntegerEmpty())
@@ -307,7 +306,6 @@ bool PresburgerSet::isIntegerEmpty() const {
 }
 
 bool PresburgerSet::findIntegerSample(SmallVectorImpl<int64_t> &sample) {
-  assert(nSym == 0 && "findIntegerSample is intended for non-symbolic sets");
   // A sample exists iff any of the disjuncts contains a sample.
   for (const FlatAffineConstraints &fac : flatAffineConstraints) {
     if (Optional<SmallVector<int64_t, 8>> opt = fac.findIntegerSample()) {
