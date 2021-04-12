@@ -499,49 +499,31 @@ class IsFloat<string type> {
   bit val = !or(!eq(type, "h"), !eq(type, "f"), !eq(type, "d"));
 }
 
-multiclass RVVVLEBuiltin<list<string> types> {
-  let Name = NAME # "_v",
-      IRName = "vle",
-      IRNameMask ="vle_mask",
-      HasNoMaskedOverloaded = false,
-      ManualCodegen = [{
-        IntrinsicTypes = {ResultType, Ops[1]->getType()};
-        Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
-      }],
-      ManualCodegenMask= [{
-        IntrinsicTypes = {ResultType, Ops[3]->getType()};
-        Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
-      }] in {
-    foreach type = types in {
-      def : RVVBuiltin<"v", "vPCe", type>;
-      if !not(IsFloat<type>.val) then {
-        def : RVVBuiltin<"Uv", "UvPCUe", type>;
-      }
-    }
+let HasNoMaskedOverloaded = false,
+    ManualCodegen = [{
+      IntrinsicTypes = {ResultType, Ops[1]->getType()};
+      Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
+    }],
+    ManualCodegenMask= [{
+      IntrinsicTypes = {ResultType, Ops[3]->getType()};
+      Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
+    }] in {
+  class RVVVLEMaskBuiltin : RVVBuiltin<"m", "mPCUe", "c"> {
+    let Name = "vle1_v";
+    let IRName = "vle1";
+    let HasMask = false;
   }
-}
-
-multiclass RVVIndexedLoad<string op> {
-  let ManualCodegen = [{
-        IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[2]->getType()};
-        Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
-      }],
-      ManualCodegenMask = [{
-        IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops[4]->getType()};
-        Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
-      }] in {
-      foreach type = TypeList in {
-        foreach eew_list = EEWList in {
-          defvar eew = eew_list[0];
-          defvar eew_type = eew_list[1];
-          let Name = op # eew # "_v", IRName = op, IRNameMask = op # "_mask" in {
-            def: RVVBuiltin<"v", "vPCe" # eew_type # "Uv", type>;
-              if !not(IsFloat<type>.val) then {
-                def: RVVBuiltin<"Uv", "UvPCUe" # eew_type # "Uv", type>;
-              }
-          }
+  multiclass RVVVLEBuiltin<list<string> types> {
+    let Name = NAME # "_v",
+        IRName = "vle",
+        IRNameMask ="vle_mask" in {
+      foreach type = types in {
+        def : RVVBuiltin<"v", "vPCe", type>;
+        if !not(IsFloat<type>.val) then {
+          def : RVVBuiltin<"Uv", "UvPCUe", type>;
         }
       }
+    }
   }
 }
 
@@ -594,26 +576,127 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
   }
 }
 
-multiclass RVVVSEBuiltin<list<string> types> {
+multiclass RVVVLSEBuiltin<list<string> types> {
   let Name = NAME # "_v",
-      IRName = "vse",
-      IRNameMask = "vse_mask",
+      IRName = "vlse",
+      IRNameMask ="vlse_mask",
+      HasNoMaskedOverloaded = false,
+      ManualCodegen = [{
+        IntrinsicTypes = {ResultType, Ops[2]->getType()};
+        Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
+      }],
+      ManualCodegenMask= [{
+        IntrinsicTypes = {ResultType, Ops[4]->getType()};
+        Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
+      }] in {
+    foreach type = types in {
+      def : RVVBuiltin<"v", "vPCet", type>;
+      if !not(IsFloat<type>.val) then {
+        def : RVVBuiltin<"Uv", "UvPCUet", type>;
+      }
+    }
+  }
+}
+
+multiclass RVVIndexedLoad<string op> {
+  let ManualCodegen = [{
+        IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[2]->getType()};
+        Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
+      }],
+      ManualCodegenMask = [{
+        IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops[4]->getType()};
+        Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
+      }] in {
+      foreach type = TypeList in {
+        foreach eew_list = EEWList in {
+          defvar eew = eew_list[0];
+          defvar eew_type = eew_list[1];
+          let Name = op # eew # "_v", IRName = op, IRNameMask = op # "_mask" in {
+            def: RVVBuiltin<"v", "vPCe" # eew_type # "Uv", type>;
+              if !not(IsFloat<type>.val) then {
+                def: RVVBuiltin<"Uv", "UvPCUe" # eew_type # "Uv", type>;
+              }
+          }
+        }
+      }
+  }
+}
+
+let HasMaskedOffOperand = false,
+    PermuteOperands = [1, 0], // C/C++ Operand: (ptr, value, vl). Builtin: (value, ptr, vl)
+    ManualCodegen = [{
+      Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
+      IntrinsicTypes = {Ops[0]->getType(), Ops[2]->getType()};
+    }],
+    ManualCodegenMask= [{
+      Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
+      IntrinsicTypes = {Ops[0]->getType(), Ops[3]->getType()};
+    }] in {
+  class RVVVSEMaskBuiltin : RVVBuiltin<"m", "0mPUe", "c"> {
+    let Name = "vse1_v";
+    let IRName = "vse1";
+    let HasMask = false;
+  }
+  multiclass RVVVSEBuiltin<list<string> types> {
+    let Name = NAME # "_v",
+        IRName = "vse",
+        IRNameMask = "vse_mask" in {
+      foreach type = types in {
+        def : RVVBuiltin<"v", "0vPe", type>;
+        if !not(IsFloat<type>.val) then {
+          def : RVVBuiltin<"Uv", "0UvPUe", type>;
+        }
+      }
+    }
+  }
+}
+
+multiclass RVVVSSEBuiltin<list<string> types> {
+  let Name = NAME # "_v",
+      IRName = "vsse",
+      IRNameMask = "vsse_mask",
       HasMaskedOffOperand = false,
-      PermuteOperands = [1, 0], // C/C++ Operand: (ptr, value, vl). Builtin: (value, ptr, vl)
+      PermuteOperands = [1, 2, 0], // C/C++ Operand: (ptr, stride, value, vl). Builtin: (value, ptr, stride, vl)
       ManualCodegen = [{
         Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
-        IntrinsicTypes = {Ops[0]->getType(), Ops[2]->getType()};
+        IntrinsicTypes = {Ops[0]->getType(), Ops[3]->getType()};
       }],
       ManualCodegenMask= [{
         Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
-        IntrinsicTypes = {Ops[0]->getType(), Ops[3]->getType()};
+        IntrinsicTypes = {Ops[0]->getType(), Ops[4]->getType()};
       }] in {
     foreach type = types in {
-      def : RVVBuiltin<"v", "0vPe", type>;
+      def : RVVBuiltin<"v", "0vPet", type>;
       if !not(IsFloat<type>.val) then {
-        def : RVVBuiltin<"Uv", "0UvPUe", type>;
+        def : RVVBuiltin<"Uv", "0UvPUet", type>;
       }
     }
+  }
+}
+
+multiclass RVVIndexedStore<string op> {
+  let HasMaskedOffOperand = false,
+      PermuteOperands = [1, 2, 0], // C/C++ Operand: (ptr, index, value, vl). Builtin: (value, ptr, index, vl)
+      ManualCodegen = [{
+        Ops[1] = Builder.CreateBitCast(Ops[1],Ops[0]->getType()->getPointerTo());
+        IntrinsicTypes = {Ops[0]->getType(), Ops[2]->getType(), Ops[3]->getType()};
+      }],
+      ManualCodegenMask= [{
+        Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
+        IntrinsicTypes = {Ops[0]->getType(), Ops[2]->getType(), Ops[4]->getType()};
+      }] in {
+      foreach type = TypeList in {
+        foreach eew_list = EEWList in {
+          defvar eew = eew_list[0];
+          defvar eew_type = eew_list[1];
+          let Name = op # eew  # "_v", IRName = op, IRNameMask = op # "_mask" in  {
+            def : RVVBuiltin<"v", "0vPe" # eew_type # "Uv", type>;
+            if !not(IsFloat<type>.val) then {
+              def : RVVBuiltin<"Uv", "0UvPUe" # eew_type # "Uv", type>;
+            }
+          }
+        }
+      }
   }
 }
 
@@ -691,24 +774,41 @@ let HasVL = false,
 
 // 7. Vector Loads and Stores
 // 7.4. Vector Unit-Stride Instructions
+def vle1: RVVVLEMaskBuiltin;
 defm vle8: RVVVLEBuiltin<["c"]>;
 defm vle16: RVVVLEBuiltin<["s"]>;
 defm vle32: RVVVLEBuiltin<["i","f"]>;
 defm vle64: RVVVLEBuiltin<["l","d"]>;
 
-defm vle8ff: RVVVLEFFBuiltin<["c"]>;
-defm vle16ff: RVVVLEFFBuiltin<["s"]>;
-defm vle32ff: RVVVLEFFBuiltin<["i", "f"]>;
-defm vle64ff: RVVVLEFFBuiltin<["l", "d"]>;
-
+def vse1 : RVVVSEMaskBuiltin;
 defm vse8 : RVVVSEBuiltin<["c"]>;
 defm vse16: RVVVSEBuiltin<["s"]>;
 defm vse32: RVVVSEBuiltin<["i","f"]>;
 defm vse64: RVVVSEBuiltin<["l","d"]>;
 
+// 7.5. Vector Strided Instructions
+defm vlse8: RVVVLSEBuiltin<["c"]>;
+defm vlse16: RVVVLSEBuiltin<["s"]>;
+defm vlse32: RVVVLSEBuiltin<["i","f"]>;
+defm vlse64: RVVVLSEBuiltin<["l","d"]>;
+
+defm vsse8 : RVVVSSEBuiltin<["c"]>;
+defm vsse16: RVVVSSEBuiltin<["s"]>;
+defm vsse32: RVVVSSEBuiltin<["i","f"]>;
+defm vsse64: RVVVSSEBuiltin<["l","d"]>;
+
 // 7.6. Vector Indexed Instructions
 defm : RVVIndexedLoad<"vluxei">;
 defm : RVVIndexedLoad<"vloxei">;
+
+defm : RVVIndexedStore<"vsuxei">;
+defm : RVVIndexedStore<"vsoxei">;
+
+// 7.7. Unit-stride Fault-Only-First Loads
+defm vle8ff: RVVVLEFFBuiltin<["c"]>;
+defm vle16ff: RVVVLEFFBuiltin<["s"]>;
+defm vle32ff: RVVVLEFFBuiltin<["i", "f"]>;
+defm vle64ff: RVVVLEFFBuiltin<["l", "d"]>;
 
 // 12. Vector Integer Arithmetic Instructions
 // 12.1. Vector Single-Width Integer Add and Subtract
