@@ -648,6 +648,22 @@ bool SIFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
   llvm_unreachable("Invalid TargetStackID::Value");
 }
 
+static void initLiveRegs(LivePhysRegs &LiveRegs, const SIRegisterInfo &TRI,
+                         const SIMachineFunctionInfo *FuncInfo,
+                         MachineFunction &MF, MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator MBBI, bool IsProlog) {
+  if (LiveRegs.empty()) {
+    LiveRegs.init(TRI);
+    if (IsProlog) {
+      LiveRegs.addLiveIns(MBB);
+    } else {
+      // In epilog.
+      LiveRegs.addLiveOuts(MBB);
+      LiveRegs.stepBackward(*MBBI);
+    }
+  }
+}
+
 // Activate all lanes, returns saved exec.
 static Register buildScratchExecCopy(LivePhysRegs &LiveRegs,
                                      MachineFunction &MF,
@@ -659,19 +675,10 @@ static Register buildScratchExecCopy(LivePhysRegs &LiveRegs,
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
+  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   DebugLoc DL;
 
-  if (LiveRegs.empty()) {
-    if (IsProlog) {
-      LiveRegs.init(TRI);
-      LiveRegs.addLiveIns(MBB);
-    } else {
-      // In epilog.
-      LiveRegs.init(*ST.getRegisterInfo());
-      LiveRegs.addLiveOuts(MBB);
-      LiveRegs.stepBackward(*MBBI);
-    }
-  }
+  initLiveRegs(LiveRegs, TRI, FuncInfo, MF, MBB, MBBI, IsProlog);
 
   ScratchExecCopy = findScratchNonCalleeSaveRegister(
       MRI, LiveRegs, *TRI.getWaveMaskRegClass());
@@ -740,13 +747,20 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBBI, Reg.VGPR, *Reg.FI);
   }
 
+  if (ScratchExecCopy) {
+    // FIXME: Split block and make terminator.
+    unsigned ExecMov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+    MCRegister Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+    BuildMI(MBB, MBBI, DL, TII->get(ExecMov), Exec)
+        .addReg(ScratchExecCopy, RegState::Kill);
+    LiveRegs.addReg(ScratchExecCopy);
+  }
+
   if (FPSaveIndex && spilledToMemory(MF, *FPSaveIndex)) {
     const int FramePtrFI = *FPSaveIndex;
     assert(!MFI.isDeadObjectIndex(FramePtrFI));
 
-    if (!ScratchExecCopy)
-      ScratchExecCopy =
-          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, /*IsProlog*/ true);
+    initLiveRegs(LiveRegs, TRI, FuncInfo, MF, MBB, MBBI, /*IsProlog*/ true);
 
     MCPhysReg TmpVGPR = findScratchNonCalleeSaveRegister(
         MRI, LiveRegs, AMDGPU::VGPR_32RegClass);
@@ -764,9 +778,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     const int BasePtrFI = *BPSaveIndex;
     assert(!MFI.isDeadObjectIndex(BasePtrFI));
 
-    if (!ScratchExecCopy)
-      ScratchExecCopy =
-          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, /*IsProlog*/ true);
+    initLiveRegs(LiveRegs, TRI, FuncInfo, MF, MBB, MBBI, /*IsProlog*/ true);
 
     MCPhysReg TmpVGPR = findScratchNonCalleeSaveRegister(
         MRI, LiveRegs, AMDGPU::VGPR_32RegClass);
@@ -778,15 +790,6 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
     buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBBI, TmpVGPR,
                      BasePtrFI);
-  }
-
-  if (ScratchExecCopy) {
-    // FIXME: Split block and make terminator.
-    unsigned ExecMov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-    MCRegister Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-    BuildMI(MBB, MBBI, DL, TII->get(ExecMov), Exec)
-        .addReg(ScratchExecCopy, RegState::Kill);
-    LiveRegs.addReg(ScratchExecCopy);
   }
 
   // In this case, spill the FP to a reserved VGPR.
@@ -968,14 +971,11 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
         .setMIFlag(MachineInstr::FrameDestroy);
   }
 
-  Register ScratchExecCopy;
   if (FPSaveIndex) {
     const int FramePtrFI = *FPSaveIndex;
     assert(!MFI.isDeadObjectIndex(FramePtrFI));
     if (spilledToMemory(MF, FramePtrFI)) {
-      if (!ScratchExecCopy)
-        ScratchExecCopy =
-            buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, /*IsProlog*/ false);
+      initLiveRegs(LiveRegs, TRI, FuncInfo, MF, MBB, MBBI, /*IsProlog*/ false);
 
       MCPhysReg TmpVGPR = findScratchNonCalleeSaveRegister(
           MRI, LiveRegs, AMDGPU::VGPR_32RegClass);
@@ -1001,9 +1001,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
     const int BasePtrFI = *BPSaveIndex;
     assert(!MFI.isDeadObjectIndex(BasePtrFI));
     if (spilledToMemory(MF, BasePtrFI)) {
-      if (!ScratchExecCopy)
-        ScratchExecCopy =
-            buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, /*IsProlog*/ false);
+      initLiveRegs(LiveRegs, TRI, FuncInfo, MF, MBB, MBBI, /*IsProlog*/ false);
 
       MCPhysReg TmpVGPR = findScratchNonCalleeSaveRegister(
           MRI, LiveRegs, AMDGPU::VGPR_32RegClass);
@@ -1025,6 +1023,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
     }
   }
 
+  Register ScratchExecCopy;
   for (const SIMachineFunctionInfo::SGPRSpillVGPR &Reg :
        FuncInfo->getSGPRSpillVGPRs()) {
     if (!Reg.FI.hasValue())
