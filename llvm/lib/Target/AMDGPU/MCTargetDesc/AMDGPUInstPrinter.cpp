@@ -881,7 +881,7 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
   } else if ((Imm >= DppCtrl::ROW_SHARE_FIRST) &&
              (Imm <= DppCtrl::ROW_SHARE_LAST)) {
     if (AMDGPU::isGFX90A(STI)) {
-      O << " row_newbcast:";
+      O << "row_newbcast:";
     } else if (AMDGPU::isGFX10Plus(STI)) {
       O << "row_share:";
     } else {
