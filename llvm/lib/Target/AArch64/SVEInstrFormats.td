@@ -7513,6 +7513,7 @@ class sve2_char_match<bit sz, bit opc, string asm,
   let Inst{3-0}   = Pd;
 
   let Defs = [NZCV];
+  let isPTestLike = 1;
 }
 
 multiclass sve2_char_match<bit opc, string asm, SDPatternOperator op> {
