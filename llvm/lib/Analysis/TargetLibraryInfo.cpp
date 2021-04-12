@@ -65,6 +65,49 @@ static bool hasBcmp(const Triple &TT) {
   return TT.isOSFreeBSD() || TT.isOSSolaris();
 }
 
+static bool isCallingConvCCompatible(CallingConv::ID CC, StringRef TT,
+                                     FunctionType *FuncTy) {
+  switch (CC) {
+  default:
+    return false;
+  case llvm::CallingConv::C:
+    return true;
+  case llvm::CallingConv::ARM_APCS:
+  case llvm::CallingConv::ARM_AAPCS:
+  case llvm::CallingConv::ARM_AAPCS_VFP: {
+
+    // The iOS ABI diverges from the standard in some cases, so for now don't
+    // try to simplify those calls.
+    if (Triple(TT).isiOS())
+      return false;
+
+    if (!FuncTy->getReturnType()->isPointerTy() &&
+        !FuncTy->getReturnType()->isIntegerTy() &&
+        !FuncTy->getReturnType()->isVoidTy())
+      return false;
+
+    for (auto *Param : FuncTy->params()) {
+      if (!Param->isPointerTy() && !Param->isIntegerTy())
+        return false;
+    }
+    return true;
+  }
+  }
+  return false;
+}
+
+bool TargetLibraryInfoImpl::isCallingConvCCompatible(CallBase *CI) {
+  return ::isCallingConvCCompatible(CI->getCallingConv(),
+                                    CI->getModule()->getTargetTriple(),
+                                    CI->getFunctionType());
+}
+
+bool TargetLibraryInfoImpl::isCallingConvCCompatible(Function *F) {
+  return ::isCallingConvCCompatible(F->getCallingConv(),
+                                    F->getParent()->getTargetTriple(),
+                                    F->getFunctionType());
+}
+
 /// Initialize the set of available library functions based on the specified
 /// target triple. This should be carefully written so that a missing target
 /// triple gets a sane set of defaults.
