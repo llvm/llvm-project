@@ -1391,8 +1391,15 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
     if (isa<CXXPseudoDestructorExpr>(Callee->IgnoreParens()))
       return Ctx.VoidTy;
 
+    if (isa<UnresolvedMemberExpr>(Callee->IgnoreParens()))
+      return Ctx.DependentTy;
+
     // This should never be overloaded and so should never return null.
     CalleeType = Expr::findBoundMemberType(Callee);
+    assert(!CalleeType.isNull());
+  } else if (CalleeType->isDependentType() ||
+             CalleeType->isSpecificPlaceholderType(BuiltinType::Overload)) {
+    return Ctx.DependentTy;
   }
 
   const FunctionType *FnType = CalleeType->castAs<FunctionType>();
