@@ -21,6 +21,7 @@ using const_iterator = std::forward_list<int>::const_iterator;
 using value_type = int;
 
 static_assert(std::forward_iterator<iterator>);
+static_assert(!std::bidirectional_iterator<iterator>);
 static_assert(std::indirectly_writable<iterator, value_type>);
 static_assert(std::sentinel_for<iterator, iterator>);
 static_assert(std::sentinel_for<iterator, const_iterator>);
@@ -28,6 +29,7 @@ static_assert(!std::sized_sentinel_for<iterator, iterator>);
 static_assert(!std::sized_sentinel_for<iterator, const_iterator>);
 
 static_assert(std::forward_iterator<const_iterator>);
+static_assert(!std::bidirectional_iterator<const_iterator>);
 static_assert(!std::indirectly_writable<const_iterator, value_type>);
 static_assert(std::sentinel_for<const_iterator, iterator>);
 static_assert(std::sentinel_for<const_iterator, const_iterator>);

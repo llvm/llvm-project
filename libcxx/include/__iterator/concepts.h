@@ -127,7 +127,17 @@ concept forward_iterator =
   incrementable<_Ip> &&
   sentinel_for<_Ip, _Ip>;
 
-// clang-format on
+// [iterator.concept.bidir]
+template<class _Ip>
+concept bidirectional_iterator =
+  forward_iterator<_Ip> &&
+  derived_from<_ITER_CONCEPT<_Ip>, bidirectional_iterator_tag> &&
+  requires(_Ip __i) {
+    { --__i } -> same_as<_Ip&>;
+    { __i-- } -> same_as<_Ip>;
+  };
+
+  // clang-format on
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 
