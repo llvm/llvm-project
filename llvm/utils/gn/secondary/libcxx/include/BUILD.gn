@@ -74,6 +74,7 @@ if (current_toolchain == default_toolchain) {
       "__locale",
       "__memory/allocator.h",
       "__memory/allocator_traits.h",
+      "__memory/auto_ptr.h",
       "__memory/base.h",
       "__memory/pointer_traits.h",
       "__memory/utilities.h",
