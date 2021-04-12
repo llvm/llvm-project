@@ -1195,7 +1195,7 @@ IntrinsicLibrary::genAll(mlir::Type resultType,
   auto resultArrayType = builder.getVarLenSeqTy(resultType, rank - 1);
   auto resultMutableBox =
        Fortran::lower::createTempMutableBox(builder, loc, resultArrayType);
-  auto resultIrBox = 
+  auto resultIrBox =
        Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
 
   // Call runtime. The runtime is allocating the result.
