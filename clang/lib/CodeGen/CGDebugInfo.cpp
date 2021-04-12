@@ -568,9 +568,9 @@ void CGDebugInfo::CreateCompileUnit() {
   if (LO.CPlusPlus) {
     if (LO.ObjC)
       LangTag = llvm::dwarf::DW_LANG_ObjC_plus_plus;
-    else if (LO.CPlusPlus14)
+    else if (LO.CPlusPlus14 && CGM.getCodeGenOpts().DwarfVersion >= 5)
       LangTag = llvm::dwarf::DW_LANG_C_plus_plus_14;
-    else if (LO.CPlusPlus11)
+    else if (LO.CPlusPlus11 && CGM.getCodeGenOpts().DwarfVersion >= 5)
       LangTag = llvm::dwarf::DW_LANG_C_plus_plus_11;
     else
       LangTag = llvm::dwarf::DW_LANG_C_plus_plus;
