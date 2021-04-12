@@ -188,17 +188,20 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsARankedTensor(MlirType type);
 /// Checks whether the given type is an unranked tensor type.
 MLIR_CAPI_EXPORTED bool mlirTypeIsAUnrankedTensor(MlirType type);
 
-/// Creates a tensor type of a fixed rank with the given shape and element type
-/// in the same context as the element type. The type is owned by the context.
+/// Creates a tensor type of a fixed rank with the given shape, element type,
+/// and optional encoding in the same context as the element type. The type is
+/// owned by the context. Tensor types without any specific encoding field
+/// should assign mlirAttributeGetNull() to this parameter.
 MLIR_CAPI_EXPORTED MlirType mlirRankedTensorTypeGet(intptr_t rank,
                                                     const int64_t *shape,
-                                                    MlirType elementType);
+                                                    MlirType elementType,
+                                                    MlirAttribute encoding);
 
 /// Same as "mlirRankedTensorTypeGet" but returns a nullptr wrapping MlirType on
 /// illegal arguments, emitting appropriate diagnostics.
-MLIR_CAPI_EXPORTED MlirType
-mlirRankedTensorTypeGetChecked(MlirLocation loc, intptr_t rank,
-                               const int64_t *shape, MlirType elementType);
+MLIR_CAPI_EXPORTED MlirType mlirRankedTensorTypeGetChecked(
+    MlirLocation loc, intptr_t rank, const int64_t *shape, MlirType elementType,
+    MlirAttribute encoding);
 
 /// Creates an unranked tensor type with the given element type in the same
 /// context as the element type. The type is owned by the context.
