@@ -193,6 +193,36 @@ static bool tryInterleave(Instruction *Start,
       Exts.insert(I);
       break;
 
+    case Instruction::Call: {
+      IntrinsicInst *II = dyn_cast<IntrinsicInst>(I);
+      if (!II)
+        return false;
+
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::abs:
+      case Intrinsic::smin:
+      case Intrinsic::smax:
+      case Intrinsic::umin:
+      case Intrinsic::umax:
+      case Intrinsic::sadd_sat:
+      case Intrinsic::ssub_sat:
+      case Intrinsic::uadd_sat:
+      case Intrinsic::usub_sat:
+      case Intrinsic::minnum:
+      case Intrinsic::maxnum:
+      case Intrinsic::fabs:
+      case Intrinsic::fma:
+      case Intrinsic::ceil:
+      case Intrinsic::floor:
+      case Intrinsic::rint:
+      case Intrinsic::round:
+      case Intrinsic::trunc:
+        break;
+      default:
+        return false;
+      }
+      LLVM_FALLTHROUGH; // Fall through to treating these like an operator below.
+    }
     // Binary/tertiary ops
     case Instruction::Add:
     case Instruction::Sub:
@@ -210,6 +240,8 @@ static bool tryInterleave(Instruction *Start,
       Ops.insert(I);
 
       for (Use &Op : I->operands()) {
+        if (!isa<FixedVectorType>(Op->getType()))
+          continue;
         if (isa<Instruction>(Op))
           Worklist.push_back(cast<Instruction>(&Op));
         else
@@ -244,7 +276,7 @@ static bool tryInterleave(Instruction *Start,
       dbgs() << "  " << *I << "\n";
     dbgs() << "  OtherLeafs:";
     for (auto *I : OtherLeafs)
-      dbgs() << "  " << *I << "\n";
+      dbgs() << "  " << *I->get() << " of " << *I->getUser() << "\n";
     dbgs() << "Truncs:";
     for (auto *I : Truncs)
       dbgs() << "  " << *I << "\n";
