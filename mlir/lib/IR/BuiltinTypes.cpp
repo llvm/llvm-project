@@ -441,10 +441,12 @@ bool TensorType::isValidElementType(Type type) {
 
 LogicalResult
 RankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
-                         ArrayRef<int64_t> shape, Type elementType) {
+                         ArrayRef<int64_t> shape, Type elementType,
+                         Attribute encoding) {
   for (int64_t s : shape)
     if (s < -1)
       return emitError() << "invalid tensor dimension size";
+  // TODO: verify contents of encoding attribute.
   return checkTensorElementType(emitError, elementType);
 }
 
