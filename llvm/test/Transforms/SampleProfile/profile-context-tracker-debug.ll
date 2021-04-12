@@ -4,7 +4,7 @@
 
 ;; The order of nodes within Context Profile Tree depends on the implmementation of std::hash<std::string>.
 ;; Mark it fail on AIX for now before we figure out a solution.
-; XFAIL: aix
+; XFAIL: system-aix
 
 
 ; Note that we need new pass manager to enable top-down processing for sample profile loader
