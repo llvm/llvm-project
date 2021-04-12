@@ -1704,6 +1704,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     // We define our scalable vector types for lmul=1 to use a 64 bit known
     // minimum size. e.g. <vscale x 2 x i32>. VLENB is in bytes so we calculate
     // vscale as VLENB / 8.
+    assert(RISCV::RVVBitsPerBlock == 64 && "Unexpected bits per block!");
     SDValue VScale = DAG.getNode(ISD::SRL, DL, VT, VLENB,
                                  DAG.getConstant(3, DL, VT));
     return DAG.getNode(ISD::MUL, DL, VT, VScale, Op.getOperand(0));
@@ -5338,9 +5339,8 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     break;
   }
   case RISCVISD::READ_VLENB:
-    // We assume VLENB is at least 8 bytes.
-    // FIXME: The 1.0 draft spec defines minimum VLEN as 128 bits.
-    Known.Zero.setLowBits(3);
+    // We assume VLENB is at least 16 bytes.
+    Known.Zero.setLowBits(4);
     break;
   }
 }
