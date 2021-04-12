@@ -96,7 +96,7 @@ struct SGPRSpillBuilder {
   int Index;
   unsigned EltSize = 4;
 
-  RegScavenger &RS;
+  RegScavenger *RS;
   MachineBasicBlock &MBB;
   MachineFunction &MF;
   SIMachineFunctionInfo &MFI;
@@ -109,7 +109,7 @@ struct SGPRSpillBuilder {
 
   SGPRSpillBuilder(const SIRegisterInfo &TRI, const SIInstrInfo &TII,
                    bool IsWave32, MachineBasicBlock::iterator MI, int Index,
-                   RegScavenger &RS)
+                   RegScavenger *RS)
       : SuperReg(MI->getOperand(0).getReg()), MI(MI),
         IsKill(MI->getOperand(0).isKill()), DL(MI->getDebugLoc()), Index(Index),
         RS(RS), MBB(*MI->getParent()), MF(*MBB.getParent()),
@@ -162,7 +162,8 @@ struct SGPRSpillBuilder {
     // is in use in lanes that are currently inactive. We can never be sure if
     // a register as actually in use in another lane, so we need to save all
     // used lanes of the chosen VGPR.
-    TmpVGPR = RS.scavengeRegister(&AMDGPU::VGPR_32RegClass, MI, 0, false);
+    assert(RS && "Cannot spill SGPR to memory without RegScavenger");
+    TmpVGPR = RS->scavengeRegister(&AMDGPU::VGPR_32RegClass, MI, 0, false);
 
     // Reserve temporary stack slot
     TmpVGPRIndex = MFI.getScavengeFI(MF.getFrameInfo(), TRI);
@@ -180,8 +181,8 @@ struct SGPRSpillBuilder {
     assert(!SavedExecReg && "Exec is already saved, refuse to save again");
     const TargetRegisterClass &RC =
         IsWave32 ? AMDGPU::SGPR_32RegClass : AMDGPU::SGPR_64RegClass;
-    RS.setRegUsed(SuperReg);
-    SavedExecReg = RS.scavengeRegister(&RC, MI, 0, false);
+    RS->setRegUsed(SuperReg);
+    SavedExecReg = RS->scavengeRegister(&RC, MI, 0, false);
 
     int64_t VGPRLanes = getPerVGPRData().VGPRLanes;
 
@@ -1292,12 +1293,12 @@ void SIRegisterInfo::buildVGPRSpillLoadStore(SGPRSpillBuilder &SB, int Index,
     unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
                                           : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
     buildSpillLoadStore(SB.MI, Opc, Index, SB.TmpVGPR, false, FrameReg,
-                        Offset * SB.EltSize, MMO, &SB.RS);
+                        Offset * SB.EltSize, MMO, SB.RS);
   } else {
     unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
                                           : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
     buildSpillLoadStore(SB.MI, Opc, Index, SB.TmpVGPR, IsKill, FrameReg,
-                        Offset * SB.EltSize, MMO, &SB.RS);
+                        Offset * SB.EltSize, MMO, SB.RS);
     // This only ever adds one VGPR spill
     SB.MFI.addToSpilledVGPRs(1);
   }
@@ -1307,7 +1308,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
                                int Index,
                                RegScavenger *RS,
                                bool OnlyToVGPR) const {
-  SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, *RS);
+  SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, RS);
 
   ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills =
       SB.MFI.getSGPRToVGPRSpills(Index);
@@ -1405,7 +1406,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
                                  int Index,
                                  RegScavenger *RS,
                                  bool OnlyToVGPR) const {
-  SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, *RS);
+  SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, RS);
 
   ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills =
       SB.MFI.getSGPRToVGPRSpills(Index);
