@@ -379,6 +379,31 @@ class RVVFloatingUnaryBuiltin<string builtin_suffix, string ir_suffix,
 
 class RVVFloatingUnaryVVBuiltin : RVVFloatingUnaryBuiltin<"v", "v", "vv">;
 
+class RVVConvBuiltin<string suffix, string prototype, string type_range,
+                     string mangled_name>
+    : RVVBuiltin<suffix, prototype, type_range> {
+  let IntrinsicTypes = [-1, 0];
+  let MangledName = mangled_name;
+}
+
+class RVVConvToSignedBuiltin<string mangled_name>
+    : RVVConvBuiltin<"Iv", "Ivv", "fd", mangled_name>;
+
+class RVVConvToUnsignedBuiltin<string mangled_name>
+    : RVVConvBuiltin<"Uv", "Uvv", "fd", mangled_name>;
+
+class RVVConvToWidenSignedBuiltin<string mangled_name>
+    : RVVConvBuiltin<"Iw", "Iwv", "f", mangled_name>;
+
+class RVVConvToWidenUnsignedBuiltin<string mangled_name>
+    : RVVConvBuiltin<"Uw", "Uwv", "f", mangled_name>;
+
+class RVVConvToNarrowingSignedBuiltin<string mangled_name>
+    : RVVConvBuiltin<"Iv", "IvFw", "si", mangled_name>;
+
+class RVVConvToNarrowingUnsignedBuiltin<string mangled_name>
+    : RVVConvBuiltin<"Uv", "UvFw", "si", mangled_name>;
+
 // For widen operation which has different mangling name.
 multiclass RVVWidenBuiltinSet<string intrinsic_name, string type_range,
                               list<list<string>> suffixes_prototypes> {
@@ -899,10 +924,32 @@ let Name = "vfmerge_vfm", HasMask = false, PermuteOperands = [2, 0, 1] in
 // TODO
 
 // 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
-// TODO
+def vfcvt_xu_f_v : RVVConvToUnsignedBuiltin<"vfcvt_xu">;
+def vfcvt_x_f_v : RVVConvToSignedBuiltin<"vfcvt_x">;
+def vfcvt_rtz_xu_f_v : RVVConvToUnsignedBuiltin<"vfcvt_rtz_xu">;
+def vfcvt_rtz_x_f_v : RVVConvToSignedBuiltin<"vfcvt_rtz_x">;
+def vfcvt_f_xu_v : RVVConvBuiltin<"Fv", "FvUv", "sil", "vfcvt_f">;
+def vfcvt_f_x_v : RVVConvBuiltin<"Fv", "Fvv", "sil", "vfcvt_f">;
 
 // 14.18. Widening Floating-Point/Integer Type-Convert Instructions
-// TODO
+let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
+  def vfwcvt_xu_f_v : RVVConvToWidenUnsignedBuiltin<"vfwcvt_xu">;
+  def vfwcvt_x_f_v : RVVConvToWidenSignedBuiltin<"vfwcvt_x">;
+  def vfwcvt_rtz_xu_f_v : RVVConvToWidenUnsignedBuiltin<"vfwcvt_rtz_xu">;
+  def vfwcvt_rtz_x_f_v : RVVConvToWidenSignedBuiltin<"vfwcvt_rtz_x">;
+  def vfwcvt_f_xu_v : RVVConvBuiltin<"Fw", "FwUv", "csi", "vfwcvt_f">;
+  def vfwcvt_f_x_v : RVVConvBuiltin<"Fw", "Fwv", "csi", "vfwcvt_f">;
+  def vfwcvt_f_f_v : RVVConvBuiltin<"w", "wv", "hf", "vfwcvt_f">;
+}
 
 // 14.19. Narrowing Floating-Point/Integer Type-Convert Instructions
-// TODO
+let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
+  def vfncvt_xu_f_w : RVVConvToNarrowingUnsignedBuiltin<"vfncvt_xu">;
+  def vfncvt_x_f_w : RVVConvToNarrowingSignedBuiltin<"vfncvt_x">;
+  def vfncvt_rtz_xu_f_w : RVVConvToNarrowingUnsignedBuiltin<"vfncvt_rtz_xu">;
+  def vfncvt_rtz_x_f_w : RVVConvToNarrowingSignedBuiltin<"vfncvt_rtz_x">;
+  def vfncvt_f_xu_w : RVVConvBuiltin<"Fv", "FvUw", "si", "vfncvt_f">;
+  def vfncvt_f_x_w : RVVConvBuiltin<"Fv", "Fvw", "si", "vfncvt_f">;
+  def vfncvt_f_f_w : RVVConvBuiltin<"v", "vw", "f", "vfncvt_f">;
+  def vfncvt_rod_f_f_w : RVVConvBuiltin<"v", "vw", "f", "vfncvt_rod_f">;
+}
