@@ -59,15 +59,13 @@ inline int integerBitsToTypeCode(unsigned bits) {
   // clang-format on
 }
 
-// Always use CFI_type_Bool and let the rest get sorted out by the elem_size.
-// NB: do *not* use the CFI_type_intN_t codes. The flang runtime will choke.
 inline int logicalBitsToTypeCode(unsigned bits) {
   // clang-format off
   switch (bits) {
-  case 8:
-  case 16:
-  case 32:
-  case 64: return CFI_type_Bool;
+  case 8: return CFI_type_Bool;
+  case 16: return CFI_type_int_least16_t;
+  case 32: return CFI_type_int_least32_t;
+  case 64: return CFI_type_int_least64_t;
   default: llvm_unreachable("unsupported logical size");
   }
   // clang-format on
