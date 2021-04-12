@@ -271,6 +271,14 @@ those of the integer type with the same bitwidth defined above.
 In absence of the corresponding entry, `index` is assumed to be a 64-bit
 integer.
 
+#### `complex` type
+
+By default complex type is treated like a 2 element structure of its given
+element type. This is to say that each of its elements are aligned to their
+preferred alignment, the entire complex type is also aligned to this preference,
+and the complex type size includes the possible padding between elements to enforce
+alignment.
+
 ### Byte Size
 
 The default data layout assumes 8-bit bytes.
