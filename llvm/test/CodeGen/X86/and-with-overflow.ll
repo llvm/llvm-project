@@ -48,7 +48,6 @@ define i8 @and_i8_rr(i8 zeroext %0, i8 zeroext %1) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    andl %edi, %eax
-; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    cmovel %edi, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
@@ -103,7 +102,6 @@ define i16 @and_i16_rr(i16 zeroext %0, i16 zeroext %1) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    andl %edi, %eax
-; X64-NEXT:    testw %ax, %ax
 ; X64-NEXT:    cmovel %edi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
