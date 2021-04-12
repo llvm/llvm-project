@@ -42,14 +42,15 @@ static LogicalResult checkExtensionRequirements(
     if (targetEnv.allows(ors))
       continue;
 
-    SmallVector<StringRef, 4> extStrings;
-    for (spirv::Extension ext : ors)
-      extStrings.push_back(spirv::stringifyExtension(ext));
+    LLVM_DEBUG({
+      SmallVector<StringRef> extStrings;
+      for (spirv::Extension ext : ors)
+        extStrings.push_back(spirv::stringifyExtension(ext));
 
-    LLVM_DEBUG(llvm::dbgs()
-               << label << " illegal: requires at least one extension in ["
-               << llvm::join(extStrings, ", ")
-               << "] but none allowed in target environment\n");
+      llvm::dbgs() << label << " illegal: requires at least one extension in ["
+                   << llvm::join(extStrings, ", ")
+                   << "] but none allowed in target environment\n";
+    });
     return failure();
   }
   return success();
@@ -69,14 +70,15 @@ static LogicalResult checkCapabilityRequirements(
     if (targetEnv.allows(ors))
       continue;
 
-    SmallVector<StringRef, 4> capStrings;
-    for (spirv::Capability cap : ors)
-      capStrings.push_back(spirv::stringifyCapability(cap));
+    LLVM_DEBUG({
+      SmallVector<StringRef> capStrings;
+      for (spirv::Capability cap : ors)
+        capStrings.push_back(spirv::stringifyCapability(cap));
 
-    LLVM_DEBUG(llvm::dbgs()
-               << label << " illegal: requires at least one capability in ["
-               << llvm::join(capStrings, ", ")
-               << "] but none allowed in target environment\n");
+      llvm::dbgs() << label << " illegal: requires at least one capability in ["
+                   << llvm::join(capStrings, ", ")
+                   << "] but none allowed in target environment\n";
+    });
     return failure();
   }
   return success();
