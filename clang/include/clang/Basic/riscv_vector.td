@@ -815,7 +815,10 @@ defm vwmaccus : RVVOutOp1Op2BuiltinSet<"vwmaccus", "csi",
 }
 
 // 12.15. Vector Integer Merge Instructions
-// TODO
+// C/C++ Operand: (mask, op1, op2, vl), Builtin: (op1, op2, mask, vl)
+let HasMask = false, PermuteOperands = [2, 0, 1] in {
+  defm vmerge : RVVCarryinBuiltinSet;
+}
 
 // 12.16. Vector Integer Move Instructions
 // TODO
@@ -917,8 +920,13 @@ let Name = "vfclass_v" in
   def vfclass : RVVOp0Builtin<"Uv", "Uvv", "fd">;
 
 // 14.15. Vector Floating-Point Merge Instructio
-let Name = "vfmerge_vfm", HasMask = false, PermuteOperands = [2, 0, 1] in
-  def vfmerge : RVVOutOp1Builtin<"v", "vvem", "fd">;
+// C/C++ Operand: (mask, op1, op2, vl), Builtin: (op1, op2, mask, vl)
+let HasMask = false, PermuteOperands = [2, 0, 1] in {
+  defm vmerge : RVVOutOp1BuiltinSet<"vfmerge", "fd",
+                                    [["vvm", "v", "vvvm"]]>;
+  defm vfmerge : RVVOutOp1BuiltinSet<"vfmerge", "fd",
+                                    [["vfm", "v", "vvem"]]>;
+}
 
 // 14.16. Vector Floating-Point Move Instruction
 // TODO
