@@ -260,7 +260,7 @@ operator>=(const _Tp& __x, const _Tp& __y)
 // move_if_noexcept
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 #ifndef _LIBCPP_CXX03_LANG
 typename conditional
 <
@@ -277,8 +277,11 @@ move_if_noexcept(_Tp& __x) _NOEXCEPT
 }
 
 #if _LIBCPP_STD_VER > 14
-template <class _Tp> constexpr add_const_t<_Tp>& as_const(_Tp& __t) noexcept { return __t; }
-template <class _Tp>                        void as_const(const _Tp&&) = delete;
+template <class _Tp>
+_LIBCPP_NODISCARD_EXT constexpr add_const_t<_Tp>& as_const(_Tp& __t) noexcept { return __t; }
+
+template <class _Tp>
+void as_const(const _Tp&&) = delete;
 #endif
 
 struct _LIBCPP_TEMPLATE_VIS piecewise_construct_t { explicit piecewise_construct_t() = default; };
@@ -1636,7 +1639,7 @@ __to_underlying(_Tp __val) noexcept {
 
 #if _LIBCPP_STD_VER > 20
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr underlying_type_t<_Tp>
+_LIBCPP_NODISCARD_EXT _LIBCPP_INLINE_VISIBILITY constexpr underlying_type_t<_Tp>
 to_underlying(_Tp __val) noexcept {
   return _VSTD::__to_underlying(__val);
 }

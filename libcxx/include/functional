@@ -3213,7 +3213,7 @@ using unwrap_ref_decay_t = typename unwrap_ref_decay<_Tp>::type;
 // [func.identity]
 struct identity {
     template<class _Tp>
-    constexpr _Tp&& operator()(_Tp&& __t) const noexcept
+    _LIBCPP_NODISCARD_EXT constexpr _Tp&& operator()(_Tp&& __t) const noexcept
     {
         return _VSTD::forward<_Tp>(__t);
     }
