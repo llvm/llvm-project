@@ -466,7 +466,7 @@ static void printRelocationTargetName(const MachOObjectFile *O,
 
   if (isExtern) {
     symbol_iterator SI = O->symbol_begin();
-    advance(SI, Val);
+    std::advance(SI, Val);
     S = unwrapOrError(SI->getName(), FileName);
   } else {
     section_iterator SI = O->section_begin();
@@ -478,7 +478,7 @@ static void printRelocationTargetName(const MachOObjectFile *O,
     uint32_t I = Val - 1;
     while (I != 0 && SI != O->section_end()) {
       --I;
-      advance(SI, 1);
+      std::advance(SI, 1);
     }
     if (SI == O->section_end()) {
       Fmt << Val << " (?,?)";

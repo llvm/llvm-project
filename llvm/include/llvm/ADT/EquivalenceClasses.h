@@ -248,19 +248,18 @@ public:
     return It != member_end() && It == findLeader(V2);
   }
 
-  class member_iterator : public std::iterator<std::forward_iterator_tag,
-                                               const ElemTy, ptrdiff_t> {
+  class member_iterator {
     friend class EquivalenceClasses;
-
-    using super = std::iterator<std::forward_iterator_tag,
-                                const ElemTy, ptrdiff_t>;
 
     const ECValue *Node;
 
   public:
-    using size_type = size_t;
-    using pointer = typename super::pointer;
-    using reference = typename super::reference;
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = const ElemTy;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
 
     explicit member_iterator() = default;
     explicit member_iterator(const ECValue *N) : Node(N) {}
