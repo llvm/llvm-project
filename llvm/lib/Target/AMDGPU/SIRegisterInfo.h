@@ -22,6 +22,7 @@ namespace llvm {
 class GCNSubtarget;
 class LiveIntervals;
 class RegisterBank;
+struct SGPRSpillBuilder;
 class SIMachineFunctionInfo;
 
 class SIRegisterInfo final : public AMDGPUGenRegisterInfo {
@@ -106,10 +107,11 @@ public:
   const TargetRegisterClass *getPointerRegClass(
     const MachineFunction &MF, unsigned Kind = 0) const override;
 
-  void buildSGPRSpillLoadStore(MachineBasicBlock::iterator MI, int Index,
-                               int Offset, unsigned EltSize, Register VGPR,
-                               int64_t VGPRLanes, RegScavenger *RS,
-                               bool IsLoad) const;
+  void buildVGPRSpillLoadStore(SGPRSpillBuilder &SB, int Index, int Offset,
+                               bool IsLoad, bool IsKill = true) const;
+
+  void buildSGPRSpillLoadStore(SGPRSpillBuilder &SB, int Offset,
+                               int64_t VGPRLanes) const;
 
   /// If \p OnlyToVGPR is true, this will only succeed if this
   bool spillSGPR(MachineBasicBlock::iterator MI,
