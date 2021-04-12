@@ -905,6 +905,19 @@ func @load_store_zero_rank_int(%arg0: memref<i32>, %arg1: memref<i32>) {
   return
 }
 
+// CHECK-LABEL: func @load_store_unknown_dim
+// CHECK-SAME: %[[SRC:[a-z0-9]+]]: !spv.ptr<!spv.struct<(!spv.rtarray<i32, stride=4> [0])>, StorageBuffer>,
+// CHECK-SAME: %[[DST:[a-z0-9]+]]: !spv.ptr<!spv.struct<(!spv.rtarray<i32, stride=4> [0])>, StorageBuffer>)
+func @load_store_unknown_dim(%i: index, %source: memref<?xi32>, %dest: memref<?xi32>) {
+  // CHECK: %[[AC0:.+]] = spv.AccessChain %[[SRC]]
+  // CHECK: spv.Load "StorageBuffer" %[[AC0]]
+  %0 = memref.load %source[%i] : memref<?xi32>
+  // CHECK: %[[AC1:.+]] = spv.AccessChain %[[DST]]
+  // CHECK: spv.Store "StorageBuffer" %[[AC1]]
+  memref.store %0, %dest[%i]: memref<?xi32>
+  return
+}
+
 } // end module
 
 // -----
