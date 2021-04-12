@@ -442,8 +442,16 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
     return nullptr;
   }
 
+  Optional<int64_t> arrayElemSize = getTypeNumBytes(options, arrayElemType);
+  if (!arrayElemSize) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot deduce converted element size\n");
+    return nullptr;
+  }
+
   if (!type.hasStaticShape()) {
-    auto arrayType = spirv::RuntimeArrayType::get(arrayElemType, *elementSize);
+    auto arrayType =
+        spirv::RuntimeArrayType::get(arrayElemType, *arrayElemSize);
     // Wrap in a struct to satisfy Vulkan interface requirements.
     auto structType = spirv::StructType::get(arrayType, 0);
     return spirv::PointerType::get(structType, *storageClass);
@@ -458,12 +466,6 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
 
   auto arrayElemCount = *memrefSize / *elementSize;
 
-  Optional<int64_t> arrayElemSize = getTypeNumBytes(options, arrayElemType);
-  if (!arrayElemSize) {
-    LLVM_DEBUG(llvm::dbgs()
-               << type << " illegal: cannot deduce converted element size\n");
-    return nullptr;
-  }
 
   auto arrayType =
       spirv::ArrayType::get(arrayElemType, arrayElemCount, *arrayElemSize);
