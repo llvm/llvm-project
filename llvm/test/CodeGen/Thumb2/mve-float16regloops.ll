@@ -1077,18 +1077,10 @@ define void @fir(%struct.arm_fir_instance_f32* nocapture readonly %S, half* noca
 ; CHECK-NEXT:    str r4, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    str r7, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:    str r0, [sp, #16] @ 4-byte Spill
-; CHECK-NEXT:    b .LBB16_4
-; CHECK-NEXT:  .LBB16_3: @ %while.end
-; CHECK-NEXT:    @ in Loop: Header=BB16_4 Depth=1
-; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    subs.w r12, r12, #1
-; CHECK-NEXT:    vstrb.8 q0, [r2], #8
-; CHECK-NEXT:    add.w r0, r5, r0, lsl #1
-; CHECK-NEXT:    add.w r5, r0, #8
-; CHECK-NEXT:    beq.w .LBB16_12
-; CHECK-NEXT:  .LBB16_4: @ %while.body
+; CHECK-NEXT:    b .LBB16_3
+; CHECK-NEXT:  .LBB16_3: @ %while.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
-; CHECK-NEXT:    @ Child Loop BB16_6 Depth 2
+; CHECK-NEXT:    @ Child Loop BB16_5 Depth 2
 ; CHECK-NEXT:    @ Child Loop BB16_10 Depth 2
 ; CHECK-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:    ldrh.w lr, [r3, #14]
@@ -1125,14 +1117,14 @@ define void @fir(%struct.arm_fir_instance_f32* nocapture readonly %S, half* noca
 ; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    vfma.f16 q0, q1, lr
 ; CHECK-NEXT:    cmp r0, #16
-; CHECK-NEXT:    blo .LBB16_7
-; CHECK-NEXT:  @ %bb.5: @ %for.body.preheader
-; CHECK-NEXT:    @ in Loop: Header=BB16_4 Depth=1
+; CHECK-NEXT:    blo .LBB16_6
+; CHECK-NEXT:  @ %bb.4: @ %for.body.preheader
+; CHECK-NEXT:    @ in Loop: Header=BB16_3 Depth=1
 ; CHECK-NEXT:    ldr r0, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    dls lr, r0
 ; CHECK-NEXT:    ldr r6, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:  .LBB16_6: @ %for.body
-; CHECK-NEXT:    @ Parent Loop BB16_4 Depth=1
+; CHECK-NEXT:  .LBB16_5: @ %for.body
+; CHECK-NEXT:    @ Parent Loop BB16_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    ldrh r0, [r6], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r5]
@@ -1163,33 +1155,39 @@ define void @fir(%struct.arm_fir_instance_f32* nocapture readonly %S, half* noca
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    adds r5, #16
 ; CHECK-NEXT:    vfma.f16 q0, q1, r4
-; CHECK-NEXT:    le lr, .LBB16_6
-; CHECK-NEXT:    b .LBB16_8
-; CHECK-NEXT:  .LBB16_7: @ in Loop: Header=BB16_4 Depth=1
+; CHECK-NEXT:    le lr, .LBB16_5
+; CHECK-NEXT:    b .LBB16_7
+; CHECK-NEXT:  .LBB16_6: @ in Loop: Header=BB16_3 Depth=1
 ; CHECK-NEXT:    ldr r6, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:  .LBB16_8: @ %for.end
-; CHECK-NEXT:    @ in Loop: Header=BB16_4 Depth=1
+; CHECK-NEXT:  .LBB16_7: @ %for.end
+; CHECK-NEXT:    @ in Loop: Header=BB16_3 Depth=1
 ; CHECK-NEXT:    ldr r0, [sp, #16] @ 4-byte Reload
-; CHECK-NEXT:    subs.w lr, r0, #0
-; CHECK-NEXT:    beq.w .LBB16_3
+; CHECK-NEXT:    wls lr, r0, .LBB16_8
 ; CHECK-NEXT:    b .LBB16_9
+; CHECK-NEXT:  .LBB16_8: @ %while.end
+; CHECK-NEXT:    @ in Loop: Header=BB16_3 Depth=1
+; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    subs.w r12, r12, #1
+; CHECK-NEXT:    vstrb.8 q0, [r2], #8
+; CHECK-NEXT:    add.w r0, r5, r0, lsl #1
+; CHECK-NEXT:    add.w r5, r0, #8
+; CHECK-NEXT:    beq .LBB16_12
+; CHECK-NEXT:    b .LBB16_3
 ; CHECK-NEXT:  .LBB16_9: @ %while.body76.preheader
-; CHECK-NEXT:    @ in Loop: Header=BB16_4 Depth=1
+; CHECK-NEXT:    @ in Loop: Header=BB16_3 Depth=1
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:  .LBB16_10: @ %while.body76
-; CHECK-NEXT:    @ Parent Loop BB16_4 Depth=1
+; CHECK-NEXT:    @ Parent Loop BB16_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    ldrh r4, [r6], #2
 ; CHECK-NEXT:    vldrh.u16 q1, [r0], #2
 ; CHECK-NEXT:    vfma.f16 q0, q1, r4
-; CHECK-NEXT:    subs.w lr, lr, #1
-; CHECK-NEXT:    bne .LBB16_10
-; CHECK-NEXT:    b .LBB16_11
-; CHECK-NEXT:  .LBB16_11: @ %while.end.loopexit
-; CHECK-NEXT:    @ in Loop: Header=BB16_4 Depth=1
+; CHECK-NEXT:    le lr, .LBB16_10
+; CHECK-NEXT:  @ %bb.11: @ %while.end.loopexit
+; CHECK-NEXT:    @ in Loop: Header=BB16_3 Depth=1
 ; CHECK-NEXT:    ldr r0, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r5, r5, r0, lsl #1
-; CHECK-NEXT:    b .LBB16_3
+; CHECK-NEXT:    b .LBB16_8
 ; CHECK-NEXT:  .LBB16_12: @ %if.end
 ; CHECK-NEXT:    add sp, #24
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
