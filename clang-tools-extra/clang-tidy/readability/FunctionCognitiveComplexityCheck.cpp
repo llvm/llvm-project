@@ -227,7 +227,7 @@ class FunctionASTVisitor final
 
 public:
   explicit FunctionASTVisitor(const bool IgnoreMacros)
-      : IgnoreMacros(IgnoreMacros){};
+      : IgnoreMacros(IgnoreMacros) {}
 
   bool traverseStmtWithIncreasedNestingLevel(Stmt *Node) {
     ++CurrentNestingLevel;
