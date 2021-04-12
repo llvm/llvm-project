@@ -1,11 +1,11 @@
-add_mlir_dialect_library(MLIRAVX512Transforms
+add_mlir_dialect_library(MLIRX86VectorTransforms
   LegalizeForLLVMExport.cpp
 
   DEPENDS
-  MLIRAVX512ConversionsIncGen
+  MLIRX86VectorConversionsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAVX512
+  MLIRX86Vector
   MLIRIR
   MLIRLLVMIR
   MLIRStandardToLLVM

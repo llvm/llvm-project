@@ -1,4 +1,4 @@
-//===- LegalizeForLLVMExport.cpp - Prepare AVX512 for LLVM translation ----===//
+//===- LegalizeForLLVMExport.cpp - Prepare X86Vector for LLVM translation -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/AVX512/Transforms.h"
+#include "mlir/Dialect/X86Vector/Transforms.h"
 
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
-#include "mlir/Dialect/AVX512/AVX512Dialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 
 using namespace mlir;
-using namespace mlir::avx512;
+using namespace mlir::x86vector;
 
-/// Extracts the "main" vector element type from the given AVX512 operation.
+/// Extracts the "main" vector element type from the given X86Vector operation.
 template <typename OpTy>
 static Type getSrcVectorElementType(OpTy op) {
   return op.src().getType().template cast<VectorType>().getElementType();
@@ -29,6 +29,7 @@ Type getSrcVectorElementType(Vp2IntersectOp op) {
 }
 
 namespace {
+
 /// Base conversion for AVX512 ops that can be lowered to one of the two
 /// intrinsics based on the bitwidth of their "main" vector element type. This
 /// relies on the to-LLVM-dialect conversion helpers to correctly pack the
@@ -126,14 +127,14 @@ using Registry = RegistryImpl<
 
 } // namespace
 
-/// Populate the given list with patterns that convert from AVX512 to LLVM.
-void mlir::populateAVX512LegalizeForLLVMExportPatterns(
+/// Populate the given list with patterns that convert from X86Vector to LLVM.
+void mlir::populateX86VectorLegalizeForLLVMExportPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   Registry::registerPatterns(converter, patterns);
   patterns.add<MaskCompressOpConversion>(converter);
 }
 
-void mlir::configureAVX512LegalizeForExportTarget(
+void mlir::configureX86VectorLegalizeForExportTarget(
     LLVMConversionTarget &target) {
   Registry::configureTarget(target);
   target.addLegalOp<MaskCompressIntrOp>();

@@ -1,4 +1,4 @@
-//===- AVX512Ops.cpp - MLIR AVX512 ops implementation ---------------------===//
+//===- X86VectorDialect.cpp - MLIR X86Vector ops implementation -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the AVX512 dialect and its operations.
+// This file implements the X86Vector dialect and its operations.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/AVX512/AVX512Dialect.h"
+#include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
@@ -18,14 +18,14 @@
 
 using namespace mlir;
 
-void avx512::AVX512Dialect::initialize() {
+void x86vector::X86VectorDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/AVX512/AVX512.cpp.inc"
+#include "mlir/Dialect/X86Vector/X86Vector.cpp.inc"
       >();
 }
 
-static LogicalResult verify(avx512::MaskCompressOp op) {
+static LogicalResult verify(x86vector::MaskCompressOp op) {
   if (op.src() && op.constant_src())
     return emitError(op.getLoc(), "cannot use both src and constant_src");
 
@@ -42,4 +42,4 @@ static LogicalResult verify(avx512::MaskCompressOp op) {
 }
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/AVX512/AVX512.cpp.inc"
+#include "mlir/Dialect/X86Vector/X86Vector.cpp.inc"
