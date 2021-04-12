@@ -20,9 +20,6 @@ namespace mlir {
 /// Creates a pass to convert standard ops to SPIR-V ops.
 std::unique_ptr<OperationPass<ModuleOp>> createConvertStandardToSPIRVPass();
 
-/// Creates a pass to legalize ops that are not directly lowered to SPIR-V.
-std::unique_ptr<Pass> createLegalizeStdOpsForSPIRVLoweringPass();
-
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_STANDARDTOSPIRV_STANDARDTOSPIRVPASS_H
