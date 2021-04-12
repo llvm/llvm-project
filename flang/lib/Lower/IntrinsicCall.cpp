@@ -1195,7 +1195,7 @@ IntrinsicLibrary::genAll(mlir::Type resultType,
   auto resultArrayType = builder.getVarLenSeqTy(resultType, rank - 1);
   auto resultMutableBox =
        Fortran::lower::createTempMutableBox(builder, loc, resultArrayType);
-  auto resultIrBox =
+  auto resultIrBox = 
        Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
 
   // Call runtime. The runtime is allocating the result.
@@ -1203,9 +1203,7 @@ IntrinsicLibrary::genAll(mlir::Type resultType,
   return Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox)
       .match(
           [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
-            addCleanUpForTemp(loc, box.getAddr());
-            auto ldVal = builder.create<fir::LoadOp>(loc, box.getAddr());
-            return builder.createConvert(loc, resultArrayType, ldVal);
+            return box;
           },
           [&](const auto &) -> fir::ExtendedValue {
             fir::emitFatalError(loc, "Invalid result for ALL");
@@ -1276,9 +1274,7 @@ IntrinsicLibrary::genAny(mlir::Type resultType,
   return Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox)
       .match(
           [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
-            addCleanUpForTemp(loc, box.getAddr());
-            auto ldVal = builder.create<fir::LoadOp>(loc, box.getAddr());
-            return builder.createConvert(loc, resultArrayType, ldVal);
+            return box;
           },
           [&](const auto &) -> fir::ExtendedValue {
             fir::emitFatalError(loc, "Invalid result for ANY");
