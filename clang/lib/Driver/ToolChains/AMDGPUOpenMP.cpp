@@ -453,6 +453,9 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
                          false))
     CC1Args.push_back("-fgpu-rdc");
 
+  if (DriverArgs.hasArg(options::OPT_S) && DriverArgs.hasArg(options::OPT_emit_llvm))
+    CC1Args.push_back("-S");
+
   StringRef MaxThreadsPerBlock =
     DriverArgs.getLastArgValue(options::OPT_gpu_max_threads_per_block_EQ);
   if (!MaxThreadsPerBlock.empty()) {
