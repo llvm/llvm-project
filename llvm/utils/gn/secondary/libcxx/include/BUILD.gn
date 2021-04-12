@@ -72,6 +72,7 @@ if (current_toolchain == default_toolchain) {
       "__hash_table",
       "__libcpp_version",
       "__locale",
+      "__memory/allocator.h",
       "__memory/allocator_traits.h",
       "__memory/base.h",
       "__memory/pointer_traits.h",
@@ -269,10 +270,7 @@ config("include_config") {
   include_dirs = [ libcxx_generated_include_dir ]
 }
 
-
 group("include") {
-  deps = [
-    ":copy_headers($default_toolchain)",
-  ]
+  deps = [ ":copy_headers($default_toolchain)" ]
   public_configs = [ ":include_config" ]
 }
