@@ -226,6 +226,24 @@ public:
     return true;
   }
 
+  bool VisitDesignatedInitExpr(const DesignatedInitExpr *E) {
+    for (const DesignatedInitExpr::Designator &D : E->designators()) {
+      if (D.isFieldDesignator() && D.getField()) {
+        const FieldDecl *Decl = D.getField();
+        if (isInUSRSet(Decl)) {
+          auto StartLoc = D.getFieldLoc();
+          auto EndLoc = D.getFieldLoc();
+          RenameInfos.push_back({StartLoc, EndLoc,
+                                 /*FromDecl=*/nullptr,
+                                 /*Context=*/nullptr,
+                                 /*Specifier=*/nullptr,
+                                 /*IgnorePrefixQualifiers=*/true});
+        }
+      }
+    }
+    return true;
+  }
+
   bool VisitCXXConstructorDecl(const CXXConstructorDecl *CD) {
     // Fix the constructor initializer when renaming class members.
     for (const auto *Initializer : CD->inits()) {
