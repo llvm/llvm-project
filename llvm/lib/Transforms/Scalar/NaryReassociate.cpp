@@ -592,7 +592,7 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
   Value *A = nullptr, *B = nullptr;
   MaxMinT m_MaxMin(m_Value(A), m_Value(B));
   for (unsigned int i = 0; i < 2; ++i) {
-    if (match(LHS, m_MaxMin)) {
+    if (LHS->getNumUses() <= 2 && match(LHS, m_MaxMin)) {
       const SCEV *AExpr = SE->getSCEV(A), *BExpr = SE->getSCEV(B);
       const SCEV *RHSExpr = SE->getSCEV(RHS);
       for (unsigned int j = 0; j < 2; ++j) {
@@ -609,6 +609,12 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
           // iteration.
           std::swap(AExpr, RHSExpr);
         }
+
+        // The optimization is profitable only if LHS can be removed in the end.
+        // In other words LHS should be used (directly or indirectly) by I only.
+        for (User *U : LHS->users())
+          if (U != I || !(U->hasOneUser() && *U->users().begin() == I))
+            continue;
 
         SCEVExpander Expander(*SE, *DL, "nary-reassociate");
         SmallVector<const SCEV *, 2> Ops1{ BExpr, AExpr };
