@@ -527,7 +527,9 @@ public:
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    if (!isa<LinalgOp>(op))
+    auto linalgOp = dyn_cast<LinalgOp>(op);
+    // TODO: remove hasIndexSemantics check once index ops are supported.
+    if (!linalgOp || linalgOp.hasIndexSemantics())
       return failure();
     if (!linalgOpToLoopsImpl<LoopType>(op, rewriter, interchangeVector))
       return failure();

@@ -2047,6 +2047,21 @@ LogicalResult TiledLoopOp::fold(ArrayRef<Attribute>,
   return foldMemRefCast(*this);
 }
 
+//===----------------------------------------------------------------------===//
+// IndexOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(IndexOp op) {
+  auto linalgOp = dyn_cast<LinalgOp>(op->getParentOp());
+  if (!linalgOp)
+    return op.emitOpError("expected parent op with LinalgOp interface");
+  if (linalgOp.getNumLoops() <= op.dim())
+    return op.emitOpError("expected dim (")
+           << op.dim() << ") to be lower than the number of loops ("
+           << linalgOp.getNumLoops() << ") of the enclosing LinalgOp";
+  return success();
+}
+
 /////// Operations corresponding to library calls defined with Tablegen ////////
 
 template <typename LinalgPoolingOp>

@@ -652,3 +652,29 @@ func @generic_index_op2(%arg0: tensor<1x8xf64>, %arg1: tensor<1x8xi32>) -> tenso
   // CHECK-NEXT:   return %[[R]] : tensor<1x8xi32>
   return %1 : tensor<1x8xi32>
 }
+
+// -----
+
+// CHECK-LABEL: func @index_op(
+// CHECK-COUNT-2: linalg.generic
+func @index_op(%arg0: tensor<1x8xindex>, %arg1: tensor<1x8xindex>) -> tensor<1x8xindex> {
+  %0 = linalg.generic {
+    indexing_maps = [affine_map<(i, j) -> (i, j)>],
+    iterator_types = ["parallel", "parallel"]}
+  outs(%arg0 : tensor<1x8xindex>) {
+  ^bb0(%a: index):   // no predecessors
+    %2 = linalg.index 1 : index
+    linalg.yield %2 : index
+  } -> tensor<1x8xindex>
+  %1 = linalg.generic {
+    indexing_maps = [affine_map<(i, j) -> (i, j)>, affine_map<(i, j) -> (i, j)>],
+    iterator_types = ["parallel", "parallel"]}
+  ins(%0 : tensor<1x8xindex>)
+  outs(%arg1 : tensor<1x8xindex>) {
+  ^bb0(%a: index, %b: index):   // no predecessors
+    %2 = linalg.index 0 : index
+    %3 = addi %2, %a : index
+    linalg.yield %3 : index
+  } -> tensor<1x8xindex>
+  return %1 : tensor<1x8xindex>
+}
