@@ -11,7 +11,7 @@
 # CHECK: error: GOT_LOAD relocation requires that variable not be thread-local for `_foo' in [[FILE]]:(__text)
 
 #--- libtlv.s
-.section	__DATA,__thread_vars,thread_local_variables
+.section __DATA,__thread_vars,thread_local_variables
 .globl _foo
 _foo:
 
