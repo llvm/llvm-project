@@ -81,20 +81,20 @@ class AArch64LinuxMTEMemoryTagAccessTestCase(TestBase):
         self.expect("memory tag read mte_buf",
                 patterns=["Logical tag: 0x9\n"
                           "Allocation tags:\n"
-                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x0$"])
+                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x0 \(mismatch\)$"])
 
         # Range of <1 granule is rounded up to 1 granule
         self.expect("memory tag read mte_buf mte_buf+8",
                 patterns=["Logical tag: 0x9\n"
                           "Allocation tags:\n"
-                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x0$"])
+                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x0 \(mismatch\)$"])
 
         # Start address is aligned down, end aligned up
         self.expect("memory tag read mte_buf+8 mte_buf+24",
                 patterns=["Logical tag: 0x9\n"
                           "Allocation tags:\n"
-                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x0\n"
-                          "\[0x[0-9A-Fa-f]+10, 0x[0-9A-Fa-f]+20\): 0x1$"])
+                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x0 \(mismatch\)\n"
+                          "\[0x[0-9A-Fa-f]+10, 0x[0-9A-Fa-f]+20\): 0x1 \(mismatch\)$"])
 
         # You may read up to the end of the tagged region
         # Layout is mte_buf, mte_buf_2, non_mte_buf.
@@ -119,15 +119,23 @@ class AArch64LinuxMTEMemoryTagAccessTestCase(TestBase):
         self.expect("memory tag read mte_buf+page_size-16 mte_buf+page_size+16",
                 patterns=["Logical tag: 0x9\n"
                           "Allocation tags:\n"
-                          "\[0x[0-9A-Fa-f]+f0, 0x[0-9A-Fa-f]+00\): 0xf\n"
-                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x0$"])
+                          "\[0x[0-9A-Fa-f]+f0, 0x[0-9A-Fa-f]+00\): 0xf \(mismatch\)\n"
+                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x0 \(mismatch\)$"])
 
         # Tags in start/end are ignored when creating the range.
         # So this is not an error despite start/end having different tags
-        self.expect("memory tag read mte_buf mte_buf_alt_tag+16 ",
+        self.expect("memory tag read mte_buf mte_buf_alt_tag+16",
                 patterns=["Logical tag: 0x9\n"
                           "Allocation tags:\n"
-                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x0$"])
+                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x0 \(mismatch\)$"])
+
+        # Mismatched tags are marked. The logical tag is taken from the start address.
+        self.expect("memory tag read mte_buf+(8*16) mte_buf_alt_tag+(8*16)+48",
+                patterns=["Logical tag: 0x9\n"
+                          "Allocation tags:\n"
+                          "\[0x[0-9A-Fa-f]+80, 0x[0-9A-Fa-f]+90\): 0x8 \(mismatch\)\n"
+                          "\[0x[0-9A-Fa-f]+90, 0x[0-9A-Fa-f]+a0\): 0x9\n"
+                          "\[0x[0-9A-Fa-f]+a0, 0x[0-9A-Fa-f]+b0\): 0xa \(mismatch\)$"])
 
     @skipUnlessArch("aarch64")
     @skipUnlessPlatform(["linux"])
@@ -162,16 +170,16 @@ class AArch64LinuxMTEMemoryTagAccessTestCase(TestBase):
                 patterns=["Logical tag: 0x9\n"
                           "Allocation tags:\n"
                           "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x9\n"
-                          "\[0x[0-9A-Fa-f]+10, 0x[0-9A-Fa-f]+20\): 0x1$"])
+                          "\[0x[0-9A-Fa-f]+10, 0x[0-9A-Fa-f]+20\): 0x1 \(mismatch\)$"])
 
         # You can write multiple tags, range calculated for you
         self.expect("memory tag write mte_buf 10 11 12")
         self.expect("memory tag read mte_buf mte_buf+48",
                 patterns=["Logical tag: 0x9\n"
                           "Allocation tags:\n"
-                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0xa\n"
-                          "\[0x[0-9A-Fa-f]+10, 0x[0-9A-Fa-f]+20\): 0xb\n"
-                          "\[0x[0-9A-Fa-f]+20, 0x[0-9A-Fa-f]+30\): 0xc$"])
+                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0xa \(mismatch\)\n"
+                          "\[0x[0-9A-Fa-f]+10, 0x[0-9A-Fa-f]+20\): 0xb \(mismatch\)\n"
+                          "\[0x[0-9A-Fa-f]+20, 0x[0-9A-Fa-f]+30\): 0xc \(mismatch\)$"])
 
         # You may write up to the end of a tagged region
         # (mte_buf_2's intial tags will all be 0)
@@ -179,7 +187,7 @@ class AArch64LinuxMTEMemoryTagAccessTestCase(TestBase):
         self.expect("memory tag read mte_buf_2+page_size-16 mte_buf_2+page_size",
                 patterns=["Logical tag: 0x0\n"
                           "Allocation tags:\n"
-                          "\[0x[0-9A-Fa-f]+, 0x[0-9A-Fa-f]+\): 0xe$"])
+                          "\[0x[0-9A-Fa-f]+, 0x[0-9A-Fa-f]+\): 0xe \(mismatch\)$"])
 
         # Ranges with any part outside the region will error
         self.expect("memory tag write mte_buf_2+page_size-16 6 7",
@@ -202,15 +210,15 @@ class AArch64LinuxMTEMemoryTagAccessTestCase(TestBase):
         self.expect("memory tag read mte_buf+page_size-16 mte_buf+page_size+16",
                 patterns=["Logical tag: 0x9\n"
                           "Allocation tags:\n"
-                          "\[0x[0-9A-Fa-f]+f0, 0x[0-9A-Fa-f]+00\): 0x1\n"
-                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x2$"])
+                          "\[0x[0-9A-Fa-f]+f0, 0x[0-9A-Fa-f]+00\): 0x1 \(mismatch\)\n"
+                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x2 \(mismatch\)$"])
 
         # Even if a page is read only the debugger can still write to it
         self.expect("memory tag write mte_read_only 1")
         self.expect("memory tag read mte_read_only",
                 patterns=["Logical tag: 0x0\n"
                           "Allocation tags:\n"
-                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x1$"])
+                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x1 \(mismatch\)$"])
 
         # Trying to write a value > maximum tag value is an error
         self.expect("memory tag write mte_buf 99",
@@ -244,9 +252,9 @@ class AArch64LinuxMTEMemoryTagAccessTestCase(TestBase):
         self.expect("memory tag read mte_buf_2 mte_buf_2+64",
                 patterns=["Logical tag: 0x0\n"
                           "Allocation tags:\n"
-                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x4\n"
-                          "\[0x[0-9A-Fa-f]+10, 0x[0-9A-Fa-f]+20\): 0x5\n"
-                          "\[0x[0-9A-Fa-f]+20, 0x[0-9A-Fa-f]+30\): 0x4\n"
+                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x4 \(mismatch\)\n"
+                          "\[0x[0-9A-Fa-f]+10, 0x[0-9A-Fa-f]+20\): 0x5 \(mismatch\)\n"
+                          "\[0x[0-9A-Fa-f]+20, 0x[0-9A-Fa-f]+30\): 0x4 \(mismatch\)\n"
                           "\[0x[0-9A-Fa-f]+30, 0x[0-9A-Fa-f]+40\): 0x0$"])
 
         # Since this aligns like tag read does, the start is aligned down and the end up.
@@ -258,9 +266,9 @@ class AArch64LinuxMTEMemoryTagAccessTestCase(TestBase):
         self.expect("memory tag read mte_buf_2 mte_buf_2+48",
                 patterns=["Logical tag: 0x0\n"
                           "Allocation tags:\n"
-                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x6\n"
-                          "\[0x[0-9A-Fa-f]+10, 0x[0-9A-Fa-f]+20\): 0x6\n"
-                          "\[0x[0-9A-Fa-f]+20, 0x[0-9A-Fa-f]+30\): 0x4$"])
+                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x6 \(mismatch\)\n"
+                          "\[0x[0-9A-Fa-f]+10, 0x[0-9A-Fa-f]+20\): 0x6 \(mismatch\)\n"
+                          "\[0x[0-9A-Fa-f]+20, 0x[0-9A-Fa-f]+30\): 0x4 \(mismatch\)$"])
 
         # If we do the same with a misaligned end, it also moves but upward.
         # The intial range is 2 granules but the final range is mte_buf_2 -> mte_buf_2+48
@@ -268,7 +276,7 @@ class AArch64LinuxMTEMemoryTagAccessTestCase(TestBase):
         self.expect("memory tag read mte_buf_2 mte_buf_2+64",
                 patterns=["Logical tag: 0x0\n"
                           "Allocation tags:\n"
-                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x3\n"
-                          "\[0x[0-9A-Fa-f]+10, 0x[0-9A-Fa-f]+20\): 0x3\n"
-                          "\[0x[0-9A-Fa-f]+20, 0x[0-9A-Fa-f]+30\): 0x3\n"
+                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x3 \(mismatch\)\n"
+                          "\[0x[0-9A-Fa-f]+10, 0x[0-9A-Fa-f]+20\): 0x3 \(mismatch\)\n"
+                          "\[0x[0-9A-Fa-f]+20, 0x[0-9A-Fa-f]+30\): 0x3 \(mismatch\)\n"
                           "\[0x[0-9A-Fa-f]+30, 0x[0-9A-Fa-f]+40\): 0x0$"])
