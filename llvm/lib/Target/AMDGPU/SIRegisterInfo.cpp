@@ -1046,16 +1046,13 @@ static unsigned getFlatScratchSpillOpcode(const SIInstrInfo *TII,
   return LoadStoreOp;
 }
 
-void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
-                                         unsigned LoadStoreOp,
-                                         int Index,
-                                         Register ValueReg,
-                                         bool IsKill,
-                                         MCRegister ScratchOffsetReg,
-                                         int64_t InstOffset,
-                                         MachineMemOperand *MMO,
-                                         RegScavenger *RS,
-                                         bool NeedsCFI) const {
+void SIRegisterInfo::buildSpillLoadStore(
+    MachineBasicBlock::iterator MI, unsigned LoadStoreOp, int Index,
+    Register ValueReg, bool IsKill, MCRegister ScratchOffsetReg,
+    int64_t InstOffset, MachineMemOperand *MMO, RegScavenger *RS,
+    LivePhysRegs *LiveRegs, bool NeedsCFI) const {
+  assert((!RS || !LiveRegs) && "Only RS or LiveRegs can be set but not both");
+
   MachineBasicBlock *MBB = MI->getParent();
   MachineFunction *MF = MI->getParent()->getParent();
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -1113,9 +1110,17 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
       Offset *= ST.getWavefrontSize();
 
     // We don't have access to the register scavenger if this function is called
-    // during  PEI::scavengeFrameVirtualRegs().
-    if (RS)
+    // during  PEI::scavengeFrameVirtualRegs() so use LiveRegs in this case.
+    if (RS) {
       SOffset = RS->scavengeRegister(&AMDGPU::SGPR_32RegClass, MI, 0, false);
+    } else if (LiveRegs) {
+      for (MCRegister Reg : AMDGPU::SGPR_32RegClass) {
+        if (LiveRegs->available(MF->getRegInfo(), Reg)) {
+          SOffset = Reg;
+          break;
+        }
+      }
+    }
 
     if (!SOffset) {
       // There are no free SGPRs, and since we are in the process of spilling
@@ -1688,6 +1693,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     }
 
     default: {
+      // Other access to frame index
       const DebugLoc &DL = MI->getDebugLoc();
 
       int64_t Offset = FrameInfo.getObjectOffset(Index);
