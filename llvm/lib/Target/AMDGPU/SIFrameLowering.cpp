@@ -1237,16 +1237,8 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   if (!allStackObjectsAreDead(MFI)) {
     assert(RS && "RegScavenger required if spilling");
 
-    if (FuncInfo->isEntryFunction()) {
-      int ScavengeFI = MFI.CreateFixedObject(
-        TRI->getSpillSize(AMDGPU::SGPR_32RegClass), 0, false);
-      RS->addScavengingFrameIndex(ScavengeFI);
-    } else {
-      int ScavengeFI = MFI.CreateStackObject(
-          TRI->getSpillSize(AMDGPU::SGPR_32RegClass),
-          TRI->getSpillAlign(AMDGPU::SGPR_32RegClass), false);
-      RS->addScavengingFrameIndex(ScavengeFI);
-    }
+    // Add an emergency spill slot
+    RS->addScavengingFrameIndex(FuncInfo->getScavengeFI(MFI, *TRI));
   }
 }
 

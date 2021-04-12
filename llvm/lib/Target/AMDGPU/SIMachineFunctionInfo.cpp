@@ -440,6 +440,21 @@ void SIMachineFunctionInfo::removeDeadFrameIndices(MachineFrameInfo &MFI) {
   }
 }
 
+int SIMachineFunctionInfo::getScavengeFI(MachineFrameInfo &MFI,
+                                         const SIRegisterInfo &TRI) {
+  if (ScavengeFI)
+    return *ScavengeFI;
+  if (isEntryFunction()) {
+    ScavengeFI = MFI.CreateFixedObject(
+        TRI.getSpillSize(AMDGPU::SGPR_32RegClass), 0, false);
+  } else {
+    ScavengeFI = MFI.CreateStackObject(
+        TRI.getSpillSize(AMDGPU::SGPR_32RegClass),
+        TRI.getSpillAlign(AMDGPU::SGPR_32RegClass), false);
+  }
+  return *ScavengeFI;
+}
+
 MCPhysReg SIMachineFunctionInfo::getNextUserSGPR() const {
   assert(NumSystemSGPRs == 0 && "System SGPRs must be added after user SGPRs");
   return AMDGPU::SGPR0 + NumUserSGPRs;
