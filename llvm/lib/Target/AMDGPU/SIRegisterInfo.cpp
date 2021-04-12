@@ -233,7 +233,7 @@ struct SGPRSpillBuilder {
       // Add an implicit use of the load so it is not dead.
       // FIXME This inserts an unnecessary waitcnt
       if (!TmpVGPRLive) {
-        I.addReg(TmpVGPR, RegState::Implicit);
+        I.addReg(TmpVGPR, RegState::ImplicitKill);
       }
     } else {
       // Restore inactive lanes
@@ -241,7 +241,7 @@ struct SGPRSpillBuilder {
                                   /*IsKill*/ false);
       auto I = BuildMI(MBB, MI, DL, TII.get(NotOpc), ExecReg).addReg(ExecReg);
       if (!TmpVGPRLive) {
-        I.addReg(TmpVGPR, RegState::Implicit);
+        I.addReg(TmpVGPR, RegState::ImplicitKill);
       }
       // Restore active lanes
       if (TmpVGPRLive)
