@@ -566,3 +566,19 @@ func @unit_dim_for_reduction_inner(%arg0: tensor<?x1x?x1xf32>) -> tensor<?x1xf32
 // CHECK-SAME:     outs(%[[FILL]] : tensor<?xf32>)
 //      CHECK:   %[[RESULT_RESHAPE:.+]] = linalg.tensor_reshape %[[RESULT]] [#[[MAP2]]]
 //      CHECK:   return %[[RESULT_RESHAPE]]
+
+// -----
+
+//  CHECK: #{{.+}} = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK-LABEL: @index_op
+func @index_op(%arg0: memref<1x8xindex>) {
+  linalg.generic {
+    indexing_maps = [affine_map<(i, j) -> (i, j)>],
+    iterator_types = ["parallel", "parallel"]}
+  outs(%arg0 : memref<1x8xindex>) {
+  ^bb0(%arg1: index):   // no predecessors
+    %0 = linalg.index 1 : index
+    linalg.yield %0 : index
+  }
+  return
+}

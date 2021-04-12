@@ -24,6 +24,41 @@ func @yield_parent(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
 
 // -----
 
+func @index_parent() {
+  // expected-error @+1 {{op expected parent op with LinalgOp interface}}
+  linalg.index 0 : index
+}
+
+// -----
+
+func @index_dim_lower_than_number_of_loops(%arg0: memref<f32>) {
+  // expected-error @+6 {{op expected dim (2) to be lower than the number of loops (0) of the enclosing LinalgOp}}
+  linalg.generic {
+      indexing_maps =  [ affine_map<() -> ()> ],
+      iterator_types = []}
+      outs(%arg0 : memref<f32>) {
+    ^bb(%0: f32):
+      linalg.index 2 : index
+      linalg.yield %0 : f32
+  }
+}
+
+// -----
+
+func @index_dim_negative(%arg0: memref<f32>) {
+  // expected-error @+6 {{op attribute 'dim' failed to satisfy constraint: 64-bit signless integer attribute whose minimum value is 0}}
+  linalg.generic {
+      indexing_maps =  [ affine_map<() -> ()> ],
+      iterator_types = []}
+      outs(%arg0 : memref<f32>) {
+    ^bb(%0: f32):
+      linalg.index -1 : index
+      linalg.yield %0 : f32
+  }
+}
+
+// -----
+
 func @generic_no_region(%arg0: memref<f32>) {
   // expected-error @+5 {{expected '{' to begin a region}}
   linalg.generic {

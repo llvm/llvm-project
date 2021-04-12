@@ -469,3 +469,19 @@ func @pad_dynamic(%arg0: tensor<1x2x2x?xf32>, %low: index, %high: index,
     } : tensor<1x2x2x?xf32> to tensor<6x?x?x?xf32>
   return %0 : tensor<6x?x?x?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @index_op
+//       CHECK:   linalg.generic
+func @index_op(%arg0: memref<4x8xindex>) {
+  linalg.generic {
+    indexing_maps = [affine_map<(i, j) -> (i, j)>],
+    iterator_types = ["parallel", "parallel"]}
+  outs(%arg0 : memref<4x8xindex>) {
+  ^bb0(%arg1: index):   // no predecessors
+    %0 = linalg.index 1 : index
+    linalg.yield %0 : index
+  }
+  return
+}

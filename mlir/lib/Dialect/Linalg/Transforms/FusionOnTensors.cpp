@@ -28,6 +28,10 @@ using namespace mlir::linalg;
 /// Implementation of fusion of generic ops and indexed_generic ops.
 static bool areElementwiseOpsFusable(LinalgOp producer, LinalgOp consumer,
                                      unsigned consumerIdx) {
+  // TODO: remove once index ops are supported.
+  if (producer.hasIndexSemantics() || consumer.hasIndexSemantics())
+    return false;
+
   // Producer and consumer must have tensor semantics.
   if (!producer.hasTensorSemantics() || !consumer.hasTensorSemantics())
     return false;
