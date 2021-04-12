@@ -21,6 +21,7 @@ namespace llvm {
 
 class GCNSubtarget;
 class LiveIntervals;
+class LivePhysRegs;
 class RegisterBank;
 struct SGPRSpillBuilder;
 class SIMachineFunctionInfo;
@@ -344,16 +345,15 @@ public:
   /// of the subtarget.
   ArrayRef<MCPhysReg> getAllSGPR32(const MachineFunction &MF) const;
 
-private:
-  void buildSpillLoadStore(MachineBasicBlock::iterator MI,
-                           unsigned LoadStoreOp,
-                           int Index,
-                           Register ValueReg,
-                           bool ValueIsKill,
-                           MCRegister ScratchOffsetReg,
-                           int64_t InstrOffset,
-                           MachineMemOperand *MMO,
-                           RegScavenger *RS) const;
+  // Insert spill or restore instructions.
+  // When lowering spill pseudos, the RegScavenger should be set.
+  // For creating spill instructions during frame lowering, where no scavenger
+  // is available, LiveRegs can be used.
+  void buildSpillLoadStore(MachineBasicBlock::iterator MI, unsigned LoadStoreOp,
+                           int Index, Register ValueReg, bool ValueIsKill,
+                           MCRegister ScratchOffsetReg, int64_t InstrOffset,
+                           MachineMemOperand *MMO, RegScavenger *RS,
+                           LivePhysRegs *LiveRegs = nullptr) const;
 };
 
 } // End namespace llvm
