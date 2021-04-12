@@ -1153,6 +1153,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
       setOperationAction(ISD::UMUL_LOHI, VT, Expand);
       setOperationAction(ISD::SMUL_LOHI, VT, Expand);
+      setOperationAction(ISD::SELECT_CC, VT, Expand);
     }
 
     // Illegal unpacked integer vector types.
@@ -1170,6 +1171,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
       setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
       setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
+
+      setOperationAction(ISD::SELECT_CC, VT, Expand);
 
       // There are no legal MVT::nxv16f## based types.
       if (VT != MVT::nxv16i1) {
@@ -1218,6 +1221,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
+
+      setOperationAction(ISD::SELECT_CC, VT, Expand);
     }
 
     for (auto VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
@@ -15324,6 +15329,9 @@ static SDValue performSelectCombine(SDNode *N,
   EVT ResVT = N->getValueType(0);
 
   if (N0.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  if (ResVT.isScalableVector())
     return SDValue();
 
   // Make sure the SETCC result is either i1 (initial DAG), or i32, the lowered
