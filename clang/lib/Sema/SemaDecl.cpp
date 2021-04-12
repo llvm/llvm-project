@@ -10968,24 +10968,6 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     if (!CurContext->isRecord())
       CheckCXXDefaultArguments(NewFD);
 
-    // If this function declares a builtin function, check the type of this
-    // declaration against the expected type for the builtin.
-    if (unsigned BuiltinID = NewFD->getBuiltinID()) {
-      ASTContext::GetBuiltinTypeError Error;
-      LookupNecessaryTypesForBuiltin(S, BuiltinID);
-      QualType T = Context.GetBuiltinType(BuiltinID, Error);
-      // If the type of the builtin differs only in its exception
-      // specification, that's OK.
-      // FIXME: If the types do differ in this way, it would be better to
-      // retain the 'noexcept' form of the type.
-      if (!T.isNull() &&
-          !Context.hasSameFunctionTypeIgnoringExceptionSpec(T,
-                                                            NewFD->getType()))
-        // The type of this function differs from the type of the builtin,
-        // so forget about the builtin entirely.
-        Context.BuiltinInfo.forgetBuiltin(BuiltinID, Context.Idents);
-    }
-
     // If this function is declared as being extern "C", then check to see if
     // the function returns a UDT (class, struct, or union type) that is not C
     // compatible, and if it does, warn the user.
