@@ -597,7 +597,8 @@ main:
     # CHECK: i32x4.extmul_high_i16x8_u # encoding: [0xfd,0xbf,0x01]
     i32x4.extmul_high_i16x8_u
 
-    # TODO: i64x2.abs # encoding: [0xfd,0xc0,0x01]
+    # CHECK: i64x2.abs # encoding: [0xfd,0xc0,0x01]
+    i64x2.abs
 
     # CHECK: i64x2.neg # encoding: [0xfd,0xc1,0x01]
     i64x2.neg
