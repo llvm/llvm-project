@@ -50,11 +50,11 @@ public:
   static void CloseAll(IoErrorHandler &);
   static void FlushAll(IoErrorHandler &);
 
-  void OpenUnit(OpenStatus, std::optional<Action>, Position,
+  void OpenUnit(std::optional<OpenStatus>, std::optional<Action>, Position,
       OwningPtr<char> &&path, std::size_t pathLength, Convert,
       IoErrorHandler &);
-  void OpenAnonymousUnit(
-      OpenStatus, std::optional<Action>, Position, Convert, IoErrorHandler &);
+  void OpenAnonymousUnit(std::optional<OpenStatus>, std::optional<Action>,
+      Position, Convert, IoErrorHandler &);
   void CloseUnit(CloseStatus, IoErrorHandler &);
   void DestroyClosed();
 

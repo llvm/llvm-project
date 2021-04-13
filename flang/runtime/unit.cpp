@@ -89,9 +89,9 @@ int ExternalFileUnit::NewUnit(const Terminator &terminator) {
   return GetUnitMap().NewUnit(terminator).unitNumber();
 }
 
-void ExternalFileUnit::OpenUnit(OpenStatus status, std::optional<Action> action,
-    Position position, OwningPtr<char> &&newPath, std::size_t newPathLength,
-    Convert convert, IoErrorHandler &handler) {
+void ExternalFileUnit::OpenUnit(std::optional<OpenStatus> status,
+    std::optional<Action> action, Position position, OwningPtr<char> &&newPath,
+    std::size_t newPathLength, Convert convert, IoErrorHandler &handler) {
   if (executionEnvironment.conversion != Convert::Unknown) {
     convert = executionEnvironment.conversion;
   }
@@ -99,11 +99,15 @@ void ExternalFileUnit::OpenUnit(OpenStatus status, std::optional<Action> action,
       (convert == Convert::LittleEndian && !isHostLittleEndian) ||
       (convert == Convert::BigEndian && isHostLittleEndian);
   if (IsOpen()) {
-    if (status == OpenStatus::Old &&
-        (!newPath.get() ||
-            (path() && pathLength() == newPathLength &&
-                std::memcmp(path(), newPath.get(), newPathLength) == 0))) {
-      // OPEN of existing unit, STATUS='OLD', not new FILE=
+    bool isSamePath{newPath.get() && path() && pathLength() == newPathLength &&
+        std::memcmp(path(), newPath.get(), newPathLength) == 0};
+    if (status && *status != OpenStatus::Old && isSamePath) {
+      handler.SignalError("OPEN statement for connected unit may not have "
+                          "explicit STATUS= other than 'OLD'");
+      return;
+    }
+    if (!newPath.get() || isSamePath) {
+      // OPEN of existing unit, STATUS='OLD' or unspecified, not new FILE=
       newPath.reset();
       return;
     }
@@ -113,7 +117,7 @@ void ExternalFileUnit::OpenUnit(OpenStatus status, std::optional<Action> action,
     Close(CloseStatus::Keep, handler);
   }
   set_path(std::move(newPath), newPathLength);
-  Open(status, action, position, handler);
+  Open(status.value_or(OpenStatus::Unknown), action, position, handler);
   auto totalBytes{knownSize()};
   if (access == Access::Direct) {
     if (!isFixedRecordLength || !recordLength) {
@@ -146,7 +150,7 @@ void ExternalFileUnit::OpenUnit(OpenStatus status, std::optional<Action> action,
   }
 }
 
-void ExternalFileUnit::OpenAnonymousUnit(OpenStatus status,
+void ExternalFileUnit::OpenAnonymousUnit(std::optional<OpenStatus> status,
     std::optional<Action> action, Position position, Convert convert,
     IoErrorHandler &handler) {
   // I/O to an unconnected unit reads/creates a local file, e.g. fort.7
