@@ -600,6 +600,8 @@ llvm::json::Value toJSON(const Diagnostic &D) {
     Diag["source"] = D.source;
   if (D.relatedInformation)
     Diag["relatedInformation"] = *D.relatedInformation;
+  if (!D.data.empty())
+    Diag["data"] = llvm::json::Object(D.data);
   // FIXME: workaround for older gcc/clang
   return std::move(Diag);
 }
@@ -607,7 +609,11 @@ llvm::json::Value toJSON(const Diagnostic &D) {
 bool fromJSON(const llvm::json::Value &Params, Diagnostic &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O && O.map("range", R.range) && O.map("message", R.message) &&
+  if (!O)
+    return false;
+  if (auto *Data = Params.getAsObject()->getObject("data"))
+    R.data = *Data;
+  return O.map("range", R.range) && O.map("message", R.message) &&
          mapOptOrNull(Params, "severity", R.severity, P) &&
          mapOptOrNull(Params, "category", R.category, P) &&
          mapOptOrNull(Params, "code", R.code, P) &&

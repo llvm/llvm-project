@@ -20,12 +20,14 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/SourceMgr.h"
 #include <cassert>
 #include <functional>
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace clang {
 namespace tidy {
@@ -70,6 +72,10 @@ struct DiagBase {
   // diags from the main file.
   bool InsideMainFile = false;
   unsigned ID; // e.g. member of clang::diag, or clang-tidy assigned ID.
+  // Feature modules can make use of this field to propagate data from a
+  // diagnostic to a CodeAction request. Each module should only append to the
+  // list.
+  llvm::json::Object OpaqueData;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const DiagBase &D);
 
