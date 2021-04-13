@@ -59,3 +59,11 @@ llvm.func @LLVM_x86_vp2intersect_q_512(%a: vector<8xi64>, %b: vector<8xi64>)
     (vector<8xi64>, vector<8xi64>) -> !llvm.struct<(vector<8 x i1>, vector<8 x i1>)>
   llvm.return %0 : !llvm.struct<(vector<8 x i1>, vector<8 x i1>)>
 }
+
+// CHECK-LABEL: define <8 x float> @LLVM_x86_avx_rsqrt_ps_256
+llvm.func @LLVM_x86_avx_rsqrt_ps_256(%a: vector <8xf32>) -> vector<8xf32>
+{
+  // CHECK: call <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float>
+  %0 = "x86vector.avx.intr.rsqrt.ps.256"(%a) : (vector<8xf32>) -> (vector<8xf32>)
+  llvm.return %0 : vector<8xf32>
+}

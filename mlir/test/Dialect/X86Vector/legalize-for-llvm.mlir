@@ -42,3 +42,11 @@ func @avx512_vp2intersect(%a: vector<16xi32>, %b: vector<8xi64>)
   %2, %3 = x86vector.avx512.vp2intersect %b, %b : vector<8xi64>
   return %0, %1, %2, %3 : vector<16xi1>, vector<16xi1>, vector<8xi1>, vector<8xi1>
 }
+
+// CHECK-LABEL: func @avx_rsqrt
+func @avx_rsqrt(%a: vector<8xf32>) -> (vector<8xf32>)
+{
+  // CHECK: x86vector.avx.intr.rsqrt.ps.256
+  %0 = x86vector.avx.rsqrt %a : vector<8xf32>
+  return %0 : vector<8xf32>
+}
