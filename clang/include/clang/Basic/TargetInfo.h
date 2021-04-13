@@ -1132,6 +1132,15 @@ public:
            getTriple().isWindowsItaniumEnvironment() || getTriple().isPS4CPU();
   }
 
+  // Does this target have PS4 specific dllimport/export handling?
+  virtual bool hasPS4DLLImportExport() const {
+    return getTriple().isPS4CPU() ||
+           // Windows Itanium support allows for testing the SCEI flavour of
+           // dllimport/export handling on a Windows system.
+           (getTriple().isWindowsItaniumEnvironment() &&
+            getTriple().getVendor() == llvm::Triple::SCEI);
+  }
+
   /// An optional hook that targets can implement to perform semantic
   /// checking on attribute((section("foo"))) specifiers.
   ///
