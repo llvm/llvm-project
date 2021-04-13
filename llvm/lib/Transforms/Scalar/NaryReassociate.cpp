@@ -592,7 +592,7 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
   Value *A = nullptr, *B = nullptr;
   MaxMinT m_MaxMin(m_Value(A), m_Value(B));
   for (unsigned int i = 0; i < 2; ++i) {
-    if (LHS->getNumUses() <= 2 && match(LHS, m_MaxMin)) {
+    if (!LHS->hasNUsesOrMore(3) && match(LHS, m_MaxMin)) {
       const SCEV *AExpr = SE->getSCEV(A), *BExpr = SE->getSCEV(B);
       const SCEV *RHSExpr = SE->getSCEV(RHS);
       for (unsigned int j = 0; j < 2; ++j) {
