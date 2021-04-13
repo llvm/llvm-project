@@ -712,8 +712,7 @@ def : Pat<(and (srl GPR:$rs1, uimmlog2xlen:$shamt), (XLenVT 1)),
 // There's no encoding for roli in the the 'B' extension as it can be
 // implemented with rori by negating the immediate.
 let Predicates = [HasStdExtZbbOrZbp] in {
-def : Pat<(rotr GPR:$rs1, uimmlog2xlen:$shamt),
-          (RORI GPR:$rs1, uimmlog2xlen:$shamt)>;
+def : PatGprImm<rotr, RORI, uimmlog2xlen>;
 def : Pat<(rotl GPR:$rs1, uimmlog2xlen:$shamt),
           (RORI GPR:$rs1, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
 
@@ -723,12 +722,9 @@ def : Pat<(riscv_gorc GPR:$rs1, 7), (ORCB GPR:$rs1)>;
 }
 
 let Predicates = [HasStdExtZbp] in {
-def : Pat<(riscv_shfl GPR:$rs1, shfl_uimm:$shamt),
-          (SHFLI GPR:$rs1, shfl_uimm:$shamt)>;
-def : Pat<(riscv_grev GPR:$rs1, uimmlog2xlen:$shamt),
-          (GREVI GPR:$rs1, uimmlog2xlen:$shamt)>;
-def : Pat<(riscv_gorc GPR:$rs1, uimmlog2xlen:$shamt),
-          (GORCI GPR:$rs1, uimmlog2xlen:$shamt)>;
+def : PatGprImm<riscv_shfl, SHFLI, shfl_uimm>;
+def : PatGprImm<riscv_grev, GREVI, uimmlog2xlen>;
+def : PatGprImm<riscv_gorc, GORCI, uimmlog2xlen>;
 } // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZbp, IsRV32] in {
@@ -875,8 +871,7 @@ def : Pat<(i64 (add (SLLIUWPat GPR:$rs1, (i64 3)), GPR:$rs2)),
 let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
 def : PatGprGpr<riscv_rolw, ROLW>;
 def : PatGprGpr<riscv_rorw, RORW>;
-def : Pat<(riscv_rorw GPR:$rs1, uimm5:$rs2),
-          (RORIW GPR:$rs1, uimm5:$rs2)>;
+def : PatGprImm<riscv_rorw, RORIW, uimm5>;
 def : Pat<(riscv_rolw GPR:$rs1, uimm5:$rs2),
           (RORIW GPR:$rs1, (ImmSubFrom32 uimm5:$rs2))>;
 } // Predicates = [HasStdExtZbbOrZbp, IsRV64]
@@ -884,8 +879,8 @@ def : Pat<(riscv_rolw GPR:$rs1, uimm5:$rs2),
 let Predicates = [HasStdExtZbp, IsRV64] in {
 def : Pat<(riscv_rorw (riscv_grevw GPR:$rs1, 24), 16), (GREVIW GPR:$rs1, 8)>;
 def : Pat<(riscv_rolw (riscv_grevw GPR:$rs1, 24), 16), (GREVIW GPR:$rs1, 8)>;
-def : Pat<(riscv_grevw GPR:$rs1, uimm5:$shamt), (GREVIW GPR:$rs1, uimm5:$shamt)>;
-def : Pat<(riscv_gorcw GPR:$rs1, uimm5:$shamt), (GORCIW GPR:$rs1, uimm5:$shamt)>;
+def : PatGprImm<riscv_grevw, GREVIW, uimm5>;
+def : PatGprImm<riscv_gorcw, GORCIW, uimm5>;
 } // Predicates = [HasStdExtZbp, IsRV64]
 
 let Predicates = [HasStdExtZbt, IsRV64] in {
