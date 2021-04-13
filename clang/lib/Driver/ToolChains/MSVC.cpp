@@ -190,13 +190,15 @@ findVCToolChainViaEnvironment(llvm::vfs::FileSystem &VFS, std::string &Path,
       if (IsBin) {
         llvm::StringRef ParentPath = llvm::sys::path::parent_path(TestPath);
         llvm::StringRef ParentFilename = llvm::sys::path::filename(ParentPath);
-        if (ParentFilename == "VC") {
+        if (ParentFilename.equals_lower("VC")) {
           Path = std::string(ParentPath);
           VSLayout = MSVCToolChain::ToolsetLayout::OlderVS;
           return true;
         }
-        if (ParentFilename == "x86ret" || ParentFilename == "x86chk"
-          || ParentFilename == "amd64ret" || ParentFilename == "amd64chk") {
+        if (ParentFilename.equals_lower("x86ret") ||
+            ParentFilename.equals_lower("x86chk") ||
+            ParentFilename.equals_lower("amd64ret") ||
+            ParentFilename.equals_lower("amd64chk")) {
           Path = std::string(ParentPath);
           VSLayout = MSVCToolChain::ToolsetLayout::DevDivInternal;
           return true;
@@ -215,7 +217,7 @@ findVCToolChainViaEnvironment(llvm::vfs::FileSystem &VFS, std::string &Path,
         for (llvm::StringRef Prefix : ExpectedPrefixes) {
           if (It == End)
             goto NotAToolChain;
-          if (!It->startswith(Prefix))
+          if (!It->startswith_lower(Prefix))
             goto NotAToolChain;
           ++It;
         }
