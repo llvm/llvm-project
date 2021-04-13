@@ -210,10 +210,10 @@ unsigned HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                 CostKind, I);
 }
 
-unsigned HexagonTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
-                                               Align Alignment,
-                                               unsigned AddressSpace,
-                                               TTI::TargetCostKind CostKind) {
+InstructionCost
+HexagonTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
+                                      Align Alignment, unsigned AddressSpace,
+                                      TTI::TargetCostKind CostKind) {
   return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                       CostKind);
 }

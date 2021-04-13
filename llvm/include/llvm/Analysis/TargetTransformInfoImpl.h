@@ -543,9 +543,9 @@ public:
     return 1;
   }
 
-  unsigned getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                                 unsigned AddressSpace,
-                                 TTI::TargetCostKind CostKind) const {
+  InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
+                                        Align Alignment, unsigned AddressSpace,
+                                        TTI::TargetCostKind CostKind) const {
     return 1;
   }
 
