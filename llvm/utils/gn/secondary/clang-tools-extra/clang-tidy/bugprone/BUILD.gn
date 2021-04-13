@@ -27,6 +27,7 @@ static_library("bugprone") {
     "FoldInitTypeCheck.cpp",
     "ForwardDeclarationNamespaceCheck.cpp",
     "ForwardingReferenceOverloadCheck.cpp",
+    "ImplicitWideningOfMultiplicationResultCheck.cpp",
     "InaccurateEraseCheck.cpp",
     "IncorrectRoundingsCheck.cpp",
     "InfiniteLoopCheck.cpp",
