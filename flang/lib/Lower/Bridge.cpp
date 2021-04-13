@@ -1557,7 +1557,6 @@ private:
   }
 
   void genArrayAssignment(const Fortran::evaluate::Assignment &assign,
-                          const Fortran::semantics::Symbol *sym,
                           Fortran::lower::StatementContext &stmtCtx) {
     localSymbols.pushScope();
     createSomeArrayAssignment(*this, assign.lhs, assign.rhs, localSymbols,
@@ -1637,7 +1636,7 @@ private:
               if (assign.lhs.Rank() > 0) {
                 // Array assignment
                 // See Fortran 2018 10.2.1.3 p5, p6, and p7
-                genArrayAssignment(assign, sym, stmtCtx);
+                genArrayAssignment(assign, stmtCtx);
                 return;
               }
 

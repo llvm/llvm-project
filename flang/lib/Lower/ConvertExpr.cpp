@@ -2056,11 +2056,27 @@ public:
           auto loc = getLoc();
           auto f = genarr(e);
           auto [iterSpace, insPt] = genIterSpace();
-          auto exv = f(iterSpace);
           auto innerArg = iterSpace.innerArgument();
           // Convert to array elemental type is needed for logical.
           auto eleTy = innerArg.getType().cast<fir::SequenceType>().getEleTy();
-          auto element = builder.createConvert(loc, eleTy, fir::getBase(exv));
+          auto exv = f(iterSpace);
+          auto element = exv.match(
+              [&](const fir::UnboxedValue &v) {
+                return builder.createConvert(loc, eleTy, v);
+              },
+              [&](const fir::CharBoxValue &v) -> mlir::Value {
+                auto ch = v.getBuffer();
+                // FIXME: a value of type !fir.char<> ought to be unboxed since
+                // it's length must have been known to create the value in the
+                // first place.
+                if (fir::isa_char(ch.getType()))
+                  return builder.createConvert(loc, eleTy, ch);
+                auto load = builder.create<fir::LoadOp>(loc, ch);
+                return builder.createConvert(loc, eleTy, load);
+              },
+              [&](const auto &) -> mlir::Value {
+                fir::emitFatalError(loc, "unhandled value for array update");
+              });
           iterSpace.setElement(element);
           mlir::Value upd = ccDest.hasValue()
                                 ? fir::getBase(ccDest.getValue()(iterSpace))
