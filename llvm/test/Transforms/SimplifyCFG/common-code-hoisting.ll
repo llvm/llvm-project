@@ -110,8 +110,8 @@ return:
 }
 
 ; A example where only the branch instructions from %if.then2 and %if.end3 need
-; to be hoisted, which effectively replaces the original branch in %if.end. As
-; this does not add any new instructions to the hoist location, it should always be profitable.
+; to be hoisted, which effectively replaces the original branch in %if.end and
+; only requires selects for PHIs in the successor.
 define float @clamp_float_value(float %value, float %minimum_value, float %maximum_value) {
 ; HOIST-LABEL: @clamp_float_value(
 ; HOIST-NEXT:  entry:
@@ -124,14 +124,9 @@ define float @clamp_float_value(float %value, float %minimum_value, float %maxim
 ; NOHOIST-LABEL: @clamp_float_value(
 ; NOHOIST-NEXT:  entry:
 ; NOHOIST-NEXT:    [[CMP:%.*]] = fcmp ogt float [[VALUE:%.*]], [[MAXIMUM_VALUE:%.*]]
-; NOHOIST-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[IF_END:%.*]]
-; NOHOIST:       if.end:
 ; NOHOIST-NEXT:    [[CMP1:%.*]] = fcmp olt float [[VALUE]], [[MINIMUM_VALUE:%.*]]
-; NOHOIST-NEXT:    br i1 [[CMP1]], label [[RETURN]], label [[IF_END3:%.*]]
-; NOHOIST:       if.end3:
-; NOHOIST-NEXT:    br label [[RETURN]]
-; NOHOIST:       return:
-; NOHOIST-NEXT:    [[RETVAL_0:%.*]] = phi float [ [[VALUE]], [[IF_END3]] ], [ [[MAXIMUM_VALUE]], [[ENTRY:%.*]] ], [ [[MINIMUM_VALUE]], [[IF_END]] ]
+; NOHOIST-NEXT:    [[MINIMUM_VALUE_VALUE:%.*]] = select i1 [[CMP1]], float [[MINIMUM_VALUE]], float [[VALUE]]
+; NOHOIST-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP]], float [[MAXIMUM_VALUE]], float [[MINIMUM_VALUE_VALUE]]
 ; NOHOIST-NEXT:    ret float [[RETVAL_0]]
 ;
 entry:
