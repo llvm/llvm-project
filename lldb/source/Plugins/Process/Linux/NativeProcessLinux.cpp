@@ -917,7 +917,7 @@ bool NativeProcessLinux::MonitorClone(
     MainLoop unused_loop;
     NativeProcessLinux child_process{static_cast<::pid_t>(child_pid),
                                      m_terminal_fd,
-                                     *m_delegates[0],
+                                     m_delegate,
                                      m_arch,
                                      unused_loop,
                                      {static_cast<::pid_t>(child_pid)}};

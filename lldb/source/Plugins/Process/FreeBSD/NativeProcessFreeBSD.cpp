@@ -957,7 +957,7 @@ void NativeProcessFreeBSD::MonitorClone(::pid_t child_pid) {
 
   MainLoop unused_loop;
   NativeProcessFreeBSD child_process{static_cast<::pid_t>(child_pid),
-                                     m_terminal_fd, *m_delegates[0], m_arch,
+                                     m_terminal_fd, m_delegate, m_arch,
                                      unused_loop};
   child_process.ReinitializeThreads();
   auto *child_thread =
