@@ -535,9 +535,13 @@ int main(int argc, char *const argv[]) {
       options.features.Enable(
           Fortran::parser::LanguageFeature::LogicalAbbreviations,
           arg == "-flogical-abbreviations");
-    } else if (arg == "-fimplicit-none-type-always") {
+    } else if (arg == "-fimplicit-none-type-always" ||
+        arg == "-fimplicit-none") {
       options.features.Enable(
           Fortran::common::LanguageFeature::ImplicitNoneTypeAlways);
+    } else if (arg == "-fno-implicit-none") {
+      options.features.Enable(
+          Fortran::common::LanguageFeature::ImplicitNoneTypeAlways, false);
     } else if (arg == "-fimplicit-none-type-never") {
       options.features.Enable(
           Fortran::common::LanguageFeature::ImplicitNoneTypeNever);
