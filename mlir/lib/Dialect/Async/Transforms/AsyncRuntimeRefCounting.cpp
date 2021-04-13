@@ -32,7 +32,7 @@ class AsyncRuntimeRefCountingPass
     : public AsyncRuntimeRefCountingBase<AsyncRuntimeRefCountingPass> {
 public:
   AsyncRuntimeRefCountingPass() = default;
-  void runOnFunction() override;
+  void runOnOperation() override;
 
 private:
   /// Adds an automatic reference counting to the `value`.
@@ -323,13 +323,13 @@ AsyncRuntimeRefCountingPass::addAutomaticRefCounting(Value value) {
   return success();
 }
 
-void AsyncRuntimeRefCountingPass::runOnFunction() {
-  FuncOp func = getFunction();
+void AsyncRuntimeRefCountingPass::runOnOperation() {
+  Operation *op = getOperation();
 
   // Check that we do not have high level async operations in the IR because
   // otherwise automatic reference counting will produce incorrect results after
   // execute operations will be lowered to `async.runtime`
-  WalkResult executeOpWalk = func.walk([&](Operation *op) -> WalkResult {
+  WalkResult executeOpWalk = op->walk([&](Operation *op) -> WalkResult {
     if (!isa<ExecuteOp, AwaitOp, AwaitAllOp, YieldOp>(op))
       return WalkResult::advance();
 
@@ -343,7 +343,7 @@ void AsyncRuntimeRefCountingPass::runOnFunction() {
   }
 
   // Add reference counting to block arguments.
-  WalkResult blockWalk = func.walk([&](Block *block) -> WalkResult {
+  WalkResult blockWalk = op->walk([&](Block *block) -> WalkResult {
     for (BlockArgument arg : block->getArguments())
       if (isRefCounted(arg.getType()))
         if (failed(addAutomaticRefCounting(arg)))
@@ -358,7 +358,7 @@ void AsyncRuntimeRefCountingPass::runOnFunction() {
   }
 
   // Add reference counting to operation results.
-  WalkResult opWalk = func.walk([&](Operation *op) -> WalkResult {
+  WalkResult opWalk = op->walk([&](Operation *op) -> WalkResult {
     for (unsigned i = 0; i < op->getNumResults(); ++i)
       if (isRefCounted(op->getResultTypes()[i]))
         if (failed(addAutomaticRefCounting(op->getResult(i))))
@@ -371,7 +371,6 @@ void AsyncRuntimeRefCountingPass::runOnFunction() {
     signalPassFailure();
 }
 
-std::unique_ptr<OperationPass<FuncOp>>
-mlir::createAsyncRuntimeRefCountingPass() {
+std::unique_ptr<Pass> mlir::createAsyncRuntimeRefCountingPass() {
   return std::make_unique<AsyncRuntimeRefCountingPass>();
 }
