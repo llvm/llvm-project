@@ -1,11 +1,17 @@
-! RUN: %flang-new -E -ccc-print-phases %s 2>&1 | FileCheck %s --check-prefix=PP
-! RUN: %flang-new -fsyntax-only -ccc-print-phases %s 2>&1 | FileCheck %s --check-prefix=COMPILE
-! RUN: %flang-new -c -ccc-print-phases %s 2>&1 | FileCheck %s --check-prefix=EMIT_OBJ
+! This test verifies the phase control in Flang compiler driver.
 
 ! REQUIRES: new-flang-driver
 
-! This test verifies the phase control in Flang compiler driver.
+!-----------
+! RUN LINES
+!-----------
+! RUN: %flang -E -ccc-print-phases %s 2>&1 | FileCheck %s --check-prefix=PP
+! RUN: %flang -fsyntax-only -ccc-print-phases %s 2>&1 | FileCheck %s --check-prefix=COMPILE
+! RUN: %flang -c -ccc-print-phases %s 2>&1 | FileCheck %s --check-prefix=EMIT_OBJ
 
+!-----------------------
+! EXPECTED OUTPUT
+!-----------------------
 ! PP: +- 0: input, "{{.*}}phases.f90", f95-cpp-input
 ! PP-NEXT: 1: preprocessor, {0}, f95
 
