@@ -91,62 +91,31 @@ using namespace lld::macho;
 // TODO(gkm): prune __eh_frame entries superseded by __unwind_info
 // TODO(gkm): how do we align the 2nd-level pages?
 
-using EncodingMap = llvm::DenseMap<compact_unwind_encoding_t, size_t>;
+UnwindInfoSection::UnwindInfoSection()
+    : SyntheticSection(segment_names::text, section_names::unwindInfo) {
+  align = 4; // mimic ld64
+}
 
-template <class Ptr> struct CompactUnwindEntry {
-  Ptr functionAddress;
-  uint32_t functionLength;
-  compact_unwind_encoding_t encoding;
-  Ptr personality;
-  Ptr lsda;
-};
+bool UnwindInfoSection::isNeeded() const {
+  return (compactUnwindSection != nullptr);
+}
 
-struct SecondLevelPage {
-  uint32_t kind;
-  size_t entryIndex;
-  size_t entryCount;
-  size_t byteCount;
-  std::vector<compact_unwind_encoding_t> localEncodings;
-  EncodingMap localEncodingIndexes;
-};
-
-template <class Ptr> class UnwindInfoSectionImpl : public UnwindInfoSection {
-public:
-  void prepareRelocations(InputSection *) override;
-  void finalize() override;
-  void writeTo(uint8_t *buf) const override;
-
-private:
-  std::vector<std::pair<compact_unwind_encoding_t, size_t>> commonEncodings;
-  EncodingMap commonEncodingIndexes;
-  // Indices of personality functions within the GOT.
-  std::vector<uint32_t> personalities;
-  SmallDenseMap<std::pair<InputSection *, uint64_t /* addend */>, Symbol *>
-      personalityTable;
-  std::vector<unwind_info_section_header_lsda_index_entry> lsdaEntries;
-  // Map of function offset (from the image base) to an index within the LSDA
-  // array.
-  llvm::DenseMap<uint32_t, uint32_t> functionToLsdaIndex;
-  std::vector<CompactUnwindEntry<Ptr>> cuVector;
-  std::vector<CompactUnwindEntry<Ptr> *> cuPtrVector;
-  std::vector<SecondLevelPage> secondLevelPages;
-  uint64_t level2PagesOffset = 0;
-};
+SmallDenseMap<std::pair<InputSection *, uint64_t /* addend */>, Symbol *>
+    personalityTable;
 
 // Compact unwind relocations have different semantics, so we handle them in a
 // separate code path from regular relocations. First, we do not wish to add
 // rebase opcodes for __LD,__compact_unwind, because that section doesn't
 // actually end up in the final binary. Second, personality pointers always
 // reside in the GOT and must be treated specially.
-template <class Ptr>
-void UnwindInfoSectionImpl<Ptr>::prepareRelocations(InputSection *isec) {
+void macho::prepareCompactUnwind(InputSection *isec) {
   assert(isec->segname == segment_names::ld &&
          isec->name == section_names::compactUnwind);
 
   for (Reloc &r : isec->relocs) {
     assert(target->hasAttr(r.type, RelocAttrBits::UNSIGNED));
-    if (r.offset % sizeof(CompactUnwindEntry<Ptr>) !=
-        offsetof(CompactUnwindEntry<Ptr>, personality))
+    if (r.offset % sizeof(CompactUnwindEntry64) !=
+        offsetof(struct CompactUnwindEntry64, personality))
       continue;
 
     if (auto *s = r.referent.dyn_cast<Symbol *>()) {
@@ -203,10 +172,8 @@ static void checkTextSegment(InputSection *isec) {
 // before converting it to post-link form. There should only be absolute
 // relocations here: since we are not emitting the pre-link CU section, there
 // is no source address to make a relative location meaningful.
-template <class Ptr>
-static void
-relocateCompactUnwind(MergedOutputSection *compactUnwindSection,
-                      std::vector<CompactUnwindEntry<Ptr>> &cuVector) {
+static void relocateCompactUnwind(MergedOutputSection *compactUnwindSection,
+                                  std::vector<CompactUnwindEntry64> &cuVector) {
   for (const InputSection *isec : compactUnwindSection->inputs) {
     uint8_t *buf =
         reinterpret_cast<uint8_t *>(cuVector.data()) + isec->outSecFileOff;
@@ -228,23 +195,21 @@ relocateCompactUnwind(MergedOutputSection *compactUnwindSection,
         checkTextSegment(referentIsec);
         referentVA = referentIsec->getVA() + r.addend;
       }
-
-      writeAddress(buf + r.offset, referentVA, r.length);
+      support::endian::write64le(buf + r.offset, referentVA);
     }
   }
 }
 
 // There should only be a handful of unique personality pointers, so we can
 // encode them as 2-bit indices into a small array.
-template <class Ptr>
-void encodePersonalities(
-    const std::vector<CompactUnwindEntry<Ptr> *> &cuPtrVector,
-    std::vector<uint32_t> &personalities) {
-  for (CompactUnwindEntry<Ptr> *cu : cuPtrVector) {
+void encodePersonalities(const std::vector<CompactUnwindEntry64 *> &cuPtrVector,
+                         std::vector<uint32_t> &personalities) {
+  for (CompactUnwindEntry64 *cu : cuPtrVector) {
     if (cu->personality == 0)
       continue;
+    uint32_t personalityOffset = cu->personality - in.header->addr;
     // Linear search is fast enough for a small array.
-    auto it = find(personalities, cu->personality);
+    auto it = find(personalities, personalityOffset);
     uint32_t personalityIndex; // 1-based index
     if (it != personalities.end()) {
       personalityIndex = std::distance(personalities.begin(), it) + 1;
@@ -263,7 +228,7 @@ void encodePersonalities(
 
 // Scan the __LD,__compact_unwind entries and compute the space needs of
 // __TEXT,__unwind_info and __TEXT,__eh_frame
-template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
+void UnwindInfoSection::finalize() {
   if (compactUnwindSection == nullptr)
     return;
 
@@ -275,23 +240,21 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
   // encoding+personality+lsda. Folding is necessary because it reduces
   // the number of CU entries by as much as 3 orders of magnitude!
   compactUnwindSection->finalize();
-  assert(compactUnwindSection->getSize() % sizeof(CompactUnwindEntry<Ptr>) ==
-         0);
+  assert(compactUnwindSection->getSize() % sizeof(CompactUnwindEntry64) == 0);
   size_t cuCount =
-      compactUnwindSection->getSize() / sizeof(CompactUnwindEntry<Ptr>);
+      compactUnwindSection->getSize() / sizeof(CompactUnwindEntry64);
   cuVector.resize(cuCount);
   relocateCompactUnwind(compactUnwindSection, cuVector);
 
   // Rather than sort & fold the 32-byte entries directly, we create a
   // vector of pointers to entries and sort & fold that instead.
   cuPtrVector.reserve(cuCount);
-  for (CompactUnwindEntry<Ptr> &cuEntry : cuVector)
+  for (CompactUnwindEntry64 &cuEntry : cuVector)
     cuPtrVector.emplace_back(&cuEntry);
-  std::sort(
-      cuPtrVector.begin(), cuPtrVector.end(),
-      [](const CompactUnwindEntry<Ptr> *a, const CompactUnwindEntry<Ptr> *b) {
-        return a->functionAddress < b->functionAddress;
-      });
+  std::sort(cuPtrVector.begin(), cuPtrVector.end(),
+            [](const CompactUnwindEntry64 *a, const CompactUnwindEntry64 *b) {
+              return a->functionAddress < b->functionAddress;
+            });
 
   // Fold adjacent entries with matching encoding+personality+lsda
   // We use three iterators on the same cuPtrVector to fold in-situ:
@@ -317,7 +280,7 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
 
   // Count frequencies of the folded encodings
   EncodingMap encodingFrequencies;
-  for (const CompactUnwindEntry<Ptr> *cuPtrEntry : cuPtrVector)
+  for (const CompactUnwindEntry64 *cuPtrEntry : cuPtrVector)
     encodingFrequencies[cuPtrEntry->encoding]++;
 
   // Make a vector of encodings, sorted by descending frequency
@@ -353,7 +316,7 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
   // If more entries fit in the regular format, we use that.
   for (size_t i = 0; i < cuPtrVector.size();) {
     secondLevelPages.emplace_back();
-    SecondLevelPage &page = secondLevelPages.back();
+    UnwindInfoSection::SecondLevelPage &page = secondLevelPages.back();
     page.entryIndex = i;
     uintptr_t functionAddressMax =
         cuPtrVector[i]->functionAddress + COMPRESSED_ENTRY_FUNC_OFFSET_MASK;
@@ -363,7 +326,7 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
         sizeof(unwind_info_compressed_second_level_page_header) /
             sizeof(uint32_t);
     while (wordsRemaining >= 1 && i < cuPtrVector.size()) {
-      const CompactUnwindEntry<Ptr> *cuPtr = cuPtrVector[i];
+      const CompactUnwindEntry64 *cuPtr = cuPtrVector[i];
       if (cuPtr->functionAddress >= functionAddressMax) {
         break;
       } else if (commonEncodingIndexes.count(cuPtr->encoding) ||
@@ -396,7 +359,7 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
     }
   }
 
-  for (const CompactUnwindEntry<Ptr> *cu : cuPtrVector) {
+  for (const CompactUnwindEntry64 *cu : cuPtrVector) {
     uint32_t functionOffset = cu->functionAddress - in.header->addr;
     functionToLsdaIndex[functionOffset] = lsdaEntries.size();
     if (cu->lsda != 0)
@@ -419,8 +382,7 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
 
 // All inputs are relocated and output addresses are known, so write!
 
-template <class Ptr>
-void UnwindInfoSectionImpl<Ptr>::writeTo(uint8_t *buf) const {
+void UnwindInfoSection::writeTo(uint8_t *buf) const {
   // section header
   auto *uip = reinterpret_cast<unwind_info_section_header *>(buf);
   uip->version = 1;
@@ -441,8 +403,7 @@ void UnwindInfoSectionImpl<Ptr>::writeTo(uint8_t *buf) const {
 
   // Personalities
   for (const uint32_t &personality : personalities)
-    *i32p++ =
-        in.got->addr + (personality - 1) * target->wordSize - in.header->addr;
+    *i32p++ = in.got->addr + (personality - 1) * target->wordSize;
 
   // Level-1 index
   uint32_t lsdaOffset =
@@ -461,7 +422,7 @@ void UnwindInfoSectionImpl<Ptr>::writeTo(uint8_t *buf) const {
     l2PagesOffset += SECOND_LEVEL_PAGE_BYTES;
   }
   // Level-1 sentinel
-  const CompactUnwindEntry<Ptr> &cuEnd = cuVector.back();
+  const CompactUnwindEntry64 &cuEnd = cuVector.back();
   iep->functionOffset = cuEnd.functionAddress + cuEnd.functionLength;
   iep->secondLevelPagesSectionOffset = 0;
   iep->lsdaIndexArraySectionOffset =
@@ -494,7 +455,7 @@ void UnwindInfoSectionImpl<Ptr>::writeTo(uint8_t *buf) const {
       p2p->encodingsCount = page.localEncodings.size();
       auto *ep = reinterpret_cast<uint32_t *>(&p2p[1]);
       for (size_t i = 0; i < page.entryCount; i++) {
-        const CompactUnwindEntry<Ptr> *cuep = cuPtrVector[page.entryIndex + i];
+        const CompactUnwindEntry64 *cuep = cuPtrVector[page.entryIndex + i];
         auto it = commonEncodingIndexes.find(cuep->encoding);
         if (it == commonEncodingIndexes.end())
           it = page.localEncodingIndexes.find(cuep->encoding);
@@ -513,18 +474,11 @@ void UnwindInfoSectionImpl<Ptr>::writeTo(uint8_t *buf) const {
       p2p->entryCount = page.entryCount;
       auto *ep = reinterpret_cast<uint32_t *>(&p2p[1]);
       for (size_t i = 0; i < page.entryCount; i++) {
-        const CompactUnwindEntry<Ptr> *cuep = cuPtrVector[page.entryIndex + i];
+        const CompactUnwindEntry64 *cuep = cuPtrVector[page.entryIndex + i];
         *ep++ = cuep->functionAddress;
         *ep++ = cuep->encoding;
       }
     }
     pp += SECOND_LEVEL_PAGE_WORDS;
   }
-}
-
-UnwindInfoSection *macho::makeUnwindInfoSection() {
-  if (target->wordSize == 8)
-    return make<UnwindInfoSectionImpl<uint64_t>>();
-  else
-    return make<UnwindInfoSectionImpl<uint32_t>>();
 }
