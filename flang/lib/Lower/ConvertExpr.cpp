@@ -2119,9 +2119,9 @@ public:
     fir::DoLoopOp inner;
     auto innerArg = destination.getResult();
     mlir::Value outerRes;
-    llvm::SmallVector<mlir::Value> ivars;
-    auto insPt = builder.saveInsertionPoint();
     const auto loopDepth = loopUppers.size();
+    llvm::SmallVector<mlir::Value> ivars(loopDepth);
+    auto insPt = builder.saveInsertionPoint();
     assert(loopDepth > 0);
     for (auto i : llvm::enumerate(llvm::reverse(loopUppers))) {
       if (i.index() > 0) {
@@ -2132,7 +2132,9 @@ public:
           loc, zero, i.value(), one, /*unordered=*/false,
           /*finalCount=*/false, mlir::ValueRange{innerArg});
       innerArg = loop.getRegionIterArgs().front();
-      ivars.push_back(loop.getInductionVar());
+      // Store induction vars in column major order, which is what FIR array ops
+      // expect.
+      ivars[loopDepth - 1 - i.index()] = loop.getInductionVar();
       if (!outerRes)
         outerRes = loop.getResult(0);
       if (!inner)

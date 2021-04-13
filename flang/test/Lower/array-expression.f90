@@ -426,4 +426,18 @@ subroutine test18
   row_i => array(i, :)
 end subroutine test18
 
+! CHECK-LABEL: func @_QPtest_column_and_row_order(
+subroutine test_column_and_row_order(x)
+  real :: x(2,3)
+  ! CHECK-DAG: %[[c2:.*]] = fir.convert %c2{{.*}} : (i64) -> index
+  ! CHECK-DAG: %[[number_of_rows:.*]] = subi %[[c2]], %c1{{.*}} : index
+  ! CHECK-DAG: %[[c3:.*]] = fir.convert %c3{{.*}} : (i64) -> index
+  ! CHECK-DAG: %[[number_of_columns:.*]] = subi %[[c3]], %c1{{.*}} : index
+  ! CHECK: fir.do_loop %[[column:.*]] = %c0{{.*}} to %[[number_of_columns]]
+  ! CHECK: fir.do_loop %[[row:.*]] = %c0{{.*}} to %[[number_of_rows]]
+  ! CHECK: = fir.array_update %{{.*}}, %{{.*}}, %[[row]], %[[column]] : (!fir.array<2x3xf32>, f32, index, index) -> !fir.array<2x3xf32>
+  x = 42
+end subroutine
+
+
 ! CHECK: func private @_QPbar(
