@@ -132,6 +132,9 @@ public:
   /// Return true if name is a Swift async function symbol.
   static bool IsSwiftAsyncFunctionSymbol(llvm::StringRef name);
 
+  /// Return the async context address using the target's specific register.
+  static lldb::addr_t GetAsyncContext(RegisterContext *regctx);
+
   static bool
   IsSwiftAsyncAwaitResumePartialFunctionSymbol(llvm::StringRef name);
 

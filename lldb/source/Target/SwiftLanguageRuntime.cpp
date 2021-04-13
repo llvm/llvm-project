@@ -2290,6 +2290,61 @@ void SwiftLanguageRuntime::DidFinishExecutingUserExpression(
 
 bool SwiftLanguageRuntime::IsABIStable() { FORWARD(IsABIStable); }
 
+namespace {
+/// The target specific register numbers used for async unwinding.
+///
+/// For UnwindPlans, these use eh_frame / dwarf register numbering.
+struct AsyncUnwindRegisterNumbers {
+  uint32_t async_ctx_regnum;
+  uint32_t fp_regnum;
+  uint32_t pc_regnum;
+  /// A register to use as a marker to indicate how the async context is passed
+  /// to the function (indirectly, or not). This needs to be communicated to the
+  /// frames below us as they need to react differently. There is no good way to
+  /// expose this, so we set another dummy register to communicate this state.
+  uint32_t dummy_regnum;
+};
+} // namespace
+
+static llvm::Optional<AsyncUnwindRegisterNumbers>
+GetAsyncUnwindRegisterNumbers(llvm::Triple::ArchType triple) {
+  switch (triple) {
+  case llvm::Triple::x86_64: {
+    AsyncUnwindRegisterNumbers regnums;
+    regnums.async_ctx_regnum = dwarf_r14_x86_64;
+    regnums.fp_regnum = dwarf_rbp_x86_64;
+    regnums.pc_regnum = dwarf_rip_x86_64;
+    regnums.dummy_regnum = dwarf_r15_x86_64;
+    return regnums;
+  }
+  case llvm::Triple::aarch64: {
+    AsyncUnwindRegisterNumbers regnums;
+    regnums.async_ctx_regnum = arm64_dwarf::x22;
+    regnums.fp_regnum = arm64_dwarf::fp;
+    regnums.pc_regnum = arm64_dwarf::pc;
+    regnums.dummy_regnum = arm64_dwarf::x23;
+    return regnums;
+  }
+  default:
+    return {};
+  }
+}
+
+lldb::addr_t SwiftLanguageRuntime::GetAsyncContext(RegisterContext *regctx) {
+  if (!regctx)
+    return LLDB_INVALID_ADDRESS;
+
+  auto arch = regctx->CalculateTarget()->GetArchitecture();
+  if (auto regnums = GetAsyncUnwindRegisterNumbers(arch.GetMachine())) {
+    auto reg = regctx->ConvertRegisterKindToRegisterNumber(
+        RegisterKind::eRegisterKindDWARF, regnums->async_ctx_regnum);
+    return regctx->ReadRegisterAsUnsigned(reg, LLDB_INVALID_ADDRESS);
+  }
+
+  assert(false && "swift async supports only x86_64 and arm64");
+  return LLDB_INVALID_ADDRESS;
+}
+
 // Examine the register state and detect the transition from a real
 // stack frame to an AsyncContext frame, or a frame in the middle of
 // the AsyncContext chain, and return an UnwindPlan for these situations.
@@ -2299,43 +2354,20 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
                                            bool &behaves_like_zeroth_frame) {
 
   Target &target(process_sp->GetTarget());
-  ArchSpec arch = target.GetArchitecture();
-  uint32_t async_context_regnum;
-  uint32_t fp_regnum;
-  uint32_t pc_regnum;
-  uint32_t dummy_regnum;
-
-  if (arch.GetMachine() == llvm::Triple::x86_64) {
-    async_context_regnum = dwarf_r14_x86_64;
-    fp_regnum = dwarf_rbp_x86_64;
-    pc_regnum = dwarf_rip_x86_64;
-    dummy_regnum = dwarf_r15_x86_64;
-  } else if (arch.GetMachine() == llvm::Triple::aarch64) {
-    async_context_regnum = arm64_dwarf::x22;
-    fp_regnum = arm64_dwarf::fp;
-    pc_regnum = arm64_dwarf::pc;
-    dummy_regnum = arm64_dwarf::x23;
-  } else {
+  auto arch = target.GetArchitecture();
+  llvm::Optional<AsyncUnwindRegisterNumbers> regnums =
+      GetAsyncUnwindRegisterNumbers(arch.GetMachine());
+  if (!regnums)
     return UnwindPlanSP();
-  }
 
   // If we can't fetch the fp reg, and we *can* fetch the async
   // context register, then we're in the middle of the AsyncContext
   // chain, return an UnwindPlan for that.
   addr_t fp = regctx->GetFP(LLDB_INVALID_ADDRESS);
   if (fp == LLDB_INVALID_ADDRESS) {
-    const RegisterInfo *reg_info =
-        regctx->GetRegisterInfo(eRegisterKindDWARF, async_context_regnum);
-    if (reg_info) {
-      RegisterValue val;
-      if (regctx->ReadRegister(reg_info, val)) {
-        addr_t async_context_addr = val.GetAsUInt64(LLDB_INVALID_ADDRESS);
-        if (async_context_addr != LLDB_INVALID_ADDRESS) {
-          return GetFollowAsyncContextUnwindPlan(regctx, arch,
-                                                 behaves_like_zeroth_frame);
-        }
-      }
-    }
+    if (GetAsyncContext(regctx) != LLDB_INVALID_ADDRESS)
+      return GetFollowAsyncContextUnwindPlan(regctx, arch,
+                                             behaves_like_zeroth_frame);
     return UnwindPlanSP();
   }
 
@@ -2417,7 +2449,7 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
   else if (arch.GetMachine() == llvm::Triple::aarch64)
     expr = g_cfa_dwarf_expression_arm64;
   else
-    llvm_unreachable("Unsupported architexture");
+    llvm_unreachable("Unsupported architecture");
 
   row->GetCFAValue().SetIsDWARFExpression(expr, expr_size);
   // The coroutine funclets split from an async function have 2 different ABIs:
@@ -2426,7 +2458,7 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
   //  - Async await resume partial functions take their context indirectly, it
   //    needs to be dereferenced to get the actual function's context.
   // The debug info for locals reflects this difference, so our unwinding of the
-  // context reister needs to reflect it too.
+  // context register needs to reflect it too.
   bool indirect_context = IsSwiftAsyncAwaitResumePartialFunctionSymbol(
       sc.symbol->GetMangled().GetMangledName().GetStringRef());
 
@@ -2439,24 +2471,25 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
     // array minus one. This skips the last deref for this use.
     assert(expr[expr_size - 1] == llvm::dwarf::DW_OP_deref &&
            "Should skip a deref");
-    row->SetRegisterLocationToIsDWARFExpression(async_context_regnum, expr,
+    row->SetRegisterLocationToIsDWARFExpression(regnums->async_ctx_regnum, expr,
                                                 expr_size - 1, false);
   } else {
     // In the first part of a split async function, the context is passed
     // directly, so we can use the CFA value directly.
-    row->SetRegisterLocationToIsCFAPlusOffset(async_context_regnum, 0, false);
+    row->SetRegisterLocationToIsCFAPlusOffset(regnums->async_ctx_regnum, 0,
+                                              false);
     // The fact that we are in this case needs to be communicated to the frames
     // below us as they need to react differently. There is no good way to
     // expose this, so we set another dummy register to communicate this state.
     static const uint8_t g_dummy_dwarf_expression[] = {
         llvm::dwarf::DW_OP_const1u, 0
     };
-    row->SetRegisterLocationToIsDWARFExpression(dummy_regnum,
-                                                g_dummy_dwarf_expression,
-                                                sizeof(g_dummy_dwarf_expression),
-                                                false);
+    row->SetRegisterLocationToIsDWARFExpression(
+        regnums->dummy_regnum, g_dummy_dwarf_expression,
+        sizeof(g_dummy_dwarf_expression), false);
   }
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_regnum, ptr_size, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(regnums->pc_regnum, ptr_size,
+                                            false);
 
   row->SetUnspecifiedRegistersAreUndefined(true);
 
@@ -2480,34 +2513,20 @@ GetFollowAsyncContextUnwindPlan(RegisterContext *regctx, ArchSpec &arch,
   const int32_t ptr_size = 8;
   row->SetOffset(0);
 
-  uint32_t async_context_regnum;
-  uint32_t fp_regnum;
-  uint32_t pc_regnum;
-  uint32_t dummy_regnum;
-
-  if (arch.GetMachine() == llvm::Triple::x86_64) {
-    async_context_regnum = dwarf_r14_x86_64;
-    fp_regnum = dwarf_rbp_x86_64;
-    pc_regnum = dwarf_rip_x86_64;
-    dummy_regnum = dwarf_r15_x86_64;
-  } else if (arch.GetMachine() == llvm::Triple::aarch64) {
-    async_context_regnum = arm64_dwarf::x22;
-    fp_regnum = arm64_dwarf::fp;
-    pc_regnum = arm64_dwarf::pc;
-    dummy_regnum = arm64_dwarf::x23;
-  } else {
+  llvm::Optional<AsyncUnwindRegisterNumbers> regnums =
+      GetAsyncUnwindRegisterNumbers(arch.GetMachine());
+  if (!regnums)
     return UnwindPlanSP();
-  }
 
   // In the general case, the async register setup by the frame above us
   // should be dereferenced twice to get our context, except when the frame
   // above us is an async frame on the OS stack that takes its context directly
   // (see discussion in GetRuntimeUnwindPlan()). The availability of
-  // dummy_regnum is used as a marked for this situation.
-  if (regctx->ReadRegisterAsUnsigned(dummy_regnum, (uint64_t)-1ll) !=
+  // dummy_regnum is used as a marker for this situation.
+  if (regctx->ReadRegisterAsUnsigned(regnums->dummy_regnum, (uint64_t)-1ll) !=
       (uint64_t)-1ll) {
-    row->GetCFAValue().SetIsRegisterDereferenced(async_context_regnum);
-    row->SetRegisterLocationToSame(async_context_regnum, false);
+    row->GetCFAValue().SetIsRegisterDereferenced(regnums->async_ctx_regnum);
+    row->SetRegisterLocationToSame(regnums->async_ctx_regnum, false);
   } else {
     static const uint8_t async_dwarf_expression_x86_64[] = {
         llvm::dwarf::DW_OP_regx, dwarf_r14_x86_64, // DW_OP_regx, reg
@@ -2539,10 +2558,11 @@ GetFollowAsyncContextUnwindPlan(RegisterContext *regctx, ArchSpec &arch,
            "Should skip a deref");
     row->GetCFAValue().SetIsDWARFExpression(expression, expr_size);
     row->SetRegisterLocationToIsDWARFExpression(
-        async_context_regnum, expression, expr_size - 1, false);
+        regnums->async_ctx_regnum, expression, expr_size - 1, false);
   }
 
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_regnum, ptr_size, false);
+  row->SetRegisterLocationToAtCFAPlusOffset(regnums->pc_regnum, ptr_size,
+                                            false);
 
   row->SetUnspecifiedRegistersAreUndefined(true);
 
