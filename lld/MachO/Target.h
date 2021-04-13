@@ -79,7 +79,6 @@ public:
 
 TargetInfo *createX86_64TargetInfo();
 TargetInfo *createARM64TargetInfo();
-TargetInfo *createARM64_32TargetInfo();
 
 struct LP64 {
   using mach_header = llvm::MachO::mach_header_64;
