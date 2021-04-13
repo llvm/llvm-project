@@ -368,6 +368,13 @@ void ThreadPlanStack::WillResume() {
   m_discarded_plans.clear();
 }
 
+lldb::tid_t ThreadPlanStack::GetTID() { return GetCurrentPlan()->GetTID(); }
+
+void ThreadPlanStack::SetTID(lldb::tid_t tid) {
+  for (auto plan_sp : m_plans)
+    plan_sp->SetTID(tid);
+}
+
 void ThreadPlanStackMap::Update(ThreadList &current_threads,
                                 bool delete_missing,
                                 bool check_for_new) {

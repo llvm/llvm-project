@@ -2211,6 +2211,10 @@ bool PruneThreadPlansForTID(lldb::tid_t tid);
 /// Prune ThreadPlanStacks for all unreported threads.
 void PruneThreadPlans();
 
+  void SynchronizeThreadPlans();
+
+  lldb::ThreadPlanSP FindDetachedPlanExplainingStop(Thread &thread, Event *event_ptr);
+
   /// Find the thread plan stack associated with thread with \a tid.
   ///
   /// \param[in] tid
@@ -2838,6 +2842,7 @@ protected:
                                      /// threads in m_thread_list, as well as
                                      /// threads we knew existed, but haven't
                                      /// determined that they have died yet.
+  std::vector<ThreadPlanStack> m_async_thread_plans;
   ThreadList m_extended_thread_list; ///< Owner for extended threads that may be
                                      ///generated, cleared on natural stops
   uint32_t m_extended_thread_stop_id; ///< The natural stop id when

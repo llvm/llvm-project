@@ -95,6 +95,10 @@ public:
   /// generated.
   void ClearThreadCache();
 
+  bool IsTID(lldb::tid_t tid);
+  lldb::tid_t GetTID();
+  void SetTID(lldb::tid_t tid);
+
 private:
   void PrintOneStack(Stream &s, llvm::StringRef stack_name,
                      const PlanStack &stack, lldb::DescriptionLevel desc_level,
@@ -152,8 +156,34 @@ public:
       plan_list.second.ClearThreadCache();
   }
 
+  // rename to Reactivate?
+  void Activate(ThreadPlanStack &&stack) {
+    if (m_plans_list.find(stack.GetTID()) == m_plans_list.end())
+      m_plans_list.emplace(stack.GetTID(), std::move(stack));
+    else
+      m_plans_list.at(stack.GetTID()) = std::move(stack);
+  }
+
+  // rename to ...?
+  std::vector<ThreadPlanStack> CleanUp() {
+    llvm::SmallVector<lldb::tid_t, 2> invalidated_tids;
+    for (auto &pair : m_plans_list)
+      if (pair.second.GetTID() != pair.first)
+        invalidated_tids.push_back(pair.first);
+
+    std::vector<ThreadPlanStack> detached_stacks;
+    detached_stacks.reserve(invalidated_tids.size());
+    for (auto tid : invalidated_tids) {
+      auto it = m_plans_list.find(tid);
+      auto stack = std::move(it->second);
+      m_plans_list.erase(it);
+      detached_stacks.emplace_back(std::move(stack));
+    }
+    return detached_stacks;
+  }
+
   void Clear() {
-    for (auto plan : m_plans_list)
+    for (auto &plan : m_plans_list)
       plan.second.ThreadDestroyed(nullptr);
     m_plans_list.clear();
   }

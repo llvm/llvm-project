@@ -61,6 +61,13 @@ bool lldb_private::operator<(const StackID &lhs, const StackID &rhs) {
   const lldb::addr_t lhs_cfa = lhs.GetCallFrameAddress();
   const lldb::addr_t rhs_cfa = rhs.GetCallFrameAddress();
 
+  // FIXME: rdar://76119439
+  // This heuristic is a *temporary* fallback while proper fixes are
+  // determined. The heuristic assumes the CFA of async functions is a low
+  // (heap) address, and for normal functions it's a high (stack) address.
+  if (lhs_cfa - rhs_cfa >= 0x00007ff000000000ULL)
+    return true;
+
   // FIXME: We are assuming that the stacks grow downward in memory.  That's not
   // necessary, but true on
   // all the machines we care about at present.  If this changes, we'll have to

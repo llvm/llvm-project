@@ -478,6 +478,15 @@ public:
     return m_takes_iteration_count;
   }
 
+  bool IsTID(lldb::tid_t tid) { return tid == m_tid; }
+  bool HasTID() { return m_tid != LLDB_INVALID_THREAD_ID; }
+  void ClearTID() { m_tid = LLDB_INVALID_THREAD_ID; }
+  lldb::tid_t GetTID() { return m_tid; }
+  void SetTID(lldb::tid_t tid) { m_tid = tid; }
+
+  friend lldb::ThreadPlanSP
+  Process::FindDetachedPlanExplainingStop(Thread &thread, Event *event_ptr);
+
 protected:
   // Constructors and Destructors
   ThreadPlan(ThreadPlanKind kind, const char *name, Thread &thread,

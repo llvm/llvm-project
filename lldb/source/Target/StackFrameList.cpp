@@ -725,27 +725,22 @@ StackFrameList::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
   return frame_sp;
 }
 
-static bool CompareStackID(const StackFrameSP &stack_sp,
-                           const StackID &stack_id) {
-  return stack_sp->GetStackID() < stack_id;
-}
-
 StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
   StackFrameSP frame_sp;
 
   if (stack_id.IsValid()) {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     uint32_t frame_idx = 0;
-    // Do a binary search in case the stack frame is already in our cache
+    // Do a search in case the stack frame is already in our cache.
     collection::const_iterator begin = m_frames.begin();
     collection::const_iterator end = m_frames.end();
     if (begin != end) {
       collection::const_iterator pos =
-          std::lower_bound(begin, end, stack_id, CompareStackID);
-      if (pos != end) {
-        if ((*pos)->GetStackID() == stack_id)
-          return *pos;
-      }
+          std::find_if(begin, end, [&](StackFrameSP frame_sp) {
+            return frame_sp->GetStackID() == stack_id;
+          });
+      if (pos != end)
+        return *pos;
     }
     do {
       frame_sp = GetFrameAtIndex(frame_idx);

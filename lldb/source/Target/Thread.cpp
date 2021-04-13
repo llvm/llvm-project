@@ -740,8 +740,6 @@ void Thread::DidResume() { SetResumeSignal(LLDB_INVALID_SIGNAL_NUMBER); }
 void Thread::DidStop() { SetState(eStateStopped); }
 
 bool Thread::ShouldStop(Event *event_ptr) {
-  ThreadPlan *current_plan = GetCurrentPlan();
-
   bool should_stop = true;
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
@@ -792,9 +790,6 @@ bool Thread::ShouldStop(Event *event_ptr) {
     LLDB_LOGF(log, "Plan stack initial state:\n%s", s.GetData());
   }
 
-  // The top most plan always gets to do the trace log...
-  current_plan->DoTraceLog();
-
   // First query the stop info's ShouldStopSynchronous.  This handles
   // "synchronous" stop reasons, for example the breakpoint command on internal
   // breakpoints.  If a synchronous stop reason says we should not stop, then
@@ -806,6 +801,16 @@ bool Thread::ShouldStop(Event *event_ptr) {
                    "stop, returning ShouldStop of false.");
     return false;
   }
+
+  // Call this after ShouldStopSynchronous.
+  ThreadPlan *current_plan;
+  if (auto plan = GetProcess()->FindDetachedPlanExplainingStop(*this, event_ptr))
+    current_plan = plan.get();
+  else
+    current_plan = GetCurrentPlan();
+
+  // The top most plan always gets to do the trace log…
+  current_plan->DoTraceLog();
 
   // If we've already been restarted, don't query the plans since the state
   // they would examine is not current.

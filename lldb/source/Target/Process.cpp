@@ -1279,6 +1279,31 @@ void Process::UpdateThreadListIfNeeded() {
   }
 }
 
+void Process::SynchronizeThreadPlans() {
+  for (auto &stack : m_thread_plans.CleanUp())
+    m_async_thread_plans.emplace_back(std::move(stack));
+}
+
+ThreadPlanSP Process::FindDetachedPlanExplainingStop(Thread &thread,
+                                                     Event *event_ptr) {
+  auto end = m_async_thread_plans.end();
+  for (auto it = m_async_thread_plans.begin(); it != end; ++it) {
+    auto plan_sp = it->GetCurrentPlan();
+    plan_sp->SetTID(thread.GetID());
+    if (!plan_sp->DoPlanExplainsStop(event_ptr)) {
+      plan_sp->ClearTID();
+      continue;
+    }
+
+    auto stack = std::move(*it);
+    m_async_thread_plans.erase(it);
+    stack.SetTID(plan_sp->GetTID());
+    m_thread_plans.Activate(std::move(stack));
+    return plan_sp;
+  }
+  return {};
+}
+
 ThreadPlanStack *Process::FindThreadPlans(lldb::tid_t tid) {
   return m_thread_plans.Find(tid);
 }
@@ -3483,8 +3508,10 @@ bool Process::ShouldBroadcastEvent(Event *event_ptr) {
       // restarted... Asking the thread list is also not likely to go well,
       // since we are running again. So in that case just report the event.
 
-      if (!was_restarted)
+      if (!was_restarted) {
         should_resume = !m_thread_list.ShouldStop(event_ptr);
+        SynchronizeThreadPlans();
+      }
 
       if (was_restarted || should_resume || m_resume_requested) {
         Vote report_stop_vote = m_thread_list.ShouldReportStop(event_ptr);
