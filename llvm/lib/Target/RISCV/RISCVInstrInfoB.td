@@ -25,10 +25,10 @@ def riscv_fslw   : SDNode<"RISCVISD::FSLW",   SDT_RISCVIntShiftDOpW>;
 def riscv_fsrw   : SDNode<"RISCVISD::FSRW",   SDT_RISCVIntShiftDOpW>;
 def riscv_fsl    : SDNode<"RISCVISD::FSL",    SDTIntShiftDOp>;
 def riscv_fsr    : SDNode<"RISCVISD::FSR",    SDTIntShiftDOp>;
-def riscv_grevi  : SDNode<"RISCVISD::GREVI",  SDTIntBinOp>;
-def riscv_greviw : SDNode<"RISCVISD::GREVIW", SDT_RISCVIntBinOpW>;
-def riscv_gorci  : SDNode<"RISCVISD::GORCI",  SDTIntBinOp>;
-def riscv_gorciw : SDNode<"RISCVISD::GORCIW", SDT_RISCVIntBinOpW>;
+def riscv_grev   : SDNode<"RISCVISD::GREV",   SDTIntBinOp>;
+def riscv_grevw  : SDNode<"RISCVISD::GREVW",  SDT_RISCVIntBinOpW>;
+def riscv_gorc   : SDNode<"RISCVISD::GORC",   SDTIntBinOp>;
+def riscv_gorcw  : SDNode<"RISCVISD::GORCW",  SDT_RISCVIntBinOpW>;
 def riscv_shfl   : SDNode<"RISCVISD::SHFL",   SDTIntBinOp>;
 
 def UImmLog2XLenHalfAsmOperand : AsmOperandClass {
@@ -719,27 +719,29 @@ def : Pat<(rotl GPR:$rs1, uimmlog2xlen:$shamt),
 
 // We treat orc.b as a separate instruction, so match it directly. We also
 // lower the Zbb orc.b intrinsic to this.
-def : Pat<(riscv_gorci GPR:$rs1, 7), (ORCB GPR:$rs1)>;
+def : Pat<(riscv_gorc GPR:$rs1, 7), (ORCB GPR:$rs1)>;
 }
 
 let Predicates = [HasStdExtZbp] in {
 def : Pat<(riscv_shfl GPR:$rs1, shfl_uimm:$shamt),
           (SHFLI GPR:$rs1, shfl_uimm:$shamt)>;
-def : Pat<(riscv_grevi GPR:$rs1, timm:$shamt), (GREVI GPR:$rs1, timm:$shamt)>;
-def : Pat<(riscv_gorci GPR:$rs1, timm:$shamt), (GORCI GPR:$rs1, timm:$shamt)>;
+def : Pat<(riscv_grev GPR:$rs1, uimmlog2xlen:$shamt),
+          (GREVI GPR:$rs1, uimmlog2xlen:$shamt)>;
+def : Pat<(riscv_gorc GPR:$rs1, uimmlog2xlen:$shamt),
+          (GORCI GPR:$rs1, uimmlog2xlen:$shamt)>;
 } // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZbp, IsRV32] in {
-def : Pat<(i32 (rotr (riscv_grevi GPR:$rs1, 24), (i32 16))), (GREVI GPR:$rs1, 8)>;
-def : Pat<(i32 (rotl (riscv_grevi GPR:$rs1, 24), (i32 16))), (GREVI GPR:$rs1, 8)>;
+def : Pat<(i32 (rotr (riscv_grev GPR:$rs1, 24), (i32 16))), (GREVI GPR:$rs1, 8)>;
+def : Pat<(i32 (rotl (riscv_grev GPR:$rs1, 24), (i32 16))), (GREVI GPR:$rs1, 8)>;
 
 // We treat rev8 as a separate instruction, so match it directly.
-def : Pat<(i32 (riscv_grevi GPR:$rs1, 24)), (REV8_RV32 GPR:$rs1)>;
+def : Pat<(i32 (riscv_grev GPR:$rs1, 24)), (REV8_RV32 GPR:$rs1)>;
 } // Predicates = [HasStdExtZbp, IsRV32]
 
 let Predicates = [HasStdExtZbp, IsRV64] in {
 // We treat rev8 as a separate instruction, so match it directly.
-def : Pat<(i64 (riscv_grevi GPR:$rs1, 56)), (REV8_RV64 GPR:$rs1)>;
+def : Pat<(i64 (riscv_grev GPR:$rs1, 56)), (REV8_RV64 GPR:$rs1)>;
 } // Predicates = [HasStdExtZbp, IsRV64]
 
 let Predicates = [HasStdExtZbt] in {
@@ -883,10 +885,10 @@ def : Pat<(riscv_rolw GPR:$rs1, uimm5:$rs2),
 } // Predicates = [HasStdExtZbbOrZbp, IsRV64]
 
 let Predicates = [HasStdExtZbp, IsRV64] in {
-def : Pat<(riscv_rorw (riscv_greviw GPR:$rs1, 24), 16), (GREVIW GPR:$rs1, 8)>;
-def : Pat<(riscv_rolw (riscv_greviw GPR:$rs1, 24), 16), (GREVIW GPR:$rs1, 8)>;
-def : Pat<(riscv_greviw GPR:$rs1, timm:$shamt), (GREVIW GPR:$rs1, timm:$shamt)>;
-def : Pat<(riscv_gorciw GPR:$rs1, timm:$shamt), (GORCIW GPR:$rs1, timm:$shamt)>;
+def : Pat<(riscv_rorw (riscv_grevw GPR:$rs1, 24), 16), (GREVIW GPR:$rs1, 8)>;
+def : Pat<(riscv_rolw (riscv_grevw GPR:$rs1, 24), 16), (GREVIW GPR:$rs1, 8)>;
+def : Pat<(riscv_grevw GPR:$rs1, uimm5:$shamt), (GREVIW GPR:$rs1, uimm5:$shamt)>;
+def : Pat<(riscv_gorcw GPR:$rs1, uimm5:$shamt), (GORCIW GPR:$rs1, uimm5:$shamt)>;
 } // Predicates = [HasStdExtZbp, IsRV64]
 
 let Predicates = [HasStdExtZbt, IsRV64] in {
