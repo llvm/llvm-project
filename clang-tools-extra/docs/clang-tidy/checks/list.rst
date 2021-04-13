@@ -62,6 +62,7 @@ Clang-Tidy Checks
    `bugprone-fold-init-type <bugprone-fold-init-type.html>`_,
    `bugprone-forward-declaration-namespace <bugprone-forward-declaration-namespace.html>`_,
    `bugprone-forwarding-reference-overload <bugprone-forwarding-reference-overload.html>`_,
+   `bugprone-implicit-widening-of-multiplication-result <bugprone-implicit-widening-of-multiplication-result.html>`_, "Yes"
    `bugprone-inaccurate-erase <bugprone-inaccurate-erase.html>`_, "Yes"
    `bugprone-incorrect-roundings <bugprone-incorrect-roundings.html>`_,
    `bugprone-infinite-loop <bugprone-infinite-loop.html>`_,

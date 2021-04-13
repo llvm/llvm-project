@@ -84,6 +84,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-implicit-widening-of-multiplication-result
+  <clang-tidy/checks/bugprone-implicit-widening-of-multiplication-result>` check.
+
+  Diagnoses instances of an implicit widening of multiplication result.
+
 - New :doc:`concurrency-thread-canceltype-asynchronous
   <clang-tidy/checks/concurrency-thread-canceltype-asynchronous>` check.
 
