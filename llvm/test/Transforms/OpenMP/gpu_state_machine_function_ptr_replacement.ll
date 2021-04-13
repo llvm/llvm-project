@@ -1,3 +1,4 @@
+; RUN: opt -S -passes=openmpopt -openmp-ir-builder-optimistic-attributes -pass-remarks=openmp-opt -openmp-print-gpu-kernels < %s | FileCheck %s
 ; RUN: opt -S -passes=openmpopt -pass-remarks=openmp-opt -openmp-print-gpu-kernels < %s | FileCheck %s
 ; RUN: opt -S        -openmpopt -pass-remarks=openmp-opt -openmp-print-gpu-kernels < %s | FileCheck %s
 
@@ -143,9 +144,9 @@ declare zeroext i1 @__kmpc_kernel_parallel(i8** nocapture %WorkFn)
 
 declare void @__kmpc_kernel_end_parallel()
 
-declare void @__kmpc_barrier_simple_spmd(%struct.ident_t* nocapture readnone %loc_ref, i32 %tid)
+declare void @__kmpc_barrier_simple_spmd(%struct.ident_t* nocapture readonly %loc_ref, i32 %tid)
 
-declare i32 @__kmpc_global_thread_num(%struct.ident_t* nocapture readnone)
+declare i32 @__kmpc_global_thread_num(%struct.ident_t* nocapture readonly)
 
 
 !nvvm.annotations = !{!0}
