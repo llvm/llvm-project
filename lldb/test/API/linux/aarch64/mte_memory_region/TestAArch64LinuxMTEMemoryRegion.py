@@ -20,6 +20,8 @@ class AArch64LinuxMTEMemoryRegionTestCase(TestBase):
     @skipIf(archs=no_match(["aarch64"]))
     @skipUnlessPlatform(["linux"])
     def test_mte_regions(self):
+        if not self.isAArch64MTE():
+            self.skipTest('Target must support MTE.')
         if not self.hasLinuxVmFlags():
             self.skipTest('/proc/{pid}/smaps VmFlags must be present')
 
