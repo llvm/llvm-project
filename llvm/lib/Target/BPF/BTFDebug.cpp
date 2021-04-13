@@ -1196,6 +1196,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     if (Linkage != GlobalValue::InternalLinkage &&
         Linkage != GlobalValue::ExternalLinkage &&
         Linkage != GlobalValue::WeakAnyLinkage &&
+        Linkage != GlobalValue::WeakODRLinkage &&
         Linkage != GlobalValue::ExternalWeakLinkage)
       continue;
 
