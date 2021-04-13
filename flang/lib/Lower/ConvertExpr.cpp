@@ -2611,63 +2611,22 @@ public:
   /// Get the declared lower bound value of the array `x` in dimension `dim`.
   /// The argument `one` must be an ssa-value for the constant 1.
   mlir::Value getLBound(const ExtValue &x, unsigned dim, mlir::Value one) {
-    auto loc = getLoc();
-    auto getLB = [&](const fir::AbstractArrayBox &box) -> mlir::Value {
-      return box.lboundsAllOne() ? one : box.getLBounds()[dim];
-    };
-    return x.match(
-        [&](const fir::ArrayBoxValue &box) { return getLB(box); },
-        [&](const fir::CharArrayBoxValue &box) { return getLB(box); },
-        [&](const fir::BoxValue &box) { return getLB(box); },
-        [&](const fir::MutableBoxValue &) -> mlir::Value {
-          fir::emitFatalError(loc, "mutable");
-        },
-        [&](const auto &) -> mlir::Value {
-          x.dump();
-          fir::emitFatalError(loc, "not an array");
-        });
+    return Fortran::lower::readLowerBound(builder, getLoc(), x, dim, one);
   }
 
   /// Get the declared upper bound value of the array `x` in dimension `dim`.
   /// The argument `one` must be an ssa-value for the constant 1.
   mlir::Value getUBound(const ExtValue &x, unsigned dim, mlir::Value one) {
-    auto lb = getLBound(x, dim, one);
     auto loc = getLoc();
-    auto adjustExtent = [&](const fir::AbstractArrayBox &box) -> mlir::Value {
-      auto up = box.getExtents()[dim];
-      auto add = builder.create<mlir::AddIOp>(loc, lb, up);
-      return builder.create<mlir::SubIOp>(loc, add, one);
-    };
-    return x.match(
-        [&](const fir::ArrayBoxValue &box) { return adjustExtent(box); },
-        [&](const fir::CharArrayBoxValue &box) { return adjustExtent(box); },
-        [&](const fir::BoxValue &box) { return adjustExtent(box); },
-        [&](const fir::MutableBoxValue &) -> mlir::Value {
-          fir::emitFatalError(loc, "mutable");
-        },
-        [&](const auto &) -> mlir::Value {
-          x.dump();
-          fir::emitFatalError(loc, "not an array");
-        });
+    auto lb = getLBound(x, dim, one);
+    auto extent = Fortran::lower::readExtent(builder, loc, x, dim);
+    auto add = builder.create<mlir::AddIOp>(loc, lb, extent);
+    return builder.create<mlir::SubIOp>(loc, add, one);
   }
 
   /// Return the extent of the boxed array `x` in dimesion `dim`.
   mlir::Value getExtent(const ExtValue &x, unsigned dim) {
-    auto loc = getLoc();
-    auto getRange = [&](const fir::AbstractArrayBox &box) -> mlir::Value {
-      return box.getExtents()[dim];
-    };
-    return x.match(
-        [&](const fir::ArrayBoxValue &box) { return getRange(box); },
-        [&](const fir::CharArrayBoxValue &box) { return getRange(box); },
-        [&](const fir::BoxValue &box) { return getRange(box); },
-        [&](const fir::MutableBoxValue &) -> mlir::Value {
-          fir::emitFatalError(loc, "mutable");
-        },
-        [&](const auto &) -> mlir::Value {
-          x.dump();
-          fir::emitFatalError(loc, "not an array");
-        });
+    return Fortran::lower::readExtent(builder, getLoc(), x, dim);
   }
 
   /// Array reference with subscripts. Since this has rank > 0, this is a form

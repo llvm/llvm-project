@@ -439,5 +439,17 @@ subroutine test_column_and_row_order(x)
   x = 42
 end subroutine
 
+! CHECK-LABEL: func @_QPtest_assigning_to_assumed_shape_slices(
+! CHECK-SAME:  %[[x:.*]]: !fir.box<!fir.array<?xi32>>
+subroutine test_assigning_to_assumed_shape_slices(x)
+  integer :: x(:)
+  ! CHECK: %[[slice:.*]] = fir.array_load %[[x]] [%{{.*}}] : (!fir.box<!fir.array<?xi32>>, !fir.slice<1>) -> !fir.array<?xi32>
+  ! CHECK: fir.box_dims %[[x]], %c0{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+  ! CHECK: %[[loop:.*]] = fir.do_loop %[[idx:.*]] = %c0{{.*}} to %{{.*}} step %c1{{.*}} iter_args(%[[dest:.*]] = %[[slice]]) -> (!fir.array<?xi32>) {
+    ! CHECK: %[[res:.*]] = fir.array_update %[[dest]], %c42{{.*}}, %[[idx]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
+    ! CHECK: fir.result %[[res]] : !fir.array<?xi32>
+  ! CHECK: fir.array_merge_store %[[slice]], %[[loop]] to %[[x]] : !fir.box<!fir.array<?xi32>>
+  x(::2) = 42
+end subroutine
 
 ! CHECK: func private @_QPbar(
