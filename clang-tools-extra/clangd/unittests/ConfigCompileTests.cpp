@@ -327,12 +327,21 @@ TEST_F(ConfigCompileTests, ExternalBlockWarnOnMultipleSource) {
 #ifdef CLANGD_ENABLE_REMOTE
   EXPECT_THAT(
       Diags.Diagnostics,
-      Contains(AllOf(DiagMessage("Exactly one of File or Server must be set."),
-                     DiagKind(llvm::SourceMgr::DK_Error))));
+      Contains(
+          AllOf(DiagMessage("Exactly one of File, Server or None must be set."),
+                DiagKind(llvm::SourceMgr::DK_Error))));
 #else
   ASSERT_TRUE(Conf.Index.External.hasValue());
   EXPECT_EQ(Conf.Index.External->Kind, Config::ExternalIndexSpec::File);
 #endif
+}
+
+TEST_F(ConfigCompileTests, ExternalBlockDisableWithNone) {
+  Fragment::IndexBlock::ExternalBlock External;
+  External.IsNone = true;
+  Frag.Index.External = std::move(External);
+  compileAndApply();
+  EXPECT_FALSE(Conf.Index.External.hasValue());
 }
 
 TEST_F(ConfigCompileTests, ExternalBlockErrOnNoSource) {
@@ -340,8 +349,9 @@ TEST_F(ConfigCompileTests, ExternalBlockErrOnNoSource) {
   compileAndApply();
   EXPECT_THAT(
       Diags.Diagnostics,
-      Contains(AllOf(DiagMessage("Exactly one of File or Server must be set."),
-                     DiagKind(llvm::SourceMgr::DK_Error))));
+      Contains(
+          AllOf(DiagMessage("Exactly one of File, Server or None must be set."),
+                DiagKind(llvm::SourceMgr::DK_Error))));
 }
 
 TEST_F(ConfigCompileTests, ExternalBlockDisablesBackgroundIndex) {
