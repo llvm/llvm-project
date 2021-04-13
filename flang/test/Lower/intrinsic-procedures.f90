@@ -53,7 +53,7 @@ logical function all_test(mask)
 ! CHECK: %[[a1:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
 ! CHECK: %[[a2:.*]] = fir.convert %[[c1]] : (index) -> i32
   all_test = all(mask)
-! CHECK:  %[[a3:.*]] = fir.call @_FortranAAll(%[[a1]], %{{.*}}, %[[a2]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1
+! CHECK:  %[[a3:.*]] = fir.call @_FortranAAll(%[[a1]], %{{.*}}, %{{.*}}, %[[a2]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1
 end function all_test 
 
 ! ALLOCATED
@@ -91,7 +91,7 @@ logical function any_test(mask)
 ! CHECK: %[[a1:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
 ! CHECK: %[[a2:.*]] = fir.convert %[[c1]] : (index) -> i32
   any_test = any(mask)
-! CHECK:  %[[a3:.*]] = fir.call @_FortranAAny(%[[a1]], %{{.*}}, %[[a2]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1
+! CHECK:  %[[a3:.*]] = fir.call @_FortranAAny(%[[a1]], %{{.*}},  %{{.*}}, %[[a2]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1
 end function any_test 
 
 ! ASSOCIATED
