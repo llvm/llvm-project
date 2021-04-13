@@ -55,8 +55,6 @@ public:
   llvm::Error
   CopyHardwareWatchpointsFrom(NativeRegisterContextFreeBSD &source) override;
 
-  llvm::Error ClearDBRegs() override;
-
 private:
   // Private member types.
   enum RegSetKind {
