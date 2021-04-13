@@ -592,11 +592,13 @@ def SwiftNameAttribute : DiagGroup<"swift-name-attribute">;
 def IntInBoolContext : DiagGroup<"int-in-bool-context">;
 def TautologicalTypeLimitCompare : DiagGroup<"tautological-type-limit-compare">;
 def TautologicalUnsignedZeroCompare : DiagGroup<"tautological-unsigned-zero-compare">;
+def TautologicalUnsignedCharZeroCompare : DiagGroup<"tautological-unsigned-char-zero-compare">;
 def TautologicalUnsignedEnumZeroCompare : DiagGroup<"tautological-unsigned-enum-zero-compare">;
 // For compatibility with GCC. Tautological comparison warnings for constants
 // that are an extremal value of the type.
 def TypeLimits : DiagGroup<"type-limits", [TautologicalTypeLimitCompare,
                                            TautologicalUnsignedZeroCompare,
+                                           TautologicalUnsignedCharZeroCompare,
                                            TautologicalUnsignedEnumZeroCompare]>;
 // Additional tautological comparison warnings based on the expression, not
 // only on its type.
