@@ -145,6 +145,11 @@ protected:
   virtual FileSpec FindModuleFile(const std::string &module_path,
                                   const ArchSpec &arch);
 
+  // Process client_features (qSupported) and return an array of server features
+  // to be returned in response.
+  virtual std::vector<std::string>
+  HandleFeatures(llvm::ArrayRef<llvm::StringRef> client_features);
+
 private:
   ModuleSpec GetModuleInfo(llvm::StringRef module_path, llvm::StringRef triple);
 };

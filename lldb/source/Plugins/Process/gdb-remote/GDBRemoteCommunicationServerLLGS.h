@@ -219,6 +219,9 @@ protected:
 
   static std::string XMLEncodeAttributeValue(llvm::StringRef value);
 
+  virtual std::vector<std::string> HandleFeatures(
+      const llvm::ArrayRef<llvm::StringRef> client_features) override;
+
 private:
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> BuildTargetXml();
 
