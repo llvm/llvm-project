@@ -1095,15 +1095,17 @@ public:
   /// \return The expected cost of cast instructions, such as bitcast, trunc,
   /// zext, etc. If there is an existing instruction that holds Opcode, it
   /// may be passed in the 'I' parameter.
-  int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                       TTI::CastContextHint CCH,
-                       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
-                       const Instruction *I = nullptr) const;
+  InstructionCost
+  getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                   TTI::CastContextHint CCH,
+                   TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
+                   const Instruction *I = nullptr) const;
 
   /// \return The expected cost of a sign- or zero-extended vector extract. Use
   /// -1 to indicate that there is no information about the index value.
-  int getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
-                               unsigned Index = -1) const;
+  InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
+                                           VectorType *VecTy,
+                                           unsigned Index = -1) const;
 
   /// \return The expected cost of control-flow related instructions such as
   /// Phi, Ret, Br, Switch.
@@ -1572,12 +1574,13 @@ public:
   virtual int getShuffleCost(ShuffleKind Kind, VectorType *Tp,
                              ArrayRef<int> Mask, int Index,
                              VectorType *SubTp) = 0;
-  virtual int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                               CastContextHint CCH,
-                               TTI::TargetCostKind CostKind,
-                               const Instruction *I) = 0;
-  virtual int getExtractWithExtendCost(unsigned Opcode, Type *Dst,
-                                       VectorType *VecTy, unsigned Index) = 0;
+  virtual InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst,
+                                           Type *Src, CastContextHint CCH,
+                                           TTI::TargetCostKind CostKind,
+                                           const Instruction *I) = 0;
+  virtual InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
+                                                   VectorType *VecTy,
+                                                   unsigned Index) = 0;
   virtual int getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                              const Instruction *I = nullptr) = 0;
   virtual int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
@@ -2039,13 +2042,15 @@ public:
                      int Index, VectorType *SubTp) override {
     return Impl.getShuffleCost(Kind, Tp, Mask, Index, SubTp);
   }
-  int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                       CastContextHint CCH, TTI::TargetCostKind CostKind,
-                       const Instruction *I) override {
+  InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                                   CastContextHint CCH,
+                                   TTI::TargetCostKind CostKind,
+                                   const Instruction *I) override {
     return Impl.getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
   }
-  int getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
-                               unsigned Index) override {
+  InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
+                                           VectorType *VecTy,
+                                           unsigned Index) override {
     return Impl.getExtractWithExtendCost(Opcode, Dst, VecTy, Index);
   }
   int getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,

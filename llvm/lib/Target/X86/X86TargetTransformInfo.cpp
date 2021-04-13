@@ -1400,15 +1400,16 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *BaseTp,
   return BaseT::getShuffleCost(Kind, BaseTp, Mask, Index, SubTp);
 }
 
-int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                                 TTI::CastContextHint CCH,
-                                 TTI::TargetCostKind CostKind,
-                                 const Instruction *I) {
+InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
+                                             Type *Src,
+                                             TTI::CastContextHint CCH,
+                                             TTI::TargetCostKind CostKind,
+                                             const Instruction *I) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
   // TODO: Allow non-throughput costs that aren't binary.
-  auto AdjustCost = [&CostKind](int Cost) {
+  auto AdjustCost = [&CostKind](InstructionCost Cost) -> InstructionCost {
     if (CostKind != TTI::TCK_RecipThroughput)
       return Cost == 0 ? 0 : 1;
     return Cost;
@@ -3412,9 +3413,10 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   if (ISD == ISD::MUL && MTy.getScalarType() == MVT::i8) {
     auto *WideSclTy = IntegerType::get(ValVTy->getContext(), 16);
     auto *WideVecTy = FixedVectorType::get(WideSclTy, ValVTy->getNumElements());
-    return getCastInstrCost(Instruction::ZExt, WideVecTy, ValTy,
-                            TargetTransformInfo::CastContextHint::None,
-                            CostKind) +
+    return *getCastInstrCost(Instruction::ZExt, WideVecTy, ValTy,
+                             TargetTransformInfo::CastContextHint::None,
+                             CostKind)
+                .getValue() +
            getArithmeticReductionCost(Opcode, WideVecTy, IsPairwise, CostKind);
   }
 

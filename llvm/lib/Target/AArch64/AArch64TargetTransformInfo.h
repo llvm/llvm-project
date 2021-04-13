@@ -132,12 +132,13 @@ public:
                                   Align Alignment, TTI::TargetCostKind CostKind,
                                   const Instruction *I = nullptr);
 
-  int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                       TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
-                       const Instruction *I = nullptr);
+  InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                                   TTI::CastContextHint CCH,
+                                   TTI::TargetCostKind CostKind,
+                                   const Instruction *I = nullptr);
 
-  int getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
-                               unsigned Index);
+  InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
+                                           VectorType *VecTy, unsigned Index);
 
   unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                           const Instruction *I = nullptr);
