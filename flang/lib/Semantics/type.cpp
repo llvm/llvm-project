@@ -369,6 +369,15 @@ void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
           : evaluate::NonPointerInitializationExpr(
                 newSymbol, std::move(*init), foldingContext());
     }
+  } else if (auto *procDetails{newSymbol.detailsIf<ProcEntityDetails>()}) {
+    // We have a procedure pointer.  Instantiate its return type
+    if (const DeclTypeSpec * returnType{InstantiateType(newSymbol)}) {
+      ProcInterface &interface{procDetails->interface()};
+      if (!interface.symbol()) {
+        // Don't change the type for interfaces based on symbols
+        interface.set_type(*returnType);
+      }
+    }
   }
 }
 
