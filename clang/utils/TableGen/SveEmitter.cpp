@@ -362,6 +362,9 @@ std::string SVEType::builtin_str() const {
   if (isVoid())
     return "v";
 
+  if (isScalarPredicate())
+    return "b";
+
   if (isVoidPointer())
     S += "v";
   else if (!isFloatingPoint())
