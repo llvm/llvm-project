@@ -12,6 +12,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/Endian.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -91,6 +92,19 @@ template <typename Diagnostic>
 inline void checkUInt(Diagnostic d, uint64_t v, int bits) {
   if ((v >> bits) != 0)
     reportRangeError(d, llvm::Twine(v), bits, 0, llvm::maxUIntN(bits));
+}
+
+inline void writeAddress(uint8_t *loc, uint64_t addr, uint8_t length) {
+  switch (length) {
+  case 2:
+    llvm::support::endian::write32le(loc, addr);
+    break;
+  case 3:
+    llvm::support::endian::write64le(loc, addr);
+    break;
+  default:
+    llvm_unreachable("invalid r_length");
+  }
 }
 
 extern const RelocAttrs invalidRelocAttrs;

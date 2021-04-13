@@ -3,16 +3,23 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/my-personality.s -o %t/x86_64-my-personality.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/main.s -o %t/x86_64-main.o
 # RUN: %lld -arch x86_64 -pie -lSystem -lc++ %t/x86_64-my-personality.o %t/x86_64-main.o -o %t/x86_64-personality-first
-# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/x86_64-personality-first | FileCheck %s --check-prefixes=FIRST,CHECK
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/x86_64-personality-first | FileCheck %s --check-prefixes=FIRST,CHECK -D#%x,BASE=0x100000000
 # RUN: %lld -arch x86_64 -pie -lSystem -lc++ %t/x86_64-main.o %t/x86_64-my-personality.o -o %t/x86_64-personality-second
-# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/x86_64-personality-second | FileCheck %s --check-prefixes=SECOND,CHECK
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/x86_64-personality-second | FileCheck %s --check-prefixes=SECOND,CHECK -D#%x,BASE=0x100000000
 
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin19.0.0 %t/my-personality.s -o %t/arm64-my-personality.o
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin19.0.0 %t/main.s -o %t/arm64-main.o
 # RUN: %lld -arch arm64 -pie -lSystem -lc++ %t/arm64-my-personality.o %t/arm64-main.o -o %t/arm64-personality-first
-# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-personality-first | FileCheck %s --check-prefixes=FIRST,CHECK
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-personality-first | FileCheck %s --check-prefixes=FIRST,CHECK -D#%x,BASE=0x100000000
 # RUN: %lld -arch arm64 -pie -lSystem -lc++ %t/arm64-main.o %t/arm64-my-personality.o -o %t/arm64-personality-second
-# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-personality-second | FileCheck %s --check-prefixes=SECOND,CHECK
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-personality-second | FileCheck %s --check-prefixes=SECOND,CHECK -D#%x,BASE=0x100000000
+
+# RUN: llvm-mc -filetype=obj -triple=arm64_32-apple-watchos %t/my-personality.s -o %t/arm64-32-my-personality.o
+# RUN: llvm-mc -filetype=obj -triple=arm64_32-apple-watchos %t/main.s -o %t/arm64-32-main.o
+# RUN: %lld-watchos -pie -lSystem -lc++ %t/arm64-32-my-personality.o %t/arm64-32-main.o -o %t/arm64-32-personality-first
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-32-personality-first | FileCheck %s --check-prefixes=FIRST,CHECK -D#%x,BASE=0x4000
+# RUN: %lld-watchos -pie -lSystem -lc++ %t/arm64-32-main.o %t/arm64-32-my-personality.o -o %t/arm64-32-personality-second
+# RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-32-personality-second | FileCheck %s --check-prefixes=SECOND,CHECK -D#%x,BASE=0x4000
 
 # FIRST:      Indirect symbols for (__DATA_CONST,__got)
 # FIRST-NEXT: address                    index name
@@ -32,16 +39,16 @@
 
 # CHECK:      Contents of __unwind_info section:
 # CHECK:        Personality functions: (count = 2)
-# CHECK-DAG:     personality[{{[0-9]+}}]: 0x{{0*}}[[#MY_PERSONALITY-0x100000000]]
-# CHECK-DAG:     personality[{{[0-9]+}}]: 0x{{0*}}[[#GXX_PERSONALITY-0x100000000]]
+# CHECK-DAG:     personality[{{[0-9]+}}]: 0x{{0*}}[[#MY_PERSONALITY-BASE]]
+# CHECK-DAG:     personality[{{[0-9]+}}]: 0x{{0*}}[[#GXX_PERSONALITY-BASE]]
 # CHECK:        LSDA descriptors:
-# CHECK-DAG:     function offset=0x{{0*}}[[#FOO-0x100000000]],  LSDA offset=0x{{0*}}[[#EXCEPTION0-0x100000000]]
-# CHECK-DAG:     function offset=0x{{0*}}[[#MAIN-0x100000000]], LSDA offset=0x{{0*}}[[#EXCEPTION1-0x100000000]]
+# CHECK-DAG:     function offset=0x[[#%.8x,FOO-BASE]],  LSDA offset=0x[[#%.8x,EXCEPTION0-BASE]]
+# CHECK-DAG:     function offset=0x[[#%.8x,MAIN-BASE]], LSDA offset=0x[[#%.8x,EXCEPTION1-BASE]]
 
 ## Check that we do not add rebase opcodes to the compact unwind section.
 # CHECK:      Rebase table:
 # CHECK-NEXT: segment      section        address          type
-# CHECK-NEXT: __DATA_CONST __got          0x{{[0-9a-f]*}}  pointer
+# CHECK-NEXT: __DATA_CONST __got          0x{{[0-9A-F]*}}  pointer
 # CHECK-NOT:  __TEXT
 
 #--- my-personality.s

@@ -71,7 +71,6 @@ public:
   SymtabSection *symtabSection = nullptr;
   IndirectSymtabSection *indirectSymtabSection = nullptr;
   CodeSignatureSection *codeSignatureSection = nullptr;
-  UnwindInfoSection *unwindInfoSection = nullptr;
   FunctionStartsSection *functionStartsSection = nullptr;
 
   LCUuid *uuidCommand = nullptr;
@@ -517,7 +516,7 @@ void Writer::scanRelocations() {
   TimeTraceScope timeScope("Scan relocations");
   for (InputSection *isec : inputSections) {
     if (isec->segname == segment_names::ld) {
-      prepareCompactUnwind(isec);
+      in.unwindInfo->prepareRelocations(isec);
       continue;
     }
 
@@ -798,7 +797,6 @@ template <class LP> void Writer::createOutputSections() {
   TimeTraceScope timeScope("Create output sections");
   // First, create hidden sections
   stringTableSection = make<StringTableSection>();
-  unwindInfoSection = make<UnwindInfoSection>(); // TODO(gkm): only when no -r
   symtabSection = makeSymtabSection<LP>(*stringTableSection);
   indirectSymtabSection = make<IndirectSymtabSection>();
   if (config->adhocCodesign)
@@ -830,9 +828,9 @@ template <class LP> void Writer::createOutputSections() {
   for (const auto &it : mergedOutputSections) {
     StringRef segname = it.first.first;
     MergedOutputSection *osec = it.second;
-    if (unwindInfoSection && segname == segment_names::ld) {
+    if (segname == segment_names::ld) {
       assert(osec->name == section_names::compactUnwind);
-      unwindInfoSection->setCompactUnwindSection(osec);
+      in.unwindInfo->setCompactUnwindSection(osec);
     } else {
       getOrCreateOutputSegment(segname)->addOutputSection(osec);
     }
@@ -993,6 +991,7 @@ template <class LP> void macho::createSyntheticSections() {
   in.stubs = make<StubsSection>();
   in.stubHelper = make<StubHelperSection>();
   in.imageLoaderCache = make<ImageLoaderCacheSection>();
+  in.unwindInfo = makeUnwindInfoSection();
 }
 
 OutputSection *macho::firstTLVDataSection = nullptr;
