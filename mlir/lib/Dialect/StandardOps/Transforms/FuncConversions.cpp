@@ -52,6 +52,12 @@ public:
   using OpInterfaceConversionPattern<
       BranchOpInterface>::OpInterfaceConversionPattern;
 
+  BranchOpInterfaceTypeConversion(
+      TypeConverter &typeConverter, MLIRContext *ctx,
+      function_ref<bool(BranchOpInterface, int)> shouldConvertBranchOperand)
+      : OpInterfaceConversionPattern(typeConverter, ctx, /*benefit=*/1),
+        shouldConvertBranchOperand(shouldConvertBranchOperand) {}
+
   LogicalResult
   matchAndRewrite(BranchOpInterface op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
@@ -61,18 +67,23 @@ public:
     for (int succIdx = 0, succEnd = op->getBlock()->getNumSuccessors();
          succIdx < succEnd; ++succIdx) {
       auto successorOperands = op.getSuccessorOperands(succIdx);
-      if (!successorOperands)
+      if (!successorOperands || successorOperands->empty())
         continue;
+
       for (int idx = successorOperands->getBeginOperandIndex(),
                eidx = idx + successorOperands->size();
            idx < eidx; ++idx) {
-        newOperands[idx] = operands[idx];
+        if (!shouldConvertBranchOperand || shouldConvertBranchOperand(op, idx))
+          newOperands[idx] = operands[idx];
       }
     }
     rewriter.updateRootInPlace(
         op, [newOperands, op]() { op->setOperands(newOperands); });
     return success();
   }
+
+private:
+  function_ref<bool(BranchOpInterface, int)> shouldConvertBranchOperand;
 };
 } // end anonymous namespace
 
@@ -98,9 +109,10 @@ public:
 } // end anonymous namespace
 
 void mlir::populateBranchOpInterfaceTypeConversionPattern(
-    RewritePatternSet &patterns, TypeConverter &typeConverter) {
-  patterns.add<BranchOpInterfaceTypeConversion>(typeConverter,
-                                                patterns.getContext());
+    RewritePatternSet &patterns, TypeConverter &typeConverter,
+    function_ref<bool(BranchOpInterface, int)> shouldConvertBranchOperand) {
+  patterns.insert<BranchOpInterfaceTypeConversion>(
+      typeConverter, patterns.getContext(), shouldConvertBranchOperand);
 }
 
 bool mlir::isLegalForBranchOpInterfaceTypeConversionPattern(
