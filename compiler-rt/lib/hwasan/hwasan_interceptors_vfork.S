@@ -1,4 +1,5 @@
 #include "sanitizer_common/sanitizer_asm.h"
+#include "builtins/assembly.h"
 
 #if defined(__linux__) && HWASAN_WITH_INTERCEPTORS
 #define COMMON_INTERCEPTOR_SPILL_AREA __hwasan_extra_spill_area
@@ -9,3 +10,5 @@
 #endif
 
 NO_EXEC_STACK_DIRECTIVE
+
+GNU_PROPERTY_BTI_PAC
