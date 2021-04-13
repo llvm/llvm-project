@@ -99,6 +99,7 @@ enum ProcessorSubtypes {
   INTEL_COREI7_SAPPHIRERAPIDS,
   INTEL_COREI7_ALDERLAKE,
   AMDFAM19H_ZNVER3,
+  INTEL_COREI7_ROCKETLAKE,
   CPU_SUBTYPE_MAX
 };
 
@@ -383,6 +384,12 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_SKYLAKE;
       break;
+
+    // Rocketlake:
+    case 0xa7:
+      CPU = "rocketlake";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_ROCKETLAKE;
 
     // Skylake Xeon:
     case 0x55:

@@ -72,6 +72,10 @@
 // RUN:   | FileCheck %s -check-prefix=icelake-client
 // icelake-client: "-target-cpu" "icelake-client"
 //
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=rocketlake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=rocketlake
+// rocketlake: "-target-cpu" "rocketlake"
+//
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=icelake-server 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=icelake-server
 // icelake-server: "-target-cpu" "icelake-server"
