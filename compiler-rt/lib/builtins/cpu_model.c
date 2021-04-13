@@ -390,6 +390,7 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       CPU = "rocketlake";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_ROCKETLAKE;
+      break;
 
     // Skylake Xeon:
     case 0x55:
