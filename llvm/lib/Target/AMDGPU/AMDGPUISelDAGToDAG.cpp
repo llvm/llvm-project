@@ -1858,6 +1858,24 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
   return true;
 }
 
+static SDValue SelectSAddrFI(SelectionDAG *CurDAG, SDValue SAddr) {
+  if (auto FI = dyn_cast<FrameIndexSDNode>(SAddr)) {
+    SAddr = CurDAG->getTargetFrameIndex(FI->getIndex(), FI->getValueType(0));
+  } else if (SAddr.getOpcode() == ISD::ADD &&
+             isa<FrameIndexSDNode>(SAddr.getOperand(0))) {
+    // Materialize this into a scalar move for scalar address to avoid
+    // readfirstlane.
+    auto FI = cast<FrameIndexSDNode>(SAddr.getOperand(0));
+    SDValue TFI = CurDAG->getTargetFrameIndex(FI->getIndex(),
+                                              FI->getValueType(0));
+    SAddr = SDValue(CurDAG->getMachineNode(AMDGPU::S_ADD_U32, SDLoc(SAddr),
+                                           MVT::i32, TFI, SAddr.getOperand(1)),
+                    0);
+  }
+
+  return SAddr;
+}
+
 // Match (32-bit SGPR base) + sext(imm offset)
 bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *N,
                                             SDValue Addr,
@@ -1874,19 +1892,7 @@ bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *N,
     SAddr = Addr.getOperand(0);
   }
 
-  if (auto FI = dyn_cast<FrameIndexSDNode>(SAddr)) {
-    SAddr = CurDAG->getTargetFrameIndex(FI->getIndex(), FI->getValueType(0));
-  } else if (SAddr.getOpcode() == ISD::ADD &&
-             isa<FrameIndexSDNode>(SAddr.getOperand(0))) {
-    // Materialize this into a scalar move for scalar address to avoid
-    // readfirstlane.
-    auto FI = cast<FrameIndexSDNode>(SAddr.getOperand(0));
-    SDValue TFI = CurDAG->getTargetFrameIndex(FI->getIndex(),
-                                              FI->getValueType(0));
-    SAddr = SDValue(CurDAG->getMachineNode(AMDGPU::S_ADD_U32, SDLoc(SAddr),
-                                           MVT::i32, TFI, SAddr.getOperand(1)),
-                    0);
-  }
+  SAddr = SelectSAddrFI(CurDAG, SAddr);
 
   const SIInstrInfo *TII = Subtarget->getInstrInfo();
 
