@@ -65,14 +65,15 @@ subroutine all_test2(mask, d, rslt)
   logical :: mask(:,:)
   integer :: d
   logical :: rslt(:)
-! CHECK-DAG:  %[[c0:.*]] = constant 0 : index
 ! CHECK-DAG:  %[[a0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>
 ! CHECK-DAG:  %[[a1:.*]] = fir.load %[[arg1:.*]] : !fir.ref<i32>
 ! CHECK-DAG:  %[[a6:.*]] = fir.convert %[[a0:.*]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK-DAG:  %[[a7:.*]] = fir.convert %[[arg0:.*]]: (!fir.box<!fir.array<?x?x!fir.logical<4>>>) -> !fir.box<none>
   rslt = all(mask, d)
 ! CHECK:  %[[r1:.*]] = fir.call @_FortranAAllDim(%[[a6:.*]], %[[a7:.*]], %[[a1:.*]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
-! CHECK-DAG:  %[[r2:.*]]:3 = fir.box_dims %[[arg2:.*]] %[[c0:.*]] : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> (index, index, index)
+! CHECK-DAG:  %[[a10:.*]] = fir.load %[[a0:.*]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
+! CHECK-DAG:  %[[a12:.*]] = fir.box_addr %[[a10:.*]] : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>) -> !fir.heap<!fir.array<?x!fir.logical<4>>>
+! CHECK-DAG  fir.freemem %[[a12:.*]] : !fir.heap<!fir.array<?x!fir.logical<4>>>
 end subroutine
 
 ! ALLOCATED
@@ -122,14 +123,15 @@ subroutine any_test2(mask, d, rslt)
   logical :: mask(:,:)
   integer :: d
   logical :: rslt(:)
-! CHECK-DAG:  %[[c0:.*]] = constant 0 : index
 ! CHECK-DAG:  %[[a0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>
 ! CHECK-DAG:  %[[a1:.*]] = fir.load %[[arg1:.*]] : !fir.ref<i32>
 ! CHECK-DAG:  %[[a6:.*]] = fir.convert %[[a0:.*]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK-DAG:  %[[a7:.*]] = fir.convert %[[arg0:.*]]: (!fir.box<!fir.array<?x?x!fir.logical<4>>>) -> !fir.box<none>
   rslt = any(mask, d)
 ! CHECK:  %[[r1:.*]] = fir.call @_FortranAAnyDim(%[[a6:.*]], %[[a7:.*]], %[[a1:.*]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
-! CHECK-DAG:  %[[r2:.*]]:3 = fir.box_dims %[[arg2:.*]] %[[c0:.*]] : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> (index, index, index)
+! CHECK-DAG:  %[[a10:.*]] = fir.load %[[a0:.*]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
+! CHECK-DAG:  %[[a12:.*]] = fir.box_addr %[[a10:.*]] : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>) -> !fir.heap<!fir.array<?x!fir.logical<4>>>
+! CHECK-DAG  fir.freemem %[[a12:.*]] : !fir.heap<!fir.array<?x!fir.logical<4>>>
 end subroutine
 
 ! ASSOCIATED
