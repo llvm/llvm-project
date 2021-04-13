@@ -221,3 +221,7 @@ Additional Topics
 :doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging`
    This document describes DWARF extensions to support heterogeneous debugging
    for targets such as the AMDGPU backend.
+
+:doc:`AMDGPULLVMExtensionsForHeterogeneousDebugging`
+   This document describes LLVM extensions to support heterogeneous debugging
+   for targets such as the AMDGPU backend.
