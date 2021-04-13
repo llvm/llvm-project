@@ -222,36 +222,6 @@ public:
     virtual void DidExec(NativeProcessProtocol *process) = 0;
   };
 
-  /// Register a native delegate.
-  ///
-  /// Clients can register nofication callbacks by passing in a
-  /// NativeDelegate impl and passing it into this function.
-  ///
-  /// Note: it is required that the lifetime of the
-  /// native_delegate outlive the NativeProcessProtocol.
-  ///
-  /// \param[in] native_delegate
-  ///     A NativeDelegate impl to be called when certain events
-  ///     happen within the NativeProcessProtocol or related threads.
-  ///
-  /// \return
-  ///     true if the delegate was registered successfully;
-  ///     false if the delegate was already registered.
-  ///
-  /// \see NativeProcessProtocol::NativeDelegate.
-  bool RegisterNativeDelegate(NativeDelegate &native_delegate);
-
-  /// Unregister a native delegate previously registered.
-  ///
-  /// \param[in] native_delegate
-  ///     A NativeDelegate impl previously registered with this process.
-  ///
-  /// \return Returns \b true if the NativeDelegate was
-  /// successfully removed from the process, \b false otherwise.
-  ///
-  /// \see NativeProcessProtocol::NativeDelegate
-  bool UnregisterNativeDelegate(NativeDelegate &native_delegate);
-
   virtual Status GetLoadedModuleFileSpec(const char *module_path,
                                          FileSpec &file_spec) = 0;
 
@@ -377,8 +347,7 @@ protected:
 
   llvm::Optional<WaitStatus> m_exit_status;
 
-  std::recursive_mutex m_delegates_mutex;
-  std::vector<NativeDelegate *> m_delegates;
+  NativeDelegate &m_delegate;
   NativeWatchpointList m_watchpoint_list;
   HardwareBreakpointMap m_hw_breakpoints_map;
   int m_terminal_fd;
