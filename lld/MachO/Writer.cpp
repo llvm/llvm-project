@@ -71,6 +71,7 @@ public:
   SymtabSection *symtabSection = nullptr;
   IndirectSymtabSection *indirectSymtabSection = nullptr;
   CodeSignatureSection *codeSignatureSection = nullptr;
+  UnwindInfoSection *unwindInfoSection = nullptr;
   FunctionStartsSection *functionStartsSection = nullptr;
 
   LCUuid *uuidCommand = nullptr;
@@ -233,12 +234,10 @@ private:
 };
 
 class LCMain : public LoadCommand {
-  uint32_t getSize() const override {
-    return sizeof(structs::entry_point_command);
-  }
+  uint32_t getSize() const override { return sizeof(entry_point_command); }
 
   void writeTo(uint8_t *buf) const override {
-    auto *c = reinterpret_cast<structs::entry_point_command *>(buf);
+    auto *c = reinterpret_cast<entry_point_command *>(buf);
     c->cmd = LC_MAIN;
     c->cmdsize = getSize();
 
@@ -516,7 +515,7 @@ void Writer::scanRelocations() {
   TimeTraceScope timeScope("Scan relocations");
   for (InputSection *isec : inputSections) {
     if (isec->segname == segment_names::ld) {
-      in.unwindInfo->prepareRelocations(isec);
+      prepareCompactUnwind(isec);
       continue;
     }
 
@@ -797,6 +796,7 @@ template <class LP> void Writer::createOutputSections() {
   TimeTraceScope timeScope("Create output sections");
   // First, create hidden sections
   stringTableSection = make<StringTableSection>();
+  unwindInfoSection = make<UnwindInfoSection>(); // TODO(gkm): only when no -r
   symtabSection = makeSymtabSection<LP>(*stringTableSection);
   indirectSymtabSection = make<IndirectSymtabSection>();
   if (config->adhocCodesign)
@@ -828,9 +828,9 @@ template <class LP> void Writer::createOutputSections() {
   for (const auto &it : mergedOutputSections) {
     StringRef segname = it.first.first;
     MergedOutputSection *osec = it.second;
-    if (segname == segment_names::ld) {
+    if (unwindInfoSection && segname == segment_names::ld) {
       assert(osec->name == section_names::compactUnwind);
-      in.unwindInfo->setCompactUnwindSection(osec);
+      unwindInfoSection->setCompactUnwindSection(osec);
     } else {
       getOrCreateOutputSegment(segname)->addOutputSection(osec);
     }
@@ -991,7 +991,6 @@ template <class LP> void macho::createSyntheticSections() {
   in.stubs = make<StubsSection>();
   in.stubHelper = make<StubHelperSection>();
   in.imageLoaderCache = make<ImageLoaderCacheSection>();
-  in.unwindInfo = makeUnwindInfoSection();
 }
 
 OutputSection *macho::firstTLVDataSection = nullptr;
