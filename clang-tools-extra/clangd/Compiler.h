@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILER_H
 
+#include "FeatureModule.h"
 #include "GlobalCompilationDatabase.h"
 #include "TidyProvider.h"
 #include "index/Index.h"
@@ -22,6 +23,8 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include <memory>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -54,6 +57,8 @@ struct ParseInputs {
   const SymbolIndex *Index = nullptr;
   ParseOptions Opts = ParseOptions();
   TidyProviderRef ClangTidyProvider = {};
+  // Used to acquire ASTListeners when parsing files.
+  FeatureModuleSet *FeatureModules = nullptr;
 };
 
 /// Builds compiler invocation that could be used to build AST or preamble.
