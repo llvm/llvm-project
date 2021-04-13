@@ -19,6 +19,7 @@ set(files
   __memory/base.h
   __memory/compressed_pair.h
   __memory/pointer_traits.h
+  __memory/raw_storage_iterator.h
   __memory/temporary_buffer.h
   __memory/utilities.h
   __mutex_base
