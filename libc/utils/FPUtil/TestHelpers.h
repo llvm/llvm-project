@@ -41,13 +41,13 @@ public:
     fputil::FPBits<T> actualBits(actual), expectedBits(expected);
     if (Condition == __llvm_libc::testing::Cond_EQ)
       return (actualBits.isNaN() && expectedBits.isNaN()) ||
-             (actualBits.bitsAsUInt() == expectedBits.bitsAsUInt());
+             (actualBits.uintval() == expectedBits.uintval());
 
     // If condition == Cond_NE.
     if (actualBits.isNaN())
       return !expectedBits.isNaN();
     return expectedBits.isNaN() ||
-           (actualBits.bitsAsUInt() != expectedBits.bitsAsUInt());
+           (actualBits.uintval() != expectedBits.uintval());
   }
 
   void explainError(testutils::StreamWrapper &stream) override {
