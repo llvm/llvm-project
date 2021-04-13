@@ -167,7 +167,7 @@ static inline T nextafter(T from, T to) {
       --intVal;
     }
   } else {
-    intVal = (UIntType(toBits) & signMask) + UIntType(1);
+    intVal = (toBits.uintval() & signMask) + UIntType(1);
   }
 
   return *reinterpret_cast<T *>(&intVal);
