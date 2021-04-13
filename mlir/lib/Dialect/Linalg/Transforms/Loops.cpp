@@ -516,6 +516,47 @@ linalgOpToLoopsImpl(Operation *op, OpBuilder &builder,
   return loops;
 }
 
+/// Replace the index operations in the body of the loop nest by the matching
+/// induction variables. If available use the interchange vector to map the
+/// interchanged induction variables to the dimension of the index operation.
+static void replaceIndexOpsByInductionVariables(
+    LinalgOp linalgOp, PatternRewriter &rewriter, ArrayRef<Operation *> loopOps,
+    ArrayRef<unsigned> interchangeVector) {
+  // Extract the induction variables of the loop nest from outer to inner.
+  SmallVector<Value> allIvs;
+  for (Operation *loopOp : loopOps) {
+    llvm::TypeSwitch<Operation *>(loopOp)
+        .Case([&](scf::ParallelOp parallelOp) {
+          allIvs.append(parallelOp.getInductionVars().begin(),
+                        parallelOp.getInductionVars().end());
+        })
+        .Case([&](scf::ForOp forOp) {
+          allIvs.push_back(forOp.getInductionVar());
+        })
+        .Case([&](AffineForOp affineForOp) {
+          allIvs.push_back(affineForOp.getInductionVar());
+        })
+        .Default([&](Operation *op) { assert(false && "unexpected op"); });
+  }
+  assert(linalgOp.getNumLoops() == allIvs.size() &&
+         "expected the number of loops and induction variables to match");
+  // Replace the index operations in the body of the innermost loop op.
+  if (!loopOps.empty()) {
+    LoopLikeOpInterface loopOp = loopOps.back();
+    for (IndexOp indexOp :
+         llvm::make_early_inc_range(loopOp.getLoopBody().getOps<IndexOp>())) {
+      // Search the indexing dimension in the interchange vector if available.
+      assert(interchangeVector.empty() ||
+             interchangeVector.size() == linalgOp.getNumLoops());
+      const auto *it = llvm::find(interchangeVector, indexOp.dim());
+      uint64_t dim = it != interchangeVector.end()
+                         ? std::distance(interchangeVector.begin(), it)
+                         : indexOp.dim();
+      rewriter.replaceOp(indexOp, allIvs[dim]);
+    }
+  }
+}
+
 namespace {
 template <typename LoopType>
 class LinalgRewritePattern : public RewritePattern {
@@ -528,11 +569,14 @@ public:
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     auto linalgOp = dyn_cast<LinalgOp>(op);
-    // TODO: remove hasIndexSemantics check once index ops are supported.
-    if (!linalgOp || linalgOp.hasIndexSemantics())
+    if (!isa<LinalgOp>(op))
       return failure();
-    if (!linalgOpToLoopsImpl<LoopType>(op, rewriter, interchangeVector))
+    Optional<LinalgLoops> loopOps =
+        linalgOpToLoopsImpl<LoopType>(op, rewriter, interchangeVector);
+    if (!loopOps.hasValue())
       return failure();
+    replaceIndexOpsByInductionVariables(linalgOp, rewriter, loopOps.getValue(),
+                                        interchangeVector);
     rewriter.eraseOp(op);
     return success();
   }
