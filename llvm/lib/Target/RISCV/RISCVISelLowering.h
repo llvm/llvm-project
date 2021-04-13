@@ -89,13 +89,12 @@ enum NodeType : unsigned {
   // Generalized Reverse and Generalized Or-Combine - directly matching the
   // semantics of the named RISC-V instructions. Lowered as custom nodes as
   // TableGen chokes when faced with commutative permutations in deeply-nested
-  // DAGs. Each node takes an input operand and a TargetConstant immediate
-  // shift amount, and outputs a bit-manipulated version of input. All operands
-  // are of type XLenVT.
-  GREVI,
-  GREVIW,
-  GORCI,
-  GORCIW,
+  // DAGs. Each node takes an input operand and a control operand and outputs a
+  // bit-manipulated version of input. All operands are i32 or XLenVT.
+  GREV,
+  GREVW,
+  GORC,
+  GORCW,
   SHFL,
   // Vector Extension
   // VMV_V_X_VL matches the semantics of vmv.v.x but includes an extra operand
