@@ -380,5 +380,10 @@ int64_t getICmpTrueVal(const TargetLowering &TLI, bool IsVector, bool IsFP);
 /// Returns true if the given block should be optimized for size.
 bool shouldOptForSize(const MachineBasicBlock &MBB, ProfileSummaryInfo *PSI,
                       BlockFrequencyInfo *BFI);
+
+/// \returns the intrinsic ID for a G_INTRINSIC or G_INTRINSIC_W_SIDE_EFFECTS
+/// instruction \p MI.
+unsigned getIntrinsicID(const MachineInstr &MI);
+
 } // End namespace llvm.
 #endif
