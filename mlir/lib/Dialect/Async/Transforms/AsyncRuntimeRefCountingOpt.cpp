@@ -26,7 +26,7 @@ class AsyncRuntimeRefCountingOptPass
     : public AsyncRuntimeRefCountingOptBase<AsyncRuntimeRefCountingOptPass> {
 public:
   AsyncRuntimeRefCountingOptPass() = default;
-  void runOnFunction() override;
+  void runOnOperation() override;
 
 private:
   LogicalResult optimizeReferenceCounting(
@@ -124,8 +124,8 @@ LogicalResult AsyncRuntimeRefCountingOptPass::optimizeReferenceCounting(
   return success();
 }
 
-void AsyncRuntimeRefCountingOptPass::runOnFunction() {
-  FuncOp func = getFunction();
+void AsyncRuntimeRefCountingOptPass::runOnOperation() {
+  Operation *op = getOperation();
 
   // Mapping from `dropRef.getOperation()` to `addRef.getOperation()`.
   //
@@ -134,7 +134,7 @@ void AsyncRuntimeRefCountingOptPass::runOnFunction() {
   llvm::SmallDenseMap<Operation *, Operation *> cancellable;
 
   // Optimize reference counting for values defined by block arguments.
-  WalkResult blockWalk = func.walk([&](Block *block) -> WalkResult {
+  WalkResult blockWalk = op->walk([&](Block *block) -> WalkResult {
     for (BlockArgument arg : block->getArguments())
       if (isRefCounted(arg.getType()))
         if (failed(optimizeReferenceCounting(arg, cancellable)))
@@ -147,7 +147,7 @@ void AsyncRuntimeRefCountingOptPass::runOnFunction() {
     signalPassFailure();
 
   // Optimize reference counting for values defined by operation results.
-  WalkResult opWalk = func.walk([&](Operation *op) -> WalkResult {
+  WalkResult opWalk = op->walk([&](Operation *op) -> WalkResult {
     for (unsigned i = 0; i < op->getNumResults(); ++i)
       if (isRefCounted(op->getResultTypes()[i]))
         if (failed(optimizeReferenceCounting(op->getResult(i), cancellable)))
@@ -171,7 +171,6 @@ void AsyncRuntimeRefCountingOptPass::runOnFunction() {
   }
 }
 
-std::unique_ptr<OperationPass<FuncOp>>
-mlir::createAsyncRuntimeRefCountingOptPass() {
+std::unique_ptr<Pass> mlir::createAsyncRuntimeRefCountingOptPass() {
   return std::make_unique<AsyncRuntimeRefCountingOptPass>();
 }
