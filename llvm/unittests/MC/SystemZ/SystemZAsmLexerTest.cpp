@@ -109,6 +109,21 @@ protected:
       Lexer.Lex();
     }
   }
+
+  void lexAndCheckIntegerTokensAndValues(StringRef AsmStr,
+                                         SmallVector<int64_t> ExpectedValues) {
+    // Get reference to AsmLexer.
+    MCAsmLexer &Lexer = Parser->getLexer();
+    // Loop through all expected tokens and expected values.
+    for (size_t I = 0; I < ExpectedValues.size(); ++I) {
+      // Skip any EndOfStatement tokens, we're not concerned with them.
+      if (Lexer.getTok().getKind() == AsmToken::EndOfStatement)
+        continue;
+      EXPECT_EQ(Lexer.getTok().getKind(), AsmToken::Integer);
+      EXPECT_EQ(Lexer.getTok().getIntVal(), ExpectedValues[I]);
+      Lexer.Lex();
+    }
+  }
 };
 
 TEST_F(SystemZAsmLexerTest, CheckDontRestrictCommentStringToStartOfStatement) {
@@ -365,6 +380,78 @@ TEST_F(SystemZAsmLexerTest, CheckStrictCommentString5) {
   ExpectedTokens.push_back(AsmToken::EndOfStatement); // "* def */// xyz"
   ExpectedTokens.push_back(AsmToken::Eof);
 
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerTest, CheckValidHLASMIntegers) {
+  StringRef AsmStr = "123\n000123\n1999\n007\n12300\n12021\n";
+  // StringRef AsmStr = "123";
+  // Setup.
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().setLexHLASMIntegers(true);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  // SmallVector<int64_t> ExpectedValues({123});
+  SmallVector<int64_t> ExpectedValues({123, 123, 1999, 7, 12300, 12021});
+  lexAndCheckIntegerTokensAndValues(AsmStr, ExpectedValues);
+}
+
+TEST_F(SystemZAsmLexerTest, CheckInvalidHLASMIntegers) {
+  StringRef AsmStr = "0b0101\n0xDEADBEEF\nfffh\n.133\n";
+
+  // Setup.
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().setLexHLASMIntegers(true);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  SmallVector<AsmToken::TokenKind> ExpectedTokens;
+  ExpectedTokens.push_back(AsmToken::Integer);        // "0"
+  ExpectedTokens.push_back(AsmToken::Identifier);     // "b0101"
+  ExpectedTokens.push_back(AsmToken::EndOfStatement); // "\n"
+  ExpectedTokens.push_back(AsmToken::Integer);        // "0"
+  ExpectedTokens.push_back(AsmToken::Identifier);     // "xDEADBEEF"
+  ExpectedTokens.push_back(AsmToken::EndOfStatement); // "\n"
+  ExpectedTokens.push_back(AsmToken::Identifier);     // "fffh"
+  ExpectedTokens.push_back(AsmToken::EndOfStatement); // "\n"
+  ExpectedTokens.push_back(AsmToken::Real);           // ".133"
+  ExpectedTokens.push_back(AsmToken::EndOfStatement); // "\n"
+  ExpectedTokens.push_back(AsmToken::Eof);
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerTest, CheckDefaultIntegers) {
+  StringRef AsmStr = "0b0101\n0xDEADBEEF\nfffh\n";
+
+  // Setup.
+  setupCallToAsmParser(AsmStr);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  SmallVector<int64_t> ExpectedValues({5, 0xDEADBEEF, 0xFFF});
+  lexAndCheckIntegerTokensAndValues(AsmStr, ExpectedValues);
+}
+
+TEST_F(SystemZAsmLexerTest, CheckDefaultFloats) {
+  StringRef AsmStr = "0.333\n1.3\n2.5\n3.0\n";
+
+  // Setup.
+  setupCallToAsmParser(AsmStr);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  SmallVector<AsmToken::TokenKind> ExpectedTokens;
+
+  for (int I = 0; I < 4; ++I)
+    ExpectedTokens.insert(ExpectedTokens.begin(),
+                          {AsmToken::Real, AsmToken::EndOfStatement});
+
+  ExpectedTokens.push_back(AsmToken::Eof);
   lexAndCheckTokens(AsmStr, ExpectedTokens);
 }
 } // end anonymous namespace

@@ -456,26 +456,32 @@ AsmToken AsmLexer::LexDigit() {
   }
 
   // Decimal integer: [1-9][0-9]*
-  if (CurPtr[-1] != '0' || CurPtr[0] == '.') {
+  // HLASM-flavour decimal integer: [0-9][0-9]*
+  // FIXME: Later on, support for fb for HLASM has to be added in
+  // as they probably would be needed for asm goto
+  if (LexHLASMIntegers || CurPtr[-1] != '0' || CurPtr[0] == '.') {
     unsigned Radix = doHexLookAhead(CurPtr, 10, LexMasmIntegers);
-    bool isHex = Radix == 16;
-    // Check for floating point literals.
-    if (!isHex && (*CurPtr == '.' || *CurPtr == 'e' || *CurPtr == 'E')) {
-      if (*CurPtr == '.')
-        ++CurPtr;
-      return LexFloatLiteral();
+
+    if (!LexHLASMIntegers) {
+      bool IsHex = Radix == 16;
+      // Check for floating point literals.
+      if (!IsHex && (*CurPtr == '.' || *CurPtr == 'e' || *CurPtr == 'E')) {
+        if (*CurPtr == '.')
+          ++CurPtr;
+        return LexFloatLiteral();
+      }
     }
 
     StringRef Result(TokStart, CurPtr - TokStart);
 
     APInt Value(128, 0, true);
-    if (Result.getAsInteger(Radix, Value)) {
+    if (Result.getAsInteger(Radix, Value))
       return ReturnError(TokStart, "invalid " + radixName(Radix) + " number");
-    }
 
-    // The darwin/x86 (and x86-64) assembler accepts and ignores type
-    // suffices on integer literals.
-    SkipIgnoredIntegerSuffix(CurPtr);
+    if (!LexHLASMIntegers)
+      // The darwin/x86 (and x86-64) assembler accepts and ignores type
+      // suffices on integer literals.
+      SkipIgnoredIntegerSuffix(CurPtr);
 
     return intToken(Result, Value);
   }
