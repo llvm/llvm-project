@@ -77,6 +77,7 @@ if (current_toolchain == default_toolchain) {
       "__memory/allocator_traits.h",
       "__memory/auto_ptr.h",
       "__memory/base.h",
+      "__memory/compressed_pair.h",
       "__memory/pointer_safety.h",
       "__memory/pointer_traits.h",
       "__memory/shared_ptr.h",
