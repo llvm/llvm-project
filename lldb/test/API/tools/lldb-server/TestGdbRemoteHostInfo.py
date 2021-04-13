@@ -77,7 +77,7 @@ class TestGdbRemoteHostInfo(GdbRemoteTestCaseBase):
         # Launch the debug monitor stub, attaching to the inferior.
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
-        self.add_no_ack_remote_stream()
+        self.do_handshake()
 
         # Request qHostInfo and get response
         self.add_host_info_collection_packets()

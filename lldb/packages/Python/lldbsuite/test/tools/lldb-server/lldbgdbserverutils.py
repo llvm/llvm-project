@@ -912,6 +912,19 @@ class Server(object):
     def send_raw(self, frame):
         self._sock.sendall(frame)
 
+    def send_ack(self):
+        self.send_raw(b"+")
+
+    def send_packet(self, packet):
+        self.send_raw(b'$%s#%02x'%(packet, self._checksum(packet)))
+
+    @staticmethod
+    def _checksum(packet):
+        checksum = 0
+        for c in six.iterbytes(packet):
+            checksum += c
+        return checksum % 256
+
     def _read(self, q):
         while not q:
             new_bytes = self._sock.recv(4096)
@@ -961,6 +974,19 @@ class Server(object):
 
     def get_raw_normal_packet(self):
         return self._read(self._normal_queue)
+
+    @staticmethod
+    def _get_payload(frame):
+        payload = frame[1:-3]
+        checksum = int(frame[-2:], 16)
+        if checksum != Server._checksum(payload):
+            raise ChecksumMismatch
+        return payload
+
+    def get_normal_packet(self):
+        frame = self.get_raw_normal_packet()
+        if frame == b"+": return frame
+        return self._get_payload(frame)
 
     def get_accumulated_output(self):
         return self._accumulated_output
