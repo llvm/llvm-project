@@ -227,8 +227,6 @@ class GdbRemoteTestCaseBase(Base):
             self.debug_monitor_exe = re.sub(r' \(deleted\)$', '', exe)
         else:
             self.debug_monitor_exe = get_lldb_server_exe()
-            if not self.debug_monitor_exe:
-                self.skipTest("lldb-server exe not found")
 
         self.debug_monitor_extra_args = ["gdbserver"]
         self.setUpServerLogging(is_llgs=True)
@@ -237,8 +235,6 @@ class GdbRemoteTestCaseBase(Base):
 
     def _init_debugserver_test(self):
         self.debug_monitor_exe = get_debugserver_exe()
-        if not self.debug_monitor_exe:
-            self.skipTest("debugserver exe not found")
         self.setUpServerLogging(is_llgs=False)
         self.reverse_connect = True
 
