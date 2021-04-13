@@ -498,8 +498,13 @@ public:
   /// Convert the types of block arguments within the given region except for
   /// the entry region. This replaces each non-entry block with a new block
   /// containing the updated signature.
-  LogicalResult convertNonEntryRegionTypes(Region *region,
-                                           TypeConverter &converter);
+  ///
+  /// If special conversion behavior is needed for the non-entry blocks (for
+  /// example, we need to convert only a subset of a BB arguments), such
+  /// behavior can be specified in blockConversions.
+  LogicalResult convertNonEntryRegionTypes(
+      Region *region, TypeConverter &converter,
+      ArrayRef<TypeConverter::SignatureConversion> blockConversions);
 
   /// Replace all the uses of the block argument `from` with value `to`.
   void replaceUsesOfBlockArgument(BlockArgument from, Value to);
