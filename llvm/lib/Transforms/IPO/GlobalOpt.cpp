@@ -106,175 +106,6 @@ static cl::opt<int> ColdCCRelFreq(
         "entry frequency, for a call site to be considered cold for enabling"
         "coldcc"));
 
-/// Is this global variable possibly used by a leak checker as a root?  If so,
-/// we might not really want to eliminate the stores to it.
-static bool isLeakCheckerRoot(GlobalVariable *GV) {
-  // A global variable is a root if it is a pointer, or could plausibly contain
-  // a pointer.  There are two challenges; one is that we could have a struct
-  // the has an inner member which is a pointer.  We recurse through the type to
-  // detect these (up to a point).  The other is that we may actually be a union
-  // of a pointer and another type, and so our LLVM type is an integer which
-  // gets converted into a pointer, or our type is an [i8 x #] with a pointer
-  // potentially contained here.
-
-  if (GV->hasPrivateLinkage())
-    return false;
-
-  SmallVector<Type *, 4> Types;
-  Types.push_back(GV->getValueType());
-
-  unsigned Limit = 20;
-  do {
-    Type *Ty = Types.pop_back_val();
-    switch (Ty->getTypeID()) {
-      default: break;
-      case Type::PointerTyID:
-        return true;
-      case Type::FixedVectorTyID:
-      case Type::ScalableVectorTyID:
-        if (cast<VectorType>(Ty)->getElementType()->isPointerTy())
-          return true;
-        break;
-      case Type::ArrayTyID:
-        Types.push_back(cast<ArrayType>(Ty)->getElementType());
-        break;
-      case Type::StructTyID: {
-        StructType *STy = cast<StructType>(Ty);
-        if (STy->isOpaque()) return true;
-        for (StructType::element_iterator I = STy->element_begin(),
-                 E = STy->element_end(); I != E; ++I) {
-          Type *InnerTy = *I;
-          if (isa<PointerType>(InnerTy)) return true;
-          if (isa<StructType>(InnerTy) || isa<ArrayType>(InnerTy) ||
-              isa<VectorType>(InnerTy))
-            Types.push_back(InnerTy);
-        }
-        break;
-      }
-    }
-    if (--Limit == 0) return true;
-  } while (!Types.empty());
-  return false;
-}
-
-/// Given a value that is stored to a global but never read, determine whether
-/// it's safe to remove the store and the chain of computation that feeds the
-/// store.
-static bool IsSafeComputationToRemove(
-    Value *V, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
-  do {
-    if (isa<Constant>(V))
-      return true;
-    if (!V->hasOneUse())
-      return false;
-    if (isa<LoadInst>(V) || isa<InvokeInst>(V) || isa<Argument>(V) ||
-        isa<GlobalValue>(V))
-      return false;
-    if (isAllocationFn(V, GetTLI))
-      return true;
-
-    Instruction *I = cast<Instruction>(V);
-    if (I->mayHaveSideEffects())
-      return false;
-    if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I)) {
-      if (!GEP->hasAllConstantIndices())
-        return false;
-    } else if (I->getNumOperands() != 1) {
-      return false;
-    }
-
-    V = I->getOperand(0);
-  } while (true);
-}
-
-/// This GV is a pointer root.  Loop over all users of the global and clean up
-/// any that obviously don't assign the global a value that isn't dynamically
-/// allocated.
-static bool
-CleanupPointerRootUsers(GlobalVariable *GV,
-                        function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
-  // A brief explanation of leak checkers.  The goal is to find bugs where
-  // pointers are forgotten, causing an accumulating growth in memory
-  // usage over time.  The common strategy for leak checkers is to explicitly
-  // allow the memory pointed to by globals at exit.  This is popular because it
-  // also solves another problem where the main thread of a C++ program may shut
-  // down before other threads that are still expecting to use those globals. To
-  // handle that case, we expect the program may create a singleton and never
-  // destroy it.
-
-  bool Changed = false;
-
-  // If Dead[n].first is the only use of a malloc result, we can delete its
-  // chain of computation and the store to the global in Dead[n].second.
-  SmallVector<std::pair<Instruction *, Instruction *>, 32> Dead;
-
-  // Constants can't be pointers to dynamically allocated memory.
-  for (Value::user_iterator UI = GV->user_begin(), E = GV->user_end();
-       UI != E;) {
-    User *U = *UI++;
-    if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
-      Value *V = SI->getValueOperand();
-      if (isa<Constant>(V)) {
-        Changed = true;
-        SI->eraseFromParent();
-      } else if (Instruction *I = dyn_cast<Instruction>(V)) {
-        if (I->hasOneUse())
-          Dead.push_back(std::make_pair(I, SI));
-      }
-    } else if (MemSetInst *MSI = dyn_cast<MemSetInst>(U)) {
-      if (isa<Constant>(MSI->getValue())) {
-        Changed = true;
-        MSI->eraseFromParent();
-      } else if (Instruction *I = dyn_cast<Instruction>(MSI->getValue())) {
-        if (I->hasOneUse())
-          Dead.push_back(std::make_pair(I, MSI));
-      }
-    } else if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(U)) {
-      GlobalVariable *MemSrc = dyn_cast<GlobalVariable>(MTI->getSource());
-      if (MemSrc && MemSrc->isConstant()) {
-        Changed = true;
-        MTI->eraseFromParent();
-      } else if (Instruction *I = dyn_cast<Instruction>(MemSrc)) {
-        if (I->hasOneUse())
-          Dead.push_back(std::make_pair(I, MTI));
-      }
-    } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(U)) {
-      if (CE->use_empty()) {
-        CE->destroyConstant();
-        Changed = true;
-      }
-    } else if (Constant *C = dyn_cast<Constant>(U)) {
-      if (isSafeToDestroyConstant(C)) {
-        C->destroyConstant();
-        // This could have invalidated UI, start over from scratch.
-        Dead.clear();
-        CleanupPointerRootUsers(GV, GetTLI);
-        return true;
-      }
-    }
-  }
-
-  for (int i = 0, e = Dead.size(); i != e; ++i) {
-    if (IsSafeComputationToRemove(Dead[i].first, GetTLI)) {
-      Dead[i].second->eraseFromParent();
-      Instruction *I = Dead[i].first;
-      do {
-        if (isAllocationFn(I, GetTLI))
-          break;
-        Instruction *J = dyn_cast<Instruction>(I->getOperand(0));
-        if (!J)
-          break;
-        I->eraseFromParent();
-        I = J;
-      } while (true);
-      I->eraseFromParent();
-      Changed = true;
-    }
-  }
-
-  return Changed;
-}
-
 /// We just marked GV constant.  Loop over all users of the global, cleaning up
 /// the obvious ones.  This is largely just a quick scan over the use list to
 /// clean up the easy and obvious cruft.  This returns true if it made a change.
@@ -823,12 +654,8 @@ static bool OptimizeAwayTrappingUsesOfLoads(
   // If we nuked all of the loads, then none of the stores are needed either,
   // nor is the global.
   if (AllNonStoreUsesGone) {
-    if (isLeakCheckerRoot(GV)) {
-      Changed |= CleanupPointerRootUsers(GV, GetTLI);
-    } else {
-      Changed = true;
-      CleanupConstantGlobalUsers(GV, nullptr, DL, GetTLI);
-    }
+    Changed = true;
+    CleanupConstantGlobalUsers(GV, nullptr, DL, GetTLI);
     if (GV->use_empty()) {
       LLVM_DEBUG(dbgs() << "  *** GLOBAL NOW DEAD!\n");
       Changed = true;
@@ -1997,15 +1824,10 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
   if (!GS.IsLoaded) {
     LLVM_DEBUG(dbgs() << "GLOBAL NEVER LOADED: " << *GV << "\n");
 
-    if (isLeakCheckerRoot(GV)) {
-      // Delete any constant stores to the global.
-      Changed = CleanupPointerRootUsers(GV, GetTLI);
-    } else {
-      // Delete any stores we can find to the global.  We may not be able to
-      // make it completely dead though.
-      Changed =
-          CleanupConstantGlobalUsers(GV, GV->getInitializer(), DL, GetTLI);
-    }
+    // Delete any stores we can find to the global.  We may not be able to
+    // make it completely dead though.
+    Changed =
+        CleanupConstantGlobalUsers(GV, GV->getInitializer(), DL, GetTLI);
 
     // If the global is dead now, delete it.
     if (GV->use_empty()) {

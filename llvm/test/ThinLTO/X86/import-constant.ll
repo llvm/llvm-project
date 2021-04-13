@@ -32,11 +32,8 @@
 ; IMPORT-NEXT: @_ZL3Obj.llvm.{{.*}} = available_externally hidden constant %struct.S { i32 4, i32 8, i32* @val }
 ; IMPORT-NEXT: @val = available_externally global i32 42
 
-; OPT: @outer = internal unnamed_addr global %struct.Q zeroinitializer
-
 ; OPT:      define dso_local i32 @main()
 ; OPT-NEXT: entry:
-; OPT-NEXT:   store %struct.S* null, %struct.S** getelementptr inbounds (%struct.Q, %struct.Q* @outer, i64 0, i32 0)
 ; OPT-NEXT:   ret i32 12
 
 ; NOREFS:      @outer = internal local_unnamed_addr global %struct.Q zeroinitializer
