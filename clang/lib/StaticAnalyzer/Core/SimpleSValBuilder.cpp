@@ -65,12 +65,12 @@ SValBuilder *ento::createSimpleSValBuilder(llvm::BumpPtrAllocator &alloc,
 // Transfer function for Casts.
 //===----------------------------------------------------------------------===//
 
+// FIXME: This function should be eliminated and replaced with `evalCast`
 SVal SimpleSValBuilder::dispatchCast(SVal Val, QualType CastTy) {
-  assert(Val.getAs<Loc>() || Val.getAs<NonLoc>());
-  return Val.getAs<Loc>() ? evalCastFromLoc(Val.castAs<Loc>(), CastTy)
-                           : evalCastFromNonLoc(Val.castAs<NonLoc>(), CastTy);
+  return evalCast(Val, CastTy, QualType{});
 }
 
+// FIXME: This function should be eliminated and replaced with `evalCast`
 SVal SimpleSValBuilder::evalCastFromNonLoc(NonLoc val, QualType castTy) {
   bool isLocType = Loc::isLocType(castTy);
   if (val.getAs<nonloc::PointerToMember>())
@@ -127,6 +127,7 @@ SVal SimpleSValBuilder::evalCastFromNonLoc(NonLoc val, QualType castTy) {
     return makeIntVal(i);
 }
 
+// FIXME: This function should be eliminated and replaced with `evalCast`
 SVal SimpleSValBuilder::evalCastFromLoc(Loc val, QualType castTy) {
 
   // Casts from pointers -> pointers, just return the lval.
