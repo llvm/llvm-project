@@ -79,7 +79,7 @@ public:
       MakeDataContiguous(handler, bytes);
       RUNTIME_CHECK(handler, at == fileOffset_ + frame_);
     }
-    while (FrameLength() < bytes) {
+    if (FrameLength() < bytes) {
       auto next{start_ + length_};
       RUNTIME_CHECK(handler, next < size_);
       auto minBytes{bytes - FrameLength()};
@@ -88,9 +88,6 @@ public:
           fileOffset_ + length_, buffer_ + next, minBytes, maxBytes, handler)};
       length_ += got;
       RUNTIME_CHECK(handler, length_ <= size_);
-      if (got < minBytes) {
-        break; // error or EOF & program can handle it
-      }
     }
     return FrameLength();
   }
