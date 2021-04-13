@@ -30,6 +30,7 @@
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
+#include "lldb/Host/linux/Host.h"
 #include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Host/linux/Uio.h"
 #include "lldb/Host/posix/ProcessLauncherPosixFork.h"
@@ -383,13 +384,21 @@ Status NativeProcessLinux::SetDefaultPtraceOpts(lldb::pid_t pid) {
   ptrace_opts |= PTRACE_O_TRACEEXIT;
 
   // Have the tracer trace threads which spawn in the inferior process.
-  // TODO: if we want to support tracing the inferiors' child, add the
-  // appropriate ptrace flags here (PTRACE_O_TRACEFORK, PTRACE_O_TRACEVFORK)
   ptrace_opts |= PTRACE_O_TRACECLONE;
 
   // Have the tracer notify us before execve returns (needed to disable legacy
   // SIGTRAP generation)
   ptrace_opts |= PTRACE_O_TRACEEXEC;
+
+  // Have the tracer trace forked children.
+  ptrace_opts |= PTRACE_O_TRACEFORK;
+
+  // Have the tracer trace vforks.
+  ptrace_opts |= PTRACE_O_TRACEVFORK;
+
+  // Have the tracer trace vfork-done in order to restore breakpoints after
+  // the child finishes sharing memory.
+  ptrace_opts |= PTRACE_O_TRACEVFORKDONE;
 
   return PtraceWrapper(PTRACE_SETOPTIONS, pid, nullptr, (void *)ptrace_opts);
 }
@@ -444,8 +453,7 @@ void NativeProcessLinux::MonitorCallback(lldb::pid_t pid, bool exited,
     LLDB_LOG(log, "tid {0}, si_code: {1}, si_pid: {2}", pid, info.si_code,
              info.si_pid);
 
-    NativeThreadLinux &thread = AddThread(pid, /*resume*/ true);
-    ThreadWasCreated(thread);
+    MonitorClone(pid, llvm::None);
     return;
   }
 
@@ -509,29 +517,24 @@ void NativeProcessLinux::MonitorCallback(lldb::pid_t pid, bool exited,
   }
 }
 
-void NativeProcessLinux::WaitForNewThread(::pid_t tid) {
+void NativeProcessLinux::WaitForCloneNotification(::pid_t pid) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
 
-  if (GetThreadByID(tid)) {
-    // We are already tracking the thread - we got the event on the new thread
-    // (see MonitorSignal) before this one. We are done.
-    return;
-  }
-
-  // The thread is not tracked yet, let's wait for it to appear.
+  // The PID is not tracked yet, let's wait for it to appear.
   int status = -1;
   LLDB_LOG(log,
-           "received thread creation event for tid {0}. tid not tracked "
-           "yet, waiting for thread to appear...",
-           tid);
-  ::pid_t wait_pid = llvm::sys::RetryAfterSignal(-1, ::waitpid, tid, &status, __WALL);
-  // Since we are waiting on a specific tid, this must be the creation event.
+           "received clone event for pid {0}. pid not tracked yet, "
+           "waiting for it to appear...",
+           pid);
+  ::pid_t wait_pid =
+      llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, &status, __WALL);
+  // Since we are waiting on a specific pid, this must be the creation event.
   // But let's do some checks just in case.
-  if (wait_pid != tid) {
+  if (wait_pid != pid) {
     LLDB_LOG(log,
-             "waiting for tid {0} failed. Assuming the thread has "
+             "waiting for pid {0} failed. Assuming the pid has "
              "disappeared in the meantime",
-             tid);
+             pid);
     // The only way I know of this could happen is if the whole process was
     // SIGKILLed in the mean time. In any case, we can't do anything about that
     // now.
@@ -539,17 +542,15 @@ void NativeProcessLinux::WaitForNewThread(::pid_t tid) {
   }
   if (WIFEXITED(status)) {
     LLDB_LOG(log,
-             "waiting for tid {0} returned an 'exited' event. Not "
-             "tracking the thread.",
-             tid);
+             "waiting for pid {0} returned an 'exited' event. Not "
+             "tracking it.",
+             pid);
     // Also a very improbable event.
+    m_pending_pid_map.erase(pid);
     return;
   }
 
-  LLDB_LOG(log, "pid = {0}: tracking new thread tid {1}", GetID(), tid);
-  NativeThreadLinux &new_thread = AddThread(tid, /*resume*/ true);
-
-  ThreadWasCreated(new_thread);
+  MonitorClone(pid, llvm::None);
 }
 
 void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
@@ -560,26 +561,26 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
   assert(info.si_signo == SIGTRAP && "Unexpected child signal!");
 
   switch (info.si_code) {
-  // TODO: these two cases are required if we want to support tracing of the
-  // inferiors' children.  We'd need this to debug a monitor. case (SIGTRAP |
-  // (PTRACE_EVENT_FORK << 8)): case (SIGTRAP | (PTRACE_EVENT_VFORK << 8)):
-
+  case (SIGTRAP | (PTRACE_EVENT_FORK << 8)):
+  case (SIGTRAP | (PTRACE_EVENT_VFORK << 8)):
   case (SIGTRAP | (PTRACE_EVENT_CLONE << 8)): {
-    // This is the notification on the parent thread which informs us of new
-    // thread creation. We don't want to do anything with the parent thread so
-    // we just resume it. In case we want to implement "break on thread
-    // creation" functionality, we would need to stop here.
+    // This can either mean a new thread or a new process spawned via
+    // clone(2) without SIGCHLD or CLONE_VFORK flag.  Note that clone(2)
+    // can also cause PTRACE_EVENT_FORK and PTRACE_EVENT_VFORK if one
+    // of these flags are passed.
 
     unsigned long event_message = 0;
     if (GetEventMessage(thread.GetID(), &event_message).Fail()) {
       LLDB_LOG(log,
-               "pid {0} received thread creation event but "
-               "GetEventMessage failed so we don't know the new tid",
+               "pid {0} received clone() event but GetEventMessage failed "
+               "so we don't know the new pid/tid",
                thread.GetID());
-    } else
-      WaitForNewThread(event_message);
+      ResumeThread(thread, thread.GetState(), LLDB_INVALID_SIGNAL_NUMBER);
+    } else {
+      if (!MonitorClone(event_message, {{(info.si_code >> 8), thread.GetID()}}))
+        WaitForCloneNotification(event_message);
+    }
 
-    ResumeThread(thread, thread.GetState(), LLDB_INVALID_SIGNAL_NUMBER);
     break;
   }
 
@@ -642,6 +643,11 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
     }
     ResumeThread(thread, state, LLDB_INVALID_SIGNAL_NUMBER);
 
+    break;
+  }
+
+  case (SIGTRAP | (PTRACE_EVENT_VFORK_DONE << 8)): {
+    ResumeThread(thread, thread.GetState(), LLDB_INVALID_SIGNAL_NUMBER);
     break;
   }
 
@@ -852,6 +858,77 @@ void NativeProcessLinux::MonitorSignal(const siginfo_t &info,
 
   // Send a stop to the debugger after we get all other threads to stop.
   StopRunningThreads(thread.GetID());
+}
+
+bool NativeProcessLinux::MonitorClone(
+    lldb::pid_t child_pid,
+    llvm::Optional<NativeProcessLinux::CloneInfo> clone_info) {
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
+  LLDB_LOG(log, "clone, child_pid={0}, clone info?={1}", child_pid,
+           clone_info.hasValue());
+
+  auto find_it = m_pending_pid_map.find(child_pid);
+  if (find_it == m_pending_pid_map.end()) {
+    // not in the map, so this is the first signal for the PID
+    m_pending_pid_map.insert({child_pid, clone_info});
+    return false;
+  }
+  m_pending_pid_map.erase(find_it);
+
+  // second signal for the pid
+  assert(clone_info.hasValue() != find_it->second.hasValue());
+  if (!clone_info) {
+    // child signal does not indicate the event, so grab the one stored
+    // earlier
+    clone_info = find_it->second;
+  }
+
+  LLDB_LOG(log, "second signal for child_pid={0}, parent_tid={1}, event={2}",
+           child_pid, clone_info->parent_tid, clone_info->event);
+
+  auto *parent_thread = GetThreadByID(clone_info->parent_tid);
+  assert(parent_thread);
+
+  switch (clone_info->event) {
+  case PTRACE_EVENT_CLONE: {
+    // PTRACE_EVENT_CLONE can either mean a new thread or a new process.
+    // Try to grab the new process' PGID to figure out which one it is.
+    // If PGID is the same as the PID, then it's a new process.  Otherwise,
+    // it's a thread.
+    auto tgid_ret = getPIDForTID(child_pid);
+    if (tgid_ret != child_pid) {
+      // A new thread should have PGID matching our process' PID.
+      assert(!tgid_ret || tgid_ret.getValue() == GetID());
+
+      NativeThreadLinux &child_thread = AddThread(child_pid, /*resume*/ true);
+      ThreadWasCreated(child_thread);
+
+      // Resume the parent.
+      ResumeThread(*parent_thread, parent_thread->GetState(),
+                   LLDB_INVALID_SIGNAL_NUMBER);
+      break;
+    }
+  }
+    LLVM_FALLTHROUGH;
+  case PTRACE_EVENT_FORK:
+  case PTRACE_EVENT_VFORK: {
+    MainLoop unused_loop;
+    NativeProcessLinux child_process{static_cast<::pid_t>(child_pid),
+                                     m_terminal_fd,
+                                     m_delegate,
+                                     m_arch,
+                                     unused_loop,
+                                     {static_cast<::pid_t>(child_pid)}};
+    child_process.Detach();
+    ResumeThread(*parent_thread, parent_thread->GetState(),
+                 LLDB_INVALID_SIGNAL_NUMBER);
+    break;
+  }
+  default:
+    llvm_unreachable("unknown clone_info.event");
+  }
+
+  return true;
 }
 
 bool NativeProcessLinux::SupportHardwareSingleStepping() const {
