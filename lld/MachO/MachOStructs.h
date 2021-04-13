@@ -37,6 +37,13 @@ struct nlist {
   llvm::support::ulittle32_t n_value;
 };
 
+struct entry_point_command {
+  llvm::support::ulittle32_t cmd;
+  llvm::support::ulittle32_t cmdsize;
+  llvm::support::ulittle64_t entryoff;
+  llvm::support::ulittle64_t stacksize;
+};
+
 } // namespace structs
 
 } // namespace lld
