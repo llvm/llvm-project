@@ -29,7 +29,7 @@ def riscv_grevi  : SDNode<"RISCVISD::GREVI",  SDTIntBinOp>;
 def riscv_greviw : SDNode<"RISCVISD::GREVIW", SDT_RISCVIntBinOpW>;
 def riscv_gorci  : SDNode<"RISCVISD::GORCI",  SDTIntBinOp>;
 def riscv_gorciw : SDNode<"RISCVISD::GORCIW", SDT_RISCVIntBinOpW>;
-def riscv_shfli  : SDNode<"RISCVISD::SHFLI",  SDTIntBinOp>;
+def riscv_shfl   : SDNode<"RISCVISD::SHFL",   SDTIntBinOp>;
 
 def UImmLog2XLenHalfAsmOperand : AsmOperandClass {
   let Name = "UImmLog2XLenHalf";
@@ -723,7 +723,8 @@ def : Pat<(riscv_gorci GPR:$rs1, 7), (ORCB GPR:$rs1)>;
 }
 
 let Predicates = [HasStdExtZbp] in {
-def : Pat<(riscv_shfli GPR:$rs1, timm:$shamt), (SHFLI GPR:$rs1, timm:$shamt)>;
+def : Pat<(riscv_shfl GPR:$rs1, shfl_uimm:$shamt),
+          (SHFLI GPR:$rs1, shfl_uimm:$shamt)>;
 def : Pat<(riscv_grevi GPR:$rs1, timm:$shamt), (GREVI GPR:$rs1, timm:$shamt)>;
 def : Pat<(riscv_gorci GPR:$rs1, timm:$shamt), (GORCI GPR:$rs1, timm:$shamt)>;
 } // Predicates = [HasStdExtZbp]
