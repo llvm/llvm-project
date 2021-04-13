@@ -56,6 +56,25 @@ logical function all_test(mask)
 ! CHECK:  %[[a3:.*]] = fir.call @_FortranAAll(%[[a1]], %{{.*}}, %{{.*}}, %[[a2]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1
 end function all_test 
 
+! ALL
+! CHECK-LABEL: all_test2
+! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?x?x!fir.logical<4>>>
+! CHECK-SAME: %[[arg1:.*]]: !fir.ref<i32>
+! CHECK-SAME: %[[arg2:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>>
+subroutine all_test2(mask, d, rslt)
+  logical :: mask(:,:)
+  integer :: d
+  logical :: rslt(:)
+! CHECK-DAG:  %[[c0:.*]] = constant 0 : index
+! CHECK-DAG:  %[[a0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>
+! CHECK-DAG:  %[[a1:.*]] = fir.load %[[arg1:.*]] : !fir.ref<i32>
+! CHECK-DAG:  %[[a6:.*]] = fir.convert %[[a0:.*]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK-DAG:  %[[a7:.*]] = fir.convert %[[arg0:.*]]: (!fir.box<!fir.array<?x?x!fir.logical<4>>>) -> !fir.box<none>
+  rslt = all(mask, d)
+! CHECK:  %[[r1:.*]] = fir.call @_FortranAAllDim(%[[a6:.*]], %[[a7:.*]], %[[a1:.*]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+! CHECK-DAG:  %[[r2:.*]]:3 = fir.box_dims %[[arg2:.*]] %[[c0:.*]] : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> (index, index, index)
+end subroutine
+
 ! ALLOCATED
 ! CHECK-LABEL: allocated_test
 ! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>>,
@@ -93,6 +112,25 @@ logical function any_test(mask)
   any_test = any(mask)
 ! CHECK:  %[[a3:.*]] = fir.call @_FortranAAny(%[[a1]], %{{.*}},  %{{.*}}, %[[a2]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1
 end function any_test 
+
+! ANY
+! CHECK-LABEL: any_test2
+! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?x?x!fir.logical<4>>>
+! CHECK-SAME: %[[arg1:.*]]: !fir.ref<i32>
+! CHECK-SAME: %[[arg2:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>>
+subroutine any_test2(mask, d, rslt)
+  logical :: mask(:,:)
+  integer :: d
+  logical :: rslt(:)
+! CHECK-DAG:  %[[c0:.*]] = constant 0 : index
+! CHECK-DAG:  %[[a0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>
+! CHECK-DAG:  %[[a1:.*]] = fir.load %[[arg1:.*]] : !fir.ref<i32>
+! CHECK-DAG:  %[[a6:.*]] = fir.convert %[[a0:.*]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK-DAG:  %[[a7:.*]] = fir.convert %[[arg0:.*]]: (!fir.box<!fir.array<?x?x!fir.logical<4>>>) -> !fir.box<none>
+  rslt = any(mask, d)
+! CHECK:  %[[r1:.*]] = fir.call @_FortranAAnyDim(%[[a6:.*]], %[[a7:.*]], %[[a1:.*]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+! CHECK-DAG:  %[[r2:.*]]:3 = fir.box_dims %[[arg2:.*]] %[[c0:.*]] : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> (index, index, index)
+end subroutine
 
 ! ASSOCIATED
 ! CHECK-LABEL: associated_test

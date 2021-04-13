@@ -1203,6 +1203,7 @@ IntrinsicLibrary::genAll(mlir::Type resultType,
   return Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox)
       .match(
           [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+            addCleanUpForTemp(loc, box.getAddr());
             return box;
           },
           [&](const auto &) -> fir::ExtendedValue {
@@ -1274,6 +1275,7 @@ IntrinsicLibrary::genAny(mlir::Type resultType,
   return Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox)
       .match(
           [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+            addCleanUpForTemp(loc, box.getAddr());
             return box;
           },
           [&](const auto &) -> fir::ExtendedValue {

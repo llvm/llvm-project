@@ -6,8 +6,6 @@
 ! tested here is that transformational intrinsics are lowered correctly
 ! regardless of the context they appear into.
 
-! TODO: enable when adding ALL intrinsic lowering tat is used for these tests
-! XFAIL: true
 
 
 module test2
