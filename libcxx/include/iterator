@@ -13,8 +13,11 @@
 /*
     iterator synopsis
 
+#include <concepts>
+
 namespace std
 {
+template<class> struct incrementable_traits; // since C++20
 
 template<class Iterator>
 struct iterator_traits
@@ -425,6 +428,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__memory/base.h>
 #include <__memory/pointer_traits.h>
 #include <version>
+#include <concepts>
 
 #include <__debug>
 
@@ -433,6 +437,43 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+#if !defined(_LIBCPP_HAS_NO_RANGES)
+// [incrementable.traits]
+template<class> struct incrementable_traits {};
+
+template<class _Tp>
+requires is_object_v<_Tp>
+struct incrementable_traits<_Tp*> {
+  using difference_type = ptrdiff_t;
+};
+
+template<class _Ip>
+struct incrementable_traits<const _Ip> : incrementable_traits<_Ip> {};
+
+template<class _Tp>
+concept __has_member_difference_type = requires { typename _Tp::difference_type; };
+
+template<__has_member_difference_type _Tp>
+struct incrementable_traits<_Tp> {
+  using difference_type = typename _Tp::difference_type;
+};
+
+template<class _Tp>
+concept __has_integral_minus =
+  !__has_member_difference_type<_Tp> &&
+  requires(const _Tp& __x, const _Tp& __y) {
+    { __x - __y } -> integral;
+  };
+
+template<__has_integral_minus _Tp>
+struct incrementable_traits<_Tp> {
+  using difference_type = make_signed_t<decltype(declval<_Tp>() - declval<_Tp>())>;
+};
+
+// TODO(cjdb): add iter_difference_t once iterator_traits is cleaned up.
+#endif // !defined(_LIBCPP_HAS_NO_RANGES)
+
 template <class _Iter>
 struct _LIBCPP_TEMPLATE_VIS iterator_traits;
 
