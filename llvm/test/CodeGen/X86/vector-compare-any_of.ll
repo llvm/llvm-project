@@ -645,9 +645,7 @@ define i16 @test_v16i16_legal_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX2-LABEL: test_v16i16_legal_sext:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpgtw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpmovmskb %xmm0, %eax
+; AVX2-NEXT:    vpmovmskb %ymm0, %eax
 ; AVX2-NEXT:    negl %eax
 ; AVX2-NEXT:    sbbl %eax, %eax
 ; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
