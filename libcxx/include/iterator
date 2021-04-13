@@ -461,12 +461,12 @@ struct incrementable_traits<_Tp> {
 
 template<class _Tp>
 concept __has_integral_minus =
-  !__has_member_difference_type<_Tp> &&
   requires(const _Tp& __x, const _Tp& __y) {
     { __x - __y } -> integral;
   };
 
 template<__has_integral_minus _Tp>
+requires (!__has_member_difference_type<_Tp>)
 struct incrementable_traits<_Tp> {
   using difference_type = make_signed_t<decltype(declval<_Tp>() - declval<_Tp>())>;
 };
