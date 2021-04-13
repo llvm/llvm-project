@@ -40,7 +40,7 @@ describeValue(const char *label, ValType value,
   if (bits.isNaN()) {
     stream << "(NaN)";
   } else if (bits.isInf()) {
-    if (bits.sign)
+    if (bits.encoding.sign)
       stream << "(-Infinity)";
     else
       stream << "(+Infinity)";
@@ -50,12 +50,13 @@ describeValue(const char *label, ValType value,
     constexpr int mantissaWidthInHex =
         (fputil::MantissaWidth<ValType>::value - 1) / 4 + 1;
 
-    stream << "Sign: " << (bits.sign ? '1' : '0') << ", "
+    stream << "Sign: " << (bits.encoding.sign ? '1' : '0') << ", "
            << "Exponent: 0x"
-           << uintToHex<uint16_t>(bits.exponent, exponentWidthInHex) << ", "
+           << uintToHex<uint16_t>(bits.encoding.exponent, exponentWidthInHex)
+           << ", "
            << "Mantissa: 0x"
            << uintToHex<typename fputil::FPBits<ValType>::UIntType>(
-                  bits.mantissa, mantissaWidthInHex);
+                  bits.encoding.mantissa, mantissaWidthInHex);
   }
 
   stream << '\n';
