@@ -4296,14 +4296,16 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes));
     break;
   }
-  case RISCVISD::SHFLI: {
+  case RISCVISD::SHFL: {
     // There is no SHFLIW instruction, but we can just promote the operation.
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
+    assert(isa<ConstantSDNode>(N->getOperand(1)) && "Expected constant");
     SDValue NewOp0 =
         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
-    SDValue NewRes =
-        DAG.getNode(RISCVISD::SHFLI, DL, MVT::i64, NewOp0, N->getOperand(1));
+    SDValue NewOp1 =
+        DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+    SDValue NewRes = DAG.getNode(RISCVISD::SHFL, DL, MVT::i64, NewOp0, NewOp1);
     // ReplaceNodeResults requires we maintain the same type for the return
     // value.
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes));
@@ -4763,9 +4765,8 @@ static SDValue combineORToSHFL(SDValue Op, SelectionDAG &DAG,
     return SDValue();
 
   SDLoc DL(Op);
-  return DAG.getNode(
-      RISCVISD::SHFLI, DL, VT, Match1->Op,
-      DAG.getTargetConstant(Match1->ShAmt, DL, Subtarget.getXLenVT()));
+  return DAG.getNode(RISCVISD::SHFL, DL, VT, Match1->Op,
+                     DAG.getConstant(Match1->ShAmt, DL, VT));
 }
 
 // Combine (GREVI (GREVI x, C2), C1) -> (GREVI x, C1^C2) when C1^C2 is
@@ -5367,12 +5368,13 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
     // more precise answer could be calculated for SRAW depending on known
     // bits in the shift amount.
     return 33;
-  case RISCVISD::SHFLI: {
+  case RISCVISD::SHFL: {
     // There is no SHFLIW, but a i64 SHFLI with bit 4 of the control word
     // cleared doesn't affect bit 31. The upper 32 bits will be shuffled, but
     // will stay within the upper 32 bits. If there were more than 32 sign bits
     // before there will be at least 33 sign bits after.
     if (Op.getValueType() == MVT::i64 &&
+        isa<ConstantSDNode>(Op.getOperand(1)) &&
         (Op.getConstantOperandVal(1) & 0x10) == 0) {
       unsigned Tmp = DAG.ComputeNumSignBits(Op.getOperand(0), Depth + 1);
       if (Tmp > 32)
@@ -7107,7 +7109,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(GREVIW)
   NODE_NAME_CASE(GORCI)
   NODE_NAME_CASE(GORCIW)
-  NODE_NAME_CASE(SHFLI)
+  NODE_NAME_CASE(SHFL)
   NODE_NAME_CASE(VMV_V_X_VL)
   NODE_NAME_CASE(VFMV_V_F_VL)
   NODE_NAME_CASE(VMV_X_S)
