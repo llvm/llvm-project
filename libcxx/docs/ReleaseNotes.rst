@@ -55,3 +55,13 @@ API Changes
 
   Also, the extension allowing a tuple to be constructed from an array has been
   removed. See https://godbolt.org/z/5esqbW.
+
+- The ``std::pointer_safety`` utility and related functions are not available
+  in C++03 anymore. Furthermore, in other standard modes, it has changed from
+  a struct to a scoped enumeration, which is an ABI break. Finally, the
+  ``std::get_pointer_safety`` function was previously in the dylib, but it
+  is now defined as inline in the headers.
+
+  While this is technically both an API and an ABI break, we do not expect
+  ``std::pointer_safety`` to have been used at all in real code, since we
+  never implemented the underlying support for garbage collection.

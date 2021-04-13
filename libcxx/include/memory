@@ -651,12 +651,12 @@ template <class T, class Alloc>
   inline constexpr bool uses_allocator_v = uses_allocator<T, Alloc>::value;
 
 // Pointer safety
-enum class pointer_safety { relaxed, preferred, strict };
-void declare_reachable(void *p);
-template <class T> T *undeclare_reachable(T *p);
-void declare_no_pointers(char *p, size_t n);
-void undeclare_no_pointers(char *p, size_t n);
-pointer_safety get_pointer_safety() noexcept;
+enum class pointer_safety { relaxed, preferred, strict }; // since C++11
+void declare_reachable(void *p);                          // since C++11
+template <class T> T *undeclare_reachable(T *p);          // since C++11
+void declare_no_pointers(char *p, size_t n);              // since C++11
+void undeclare_no_pointers(char *p, size_t n);            // since C++11
+pointer_safety get_pointer_safety() noexcept;             // since C++11
 
 void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 
