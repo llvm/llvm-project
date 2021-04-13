@@ -1427,10 +1427,10 @@ int ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                            CostKind, I);
 }
 
-unsigned ARMTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
-                                           Align Alignment,
-                                           unsigned AddressSpace,
-                                           TTI::TargetCostKind CostKind) {
+InstructionCost
+ARMTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
+                                  unsigned AddressSpace,
+                                  TTI::TargetCostKind CostKind) {
   if (ST->hasMVEIntegerOps()) {
     if (Opcode == Instruction::Load && isLegalMaskedLoad(Src, Alignment))
       return ST->getMVEVectorCostFactor(CostKind);

@@ -118,7 +118,7 @@ public:
                            unsigned AddressSpace,
                            TTI::TargetCostKind CostKind,
                            const Instruction *I = nullptr);
-  unsigned
+  InstructionCost
   getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                         unsigned AddressSpace,
                         TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency);
