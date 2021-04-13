@@ -345,9 +345,6 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_qXfer_features_read = eLazyBoolNo;
   m_supports_qXfer_memory_map_read = eLazyBoolNo;
   m_supports_multiprocess = eLazyBoolNo;
-  m_supports_qEcho = eLazyBoolNo;
-  m_supports_QPassSignals = eLazyBoolNo;
-
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
                                   // not, we assume no limit
 
@@ -365,51 +362,97 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   if (SendPacketAndWaitForResponse(packet.GetString(), response,
                                    /*send_async=*/false) ==
       PacketResult::Success) {
+    const char *response_cstr = response.GetStringRef().data();
+
     // Hang on to the qSupported packet, so that platforms can do custom
     // configuration of the transport before attaching/launching the process.
-    m_qSupported_response = response.GetStringRef().str();
+    m_qSupported_response = response_cstr;
 
-    llvm::SmallVector<llvm::StringRef, 16> server_features;
-    response.GetStringRef().split(server_features, ';');
+    if (::strstr(response_cstr, "qXfer:auxv:read+"))
+      m_supports_qXfer_auxv_read = eLazyBoolYes;
+    if (::strstr(response_cstr, "qXfer:libraries-svr4:read+"))
+      m_supports_qXfer_libraries_svr4_read = eLazyBoolYes;
+    if (::strstr(response_cstr, "augmented-libraries-svr4-read")) {
+      m_supports_qXfer_libraries_svr4_read = eLazyBoolYes; // implied
+      m_supports_augmented_libraries_svr4_read = eLazyBoolYes;
+    }
+    if (::strstr(response_cstr, "qXfer:libraries:read+"))
+      m_supports_qXfer_libraries_read = eLazyBoolYes;
+    if (::strstr(response_cstr, "qXfer:features:read+"))
+      m_supports_qXfer_features_read = eLazyBoolYes;
+    if (::strstr(response_cstr, "qXfer:memory-map:read+"))
+      m_supports_qXfer_memory_map_read = eLazyBoolYes;
 
-    for (auto x : server_features) {
-      if (x == "qXfer:auxv:read+")
-        m_supports_qXfer_auxv_read = eLazyBoolYes;
-      else if (x == "qXfer:libraries-svr4:read+")
-        m_supports_qXfer_libraries_svr4_read = eLazyBoolYes;
-      else if (x == "augmented-libraries-svr4-read") {
-        m_supports_qXfer_libraries_svr4_read = eLazyBoolYes; // implied
-        m_supports_augmented_libraries_svr4_read = eLazyBoolYes;
-      } else if (x == "qXfer:libraries:read+")
-        m_supports_qXfer_libraries_read = eLazyBoolYes;
-      else if (x == "qXfer:features:read+")
-        m_supports_qXfer_features_read = eLazyBoolYes;
-      else if (x == "qXfer:memory-map:read+")
-        m_supports_qXfer_memory_map_read = eLazyBoolYes;
-      else if (x == "qEcho")
-        m_supports_qEcho = eLazyBoolYes;
-      else if (x == "QPassSignals+")
-        m_supports_QPassSignals = eLazyBoolYes;
-      else if (x == "multiprocess+")
-        m_supports_multiprocess = eLazyBoolYes;
-      // Look for a list of compressions in the features list e.g.
-      // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-
-      // deflate,lzma
-      else if (x.consume_front("SupportedCompressions=")) {
-        llvm::SmallVector<llvm::StringRef, 4> compressions;
-        x.split(compressions, ',');
-        if (!compressions.empty())
-          MaybeEnableCompression(compressions);
-      } else if (x.consume_front("PacketSize=")) {
-        StringExtractorGDBRemote packet_response(x);
-        m_max_packet_size =
-            packet_response.GetHexMaxU64(/*little_endian=*/false, UINT64_MAX);
-        if (m_max_packet_size == 0) {
-          m_max_packet_size = UINT64_MAX; // Must have been a garbled response
-          Log *log(
-              ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
-          LLDB_LOGF(log, "Garbled PacketSize spec in qSupported response");
+    // Look for a list of compressions in the features list e.g.
+    // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-
+    // deflate,lzma
+    const char *features_list = ::strstr(response_cstr, "qXfer:features:");
+    if (features_list) {
+      const char *compressions =
+          ::strstr(features_list, "SupportedCompressions=");
+      if (compressions) {
+        std::vector<std::string> supported_compressions;
+        compressions += sizeof("SupportedCompressions=") - 1;
+        const char *end_of_compressions = strchr(compressions, ';');
+        if (end_of_compressions == nullptr) {
+          end_of_compressions = strchr(compressions, '\0');
         }
+        const char *current_compression = compressions;
+        while (current_compression < end_of_compressions) {
+          const char *next_compression_name = strchr(current_compression, ',');
+          const char *end_of_this_word = next_compression_name;
+          if (next_compression_name == nullptr ||
+              end_of_compressions < next_compression_name) {
+            end_of_this_word = end_of_compressions;
+          }
+
+          if (end_of_this_word) {
+            if (end_of_this_word == current_compression) {
+              current_compression++;
+            } else {
+              std::string this_compression(
+                  current_compression, end_of_this_word - current_compression);
+              supported_compressions.push_back(this_compression);
+              current_compression = end_of_this_word + 1;
+            }
+          } else {
+            supported_compressions.push_back(current_compression);
+            current_compression = end_of_compressions;
+          }
+        }
+
+        if (supported_compressions.size() > 0) {
+          MaybeEnableCompression(supported_compressions);
+        }
+      }
+    }
+
+    if (::strstr(response_cstr, "qEcho"))
+      m_supports_qEcho = eLazyBoolYes;
+    else
+      m_supports_qEcho = eLazyBoolNo;
+
+    if (::strstr(response_cstr, "QPassSignals+"))
+      m_supports_QPassSignals = eLazyBoolYes;
+    else
+      m_supports_QPassSignals = eLazyBoolNo;
+
+    if (::strstr(response_cstr, "multiprocess+"))
+      m_supports_multiprocess = eLazyBoolYes;
+    else
+      m_supports_multiprocess = eLazyBoolNo;
+
+    const char *packet_size_str = ::strstr(response_cstr, "PacketSize=");
+    if (packet_size_str) {
+      StringExtractorGDBRemote packet_response(packet_size_str +
+                                               strlen("PacketSize="));
+      m_max_packet_size =
+          packet_response.GetHexMaxU64(/*little_endian=*/false, UINT64_MAX);
+      if (m_max_packet_size == 0) {
+        m_max_packet_size = UINT64_MAX; // Must have been a garbled response
+        Log *log(
+            ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
+        LLDB_LOGF(log, "Garbled PacketSize spec in qSupported response");
       }
     }
   }
@@ -993,7 +1036,7 @@ bool GDBRemoteCommunicationClient::GetGDBServerVersion() {
 }
 
 void GDBRemoteCommunicationClient::MaybeEnableCompression(
-    llvm::ArrayRef<llvm::StringRef> supported_compressions) {
+    std::vector<std::string> supported_compressions) {
   CompressionType avail_type = CompressionType::None;
   std::string avail_name;
 

@@ -601,8 +601,7 @@ protected:
 
   // Given the list of compression types that the remote debug stub can support,
   // possibly enable compression if we find an encoding we can handle.
-  void MaybeEnableCompression(
-      llvm::ArrayRef<llvm::StringRef> supported_compressions);
+  void MaybeEnableCompression(std::vector<std::string> supported_compressions);
 
   bool DecodeProcessInfoResponse(StringExtractorGDBRemote &response,
                                  ProcessInstanceInfo &process_info);
