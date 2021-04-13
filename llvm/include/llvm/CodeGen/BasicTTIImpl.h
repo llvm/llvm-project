@@ -982,10 +982,10 @@ public:
     return LT.first;
   }
 
-  unsigned getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
-                           unsigned AddressSpace,
-                           TTI::TargetCostKind CostKind,
-                           const Instruction *I = nullptr) {
+  InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
+                                  MaybeAlign Alignment, unsigned AddressSpace,
+                                  TTI::TargetCostKind CostKind,
+                                  const Instruction *I = nullptr) {
     assert(!Src->isVoidTy() && "Invalid type");
     // Assume types, such as structs, are expensive.
     if (getTLI()->getValueType(DL, Src,  true) == MVT::Other)
@@ -993,7 +993,7 @@ public:
     std::pair<unsigned, MVT> LT = getTLI()->getTypeLegalizationCost(DL, Src);
 
     // Assuming that all loads of legal types cost 1.
-    unsigned Cost = LT.first;
+    InstructionCost Cost = LT.first;
     if (CostKind != TTI::TCK_RecipThroughput)
       return Cost;
 
@@ -1036,7 +1036,7 @@ public:
     //
     // First, compute the cost of extracting the individual addresses and the
     // individual memory operations.
-    int LoadCost =
+    InstructionCost LoadCost =
         VT->getNumElements() *
         (getVectorInstrCost(
              Instruction::ExtractElement,
@@ -1071,7 +1071,7 @@ public:
     return LoadCost + PackingCost + ConditionalCost;
   }
 
-  unsigned getInterleavedMemoryOpCost(
+  InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond = false, bool UseMaskForGaps = false) {
@@ -1186,7 +1186,7 @@ public:
     }
 
     if (!UseMaskForCond)
-      return *Cost.getValue();
+      return Cost;
 
     Type *I8Type = Type::getInt8Ty(VT->getContext());
     auto *MaskVT = FixedVectorType::get(I8Type, NumElts);
@@ -1219,7 +1219,7 @@ public:
       Cost += thisT()->getArithmeticInstrCost(BinaryOperator::And, MaskVT,
                                               CostKind);
 
-    return *Cost.getValue();
+    return Cost;
   }
 
   /// Get intrinsic cost based on arguments.
