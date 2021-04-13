@@ -106,6 +106,7 @@ private:
   void MonitorSIGSTOP(lldb::pid_t pid);
   void MonitorSIGTRAP(lldb::pid_t pid);
   void MonitorSignal(lldb::pid_t pid, int signal);
+  void MonitorClone(::pid_t child_pid);
 
   Status PopulateMemoryRegionCache();
   void SigchldHandler();
