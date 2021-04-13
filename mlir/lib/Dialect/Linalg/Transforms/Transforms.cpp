@@ -246,8 +246,7 @@ mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
 LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
     Operation *op, PatternRewriter &rewriter, TiledLinalgOp &result) const {
   LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
-  // TODO: remove hasIndexSemantics check once index ops are supported.
-  if (!linalgOp || linalgOp.hasIndexSemantics())
+  if (!linalgOp)
     return failure();
   if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
