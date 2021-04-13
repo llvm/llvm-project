@@ -194,6 +194,7 @@ constexpr FeatureBitset FeaturesICLClient =
     FeaturesCannonlake | FeatureAVX512BITALG | FeatureAVX512VBMI2 |
     FeatureAVX512VNNI | FeatureAVX512VPOPCNTDQ | FeatureGFNI | FeatureRDPID |
     FeatureVAES | FeatureVPCLMULQDQ;
+constexpr FeatureBitset FeaturesRocketlake = FeaturesICLClient & ~FeatureSGX;
 constexpr FeatureBitset FeaturesICLServer =
     FeaturesICLClient | FeatureCLWB | FeaturePCONFIG | FeatureWBNOINVD;
 constexpr FeatureBitset FeaturesTigerlake =
@@ -356,6 +357,8 @@ constexpr ProcInfo Processors[] = {
   { {"cannonlake"}, CK_Cannonlake, FEATURE_AVX512VBMI, FeaturesCannonlake },
   // Icelake client microarchitecture based processors.
   { {"icelake-client"}, CK_IcelakeClient, FEATURE_AVX512VBMI2, FeaturesICLClient },
+  // Rocketlake microarchitecture based processors.
+  { {"rocketlake"}, CK_Rocketlake, FEATURE_AVX512VBMI2, FeaturesRocketlake },
   // Icelake server microarchitecture based processors.
   { {"icelake-server"}, CK_IcelakeServer, FEATURE_AVX512VBMI2, FeaturesICLServer },
   // Tigerlake microarchitecture based processors.
