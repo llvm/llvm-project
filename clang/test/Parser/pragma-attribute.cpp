@@ -165,9 +165,9 @@ _Pragma("clang attribute pop");
 
 #pragma clang attribute push ([[]], apply_to = function) // A noop
 
-#pragma clang attribute push ([[noreturn ""]], apply_to=function) // expected-error {{expected ']'}}
+#pragma clang attribute push ([[noreturn ""]], apply_to=function) // expected-error {{expected ','}}
 #pragma clang attribute pop
-#pragma clang attribute push ([[noreturn 42]]) // expected-error {{expected ']'}} expected-error {{expected ','}}
+#pragma clang attribute push ([[noreturn 42]]) // expected-error 2 {{expected ','}}
 
 #pragma clang attribute push(__attribute__, apply_to=function) // expected-error {{expected '(' after 'attribute'}}
 #pragma clang attribute push(__attribute__(), apply_to=function) // expected-error {{expected '(' after '('}}
