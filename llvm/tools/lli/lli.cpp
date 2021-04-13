@@ -1066,7 +1066,7 @@ int runOrcJIT(const char *ProgName) {
   }
 
   // Resolve and run the main function.
-  JITEvaluatedSymbol MainSym = ExitOnErr(J->lookup("main"));
+  JITEvaluatedSymbol MainSym = ExitOnErr(J->lookup(EntryFunc));
   int Result;
 
   if (TPC) {
