@@ -68,12 +68,14 @@ class TestSwiftAsyncBacktraceLocals(lldbtest.TestBase):
                 # Get arguments (arguments, locals, statics, in_scope_only)
                 n_var = frame.FindVariable("n")
                 self.assertTrue(n_var, "Found 'n'")
-                self.assertEqual(n_var.GetValueAsSigned(), fibonacci_number, "n has correct value")
+                self.assertEqual(n_var.GetValueAsSigned(), fibonacci_number,
+                                 "n has correct value (n=%d, f=%d)"%(n, f))
                 if f != 0:
                     # The PC of a logical frame is stored in its "callee"
                     # AsyncContext as the second pointer field.
                     error = lldb.SBError()
-                    ret_addr = process.ReadPointerFromMemory(cfa[fibonacci_number-1] + target.addr_size, error)
+                    ret_addr = process.ReadPointerFromMemory(
+                        cfa[fibonacci_number-1] + target.addr_size, error)
                     self.assertTrue(error.Success(), "Managed to read context memory")
                     self.assertEqual(ret_addr, frame.GetPC())
 

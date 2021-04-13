@@ -763,8 +763,8 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
   // register is known to the unwinder and can always be restored
   // therefore it is not necessary to match up a call site parameter
   // with it.
-  if (!SwiftLanguageRuntime::IsSwiftAsyncFunctionSymbol(
-          current_func->GetMangled().GetMangledName().GetStringRef())) {
+  auto fn_name = current_func->GetMangled().GetMangledName().GetStringRef();
+  if (!SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(fn_name)) {
 #endif
   if (!parent_frame->IsArtificial()) {
     // If the parent frame is not artificial, the current activation may be

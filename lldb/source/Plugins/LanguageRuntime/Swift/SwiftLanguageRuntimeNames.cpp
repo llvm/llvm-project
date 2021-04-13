@@ -112,6 +112,20 @@ bool SwiftLanguageRuntime::IsSwiftAsyncAwaitResumePartialFunctionSymbol(
   return hasChild(node, Node::Kind::AsyncAwaitResumePartialFunction);
 }
 
+bool SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(StringRef name) {
+  if (!IsSwiftMangledName(name))
+    return false;
+  using namespace swift::Demangle;
+  Context ctx;
+  NodePointer node = ctx.demangleSymbolAsNode(name);
+  if (!node || node->getKind() != Node::Kind::Global || !node->getNumChildren())
+    return false;
+  auto marker = node->getFirstChild()->getKind();
+  return (marker == Node::Kind::AsyncSuspendResumePartialFunction) ||
+         (marker == Node::Kind::AsyncAwaitResumePartialFunction) ||
+         ::IsSwiftAsyncFunctionSymbol(node);
+}
+
 static ThunkKind GetThunkKind(Symbol *symbol) {
   auto symbol_name = symbol->GetMangled().GetMangledName().GetStringRef();
 
