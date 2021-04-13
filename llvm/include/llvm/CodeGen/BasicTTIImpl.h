@@ -928,10 +928,10 @@ public:
     return BaseT::getCFInstrCost(Opcode, CostKind, I);
   }
 
-  unsigned getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
-                              CmpInst::Predicate VecPred,
-                              TTI::TargetCostKind CostKind,
-                              const Instruction *I = nullptr) {
+  InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                                     CmpInst::Predicate VecPred,
+                                     TTI::TargetCostKind CostKind,
+                                     const Instruction *I = nullptr) {
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Invalid opcode");
@@ -963,7 +963,7 @@ public:
       unsigned Num = cast<FixedVectorType>(ValVTy)->getNumElements();
       if (CondTy)
         CondTy = CondTy->getScalarType();
-      unsigned Cost = thisT()->getCmpSelInstrCost(
+      InstructionCost Cost = thisT()->getCmpSelInstrCost(
           Opcode, ValVTy->getScalarType(), CondTy, VecPred, CostKind, I);
 
       // Return the cost of multiple scalar invocation plus the cost of
@@ -1346,7 +1346,7 @@ public:
                                                               : TTI::OP_None;
       // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
       // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
-      unsigned Cost = 0;
+      InstructionCost Cost = 0;
       Cost +=
           thisT()->getArithmeticInstrCost(BinaryOperator::Or, RetTy, CostKind);
       Cost +=
@@ -1612,7 +1612,7 @@ public:
       // abs(X) = select(icmp(X,0),X,sub(0,X))
       // minmax(X,Y) = select(icmp(X,Y),X,Y)
       Type *CondTy = RetTy->getWithNewBitWidth(1);
-      unsigned Cost = 0;
+      InstructionCost Cost = 0;
       // TODO: Ideally getCmpSelInstrCost would accept an icmp condition code.
       Cost +=
           thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
@@ -1707,7 +1707,7 @@ public:
       //   Overflow -> (LHSSign == RHSSign) && (LHSSign != SumSign)
       //   Sub:
       //   Overflow -> (LHSSign != RHSSign) && (LHSSign != SumSign)
-      unsigned Cost = 0;
+      InstructionCost Cost = 0;
       Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
       Cost += 3 * thisT()->getCmpSelInstrCost(
                       Instruction::ICmp, SumTy, OverflowTy,
@@ -1727,7 +1727,7 @@ public:
                             ? BinaryOperator::Add
                             : BinaryOperator::Sub;
 
-      unsigned Cost = 0;
+      InstructionCost Cost = 0;
       Cost += thisT()->getArithmeticInstrCost(Opcode, SumTy, CostKind);
       Cost +=
           thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SumTy, OverflowTy,
@@ -2015,7 +2015,7 @@ public:
              "expecting floating point or integer type for min/max reduction");
       CmpOpcode = Instruction::ICmp;
     }
-    unsigned MinMaxCost = 0;
+    InstructionCost MinMaxCost = 0;
     unsigned ShuffleCost = 0;
     std::pair<unsigned, MVT> LT =
         thisT()->getTLI()->getTypeLegalizationCost(DL, Ty);
