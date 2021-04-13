@@ -27,7 +27,7 @@
 "`P0966R1 <https://wg21.link/P0966R1>`__","LWG","``string::reserve``\  Should Not Shrink","Jacksonville","|Complete| [#note-P0966]_","12.0"
 "","","","","",""
 "`P0019R8 <https://wg21.link/P0019R8>`__","LWG","Atomic Ref","Rapperswil","",""
-"`P0458R2 <https://wg21.link/P0458R2>`__","LWG","Checking for Existence of an Element in Associative Containers","Rapperswil","|Complete|",""
+"`P0458R2 <https://wg21.link/P0458R2>`__","LWG","Checking for Existence of an Element in Associative Containers","Rapperswil","|Complete|","13.0"
 "`P0475R1 <https://wg21.link/P0475R1>`__","LWG","LWG 2511: guaranteed copy elision for piecewise construction","Rapperswil","|Complete|",""
 "`P0476R2 <https://wg21.link/P0476R2>`__","LWG","Bit-casting object representations","Rapperswil","",""
 "`P0528R3 <https://wg21.link/P0528R3>`__","CWG","The Curious Case of Padding Bits, Featuring Atomic Compare-and-Exchange","Rapperswil","",""
