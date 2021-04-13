@@ -172,6 +172,85 @@ static void transformIndexedGenericOpIndices(
   }
 }
 
+// All indices returned by IndexOp should be invariant with respect to tiling.
+// Therefore, if an operation is tiled, we have to transform the indices
+// accordingly, i.e. offset them by the values of the corresponding induction
+// variables that are captured implicitly in the body of the op.
+//
+// Example. `linalg.generic` before tiling:
+//
+// #id_2d = (i, j) -> (i, j)
+// #pointwise_2d_trait = {
+//   indexing_maps = [#id_2d, #id_2d],
+//   iterator_types = ["parallel", "parallel"]
+// }
+// linalg.generic #pointwise_2d_trait %operand, %result {
+//   ^bb0(%operand_in: f32, %result_in: f32):
+//     %i = linalg.index 0 : index
+//     %j = linalg.index 1 : index
+//     <some operations that use %i, %j>
+// }: memref<50x100xf32>, memref<50x100xf32>
+//
+// After tiling pass with tiles sizes 10 and 25:
+//
+// #strided = (i, j)[s0, s1, s2] -> (i * s1 + s0 + j * s2)
+//
+// %c1 = constant 1 : index
+// %c0 = constant 0 : index
+// %c25 = constant 25 : index
+// %c10 = constant 10 : index
+// operand_dim_0 = dim %operand, 0 : memref<50x100xf32>
+// operand_dim_1 = dim %operand, 1 : memref<50x100xf32>
+// scf.for %k = %c0 to operand_dim_0 step %c10 {
+//   scf.for %l = %c0 to operand_dim_1 step %c25 {
+//     %4 = std.subview %operand[%k, %l][%c10, %c25][%c1, %c1]
+//       : memref<50x100xf32> to memref<?x?xf32, #strided>
+//     %5 = std.subview %result[%k, %l][%c10, %c25][%c1, %c1]
+//       : memref<50x100xf32> to memref<?x?xf32, #strided>
+//     linalg.generic pointwise_2d_trait %4, %5 {
+//     ^bb0(%operand_in: f32, %result_in: f32):
+//       %i = linalg.index 0 : index
+//       %j = linalg.index 1 : index
+//       // Indices `k` and `l` are implicitly captured in the body.
+//       %transformed_i = addi %i, %k : index // index `i` is offset by %k
+//       %transformed_j = addi %j, %l : index // index `j` is offset by %l
+//       // Every use of %i, %j is replaced with %transformed_i, %transformed_j
+//       <some operations that use %transformed_i, %transformed_j>
+//     }: memref<?x?xf32, #strided>, memref<?x?xf32, #strided>
+//   }
+// }
+//
+// TODO: Investigate whether mixing implicit and explicit indices
+// does not lead to losing information.
+static void
+transformIndexOps(OpBuilder &b, LinalgOp op, SmallVectorImpl<Value> &ivs,
+                  const LoopIndexToRangeIndexMap &loopIndexToRangeIndex) {
+  // Skip operations that have no region attached.
+  if (op->getNumRegions() == 0)
+    return;
+  assert(op->getNumRegions() == 1 && op->getRegion(0).getBlocks().size() == 1 &&
+         "expected linalg operation to have one block.");
+  Block &block = op->getRegion(0).front();
+
+  for (IndexOp indexOp :
+       llvm::make_early_inc_range(block.getOps<linalg::IndexOp>())) {
+    auto rangeIndex = loopIndexToRangeIndex.find(indexOp.dim());
+    if (rangeIndex == loopIndexToRangeIndex.end())
+      continue;
+    // Offset the index by the value of the corresponding induction variable and
+    // replace all uses of the previous value.
+    OpBuilder::InsertionGuard g(b);
+    b.setInsertionPointAfter(indexOp);
+    AffineExpr index, iv;
+    bindDims(b.getContext(), index, iv);
+    AffineApplyOp applyOp = b.create<AffineApplyOp>(
+        indexOp.getLoc(), index + iv,
+        ValueRange{indexOp.getResult(), ivs[rangeIndex->second]});
+    indexOp.getResult().replaceAllUsesExcept(
+        applyOp.getResult(), SmallPtrSet<Operation *, 1>{applyOp});
+  }
+}
+
 template <typename LoopTy>
 static Optional<TiledLinalgOp>
 tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
@@ -299,8 +378,10 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
       },
       options.distribution);
 
-  // 3. Transforms index arguments of `linalg.generic` w.r.t. to the tiling.
+  // 3a. Transforms index arguments of `linalg.generic` w.r.t. to the tiling.
   transformIndexedGenericOpIndices(b, res, ivs, loopIndexToRangeIndex);
+  // 3b. Transform IndexOp results w.r.t. the tiling.
+  transformIndexOps(b, res, ivs, loopIndexToRangeIndex);
 
   // 4. Gather the newly created loops and return them with the new op.
   SmallVector<Operation *, 8> loops;
