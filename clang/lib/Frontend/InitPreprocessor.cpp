@@ -778,6 +778,21 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     }
   }
 
+  // Macros to help identify the narrow and wide character sets
+  // FIXME: clang currently ignores -fexec-charset=. If this changes,
+  // then this may need to be updated.
+  Builder.defineMacro("__clang_literal_encoding__", "\"UTF-8\"");
+  if (TI.getTypeWidth(TI.getWCharType()) >= 32) {
+    // FIXME: 32-bit wchar_t signals UTF-32. This may change
+    // if -fwide-exec-charset= is ever supported.
+    Builder.defineMacro("__clang_wide_literal_encoding__", "\"UTF-32\"");
+  } else {
+    // FIXME: Less-than 32-bit wchar_t generally means UTF-16
+    // (e.g., Windows, 32-bit IBM). This may need to be
+    // updated if -fwide-exec-charset= is ever supported.
+    Builder.defineMacro("__clang_wide_literal_encoding__", "\"UTF-16\"");
+  }
+
   if (LangOpts.Optimize)
     Builder.defineMacro("__OPTIMIZE__");
   if (LangOpts.OptimizeSize)
