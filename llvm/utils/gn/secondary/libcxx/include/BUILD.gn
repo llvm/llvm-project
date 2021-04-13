@@ -6,7 +6,7 @@ libcxx_generated_include_dir = "$root_build_dir/include/c++/v1"
 # This is a bit weird. For now, we assume that __config_site is identical
 # in all toolchains, and only copy it (and all other libcxx headers)
 # to 'include' in the root build dir, so that it's the same for all toolchains.
-# Maybe we wnt to make this per-toolchain eventually (and then use root_out_dir
+# Maybe we want to make this per-toolchain eventually (and then use root_out_dir
 # in libcxx_generated_include_dir) -- e.g. for cross-builds that for example
 # use for-linux-configured libc++ for the host build but for-windows-configured
 # libc++ for the target build.
@@ -64,6 +64,7 @@ if (current_toolchain == default_toolchain) {
       "__bits",
       "__bsd_locale_defaults.h",
       "__bsd_locale_fallbacks.h",
+      "__config",
       "__debug",
       "__errc",
       "__functional_03",
