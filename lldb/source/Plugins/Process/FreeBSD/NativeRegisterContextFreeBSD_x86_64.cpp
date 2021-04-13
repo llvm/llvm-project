@@ -653,10 +653,4 @@ NativeRegisterContextFreeBSD_x86_64::GetYMMSplitReg(uint32_t reg) {
   return YMMSplitPtr{&fpreg->sv_xmm[reg_index], &ymmreg[reg_index]};
 }
 
-llvm::Error NativeRegisterContextFreeBSD_x86_64::ClearDBRegs() {
-  uint64_t zero = 0;
-  RegisterValue dr7{zero};
-  return WriteRegister(GetDR(7), dr7).ToError();
-}
-
 #endif // defined(__x86_64__)
