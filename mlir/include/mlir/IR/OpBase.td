@@ -2699,6 +2699,20 @@ class AttrDef<Dialect dialect, string name,
   // The name of the C++ Attribute class.
   string cppClassName = name # "Attr";
 
+  // The underlying C++ value type
+  let returnType = dialect.cppNamespace # "::" # cppClassName;
+
+  // The call expression to convert from the storage type to the return
+  // type. For example, an enum can be stored as an int but returned as an
+  // enum class.
+  //
+  // Format: $_self will be expanded to the attribute.
+  //
+  // For example, `$_self.getValue().getSExtValue()` for `IntegerAttr val` will
+  // expand to `getAttrOfType<IntegerAttr>("val").getValue().getSExtValue()`.
+  let convertFromStorage = "$_self.cast<" # dialect.cppNamespace #
+                                 "::" # cppClassName # ">()";
+
   // A code block used to build the value 'Type' of an Attribute when
   // initializing its storage instance. This field is optional, and if not
   // present the attribute will have its value type set to `NoneType`. This code
