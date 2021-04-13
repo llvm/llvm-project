@@ -1245,9 +1245,10 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(RecurrenceDescriptor RdxDesc,
   }
 }
 
-int AArch64TTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                                           bool IsPairwise, bool IsUnsigned,
-                                           TTI::TargetCostKind CostKind) {
+InstructionCost
+AArch64TTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
+                                       bool IsPairwise, bool IsUnsigned,
+                                       TTI::TargetCostKind CostKind) {
   if (!isa<ScalableVectorType>(Ty))
     return BaseT::getMinMaxReductionCost(Ty, CondTy, IsPairwise, IsUnsigned,
                                          CostKind);

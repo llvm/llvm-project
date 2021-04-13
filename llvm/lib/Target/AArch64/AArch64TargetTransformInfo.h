@@ -146,9 +146,9 @@ public:
 
   int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
 
-  int getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                             bool IsPairwise, bool IsUnsigned,
-                             TTI::TargetCostKind CostKind);
+  InstructionCost getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
+                                         bool IsPairwise, bool IsUnsigned,
+                                         TTI::TargetCostKind CostKind);
 
   InstructionCost getArithmeticReductionCostSVE(unsigned Opcode,
                                                 VectorType *ValTy,

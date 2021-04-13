@@ -1186,9 +1186,9 @@ public:
       unsigned Opcode, VectorType *Ty, bool IsPairwiseForm,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
-  int getMinMaxReductionCost(
-    VectorType *Ty, VectorType *CondTy, bool IsPairwiseForm, bool IsUnsigned,
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+  InstructionCost getMinMaxReductionCost(
+      VectorType *Ty, VectorType *CondTy, bool IsPairwiseForm, bool IsUnsigned,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// Calculate the cost of an extended reduction pattern, similar to
   /// getArithmeticReductionCost of an Add reduction with an extension and
@@ -1610,9 +1610,10 @@ public:
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                              bool IsPairwiseForm,
                              TTI::TargetCostKind CostKind) = 0;
-  virtual int getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                                     bool IsPairwiseForm, bool IsUnsigned,
-                                     TTI::TargetCostKind CostKind) = 0;
+  virtual InstructionCost
+  getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
+                         bool IsPairwiseForm, bool IsUnsigned,
+                         TTI::TargetCostKind CostKind) = 0;
   virtual InstructionCost getExtendedAddReductionCost(
       bool IsMLA, bool IsUnsigned, Type *ResTy, VectorType *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) = 0;
@@ -2104,9 +2105,10 @@ public:
     return Impl.getArithmeticReductionCost(Opcode, Ty, IsPairwiseForm,
                                            CostKind);
   }
-  int getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                             bool IsPairwiseForm, bool IsUnsigned,
-                             TTI::TargetCostKind CostKind) override {
+  InstructionCost
+  getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
+                         bool IsPairwiseForm, bool IsUnsigned,
+                         TTI::TargetCostKind CostKind) override {
     return Impl.getMinMaxReductionCost(Ty, CondTy, IsPairwiseForm, IsUnsigned,
                                        CostKind);
   }
