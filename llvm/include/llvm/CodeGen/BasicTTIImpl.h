@@ -1937,9 +1937,9 @@ public:
   ///
   /// The cost model should take into account that the actual length of the
   /// vector is reduced on each iteration.
-  unsigned getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                                      bool IsPairwise,
-                                      TTI::TargetCostKind CostKind) {
+  InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
+                                             bool IsPairwise,
+                                             TTI::TargetCostKind CostKind) {
     Type *ScalarTy = Ty->getElementType();
     unsigned NumVecElts = cast<FixedVectorType>(Ty)->getNumElements();
     if ((Opcode == Instruction::Or || Opcode == Instruction::And) &&
@@ -1952,10 +1952,8 @@ public:
       // %val = bitcast <ReduxWidth x i1> to iReduxWidth
       // %res = cmp eq iReduxWidth %val, 11111
       Type *ValTy = IntegerType::get(Ty->getContext(), NumVecElts);
-      return *thisT()
-                  ->getCastInstrCost(Instruction::BitCast, ValTy, Ty,
-                                     TTI::CastContextHint::None, CostKind)
-                  .getValue() +
+      return thisT()->getCastInstrCost(Instruction::BitCast, ValTy, Ty,
+                                       TTI::CastContextHint::None, CostKind) +
              thisT()->getCmpSelInstrCost(Instruction::ICmp, ValTy,
                                          CmpInst::makeCmpResultType(ValTy),
                                          CmpInst::BAD_ICMP_PREDICATE, CostKind);
@@ -2075,7 +2073,7 @@ public:
     // Without any native support, this is equivalent to the cost of
     // vecreduce.add(ext) or if IsMLA vecreduce.add(mul(ext, ext))
     VectorType *ExtTy = VectorType::get(ResTy, Ty);
-    unsigned RedCost = thisT()->getArithmeticReductionCost(
+    InstructionCost RedCost = thisT()->getArithmeticReductionCost(
         Instruction::Add, ExtTy, false, CostKind);
     InstructionCost MulCost = 0;
     InstructionCost ExtCost = thisT()->getCastInstrCost(

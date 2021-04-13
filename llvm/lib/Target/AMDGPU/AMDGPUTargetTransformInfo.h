@@ -209,10 +209,8 @@ public:
 
   int getInlinerVectorBonusPercent() { return 0; }
 
-  int getArithmeticReductionCost(
-      unsigned Opcode,
-      VectorType *Ty,
-      bool IsPairwise,
+  InstructionCost getArithmeticReductionCost(
+      unsigned Opcode, VectorType *Ty, bool IsPairwise,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
 
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,

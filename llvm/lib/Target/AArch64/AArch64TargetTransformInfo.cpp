@@ -1271,7 +1271,7 @@ int AArch64TTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
   return LegalizationCost + /*Cost of horizontal reduction*/ 2;
 }
 
-int AArch64TTIImpl::getArithmeticReductionCostSVE(
+InstructionCost AArch64TTIImpl::getArithmeticReductionCostSVE(
     unsigned Opcode, VectorType *ValTy, bool IsPairwise,
     TTI::TargetCostKind CostKind) {
   assert(!IsPairwise && "Cannot be pair wise to continue");
@@ -1295,16 +1295,14 @@ int AArch64TTIImpl::getArithmeticReductionCostSVE(
   case ISD::FADD:
     return LegalizationCost + 2;
   default:
-    // TODO: Replace for invalid when InstructionCost is used
-    // cases not supported by SVE
-    return 16;
+    return InstructionCost::getInvalid();
   }
 }
 
-int AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode,
-                                               VectorType *ValTy,
-                                               bool IsPairwiseForm,
-                                               TTI::TargetCostKind CostKind) {
+InstructionCost
+AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
+                                           bool IsPairwiseForm,
+                                           TTI::TargetCostKind CostKind) {
 
   if (isa<ScalableVectorType>(ValTy))
     return getArithmeticReductionCostSVE(Opcode, ValTy, IsPairwiseForm,

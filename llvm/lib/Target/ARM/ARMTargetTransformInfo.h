@@ -247,9 +247,9 @@ public:
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I = nullptr);
 
-  int getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
-                                 bool IsPairwiseForm,
-                                 TTI::TargetCostKind CostKind);
+  InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
+                                             bool IsPairwiseForm,
+                                             TTI::TargetCostKind CostKind);
   InstructionCost getExtendedAddReductionCost(bool IsMLA, bool IsUnsigned,
                                               Type *ResTy, VectorType *ValTy,
                                               TTI::TargetCostKind CostKind);
