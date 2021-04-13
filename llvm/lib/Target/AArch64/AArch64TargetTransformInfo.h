@@ -150,9 +150,10 @@ public:
                              bool IsPairwise, bool IsUnsigned,
                              TTI::TargetCostKind CostKind);
 
-  int getArithmeticReductionCostSVE(unsigned Opcode, VectorType *ValTy,
-                                    bool IsPairwiseForm,
-                                    TTI::TargetCostKind CostKind);
+  InstructionCost getArithmeticReductionCostSVE(unsigned Opcode,
+                                                VectorType *ValTy,
+                                                bool IsPairwiseForm,
+                                                TTI::TargetCostKind CostKind);
 
   int getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
@@ -278,9 +279,9 @@ public:
   bool isLegalToVectorizeReduction(RecurrenceDescriptor RdxDesc,
                                    ElementCount VF) const;
 
-  int getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                                 bool IsPairwiseForm,
-                                 TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
+  InstructionCost getArithmeticReductionCost(
+      unsigned Opcode, VectorType *Ty, bool IsPairwiseForm,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
 
   int getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
                      int Index, VectorType *SubTp);

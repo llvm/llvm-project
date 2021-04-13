@@ -175,9 +175,9 @@ public:
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
 
-  int getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                                 bool IsPairwiseForm,
-                                 TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency);
+  InstructionCost getArithmeticReductionCost(
+      unsigned Opcode, VectorType *Ty, bool IsPairwiseForm,
+      TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency);
 
   int getMinMaxCost(Type *Ty, Type *CondTy, bool IsUnsigned);
 

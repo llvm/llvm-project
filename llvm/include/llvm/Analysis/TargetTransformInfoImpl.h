@@ -616,8 +616,8 @@ public:
     return 0;
   }
 
-  unsigned getArithmeticReductionCost(unsigned, VectorType *, bool,
-                                      TTI::TargetCostKind) const {
+  InstructionCost getArithmeticReductionCost(unsigned, VectorType *, bool,
+                                             TTI::TargetCostKind) const {
     return 1;
   }
 
