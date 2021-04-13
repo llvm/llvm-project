@@ -188,17 +188,12 @@ void OpenStatementState::set_path(const char *path, std::size_t length) {
 }
 
 int OpenStatementState::EndIoStatement() {
-  if (wasExtant_ && status_ && *status_ != OpenStatus::Old) {
-    SignalError("OPEN statement for connected unit may not have STATUS= other "
-                "than 'OLD'");
-  }
   if (path_.get() || wasExtant_ ||
       (status_ && *status_ == OpenStatus::Scratch)) {
-    unit().OpenUnit(status_.value_or(OpenStatus::Unknown), action_, position_,
-        std::move(path_), pathLength_, convert_, *this);
+    unit().OpenUnit(status_, action_, position_, std::move(path_), pathLength_,
+        convert_, *this);
   } else {
-    unit().OpenAnonymousUnit(status_.value_or(OpenStatus::Unknown), action_,
-        position_, convert_, *this);
+    unit().OpenAnonymousUnit(status_, action_, position_, convert_, *this);
   }
   if (access_) {
     if (*access_ != unit().access) {
