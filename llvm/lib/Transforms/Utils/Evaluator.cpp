@@ -318,9 +318,10 @@ Constant *Evaluator::castCallResultIfNeeded(Value *CallExpr, Constant *RV) {
 
 /// Evaluate all instructions in block BB, returning true if successful, false
 /// if we can't evaluate it.  NewBB returns the next BB that control flows into,
-/// or null upon return.
-bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
-                              BasicBlock *&NextBB) {
+/// or null upon return. StrippedPointerCastsForAliasAnalysis is set to true if
+/// we looked through pointer casts to evaluate something.
+bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
+                              bool &StrippedPointerCastsForAliasAnalysis) {
   // This is the main evaluation loop.
   while (true) {
     Constant *InstResult = nullptr;
@@ -550,56 +551,73 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
           LLVM_DEBUG(dbgs() << "Skipping pseudoprobe intrinsic.\n");
           ++CurInst;
           continue;
-        }
-
-        LLVM_DEBUG(dbgs() << "Unknown intrinsic. Can not evaluate.\n");
-        return false;
-      }
-
-      // Resolve function pointers.
-      SmallVector<Constant *, 8> Formals;
-      Function *Callee = getCalleeWithFormalArgs(CB, Formals);
-      if (!Callee || Callee->isInterposable()) {
-        LLVM_DEBUG(dbgs() << "Can not resolve function pointer.\n");
-        return false;  // Cannot resolve.
-      }
-
-      if (Callee->isDeclaration()) {
-        // If this is a function we can constant fold, do it.
-        if (Constant *C = ConstantFoldCall(&CB, Callee, Formals, TLI)) {
-          InstResult = castCallResultIfNeeded(CB.getCalledOperand(), C);
-          if (!InstResult)
+        } else {
+          Value *Stripped = CurInst->stripPointerCastsForAliasAnalysis();
+          // Only attempt to getVal() if we've actually managed to strip
+          // anything away, or else we'll call getVal() on the current
+          // instruction.
+          if (Stripped != &*CurInst) {
+            InstResult = getVal(Stripped);
+          }
+          if (InstResult) {
+            LLVM_DEBUG(dbgs()
+                       << "Stripped pointer casts for alias analysis for "
+                          "intrinsic call.\n");
+            StrippedPointerCastsForAliasAnalysis = true;
+          } else {
+            LLVM_DEBUG(dbgs() << "Unknown intrinsic. Cannot evaluate.\n");
             return false;
-          LLVM_DEBUG(dbgs() << "Constant folded function call. Result: "
-                            << *InstResult << "\n");
-        } else {
-          LLVM_DEBUG(dbgs() << "Can not constant fold function call.\n");
-          return false;
+          }
         }
-      } else {
-        if (Callee->getFunctionType()->isVarArg()) {
-          LLVM_DEBUG(dbgs() << "Can not constant fold vararg function call.\n");
-          return false;
+      }
+
+      if (!InstResult) {
+        // Resolve function pointers.
+        SmallVector<Constant *, 8> Formals;
+        Function *Callee = getCalleeWithFormalArgs(CB, Formals);
+        if (!Callee || Callee->isInterposable()) {
+          LLVM_DEBUG(dbgs() << "Can not resolve function pointer.\n");
+          return false; // Cannot resolve.
         }
 
-        Constant *RetVal = nullptr;
-        // Execute the call, if successful, use the return value.
-        ValueStack.emplace_back();
-        if (!EvaluateFunction(Callee, RetVal, Formals)) {
-          LLVM_DEBUG(dbgs() << "Failed to evaluate function.\n");
-          return false;
-        }
-        ValueStack.pop_back();
-        InstResult = castCallResultIfNeeded(CB.getCalledOperand(), RetVal);
-        if (RetVal && !InstResult)
-          return false;
-
-        if (InstResult) {
-          LLVM_DEBUG(dbgs() << "Successfully evaluated function. Result: "
-                            << *InstResult << "\n\n");
+        if (Callee->isDeclaration()) {
+          // If this is a function we can constant fold, do it.
+          if (Constant *C = ConstantFoldCall(&CB, Callee, Formals, TLI)) {
+            InstResult = castCallResultIfNeeded(CB.getCalledOperand(), C);
+            if (!InstResult)
+              return false;
+            LLVM_DEBUG(dbgs() << "Constant folded function call. Result: "
+                              << *InstResult << "\n");
+          } else {
+            LLVM_DEBUG(dbgs() << "Can not constant fold function call.\n");
+            return false;
+          }
         } else {
-          LLVM_DEBUG(dbgs()
-                     << "Successfully evaluated function. Result: 0\n\n");
+          if (Callee->getFunctionType()->isVarArg()) {
+            LLVM_DEBUG(dbgs()
+                       << "Can not constant fold vararg function call.\n");
+            return false;
+          }
+
+          Constant *RetVal = nullptr;
+          // Execute the call, if successful, use the return value.
+          ValueStack.emplace_back();
+          if (!EvaluateFunction(Callee, RetVal, Formals)) {
+            LLVM_DEBUG(dbgs() << "Failed to evaluate function.\n");
+            return false;
+          }
+          ValueStack.pop_back();
+          InstResult = castCallResultIfNeeded(CB.getCalledOperand(), RetVal);
+          if (RetVal && !InstResult)
+            return false;
+
+          if (InstResult) {
+            LLVM_DEBUG(dbgs() << "Successfully evaluated function. Result: "
+                              << *InstResult << "\n\n");
+          } else {
+            LLVM_DEBUG(dbgs()
+                       << "Successfully evaluated function. Result: 0\n\n");
+          }
         }
       }
     } else if (CurInst->isTerminator()) {
@@ -694,15 +712,27 @@ bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
     BasicBlock *NextBB = nullptr; // Initialized to avoid compiler warnings.
     LLVM_DEBUG(dbgs() << "Trying to evaluate BB: " << *CurBB << "\n");
 
-    if (!EvaluateBlock(CurInst, NextBB))
+    bool StrippedPointerCastsForAliasAnalysis = false;
+
+    if (!EvaluateBlock(CurInst, NextBB, StrippedPointerCastsForAliasAnalysis))
       return false;
 
     if (!NextBB) {
       // Successfully running until there's no next block means that we found
       // the return.  Fill it the return value and pop the call stack.
       ReturnInst *RI = cast<ReturnInst>(CurBB->getTerminator());
-      if (RI->getNumOperands())
+      if (RI->getNumOperands()) {
+        // The Evaluator can look through pointer casts as long as alias
+        // analysis holds because it's just a simple interpreter and doesn't
+        // skip memory accesses due to invariant group metadata, but we can't
+        // let users of Evaluator use a value that's been gleaned looking
+        // through stripping pointer casts.
+        if (StrippedPointerCastsForAliasAnalysis &&
+            !RI->getReturnValue()->getType()->isVoidTy()) {
+          return false;
+        }
         RetVal = getVal(RI->getOperand(0));
+      }
       CallStack.pop_back();
       return true;
     }
