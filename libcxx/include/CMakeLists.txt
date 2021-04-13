@@ -22,6 +22,7 @@ set(files
   __memory/raw_storage_iterator.h
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
+  __memory/unique_ptr.h
   __memory/utilities.h
   __mutex_base
   __node_handle
