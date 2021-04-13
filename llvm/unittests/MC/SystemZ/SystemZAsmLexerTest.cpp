@@ -32,6 +32,9 @@ public:
     RestrictCommentStringToStartOfStatement = Value;
   }
   void setCommentString(StringRef Value) { CommentString = Value; }
+  void setAllowAdditionalComments(bool Value) {
+    AllowAdditionalComments = Value;
+  }
 };
 
 // Setup a testing class that the GTest framework can call.
@@ -211,6 +214,157 @@ TEST_F(SystemZAsmLexerTest, CheckAllowHashInIdentifier2) {
   SmallVector<AsmToken::TokenKind> ExpectedTokens(
       {AsmToken::Identifier, AsmToken::Star, AsmToken::Integer,
        AsmToken::EndOfStatement, AsmToken::Eof});
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerTest, DontCheckStrictCommentString) {
+  StringRef AsmStr = "# abc\n/* def *///  xyz";
+
+  // Setup.
+  setupCallToAsmParser(AsmStr);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  SmallVector<AsmToken::TokenKind> ExpectedTokens(
+      {AsmToken::EndOfStatement, AsmToken::Comment, AsmToken::EndOfStatement,
+       AsmToken::Eof});
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerTest, DontCheckStrictCommentString2) {
+  StringRef AsmStr = "# abc\n/* def *///  xyz\n* rst";
+
+  // Setup.
+  MUPMAI->setCommentString("*");
+  setupCallToAsmParser(AsmStr);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  SmallVector<AsmToken::TokenKind> ExpectedTokens(
+      {AsmToken::EndOfStatement, AsmToken::Comment, AsmToken::EndOfStatement,
+       AsmToken::EndOfStatement, AsmToken::Eof});
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerTest, CheckStrictCommentString) {
+  StringRef AsmStr = "# abc\n/* def *///  xyz";
+
+  // Setup.
+  MUPMAI->setAllowAdditionalComments(false);
+  setupCallToAsmParser(AsmStr);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  // "# abc" -> still treated as a comment, since CommentString
+  //            is set to "#"
+  SmallVector<AsmToken::TokenKind> ExpectedTokens;
+  ExpectedTokens.push_back(AsmToken::EndOfStatement); // "# abc\n"
+  ExpectedTokens.push_back(AsmToken::Slash);          // "/"
+  ExpectedTokens.push_back(AsmToken::Star);           // "*"
+  ExpectedTokens.push_back(AsmToken::Identifier);     // "def"
+  ExpectedTokens.push_back(AsmToken::Star);           // "*"
+  ExpectedTokens.push_back(AsmToken::Slash);          // "/"
+  ExpectedTokens.push_back(AsmToken::Slash);          // "/"
+  ExpectedTokens.push_back(AsmToken::Slash);          // "/"
+  ExpectedTokens.push_back(AsmToken::Identifier);     // "xyz"
+  ExpectedTokens.push_back(AsmToken::EndOfStatement);
+  ExpectedTokens.push_back(AsmToken::Eof);
+
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerTest, CheckStrictCommentString2) {
+  StringRef AsmStr = "// abc";
+
+  // Setup.
+  MUPMAI->setAllowAdditionalComments(false);
+  MUPMAI->setCommentString("//");
+  setupCallToAsmParser(AsmStr);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  // "// abc" -> will still be treated as a comment because "//" is the
+  //             CommentString
+  SmallVector<AsmToken::TokenKind> ExpectedTokens(
+      {AsmToken::EndOfStatement, AsmToken::Eof});
+  lexAndCheckTokens(AsmStr /* "// abc" */, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerTest, CheckStrictCommentString3) {
+  StringRef AsmStr = "/* abc */";
+
+  // Setup.
+  MUPMAI->setAllowAdditionalComments(false);
+  setupCallToAsmParser(AsmStr);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  SmallVector<AsmToken::TokenKind> ExpectedTokens;
+  ExpectedTokens.push_back(AsmToken::Slash);
+  ExpectedTokens.push_back(AsmToken::Star);
+  ExpectedTokens.push_back(AsmToken::Identifier);
+  ExpectedTokens.push_back(AsmToken::Star);
+  ExpectedTokens.push_back(AsmToken::Slash);
+  ExpectedTokens.push_back(AsmToken::EndOfStatement);
+  ExpectedTokens.push_back(AsmToken::Eof);
+
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerTest, CheckStrictCommentString4) {
+  StringRef AsmStr = "# abc\n/* def *///  xyz";
+
+  // Setup.
+  MUPMAI->setCommentString("*");
+  MUPMAI->setAllowAdditionalComments(false);
+  MUPMAI->setRestrictCommentStringToStartOfStatement(true);
+  setupCallToAsmParser(AsmStr);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  SmallVector<AsmToken::TokenKind> ExpectedTokens;
+  ExpectedTokens.push_back(AsmToken::Hash);           // "#"
+  ExpectedTokens.push_back(AsmToken::Identifier);     // "abc"
+  ExpectedTokens.push_back(AsmToken::EndOfStatement); // "\n"
+  ExpectedTokens.push_back(AsmToken::Slash);          // "/"
+  ExpectedTokens.push_back(AsmToken::Star);           // "*"
+  ExpectedTokens.push_back(AsmToken::Identifier);     // "def"
+  ExpectedTokens.push_back(AsmToken::Star);           // "*"
+  ExpectedTokens.push_back(AsmToken::Slash);          // "/"
+  ExpectedTokens.push_back(AsmToken::Slash);          // "/"
+  ExpectedTokens.push_back(AsmToken::Slash);          // "/"
+  ExpectedTokens.push_back(AsmToken::Identifier);     // "xyz"
+  ExpectedTokens.push_back(AsmToken::EndOfStatement);
+  ExpectedTokens.push_back(AsmToken::Eof);
+
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerTest, CheckStrictCommentString5) {
+  StringRef AsmStr = "#abc\n/* def */// xyz";
+
+  // Setup.
+  MUPMAI->setCommentString("*");
+  MUPMAI->setAllowAdditionalComments(false);
+  setupCallToAsmParser(AsmStr);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  SmallVector<AsmToken::TokenKind> ExpectedTokens;
+  ExpectedTokens.push_back(AsmToken::Hash);           // "#"
+  ExpectedTokens.push_back(AsmToken::Identifier);     // "abc"
+  ExpectedTokens.push_back(AsmToken::EndOfStatement); // "\n"
+  ExpectedTokens.push_back(AsmToken::Slash);          // "/"
+  ExpectedTokens.push_back(AsmToken::EndOfStatement); // "* def */// xyz"
+  ExpectedTokens.push_back(AsmToken::Eof);
+
   lexAndCheckTokens(AsmStr, ExpectedTokens);
 }
 } // end anonymous namespace

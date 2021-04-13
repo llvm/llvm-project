@@ -175,7 +175,13 @@ AsmToken AsmLexer::LexIdentifier() {
 
 /// LexSlash: Slash: /
 ///           C-Style Comment: /* ... */
+///           C-style Comment: // ...
 AsmToken AsmLexer::LexSlash() {
+  if (!MAI.shouldAllowAdditionalComments()) {
+    IsAtStartOfStatement = false;
+    return AsmToken(AsmToken::Slash, StringRef(TokStart, 1));
+  }
+
   switch (*CurPtr) {
   case '*':
     IsAtStartOfStatement = false;
@@ -729,7 +735,9 @@ AsmToken AsmLexer::LexToken() {
       UnLex(TokenBuf[0]);
       return AsmToken(AsmToken::HashDirective, s);
     }
-    return LexLineComment();
+
+    if (MAI.shouldAllowAdditionalComments())
+      return LexLineComment();
   }
 
   if (isAtStartOfComment(TokStart))
