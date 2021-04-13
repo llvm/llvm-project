@@ -1,7 +1,8 @@
 // RUN: mlir-opt %s -convert-scf-to-std -convert-vector-to-llvm="enable-x86vector" -convert-std-to-llvm  | \
 // RUN: mlir-translate  --mlir-to-llvmir | \
-// RUN: %lli --entry-function=entry --mattr="avx512bw" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: %lli --jit-kind=mcjit --entry-function=entry --mattr="avx512bw" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
+// TODO: drop lli's --jit-kind flag once PR#49906 (https://bugs.llvm.org/show_bug.cgi?id=49906) is fixed.
 
 func @entry() -> i32 {
   %i0 = constant 0 : i32
