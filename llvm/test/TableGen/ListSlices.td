@@ -111,8 +111,11 @@ def Rec08 {
 // CHECK: def Rec09
 // CHECK:   int Zero = ?;
 // CHECK:   list<int> TwoFive = [2, 3, ?, 5];
-// CHECK: def Rec10
-// CHECK:   list<int> TwoFive = [2, 3, ?, 5];
+// We need CHECK-NEXT for these because otherwise it will match anonymous defs
+// that appear later.
+// CHECK: def Rec10 {
+// CHECK-NEXT:   int Zero = ?;
+// CHECK-NEXT:   list<int> TwoFive = [2, 3, ?, 5];
 
 def Rec09 : Class1<[?, ?, 2, 3, ?, 5, ?]>;
 
@@ -120,6 +123,3 @@ def Rec10 {
   int Zero = Class1<[?, ?, 2, 3, ?, 5, ?]>.Zero;
   list<int> TwoFive = Class1<[?, ?, 2, 3, ?, 5, ?]>.TwoFive;
 }
-
-// TO-DO: Notice that the first field in Rec10 is not checked. 
-// It is not fully resolved for reasons that need to be investigated.

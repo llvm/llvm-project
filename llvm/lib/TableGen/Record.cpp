@@ -655,6 +655,14 @@ Init *ListInit::resolveReferences(Resolver &R) const {
   return const_cast<ListInit *>(this);
 }
 
+bool ListInit::isComplete() const {
+  for (Init *Element : *this) {
+    if (!Element->isComplete())
+      return false;
+  }
+  return true;
+}
+
 bool ListInit::isConcrete() const {
   for (Init *Element : *this) {
     if (!Element->isConcrete())
@@ -1924,7 +1932,7 @@ Init *FieldInit::Fold(Record *CurRec) const {
                       FieldName->getAsUnquotedString() + "' of '" +
                       Rec->getAsString() + "' is a forbidden self-reference");
     Init *FieldVal = Def->getValue(FieldName)->getValue();
-    if (FieldVal->isComplete())
+    if (FieldVal->isConcrete())
       return FieldVal;
   }
   return const_cast<FieldInit *>(this);
