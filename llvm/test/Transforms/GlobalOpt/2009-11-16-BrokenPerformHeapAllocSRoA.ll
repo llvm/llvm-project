@@ -17,7 +17,7 @@ define void @test() nounwind ssp {
   %2 = sext i32 %1 to i64                         ; <i64> [#uses=1]
   %3 = mul i64 %2, ptrtoint (%struct.strchartype* getelementptr (%struct.strchartype, %struct.strchartype* null, i64 1) to i64) ; <i64> [#uses=1]
   %4 = tail call i8* @malloc(i64 %3)              ; <i8*> [#uses=1]
-; CHECK-NOT: call i8* @malloc(i64
+; CHECK: call i8* @malloc(i64
   %5 = bitcast i8* %4 to %struct.strchartype*     ; <%struct.strchartype*> [#uses=1]
   store %struct.strchartype* %5, %struct.strchartype** @chartypes, align 8
   ret void
