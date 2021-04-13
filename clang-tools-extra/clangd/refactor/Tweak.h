@@ -35,6 +35,8 @@
 namespace clang {
 namespace clangd {
 
+class FeatureModuleSet;
+
 /// An interface base for small context-sensitive refactoring actions.
 /// To implement a new tweak use the following pattern in a .cpp file:
 ///   class MyTweak : public Tweak {
@@ -128,13 +130,15 @@ public:
 /// can run on the selection.
 std::vector<std::unique_ptr<Tweak>>
 prepareTweaks(const Tweak::Selection &S,
-              llvm::function_ref<bool(const Tweak &)> Filter);
+              llvm::function_ref<bool(const Tweak &)> Filter,
+              const FeatureModuleSet *Modules);
 
 // Calls prepare() on the tweak with a given ID.
 // If prepare() returns false, returns an error.
 // If prepare() returns true, returns the corresponding tweak.
-llvm::Expected<std::unique_ptr<Tweak>> prepareTweak(StringRef TweakID,
-                                                    const Tweak::Selection &S);
+llvm::Expected<std::unique_ptr<Tweak>>
+prepareTweak(StringRef ID, const Tweak::Selection &S,
+             const FeatureModuleSet *Modules);
 } // namespace clangd
 } // namespace clang
 
