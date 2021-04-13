@@ -1146,10 +1146,6 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
         SecName = ".rodata";
       else
         SecName = Global.getInitializer()->isZeroValue() ? ".bss" : ".data";
-    } else {
-      // extern variables without explicit section,
-      // put them into ".extern" section.
-      SecName = ".extern";
     }
 
     if (ProcessingMapDef != SecName.startswith(".maps"))
@@ -1213,7 +1209,9 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
         std::make_unique<BTFKindVar>(Global.getName(), GVTypeId, GVarInfo);
     uint32_t VarId = addType(std::move(VarEntry));
 
-    assert(!SecName.empty());
+    // An empty SecName means an extern variable without section attribute.
+    if (SecName.empty())
+      continue;
 
     // Find or create a DataSec
     if (DataSecEntries.find(std::string(SecName)) == DataSecEntries.end()) {
