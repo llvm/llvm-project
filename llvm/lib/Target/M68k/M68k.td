@@ -84,10 +84,34 @@ def M68kInstrInfo : InstrInfo;
 
 include "M68kCallingConv.td"
 
+//===---------------------------------------------------------------------===//
+// Assembly Printers
+//===---------------------------------------------------------------------===//
+
+def M68kAsmWriter : AsmWriter {
+ string AsmWriterClassName = "InstPrinter";
+ bit isMCAsmWriter = 1;
+}
+
+//===---------------------------------------------------------------------===//
+// Assembly Parsers
+//===---------------------------------------------------------------------===//
+
+def M68kAsmParser : AsmParser {
+  let ShouldEmitMatchRegisterName = 0;
+  let ShouldEmitMatchRegisterAltName = 0;
+}
+
+def M68kAsmParserVariant : AsmParserVariant {
+  int Variant = 0;
+}
+
 //===----------------------------------------------------------------------===//
 // Target
 //===----------------------------------------------------------------------===//
 
 def M68k : Target {
   let InstructionSet = M68kInstrInfo;
+  let AssemblyParsers = [M68kAsmParser];
+  let AssemblyWriters = [M68kAsmWriter];
 }
