@@ -224,7 +224,7 @@ unsigned HexagonTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
   return 1;
 }
 
-unsigned HexagonTTIImpl::getGatherScatterOpCost(
+InstructionCost HexagonTTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
   return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,

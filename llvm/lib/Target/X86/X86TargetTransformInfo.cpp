@@ -4223,11 +4223,10 @@ int X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
 }
 
 /// Calculate the cost of Gather / Scatter operation
-int X86TTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *SrcVTy,
-                                       const Value *Ptr, bool VariableMask,
-                                       Align Alignment,
-                                       TTI::TargetCostKind CostKind,
-                                       const Instruction *I = nullptr) {
+InstructionCost X86TTIImpl::getGatherScatterOpCost(
+    unsigned Opcode, Type *SrcVTy, const Value *Ptr, bool VariableMask,
+    Align Alignment, TTI::TargetCostKind CostKind,
+    const Instruction *I = nullptr) {
   if (CostKind != TTI::TCK_RecipThroughput) {
     if ((Opcode == Instruction::Load &&
          isLegalMaskedGather(SrcVTy, Align(Alignment))) ||
