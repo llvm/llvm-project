@@ -211,7 +211,8 @@ public:
       auto Tree = SelectionTree::createRight(AST->getASTContext(),
                                              AST->getTokens(), Start, End);
       Tweak::Selection Selection(&Index, *AST, Start, End, std::move(Tree));
-      for (const auto &T : prepareTweaks(Selection, Opts.TweakFilter)) {
+      for (const auto &T :
+           prepareTweaks(Selection, Opts.TweakFilter, Opts.FeatureModules)) {
         auto Result = T->apply(Selection);
         if (!Result) {
           elog("    tweak: {0} ==> FAIL: {1}", T->id(), Result.takeError());

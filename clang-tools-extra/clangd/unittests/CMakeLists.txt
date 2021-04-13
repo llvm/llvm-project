@@ -55,6 +55,7 @@ add_unittest(ClangdUnitTests ClangdTests
   DraftStoreTests.cpp
   DumpASTTests.cpp
   ExpectedTypeTest.cpp
+  FeatureModulesTests.cpp
   FileDistanceTests.cpp
   FileIndexTests.cpp
   FindSymbolsTests.cpp
