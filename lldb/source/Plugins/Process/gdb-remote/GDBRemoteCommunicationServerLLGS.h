@@ -86,6 +86,8 @@ protected:
   const NativeProcessProtocol::Factory &m_process_factory;
   lldb::tid_t m_current_tid = LLDB_INVALID_THREAD_ID;
   lldb::tid_t m_continue_tid = LLDB_INVALID_THREAD_ID;
+  NativeProcessProtocol *m_current_process;
+  NativeProcessProtocol *m_continue_process;
   std::recursive_mutex m_debugged_process_mutex;
   std::unique_ptr<NativeProcessProtocol> m_debugged_process_up;
 
@@ -254,7 +256,7 @@ private:
   // In any case, the function assumes that exactly one inferior is being
   // debugged and rejects pid values that do no match that inferior.
   llvm::Expected<lldb::tid_t> ReadTid(StringExtractorGDBRemote &packet,
-                                      bool allow_all = false);
+                                      bool allow_all, lldb::pid_t default_pid);
 
   // For GDBRemoteCommunicationServerLLGS only
   GDBRemoteCommunicationServerLLGS(const GDBRemoteCommunicationServerLLGS &) =
