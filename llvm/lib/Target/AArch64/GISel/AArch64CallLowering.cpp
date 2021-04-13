@@ -51,6 +51,27 @@ using namespace llvm;
 AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
   : CallLowering(&TLI) {}
 
+static void applyStackPassedSmallTypeDAGHack(EVT OrigVT, MVT &ValVT,
+                                             MVT &LocVT) {
+  // If ValVT is i1/i8/i16, we should set LocVT to i8/i8/i16. This is a legacy
+  // hack because the DAG calls the assignment function with pre-legalized
+  // register typed values, not the raw type.
+  //
+  // This hack is not applied to return values which are not passed on the
+  // stack.
+  if (OrigVT == MVT::i1 || OrigVT == MVT::i8)
+    ValVT = LocVT = MVT::i8;
+  else if (OrigVT == MVT::i16)
+    ValVT = LocVT = MVT::i16;
+}
+
+// Account for i1/i8/i16 stack passed value hack
+static uint64_t getStackValueStoreSizeHack(const CCValAssign &VA) {
+  const MVT ValVT = VA.getValVT();
+  return (ValVT == MVT::i8 || ValVT == MVT::i16) ? ValVT.getStoreSize()
+                                                 : VA.getLocVT().getStoreSize();
+}
+
 namespace {
 struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
   IncomingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
@@ -73,6 +94,10 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
     return AddrReg.getReg(0);
   }
 
+  uint64_t getStackValueStoreSize(const CCValAssign &VA) const override {
+    return getStackValueStoreSizeHack(VA);
+  }
+
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         CCValAssign &VA) override {
     markPhysRegUsed(PhysReg);
@@ -84,40 +109,36 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
     MachineFunction &MF = MIRBuilder.getMF();
 
     // The reported memory location may be wider than the value.
-    const LLT RegTy = MRI.getType(ValVReg);
-    MemSize = std::min(static_cast<uint64_t>(RegTy.getSizeInBytes()), MemSize);
+    const LLT RealRegTy = MRI.getType(ValVReg);
+    LLT ValTy(VA.getValVT());
+    LLT LocTy(VA.getLocVT());
+
+    // Fixup the types for the DAG compatibility hack.
+    if (VA.getValVT() == MVT::i8 || VA.getValVT() == MVT::i16)
+      std::swap(ValTy, LocTy);
+
+    MemSize = LocTy.getSizeInBytes();
 
     auto MMO = MF.getMachineMemOperand(
         MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant,
         MemSize, inferAlignFromPtrInfo(MF, MPO));
-    const LLT LocVT = LLT{VA.getLocVT()};
 
-    if (RegTy.getScalarSizeInBits() < LocVT.getScalarSizeInBits()) {
-      auto LocInfo = VA.getLocInfo();
-      if (LocInfo == CCValAssign::LocInfo::ZExt) {
-        // We know the parameter is zero-extended. Perform a load into LocVT,
-        // and use G_ASSERT_ZEXT to communicate that this was zero-extended from
-        // the parameter type. Move down to the parameter type using G_TRUNC.
-        MIRBuilder.buildTrunc(
-            ValVReg, MIRBuilder.buildAssertZExt(
-                         LocVT, MIRBuilder.buildLoad(LocVT, Addr, *MMO),
-                         RegTy.getScalarSizeInBits()));
-        return;
-      }
-
-      if (LocInfo == CCValAssign::LocInfo::SExt) {
-        // Same as the ZExt case, but use G_ASSERT_SEXT instead.
-        MIRBuilder.buildTrunc(
-            ValVReg, MIRBuilder.buildAssertSExt(
-                         LocVT, MIRBuilder.buildLoad(LocVT, Addr, *MMO),
-                         RegTy.getScalarSizeInBits()));
-        return;
-      }
+    if (RealRegTy.getSizeInBits() == ValTy.getSizeInBits()) {
+      // No extension information, or no extension necessary. Load into the
+      // incoming parameter type directly.
+      MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
+    } else {
+      auto Tmp = MIRBuilder.buildLoad(LocTy, Addr, *MMO);
+      MIRBuilder.buildTrunc(ValVReg, Tmp);
     }
+  }
 
-    // No extension information, or no extension necessary. Load into the
-    // incoming parameter type directly.
-    MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
+  bool assignArg(unsigned ValNo, EVT OrigVT, MVT ValVT, MVT LocVT,
+                 CCValAssign::LocInfo LocInfo,
+                 const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
+                 CCState &State) override {
+    applyStackPassedSmallTypeDAGHack(OrigVT, ValVT, LocVT);
+    return AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
   }
 
   /// How the physical register gets marked varies between formal
@@ -164,11 +185,11 @@ struct ReturnedArgCallReturnHandler : public CallReturnHandler {
 struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
   OutgoingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                      MachineInstrBuilder MIB, CCAssignFn *AssignFn,
-                     CCAssignFn *AssignFnVarArg, bool IsTailCall = false,
-                     int FPDiff = 0)
+                     CCAssignFn *AssignFnVarArg, bool IsReturn,
+                     bool IsTailCall = false, int FPDiff = 0)
       : OutgoingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
-        AssignFnVarArg(AssignFnVarArg), IsTailCall(IsTailCall), FPDiff(FPDiff),
-        StackSize(0), SPReg(0),
+        AssignFnVarArg(AssignFnVarArg), IsReturn(IsReturn),
+        IsTailCall(IsTailCall), FPDiff(FPDiff), StackSize(0), SPReg(0),
         Subtarget(MIRBuilder.getMF().getSubtarget<AArch64Subtarget>()) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
@@ -199,6 +220,14 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
     return AddrReg.getReg(0);
   }
 
+  /// We need to fixup the reported store size for certain value types because
+  /// we invert the interpretation of ValVT and LocVT in certain cases. This is
+  /// for compatability with the DAG call lowering implementation, which we're
+  /// currently building on top of.
+  uint64_t getStackValueStoreSize(const CCValAssign &VA) const override {
+    return getStackValueStoreSizeHack(VA);
+  }
+
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         CCValAssign &VA) override {
     MIB.addUse(PhysReg, RegState::Implicit);
@@ -215,34 +244,48 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
   }
 
   void assignValueToAddress(const CallLowering::ArgInfo &Arg, unsigned RegIndex,
-                            Register Addr, uint64_t Size,
+                            Register Addr, uint64_t MemSize,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
-    unsigned MaxSize = Size * 8;
+    unsigned MaxSize = MemSize * 8;
     // For varargs, we always want to extend them to 8 bytes, in which case
     // we disable setting a max.
     if (!Arg.IsFixed)
       MaxSize = 0;
 
-    Register ValVReg = VA.getLocInfo() != CCValAssign::LocInfo::FPExt
-                           ? extendRegister(Arg.Regs[RegIndex], VA, MaxSize)
-                           : Arg.Regs[0];
+    Register ValVReg = Arg.Regs[RegIndex];
+    if (VA.getLocInfo() != CCValAssign::LocInfo::FPExt) {
+      MVT LocVT = VA.getLocVT();
+      MVT ValVT = VA.getValVT();
 
-    // If we extended we might need to adjust the MMO's Size.
-    const LLT RegTy = MRI.getType(ValVReg);
-    if (RegTy.getSizeInBytes() > Size)
-      Size = RegTy.getSizeInBytes();
+      if (VA.getValVT() == MVT::i8 || VA.getValVT() == MVT::i16) {
+        std::swap(ValVT, LocVT);
+        MemSize = VA.getValVT().getStoreSize();
+      }
 
-    assignValueToAddress(ValVReg, Addr, Size, MPO, VA);
+      ValVReg = extendRegister(ValVReg, VA, MaxSize);
+      const LLT RegTy = MRI.getType(ValVReg);
+
+      if (RegTy.getSizeInBits() < LocVT.getSizeInBits())
+        ValVReg = MIRBuilder.buildTrunc(RegTy, ValVReg).getReg(0);
+    } else {
+      // The store does not cover the full allocated stack slot.
+      MemSize = VA.getValVT().getStoreSize();
+    }
+
+    assignValueToAddress(ValVReg, Addr, MemSize, MPO, VA);
   }
 
-  bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
+  bool assignArg(unsigned ValNo, EVT OrigVT, MVT ValVT, MVT LocVT,
                  CCValAssign::LocInfo LocInfo,
-                 const CallLowering::ArgInfo &Info,
-                 ISD::ArgFlagsTy Flags,
+                 const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
                  CCState &State) override {
-    bool Res;
     bool IsCalleeWin = Subtarget.isCallingConvWin64(State.getCallingConv());
     bool UseVarArgsCCForFixed = IsCalleeWin && State.isVarArg();
+
+    if (!State.isVarArg() && !UseVarArgsCCForFixed && !IsReturn)
+      applyStackPassedSmallTypeDAGHack(OrigVT, ValVT, LocVT);
+
+    bool Res;
     if (Info.IsFixed && !UseVarArgsCCForFixed)
       Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
     else
@@ -254,6 +297,11 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
 
   MachineInstrBuilder MIB;
   CCAssignFn *AssignFnVarArg;
+
+  /// Track if this is used for a return instead of function argument
+  /// passing. We apply a hack to i1/i8/i16 stack passed values, but do not use
+  /// stack passed returns for them and cannot apply the type adjustment.
+  bool IsReturn;
   bool IsTailCall;
 
   /// For tail calls, the byte offset of the call's argument area from the
@@ -381,7 +429,8 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
       splitToValueTypes(CurArgInfo, SplitArgs, DL, CC);
     }
 
-    OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFn, AssignFn);
+    OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFn, AssignFn,
+                               /*IsReturn*/ true);
     Success =
         handleAssignments(MIRBuilder, SplitArgs, Handler, CC, F.isVarArg());
   }
@@ -885,7 +934,8 @@ bool AArch64CallLowering::lowerTailCall(
 
   // Do the actual argument marshalling.
   OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFnFixed,
-                             AssignFnVarArg, true, FPDiff);
+                             AssignFnVarArg, /*IsReturn*/ false,
+                             /*IsTailCall*/ true, FPDiff);
   if (!handleAssignments(MIRBuilder, OutArgs, Handler, CalleeCC, Info.IsVarArg))
     return false;
 
@@ -997,7 +1047,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Do the actual argument marshalling.
   OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFnFixed,
-                             AssignFnVarArg, false);
+                             AssignFnVarArg, /*IsReturn*/ false);
   if (!handleAssignments(MIRBuilder, OutArgs, Handler, Info.CallConv,
                          Info.IsVarArg))
     return false;

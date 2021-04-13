@@ -79,10 +79,9 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     MIB.addUse(PhysReg, RegState::Implicit);
   }
 
-  bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
+  bool assignArg(unsigned ValNo, EVT OrigVT, MVT ValVT, MVT LocVT,
                  CCValAssign::LocInfo LocInfo,
-                 const CallLowering::ArgInfo &Info,
-                 ISD::ArgFlagsTy Flags,
+                 const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
                  CCState &State) override {
     return AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
   }
