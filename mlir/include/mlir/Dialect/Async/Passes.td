@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def AsyncParallelFor : FunctionPass<"async-parallel-for"> {
+def AsyncParallelFor : Pass<"async-parallel-for"> {
   let summary = "Convert scf.parallel operations to multiple async regions "
                 "executed concurrently for non-overlapping iteration ranges";
   let constructor = "mlir::createAsyncParallelForPass()";
@@ -31,7 +31,7 @@ def AsyncToAsyncRuntime : Pass<"async-to-async-runtime", "ModuleOp"> {
   let dependentDialects = ["async::AsyncDialect"];
 }
 
-def AsyncRuntimeRefCounting : FunctionPass<"async-runtime-ref-counting"> {
+def AsyncRuntimeRefCounting : Pass<"async-runtime-ref-counting"> {
   let summary = "Automatic reference counting for Async runtime operations";
   let description = [{
     This pass works at the async runtime abtraction level, after all
@@ -48,8 +48,7 @@ def AsyncRuntimeRefCounting : FunctionPass<"async-runtime-ref-counting"> {
   let dependentDialects = ["async::AsyncDialect"];
 }
 
-def AsyncRuntimeRefCountingOpt :
-    FunctionPass<"async-runtime-ref-counting-opt"> {
+def AsyncRuntimeRefCountingOpt : Pass<"async-runtime-ref-counting-opt"> {
   let summary = "Optimize automatic reference counting operations for the"
                 "Async runtime by removing redundant operations";
   let constructor = "mlir::createAsyncRuntimeRefCountingOptPass()";
