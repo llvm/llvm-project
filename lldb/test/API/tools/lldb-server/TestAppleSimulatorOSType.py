@@ -94,7 +94,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
         server = self.connect_to_debug_monitor(attach_pid=pid)
 
         # Setup packet sequences
-        self.add_no_ack_remote_stream()
+        self.do_handshake()
         self.add_process_info_collection_packets()
         self.test_sequence.add_log_lines(
             ["read packet: " +
