@@ -56,6 +56,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-objdump
   llvm-nm
   llvm-size
+  llvm-cxxfilt
   llvm-config
   CACHE STRING "")
 
