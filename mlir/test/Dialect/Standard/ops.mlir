@@ -96,3 +96,35 @@ func @read_global_memref() {
   %1 = memref.tensor_load %0 : memref<2xf32>
   return
 }
+
+// CHECK-LABEL: func @switch(
+func @switch(%flag : i32, %caseOperand : i32) {
+  switch %flag : i32, [
+    default: ^bb1(%caseOperand : i32),
+    42: ^bb2(%caseOperand : i32),
+    43: ^bb3(%caseOperand : i32)
+  ]
+
+  ^bb1(%bb1arg : i32):
+    return
+  ^bb2(%bb2arg : i32):
+    return
+  ^bb3(%bb3arg : i32):
+    return
+}
+
+// CHECK-LABEL: func @switch_i64(
+func @switch_i64(%flag : i64, %caseOperand : i32) {
+  switch %flag : i64, [
+    default: ^bb1(%caseOperand : i32),
+    42: ^bb2(%caseOperand : i32),
+    43: ^bb3(%caseOperand : i32)
+  ]
+
+  ^bb1(%bb1arg : i32):
+    return
+  ^bb2(%bb2arg : i32):
+    return
+  ^bb3(%bb3arg : i32):
+    return
+}
