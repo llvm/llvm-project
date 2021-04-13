@@ -107,7 +107,7 @@ SVal SValBuilder::convertToArrayIndex(SVal val) {
       return val;
   }
 
-  return evalCastFromNonLoc(val.castAs<NonLoc>(), ArrayIndexTy);
+  return evalCast(val, ArrayIndexTy, QualType{});
 }
 
 nonloc::ConcreteInt SValBuilder::makeBoolVal(const CXXBoolLiteralExpr *boolean){
