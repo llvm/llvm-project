@@ -46,7 +46,8 @@ public:
   RNBContext()
       : m_pid(INVALID_NUB_PROCESS), m_pid_stop_count(0),
         m_events(0, all_event_bits), m_pid_pthread(), m_launch_status(),
-        m_arg_vec(), m_env_vec(), m_detach_on_error(false) {}
+        m_arg_vec(), m_env_vec(), m_detach_on_error(false),
+        m_unmask_signals(false) {}
 
   virtual ~RNBContext();
 
@@ -148,11 +149,11 @@ protected:
   std::string m_working_directory;
   std::string m_process_event;
   bool m_detach_on_error;
+  bool m_unmask_signals;
 
   void StartProcessStatusThread();
   void StopProcessStatusThread();
   static void *ThreadFunctionProcessStatus(void *arg);
-  bool m_unmask_signals;
 
 private:
   RNBContext(const RNBContext &rhs) = delete;
