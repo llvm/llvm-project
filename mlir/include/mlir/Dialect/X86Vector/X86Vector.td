@@ -267,4 +267,32 @@ def Vp2IntersectQIntrOp : AVX512_IntrOp<"vp2intersect.q.512", 2, [
                    VectorOfLengthAndType<[8], [I64]>:$b);
 }
 
+//===----------------------------------------------------------------------===//
+// AVX op definitions
+//===----------------------------------------------------------------------===//
+
+class AVX_Op<string mnemonic, list<OpTrait> traits = []> :
+  Op<X86Vector_Dialect, "avx." # mnemonic, traits> {}
+
+class AVX_IntrOp<string mnemonic, int numResults, list<OpTrait> traits = []> :
+  LLVM_IntrOpBase<X86Vector_Dialect, "avx.intr." # mnemonic,
+                  "x86_avx_" # !subst(".", "_", mnemonic),
+                  [], [], traits, numResults>;
+
+//----------------------------------------------------------------------------//
+// AVX Rsqrt
+//----------------------------------------------------------------------------//
+
+def RsqrtOp : AVX_Op<"rsqrt", [NoSideEffect, SameOperandsAndResultType]> {
+  let summary = "Rsqrt";
+  let arguments = (ins VectorOfLengthAndType<[8], [F32]>:$a);
+  let results = (outs VectorOfLengthAndType<[8], [F32]>:$b);
+  let assemblyFormat = "$a attr-dict `:` type($a)";
+}
+
+def RsqrtIntrOp : AVX_IntrOp<"rsqrt.ps.256", 1, [NoSideEffect,
+  SameOperandsAndResultType]> {
+  let arguments = (ins VectorOfLengthAndType<[8], [F32]>:$a);
+}
+
 #endif // X86VECTOR_OPS
