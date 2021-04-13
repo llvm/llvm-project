@@ -65,7 +65,7 @@ class TestGdbRemoteAttachOrWait(gdbremote_testcase.GdbRemoteTestCaseBase):
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
 
-        self.add_no_ack_remote_stream()
+        self.do_handshake()
         self.test_sequence.add_log_lines([
             # Do the attach.
             "read packet: $vAttachOrWait;{}#00".format(lldbgdbserverutils.gdbremote_hex_encode_string(exe)),
