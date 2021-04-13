@@ -92,4 +92,54 @@ SUBROUTINE ORDERED_BAD(N)
   END DO
   !$OMP END TASKLOOP
 
+  !$OMP CRITICAL  
+    C =  C - A * B
+    !$OMP MASTER
+    DO I = 1,N
+      !ERROR: `ORDERED` region may not be closely nested inside of `CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` region.
+      !$OMP ORDERED 
+      CALL WORK(I)
+      !$OMP END ORDERED
+    END DO
+    !$OMP END MASTER
+  !$OMP END CRITICAL
+
+  !$OMP ORDERED  
+    C =  C - A * B
+    !$OMP MASTER
+    DO I = 1,N
+      !ERROR: `ORDERED` region may not be closely nested inside of `CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` region.
+      !$OMP ORDERED 
+      CALL WORK(I)
+      !$OMP END ORDERED
+    END DO
+    !$OMP END MASTER
+  !$OMP END ORDERED
+
+  !$OMP TASK  
+    C =  C - A * B
+    !$OMP MASTER
+    DO I = 1,N
+      !ERROR: `ORDERED` region may not be closely nested inside of `CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` region.
+      !$OMP ORDERED 
+      CALL WORK(I)
+      !$OMP END ORDERED
+    END DO
+    !$OMP END MASTER
+  !$OMP END TASK
+
+  !$OMP TASKLOOP
+  DO J= 1,N  
+    C =  C - A * B
+    !$OMP MASTER
+    DO I = 1,N
+      !ERROR: `ORDERED` region may not be closely nested inside of `CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` region.
+      !$OMP ORDERED 
+      CALL WORK(I)
+      !$OMP END ORDERED
+    END DO
+    !$OMP END MASTER
+  END DO
+  !$OMP END TASKLOOP
+
 END SUBROUTINE ORDERED_BAD

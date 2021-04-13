@@ -394,8 +394,7 @@ void OmpStructureChecker::CheckIfDoOrderedClause(
     }
     // Other disallowed nestings, these directives do not support
     // ordered clause in them, so no need to check
-    else if (llvm::omp::nestedOrderedErrSet.test(
-                 GetContextParent().directive)) {
+    else if (IsCloselyNestedRegion(llvm::omp::nestedOrderedErrSet)) {
       context_.Say(blkDirective.source,
           "`ORDERED` region may not be closely nested inside of "
           "`CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` region."_err_en_US);
