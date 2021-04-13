@@ -234,10 +234,12 @@ private:
 };
 
 class LCMain : public LoadCommand {
-  uint32_t getSize() const override { return sizeof(entry_point_command); }
+  uint32_t getSize() const override {
+    return sizeof(structs::entry_point_command);
+  }
 
   void writeTo(uint8_t *buf) const override {
-    auto *c = reinterpret_cast<entry_point_command *>(buf);
+    auto *c = reinterpret_cast<structs::entry_point_command *>(buf);
     c->cmd = LC_MAIN;
     c->cmdsize = getSize();
 
