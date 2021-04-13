@@ -140,10 +140,10 @@ public:
   int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
   unsigned getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
                                     bool Insert, bool Extract);
-  int getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
-                      unsigned AddressSpace,
-                      TTI::TargetCostKind CostKind,
-                      const Instruction *I = nullptr);
+  InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
+                                  MaybeAlign Alignment, unsigned AddressSpace,
+                                  TTI::TargetCostKind CostKind,
+                                  const Instruction *I = nullptr);
   InstructionCost
   getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                         unsigned AddressSpace,
@@ -186,17 +186,17 @@ public:
                                          bool IsPairwiseForm, bool IsUnsigned,
                                          TTI::TargetCostKind CostKind);
 
-  int getInterleavedMemoryOpCost(
+  InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
       bool UseMaskForCond = false, bool UseMaskForGaps = false);
-  int getInterleavedMemoryOpCostAVX512(
+  InstructionCost getInterleavedMemoryOpCostAVX512(
       unsigned Opcode, FixedVectorType *VecTy, unsigned Factor,
       ArrayRef<unsigned> Indices, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
       bool UseMaskForCond = false, bool UseMaskForGaps = false);
-  int getInterleavedMemoryOpCostAVX2(
+  InstructionCost getInterleavedMemoryOpCostAVX2(
       unsigned Opcode, FixedVectorType *VecTy, unsigned Factor,
       ArrayRef<unsigned> Indices, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
@@ -240,8 +240,9 @@ private:
   InstructionCost getGSScalarCost(unsigned Opcode, Type *DataTy,
                                   bool VariableMask, Align Alignment,
                                   unsigned AddressSpace);
-  int getGSVectorCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                      Align Alignment, unsigned AddressSpace);
+  InstructionCost getGSVectorCost(unsigned Opcode, Type *DataTy,
+                                  const Value *Ptr, Align Alignment,
+                                  unsigned AddressSpace);
 
   int getGatherOverhead() const;
   int getScatterOverhead() const;
