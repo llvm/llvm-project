@@ -222,6 +222,10 @@ public:
                                      lldb::StateType state) = 0;
 
     virtual void DidExec(NativeProcessProtocol *process) = 0;
+
+    virtual void
+    NewSubprocess(NativeProcessProtocol *parent_process,
+                  std::unique_ptr<NativeProcessProtocol> child_process) = 0;
   };
 
   virtual Status GetLoadedModuleFileSpec(const char *module_path,

@@ -249,14 +249,14 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
 
   {
     std::lock_guard<std::recursive_mutex> guard(m_debugged_process_mutex);
-    assert(!m_debugged_process_up && "lldb-server creating debugged "
-                                     "process but one already exists");
+    assert(m_debugged_processes.empty() && "lldb-server creating debugged "
+                                           "process but one already exists");
     auto process_or =
         m_process_factory.Launch(m_process_launch_info, *this, m_mainloop);
     if (!process_or)
       return Status(process_or.takeError());
-    m_debugged_process_up = std::move(*process_or);
-    m_continue_process = m_current_process = m_debugged_process_up.get();
+    m_continue_process = m_current_process = process_or->get();
+    m_debugged_processes[m_current_process->GetID()] = std::move(*process_or);
   }
 
   SetEnabledExtensions(*m_current_process);
@@ -273,10 +273,10 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
     LLDB_LOG(log,
              "pid = {0}: setting up stdout/stderr redirection via $O "
              "gdb-remote commands",
-             m_debugged_process_up->GetID());
+             m_current_process->GetID());
 
     // Setup stdout/stderr mapping from inferior to $O
-    auto terminal_fd = m_debugged_process_up->GetTerminalFileDescriptor();
+    auto terminal_fd = m_current_process->GetTerminalFileDescriptor();
     if (terminal_fd >= 0) {
       LLDB_LOGF(log,
                 "ProcessGDBRemoteCommunicationServerLLGS::%s setting "
@@ -295,12 +295,12 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
     LLDB_LOG(log,
              "pid = {0} skipping stdout/stderr redirection via $O: inferior "
              "will communicate over client-provided file descriptors",
-             m_debugged_process_up->GetID());
+             m_current_process->GetID());
   }
 
   printf("Launched '%s' as process %" PRIu64 "...\n",
          m_process_launch_info.GetArguments().GetArgumentAtIndex(0),
-         m_debugged_process_up->GetID());
+         m_current_process->GetID());
 
   return Status();
 }
@@ -312,12 +312,11 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
 
   // Before we try to attach, make sure we aren't already monitoring something
   // else.
-  if (m_debugged_process_up &&
-      m_debugged_process_up->GetID() != LLDB_INVALID_PROCESS_ID)
+  if (!m_debugged_processes.empty())
     return Status("cannot attach to process %" PRIu64
                   " when another process with pid %" PRIu64
                   " is being debugged.",
-                  pid, m_debugged_process_up->GetID());
+                  pid, m_current_process->GetID());
 
   // Try to attach.
   auto process_or = m_process_factory.Attach(pid, *this, m_mainloop);
@@ -327,12 +326,12 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
                                   status);
     return status;
   }
-  m_debugged_process_up = std::move(*process_or);
-  m_continue_process = m_current_process = m_debugged_process_up.get();
+  m_continue_process = m_current_process = process_or->get();
+  m_debugged_processes[m_current_process->GetID()] = std::move(*process_or);
   SetEnabledExtensions(*m_current_process);
 
   // Setup stdout/stderr mapping from inferior.
-  auto terminal_fd = m_debugged_process_up->GetTerminalFileDescriptor();
+  auto terminal_fd = m_current_process->GetTerminalFileDescriptor();
   if (terminal_fd >= 0) {
     LLDB_LOGF(log,
               "ProcessGDBRemoteCommunicationServerLLGS::%s setting "
@@ -1058,6 +1057,15 @@ void GDBRemoteCommunicationServerLLGS::ProcessStateChanged(
 
 void GDBRemoteCommunicationServerLLGS::DidExec(NativeProcessProtocol *process) {
   ClearProcessSpecificData();
+}
+
+void GDBRemoteCommunicationServerLLGS::NewSubprocess(
+    NativeProcessProtocol *parent_process,
+    std::unique_ptr<NativeProcessProtocol> child_process) {
+  lldb::pid_t child_pid = child_process->GetID();
+  assert(child_pid != LLDB_INVALID_PROCESS_ID);
+  assert(m_debugged_processes.find(child_pid) == m_debugged_processes.end());
+  m_debugged_processes[child_pid] = std::move(child_process);
 }
 
 void GDBRemoteCommunicationServerLLGS::DataAvailableCallback() {
@@ -3228,19 +3236,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vAttachOrWait(
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_D(StringExtractorGDBRemote &packet) {
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
-
   StopSTDIOForwarding();
-
-  // Fail if we don't have a current process.
-  if (!m_current_process ||
-      (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID)) {
-    LLDB_LOGF(
-        log,
-        "GDBRemoteCommunicationServerLLGS::%s failed, no process available",
-        __FUNCTION__);
-    return SendErrorResponse(0x15);
-  }
 
   lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
 
@@ -3256,19 +3252,32 @@ GDBRemoteCommunicationServerLLGS::Handle_D(StringExtractorGDBRemote &packet) {
       return SendIllFormedResponse(packet, "D failed to parse the process id");
   }
 
-  if (pid != LLDB_INVALID_PROCESS_ID && m_current_process->GetID() != pid) {
-    return SendIllFormedResponse(packet, "Invalid pid");
+  // Detach forked children if their PID was specified *or* no PID was requested
+  // (i.e. detach-all packet).
+  llvm::Error detach_error = llvm::Error::success();
+  bool detached = false;
+  for (auto it = m_debugged_processes.begin();
+       it != m_debugged_processes.end();) {
+    if (pid == LLDB_INVALID_PROCESS_ID || pid == it->first) {
+      if (llvm::Error e = it->second->Detach().ToError())
+        detach_error = llvm::joinErrors(std::move(detach_error), std::move(e));
+      else {
+        if (it->second.get() == m_current_process)
+          m_current_process = nullptr;
+        if (it->second.get() == m_continue_process)
+          m_continue_process = nullptr;
+        it = m_debugged_processes.erase(it);
+        detached = true;
+        continue;
+      }
+    }
+    ++it;
   }
 
-  const Status error = m_current_process->Detach();
-  if (error.Fail()) {
-    LLDB_LOGF(log,
-              "GDBRemoteCommunicationServerLLGS::%s failed to detach from "
-              "pid %" PRIu64 ": %s\n",
-              __FUNCTION__, m_current_process->GetID(), error.AsCString());
-    return SendErrorResponse(0x01);
-  }
-
+  if (detach_error)
+    return SendErrorResponse(std::move(detach_error));
+  if (!detached)
+    return SendErrorResponse(Status("PID %" PRIu64 " not traced", pid));
   return SendOKResponse();
 }
 
@@ -3616,8 +3625,8 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
   if (bool(m_extensions_supported & Extension::vfork))
     ret.push_back("vfork-events+");
 
-  if (m_debugged_process_up)
-    SetEnabledExtensions(*m_debugged_process_up);
+  for (auto &x : m_debugged_processes)
+    SetEnabledExtensions(*x.second);
   return ret;
 }
 
