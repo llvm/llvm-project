@@ -18,6 +18,55 @@
 
 using namespace Fortran::runtime;
 
+// The real*10 and real*16 placeholders below are used to force the
+// compilation of the real*10 and real*16 method names on systems that
+// may not have them in their runtime library. This can occur in the
+// case of cross compilation, for example.
+
+/// Placeholder for real*10 version of RRSpacing Intrinsic
+struct ForcedRRSpacing10 {
+  static constexpr const char *name = QuoteKey(RTNAME(RRSpacing10));
+  static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF80(ctx);
+      return mlir::FunctionType::get(ctx, {ty}, {ty});
+    };
+  }
+};
+
+/// Placeholder for real*16 version of RRSpacing Intrinsic
+struct ForcedRRSpacing16 {
+  static constexpr const char *name = QuoteKey(RTNAME(RRSpacing16));
+  static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF128(ctx);
+      return mlir::FunctionType::get(ctx, {ty}, {ty});
+    };
+  }
+};
+
+/// Placeholder for real*10 version of Spacing Intrinsic
+struct ForcedSpacing10 {
+  static constexpr const char *name = QuoteKey(RTNAME(Spacing10));
+  static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF80(ctx);
+      return mlir::FunctionType::get(ctx, {ty}, {ty});
+    };
+  }
+};
+
+/// Placeholder for real*16 version of Spacing Intrinsic
+struct ForcedSpacing16 {
+  static constexpr const char *name = QuoteKey(RTNAME(Spacing16));
+  static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF128(ctx);
+      return mlir::FunctionType::get(ctx, {ty}, {ty});
+    };
+  }
+};
+
 /// Generate call to RRSpacing intrinsic runtime routine. 
 mlir::Value
 Fortran::lower::genRRSpacing(Fortran::lower::FirOpBuilder &builder, 
@@ -29,13 +78,10 @@ Fortran::lower::genRRSpacing(Fortran::lower::FirOpBuilder &builder,
     func = Fortran::lower::getRuntimeFunc<mkRTKey(RRSpacing4)>(loc, builder);
   else if (fltTy.isF64())
     func = Fortran::lower::getRuntimeFunc<mkRTKey(RRSpacing8)>(loc, builder);
-#if LONG_DOUBLE == 80
   else if (fltTy.isF80())
-    func = Fortran::lower::getRuntimeFunc<mkRTKey(RRSpacing10)>(loc, builder);
-#elif LONG_DOUBLE == 128
+    func = Fortran::lower::getRuntimeFunc<ForcedRRSpacing10>(loc, builder);
   else if (fltTy.isF128())
-    func = Fortran::lower::getRuntimeFunc<mkRTKey(RRSpacing16)>(loc, builder);
-#endif
+    func = Fortran::lower::getRuntimeFunc<ForcedRRSpacing16>(loc, builder);
   else
     TODO(loc, "unsupported real kind in RRSpacing lowering");
 
@@ -58,13 +104,10 @@ Fortran::lower::genSpacing(Fortran::lower::FirOpBuilder &builder,
     func = Fortran::lower::getRuntimeFunc<mkRTKey(Spacing4)>(loc, builder);
   else if (fltTy.isF64())
     func = Fortran::lower::getRuntimeFunc<mkRTKey(Spacing8)>(loc, builder);
-#if LONG_DOUBLE == 80
   else if (fltTy.isF80())
-    func = Fortran::lower::getRuntimeFunc<mkRTKey(Spacing10)>(loc, builder);
-#elif LONG_DOUBLE == 128
+    func = Fortran::lower::getRuntimeFunc<ForcedSpacing10>(loc, builder);
   else if (fltTy.isF128())
-    func = Fortran::lower::getRuntimeFunc<mkRTKey(Spacing16)>(loc, builder);
-#endif
+    func = Fortran::lower::getRuntimeFunc<ForcedSpacing16>(loc, builder);
   else
     TODO(loc, "unsupported real kind in Spacing lowering");
 
