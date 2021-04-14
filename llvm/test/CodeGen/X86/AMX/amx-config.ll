@@ -12,15 +12,15 @@ define dso_local void @test_api(i32 %0, i16 signext %1, i16 signext %2) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; AVX512-NEXT:    vmovdqu64 %zmm0, -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    testl %edi, %edi
 ; AVX512-NEXT:    movsbl %sil, %eax
-; AVX512-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    je .LBB0_2
 ; AVX512-NEXT:  # %bb.1:
@@ -46,15 +46,15 @@ define dso_local void @test_api(i32 %0, i16 signext %1, i16 signext %2) {
 ; AVX2-NEXT:    vxorps %ymm0, %ymm0, %ymm0
 ; AVX2-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    testl %edi, %edi
 ; AVX2-NEXT:    movsbl %sil, %eax
-; AVX2-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    je .LBB0_2
 ; AVX2-NEXT:  # %bb.1:
@@ -82,15 +82,15 @@ define dso_local void @test_api(i32 %0, i16 signext %1, i16 signext %2) {
 ; SSE2-NEXT:    movups %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movups %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movups %xmm0, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    testl %edi, %edi
 ; SSE2-NEXT:    movsbl %sil, %eax
-; SSE2-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    je .LBB0_2
 ; SSE2-NEXT:  # %bb.1:

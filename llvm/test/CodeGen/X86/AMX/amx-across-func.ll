@@ -29,12 +29,12 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %bpl, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %bpl, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %bpl, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %bpl, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl $buf, %eax
 ; CHECK-NEXT:    movl $32, %r14d
@@ -71,12 +71,12 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; IPRA-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; IPRA-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; IPRA-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movb $8, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movw %si, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movw %si, {{[0-9]+}}(%rsp)
+; IPRA-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movl $buf, %eax
 ; IPRA-NEXT:    movl $32, %ecx
@@ -115,11 +115,11 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; CHECK-NEXT:    movl %edi, %r14d
 ; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    testl %r14d, %r14d
 ; CHECK-NEXT:    jg .LBB2_4
@@ -274,6 +274,9 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl $buf, %r14d
 ; CHECK-NEXT:    movl $32, %r15d
 ; CHECK-NEXT:    movw $8, %bp
@@ -282,9 +285,6 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; CHECK-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
-; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    testl %ebx, %ebx
 ; CHECK-NEXT:    jle .LBB3_3
