@@ -170,6 +170,8 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
     return;
   }
   const FlatAffineConstraints &sI = s.getFlatAffineConstraints(i);
+  assert(sI.getNumLocalIds() == 0 &&
+         "Subtracting sets with divisions is not yet supported!");
   unsigned initialSnapshot = simplex.getSnapshot();
   unsigned offset = simplex.numConstraints();
   simplex.intersectFlatAffineConstraints(sI);
@@ -254,6 +256,8 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
 PresburgerSet PresburgerSet::getSetDifference(FlatAffineConstraints fac,
                                               const PresburgerSet &set) {
   assertDimensionsCompatible(fac, set);
+  assert(fac.getNumLocalIds() == 0 &&
+         "Subtracting sets with divisions is not yet supported!");
   if (fac.isEmptyByGCDTest())
     return PresburgerSet::getEmptySet(fac.getNumDimIds(),
                                       fac.getNumSymbolIds());
