@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
   // Initialize test environment.
   const Tester test(testFilename, testArguments);
 
-  if (test.isInteresting(inputFilename) != Tester::Interestingness::True)
+  if (!test.isInteresting(inputFilename))
     llvm::report_fatal_error(
         "Input test case does not exhibit interesting behavior");
 
@@ -118,10 +118,11 @@ int main(int argc, char **argv) {
 
   } else if (passTestSpecifier == "function-reducer") {
 
-    // Reduction tree pass with Reducer variant generation and single path
+    // Reduction tree pass with OpReducer variant generation and single path
     // traversal.
-    pm.addPass(std::make_unique<ReductionTreePass>(
-        FuncOp::getOperationName(), TraversalMode::SinglePath, test));
+    pm.addPass(
+        std::make_unique<ReductionTreePass<OpReducer<FuncOp>, SinglePath>>(
+            test));
   }
 
   ModuleOp m = moduleRef.get().clone();
