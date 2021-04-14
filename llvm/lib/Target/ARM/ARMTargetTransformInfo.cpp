@@ -746,7 +746,8 @@ InstructionCost ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     // As general rule, fp converts that were not matched above are scalarized
     // and cost 1 vcvt for each lane, so long as the instruction is available.
     // If not it will become a series of function calls.
-    const int CallCost = getCallInstrCost(nullptr, Dst, {Src}, CostKind);
+    const InstructionCost CallCost =
+        getCallInstrCost(nullptr, Dst, {Src}, CostKind);
     int Lanes = 1;
     if (SrcTy.isFixedLengthVector())
       Lanes = SrcTy.getVectorNumElements();

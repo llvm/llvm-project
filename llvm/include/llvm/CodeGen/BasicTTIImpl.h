@@ -1882,8 +1882,9 @@ public:
   /// \param RetTy Return value types.
   /// \param Tys Argument types.
   /// \returns The cost of Call instruction.
-  unsigned getCallInstrCost(Function *F, Type *RetTy, ArrayRef<Type *> Tys,
-                     TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) {
+  InstructionCost
+  getCallInstrCost(Function *F, Type *RetTy, ArrayRef<Type *> Tys,
+                   TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) {
     return 10;
   }
 
