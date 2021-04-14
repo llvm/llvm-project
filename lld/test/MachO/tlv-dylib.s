@@ -27,7 +27,7 @@
 # CHECK-DAG: __DATA_CONST __got          0x{{0*}}[[#%x, BAZ]] pointer 0   libtlv   _baz
 
 #--- libtlv.s
-.section	__DATA,__thread_vars,thread_local_variables
+.section __DATA,__thread_vars,thread_local_variables
 .globl _foo, _bar, _baz
 _foo:
 _bar:

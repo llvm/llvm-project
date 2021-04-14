@@ -10,8 +10,8 @@ struct [[no_unique_address]] S { // expected-error {{only applies to non-bit-fie
   [[no_unique_address]] static void sf(); // expected-error {{only applies to non-bit-field non-static data members}} unsupported-warning {{unknown}}
   [[no_unique_address]] int b : 3; // expected-error {{only applies to non-bit-field non-static data members}} unsupported-warning {{unknown}}
 
-  [[no_unique_address, no_unique_address]] int duplicated; // expected-error {{cannot appear multiple times}}
-  // unsupported-error@-1 {{cannot appear multiple times}} unsupported-warning@-1 2{{unknown}}
+  [[no_unique_address, no_unique_address]] int duplicated; // ok
+  // unsupported-warning@-1 2{{unknown}}
   [[no_unique_address]] [[no_unique_address]] int duplicated2; // unsupported-warning 2{{unknown}}
   [[no_unique_address()]] int arglist; // expected-error {{cannot have an argument list}} unsupported-warning {{unknown}}
 

@@ -43,14 +43,14 @@ static inline T trunc(T x) {
 
   // If the exponent is such that abs(x) is less than 1, then return 0.
   if (exponent <= -1) {
-    if (bits.sign)
+    if (bits.encoding.sign)
       return T(-0.0);
     else
       return T(0.0);
   }
 
   int trimSize = MantissaWidth<T>::value - exponent;
-  bits.mantissa = (bits.mantissa >> trimSize) << trimSize;
+  bits.encoding.mantissa = (bits.encoding.mantissa >> trimSize) << trimSize;
   return bits;
 }
 
@@ -63,7 +63,7 @@ static inline T ceil(T x) {
   if (bits.isInfOrNaN() || bits.isZero())
     return x;
 
-  bool isNeg = bits.sign;
+  bool isNeg = bits.encoding.sign;
   int exponent = bits.getExponent();
 
   // If the exponent is greater than the most negative mantissa
@@ -79,7 +79,7 @@ static inline T ceil(T x) {
   }
 
   uint32_t trimSize = MantissaWidth<T>::value - exponent;
-  bits.mantissa = (bits.mantissa >> trimSize) << trimSize;
+  bits.encoding.mantissa = (bits.encoding.mantissa >> trimSize) << trimSize;
   T truncValue = T(bits);
 
   // If x is already an integer, return it.
@@ -97,7 +97,7 @@ template <typename T,
           cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
 static inline T floor(T x) {
   FPBits<T> bits(x);
-  if (bits.sign) {
+  if (bits.encoding.sign) {
     return -ceil(-x);
   } else {
     return trunc(x);
@@ -114,7 +114,7 @@ static inline T round(T x) {
   if (bits.isInfOrNaN() || bits.isZero())
     return x;
 
-  bool isNeg = bits.sign;
+  bool isNeg = bits.encoding.sign;
   int exponent = bits.getExponent();
 
   // If the exponent is greater than the most negative mantissa
@@ -139,8 +139,8 @@ static inline T round(T x) {
   }
 
   uint32_t trimSize = MantissaWidth<T>::value - exponent;
-  bool halfBitSet = bits.mantissa & (UIntType(1) << (trimSize - 1));
-  bits.mantissa = (bits.mantissa >> trimSize) << trimSize;
+  bool halfBitSet = bits.encoding.mantissa & (UIntType(1) << (trimSize - 1));
+  bits.encoding.mantissa = (bits.encoding.mantissa >> trimSize) << trimSize;
   T truncValue = T(bits);
 
   // If x is already an integer, return it.
@@ -166,7 +166,7 @@ static inline T roundUsingCurrentRoundingMode(T x) {
   if (bits.isInfOrNaN() || bits.isZero())
     return x;
 
-  bool isNeg = bits.sign;
+  bool isNeg = bits.encoding.sign;
   int exponent = bits.getExponent();
   int roundingMode = getRound();
 
@@ -184,7 +184,7 @@ static inline T roundUsingCurrentRoundingMode(T x) {
     case FE_TOWARDZERO:
       return isNeg ? T(-0.0) : T(0.0);
     case FE_TONEAREST:
-      if (exponent <= -2 || bits.mantissa == 0)
+      if (exponent <= -2 || bits.encoding.mantissa == 0)
         return isNeg ? T(-0.0) : T(0.0); // abs(x) <= 0.5
       else
         return isNeg ? T(-1.0) : T(1.0); // abs(x) > 0.5
@@ -195,19 +195,19 @@ static inline T roundUsingCurrentRoundingMode(T x) {
 
   uint32_t trimSize = MantissaWidth<T>::value - exponent;
   FPBits<T> newBits = bits;
-  newBits.mantissa = (bits.mantissa >> trimSize) << trimSize;
+  newBits.encoding.mantissa = (bits.encoding.mantissa >> trimSize) << trimSize;
   T truncValue = T(newBits);
 
   // If x is already an integer, return it.
   if (truncValue == x)
     return x;
 
-  UIntType trimValue = bits.mantissa & ((UIntType(1) << trimSize) - 1);
+  UIntType trimValue = bits.encoding.mantissa & ((UIntType(1) << trimSize) - 1);
   UIntType halfValue = (UIntType(1) << (trimSize - 1));
   // If exponent is 0, trimSize will be equal to the mantissa width, and
   // truncIsOdd` will not be correct. So, we handle it as a special case
   // below.
-  UIntType truncIsOdd = newBits.mantissa & (UIntType(1) << trimSize);
+  UIntType truncIsOdd = newBits.encoding.mantissa & (UIntType(1) << trimSize);
 
   switch (roundingMode) {
   case FE_DOWNWARD:
@@ -255,18 +255,18 @@ static inline I roundedFloatToSignedInteger(F x) {
 
   if (bits.isInfOrNaN()) {
     setDomainErrorAndRaiseInvalid();
-    return bits.sign ? IntegerMin : IntegerMax;
+    return bits.encoding.sign ? IntegerMin : IntegerMax;
   }
 
   int exponent = bits.getExponent();
   constexpr int exponentLimit = sizeof(I) * 8 - 1;
   if (exponent > exponentLimit) {
     setDomainErrorAndRaiseInvalid();
-    return bits.sign ? IntegerMin : IntegerMax;
+    return bits.encoding.sign ? IntegerMin : IntegerMax;
   } else if (exponent == exponentLimit) {
-    if (bits.sign == 0 || bits.mantissa != 0) {
+    if (bits.encoding.sign == 0 || bits.encoding.mantissa != 0) {
       setDomainErrorAndRaiseInvalid();
-      return bits.sign ? IntegerMin : IntegerMax;
+      return bits.encoding.sign ? IntegerMin : IntegerMax;
     }
     // If the control reaches here, then it means that the rounded
     // value is the most negative number for the signed integer type I.

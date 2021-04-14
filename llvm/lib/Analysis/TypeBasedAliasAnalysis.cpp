@@ -379,7 +379,7 @@ AliasResult TypeBasedAAResult::alias(const MemoryLocation &LocA,
     return AAResultBase::alias(LocA, LocB, AAQI);
 
   // Otherwise return a definitive result.
-  return NoAlias;
+  return AliasResult::NoAlias;
 }
 
 bool TypeBasedAAResult::pointsToConstantMemory(const MemoryLocation &Loc,

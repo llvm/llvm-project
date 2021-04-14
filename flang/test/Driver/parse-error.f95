@@ -1,7 +1,6 @@
-! RUN: not %flang-new -fc1 -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix=ERROR
-! RUN: not %f18 -syntax-only %s 2>&1 | FileCheck %s --check-prefix=ERROR
+! Verify that parsing errors are correctly reported by the driver
 
-! REQUIRES: new-flang-driver
+! RUN: not %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
 ! ERROR: Could not parse {{.*}}parse-error.f95
 

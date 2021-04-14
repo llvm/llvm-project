@@ -1,7 +1,8 @@
 // RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-std -convert-vector-to-llvm="enable-amx" -convert-std-to-llvm | \
 // RUN: mlir-translate -mlir-to-llvmir | \
-// RUN: %lli --entry-function=entry --mattr="+amx-tile,+amx-int8,+amx-bf16" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: %lli --jit-kind=mcjit --entry-function=entry --mattr="+amx-tile,+amx-int8,+amx-bf16" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
+// TODO: drop lli's --jit-kind flag once PR#49906 (https://bugs.llvm.org/show_bug.cgi?id=49906) is fixed.
 
 // Note: To run this test, your CPU must support AMX.
 
@@ -11,7 +12,7 @@ func @tilezero(%arg0: memref<?x?xi32>, %i: index, %j: index) {
   return
 }
 
-func @entry() {
+func @entry() -> i32 {
   %i0 = constant 0: i32
   %i1 = constant 1: i32
   %c0 = constant 0: index
@@ -92,5 +93,5 @@ func @entry() {
   // Release resources.
   memref.dealloc %a : memref<?x?xi32>
 
-  return
+  return %i0 : i32
 }

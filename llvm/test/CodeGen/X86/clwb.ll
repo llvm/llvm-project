@@ -4,8 +4,8 @@
 ; RUN: llc < %s -mtriple=i686-apple-darwin -mattr=clwb | FileCheck %s
 ; RUN: llc < %s -mtriple=i686-apple-darwin -mcpu=skx | FileCheck %s
 ; RUN: not --crash llc < %s -mtriple=i686-apple-darwin -mcpu=cannonlake 2>&1 | FileCheck %s --check-prefix=CNL
-; RUN: llc < %s -mtriple=i686-apple-darwin -mcpu=icelake-client | FileCheck %s
 ; RUN: llc < %s -mtriple=i686-apple-darwin -mcpu=icelake-server | FileCheck %s
+; RUN: llc < %s -mtriple=i686-apple-darwin -mcpu=tigerlake | FileCheck %s
 
 ; CNL: LLVM ERROR: Cannot select: intrinsic %llvm.x86.clwb
 

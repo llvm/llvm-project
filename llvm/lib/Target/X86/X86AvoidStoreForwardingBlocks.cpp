@@ -529,10 +529,9 @@ bool X86AvoidSFBPass::alias(const MachineMemOperand &Op1,
   int64_t Overlapa = Op1.getSize() + Op1.getOffset() - MinOffset;
   int64_t Overlapb = Op2.getSize() + Op2.getOffset() - MinOffset;
 
-  AliasResult AAResult =
-      AA->alias(MemoryLocation(Op1.getValue(), Overlapa, Op1.getAAInfo()),
-                MemoryLocation(Op2.getValue(), Overlapb, Op2.getAAInfo()));
-  return AAResult != NoAlias;
+  return !AA->isNoAlias(
+      MemoryLocation(Op1.getValue(), Overlapa, Op1.getAAInfo()),
+      MemoryLocation(Op2.getValue(), Overlapb, Op2.getAAInfo()));
 }
 
 void X86AvoidSFBPass::findPotentiallylBlockedCopies(MachineFunction &MF) {

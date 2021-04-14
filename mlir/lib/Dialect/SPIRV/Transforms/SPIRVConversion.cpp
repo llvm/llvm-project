@@ -42,14 +42,15 @@ static LogicalResult checkExtensionRequirements(
     if (targetEnv.allows(ors))
       continue;
 
-    SmallVector<StringRef, 4> extStrings;
-    for (spirv::Extension ext : ors)
-      extStrings.push_back(spirv::stringifyExtension(ext));
+    LLVM_DEBUG({
+      SmallVector<StringRef> extStrings;
+      for (spirv::Extension ext : ors)
+        extStrings.push_back(spirv::stringifyExtension(ext));
 
-    LLVM_DEBUG(llvm::dbgs()
-               << label << " illegal: requires at least one extension in ["
-               << llvm::join(extStrings, ", ")
-               << "] but none allowed in target environment\n");
+      llvm::dbgs() << label << " illegal: requires at least one extension in ["
+                   << llvm::join(extStrings, ", ")
+                   << "] but none allowed in target environment\n";
+    });
     return failure();
   }
   return success();
@@ -69,17 +70,42 @@ static LogicalResult checkCapabilityRequirements(
     if (targetEnv.allows(ors))
       continue;
 
-    SmallVector<StringRef, 4> capStrings;
-    for (spirv::Capability cap : ors)
-      capStrings.push_back(spirv::stringifyCapability(cap));
+    LLVM_DEBUG({
+      SmallVector<StringRef> capStrings;
+      for (spirv::Capability cap : ors)
+        capStrings.push_back(spirv::stringifyCapability(cap));
 
-    LLVM_DEBUG(llvm::dbgs()
-               << label << " illegal: requires at least one capability in ["
-               << llvm::join(capStrings, ", ")
-               << "] but none allowed in target environment\n");
+      llvm::dbgs() << label << " illegal: requires at least one capability in ["
+                   << llvm::join(capStrings, ", ")
+                   << "] but none allowed in target environment\n";
+    });
     return failure();
   }
   return success();
+}
+
+/// Returns true if the given `storageClass` needs explicit layout when used in
+/// Shader environments.
+static bool needsExplicitLayout(spirv::StorageClass storageClass) {
+  switch (storageClass) {
+  case spirv::StorageClass::PhysicalStorageBuffer:
+  case spirv::StorageClass::PushConstant:
+  case spirv::StorageClass::StorageBuffer:
+  case spirv::StorageClass::Uniform:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Wraps the given `elementType` in a struct and gets the pointer to the
+/// struct. This is used to satisfy Vulkan interface requirements.
+static spirv::PointerType
+wrapInStructAndGetPointer(Type elementType, spirv::StorageClass storageClass) {
+  auto structType = needsExplicitLayout(storageClass)
+                        ? spirv::StructType::get(elementType, /*offsetInfo=*/0)
+                        : spirv::StructType::get(elementType);
+  return spirv::PointerType::get(structType, storageClass);
 }
 
 //===----------------------------------------------------------------------===//
@@ -390,12 +416,7 @@ static Type convertBoolMemrefType(const spirv::TargetEnv &targetEnv,
   auto arrayType =
       spirv::ArrayType::get(arrayElemType, arrayElemCount, *arrayElemSize);
 
-  // Wrap in a struct to satisfy Vulkan interface requirements. Memrefs with
-  // workgroup storage class do not need the struct to be laid out explicitly.
-  auto structType = *storageClass == spirv::StorageClass::Workgroup
-                        ? spirv::StructType::get(arrayType)
-                        : spirv::StructType::get(arrayType, 0);
-  return spirv::PointerType::get(structType, *storageClass);
+  return wrapInStructAndGetPointer(arrayType, *storageClass);
 }
 
 static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
@@ -440,11 +461,17 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
     return nullptr;
   }
 
+  Optional<int64_t> arrayElemSize = getTypeNumBytes(options, arrayElemType);
+  if (!arrayElemSize) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot deduce converted element size\n");
+    return nullptr;
+  }
+
   if (!type.hasStaticShape()) {
-    auto arrayType = spirv::RuntimeArrayType::get(arrayElemType, *elementSize);
-    // Wrap in a struct to satisfy Vulkan interface requirements.
-    auto structType = spirv::StructType::get(arrayType, 0);
-    return spirv::PointerType::get(structType, *storageClass);
+    auto arrayType =
+        spirv::RuntimeArrayType::get(arrayElemType, *arrayElemSize);
+    return wrapInStructAndGetPointer(arrayType, *storageClass);
   }
 
   Optional<int64_t> memrefSize = getTypeNumBytes(options, type);
@@ -456,22 +483,11 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
 
   auto arrayElemCount = *memrefSize / *elementSize;
 
-  Optional<int64_t> arrayElemSize = getTypeNumBytes(options, arrayElemType);
-  if (!arrayElemSize) {
-    LLVM_DEBUG(llvm::dbgs()
-               << type << " illegal: cannot deduce converted element size\n");
-    return nullptr;
-  }
 
   auto arrayType =
       spirv::ArrayType::get(arrayElemType, arrayElemCount, *arrayElemSize);
 
-  // Wrap in a struct to satisfy Vulkan interface requirements. Memrefs with
-  // workgroup storage class do not need the struct to be laid out explicitly.
-  auto structType = *storageClass == spirv::StorageClass::Workgroup
-                        ? spirv::StructType::get(arrayType)
-                        : spirv::StructType::get(arrayType, 0);
-  return spirv::PointerType::get(structType, *storageClass);
+  return wrapInStructAndGetPointer(arrayType, *storageClass);
 }
 
 SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,

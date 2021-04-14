@@ -631,69 +631,29 @@ define arm_aapcs_vfpcc <8 x i16> @ext_intrinsics_trunc_i16(<8 x i16> %a, <8 x i1
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    vmov.u16 r0, q1[2]
-; CHECK-NEXT:    vmov.u16 r1, q1[0]
-; CHECK-NEXT:    vmov q2, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
-; CHECK-NEXT:    vmov.u16 r0, q1[3]
-; CHECK-NEXT:    vmov.u16 r1, q1[1]
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
-; CHECK-NEXT:    vmov.u16 r0, q2[2]
-; CHECK-NEXT:    vmov.u16 r1, q2[0]
-; CHECK-NEXT:    vmovlb.u16 q0, q0
-; CHECK-NEXT:    vmov q3[2], q3[0], r1, r0
-; CHECK-NEXT:    vmov.u16 r0, q2[3]
-; CHECK-NEXT:    vmov.u16 r1, q2[1]
-; CHECK-NEXT:    vmov q3[3], q3[1], r1, r0
-; CHECK-NEXT:    vmov.u16 r1, q2[4]
-; CHECK-NEXT:    vmovlb.s16 q3, q3
-; CHECK-NEXT:    vqadd.s32 q4, q3, q0
-; CHECK-NEXT:    vqadd.u32 q4, q4, q0
+; CHECK-NEXT:    vmovlb.u16 q2, q1
+; CHECK-NEXT:    vmovlb.s16 q3, q0
+; CHECK-NEXT:    vqadd.s32 q4, q3, q2
+; CHECK-NEXT:    vmovlt.u16 q1, q1
+; CHECK-NEXT:    vqadd.u32 q4, q4, q2
+; CHECK-NEXT:    vmovlt.s16 q0, q0
 ; CHECK-NEXT:    vqsub.s32 q4, q4, q3
-; CHECK-NEXT:    vqsub.u32 q4, q4, q0
+; CHECK-NEXT:    vqsub.u32 q4, q4, q2
 ; CHECK-NEXT:    vabs.s32 q4, q4
 ; CHECK-NEXT:    vmin.s32 q4, q4, q3
-; CHECK-NEXT:    vmax.s32 q4, q4, q0
+; CHECK-NEXT:    vmax.s32 q4, q4, q2
 ; CHECK-NEXT:    vmin.u32 q3, q4, q3
-; CHECK-NEXT:    vmax.u32 q3, q3, q0
-; CHECK-NEXT:    vmov r0, s12
-; CHECK-NEXT:    vmov.16 q0[0], r0
-; CHECK-NEXT:    vmov r0, s13
-; CHECK-NEXT:    vmov.16 q0[1], r0
-; CHECK-NEXT:    vmov r0, s14
-; CHECK-NEXT:    vmov.16 q0[2], r0
-; CHECK-NEXT:    vmov r0, s15
-; CHECK-NEXT:    vmov.16 q0[3], r0
-; CHECK-NEXT:    vmov.u16 r0, q2[6]
-; CHECK-NEXT:    vmov q3[2], q3[0], r1, r0
-; CHECK-NEXT:    vmov.u16 r0, q2[7]
-; CHECK-NEXT:    vmov.u16 r1, q2[5]
-; CHECK-NEXT:    vmov q3[3], q3[1], r1, r0
-; CHECK-NEXT:    vmov.u16 r0, q1[6]
-; CHECK-NEXT:    vmov.u16 r1, q1[4]
-; CHECK-NEXT:    vmov q2[2], q2[0], r1, r0
-; CHECK-NEXT:    vmov.u16 r0, q1[7]
-; CHECK-NEXT:    vmov.u16 r1, q1[5]
-; CHECK-NEXT:    vmov q2[3], q2[1], r1, r0
-; CHECK-NEXT:    vmovlb.u16 q1, q2
-; CHECK-NEXT:    vmovlb.s16 q2, q3
-; CHECK-NEXT:    vqadd.s32 q3, q2, q1
-; CHECK-NEXT:    vqadd.u32 q3, q3, q1
-; CHECK-NEXT:    vqsub.s32 q3, q3, q2
-; CHECK-NEXT:    vqsub.u32 q3, q3, q1
-; CHECK-NEXT:    vabs.s32 q3, q3
-; CHECK-NEXT:    vmin.s32 q3, q3, q2
-; CHECK-NEXT:    vmax.s32 q3, q3, q1
-; CHECK-NEXT:    vmin.u32 q2, q3, q2
-; CHECK-NEXT:    vmax.u32 q1, q2, q1
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov.16 q0[4], r0
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    vmov.16 q0[5], r0
-; CHECK-NEXT:    vmov r0, s6
-; CHECK-NEXT:    vmov.16 q0[6], r0
-; CHECK-NEXT:    vmov r0, s7
-; CHECK-NEXT:    vmov.16 q0[7], r0
+; CHECK-NEXT:    vqadd.s32 q4, q0, q1
+; CHECK-NEXT:    vqadd.u32 q4, q4, q1
+; CHECK-NEXT:    vqsub.s32 q4, q4, q0
+; CHECK-NEXT:    vqsub.u32 q4, q4, q1
+; CHECK-NEXT:    vabs.s32 q4, q4
+; CHECK-NEXT:    vmin.s32 q4, q4, q0
+; CHECK-NEXT:    vmax.s32 q4, q4, q1
+; CHECK-NEXT:    vmin.u32 q0, q4, q0
+; CHECK-NEXT:    vmax.u32 q1, q0, q1
+; CHECK-NEXT:    vmax.u32 q0, q3, q2
+; CHECK-NEXT:    vmovnt.i32 q0, q1
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
@@ -717,49 +677,30 @@ define arm_aapcs_vfpcc <8 x half> @ext_fpintrinsics_trunc_half(<8 x half> %a, <8
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    vmov q2, q0
-; CHECK-NEXT:    vcvtt.f32.f16 s3, s5
-; CHECK-NEXT:    vcvtt.f32.f16 s15, s9
-; CHECK-NEXT:    vcvtb.f32.f16 s2, s5
-; CHECK-NEXT:    vcvtb.f32.f16 s14, s9
-; CHECK-NEXT:    vcvtt.f32.f16 s1, s4
-; CHECK-NEXT:    vcvtt.f32.f16 s13, s8
-; CHECK-NEXT:    vcvtb.f32.f16 s0, s4
-; CHECK-NEXT:    vcvtb.f32.f16 s12, s8
-; CHECK-NEXT:    vabs.f32 q4, q3
-; CHECK-NEXT:    vminnm.f32 q4, q4, q3
-; CHECK-NEXT:    vmaxnm.f32 q4, q4, q0
-; CHECK-NEXT:    vfma.f32 q0, q4, q3
-; CHECK-NEXT:    vcvtt.f32.f16 s19, s11
-; CHECK-NEXT:    vrintp.f32 q0, q0
-; CHECK-NEXT:    vcvtb.f32.f16 s18, s11
+; CHECK-NEXT:    vcvtb.f32.f16 q2, q0
+; CHECK-NEXT:    vcvtb.f32.f16 q4, q1
+; CHECK-NEXT:    vabs.f32 q3, q2
+; CHECK-NEXT:    vcvtt.f32.f16 q0, q0
+; CHECK-NEXT:    vminnm.f32 q3, q3, q2
+; CHECK-NEXT:    vcvtt.f32.f16 q1, q1
+; CHECK-NEXT:    vmaxnm.f32 q3, q3, q4
+; CHECK-NEXT:    vfma.f32 q4, q3, q2
+; CHECK-NEXT:    vabs.f32 q3, q0
+; CHECK-NEXT:    vminnm.f32 q3, q3, q0
+; CHECK-NEXT:    vrintp.f32 q2, q4
+; CHECK-NEXT:    vmaxnm.f32 q3, q3, q1
+; CHECK-NEXT:    vrintm.f32 q2, q2
+; CHECK-NEXT:    vfma.f32 q1, q3, q0
+; CHECK-NEXT:    vrintx.f32 q2, q2
+; CHECK-NEXT:    vrintp.f32 q0, q1
+; CHECK-NEXT:    vrinta.f32 q2, q2
 ; CHECK-NEXT:    vrintm.f32 q0, q0
-; CHECK-NEXT:    vcvtt.f32.f16 s17, s10
+; CHECK-NEXT:    vrintz.f32 q2, q2
 ; CHECK-NEXT:    vrintx.f32 q0, q0
-; CHECK-NEXT:    vcvtb.f32.f16 s16, s10
 ; CHECK-NEXT:    vrinta.f32 q0, q0
-; CHECK-NEXT:    vrintz.f32 q3, q0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s12
-; CHECK-NEXT:    vcvtt.f16.f32 s0, s13
-; CHECK-NEXT:    vcvtb.f16.f32 s1, s14
-; CHECK-NEXT:    vcvtt.f16.f32 s1, s15
-; CHECK-NEXT:    vcvtt.f32.f16 s15, s7
-; CHECK-NEXT:    vcvtb.f32.f16 s14, s7
-; CHECK-NEXT:    vcvtt.f32.f16 s13, s6
-; CHECK-NEXT:    vcvtb.f32.f16 s12, s6
-; CHECK-NEXT:    vabs.f32 q1, q4
-; CHECK-NEXT:    vminnm.f32 q1, q1, q4
-; CHECK-NEXT:    vmaxnm.f32 q1, q1, q3
-; CHECK-NEXT:    vfma.f32 q3, q1, q4
-; CHECK-NEXT:    vrintp.f32 q1, q3
-; CHECK-NEXT:    vrintm.f32 q1, q1
-; CHECK-NEXT:    vrintx.f32 q1, q1
-; CHECK-NEXT:    vrinta.f32 q1, q1
-; CHECK-NEXT:    vrintz.f32 q1, q1
-; CHECK-NEXT:    vcvtb.f16.f32 s2, s4
-; CHECK-NEXT:    vcvtt.f16.f32 s2, s5
-; CHECK-NEXT:    vcvtb.f16.f32 s3, s6
-; CHECK-NEXT:    vcvtt.f16.f32 s3, s7
+; CHECK-NEXT:    vrintz.f32 q1, q0
+; CHECK-NEXT:    vcvtb.f16.f32 q0, q2
+; CHECK-NEXT:    vcvtt.f16.f32 q0, q1
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:

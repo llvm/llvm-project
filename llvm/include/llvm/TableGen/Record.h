@@ -708,6 +708,7 @@ public:
   ///
   Init *resolveReferences(Resolver &R) const override;
 
+  bool isComplete() const override;
   bool isConcrete() const override;
   std::string getAsString() const override;
 

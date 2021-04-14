@@ -748,6 +748,12 @@ def Shape_AssumingAllOp : Shape_Op<"assuming_all", [Commutative, NoSideEffect]> 
   let arguments = (ins Variadic<Shape_WitnessType>:$inputs);
   let results = (outs Shape_WitnessType:$result);
 
+  // Only needed while tablegen is unable to generate this for ops with variadic
+  // arguments.
+  let builders = [
+    OpBuilder<(ins "ValueRange":$inputs)>,
+  ];
+
   let assemblyFormat = "$inputs attr-dict";
 
   let hasFolder = 1;

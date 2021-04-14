@@ -6,7 +6,7 @@ libcxx_generated_include_dir = "$root_build_dir/include/c++/v1"
 # This is a bit weird. For now, we assume that __config_site is identical
 # in all toolchains, and only copy it (and all other libcxx headers)
 # to 'include' in the root build dir, so that it's the same for all toolchains.
-# Maybe we wnt to make this per-toolchain eventually (and then use root_out_dir
+# Maybe we want to make this per-toolchain eventually (and then use root_out_dir
 # in libcxx_generated_include_dir) -- e.g. for cross-builds that for example
 # use for-linux-configured libc++ for the host build but for-windows-configured
 # libc++ for the target build.
@@ -64,6 +64,7 @@ if (current_toolchain == default_toolchain) {
       "__bits",
       "__bsd_locale_defaults.h",
       "__bsd_locale_fallbacks.h",
+      "__config",
       "__debug",
       "__errc",
       "__functional_03",
@@ -72,9 +73,18 @@ if (current_toolchain == default_toolchain) {
       "__hash_table",
       "__libcpp_version",
       "__locale",
+      "__memory/allocator.h",
       "__memory/allocator_traits.h",
+      "__memory/auto_ptr.h",
       "__memory/base.h",
+      "__memory/compressed_pair.h",
+      "__memory/pointer_safety.h",
       "__memory/pointer_traits.h",
+      "__memory/raw_storage_iterator.h",
+      "__memory/shared_ptr.h",
+      "__memory/temporary_buffer.h",
+      "__memory/uninitialized_algorithms.h",
+      "__memory/unique_ptr.h",
       "__memory/utilities.h",
       "__mutex_base",
       "__node_handle",
@@ -269,10 +279,7 @@ config("include_config") {
   include_dirs = [ libcxx_generated_include_dir ]
 }
 
-
 group("include") {
-  deps = [
-    ":copy_headers($default_toolchain)",
-  ]
+  deps = [ ":copy_headers($default_toolchain)" ]
   public_configs = [ ":include_config" ]
 }

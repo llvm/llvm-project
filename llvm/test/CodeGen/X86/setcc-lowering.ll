@@ -53,7 +53,7 @@ define void @pr26232(i64 %a, <16 x i1> %b) {
 ; AVX-NEXT:    vpand %xmm0, %xmm2, %xmm2
 ; AVX-NEXT:    vpsllw $7, %xmm2, %xmm2
 ; AVX-NEXT:    vpmovmskb %xmm2, %eax
-; AVX-NEXT:    testw %ax, %ax
+; AVX-NEXT:    testl %eax, %eax
 ; AVX-NEXT:    jne .LBB1_1
 ; AVX-NEXT:  # %bb.2: # %for_exit600
 ; AVX-NEXT:    retq

@@ -106,10 +106,6 @@ void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
         .setBuiltinID(i + Builtin::FirstTSBuiltin + TSRecords.size());
 }
 
-void Builtin::Context::forgetBuiltin(unsigned ID, IdentifierTable &Table) {
-  Table.get(getRecord(ID).Name).setBuiltinID(0);
-}
-
 unsigned Builtin::Context::getRequiredVectorWidth(unsigned ID) const {
   const char *WidthPos = ::strchr(getRecord(ID).Attributes, 'V');
   if (!WidthPos)

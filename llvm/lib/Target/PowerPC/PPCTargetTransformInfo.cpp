@@ -940,8 +940,9 @@ unsigned PPCTTIImpl::getMaxInterleaveFactor(unsigned VF) {
 // Adjust the cost of vector instructions on targets which there is overlap
 // between the vector and scalar units, thereby reducing the overall throughput
 // of vector code wrt. scalar code.
-int PPCTTIImpl::vectorCostAdjustment(int Cost, unsigned Opcode, Type *Ty1,
-                                     Type *Ty2) {
+InstructionCost PPCTTIImpl::vectorCostAdjustment(InstructionCost Cost,
+                                                 unsigned Opcode, Type *Ty1,
+                                                 Type *Ty2) {
   if (!ST->vectorsUseTwoUnits() || !Ty1->isVectorTy())
     return Cost;
 
@@ -983,7 +984,7 @@ int PPCTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
   int Cost = BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                            Op2Info,
                                            Opd1PropInfo, Opd2PropInfo);
-  return vectorCostAdjustment(Cost, Opcode, Ty, nullptr);
+  return *vectorCostAdjustment(Cost, Opcode, Ty, nullptr).getValue();
 }
 
 int PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
@@ -996,24 +997,28 @@ int PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
   // instruction). We need one such shuffle instruction for each actual
   // register (this is not true for arbitrary shuffles, but is true for the
   // structured types of shuffles covered by TTI::ShuffleKind).
-  return vectorCostAdjustment(LT.first, Instruction::ShuffleVector, Tp,
-                              nullptr);
+  return *vectorCostAdjustment(LT.first, Instruction::ShuffleVector, Tp,
+                               nullptr)
+              .getValue();
 }
 
-int PPCTTIImpl::getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind) {
+int PPCTTIImpl::getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                               const Instruction *I) {
   if (CostKind != TTI::TCK_RecipThroughput)
     return Opcode == Instruction::PHI ? 0 : 1;
   // Branches are assumed to be predicted.
-  return CostKind == TTI::TCK_RecipThroughput ? 0 : 1;
+  return 0;
 }
 
-int PPCTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                                 TTI::CastContextHint CCH,
-                                 TTI::TargetCostKind CostKind,
-                                 const Instruction *I) {
+InstructionCost PPCTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
+                                             Type *Src,
+                                             TTI::CastContextHint CCH,
+                                             TTI::TargetCostKind CostKind,
+                                             const Instruction *I) {
   assert(TLI->InstructionOpcodeToISD(Opcode) && "Invalid opcode");
 
-  int Cost = BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+  InstructionCost Cost =
+      BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
   Cost = vectorCostAdjustment(Cost, Opcode, Dst, Src);
   // TODO: Allow non-throughput costs that aren't binary.
   if (CostKind != TTI::TCK_RecipThroughput)
@@ -1021,11 +1026,12 @@ int PPCTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   return Cost;
 }
 
-int PPCTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
-                                   CmpInst::Predicate VecPred,
-                                   TTI::TargetCostKind CostKind,
-                                   const Instruction *I) {
-  int Cost =
+InstructionCost PPCTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
+                                               Type *CondTy,
+                                               CmpInst::Predicate VecPred,
+                                               TTI::TargetCostKind CostKind,
+                                               const Instruction *I) {
+  InstructionCost Cost =
       BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
@@ -1040,7 +1046,7 @@ int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
   assert(ISD && "Invalid opcode");
 
   int Cost = BaseT::getVectorInstrCost(Opcode, Val, Index);
-  Cost = vectorCostAdjustment(Cost, Opcode, Val, nullptr);
+  Cost = *vectorCostAdjustment(Cost, Opcode, Val, nullptr).getValue();
 
   if (ST->hasVSX() && Val->getScalarType()->isDoubleTy()) {
     // Double-precision scalars are already located in index #0 (or #1 if LE).
@@ -1055,7 +1061,7 @@ int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
       if (ISD == ISD::INSERT_VECTOR_ELT)
         // A move-to VSR and a permute/insert.  Assume vector operation cost
         // for both (cost will be 2x on P9).
-        return vectorCostAdjustment(2, Opcode, Val, nullptr);
+        return *vectorCostAdjustment(2, Opcode, Val, nullptr).getValue();
 
       // It's an extract.  Maybe we can do a cheap move-from VSR.
       unsigned EltSize = Val->getScalarSizeInBits();
@@ -1072,7 +1078,7 @@ int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
       // We need a vector extract (or mfvsrld).  Assume vector operation cost.
       // The cost of the load constant for a vector extract is disregarded
       // (invariant, easily schedulable).
-      return vectorCostAdjustment(1, Opcode, Val, nullptr);
+      return *vectorCostAdjustment(1, Opcode, Val, nullptr).getValue();
 
     } else if (ST->hasDirectMove())
       // Assume permute has standard cost.
@@ -1099,10 +1105,11 @@ int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
   return Cost;
 }
 
-int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                MaybeAlign Alignment, unsigned AddressSpace,
-                                TTI::TargetCostKind CostKind,
-                                const Instruction *I) {
+InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
+                                            MaybeAlign Alignment,
+                                            unsigned AddressSpace,
+                                            TTI::TargetCostKind CostKind,
+                                            const Instruction *I) {
   if (TLI->getValueType(DL, Src,  true) == MVT::Other)
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                   CostKind);
@@ -1111,13 +1118,13 @@ int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   assert((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
          "Invalid Opcode");
 
-  int Cost = BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                    CostKind);
+  InstructionCost Cost =
+      BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind);
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return Cost;
 
-  Cost = vectorCostAdjustment(Cost, Opcode, Src, nullptr);
+  Cost = *vectorCostAdjustment(Cost, Opcode, Src, nullptr).getValue();
 
   bool IsAltivecType = ST->hasAltivec() &&
                        (LT.second == MVT::v16i8 || LT.second == MVT::v8i16 ||
@@ -1179,7 +1186,7 @@ int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   return Cost;
 }
 
-int PPCTTIImpl::getInterleavedMemoryOpCost(
+InstructionCost PPCTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) {
@@ -1195,9 +1202,8 @@ int PPCTTIImpl::getInterleavedMemoryOpCost(
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, VecTy);
 
   // Firstly, the cost of load/store operation.
-  int Cost =
-      getMemoryOpCost(Opcode, VecTy, MaybeAlign(Alignment), AddressSpace,
-                      CostKind);
+  InstructionCost Cost = getMemoryOpCost(Opcode, VecTy, MaybeAlign(Alignment),
+                                         AddressSpace, CostKind);
 
   // PPC, for both Altivec/VSX, support cheap arbitrary permutations
   // (at least in the sense that there need only be one non-loop-invariant

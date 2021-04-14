@@ -1,7 +1,8 @@
 // RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-std -convert-vector-to-llvm="enable-amx" -convert-std-to-llvm | \
 // RUN: mlir-translate -mlir-to-llvmir | \
-// RUN: %lli --entry-function=entry --mattr="+amx-tile,+amx-int8,+amx-bf16" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: %lli --jit-kind=mcjit --entry-function=entry --mattr="+amx-tile,+amx-int8,+amx-bf16" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
+// TODO: drop lli's --jit-kind flag once PR#49906 (https://bugs.llvm.org/show_bug.cgi?id=49906) is fixed.
 
 // Note: To run this test, your CPU must support AMX.
 
@@ -65,7 +66,7 @@ func @kernel4(%arg0: memref<16x16xi8>,
   return
 }
 
-func @entry() {
+func @entry() -> i32 {
   %c0 = constant 0: index
 
   // Set up memory.
@@ -193,5 +194,6 @@ func @entry() {
   memref.dealloc %b : memref<4x16xi8>
   memref.dealloc %c : memref<16x4xi32>
 
-  return
+  %i0 = constant 0 : i32
+  return %i0 : i32
 }

@@ -135,9 +135,9 @@ public:
     // We start with 1.0 so that the implicit bit for x86 long doubles
     // is set.
     FPBits bits(F(1.0));
-    bits.exponent = exponentLimit + FPBits::exponentBias;
-    bits.sign = 1;
-    bits.mantissa = 0;
+    bits.encoding.exponent = exponentLimit + FPBits::exponentBias;
+    bits.encoding.sign = 1;
+    bits.encoding.mantissa = 0;
 
     F x = bits;
     long mpfrResult;
@@ -199,10 +199,10 @@ public:
     // We start with 1.0 so that the implicit bit for x86 long doubles
     // is set.
     FPBits bits(F(1.0));
-    bits.exponent = exponentLimit + FPBits::exponentBias;
-    bits.sign = 1;
-    bits.mantissa = UIntType(0x1)
-                    << (__llvm_libc::fputil::MantissaWidth<F>::value - 1);
+    bits.encoding.exponent = exponentLimit + FPBits::exponentBias;
+    bits.encoding.sign = 1;
+    bits.encoding.mantissa =
+        UIntType(0x1) << (__llvm_libc::fputil::MantissaWidth<F>::value - 1);
 
     F x = bits;
     if (TestModes) {

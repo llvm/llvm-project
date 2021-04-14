@@ -82,9 +82,12 @@ STATISTIC(NumMulNUW,    "Number of no-unsigned-wrap deductions for mul");
 STATISTIC(NumShlNW,     "Number of no-wrap deductions for shl");
 STATISTIC(NumShlNSW,    "Number of no-signed-wrap deductions for shl");
 STATISTIC(NumShlNUW,    "Number of no-unsigned-wrap deductions for shl");
+STATISTIC(NumAbs,       "Number of llvm.abs intrinsics removed");
 STATISTIC(NumOverflows, "Number of overflow checks removed");
 STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
+STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
+STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
 
 namespace {
 
@@ -442,6 +445,74 @@ static void setDeducedOverflowingFlags(Value *V, Instruction::BinaryOps Opcode,
 
 static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI);
 
+// See if @llvm.abs argument is alays positive/negative, and simplify.
+// Notably, INT_MIN can belong to either range, regardless of the NSW,
+// because it is negation-invariant.
+static void processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
+  Value *X = II->getArgOperand(0);
+  bool IsIntMinPoison = cast<ConstantInt>(II->getArgOperand(1))->isOne();
+
+  Type *Ty = X->getType();
+  Constant *IntMin =
+      ConstantInt::get(Ty, APInt::getSignedMinValue(Ty->getScalarSizeInBits()));
+  LazyValueInfo::Tristate Result;
+
+  // Is X in [0, IntMin]?  NOTE: INT_MIN is fine!
+  Result = LVI->getPredicateAt(CmpInst::Predicate::ICMP_ULE, X, IntMin, II,
+                               /*UseBlockValue=*/true);
+  if (Result == LazyValueInfo::True) {
+    ++NumAbs;
+    II->replaceAllUsesWith(X);
+    II->eraseFromParent();
+    return;
+  }
+
+  // Is X in [IntMin, 0]?  NOTE: INT_MIN is fine!
+  Constant *Zero = ConstantInt::getNullValue(Ty);
+  Result = LVI->getPredicateAt(CmpInst::Predicate::ICMP_SLE, X, Zero, II,
+                               /*UseBlockValue=*/true);
+  assert(Result != LazyValueInfo::False && "Should have been handled already.");
+
+  if (Result == LazyValueInfo::Unknown) {
+    // Argument's range crosses zero.
+    if (!IsIntMinPoison) {
+      // Can we at least tell that the argument is never INT_MIN?
+      Result = LVI->getPredicateAt(CmpInst::Predicate::ICMP_NE, X, IntMin, II,
+                                   /*UseBlockValue=*/true);
+      if (Result == LazyValueInfo::True) {
+        ++NumNSW;
+        ++NumSubNSW;
+        II->setArgOperand(1, ConstantInt::getTrue(II->getContext()));
+      }
+    }
+    return;
+  }
+
+  IRBuilder<> B(II);
+  Value *NegX = B.CreateNeg(X, II->getName(), /*HasNUW=*/false,
+                            /*HasNSW=*/IsIntMinPoison);
+  ++NumAbs;
+  II->replaceAllUsesWith(NegX);
+  II->eraseFromParent();
+
+  // See if we can infer some no-wrap flags.
+  if (auto *BO = dyn_cast<BinaryOperator>(NegX))
+    processBinOp(BO, LVI);
+}
+
+// See if this min/max intrinsic always picks it's one specific operand.
+static void processMinMaxIntrinsic(MinMaxIntrinsic *MM, LazyValueInfo *LVI) {
+  CmpInst::Predicate Pred = CmpInst::getNonStrictPredicate(MM->getPredicate());
+  LazyValueInfo::Tristate Result = LVI->getPredicateAt(
+      Pred, MM->getLHS(), MM->getRHS(), MM, /*UseBlockValue=*/true);
+  if (Result == LazyValueInfo::Unknown)
+    return;
+
+  ++NumMinMax;
+  MM->replaceAllUsesWith(MM->getOperand(!Result));
+  MM->eraseFromParent();
+}
+
 // Rewrite this with.overflow intrinsic as non-overflowing.
 static void processOverflowIntrinsic(WithOverflowInst *WO, LazyValueInfo *LVI) {
   IRBuilder<> B(WO);
@@ -487,6 +558,16 @@ static void processSaturatingInst(SaturatingInst *SI, LazyValueInfo *LVI) {
 
 /// Infer nonnull attributes for the arguments at the specified callsite.
 static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
+
+  if (CB.getIntrinsicID() == Intrinsic::abs) {
+    processAbsIntrinsic(&cast<IntrinsicInst>(CB), LVI);
+    return true;
+  }
+
+  if (auto *MM = dyn_cast<MinMaxIntrinsic>(&CB)) {
+    processMinMaxIntrinsic(MM, LVI);
+    return true;
+  }
 
   if (auto *WO = dyn_cast<WithOverflowInst>(&CB)) {
     if (WO->getLHS()->getType()->isIntegerTy() && willNotOverflow(WO, LVI)) {
@@ -536,8 +617,8 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
     if (Type && !CB.paramHasAttr(ArgNo, Attribute::NonNull) &&
         !isa<Constant>(V) &&
         LVI->getPredicateAt(ICmpInst::ICMP_EQ, V,
-                            ConstantPointerNull::get(Type),
-                            &CB) == LazyValueInfo::False)
+                            ConstantPointerNull::get(Type), &CB,
+                            /*UseBlockValue=*/false) == LazyValueInfo::False)
       ArgNos.push_back(ArgNo);
     ArgNo++;
   }
@@ -547,6 +628,7 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
   if (ArgNos.empty())
     return Changed;
 
+  NumNonNull += ArgNos.size();
   AttributeList AS = CB.getAttributes();
   LLVMContext &Ctx = CB.getContext();
   AS = AS.addParamAttribute(Ctx, ArgNos,
@@ -558,13 +640,15 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
 
 static bool isNonNegative(Value *V, LazyValueInfo *LVI, Instruction *CxtI) {
   Constant *Zero = ConstantInt::get(V->getType(), 0);
-  auto Result = LVI->getPredicateAt(ICmpInst::ICMP_SGE, V, Zero, CxtI);
+  auto Result = LVI->getPredicateAt(ICmpInst::ICMP_SGE, V, Zero, CxtI,
+                                    /*UseBlockValue=*/true);
   return Result == LazyValueInfo::True;
 }
 
 static bool isNonPositive(Value *V, LazyValueInfo *LVI, Instruction *CxtI) {
   Constant *Zero = ConstantInt::get(V->getType(), 0);
-  auto Result = LVI->getPredicateAt(ICmpInst::ICMP_SLE, V, Zero, CxtI);
+  auto Result = LVI->getPredicateAt(ICmpInst::ICMP_SLE, V, Zero, CxtI,
+                                    /*UseBlockValue=*/true);
   return Result == LazyValueInfo::True;
 }
 
@@ -914,8 +998,8 @@ static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
   Constant *Op1 = dyn_cast<Constant>(C->getOperand(1));
   if (!Op1) return nullptr;
 
-  LazyValueInfo::Tristate Result =
-    LVI->getPredicateAt(C->getPredicate(), Op0, Op1, At);
+  LazyValueInfo::Tristate Result = LVI->getPredicateAt(
+      C->getPredicate(), Op0, Op1, At, /*UseBlockValue=*/false);
   if (Result == LazyValueInfo::Unknown)
     return nullptr;
 

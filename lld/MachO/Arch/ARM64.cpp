@@ -55,8 +55,8 @@ struct ARM64 : TargetInfo {
 const RelocAttrs &ARM64::getRelocAttrs(uint8_t type) const {
   static const std::array<RelocAttrs, 11> relocAttrsArray{{
 #define B(x) RelocAttrBits::x
-      {"UNSIGNED", B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) |
-                       B(DYSYM8) | B(BYTE4) | B(BYTE8)},
+      {"UNSIGNED",
+       B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE4) | B(BYTE8)},
       {"SUBTRACTOR", B(SUBTRAHEND) | B(BYTE4) | B(BYTE8)},
       {"BRANCH26", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
       {"PAGE21", B(PCREL) | B(EXTERN) | B(BYTE4)},

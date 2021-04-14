@@ -71,6 +71,8 @@ struct LoadConfigTables {
   uint64_t GuardIatTableCount = 0;
   uint64_t GuardLJmpTableVA = 0;
   uint64_t GuardLJmpTableCount = 0;
+  uint64_t GuardEHContTableVA = 0;
+  uint64_t GuardEHContTableCount = 0;
 };
 
 class COFFDumper : public ObjDumper {
@@ -793,19 +795,19 @@ void COFFDumper::printCOFFLoadConfig() {
     printRVATable(Tables.SEHTableVA, Tables.SEHTableCount, 4);
   }
 
+  auto PrintGuardFlags = [](raw_ostream &OS, const uint8_t *Entry) {
+    uint8_t Flags = *reinterpret_cast<const uint8_t *>(Entry + 4);
+    if (Flags)
+      OS << " flags " << utohexstr(Flags);
+  };
+
   if (Tables.GuardFidTableVA) {
     ListScope LS(W, "GuardFidTable");
-    if (Tables.GuardFlags & uint32_t(coff_guard_flags::FidTableHasFlags)) {
-      auto PrintGuardFlags = [](raw_ostream &OS, const uint8_t *Entry) {
-        uint8_t Flags = *reinterpret_cast<const uint8_t *>(Entry + 4);
-        if (Flags)
-          OS << " flags " << utohexstr(Flags);
-      };
+    if (Tables.GuardFlags & uint32_t(coff_guard_flags::FidTableHasFlags))
       printRVATable(Tables.GuardFidTableVA, Tables.GuardFidTableCount, 5,
                     PrintGuardFlags);
-    } else {
+    else
       printRVATable(Tables.GuardFidTableVA, Tables.GuardFidTableCount, 4);
-    }
   }
 
   if (Tables.GuardIatTableVA) {
@@ -816,6 +818,12 @@ void COFFDumper::printCOFFLoadConfig() {
   if (Tables.GuardLJmpTableVA) {
     ListScope LS(W, "GuardLJmpTable");
     printRVATable(Tables.GuardLJmpTableVA, Tables.GuardLJmpTableCount, 4);
+  }
+
+  if (Tables.GuardEHContTableVA) {
+    ListScope LS(W, "GuardEHContTable");
+    printRVATable(Tables.GuardEHContTableVA, Tables.GuardEHContTableCount, 5,
+                  PrintGuardFlags);
   }
 }
 
@@ -875,8 +883,8 @@ void COFFDumper::printCOFFLoadConfig(const T *Conf, LoadConfigTables &Tables) {
   Tables.GuardFidTableCount = Conf->GuardCFFunctionCount;
   Tables.GuardFlags = Conf->GuardFlags;
 
-  // Print the rest. (2017)
-  if (Conf->Size < sizeof(T))
+  // Print everything before Reserved3. (2017)
+  if (Conf->Size < offsetof(T, Reserved3))
     return;
   W.printHex("GuardAddressTakenIatEntryTable",
              Conf->GuardAddressTakenIatEntryTable);
@@ -902,6 +910,17 @@ void COFFDumper::printCOFFLoadConfig(const T *Conf, LoadConfigTables &Tables) {
 
   Tables.GuardLJmpTableVA = Conf->GuardLongJumpTargetTable;
   Tables.GuardLJmpTableCount = Conf->GuardLongJumpTargetCount;
+
+  // Print the rest. (2019)
+  if (Conf->Size < sizeof(T))
+    return;
+  W.printHex("EnclaveConfigurationPointer", Conf->EnclaveConfigurationPointer);
+  W.printHex("VolatileMetadataPointer", Conf->VolatileMetadataPointer);
+  W.printHex("GuardEHContinuationTable", Conf->GuardEHContinuationTable);
+  W.printNumber("GuardEHContinuationCount", Conf->GuardEHContinuationCount);
+
+  Tables.GuardEHContTableVA = Conf->GuardEHContinuationTable;
+  Tables.GuardEHContTableCount = Conf->GuardEHContinuationCount;
 }
 
 void COFFDumper::printBaseOfDataField(const pe32_header *Hdr) {

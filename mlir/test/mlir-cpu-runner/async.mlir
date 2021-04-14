@@ -1,5 +1,6 @@
-// RUN:   mlir-opt %s -async-ref-counting                                      \
-// RUN:               -async-to-async-runtime                                  \
+// RUN:   mlir-opt %s -async-to-async-runtime                                  \
+// RUN:               -async-runtime-ref-counting                              \
+// RUN:               -async-runtime-ref-counting-opt                          \
 // RUN:               -convert-async-to-llvm                                   \
 // RUN:               -convert-linalg-to-loops                                 \
 // RUN:               -convert-scf-to-std                                      \

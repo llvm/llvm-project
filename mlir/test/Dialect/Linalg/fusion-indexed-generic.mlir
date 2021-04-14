@@ -188,3 +188,53 @@ func @fuse_indexed_generic_producer_tile_second_dim_only(%A: memref<?x?xf32>,
 // CHECK:          {{.*}} = index_cast [[j_new]] : index to i32
 // CHECK:      linalg.generic
 // CHECK:          addf
+
+// -----
+
+#map = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
+#id_2d = affine_map<(d0, d1) -> (d0, d1)>
+#pointwise_2d_trait = {
+  indexing_maps = [#id_2d],
+  iterator_types = ["parallel", "parallel"]
+}
+func @index_op(%A: memref<?x?xindex>,
+               %B: memref<?x?xindex>) {
+  linalg.generic #pointwise_2d_trait
+   outs(%B : memref<?x?xindex>) {
+  ^bb0(%arg6: index):   // no predecessors
+    %2 = constant 0 : index
+    linalg.yield %2 : index
+  }
+  %c1 = constant 1 : index
+  %c0 = constant 0 : index
+  %c25 = constant 25 : index
+  %c10 = constant 10 : index
+  %0 = memref.dim %A, %c0 : memref<?x?xindex>
+  %1 = memref.dim %A, %c1 : memref<?x?xindex>
+  %2 = memref.dim %B, %c0 : memref<?x?xindex>
+  %3 = memref.dim %B, %c1 : memref<?x?xindex>
+  scf.for %arg2 = %c0 to %0 step %c10 {
+    scf.for %arg3 = %c0 to %1 step %c25 {
+      %4 = memref.subview %A[%arg2, %arg3][%c10, %c25][%c1, %c1] :
+          memref<?x?xindex> to memref<?x?xindex, #map>
+      %5 = memref.subview %B[%arg2, %arg3][%c10, %c25][%c1, %c1] :
+          memref<?x?xindex> to memref<?x?xindex, #map>
+      linalg.generic {
+        indexing_maps = [#id_2d, #id_2d],
+        iterator_types = ["parallel", "parallel"]}
+        ins(%4 : memref<?x?xindex, #map>)
+       outs(%5 : memref<?x?xindex, #map>) {
+      ^bb0(%arg6: index, %arg7: index):
+        %6 = linalg.index 0 : index
+        linalg.yield %6 : index
+      }
+    }
+  }
+  return
+}
+// CHECK-LABEL: func @index_op
+// CHECK:  linalg.generic
+// CHECK:  scf.for
+// CHECK:    scf.for
+// CHECK-NOT:  scf.for
+// CHECK:      linalg.generic

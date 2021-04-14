@@ -506,28 +506,28 @@ public:
   // i.e. global_* or scratch_*.
   static bool isSegmentSpecificFLAT(const MachineInstr &MI) {
     auto Flags = MI.getDesc().TSFlags;
-    return Flags & (SIInstrFlags::IsFlatGlobal | SIInstrFlags::IsFlatScratch);
+    return Flags & (SIInstrFlags::FlatGlobal | SIInstrFlags::FlatScratch);
   }
 
   bool isSegmentSpecificFLAT(uint16_t Opcode) const {
     auto Flags = get(Opcode).TSFlags;
-    return Flags & (SIInstrFlags::IsFlatGlobal | SIInstrFlags::IsFlatScratch);
+    return Flags & (SIInstrFlags::FlatGlobal | SIInstrFlags::FlatScratch);
   }
 
   static bool isFLATGlobal(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::IsFlatGlobal;
+    return MI.getDesc().TSFlags & SIInstrFlags::FlatGlobal;
   }
 
   bool isFLATGlobal(uint16_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::IsFlatGlobal;
+    return get(Opcode).TSFlags & SIInstrFlags::FlatGlobal;
   }
 
   static bool isFLATScratch(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::IsFlatScratch;
+    return MI.getDesc().TSFlags & SIInstrFlags::FlatScratch;
   }
 
   bool isFLATScratch(uint16_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::IsFlatScratch;
+    return get(Opcode).TSFlags & SIInstrFlags::FlatScratch;
   }
 
   // Any FLAT encoded instruction, including global_* and scratch_*.
@@ -1070,13 +1070,13 @@ public:
   /// encoded instruction. If \p Signed, this is for an instruction that
   /// interprets the offset as signed.
   bool isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
-                         bool Signed) const;
+                         uint64_t FlatVariant) const;
 
   /// Split \p COffsetVal into {immediate offset field, remainder offset}
   /// values.
   std::pair<int64_t, int64_t> splitFlatOffset(int64_t COffsetVal,
                                               unsigned AddrSpace,
-                                              bool IsSigned) const;
+                                              uint64_t FlatVariant) const;
 
   /// \brief Return a target-specific opcode if Opcode is a pseudo instruction.
   /// Return -1 if the target-specific opcode for the pseudo instruction does

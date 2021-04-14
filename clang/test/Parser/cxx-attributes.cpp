@@ -34,3 +34,10 @@ void fn() {
   int (*__attribute__((attr(i[1]))) pi);  // expected-warning{{unknown attribute 'attr' ignored}}
   pi = &i[0];
 }
+
+[[,,,,,]] int Commas1; // ok
+[[,, maybe_unused]] int Commas2; // ok
+[[maybe_unused,,,]] int Commas3; // ok
+[[,,maybe_unused,]] int Commas4; // ok
+[[foo bar]] int NoComma; // expected-error {{expected ','}} \
+                         // expected-warning {{unknown attribute 'foo' ignored}}

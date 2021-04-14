@@ -2053,6 +2053,12 @@ private:
   std::tuple<SCEV *, FoldingSetNodeID, void *>
   findExistingSCEVInCache(SCEVTypes SCEVType, ArrayRef<const SCEV *> Ops);
 
+  /// Push PHI nodes in the header of the given loop onto the given Worklist
+  /// if they have a cached SCEV expression. If no expression is cached, then
+  /// there also aren't any dependent expressions to invalidate.
+  void pushCachedLoopPHIs(const Loop *L,
+                          SmallVectorImpl<Instruction *> &Worklist) const;
+
   FoldingSet<SCEV> UniqueSCEVs;
   FoldingSet<SCEVPredicate> UniquePreds;
   BumpPtrAllocator SCEVAllocator;

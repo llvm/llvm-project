@@ -127,29 +127,33 @@ public:
 
   unsigned getMaxInterleaveFactor(unsigned VF);
 
-  unsigned getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
-                                  const Value *Ptr, bool VariableMask,
-                                  Align Alignment, TTI::TargetCostKind CostKind,
-                                  const Instruction *I = nullptr);
+  InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
+                                         const Value *Ptr, bool VariableMask,
+                                         Align Alignment,
+                                         TTI::TargetCostKind CostKind,
+                                         const Instruction *I = nullptr);
 
-  int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                       TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
-                       const Instruction *I = nullptr);
+  InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                                   TTI::CastContextHint CCH,
+                                   TTI::TargetCostKind CostKind,
+                                   const Instruction *I = nullptr);
 
-  int getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
-                               unsigned Index);
+  InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
+                                           VectorType *VecTy, unsigned Index);
 
-  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind);
+  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                          const Instruction *I = nullptr);
 
   int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
 
-  int getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                             bool IsPairwise, bool IsUnsigned,
-                             TTI::TargetCostKind CostKind);
+  InstructionCost getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
+                                         bool IsPairwise, bool IsUnsigned,
+                                         TTI::TargetCostKind CostKind);
 
-  int getArithmeticReductionCostSVE(unsigned Opcode, VectorType *ValTy,
-                                    bool IsPairwiseForm,
-                                    TTI::TargetCostKind CostKind);
+  InstructionCost getArithmeticReductionCostSVE(unsigned Opcode,
+                                                VectorType *ValTy,
+                                                bool IsPairwiseForm,
+                                                TTI::TargetCostKind CostKind);
 
   int getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
@@ -163,19 +167,19 @@ public:
 
   int getAddressComputationCost(Type *Ty, ScalarEvolution *SE, const SCEV *Ptr);
 
-  int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
-                         CmpInst::Predicate VecPred,
-                         TTI::TargetCostKind CostKind,
-                         const Instruction *I = nullptr);
+  InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                                     CmpInst::Predicate VecPred,
+                                     TTI::TargetCostKind CostKind,
+                                     const Instruction *I = nullptr);
 
   TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
                                                     bool IsZeroCmp) const;
   bool useNeonVector(const Type *Ty) const;
 
-  int getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
-                      unsigned AddressSpace,
-                      TTI::TargetCostKind CostKind,
-                      const Instruction *I = nullptr);
+  InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
+                                  MaybeAlign Alignment, unsigned AddressSpace,
+                                  TTI::TargetCostKind CostKind,
+                                  const Instruction *I = nullptr);
 
   int getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys);
 
@@ -254,7 +258,7 @@ public:
     return BaseT::isLegalNTStore(DataType, Alignment);
   }
 
-  int getInterleavedMemoryOpCost(
+  InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
@@ -275,9 +279,9 @@ public:
   bool isLegalToVectorizeReduction(RecurrenceDescriptor RdxDesc,
                                    ElementCount VF) const;
 
-  int getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                                 bool IsPairwiseForm,
-                                 TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
+  InstructionCost getArithmeticReductionCost(
+      unsigned Opcode, VectorType *Ty, bool IsPairwiseForm,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
 
   int getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
                      int Index, VectorType *SubTp);

@@ -547,7 +547,7 @@ declare void @llvm.coro.async.size.replace(i8*, i8*)
                             scope: !2, file: !3, line: 1, type: !4,
                             scopeLine: 1, spFlags: DISPFlagDefinition, unit: !2)
 ; CHECK: ![[SP2]] = distinct !DISubprogram(name: "my_async_function",
-; CHECK-SAME:                              linkageName: "my_async_function",
+; CHECK-SAME:                              linkageName: "my_async_function.resume.0",
 ; CHECK-SAME:                              scopeLine: 2
 !2 = distinct !DICompileUnit(language: DW_LANG_Swift, file: !3, emissionKind: FullDebug)
 !3 = !DIFile(filename: "/tmp/1.swift", directory: "/")

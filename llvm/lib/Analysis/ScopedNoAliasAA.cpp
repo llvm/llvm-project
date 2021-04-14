@@ -64,10 +64,10 @@ AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
   const MDNode *ANoAlias = LocA.AATags.NoAlias, *BNoAlias = LocB.AATags.NoAlias;
 
   if (!mayAliasInScopes(AScopes, BNoAlias))
-    return NoAlias;
+    return AliasResult::NoAlias;
 
   if (!mayAliasInScopes(BScopes, ANoAlias))
-    return NoAlias;
+    return AliasResult::NoAlias;
 
   // If they may alias, chain to the next AliasAnalysis.
   return AAResultBase::alias(LocA, LocB, AAQI);

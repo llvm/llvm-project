@@ -1681,9 +1681,10 @@ struct FoldFillWithTensorReshape : OpRewritePattern<TensorReshapeOp> {
     if (!oldFill)
       return failure();
 
-    auto newInit = rewriter.create<InitTensorOp>(
-        oldFill.getLoc(), reshapeOp.getResultType().getShape(),
-        reshapeOp.getResultType().getElementType());
+    Location loc = oldFill.getLoc();
+    auto newInit = rewriter.create<TensorReshapeOp>(
+        loc, reshapeOp.getResultType(), oldFill.output(),
+        reshapeOp.reassociation());
     rewriter.replaceOpWithNewOp<FillOp>(reshapeOp, newInit, oldFill.value());
 
     return success();
@@ -1694,7 +1695,8 @@ struct FoldFillWithTensorReshape : OpRewritePattern<TensorReshapeOp> {
 void TensorReshapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
   results.add<CollapseReshapeOps<TensorReshapeOp>, FoldFillWithTensorReshape,
-              FoldReshapeWithConstant>(context);
+              FoldInitTensorWithTensorReshapeOp, FoldReshapeWithConstant>(
+      context);
 }
 
 LogicalResult TensorReshapeOp::reifyReturnTypeShapesPerResultDim(
@@ -2043,6 +2045,21 @@ void TiledLoopOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
 LogicalResult TiledLoopOp::fold(ArrayRef<Attribute>,
                                 SmallVectorImpl<OpFoldResult> &) {
   return foldMemRefCast(*this);
+}
+
+//===----------------------------------------------------------------------===//
+// IndexOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(IndexOp op) {
+  auto linalgOp = dyn_cast<LinalgOp>(op->getParentOp());
+  if (!linalgOp)
+    return op.emitOpError("expected parent op with LinalgOp interface");
+  if (linalgOp.getNumLoops() <= op.dim())
+    return op.emitOpError("expected dim (")
+           << op.dim() << ") to be lower than the number of loops ("
+           << linalgOp.getNumLoops() << ") of the enclosing LinalgOp";
+  return success();
 }
 
 /////// Operations corresponding to library calls defined with Tablegen ////////

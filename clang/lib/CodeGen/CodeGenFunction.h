@@ -325,6 +325,9 @@ public:
   QualType FnRetTy;
   llvm::Function *CurFn = nullptr;
 
+  /// Save Parameter Decl for coroutine.
+  llvm::SmallVector<const ParmVarDecl *, 4> FnArgs;
+
   // Holds coroutine data if the current function is a coroutine. We use a
   // wrapper to manage its lifetime, so that we don't have to define CGCoroData
   // in this header.

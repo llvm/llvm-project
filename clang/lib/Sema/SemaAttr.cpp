@@ -875,12 +875,33 @@ void Sema::ActOnPragmaAttributeAttribute(
     }
     Rules.clear();
   } else {
-    for (const auto &Rule : StrictSubjectMatchRuleSet) {
-      if (Rules.erase(Rule.first)) {
+    // Each rule in Rules must be a strict subset of the attribute's
+    // SubjectMatch rules.  I.e. we're allowed to use
+    // `apply_to=variables(is_global)` on an attrubute with SubjectList<[Var]>,
+    // but should not allow `apply_to=variables` on an attribute which has
+    // `SubjectList<[GlobalVar]>`.
+    for (const auto &StrictRule : StrictSubjectMatchRuleSet) {
+      // First, check for exact match.
+      if (Rules.erase(StrictRule.first)) {
         // Add the rule to the set of attribute receivers only if it's supported
         // in the current language mode.
-        if (Rule.second)
-          SubjectMatchRules.push_back(Rule.first);
+        if (StrictRule.second)
+          SubjectMatchRules.push_back(StrictRule.first);
+      }
+    }
+    // Check remaining rules for subset matches.
+    auto RulesToCheck = Rules;
+    for (const auto &Rule : RulesToCheck) {
+      attr::SubjectMatchRule MatchRule = attr::SubjectMatchRule(Rule.first);
+      if (auto ParentRule = getParentAttrMatcherRule(MatchRule)) {
+        if (llvm::any_of(StrictSubjectMatchRuleSet,
+                         [ParentRule](const auto &StrictRule) {
+                           return StrictRule.first == *ParentRule &&
+                                  StrictRule.second; // IsEnabled
+                         })) {
+          SubjectMatchRules.push_back(MatchRule);
+          Rules.erase(MatchRule);
+        }
       }
     }
   }

@@ -4,6 +4,9 @@
 @ RUN: llvm-mc -triple thumbv7-windows-itanium -filetype obj -o - %s \
 @ RUN:   | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-ENCODING
 
+@ RUN: llvm-mc -triple thumbv7-windows-itanium -filetype obj -o - %s \
+@ RUN:   | llvm-objdump -s - | FileCheck %s --check-prefix=CHECK-DATA
+
 	.syntax unified
 	.text
 	.thumb
@@ -87,6 +90,11 @@ secrel:
 .Lsecrel:
 	.long target(secrel32)
 
+	.section .rdata, "dr"
+.Ltable:
+	.word addr32nb - .Ltable
+	.word secrel - .Ltable
+
 @ CHECK-ENCODING-LABEL: <secrel>:
 @ CHECK-ENCODING-NEXT: ldr.w r0, [pc, #4]
 @ CHECK-ENCODING-NEXT: bx r0
@@ -105,5 +113,11 @@ secrel:
 @ CHECK-RELOCATION:     0x2C IMAGE_REL_ARM_ADDR32NB
 @ CHECK-RELOCATION:     0x38 IMAGE_REL_ARM_SECREL
 @ CHECK-RELOCATION:   }
+@ CHECK-RELOCATION:   Section (4) .rdata {
+@ CHECK-RELOCATION:     0x0 IMAGE_REL_ARM_REL32
+@ CHECK-RELOCATION:     0x4 IMAGE_REL_ARM_REL32
+@ CHECK-RELOCATION:   }
 @ CHECK-RELOCATION: ]
 
+@ CHECK-DATA: Contents of section .rdata:
+@ CHECK-DATA-NEXT: 0000 00000000 04000000

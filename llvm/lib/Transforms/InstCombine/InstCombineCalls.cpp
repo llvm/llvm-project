@@ -916,12 +916,21 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // umax(X, -X) --> -abs(X)
     // umin(X, -X) --> abs(X)
     if (isKnownNegation(I0, I1)) {
+      // We can choose either operand as the input to abs(), but if we can
+      // eliminate the only use of a value, that's better for subsequent
+      // transforms/analysis.
+      if (I0->hasOneUse() && !I1->hasOneUse())
+        std::swap(I0, I1);
+
       // This is some variant of abs(). See if we can propagate 'nsw' to the abs
       // operation and potentially its negation.
       bool IntMinIsPoison = isKnownNegation(I0, I1, /* NeedNSW */ true);
       Value *Abs = Builder.CreateBinaryIntrinsic(
           Intrinsic::abs, I0,
           ConstantInt::getBool(II->getContext(), IntMinIsPoison));
+
+      // We don't have a "nabs" intrinsic, so negate if needed based on the
+      // max/min operation.
       if (IID == Intrinsic::smin || IID == Intrinsic::umax)
         Abs = Builder.CreateNeg(Abs, "nabs", /* NUW */ false, IntMinIsPoison);
       return replaceInstUsesWith(CI, Abs);
@@ -2149,9 +2158,14 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
       return &Call;
     }
 
-    // If the call and callee calling conventions don't match, this call must
-    // be unreachable, as the call is undefined.
-    if (CalleeF->getCallingConv() != Call.getCallingConv() &&
+    // If the call and callee calling conventions don't match, and neither one
+    // of the calling conventions is compatible with C calling convention
+    // this call must be unreachable, as the call is undefined.
+    if ((CalleeF->getCallingConv() != Call.getCallingConv() &&
+         !(CalleeF->getCallingConv() == llvm::CallingConv::C &&
+           TargetLibraryInfoImpl::isCallingConvCCompatible(&Call)) &&
+         !(Call.getCallingConv() == llvm::CallingConv::C &&
+           TargetLibraryInfoImpl::isCallingConvCCompatible(CalleeF))) &&
         // Only do this for calls to a function with a body.  A prototype may
         // not actually end up matching the implementation's calling conv for a
         // variety of reasons (e.g. it may be written in assembly).

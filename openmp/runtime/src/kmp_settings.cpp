@@ -5080,7 +5080,7 @@ static void __kmp_stg_print_omp_tool_verbose_init(kmp_str_buf_t *buffer,
                                                   char const *name,
                                                   void *data) {
   if (__kmp_tool_verbose_init)
-    __kmp_stg_print_str(buffer, name, __kmp_tool_libraries);
+    __kmp_stg_print_str(buffer, name, __kmp_tool_verbose_init);
   else {
     if (__kmp_env_format) {
       KMP_STR_BUF_PRINT_NAME;

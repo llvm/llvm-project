@@ -147,5 +147,11 @@ void o()
   if constexpr (true) [[likely]] {
   // expected-warning@+1 {{attribute 'likely' has no effect when annotating an 'if constexpr' statement}}
   } else [[likely]];
+
+  if (1) [[likely, unlikely]] { // expected-error {{'unlikely' and 'likely' attributes are not compatible}} \
+                                // expected-note {{conflicting attribute is here}}
+  } else [[unlikely]][[likely]] { // expected-error {{'likely' and 'unlikely' attributes are not compatible}} \
+                                  // expected-note {{conflicting attribute is here}}
+  }
 }
 #endif

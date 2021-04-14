@@ -2213,33 +2213,34 @@ static bool rangeMetadataExcludesValue(const MDNode* Ranges, const APInt& Value)
   return true;
 }
 
+/// Try to detect a recurrence that monotonically increases/decreases from a
+/// non-zero starting value. These are common as induction variables.
 static bool isNonZeroRecurrence(const PHINode *PN) {
-  // Try and detect a recurrence that monotonically increases from a
-  // starting value, as these are common as induction variables.
   BinaryOperator *BO = nullptr;
   Value *Start = nullptr, *Step = nullptr;
   const APInt *StartC, *StepC;
   if (!matchSimpleRecurrence(PN, BO, Start, Step) ||
-      !match(Start, m_APInt(StartC)))
+      !match(Start, m_APInt(StartC)) || StartC->isNullValue())
     return false;
 
   switch (BO->getOpcode()) {
   case Instruction::Add:
+    // Starting from non-zero and stepping away from zero can never wrap back
+    // to zero.
+    // TODO: The constant step requirement is not needed with NUW.
     return match(Step, m_APInt(StepC)) &&
-           ((BO->hasNoUnsignedWrap() && !StartC->isNullValue() &&
-             !StepC->isNullValue()) ||
-            (BO->hasNoSignedWrap() && StartC->isStrictlyPositive() &&
-             StepC->isNonNegative()));
+           ((BO->hasNoUnsignedWrap() && !StepC->isNullValue()) ||
+            (BO->hasNoSignedWrap() &&
+             StartC->isNegative() == StepC->isNegative()));
   case Instruction::Mul:
-    return !StartC->isNullValue() && match(Step, m_APInt(StepC)) &&
+    return match(Step, m_APInt(StepC)) &&
            ((BO->hasNoUnsignedWrap() && !StepC->isNullValue()) ||
             (BO->hasNoSignedWrap() && StepC->isStrictlyPositive()));
   case Instruction::Shl:
-    return !StartC->isNullValue() &&
-           (BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap());
+    return BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap();
   case Instruction::AShr:
   case Instruction::LShr:
-    return !StartC->isNullValue() && BO->isExact();
+    return BO->isExact();
   default:
     return false;
   }

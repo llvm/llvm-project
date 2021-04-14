@@ -29,12 +29,12 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %bpl, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %bpl, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %bpl, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %bpl, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl $buf, %eax
 ; CHECK-NEXT:    movl $32, %r14d
@@ -71,12 +71,12 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; IPRA-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; IPRA-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; IPRA-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movb $8, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movw %si, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movw %si, {{[0-9]+}}(%rsp)
+; IPRA-NEXT:    movb %dil, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movl $buf, %eax
 ; IPRA-NEXT:    movl $32, %ecx
@@ -113,12 +113,13 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $3016, %rsp # imm = 0xBC8
 ; CHECK-NEXT:    movl %edi, %r14d
-; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    testl %r14d, %r14d
 ; CHECK-NEXT:    jg .LBB2_4
@@ -133,7 +134,6 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; CHECK-NEXT:    tileloadd (%r15,%r12), %tmm0
 ; CHECK-NEXT:    movabsq $64, %rax
 ; CHECK-NEXT:    tilestored %tmm0, 1024(%rsp,%rax) # 1024-byte Folded Spill
-; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movabsq $64, %rax
@@ -154,7 +154,6 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; CHECK-NEXT:    incl %r14d
 ; CHECK-NEXT:    jmp .LBB2_8
 ; CHECK-NEXT:  .LBB2_4:
-; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl $32, %eax
@@ -180,13 +179,13 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; IPRA:       # %bb.0:
 ; IPRA-NEXT:    subq $72, %rsp
 ; IPRA-NEXT:    movl %edi, %eax
-; IPRA-NEXT:    callq foo
 ; IPRA-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; IPRA-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movb $1, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movb $8, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; IPRA-NEXT:    callq foo
 ; IPRA-NEXT:    testl %edi, %edi
 ; IPRA-NEXT:    jg .LBB2_4
 ; IPRA-NEXT:  # %bb.1: # %.preheader
@@ -273,26 +272,26 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $3024, %rsp # imm = 0xBD0
 ; CHECK-NEXT:    movl %edi, %ebx
+; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; CHECK-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl $buf, %r14d
 ; CHECK-NEXT:    movl $32, %r15d
 ; CHECK-NEXT:    movw $8, %bp
 ; CHECK-NEXT:    movl $buf+2048, %r12d
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
+; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    testl %ebx, %ebx
 ; CHECK-NEXT:    jle .LBB3_3
 ; CHECK-NEXT:  # %bb.2: # in Loop: Header=BB3_1 Depth=1
-; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; CHECK-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    tileloadd (%r14,%r15), %tmm0
 ; CHECK-NEXT:    movabsq $64, %rax
 ; CHECK-NEXT:    tilestored %tmm0, 1024(%rsp,%rax) # 1024-byte Folded Spill
-; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movabsq $64, %rax
@@ -313,6 +312,12 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; IPRA-LABEL: test_loop2:
 ; IPRA:       # %bb.0:
 ; IPRA-NEXT:    subq $72, %rsp
+; IPRA-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; IPRA-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
+; IPRA-NEXT:    movb $1, {{[0-9]+}}(%rsp)
+; IPRA-NEXT:    movb $8, {{[0-9]+}}(%rsp)
+; IPRA-NEXT:    movw $8, {{[0-9]+}}(%rsp)
+; IPRA-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movl $buf, %eax
 ; IPRA-NEXT:    movl $32, %ecx
 ; IPRA-NEXT:    movw $8, %dx
@@ -323,12 +328,6 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; IPRA-NEXT:    testl %edi, %edi
 ; IPRA-NEXT:    jle .LBB3_3
 ; IPRA-NEXT:  # %bb.2: # in Loop: Header=BB3_1 Depth=1
-; IPRA-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; IPRA-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
-; IPRA-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; IPRA-NEXT:    movb $8, {{[0-9]+}}(%rsp)
-; IPRA-NEXT:    movw $8, {{[0-9]+}}(%rsp)
-; IPRA-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    tileloadd (%rax,%rcx), %tmm0
 ; IPRA-NEXT:    callq foo
 ; IPRA-NEXT:    tilestored %tmm0, (%rsi,%rcx)

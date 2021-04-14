@@ -66,9 +66,14 @@ public:
     return has(AK_i386) || has(AK_x86_64) || has(AK_x86_64h);
   }
 
-  template <typename Ty>
-  class arch_iterator
-      : public std::iterator<std::forward_iterator_tag, Architecture, size_t> {
+  template <typename Ty> class arch_iterator {
+  public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = Architecture;
+    using difference_type = std::size_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
   private:
     ArchSetType Index;
     Ty *ArchSet;

@@ -678,12 +678,15 @@ static const char *getReproduceOption(InputArgList &args) {
 static bool isPie(InputArgList &args) {
   if (config->outputType != MH_EXECUTE || args.hasArg(OPT_no_pie))
     return false;
-  if (config->target.Arch == AK_arm64 || config->target.Arch == AK_arm64e)
+  if (config->target.Arch == AK_arm64 || config->target.Arch == AK_arm64e ||
+      config->target.Arch == AK_arm64_32)
     return true;
 
   // TODO: add logic here as we support more archs. E.g. i386 should default
   // to PIE from 10.7
-  assert(config->target.Arch == AK_x86_64 || config->target.Arch == AK_x86_64h);
+  assert(config->target.Arch == AK_x86_64 ||
+         config->target.Arch == AK_x86_64h ||
+         config->target.Arch == AK_arm64_32);
 
   PlatformKind kind = config->target.Platform;
   if (kind == PlatformKind::macOS &&

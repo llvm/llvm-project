@@ -191,7 +191,13 @@ def quote_windows_command(seq):
 
     We use the same algorithm from MSDN as CPython
     (http://msdn.microsoft.com/en-us/library/17w5ykft.aspx), but we treat more
-    characters as needing quoting, such as double quotes themselves.
+    characters as needing quoting, such as double quotes themselves, and square
+    brackets.
+
+    For MSys based tools, this is very brittle though, because quoting an
+    argument makes the MSys based tool unescape backslashes where it shouldn't
+    (e.g. "a\b\\c\\\\d" becomes "a\b\c\\d" where it should stay as it was,
+    according to regular win32 command line parsing rules).
     """
     result = []
     needquote = False
@@ -203,7 +209,7 @@ def quote_windows_command(seq):
             result.append(' ')
 
         # This logic differs from upstream list2cmdline.
-        needquote = (" " in arg) or ("\t" in arg) or ("\"" in arg) or not arg
+        needquote = (" " in arg) or ("\t" in arg) or ("\"" in arg) or ("[" in arg) or not arg
         if needquote:
             result.append('"')
 

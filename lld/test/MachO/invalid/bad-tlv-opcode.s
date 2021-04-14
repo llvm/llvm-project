@@ -10,5 +10,5 @@ _main:
   leaq _foo@TLVP(%rip), %rax
   ret
 
-.section	__DATA,__thread_vars,thread_local_variables
+.section __DATA,__thread_vars,thread_local_variables
 _foo:

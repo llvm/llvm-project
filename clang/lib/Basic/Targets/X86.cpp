@@ -467,6 +467,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_Cooperlake:
   case CK_Cannonlake:
   case CK_IcelakeClient:
+  case CK_Rocketlake:
   case CK_IcelakeServer:
   case CK_Tigerlake:
   case CK_SapphireRapids:
@@ -1314,6 +1315,7 @@ Optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_Tigerlake:
     case CK_SapphireRapids:
     case CK_IcelakeClient:
+    case CK_Rocketlake:
     case CK_IcelakeServer:
     case CK_Alderlake:
     case CK_KNL:
