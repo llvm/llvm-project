@@ -81,6 +81,8 @@ func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
   %3 = divf %lhs, %rhs: f32
   // CHECK: spv.FRem %{{.*}}, %{{.*}}: f32
   %4 = remf %lhs, %rhs: f32
+  // CHECK: spv.GLSL.Pow %{{.*}}: f32
+  %5 = math.powf %lhs, %rhs : f32
   return
 }
 
