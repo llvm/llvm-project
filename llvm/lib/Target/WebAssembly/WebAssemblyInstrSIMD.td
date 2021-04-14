@@ -1125,17 +1125,9 @@ multiclass SIMDExtend<Vec vec, bits<32> baseInst> {
                         "extend_high_"#vec.split.prefix#"_u", !add(baseInst, 3)>;
 }
 
-defm "" : SIMDExtend<I16x8, 135>;
-defm "" : SIMDExtend<I32x4, 167>;
-
-defm "" : SIMDConvert<I64x2, I32x4, int_wasm_extend_low_signed,
-                      "extend_low_i32x4_s", 199>;
-defm "" : SIMDConvert<I64x2, I32x4, int_wasm_extend_high_signed,
-                      "extend_high_i32x4_s", 200>;
-defm "" : SIMDConvert<I64x2, I32x4, int_wasm_extend_low_unsigned,
-                      "extend_low_i32x4_u", 201>;
-defm "" : SIMDConvert<I64x2, I32x4, int_wasm_extend_high_unsigned,
-                      "extend_high_i32x4_u", 202>;
+defm "" : SIMDExtend<I16x8, 0x87>;
+defm "" : SIMDExtend<I32x4, 0xa7>;
+defm "" : SIMDExtend<I64x2, 0xc7>;
 
 // Narrowing operations
 multiclass SIMDNarrow<Vec vec, bits<32> baseInst> {

@@ -553,46 +553,6 @@ define <4 x i32> @trunc_sat_zero_unsigned_v4i32(<2 x double> %a) {
 ; ==============================================================================
 ; 2 x i64
 ; ==============================================================================
-; CHECK-LABEL: extend_low_s_v2i64:
-; CHECK-NEXT: .functype extend_low_s_v2i64 (v128) -> (v128){{$}}
-; CHECK-NEXT: i64x2.extend_low_i32x4_s $push[[R:[0-9]+]]=, $0{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x i64> @llvm.wasm.extend.low.signed(<4 x i32>)
-define <2 x i64> @extend_low_s_v2i64(<4 x i32> %x) {
-  %a = call <2 x i64> @llvm.wasm.extend.low.signed(<4 x i32> %x)
-  ret <2 x i64> %a
-}
-
-; CHECK-LABEL: extend_high_s_v2i64:
-; CHECK-NEXT: .functype extend_high_s_v2i64 (v128) -> (v128){{$}}
-; CHECK-NEXT: i64x2.extend_high_i32x4_s $push[[R:[0-9]+]]=, $0{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x i64> @llvm.wasm.extend.high.signed(<4 x i32>)
-define <2 x i64> @extend_high_s_v2i64(<4 x i32> %x) {
-  %a = call <2 x i64> @llvm.wasm.extend.high.signed(<4 x i32> %x)
-  ret <2 x i64> %a
-}
-
-; CHECK-LABEL: extend_low_u_v2i64:
-; CHECK-NEXT: .functype extend_low_u_v2i64 (v128) -> (v128){{$}}
-; CHECK-NEXT: i64x2.extend_low_i32x4_u $push[[R:[0-9]+]]=, $0{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x i64> @llvm.wasm.extend.low.unsigned(<4 x i32>)
-define <2 x i64> @extend_low_u_v2i64(<4 x i32> %x) {
-  %a = call <2 x i64> @llvm.wasm.extend.low.unsigned(<4 x i32> %x)
-  ret <2 x i64> %a
-}
-
-; CHECK-LABEL: extend_high_u_v2i64:
-; CHECK-NEXT: .functype extend_high_u_v2i64 (v128) -> (v128){{$}}
-; CHECK-NEXT: i64x2.extend_high_i32x4_u $push[[R:[0-9]+]]=, $0{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x i64> @llvm.wasm.extend.high.unsigned(<4 x i32>)
-define <2 x i64> @extend_high_u_v2i64(<4 x i32> %x) {
-  %a = call <2 x i64> @llvm.wasm.extend.high.unsigned(<4 x i32> %x)
-  ret <2 x i64> %a
-}
-
 ; CHECK-LABEL: extmul_low_s_v2i64:
 ; CHECK-NEXT: .functype extmul_low_s_v2i64 (v128, v128) -> (v128){{$}}
 ; CHECK-NEXT: i64x2.extmul_low_i32x4_s $push[[R:[0-9]+]]=, $0, $1{{$}}
