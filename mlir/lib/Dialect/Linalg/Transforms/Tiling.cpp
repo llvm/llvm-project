@@ -232,8 +232,7 @@ transformIndexOps(OpBuilder &b, LinalgOp op, SmallVectorImpl<Value> &ivs,
          "expected linalg operation to have one block.");
   Block &block = op->getRegion(0).front();
 
-  for (IndexOp indexOp :
-       llvm::make_early_inc_range(block.getOps<linalg::IndexOp>())) {
+  for (IndexOp indexOp : block.getOps<linalg::IndexOp>()) {
     auto rangeIndex = loopIndexToRangeIndex.find(indexOp.dim());
     if (rangeIndex == loopIndexToRangeIndex.end())
       continue;
