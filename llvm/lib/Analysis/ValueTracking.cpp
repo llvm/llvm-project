@@ -2213,8 +2213,8 @@ static bool rangeMetadataExcludesValue(const MDNode* Ranges, const APInt& Value)
   return true;
 }
 
-/// Try to detect a recurrence that monotonically increases from a non-zero
-/// starting value. These are common as induction variables.
+/// Try to detect a recurrence that monotonically increases/decreases from a
+/// non-zero starting value. These are common as induction variables.
 static bool isNonZeroRecurrence(const PHINode *PN) {
   BinaryOperator *BO = nullptr;
   Value *Start = nullptr, *Step = nullptr;
@@ -2225,10 +2225,13 @@ static bool isNonZeroRecurrence(const PHINode *PN) {
 
   switch (BO->getOpcode()) {
   case Instruction::Add:
+    // Starting from non-zero and stepping away from zero can never wrap back
+    // to zero.
+    // TODO: The constant step requirement is not needed with NUW.
     return match(Step, m_APInt(StepC)) &&
            ((BO->hasNoUnsignedWrap() && !StepC->isNullValue()) ||
-            (BO->hasNoSignedWrap() && StartC->isStrictlyPositive() &&
-             StepC->isNonNegative()));
+            (BO->hasNoSignedWrap() &&
+             StartC->isNegative() == StepC->isNegative()));
   case Instruction::Mul:
     return match(Step, m_APInt(StepC)) &&
            ((BO->hasNoUnsignedWrap() && !StepC->isNullValue()) ||

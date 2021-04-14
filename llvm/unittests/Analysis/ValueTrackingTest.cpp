@@ -1191,7 +1191,7 @@ TEST_F(ValueTrackingTest, isNonZeroRecurrence) {
   )");
   DataLayout DL = M->getDataLayout();
   AssumptionCache AC(*F);
-  EXPECT_FALSE(isKnownNonZero(A, DL, 0, &AC, CxtI));
+  EXPECT_TRUE(isKnownNonZero(A, DL, 0, &AC, CxtI));
 }
 
 TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond) {
