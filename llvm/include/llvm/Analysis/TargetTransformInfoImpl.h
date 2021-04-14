@@ -340,7 +340,7 @@ public:
 
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const { return true; }
 
-  unsigned getFPOpCost(Type *Ty) const {
+  InstructionCost getFPOpCost(Type *Ty) const {
     return TargetTransformInfo::TCC_Basic;
   }
 
