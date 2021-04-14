@@ -5018,6 +5018,11 @@ def fdenormal_fp_math_f32_EQ : Joined<["-"], "fdenormal-fp-math-f32=">,
 def sys_header_deps : Flag<["-"], "sys-header-deps">,
   HelpText<"Include system headers in dependency output">,
   MarshallingInfoFlag<DependencyOutputOpts<"IncludeSystemHeaders">>;
+def show_skipped_includes : Flag<["-"], "show-skipped-includes">,
+  HelpText<"Show skipped includes in -H output.">,
+  DocBrief<[{#include files may be "skipped" due to include guard optimization
+             or #pragma once. This flag makes -H show also such includes.}]>,
+  MarshallingInfoFlag<DependencyOutputOpts<"ShowSkippedHeaderIncludes">>;
 def skip_unused_modulemap_file_deps : Flag<["-"], "skip-unused-modulemap-deps">,
   HelpText<"Include module map files only for imported modules in dependency output">,
   MarshallingInfoFlag<DependencyOutputOpts<"SkipUnusedModuleMaps">>;
