@@ -23,6 +23,10 @@ namespace clang {
 
 class Stmt;
 class Decl;
+class CXXCtorInitializer;
+class NestedNameSpecifierLoc;
+class TemplateArgumentLoc;
+class CXXBaseSpecifier;
 
 namespace tooling {
 
@@ -80,6 +84,10 @@ struct NodeLocationAccessors {
 namespace NodeIntrospection {
 NodeLocationAccessors GetLocations(clang::Stmt const *Object);
 NodeLocationAccessors GetLocations(clang::Decl const *Object);
+NodeLocationAccessors GetLocations(clang::CXXCtorInitializer const *Object);
+NodeLocationAccessors GetLocations(clang::NestedNameSpecifierLoc const *);
+NodeLocationAccessors GetLocations(clang::TemplateArgumentLoc const *);
+NodeLocationAccessors GetLocations(clang::CXXBaseSpecifier const *);
 NodeLocationAccessors GetLocations(clang::DynTypedNode const &Node);
 } // namespace NodeIntrospection
 } // namespace tooling
