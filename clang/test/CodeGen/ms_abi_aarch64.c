@@ -18,8 +18,7 @@ void f3(void) {
   // LINUX: call win64cc void @f1()
   // WIN64: call void @f1()
   f2();
-  // LINUX: call void @f2()
-  // WIN64: call void @f2()
+  // COMMON: call void @f2()
 }
 // LINUX: declare win64cc void @f1()
 // LINUX: declare void @f2()
@@ -32,28 +31,19 @@ void __attribute__((ms_abi)) f4(int a, ...) {
   // WIN64-LABEL: define dso_local void @f4
   __builtin_ms_va_list ap;
   __builtin_ms_va_start(ap, a);
-  // LINUX: %[[AP:.*]] = alloca i8*
-  // LINUX: call void @llvm.va_start
-  // WIN64: %[[AP:.*]] = alloca i8*
-  // WIN64: call void @llvm.va_start
+  // COMMON: %[[AP:.*]] = alloca i8*
+  // COMMON: call void @llvm.va_start
   int b = __builtin_va_arg(ap, int);
-  // LINUX: %[[AP_CUR:.*]] = load i8*, i8** %[[AP]]
-  // LINUX-NEXT: %[[AP_NEXT:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR]], i64 8
-  // LINUX-NEXT: store i8* %[[AP_NEXT]], i8** %[[AP]]
-  // LINUX-NEXT: bitcast i8* %[[AP_CUR]] to i32*
-  // WIN64: %[[AP_CUR:.*]] = load i8*, i8** %[[AP]]
-  // WIN64-NEXT: %[[AP_NEXT:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR]], i64 8
-  // WIN64-NEXT: store i8* %[[AP_NEXT]], i8** %[[AP]]
-  // WIN64-NEXT: bitcast i8* %[[AP_CUR]] to i32*
+  // COMMON: %[[AP_CUR:.*]] = load i8*, i8** %[[AP]]
+  // COMMON-NEXT: %[[AP_NEXT:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR]], i64 8
+  // COMMON-NEXT: store i8* %[[AP_NEXT]], i8** %[[AP]]
+  // COMMON-NEXT: bitcast i8* %[[AP_CUR]] to i32*
   __builtin_ms_va_list ap2;
   __builtin_ms_va_copy(ap2, ap);
-  // LINUX: %[[AP_VAL:.*]] = load i8*, i8** %[[AP]]
-  // LINUX-NEXT: store i8* %[[AP_VAL]], i8** %[[AP2:.*]]
-  // WIN64: %[[AP_VAL:.*]] = load i8*, i8** %[[AP]]
-  // WIN64-NEXT: store i8* %[[AP_VAL]], i8** %[[AP2:.*]]
+  // COMMON: %[[AP_VAL:.*]] = load i8*, i8** %[[AP]]
+  // COMMON-NEXT: store i8* %[[AP_VAL]], i8** %[[AP2:.*]]
   __builtin_ms_va_end(ap);
-  // LINUX: call void @llvm.va_end
-  // WIN64: call void @llvm.va_end
+  // COMMON: call void @llvm.va_end
 }
 
 void __attribute__((ms_abi)) f4_2(int a, ...) {
