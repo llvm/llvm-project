@@ -51,7 +51,7 @@ typedef unsigned int Arg2Type;
 __attribute__((no_caller_saved_registers))
 #else
 // expected-note@+3 {{'foo9' declared here}}
-// expected-error@+4 {{interrupt service routine may only call a function with attribute 'no_caller_saved_registers'}}
+// expected-warning@+4 {{interrupt service routine should only call a function with attribute 'no_caller_saved_registers'}}
 #endif
 void foo9(int *a, Arg2Type b) {}
 __attribute__((interrupt)) void fooA(int *a, Arg2Type b) {
