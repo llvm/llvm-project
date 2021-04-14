@@ -10,11 +10,9 @@ define i32 @umin_test1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @umin_test1(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[UMIN1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[B]], [[C:%.*]]
-; CHECK-NEXT:    [[UMIN2:%.*]] = select i1 [[C2]], i32 [[B]], i32 [[C]]
-; CHECK-NEXT:    [[C3:%.*]] = icmp ult i32 [[UMIN2]], [[A]]
-; CHECK-NEXT:    [[UMIN3:%.*]] = select i1 [[C3]], i32 [[UMIN2]], i32 [[A]]
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[UMIN1]], [[UMIN3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[UMIN1]], [[C:%.*]]
+; CHECK-NEXT:    [[UMIN3_NARY:%.*]] = select i1 [[TMP1]], i32 [[UMIN1]], i32 [[C]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[UMIN1]], [[UMIN3_NARY]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %c1 = icmp ult i32 %a, %b
@@ -33,11 +31,9 @@ define i32 @umin_test2(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @umin_test2(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[UMIN1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[A]], [[C:%.*]]
-; CHECK-NEXT:    [[UMIN2:%.*]] = select i1 [[C2]], i32 [[A]], i32 [[C]]
-; CHECK-NEXT:    [[C3:%.*]] = icmp ult i32 [[B]], [[UMIN2]]
-; CHECK-NEXT:    [[UMIN3:%.*]] = select i1 [[C3]], i32 [[B]], i32 [[UMIN2]]
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[UMIN1]], [[UMIN3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[UMIN1]], [[C:%.*]]
+; CHECK-NEXT:    [[UMIN3_NARY:%.*]] = select i1 [[TMP1]], i32 [[UMIN1]], i32 [[C]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[UMIN1]], [[UMIN3_NARY]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %c1 = icmp ult i32 %a, %b
@@ -54,9 +50,9 @@ define i32 @umin_test2(i32 %a, i32 %b, i32 %c) {
 define i32 @umin_test3(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @umin_test3(
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[A:%.*]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[UMIN2:%.*]] = call i32 @llvm.umin.i32(i32 [[B]], i32 [[C:%.*]])
-; CHECK-NEXT:    [[UMIN3:%.*]] = call i32 @llvm.umin.i32(i32 [[UMIN2]], i32 [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[UMIN1]], [[UMIN3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[UMIN1]], [[C:%.*]]
+; CHECK-NEXT:    [[UMIN3_NARY:%.*]] = select i1 [[TMP1]], i32 [[UMIN1]], i32 [[C]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[UMIN1]], [[UMIN3_NARY]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %umin1 = call i32 @llvm.umin.i32(i32 %a, i32 %b)
@@ -72,11 +68,9 @@ define i32 @umin_test4(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @umin_test4(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[UMIN1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ule i32 [[B]], [[C:%.*]]
-; CHECK-NEXT:    [[UMIN_OR_EQ2:%.*]] = select i1 [[C2]], i32 [[B]], i32 [[C]]
-; CHECK-NEXT:    [[C3:%.*]] = icmp ult i32 [[UMIN_OR_EQ2]], [[A]]
-; CHECK-NEXT:    [[UMIN3:%.*]] = select i1 [[C3]], i32 [[UMIN_OR_EQ2]], i32 [[A]]
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[UMIN1]], [[UMIN3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[UMIN1]], [[C:%.*]]
+; CHECK-NEXT:    [[UMIN3_NARY:%.*]] = select i1 [[TMP1]], i32 [[UMIN1]], i32 [[C]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[UMIN1]], [[UMIN3_NARY]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %c1 = icmp ult i32 %a, %b
@@ -95,11 +89,9 @@ define i32 @umin_test5(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @umin_test5(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ule i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[UMIN_OR_EQ1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[B]], [[C:%.*]]
-; CHECK-NEXT:    [[UMIN2:%.*]] = select i1 [[C2]], i32 [[B]], i32 [[C]]
-; CHECK-NEXT:    [[C3:%.*]] = icmp ule i32 [[UMIN2]], [[A]]
-; CHECK-NEXT:    [[UMIN_OR_EQ3:%.*]] = select i1 [[C3]], i32 [[UMIN2]], i32 [[A]]
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[UMIN_OR_EQ1]], [[UMIN_OR_EQ3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[UMIN_OR_EQ1]], [[C:%.*]]
+; CHECK-NEXT:    [[UMIN_OR_EQ3_NARY:%.*]] = select i1 [[TMP1]], i32 [[UMIN_OR_EQ1]], i32 [[C]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[UMIN_OR_EQ1]], [[UMIN_OR_EQ3_NARY]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %c1 = icmp ule i32 %a, %b

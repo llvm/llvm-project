@@ -10,11 +10,9 @@ define i32 @smax_test1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @smax_test1(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[SMAX1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[B]], [[C:%.*]]
-; CHECK-NEXT:    [[SMAX2:%.*]] = select i1 [[C2]], i32 [[B]], i32 [[C]]
-; CHECK-NEXT:    [[C3:%.*]] = icmp sgt i32 [[SMAX2]], [[A]]
-; CHECK-NEXT:    [[SMAX3:%.*]] = select i1 [[C3]], i32 [[SMAX2]], i32 [[A]]
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX1]], [[SMAX3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[SMAX1]], [[C:%.*]]
+; CHECK-NEXT:    [[SMAX3_NARY:%.*]] = select i1 [[TMP1]], i32 [[SMAX1]], i32 [[C]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX1]], [[SMAX3_NARY]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %c1 = icmp sgt i32 %a, %b
@@ -33,11 +31,9 @@ define i32 @smax_test2(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @smax_test2(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[SMAX1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[A]], [[C:%.*]]
-; CHECK-NEXT:    [[SMAX2:%.*]] = select i1 [[C2]], i32 [[A]], i32 [[C]]
-; CHECK-NEXT:    [[C3:%.*]] = icmp sgt i32 [[B]], [[SMAX2]]
-; CHECK-NEXT:    [[SMAX3:%.*]] = select i1 [[C3]], i32 [[B]], i32 [[SMAX2]]
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX1]], [[SMAX3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[SMAX1]], [[C:%.*]]
+; CHECK-NEXT:    [[SMAX3_NARY:%.*]] = select i1 [[TMP1]], i32 [[SMAX1]], i32 [[C]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX1]], [[SMAX3_NARY]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %c1 = icmp sgt i32 %a, %b
@@ -54,9 +50,9 @@ define i32 @smax_test2(i32 %a, i32 %b, i32 %c) {
 define i32 @smax_test3(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @smax_test3(
 ; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[SMAX2:%.*]] = call i32 @llvm.smax.i32(i32 [[B]], i32 [[C:%.*]])
-; CHECK-NEXT:    [[SMAX3:%.*]] = call i32 @llvm.smax.i32(i32 [[SMAX2]], i32 [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX1]], [[SMAX3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[SMAX1]], [[C:%.*]]
+; CHECK-NEXT:    [[SMAX3_NARY:%.*]] = select i1 [[TMP1]], i32 [[SMAX1]], i32 [[C]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX1]], [[SMAX3_NARY]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %smax1 = call i32 @llvm.smax.i32(i32 %a, i32 %b)
@@ -72,11 +68,9 @@ define i32 @umax_test4(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @umax_test4(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[SMAX1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp sge i32 [[B]], [[C:%.*]]
-; CHECK-NEXT:    [[SMAX_OR_EQ2:%.*]] = select i1 [[C2]], i32 [[B]], i32 [[C]]
-; CHECK-NEXT:    [[C3:%.*]] = icmp sgt i32 [[SMAX_OR_EQ2]], [[A]]
-; CHECK-NEXT:    [[SMAX3:%.*]] = select i1 [[C3]], i32 [[SMAX_OR_EQ2]], i32 [[A]]
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX1]], [[SMAX3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[SMAX1]], [[C:%.*]]
+; CHECK-NEXT:    [[SMAX3_NARY:%.*]] = select i1 [[TMP1]], i32 [[SMAX1]], i32 [[C]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX1]], [[SMAX3_NARY]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %c1 = icmp sgt i32 %a, %b
@@ -95,11 +89,9 @@ define i32 @smax_test5(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @smax_test5(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sge i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[SMAX_OR_EQ1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[B]], [[C:%.*]]
-; CHECK-NEXT:    [[SMAX2:%.*]] = select i1 [[C2]], i32 [[B]], i32 [[C]]
-; CHECK-NEXT:    [[C3:%.*]] = icmp sge i32 [[SMAX2]], [[A]]
-; CHECK-NEXT:    [[SMAX_OR_EQ3:%.*]] = select i1 [[C3]], i32 [[SMAX2]], i32 [[A]]
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX_OR_EQ1]], [[SMAX_OR_EQ3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[SMAX_OR_EQ1]], [[C:%.*]]
+; CHECK-NEXT:    [[SMAX_OR_EQ3_NARY:%.*]] = select i1 [[TMP1]], i32 [[SMAX_OR_EQ1]], i32 [[C]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX_OR_EQ1]], [[SMAX_OR_EQ3_NARY]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %c1 = icmp sge i32 %a, %b
