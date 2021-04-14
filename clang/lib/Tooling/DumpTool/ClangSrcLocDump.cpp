@@ -14,6 +14,7 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
@@ -29,10 +30,6 @@ using namespace llvm;
 static cl::list<std::string> IncludeDirectories(
     "I", cl::desc("Include directories to use while compiling"),
     cl::value_desc("directory"), cl::Required, cl::OneOrMore, cl::Prefix);
-
-static cl::opt<std::string>
-    AstHeaderFile("astheader", cl::desc("AST header to parse API from"),
-                  cl::Required, cl::value_desc("AST header file"));
 
 static cl::opt<bool>
     SkipProcessing("skip-processing",
@@ -66,6 +63,8 @@ private:
   ASTSrcLocProcessor Processor;
 };
 
+static const char Filename[] = "ASTTU.cpp";
+
 int main(int argc, const char **argv) {
 
   cl::ParseCommandLineOptions(argc, argv);
@@ -86,7 +85,7 @@ int main(int argc, const char **argv) {
                   [](const std::string &IncDir) { return "-I" + IncDir; });
 
   Args.push_back("-fsyntax-only");
-  Args.push_back(AstHeaderFile);
+  Args.push_back(Filename);
 
   std::vector<const char *> Argv(Args.size(), nullptr);
   llvm::transform(Args, Argv.begin(),
@@ -102,18 +101,23 @@ int main(int argc, const char **argv) {
   // Don't output diagnostics, because common scenarios such as
   // cross-compiling fail with diagnostics.  This is not fatal, but
   // just causes attempts to use the introspection API to return no data.
-  std::string Str;
-  llvm::raw_string_ostream OS(Str);
-  TextDiagnosticPrinter DiagnosticPrinter(OS, &*DiagOpts);
+  TextDiagnosticPrinter DiagnosticPrinter(llvm::nulls(), &*DiagOpts);
   DiagnosticsEngine Diagnostics(
       IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), &*DiagOpts,
       &DiagnosticPrinter, false);
 
-  FileManager Files(FileSystemOptions(), vfs::getRealFileSystem());
+  auto *OFS = new llvm::vfs::OverlayFileSystem(vfs::getRealFileSystem());
+
+  auto *MemFS = new llvm::vfs::InMemoryFileSystem();
+  OFS->pushOverlay(MemFS);
+  MemFS->addFile(Filename, 0,
+                 MemoryBuffer::getMemBuffer("#include \"clang/AST/AST.h\"\n"));
+
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(), OFS);
 
   auto Driver = std::make_unique<driver::Driver>(
       "clang", llvm::sys::getDefaultTargetTriple(), Diagnostics,
-      "ast-api-dump-tool", &Files.getVirtualFileSystem());
+      "ast-api-dump-tool", OFS);
 
   std::unique_ptr<clang::driver::Compilation> Comp(
       Driver->BuildCompilation(llvm::makeArrayRef(Argv)));
@@ -143,12 +147,13 @@ int main(int argc, const char **argv) {
 
   // Suppress "2 errors generated" or similar messages
   Compiler.getDiagnosticOpts().ShowCarets = false;
-  Compiler.createSourceManager(Files);
+  Compiler.createSourceManager(*Files);
+  Compiler.setFileManager(Files.get());
 
   ASTSrcLocGenerationAction ScopedToolAction;
   Compiler.ExecuteAction(ScopedToolAction);
 
-  Files.clearStatCache();
+  Files->clearStatCache();
 
   return 0;
 }

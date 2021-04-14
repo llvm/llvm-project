@@ -78,11 +78,6 @@ else()
 
   set(skip_expensive_processing $<OR:$<CONFIG:Debug>,$<NOT:$<BOOL:${CLANG_TOOLING_BUILD_AST_INTROSPECTION}>>>)
 
-  file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ASTTU.cpp
-    CONTENT "
-#include <clang/AST/AST.h>
-")
-
   set(implicitDirs)
   foreach(implicitDir ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES})
     list(APPEND implicitDirs -I ${implicitDir})
@@ -91,12 +86,11 @@ else()
   add_custom_command(
       COMMENT Generate ASTNodeAPI.json
       OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ASTNodeAPI.json
-      DEPENDS clang-ast-dump clang-resource-headers ${CMAKE_CURRENT_BINARY_DIR}/ASTTU.cpp
+      DEPENDS clang-ast-dump clang-resource-headers
       COMMAND
       $<TARGET_FILE:clang-ast-dump>
         # Skip this in debug mode because parsing AST.h is too slow
         --skip-processing=${skip_expensive_processing}
-        --astheader=${CMAKE_CURRENT_BINARY_DIR}/ASTTU.cpp
         -I ${CMAKE_BINARY_DIR}/lib/clang/${CLANG_VERSION}/include
         -I ${CMAKE_SOURCE_DIR}/../clang/include
         -I ${CMAKE_BINARY_DIR}/tools/clang/include
