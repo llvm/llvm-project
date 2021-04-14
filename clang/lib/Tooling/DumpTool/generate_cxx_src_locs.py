@@ -33,7 +33,7 @@ using RangeAndString = SourceRangeMap::value_type;
     def GenerateBaseGetLocationsDeclaration(self, CladeName):
         self.implementationContent += \
             """
-void GetLocationsImpl(std::shared_ptr<LocationCall> const& Prefix,
+void GetLocationsImpl(SharedLocationCall const& Prefix,
     clang::{0} const *Object, SourceLocationMap &Locs,
     SourceRangeMap &Rngs);
 """.format(CladeName)
@@ -42,7 +42,7 @@ void GetLocationsImpl(std::shared_ptr<LocationCall> const& Prefix,
 
         self.implementationContent += \
             """
-static void GetLocations{0}(std::shared_ptr<LocationCall> const& Prefix,
+static void GetLocations{0}(SharedLocationCall const& Prefix,
     clang::{0} const &Object,
     SourceLocationMap &Locs, SourceRangeMap &Rngs)
 {{
@@ -53,7 +53,7 @@ static void GetLocations{0}(std::shared_ptr<LocationCall> const& Prefix,
                 self.implementationContent += \
                     """
   Locs.insert(LocationAndString(Object.{0}(),
-    std::make_shared<LocationCall>(Prefix, "{0}")));
+    llvm::makeIntrusiveRefCnt<LocationCall>(Prefix, "{0}")));
 """.format(locName)
 
             self.implementationContent += '\n'
@@ -63,7 +63,7 @@ static void GetLocations{0}(std::shared_ptr<LocationCall> const& Prefix,
                 self.implementationContent += \
                     """
   Rngs.insert(RangeAndString(Object.{0}(),
-    std::make_shared<LocationCall>(Prefix, "{0}")));
+    llvm::makeIntrusiveRefCnt<LocationCall>(Prefix, "{0}")));
 """.format(rngName)
 
             self.implementationContent += '\n'
@@ -83,7 +83,7 @@ static void GetLocations{0}(std::shared_ptr<LocationCall> const& Prefix,
             'GetLocations(clang::{0} const *Object)'.format(CladeName)
         ImplSignature = \
             """
-GetLocationsImpl(std::shared_ptr<LocationCall> const& Prefix,
+GetLocationsImpl(SharedLocationCall const& Prefix,
     clang::{0} const *Object, SourceLocationMap &Locs,
     SourceRangeMap &Rngs)
 """.format(CladeName)
@@ -108,7 +108,7 @@ if (auto Derived = llvm::dyn_cast<clang::{0}>(Object)) {{
             """
 {0} NodeIntrospection::{1} {{
   NodeLocationAccessors Result;
-  std::shared_ptr<LocationCall> Prefix;
+  SharedLocationCall Prefix;
 
   GetLocationsImpl(Prefix, Object, Result.LocationAccessors,
                    Result.RangeAccessors);
