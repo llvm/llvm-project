@@ -699,7 +699,7 @@ bool GotSection::isNeeded() const {
   // We need to emit a GOT even if it's empty if there's a relocation that is
   // relative to GOT(such as GOTOFFREL).
 
-  // On PPC64 we need to check that the number of entires is more than just the
+  // On PPC64 we need to check that the number of entries is more than just the
   // size of the header since the header is always added. A GOT with just the
   // header may not actually be needed.
   if (config->emachine == EM_PPC64)
