@@ -416,7 +416,7 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
   return isSafeToLoadUnconditionally(V, Alignment, Size, DL, ScanFrom, DT, TLI);
 }
 
-  /// DefMaxInstsToScan - the default number of maximum instructions
+/// DefMaxInstsToScan - the default number of maximum instructions
 /// to scan in the block, used by FindAvailableLoadedValue().
 /// FindAvailableLoadedValue() was introduced in r60148, to improve jump
 /// threading in part by eliminating partially redundant loads.
