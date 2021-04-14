@@ -13,10 +13,10 @@
 #include <__config>
 #include <__availability>
 #include <__functional_base> // std::less, std::binary_function
+#include <__memory/addressof.h>
 #include <__memory/allocator.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/auto_ptr.h>
-#include <__memory/base.h> // std::addressof
 #include <__memory/compressed_pair.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/unique_ptr.h>

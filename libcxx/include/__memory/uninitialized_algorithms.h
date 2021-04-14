@@ -11,7 +11,8 @@
 #define _LIBCPP___MEMORY_UNINITIALIZED_ALGORITHMS_H
 
 #include <__config>
-#include <__memory/base.h> // addressof, destroy_at
+#include <__memory/addressof.h>
+#include <__memory/construct_at.h>
 #include <iterator>
 #include <utility>
 
