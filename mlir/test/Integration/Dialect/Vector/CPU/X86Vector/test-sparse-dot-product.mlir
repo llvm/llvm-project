@@ -1,8 +1,7 @@
 // RUN: mlir-opt %s -convert-scf-to-std -convert-vector-to-llvm="enable-x86vector" -convert-std-to-llvm  | \
 // RUN: mlir-translate  --mlir-to-llvmir | \
-// RUN: %lli --jit-kind=mcjit --entry-function=entry --mattr="avx512bw,avx512vp2intersect" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: %lli --entry-function=entry --mattr="avx512bw,avx512vp2intersect" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
-// TODO: drop lli's --jit-kind flag once PR#49906 (https://bugs.llvm.org/show_bug.cgi?id=49906) is fixed.
 
 // This test shows how to implement a sparse vector-vector dot product with
 // AVX512. It uses vp2intersect, mask.compress and vector.contract to compute
