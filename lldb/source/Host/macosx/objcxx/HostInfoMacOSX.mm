@@ -243,6 +243,12 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
     len = sizeof(is_64_bit_capable);
     ::sysctlbyname("hw.cpu64bit_capable", &is_64_bit_capable, &len, NULL, 0);
 
+    if (cputype == CPU_TYPE_ARM64 && cpusubtype == CPU_SUBTYPE_ARM64E) {
+      // The arm64e architecture is a preview. Pretend the host architecture
+      // is arm64.
+      cpusubtype = CPU_SUBTYPE_ARM64_ALL;
+    }
+
     if (is_64_bit_capable) {
       if (cputype & CPU_ARCH_ABI64) {
         // We have a 64 bit kernel on a 64 bit system
