@@ -84,7 +84,7 @@
 // CHECK-NOT: {{^}}0: Could not register callback
 
 // ADDRSPACE: ----- START LOGGING OF TOOL REGISTRATION -----
-// ADDRSPACE-NEXT: Search for OMP tool in current address space... Sucess.
+// ADDRSPACE-NEXT: Search for OMP tool in current address space... Success.
 // ADDRSPACE-NEXT: Tool was started and is using the OMPT interface.
 // ADDRSPACE-NEXT: ----- END LOGGING OF TOOL REGISTRATION -----
 
