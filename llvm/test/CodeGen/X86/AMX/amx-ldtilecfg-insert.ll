@@ -8,12 +8,12 @@ define dso_local void @test1(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw $8, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $8, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl $buf, %eax
 ; CHECK-NEXT:    movl $32, %ecx
@@ -48,19 +48,19 @@ define dso_local void @test2(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    movl %edi, %ebp
 ; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %bpl, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %bpl, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %bpl, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
-; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %bpl, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %bpl, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %bpl, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
@@ -121,6 +121,9 @@ define dso_local void @test3(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB2_2
@@ -130,9 +133,7 @@ define dso_local void @test3(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:  .LBB2_2: # %if.false
 ; CHECK-NEXT:    decl %edi
 ; CHECK-NEXT:  .LBB2_3: # %exit
-; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    tilezero %tmm0
 ; CHECK-NEXT:    movl $buf, %eax
@@ -158,25 +159,25 @@ exit:
   ret void
 }
 
-; TODO: There's PRA Tile Register Configure bug needs to fix later.
 define dso_local void @test4(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB3_3
 ; CHECK-NEXT:  # %bb.1: # %if.true
 ; CHECK-NEXT:    incl %edi
+; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB3_4
 ; CHECK-NEXT:  .LBB3_2: # %amx2
-; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    movl $buf+1024, %ecx
 ; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm0
@@ -187,11 +188,12 @@ define dso_local void @test4(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB3_3: # %if.false
 ; CHECK-NEXT:    decl %edi
+; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB3_2
 ; CHECK-NEXT:  .LBB3_4: # %amx1
-; CHECK-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    tilezero %tmm0
 ; CHECK-NEXT:    movl $buf, %eax
 ; CHECK-NEXT:    movl $32, %ecx
@@ -231,6 +233,9 @@ define dso_local void @test5(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movl $buf, %r8d
 ; CHECK-NEXT:    movl $32, %edx
@@ -240,13 +245,11 @@ define dso_local void @test5(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:  .LBB4_3: # %if.false
 ; CHECK-NEXT:    # in Loop: Header=BB4_1 Depth=1
 ; CHECK-NEXT:    movl %ecx, %esi
+; CHECK-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    cmpw $7, %si
 ; CHECK-NEXT:    jne .LBB4_5
 ; CHECK-NEXT:  .LBB4_1: # %loop.bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB4_3
@@ -291,6 +294,8 @@ define dso_local void @test6(i16 signext %0) nounwind {
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    movl $buf, %ecx
 ; CHECK-NEXT:    movl $32, %edx
@@ -303,10 +308,8 @@ define dso_local void @test6(i16 signext %0) nounwind {
 ; CHECK-NEXT:  .LBB5_4: # %loop.bb2
 ; CHECK-NEXT:    # in Loop: Header=BB5_1 Depth=1
 ; CHECK-NEXT:    leal (%rdi,%rsi), %eax
-; CHECK-NEXT:    cmpw $7, %si
-; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    cmpw $7, %si
 ; CHECK-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    tilezero %tmm0
 ; CHECK-NEXT:    tilestored %tmm0, (%rcx,%rdx)
