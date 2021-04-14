@@ -219,9 +219,9 @@ HexagonTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                       CostKind);
 }
 
-unsigned HexagonTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
-                                        ArrayRef<int> Mask, int Index,
-                                        Type *SubTp) {
+InstructionCost HexagonTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
+                                               ArrayRef<int> Mask, int Index,
+                                               Type *SubTp) {
   return 1;
 }
 

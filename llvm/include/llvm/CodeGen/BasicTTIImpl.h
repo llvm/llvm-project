@@ -738,8 +738,9 @@ public:
     return OpCost;
   }
 
-  unsigned getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
-                          ArrayRef<int> Mask, int Index, VectorType *SubTp) {
+  InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
+                                 ArrayRef<int> Mask, int Index,
+                                 VectorType *SubTp) {
 
     switch (Kind) {
     case TTI::SK_Broadcast:
@@ -1955,8 +1956,8 @@ public:
                                          CmpInst::BAD_ICMP_PREDICATE, CostKind);
     }
     unsigned NumReduxLevels = Log2_32(NumVecElts);
-    unsigned ArithCost = 0;
-    unsigned ShuffleCost = 0;
+    InstructionCost ArithCost = 0;
+    InstructionCost ShuffleCost = 0;
     std::pair<unsigned, MVT> LT =
         thisT()->getTLI()->getTypeLegalizationCost(DL, Ty);
     unsigned LongVectorCount = 0;
@@ -2012,7 +2013,7 @@ public:
       CmpOpcode = Instruction::ICmp;
     }
     InstructionCost MinMaxCost = 0;
-    unsigned ShuffleCost = 0;
+    InstructionCost ShuffleCost = 0;
     std::pair<unsigned, MVT> LT =
         thisT()->getTLI()->getTypeLegalizationCost(DL, Ty);
     unsigned LongVectorCount = 0;
