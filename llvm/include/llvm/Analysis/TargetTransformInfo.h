@@ -1208,8 +1208,9 @@ public:
                                         TTI::TargetCostKind CostKind) const;
 
   /// \returns The cost of Call instructions.
-  int getCallInstrCost(Function *F, Type *RetTy, ArrayRef<Type *> Tys,
-                 TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) const;
+  InstructionCost getCallInstrCost(
+      Function *F, Type *RetTy, ArrayRef<Type *> Tys,
+      TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) const;
 
   /// \returns The number of pieces into which the provided type must be
   /// split during legalization. Zero is returned when the answer is unknown.
@@ -1624,9 +1625,9 @@ public:
   virtual InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) = 0;
-  virtual int getCallInstrCost(Function *F, Type *RetTy,
-                               ArrayRef<Type *> Tys,
-                               TTI::TargetCostKind CostKind) = 0;
+  virtual InstructionCost getCallInstrCost(Function *F, Type *RetTy,
+                                           ArrayRef<Type *> Tys,
+                                           TTI::TargetCostKind CostKind) = 0;
   virtual unsigned getNumberOfParts(Type *Tp) = 0;
   virtual int getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
                                         const SCEV *Ptr) = 0;
@@ -2125,9 +2126,9 @@ public:
                                         TTI::TargetCostKind CostKind) override {
     return Impl.getIntrinsicInstrCost(ICA, CostKind);
   }
-  int getCallInstrCost(Function *F, Type *RetTy,
-                       ArrayRef<Type *> Tys,
-                       TTI::TargetCostKind CostKind) override {
+  InstructionCost getCallInstrCost(Function *F, Type *RetTy,
+                                   ArrayRef<Type *> Tys,
+                                   TTI::TargetCostKind CostKind) override {
     return Impl.getCallInstrCost(F, RetTy, Tys, CostKind);
   }
   unsigned getNumberOfParts(Type *Tp) override {
