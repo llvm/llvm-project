@@ -258,10 +258,10 @@ InstructionCost HexagonTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
 }
 
-unsigned HexagonTTIImpl::getArithmeticInstrCost(
+InstructionCost HexagonTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-    TTI::OperandValueKind Opd1Info,
-    TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,
+    TTI::OperandValueKind Opd1Info, TTI::OperandValueKind Opd2Info,
+    TTI::OperandValueProperties Opd1PropInfo,
     TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
   // TODO: Handle more cost kinds.

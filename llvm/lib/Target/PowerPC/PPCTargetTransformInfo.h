@@ -99,7 +99,7 @@ public:
   unsigned getMaxInterleaveFactor(unsigned VF);
   InstructionCost vectorCostAdjustment(InstructionCost Cost, unsigned Opcode,
                                        Type *Ty1, Type *Ty2);
-  int getArithmeticInstrCost(
+  InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,

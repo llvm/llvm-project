@@ -965,14 +965,12 @@ InstructionCost PPCTTIImpl::vectorCostAdjustment(InstructionCost Cost,
   return Cost * 2;
 }
 
-int PPCTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
-                                       TTI::TargetCostKind CostKind,
-                                       TTI::OperandValueKind Op1Info,
-                                       TTI::OperandValueKind Op2Info,
-                                       TTI::OperandValueProperties Opd1PropInfo,
-                                       TTI::OperandValueProperties Opd2PropInfo,
-                                       ArrayRef<const Value *> Args,
-                                       const Instruction *CxtI) {
+InstructionCost PPCTTIImpl::getArithmeticInstrCost(
+    unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+    TTI::OperandValueKind Op1Info, TTI::OperandValueKind Op2Info,
+    TTI::OperandValueProperties Opd1PropInfo,
+    TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
+    const Instruction *CxtI) {
   assert(TLI->InstructionOpcodeToISD(Opcode) && "Invalid opcode");
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
@@ -981,10 +979,9 @@ int PPCTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
                                          Opd2PropInfo, Args, CxtI);
 
   // Fallback to the default implementation.
-  int Cost = BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                           Op2Info,
-                                           Opd1PropInfo, Opd2PropInfo);
-  return *vectorCostAdjustment(Cost, Opcode, Ty, nullptr).getValue();
+  InstructionCost Cost = BaseT::getArithmeticInstrCost(
+      Opcode, Ty, CostKind, Op1Info, Op2Info, Opd1PropInfo, Opd2PropInfo);
+  return vectorCostAdjustment(Cost, Opcode, Ty, nullptr);
 }
 
 InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,

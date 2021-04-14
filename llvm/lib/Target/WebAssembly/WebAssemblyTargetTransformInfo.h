@@ -58,7 +58,7 @@ public:
 
   unsigned getNumberOfRegisters(unsigned ClassID) const;
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
-  unsigned getArithmeticInstrCost(
+  InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,

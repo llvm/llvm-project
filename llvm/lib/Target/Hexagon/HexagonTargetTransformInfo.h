@@ -139,7 +139,7 @@ public:
                                      CmpInst::Predicate VecPred,
                                      TTI::TargetCostKind CostKind,
                                      const Instruction *I = nullptr);
-  unsigned getArithmeticInstrCost(
+  InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
