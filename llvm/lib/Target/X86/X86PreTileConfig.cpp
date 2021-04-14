@@ -83,8 +83,8 @@ struct BBInfo {
   MIRef FirstAMX;
   MIRef LastCall;
   MIRef LastShape;
+  bool TileCfgForbidden = false;
   bool NeedTileCfgLiveIn = false;
-  unsigned ShapeReachedCount = 0;
 };
 
 class X86PreTileConfig : public MachineFunctionPass {
@@ -256,19 +256,17 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
   if (CfgNeedInsert.empty())
     return false;
 
-  // Calculate how many times the ShapeBB can reach to this BB.
-  unsigned ShapeBBNum = 0;
-  for (auto *MBB : ShapeBBs) {
-    SmallSet<MachineBasicBlock *, 8> VistedBB;
-    SmallVector<MachineBasicBlock *, 8> WorkList({MBB});
-    while (!WorkList.empty()) {
-      MachineBasicBlock *MBB = WorkList.pop_back_val();
-      ++BBVisitedInfo[MBB].ShapeReachedCount;
-      for (auto *Succ : MBB->successors())
-        if (VistedBB.insert(Succ).second && !isLoopBackEdge(Succ, MBB))
-          WorkList.push_back(Succ);
+  // Avoid to insert ldtilecfg before any shape defs.
+  SmallVector<MachineBasicBlock *, 8> WorkList(
+      make_range(ShapeBBs.begin(), ShapeBBs.end()));
+  while (!WorkList.empty()) {
+    MachineBasicBlock *MBB = WorkList.pop_back_val();
+    for (auto *Pred : MBB->predecessors()) {
+      if (!BBVisitedInfo[Pred].TileCfgForbidden && !isLoopBackEdge(MBB, Pred)) {
+        BBVisitedInfo[Pred].TileCfgForbidden = true;
+        WorkList.push_back(Pred);
+      }
     }
-    ++ShapeBBNum;
   }
 
   DebugLoc DL;
@@ -283,7 +281,7 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
     while (!WorkList.empty()) {
       MIRef I = WorkList.pop_back_val();
       if (!VisitedOrInserted.count(I)) {
-        if (BBVisitedInfo[I.MBB].ShapeReachedCount == ShapeBBNum) {
+        if (!BBVisitedInfo[I.MBB].TileCfgForbidden) {
           // If the BB is all shapes reachable, stop sink and try to insert.
           InsertPoints.insert(I);
         } else {
@@ -355,6 +353,8 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
     addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::MOVUPSmr)), SS, 48)
         .addReg(Xmm);
   }
+  // Fill in the palette first.
+  addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::MOV8mi)), SS).addImm(1);
 
   return true;
 }
