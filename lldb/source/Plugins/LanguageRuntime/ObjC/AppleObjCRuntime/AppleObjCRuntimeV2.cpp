@@ -1447,7 +1447,8 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunction(
                                           g_get_dynamic_class_info2_name);
     return m_objc_copyRealizedClassList_helper.utility_function.get();
   }
-  };
+  }
+  llvm_unreachable("Unexpected helper");
 }
 
 lldb::addr_t &
@@ -1458,6 +1459,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoArgs(Helper helper) {
   case objc_copyRealizedClassList:
     return m_objc_copyRealizedClassList_helper.args;
   }
+  llvm_unreachable("Unexpected helper");
 }
 
 AppleObjCRuntimeV2::DynamicClassInfoExtractor::Helper
