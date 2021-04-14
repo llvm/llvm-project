@@ -3195,7 +3195,7 @@ def : Pat<(f64 (PPCfcfid (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 3)))))),
 def : Pat<(v2i64 (scalar_to_vector (i64 (sextloadi32 xoaddr:$src)))),
           (v2i64 (SUBREG_TO_REG (i64 1), (LIWAX xoaddr:$src), sub_64))>;
 def : Pat<(v2i64 (scalar_to_vector (i64 (zextloadi32 xoaddr:$src)))),
-          (v2i64 (SUBREG_TO_REG (i64 1), (LIWZX xoaddr:$src), VSRC))>;
+          (v2i64 (SUBREG_TO_REG (i64 1), (LIWZX xoaddr:$src), sub_64))>;
 def : Pat<(v4i32 (scalar_to_vector (i32 (load xoaddr:$src)))),
           (v4i32 (XXSLDWIs (LIWZX xoaddr:$src), 1))>;
 def : Pat<(v4f32 (scalar_to_vector (f32 (load xoaddr:$src)))),
