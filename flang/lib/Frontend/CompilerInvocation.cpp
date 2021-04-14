@@ -99,8 +99,8 @@ static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
     opts.needProvenanceRangeToCharBlockMappings_ = true;
 }
 
-static InputKind ParseFrontendArgs(FrontendOptions &opts,
-    llvm::opt::ArgList &args, clang::DiagnosticsEngine &diags) {
+static void ParseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
+    clang::DiagnosticsEngine &diags) {
 
   // By default the frontend driver creates a ParseSyntaxOnly action.
   opts.programAction_ = ParseSyntaxOnly;
@@ -292,8 +292,7 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
   }
 
   setUpFrontendBasedOnAction(opts);
-
-  return dashX;
+  opts.dashX_ = dashX;
 }
 
 // Generate the path to look for intrinsic modules
@@ -343,9 +342,10 @@ static void parsePreprocessorArgs(
 }
 
 /// Parses all semantic related arguments and populates the variables
-/// options accordingly.
-static void parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
+/// options accordingly. Returns false if new errors are generated.
+static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     clang::DiagnosticsEngine &diags) {
+  unsigned numErrorsBefore = diags.getNumErrors();
 
   // -J/module-dir option
   auto moduleDirList =
@@ -365,12 +365,16 @@ static void parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   if (args.hasArg(clang::driver::options::OPT_fdebug_module_writer)) {
     res.SetDebugModuleDir(true);
   }
+
+  return diags.getNumErrors() == numErrorsBefore;
 }
 
 /// Parses all diagnostics related arguments and populates the variables
-/// options accordingly.
-static void parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
+/// options accordingly. Returns false if new errors are generated.
+static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     clang::DiagnosticsEngine &diags) {
+  unsigned numErrorsBefore = diags.getNumErrors();
+
   // -Werror option
   // TODO: Currently throws a Diagnostic for anything other than -W<error>,
   // this has to change when other -W<opt>'s are supported.
@@ -385,12 +389,15 @@ static void parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       diags.Report(diagID);
     }
   }
+
+  return diags.getNumErrors() == numErrorsBefore;
 }
 
 /// Parses all Dialect related arguments and populates the variables
-/// options accordingly.
-static void parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
+/// options accordingly. Returns false if new errors are generated.
+static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     clang::DiagnosticsEngine &diags) {
+  unsigned numErrorsBefore = diags.getNumErrors();
 
   // -fdefault* family
   if (args.hasArg(clang::driver::options::OPT_fdefault_real_8)) {
@@ -446,7 +453,7 @@ static void parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       diags.Report(diagID);
     }
   }
-  return;
+  return diags.getNumErrors() == numErrorsBefore;
 }
 
 bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
@@ -476,14 +483,10 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
 
   // Parse the frontend args
   ParseFrontendArgs(res.frontendOpts(), args, diags);
-  // Parse the preprocessor args
   parsePreprocessorArgs(res.preprocessorOpts(), args);
-  // Parse semantic args
-  parseSemaArgs(res, args, diags);
-  // Parse dialect arguments
-  parseDialectArgs(res, args, diags);
-  // Parse diagnostic arguments
-  parseDiagArgs(res, args, diags);
+  success &= parseSemaArgs(res, args, diags);
+  success &= parseDialectArgs(res, args, diags);
+  success &= parseDiagArgs(res, args, diags);
 
   return success;
 }

@@ -222,6 +222,10 @@ public:
   // source file.
   int fixedFormColumns_ = 72;
 
+  /// The input kind, either specified via -x argument or deduced from the input
+  /// file name.
+  InputKind dashX_;
+
   // Language features
   common::LanguageFeatureControl features_;
 
