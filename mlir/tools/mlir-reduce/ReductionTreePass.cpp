@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Reducer/ReductionTreePass.h"
+#include "mlir/Reducer/Passes.h"
 
 #include "llvm/Support/Allocator.h"
 
@@ -30,7 +31,7 @@ static std::unique_ptr<OpReducer> getOpReducer(llvm::StringRef opType) {
 
 void ReductionTreePass::runOnOperation() {
   ModuleOp module = this->getOperation();
-  std::unique_ptr<OpReducer> reducer = getOpReducer(opType);
+  std::unique_ptr<OpReducer> reducer = getOpReducer(opReducerName);
   std::vector<std::pair<int, int>> ranges = {
       {0, reducer->getNumTargetOps(module)}};
 
@@ -40,7 +41,7 @@ void ReductionTreePass::runOnOperation() {
   new (root) ReductionNode(nullptr, ranges, allocator);
 
   ModuleOp golden = module;
-  switch (mode) {
+  switch (traversalModeId) {
   case TraversalMode::SinglePath:
     golden = findOptimal<ReductionNode::iterator<TraversalMode::SinglePath>>(
         module, std::move(reducer), root);
@@ -61,8 +62,15 @@ template <typename IteratorType>
 ModuleOp ReductionTreePass::findOptimal(ModuleOp module,
                                         std::unique_ptr<OpReducer> reducer,
                                         ReductionNode *root) {
+  Tester test(testerName, testerArgs);
   std::pair<Tester::Interestingness, size_t> initStatus =
       test.isInteresting(module);
+
+  if (initStatus.first != Tester::Interestingness::True) {
+    LLVM_DEBUG(llvm::dbgs() << "\nThe original input is not interested");
+    return module;
+  }
+
   root->update(initStatus);
 
   ReductionNode *smallestNode = root;
@@ -92,4 +100,8 @@ ModuleOp ReductionTreePass::findOptimal(ModuleOp module,
   }
 
   return golden;
+}
+
+std::unique_ptr<Pass> mlir::createReductionTreePass() {
+  return std::make_unique<ReductionTreePass>();
 }

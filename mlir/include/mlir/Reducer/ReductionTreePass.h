@@ -33,12 +33,8 @@ namespace mlir {
 /// generated reduced variants.
 class ReductionTreePass : public ReductionTreeBase<ReductionTreePass> {
 public:
-  ReductionTreePass(const ReductionTreePass &pass)
-      : ReductionTreeBase<ReductionTreePass>(pass), opType(pass.opType),
-        mode(pass.mode), test(pass.test) {}
-
-  ReductionTreePass(StringRef opType, TraversalMode mode, const Tester &test)
-      : opType(opType), mode(mode), test(test) {}
+  ReductionTreePass() = default;
+  ReductionTreePass(const ReductionTreePass &pass) = default;
 
   /// Runs the pass instance in the pass pipeline.
   void runOnOperation() override;
@@ -47,15 +43,6 @@ private:
   template <typename IteratorType>
   ModuleOp findOptimal(ModuleOp module, std::unique_ptr<OpReducer> reducer,
                        ReductionNode *node);
-
-  /// The name of operation that we will try to remove.
-  StringRef opType;
-
-  TraversalMode mode;
-
-  /// This is used to test the interesting behavior of the reduction nodes in
-  /// the tree.
-  const Tester &test;
 };
 
 } // end namespace mlir
