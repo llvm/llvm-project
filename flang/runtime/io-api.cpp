@@ -310,7 +310,7 @@ Cookie IONAME(BeginEndfile)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
-      unitNumber, Direction::Output, true /*formatted*/, terminator)};
+      unitNumber, Direction::Output, false /*formatted*/, terminator)};
   return &unit.BeginIoStatement<ExternalMiscIoStatementState>(
       unit, ExternalMiscIoStatementState::Endfile, sourceFile, sourceLine);
 }
@@ -319,7 +319,7 @@ Cookie IONAME(BeginRewind)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
-      unitNumber, Direction::Input, true /*formatted*/, terminator)};
+      unitNumber, Direction::Input, false /*formatted*/, terminator)};
   return &unit.BeginIoStatement<ExternalMiscIoStatementState>(
       unit, ExternalMiscIoStatementState::Rewind, sourceFile, sourceLine);
 }
