@@ -56,6 +56,7 @@ add_clang_library(clangTidyBugproneModule
   TooSmallLoopVariableCheck.cpp
   UndefinedMemoryManipulationCheck.cpp
   UndelegatedConstructorCheck.cpp
+  UnhandledExceptionAtNewCheck.cpp
   UnhandledSelfAssignmentCheck.cpp
   UnusedRaiiCheck.cpp
   UnusedReturnValueCheck.cpp
