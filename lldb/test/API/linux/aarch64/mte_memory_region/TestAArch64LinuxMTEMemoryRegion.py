@@ -23,8 +23,12 @@ class AArch64LinuxMTEMemoryRegionTestCase(TestBase):
     def test_mte_regions(self):
         if not self.isAArch64MTE():
             self.skipTest('Target must support MTE.')
-        if not self.hasLinuxVmFlags():
-            self.skipTest('/proc/{pid}/smaps VmFlags must be present')
+
+        # This test assumes that we have /proc/<PID>/smaps files
+        # that include "VmFlags:" lines.
+        # AArch64 kernel config defaults to enabling smaps with
+        # PROC_PAGE_MONITOR and "VmFlags" was added in kernel 3.8,
+        # before MTE was supported at all.
 
         self.build()
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
