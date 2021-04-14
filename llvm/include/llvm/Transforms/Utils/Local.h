@@ -488,6 +488,15 @@ bool canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx);
 /// Invert the given true/false value, possibly reusing an existing copy.
 Value *invertCondition(Value *Condition);
 
+
+//===----------------------------------------------------------------------===//
+//  Assorted
+//
+
+/// If we can infer one attribute from another on the declaration of a
+/// function, explicitly materialize the maximal set in the IR.
+bool inferAttributesFromOthers(Function &F);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_LOCAL_H
