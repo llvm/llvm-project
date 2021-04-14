@@ -40,9 +40,8 @@ define void @foo() {
 ; X64-NEXT:    movzbl {{.*}}(%rip), %eax
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    testl %eax, %eax
-; X64-NEXT:    setne %cl
-; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    setne -{{[0-9]+}}(%rsp)
+; X64-NEXT:    setne %cl
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    cmpl %eax, %ecx
 ; X64-NEXT:    setle %dl
@@ -317,11 +316,9 @@ define void @f2() {
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    testl %eax, %eax
 ; X64-NEXT:    sete %cl
-; X64-NEXT:    xorl %eax, %ecx
-; X64-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testb %al, %al
-; X64-NEXT:    sete %cl
+; X64-NEXT:    movl %eax, %edx
+; X64-NEXT:    xorl %ecx, %edx
+; X64-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    cmpl %eax, %ecx
 ; X64-NEXT:    sete %dl
@@ -364,17 +361,15 @@ define void @f2() {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $2, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 6
-; X86-NEXT:    movzbl var_7, %eax
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    sete %cl
-; X86-NEXT:    xorl %eax, %ecx
-; X86-NEXT:    movw %cx, (%esp)
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    testb %al, %al
-; X86-NEXT:    sete %cl
+; X86-NEXT:    movzbl var_7, %ecx
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    testl %ecx, %ecx
+; X86-NEXT:    sete %al
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    xorl %eax, %edx
+; X86-NEXT:    movw %dx, (%esp)
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    cmpl %eax, %ecx
+; X86-NEXT:    cmpl %ecx, %eax
 ; X86-NEXT:    sete %dl
 ; X86-NEXT:    movw %dx, (%eax)
 ; X86-NEXT:    addl $2, %esp
