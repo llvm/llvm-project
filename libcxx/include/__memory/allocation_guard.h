@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_UTILITIES_H
-#define _LIBCPP___MEMORY_UTILITIES_H
+#ifndef _LIBCPP___MEMORY_ALLOCATION_GUARD_H
+#define _LIBCPP___MEMORY_ALLOCATION_GUARD_H
 
 #include <__config>
 #include <__memory/allocator_traits.h>
@@ -85,4 +85,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif  // _LIBCPP___MEMORY_UTILITIES_H
+#endif  // _LIBCPP___MEMORY_ALLOCATION_GUARD_H
