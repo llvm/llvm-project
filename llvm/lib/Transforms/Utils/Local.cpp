@@ -3392,3 +3392,33 @@ Value *llvm::invertCondition(Value *Condition) {
     Inverted->insertBefore(&*Parent->getFirstInsertionPt());
   return Inverted;
 }
+
+bool llvm::inferAttributesFromOthers(Function &F) {
+  // Note: We explicitly check for attributes rather than using cover functions
+  // because some of the cover functions include the logic being implemented.
+
+  bool Changed = false;
+  // readnone + not convergent implies nosync
+  if (!F.hasFnAttribute(Attribute::NoSync) &&
+      F.doesNotAccessMemory() && !F.isConvergent()) {
+    F.setNoSync();
+    Changed = true;
+  }
+
+  // readonly implies nofree
+  if (!F.hasFnAttribute(Attribute::NoFree) && F.onlyReadsMemory()) {
+    F.setDoesNotFreeMemory();
+    Changed = true;
+  }
+
+  // willreturn implies mustprogress
+  if (!F.hasFnAttribute(Attribute::MustProgress) && F.willReturn()) {
+    F.setMustProgress();
+    Changed = true;
+  }
+
+  // TODO: There are a bunch of cases of restrictive memory effects we
+  // can infer by inspecting arguments of argmemonly-ish functions.
+
+  return Changed;
+}
