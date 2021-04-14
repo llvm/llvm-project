@@ -101,6 +101,7 @@ Clang-Tidy Checks
    `bugprone-too-small-loop-variable <bugprone-too-small-loop-variable.html>`_,
    `bugprone-undefined-memory-manipulation <bugprone-undefined-memory-manipulation.html>`_,
    `bugprone-undelegated-constructor <bugprone-undelegated-constructor.html>`_,
+   `bugprone-unhandled-exception-at-new <bugprone-unhandled-exception-at-new.html>`_,
    `bugprone-unhandled-self-assignment <bugprone-unhandled-self-assignment.html>`_,
    `bugprone-unused-raii <bugprone-unused-raii.html>`_, "Yes"
    `bugprone-unused-return-value <bugprone-unused-return-value.html>`_,

@@ -107,6 +107,11 @@ New checks
   Finds member initializations in the constructor body which can be placed into
   the initialization list instead.
 
+- New :doc:`bugprone-unhandled-exception-at-new
+  <clang-tidy/checks/bugprone-unhandled-exception-at-new>` check.
+
+  Finds calls to ``new`` with missing exception handler for ``std::bad_alloc``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
