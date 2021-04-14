@@ -87,6 +87,9 @@ struct JsModuleReference {
   StringRef DefaultImport;
   // Symbols from `import {SymbolA, SymbolB, ...} from ...;`.
   SmallVector<JsImportedSymbol, 1> Symbols;
+  // Whether some symbols were merged into this one. Controls if the module
+  // reference needs re-formatting.
+  bool SymbolsMerged;
   // The source location just after { and just before } in the import.
   // Extracted eagerly to allow modification of Symbols later on.
   SourceLocation SymbolsStart, SymbolsEnd;
@@ -151,40 +154,7 @@ public:
     });
     bool ReferencesInOrder = llvm::is_sorted(Indices);
 
-    // Merge module references:
-    // After sorting, find all references that import named symbols from the
-    // same URL and merge their names. E.g.
-    //   import {X} from 'a';
-    //   import {Y} from 'a';
-    // should be rewritten to:
-    //   import {X, Y} from 'a';
-    // Note: this removes merged imports from Indices, but not from References.
-    // The loop below iterates Indices, so things work out.
-    JsModuleReference *PreviousReference = &References[Indices[0]];
-    auto *it = std::next(Indices.begin());
-    bool ImportsMerged = false;
-    while (it != std::end(Indices)) {
-      JsModuleReference *Reference = &References[*it];
-      // Skip:
-      //   import 'foo';
-      //   import * as foo from 'foo'; on either previous or this.
-      //   import Default from 'foo'; on either previous or this.
-      //   mismatching
-      if (Reference->Category == JsModuleReference::SIDE_EFFECT ||
-          !PreviousReference->Prefix.empty() || !Reference->Prefix.empty() ||
-          !PreviousReference->DefaultImport.empty() ||
-          !Reference->DefaultImport.empty() || Reference->Symbols.empty() ||
-          PreviousReference->URL != Reference->URL) {
-        PreviousReference = Reference;
-        ++it;
-        continue;
-      }
-      // Merge symbols from identical imports.
-      PreviousReference->Symbols.append(Reference->Symbols);
-      ImportsMerged = true;
-      // Remove the merged import.
-      it = Indices.erase(it);
-    }
+    mergeModuleReferences(References, Indices);
 
     std::string ReferencesText;
     bool SymbolsInOrder = true;
@@ -203,8 +173,7 @@ public:
           ReferencesText += "\n";
       }
     }
-
-    if (ReferencesInOrder && SymbolsInOrder && !ImportsMerged)
+    if (ReferencesInOrder && SymbolsInOrder)
       return {Result, 0};
 
     SourceRange InsertionPoint = References[0].Range;
@@ -279,22 +248,61 @@ private:
                                SM.getFileOffset(End) - SM.getFileOffset(Begin));
   }
 
+  // Merge module references.
+  // After sorting, find all references that import named symbols from the
+  // same URL and merge their names. E.g.
+  //   import {X} from 'a';
+  //   import {Y} from 'a';
+  // should be rewritten to:
+  //   import {X, Y} from 'a';
+  // Note: this modifies the passed in ``Indices`` vector (by removing no longer
+  // needed references), but not ``References``.
+  // ``JsModuleReference``s that get merged have the ``SymbolsMerged`` flag
+  // flipped to true.
+  void mergeModuleReferences(SmallVector<JsModuleReference, 16> &References,
+                             SmallVector<unsigned, 16> &Indices) {
+    JsModuleReference *PreviousReference = &References[Indices[0]];
+    auto *It = std::next(Indices.begin());
+    while (It != std::end(Indices)) {
+      JsModuleReference *Reference = &References[*It];
+      // Skip:
+      //   import 'foo';
+      //   import * as foo from 'foo'; on either previous or this.
+      //   import Default from 'foo'; on either previous or this.
+      //   mismatching
+      if (Reference->Category == JsModuleReference::SIDE_EFFECT ||
+          !PreviousReference->Prefix.empty() || !Reference->Prefix.empty() ||
+          !PreviousReference->DefaultImport.empty() ||
+          !Reference->DefaultImport.empty() || Reference->Symbols.empty() ||
+          PreviousReference->URL != Reference->URL) {
+        PreviousReference = Reference;
+        ++It;
+        continue;
+      }
+      // Merge symbols from identical imports.
+      PreviousReference->Symbols.append(Reference->Symbols);
+      PreviousReference->SymbolsMerged = true;
+      // Remove the merged import.
+      It = Indices.erase(It);
+    }
+  }
+
   // Appends ``Reference`` to ``Buffer``, returning true if text within the
   // ``Reference`` changed (e.g. symbol order).
   bool appendReference(std::string &Buffer, JsModuleReference &Reference) {
     // Sort the individual symbols within the import.
     // E.g. `import {b, a} from 'x';` -> `import {a, b} from 'x';`
     SmallVector<JsImportedSymbol, 1> Symbols = Reference.Symbols;
-    if (Symbols.empty()) {
-      // No symbol imports, just emit the entire module reference.
-      StringRef ReferenceStmt = getSourceText(Reference.Range);
-      Buffer += ReferenceStmt;
-      return false;
-    }
     llvm::stable_sort(
         Symbols, [&](const JsImportedSymbol &LHS, const JsImportedSymbol &RHS) {
           return LHS.Symbol.compare_lower(RHS.Symbol) < 0;
         });
+    if (!Reference.SymbolsMerged && Symbols == Reference.Symbols) {
+      // Symbols didn't change, just emit the entire module reference.
+      StringRef ReferenceStmt = getSourceText(Reference.Range);
+      Buffer += ReferenceStmt;
+      return false;
+    }
     // Stitch together the module reference start...
     Buffer += getSourceText(Reference.Range.getBegin(), Reference.SymbolsStart);
     // ... then the references in order ...
