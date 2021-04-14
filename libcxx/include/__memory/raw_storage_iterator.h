@@ -11,7 +11,7 @@
 #define _LIBCPP___MEMORY_RAW_STORAGE_ITERATOR_H
 
 #include <__config>
-#include <__memory/base.h> // addressof
+#include <__memory/addressof.h>
 #include <cstddef>
 #include <iterator>
 #include <utility>
