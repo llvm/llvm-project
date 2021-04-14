@@ -49,6 +49,7 @@
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
 #include "IOStream.h"
+#include "ProgressEvent.h"
 #include "RunInTerminal.h"
 #include "SourceBreakpoint.h"
 #include "SourceReference.h"
@@ -113,6 +114,7 @@ struct VSCode {
   uint32_t reverse_request_seq;
   std::map<std::string, RequestCallback> request_handlers;
   bool waiting_for_run_in_terminal;
+  ProgressEventFilterQueue progress_event_queue;
   // Keep track of the last stop thread index IDs as threads won't go away
   // unless we send a "thread" event to indicate the thread exited.
   llvm::DenseSet<lldb::tid_t> thread_ids;
@@ -136,8 +138,7 @@ struct VSCode {
 
   void SendOutput(OutputType o, const llvm::StringRef output);
 
-  void SendProgressEvent(uint64_t progress_id, const char *message,
-                         uint64_t completed, uint64_t total);
+  void SendProgressEvent(const ProgressEvent &event);
 
   void __attribute__((format(printf, 3, 4)))
   SendFormattedOutput(OutputType o, const char *format, ...);
