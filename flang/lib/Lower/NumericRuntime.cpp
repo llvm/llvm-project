@@ -57,7 +57,7 @@ Fortran::lower::genRRSpacing(Fortran::lower::FirOpBuilder &builder,
     break;
 #endif
   default:
-    llvm_unreachable("unsupported real kind");
+    TODO(loc, "unsupported real kind in RRSpacing lowering");
   }
 
   auto fTy = func.getType();
@@ -90,7 +90,7 @@ Fortran::lower::genSpacing(Fortran::lower::FirOpBuilder &builder,
     break;
 #endif
   default:
-    llvm_unreachable("unsupported real kind");
+    TODO(loc, "unsupported real kind in Spacing lowering");
   }
 
   auto fTy = func.getType();
