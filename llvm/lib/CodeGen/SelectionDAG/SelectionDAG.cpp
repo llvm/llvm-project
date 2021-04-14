@@ -4642,6 +4642,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     case ISD::BITCAST:
       if (VT == MVT::i16 && C->getValueType(0) == MVT::f16)
         return getConstant((uint16_t)V.bitcastToAPInt().getZExtValue(), DL, VT);
+      if (VT == MVT::i16 && C->getValueType(0) == MVT::bf16)
+        return getConstant((uint16_t)V.bitcastToAPInt().getZExtValue(), DL, VT);
       else if (VT == MVT::i32 && C->getValueType(0) == MVT::f32)
         return getConstant((uint32_t)V.bitcastToAPInt().getZExtValue(), DL, VT);
       else if (VT == MVT::i64 && C->getValueType(0) == MVT::f64)
