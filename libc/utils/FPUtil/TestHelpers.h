@@ -66,11 +66,13 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
 } // namespace __llvm_libc
 
 #define DECLARE_SPECIAL_CONSTANTS(T)                                           \
-  static const T zero = __llvm_libc::fputil::FPBits<T>::zero();                \
-  static const T negZero = __llvm_libc::fputil::FPBits<T>::negZero();          \
-  static const T aNaN = __llvm_libc::fputil::FPBits<T>::buildNaN(1);           \
-  static const T inf = __llvm_libc::fputil::FPBits<T>::inf();                  \
-  static const T negInf = __llvm_libc::fputil::FPBits<T>::negInf();
+  using FPBits = __llvm_libc::fputil::FPBits<T>;                               \
+  using UIntType = typename FPBits::UIntType;                                  \
+  const T zero = FPBits::zero();                                               \
+  const T negZero = FPBits::negZero();                                         \
+  const T aNaN = FPBits::buildNaN(1);                                          \
+  const T inf = FPBits::inf();                                                 \
+  const T negInf = FPBits::negInf();
 
 #define EXPECT_FP_EQ(expected, actual)                                         \
   EXPECT_THAT(                                                                 \
