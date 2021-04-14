@@ -196,7 +196,7 @@ static bool runSCCP(Function &F, const DataLayout &DL,
       F.getContext());
 
   // Mark the first block of the function as being executable.
-  Solver.MarkBlockExecutable(&F.front());
+  Solver.markBlockExecutable(&F.front());
 
   // Mark all arguments to the function as being overdefined.
   for (Argument &AI : F.args())
@@ -205,9 +205,9 @@ static bool runSCCP(Function &F, const DataLayout &DL,
   // Solve for constants.
   bool ResolvedUndefs = true;
   while (ResolvedUndefs) {
-    Solver.Solve();
+    Solver.solve();
     LLVM_DEBUG(dbgs() << "RESOLVING UNDEFs\n");
-    ResolvedUndefs = Solver.ResolvedUndefsIn(F);
+    ResolvedUndefs = Solver.resolvedUndefsIn(F);
   }
 
   bool MadeChanges = false;
@@ -427,17 +427,17 @@ bool llvm::runIPSCCP(
     // Determine if we can track the function's return values. If so, add the
     // function to the solver's set of return-tracked functions.
     if (canTrackReturnsInterprocedurally(&F))
-      Solver.AddTrackedFunction(&F);
+      Solver.addTrackedFunction(&F);
 
     // Determine if we can track the function's arguments. If so, add the
     // function to the solver's set of argument-tracked functions.
     if (canTrackArgumentsInterprocedurally(&F)) {
-      Solver.AddArgumentTrackedFunction(&F);
+      Solver.addArgumentTrackedFunction(&F);
       continue;
     }
 
     // Assume the function is called.
-    Solver.MarkBlockExecutable(&F.front());
+    Solver.markBlockExecutable(&F.front());
 
     // Assume nothing about the incoming arguments.
     for (Argument &AI : F.args())
@@ -450,21 +450,21 @@ bool llvm::runIPSCCP(
   for (GlobalVariable &G : M.globals()) {
     G.removeDeadConstantUsers();
     if (canTrackGlobalVariableInterprocedurally(&G))
-      Solver.TrackValueOfGlobalVariable(&G);
+      Solver.trackValueOfGlobalVariable(&G);
   }
 
   // Solve for constants.
   bool ResolvedUndefs = true;
-  Solver.Solve();
+  Solver.solve();
   while (ResolvedUndefs) {
     LLVM_DEBUG(dbgs() << "RESOLVING UNDEFS\n");
     ResolvedUndefs = false;
     for (Function &F : M) {
-      if (Solver.ResolvedUndefsIn(F))
+      if (Solver.resolvedUndefsIn(F))
         ResolvedUndefs = true;
     }
     if (ResolvedUndefs)
-      Solver.Solve();
+      Solver.solve();
   }
 
   bool MadeChanges = false;
