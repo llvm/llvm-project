@@ -815,6 +815,7 @@ void RVAFlagTableChunk::writeTo(uint8_t *buf) const {
   }
   auto lt = [](RVAFlag &a, RVAFlag &b) { return a.rva < b.rva; };
   auto eq = [](RVAFlag &a, RVAFlag &b) { return a.rva == b.rva; };
+  (void)eq;
   std::sort(begin, begin + cnt, lt);
   assert(std::unique(begin, begin + cnt, eq) == begin + cnt &&
          "RVA tables should be de-duplicated");
