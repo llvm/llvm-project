@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Utils/SCCPSolver.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -22,7 +23,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include "llvm/Transforms/Utils/SCCPSolver.h"
 #include <cassert>
 #include <utility>
 #include <vector>
@@ -231,7 +231,7 @@ private:
   // OperandChangedState - This method is invoked on all of the users of an
   // instruction that was just changed state somehow.  Based on this
   // information, we need to update the specified user of this instruction.
-  void OperandChangedState(Instruction *I) {
+  void operandChangedState(Instruction *I) {
     if (BBExecutable.count(I->getParent())) // Inst is executable?
       visit(*I);
   }
@@ -256,7 +256,7 @@ private:
     } else {
       for (User *U : I->users())
         if (auto *UI = dyn_cast<Instruction>(U))
-          OperandChangedState(UI);
+          operandChangedState(UI);
     }
 
     auto Iter = AdditionalUsers.find(I);
@@ -268,7 +268,7 @@ private:
         if (auto *UI = dyn_cast<Instruction>(U))
           ToNotify.push_back(UI);
       for (Instruction *UI : ToNotify)
-        OperandChangedState(UI);
+        operandChangedState(UI);
     }
   }
   void handleCallOverdefined(CallBase &CB);
@@ -334,7 +334,7 @@ public:
     AnalysisResults.insert({&F, std::move(A)});
   }
 
-  bool MarkBlockExecutable(BasicBlock *BB);
+  bool markBlockExecutable(BasicBlock *BB);
 
   const PredicateBase *getPredicateInfoFor(Instruction *I) {
     auto A = AnalysisResults.find(I->getParent()->getParent());
@@ -354,7 +354,7 @@ public:
                   LLVMContext &Ctx)
       : DL(DL), GetTLI(GetTLI), Ctx(Ctx) {}
 
-  void TrackValueOfGlobalVariable(GlobalVariable *GV) {
+  void trackValueOfGlobalVariable(GlobalVariable *GV) {
     // We only track the contents of scalar globals.
     if (GV->getValueType()->isSingleValueType()) {
       ValueLatticeElement &IV = TrackedGlobals[GV];
@@ -363,7 +363,7 @@ public:
     }
   }
 
-  void AddTrackedFunction(Function *F) {
+  void addTrackedFunction(Function *F) {
     // Add an entry, F -> undef.
     if (auto *STy = dyn_cast<StructType>(F->getReturnType())) {
       MRVFunctionsTracked.insert(F);
@@ -382,7 +382,7 @@ public:
     return MustPreserveReturnsInFunctions.count(F);
   }
 
-  void AddArgumentTrackedFunction(Function *F) {
+  void addArgumentTrackedFunction(Function *F) {
     TrackingIncomingArguments.insert(F);
   }
 
@@ -390,9 +390,9 @@ public:
     return TrackingIncomingArguments.count(F);
   }
 
-  void Solve();
+  void solve();
 
-  bool ResolvedUndefsIn(Function &F);
+  bool resolvedUndefsIn(Function &F);
 
   bool isBlockExecutable(BasicBlock *BB) const {
     return BBExecutable.count(BB);
@@ -451,7 +451,7 @@ public:
 
 } // namespace llvm
 
-bool SCCPInstVisitor::MarkBlockExecutable(BasicBlock *BB) {
+bool SCCPInstVisitor::markBlockExecutable(BasicBlock *BB) {
   if (!BBExecutable.insert(BB).second)
     return false;
   LLVM_DEBUG(dbgs() << "Marking Block Executable: " << BB->getName() << '\n');
@@ -508,7 +508,7 @@ Constant *SCCPInstVisitor::getConstant(const ValueLatticeElement &LV) const {
     return LV.getConstant();
 
   if (LV.isConstantRange()) {
-    auto &CR = LV.getConstantRange();
+    const auto &CR = LV.getConstantRange();
     if (CR.getSingleElement())
       return ConstantInt::get(Ctx, *CR.getSingleElement());
   }
@@ -538,7 +538,7 @@ bool SCCPInstVisitor::markEdgeExecutable(BasicBlock *Source, BasicBlock *Dest) {
   if (!KnownFeasibleEdges.insert(Edge(Source, Dest)).second)
     return false; // This edge is already known to be executable!
 
-  if (!MarkBlockExecutable(Dest)) {
+  if (!markBlockExecutable(Dest)) {
     // If the destination is already executable, we just made an *edge*
     // feasible that wasn't before.  Revisit the PHI nodes in the block
     // because they have potentially new operands.
@@ -806,7 +806,7 @@ void SCCPInstVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
   if (EVI.getType()->isStructTy())
     return (void)markOverdefined(&EVI);
 
-  // ResolvedUndefsIn might mark I as overdefined. Bail out, even if we would
+  // resolvedUndefsIn might mark I as overdefined. Bail out, even if we would
   // discover a concrete value later.
   if (ValueState[&EVI].isOverdefined())
     return (void)markOverdefined(&EVI);
@@ -831,7 +831,7 @@ void SCCPInstVisitor::visitInsertValueInst(InsertValueInst &IVI) {
   if (!STy)
     return (void)markOverdefined(&IVI);
 
-  // ResolvedUndefsIn might mark I as overdefined. Bail out, even if we would
+  // resolvedUndefsIn might mark I as overdefined. Bail out, even if we would
   // discover a concrete value later.
   if (isOverdefined(ValueState[&IVI]))
     return (void)markOverdefined(&IVI);
@@ -870,7 +870,7 @@ void SCCPInstVisitor::visitSelectInst(SelectInst &I) {
   if (I.getType()->isStructTy())
     return (void)markOverdefined(&I);
 
-  // ResolvedUndefsIn might mark I as overdefined. Bail out, even if we would
+  // resolvedUndefsIn might mark I as overdefined. Bail out, even if we would
   // discover a concrete value later.
   if (ValueState[&I].isOverdefined())
     return (void)markOverdefined(&I);
@@ -902,7 +902,7 @@ void SCCPInstVisitor::visitUnaryOperator(Instruction &I) {
   ValueLatticeElement V0State = getValueState(I.getOperand(0));
 
   ValueLatticeElement &IV = ValueState[&I];
-  // ResolvedUndefsIn might mark I as overdefined. Bail out, even if we would
+  // resolvedUndefsIn might mark I as overdefined. Bail out, even if we would
   // discover a concrete value later.
   if (isOverdefined(IV))
     return (void)markOverdefined(&I);
@@ -1087,7 +1087,7 @@ void SCCPInstVisitor::visitLoadInst(LoadInst &I) {
   if (I.getType()->isStructTy() || I.isVolatile())
     return (void)markOverdefined(&I);
 
-  // ResolvedUndefsIn might mark I as overdefined. Bail out, even if we would
+  // resolvedUndefsIn might mark I as overdefined. Bail out, even if we would
   // discover a concrete value later.
   if (ValueState[&I].isOverdefined())
     return (void)markOverdefined(&I);
@@ -1190,7 +1190,7 @@ void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
   // the formal arguments of the function.
   if (!TrackingIncomingArguments.empty() &&
       TrackingIncomingArguments.count(F)) {
-    MarkBlockExecutable(&F->front());
+    markBlockExecutable(&F->front());
 
     // Propagate information from this call site into the callee.
     auto CAI = CB.arg_begin();
@@ -1225,7 +1225,7 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
 
       Value *CopyOf = CB.getOperand(0);
       ValueLatticeElement CopyOfVal = getValueState(CopyOf);
-      auto *PI = getPredicateInfoFor(&CB);
+      const auto *PI = getPredicateInfoFor(&CB);
       assert(PI && "Missing predicate info for ssa.copy");
 
       const Optional<PredicateConstraint> &Constraint = PI->getConstraint();
@@ -1347,7 +1347,7 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
   }
 }
 
-void SCCPInstVisitor::Solve() {
+void SCCPInstVisitor::solve() {
   // Process the work lists until they are empty!
   while (!BBWorkList.empty() || !InstWorkList.empty() ||
          !OverdefinedInstWorkList.empty()) {
@@ -1398,7 +1398,7 @@ void SCCPInstVisitor::Solve() {
   }
 }
 
-/// ResolvedUndefsIn - While solving the dataflow for a function, we assume
+/// resolvedUndefsIn - While solving the dataflow for a function, we assume
 /// that branches on undef values cannot reach any of their successors.
 /// However, this is not a safe assumption.  After we solve dataflow, this
 /// method should be use to handle this.  If this returns true, the solver
@@ -1414,7 +1414,7 @@ void SCCPInstVisitor::Solve() {
 ///
 /// This scan also checks for values that use undefs. It conservatively marks
 /// them as overdefined.
-bool SCCPInstVisitor::ResolvedUndefsIn(Function &F) {
+bool SCCPInstVisitor::resolvedUndefsIn(Function &F) {
   bool MadeChange = false;
   for (BasicBlock &BB : F) {
     if (!BBExecutable.count(&BB))
@@ -1428,7 +1428,7 @@ bool SCCPInstVisitor::ResolvedUndefsIn(Function &F) {
       if (auto *STy = dyn_cast<StructType>(I.getType())) {
         // Only a few things that can be structs matter for undef.
 
-        // Tracked calls must never be marked overdefined in ResolvedUndefsIn.
+        // Tracked calls must never be marked overdefined in resolvedUndefsIn.
         if (auto *CB = dyn_cast<CallBase>(&I))
           if (Function *F = CB->getCalledFunction())
             if (MRVFunctionsTracked.count(F))
@@ -1458,7 +1458,7 @@ bool SCCPInstVisitor::ResolvedUndefsIn(Function &F) {
       // 1. It could be tracked.
       // 2. It could be constant-foldable.
       // Because of the way we solve return values, tracked calls must
-      // never be marked overdefined in ResolvedUndefsIn.
+      // never be marked overdefined in resolvedUndefsIn.
       if (auto *CB = dyn_cast<CallBase>(&I))
         if (Function *F = CB->getCalledFunction())
           if (TrackedRetVals.count(F))
@@ -1580,8 +1580,8 @@ void SCCPSolver::addAnalysis(Function &F, AnalysisResultsForFn A) {
   return Visitor->addAnalysis(F, std::move(A));
 }
 
-bool SCCPSolver::MarkBlockExecutable(BasicBlock *BB) {
-  return Visitor->MarkBlockExecutable(BB);
+bool SCCPSolver::markBlockExecutable(BasicBlock *BB) {
+  return Visitor->markBlockExecutable(BB);
 }
 
 const PredicateBase *SCCPSolver::getPredicateInfoFor(Instruction *I) {
@@ -1590,12 +1590,12 @@ const PredicateBase *SCCPSolver::getPredicateInfoFor(Instruction *I) {
 
 DomTreeUpdater SCCPSolver::getDTU(Function &F) { return Visitor->getDTU(F); }
 
-void SCCPSolver::TrackValueOfGlobalVariable(GlobalVariable *GV) {
-  Visitor->TrackValueOfGlobalVariable(GV);
+void SCCPSolver::trackValueOfGlobalVariable(GlobalVariable *GV) {
+  Visitor->trackValueOfGlobalVariable(GV);
 }
 
-void SCCPSolver::AddTrackedFunction(Function *F) {
-  Visitor->AddTrackedFunction(F);
+void SCCPSolver::addTrackedFunction(Function *F) {
+  Visitor->addTrackedFunction(F);
 }
 
 void SCCPSolver::addToMustPreserveReturnsInFunctions(Function *F) {
@@ -1606,18 +1606,18 @@ bool SCCPSolver::mustPreserveReturn(Function *F) {
   return Visitor->mustPreserveReturn(F);
 }
 
-void SCCPSolver::AddArgumentTrackedFunction(Function *F) {
-  Visitor->AddArgumentTrackedFunction(F);
+void SCCPSolver::addArgumentTrackedFunction(Function *F) {
+  Visitor->addArgumentTrackedFunction(F);
 }
 
 bool SCCPSolver::isArgumentTrackedFunction(Function *F) {
   return Visitor->isArgumentTrackedFunction(F);
 }
 
-void SCCPSolver::Solve() { Visitor->Solve(); }
+void SCCPSolver::solve() { Visitor->solve(); }
 
-bool SCCPSolver::ResolvedUndefsIn(Function &F) {
-  return Visitor->ResolvedUndefsIn(F);
+bool SCCPSolver::resolvedUndefsIn(Function &F) {
+  return Visitor->resolvedUndefsIn(F);
 }
 
 bool SCCPSolver::isBlockExecutable(BasicBlock *BB) const {
