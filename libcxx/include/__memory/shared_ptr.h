@@ -379,6 +379,16 @@ struct __compatible_with
     : is_convertible<_Tp*, _Up*> {};
 #endif // _LIBCPP_STD_VER > 14
 
+template <class _Ptr, class = void>
+struct __is_deletable : false_type { };
+template <class _Ptr>
+struct __is_deletable<_Ptr, decltype(delete _VSTD::declval<_Ptr>())> : true_type { };
+
+template <class _Ptr, class = void>
+struct __is_array_deletable : false_type { };
+template <class _Ptr>
+struct __is_array_deletable<_Ptr, decltype(delete[] _VSTD::declval<_Ptr>())> : true_type { };
+
 template <class _Dp, class _Pt,
     class = decltype(_VSTD::declval<_Dp>()(_VSTD::declval<_Pt>()))>
 static true_type __well_formed_deleter_test(int);
@@ -424,9 +434,27 @@ public:
     _LIBCPP_CONSTEXPR shared_ptr() _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR shared_ptr(nullptr_t) _NOEXCEPT;
-    template<class _Yp>
-        explicit shared_ptr(_Yp* __p,
-                            typename enable_if<__compatible_with<_Yp, element_type>::value, __nat>::type = __nat());
+
+    template<class _Yp, class = _EnableIf<
+        _And<
+            __compatible_with<_Yp, _Tp>
+            // In C++03 we get errors when trying to do SFINAE with the
+            // delete operator, so we always pretend that it's deletable.
+            // The same happens on GCC.
+#if !defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_COMPILER_GCC)
+            , _If<is_array<_Tp>::value, __is_array_deletable<_Yp*>, __is_deletable<_Yp*> >
+#endif
+        >::value
+    > >
+    explicit shared_ptr(_Yp* __p) : __ptr_(__p) {
+        unique_ptr<_Yp> __hold(__p);
+        typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
+        typedef __shared_ptr_pointer<_Yp*, __shared_ptr_default_delete<_Tp, _Yp>, _AllocT > _CntrlBlk;
+        __cntrl_ = new _CntrlBlk(__p, __shared_ptr_default_delete<_Tp, _Yp>(), _AllocT());
+        __hold.release();
+        __enable_weak_this(__p, __p);
+    }
+
     template<class _Yp, class _Dp>
         shared_ptr(_Yp* __p, _Dp __d,
                    typename enable_if<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, element_type>::value, __nat>::type = __nat());
@@ -676,20 +704,6 @@ shared_ptr<_Tp>::shared_ptr(nullptr_t) _NOEXCEPT
     : __ptr_(nullptr),
       __cntrl_(nullptr)
 {
-}
-
-template<class _Tp>
-template<class _Yp>
-shared_ptr<_Tp>::shared_ptr(_Yp* __p,
-                            typename enable_if<__compatible_with<_Yp, element_type>::value, __nat>::type)
-    : __ptr_(__p)
-{
-    unique_ptr<_Yp> __hold(__p);
-    typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
-    typedef __shared_ptr_pointer<_Yp*, __shared_ptr_default_delete<_Tp, _Yp>, _AllocT > _CntrlBlk;
-    __cntrl_ = new _CntrlBlk(__p, __shared_ptr_default_delete<_Tp, _Yp>(), _AllocT());
-    __hold.release();
-    __enable_weak_this(__p, __p);
 }
 
 template<class _Tp>
