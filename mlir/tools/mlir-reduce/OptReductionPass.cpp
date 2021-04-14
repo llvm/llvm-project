@@ -13,33 +13,39 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Reducer/OptReductionPass.h"
+#include "mlir/Pass/PassRegistry.h"
+#include "mlir/Reducer/Passes.h"
+#include "mlir/Reducer/Tester.h"
 
 #define DEBUG_TYPE "mlir-reduce"
 
 using namespace mlir;
 
-OptReductionPass::OptReductionPass(const Tester &test, MLIRContext *context,
-                                   std::unique_ptr<Pass> optPass)
-    : context(context), test(test), optPass(std::move(optPass)) {}
-
-OptReductionPass::OptReductionPass(const OptReductionPass &srcPass)
-    : OptReductionBase<OptReductionPass>(srcPass), test(srcPass.test),
-      optPass(srcPass.optPass.get()) {}
-
 /// Runs the pass instance in the pass pipeline.
 void OptReductionPass::runOnOperation() {
   LLVM_DEBUG(llvm::dbgs() << "\nOptimization Reduction pass: ");
-  LLVM_DEBUG(llvm::dbgs() << optPass.get()->getName() << "\nTesting:\n");
+
+  Tester test(testerName, testerArgs);
 
   ModuleOp module = this->getOperation();
   ModuleOp moduleVariant = module.clone();
-  PassManager pmTransform(context);
-  pmTransform.addPass(std::move(optPass));
+
+  PassManager passManager(module.getContext());
+  if (failed(parsePassPipeline(optPass, passManager))) {
+    LLVM_DEBUG(llvm::dbgs() << "\nFailed to parse pass pipeline");
+    return;
+  }
 
   std::pair<Tester::Interestingness, int> original = test.isInteresting(module);
-
-  if (failed(pmTransform.run(moduleVariant)))
+  if (original.first != Tester::Interestingness::True) {
+    LLVM_DEBUG(llvm::dbgs() << "\nThe original input is not interested");
     return;
+  }
+
+  if (failed(passManager.run(moduleVariant))) {
+    LLVM_DEBUG(llvm::dbgs() << "\nFailed to run pass pipeline");
+    return;
+  }
 
   std::pair<Tester::Interestingness, int> reduced =
       test.isInteresting(moduleVariant);
@@ -57,4 +63,8 @@ void OptReductionPass::runOnOperation() {
   moduleVariant->destroy();
 
   LLVM_DEBUG(llvm::dbgs() << "Pass Complete\n\n");
+}
+
+std::unique_ptr<Pass> mlir::createOptReductionPass() {
+  return std::make_unique<OptReductionPass>();
 }
