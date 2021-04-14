@@ -2187,6 +2187,11 @@ def VectorExtractions {
   dag BE_VFLOAT_PERMUTE = (VPERM $S, $S, BE_VFLOAT_PERM_VEC);
   dag BE_VARIABLE_FLOAT = (XSCVSPDPN BE_VFLOAT_PERMUTE);
 
+  //  BE variable float 32-bit version
+  dag BE_32B_VFLOAT_PERM_VEC = (v16i8 (LVSL (i32 ZERO), (RLWINM $Idx, 2, 0, 29)));
+  dag BE_32B_VFLOAT_PERMUTE = (VPERM $S, $S, BE_32B_VFLOAT_PERM_VEC);
+  dag BE_32B_VARIABLE_FLOAT = (XSCVSPDPN BE_32B_VFLOAT_PERMUTE);
+
   /* BE variable double
       Same as the BE doubleword except there is no move.
   */
@@ -2194,6 +2199,14 @@ def VectorExtractions {
                                          (v16i8 (COPY_TO_REGCLASS $S, VRRC)),
                                          BE_VDWORD_PERM_VEC));
   dag BE_VARIABLE_DOUBLE = (COPY_TO_REGCLASS BE_VDOUBLE_PERMUTE, VSRC);
+
+  //  BE variable double 32-bit version
+  dag BE_32B_VDWORD_PERM_VEC = (v16i8 (LVSL (i32 ZERO),
+                                        (RLWINM (ANDI_rec $Idx, 1), 3, 0, 28)));
+  dag BE_32B_VDOUBLE_PERMUTE = (v16i8 (VPERM (v16i8 (COPY_TO_REGCLASS $S, VRRC)),
+                                      (v16i8 (COPY_TO_REGCLASS $S, VRRC)),
+                                      BE_32B_VDWORD_PERM_VEC));
+  dag BE_32B_VARIABLE_DOUBLE = (COPY_TO_REGCLASS BE_32B_VDOUBLE_PERMUTE, VSRC);
 }
 
 def AlignValues {
@@ -2426,6 +2439,7 @@ def MrgWords {
 // [HasVSX, HasOnlySwappingMemOps]
 // [HasVSX, HasOnlySwappingMemOps, IsBigEndian]
 // [HasVSX, HasP8Vector]
+// [HasVSX, HasP8Vector, IsBigEndian]
 // [HasVSX, HasP8Vector, IsBigEndian, IsPPC64]
 // [HasVSX, HasP8Vector, IsLittleEndian]
 // [HasVSX, HasP8Vector, NoP9Vector, IsBigEndian, IsPPC64]
@@ -3147,8 +3161,8 @@ def : Pat<(v16i8 (bitconvert (v16i8 immAllOnesV))),
           (v16i8 (COPY_TO_REGCLASS(XXLEQVOnes), VSRC))>;
 } // HasVSX, HasP8Vector
 
-// Big endian Power8 VSX subtarget.
-let Predicates = [HasVSX, HasP8Vector, IsBigEndian, IsPPC64] in {
+// Any big endian Power8 VSX subtarget.
+let Predicates = [HasVSX, HasP8Vector, IsBigEndian] in {
 def : Pat<DWToSPExtractConv.El0SS1,
           (f32 (XSCVSXDSP (COPY_TO_REGCLASS $S1, VSFRC)))>;
 def : Pat<DWToSPExtractConv.El1SS1,
@@ -3169,8 +3183,6 @@ def : Pat<(f32 (vector_extract v4f32:$S, 2)),
           (f32 (XSCVSPDPN (XXPERMDI $S, $S, 2)))>;
 def : Pat<(f32 (vector_extract v4f32:$S, 3)),
           (f32 (XSCVSPDPN (XXSLDWI $S, $S, 3)))>;
-def : Pat<(f32 (vector_extract v4f32:$S, i64:$Idx)),
-          (f32 VectorExtractions.BE_VARIABLE_FLOAT)>;
 
 def : Pat<(f32 (PPCfcfids (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 0)))))),
           (f32 (XSCVSPDPN (XVCVSXWSP (XXSPLTW $A, 0))))>;
@@ -3188,6 +3200,18 @@ def : Pat<(f64 (PPCfcfid (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 2)))))),
           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 2)), VSFRC))>;
 def : Pat<(f64 (PPCfcfid (f64 (PPCmtvsra (i32 (extractelt v4i32:$A, 3)))))),
           (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 3)), VSFRC))>;
+
+def : Pat<(f32 (vector_extract v4f32:$S, i32:$Idx)),
+          (f32 VectorExtractions.BE_32B_VARIABLE_FLOAT)>;
+
+def : Pat<(f64 (vector_extract v2f64:$S, i32:$Idx)),
+          (f64 VectorExtractions.BE_32B_VARIABLE_DOUBLE)>;
+} // HasVSX, HasP8Vector, IsBigEndian
+
+// Big endian Power8 64Bit VSX subtarget.
+let Predicates = [HasVSX, HasP8Vector, IsBigEndian, IsPPC64] in {
+def : Pat<(f32 (vector_extract v4f32:$S, i64:$Idx)),
+          (f32 VectorExtractions.BE_VARIABLE_FLOAT)>;
 
 // LIWAX - This instruction is used for sign extending i32 -> i64.
 // LIWZX - This instruction will be emitted for i32, f32, and when

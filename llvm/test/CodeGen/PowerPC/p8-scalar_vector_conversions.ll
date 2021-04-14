@@ -4,6 +4,9 @@
 ; RUN: llc < %s -ppc-vsr-nums-as-vr -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:       -verify-machineinstrs -ppc-asm-full-reg-names -mcpu=pwr8 -relocation-model=pic \
 ; RUN:       | FileCheck %s -check-prefix=CHECK-LE
+; RUN: llc < %s -vec-extabi -mtriple=powerpc64-ibm-aix-xcoff \
+; RUN:       -verify-machineinstrs -mcpu=pwr8 \
+; RUN:       | FileCheck %s -check-prefix=CHECK-AIX
 
 ; The build[csilf] functions simply test the scalar_to_vector handling with
 ; direct moves. This corresponds to the "insertelement" instruction. Subsequent
@@ -20,9 +23,14 @@ entry:
 ; CHECK-LABEL: buildc
 ; CHECK: sldi r3, r3, 56
 ; CHECK: mtvsrd v2, r3
+
 ; CHECK-LE-LABEL: buildc
 ; CHECK-LE: mtvsrd v2, r3
 ; CHECK-LE: vspltb v2, v2, 7
+
+; CHECK-AIX-LABEL: buildc:
+; CHECK-AIX: mtvsrd 34, 3
+; CHECK-AIX: vspltb 2, 2, 0
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -34,9 +42,14 @@ entry:
 ; CHECK-LABEL: builds
 ; CHECK: sldi r3, r3, 48
 ; CHECK: mtvsrd v2, r3
+
 ; CHECK-LE-LABEL: builds
 ; CHECK-LE: mtvsrd v2, r3
 ; CHECK-LE: vsplth v2, v2, 3
+
+; CHECK-AIX-LABEL: builds:
+; CHECK-AIX: mtvsrd 34, 3
+; CHECK-AIX: vsplth 2, 2, 0
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -48,9 +61,14 @@ entry:
 ; CHECK-LABEL: buildi
 ; CHECK: mtfprwz f0, r3
 ; CHECK: xxspltw v2, vs0, 1
+
 ; CHECK-LE-LABEL: buildi
 ; CHECK-LE: mtfprwz f0, r3
 ; CHECK-LE: xxspltw v2, vs0, 1
+
+; CHECK-AIX-LABEL: buildi:
+; CHECK-AIX: mtfprwz 0, 3
+; CHECK-AIX: xxspltw 34, 0, 1
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -61,9 +79,14 @@ entry:
   ret <2 x i64> %splat.splat
 ; CHECK-LABEL: buildl
 ; CHECK: mtfprd f0, r3
+
 ; CHECK-LE-LABEL: buildl
 ; CHECK-LE: mtfprd f0, r3
 ; CHECK-LE: xxspltd v2, vs0, 0
+
+; CHECK-AIX-LABEL: buildl:
+; CHECK-AIX: mtfprd 0, 3
+; CHECK-AIX: xxmrghd 34, 0, 0
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -75,9 +98,14 @@ entry:
 ; CHECK-LABEL: buildf
 ; CHECK: xscvdpspn vs0, f1
 ; CHECK: xxspltw v2, vs0, 0
+
 ; CHECK-LE-LABEL: buildf
 ; CHECK-LE: xscvdpspn vs0, f1
 ; CHECK-LE: xxspltw v2, vs0, 0
+
+; CHECK-AIX-LABEL: buildf:
+; CHECK-AIX: xscvdpspn 0, 1
+; CHECK-AIX: xxspltw 34, 0, 0
 }
 
 ; The optimization to remove stack operations from PPCDAGToDAGISel::Select
@@ -92,9 +120,14 @@ entry:
 ; CHECK-LABEL: buildd
 ; CHECK: ld r3, .LC0@toc@l(r3)
 ; CHECK: lxvdsx v2, 0, r3
+
 ; CHECK-LE-LABEL: buildd
 ; CHECK-LE: ld r3, .LC0@toc@l(r3)
 ; CHECK-LE: lxvdsx v2, 0, r3
+
+; CHECK-AIX-LABEL: buildd:
+; CHECK-AIX: ld 3, L..C0(2)
+; CHECK-AIX: lxvdsx 34, 0, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -106,10 +139,16 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 8, 56
 ; CHECK: extsb r3, r3
+
 ; CHECK-LE-LABEL: @getsc0
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: clrldi r3, r3, 56
 ; CHECK-LE: extsb r3, r3
+
+; CHECK-AIX-LABEL: getsc0:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 8, 56
+; CHECK-AIX: extsb 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -121,10 +160,16 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 16, 56
 ; CHECK: extsb r3, r3
+
 ; CHECK-LE-LABEL: @getsc1
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 56, 56
 ; CHECK-LE: extsb r3, r3
+
+; CHECK-AIX-LABEL: getsc1:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 16, 56
+; CHECK-AIX: extsb 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -136,10 +181,16 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 24, 56
 ; CHECK: extsb r3, r3
+
 ; CHECK-LE-LABEL: @getsc2
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 48, 56
 ; CHECK-LE: extsb r3, r3
+
+; CHECK-AIX-LABEL: getsc2:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 24, 56
+; CHECK-AIX: extsb 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -151,10 +202,16 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 32, 56
 ; CHECK: extsb r3, r3
+
 ; CHECK-LE-LABEL: @getsc3
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 40, 56
 ; CHECK-LE: extsb r3, r3
+
+; CHECK-AIX-LABEL: getsc3:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 32, 56
+; CHECK-AIX: extsb 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -166,10 +223,16 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 40, 56
 ; CHECK: extsb r3, r3
+
 ; CHECK-LE-LABEL: @getsc4
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 32, 56
 ; CHECK-LE: extsb r3, r3
+
+; CHECK-AIX-LABEL: getsc4:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 40, 56
+; CHECK-AIX: extsb 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -181,10 +244,16 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 48, 56
 ; CHECK: extsb r3, r3
+
 ; CHECK-LE-LABEL: @getsc5
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 24, 56
 ; CHECK-LE: extsb r3, r3
+
+; CHECK-AIX-LABEL: getsc5:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 48, 56
+; CHECK-AIX: extsb 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -196,10 +265,16 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 56, 56
 ; CHECK: extsb r3, r3
+
 ; CHECK-LE-LABEL: @getsc6
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 16, 56
 ; CHECK-LE: extsb r3, r3
+
+; CHECK-AIX-LABEL: getsc6:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 56, 56
+; CHECK-AIX: extsb 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -211,10 +286,16 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: clrldi r3, r3, 56
 ; CHECK: extsb r3, r3
+
 ; CHECK-LE-LABEL: @getsc7
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 8, 56
 ; CHECK-LE: extsb r3, r3
+
+; CHECK-AIX-LABEL: getsc7:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: clrldi 3, 3, 56
+; CHECK-AIX: extsb 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -226,10 +307,16 @@ entry:
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 8, 56
 ; CHECK: extsb r3, r3
+
 ; CHECK-LE-LABEL: @getsc8
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: clrldi r3, r3, 56
 ; CHECK-LE: extsb r3, r3
+
+; CHECK-AIX-LABEL: getsc8:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 8, 56
+; CHECK-AIX: extsb 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -241,10 +328,16 @@ entry:
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 16, 56
 ; CHECK: extsb r3, r3
+
 ; CHECK-LE-LABEL: @getsc9
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 56, 56
 ; CHECK-LE: extsb r3, r3
+
+; CHECK-AIX-LABEL: getsc9:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 16, 56
+; CHECK-AIX: extsb 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -256,10 +349,16 @@ entry:
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 24, 56
 ; CHECK: extsb r3, r3
+
 ; CHECK-LE-LABEL: @getsc10
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 48, 56
 ; CHECK-LE: extsb r3, r3
+
+; CHECK-AIX-LABEL: getsc10:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 24, 56
+; CHECK-AIX: extsb 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -271,10 +370,16 @@ entry:
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 32, 56
 ; CHECK: extsb r3, r3
+
 ; CHECK-LE-LABEL: @getsc11
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 40, 56
 ; CHECK-LE: extsb r3, r3
+
+; CHECK-AIX-LABEL: getsc11:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 32, 56
+; CHECK-AIX: extsb 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -286,10 +391,16 @@ entry:
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 40, 56
 ; CHECK: extsb r3, r3
+
 ; CHECK-LE-LABEL: @getsc12
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 32, 56
 ; CHECK-LE: extsb r3, r3
+
+; CHECK-AIX-LABEL: getsc12:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 40, 56
+; CHECK-AIX: extsb 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -301,10 +412,15 @@ entry:
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 48, 56
 ; CHECK: extsb r3, r3
+
 ; CHECK-LE-LABEL: @getsc13
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 24, 56
 ; CHECK-LE: extsb r3, r3
+
+; CHECK-AIX-LABEL: getsc13:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 48, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -316,10 +432,16 @@ entry:
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 56, 56
 ; CHECK: extsb r3, r3
+
 ; CHECK-LE-LABEL: @getsc14
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 16, 56
 ; CHECK-LE: extsb r3, r3
+
+; CHECK-AIX-LABEL: getsc14:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 56, 56
+; CHECK-AIX: extsb 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -331,10 +453,16 @@ entry:
 ; CHECK: mffprd r3, f0
 ; CHECK: clrldi  r3, r3, 56
 ; CHECK: extsb r3, r3
+
 ; CHECK-LE-LABEL: @getsc15
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 8, 56
 ; CHECK-LE: extsb r3, r3
+
+; CHECK-AIX-LABEL: getsc15:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: clrldi 3, 3, 56
+; CHECK-AIX: extsb 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -345,9 +473,14 @@ entry:
 ; CHECK-LABEL: @getuc0
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 8, 56
+
 ; CHECK-LE-LABEL: @getuc0
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: clrldi r3, r3, 56
+
+; CHECK-AIX-LABEL: getuc0:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 8, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -358,9 +491,14 @@ entry:
 ; CHECK-LABEL: @getuc1
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 16, 56
+
 ; CHECK-LE-LABEL: @getuc1
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 56, 56
+
+; CHECK-AIX-LABEL: getuc1:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 16, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -371,9 +509,15 @@ entry:
 ; CHECK-LABEL: @getuc2
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 24, 56
+
 ; CHECK-LE-LABEL: @getuc2
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 48, 56
+
+; CHECK-AIX-LABEL: getuc2:
+; CHECK-AIX mfvsrd 3, 34
+; CHECK-AIX rldicl 3, 3, 24, 56
+; CHECK-AIX clrldi 3, 3, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -384,9 +528,14 @@ entry:
 ; CHECK-LABEL: @getuc3
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 32, 56
+
 ; CHECK-LE-LABEL: @getuc3
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 40, 56
+
+; CHECK-AIX-LABEL: getuc3:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 32, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -397,9 +546,14 @@ entry:
 ; CHECK-LABEL: @getuc4
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 40, 56
+
 ; CHECK-LE-LABEL: @getuc4
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 32, 56
+
+; CHECK-AIX-LABEL: getuc4:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 40, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -410,9 +564,14 @@ entry:
 ; CHECK-LABEL: @getuc5
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 48, 56
+
 ; CHECK-LE-LABEL: @getuc5
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 24, 56
+
+; CHECK-AIX-LABEL: getuc5:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 48, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -423,9 +582,14 @@ entry:
 ; CHECK-LABEL: @getuc6
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 56, 56
+
 ; CHECK-LE-LABEL: @getuc6
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 16, 56
+
+; CHECK-AIX-LABEL: getuc6:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 56, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -436,9 +600,14 @@ entry:
 ; CHECK-LABEL: @getuc7
 ; CHECK: mfvsrd r3, v2
 ; CHECK: clrldi   r3, r3, 56
+
 ; CHECK-LE-LABEL: @getuc7
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 8, 56
+
+; CHECK-AIX-LABEL: getuc7:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: clrldi 3, 3, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -449,9 +618,14 @@ entry:
 ; CHECK-LABEL: @getuc8
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 8, 56
+
 ; CHECK-LE-LABEL: @getuc8
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: clrldi r3, r3, 56
+
+; CHECK-AIX-LABEL: getuc8:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 8, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -462,9 +636,14 @@ entry:
 ; CHECK-LABEL: @getuc9
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 16, 56
+
 ; CHECK-LE-LABEL: @getuc9
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 56, 56
+
+; CHECK-AIX-LABEL: getuc9:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 16, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -475,9 +654,14 @@ entry:
 ; CHECK-LABEL: @getuc10
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 24, 56
+
 ; CHECK-LE-LABEL: @getuc10
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 48, 56
+
+; CHECK-AIX-LABEL: getuc10:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 24, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -488,9 +672,14 @@ entry:
 ; CHECK-LABEL: @getuc11
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 32, 56
+
 ; CHECK-LE-LABEL: @getuc11
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 40, 56
+
+; CHECK-AIX-LABEL: getuc11:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 32, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -501,9 +690,14 @@ entry:
 ; CHECK-LABEL: @getuc12
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 40, 56
+
 ; CHECK-LE-LABEL: @getuc12
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 32, 56
+
+; CHECK-AIX-LABEL: getuc12:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 40, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -514,9 +708,14 @@ entry:
 ; CHECK-LABEL: @getuc13
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 48, 56
+
 ; CHECK-LE-LABEL: @getuc13
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 24, 56
+
+; CHECK-AIX-LABEL: getuc13:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 48, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -527,9 +726,14 @@ entry:
 ; CHECK-LABEL: @getuc14
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 56, 56
+
 ; CHECK-LE-LABEL: @getuc14
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 16, 56
+
+; CHECK-AIX-LABEL: getuc14
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 56, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -540,9 +744,14 @@ entry:
 ; CHECK-LABEL: @getuc15
 ; CHECK: mffprd r3, f0
 ; CHECK: clrldi   r3, r3, 56
+
 ; CHECK-LE-LABEL: @getuc15
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 8, 56
+
+; CHECK-AIX-LABEL: getuc15:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: clrldi 3, 3, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -557,6 +766,7 @@ define signext i8 @getvelsc(<16 x i8> %vsc, i32 signext %i) {
 ; CHECK: mfvsrd r4, v2
 ; CHECK: srd r3, r4, r3
 ; CHECK: extsb r3, r3
+
 ; CHECK-LE-LABEL: @getvelsc
 ; CHECK-LE: li r3, 8
 ; CHECK-LE: andc r3, r3, r5
@@ -568,6 +778,17 @@ define signext i8 @getvelsc(<16 x i8> %vsc, i32 signext %i) {
 ; CHECK-LE: mfvsrd r4, v2
 ; CHECK-LE: srd r3, r4, r3
 ; CHECK-LE: extsb r3, r3
+
+; CHECK-AIX-LABEL: getvelsc:
+; CHECK-AIX: andi. 5, 3, 8
+; CHECK-AIX: li 4, 7
+; CHECK-AIX: lvsl 3, 0, 5
+; CHECK-AIX: andc 3, 4, 3
+; CHECK-AIX: sldi 3, 3, 3
+; CHECK-AIX: vperm 2, 2, 2, 3
+; CHECK-AIX: mfvsrd 4, 34
+; CHECK-AIX: srd 3, 4, 3
+; CHECK-AIX: extsb 3, 3
 entry:
   %vecext = extractelement <16 x i8> %vsc, i32 %i
   ret i8 %vecext
@@ -585,6 +806,7 @@ define zeroext i8 @getveluc(<16 x i8> %vuc, i32 signext %i) {
 ; CHECK: mfvsrd r4, v2
 ; CHECK: srd r3, r4, r3
 ; CHECK: clrldi  r3, r3, 5
+
 ; CHECK-LE-LABEL: @getveluc
 ; CHECK-LE: li r3, 8
 ; CHECK-LE: andc r3, r3, r5
@@ -596,6 +818,17 @@ define zeroext i8 @getveluc(<16 x i8> %vuc, i32 signext %i) {
 ; CHECK-LE: mfvsrd r4, v2
 ; CHECK-LE: srd r3, r4, r3
 ; CHECK-LE: clrldi r3, r3, 56
+
+; CHECK-AIX-LABEL: getveluc:
+; CHECK-AIX: andi. 5, 3, 8
+; CHECK-AIX: li 4, 7
+; CHECK-AIX: lvsl 3, 0, 5
+; CHECK-AIX: andc 3, 4, 3
+; CHECK-AIX: sldi 3, 3, 3
+; CHECK-AIX: vperm 2, 2, 2, 3
+; CHECK-AIX: mfvsrd 4, 34
+; CHECK-AIX: srd 3, 4, 3
+; CHECK-AIX: clrldi 3, 3, 56
 entry:
   %vecext = extractelement <16 x i8> %vuc, i32 %i
   ret i8 %vecext
@@ -610,10 +843,16 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 16, 48
 ; CHECK: extsh r3, r3
+
 ; CHECK-LE-LABEL: @getss0
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: clrldi r3, r3, 48
 ; CHECK-LE: extsh r3, r3
+
+; CHECK-AIX-LABEL: getss0:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 16, 48
+; CHECK-AIX: extsh 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -625,10 +864,16 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 32, 48
 ; CHECK: extsh r3, r3
+
 ; CHECK-LE-LABEL: @getss1
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 48, 48
 ; CHECK-LE: extsh r3, r3
+
+; CHECK-AIX-LABEL: getss1:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 32, 48
+; CHECK-AIX: extsh 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -640,10 +885,16 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 48, 48
 ; CHECK: extsh r3, r3
+
 ; CHECK-LE-LABEL: @getss2
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 32, 48
 ; CHECK-LE: extsh r3, r3
+
+; CHECK-AIX-LABEL: getss2:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 48, 48
+; CHECK-AIX: extsh 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -655,10 +906,16 @@ entry:
 ; CHECK: mfvsrd r3, v2
 ; CHECK: clrldi r3, r3, 48
 ; CHECK: extsh r3, r3
+
 ; CHECK-LE-LABEL: @getss3
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 16, 48
 ; CHECK-LE: extsh r3, r3
+
+; CHECK-AIX-LABEL: getss3:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: clrldi 3, 3, 48
+; CHECK-AIX: extsh 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -670,10 +927,16 @@ entry:
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 16, 48
 ; CHECK: extsh r3, r3
+
 ; CHECK-LE-LABEL: @getss4
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: clrldi r3, r3, 48
 ; CHECK-LE: extsh r3, r3
+
+; CHECK-AIX-LABEL: getss4:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 16, 48
+; CHECK-AIX: extsh 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -685,10 +948,16 @@ entry:
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 32, 48
 ; CHECK: extsh r3, r3
+
 ; CHECK-LE-LABEL: @getss5
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 48, 48
 ; CHECK-LE: extsh r3, r3
+
+; CHECK-AIX-LABEL: getss5:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 32, 48
+; CHECK-AIX: extsh 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -700,10 +969,16 @@ entry:
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 48, 48
 ; CHECK: extsh r3, r3
+
 ; CHECK-LE-LABEL: @getss6
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 32, 48
 ; CHECK-LE: extsh r3, r3
+
+; CHECK-AIX-LABEL: getss6:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 48, 48
+; CHECK-AIX: extsh 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -715,10 +990,16 @@ entry:
 ; CHECK: mffprd r3, f0
 ; CHECK: clrldi  r3, r3, 48
 ; CHECK: extsh r3, r3
+
 ; CHECK-LE-LABEL: @getss7
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 16, 48
 ; CHECK-LE: extsh r3, r3
+
+; CHECK-AIX-LABEL: getss7:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: clrldi 3, 3, 48
+; CHECK-AIX: extsh 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -729,9 +1010,14 @@ entry:
 ; CHECK-LABEL: @getus0
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 16, 48
+
 ; CHECK-LE-LABEL: @getus0
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: clrldi r3, r3, 48
+
+; CHECK-AIX-LABEL: getus0:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 16, 48
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -742,9 +1028,14 @@ entry:
 ; CHECK-LABEL: @getus1
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 32, 48
+
 ; CHECK-LE-LABEL: @getus1
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 48, 48
+
+; CHECK-AIX-LABEL: getus1:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 32, 48
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -755,9 +1046,14 @@ entry:
 ; CHECK-LABEL: @getus2
 ; CHECK: mfvsrd r3, v2
 ; CHECK: rldicl r3, r3, 48, 48
+
 ; CHECK-LE-LABEL: @getus2
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 32, 48
+
+; CHECK-AIX-LABEL: getus2:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: rldicl 3, 3, 48, 48
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -768,9 +1064,14 @@ entry:
 ; CHECK-LABEL: @getus3
 ; CHECK: mfvsrd r3, v2
 ; CHECK: clrldi   r3, r3, 48
+
 ; CHECK-LE-LABEL: @getus3
 ; CHECK-LE: mffprd r3, f0
 ; CHECK-LE: rldicl r3, r3, 16, 48
+
+; CHECK-AIX-LABEL: getus3:
+; CHECK-AIX: mfvsrd 3, 34
+; CHECK-AIX: clrldi 3, 3, 48
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -781,9 +1082,14 @@ entry:
 ; CHECK-LABEL: @getus4
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 16, 48
+
 ; CHECK-LE-LABEL: @getus4
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: clrldi r3, r3, 48
+
+; CHECK-AIX-LABEL: getus4:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 16, 48
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -794,9 +1100,14 @@ entry:
 ; CHECK-LABEL: @getus5
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 32, 48
+
 ; CHECK-LE-LABEL: @getus5
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 48, 48
+
+; CHECK-AIX-LABEL: getus5:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 32, 48
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -807,9 +1118,14 @@ entry:
 ; CHECK-LABEL: @getus6
 ; CHECK: mffprd r3, f0
 ; CHECK: rldicl r3, r3, 48, 48
+
 ; CHECK-LE-LABEL: @getus6
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 32, 48
+
+; CHECK-AIX-LABEL: getus6:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: rldicl 3, 3, 48, 48
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -820,9 +1136,14 @@ entry:
 ; CHECK-LABEL: @getus7
 ; CHECK: mffprd r3, f0
 ; CHECK: clrldi   r3, r3, 48
+
 ; CHECK-LE-LABEL: @getus7
 ; CHECK-LE: mfvsrd r3, v2
 ; CHECK-LE: rldicl r3, r3, 16, 48
+
+; CHECK-AIX-LABEL: getus7:
+; CHECK-AIX: mffprd 3, 0
+; CHECK-AIX: clrldi 3, 3, 48
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -838,6 +1159,7 @@ define signext i16 @getvelss(<8 x i16> %vss, i32 signext %i) {
 ; CHECK: mfvsrd r4, v2
 ; CHECK: srd r3, r4, r3
 ; CHECK: extsh r3, r3
+
 ; CHECK-LE-LABEL: @getvelss
 ; CHECK-LE: li r3, 4
 ; CHECK-LE: andc r3, r3, r5
@@ -850,6 +1172,18 @@ define signext i16 @getvelss(<8 x i16> %vss, i32 signext %i) {
 ; CHECK-LE: mfvsrd r4, v2
 ; CHECK-LE: srd r3, r4, r3
 ; CHECK-LE: extsh r3, r3
+
+; CHECK-AIX-LABEL: getvelss:
+; CHECK-AIX: andi. 5, 3, 4
+; CHECK-AIX: li 4, 3
+; CHECK-AIX: sldi 5, 5, 1
+; CHECK-AIX: andc 3, 4, 3
+; CHECK-AIX: lvsl 3, 0, 5
+; CHECK-AIX: sldi 3, 3, 4
+; CHECK-AIX: vperm 2, 2, 2, 3
+; CHECK-AIX: mfvsrd 4, 34
+; CHECK-AIX: srd 3, 4, 3
+; CHECK-AIX: extsh 3, 3
 entry:
   %vecext = extractelement <8 x i16> %vss, i32 %i
   ret i16 %vecext
@@ -868,6 +1202,7 @@ define zeroext i16 @getvelus(<8 x i16> %vus, i32 signext %i) {
 ; CHECK: mfvsrd r4, v2
 ; CHECK: srd r3, r4, r3
 ; CHECK: clrldi  r3, r3, 48
+
 ; CHECK-LE-LABEL: @getvelus
 ; CHECK-LE: li r3, 4
 ; CHECK-LE: andc r3, r3, r5
@@ -880,6 +1215,18 @@ define zeroext i16 @getvelus(<8 x i16> %vus, i32 signext %i) {
 ; CHECK-LE: mfvsrd r4, v2
 ; CHECK-LE: srd r3, r4, r3
 ; CHECK-LE: clrldi r3, r3, 48
+
+; CHECK-AIX-LABEL: getvelus:
+; CHECK-AIX: andi. 5, 3, 4
+; CHECK-AIX: li 4, 3
+; CHECK-AIX: sldi 5, 5, 1
+; CHECK-AIX: andc 3, 4, 3
+; CHECK-AIX: lvsl 3, 0, 5
+; CHECK-AIX: sldi 3, 3, 4
+; CHECK-AIX: vperm 2, 2, 2, 3
+; CHECK-AIX: mfvsrd 4, 34
+; CHECK-AIX: srd 3, 4, 3
+; CHECK-AIX: clrldi 3, 3, 48
 entry:
   %vecext = extractelement <8 x i16> %vus, i32 %i
   ret i16 %vecext
@@ -894,10 +1241,16 @@ entry:
 ; CHECK: xxsldwi vs0, v2, v2, 3
 ; CHECK: mffprwz r3, f0
 ; CHECK: extsw r3, r3
+
 ; CHECK-LE-LABEL: @getsi0
 ; CHECK-LE: xxswapd vs0, v2
 ; CHECK-LE: mffprwz r3, f0
 ; CHECK-LE: extsw r3, r3
+
+; CHECK-AIX-LABEL: getsi0:
+; CHECK-AIX: xxsldwi 0, 34, 34, 3
+; CHECK-AIX: mffprwz 3, 0
+; CHECK-AIX: extsw 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -908,10 +1261,15 @@ entry:
 ; CHECK-LABEL: @getsi1
 ; CHECK: mfvsrwz r3, v2
 ; CHECK: extsw r3, r3
+
 ; CHECK-LE-LABEL: @getsi1
 ; CHECK-LE: xxsldwi vs0, v2, v2, 1
 ; CHECK-LE: mffprwz r3, f0
 ; CHECK-LE: extsw r3, r3
+
+; CHECK-AIX-LABEL: getsi1:
+; CHECK-AIX: mfvsrwz 3, 34
+; CHECK-AIX: extsw 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -923,9 +1281,15 @@ entry:
 ; CHECK: xxsldwi vs0, v2, v2, 1
 ; CHECK: mffprwz r3, f0
 ; CHECK: extsw r3, r3
+
 ; CHECK-LE-LABEL: @getsi2
 ; CHECK-LE: mfvsrwz r3, v2
 ; CHECK-LE: extsw r3, r3
+
+; CHECK-AIX-LABEL: getsi2:
+; CHECK-AIX: xxsldwi 0, 34, 34, 1
+; CHECK-AIX: mffprwz 3, 0
+; CHECK-AIX: extsw 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -937,10 +1301,16 @@ entry:
 ; CHECK: xxswapd vs0, v2
 ; CHECK: mffprwz r3, f0
 ; CHECK: extsw r3, r3
+
 ; CHECK-LE-LABEL: @getsi3
 ; CHECK-LE: xxsldwi vs0, v2, v2, 3
 ; CHECK-LE: mffprwz r3, f0
 ; CHECK-LE: extsw r3, r3
+
+; CHECK-AIX-LABEL: getsi3:
+; CHECK-AIX: xxswapd 0, 34
+; CHECK-AIX: mffprwz 3, 0
+; CHECK-AIX: extsw 3, 3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -951,9 +1321,14 @@ entry:
 ; CHECK-LABEL: @getui0
 ; CHECK: xxsldwi vs0, v2, v2, 3
 ; CHECK: mffprwz r3, f0
+
 ; CHECK-LE-LABEL: @getui0
 ; CHECK-LE: xxswapd vs0, v2
 ; CHECK-LE: mffprwz r3, f0
+
+; CHECK-AIX-LABEL: getui0:
+; CHECK-AIX: xxsldwi 0, 34, 34, 3
+; CHECK-AIX: mffprwz 3, 0
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -963,9 +1338,13 @@ entry:
   ret i32 %vecext
 ; CHECK-LABEL: @getui1
 ; CHECK: mfvsrwz r3, v2
+
 ; CHECK-LE-LABEL: @getui1
 ; CHECK-LE: xxsldwi vs0, v2, v2, 1
 ; CHECK-LE: mffprwz r3, f0
+
+; CHECK-AIX-LABEL: getui1:
+; CHECK-AIX: mfvsrwz 3, 34
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -976,8 +1355,13 @@ entry:
 ; CHECK-LABEL: @getui2
 ; CHECK: xxsldwi vs0, v2, v2, 1
 ; CHECK: mffprwz r3, f0
+
 ; CHECK-LE-LABEL: @getui2
 ; CHECK-LE: mfvsrwz r3, v2
+
+; CHECK-AIX-LABEL: getui2:
+; CHECK-AIX: xxsldwi 0, 34, 34, 1
+; CHECK-AIX: mffprwz 3, 0
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -988,9 +1372,14 @@ entry:
 ; CHECK-LABEL: @getui3
 ; CHECK: xxswapd vs0, v2
 ; CHECK: mffprwz r3, f0
+
 ; CHECK-LE-LABEL: @getui3
 ; CHECK-LE: xxsldwi vs0, v2, v2, 3
 ; CHECK-LE: mffprwz r3, f0
+
+; CHECK-AIX-LABEL: getui3:
+; CHECK-AIX: xxswapd 0, 34
+; CHECK-AIX: mffprwz 3, 0
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -1000,6 +1389,7 @@ entry:
   ret i32 %vecext
 ; CHECK-LABEL: @getvelsi
 ; CHECK-LE-LABEL: @getvelsi
+; CHECK-AIX-LABEL: getvelsi
 ; FIXME: add check patterns when variable element extraction is implemented
 }
 
@@ -1010,6 +1400,7 @@ entry:
   ret i32 %vecext
 ; CHECK-LABEL: @getvelui
 ; CHECK-LE-LABEL: @getvelui
+; CHECK-AIX-LABEL: getvelui
 ; FIXME: add check patterns when variable element extraction is implemented
 }
 
@@ -1020,9 +1411,13 @@ entry:
   ret i64 %vecext
 ; CHECK-LABEL: @getsl0
 ; CHECK: mfvsrd r3, v2
+
 ; CHECK-LE-LABEL: @getsl0
 ; CHECK-LE: xxswapd vs0, v2
 ; CHECK-LE: mffprd r3, f0
+
+; CHECK-AIX-LABEL: getsl0:
+; CHECK-AIX: mfvsrd 3, 34
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -1033,8 +1428,13 @@ entry:
 ; CHECK-LABEL: @getsl1
 ; CHECK: xxswapd vs0, v2
 ; CHECK: mffprd r3, f0
+
 ; CHECK-LE-LABEL: @getsl1
 ; CHECK-LE: mfvsrd r3, v2
+
+; CHECK-AIX-LABEL: getsl1:
+; CHECK-AIX: xxswapd 0, 34
+; CHECK-AIX: mffprd 3, 0
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -1044,9 +1444,13 @@ entry:
   ret i64 %vecext
 ; CHECK-LABEL: @getul0
 ; CHECK: mfvsrd r3, v2
+
 ; CHECK-LE-LABEL: @getul0
 ; CHECK-LE: xxswapd  vs0, v2
 ; CHECK-LE: mffprd r3, f0
+
+; CHECK-AIX-LABEL: getul0:
+; CHECK-AIX: mfvsrd 3, 34
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -1057,8 +1461,13 @@ entry:
 ; CHECK-LABEL: @getul1
 ; CHECK: xxswapd vs0, v2
 ; CHECK: mffprd r3, f0
+
 ; CHECK-LE-LABEL: @getul1
 ; CHECK-LE: mfvsrd r3, v2
+
+; CHECK-AIX-LABEL: getul1:
+; CHECK-AIX: xxswapd 0, 34
+; CHECK-AIX: mffprd 3, 0
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -1068,6 +1477,7 @@ entry:
   ret i64 %vecext
 ; CHECK-LABEL: @getvelsl
 ; CHECK-LE-LABEL: @getvelsl
+; CHECK-AIX-LABEL: getvelsl:
 ; FIXME: add check patterns when variable element extraction is implemented
 }
 
@@ -1078,6 +1488,7 @@ entry:
   ret i64 %vecext
 ; CHECK-LABEL: @getvelul
 ; CHECK-LE-LABEL: @getvelul
+; CHECK-AIX-LABEL: getvelul
 ; FIXME: add check patterns when variable element extraction is implemented
 }
 
@@ -1088,9 +1499,13 @@ entry:
   ret float %vecext
 ; CHECK-LABEL: @getf0
 ; CHECK: xscvspdpn f1, v2
+
 ; CHECK-LE-LABEL: @getf0
 ; CHECK-LE: xxsldwi vs0, v2, v2, 3
 ; CHECK-LE: xscvspdpn f1, vs0
+
+; CHECK-AIX-LABEL: getf0:
+; CHECK-AIX: xscvspdpn 1, 34
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -1101,9 +1516,14 @@ entry:
 ; CHECK-LABEL: @getf1
 ; CHECK: xxsldwi vs0, v2, v2, 1
 ; CHECK: xscvspdpn f1, vs0
+
 ; CHECK-LE-LABEL: @getf1
 ; CHECK-LE: xxswapd vs0, v2
 ; CHECK-LE: xscvspdpn f1, vs0
+
+; CHECK-AIX-LABEL: getf1:
+; CHECK-AIX: xxsldwi 0, 34, 34, 1
+; CHECK-AIX: xscvspdpn 1, 0
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -1114,9 +1534,14 @@ entry:
 ; CHECK-LABEL: @getf2
 ; CHECK: xxswapd vs0, v2
 ; CHECK: xscvspdpn f1, vs0
+
 ; CHECK-LE-LABEL: @getf2
 ; CHECK-LE: xxsldwi vs0, v2, v2, 1
 ; CHECK-LE: xscvspdpn f1, vs0
+
+; CHECK-AIX-LABEL: getf2:
+; CHECK-AIX: xxswapd 0, 34
+; CHECK-AIX: xscvspdpn 1, 0
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -1127,8 +1552,13 @@ entry:
 ; CHECK-LABEL: @getf3
 ; CHECK: xxsldwi vs0, v2, v2, 3
 ; CHECK: xscvspdpn f1, vs0
+
 ; CHECK-LE-LABEL: @getf3
 ; CHECK-LE: xscvspdpn f1, v2
+
+; CHECK-AIX-LABEL: getf3:
+; CHECK-AIX: xxsldwi 0, 34, 34, 3
+; CHECK-AIX: xscvspdpn 1, 0
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -1138,6 +1568,7 @@ entry:
   ret float %vecext
 ; CHECK-LABEL: @getvelf
 ; CHECK-LE-LABEL: @getvelf
+; CHECK-AIX-LABEL: @getvelf
 ; FIXME: add check patterns when variable element extraction is implemented
 }
 
@@ -1148,8 +1579,12 @@ entry:
   ret double %vecext
 ; CHECK-LABEL: @getd0
 ; CHECK: xxlor f1, v2, v2
+
 ; CHECK-LE-LABEL: @getd0
 ; CHECK-LE: xxswapd vs1, v2
+
+; CHECK-AIX-LABEL: getd0:
+; CHECK-AIXT: xxlor 1, 34, 34
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -1159,8 +1594,12 @@ entry:
   ret double %vecext
 ; CHECK-LABEL: @getd1
 ; CHECK: xxswapd vs1, v2
+
 ; CHECK-LE-LABEL: @getd1
 ; CHECK-LE: xxlor f1, v2, v2
+
+; CHECK-AIX-LABEL: getd1:
+; CHECK-AIX: xxswapd 1, 34
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -1170,5 +1609,6 @@ entry:
   ret double %vecext
 ; CHECK-LABEL: @getveld
 ; CHECK-LE-LABEL: @getveld
+; CHECK-AIX-LABEL: @getveld
 ; FIXME: add check patterns when variable element extraction is implemented
 }
