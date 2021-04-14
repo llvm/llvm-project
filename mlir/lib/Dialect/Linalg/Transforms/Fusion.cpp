@@ -188,6 +188,27 @@ static LinalgOp fuse(OpBuilder &builder, LinalgOp producer,
                                     SmallPtrSet<Operation *, 1>{newIndex});
     }
   }
+  // When the producer has index semantics, we have to transform the indices of
+  // the producer according to the tiling of the consumer, i.e. offset them by
+  // the values computed in `loopRanges`.
+  if (producer.hasIndexSemantics()) {
+    assert(clonedOp->getNumRegions() == 1 &&
+           clonedOp->getRegion(0).getBlocks().size() == 1 &&
+           "expected producer to have one block.");
+    // Shift all indices by the tile offset.
+    Block &block = clonedOp->getRegion(0).front();
+    for (IndexOp indexOp : block.getOps<IndexOp>()) {
+      OpBuilder::InsertionGuard g(builder);
+      builder.setInsertionPointAfter(indexOp);
+      AffineExpr index, offset;
+      bindDims(builder.getContext(), index, offset);
+      AffineApplyOp applyOp = builder.create<AffineApplyOp>(
+          indexOp.getLoc(), index + offset,
+          ValueRange{indexOp.getResult(), loopRanges[indexOp.dim()].offset});
+      indexOp.getResult().replaceAllUsesExcept(
+          applyOp, SmallPtrSet<Operation *, 1>{applyOp});
+    }
+  }
 
   return clonedOp;
 }
