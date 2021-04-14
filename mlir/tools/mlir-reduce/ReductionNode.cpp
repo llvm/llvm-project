@@ -15,116 +15,138 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Reducer/ReductionNode.h"
+#include "llvm/ADT/STLExtras.h"
+
+#include <algorithm>
+#include <limits>
 
 using namespace mlir;
 
-/// Sets up the metadata and links the node to its parent.
-ReductionNode::ReductionNode(ModuleOp module, ReductionNode *parent)
-    : module(module), evaluated(false) {
-
-  if (parent != nullptr)
-    parent->linkVariant(this);
-}
-
-ReductionNode::ReductionNode(ModuleOp module, ReductionNode *parent,
-                             std::vector<bool> transformSpace)
-    : module(module), evaluated(false), transformSpace(transformSpace) {
-
-  if (parent != nullptr)
-    parent->linkVariant(this);
-}
-
-/// Calculates and updates the size and interesting values of the module.
-void ReductionNode::measureAndTest(const Tester &test) {
-  SmallString<128> filepath;
-  int fd;
-
-  // Print module to temporary file.
-  std::error_code ec =
-      llvm::sys::fs::createTemporaryFile("mlir-reduce", "mlir", fd, filepath);
-
-  if (ec)
-    llvm::report_fatal_error("Error making unique filename: " + ec.message());
-
-  llvm::ToolOutputFile out(filepath, fd);
-  module.print(out.os());
-  out.os().close();
-
-  if (out.os().has_error())
-    llvm::report_fatal_error("Error emitting bitcode to file '" + filepath);
-
-  size = out.os().tell();
-  interesting = test.isInteresting(filepath);
-  evaluated = true;
-}
-
-/// Returns true if the size and interestingness have been calculated.
-bool ReductionNode::isEvaluated() const { return evaluated; }
+ReductionNode::ReductionNode(
+    ReductionNode *parent, std::vector<Range> ranges,
+    llvm::SpecificBumpPtrAllocator<ReductionNode> &allocator)
+    : size(std::numeric_limits<size_t>::max()),
+      interesting(Tester::Interestingness::Untested),
+      /// Root node will have the parent pointer point to themselves.
+      parent(parent == nullptr ? this : parent), ranges(ranges),
+      allocator(allocator) {}
 
 /// Returns the size in bytes of the module.
-int ReductionNode::getSize() const { return size; }
+size_t ReductionNode::getSize() const { return size; }
+
+ReductionNode *ReductionNode::getParent() const { return parent; }
 
 /// Returns true if the module exhibits the interesting behavior.
-bool ReductionNode::isInteresting() const { return interesting; }
-
-/// Returns the pointers to the child variants.
-ReductionNode *ReductionNode::getVariant(unsigned long index) const {
-  if (index < variants.size())
-    return variants[index].get();
-
-  return nullptr;
+Tester::Interestingness ReductionNode::isInteresting() const {
+  return interesting;
 }
 
-/// Returns the number of child variants.
-int ReductionNode::variantsSize() const { return variants.size(); }
-
-/// Returns true if the child variants vector is empty.
-bool ReductionNode::variantsEmpty() const { return variants.empty(); }
-
-/// Link a child variant node.
-void ReductionNode::linkVariant(ReductionNode *newVariant) {
-  std::unique_ptr<ReductionNode> ptrVariant(newVariant);
-  variants.push_back(std::move(ptrVariant));
+std::vector<ReductionNode::Range> ReductionNode::getRanges() const {
+  return ranges;
 }
 
-/// Sort the child variants and remove the uninteresting ones.
-void ReductionNode::organizeVariants(const Tester &test) {
-  // Ensure all variants are evaluated.
-  for (auto &var : variants)
-    if (!var->isEvaluated())
-      var->measureAndTest(test);
+std::vector<ReductionNode *> &ReductionNode::getVariants() { return variants; }
 
-  // Sort variants by interestingness and size.
-  llvm::array_pod_sort(
-      variants.begin(), variants.end(), [](const auto *lhs, const auto *rhs) {
-        if (lhs->get()->isInteresting() && !rhs->get()->isInteresting())
-          return 0;
+#include <iostream>
 
-        if (!lhs->get()->isInteresting() && rhs->get()->isInteresting())
-          return 1;
+/// If we haven't explored any variants from this node, we will create N
+/// variants, N is the length of `ranges` if N > 1. Otherwise, we will split the
+/// max element in `ranges` and create 2 new variants for each call.
+std::vector<ReductionNode *> ReductionNode::generateNewVariants() {
+  std::vector<ReductionNode *> newNodes;
 
-        return (lhs->get()->getSize(), rhs->get()->getSize());
-      });
-
-  int interestingCount = 0;
-  for (auto &var : variants) {
-    if (var->isInteresting()) {
-      ++interestingCount;
-    } else {
-      break;
+  // If we haven't created new variant, then we can create varients by removing
+  // each of them respectively. For example, given {{1, 3}, {4, 9}}, we can
+  // produce variants with range {{1, 3}} and {{4, 9}}.
+  if (variants.size() == 0 && ranges.size() != 1) {
+    for (const Range &range : ranges) {
+      std::vector<Range> subRanges = ranges;
+      llvm::erase_value(subRanges, range);
+      ReductionNode *newNode = allocator.Allocate();
+      new (newNode) ReductionNode(this, subRanges, allocator);
+      newNodes.push_back(newNode);
+      variants.push_back(newNode);
     }
+
+    return newNodes;
   }
 
-  // Remove uninteresting variants.
-  variants.resize(interestingCount);
+  // At here, we have created the type of variants mentioned above. We would
+  // like to split the max range into 2 to create 2 new variants. Continue on
+  // the above example, we split the range {4, 9} into {4, 6}, {6, 9}, and
+  // create two variants with range {{1, 3}, {4, 6}} and {{1, 3}, {6, 9}}. The
+  // result ranges vector will be {{1, 3}, {4, 6}, {6, 9}}.
+  auto maxElement = std::max_element(
+      ranges.begin(), ranges.end(), [](const Range &lhs, const Range &rhs) {
+        return (lhs.second - lhs.first) > (rhs.second - rhs.first);
+      });
+
+  // We can't split range with lenght 1, which means we can't produce new
+  // variant.
+  if (maxElement->second - maxElement->first == 1)
+    return {};
+
+  auto createNewNode = [this](const std::vector<Range> &ranges) {
+    ReductionNode *newNode = allocator.Allocate();
+    new (newNode) ReductionNode(this, ranges, allocator);
+    return newNode;
+  };
+
+  Range maxRange = *maxElement;
+  std::vector<Range> subRanges = ranges;
+  auto subRangesIter = subRanges.begin() + (maxElement - ranges.begin());
+  int half = (maxRange.first + maxRange.second) / 2;
+  *subRangesIter = std::make_pair(maxRange.first, half);
+  newNodes.push_back(createNewNode(subRanges));
+  *subRangesIter = std::make_pair(half, maxRange.second);
+  newNodes.push_back(createNewNode(subRanges));
+
+  variants.insert(variants.end(), newNodes.begin(), newNodes.end());
+  auto it = ranges.insert(maxElement, std::make_pair(half, maxRange.second));
+  it = ranges.insert(it, std::make_pair(maxRange.first, half));
+  // Remove the range that has been split.
+  ranges.erase(it + 2);
+
+  return newNodes;
 }
 
-/// Returns the number of non transformed indices.
-int ReductionNode::transformSpaceSize() {
-  return std::count(transformSpace.begin(), transformSpace.end(), false);
+void ReductionNode::update(std::pair<Tester::Interestingness, size_t> result) {
+  std::tie(interesting, size) = result;
 }
 
-/// Returns a vector of the transformable indices in the Module.
-const std::vector<bool> ReductionNode::getTransformSpace() {
-  return transformSpace;
+std::vector<ReductionNode *>
+ReductionNode::iterator<SinglePath>::getNeighbors(ReductionNode *node) {
+  // Single Path: Traverses the smallest successful variant at each level until
+  // no new successful variants can be created at that level.
+  llvm::ArrayRef<ReductionNode *> variantsFromParent =
+      node->getParent()->getVariants();
+
+  // The parent node created several variants and they may be waiting for
+  // examing interestingness. In Single Path approach, we will select the
+  // smallest variant to continue our exploration. Thus we should wait until the
+  // last variant to be examed then do the following traversal decision.
+  if (!llvm::all_of(variantsFromParent, [](ReductionNode *node) {
+        return node->isInteresting() != Tester::Interestingness::Untested;
+      })) {
+    return {};
+  }
+
+  ReductionNode *smallest = nullptr;
+  for (ReductionNode *node : variantsFromParent) {
+    if (node->isInteresting() != Tester::Interestingness::True)
+      continue;
+    if (smallest == nullptr || node->getSize() < smallest->getSize())
+      smallest = node;
+  }
+
+  if (smallest != nullptr) {
+    // We got a smallest one, keep traversing from this node.
+    node = smallest;
+  } else {
+    // None of these variants is interesting, let the parent node to generate
+    // more variants.
+    node = node->getParent();
+  }
+
+  return node->generateNewVariants();
 }
