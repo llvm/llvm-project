@@ -17,17 +17,22 @@
 #include "ResourceScriptStmt.h"
 #include "ResourceScriptToken.h"
 
+#include "llvm/ADT/Triple.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
@@ -71,10 +76,112 @@ public:
 };
 
 static ExitOnError ExitOnErr;
+static FileRemover TempPreprocFile;
 
 LLVM_ATTRIBUTE_NORETURN static void fatalError(const Twine &Message) {
   errs() << Message << "\n";
   exit(1);
+}
+
+std::string createTempFile(const Twine &Prefix, StringRef Suffix) {
+  std::error_code EC;
+  SmallString<128> FileName;
+  if ((EC = sys::fs::createTemporaryFile(Prefix, Suffix, FileName)))
+    fatalError("Unable to create temp file: " + EC.message());
+  return static_cast<std::string>(FileName);
+}
+
+ErrorOr<std::string> findClang(const char *Argv0) {
+  StringRef Parent = llvm::sys::path::parent_path(Argv0);
+  ErrorOr<std::string> Path = std::error_code();
+  if (!Parent.empty()) {
+    // First look for the tool with all potential names in the specific
+    // directory of Argv0, if known
+    for (const auto *Name : {"clang", "clang-cl"}) {
+      Path = sys::findProgramByName(Name, Parent);
+      if (Path)
+        return Path;
+    }
+  }
+  // If no parent directory known, or not found there, look everywhere in PATH
+  for (const auto *Name : {"clang", "clang-cl"}) {
+    Path = sys::findProgramByName(Name);
+    if (Path)
+      return Path;
+  }
+  return Path;
+}
+
+std::string getClangClTriple() {
+  Triple T(sys::getDefaultTargetTriple());
+  T.setOS(llvm::Triple::Win32);
+  T.setVendor(llvm::Triple::PC);
+  T.setEnvironment(llvm::Triple::MSVC);
+  T.setObjectFormat(llvm::Triple::COFF);
+  return T.str();
+}
+
+bool preprocess(StringRef Src, StringRef Dst, opt::InputArgList &InputArgs,
+                const char *Argv0) {
+  std::string Clang;
+  if (InputArgs.hasArg(OPT__HASH_HASH_HASH)) {
+    Clang = "clang";
+  } else {
+    ErrorOr<std::string> ClangOrErr = findClang(Argv0);
+    if (ClangOrErr) {
+      Clang = *ClangOrErr;
+    } else {
+      errs() << "llvm-rc: Unable to find clang, skipping preprocessing."
+             << "\n";
+      errs() << "Pass -no-cpp to disable preprocessing. This will be an error "
+                "in the future."
+             << "\n";
+      return false;
+    }
+  }
+  std::string PreprocTriple = getClangClTriple();
+
+  SmallVector<StringRef, 8> Args = {
+      Clang, "--driver-mode=gcc", "-target", PreprocTriple, "-E",
+      "-xc", "-DRC_INVOKED",      Src,       "-o",          Dst};
+  if (InputArgs.hasArg(OPT_noinclude)) {
+#ifdef _WIN32
+    ::_putenv("INCLUDE=");
+#else
+    ::unsetenv("INCLUDE");
+#endif
+  }
+  for (const auto *Arg :
+       InputArgs.filtered(OPT_includepath, OPT_define, OPT_undef)) {
+    switch (Arg->getOption().getID()) {
+    case OPT_includepath:
+      Args.push_back("-I");
+      break;
+    case OPT_define:
+      Args.push_back("-D");
+      break;
+    case OPT_undef:
+      Args.push_back("-U");
+      break;
+    }
+    Args.push_back(Arg->getValue());
+  }
+  if (InputArgs.hasArg(OPT__HASH_HASH_HASH) || InputArgs.hasArg(OPT_verbose)) {
+    for (const auto &A : Args) {
+      outs() << " ";
+      sys::printArg(outs(), A, InputArgs.hasArg(OPT__HASH_HASH_HASH));
+    }
+    outs() << "\n";
+    if (InputArgs.hasArg(OPT__HASH_HASH_HASH))
+      exit(0);
+  }
+  // The llvm Support classes don't handle reading from stdout of a child
+  // process; otherwise we could avoid using a temp file.
+  int Res = sys::ExecuteAndWait(Clang, Args);
+  if (Res) {
+    fatalError("llvm-rc: Preprocessing failed.");
+  }
+  return true;
 }
 
 } // anonymous namespace
@@ -106,9 +213,17 @@ int main(int Argc, const char **Argv) {
     fatalError("Exactly one input file should be provided.");
   }
 
+  std::string PreprocessedFile = InArgsInfo[0];
+  if (!InputArgs.hasArg(OPT_no_preprocess)) {
+    std::string OutFile = createTempFile("preproc", "rc");
+    TempPreprocFile.setFile(OutFile);
+    if (preprocess(InArgsInfo[0], OutFile, InputArgs, Argv[0]))
+      PreprocessedFile = OutFile;
+  }
+
   // Read and tokenize the input file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> File =
-      MemoryBuffer::getFile(InArgsInfo[0]);
+      MemoryBuffer::getFile(PreprocessedFile);
   if (!File) {
     fatalError("Error opening file '" + Twine(InArgsInfo[0]) +
                "': " + File.getError().message());
