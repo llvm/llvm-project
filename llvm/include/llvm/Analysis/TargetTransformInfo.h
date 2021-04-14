@@ -812,7 +812,7 @@ public:
 
   /// Return the expected cost of supporting the floating point operation
   /// of the specified type.
-  int getFPOpCost(Type *Ty) const;
+  InstructionCost getFPOpCost(Type *Ty) const;
 
   /// Return the expected cost of materializing for the given integer
   /// immediate of the specified type.
@@ -1515,7 +1515,7 @@ public:
   virtual PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) = 0;
   virtual bool haveFastSqrt(Type *Ty) = 0;
   virtual bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) = 0;
-  virtual int getFPOpCost(Type *Ty) = 0;
+  virtual InstructionCost getFPOpCost(Type *Ty) = 0;
   virtual int getIntImmCodeSizeCost(unsigned Opc, unsigned Idx,
                                     const APInt &Imm, Type *Ty) = 0;
   virtual int getIntImmCost(const APInt &Imm, Type *Ty,
@@ -1938,7 +1938,9 @@ public:
     return Impl.isFCmpOrdCheaperThanFCmpZero(Ty);
   }
 
-  int getFPOpCost(Type *Ty) override { return Impl.getFPOpCost(Ty); }
+  InstructionCost getFPOpCost(Type *Ty) override {
+    return Impl.getFPOpCost(Ty);
+  }
 
   int getIntImmCodeSizeCost(unsigned Opc, unsigned Idx, const APInt &Imm,
                             Type *Ty) override {
