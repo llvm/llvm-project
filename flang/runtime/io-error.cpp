@@ -23,7 +23,7 @@ void IoErrorHandler::SignalError(int iostatOrErrno, const char *msg, ...) {
       ioStat_ = IostatEnd;
     }
   } else if (iostatOrErrno == IostatEor && (flags_ & hasEor)) {
-    if (!ioStat_ == IostatOk || ioStat_ < IostatEor) {
+    if (ioStat_ == IostatOk || ioStat_ < IostatEor) {
       ioStat_ = IostatEor; // least priority
     }
   } else if (iostatOrErrno != IostatOk) {
