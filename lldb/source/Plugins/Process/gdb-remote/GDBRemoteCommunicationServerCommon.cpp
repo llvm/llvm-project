@@ -60,8 +60,7 @@ GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon(
     const char *comm_name, const char *listener_name)
     : GDBRemoteCommunicationServer(comm_name, listener_name),
       m_process_launch_info(), m_process_launch_error(), m_proc_infos(),
-      m_proc_infos_index(0), m_thread_suffix_supported(false),
-      m_list_threads_in_stop_reply(false) {
+      m_proc_infos_index(0) {
   RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_A,
                                 &GDBRemoteCommunicationServerCommon::Handle_A);
   RegisterMemberFunctionHandler(
@@ -85,9 +84,6 @@ GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon(
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qLaunchSuccess,
       &GDBRemoteCommunicationServerCommon::Handle_qLaunchSuccess);
-  RegisterMemberFunctionHandler(
-      StringExtractorGDBRemote::eServerPacketType_QListThreadsInStopReply,
-      &GDBRemoteCommunicationServerCommon::Handle_QListThreadsInStopReply);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qEcho,
       &GDBRemoteCommunicationServerCommon::Handle_qEcho);
@@ -133,9 +129,6 @@ GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon(
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qSupported,
       &GDBRemoteCommunicationServerCommon::Handle_qSupported);
-  RegisterMemberFunctionHandler(
-      StringExtractorGDBRemote::eServerPacketType_QThreadSuffixSupported,
-      &GDBRemoteCommunicationServerCommon::Handle_QThreadSuffixSupported);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qUserName,
       &GDBRemoteCommunicationServerCommon::Handle_qUserName);
@@ -838,20 +831,6 @@ GDBRemoteCommunicationServerCommon::Handle_qSupported(
 }
 
 GDBRemoteCommunication::PacketResult
-GDBRemoteCommunicationServerCommon::Handle_QThreadSuffixSupported(
-    StringExtractorGDBRemote &packet) {
-  m_thread_suffix_supported = true;
-  return SendOKResponse();
-}
-
-GDBRemoteCommunication::PacketResult
-GDBRemoteCommunicationServerCommon::Handle_QListThreadsInStopReply(
-    StringExtractorGDBRemote &packet) {
-  m_list_threads_in_stop_reply = true;
-  return SendOKResponse();
-}
-
-GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_QSetDetachOnError(
     StringExtractorGDBRemote &packet) {
   packet.SetFilePos(::strlen("QSetDetachOnError:"));
@@ -1306,8 +1285,6 @@ std::vector<std::string> GDBRemoteCommunicationServerCommon::HandleFeatures(
   return {
       llvm::formatv("PacketSize={0}", max_packet_size),
       "QStartNoAckMode+",
-      "QThreadSuffixSupported+",
-      "QListThreadsInStopReply+",
       "qEcho+",
   };
 }

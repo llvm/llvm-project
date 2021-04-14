@@ -36,8 +36,6 @@ protected:
   Status m_process_launch_error;
   ProcessInstanceInfoList m_proc_infos;
   uint32_t m_proc_infos_index;
-  bool m_thread_suffix_supported;
-  bool m_list_threads_in_stop_reply;
 
   PacketResult Handle_A(StringExtractorGDBRemote &packet);
 
@@ -90,10 +88,6 @@ protected:
   PacketResult Handle_qPlatform_chmod(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_qSupported(StringExtractorGDBRemote &packet);
-
-  PacketResult Handle_QThreadSuffixSupported(StringExtractorGDBRemote &packet);
-
-  PacketResult Handle_QListThreadsInStopReply(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_QSetDetachOnError(StringExtractorGDBRemote &packet);
 
