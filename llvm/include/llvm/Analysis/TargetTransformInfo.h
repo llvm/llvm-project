@@ -1127,7 +1127,8 @@ public:
 
   /// \return The expected cost of vector Insert and Extract.
   /// Use -1 to indicate that there is no information on the index value.
-  int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index = -1) const;
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     unsigned Index = -1) const;
 
   /// \return The cost of Load and Store instructions.
   InstructionCost
@@ -1592,8 +1593,8 @@ public:
                                              CmpInst::Predicate VecPred,
                                              TTI::TargetCostKind CostKind,
                                              const Instruction *I) = 0;
-  virtual int getVectorInstrCost(unsigned Opcode, Type *Val,
-                                 unsigned Index) = 0;
+  virtual InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                             unsigned Index) = 0;
   virtual InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
                                           Align Alignment,
                                           unsigned AddressSpace,
@@ -2073,7 +2074,8 @@ public:
                                      const Instruction *I) override {
     return Impl.getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
   }
-  int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) override {
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     unsigned Index) override {
     return Impl.getVectorInstrCost(Opcode, Val, Index);
   }
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,

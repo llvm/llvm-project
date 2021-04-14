@@ -212,7 +212,8 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      const Instruction *I = nullptr);
 
-  int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     unsigned Index);
 
   int getAddressComputationCost(Type *Val, ScalarEvolution *SE,
                                 const SCEV *Ptr);
