@@ -272,13 +272,11 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
         global = builder.createGlobal(
             loc, symTy, globalName, isConst,
             [&](Fortran::lower::FirOpBuilder &builder) {
-              Fortran::lower::StatementContext stmtCtx;
+              Fortran::lower::StatementContext stmtCtx(/*prohibited=*/true);
               auto initVal = genInitializerExprValue(
                   converter, loc, details->init().value(), stmtCtx);
               auto castTo =
                   builder.createConvert(loc, symTy, fir::getBase(initVal));
-              assert(!stmtCtx.hasCleanups() &&
-                     "cleanup not expected in initializer");
               stmtCtx.finalize();
               builder.create<fir::HasValueOp>(loc, castTo);
             },

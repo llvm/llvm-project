@@ -3280,7 +3280,7 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
     A dispatch table is an untyped symbol that contains a list of associations
     between method identifiers and corresponding `FuncOp` symbols.
 
-    The ordering of associations in the map is determined by the front-end.
+    The ordering of associations in the map is determined by the front end.
 
     ```mlir
       fir.dispatch_table @_QDTMquuzTfoo {

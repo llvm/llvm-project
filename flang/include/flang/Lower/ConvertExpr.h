@@ -34,6 +34,7 @@ class ShapeOp;
 namespace Fortran::lower {
 
 class AbstractConverter;
+class MaskExpr;
 class StatementContext;
 class SymMap;
 
@@ -76,6 +77,24 @@ void createSomeArrayAssignment(AbstractConverter &converter,
                                const evaluate::Expr<evaluate::SomeType> &lhs,
                                const evaluate::Expr<evaluate::SomeType> &rhs,
                                SymMap &symMap, StatementContext &stmtCtx);
+
+/// Lower an array assignment expression with masking expression(s).
+///
+/// 1. Evaluate the lhs to determine the rank and how to form the ArrayLoad
+/// (e.g., if there is a slicing op).
+/// 2. Scan the rhs, creating the ArrayLoads and evaluate the scalar subparts to
+/// be added to the map.
+/// 3. Create the loop nest.
+/// 4. Create the masking condition. Step 5 is conditionally executed only when
+/// the mask condition evaluates to true.
+/// 5. Evaluate the elemental expression, threading the results.
+/// 6. Copy the resulting array back with ArrayMergeStore to the lhs as
+/// determined per step 1.
+void createMaskedArrayAssignment(AbstractConverter &converter,
+                                 const evaluate::Expr<evaluate::SomeType> &lhs,
+                                 const evaluate::Expr<evaluate::SomeType> &rhs,
+                                 Fortran::lower::MaskExpr &masks,
+                                 SymMap &symMap, StatementContext &stmtCtx);
 
 /// Create an array temporary.
 /// When lowering an array expression, it may be necessary to allocate temporary

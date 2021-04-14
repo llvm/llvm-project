@@ -64,6 +64,13 @@ public:
 
   bool hasCleanups() const { return cleanupAdded; }
 
+  void reset() {
+    assert((finalized || !cleanupAdded) &&
+           "statement context is not empty and not finalized");
+    cleanup = []() {};
+    finalized = false;
+  }
+
 private:
   StatementContext(const StatementContext &) = delete;
   StatementContext &operator=(const StatementContext &) = delete;

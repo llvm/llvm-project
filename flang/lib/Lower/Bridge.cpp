@@ -13,6 +13,7 @@
 #include "flang/Lower/Bridge.h"
 #include "../../runtime/iostat.h"
 #include "ConvertVariable.h"
+#include "MaskExpr.h"
 #include "StatementContext.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
@@ -1556,12 +1557,21 @@ private:
                                            localSymbols, stmtCtx);
   }
 
+  /// Generate an array assignment.
+  /// This is an assignment expression with rank > 0. The assignment may or may
+  /// not be in a WHERE context.
   void genArrayAssignment(const Fortran::evaluate::Assignment &assign,
                           Fortran::lower::StatementContext &stmtCtx) {
-    localSymbols.pushScope();
-    createSomeArrayAssignment(*this, assign.lhs, assign.rhs, localSymbols,
-                              stmtCtx);
-    localSymbols.popScope();
+    if (masks.empty()) {
+      // No masks, so create a simple array assignment.
+      createSomeArrayAssignment(*this, assign.lhs, assign.rhs, localSymbols,
+                                stmtCtx);
+      return;
+    }
+
+    // Generate a masked array assignment.
+    createMaskedArrayAssignment(*this, assign.lhs, assign.rhs, masks,
+                                localSymbols, masks.stmtCtx);
   }
 
   static bool isArraySectionWithoutVectorSubscript(
@@ -1754,23 +1764,81 @@ private:
         assign.u);
   }
 
-  void genFIR(const Fortran::parser::WhereConstruct &) {
-    TODO(toLocation(), "WhereConstruct lowering");
+  void genFIR(const Fortran::parser::WhereConstruct &c) {
+    masks.growStack();
+    genFIR(std::get<
+               Fortran::parser::Statement<Fortran::parser::WhereConstructStmt>>(
+               c.t)
+               .statement);
+    for (const auto &body :
+         std::get<std::list<Fortran::parser::WhereBodyConstruct>>(c.t))
+      genFIR(body);
+    for (const auto &e :
+         std::get<std::list<Fortran::parser::WhereConstruct::MaskedElsewhere>>(
+             c.t))
+      genFIR(e);
+    if (const auto &e =
+            std::get<std::optional<Fortran::parser::WhereConstruct::Elsewhere>>(
+                c.t);
+        e.has_value())
+      genFIR(*e);
+    genFIR(
+        std::get<Fortran::parser::Statement<Fortran::parser::EndWhereStmt>>(c.t)
+            .statement);
   }
-  void genFIR(const Fortran::parser::WhereConstructStmt &) {
-    TODO(toLocation(), "WhereConstructStmt lowering");
+  void genFIR(const Fortran::parser::WhereBodyConstruct &body) {
+    std::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::parser::Statement<
+                Fortran::parser::AssignmentStmt> &stmt) {
+              genFIR(stmt.statement);
+            },
+            [&](const Fortran::parser::Statement<Fortran::parser::WhereStmt>
+                    &stmt) { genFIR(stmt.statement); },
+            [&](const Fortran::common::Indirection<
+                Fortran::parser::WhereConstruct> &c) { genFIR(c.value()); },
+        },
+        body.u);
   }
-  void genFIR(const Fortran::parser::MaskedElsewhereStmt &) {
-    TODO(toLocation(), "MaskedElsewhereStmt lowering");
+  void genFIR(const Fortran::parser::WhereConstructStmt &stmt) {
+    masks.append(Fortran::semantics::GetExpr(
+        std::get<Fortran::parser::LogicalExpr>(stmt.t)));
   }
-  void genFIR(const Fortran::parser::ElsewhereStmt &) {
-    TODO(toLocation(), "ElsewhereStmt lowering");
+  void genFIR(const Fortran::parser::WhereConstruct::MaskedElsewhere &ew) {
+    genFIR(
+        std::get<
+            Fortran::parser::Statement<Fortran::parser::MaskedElsewhereStmt>>(
+            ew.t)
+            .statement);
+    for (const auto &body :
+         std::get<std::list<Fortran::parser::WhereBodyConstruct>>(ew.t))
+      genFIR(body);
   }
-  void genFIR(const Fortran::parser::EndWhereStmt &) {
-    TODO(toLocation(), "EndWhereStmt lowering");
+  void genFIR(const Fortran::parser::MaskedElsewhereStmt &stmt) {
+    masks.append(Fortran::semantics::GetExpr(
+        std::get<Fortran::parser::LogicalExpr>(stmt.t)));
   }
-  void genFIR(const Fortran::parser::WhereStmt &) {
-    TODO(toLocation(), "WhereStmt lowering");
+  void genFIR(const Fortran::parser::WhereConstruct::Elsewhere &ew) {
+    genFIR(std::get<Fortran::parser::Statement<Fortran::parser::ElsewhereStmt>>(
+               ew.t)
+               .statement);
+    for (const auto &body :
+         std::get<std::list<Fortran::parser::WhereBodyConstruct>>(ew.t))
+      genFIR(body);
+  }
+  void genFIR(const Fortran::parser::ElsewhereStmt &stmt) {
+    masks.append(nullptr);
+  }
+  void genFIR(const Fortran::parser::EndWhereStmt &) { masks.shrinkStack(); }
+
+  void genFIR(const Fortran::parser::WhereStmt &stmt) {
+    Fortran::lower::StatementContext stmtCtx;
+    const auto &assign = std::get<Fortran::parser::AssignmentStmt>(stmt.t);
+    masks.growStack();
+    masks.append(Fortran::semantics::GetExpr(
+        std::get<Fortran::parser::LogicalExpr>(stmt.t)));
+    genAssignment(*assign.typedAssignment->v);
+    masks.shrinkStack();
   }
 
   void genFIR(const Fortran::parser::PointerAssignmentStmt &stmt) {
@@ -1878,26 +1946,26 @@ private:
   }
 
   // Nop statements - No code, or code is generated at the construct level.
-  void genFIR(const Fortran::parser::AssociateStmt &) {}          // nop
-  void genFIR(const Fortran::parser::CaseStmt &) {}               // nop
-  void genFIR(const Fortran::parser::ContinueStmt &) {}           // nop
-  void genFIR(const Fortran::parser::ElseIfStmt &) {}             // nop
-  void genFIR(const Fortran::parser::ElseStmt &) {}               // nop
-  void genFIR(const Fortran::parser::EndAssociateStmt &) {}       // nop
-  void genFIR(const Fortran::parser::EndDoStmt &) {}              // nop
-  void genFIR(const Fortran::parser::EndForallStmt &) {}          // nop
-  void genFIR(const Fortran::parser::EndFunctionStmt &) {}        // nop
-  void genFIR(const Fortran::parser::EndIfStmt &) {}              // nop
-  void genFIR(const Fortran::parser::EndMpSubprogramStmt &) {}    // nop
-  void genFIR(const Fortran::parser::EndSelectStmt &) {}          // nop
-  void genFIR(const Fortran::parser::EndSubroutineStmt &) {}      // nop
-  void genFIR(const Fortran::parser::EntryStmt &) {}              // nop
-  void genFIR(const Fortran::parser::ForallAssignmentStmt &s) {}  // nop
-  void genFIR(const Fortran::parser::ForallConstructStmt &) {}    // nop
-  void genFIR(const Fortran::parser::IfStmt &stmt) {}             // nop
-  void genFIR(const Fortran::parser::IfThenStmt &) {}             // nop
-  void genFIR(const Fortran::parser::NonLabelDoStmt &) {}         // nop
-  void genFIR(const Fortran::parser::OmpEndLoopDirective &omp) {} // nop
+  void genFIR(const Fortran::parser::AssociateStmt &) {}        // nop
+  void genFIR(const Fortran::parser::CaseStmt &) {}             // nop
+  void genFIR(const Fortran::parser::ContinueStmt &) {}         // nop
+  void genFIR(const Fortran::parser::ElseIfStmt &) {}           // nop
+  void genFIR(const Fortran::parser::ElseStmt &) {}             // nop
+  void genFIR(const Fortran::parser::EndAssociateStmt &) {}     // nop
+  void genFIR(const Fortran::parser::EndDoStmt &) {}            // nop
+  void genFIR(const Fortran::parser::EndForallStmt &) {}        // nop
+  void genFIR(const Fortran::parser::EndFunctionStmt &) {}      // nop
+  void genFIR(const Fortran::parser::EndIfStmt &) {}            // nop
+  void genFIR(const Fortran::parser::EndMpSubprogramStmt &) {}  // nop
+  void genFIR(const Fortran::parser::EndSelectStmt &) {}        // nop
+  void genFIR(const Fortran::parser::EndSubroutineStmt &) {}    // nop
+  void genFIR(const Fortran::parser::EntryStmt &) {}            // nop
+  void genFIR(const Fortran::parser::ForallAssignmentStmt &) {} // nop
+  void genFIR(const Fortran::parser::ForallConstructStmt &) {}  // nop
+  void genFIR(const Fortran::parser::IfStmt &) {}               // nop
+  void genFIR(const Fortran::parser::IfThenStmt &) {}           // nop
+  void genFIR(const Fortran::parser::NonLabelDoStmt &) {}       // nop
+  void genFIR(const Fortran::parser::OmpEndLoopDirective &) {}  // nop
 
   /// Generate FIR for the Evaluation `eval`.
   void genFIR(Fortran::lower::pft::Evaluation &eval,
@@ -1971,6 +2039,7 @@ private:
   }
 
   /// Instantiate variable \p var and add it to the symbol map.
+  /// See ConvertVariable.cpp.
   void instantiateVar(const Fortran::lower::pft::Variable &var,
                       Fortran::lower::AggregateStoreMap &storeMap) {
     Fortran::lower::instantiateVariable(*this, var, localSymbols, storeMap);
@@ -2232,6 +2301,9 @@ private:
   Fortran::lower::pft::Evaluation *evalPtr = nullptr;
   Fortran::lower::SymMap localSymbols;
   Fortran::parser::CharBlock currentPosition;
+
+  /// WHERE statement/construct mask expression stack.
+  Fortran::lower::MaskExpr masks;
 };
 
 } // namespace

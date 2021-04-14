@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertExpr.h"
+#include "MaskExpr.h"
 #include "StatementContext.h"
 #include "flang/Common/default-kinds.h"
 #include "flang/Common/unwrap.h"
@@ -1934,10 +1935,11 @@ namespace {
 class ArrayExprLowering {
   struct IterationSpace {
     IterationSpace() = default;
+
+    template <typename A>
     explicit IterationSpace(mlir::Value inArg, mlir::Value outRes,
-                            llvm::ArrayRef<mlir::Value> indices)
-        : inArg{inArg}, outRes{outRes}, indices{indices.begin(),
-                                                indices.end()} {}
+                            llvm::iterator_range<A> range)
+        : inArg{inArg}, outRes{outRes}, indices{range.begin(), range.end()} {}
 
     mlir::Value innerArgument() const { return inArg; }
     mlir::Value outerResult() const { return outRes; }
@@ -1977,6 +1979,8 @@ public:
   using CC = std::function<ExtValue(IterSpace)>; // current continuation
   using PC =
       std::function<IterationSpace(IterSpace)>; // projection continuation
+  using MaskExpr = const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> *;
+  using MaskExprList = llvm::ArrayRef<MaskExpr>;
 
   static void lowerArrayAssignment(
       Fortran::lower::AbstractConverter &converter,
@@ -1998,6 +2002,20 @@ public:
     auto exv = lowerArrayExpression(rhs);
     builder.create<fir::ArrayMergeStoreOp>(loc, destination, fir::getBase(exv),
                                            destination.memref());
+  }
+
+  /// Entry point for masked array assignment, Fortran's WHERE. This has the
+  /// same semantics as ordinary array assignment except that the RHS is a
+  /// projected array value based on the mask condition(s).
+  static void lowerMaskedArrayAssignment(
+      Fortran::lower::AbstractConverter &converter,
+      Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
+      const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &lhs,
+      const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &rhs,
+      Fortran::lower::MaskExpr &masks) {
+    ArrayExprLowering ael{converter, stmtCtx, symMap,
+                          ConstituentSemantics::CopyInCopyOut, &masks};
+    ael.lowerArrayAssignment(lhs, rhs);
   }
 
   /// Entry point for when an array expression appears on the lhs of an
@@ -2118,12 +2136,24 @@ public:
         exp.u);
   }
 
+  /// Build the iteration space into which the array expression will be lowered.
   std::pair<IterationSpace, mlir::OpBuilder::InsertPoint> genIterSpace() {
     auto loc = getLoc();
     auto idxTy = builder.getIndexType();
     auto zero = builder.createIntegerConstant(loc, idxTy, 0);
     auto one = builder.createIntegerConstant(loc, idxTy, 1);
     llvm::SmallVector<mlir::Value> loopUppers;
+
+    // Lower the mask expressions, if any.
+    if (masks && !masks->empty()) {
+      // Mask expressions are array expressions too.
+      for (const auto *e : masks->getExprs())
+        if (e && !masks->vmap.count(e)) {
+          ScalarExprLowering sel(getLoc(), converter, symMap, stmtCtx);
+          auto tmp = fir::getBase(sel.asArray(*e));
+          masks->vmap.try_emplace(e, tmp);
+        }
+    }
 
     // Convert the shape to closed interval form.
     if (destShape.has_value()) {
@@ -2148,7 +2178,7 @@ public:
     auto innerArg = destination.getResult();
     mlir::Value outerRes;
     const auto loopDepth = loopUppers.size();
-    llvm::SmallVector<mlir::Value> ivars(loopDepth);
+    llvm::SmallVector<mlir::Value> ivars;
     auto insPt = builder.saveInsertionPoint();
     assert(loopDepth > 0);
     for (auto i : llvm::enumerate(llvm::reverse(loopUppers))) {
@@ -2162,7 +2192,7 @@ public:
       innerArg = loop.getRegionIterArgs().front();
       // Store induction vars in column major order, which is what FIR array ops
       // expect.
-      ivars[loopDepth - 1 - i.index()] = loop.getInductionVar();
+      ivars.push_back(loop.getInductionVar());
       if (!outerRes)
         outerRes = loop.getResult(0);
       if (!inner)
@@ -2177,7 +2207,55 @@ public:
 
     // move insertion point inside loop nest
     builder.setInsertionPointToStart(inner.getBody());
-    return {IterationSpace{innerArg, outerRes, ivars}, insPt};
+
+    // put loop variables in row to column order
+    IterationSpace iters{innerArg, outerRes, llvm::reverse(ivars)};
+
+    // Generate the mask conditional structure, if there are masks.
+    if (masks && !masks->empty()) {
+      auto genCond = [&](mlir::Value tmp, IterSpace iters) {
+        auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(tmp.getType());
+        auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+        auto eleRefTy = builder.getRefType(eleTy);
+        auto i1Ty = builder.getI1Type();
+        auto addr = builder.create<fir::CoordinateOp>(loc, eleRefTy, tmp,
+                                                      iters.iterVec());
+        auto load = builder.create<fir::LoadOp>(loc, addr);
+        return builder.createConvert(loc, i1Ty, load);
+      };
+
+      // Handle the negated conditions. See 10.2.3.2p4 as to why this control
+      // structure is produced.
+      auto maskExprs = masks->getExprs();
+      auto size = maskExprs.size() - 1;
+      for (decltype(size) i = 0; i < size; ++i) {
+        auto ifOp = builder.create<fir::IfOp>(
+            loc, mlir::TypeRange{innerArg.getType()},
+            fir::getBase(genCond(masks->vmap.lookup(maskExprs[i]), iters)),
+            /*withElseRegion=*/true);
+        builder.create<fir::ResultOp>(loc, ifOp.getResult(0));
+        builder.setInsertionPointToStart(&ifOp.thenRegion().front());
+        builder.create<fir::ResultOp>(loc, innerArg);
+        builder.setInsertionPointToStart(&ifOp.elseRegion().front());
+      }
+
+      // The last condition is either non-negated or unconditionally negated.
+      if (maskExprs[size]) {
+        auto ifOp = builder.create<fir::IfOp>(
+            loc, mlir::TypeRange{innerArg.getType()},
+            fir::getBase(genCond(masks->vmap.lookup(maskExprs[size]), iters)),
+            /*withElseRegion=*/true);
+        builder.create<fir::ResultOp>(loc, ifOp.getResult(0));
+        builder.setInsertionPointToStart(&ifOp.elseRegion().front());
+        builder.create<fir::ResultOp>(loc, innerArg);
+        builder.setInsertionPointToStart(&ifOp.thenRegion().front());
+      } else {
+        // do nothing
+      }
+    }
+
+    // We're ready to lower the body of this loop nest now.
+    return {iters, insPt};
   }
 
   //===--------------------------------------------------------------------===//
@@ -3190,6 +3268,14 @@ private:
       : converter{converter}, builder{converter.getFirOpBuilder()},
         stmtCtx{stmtCtx}, symMap{symMap}, destination{dst}, semant{sem} {}
 
+  explicit ArrayExprLowering(Fortran::lower::AbstractConverter &converter,
+                             Fortran::lower::StatementContext &stmtCtx,
+                             Fortran::lower::SymMap &symMap,
+                             ConstituentSemantics sem,
+                             Fortran::lower::MaskExpr *masks)
+      : converter{converter}, builder{converter.getFirOpBuilder()},
+        stmtCtx{stmtCtx}, symMap{symMap}, masks{masks}, semant{sem} {}
+
   mlir::Location getLoc() { return converter.getCurrentLocation(); }
 
   /// Array appears in a lhs context such that it is assigned after the rhs is
@@ -3197,6 +3283,11 @@ private:
   bool isCopyInCopyOut() {
     return semant == ConstituentSemantics::CopyInCopyOut;
   }
+
+  /// Array appears in a lhs (or temp) context such that a projected,
+  /// discontiguous subspace of the array is assigned after the rhs is fully
+  /// evaluated. That is, the rhs array value is merged into a section of the
+  /// lhs array.
   bool isProjectedCopyInCopyOut() {
     return semant == ConstituentSemantics::ProjectedCopyInCopyOut;
   }
@@ -3223,6 +3314,7 @@ private:
   std::optional<Fortran::evaluate::Shape> destShape;
   llvm::SmallVector<mlir::Value> sliceTriple;
   llvm::SmallVector<mlir::Value> slicePath;
+  Fortran::lower::MaskExpr *masks{};
   ConstituentSemantics semant{ConstituentSemantics::RefTransparent};
   bool inSlice{false};
 };
@@ -3286,6 +3378,19 @@ void Fortran::lower::createSomeArrayAssignment(
   LLVM_DEBUG(lhs.AsFortran(llvm::dbgs() << "onto array: ") << '\n';
              rhs.AsFortran(llvm::dbgs() << "assign expression: ") << '\n';);
   ArrayExprLowering::lowerArrayAssignment(converter, symMap, stmtCtx, lhs, rhs);
+}
+
+void Fortran::lower::createMaskedArrayAssignment(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &lhs,
+    const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &rhs,
+    Fortran::lower::MaskExpr &masks, Fortran::lower::SymMap &symMap,
+    Fortran::lower::StatementContext &stmtCtx) {
+  LLVM_DEBUG(lhs.AsFortran(llvm::dbgs() << "onto array: ") << '\n';
+             rhs.AsFortran(llvm::dbgs() << "assign expression: ")
+             << " given mask conditions\n";);
+  ArrayExprLowering::lowerMaskedArrayAssignment(converter, symMap, stmtCtx, lhs,
+                                                rhs, masks);
 }
 
 fir::AllocMemOp Fortran::lower::createSomeArrayTemp(
