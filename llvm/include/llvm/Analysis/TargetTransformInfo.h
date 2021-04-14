@@ -1109,9 +1109,10 @@ public:
 
   /// \return The expected cost of control-flow related instructions such as
   /// Phi, Ret, Br, Switch.
-  int getCFInstrCost(unsigned Opcode,
-                     TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
-                     const Instruction *I = nullptr) const;
+  InstructionCost
+  getCFInstrCost(unsigned Opcode,
+                 TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
+                 const Instruction *I = nullptr) const;
 
   /// \returns The expected cost of compare and select instructions. If there
   /// is an existing instruction that holds Opcode, it may be passed in the
@@ -1583,8 +1584,9 @@ public:
   virtual InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
                                                    VectorType *VecTy,
                                                    unsigned Index) = 0;
-  virtual int getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
-                             const Instruction *I = nullptr) = 0;
+  virtual InstructionCost getCFInstrCost(unsigned Opcode,
+                                         TTI::TargetCostKind CostKind,
+                                         const Instruction *I = nullptr) = 0;
   virtual InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                                              Type *CondTy,
                                              CmpInst::Predicate VecPred,
@@ -2060,8 +2062,8 @@ public:
                                            unsigned Index) override {
     return Impl.getExtractWithExtendCost(Opcode, Dst, VecTy, Index);
   }
-  int getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
-                     const Instruction *I = nullptr) override {
+  InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                                 const Instruction *I = nullptr) override {
     return Impl.getCFInstrCost(Opcode, CostKind, I);
   }
   InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
