@@ -14,22 +14,23 @@ class TestGdbRemoteHostInfo(GdbRemoteTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
     KNOWN_HOST_INFO_KEYS = set([
+        "addressing_bits",
         "arch",
-        "cputype",
         "cpusubtype",
+        "cputype",
+        "default_packet_timeout",
         "distribution_id",
         "endian",
         "hostname",
-        "ostype",
+        "maccatalyst_version",
         "os_build",
         "os_kernel",
         "os_version",
-        "maccatalyst_version",
+        "ostype",
         "ptrsize",
         "triple",
         "vendor",
         "watchpoint_exceptions_received",
-        "default_packet_timeout",
     ])
 
     DARWIN_REQUIRED_HOST_INFO_KEYS = set([
