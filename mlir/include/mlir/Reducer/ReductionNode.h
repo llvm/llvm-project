@@ -17,129 +17,82 @@
 #ifndef MLIR_REDUCER_REDUCTIONNODE_H
 #define MLIR_REDUCER_REDUCTIONNODE_H
 
-#include <queue>
 #include <vector>
 
 #include "mlir/Reducer/Tester.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 namespace mlir {
 
-/// Defines the traversal method options to be used in the reduction tree
-/// traversal.
-enum TraversalMode { SinglePath, Backtrack, MultiPath };
-
-/// This class defines the ReductionNode which is used to generate variant and
-/// keep track of the necessary metadata for the reduction pass. The nodes are
-/// linked together in a reduction tree structure which defines the relationship
-/// between all the different generated variants.
+/// This class defines the ReductionNode which is used to wrap the module of
+/// a generated variant and keep track of the necessary metadata for the
+/// reduction pass. The nodes are linked together in a reduction tree structure
+/// which defines the relationship between all the different generated variants.
 class ReductionNode {
 public:
-  template <TraversalMode mode>
-  class iterator;
+  ReductionNode(ModuleOp module, ReductionNode *parent);
 
-  using Range = std::pair<int, int>;
+  ReductionNode(ModuleOp module, ReductionNode *parent,
+                std::vector<bool> transformSpace);
 
-  ReductionNode(ReductionNode *parent, std::vector<Range> range,
-                llvm::SpecificBumpPtrAllocator<ReductionNode> &allocator);
+  /// Calculates and initializes the size and interesting values of the node.
+  void measureAndTest(const Tester &test);
 
-  ReductionNode *getParent() const;
+  /// Returns the module.
+  ModuleOp getModule() const { return module; }
 
-  size_t getSize() const;
+  /// Returns true if the size and interestingness have been calculated.
+  bool isEvaluated() const;
+
+  /// Returns the size in bytes of the module.
+  int getSize() const;
 
   /// Returns true if the module exhibits the interesting behavior.
-  Tester::Interestingness isInteresting() const;
+  bool isInteresting() const;
 
-  std::vector<Range> getRanges() const;
+  /// Returns the pointer to a child variant by index.
+  ReductionNode *getVariant(unsigned long index) const;
 
-  std::vector<ReductionNode *> &getVariants();
+  /// Returns the number of child variants.
+  int variantsSize() const;
 
-  /// Split the ranges and generate new variants.
-  std::vector<ReductionNode *> generateNewVariants();
+  /// Returns true if the vector containing the child variants is empty.
+  bool variantsEmpty() const;
 
-  /// Update the interestingness result from tester.
-  void update(std::pair<Tester::Interestingness, size_t> result);
+  /// Sort the child variants and remove the uninteresting ones.
+  void organizeVariants(const Tester &test);
+
+  /// Returns the number of child variants.
+  int transformSpaceSize();
+
+  /// Returns a vector indicating the transformed indices as true.
+  const std::vector<bool> getTransformSpace();
 
 private:
-  /// A custom BFS iterator. The difference between
-  /// llvm/ADT/BreadthFirstIterator.h is the graph we're exploring is dynamic.
-  /// We may explore more neighbors at certain node if we didn't find interested
-  /// event. As a result, we defer pushing adjacent nodes until poping the last
-  /// visited node. The graph exploration strategy will be put in
-  /// getNeighbors().
-  ///
-  /// Subclass BaseIterator and implement traversal strategy in getNeighbors().
-  template <typename T>
-  class BaseIterator {
-  public:
-    BaseIterator(ReductionNode *node) { visitQueue.push(node); }
-    BaseIterator(const BaseIterator &) = default;
-    BaseIterator() = default;
+  /// Link a child variant node.
+  void linkVariant(ReductionNode *newVariant);
 
-    static BaseIterator end() { return BaseIterator(); }
+  // This is the MLIR module of this variant.
+  ModuleOp module;
 
-    bool operator==(const BaseIterator &i) {
-      return visitQueue == i.visitQueue;
-    }
-    bool operator!=(const BaseIterator &i) { return !(*this == i); }
+  // This is true if the module has been evaluated and it exhibits the
+  // interesting behavior.
+  bool interesting;
 
-    BaseIterator &operator++() {
-      ReductionNode *top = visitQueue.front();
-      visitQueue.pop();
-      std::vector<ReductionNode *> neighbors = getNeighbors(top);
-      for (ReductionNode *node : neighbors)
-        visitQueue.push(node);
-      return *this;
-    }
+  // This indicates the number of characters in the printed module if the module
+  // has been evaluated.
+  int size;
 
-    BaseIterator operator++(int) {
-      BaseIterator tmp = *this;
-      ++*this;
-      return tmp;
-    }
+  // This indicates if the module has been evaluated (measured and tested).
+  bool evaluated;
 
-    ReductionNode &operator*() const { return *(visitQueue.front()); }
-    ReductionNode *operator->() const { return visitQueue.front(); }
+  // Indicates the indices in the node that have been transformed in previous
+  // levels of the reduction tree.
+  std::vector<bool> transformSpace;
 
-  protected:
-    std::vector<ReductionNode *> getNeighbors(ReductionNode *node) {
-      return static_cast<T *>(this)->getNeighbors(node);
-    }
-
-  private:
-    std::queue<ReductionNode *> visitQueue;
-  };
-
-  /// The size of module after applying the range constraints.
-  size_t size;
-
-  /// This is true if the module has been evaluated and it exhibits the
-  /// interesting behavior.
-  Tester::Interestingness interesting;
-
-  ReductionNode *parent;
-
-  /// We will only keep the operation with index falls into the ranges.
-  /// For example, number each function in a certain module and then we will
-  /// remove the functions with index outside the ranges and see if the
-  /// resulting module is still interesting.
-  std::vector<Range> ranges;
-
-  /// This points to the child variants that were created using this node as a
-  /// starting point.
-  std::vector<ReductionNode *> variants;
-
-  llvm::SpecificBumpPtrAllocator<ReductionNode> &allocator;
-};
-
-// Specialized iterator for SinglePath traversal
-template <>
-class ReductionNode::iterator<SinglePath>
-    : public BaseIterator<iterator<SinglePath>> {
-  friend BaseIterator<iterator<SinglePath>>;
-  using BaseIterator::BaseIterator;
-  std::vector<ReductionNode *> getNeighbors(ReductionNode *node);
+  // This points to the child variants that were created using this node as a
+  // starting point.
+  std::vector<std::unique_ptr<ReductionNode>> variants;
 };
 
 } // end namespace mlir

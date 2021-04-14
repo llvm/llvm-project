@@ -36,25 +36,21 @@ void OptReductionPass::runOnOperation() {
   PassManager pmTransform(context);
   pmTransform.addPass(std::move(optPass));
 
-  std::pair<Tester::Interestingness, int> original = test.isInteresting(module);
-
   if (failed(pmTransform.run(moduleVariant)))
     return;
 
-  std::pair<Tester::Interestingness, int> reduced =
-      test.isInteresting(moduleVariant);
+  ReductionNode original(module, nullptr);
+  original.measureAndTest(test);
 
-  if (reduced.first == Tester::Interestingness::True &&
-      reduced.second < original.second) {
-    module.getBody()->clear();
-    module.getBody()->getOperations().splice(
-        module.getBody()->begin(), moduleVariant.getBody()->getOperations());
+  ReductionNode reduced(moduleVariant, nullptr);
+  reduced.measureAndTest(test);
+
+  if (reduced.isInteresting() && reduced.getSize() < original.getSize()) {
+    ReductionTreeUtils::updateGoldenModule(module, reduced.getModule().clone());
     LLVM_DEBUG(llvm::dbgs() << "\nSuccessful Transformed version\n\n");
   } else {
     LLVM_DEBUG(llvm::dbgs() << "\nUnsuccessful Transformed version\n\n");
   }
-
-  moduleVariant->destroy();
 
   LLVM_DEBUG(llvm::dbgs() << "Pass Complete\n\n");
 }

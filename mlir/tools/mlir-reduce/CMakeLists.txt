@@ -45,8 +45,9 @@ set(LIBS
 
 add_llvm_tool(mlir-reduce
   OptReductionPass.cpp
+  Passes/OpReducer.cpp
   ReductionNode.cpp
-  ReductionTreePass.cpp
+  ReductionTreeUtils.cpp
   mlir-reduce.cpp
 
   ADDITIONAL_HEADER_DIRS
