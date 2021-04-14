@@ -62,6 +62,7 @@ static_library("Utils") {
     "PredicateInfo.cpp",
     "PromoteMemoryToRegister.cpp",
     "RelLookupTableConverter.cpp",
+    "SCCPSolver.cpp",
     "SSAUpdater.cpp",
     "SSAUpdaterBulk.cpp",
     "SampleProfileLoaderBaseUtil.cpp",
