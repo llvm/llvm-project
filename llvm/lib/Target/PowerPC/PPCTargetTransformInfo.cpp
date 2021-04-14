@@ -1002,8 +1002,9 @@ int PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
               .getValue();
 }
 
-int PPCTTIImpl::getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
-                               const Instruction *I) {
+InstructionCost PPCTTIImpl::getCFInstrCost(unsigned Opcode,
+                                           TTI::TargetCostKind CostKind,
+                                           const Instruction *I) {
   if (CostKind != TTI::TCK_RecipThroughput)
     return Opcode == Instruction::PHI ? 0 : 1;
   // Branches are assumed to be predicted.
