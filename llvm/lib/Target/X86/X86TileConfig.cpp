@@ -151,6 +151,7 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
       // 55     tile7.rows Tile 7 rows.
       // 56-63  reserved, must be zero
       int ImmCount = 0;
+      (void)ImmCount;
       int Offset = IsRow ? 48 + I : 16 + I * 2;
       for (auto &DefMI : MRI.def_instructions(R)) {
         MachineBasicBlock &MBB = *DefMI.getParent();
