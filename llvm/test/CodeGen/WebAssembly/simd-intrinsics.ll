@@ -843,26 +843,6 @@ define <2 x double> @nearest_v2f64(<2 x double> %a) {
   ret <2 x double> %v
 }
 
-; CHECK-LABEL: convert_low_signed_v2f64:
-; CHECK-NEXT: .functype convert_low_signed_v2f64 (v128) -> (v128){{$}}
-; CHECK-NEXT: f64x2.convert_low_i32x4_s $push[[R:[0-9]+]]=, $0{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x double> @llvm.wasm.convert.low.signed(<4 x i32>)
-define <2 x double> @convert_low_signed_v2f64(<4 x i32> %a) {
-  %v = call <2 x double> @llvm.wasm.convert.low.signed(<4 x i32> %a)
-  ret <2 x double> %v
-}
-
-; CHECK-LABEL: convert_low_unsigned_v2f64:
-; CHECK-NEXT: .functype convert_low_unsigned_v2f64 (v128) -> (v128){{$}}
-; CHECK-NEXT: f64x2.convert_low_i32x4_u $push[[R:[0-9]+]]=, $0{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x double> @llvm.wasm.convert.low.unsigned(<4 x i32>)
-define <2 x double> @convert_low_unsigned_v2f64(<4 x i32> %a) {
-  %v = call <2 x double> @llvm.wasm.convert.low.unsigned(<4 x i32> %a)
-  ret <2 x double> %v
-}
-
 ; CHECK-LABEL: promote_low_v2f64:
 ; CHECK-NEXT: .functype promote_low_v2f64 (v128) -> (v128){{$}}
 ; CHECK-NEXT: f64x2.promote_low_f32x4 $push[[R:[0-9]+]]=, $0{{$}}
