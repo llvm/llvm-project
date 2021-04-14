@@ -187,6 +187,7 @@ struct SGPRSpillBuilder {
     int64_t VGPRLanes = getPerVGPRData().VGPRLanes;
 
     if (SavedExecReg) {
+      RS->setRegUsed(SavedExecReg);
       // Set exec to needed lanes
       BuildMI(MBB, MI, DL, TII.get(MovOpc), SavedExecReg).addReg(ExecReg);
       auto I = BuildMI(MBB, MI, DL, TII.get(MovOpc), ExecReg).addImm(VGPRLanes);
