@@ -156,7 +156,7 @@ public:
                                                 bool IsPairwiseForm,
                                                 TTI::TargetCostKind CostKind);
 
-  int getArithmeticInstrCost(
+  InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,

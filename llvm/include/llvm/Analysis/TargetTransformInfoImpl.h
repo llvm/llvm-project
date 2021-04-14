@@ -441,14 +441,12 @@ public:
 
   unsigned getMaxInterleaveFactor(unsigned VF) const { return 1; }
 
-  unsigned getArithmeticInstrCost(unsigned Opcode, Type *Ty,
-                                  TTI::TargetCostKind CostKind,
-                                  TTI::OperandValueKind Opd1Info,
-                                  TTI::OperandValueKind Opd2Info,
-                                  TTI::OperandValueProperties Opd1PropInfo,
-                                  TTI::OperandValueProperties Opd2PropInfo,
-                                  ArrayRef<const Value *> Args,
-                                  const Instruction *CxtI = nullptr) const {
+  InstructionCost getArithmeticInstrCost(
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+      TTI::OperandValueKind Opd1Info, TTI::OperandValueKind Opd2Info,
+      TTI::OperandValueProperties Opd1PropInfo,
+      TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
+      const Instruction *CxtI = nullptr) const {
     // FIXME: A number of transformation tests seem to require these values
     // which seems a little odd for how arbitary there are.
     switch (Opcode) {

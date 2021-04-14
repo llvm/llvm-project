@@ -173,14 +173,12 @@ unsigned X86TTIImpl::getMaxInterleaveFactor(unsigned VF) {
   return 2;
 }
 
-int X86TTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
-                                       TTI::TargetCostKind CostKind,
-                                       TTI::OperandValueKind Op1Info,
-                                       TTI::OperandValueKind Op2Info,
-                                       TTI::OperandValueProperties Opd1PropInfo,
-                                       TTI::OperandValueProperties Opd2PropInfo,
-                                       ArrayRef<const Value *> Args,
-                                       const Instruction *CxtI) {
+InstructionCost X86TTIImpl::getArithmeticInstrCost(
+    unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+    TTI::OperandValueKind Op1Info, TTI::OperandValueKind Op2Info,
+    TTI::OperandValueProperties Opd1PropInfo,
+    TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
+    const Instruction *CxtI) {
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
@@ -265,10 +263,9 @@ int X86TTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
       // normally expanded to the sequence SRA + SRL + ADD + SRA.
       // The OperandValue properties may not be the same as that of the previous
       // operation; conservatively assume OP_None.
-      int Cost =
+      InstructionCost Cost =
           2 * getArithmeticInstrCost(Instruction::AShr, Ty, CostKind, Op1Info,
-                                     Op2Info,
-                                     TargetTransformInfo::OP_None,
+                                     Op2Info, TargetTransformInfo::OP_None,
                                      TargetTransformInfo::OP_None);
       Cost += getArithmeticInstrCost(Instruction::LShr, Ty, CostKind, Op1Info,
                                      Op2Info,
@@ -953,7 +950,7 @@ int X86TTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
   // to hide "20 cycles" for each lane.
   if (LT.second.isVector() && (ISD == ISD::SDIV || ISD == ISD::SREM ||
                                ISD == ISD::UDIV || ISD == ISD::UREM)) {
-    int ScalarCost = getArithmeticInstrCost(
+    InstructionCost ScalarCost = getArithmeticInstrCost(
         Opcode, Ty->getScalarType(), CostKind, Op1Info, Op2Info,
         TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
     return 20 * LT.first * LT.second.getVectorNumElements() * ScalarCost;
@@ -3419,14 +3416,13 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   if (ISD == ISD::MUL && MTy.getScalarType() == MVT::i8) {
     auto *WideSclTy = IntegerType::get(ValVTy->getContext(), 16);
     auto *WideVecTy = FixedVectorType::get(WideSclTy, ValVTy->getNumElements());
-    return *getCastInstrCost(Instruction::ZExt, WideVecTy, ValTy,
-                             TargetTransformInfo::CastContextHint::None,
-                             CostKind)
-                .getValue() +
+    return getCastInstrCost(Instruction::ZExt, WideVecTy, ValTy,
+                            TargetTransformInfo::CastContextHint::None,
+                            CostKind) +
            getArithmeticReductionCost(Opcode, WideVecTy, IsPairwise, CostKind);
   }
 
-  unsigned ArithmeticCost = 0;
+  InstructionCost ArithmeticCost = 0;
   if (LT.first != 1 && MTy.isVector() &&
       MTy.getVectorNumElements() < ValVTy->getNumElements()) {
     // Type needs to be split. We need LT.first - 1 arithmetic ops.
@@ -3496,7 +3492,7 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
   // Handle bool allof/anyof patterns.
   if (ValVTy->getElementType()->isIntegerTy(1)) {
-    unsigned ArithmeticCost = 0;
+    InstructionCost ArithmeticCost = 0;
     if (LT.first != 1 && MTy.isVector() &&
         MTy.getVectorNumElements() < ValVTy->getNumElements()) {
       // Type needs to be split. We need LT.first - 1 arithmetic ops.
