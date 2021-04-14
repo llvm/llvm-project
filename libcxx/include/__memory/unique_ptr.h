@@ -13,11 +13,14 @@
 #include <__config>
 #include <__functional_base> // std::less
 #include <__memory/allocator_traits.h> // __pointer
-#include <__memory/auto_ptr.h>
 #include <__memory/compressed_pair.h>
 #include <cstddef>
 #include <type_traits>
 #include <utility>
+
+#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
+#   include <__memory/auto_ptr.h>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
