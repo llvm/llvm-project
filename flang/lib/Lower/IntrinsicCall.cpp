@@ -26,6 +26,7 @@
 #include "flang/Lower/FIRBuilder.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/ReductionRuntime.h"
+#include "flang/Lower/NumericRuntime.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -172,8 +173,12 @@ struct IntrinsicLibrary {
   mlir::Value genModulo(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genPresent(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genRRSpacing(mlir::Type resultType, llvm::ArrayRef<mlir::Value> 
+                           args);
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genSpacing(mlir::Type resultType, llvm::ArrayRef<mlir::Value> 
+                         args);
   fir::ExtendedValue genTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genVerify(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   /// Implement all conversion functions like DBLE, the first argument is
@@ -329,6 +334,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"modulo", &I::genModulo},
     {"nint", &I::genNint},
     {"present", &I::genPresent, {{{"a", asInquired}}}, /*isElemental=*/false},
+    {"rrspacing", 
+     &I::genRRSpacing,
+     {{{"x", asValue}}},
+     /*isElemental=*/true},
     {"scan",
      &I::genScan,
      {{{"string", asAddr},
@@ -337,6 +346,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"kind", asValue}}},
      /*isElemental=*/true},
     {"sign", &I::genSign},
+    {"spacing", 
+     &I::genSpacing,
+     {{{"x", asValue}}},
+     /*isElemental=*/true},
     {"trim", &I::genTrim, {{{"string", asAddr}}}, /*isElemental=*/false},
     {"verify",
      &I::genVerify,
@@ -1654,6 +1667,16 @@ IntrinsicLibrary::genPresent(mlir::Type,
                                           fir::getBase(args[0]));
 }
 
+// RRSPACING
+mlir::Value IntrinsicLibrary::genRRSpacing(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(
+        loc, resultType,
+        Fortran::lower::genRRSpacing(builder, loc, fir::getBase(args[0]))); 
+}
+
 // SCAN
 fir::ExtendedValue
 IntrinsicLibrary::genScan(mlir::Type resultType,
@@ -1759,6 +1782,16 @@ mlir::Value IntrinsicLibrary::genSign(mlir::Type resultType,
   auto cmp =
       builder.create<fir::CmpfOp>(loc, mlir::CmpFPredicate::OLT, args[1], zero);
   return builder.create<mlir::SelectOp>(loc, cmp, neg, abs);
+}
+
+// SPACING
+mlir::Value IntrinsicLibrary::genSpacing(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(
+        loc, resultType,
+        Fortran::lower::genSpacing(builder, loc, fir::getBase(args[0]))); 
 }
 
 // TRIM

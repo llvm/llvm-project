@@ -17,6 +17,7 @@ add_flang_library(FortranLower
   IntrinsicCall.cpp
   IO.cpp
   Mangler.cpp
+  NumericRuntime.cpp
   OpenACC.cpp
   OpenMP.cpp
   PFTBuilder.cpp

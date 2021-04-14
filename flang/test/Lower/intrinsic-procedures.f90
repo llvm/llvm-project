@@ -441,6 +441,16 @@ subroutine modulo_testi(r, a, p)
   r = modulo(a, p)
 end subroutine
 
+! RRSPACING
+! CHECK-LABEL: rrspacing_test
+! CHECK-SAME: [[x:[^:]+]]: !fir.ref<f32>) -> f32
+real*4 function rrspacing_test(x)
+  real*4 :: x
+  rrspacing_test = rrspacing(x)
+!CHECK %[[a1:.*]] = fir.load %[[x]] : !fir.ref<f32>
+!CHECK %{{.*}} = fir.call @_FortranARRSpacing4(%[[a1]]) : (f32) -> f32
+end function
+
 ! SCAN 
 ! CHECK-LABEL: func @_QPscan_test(%
 ! CHECK-SAME: [[s:[^:]+]]: !fir.boxchar<1>, %
@@ -502,6 +512,16 @@ subroutine sign_testr(a, b, c)
   ! CHECK: select
   c = sign(a, b)
 end subroutine
+
+! SPACING
+! CHECK-LABEL: spacing_test
+! CHECK-SAME: [[x:[^:]+]]: !fir.ref<f32>) -> f32
+real*4 function spacing_test(x)
+  real*4 :: x
+  spacing_test = spacing(x)
+!CHECK %[[a1:.*]] = fir.load %[[x]] : !fir.ref<f32>
+!CHECK %{{.*}} = fir.call @_FortranASpacing4(%[[a1]]) : (f32) -> f32
+end function
 
 ! SQRT
 ! CHECK-LABEL: sqrt_testr

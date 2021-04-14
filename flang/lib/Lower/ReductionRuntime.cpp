@@ -110,3 +110,18 @@ Fortran::lower::genAny(Fortran::lower::FirOpBuilder &builder,
    
   return builder.create<fir::CallOp>(loc, anyFunc, args).getResult(0);
 }
+
+/// Helper function to recover the KIND from the FIR type.
+static int discoverKind(mlir::Type ty) {
+  if (auto charTy = ty.dyn_cast<fir::CharacterType>())
+    return charTy.getFKind();
+  if (auto eleTy = fir::dyn_cast_ptrEleTy(ty))
+    return discoverKind(eleTy);
+  if (auto arrTy = ty.dyn_cast<fir::SequenceType>())
+    return discoverKind(arrTy.getEleTy());
+  if (auto boxTy = ty.dyn_cast<fir::BoxCharType>())
+    return discoverKind(boxTy.getEleTy());
+  if (auto boxTy = ty.dyn_cast<fir::BoxType>())
+    return discoverKind(boxTy.getEleTy());
+  llvm_unreachable("unexpected character type");
+}
