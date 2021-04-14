@@ -658,8 +658,8 @@ int main(int argc, char *const argv[]) {
         }
         arguments[i] = std::strtol(args.front().c_str(), &endptr, 10);
         if (*endptr != '\0') {
-          llvm::errs() << "Invalid argument to -fget-definitions: "
-                       << args.front() << '\n';
+          llvm::errs() << "error: invalid value '" << args.front()
+                       << "' in 'fget-definition'" << '\n';
           return EXIT_FAILURE;
         }
         args.pop_front();
