@@ -69,6 +69,7 @@ add_unittest(ClangdUnitTests ClangdTests
   HoverTests.cpp
   IndexActionTests.cpp
   IndexTests.cpp
+  InlayHintTests.cpp
   JSONTransportTests.cpp
   LoggerTests.cpp
   LSPBinderTests.cpp

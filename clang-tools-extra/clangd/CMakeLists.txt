@@ -76,6 +76,7 @@ add_clang_library(clangDaemon
   HeuristicResolver.cpp
   Hover.cpp
   IncludeFixer.cpp
+  InlayHints.cpp
   JSONTransport.cpp
   PathMapping.cpp
   Protocol.cpp
