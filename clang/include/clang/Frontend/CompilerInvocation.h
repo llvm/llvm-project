@@ -91,8 +91,9 @@ public:
 
   CompilerInvocationRefBase();
   CompilerInvocationRefBase(const CompilerInvocationRefBase &X);
-  CompilerInvocationRefBase &
-  operator=(const CompilerInvocationRefBase &) = delete;
+  CompilerInvocationRefBase(CompilerInvocationRefBase &&X);
+  CompilerInvocationRefBase &operator=(CompilerInvocationRefBase X);
+  CompilerInvocationRefBase &operator=(CompilerInvocationRefBase &&X);
   ~CompilerInvocationRefBase();
 
   LangOptions *getLangOpts() { return LangOpts.get(); }

@@ -125,6 +125,23 @@ CompilerInvocationRefBase::CompilerInvocationRefBase(
       PreprocessorOpts(new PreprocessorOptions(X.getPreprocessorOpts())),
       AnalyzerOpts(new AnalyzerOptions(*X.getAnalyzerOpts())) {}
 
+CompilerInvocationRefBase::CompilerInvocationRefBase(
+    CompilerInvocationRefBase &&X) = default;
+
+CompilerInvocationRefBase &
+CompilerInvocationRefBase::operator=(CompilerInvocationRefBase X) {
+  LangOpts.swap(X.LangOpts);
+  TargetOpts.swap(X.TargetOpts);
+  DiagnosticOpts.swap(X.DiagnosticOpts);
+  HeaderSearchOpts.swap(X.HeaderSearchOpts);
+  PreprocessorOpts.swap(X.PreprocessorOpts);
+  AnalyzerOpts.swap(X.AnalyzerOpts);
+  return *this;
+}
+
+CompilerInvocationRefBase &
+CompilerInvocationRefBase::operator=(CompilerInvocationRefBase &&X) = default;
+
 CompilerInvocationRefBase::~CompilerInvocationRefBase() = default;
 
 //===----------------------------------------------------------------------===//
