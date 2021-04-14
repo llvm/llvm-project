@@ -2227,11 +2227,9 @@ static bool isNonZeroRecurrence(const PHINode *PN) {
   case Instruction::Add:
     // Starting from non-zero and stepping away from zero can never wrap back
     // to zero.
-    // TODO: The constant step requirement is not needed with NUW.
-    return match(Step, m_APInt(StepC)) &&
-           ((BO->hasNoUnsignedWrap() && !StepC->isNullValue()) ||
-            (BO->hasNoSignedWrap() &&
-             StartC->isNegative() == StepC->isNegative()));
+    return BO->hasNoUnsignedWrap() ||
+           (BO->hasNoSignedWrap() && match(Step, m_APInt(StepC)) &&
+            StartC->isNegative() == StepC->isNegative());
   case Instruction::Mul:
     return match(Step, m_APInt(StepC)) &&
            ((BO->hasNoUnsignedWrap() && !StepC->isNullValue()) ||
