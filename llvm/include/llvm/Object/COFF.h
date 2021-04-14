@@ -604,6 +604,7 @@ enum class coff_guard_flags : uint32_t {
   ProtectDelayLoadIAT = 0x00001000,
   DelayLoadIATSection = 0x00002000, // Delay load in separate section
   HasLongJmpTable = 0x00010000,
+  HasEHContTable = 0x00400000,
   FidTableHasFlags = 0x10000000, // Indicates that fid tables are 5 bytes
 };
 
@@ -661,6 +662,17 @@ struct coff_load_configuration32 {
   support::ulittle16_t Reserved2;
   support::ulittle32_t GuardRFVerifyStackPointerFunctionPointer;
   support::ulittle32_t HotPatchTableOffset;
+
+  // Added in MSVC 2019
+  support::ulittle32_t Reserved3;
+  support::ulittle32_t EnclaveConfigurationPointer;
+  support::ulittle32_t VolatileMetadataPointer;
+  support::ulittle32_t GuardEHContinuationTable;
+  support::ulittle32_t GuardEHContinuationCount;
+  support::ulittle32_t GuardXFGCheckFunctionPointer;
+  support::ulittle32_t GuardXFGDispatchFunctionPointer;
+  support::ulittle32_t GuardXFGTableDispatchFunctionPointer;
+  support::ulittle32_t CastGuardOsDeterminedFailureMode;
 };
 
 /// 64-bit load config (IMAGE_LOAD_CONFIG_DIRECTORY64)
@@ -708,6 +720,17 @@ struct coff_load_configuration64 {
   support::ulittle16_t Reserved2;
   support::ulittle64_t GuardRFVerifyStackPointerFunctionPointer;
   support::ulittle32_t HotPatchTableOffset;
+
+  // Added in MSVC 2019
+  support::ulittle32_t Reserved3;
+  support::ulittle64_t EnclaveConfigurationPointer;
+  support::ulittle64_t VolatileMetadataPointer;
+  support::ulittle64_t GuardEHContinuationTable;
+  support::ulittle64_t GuardEHContinuationCount;
+  support::ulittle64_t GuardXFGCheckFunctionPointer;
+  support::ulittle64_t GuardXFGDispatchFunctionPointer;
+  support::ulittle64_t GuardXFGTableDispatchFunctionPointer;
+  support::ulittle64_t CastGuardOsDeterminedFailureMode;
 };
 
 struct coff_runtime_function_x64 {

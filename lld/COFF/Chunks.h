@@ -584,6 +584,17 @@ private:
   SymbolRVASet syms;
 };
 
+// Table which contains symbol RVAs with flags. Used for /guard:ehcont.
+class RVAFlagTableChunk : public NonSectionChunk {
+public:
+  explicit RVAFlagTableChunk(SymbolRVASet s) : syms(std::move(s)) {}
+  size_t getSize() const override { return syms.size() * 5; }
+  void writeTo(uint8_t *buf) const override;
+
+private:
+  SymbolRVASet syms;
+};
+
 // Windows-specific.
 // This class represents a block in .reloc section.
 // See the PE/COFF spec 5.6 for details.
