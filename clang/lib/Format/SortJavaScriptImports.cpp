@@ -89,7 +89,7 @@ struct JsModuleReference {
   SmallVector<JsImportedSymbol, 1> Symbols;
   // Whether some symbols were merged into this one. Controls if the module
   // reference needs re-formatting.
-  bool SymbolsMerged;
+  bool SymbolsMerged = false;
   // The source location just after { and just before } in the import.
   // Extracted eagerly to allow modification of Symbols later on.
   SourceLocation SymbolsStart, SymbolsEnd;
