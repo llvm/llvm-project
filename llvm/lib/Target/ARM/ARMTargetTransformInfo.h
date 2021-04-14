@@ -218,7 +218,7 @@ public:
   int getAddressComputationCost(Type *Val, ScalarEvolution *SE,
                                 const SCEV *Ptr);
 
-  int getArithmeticInstrCost(
+  InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueKind Op1Info = TTI::OK_AnyValue,

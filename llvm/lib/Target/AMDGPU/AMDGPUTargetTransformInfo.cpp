@@ -510,14 +510,12 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   }
 }
 
-int GCNTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
-                                       TTI::TargetCostKind CostKind,
-                                       TTI::OperandValueKind Opd1Info,
-                                       TTI::OperandValueKind Opd2Info,
-                                       TTI::OperandValueProperties Opd1PropInfo,
-                                       TTI::OperandValueProperties Opd2PropInfo,
-                                       ArrayRef<const Value *> Args,
-                                       const Instruction *CxtI) {
+InstructionCost GCNTTIImpl::getArithmeticInstrCost(
+    unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+    TTI::OperandValueKind Opd1Info, TTI::OperandValueKind Opd2Info,
+    TTI::OperandValueProperties Opd1PropInfo,
+    TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
+    const Instruction *CxtI) {
   EVT OrigTy = TLI->getValueType(DL, Ty);
   if (!OrigTy.isSimple()) {
     // FIXME: We're having to query the throughput cost so that the basic
@@ -557,7 +555,7 @@ int GCNTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     // similarly to what getCastInstrCost() does.
     if (auto *VTy = dyn_cast<VectorType>(Ty)) {
       unsigned Num = cast<FixedVectorType>(VTy)->getNumElements();
-      unsigned Cost = getArithmeticInstrCost(
+      InstructionCost Cost = getArithmeticInstrCost(
           Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info,
           Opd1PropInfo, Opd2PropInfo, Args, CxtI);
       // Return the cost of multiple scalar invocation plus the cost of

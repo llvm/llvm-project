@@ -1036,7 +1036,7 @@ public:
   /// cases or optimizations based on those values.
   /// \p CxtI is the optional original context instruction, if one exists, to
   /// provide even more information.
-  int getArithmeticInstrCost(
+  InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       OperandValueKind Opd1Info = OK_AnyValue,
@@ -1568,13 +1568,11 @@ public:
   virtual bool enableWritePrefetching() const = 0;
 
   virtual unsigned getMaxInterleaveFactor(unsigned VF) = 0;
-  virtual unsigned getArithmeticInstrCost(
-      unsigned Opcode, Type *Ty,
-      TTI::TargetCostKind CostKind,
-      OperandValueKind Opd1Info,
-      OperandValueKind Opd2Info, OperandValueProperties Opd1PropInfo,
-      OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
-      const Instruction *CxtI = nullptr) = 0;
+  virtual InstructionCost getArithmeticInstrCost(
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+      OperandValueKind Opd1Info, OperandValueKind Opd2Info,
+      OperandValueProperties Opd1PropInfo, OperandValueProperties Opd2PropInfo,
+      ArrayRef<const Value *> Args, const Instruction *CxtI = nullptr) = 0;
   virtual InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
                                          ArrayRef<int> Mask, int Index,
                                          VectorType *SubTp) = 0;
@@ -2039,14 +2037,12 @@ public:
                                             BlockFrequencyInfo *BFI) override {
     return Impl.getEstimatedNumberOfCaseClusters(SI, JTSize, PSI, BFI);
   }
-  unsigned getArithmeticInstrCost(unsigned Opcode, Type *Ty,
-                                  TTI::TargetCostKind CostKind,
-                                  OperandValueKind Opd1Info,
-                                  OperandValueKind Opd2Info,
-                                  OperandValueProperties Opd1PropInfo,
-                                  OperandValueProperties Opd2PropInfo,
-                                  ArrayRef<const Value *> Args,
-                                  const Instruction *CxtI = nullptr) override {
+  InstructionCost getArithmeticInstrCost(
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+      OperandValueKind Opd1Info, OperandValueKind Opd2Info,
+      OperandValueProperties Opd1PropInfo, OperandValueProperties Opd2PropInfo,
+      ArrayRef<const Value *> Args,
+      const Instruction *CxtI = nullptr) override {
     return Impl.getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info, Opd2Info,
                                        Opd1PropInfo, Opd2PropInfo, Args, CxtI);
   }

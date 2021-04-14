@@ -680,7 +680,7 @@ public:
 
   unsigned getMaxInterleaveFactor(unsigned VF) { return 1; }
 
-  unsigned getArithmeticInstrCost(
+  InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
@@ -725,7 +725,7 @@ public:
     // similarly to what getCastInstrCost() does.
     if (auto *VTy = dyn_cast<VectorType>(Ty)) {
       unsigned Num = cast<FixedVectorType>(VTy)->getNumElements();
-      unsigned Cost = thisT()->getArithmeticInstrCost(
+      InstructionCost Cost = thisT()->getArithmeticInstrCost(
           Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info,
           Opd1PropInfo, Opd2PropInfo, Args, CxtI);
       // Return the cost of multiple scalar invocation plus the cost of

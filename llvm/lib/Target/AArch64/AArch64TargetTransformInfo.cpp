@@ -261,13 +261,13 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   case Intrinsic::experimental_stepvector: {
-    unsigned Cost = 1; // Cost of the `index' instruction
+    InstructionCost Cost = 1; // Cost of the `index' instruction
     auto LT = TLI->getTypeLegalizationCost(DL, RetTy);
     // Legalisation of illegal vectors involves an `index' instruction plus
     // (LT.first - 1) vector adds.
     if (LT.first > 1) {
       Type *LegalVTy = EVT(LT.second).getTypeForEVT(RetTy->getContext());
-      unsigned AddCost =
+      InstructionCost AddCost =
           getArithmeticInstrCost(Instruction::Add, LegalVTy, CostKind);
       Cost += AddCost * (LT.first - 1);
     }
@@ -690,10 +690,10 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   return ST->getVectorInsertExtractBaseCost();
 }
 
-int AArch64TTIImpl::getArithmeticInstrCost(
+InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-    TTI::OperandValueKind Opd1Info,
-    TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,
+    TTI::OperandValueKind Opd1Info, TTI::OperandValueKind Opd2Info,
+    TTI::OperandValueProperties Opd1PropInfo,
     TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
   // TODO: Handle more cost kinds.
@@ -711,7 +711,7 @@ int AArch64TTIImpl::getArithmeticInstrCost(
   // aren't present in the generated code and have a zero cost. By adding a
   // widening overhead here, we attach the total cost of the combined operation
   // to the widening instruction.
-  int Cost = 0;
+  InstructionCost Cost = 0;
   if (isWideningInstruction(Ty, Opcode, Args))
     Cost += ST->getWideningBaseCost();
 
@@ -755,18 +755,15 @@ int AArch64TTIImpl::getArithmeticInstrCost(
         // Vector signed division by constant are expanded to the
         // sequence MULHS + ADD/SUB + SRA + SRL + ADD, and unsigned division
         // to MULHS + SUB + SRL + ADD + SRL.
-        int MulCost = getArithmeticInstrCost(Instruction::Mul, Ty, CostKind,
-                                             Opd1Info, Opd2Info,
-                                             TargetTransformInfo::OP_None,
-                                             TargetTransformInfo::OP_None);
-        int AddCost = getArithmeticInstrCost(Instruction::Add, Ty, CostKind,
-                                             Opd1Info, Opd2Info,
-                                             TargetTransformInfo::OP_None,
-                                             TargetTransformInfo::OP_None);
-        int ShrCost = getArithmeticInstrCost(Instruction::AShr, Ty, CostKind,
-                                             Opd1Info, Opd2Info,
-                                             TargetTransformInfo::OP_None,
-                                             TargetTransformInfo::OP_None);
+        InstructionCost MulCost = getArithmeticInstrCost(
+            Instruction::Mul, Ty, CostKind, Opd1Info, Opd2Info,
+            TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
+        InstructionCost AddCost = getArithmeticInstrCost(
+            Instruction::Add, Ty, CostKind, Opd1Info, Opd2Info,
+            TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
+        InstructionCost ShrCost = getArithmeticInstrCost(
+            Instruction::AShr, Ty, CostKind, Opd1Info, Opd2Info,
+            TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
         return MulCost * 2 + AddCost * 2 + ShrCost * 2 + 1;
       }
     }
@@ -1280,7 +1277,7 @@ InstructionCost AArch64TTIImpl::getArithmeticReductionCostSVE(
   assert(!IsPairwise && "Cannot be pair wise to continue");
 
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
-  int LegalizationCost = 0;
+  InstructionCost LegalizationCost = 0;
   if (LT.first > 1) {
     Type *LegalVTy = EVT(LT.second).getTypeForEVT(ValTy->getContext());
     LegalizationCost = getArithmeticInstrCost(Opcode, LegalVTy, CostKind);
