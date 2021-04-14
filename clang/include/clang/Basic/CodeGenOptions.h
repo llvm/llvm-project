@@ -372,6 +372,11 @@ public:
   /// coverage pass should actually not be instrumented.
   std::vector<std::string> SanitizeCoverageIgnorelistFiles;
 
+  /// Name of the stack usage file (i.e., .su file) if user passes
+  /// -fstack-usage. If empty, it can be implied that -fstack-usage is not
+  /// passed on the command line.
+  std::string StackUsageOutput;
+
   /// Executable and command-line used to create a given CompilerInvocation.
   /// Most of the time this will be the full -cc1 command.
   const char *Argv0 = nullptr;
