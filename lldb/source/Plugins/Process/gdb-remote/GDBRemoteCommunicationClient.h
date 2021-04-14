@@ -336,6 +336,8 @@ public:
   // and response times.
   bool SendSpeedTestPacket(uint32_t send_size, uint32_t recv_size);
 
+  llvm::Optional<uint64_t> SendSetCurrentThreadPacket(uint64_t tid, char op);
+
   bool SetCurrentThread(uint64_t tid);
 
   bool SetCurrentThreadForRun(uint64_t tid);

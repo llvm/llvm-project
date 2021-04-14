@@ -98,7 +98,7 @@ TEST_F(GDBRemoteCommunicationClientTest, WriteRegisterNoSuffix) {
   });
 
   Handle_QThreadSuffixSupported(server, false);
-  HandlePacket(server, "Hg47", "OK");
+  HandlePacket(server, "Hg0000000000000047", "OK");
   HandlePacket(server, "P4=" + one_register_hex, "OK");
   ASSERT_TRUE(write_result.get());
 
@@ -143,7 +143,7 @@ TEST_F(GDBRemoteCommunicationClientTest, SaveRestoreRegistersNoSuffix) {
     return client.SaveRegisterState(tid, save_id);
   });
   Handle_QThreadSuffixSupported(server, false);
-  HandlePacket(server, "Hg47", "OK");
+  HandlePacket(server, "Hg0000000000000047", "OK");
   HandlePacket(server, "QSaveRegisterState", "1");
   ASSERT_TRUE(async_result.get());
   EXPECT_EQ(1u, save_id);
