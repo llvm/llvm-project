@@ -61,7 +61,15 @@ bool ParseDiagnosticArgs(DiagnosticOptions &Opts, llvm::opt::ArgList &Args,
                          DiagnosticsEngine *Diags = nullptr,
                          bool DefaultDiagColor = true);
 
-class CompilerInvocationBase {
+/// The base class of CompilerInvocation with reference semantics.
+///
+/// This class stores option objects behind reference-counted pointers. This is
+/// useful for clients that want to keep some option object around even after
+/// CompilerInvocation gets destroyed, without making a copy.
+///
+/// This is a separate class so that we can implement the copy constructor and
+/// assignment here and leave them defaulted in the rest of CompilerInvocation.
+class CompilerInvocationRefBase {
 public:
   /// Options controlling the language variant.
   std::shared_ptr<LangOptions> LangOpts;
@@ -81,10 +89,11 @@ public:
   /// Options controlling the static analyzer.
   AnalyzerOptionsRef AnalyzerOpts;
 
-  CompilerInvocationBase();
-  CompilerInvocationBase(const CompilerInvocationBase &X);
-  CompilerInvocationBase &operator=(const CompilerInvocationBase &) = delete;
-  ~CompilerInvocationBase();
+  CompilerInvocationRefBase();
+  CompilerInvocationRefBase(const CompilerInvocationRefBase &X);
+  CompilerInvocationRefBase &
+  operator=(const CompilerInvocationRefBase &) = delete;
+  ~CompilerInvocationRefBase();
 
   LangOptions *getLangOpts() { return LangOpts.get(); }
   const LangOptions *getLangOpts() const { return LangOpts.get(); }
@@ -117,12 +126,9 @@ public:
   AnalyzerOptionsRef getAnalyzerOpts() const { return AnalyzerOpts; }
 };
 
-/// Helper class for holding the data necessary to invoke the compiler.
-///
-/// This class is designed to represent an abstract "invocation" of the
-/// compiler, including data such as the include paths, the code generation
-/// options, the warning flags, and so on.
-class CompilerInvocation : public CompilerInvocationBase {
+/// The base class of CompilerInvocation with value semantics.
+class CompilerInvocationValueBase {
+protected:
   MigratorOptions MigratorOpts;
 
   /// Options controlling IRgen and the backend.
@@ -141,9 +147,46 @@ class CompilerInvocation : public CompilerInvocationBase {
   PreprocessorOutputOptions PreprocessorOutputOpts;
 
 public:
-  /// @name Utility Methods
-  /// @{
+  MigratorOptions &getMigratorOpts() { return MigratorOpts; }
+  const MigratorOptions &getMigratorOpts() const { return MigratorOpts; }
 
+  CodeGenOptions &getCodeGenOpts() { return CodeGenOpts; }
+  const CodeGenOptions &getCodeGenOpts() const { return CodeGenOpts; }
+
+  DependencyOutputOptions &getDependencyOutputOpts() {
+    return DependencyOutputOpts;
+  }
+
+  const DependencyOutputOptions &getDependencyOutputOpts() const {
+    return DependencyOutputOpts;
+  }
+
+  FileSystemOptions &getFileSystemOpts() { return FileSystemOpts; }
+
+  const FileSystemOptions &getFileSystemOpts() const {
+    return FileSystemOpts;
+  }
+
+  FrontendOptions &getFrontendOpts() { return FrontendOpts; }
+  const FrontendOptions &getFrontendOpts() const { return FrontendOpts; }
+
+  PreprocessorOutputOptions &getPreprocessorOutputOpts() {
+    return PreprocessorOutputOpts;
+  }
+
+  const PreprocessorOutputOptions &getPreprocessorOutputOpts() const {
+    return PreprocessorOutputOpts;
+  }
+};
+
+/// Helper class for holding the data necessary to invoke the compiler.
+///
+/// This class is designed to represent an abstract "invocation" of the
+/// compiler, including data such as the include paths, the code generation
+/// options, the warning flags, and so on.
+class CompilerInvocation : public CompilerInvocationRefBase,
+                           public CompilerInvocationValueBase {
+public:
   /// Create a compiler invocation from a list of input options.
   /// \returns true on success.
   ///
@@ -198,43 +241,6 @@ public:
   /// The returned pointer is what gets appended to Args.
   void generateCC1CommandLine(llvm::SmallVectorImpl<const char *> &Args,
                               StringAllocator SA) const;
-
-  /// @}
-  /// @name Option Subgroups
-  /// @{
-
-  MigratorOptions &getMigratorOpts() { return MigratorOpts; }
-  const MigratorOptions &getMigratorOpts() const { return MigratorOpts; }
-
-  CodeGenOptions &getCodeGenOpts() { return CodeGenOpts; }
-  const CodeGenOptions &getCodeGenOpts() const { return CodeGenOpts; }
-
-  DependencyOutputOptions &getDependencyOutputOpts() {
-    return DependencyOutputOpts;
-  }
-
-  const DependencyOutputOptions &getDependencyOutputOpts() const {
-    return DependencyOutputOpts;
-  }
-
-  FileSystemOptions &getFileSystemOpts() { return FileSystemOpts; }
-
-  const FileSystemOptions &getFileSystemOpts() const {
-    return FileSystemOpts;
-  }
-
-  FrontendOptions &getFrontendOpts() { return FrontendOpts; }
-  const FrontendOptions &getFrontendOpts() const { return FrontendOpts; }
-
-  PreprocessorOutputOptions &getPreprocessorOutputOpts() {
-    return PreprocessorOutputOpts;
-  }
-
-  const PreprocessorOutputOptions &getPreprocessorOutputOpts() const {
-    return PreprocessorOutputOpts;
-  }
-
-  /// @}
 
 private:
   static bool CreateFromArgsImpl(CompilerInvocation &Res,
