@@ -407,10 +407,9 @@ Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
       TheSrc, AllocaAlign, DL, &AI, &AC, &DT);
     if (AllocaAlign <= SourceAlign &&
         isDereferenceableForAllocaSize(TheSrc, &AI, DL) &&
-        (!isa<Instruction>(TheSrc) || all_of(AI.users(), [&](const User *U) {
-          return DT.dominates(cast<Instruction>(TheSrc), cast<Instruction>(U));
-        }))) {
-      // FIXME: can the dominance restriction be relaxed by sinking instrns?
+        !isa<Instruction>(TheSrc)) {
+      // FIXME: Can we sink instructions without violating dominance when TheSrc
+      // is an instruction instead of a constant or argument?
       LLVM_DEBUG(dbgs() << "Found alloca equal to global: " << AI << '\n');
       LLVM_DEBUG(dbgs() << "  memcpy = " << *Copy << '\n');
       unsigned SrcAddrSpace = TheSrc->getType()->getPointerAddressSpace();
