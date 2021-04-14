@@ -15,44 +15,10 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
+#include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "inferattrs"
-
-/// If we can infer one attribute from another on the declaration of a
-/// function, explicitly materialize the maximal set for readability in the IR.
-/// Doing this also allows our CGSCC inference to avoid needing to duplicate
-/// this logic on all calls to declarations (as declarations aren't explicitly
-/// visited by CGSCC passes in the new pass manager.)
-static bool inferAttributesFromOthers(Function &F) {
-  // Note: We explicitly check for attributes rather than using cover functions
-  // because some of the cover functions include the logic being implemented.
-
-  bool Changed = false;
-  // readnone + not convergent implies nosync
-  if (!F.hasFnAttribute(Attribute::NoSync) &&
-      F.doesNotAccessMemory() && !F.isConvergent()) {
-    F.setNoSync();
-    Changed = true;
-  }
-
-  // readonly implies nofree
-  if (!F.hasFnAttribute(Attribute::NoFree) && F.onlyReadsMemory()) {
-    F.setDoesNotFreeMemory();
-    Changed = true;
-  }
-
-  // willreturn implies mustprogress
-  if (!F.hasFnAttribute(Attribute::MustProgress) && F.willReturn()) {
-    F.setMustProgress();
-    Changed = true;
-  }
-
-  // TODO: There are a bunch of cases of restrictive memory effects we
-  // can infer by inspecting arguments of argmemonly-ish functions.
-
-  return Changed;
-}
 
 static bool inferAllPrototypeAttributes(
     Module &M, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
@@ -60,7 +26,10 @@ static bool inferAllPrototypeAttributes(
 
   for (Function &F : M.functions())
     // We only infer things using the prototype and the name; we don't need
-    // definitions.
+    // definitions.  This ensures libfuncs are annotated and also allows our
+    // CGSCC inference to avoid needing to duplicate the inference from other
+    // attribute logic on all calls to declarations (as declarations aren't
+    // explicitly visited by CGSCC passes in the new pass manager.)
     if (F.isDeclaration() && !F.hasOptNone()) {
       Changed |= inferLibFuncAttributes(F, GetTLI(F));
       Changed |= inferAttributesFromOthers(F);
