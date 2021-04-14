@@ -36,8 +36,8 @@ std::string LocationCallFormatterCpp::format(LocationCall *Call) {
 
 namespace internal {
 bool RangeLessThan::operator()(
-    std::pair<SourceRange, std::shared_ptr<LocationCall>> const &LHS,
-    std::pair<SourceRange, std::shared_ptr<LocationCall>> const &RHS) const {
+    std::pair<SourceRange, SharedLocationCall> const &LHS,
+    std::pair<SourceRange, SharedLocationCall> const &RHS) const {
   if (!LHS.first.isValid() || !RHS.first.isValid())
     return false;
 
@@ -52,6 +52,13 @@ bool RangeLessThan::operator()(
     return false;
 
   return LHS.second->name() < RHS.second->name();
+}
+bool RangeLessThan::operator()(
+    std::pair<SourceLocation, SharedLocationCall> const &LHS,
+    std::pair<SourceLocation, SharedLocationCall> const &RHS) const {
+  if (LHS.first == RHS.first)
+    return LHS.second->name() < RHS.second->name();
+  return LHS.first < RHS.first;
 }
 } // namespace internal
 

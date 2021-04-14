@@ -13,44 +13,58 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Reducer/OptReductionPass.h"
+#include "mlir/Pass/PassRegistry.h"
+#include "mlir/Reducer/Passes.h"
+#include "mlir/Reducer/Tester.h"
 
 #define DEBUG_TYPE "mlir-reduce"
 
 using namespace mlir;
 
-OptReductionPass::OptReductionPass(const Tester &test, MLIRContext *context,
-                                   std::unique_ptr<Pass> optPass)
-    : context(context), test(test), optPass(std::move(optPass)) {}
-
-OptReductionPass::OptReductionPass(const OptReductionPass &srcPass)
-    : OptReductionBase<OptReductionPass>(srcPass), test(srcPass.test),
-      optPass(srcPass.optPass.get()) {}
-
 /// Runs the pass instance in the pass pipeline.
 void OptReductionPass::runOnOperation() {
   LLVM_DEBUG(llvm::dbgs() << "\nOptimization Reduction pass: ");
-  LLVM_DEBUG(llvm::dbgs() << optPass.get()->getName() << "\nTesting:\n");
+
+  Tester test(testerName, testerArgs);
 
   ModuleOp module = this->getOperation();
   ModuleOp moduleVariant = module.clone();
-  PassManager pmTransform(context);
-  pmTransform.addPass(std::move(optPass));
 
-  if (failed(pmTransform.run(moduleVariant)))
+  PassManager passManager(module.getContext());
+  if (failed(parsePassPipeline(optPass, passManager))) {
+    LLVM_DEBUG(llvm::dbgs() << "\nFailed to parse pass pipeline");
     return;
+  }
 
-  ReductionNode original(module, nullptr);
-  original.measureAndTest(test);
+  std::pair<Tester::Interestingness, int> original = test.isInteresting(module);
+  if (original.first != Tester::Interestingness::True) {
+    LLVM_DEBUG(llvm::dbgs() << "\nThe original input is not interested");
+    return;
+  }
 
-  ReductionNode reduced(moduleVariant, nullptr);
-  reduced.measureAndTest(test);
+  if (failed(passManager.run(moduleVariant))) {
+    LLVM_DEBUG(llvm::dbgs() << "\nFailed to run pass pipeline");
+    return;
+  }
 
-  if (reduced.isInteresting() && reduced.getSize() < original.getSize()) {
-    ReductionTreeUtils::updateGoldenModule(module, reduced.getModule().clone());
+  std::pair<Tester::Interestingness, int> reduced =
+      test.isInteresting(moduleVariant);
+
+  if (reduced.first == Tester::Interestingness::True &&
+      reduced.second < original.second) {
+    module.getBody()->clear();
+    module.getBody()->getOperations().splice(
+        module.getBody()->begin(), moduleVariant.getBody()->getOperations());
     LLVM_DEBUG(llvm::dbgs() << "\nSuccessful Transformed version\n\n");
   } else {
     LLVM_DEBUG(llvm::dbgs() << "\nUnsuccessful Transformed version\n\n");
   }
 
+  moduleVariant->destroy();
+
   LLVM_DEBUG(llvm::dbgs() << "Pass Complete\n\n");
+}
+
+std::unique_ptr<Pass> mlir::createOptReductionPass() {
+  return std::make_unique<OptReductionPass>();
 }

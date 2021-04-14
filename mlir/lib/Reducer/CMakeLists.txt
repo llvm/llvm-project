@@ -1,7 +1,7 @@
 add_mlir_library(MLIRReduce
    Tester.cpp
-   DEPENDS
+   LINK_LIBS PUBLIC
    MLIRIR
- )
- 
- mlir_check_all_link_libraries(MLIRReduce)
+)
+
+mlir_check_all_link_libraries(MLIRReduce)
