@@ -66,7 +66,7 @@ func @kernel4(%arg0: memref<16x16xi8>,
   return
 }
 
-func @entry() {
+func @entry() -> i32 {
   %c0 = constant 0: index
 
   // Set up memory.
@@ -194,5 +194,6 @@ func @entry() {
   memref.dealloc %b : memref<4x16xi8>
   memref.dealloc %c : memref<16x4xi32>
 
-  return
+  %i0 = constant 0 : i32
+  return %i0 : i32
 }
