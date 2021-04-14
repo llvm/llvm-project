@@ -194,9 +194,9 @@ static cl::opt<bool> EnableStructurizerWorkarounds(
     cl::Hidden);
 
 static cl::opt<bool>
-    DisableLowerModuleLDS("amdgpu-disable-lower-module-lds", cl::Hidden,
-                          cl::desc("Disable lower module lds pass"),
-                          cl::init(false));
+    EnableLowerModuleLDS("amdgpu-enable-lower-module-lds", cl::Hidden,
+                         cl::desc("Enable lower module lds pass"),
+                         cl::init(true));
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
@@ -888,7 +888,7 @@ void AMDGPUPassConfig::addIRPasses() {
   addPass(createAMDGPUOpenCLEnqueuedBlockLoweringPass());
 
   // Can increase LDS used by kernel so runs before PromoteAlloca
-  if (!DisableLowerModuleLDS)
+  if (EnableLowerModuleLDS)
     addPass(createAMDGPULowerModuleLDSPass());
 
   if (TM.getOptLevel() > CodeGenOpt::None) {
