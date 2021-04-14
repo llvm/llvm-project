@@ -374,7 +374,8 @@ void ProgressEventThreadFunction() {
         const char *message = lldb::SBDebugger::GetProgressFromEvent(
             event, progress_id, completed, total, is_debugger_specific);
         if (message)
-          g_vsc.SendProgressEvent(progress_id, message, completed, total);
+          g_vsc.SendProgressEvent(
+              ProgressEvent(progress_id, message, completed, total));
       }
     }
   }
