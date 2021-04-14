@@ -146,6 +146,7 @@ public:
   ArrayRef<SectionChunk *> getGuardFidChunks() { return guardFidChunks; }
   ArrayRef<SectionChunk *> getGuardIATChunks() { return guardIATChunks; }
   ArrayRef<SectionChunk *> getGuardLJmpChunks() { return guardLJmpChunks; }
+  ArrayRef<SectionChunk *> getGuardEHContChunks() { return guardEHContChunks; }
   ArrayRef<Symbol *> getSymbols() { return symbols; }
 
   MutableArrayRef<Symbol *> getMutableSymbols() { return symbols; }
@@ -184,7 +185,7 @@ public:
   bool hasSafeSEH() { return feat00Flags & 0x1; }
 
   // True if this file was compiled with /guard:cf.
-  bool hasGuardCF() { return feat00Flags & 0x800; }
+  bool hasGuardCF() { return feat00Flags & 0x4800; }
 
   // Pointer to the PDB module descriptor builder. Various debug info records
   // will reference object files by "module index", which is here. Things like
@@ -287,11 +288,12 @@ private:
   std::vector<SectionChunk *> sxDataChunks;
 
   // Chunks containing symbol table indices of address taken symbols, address
-  // taken IAT entries, and longjmp targets. These are not linked into the
-  // final binary when /guard:cf is set.
+  // taken IAT entries, longjmp and ehcont targets. These are not linked into
+  // the final binary when /guard:cf is set.
   std::vector<SectionChunk *> guardFidChunks;
   std::vector<SectionChunk *> guardIATChunks;
   std::vector<SectionChunk *> guardLJmpChunks;
+  std::vector<SectionChunk *> guardEHContChunks;
 
   // This vector contains a list of all symbols defined or referenced by this
   // file. They are indexed such that you can get a Symbol by symbol

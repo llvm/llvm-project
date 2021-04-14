@@ -801,6 +801,25 @@ void RVATableChunk::writeTo(uint8_t *buf) const {
          "RVA tables should be de-duplicated");
 }
 
+void RVAFlagTableChunk::writeTo(uint8_t *buf) const {
+  struct RVAFlag {
+    ulittle32_t rva;
+    uint8_t flag;
+  };
+  RVAFlag *begin = reinterpret_cast<RVAFlag *>(buf);
+  size_t cnt = 0;
+  for (const ChunkAndOffset &co : syms) {
+    begin[cnt].rva = co.inputChunk->getRVA() + co.offset;
+    begin[cnt].flag = 0;
+    ++cnt;
+  }
+  auto lt = [](RVAFlag &a, RVAFlag &b) { return a.rva < b.rva; };
+  auto eq = [](RVAFlag &a, RVAFlag &b) { return a.rva == b.rva; };
+  std::sort(begin, begin + cnt, lt);
+  assert(std::unique(begin, begin + cnt, eq) == begin + cnt &&
+         "RVA tables should be de-duplicated");
+}
+
 // MinGW specific, for the "automatic import of variables from DLLs" feature.
 size_t PseudoRelocTableChunk::getSize() const {
   if (relocs.empty())
