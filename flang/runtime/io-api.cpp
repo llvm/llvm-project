@@ -894,6 +894,9 @@ bool IONAME(InputUnformattedBlock)(
     Cookie cookie, char *x, std::size_t length, std::size_t elementBytes) {
   IoStatementState &io{*cookie};
   io.BeginReadingRecord();
+  if (io.GetIoErrorHandler().InError()) {
+    return false;
+  }
   if (auto *unf{io.get_if<UnformattedIoStatementState<Direction::Input>>()}) {
     return unf->Receive(x, length, elementBytes);
   }
@@ -1037,7 +1040,7 @@ bool IONAME(InputLogical)(Cookie cookie, bool &truth) {
 
 void IONAME(GetIoMsg)(Cookie cookie, char *msg, std::size_t length) {
   IoErrorHandler &handler{cookie->GetIoErrorHandler()};
-  if (handler.GetIoStat()) { // leave "msg" alone when no error
+  if (handler.InError()) { // leave "msg" alone when no error
     handler.GetIoMsg(msg, length);
   }
 }
