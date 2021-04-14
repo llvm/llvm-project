@@ -48224,21 +48224,18 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
       if (SDValue AndN = MatchAndCmpEq(RHS, LHS))
         return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
 
-      // cmpeq(trunc(logic(x)),0) --> cmpeq(logic(x),0)
-      // cmpne(trunc(logic(x)),0) --> cmpne(logic(x),0)
+      // cmpeq(trunc(x),0) --> cmpeq(x,0)
+      // cmpne(trunc(x),0) --> cmpne(x,0)
       // iff x upper bits are zero.
-      // TODO: Remove the logic-op only limit?
       // TODO: Add support for RHS to be truncate as well?
       if (LHS.getOpcode() == ISD::TRUNCATE &&
           LHS.getOperand(0).getScalarValueSizeInBits() >= 32 &&
           isNullConstant(RHS) && !DCI.isBeforeLegalize()) {
-        unsigned LHSOpc = LHS.getOperand(0).getOpcode();
         EVT SrcVT = LHS.getOperand(0).getValueType();
         APInt UpperBits = APInt::getBitsSetFrom(SrcVT.getScalarSizeInBits(),
                                                 OpVT.getScalarSizeInBits());
         const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-        if ((LHSOpc == ISD::AND || LHSOpc == ISD::OR || LHSOpc == ISD::XOR) &&
-            DAG.MaskedValueIsZero(LHS.getOperand(0), UpperBits) &&
+        if (DAG.MaskedValueIsZero(LHS.getOperand(0), UpperBits) &&
             TLI.isTypeLegal(LHS.getOperand(0).getValueType()))
           return DAG.getSetCC(DL, VT, LHS.getOperand(0),
                               DAG.getConstant(0, DL, SrcVT), CC);
