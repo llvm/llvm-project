@@ -114,6 +114,12 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       StringExtractorGDBRemote::eServerPacketType_qGetWorkingDir,
       &GDBRemoteCommunicationServerLLGS::Handle_qGetWorkingDir);
   RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_QThreadSuffixSupported,
+      &GDBRemoteCommunicationServerLLGS::Handle_QThreadSuffixSupported);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_QListThreadsInStopReply,
+      &GDBRemoteCommunicationServerLLGS::Handle_QListThreadsInStopReply);
+  RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qMemoryRegionInfo,
       &GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo);
   RegisterMemberFunctionHandler(
@@ -1363,6 +1369,20 @@ GDBRemoteCommunicationServerLLGS::Handle_qGetWorkingDir(
   }
 
   return SendErrorResponse(14);
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_QThreadSuffixSupported(
+    StringExtractorGDBRemote &packet) {
+  m_thread_suffix_supported = true;
+  return SendOKResponse();
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_QListThreadsInStopReply(
+    StringExtractorGDBRemote &packet) {
+  m_list_threads_in_stop_reply = true;
+  return SendOKResponse();
 }
 
 GDBRemoteCommunication::PacketResult
@@ -3540,7 +3560,8 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
   auto ret =
       GDBRemoteCommunicationServerCommon::HandleFeatures(client_features);
   ret.insert(ret.end(), {
-    "qXfer:features:read+", "multiprocess+",
+    "QThreadSuffixSupported+", "QListThreadsInStopReply+",
+        "qXfer:features:read+", "multiprocess+",
 #if defined(__linux__) || defined(__NetBSD__) || defined(__FreeBSD__)
         "QPassSignals+", "qXfer:auxv:read+", "qXfer:libraries-svr4:read+",
 #endif

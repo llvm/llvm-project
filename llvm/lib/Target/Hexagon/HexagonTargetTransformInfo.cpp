@@ -134,8 +134,9 @@ HexagonTTIImpl::getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
   return BaseT::getOperandsScalarizationOverhead(Args, Tys);
 }
 
-unsigned HexagonTTIImpl::getCallInstrCost(Function *F, Type *RetTy,
-      ArrayRef<Type*> Tys, TTI::TargetCostKind CostKind) {
+InstructionCost HexagonTTIImpl::getCallInstrCost(Function *F, Type *RetTy,
+                                                 ArrayRef<Type *> Tys,
+                                                 TTI::TargetCostKind CostKind) {
   return BaseT::getCallInstrCost(F, RetTy, Tys, CostKind);
 }
 
@@ -218,9 +219,9 @@ HexagonTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                       CostKind);
 }
 
-unsigned HexagonTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
-                                        ArrayRef<int> Mask, int Index,
-                                        Type *SubTp) {
+InstructionCost HexagonTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
+                                               ArrayRef<int> Mask, int Index,
+                                               Type *SubTp) {
   return 1;
 }
 
@@ -257,10 +258,10 @@ InstructionCost HexagonTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
 }
 
-unsigned HexagonTTIImpl::getArithmeticInstrCost(
+InstructionCost HexagonTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-    TTI::OperandValueKind Opd1Info,
-    TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,
+    TTI::OperandValueKind Opd1Info, TTI::OperandValueKind Opd2Info,
+    TTI::OperandValueProperties Opd1PropInfo,
     TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
   // TODO: Handle more cost kinds.
@@ -298,8 +299,8 @@ InstructionCost HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,
   return 1;
 }
 
-unsigned HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-      unsigned Index) {
+InstructionCost HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
+                                                   unsigned Index) {
   Type *ElemTy = Val->isVectorTy() ? cast<VectorType>(Val)->getElementType()
                                    : Val;
   if (Opcode == Instruction::InsertElement) {

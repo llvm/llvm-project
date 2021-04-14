@@ -50,15 +50,16 @@ TypeSize WebAssemblyTTIImpl::getRegisterBitWidth(
   llvm_unreachable("Unsupported register kind");
 }
 
-unsigned WebAssemblyTTIImpl::getArithmeticInstrCost(
+InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-    TTI::OperandValueKind Opd1Info,
-    TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,
+    TTI::OperandValueKind Opd1Info, TTI::OperandValueKind Opd2Info,
+    TTI::OperandValueProperties Opd1PropInfo,
     TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
 
-  unsigned Cost = BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCost(
-      Opcode, Ty, CostKind, Opd1Info, Opd2Info, Opd1PropInfo, Opd2PropInfo);
+  InstructionCost Cost =
+      BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCost(
+          Opcode, Ty, CostKind, Opd1Info, Opd2Info, Opd1PropInfo, Opd2PropInfo);
 
   if (auto *VTy = dyn_cast<VectorType>(Ty)) {
     switch (Opcode) {
@@ -81,9 +82,11 @@ unsigned WebAssemblyTTIImpl::getArithmeticInstrCost(
   return Cost;
 }
 
-unsigned WebAssemblyTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                                unsigned Index) {
-  unsigned Cost = BasicTTIImplBase::getVectorInstrCost(Opcode, Val, Index);
+InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(unsigned Opcode,
+                                                       Type *Val,
+                                                       unsigned Index) {
+  InstructionCost Cost =
+      BasicTTIImplBase::getVectorInstrCost(Opcode, Val, Index);
 
   // SIMD128's insert/extract currently only take constant indices.
   if (Index == -1u)

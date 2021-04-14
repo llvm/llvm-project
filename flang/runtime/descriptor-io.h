@@ -220,7 +220,9 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
     return false;
   }
   if constexpr (DIR == Direction::Input) {
-    io.BeginReadingRecord();
+    if (!io.BeginReadingRecord()) {
+      return false;
+    }
   }
   if (auto *unf{io.get_if<UnformattedIoStatementState<DIR>>()}) {
     std::size_t elementBytes{descriptor.ElementBytes()};

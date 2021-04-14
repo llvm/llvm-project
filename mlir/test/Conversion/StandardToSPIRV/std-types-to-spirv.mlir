@@ -511,9 +511,10 @@ module attributes {
 // CHECK-SAME: memref<*xi32>
 func @unranked_memref(%arg0: memref<*xi32>) { return }
 
-// Check that dynamic dims on i1 are not supported.
 // CHECK-LABEL: func @memref_1bit_type
-// CHECK-SAME: memref<?xi1>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<i32, stride=4> [0])>, StorageBuffer>
+// NOEMU-LABEL: func @memref_1bit_type
+// NOEMU-SAME: memref<?xi1>
 func @memref_1bit_type(%arg0: memref<?xi1>) { return }
 
 // CHECK-LABEL: func @dynamic_dim_memref

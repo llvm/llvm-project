@@ -1031,14 +1031,14 @@ defm NEG : SIMDUnaryFP<fneg, "neg", 225>;
 defm SQRT : SIMDUnaryFP<fsqrt, "sqrt", 227>;
 
 // Rounding: ceil, floor, trunc, nearest
-defm CEIL : SIMDUnary<F32x4, int_wasm_ceil, "ceil", 0x67>;
-defm FLOOR : SIMDUnary<F32x4, int_wasm_floor, "floor", 0x68>;
-defm TRUNC: SIMDUnary<F32x4, int_wasm_trunc, "trunc", 0x69>;
-defm NEAREST: SIMDUnary<F32x4, int_wasm_nearest, "nearest", 0x6a>;
-defm CEIL : SIMDUnary<F64x2, int_wasm_ceil, "ceil", 0x74>;
-defm FLOOR : SIMDUnary<F64x2, int_wasm_floor, "floor", 0x75>;
-defm TRUNC: SIMDUnary<F64x2, int_wasm_trunc, "trunc", 0x7a>;
-defm NEAREST: SIMDUnary<F64x2, int_wasm_nearest, "nearest", 0x94>;
+defm CEIL : SIMDUnary<F32x4, fceil, "ceil", 0x67>;
+defm FLOOR : SIMDUnary<F32x4, ffloor, "floor", 0x68>;
+defm TRUNC: SIMDUnary<F32x4, ftrunc, "trunc", 0x69>;
+defm NEAREST: SIMDUnary<F32x4, fnearbyint, "nearest", 0x6a>;
+defm CEIL : SIMDUnary<F64x2, fceil, "ceil", 0x74>;
+defm FLOOR : SIMDUnary<F64x2, ffloor, "floor", 0x75>;
+defm TRUNC: SIMDUnary<F64x2, ftrunc, "trunc", 0x7a>;
+defm NEAREST: SIMDUnary<F64x2, fnearbyint, "nearest", 0x94>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point binary arithmetic
@@ -1091,15 +1091,20 @@ multiclass SIMDConvert<Vec vec, Vec arg, SDPatternOperator op, string name,
 defm "" : SIMDConvert<I32x4, F32x4, fp_to_sint, "trunc_sat_f32x4_s", 248>;
 defm "" : SIMDConvert<I32x4, F32x4, fp_to_uint, "trunc_sat_f32x4_u", 249>;
 
-// Integer to floating point: convert
-defm "" : SIMDConvert<F32x4, I32x4, sint_to_fp, "convert_i32x4_s", 250>;
-defm "" : SIMDConvert<F32x4, I32x4, uint_to_fp, "convert_i32x4_u", 251>;
-
 // Lower llvm.wasm.trunc.sat.* to saturating instructions
 def : Pat<(v4i32 (int_wasm_trunc_saturate_signed (v4f32 V128:$src))),
           (fp_to_sint_I32x4 $src)>;
 def : Pat<(v4i32 (int_wasm_trunc_saturate_unsigned (v4f32 V128:$src))),
           (fp_to_uint_I32x4 $src)>;
+
+// Integer to floating point: convert
+def convert_low_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
+def convert_low_s : SDNode<"WebAssemblyISD::CONVERT_LOW_S", convert_low_t>;
+def convert_low_u : SDNode<"WebAssemblyISD::CONVERT_LOW_U", convert_low_t>;
+defm "" : SIMDConvert<F32x4, I32x4, sint_to_fp, "convert_i32x4_s", 250>;
+defm "" : SIMDConvert<F32x4, I32x4, uint_to_fp, "convert_i32x4_u", 251>;
+defm "" : SIMDConvert<F64x2, I32x4, convert_low_s, "convert_low_i32x4_s", 0xfe>;
+defm "" : SIMDConvert<F64x2, I32x4, convert_low_u, "convert_low_i32x4_u", 0xff>;
 
 // Extending operations
 def extend_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
@@ -1255,10 +1260,6 @@ defm "" : SIMDConvert<I32x4, F64x2, int_wasm_trunc_sat_zero_signed,
                       "trunc_sat_zero_f64x2_s", 0xfc>;
 defm "" : SIMDConvert<I32x4, F64x2, int_wasm_trunc_sat_zero_unsigned,
                       "trunc_sat_zero_f64x2_u", 0xfd>;
-defm "" : SIMDConvert<F64x2, I32x4, int_wasm_convert_low_signed,
-                      "convert_low_i32x4_s", 0xfe>;
-defm "" : SIMDConvert<F64x2, I32x4, int_wasm_convert_low_unsigned,
-                      "convert_low_i32x4_u", 0xff>;
 
 //===----------------------------------------------------------------------===//
 // Saturating Rounding Q-Format Multiplication

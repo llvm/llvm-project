@@ -454,11 +454,21 @@ void SectionChunk::writeAndRelocateSubsection(ArrayRef<uint8_t> sec,
 }
 
 void SectionChunk::addAssociative(SectionChunk *child) {
-  // Insert this child at the head of the list.
+  // Insert the child section into the list of associated children. Keep the
+  // list ordered by section name so that ICF does not depend on section order.
   assert(child->assocChildren == nullptr &&
          "associated sections cannot have their own associated children");
-  child->assocChildren = assocChildren;
-  assocChildren = child;
+  SectionChunk *prev = this;
+  SectionChunk *next = assocChildren;
+  for (; next != nullptr; prev = next, next = next->assocChildren) {
+    if (next->getSectionName() <= child->getSectionName())
+      break;
+  }
+
+  // Insert child between prev and next.
+  assert(prev->assocChildren == next);
+  prev->assocChildren = child;
+  child->assocChildren = next;
 }
 
 static uint8_t getBaserelType(const coff_relocation &rel) {

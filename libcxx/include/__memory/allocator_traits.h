@@ -11,7 +11,7 @@
 #define _LIBCPP___MEMORY_ALLOCATOR_TRAITS_H
 
 #include <__config>
-#include <__memory/base.h>
+#include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
 #include <limits>
 #include <type_traits>

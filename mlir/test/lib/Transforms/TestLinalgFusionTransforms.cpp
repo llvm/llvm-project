@@ -126,10 +126,6 @@ static LogicalResult fuseLinalgOpsGreedily(FuncOp f) {
   // Save original Linalg ops, we only want to make a pass over those.
   SmallVector<LinalgOp, 8> linalgOps;
   f.walk([&](LinalgOp op) {
-    // TODO: remove hasIndexSemantics check once index ops are supported.
-    if (op.hasIndexSemantics())
-      return;
-
     // TODO: support multi-results.
     if (op->getNumResults() <= 1)
       linalgOps.push_back(op);

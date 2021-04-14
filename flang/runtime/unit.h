@@ -77,7 +77,7 @@ public:
   bool Receive(char *, std::size_t, std::size_t elementBytes, IoErrorHandler &);
   std::optional<char32_t> GetCurrentChar(IoErrorHandler &);
   void SetLeftTabLimit();
-  void BeginReadingRecord(IoErrorHandler &);
+  bool BeginReadingRecord(IoErrorHandler &);
   void FinishReadingRecord(IoErrorHandler &);
   bool AdvanceRecord(IoErrorHandler &);
   void BackspaceRecord(IoErrorHandler &);

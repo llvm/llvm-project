@@ -965,14 +965,12 @@ InstructionCost PPCTTIImpl::vectorCostAdjustment(InstructionCost Cost,
   return Cost * 2;
 }
 
-int PPCTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
-                                       TTI::TargetCostKind CostKind,
-                                       TTI::OperandValueKind Op1Info,
-                                       TTI::OperandValueKind Op2Info,
-                                       TTI::OperandValueProperties Opd1PropInfo,
-                                       TTI::OperandValueProperties Opd2PropInfo,
-                                       ArrayRef<const Value *> Args,
-                                       const Instruction *CxtI) {
+InstructionCost PPCTTIImpl::getArithmeticInstrCost(
+    unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+    TTI::OperandValueKind Op1Info, TTI::OperandValueKind Op2Info,
+    TTI::OperandValueProperties Opd1PropInfo,
+    TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
+    const Instruction *CxtI) {
   assert(TLI->InstructionOpcodeToISD(Opcode) && "Invalid opcode");
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
@@ -981,14 +979,14 @@ int PPCTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
                                          Opd2PropInfo, Args, CxtI);
 
   // Fallback to the default implementation.
-  int Cost = BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                           Op2Info,
-                                           Opd1PropInfo, Opd2PropInfo);
-  return *vectorCostAdjustment(Cost, Opcode, Ty, nullptr).getValue();
+  InstructionCost Cost = BaseT::getArithmeticInstrCost(
+      Opcode, Ty, CostKind, Op1Info, Op2Info, Opd1PropInfo, Opd2PropInfo);
+  return vectorCostAdjustment(Cost, Opcode, Ty, nullptr);
 }
 
-int PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
-                               ArrayRef<int> Mask, int Index, Type *SubTp) {
+InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
+                                           ArrayRef<int> Mask, int Index,
+                                           Type *SubTp) {
   // Legalize the type.
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
 
@@ -997,13 +995,13 @@ int PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
   // instruction). We need one such shuffle instruction for each actual
   // register (this is not true for arbitrary shuffles, but is true for the
   // structured types of shuffles covered by TTI::ShuffleKind).
-  return *vectorCostAdjustment(LT.first, Instruction::ShuffleVector, Tp,
-                               nullptr)
-              .getValue();
+  return vectorCostAdjustment(LT.first, Instruction::ShuffleVector, Tp,
+                              nullptr);
 }
 
-int PPCTTIImpl::getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
-                               const Instruction *I) {
+InstructionCost PPCTTIImpl::getCFInstrCost(unsigned Opcode,
+                                           TTI::TargetCostKind CostKind,
+                                           const Instruction *I) {
   if (CostKind != TTI::TCK_RecipThroughput)
     return Opcode == Instruction::PHI ? 0 : 1;
   // Branches are assumed to be predicted.
@@ -1039,14 +1037,15 @@ InstructionCost PPCTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   return vectorCostAdjustment(Cost, Opcode, ValTy, nullptr);
 }
 
-int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
+InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
+                                               unsigned Index) {
   assert(Val->isVectorTy() && "This must be a vector type");
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
-  int Cost = BaseT::getVectorInstrCost(Opcode, Val, Index);
-  Cost = *vectorCostAdjustment(Cost, Opcode, Val, nullptr).getValue();
+  InstructionCost Cost = BaseT::getVectorInstrCost(Opcode, Val, Index);
+  Cost = vectorCostAdjustment(Cost, Opcode, Val, nullptr);
 
   if (ST->hasVSX() && Val->getScalarType()->isDoubleTy()) {
     // Double-precision scalars are already located in index #0 (or #1 if LE).
@@ -1061,7 +1060,7 @@ int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
       if (ISD == ISD::INSERT_VECTOR_ELT)
         // A move-to VSR and a permute/insert.  Assume vector operation cost
         // for both (cost will be 2x on P9).
-        return *vectorCostAdjustment(2, Opcode, Val, nullptr).getValue();
+        return vectorCostAdjustment(2, Opcode, Val, nullptr);
 
       // It's an extract.  Maybe we can do a cheap move-from VSR.
       unsigned EltSize = Val->getScalarSizeInBits();
@@ -1078,7 +1077,7 @@ int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
       // We need a vector extract (or mfvsrld).  Assume vector operation cost.
       // The cost of the load constant for a vector extract is disregarded
       // (invariant, easily schedulable).
-      return *vectorCostAdjustment(1, Opcode, Val, nullptr).getValue();
+      return vectorCostAdjustment(1, Opcode, Val, nullptr);
 
     } else if (ST->hasDirectMove())
       // Assume permute has standard cost.
@@ -1124,7 +1123,7 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   if (CostKind != TTI::TCK_RecipThroughput)
     return Cost;
 
-  Cost = *vectorCostAdjustment(Cost, Opcode, Src, nullptr).getValue();
+  Cost = vectorCostAdjustment(Cost, Opcode, Src, nullptr);
 
   bool IsAltivecType = ST->hasAltivec() &&
                        (LT.second == MVT::v16i8 || LT.second == MVT::v8i16 ||
