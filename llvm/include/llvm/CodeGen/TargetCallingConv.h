@@ -141,11 +141,6 @@ namespace ISD {
     bool isPointer()  const { return IsPointer; }
     void setPointer() { IsPointer = 1; }
 
-    LLVM_ATTRIBUTE_DEPRECATED(unsigned getByValAlign() const,
-                              "Use getNonZeroByValAlign() instead") {
-      MaybeAlign A = decodeMaybeAlign(ByValOrByRefAlign);
-      return A ? A->value() : 0;
-    }
     Align getNonZeroByValAlign() const {
       MaybeAlign A = decodeMaybeAlign(ByValOrByRefAlign);
       assert(A && "ByValAlign must be defined");
@@ -161,11 +156,6 @@ namespace ISD {
       setAlignImpl(A);
     }
 
-    LLVM_ATTRIBUTE_DEPRECATED(unsigned getOrigAlign() const,
-                              "Use getNonZeroOrigAlign() instead") {
-      MaybeAlign A = decodeMaybeAlign(OrigAlign);
-      return A ? A->value() : 0;
-    }
     Align getNonZeroOrigAlign() const {
       return decodeMaybeAlign(OrigAlign).valueOrOne();
     }
