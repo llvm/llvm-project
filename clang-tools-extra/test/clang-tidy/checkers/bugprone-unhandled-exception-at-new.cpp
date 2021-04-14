@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14 %s bugprone-unhandled-exception-at-new %t
+// RUN: %check_clang_tidy -std=c++14 %s bugprone-unhandled-exception-at-new %t -- -- -fexceptions
 
 namespace std {
 typedef __typeof__(sizeof(0)) size_t;
