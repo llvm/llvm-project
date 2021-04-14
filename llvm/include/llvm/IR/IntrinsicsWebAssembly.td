@@ -183,26 +183,6 @@ def int_wasm_pmax :
             [LLVMMatchType<0>, LLVMMatchType<0>],
             [IntrNoMem, IntrSpeculatable]>;
 
-// TODO: Replace these instrinsics with normal ISel patterns once the
-// rounding instructions are merged to the proposal
-// (https://github.com/WebAssembly/simd/pull/232).
-def int_wasm_ceil :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMMatchType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_floor :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMMatchType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_trunc :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMMatchType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_nearest :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMMatchType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
-
 // TODO: Replace these intrinsic with normal ISel patterns once the
 // load_zero instructions are merged to the proposal.
 def int_wasm_load32_zero :
