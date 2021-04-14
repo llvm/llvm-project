@@ -666,7 +666,7 @@ define <2 x i1> @icmp_eq_add_non_splat2(<2 x i32> %a) {
 
 define i1 @without_nsw_nuw(i8 %x, i8 %y) {
 ; CHECK-LABEL: @without_nsw_nuw(
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
@@ -678,7 +678,7 @@ define i1 @without_nsw_nuw(i8 %x, i8 %y) {
 
 define i1 @with_nsw_nuw(i8 %x, i8 %y) {
 ; CHECK-LABEL: @with_nsw_nuw(
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i8 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
@@ -702,7 +702,7 @@ define i1 @with_nsw_large(i8 %x, i8 %y) {
 
 define i1 @with_nsw_small(i8 %x, i8 %y) {
 ; CHECK-LABEL: @with_nsw_small(
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], 2
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
@@ -714,7 +714,7 @@ define i1 @with_nsw_small(i8 %x, i8 %y) {
 
 define i1 @with_nuw_large(i8 %x, i8 %y) {
 ; CHECK-LABEL: @with_nuw_large(
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i8 [[X:%.*]], 2
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
@@ -726,12 +726,24 @@ define i1 @with_nuw_large(i8 %x, i8 %y) {
 
 define i1 @with_nuw_small(i8 %x, i8 %y) {
 ; CHECK-LABEL: @with_nuw_small(
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], 2
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
   %t1 = add nuw i8 %x, 35
   %t2 = add i8 %y, 37
+  %tobool = icmp eq i8 %t2, %t1
+  ret i1 %tobool
+}
+
+define i1 @with_nuw_large_negative(i8 %x, i8 %y) {
+; CHECK-LABEL: @with_nuw_large_negative(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], -2
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
+;
+  %t1 = add nuw i8 %x, -37
+  %t2 = add i8 %y, -35
   %tobool = icmp eq i8 %t2, %t1
   ret i1 %tobool
 }
