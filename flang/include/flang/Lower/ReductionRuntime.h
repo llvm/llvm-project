@@ -50,11 +50,6 @@ genAny(Fortran::lower::FirOpBuilder &builder,
        mlir::Location loc, mlir::Value maskBox,
        mlir::Value dim);
 
-/// Generate call to Spacing intrinsic runtime routine.
-mlir::Value
-genSpacing(Fortran::lower::FirOpBuilder &builder,
-           mlir::Location loc, mlir::Value x);
-
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_REDUCTIONRUNTIME_H
