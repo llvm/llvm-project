@@ -11,7 +11,7 @@
 ; SIMPLIFY: IR Dump {{.*}} LoopInstSimplifyPass
 ; DELETED-NOT: IR Dump {{.*}}LoopInstSimplifyPass
 ; DELETED-NOT: IR Dump {{.*}}LoopDeletionPass
-; DELETED-BUT-PRINTED: IR Dump {{.*}}LoopDeletionPass {{.*invalidated:}}
+; DELETED-BUT-PRINTED: IR Dump {{.*}}LoopDeletionPass {{.*}}(invalidated)
 ; DELETED-BUT-PRINTED-NOT: IR Dump {{.*}}LoopInstSimplifyPass
 
 define void @deleteme() {
