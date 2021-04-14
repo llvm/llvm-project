@@ -4,12 +4,6 @@ RUN: echo 'a[b\c' | FileCheck %s --check-prefix=CHECK2
 RUN: echo "a[b\\c" | FileCheck %s --check-prefix=CHECK2
 RUN: echo 'a\b\\c\\\\d' | FileCheck %s --check-prefix=CHECK3
 RUN: echo "a\\b\\\\c\\\\\\\\d" | FileCheck %s --check-prefix=CHECK3
-RUN: not not echo "\"" | FileCheck %s --check-prefix=CHECK1
-RUN: not not echo '"' | FileCheck %s --check-prefix=CHECK1
-RUN: not not echo 'a[b\c' | FileCheck %s --check-prefix=CHECK2
-RUN: not not echo "a[b\\c" | FileCheck %s --check-prefix=CHECK2
-RUN: not not echo 'a\b\\c\\\\d' | FileCheck %s --check-prefix=CHECK3
-RUN: not not echo "a\\b\\\\c\\\\\\\\d" | FileCheck %s --check-prefix=CHECK3
 CHECK1: {{^"$}}
 CHECK2: {{^a\[b\\c$}}
 CHECK3: {{^a\\b\\\\c\\\\\\\\d$}}
