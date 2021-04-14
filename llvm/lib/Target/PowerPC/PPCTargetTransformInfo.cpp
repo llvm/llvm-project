@@ -987,8 +987,9 @@ int PPCTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
   return *vectorCostAdjustment(Cost, Opcode, Ty, nullptr).getValue();
 }
 
-int PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
-                               ArrayRef<int> Mask, int Index, Type *SubTp) {
+InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
+                                           ArrayRef<int> Mask, int Index,
+                                           Type *SubTp) {
   // Legalize the type.
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
 
@@ -997,9 +998,8 @@ int PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
   // instruction). We need one such shuffle instruction for each actual
   // register (this is not true for arbitrary shuffles, but is true for the
   // structured types of shuffles covered by TTI::ShuffleKind).
-  return *vectorCostAdjustment(LT.first, Instruction::ShuffleVector, Tp,
-                               nullptr)
-              .getValue();
+  return vectorCostAdjustment(LT.first, Instruction::ShuffleVector, Tp,
+                              nullptr);
 }
 
 InstructionCost PPCTTIImpl::getCFInstrCost(unsigned Opcode,
