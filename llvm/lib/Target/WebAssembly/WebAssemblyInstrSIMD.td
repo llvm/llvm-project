@@ -1031,14 +1031,14 @@ defm NEG : SIMDUnaryFP<fneg, "neg", 225>;
 defm SQRT : SIMDUnaryFP<fsqrt, "sqrt", 227>;
 
 // Rounding: ceil, floor, trunc, nearest
-defm CEIL : SIMDUnary<F32x4, int_wasm_ceil, "ceil", 0x67>;
-defm FLOOR : SIMDUnary<F32x4, int_wasm_floor, "floor", 0x68>;
-defm TRUNC: SIMDUnary<F32x4, int_wasm_trunc, "trunc", 0x69>;
-defm NEAREST: SIMDUnary<F32x4, int_wasm_nearest, "nearest", 0x6a>;
-defm CEIL : SIMDUnary<F64x2, int_wasm_ceil, "ceil", 0x74>;
-defm FLOOR : SIMDUnary<F64x2, int_wasm_floor, "floor", 0x75>;
-defm TRUNC: SIMDUnary<F64x2, int_wasm_trunc, "trunc", 0x7a>;
-defm NEAREST: SIMDUnary<F64x2, int_wasm_nearest, "nearest", 0x94>;
+defm CEIL : SIMDUnary<F32x4, fceil, "ceil", 0x67>;
+defm FLOOR : SIMDUnary<F32x4, ffloor, "floor", 0x68>;
+defm TRUNC: SIMDUnary<F32x4, ftrunc, "trunc", 0x69>;
+defm NEAREST: SIMDUnary<F32x4, fnearbyint, "nearest", 0x6a>;
+defm CEIL : SIMDUnary<F64x2, fceil, "ceil", 0x74>;
+defm FLOOR : SIMDUnary<F64x2, ffloor, "floor", 0x75>;
+defm TRUNC: SIMDUnary<F64x2, ftrunc, "trunc", 0x7a>;
+defm NEAREST: SIMDUnary<F64x2, fnearbyint, "nearest", 0x94>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point binary arithmetic
