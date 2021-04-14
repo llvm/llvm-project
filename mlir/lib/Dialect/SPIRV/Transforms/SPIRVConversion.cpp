@@ -375,12 +375,6 @@ static Type convertTensorType(const spirv::TargetEnv &targetEnv,
 static Type convertBoolMemrefType(const spirv::TargetEnv &targetEnv,
                                   const SPIRVTypeConverter::Options &options,
                                   MemRefType type) {
-  if (!type.hasStaticShape()) {
-    LLVM_DEBUG(llvm::dbgs()
-               << type << " dynamic shape on i1 is not supported yet\n");
-    return nullptr;
-  }
-
   Optional<spirv::StorageClass> storageClass =
       SPIRVTypeConverter::getStorageClassForMemorySpace(
           type.getMemorySpaceAsInt());
@@ -409,6 +403,12 @@ static Type convertBoolMemrefType(const spirv::TargetEnv &targetEnv,
     LLVM_DEBUG(llvm::dbgs()
                << type << " illegal: cannot deduce converted element size\n");
     return nullptr;
+  }
+
+  if (!type.hasStaticShape()) {
+    auto arrayType =
+        spirv::RuntimeArrayType::get(arrayElemType, *arrayElemSize);
+    return wrapInStructAndGetPointer(arrayType, *storageClass);
   }
 
   int64_t memrefSize = (type.getNumElements() * numBoolBits + 7) / 8;
