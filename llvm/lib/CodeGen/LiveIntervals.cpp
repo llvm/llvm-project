@@ -914,11 +914,8 @@ bool LiveIntervals::checkRegMaskInterference(LiveInterval &LI,
     return false;
 
   bool Found = false;
-  while (true) {
-    assert(*SlotI >= LiveI->start);
-    // Loop over all slots overlapping this segment.
-    while (*SlotI < LiveI->end) {
-      // *SlotI overlaps LI. Collect mask bits.
+  // Utility to union regmasks.
+  auto unionBitMask = [&](unsigned Idx) {
       if (!Found) {
         // This is the first overlap. Initialize UsableRegs to all ones.
         UsableRegs.clear();
@@ -926,7 +923,14 @@ bool LiveIntervals::checkRegMaskInterference(LiveInterval &LI,
         Found = true;
       }
       // Remove usable registers clobbered by this mask.
-      UsableRegs.clearBitsNotInMask(Bits[SlotI-Slots.begin()]);
+      UsableRegs.clearBitsNotInMask(Bits[Idx]);
+  };
+  while (true) {
+    assert(*SlotI >= LiveI->start);
+    // Loop over all slots overlapping this segment.
+    while (*SlotI < LiveI->end) {
+      // *SlotI overlaps LI. Collect mask bits.
+      unionBitMask(SlotI - Slots.begin());
       if (++SlotI == SlotE)
         return Found;
     }
