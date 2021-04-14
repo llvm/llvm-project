@@ -152,7 +152,8 @@ public:
                                    TTI::CastContextHint CCH,
                                    TTI::TargetCostKind CostKind,
                                    const Instruction *I = nullptr);
-  unsigned getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     unsigned Index);
 
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                  const Instruction *I = nullptr) {

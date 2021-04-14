@@ -169,7 +169,8 @@ public:
   bool isInlineAsmSourceOfDivergence(const CallInst *CI,
                                      ArrayRef<unsigned> Indices = {}) const;
 
-  int getVectorInstrCost(unsigned Opcode, Type *ValTy, unsigned Index);
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *ValTy,
+                                     unsigned Index);
   bool isSourceOfDivergence(const Value *V) const;
   bool isAlwaysUniform(const Value *V) const;
 
@@ -255,7 +256,8 @@ public:
   unsigned getMaxInterleaveFactor(unsigned VF);
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                  const Instruction *I = nullptr);
-  int getVectorInstrCost(unsigned Opcode, Type *ValTy, unsigned Index);
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *ValTy,
+                                     unsigned Index);
 };
 
 } // end namespace llvm

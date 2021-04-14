@@ -299,8 +299,8 @@ InstructionCost HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,
   return 1;
 }
 
-unsigned HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-      unsigned Index) {
+InstructionCost HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
+                                                   unsigned Index) {
   Type *ElemTy = Val->isVectorTy() ? cast<VectorType>(Val)->getElementType()
                                    : Val;
   if (Opcode == Instruction::InsertElement) {

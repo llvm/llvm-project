@@ -83,8 +83,8 @@ private:
 
   /// Estimate a cost of Broadcast as an extract and sequence of insert
   /// operations.
-  unsigned getBroadcastShuffleOverhead(FixedVectorType *VTy) {
-    unsigned Cost = 0;
+  InstructionCost getBroadcastShuffleOverhead(FixedVectorType *VTy) {
+    InstructionCost Cost = 0;
     // Broadcast cost is equal to the cost of extracting the zero'th element
     // plus the cost of inserting it into every element of the result vector.
     Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, VTy, 0);
@@ -97,8 +97,8 @@ private:
 
   /// Estimate a cost of shuffle as a sequence of extract and insert
   /// operations.
-  unsigned getPermuteShuffleOverhead(FixedVectorType *VTy) {
-    unsigned Cost = 0;
+  InstructionCost getPermuteShuffleOverhead(FixedVectorType *VTy) {
+    InstructionCost Cost = 0;
     // Shuffle cost is equal to the cost of extracting element from its argument
     // plus the cost of inserting them onto the result vector.
 
@@ -115,7 +115,7 @@ private:
 
   /// Estimate a cost of subvector extraction as a sequence of extract and
   /// insert operations.
-  unsigned getExtractSubvectorOverhead(VectorType *VTy, int Index,
+  InstructionCost getExtractSubvectorOverhead(VectorType *VTy, int Index,
                                        FixedVectorType *SubVTy) {
     assert(VTy && SubVTy &&
            "Can only extract subvectors from vectors");
@@ -125,7 +125,7 @@ private:
                 (int)cast<FixedVectorType>(VTy)->getNumElements()) &&
            "SK_ExtractSubvector index out of range");
 
-    unsigned Cost = 0;
+    InstructionCost Cost = 0;
     // Subvector extraction cost is equal to the cost of extracting element from
     // the source type plus the cost of inserting them into the result vector
     // type.
@@ -140,7 +140,7 @@ private:
 
   /// Estimate a cost of subvector insertion as a sequence of extract and
   /// insert operations.
-  unsigned getInsertSubvectorOverhead(VectorType *VTy, int Index,
+  InstructionCost getInsertSubvectorOverhead(VectorType *VTy, int Index,
                                       FixedVectorType *SubVTy) {
     assert(VTy && SubVTy &&
            "Can only insert subvectors into vectors");
@@ -150,7 +150,7 @@ private:
                 (int)cast<FixedVectorType>(VTy)->getNumElements()) &&
            "SK_InsertSubvector index out of range");
 
-    unsigned Cost = 0;
+    InstructionCost Cost = 0;
     // Subvector insertion cost is equal to the cost of extracting element from
     // the source type plus the cost of inserting them into the result vector
     // type.
@@ -609,7 +609,7 @@ public:
     assert(DemandedElts.getBitWidth() == Ty->getNumElements() &&
            "Vector size mismatch");
 
-    unsigned Cost = 0;
+    InstructionCost Cost = 0;
 
     for (int i = 0, e = Ty->getNumElements(); i < e; ++i) {
       if (!DemandedElts[i])
@@ -620,7 +620,7 @@ public:
         Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty, i);
     }
 
-    return Cost;
+    return *Cost.getValue();
   }
 
   /// Helper wrapper for the DemandedElts variant of getScalarizationOverhead.
@@ -916,7 +916,8 @@ public:
     return thisT()->getVectorInstrCost(Instruction::ExtractElement, VecTy,
                                        Index) +
            thisT()->getCastInstrCost(Opcode, Dst, VecTy->getElementType(),
-                                     TTI::CastContextHint::None, TTI::TCK_RecipThroughput);
+                                     TTI::CastContextHint::None,
+                                     TTI::TCK_RecipThroughput);
   }
 
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
@@ -971,7 +972,8 @@ public:
     return 1;
   }
 
-  unsigned getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     unsigned Index) {
     std::pair<unsigned, MVT> LT =
         getTLI()->getTypeLegalizationCost(DL, Val->getScalarType());
 
@@ -1154,7 +1156,7 @@ public:
                                               Index + i * Factor);
       }
 
-      unsigned InsSubCost = 0;
+      InstructionCost InsSubCost = 0;
       for (unsigned i = 0; i < NumSubElts; i++)
         InsSubCost +=
             thisT()->getVectorInstrCost(Instruction::InsertElement, SubVT, i);
@@ -1170,7 +1172,7 @@ public:
       // The cost is estimated as extract all elements from both <4 x i32>
       // vectors and insert into the <8 x i32> vector.
 
-      unsigned ExtSubCost = 0;
+      InstructionCost ExtSubCost = 0;
       for (unsigned i = 0; i < NumSubElts; i++)
         ExtSubCost +=
             thisT()->getVectorInstrCost(Instruction::ExtractElement, SubVT, i);
