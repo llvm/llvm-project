@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_SCCP_SOLVER_H
-#define LLVM_TRANSFORMS_UTILS_SCCP_SOLVER_H
+#ifndef LLVM_TRANSFORMS_UTILS_SCCPSOLVER_H
+#define LLVM_TRANSFORMS_UTILS_SCCPSOLVER_H
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -53,25 +53,25 @@ public:
 
   void addAnalysis(Function &F, AnalysisResultsForFn A);
 
-  /// MarkBlockExecutable - This method can be used by clients to mark all of
+  /// markBlockExecutable - This method can be used by clients to mark all of
   /// the blocks that are known to be intrinsically live in the processed unit.
   /// This returns true if the block was not considered live before.
-  bool MarkBlockExecutable(BasicBlock *BB);
+  bool markBlockExecutable(BasicBlock *BB);
 
   const PredicateBase *getPredicateInfoFor(Instruction *I);
 
   DomTreeUpdater getDTU(Function &F);
 
-  /// TrackValueOfGlobalVariable - Clients can use this method to
+  /// trackValueOfGlobalVariable - Clients can use this method to
   /// inform the SCCPSolver that it should track loads and stores to the
   /// specified global variable if it can.  This is only legal to call if
   /// performing Interprocedural SCCP.
-  void TrackValueOfGlobalVariable(GlobalVariable *GV);
+  void trackValueOfGlobalVariable(GlobalVariable *GV);
 
-  /// AddTrackedFunction - If the SCCP solver is supposed to track calls into
+  /// addTrackedFunction - If the SCCP solver is supposed to track calls into
   /// and out of the specified function (which cannot have its address taken),
   /// this method must be called.
-  void AddTrackedFunction(Function *F);
+  void addTrackedFunction(Function *F);
 
   /// Add function to the list of functions whose return cannot be modified.
   void addToMustPreserveReturnsInFunctions(Function *F);
@@ -79,21 +79,21 @@ public:
   /// Returns true if the return of the given function cannot be modified.
   bool mustPreserveReturn(Function *F);
 
-  void AddArgumentTrackedFunction(Function *F);
+  void addArgumentTrackedFunction(Function *F);
 
   /// Returns true if the given function is in the solver's set of
   /// argument-tracked functions.
   bool isArgumentTrackedFunction(Function *F);
 
   /// Solve - Solve for constants and executable blocks.
-  void Solve();
+  void solve();
 
-  /// ResolvedUndefsIn - While solving the dataflow for a function, we assume
+  /// resolvedUndefsIn - While solving the dataflow for a function, we assume
   /// that branches on undef values cannot reach any of their successors.
   /// However, this is not a safe assumption.  After we solve dataflow, this
   /// method should be use to handle this.  If this returns true, the solver
   /// should be rerun.
-  bool ResolvedUndefsIn(Function &F);
+  bool resolvedUndefsIn(Function &F);
 
   bool isBlockExecutable(BasicBlock *BB) const;
 
@@ -134,4 +134,4 @@ public:
 
 } // namespace llvm
 
-#endif // LLVM_TRANSFORMS_UTILS_SCCP_SOLVER_H
+#endif // LLVM_TRANSFORMS_UTILS_SCCPSOLVER_H
