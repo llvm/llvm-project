@@ -319,6 +319,10 @@ TEST_F(SortImportsTestJS, MergeImports) {
              "\n"
              "X + Y + Z;\n");
 
+  // merge only, no resorting.
+  verifySort("import {A, B} from 'foo';\n", "import {A} from 'foo';\n"
+                                            "import {B} from 'foo';");
+
   // empty imports
   verifySort("import {A} from 'foo';\n", "import {} from 'foo';\n"
                                          "import {A} from 'foo';");
