@@ -32,12 +32,21 @@ namespace mlir {
 /// case file.
 class Tester {
 public:
+  enum class Interestingness {
+    True,
+    False,
+    Untested,
+  };
+
   Tester(StringRef testScript, ArrayRef<std::string> testScriptArgs);
 
   /// Runs the interestingness testing script on a MLIR test case file. Returns
   /// true if the interesting behavior is present in the test case or false
   /// otherwise.
-  bool isInteresting(StringRef testCase) const;
+  std::pair<Interestingness, size_t> isInteresting(ModuleOp module) const;
+
+  /// Return whether the file in the given path is interesting.
+  Interestingness isInteresting(StringRef testCase) const;
 
 private:
   StringRef testScript;
