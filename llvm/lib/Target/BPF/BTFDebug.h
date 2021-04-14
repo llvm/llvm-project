@@ -320,8 +320,9 @@ class BTFDebug : public DebugHandlerBase {
   /// Populating unprocessed type on demand.
   unsigned populateType(const DIType *Ty);
 
-  /// Process relocation instructions.
-  void processReloc(const MachineOperand &MO);
+  /// Process global variables referenced by relocation instructions
+  /// and extern function references.
+  void processGlobalValue(const MachineOperand &MO);
 
   /// Emit common header of .BTF and .BTF.ext sections.
   void emitCommonHeader();
