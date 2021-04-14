@@ -35,7 +35,7 @@ Sub-Projects in the One Ranges Proposal
 Misc. Items and TODOs
 ====================================
 
-(Note: files with required updates will contain the TODO at the begining of the list item
+(Note: files with required updates will contain the TODO at the beginning of the list item
 so they can be easily found via global search.)
 
     * TODO(XX_SPACESHIP_CONCEPTS): when spaceship support is added to various STL types, we need to update some concept tests.
