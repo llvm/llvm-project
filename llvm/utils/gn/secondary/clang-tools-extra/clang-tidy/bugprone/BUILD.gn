@@ -66,6 +66,7 @@ static_library("bugprone") {
     "TooSmallLoopVariableCheck.cpp",
     "UndefinedMemoryManipulationCheck.cpp",
     "UndelegatedConstructorCheck.cpp",
+    "UnhandledExceptionAtNewCheck.cpp",
     "UnhandledSelfAssignmentCheck.cpp",
     "UnusedRaiiCheck.cpp",
     "UnusedReturnValueCheck.cpp",
