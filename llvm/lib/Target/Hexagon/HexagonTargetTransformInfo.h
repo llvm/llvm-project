@@ -123,8 +123,8 @@ public:
   getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                         unsigned AddressSpace,
                         TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency);
-  unsigned getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, ArrayRef<int> Mask,
-                          int Index, Type *SubTp);
+  InstructionCost getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
+                                 ArrayRef<int> Mask, int Index, Type *SubTp);
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
                                          Align Alignment,

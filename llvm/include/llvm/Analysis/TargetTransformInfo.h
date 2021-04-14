@@ -1052,9 +1052,9 @@ public:
   /// extraction shuffle kinds to show the insert/extract point and the type of
   /// the subvector being inserted/extracted.
   /// NOTE: For subvector extractions Tp represents the source type.
-  int getShuffleCost(ShuffleKind Kind, VectorType *Tp,
-                     ArrayRef<int> Mask = None, int Index = 0,
-                     VectorType *SubTp = nullptr) const;
+  InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
+                                 ArrayRef<int> Mask = None, int Index = 0,
+                                 VectorType *SubTp = nullptr) const;
 
   /// Represents a hint about the context in which a cast is used.
   ///
@@ -1574,9 +1574,9 @@ public:
       OperandValueKind Opd2Info, OperandValueProperties Opd1PropInfo,
       OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
       const Instruction *CxtI = nullptr) = 0;
-  virtual int getShuffleCost(ShuffleKind Kind, VectorType *Tp,
-                             ArrayRef<int> Mask, int Index,
-                             VectorType *SubTp) = 0;
+  virtual InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
+                                         ArrayRef<int> Mask, int Index,
+                                         VectorType *SubTp) = 0;
   virtual InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst,
                                            Type *Src, CastContextHint CCH,
                                            TTI::TargetCostKind CostKind,
@@ -2047,8 +2047,9 @@ public:
     return Impl.getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info, Opd2Info,
                                        Opd1PropInfo, Opd2PropInfo, Args, CxtI);
   }
-  int getShuffleCost(ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
-                     int Index, VectorType *SubTp) override {
+  InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
+                                 ArrayRef<int> Mask, int Index,
+                                 VectorType *SubTp) override {
     return Impl.getShuffleCost(Kind, Tp, Mask, Index, SubTp);
   }
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,

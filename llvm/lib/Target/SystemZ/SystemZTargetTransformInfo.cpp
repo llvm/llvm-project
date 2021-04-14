@@ -554,9 +554,10 @@ int SystemZTTIImpl::getArithmeticInstrCost(
                                        Opd1PropInfo, Opd2PropInfo, Args, CxtI);
 }
 
-int SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
-                                   ArrayRef<int> Mask, int Index,
-                                   VectorType *SubTp) {
+InstructionCost SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
+                                               VectorType *Tp,
+                                               ArrayRef<int> Mask, int Index,
+                                               VectorType *SubTp) {
   if (ST->hasVector()) {
     unsigned NumVectors = getNumVectorRegs(Tp);
 

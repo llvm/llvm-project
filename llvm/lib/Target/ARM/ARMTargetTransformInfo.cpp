@@ -1134,9 +1134,9 @@ int ARMTTIImpl::getMemcpyCost(const Instruction *I) {
   return NumOps;
 }
 
-int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
-                               ArrayRef<int> Mask, int Index,
-                               VectorType *SubTp) {
+InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
+                                           VectorType *Tp, ArrayRef<int> Mask,
+                                           int Index, VectorType *SubTp) {
   if (ST->hasNEON()) {
     if (Kind == TTI::SK_Broadcast) {
       static const CostTblEntry NEONDupTbl[] = {
