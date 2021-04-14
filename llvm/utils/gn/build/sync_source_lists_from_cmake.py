@@ -54,7 +54,8 @@ def sync_source_lists(write):
     # Use shell=True on Windows in case git is a bat file.
     def git(args): subprocess.check_call(['git'] + args, shell=os.name == 'nt')
     def git_out(args):
-        return subprocess.check_output(['git'] + args, shell=os.name == 'nt')
+        return subprocess.check_output(['git'] + args, shell=os.name == 'nt',
+                                       universal_newlines=True)
     gn_files = git_out(['ls-files', '*BUILD.gn']).splitlines()
 
     # Matches e.g. |   "foo.cpp",|, captures |foo| in group 1.
