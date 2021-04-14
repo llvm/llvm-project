@@ -4,18 +4,18 @@
 ; devirtualization here with GVN which forwards a store through a load and to
 ; an indirect call.
 ;
-; RUN: opt -aa-pipeline=basic-aa -passes='module(inferattrs),cgscc(function-attrs,function(gvn,instcombine))' -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=BEFORE
-; RUN: opt -aa-pipeline=basic-aa -passes='module(inferattrs),cgscc(devirt<1>(function-attrs,function(gvn,instcombine)))' -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=AFTER --check-prefix=AFTER1
-; RUN: opt -aa-pipeline=basic-aa -passes='module(inferattrs),cgscc(devirt<2>(function-attrs,function(gvn,instcombine)))' -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=AFTER --check-prefix=AFTER2
+; RUN: opt -aa-pipeline=basic-aa -passes='cgscc(function-attrs,function(gvn,instcombine))' -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=BEFORE
+; RUN: opt -aa-pipeline=basic-aa -passes='cgscc(devirt<1>(function-attrs,function(gvn,instcombine)))' -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=AFTER --check-prefix=AFTER1
+; RUN: opt -aa-pipeline=basic-aa -passes='cgscc(devirt<2>(function-attrs,function(gvn,instcombine)))' -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=AFTER --check-prefix=AFTER2
 ;
-; RUN: not --crash opt -abort-on-max-devirt-iterations-reached -aa-pipeline=basic-aa -passes='module(inferattrs),cgscc(devirt<1>(function-attrs,function(gvn,instcombine)))' -S < %s
-; RUN: opt -abort-on-max-devirt-iterations-reached -aa-pipeline=basic-aa -passes='module(inferattrs),cgscc(devirt<2>(function-attrs,function(gvn,instcombine)))' -S < %s
+; RUN: not --crash opt -abort-on-max-devirt-iterations-reached -aa-pipeline=basic-aa -passes='cgscc(devirt<1>(function-attrs,function(gvn,instcombine)))' -S < %s
+; RUN: opt -abort-on-max-devirt-iterations-reached -aa-pipeline=basic-aa -passes='cgscc(devirt<2>(function-attrs,function(gvn,instcombine)))' -S < %s
 ;
 ; We also verify that the real O2 pipeline catches these cases.
 ; RUN: opt -aa-pipeline=basic-aa -passes='default<O2>' -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=AFTER --check-prefix=AFTER2
 
 declare void @readnone() readnone
-; CHECK: Function Attrs: nofree nosync readnone
+; CHECK: Function Attrs: readnone
 ; CHECK-NEXT: declare void @readnone()
 
 declare void @unknown()
@@ -51,7 +51,7 @@ entry:
 ; devirtualize again, and then deduce readnone.
 
 declare void @readnone_with_arg(void ()**) readnone
-; CHECK: Function Attrs: nofree nosync readnone
+; CHECK: Function Attrs: readnone
 ; CHECK-LABEL: declare void @readnone_with_arg(void ()**)
 
 define void @test2_a(void ()** %ignore) {
