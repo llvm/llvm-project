@@ -551,16 +551,19 @@ private:
   struct RAGreedyStats {
     unsigned Reloads = 0;
     unsigned FoldedReloads = 0;
+    unsigned ZeroCostFoldedReloads = 0;
     unsigned Spills = 0;
     unsigned FoldedSpills = 0;
 
     bool isEmpty() {
-      return !(Reloads || FoldedReloads || Spills || FoldedSpills);
+      return !(Reloads || FoldedReloads || Spills || FoldedSpills ||
+               ZeroCostFoldedReloads);
     }
 
     void add(RAGreedyStats other) {
       Reloads += other.Reloads;
       FoldedReloads += other.FoldedReloads;
+      ZeroCostFoldedReloads += other.ZeroCostFoldedReloads;
       Spills += other.Spills;
       FoldedSpills += other.FoldedSpills;
     }
@@ -3139,6 +3142,9 @@ void RAGreedy::RAGreedyStats::report(MachineOptimizationRemarkMissed &R) {
     R << NV("NumReloads", Reloads) << " reloads ";
   if (FoldedReloads)
     R << NV("NumFoldedReloads", FoldedReloads) << " folded reloads ";
+  if (ZeroCostFoldedReloads)
+    R << NV("NumZeroCostFoldedReloads", ZeroCostFoldedReloads)
+      << " zero cost folded reloads ";
 }
 
 RAGreedy::RAGreedyStats
@@ -3150,6 +3156,11 @@ RAGreedy::computeNumberOfSplillsReloads(MachineBasicBlock &MBB) {
   auto isSpillSlotAccess = [&MFI](const MachineMemOperand *A) {
     return MFI.isSpillSlotObjectIndex(cast<FixedStackPseudoSourceValue>(
         A->getPseudoValue())->getFrameIndex());
+  };
+  auto isPatchpointInstr = [](const MachineInstr &MI) {
+    return MI.getOpcode() == TargetOpcode::PATCHPOINT ||
+           MI.getOpcode() == TargetOpcode::STACKMAP ||
+           MI.getOpcode() == TargetOpcode::STATEPOINT;
   };
   for (MachineInstr &MI : MBB) {
     SmallVector<const MachineMemOperand *, 2> Accesses;
@@ -3164,13 +3175,35 @@ RAGreedy::computeNumberOfSplillsReloads(MachineBasicBlock &MBB) {
     }
     if (TII->hasLoadFromStackSlot(MI, Accesses) &&
         llvm::any_of(Accesses, isSpillSlotAccess)) {
-      ++Stats.FoldedReloads;
+      if (!isPatchpointInstr(MI)) {
+        Stats.FoldedReloads += Accesses.size();
+        continue;
+      }
+      // For statepoint there may be folded and zero cost folded stack reloads.
+      std::pair<unsigned, unsigned> NonZeroCostRange =
+          TII->getPatchpointUnfoldableRange(MI);
+      SmallSet<unsigned, 16> FoldedReloads;
+      SmallSet<unsigned, 16> ZeroCostFoldedReloads;
+      for (unsigned Idx = 0, E = MI.getNumOperands(); Idx < E; ++Idx) {
+        MachineOperand &MO = MI.getOperand(Idx);
+        if (!MO.isFI() || !MFI.isSpillSlotObjectIndex(MO.getIndex()))
+          continue;
+        if (Idx >= NonZeroCostRange.first && Idx < NonZeroCostRange.second)
+          FoldedReloads.insert(MO.getIndex());
+        else
+          ZeroCostFoldedReloads.insert(MO.getIndex());
+      }
+      // If stack slot is used in folded reload it is not zero cost then.
+      for (unsigned Slot : FoldedReloads)
+        ZeroCostFoldedReloads.erase(Slot);
+      Stats.FoldedReloads += FoldedReloads.size();
+      Stats.ZeroCostFoldedReloads += ZeroCostFoldedReloads.size();
       continue;
     }
     Accesses.clear();
     if (TII->hasStoreToStackSlot(MI, Accesses) &&
         llvm::any_of(Accesses, isSpillSlotAccess)) {
-      ++Stats.FoldedSpills;
+      Stats.FoldedSpills += Accesses.size();
     }
   }
   return Stats;
