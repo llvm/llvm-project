@@ -838,6 +838,10 @@ public:
     return HasPackedFP32Ops;
   }
 
+  bool hasFmaakFmamkF32Insts() const {
+    return getGeneration() >= GFX10;
+  }
+
   bool hasExtendedImageInsts() const {
     return HasExtendedImageInsts;
   }
