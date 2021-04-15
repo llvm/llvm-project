@@ -1839,8 +1839,14 @@ bool SIFrameLowering::spillCalleeSavedRegisters(
           .addReg(Reg, getKillRegState(true));
     } else {
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-      TII->storeRegToStackSlotCFI(MBB, MBBI, Reg, true, CS.getFrameIdx(), RC,
-                                  TRI);
+      const MachineRegisterInfo &MRI = MF.getRegInfo();
+      // If this value was already livein, we probably have a direct use of the
+      // incoming register value, so don't kill at the spill point. This happens
+      // since we pass some special inputs (workgroup IDs) in the callee saved
+      // range.
+      const bool IsLiveIn = MRI.isLiveIn(Reg);
+      TII->storeRegToStackSlotCFI(MBB, MBBI, Reg, !IsLiveIn, CS.getFrameIdx(),
+                                  RC, TRI);
     }
   }
 
