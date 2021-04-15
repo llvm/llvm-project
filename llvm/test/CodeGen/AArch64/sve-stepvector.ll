@@ -105,6 +105,59 @@ entry:
   ret <vscale x 8 x i8> %0
 }
 
+define <vscale x 8 x i8> @add_stepvector_nxv8i8() {
+; CHECK-LABEL: add_stepvector_nxv8i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    index z0.h, #0, #2
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <vscale x 8 x i8> @llvm.experimental.stepvector.nxv8i8()
+  %1 = call <vscale x 8 x i8> @llvm.experimental.stepvector.nxv8i8()
+  %2 = add <vscale x 8 x i8> %0, %1
+  ret <vscale x 8 x i8> %2
+}
+
+define <vscale x 8 x i8> @add_stepvector_nxv8i8_1(<vscale x 8 x i8> %p) {
+; CHECK-LABEL: add_stepvector_nxv8i8_1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    index z1.h, #0, #2
+; CHECK-NEXT:    add z0.h, z0.h, z1.h
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <vscale x 8 x i8> @llvm.experimental.stepvector.nxv8i8()
+  %1 = add <vscale x 8 x i8> %p, %0
+  %2 = call <vscale x 8 x i8> @llvm.experimental.stepvector.nxv8i8()
+  %3 = add <vscale x 8 x i8> %1, %2
+  ret <vscale x 8 x i8> %3
+}
+
+define <vscale x 8 x i8> @mul_stepvector_nxv8i8() {
+; CHECK-LABEL: mul_stepvector_nxv8i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    index z0.h, #0, #2
+; CHECK-NEXT:    ret
+entry:
+  %0 = insertelement <vscale x 8 x i8> poison, i8 2, i32 0
+  %1 = shufflevector <vscale x 8 x i8> %0, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
+  %2 = call <vscale x 8 x i8> @llvm.experimental.stepvector.nxv8i8()
+  %3 = mul <vscale x 8 x i8> %2, %1
+  ret <vscale x 8 x i8> %3
+}
+
+define <vscale x 8 x i8> @shl_stepvector_nxv8i8() {
+; CHECK-LABEL: shl_stepvector_nxv8i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    index z0.h, #0, #4
+; CHECK-NEXT:    ret
+entry:
+  %0 = insertelement <vscale x 8 x i8> poison, i8 2, i32 0
+  %1 = shufflevector <vscale x 8 x i8> %0, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
+  %2 = call <vscale x 8 x i8> @llvm.experimental.stepvector.nxv8i8()
+  %3 = shl <vscale x 8 x i8> %2, %1
+  ret <vscale x 8 x i8> %3
+}
+
+
 declare <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
 declare <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
 declare <vscale x 8 x i16> @llvm.experimental.stepvector.nxv8i16()
