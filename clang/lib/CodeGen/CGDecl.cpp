@@ -550,6 +550,7 @@ namespace {
   struct CallStackRestore final : EHScopeStack::Cleanup {
     Address Stack;
     CallStackRestore(Address Stack) : Stack(Stack) {}
+    bool isRedundantBeforeReturn() override { return true; }
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       llvm::Value *V = CGF.Builder.CreateLoad(Stack);
       llvm::Function *F = CGF.CGM.getIntrinsic(llvm::Intrinsic::stackrestore);
