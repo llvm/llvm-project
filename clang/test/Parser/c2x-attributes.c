@@ -16,6 +16,7 @@ enum { [[]] Six }; // expected-error {{expected identifier}}
 // FIXME: this diagnostic can be improved.
 enum E3 [[]] { Seven }; // expected-error {{expected identifier or '('}}
 
+[[deprecated([""])]] int WrongArgs; // expected-error {{expected expression}}
 [[,,,,,]] int Commas1; // ok
 [[,, maybe_unused]] int Commas2; // ok
 [[maybe_unused,,,]] int Commas3; // ok

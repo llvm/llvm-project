@@ -4214,7 +4214,7 @@ void Parser::ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
   llvm::SmallDenseMap<IdentifierInfo*, SourceLocation, 4> SeenAttrs;
 
   bool AttrParsed = false;
-  while (Tok.isNot(tok::r_square)) {
+  while (!Tok.isOneOf(tok::r_square, tok::semi)) {
     if (AttrParsed) {
       // If we parsed an attribute, a comma is required before parsing any
       // additional attributes.
@@ -4277,6 +4277,13 @@ void Parser::ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
     if (TryConsumeToken(tok::ellipsis))
       Diag(Tok, diag::err_cxx11_attribute_forbids_ellipsis)
         << AttrName;
+  }
+
+  // If we hit an error and recovered by parsing up to a semicolon, eat the
+  // semicolon and don't issue further diagnostics about missing brackets.
+  if (Tok.is(tok::semi)) {
+    ConsumeToken();
+    return;
   }
 
   SourceLocation CloseLoc = Tok.getLocation();
