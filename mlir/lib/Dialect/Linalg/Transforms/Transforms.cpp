@@ -206,7 +206,7 @@ static LogicalResult rewriteAsPaddedOp(PatternRewriter &rewriter,
   // This later folds away.
   SmallVector<Value> paddedSubviewResults;
   paddedSubviewResults.reserve(opToPad->getNumResults());
-  llvm::SetVector<Operation *> newUsersOfOpToPad;
+  SetVector<Operation *> newUsersOfOpToPad;
   for (auto it : llvm::zip(opToPad->getResults(), paddedOp->getResults())) {
     auto rank = std::get<0>(it).getType().cast<RankedTensorType>().getRank();
     SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));

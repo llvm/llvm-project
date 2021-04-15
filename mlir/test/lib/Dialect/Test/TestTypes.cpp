@@ -227,7 +227,7 @@ void TestDialect::registerTypes() {
 }
 
 static Type parseTestType(MLIRContext *ctxt, DialectAsmParser &parser,
-                          llvm::SetVector<Type> &stack) {
+                          SetVector<Type> &stack) {
   StringRef typeTag;
   if (failed(parser.parseKeyword(&typeTag)))
     return Type();
@@ -270,12 +270,12 @@ static Type parseTestType(MLIRContext *ctxt, DialectAsmParser &parser,
 }
 
 Type TestDialect::parseType(DialectAsmParser &parser) const {
-  llvm::SetVector<Type> stack;
+  SetVector<Type> stack;
   return parseTestType(getContext(), parser, stack);
 }
 
 static void printTestType(Type type, DialectAsmPrinter &printer,
-                          llvm::SetVector<Type> &stack) {
+                          SetVector<Type> &stack) {
   if (succeeded(generatedTypePrinter(type, printer)))
     return;
 
@@ -291,6 +291,6 @@ static void printTestType(Type type, DialectAsmPrinter &printer,
 }
 
 void TestDialect::printType(Type type, DialectAsmPrinter &printer) const {
-  llvm::SetVector<Type> stack;
+  SetVector<Type> stack;
   printTestType(type, printer, stack);
 }

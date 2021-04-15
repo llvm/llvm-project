@@ -32,8 +32,6 @@
 
 using namespace mlir;
 
-using llvm::SetVector;
-
 static llvm::cl::OptionCategory clOptionsCategory(DEBUG_TYPE " options");
 
 static llvm::cl::list<int> clTestVectorShapeRatio(
