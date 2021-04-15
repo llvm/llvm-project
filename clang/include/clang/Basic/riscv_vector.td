@@ -246,6 +246,10 @@ multiclass RVVOutBuiltinSet<string intrinsic_name, string type_range,
                             list<list<string>> suffixes_prototypes>
     : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [-1]>;
 
+multiclass RVVOp0BuiltinSet<string intrinsic_name, string type_range,
+                            list<list<string>> suffixes_prototypes>
+    : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [0]>;
+
 // IntrinsicTypes is output, op1 [-1, 1]
 multiclass RVVOutOp1BuiltinSet<string intrinsic_name, string type_range,
                                list<list<string>> suffixes_prototypes>
@@ -983,7 +987,18 @@ let HasMask = false, PermuteOperands = [2, 0, 1] in {
 }
 
 // 12.16. Vector Integer Move Instructions
-// TODO
+let HasMask = false in {
+  let MangledName = "vmv_v" in {
+    defm vmv_v : RVVOutBuiltinSet<"vmv_v_v", "csil",
+                                   [["v", "Uv", "UvUv"]]>;
+    defm vmv_v : RVVOutBuiltinSet<"vmv_v_v", "csilfd",
+                                   [["v", "v", "vv"]]>;
+  }
+  let HasNoMaskedOverloaded = false in
+    defm vmv_v : RVVOutBuiltinSet<"vmv_v_x", "csil",
+                                   [["x", "v", "ve"],
+                                    ["x", "Uv", "UvUe"]]>;
+}
 
 // 13. Vector Fixed-Point Arithmetic Instructions
 // 13.1. Vector Single-Width Saturating Add and Subtract
@@ -1091,7 +1106,9 @@ let HasMask = false, PermuteOperands = [2, 0, 1] in {
 }
 
 // 14.16. Vector Floating-Point Move Instruction
-// TODO
+let HasMask = false, HasNoMaskedOverloaded = false in
+  defm vfmv_v : RVVOutBuiltinSet<"vfmv_v_f", "fd",
+                                  [["f", "v", "ve"]]>;
 
 // 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
 def vfcvt_xu_f_v : RVVConvToUnsignedBuiltin<"vfcvt_xu">;
@@ -1194,10 +1211,27 @@ let HasNoMaskedOverloaded = false in {
 
 // 17. Vector Permutation Instructions
 // 17.1. Integer Scalar Move Instructions
-// TODO
+let HasMask = false in {
+  let HasVL = false, MangledName = "vmv_x" in
+    defm vmv_x : RVVOp0BuiltinSet<"vmv_x_s", "csil",
+                                   [["s", "ve", "ev"],
+                                    ["s", "UvUe", "UeUv"]]>;
+  let MangledName = "vmv_s" in
+    defm vmv_s : RVVOutBuiltinSet<"vmv_s_x", "csil",
+                                   [["x", "v", "vve"],
+                                    ["x", "Uv", "UvUvUe"]]>;
+}
 
 // 17.2. Floating-Point Scalar Move Instructions
-// TODO
+let HasMask = false in {
+  let HasVL = false, MangledName = "vfmv_f" in
+    defm vfmv_f : RVVOp0BuiltinSet<"vfmv_f_s", "fd",
+                                     [["s", "ve", "ev"]]>;
+  let MangledName = "vfmv_s" in
+    defm vfmv_s : RVVOutBuiltinSet<"vfmv_s_f", "fd",
+                                     [["f", "v", "vve"],
+                                      ["x", "Uv", "UvUvUe"]]>;
+}
 
 // 17.3. Vector Slide Instructions
 // 17.3.1. Vector Slideup Instructions
