@@ -20,7 +20,7 @@ define i32 @test_load_on_cold_path(i32* %p) {
 ; CHECK:       hot_path:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       cold_path:
-; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
@@ -42,7 +42,7 @@ hot_path:
   br label %backedge
 
 cold_path:
-  call void @side_effect()
+  call void @side_effect() nofree
   br label %backedge
 
 backedge:
@@ -163,10 +163,10 @@ define i32 @test_load_on_both_paths(i32* %p) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
 ; CHECK:       hot_path:
-; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       cold_path:
-; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
@@ -185,11 +185,11 @@ loop:
   br i1 %cond, label %hot_path, label %cold_path
 
 hot_path:
-  call void @side_effect()
+  call void @side_effect() nofree
   br label %backedge
 
 cold_path:
-  call void @side_effect()
+  call void @side_effect() nofree
   br label %backedge
 
 backedge:
@@ -218,7 +218,7 @@ define i32 @test_load_on_backedge(i32* %p) {
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
-; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -241,7 +241,7 @@ cold_path:
 
 backedge:
   %iv.next = add i32 %iv, %x
-  call void @side_effect()
+  call void @side_effect() nofree
   %loop.cond = icmp ult i32 %iv.next, 1000
   br i1 %loop.cond, label %loop, label %exit
 
@@ -262,7 +262,7 @@ define i32 @test_load_on_exiting_cold_path_01(i32* %p) {
 ; CHECK:       hot_path:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       cold_path:
-; CHECK-NEXT:    [[SIDE_COND:%.*]] = call i1 @side_effect_cond()
+; CHECK-NEXT:    [[SIDE_COND:%.*]] = call i1 @side_effect_cond() #[[ATTR0]]
 ; CHECK-NEXT:    br i1 [[SIDE_COND]], label [[BACKEDGE]], label [[COLD_EXIT:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
@@ -286,7 +286,7 @@ hot_path:
   br label %backedge
 
 cold_path:
-  %side_cond = call i1 @side_effect_cond()
+  %side_cond = call i1 @side_effect_cond() nofree
   br i1 %side_cond, label %backedge, label %cold_exit
 
 backedge:
@@ -369,12 +369,12 @@ define i32 @test_load_on_cold_path_and_backedge(i32* %p) {
 ; CHECK:       hot_path:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       cold_path:
-; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
-; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 [[X]]
@@ -392,13 +392,13 @@ hot_path:
   br label %backedge
 
 cold_path:
-  call void @side_effect()
+  call void @side_effect() nofree
   br label %backedge
 
 backedge:
   %iv.next = add i32 %iv, %x
   %loop.cond = icmp ult i32 %iv.next, 1000
-  call void @side_effect()
+  call void @side_effect() nofree
   br i1 %loop.cond, label %loop, label %exit
 
 exit:
@@ -418,14 +418,14 @@ define i32 @test_load_multi_block_cold_path(i32* %p) {
 ; CHECK:       hot_path:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       cold_path.1:
-; CHECK-NEXT:    call void @side_effect()
-; CHECK-NEXT:    call void @side_effect()
-; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
-; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 [[X]]
@@ -443,21 +443,21 @@ hot_path:
   br label %backedge
 
 cold_path.1:
-  call void @side_effect()
+  call void @side_effect() nofree
   br label %cold_path.2
 
 cold_path.2:
-  call void @side_effect()
+  call void @side_effect() nofree
   br label %cold_path.3
 
 cold_path.3:
-  call void @side_effect()
+  call void @side_effect() nofree
   br label %backedge
 
 backedge:
   %iv.next = add i32 %iv, %x
   %loop.cond = icmp ult i32 %iv.next, 1000
-  call void @side_effect()
+  call void @side_effect() nofree
   br i1 %loop.cond, label %loop, label %exit
 
 exit:
@@ -477,13 +477,13 @@ define i32 @test_load_on_multi_exiting_cold_path(i32* %p) {
 ; CHECK:       hot_path:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       cold_path.1:
-; CHECK-NEXT:    [[SIDE_COND_1:%.*]] = call i1 @side_effect_cond()
+; CHECK-NEXT:    [[SIDE_COND_1:%.*]] = call i1 @side_effect_cond() #[[ATTR0]]
 ; CHECK-NEXT:    br i1 [[SIDE_COND_1]], label [[COLD_PATH_2:%.*]], label [[COLD_EXIT:%.*]]
 ; CHECK:       cold_path.2:
-; CHECK-NEXT:    [[SIDE_COND_2:%.*]] = call i1 @side_effect_cond()
+; CHECK-NEXT:    [[SIDE_COND_2:%.*]] = call i1 @side_effect_cond() #[[ATTR0]]
 ; CHECK-NEXT:    br i1 [[SIDE_COND_2]], label [[COLD_PATH_3:%.*]], label [[COLD_EXIT]]
 ; CHECK:       cold_path.3:
-; CHECK-NEXT:    [[SIDE_COND_3:%.*]] = call i1 @side_effect_cond()
+; CHECK-NEXT:    [[SIDE_COND_3:%.*]] = call i1 @side_effect_cond() #[[ATTR0]]
 ; CHECK-NEXT:    br i1 [[SIDE_COND_3]], label [[BACKEDGE]], label [[COLD_EXIT]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
@@ -507,15 +507,15 @@ hot_path:
   br label %backedge
 
 cold_path.1:
-  %side_cond.1 = call i1 @side_effect_cond()
+  %side_cond.1 = call i1 @side_effect_cond() nofree
   br i1 %side_cond.1, label %cold_path.2, label %cold_exit
 
 cold_path.2:
-  %side_cond.2 = call i1 @side_effect_cond()
+  %side_cond.2 = call i1 @side_effect_cond() nofree
   br i1 %side_cond.2, label %cold_path.3, label %cold_exit
 
 cold_path.3:
-  %side_cond.3 = call i1 @side_effect_cond()
+  %side_cond.3 = call i1 @side_effect_cond() nofree
   br i1 %side_cond.3, label %backedge, label %cold_exit
 
 backedge:
@@ -545,7 +545,7 @@ define i32 @test_inner_loop(i32* %p) {
 ; CHECK:       cold_path:
 ; CHECK-NEXT:    br label [[INNER_LOOP:%.*]]
 ; CHECK:       inner_loop:
-; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
 ; CHECK-NEXT:    br i1 undef, label [[INNER_LOOP]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
@@ -570,7 +570,7 @@ cold_path:
   br label %inner_loop
 
 inner_loop:
-  call void @side_effect()
+  call void @side_effect() nofree
   br i1 undef, label %inner_loop, label %backedge
 
 backedge:
@@ -595,7 +595,7 @@ define i32 @test_multiple_cold_paths(i32* %p) {
 ; CHECK:       hot_path.1:
 ; CHECK-NEXT:    br label [[DOM_1:%.*]]
 ; CHECK:       cold_path.1:
-; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[DOM_1]]
 ; CHECK:       dom.1:
 ; CHECK-NEXT:    [[COND_2:%.*]] = icmp ne i32 [[X]], 1
@@ -603,7 +603,7 @@ define i32 @test_multiple_cold_paths(i32* %p) {
 ; CHECK:       hot_path.2:
 ; CHECK-NEXT:    br label [[DOM_2:%.*]]
 ; CHECK:       cold_path.2:
-; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[DOM_2]]
 ; CHECK:       dom.2:
 ; CHECK-NEXT:    [[COND_3:%.*]] = icmp ne i32 [[X]], 2
@@ -611,7 +611,7 @@ define i32 @test_multiple_cold_paths(i32* %p) {
 ; CHECK:       hot_path.3:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       cold_path.3:
-; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
@@ -633,7 +633,7 @@ hot_path.1:
   br label %dom.1
 
 cold_path.1:
-  call void @side_effect()
+  call void @side_effect() nofree
   br label %dom.1
 
 dom.1:
@@ -644,7 +644,7 @@ hot_path.2:
   br label %dom.2
 
 cold_path.2:
-  call void @side_effect()
+  call void @side_effect() nofree
   br label %dom.2
 
 dom.2:
@@ -655,7 +655,7 @@ hot_path.3:
   br label %backedge
 
 cold_path.3:
-  call void @side_effect()
+  call void @side_effect() nofree
   br label %backedge
 
 backedge:
@@ -683,7 +683,7 @@ define i32 @test_side_exit_after_merge(i32* %p) {
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp ne i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[COND_1]], label [[DO_CALL:%.*]], label [[SIDE_EXITING:%.*]]
 ; CHECK:       do_call:
-; CHECK-NEXT:    [[SIDE_COND:%.*]] = call i1 @side_effect_cond()
+; CHECK-NEXT:    [[SIDE_COND:%.*]] = call i1 @side_effect_cond() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[SIDE_EXITING]]
 ; CHECK:       side_exiting:
 ; CHECK-NEXT:    [[SIDE_COND_PHI:%.*]] = phi i1 [ [[SIDE_COND]], [[DO_CALL]] ], [ true, [[COLD_PATH]] ]
@@ -714,7 +714,7 @@ cold_path:
   br i1 %cond.1, label %do_call, label %side_exiting
 
 do_call:
-  %side_cond = call i1 @side_effect_cond()
+  %side_cond = call i1 @side_effect_cond() nofree
   br label %side_exiting
 
 side_exiting:
@@ -749,7 +749,7 @@ define i32 @test_guard_1(i32* %p, i32 %g) {
 ; CHECK:       hot_path:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       cold_path:
-; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
@@ -773,7 +773,7 @@ hot_path:
   br label %backedge
 
 cold_path:
-  call void @side_effect()
+  call void @side_effect() nofree
   br label %backedge
 
 backedge:
@@ -799,7 +799,7 @@ define i32 @test_guard_2(i32* %p, i32 %g) {
 ; CHECK:       hot_path:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       cold_path:
-; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
@@ -823,7 +823,7 @@ hot_path:
   br label %backedge
 
 cold_path:
-  call void @side_effect()
+  call void @side_effect() nofree
   br label %backedge
 
 backedge:
