@@ -283,6 +283,27 @@ def x86_asm_syntax_intel : Flag<["--"], "x86-asm-syntax=intel">,
   HelpText<"Emit Intel-style disassembly">,
   Group<grp_objdump>;
 
+def mhvx : Flag<["--"], "mhvx">, HelpText<"Enable Hexagon Vector eXtensions">,
+  Group<grp_objdump>;
+
+def mhvx_v66 : Flag<["--"], "mhvx=v66">,
+  Group<grp_objdump>;
+
+def mv60 : Flag<["--"], "mv60">, HelpText<"Build for Hexagon V60">,
+  Group<grp_objdump>;
+
+def mv65 : Flag<["--"], "mv65">, HelpText<"Build for Hexagon V65">,
+  Group<grp_objdump>;
+
+def mv66 : Flag<["--"], "mv66">, HelpText<"Build for Hexagon V66">,
+  Group<grp_objdump>;
+
+def mv67t : Flag<["--"], "mv67t">, HelpText<"Build for Hexagon V67t">,
+  Group<grp_objdump>;
+
+def riscv_no_aliases : Flag<["--"], "riscv-no-aliases">,
+  HelpText<"Disable the emission of assembler pseudo instructions">,
+  Group<grp_objdump>;
 
 
 def grp_mach_o : OptionGroup<"kind">, HelpText<"llvm-objdump MachO Specific Options">;
