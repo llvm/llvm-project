@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=nanomips -asm-show-inst < %s | FileCheck %s
+; RUN: llc -mtriple=nanomips -asm-show-inst -verify-machineinstrs < %s | FileCheck %s
 
 define i32 @foo0() nounwind readnone {
 ; CHECK-LABEL: foo0

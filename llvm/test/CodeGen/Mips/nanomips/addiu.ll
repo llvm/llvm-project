@@ -1,4 +1,4 @@
-; RUN: llc -march=nanomips -mcpu=nanomips  < %s | FileCheck %s
+; RUN: llc -mtriple=nanomips -asm-show-inst -verify-machineinstrs < %s | FileCheck %s
 
 define i32 @test_addiu0(i32 %a) nounwind readnone {
 entry:

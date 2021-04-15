@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=nanomips -asm-show-inst < %s | FileCheck %s
+; RUN: llc -mtriple=nanomips -asm-show-inst -verify-machineinstrs < %s | FileCheck %s
 
 declare i32 @foo(i32, i32, i32, i32, i32, i32, i32, i32, i32)
 

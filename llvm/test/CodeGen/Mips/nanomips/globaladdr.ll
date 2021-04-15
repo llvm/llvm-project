@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=nanomips -asm-show-inst < %s | FileCheck %s
+; RUN: llc -mtriple=nanomips -asm-show-inst -verify-machineinstrs < %s | FileCheck %s
 
 @str = constant [10 x i8] c"pineapple\00"
 
