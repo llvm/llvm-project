@@ -1,4 +1,4 @@
-//===- OpTrait.h - OpTrait wrapper class ------------------------*- C++ -*-===//
+//===- Trait.h - Trait wrapper class ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// OpTrait wrapper to simplify using TableGen Record defining an MLIR OpTrait.
+// Trait wrapper to simplify using TableGen Record defining an MLIR Trait.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TABLEGEN_OPTRAIT_H_
-#define MLIR_TABLEGEN_OPTRAIT_H_
+#ifndef MLIR_TABLEGEN_TRAIT_H_
+#define MLIR_TABLEGEN_TRAIT_H_
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
@@ -25,28 +25,28 @@ class Record;
 namespace mlir {
 namespace tblgen {
 
-struct OpInterface;
+class Interface;
 
-// Wrapper class with helper methods for accessing OpTrait constraints defined
-// in TableGen.
-class OpTrait {
+// Wrapper class with helper methods for accessing Trait constraints defined in
+// TableGen.
+class Trait {
 public:
-  // Discriminator for kinds of op traits.
+  // Discriminator for kinds of traits.
   enum class Kind {
-    // OpTrait corresponding to C++ class.
+    // Trait corresponding to C++ class.
     Native,
-    // OpTrait corresponding to predicate on operation.
+    // Trait corresponding to a predicate.
     Pred,
-    // OpTrait controlling op definition generator internals.
+    // Trait controlling definition generator internals.
     Internal,
-    // OpTrait corresponding to OpInterface.
+    // Trait corresponding to an Interface.
     Interface
   };
 
-  explicit OpTrait(Kind kind, const llvm::Record *def);
+  explicit Trait(Kind kind, const llvm::Record *def);
 
-  // Returns an OpTrait corresponding to the init provided.
-  static OpTrait create(const llvm::Init *init);
+  // Returns an Trait corresponding to the init provided.
+  static Trait create(const llvm::Init *init);
 
   Kind getKind() const { return kind; }
 
@@ -59,17 +59,17 @@ protected:
   Kind kind;
 };
 
-// OpTrait corresponding to a native C++ OpTrait.
-class NativeOpTrait : public OpTrait {
+// Trait corresponding to a native C++ Trait.
+class NativeTrait : public Trait {
 public:
   // Returns the trait corresponding to a C++ trait class.
-  std::string getTrait() const;
+  std::string getFullyQualifiedTraitName() const;
 
-  static bool classof(const OpTrait *t) { return t->getKind() == Kind::Native; }
+  static bool classof(const Trait *t) { return t->getKind() == Kind::Native; }
 };
 
-// OpTrait corresponding to a predicate on the operation.
-class PredOpTrait : public OpTrait {
+// Trait corresponding to a predicate on the operation.
+class PredTrait : public Trait {
 public:
   // Returns the template for constructing the predicate.
   std::string getPredTemplate() const;
@@ -77,30 +77,28 @@ public:
   // Returns the description of what the predicate is verifying.
   StringRef getSummary() const;
 
-  static bool classof(const OpTrait *t) { return t->getKind() == Kind::Pred; }
+  static bool classof(const Trait *t) { return t->getKind() == Kind::Pred; }
 };
 
-// OpTrait controlling op definition generator internals.
-class InternalOpTrait : public OpTrait {
+// Trait controlling op definition generator internals.
+class InternalTrait : public Trait {
 public:
   // Returns the trait controlling op definition generator internals.
-  StringRef getTrait() const;
+  StringRef getFullyQualifiedTraitName() const;
 
-  static bool classof(const OpTrait *t) {
-    return t->getKind() == Kind::Internal;
-  }
+  static bool classof(const Trait *t) { return t->getKind() == Kind::Internal; }
 };
 
-// OpTrait corresponding to an OpInterface on the operation.
-class InterfaceOpTrait : public OpTrait {
+// Trait corresponding to an OpInterface on the operation.
+class InterfaceTrait : public Trait {
 public:
-  // Returns member function definitions corresponding to the trait,
-  OpInterface getOpInterface() const;
+  // Returns interface corresponding to the trait.
+  Interface getInterface() const;
 
   // Returns the trait corresponding to a C++ trait class.
-  std::string getTrait() const;
+  std::string getFullyQualifiedTraitName() const;
 
-  static bool classof(const OpTrait *t) {
+  static bool classof(const Trait *t) {
     return t->getKind() == Kind::Interface;
   }
 
@@ -115,4 +113,4 @@ public:
 } // end namespace tblgen
 } // end namespace mlir
 
-#endif // MLIR_TABLEGEN_OPTRAIT_H_
+#endif // MLIR_TABLEGEN_TRAIT_H_

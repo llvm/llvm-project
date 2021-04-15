@@ -78,16 +78,16 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
 // DEF: CompoundAAttrStorage (
 // DEF-NEXT: : ::mlir::AttributeStorage(inner),
 
-// DEF: bool operator==(const KeyTy &key) const {
-// DEF-NEXT: if (!(widthOfSomething == std::get<0>(key)))
+// DEF: bool operator==(const KeyTy &tblgenKey) const {
+// DEF-NEXT: if (!(widthOfSomething == std::get<0>(tblgenKey)))
 // DEF-NEXT:   return false;
-// DEF-NEXT: if (!(exampleTdType == std::get<1>(key)))
+// DEF-NEXT: if (!(exampleTdType == std::get<1>(tblgenKey)))
 // DEF-NEXT:   return false;
-// DEF-NEXT: if (!(apFloat.bitwiseIsEqual(std::get<2>(key))))
+// DEF-NEXT: if (!(apFloat.bitwiseIsEqual(std::get<2>(tblgenKey))))
 // DEF-NEXT:   return false;
-// DEF-NEXT: if (!(dims == std::get<3>(key)))
+// DEF-NEXT: if (!(dims == std::get<3>(tblgenKey)))
 // DEF-NEXT:   return false;
-// DEF-NEXT: if (!(getType() == std::get<4>(key)))
+// DEF-NEXT: if (!(getType() == std::get<4>(tblgenKey)))
 // DEF-NEXT:   return false;
 // DEF-NEXT: return true;
 
