@@ -15,6 +15,5 @@ ReflowComments: false
 ColumnLimit: 120
 
 # These aren't covered by the LLVM Style Guide
-BreakBeforeConceptDeclarations: true
 IndentRequires: false
 ---
