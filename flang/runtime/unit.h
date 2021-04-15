@@ -50,11 +50,11 @@ public:
   static void CloseAll(IoErrorHandler &);
   static void FlushAll(IoErrorHandler &);
 
-  void OpenUnit(OpenStatus, std::optional<Action>, Position,
+  void OpenUnit(std::optional<OpenStatus>, std::optional<Action>, Position,
       OwningPtr<char> &&path, std::size_t pathLength, Convert,
       IoErrorHandler &);
-  void OpenAnonymousUnit(
-      OpenStatus, std::optional<Action>, Position, Convert, IoErrorHandler &);
+  void OpenAnonymousUnit(std::optional<OpenStatus>, std::optional<Action>,
+      Position, Convert, IoErrorHandler &);
   void CloseUnit(CloseStatus, IoErrorHandler &);
   void DestroyClosed();
 
@@ -77,7 +77,7 @@ public:
   bool Receive(char *, std::size_t, std::size_t elementBytes, IoErrorHandler &);
   std::optional<char32_t> GetCurrentChar(IoErrorHandler &);
   void SetLeftTabLimit();
-  void BeginReadingRecord(IoErrorHandler &);
+  bool BeginReadingRecord(IoErrorHandler &);
   void FinishReadingRecord(IoErrorHandler &);
   bool AdvanceRecord(IoErrorHandler &);
   void BackspaceRecord(IoErrorHandler &);

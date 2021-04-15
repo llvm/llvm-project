@@ -163,12 +163,12 @@ replaceTransferOpWithMasked(ConversionPatternRewriter &rewriter,
                             LLVMTypeConverter &typeConverter, Location loc,
                             TransferReadOp xferOp, ArrayRef<Value> operands,
                             Value dataPtr, Value mask) {
-  VectorType fillType = xferOp.getVectorType();
-  Value fill = rewriter.create<SplatOp>(loc, fillType, xferOp.padding());
-
   Type vecTy = typeConverter.convertType(xferOp.getVectorType());
   if (!vecTy)
     return failure();
+
+  auto adaptor = TransferReadOpAdaptor(operands, xferOp->getAttrDictionary());
+  Value fill = rewriter.create<SplatOp>(loc, vecTy, adaptor.padding());
 
   unsigned align;
   if (failed(getMemRefAlignment(

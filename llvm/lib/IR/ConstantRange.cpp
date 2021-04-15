@@ -181,6 +181,11 @@ bool ConstantRange::getEquivalentICmp(CmpInst::Predicate &Pred,
   return Success;
 }
 
+bool ConstantRange::icmp(CmpInst::Predicate Pred,
+                         const ConstantRange &Other) const {
+  return makeSatisfyingICmpRegion(Pred, Other).contains(*this);
+}
+
 /// Exact mul nuw region for single element RHS.
 static ConstantRange makeExactMulNUWRegion(const APInt &V) {
   unsigned BitWidth = V.getBitWidth();

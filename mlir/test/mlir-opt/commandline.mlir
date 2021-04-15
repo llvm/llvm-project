@@ -6,7 +6,6 @@
 // CHECK-NEXT: arm_neon
 // CHECK-NEXT: arm_sve
 // CHECK-NEXT: async
-// CHECK-NEXT: avx512
 // CHECK-NEXT: complex
 // CHECK-NEXT: dlti
 // CHECK-NEXT: gpu
@@ -30,3 +29,4 @@
 // CHECK-NEXT: test
 // CHECK-NEXT: tosa
 // CHECK-NEXT: vector
+// CHECK-NEXT: x86vector

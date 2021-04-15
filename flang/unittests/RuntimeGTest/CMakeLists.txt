@@ -4,6 +4,7 @@ add_flang_unittest(FlangRuntimeTests
   MiscIntrinsic.cpp
   Numeric.cpp
   NumericalFormatTest.cpp
+  Random.cpp
   Reduction.cpp
   RuntimeCrashTest.cpp
 )

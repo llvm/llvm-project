@@ -1180,6 +1180,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     for (auto VT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv8f16, MVT::nxv2f32,
                     MVT::nxv4f32, MVT::nxv2f64}) {
+      for (auto InnerVT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv8f16,
+                           MVT::nxv2f32, MVT::nxv4f32, MVT::nxv2f64}) {
+        // Avoid marking truncating FP stores as legal to prevent the
+        // DAGCombiner from creating unsupported truncating stores.
+        setTruncStoreAction(VT, InnerVT, Expand);
+      }
+
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::MGATHER, VT, Custom);
@@ -4725,7 +4732,10 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       else if (ActualMVT == MVT::i16)
         ValVT = MVT::i16;
     }
-    CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, /*IsVarArg=*/false);
+    bool UseVarArgCC = false;
+    if (IsWin64)
+      UseVarArgCC = isVarArg;
+    CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, UseVarArgCC);
     bool Res =
         AssignFn(i, ValVT, ValVT, CCValAssign::Full, Ins[i].Flags, CCInfo);
     assert(!Res && "Call operand has unhandled type");
@@ -5355,6 +5365,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   bool TailCallOpt = MF.getTarget().Options.GuaranteedTailCallOpt;
   bool IsSibCall = false;
+  bool IsWin64 =
+      Subtarget->isCallingConvWin64(MF.getFunction().getCallingConv());
 
   // Check callee args/returns for SVE registers and set calling convention
   // accordingly.
@@ -5404,8 +5416,12 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
                            "currently not supported");
 
       ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
-      CCAssignFn *AssignFn = CCAssignFnForCall(CallConv,
-                                               /*IsVarArg=*/ !Outs[i].IsFixed);
+      bool UseVarArgCC = !Outs[i].IsFixed;
+      // On Windows, the fixed arguments in a vararg call are passed in GPRs
+      // too, so use the vararg CC to force them to integer registers.
+      if (IsWin64)
+        UseVarArgCC = true;
+      CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, UseVarArgCC);
       bool Res = AssignFn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo);
       assert(!Res && "Call operand has unhandled type");
       (void)Res;

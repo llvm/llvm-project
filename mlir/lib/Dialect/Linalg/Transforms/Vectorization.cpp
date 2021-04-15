@@ -402,6 +402,9 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
   for (Type outputTensorType : linalgOp.getOutputTensorTypes())
     if (!outputTensorType.cast<ShapedType>().hasStaticShape())
       return failure();
+  // TODO: remove once index ops are supported.
+  if (linalgOp.hasIndexSemantics())
+    return failure();
   if (isElementwise(op))
     return success();
   return success(isaContractionOpInterface(linalgOp));

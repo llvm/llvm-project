@@ -903,10 +903,10 @@ std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
 mapped_file_region::mapped_file_region(sys::fs::file_t fd, mapmode mode,
                                        size_t length, uint64_t offset,
                                        std::error_code &ec)
-    : Size(length), Mapping() {
+    : Size(length) {
   ec = init(fd, offset, mode);
   if (ec)
-    Mapping = 0;
+    copyFrom(mapped_file_region());
 }
 
 static bool hasFlushBufferKernelBug() {
@@ -925,7 +925,7 @@ static bool isEXE(StringRef Magic) {
   return false;
 }
 
-mapped_file_region::~mapped_file_region() {
+void mapped_file_region::unmapImpl() {
   if (Mapping) {
 
     bool Exe = isEXE(StringRef((char *)Mapping, Size));
@@ -945,21 +945,6 @@ mapped_file_region::~mapped_file_region() {
 
     ::CloseHandle(FileHandle);
   }
-}
-
-size_t mapped_file_region::size() const {
-  assert(Mapping && "Mapping failed but used anyway!");
-  return Size;
-}
-
-char *mapped_file_region::data() const {
-  assert(Mapping && "Mapping failed but used anyway!");
-  return reinterpret_cast<char*>(Mapping);
-}
-
-const char *mapped_file_region::const_data() const {
-  assert(Mapping && "Mapping failed but used anyway!");
-  return reinterpret_cast<const char*>(Mapping);
 }
 
 int mapped_file_region::alignment() {

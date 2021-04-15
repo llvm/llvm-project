@@ -83,8 +83,16 @@ struct JsModuleReference {
   // Prefix from "import * as prefix". Empty for symbol imports and `export *`.
   // Implies an empty names list.
   StringRef Prefix;
+  // Default import from "import DefaultName from '...';".
+  StringRef DefaultImport;
   // Symbols from `import {SymbolA, SymbolB, ...} from ...;`.
   SmallVector<JsImportedSymbol, 1> Symbols;
+  // Whether some symbols were merged into this one. Controls if the module
+  // reference needs re-formatting.
+  bool SymbolsMerged = false;
+  // The source location just after { and just before } in the import.
+  // Extracted eagerly to allow modification of Symbols later on.
+  SourceLocation SymbolsStart, SymbolsEnd;
   // Textual position of the import/export, including preceding and trailing
   // comments.
   SourceRange Range;
@@ -146,6 +154,8 @@ public:
     });
     bool ReferencesInOrder = llvm::is_sorted(Indices);
 
+    mergeModuleReferences(References, Indices);
+
     std::string ReferencesText;
     bool SymbolsInOrder = true;
     for (unsigned i = 0, e = Indices.size(); i != e; ++i) {
@@ -163,7 +173,6 @@ public:
           ReferencesText += "\n";
       }
     }
-
     if (ReferencesInOrder && SymbolsInOrder)
       return {Result, 0};
 
@@ -239,6 +248,45 @@ private:
                                SM.getFileOffset(End) - SM.getFileOffset(Begin));
   }
 
+  // Merge module references.
+  // After sorting, find all references that import named symbols from the
+  // same URL and merge their names. E.g.
+  //   import {X} from 'a';
+  //   import {Y} from 'a';
+  // should be rewritten to:
+  //   import {X, Y} from 'a';
+  // Note: this modifies the passed in ``Indices`` vector (by removing no longer
+  // needed references), but not ``References``.
+  // ``JsModuleReference``s that get merged have the ``SymbolsMerged`` flag
+  // flipped to true.
+  void mergeModuleReferences(SmallVector<JsModuleReference, 16> &References,
+                             SmallVector<unsigned, 16> &Indices) {
+    JsModuleReference *PreviousReference = &References[Indices[0]];
+    auto *It = std::next(Indices.begin());
+    while (It != std::end(Indices)) {
+      JsModuleReference *Reference = &References[*It];
+      // Skip:
+      //   import 'foo';
+      //   import * as foo from 'foo'; on either previous or this.
+      //   import Default from 'foo'; on either previous or this.
+      //   mismatching
+      if (Reference->Category == JsModuleReference::SIDE_EFFECT ||
+          !PreviousReference->Prefix.empty() || !Reference->Prefix.empty() ||
+          !PreviousReference->DefaultImport.empty() ||
+          !Reference->DefaultImport.empty() || Reference->Symbols.empty() ||
+          PreviousReference->URL != Reference->URL) {
+        PreviousReference = Reference;
+        ++It;
+        continue;
+      }
+      // Merge symbols from identical imports.
+      PreviousReference->Symbols.append(Reference->Symbols);
+      PreviousReference->SymbolsMerged = true;
+      // Remove the merged import.
+      It = Indices.erase(It);
+    }
+  }
+
   // Appends ``Reference`` to ``Buffer``, returning true if text within the
   // ``Reference`` changed (e.g. symbol order).
   bool appendReference(std::string &Buffer, JsModuleReference &Reference) {
@@ -249,16 +297,14 @@ private:
         Symbols, [&](const JsImportedSymbol &LHS, const JsImportedSymbol &RHS) {
           return LHS.Symbol.compare_lower(RHS.Symbol) < 0;
         });
-    if (Symbols == Reference.Symbols) {
-      // No change in symbol order.
+    if (!Reference.SymbolsMerged && Symbols == Reference.Symbols) {
+      // Symbols didn't change, just emit the entire module reference.
       StringRef ReferenceStmt = getSourceText(Reference.Range);
       Buffer += ReferenceStmt;
       return false;
     }
     // Stitch together the module reference start...
-    SourceLocation SymbolsStart = Reference.Symbols.front().Range.getBegin();
-    SourceLocation SymbolsEnd = Reference.Symbols.back().Range.getEnd();
-    Buffer += getSourceText(Reference.Range.getBegin(), SymbolsStart);
+    Buffer += getSourceText(Reference.Range.getBegin(), Reference.SymbolsStart);
     // ... then the references in order ...
     for (auto I = Symbols.begin(), E = Symbols.end(); I != E; ++I) {
       if (I != Symbols.begin())
@@ -266,7 +312,7 @@ private:
       Buffer += getSourceText(I->Range);
     }
     // ... followed by the module reference end.
-    Buffer += getSourceText(SymbolsEnd, Reference.Range.getEnd());
+    Buffer += getSourceText(Reference.SymbolsEnd, Reference.Range.getEnd());
     return true;
   }
 
@@ -280,7 +326,7 @@ private:
     SourceLocation Start;
     AnnotatedLine *FirstNonImportLine = nullptr;
     bool AnyImportAffected = false;
-    for (auto Line : AnnotatedLines) {
+    for (auto *Line : AnnotatedLines) {
       Current = Line->First;
       LineEnd = Line->Last;
       skipComments();
@@ -393,7 +439,9 @@ private:
 
   bool parseNamedBindings(const AdditionalKeywords &Keywords,
                           JsModuleReference &Reference) {
+    // eat a potential "import X, " prefix.
     if (Current->is(tok::identifier)) {
+      Reference.DefaultImport = Current->TokenText;
       nextToken();
       if (Current->is(Keywords.kw_from))
         return true;
@@ -405,6 +453,7 @@ private:
       return false;
 
     // {sym as alias, sym2 as ...} from '...';
+    Reference.SymbolsStart = Current->Tok.getEndLoc();
     while (Current->isNot(tok::r_brace)) {
       nextToken();
       if (Current->is(tok::r_brace))
@@ -432,6 +481,11 @@ private:
       if (!Current->isOneOf(tok::r_brace, tok::comma))
         return false;
     }
+    Reference.SymbolsEnd = Current->Tok.getLocation();
+    // For named imports with a trailing comma ("import {X,}"), consider the
+    // comma to be the end of the import list, so that it doesn't get removed.
+    if (Current->Previous->is(tok::comma))
+      Reference.SymbolsEnd = Current->Previous->Tok.getLocation();
     nextToken(); // consume r_brace
     return true;
   }

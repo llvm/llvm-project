@@ -41,7 +41,7 @@ template <typename... FnTys> Expr *IgnoreExprNodes(Expr *E, FnTys &&... Fns) {
 
 template <typename... FnTys>
 const Expr *IgnoreExprNodes(const Expr *E, FnTys &&...Fns) {
-  return const_cast<Expr *>(IgnoreExprNodes(E, std::forward<FnTys>(Fns)...));
+  return IgnoreExprNodes(const_cast<Expr *>(E), std::forward<FnTys>(Fns)...);
 }
 
 inline Expr *IgnoreImplicitCastsSingleStep(Expr *E) {

@@ -679,7 +679,7 @@ end:
 ; CHECKXX: ld [[CSR]], -[[STACK_OFFSET]](1) # 8-byte Folded Reload
 ;
 ; Ensure no subsequent uses of callee-save register before end of function
-; CHECK-NOT: {{[a-z]+}} [[CSR]]
+; CHECKXX-NOT: {{[a-z]+}} [[CSR]]
 ; CHECK: blr
 define signext i32 @transpose() {
 entry:

@@ -16,6 +16,22 @@ namespace clang {
 namespace tidy {
 namespace misc {
 
+UniqueptrResetReleaseCheck::UniqueptrResetReleaseCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      Inserter(Options.getLocalOrGlobal("IncludeStyle",
+                                        utils::IncludeSorter::IS_LLVM)) {}
+
+void UniqueptrResetReleaseCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IncludeStyle", Inserter.getStyle());
+}
+
+void UniqueptrResetReleaseCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  Inserter.registerPreprocessor(PP);
+}
+
 void UniqueptrResetReleaseCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxMemberCallExpr(
@@ -103,12 +119,15 @@ void UniqueptrResetReleaseCheck::check(const MatchFinder::MatchResult &Result) {
 
   StringRef AssignmentText = " = ";
   StringRef TrailingText = "";
+  bool NeedsUtilityInclude = false;
   if (ReleaseMember->isArrow()) {
     AssignmentText = " = std::move(*";
     TrailingText = ")";
+    NeedsUtilityInclude = true;
   } else if (!Right->isRValue()) {
     AssignmentText = " = std::move(";
     TrailingText = ")";
+    NeedsUtilityInclude = true;
   }
 
   auto D = diag(ResetMember->getExprLoc(),
@@ -123,8 +142,11 @@ void UniqueptrResetReleaseCheck::check(const MatchFinder::MatchResult &Result) {
            CharSourceRange::getTokenRange(ReleaseMember->getOperatorLoc(),
                                           ResetCall->getEndLoc()),
            TrailingText);
+  if (NeedsUtilityInclude)
+    D << Inserter.createIncludeInsertion(
+        Result.SourceManager->getFileID(ResetMember->getBeginLoc()),
+        "<utility>");
 }
-
 } // namespace misc
 } // namespace tidy
 } // namespace clang

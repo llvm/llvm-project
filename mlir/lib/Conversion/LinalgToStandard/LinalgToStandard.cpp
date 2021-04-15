@@ -106,6 +106,10 @@ LogicalResult mlir::linalg::LinalgOpToLibraryCallRewrite::matchAndRewrite(
   if (isa<CopyOp>(op) || isa<IndexedGenericOp>(op))
     return failure();
 
+  // TODO: remove once index ops are supported.
+  if (op.hasIndexSemantics())
+    return failure();
+
   auto libraryCallName = getLibraryCallSymbolRef(op, rewriter);
   if (!libraryCallName)
     return failure();

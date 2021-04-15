@@ -9,7 +9,7 @@
 _main:
   ret
 
-.section	__DATA,__thread_vars,thread_local_variables
-.globl	_foo, _bar
+.section __DATA,__thread_vars,thread_local_variables
+.globl _foo, _bar
 _foo:
   movq _bar@GOTPCREL(%rip), %rax

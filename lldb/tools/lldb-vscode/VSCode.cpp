@@ -40,8 +40,10 @@ VSCode::VSCode()
            {"swift_catch", "Swift Catch", lldb::eLanguageTypeSwift},
            {"swift_throw", "Swift Throw", lldb::eLanguageTypeSwift}}),
       focus_tid(LLDB_INVALID_THREAD_ID), sent_terminated_event(false),
-      stop_at_entry(false), is_attach(false),
-      reverse_request_seq(0), waiting_for_run_in_terminal(false) {
+      stop_at_entry(false), is_attach(false), reverse_request_seq(0),
+      waiting_for_run_in_terminal(false),
+      progress_event_queue(
+          [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }) {
   const char *log_file_path = getenv("LLDBVSCODE_LOG");
 #if defined(_WIN32)
   // Windows opens stdout and stdin in text mode which converts \n to 13,10
@@ -320,51 +322,8 @@ void VSCode::SendOutput(OutputType o, const llvm::StringRef output) {
 //   };
 // }
 
-void VSCode::SendProgressEvent(uint64_t progress_id, const char *message,
-                               uint64_t completed, uint64_t total) {
-  enum ProgressEventType {
-    progressInvalid,
-    progressStart,
-    progressUpdate,
-    progressEnd
-  };
-  const char *event_name = nullptr;
-  ProgressEventType event_type = progressInvalid;
-  if (completed == 0) {
-    event_type = progressStart;
-    event_name = "progressStart";
-  } else if (completed == total) {
-    event_type = progressEnd;
-    event_name = "progressEnd";
-  } else if (completed < total) {
-    event_type = progressUpdate;
-    event_name = "progressUpdate";
-  }
-  if (event_type == progressInvalid)
-    return;
-
-  llvm::json::Object event(CreateEventObject(event_name));
-  llvm::json::Object body;
-  std::string progress_id_str;
-  llvm::raw_string_ostream progress_id_strm(progress_id_str);
-  progress_id_strm << progress_id;
-  progress_id_strm.flush();
-  body.try_emplace("progressId", progress_id_str);
-  if (event_type == progressStart) {
-    EmplaceSafeString(body, "title", message);
-    body.try_emplace("cancellable", false);
-  }
-  auto now = std::chrono::duration<double>(
-      std::chrono::system_clock::now().time_since_epoch());
-  std::string timestamp(llvm::formatv("{0:f9}", now.count()));
-  EmplaceSafeString(body, "timestamp", timestamp);
-
-  if (0 < total && total < UINT64_MAX) {
-    uint32_t percentage = (uint32_t)(((float)completed / (float)total) * 100.0);
-    body.try_emplace("percentage", percentage);
-  }
-  event.try_emplace("body", std::move(body));
-  SendJSON(llvm::json::Value(std::move(event)));
+void VSCode::SendProgressEvent(const ProgressEvent &event) {
+  progress_event_queue.Push(event);
 }
 
 void __attribute__((format(printf, 3, 4)))

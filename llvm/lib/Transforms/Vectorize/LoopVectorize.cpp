@@ -116,6 +116,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -514,8 +515,7 @@ public:
   /// variable canonicalization. It supports both VF = 1 for unrolled loops and
   /// arbitrary length vectors.
   void widenPHIInstruction(Instruction *PN, RecurrenceDescriptor *RdxDesc,
-                           VPValue *StartV, VPValue *Def,
-                           VPTransformState &State);
+                           VPWidenPHIRecipe *PhiR, VPTransformState &State);
 
   /// A helper function to scalarize a single Instruction in the innermost loop.
   /// Generates a sequence of scalar instances for each lane between \p MinLane
@@ -2675,8 +2675,6 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   // pointer operand of the interleaved access is supposed to be uniform. For
   // uniform instructions, we're only required to generate a value for the
   // first vector lane in each unroll iteration.
-  assert(!VF.isScalable() &&
-         "scalable vector reverse operation is not implemented");
   if (Group->isReverse())
     Index += (VF.getKnownMinValue() - 1) * Group->getFactor();
 
@@ -2713,7 +2711,6 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
 
   Value *MaskForGaps = nullptr;
   if (Group->requiresScalarEpilogue() && !Cost->isScalarEpilogueAllowed()) {
-    assert(!VF.isScalable() && "scalable vectors not yet supported.");
     MaskForGaps = createBitMaskForGaps(Builder, VF.getKnownMinValue(), *Group);
     assert(MaskForGaps && "Mask for Gaps is required but it is null");
   }
@@ -2730,7 +2727,6 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         Value *GroupMask = MaskForGaps;
         if (BlockInMask) {
           Value *BlockInMaskPart = State.get(BlockInMask, Part);
-          assert(!VF.isScalable() && "scalable vectors not yet supported.");
           Value *ShuffledMask = Builder.CreateShuffleVector(
               BlockInMaskPart,
               createReplicatedMask(InterleaveFactor, VF.getKnownMinValue()),
@@ -2761,7 +2757,6 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
       if (!Member)
         continue;
 
-      assert(!VF.isScalable() && "scalable vectors not yet supported.");
       auto StrideMask =
           createStrideMask(I, InterleaveFactor, VF.getKnownMinValue());
       for (unsigned Part = 0; Part < UF; Part++) {
@@ -2786,7 +2781,6 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   }
 
   // The sub vector type for current instruction.
-  assert(!VF.isScalable() && "VF is assumed to be non scalable.");
   auto *SubVT = VectorType::get(ScalarTy, VF);
 
   // Vectorize the interleaved store group.
@@ -2814,7 +2808,6 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
     Value *WideVec = concatenateVectors(Builder, StoredVecs);
 
     // Interleave the elements in the wide vector.
-    assert(!VF.isScalable() && "scalable vectors not yet supported.");
     Value *IVec = Builder.CreateShuffleVector(
         WideVec, createInterleaveMask(VF.getKnownMinValue(), InterleaveFactor),
         "interleaved.vec");
@@ -4660,7 +4653,7 @@ void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, VPValue *VPDef,
 
 void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
                                               RecurrenceDescriptor *RdxDesc,
-                                              VPValue *StartVPV, VPValue *Def,
+                                              VPWidenPHIRecipe *PhiR,
                                               VPTransformState &State) {
   PHINode *P = cast<PHINode>(PN);
   if (EnableVPlanNativePath) {
@@ -4672,7 +4665,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
                       ? PN->getType()
                       : VectorType::get(PN->getType(), State.VF);
     Value *VecPhi = Builder.CreatePHI(VecTy, PN->getNumOperands(), "vec.phi");
-    State.set(Def, VecPhi, 0);
+    State.set(PhiR, VecPhi, 0);
     OrigPHIsToFix.push_back(P);
 
     return;
@@ -4681,6 +4674,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
   assert(PN->getParent() == OrigLoop->getHeader() &&
          "Non-header phis should have been handled elsewhere");
 
+  VPValue *StartVPV = PhiR->getStartValue();
   Value *StartV = StartVPV ? StartVPV->getLiveInIRValue() : nullptr;
   // In order to support recurrences we need to be able to vectorize Phi nodes.
   // Phi nodes have cycles, so we need to vectorize them in two stages. This is
@@ -4727,7 +4721,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
       // This is phase one of vectorizing PHIs.
       Value *EntryPart = PHINode::Create(
           VecTy, 2, "vec.phi", &*LoopVectorBody->getFirstInsertionPt());
-      State.set(Def, EntryPart, Part);
+      State.set(PhiR, EntryPart, Part);
       if (StartV) {
         // Make sure to add the reduction start value only to the
         // first unroll part.
@@ -4781,7 +4775,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
           Value *SclrGep =
               emitTransformedIndex(Builder, GlobalIdx, PSE.getSE(), DL, II);
           SclrGep->setName("next.gep");
-          State.set(Def, SclrGep, VPIteration(Part, Lane));
+          State.set(PhiR, SclrGep, VPIteration(Part, Lane));
         }
       }
       return;
@@ -4829,7 +4823,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
                             Builder.CreateVectorSplat(
                                 State.VF.getKnownMinValue(), ScalarStepValue),
                             "vector.gep"));
-      State.set(Def, GEP, Part);
+      State.set(PhiR, GEP, Part);
     }
   }
   }
@@ -6777,7 +6771,9 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
                                                         ElementCount VF) {
   assert(VF.isVector() &&
          "Scalarization cost of instruction implies vectorization.");
-  assert(!VF.isScalable() && "scalable vectors not yet supported.");
+  if (VF.isScalable())
+    return InstructionCost::getInvalid();
+
   Type *ValTy = getMemInstValueType(I);
   auto SE = PSE.getSE();
 
@@ -6989,8 +6985,8 @@ InstructionCost LoopVectorizationCostModel::getReductionPatternCost(
 
   RecurrenceDescriptor RdxDesc =
       Legal->getReductionVars()[cast<PHINode>(ReductionPhi)];
-  unsigned BaseCost = TTI.getArithmeticReductionCost(RdxDesc.getOpcode(),
-                                                     VectorTy, false, CostKind);
+  InstructionCost BaseCost = TTI.getArithmeticReductionCost(
+      RdxDesc.getOpcode(), VectorTy, false, CostKind);
 
   // Get the operand that was not the reduction chain and match it to one of the
   // patterns, returning the better cost if it is found.
@@ -7008,7 +7004,7 @@ InstructionCost LoopVectorizationCostModel::getReductionPatternCost(
         /*IsMLA=*/false, IsUnsigned, RdxDesc.getRecurrenceType(), ExtType,
         CostKind);
 
-    unsigned ExtCost =
+    InstructionCost ExtCost =
         TTI.getCastInstrCost(RedOp->getOpcode(), VectorTy, ExtType,
                              TTI::CastContextHint::None, CostKind, RedOp);
     if (RedCost.isValid() && RedCost < BaseCost + ExtCost)
@@ -7024,7 +7020,7 @@ InstructionCost LoopVectorizationCostModel::getReductionPatternCost(
       bool IsUnsigned = isa<ZExtInst>(Op0);
       auto *ExtType = VectorType::get(Op0->getOperand(0)->getType(), VectorTy);
       // reduce(mul(ext, ext))
-      unsigned ExtCost =
+      InstructionCost ExtCost =
           TTI.getCastInstrCost(Op0->getOpcode(), VectorTy, ExtType,
                                TTI::CastContextHint::None, CostKind, Op0);
       InstructionCost MulCost =
@@ -7202,8 +7198,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
               : InstructionCost::getInvalid();
 
       InstructionCost ScalarizationCost =
-          !VF.isScalable() ? getMemInstScalarizationCost(&I, VF) * NumAccesses
-                           : InstructionCost::getInvalid();
+          getMemInstScalarizationCost(&I, VF) * NumAccesses;
 
       // Choose better solution for the current VF,
       // write down this decision and use it during vectorization.
@@ -7450,6 +7445,26 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     SelectInst *SI = cast<SelectInst>(I);
     const SCEV *CondSCEV = SE->getSCEV(SI->getCondition());
     bool ScalarCond = (SE->isLoopInvariant(CondSCEV, TheLoop));
+
+    const Value *Op0, *Op1;
+    using namespace llvm::PatternMatch;
+    if (!ScalarCond && (match(I, m_LogicalAnd(m_Value(Op0), m_Value(Op1))) ||
+                        match(I, m_LogicalOr(m_Value(Op0), m_Value(Op1))))) {
+      // select x, y, false --> x & y
+      // select x, true, y --> x | y
+      TTI::OperandValueProperties Op1VP = TTI::OP_None;
+      TTI::OperandValueProperties Op2VP = TTI::OP_None;
+      TTI::OperandValueKind Op1VK = TTI::getOperandInfo(Op0, Op1VP);
+      TTI::OperandValueKind Op2VK = TTI::getOperandInfo(Op1, Op2VP);
+      assert(Op0->getType()->getScalarSizeInBits() == 1 &&
+              Op1->getType()->getScalarSizeInBits() == 1);
+
+      SmallVector<const Value *, 2> Operands{Op0, Op1};
+      return TTI.getArithmeticInstrCost(
+          match(I, m_LogicalOr()) ? Instruction::Or : Instruction::And, VectorTy,
+          CostKind, Op1VK, Op2VK, Op1VP, Op2VP, Operands, I);
+    }
+
     Type *CondTy = SI->getCondition()->getType();
     if (!ScalarCond)
       CondTy = VectorType::get(CondTy, VF);
@@ -9163,7 +9178,7 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
   State.ILV->widenPHIInstruction(cast<PHINode>(getUnderlyingValue()), RdxDesc,
-                                 getStartValue(), this, State);
+                                 this, State);
 }
 
 void VPBlendRecipe::execute(VPTransformState &State) {

@@ -323,10 +323,23 @@ Error evalData(const AccessData &Data, const MatchFinder::MatchResult &Match,
     return llvm::make_error<StringError>(errc::invalid_argument,
                                          "Id not bound: " + Data.BaseId);
   if (!E->isImplicitCXXThis()) {
-    if (llvm::Optional<std::string> S =
-            E->getType()->isAnyPointerType()
-                ? tooling::buildArrow(*E, *Match.Context)
-                : tooling::buildDot(*E, *Match.Context))
+    llvm::Optional<std::string> S;
+    if (E->getType()->isAnyPointerType() ||
+        isSmartPointerType(E->getType(), *Match.Context)) {
+      // Strip off any operator->. This can only occur inside an actual arrow
+      // member access, so we treat it as equivalent to an actual object
+      // expression.
+      if (const auto *OpCall = dyn_cast<clang::CXXOperatorCallExpr>(E)) {
+        if (OpCall->getOperator() == clang::OO_Arrow &&
+            OpCall->getNumArgs() == 1) {
+          E = OpCall->getArg(0);
+        }
+      }
+      S = tooling::buildArrow(*E, *Match.Context);
+    } else {
+      S = tooling::buildDot(*E, *Match.Context);
+    }
+    if (S.hasValue())
       *Result += *S;
     else
       return llvm::make_error<StringError>(

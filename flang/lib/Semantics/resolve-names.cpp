@@ -235,7 +235,7 @@ public:
   Attrs GetAttrs();
   Attrs EndAttrs();
   bool SetPassNameOn(Symbol &);
-  bool SetBindNameOn(Symbol &);
+  void SetBindNameOn(Symbol &);
   void Post(const parser::LanguageBindingSpec &);
   bool Pre(const parser::IntentSpec &);
   bool Pre(const parser::Pass &);
@@ -1529,28 +1529,26 @@ bool AttrsVisitor::SetPassNameOn(Symbol &symbol) {
   return true;
 }
 
-bool AttrsVisitor::SetBindNameOn(Symbol &symbol) {
+void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
   if (!attrs_ || !attrs_->test(Attr::BIND_C)) {
-    return false;
+    return;
   }
   std::optional<std::string> label{evaluate::GetScalarConstantValue<
       evaluate::Type<TypeCategory::Character, 1>>(bindName_)};
   // 18.9.2(2): discard leading and trailing blanks, ignore if all blank
   if (label) {
     auto first{label->find_first_not_of(" ")};
-    auto last{label->find_last_not_of(" ")};
     if (first == std::string::npos) {
+      // Empty NAME= means no binding at all (18.10.2p2)
       Say(currStmtSource().value(), "Blank binding label ignored"_en_US);
-      label.reset();
-    } else {
-      label = label->substr(first, last - first + 1);
+      return;
     }
-  }
-  if (!label) {
+    auto last{label->find_last_not_of(" ")};
+    label = label->substr(first, last - first + 1);
+  } else {
     label = parser::ToLowerCaseLetters(symbol.name().ToString());
   }
   symbol.SetBindName(std::move(*label));
-  return true;
 }
 
 void AttrsVisitor::Post(const parser::LanguageBindingSpec &x) {
@@ -2237,7 +2235,7 @@ const DeclTypeSpec *ScopeHandler::GetImplicitType(
     if (const DerivedTypeSpec * derived{type->AsDerived()}) {
       // Resolve any forward-referenced derived type; a quick no-op else.
       auto &instantiatable{*const_cast<DerivedTypeSpec *>(derived)};
-      instantiatable.Instantiate(currScope(), context());
+      instantiatable.Instantiate(currScope());
     }
   }
   return type;
@@ -3931,7 +3929,7 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
     } else {
       auto restorer{
           GetFoldingContext().messages().SetLocation(currStmtSource().value())};
-      derived.Instantiate(currScope(), context());
+      derived.Instantiate(currScope());
     }
     SetDeclTypeSpec(type);
   }
@@ -6827,7 +6825,7 @@ void ResolveNamesVisitor::FinishSpecificationParts(const ProgramTree &node) {
 void ResolveNamesVisitor::FinishDerivedTypeInstantiation(Scope &scope) {
   CHECK(scope.IsDerivedType() && !scope.symbol());
   if (DerivedTypeSpec * spec{scope.derivedTypeSpec()}) {
-    spec->Instantiate(currScope(), context());
+    spec->Instantiate(currScope());
     const Symbol &origTypeSymbol{spec->typeSymbol()};
     if (const Scope * origTypeScope{origTypeSymbol.scope()}) {
       CHECK(origTypeScope->IsDerivedType() &&

@@ -51,7 +51,7 @@ template <> inline long double sqrt<long double, 0>(long double x) {
   FPBits<long double> bits(x);
 
   if (bits.isInfOrNaN()) {
-    if (bits.sign && (bits.mantissa == 0)) {
+    if (bits.encoding.sign && (bits.encoding.mantissa == 0)) {
       // sqrt(-Inf) = NaN
       return FPBits<long double>::buildNaN(One >> 1);
     } else {
@@ -63,17 +63,17 @@ template <> inline long double sqrt<long double, 0>(long double x) {
     // sqrt(+0) = +0
     // sqrt(-0) = -0
     return x;
-  } else if (bits.sign) {
+  } else if (bits.encoding.sign) {
     // sqrt( negative numbers ) = NaN
     return FPBits<long double>::buildNaN(One >> 1);
   } else {
     int xExp = bits.getExponent();
-    UIntType xMant = bits.mantissa;
+    UIntType xMant = bits.encoding.mantissa;
 
     // Step 1a: Normalize denormal input
-    if (bits.implicitBit) {
+    if (bits.encoding.implicitBit) {
       xMant |= One;
-    } else if (bits.exponent == 0) {
+    } else if (bits.encoding.exponent == 0) {
       internal::normalize<long double>(xExp, xMant);
     }
 
@@ -129,9 +129,9 @@ template <> inline long double sqrt<long double, 0>(long double x) {
 
     // Extract output
     FPBits<long double> out(0.0L);
-    out.exponent = xExp;
-    out.implicitBit = 1;
-    out.mantissa = (y & (One - 1));
+    out.encoding.exponent = xExp;
+    out.encoding.implicitBit = 1;
+    out.encoding.mantissa = (y & (One - 1));
 
     return out;
   }

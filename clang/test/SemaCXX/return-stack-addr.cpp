@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected       %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected       %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=expected,cxx11 %s
 
 int* ret_local() {
   int x = 1;
@@ -179,12 +181,12 @@ void ret_from_lambda() {
   };
   (void) [] {
     int a;
-    // expected-warning@+1 {{C++14}}
+    // cxx11-warning@+1 {{C++14}}
     return [&b = a] {}; // expected-warning {{address of stack memory associated with local variable 'a' returned}} expected-note {{captured by reference via initialization of lambda capture 'b'}}
   };
   (void) [] {
     int a;
-    // expected-warning@+1 {{C++14}}
+    // cxx11-warning@+1 {{C++14}}
     return [b = &a] {}; // expected-warning {{address of stack memory associated with local variable 'a' returned}} expected-note {{captured via initialization of lambda capture 'b'}}
   };
 }
@@ -197,7 +199,7 @@ HoldsPointer ret_via_member_1() {
 }
 HoldsPointer ret_via_member_2() {
   int n;
-  return HoldsPointer(HoldsPointer{&n}); // expected-warning {{address of stack memory associated with local variable 'n' returned}}
+  return HoldsPointer(HoldsPointer{&n}); // cxx11-warning {{address of stack memory associated with local variable 'n' returned}}
 }
 // FIXME: We could diagnose this too.
 HoldsPointer ret_via_member_3() {

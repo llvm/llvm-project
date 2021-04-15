@@ -1302,8 +1302,8 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
                                            bool IsVariadic) {
   if (Values.empty())
     return true;
-  SDDbgValue::LocOpVector LocationOps;
-  SDDbgValue::SDNodeVector Dependencies;
+  SmallVector<SDDbgOperand> LocationOps;
+  SmallVector<SDNode *> Dependencies;
   for (const Value *V : Values) {
     // Constant value.
     if (isa<ConstantInt>(V) || isa<ConstantFP>(V) || isa<UndefValue>(V) ||
@@ -1331,7 +1331,6 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
       // Only emit func arg dbg value for non-variadic dbg.values for now.
       if (!IsVariadic && EmitFuncArgumentDbgValue(V, Var, Expr, dl, false, N))
         return true;
-      Dependencies.push_back(N.getNode());
       if (auto *FISDN = dyn_cast<FrameIndexSDNode>(N.getNode())) {
         // Construct a FrameIndexDbgValue for FrameIndexSDNodes so we can
         // describe stack slot locations.
@@ -1343,6 +1342,7 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
         //   dbg.value(i32* %px, !"int x", !DIExpression(DW_OP_deref))
         //
         // Both describe the direct values of their associated variables.
+        Dependencies.push_back(N.getNode());
         LocationOps.emplace_back(SDDbgOperand::fromFrameIdx(FISDN->getIndex()));
         continue;
       }

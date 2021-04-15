@@ -31,7 +31,7 @@ func @kernel2(%arg0: memref<2x4xbf16>,
   return
 }
 
-func @entry() {
+func @entry() -> i32 {
   %f0 = constant 0.0: f32
   %c0 = constant 0: index
   %c1 = constant 1: index
@@ -79,5 +79,6 @@ func @entry() {
   memref.dealloc %b : memref<2x4xbf16>
   memref.dealloc %c : memref<2x2xf32>
 
-  return
+  %i0 = constant 0 : i32
+  return %i0 : i32
 }

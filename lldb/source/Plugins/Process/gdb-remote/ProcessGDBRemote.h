@@ -335,7 +335,7 @@ protected:
 
   size_t UpdateThreadPCsFromStopReplyThreadsValue(std::string &value);
 
-  size_t UpdateThreadIDsFromStopReplyThreadsValue(std::string &value);
+  size_t UpdateThreadIDsFromStopReplyThreadsValue(llvm::StringRef value);
 
   bool HandleNotifyPacket(StringExtractorGDBRemote &packet);
 

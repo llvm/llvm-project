@@ -69,6 +69,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -546,19 +547,38 @@ private:
 
   bool isUnusedCalleeSavedReg(MCRegister PhysReg) const;
 
-  /// Compute and report the number of spills and reloads for a loop.
-  void reportNumberOfSplillsReloads(MachineLoop *L, unsigned &Reloads,
-                                    unsigned &FoldedReloads, unsigned &Spills,
-                                    unsigned &FoldedSpills);
+  /// Greedy RA statistic to remark.
+  struct RAGreedyStats {
+    unsigned Reloads = 0;
+    unsigned FoldedReloads = 0;
+    unsigned ZeroCostFoldedReloads = 0;
+    unsigned Spills = 0;
+    unsigned FoldedSpills = 0;
+
+    bool isEmpty() {
+      return !(Reloads || FoldedReloads || Spills || FoldedSpills ||
+               ZeroCostFoldedReloads);
+    }
+
+    void add(RAGreedyStats other) {
+      Reloads += other.Reloads;
+      FoldedReloads += other.FoldedReloads;
+      ZeroCostFoldedReloads += other.ZeroCostFoldedReloads;
+      Spills += other.Spills;
+      FoldedSpills += other.FoldedSpills;
+    }
+
+    void report(MachineOptimizationRemarkMissed &R);
+  };
+
+  /// Compute the number of spills and reloads for a basic block.
+  RAGreedyStats computeNumberOfSplillsReloads(MachineBasicBlock &MBB);
+
+  /// Compute and report the number of spills through a remark.
+  RAGreedyStats reportNumberOfSplillsReloads(MachineLoop *L);
 
   /// Report the number of spills and reloads for each loop.
-  void reportNumberOfSplillsReloads() {
-    for (MachineLoop *L : *Loops) {
-      unsigned Reloads, FoldedReloads, Spills, FoldedSpills;
-      reportNumberOfSplillsReloads(L, Reloads, FoldedReloads, Spills,
-                                   FoldedSpills);
-    }
-  }
+  void reportNumberOfSplillsReloads();
 };
 
 } // end anonymous namespace
@@ -3112,72 +3132,130 @@ MCRegister RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
   return 0;
 }
 
-void RAGreedy::reportNumberOfSplillsReloads(MachineLoop *L, unsigned &Reloads,
-                                            unsigned &FoldedReloads,
-                                            unsigned &Spills,
-                                            unsigned &FoldedSpills) {
-  Reloads = 0;
-  FoldedReloads = 0;
-  Spills = 0;
-  FoldedSpills = 0;
+void RAGreedy::RAGreedyStats::report(MachineOptimizationRemarkMissed &R) {
+  using namespace ore;
+  if (Spills)
+    R << NV("NumSpills", Spills) << " spills ";
+  if (FoldedSpills)
+    R << NV("NumFoldedSpills", FoldedSpills) << " folded spills ";
+  if (Reloads)
+    R << NV("NumReloads", Reloads) << " reloads ";
+  if (FoldedReloads)
+    R << NV("NumFoldedReloads", FoldedReloads) << " folded reloads ";
+  if (ZeroCostFoldedReloads)
+    R << NV("NumZeroCostFoldedReloads", ZeroCostFoldedReloads)
+      << " zero cost folded reloads ";
+}
 
-  // Sum up the spill and reloads in subloops.
-  for (MachineLoop *SubLoop : *L) {
-    unsigned SubReloads;
-    unsigned SubFoldedReloads;
-    unsigned SubSpills;
-    unsigned SubFoldedSpills;
-
-    reportNumberOfSplillsReloads(SubLoop, SubReloads, SubFoldedReloads,
-                                 SubSpills, SubFoldedSpills);
-    Reloads += SubReloads;
-    FoldedReloads += SubFoldedReloads;
-    Spills += SubSpills;
-    FoldedSpills += SubFoldedSpills;
-  }
-
+RAGreedy::RAGreedyStats
+RAGreedy::computeNumberOfSplillsReloads(MachineBasicBlock &MBB) {
+  RAGreedyStats Stats;
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   int FI;
+
+  auto isSpillSlotAccess = [&MFI](const MachineMemOperand *A) {
+    return MFI.isSpillSlotObjectIndex(cast<FixedStackPseudoSourceValue>(
+        A->getPseudoValue())->getFrameIndex());
+  };
+  auto isPatchpointInstr = [](const MachineInstr &MI) {
+    return MI.getOpcode() == TargetOpcode::PATCHPOINT ||
+           MI.getOpcode() == TargetOpcode::STACKMAP ||
+           MI.getOpcode() == TargetOpcode::STATEPOINT;
+  };
+  for (MachineInstr &MI : MBB) {
+    SmallVector<const MachineMemOperand *, 2> Accesses;
+
+    if (TII->isLoadFromStackSlot(MI, FI) && MFI.isSpillSlotObjectIndex(FI)) {
+      ++Stats.Reloads;
+      continue;
+    }
+    if (TII->isStoreToStackSlot(MI, FI) && MFI.isSpillSlotObjectIndex(FI)) {
+      ++Stats.Spills;
+      continue;
+    }
+    if (TII->hasLoadFromStackSlot(MI, Accesses) &&
+        llvm::any_of(Accesses, isSpillSlotAccess)) {
+      if (!isPatchpointInstr(MI)) {
+        Stats.FoldedReloads += Accesses.size();
+        continue;
+      }
+      // For statepoint there may be folded and zero cost folded stack reloads.
+      std::pair<unsigned, unsigned> NonZeroCostRange =
+          TII->getPatchpointUnfoldableRange(MI);
+      SmallSet<unsigned, 16> FoldedReloads;
+      SmallSet<unsigned, 16> ZeroCostFoldedReloads;
+      for (unsigned Idx = 0, E = MI.getNumOperands(); Idx < E; ++Idx) {
+        MachineOperand &MO = MI.getOperand(Idx);
+        if (!MO.isFI() || !MFI.isSpillSlotObjectIndex(MO.getIndex()))
+          continue;
+        if (Idx >= NonZeroCostRange.first && Idx < NonZeroCostRange.second)
+          FoldedReloads.insert(MO.getIndex());
+        else
+          ZeroCostFoldedReloads.insert(MO.getIndex());
+      }
+      // If stack slot is used in folded reload it is not zero cost then.
+      for (unsigned Slot : FoldedReloads)
+        ZeroCostFoldedReloads.erase(Slot);
+      Stats.FoldedReloads += FoldedReloads.size();
+      Stats.ZeroCostFoldedReloads += ZeroCostFoldedReloads.size();
+      continue;
+    }
+    Accesses.clear();
+    if (TII->hasStoreToStackSlot(MI, Accesses) &&
+        llvm::any_of(Accesses, isSpillSlotAccess)) {
+      Stats.FoldedSpills += Accesses.size();
+    }
+  }
+  return Stats;
+}
+
+RAGreedy::RAGreedyStats RAGreedy::reportNumberOfSplillsReloads(MachineLoop *L) {
+  RAGreedyStats Stats;
+
+  // Sum up the spill and reloads in subloops.
+  for (MachineLoop *SubLoop : *L)
+    Stats.add(reportNumberOfSplillsReloads(SubLoop));
 
   for (MachineBasicBlock *MBB : L->getBlocks())
     // Handle blocks that were not included in subloops.
     if (Loops->getLoopFor(MBB) == L)
-      for (MachineInstr &MI : *MBB) {
-        SmallVector<const MachineMemOperand *, 2> Accesses;
-        auto isSpillSlotAccess = [&MFI](const MachineMemOperand *A) {
-          return MFI.isSpillSlotObjectIndex(
-              cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
-                  ->getFrameIndex());
-        };
+      Stats.add(computeNumberOfSplillsReloads(*MBB));
 
-        if (TII->isLoadFromStackSlot(MI, FI) && MFI.isSpillSlotObjectIndex(FI))
-          ++Reloads;
-        else if (TII->hasLoadFromStackSlot(MI, Accesses) &&
-                 llvm::any_of(Accesses, isSpillSlotAccess))
-          ++FoldedReloads;
-        else if (TII->isStoreToStackSlot(MI, FI) &&
-                 MFI.isSpillSlotObjectIndex(FI))
-          ++Spills;
-        else if (TII->hasStoreToStackSlot(MI, Accesses) &&
-                 llvm::any_of(Accesses, isSpillSlotAccess))
-          ++FoldedSpills;
-      }
-
-  if (Reloads || FoldedReloads || Spills || FoldedSpills) {
+  if (!Stats.isEmpty()) {
     using namespace ore;
 
     ORE->emit([&]() {
       MachineOptimizationRemarkMissed R(DEBUG_TYPE, "LoopSpillReload",
                                         L->getStartLoc(), L->getHeader());
-      if (Spills)
-        R << NV("NumSpills", Spills) << " spills ";
-      if (FoldedSpills)
-        R << NV("NumFoldedSpills", FoldedSpills) << " folded spills ";
-      if (Reloads)
-        R << NV("NumReloads", Reloads) << " reloads ";
-      if (FoldedReloads)
-        R << NV("NumFoldedReloads", FoldedReloads) << " folded reloads ";
+      Stats.report(R);
       R << "generated in loop";
+      return R;
+    });
+  }
+  return Stats;
+}
+
+void RAGreedy::reportNumberOfSplillsReloads() {
+  if (!ORE->allowExtraAnalysis(DEBUG_TYPE))
+    return;
+  RAGreedyStats Stats;
+  for (MachineLoop *L : *Loops)
+    Stats.add(reportNumberOfSplillsReloads(L));
+  // Process non-loop blocks.
+  for (MachineBasicBlock &MBB : *MF)
+    if (!Loops->getLoopFor(&MBB))
+      Stats.add(computeNumberOfSplillsReloads(MBB));
+  if (!Stats.isEmpty()) {
+    using namespace ore;
+
+    ORE->emit([&]() {
+      DebugLoc Loc;
+      if (auto *SP = MF->getFunction().getSubprogram())
+        Loc = DILocation::get(SP->getContext(), SP->getLine(), 1, SP);
+      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "SpillReload", Loc,
+                                        &MF->front());
+      Stats.report(R);
+      R << "generated in function";
       return R;
     });
   }

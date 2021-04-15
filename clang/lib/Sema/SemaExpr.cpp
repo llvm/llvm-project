@@ -6874,9 +6874,12 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
             diag::err_array_incomplete_or_sizeless_type,
             SourceRange(LParenLoc, LiteralExpr->getSourceRange().getEnd())))
       return ExprError();
-    if (literalType->isVariableArrayType())
-      return ExprError(Diag(LParenLoc, diag::err_variable_object_no_init)
-        << SourceRange(LParenLoc, LiteralExpr->getSourceRange().getEnd()));
+    if (literalType->isVariableArrayType()) {
+      if (!tryToFixVariablyModifiedVarType(TInfo, literalType, LParenLoc,
+                                           diag::err_variable_object_no_init)) {
+        return ExprError();
+      }
+    }
   } else if (!literalType->isDependentType() &&
              RequireCompleteType(LParenLoc, literalType,
                diag::err_typecheck_decl_incomplete_type,
@@ -7345,6 +7348,19 @@ bool Sema::isValidSveBitcast(QualType srcTy, QualType destTy) {
          ValidScalableConversion(destTy, srcTy);
 }
 
+/// Are the two types matrix types and do they have the same dimensions i.e.
+/// do they have the same number of rows and the same number of columns?
+bool Sema::areMatrixTypesOfTheSameDimension(QualType srcTy, QualType destTy) {
+  if (!destTy->isMatrixType() || !srcTy->isMatrixType())
+    return false;
+
+  const ConstantMatrixType *matSrcType = srcTy->getAs<ConstantMatrixType>();
+  const ConstantMatrixType *matDestType = destTy->getAs<ConstantMatrixType>();
+
+  return matSrcType->getNumRows() == matDestType->getNumRows() &&
+         matSrcType->getNumColumns() == matDestType->getNumColumns();
+}
+
 /// Are the two types lax-compatible vector types?  That is, given
 /// that one of them is a vector, do they have equal storage sizes,
 /// where the storage size is the number of elements times the element
@@ -7405,6 +7421,27 @@ bool Sema::isLaxVectorConversion(QualType srcTy, QualType destTy) {
   }
 
   return areLaxCompatibleVectorTypes(srcTy, destTy);
+}
+
+bool Sema::CheckMatrixCast(SourceRange R, QualType DestTy, QualType SrcTy,
+                           CastKind &Kind) {
+  if (SrcTy->isMatrixType() && DestTy->isMatrixType()) {
+    if (!areMatrixTypesOfTheSameDimension(SrcTy, DestTy)) {
+      return Diag(R.getBegin(), diag::err_invalid_conversion_between_matrixes)
+             << DestTy << SrcTy << R;
+    }
+  } else if (SrcTy->isMatrixType()) {
+    return Diag(R.getBegin(),
+                diag::err_invalid_conversion_between_matrix_and_type)
+           << SrcTy << DestTy << R;
+  } else if (DestTy->isMatrixType()) {
+    return Diag(R.getBegin(),
+                diag::err_invalid_conversion_between_matrix_and_type)
+           << DestTy << SrcTy << R;
+  }
+
+  Kind = CK_MatrixCast;
+  return false;
 }
 
 bool Sema::CheckVectorCast(SourceRange R, QualType VectorTy, QualType Ty,

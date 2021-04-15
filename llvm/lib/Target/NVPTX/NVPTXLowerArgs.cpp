@@ -233,7 +233,7 @@ void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
 
   Type *StructType = PType->getElementType();
 
-  auto IsALoadChain = [Arg](Value *Start) {
+  auto IsALoadChain = [&](Value *Start) {
     SmallVector<Value *, 16> ValuesToCheck = {Start};
     auto IsALoadChainInstr = [](Value *V) -> bool {
       if (isa<GetElementPtrInst>(V) || isa<BitCastInst>(V) || isa<LoadInst>(V))
@@ -251,6 +251,7 @@ void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
       if (!IsALoadChainInstr(V)) {
         LLVM_DEBUG(dbgs() << "Need a copy of " << *Arg << " because of " << *V
                           << "\n");
+        (void)Arg;
         return false;
       }
       if (!isa<LoadInst>(V))

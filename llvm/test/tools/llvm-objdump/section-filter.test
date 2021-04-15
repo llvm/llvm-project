@@ -2,7 +2,7 @@
 ## We test the LMA here too, because the code at the time of writing uses the 
 ## value of --section when looking up section LMAs.
 # RUN: yaml2obj %s --docnum=1 -o %t.h.elf
-# RUN: llvm-objdump -h %t.h.elf -j=.text --section=.bss \
+# RUN: llvm-objdump -h %t.h.elf -j.text --section=.bss \
 # RUN:   | FileCheck %s --check-prefix=SHDRS --implicit-check-not=.data --implicit-check-not=.text2
 
 # SHDRS: Name  Size     VMA              LMA
@@ -92,21 +92,17 @@ Sections:
     Content: '666f6f626172' # "foobar"
 
 ## Test that the -j alias can be used flexibly. Create a baseline and ensure
-## all other combinations are identical.
+## all other combinations compatible with POSIX are identical.
 # RUN: llvm-objdump %t.h.elf -h -s --section .symtab > %t.full
 # RUN: llvm-objdump %t.h.elf -h -s -j .symtab > %t.1
-# RUN: llvm-objdump %t.h.elf -h -s -j=.symtab > %t.2
-# RUN: llvm-objdump %t.h.elf -h -s -j.symtab > %t.3
-# RUN: llvm-objdump %t.h.elf -hsj .symtab > %t.4
-# RUN: llvm-objdump %t.h.elf -hsj=.symtab > %t.5
-# RUN: llvm-objdump %t.h.elf -hsj.symtab > %t.6
+# RUN: llvm-objdump %t.h.elf -h -s -j.symtab > %t.2
+# RUN: llvm-objdump %t.h.elf -hsj .symtab > %t.3
+# RUN: llvm-objdump %t.h.elf -hsj.symtab > %t.4
 
 # RUN: cmp %t.full %t.1
 # RUN: cmp %t.full %t.2
 # RUN: cmp %t.full %t.3
 # RUN: cmp %t.full %t.4
-# RUN: cmp %t.full %t.5
-# RUN: cmp %t.full %t.6
 
 ## Test that an unknown section name causes all section output to be suppressed.
 # RUN: llvm-objdump %t.h.elf -h --section foobar \

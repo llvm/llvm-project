@@ -35,17 +35,16 @@
 namespace llvm {
 
 class AAResults;
+class AliasResult;
 class AliasSetTracker;
-class BasicBlock;
-class LoadInst;
 class AnyMemSetInst;
 class AnyMemTransferInst;
+class BasicBlock;
+class LoadInst;
 class raw_ostream;
 class StoreInst;
 class VAArgInst;
 class Value;
-
-enum AliasResult : uint8_t;
 
 class AliasSet : public ilist_node<AliasSet> {
   friend class AliasSetTracker;
@@ -233,11 +232,16 @@ public:
   void dump() const;
 
   /// Define an iterator for alias sets... this is just a forward iterator.
-  class iterator : public std::iterator<std::forward_iterator_tag,
-                                        PointerRec, ptrdiff_t> {
+  class iterator {
     PointerRec *CurNode;
 
   public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = PointerRec;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
     explicit iterator(PointerRec *CN = nullptr) : CurNode(CN) {}
 
     bool operator==(const iterator& x) const {

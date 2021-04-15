@@ -196,10 +196,8 @@ define <8 x float> @pair_sum_v8f32_v4f32(<4 x float> %0, <4 x float> %1, <4 x fl
 ; SSSE3-SLOW-NEXT:    addps %xmm1, %xmm3
 ; SSSE3-SLOW-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm3[0]
 ; SSSE3-SLOW-NEXT:    haddps %xmm7, %xmm6
-; SSSE3-SLOW-NEXT:    movaps %xmm6, %xmm1
-; SSSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm6[1]
-; SSSE3-SLOW-NEXT:    haddps %xmm1, %xmm6
-; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm3 = xmm3[2,3],xmm6[0,2]
+; SSSE3-SLOW-NEXT:    haddps %xmm6, %xmm6
+; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm3 = xmm3[2,3],xmm6[0,3]
 ; SSSE3-SLOW-NEXT:    movaps %xmm3, %xmm1
 ; SSSE3-SLOW-NEXT:    retq
 ;
@@ -241,9 +239,7 @@ define <8 x float> @pair_sum_v8f32_v4f32(<4 x float> %0, <4 x float> %1, <4 x fl
 ; AVX1-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
 ; AVX1-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; AVX1-SLOW-NEXT:    vhaddps %xmm7, %xmm6, %xmm2
-; AVX1-SLOW-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,1]
-; AVX1-SLOW-NEXT:    vhaddps %xmm3, %xmm2, %xmm2
-; AVX1-SLOW-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; AVX1-SLOW-NEXT:    vhaddps %xmm2, %xmm2, %xmm2
 ; AVX1-SLOW-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-SLOW-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[2]
 ; AVX1-SLOW-NEXT:    retq
@@ -291,9 +287,7 @@ define <8 x float> @pair_sum_v8f32_v4f32(<4 x float> %0, <4 x float> %1, <4 x fl
 ; AVX2-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; AVX2-SLOW-NEXT:    vhaddps %xmm7, %xmm6, %xmm2
-; AVX2-SLOW-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,1]
-; AVX2-SLOW-NEXT:    vhaddps %xmm3, %xmm2, %xmm2
-; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; AVX2-SLOW-NEXT:    vhaddps %xmm2, %xmm2, %xmm2
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[2]
 ; AVX2-SLOW-NEXT:    retq

@@ -1478,7 +1478,7 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
     return UnknownVal();
 
   if (const FieldRegion* FR = dyn_cast<FieldRegion>(R))
-    return CastRetrievedVal(getBindingForField(B, FR), FR, T);
+    return svalBuilder.evalCast(getBindingForField(B, FR), T, QualType{});
 
   if (const ElementRegion* ER = dyn_cast<ElementRegion>(R)) {
     // FIXME: Here we actually perform an implicit conversion from the loaded
@@ -1486,7 +1486,7 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
     // more intelligently.  For example, an 'element' can encompass multiple
     // bound regions (e.g., several bound bytes), or could be a subset of
     // a larger value.
-    return CastRetrievedVal(getBindingForElement(B, ER), ER, T);
+    return svalBuilder.evalCast(getBindingForElement(B, ER), T, QualType{});
   }
 
   if (const ObjCIvarRegion *IVR = dyn_cast<ObjCIvarRegion>(R)) {
@@ -1496,7 +1496,7 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
     // reinterpretted, it is possible we stored a different value that could
     // fit within the ivar.  Either we need to cast these when storing them
     // or reinterpret them lazily (as we do here).
-    return CastRetrievedVal(getBindingForObjCIvar(B, IVR), IVR, T);
+    return svalBuilder.evalCast(getBindingForObjCIvar(B, IVR), T, QualType{});
   }
 
   if (const VarRegion *VR = dyn_cast<VarRegion>(R)) {
@@ -1506,7 +1506,7 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
     // variable is reinterpretted, it is possible we stored a different value
     // that could fit within the variable.  Either we need to cast these when
     // storing them or reinterpret them lazily (as we do here).
-    return CastRetrievedVal(getBindingForVar(B, VR), VR, T);
+    return svalBuilder.evalCast(getBindingForVar(B, VR), T, QualType{});
   }
 
   const SVal *V = B.lookup(R, BindingKey::Direct);

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 
 ! When a module subprogram has the MODULE prefix the following must match
 ! with the corresponding separate module procedure interface body:

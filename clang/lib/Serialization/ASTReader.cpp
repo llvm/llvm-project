@@ -11993,6 +11993,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_affinity:
     C = OMPAffinityClause::CreateEmpty(Context, Record.readInt());
     break;
+  case llvm::omp::OMPC_filter:
+    C = new (Context) OMPFilterClause();
+    break;
 #define OMP_CLAUSE_NO_CLASS(Enum, Str)                                         \
   case llvm::omp::Enum:                                                        \
     break;
@@ -12962,6 +12965,12 @@ void OMPClauseReader::VisitOMPOrderClause(OMPOrderClause *C) {
   C->setKind(Record.readEnum<OpenMPOrderClauseKind>());
   C->setLParenLoc(Record.readSourceLocation());
   C->setKindKwLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPFilterClause(OMPFilterClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  C->setThreadID(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
 }
 
 OMPTraitInfo *ASTRecordReader::readOMPTraitInfo() {

@@ -740,6 +740,109 @@ public:
   }
 };
 
+class Conv2DConverter : public OpConversionPattern<tosa::Conv2DOp> {
+public:
+  using OpConversionPattern<tosa::Conv2DOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tosa::Conv2DOp op, ArrayRef<Value> args,
+                  ConversionPatternRewriter &rewriter) const final {
+    Location loc = op.getLoc();
+    Value input = op.input();
+    Value weight = op.weight();
+    Value bias = op.bias();
+
+    ShapedType inputTy = input.getType().cast<ShapedType>();
+    ShapedType weightTy = weight.getType().cast<ShapedType>();
+    ShapedType biasTy = bias.getType().cast<ShapedType>();
+    ShapedType resultTy = op.getType().cast<ShapedType>();
+
+    Type inputETy = inputTy.getElementType();
+    Type weightETy = weightTy.getElementType();
+    Type biasETy = biasTy.getElementType();
+    Type resultETy = resultTy.getElementType();
+
+    if (!inputTy.hasStaticShape() || !weightTy.hasStaticShape() ||
+        !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
+      return rewriter.notifyMatchFailure(op,
+                                         "tosa.conv2d requires static shapes");
+
+    auto inputShape = inputTy.getShape();
+    auto weightShape = weightTy.getShape();
+
+    // TODO(suderman): Support other types.
+    if (!inputETy.isF32() || !weightETy.isF32() || !biasETy.isF32() ||
+        !resultETy.isF32())
+      return failure();
+
+    // Broadcast the initial value to the output tensor before convolving.
+    SmallVector<AffineMap, 4> indexingMaps;
+    indexingMaps.push_back(AffineMap::get(/*dimCount=*/4, /*symbolCount=*/0,
+                                          {rewriter.getAffineDimExpr(3)},
+                                          rewriter.getContext()));
+    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
+
+    Value initTensor = rewriter.create<linalg::InitTensorOp>(
+        loc, resultTy.getShape(), resultTy.getElementType());
+    Value biasBroadcast =
+        rewriter
+            .create<linalg::GenericOp>(
+                loc, resultTy, bias, initTensor, indexingMaps,
+                getNParallelLoopsAttrs(resultTy.getRank()),
+                [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                    ValueRange args) {
+                  nestedBuilder.create<linalg::YieldOp>(nestedLoc, args[0]);
+                })
+            .getResult(0);
+
+    // Transpose weights tensor to be in dim order: spatial dims,
+    // input channels, and output channels.
+    SmallVector<int64_t> permutation{1, 2, 3, 0};
+    auto permutationAttr = DenseIntElementsAttr::get(
+        RankedTensorType::get({4}, rewriter.getI64Type()), permutation);
+    Value permutationValue = rewriter.create<ConstantOp>(loc, permutationAttr);
+
+    SmallVector<int64_t> newKernelShape{weightShape[1], weightShape[2],
+                                        weightShape[3], weightShape[0]};
+    Type newKernelTy = RankedTensorType::get(newKernelShape, biasETy);
+
+    Value transposedKernel = rewriter.create<tosa::TransposeOp>(
+        loc, newKernelTy, weight, permutationValue);
+
+    // Extract the attributes for convolution.
+    llvm::SmallVector<int64_t> stride, dilation, pad;
+    getValuesFromIntArrayAttribute(op.stride(), stride);
+    getValuesFromIntArrayAttribute(op.dilation(), dilation);
+    getValuesFromIntArrayAttribute(op.pad(), pad);
+
+    // Input should be padded if necessary.
+    if (llvm::any_of(pad, [](int64_t p) { return p; })) {
+      llvm::SmallVector<int64_t, 8> newPad{0,      0,      pad[0], pad[1],
+                                           pad[2], pad[3], 0,      0};
+      auto padAttr = DenseIntElementsAttr::get(
+          RankedTensorType::get({4, 2}, rewriter.getI64Type()), newPad);
+      Value padValue = rewriter.create<ConstantOp>(loc, padAttr);
+
+      SmallVector<int64_t, 4> paddedShape{
+          inputShape[0], inputShape[1] + pad[0] + pad[1],
+          inputShape[2] + pad[2] + pad[3], inputShape[3]};
+      Type paddedTy = RankedTensorType::get(paddedShape, inputETy);
+      input = rewriter.create<tosa::PadOp>(loc, paddedTy, input, padValue);
+    }
+
+    auto strideAttr = DenseIntElementsAttr::get(
+        RankedTensorType::get({2}, rewriter.getI64Type()), stride);
+    auto dilationAttr = DenseIntElementsAttr::get(
+        RankedTensorType::get({2}, rewriter.getI64Type()), dilation);
+
+    auto convOp = rewriter.create<linalg::ConvInputNHWCFilterHWCFOp>(
+        loc, resultTy, ValueRange{input, transposedKernel},
+        ValueRange{biasBroadcast}, dilationAttr, strideAttr);
+
+    rewriter.replaceOp(op, convOp.getResult(0));
+    return success();
+  }
+};
+
 class ReshapeConverter : public OpConversionPattern<tosa::ReshapeOp> {
 public:
   using OpConversionPattern<tosa::ReshapeOp>::OpConversionPattern;
@@ -1230,6 +1333,22 @@ public:
           "Pad converter requires static shaped input / padding values.");
     }
 
+    Attribute constantAttr;
+    if (elementTy.isa<FloatType>())
+      constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
+    else if (elementTy.isa<IntegerType>() && !padOp.quantization_info())
+      constantAttr = rewriter.getIntegerAttr(elementTy, 0);
+    else if (elementTy.isa<IntegerType>() && padOp.quantization_info()) {
+      auto value = padOp.quantization_info().getValue().input_zp().getValue();
+      constantAttr = rewriter.getIntegerAttr(elementTy, value.getZExtValue());
+    }
+
+    if (!constantAttr) {
+      return rewriter.notifyMatchFailure(
+          padOp,
+          "tosa.pad to linalg lowering encountered an unknown element type");
+    }
+
     Value lowIndex = rewriter.create<ConstantOp>(loc, rewriter.getIndexAttr(0));
     Value highIndex =
         rewriter.create<ConstantOp>(loc, rewriter.getIndexAttr(1));
@@ -1254,22 +1373,6 @@ public:
 
       lowValues.push_back(lowVal);
       highValues.push_back(highVal);
-    }
-
-    Attribute constantAttr;
-    if (elementTy.isa<FloatType>())
-      constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
-    else if (elementTy.isa<IntegerType>() && !padOp.quantization_info())
-      constantAttr = rewriter.getIntegerAttr(elementTy, 0);
-    else if (elementTy.isa<IntegerType>() && padOp.quantization_info()) {
-      auto value = padOp.quantization_info().getValue().input_zp().getValue();
-      constantAttr = rewriter.getIntegerAttr(elementTy, value.getZExtValue());
-    }
-
-    if (!constantAttr) {
-      return rewriter.notifyMatchFailure(
-          padOp,
-          "tosa.pad to linalg lowering encountered an unknown element type");
     }
 
     Value constant = rewriter.create<ConstantOp>(loc, constantAttr);
@@ -1523,6 +1626,128 @@ public:
   }
 };
 
+class MaxPool2dConverter : public OpRewritePattern<tosa::MaxPool2dOp> {
+public:
+  using OpRewritePattern<tosa::MaxPool2dOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::MaxPool2dOp op,
+                                PatternRewriter &rewriter) const final {
+    Location loc = op.getLoc();
+    Value input = op.input();
+    ShapedType inputTy = input.getType().cast<ShapedType>();
+    Type inElementTy = inputTy.getElementType();
+
+    ShapedType resultTy = op.getType().cast<ShapedType>();
+    Type outElementTy = inputTy.getElementType();
+    int64_t rank = inputTy.getRank();
+
+    if (!inputTy.hasStaticShape())
+      return failure();
+
+    // Determine what the initial value needs to be for the max pool op.
+    Attribute initialAttr;
+    if (outElementTy.isF32())
+      initialAttr = rewriter.getFloatAttr(
+          outElementTy,
+          APFloat::getLargest(
+              outElementTy.cast<FloatType>().getFloatSemantics(), true));
+
+    if (outElementTy.isa<IntegerType>())
+      initialAttr = rewriter.getIntegerAttr(
+          outElementTy,
+          APInt::getSignedMinValue(outElementTy.getIntOrFloatBitWidth()));
+
+    if (!initialAttr)
+      return rewriter.notifyMatchFailure(
+          op, "Unsupported initial value for tosa.maxpool_2d op");
+
+    Value initialValue = rewriter.create<ConstantOp>(loc, initialAttr);
+
+    SmallVector<int64_t> kernel, stride, pad;
+    getValuesFromIntArrayAttribute(op.kernel(), kernel);
+    getValuesFromIntArrayAttribute(op.stride(), stride);
+    getValuesFromIntArrayAttribute(op.pad(), pad);
+
+    Attribute strideAttr = rewriter.getI64VectorAttr(stride);
+    Attribute dilationAttr = rewriter.getI64VectorAttr({1, 1});
+
+    // If non-zero padding we need to pad the input
+    if (llvm::any_of(pad, [](int64_t v) { return v != 0; })) {
+      SmallVector<int64_t, 4> paddedShape;
+      for (int64_t i = 0; i < rank; i++)
+        paddedShape.push_back(inputTy.getDimSize(i));
+
+      paddedShape[1] += pad[0] + pad[1];
+      paddedShape[2] += pad[2] + pad[3];
+
+      OpFoldResult zeroIndex = rewriter.getIndexAttr(0);
+      OpFoldResult heightLowPadIndex = rewriter.getIndexAttr(pad[0]);
+      OpFoldResult heightHighPadIndex = rewriter.getIndexAttr(pad[1]);
+      OpFoldResult widthLowPadIndex = rewriter.getIndexAttr(pad[2]);
+      OpFoldResult widthHighPadIndex = rewriter.getIndexAttr(pad[3]);
+
+      SmallVector<OpFoldResult, 4> lowIndices = {zeroIndex, heightLowPadIndex,
+                                                 widthLowPadIndex, zeroIndex};
+      SmallVector<OpFoldResult, 4> highIndices = {zeroIndex, heightHighPadIndex,
+                                                  widthHighPadIndex, zeroIndex};
+
+      input = linalg::PadTensorOp::createPadScalarOp(
+                  RankedTensorType::get(paddedShape, inElementTy), input,
+                  initialValue, lowIndices, highIndices, loc, rewriter)
+                  .result();
+    }
+
+    Value initTensor = rewriter.create<linalg::InitTensorOp>(
+        loc, resultTy.getShape(), resultTy.getElementType());
+
+    Value filledInitTensor =
+        rewriter.create<linalg::FillOp>(loc, initTensor, initialValue).result();
+
+    Value fakeWindowDims =
+        rewriter.create<linalg::InitTensorOp>(loc, kernel, outElementTy);
+
+    auto createOp = [&](auto *typePtr) -> linalg::LinalgOp {
+      return cast<linalg::LinalgOp>(
+          rewriter
+              .create<std::remove_pointer_t<decltype(typePtr)>>(
+                  loc, ArrayRef<Type>{resultTy},
+                  ValueRange{input, fakeWindowDims}, filledInitTensor,
+                  dilationAttr, strideAttr)
+              .getOperation());
+    };
+
+    if (inElementTy.isF32()) {
+      linalg::LinalgOp poolingOp =
+          createOp(static_cast<linalg::PoolingNHWCMaxFOp *>(nullptr));
+      rewriter.replaceOp(op, poolingOp->getResult(0));
+      return success();
+    }
+
+    if (inElementTy.isInteger(8)) {
+      linalg::LinalgOp poolingOp =
+          createOp(static_cast<linalg::PoolingNHWCMaxI8Op *>(nullptr));
+      rewriter.replaceOp(op, poolingOp->getResult(0));
+      return success();
+    }
+
+    if (inElementTy.isInteger(16)) {
+      linalg::LinalgOp poolingOp =
+          createOp(static_cast<linalg::PoolingNHWCMaxI16Op *>(nullptr));
+      rewriter.replaceOp(op, poolingOp->getResult(0));
+      return success();
+    }
+
+    if (inElementTy.isInteger(32)) {
+      linalg::LinalgOp poolingOp =
+          createOp(static_cast<linalg::PoolingNHWCMaxI32Op *>(nullptr));
+      rewriter.replaceOp(op, poolingOp->getResult(0));
+      return success();
+    }
+
+    return failure();
+  }
+};
+
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
@@ -1571,6 +1796,7 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       ReduceConverter<tosa::ReduceProdOp>,
       ArgMaxConverter,
       ConcatConverter,
+      Conv2DConverter,
       PadConverter,
       ReshapeConverter,
       RescaleConverter,
@@ -1579,6 +1805,7 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       TileConverter,
       TransposeConverter,
       MatMulConverter,
+      MaxPool2dConverter,
       FullyConnectedConverter>(patterns->getContext());
       // clang-format on
 }

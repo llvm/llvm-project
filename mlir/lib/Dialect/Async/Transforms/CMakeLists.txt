@@ -1,7 +1,7 @@
 add_mlir_dialect_library(MLIRAsyncTransforms
   AsyncParallelFor.cpp
-  AsyncRefCounting.cpp
-  AsyncRefCountingOptimization.cpp
+  AsyncRuntimeRefCounting.cpp
+  AsyncRuntimeRefCountingOpt.cpp
   AsyncToAsyncRuntime.cpp
 
   ADDITIONAL_HEADER_DIRS

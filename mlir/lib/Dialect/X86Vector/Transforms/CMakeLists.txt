@@ -1,0 +1,12 @@
+add_mlir_dialect_library(MLIRX86VectorTransforms
+  LegalizeForLLVMExport.cpp
+
+  DEPENDS
+  MLIRX86VectorConversionsIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRX86Vector
+  MLIRIR
+  MLIRLLVMIR
+  MLIRStandardToLLVM
+  )

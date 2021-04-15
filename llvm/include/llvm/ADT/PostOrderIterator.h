@@ -90,13 +90,17 @@ public:
 };
 
 template <class GraphT,
-          class SetType =
-              SmallPtrSet<typename GraphTraits<GraphT>::NodeRef, 8>,
+          class SetType = SmallPtrSet<typename GraphTraits<GraphT>::NodeRef, 8>,
           bool ExtStorage = false, class GT = GraphTraits<GraphT>>
-class po_iterator
-    : public std::iterator<std::forward_iterator_tag, typename GT::NodeRef>,
-      public po_iterator_storage<SetType, ExtStorage> {
-  using super = std::iterator<std::forward_iterator_tag, typename GT::NodeRef>;
+class po_iterator : public po_iterator_storage<SetType, ExtStorage> {
+public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = typename GT::NodeRef;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type *;
+  using reference = value_type &;
+
+private:
   using NodeRef = typename GT::NodeRef;
   using ChildItTy = typename GT::ChildIteratorType;
 
@@ -135,8 +139,6 @@ class po_iterator
   }
 
 public:
-  using pointer = typename super::pointer;
-
   // Provide static "constructors"...
   static po_iterator begin(GraphT G) {
     return po_iterator(GT::getEntryNode(G));

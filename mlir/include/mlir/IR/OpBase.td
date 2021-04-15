@@ -758,11 +758,11 @@ def BoolLike : TypeConstraint<Or<[I1.predicate, VectorOf<[I1]>.predicate,
     "bool-like">;
 
 // Type constraint for signless-integer-like types: signless integers, indices,
-// vectors of signless integers, tensors of signless integers.
+// vectors of signless integers or indices, tensors of signless integers.
 def SignlessIntegerLike : TypeConstraint<Or<[
         AnySignlessInteger.predicate, Index.predicate,
-        VectorOf<[AnySignlessInteger]>.predicate,
-        TensorOf<[AnySignlessInteger]>.predicate]>,
+        VectorOf<[AnySignlessInteger, Index]>.predicate,
+        TensorOf<[AnySignlessInteger, Index]>.predicate]>,
     "signless-integer-like">;
 
 // Type constraint for float-like types: floats, vectors or tensors thereof.
@@ -1333,13 +1333,15 @@ def IndexElementsAttr
                                       .isIndex()}]>,
                           "index elements attribute">;
 
-class AnyIntElementsAttr<int width> : IntElementsAttrBase<
+def AnyIntElementsAttr : IntElementsAttrBase<CPred<"true">, "integer elements attribute">;
+
+class IntElementsAttrOf<int width> : IntElementsAttrBase<
   CPred<"$_self.cast<::mlir::DenseIntElementsAttr>().getType()."
         "getElementType().isInteger(" # width # ")">,
   width # "-bit integer elements attribute">;
 
-def AnyI32ElementsAttr : AnyIntElementsAttr<32>;
-def AnyI64ElementsAttr : AnyIntElementsAttr<64>;
+def AnyI32ElementsAttr : IntElementsAttrOf<32>;
+def AnyI64ElementsAttr : IntElementsAttrOf<64>;
 
 class SignlessIntElementsAttr<int width> : IntElementsAttrBase<
   CPred<"$_self.cast<::mlir::DenseIntElementsAttr>().getType()."
@@ -2696,6 +2698,20 @@ class AttrDef<Dialect dialect, string name,
       AttrOrTypeDef<"Attr", name, baseCppClass> {
   // The name of the C++ Attribute class.
   string cppClassName = name # "Attr";
+
+  // The underlying C++ value type
+  let returnType = dialect.cppNamespace # "::" # cppClassName;
+
+  // The call expression to convert from the storage type to the return
+  // type. For example, an enum can be stored as an int but returned as an
+  // enum class.
+  //
+  // Format: $_self will be expanded to the attribute.
+  //
+  // For example, `$_self.getValue().getSExtValue()` for `IntegerAttr val` will
+  // expand to `getAttrOfType<IntegerAttr>("val").getValue().getSExtValue()`.
+  let convertFromStorage = "$_self.cast<" # dialect.cppNamespace #
+                                 "::" # cppClassName # ">()";
 
   // A code block used to build the value 'Type' of an Attribute when
   // initializing its storage instance. This field is optional, and if not

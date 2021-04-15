@@ -108,8 +108,11 @@ namespace {
 
   /// Given a CallExpr, try to get the alloc_size attribute. May return null.
   static const AllocSizeAttr *getAllocSizeAttr(const CallExpr *CE) {
-    const FunctionDecl *Callee = CE->getDirectCallee();
-    return Callee ? Callee->getAttr<AllocSizeAttr>() : nullptr;
+    if (const FunctionDecl *DirectCallee = CE->getDirectCallee())
+      return DirectCallee->getAttr<AllocSizeAttr>();
+    if (const Decl *IndirectCallee = CE->getCalleeDecl())
+      return IndirectCallee->getAttr<AllocSizeAttr>();
+    return nullptr;
   }
 
   /// Attempts to unwrap a CallExpr (with an alloc_size attribute) from an Expr.
@@ -13180,6 +13183,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_FixedPointToFloating:
   case CK_FixedPointCast:
   case CK_IntegralToFixedPoint:
+  case CK_MatrixCast:
     llvm_unreachable("invalid cast kind for integral value");
 
   case CK_BitCast:
@@ -13920,6 +13924,7 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_FixedPointToBoolean:
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
+  case CK_MatrixCast:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_LValueToRValue:

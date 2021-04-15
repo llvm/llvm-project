@@ -1476,25 +1476,100 @@ static bool addWillReturn(const SCCNodeSet &SCCNodes) {
   return Changed;
 }
 
-// Infer the nosync attribute.  For the moment, the inference is trivial
-// and relies on the readnone attribute already being infered.  This will
-// be replaced with a more robust implementation in the near future.
-static bool addNoSyncAttr(const SCCNodeSet &SCCNodes) {
-  bool Changed = false;
+// Return true if this is an atomic which has an ordering stronger than
+// unordered.  Note that this is different than the predicate we use in
+// Attributor.  Here we chose to be conservative and consider monotonic
+// operations potentially synchronizing.  We generally don't do much with
+// monotonic operations, so this is simply risk reduction.
+static bool isOrderedAtomic(Instruction *I) {
+  if (!I->isAtomic())
+    return false;
 
+  if (auto *FI = dyn_cast<FenceInst>(I))
+    // All legal orderings for fence are stronger than monotonic.
+    return FI->getSyncScopeID() != SyncScope::SingleThread;
+  else if (isa<AtomicCmpXchgInst>(I) || isa<AtomicRMWInst>(I))
+    return true;
+  else if (auto *SI = dyn_cast<StoreInst>(I))
+    return !SI->isUnordered();
+  else if (auto *LI = dyn_cast<LoadInst>(I))
+    return !LI->isUnordered();
+  else {
+    llvm_unreachable("unknown atomic instruction?");
+  }
+}
+
+static bool InstrBreaksNoSync(Instruction &I, const SCCNodeSet &SCCNodes) {
+  // Volatile may synchronize
+  if (I.isVolatile())
+    return true;
+
+  // An ordered atomic may synchronize.  (See comment about on monotonic.)
+  if (isOrderedAtomic(&I))
+    return true;
+
+  auto *CB = dyn_cast<CallBase>(&I);
+  if (!CB)
+    // Non call site cases covered by the two checks above
+    return false;
+
+  if (CB->hasFnAttr(Attribute::NoSync))
+    return false;
+
+  // readnone + not convergent implies nosync
+  // (This is needed to initialize inference from declarations which aren't
+  //  explicitly nosync, but are readnone and not convergent.)
+  if (CB->hasFnAttr(Attribute::ReadNone) &&
+      !CB->hasFnAttr(Attribute::Convergent))
+    return false;
+
+  // Non volatile memset/memcpy/memmoves are nosync
+  // NOTE: Only intrinsics with volatile flags should be handled here.  All
+  // others should be marked in Intrinsics.td.
+  if (auto *MI = dyn_cast<MemIntrinsic>(&I))
+    if (!MI->isVolatile())
+      return false;
+
+  // Speculatively assume in SCC.
+  if (Function *Callee = CB->getCalledFunction())
+    if (SCCNodes.contains(Callee))
+      return false;
+
+  return true;
+}
+
+// Infer the nosync attribute.
+static bool addNoSyncAttr(const SCCNodeSet &SCCNodes) {
+  AttributeInferer AI;
+  AI.registerAttrInference(AttributeInferer::InferenceDescriptor{
+      Attribute::NoSync,
+      // Skip already marked functions.
+      [](const Function &F) { return F.hasNoSync(); },
+      // Instructions that break nosync assumption.
+      [&SCCNodes](Instruction &I) {
+        return InstrBreaksNoSync(I, SCCNodes);
+      },
+      [](Function &F) {
+        LLVM_DEBUG(dbgs()
+                   << "Adding nosync attr to fn " << F.getName() << "\n");
+        F.setNoSync();
+        ++NumNoSync;
+      },
+      /* RequiresExactDefinition= */ true});
+  bool Changed = AI.run(SCCNodes);
+
+  // readnone + not convergent implies nosync
+  // (This is here so that we don't have to duplicate the function local
+  //  memory reasoning of the readnone analysis.)
   for (Function *F : SCCNodes) {
     if (!F || F->hasNoSync())
       continue;
-
-    // readnone + not convergent implies nosync
     if (!F->doesNotAccessMemory() || F->isConvergent())
       continue;
-
     F->setNoSync();
     NumNoSync++;
     Changed = true;
   }
-
   return Changed;
 }
 

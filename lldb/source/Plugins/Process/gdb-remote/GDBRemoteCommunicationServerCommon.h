@@ -36,8 +36,6 @@ protected:
   Status m_process_launch_error;
   ProcessInstanceInfoList m_proc_infos;
   uint32_t m_proc_infos_index;
-  bool m_thread_suffix_supported;
-  bool m_list_threads_in_stop_reply;
 
   PacketResult Handle_A(StringExtractorGDBRemote &packet);
 
@@ -91,10 +89,6 @@ protected:
 
   PacketResult Handle_qSupported(StringExtractorGDBRemote &packet);
 
-  PacketResult Handle_QThreadSuffixSupported(StringExtractorGDBRemote &packet);
-
-  PacketResult Handle_QListThreadsInStopReply(StringExtractorGDBRemote &packet);
-
   PacketResult Handle_QSetDetachOnError(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_QStartNoAckMode(StringExtractorGDBRemote &packet);
@@ -144,6 +138,11 @@ protected:
 
   virtual FileSpec FindModuleFile(const std::string &module_path,
                                   const ArchSpec &arch);
+
+  // Process client_features (qSupported) and return an array of server features
+  // to be returned in response.
+  virtual std::vector<std::string>
+  HandleFeatures(llvm::ArrayRef<llvm::StringRef> client_features);
 
 private:
   ModuleSpec GetModuleInfo(llvm::StringRef module_path, llvm::StringRef triple);

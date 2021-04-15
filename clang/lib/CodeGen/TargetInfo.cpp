@@ -1105,6 +1105,7 @@ class X86_32ABIInfo : public SwiftABIInfo {
   bool IsWin32StructABI;
   bool IsSoftFloatABI;
   bool IsMCUABI;
+  bool IsLinuxABI;
   unsigned DefaultNumRegisterParameters;
 
   static bool isRegisterSize(unsigned Size) {
@@ -1167,9 +1168,9 @@ public:
                 unsigned NumRegisterParameters, bool SoftFloatABI)
     : SwiftABIInfo(CGT), IsDarwinVectorABI(DarwinVectorABI),
       IsRetSmallStructInRegABI(RetSmallStructInRegABI),
-      IsWin32StructABI(Win32StructABI),
-      IsSoftFloatABI(SoftFloatABI),
+      IsWin32StructABI(Win32StructABI), IsSoftFloatABI(SoftFloatABI),
       IsMCUABI(CGT.getTarget().getTriple().isOSIAMCU()),
+      IsLinuxABI(CGT.getTarget().getTriple().isOSLinux()),
       DefaultNumRegisterParameters(NumRegisterParameters) {}
 
   bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
@@ -1594,6 +1595,14 @@ unsigned X86_32ABIInfo::getTypeStackAlignInBytes(QualType Ty,
   if (Align <= MinABIStackAlignInBytes)
     return 0; // Use default alignment.
 
+  if (IsLinuxABI) {
+    // Exclude other System V OS (e.g Darwin, PS4 and FreeBSD) since we don't
+    // want to spend any effort dealing with the ramifications of ABI breaks.
+    //
+    // If the vector type is __m128/__m256/__m512, return the default alignment.
+    if (Ty->isVectorType() && (Align == 16 || Align == 32 || Align == 64))
+      return Align;
+  }
   // On non-Darwin, the stack type alignment is always 4.
   if (!IsDarwinVectorABI) {
     // Set explicit alignment, since we may need to realign the top.
@@ -6112,7 +6121,13 @@ Address AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
 
 Address AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                     QualType Ty) const {
-  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*indirect*/ false,
+  bool IsIndirect = false;
+
+  // Composites larger than 16 bytes are passed by reference.
+  if (isAggregateTypeForABI(Ty) && getContext().getTypeSize(Ty) > 128)
+    IsIndirect = true;
+
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           CGF.getContext().getTypeInfoInChars(Ty),
                           CharUnits::fromQuantity(8),
                           /*allowHigherAlign*/ false);
@@ -8107,6 +8122,19 @@ class AVRTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   AVRTargetCodeGenInfo(CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
+
+  LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
+                                  const VarDecl *D) const override {
+    // Check if a global/static variable is defined within address space 1
+    // but not constant.
+    LangAS AS = D->getType().getAddressSpace();
+    if (isTargetAddressSpace(AS) && toTargetAddressSpace(AS) == 1 &&
+        !D->getType().isConstQualified())
+      CGM.getDiags().Report(D->getLocation(),
+                            diag::err_verify_nonconst_addrspace)
+          << "__flash";
+    return TargetCodeGenInfo::getGlobalVarAddressSpace(CGM, D);
+  }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
@@ -10700,8 +10728,8 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     llvm::Type *Field2Ty = nullptr;
     CharUnits Field1Off = CharUnits::Zero();
     CharUnits Field2Off = CharUnits::Zero();
-    int NeededArgGPRs;
-    int NeededArgFPRs;
+    int NeededArgGPRs = 0;
+    int NeededArgFPRs = 0;
     bool IsCandidate =
         detectFPCCEligibleStruct(Ty, Field1Ty, Field1Off, Field2Ty, Field2Off,
                                  NeededArgGPRs, NeededArgFPRs);

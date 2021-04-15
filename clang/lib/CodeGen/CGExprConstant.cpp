@@ -1170,6 +1170,7 @@ public:
     case CK_FixedPointToIntegral:
     case CK_IntegralToFixedPoint:
     case CK_ZeroToOCLOpaqueType:
+    case CK_MatrixCast:
       return nullptr;
     }
     llvm_unreachable("Invalid CastKind");

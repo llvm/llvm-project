@@ -28,6 +28,24 @@ steps:
     soft_fail:
         - exit_status: 1
 
+  - label: "Generated output"
+    command: "libcxx/utils/ci/run-buildbot check-generated-output"
+    artifact_paths:
+      - "**/generated_output.patch"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  # All jobs defined before this `wait` will run whenever a CI job is started.
+  # Jobs defined after the `wait` will run only if all the jobs above
+  # succeeded. The build failures before this `wait` can be fixed by running
+  # the proper scripts or clang-format. We use this to reduce the load on the
+  # testers and avoid running builds that we know fail anyway.
+  - wait
+
   - label: "C++03"
     command: "libcxx/utils/ci/run-buildbot generic-cxx03"
     artifact_paths:

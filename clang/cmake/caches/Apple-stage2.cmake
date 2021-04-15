@@ -56,6 +56,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-objdump
   llvm-nm
   llvm-size
+  llvm-cxxfilt
   llvm-config
   CACHE STRING "")
 
@@ -65,6 +66,7 @@ set(LLVM_TOOLCHAIN_UTILITIES
   FileCheck
   yaml2obj
   not
+  count
   CACHE STRING "")
 
 set(LLVM_DISTRIBUTION_COMPONENTS

@@ -4,100 +4,137 @@ Scudo Hardened Allocator
 
 .. contents::
    :local:
-   :depth: 1
+   :depth: 2
 
 Introduction
 ============
 
-The Scudo Hardened Allocator is a user-mode allocator based on LLVM Sanitizer's
-CombinedAllocator, which aims at providing additional mitigations against heap
-based vulnerabilities, while maintaining good performance.
+The Scudo Hardened Allocator is a user-mode allocator, originally based on LLVM
+Sanitizers'
+`CombinedAllocator <https://github.com/llvm/llvm-project/blob/main/compiler-rt/lib/sanitizer_common/sanitizer_allocator_combined.h>`_.
+It aims at providing additional mitigation against heap based vulnerabilities,
+while maintaining good performance. Scudo is currently the default allocator in
+`Fuchsia <https://fuchsia.dev/>`_, and in `Android <https://www.android.com/>`_
+since Android 11.
 
-Currently, the allocator supports (was tested on) the following architectures:
-
-- i386 (& i686) (32-bit);
-- x86_64 (64-bit);
-- armhf (32-bit);
-- AArch64 (64-bit);
-- MIPS (32-bit & 64-bit).
-
-The name "Scudo" has been retained from the initial implementation (Escudo
-meaning Shield in Spanish and Portuguese).
+The name "Scudo" comes from the Italian word for
+`shield <https://www.collinsdictionary.com/dictionary/italian-english/scudo>`_
+(and Escudo in Spanish).
 
 Design
 ======
 
 Allocator
 ---------
-Scudo can be considered a Frontend to the Sanitizers' common allocator (later
-referenced as the Backend). It is split between a Primary allocator, fast and
-efficient, that services smaller allocation sizes, and a Secondary allocator
-that services larger allocation sizes and is backed by the operating system
-memory mapping primitives.
-
 Scudo was designed with security in mind, but aims at striking a good balance
-between security and performance. It is highly tunable and configurable.
+between security and performance. It was designed to be highly tunable and
+configurable, and while we provide some default configurations, we encourage
+consumers to come up with the parameters that will work best for their use
+cases.
 
-Chunk Header
-------------
-Every chunk of heap memory will be preceded by a chunk header. This has two
-purposes, the first one being to store various information about the chunk,
-the second one being to detect potential heap overflows. In order to achieve
-this, the header will be checksummed, involving the pointer to the chunk itself
-and a global secret. Any corruption of the header will be detected when said
-header is accessed, and the process terminated.
+The allocator combines several components that serve distinct purposes:
+
+- the Primary allocator: fast and efficient, it services smaller allocation
+  sizes by carving reserved memory regions into blocks of identical size. There
+  are currently two Primary allocators implemented, specific to 32 and 64 bit
+  architectures. It is configurable via compile time options.
+
+- the Secondary allocator: slower, it services larger allocation sizes via the
+  memory mapping primitives of the underlying operating system. Secondary backed
+  allocations are surrounded by Guard Pages. It is also configurable via compile
+  time options.
+
+- the thread specific data Registry: defines how local caches operate for each
+  thread. There are currently two models implemented: the exlusive model where
+  each thread holds its own caches (using the ELF TLS); or the shared model
+  where threads share a fixed size pool of caches.
+
+- the Quarantine: offers a way to delay the deallocation operations, preventing
+  blocks to be immediately available for reuse. Blocks held will be recycled
+  once certain size criteria are reached. This is essentially a delayed freelist
+  which can help mitigate some use-after-free situations. This feature is fairly
+  costly in terms of performance and memory footprint, is mostly controlled by
+  runtime options and is disabled by default.
+
+Allocations Header
+------------------
+Every chunk of heap memory returned to an application by the allocator will be
+preceded by a header. This has two purposes:
+
+- being to store various information about the chunk, that can be leveraged to
+  ensure consistency of the heap operations;
+
+- being able to detect potential corruption. For this purpose, the header is
+  checksummed and corruption of the header will be detected when said header is
+  accessed (note that if the corrupted header is not accessed, the corruption
+  will remain undetected).
 
 The following information is stored in the header:
 
-- the 16-bit checksum;
-- the class ID for that chunk, which is the "bucket" where the chunk resides
-  for Primary backed allocations, or 0 for Secondary backed allocations;
-- the size (Primary) or unused bytes amount (Secondary) for that chunk, which is
-  necessary for computing the size of the chunk;
+- the class ID for that chunk, which identifies the region where the chunk
+  resides for Primary backed allocations, or 0 for Secondary backed allocations;
+
 - the state of the chunk (available, allocated or quarantined);
+
 - the allocation type (malloc, new, new[] or memalign), to detect potential
   mismatches in the allocation APIs used;
+
+- the size (Primary) or unused bytes amount (Secondary) for that chunk, which is
+  necessary for reallocation or sized-deallocation operations;
+
 - the offset of the chunk, which is the distance in bytes from the beginning of
-  the returned chunk to the beginning of the Backend allocation;
+  the returned chunk to the beginning of the backend allocation (the "block");
 
-This header fits within 8 bytes, on all platforms supported.
+- the 16-bit checksum;
 
-The checksum is computed as a CRC32 (made faster with hardware support)
+This header fits within 8 bytes on all platforms supported, and contributes to a
+small overhead for each allocation.
+
+The checksum is computed using a CRC32 (made faster with hardware support)
 of the global secret, the chunk pointer itself, and the 8 bytes of header with
 the checksum field zeroed out. It is not intended to be cryptographically
-strong. 
+strong.
 
 The header is atomically loaded and stored to prevent races. This is important
-as two consecutive chunks could belong to different threads. We also want to
-avoid any type of double fetches of information located in the header, and use
-local copies of the header for this purpose.
-
-Delayed Freelist
------------------
-A delayed freelist allows us to not return a chunk directly to the Backend, but
-to keep it aside for a while. Once a criterion is met, the delayed freelist is
-emptied, and the quarantined chunks are returned to the Backend. This helps
-mitigate use-after-free vulnerabilities by reducing the determinism of the
-allocation and deallocation patterns.
-
-This feature is using the Sanitizer's Quarantine as its base, and the amount of
-memory that it can hold is configurable by the user (see the Options section
-below).
+as two consecutive chunks could belong to different threads. We work on local
+copies and use compare-exchange primitives to update the headers in the heap
+memory, and avoid any type of double-fetching.
 
 Randomness
 ----------
-It is important for the allocator to not make use of fixed addresses. We use
-the dynamic base option for the SizeClassAllocator, allowing us to benefit
-from the randomness of the system memory mapping functions.
+Randomness is a critical factor to the additional security provided by the
+allocator. The allocator trusts the memory mapping primitives of the OS to
+provide pages at (mostly) non-predictable locations in memory, as well as the
+binaries to be compiled with ASLR. In the event one of those assumptions is
+incorrect, the security will be greatly reduced. Scudo further randomizes how
+blocks are allocated in the Primary, can randomize how caches are assigned to
+threads.
+
+Memory reclaiming
+-----------------
+Primary and Secondary allocators have different behaviors with regard to
+reclaiming. While Secondary mapped allocations can be unmapped on deallocation,
+it isn't the case for the Primary, which could lead to a steady growth of the
+RSS of a process. To counteracty this, if the underlying OS allows it, pages
+that are covered by contiguous free memory blocks in the Primary can be
+released: this generally means they won't count towards the RSS of a process and
+be zero filled on subsequent accesses). This is done in the deallocation path,
+and several options exist to tune this behavior.
 
 Usage
 =====
 
+Platform
+--------
+If using Fuchsia or an Android version greater than 11, your memory allocations
+are already service by Scudo (note that Android Svelte configurations still use
+jemalloc).
+
 Library
 -------
-The allocator static library can be built from the LLVM build tree thanks to
-the ``scudo`` CMake rule. The associated tests can be exercised thanks to the
-``check-scudo`` CMake rule.
+The allocator static library can be built from the LLVM tree thanks to the
+``scudo_standalone`` CMake rule. The associated tests can be exercised thanks to
+the ``check-scudo_standalone`` CMake rule.
 
 Linking the static library to your project can require the use of the
 ``whole-archive`` linker flag (or equivalent), depending on your linker.
@@ -106,28 +143,32 @@ Additional flags might also be necessary.
 Your linked binary should now make use of the Scudo allocation and deallocation
 functions.
 
-You may also build Scudo like this: 
+You may also build Scudo like this:
 
 .. code:: console
 
-  cd $LLVM/projects/compiler-rt/lib
-  clang++ -fPIC -std=c++11 -msse4.2 -O2 -I. scudo/*.cpp \
-    $(\ls sanitizer_common/*.{cc,S} | grep -v "sanitizer_termination\|sanitizer_common_nolibc\|sancov_\|sanitizer_unwind\|sanitizer_symbol") \
-    -shared -o libscudo.so -pthread
+  cd $LLVM/compiler-rt/lib
+  clang++ -fPIC -std=c++17 -msse4.2 -O2 -pthread -shared \
+    -I scudo/standalone/include \
+    scudo/standalone/*.cpp \
+    -o $HOME/libscudo.so
 
 and then use it with existing binaries as follows:
 
 .. code:: console
 
-  LD_PRELOAD=`pwd`/libscudo.so ./a.out
+  LD_PRELOAD=$HOME/libscudo.so ./a.out
 
 Clang
 -----
-With a recent version of Clang (post rL317337), the allocator can be linked with
-a binary at compilation using the ``-fsanitize=scudo`` command-line argument, if
-the target platform is supported. Currently, the only other Sanitizer Scudo is
-compatible with is UBSan (eg: ``-fsanitize=scudo,undefined``). Compiling with
-Scudo will also enforce PIE for the output binary.
+With a recent version of Clang (post rL317337), the "old" version of the
+allocator can be linked with a binary at compilation using the
+``-fsanitize=scudo`` command-line argument, if the target platform is supported.
+Currently, the only other sanitizer Scudo is compatible with is UBSan
+(eg: ``-fsanitize=scudo,undefined``). Compiling with Scudo will also enforce
+PIE for the output binary.
+
+We will transition this to the standalone Scudo version in the future.
 
 Options
 -------
@@ -146,61 +187,104 @@ through the following ways:
   to be parsed. Options defined this way will override any definition made
   through ``__scudo_default_options``.
 
-The options string follows a syntax similar to ASan, where distinct options
-can be assigned in the same string, separated by colons.
+- via the standard ``mallopt`` `API <https://man7.org/linux/man-pages/man3/mallopt.3.html>`_,
+  using parameters that are Scudo specific.
+
+When dealing with the options string, it follows a syntax similar to ASan, where
+distinct options can be assigned in the same string, separated by colons.
 
 For example, using the environment variable:
 
 .. code:: console
 
-  SCUDO_OPTIONS="DeleteSizeMismatch=1:QuarantineSizeKb=64" ./a.out
+  SCUDO_OPTIONS="delete_size_mismatch=false:release_to_os_interval_ms=-1" ./a.out
 
 Or using the function:
 
 .. code:: cpp
 
   extern "C" const char *__scudo_default_options() {
-    return "DeleteSizeMismatch=1:QuarantineSizeKb=64";
+    return "delete_size_mismatch=false:release_to_os_interval_ms=-1";
   }
 
 
-The following options are available:
+The following "string" options are available:
 
-+-----------------------------+----------------+----------------+------------------------------------------------+
-| Option                      | 64-bit default | 32-bit default | Description                                    |
-+-----------------------------+----------------+----------------+------------------------------------------------+
-| QuarantineSizeKb            | 256            | 64             | The size (in Kb) of quarantine used to delay   |
-|                             |                |                | the actual deallocation of chunks. Lower value |
-|                             |                |                | may reduce memory usage but decrease the       |
-|                             |                |                | effectiveness of the mitigation; a negative    |
-|                             |                |                | value will fallback to the defaults. Setting   |
-|                             |                |                | *both* this and ThreadLocalQuarantineSizeKb to |
-|                             |                |                | zero will disable the quarantine entirely.     |
-+-----------------------------+----------------+----------------+------------------------------------------------+
-| QuarantineChunksUpToSize    | 2048           | 512            | Size (in bytes) up to which chunks can be      |
-|                             |                |                | quarantined.                                   |
-+-----------------------------+----------------+----------------+------------------------------------------------+
-| ThreadLocalQuarantineSizeKb | 1024           | 256            | The size (in Kb) of per-thread cache use to    |
-|                             |                |                | offload the global quarantine. Lower value may |
-|                             |                |                | reduce memory usage but might increase         |
-|                             |                |                | contention on the global quarantine. Setting   |
-|                             |                |                | *both* this and QuarantineSizeKb to zero will  |
-|                             |                |                | disable the quarantine entirely.               |
-+-----------------------------+----------------+----------------+------------------------------------------------+
-| DeallocationTypeMismatch    | true           | true           | Whether or not we report errors on             |
-|                             |                |                | malloc/delete, new/free, new/delete[], etc.    |
-+-----------------------------+----------------+----------------+------------------------------------------------+
-| DeleteSizeMismatch          | true           | true           | Whether or not we report errors on mismatch    |
-|                             |                |                | between sizes of new and delete.               |
-+-----------------------------+----------------+----------------+------------------------------------------------+
-| ZeroContents                | false          | false          | Whether or not we zero chunk contents on       |
-|                             |                |                | allocation and deallocation.                   |
-+-----------------------------+----------------+----------------+------------------------------------------------+
++---------------------------------+----------------+----------------+-------------------------------------------------+
+| Option                          | 64-bit default | 32-bit default | Description                                     |
++---------------------------------+----------------+----------------+-------------------------------------------------+
+| quarantine_size_kb              | 0              | 0              | The size (in Kb) of quarantine used to delay    |
+|                                 |                |                | the actual deallocation of chunks. Lower value  |
+|                                 |                |                | may reduce memory usage but decrease the        |
+|                                 |                |                | effectiveness of the mitigation; a negative     |
+|                                 |                |                | value will fallback to the defaults. Setting    |
+|                                 |                |                | *both* this and thread_local_quarantine_size_kb |
+|                                 |                |                | to zero will disable the quarantine entirely.   |
++---------------------------------+----------------+----------------+-------------------------------------------------+
+| quarantine_max_chunk_size       | 0              | 0              | Size (in bytes) up to which chunks can be       |
+|                                 |                |                | quarantined.                                    |
++---------------------------------+----------------+----------------+-------------------------------------------------+
+| thread_local_quarantine_size_kb | 0              | 0              | The size (in Kb) of per-thread cache use to     |
+|                                 |                |                | offload the global quarantine. Lower value may  |
+|                                 |                |                | reduce memory usage but might increase          |
+|                                 |                |                | contention on the global quarantine. Setting    |
+|                                 |                |                | *both* this and quarantine_size_kb to zero will |
+|                                 |                |                | disable the quarantine entirely.                |
++---------------------------------+----------------+----------------+-------------------------------------------------+
+| dealloc_type_mismatch           | false          | false          | Whether or not we report errors on              |
+|                                 |                |                | malloc/delete, new/free, new/delete[], etc.     |
++---------------------------------+----------------+----------------+-------------------------------------------------+
+| delete_size_mismatch            | true           | true           | Whether or not we report errors on mismatch     |
+|                                 |                |                | between sizes of new and delete.                |
++---------------------------------+----------------+----------------+-------------------------------------------------+
+| zero_contents                   | false          | false          | Whether or not we zero chunk contents on        |
+|                                 |                |                | allocation.                                     |
++---------------------------------+----------------+----------------+-------------------------------------------------+
+| pattern_fill_contents           | false          | false          | Whether or not we fill chunk contents with a    |
+|                                 |                |                | byte pattern on allocation.                     |
++---------------------------------+----------------+----------------+-------------------------------------------------+
+| may_return_null                 | true           | true           | Whether or not a non-fatal failure can return a |
+|                                 |                |                | NULL pointer (as opposed to terminating).       |
++---------------------------------+----------------+----------------+-------------------------------------------------+
+| release_to_os_interval_ms       | 5000           | 5000           | The minimum interval (in ms) at which a release |
+|                                 |                |                | can be attempted (a negative value disables     |
+|                                 |                |                | reclaiming).                                    |
++---------------------------------+----------------+----------------+-------------------------------------------------+
 
-Allocator related common Sanitizer options can also be passed through Scudo
-options, such as ``allocator_may_return_null`` or ``abort_on_error``. A detailed
-list including those can be found here:
-https://github.com/google/sanitizers/wiki/SanitizerCommonFlags.
+Additional flags can be specified, for example if Scudo if compiled with
+`GWP-ASan <https://llvm.org/docs/GwpAsan.html>`_ support.
+
+The following "mallopt" options are available (options are defined in
+``include/scudo/interface.h``):
+
++---------------------------+-------------------------------------------------------+
+| Option                    | Description                                           |
++---------------------------+-------------------------------------------------------+
+| M_DECAY_TIME              | Sets the release interval option to the specified     |
+|                           | value (Android only allows 0 or 1 to respectively set |
+|                           | the interval to the mininum and maximum value as      |
+|                           | specified at compile time).                           |
++---------------------------+-------------------------------------------------------+
+| M_PURGE                   | Forces immediate memory reclaiming (value is unused). |
++---------------------------+-------------------------------------------------------+
+| M_MEMTAG_TUNING           | Tunes the allocator's choice of memory tags to make   |
+|                           | it more likely that a certain class of memory errors  |
+|                           | will be detected. The value argument should be one of |
+|                           | the enumerators of ``scudo_memtag_tuning``.           |
++---------------------------+-------------------------------------------------------+
+| M_THREAD_DISABLE_MEM_INIT | Tunes the per-thread memory initialization, 0 being   |
+|                           | the normal behavior, 1 disabling the automatic heap   |
+|                           | initialization.                                       |
++---------------------------+-------------------------------------------------------+
+| M_CACHE_COUNT_MAX         | Set the maximum number of entries than can be cached  |
+|                           | in the Secondary cache.                               |
++---------------------------+-------------------------------------------------------+
+| M_CACHE_SIZE_MAX          | Sets the maximum size of entries that can be cached   |
+|                           | in the Secondary cache.                               |
++---------------------------+-------------------------------------------------------+
+| M_TSDS_COUNT_MAX          | Increases the maximum number of TSDs that can be used |
+|                           | up to the limit specified at compile time.            |
++---------------------------+-------------------------------------------------------+
 
 Error Types
 ===========
@@ -251,3 +335,4 @@ Here is a list of the current error messages and their potential cause:
 
 Several other error messages relate to parameter checking on the libc allocation
 APIs and are fairly straightforward to understand.
+

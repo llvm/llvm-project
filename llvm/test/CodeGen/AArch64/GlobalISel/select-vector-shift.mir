@@ -562,8 +562,8 @@ body:             |
     ; CHECK: liveins: $q0, $q1
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
-    ; CHECK: [[NEGv8i16_:%[0-9]+]]:fpr128 = NEGv8i16 [[COPY1]]
-    ; CHECK: [[USHLv16i8_:%[0-9]+]]:fpr128 = USHLv16i8 [[COPY]], [[NEGv8i16_]]
+    ; CHECK: [[NEGv16i8_:%[0-9]+]]:fpr128 = NEGv16i8 [[COPY1]]
+    ; CHECK: [[USHLv16i8_:%[0-9]+]]:fpr128 = USHLv16i8 [[COPY]], [[NEGv16i8_]]
     ; CHECK: $q0 = COPY [[USHLv16i8_]]
     ; CHECK: RET_ReallyLR implicit $q0
     %0:fpr(<16 x s8>) = COPY $q0

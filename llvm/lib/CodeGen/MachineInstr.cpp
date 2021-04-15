@@ -1319,12 +1319,10 @@ static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
   int64_t OverlapB =
       KnownWidthB ? WidthB + OffsetB - MinOffset : MemoryLocation::UnknownSize;
 
-  AliasResult AAResult = AA->alias(
+  return !AA->isNoAlias(
       MemoryLocation(ValA, OverlapA, UseTBAA ? MMOa->getAAInfo() : AAMDNodes()),
       MemoryLocation(ValB, OverlapB,
                      UseTBAA ? MMOb->getAAInfo() : AAMDNodes()));
-
-  return (AAResult != NoAlias);
 }
 
 bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,

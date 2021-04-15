@@ -227,6 +227,7 @@
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/Transforms/Utils/MetaRenamer.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
+#include "llvm/Transforms/Utils/RelLookupTableConverter.h"
 #include "llvm/Transforms/Utils/StripGCRelocates.h"
 #include "llvm/Transforms/Utils/StripNonLineTableDebugInfo.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
@@ -1066,10 +1067,12 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // Create an early function pass manager to cleanup the output of the
   // frontend.
   FunctionPassManager EarlyFPM(DebugLogging);
+  // Lower llvm.expect to metadata before attempting transforms.
+  // Compare/branch metadata may alter the behavior of passes like SimplifyCFG.
+  EarlyFPM.addPass(LowerExpectIntrinsicPass());
   EarlyFPM.addPass(SimplifyCFGPass());
   EarlyFPM.addPass(SROA());
   EarlyFPM.addPass(EarlyCSEPass());
-  EarlyFPM.addPass(LowerExpectIntrinsicPass());
   if (PTO.Coroutines)
     EarlyFPM.addPass(CoroEarlyPass());
   if (Level == OptimizationLevel::O3)
@@ -1417,6 +1420,8 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // ordering here.
   MPM.addPass(GlobalDCEPass());
   MPM.addPass(ConstantMergePass());
+
+  MPM.addPass(RelLookupTableConverterPass());
 
   return MPM;
 }

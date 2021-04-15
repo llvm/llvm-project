@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 using namespace mlir;
 

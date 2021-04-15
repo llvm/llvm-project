@@ -119,7 +119,7 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   // This field indicates that FLAT instruction accesses FLAT_GLBL segment.
   // Must be 0 for non-FLAT instructions.
-  field bit IsFlatGlobal = 0;
+  field bit FlatGlobal = 0;
 
   // Reads the mode register, usually for FP environment.
   field bit ReadsModeReg = 0;
@@ -139,7 +139,7 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   // This field indicates that FLAT instruction accesses FLAT_SCRATCH segment.
   // Must be 0 for non-FLAT instructions.
-  field bit IsFlatScratch = 0;
+  field bit FlatScratch = 0;
 
   // Atomic without a return.
   field bit IsAtomicNoRet = 0;
@@ -208,7 +208,7 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   let TSFlags{50} = D16Buf;
 
-  let TSFlags{51} = IsFlatGlobal;
+  let TSFlags{51} = FlatGlobal;
 
   let TSFlags{52} = FPDPRounding;
 
@@ -218,7 +218,7 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   let TSFlags{55} = IsDOT;
 
-  let TSFlags{56} = IsFlatScratch;
+  let TSFlags{56} = FlatScratch;
 
   let TSFlags{57} = IsAtomicNoRet;
 

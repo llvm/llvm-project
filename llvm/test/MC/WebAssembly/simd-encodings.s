@@ -280,7 +280,8 @@ main:
     # CHECK: v128.bitselect # encoding: [0xfd,0x52]
     v128.bitselect
 
-    # TODO: v128.any_true # encoding: [0xfd,0x53]
+    # CHECK: v128.any_true # encoding: [0xfd,0x53]
+    v128.any_true
 
     # CHECK: v128.load8_lane 32, 1 # encoding: [0xfd,0x54,0x00,0x20,0x01]
     v128.load8_lane 32, 1
@@ -596,7 +597,8 @@ main:
     # CHECK: i32x4.extmul_high_i16x8_u # encoding: [0xfd,0xbf,0x01]
     i32x4.extmul_high_i16x8_u
 
-    # TODO: i64x2.abs # encoding: [0xfd,0xc0,0x01]
+    # CHECK: i64x2.abs # encoding: [0xfd,0xc0,0x01]
+    i64x2.abs
 
     # CHECK: i64x2.neg # encoding: [0xfd,0xc1,0x01]
     i64x2.neg

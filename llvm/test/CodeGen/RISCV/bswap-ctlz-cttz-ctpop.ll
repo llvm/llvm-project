@@ -26,8 +26,8 @@ define i16 @test_bswap_i16(i16 %a) nounwind {
 ; RV64I-LABEL: test_bswap_i16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a0, 8
-; RV64I-NEXT:    slliw a0, a0, 16
-; RV64I-NEXT:    srliw a0, a0, 24
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 56
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
   %tmp = call i16 @llvm.bswap.i16(i16 %a)

@@ -27,29 +27,39 @@ namespace mlir {
 
 /// Type conversion from builtin types to SPIR-V types for shader interface.
 ///
-/// Non-32-bit scalar types require special hardware support that may not exist
-/// on all GPUs. This is reflected in SPIR-V as that non-32-bit scalar types
-/// require special capabilities or extensions. Right now if a scalar type of a
-/// certain bitwidth is not supported in the target environment, we use 32-bit
-/// ones unconditionally. This requires the runtime to also feed in data with
-/// a matched bitwidth and layout for interface types. The runtime can do that
-/// by inspecting the SPIR-V module.
-///
 /// For memref types, this converter additionally performs type wrapping to
 /// satisfy shader interface requirements: shader interface types must be
 /// pointers to structs.
-///
-/// TODO: We might want to introduce a way to control how unsupported bitwidth
-/// are handled and explicitly fail if wanted.
 class SPIRVTypeConverter : public TypeConverter {
 public:
-  explicit SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr);
+  struct Options {
+    /// Whether to emulate non-32-bit scalar types with 32-bit scalar types if
+    /// no native support.
+    ///
+    /// Non-32-bit scalar types require special hardware support that may not
+    /// exist on all GPUs. This is reflected in SPIR-V as that non-32-bit scalar
+    /// types require special capabilities or extensions. This option controls
+    /// whether to use 32-bit types to emulate, if a scalar type of a certain
+    /// bitwidth is not supported in the target environment. This requires the
+    /// runtime to also feed in data with a matched bitwidth and layout for
+    /// interface types. The runtime can do that by inspecting the SPIR-V
+    /// module.
+    ///
+    /// If the original scalar type has less than 32-bit, a multiple of its
+    /// values will be packed into one 32-bit value to be memory efficient.
+    bool emulateNon32BitScalarTypes;
 
-  /// Gets the number of bytes used for a type when converted to SPIR-V
-  /// type. Note that it doesnt account for whether the type is legal for a
-  /// SPIR-V target (described by spirv::TargetEnvAttr). Returns None on
-  /// failure.
-  static Optional<int64_t> getConvertedTypeNumBytes(Type);
+    /// The number of bits to store a boolean value. It is eight bits by
+    /// default.
+    unsigned boolNumBits;
+
+    // Note: we need this instead of inline initializers becuase of
+    // https://bugs.llvm.org/show_bug.cgi?id=36684
+    Options() : emulateNon32BitScalarTypes(true), boolNumBits(8) {}
+  };
+
+  explicit SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
+                              Options options = {});
 
   /// Gets the SPIR-V correspondence for the standard index type.
   static Type getIndexType(MLIRContext *context);
@@ -63,8 +73,12 @@ public:
   static Optional<spirv::StorageClass>
   getStorageClassForMemorySpace(unsigned space);
 
+  /// Returns the options controlling the SPIR-V type converter.
+  const Options &getOptions() const;
+
 private:
   spirv::TargetEnv targetEnv;
+  Options options;
 };
 
 //===----------------------------------------------------------------------===//

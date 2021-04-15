@@ -80,11 +80,16 @@ public:
     return cast_or_null<DIType>(N->getOperand(I));
   }
 
-  class iterator : std::iterator<std::input_iterator_tag, DIType *,
-                                 std::ptrdiff_t, void, DIType *> {
+  class iterator {
     MDNode::op_iterator I = nullptr;
 
   public:
+    using iterator_category = std::input_iterator_tag;
+    using value_type = DIType *;
+    using difference_type = std::ptrdiff_t;
+    using pointer = void;
+    using reference = DIType *;
+
     iterator() = default;
     explicit iterator(MDNode::op_iterator I) : I(I) {}
 
@@ -2010,6 +2015,8 @@ public:
 
   StringRef getName() const { return getStringOperand(2); }
   StringRef getLinkageName() const { return getStringOperand(3); }
+  /// Only used by clients of CloneFunction, and only right after the cloning.
+  void replaceLinkageName(MDString *LN) { replaceOperandWith(3, LN); }
 
   DISubroutineType *getType() const {
     return cast_or_null<DISubroutineType>(getRawType());
@@ -2627,11 +2634,16 @@ public:
   };
 
   /// An iterator for expression operands.
-  class expr_op_iterator
-      : public std::iterator<std::input_iterator_tag, ExprOperand> {
+  class expr_op_iterator {
     ExprOperand Op;
 
   public:
+    using iterator_category = std::input_iterator_tag;
+    using value_type = ExprOperand;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
     expr_op_iterator() = default;
     explicit expr_op_iterator(element_iterator I) : Op(I) {}
 

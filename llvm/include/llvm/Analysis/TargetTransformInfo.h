@@ -718,6 +718,9 @@ public:
   /// containing this constant value for the target.
   bool shouldBuildLookupTablesForConstant(Constant *C) const;
 
+  /// Return true if lookup tables should be turned into relative lookup tables.
+  bool shouldBuildRelLookupTables() const;
+
   /// Return true if the input function which is cold at all call sites,
   ///  should use coldcc calling convention.
   bool useColdCCForColdCall(Function &F) const;
@@ -809,7 +812,7 @@ public:
 
   /// Return the expected cost of supporting the floating point operation
   /// of the specified type.
-  int getFPOpCost(Type *Ty) const;
+  InstructionCost getFPOpCost(Type *Ty) const;
 
   /// Return the expected cost of materializing for the given integer
   /// immediate of the specified type.
@@ -1033,7 +1036,7 @@ public:
   /// cases or optimizations based on those values.
   /// \p CxtI is the optional original context instruction, if one exists, to
   /// provide even more information.
-  int getArithmeticInstrCost(
+  InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       OperandValueKind Opd1Info = OK_AnyValue,
@@ -1049,9 +1052,9 @@ public:
   /// extraction shuffle kinds to show the insert/extract point and the type of
   /// the subvector being inserted/extracted.
   /// NOTE: For subvector extractions Tp represents the source type.
-  int getShuffleCost(ShuffleKind Kind, VectorType *Tp,
-                     ArrayRef<int> Mask = None, int Index = 0,
-                     VectorType *SubTp = nullptr) const;
+  InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
+                                 ArrayRef<int> Mask = None, int Index = 0,
+                                 VectorType *SubTp = nullptr) const;
 
   /// Represents a hint about the context in which a cast is used.
   ///
@@ -1092,44 +1095,50 @@ public:
   /// \return The expected cost of cast instructions, such as bitcast, trunc,
   /// zext, etc. If there is an existing instruction that holds Opcode, it
   /// may be passed in the 'I' parameter.
-  int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                       TTI::CastContextHint CCH,
-                       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
-                       const Instruction *I = nullptr) const;
+  InstructionCost
+  getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                   TTI::CastContextHint CCH,
+                   TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
+                   const Instruction *I = nullptr) const;
 
   /// \return The expected cost of a sign- or zero-extended vector extract. Use
   /// -1 to indicate that there is no information about the index value.
-  int getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
-                               unsigned Index = -1) const;
+  InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
+                                           VectorType *VecTy,
+                                           unsigned Index = -1) const;
 
   /// \return The expected cost of control-flow related instructions such as
-  /// Phi, Ret, Br.
-  int getCFInstrCost(unsigned Opcode,
-                     TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) const;
+  /// Phi, Ret, Br, Switch.
+  InstructionCost
+  getCFInstrCost(unsigned Opcode,
+                 TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
+                 const Instruction *I = nullptr) const;
 
   /// \returns The expected cost of compare and select instructions. If there
   /// is an existing instruction that holds Opcode, it may be passed in the
   /// 'I' parameter. The \p VecPred parameter can be used to indicate the select
   /// is using a compare with the specified predicate as condition. When vector
   /// types are passed, \p VecPred must be used for all lanes.
-  int getCmpSelInstrCost(
-      unsigned Opcode, Type *ValTy, Type *CondTy = nullptr,
-      CmpInst::Predicate VecPred = CmpInst::BAD_ICMP_PREDICATE,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      const Instruction *I = nullptr) const;
+  InstructionCost
+  getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy = nullptr,
+                     CmpInst::Predicate VecPred = CmpInst::BAD_ICMP_PREDICATE,
+                     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+                     const Instruction *I = nullptr) const;
 
   /// \return The expected cost of vector Insert and Extract.
   /// Use -1 to indicate that there is no information on the index value.
-  int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index = -1) const;
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     unsigned Index = -1) const;
 
   /// \return The cost of Load and Store instructions.
-  int getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                      unsigned AddressSpace,
-                      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-                      const Instruction *I = nullptr) const;
+  InstructionCost
+  getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
+                  unsigned AddressSpace,
+                  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+                  const Instruction *I = nullptr) const;
 
   /// \return The cost of masked Load and Store instructions.
-  int getMaskedMemoryOpCost(
+  InstructionCost getMaskedMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
@@ -1142,7 +1151,7 @@ public:
   /// \p Alignment - alignment of single element
   /// \p I - the optional original context instruction, if one exists, e.g. the
   ///        load/store to transform or the call to the gather/scatter intrinsic
-  int getGatherScatterOpCost(
+  InstructionCost getGatherScatterOpCost(
       unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
       Align Alignment, TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       const Instruction *I = nullptr) const;
@@ -1157,7 +1166,7 @@ public:
   /// \p AddressSpace is address space of the pointer.
   /// \p UseMaskForCond indicates if the memory access is predicated.
   /// \p UseMaskForGaps indicates if gaps should be masked.
-  int getInterleavedMemoryOpCost(
+  InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
@@ -1176,13 +1185,13 @@ public:
   /// Split:
   ///  (v0, v1, v2, v3)
   ///  ((v0+v2), (v1+v3), undef, undef)
-  int getArithmeticReductionCost(
-    unsigned Opcode, VectorType *Ty, bool IsPairwiseForm,
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+  InstructionCost getArithmeticReductionCost(
+      unsigned Opcode, VectorType *Ty, bool IsPairwiseForm,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
-  int getMinMaxReductionCost(
-    VectorType *Ty, VectorType *CondTy, bool IsPairwiseForm, bool IsUnsigned,
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+  InstructionCost getMinMaxReductionCost(
+      VectorType *Ty, VectorType *CondTy, bool IsPairwiseForm, bool IsUnsigned,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// Calculate the cost of an extended reduction pattern, similar to
   /// getArithmeticReductionCost of an Add reduction with an extension and
@@ -1201,8 +1210,9 @@ public:
                                         TTI::TargetCostKind CostKind) const;
 
   /// \returns The cost of Call instructions.
-  int getCallInstrCost(Function *F, Type *RetTy, ArrayRef<Type *> Tys,
-                 TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) const;
+  InstructionCost getCallInstrCost(
+      Function *F, Type *RetTy, ArrayRef<Type *> Tys,
+      TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) const;
 
   /// \returns The number of pieces into which the provided type must be
   /// split during legalization. Zero is returned when the answer is unknown.
@@ -1482,6 +1492,7 @@ public:
   virtual unsigned getRegUsageForType(Type *Ty) = 0;
   virtual bool shouldBuildLookupTables() = 0;
   virtual bool shouldBuildLookupTablesForConstant(Constant *C) = 0;
+  virtual bool shouldBuildRelLookupTables() = 0;
   virtual bool useColdCCForColdCall(Function &F) = 0;
   virtual unsigned getScalarizationOverhead(VectorType *Ty,
                                             const APInt &DemandedElts,
@@ -1504,7 +1515,7 @@ public:
   virtual PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) = 0;
   virtual bool haveFastSqrt(Type *Ty) = 0;
   virtual bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) = 0;
-  virtual int getFPOpCost(Type *Ty) = 0;
+  virtual InstructionCost getFPOpCost(Type *Ty) = 0;
   virtual int getIntImmCodeSizeCost(unsigned Opc, unsigned Idx,
                                     const APInt &Imm, Type *Ty) = 0;
   virtual int getIntImmCost(const APInt &Imm, Type *Ty,
@@ -1557,62 +1568,67 @@ public:
   virtual bool enableWritePrefetching() const = 0;
 
   virtual unsigned getMaxInterleaveFactor(unsigned VF) = 0;
-  virtual unsigned getArithmeticInstrCost(
-      unsigned Opcode, Type *Ty,
-      TTI::TargetCostKind CostKind,
-      OperandValueKind Opd1Info,
-      OperandValueKind Opd2Info, OperandValueProperties Opd1PropInfo,
-      OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
-      const Instruction *CxtI = nullptr) = 0;
-  virtual int getShuffleCost(ShuffleKind Kind, VectorType *Tp,
-                             ArrayRef<int> Mask, int Index,
-                             VectorType *SubTp) = 0;
-  virtual int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                               CastContextHint CCH,
-                               TTI::TargetCostKind CostKind,
-                               const Instruction *I) = 0;
-  virtual int getExtractWithExtendCost(unsigned Opcode, Type *Dst,
-                                       VectorType *VecTy, unsigned Index) = 0;
-  virtual int getCFInstrCost(unsigned Opcode,
-                             TTI::TargetCostKind CostKind) = 0;
-  virtual int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
-                                 CmpInst::Predicate VecPred,
-                                 TTI::TargetCostKind CostKind,
-                                 const Instruction *I) = 0;
-  virtual int getVectorInstrCost(unsigned Opcode, Type *Val,
-                                 unsigned Index) = 0;
-  virtual int getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                              unsigned AddressSpace,
-                              TTI::TargetCostKind CostKind,
-                              const Instruction *I) = 0;
-  virtual int getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                                    unsigned AddressSpace,
-                                    TTI::TargetCostKind CostKind) = 0;
-  virtual int getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
-                                     const Value *Ptr, bool VariableMask,
-                                     Align Alignment,
-                                     TTI::TargetCostKind CostKind,
-                                     const Instruction *I = nullptr) = 0;
+  virtual InstructionCost getArithmeticInstrCost(
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+      OperandValueKind Opd1Info, OperandValueKind Opd2Info,
+      OperandValueProperties Opd1PropInfo, OperandValueProperties Opd2PropInfo,
+      ArrayRef<const Value *> Args, const Instruction *CxtI = nullptr) = 0;
+  virtual InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
+                                         ArrayRef<int> Mask, int Index,
+                                         VectorType *SubTp) = 0;
+  virtual InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst,
+                                           Type *Src, CastContextHint CCH,
+                                           TTI::TargetCostKind CostKind,
+                                           const Instruction *I) = 0;
+  virtual InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
+                                                   VectorType *VecTy,
+                                                   unsigned Index) = 0;
+  virtual InstructionCost getCFInstrCost(unsigned Opcode,
+                                         TTI::TargetCostKind CostKind,
+                                         const Instruction *I = nullptr) = 0;
+  virtual InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
+                                             Type *CondTy,
+                                             CmpInst::Predicate VecPred,
+                                             TTI::TargetCostKind CostKind,
+                                             const Instruction *I) = 0;
+  virtual InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                             unsigned Index) = 0;
+  virtual InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
+                                          Align Alignment,
+                                          unsigned AddressSpace,
+                                          TTI::TargetCostKind CostKind,
+                                          const Instruction *I) = 0;
+  virtual InstructionCost
+  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
+                        unsigned AddressSpace,
+                        TTI::TargetCostKind CostKind) = 0;
+  virtual InstructionCost
+  getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
+                         bool VariableMask, Align Alignment,
+                         TTI::TargetCostKind CostKind,
+                         const Instruction *I = nullptr) = 0;
 
-  virtual int getInterleavedMemoryOpCost(
+  virtual InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond = false, bool UseMaskForGaps = false) = 0;
-  virtual int getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                                         bool IsPairwiseForm,
-                                         TTI::TargetCostKind CostKind) = 0;
-  virtual int getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                                     bool IsPairwiseForm, bool IsUnsigned,
-                                     TTI::TargetCostKind CostKind) = 0;
+  virtual InstructionCost
+  getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
+                             bool IsPairwiseForm,
+                             TTI::TargetCostKind CostKind) = 0;
+  virtual InstructionCost
+  getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
+                         bool IsPairwiseForm, bool IsUnsigned,
+                         TTI::TargetCostKind CostKind) = 0;
   virtual InstructionCost getExtendedAddReductionCost(
       bool IsMLA, bool IsUnsigned, Type *ResTy, VectorType *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) = 0;
   virtual InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) = 0;
-  virtual int getCallInstrCost(Function *F, Type *RetTy,
-                               ArrayRef<Type *> Tys,
-                               TTI::TargetCostKind CostKind) = 0;
+  virtual InstructionCost getCallInstrCost(Function *F, Type *RetTy,
+                                           ArrayRef<Type *> Tys,
+                                           TTI::TargetCostKind CostKind) = 0;
   virtual unsigned getNumberOfParts(Type *Tp) = 0;
   virtual int getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
                                         const SCEV *Ptr) = 0;
@@ -1869,6 +1885,9 @@ public:
   bool shouldBuildLookupTablesForConstant(Constant *C) override {
     return Impl.shouldBuildLookupTablesForConstant(C);
   }
+  bool shouldBuildRelLookupTables() override {
+    return Impl.shouldBuildRelLookupTables();
+  }
   bool useColdCCForColdCall(Function &F) override {
     return Impl.useColdCCForColdCall(F);
   }
@@ -1917,7 +1936,9 @@ public:
     return Impl.isFCmpOrdCheaperThanFCmpZero(Ty);
   }
 
-  int getFPOpCost(Type *Ty) override { return Impl.getFPOpCost(Ty); }
+  InstructionCost getFPOpCost(Type *Ty) override {
+    return Impl.getFPOpCost(Ty);
+  }
 
   int getIntImmCodeSizeCost(unsigned Opc, unsigned Idx, const APInt &Imm,
                             Type *Ty) override {
@@ -2016,80 +2037,85 @@ public:
                                             BlockFrequencyInfo *BFI) override {
     return Impl.getEstimatedNumberOfCaseClusters(SI, JTSize, PSI, BFI);
   }
-  unsigned getArithmeticInstrCost(unsigned Opcode, Type *Ty,
-                                  TTI::TargetCostKind CostKind,
-                                  OperandValueKind Opd1Info,
-                                  OperandValueKind Opd2Info,
-                                  OperandValueProperties Opd1PropInfo,
-                                  OperandValueProperties Opd2PropInfo,
-                                  ArrayRef<const Value *> Args,
-                                  const Instruction *CxtI = nullptr) override {
+  InstructionCost getArithmeticInstrCost(
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+      OperandValueKind Opd1Info, OperandValueKind Opd2Info,
+      OperandValueProperties Opd1PropInfo, OperandValueProperties Opd2PropInfo,
+      ArrayRef<const Value *> Args,
+      const Instruction *CxtI = nullptr) override {
     return Impl.getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info, Opd2Info,
                                        Opd1PropInfo, Opd2PropInfo, Args, CxtI);
   }
-  int getShuffleCost(ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
-                     int Index, VectorType *SubTp) override {
+  InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
+                                 ArrayRef<int> Mask, int Index,
+                                 VectorType *SubTp) override {
     return Impl.getShuffleCost(Kind, Tp, Mask, Index, SubTp);
   }
-  int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                       CastContextHint CCH, TTI::TargetCostKind CostKind,
-                       const Instruction *I) override {
+  InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                                   CastContextHint CCH,
+                                   TTI::TargetCostKind CostKind,
+                                   const Instruction *I) override {
     return Impl.getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
   }
-  int getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
-                               unsigned Index) override {
+  InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
+                                           VectorType *VecTy,
+                                           unsigned Index) override {
     return Impl.getExtractWithExtendCost(Opcode, Dst, VecTy, Index);
   }
-  int getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind) override {
-    return Impl.getCFInstrCost(Opcode, CostKind);
+  InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                                 const Instruction *I = nullptr) override {
+    return Impl.getCFInstrCost(Opcode, CostKind, I);
   }
-  int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
-                         CmpInst::Predicate VecPred,
-                         TTI::TargetCostKind CostKind,
-                         const Instruction *I) override {
+  InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                                     CmpInst::Predicate VecPred,
+                                     TTI::TargetCostKind CostKind,
+                                     const Instruction *I) override {
     return Impl.getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
   }
-  int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) override {
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     unsigned Index) override {
     return Impl.getVectorInstrCost(Opcode, Val, Index);
   }
-  int getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                      unsigned AddressSpace, TTI::TargetCostKind CostKind,
-                      const Instruction *I) override {
+  InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
+                                  unsigned AddressSpace,
+                                  TTI::TargetCostKind CostKind,
+                                  const Instruction *I) override {
     return Impl.getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                 CostKind, I);
   }
-  int getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                            unsigned AddressSpace,
-                            TTI::TargetCostKind CostKind) override {
+  InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
+                                        Align Alignment, unsigned AddressSpace,
+                                        TTI::TargetCostKind CostKind) override {
     return Impl.getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                       CostKind);
   }
-  int getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                             bool VariableMask, Align Alignment,
-                             TTI::TargetCostKind CostKind,
-                             const Instruction *I = nullptr) override {
+  InstructionCost
+  getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
+                         bool VariableMask, Align Alignment,
+                         TTI::TargetCostKind CostKind,
+                         const Instruction *I = nullptr) override {
     return Impl.getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                        Alignment, CostKind, I);
   }
-  int getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy, unsigned Factor,
-                                 ArrayRef<unsigned> Indices, Align Alignment,
-                                 unsigned AddressSpace,
-                                 TTI::TargetCostKind CostKind,
-                                 bool UseMaskForCond,
-                                 bool UseMaskForGaps) override {
+  InstructionCost getInterleavedMemoryOpCost(
+      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
+      bool UseMaskForCond, bool UseMaskForGaps) override {
     return Impl.getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
                                            Alignment, AddressSpace, CostKind,
                                            UseMaskForCond, UseMaskForGaps);
   }
-  int getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                                 bool IsPairwiseForm,
-                                 TTI::TargetCostKind CostKind) override {
+  InstructionCost
+  getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
+                             bool IsPairwiseForm,
+                             TTI::TargetCostKind CostKind) override {
     return Impl.getArithmeticReductionCost(Opcode, Ty, IsPairwiseForm,
                                            CostKind);
   }
-  int getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                             bool IsPairwiseForm, bool IsUnsigned,
-                             TTI::TargetCostKind CostKind) override {
+  InstructionCost
+  getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
+                         bool IsPairwiseForm, bool IsUnsigned,
+                         TTI::TargetCostKind CostKind) override {
     return Impl.getMinMaxReductionCost(Ty, CondTy, IsPairwiseForm, IsUnsigned,
                                        CostKind);
   }
@@ -2103,9 +2129,9 @@ public:
                                         TTI::TargetCostKind CostKind) override {
     return Impl.getIntrinsicInstrCost(ICA, CostKind);
   }
-  int getCallInstrCost(Function *F, Type *RetTy,
-                       ArrayRef<Type *> Tys,
-                       TTI::TargetCostKind CostKind) override {
+  InstructionCost getCallInstrCost(Function *F, Type *RetTy,
+                                   ArrayRef<Type *> Tys,
+                                   TTI::TargetCostKind CostKind) override {
     return Impl.getCallInstrCost(F, RetTy, Tys, CostKind);
   }
   unsigned getNumberOfParts(Type *Tp) override {

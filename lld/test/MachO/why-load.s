@@ -28,40 +28,40 @@
 # RUN: %lld %t/main.o -force_load %t/lib.a -o /dev/null -ObjC -all_load -why_load | \
 # RUN:     FileCheck %s --check-prefix=WHYOBJCALLFORCE
 
-# WHY-DAG: _bar forced load of lib.a(bar.o)
-# WHY-DAG: __Z3foo forced load of lib.a(foo.o)
-# WHY-NOT: {{.*}} forced load of lib.a(objc.o)
+# WHY-DAG: _bar forced load of {{.+}}lib.a(bar.o)
+# WHY-DAG: __Z3foo forced load of {{.+}}lib.a(foo.o)
+# WHY-NOT: {{.+}} forced load of {{.+}}lib.a(objc.o)
 
-# WHYFORCE-DAG: -force_load forced load of lib.a(bar.o)
-# WHYFORCE-DAG: -force_load forced load of lib.a(foo.o)
-# WHYFORCE-DAG: -force_load forced load of lib.a(objc.o)
+# WHYFORCE-DAG: -force_load forced load of {{.+}}lib.a(bar.o)
+# WHYFORCE-DAG: -force_load forced load of {{.+}}lib.a(foo.o)
+# WHYFORCE-DAG: -force_load forced load of {{.+}}lib.a(objc.o)
 
-# WHYALL-DAG: -all_load forced load of lib.a(bar.o)
-# WHYALL-DAG: -all_load forced load of lib.a(foo.o)
-# WHYALL-DAG: -all_load forced load of lib.a(objc.o)
+# WHYALL-DAG: -all_load forced load of {{.+}}lib.a(bar.o)
+# WHYALL-DAG: -all_load forced load of {{.+}}lib.a(foo.o)
+# WHYALL-DAG: -all_load forced load of {{.+}}lib.a(objc.o)
 
-# WHYALLFORCE-DAG: -force_load forced load of lib.a(bar.o)
-# WHYALLFORCE-DAG: -force_load forced load of lib.a(foo.o)
-# WHYALLFORCE-DAG: -force_load forced load of lib.a(objc.o)
+# WHYALLFORCE-DAG: -force_load forced load of {{.+}}lib.a(bar.o)
+# WHYALLFORCE-DAG: -force_load forced load of {{.+}}lib.a(foo.o)
+# WHYALLFORCE-DAG: -force_load forced load of {{.+}}lib.a(objc.o)
 
-# WHYOBJC-DAG: _bar forced load of lib.a(bar.o)
-# WHYOBJC-DAG: __Z3foo forced load of lib.a(foo.o)
-# WHYOBJC-DAG: -ObjC forced load of lib.a(objc.o)
+# WHYOBJC-DAG: _bar forced load of {{.+}}lib.a(bar.o)
+# WHYOBJC-DAG: __Z3foo forced load of {{.+}}lib.a(foo.o)
+# WHYOBJC-DAG: -ObjC forced load of {{.+}}lib.a(objc.o)
 
-# WHYOBJCFORCE-DAG: -force_load forced load of lib.a(bar.o)
-# WHYOBJCFORCE-DAG: -force_load forced load of lib.a(foo.o)
-# WHYOBJCFORCE-DAG: -force_load forced load of lib.a(objc.o)
+# WHYOBJCFORCE-DAG: -force_load forced load of {{.+}}lib.a(bar.o)
+# WHYOBJCFORCE-DAG: -force_load forced load of {{.+}}lib.a(foo.o)
+# WHYOBJCFORCE-DAG: -force_load forced load of {{.+}}lib.a(objc.o)
 
-# WHYOBJCALL-DAG: -all_load forced load of lib.a(bar.o)
-# WHYOBJCALL-DAG: -all_load forced load of lib.a(foo.o)
-# WHYOBJCALL-DAG: -all_load forced load of lib.a(objc.o)
+# WHYOBJCALL-DAG: -all_load forced load of {{.+}}lib.a(bar.o)
+# WHYOBJCALL-DAG: -all_load forced load of {{.+}}lib.a(foo.o)
+# WHYOBJCALL-DAG: -all_load forced load of {{.+}}lib.a(objc.o)
 
-# WHYOBJCALLFORCE-DAG: -force_load forced load of lib.a(bar.o)
-# WHYOBJCALLFORCE-DAG: -force_load forced load of lib.a(foo.o)
-# WHYOBJCALLFORCE-DAG: -force_load forced load of lib.a(objc.o)
+# WHYOBJCALLFORCE-DAG: -force_load forced load of {{.+}}lib.a(bar.o)
+# WHYOBJCALLFORCE-DAG: -force_load forced load of {{.+}}lib.a(foo.o)
+# WHYOBJCALLFORCE-DAG: -force_load forced load of {{.+}}lib.a(objc.o)
 
 #--- objc.s
-.section	__DATA,__objc_catlist
+.section __DATA,__objc_catlist
 .quad 0x1234
 
 #--- foo.s

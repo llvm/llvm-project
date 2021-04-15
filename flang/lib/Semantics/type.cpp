@@ -191,14 +191,14 @@ ParamValue *DerivedTypeSpec::FindParameter(SourceName target) {
 
 class InstantiateHelper {
 public:
-  InstantiateHelper(SemanticsContext &context, Scope &scope)
-      : context_{context}, scope_{scope} {}
+  InstantiateHelper(Scope &scope) : scope_{scope} {}
   // Instantiate components from fromScope into scope_
   void InstantiateComponents(const Scope &);
 
 private:
+  SemanticsContext &context() const { return scope_.context(); }
   evaluate::FoldingContext &foldingContext() {
-    return context_.foldingContext();
+    return context().foldingContext();
   }
   template <typename T> T Fold(T &&expr) {
     return evaluate::Fold(foldingContext(), std::move(expr));
@@ -209,16 +209,24 @@ private:
       SourceName, const DeclTypeSpec &);
   DerivedTypeSpec CreateDerivedTypeSpec(const DerivedTypeSpec &, bool);
 
-  SemanticsContext &context_;
   Scope &scope_;
 };
 
-void DerivedTypeSpec::Instantiate(
-    Scope &containingScope, SemanticsContext &context) {
+static int PlumbPDTInstantiationDepth(const Scope *scope) {
+  int depth{0};
+  while (scope->IsParameterizedDerivedTypeInstantiation()) {
+    ++depth;
+    scope = &scope->parent();
+  }
+  return depth;
+}
+
+void DerivedTypeSpec::Instantiate(Scope &containingScope) {
   if (instantiated_) {
     return;
   }
   instantiated_ = true;
+  auto &context{containingScope.context()};
   auto &foldingContext{context.foldingContext()};
   if (IsForwardReferenced()) {
     foldingContext.messages().Say(typeSymbol_.name(),
@@ -236,7 +244,7 @@ void DerivedTypeSpec::Instantiate(
         if (DerivedTypeSpec * derived{type->AsDerived()}) {
           if (!(derived->IsForwardReferenced() &&
                   IsAllocatableOrPointer(symbol))) {
-            derived->Instantiate(containingScope, context);
+            derived->Instantiate(containingScope);
           }
         }
       }
@@ -253,6 +261,9 @@ void DerivedTypeSpec::Instantiate(
     ComputeOffsets(context, const_cast<Scope &>(typeScope));
     return;
   }
+  // New PDT instantiation.  Create a new scope and populate it
+  // with components that have been specialized for this set of
+  // parameters.
   Scope &newScope{containingScope.MakeScope(Scope::Kind::DerivedType)};
   newScope.set_derivedTypeSpec(*this);
   ReplaceScope(newScope);
@@ -302,14 +313,19 @@ void DerivedTypeSpec::Instantiate(
   // type's scope into the new instance.
   newScope.AddSourceRange(typeScope.sourceRange());
   auto restorer2{foldingContext.messages().SetContext(contextMessage)};
-  InstantiateHelper{context, newScope}.InstantiateComponents(typeScope);
+  if (PlumbPDTInstantiationDepth(&containingScope) > 100) {
+    foldingContext.messages().Say(
+        "Too many recursive parameterized derived type instantiations"_err_en_US);
+  } else {
+    InstantiateHelper{newScope}.InstantiateComponents(typeScope);
+  }
 }
 
 void InstantiateHelper::InstantiateComponents(const Scope &fromScope) {
   for (const auto &pair : fromScope) {
     InstantiateComponent(*pair.second);
   }
-  ComputeOffsets(context_, scope_);
+  ComputeOffsets(context(), scope_);
 }
 
 void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
@@ -353,6 +369,15 @@ void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
           : evaluate::NonPointerInitializationExpr(
                 newSymbol, std::move(*init), foldingContext());
     }
+  } else if (auto *procDetails{newSymbol.detailsIf<ProcEntityDetails>()}) {
+    // We have a procedure pointer.  Instantiate its return type
+    if (const DeclTypeSpec * returnType{InstantiateType(newSymbol)}) {
+      ProcInterface &interface{procDetails->interface()};
+      if (!interface.symbol()) {
+        // Don't change the type for interfaces based on symbols
+        interface.set_type(*returnType);
+      }
+    }
   }
 }
 
@@ -363,7 +388,7 @@ const DeclTypeSpec *InstantiateHelper::InstantiateType(const Symbol &symbol) {
   } else if (const DerivedTypeSpec * spec{type->AsDerived()}) {
     return &FindOrInstantiateDerivedType(scope_,
         CreateDerivedTypeSpec(*spec, symbol.test(Symbol::Flag::ParentComp)),
-        context_, type->category());
+        type->category());
   } else if (type->AsIntrinsic()) {
     return &InstantiateIntrinsicType(symbol.name(), *type);
   } else if (type->category() == DeclTypeSpec::ClassStar) {
@@ -383,7 +408,7 @@ const DeclTypeSpec &InstantiateHelper::InstantiateIntrinsicType(
   // The expression was not originally constant, but now it must be so
   // in the context of a parameterized derived type instantiation.
   KindExpr copy{Fold(common::Clone(intrinsic.kind()))};
-  int kind{context_.GetDefaultKind(intrinsic.category())};
+  int kind{context().GetDefaultKind(intrinsic.category())};
   if (auto value{evaluate::ToInt64(copy)}) {
     if (evaluate::IsValidKindOfIntrinsicType(intrinsic.category(), *value)) {
       kind = *value;

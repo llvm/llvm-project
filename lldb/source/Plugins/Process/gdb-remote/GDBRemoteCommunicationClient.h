@@ -366,6 +366,9 @@ public:
     return m_supports_alloc_dealloc_memory;
   }
 
+  std::vector<std::pair<lldb::pid_t, lldb::tid_t>>
+  GetCurrentProcessAndThreadIDs(bool &sequence_mutex_unavailable);
+
   size_t GetCurrentThreadIDs(std::vector<lldb::tid_t> &thread_ids,
                              bool &sequence_mutex_unavailable);
 
@@ -598,7 +601,8 @@ protected:
 
   // Given the list of compression types that the remote debug stub can support,
   // possibly enable compression if we find an encoding we can handle.
-  void MaybeEnableCompression(std::vector<std::string> supported_compressions);
+  void MaybeEnableCompression(
+      llvm::ArrayRef<llvm::StringRef> supported_compressions);
 
   bool DecodeProcessInfoResponse(StringExtractorGDBRemote &response,
                                  ProcessInstanceInfo &process_info);

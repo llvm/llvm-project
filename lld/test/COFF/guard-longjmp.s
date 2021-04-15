@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -triple x86_64-windows-msvc %s -filetype=obj -o %t.obj
-# RUN: lld-link %t.obj -guard:cf -out:%t.exe -entry:main
+# RUN: lld-link %t.obj -guard:cf -guard:longjmp -out:%t.exe -entry:main
 # RUN: llvm-readobj --file-headers --coff-load-config %t.exe | FileCheck %s
 
 # CHECK: ImageBase: 0x140000000
@@ -100,5 +100,5 @@ _load_config_used:
         .quad __guard_iat_table
         .quad __guard_iat_count
         .quad __guard_longjmp_table
-        .quad __guard_fids_count
+        .quad __guard_longjmp_count
         .fill 84, 1, 0

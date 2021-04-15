@@ -88,9 +88,7 @@ std::string lld::toString(const InputFile *f) {
 
   if (f->archiveName.empty())
     return std::string(f->getName());
-  return (path::filename(f->archiveName) + "(" + path::filename(f->getName()) +
-          ")")
-      .str();
+  return (f->archiveName + "(" + path::filename(f->getName()) + ")").str();
 }
 
 SetVector<InputFile *> macho::inputFiles;

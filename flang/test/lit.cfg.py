@@ -68,7 +68,6 @@ tools = [
 ]
 
 if config.include_flang_new_driver_test:
-   tools.append(ToolSubst('%flang-new', command=FindTool('flang-new'), unresolved='fatal'))
    tools.append(ToolSubst('%flang', command=FindTool('flang-new'), unresolved='fatal'))
    tools.append(ToolSubst('%flang_fc1', command=FindTool('flang-new'),
     extra_args=['-fc1'], unresolved='fatal'))

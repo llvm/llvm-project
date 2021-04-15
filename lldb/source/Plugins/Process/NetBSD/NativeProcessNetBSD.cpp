@@ -256,6 +256,24 @@ void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
     SetState(StateType::eStateStopped, true);
     return;
   }
+  case TRAP_CHLD: {
+    ptrace_state_t pst;
+    Status error = PtraceWrapper(PT_GET_PROCESS_STATE, pid, &pst, sizeof(pst));
+    if (error.Fail()) {
+      SetState(StateType::eStateInvalid);
+      return;
+    }
+
+    if (pst.pe_report_event == PTRACE_VFORK_DONE) {
+      Status error =
+          PtraceWrapper(PT_CONTINUE, pid, reinterpret_cast<void *>(1), 0);
+      if (error.Fail())
+        SetState(StateType::eStateInvalid);
+      return;
+    } else
+      MonitorClone(pst.pe_other_pid);
+    return;
+  }
   case TRAP_LWP: {
     ptrace_state_t pst;
     Status error = PtraceWrapper(PT_GET_PROCESS_STATE, pid, &pst, sizeof(pst));
@@ -510,7 +528,7 @@ Status NativeProcessNetBSD::Detach() {
   if (GetID() == LLDB_INVALID_PROCESS_ID)
     return error;
 
-  return PtraceWrapper(PT_DETACH, GetID());
+  return PtraceWrapper(PT_DETACH, GetID(), reinterpret_cast<void *>(1));
 }
 
 Status NativeProcessNetBSD::Signal(int signo) {
@@ -738,17 +756,17 @@ Status NativeProcessNetBSD::GetFileLoadAddress(const llvm::StringRef &file_name,
 
 void NativeProcessNetBSD::SigchldHandler() {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
-  // Process all pending waitpid notifications.
   int status;
   ::pid_t wait_pid = llvm::sys::RetryAfterSignal(-1, waitpid, GetID(), &status,
                                                  WALLSIG | WNOHANG);
 
   if (wait_pid == 0)
-    return; // We are done.
+    return;
 
   if (wait_pid == -1) {
     Status error(errno, eErrorTypePOSIX);
     LLDB_LOG(log, "waitpid ({0}, &status, _) failed: {1}", GetID(), error);
+    return;
   }
 
   WaitStatus wait_status = WaitStatus::Decode(status);
@@ -936,8 +954,9 @@ Status NativeProcessNetBSD::SetupTrace() {
       PtraceWrapper(PT_GET_EVENT_MASK, GetID(), &events, sizeof(events));
   if (status.Fail())
     return status;
-  // TODO: PTRACE_FORK | PTRACE_VFORK | PTRACE_POSIX_SPAWN?
-  events.pe_set_event |= PTRACE_LWP_CREATE | PTRACE_LWP_EXIT;
+  // TODO: PTRACE_POSIX_SPAWN?
+  events.pe_set_event |= PTRACE_LWP_CREATE | PTRACE_LWP_EXIT | PTRACE_FORK |
+                         PTRACE_VFORK | PTRACE_VFORK_DONE;
   status = PtraceWrapper(PT_SET_EVENT_MASK, GetID(), &events, sizeof(events));
   if (status.Fail())
     return status;
@@ -973,4 +992,40 @@ Status NativeProcessNetBSD::ReinitializeThreads() {
   }
 
   return error;
+}
+
+void NativeProcessNetBSD::MonitorClone(::pid_t child_pid) {
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
+  LLDB_LOG(log, "clone, child_pid={0}", child_pid);
+
+  int status;
+  ::pid_t wait_pid =
+      llvm::sys::RetryAfterSignal(-1, ::waitpid, child_pid, &status, 0);
+  if (wait_pid != child_pid) {
+    LLDB_LOG(log,
+             "waiting for pid {0} failed. Assuming the pid has "
+             "disappeared in the meantime",
+             child_pid);
+    return;
+  }
+  if (WIFEXITED(status)) {
+    LLDB_LOG(log,
+             "waiting for pid {0} returned an 'exited' event. Not "
+             "tracking it.",
+             child_pid);
+    return;
+  }
+
+  MainLoop unused_loop;
+  NativeProcessNetBSD child_process{static_cast<::pid_t>(child_pid),
+                                    m_terminal_fd, m_delegate, m_arch,
+                                    unused_loop};
+  child_process.Detach();
+  Status pt_error =
+      PtraceWrapper(PT_CONTINUE, GetID(), reinterpret_cast<void *>(1), 0);
+  if (pt_error.Fail()) {
+    LLDB_LOG_ERROR(log, std::move(pt_error.ToError()),
+                   "unable to resume parent process {1}: {0}", GetID());
+    SetState(StateType::eStateInvalid);
+  }
 }

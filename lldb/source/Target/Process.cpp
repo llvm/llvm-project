@@ -238,6 +238,18 @@ void ProcessProperties::SetStopOnSharedLibraryEvents(bool stop) {
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, stop);
 }
 
+bool ProcessProperties::GetDisableLangRuntimeUnwindPlans() const {
+  const uint32_t idx = ePropertyDisableLangRuntimeUnwindPlans;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_process_properties[idx].default_uint_value != 0);
+}
+
+void ProcessProperties::SetDisableLangRuntimeUnwindPlans(bool disable) {
+  const uint32_t idx = ePropertyDisableLangRuntimeUnwindPlans;
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, disable);
+  m_process->Flush();
+}
+
 bool ProcessProperties::GetDetachKeepsStopped() const {
   const uint32_t idx = ePropertyDetachKeepsStopped;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
@@ -2853,8 +2865,10 @@ void Process::CompleteAttach() {
       ProcessInstanceInfo process_info;
       GetProcessInfo(process_info);
       const ArchSpec &process_arch = process_info.GetArchitecture();
+      const ArchSpec &target_arch = GetTarget().GetArchitecture();
       if (process_arch.IsValid() &&
-          !GetTarget().GetArchitecture().IsExactMatch(process_arch)) {
+          target_arch.IsCompatibleMatch(process_arch) &&
+          !target_arch.IsExactMatch(process_arch)) {
         GetTarget().SetArchitecture(process_arch);
         LLDB_LOGF(log,
                   "Process::%s switching architecture to %s based on info "
