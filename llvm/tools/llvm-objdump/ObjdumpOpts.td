@@ -298,7 +298,10 @@ def mv65 : Flag<["--"], "mv65">, HelpText<"Build for Hexagon V65">,
 def mv66 : Flag<["--"], "mv66">, HelpText<"Build for Hexagon V66">,
   Group<grp_objdump>;
 
-def mv67t : Flag<["--"], "mv67t">, HelpText<"Build for Hexagon V67t">,
+def mv67 : Flag<["--"], "mv67">, HelpText<"Build for Hexagon V67">,
+  Group<grp_objdump>;
+
+def mv67t : Flag<["--"], "mv67t">, HelpText<"Build for Hexagon V67T">,
   Group<grp_objdump>;
 
 def riscv_no_aliases : Flag<["--"], "riscv-no-aliases">,
