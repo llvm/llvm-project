@@ -359,6 +359,15 @@ public:
   bool isS16ImmX4() const { return Kind == Expression ||
                                    (Kind == Immediate && isInt<16>(getImm()) &&
                                     (getImm() & 3) == 0); }
+
+  bool isHashImmX8() const {
+    // The Hash Imm form is used for instructions that check or store a hash.
+    // These instructions have a small immediate range that spans between
+    // -8 and -512.
+    return (Kind == Immediate && getImm() <= -8 && getImm() >= -512 &&
+            (getImm() & 7) == 0);
+  }
+
   bool isS16ImmX16() const { return Kind == Expression ||
                                     (Kind == Immediate && isInt<16>(getImm()) &&
                                      (getImm() & 15) == 0); }
