@@ -25,7 +25,7 @@ using namespace Fortran::runtime;
 
 /// Placeholder for real*10 version of RRSpacing Intrinsic
 struct ForcedRRSpacing10 {
-  static constexpr const char *name = QuoteKey(RTNAME(RRSpacing10));
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(RRSpacing10));
   static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::FloatType::getF80(ctx);
@@ -36,7 +36,7 @@ struct ForcedRRSpacing10 {
 
 /// Placeholder for real*16 version of RRSpacing Intrinsic
 struct ForcedRRSpacing16 {
-  static constexpr const char *name = QuoteKey(RTNAME(RRSpacing16));
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(RRSpacing16));
   static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::FloatType::getF128(ctx);
@@ -47,7 +47,7 @@ struct ForcedRRSpacing16 {
 
 /// Placeholder for real*10 version of Spacing Intrinsic
 struct ForcedSpacing10 {
-  static constexpr const char *name = QuoteKey(RTNAME(Spacing10));
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(Spacing10));
   static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::FloatType::getF80(ctx);
@@ -58,7 +58,7 @@ struct ForcedSpacing10 {
 
 /// Placeholder for real*16 version of Spacing Intrinsic
 struct ForcedSpacing16 {
-  static constexpr const char *name = QuoteKey(RTNAME(Spacing16));
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(Spacing16));
   static constexpr Fortran::lower::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::FloatType::getF128(ctx);

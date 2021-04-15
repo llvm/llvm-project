@@ -319,6 +319,7 @@ struct RuntimeTableEntry<RuntimeTableKey<KT>, RuntimeIdentifier<Cs...>> {
 #undef E
 #define E(L, I) (I < sizeof(L) / sizeof(*L) ? L[I] : 0)
 #define QuoteKey(X) #X
+#define ExpandAndQuoteKey(X) QuoteKey(X)
 #define MacroExpandKey(X)                                                      \
   E(X, 0), E(X, 1), E(X, 2), E(X, 3), E(X, 4), E(X, 5), E(X, 6), E(X, 7),      \
       E(X, 8), E(X, 9), E(X, 10), E(X, 11), E(X, 12), E(X, 13), E(X, 14),      \

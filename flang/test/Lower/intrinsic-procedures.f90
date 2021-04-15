@@ -451,6 +451,16 @@ real*4 function rrspacing_test(x)
 !CHECK %{{.*}} = fir.call @_FortranARRSpacing4(%[[a1]]) : (f32) -> f32
 end function
 
+! RRSPACING
+! CHECK-LABEL: rrspacing_test2
+! CHECK-SAME: [[x:[^:]+]]: !fir.ref<f128>) -> f128
+real*16 function rrspacing_test2(x)
+  real*16 :: x
+  rrspacing_test2 = spacing(x)
+!CHECK %[[a1:.*]] = fir.load %[[x]] : !fir.ref<f128>
+!CHECK %{{.*}} = fir.call @_FortranARRSpacing16(%[[a1]]) : (f128) -> f128
+end function
+
 ! SCAN 
 ! CHECK-LABEL: func @_QPscan_test(%
 ! CHECK-SAME: [[s:[^:]+]]: !fir.boxchar<1>, %
@@ -521,6 +531,16 @@ real*4 function spacing_test(x)
   spacing_test = spacing(x)
 !CHECK %[[a1:.*]] = fir.load %[[x]] : !fir.ref<f32>
 !CHECK %{{.*}} = fir.call @_FortranASpacing4(%[[a1]]) : (f32) -> f32
+end function
+
+! SPACING
+! CHECK-LABEL: spacing_test2
+! CHECK-SAME: [[x:[^:]+]]: !fir.ref<f80>) -> f80
+real*10 function spacing_test2(x)
+  real*10 :: x
+  spacing_test2 = spacing(x)
+!CHECK %[[a1:.*]] = fir.load %[[x]] : !fir.ref<f80>
+!CHECK %{{.*}} = fir.call @_FortranASpacing10(%[[a1]]) : (f80) -> f80
 end function
 
 ! SQRT
