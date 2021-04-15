@@ -258,20 +258,18 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   } else if (const auto *details =
                  sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
     if (details->init()) {
-      if (!sym.GetType()->AsIntrinsic()) {
-        TODO(loc, "Derived type / polymorphic global with init lowering");
-      }
       auto symTy = converter.genType(var);
       if (fir::isa_char(symTy)) {
+        // CHARACTER literal
         if (auto chLit = getCharacterLiteralCopy(details->init().value())) {
           auto init = builder.getStringAttr(std::get<std::string>(*chLit));
           global = builder.createGlobal(loc, symTy, globalName, linkage, init,
                                         isConst);
         } else {
-          fir::emitFatalError(loc,
-                              "global CHARACTER has unexpected initial value");
+          fir::emitFatalError(loc, "CHARACTER has unexpected initial value");
         }
-      } else {
+      } else /*if (sym.GetType()->AsIntrinsic())*/ {
+        // Other intrisic types (INTEGER, ...)
         global = builder.createGlobal(
             loc, symTy, globalName, isConst,
             [&](Fortran::lower::FirOpBuilder &builder) {
@@ -280,6 +278,9 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
                   converter, loc, details->init().value(), stmtCtx);
               auto castTo =
                   builder.createConvert(loc, symTy, fir::getBase(initVal));
+              assert(!stmtCtx.hasCleanups() &&
+                     "cleanup not expected in initializer");
+              stmtCtx.finalize();
               builder.create<fir::HasValueOp>(loc, castTo);
             },
             linkage);

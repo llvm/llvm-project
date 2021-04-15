@@ -469,13 +469,19 @@ public:
     return builder.createNullConstant(getLoc());
   }
 
+  /// A structure constructor is lowered two ways. In an initializer context,
+  /// the entire structure must be constant, so the aggregate value is
+  /// constructed inline. This allows it to be the body of a GlobalOp.
+  /// Otherwise, the structure constructor is in an expression. In that case, a
+  /// temporary object is constructed in the stack frame of the procedure.
   fir::ExtendedValue
   genval(const Fortran::evaluate::StructureConstructor &ctor) {
     auto loc = getLoc();
     auto ty = translateSomeExprToFIRType(converter, toEvExpr(ctor));
     auto recTy = ty.cast<fir::RecordType>();
-    mlir::Value res = builder.createTemporary(loc, ty);
     auto fieldTy = fir::FieldType::get(ty.getContext());
+    mlir::Value res = inInitializer ? builder.create<fir::UndefOp>(loc, recTy)
+                                    : builder.createTemporary(loc, recTy);
     for (auto [sym, expr] : ctor.values()) {
       auto val = genval(expr.value());
       auto valTy = fir::getBase(val).getType();
@@ -485,6 +491,7 @@ public:
           loc, fieldTy, name, ty,
           /*typeParams=*/mlir::ValueRange{} /*TODO*/);
       if (fir::isa_ref_type(valTy)) {
+        assert(!inInitializer && "expecting a constant value");
         auto fldType = fir::dyn_cast_ptrEleTy(valTy);
         if (fir::isa_char(fldType)) {
           auto fldCharTy = fldType.cast<fir::CharacterType>();
@@ -507,12 +514,19 @@ public:
           continue;
         }
       }
-      auto coorTy = builder.getRefType(recTy.getType(name));
-      auto coor = builder.create<fir::CoordinateOp>(loc, coorTy,
-                                                    fir::getBase(res), field);
-      builder.create<fir::StoreOp>(loc, fir::getBase(val), coor);
+      if (inInitializer) {
+        auto memTy = recTy.getType(name);
+        auto castVal = builder.createConvert(loc, memTy, fir::getBase(val));
+        res =
+            builder.create<fir::InsertValueOp>(loc, recTy, res, castVal, field);
+      } else {
+        auto coorTy = builder.getRefType(recTy.getType(name));
+        auto coor = builder.create<fir::CoordinateOp>(loc, coorTy,
+                                                      fir::getBase(res), field);
+        builder.create<fir::StoreOp>(loc, fir::getBase(val), coor);
+      }
     }
-    return builder.create<fir::LoadOp>(loc, res);
+    return inInitializer ? res : builder.create<fir::LoadOp>(loc, res);
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::ImpliedDoIndex &) {
