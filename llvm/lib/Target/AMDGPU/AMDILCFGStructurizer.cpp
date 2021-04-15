@@ -171,7 +171,7 @@ protected:
   static void PrintLoopinfo(const MachineLoopInfo &LoopInfo) {
     for (MachineLoop::iterator iter = LoopInfo.begin(),
          iterEnd = LoopInfo.end(); iter != iterEnd; ++iter) {
-      (*iter)->print(dbgs(), 0);
+      (*iter)->print(dbgs());
     }
   }
 
