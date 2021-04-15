@@ -2872,6 +2872,8 @@ static void parseOptions(const llvm::opt::InputArgList &InputArgs) {
     LLVMArgs.push_back("--mv65");
   if (InputArgs.hasArg(OBJDUMP_mv66))
     LLVMArgs.push_back("--mv66");
+  if (InputArgs.hasArg(OBJDUMP_mv67))
+    LLVMArgs.push_back("--mv67");
   if (InputArgs.hasArg(OBJDUMP_mv67t))
     LLVMArgs.push_back("--mv67t");
   if (InputArgs.hasArg(OBJDUMP_riscv_no_aliases))
