@@ -772,6 +772,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"back", AnyLogical, Rank::elemental, Optionality::optional},
             DefaultingKIND},
         KINDInt},
+    {"__builtin_ieee_is_nan", {{"a", AnyFloating}}, DefaultLogical},
     {"__builtin_ieee_selected_real_kind", // alias for selected_real_kind
         {{"p", AnyInt, Rank::scalar},
             {"r", AnyInt, Rank::scalar, Optionality::optional},
