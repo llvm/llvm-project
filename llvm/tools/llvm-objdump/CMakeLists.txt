@@ -9,9 +9,14 @@ set(LLVM_LINK_COMPONENTS
   MC
   MCDisassembler
   Object
+  Option
   Support
   Symbolize
   )
+
+set(LLVM_TARGET_DEFINITIONS ObjdumpOpts.td)
+tablegen(LLVM ObjdumpOpts.inc -gen-opt-parser-defs)
+add_public_tablegen_target(ObjdumpOptsTableGen)
 
 add_llvm_tool(llvm-objdump
   llvm-objdump.cpp
@@ -20,6 +25,8 @@ add_llvm_tool(llvm-objdump
   MachODump.cpp
   WasmDump.cpp
   XCOFFDump.cpp
+  DEPENDS
+  ObjdumpOptsTableGen
   )
 
 if(HAVE_LIBXAR)
