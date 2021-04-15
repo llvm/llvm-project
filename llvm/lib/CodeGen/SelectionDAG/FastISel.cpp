@@ -1074,6 +1074,7 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
       // preallocated handling in the various CC lowering callbacks.
       Flags.setByVal();
     }
+    MaybeAlign MemAlign = Arg.Alignment;
     if (Arg.IsByVal || Arg.IsInAlloca || Arg.IsPreallocated) {
       PointerType *Ty = cast<PointerType>(Arg.Ty);
       Type *ElementTy = Ty->getElementType();
@@ -1082,18 +1083,18 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
 
       // For ByVal, alignment should come from FE. BE will guess if this info
       // is not there, but there are cases it cannot get right.
-      MaybeAlign FrameAlign = Arg.Alignment;
-      if (!FrameAlign)
-        FrameAlign = Align(TLI.getByValTypeAlignment(ElementTy, DL));
+      if (!MemAlign)
+        MemAlign = Align(TLI.getByValTypeAlignment(ElementTy, DL));
       Flags.setByValSize(FrameSize);
-      Flags.setByValAlign(*FrameAlign);
+    } else if (!MemAlign) {
+      MemAlign = DL.getABITypeAlign(Arg.Ty);
     }
+    Flags.setMemAlign(*MemAlign);
     if (Arg.IsNest)
       Flags.setNest();
     if (NeedsRegBlock)
       Flags.setInConsecutiveRegs();
     Flags.setOrigAlign(DL.getABITypeAlign(Arg.Ty));
-
     CLI.OutVals.push_back(Arg.Val);
     CLI.OutFlags.push_back(Flags);
   }

@@ -116,10 +116,13 @@ void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
   IsSwiftSelf = Call->paramHasAttr(ArgIdx, Attribute::SwiftSelf);
   IsSwiftAsync = Call->paramHasAttr(ArgIdx, Attribute::SwiftAsync);
   IsSwiftError = Call->paramHasAttr(ArgIdx, Attribute::SwiftError);
-  Alignment = Call->getParamAlign(ArgIdx);
+  Alignment = Call->getParamStackAlign(ArgIdx);
   ByValType = nullptr;
-  if (IsByVal)
+  if (IsByVal) {
     ByValType = Call->getParamByValType(ArgIdx);
+    if (!Alignment)
+      Alignment = Call->getParamAlign(ArgIdx);
+  }
   PreallocatedType = nullptr;
   if (IsPreallocated)
     PreallocatedType = Call->getParamPreallocatedType(ArgIdx);
