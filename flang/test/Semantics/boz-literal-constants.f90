@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 ! Confirm enforcement of constraints and restrictions in 7.7
 ! C7107, C7108, C7109
 

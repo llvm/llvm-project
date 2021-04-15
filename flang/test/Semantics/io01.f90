@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
   character(len=20) :: access = "direcT"
   character(len=20) :: access_(2) = (/"direcT", "streaM"/)
   character(len=20) :: action_(2) = (/"reaD ", "writE"/)

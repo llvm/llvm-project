@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %f18 -fopenmp
+! RUN: %S/test_symbols.sh %s %t %flang_fc1 -fopenmp
 
 ! Generic tests
 !   1. subroutine or function calls should not be fixed for DSA or DMA

@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %f18
+! RUN: %S/test_modfile.sh %s %t %flang_fc1
 ! Intrinsics SELECTED_INT_KIND, SELECTED_REAL_KIND, PRECISION, RANGE,
 ! RADIX, DIGITS
 
