@@ -2363,6 +2363,7 @@ void CodeGenModule::ConstructAttributeList(
         Attrs.addAttribute(llvm::Attribute::Nest);
       else if (AI.getInReg())
         Attrs.addAttribute(llvm::Attribute::InReg);
+      Attrs.addStackAlignmentAttr(llvm::MaybeAlign(AI.getDirectAlign()));
       break;
 
     case ABIArgInfo::Indirect: {
