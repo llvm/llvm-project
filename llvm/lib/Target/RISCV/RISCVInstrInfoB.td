@@ -92,46 +92,30 @@ class RVBUnary<bits<7> funct7, bits<5> funct5, bits<3> funct3,
                RISCVOpcode opcode, string opcodestr>
     : RVInstR<funct7, funct3, opcode, (outs GPR:$rd), (ins GPR:$rs1),
               opcodestr, "$rd, $rs1"> {
-  let Inst{24-20} = funct5;
+  let rs2 = funct5;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVBShift_ri<bits<5> funct5, bits<3> funct3, RISCVOpcode opcode,
+class RVBShift_ri<bits<5> imm11_7, bits<3> funct3, RISCVOpcode opcode,
                   string opcodestr>
-    : RVInstI<funct3, opcode, (outs GPR:$rd),
-              (ins GPR:$rs1, uimmlog2xlen:$shamt), opcodestr,
-              "$rd, $rs1, $shamt"> {
-  bits<6> shamt;
-
-  let Inst{31-27} = funct5;
-  // NOTE: the bit op(26)=1 is used to select funnel shifts. All other
-  // shifts operations and operations that live in the encoding space
-  // of the shifts (single bit operations, grev, gorc) use op(26) = 0
-  let Inst{26} = 0;
-  let Inst{25-20} = shamt;
-}
+    : RVInstIShift<imm11_7, funct3, opcode, (outs GPR:$rd),
+                   (ins GPR:$rs1, uimmlog2xlen:$shamt), opcodestr,
+                   "$rd, $rs1, $shamt">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVBShiftW_ri<bits<7> funct7, bits<3> funct3, RISCVOpcode opcode,
+class RVBShiftW_ri<bits<7> imm11_5, bits<3> funct3, RISCVOpcode opcode,
                    string opcodestr>
-    : RVInstI<funct3, opcode, (outs GPR:$rd), (ins GPR:$rs1, uimm5:$shamt),
-              opcodestr, "$rd, $rs1, $shamt"> {
-  bits<5> shamt;
+    : RVInstIShiftW<imm11_5, funct3, opcode, (outs GPR:$rd),
+                    (ins GPR:$rs1, uimm5:$shamt), opcodestr,
+                    "$rd, $rs1, $shamt">;
 
-  let Inst{31-25} = funct7;
-  let Inst{24-20} = shamt;
-}
-
+// Using RVInstIShiftW since it allocates 5 bits instead of 6 to shamt.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVBShfl_ri<bits<6> funct6, bits<3> funct3, RISCVOpcode opcode,
+class RVBShfl_ri<bits<7> imm11_5, bits<3> funct3, RISCVOpcode opcode,
                  string opcodestr>
-    : RVInstI<funct3, opcode, (outs GPR:$rd), (ins GPR:$rs1, shfl_uimm:$shamt),
-              opcodestr, "$rd, $rs1, $shamt"> {
-  bits<6> shamt;
-
-  let Inst{31-26} = funct6;
-  let Inst{25-20} = shamt;
-}
+    : RVInstIShiftW<imm11_5, funct3, opcode, (outs GPR:$rd),
+                    (ins GPR:$rs1, shfl_uimm:$shamt), opcodestr,
+                    "$rd, $rs1, $shamt">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVBTernaryR<bits<2> funct2, bits<3> funct3_b, RISCVOpcode opcode,
@@ -338,8 +322,8 @@ let Predicates = [HasStdExtZbf] in
 def BFP : ALU_rr<0b0100100, 0b111, "bfp">, Sched<[]>;
 
 let Predicates = [HasStdExtZbp] in {
-def SHFLI   : RVBShfl_ri<0b000010, 0b001, OPC_OP_IMM, "shfli">, Sched<[]>;
-def UNSHFLI : RVBShfl_ri<0b000010, 0b101, OPC_OP_IMM, "unshfli">, Sched<[]>;
+def SHFLI   : RVBShfl_ri<0b0000100, 0b001, OPC_OP_IMM, "shfli">, Sched<[]>;
+def UNSHFLI : RVBShfl_ri<0b0000100, 0b101, OPC_OP_IMM, "unshfli">, Sched<[]>;
 } // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZba, IsRV64] in {
