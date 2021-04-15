@@ -101,6 +101,7 @@ struct FragmentCompiler {
   llvm::SourceMgr *SourceMgr;
   // Normalized Fragment::SourceInfo::Directory.
   std::string FragmentDirectory;
+  bool Trusted = false;
 
   llvm::Optional<llvm::Regex>
   compileRegex(const Located<std::string> &Text,
@@ -183,6 +184,7 @@ struct FragmentCompiler {
   }
 
   void compile(Fragment &&F) {
+    Trusted = F.Source.Trusted;
     if (!F.Source.Directory.empty()) {
       FragmentDirectory = llvm::sys::path::convert_to_slash(F.Source.Directory);
       if (FragmentDirectory.back() != '/')
@@ -319,6 +321,13 @@ struct FragmentCompiler {
 
   void compile(Fragment::IndexBlock::ExternalBlock &&External,
                llvm::SMRange BlockRange) {
+    if (External.Server && !Trusted) {
+      diag(Error,
+           "Remote index may not be specified by untrusted configuration. "
+           "Copy this into user config to use it.",
+           External.Server->Range);
+      return;
+    }
 #ifndef CLANGD_ENABLE_REMOTE
     if (External.Server) {
       elog("Clangd isn't compiled with remote index support, ignoring Server: "
@@ -489,8 +498,8 @@ CompiledFragment Fragment::compile(DiagnosticCallback D) && {
   trace::Span Tracer("ConfigCompile");
   SPAN_ATTACH(Tracer, "ConfigFile", ConfigFile);
   auto Result = std::make_shared<CompiledFragmentImpl>();
-  vlog("Config fragment: compiling {0}:{1} -> {2}", ConfigFile, LineCol.first,
-       Result.get());
+  vlog("Config fragment: compiling {0}:{1} -> {2} (trusted={3})", ConfigFile,
+       LineCol.first, Result.get(), Source.Trusted);
 
   FragmentCompiler{*Result, D, Source.Manager.get()}.compile(std::move(*this));
   // Return as cheaply-copyable wrapper.

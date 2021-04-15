@@ -318,7 +318,21 @@ TEST_F(ConfigCompileTests, TidyBadChecks) {
               DiagKind(llvm::SourceMgr::DK_Warning))));
 }
 
+TEST_F(ConfigCompileTests, ExternalServerNeedsTrusted) {
+  Fragment::IndexBlock::ExternalBlock External;
+  External.Server.emplace("xxx");
+  Frag.Index.External = std::move(External);
+  compileAndApply();
+  EXPECT_THAT(
+      Diags.Diagnostics,
+      ElementsAre(DiagMessage(
+          "Remote index may not be specified by untrusted configuration. "
+          "Copy this into user config to use it.")));
+  EXPECT_FALSE(Conf.Index.External.hasValue());
+}
+
 TEST_F(ConfigCompileTests, ExternalBlockWarnOnMultipleSource) {
+  Frag.Source.Trusted = true;
   Fragment::IndexBlock::ExternalBlock External;
   External.File.emplace("");
   External.Server.emplace("");
