@@ -629,6 +629,17 @@ public:
                              BodyGenCallbackTy BodyGenCB,
                              FinalizeCallbackTy FiniCB);
 
+  /// Generator for '#omp masked'
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param BodyGenCB Callback that will generate the region code.
+  /// \param FiniCB Callback to finialize variable copies.
+  ///
+  /// \returns The insertion position *after* the master.
+  InsertPointTy createMasked(const LocationDescription &Loc,
+                             BodyGenCallbackTy BodyGenCB,
+                             FinalizeCallbackTy FiniCB, Value *Filter);
+
   /// Generator for '#omp critical'
   ///
   /// \param Loc The insert and source location description.

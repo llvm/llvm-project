@@ -382,7 +382,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     llvm_unreachable("Dispatch directive not supported yet.");
     break;
   case Stmt::OMPMaskedDirectiveClass:
-    llvm_unreachable("Masked directive not supported yet.");
+    EmitOMPMaskedDirective(cast<OMPMaskedDirective>(*S));
     break;
   }
 }
