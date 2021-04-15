@@ -85,14 +85,19 @@ int main(int, char**)
     static_assert((std::is_same<decltype(wcsncmp(L"", L"", s)), int>::value), "");
     static_assert((std::is_same<decltype(wcsxfrm(ws, L"", s)), size_t>::value), "");
     static_assert((std::is_same<decltype(wcschr((wchar_t*)0, L' ')), wchar_t*>::value), "");
+    static_assert((std::is_same<decltype(wcschr((const wchar_t*)0, L' ')), const wchar_t*>::value), "");
     static_assert((std::is_same<decltype(wcscspn(L"", L"")), size_t>::value), "");
     static_assert((std::is_same<decltype(wcslen(L"")), size_t>::value), "");
     static_assert((std::is_same<decltype(wcspbrk((wchar_t*)0, L"")), wchar_t*>::value), "");
+    static_assert((std::is_same<decltype(wcspbrk((const wchar_t*)0, L"")), const wchar_t*>::value), "");
     static_assert((std::is_same<decltype(wcsrchr((wchar_t*)0, L' ')), wchar_t*>::value), "");
+    static_assert((std::is_same<decltype(wcsrchr((const wchar_t*)0, L' ')), const wchar_t*>::value), "");
     static_assert((std::is_same<decltype(wcsspn(L"", L"")), size_t>::value), "");
     static_assert((std::is_same<decltype(wcsstr((wchar_t*)0, L"")), wchar_t*>::value), "");
+    static_assert((std::is_same<decltype(wcsstr((const wchar_t*)0, L"")), const wchar_t*>::value), "");
     static_assert((std::is_same<decltype(wcstok(ws, L"", (wchar_t**)0)), wchar_t*>::value), "");
     static_assert((std::is_same<decltype(wmemchr((wchar_t*)0, L' ', s)), wchar_t*>::value), "");
+    static_assert((std::is_same<decltype(wmemchr((const wchar_t*)0, L' ', s)), const wchar_t*>::value), "");
     static_assert((std::is_same<decltype(wmemcmp(L"", L"", s)), int>::value), "");
     static_assert((std::is_same<decltype(wmemcpy(ws, L"", s)), wchar_t*>::value), "");
     static_assert((std::is_same<decltype(wmemmove(ws, L"", s)), wchar_t*>::value), "");
@@ -107,17 +112,6 @@ int main(int, char**)
     static_assert((std::is_same<decltype(mbsrtowcs(ws, (const char**)0, s, &mb)), size_t>::value), "");
     static_assert((std::is_same<decltype(wcsrtombs(ns, (const wchar_t**)0, s, &mb)), size_t>::value), "");
 
-    // These tests fail on systems whose C library doesn't provide a correct overload
-    // set for wcschr, wcspbrk, wcsrchr, wcsstr, and wmemchr, unless the compiler is
-    // a suitably recent version of Clang.
-#if !defined(__APPLE__) || defined(_LIBCPP_PREFERRED_OVERLOAD)
-    static_assert((std::is_same<decltype(wcschr((const wchar_t*)0, L' ')), const wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wcspbrk((const wchar_t*)0, L"")), const wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wcsrchr((const wchar_t*)0, L' ')), const wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wcsstr((const wchar_t*)0, L"")), const wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wmemchr((const wchar_t*)0, L' ', s)), const wchar_t*>::value), "");
-#endif
-
 #ifndef _LIBCPP_HAS_NO_STDIN
     static_assert((std::is_same<decltype(getwchar()), wint_t>::value), "");
     static_assert((std::is_same<decltype(vwscanf(L"", va)), int>::value), "");
@@ -130,5 +124,5 @@ int main(int, char**)
     static_assert((std::is_same<decltype(wprintf(L"")), int>::value), "");
 #endif
 
-  return 0;
+    return 0;
 }
