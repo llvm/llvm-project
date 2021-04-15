@@ -32,20 +32,31 @@ getDesignatorNameIfDataRef(const Fortran::parser::Designator &designator) {
 static void genObjectList(const Fortran::parser::OmpObjectList &objectList,
                           Fortran::lower::AbstractConverter &converter,
                           SmallVectorImpl<Value> &operands) {
+  auto addOperands = [&](Fortran::lower::SymbolRef sym) {
+    const auto variable = converter.getSymbolAddress(sym);
+    // TODO: Might need revisiting to handle for non-shared clauses
+    if (variable) {
+      operands.push_back(variable);
+    } else {
+      if (const auto *details =
+              sym->detailsIf<Fortran::semantics::HostAssocDetails>()) {
+        operands.push_back(converter.getSymbolAddress(details->symbol()));
+        converter.copySymbolBinding(details->symbol(), sym);
+      }
+    }
+  };
   for (const auto &ompObject : objectList.v) {
-    std::visit(
-        Fortran::common::visitors{
-            [&](const Fortran::parser::Designator &designator) {
-              if (const auto *name = getDesignatorNameIfDataRef(designator)) {
-                const auto variable = converter.getSymbolAddress(*name->symbol);
-                operands.push_back(variable);
-              }
-            },
-            [&](const Fortran::parser::Name &name) {
-              const auto variable = converter.getSymbolAddress(*name.symbol);
-              operands.push_back(variable);
-            }},
-        ompObject.u);
+    std::visit(Fortran::common::visitors{
+                   [&](const Fortran::parser::Designator &designator) {
+                     if (const auto *name =
+                             getDesignatorNameIfDataRef(designator)) {
+                       addOperands(*name->symbol);
+                     }
+                   },
+                   [&](const Fortran::parser::Name &name) {
+                     addOperands(*name.symbol);
+                   }},
+               ompObject.u);
   }
 }
 

@@ -69,6 +69,9 @@ public:
   /// Get the mlir instance of a symbol.
   virtual mlir::Value getSymbolAddress(SymbolRef sym) = 0;
 
+  /// Copy the binding of src to target symbol.
+  virtual void copySymbolBinding(SymbolRef src, SymbolRef target) = 0;
+
   /// Bind the symbol to an mlir value.
   virtual void bindSymbol(const SymbolRef sym, mlir::Value val) = 0;
 
