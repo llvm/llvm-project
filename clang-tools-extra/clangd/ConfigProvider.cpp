@@ -36,7 +36,7 @@ public:
       : FileCache(Path), Directory(Directory) {}
 
   void get(const ThreadsafeFS &TFS, DiagnosticCallback DC,
-           std::chrono::steady_clock::time_point FreshTime,
+           std::chrono::steady_clock::time_point FreshTime, bool Trusted,
            std::vector<CompiledFragment> &Out) const {
     read(
         TFS, FreshTime,
@@ -45,6 +45,7 @@ public:
           if (Data)
             for (auto &Fragment : Fragment::parseYAML(*Data, path(), DC)) {
               Fragment.Source.Directory = Directory;
+              Fragment.Source.Trusted = Trusted;
               CachedValue.push_back(std::move(Fragment).compile(DC));
             }
         },
@@ -54,35 +55,38 @@ public:
 
 std::unique_ptr<Provider> Provider::fromYAMLFile(llvm::StringRef AbsPath,
                                                  llvm::StringRef Directory,
-                                                 const ThreadsafeFS &FS) {
+                                                 const ThreadsafeFS &FS,
+                                                 bool Trusted) {
   class AbsFileProvider : public Provider {
     mutable FileConfigCache Cache; // threadsafe
     const ThreadsafeFS &FS;
+    bool Trusted;
 
     std::vector<CompiledFragment>
     getFragments(const Params &P, DiagnosticCallback DC) const override {
       std::vector<CompiledFragment> Result;
-      Cache.get(FS, DC, P.FreshTime, Result);
+      Cache.get(FS, DC, P.FreshTime, Trusted, Result);
       return Result;
     };
 
   public:
     AbsFileProvider(llvm::StringRef Path, llvm::StringRef Directory,
-                    const ThreadsafeFS &FS)
-        : Cache(Path, Directory), FS(FS) {
+                    const ThreadsafeFS &FS, bool Trusted)
+        : Cache(Path, Directory), FS(FS), Trusted(Trusted) {
       assert(llvm::sys::path::is_absolute(Path));
     }
   };
 
-  return std::make_unique<AbsFileProvider>(AbsPath, Directory, FS);
+  return std::make_unique<AbsFileProvider>(AbsPath, Directory, FS, Trusted);
 }
 
 std::unique_ptr<Provider>
 Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
-                                        const ThreadsafeFS &FS) {
+                                        const ThreadsafeFS &FS, bool Trusted) {
   class RelFileProvider : public Provider {
     std::string RelPath;
     const ThreadsafeFS &FS;
+    bool Trusted;
 
     mutable std::mutex Mu;
     // Keys are the (posix-style) ancestor directory, not the config within it.
@@ -124,18 +128,19 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
       // This will take a (per-file) lock for each file that actually exists.
       std::vector<CompiledFragment> Result;
       for (FileConfigCache *Cache : llvm::reverse(Caches))
-        Cache->get(FS, DC, P.FreshTime, Result);
+        Cache->get(FS, DC, P.FreshTime, Trusted, Result);
       return Result;
     };
 
   public:
-    RelFileProvider(llvm::StringRef RelPath, const ThreadsafeFS &FS)
-        : RelPath(RelPath), FS(FS) {
+    RelFileProvider(llvm::StringRef RelPath, const ThreadsafeFS &FS,
+                    bool Trusted)
+        : RelPath(RelPath), FS(FS), Trusted(Trusted) {
       assert(llvm::sys::path::is_relative(RelPath));
     }
   };
 
-  return std::make_unique<RelFileProvider>(RelPath, FS);
+  return std::make_unique<RelFileProvider>(RelPath, FS, Trusted);
 }
 
 std::unique_ptr<Provider>
