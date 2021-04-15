@@ -2758,6 +2758,14 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
         dbgs()
         << "Not creating real PHI of ops because it simplified to existing "
            "value or constant\n");
+    // We have leaders for all operands, but do not create a real PHI node with
+    // those leaders as operands, so the link between the operands and the
+    // PHI-of-ops is not materialized in the IR. If any of those leaders
+    // changes, the PHI-of-op may change also, so we need to add the operands as
+    // additional users.
+    for (auto &O : PHIOps)
+      addAdditionalUsers(O.first, I);
+
     return E;
   }
   auto *ValuePHI = RealToTemp.lookup(I);
