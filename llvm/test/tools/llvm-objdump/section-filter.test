@@ -95,17 +95,14 @@ Sections:
 ## all other combinations compatible with POSIX are identical.
 # RUN: llvm-objdump %t.h.elf -h -s --section .symtab > %t.full
 # RUN: llvm-objdump %t.h.elf -h -s -j .symtab > %t.1
-# RUN: llvm-objdump %t.h.elf -h -s -j.symtab > %t.3
-# RUN: llvm-objdump %t.h.elf -hsj .symtab > %t.4
-# RUN: llvm-objdump %t.h.elf -hsj=.symtab > %t.5
-# RUN: llvm-objdump %t.h.elf -hsj.symtab > %t.6
+# RUN: llvm-objdump %t.h.elf -h -s -j.symtab > %t.2
+# RUN: llvm-objdump %t.h.elf -hsj .symtab > %t.3
+# RUN: llvm-objdump %t.h.elf -hsj.symtab > %t.4
 
 # RUN: cmp %t.full %t.1
 # RUN: cmp %t.full %t.2
 # RUN: cmp %t.full %t.3
 # RUN: cmp %t.full %t.4
-# RUN: cmp %t.full %t.5
-# RUN: cmp %t.full %t.6
 
 ## Test that an unknown section name causes all section output to be suppressed.
 # RUN: llvm-objdump %t.h.elf -h --section foobar \
