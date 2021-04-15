@@ -251,9 +251,6 @@ class DWARFUnit {
 protected:
   const DWARFUnitHeader &getHeader() const { return Header; }
 
-  /// Size in bytes of the parsed unit header.
-  uint32_t getHeaderSize() const { return Header.getSize(); }
-
   /// Find the unit's contribution to the string offsets table and determine its
   /// length and form. The given offset is expected to be derived from the unit
   /// DIE's DW_AT_str_offsets_base attribute.
@@ -290,6 +287,8 @@ public:
   uint8_t getDwarfOffsetByteSize() const {
     return Header.getDwarfOffsetByteSize();
   }
+  /// Size in bytes of the parsed unit header.
+  uint32_t getHeaderSize() const { return Header.getSize(); }
   uint64_t getLength() const { return Header.getLength(); }
   dwarf::DwarfFormat getFormat() const { return Header.getFormat(); }
   uint8_t getUnitType() const { return Header.getUnitType(); }
