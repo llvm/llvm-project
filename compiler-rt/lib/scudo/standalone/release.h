@@ -81,7 +81,8 @@ public:
       memset(Buffer, 0, BufferSize);
     } else {
       Buffer = reinterpret_cast<uptr *>(
-          map(nullptr, BufferSize, "scudo:counters", MAP_ALLOWNOMEM));
+          map(nullptr, roundUpTo(BufferSize, getPageSizeCached()),
+              "scudo:counters", MAP_ALLOWNOMEM));
     }
   }
   ~PackedCounterArray() {
@@ -90,7 +91,8 @@ public:
     if (Buffer == &StaticBuffer[0])
       Mutex.unlock();
     else
-      unmap(reinterpret_cast<void *>(Buffer), BufferSize);
+      unmap(reinterpret_cast<void *>(Buffer),
+            roundUpTo(BufferSize, getPageSizeCached()));
   }
 
   bool isAllocated() const { return !!Buffer; }
