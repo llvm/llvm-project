@@ -85,14 +85,19 @@ int main(int, char**)
     ASSERT_SAME_TYPE(int,                decltype(std::wcsncmp(L"", L"", s)));
     ASSERT_SAME_TYPE(std::size_t,        decltype(std::wcsxfrm(ws, L"", s)));
     ASSERT_SAME_TYPE(wchar_t*,           decltype(std::wcschr((wchar_t*)0, L' ')));
+    ASSERT_SAME_TYPE(const wchar_t*,     decltype(std::wcschr((const wchar_t*)0, L' ')));
     ASSERT_SAME_TYPE(std::size_t,        decltype(std::wcscspn(L"", L"")));
     ASSERT_SAME_TYPE(std::size_t,        decltype(std::wcslen(L"")));
     ASSERT_SAME_TYPE(wchar_t*,           decltype(std::wcspbrk((wchar_t*)0, L"")));
+    ASSERT_SAME_TYPE(const wchar_t*,     decltype(std::wcspbrk((const wchar_t*)0, L"")));
     ASSERT_SAME_TYPE(wchar_t*,           decltype(std::wcsrchr((wchar_t*)0, L' ')));
+    ASSERT_SAME_TYPE(const wchar_t*,     decltype(std::wcsrchr((const wchar_t*)0, L' ')));
     ASSERT_SAME_TYPE(std::size_t,        decltype(std::wcsspn(L"", L"")));
     ASSERT_SAME_TYPE(wchar_t*,           decltype(std::wcsstr((wchar_t*)0, L"")));
+    ASSERT_SAME_TYPE(const wchar_t*,     decltype(std::wcsstr((const wchar_t*)0, L"")));
     ASSERT_SAME_TYPE(wchar_t*,           decltype(std::wcstok(ws, L"", (wchar_t**)0)));
     ASSERT_SAME_TYPE(wchar_t*,           decltype(std::wmemchr((wchar_t*)0, L' ', s)));
+    ASSERT_SAME_TYPE(const wchar_t*,     decltype(std::wmemchr((const wchar_t*)0, L' ', s)));
     ASSERT_SAME_TYPE(int,                decltype(std::wmemcmp(L"", L"", s)));
     ASSERT_SAME_TYPE(wchar_t*,           decltype(std::wmemcpy(ws, L"", s)));
     ASSERT_SAME_TYPE(wchar_t*,           decltype(std::wmemmove(ws, L"", s)));
@@ -107,17 +112,6 @@ int main(int, char**)
     ASSERT_SAME_TYPE(std::size_t,        decltype(std::mbsrtowcs(ws, (const char**)0, s, &mb)));
     ASSERT_SAME_TYPE(std::size_t,        decltype(std::wcsrtombs(ns, (const wchar_t**)0, s, &mb)));
 
-    // These tests fail on systems whose C library doesn't provide a correct overload
-    // set for wcschr, wcspbrk, wcsrchr, wcsstr, and wmemchr, unless the compiler is
-    // a suitably recent version of Clang.
-#if !defined(__APPLE__) || defined(_LIBCPP_PREFERRED_OVERLOAD)
-    ASSERT_SAME_TYPE(const wchar_t*,     decltype(std::wcschr((const wchar_t*)0, L' ')));
-    ASSERT_SAME_TYPE(const wchar_t*,     decltype(std::wcspbrk((const wchar_t*)0, L"")));
-    ASSERT_SAME_TYPE(const wchar_t*,     decltype(std::wcsrchr((const wchar_t*)0, L' ')));
-    ASSERT_SAME_TYPE(const wchar_t*,     decltype(std::wcsstr((const wchar_t*)0, L"")));
-    ASSERT_SAME_TYPE(const wchar_t*,     decltype(std::wmemchr((const wchar_t*)0, L' ', s)));
-#endif
-
 #ifndef _LIBCPP_HAS_NO_STDIN
     ASSERT_SAME_TYPE(std::wint_t,        decltype(std::getwchar()));
     ASSERT_SAME_TYPE(int,                decltype(std::vwscanf(L"", va)));
@@ -130,5 +124,5 @@ int main(int, char**)
     ASSERT_SAME_TYPE(int,                decltype(std::wprintf(L"")));
 #endif
 
-  return 0;
+    return 0;
 }
