@@ -401,24 +401,25 @@ void CSProfileGenerator::postProcessProfiles() {
 
   // Run global pre-inliner to adjust/merge context profile based on estimated
   // inline decisions.
-  CSPreInliner(ProfileMap, PSI->getHotCountThreshold(),
-               PSI->getColdCountThreshold())
-      .run();
+  CSPreInliner(ProfileMap, HotCountThreshold, ColdCountThreshold).run();
 
   // Trim and merge cold context profile using cold threshold above;
   SampleContextTrimmer(ProfileMap)
       .trimAndMergeColdContextProfiles(
-          CSProfColdThreshold, CSProfTrimColdContext, CSProfMergeColdContext);
+          ColdCountThreshold, CSProfTrimColdContext, CSProfMergeColdContext);
 }
 
 void CSProfileGenerator::computeSummaryAndThreshold() {
   SampleProfileSummaryBuilder Builder(ProfileSummaryBuilder::DefaultCutoffs);
   auto Summary = Builder.computeSummaryForProfiles(ProfileMap);
-  PSI.reset(new ProfileSummaryInfo(std::move(Summary)));
+  HotCountThreshold = ProfileSummaryBuilder::getHotCountThreshold(
+      (Summary->getDetailedSummary()));
+  ColdCountThreshold = ProfileSummaryBuilder::getColdCountThreshold(
+      (Summary->getDetailedSummary()));
 
   // Use threshold calculated from profile summary unless specified.
-  if (!CSProfColdThreshold.getNumOccurrences()) {
-    CSProfColdThreshold = PSI->getColdCountThreshold();
+  if (CSProfColdThreshold.getNumOccurrences()) {
+    ColdCountThreshold = CSProfColdThreshold;
   }
 }
 
