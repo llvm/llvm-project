@@ -1122,11 +1122,13 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
     if (!enforce_exact_match) {
       if (core2 == ArchSpec::eCore_arm_generic)
         return true;
-      try_inverse = false;
+      if (core2 == ArchSpec::eCore_arm_armv7em)
+        return true;
       if (core2 == ArchSpec::eCore_arm_armv7)
         return true;
       if (core2 == ArchSpec::eCore_arm_armv6m)
         return true;
+      try_inverse = false;
     }
     break;
 
