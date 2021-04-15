@@ -153,128 +153,121 @@ static void createParallelOp(Fortran::lower::AbstractConverter &converter,
   auto currentLocation = converter.getCurrentLocation();
   Fortran::lower::StatementContext stmtCtx;
   llvm::ArrayRef<mlir::Type> argTy;
-    mlir::Value ifClauseOperand, numThreadsClauseOperand;
-    SmallVector<Value, 4> privateClauseOperands, firstprivateClauseOperands,
-        sharedClauseOperands, copyinClauseOperands, allocatorOperands,
-        allocateOperands;
-    Attribute defaultClauseOperand, procBindClauseOperand;
-    const auto &opClauseList =
-        std::get<Fortran::parser::OmpClauseList>(directive.t);
-    for (const auto &clause : opClauseList.v) {
-      if (const auto &ifClause =
-              std::get_if<Fortran::parser::OmpClause::If>(&clause.u)) {
-        auto &expr =
-            std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
-        ifClauseOperand = fir::getBase(
-              converter.genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx));
-      } else if (const auto &numThreadsClause =
-                     std::get_if<Fortran::parser::OmpClause::NumThreads>(
-                         &clause.u)) {
-        numThreadsClauseOperand = fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(numThreadsClause->v), stmtCtx));
-      } else if (const auto &privateClause =
-                     std::get_if<Fortran::parser::OmpClause::Private>(
-                         &clause.u)) {
-        const Fortran::parser::OmpObjectList &ompObjectList = privateClause->v;
-        genObjectList(ompObjectList, converter, privateClauseOperands);
-      } else if (const auto &firstprivateClause =
-                     std::get_if<Fortran::parser::OmpClause::Firstprivate>(
-                         &clause.u)) {
-        const Fortran::parser::OmpObjectList &ompObjectList =
-            firstprivateClause->v;
-        genObjectList(ompObjectList, converter, firstprivateClauseOperands);
-      } else if (const auto &sharedClause =
-                     std::get_if<Fortran::parser::OmpClause::Shared>(
-                         &clause.u)) {
-        const Fortran::parser::OmpObjectList &ompObjectList = sharedClause->v;
-        genObjectList(ompObjectList, converter, sharedClauseOperands);
-      } else if (const auto &copyinClause =
-                     std::get_if<Fortran::parser::OmpClause::Copyin>(
-                         &clause.u)) {
-        const Fortran::parser::OmpObjectList &ompObjectList = copyinClause->v;
-        genObjectList(ompObjectList, converter, copyinClauseOperands);
-      } else if (const auto &allocateClause =
-                     std::get_if<Fortran::parser::OmpClause::Allocate>(
-                         &clause.u)) {
-        mlir::Value allocatorOperand;
-        const Fortran::parser::OmpAllocateClause &ompAllocateClause =
-            allocateClause->v;
-        const Fortran::parser::OmpObjectList &ompObjectList =
-            std::get<Fortran::parser::OmpObjectList>(ompAllocateClause.t);
-        // Check if allocate clause has allocator specified. If so, add it
-        // to list of allocators, otherwise, add default allocator to
-        // list of allocators.
-        const auto &allocatorValue = std::get<
-            std::optional<Fortran::parser::OmpAllocateClause::Allocator>>(
-            ompAllocateClause.t);
-        if (allocatorValue) {
-          allocatorOperand = fir::getBase(converter.genExprValue(
-              *Fortran::semantics::GetExpr(allocatorValue->v), stmtCtx));
-          allocatorOperands.insert(allocatorOperands.end(),
-                                   ompObjectList.v.size(), allocatorOperand);
-        } else {
-          allocatorOperand = firOpBuilder.createIntegerConstant(
-              currentLocation, firOpBuilder.getI32Type(), 1);
-          allocatorOperands.insert(allocatorOperands.end(),
-                                   ompObjectList.v.size(), allocatorOperand);
-        }
-        genObjectList(ompObjectList, converter, allocateOperands);
+  mlir::Value ifClauseOperand, numThreadsClauseOperand;
+  SmallVector<Value, 4> privateClauseOperands, firstprivateClauseOperands,
+      sharedClauseOperands, copyinClauseOperands, allocatorOperands,
+      allocateOperands;
+  Attribute defaultClauseOperand, procBindClauseOperand;
+  const auto &opClauseList =
+      std::get<Fortran::parser::OmpClauseList>(directive.t);
+  for (const auto &clause : opClauseList.v) {
+    if (const auto &ifClause =
+            std::get_if<Fortran::parser::OmpClause::If>(&clause.u)) {
+      auto &expr = std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
+      ifClauseOperand = fir::getBase(
+          converter.genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx));
+    } else if (const auto &numThreadsClause =
+                   std::get_if<Fortran::parser::OmpClause::NumThreads>(
+                       &clause.u)) {
+      numThreadsClauseOperand = fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(numThreadsClause->v), stmtCtx));
+    } else if (const auto &privateClause =
+                   std::get_if<Fortran::parser::OmpClause::Private>(
+                       &clause.u)) {
+      const Fortran::parser::OmpObjectList &ompObjectList = privateClause->v;
+      genObjectList(ompObjectList, converter, privateClauseOperands);
+    } else if (const auto &firstprivateClause =
+                   std::get_if<Fortran::parser::OmpClause::Firstprivate>(
+                       &clause.u)) {
+      const Fortran::parser::OmpObjectList &ompObjectList =
+          firstprivateClause->v;
+      genObjectList(ompObjectList, converter, firstprivateClauseOperands);
+    } else if (const auto &sharedClause =
+                   std::get_if<Fortran::parser::OmpClause::Shared>(&clause.u)) {
+      const Fortran::parser::OmpObjectList &ompObjectList = sharedClause->v;
+      genObjectList(ompObjectList, converter, sharedClauseOperands);
+    } else if (const auto &copyinClause =
+                   std::get_if<Fortran::parser::OmpClause::Copyin>(&clause.u)) {
+      const Fortran::parser::OmpObjectList &ompObjectList = copyinClause->v;
+      genObjectList(ompObjectList, converter, copyinClauseOperands);
+    } else if (const auto &allocateClause =
+                   std::get_if<Fortran::parser::OmpClause::Allocate>(
+                       &clause.u)) {
+      mlir::Value allocatorOperand;
+      const Fortran::parser::OmpAllocateClause &ompAllocateClause =
+          allocateClause->v;
+      const Fortran::parser::OmpObjectList &ompObjectList =
+          std::get<Fortran::parser::OmpObjectList>(ompAllocateClause.t);
+      // Check if allocate clause has allocator specified. If so, add it
+      // to list of allocators, otherwise, add default allocator to
+      // list of allocators.
+      const auto &allocatorValue = std::get<
+          std::optional<Fortran::parser::OmpAllocateClause::Allocator>>(
+          ompAllocateClause.t);
+      if (allocatorValue) {
+        allocatorOperand = fir::getBase(converter.genExprValue(
+            *Fortran::semantics::GetExpr(allocatorValue->v), stmtCtx));
+        allocatorOperands.insert(allocatorOperands.end(),
+                                 ompObjectList.v.size(), allocatorOperand);
+      } else {
+        allocatorOperand = firOpBuilder.createIntegerConstant(
+            currentLocation, firOpBuilder.getI32Type(), 1);
+        allocatorOperands.insert(allocatorOperands.end(),
+                                 ompObjectList.v.size(), allocatorOperand);
+      }
+      genObjectList(ompObjectList, converter, allocateOperands);
+    }
+  }
+  // Create and insert the operation.
+  auto parallelOp = firOpBuilder.create<mlir::omp::ParallelOp>(
+      currentLocation, argTy, ifClauseOperand, numThreadsClauseOperand,
+      defaultClauseOperand.dyn_cast_or_null<StringAttr>(),
+      privateClauseOperands, firstprivateClauseOperands, sharedClauseOperands,
+      copyinClauseOperands, allocateOperands, allocatorOperands,
+      procBindClauseOperand.dyn_cast_or_null<StringAttr>());
+  for (const auto &clause : opClauseList.v) {
+    if (const auto &defaultClause =
+            std::get_if<Fortran::parser::OmpClause::Default>(&clause.u)) {
+      const auto &ompDefaultClause{defaultClause->v};
+      switch (ompDefaultClause.v) {
+      case Fortran::parser::OmpDefaultClause::Type::Private:
+        parallelOp.default_valAttr(firOpBuilder.getStringAttr(
+            omp::stringifyClauseDefault(omp::ClauseDefault::defprivate)));
+        break;
+      case Fortran::parser::OmpDefaultClause::Type::Firstprivate:
+        parallelOp.default_valAttr(firOpBuilder.getStringAttr(
+            omp::stringifyClauseDefault(omp::ClauseDefault::deffirstprivate)));
+        break;
+      case Fortran::parser::OmpDefaultClause::Type::Shared:
+        parallelOp.default_valAttr(firOpBuilder.getStringAttr(
+            omp::stringifyClauseDefault(omp::ClauseDefault::defshared)));
+        break;
+      case Fortran::parser::OmpDefaultClause::Type::None:
+        parallelOp.default_valAttr(firOpBuilder.getStringAttr(
+            omp::stringifyClauseDefault(omp::ClauseDefault::defnone)));
+        break;
       }
     }
-    // Create and insert the operation.
-    auto parallelOp = firOpBuilder.create<mlir::omp::ParallelOp>(
-        currentLocation, argTy, ifClauseOperand, numThreadsClauseOperand,
-        defaultClauseOperand.dyn_cast_or_null<StringAttr>(),
-        privateClauseOperands, firstprivateClauseOperands, sharedClauseOperands,
-        copyinClauseOperands, allocateOperands, allocatorOperands,
-        procBindClauseOperand.dyn_cast_or_null<StringAttr>());
-    for (const auto &clause : opClauseList.v) {
-      if (const auto &defaultClause =
-              std::get_if<Fortran::parser::OmpClause::Default>(&clause.u)) {
-        const auto &ompDefaultClause{defaultClause->v};
-        switch (ompDefaultClause.v) {
-        case Fortran::parser::OmpDefaultClause::Type::Private:
-          parallelOp.default_valAttr(firOpBuilder.getStringAttr(
-              omp::stringifyClauseDefault(omp::ClauseDefault::defprivate)));
-          break;
-        case Fortran::parser::OmpDefaultClause::Type::Firstprivate:
-          parallelOp.default_valAttr(
-              firOpBuilder.getStringAttr(omp::stringifyClauseDefault(
-                  omp::ClauseDefault::deffirstprivate)));
-          break;
-        case Fortran::parser::OmpDefaultClause::Type::Shared:
-          parallelOp.default_valAttr(firOpBuilder.getStringAttr(
-              omp::stringifyClauseDefault(omp::ClauseDefault::defshared)));
-          break;
-        case Fortran::parser::OmpDefaultClause::Type::None:
-          parallelOp.default_valAttr(firOpBuilder.getStringAttr(
-              omp::stringifyClauseDefault(omp::ClauseDefault::defnone)));
-          break;
-        }
-      }
-      if (const auto &procBindClause =
-              std::get_if<Fortran::parser::OmpClause::ProcBind>(&clause.u)) {
-        const auto &ompProcBindClause{procBindClause->v};
-        switch (ompProcBindClause.v) {
-        case Fortran::parser::OmpProcBindClause::Type::Master:
-          parallelOp.proc_bind_valAttr(
-              firOpBuilder.getStringAttr(omp::stringifyClauseProcBindKind(
-                  omp::ClauseProcBindKind::master)));
-          break;
-        case Fortran::parser::OmpProcBindClause::Type::Close:
-          parallelOp.proc_bind_valAttr(
-              firOpBuilder.getStringAttr(omp::stringifyClauseProcBindKind(
-                  omp::ClauseProcBindKind::close)));
-          break;
-        case Fortran::parser::OmpProcBindClause::Type::Spread:
-          parallelOp.proc_bind_valAttr(
-              firOpBuilder.getStringAttr(omp::stringifyClauseProcBindKind(
-                  omp::ClauseProcBindKind::spread)));
-          break;
-        }
+    if (const auto &procBindClause =
+            std::get_if<Fortran::parser::OmpClause::ProcBind>(&clause.u)) {
+      const auto &ompProcBindClause{procBindClause->v};
+      switch (ompProcBindClause.v) {
+      case Fortran::parser::OmpProcBindClause::Type::Master:
+        parallelOp.proc_bind_valAttr(firOpBuilder.getStringAttr(
+            omp::stringifyClauseProcBindKind(omp::ClauseProcBindKind::master)));
+        break;
+      case Fortran::parser::OmpProcBindClause::Type::Close:
+        parallelOp.proc_bind_valAttr(firOpBuilder.getStringAttr(
+            omp::stringifyClauseProcBindKind(omp::ClauseProcBindKind::close)));
+        break;
+      case Fortran::parser::OmpProcBindClause::Type::Spread:
+        parallelOp.proc_bind_valAttr(firOpBuilder.getStringAttr(
+            omp::stringifyClauseProcBindKind(omp::ClauseProcBindKind::spread)));
+        break;
       }
     }
-    createBodyOfOp<omp::ParallelOp>(parallelOp, converter, currentLocation);
+  }
+  createBodyOfOp<omp::ParallelOp>(parallelOp, converter, currentLocation);
 }
 
 static void
