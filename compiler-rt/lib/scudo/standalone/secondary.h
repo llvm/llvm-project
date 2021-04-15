@@ -69,7 +69,7 @@ public:
                 UNUSED LargeBlock::Header **H, UNUSED bool *Zeroed) {
     return false;
   }
-  void store(UNUSED Options Options, UNUSED LargeBlock::Header *H) { unmap(H); }
+  void store(UNUSED Options Options, LargeBlock::Header *H) { unmap(H); }
   bool canCache(UNUSED uptr Size) { return false; }
   void disable() {}
   void enable() {}
