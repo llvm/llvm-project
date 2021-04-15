@@ -70,7 +70,7 @@ add_dependencies(mlir-headers LinalgOdsGen)
 
 add_mlir_dialect(LinalgOps linalg)
 
-add_mlir_doc(LinalgDoc -gen-op-doc LinalgOps Dialects/)
+add_mlir_doc(LinalgDoc LinalgOps Dialects/ -gen-op-doc)
 add_dependencies(LinalgOpsDocGen LinalgOdsGen)
 
 set(LLVM_TARGET_DEFINITIONS LinalgStructuredOps.td)

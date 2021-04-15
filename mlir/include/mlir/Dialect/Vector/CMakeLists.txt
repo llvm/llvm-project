@@ -1,5 +1,5 @@
 add_mlir_dialect(VectorOps vector)
-add_mlir_doc(VectorOps -gen-op-doc VectorOps Dialects/)
+add_mlir_doc(VectorOps VectorOps Dialects/ -gen-op-doc)
 
 set(LLVM_TARGET_DEFINITIONS VectorOps.td)
 mlir_tablegen(VectorOpsEnums.h.inc -gen-enum-decls)
