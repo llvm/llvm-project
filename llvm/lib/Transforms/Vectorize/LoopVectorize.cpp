@@ -2675,8 +2675,6 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   // pointer operand of the interleaved access is supposed to be uniform. For
   // uniform instructions, we're only required to generate a value for the
   // first vector lane in each unroll iteration.
-  assert(!VF.isScalable() &&
-         "scalable vector reverse operation is not implemented");
   if (Group->isReverse())
     Index += (VF.getKnownMinValue() - 1) * Group->getFactor();
 
@@ -2713,7 +2711,6 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
 
   Value *MaskForGaps = nullptr;
   if (Group->requiresScalarEpilogue() && !Cost->isScalarEpilogueAllowed()) {
-    assert(!VF.isScalable() && "scalable vectors not yet supported.");
     MaskForGaps = createBitMaskForGaps(Builder, VF.getKnownMinValue(), *Group);
     assert(MaskForGaps && "Mask for Gaps is required but it is null");
   }
@@ -2730,7 +2727,6 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         Value *GroupMask = MaskForGaps;
         if (BlockInMask) {
           Value *BlockInMaskPart = State.get(BlockInMask, Part);
-          assert(!VF.isScalable() && "scalable vectors not yet supported.");
           Value *ShuffledMask = Builder.CreateShuffleVector(
               BlockInMaskPart,
               createReplicatedMask(InterleaveFactor, VF.getKnownMinValue()),
@@ -2761,7 +2757,6 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
       if (!Member)
         continue;
 
-      assert(!VF.isScalable() && "scalable vectors not yet supported.");
       auto StrideMask =
           createStrideMask(I, InterleaveFactor, VF.getKnownMinValue());
       for (unsigned Part = 0; Part < UF; Part++) {
@@ -2786,7 +2781,6 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   }
 
   // The sub vector type for current instruction.
-  assert(!VF.isScalable() && "VF is assumed to be non scalable.");
   auto *SubVT = VectorType::get(ScalarTy, VF);
 
   // Vectorize the interleaved store group.
@@ -2814,7 +2808,6 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
     Value *WideVec = concatenateVectors(Builder, StoredVecs);
 
     // Interleave the elements in the wide vector.
-    assert(!VF.isScalable() && "scalable vectors not yet supported.");
     Value *IVec = Builder.CreateShuffleVector(
         WideVec, createInterleaveMask(VF.getKnownMinValue(), InterleaveFactor),
         "interleaved.vec");
@@ -6778,7 +6771,9 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
                                                         ElementCount VF) {
   assert(VF.isVector() &&
          "Scalarization cost of instruction implies vectorization.");
-  assert(!VF.isScalable() && "scalable vectors not yet supported.");
+  if (VF.isScalable())
+    return InstructionCost::getInvalid();
+
   Type *ValTy = getMemInstValueType(I);
   auto SE = PSE.getSE();
 
@@ -7203,8 +7198,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
               : InstructionCost::getInvalid();
 
       InstructionCost ScalarizationCost =
-          !VF.isScalable() ? getMemInstScalarizationCost(&I, VF) * NumAccesses
-                           : InstructionCost::getInvalid();
+          getMemInstScalarizationCost(&I, VF) * NumAccesses;
 
       // Choose better solution for the current VF,
       // write down this decision and use it during vectorization.
