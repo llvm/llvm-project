@@ -2128,6 +2128,56 @@ the configuration (without a prefix: ``Auto``).
 **DisableFormat** (``bool``)
   Disables formatting completely.
 
+**EmptyLineAfterAccessModifier** (``EmptyLineAfterAccessModifierStyle``)
+  Defines when to put an empty line after access modifiers.
+  ``EmptyLineBeforeAccessModifier`` configuration handles the number of
+  empty lines between two access modifiers.
+
+  Possible values:
+
+  * ``ELAAMS_Never`` (in configuration: ``Never``)
+    Remove all empty lines after access modifiers.
+
+    .. code-block:: c++
+
+      struct foo {
+      private:
+        int i;
+      protected:
+        int j;
+        /* comment */
+      public:
+        foo() {}
+      private:
+      protected:
+      };
+
+  * ``ELAAMS_Leave`` (in configuration: ``Leave``)
+    Keep existing empty lines after access modifiers.
+    MaxEmptyLinesToKeep is applied instead.
+
+  * ``ELAAMS_Always`` (in configuration: ``Always``)
+    Always add empty line after access modifiers if there are none.
+    MaxEmptyLinesToKeep is applied also.
+
+    .. code-block:: c++
+
+      struct foo {
+      private:
+
+        int i;
+      protected:
+
+        int j;
+        /* comment */
+      public:
+
+        foo() {}
+      private:
+
+      protected:
+      };
+
 **EmptyLineBeforeAccessModifier** (``EmptyLineBeforeAccessModifierStyle``)
   Defines in which cases to put empty line before access modifiers.
 
@@ -2194,8 +2244,6 @@ the configuration (without a prefix: ``Auto``).
 
       protected:
       };
-
-
 
 **ExperimentalAutoDetectBinPacking** (``bool``)
   If ``true``, clang-format detects whether function calls and

@@ -216,6 +216,9 @@ clang-format
 - Support for Whitesmiths has been improved, with fixes for ``namespace`` blocks
   and ``case`` blocks and labels.
 
+- Option ``EmptyLineAfterAccessModifier`` has been added to remove, force or keep
+  new lines after access modifiers.
+
 libclang
 --------
 
