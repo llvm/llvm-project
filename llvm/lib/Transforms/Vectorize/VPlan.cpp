@@ -510,6 +510,31 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+bool VPRecipeBase::mayHaveSideEffects() const {
+  switch (getVPDefID()) {
+  case VPBranchOnMaskSC:
+    return false;
+  case VPBlendSC:
+  case VPWidenSC:
+  case VPWidenGEPSC:
+  case VPReductionSC:
+  case VPWidenSelectSC: {
+    const Instruction *I =
+        dyn_cast_or_null<Instruction>(getVPValue()->getUnderlyingValue());
+    (void)I;
+    assert((!I || !I->mayHaveSideEffects()) &&
+           "underlying instruction has side-effects");
+    return false;
+  }
+  case VPReplicateSC: {
+    auto *R = cast<VPReplicateRecipe>(this);
+    return R->getUnderlyingInstr()->mayHaveSideEffects();
+  }
+  default:
+    return true;
+  }
+}
+
 void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(InsertPos->getParent() &&
