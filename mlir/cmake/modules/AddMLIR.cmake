@@ -28,9 +28,9 @@ endfunction()
 
 
 # Generate Documentation
-function(add_mlir_doc doc_filename command output_file output_directory)
+function(add_mlir_doc doc_filename output_file output_directory command)
   set(LLVM_TARGET_DEFINITIONS ${doc_filename}.td)
-  tablegen(MLIR ${output_file}.md ${command})
+  tablegen(MLIR ${output_file}.md ${command} ${ARGN})
   set(GEN_DOC_FILE ${MLIR_BINARY_DIR}/docs/${output_directory}${output_file}.md)
   add_custom_command(
           OUTPUT ${GEN_DOC_FILE}
