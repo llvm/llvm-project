@@ -16,9 +16,30 @@
 #ifndef LLVM_ADT_STLFORWARDCOMPAT_H
 #define LLVM_ADT_STLFORWARDCOMPAT_H
 
+#include <array>
 #include <type_traits>
 
 namespace llvm {
+
+//===----------------------------------------------------------------------===//
+//     Features from C++20
+//===----------------------------------------------------------------------===//
+
+template <typename T>
+struct remove_cvref // NOLINT(readability-identifier-naming)
+{
+  using type = std::remove_cv_t<std::remove_reference_t<T>>;
+};
+
+template <typename T>
+using remove_cvref_t // NOLINT(readability-identifier-naming)
+    = typename llvm::remove_cvref<T>::type;
+
+template <typename T>
+struct type_identity // NOLINT(readability-identifier-naming)
+{
+  using type = T;
+};
 
 //===----------------------------------------------------------------------===//
 //     Features from C++17
@@ -56,26 +77,32 @@ struct in_place_type_t // NOLINT(readability-identifier-naming)
 {
   explicit in_place_type_t() = default;
 };
+/// \warning This must not be odr-used, as it cannot be made \c inline in C++14.
+template <typename T>
+constexpr in_place_type_t<T>
+    in_place_type; // NOLINT(readability-identifier-naming)
 
 template <std::size_t I>
 struct in_place_index_t // NOLINT(readability-identifier-naming)
 {
   explicit in_place_index_t() = default;
 };
+/// \warning This must not be odr-used, as it cannot be made \c inline in C++14.
+template <std::size_t I>
+constexpr in_place_index_t<I>
+    in_place_index; // NOLINT(readability-identifier-naming)
 
-//===----------------------------------------------------------------------===//
-//     Features from C++20
-//===----------------------------------------------------------------------===//
-
-template <typename T>
-struct remove_cvref // NOLINT(readability-identifier-naming)
-{
-  using type = std::remove_cv_t<std::remove_reference_t<T>>;
-};
-
-template <typename T>
-using remove_cvref_t // NOLINT(readability-identifier-naming)
-    = typename llvm::remove_cvref<T>::type;
+/// Implementation of std::experimental::make_array. Should be deleted in favor
+/// of the C++17 deduction guide for std::array.
+template <typename ExplicitT = void, typename... ArgTs>
+static constexpr auto
+make_array(ArgTs &&...Args) // NOLINT(readability-identifier-naming)
+    -> std::array<typename std::conditional_t<std::is_same<ExplicitT, void>{},
+                                              std::common_type<ArgTs...>,
+                                              type_identity<ExplicitT>>::type,
+                  sizeof...(ArgTs)> {
+  return {std::forward<ArgTs>(Args)...};
+}
 
 } // namespace llvm
 
