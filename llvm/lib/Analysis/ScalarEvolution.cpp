@@ -7020,16 +7020,13 @@ bool ScalarEvolution::isBackedgeTakenCountMaxOrZero(const Loop *L) {
 }
 
 /// Push PHI nodes in the header of the given loop onto the given Worklist.
-/// Only push PHIs for which a SCEV expression has been cached, otherwise there
-/// cannot be any dependent expressions to invalidate.
-void ScalarEvolution::pushCachedLoopPHIs(
-    const Loop *L, SmallVectorImpl<Instruction *> &Worklist) const {
+static void
+PushLoopPHIs(const Loop *L, SmallVectorImpl<Instruction *> &Worklist) {
   BasicBlock *Header = L->getHeader();
-  for (PHINode &PN : Header->phis()) {
-    auto It = ValueExprMap.find_as(static_cast<Value *>(&PN));
-    if (It != ValueExprMap.end())
-      Worklist.push_back(&PN);
-  }
+
+  // Push all Loop-header PHIs onto the Worklist stack.
+  for (PHINode &PN : Header->phis())
+    Worklist.push_back(&PN);
 }
 
 const ScalarEvolution::BackedgeTakenInfo &
@@ -7090,7 +7087,7 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
   // it handles SCEVUnknown PHI nodes specially.
   if (Result.hasAnyInfo()) {
     SmallVector<Instruction *, 16> Worklist;
-    pushCachedLoopPHIs(L, Worklist);
+    PushLoopPHIs(L, Worklist);
 
     SmallPtrSet<Instruction *, 8> Discovered;
     while (!Worklist.empty()) {
@@ -7213,7 +7210,7 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
     }
 
     // Drop information about expressions based on loop-header PHIs.
-    pushCachedLoopPHIs(CurrL, Worklist);
+    PushLoopPHIs(CurrL, Worklist);
 
     while (!Worklist.empty()) {
       Instruction *I = Worklist.pop_back_val();
