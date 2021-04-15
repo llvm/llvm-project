@@ -2378,7 +2378,7 @@ public:
 
   using udir_iterator_base =
       llvm::iterator_adaptor_base<udir_iterator, lookup_iterator,
-                                  std::random_access_iterator_tag,
+                                  typename lookup_iterator::iterator_category,
                                   UsingDirectiveDecl *>;
 
   struct udir_iterator : udir_iterator_base {
