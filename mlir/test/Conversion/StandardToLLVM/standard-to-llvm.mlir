@@ -248,3 +248,16 @@ func @fmaf(%arg0: f32, %arg1: vector<4xf32>) {
   %1 = fmaf %arg1, %arg1, %arg1 : vector<4xf32>
   std.return
 }
+
+// -----
+
+// CHECK-LABEL: func @index_vector(
+// CHECK-SAME: %[[ARG0:.*]]: vector<4xi64>
+func @index_vector(%arg0: vector<4xindex>) {
+  // CHECK: %[[CST:.*]] = llvm.mlir.constant(dense<[0, 1, 2, 3]> : vector<4xindex>) : vector<4xi64>
+  %0 = constant dense<[0, 1, 2, 3]> : vector<4xindex>
+  // CHECK: %[[V:.*]] = llvm.add %[[ARG0]], %[[CST]] : vector<4xi64>
+  %1 = addi %arg0, %0 : vector<4xindex>
+  std.return
+}
+

@@ -192,6 +192,11 @@ public:
   /// vector functions.
   void getWidestVF(StringRef ScalarF, ElementCount &FixedVF,
                    ElementCount &Scalable) const;
+
+  /// Returns true if call site / callee has cdecl-compatible calling
+  /// conventions.
+  static bool isCallingConvCCompatible(CallBase *CI);
+  static bool isCallingConvCCompatible(Function *Callee);
 };
 
 /// Provides information about what library functions are available for

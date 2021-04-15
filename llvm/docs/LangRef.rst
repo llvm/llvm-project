@@ -939,7 +939,7 @@ the COMDAT key's section is the largest:
 As a syntactic sugar the ``$name`` can be omitted if the name is the same as
 the global name:
 
-.. code-block:: text
+.. code-block:: llvm
 
   $foo = comdat any
   @foo = global i32 2, comdat
@@ -963,7 +963,7 @@ if a collision occurs in the symbol table.
 The combined use of COMDATS and section attributes may yield surprising results.
 For example:
 
-.. code-block:: text
+.. code-block:: llvm
 
    $foo = comdat any
    $bar = comdat any

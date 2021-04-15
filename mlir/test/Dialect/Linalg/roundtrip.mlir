@@ -525,6 +525,9 @@ func @generic_region(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1
       outs(%arg1 : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>)
       attrs = {foo = 1} {
     ^bb(%a: vector<3x4xi4>, %b: f32) :
+      %0 = linalg.index 0 : index
+      %1 = linalg.index 1 : index
+      %2 = linalg.index 2 : index
       linalg.yield %b : f32
   }
   return
@@ -538,6 +541,9 @@ func @generic_region(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1
 //  CHECK-SAME:     outs({{.*}} : memref<?x?x?xf32, #[[$strided3D]]>)
 //  CHECK-SAME:     attrs = {foo = 1 : i64} {
 //       CHECK:  ^{{.*}}(%{{.*}}: vector<3x4xi4>, %{{.*}}: f32):
+//       CHECK:    %{{.*}} = linalg.index 0 : index
+//       CHECK:    %{{.*}} = linalg.index 1 : index
+//       CHECK:    %{{.*}} = linalg.index 2 : index
 //       CHECK:    linalg.yield %{{.*}} : f32
 
 func @indexed_generic(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>,

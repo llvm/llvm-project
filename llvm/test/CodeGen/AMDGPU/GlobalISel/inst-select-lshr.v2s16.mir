@@ -3,6 +3,7 @@
 # RUN: FileCheck -check-prefixes=ERR-GFX910,ERR %s < %t
 
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass=instruction-select -global-isel-abort=2 -pass-remarks-missed='gisel*' -verify-machineinstrs %s -o - 2>%t | FileCheck -check-prefix=GFX10 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass=instruction-select -global-isel-abort=2 -pass-remarks-missed='gisel*' -verify-machineinstrs %s -o - 2>%t | FileCheck -check-prefix=GFX10 %s
 # RUN: FileCheck -check-prefixes=ERR-GFX910,ERR %s < %t
 
 # ERR-NOT: remark

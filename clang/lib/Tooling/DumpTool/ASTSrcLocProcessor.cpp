@@ -26,7 +26,11 @@ ASTSrcLocProcessor::ASTSrcLocProcessor(StringRef JsonPath)
           isDefinition(),
           isSameOrDerivedFrom(
               // TODO: Extend this with other clades
-              namedDecl(hasAnyName("clang::Stmt", "clang::Decl"))
+              namedDecl(hasAnyName("clang::Stmt", "clang::Decl",
+                                   "clang::CXXCtorInitializer",
+                                   "clang::NestedNameSpecifierLoc",
+                                   "clang::TemplateArgumentLoc",
+                                   "clang::CXXBaseSpecifier"))
                   .bind("nodeClade")),
           optionally(isDerivedFrom(cxxRecordDecl().bind("derivedFrom"))))
           .bind("className"),
@@ -116,22 +120,30 @@ CaptureMethods(std::string TypeString, const clang::CXXRecordDecl *ASTClass,
                          InnerMatcher...);
   };
 
-  auto BoundNodesVec =
-      match(findAll(publicAccessor(ofClass(equalsNode(ASTClass)),
-                                   returns(asString(TypeString)))
-                        .bind("classMethod")),
-            *ASTClass, *Result.Context);
+  auto BoundNodesVec = match(
+      findAll(
+          publicAccessor(
+              ofClass(cxxRecordDecl(
+                  equalsNode(ASTClass),
+                  optionally(isDerivedFrom(
+                      cxxRecordDecl(hasAnyName("clang::Stmt", "clang::Decl"))
+                          .bind("stmtOrDeclBase"))))),
+              returns(asString(TypeString)))
+              .bind("classMethod")),
+      *ASTClass, *Result.Context);
 
   std::vector<std::string> Methods;
   for (const auto &BN : BoundNodesVec) {
+    const auto *StmtOrDeclBase =
+        BN.getNodeAs<clang::CXXRecordDecl>("stmtOrDeclBase");
     if (const auto *Node = BN.getNodeAs<clang::NamedDecl>("classMethod")) {
       // Only record the getBeginLoc etc on Stmt etc, because it will call
       // more-derived implementations pseudo-virtually.
-      if ((ASTClass->getName() != "Stmt" && ASTClass->getName() != "Decl") &&
+      if (StmtOrDeclBase &&
           (Node->getName() == "getBeginLoc" || Node->getName() == "getEndLoc" ||
-           Node->getName() == "getSourceRange")) {
+           Node->getName() == "getSourceRange"))
         continue;
-      }
+
       // Only record the getExprLoc on Expr, because it will call
       // more-derived implementations pseudo-virtually.
       if (ASTClass->getName() != "Expr" && Node->getName() == "getExprLoc") {
@@ -145,29 +157,28 @@ CaptureMethods(std::string TypeString, const clang::CXXRecordDecl *ASTClass,
 
 void ASTSrcLocProcessor::run(const MatchFinder::MatchResult &Result) {
 
-  if (const auto *ASTClass =
-          Result.Nodes.getNodeAs<clang::CXXRecordDecl>("className")) {
+  const auto *ASTClass =
+      Result.Nodes.getNodeAs<clang::CXXRecordDecl>("className");
 
-    StringRef ClassName = ASTClass->getName();
+  StringRef ClassName = ASTClass->getName();
 
-    ClassData CD;
+  ClassData CD;
 
-    const auto *NodeClade =
-        Result.Nodes.getNodeAs<clang::CXXRecordDecl>("nodeClade");
-    StringRef CladeName = NodeClade->getName();
+  const auto *NodeClade =
+      Result.Nodes.getNodeAs<clang::CXXRecordDecl>("nodeClade");
+  StringRef CladeName = NodeClade->getName();
 
-    if (const auto *DerivedFrom =
-            Result.Nodes.getNodeAs<clang::CXXRecordDecl>("derivedFrom"))
-      ClassInheritance[ClassName] = DerivedFrom->getName();
+  if (const auto *DerivedFrom =
+          Result.Nodes.getNodeAs<clang::CXXRecordDecl>("derivedFrom"))
+    ClassInheritance[ClassName] = DerivedFrom->getName();
 
-    CD.ASTClassLocations =
-        CaptureMethods("class clang::SourceLocation", ASTClass, Result);
-    CD.ASTClassRanges =
-        CaptureMethods("class clang::SourceRange", ASTClass, Result);
+  CD.ASTClassLocations =
+      CaptureMethods("class clang::SourceLocation", ASTClass, Result);
+  CD.ASTClassRanges =
+      CaptureMethods("class clang::SourceRange", ASTClass, Result);
 
-    if (!CD.isEmpty()) {
-      ClassEntries[ClassName] = CD;
-      ClassesInClade[CladeName].push_back(ClassName);
-    }
+  if (!CD.isEmpty()) {
+    ClassEntries[ClassName] = CD;
+    ClassesInClade[CladeName].push_back(ClassName);
   }
 }

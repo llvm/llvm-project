@@ -38,6 +38,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
+#include <memory>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -260,6 +261,9 @@ public:
   /// Resolve incoming calls for a given call hierarchy item.
   void incomingCalls(const CallHierarchyItem &Item,
                      Callback<std::vector<CallHierarchyIncomingCall>>);
+
+  /// Resolve inlay hints for a given document.
+  void inlayHints(PathRef File, Callback<std::vector<InlayHint>>);
 
   /// Retrieve the top symbols from the workspace matching a query.
   void workspaceSymbols(StringRef Query, int Limit,

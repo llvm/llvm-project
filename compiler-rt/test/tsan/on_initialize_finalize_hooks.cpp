@@ -1,5 +1,5 @@
-// RUN: %clang_tsan -O1 %s -o %t.lib -fno-sanitize=thread -shared -fPIC -DBUILD_LIB=1
-// RUN: %clang_tsan -O1 %s %t.lib -o %t
+// RUN: %clang_tsan -O1 %s -DBUILD_LIB=1 -fno-sanitize=thread -shared -fPIC -o %dynamiclib %ld_flags_rpath_so
+// RUN: %clang_tsan -O1 %s -o %t %ld_flags_rpath_exe
 // RUN: %run %t | FileCheck %s
 
 // Test that initialization/finalization hooks are called, even when they are

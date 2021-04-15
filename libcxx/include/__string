@@ -10,51 +10,6 @@
 #ifndef _LIBCPP___STRING
 #define _LIBCPP___STRING
 
-/*
-    string synopsis
-
-namespace std
-{
-
-template <class charT>
-struct char_traits
-{
-    typedef charT     char_type;
-    typedef ...       int_type;
-    typedef streamoff off_type;
-    typedef streampos pos_type;
-    typedef mbstate_t state_type;
-
-    static constexpr void assign(char_type& c1, const char_type& c2) noexcept;
-    static constexpr bool eq(char_type c1, char_type c2) noexcept;
-    static constexpr bool lt(char_type c1, char_type c2) noexcept;
-
-    static constexpr int    compare(const char_type* s1, const char_type* s2, size_t n);
-    static constexpr size_t length(const char_type* s);
-    static constexpr const char_type*
-                            find(const char_type* s, size_t n, const char_type& a);
-
-    static constexpr char_type* move(char_type* s1, const char_type* s2, size_t n); // constexpr in C++20
-    static constexpr char_type* copy(char_type* s1, const char_type* s2, size_t n); // constexpr in C++20
-    static constexpr char_type* assign(char_type* s, size_t n, char_type a);        // constexpr in C++20
-
-    static constexpr int_type  not_eof(int_type c) noexcept;
-    static constexpr char_type to_char_type(int_type c) noexcept;
-    static constexpr int_type  to_int_type(char_type c) noexcept;
-    static constexpr bool      eq_int_type(int_type c1, int_type c2) noexcept;
-    static constexpr int_type  eof() noexcept;
-};
-
-template <> struct char_traits<char>;
-template <> struct char_traits<wchar_t>;
-template <> struct char_traits<char8_t>;  // C++20
-template <> struct char_traits<char16_t>;
-template <> struct char_traits<char32_t>;
-
-}  // std
-
-*/
-
 #include <__config>
 #include <algorithm>  // for search and min
 #include <cstdio>     // for EOF

@@ -142,7 +142,7 @@ public:
   static bool isInnermost(const isl::ast_node &Node);
 
   /// Is this loop a parallel loop?
-  static bool isParallel(__isl_keep isl_ast_node *Node);
+  static bool isParallel(const isl::ast_node &Node);
 
   /// Is this loop an outermost parallel loop?
   static bool isOutermostParallel(const isl::ast_node &Node);
@@ -151,20 +151,19 @@ public:
   static bool isInnermostParallel(const isl::ast_node &Node);
 
   /// Is this loop a reduction parallel loop?
-  static bool isReductionParallel(__isl_keep isl_ast_node *Node);
+  static bool isReductionParallel(const isl::ast_node &Node);
 
   /// Will the loop be run as thread parallel?
-  static bool isExecutedInParallel(__isl_keep isl_ast_node *Node);
+  static bool isExecutedInParallel(const isl::ast_node &Node);
 
   /// Get the nodes schedule or a nullptr if not available.
-  static __isl_give isl_union_map *getSchedule(__isl_keep isl_ast_node *Node);
+  static isl::union_map getSchedule(const isl::ast_node &Node);
 
   /// Get minimal dependence distance or nullptr if not available.
-  static __isl_give isl_pw_aff *
-  getMinimalDependenceDistance(__isl_keep isl_ast_node *Node);
+  static isl::pw_aff getMinimalDependenceDistance(const isl::ast_node &Node);
 
   /// Get the nodes broken reductions or a nullptr if not available.
-  static MemoryAccessSet *getBrokenReductions(__isl_keep isl_ast_node *Node);
+  static MemoryAccessSet *getBrokenReductions(const isl::ast_node &Node);
 
   /// Get the nodes build context or a nullptr if not available.
   static __isl_give isl_ast_build *getBuild(__isl_keep isl_ast_node *Node);

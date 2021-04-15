@@ -1339,6 +1339,11 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
   SDValue Ops[] = { Base, Offset, Chain };
   SDNode *Res = CurDAG->getMachineNode(Opcode, dl, MVT::i64, DstVT,
                                        MVT::Other, Ops);
+
+  // Transfer memoperands.
+  MachineMemOperand *MemOp = cast<MemSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Res), {MemOp});
+
   // Either way, we're replacing the node, so tell the caller that.
   SDValue LoadedVal = SDValue(Res, 1);
   if (InsertTo64) {

@@ -512,7 +512,8 @@ public:
   }
 
   TypeSourceInfo *getTypeSourceInfo() const {
-    assert(Argument.getKind() == TemplateArgument::Type);
+    if (Argument.getKind() != TemplateArgument::Type)
+      return nullptr;
     return LocInfo.getAsTypeSourceInfo();
   }
 

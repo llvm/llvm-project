@@ -572,3 +572,40 @@ body: |
     %4 = V_ADD_F64_e64 0, %0.sub0_sub1:vreg_128, 0, %2:vreg_64, 0, 0, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
+
+# GCN-LABEL: dbg_value_v1_v5{{$}}
+# GCN: renamable $vgpr1 = IMPLICIT_DEF
+# GCN: renamable $vgpr5 = IMPLICIT_DEF
+---
+name:            dbg_value_v1_v5
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: '$vgpr1' }
+  - { id: 1, class: vgpr_32, preferred-register: '$vgpr5' }
+  - { id: 2, class: vgpr_32 }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    DBG_VALUE debug-use %1, debug-use %0
+    S_ENDPGM 0, implicit %0, implicit %1
+...
+
+# GCN-LABEL: kill_v1_v5{{$}}
+# GCN: renamable $vgpr1 = IMPLICIT_DEF
+# GCN: renamable $vgpr5 = IMPLICIT_DEF
+# GCN: KILL killed renamable $vgpr5, killed renamable $vgpr1
+---
+name:            kill_v1_v5
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: '$vgpr1' }
+  - { id: 1, class: vgpr_32, preferred-register: '$vgpr5' }
+  - { id: 2, class: vgpr_32 }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    KILL %1, %0
+    S_ENDPGM 0
+...

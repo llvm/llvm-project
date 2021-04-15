@@ -101,7 +101,7 @@ _foo_fn:
 _weak_foo:
 _weak_foo_fn:
 
-.section	__DATA,__thread_vars,thread_local_variables
+.section __DATA,__thread_vars,thread_local_variables
 .globl _foo_tlv
 _foo_tlv:
 

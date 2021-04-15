@@ -2217,8 +2217,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
           return std::nullopt;
         }
         const semantics::DeclTypeSpec &type{
-            semantics::FindOrInstantiateDerivedType(
-                scope, std::move(dtSpec), context_)};
+            semantics::FindOrInstantiateDerivedType(scope, std::move(dtSpec))};
         auto &mutableRef{const_cast<parser::FunctionReference &>(funcRef)};
         *structureConstructor =
             mutableRef.ConvertToStructureConstructor(type.derivedTypeSpec());

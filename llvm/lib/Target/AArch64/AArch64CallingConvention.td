@@ -166,7 +166,8 @@ def RetCC_AArch64_AAPCS : CallingConv<[
 // Vararg functions on windows pass floats in integer registers
 let Entry = 1 in
 def CC_AArch64_Win64_VarArg : CallingConv<[
-  CCIfType<[f16, bf16, f32], CCPromoteToType<f64>>,
+  CCIfType<[f16, bf16], CCBitConvertToType<i16>>,
+  CCIfType<[f32], CCBitConvertToType<i32>>,
   CCIfType<[f64], CCBitConvertToType<i64>>,
   CCDelegateTo<CC_AArch64_AAPCS>
 ]>;

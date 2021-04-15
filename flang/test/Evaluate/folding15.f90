@@ -1,4 +1,4 @@
-! RUN: %S/test_folding.sh %s %t %f18
+! RUN: %S/test_folding.sh %s %t %flang_fc1
 ! Test folding of array constructors with duplicate names for the implied
 ! DO variables
 module m1

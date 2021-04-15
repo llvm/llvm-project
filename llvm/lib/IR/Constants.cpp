@@ -1265,6 +1265,9 @@ Constant *ConstantArray::getImpl(ArrayType *Ty, ArrayRef<Constant*> V) {
   // all undef, return an UndefValue, if "all simple", then return a
   // ConstantDataArray.
   Constant *C = V[0];
+  if (isa<PoisonValue>(C) && rangeOnlyContains(V.begin(), V.end(), C))
+    return PoisonValue::get(Ty);
+
   if (isa<UndefValue>(C) && rangeOnlyContains(V.begin(), V.end(), C))
     return UndefValue::get(Ty);
 
@@ -1313,21 +1316,28 @@ Constant *ConstantStruct::get(StructType *ST, ArrayRef<Constant*> V) {
   // Create a ConstantAggregateZero value if all elements are zeros.
   bool isZero = true;
   bool isUndef = false;
+  bool isPoison = false;
 
   if (!V.empty()) {
     isUndef = isa<UndefValue>(V[0]);
+    isPoison = isa<PoisonValue>(V[0]);
     isZero = V[0]->isNullValue();
+    // PoisonValue inherits UndefValue, so its check is not necessary.
     if (isUndef || isZero) {
       for (unsigned i = 0, e = V.size(); i != e; ++i) {
         if (!V[i]->isNullValue())
           isZero = false;
-        if (!isa<UndefValue>(V[i]))
+        if (!isa<PoisonValue>(V[i]))
+          isPoison = false;
+        if (isa<PoisonValue>(V[i]) || !isa<UndefValue>(V[i]))
           isUndef = false;
       }
     }
   }
   if (isZero)
     return ConstantAggregateZero::get(ST);
+  if (isPoison)
+    return PoisonValue::get(ST);
   if (isUndef)
     return UndefValue::get(ST);
 

@@ -4377,14 +4377,26 @@ let Flags = [FC1Option, FlangOnlyOption] in {
 
 def test_io : Flag<["-"], "test-io">, Group<Action_Group>,
   HelpText<"Run the InputOuputTest action. Use for development and testing only.">;
+def fdebug_unparse_no_sema : Flag<["-"], "fdebug-unparse-no-sema">, Group<Action_Group>,
+  HelpText<"Unparse and stop (skips the semantic checks)">,
+  DocBrief<[{Only run the parser, then unparse the parse-tree and output the
+generated Fortran source file. Semantic checks are disabled.}]>;
 def fdebug_unparse : Flag<["-"], "fdebug-unparse">, Group<Action_Group>,
-  HelpText<"Unparse and stop.">;
+  HelpText<"Unparse and stop.">,
+  DocBrief<[{Run the parser and the semantic checks. Then unparse the
+parse-tree and output the generated Fortran source file.}]>;
 def fdebug_unparse_with_symbols : Flag<["-"], "fdebug-unparse-with-symbols">, Group<Action_Group>,
   HelpText<"Unparse and stop.">;
 def fdebug_dump_symbols : Flag<["-"], "fdebug-dump-symbols">, Group<Action_Group>,
   HelpText<"Dump symbols after the semantic analysis">;
 def fdebug_dump_parse_tree : Flag<["-"], "fdebug-dump-parse-tree">, Group<Action_Group>,
-  HelpText<"Dump the parse tree">;
+  HelpText<"Dump the parse tree">,
+  DocBrief<[{Run the Parser and the semantic checks, and then output the
+parse tree.}]>;
+def fdebug_dump_parse_tree_no_sema : Flag<["-"], "fdebug-dump-parse-tree-no-sema">, Group<Action_Group>,
+  HelpText<"Dump the parse tree (skips the semantic checks)">,
+  DocBrief<[{Run the Parser and then output the parse tree. Semantic
+checks are disabled.}]>;
 def fdebug_dump_provenance : Flag<["-"], "fdebug-dump-provenance">, Group<Action_Group>,
   HelpText<"Dump provenance">;
 def fdebug_dump_parsing_log : Flag<["-"], "fdebug-dump-parsing-log">, Group<Action_Group>,
@@ -4933,6 +4945,11 @@ def fdenormal_fp_math_f32_EQ : Joined<["-"], "fdenormal-fp-math-f32=">,
 def sys_header_deps : Flag<["-"], "sys-header-deps">,
   HelpText<"Include system headers in dependency output">,
   MarshallingInfoFlag<DependencyOutputOpts<"IncludeSystemHeaders">>;
+def show_skipped_includes : Flag<["-"], "show-skipped-includes">,
+  HelpText<"Show skipped includes in -H output.">,
+  DocBrief<[{#include files may be "skipped" due to include guard optimization
+             or #pragma once. This flag makes -H show also such includes.}]>,
+  MarshallingInfoFlag<DependencyOutputOpts<"ShowSkippedHeaderIncludes">>;
 def module_file_deps : Flag<["-"], "module-file-deps">,
   HelpText<"Include module files in dependency output">,
   MarshallingInfoFlag<DependencyOutputOpts<"IncludeModuleFiles">>;

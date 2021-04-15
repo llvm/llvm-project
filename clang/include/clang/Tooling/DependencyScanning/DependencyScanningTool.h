@@ -45,14 +45,14 @@ struct FullDependencies {
   /// appending to the original command line to pass to clang.
   std::vector<std::string> AdditionalNonPathCommandLine;
 
-  /// Gets the full addtional command line suitable for appending to the
-  /// original command line to pass to clang.
+  /// Get additional arguments suitable for appending to the original Clang
+  /// command line.
   ///
-  /// \param LookupPCMPath this function is called to fill in `-fmodule-file=`
+  /// \param LookupPCMPath This function is called to fill in `-fmodule-file=`
   ///                      flags and for the `-o` flag. It needs to return a
   ///                      path for where the PCM for the given module is to
   ///                      be located.
-  /// \param LookupModuleDeps this fucntion is called to collect the full
+  /// \param LookupModuleDeps This function is called to collect the full
   ///                         transitive set of dependencies for this
   ///                         compilation.
   std::vector<std::string> getAdditionalCommandLine(
@@ -82,15 +82,14 @@ public:
   getDependencyFile(const tooling::CompilationDatabase &Compilations,
                     StringRef CWD);
 
-  /// Collect the full module depenedency graph for the input, ignoring any
+  /// Collect the full module dependency graph for the input, ignoring any
   /// modules which have already been seen.
   ///
-  /// \param AlreadySeen this is used to not report modules that have previously
-  ///                    been reported. Use the same `llvm::StringSet<>` for all
-  ///                    calls to `getFullDependencies` for a single
-  ///                    `DependencyScanningTool` for a single build. Use a
-  ///                    different one for different tools, and clear it between
-  ///                    builds.
+  /// \param AlreadySeen This stores modules which have previously been
+  ///                    reported. Use the same instance for all calls to this
+  ///                    function for a single \c DependencyScanningTool in a
+  ///                    single build. Use a different one for different tools,
+  ///                    and clear it between builds.
   ///
   /// \returns a \c StringError with the diagnostic output if clang errors
   /// occurred, \c FullDependencies otherwise.

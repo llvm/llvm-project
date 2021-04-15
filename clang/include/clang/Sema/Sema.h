@@ -2589,6 +2589,9 @@ public:
 
   NamedDecl *HandleDeclarator(Scope *S, Declarator &D,
                               MultiTemplateParamsArg TemplateParameterLists);
+  bool tryToFixVariablyModifiedVarType(TypeSourceInfo *&TInfo,
+                                       QualType &T, SourceLocation Loc,
+                                       unsigned FailedFoldDiagID);
   void RegisterLocallyScopedExternCDecl(NamedDecl *ND, Scope *S);
   bool DiagnoseClassNameShadow(DeclContext *DC, DeclarationNameInfo Info);
   bool diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
@@ -10803,6 +10806,11 @@ public:
   StmtResult ActOnOpenMPDispatchDirective(ArrayRef<OMPClause *> Clauses,
                                           Stmt *AStmt, SourceLocation StartLoc,
                                           SourceLocation EndLoc);
+  /// Called on well-formed '\#pragma omp masked' after parsing of the
+  // /associated statement.
+  StmtResult ActOnOpenMPMaskedDirective(ArrayRef<OMPClause *> Clauses,
+                                        Stmt *AStmt, SourceLocation StartLoc,
+                                        SourceLocation EndLoc);
 
   /// Checks correctness of linear modifiers.
   bool CheckOpenMPLinearModifier(OpenMPLinearClauseKind LinKind,
@@ -11021,6 +11029,10 @@ public:
                                         SourceLocation StartLoc,
                                         SourceLocation LParenLoc,
                                         SourceLocation EndLoc);
+  /// Called on well-formed 'filter' clause.
+  OMPClause *ActOnOpenMPFilterClause(Expr *ThreadID, SourceLocation StartLoc,
+                                     SourceLocation LParenLoc,
+                                     SourceLocation EndLoc);
   /// Called on well-formed 'threads' clause.
   OMPClause *ActOnOpenMPThreadsClause(SourceLocation StartLoc,
                                       SourceLocation EndLoc);
@@ -11651,6 +11663,8 @@ public:
 
   bool isValidSveBitcast(QualType srcType, QualType destType);
 
+  bool areMatrixTypesOfTheSameDimension(QualType srcTy, QualType destTy);
+
   bool areLaxCompatibleVectorTypes(QualType srcType, QualType destType);
   bool isLaxVectorConversion(QualType srcType, QualType destType);
 
@@ -11708,6 +11722,13 @@ public:
   /// __unknown_anytype parameter.
   ExprResult checkUnknownAnyArg(SourceLocation callLoc,
                                 Expr *result, QualType &paramType);
+
+  // CheckMatrixCast - Check type constraints for matrix casts.
+  // We allow casting between matrixes of the same dimensions i.e. when they
+  // have the same number of rows and column. Returns true if the cast is
+  // invalid.
+  bool CheckMatrixCast(SourceRange R, QualType DestTy, QualType SrcTy,
+                       CastKind &Kind);
 
   // CheckVectorCast - check type constraints for vectors.
   // Since vectors are an extension, there are no C standard reference for this.

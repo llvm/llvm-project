@@ -38,8 +38,15 @@ namespace llvm {
 class InstrProfReader;
 
 /// A file format agnostic iterator over profiling data.
-class InstrProfIterator : public std::iterator<std::input_iterator_tag,
-                                               NamedInstrProfRecord> {
+class InstrProfIterator {
+public:
+  using iterator_category = std::input_iterator_tag;
+  using value_type = NamedInstrProfRecord;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type *;
+  using reference = value_type &;
+
+private:
   InstrProfReader *Reader = nullptr;
   value_type Record;
 

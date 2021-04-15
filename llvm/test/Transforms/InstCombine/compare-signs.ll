@@ -148,3 +148,62 @@ define <2 x i1> @test4c_vec(<2 x i64> %a) {
   ret <2 x i1> %c
 }
 
+; PR49866
+
+define i1 @shift_trunc_signbit_test(i32 %x) {
+; CHECK-LABEL: @shift_trunc_signbit_test(
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %sh = lshr i32 %x, 24
+  %tr = trunc i32 %sh to i8
+  %r = icmp slt i8 %tr, 0
+  ret i1 %r
+}
+
+define <2 x i1> @shift_trunc_signbit_test_vec_uses(<2 x i17> %x, <2 x i17>* %p1, <2 x i13>* %p2) {
+; CHECK-LABEL: @shift_trunc_signbit_test_vec_uses(
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i17> [[X:%.*]], <i17 4, i17 4>
+; CHECK-NEXT:    store <2 x i17> [[SH]], <2 x i17>* [[P1:%.*]], align 8
+; CHECK-NEXT:    [[TR:%.*]] = trunc <2 x i17> [[SH]] to <2 x i13>
+; CHECK-NEXT:    store <2 x i13> [[TR]], <2 x i13>* [[P2:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i17> [[X]], <i17 -1, i17 -1>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %sh = lshr <2 x i17> %x, <i17 4, i17 4>
+  store <2 x i17> %sh, <2 x i17>* %p1
+  %tr = trunc <2 x i17> %sh to <2 x i13>
+  store <2 x i13> %tr, <2 x i13>* %p2
+  %r = icmp sgt <2 x i13> %tr, <i13 -1, i13 -1>
+  ret <2 x i1> %r
+}
+
+; negative test
+
+define i1 @shift_trunc_wrong_shift(i32 %x) {
+; CHECK-LABEL: @shift_trunc_wrong_shift(
+; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[X:%.*]], 23
+; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[SH]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[TR]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %sh = lshr i32 %x, 23
+  %tr = trunc i32 %sh to i8
+  %r = icmp slt i8 %tr, 0
+  ret i1 %r
+}
+
+; negative test
+
+define i1 @shift_trunc_wrong_cmp(i32 %x) {
+; CHECK-LABEL: @shift_trunc_wrong_cmp(
+; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[X:%.*]], 24
+; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[SH]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[TR]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %sh = lshr i32 %x, 24
+  %tr = trunc i32 %sh to i8
+  %r = icmp slt i8 %tr, 1
+  ret i1 %r
+}

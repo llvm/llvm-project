@@ -89,14 +89,13 @@ enum NodeType : unsigned {
   // Generalized Reverse and Generalized Or-Combine - directly matching the
   // semantics of the named RISC-V instructions. Lowered as custom nodes as
   // TableGen chokes when faced with commutative permutations in deeply-nested
-  // DAGs. Each node takes an input operand and a TargetConstant immediate
-  // shift amount, and outputs a bit-manipulated version of input. All operands
-  // are of type XLenVT.
-  GREVI,
-  GREVIW,
-  GORCI,
-  GORCIW,
-  SHFLI,
+  // DAGs. Each node takes an input operand and a control operand and outputs a
+  // bit-manipulated version of input. All operands are i32 or XLenVT.
+  GREV,
+  GREVW,
+  GORC,
+  GORCW,
+  SHFL,
   // Vector Extension
   // VMV_V_X_VL matches the semantics of vmv.v.x but includes an extra operand
   // for the VL value to be used for the operation.
@@ -226,6 +225,8 @@ enum NodeType : unsigned {
   // Vector sign/zero extend with additional mask & VL operands.
   VSEXT_VL,
   VZEXT_VL,
+  //  vpopc.m with additional mask and VL operands.
+  VPOPC_VL,
 
   // Reads value of CSR.
   // The first operand is a chain pointer. The second specifies address of the
@@ -507,6 +508,7 @@ private:
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVectorMaskVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFPVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;

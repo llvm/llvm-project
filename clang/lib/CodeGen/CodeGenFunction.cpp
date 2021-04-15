@@ -493,8 +493,7 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   // 4. Width of vector arguments and return types for this function.
   // 5. Width of vector aguments and return types for functions called by this
   //    function.
-  if (LargestVectorWidth)
-    CurFn->addFnAttr("min-legal-vector-width", llvm::utostr(LargestVectorWidth));
+  CurFn->addFnAttr("min-legal-vector-width", llvm::utostr(LargestVectorWidth));
 
   // Add vscale attribute if appropriate.
   if (getLangOpts().ArmSveVectorBits) {
@@ -1331,6 +1330,11 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
 
   // Emit the standard function prologue.
   StartFunction(GD, ResTy, Fn, FnInfo, Args, Loc, BodyRange.getBegin());
+
+  // Save parameters for coroutine function.
+  if (Body && isa_and_nonnull<CoroutineBodyStmt>(Body))
+    for (const auto *ParamDecl : FD->parameters())
+      FnArgs.push_back(ParamDecl);
 
   // Generate the body of the function.
   PGO.assignRegionCounters(GD, CurFn);

@@ -1238,9 +1238,9 @@ bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM) const {
   }
 
   return AM.Scale == 0 &&
-         (AM.BaseOffs == 0 || Subtarget->getInstrInfo()->isLegalFLATOffset(
-                                  AM.BaseOffs, AMDGPUAS::FLAT_ADDRESS,
-                                  /*Signed=*/false));
+         (AM.BaseOffs == 0 ||
+          Subtarget->getInstrInfo()->isLegalFLATOffset(
+              AM.BaseOffs, AMDGPUAS::FLAT_ADDRESS, SIInstrFlags::FLAT));
 }
 
 bool SITargetLowering::isLegalGlobalAddressingMode(const AddrMode &AM) const {
@@ -1248,7 +1248,7 @@ bool SITargetLowering::isLegalGlobalAddressingMode(const AddrMode &AM) const {
     return AM.Scale == 0 &&
            (AM.BaseOffs == 0 || Subtarget->getInstrInfo()->isLegalFLATOffset(
                                     AM.BaseOffs, AMDGPUAS::GLOBAL_ADDRESS,
-                                    /*Signed=*/true));
+                                    SIInstrFlags::FlatGlobal));
 
   if (!Subtarget->hasAddr64() || Subtarget->useFlatForGlobal()) {
       // Assume the we will use FLAT for all global memory accesses
@@ -12112,10 +12112,15 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     unsigned AS = RMW->getPointerAddressSpace();
 
     if ((AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS) &&
-        Subtarget->hasAtomicFaddNoRtnInsts()) {
-      if (!fpModeMatchesGlobalFPAtomicMode(RMW) ||
-          RMW->getFunction()->getFnAttribute("amdgpu-unsafe-fp-atomics")
-              .getValueAsString() != "true")
+         Subtarget->hasAtomicFaddNoRtnInsts()) {
+      // The amdgpu-unsafe-fp-atomics attribute enables generation of unsafe
+      // floating point atomic instructions. May generate more efficient code,
+      // but may not respect rounding and denormal modes, and may give incorrect
+      // results for certain memory destinations.
+      if (!fpModeMatchesGlobalFPAtomicMode(RMW) &&
+          RMW->getFunction()
+                  ->getFnAttribute("amdgpu-unsafe-fp-atomics")
+                  .getValueAsString() != "true")
         return AtomicExpansionKind::CmpXChg;
 
       if (Subtarget->hasGFX90AInsts()) {

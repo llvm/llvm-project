@@ -1909,7 +1909,7 @@ private:
     bool aliased = true;
     if (Loc1.Ptr && Loc2.Ptr && isSimple(Inst1) && isSimple(Inst2)) {
       // Do the alias check.
-      aliased = AA->alias(Loc1, Loc2);
+      aliased = !AA->isNoAlias(Loc1, Loc2);
     }
     // Store the result in the cache.
     result = aliased;
@@ -6214,6 +6214,9 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
         break;
   }
 
+  // Tracks if we tried to vectorize stores starting from the given tail
+  // already.
+  SmallBitVector TriedTails(E, false);
   // For stores that start but don't end a link in the chain:
   for (int Cnt = E; Cnt > 0; --Cnt) {
     int I = Cnt - 1;
@@ -6230,8 +6233,9 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
         // Mark the new end in the chain and go back, if required. It might be
         // required if the original stores come in reversed order, for example.
         if (ConsecutiveChain[I].first != E &&
-            Tails.test(ConsecutiveChain[I].first) &&
+            Tails.test(ConsecutiveChain[I].first) && !TriedTails.test(I) &&
             !VectorizedStores.count(Stores[ConsecutiveChain[I].first])) {
+          TriedTails.set(I);
           Tails.reset(ConsecutiveChain[I].first);
           if (Cnt < ConsecutiveChain[I].first + 2)
             Cnt = ConsecutiveChain[I].first + 2;
@@ -6692,15 +6696,16 @@ class HorizontalReduction {
     propagateIRFlags(Op, ReductionOps[0]);
     return Op;
   }
+
   /// Creates reduction operation with the current opcode with the IR flags
   /// from \p I.
   static Value *createOp(IRBuilder<> &Builder, RecurKind RdxKind, Value *LHS,
                          Value *RHS, const Twine &Name, Instruction *I) {
     auto *SelI = dyn_cast<SelectInst>(I);
     Value *Op = createOp(Builder, RdxKind, LHS, RHS, Name, SelI != nullptr);
-    if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind)) {
+    if (SelI && RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind)) {
       if (auto *Sel = dyn_cast<SelectInst>(Op))
-          propagateIRFlags(Sel->getCondition(), SelI->getCondition());
+        propagateIRFlags(Sel->getCondition(), SelI->getCondition());
     }
     propagateIRFlags(Op, I);
     return Op;

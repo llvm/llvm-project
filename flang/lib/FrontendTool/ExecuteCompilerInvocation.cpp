@@ -40,6 +40,9 @@ static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
   case DebugUnparse:
     return std::make_unique<DebugUnparseAction>();
     break;
+  case DebugUnparseNoSema:
+    return std::make_unique<DebugUnparseNoSemaAction>();
+    break;
   case DebugUnparseWithSymbols:
     return std::make_unique<DebugUnparseWithSymbolsAction>();
     break;
@@ -48,6 +51,9 @@ static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
     break;
   case DebugDumpParseTree:
     return std::make_unique<DebugDumpParseTreeAction>();
+    break;
+  case DebugDumpParseTreeNoSema:
+    return std::make_unique<DebugDumpParseTreeNoSemaAction>();
     break;
   case DebugDumpProvenance:
     return std::make_unique<DebugDumpProvenanceAction>();

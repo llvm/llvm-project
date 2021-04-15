@@ -65,7 +65,7 @@ void g(void) {
     return;
 
   case 0:
-    [[fallthrough, fallthrough]]; // expected-error {{multiple times}}
+    [[fallthrough, fallthrough]]; // ok
   case 1:
     [[fallthrough(0)]]; // expected-error {{argument list}}
   case 2:

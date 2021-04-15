@@ -2,7 +2,7 @@
 ; REQUIRES: shell
 ; RUN: llvm-as %s -o %t.bc
 ; RUN: touch %t.resolution.txt
-; RUN: chmod -w %t.resolution.txt
+; RUN: chmod u-w %t.resolution.txt
 ; RUN: not ld.lld -save-temps %t.bc -o %t 2>&1 | FileCheck -DMSG=%errc_EACCES %s
 ; RUN: rm -f %t.resolution.txt
 

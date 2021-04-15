@@ -842,7 +842,7 @@ func @invalid_splat(%v : f32) {
 
 func @invalid_splat(%v : vector<8xf32>) {
   %w = splat %v : tensor<8xvector<8xf32>>
-  // expected-error@-1 {{must be integer or float type}}
+  // expected-error@-1 {{must be integer/index/float type}}
   return
 }
 

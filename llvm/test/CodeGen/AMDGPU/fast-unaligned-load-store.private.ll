@@ -5,6 +5,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+unaligned-scratch-access -amdgpu-enable-flat-scratch < %s | FileCheck --check-prefix=GFX9-FLASTSCR %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+unaligned-scratch-access < %s | FileCheck --check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+unaligned-scratch-access -amdgpu-enable-flat-scratch < %s | FileCheck --check-prefix=GFX10-FLASTSCR %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -mattr=+unaligned-scratch-access < %s | FileCheck --check-prefix=GFX11 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -mattr=+unaligned-scratch-access -amdgpu-enable-flat-scratch < %s | FileCheck --check-prefix=GFX11-FLASTSCR %s
 
 ; Should not merge this to a dword load
 define i32 @private_load_2xi16_align2(i16 addrspace(5)* %p) #0 {
@@ -69,6 +71,28 @@ define i32 @private_load_2xi16_align2(i16 addrspace(5)* %p) #0 {
 ; GFX10-FLASTSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLASTSCR-NEXT:    v_lshl_or_b32 v0, v2, 16, v1
 ; GFX10-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: private_load_2xi16_align2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    scratch_load_u16 v1, v0, off
+; GFX11-NEXT:    scratch_load_u16 v0, v0, off offset:2
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FLASTSCR-LABEL: private_load_2xi16_align2:
+; GFX11-FLASTSCR:       ; %bb.0:
+; GFX11-FLASTSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-FLASTSCR-NEXT:    s_clause 0x1
+; GFX11-FLASTSCR-NEXT:    scratch_load_u16 v1, v0, off
+; GFX11-FLASTSCR-NEXT:    scratch_load_u16 v0, v0, off offset:2
+; GFX11-FLASTSCR-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FLASTSCR-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, i16 addrspace(5)* %p, i64 1
   %p.0 = load i16, i16 addrspace(5)* %p, align 2
   %p.1 = load i16, i16 addrspace(5)* %gep.p, align 2
@@ -144,6 +168,28 @@ define void @private_store_2xi16_align2(i16 addrspace(5)* %p, i16 addrspace(5)* 
 ; GFX10-FLASTSCR-NEXT:    scratch_store_short v1, v2, off offset:2
 ; GFX10-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: private_store_2xi16_align2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_mov_b32_e32 v0, 1
+; GFX11-NEXT:    v_mov_b32_e32 v2, 2
+; GFX11-NEXT:    scratch_store_b16 v1, v0, off
+; GFX11-NEXT:    scratch_store_b16 v1, v2, off offset:2
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FLASTSCR-LABEL: private_store_2xi16_align2:
+; GFX11-FLASTSCR:       ; %bb.0:
+; GFX11-FLASTSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-FLASTSCR-NEXT:    v_mov_b32_e32 v0, 1
+; GFX11-FLASTSCR-NEXT:    v_mov_b32_e32 v2, 2
+; GFX11-FLASTSCR-NEXT:    scratch_store_b16 v1, v0, off
+; GFX11-FLASTSCR-NEXT:    scratch_store_b16 v1, v2, off offset:2
+; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
   %gep.r = getelementptr i16, i16 addrspace(5)* %r, i64 1
   store i16 1, i16 addrspace(5)* %r, align 2
   store i16 2, i16 addrspace(5)* %gep.r, align 2
@@ -221,6 +267,26 @@ define i32 @private_load_2xi16_align1(i16 addrspace(5)* %p) #0 {
 ; GFX10-FLASTSCR-NEXT:    v_bfi_b32 v1, 0xffff, 0, v0
 ; GFX10-FLASTSCR-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
 ; GFX10-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: private_load_2xi16_align1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    scratch_load_b32 v0, v0, off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_bfi_b32 v1, 0xffff, 0, v0
+; GFX11-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FLASTSCR-LABEL: private_load_2xi16_align1:
+; GFX11-FLASTSCR:       ; %bb.0:
+; GFX11-FLASTSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-FLASTSCR-NEXT:    scratch_load_b32 v0, v0, off
+; GFX11-FLASTSCR-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FLASTSCR-NEXT:    v_bfi_b32 v1, 0xffff, 0, v0
+; GFX11-FLASTSCR-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, i16 addrspace(5)* %p, i64 1
   %p.0 = load i16, i16 addrspace(5)* %p, align 1
   %p.1 = load i16, i16 addrspace(5)* %gep.p, align 1
@@ -290,6 +356,24 @@ define void @private_store_2xi16_align1(i16 addrspace(5)* %p, i16 addrspace(5)* 
 ; GFX10-FLASTSCR-NEXT:    scratch_store_dword v1, v0, off
 ; GFX10-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: private_store_2xi16_align1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0x20001
+; GFX11-NEXT:    scratch_store_b32 v1, v0, off
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FLASTSCR-LABEL: private_store_2xi16_align1:
+; GFX11-FLASTSCR:       ; %bb.0:
+; GFX11-FLASTSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-FLASTSCR-NEXT:    v_mov_b32_e32 v0, 0x20001
+; GFX11-FLASTSCR-NEXT:    scratch_store_b32 v1, v0, off
+; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
   %gep.r = getelementptr i16, i16 addrspace(5)* %r, i64 1
   store i16 1, i16 addrspace(5)* %r, align 1
   store i16 2, i16 addrspace(5)* %gep.r, align 1
@@ -360,6 +444,26 @@ define i32 @private_load_2xi16_align4(i16 addrspace(5)* %p) #0 {
 ; GFX10-FLASTSCR-NEXT:    v_bfi_b32 v1, 0xffff, 0, v0
 ; GFX10-FLASTSCR-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
 ; GFX10-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: private_load_2xi16_align4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    scratch_load_b32 v0, v0, off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_bfi_b32 v1, 0xffff, 0, v0
+; GFX11-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FLASTSCR-LABEL: private_load_2xi16_align4:
+; GFX11-FLASTSCR:       ; %bb.0:
+; GFX11-FLASTSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-FLASTSCR-NEXT:    scratch_load_b32 v0, v0, off
+; GFX11-FLASTSCR-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FLASTSCR-NEXT:    v_bfi_b32 v1, 0xffff, 0, v0
+; GFX11-FLASTSCR-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, i16 addrspace(5)* %p, i64 1
   %p.0 = load i16, i16 addrspace(5)* %p, align 4
   %p.1 = load i16, i16 addrspace(5)* %gep.p, align 2
@@ -431,6 +535,24 @@ define void @private_store_2xi16_align4(i16 addrspace(5)* %p, i16 addrspace(5)* 
 ; GFX10-FLASTSCR-NEXT:    scratch_store_dword v1, v0, off
 ; GFX10-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: private_store_2xi16_align4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0x20001
+; GFX11-NEXT:    scratch_store_b32 v1, v0, off
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FLASTSCR-LABEL: private_store_2xi16_align4:
+; GFX11-FLASTSCR:       ; %bb.0:
+; GFX11-FLASTSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-FLASTSCR-NEXT:    v_mov_b32_e32 v0, 0x20001
+; GFX11-FLASTSCR-NEXT:    scratch_store_b32 v1, v0, off
+; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-FLASTSCR-NEXT:    s_setpc_b64 s[30:31]
   %gep.r = getelementptr i16, i16 addrspace(5)* %r, i64 1
   store i16 1, i16 addrspace(5)* %r, align 4
   store i16 2, i16 addrspace(5)* %gep.r, align 2

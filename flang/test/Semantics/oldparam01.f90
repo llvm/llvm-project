@@ -1,4 +1,4 @@
-! RUN: %f18 -falternative-parameter-statement -fdebug-dump-symbols %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -falternative-parameter-statement -fdebug-dump-symbols %s 2>&1 | FileCheck %s
 
 ! Non-error tests for "old style" PARAMETER statements
 

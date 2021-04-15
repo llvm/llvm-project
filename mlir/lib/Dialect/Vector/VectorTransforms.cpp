@@ -1388,7 +1388,7 @@ public:
     VectorType rhsType = op.getOperandTypeRHS().dyn_cast<VectorType>();
     VectorType resType = op.getVectorType();
     Type eltType = resType.getElementType();
-    bool isInt = eltType.isa<IntegerType>();
+    bool isInt = eltType.isa<IntegerType, IndexType>();
     Value acc = (op.acc().empty()) ? nullptr : op.acc()[0];
     vector::CombiningKind kind = op.kind();
 
@@ -2556,11 +2556,11 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
          "Expected splitFullAndPartialTransferPrecondition to hold");
   auto xferReadOp = dyn_cast<vector::TransferReadOp>(xferOp.getOperation());
 
-  if (xferReadOp.mask())
-    return failure();
-
   // TODO: add support for write case.
   if (!xferReadOp)
+    return failure();
+
+  if (xferReadOp.mask())
     return failure();
 
   OpBuilder::InsertionGuard guard(b);

@@ -165,6 +165,13 @@ def MxSize8  : MxSize<8,  "b", "byte">;
 def MxSize16 : MxSize<16, "w", "word">;
 def MxSize32 : MxSize<32, "l", "long">;
 
+class MxOpClass<string name> : AsmOperandClass {
+  let Name = name;
+  let ParserMethod = "parseMemOp";
+}
+
+def MxRegClass : MxOpClass<"Reg">;
+
 class MxOperand<ValueType vt, MxSize size, string letter, RegisterClass rc, dag pat = (null_frag)> {
   ValueType VT = vt;
   string Letter = letter;
@@ -179,7 +186,9 @@ class MxRegOp<ValueType vt,
               string letter,
               string pm = "printOperand">
     : RegisterOperand<rc, pm>,
-      MxOperand<vt, size, letter, rc>;
+      MxOperand<vt, size, letter, rc> {
+  let ParserMatchClass = MxRegClass;
+}
 
 // REGISTER DIRECT. The operand is in the data register specified by
 // the effective address register field.
@@ -205,11 +214,6 @@ def MxARD32 : MxRegOp<i32, AR32, MxSize32, "a">;
 
 def MxARD16_TC : MxRegOp<i16, AR16_TC, MxSize16, "a">;
 def MxARD32_TC : MxRegOp<i32, AR32_TC, MxSize32, "a">;
-
-class MxOpClass<string name> : AsmOperandClass {
-  let Name = name;
-  let ParserMethod = "parse"#name;
-}
 
 class MxMemOp<dag ops, MxSize size, string letter,
               string printMethod = "printOperand",
@@ -338,7 +342,12 @@ def MxPCI16  : MxMemOp<(ops i8imm, XR32), MxSize16, "k", "printPCI16Mem", MxPCI>
 def MxPCI32  : MxMemOp<(ops i8imm, XR32), MxSize32, "k", "printPCI32Mem", MxPCI>;
 } // OPERAND_PCREL
 
-def MxImm : MxOpClass<"MxImm">;
+def MxImm : AsmOperandClass {
+  let Name = "MxImm";
+  let PredicateMethod = "isImm";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseImm";
+}
 
 class MxOp<ValueType vt, MxSize size, string letter>
     : Operand<vt>,
@@ -362,7 +371,7 @@ def Mxi32imm : MxOp<i32, MxSize32, "i">;
 } // OPERAND_IMMEDIATE
 
 let OperandType = "OPERAND_PCREL",
-    ParserMatchClass = MxImm,
+    ParserMatchClass = MxAddr,
     PrintMethod = "printPCRelImm" in {
 
 // Branch targets have OtherVT type and print as pc-relative values.
@@ -377,7 +386,6 @@ def MxMoveMask : MxOp<i16, MxSize16, "m"> {
   let OperandType = "OPERAND_IMMEDIATE";
   let PrintMethod = "printMoveMask";
 }
-
 
 //===----------------------------------------------------------------------===//
 // Predicates

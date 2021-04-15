@@ -540,6 +540,13 @@ void IRChangedPrinter::generateIRRepresentation(Any IR, StringRef PassID,
 void IRChangedPrinter::handleAfter(StringRef PassID, std::string &Name,
                                    const std::string &Before,
                                    const std::string &After, Any) {
+  // We might not get anything to print if we only want to print a specific
+  // function but it gets deleted.
+  if (After.empty()) {
+    Out << "*** IR Deleted After " << PassID << Name << " ***\n";
+    return;
+  }
+
   assert(After.find("*** IR Dump") == 0 && "Unexpected banner format.");
   StringRef AfterRef = After;
   StringRef Banner =

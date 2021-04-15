@@ -98,6 +98,7 @@ enum CPUKind {
   CK_Cooperlake,
   CK_Cannonlake,
   CK_IcelakeClient,
+  CK_Rocketlake,
   CK_IcelakeServer,
   CK_Tigerlake,
   CK_SapphireRapids,

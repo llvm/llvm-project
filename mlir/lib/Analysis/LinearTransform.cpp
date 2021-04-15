@@ -137,7 +137,7 @@ LinearTransform::preMultiplyColumn(ArrayRef<int64_t> colVec) const {
 
 FlatAffineConstraints
 LinearTransform::applyTo(const FlatAffineConstraints &fac) const {
-  FlatAffineConstraints result(fac.getNumDimIds());
+  FlatAffineConstraints result(fac.getNumIds());
 
   for (unsigned i = 0, e = fac.getNumEqualities(); i < e; ++i) {
     ArrayRef<int64_t> eq = fac.getEquality(i);

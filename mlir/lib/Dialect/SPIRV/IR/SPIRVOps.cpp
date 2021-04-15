@@ -3608,6 +3608,46 @@ static LogicalResult verify(spirv::GLSLLdexpOp ldexpOp) {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// spv.ImageDrefGather
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(spirv::ImageDrefGatherOp imageDrefGatherOp) {
+  // TODO: Support optional operands.
+  VectorType resultType =
+      imageDrefGatherOp.result().getType().cast<VectorType>();
+  auto sampledImageType = imageDrefGatherOp.sampledimage()
+                              .getType()
+                              .cast<spirv::SampledImageType>();
+  auto imageType = sampledImageType.getImageType().cast<spirv::ImageType>();
+
+  if (resultType.getNumElements() != 4)
+    return imageDrefGatherOp.emitOpError(
+        "result type must be a vector of four components");
+
+  Type elementType = resultType.getElementType();
+  Type sampledElementType = imageType.getElementType();
+  if (!sampledElementType.isa<NoneType>() && elementType != sampledElementType)
+    return imageDrefGatherOp.emitOpError(
+        "the component type of result must be the same as sampled type of the "
+        "underlying image type");
+
+  spirv::Dim imageDim = imageType.getDim();
+  spirv::ImageSamplingInfo imageMS = imageType.getSamplingInfo();
+
+  if (imageDim != spirv::Dim::Dim2D && imageDim != spirv::Dim::Cube &&
+      imageDim != spirv::Dim::Rect)
+    return imageDrefGatherOp.emitOpError(
+        "the Dim operand of the underlying image type must be 2D, Cube, or "
+        "Rect");
+
+  if (imageMS != spirv::ImageSamplingInfo::SingleSampled)
+    return imageDrefGatherOp.emitOpError(
+        "the MS operand of the underlying image type must be 0");
+
+  return success();
+}
+
 namespace mlir {
 namespace spirv {
 

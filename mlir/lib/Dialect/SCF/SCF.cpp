@@ -1239,10 +1239,36 @@ struct CollapseSingleIterationLoops : public OpRewritePattern<ParallelOp> {
         newSteps.push_back(step);
       }
     }
-    // Exit if all or none of the loop dimensions perform a single iteration.
-    if (newLowerBounds.size() == 0 ||
-        newLowerBounds.size() == op.lowerBound().size())
+    // Exit if none of the loop dimensions perform a single iteration.
+    if (newLowerBounds.size() == op.lowerBound().size())
       return failure();
+
+    if (newLowerBounds.empty()) {
+      // All of the loop dimensions perform a single iteration. Inline
+      // loop body and nested ReduceOp's
+      SmallVector<Value> results;
+      results.reserve(op.initVals().size());
+      for (auto &bodyOp : op.getLoopBody().front().without_terminator()) {
+        auto reduce = dyn_cast<ReduceOp>(bodyOp);
+        if (!reduce) {
+          rewriter.clone(bodyOp, mapping);
+          continue;
+        }
+        Block &reduceBlock = reduce.reductionOperator().front();
+        auto initValIndex = results.size();
+        mapping.map(reduceBlock.getArgument(0), op.initVals()[initValIndex]);
+        mapping.map(reduceBlock.getArgument(1),
+                    mapping.lookupOrDefault(reduce.operand()));
+        for (auto &reduceBodyOp : reduceBlock.without_terminator())
+          rewriter.clone(reduceBodyOp, mapping);
+
+        auto result = mapping.lookupOrDefault(
+            cast<ReduceReturnOp>(reduceBlock.getTerminator()).result());
+        results.push_back(result);
+      }
+      rewriter.replaceOp(op, results);
+      return success();
+    }
     // Replace the parallel loop by lower-dimensional parallel loop.
     auto newOp =
         rewriter.create<ParallelOp>(op.getLoc(), newLowerBounds, newUpperBounds,

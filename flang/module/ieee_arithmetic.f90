@@ -19,7 +19,8 @@ module ieee_arithmetic
     ieee_support_sqrt => __builtin_ieee_support_sqrt, &
     ieee_support_standard => __builtin_ieee_support_standard, &
     ieee_support_subnormal => __builtin_ieee_support_subnormal, &
-    ieee_support_underflow_control => __builtin_ieee_support_underflow_control
+    ieee_support_underflow_control => __builtin_ieee_support_underflow_control, &
+    ieee_selected_real_kind => __builtin_ieee_selected_real_kind
 
   type :: ieee_class_type
     private

@@ -12,11 +12,11 @@
 ; CHECK-NEXT:     Module Verifier
 ; CHECK-EXT:      Good Bye World Pass
 ; CHECK-NOEXT-NOT:      Good Bye World Pass
+; CHECK-NEXT:     Lower 'expect' Intrinsics
 ; CHECK-NEXT:     Simplify the CFG
 ; CHECK-NEXT:     Dominator Tree Construction
 ; CHECK-NEXT:     SROA
 ; CHECK-NEXT:     Early CSE
-; CHECK-NEXT:     Lower 'expect' Intrinsics
 ; CHECK-NEXT: Pass Arguments:
 ; CHECK-NEXT: Target Library Information
 ; CHECK-NEXT: Target Transform Information
@@ -99,11 +99,7 @@
 ; CHECK-NEXT:         Lazy Block Frequency Analysis
 ; CHECK-NEXT:         Loop Pass Manager
 ; CHECK-NEXT:           Loop Invariant Code Motion
-; CHECK-NEXT:         Loop Pass Manager
 ; CHECK-NEXT:           Rotate Loops
-; CHECK-NEXT:         Lazy Branch Probability Analysis
-; CHECK-NEXT:         Lazy Block Frequency Analysis
-; CHECK-NEXT:         Loop Pass Manager
 ; CHECK-NEXT:           Loop Invariant Code Motion
 ; CHECK-NEXT:           Unswitch loops
 ; CHECK-NEXT:         Simplify the CFG

@@ -15,6 +15,8 @@
 
 using namespace mlir;
 
+MlirAttribute mlirAttributeGetNull() { return {nullptr}; }
+
 //===----------------------------------------------------------------------===//
 // Affine map attribute.
 //===----------------------------------------------------------------------===//

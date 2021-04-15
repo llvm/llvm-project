@@ -1523,11 +1523,11 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
                           ConstantInt::get(V->getType(), 1));
   }
 
+  unsigned DstBits = Trunc->getType()->getScalarSizeInBits(),
+           SrcBits = X->getType()->getScalarSizeInBits();
   if (Cmp.isEquality() && Trunc->hasOneUse()) {
     // Simplify icmp eq (trunc x to i8), 42 -> icmp eq x, 42|highbits if all
     // of the high bits truncated out of x are known.
-    unsigned DstBits = Trunc->getType()->getScalarSizeInBits(),
-             SrcBits = X->getType()->getScalarSizeInBits();
     KnownBits Known = computeKnownBits(X, 0, &Cmp);
 
     // If all the high bits are known, we can do this xform.
@@ -1537,6 +1537,22 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
       NewRHS |= Known.One & APInt::getHighBitsSet(SrcBits, SrcBits - DstBits);
       return new ICmpInst(Pred, X, ConstantInt::get(X->getType(), NewRHS));
     }
+  }
+
+  // Look through truncated right-shift of the sign-bit for a sign-bit check:
+  // trunc iN (ShOp >> ShAmtC) to i[N - ShAmtC] < 0  --> ShOp <  0
+  // trunc iN (ShOp >> ShAmtC) to i[N - ShAmtC] > -1 --> ShOp > -1
+  Value *ShOp;
+  const APInt *ShAmtC;
+  bool TrueIfSigned;
+  if (isSignBitCheck(Pred, C, TrueIfSigned) &&
+      match(X, m_Shr(m_Value(ShOp), m_APInt(ShAmtC))) &&
+      DstBits == SrcBits - ShAmtC->getZExtValue()) {
+    return TrueIfSigned
+               ? new ICmpInst(ICmpInst::ICMP_SLT, ShOp,
+                              ConstantInt::getNullValue(X->getType()))
+               : new ICmpInst(ICmpInst::ICMP_SGT, ShOp,
+                              ConstantInt::getAllOnesValue(X->getType()));
   }
 
   return nullptr;
@@ -3901,11 +3917,15 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
           APInt AP2Abs = C2->getValue().abs();
           if (AP1Abs.uge(AP2Abs)) {
             ConstantInt *C3 = Builder.getInt(AP1 - AP2);
-            Value *NewAdd = Builder.CreateNSWAdd(A, C3);
+            bool HasNUW = BO0->hasNoUnsignedWrap() && C3->getValue().ule(AP1);
+            bool HasNSW = BO0->hasNoSignedWrap();
+            Value *NewAdd = Builder.CreateAdd(A, C3, "", HasNUW, HasNSW);
             return new ICmpInst(Pred, NewAdd, C);
           } else {
             ConstantInt *C3 = Builder.getInt(AP2 - AP1);
-            Value *NewAdd = Builder.CreateNSWAdd(C, C3);
+            bool HasNUW = BO1->hasNoUnsignedWrap() && C3->getValue().ule(AP2);
+            bool HasNSW = BO1->hasNoSignedWrap();
+            Value *NewAdd = Builder.CreateAdd(C, C3, "", HasNUW, HasNSW);
             return new ICmpInst(Pred, A, NewAdd);
           }
         }

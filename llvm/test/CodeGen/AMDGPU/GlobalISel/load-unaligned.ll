@@ -2,6 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -mattr=+unaligned-access-mode -verify-machineinstrs < %s | FileCheck --check-prefix=GFX9 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=hawaii -mattr=+unaligned-access-mode -verify-machineinstrs < %s | FileCheck --check-prefix=GFX7 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 -mattr=+unaligned-access-mode -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10 %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -mattr=+unaligned-access-mode -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
 
 ; Unaligned DS access in available from GFX9 onwards.
 ; LDS alignment enforcement is controlled by a configuration register:
@@ -158,6 +159,14 @@ define <4 x i32> @load_lds_v4i32_align1(<4 x i32> addrspace(3)* %ptr) {
 ; GFX10-NEXT:    v_or3_b32 v1, v4, v5, v6
 ; GFX10-NEXT:    v_or3_b32 v2, v7, v8, v9
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: load_lds_v4i32_align1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    ds_load_2addr_b64 v[0:3], v0 offset1:1
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %load = load <4 x i32>, <4 x i32> addrspace(3)* %ptr, align 1
   ret <4 x i32> %load
 }
@@ -285,6 +294,14 @@ define <3 x i32> @load_lds_v3i32_align1(<3 x i32> addrspace(3)* %ptr) {
 ; GFX10-NEXT:    v_or3_b32 v1, v4, v5, v6
 ; GFX10-NEXT:    v_or3_b32 v2, v7, v8, v9
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: load_lds_v3i32_align1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    ds_load_b96 v[0:2], v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %load = load <3 x i32>, <3 x i32> addrspace(3)* %ptr, align 1
   ret <3 x i32> %load
 }
@@ -366,6 +383,14 @@ define void @store_lds_v4i32_align1(<4 x i32> addrspace(3)* %out, <4 x i32> %x) 
 ; GFX10-NEXT:    ds_write_b8 v0, v3 offset:15
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: store_lds_v4i32_align1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    ds_store_2addr_b64 v0, v[1:2], v[3:4] offset1:1
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store <4 x i32> %x, <4 x i32> addrspace(3)* %out, align 1
   ret void
 }
@@ -433,6 +458,14 @@ define void @store_lds_v3i32_align1(<3 x i32> addrspace(3)* %out, <3 x i32> %x) 
 ; GFX10-NEXT:    ds_write_b8 v0, v7 offset:11
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: store_lds_v3i32_align1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    ds_store_b96 v0, v[1:3]
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store <3 x i32> %x, <3 x i32> addrspace(3)* %out, align 1
   ret void
 }

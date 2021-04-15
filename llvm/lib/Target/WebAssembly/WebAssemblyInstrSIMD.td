@@ -800,20 +800,6 @@ multiclass SIMDUnaryInt<SDPatternOperator node, string name, bits<32> baseInst> 
   defm "" : SIMDUnary<I64x2, node, name, !add(baseInst, 96)>;
 }
 
-multiclass SIMDReduceVec<Vec vec, SDPatternOperator op, string name, bits<32> simdop> {
-  defm _#vec : SIMD_I<(outs I32:$dst), (ins V128:$vec), (outs), (ins),
-                      [(set I32:$dst, (i32 (op (vec.vt V128:$vec))))],
-                      vec.prefix#"."#name#"\t$dst, $vec", vec.prefix#"."#name,
-                      simdop>;
-}
-
-multiclass SIMDReduce<SDPatternOperator op, string name, bits<32> baseInst> {
-  defm "" : SIMDReduceVec<I8x16, op, name, baseInst>;
-  defm "" : SIMDReduceVec<I16x8, op, name, !add(baseInst, 32)>;
-  defm "" : SIMDReduceVec<I32x4, op, name, !add(baseInst, 64)>;
-  defm "" : SIMDReduceVec<I64x2, op, name, !add(baseInst, 96)>;
-}
-
 // Integer vector negation
 def ivneg : PatFrag<(ops node:$in), (sub immAllZerosV, $in)>;
 
@@ -823,22 +809,44 @@ defm ABS : SIMDUnaryInt<abs, "abs", 96>;
 // Integer negation: neg
 defm NEG : SIMDUnaryInt<ivneg, "neg", 97>;
 
-// Any lane true: any_true
-defm ANYTRUE : SIMDReduce<int_wasm_anytrue, "any_true", 98>;
-
-// All lanes true: all_true
-defm ALLTRUE : SIMDReduce<int_wasm_alltrue, "all_true", 99>;
-
 // Population count: popcnt
 defm POPCNT : SIMDUnary<I8x16, int_wasm_popcnt, "popcnt", 0x62>;
+
+// Any lane true: any_true
+defm ANYTRUE : SIMD_I<(outs I32:$dst), (ins V128:$vec), (outs), (ins), [],
+                      "v128.any_true\t$dst, $vec", "v128.any_true", 0x53>;
+
+foreach vec = IntVecs in
+def : Pat<(int_wasm_anytrue (vec.vt V128:$vec)), (ANYTRUE V128:$vec)>;
+
+// All lanes true: all_true
+multiclass SIMDAllTrue<Vec vec, bits<32> simdop> {
+  defm ALLTRUE_#vec : SIMD_I<(outs I32:$dst), (ins V128:$vec), (outs), (ins),
+                             [(set I32:$dst,
+                               (i32 (int_wasm_alltrue (vec.vt V128:$vec))))],
+                             vec.prefix#".all_true\t$dst, $vec",
+                             vec.prefix#".all_true", simdop>;
+}
+
+defm "" : SIMDAllTrue<I8x16, 0x63>;
+defm "" : SIMDAllTrue<I16x8, 0x83>;
+defm "" : SIMDAllTrue<I32x4, 0xa3>;
+defm "" : SIMDAllTrue<I64x2, 0xc3>;
 
 // Reductions already return 0 or 1, so and 1, setne 0, and seteq 1
 // can be folded out
 foreach reduction =
-  [["int_wasm_anytrue", "ANYTRUE"], ["int_wasm_alltrue", "ALLTRUE"]] in
-foreach vec = IntVecs in {
+  [["int_wasm_anytrue", "ANYTRUE", "I8x16"],
+   ["int_wasm_anytrue", "ANYTRUE", "I16x8"],
+   ["int_wasm_anytrue", "ANYTRUE", "I32x4"],
+   ["int_wasm_anytrue", "ANYTRUE", "I64x2"],
+   ["int_wasm_alltrue", "ALLTRUE_I8x16", "I8x16"],
+   ["int_wasm_alltrue", "ALLTRUE_I16x8", "I16x8"],
+   ["int_wasm_alltrue", "ALLTRUE_I32x4", "I32x4"],
+   ["int_wasm_alltrue", "ALLTRUE_I64x2", "I64x2"]] in {
 defvar intrinsic = !cast<Intrinsic>(reduction[0]);
-defvar inst = !cast<NI>(reduction[1]#"_"#vec);
+defvar inst = !cast<NI>(reduction[1]);
+defvar vec = !cast<Vec>(reduction[2]);
 def : Pat<(i32 (and (i32 (intrinsic (vec.vt V128:$x))), (i32 1))), (inst $x)>;
 def : Pat<(i32 (setne (i32 (intrinsic (vec.vt V128:$x))), (i32 0))), (inst $x)>;
 def : Pat<(i32 (seteq (i32 (intrinsic (vec.vt V128:$x))), (i32 1))), (inst $x)>;
@@ -1023,14 +1031,14 @@ defm NEG : SIMDUnaryFP<fneg, "neg", 225>;
 defm SQRT : SIMDUnaryFP<fsqrt, "sqrt", 227>;
 
 // Rounding: ceil, floor, trunc, nearest
-defm CEIL : SIMDUnary<F32x4, int_wasm_ceil, "ceil", 0x67>;
-defm FLOOR : SIMDUnary<F32x4, int_wasm_floor, "floor", 0x68>;
-defm TRUNC: SIMDUnary<F32x4, int_wasm_trunc, "trunc", 0x69>;
-defm NEAREST: SIMDUnary<F32x4, int_wasm_nearest, "nearest", 0x6a>;
-defm CEIL : SIMDUnary<F64x2, int_wasm_ceil, "ceil", 0x74>;
-defm FLOOR : SIMDUnary<F64x2, int_wasm_floor, "floor", 0x75>;
-defm TRUNC: SIMDUnary<F64x2, int_wasm_trunc, "trunc", 0x7a>;
-defm NEAREST: SIMDUnary<F64x2, int_wasm_nearest, "nearest", 0x94>;
+defm CEIL : SIMDUnary<F32x4, fceil, "ceil", 0x67>;
+defm FLOOR : SIMDUnary<F32x4, ffloor, "floor", 0x68>;
+defm TRUNC: SIMDUnary<F32x4, ftrunc, "trunc", 0x69>;
+defm NEAREST: SIMDUnary<F32x4, fnearbyint, "nearest", 0x6a>;
+defm CEIL : SIMDUnary<F64x2, fceil, "ceil", 0x74>;
+defm FLOOR : SIMDUnary<F64x2, ffloor, "floor", 0x75>;
+defm TRUNC: SIMDUnary<F64x2, ftrunc, "trunc", 0x7a>;
+defm NEAREST: SIMDUnary<F64x2, fnearbyint, "nearest", 0x94>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point binary arithmetic
@@ -1083,15 +1091,20 @@ multiclass SIMDConvert<Vec vec, Vec arg, SDPatternOperator op, string name,
 defm "" : SIMDConvert<I32x4, F32x4, fp_to_sint, "trunc_sat_f32x4_s", 248>;
 defm "" : SIMDConvert<I32x4, F32x4, fp_to_uint, "trunc_sat_f32x4_u", 249>;
 
-// Integer to floating point: convert
-defm "" : SIMDConvert<F32x4, I32x4, sint_to_fp, "convert_i32x4_s", 250>;
-defm "" : SIMDConvert<F32x4, I32x4, uint_to_fp, "convert_i32x4_u", 251>;
-
 // Lower llvm.wasm.trunc.sat.* to saturating instructions
 def : Pat<(v4i32 (int_wasm_trunc_saturate_signed (v4f32 V128:$src))),
           (fp_to_sint_I32x4 $src)>;
 def : Pat<(v4i32 (int_wasm_trunc_saturate_unsigned (v4f32 V128:$src))),
           (fp_to_uint_I32x4 $src)>;
+
+// Integer to floating point: convert
+def convert_low_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
+def convert_low_s : SDNode<"WebAssemblyISD::CONVERT_LOW_S", convert_low_t>;
+def convert_low_u : SDNode<"WebAssemblyISD::CONVERT_LOW_U", convert_low_t>;
+defm "" : SIMDConvert<F32x4, I32x4, sint_to_fp, "convert_i32x4_s", 250>;
+defm "" : SIMDConvert<F32x4, I32x4, uint_to_fp, "convert_i32x4_u", 251>;
+defm "" : SIMDConvert<F64x2, I32x4, convert_low_s, "convert_low_i32x4_s", 0xfe>;
+defm "" : SIMDConvert<F64x2, I32x4, convert_low_u, "convert_low_i32x4_u", 0xff>;
 
 // Extending operations
 def extend_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
@@ -1112,17 +1125,9 @@ multiclass SIMDExtend<Vec vec, bits<32> baseInst> {
                         "extend_high_"#vec.split.prefix#"_u", !add(baseInst, 3)>;
 }
 
-defm "" : SIMDExtend<I16x8, 135>;
-defm "" : SIMDExtend<I32x4, 167>;
-
-defm "" : SIMDConvert<I64x2, I32x4, int_wasm_extend_low_signed,
-                      "extend_low_i32x4_s", 199>;
-defm "" : SIMDConvert<I64x2, I32x4, int_wasm_extend_high_signed,
-                      "extend_high_i32x4_s", 200>;
-defm "" : SIMDConvert<I64x2, I32x4, int_wasm_extend_low_unsigned,
-                      "extend_low_i32x4_u", 201>;
-defm "" : SIMDConvert<I64x2, I32x4, int_wasm_extend_high_unsigned,
-                      "extend_high_i32x4_u", 202>;
+defm "" : SIMDExtend<I16x8, 0x87>;
+defm "" : SIMDExtend<I32x4, 0xa7>;
+defm "" : SIMDExtend<I64x2, 0xc7>;
 
 // Narrowing operations
 multiclass SIMDNarrow<Vec vec, bits<32> baseInst> {
@@ -1247,10 +1252,6 @@ defm "" : SIMDConvert<I32x4, F64x2, int_wasm_trunc_sat_zero_signed,
                       "trunc_sat_zero_f64x2_s", 0xfc>;
 defm "" : SIMDConvert<I32x4, F64x2, int_wasm_trunc_sat_zero_unsigned,
                       "trunc_sat_zero_f64x2_u", 0xfd>;
-defm "" : SIMDConvert<F64x2, I32x4, int_wasm_convert_low_signed,
-                      "convert_low_i32x4_s", 0xfe>;
-defm "" : SIMDConvert<F64x2, I32x4, int_wasm_convert_low_unsigned,
-                      "convert_low_i32x4_u", 0xff>;
 
 //===----------------------------------------------------------------------===//
 // Saturating Rounding Q-Format Multiplication

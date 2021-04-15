@@ -202,39 +202,39 @@ and described in
 interest
 [starts here](https://www.google.com/url?q=https://youtu.be/Ntj8ab-5cvE?t%3D596&sa=D&ust=1529450150971000&usg=AFQjCNFQHEWL7m8q3eO-1DiKw9zqC2v24Q).
 
-### Index type disallowed in vector types
+### Index type usage and limitations
 
-Index types are not allowed as elements of `vector` types. Index
-types are intended to be used for platform-specific "size" values and may appear
-in subscripts, sizes of aggregate types and affine expressions. They are also
-tightly coupled with `affine.apply` and affine.load/store operations; having
-`index` type is a necessary precondition of a value to be acceptable by these
-operations.
+Index types are intended to be used for platform-specific "size" values and may
+appear in subscripts, sizes of aggregate types and affine expressions. They are
+also tightly coupled with `affine.apply` and affine.load/store operations;
+having `index` type is a necessary precondition of a value to be acceptable by
+these operations.
 
-We allow `index` types in tensors and memrefs as a code generation strategy has
-to map `index` to an implementation type and hence needs to be able to
-materialize corresponding values. However, the target might lack support for
+We allow `index` types in tensors, vectors, and memrefs as a code generation
+strategy has to map `index` to an implementation type and hence needs to be able
+to materialize corresponding values. However, the target might lack support for
 `vector` values with the target specific equivalent of the `index` type.
 
-### Bit width of a non-primitive type and `index` is undefined
+### Data layout of non-primitive types
 
-The bit width of a compound type is not defined by MLIR, it may be defined by a
-specific lowering pass. In MLIR, bit width is a property of certain primitive
-_type_, in particular integers and floats. It is equal to the number that
-appears in the type definition, e.g. the bit width of `i32` is `32`, so is the
-bit width of `f32`. The bit width is not _necessarily_ related to the amount of
-memory (in bytes) or the size of register (in bits) that is necessary to store
-the value of the given type. These quantities are target and ABI-specific and
-should be defined during the lowering process rather than imposed from above.
-For example, `vector<3xi57>` is likely to be lowered to a vector of four 64-bit
-integers, so that its storage requirement is `4 x 64 / 8 = 32` bytes, rather
-than `(3 x 57) ceildiv 8 = 22` bytes as can be naively computed from the
-bitwidth. Individual components of MLIR that allocate space for storing values
-may use the bit size as the baseline and query the target description when it is
-introduced.
+Data layout information such as the bit width or the alignment of types may be
+target and ABI-specific and thus should be configurable rather than imposed by
+the compiler. Especially, the layout of compound or `index` types may vary. MLIR
+specifies default bit widths for certain primitive _types_, in particular for
+integers and floats. It is equal to the number that appears in the type
+definition, e.g. the bit width of `i32` is `32`, so is the bit width of `f32`.
+The bit width is not _necessarily_ related to the amount of memory (in bytes) or
+the register size (in bits) that is necessary to store the value of the given
+type. For example, `vector<3xi57>` is likely to be lowered to a vector of four
+64-bit integers, so that its storage requirement is `4 x 64 / 8 = 32` bytes,
+rather than `(3 x 57) ceildiv 8 = 22` bytes as can be naively computed from the
+bit width. MLIR makes such [data layout information](../DataLayout.md)
+configurable using attributes that can be queried during lowering, for example,
+when allocating a compound type.
 
-The bit width is not defined for dialect-specific types at MLIR level. Dialects
-are free to define their own quantities for type sizes.
+The data layout of dialect-specific types is undefined at MLIR level. Yet
+dialects are free to define their own quantities and make them available via the
+data layout infrastructure.
 
 ### Integer signedness semantics
 

@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -run-pass=legalizer %s -o - | FileCheck -check-prefix=GFX6 %s
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -run-pass=legalizer %s -o - | FileCheck -check-prefix=GFX7 %s
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -run-pass=legalizer %s -o - | FileCheck -check-prefix=GFX10 %s
+# RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -run-pass=legalizer %s -o - | FileCheck -check-prefix=GFX10 %s
 
 ---
 name: test_fmad_s16_flush

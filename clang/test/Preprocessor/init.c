@@ -115,10 +115,12 @@
 // COMMON:#define __STDC__ 1
 // COMMON:#define __VERSION__ {{.*}}
 // COMMON:#define __clang__ 1
+// COMMON:#define __clang_literal_encoding__ {{.*}}
 // COMMON:#define __clang_major__ {{[0-9]+}}
 // COMMON:#define __clang_minor__ {{[0-9]+}}
 // COMMON:#define __clang_patchlevel__ {{[0-9]+}}
 // COMMON:#define __clang_version__ {{.*}}
+// COMMON:#define __clang_wide_literal_encoding__ {{.*}}
 // COMMON:#define __llvm__ 1
 //
 // RUN: %clang_cc1 -E -dM -triple=x86_64-pc-win32 < /dev/null | FileCheck -match-full-lines -check-prefix C-DEFAULT %s
@@ -1844,10 +1846,12 @@
 // WEBASSEMBLY-NOT:#define __WINT_UNSIGNED__
 // WEBASSEMBLY-NEXT:#define __WINT_WIDTH__ 32
 // WEBASSEMBLY-NEXT:#define __clang__ 1
+// WEBASSEMBLY-NEXT:#define __clang_literal_encoding__ {{.*}}
 // WEBASSEMBLY-NEXT:#define __clang_major__ {{.*}}
 // WEBASSEMBLY-NEXT:#define __clang_minor__ {{.*}}
 // WEBASSEMBLY-NEXT:#define __clang_patchlevel__ {{.*}}
 // WEBASSEMBLY-NEXT:#define __clang_version__ "{{.*}}"
+// WEBASSEMBLY-NEXT:#define __clang_wide_literal_encoding__ {{.*}}
 // WEBASSEMBLY-NEXT:#define __llvm__ 1
 // WEBASSEMBLY-NOT:#define __unix
 // WEBASSEMBLY-NOT:#define __unix__

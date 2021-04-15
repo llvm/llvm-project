@@ -1289,6 +1289,31 @@ TEST_F(FileSystemTest, Resize) {
   ASSERT_NO_ERROR(fs::remove(TempPath));
 }
 
+TEST_F(FileSystemTest, ResizeBeforeMapping) {
+  // Create a temp file.
+  int FD;
+  SmallString<64> TempPath;
+  ASSERT_NO_ERROR(fs::createTemporaryFile("prefix", "temp", FD, TempPath));
+  ASSERT_NO_ERROR(fs::resize_file_before_mapping_readwrite(FD, 123));
+
+  // Map in temp file. On Windows, fs::resize_file_before_mapping_readwrite is
+  // a no-op and the mapping itself will resize the file.
+  std::error_code EC;
+  {
+    fs::mapped_file_region mfr(fs::convertFDToNativeFile(FD),
+                               fs::mapped_file_region::readwrite, 123, 0, EC);
+    ASSERT_NO_ERROR(EC);
+    // Unmap temp file
+  }
+
+  // Check the size.
+  fs::file_status Status;
+  ASSERT_NO_ERROR(fs::status(FD, Status));
+  ASSERT_EQ(Status.getSize(), 123U);
+  ::close(FD);
+  ASSERT_NO_ERROR(fs::remove(TempPath));
+}
+
 TEST_F(FileSystemTest, MD5) {
   int FD;
   SmallString<64> TempPath;
@@ -1310,11 +1335,14 @@ TEST_F(FileSystemTest, FileMapping) {
   ASSERT_NO_ERROR(
       fs::createTemporaryFile("prefix", "temp", FileDescriptor, TempPath));
   unsigned Size = 4096;
-  ASSERT_NO_ERROR(fs::resize_file(FileDescriptor, Size));
+  ASSERT_NO_ERROR(
+      fs::resize_file_before_mapping_readwrite(FileDescriptor, Size));
 
   // Map in temp file and add some content
   std::error_code EC;
   StringRef Val("hello there");
+  fs::mapped_file_region MaybeMFR;
+  EXPECT_FALSE(MaybeMFR);
   {
     fs::mapped_file_region mfr(fs::convertFDToNativeFile(FileDescriptor),
                                fs::mapped_file_region::readwrite, Size, 0, EC);
@@ -1322,8 +1350,23 @@ TEST_F(FileSystemTest, FileMapping) {
     std::copy(Val.begin(), Val.end(), mfr.data());
     // Explicitly add a 0.
     mfr.data()[Val.size()] = 0;
-    // Unmap temp file
+
+    // Move it out of the scope and confirm mfr is reset.
+    MaybeMFR = std::move(mfr);
+    EXPECT_FALSE(mfr);
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+    EXPECT_DEATH(mfr.data(), "Mapping failed but used anyway!");
+    EXPECT_DEATH(mfr.size(), "Mapping failed but used anyway!");
+#endif
   }
+
+  // Check that the moved-to region is still valid.
+  EXPECT_EQ(Val, StringRef(MaybeMFR.data()));
+  EXPECT_EQ(Size, MaybeMFR.size());
+
+  // Unmap temp file.
+  MaybeMFR.unmap();
+
   ASSERT_EQ(close(FileDescriptor), 0);
 
   // Map it back in read-only

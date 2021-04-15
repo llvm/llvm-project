@@ -100,6 +100,8 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
     return static_cast<const OMPNovariantsClause *>(C);
   case OMPC_nocontext:
     return static_cast<const OMPNocontextClause *>(C);
+  case OMPC_filter:
+    return static_cast<const OMPFilterClause *>(C);
   case OMPC_default:
   case OMPC_proc_bind:
   case OMPC_safelen:
@@ -2242,6 +2244,12 @@ void OMPClausePrinter::VisitOMPAffinityClause(OMPAffinityClause *Node) {
     StartSym = ' ';
   }
   VisitOMPClauseList(Node, StartSym);
+  OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPFilterClause(OMPFilterClause *Node) {
+  OS << "filter(";
+  Node->getThreadID()->printPretty(OS, nullptr, Policy, 0);
   OS << ")";
 }
 

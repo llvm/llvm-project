@@ -25,6 +25,7 @@
 #include <memory>
 #include <set>
 #include <system_error>
+#include <unordered_set>
 
 namespace llvm {
 namespace sampleprof {
@@ -136,13 +137,14 @@ protected:
   virtual std::error_code
   writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
   std::error_code writeSummary();
-  std::error_code writeNameIdx(StringRef FName);
+  std::error_code writeNameIdx(StringRef FName, bool IsContextName = false);
   std::error_code writeBody(const FunctionSamples &S);
   inline void stablizeNameTable(std::set<StringRef> &V);
 
   MapVector<StringRef, uint32_t> NameTable;
+  std::unordered_set<std::string> BracketedContextStr;
 
-  void addName(StringRef FName);
+  void addName(StringRef FName, bool IsContextName = false);
   void addNames(const FunctionSamples &S);
 
 private:

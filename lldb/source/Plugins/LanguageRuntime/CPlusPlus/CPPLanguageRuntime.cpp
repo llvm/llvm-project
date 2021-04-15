@@ -322,6 +322,9 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
     }
   }
 
+  if (symbol == nullptr)
+    return optional_info;
+
   // Case 1 or 3
   if (scl.GetSize() >= 1) {
     optional_info = line_entry_helper(target, scl[0], symbol,

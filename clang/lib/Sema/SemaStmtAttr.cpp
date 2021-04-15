@@ -227,9 +227,22 @@ static Attr *handleUnlikely(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) UnlikelyAttr(S.Context, A);
 }
 
+#define WANT_STMT_MERGE_LOGIC
+#include "clang/Sema/AttrParsedAttrImpl.inc"
+#undef WANT_STMT_MERGE_LOGIC
+
 static void
 CheckForIncompatibleAttributes(Sema &S,
                                const SmallVectorImpl<const Attr *> &Attrs) {
+  // The vast majority of attributed statements will only have one attribute
+  // on them, so skip all of the checking in the common case.
+  if (Attrs.size() < 2)
+    return;
+
+  // First, check for the easy cases that are table-generated for us.
+  if (!DiagnoseMutualExclusions(S, Attrs))
+    return;
+
   // There are 6 categories of loop hints attributes: vectorize, interleave,
   // unroll, unroll_and_jam, pipeline and distribute. Except for distribute they
   // come in two variants: a state form and a numeric form.  The state form

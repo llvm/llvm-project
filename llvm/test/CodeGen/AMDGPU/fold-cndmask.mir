@@ -30,5 +30,5 @@ body:             |
     %6 = V_CNDMASK_B32_e64 0, %5, 0, 0, %0, implicit $exec
     $vcc = IMPLICIT_DEF
     %7 = V_CNDMASK_B32_e32 %3, %3, implicit $exec, implicit $vcc
-
+    S_ENDPGM 0, implicit %1, implicit %2, implicit %4, implicit %6, implicit %7
 ...

@@ -42,7 +42,7 @@
 ; YAML-NEXT:   - '$T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + = '
 ; YAML-NEXT: PdbStream:
 ; YAML-NEXT:   Age:             1
-; YAML-NEXT:   Guid:            '{0B355641-86A0-A249-896F-9988FAE52FF0}'
+; YAML-NEXT:   Guid:            '{4156350B-A086-49A2-896F-9988FAE52FF0}'
 ; YAML-NEXT:   Signature:       1424295906
 ; YAML-NEXT:   Features:        [ VC110 ]
 ; YAML-NEXT:   Version:         VC70

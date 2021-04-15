@@ -640,16 +640,8 @@ TEST(ConstantsTest, isElementWiseEqual) {
 
   Type *Int32Ty = Type::getInt32Ty(Context);
   Constant *CU = UndefValue::get(Int32Ty);
-  Constant *CP = PoisonValue::get(Int32Ty);
   Constant *C1 = ConstantInt::get(Int32Ty, 1);
   Constant *C2 = ConstantInt::get(Int32Ty, 2);
-
-  Constant *CUU = ConstantVector::get({CU, CU});
-  Constant *CPP = ConstantVector::get({CP, CP});
-  Constant *CUP = ConstantVector::get({CU, CP});
-  EXPECT_EQ(CUU, UndefValue::get(CUU->getType()));
-  EXPECT_EQ(CPP, PoisonValue::get(CPP->getType()));
-  EXPECT_NE(CUP, UndefValue::get(CUP->getType()));
 
   Constant *C1211 = ConstantVector::get({C1, C2, C1, C1});
   Constant *C12U1 = ConstantVector::get({C1, C2, CU, C1});
@@ -690,6 +682,52 @@ TEST(ConstantsTest, isElementWiseEqual) {
   EXPECT_FALSE(CP00U0->isElementWiseEqual(CP0000));
   EXPECT_FALSE(CP0000->isElementWiseEqual(CP00U));
   EXPECT_FALSE(CP00U->isElementWiseEqual(CP00U0));
+}
+
+// Check that vector/aggregate constants correctly store undef and poison
+// elements.
+
+TEST(ConstantsTest, CheckElementWiseUndefPoison) {
+  LLVMContext Context;
+
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  StructType *STy = StructType::get(Int32Ty, Int32Ty);
+  ArrayType *ATy = ArrayType::get(Int32Ty, 2);
+  Constant *CU = UndefValue::get(Int32Ty);
+  Constant *CP = PoisonValue::get(Int32Ty);
+
+  {
+    Constant *CUU = ConstantVector::get({CU, CU});
+    Constant *CPP = ConstantVector::get({CP, CP});
+    Constant *CUP = ConstantVector::get({CU, CP});
+    Constant *CPU = ConstantVector::get({CP, CU});
+    EXPECT_EQ(CUU, UndefValue::get(CUU->getType()));
+    EXPECT_EQ(CPP, PoisonValue::get(CPP->getType()));
+    EXPECT_NE(CUP, UndefValue::get(CUP->getType()));
+    EXPECT_NE(CPU, UndefValue::get(CPU->getType()));
+  }
+
+  {
+    Constant *CUU = ConstantStruct::get(STy, {CU, CU});
+    Constant *CPP = ConstantStruct::get(STy, {CP, CP});
+    Constant *CUP = ConstantStruct::get(STy, {CU, CP});
+    Constant *CPU = ConstantStruct::get(STy, {CP, CU});
+    EXPECT_EQ(CUU, UndefValue::get(CUU->getType()));
+    EXPECT_EQ(CPP, PoisonValue::get(CPP->getType()));
+    EXPECT_NE(CUP, UndefValue::get(CUP->getType()));
+    EXPECT_NE(CPU, UndefValue::get(CPU->getType()));
+  }
+
+  {
+    Constant *CUU = ConstantArray::get(ATy, {CU, CU});
+    Constant *CPP = ConstantArray::get(ATy, {CP, CP});
+    Constant *CUP = ConstantArray::get(ATy, {CU, CP});
+    Constant *CPU = ConstantArray::get(ATy, {CP, CU});
+    EXPECT_EQ(CUU, UndefValue::get(CUU->getType()));
+    EXPECT_EQ(CPP, PoisonValue::get(CPP->getType()));
+    EXPECT_NE(CUP, UndefValue::get(CUP->getType()));
+    EXPECT_NE(CPU, UndefValue::get(CPU->getType()));
+  }
 }
 
 TEST(ConstantsTest, GetSplatValueRoundTrip) {

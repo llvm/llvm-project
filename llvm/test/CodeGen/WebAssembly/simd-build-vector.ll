@@ -165,6 +165,22 @@ define <8 x i16> @swizzle_one_i16x8(<8 x i16> %src, <8 x i16> %mask) {
   ret <8 x i16> %v0
 }
 
+; CHECK-LABEL: half_shuffle_i32x4:
+; CHECK-NEXT: .functype        half_shuffle_i32x4 (v128) -> (v128)
+; CHECK:      i8x16.shuffle $push[[L0:[0-9]+]]=, $0, $0, 0, 0, 0, 0, 8, 9, 10, 11, 0, 1, 2, 3, 0, 0, 0, 0
+; CHECK:      i32x4.replace_lane
+; CHECK:      i32x4.replace_lane
+; CHECK:      return
+define <4 x i32> @half_shuffle_i32x4(<4 x i32> %src) {
+  %s0 = extractelement <4 x i32> %src, i32 0
+  %s2 = extractelement <4 x i32> %src, i32 2
+  %v0 = insertelement <4 x i32> undef, i32 0, i32 0
+  %v1 = insertelement <4 x i32> %v0, i32 %s2, i32 1
+  %v2 = insertelement <4 x i32> %v1, i32 %s0, i32 2
+  %v3 = insertelement <4 x i32> %v2, i32 3, i32 3
+  ret <4 x i32> %v3
+}
+
 ; CHECK-LABEL: mashup_swizzle_i8x16:
 ; CHECK-NEXT:  .functype       mashup_swizzle_i8x16 (v128, v128, i32) -> (v128)
 ; CHECK-NEXT:  i8x16.swizzle   $push[[L0:[0-9]+]]=, $0, $1

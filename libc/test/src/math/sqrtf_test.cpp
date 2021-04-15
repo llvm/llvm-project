@@ -37,7 +37,7 @@ TEST(LlvmLibcSqrtfTest, SpecialValues) {
 TEST(LlvmLibcSqrtfTest, DenormalValues) {
   for (UIntType mant = 1; mant < HiddenBit; mant <<= 1) {
     FPBits denormal(0.0f);
-    denormal.mantissa = mant;
+    denormal.encoding.mantissa = mant;
 
     ASSERT_MPFR_MATCH(mpfr::Operation::Sqrt, float(denormal),
                       __llvm_libc::sqrtf(denormal), 0.5);

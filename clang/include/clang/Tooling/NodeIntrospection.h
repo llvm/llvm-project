@@ -15,39 +15,45 @@
 
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/DeclarationName.h"
-
-#include <memory>
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include <set>
 
 namespace clang {
 
 class Stmt;
 class Decl;
+class CXXCtorInitializer;
+class NestedNameSpecifierLoc;
+class TemplateArgumentLoc;
+class CXXBaseSpecifier;
 
 namespace tooling {
 
-class LocationCall {
+class LocationCall;
+using SharedLocationCall = llvm::IntrusiveRefCntPtr<LocationCall>;
+
+class LocationCall : public llvm::ThreadSafeRefCountedBase<LocationCall> {
 public:
   enum LocationCallFlags { NoFlags, ReturnsPointer, IsCast };
-  LocationCall(std::shared_ptr<LocationCall> on, std::string name,
+  LocationCall(SharedLocationCall on, std::string name,
                LocationCallFlags flags = NoFlags)
-      : m_on(on), m_name(name), m_flags(flags) {}
-  LocationCall(std::shared_ptr<LocationCall> on, std::string name,
-               std::vector<std::string> const &args,
-               LocationCallFlags flags = NoFlags)
-      : m_on(on), m_name(name), m_flags(flags) {}
+      : m_flags(flags), m_on(std::move(on)), m_name(std::move(name)) {}
+  LocationCall(SharedLocationCall on, std::string name,
+               std::vector<std::string> args, LocationCallFlags flags = NoFlags)
+      : m_flags(flags), m_on(std::move(on)), m_name(std::move(name)),
+        m_args(std::move(args)) {}
 
   LocationCall *on() const { return m_on.get(); }
   StringRef name() const { return m_name; }
-  std::vector<std::string> const &args() const { return m_args; }
+  ArrayRef<std::string> args() const { return m_args; }
   bool returnsPointer() const { return m_flags & ReturnsPointer; }
   bool isCast() const { return m_flags & IsCast; }
 
 private:
-  std::shared_ptr<LocationCall> m_on;
+  LocationCallFlags m_flags;
+  SharedLocationCall m_on;
   std::string m_name;
   std::vector<std::string> m_args;
-  LocationCallFlags m_flags;
 };
 
 class LocationCallFormatterCpp {
@@ -57,20 +63,20 @@ public:
 
 namespace internal {
 struct RangeLessThan {
-  bool operator()(
-      std::pair<SourceRange, std::shared_ptr<LocationCall>> const &LHS,
-      std::pair<SourceRange, std::shared_ptr<LocationCall>> const &RHS) const;
+  bool operator()(std::pair<SourceRange, SharedLocationCall> const &LHS,
+                  std::pair<SourceRange, SharedLocationCall> const &RHS) const;
+  bool
+  operator()(std::pair<SourceLocation, SharedLocationCall> const &LHS,
+             std::pair<SourceLocation, SharedLocationCall> const &RHS) const;
 };
+
 } // namespace internal
 
-template <typename T, typename U, typename Comp = std::less<std::pair<T, U>>>
-using UniqueMultiMap = std::set<std::pair<T, U>, Comp>;
+template <typename T, typename U>
+using UniqueMultiMap = std::set<std::pair<T, U>, internal::RangeLessThan>;
 
-using SourceLocationMap =
-    UniqueMultiMap<SourceLocation, std::shared_ptr<LocationCall>>;
-using SourceRangeMap =
-    UniqueMultiMap<SourceRange, std::shared_ptr<LocationCall>,
-                   internal::RangeLessThan>;
+using SourceLocationMap = UniqueMultiMap<SourceLocation, SharedLocationCall>;
+using SourceRangeMap = UniqueMultiMap<SourceRange, SharedLocationCall>;
 
 struct NodeLocationAccessors {
   SourceLocationMap LocationAccessors;
@@ -80,6 +86,10 @@ struct NodeLocationAccessors {
 namespace NodeIntrospection {
 NodeLocationAccessors GetLocations(clang::Stmt const *Object);
 NodeLocationAccessors GetLocations(clang::Decl const *Object);
+NodeLocationAccessors GetLocations(clang::CXXCtorInitializer const *Object);
+NodeLocationAccessors GetLocations(clang::NestedNameSpecifierLoc const *);
+NodeLocationAccessors GetLocations(clang::TemplateArgumentLoc const *);
+NodeLocationAccessors GetLocations(clang::CXXBaseSpecifier const *);
 NodeLocationAccessors GetLocations(clang::DynTypedNode const &Node);
 } // namespace NodeIntrospection
 } // namespace tooling

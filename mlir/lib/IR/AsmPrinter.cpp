@@ -1866,7 +1866,13 @@ void ModulePrinter::printType(Type type) {
             os << dim;
           os << 'x';
         }
-        os << tensorTy.getElementType() << '>';
+        os << tensorTy.getElementType();
+        // Only print the encoding attribute value if set.
+        if (tensorTy.getEncoding()) {
+          os << ", ";
+          printAttribute(tensorTy.getEncoding());
+        }
+        os << '>';
       })
       .Case<UnrankedTensorType>([&](UnrankedTensorType tensorTy) {
         os << "tensor<*x";

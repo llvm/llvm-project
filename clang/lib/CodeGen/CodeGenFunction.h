@@ -325,6 +325,9 @@ public:
   QualType FnRetTy;
   llvm::Function *CurFn = nullptr;
 
+  /// Save Parameter Decl for coroutine.
+  llvm::SmallVector<const ParmVarDecl *, 4> FnArgs;
+
   // Holds coroutine data if the current function is a coroutine. We use a
   // wrapper to manage its lifetime, so that we don't have to define CGCoroData
   // in this header.
@@ -4369,8 +4372,9 @@ public:
   /// variables.
   void GenerateCXXGlobalCleanUpFunc(
       llvm::Function *Fn,
-      const std::vector<std::tuple<llvm::FunctionType *, llvm::WeakTrackingVH,
-                                   llvm::Constant *>> &DtorsOrStermFinalizers);
+      ArrayRef<std::tuple<llvm::FunctionType *, llvm::WeakTrackingVH,
+                          llvm::Constant *>>
+          DtorsOrStermFinalizers);
 
   void GenerateCXXGlobalVarDeclInitFunc(llvm::Function *Fn,
                                         const VarDecl *D,

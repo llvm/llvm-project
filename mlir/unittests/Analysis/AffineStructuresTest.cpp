@@ -51,9 +51,11 @@ static void checkSample(bool hasSample, const FlatAffineConstraints &fac,
 /// Construct a FlatAffineConstraints from a set of inequality and
 /// equality constraints.
 static FlatAffineConstraints
-makeFACFromConstraints(unsigned dims, ArrayRef<SmallVector<int64_t, 4>> ineqs,
-                       ArrayRef<SmallVector<int64_t, 4>> eqs) {
-  FlatAffineConstraints fac(ineqs.size(), eqs.size(), dims + 1, dims);
+makeFACFromConstraints(unsigned ids, ArrayRef<SmallVector<int64_t, 4>> ineqs,
+                       ArrayRef<SmallVector<int64_t, 4>> eqs,
+                       unsigned syms = 0) {
+  FlatAffineConstraints fac(ineqs.size(), eqs.size(), ids + 1, ids - syms,
+                            syms);
   for (const auto &eq : eqs)
     fac.addEquality(eq);
   for (const auto &ineq : ineqs)
@@ -419,6 +421,17 @@ TEST(FlatAffineConstraintsTest, IsIntegerEmptyTest) {
                   },
                   {{2, -3, 0, 0, 0}, {1, -1, 6, 0, -1}, {1, 1, 0, -6, -2}})
                   .isIntegerEmpty());
+
+  // Set with symbols.
+  FlatAffineConstraints fac6 = makeFACFromConstraints(2,
+                                                      {
+                                                          {1, 1, 0},
+                                                      },
+                                                      {
+                                                          {1, -1, 0},
+                                                      },
+                                                      1);
+  EXPECT_FALSE(fac6.isIntegerEmpty());
 }
 
 TEST(FlatAffineConstraintsTest, removeRedundantConstraintsTest) {

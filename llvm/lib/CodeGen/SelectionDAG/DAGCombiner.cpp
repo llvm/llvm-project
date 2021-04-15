@@ -22796,12 +22796,11 @@ bool DAGCombiner::isAlias(SDNode *Op0, SDNode *Op1) const {
     int64_t MinOffset = std::min(SrcValOffset0, SrcValOffset1);
     int64_t Overlap0 = *Size0 + SrcValOffset0 - MinOffset;
     int64_t Overlap1 = *Size1 + SrcValOffset1 - MinOffset;
-    AliasResult AAResult = AA->alias(
-        MemoryLocation(MUC0.MMO->getValue(), Overlap0,
-                       UseTBAA ? MUC0.MMO->getAAInfo() : AAMDNodes()),
-        MemoryLocation(MUC1.MMO->getValue(), Overlap1,
-                       UseTBAA ? MUC1.MMO->getAAInfo() : AAMDNodes()));
-    if (AAResult == NoAlias)
+    if (AA->isNoAlias(
+            MemoryLocation(MUC0.MMO->getValue(), Overlap0,
+                           UseTBAA ? MUC0.MMO->getAAInfo() : AAMDNodes()),
+            MemoryLocation(MUC1.MMO->getValue(), Overlap1,
+                           UseTBAA ? MUC1.MMO->getAAInfo() : AAMDNodes())))
       return false;
   }
 

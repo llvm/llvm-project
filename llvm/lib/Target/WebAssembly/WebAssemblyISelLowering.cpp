@@ -130,6 +130,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setTargetDAGCombine(ISD::SIGN_EXTEND);
     setTargetDAGCombine(ISD::ZERO_EXTEND);
 
+    // Combine {s,u}int_to_fp of extract_vectors into conversion ops
+    setTargetDAGCombine(ISD::SINT_TO_FP);
+    setTargetDAGCombine(ISD::UINT_TO_FP);
+
     // Support saturating add for i8x16 and i16x8
     for (auto Op : {ISD::SADDSAT, ISD::UADDSAT})
       for (auto T : {MVT::v16i8, MVT::v8i16})
@@ -180,8 +184,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         setOperationAction(Op, T, Legal);
 
     // Expand float operations supported for scalars but not SIMD
-    for (auto Op : {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT,
-                    ISD::FCOPYSIGN, ISD::FLOG, ISD::FLOG2, ISD::FLOG10,
+    for (auto Op : {ISD::FCOPYSIGN, ISD::FLOG, ISD::FLOG2, ISD::FLOG10,
                     ISD::FEXP, ISD::FEXP2, ISD::FRINT})
       for (auto T : {MVT::v4f32, MVT::v2f64})
         setOperationAction(Op, T, Expand);
@@ -1604,8 +1607,8 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // TODO: Tune this. For example, lanewise swizzling is very expensive, so
   // swizzled lanes should be given greater weight.
 
-  // TODO: Investigate building vectors by shuffling together vectors built by
-  // separately specialized means.
+  // TODO: Investigate looping rather than always extracting/replacing specific
+  // lanes to fill gaps.
 
   auto IsConstant = [](const SDValue &V) {
     return V.getOpcode() == ISD::Constant || V.getOpcode() == ISD::ConstantFP;
@@ -1636,11 +1639,29 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     return std::make_pair(SwizzleSrc, SwizzleIndices);
   };
 
+  // If the lane is extracted from another vector at a constant index, return
+  // that vector. The source vector must not have more lanes than the dest
+  // because the shufflevector indices are in terms of the destination lanes and
+  // would not be able to address the smaller individual source lanes.
+  auto GetShuffleSrc = [&](const SDValue &Lane) {
+    if (Lane->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      return SDValue();
+    if (!isa<ConstantSDNode>(Lane->getOperand(1).getNode()))
+      return SDValue();
+    if (Lane->getOperand(0).getValueType().getVectorNumElements() >
+        VecT.getVectorNumElements())
+      return SDValue();
+    return Lane->getOperand(0);
+  };
+
   using ValueEntry = std::pair<SDValue, size_t>;
   SmallVector<ValueEntry, 16> SplatValueCounts;
 
   using SwizzleEntry = std::pair<std::pair<SDValue, SDValue>, size_t>;
   SmallVector<SwizzleEntry, 16> SwizzleCounts;
+
+  using ShuffleEntry = std::pair<SDValue, size_t>;
+  SmallVector<ShuffleEntry, 16> ShuffleCounts;
 
   auto AddCount = [](auto &Counts, const auto &Val) {
     auto CountIt =
@@ -1670,9 +1691,11 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
 
     AddCount(SplatValueCounts, Lane);
 
-    if (IsConstant(Lane)) {
+    if (IsConstant(Lane))
       NumConstantLanes++;
-    } else if (CanSwizzle) {
+    if (auto ShuffleSrc = GetShuffleSrc(Lane))
+      AddCount(ShuffleCounts, ShuffleSrc);
+    if (CanSwizzle) {
       auto SwizzleSrcs = GetSwizzleSrcs(I, Lane);
       if (SwizzleSrcs.first)
         AddCount(SwizzleCounts, SwizzleSrcs);
@@ -1690,17 +1713,80 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     std::forward_as_tuple(std::tie(SwizzleSrc, SwizzleIndices),
                           NumSwizzleLanes) = GetMostCommon(SwizzleCounts);
 
+  // Shuffles can draw from up to two vectors, so find the two most common
+  // sources.
+  SDValue ShuffleSrc1, ShuffleSrc2;
+  size_t NumShuffleLanes = 0;
+  if (ShuffleCounts.size()) {
+    std::tie(ShuffleSrc1, NumShuffleLanes) = GetMostCommon(ShuffleCounts);
+    ShuffleCounts.erase(std::remove_if(ShuffleCounts.begin(),
+                                       ShuffleCounts.end(),
+                                       [&](const auto &Pair) {
+                                         return Pair.first == ShuffleSrc1;
+                                       }),
+                        ShuffleCounts.end());
+  }
+  if (ShuffleCounts.size()) {
+    size_t AdditionalShuffleLanes;
+    std::tie(ShuffleSrc2, AdditionalShuffleLanes) =
+        GetMostCommon(ShuffleCounts);
+    NumShuffleLanes += AdditionalShuffleLanes;
+  }
+
   // Predicate returning true if the lane is properly initialized by the
   // original instruction
   std::function<bool(size_t, const SDValue &)> IsLaneConstructed;
   SDValue Result;
-  // Prefer swizzles over vector consts over splats
-  if (NumSwizzleLanes >= NumSplatLanes && NumSwizzleLanes >= NumConstantLanes) {
+  // Prefer swizzles over shuffles over vector consts over splats
+  if (NumSwizzleLanes >= NumShuffleLanes &&
+      NumSwizzleLanes >= NumConstantLanes && NumSwizzleLanes >= NumSplatLanes) {
     Result = DAG.getNode(WebAssemblyISD::SWIZZLE, DL, VecT, SwizzleSrc,
                          SwizzleIndices);
     auto Swizzled = std::make_pair(SwizzleSrc, SwizzleIndices);
     IsLaneConstructed = [&, Swizzled](size_t I, const SDValue &Lane) {
       return Swizzled == GetSwizzleSrcs(I, Lane);
+    };
+  } else if (NumShuffleLanes >= NumConstantLanes &&
+             NumShuffleLanes >= NumSplatLanes) {
+    size_t DestLaneSize = VecT.getVectorElementType().getFixedSizeInBits() / 8;
+    size_t DestLaneCount = VecT.getVectorNumElements();
+    size_t Scale1 = 1;
+    size_t Scale2 = 1;
+    SDValue Src1 = ShuffleSrc1;
+    SDValue Src2 = ShuffleSrc2 ? ShuffleSrc2 : DAG.getUNDEF(VecT);
+    if (Src1.getValueType() != VecT) {
+      size_t LaneSize =
+          Src1.getValueType().getVectorElementType().getFixedSizeInBits() / 8;
+      assert(LaneSize > DestLaneSize);
+      Scale1 = LaneSize / DestLaneSize;
+      Src1 = DAG.getBitcast(VecT, Src1);
+    }
+    if (Src2.getValueType() != VecT) {
+      size_t LaneSize =
+          Src2.getValueType().getVectorElementType().getFixedSizeInBits() / 8;
+      assert(LaneSize > DestLaneSize);
+      Scale2 = LaneSize / DestLaneSize;
+      Src2 = DAG.getBitcast(VecT, Src2);
+    }
+
+    int Mask[16];
+    assert(DestLaneCount <= 16);
+    for (size_t I = 0; I < DestLaneCount; ++I) {
+      const SDValue &Lane = Op->getOperand(I);
+      SDValue Src = GetShuffleSrc(Lane);
+      if (Src == ShuffleSrc1) {
+        Mask[I] = Lane->getConstantOperandVal(1) * Scale1;
+      } else if (Src && Src == ShuffleSrc2) {
+        Mask[I] = DestLaneCount + Lane->getConstantOperandVal(1) * Scale2;
+      } else {
+        Mask[I] = -1;
+      }
+    }
+    ArrayRef<int> MaskRef(Mask, DestLaneCount);
+    Result = DAG.getVectorShuffle(VecT, DL, Src1, Src2, MaskRef);
+    IsLaneConstructed = [&](size_t, const SDValue &Lane) {
+      auto Src = GetShuffleSrc(Lane);
+      return Src == ShuffleSrc1 || (Src && Src == ShuffleSrc2);
     };
   } else if (NumConstantLanes >= NumSplatLanes) {
     SmallVector<SDValue, 16> ConstLanes;
@@ -1912,8 +1998,8 @@ performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     return SDValue();
   auto Index = IndexNode->getZExtValue();
 
-  // Only v8i8 and v4i16 extracts can be widened, and only if the extracted
-  // subvector is the low or high half of its source.
+  // Only v8i8, v4i16, and v2i32 extracts can be widened, and only if the
+  // extracted subvector is the low or high half of its source.
   EVT ResVT = N->getValueType(0);
   if (ResVT == MVT::v8i16) {
     if (Extract.getValueType() != MVT::v8i8 ||
@@ -1922,6 +2008,10 @@ performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   } else if (ResVT == MVT::v4i32) {
     if (Extract.getValueType() != MVT::v4i16 ||
         Source.getValueType() != MVT::v8i16 || (Index != 0 && Index != 4))
+      return SDValue();
+  } else if (ResVT == MVT::v2i64) {
+    if (Extract.getValueType() != MVT::v2i32 ||
+        Source.getValueType() != MVT::v4i32 || (Index != 0 && Index != 2))
       return SDValue();
   } else {
     return SDValue();
@@ -1938,6 +2028,40 @@ performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   return DAG.getNode(Op, SDLoc(N), ResVT, Source);
 }
 
+static SDValue
+performVectorConvertLowCombine(SDNode *N,
+                               TargetLowering::DAGCombinerInfo &DCI) {
+  auto &DAG = DCI.DAG;
+  assert(N->getOpcode() == ISD::SINT_TO_FP ||
+         N->getOpcode() == ISD::UINT_TO_FP);
+
+  // Combine ({s,u}int_to_fp (extract_subvector ... 0)) to an
+  // f64x2.convert_low_i32x4_{s,u} SDNode.
+  auto Extract = N->getOperand(0);
+  if (Extract.getOpcode() != ISD::EXTRACT_SUBVECTOR)
+    return SDValue();
+  auto Source = Extract.getOperand(0);
+  auto *IndexNode = dyn_cast<ConstantSDNode>(Extract.getOperand(1));
+  if (IndexNode == nullptr)
+    return SDValue();
+  auto Index = IndexNode->getZExtValue();
+
+  // The types must be correct.
+  EVT ResVT = N->getValueType(0);
+  if (ResVT != MVT::v2f64 || Extract.getValueType() != MVT::v2i32)
+    return SDValue();
+
+  // The extracted vector must be the low half.
+  if (Index != 0)
+    return SDValue();
+
+  unsigned Op = N->getOpcode() == ISD::SINT_TO_FP
+                    ? WebAssemblyISD::CONVERT_LOW_S
+                    : WebAssemblyISD::CONVERT_LOW_U;
+
+  return DAG.getNode(Op, SDLoc(N), ResVT, Source);
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -1949,5 +2073,8 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
     return performVectorExtendCombine(N, DCI);
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP:
+    return performVectorConvertLowCombine(N, DCI);
   }
 }

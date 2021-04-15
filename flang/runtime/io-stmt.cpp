@@ -188,17 +188,12 @@ void OpenStatementState::set_path(const char *path, std::size_t length) {
 }
 
 int OpenStatementState::EndIoStatement() {
-  if (wasExtant_ && status_ && *status_ != OpenStatus::Old) {
-    SignalError("OPEN statement for connected unit may not have STATUS= other "
-                "than 'OLD'");
-  }
   if (path_.get() || wasExtant_ ||
       (status_ && *status_ == OpenStatus::Scratch)) {
-    unit().OpenUnit(status_.value_or(OpenStatus::Unknown), action_, position_,
-        std::move(path_), pathLength_, convert_, *this);
+    unit().OpenUnit(status_, action_, position_, std::move(path_), pathLength_,
+        convert_, *this);
   } else {
-    unit().OpenAnonymousUnit(status_.value_or(OpenStatus::Unknown), action_,
-        position_, convert_, *this);
+    unit().OpenAnonymousUnit(status_, action_, position_, convert_, *this);
   }
   if (access_) {
     if (*access_ != unit().access) {
@@ -235,7 +230,7 @@ int NoUnitIoStatementState::EndIoStatement() {
 
 template <Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
   if constexpr (DIR == Direction::Input) {
-    BeginReadingRecord(); // in case of READ with no data items
+    BeginReadingRecord(); // in case there were no I/O items
     if (!unit().nonAdvancing) {
       FinishReadingRecord();
     }
@@ -315,12 +310,13 @@ void ExternalIoStatementState<DIR>::HandleRelativePosition(std::int64_t n) {
 }
 
 template <Direction DIR>
-void ExternalIoStatementState<DIR>::BeginReadingRecord() {
+bool ExternalIoStatementState<DIR>::BeginReadingRecord() {
   if constexpr (DIR == Direction::Input) {
-    unit().BeginReadingRecord(*this);
+    return unit().BeginReadingRecord(*this);
   } else {
     Crash("ExternalIoStatementState<Direction::Output>::BeginReadingRecord() "
           "called");
+    return false;
   }
 }
 
@@ -389,8 +385,8 @@ MutableModes &IoStatementState::mutableModes() {
       [](auto &x) -> MutableModes & { return x.get().mutableModes(); }, u_);
 }
 
-void IoStatementState::BeginReadingRecord() {
-  std::visit([](auto &x) { return x.get().BeginReadingRecord(); }, u_);
+bool IoStatementState::BeginReadingRecord() {
+  return std::visit([](auto &x) { return x.get().BeginReadingRecord(); }, u_);
 }
 
 IoErrorHandler &IoStatementState::GetIoErrorHandler() const {

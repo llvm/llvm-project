@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 
 ! Tests for circularly defined procedures
 !ERROR: Procedure 'sub' is recursively defined.  Procedures in the cycle: 'sub', 'p2'
