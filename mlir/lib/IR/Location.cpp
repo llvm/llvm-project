@@ -9,7 +9,9 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Identifier.h"
+#include "mlir/IR/Visitors.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -35,6 +37,31 @@ void BuiltinDialect::registerLocationAttributes() {
 //===----------------------------------------------------------------------===//
 // LocationAttr
 //===----------------------------------------------------------------------===//
+
+WalkResult LocationAttr::walk(function_ref<WalkResult(Location)> walkFn) {
+  if (walkFn(*this).wasInterrupted())
+    return WalkResult::interrupt();
+
+  return TypeSwitch<LocationAttr, WalkResult>(*this)
+      .Case([&](CallSiteLoc callLoc) -> WalkResult {
+        if (callLoc.getCallee()->walk(walkFn).wasInterrupted())
+          return WalkResult::interrupt();
+        return callLoc.getCaller()->walk(walkFn);
+      })
+      .Case([&](FusedLoc fusedLoc) -> WalkResult {
+        for (Location subLoc : fusedLoc.getLocations())
+          if (subLoc->walk(walkFn).wasInterrupted())
+            return WalkResult::interrupt();
+        return WalkResult::advance();
+      })
+      .Case([&](NameLoc nameLoc) -> WalkResult {
+        return nameLoc.getChildLoc()->walk(walkFn);
+      })
+      .Case([&](OpaqueLoc opaqueLoc) -> WalkResult {
+        return opaqueLoc.getFallbackLocation()->walk(walkFn);
+      })
+      .Default(WalkResult::advance());
+}
 
 /// Methods for support type inquiry through isa, cast, and dyn_cast.
 bool LocationAttr::classof(Attribute attr) {
