@@ -13,25 +13,40 @@
 #include "clang/Tooling/NodeIntrospection.h"
 
 #include "clang/AST/AST.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 
 namespace tooling {
 
-std::string LocationCallFormatterCpp::format(LocationCall *Call) {
-  SmallVector<LocationCall *> vec;
-  while (Call) {
-    vec.push_back(Call);
-    Call = Call->on();
+void LocationCallFormatterCpp::print(const LocationCall &Call,
+                                     llvm::raw_ostream &OS) {
+  if (const LocationCall *On = Call.on()) {
+    print(*On, OS);
+    if (On->returnsPointer())
+      OS << "->";
+    else
+      OS << '.';
   }
-  std::string result;
-  for (auto *VecCall : llvm::reverse(llvm::makeArrayRef(vec).drop_front())) {
-    result +=
-        (VecCall->name() + "()" + (VecCall->returnsPointer() ? "->" : "."))
-            .str();
+
+  OS << Call.name();
+  if (Call.args().empty()) {
+    OS << "()";
+    return;
   }
-  result += (vec.back()->name() + "()").str();
-  return result;
+  OS << '(' << Call.args().front();
+  for (const std::string &Arg : Call.args().drop_front()) {
+    OS << ", " << Arg;
+  }
+  OS << ')';
+}
+
+std::string LocationCallFormatterCpp::format(const LocationCall &Call) {
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  print(Call, OS);
+  OS.flush();
+  return Result;
 }
 
 namespace internal {

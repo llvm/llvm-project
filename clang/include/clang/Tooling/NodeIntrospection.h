@@ -58,7 +58,8 @@ private:
 
 class LocationCallFormatterCpp {
 public:
-  static std::string format(LocationCall *Call);
+  static void print(const LocationCall &Call, llvm::raw_ostream &OS);
+  static std::string format(const LocationCall &Call);
 };
 
 namespace internal {

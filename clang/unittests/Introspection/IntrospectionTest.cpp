@@ -36,9 +36,9 @@ FormatExpected(const MapType &Accessors) {
                                           }),
                   std::inserter(Result, Result.end()),
                   [](const auto &Accessor) {
-                    return std::make_pair(
-                        LocationCallFormatterCpp::format(Accessor.second.get()),
-                        Accessor.first);
+                    return std::make_pair(LocationCallFormatterCpp::format(
+                                              *Accessor.second.get()),
+                                          Accessor.first);
                   });
   return Result;
 }
