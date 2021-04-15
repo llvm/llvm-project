@@ -479,7 +479,8 @@ public:
   bool isAnnotatedParallel() const { return false; }
 
   /// Print loop with all the BBs inside it.
-  void print(raw_ostream &OS, unsigned Depth = 0, bool Verbose = false) const;
+  void print(raw_ostream &OS, bool Verbose = false, bool PrintNested = true,
+             unsigned Depth = 0) const;
 
 protected:
   friend class LoopInfoBase<BlockT, LoopT>;
