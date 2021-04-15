@@ -1775,6 +1775,27 @@ static LogicalResult verify(linalg::YieldOp op) {
   }
 
   if (auto tiledLoopOp = dyn_cast<linalg::TiledLoopOp>(parentOp)) {
+    // Check if output args with tensor types match results types.
+    SmallVector<Value, 2> tensorOuts;
+    llvm::copy_if(
+        tiledLoopOp.outputs(), std::back_inserter(tensorOuts),
+        [&](Value out) { return out.getType().isa<RankedTensorType>(); });
+    if (tensorOuts.size() != op.values().size())
+      return op.emitOpError("expected number of tensor output args = ")
+             << tensorOuts.size() << " to match the number of yield operands = "
+             << op.values().size();
+
+    TypeRange tensorTypes(llvm::makeArrayRef(tensorOuts));
+    for (auto &item :
+         llvm::enumerate(llvm::zip(tensorTypes, op.getOperandTypes()))) {
+      Type outType, resultType;
+      unsigned index = item.index();
+      std::tie(outType, resultType) = item.value();
+      if (outType != resultType)
+        return op.emitOpError("expected yield operand ")
+               << index << " with type = " << resultType
+               << " to match output arg type = " << outType;
+    }
     return success();
   }
   return op.emitOpError("expected parent op with LinalgOp interface");
@@ -1964,7 +1985,14 @@ bool TiledLoopOp::isDefinedOutsideOfLoop(Value value) {
   return !region().isAncestor(value.getParentRegion());
 }
 
-static LogicalResult verify(TiledLoopOp op) { return success(); }
+static LogicalResult verify(TiledLoopOp op) {
+  // Check if iterator types are provided for every loop dimension.
+  if (op.iterator_types().size() != op.getNumLoops())
+    return op.emitOpError("expected iterator types array attribute size = ")
+           << op.iterator_types().size()
+           << " to match the number of loops = " << op.getNumLoops();
+  return success();
+}
 
 namespace {
 
