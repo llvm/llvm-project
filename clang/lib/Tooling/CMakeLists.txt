@@ -35,6 +35,8 @@ if (NOT Python3_EXECUTABLE
 namespace clang {
 namespace tooling {
 
+bool NodeIntrospection::hasIntrospectionSupport() { return false; }
+
 NodeLocationAccessors NodeIntrospection::GetLocations(clang::Stmt const *) {
   return {};
 }
