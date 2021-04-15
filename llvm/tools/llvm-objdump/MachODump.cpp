@@ -12,6 +12,7 @@
 
 #include "MachODump.h"
 
+#include "ObjdumpOptID.h"
 #include "llvm-objdump.h"
 #include "llvm-c/Disassembler.h"
 #include "llvm/ADT/STLExtras.h"
@@ -34,8 +35,8 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
+#include "llvm/Option/ArgList.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
@@ -62,130 +63,60 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::objdump;
 
-cl::OptionCategory objdump::MachOCat("llvm-objdump MachO Specific Options");
-
-cl::opt<bool> objdump::FirstPrivateHeader(
-    "private-header",
-    cl::desc("Display only the first format specific file header"),
-    cl::cat(MachOCat));
-
-cl::opt<bool> objdump::ExportsTrie("exports-trie",
-                                   cl::desc("Display mach-o exported symbols"),
-                                   cl::cat(MachOCat));
-
-cl::opt<bool> objdump::Rebase("rebase",
-                              cl::desc("Display mach-o rebasing info"),
-                              cl::cat(MachOCat));
-
-cl::opt<bool> objdump::Bind("bind", cl::desc("Display mach-o binding info"),
-                            cl::cat(MachOCat));
-
-cl::opt<bool> objdump::LazyBind("lazy-bind",
-                                cl::desc("Display mach-o lazy binding info"),
-                                cl::cat(MachOCat));
-
-cl::opt<bool> objdump::WeakBind("weak-bind",
-                                cl::desc("Display mach-o weak binding info"),
-                                cl::cat(MachOCat));
-
-static cl::opt<bool>
-    UseDbg("g", cl::Grouping,
-           cl::desc("Print line information from debug info if available"),
-           cl::cat(MachOCat));
-
-static cl::opt<std::string> DSYMFile("dsym",
-                                     cl::desc("Use .dSYM file for debug info"),
-                                     cl::cat(MachOCat));
-
-static cl::opt<bool> FullLeadingAddr("full-leading-addr",
-                                     cl::desc("Print full leading address"),
-                                     cl::cat(MachOCat));
-
-static cl::opt<bool> NoLeadingHeaders("no-leading-headers",
-                                      cl::desc("Print no leading headers"),
-                                      cl::cat(MachOCat));
-
-cl::opt<bool> objdump::UniversalHeaders(
-    "universal-headers",
-    cl::desc("Print Mach-O universal headers (requires --macho)"),
-    cl::cat(MachOCat));
-
-static cl::opt<bool> ArchiveMemberOffsets(
-    "archive-member-offsets",
-    cl::desc("Print the offset to each archive member for Mach-O archives "
-             "(requires --macho and --archive-headers)"),
-    cl::cat(MachOCat));
-
-cl::opt<bool> objdump::IndirectSymbols(
-    "indirect-symbols",
-    cl::desc(
-        "Print indirect symbol table for Mach-O objects (requires --macho)"),
-    cl::cat(MachOCat));
-
-cl::opt<bool> objdump::DataInCode(
-    "data-in-code",
-    cl::desc(
-        "Print the data in code table for Mach-O objects (requires --macho)"),
-    cl::cat(MachOCat));
-
-cl::opt<bool>
-    objdump::FunctionStarts("function-starts",
-                            cl::desc("Print the function starts table for "
-                                     "Mach-O objects (requires --macho)"),
-                            cl::cat(MachOCat));
-
-cl::opt<bool>
-    objdump::LinkOptHints("link-opt-hints",
-                          cl::desc("Print the linker optimization hints for "
-                                   "Mach-O objects (requires --macho)"),
-                          cl::cat(MachOCat));
-
-cl::opt<bool>
-    objdump::InfoPlist("info-plist",
-                       cl::desc("Print the info plist section as strings for "
-                                "Mach-O objects (requires --macho)"),
-                       cl::cat(MachOCat));
-
-cl::opt<bool>
-    objdump::DylibsUsed("dylibs-used",
-                        cl::desc("Print the shared libraries used for linked "
-                                 "Mach-O files (requires --macho)"),
-                        cl::cat(MachOCat));
-
-cl::opt<bool> objdump::DylibId("dylib-id",
-                               cl::desc("Print the shared library's id for the "
-                                        "dylib Mach-O file (requires --macho)"),
-                               cl::cat(MachOCat));
-
-static cl::opt<bool>
-    NonVerbose("non-verbose",
-               cl::desc("Print the info for Mach-O objects in non-verbose or "
-                        "numeric form (requires --macho)"),
-               cl::cat(MachOCat));
-
-cl::opt<bool>
-    objdump::ObjcMetaData("objc-meta-data",
-                          cl::desc("Print the Objective-C runtime meta data "
-                                   "for Mach-O files (requires --macho)"),
-                          cl::cat(MachOCat));
-
-static cl::opt<std::string> DisSymName(
-    "dis-symname",
-    cl::desc("disassemble just this symbol's instructions (requires --macho)"),
-    cl::cat(MachOCat));
-
-static cl::opt<bool> NoSymbolicOperands(
-    "no-symbolic-operands",
-    cl::desc("do not symbolic operands when disassembling (requires --macho)"),
-    cl::cat(MachOCat));
-
-static cl::list<std::string>
-    ArchFlags("arch", cl::desc("architecture(s) from a Mach-O file to dump"),
-              cl::ZeroOrMore, cl::cat(MachOCat));
+bool objdump::FirstPrivateHeader;
+bool objdump::ExportsTrie;
+bool objdump::Rebase;
+bool objdump::Bind;
+bool objdump::LazyBind;
+bool objdump::WeakBind;
+static bool UseDbg;
+static std::string DSYMFile;
+static bool FullLeadingAddr;
+static bool NoLeadingHeaders;
+bool objdump::UniversalHeaders;
+static bool ArchiveMemberOffsets;
+bool objdump::IndirectSymbols;
+bool objdump::DataInCode;
+bool objdump::FunctionStarts;
+bool objdump::LinkOptHints;
+bool objdump::InfoPlist;
+bool objdump::DylibsUsed;
+bool objdump::DylibId;
+static bool NonVerbose;
+bool objdump::ObjcMetaData;
+static std::string DisSymName;
+static bool NoSymbolicOperands;
+static std::vector<std::string> ArchFlags;
 
 static bool ArchAll = false;
-
 static std::string ThumbTripleName;
+
+void objdump::parseMachOOptions(const llvm::opt::InputArgList &InputArgs) {
+  FirstPrivateHeader = InputArgs.hasArg(OBJDUMP_private_header);
+  ExportsTrie = InputArgs.hasArg(OBJDUMP_exports_trie);
+  Rebase = InputArgs.hasArg(OBJDUMP_rebase);
+  Bind = InputArgs.hasArg(OBJDUMP_bind);
+  LazyBind = InputArgs.hasArg(OBJDUMP_lazy_bind);
+  WeakBind = InputArgs.hasArg(OBJDUMP_weak_bind);
+  UseDbg = InputArgs.hasArg(OBJDUMP_g);
+  DSYMFile = InputArgs.getLastArgValue(OBJDUMP_dsym_EQ).str();
+  FullLeadingAddr = InputArgs.hasArg(OBJDUMP_full_leading_addr);
+  NoLeadingHeaders = InputArgs.hasArg(OBJDUMP_no_leading_headers);
+  UniversalHeaders = InputArgs.hasArg(OBJDUMP_universal_headers);
+  ArchiveMemberOffsets = InputArgs.hasArg(OBJDUMP_archive_member_offsets);
+  IndirectSymbols = InputArgs.hasArg(OBJDUMP_indirect_symbols);
+  DataInCode = InputArgs.hasArg(OBJDUMP_data_in_code);
+  FunctionStarts = InputArgs.hasArg(OBJDUMP_function_starts);
+  LinkOptHints = InputArgs.hasArg(OBJDUMP_link_opt_hints);
+  InfoPlist = InputArgs.hasArg(OBJDUMP_info_plist);
+  DylibsUsed = InputArgs.hasArg(OBJDUMP_dylibs_used);
+  DylibId = InputArgs.hasArg(OBJDUMP_dylib_id);
+  NonVerbose = InputArgs.hasArg(OBJDUMP_non_verbose);
+  ObjcMetaData = InputArgs.hasArg(OBJDUMP_objc_meta_data);
+  DisSymName = InputArgs.getLastArgValue(OBJDUMP_dis_symname).str();
+  NoSymbolicOperands = InputArgs.hasArg(OBJDUMP_no_symbolic_operands);
+  ArchFlags = InputArgs.getAllArgValues(OBJDUMP_arch_EQ);
+}
 
 static const Target *GetTarget(const MachOObjectFile *MachOObj,
                                const char **McpuDefault,
