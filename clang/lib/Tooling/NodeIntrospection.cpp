@@ -66,13 +66,15 @@ bool RangeLessThan::operator()(
   else if (LHS.first.getEnd() != RHS.first.getEnd())
     return false;
 
-  return LHS.second->name() < RHS.second->name();
+  return LocationCallFormatterCpp::format(*LHS.second) <
+         LocationCallFormatterCpp::format(*RHS.second);
 }
 bool RangeLessThan::operator()(
     std::pair<SourceLocation, SharedLocationCall> const &LHS,
     std::pair<SourceLocation, SharedLocationCall> const &RHS) const {
   if (LHS.first == RHS.first)
-    return LHS.second->name() < RHS.second->name();
+    return LocationCallFormatterCpp::format(*LHS.second) <
+           LocationCallFormatterCpp::format(*RHS.second);
   return LHS.first < RHS.first;
 }
 } // namespace internal
