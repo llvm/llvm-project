@@ -20,9 +20,9 @@ add_public_tablegen_target(MLIRDataLayoutInterfacesIncGen)
 add_dependencies(mlir-generic-headers MLIRDataLayoutInterfacesIncGen)
 
 add_mlir_doc(DataLayoutInterfaces
-  -gen-attr-interface-docs
   DataLayoutAttrInterface
-  Interfaces/)
+  Interfaces/
+  -gen-attr-interface-docs)
 
 add_mlir_doc(DataLayoutInterfaces
   -gen-type-interface-docs
