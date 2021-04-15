@@ -268,7 +268,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
         } else {
           fir::emitFatalError(loc, "CHARACTER has unexpected initial value");
         }
-      } else /*if (sym.GetType()->AsIntrinsic())*/ {
+      } else {
         // Other intrisic types (INTEGER, ...)
         global = builder.createGlobal(
             loc, symTy, globalName, isConst,
