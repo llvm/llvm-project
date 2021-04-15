@@ -1264,6 +1264,8 @@ void UnwrappedLineFormatter::formatFirstToken(
       if (PreviousLine->Last->isOneOf(tok::semi, tok::r_brace) &&
           RootToken.NewlinesBefore <= 1)
         Newlines = 2;
+      if (PreviousLine->First->isAccessSpecifier())
+        Newlines = 1; // Previous is an access modifier remove all new lines.
       break;
     case FormatStyle::ELBAMS_Always: {
       const FormatToken *previousToken;
@@ -1278,10 +1280,28 @@ void UnwrappedLineFormatter::formatFirstToken(
     }
   }
 
-  // Remove empty lines after access specifiers.
+  // Insert or remove empty line after access specifiers.
   if (PreviousLine && PreviousLine->First->isAccessSpecifier() &&
-      (!PreviousLine->InPPDirective || !RootToken.HasUnescapedNewline))
-    Newlines = std::min(1u, Newlines);
+      (!PreviousLine->InPPDirective || !RootToken.HasUnescapedNewline)) {
+    // EmptyLineBeforeAccessModifier is handling the case when two access
+    // modifiers follow each other.
+    if (!RootToken.isAccessSpecifier()) {
+      switch (Style.EmptyLineAfterAccessModifier) {
+      case FormatStyle::ELAAMS_Never:
+        Newlines = 1;
+        break;
+      case FormatStyle::ELAAMS_Leave:
+        Newlines = std::max(Newlines, 1u);
+        break;
+      case FormatStyle::ELAAMS_Always:
+        if (RootToken.is(tok::r_brace)) // Do not add at end of class.
+          Newlines = 1u;
+        else
+          Newlines = std::max(Newlines, 2u);
+        break;
+      }
+    }
+  }
 
   if (Newlines)
     Indent = NewlineIndent;

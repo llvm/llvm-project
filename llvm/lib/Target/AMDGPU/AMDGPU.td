@@ -1328,6 +1328,10 @@ def Has64BitDPP : Predicate<"Subtarget->has64BitDPP()">,
 def HasPackedFP32Ops : Predicate<"Subtarget->hasPackedFP32Ops()">,
   AssemblerPredicate<(all_of FeaturePackedFP32Ops)>;
 
+def HasFmaakFmamkF32Insts :
+  Predicate<"Subtarget->hasFmaakFmamkF32Insts()">,
+  AssemblerPredicate<(any_of FeatureGFX10Insts)>;
+
 def HasExtendedImageInsts : Predicate<"Subtarget->hasExtendedImageInsts()">,
   AssemblerPredicate<(all_of FeatureExtendedImageInsts)>;
 

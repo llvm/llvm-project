@@ -286,10 +286,3 @@ void Fortran::lower::genOpenMPConstruct(
       },
       ompConstruct.u);
 }
-
-void Fortran::lower::genOpenMPEndLoop(
-    Fortran::lower::AbstractConverter &converter,
-    Fortran::lower::pft::Evaluation &,
-    const Fortran::parser::OmpEndLoopDirective &) {
-  TODO(converter.getCurrentLocation(), "OmpEndLoopDirective");
-}

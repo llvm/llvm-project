@@ -384,8 +384,8 @@ class ALU_ri<bits<3> funct3, string opcodestr>
       Sched<[WriteIALU, ReadIALU]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class Shift_ri<bit arithshift, bits<3> funct3, string opcodestr>
-    : RVInstIShift<arithshift, funct3, OPC_OP_IMM, (outs GPR:$rd),
+class Shift_ri<bits<5> imm11_7, bits<3> funct3, string opcodestr>
+    : RVInstIShift<imm11_7, funct3, OPC_OP_IMM, (outs GPR:$rd),
                    (ins GPR:$rs1, uimmlog2xlen:$shamt), opcodestr,
                    "$rd, $rs1, $shamt">,
       Sched<[WriteShiftImm, ReadShiftImm]>;
@@ -409,8 +409,8 @@ class CSR_ii<bits<3> funct3, string opcodestr>
               opcodestr, "$rd, $imm12, $rs1">, Sched<[WriteCSR]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class ShiftW_ri<bit arithshift, bits<3> funct3, string opcodestr>
-    : RVInstIShiftW<arithshift, funct3, OPC_OP_IMM_32, (outs GPR:$rd),
+class ShiftW_ri<bits<7> imm11_5, bits<3> funct3, string opcodestr>
+    : RVInstIShiftW<imm11_5, funct3, OPC_OP_IMM_32, (outs GPR:$rd),
                     (ins GPR:$rs1, uimm5:$shamt), opcodestr,
                     "$rd, $rs1, $shamt">,
       Sched<[WriteShiftImm32, ReadShiftImm32]>;
@@ -480,9 +480,9 @@ def ORI   : ALU_ri<0b110, "ori">;
 
 def ANDI  : ALU_ri<0b111, "andi">;
 
-def SLLI : Shift_ri<0, 0b001, "slli">;
-def SRLI : Shift_ri<0, 0b101, "srli">;
-def SRAI : Shift_ri<1, 0b101, "srai">;
+def SLLI : Shift_ri<0b00000, 0b001, "slli">;
+def SRLI : Shift_ri<0b00000, 0b101, "srli">;
+def SRAI : Shift_ri<0b01000, 0b101, "srai">;
 
 def ADD  : ALU_rr<0b0000000, 0b000, "add">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 def SUB  : ALU_rr<0b0100000, 0b000, "sub">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
@@ -564,9 +564,9 @@ def ADDIW : RVInstI<0b000, OPC_OP_IMM_32, (outs GPR:$rd),
                     "addiw", "$rd, $rs1, $imm12">,
             Sched<[WriteIALU32, ReadIALU32]>;
 
-def SLLIW : ShiftW_ri<0, 0b001, "slliw">;
-def SRLIW : ShiftW_ri<0, 0b101, "srliw">;
-def SRAIW : ShiftW_ri<1, 0b101, "sraiw">;
+def SLLIW : ShiftW_ri<0b0000000, 0b001, "slliw">;
+def SRLIW : ShiftW_ri<0b0000000, 0b101, "srliw">;
+def SRAIW : ShiftW_ri<0b0100000, 0b101, "sraiw">;
 
 def ADDW  : ALUW_rr<0b0000000, 0b000, "addw">,
             Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;

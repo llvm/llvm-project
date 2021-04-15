@@ -16,6 +16,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/Builder.h"
+#include "mlir/TableGen/Trait.h"
 
 namespace llvm {
 class DagInit;
@@ -120,6 +121,9 @@ public:
   // Returns the builders of this def.
   ArrayRef<AttrOrTypeBuilder> getBuilders() const { return builders; }
 
+  // Returns the traits of this def.
+  ArrayRef<Trait> getTraits() const { return traits; }
+
   // Returns whether two AttrOrTypeDefs are equal by checking the equality of
   // the underlying record.
   bool operator==(const AttrOrTypeDef &other) const;
@@ -136,8 +140,11 @@ public:
 protected:
   const llvm::Record *def;
 
-  // The builders of this type definition.
+  // The builders of this definition.
   SmallVector<AttrOrTypeBuilder> builders;
+
+  // The traits of this definition.
+  SmallVector<Trait> traits;
 };
 
 //===----------------------------------------------------------------------===//

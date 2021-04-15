@@ -1734,41 +1734,57 @@ def AnySuccessor : Successor<?, "any successor">;
 class VariadicSuccessor<Successor successor>
   : Successor<successor.predicate, successor.summary>;
 
+
+//===----------------------------------------------------------------------===//
+// Trait definitions
+//===----------------------------------------------------------------------===//
+
+// Trait represents a trait regarding an attribute, operation, or type.
+class Trait;
+
+// NativeTrait corresponds to the MLIR C++ trait mechanism. The purpose to wrap
+// around C++ symbol string with this class is to make traits specified for
+// entities in TableGen less alien and more integrated.
+class NativeTrait<string name, string entityType> : Trait {
+  string trait = name;
+  string cppNamespace = "::mlir::" # entityType # "Trait";
+}
+
+// ParamNativeTrait corresponds to the template-parameterized traits in the C++
+// implementation. MLIR uses nested class templates to implement such traits
+// leading to constructs of the form "TraitName<Parameters>::Impl". Use the
+// value in `prop` as the trait name and the value in `params` as parameters to
+// construct the native trait class name.
+class ParamNativeTrait<string prop, string params, string entityType>
+    : NativeTrait<prop # "<" # params # ">::Impl", entityType>;
+
+// GenInternalTrait is a trait that does not have direct C++ mapping but affects
+// an entities definition generator internals, like how operation builders and
+// operand/attribute/result getters are generated.
+class GenInternalTrait<string prop, string entityType> : Trait {
+  string trait = "::mlir::" # entityType # "Trait::" # prop;
+}
+
+// PredTrait is a trait implemented by way of a predicate on an entity.
+class PredTrait<string descr, Pred pred> : Trait {
+  string summary = descr;
+  Pred predicate = pred;
+}
+
 //===----------------------------------------------------------------------===//
 // OpTrait definitions
 //===----------------------------------------------------------------------===//
 
-// OpTrait represents a trait regarding an op.
+// OpTrait represents a trait regarding an operation.
+// TODO: Remove this class in favor of using Trait.
 class OpTrait;
 
-// NativeOpTrait corresponds to the MLIR C++ OpTrait mechanism. The
-// purpose to wrap around C++ symbol string with this class is to make
-// traits specified for ops in TableGen less alien and more integrated.
-class NativeOpTrait<string name> : OpTrait {
-  string trait = name;
-  string cppNamespace = "::mlir::OpTrait";
-}
-
-// ParamNativeOpTrait corresponds to the template-parameterized traits in the
-// C++ implementation.  MLIR uses nested class templates to implement such
-// traits leading to constructs of the form "TraitName<Parameters>::Impl". Use
-// the value in `prop` as the trait name and the value in `params` as
-// parameters to construct the native trait class name.
+// These classes are used to define operation specific traits.
+class NativeOpTrait<string name> : NativeTrait<name, "Op">, OpTrait;
 class ParamNativeOpTrait<string prop, string params>
-    : NativeOpTrait<prop # "<" # params # ">::Impl">;
-
-// GenInternalOpTrait is an op trait that does not have direct C++ mapping but
-// affects op definition generator internals, like how op builders and
-// operand/attribute/result getters are generated.
-class GenInternalOpTrait<string prop> : OpTrait {
-  string trait = "::mlir::OpTrait::" # prop;
-}
-
-// PredOpTrait is an op trait implemented by way of a predicate on the op.
-class PredOpTrait<string descr, Pred pred> : OpTrait {
-  string summary = descr;
-  Pred predicate = pred;
-}
+    : ParamNativeTrait<prop, params, "Op">, OpTrait;
+class GenInternalOpTrait<string prop> : GenInternalTrait<prop, "Op">, OpTrait;
+class PredOpTrait<string descr, Pred pred> : PredTrait<descr, pred>, OpTrait;
 
 // Op defines an affine scope.
 def AffineScope : NativeOpTrait<"AffineScope">;
@@ -1895,21 +1911,26 @@ class CArg<string ty, string value = ""> {
   string defaultValue = value;
 }
 
-// OpInterfaceTrait corresponds to a specific 'OpInterface' class defined in
-// C++. The purpose to wrap around C++ symbol string with this class is to make
+// InterfaceTrait corresponds to a specific 'Interface' class defined in C++.
+// The purpose to wrap around C++ symbol string with this class is to make
 // interfaces specified for ops in TableGen less alien and more integrated.
-class OpInterfaceTrait<string name, code verifyBody = [{}]>
-          : NativeOpTrait<""> {
+class InterfaceTrait<string name> : NativeTrait<"", ""> {
   let trait = name # "::Trait";
   let cppNamespace = "";
-
-  // Specify the body of the verification function. `$_op` will be replaced with
-  // the operation being verified.
-  code verify = verifyBody;
 
   // An optional code block containing extra declarations to place in the
   // interface trait declaration.
   code extraTraitClassDeclaration = "";
+}
+
+// OpInterfaceTrait corresponds to a specific 'OpInterface' class defined in
+// C++. The purpose to wrap around C++ symbol string with this class is to make
+// interfaces specified for ops in TableGen less alien and more integrated.
+class OpInterfaceTrait<string name, code verifyBody = [{}]>
+    : InterfaceTrait<name>, OpTrait {
+  // Specify the body of the verification function. `$_op` will be replaced with
+  // the operation being verified.
+  code verify = verifyBody;
 }
 
 // This class represents a single, optionally static, interface method.
@@ -1967,39 +1988,52 @@ class Interface<string name> {
 }
 
 // AttrInterface represents an interface registered to an attribute.
-class AttrInterface<string name> : Interface<name> {
-  // An optional code block containing extra declarations to place in the
-  // interface trait declaration.
-  code extraTraitClassDeclaration = "";
-}
+class AttrInterface<string name> : Interface<name>, InterfaceTrait<name>;
 
 // OpInterface represents an interface registered to an operation.
 class OpInterface<string name> : Interface<name>, OpInterfaceTrait<name>;
 
 // TypeInterface represents an interface registered to a type.
-class TypeInterface<string name> : Interface<name> {
-  // An optional code block containing extra declarations to place in the
-  // interface trait declaration.
-  code extraTraitClassDeclaration = "";
-}
+class TypeInterface<string name> : Interface<name>, InterfaceTrait<name>;
 
-// Whether to declare the op interface methods in the op's header. This class
-// simply wraps an OpInterface but is used to indicate that the method
+// Whether to declare the interface methods in the user entity's header. This
+// class simply wraps an Interface but is used to indicate that the method
 // declarations should be generated. This class takes an optional set of methods
 // that should have declarations generated even if the method has a default
 // implementation.
-class DeclareOpInterfaceMethods<OpInterface interface,
-                                list<string> overridenMethods = []>
-      : OpInterface<interface.cppClassName> {
-    let description = interface.description;
-    let cppClassName = interface.cppClassName;
-    let cppNamespace = interface.cppNamespace;
-    let methods = interface.methods;
-
+class DeclareInterfaceMethods<Interface interface,
+                              list<string> overridenMethods = []> {
     // This field contains a set of method names that should always have their
     // declarations generated. This allows for generating declarations for
     // methods with default implementations that need to be overridden.
     list<string> alwaysOverriddenMethods = overridenMethods;
+}
+class DeclareAttrInterfaceMethods<AttrInterface interface,
+                                  list<string> overridenMethods = []>
+      : DeclareInterfaceMethods<interface, overridenMethods>,
+        AttrInterface<interface.cppClassName> {
+    let description = interface.description;
+    let cppClassName = interface.cppClassName;
+    let cppNamespace = interface.cppNamespace;
+    let methods = interface.methods;
+}
+class DeclareOpInterfaceMethods<OpInterface interface,
+                                list<string> overridenMethods = []>
+      : DeclareInterfaceMethods<interface, overridenMethods>,
+        OpInterface<interface.cppClassName> {
+    let description = interface.description;
+    let cppClassName = interface.cppClassName;
+    let cppNamespace = interface.cppNamespace;
+    let methods = interface.methods;
+}
+class DeclareTypeInterfaceMethods<TypeInterface interface,
+                                  list<string> overridenMethods = []>
+      : DeclareInterfaceMethods<interface, overridenMethods>,
+        TypeInterface<interface.cppClassName> {
+    let description = interface.description;
+    let cppClassName = interface.cppClassName;
+    let cppNamespace = interface.cppNamespace;
+    let methods = interface.methods;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2609,7 +2643,8 @@ class TypeBuilderWithInferredContext<dag parameters, code bodyCode = "">
 
 // Define a new attribute or type, named `name`, that inherits from the given
 // C++ base class.
-class AttrOrTypeDef<string valueType, string name, string baseCppClass> {
+class AttrOrTypeDef<string valueType, string name, list<Trait> defTraits,
+                    string baseCppClass> {
   // The name of the C++ base class to use for this def.
   string cppBaseClassName = baseCppClass;
 
@@ -2664,6 +2699,9 @@ class AttrOrTypeDef<string valueType, string name, string baseCppClass> {
   // Note that builders should only be provided when a def has parameters.
   list<AttrOrTypeBuilder> builders = ?;
 
+  // The list of traits attached to this def.
+  list<Trait> traits = defTraits;
+
   // Use the lowercased name as the keyword for parsing/printing. Specify only
   // if you want tblgen to generate declarations and/or definitions of
   // the printer/parser.
@@ -2692,10 +2730,10 @@ class AttrOrTypeDef<string valueType, string name, string baseCppClass> {
 
 // Define a new attribute, named `name`, belonging to `dialect` that inherits
 // from the given C++ base class.
-class AttrDef<Dialect dialect, string name,
+class AttrDef<Dialect dialect, string name, list<Trait> traits = [],
               string baseCppClass = "::mlir::Attribute">
     : DialectAttr<dialect, CPred<"">, /*descr*/"">,
-      AttrOrTypeDef<"Attr", name, baseCppClass> {
+      AttrOrTypeDef<"Attr", name, traits, baseCppClass> {
   // The name of the C++ Attribute class.
   string cppClassName = name # "Attr";
 
@@ -2728,10 +2766,10 @@ class AttrDef<Dialect dialect, string name,
 
 // Define a new type, named `name`, belonging to `dialect` that inherits from
 // the given C++ base class.
-class TypeDef<Dialect dialect, string name,
+class TypeDef<Dialect dialect, string name, list<Trait> traits = [],
               string baseCppClass = "::mlir::Type">
     : DialectType<dialect, CPred<"">, /*descr*/"", name # "Type">,
-      AttrOrTypeDef<"Type", name, baseCppClass> {
+      AttrOrTypeDef<"Type", name, traits, baseCppClass> {
   // A constant builder provided when the type has no parameters.
   let builderCall = !if(!empty(parameters),
                            "$_builder.getType<" # dialect.cppNamespace #

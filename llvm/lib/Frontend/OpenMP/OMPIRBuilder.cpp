@@ -901,6 +901,30 @@ OpenMPIRBuilder::createMaster(const LocationDescription &Loc,
                               /*Conditional*/ true, /*hasFinalize*/ true);
 }
 
+OpenMPIRBuilder::InsertPointTy
+OpenMPIRBuilder::createMasked(const LocationDescription &Loc,
+                              BodyGenCallbackTy BodyGenCB,
+                              FinalizeCallbackTy FiniCB, Value *Filter) {
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  Directive OMPD = Directive::OMPD_masked;
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
+  Value *Ident = getOrCreateIdent(SrcLocStr);
+  Value *ThreadId = getOrCreateThreadID(Ident);
+  Value *Args[] = {Ident, ThreadId, Filter};
+  Value *ArgsEnd[] = {Ident, ThreadId};
+
+  Function *EntryRTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_masked);
+  Instruction *EntryCall = Builder.CreateCall(EntryRTLFn, Args);
+
+  Function *ExitRTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_masked);
+  Instruction *ExitCall = Builder.CreateCall(ExitRTLFn, ArgsEnd);
+
+  return EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
+                              /*Conditional*/ true, /*hasFinalize*/ true);
+}
+
 CanonicalLoopInfo *OpenMPIRBuilder::createLoopSkeleton(
     DebugLoc DL, Value *TripCount, Function *F, BasicBlock *PreInsertBefore,
     BasicBlock *PostInsertBefore, const Twine &Name) {

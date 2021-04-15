@@ -23,7 +23,7 @@ include "mlir/IR/BuiltinDialect.td"
 
 // Base class for Builtin dialect attributes.
 class Builtin_Attr<string name, string baseCppClass = "::mlir::Attribute">
-    : AttrDef<Builtin_Dialect, name, baseCppClass> {
+    : AttrDef<Builtin_Dialect, name, [], baseCppClass> {
   let mnemonic = ?;
 }
 

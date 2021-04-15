@@ -200,9 +200,7 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   TypeSetByHwMode(ArrayRef<ValueTypeByHwMode> VTList);
 
   SetType &getOrCreate(unsigned Mode) {
-    if (hasMode(Mode))
-      return get(Mode);
-    return Map.insert({Mode,SetType()}).first->second;
+    return Map[Mode];
   }
 
   bool isValueTypeByHwMode(bool AllowEmpty) const;

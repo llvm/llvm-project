@@ -2100,6 +2100,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
   field bit HasDst32 = HasDst;
   field bit EmitDst = HasDst; // force dst encoding, see v_movreld_b32 special case
+  field bit EmitDstSel = EmitDst;
   field int NumSrcArgs = getNumSrcArgs<Src0VT, Src1VT, Src2VT>.ret;
   field bit HasSrc0 = !ne(Src0VT.Value, untyped.Value);
   field bit HasSrc1 = !ne(Src1VT.Value, untyped.Value);
