@@ -4755,7 +4755,6 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
   case InductionDescriptor::IK_PtrInduction: {
     // Handle the pointer induction variable case.
     assert(P->getType()->isPointerTy() && "Unexpected type.");
-    assert(!VF.isScalable() && "Currently unsupported for scalable vectors");
 
     if (Cost->isScalarAfterVectorization(P, State.VF)) {
       // This is the normalized GEP that starts counting at zero.
@@ -4764,13 +4763,18 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
       // Determine the number of scalars we need to generate for each unroll
       // iteration. If the instruction is uniform, we only need to generate the
       // first lane. Otherwise, we generate all VF values.
-      unsigned Lanes = Cost->isUniformAfterVectorization(P, State.VF)
-                           ? 1
-                           : State.VF.getKnownMinValue();
+      bool IsUniform = Cost->isUniformAfterVectorization(P, State.VF);
+      assert((IsUniform || !VF.isScalable()) &&
+             "Currently unsupported for scalable vectors");
+      unsigned Lanes = IsUniform ? 1 : State.VF.getFixedValue();
+
+      Value *RuntimeVF = getRuntimeVF(Builder, PtrInd->getType(), VF);
       for (unsigned Part = 0; Part < UF; ++Part) {
+        Value *PartStart = Builder.CreateMul(
+            RuntimeVF, ConstantInt::get(PtrInd->getType(), Part));
         for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
-          Constant *Idx = ConstantInt::get(
-              PtrInd->getType(), Lane + Part * State.VF.getKnownMinValue());
+          Value *Idx = Builder.CreateAdd(
+              PartStart, ConstantInt::get(PtrInd->getType(), Lane));
           Value *GlobalIdx = Builder.CreateAdd(PtrInd, Idx);
           Value *SclrGep =
               emitTransformedIndex(Builder, GlobalIdx, PSE.getSE(), DL, II);
@@ -4798,12 +4802,13 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
     SCEVExpander Exp(*PSE.getSE(), DL, "induction");
     Value *ScalarStepValue =
         Exp.expandCodeFor(ScalarStep, PhiType, InductionLoc);
+    Value *RuntimeVF = getRuntimeVF(Builder, PhiType, VF);
+    Value *NumUnrolledElems =
+        Builder.CreateMul(RuntimeVF, ConstantInt::get(PhiType, State.UF));
     Value *InductionGEP = GetElementPtrInst::Create(
         ScStValueType->getPointerElementType(), NewPointerPhi,
-        Builder.CreateMul(
-            ScalarStepValue,
-            ConstantInt::get(PhiType, State.VF.getKnownMinValue() * State.UF)),
-        "ptr.ind", InductionLoc);
+        Builder.CreateMul(ScalarStepValue, NumUnrolledElems), "ptr.ind",
+        InductionLoc);
     NewPointerPhi->addIncoming(InductionGEP, LoopLatch);
 
     // Create UF many actual address geps that use the pointer
@@ -4811,18 +4816,19 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
     // (<step*0, ..., step*N>) as offset.
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       Type *VecPhiType = VectorType::get(PhiType, State.VF);
+      Value *StartOffsetScalar =
+          Builder.CreateMul(RuntimeVF, ConstantInt::get(PhiType, Part));
       Value *StartOffset =
-          ConstantInt::get(VecPhiType, Part * State.VF.getKnownMinValue());
+          Builder.CreateVectorSplat(State.VF, StartOffsetScalar);
       // Create a vector of consecutive numbers from zero to VF.
       StartOffset =
           Builder.CreateAdd(StartOffset, Builder.CreateStepVector(VecPhiType));
 
       Value *GEP = Builder.CreateGEP(
           ScStValueType->getPointerElementType(), NewPointerPhi,
-          Builder.CreateMul(StartOffset,
-                            Builder.CreateVectorSplat(
-                                State.VF.getKnownMinValue(), ScalarStepValue),
-                            "vector.gep"));
+          Builder.CreateMul(
+              StartOffset, Builder.CreateVectorSplat(State.VF, ScalarStepValue),
+              "vector.gep"));
       State.set(PhiR, GEP, Part);
     }
   }
