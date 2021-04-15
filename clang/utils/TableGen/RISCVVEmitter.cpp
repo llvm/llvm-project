@@ -528,23 +528,25 @@ void RVVType::initTypeStr() {
 }
 
 void RVVType::initShortStr() {
-  assert(isVector() && "only handle vector type");
   switch (ScalarType) {
   case ScalarTypeKind::Boolean:
+    assert(isVector());
     ShortStr = "b" + utostr(64 / Scale.getValue());
-    break;
+    return;
   case ScalarTypeKind::Float:
-    ShortStr = "f" + utostr(ElementBitwidth) + LMUL.str();
+    ShortStr = "f" + utostr(ElementBitwidth);
     break;
   case ScalarTypeKind::SignedInteger:
-    ShortStr = "i" + utostr(ElementBitwidth) + LMUL.str();
+    ShortStr = "i" + utostr(ElementBitwidth);
     break;
   case ScalarTypeKind::UnsignedInteger:
-    ShortStr = "u" + utostr(ElementBitwidth) + LMUL.str();
+    ShortStr = "u" + utostr(ElementBitwidth);
     break;
   default:
-    llvm_unreachable("Unhandled case!");
+    PrintFatalError("Unhandled case!");
   }
+  if (isVector())
+    ShortStr += LMUL.str();
 }
 
 void RVVType::applyBasicType() {
