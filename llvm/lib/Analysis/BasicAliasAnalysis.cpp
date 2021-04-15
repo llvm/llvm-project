@@ -1111,8 +1111,8 @@ AliasResult BasicAAResult::aliasGEP(
         // Conservatively drop processing if a phi was visited and/or offset is
         // too big.
         AliasResult AR = AliasResult::PartialAlias;
-        if (VisitedPhiBBs.empty() && VRightSize.hasValue() &&
-            Off.ule(INT32_MAX) && (Off + VRightSize.getValue()).ule(LSize)) {
+        if (VRightSize.hasValue() && Off.ule(INT32_MAX) &&
+            (Off + VRightSize.getValue()).ule(LSize)) {
           // Memory referenced by right pointer is nested. Save the offset in
           // cache. Note that originally offset estimated as GEP1-V2, but
           // AliasResult contains the shift that represents GEP1+Offset=V2.

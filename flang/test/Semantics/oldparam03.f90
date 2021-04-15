@@ -1,4 +1,4 @@
-! RUN: not %f18 -fsyntax-only %s 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s
 
 ! Ensure that old-style PARAMETER statements are disabled by default.
 

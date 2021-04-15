@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 ! Test 15.5.2.5 constraints and restrictions for POINTER & ALLOCATABLE
 ! arguments when both sides of the call have the same attributes.
 

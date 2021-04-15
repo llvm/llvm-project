@@ -1,4 +1,4 @@
-! RUN: %S/test_folding.sh %s %t %f18
+! RUN: %S/test_folding.sh %s %t %flang_fc1
 ! Test implementations of STORAGE_SIZE() and SIZEOF() as expression rewrites
 module m1
   type :: t1

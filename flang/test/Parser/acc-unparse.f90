@@ -1,4 +1,4 @@
-! RUN: %f18 -fopenacc -funparse %s | FileCheck %s
+! RUN: %flang_fc1 -fopenacc -fdebug-unparse %s | FileCheck %s
 
 ! Test unparse does not crash with OpenACC directives.
 

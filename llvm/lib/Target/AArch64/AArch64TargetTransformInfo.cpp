@@ -944,16 +944,19 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                                 unsigned AddressSpace,
                                                 TTI::TargetCostKind CostKind,
                                                 const Instruction *I) {
-  // TODO: Handle other cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return 1;
-
   // Type legalization can't handle structs
   if (TLI->getValueType(DL, Ty,  true) == MVT::Other)
     return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace,
                                   CostKind);
 
   auto LT = TLI->getTypeLegalizationCost(DL, Ty);
+
+  // TODO: consider latency as well for TCK_SizeAndLatency.
+  if (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency)
+    return LT.first;
+
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return 1;
 
   if (ST->isMisaligned128StoreSlow() && Opcode == Instruction::Store &&
       LT.second.is128BitVector() && (!Alignment || *Alignment < Align(16))) {
