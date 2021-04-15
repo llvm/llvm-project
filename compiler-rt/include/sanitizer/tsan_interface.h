@@ -67,6 +67,12 @@ static const unsigned __tsan_mutex_recursive_lock   = 1 << 6;
 // the corresponding __tsan_mutex_post_lock annotation.
 static const unsigned __tsan_mutex_recursive_unlock = 1 << 7;
 
+// Convenient composed constants.
+static const unsigned __tsan_mutex_try_read_lock =
+    __tsan_mutex_read_lock | __tsan_mutex_try_lock;
+static const unsigned __tsan_mutex_try_read_lock_failed =
+    __tsan_mutex_try_read_lock | __tsan_mutex_try_lock_failed;
+
 // Annotate creation of a mutex.
 // Supported flags: mutex creation flags.
 void __tsan_mutex_create(void *addr, unsigned flags);
