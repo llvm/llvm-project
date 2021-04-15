@@ -33,7 +33,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -532,17 +531,6 @@ void Value::replaceNonMetadataUsesWith(Value *New) {
   doRAUW(New, ReplaceMetadataUses::No);
 }
 
-/// Replace llvm.dbg.* uses of MetadataAsValue(ValueAsMetadata(V)) outside BB
-/// with New.
-static void replaceDbgUsesOutsideBlock(Value *V, Value *New, BasicBlock *BB) {
-  SmallVector<DbgVariableIntrinsic *> DbgUsers;
-  findDbgUsers(DbgUsers, V);
-  for (auto *DVI : DbgUsers) {
-    if (DVI->getParent() != BB)
-      DVI->replaceVariableLocationOp(V, New);
-  }
-}
-
 // Like replaceAllUsesWith except it does not handle constants or basic blocks.
 // This routine leaves uses within BB.
 void Value::replaceUsesOutsideBlock(Value *New, BasicBlock *BB) {
@@ -553,7 +541,6 @@ void Value::replaceUsesOutsideBlock(Value *New, BasicBlock *BB) {
          "replaceUses of value with new value of different type!");
   assert(BB && "Basic block that may contain a use of 'New' must be defined\n");
 
-  replaceDbgUsesOutsideBlock(this, New, BB);
   replaceUsesWithIf(New, [BB](Use &U) {
     auto *I = dyn_cast<Instruction>(U.getUser());
     // Don't replace if it's an instruction in the BB basic block.
