@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
 ! OpenMP Version 4.5
 ! 2.15.4.2 copyprivate Clause
 ! All list items that appear in the copyprivate clause must be either

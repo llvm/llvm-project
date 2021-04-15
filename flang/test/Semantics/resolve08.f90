@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 integer :: g(10)
 f(i) = i + 1  ! statement function
 g(i) = i + 2  ! mis-parsed array assignment

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Compile a source file and check errors against those listed in the file.
-# Change the compiler by setting the F18 environment variable.
+# Change the compiler by setting the FLANG_FC1 environment variable.
 
-F18_OPTIONS="-fsyntax-only"
+FLANG_FC1_OPTIONS="-fsyntax-only"
 srcdir=$(dirname $0)
 source $srcdir/common.sh
 [[ ! -f $src ]] && die "File not found: $src"
@@ -12,7 +12,7 @@ actual=$temp/actual
 expect=$temp/expect
 diffs=$temp/diffs
 
-cmd="$F18 $F18_OPTIONS $src"
+cmd="$FLANG_FC1 $FLANG_FC1_OPTIONS $src"
 ( cd $temp; $cmd ) > $log 2>&1
 if [[ $? -ge 128 ]]; then
   cat $log

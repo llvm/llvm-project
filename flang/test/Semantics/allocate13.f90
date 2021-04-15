@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 ! Check for semantic errors in ALLOCATE statements
 
 module not_iso_fortran_env

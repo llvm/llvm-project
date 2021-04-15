@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 
 ! C1568 The procedure-name shall have been declared to be a separate module
 ! procedure in the containing program unit or an ancestor of that program unit.

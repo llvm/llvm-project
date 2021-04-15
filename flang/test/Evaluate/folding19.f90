@@ -1,4 +1,4 @@
-! RUN: not %f18 %s 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 %s 2>&1 | FileCheck %s
 ! Check errors found in folding
 ! TODO: test others emitted from flang/lib/Evaluate
 module m
