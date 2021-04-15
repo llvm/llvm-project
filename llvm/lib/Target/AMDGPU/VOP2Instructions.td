@@ -749,17 +749,21 @@ let AddedComplexity = 30 in {
   }
 } // End AddedComplexity = 30
 
+let SubtargetPredicate = HasFmaakFmamkF32Insts in {
+def V_FMAMK_F32 : VOP2_Pseudo<"v_fmamk_f32", VOP_MADMK_F32, [], "">;
+
+let isCommutable = 1 in
+def V_FMAAK_F32 : VOP2_Pseudo<"v_fmaak_f32", VOP_MADAK_F32, [], "">;
+}
+
 let SubtargetPredicate = isGFX10Plus in {
 
-def V_FMAMK_F32 : VOP2_Pseudo<"v_fmamk_f32", VOP_MADMK_F32, [], "">;
-let FPDPRounding = 1 in
+let FPDPRounding = 1 in {
 def V_FMAMK_F16 : VOP2_Pseudo <"v_fmamk_f16", VOP_MADMK_F16, [], "">;
 
-let isCommutable = 1 in {
-def V_FMAAK_F32 : VOP2_Pseudo<"v_fmaak_f32", VOP_MADAK_F32, [], "">;
-let FPDPRounding = 1 in
+let isCommutable = 1 in
 def V_FMAAK_F16 : VOP2_Pseudo <"v_fmaak_f16", VOP_MADAK_F16, [], "">;
-} // End isCommutable = 1
+} // End FPDPRounding  = 1
 
 let Constraints = "$vdst = $src2",
     DisableEncoding="$src2",
