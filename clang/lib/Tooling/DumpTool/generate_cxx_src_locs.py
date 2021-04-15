@@ -28,6 +28,8 @@ namespace tooling {
 
 using LocationAndString = SourceLocationMap::value_type;
 using RangeAndString = SourceRangeMap::value_type;
+
+bool NodeIntrospection::hasIntrospectionSupport() { return true; }
 """
 
     def GenerateBaseGetLocationsDeclaration(self, CladeName):
@@ -173,6 +175,8 @@ def main():
             f.write("""
 namespace clang {
 namespace tooling {
+
+bool NodeIntrospection::hasIntrospectionSupport() { return false; }
 
 NodeLocationAccessors NodeIntrospection::GetLocations(clang::Stmt const *) {
   return {};

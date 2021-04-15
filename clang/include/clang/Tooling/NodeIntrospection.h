@@ -85,6 +85,7 @@ struct NodeLocationAccessors {
 };
 
 namespace NodeIntrospection {
+bool hasIntrospectionSupport();
 NodeLocationAccessors GetLocations(clang::Stmt const *Object);
 NodeLocationAccessors GetLocations(clang::Decl const *Object);
 NodeLocationAccessors GetLocations(clang::CXXCtorInitializer const *Object);
