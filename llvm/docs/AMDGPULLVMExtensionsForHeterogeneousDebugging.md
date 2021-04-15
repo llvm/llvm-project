@@ -312,7 +312,12 @@ elements as described in [DWARF Expression Evaluation Context][13] with the
 following exceptions.  The _current result kind_ is not applicable as all LLVM
 expressions are location descriptions.  The _current object_ and _initial stack_
 are not applicable as LLVM expressions have no implicit inputs.
+
 ## 4.4. Location Descriptions of LLVM Entities
+
+_[TODO: Categorize `MO_ConstantPoolIndex`, `MO_ExternalSymbol`; explicitly
+describe all `MachineOperandType`s, including those for which there is no
+location description.]_
 
 The notion of location storage is extended to include the abstract LLVM IR
 entities of _SSA values_, _stack slots_, _virtual registers_, and _physical
@@ -323,11 +328,59 @@ In addition, an implicit address location storage kind is defined. The size of
 the storage matches the size of the type for the address.  The value in the
 storage is only meaningful when used in its entirety by a `deref` operation,
 which yields a location description for the entity that the address references.
-_[Note: This is a generalization to the implicit pointer location description of
-DWARF 5.]_
+_[Note: This is a generalization to the implicit pointer location description
+of DWARF 5.]_
 
 Location descriptions can be associated with instances of any of these location
 storage kinds.
+
+### LLVM IR SSA Values
+
+The location description of an LLVM IR SSA value `V` specifies a location
+storage `LS` and offset `O` which identify the least significant bit of the
+object described by `V`. The size of `LS`, minus `O`, is no less than the size
+of `V`.
+
+_[Note: The kind of `LS` is unspecified and referentially transparent, but
+values of the following kinds generally map to the corresponding kind of
+location storage:]_
+
+- `memory location storage`: N/A
+- `implicit location storage`: Constant Values, including Global Variables and
+  Function Addresses
+  - `undefined location storage`: Undefined Values
+  - `composite location storage`: N/A
+  - `register location storage`: Most Other Values
+
+### LLVM MIR Physical and Virtual Register Operands
+
+The location description of an LLVM MIR Physical or Virtual Register operand
+`R` specifies a register location storage `RLS` and offset `O` which identify
+the least significant bit of `R`. The size of the `RLS`, minus `O`, is no less
+than the size of `R`.
+
+_[Note: The corresponding `MachineOperandType` is `MO_Register`.]_
+
+### LLVM MIR Immediate Operands
+
+The location description of an LLVM MIR Immediate operand `I` specifies an
+implicit location storage `ILS` and offset `O` which identify the least
+significant bit of `I`. The size of the `ILS`, minus `O`, is no less than the
+size of `I`.
+
+_[Note: The corresponding `MachineOperandType`s are: `MO_Immediate`,
+`MO_CImmediate`, `MO_FPImmediate`, `MO_GlobalAddress`, `MO_BlockAddress`.]_
+
+### LLVM MIR Frame Index Operands
+
+The location description of an LLVM MIR Frame Index operand `F` specifies a
+memory location storage `MLS` with target-specific stack address space and
+offset `O` which identify the least significant bit of the stack slot
+identified by `F`. The size of the `MLS`, minus `O`, is no less than the size
+of the stack slot identified by `F`.
+
+_[Note: The corresponding `MachineOperandType`s are: `MO_FrameIndex`.]_
+
 ## 4.5. Metadata
 
 An abstract metadata node exists only to abstractly specify common aspects of
