@@ -674,6 +674,9 @@ public:
   /// Return the alignment for the specified function parameter.
   MaybeAlign getParamAlignment(unsigned ArgNo) const;
 
+  /// Return the stack alignment for the specified function parameter.
+  MaybeAlign getParamStackAlignment(unsigned ArgNo) const;
+
   /// Return the byval type for the specified function parameter.
   Type *getParamByValType(unsigned ArgNo) const;
 

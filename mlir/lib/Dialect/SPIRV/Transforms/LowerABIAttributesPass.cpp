@@ -74,7 +74,7 @@ getInterfaceVariables(spirv::FuncOp funcOp,
   if (!module) {
     return failure();
   }
-  llvm::SetVector<Operation *> interfaceVarSet;
+  SetVector<Operation *> interfaceVarSet;
 
   // TODO: This should in reality traverse the entry function
   // call graph and collect all the interfaces. For now, just traverse the

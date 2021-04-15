@@ -102,6 +102,8 @@ public:
   /// If this is a byval or inalloca argument, return its alignment.
   MaybeAlign getParamAlign() const;
 
+  MaybeAlign getParamStackAlign() const;
+
   /// If this is a byval argument, return its type.
   Type *getParamByValType() const;
 

@@ -1630,7 +1630,7 @@ private:
   Block *mergeBlock;
   Block *continueBlock; // nullptr for spv.mlir.selection
 
-  llvm::SetVector<Block *> constructBlocks;
+  SetVector<Block *> constructBlocks;
 };
 } // namespace
 

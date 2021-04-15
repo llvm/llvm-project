@@ -34,8 +34,6 @@
 #include <sstream>
 #define DEBUG_TYPE "affine-loop-fusion"
 
-using llvm::SetVector;
-
 using namespace mlir;
 
 namespace {
