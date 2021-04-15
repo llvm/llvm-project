@@ -106,6 +106,13 @@ let Defs = [RA_NM] in
   def BALC_NM : BranchNM<"balc", MipsJmpLink, tglobaladdr>, ISA_NANOMIPS;
 
 def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, ISA_NANOMIPS;
+
+let Defs = [SP_NM], Uses = [SP_NM], hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
+  def ADJCALLSTACKDOWN_NM : MipsPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                                       [(callseq_start timm:$amt1, timm:$amt2)]>;
+  def ADJCALLSTACKUP_NM : MipsPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                                     [(callseq_end timm:$amt1, timm:$amt2)]>;
+}
 }
 
 def imm32_NM : IntImmLeaf<i32, [{

@@ -454,8 +454,8 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       static_cast<const MipsTargetMachine &>(MF.getTarget());
   const MipsABIInfo &ABI = TM.getABI();
 
-  MachineInstrBuilder CallSeqStart =
-      MIRBuilder.buildInstr(Mips::ADJCALLSTACKDOWN);
+  MachineInstrBuilder CallSeqStart = MIRBuilder.buildInstr(
+      ABI.IsP32() ? Mips::ADJCALLSTACKDOWN_NM : Mips::ADJCALLSTACKDOWN);
 
   const bool IsCalleeGlobalPIC =
       Info.Callee.isGlobal() && TM.isPositionIndependent();
