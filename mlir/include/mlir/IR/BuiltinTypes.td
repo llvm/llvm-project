@@ -22,7 +22,7 @@ include "mlir/IR/BuiltinDialect.td"
 
 // Base class for Builtin dialect types.
 class Builtin_Type<string name, string baseCppClass = "::mlir::Type">
-    : TypeDef<Builtin_Dialect, name, baseCppClass> {
+    : TypeDef<Builtin_Dialect, name, [], baseCppClass> {
   let mnemonic = ?;
 }
 
@@ -65,8 +65,7 @@ def Builtin_Complex : Builtin_Type<"Complex"> {
 //===----------------------------------------------------------------------===//
 
 // Base class for Builtin dialect float types.
-class Builtin_FloatType<string name> : TypeDef<Builtin_Dialect, name,
-                                               "::mlir::FloatType"> {
+class Builtin_FloatType<string name> : Builtin_Type<name, "::mlir::FloatType"> {
   let extraClassDeclaration = [{
     static }] # name # [{Type get(MLIRContext *context);
   }];

@@ -20,7 +20,7 @@ include "mlir/Dialect/PDL/IR/PDLDialect.td"
 //===----------------------------------------------------------------------===//
 
 class PDL_Type<string name, string typeMnemonic>
-    : TypeDef<PDL_Dialect, name, "::mlir::pdl::PDLType"> {
+    : TypeDef<PDL_Dialect, name, [], "::mlir::pdl::PDLType"> {
   let mnemonic = typeMnemonic;
 }
 
