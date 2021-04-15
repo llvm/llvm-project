@@ -8,6 +8,7 @@
 
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Dialect.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -45,6 +46,15 @@ AttrOrTypeDef::AttrOrTypeDef(const llvm::Record *def) : def(def) {
       }
       builders.emplace_back(builder);
     }
+  }
+
+  // Populate the traits.
+  if (auto *traitList = def->getValueAsListInit("traits")) {
+    SmallPtrSet<const llvm::Init *, 32> traitSet;
+    traits.reserve(traitSet.size());
+    for (auto *traitInit : *traitList)
+      if (traitSet.insert(traitInit).second)
+        traits.push_back(Trait::create(traitInit));
   }
 }
 
