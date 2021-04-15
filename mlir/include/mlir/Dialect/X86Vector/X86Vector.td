@@ -29,9 +29,11 @@ def X86Vector_Dialect : Dialect {
 // AVX512 op definitions
 //===----------------------------------------------------------------------===//
 
+// Operation that is part of the input dialect.
 class AVX512_Op<string mnemonic, list<OpTrait> traits = []> :
   Op<X86Vector_Dialect, "avx512." # mnemonic, traits> {}
 
+// Intrinsic operation used during lowering to LLVM IR.
 class AVX512_IntrOp<string mnemonic, int numResults, list<OpTrait> traits = []> :
   LLVM_IntrOpBase<X86Vector_Dialect, "avx512.intr." # mnemonic,
                   "x86_avx512_" # !subst(".", "_", mnemonic),
@@ -46,6 +48,7 @@ class AVX512_IntrOverloadedOp<string mnemonic,
                   /*list<int> overloadedResults=*/[0],
                   /*list<int> overloadedOperands=*/[],
                   traits, /*numResults=*/1>;
+
 //----------------------------------------------------------------------------//
 // MaskCompressOp
 //----------------------------------------------------------------------------//
@@ -271,9 +274,17 @@ def Vp2IntersectQIntrOp : AVX512_IntrOp<"vp2intersect.q.512", 2, [
 // AVX op definitions
 //===----------------------------------------------------------------------===//
 
+// Operation that is part of the input dialect.
 class AVX_Op<string mnemonic, list<OpTrait> traits = []> :
   Op<X86Vector_Dialect, "avx." # mnemonic, traits> {}
 
+// Operation that may be part of the input dialect, but whose
+// form is somewhere between the user view of the operation
+// and the actual lower level intrinsic in LLVM IR.
+class AVX_LowOp<string mnemonic, list<OpTrait> traits = []> :
+  Op<X86Vector_Dialect, "avx.intr." # mnemonic, traits> {}
+
+// Intrinsic operation used during lowering to LLVM IR.
 class AVX_IntrOp<string mnemonic, int numResults, list<OpTrait> traits = []> :
   LLVM_IntrOpBase<X86Vector_Dialect, "avx.intr." # mnemonic,
                   "x86_avx_" # !subst(".", "_", mnemonic),
@@ -293,6 +304,41 @@ def RsqrtOp : AVX_Op<"rsqrt", [NoSideEffect, SameOperandsAndResultType]> {
 def RsqrtIntrOp : AVX_IntrOp<"rsqrt.ps.256", 1, [NoSideEffect,
   SameOperandsAndResultType]> {
   let arguments = (ins VectorOfLengthAndType<[8], [F32]>:$a);
+}
+
+//----------------------------------------------------------------------------//
+// AVX Dot
+//----------------------------------------------------------------------------//
+
+def DotOp : AVX_LowOp<"dot", [NoSideEffect, SameOperandsAndResultType]> {
+  let summary = "Dot";
+  let description = [{
+    Computes the 4-way dot products of the lower and higher parts of the source
+    vectors and broadcasts the two results to the lower and higher elements of
+    the destination vector, respectively. Adding one element of the lower part
+    to one element of the higher part in the destination vector yields the full
+    dot product of the two source vectors.
+
+    Example:
+
+    ```mlir
+    %0 = x86vector.avx.intr.dot %a, %b : vector<8xf32>
+    %1 = vector.extractelement %0[%i0 : i32]: vector<8xf32>
+    %2 = vector.extractelement %0[%i4 : i32]: vector<8xf32>
+    %d = addf %1, %2 : f32
+    ```
+  }];
+  let arguments = (ins VectorOfLengthAndType<[8], [F32]>:$a,
+                       VectorOfLengthAndType<[8], [F32]>:$b);
+  let results = (outs VectorOfLengthAndType<[8], [F32]>:$res);
+  let assemblyFormat = "$a `,` $b attr-dict `:` type($res)";
+}
+
+def DotIntrOp : AVX_IntrOp<"dp.ps.256", 1, [NoSideEffect,
+    AllTypesMatch<["a", "b", "res"]>]> {
+  let arguments = (ins VectorOfLengthAndType<[8], [F32]>:$a,
+                       VectorOfLengthAndType<[8], [F32]>:$b, I8:$c);
+  let results = (outs VectorOfLengthAndType<[8], [F32]>:$res);
 }
 
 #endif // X86VECTOR_OPS
