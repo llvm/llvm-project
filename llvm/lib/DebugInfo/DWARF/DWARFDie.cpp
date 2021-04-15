@@ -635,14 +635,14 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
         for (const DWARFAttribute &AttrValue : attributes())
           dumpAttribute(OS, *this, AttrValue, Indent, DumpOpts);
 
-        DWARFDie child = getFirstChild();
-        if (DumpOpts.ShowChildren && DumpOpts.ChildRecurseDepth > 0 && child) {
+        if (DumpOpts.ShowChildren && DumpOpts.ChildRecurseDepth > 0) {
+          DWARFDie Child = getFirstChild();
           DumpOpts.ChildRecurseDepth--;
           DIDumpOptions ChildDumpOpts = DumpOpts;
           ChildDumpOpts.ShowParents = false;
-          while (child) {
-            child.dump(OS, Indent + 2, ChildDumpOpts);
-            child = child.getSibling();
+          while (Child) {
+            Child.dump(OS, Indent + 2, ChildDumpOpts);
+            Child = Child.getSibling();
           }
         }
       } else {
