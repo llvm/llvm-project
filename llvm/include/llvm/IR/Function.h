@@ -899,7 +899,7 @@ public:
   ///
   bool hasAddressTaken(const User ** = nullptr,
                        bool IgnoreCallbackUses = false,
-                       bool IgnoreAssumeLikeCalls = false,
+                       bool IgnoreAssumeLikeCalls = true,
                        bool IngoreLLVMUsed = false) const;
 
   /// isDefTriviallyDead - Return true if it is trivially safe to remove
