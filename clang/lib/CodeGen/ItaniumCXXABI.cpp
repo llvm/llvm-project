@@ -3249,13 +3249,11 @@ ItaniumCXXABI::getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD) {
                                          getThisAddress(CGF), ThunkTy);
   llvm::CallBase *CallOrInvoke;
   CGF.EmitCall(CallInfo, Callee, ReturnValueSlot(), CallArgs, &CallOrInvoke,
-               SourceLocation(), true);
-  auto *Call = cast<llvm::CallInst>(CallOrInvoke);
-  Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
-  if (Call->getType()->isVoidTy())
+               /*IsMustTail=*/true, SourceLocation(), true);
+  if (CallOrInvoke->getType()->isVoidTy())
     CGF.Builder.CreateRetVoid();
   else
-    CGF.Builder.CreateRet(Call);
+    CGF.Builder.CreateRet(CallOrInvoke);
 
   // Finish the function to maintain CodeGenFunction invariants.
   // FIXME: Don't emit unreachable code.
