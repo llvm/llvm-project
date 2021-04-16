@@ -76,7 +76,7 @@ static constexpr uint32_t stubCode[] = {
 };
 
 void ARM64::writeStub(uint8_t *buf8, const Symbol &sym) const {
-  ::writeStub<LP64, stubCode>(buf8, sym);
+  ::writeStub<LP64>(buf8, stubCode, sym);
 }
 
 static constexpr uint32_t stubHelperHeaderCode[] = {
@@ -89,7 +89,7 @@ static constexpr uint32_t stubHelperHeaderCode[] = {
 };
 
 void ARM64::writeStubHelperHeader(uint8_t *buf8) const {
-  ::writeStubHelperHeader<LP64, stubHelperHeaderCode>(buf8);
+  ::writeStubHelperHeader<LP64>(buf8, stubHelperHeaderCode);
 }
 
 static constexpr uint32_t stubHelperEntryCode[] = {
@@ -100,7 +100,7 @@ static constexpr uint32_t stubHelperEntryCode[] = {
 
 void ARM64::writeStubHelperEntry(uint8_t *buf8, const DylibSymbol &sym,
                                  uint64_t entryVA) const {
-  ::writeStubHelperEntry<stubHelperEntryCode>(buf8, sym, entryVA);
+  ::writeStubHelperEntry(buf8, stubHelperEntryCode, sym, entryVA);
 }
 
 ARM64::ARM64() : ARM64Common(LP64()) {
