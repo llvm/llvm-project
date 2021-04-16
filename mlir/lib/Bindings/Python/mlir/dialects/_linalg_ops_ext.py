@@ -5,6 +5,47 @@
 from typing import Optional, Sequence, Union
 from ..ir import *
 from ._ods_common import get_default_loc_context
+# TODO: resolve name collision for Linalg functionality that is injected inside
+# the _mlir.dialects.linalg directly via pybind.
+from _mlir.dialects.linalg import fill_builtin_region
+
+
+def isa(cls : Type, ty : Type):
+  try:
+    cls(ty)
+    return True
+  except ValueError:
+    return False
+
+
+class FillOp:
+  """Extends the linalg.fill op."""
+
+  def __init__(self,
+               output: Value,
+               value: Value,
+               *,
+               loc=None,
+               ip=None):
+    results = []
+    if isa(RankedTensorType, output.type):
+      results = [output.type]
+    op = self.build_generic(results=results,
+                            operands=[output, value],
+                            attributes=None,
+                            loc=loc,
+                            ip=ip)
+    OpView.__init__(self, op)
+    linalgDialect = Context.current.get_dialect_descriptor("linalg")
+    fill_builtin_region(linalgDialect, self.operation, [value])
+    # TODO: self.result is None. When len(results) == 1 we expect it to be
+    # results[0] as per _linalg_ops_gen.py. This seems like an orthogonal bug
+    # in the generator of _linalg_ops_gen.py where we have:
+    # ```
+    # def result(self):
+    #   return self.operation.results[0] \
+    #     if len(self.operation.results) > 1 else None
+    # ```
 
 
 class InitTensorOp:
