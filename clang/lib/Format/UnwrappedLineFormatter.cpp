@@ -1254,15 +1254,14 @@ void UnwrappedLineFormatter::formatFirstToken(
   if (PreviousLine && RootToken.isAccessSpecifier()) {
     switch (Style.EmptyLineBeforeAccessModifier) {
     case FormatStyle::ELBAMS_Never:
-      if (RootToken.NewlinesBefore > 1)
+      if (Newlines > 1)
         Newlines = 1;
       break;
     case FormatStyle::ELBAMS_Leave:
       Newlines = std::max(RootToken.NewlinesBefore, 1u);
       break;
     case FormatStyle::ELBAMS_LogicalBlock:
-      if (PreviousLine->Last->isOneOf(tok::semi, tok::r_brace) &&
-          RootToken.NewlinesBefore <= 1)
+      if (PreviousLine->Last->isOneOf(tok::semi, tok::r_brace) && Newlines <= 1)
         Newlines = 2;
       if (PreviousLine->First->isAccessSpecifier())
         Newlines = 1; // Previous is an access modifier remove all new lines.
@@ -1273,8 +1272,7 @@ void UnwrappedLineFormatter::formatFirstToken(
         previousToken = PreviousLine->Last->getPreviousNonComment();
       else
         previousToken = PreviousLine->Last;
-      if ((!previousToken || !previousToken->is(tok::l_brace)) &&
-          RootToken.NewlinesBefore <= 1)
+      if ((!previousToken || !previousToken->is(tok::l_brace)) && Newlines <= 1)
         Newlines = 2;
     } break;
     }
