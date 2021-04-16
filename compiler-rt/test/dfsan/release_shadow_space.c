@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
       after_mmap_and_set_label2, after_munmap);
 
   const size_t mmap_cost_kb = map_size >> 10;
-  const size_t mmap_shadow_cost_kb = 2 * mmap_cost_kb;
+  const size_t mmap_shadow_cost_kb = sizeof(dfsan_label) * mmap_cost_kb;
   assert(after_mmap >= before + mmap_cost_kb);
   assert(after_mmap_and_set_label >= after_mmap + mmap_shadow_cost_kb);
   assert(after_mmap_and_set_label2 >= before + mmap_cost_kb + mmap_shadow_cost_kb);
