@@ -1731,6 +1731,10 @@ public:
     return Attrs.getParamAlignment(ArgNo);
   }
 
+  MaybeAlign getParamStackAlign(unsigned ArgNo) const {
+    return Attrs.getParamStackAlignment(ArgNo);
+  }
+
   /// Extract the byval type for a call or parameter.
   Type *getParamByValType(unsigned ArgNo) const {
     Type *Ty = Attrs.getParamByValType(ArgNo);

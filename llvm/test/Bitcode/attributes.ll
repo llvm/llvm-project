@@ -422,12 +422,6 @@ define void @f71() hot
   ret void
 }
 
-; CHECK: define void @f72(i8* swiftasync %0)
-define void @f72(i8* swiftasync %0)
-{
-  ret void;
-}
-
 ; CHECK: define void @f72() #45
 define void @f72() vscale_range(8)
 {
@@ -451,6 +445,12 @@ define void @f74() vscale_range(1,0)
 define void @f75() vscale_range(0,0)
 {
   ret void
+}
+
+; CHECK: define void @f76(i8* swiftasync %0)
+define void @f76(i8* swiftasync %0)
+{
+  ret void;
 }
 
 ; CHECK: attributes #0 = { noreturn }
