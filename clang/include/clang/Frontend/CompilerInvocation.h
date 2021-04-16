@@ -262,7 +262,8 @@ private:
   /// Generate command line options from LangOptions.
   static void GenerateLangArgs(const LangOptions &Opts,
                                SmallVectorImpl<const char *> &Args,
-                               StringAllocator SA, const llvm::Triple &T);
+                               StringAllocator SA, const llvm::Triple &T,
+                               InputKind IK);
 
   /// Parse command line options that map to CodeGenOptions.
   static bool ParseCodeGenArgs(CodeGenOptions &Opts, llvm::opt::ArgList &Args,
