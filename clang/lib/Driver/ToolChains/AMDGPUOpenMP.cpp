@@ -10,6 +10,7 @@
 #include "AMDGPU.h"
 #include "CommonArgs.h"
 #include "InputInfo.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -145,10 +146,19 @@ void AMDGCN::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
                                         const InputInfoList &Inputs,
                                         const ArgList &Args,
                                         const char *LinkingOutput) const {
+  const ToolChain &TC = getToolChain();
   assert(getToolChain().getTriple().isAMDGCN() && "Unsupported target");
 
+  const toolchains::AMDGPUOpenMPToolChain &AMDGPUOpenMPTC =
+      static_cast<const toolchains::AMDGPUOpenMPToolChain &>(TC);
   StringRef GPUArch = Args.getLastArgValue(options::OPT_march_EQ);
-  assert(GPUArch.startswith("gfx") && "Unsupported sub arch");
+  if (GPUArch.empty()) {
+    GPUArch = AMDGPUOpenMPTC.getSystemGPUArch(Args);
+  }
+  if (GPUArch.empty()) {
+    TC.getDriver().Diag(diag::err_drv_undetermined_amdgpu_arch);
+    return;
+  }
 
   // Prefix for temporary file name.
   std::string Prefix;
@@ -187,7 +197,16 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
 
   StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
-  assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
+  if (GpuArch.empty()) {
+    // in case no GPU arch is passed via -march, then try to detect
+    // the system gpu
+    GpuArch = getSystemGPUArch(DriverArgs);
+  }
+  if (GpuArch.empty()) {
+    getDriver().Diag(diag::err_drv_undetermined_amdgpu_arch);
+    return;
+  }
+
   assert(DeviceOffloadingKind == Action::OFK_OpenMP &&
          "Only OpenMP offloading kinds are supported.");
 

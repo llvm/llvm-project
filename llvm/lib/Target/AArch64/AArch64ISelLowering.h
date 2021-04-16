@@ -1027,6 +1027,8 @@ private:
   unsigned getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
     if (ConstraintCode == "Q")
       return InlineAsm::Constraint_Q;
+    if (ConstraintCode == "o")
+      return InlineAsm::Constraint_o;
     // FIXME: clang has code for 'Ump', 'Utf', 'Usa', and 'Ush' but these are
     //        followed by llvm_unreachable so we'll leave them unimplemented in
     //        the backend for now.
