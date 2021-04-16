@@ -35,8 +35,3 @@ set(LLVM_TARGET_DEFINITIONS ROCDLOps.td)
 mlir_tablegen(ROCDLConversions.inc -gen-llvmir-conversions)
 add_public_tablegen_target(MLIRROCDLConversionsIncGen)
 
-add_mlir_dialect(LLVMArmSVE llvm_arm_sve LLVMArmSVE)
-add_mlir_doc(LLVMArmSVE LLVMArmSve Dialects/ -gen-dialect-doc)
-set(LLVM_TARGET_DEFINITIONS LLVMArmSVE.td)
-mlir_tablegen(LLVMArmSVEConversions.inc -gen-llvmir-conversions)
-add_public_tablegen_target(MLIRLLVMArmSVEConversionsIncGen)

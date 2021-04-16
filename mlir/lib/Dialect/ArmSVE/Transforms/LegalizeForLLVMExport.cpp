@@ -1,4 +1,4 @@
-//===- ArmSVEToLLVM.cpp - Convert ArmSVE to the LLVM dialect --------------===//
+//===- LegalizeForLLVMExport.cpp - Prepare ArmSVE for LLVM translation ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,34 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/ArmSVEToLLVM/ArmSVEToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMArmSVEDialect.h"
+#include "mlir/Dialect/ArmSVE/Transforms.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 
 using namespace mlir;
 using namespace mlir::arm_sve;
-using namespace mlir::vector;
-
-using SdotOpLowering =
-    OneToOneConvertToLLVMPattern<SdotOp, LLVM::aarch64_arm_sve_sdot>;
-
-using SmmlaOpLowering =
-    OneToOneConvertToLLVMPattern<SmmlaOp, LLVM::aarch64_arm_sve_smmla>;
-
-using UdotOpLowering =
-    OneToOneConvertToLLVMPattern<UdotOp, LLVM::aarch64_arm_sve_udot>;
-
-using UmmlaOpLowering =
-    OneToOneConvertToLLVMPattern<UmmlaOp, LLVM::aarch64_arm_sve_ummla>;
-
-using VectorScaleOpLowering =
-    OneToOneConvertToLLVMPattern<VectorScaleOp, LLVM::vector_scale>;
 
 // Extract an LLVM IR type from the LLVM IR dialect type.
 static Type unwrap(Type type) {
@@ -95,9 +77,19 @@ static Optional<Value> addUnrealizedCast(OpBuilder &builder,
       .getResult(0);
 }
 
+using SdotOpLowering = OneToOneConvertToLLVMPattern<SdotOp, SdotIntrOp>;
+using SmmlaOpLowering = OneToOneConvertToLLVMPattern<SmmlaOp, SmmlaIntrOp>;
+using UdotOpLowering = OneToOneConvertToLLVMPattern<UdotOp, UdotIntrOp>;
+using UmmlaOpLowering = OneToOneConvertToLLVMPattern<UmmlaOp, UmmlaIntrOp>;
+using VectorScaleOpLowering =
+    OneToOneConvertToLLVMPattern<VectorScaleOp, VectorScaleIntrOp>;
+
 /// Populate the given list with patterns that convert from ArmSVE to LLVM.
-void mlir::populateArmSVEToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                                  RewritePatternSet &patterns) {
+void mlir::populateArmSVELegalizeForLLVMExportPatterns(
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+  // Populate conversion patterns
+  // Remove any ArmSVE-specific types from function signatures and results.
+  populateFuncOpTypeConversionPattern(patterns, converter);
   converter.addConversion([&converter](ScalableVectorType svType) {
     return convertScalableVectorTypeToLLVM(svType, converter);
   });
@@ -105,13 +97,42 @@ void mlir::populateArmSVEToLLVMConversionPatterns(LLVMTypeConverter &converter,
 
   // clang-format off
   patterns.add<ForwardOperands<CallOp>,
-                  ForwardOperands<CallIndirectOp>,
-                  ForwardOperands<ReturnOp>>(converter,
-                                             &converter.getContext());
+               ForwardOperands<CallIndirectOp>,
+               ForwardOperands<ReturnOp>>(converter,
+                                          &converter.getContext());
   patterns.add<SdotOpLowering,
-                  SmmlaOpLowering,
-                  UdotOpLowering,
-                  UmmlaOpLowering,
-                  VectorScaleOpLowering>(converter);
+               SmmlaOpLowering,
+               UdotOpLowering,
+               UmmlaOpLowering,
+               VectorScaleOpLowering>(converter);
   // clang-format on
+}
+
+void mlir::configureArmSVELegalizeForExportTarget(
+    LLVMConversionTarget &target) {
+  target.addLegalOp<SdotIntrOp>();
+  target.addIllegalOp<SdotOp>();
+  target.addLegalOp<SmmlaIntrOp>();
+  target.addIllegalOp<SmmlaOp>();
+  target.addLegalOp<UdotIntrOp>();
+  target.addIllegalOp<UdotOp>();
+  target.addLegalOp<UmmlaIntrOp>();
+  target.addIllegalOp<UmmlaOp>();
+  target.addLegalOp<VectorScaleIntrOp>();
+  target.addIllegalOp<VectorScaleOp>();
+  auto hasScalableVectorType = [](TypeRange types) {
+    for (Type type : types)
+      if (type.isa<arm_sve::ScalableVectorType>())
+        return true;
+    return false;
+  };
+  target.addDynamicallyLegalOp<FuncOp>([hasScalableVectorType](FuncOp op) {
+    return !hasScalableVectorType(op.getType().getInputs()) &&
+           !hasScalableVectorType(op.getType().getResults());
+  });
+  target.addDynamicallyLegalOp<CallOp, CallIndirectOp, ReturnOp>(
+      [hasScalableVectorType](Operation *op) {
+        return !hasScalableVectorType(op->getOperandTypes()) &&
+               !hasScalableVectorType(op->getResultTypes());
+      });
 }
