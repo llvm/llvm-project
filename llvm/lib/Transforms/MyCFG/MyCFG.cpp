@@ -10,6 +10,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/BreadthFirstIterator.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -17,14 +18,11 @@
 #include "llvm/Analysis/HeatUtils.h"
 
 using namespace llvm;
-PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
-  if (F.getName() != "main") {
-    return PreservedAnalyses::all();
-  }
 
+void traverse(Function &F) {
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in df_iterator:\n";
-  for (df_iterator<BasicBlock *> iterator = df_begin(&F.getEntryBlock()),
+  for (auto iterator = df_begin(&F.getEntryBlock()),
            IE = df_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
     outs() << *iterator << "\n";
@@ -32,11 +30,23 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
       outs() << instruction << "\n";
     }
   }
-
   outs() << "\n\n";
+
+  outs() << "===============================================\n";
+  outs() << "Basic blocks of " << F.getName() << " in idf_iterator:\n";
+  for (auto iterator = idf_begin(&F.getEntryBlock()),
+           IE = idf_end(&F.getEntryBlock());
+       iterator != IE; ++iterator) {
+    outs() << *iterator << "\n";
+    for (auto &instruction : **iterator) {
+      outs() << instruction << "\n";
+    }
+  }
+  outs() << "\n\n";
+
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in bf_iterator:\n";
-  for (bf_iterator<BasicBlock *> iterator = bf_begin(&F.getEntryBlock()),
+  for (auto iterator = bf_begin(&F.getEntryBlock()),
            IE = bf_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
     outs() << *iterator << "\n";
@@ -48,7 +58,7 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
 
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in po_iterator:\n";
-  for (po_iterator<BasicBlock *> iterator = po_begin(&F.getEntryBlock()),
+  for (auto iterator = po_begin(&F.getEntryBlock()),
            IE = po_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
     outs() << *iterator << "\n";
@@ -60,8 +70,7 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
 
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in pred_iterator:\n";
-  for (auto iterator = pred_begin(&F.getEntryBlock()),
-           IE = pred_end(&F.getEntryBlock());
+  for (auto iterator = pred_begin(&F.getEntryBlock()), IE = pred_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
     outs() << *iterator << "\n";
     for (auto &instruction : **iterator) {
@@ -81,43 +90,39 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
     }
   }
   outs() << "\n\n";
+}
 
-  // Use LLVM's Strongly Connected Components (SCCs) iterator to produce
-  // a reverse topological sort of SCCs.
-  outs() << "===============================================\n";
-  outs() << "SCCs for " << F.getName() << " in post-order:\n";
-  for (scc_iterator<Function *> I = scc_begin(&F), IE = scc_end(&F); I != IE;
-       ++I) {
-    // Obtain the vector of BBs in this SCC and print it out.
-    const std::vector<BasicBlock *> &SCCBBs = *I;
-    outs() << "  SCC: ";
-    for (std::vector<BasicBlock *>::const_iterator BBI = SCCBBs.begin(),
-             BBIE = SCCBBs.end();
-         BBI != BBIE; ++BBI) {
-      outs() << (*BBI) << "  ";
-      for (auto &ii: **BBI) {
-        outs() << "Instruction in this ssc post order: " << ii << "\n";
-      }
-    }
-    outs() << "\n";
-  }
-
-  outs() << "===============================================\n";
-  outs() << "===============================================\n";
-  outs() << "Instruction count: " << F.getInstructionCount() << "\n";
-
+PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
+  outs() << "Function '" << F.getName() << "'\n";
+  bool isThreadStartCheckpoint = true;
   for (auto &bb : F) {
-    for (auto &ii: bb) {
-      outs() << "Instruction: " << ii << "\n";
-    }
-    auto *ti = bb.getTerminator();
-    outs() << "Terminating instruction: " << *ti << "\n";
-    for (unsigned I = 0, NSucc = ti->getNumSuccessors(); I < NSucc; ++I) {
-      BasicBlock *Succ = ti->getSuccessor(I);
-      for (auto &ii: *Succ) {
-        outs() << "Instruction in successor: " << ii << "\n";
+    outs() << "Basic Block '" << &bb << "' Instructions: '" << bb << "'\n";
+    bool isThreadEndCheckpoint = false;
+    bool isExitPointCheckpoint = false;
+    for (auto &i : bb) {
+      // if instruction is last in the block and has no more successor,
+      // then this will be thread end checkpoint
+      if (i.isTerminator()) {
+        if (i.getNumSuccessors() == 0) {
+          isThreadEndCheckpoint |= true;
+        }
+      }
+      // Check if instruction is calling a function
+      if (isa<CallInst>(i)) {
+        isExitPointCheckpoint |= true;
       }
     }
+    if (isThreadStartCheckpoint) {
+      outs() << "This basic block is thread start checkpoint\n";
+      isThreadStartCheckpoint = false;
+    }
+    if (isExitPointCheckpoint) {
+      outs() << "This basic block is an exit-point checkpoint\n";
+    }
+    if (isThreadEndCheckpoint) {
+      outs() << "This basic block is thread end checkpoint\n";
+    }
+    outs() << "\n\n";
   }
 
   return PreservedAnalyses::all();
