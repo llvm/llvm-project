@@ -4699,6 +4699,25 @@ the old mangled name and the new code will use the new mangled name with tags.
   }];
 }
 
+def BuiltinAliasDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This attribute is used in the implementation of the C intrinsics.
+It allows the C intrinsic functions to be declared using the names defined
+in target builtins, and still be recognized as clang builtins equivalent to the
+underlying name. For example, ``riscv_vector.h`` declares the function ``vadd``
+with ``__attribute__((clang_builtin_alias(__builtin_rvv_vadd_vv_i8m1)))``.
+This ensures that both functions are recognized as that clang builtin,
+and in the latter case, the choice of which builtin to identify the
+function as can be deferred until after overload resolution.
+
+This attribute can only be used to set up the aliases for certain ARM/RISC-V
+C intrinsic functions; it is intended for use only inside ``arm_*.h`` and
+``riscv_*.h`` and is not a general mechanism for declaring arbitrary aliases
+for clang builtin functions.
+  }];
+}
+
 def PreferredNameDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
@@ -5693,6 +5712,10 @@ This attribute can only be used to set up the aliases for certain Arm
 intrinsic functions; it is intended for use only inside ``arm_*.h``
 and is not a general mechanism for declaring arbitrary aliases for
 clang builtin functions.
+
+In order to avoid duplicating the attribute definitions for similar
+purpose for other architecture, there is a general form for the
+attribute `clang_builtin_alias`.
   }];
 }
 
