@@ -90,11 +90,13 @@ inline uint64_t pageBits(uint64_t address) {
   return address & pageMask;
 }
 
-template <class LP, const uint32_t stubCode[3]>
-inline void writeStub(uint8_t *buf8, const macho::Symbol &sym) {
+template <class LP>
+inline void writeStub(uint8_t *buf8, const uint32_t stubCode[3],
+                      const macho::Symbol &sym) {
   auto *buf32 = reinterpret_cast<uint32_t *>(buf8);
+  constexpr size_t stubCodeSize = 3 * sizeof(uint32_t);
   uint64_t pcPageBits =
-      pageBits(in.stubs->addr + sym.stubsIndex * sizeof(stubCode));
+      pageBits(in.stubs->addr + sym.stubsIndex * stubCodeSize);
   uint64_t lazyPointerVA =
       in.lazyPointers->addr + sym.stubsIndex * LP::wordSize;
   buf32[0] = encodePage21({&sym, "stub"}, stubCode[0],
@@ -103,8 +105,9 @@ inline void writeStub(uint8_t *buf8, const macho::Symbol &sym) {
   buf32[2] = stubCode[2];
 }
 
-template <class LP, const uint32_t stubHelperHeaderCode[6]>
-inline void writeStubHelperHeader(uint8_t *buf8) {
+template <class LP>
+inline void writeStubHelperHeader(uint8_t *buf8,
+                                  const uint32_t stubHelperHeaderCode[6]) {
   auto *buf32 = reinterpret_cast<uint32_t *>(buf8);
   auto pcPageBits = [](int i) {
     return pageBits(in.stubHelper->addr + i * sizeof(uint32_t));
@@ -123,9 +126,9 @@ inline void writeStubHelperHeader(uint8_t *buf8) {
   buf32[5] = stubHelperHeaderCode[5];
 }
 
-template <const uint32_t stubHelperEntryCode[3]>
-void writeStubHelperEntry(uint8_t *buf8, const DylibSymbol &sym,
-                          uint64_t entryVA) {
+inline void writeStubHelperEntry(uint8_t *buf8,
+                                 const uint32_t stubHelperEntryCode[3],
+                                 const DylibSymbol &sym, uint64_t entryVA) {
   auto *buf32 = reinterpret_cast<uint32_t *>(buf8);
   auto pcVA = [entryVA](int i) { return entryVA + i * sizeof(uint32_t); };
   uint64_t stubHelperHeaderVA = in.stubHelper->addr;
