@@ -40,6 +40,9 @@ struct iterator_traits<T*>
     typedef random_access_iterator_tag iterator_category;
 };
 
+template<dereferenceable T>
+  using iter_reference_t = decltype(*declval<T&>());
+
 template<class Category, class T, class Distance = ptrdiff_t,
          class Pointer = T*, class Reference = T&>
 struct iterator
@@ -429,7 +432,6 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__memory/addressof.h>
 #include <__memory/pointer_traits.h>
 #include <version>
-#include <concepts>
 
 #include <__debug>
 
@@ -440,6 +442,20 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
+
+template<class _Tp>
+using __with_reference = _Tp&;
+
+template<class _Tp>
+concept __referenceable = requires {
+  typename __with_reference<_Tp>;
+};
+
+template<class _Tp>
+concept __dereferenceable = requires(_Tp& __t) {
+  { *__t } -> __referenceable; // not required to be equality-preserving
+};
+
 // [incrementable.traits]
 template<class> struct incrementable_traits {};
 
@@ -520,6 +536,9 @@ requires __has_member_element_type<_Tp> &&
 struct indirectly_readable_traits<_Tp>
   : __cond_value_type<typename _Tp::value_type> {};
 
+// [iterator.traits]
+template<__dereferenceable _Tp>
+using iter_reference_t = decltype(*declval<_Tp&>());
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 
 template <class _Iter>
@@ -629,6 +648,71 @@ struct __iterator_traits_impl<_Iter, true>
     typedef typename _Iter::reference         reference;
     typedef typename _Iter::iterator_category iterator_category;
 };
+
+#if !defined(_LIBCPP_HAS_NO_RANGES)
+
+// The `cpp17-*-iterator` exposition-only concepts are easily confused with the Cpp17*Iterator tables,
+// so they've been banished to a namespace that makes it obvious they have a niche use-case.
+namespace __iterator_traits_detail {
+template<class _Ip>
+concept __cpp17_iterator =
+  requires(_Ip __i) {
+    {   *__i } -> __referenceable;
+    {  ++__i } -> same_as<_Ip&>;
+    { *__i++ } -> __referenceable;
+  } &&
+  copyable<_Ip>;
+
+template<class _Ip>
+concept __cpp17_input_iterator =
+  __cpp17_iterator<_Ip> &&
+  equality_comparable<_Ip> &&
+  requires(_Ip __i) {
+    typename incrementable_traits<_Ip>::difference_type;
+    typename indirectly_readable_traits<_Ip>::value_type;
+    typename common_reference_t<iter_reference_t<_Ip>&&,
+                                typename indirectly_readable_traits<_Ip>::value_type&>;
+    typename common_reference_t<decltype(*__i++)&&,
+                                typename indirectly_readable_traits<_Ip>::value_type&>;
+    requires signed_integral<typename incrementable_traits<_Ip>::difference_type>;
+  };
+
+template<class _Ip>
+concept __cpp17_forward_iterator =
+  __cpp17_input_iterator<_Ip> &&
+  constructible_from<_Ip> &&
+  is_lvalue_reference_v<iter_reference_t<_Ip>> &&
+  same_as<remove_cvref_t<iter_reference_t<_Ip>>,
+          typename indirectly_readable_traits<_Ip>::value_type> &&
+  requires(_Ip __i) {
+    {  __i++ } -> convertible_to<_Ip const&>;
+    { *__i++ } -> same_as<iter_reference_t<_Ip>>;
+  };
+
+template<class _Ip>
+concept __cpp17_bidirectional_iterator =
+  __cpp17_forward_iterator<_Ip> &&
+  requires(_Ip __i) {
+    {  --__i } -> same_as<_Ip&>;
+    {  __i-- } -> convertible_to<_Ip const&>;
+    { *__i-- } -> same_as<iter_reference_t<_Ip>>;
+  };
+
+template<class _Ip>
+concept __cpp17_random_access_iterator =
+  __cpp17_bidirectional_iterator<_Ip> and
+  totally_ordered<_Ip> and
+  requires(_Ip __i, typename incrementable_traits<_Ip>::difference_type __n) {
+    { __i += __n } -> same_as<_Ip&>;
+    { __i -= __n } -> same_as<_Ip&>;
+    { __i +  __n } -> same_as<_Ip>;
+    { __n +  __i } -> same_as<_Ip>;
+    { __i -  __n } -> same_as<_Ip>;
+    { __i -  __i } -> same_as<decltype(__n)>;
+    {  __i[__n]  } -> convertible_to<iter_reference_t<_Ip>>;
+  };
+} // namespace __iterator_traits_detail
+#endif // !defined(_LIBCPP_HAS_NO_RANGES)
 
 template <class _Iter, bool> struct __iterator_traits {};
 
