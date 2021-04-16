@@ -46,5 +46,3 @@ add_llvm_external_project(clang-tools-extra extra)
 add_clang_subdirectory(libclang)
 
 add_clang_subdirectory(clang-refactor-test)
-
-add_clang_subdirectory(amdgpu-arch)
