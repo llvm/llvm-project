@@ -354,3 +354,19 @@ bool mlir::isDisjointTransferSet(VectorTransferOpInterface transferA,
     return false;
   return isDisjointTransferIndices(transferA, transferB);
 }
+
+bool mlir::checkSameValueRAW(vector::TransferWriteOp defWrite,
+                             vector::TransferReadOp read) {
+  return !defWrite.hasOutOfBoundsDim() && !defWrite.mask() && !read.mask() &&
+         defWrite.indices() == read.indices() &&
+         defWrite.getVectorType() == read.getVectorType() &&
+         defWrite.permutation_map() == read.permutation_map();
+}
+
+bool mlir::checkSameValueWAW(vector::TransferWriteOp write,
+                             vector::TransferWriteOp priorWrite) {
+  return priorWrite.indices() == write.indices() &&
+         priorWrite.mask() == write.mask() &&
+         priorWrite.getVectorType() == write.getVectorType() &&
+         priorWrite.permutation_map() == write.permutation_map();
+}

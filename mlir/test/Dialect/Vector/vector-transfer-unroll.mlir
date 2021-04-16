@@ -112,11 +112,11 @@ func @transfer_write_unroll_tensor(%arg0 : tensor<4x4xf32>,
 //  CHECK-NEXT:   %[[VTW3:.*]] = vector.transfer_write %[[VTR3]], %[[VTW2]][%[[C2]], %[[C2]]] {{.*}} : vector<2x2xf32>, tensor<4x4xf32>
 //  CHECK-NEXT:   return %[[VTW3]] : tensor<4x4xf32>
 
-func @transfer_readwrite_unroll_tensor(%arg0 : tensor<4x4xf32>) ->
+func @transfer_readwrite_unroll_tensor(%arg0 : tensor<4x4xf32>, %arg1 : tensor<4x4xf32>) ->
   tensor<4x4xf32> {
   %c0 = constant 0 : index
   %cf0 = constant 0.0 : f32
   %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 : tensor<4x4xf32>, vector<4x4xf32>
-  %r = vector.transfer_write %0, %arg0[%c0, %c0] : vector<4x4xf32>, tensor<4x4xf32>
+  %r = vector.transfer_write %0, %arg1[%c0, %c0] : vector<4x4xf32>, tensor<4x4xf32>
   return %r: tensor<4x4xf32>
 }
