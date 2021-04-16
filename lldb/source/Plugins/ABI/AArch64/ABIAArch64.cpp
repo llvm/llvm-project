@@ -11,6 +11,7 @@
 #include "ABISysV_arm64.h"
 #include "Utility/ARM64_DWARF_Registers.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Target/Process.h"
 
 LLDB_PLUGIN_DEFINE(ABIAArch64)
 
@@ -22,6 +23,18 @@ void ABIAArch64::Initialize() {
 void ABIAArch64::Terminate() {
   ABISysV_arm64::Terminate();
   ABIMacOSX_arm64::Terminate();
+}
+
+lldb::addr_t ABIAArch64::FixCodeAddress(lldb::addr_t pc) {
+  if (lldb::ProcessSP process_sp = GetProcessSP())
+    return FixAddress(pc, process_sp->GetCodeAddressMask());
+  return pc;
+}
+
+lldb::addr_t ABIAArch64::FixDataAddress(lldb::addr_t pc) {
+  if (lldb::ProcessSP process_sp = GetProcessSP())
+    return FixAddress(pc, process_sp->GetDataAddressMask());
+  return pc;
 }
 
 std::pair<uint32_t, uint32_t>
