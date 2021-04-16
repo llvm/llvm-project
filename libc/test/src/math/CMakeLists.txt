@@ -82,6 +82,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fabs_test.cpp
+  HDRS
+    FAbsTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fabs
@@ -95,6 +97,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fabsf_test.cpp
+  HDRS
+    FAbsTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fabsf
@@ -108,6 +112,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fabsl_test.cpp
+  HDRS
+    FAbsTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fabsl
@@ -121,6 +127,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     trunc_test.cpp
+  HDRS
+    TruncTest.h
   DEPENDS
     libc.include.math
     libc.src.math.trunc
@@ -134,6 +142,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     truncf_test.cpp
+  HDRS
+    TruncTest.h
   DEPENDS
     libc.include.math
     libc.src.math.truncf
@@ -147,6 +157,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     truncl_test.cpp
+  HDRS
+    TruncTest.h
   DEPENDS
     libc.include.math
     libc.src.math.truncl
@@ -160,6 +172,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     ceil_test.cpp
+  HDRS
+    CeilTest.h
   DEPENDS
     libc.include.math
     libc.src.math.ceil
@@ -173,6 +187,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     ceilf_test.cpp
+  HDRS
+    CeilTest.h
   DEPENDS
     libc.include.math
     libc.src.math.ceilf
@@ -186,6 +202,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     ceill_test.cpp
+  HDRS
+    CeilTest.h
   DEPENDS
     libc.include.math
     libc.src.math.ceill
@@ -199,6 +217,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     floor_test.cpp
+  HDRS
+    FloorTest.h
   DEPENDS
     libc.include.math
     libc.src.math.floor
@@ -212,6 +232,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     floorf_test.cpp
+  HDRS
+    FloorTest.h
   DEPENDS
     libc.include.math
     libc.src.math.floorf
@@ -225,6 +247,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     floorl_test.cpp
+  HDRS
+    FloorTest.h
   DEPENDS
     libc.include.math
     libc.src.math.floorl
@@ -238,6 +262,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     round_test.cpp
+  HDRS
+    RoundTest.h
   DEPENDS
     libc.include.math
     libc.src.math.round
@@ -251,6 +277,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     roundf_test.cpp
+  HDRS
+    RoundTest.h
   DEPENDS
     libc.include.math
     libc.src.math.roundf
@@ -264,6 +292,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     roundl_test.cpp
+  HDRS
+    RoundTest.h
   DEPENDS
     libc.include.math
     libc.src.math.roundl
@@ -559,6 +589,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     copysign_test.cpp
+  HDRS
+    CopySignTest.h
   DEPENDS
     libc.include.math
     libc.src.math.copysign
@@ -571,6 +603,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     copysignf_test.cpp
+  HDRS
+    CopySignTest.h
   DEPENDS
     libc.include.math
     libc.src.math.copysignf
@@ -583,6 +617,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     copysignl_test.cpp
+  HDRS
+    CopySignTest.h
   DEPENDS
     libc.include.math
     libc.src.math.copysignl
@@ -832,6 +868,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fminf_test.cpp
+  HDRS
+    FMinTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fminf
@@ -844,6 +882,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fmin_test.cpp
+  HDRS
+    FMinTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fmin
@@ -856,6 +896,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fminl_test.cpp
+  HDRS
+    FMinTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fminl
@@ -868,6 +910,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fmaxf_test.cpp
+  HDRS
+    FMaxTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fmaxf
@@ -880,6 +924,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fmax_test.cpp
+  HDRS
+    FMaxTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fmax
@@ -892,6 +938,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fmaxl_test.cpp
+  HDRS
+    FMaxTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fmaxl
