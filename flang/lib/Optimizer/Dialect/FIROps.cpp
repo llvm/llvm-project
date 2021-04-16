@@ -1326,6 +1326,67 @@ static mlir::LogicalResult verify(fir::ResultOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// SaveResultOp
+//===----------------------------------------------------------------------===//
+
+static mlir::LogicalResult verify(fir::SaveResultOp op) {
+  auto resultType = op.value().getType();
+  if (resultType != fir::dyn_cast_ptrEleTy(op.memref().getType()))
+    return op.emitOpError("value type must match memory reference type");
+  if (fir::isa_unknown_size_box(resultType))
+    return op.emitOpError("cannot save !fir.box of unknown rank or type");
+
+  if (!resultType.isa<fir::BoxType, fir::SequenceType, fir::RecordType>())
+    return op.emitOpError(
+        "value operand must be a fir.box, fir.array or fir.type");
+
+  if (resultType.isa<fir::BoxType>()) {
+    if (op.shape() || !op.lenParams().empty())
+      return op.emitOpError(
+          "must not have shape or length operands if the value is a fir.box");
+    return mlir::success();
+  }
+
+  // fir.record or fir.array case.
+  unsigned shapeTyRank = 0;
+  if (auto shapeOp = op.shape()) {
+    auto shapeTy = shapeOp.getType();
+    if (auto s = shapeTy.dyn_cast<fir::ShapeType>())
+      shapeTyRank = s.getRank();
+    else
+      shapeTyRank = shapeTy.cast<fir::ShapeShiftType>().getRank();
+  }
+
+  auto eleTy = resultType;
+  if (auto seqTy = resultType.dyn_cast<fir::SequenceType>()) {
+    if (seqTy.getDimension() != shapeTyRank)
+      op.emitOpError("shape operand must be provided and have the value rank "
+                     "when the value is a fir.array");
+    eleTy = seqTy.getEleTy();
+  } else {
+    if (shapeTyRank != 0)
+      op.emitOpError(
+          "shape operand should only be provided if the value is a fir.array");
+  }
+
+  if (auto recTy = eleTy.dyn_cast<fir::RecordType>()) {
+    if (recTy.getNumLenParams() != op.lenParams().size())
+      op.emitOpError("length parameters number must match with the value type "
+                     "length parameters");
+  } else if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
+    if (op.lenParams().size() > 1)
+      op.emitOpError("no more than one length parameter must be provided for "
+                     "character value");
+  } else {
+    if (!op.lenParams().empty())
+      op.emitOpError(
+          "length parameters must not be provided for this value type");
+  }
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // SelectOp
 //===----------------------------------------------------------------------===//
 
