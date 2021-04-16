@@ -142,7 +142,7 @@ int main(int Argc, const char **Argv) {
   llvm::sys::fs::make_absolute(InputFile);
   Params.InputFilePath = InputFile;
   Params.Include = InputArgs.getAllArgValues(OPT_includepath);
-  Params.NoInclude = InputArgs.getAllArgValues(OPT_noinclude);
+  Params.NoInclude = InputArgs.hasArg(OPT_noinclude);
 
   if (InputArgs.hasArg(OPT_codepage)) {
     if (InputArgs.getLastArgValue(OPT_codepage)

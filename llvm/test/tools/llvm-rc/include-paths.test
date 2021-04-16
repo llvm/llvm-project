@@ -13,6 +13,16 @@
 ; RUN: llvm-rc /FO %t.nested-include.res /I %p/Inputs/nested -- %p/Inputs/deep-include.rc
 ; RUN: llvm-readobj %t.nested-include.res | FileCheck --check-prefix=FOUND %s
 
+; The include dir can be specified via the INCLUDE env var too.
+; RUN: rm -f %t.nested-include.res
+; RUN: env INCLUDE=%p/Inputs/nested llvm-rc /FO %t.nested-include.res -- %p/Inputs/deep-include.rc
+; RUN: llvm-readobj %t.nested-include.res | FileCheck --check-prefix=FOUND %s
+
+; Specifying the /X option should make it ignore the INCLUDE variable.
+; RUN: rm -f %t.nested-include.res
+; RUN: not env INCLUDE=%p/Inputs/nested llvm-rc /X /FO %t.nested-include.res -- %p/Inputs/deep-include.rc 2>&1 \
+; RUN:   | FileCheck --check-prefix=MISSING %s
+
 ; Otherwise, it should not find the bitmap.
 ; RUN: rm -f %t.nested-include.res
 ; RUN: not llvm-rc /FO %t.nested-include.res -- %p/Inputs/deep-include.rc 2>&1 \
