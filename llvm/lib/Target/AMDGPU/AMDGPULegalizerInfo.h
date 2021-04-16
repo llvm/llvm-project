@@ -105,10 +105,6 @@ public:
   void legalizeUDIV_UREM32Impl(MachineIRBuilder &B,
                                Register DstReg, Register Num, Register Den,
                                bool IsRem) const;
-  bool legalizeUDIV_UREM32(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B) const;
-  bool legalizeSDIV_SREM32(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B) const;
 
   void legalizeUDIV_UREM64Impl(MachineIRBuilder &B,
                                Register DstReg, Register Numer, Register Denom,
