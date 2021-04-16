@@ -385,12 +385,13 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
                        ? genControlValue(*control.step)
                        : builder.create<mlir::ConstantIndexOp>(loc, 1);
   auto genItemList = [&](const D &ioImpliedDo) {
+    Fortran::lower::StatementContext loopCtx;
     if constexpr (std::is_same_v<D, Fortran::parser::InputImpliedDo>)
       genInputItemList(converter, cookie, itemList, isFormatted, checkResult,
-                       ok, /*inLoop=*/true, stmtCtx);
+                       ok, /*inLoop=*/true, loopCtx);
     else
       genOutputItemList(converter, cookie, itemList, isFormatted, checkResult,
-                        ok, /*inLoop=*/true, stmtCtx);
+                        ok, /*inLoop=*/true, loopCtx);
   };
   if (!checkResult) {
     // No I/O call result checks - the loop is a fir.do_loop op.
@@ -1546,6 +1547,7 @@ genDataTransferStmt(Fortran::lower::AbstractConverter &converter,
     genOutputItemList(converter, cookie, stmt.items, isFormatted,
                       csi.hasTransferConditionSpec(), ok,
                       /*inLoop=*/false, stmtCtx);
+  stmtCtx.finalize();
 
   // Generate end statement call/s.
   builder.restoreInsertionPoint(insertPt);
