@@ -9177,6 +9177,48 @@ TEST_F(FormatTest, FormatsAccessModifiers) {
                "  int j;\n"
                "};\n",
                Style);
+
+  FormatStyle NoEmptyLines = getLLVMStyle();
+  NoEmptyLines.MaxEmptyLinesToKeep = 0;
+  verifyFormat("struct foo {\n"
+               "private:\n"
+               "  void f() {}\n"
+               "\n"
+               "private:\n"
+               "  int i;\n"
+               "\n"
+               "public:\n"
+               "protected:\n"
+               "  int j;\n"
+               "};\n",
+               NoEmptyLines);
+
+  NoEmptyLines.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_Never;
+  verifyFormat("struct foo {\n"
+               "private:\n"
+               "  void f() {}\n"
+               "private:\n"
+               "  int i;\n"
+               "public:\n"
+               "protected:\n"
+               "  int j;\n"
+               "};\n",
+               NoEmptyLines);
+
+  NoEmptyLines.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_Always;
+  verifyFormat("struct foo {\n"
+               "private:\n"
+               "  void f() {}\n"
+               "\n"
+               "private:\n"
+               "  int i;\n"
+               "\n"
+               "public:\n"
+               "\n"
+               "protected:\n"
+               "  int j;\n"
+               "};\n",
+               NoEmptyLines);
 }
 
 TEST_F(FormatTest, FormatsAfterAccessModifiers) {
@@ -9266,32 +9308,26 @@ TEST_F(FormatTest, FormatsAfterAccessModifiers) {
   // Leave tests rely on the code layout, test::messUp can not be used.
   Style.EmptyLineAfterAccessModifier = FormatStyle::ELAAMS_Leave;
   Style.MaxEmptyLinesToKeep = 0u;
-  EXPECT_EQ("struct foo {\n"
-            "private:\n"
-            "  void f() {}\n"
-            "private:\n"
-            "  int i;\n"
-            "protected:\n"
-            "  int j;\n"
-            "};\n",
-            format("struct foo {\n"
-                   "private:\n"
-                   "  void f() {}\n"
-                   "\n"
-                   "private:\n"
-                   "  int i;\n"
-                   "\n"
-                   "protected:\n"
-                   "  int j;\n"
-                   "};\n",
-                   Style));
+  verifyFormat("struct foo {\n"
+               "private:\n"
+               "  void f() {}\n"
+               "\n"
+               "private:\n"
+               "  int i;\n"
+               "\n"
+               "protected:\n"
+               "  int j;\n"
+               "};\n",
+               Style);
 
   // Check if MaxEmptyLinesToKeep is respected.
   EXPECT_EQ("struct foo {\n"
             "private:\n"
             "  void f() {}\n"
+            "\n"
             "private:\n"
             "  int i;\n"
+            "\n"
             "protected:\n"
             "  int j;\n"
             "};\n",
