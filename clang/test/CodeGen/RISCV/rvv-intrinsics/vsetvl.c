@@ -4,10 +4,7 @@
 // RUN:       | FileCheck --check-prefix=CHECK-RV32 %s
 // RUN: %clang_cc1 -triple riscv64 -target-feature +experimental-v -emit-llvm -o - %s \
 // RUN:       | FileCheck --check-prefix=CHECK-RV64 %s
-// RUN: %clang_cc1 -triple riscv64 -target-feature +m -target-feature +experimental-v \
-// RUN:   -Werror -Wall -o - %s -S >/dev/null 2>&1 | FileCheck --check-prefix=ASM --allow-empty %s
 
-// ASM-NOT: warning
 #include <riscv_vector.h>
 
 // CHECK-RV32-LABEL: @test_vsetvl_e8m1(

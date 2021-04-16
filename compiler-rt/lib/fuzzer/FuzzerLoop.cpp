@@ -414,19 +414,25 @@ void Fuzzer::RereadOutputCorpus(size_t MaxSize) {
   if (Options.OutputCorpus.empty() || !Options.ReloadIntervalSec)
     return;
   Vector<Unit> AdditionalCorpus;
-  ReadDirToVectorOfUnits(Options.OutputCorpus.c_str(), &AdditionalCorpus,
-                         &EpochOfLastReadOfOutputCorpus, MaxSize,
-                         /*ExitOnError*/ false);
+  Vector<std::string> AdditionalCorpusPaths;
+  ReadDirToVectorOfUnits(
+      Options.OutputCorpus.c_str(), &AdditionalCorpus,
+      &EpochOfLastReadOfOutputCorpus, MaxSize,
+      /*ExitOnError*/ false,
+      (Options.Verbosity >= 2 ? &AdditionalCorpusPaths : nullptr));
   if (Options.Verbosity >= 2)
     Printf("Reload: read %zd new units.\n", AdditionalCorpus.size());
   bool Reloaded = false;
-  for (auto &U : AdditionalCorpus) {
+  for (size_t i = 0; i != AdditionalCorpus.size(); ++i) {
+    auto &U = AdditionalCorpus[i];
     if (U.size() > MaxSize)
       U.resize(MaxSize);
     if (!Corpus.HasUnit(U)) {
       if (RunOne(U.data(), U.size())) {
         CheckExitOnSrcPosOrItem();
         Reloaded = true;
+        if (Options.Verbosity >= 2)
+          Printf("Reloaded %s\n", AdditionalCorpusPaths[i].c_str());
       }
     }
   }

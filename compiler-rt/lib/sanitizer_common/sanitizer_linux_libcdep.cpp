@@ -194,9 +194,7 @@ __attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
 // musl before 1.2.3 and FreeBSD as of 12.2 incorrectly set dlpi_tls_data to
 // the TLS initialization image
 // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=254774
-#if !SANITIZER_GO
-static int g_use_dlpi_tls_data;
-#endif
+__attribute__((unused)) static int g_use_dlpi_tls_data;
 
 #if SANITIZER_GLIBC && !SANITIZER_GO
 __attribute__((unused)) static uptr g_tls_size;
