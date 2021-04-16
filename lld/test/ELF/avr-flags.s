@@ -1,3 +1,5 @@
+; REQUIRES: avr
+
 ; RUN: llvm-mc -filetype=obj -triple=avr -mcpu=avr5 %s -o %t-v5
 ; RUN: llvm-mc -filetype=obj -triple=avr -mcpu=avrxmega3 %s -o %t-xmega3
 ; RUN: ld.lld %t-v5 -o %t-v5.out
