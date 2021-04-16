@@ -488,6 +488,18 @@ public:
   void writeHashes(uint8_t *buf) const;
 };
 
+class BitcodeBundleSection : public SyntheticSection {
+public:
+  BitcodeBundleSection();
+  uint64_t getSize() const override { return xarSize; }
+  void finalize() override;
+  void writeTo(uint8_t *buf) const override;
+
+private:
+  llvm::SmallString<261> xarPath;
+  uint64_t xarSize;
+};
+
 static_assert((CodeSignatureSection::blobHeadersSize % 8) == 0, "");
 static_assert((CodeSignatureSection::fixedHeadersSize % 8) == 0, "");
 

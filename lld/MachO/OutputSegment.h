@@ -24,6 +24,7 @@ constexpr const char linkEdit[] = "__LINKEDIT";
 constexpr const char dataConst[] = "__DATA_CONST";
 constexpr const char ld[] = "__LD"; // output only with -r
 constexpr const char dwarf[] = "__DWARF";
+constexpr const char llvm[] = "__LLVM";
 
 } // namespace segment_names
 
