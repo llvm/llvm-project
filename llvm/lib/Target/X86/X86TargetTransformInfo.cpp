@@ -3209,42 +3209,48 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     return TTI::TCC_Basic;
   }
 
-  // Handle non-power-of-two vectors such as <3 x float>
-  if (auto *VTy = dyn_cast<FixedVectorType>(Src)) {
-    unsigned NumElem = VTy->getNumElements();
-
-    // Handle a few common cases:
-    // <3 x float>
-    if (NumElem == 3 && VTy->getScalarSizeInBits() == 32)
-      // Cost = 64 bit store + extract + 32 bit store.
-      return 3;
-
-    // <3 x double>
-    if (NumElem == 3 && VTy->getScalarSizeInBits() == 64)
-      // Cost = 128 bit store + unpack + 64 bit store.
-      return 3;
-
-    // Assume that all other non-power-of-two numbers are scalarized.
-    if (!isPowerOf2_32(NumElem)) {
-      APInt DemandedElts = APInt::getAllOnesValue(NumElem);
-      InstructionCost Cost = BaseT::getMemoryOpCost(
-          Opcode, VTy->getScalarType(), Alignment, AddressSpace, CostKind);
-      int SplitCost = getScalarizationOverhead(VTy, DemandedElts,
-                                               Opcode == Instruction::Load,
-                                               Opcode == Instruction::Store);
-      return NumElem * Cost + SplitCost;
-    }
-  }
-
+  assert((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
+         "Invalid Opcode");
   // Type legalization can't handle structs
-  if (TLI->getValueType(DL, Src,  true) == MVT::Other)
+  if (TLI->getValueType(DL, Src, true) == MVT::Other)
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                   CostKind);
 
+  // Handle non-power-of-two vectors such as <3 x float> and <48 x i16>
+  if (auto *VTy = dyn_cast<FixedVectorType>(Src)) {
+    const unsigned NumElem = VTy->getNumElements();
+    if (!isPowerOf2_32(NumElem)) {
+      // Factorize NumElem into sum of power-of-two.
+      InstructionCost Cost = 0;
+      unsigned NumElemDone = 0;
+      for (unsigned NumElemLeft = NumElem, Factor;
+           Factor = PowerOf2Floor(NumElemLeft), NumElemLeft > 0;
+           NumElemLeft -= Factor) {
+        Type *SubTy = FixedVectorType::get(VTy->getScalarType(), Factor);
+        unsigned SubTyBytes = SubTy->getPrimitiveSizeInBits() / 8;
+
+        Cost +=
+            getMemoryOpCost(Opcode, SubTy, Alignment, AddressSpace, CostKind);
+
+        std::pair<int, MVT> LST = TLI->getTypeLegalizationCost(DL, SubTy);
+        if (!LST.second.isVector()) {
+          APInt DemandedElts =
+              APInt::getBitsSet(NumElem, NumElemDone, NumElemDone + Factor);
+          Cost += getScalarizationOverhead(VTy, DemandedElts,
+                                           Opcode == Instruction::Load,
+                                           Opcode == Instruction::Store);
+        }
+
+        NumElemDone += Factor;
+        Alignment = commonAlignment(Alignment.valueOrOne(), SubTyBytes);
+      }
+      assert(NumElemDone == NumElem && "Processed wrong element count?");
+      return Cost;
+    }
+  }
+
   // Legalize the type.
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
-  assert((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
-         "Invalid Opcode");
 
   // Each load/store unit costs 1.
   int Cost = LT.first * 1;
