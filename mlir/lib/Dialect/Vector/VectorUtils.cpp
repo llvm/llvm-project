@@ -25,8 +25,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 
-using llvm::SetVector;
-
 using namespace mlir;
 
 /// Return the number of elements of basis, `0` if empty.

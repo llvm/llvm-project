@@ -608,7 +608,7 @@ private:
 
   /// A list of IDs for all types forward-declared through OpTypeForwardPointer
   /// instructions.
-  llvm::SetVector<uint32_t> typeForwardPointerIDs;
+  SetVector<uint32_t> typeForwardPointerIDs;
 
   /// A list of all structs which have unresolved member types.
   SmallVector<DeferredStructTypeInfo, 0> deferredStructTypesInfos;

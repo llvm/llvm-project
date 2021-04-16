@@ -242,7 +242,7 @@ namespace detail {
 void connectPHINodes(Region &region, const ModuleTranslation &state);
 
 /// Get a topologically sorted list of blocks of the given region.
-llvm::SetVector<Block *> getTopologicallySortedBlocks(Region &region);
+SetVector<Block *> getTopologicallySortedBlocks(Region &region);
 
 /// Create an LLVM IR constant of `llvmType` from the MLIR attribute `attr`.
 /// This currently supports integer, floating point, splat and dense element

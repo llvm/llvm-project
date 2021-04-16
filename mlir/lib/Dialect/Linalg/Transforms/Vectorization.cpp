@@ -40,8 +40,7 @@ using llvm::dbgs;
 
 /// Return the unique instance of OpType in `block` if it is indeed unique.
 /// Return null if none or more than 1 instances exist.
-template <typename OpType>
-static OpType getSingleOpOfType(Block &block) {
+template <typename OpType> static OpType getSingleOpOfType(Block &block) {
   OpType res;
   block.walk([&](OpType op) {
     if (res) {
@@ -307,7 +306,7 @@ LogicalResult vectorizeAsLinalgGeneric(
   BlockAndValueMapping bvm;
   // 2. Values defined above the region can only be broadcast for now. Make them
   // map to themselves.
-  llvm::SetVector<Value> valuesSet;
+  SetVector<Value> valuesSet;
   mlir::getUsedValuesDefinedAbove(linalgOp->getRegion(0), valuesSet);
   bvm.map(valuesSet.getArrayRef(), valuesSet.getArrayRef());
 

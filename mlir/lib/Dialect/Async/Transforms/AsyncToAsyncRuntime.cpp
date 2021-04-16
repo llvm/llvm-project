@@ -182,8 +182,8 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   Location loc = execute.getLoc();
 
   // Collect all outlined function inputs.
-  llvm::SetVector<mlir::Value> functionInputs(execute.dependencies().begin(),
-                                              execute.dependencies().end());
+  SetVector<mlir::Value> functionInputs(execute.dependencies().begin(),
+                                        execute.dependencies().end());
   functionInputs.insert(execute.operands().begin(), execute.operands().end());
   getUsedValuesDefinedAbove(execute.body(), functionInputs);
 
