@@ -644,7 +644,7 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U, const char *Text) {
   if (!Options.PrintNEW)
     return;
   PrintStats(Text, "");
-  if (Options.Verbosity) {
+  if (Options.Verbosity >= 2) {
     Printf(" L: %zd/%zd ", U.size(), Corpus.MaxInputSize());
     MD.PrintMutationSequence(Options.Verbosity >= 2);
     Printf("\n");
