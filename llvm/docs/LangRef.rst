@@ -2680,8 +2680,8 @@ To be precise, a pointer is captured if one or more of the following conditions
 hold:
 
 1. The call stores any bit of the pointer carrying information into a place,
-and the stored bits can be read from the place by the caller after this call
-exits.
+   and the stored bits can be read from the place by the caller after this call
+   exits.
 
 .. code-block:: llvm
 
@@ -2708,8 +2708,8 @@ exits.
     }
 
 2. The call stores any bit of the pointer carrying information into a place,
-and the stored bits can be safely read from the place by another thread via
-synchronization.
+   and the stored bits can be safely read from the place by another thread via
+   synchronization.
 
 .. code-block:: llvm
 
@@ -2726,12 +2726,13 @@ synchronization.
 
 .. code-block:: llvm
 
-    @glb  = global i8 0
+    @glb = global i8 0
+
     define void @f(i8* %a) {
       %c = icmp eq i8* %a, @glb
-      br i1 %c, BB_EXIT, BB_CONTINUE ; escapes %a
+      br i1 %c, label %BB_EXIT, label %BB_CONTINUE ; escapes %a
     BB_EXIT:
-      call void exit()
+      call void @exit()
       unreachable
     BB_CONTINUE:
       ret void
