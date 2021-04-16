@@ -27,13 +27,19 @@ static const MCPhysReg O32IntRegs[4] = {Mips::A0, Mips::A1, Mips::A2, Mips::A3};
 static const MCPhysReg Mips64IntRegs[8] = {
     Mips::A0_64, Mips::A1_64, Mips::A2_64, Mips::A3_64,
     Mips::T0_64, Mips::T1_64, Mips::T2_64, Mips::T3_64};
-}
+
+static const MCPhysReg P32IntRegs[8] = {Mips::A0_NM, Mips::A1_NM, Mips::A2_NM,
+                                        Mips::A3_NM, Mips::A4_NM, Mips::A5_NM,
+                                        Mips::A6_NM, Mips::A7_NM};
+} // namespace
 
 ArrayRef<MCPhysReg> MipsABIInfo::GetByValArgRegs() const {
   if (IsO32())
     return makeArrayRef(O32IntRegs);
   if (IsN32() || IsN64())
     return makeArrayRef(Mips64IntRegs);
+  if (IsP32())
+    return makeArrayRef(P32IntRegs);
   llvm_unreachable("Unhandled ABI");
 }
 
@@ -42,6 +48,8 @@ ArrayRef<MCPhysReg> MipsABIInfo::GetVarArgRegs() const {
     return makeArrayRef(O32IntRegs);
   if (IsN32() || IsN64())
     return makeArrayRef(Mips64IntRegs);
+  if (IsP32())
+    return makeArrayRef(P32IntRegs);
   llvm_unreachable("Unhandled ABI");
 }
 
@@ -125,9 +133,7 @@ unsigned MipsABIInfo::GetEhDataReg(unsigned I) const {
   static const unsigned EhDataReg64[] = {
     Mips::A0_64, Mips::A1_64, Mips::A2_64, Mips::A3_64
   };
-  static const unsigned EhDataRegNM[] = {
-    Mips::A3_NM, Mips::A2_NM
-  };
+  static const unsigned EhDataRegNM[] = {Mips::A3_NM, Mips::A2_NM};
 
   return IsN64() ? EhDataReg64[I] : IsP32() ? EhDataRegNM[I] : EhDataReg[I];
 }
