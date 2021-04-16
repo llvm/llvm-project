@@ -558,8 +558,8 @@ bool llvm::sinkRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
     for (BasicBlock::iterator II = BB->end(); II != BB->begin();) {
       Instruction &I = *--II;
 
-      // If the instruction is dead, we would try to sink it because it isn't
-      // used in the loop, instead, just delete it.
+      // The instruction is not used in the loop if it is dead.  In this case,
+      // we just delete it instead of sinking it.
       if (isInstructionTriviallyDead(&I, TLI)) {
         LLVM_DEBUG(dbgs() << "LICM deleting dead inst: " << I << '\n');
         salvageKnowledge(&I);
@@ -1126,7 +1126,7 @@ bool isHoistableAndSinkableInst(Instruction &I) {
           isa<InsertValueInst>(I) || isa<FreezeInst>(I));
 }
 /// Return true if all of the alias sets within this AST are known not to
-/// contain a Mod, or if MSSA knows thare are no MemoryDefs in the loop.
+/// contain a Mod, or if MSSA knows there are no MemoryDefs in the loop.
 bool isReadOnly(AliasSetTracker *CurAST, const MemorySSAUpdater *MSSAU,
                 const Loop *L) {
   if (CurAST) {
@@ -1355,7 +1355,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
               }
               // Any call, while it may not be clobbering SI, it may be a use.
               if (auto *CI = dyn_cast<CallInst>(MD->getMemoryInst())) {
-                // Check if the call may read from the memory locattion written
+                // Check if the call may read from the memory location written
                 // to by SI. Check CI's attributes and arguments; the number of
                 // such checks performed is limited above by NoOfMemAccTooLarge.
                 ModRefInfo MRI = AA->getModRefInfo(CI, MemoryLocation::get(SI));
@@ -2097,7 +2097,7 @@ bool llvm::promoteLoopAccessesToScalars(
         // Note that proving a load safe to speculate requires proving
         // sufficient alignment at the target location.  Proving it guaranteed
         // to execute does as well.  Thus we can increase our guaranteed
-        // alignment as well. 
+        // alignment as well.
         if (!DereferenceableInPH || (InstAlignment > Alignment))
           if (isSafeToExecuteUnconditionally(*Load, DT, TLI, CurLoop,
                                              SafetyInfo, ORE,
