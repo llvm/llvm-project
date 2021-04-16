@@ -106,6 +106,10 @@ void populateElementwiseOpsFusionPatterns(
     RewritePatternSet &patterns,
     LinalgElementwiseFusionOptions options = LinalgElementwiseFusionOptions());
 
+/// Patterns to push reshape op towards the end of the graph in order to expose
+/// more fusion opportunities.
+void populatePushReshapeOpsPatterns(RewritePatternSet &patterns);
+
 /// Performs standalone tiling of a single LinalgOp by `tileSizes`.
 /// and permute the loop nest according to `interchangeVector`
 /// The permutation is expressed as a list of integers that specify
