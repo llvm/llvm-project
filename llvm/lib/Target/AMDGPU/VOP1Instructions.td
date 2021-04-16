@@ -525,9 +525,6 @@ class VOP1_DPP8<bits<8> op, VOP1_Pseudo ps, VOPProfile p = ps.Pfl> :
   let Inst{16-9}  = op;
   let Inst{24-17} = !if(p.EmitDst, vdst{7-0}, 0);
   let Inst{31-25} = 0x3f;
-
-  let AssemblerPredicate = HasDPP8;
-  let SubtargetPredicate = HasDPP8;
 }
 
 //===----------------------------------------------------------------------===//
