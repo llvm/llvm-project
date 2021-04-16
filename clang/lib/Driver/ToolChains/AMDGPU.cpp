@@ -12,14 +12,9 @@
 #include "clang/Basic/TargetID.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/LineIterator.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
-
-#define AMDGPU_ARCH_PROGRAM_NAME "amdgpu-arch"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -718,57 +713,6 @@ void AMDGPUToolChain::checkTargetID(
   if (!OptionalGpuArch) {
     getDriver().Diag(clang::diag::err_drv_bad_target_id) << TargetID;
   }
-}
-
-llvm::SmallVector<SmallString<8>, 1>
-AMDGPUToolChain::detectSystemGPUs(const ArgList &Args) const {
-  std::string Program;
-  if (Arg *A = Args.getLastArg(options::OPT_amdgpu_arch_tool_EQ))
-    Program = A->getValue();
-  else
-    Program = GetProgramPath(AMDGPU_ARCH_PROGRAM_NAME);
-  llvm::SmallString<64> OutputFile;
-  llvm::sys::fs::createTemporaryFile("print-system-gpus", "" /* No Suffix */,
-                                     OutputFile);
-  llvm::FileRemover OutputRemover(OutputFile.c_str());
-  llvm::Optional<llvm::StringRef> Redirects[] = {
-      {""},
-      StringRef(OutputFile),
-      {""},
-  };
-
-  if (llvm::sys::ExecuteAndWait(Program.c_str(), {}, {}, Redirects)) {
-    return {};
-  }
-
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> OutputBuf =
-      llvm::MemoryBuffer::getFile(OutputFile.c_str());
-  if (!OutputBuf)
-    return {};
-
-  llvm::SmallVector<SmallString<8>, 1> GPUArchs;
-  for (llvm::line_iterator LineIt(**OutputBuf); !LineIt.is_at_end(); ++LineIt) {
-    GPUArchs.push_back(*LineIt);
-  }
-  return GPUArchs;
-}
-
-SmallString<8> AMDGPUToolChain::getSystemGPUArch(const ArgList &Args) const {
-  // detect the AMDGPU installed in system
-  auto GPUArchs = detectSystemGPUs(Args);
-  if (GPUArchs.empty()) {
-    return SmallString<8>("");
-  }
-  if (GPUArchs.size() > 1) {
-    bool AllSame = std::all_of(
-        GPUArchs.begin(), GPUArchs.end(),
-        [&](const StringRef &GPUArch) { return GPUArch == GPUArchs.front(); });
-    if (AllSame)
-      return GPUArchs.front();
-
-    return SmallString<8>("");
-  }
-  return GPUArchs.front();
 }
 
 void ROCMToolChain::addClangTargetOptions(

@@ -100,19 +100,12 @@ public:
   /// Should skip argument.
   bool shouldSkipArgument(const llvm::opt::Arg *Arg) const;
 
-  /// Uses amdgpu_arch tool to get arch of the system GPU. Returns empty string
-  /// if unable to find one.
-  SmallString<8> getSystemGPUArch(const llvm::opt::ArgList &Args) const;
-
 protected:
   /// Check and diagnose invalid target ID specified by -mcpu.
   void checkTargetID(const llvm::opt::ArgList &DriverArgs) const;
 
   /// Get GPU arch from -mcpu without checking.
   StringRef getGPUArch(const llvm::opt::ArgList &DriverArgs) const;
-
-  SmallVector<SmallString<8>, 1>
-  detectSystemGPUs(const llvm::opt::ArgList &Args) const;
 };
 
 class LLVM_LIBRARY_VISIBILITY ROCMToolChain : public AMDGPUToolChain {
