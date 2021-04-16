@@ -713,39 +713,6 @@ defm : DSReadPat_mc <DS_READ_B32, vt, "load_local">;
 defm : DSReadPat_mc <DS_READ_B32, i32, "atomic_load_32_local">;
 defm : DSReadPat_mc <DS_READ_B64, i64, "atomic_load_64_local">;
 
-// Prefer ds_read over ds_read2, all other things being equal, because it has
-// a larger immediate offset range.
-let AddedComplexity = 100 in {
-
-foreach vt = VReg_64.RegTypes in {
-defm : DSReadPat_mc <DS_READ_B64, vt, "load_align8_local">;
-}
-
-let SubtargetPredicate = isGFX7Plus in {
-
-foreach vt = VReg_96.RegTypes in {
-defm : DSReadPat_mc <DS_READ_B96, vt, "load_align16_local">;
-}
-
-// For performance reasons restrict this to alignment >= 16 even with
-// unaligned-access-mode. At lower alignments ds_read2_b64 is always a better
-// choice.
-foreach vt = VReg_128.RegTypes in {
-defm : DSReadPat_mc <DS_READ_B128, vt, "load_align16_local">;
-}
-
-let SubtargetPredicate = HasUnalignedAccessMode in {
-
-foreach vt = VReg_96.RegTypes in {
-defm : DSReadPat_mc <DS_READ_B96, vt, "load_local">;
-}
-
-} // End SubtargetPredicate = HasUnalignedAccessMode
-
-} // End SubtargetPredicate = isGFX7Plus
-
-} // End AddedComplexity = 100
-
 let OtherPredicates = [D16PreservesUnusedBits] in {
 def : DSReadPat_D16<DS_READ_U16_D16_HI, load_d16_hi_local, v2i16>;
 def : DSReadPat_D16<DS_READ_U16_D16_HI, load_d16_hi_local, v2f16>;
@@ -869,9 +836,13 @@ foreach vt = VReg_128.RegTypes in {
 defm : DS128Bit8ByteAlignedPat_mc<vt>;
 }
 
-// Prefer ds_write over ds_write2, all other things being equal, because it has
-// a larger immediate offset range.
+// Prefer ds_read over ds_read2 and ds_write over ds_write2, all other things
+// being equal, because it has a larger immediate offset range.
 let AddedComplexity = 100 in {
+
+foreach vt = VReg_64.RegTypes in {
+defm : DSReadPat_mc <DS_READ_B64, vt, "load_align8_local">;
+}
 
 foreach vt = VReg_64.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B64, vt, "store_align8_local">;
@@ -880,21 +851,35 @@ defm : DSWritePat_mc <DS_WRITE_B64, vt, "store_align8_local">;
 let SubtargetPredicate = isGFX7Plus in {
 
 foreach vt = VReg_96.RegTypes in {
+defm : DSReadPat_mc <DS_READ_B96, vt, "load_align16_local">;
+}
+
+foreach vt = VReg_96.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B96, vt, "store_align16_local">;
 }
 
-// For performance reasons restrict this to alignment >= 16 even with
-// unaligned-access-mode. At lower alignments ds_write2_b64 is always a better
-// choice.
+foreach vt = VReg_128.RegTypes in {
+defm : DSReadPat_mc <DS_READ_B128, vt, "load_align16_local">;
+}
+
 foreach vt = VReg_128.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_align16_local">;
 }
 
 let SubtargetPredicate = HasUnalignedAccessMode in {
 
+// FIXME: Is ds_read_b96/ds_write_b96 better choice in unaligned-access-mode?
+foreach vt = VReg_96.RegTypes in {
+defm : DSReadPat_mc <DS_READ_B96, vt, "load_local">;
+}
+
 foreach vt = VReg_96.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B96, vt, "store_local">;
 }
+
+// For performance reasons, *do not* select ds_read_b128/ds_write_b128 in
+// unaligned-access-mode. At lower alignments ds_read2_b64/ds_write2_b64 is
+// always a better choice.
 
 } // End SubtargetPredicate = HasUnalignedAccessMode
 
