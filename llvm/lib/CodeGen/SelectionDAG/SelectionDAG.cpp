@@ -2472,7 +2472,7 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
     return true;
   case ISD::ADD:
   case ISD::SUB:
-  case ISD::AND: 
+  case ISD::AND:
   case ISD::XOR:
   case ISD::OR: {
     APInt UndefLHS, UndefRHS;
@@ -2483,7 +2483,7 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
       UndefElts = UndefLHS | UndefRHS;
       return true;
     }
-    break;
+    return false;
   }
   case ISD::ABS:
   case ISD::TRUNCATE:
