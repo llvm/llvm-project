@@ -3506,9 +3506,11 @@ public:
     Builder.SetInsertPoint(SplitBlock->getTerminator());
 
     isl_ast_build *Build = isl_ast_build_alloc(S->getIslCtx().get());
-    isl_ast_expr *Condition = IslAst::buildRunCondition(*S, Build);
+    isl::ast_expr Condition =
+        IslAst::buildRunCondition(*S, isl::manage_copy(Build));
     isl_ast_expr *SufficientCompute = createSufficientComputeCheck(*S, Build);
-    Condition = isl_ast_expr_and(Condition, SufficientCompute);
+    Condition =
+        isl::manage(isl_ast_expr_and(Condition.release(), SufficientCompute));
     isl_ast_build_free(Build);
 
     // preload invariant loads. Note: This should happen before the RTC
@@ -3535,7 +3537,6 @@ public:
 
       DT->changeImmediateDominator(MergeBlock, ExitingBB);
       DT->eraseNode(ExitingBlock);
-      isl_ast_expr_free(Condition);
       isl_ast_node_free(Root);
     } else {
 
@@ -3556,7 +3557,7 @@ public:
       }
 
       NodeBuilder.addParameters(S->getContext().release());
-      Value *RTC = NodeBuilder.createRTC(Condition);
+      Value *RTC = NodeBuilder.createRTC(Condition.release());
       Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
 
       Builder.SetInsertPoint(&*StartBlock->begin());
