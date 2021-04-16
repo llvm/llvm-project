@@ -76,16 +76,19 @@ static HeaderFileType getOutputType(const InputArgList &args) {
   }
 }
 
-static Optional<std::string>
-findAlongPathsWithExtensions(StringRef name, ArrayRef<StringRef> extensions) {
+// Search for all possible combinations of `{root}/{name}.{extension}`.
+// If \p extensions are not specified, then just search for `{root}/{name}`.
+static Optional<StringRef>
+findPathCombination(const Twine &name, const std::vector<StringRef> &roots,
+                    ArrayRef<StringRef> extensions = {""}) {
   SmallString<261> base;
-  for (StringRef dir : config->librarySearchPaths) {
+  for (StringRef dir : roots) {
     base = dir;
-    path::append(base, Twine("lib") + name);
+    path::append(base, name);
     for (StringRef ext : extensions) {
       Twine location = base + ext;
       if (fs::exists(location))
-        return location.str();
+        return saver.save(location.str());
       else
         depTracker->logFileNotFound(location);
     }
@@ -93,14 +96,29 @@ findAlongPathsWithExtensions(StringRef name, ArrayRef<StringRef> extensions) {
   return {};
 }
 
-static Optional<std::string> findLibrary(StringRef name) {
+static Optional<StringRef> findLibrary(StringRef name) {
   if (config->searchDylibsFirst) {
-    if (Optional<std::string> path =
-            findAlongPathsWithExtensions(name, {".tbd", ".dylib"}))
+    if (Optional<StringRef> path = findPathCombination(
+            "lib" + name, config->librarySearchPaths, {".tbd", ".dylib"}))
       return path;
-    return findAlongPathsWithExtensions(name, {".a"});
+    return findPathCombination("lib" + name, config->librarySearchPaths,
+                               {".a"});
   }
-  return findAlongPathsWithExtensions(name, {".tbd", ".dylib", ".a"});
+  return findPathCombination("lib" + name, config->librarySearchPaths,
+                             {".tbd", ".dylib", ".a"});
+}
+
+// If -syslibroot is specified, absolute paths to non-object files may be
+// rerooted.
+static StringRef rerootPath(StringRef path) {
+  if (!path::is_absolute(path, path::Style::posix) || path.endswith(".o"))
+    return path;
+
+  if (Optional<StringRef> rerootedPath =
+          findPathCombination(path, config->systemLibraryRoots))
+    return *rerootedPath;
+
+  return path;
 }
 
 static Optional<std::string> findFramework(StringRef name) {
@@ -337,7 +355,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
 }
 
 static void addLibrary(StringRef name, bool isWeak) {
-  if (Optional<std::string> path = findLibrary(name)) {
+  if (Optional<StringRef> path = findLibrary(name)) {
     auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path, false));
     if (isWeak && dylibFile)
       dylibFile->forceWeakImport = true;
@@ -396,7 +414,7 @@ static void addFileList(StringRef path) {
     return;
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
-    addFile(path, false);
+    addFile(rerootPath(path), false);
 }
 
 // An order file has one entry per line, in the following format:
@@ -814,18 +832,18 @@ void createFiles(const InputArgList &args) {
 
     switch (opt.getID()) {
     case OPT_INPUT:
-      addFile(arg->getValue(), false);
+      addFile(rerootPath(arg->getValue()), false);
       break;
     case OPT_weak_library:
-      if (auto *dylibFile =
-              dyn_cast_or_null<DylibFile>(addFile(arg->getValue(), false)))
+      if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
+              addFile(rerootPath(arg->getValue()), false)))
         dylibFile->forceWeakImport = true;
       break;
     case OPT_filelist:
       addFileList(arg->getValue());
       break;
     case OPT_force_load:
-      addFile(arg->getValue(), true);
+      addFile(rerootPath(arg->getValue()), true);
       break;
     case OPT_l:
     case OPT_weak_l:
