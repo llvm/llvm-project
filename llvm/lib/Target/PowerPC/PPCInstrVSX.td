@@ -2907,6 +2907,10 @@ def : Pat<WToDPExtractConv.BV02U,
           (v2f64 (XVCVUXWDP $A))>;
 def : Pat<WToDPExtractConv.BV13U,
           (v2f64 (XVCVUXWDP (XXSLDWI $A, $A, 3)))>;
+def : Pat<(v2f64 (insertelt v2f64:$A, f64:$B, 0)),
+          (v2f64 (XXPERMDI (SUBREG_TO_REG (i64 1), $B, sub_64), $A, 1))>;
+def : Pat<(v2f64 (insertelt v2f64:$A, f64:$B, 1)),
+          (v2f64 (XXPERMDI $A, (SUBREG_TO_REG (i64 1), $B, sub_64), 0))>;
 } // HasVSX, IsBigEndian
 
 // Any little endian VSX subtarget.
@@ -3012,6 +3016,10 @@ def : Pat<WToDPExtractConv.BV02U,
           (v2f64 (XVCVUXWDP (XXSLDWI $A, $A, 1)))>;
 def : Pat<WToDPExtractConv.BV13U,
           (v2f64 (XVCVUXWDP $A))>;
+def : Pat<(v2f64 (insertelt v2f64:$A, f64:$B, 0)),
+          (v2f64 (XXPERMDI $A, (SUBREG_TO_REG (i64 1), $B, sub_64), 0))>;
+def : Pat<(v2f64 (insertelt v2f64:$A, f64:$B, 1)),
+          (v2f64 (XXPERMDI (SUBREG_TO_REG (i64 1), $B, sub_64), $A, 1))>;
 } // HasVSX, IsLittleEndian
 
 // Any pre-Power9 VSX subtarget.
