@@ -837,6 +837,20 @@ def : Pattern<(OpNativeCodeCall3 $input),
               [(NativeCodeCall<"createOpI($_builder, $_loc, $0)"> $input),
                (OpK)]>;
 
+def OpNativeCodeCall4 : TEST_Op<"native_code_call4"> {
+  let arguments = (ins AnyType:$input1);
+  let results = (outs I32:$output1, I32:$output2);
+}
+def OpNativeCodeCall5 : TEST_Op<"native_code_call5"> {
+  let arguments = (ins I32:$input1, I32:$input2);
+  let results = (outs I32:$output1, I32:$output2);
+}
+
+def GetFirstI32Result : NativeCodeCall<"success(getFirstI32Result($_self, $0))">;
+def BindNativeCodeCallResult : NativeCodeCall<"bindNativeCodeCallResult($0)">;
+def : Pat<(OpNativeCodeCall4 (GetFirstI32Result $ret)),
+          (OpNativeCodeCall5 (BindNativeCodeCallResult:$native $ret), $native)>;
+
 // Test AllAttrConstraintsOf.
 def OpAllAttrConstraint1 : TEST_Op<"all_attr_constraint_of1"> {
   let arguments = (ins I64ArrayAttr:$attr);
