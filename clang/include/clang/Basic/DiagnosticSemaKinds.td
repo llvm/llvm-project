@@ -2824,6 +2824,53 @@ def warn_nomerge_attribute_ignored_in_stmt: Warning<
   "%0 attribute is ignored because there exists no call expression inside the "
   "statement">,
   InGroup<IgnoredAttributes>;
+
+def err_musttail_needs_trivial_args : Error<
+  "tail call requires that the return value, all parameters, and any "
+  "temporaries created by the expression are trivially destructible">;
+def err_musttail_needs_call : Error<
+  "%0 attribute requires that the return value is the result of a function call"
+  >;
+def err_musttail_needs_prototype : Error<
+  "%0 attribute requires that both caller and callee functions have a "
+  "prototype">;
+def note_musttail_fix_non_prototype : Note<
+  "add 'void' to the parameter list to turn an old-style K&R function "
+  "declaration into a prototype">;
+def err_musttail_structors_forbidden : Error<"cannot perform a tail call "
+  "%select{from|to}0 a %select{constructor|destructor}1">;
+def note_musttail_structors_forbidden : Note<"target "
+  "%select{constructor|destructor}0 is declared here">;
+def err_musttail_forbidden_from_this_context : Error<
+  "%0 attribute cannot be used from "
+  "%select{a block|an Objective-C function|this context}1">;
+def err_musttail_member_mismatch : Error<
+  "%select{non-member|static member|non-static member}0 "
+  "function cannot perform a tail call to "
+  "%select{non-member|static member|non-static member|pointer-to-member}1 "
+  "function%select{| %3}2">;
+def note_musttail_callee_defined_here : Note<"%0 declared here">;
+def note_tail_call_required : Note<"tail call required by %0 attribute here">;
+def err_musttail_mismatch : Error<
+  "cannot perform a tail call to function%select{| %1}0 because its signature "
+  "is incompatible with the calling function">;
+def note_musttail_mismatch : Note<
+    "target function "
+    "%select{is a member of different class%diff{ (expected $ but has $)|}1,2"
+    "|has different number of parameters (expected %1 but has %2)"
+    "|has type mismatch at %ordinal3 parameter"
+    "%diff{ (expected $ but has $)|}1,2"
+    "|has different return type%diff{ ($ expected but has $)|}1,2}0">;
+def err_musttail_callconv_mismatch : Error<
+  "cannot perform a tail call to function%select{| %1}0 because it uses an "
+  "incompatible calling convention">;
+def note_musttail_callconv_mismatch : Note<
+  "target function has calling convention %1 (expected %0)">;
+def err_musttail_scope : Error<
+  "cannot perform a tail call from this return statement">;
+def err_musttail_no_variadic : Error<
+  "%0 attribute may not be used with variadic functions">;
+
 def err_nsobject_attribute : Error<
   "'NSObject' attribute is for pointer types only">;
 def err_attributes_are_not_compatible : Error<

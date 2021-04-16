@@ -46,7 +46,13 @@ sections with improvements to Clang's support for those languages.
 Major New Features
 ------------------
 
-- ...
+- Guaranteed tail calls are now supported with statement attributes
+  ``[[clang::musttail]]`` in C++ and ``__attribute__((musttail))`` in C. The
+  attribute is applied to a return statement (not a function declaration),
+  and an error is emitted if a tail call cannot be guaranteed, for example if
+  the function signatures of caller and callee are not compatible. Guaranteed
+  tail calls enable a class of algorithms that would otherwise use an
+  arbitrary amount of stack space.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

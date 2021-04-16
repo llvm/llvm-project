@@ -121,6 +121,18 @@ inline Expr *IgnoreImplicitSingleStep(Expr *E) {
   return E;
 }
 
+inline Expr *IgnoreElidableImplicitConstructorSingleStep(Expr *E) {
+  auto *CCE = dyn_cast<CXXConstructExpr>(E);
+  if (CCE && CCE->isElidable() && !isa<CXXTemporaryObjectExpr>(CCE)) {
+    unsigned NumArgs = CCE->getNumArgs();
+    if ((NumArgs == 1 ||
+         (NumArgs > 1 && CCE->getArg(1)->isDefaultArgument())) &&
+        !CCE->getArg(0)->isDefaultArgument() && !CCE->isListInitialization())
+      return CCE->getArg(0);
+  }
+  return E;
+}
+
 inline Expr *IgnoreImplicitAsWrittenSingleStep(Expr *E) {
   if (auto *ICE = dyn_cast<ImplicitCastExpr>(E))
     return ICE->getSubExprAsWritten();
