@@ -208,6 +208,9 @@ public:
   /// is, presumably, for writing out the mnemonics for the assembly writer.
   std::string getAsString(bool InAttrGrp = false) const;
 
+  /// Return true if this attribute belongs to the LLVMContext.
+  bool hasParentContext(LLVMContext &C) const;
+
   /// Equality and non-equality operators.
   bool operator==(Attribute A) const { return pImpl == A.pImpl; }
   bool operator!=(Attribute A) const { return pImpl != A.pImpl; }
@@ -330,6 +333,9 @@ public:
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
   std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
   std::string getAsString(bool InAttrGrp = false) const;
+
+  /// Return true if this attribute set belongs to the LLVMContext.
+  bool hasParentContext(LLVMContext &C) const;
 
   using iterator = const Attribute *;
 
@@ -724,6 +730,9 @@ public:
   /// Return the attributes at the index as a string.
   std::string getAsString(unsigned Index, bool InAttrGrp = false) const;
 
+  /// Return true if this attribute list belongs to the LLVMContext.
+  bool hasParentContext(LLVMContext &C) const;
+
   //===--------------------------------------------------------------------===//
   // AttributeList Introspection
   //===--------------------------------------------------------------------===//
@@ -750,6 +759,8 @@ public:
 
   /// Return true if there are no attributes.
   bool isEmpty() const { return pImpl == nullptr; }
+
+  void print(raw_ostream &O) const;
 
   void dump() const;
 };

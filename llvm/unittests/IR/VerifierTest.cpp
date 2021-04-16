@@ -253,5 +253,22 @@ TEST(VerifierTest, MDNodeWrongContext) {
                   .startswith("MDNode context does not match Module context!"));
 }
 
+TEST(VerifierTest, AttributesWrongContext) {
+  LLVMContext C1, C2;
+  Module M1("M", C1);
+  FunctionType *FTy1 =
+      FunctionType::get(Type::getVoidTy(C1), /*isVarArg=*/false);
+  Function *F1 = Function::Create(FTy1, Function::ExternalLinkage, "foo", M1);
+  F1->setDoesNotReturn();
+
+  Module M2("M", C2);
+  FunctionType *FTy2 =
+      FunctionType::get(Type::getVoidTy(C2), /*isVarArg=*/false);
+  Function *F2 = Function::Create(FTy2, Function::ExternalLinkage, "foo", M2);
+  F2->copyAttributesFrom(F1);
+
+  EXPECT_TRUE(verifyFunction(*F2));
+}
+
 } // end anonymous namespace
 } // end namespace llvm
