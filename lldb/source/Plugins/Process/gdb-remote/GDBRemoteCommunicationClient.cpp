@@ -100,11 +100,11 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_supports_jThreadsInfo(true), m_supports_jModulesInfo(true),
       m_curr_pid(LLDB_INVALID_PROCESS_ID), m_curr_tid(LLDB_INVALID_THREAD_ID),
       m_curr_tid_run(LLDB_INVALID_THREAD_ID),
-      m_num_supported_hardware_watchpoints(0), m_host_arch(), m_process_arch(),
-      m_os_build(), m_os_kernel(), m_hostname(), m_gdb_server_name(),
-      m_gdb_server_version(UINT32_MAX), m_default_packet_timeout(0),
-      m_max_packet_size(0), m_qSupported_response(),
-      m_supported_async_json_packets_is_valid(false),
+      m_num_supported_hardware_watchpoints(0), m_addressing_bits(0),
+      m_host_arch(), m_process_arch(), m_os_build(), m_os_kernel(),
+      m_hostname(), m_gdb_server_name(), m_gdb_server_version(UINT32_MAX),
+      m_default_packet_timeout(0), m_max_packet_size(0),
+      m_qSupported_response(), m_supported_async_json_packets_is_valid(false),
       m_supported_async_json_packets_sp(), m_qXfer_memory_map(),
       m_qXfer_memory_map_loaded(false) {}
 
@@ -1202,11 +1202,13 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
           } else if (name.equals("ptrsize")) {
             if (!value.getAsInteger(0, pointer_byte_size))
               ++num_keys_decoded;
+          } else if (name.equals("addressing_bits")) {
+            if (!value.getAsInteger(0, m_addressing_bits))
+              ++num_keys_decoded;
           } else if (name.equals("os_version") ||
-                     name.equals(
-                         "version")) // Older debugserver binaries used the
-                                     // "version" key instead of
-                                     // "os_version"...
+                     name.equals("version")) // Older debugserver binaries used
+                                             // the "version" key instead of
+                                             // "os_version"...
           {
             if (!m_os_version.tryParse(value))
               ++num_keys_decoded;
@@ -1357,6 +1359,11 @@ GDBRemoteCommunicationClient::GetHostArchitecture() {
   return m_host_arch;
 }
 
+uint32_t GDBRemoteCommunicationClient::GetAddressingBits() {
+  if (m_qHostInfo_is_valid == eLazyBoolCalculate)
+    GetHostInfo();
+  return m_addressing_bits;
+}
 seconds GDBRemoteCommunicationClient::GetHostDefaultPacketTimeout() {
   if (m_qHostInfo_is_valid == eLazyBoolCalculate)
     GetHostInfo();
