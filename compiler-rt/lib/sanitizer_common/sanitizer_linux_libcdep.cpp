@@ -203,7 +203,7 @@ void InitTlsSize() {
   g_use_dlpi_tls_data =
       GetLibcVersion(&major, &minor, &patch) && major == 2 && minor >= 25;
 
-#ifdef __x86_64__
+#if defined(__x86_64__) || defined(__powerpc64__)
   void *get_tls_static_info = dlsym(RTLD_NEXT, "_dl_get_tls_static_info");
   size_t tls_align;
   ((void (*)(size_t *, size_t *))get_tls_static_info)(&g_tls_size, &tls_align);
@@ -429,6 +429,13 @@ static void GetTls(uptr *addr, uptr *size) {
   *size = g_tls_size;
   *addr -= *size;
   *addr += ThreadDescriptorSize();
+#elif SANITIZER_GLIBC && defined(__powerpc64__)
+  // Workaround for glibc<2.25(?). 2.27 is known to not need this.
+  uptr tp;
+  asm("addi %0,13,-0x7000" : "=r"(tp));
+  const uptr pre_tcb_size = TlsPreTcbSize();
+  *addr = tp - pre_tcb_size;
+  *size = g_tls_size + pre_tcb_size;
 #elif SANITIZER_FREEBSD || SANITIZER_LINUX
   uptr align;
   GetStaticTlsBoundary(addr, size, &align);
