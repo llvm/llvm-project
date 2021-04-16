@@ -37,6 +37,23 @@ class CheckResult(gdb.Command):
             compare_frame = gdb.newest_frame().older()
             testcase_frame = compare_frame.older()
             test_loc = testcase_frame.find_sal()
+
+            expectation_val = compare_frame.read_var("expectation")
+            check_literal = expectation_val.string(encoding="utf-8")
+
+            # Heuristic to determine if libc++ itself has debug
+            # info. If it doesn't, then anything normally homed there
+            # won't be found, and the printer will error. We don't
+            # want to fail the test in this case--the printer itself
+            # is probably fine, or at least we can't tell.
+            if check_literal.startswith("std::shared_ptr"):
+                shared_ptr = compare_frame.read_var("value")
+                if not "__shared_owners_" in shared_ptr.type.fields():
+                    print("IGNORED (no debug info in libc++): " +
+                          test_loc.symtab.filename + ":" +
+                          str(test_loc.line))
+                    return
+
             # Use interactive commands in the correct context to get the pretty
             # printed version
 
