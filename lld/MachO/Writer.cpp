@@ -803,6 +803,8 @@ template <class LP> void Writer::createOutputSections() {
     codeSignatureSection = make<CodeSignatureSection>();
   if (config->emitFunctionStarts)
     functionStartsSection = make<FunctionStartsSection>();
+  if (config->emitBitcodeBundle)
+    make<BitcodeBundleSection>();
 
   switch (config->outputType) {
   case MH_EXECUTE:

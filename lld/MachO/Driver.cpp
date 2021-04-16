@@ -31,6 +31,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Config/config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
@@ -958,6 +959,12 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->demangle = args.hasArg(OPT_demangle);
   config->implicitDylibs = !args.hasArg(OPT_no_implicit_dylibs);
   config->emitFunctionStarts = !args.hasArg(OPT_no_function_starts);
+  config->emitBitcodeBundle = args.hasArg(OPT_bitcode_bundle);
+
+#ifndef HAVE_LIBXAR
+  if (config->emitBitcodeBundle)
+    error("-bitcode_bundle unsupported because LLD wasn't built with libxar");
+#endif
 
   if (const Arg *arg = args.getLastArg(OPT_install_name)) {
     if (config->outputType != MH_DYLIB)
