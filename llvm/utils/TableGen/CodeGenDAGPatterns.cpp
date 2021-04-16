@@ -1252,7 +1252,7 @@ StringRef TreePredicateFn::getImmType() const {
 StringRef TreePredicateFn::getImmTypeIdentifier() const {
   if (immCodeUsesAPInt())
     return "APInt";
-  else if (immCodeUsesAPFloat())
+  if (immCodeUsesAPFloat())
     return "APFloat";
   return "I64";
 }
