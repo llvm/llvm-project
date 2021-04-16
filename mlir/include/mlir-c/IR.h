@@ -76,6 +76,13 @@ struct MlirNamedAttribute {
 typedef struct MlirNamedAttribute MlirNamedAttribute;
 
 //===----------------------------------------------------------------------===//
+// Global API.
+//===----------------------------------------------------------------------===//
+
+/// Set the global debugging flag.
+MLIR_CAPI_EXPORTED void mlirEnableGlobalDebug(bool enable);
+
+//===----------------------------------------------------------------------===//
 // Context API.
 //===----------------------------------------------------------------------===//
 
@@ -118,6 +125,10 @@ mlirContextGetNumLoadedDialects(MlirContext context);
 /// dialect.
 MLIR_CAPI_EXPORTED MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
                                                            MlirStringRef name);
+
+/// Set threading mode (must be set to false to print-ir-after-all).
+MLIR_CAPI_EXPORTED void mlirContextEnableMultithreading(MlirContext context,
+                                                        bool enable);
 
 /// Returns whether the given fully-qualified operation (i.e.
 /// 'dialect.operation') is registered with the context. This will return true

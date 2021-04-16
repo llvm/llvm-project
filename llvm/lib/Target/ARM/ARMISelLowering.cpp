@@ -12733,6 +12733,27 @@ static SDValue PerformADDCombine(SDNode *N,
   return PerformADDCombineWithOperands(N, N1, N0, DCI, Subtarget);
 }
 
+// Combine (sub 0, (csinc X, Y, CC)) -> (csinv -X, Y, CC)
+//   providing -X is as cheap as X (currently, just a constant).
+static SDValue PerformSubCSINCCombine(SDNode *N,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+  if (N->getValueType(0) != MVT::i32 || !isNullConstant(N->getOperand(0)))
+    return SDValue();
+  SDValue CSINC = N->getOperand(1);
+  if (CSINC.getOpcode() != ARMISD::CSINC)
+    return SDValue();
+
+  ConstantSDNode *X = dyn_cast<ConstantSDNode>(CSINC.getOperand(0));
+  if (!X)
+    return SDValue();
+
+  return DCI.DAG.getNode(ARMISD::CSINV, SDLoc(N), MVT::i32,
+                         DCI.DAG.getNode(ISD::SUB, SDLoc(N), MVT::i32,
+                                         N->getOperand(0), CSINC.getOperand(0)),
+                         CSINC.getOperand(1), CSINC.getOperand(2),
+                         CSINC.getOperand(3));
+}
+
 /// PerformSUBCombine - Target-specific dag combine xforms for ISD::SUB.
 ///
 static SDValue PerformSUBCombine(SDNode *N,
@@ -12745,6 +12766,9 @@ static SDValue PerformSUBCombine(SDNode *N,
   if (N1.getNode()->hasOneUse())
     if (SDValue Result = combineSelectAndUse(N, N1, N0, DCI))
       return Result;
+
+  if (SDValue R = PerformSubCSINCCombine(N, DCI))
+    return R;
 
   if (!Subtarget->hasMVEIntegerOps() || !N->getValueType(0).isVector())
     return SDValue();

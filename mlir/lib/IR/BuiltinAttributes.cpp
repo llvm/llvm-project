@@ -353,7 +353,8 @@ bool ElementsAttr::isValidIndex(ArrayRef<uint64_t> index) const {
   // Verify that all of the indices are within the shape dimensions.
   auto shape = type.getShape();
   return llvm::all_of(llvm::seq<int>(0, rank), [&](int i) {
-    return static_cast<int64_t>(index[i]) < shape[i];
+    int64_t dim = static_cast<int64_t>(index[i]);
+    return 0 <= dim && dim < shape[i];
   });
 }
 

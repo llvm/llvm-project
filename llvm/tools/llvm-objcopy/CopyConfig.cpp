@@ -244,9 +244,10 @@ parseSetSectionAlignment(StringRef FlagValue) {
         "bad format for --set-section-alignment: missing section name");
   uint64_t NewAlign;
   if (Split.second.getAsInteger(0, NewAlign))
-    return createStringError(errc::invalid_argument,
-                             "invalid alignment for --set-section-alignment: '%s'",
-                             Split.second.str().c_str());
+    return createStringError(
+        errc::invalid_argument,
+        "invalid alignment for --set-section-alignment: '%s'",
+        Split.second.str().c_str());
   return std::make_pair(Split.first, NewAlign);
 }
 
