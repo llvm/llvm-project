@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fsyntax-only -fms-extensions -fcxx-exceptions -fopenmp %s
+// RUN: %clang_cc1 -verify -fsyntax-only -fms-extensions -fcxx-exceptions -fopenmp -triple x86_64-linux %s
 
 int ReturnsInt1();
 int Func1() {
