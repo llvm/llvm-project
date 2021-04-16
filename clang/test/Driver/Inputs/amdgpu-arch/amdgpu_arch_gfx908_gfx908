@@ -1,4 +1,0 @@
-#!/usr/bin/env sh
-echo gfx908
-echo gfx908
-return 0
