@@ -76,8 +76,8 @@ apply to each Module that is added via addModule:
           TransformLayer(ES, CompileLayer, optimizeModule),
           DL(std::move(DL)), Mangle(ES, this->DL),
           Ctx(std::make_unique<LLVMContext>()) {
-      ES.getMainJITDylib().setGenerator(
-          cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(DL)));
+      ES.getMainJITDylib().addGenerator(
+          cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(DL.getGlobalPrefix())));
     }
 
 Our extended KaleidoscopeJIT class starts out the same as it did in Chapter 1,
