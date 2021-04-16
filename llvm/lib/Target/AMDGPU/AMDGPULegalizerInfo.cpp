@@ -2831,18 +2831,6 @@ void AMDGPULegalizerInfo::legalizeUDIV_UREM32Impl(MachineIRBuilder &B,
     B.buildSelect(DstReg, Cond, B.buildSub(S32, R, Y), R);
 }
 
-bool AMDGPULegalizerInfo::legalizeUDIV_UREM32(MachineInstr &MI,
-                                              MachineRegisterInfo &MRI,
-                                              MachineIRBuilder &B) const {
-  const bool IsDiv = MI.getOpcode() == AMDGPU::G_UDIV;
-  Register DstReg = MI.getOperand(0).getReg();
-  Register Num = MI.getOperand(1).getReg();
-  Register Den = MI.getOperand(2).getReg();
-  legalizeUDIV_UREM32Impl(B, DstReg, Num, Den, IsDiv);
-  MI.eraseFromParent();
-  return true;
-}
-
 // Build integer reciprocal sequence arounud V_RCP_IFLAG_F32
 //
 // Return lo, hi of result
