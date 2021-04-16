@@ -212,7 +212,7 @@ static int Cond;
 }
 
 -(id)initY {
-  self = [super init]; //expected-note {{Method returns an instance of MyObj with a +1 retain count}}
+  self = [super init]; // expected-note 6 {{Method returns an instance of MyObj with a +1 retain count}}
   return self;
 }
 
@@ -327,5 +327,74 @@ void CFAutoreleaseUnownedMixed() {
 
 @end
 
+int seed();
 
+@interface LeakReassignmentTests : MyObj
+@end
 
+@implementation LeakReassignmentTests
++(void)testLeakAliasSimple {
+  id Original = [[MyObj alloc] initY]; // expected-note {{Calling 'initY'}}
+                                       // expected-note@-1 {{Returning from 'initY'}}
+  id New = Original;
+  Original = [[MyObj alloc] initZ];
+  (void)New;
+  [Original release]; // expected-warning {{Potential leak of an object stored into 'New'}}
+                      // expected-note@-1 {{Object leaked: object allocated and stored into 'New' is not referenced later in this execution path and has a retain count of +1}}
+}
+
++(void)testLeakAliasChain {
+  id Original = [[MyObj alloc] initY]; // expected-note {{Calling 'initY'}}
+                                       // expected-note@-1 {{Returning from 'initY'}}
+  id Intermediate = Original;
+  id New = Intermediate;
+  Original = [[MyObj alloc] initZ];
+  (void)New;
+  [Original release]; // expected-warning {{Potential leak of an object stored into 'New'}}
+                      // expected-note@-1 {{Object leaked: object allocated and stored into 'New' is not referenced later in this execution path and has a retain count of +1}}
+}
+
++(void)log:(id)Obj with:(int)Num {
+  Num *= 42;
+  if (Obj )
+    Num /= 2;
+}
+
++(int)calculate {
+  int x = 10;
+  int y = 25;
+  x += y * x + seed();
+  return y - x * y;
+}
+
++(void)testLeakAliasDeathInExpr {
+  id Original = [[MyObj alloc] initY]; // expected-note {{Calling 'initY'}}
+                                       // expected-note@-1 {{Returning from 'initY'}}
+  id New = Original;
+  Original = [[MyObj alloc] initZ];
+  [self log:New with:[self calculate]];
+  [Original release]; // expected-warning {{Potential leak of an object stored into 'New'}}
+                      // expected-note@-1 {{Object leaked: object allocated and stored into 'New' is not referenced later in this execution path and has a retain count of +1}}
+}
+
++(void)testLeakReassign {
+  id Original = [[MyObj alloc] initY]; // expected-note {{Calling 'initY'}}
+                                       // expected-note@-1 {{Returning from 'initY'}}
+  // TODO: move warning here
+  Original = [[MyObj alloc] initZ];
+  [Original release]; // expected-warning {{Potential leak of an object stored into 'Original'}}
+                      // expected-note@-1 {{Object leaked: object allocated and stored into 'Original' is not referenced later in this execution path and has a retain count of +1}}
+}
+
++(void)testLeakReassign:(int)cond {
+  id Original = [[MyObj alloc] initY]; // expected-note {{Calling 'initY'}}
+                                       // expected-note@-1 {{Returning from 'initY'}}
+  if (cond)                            // expected-note {{Assuming 'cond' is not equal to 0}}
+                                       // expected-note@-1 {{Taking true branch}}
+    // TODO: move warning here
+    Original = [[MyObj alloc] initZ];
+  [Original release]; // expected-warning {{Potential leak of an object stored into 'Original'}}
+                      // expected-note@-1 {{Object leaked: object allocated and stored into 'Original' is not referenced later in this execution path and has a retain count of +1}}
+}
+
+@end

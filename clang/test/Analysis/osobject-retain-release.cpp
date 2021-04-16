@@ -641,7 +641,7 @@ void test_smart_ptr_leak() {
   OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type 'OSObject' with a +1 retain count}}
   {
     OSObjectPtr p(obj); // expected-note{{Calling constructor for 'smart_ptr<OSObject>'}}
-   // expected-note@-1{{Returning from constructor for 'smart_ptr<OSObject>'}}
+                        // expected-note@-1{{Returning from constructor for 'smart_ptr<OSObject>'}}
     // expected-note@os_smart_ptr.h:13{{Field 'pointer' is non-null}}
     // expected-note@os_smart_ptr.h:13{{Taking true branch}}
     // expected-note@os_smart_ptr.h:14{{Calling 'smart_ptr::_retain'}}
@@ -653,9 +653,9 @@ void test_smart_ptr_leak() {
   // expected-note@os_smart_ptr.h:36{{Calling 'smart_ptr::_release'}}
   // expected-note@os_smart_ptr.h:76{{Reference count decremented. The object now has a +1 retain count}}
   // expected-note@os_smart_ptr.h:36{{Returning from 'smart_ptr::_release'}}
- // expected-note@-6{{Returning from '~smart_ptr'}}
-} // expected-warning{{Potential leak of an object stored into 'obj'}}
-// expected-note@-1{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
+  // expected-note@-6{{Returning from '~smart_ptr'}}
+} // expected-warning{{Potential leak of an object stored into 'p'}}
+// expected-note@-1{{Object leaked: object allocated and stored into 'p' is not referenced later in this execution path and has a retain count of +1}}
 
 void test_smart_ptr_no_leak() {
   OSObject *obj = new OSObject;
