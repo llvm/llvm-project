@@ -257,11 +257,8 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
     return failure();
 
   // Setup RAII guard to return properly.
-  bool succeeded = true;
   LinalgOp tiledOp = res->op;
   auto guard = llvm::make_scope_exit([&]() {
-    if (!succeeded)
-      return;
     // Return relevant information to derived pattern.
     result = *res;
     // Replace filter on both tiledOp and tiledAndPaddedOp, if necessary.
@@ -278,7 +275,6 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
   // Try to pad on the fly by rewriting res->op as a padded op.
   if (failed(rewriteAsPaddedOp(rewriter, *res, options))) {
     // Set so RAII guard does not propagate TiledLinalgOp to `result`.
-    succeeded = false;
     return failure();
   }
 
