@@ -1056,7 +1056,8 @@ private:
   do {                                                                         \
     ErrorCodeWrapper ec(exp);                                                  \
     if (ec)                                                                    \
-      fatal(Twine("operation failed with error code ") + Twine(ec) + #exp);    \
+      fatal(Twine("operation failed with error code ") + Twine(ec) + ": " +    \
+            #exp);                                                             \
   } while (0);
 
 void BitcodeBundleSection::finalize() {
