@@ -131,22 +131,146 @@ private:
   static Test *End;
 };
 
-} // namespace testing
-} // namespace __llvm_libc
-
-namespace __llvm_libc {
 namespace internal {
+
 constexpr bool same_prefix(char const *lhs, char const *rhs, int const len) {
   for (int i = 0; (*lhs || *rhs) && (i < len); ++lhs, ++rhs, ++i)
     if (*lhs != *rhs)
       return false;
   return true;
 }
+
+constexpr bool valid_prefix(char const *lhs) {
+  return same_prefix(lhs, "LlvmLibc", 8);
+}
+
+// 'str' is a null terminated string of the form
+// "const char *__llvm_libc::testing::internal::GetTypeName() [ParamType = XXX]"
+// We return the substring that start at character '[' or a default message.
+constexpr char const *GetPrettyFunctionParamType(char const *str) {
+  for (const char *ptr = str; *ptr != '\0'; ++ptr)
+    if (*ptr == '[')
+      return ptr;
+  return "UNSET : declare with REGISTER_TYPE_NAME";
+}
+
+// This function recovers ParamType at compile time by using __PRETTY_FUNCTION__
+// It can be customized by using the REGISTER_TYPE_NAME macro below.
+template <typename ParamType> static constexpr const char *GetTypeName() {
+  return GetPrettyFunctionParamType(__PRETTY_FUNCTION__);
+}
+
+template <typename T>
+static inline void GenerateName(char *buffer, int buffer_size,
+                                const char *prefix) {
+  if (buffer_size == 0)
+    return;
+
+  // Make sure string is null terminated.
+  --buffer_size;
+  buffer[buffer_size] = '\0';
+
+  const auto AppendChar = [&](char c) {
+    if (buffer_size > 0) {
+      *buffer = c;
+      ++buffer;
+      --buffer_size;
+    }
+  };
+  const auto AppendStr = [&](const char *str) {
+    for (; str && *str != '\0'; ++str)
+      AppendChar(*str);
+  };
+
+  AppendStr(prefix);
+  AppendChar(' ');
+  AppendStr(GetTypeName<T>());
+  AppendChar('\0');
+}
+
+// TestCreator implements a linear hierarchy of test instances, effectively
+// instanciating all tests with Types in a single object.
+template <template <typename> class TemplatedTestClass, typename... Types>
+struct TestCreator;
+
+template <template <typename> class TemplatedTestClass, typename Head,
+          typename... Tail>
+struct TestCreator<TemplatedTestClass, Head, Tail...>
+    : private TestCreator<TemplatedTestClass, Tail...> {
+  TemplatedTestClass<Head> instance;
+};
+
+template <template <typename> class TemplatedTestClass>
+struct TestCreator<TemplatedTestClass> {};
+
+// A type list to declare the set of types to instantiate the tests with.
+template <typename... Types> struct TypeList {
+  template <template <typename> class TemplatedTestClass> struct Tests {
+    using type = TestCreator<TemplatedTestClass, Types...>;
+  };
+};
+
 } // namespace internal
+
+// Make TypeList visible in __llvm_libc::testing.
+template <typename... Types> using TypeList = internal::TypeList<Types...>;
+
+} // namespace testing
 } // namespace __llvm_libc
 
+// For TYPED_TEST and TYPED_TEST_F below we need to display which type was used
+// to run the test. The default will return the fully qualified canonical type
+// but it can be difficult to read. We provide the following macro to allow the
+// client to register the type name as they see it in the code.
+#define REGISTER_TYPE_NAME(TYPE)                                               \
+  template <>                                                                  \
+  constexpr const char *__llvm_libc::testing::internal::GetTypeName<TYPE>() {  \
+    return "[ParamType = " #TYPE "]";                                          \
+  }
+
+#define TYPED_TEST(SuiteName, TestName, TypeList)                              \
+  static_assert(                                                               \
+      __llvm_libc::testing::internal::valid_prefix(#SuiteName),                \
+      "All LLVM-libc TYPED_TEST suite names must start with 'LlvmLibc'.");     \
+  template <typename T>                                                        \
+  class SuiteName##_##TestName : public __llvm_libc::testing::Test {           \
+  public:                                                                      \
+    using ParamType = T;                                                       \
+    char name[256];                                                            \
+    SuiteName##_##TestName() {                                                 \
+      addTest(this);                                                           \
+      __llvm_libc::testing::internal::GenerateName<T>(                         \
+          name, sizeof(name), #SuiteName "." #TestName);                       \
+    }                                                                          \
+    void Run() override;                                                       \
+    const char *getName() const override { return name; }                      \
+  };                                                                           \
+  TypeList::Tests<SuiteName##_##TestName>::type                                \
+      SuiteName##_##TestName##_Instance;                                       \
+  template <typename T> void SuiteName##_##TestName<T>::Run()
+
+#define TYPED_TEST_F(SuiteClass, TestName, TypeList)                           \
+  static_assert(__llvm_libc::testing::internal::valid_prefix(#SuiteClass),     \
+                "All LLVM-libc TYPED_TEST_F suite class names must start "     \
+                "with 'LlvmLibc'.");                                           \
+  template <typename T> class SuiteClass##_##TestName : public SuiteClass<T> { \
+  public:                                                                      \
+    using ParamType = T;                                                       \
+    char name[256];                                                            \
+    SuiteClass##_##TestName() {                                                \
+      SuiteClass<T>::addTest(this);                                            \
+      __llvm_libc::testing::internal::GenerateName<T>(                         \
+          name, sizeof(name), #SuiteClass "." #TestName);                      \
+    }                                                                          \
+    void Run() override;                                                       \
+    const char *getName() const override { return name; }                      \
+  };                                                                           \
+  TypeList::Tests<SuiteClass##_##TestName>::type                               \
+      SuiteClass##_##TestName##_Instance;                                      \
+  template <typename T> void SuiteClass##_##TestName<T>::Run()
+
 #define TEST(SuiteName, TestName)                                              \
-  static_assert(__llvm_libc::internal::same_prefix(#SuiteName, "LlvmLibc", 8), \
+  static_assert(__llvm_libc::testing::internal::valid_prefix(#SuiteName),      \
                 "All LLVM-libc TEST suite names must start with 'LlvmLibc'."); \
   class SuiteName##_##TestName : public __llvm_libc::testing::Test {           \
   public:                                                                      \
@@ -159,7 +283,7 @@ constexpr bool same_prefix(char const *lhs, char const *rhs, int const len) {
 
 #define TEST_F(SuiteClass, TestName)                                           \
   static_assert(                                                               \
-      __llvm_libc::internal::same_prefix(#SuiteClass, "LlvmLibc", 8),          \
+      __llvm_libc::testing::internal::valid_prefix(#SuiteClass),               \
       "All LLVM-libc TEST_F suite class names must start with 'LlvmLibc'.");   \
   class SuiteClass##_##TestName : public SuiteClass {                          \
   public:                                                                      \

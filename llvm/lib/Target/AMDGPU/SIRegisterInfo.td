@@ -1026,7 +1026,7 @@ def VSrc_128 : RegisterOperand<VReg_128> {
 }
 
 //===----------------------------------------------------------------------===//
-//  VSrc_* Operands with an VGPR
+//  VRegSrc_* Operands with a VGPR
 //===----------------------------------------------------------------------===//
 
 // This is for operands with the enum(9), VSrc encoding restriction,

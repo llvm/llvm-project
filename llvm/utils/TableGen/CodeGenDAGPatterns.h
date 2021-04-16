@@ -1078,7 +1078,8 @@ public:
   }
 
   bool operator==(const Predicate &P) const {
-    return IfCond == P.IfCond && IsHwMode == P.IsHwMode && Def == P.Def;
+    return IfCond == P.IfCond && IsHwMode == P.IsHwMode && Def == P.Def &&
+           Features == P.Features;
   }
   bool operator<(const Predicate &P) const {
     if (IsHwMode != P.IsHwMode)

@@ -57,6 +57,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <iterator>
 #include <map>
@@ -1556,21 +1557,7 @@ static bool addNoSyncAttr(const SCCNodeSet &SCCNodes) {
         ++NumNoSync;
       },
       /* RequiresExactDefinition= */ true});
-  bool Changed = AI.run(SCCNodes);
-
-  // readnone + not convergent implies nosync
-  // (This is here so that we don't have to duplicate the function local
-  //  memory reasoning of the readnone analysis.)
-  for (Function *F : SCCNodes) {
-    if (!F || F->hasNoSync())
-      continue;
-    if (!F->doesNotAccessMemory() || F->isConvergent())
-      continue;
-    F->setNoSync();
-    NumNoSync++;
-    Changed = true;
-  }
-  return Changed;
+  return AI.run(SCCNodes);
 }
 
 static SCCNodesResult createSCCNodeSet(ArrayRef<Function *> Functions) {
@@ -1629,6 +1616,14 @@ static bool deriveAttrsInPostOrder(ArrayRef<Function *> Functions,
   }
 
   Changed |= addNoSyncAttr(Nodes.SCCNodes);
+
+  // Finally, infer the maximal set of attributes from the ones we've inferred
+  // above.  This is handling the cases where one attribute on a signature
+  // implies another, but for implementation reasons the inference rule for
+  // the later is missing (or simply less sophisticated).
+  for (Function *F : Nodes.SCCNodes)
+    if (F)
+      Changed |= inferAttributesFromOthers(*F);
 
   return Changed;
 }
