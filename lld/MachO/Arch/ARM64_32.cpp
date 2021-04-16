@@ -1,4 +1,5 @@
-//===- ARM64.cpp ----------------------------------------------------------===//
+//===- ARM64_32.cpp
+//----------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,8 +27,8 @@ using namespace lld::macho;
 
 namespace {
 
-struct ARM64 : ARM64Common {
-  ARM64();
+struct ARM64_32 : ARM64Common {
+  ARM64_32();
   void writeStub(uint8_t *buf, const Symbol &) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
   void writeStubHelperEntry(uint8_t *buf, const DylibSymbol &,
@@ -37,19 +38,13 @@ struct ARM64 : ARM64Common {
 
 } // namespace
 
-// Random notes on reloc types:
-// ADDEND always pairs with BRANCH26, PAGE21, or PAGEOFF12
-// POINTER_TO_GOT: ld64 supports a 4-byte pc-relative form as well as an 8-byte
-// absolute version of this relocation. The semantics of the absolute relocation
-// are weird -- it results in the value of the GOT slot being written, instead
-// of the address. Let's not support it unless we find a real-world use case.
-
-const RelocAttrs &ARM64::getRelocAttrs(uint8_t type) const {
+// These are very similar to ARM64's relocation attributes, except that we don't
+// have the BYTE8 flag set.
+const RelocAttrs &ARM64_32::getRelocAttrs(uint8_t type) const {
   static const std::array<RelocAttrs, 11> relocAttrsArray{{
 #define B(x) RelocAttrBits::x
-      {"UNSIGNED",
-       B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE4) | B(BYTE8)},
-      {"SUBTRACTOR", B(SUBTRAHEND) | B(BYTE4) | B(BYTE8)},
+      {"UNSIGNED", B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
+      {"SUBTRACTOR", B(SUBTRAHEND) | B(BYTE4)},
       {"BRANCH26", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
       {"PAGE21", B(PCREL) | B(EXTERN) | B(BYTE4)},
       {"PAGEOFF12", B(ABSOLUTE) | B(EXTERN) | B(BYTE4)},
@@ -69,14 +64,17 @@ const RelocAttrs &ARM64::getRelocAttrs(uint8_t type) const {
   return relocAttrsArray[type];
 }
 
+// The stub code is fairly similar to ARM64's, except that we load pointers into
+// 32-bit 'w' registers, instead of the 64-bit 'x' ones.
+
 static constexpr uint32_t stubCode[] = {
     0x90000010, // 00: adrp  x16, __la_symbol_ptr@page
-    0xf9400210, // 04: ldr   x16, [x16, __la_symbol_ptr@pageoff]
+    0xb9400210, // 04: ldr   w16, [x16, __la_symbol_ptr@pageoff]
     0xd61f0200, // 08: br    x16
 };
 
-void ARM64::writeStub(uint8_t *buf8, const Symbol &sym) const {
-  ::writeStub<LP64, stubCode>(buf8, sym);
+void ARM64_32::writeStub(uint8_t *buf8, const Symbol &sym) const {
+  ::writeStub<ILP32, stubCode>(buf8, sym);
 }
 
 static constexpr uint32_t stubHelperHeaderCode[] = {
@@ -84,12 +82,12 @@ static constexpr uint32_t stubHelperHeaderCode[] = {
     0x91000231, // 04: add   x17, x17, _dyld_private@pageoff
     0xa9bf47f0, // 08: stp   x16/x17, [sp, #-16]!
     0x90000010, // 0c: adrp  x16, dyld_stub_binder@page
-    0xf9400210, // 10: ldr   x16, [x16, dyld_stub_binder@pageoff]
+    0xb9400210, // 10: ldr   w16, [x16, dyld_stub_binder@pageoff]
     0xd61f0200, // 14: br    x16
 };
 
-void ARM64::writeStubHelperHeader(uint8_t *buf8) const {
-  ::writeStubHelperHeader<LP64, stubHelperHeaderCode>(buf8);
+void ARM64_32::writeStubHelperHeader(uint8_t *buf8) const {
+  ::writeStubHelperHeader<ILP32, stubHelperHeaderCode>(buf8);
 }
 
 static constexpr uint32_t stubHelperEntryCode[] = {
@@ -98,21 +96,21 @@ static constexpr uint32_t stubHelperEntryCode[] = {
     0x00000000, // 08: l0: .long 0
 };
 
-void ARM64::writeStubHelperEntry(uint8_t *buf8, const DylibSymbol &sym,
-                                 uint64_t entryVA) const {
+void ARM64_32::writeStubHelperEntry(uint8_t *buf8, const DylibSymbol &sym,
+                                    uint64_t entryVA) const {
   ::writeStubHelperEntry<stubHelperEntryCode>(buf8, sym, entryVA);
 }
 
-ARM64::ARM64() : ARM64Common(LP64()) {
-  cpuType = CPU_TYPE_ARM64;
-  cpuSubtype = CPU_SUBTYPE_ARM64_ALL;
+ARM64_32::ARM64_32() : ARM64Common(ILP32()) {
+  cpuType = CPU_TYPE_ARM64_32;
+  cpuSubtype = CPU_SUBTYPE_ARM64_V8;
 
   stubSize = sizeof(stubCode);
   stubHelperHeaderSize = sizeof(stubHelperHeaderCode);
   stubHelperEntrySize = sizeof(stubHelperEntryCode);
 }
 
-TargetInfo *macho::createARM64TargetInfo() {
-  static ARM64 t;
+TargetInfo *macho::createARM64_32TargetInfo() {
+  static ARM64_32 t;
   return &t;
 }

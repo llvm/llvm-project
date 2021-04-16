@@ -622,6 +622,8 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
     return createX86_64TargetInfo();
   case CPU_TYPE_ARM64:
     return createARM64TargetInfo();
+  case CPU_TYPE_ARM64_32:
+    return createARM64_32TargetInfo();
   default:
     fatal("missing or unsupported -arch " + archName);
   }
