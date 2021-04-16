@@ -2,13 +2,13 @@
 # LINK_ORDER cnamed sections are not kept alive by the __start_* reference.
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-# RUN: ld.lld --gc-sections %t.o -o %t
-# RUN: llvm-objdump --section-headers -t %t | FileCheck  %s
 # RUN: ld.lld --gc-sections -z start-stop-gc -z nostart-stop-gc %t.o -o %t
 # RUN: llvm-objdump --section-headers -t %t | FileCheck  %s
 
-## With -z start-stop-gc, non-SHF_LINK_ORDER non-SHF_GROUP C identifier name
+## With -z start-stop-gc (default), non-SHF_LINK_ORDER C identifier name
 ## sections are not retained by __start_/__stop_ references.
+# RUN: ld.lld --gc-sections %t.o -o %t
+# RUN: llvm-readelf -S -s %t | FileCheck %s --check-prefix=GC
 # RUN: ld.lld --gc-sections -z start-stop-gc %t.o -o %t1
 # RUN: llvm-readelf -S -s %t1 | FileCheck %s --check-prefix=GC
 
@@ -44,4 +44,3 @@ _start:
 
 .section yy,"ao",@progbits,.foo
 .quad 0
-
