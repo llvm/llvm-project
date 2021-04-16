@@ -1,4 +1,4 @@
-//===- LLVMArmSVEToLLVMIRTranslation.cpp - Translate LLVMArmSVE to LLVM IR-===//
+//======- ArmSVEToLLVMIRTranslation.cpp - Translate ArmSVE to LLVM IR -=======//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a translation between the MLIR LLVMArmSVE dialect and
-// LLVM IR.
+// This file implements a translation between the ArmSVE dialect and LLVM IR.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Target/LLVMIR/Dialect/LLVMArmSVE/LLVMArmSVEToLLVMIRTranslation.h"
-#include "mlir/Dialect/LLVMIR/LLVMArmSVEDialect.h"
+#include "mlir/Target/LLVMIR/Dialect/ArmSVE/ArmSVEToLLVMIRTranslation.h"
+#include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
@@ -24,8 +23,8 @@ using namespace mlir::LLVM;
 
 namespace {
 /// Implementation of the dialect interface that converts operations belonging
-/// to the LLVMArmSVE dialect to LLVM IR.
-class LLVMArmSVEDialectLLVMIRTranslationInterface
+/// to the ArmSVE dialect to LLVM IR.
+class ArmSVEDialectLLVMIRTranslationInterface
     : public LLVMTranslationDialectInterface {
 public:
   using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
@@ -36,21 +35,21 @@ public:
   convertOperation(Operation *op, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) const final {
     Operation &opInst = *op;
-#include "mlir/Dialect/LLVMIR/LLVMArmSVEConversions.inc"
+#include "mlir/Dialect/ArmSVE/ArmSVEConversions.inc"
 
     return failure();
   }
 };
 } // end namespace
 
-void mlir::registerLLVMArmSVEDialectTranslation(DialectRegistry &registry) {
-  registry.insert<LLVM::LLVMArmSVEDialect>();
-  registry.addDialectInterface<LLVM::LLVMArmSVEDialect,
-                               LLVMArmSVEDialectLLVMIRTranslationInterface>();
+void mlir::registerArmSVEDialectTranslation(DialectRegistry &registry) {
+  registry.insert<arm_sve::ArmSVEDialect>();
+  registry.addDialectInterface<arm_sve::ArmSVEDialect,
+                               ArmSVEDialectLLVMIRTranslationInterface>();
 }
 
-void mlir::registerLLVMArmSVEDialectTranslation(MLIRContext &context) {
+void mlir::registerArmSVEDialectTranslation(MLIRContext &context) {
   DialectRegistry registry;
-  registerLLVMArmSVEDialectTranslation(registry);
+  registerArmSVEDialectTranslation(registry);
   context.appendDialectRegistry(registry);
 }
