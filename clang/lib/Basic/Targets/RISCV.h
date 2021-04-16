@@ -99,6 +99,11 @@ public:
 
   std::string convertConstraint(const char *&Constraint) const override;
 
+  bool
+  initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
+                 StringRef CPU,
+                 const std::vector<std::string> &FeaturesVec) const override;
+
   bool hasFeature(StringRef Feature) const override;
 
   bool handleTargetFeatures(std::vector<std::string> &Features,

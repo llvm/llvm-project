@@ -633,6 +633,27 @@ def : InstAlias<"orc2 $rd, $rs",    (GORCI GPR:$rd, GPR:$rs, 0b111110)>;
 def : InstAlias<"orc $rd, $rs",     (GORCI GPR:$rd, GPR:$rs, 0b111111)>;
 } // Predicates = [HasStdExtZbp, IsRV64]
 
+let Predicates = [HasStdExtZbbOrZbp] in {
+def : InstAlias<"ror $rd, $rs1, $shamt",
+                (RORI  GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt), 0>;
+} // Predicates = [HasStdExtZbbOrZbp]
+
+let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
+def : InstAlias<"rorw $rd, $rs1, $shamt",
+                (RORIW  GPR:$rd, GPR:$rs1, uimm5:$shamt), 0>;
+} // Predicates = [HasStdExtZbbOrZbp, IsRV64]
+
+let Predicates = [HasStdExtZbs] in {
+def : InstAlias<"bset $rd, $rs1, $shamt",
+                (BSETI  GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt), 0>;
+def : InstAlias<"bclr $rd, $rs1, $shamt",
+                (BCLRI GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt), 0>;
+def : InstAlias<"binv $rd, $rs1, $shamt",
+                (BINVI GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt), 0>;
+def : InstAlias<"bext $rd, $rs1, $shamt",
+                (BEXTI GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt), 0>;
+} // Predicates = [HasStdExtZbs]
+
 //===----------------------------------------------------------------------===//
 // Compressed Instruction patterns
 //===----------------------------------------------------------------------===//

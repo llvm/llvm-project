@@ -16,5 +16,5 @@ body:             |
     %1:sreg_32 = S_MOV_B32 0
     %2:vgpr_32 = COPY %1:sreg_32
     %3:vgpr_32 = V_CNDMASK_B32_e64 0, %1:sreg_32, 0, %2:vgpr_32, %0:sreg_32_xm0_xexec, implicit $exec
-
+    S_ENDPGM 0, implicit %3
 ...

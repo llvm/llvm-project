@@ -3422,12 +3422,18 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
   Features.split(ReqFeatures, ',');
 
   // Check if each required feature is included
-  for (auto &I : ReqFeatures) {
-    if (TI.hasFeature(I))
+  for (StringRef F : ReqFeatures) {
+    if (TI.hasFeature(F))
       continue;
+
+    // If the feature is 64bit, alter the string so it will print better in
+    // the diagnostic.
+    if (F == "64bit")
+      F = "RV64";
+
     // Convert features like "zbr" and "experimental-zbr" to "Zbr".
-    I.consume_front("experimental-");
-    std::string FeatureStr = I.str();
+    F.consume_front("experimental-");
+    std::string FeatureStr = F.str();
     FeatureStr[0] = std::toupper(FeatureStr[0]);
 
     // Error message
