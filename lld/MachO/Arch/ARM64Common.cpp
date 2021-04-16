@@ -98,8 +98,9 @@ void ARM64Common::relaxGotLoad(uint8_t *loc, uint8_t type) const {
   // ARM DDI 0487G.a (ID011921)
   uint32_t instruction = read32le(loc);
   // C6.2.132 LDR (immediate)
-  // LDR <Xt>, [<Xn|SP>{, #<pimm>}]
-  if ((instruction & 0xffc00000) != 0xf9400000)
+  // This matches both the 64- and 32-bit variants:
+  // LDR <(X|W)t>, [<Xn|SP>{, #<pimm>}]
+  if ((instruction & 0xbfc00000) != 0xb9400000)
     error(getRelocAttrs(type).name + " reloc requires LDR instruction");
   assert(((instruction >> 10) & 0xfff) == 0 &&
          "non-zero embedded LDR immediate");
