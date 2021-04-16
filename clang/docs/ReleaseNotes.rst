@@ -225,6 +225,10 @@ clang-format
 - Option ``EmptyLineAfterAccessModifier`` has been added to remove, force or keep
   new lines after access modifiers.
 
+- Checks for newlines in option ``EmptyLineBeforeAccessModifier`` are now based
+  on the formatted new lines and not on the new lines in the file. (Fixes
+  https://llvm.org/PR41870.)
+
 libclang
 --------
 
