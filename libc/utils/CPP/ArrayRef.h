@@ -16,7 +16,7 @@
 namespace __llvm_libc {
 namespace cpp {
 
-// The implementations of ArrayRef and MutualArrayRef in this file are based
+// The implementations of ArrayRef and MutableArrayRef in this file are based
 // on the implementations of the types with the same names in
 // llvm/ADT/ArrayRef.h. The implementations in this file are of a limited
 // functionality, but can be extended in an as needed basis.
