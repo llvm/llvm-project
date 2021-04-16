@@ -715,6 +715,14 @@
           integer(c_int), value :: device_num
         end function omp_target_disassociate_ptr
 
+        function omp_target_is_accessible(ptr, size, device_num) bind(c)
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t, c_int
+          integer(c_int) omp_target_is_accessible
+          type(c_ptr), value :: ptr
+          integer(c_size_t), value :: size
+          integer(c_int), value :: device_num
+        end function omp_target_is_accessible
+
 !       ***
 !       *** kmp_* entry points
 !       ***
