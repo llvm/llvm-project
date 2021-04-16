@@ -2497,6 +2497,7 @@ void __kmpc_taskgroup(ident_t *loc, int gtid) {
   tg_new->parent = taskdata->td_taskgroup;
   tg_new->reduce_data = NULL;
   tg_new->reduce_num_data = 0;
+  tg_new->gomp_data = NULL;
   taskdata->td_taskgroup = tg_new;
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
@@ -2595,7 +2596,8 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
   }
   KMP_DEBUG_ASSERT(taskgroup->count == 0);
 
-  if (taskgroup->reduce_data != NULL) { // need to reduce?
+  if (taskgroup->reduce_data != NULL &&
+      !taskgroup->gomp_data) { // need to reduce?
     int cnt;
     void *reduce_data;
     kmp_team_t *t = thread->th.th_team;

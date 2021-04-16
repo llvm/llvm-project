@@ -697,5 +697,20 @@
   GOMP_parallel_loop_maybe_nonmonotonic_runtime
 #define KMP_API_NAME_GOMP_TEAMS_REG GOMP_teams_reg
 #define KMP_API_NAME_GOMP_TASKWAIT_DEPEND GOMP_taskwait_depend
+#define KMP_API_NAME_GOMP_TASKGROUP_REDUCTION_REGISTER                         \
+  GOMP_taskgroup_reduction_register
+#define KMP_API_NAME_GOMP_TASKGROUP_REDUCTION_UNREGISTER                       \
+  GOMP_taskgroup_reduction_unregister
+#define KMP_API_NAME_GOMP_TASK_REDUCTION_REMAP GOMP_task_reduction_remap
+#define KMP_API_NAME_GOMP_PARALLEL_REDUCTIONS GOMP_parallel_reductions
+#define KMP_API_NAME_GOMP_LOOP_START GOMP_loop_start
+#define KMP_API_NAME_GOMP_LOOP_ULL_START GOMP_loop_ull_start
+#define KMP_API_NAME_GOMP_LOOP_DOACROSS_START GOMP_loop_doacross_start
+#define KMP_API_NAME_GOMP_LOOP_ULL_DOACROSS_START GOMP_loop_ull_doacross_start
+#define KMP_API_NAME_GOMP_LOOP_ORDERED_START GOMP_loop_ordered_start
+#define KMP_API_NAME_GOMP_LOOP_ULL_ORDERED_START GOMP_loop_ull_ordered_start
+#define KMP_API_NAME_GOMP_SECTIONS2_START GOMP_sections2_start
+#define KMP_API_NAME_GOMP_WORKSHARE_TASK_REDUCTION_UNREGISTER                  \
+  GOMP_workshare_task_reduction_unregister
 
 #endif /* KMP_FTN_OS_H */
