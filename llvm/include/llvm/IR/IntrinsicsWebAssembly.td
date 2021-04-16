@@ -264,12 +264,6 @@ def int_wasm_extadd_pairwise_unsigned :
             [IntrNoMem, IntrSpeculatable]>;
 
 // TODO: Remove these if possible if they are merged to the spec.
-def int_wasm_trunc_sat_zero_signed :
-  Intrinsic<[llvm_v4i32_ty], [llvm_v2f64_ty],
-            [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_trunc_sat_zero_unsigned :
-  Intrinsic<[llvm_v4i32_ty], [llvm_v2f64_ty],
-            [IntrNoMem, IntrSpeculatable]>;
 def int_wasm_demote_zero :
   Intrinsic<[llvm_v4f32_ty], [llvm_v2f64_ty],
             [IntrNoMem, IntrSpeculatable]>;
