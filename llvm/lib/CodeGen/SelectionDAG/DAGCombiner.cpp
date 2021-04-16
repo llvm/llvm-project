@@ -23040,6 +23040,9 @@ bool DAGCombiner::parallelizeChainedStores(StoreSDNode *St) {
   Intervals.insert(0, (St->getMemoryVT().getSizeInBits() + 7) / 8, Unit);
 
   while (StoreSDNode *Chain = dyn_cast<StoreSDNode>(STChain->getChain())) {
+    if (Chain->getMemoryVT().isScalableVector())
+      return false;
+
     // If the chain has more than one use, then we can't reorder the mem ops.
     if (!SDValue(Chain, 0)->hasOneUse())
       break;
