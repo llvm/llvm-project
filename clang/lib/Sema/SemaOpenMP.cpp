@@ -4596,6 +4596,17 @@ StmtResult Sema::ActOnOpenMPRegionEnd(StmtResult S,
         }
       }
     }
+    if (ThisCaptureRegion == OMPD_parallel) {
+      // Capture temp arrays for inscan reductions.
+      for (OMPClause *C : Clauses) {
+        if (auto *RC = dyn_cast<OMPReductionClause>(C)) {
+          if (RC->getModifier() != OMPC_REDUCTION_inscan)
+            continue;
+          for (Expr *E : RC->copy_array_temps())
+            MarkDeclarationsReferencedInExpr(E);
+        }
+      }
+    }
     if (++CompletedRegions == CaptureRegions.size())
       DSAStack->setBodyComplete();
     SR = ActOnCapturedRegionEnd(SR.get());
