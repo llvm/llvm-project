@@ -1598,12 +1598,21 @@ example:
     call is dead after inlining.
 ``nofree``
     This function attribute indicates that the function does not, directly or
-    indirectly, call a memory-deallocation function (free, for example). As a
-    result, uncaptured pointers that are known to be dereferenceable prior to a
-    call to a function with the ``nofree`` attribute are still known to be
-    dereferenceable after the call (the capturing condition is necessary in
-    environments where the function might communicate the pointer to another thread
-    which then deallocates the memory).
+    transitively, call a memory-deallocation function (``free``, for example)
+    on a memory allocation which existed before the call.
+
+    As a result, uncaptured pointers that are known to be dereferenceable
+    prior to a call to a function with the ``nofree`` attribute are still
+    known to be dereferenceable after the call. The capturing condition is
+    necessary in environments where the function might communicate the
+    pointer to another thread which then deallocates the memory.  Alternatively,
+    ``nosync`` would ensure such communication cannot happen and even captured
+    pointers cannot be freed by the function.
+
+    A ``nofree`` function is explicitly allowed to free memory which it
+    allocated or (if not ``nosync``) arrange for another thread to free
+    memory on it's behalf.  As a result, perhaps surprisingly, a ``nofree``
+    function can return a pointer to a previously deallocated memory object.
 ``noimplicitfloat``
     This attributes disables implicit floating-point instructions.
 ``noinline``
