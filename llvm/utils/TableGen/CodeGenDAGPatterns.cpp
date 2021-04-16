@@ -2023,13 +2023,13 @@ void TreePatternNode::InlinePatternFragments(
       if (ChildAlternatives[i].empty())
         return;
 
-      assert(Child->getPredicateCalls().empty() ||
-             llvm::all_of(ChildAlternatives[i],
-                          [&](const TreePatternNodePtr &NewChild) {
-                            return NewChild->getPredicateCalls() ==
-                                   Child->getPredicateCalls();
-                          }) &&
-                 "Non-empty child predicate clobbered!");
+      assert((Child->getPredicateCalls().empty() ||
+              llvm::all_of(ChildAlternatives[i],
+                           [&](const TreePatternNodePtr &NewChild) {
+                             return NewChild->getPredicateCalls() ==
+                                    Child->getPredicateCalls();
+                           })) &&
+             "Non-empty child predicate clobbered!");
     }
 
     // The end result is an all-pairs construction of the resultant pattern.
