@@ -17,6 +17,7 @@
 
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
+#include <algorithm>
 #include <cassert>
 #include <climits>
 #include <cstring>

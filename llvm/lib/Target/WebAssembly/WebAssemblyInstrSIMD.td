@@ -1091,11 +1091,21 @@ multiclass SIMDConvert<Vec vec, Vec arg, SDPatternOperator op, string name,
 defm "" : SIMDConvert<I32x4, F32x4, fp_to_sint, "trunc_sat_f32x4_s", 248>;
 defm "" : SIMDConvert<I32x4, F32x4, fp_to_uint, "trunc_sat_f32x4_u", 249>;
 
-// Lower llvm.wasm.trunc.sat.* to saturating instructions
-def : Pat<(v4i32 (int_wasm_trunc_saturate_signed (v4f32 V128:$src))),
-          (fp_to_sint_I32x4 $src)>;
-def : Pat<(v4i32 (int_wasm_trunc_saturate_unsigned (v4f32 V128:$src))),
-          (fp_to_uint_I32x4 $src)>;
+// Support the saturating variety as well.
+def trunc_s_sat32 : PatFrag<(ops node:$x), (fp_to_sint_sat $x, (i32 32))>;
+def trunc_u_sat32 : PatFrag<(ops node:$x), (fp_to_uint_sat $x, (i32 32))>;
+def : Pat<(v4i32 (trunc_s_sat32 (v4f32 V128:$src))), (fp_to_sint_I32x4 $src)>;
+def : Pat<(v4i32 (trunc_u_sat32 (v4f32 V128:$src))), (fp_to_uint_I32x4 $src)>;
+
+def trunc_sat_zero_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
+def trunc_sat_zero_s :
+  SDNode<"WebAssemblyISD::TRUNC_SAT_ZERO_S", trunc_sat_zero_t>;
+def trunc_sat_zero_u :
+  SDNode<"WebAssemblyISD::TRUNC_SAT_ZERO_U", trunc_sat_zero_t>;
+defm "" : SIMDConvert<I32x4, F64x2, trunc_sat_zero_s, "trunc_sat_zero_f64x2_s",
+                      0xfc>;
+defm "" : SIMDConvert<I32x4, F64x2, trunc_sat_zero_u, "trunc_sat_zero_f64x2_u",
+                      0xfd>;
 
 // Integer to floating point: convert
 def convert_low_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
@@ -1248,10 +1258,6 @@ defm "" : SIMDConvert<F32x4, F64x2, int_wasm_demote_zero,
                       "demote_zero_f64x2", 0x5e>;
 defm "" : SIMDConvert<F64x2, F32x4, int_wasm_promote_low,
                       "promote_low_f32x4", 0x5f>;
-defm "" : SIMDConvert<I32x4, F64x2, int_wasm_trunc_sat_zero_signed,
-                      "trunc_sat_zero_f64x2_s", 0xfc>;
-defm "" : SIMDConvert<I32x4, F64x2, int_wasm_trunc_sat_zero_unsigned,
-                      "trunc_sat_zero_f64x2_u", 0xfd>;
 
 //===----------------------------------------------------------------------===//
 // Saturating Rounding Q-Format Multiplication

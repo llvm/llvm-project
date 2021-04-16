@@ -200,6 +200,16 @@ FileSpec ProcessProperties::GetPythonOSPluginPath() const {
   return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
 }
 
+uint32_t ProcessProperties::GetVirtualAddressableBits() const {
+  const uint32_t idx = ePropertyVirtualAddressableBits;
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_process_properties[idx].default_uint_value);
+}
+
+void ProcessProperties::SetVirtualAddressableBits(uint32_t bits) {
+  const uint32_t idx = ePropertyVirtualAddressableBits;
+  m_collection_sp->SetPropertyAtIndexAsUInt64(nullptr, idx, bits);
+}
 void ProcessProperties::SetPythonOSPluginPath(const FileSpec &file) {
   const uint32_t idx = ePropertyPythonOSPluginPath;
   m_collection_sp->SetPropertyAtIndexAsFileSpec(nullptr, idx, file);
@@ -5545,6 +5555,26 @@ void Process::Flush() {
   m_extended_thread_stop_id = 0;
   m_queue_list.Clear();
   m_queue_list_stop_id = 0;
+}
+
+lldb::addr_t Process::GetCodeAddressMask() {
+  if (m_code_address_mask == 0) {
+    if (uint32_t number_of_addressable_bits = GetVirtualAddressableBits()) {
+      lldb::addr_t address_mask = ~((1ULL << number_of_addressable_bits) - 1);
+      SetCodeAddressMask(address_mask);
+    }
+  }
+  return m_code_address_mask;
+}
+
+lldb::addr_t Process::GetDataAddressMask() {
+  if (m_data_address_mask == 0) {
+    if (uint32_t number_of_addressable_bits = GetVirtualAddressableBits()) {
+      lldb::addr_t address_mask = ~((1ULL << number_of_addressable_bits) - 1);
+      SetDataAddressMask(address_mask);
+    }
+  }
+  return m_data_address_mask;
 }
 
 void Process::DidExec() {

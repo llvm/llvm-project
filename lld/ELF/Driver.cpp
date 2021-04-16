@@ -1133,7 +1133,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->zShstk = hasZOption(args, "shstk");
   config->zStackSize = args::getZOptionValue(args, OPT_z, "stack-size", 0);
   config->zStartStopGC =
-      getZFlag(args, "start-stop-gc", "nostart-stop-gc", false);
+      getZFlag(args, "start-stop-gc", "nostart-stop-gc", true);
   config->zStartStopVisibility = getZStartStopVisibility(args);
   config->zText = getZFlag(args, "text", "notext", true);
   config->zWxneeded = hasZOption(args, "wxneeded");

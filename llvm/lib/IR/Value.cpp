@@ -736,9 +736,18 @@ bool Value::canBeFreed() const {
 
   // Handle byval/byref/sret/inalloca/preallocated arguments.  The storage
   // lifetime is guaranteed to be longer than the callee's lifetime.
-  if (auto *A = dyn_cast<Argument>(this))
+  if (auto *A = dyn_cast<Argument>(this)) {
     if (A->hasPointeeInMemoryValueAttr())
       return false;
+    // A pointer to an object in a function which neither frees, nor can arrange
+    // for another thread to free on its behalf, can not be freed in the scope
+    // of the function.  Note that this logic is restricted to memory
+    // allocations in existance before the call; a nofree function *is* allowed
+    // to free memory it allocated.
+    const Function *F = A->getParent();
+    if (F->doesNotFreeMemory() && F->hasNoSync())
+      return false;
+  }
 
   const Function *F = nullptr;
   if (auto *I = dyn_cast<Instruction>(this))
@@ -748,12 +757,6 @@ bool Value::canBeFreed() const {
 
   if (!F)
     return true;
-
-  // A pointer to an object in a function which neither frees, nor can arrange
-  // for another thread to free on its behalf, can not be freed in the scope
-  // of the function.
-  if (F->doesNotFreeMemory() && F->hasNoSync())
-    return false;
 
   // With garbage collection, deallocation typically occurs solely at or after
   // safepoints.  If we're compiling for a collector which uses the
