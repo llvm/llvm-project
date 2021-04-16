@@ -1801,7 +1801,7 @@ static unsigned GetNumNodeResults(Record *Operator, CodeGenDAGPatterns &CDP) {
       // The number of results of a fragment with alternative records is the
       // maximum number of results across all alternatives.
       unsigned NumResults = 0;
-      for (auto T : PFRec->getTrees())
+      for (const auto &T : PFRec->getTrees())
         NumResults = std::max(NumResults, T->getNumTypes());
       return NumResults;
     }
@@ -2023,7 +2023,7 @@ void TreePatternNode::InlinePatternFragments(
       if (ChildAlternatives[i].empty())
         return;
 
-      for (auto NewChild : ChildAlternatives[i])
+      for (const auto &NewChild : ChildAlternatives[i])
         assert((Child->getPredicateCalls().empty() ||
                 NewChild->getPredicateCalls() == Child->getPredicateCalls()) &&
                "Non-empty child predicate clobbered!");
@@ -2098,7 +2098,7 @@ void TreePatternNode::InlinePatternFragments(
   }
 
   // Loop over all fragment alternatives.
-  for (auto Alternative : Frag->getTrees()) {
+  for (const auto &Alternative : Frag->getTrees()) {
     TreePatternNodePtr FragTree = Alternative->clone();
 
     if (!PredFn.isAlwaysTrue())
@@ -3214,7 +3214,7 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
     // it.
     Record *Transform = Frag->getValueAsDef("OperandTransform");
     if (!getSDNodeTransform(Transform).second.empty())    // not noop xform?
-      for (auto T : P->getTrees())
+      for (const auto &T : P->getTrees())
         T->setTransformFn(Transform);
   }
 
@@ -4187,7 +4187,7 @@ void CodeGenDAGPatterns::ParseOnePattern(Record *TheDef,
     // resolve cases where the input type is known to be a pointer type (which
     // is considered resolved), but the result knows it needs to be 32- or
     // 64-bits.  Infer the other way for good measure.
-    for (auto T : Pattern.getTrees())
+    for (const auto &T : Pattern.getTrees())
       for (unsigned i = 0, e = std::min(Result.getOnlyTree()->getNumTypes(),
                                         T->getNumTypes());
          i != e; ++i) {
@@ -4241,7 +4241,7 @@ void CodeGenDAGPatterns::ParseOnePattern(Record *TheDef,
   // will lead to a contradiction, which is not an error however, but
   // a sign that this pattern will simply never match.
   if (Temp.getOnlyTree()->hasPossibleType())
-    for (auto T : Pattern.getTrees())
+    for (const auto &T : Pattern.getTrees())
       if (T->hasPossibleType())
         AddPatternToMatch(&Pattern,
                           PatternToMatch(TheDef, makePredList(Preds),
@@ -4704,7 +4704,7 @@ void CodeGenDAGPatterns::GenerateVariants() {
       }
   }
 
-  for (auto it : PatternsWithVariants) {
+  for (const auto &it : PatternsWithVariants) {
     unsigned i = it.first;
     const MultipleUseVarSet &DepVars = it.second.first;
     const std::vector<TreePatternNodePtr> &Variants = it.second.second;
