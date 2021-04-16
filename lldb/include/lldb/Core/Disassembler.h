@@ -394,10 +394,12 @@ public:
     lldb::addr_t value;
   };
 
-  static lldb::DisassemblerSP
-  DisassembleRange(const ArchSpec &arch, const char *plugin_name,
-                   const char *flavor, Target &target,
-                   const AddressRange &disasm_range, bool prefer_file_cache);
+  static lldb::DisassemblerSP DisassembleRange(const ArchSpec &arch,
+                                               const char *plugin_name,
+                                               const char *flavor,
+                                               Target &target,
+                                               const AddressRange &disasm_range,
+                                               bool force_live_memory = false);
 
   static lldb::DisassemblerSP
   DisassembleBytes(const ArchSpec &arch, const char *plugin_name,
@@ -426,7 +428,8 @@ public:
                          Stream &strm);
 
   size_t ParseInstructions(Target &target, Address address, Limit limit,
-                           Stream *error_strm_ptr, bool prefer_file_cache);
+                           Stream *error_strm_ptr,
+                           bool force_live_memory = false);
 
   virtual size_t DecodeInstructions(const Address &base_addr,
                                     const DataExtractor &data,

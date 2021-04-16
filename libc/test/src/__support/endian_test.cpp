@@ -30,25 +30,25 @@ TEST_F(LlvmLibcEndian, Field) {
 }
 
 TEST_F(LlvmLibcEndian, uint8_t) {
-  const auto original = uint8_t(0x12);
+  const uint8_t original = uint8_t(0x12);
   check(original, original);
 }
 
 TEST_F(LlvmLibcEndian, uint16_t) {
-  const auto original = uint16_t(0x1234);
-  const auto swapped = __builtin_bswap16(original);
+  const uint16_t original = uint16_t(0x1234);
+  const uint16_t swapped = __builtin_bswap16(original);
   check(original, swapped);
 }
 
 TEST_F(LlvmLibcEndian, uint32_t) {
-  const auto original = uint32_t(0x12345678);
-  const auto swapped = __builtin_bswap32(original);
+  const uint32_t original = uint32_t(0x12345678);
+  const uint32_t swapped = __builtin_bswap32(original);
   check(original, swapped);
 }
 
 TEST_F(LlvmLibcEndian, uint64_t) {
-  const auto original = uint64_t(0x123456789ABCDEF0);
-  const auto swapped = __builtin_bswap64(original);
+  const uint64_t original = uint64_t(0x123456789ABCDEF0);
+  const uint64_t swapped = __builtin_bswap64(original);
   check(original, swapped);
 }
 
