@@ -44,7 +44,7 @@ static void convertOmpOpRegions(Region &region, StringRef blockName,
 
   // Convert blocks one by one in topological order to ensure
   // defs are converted before uses.
-  llvm::SetVector<Block *> blocks =
+  SetVector<Block *> blocks =
       LLVM::detail::getTopologicallySortedBlocks(region);
   for (Block *bb : blocks) {
     llvm::BasicBlock *llvmBB = moduleTranslation.lookupBlock(bb);

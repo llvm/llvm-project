@@ -223,14 +223,12 @@ namespace {
 /// The padding value for a given Op depends on the semantics of the Op.
 /// The identity value for ConvOp and PoolingSumOp is 0, for PoolingMaxOp is
 /// -inf or minInt and for PoolingMinOp is inf or maxInt.
-template <typename OpType>
-Attribute getPadValueAttr(Type type) {
+template <typename OpType> Attribute getPadValueAttr(Type type) {
   llvm_unreachable("Unexpected op type for getPadValueAttr");
   return {};
 }
 
-template <>
-Attribute getPadValueAttr<PoolingMaxOp>(Type type) {
+template <> Attribute getPadValueAttr<PoolingMaxOp>(Type type) {
   auto &b = ScopedContext::getBuilderRef();
   if (auto floatType = type.dyn_cast<FloatType>()) {
     return b.getFloatAttr(
@@ -248,8 +246,7 @@ Attribute getPadValueAttr<PoolingMaxOp>(Type type) {
   return {};
 }
 
-template <>
-Attribute getPadValueAttr<PoolingMinOp>(Type type) {
+template <> Attribute getPadValueAttr<PoolingMinOp>(Type type) {
   auto &b = ScopedContext::getBuilderRef();
   if (auto floatType = type.dyn_cast<FloatType>()) {
     return b.getFloatAttr(floatType,
@@ -266,14 +263,12 @@ Attribute getPadValueAttr<PoolingMinOp>(Type type) {
   return {};
 }
 
-template <>
-Attribute getPadValueAttr<PoolingSumOp>(Type type) {
+template <> Attribute getPadValueAttr<PoolingSumOp>(Type type) {
   auto &b = ScopedContext::getBuilderRef();
   return b.getZeroAttr(type);
 }
 
-template <>
-Attribute getPadValueAttr<ConvOp>(Type type) {
+template <> Attribute getPadValueAttr<ConvOp>(Type type) {
   auto &b = ScopedContext::getBuilderRef();
   return b.getZeroAttr(type);
 }
@@ -324,8 +319,7 @@ static void emitScalarImplementation(ArrayRef<Value> allIvs, ConvOp convOp) {
   }
 }
 
-template <typename PoolingOp>
-static bool hasPadding(PoolingOp poolingOp) {
+template <typename PoolingOp> static bool hasPadding(PoolingOp poolingOp) {
   for (unsigned i = 0, e = poolingOp.getNumWindowLoops(); i < e; ++i) {
     if (poolingOp.getLowPad(i) > 0 || poolingOp.getHighPad(i) > 0)
       return true;
@@ -501,7 +495,7 @@ linalgOpToLoopsImpl(Operation *op, OpBuilder &builder,
       });
   // Number of loop ops might be different from the number of ivs since some
   // loops like affine.parallel and scf.parallel have multiple ivs.
-  llvm::SetVector<Operation *> loopSet;
+  SetVector<Operation *> loopSet;
   for (Value iv : allIvs) {
     if (!iv)
       return {};

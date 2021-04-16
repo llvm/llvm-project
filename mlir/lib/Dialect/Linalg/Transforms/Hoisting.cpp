@@ -412,7 +412,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
       LLVM_DEBUG(DBGS() << "Candidate read: " << *transferRead.getOperation()
                         << "\n");
 
-      llvm::SetVector<Operation *> forwardSlice;
+      SetVector<Operation *> forwardSlice;
       getForwardSlice(transferRead.getOperation(), &forwardSlice);
 
       // Look for the last TransferWriteOp in the forwardSlice of
@@ -510,7 +510,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
 template <typename... OpTypeList>
 static bool backwardsSliceOnlyHasOpsOfType(scf::ForOp outerLimit, Value v) {
   // Compute a backward slice up to, but not including, `outerLimit`.
-  llvm::SetVector<Operation *> backwardSlice;
+  SetVector<Operation *> backwardSlice;
   getBackwardSlice(v, &backwardSlice, [&](Operation *op) {
     return outerLimit->isProperAncestor(op);
   });
@@ -557,7 +557,7 @@ static Value computeLoopIndependentUpperBound(OpBuilder &b, scf::ForOp outer,
   (void)ok;
 
   // Compute a backward slice up to, but not including, `outer`.
-  llvm::SetVector<Operation *> backwardSlice;
+  SetVector<Operation *> backwardSlice;
   getBackwardSlice(v, &backwardSlice,
                    [&](Operation *op) { return outer->isProperAncestor(op); });
   backwardSlice.insert(v.getDefiningOp());
@@ -655,8 +655,8 @@ static Value buildLoopIterationCount(OpBuilder &b, scf::ForOp outer,
 ///   dimensions of reuse.
 static LogicalResult
 hoistPaddingOnTensorsPrerequisites(linalg::PadTensorOp padTensorOp, int nLevels,
-                                   llvm::SetVector<Operation *> &backwardSlice,
-                                   llvm::SetVector<Operation *> &packingLoops,
+                                   SetVector<Operation *> &backwardSlice,
+                                   SetVector<Operation *> &packingLoops,
                                    SmallVector<Value> &dynamicTensorSizes) {
   // Bail on any use that isn't an input of a Linalg op.
   // Hoisting of inplace updates happens after vectorization.
@@ -746,7 +746,7 @@ hoistPaddingOnTensorsPrerequisites(linalg::PadTensorOp padTensorOp, int nLevels,
 LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
                                                   unsigned nLoops) {
   SmallVector<Value> dynamicTensorSizes;
-  llvm::SetVector<Operation *> backwardSlice, packingLoops;
+  SetVector<Operation *> backwardSlice, packingLoops;
   if (failed(hoistPaddingOnTensorsPrerequisites(padTensorOp, nLoops,
                                                 backwardSlice, packingLoops,
                                                 dynamicTensorSizes)))
