@@ -54,7 +54,10 @@ class TestCase(lldbtest.TestBase):
                         process.Continue()
                     continue
 
-                self.assertEqual(caller_after, caller_before)
+                # The entry function is missing this prefix dedicating resume functions.
+                prefix = re.compile(r'^\([0-9]+\) (await|suspend) resume partial function for ')
+                self.assertEqual(prefix.sub('', caller_after),
+                                 prefix.sub('', caller_before))
                 num_async_steps += 1
 
         self.assertEqual(num_async_steps, 6)
