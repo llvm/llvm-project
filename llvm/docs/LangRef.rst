@@ -2717,8 +2717,7 @@ synchronization.
 
     define void @f(i8* %a) {
       store i8* %a, i8** @glb
-      store atomic i1 false, i1* @lock release ; %a is captured because another
-thread can safely read @glb
+      store atomic i1 false, i1* @lock release ; %a is captured because another thread can safely read @glb
       store i8* null, i8** @glb
       ret void
     }
