@@ -60,9 +60,10 @@ public:
 
   bool useSaveRestoreLibCalls(const MachineFunction &MF) const {
     // We cannot use fixed locations for the callee saved spill slots if the
-    // function uses a varargs save area.
+    // function uses a varargs save area, or is an interrupt handler.
     return MF.getSubtarget<RISCVSubtarget>().enableSaveRestore() &&
-           VarArgsSaveSize == 0 && !MF.getFrameInfo().hasTailCall();
+           VarArgsSaveSize == 0 && !MF.getFrameInfo().hasTailCall() &&
+           !MF.getFunction().hasFnAttribute("interrupt");
   }
 
   uint64_t getRVVStackSize() const { return RVVStackSize; }
