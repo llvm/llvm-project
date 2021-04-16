@@ -175,15 +175,20 @@ entry:
   ret i32 %and1
 }
 
-define i32 @bar4(i32 %a, i32 %b) {
-; CHECK-LABEL: @bar4(
+; If we allow recursive known bits queries based on
+; assumptions, we could do better here:
+; a == b and a & 7 == 1, so b & 7 == 1, so b & 3 == 1, so return 1.
+
+define i32 @known_bits_recursion_via_assumes(i32 %a, i32 %b) {
+; CHECK-LABEL: @known_bits_recursion_via_assumes(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B:%.*]], 3
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 7
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[A]], [[B]]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP2]])
-; CHECK-NEXT:    ret i32 1
+; CHECK-NEXT:    ret i32 [[AND1]]
 ;
 entry:
   %and1 = and i32 %b, 3
