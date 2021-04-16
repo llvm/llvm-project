@@ -45,6 +45,31 @@ FormatExpected(const MapType &Accessors) {
 
 #define STRING_LOCATION_PAIR(INSTANCE, LOC) Pair(#LOC, INSTANCE->LOC)
 
+TEST(Introspection, SourceLocations_CallContainer) {
+  SourceLocationMap slm;
+  SharedLocationCall Prefix;
+  slm.insert(std::make_pair(
+      SourceLocation(),
+      llvm::makeIntrusiveRefCnt<LocationCall>(Prefix, "getSourceRange")));
+  EXPECT_EQ(slm.size(), 1u);
+
+  auto callTypeLoc =
+      llvm::makeIntrusiveRefCnt<LocationCall>(Prefix, "getTypeLoc");
+  slm.insert(std::make_pair(
+      SourceLocation(),
+      llvm::makeIntrusiveRefCnt<LocationCall>(callTypeLoc, "getSourceRange")));
+  EXPECT_EQ(slm.size(), 2u);
+}
+
+TEST(Introspection, SourceLocations_CallChainFormatting) {
+  SharedLocationCall Prefix;
+  auto chainedCall = llvm::makeIntrusiveRefCnt<LocationCall>(
+      llvm::makeIntrusiveRefCnt<LocationCall>(Prefix, "getTypeLoc"),
+      "getSourceRange");
+  EXPECT_EQ(LocationCallFormatterCpp::format(*chainedCall),
+            "getTypeLoc().getSourceRange()");
+}
+
 TEST(Introspection, SourceLocations_Stmt) {
   if (!NodeIntrospection::hasIntrospectionSupport())
     return;
