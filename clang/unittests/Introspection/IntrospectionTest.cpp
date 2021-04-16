@@ -133,7 +133,7 @@ ns1::ns2::Foo<A, B> ns1::ns2::Bar<T, U>::Nested::method(int i, bool b) const
 
   auto BoundNodes = ast_matchers::match(
       decl(hasDescendant(
-          cxxMethodDecl(hasName("method")).bind("method"))),
+          cxxMethodDecl(hasName("method"), isDefinition()).bind("method"))),
       TU, Ctx);
 
   EXPECT_EQ(BoundNodes.size(), 1u);
