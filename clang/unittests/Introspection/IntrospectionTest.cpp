@@ -45,6 +45,43 @@ FormatExpected(const MapType &Accessors) {
 
 #define STRING_LOCATION_PAIR(INSTANCE, LOC) Pair(#LOC, INSTANCE->LOC)
 
+/**
+  A test formatter for a hypothetical language which needs
+  neither casts nor '->'.
+*/
+class LocationCallFormatterSimple {
+public:
+  static void print(const LocationCall &Call, llvm::raw_ostream &OS) {
+    if (Call.isCast()) {
+      if (const LocationCall *On = Call.on())
+        print(*On, OS);
+      return;
+    }
+    if (const LocationCall *On = Call.on()) {
+      print(*On, OS);
+      OS << '.';
+    }
+    OS << Call.name();
+    if (Call.args().empty()) {
+      OS << "()";
+      return;
+    }
+    OS << '(' << Call.args().front();
+    for (const std::string &Arg : Call.args().drop_front()) {
+      OS << ", " << Arg;
+    }
+    OS << ')';
+  }
+
+  static std::string format(const LocationCall &Call) {
+    std::string Result;
+    llvm::raw_string_ostream OS(Result);
+    print(Call, OS);
+    OS.flush();
+    return Result;
+  }
+};
+
 TEST(Introspection, SourceLocations_CallContainer) {
   SourceLocationMap slm;
   SharedLocationCall Prefix;
@@ -68,6 +105,24 @@ TEST(Introspection, SourceLocations_CallChainFormatting) {
       "getSourceRange");
   EXPECT_EQ(LocationCallFormatterCpp::format(*chainedCall),
             "getTypeLoc().getSourceRange()");
+}
+
+TEST(Introspection, SourceLocations_Formatter) {
+  SharedLocationCall Prefix;
+  auto chainedCall = llvm::makeIntrusiveRefCnt<LocationCall>(
+      llvm::makeIntrusiveRefCnt<LocationCall>(
+          llvm::makeIntrusiveRefCnt<LocationCall>(
+              llvm::makeIntrusiveRefCnt<LocationCall>(
+                  Prefix, "getTypeSourceInfo", LocationCall::ReturnsPointer),
+              "getTypeLoc"),
+          "getAs<clang::TypeSpecTypeLoc>", LocationCall::IsCast),
+      "getNameLoc");
+
+  EXPECT_EQ("getTypeSourceInfo()->getTypeLoc().getAs<clang::TypeSpecTypeLoc>()."
+            "getNameLoc()",
+            LocationCallFormatterCpp::format(*chainedCall));
+  EXPECT_EQ("getTypeSourceInfo().getTypeLoc().getNameLoc()",
+            LocationCallFormatterSimple::format(*chainedCall));
 }
 
 TEST(Introspection, SourceLocations_Stmt) {
