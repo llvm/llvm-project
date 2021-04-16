@@ -859,8 +859,7 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
       if (symbol.d_tag == DT_MIPS_RLD_MAP) {
         // DT_MIPS_RLD_MAP tag stores an absolute address of the debug pointer.
         Address addr;
-        if (target->ReadPointerFromMemory(dyn_base + offset, false, error,
-                                          addr))
+        if (target->ReadPointerFromMemory(dyn_base + offset, error, addr, true))
           return addr;
       }
       if (symbol.d_tag == DT_MIPS_RLD_MAP_REL) {
@@ -868,7 +867,7 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
         // relative to the address of the tag.
         uint64_t rel_offset;
         rel_offset = target->ReadUnsignedIntegerFromMemory(
-            dyn_base + offset, false, GetAddressByteSize(), UINT64_MAX, error);
+            dyn_base + offset, GetAddressByteSize(), UINT64_MAX, error, true);
         if (error.Success() && rel_offset != UINT64_MAX) {
           Address addr;
           addr_t debug_ptr_address =

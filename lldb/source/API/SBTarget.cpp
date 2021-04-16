@@ -705,7 +705,7 @@ size_t SBTarget::ReadMemory(const SBAddress addr, void *buf, size_t size,
   if (target_sp) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     bytes_read =
-        target_sp->ReadMemory(addr.ref(), false, buf, size, sb_error.ref());
+        target_sp->ReadMemory(addr.ref(), buf, size, sb_error.ref(), true);
   } else {
     sb_error.SetErrorString("invalid target");
   }
@@ -2085,12 +2085,12 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
     if (addr_ptr) {
       DataBufferHeap data(
           target_sp->GetArchitecture().GetMaximumOpcodeByteSize() * count, 0);
-      bool prefer_file_cache = false;
+      bool force_live_memory = true;
       lldb_private::Status error;
       lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
       const size_t bytes_read =
-          target_sp->ReadMemory(*addr_ptr, prefer_file_cache, data.GetBytes(),
-                                data.GetByteSize(), error, &load_addr);
+          target_sp->ReadMemory(*addr_ptr, data.GetBytes(), data.GetByteSize(),
+                                error, force_live_memory, &load_addr);
       const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
       sb_instructions.SetDisassembler(Disassembler::DisassembleBytes(
           target_sp->GetArchitecture(), nullptr, flavor_string, *addr_ptr,
