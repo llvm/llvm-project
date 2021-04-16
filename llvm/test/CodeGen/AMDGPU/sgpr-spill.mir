@@ -35,6 +35,7 @@ stack:
   - { id: 5, type: spill-slot, size: 32, alignment: 4 }
   - { id: 6, type: spill-slot, size: 64, alignment: 4 }
   - { id: 7, type: spill-slot, size: 128, alignment: 4 }
+  - { id: 8, type: spill-slot, size: 4, alignment: 4096 }
 machineFunctionInfo:
   explicitKernArgSize: 660
   maxKernArgAlign: 4
@@ -596,6 +597,15 @@ body:             |
     ; GCN64-MUBUF: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 160, 0, 0, 0, implicit $exec :: (store 4 into %stack.7, addrspace 5)
     ; GCN64-MUBUF: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, 0, implicit $exec :: (load 4 from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-MUBUF: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
+    ; GCN64-MUBUF: renamable $sgpr12 = IMPLICIT_DEF
+    ; GCN64-MUBUF: $sgpr0_sgpr1 = S_MOV_B64 $exec
+    ; GCN64-MUBUF: $exec = S_MOV_B64 1, implicit-def $vgpr0
+    ; GCN64-MUBUF: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, 0, implicit $exec :: (store 4 into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0
+    ; GCN64-MUBUF: $sgpr2 = S_ADD_U32 $sgpr33, 262144, implicit-def $scc
+    ; GCN64-MUBUF: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, killed $sgpr2, 0, 0, 0, 0, implicit $exec :: (store 4 into %stack.8, align 4096, addrspace 5)
+    ; GCN64-MUBUF: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, 0, implicit $exec :: (load 4 from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN32-MUBUF-LABEL: name: check_spill
     ; GCN32-MUBUF: liveins: $sgpr8, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr11
     ; GCN32-MUBUF: $sgpr33 = S_MOV_B32 0
@@ -749,6 +759,15 @@ body:             |
     ; GCN32-MUBUF: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 160, 0, 0, 0, implicit $exec :: (store 4 into %stack.7, addrspace 5)
     ; GCN32-MUBUF: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, 0, implicit $exec :: (load 4 from %fixed-stack.0, align 16, addrspace 5)
     ; GCN32-MUBUF: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
+    ; GCN32-MUBUF: renamable $sgpr12 = IMPLICIT_DEF
+    ; GCN32-MUBUF: $sgpr0 = S_MOV_B32 $exec_lo
+    ; GCN32-MUBUF: $exec_lo = S_MOV_B32 1, implicit-def $vgpr0
+    ; GCN32-MUBUF: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, 0, implicit $exec :: (store 4 into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0
+    ; GCN32-MUBUF: $sgpr1 = S_ADD_U32 $sgpr33, 131072, implicit-def $scc
+    ; GCN32-MUBUF: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, killed $sgpr1, 0, 0, 0, 0, implicit $exec :: (store 4 into %stack.8, align 4096, addrspace 5)
+    ; GCN32-MUBUF: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, 0, implicit $exec :: (load 4 from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN64-FLATSCR-LABEL: name: check_spill
     ; GCN64-FLATSCR: liveins: $sgpr8, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr11, $sgpr0_sgpr1
     ; GCN64-FLATSCR: $sgpr33 = S_MOV_B32 0
@@ -898,6 +917,15 @@ body:             |
     ; GCN64-FLATSCR: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 160, 0, implicit $exec, implicit $flat_scr :: (store 4 into %stack.7, addrspace 5)
     ; GCN64-FLATSCR: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %fixed-stack.0, align 16, addrspace 5)
     ; GCN64-FLATSCR: $exec = S_MOV_B64 killed $sgpr2_sgpr3, implicit killed $vgpr0
+    ; GCN64-FLATSCR: renamable $sgpr12 = IMPLICIT_DEF
+    ; GCN64-FLATSCR: $sgpr2_sgpr3 = S_MOV_B64 $exec
+    ; GCN64-FLATSCR: $exec = S_MOV_B64 1, implicit-def $vgpr0
+    ; GCN64-FLATSCR: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR: $vgpr0 = V_WRITELANE_B32 $sgpr12, 0, undef $vgpr0
+    ; GCN64-FLATSCR: $sgpr9 = S_ADD_U32 $sgpr33, 4096, implicit-def $scc
+    ; GCN64-FLATSCR: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, killed $sgpr9, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into %stack.8, align 4096, addrspace 5)
+    ; GCN64-FLATSCR: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR: $exec = S_MOV_B64 killed $sgpr2_sgpr3, implicit killed $vgpr0
     renamable $sgpr12 = IMPLICIT_DEF
     SI_SPILL_S32_SAVE killed $sgpr12, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 
@@ -928,6 +956,9 @@ body:             |
     renamable $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95 = IMPLICIT_DEF
     SI_SPILL_S1024_SAVE killed $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, %stack.7, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 
+    renamable $sgpr12 = IMPLICIT_DEF
+    SI_SPILL_S32_SAVE $sgpr12, %stack.8, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+
 ---
 name:            check_reload
 tracksRegLiveness: true
@@ -946,6 +977,7 @@ stack:
   - { id: 5, type: spill-slot, size: 32, alignment: 4 }
   - { id: 6, type: spill-slot, size: 64, alignment: 4 }
   - { id: 7, type: spill-slot, size: 128, alignment: 4 }
+  - { id: 8, type: spill-slot, size: 4, alignment: 4096 }
 machineFunctionInfo:
   explicitKernArgSize: 660
   maxKernArgAlign: 4
@@ -980,3 +1012,5 @@ body:             |
     renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27 = SI_SPILL_S512_RESTORE %stack.6, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 
     renamable $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95 = SI_SPILL_S1024_RESTORE %stack.7, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+
+    renamable $sgpr12 = SI_SPILL_S32_RESTORE %stack.8, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
