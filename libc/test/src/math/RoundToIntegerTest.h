@@ -35,11 +35,11 @@ private:
   using FPBits = __llvm_libc::fputil::FPBits<F>;
   using UIntType = typename FPBits::UIntType;
 
-  const F zero = __llvm_libc::fputil::FPBits<F>::zero();
-  const F negZero = __llvm_libc::fputil::FPBits<F>::negZero();
-  const F inf = __llvm_libc::fputil::FPBits<F>::inf();
-  const F negInf = __llvm_libc::fputil::FPBits<F>::negInf();
-  const F nan = __llvm_libc::fputil::FPBits<F>::buildNaN(1);
+  const F zero = F(__llvm_libc::fputil::FPBits<F>::zero());
+  const F negZero = F(__llvm_libc::fputil::FPBits<F>::negZero());
+  const F inf = F(__llvm_libc::fputil::FPBits<F>::inf());
+  const F negInf = F(__llvm_libc::fputil::FPBits<F>::negInf());
+  const F nan = F(__llvm_libc::fputil::FPBits<F>::buildNaN(1));
   static constexpr I IntegerMin = I(1) << (sizeof(I) * 8 - 1);
   static constexpr I IntegerMax = -(IntegerMin + 1);
 
@@ -139,7 +139,7 @@ public:
     bits.encoding.sign = 1;
     bits.encoding.mantissa = 0;
 
-    F x = bits;
+    F x = F(bits);
     long mpfrResult;
     bool erangeflag = mpfr::RoundToLong(x, mpfrResult);
     ASSERT_FALSE(erangeflag);
@@ -204,7 +204,7 @@ public:
     bits.encoding.mantissa =
         UIntType(0x1) << (__llvm_libc::fputil::MantissaWidth<F>::value - 1);
 
-    F x = bits;
+    F x = F(bits);
     if (TestModes) {
       for (int m : roundingModes) {
         __llvm_libc::fputil::setRound(m);
@@ -228,7 +228,7 @@ public:
         (FPBits::maxSubnormal - FPBits::minSubnormal) / count;
     for (UIntType i = FPBits::minSubnormal; i <= FPBits::maxSubnormal;
          i += step) {
-      F x = FPBits(i);
+      F x = F(FPBits(i));
       if (x == F(0.0))
         continue;
       // All subnormal numbers should round to zero.
@@ -270,7 +270,7 @@ public:
     constexpr UIntType count = 1000001;
     constexpr UIntType step = (FPBits::maxNormal - FPBits::minNormal) / count;
     for (UIntType i = FPBits::minNormal; i <= FPBits::maxNormal; i += step) {
-      F x = FPBits(i);
+      F x = F(FPBits(i));
       // In normal range on x86 platforms, the long double implicit 1 bit can be
       // zero making the numbers NaN. We will skip them.
       if (isnan(x)) {
