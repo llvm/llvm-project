@@ -406,7 +406,7 @@ template <class C> constexpr auto size(const C& c) -> decltype(c.size());       
 template <class T, size_t N> constexpr size_t size(const T (&array)[N]) noexcept; // C++17
 
 template <class C> constexpr auto ssize(const C& c)
-    -> common_type_t<ptrdiff_t, make_signed_t<decltype(c.size())>>;				       // C++20
+    -> common_type_t<ptrdiff_t, make_signed_t<decltype(c.size())>>;                    // C++20
 template <class T, ptrdiff_t> constexpr ptrdiff_t ssize(const T (&array)[N]) noexcept; // C++20
 
 template <class C> constexpr auto empty(const C& c) -> decltype(c.empty());       // C++17

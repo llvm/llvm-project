@@ -309,11 +309,11 @@ public:
     {
         __b.wait(_VSTD::move(__phase));
     }
-	_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void arrive_and_wait()
     {
         wait(arrive());
-	}
+    }
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void arrive_and_drop()
     {
