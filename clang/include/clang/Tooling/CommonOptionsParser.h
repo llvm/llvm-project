@@ -56,9 +56,9 @@ namespace tooling {
 /// ...
 ///
 /// int main(int argc, const char **argv) {
-///   CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
-///   ClangTool Tool(OptionsParser.getCompilations(),
-///                  OptionsParser.getSourcePathList());
+///   Expected<CommonOptionsParser> OptionsParser = CommonOptionsParser::create(argc, argv, MyToolCategory);
+///   ClangTool Tool(OptionsParser->getCompilations(),
+///                  OptionsParser->getSourcePathList());
 ///   return Tool.run(newFrontendActionFactory<SyntaxOnlyAction>().get());
 /// }
 /// \endcode
