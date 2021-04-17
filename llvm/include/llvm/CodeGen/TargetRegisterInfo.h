@@ -301,6 +301,19 @@ public:
     return false;
   }
 
+  /// Return true if the given TargetRegisterClass is compatible with LLT T.
+  bool isTypeLegalForClass(const TargetRegisterClass &RC, LLT T) const {
+    for (auto I = legalclasstypes_begin(RC); *I != MVT::Other; ++I) {
+      MVT VT(*I);
+      if (VT == MVT::Untyped)
+        return true;
+
+      if (LLT(VT) == T)
+        return true;
+    }
+    return false;
+  }
+
   /// Loop over all of the value types that can be represented by values
   /// in the given register class.
   vt_iterator legalclasstypes_begin(const TargetRegisterClass &RC) const {
@@ -319,6 +332,13 @@ public:
   /// physreg.
   const TargetRegisterClass *getMinimalPhysRegClass(MCRegister Reg,
                                                     MVT VT = MVT::Other) const;
+
+  /// Returns the Register Class of a physical register of the given type,
+  /// picking the most sub register class of the right type that contains this
+  /// physreg. If there is no register class compatible with the given type,
+  /// returns nullptr.
+  const TargetRegisterClass *getMinimalPhysRegClassLLT(MCRegister Reg,
+                                                       LLT Ty = LLT()) const;
 
   /// Return the maximal subclass of the given register class that is
   /// allocatable or NULL.
