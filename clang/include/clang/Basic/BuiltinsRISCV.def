@@ -19,7 +19,7 @@
 
 // Zbb extension
 TARGET_BUILTIN(__builtin_riscv_orc_b_32, "ZiZi", "nc", "experimental-zbb")
-TARGET_BUILTIN(__builtin_riscv_orc_b_64, "WiWi", "nc", "experimental-zbb")
+TARGET_BUILTIN(__builtin_riscv_orc_b_64, "WiWi", "nc", "experimental-zbb,64bit")
 
 // Zbc extension
 TARGET_BUILTIN(__builtin_riscv_clmul, "LiLiLi", "nc", "experimental-zbc")

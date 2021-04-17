@@ -1779,8 +1779,7 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
       //    %3 = COPY %vgpr0; VGPR_32:%3
       //    ...
       //    %vgpr0 = V_MOV_B32_e32 1, implicit %exec
-      MachineOperand &Dst = MI.getOperand(0);
-      if (Dst.isReg() && !Dst.getReg().isVirtual())
+      if (!MI.getOperand(0).getReg().isVirtual())
         continue;
 
       foldInstOperand(MI, OpToFold);

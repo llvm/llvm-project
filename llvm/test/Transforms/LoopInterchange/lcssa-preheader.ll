@@ -25,12 +25,12 @@ define void @lcssa_08(i32 %n, i32 %m) {
 ; CHECK-NEXT:    [[INDVARS_IV27:%.*]] = phi i64 [ 0, [[OUTER_PREHEADER:%.*]] ], [ [[INDVARS_IV_NEXT28:%.*]], [[OUTER_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[CMP222:%.*]] = icmp sgt i32 [[M:%.*]], 0
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[M]] to i64
-; CHECK-NEXT:    br i1 [[CMP222]], label [[INNER_FOR_BODY_SPLIT1:%.*]], label [[OUTER_CRIT_EDGE:%.*]]
+; CHECK-NEXT:    br i1 [[CMP222]], label [[INNER_FOR_BODY_SPLIT1:%.*]], label [[INNER_FOR_BODY_SPLIT:%.*]]
 ; CHECK:       inner.preheader:
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT29:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[INNER_FOR_BODY:%.*]]
 ; CHECK:       inner.for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[INNER_PREHEADER]] ], [ [[TMP1:%.*]], [[INNER_FOR_BODY_SPLIT:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[INNER_PREHEADER]] ], [ [[TMP1:%.*]], [[INNER_FOR_BODY_SPLIT]] ]
 ; CHECK-NEXT:    br label [[OUTER_PREHEADER]]
 ; CHECK:       inner.for.body.split1:
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [16 x [16 x i32]], [16 x [16 x i32]]* [[TEMP]], i64 0, i64 [[INDVARS_IV]], i64 [[INDVARS_IV27]]
@@ -41,10 +41,10 @@ define void @lcssa_08(i32 %n, i32 %m) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br label [[INNER_CRIT_EDGE:%.*]]
 ; CHECK:       inner.for.body.split:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT_LCSSA2:%.*]] = phi i64 [ [[WIDE_TRIP_COUNT]], [[OUTER_LATCH]] ]
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT_LCSSA:%.*]] = phi i64 [ [[WIDE_TRIP_COUNT]], [[OUTER_LATCH]] ], [ [[WIDE_TRIP_COUNT]], [[OUTER_HEADER]] ]
 ; CHECK-NEXT:    [[TMP1]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], [[WIDE_TRIP_COUNT_LCSSA2]]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[INNER_FOR_BODY]], label [[OUTER_CRIT_EDGE]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], [[WIDE_TRIP_COUNT_LCSSA]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[INNER_FOR_BODY]], label [[OUTER_CRIT_EDGE:%.*]]
 ; CHECK:       inner.crit_edge:
 ; CHECK-NEXT:    br label [[OUTER_LATCH]]
 ; CHECK:       outer.latch:
