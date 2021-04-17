@@ -878,6 +878,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     if (Subtarget.hasVSX()) {
       setOperationAction(ISD::FDIV, MVT::v4f32, Legal);
       setOperationAction(ISD::FSQRT, MVT::v4f32, Legal);
+      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2f64, Custom);
     }
 
     if (Subtarget.hasP8Altivec())
@@ -1247,10 +1248,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i64, Legal);
     }
 
-    if (Subtarget.isISA3_1()) {
+    if (Subtarget.isISA3_1())
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2i64, Custom);
-      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2f64, Custom);
-    }
   }
 
   if (Subtarget.pairedVectorMemops()) {
@@ -10341,6 +10340,9 @@ SDValue PPCTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   SDValue V2 = Op.getOperand(1);
   SDValue V3 = Op.getOperand(2);
 
+  if (VT == MVT::v2f64 && C)
+    return Op;
+
   if (Subtarget.isISA3_1()) {
     // On P10, we have legal lowering for constant and variable indices for
     // integer vectors.
@@ -10353,7 +10355,7 @@ SDValue PPCTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
     if (VT == MVT::v4f32 || VT == MVT::v2f64) {
       if (!C || (VT == MVT::v4f32 && dyn_cast<LoadSDNode>(V2)))
         return DAG.getNode(PPCISD::VECINSERT, dl, VT, V1, V2, V3);
-      return SDValue();
+      return Op;
     }
   }
 
