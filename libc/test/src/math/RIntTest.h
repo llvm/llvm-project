@@ -33,11 +33,11 @@ private:
   using FPBits = __llvm_libc::fputil::FPBits<T>;
   using UIntType = typename FPBits::UIntType;
 
-  const T zero = FPBits::zero();
-  const T negZero = FPBits::negZero();
-  const T inf = FPBits::inf();
-  const T negInf = FPBits::negInf();
-  const T nan = FPBits::buildNaN(1);
+  const T zero = T(FPBits::zero());
+  const T negZero = T(FPBits::negZero());
+  const T inf = T(FPBits::inf());
+  const T negInf = T(FPBits::negInf());
+  const T nan = T(FPBits::buildNaN(1));
 
   static inline mpfr::RoundingMode toMPFRRoundingMode(int mode) {
     switch (mode) {
@@ -98,7 +98,7 @@ public:
         (FPBits::maxSubnormal - FPBits::minSubnormal) / count;
     for (UIntType i = FPBits::minSubnormal; i <= FPBits::maxSubnormal;
          i += step) {
-      T x = FPBits(i);
+      T x = T(FPBits(i));
       for (int mode : roundingModes) {
         __llvm_libc::fputil::setRound(mode);
         mpfr::RoundingMode mpfrMode = toMPFRRoundingMode(mode);
@@ -111,7 +111,7 @@ public:
     constexpr UIntType count = 1000001;
     constexpr UIntType step = (FPBits::maxNormal - FPBits::minNormal) / count;
     for (UIntType i = FPBits::minNormal; i <= FPBits::maxNormal; i += step) {
-      T x = FPBits(i);
+      T x = T(FPBits(i));
       // In normal range on x86 platforms, the long double implicit 1 bit can be
       // zero making the numbers NaN. We will skip them.
       if (isnan(x)) {

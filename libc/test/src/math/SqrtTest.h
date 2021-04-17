@@ -41,8 +41,8 @@ public:
       FPBits denormal(T(0.0));
       denormal.encoding.mantissa = mant;
 
-      ASSERT_MPFR_MATCH(mpfr::Operation::Sqrt, T(denormal),
-                        func(denormal), T(0.5));
+      ASSERT_MPFR_MATCH(mpfr::Operation::Sqrt, T(denormal), func(T(denormal)),
+                        T(0.5));
     }
 
     constexpr UIntType count = 1'000'001;
