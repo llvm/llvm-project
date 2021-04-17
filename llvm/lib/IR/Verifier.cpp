@@ -1717,8 +1717,21 @@ static bool isFuncOrArgAttr(Attribute::AttrKind Kind) {
 void Verifier::verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
                                     const Value *V) {
   for (Attribute A : Attrs) {
-    if (A.isStringAttribute())
+
+    if (A.isStringAttribute()) {
+#define GET_ATTR_NAMES
+#define ATTRIBUTE_ENUM(ENUM_NAME, DISPLAY_NAME)
+#define ATTRIBUTE_STRBOOL(ENUM_NAME, DISPLAY_NAME)                             \
+  if (A.getKindAsString() == #DISPLAY_NAME) {                                  \
+    auto V = A.getValueAsString();                                             \
+    if (!(V.empty() || V == "true" || V == "false"))                           \
+      CheckFailed("invalid value for '" #DISPLAY_NAME "' attribute: " + V +    \
+                  "");                                                         \
+  }
+
+#include "llvm/IR/Attributes.inc"
       continue;
+    }
 
     if (A.isIntAttribute() !=
         Attribute::doesAttrKindHaveArgument(A.getKindAsEnum())) {

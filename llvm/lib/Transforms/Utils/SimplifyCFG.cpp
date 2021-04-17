@@ -5793,7 +5793,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   // Only build lookup table when we have a target that supports it or the
   // attribute is not set.
   if (!TTI.shouldBuildLookupTables() ||
-      (Fn->getFnAttribute("no-jump-tables").getValueAsString() == "true"))
+      (Fn->getFnAttribute("no-jump-tables").getValueAsBool()))
     return false;
 
   // FIXME: If the switch is too sparse for a lookup table, perhaps we could

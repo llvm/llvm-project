@@ -1144,7 +1144,7 @@ public:
 
   /// Return true if lowering to a jump table is allowed.
   virtual bool areJTsAllowed(const Function *Fn) const {
-    if (Fn->getFnAttribute("no-jump-tables").getValueAsString() == "true")
+    if (Fn->getFnAttribute("no-jump-tables").getValueAsBool())
       return false;
 
     return isOperationLegalOrCustom(ISD::BR_JT, MVT::Other) ||
