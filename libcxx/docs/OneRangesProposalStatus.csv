@@ -1,4 +1,4 @@
-Section,Description,Dependencies,Asignee,Patch,Complete
+Section,Description,Dependencies,Assignee,Patch,Complete
 [concepts],"Normally this would be more fine-grained, but it’s already been implemented.",,Christopher Di Bella,,✅
 [tuple.helper],Update <tuple> includes.,,,,
 [function.objects],"Comparison functions: equal_to, less, etc.",[concepts],Zoe Carver,D100429,
@@ -19,15 +19,15 @@ forward_iterator: D100275
 bidirectional_iterator: D100278",
 [indirectcallable.indirectinvocable],"indirectly_unary_invocable, indirectly_regular_unary_invocable, indirectly_unary_predicate, indirectly_binary_predicate, indirectly_equivalence_relation, and indirectly_strict_weak_order.","[concepts], [readable.traits]: iter_value_t, [iterator.traits]",,,
 [projected],,[iterator.concepts],,,
-[common.alg.req]: pt. 1,"indirectly_movable, indirectly_movable_sorable, indirectly_copyable, and indirectly_copyable_storable.",[iterator.concepts],,,
+[common.alg.req]: pt. 1,"indirectly_movable, indirectly_movable_storable, indirectly_copyable, and indirectly_copyable_storable.",[iterator.concepts],,,
 [common.alg.req]: pt. 2,indirectly_swappable,"[iterator.concepts], [iterator.cust.swap]",,,
 [common.alg.req]: pt. 3,indirectly_comparable,[projected],,,
 [common.alg.req]: pt. 4,"Note: could be done with pt. 1.           …                              permutable, mergeable, and sortable",[iterator.concepts],,,
 [std.iterator.tags],,[iterator.traits],,,
-[range.iterator.opearations.advance],ranges::advance,[iterator.concepts],,,
-[range.iterator.opearations.distance],ranges::distance,"[iterator.concepts], [range.range]",,,
-[range.iterator.opearations.next],ranges::next,[iterator.concepts],,,
-[range.iterator.opearations.prev],ranges::prev,[iterator.concepts],,,
+[range.iterator.operations.advance],ranges::advance,[iterator.concepts],,,
+[range.iterator.operations.distance],ranges::distance,"[iterator.concepts], [range.range]",,,
+[range.iterator.operations.next],ranges::next,[iterator.concepts],,,
+[range.iterator.operations.prev],ranges::prev,[iterator.concepts],,,
 [predef.iterators],Updates to predefined iterators.,"[iterator.concepts], [iterator.cust.swap], [iterator.cust.move]",,,
 [move.sentinel],,[concepts] … Note: for testing it may be beneficial to have completed [predef.iterators]. ,,,
 [common.iterator],,"[iterator.concepts], [iterator.cust.swap], [iterator.cust.move]",,,
@@ -44,7 +44,7 @@ bidirectional_iterator: D100278",
 [range.refinements],"OutputRange, InputRange, ForwardRange, BidirectionalRange, RandomAccessRange, ContiguousRange, CommonRange, ViewableRange","[ranges.syn]: pt. 2, [range.range]",Christopher Di Bella,"input_range: D100271
 forward_range: D100275
 bidirectional_range: D100278",
-[view.interface],[range.utility.helpers] and view_interface,"[ranges.syn]: pt. 2, [range.view], [range.iterator.opearations.prev], [range.refinements]",,,
+[view.interface],[range.utility.helpers] and view_interface,"[ranges.syn]: pt. 2, [range.view], [range.iterator.operations.prev], [range.refinements]",,,
 [range.subrange],,[view.interface],,,
 [range.all],view::all,"[range.subrange], [range.view.ref]",,,
 [range.view.ref],ref-view,[view.interface],,,
