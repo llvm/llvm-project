@@ -168,6 +168,10 @@ public:
   /// attribute be an integer attribute.
   uint64_t getValueAsInt() const;
 
+  /// Return the attribute's value as a boolean. This requires that the
+  /// attribute be a string attribute.
+  bool getValueAsBool() const;
+
   /// Return the attribute's kind as a string. This requires the
   /// attribute to be a string attribute.
   StringRef getKindAsString() const;

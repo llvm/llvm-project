@@ -64,6 +64,7 @@ public:
 
   Attribute::AttrKind getKindAsEnum() const;
   uint64_t getValueAsInt() const;
+  bool getValueAsBool() const;
 
   StringRef getKindAsString() const;
   StringRef getValueAsString() const;
