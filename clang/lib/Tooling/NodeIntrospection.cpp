@@ -29,16 +29,7 @@ void LocationCallFormatterCpp::print(const LocationCall &Call,
       OS << '.';
   }
 
-  OS << Call.name();
-  if (Call.args().empty()) {
-    OS << "()";
-    return;
-  }
-  OS << '(' << Call.args().front();
-  for (const std::string &Arg : Call.args().drop_front()) {
-    OS << ", " << Arg;
-  }
-  OS << ')';
+  OS << Call.name() << "()";
 }
 
 std::string LocationCallFormatterCpp::format(const LocationCall &Call) {
