@@ -111,7 +111,7 @@ bool TypeSetByHwMode::insert(const ValueTypeByHwMode &VVT) {
   bool ContainsDefault = false;
   MVT DT = MVT::Other;
 
-  SmallDenseSet<unsigned, 4> Modes;
+  SmallSet<unsigned, 4> Modes;
   for (const auto &P : VVT) {
     unsigned M = P.first;
     Modes.insert(M);
@@ -224,7 +224,7 @@ bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
   if (HaveDefault != VTSHaveDefault)
     return false;
 
-  SmallDenseSet<unsigned, 4> Modes;
+  SmallSet<unsigned, 4> Modes;
   for (auto &I : *this)
     Modes.insert(I.first);
   for (const auto &I : VTS)
