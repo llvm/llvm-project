@@ -45,8 +45,10 @@ define i1 @hoist_with_debug2(i32 %x) !dbg !22 {
 ; CHECK-LABEL: @hoist_with_debug2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ugt i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[P:%.*]] = select i1 [[TOBOOL_NOT]], i1 false, i1 true
-; CHECK-NEXT:    ret i1 [[P]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[X]], metadata [[META21:![0-9]+]], metadata !DIExpression()), !dbg [[DBG23:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[X]], metadata [[META21]], metadata !DIExpression()), !dbg [[DBG23]]
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[TOBOOL_NOT]], i1 false, i1 true
+; CHECK-NEXT:    ret i1 [[DOT]]
 ;
 entry:
   %tobool.not = icmp ugt i32 %x, 2
@@ -72,15 +74,11 @@ define i16 @hoist_with_debug3_pr49982(i32 %x, i1 %c.2) !dbg !26 {
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp sgt i32 [[X:%.*]], 0
-; CHECK-NEXT:    br i1 [[C_0]], label [[CHECK:%.*]], label [[LATCH:%.*]]
-; CHECK:       check:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i32 [[X]], 2
-; CHECK-NEXT:    br label [[EXIT_1:%.*]]
-; CHECK:       latch:
-; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[EXIT_1]], label [[FOR_COND]]
+; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[C_0]], [[C_2:%.*]]
+; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 [[C_0]], i16 0, i16 20
+; CHECK-NEXT:    br i1 [[BRMERGE]], label [[EXIT_1:%.*]], label [[FOR_COND]]
 ; CHECK:       exit.1:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i16 [ 20, [[LATCH]] ], [ 0, [[CHECK]] ]
-; CHECK-NEXT:    ret i16 [[MERGE]]
+; CHECK-NEXT:    ret i16 [[DOTMUX]]
 ;
 entry:
   br label %for.cond
