@@ -461,7 +461,7 @@ static void diagnoseUnsatisfiedRequirement(Sema &S,
         Expr *e = Req->getExpr();
         S.Diag(e->getBeginLoc(),
                diag::note_expr_requirement_constraints_not_satisfied_simple)
-            << (int)First << S.getDecltypeForParenthesizedExpr(e)
+            << (int)First << S.Context.getReferenceQualifiedType(e)
             << ConstraintExpr->getNamedConcept();
       } else {
         S.Diag(ConstraintExpr->getBeginLoc(),
