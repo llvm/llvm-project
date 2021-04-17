@@ -1147,7 +1147,7 @@ bool FastISel::lowerCall(const CallInst *CI) {
     IsTailCall = false;
   if (IsTailCall && MF->getFunction()
                             .getFnAttribute("disable-tail-calls")
-                            .getValueAsString() == "true")
+                            .getValueAsBool())
     IsTailCall = false;
 
   CallLoweringInfo CLI;
