@@ -140,15 +140,15 @@ private:
 
 public:
   // Provide static "constructors"...
-  static po_iterator begin(GraphT G) {
+  static po_iterator begin(const GraphT &G) {
     return po_iterator(GT::getEntryNode(G));
   }
-  static po_iterator end(GraphT G) { return po_iterator(); }
+  static po_iterator end(const GraphT &G) { return po_iterator(); }
 
-  static po_iterator begin(GraphT G, SetType &S) {
+  static po_iterator begin(const GraphT &G, SetType &S) {
     return po_iterator(GT::getEntryNode(G), S);
   }
-  static po_iterator end(GraphT G, SetType &S) { return po_iterator(S); }
+  static po_iterator end(const GraphT &G, SetType &S) { return po_iterator(S); }
 
   bool operator==(const po_iterator &x) const {
     return VisitStack == x.VisitStack;
