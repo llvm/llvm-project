@@ -2,6 +2,7 @@
 // RUN: rm -rf %t.cdb
 // RUN: mkdir -p %t.dir
 // RUN: cp %s %t.dir/has_include_if_elif2.cpp
+// RUN: cp %s %t.dir/has_include_if_elif2_clangcl.cpp
 // RUN: mkdir %t.dir/Inputs
 // RUN: cp %S/Inputs/header.h %t.dir/Inputs/header.h
 // RUN: cp %S/Inputs/header.h %t.dir/Inputs/header2.h
@@ -32,6 +33,12 @@
 #endif
 
 // CHECK: has_include_if_elif2.cpp
+// CHECK-NEXT: Inputs{{/|\\}}header.h
+// CHECK-NEXT: Inputs{{/|\\}}header2.h
+// CHECK-NEXT: Inputs{{/|\\}}header3.h
+// CHECK-NEXT: Inputs{{/|\\}}header4.h
+
+// CHECK: has_include_if_elif2_clangcl.cpp
 // CHECK-NEXT: Inputs{{/|\\}}header.h
 // CHECK-NEXT: Inputs{{/|\\}}header2.h
 // CHECK-NEXT: Inputs{{/|\\}}header3.h
