@@ -42,7 +42,7 @@ mandatory_inclusions = {
     "optional": ["compare"],
     "queue": ["compare", "initializer_list"],
     "random": ["initializer_list"],
-    # TODO "ranges": ["compare", "initializer_list", "iterator"],
+    "ranges": ["compare", "initializer_list", "iterator"],
     "regex": ["compare", "initializer_list"],
     "set": ["compare", "initializer_list"],
     "stack": ["compare", "initializer_list"],

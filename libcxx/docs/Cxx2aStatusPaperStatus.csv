@@ -153,7 +153,7 @@
 "`P1862 <https://wg21.link/P1862>`__","LWG","Ranges adaptors for non-copyable iterators","Belfast","* *",""
 "`P1865 <https://wg21.link/P1865>`__","LWG","Add max() to latch and barrier","Belfast","|Complete|","11.0"
 "`P1869 <https://wg21.link/P1869>`__","LWG","Rename 'condition_variable_any' interruptible wait methods","Belfast","* *",""
-"`P1870 <https://wg21.link/P1870>`__","LWG","forwarding-range is too subtle","Belfast","* *",""
+"`P1870 <https://wg21.link/P1870>`__","LWG","forwarding-range is too subtle","Belfast","|In Progress|",""
 "`P1871 <https://wg21.link/P1871>`__","LWG","Should concepts be enabled or disabled?","Belfast","* *",""
 "`P1872 <https://wg21.link/P1872>`__","LWG","span should have size_type, not index_type","Belfast","|Complete|","10.0"
 "`P1878 <https://wg21.link/P1878>`__","LWG","Constraining Readable Types","Belfast","* *",""

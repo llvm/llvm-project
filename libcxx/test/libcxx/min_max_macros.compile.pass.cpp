@@ -218,6 +218,8 @@ TEST_MACROS();
 TEST_MACROS();
 #include <random>
 TEST_MACROS();
+#include <ranges>
+TEST_MACROS();
 #include <ratio>
 TEST_MACROS();
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
