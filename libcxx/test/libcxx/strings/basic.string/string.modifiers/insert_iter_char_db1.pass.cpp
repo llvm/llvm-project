@@ -13,24 +13,18 @@
 // UNSUPPORTED: libcxx-no-debug-mode
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <string>
-#include <stdexcept>
-#include <cassert>
 
 #include "test_macros.h"
-
+#include "debug_macros.h"
 
 int main(int, char**)
 {
-    {
-        typedef std::string S;
-        S s;
-        S s2;
-        s.insert(s2.begin(), '1');
-        assert(false);
-    }
+    typedef std::string S;
+    S s;
+    S s2;
+    TEST_LIBCPP_ASSERT_FAILURE(s.insert(s2.begin(), '1'), "Attempted to subtract incompatible iterators");
 
     return 0;
 }
