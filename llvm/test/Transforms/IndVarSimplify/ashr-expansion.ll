@@ -6,13 +6,8 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define float @ashr_expansion_valid(i64 %x, float* %ptr) {
 ; CHECK-LABEL: @ashr_expansion_valid(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[X:%.*]], i64 -1)
-; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[SMAX]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 0, [[X]]
-; CHECK-NEXT:    [[SMAX1:%.*]] = call i64 @llvm.smax.i64(i64 [[X]], i64 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[SMAX1]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw i64 [[SMIN]], [[TMP1]]
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 1)
+; CHECK-NEXT:    [[BOUND:%.*]] = ashr exact i64 [[X:%.*]], 4
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[BOUND]], i64 1)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
