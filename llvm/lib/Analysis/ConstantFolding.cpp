@@ -658,16 +658,10 @@ Constant *FoldReinterpretLoadFromConstPtr(Constant *C, Type *LoadTy,
 Constant *ConstantFoldLoadThroughBitcastExpr(ConstantExpr *CE, Type *DestTy,
                                              const DataLayout &DL) {
   auto *SrcPtr = CE->getOperand(0);
-  auto *SrcPtrTy = dyn_cast<PointerType>(SrcPtr->getType());
-  if (!SrcPtrTy)
-    return nullptr;
-  Type *SrcTy = SrcPtrTy->getPointerElementType();
-
-  Constant *C = ConstantFoldLoadFromConstPtr(SrcPtr, SrcTy, DL);
-  if (!C)
+  if (!SrcPtr->getType()->isPointerTy())
     return nullptr;
 
-  return llvm::ConstantFoldLoadThroughBitcast(C, DestTy, DL);
+  return ConstantFoldLoadFromConstPtr(SrcPtr, DestTy, DL);
 }
 
 } // end anonymous namespace
@@ -677,7 +671,7 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
   // First, try the easy cases:
   if (auto *GV = dyn_cast<GlobalVariable>(C))
     if (GV->isConstant() && GV->hasDefinitiveInitializer())
-      return GV->getInitializer();
+      return ConstantFoldLoadThroughBitcast(GV->getInitializer(), Ty, DL);
 
   if (auto *GA = dyn_cast<GlobalAlias>(C))
     if (GA->getAliasee() && !GA->isInterposable())
@@ -691,8 +685,8 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
   if (CE->getOpcode() == Instruction::GetElementPtr) {
     if (auto *GV = dyn_cast<GlobalVariable>(CE->getOperand(0))) {
       if (GV->isConstant() && GV->hasDefinitiveInitializer()) {
-        if (Constant *V =
-             ConstantFoldLoadThroughGEPConstantExpr(GV->getInitializer(), CE))
+        if (Constant *V = ConstantFoldLoadThroughGEPConstantExpr(
+                GV->getInitializer(), CE, Ty, DL))
           return V;
       }
     }
@@ -1410,7 +1404,9 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
 }
 
 Constant *llvm::ConstantFoldLoadThroughGEPConstantExpr(Constant *C,
-                                                       ConstantExpr *CE) {
+                                                       ConstantExpr *CE,
+                                                       Type *Ty,
+                                                       const DataLayout &DL) {
   if (!CE->getOperand(1)->isNullValue())
     return nullptr;  // Do not allow stepping over the value!
 
@@ -1421,7 +1417,7 @@ Constant *llvm::ConstantFoldLoadThroughGEPConstantExpr(Constant *C,
     if (!C)
       return nullptr;
   }
-  return C;
+  return ConstantFoldLoadThroughBitcast(C, Ty, DL);
 }
 
 Constant *
