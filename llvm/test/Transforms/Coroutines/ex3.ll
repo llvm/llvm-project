@@ -2,7 +2,7 @@
 ; RUN: opt < %s -O2 -enable-coroutines -S | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes='default<O2>' -enable-coroutines -S | FileCheck %s
 
-define i8* @f(i32 %n) {
+define i8* @f(i32 %n) "coroutine.presplit"="0" {
 entry:
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %size = call i32 @llvm.coro.size.i32()

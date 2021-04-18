@@ -12,7 +12,7 @@
 ; CHECK:      CoroSplit: Processing coroutine 'f' state: 0
 ; CHECK-NEXT: CoroSplit: Processing coroutine 'f' state: 1
 
-define void @f() {
+define void @f() "coroutine.presplit"="0" {
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call i8* @malloc(i32 %size)

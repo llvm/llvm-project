@@ -179,7 +179,6 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
         // with a coroutine attribute.
         if (auto *CII = cast<CoroIdInst>(&I)) {
           if (CII->getInfo().isPreSplit()) {
-            F.addFnAttr(CORO_PRESPLIT_ATTR, UNPREPARED_FOR_SPLIT);
             setCannotDuplicate(CII);
             CII->setCoroutineSelf();
             CoroId = cast<CoroIdInst>(&I);
