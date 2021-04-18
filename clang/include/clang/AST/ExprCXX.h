@@ -4528,9 +4528,7 @@ public:
 
   /// Determine whether this materialized temporary is bound to an
   /// lvalue reference; otherwise, it's bound to an rvalue reference.
-  bool isBoundToLvalueReference() const {
-    return getValueKind() == VK_LValue;
-  }
+  bool isBoundToLvalueReference() const { return isLValue(); }
 
   /// Determine whether this temporary object is usable in constant
   /// expressions, as specified in C++20 [expr.const]p4.
