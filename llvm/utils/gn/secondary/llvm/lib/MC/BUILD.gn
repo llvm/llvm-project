@@ -2,6 +2,7 @@ static_library("MC") {
   output_name = "LLVMMC"
   deps = [
     "//llvm/include/llvm/Config:config",
+    "//llvm/lib/BinaryFormat",
     "//llvm/lib/DebugInfo/CodeView",
     "//llvm/lib/Support",
   ]
