@@ -61,7 +61,7 @@ define void @f(i32* noalias %a, i32* noalias %b, i32* noalias %c, i32* noalias %
 ; CHECK-NEXT:    [[ARRAYIDXC_LVER_ORIG:%.*]] = getelementptr inbounds i32, i32* [[C:%.*]], i64 [[MUL_EXT_LVER_ORIG]]
 ; CHECK-NEXT:    store i32 [[MULC_LVER_ORIG]], i32* [[ARRAYIDXC_LVER_ORIG]], align 4
 ; CHECK-NEXT:    [[EXITCOND_LVER_ORIG:%.*]] = icmp eq i64 [[ADD_LVER_ORIG]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_LVER_ORIG]], label %[[FOR_END1:.*]], label [[FOR_BODY_LVER_ORIG]]
+; CHECK-NEXT:    br i1 [[EXITCOND_LVER_ORIG]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY_LVER_ORIG]]
 ; CHECK:       for.body.ph.ldist1:
 ; CHECK-NEXT:    br label [[FOR_BODY_LDIST1:%.*]]
 ; CHECK:       for.body.ldist1:
@@ -70,14 +70,14 @@ define void @f(i32* noalias %a, i32* noalias %b, i32* noalias %c, i32* noalias %
 ; CHECK-NEXT:    [[MUL_LDIST1:%.*]] = mul i32 [[IND1_LDIST1]], 2
 ; CHECK-NEXT:    [[MUL_EXT_LDIST1:%.*]] = zext i32 [[MUL_LDIST1]] to i64
 ; CHECK-NEXT:    [[ARRAYIDXA_LDIST1:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[MUL_EXT_LDIST1]]
-; CHECK-NEXT:    [[LOADA_LDIST1:%.*]] = load i32, i32* [[ARRAYIDXA_LDIST1]], align 4
+; CHECK-NEXT:    [[LOADA_LDIST1:%.*]] = load i32, i32* [[ARRAYIDXA_LDIST1]], align 4, !alias.scope !0
 ; CHECK-NEXT:    [[ARRAYIDXB_LDIST1:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[MUL_EXT_LDIST1]]
 ; CHECK-NEXT:    [[LOADB_LDIST1:%.*]] = load i32, i32* [[ARRAYIDXB_LDIST1]], align 4
 ; CHECK-NEXT:    [[MULA_LDIST1:%.*]] = mul i32 [[LOADB_LDIST1]], [[LOADA_LDIST1]]
 ; CHECK-NEXT:    [[ADD_LDIST1]] = add nuw nsw i64 [[IND_LDIST1]], 1
 ; CHECK-NEXT:    [[INC1_LDIST1]] = add i32 [[IND1_LDIST1]], 1
 ; CHECK-NEXT:    [[ARRAYIDXA_PLUS_4_LDIST1:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[ADD_LDIST1]]
-; CHECK-NEXT:    store i32 [[MULA_LDIST1]], i32* [[ARRAYIDXA_PLUS_4_LDIST1]], align 4
+; CHECK-NEXT:    store i32 [[MULA_LDIST1]], i32* [[ARRAYIDXA_PLUS_4_LDIST1]], align 4, !alias.scope !3
 ; CHECK-NEXT:    [[EXITCOND_LDIST1:%.*]] = icmp eq i64 [[ADD_LDIST1]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_LDIST1]], label [[FOR_BODY_PH:%.*]], label [[FOR_BODY_LDIST1]]
 ; CHECK:       for.body.ph:
@@ -97,11 +97,11 @@ define void @f(i32* noalias %a, i32* noalias %b, i32* noalias %c, i32* noalias %
 ; CHECK-NEXT:    [[ARRAYIDXC:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 [[MUL_EXT]]
 ; CHECK-NEXT:    store i32 [[MULC]], i32* [[ARRAYIDXC]], align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[ADD]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END2:.*]], label [[FOR_BODY]]
-; CHECK:       [[FOR_END1]]:
-; CHECK:         br label %for.end
-; CHECK:       [[FOR_END2]]:
-; CHECK:         br label %for.end
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT6:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    br label [[FOR_END:%.*]]
+; CHECK:       for.end.loopexit6:
+; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
