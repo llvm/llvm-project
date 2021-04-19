@@ -614,7 +614,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     assert isinstance(cmd, ShUtil.Pipeline)
 
     procs = []
-    negate_procs = []
+    proc_not_counts = []
     default_stdin = subprocess.PIPE
     stderrTempFiles = []
     opened_files = []
@@ -784,7 +784,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                                           stderr = stderr,
                                           env = cmd_shenv.env,
                                           close_fds = kUseCloseFDs))
-            negate_procs.append((not_count % 2) != 0)
+            proc_not_counts.append(not_count)
             # Let the helper know about this process
             timeoutHelper.addProcess(procs[-1])
         except OSError as e:
@@ -837,8 +837,10 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # Detect Ctrl-C in subprocess.
         if res == -signal.SIGINT:
             raise KeyboardInterrupt
-        if negate_procs[i]:
+        if proc_not_counts[i] % 2:
             res = not res
+        elif proc_not_counts[i] > 1:
+            res = 1 if res != 0 else 0
 
         # Ensure the resulting output is always of string type.
         try:
