@@ -558,6 +558,8 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   CurCoro.Data->SuspendBB = RetBB;
   assert(ShouldEmitLifetimeMarkers &&
          "Must emit lifetime intrinsics for coroutines");
+  // CORO_PRESPLIT_ATTR = UNPREPARED_FOR_SPLIT
+  CurFn->addFnAttr("coroutine.presplit", "0");
 
   // Backend is allowed to elide memory allocations, to help it, emit
   // auto mem = coro.alloc() ? 0 : ... allocation code ...;
