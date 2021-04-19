@@ -143,3 +143,34 @@ module {
 //       CHECK:       scf.yield %[[UPDATE]]
 //       CHECK:     scf.yield %[[YIELD]]
 //       CHECK:   return %[[RESULT]]
+
+// -----
+
+module {
+  func @matmul_out_fusion(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
+                      %arg2: tensor<?x?xf32>) -> tensor<?x?xf32> {
+    %c0 = constant 0.0 : f32
+    %0 = linalg.fill(%arg0, %c0) : tensor<?x?xf32>, f32 -> tensor<?x?xf32>
+    %1 = linalg.matmul {__internal_linalg_transform__ = "out_fusion"}
+      ins(%arg1, %arg2 : tensor<?x?xf32>, tensor<?x?xf32>)
+      outs(%0 : tensor<?x?xf32>) -> tensor<?x?xf32>
+    return %1 : tensor<?x?xf32>
+  }
+}
+
+// CHECK-LABEL: func @matmul_out_fusion(
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
+//  CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
+//       CHECK: %[[C0:.*]] = constant 0.0{{.*}} : f32
+//   CHECK-NOT: fill
+//       CHECK: scf.for %[[I:.*]]{{.*}}iter_args(%{{.*}} = %[[ARG0]]) -> (tensor<?x?xf32>) {
+//       CHECK:   scf.for %[[J:.*]]
+//       CHECK:     %[[ST:.*]] = subtensor %[[ARG0]]
+//       CHECK:     %[[ST_FILL:.*]] = linalg.fill(%[[ST]], %[[C0]]) {__internal_linalg_transform__ = "after_out_fusion_producer"} : tensor<?x?xf32>, f32 -> tensor<?x?xf32>
+//       CHECK:     %[[ST_MM_RES:.*]] = scf.for %[[K:.*]]{{.*}}iter_args(%[[BB:.*]] = %[[ST_FILL]]) -> (tensor<?x?xf32>) {
+//   CHECK-NOT:       fill
+//       CHECK:       %[[ST_MM:.*]] = linalg.matmul {__internal_linalg_transform__ = "after_out_fusion"} ins(%{{.*}}, %{{.*}} : tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[BB]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+//       CHECK:       scf.yield %[[ST_MM]] : tensor<?x?xf32>
+//       CHECK:     %[[MM:.*]] = subtensor_insert %[[ST_MM_RES]] into {{.*}}
+//       CHECK:     scf.yield %[[MM]] : tensor<?x?xf32>

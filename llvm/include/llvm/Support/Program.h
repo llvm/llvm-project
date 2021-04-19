@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FileSystem.h"
 #include <chrono>
 #include <system_error>
 
@@ -76,6 +77,12 @@ namespace sys {
   ///   exists. \p Name if \p Name has slashes in it. Otherwise an error.
   ErrorOr<std::string>
   findProgramByName(StringRef Name, ArrayRef<StringRef> Paths = {});
+
+  // These functions change the specified standard stream (stdin or stdout) mode
+  // based on the Flags. They return errc::success if the specified stream was
+  // changed. Otherwise, a platform dependent error is returned.
+  std::error_code ChangeStdinMode(fs::OpenFlags Flags);
+  std::error_code ChangeStdoutMode(fs::OpenFlags Flags);
 
   // These functions change the specified standard stream (stdin or stdout) to
   // binary mode. They return errc::success if the specified stream

@@ -302,16 +302,15 @@ class RVInstI<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
   let Opcode = opcode.Value;
 }
 
-class RVInstIShift<bit arithshift, bits<3> funct3, RISCVOpcode opcode,
+class RVInstIShift<bits<5> imm11_7, bits<3> funct3, RISCVOpcode opcode,
                    dag outs, dag ins, string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
   bits<6> shamt;
   bits<5> rs1;
   bits<5> rd;
 
-  let Inst{31} = 0;
-  let Inst{30} = arithshift;
-  let Inst{29-26} = 0;
+  let Inst{31-27} = imm11_7;
+  let Inst{26} = 0;
   let Inst{25-20} = shamt;
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
@@ -319,16 +318,14 @@ class RVInstIShift<bit arithshift, bits<3> funct3, RISCVOpcode opcode,
   let Opcode = opcode.Value;
 }
 
-class RVInstIShiftW<bit arithshift, bits<3> funct3, RISCVOpcode opcode,
+class RVInstIShiftW<bits<7> imm11_5, bits<3> funct3, RISCVOpcode opcode,
                     dag outs, dag ins, string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
   bits<5> shamt;
   bits<5> rs1;
   bits<5> rd;
 
-  let Inst{31} = 0;
-  let Inst{30} = arithshift;
-  let Inst{29-25} = 0;
+  let Inst{31-25} = imm11_5;
   let Inst{24-20} = shamt;
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;

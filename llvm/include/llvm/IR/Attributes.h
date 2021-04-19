@@ -168,6 +168,10 @@ public:
   /// attribute be an integer attribute.
   uint64_t getValueAsInt() const;
 
+  /// Return the attribute's value as a boolean. This requires that the
+  /// attribute be a string attribute.
+  bool getValueAsBool() const;
+
   /// Return the attribute's kind as a string. This requires the
   /// attribute to be a string attribute.
   StringRef getKindAsString() const;
@@ -207,6 +211,9 @@ public:
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
   std::string getAsString(bool InAttrGrp = false) const;
+
+  /// Return true if this attribute belongs to the LLVMContext.
+  bool hasParentContext(LLVMContext &C) const;
 
   /// Equality and non-equality operators.
   bool operator==(Attribute A) const { return pImpl == A.pImpl; }
@@ -330,6 +337,9 @@ public:
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
   std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
   std::string getAsString(bool InAttrGrp = false) const;
+
+  /// Return true if this attribute set belongs to the LLVMContext.
+  bool hasParentContext(LLVMContext &C) const;
 
   using iterator = const Attribute *;
 
@@ -674,6 +684,9 @@ public:
   /// Return the alignment for the specified function parameter.
   MaybeAlign getParamAlignment(unsigned ArgNo) const;
 
+  /// Return the stack alignment for the specified function parameter.
+  MaybeAlign getParamStackAlignment(unsigned ArgNo) const;
+
   /// Return the byval type for the specified function parameter.
   Type *getParamByValType(unsigned ArgNo) const;
 
@@ -721,6 +734,9 @@ public:
   /// Return the attributes at the index as a string.
   std::string getAsString(unsigned Index, bool InAttrGrp = false) const;
 
+  /// Return true if this attribute list belongs to the LLVMContext.
+  bool hasParentContext(LLVMContext &C) const;
+
   //===--------------------------------------------------------------------===//
   // AttributeList Introspection
   //===--------------------------------------------------------------------===//
@@ -747,6 +763,8 @@ public:
 
   /// Return true if there are no attributes.
   bool isEmpty() const { return pImpl == nullptr; }
+
+  void print(raw_ostream &O) const;
 
   void dump() const;
 };

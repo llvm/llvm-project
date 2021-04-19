@@ -2363,6 +2363,7 @@ void CodeGenModule::ConstructAttributeList(
         Attrs.addAttribute(llvm::Attribute::Nest);
       else if (AI.getInReg())
         Attrs.addAttribute(llvm::Attribute::InReg);
+      Attrs.addStackAlignmentAttr(llvm::MaybeAlign(AI.getDirectAlign()));
       break;
 
     case ABIArgInfo::Indirect: {
@@ -4559,7 +4560,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                                  const CGCallee &Callee,
                                  ReturnValueSlot ReturnValue,
                                  const CallArgList &CallArgs,
-                                 llvm::CallBase **callOrInvoke,
+                                 llvm::CallBase **callOrInvoke, bool IsMustTail,
                                  SourceLocation Loc) {
   // FIXME: We no longer need the types from CallArgs; lift up and simplify.
 
@@ -5252,10 +5253,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (CGM.getLangOpts().ObjCAutoRefCount)
     AddObjCARCExceptionMetadata(CI);
 
-  // Suppress tail calls if requested.
+  // Set tail call kind if necessary.
   if (llvm::CallInst *Call = dyn_cast<llvm::CallInst>(CI)) {
     if (TargetDecl && TargetDecl->hasAttr<NotTailCalledAttr>())
       Call->setTailCallKind(llvm::CallInst::TCK_NoTail);
+    else if (IsMustTail)
+      Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
   }
 
   // Add metadata for calls to MSAllocator functions
@@ -5304,6 +5307,24 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     EnsureInsertPoint();
 
     // Return a reasonable RValue.
+    return GetUndefRValue(RetTy);
+  }
+
+  // If this is a musttail call, return immediately. We do not branch to the
+  // epilogue in this case.
+  if (IsMustTail) {
+    for (auto it = EHStack.find(CurrentCleanupScopeDepth); it != EHStack.end();
+         ++it) {
+      EHCleanupScope *Cleanup = dyn_cast<EHCleanupScope>(&*it);
+      if (!(Cleanup && Cleanup->getCleanup()->isRedundantBeforeReturn()))
+        CGM.ErrorUnsupported(MustTailCall, "tail call skipping over cleanups");
+    }
+    if (CI->getType()->isVoidTy())
+      Builder.CreateRetVoid();
+    else
+      Builder.CreateRet(CI);
+    Builder.ClearInsertionPoint();
+    EnsureInsertPoint();
     return GetUndefRValue(RetTy);
   }
 

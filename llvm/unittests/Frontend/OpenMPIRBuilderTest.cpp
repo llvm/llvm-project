@@ -1708,6 +1708,105 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkShareLoop) {
   EXPECT_EQ(NumCallsInExitBlock, 3u);
 }
 
+TEST_F(OpenMPIRBuilderTest, DynamicWorkShareLoop) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  Type *LCTy = Type::getInt32Ty(Ctx);
+  Value *StartVal = ConstantInt::get(LCTy, 10);
+  Value *StopVal = ConstantInt::get(LCTy, 52);
+  Value *StepVal = ConstantInt::get(LCTy, 2);
+  Value *ChunkVal = ConstantInt::get(LCTy, 7);
+  auto LoopBodyGen = [&](InsertPointTy, llvm::Value *) {};
+
+  CanonicalLoopInfo *CLI = OMPBuilder.createCanonicalLoop(
+      Loc, LoopBodyGen, StartVal, StopVal, StepVal,
+      /*IsSigned=*/false, /*InclusiveStop=*/false);
+
+  Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
+  InsertPointTy AllocaIP = Builder.saveIP();
+
+  // Collect all the info from CLI, as it isn't usable after the call to
+  // createDynamicWorkshareLoop.
+  InsertPointTy AfterIP = CLI->getAfterIP();
+  BasicBlock *Preheader = CLI->getPreheader();
+  BasicBlock *ExitBlock = CLI->getExit();
+  Value *IV = CLI->getIndVar();
+
+  InsertPointTy EndIP =
+      OMPBuilder.createDynamicWorkshareLoop(Loc, CLI, AllocaIP,
+                                            /*NeedsBarrier=*/true, ChunkVal);
+  // The returned value should be the "after" point.
+  ASSERT_EQ(EndIP.getBlock(), AfterIP.getBlock());
+  ASSERT_EQ(EndIP.getPoint(), AfterIP.getPoint());
+
+  auto AllocaIter = BB->begin();
+  ASSERT_GE(std::distance(BB->begin(), BB->end()), 4);
+  AllocaInst *PLastIter = dyn_cast<AllocaInst>(&*(AllocaIter++));
+  AllocaInst *PLowerBound = dyn_cast<AllocaInst>(&*(AllocaIter++));
+  AllocaInst *PUpperBound = dyn_cast<AllocaInst>(&*(AllocaIter++));
+  AllocaInst *PStride = dyn_cast<AllocaInst>(&*(AllocaIter++));
+  EXPECT_NE(PLastIter, nullptr);
+  EXPECT_NE(PLowerBound, nullptr);
+  EXPECT_NE(PUpperBound, nullptr);
+  EXPECT_NE(PStride, nullptr);
+
+  auto PreheaderIter = Preheader->begin();
+  ASSERT_GE(std::distance(Preheader->begin(), Preheader->end()), 6);
+  StoreInst *LowerBoundStore = dyn_cast<StoreInst>(&*(PreheaderIter++));
+  StoreInst *UpperBoundStore = dyn_cast<StoreInst>(&*(PreheaderIter++));
+  StoreInst *StrideStore = dyn_cast<StoreInst>(&*(PreheaderIter++));
+  ASSERT_NE(LowerBoundStore, nullptr);
+  ASSERT_NE(UpperBoundStore, nullptr);
+  ASSERT_NE(StrideStore, nullptr);
+
+  CallInst *ThreadIdCall = dyn_cast<CallInst>(&*(PreheaderIter++));
+  ASSERT_NE(ThreadIdCall, nullptr);
+  EXPECT_EQ(ThreadIdCall->getCalledFunction()->getName(),
+            "__kmpc_global_thread_num");
+
+  CallInst *InitCall = dyn_cast<CallInst>(&*PreheaderIter);
+
+  ASSERT_NE(InitCall, nullptr);
+  EXPECT_EQ(InitCall->getCalledFunction()->getName(),
+            "__kmpc_dispatch_init_4u");
+  EXPECT_EQ(InitCall->getNumArgOperands(), 7U);
+  EXPECT_EQ(InitCall->getArgOperand(6),
+            ConstantInt::get(Type::getInt32Ty(Ctx), 7));
+
+  ConstantInt *OrigLowerBound =
+      dyn_cast<ConstantInt>(LowerBoundStore->getValueOperand());
+  ConstantInt *OrigUpperBound =
+      dyn_cast<ConstantInt>(UpperBoundStore->getValueOperand());
+  ConstantInt *OrigStride =
+      dyn_cast<ConstantInt>(StrideStore->getValueOperand());
+  ASSERT_NE(OrigLowerBound, nullptr);
+  ASSERT_NE(OrigUpperBound, nullptr);
+  ASSERT_NE(OrigStride, nullptr);
+  EXPECT_EQ(OrigLowerBound->getValue(), 1);
+  EXPECT_EQ(OrigUpperBound->getValue(), 21);
+  EXPECT_EQ(OrigStride->getValue(), 1);
+
+  // The original loop iterator should only be used in the condition, in the
+  // increment and in the statement that adds the lower bound to it.
+  EXPECT_EQ(std::distance(IV->use_begin(), IV->use_end()), 3);
+
+  // The exit block should contain the barrier call, plus the call to obtain
+  // the thread ID.
+  size_t NumCallsInExitBlock =
+      count_if(*ExitBlock, [](Instruction &I) { return isa<CallInst>(I); });
+  EXPECT_EQ(NumCallsInExitBlock, 2u);
+
+  // Add a termination to our block and check that it is internally consistent.
+  Builder.restoreIP(EndIP);
+  Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
 TEST_F(OpenMPIRBuilderTest, MasterDirective) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
@@ -1786,6 +1885,88 @@ TEST_F(OpenMPIRBuilderTest, MasterDirective) {
   EXPECT_EQ(MasterEndCI->getNumArgOperands(), 2U);
   EXPECT_TRUE(isa<GlobalVariable>(MasterEndCI->getArgOperand(0)));
   EXPECT_EQ(MasterEndCI->getArgOperand(1), MasterEntryCI->getArgOperand(1));
+}
+
+TEST_F(OpenMPIRBuilderTest, MaskedDirective) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  AllocaInst *PrivAI = nullptr;
+
+  BasicBlock *EntryBB = nullptr;
+  BasicBlock *ExitBB = nullptr;
+  BasicBlock *ThenBB = nullptr;
+
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                       BasicBlock &FiniBB) {
+    if (AllocaIP.isSet())
+      Builder.restoreIP(AllocaIP);
+    else
+      Builder.SetInsertPoint(&*(F->getEntryBlock().getFirstInsertionPt()));
+    PrivAI = Builder.CreateAlloca(F->arg_begin()->getType());
+    Builder.CreateStore(F->arg_begin(), PrivAI);
+
+    llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
+    llvm::Instruction *CodeGenIPInst = &*CodeGenIP.getPoint();
+    EXPECT_EQ(CodeGenIPBB->getTerminator(), CodeGenIPInst);
+
+    Builder.restoreIP(CodeGenIP);
+
+    // collect some info for checks later
+    ExitBB = FiniBB.getUniqueSuccessor();
+    ThenBB = Builder.GetInsertBlock();
+    EntryBB = ThenBB->getUniquePredecessor();
+
+    // simple instructions for body
+    Value *PrivLoad =
+        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
+    Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
+  };
+
+  auto FiniCB = [&](InsertPointTy IP) {
+    BasicBlock *IPBB = IP.getBlock();
+    EXPECT_NE(IPBB->end(), IP.getPoint());
+  };
+
+  Constant *Filter = ConstantInt::get(Type::getInt32Ty(M->getContext()), 0);
+  Builder.restoreIP(
+      OMPBuilder.createMasked(Builder, BodyGenCB, FiniCB, Filter));
+  Value *EntryBBTI = EntryBB->getTerminator();
+  EXPECT_NE(EntryBBTI, nullptr);
+  EXPECT_TRUE(isa<BranchInst>(EntryBBTI));
+  BranchInst *EntryBr = cast<BranchInst>(EntryBB->getTerminator());
+  EXPECT_TRUE(EntryBr->isConditional());
+  EXPECT_EQ(EntryBr->getSuccessor(0), ThenBB);
+  EXPECT_EQ(ThenBB->getUniqueSuccessor(), ExitBB);
+  EXPECT_EQ(EntryBr->getSuccessor(1), ExitBB);
+
+  CmpInst *CondInst = cast<CmpInst>(EntryBr->getCondition());
+  EXPECT_TRUE(isa<CallInst>(CondInst->getOperand(0)));
+
+  CallInst *MaskedEntryCI = cast<CallInst>(CondInst->getOperand(0));
+  EXPECT_EQ(MaskedEntryCI->getNumArgOperands(), 3U);
+  EXPECT_EQ(MaskedEntryCI->getCalledFunction()->getName(), "__kmpc_masked");
+  EXPECT_TRUE(isa<GlobalVariable>(MaskedEntryCI->getArgOperand(0)));
+
+  CallInst *MaskedEndCI = nullptr;
+  for (auto &FI : *ThenBB) {
+    Instruction *cur = &FI;
+    if (isa<CallInst>(cur)) {
+      MaskedEndCI = cast<CallInst>(cur);
+      if (MaskedEndCI->getCalledFunction()->getName() == "__kmpc_end_masked")
+        break;
+      MaskedEndCI = nullptr;
+    }
+  }
+  EXPECT_NE(MaskedEndCI, nullptr);
+  EXPECT_EQ(MaskedEndCI->getNumArgOperands(), 2U);
+  EXPECT_TRUE(isa<GlobalVariable>(MaskedEndCI->getArgOperand(0)));
+  EXPECT_EQ(MaskedEndCI->getArgOperand(1), MaskedEntryCI->getArgOperand(1));
 }
 
 TEST_F(OpenMPIRBuilderTest, CriticalDirective) {

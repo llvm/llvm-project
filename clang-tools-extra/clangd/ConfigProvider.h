@@ -69,7 +69,8 @@ public:
   /// Directory will be used to resolve relative paths in the fragments.
   static std::unique_ptr<Provider> fromYAMLFile(llvm::StringRef AbsPath,
                                                 llvm::StringRef Directory,
-                                                const ThreadsafeFS &);
+                                                const ThreadsafeFS &,
+                                                bool Trusted = false);
   // Reads fragments from YAML files found relative to ancestors of Params.Path.
   //
   // All fragments that exist are returned, starting from distant ancestors.
@@ -78,7 +79,8 @@ public:
   //
   // If Params does not specify a path, no fragments are returned.
   static std::unique_ptr<Provider>
-  fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath, const ThreadsafeFS &);
+  fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath, const ThreadsafeFS &,
+                                bool Trusted = false);
 
   /// A provider that includes fragments from all the supplied providers.
   /// Order is preserved; later providers take precedence over earlier ones.

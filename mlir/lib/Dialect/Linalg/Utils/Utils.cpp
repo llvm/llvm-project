@@ -241,10 +241,9 @@ void GenerateLoopNest<AffineForOp>::doit(
 }
 
 /// Update the `lb`, `ub` and `step` to get per processor `lb`, `ub` and `step`.
-static void updateBoundsForCyclicDistribution(OpBuilder &builder, Location loc,
-                                              Value procId, Value nprocs,
-                                              Value &lb, Value &ub,
-                                              Value &step) {
+void updateBoundsForCyclicDistribution(OpBuilder &builder, Location loc,
+                                       Value procId, Value nprocs, Value &lb,
+                                       Value &ub, Value &step) {
   using edsc::op::operator+;
   using edsc::op::operator*;
   lb = lb + (procId * step);

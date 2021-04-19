@@ -58,6 +58,19 @@
 // RUN: %clang -### -S -fprofile-sample-use=%S/Inputs/file.prof %s 2>&1 | FileCheck -check-prefix=CHECK-SAMPLE-PROFILE %s
 // CHECK-SAMPLE-PROFILE: "-fprofile-sample-use={{.*}}/file.prof"
 
+//
+// RUN: %clang -### -x cuda -nocudainc -nocudalib \
+// RUN:    -c -fprofile-sample-use=%S/Inputs/file.prof %s 2>&1 \
+// RUN:  | FileCheck -check-prefix=CHECK-CUDA-SAMPLE-PROFILE %s
+// -fprofile-sample-use should not be passed to the GPU compilation
+// CHECK-CUDA-SAMPLE-PROFILE: "-cc1"
+// CHECK-CUDA-SAMPLE-PROFILE-SAME: "-triple" "nvptx
+// CHECK-CUDA-SAMPLE-PROFILE-NOT: "-fprofile-sample-use={{.*}}/file.prof"
+// Host compilation should still have the option.
+// CHECK-CUDA-SAMPLE-PROFILE: "-cc1"
+// CHECK-CUDA-SAMPLE-PROFILE-SAME: "-fprofile-sample-use={{.*}}/file.prof"
+
+
 // RUN: %clang -### -S -fauto-profile=%S/Inputs/file.prof %s 2>&1 | FileCheck -check-prefix=CHECK-AUTO-PROFILE %s
 // CHECK-AUTO-PROFILE: "-fprofile-sample-use={{.*}}/file.prof"
 
@@ -279,6 +292,7 @@
 // RUN:     -fno-delete-null-pointer-checks -fdelete-null-pointer-checks      \
 // RUN:     -fno-inline-small-functions -finline-small-functions              \
 // RUN:     -fno-fat-lto-objects -ffat-lto-objects                            \
+// RUN:     -flto=auto -flto=jobserver                                        \
 // RUN:     -fno-merge-constants -fmerge-constants                            \
 // RUN:     -fno-caller-saves -fcaller-saves                                  \
 // RUN:     -fno-reorder-blocks -freorder-blocks                              \

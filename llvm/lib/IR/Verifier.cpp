@@ -199,6 +199,27 @@ private:
 
   void Write(const unsigned i) { *OS << i << '\n'; }
 
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  void Write(const Attribute *A) {
+    if (!A)
+      return;
+    *OS << A->getAsString() << '\n';
+  }
+
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  void Write(const AttributeSet *AS) {
+    if (!AS)
+      return;
+    *OS << AS->getAsString() << '\n';
+  }
+
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  void Write(const AttributeList *AL) {
+    if (!AL)
+      return;
+    AL->print(*OS);
+  }
+
   template <typename T> void Write(ArrayRef<T> Vs) {
     for (const T &V : Vs)
       Write(V);
@@ -1648,7 +1669,6 @@ static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
   case Attribute::NoImplicitFloat:
   case Attribute::Naked:
   case Attribute::InlineHint:
-  case Attribute::StackAlignment:
   case Attribute::UWTable:
   case Attribute::VScaleRange:
   case Attribute::NonLazyBind:
@@ -1691,14 +1711,27 @@ static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
 static bool isFuncOrArgAttr(Attribute::AttrKind Kind) {
   return Kind == Attribute::ReadOnly || Kind == Attribute::WriteOnly ||
          Kind == Attribute::ReadNone || Kind == Attribute::NoFree ||
-         Kind == Attribute::Preallocated;
+         Kind == Attribute::Preallocated || Kind == Attribute::StackAlignment;
 }
 
 void Verifier::verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
                                     const Value *V) {
   for (Attribute A : Attrs) {
-    if (A.isStringAttribute())
+
+    if (A.isStringAttribute()) {
+#define GET_ATTR_NAMES
+#define ATTRIBUTE_ENUM(ENUM_NAME, DISPLAY_NAME)
+#define ATTRIBUTE_STRBOOL(ENUM_NAME, DISPLAY_NAME)                             \
+  if (A.getKindAsString() == #DISPLAY_NAME) {                                  \
+    auto V = A.getValueAsString();                                             \
+    if (!(V.empty() || V == "true" || V == "false"))                           \
+      CheckFailed("invalid value for '" #DISPLAY_NAME "' attribute: " + V +    \
+                  "");                                                         \
+  }
+
+#include "llvm/IR/Attributes.inc"
       continue;
+    }
 
     if (A.isIntAttribute() !=
         Attribute::doesAttrKindHaveArgument(A.getKindAsEnum())) {
@@ -1856,6 +1889,17 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                                    const Value *V, bool IsIntrinsic) {
   if (Attrs.isEmpty())
     return;
+
+  Assert(Attrs.hasParentContext(Context),
+         "Attribute list does not match Module context!", &Attrs);
+  for (const auto &AttrSet : Attrs) {
+    Assert(!AttrSet.hasAttributes() || AttrSet.hasParentContext(Context),
+           "Attribute set does not match Module context!", &AttrSet);
+    for (const auto &A : AttrSet) {
+      Assert(A.hasParentContext(Context),
+             "Attribute does not match Module context!", &A);
+    }
+  }
 
   bool SawNest = false;
   bool SawReturned = false;
@@ -3313,7 +3357,7 @@ static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
   static const Attribute::AttrKind ABIAttrs[] = {
       Attribute::StructRet,    Attribute::ByVal,     Attribute::InAlloca,
       Attribute::InReg,        Attribute::SwiftSelf, Attribute::SwiftError,
-      Attribute::Preallocated, Attribute::ByRef};
+      Attribute::Preallocated, Attribute::ByRef,     Attribute::StackAlignment};
   AttrBuilder Copy;
   for (auto AK : ABIAttrs) {
     if (Attrs.hasParamAttribute(I, AK))

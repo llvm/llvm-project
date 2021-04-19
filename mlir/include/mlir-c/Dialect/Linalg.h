@@ -1,11 +1,11 @@
-//===-- mlir-c/Dialect/Linalg.h - C API for Linalg dialect --------*- C -*-===//
+//===-- mlir-c/Dialect/Linalg.h - C API for Linalg dialect -------*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM
 // Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===----------------------------------------------------------------------===//
+//===---------------------------------------------------------------------===//
 
 #ifndef MLIR_C_DIALECT_LINALG_H
 #define MLIR_C_DIALECT_LINALG_H
@@ -18,9 +18,11 @@ extern "C" {
 #endif
 
 /// Apply the special region builder for the builtin named Linalg op.
+/// The list of `capture` MlirValue is passed as-is to the region builder.
 /// Assert that `op` is a builtin named Linalg op.
 MLIR_CAPI_EXPORTED void
-mlirLinalgFillBuiltinNamedOpRegion(MlirDialect linalgDialect, MlirOperation op);
+mlirLinalgFillBuiltinNamedOpRegion(MlirDialect linalgDialect, MlirOperation op,
+                                   intptr_t n, MlirValue const *mlirCaptures);
 
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Linalg, linalg);
 

@@ -483,6 +483,10 @@ public:
     return AttributeSets.getParamAlignment(ArgNo);
   }
 
+  MaybeAlign getParamStackAlign(unsigned ArgNo) const {
+    return AttributeSets.getParamStackAlignment(ArgNo);
+  }
+
   /// Extract the byval type for a parameter.
   Type *getParamByValType(unsigned ArgNo) const {
     return AttributeSets.getParamByValType(ArgNo);
@@ -895,7 +899,7 @@ public:
   ///
   bool hasAddressTaken(const User ** = nullptr,
                        bool IgnoreCallbackUses = false,
-                       bool IgnoreAssumeLikeCalls = false,
+                       bool IgnoreAssumeLikeCalls = true,
                        bool IngoreLLVMUsed = false) const;
 
   /// isDefTriviallyDead - Return true if it is trivially safe to remove

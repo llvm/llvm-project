@@ -1713,6 +1713,11 @@ private:
 
 void mlir::python::populateIRCore(py::module &m) {
   //----------------------------------------------------------------------------
+  // Mapping of Global functions
+  //----------------------------------------------------------------------------
+  m.def("_enable_debug", [](bool enable) { mlirEnableGlobalDebug(enable); });
+
+  //----------------------------------------------------------------------------
   // Mapping of MlirContext
   //----------------------------------------------------------------------------
   py::class_<PyMlirContext>(m, "Context")
@@ -1766,6 +1771,10 @@ void mlir::python::populateIRCore(py::module &m) {
           [](PyMlirContext &self, bool value) {
             mlirContextSetAllowUnregisteredDialects(self.get(), value);
           })
+      .def("enable_multithreading",
+           [](PyMlirContext &self, bool enable) {
+             mlirContextEnableMultithreading(self.get(), enable);
+           })
       .def("is_registered_operation",
            [](PyMlirContext &self, std::string &name) {
              return mlirContextIsRegisteredOperation(

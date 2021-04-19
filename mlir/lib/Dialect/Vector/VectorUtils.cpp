@@ -25,8 +25,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 
-using llvm::SetVector;
-
 using namespace mlir;
 
 /// Return the number of elements of basis, `0` if empty.
@@ -355,4 +353,20 @@ bool mlir::isDisjointTransferSet(VectorTransferOpInterface transferA,
   if (transferA.source() != transferB.source())
     return false;
   return isDisjointTransferIndices(transferA, transferB);
+}
+
+bool mlir::checkSameValueRAW(vector::TransferWriteOp defWrite,
+                             vector::TransferReadOp read) {
+  return !defWrite.hasOutOfBoundsDim() && !defWrite.mask() && !read.mask() &&
+         defWrite.indices() == read.indices() &&
+         defWrite.getVectorType() == read.getVectorType() &&
+         defWrite.permutation_map() == read.permutation_map();
+}
+
+bool mlir::checkSameValueWAW(vector::TransferWriteOp write,
+                             vector::TransferWriteOp priorWrite) {
+  return priorWrite.indices() == write.indices() &&
+         priorWrite.mask() == write.mask() &&
+         priorWrite.getVectorType() == write.getVectorType() &&
+         priorWrite.permutation_map() == write.permutation_map();
 }

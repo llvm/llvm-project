@@ -14,7 +14,6 @@
 #define LLVM_SUPPORT_MATHEXTRAS_H
 
 #include "llvm/Support/Compiler.h"
-#include <algorithm>
 #include <cassert>
 #include <climits>
 #include <cmath>
@@ -793,7 +792,7 @@ inline int64_t SignExtend64(uint64_t X, unsigned B) {
 /// value of the result.
 template <typename T>
 std::enable_if_t<std::is_unsigned<T>::value, T> AbsoluteDifference(T X, T Y) {
-  return std::max(X, Y) - std::min(X, Y);
+  return X > Y ? (X - Y) : (Y - X);
 }
 
 /// Add two unsigned integers, X and Y, of type T.  Clamp the result to the

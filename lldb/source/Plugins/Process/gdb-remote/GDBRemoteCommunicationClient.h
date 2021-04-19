@@ -275,6 +275,8 @@ public:
 
   ArchSpec GetSystemArchitecture();
 
+  uint32_t GetAddressingBits();
+
   bool GetHostname(std::string &s);
 
   lldb::addr_t GetShlibInfoAddr();
@@ -573,6 +575,7 @@ protected:
                               // continue, step, etc
 
   uint32_t m_num_supported_hardware_watchpoints;
+  uint32_t m_addressing_bits;
 
   ArchSpec m_host_arch;
   ArchSpec m_process_arch;

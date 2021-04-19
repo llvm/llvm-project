@@ -39,7 +39,7 @@
 
 ; YAML: --- !Missed
 ; YAML: Pass:            regalloc
-; YAML: Name:            LoopSpillReload
+; YAML: Name:            LoopSpillReloadCopies
 ; YAML: DebugLoc:        { File: '/tmp/kk.c', Line: 3, Column: 20 }
 ; YAML: Function:        fpr128
 ; YAML: Hotness:         300
@@ -52,7 +52,7 @@
 ; YAML: ...
 ; YAML: --- !Missed
 ; YAML: Pass:            regalloc
-; YAML: Name:            LoopSpillReload
+; YAML: Name:            LoopSpillReloadCopies
 ; YAML: DebugLoc:        { File: '/tmp/kk.c', Line: 2, Column: 20 }
 ; YAML: Function:        fpr128
 ; YAML: Hotness:         30000
@@ -65,7 +65,7 @@
 ; YAML: ...
 ; YAML: --- !Missed
 ; YAML: Pass:            regalloc
-; YAML: Name:            LoopSpillReload
+; YAML: Name:            LoopSpillReloadCopies
 ; YAML: DebugLoc:        { File: '/tmp/kk.c', Line: 1, Column: 20 }
 ; YAML: Function:        fpr128
 ; YAML: Hotness:         300
@@ -78,7 +78,7 @@
 ; YAML: ...
 ; YAML: --- !Missed
 ; YAML: Pass:            regalloc
-; YAML: Name:            SpillReload
+; YAML: Name:            SpillReloadCopies
 ; YAML: DebugLoc:        { File: '/tmp/kk.c', Line: 1, Column: 1 }
 ; YAML: Function:        fpr128
 ; YAML: Hotness:         3
@@ -93,7 +93,7 @@
 ; THRESHOLD_YAML-NOT: Hotness:         300{{$}}
 ; THRESHOLD_YAML: --- !Missed
 ; THRESHOLD_YAML: Pass:            regalloc
-; THRESHOLD_YAML: Name:            LoopSpillReload
+; THRESHOLD_YAML: Name:            LoopSpillReloadCopies
 ; THRESHOLD_YAML: DebugLoc:        { File: '/tmp/kk.c', Line: 2, Column: 20 }
 ; THRESHOLD_YAML: Function:        fpr128
 ; THRESHOLD_YAML: Hotness:         30000

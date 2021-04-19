@@ -208,6 +208,11 @@ struct LinalgLoopDistributionOptions {
   SmallVector<DistributionMethod, 0> distributionMethod = {};
 };
 
+/// Update the `lb`, `ub` and `step` to get per processor `lb`, `ub` and `step`.
+void updateBoundsForCyclicDistribution(OpBuilder &builder, Location loc,
+                                       Value procId, Value nprocs, Value &lb,
+                                       Value &ub, Value &step);
+
 //===----------------------------------------------------------------------===//
 // Generic op region utilities
 //===----------------------------------------------------------------------===//

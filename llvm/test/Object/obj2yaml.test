@@ -685,7 +685,7 @@ Symbols:
 # ELF-AVR-NEXT:   Data:            ELFDATA2LSB
 # ELF-AVR-NEXT:   Type:            ET_EXEC
 # ELF-AVR-NEXT:   Machine:         EM_AVR
-# ELF-AVR-NEXT:   Flags:           [ EF_AVR_ARCH_AVR2 ]
+# ELF-AVR-NEXT:   Flags:           [ EF_AVR_ARCH_AVR2, EF_AVR_LINKRELAX_PREPARED ]
 # ELF-AVR-NEXT: ProgramHeaders:
 # ELF-AVR-NEXT:  - Type:     PT_LOAD
 # ELF-AVR-NEXT:    Flags:    [ PF_X, PF_R ]

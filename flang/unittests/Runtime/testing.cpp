@@ -36,11 +36,3 @@ int EndTests() {
   }
   return failures != 0;
 }
-
-void SetCharacter(char *to, std::size_t n, const char *from) {
-  auto len{std::strlen(from)};
-  std::memcpy(to, from, std::min(len, n));
-  if (len < n) {
-    std::memset(to + len, ' ', n - len);
-  }
-}

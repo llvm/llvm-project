@@ -6,12 +6,7 @@
 // RUN: %clang_cc1 -triple riscv64 -target-feature +f -target-feature +d \
 // RUN:   -target-feature +experimental-v -disable-O0-optnone -emit-llvm %s \
 // RUN:   -o - | opt -S -mem2reg | FileCheck --check-prefix=CHECK-RV64 %s
-// RUN: %clang_cc1 -triple riscv64 -target-feature +m -target-feature +f \
-// RUN:   -target-feature +d -target-feature +experimental-v \
-// RUN:   -Werror -Wall -S -o - %s >/dev/null 2>%t
-// RUN: FileCheck --check-prefix=ASM --allow-empty %s <%t
 
-// ASM-NOT: warning
 #include <riscv_vector.h>
 
 // CHECK-RV32-LABEL: @test_vle8ff_v_i8mf8(

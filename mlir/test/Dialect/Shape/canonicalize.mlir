@@ -1259,3 +1259,14 @@ func @min_same_arg(%a: !shape.shape) -> !shape.shape {
   // CHECK: return %[[SHAPE]]
   return %1 : !shape.shape
 }
+
+// ----
+
+// CHECK-LABEL: @cstr_broadcastable_folding
+func @cstr_broadcastable_folding(%arg : tensor<?x4xf32>) {
+  // CHECK: const_witness true
+  %0 = shape.shape_of %arg : tensor<?x4xf32> -> tensor<2xindex>
+  %1 = constant dense<[4]> : tensor<1xindex>
+  %2 = shape.cstr_broadcastable %0, %1: tensor<2xindex>, tensor<1xindex>
+  "use"(%2) : (!shape.witness) -> ()
+}

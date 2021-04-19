@@ -2760,9 +2760,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
       bool hasErrors = Record[6];
       if (hasErrors && !DisableValidation) {
-        // If requested by the caller, mark modules on error as out-of-date.
-        if (F.Kind == MK_ImplicitModule &&
-            (ClientLoadCapabilities & ARR_TreatModuleWithErrorsAsOutOfDate))
+        // If requested by the caller and the module hasn't already been read
+        // or compiled, mark modules on error as out-of-date.
+        if ((ClientLoadCapabilities & ARR_TreatModuleWithErrorsAsOutOfDate) &&
+            !ModuleMgr.getModuleCache().isPCMFinal(F.FileName))
           return OutOfDate;
 
         if (!AllowASTWithCompilerErrors) {

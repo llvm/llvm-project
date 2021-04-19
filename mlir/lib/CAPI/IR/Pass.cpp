@@ -38,6 +38,14 @@ MlirLogicalResult mlirPassManagerRun(MlirPassManager passManager,
   return wrap(unwrap(passManager)->run(unwrap(module)));
 }
 
+void mlirPassManagerEnableIRPrinting(MlirPassManager passManager) {
+  return unwrap(passManager)->enableIRPrinting();
+}
+
+void mlirPassManagerEnableVerifier(MlirPassManager passManager, bool enable) {
+  unwrap(passManager)->enableVerifier(enable);
+}
+
 MlirOpPassManager mlirPassManagerGetNestedUnder(MlirPassManager passManager,
                                                 MlirStringRef operationName) {
   return wrap(&unwrap(passManager)->nest(unwrap(operationName)));

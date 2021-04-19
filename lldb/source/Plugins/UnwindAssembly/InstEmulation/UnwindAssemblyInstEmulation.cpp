@@ -38,10 +38,10 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
   ProcessSP process_sp(thread.GetProcess());
   if (process_sp) {
     Status error;
-    const bool prefer_file_cache = true;
+    const bool force_live_memory = true;
     if (process_sp->GetTarget().ReadMemory(
-            range.GetBaseAddress(), prefer_file_cache, function_text.data(),
-            range.GetByteSize(), error) != range.GetByteSize()) {
+            range.GetBaseAddress(), function_text.data(), range.GetByteSize(),
+            error, force_live_memory) != range.GetByteSize()) {
       return false;
     }
   }

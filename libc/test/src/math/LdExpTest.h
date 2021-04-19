@@ -28,11 +28,11 @@ class LdExpTestTemplate : public __llvm_libc::testing::Test {
   // A normalized mantissa to be used with tests.
   static constexpr UIntType mantissa = NormalFloat::one + 0x1234;
 
-  const T zero = __llvm_libc::fputil::FPBits<T>::zero();
-  const T negZero = __llvm_libc::fputil::FPBits<T>::negZero();
-  const T inf = __llvm_libc::fputil::FPBits<T>::inf();
-  const T negInf = __llvm_libc::fputil::FPBits<T>::negInf();
-  const T nan = __llvm_libc::fputil::FPBits<T>::buildNaN(1);
+  const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
+  const T negZero = T(__llvm_libc::fputil::FPBits<T>::negZero());
+  const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
+  const T negInf = T(__llvm_libc::fputil::FPBits<T>::negInf());
+  const T nan = T(__llvm_libc::fputil::FPBits<T>::buildNaN(1));
 
 public:
   typedef T (*LdExpFunc)(T, int);

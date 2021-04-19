@@ -53,7 +53,7 @@ bool TargetLowering::isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
   const Function &F = DAG.getMachineFunction().getFunction();
 
   // First, check if tail calls have been disabled in this function.
-  if (F.getFnAttribute("disable-tail-calls").getValueAsString() == "true")
+  if (F.getFnAttribute("disable-tail-calls").getValueAsBool())
     return false;
 
   // Conservatively require the attributes of the call to match those of
@@ -115,10 +115,13 @@ void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
   IsReturned = Call->paramHasAttr(ArgIdx, Attribute::Returned);
   IsSwiftSelf = Call->paramHasAttr(ArgIdx, Attribute::SwiftSelf);
   IsSwiftError = Call->paramHasAttr(ArgIdx, Attribute::SwiftError);
-  Alignment = Call->getParamAlign(ArgIdx);
+  Alignment = Call->getParamStackAlign(ArgIdx);
   ByValType = nullptr;
-  if (IsByVal)
+  if (IsByVal) {
     ByValType = Call->getParamByValType(ArgIdx);
+    if (!Alignment)
+      Alignment = Call->getParamAlign(ArgIdx);
+  }
   PreallocatedType = nullptr;
   if (IsPreallocated)
     PreallocatedType = Call->getParamPreallocatedType(ArgIdx);
@@ -7712,6 +7715,12 @@ static SDValue clampDynamicVectorIndex(SelectionDAG &DAG,
   EVT IdxVT = Idx.getValueType();
   unsigned NElts = VecVT.getVectorMinNumElements();
   if (VecVT.isScalableVector()) {
+    // If this is a constant index and we know the value is less than the
+    // minimum number of elements then it's safe to return Idx.
+    if (auto *IdxCst = dyn_cast<ConstantSDNode>(Idx))
+      if (IdxCst->getZExtValue() < NElts)
+        return Idx;
+
     SDValue VS = DAG.getVScale(dl, IdxVT,
                                APInt(IdxVT.getFixedSizeInBits(),
                                      NElts));

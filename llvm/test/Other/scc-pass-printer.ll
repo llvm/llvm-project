@@ -20,12 +20,12 @@
 ; LEGACY: define void @tester()
 ; LEGACY-NEXT:  call void @foo()
 
-; INL:      IR Dump After InlinerPass *** (scc: (foo, bar))
+; INL:      IR Dump After InlinerPass on (foo, bar) ***
 ; INL:      define void @foo()
 ; INL-NEXT:   call void @bar()
 ; INL:      define void @bar()
 ; INL-NEXT:   call void @foo()
-; INL:      IR Dump After InlinerPass *** (scc: (tester))
+; INL:      IR Dump After InlinerPass on (tester) ***
 ; INL:      define void @tester()
 ; INL-NEXT:   call void @foo()
 
@@ -35,7 +35,7 @@
 ; LEGACY-MOD:      define void @foo()
 ; LEGACY-MOD:      define void @bar()
 
-; INL-MOD-LABEL:*** IR Dump After InlinerPass *** (scc: (foo, bar))
+; INL-MOD-LABEL:*** IR Dump After InlinerPass on (foo, bar) ***
 ; INL-MOD-NEXT: ModuleID =
 ; INL-MOD-NEXT: source_filename =
 ; INL-MOD: define void @tester()
@@ -44,7 +44,7 @@
 ; INL-MOD-NEXT:  call void @bar()
 ; INL-MOD: define void @bar()
 ; INL-MOD-NEXT:   call void @foo()
-; INL-MOD-LABEL:*** IR Dump After InlinerPass *** (scc: (tester))
+; INL-MOD-LABEL:*** IR Dump After InlinerPass on (tester) ***
 ; INL-MOD-NEXT: ModuleID =
 ; INL-MOD-NEXT: source_filename =
 ; INL-MOD: define void @tester()

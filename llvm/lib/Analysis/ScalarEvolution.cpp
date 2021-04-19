@@ -3503,11 +3503,6 @@ const SCEV *ScalarEvolution::getAbsExpr(const SCEV *Op, bool IsNSW) {
   return getSMaxExpr(Op, getNegativeSCEV(Op, Flags));
 }
 
-const SCEV *ScalarEvolution::getSignumExpr(const SCEV *Op) {
-  Type *Ty = Op->getType();
-  return getSMinExpr(getSMaxExpr(Op, getMinusOne(Ty)), getOne(Ty));
-}
-
 const SCEV *ScalarEvolution::getMinMaxExpr(SCEVTypes Kind,
                                            SmallVectorImpl<const SCEV *> &Ops) {
   assert(!Ops.empty() && "Cannot get empty (u|s)(min|max)!");
@@ -4559,7 +4554,6 @@ struct BinaryOp {
   Value *RHS;
   bool IsNSW = false;
   bool IsNUW = false;
-  bool IsExact = false;
 
   /// Op is set if this BinaryOp corresponds to a concrete LLVM instruction or
   /// constant expression.
@@ -4572,14 +4566,11 @@ struct BinaryOp {
       IsNSW = OBO->hasNoSignedWrap();
       IsNUW = OBO->hasNoUnsignedWrap();
     }
-    if (auto *PEO = dyn_cast<PossiblyExactOperator>(Op))
-      IsExact = PEO->isExact();
   }
 
   explicit BinaryOp(unsigned Opcode, Value *LHS, Value *RHS, bool IsNSW = false,
-                    bool IsNUW = false, bool IsExact = false)
-      : Opcode(Opcode), LHS(LHS), RHS(RHS), IsNSW(IsNSW), IsNUW(IsNUW),
-        IsExact(IsExact) {}
+                    bool IsNUW = false)
+      : Opcode(Opcode), LHS(LHS), RHS(RHS), IsNSW(IsNSW), IsNUW(IsNUW) {}
 };
 
 } // end anonymous namespace
@@ -6744,15 +6735,6 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
                 getConstant(Mul)), OuterTy);
           }
         }
-      }
-      if (BO->IsExact) {
-        // Given exact arithmetic in-bounds right-shift by a constant,
-        // we can lower it into:  (abs(x) EXACT/u (1<<C)) * signum(x)
-        const SCEV *X = getSCEV(BO->LHS);
-        const SCEV *AbsX = getAbsExpr(X, /*IsNSW=*/false);
-        APInt Mult = APInt::getOneBitSet(BitWidth, AShrAmt);
-        const SCEV *Div = getUDivExactExpr(AbsX, getConstant(Mult));
-        return getMulExpr(Div, getSignumExpr(X), SCEV::FlagNSW);
       }
       break;
     }

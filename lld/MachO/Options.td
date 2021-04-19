@@ -545,7 +545,6 @@ def grp_bitcode : OptionGroup<"bitcode">, HelpText<"BITCODE BUILD FLOW">;
 
 def bitcode_bundle : Flag<["-"], "bitcode_bundle">,
     HelpText<"Generate an embedded bitcode bundle in the __LLVM,__bundle section of the output">,
-    Flags<[HelpHidden]>,
     Group<grp_bitcode>;
 def bitcode_hide_symbols : Flag<["-"], "bitcode_hide_symbols">,
     HelpText<"With -bitcode_bundle, hide all non-exported symbols from output bitcode bundle.">,

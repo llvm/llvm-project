@@ -13,8 +13,4 @@ ReflowComments: false
 
 # libc++ has some long names so we need more than the 80 column limit imposed by LLVM style, for sensible formatting
 ColumnLimit: 120
-
-# These aren't covered by the LLVM Style Guide
-BreakBeforeConceptDeclarations: true
-IndentRequires: false
 ---

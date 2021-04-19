@@ -45,6 +45,8 @@ public:
 
   size_t size() { return Len; }
 
+  const char &operator[](size_t Index) const { return Data[Index]; }
+
   StringView remove_prefix(size_t N) const {
     if (N >= Len)
       return StringView();

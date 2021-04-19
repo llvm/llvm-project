@@ -11,8 +11,10 @@
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/Interfaces.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -208,28 +210,29 @@ class DialectAsmPrinter;
 /// {1}: The name of the type base class.
 /// {2}: The name of the base value type, e.g. Attribute or Type.
 /// {3}: The tablegen record type prefix, e.g. Attr or Type.
+/// {4}: The traits of the def class.
 static const char *const defDeclSingletonBeginStr = R"(
-  class {0} : public ::mlir::{2}::{3}Base<{0}, {1}, ::mlir::{2}Storage> {{
+  class {0} : public ::mlir::{2}::{3}Base<{0}, {1}, ::mlir::{2}Storage{4}> {{
   public:
     /// Inherit some necessary constructors from '{3}Base'.
     using Base::Base;
 )";
 
-/// The code block for the start of a typeDef class declaration -- parametric
-/// case.
+/// The code block for the start of a class declaration -- parametric case.
 ///
-/// {0}: The name of the typeDef class.
-/// {1}: The name of the type base class.
-/// {2}: The typeDef storage class namespace.
+/// {0}: The name of the def class.
+/// {1}: The name of the base class.
+/// {2}: The def storage class namespace.
 /// {3}: The storage class name.
 /// {4}: The name of the base value type, e.g. Attribute or Type.
 /// {5}: The tablegen record type prefix, e.g. Attr or Type.
+/// {6}: The traits of the def class.
 static const char *const defDeclParametricBeginStr = R"(
   namespace {2} {
     struct {3};
   } // end namespace {2}
   class {0} : public ::mlir::{4}::{5}Base<{0}, {1},
-                                         {2}::{3}> {{
+                                         {2}::{3}{6}> {{
   public:
     /// Inherit some necessary constructors from '{5}Base'.
     using Base::Base;
@@ -309,19 +312,71 @@ static void emitBuilderDecls(const AttrOrTypeDef &def, raw_ostream &os,
   }
 }
 
+static void emitInterfaceMethodDecls(const InterfaceTrait *trait,
+                                     raw_ostream &os) {
+  Interface interface = trait->getInterface();
+
+  // Get the set of methods that should always be declared.
+  auto alwaysDeclaredMethodsVec = trait->getAlwaysDeclaredMethods();
+  llvm::StringSet<> alwaysDeclaredMethods;
+  alwaysDeclaredMethods.insert(alwaysDeclaredMethodsVec.begin(),
+                               alwaysDeclaredMethodsVec.end());
+
+  for (const InterfaceMethod &method : interface.getMethods()) {
+    // Don't declare if the method has a body.
+    if (method.getBody())
+      continue;
+    // Don't declare if the method has a default implementation and the def
+    // didn't request that it always be declared.
+    if (method.getDefaultImplementation() &&
+        !alwaysDeclaredMethods.count(method.getName()))
+      continue;
+
+    // Emit the method declaration.
+    os << "    " << (method.isStatic() ? "static " : "")
+       << method.getReturnType() << " " << method.getName() << "(";
+    llvm::interleaveComma(method.getArguments(), os,
+                          [&](const InterfaceMethod::Argument &arg) {
+                            os << arg.type << " " << arg.name;
+                          });
+    os << ")" << (method.isStatic() ? "" : " const") << ";\n";
+  }
+}
+
 void DefGenerator::emitDefDecl(const AttrOrTypeDef &def) {
   SmallVector<AttrOrTypeParameter, 4> params;
   def.getParameters(params);
+
+  // Build the trait list for this def.
+  std::vector<std::string> traitList;
+  StringSet<> traitSet;
+  for (const Trait &baseTrait : def.getTraits()) {
+    std::string traitStr;
+    if (const auto *trait = dyn_cast<NativeTrait>(&baseTrait))
+      traitStr = trait->getFullyQualifiedTraitName();
+    else if (const auto *trait = dyn_cast<InterfaceTrait>(&baseTrait))
+      traitStr = trait->getFullyQualifiedTraitName();
+    else
+      llvm_unreachable("unexpected Attribute/Type trait type");
+
+    if (traitSet.insert(traitStr).second)
+      traitList.emplace_back(std::move(traitStr));
+  }
+  std::string traitStr;
+  if (!traitList.empty())
+    traitStr = ", " + llvm::join(traitList, ", ");
 
   // Emit the beginning string template: either the singleton or parametric
   // template.
   if (def.getNumParameters() == 0) {
     os << formatv(defDeclSingletonBeginStr, def.getCppClassName(),
-                  def.getCppBaseClassName(), valueType, defTypePrefix);
+                  def.getCppBaseClassName(), valueType, defTypePrefix,
+                  traitStr);
   } else {
     os << formatv(defDeclParametricBeginStr, def.getCppClassName(),
                   def.getCppBaseClassName(), def.getStorageNamespace(),
-                  def.getStorageClassName(), valueType, defTypePrefix);
+                  def.getStorageClassName(), valueType, defTypePrefix,
+                  traitStr);
   }
 
   // Emit the extra declarations first in case there's a definition in there.
@@ -359,6 +414,14 @@ void DefGenerator::emitDefDecl(const AttrOrTypeDef &def) {
       SmallString<16> name = parameter.getName();
       name[0] = llvm::toUpper(name[0]);
       os << formatv("    {0} get{1}() const;\n", parameter.getCppType(), name);
+    }
+  }
+
+  // Emit any interface method declarations.
+  for (const Trait &trait : def.getTraits()) {
+    if (const auto *traitDef = dyn_cast<InterfaceTrait>(&trait)) {
+      if (traitDef->shouldDeclareMethods())
+        emitInterfaceMethodDecls(traitDef, os);
     }
   }
 
@@ -452,7 +515,7 @@ static const char *const defStorageClassConstructorBeginStr = R"(
     /// Define a construction method for creating a new instance of this
     /// storage.
     static {0} *construct(::mlir::{1}StorageAllocator &allocator,
-                          const KeyTy &key) {{
+                          const KeyTy &tblgenKey) {{
 )";
 
 /// The storage class' constructor return template.
@@ -558,7 +621,7 @@ void DefGenerator::emitStorageClass(const AttrOrTypeDef &def) {
       paramInitializer, parameterTypeList, valueType);
 
   // * Emit the comparison method.
-  os << "  bool operator==(const KeyTy &key) const {\n";
+  os << "  bool operator==(const KeyTy &tblgenKey) const {\n";
   for (auto it : llvm::enumerate(params)) {
     os << "    if (!(";
 
@@ -566,7 +629,7 @@ void DefGenerator::emitStorageClass(const AttrOrTypeDef &def) {
     bool isSelfType = isa<AttributeSelfTypeParameter>(it.value());
     FmtContext context;
     context.addSubst("_lhs", isSelfType ? "getType()" : it.value().getName())
-        .addSubst("_rhs", "std::get<" + Twine(it.index()) + ">(key)");
+        .addSubst("_rhs", "std::get<" + Twine(it.index()) + ">(tblgenKey)");
 
     // Use the parameter specified comparator if possible, otherwise default to
     // operator==.
@@ -577,13 +640,13 @@ void DefGenerator::emitStorageClass(const AttrOrTypeDef &def) {
   os << "    return true;\n  }\n";
 
   // * Emit the haskKey method.
-  os << "  static ::llvm::hash_code hashKey(const KeyTy &key) {\n";
+  os << "  static ::llvm::hash_code hashKey(const KeyTy &tblgenKey) {\n";
 
   // Extract each parameter from the key.
   os << "      return ::llvm::hash_combine(";
   llvm::interleaveComma(
       llvm::seq<unsigned>(0, params.size()), os,
-      [&](unsigned it) { os << "std::get<" << it << ">(key)"; });
+      [&](unsigned it) { os << "std::get<" << it << ">(tblgenKey)"; });
   os << ");\n    }\n";
 
   // * Emit the construct method.
@@ -592,7 +655,7 @@ void DefGenerator::emitStorageClass(const AttrOrTypeDef &def) {
   // here and then they can write the definition elsewhere.
   if (def.hasStorageCustomConstructor()) {
     os << llvm::formatv("    static {0} *construct(::mlir::{1}StorageAllocator "
-                        "&allocator, const KeyTy &key);\n",
+                        "&allocator, const KeyTy &tblgenKey);\n",
                         def.getStorageClassName(), valueType);
 
     // Otherwise, generate one.
@@ -601,7 +664,7 @@ void DefGenerator::emitStorageClass(const AttrOrTypeDef &def) {
     os << formatv(defStorageClassConstructorBeginStr, def.getStorageClassName(),
                   valueType);
     for (unsigned i = 0, e = params.size(); i < e; ++i) {
-      os << formatv("      auto {0} = std::get<{1}>(key);\n",
+      os << formatv("      auto {0} = std::get<{1}>(tblgenKey);\n",
                     params[i].getName(), i);
     }
 

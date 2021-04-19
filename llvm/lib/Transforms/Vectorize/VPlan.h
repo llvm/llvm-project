@@ -681,6 +681,9 @@ public:
     // All VPDefs are also VPRecipeBases.
     return true;
   }
+
+  /// Returns true if the recipe may have side-effects.
+  bool mayHaveSideEffects() const;
 };
 
 inline bool VPUser::classof(const VPDef *Def) {

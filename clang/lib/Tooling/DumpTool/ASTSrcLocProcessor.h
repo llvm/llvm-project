@@ -35,7 +35,11 @@ public:
 private:
   void run(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
-  llvm::StringMap<StringRef> ClassInheritance;
+  llvm::Optional<TraversalKind> getCheckTraversalKind() const override {
+    return TK_IgnoreUnlessSpelledInSource;
+  }
+
+  llvm::StringMap<std::string> ClassInheritance;
   llvm::StringMap<std::vector<StringRef>> ClassesInClade;
   llvm::StringMap<ClassData> ClassEntries;
 

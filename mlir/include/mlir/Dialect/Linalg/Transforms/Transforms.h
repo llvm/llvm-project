@@ -1098,13 +1098,7 @@ struct SparsificationOptions {
                         SparseVectorizationStrategy v, unsigned vl,
                         SparseIntType pt, SparseIntType it, bool fo)
       : parallelizationStrategy(p), vectorizationStrategy(v), vectorLength(vl),
-        ptrType(pt), indType(it), fastOutput(fo) {
-    // TODO: remove restriction when vectors with index elements are supported
-    assert((v != SparseVectorizationStrategy::kAnyStorageInnerLoop ||
-            (ptrType != SparseIntType::kNative &&
-             indType != SparseIntType::kNative)) &&
-           "This combination requires support for vectors with index elements");
-  }
+        ptrType(pt), indType(it), fastOutput(fo) {}
   SparsificationOptions()
       : SparsificationOptions(SparseParallelizationStrategy::kNone,
                               SparseVectorizationStrategy::kNone, 1u,

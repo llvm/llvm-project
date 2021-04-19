@@ -470,7 +470,7 @@ define i1 @test_v2i16(<2 x i16> %a0) {
 ; SSE-NEXT:    psrld $16, %xmm1
 ; SSE-NEXT:    pand %xmm0, %xmm1
 ; SSE-NEXT:    movd %xmm1, %eax
-; SSE-NEXT:    testw %ax, %ax
+; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;
@@ -479,7 +479,7 @@ define i1 @test_v2i16(<2 x i16> %a0) {
 ; AVX-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    testw %ax, %ax
+; AVX-NEXT:    testl %eax, %eax
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %1 = call i16 @llvm.vector.reduce.and.v2i16(<2 x i16> %a0)
@@ -496,7 +496,7 @@ define i1 @test_v4i16(<4 x i16> %a0) {
 ; SSE-NEXT:    psrld $16, %xmm0
 ; SSE-NEXT:    pand %xmm1, %xmm0
 ; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    testw %ax, %ax
+; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    setne %al
 ; SSE-NEXT:    retq
 ;
@@ -507,7 +507,7 @@ define i1 @test_v4i16(<4 x i16> %a0) {
 ; AVX-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    testw %ax, %ax
+; AVX-NEXT:    testl %eax, %eax
 ; AVX-NEXT:    setne %al
 ; AVX-NEXT:    retq
   %1 = call i16 @llvm.vector.reduce.and.v4i16(<4 x i16> %a0)
@@ -526,7 +526,7 @@ define i1 @test_v8i16(<8 x i16> %a0) {
 ; SSE-NEXT:    psrld $16, %xmm1
 ; SSE-NEXT:    pand %xmm0, %xmm1
 ; SSE-NEXT:    movd %xmm1, %eax
-; SSE-NEXT:    testw %ax, %ax
+; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;
@@ -539,7 +539,7 @@ define i1 @test_v8i16(<8 x i16> %a0) {
 ; AVX-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    testw %ax, %ax
+; AVX-NEXT:    testl %eax, %eax
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %1 = call i16 @llvm.vector.reduce.and.v8i16(<8 x i16> %a0)
@@ -559,7 +559,7 @@ define i1 @test_v16i16(<16 x i16> %a0) {
 ; SSE-NEXT:    psrld $16, %xmm1
 ; SSE-NEXT:    pand %xmm0, %xmm1
 ; SSE-NEXT:    movd %xmm1, %eax
-; SSE-NEXT:    testw %ax, %ax
+; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    setne %al
 ; SSE-NEXT:    retq
 ;
@@ -574,7 +574,7 @@ define i1 @test_v16i16(<16 x i16> %a0) {
 ; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    testw %ax, %ax
+; AVX1-NEXT:    testl %eax, %eax
 ; AVX1-NEXT:    setne %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -590,7 +590,7 @@ define i1 @test_v16i16(<16 x i16> %a0) {
 ; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    testw %ax, %ax
+; AVX2-NEXT:    testl %eax, %eax
 ; AVX2-NEXT:    setne %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -606,7 +606,7 @@ define i1 @test_v16i16(<16 x i16> %a0) {
 ; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    testw %ax, %ax
+; AVX512-NEXT:    testl %eax, %eax
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -629,7 +629,7 @@ define i1 @test_v32i16(<32 x i16> %a0) {
 ; SSE-NEXT:    psrld $16, %xmm0
 ; SSE-NEXT:    pand %xmm1, %xmm0
 ; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    testw %ax, %ax
+; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;
@@ -645,7 +645,7 @@ define i1 @test_v32i16(<32 x i16> %a0) {
 ; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    testw %ax, %ax
+; AVX1-NEXT:    testl %eax, %eax
 ; AVX1-NEXT:    sete %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -662,7 +662,7 @@ define i1 @test_v32i16(<32 x i16> %a0) {
 ; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    testw %ax, %ax
+; AVX2-NEXT:    testl %eax, %eax
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -680,7 +680,7 @@ define i1 @test_v32i16(<32 x i16> %a0) {
 ; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    testw %ax, %ax
+; AVX512-NEXT:    testl %eax, %eax
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -707,7 +707,7 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; SSE-NEXT:    psrld $16, %xmm0
 ; SSE-NEXT:    pand %xmm1, %xmm0
 ; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    testw %ax, %ax
+; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    setne %al
 ; SSE-NEXT:    retq
 ;
@@ -725,7 +725,7 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    testw %ax, %ax
+; AVX1-NEXT:    testl %eax, %eax
 ; AVX1-NEXT:    setne %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -744,7 +744,7 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    testw %ax, %ax
+; AVX2-NEXT:    testl %eax, %eax
 ; AVX2-NEXT:    setne %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -763,7 +763,7 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    testw %ax, %ax
+; AVX512-NEXT:    testl %eax, %eax
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -810,7 +810,7 @@ define i1 @test_v4i8(<4 x i8> %a0) {
 ; SSE-NEXT:    psrlw $8, %xmm0
 ; SSE-NEXT:    pand %xmm1, %xmm0
 ; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    setne %al
 ; SSE-NEXT:    retq
 ;
@@ -821,7 +821,7 @@ define i1 @test_v4i8(<4 x i8> %a0) {
 ; AVX-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    testb %al, %al
+; AVX-NEXT:    testl %eax, %eax
 ; AVX-NEXT:    setne %al
 ; AVX-NEXT:    retq
   %1 = call i8 @llvm.vector.reduce.and.v4i8(<4 x i8> %a0)
@@ -841,7 +841,7 @@ define i1 @test_v8i8(<8 x i8> %a0) {
 ; SSE-NEXT:    psrlw $8, %xmm1
 ; SSE-NEXT:    pand %xmm0, %xmm1
 ; SSE-NEXT:    movd %xmm1, %eax
-; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;
@@ -854,7 +854,7 @@ define i1 @test_v8i8(<8 x i8> %a0) {
 ; AVX-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    testb %al, %al
+; AVX-NEXT:    testl %eax, %eax
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %1 = call i8 @llvm.vector.reduce.and.v8i8(<8 x i8> %a0)
@@ -876,7 +876,7 @@ define i1 @test_v16i8(<16 x i8> %a0) {
 ; SSE-NEXT:    psrlw $8, %xmm0
 ; SSE-NEXT:    pand %xmm1, %xmm0
 ; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    setne %al
 ; SSE-NEXT:    retq
 ;
@@ -891,7 +891,7 @@ define i1 @test_v16i8(<16 x i8> %a0) {
 ; AVX-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    testb %al, %al
+; AVX-NEXT:    testl %eax, %eax
 ; AVX-NEXT:    setne %al
 ; AVX-NEXT:    retq
   %1 = call i8 @llvm.vector.reduce.and.v16i8(<16 x i8> %a0)
@@ -914,7 +914,7 @@ define i1 @test_v32i8(<32 x i8> %a0) {
 ; SSE-NEXT:    psrlw $8, %xmm0
 ; SSE-NEXT:    pand %xmm1, %xmm0
 ; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;
@@ -931,7 +931,7 @@ define i1 @test_v32i8(<32 x i8> %a0) {
 ; AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    testl %eax, %eax
 ; AVX1-NEXT:    sete %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -949,7 +949,7 @@ define i1 @test_v32i8(<32 x i8> %a0) {
 ; AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    testl %eax, %eax
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -967,7 +967,7 @@ define i1 @test_v32i8(<32 x i8> %a0) {
 ; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    testb %al, %al
+; AVX512-NEXT:    testl %eax, %eax
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -993,7 +993,7 @@ define i1 @test_v64i8(<64 x i8> %a0) {
 ; SSE-NEXT:    psrlw $8, %xmm1
 ; SSE-NEXT:    pand %xmm0, %xmm1
 ; SSE-NEXT:    movd %xmm1, %eax
-; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    setne %al
 ; SSE-NEXT:    retq
 ;
@@ -1011,7 +1011,7 @@ define i1 @test_v64i8(<64 x i8> %a0) {
 ; AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    testl %eax, %eax
 ; AVX1-NEXT:    setne %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -1030,7 +1030,7 @@ define i1 @test_v64i8(<64 x i8> %a0) {
 ; AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    testl %eax, %eax
 ; AVX2-NEXT:    setne %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -1080,7 +1080,7 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 ; SSE-NEXT:    psrlw $8, %xmm1
 ; SSE-NEXT:    pand %xmm0, %xmm1
 ; SSE-NEXT:    movd %xmm1, %eax
-; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;

@@ -114,10 +114,10 @@ Using libc++ with GCC
 GCC does not provide a way to switch from libstdc++ to libc++. You must manually
 configure the compile and link commands.
 
-In particular you must tell GCC to remove the libstdc++ include directories
+In particular, you must tell GCC to remove the libstdc++ include directories
 using ``-nostdinc++`` and to not link libstdc++.so using ``-nodefaultlibs``.
 
-Note that ``-nodefaultlibs`` removes all of the standard system libraries and
+Note that ``-nodefaultlibs`` removes all the standard system libraries and
 not just libstdc++ so they must be manually linked. For example:
 
 .. code-block:: bash
@@ -151,7 +151,7 @@ thread safety annotations.
 
 **_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS**:
   This macro is used to enable -Wthread-safety annotations on libc++'s
-  ``std::mutex`` and ``std::lock_guard``. By default these annotations are
+  ``std::mutex`` and ``std::lock_guard``. By default, these annotations are
   disabled and must be manually enabled by the user.
 
 **_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS**:

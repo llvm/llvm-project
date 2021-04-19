@@ -14,6 +14,7 @@
 #error "This file is for HIP and OpenMP AMDGCN device compilation only."
 #endif
 
+#if !defined(__HIPCC_RTC__)
 #if defined(__cplusplus)
 #include <limits>
 #include <type_traits>
@@ -21,6 +22,7 @@
 #endif
 #include <limits.h>
 #include <stdint.h>
+#endif // __HIPCC_RTC__
 
 #pragma push_macro("__DEVICE__")
 #define __DEVICE__ static __device__ inline __attribute__((always_inline))

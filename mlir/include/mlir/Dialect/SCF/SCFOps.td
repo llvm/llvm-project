@@ -171,6 +171,10 @@ def ForOp : SCF_Op<"for",
     Operation::operand_range getIterOperands() {
       return getOperands().drop_front(getNumControlOperands());
     }
+    MutableArrayRef<OpOperand> getIterOpOperands() {
+      return
+        getOperation()->getOpOperands().drop_front(getNumControlOperands());
+    }
 
     void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
     void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }

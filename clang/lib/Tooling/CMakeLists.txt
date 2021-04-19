@@ -24,8 +24,8 @@ string(SUBSTRING ${CMAKE_CURRENT_BINARY_DIR} ${PATH_LIB_END} -1 PATH_TAIL)
 string(CONCAT BINARY_INCLUDE_DIR ${PATH_HEAD} "/include/clang/" ${PATH_TAIL})
 
 if (NOT Python3_EXECUTABLE
-    OR WIN32
     OR APPLE
+    OR CMAKE_CROSSCOMPILING
     OR GENERATOR_IS_MULTI_CONFIG
     OR NOT LLVM_NATIVE_ARCH IN_LIST LLVM_TARGETS_TO_BUILD
     OR NOT X86 IN_LIST LLVM_TARGETS_TO_BUILD
@@ -34,6 +34,8 @@ if (NOT Python3_EXECUTABLE
     CONTENT "
 namespace clang {
 namespace tooling {
+
+bool NodeIntrospection::hasIntrospectionSupport() { return false; }
 
 NodeLocationAccessors NodeIntrospection::GetLocations(clang::Stmt const *) {
   return {};
@@ -55,6 +57,10 @@ NodeLocationAccessors NodeIntrospection::GetLocations(
 }
 NodeLocationAccessors NodeIntrospection::GetLocations(
     clang::CXXBaseSpecifier const*) {
+  return {};
+}
+NodeLocationAccessors NodeIntrospection::GetLocations(
+    clang::TypeLoc const&) {
   return {};
 }
 NodeLocationAccessors

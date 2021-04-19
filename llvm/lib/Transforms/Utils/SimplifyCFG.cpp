@@ -1434,11 +1434,15 @@ bool SimplifyCFGOpt::HoistThenElseCodeToIf(BranchInst *BI,
   // Check if only hoisting terminators is allowed. This does not add new
   // instructions to the hoist location.
   if (EqTermsOnly) {
-    if (!I1->isIdenticalToWhenDefined(I2))
+    // Skip any debug intrinsics, as they are free to hoist.
+    auto *I1NonDbg = &*skipDebugIntrinsics(I1->getIterator());
+    auto *I2NonDbg = &*skipDebugIntrinsics(I2->getIterator());
+    if (!I1NonDbg->isIdenticalToWhenDefined(I2NonDbg))
       return false;
-    if (!I1->isTerminator())
+    if (!I1NonDbg->isTerminator())
       return false;
-    goto HoistTerminator;
+    // Now we know that we only need to hoist debug instrinsics and the
+    // terminator. Let the loop below handle those 2 cases.
   }
 
   do {
@@ -5793,7 +5797,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   // Only build lookup table when we have a target that supports it or the
   // attribute is not set.
   if (!TTI.shouldBuildLookupTables() ||
-      (Fn->getFnAttribute("no-jump-tables").getValueAsString() == "true"))
+      (Fn->getFnAttribute("no-jump-tables").getValueAsBool()))
     return false;
 
   // FIXME: If the switch is too sparse for a lookup table, perhaps we could

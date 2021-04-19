@@ -45,6 +45,8 @@ int main(int, char**)
     ::va_list va;
     char* ns = 0;
     wchar_t* ws = 0;
+    const wchar_t* cws = 0;
+    wchar_t** wsp = 0;
     ((void)mb); // Prevent unused warning
     ((void)s); // Prevent unused warning
     ((void)tm); // Prevent unused warning
@@ -53,82 +55,78 @@ int main(int, char**)
     ((void)va); // Prevent unused warning
     ((void)ns); // Prevent unused warning
     ((void)ws); // Prevent unused warning
-    static_assert((std::is_same<decltype(fwprintf(fp, L"")), int>::value), "");
-    static_assert((std::is_same<decltype(fwscanf(fp, L"")), int>::value), "");
-    static_assert((std::is_same<decltype(swprintf(ws, s, L"")), int>::value), "");
-    static_assert((std::is_same<decltype(swscanf(L"", L"")), int>::value), "");
-    static_assert((std::is_same<decltype(vfwprintf(fp, L"", va)), int>::value), "");
-    static_assert((std::is_same<decltype(vfwscanf(fp, L"", va)), int>::value), "");
-    static_assert((std::is_same<decltype(vswprintf(ws, s, L"", va)), int>::value), "");
-    static_assert((std::is_same<decltype(vswscanf(L"", L"", va)), int>::value), "");
-    static_assert((std::is_same<decltype(fgetwc(fp)), wint_t>::value), "");
-    static_assert((std::is_same<decltype(fgetws(ws, 0, fp)), wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(fputwc(L' ', fp)), wint_t>::value), "");
-    static_assert((std::is_same<decltype(fputws(L"", fp)), int>::value), "");
-    static_assert((std::is_same<decltype(fwide(fp, 0)), int>::value), "");
-    static_assert((std::is_same<decltype(getwc(fp)), wint_t>::value), "");
-    static_assert((std::is_same<decltype(putwc(L' ', fp)), wint_t>::value), "");
-    static_assert((std::is_same<decltype(ungetwc(L' ', fp)), wint_t>::value), "");
-    static_assert((std::is_same<decltype(wcstod(L"", (wchar_t**)0)), double>::value), "");
-    static_assert((std::is_same<decltype(wcstof(L"", (wchar_t**)0)), float>::value), "");
-    static_assert((std::is_same<decltype(wcstold(L"", (wchar_t**)0)), long double>::value), "");
-    static_assert((std::is_same<decltype(wcstol(L"", (wchar_t**)0, 0)), long>::value), "");
-    static_assert((std::is_same<decltype(wcstoll(L"", (wchar_t**)0, 0)), long long>::value), "");
-    static_assert((std::is_same<decltype(wcstoul(L"", (wchar_t**)0, 0)), unsigned long>::value), "");
-    static_assert((std::is_same<decltype(wcstoull(L"", (wchar_t**)0, 0)), unsigned long long>::value), "");
-    static_assert((std::is_same<decltype(wcscpy(ws, L"")), wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wcsncpy(ws, L"", s)), wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wcscat(ws, L"")), wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wcsncat(ws, L"", s)), wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wcscmp(L"", L"")), int>::value), "");
-    static_assert((std::is_same<decltype(wcscoll(L"", L"")), int>::value), "");
-    static_assert((std::is_same<decltype(wcsncmp(L"", L"", s)), int>::value), "");
-    static_assert((std::is_same<decltype(wcsxfrm(ws, L"", s)), size_t>::value), "");
-    static_assert((std::is_same<decltype(wcschr((wchar_t*)0, L' ')), wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wcscspn(L"", L"")), size_t>::value), "");
-    static_assert((std::is_same<decltype(wcslen(L"")), size_t>::value), "");
-    static_assert((std::is_same<decltype(wcspbrk((wchar_t*)0, L"")), wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wcsrchr((wchar_t*)0, L' ')), wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wcsspn(L"", L"")), size_t>::value), "");
-    static_assert((std::is_same<decltype(wcsstr((wchar_t*)0, L"")), wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wcstok(ws, L"", (wchar_t**)0)), wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wmemchr((wchar_t*)0, L' ', s)), wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wmemcmp(L"", L"", s)), int>::value), "");
-    static_assert((std::is_same<decltype(wmemcpy(ws, L"", s)), wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wmemmove(ws, L"", s)), wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wmemset(ws, L' ', s)), wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wcsftime(ws, s, L"", tm)), size_t>::value), "");
-    static_assert((std::is_same<decltype(btowc(0)), wint_t>::value), "");
-    static_assert((std::is_same<decltype(wctob(w)), int>::value), "");
-    static_assert((std::is_same<decltype(mbsinit(&mb)), int>::value), "");
-    static_assert((std::is_same<decltype(mbrlen("", s, &mb)), size_t>::value), "");
-    static_assert((std::is_same<decltype(mbrtowc(ws, "", s, &mb)), size_t>::value), "");
-    static_assert((std::is_same<decltype(wcrtomb(ns, L' ', &mb)), size_t>::value), "");
-    static_assert((std::is_same<decltype(mbsrtowcs(ws, (const char**)0, s, &mb)), size_t>::value), "");
-    static_assert((std::is_same<decltype(wcsrtombs(ns, (const wchar_t**)0, s, &mb)), size_t>::value), "");
-
-    // These tests fail on systems whose C library doesn't provide a correct overload
-    // set for wcschr, wcspbrk, wcsrchr, wcsstr, and wmemchr, unless the compiler is
-    // a suitably recent version of Clang.
-#if !defined(__APPLE__) || defined(_LIBCPP_PREFERRED_OVERLOAD)
-    static_assert((std::is_same<decltype(wcschr((const wchar_t*)0, L' ')), const wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wcspbrk((const wchar_t*)0, L"")), const wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wcsrchr((const wchar_t*)0, L' ')), const wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wcsstr((const wchar_t*)0, L"")), const wchar_t*>::value), "");
-    static_assert((std::is_same<decltype(wmemchr((const wchar_t*)0, L' ', s)), const wchar_t*>::value), "");
-#endif
+    ((void)cws); // Prevent unused warning
+    ((void)wsp); // Prevent unused warning
+    ASSERT_SAME_TYPE(int,                decltype(fwprintf(fp, L"")));
+    ASSERT_SAME_TYPE(int,                decltype(fwscanf(fp, L"")));
+    ASSERT_SAME_TYPE(int,                decltype(swprintf(ws, s, L"")));
+    ASSERT_SAME_TYPE(int,                decltype(swscanf(L"", L"")));
+    ASSERT_SAME_TYPE(int,                decltype(vfwprintf(fp, L"", va)));
+    ASSERT_SAME_TYPE(int,                decltype(vfwscanf(fp, L"", va)));
+    ASSERT_SAME_TYPE(int,                decltype(vswprintf(ws, s, L"", va)));
+    ASSERT_SAME_TYPE(int,                decltype(vswscanf(L"", L"", va)));
+    ASSERT_SAME_TYPE(wint_t,             decltype(fgetwc(fp)));
+    ASSERT_SAME_TYPE(wchar_t*,           decltype(fgetws(ws, 0, fp)));
+    ASSERT_SAME_TYPE(wint_t,             decltype(fputwc(L' ', fp)));
+    ASSERT_SAME_TYPE(int,                decltype(fputws(L"", fp)));
+    ASSERT_SAME_TYPE(int,                decltype(fwide(fp, 0)));
+    ASSERT_SAME_TYPE(wint_t,             decltype(getwc(fp)));
+    ASSERT_SAME_TYPE(wint_t,             decltype(putwc(L' ', fp)));
+    ASSERT_SAME_TYPE(wint_t,             decltype(ungetwc(L' ', fp)));
+    ASSERT_SAME_TYPE(double,             decltype(wcstod(L"", wsp)));
+    ASSERT_SAME_TYPE(float,              decltype(wcstof(L"", wsp)));
+    ASSERT_SAME_TYPE(long double,        decltype(wcstold(L"", wsp)));
+    ASSERT_SAME_TYPE(long,               decltype(wcstol(L"", wsp, 0)));
+    ASSERT_SAME_TYPE(long long,          decltype(wcstoll(L"", wsp, 0)));
+    ASSERT_SAME_TYPE(unsigned long,      decltype(wcstoul(L"", wsp, 0)));
+    ASSERT_SAME_TYPE(unsigned long long, decltype(wcstoull(L"", wsp, 0)));
+    ASSERT_SAME_TYPE(wchar_t*,           decltype(wcscpy(ws, L"")));
+    ASSERT_SAME_TYPE(wchar_t*,           decltype(wcsncpy(ws, L"", s)));
+    ASSERT_SAME_TYPE(wchar_t*,           decltype(wcscat(ws, L"")));
+    ASSERT_SAME_TYPE(wchar_t*,           decltype(wcsncat(ws, L"", s)));
+    ASSERT_SAME_TYPE(int,                decltype(wcscmp(L"", L"")));
+    ASSERT_SAME_TYPE(int,                decltype(wcscoll(L"", L"")));
+    ASSERT_SAME_TYPE(int,                decltype(wcsncmp(L"", L"", s)));
+    ASSERT_SAME_TYPE(size_t,             decltype(wcsxfrm(ws, L"", s)));
+    ASSERT_SAME_TYPE(wchar_t*,           decltype(wcschr(ws, L' ')));
+    ASSERT_SAME_TYPE(const wchar_t*,     decltype(wcschr(cws, L' ')));
+    ASSERT_SAME_TYPE(size_t,             decltype(wcscspn(L"", L"")));
+    ASSERT_SAME_TYPE(size_t,             decltype(wcslen(L"")));
+    ASSERT_SAME_TYPE(wchar_t*,           decltype(wcspbrk(ws, L"")));
+    ASSERT_SAME_TYPE(const wchar_t*,     decltype(wcspbrk(cws, L"")));
+    ASSERT_SAME_TYPE(wchar_t*,           decltype(wcsrchr(ws, L' ')));
+    ASSERT_SAME_TYPE(const wchar_t*,     decltype(wcsrchr(cws, L' ')));
+    ASSERT_SAME_TYPE(size_t,             decltype(wcsspn(L"", L"")));
+    ASSERT_SAME_TYPE(wchar_t*,           decltype(wcsstr(ws, L"")));
+    ASSERT_SAME_TYPE(const wchar_t*,     decltype(wcsstr(cws, L"")));
+    ASSERT_SAME_TYPE(wchar_t*,           decltype(wcstok(ws, L"", wsp)));
+    ASSERT_SAME_TYPE(wchar_t*,           decltype(wmemchr(ws, L' ', s)));
+    ASSERT_SAME_TYPE(const wchar_t*,     decltype(wmemchr(cws, L' ', s)));
+    ASSERT_SAME_TYPE(int,                decltype(wmemcmp(L"", L"", s)));
+    ASSERT_SAME_TYPE(wchar_t*,           decltype(wmemcpy(ws, L"", s)));
+    ASSERT_SAME_TYPE(wchar_t*,           decltype(wmemmove(ws, L"", s)));
+    ASSERT_SAME_TYPE(wchar_t*,           decltype(wmemset(ws, L' ', s)));
+    ASSERT_SAME_TYPE(size_t,             decltype(wcsftime(ws, s, L"", tm)));
+    ASSERT_SAME_TYPE(wint_t,             decltype(btowc(0)));
+    ASSERT_SAME_TYPE(int,                decltype(wctob(w)));
+    ASSERT_SAME_TYPE(int,                decltype(mbsinit(&mb)));
+    ASSERT_SAME_TYPE(size_t,             decltype(mbrlen("", s, &mb)));
+    ASSERT_SAME_TYPE(size_t,             decltype(mbrtowc(ws, "", s, &mb)));
+    ASSERT_SAME_TYPE(size_t,             decltype(wcrtomb(ns, L' ', &mb)));
+    ASSERT_SAME_TYPE(size_t,             decltype(mbsrtowcs(ws, (const char**)0, s, &mb)));
+    ASSERT_SAME_TYPE(size_t,             decltype(wcsrtombs(ns, (const wchar_t**)0, s, &mb)));
 
 #ifndef _LIBCPP_HAS_NO_STDIN
-    static_assert((std::is_same<decltype(getwchar()), wint_t>::value), "");
-    static_assert((std::is_same<decltype(vwscanf(L"", va)), int>::value), "");
-    static_assert((std::is_same<decltype(wscanf(L"")), int>::value), "");
+    ASSERT_SAME_TYPE(wint_t,             decltype(getwchar()));
+    ASSERT_SAME_TYPE(int,                decltype(vwscanf(L"", va)));
+    ASSERT_SAME_TYPE(int,                decltype(wscanf(L"")));
 #endif
 
 #ifndef _LIBCPP_HAS_NO_STDOUT
-    static_assert((std::is_same<decltype(putwchar(L' ')), wint_t>::value), "");
-    static_assert((std::is_same<decltype(vwprintf(L"", va)), int>::value), "");
-    static_assert((std::is_same<decltype(wprintf(L"")), int>::value), "");
+    ASSERT_SAME_TYPE(wint_t,             decltype(putwchar(L' ')));
+    ASSERT_SAME_TYPE(int,                decltype(vwprintf(L"", va)));
+    ASSERT_SAME_TYPE(int,                decltype(wprintf(L"")));
 #endif
 
-  return 0;
+    return 0;
 }

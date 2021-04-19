@@ -839,7 +839,7 @@ declare i8* @stpncpy(i8*, i8*, i64)
 ; CHECK: declare i32 @strcasecmp(i8* nocapture, i8* nocapture) [[NOFREE_NOUNWIND_READONLY_WILLRETURN:#[0-9]+]]
 declare i32 @strcasecmp(i8*, i8*)
 
-; CHECK: declare i8* @strcat(i8* noalias returned writeonly, i8* noalias nocapture readonly) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare i8* @strcat(i8* noalias returned, i8* noalias nocapture readonly) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare i8* @strcat(i8*, i8*)
 
 ; CHECK: declare i8* @strchr(i8*, i32) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
@@ -866,7 +866,7 @@ declare i64 @strlen(i8*)
 ; CHECK: declare i32 @strncasecmp(i8* nocapture, i8* nocapture, i64) [[NOFREE_NOUNWIND_READONLY_WILLRETURN]]
 declare i32 @strncasecmp(i8*, i8*, i64)
 
-; CHECK: declare i8* @strncat(i8* noalias returned writeonly, i8* noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare i8* @strncat(i8* noalias returned, i8* noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare i8* @strncat(i8*, i8*, i64)
 
 ; CHECK: declare i32 @strncmp(i8* nocapture, i8* nocapture, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]

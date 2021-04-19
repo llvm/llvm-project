@@ -91,7 +91,7 @@ void mlir::outlineIfOp(OpBuilder &b, scf::IfOp ifOp, FuncOp *thenFn,
     OpBuilder::InsertionGuard g(b);
     b.setInsertionPoint(ifOp->getParentOfType<FuncOp>());
 
-    llvm::SetVector<Value> captures;
+    SetVector<Value> captures;
     getUsedValuesDefinedAbove(ifOrElseRegion, captures);
 
     ValueRange values(captures.getArrayRef());

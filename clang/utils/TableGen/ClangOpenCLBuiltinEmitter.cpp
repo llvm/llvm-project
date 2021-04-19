@@ -339,10 +339,8 @@ struct OpenCLBuiltinStruct {
   const bool IsConv : 1;
   // OpenCL extension(s) required for this overload.
   const unsigned short Extension;
-  // First OpenCL version in which this overload was introduced (e.g. CL20).
-  const unsigned short MinVersion;
-  // First OpenCL version in which this overload was removed (e.g. CL20).
-  const unsigned short MaxVersion;
+  // OpenCL versions in which this overload is available.
+  const unsigned short Versions;
 };
 
 )";
@@ -490,6 +488,29 @@ void BuiltinNameEmitter::EmitSignatureTable() {
   OS << "};\n\n";
 }
 
+// Encode a range MinVersion..MaxVersion into a single bit mask that can be
+// checked against LangOpts using isOpenCLVersionContainedInMask().
+// This must be kept in sync with OpenCLVersionID in OpenCLOptions.h.
+// (Including OpenCLOptions.h here would be a layering violation.)
+static unsigned short EncodeVersions(unsigned int MinVersion,
+                                     unsigned int MaxVersion) {
+  unsigned short Encoded = 0;
+
+  // A maximum version of 0 means available in all later versions.
+  if (MaxVersion == 0) {
+    MaxVersion = UINT_MAX;
+  }
+
+  unsigned VersionIDs[] = {100, 110, 120, 200, 300};
+  for (unsigned I = 0; I < sizeof(VersionIDs) / sizeof(VersionIDs[0]); I++) {
+    if (VersionIDs[I] >= MinVersion && VersionIDs[I] < MaxVersion) {
+      Encoded |= 1 << I;
+    }
+  }
+
+  return Encoded;
+}
+
 void BuiltinNameEmitter::EmitBuiltinTable() {
   unsigned Index = 0;
 
@@ -510,9 +531,10 @@ void BuiltinNameEmitter::EmitBuiltinTable() {
          << (Overload.first->getValueAsBit("IsConst")) << ", "
          << (Overload.first->getValueAsBit("IsConv")) << ", "
          << FunctionExtensionIndex[ExtName] << ", "
-         << Overload.first->getValueAsDef("MinVersion")->getValueAsInt("ID")
-         << ", "
-         << Overload.first->getValueAsDef("MaxVersion")->getValueAsInt("ID")
+         << EncodeVersions(Overload.first->getValueAsDef("MinVersion")
+                               ->getValueAsInt("ID"),
+                           Overload.first->getValueAsDef("MaxVersion")
+                               ->getValueAsInt("ID"))
          << " },\n";
       Index++;
     }

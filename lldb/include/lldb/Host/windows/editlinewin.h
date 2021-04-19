@@ -112,4 +112,4 @@ void el_deletestr(EditLine *, int);
 History *history_init(void);
 void history_end(History *);
 int history(History *, HistEvent *, int, ...);
-};
+}

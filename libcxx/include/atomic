@@ -669,7 +669,7 @@ static_assert((is_same<underlying_type<memory_order>::type, __memory_order_under
   "unexpected underlying type for std::memory_order");
 
 #if defined(_LIBCPP_HAS_GCC_ATOMIC_IMP) || \
-	defined(_LIBCPP_ATOMIC_ONLY_USE_BUILTINS)
+    defined(_LIBCPP_ATOMIC_ONLY_USE_BUILTINS)
 
 // [atomics.types.generic]p1 guarantees _Tp is trivially copyable. Because
 // the default operator= in an object is not volatile, a byte-by-byte copy

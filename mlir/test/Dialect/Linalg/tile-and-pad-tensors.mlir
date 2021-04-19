@@ -1,4 +1,5 @@
-// RUN: mlir-opt %s -test-linalg-transform-patterns=test-tile-and-pad-pattern -canonicalize | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-transform-patterns="test-tile-and-pad-pattern tile-sizes-for-padding=2,3,4" -canonicalize | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-transform-patterns="test-tile-and-pad-pattern tile-sizes-for-padding=2,3" -canonicalize | FileCheck %s -check-prefix=CHECK-1DIM-TILE
 
 // CHECK-LABEL: func @matmul_tensors(
 // CHECK-SAME:    %[[TA:[0-9a-z]+]]: tensor<?x?xi8>
@@ -39,3 +40,10 @@ func @matmul_tensors(
 //      CHECK: return %[[TD0]] : tensor<?x?xi32>
   return %0 : tensor<?x?xi32>
 }
+
+// CHECK-1DIM-TILE: func @matmul_tensors(
+// CHECK-1DIM-TILE:    %[[TA:[0-9a-z]+]]: tensor<?x?xi8>
+// CHECK-1DIM-TILE:    %[[TB:[0-9a-z]+]]: tensor<?x?xi8>
+// CHECK-1DIM-TILE:    %[[TC:[0-9a-z]+]]: tensor<?x?xi32>) -> tensor<?x?xi32> {
+// CHECK-1DIM-TILE-NOT: scf.for
+// CHECK-1DIM-TILE: linalg.matmul_i8_i8_i32 ins(%[[TA]], %[[TB]] : tensor<?x?xi8>, tensor<?x?xi8>) outs(%[[TC]] : tensor<?x?xi32>) -> tensor<?x?xi32>

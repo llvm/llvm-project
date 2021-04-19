@@ -165,7 +165,7 @@ private:
   /// serialized type will be returned as `typeID`.
   LogicalResult processType(Location loc, Type type, uint32_t &typeID);
   LogicalResult processTypeImpl(Location loc, Type type, uint32_t &typeID,
-                                llvm::SetVector<StringRef> &serializationCtx);
+                                SetVector<StringRef> &serializationCtx);
 
   /// Method for preparing basic SPIR-V type serialization. Returns the type's
   /// opcode and operands for the instruction via `typeEnum` and `operands`.
@@ -173,7 +173,7 @@ private:
                                  spirv::Opcode &typeEnum,
                                  SmallVectorImpl<uint32_t> &operands,
                                  bool &deferSerialization,
-                                 llvm::SetVector<StringRef> &serializationCtx);
+                                 SetVector<StringRef> &serializationCtx);
 
   LogicalResult prepareFunctionType(Location loc, FunctionType type,
                                     spirv::Opcode &typeEnum,
@@ -292,8 +292,7 @@ private:
   /// Serializes an operation in the SPIR-V dialect that is a mirror of an
   /// instruction in the SPIR-V spec. This is auto generated if hasOpcode == 1
   /// and autogenSerialization == 1 in ODS.
-  template <typename OpTy>
-  LogicalResult processOp(OpTy op) {
+  template <typename OpTy> LogicalResult processOp(OpTy op) {
     return op.emitError("unsupported op serialization");
   }
 

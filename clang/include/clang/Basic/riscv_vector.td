@@ -92,6 +92,17 @@
 //      (SEW=16, LMUL=4) and Log2EEW is 3 (EEW=8), and then equivalent vector
 //      type is __rvv_uint8m2_t (elmul=(8/16)*4 = 2). Ignore to define a new
 //      builtins if its equivalent type has illegal lmul.
+//   (FixedSEW:Value): Given a vector type (SEW and LMUL), and computes another
+//      vector type which only changed SEW as given value. Ignore to define a new
+//      builtin if its equivalent type has illegal lmul or the SEW does not changed.
+//   (SFixedLog2LMUL:Value): Smaller Fixed Log2LMUL. Given a vector type (SEW
+//      and LMUL), and computes another vector type which only changed LMUL as
+//      given value. The new LMUL should be smaller than the old one. Ignore to
+//      define a new builtin if its equivalent type has illegal lmul.
+//   (LFixedLog2LMUL:Value): Larger Fixed Log2LMUL. Given a vector type (SEW
+//      and LMUL), and computes another vector type which only changed LMUL as
+//      given value. The new LMUL should be larger than the old one. Ignore to
+//      define a new builtin if its equivalent type has illegal lmul.
 //
 // Following with the example above, if t is "i", then "Ue" will yield unsigned
 // int and "Fv" will yield __rvv_float32m1_t (again assuming LMUL=1), Fw would
@@ -1271,4 +1282,70 @@ let HasMask = false, PermuteOperands = [2, 0, 1] in {
   // unsigned type
   defm vcompress : RVVOutBuiltinSet<"vcompress", "csil",
                                     [["vm", "Uv", "UvUvUvm"]]>;
+}
+
+// Miscellaneous
+let HasMask = false, HasVL = false, HasNoMaskedOverloaded = false,
+    IRName = "" in {
+  let Name = "vreinterpret_v",
+      ManualCodegen = [{
+        return Builder.CreateBitCast(Ops[0], ResultType);
+      }] in {
+    // Reinterpret between different type under the same SEW and LMUL
+    def vreinterpret_i_u : RVVBuiltin<"Uvv", "vUv", "csil">;
+    def vreinterpret_i_f : RVVBuiltin<"Fvv", "vFv", "il">;
+    def vreinterpret_u_i : RVVBuiltin<"vUv", "Uvv", "csil">;
+    def vreinterpret_u_f : RVVBuiltin<"FvUv", "UvFv", "il">;
+    def vreinterpret_f_i : RVVBuiltin<"vFv", "Fvv", "il">;
+    def vreinterpret_f_u : RVVBuiltin<"UvFv", "FvUv", "il">;
+
+    // Reinterpret between different SEW under the same LMUL
+    foreach dst_sew = ["(FixedSEW:8)", "(FixedSEW:16)", "(FixedSEW:32)",
+                       "(FixedSEW:64)"] in {
+      def vreinterpret_i_ # dst_sew : RVVBuiltin<"v" # dst_sew # "v", dst_sew # "vv", "csil">;
+      def vreinterpret_u_ # dst_sew : RVVBuiltin<"Uv" # dst_sew # "Uv", dst_sew # "UvUv", "csil">;
+    }
+  }
+
+  let Name = "vundefined",
+      ManualCodegen = [{
+        return llvm::UndefValue::get(ResultType);
+      }] in {
+    def vundefined : RVVBuiltin<"v", "v", "csilfd">;
+    def vundefined_u : RVVBuiltin<"Uv", "Uv", "csil">;
+  }
+
+  // LMUL truncation
+  // C/C++ Operand: VecTy, IR Operand: VecTy, Index
+  let Name = "vlmul_trunc_v",
+      ManualCodegen = [{ {
+        ID = Intrinsic::experimental_vector_extract;
+        IntrinsicTypes = {ResultType, Ops[0]->getType()};
+        Ops.push_back(ConstantInt::get(Int64Ty, 0));
+        return Builder.CreateCall(CGM.getIntrinsic(ID, IntrinsicTypes), Ops, "");
+      } }] in {
+    foreach dst_lmul = ["(SFixedLog2LMUL:-3)", "(SFixedLog2LMUL:-2)", "(SFixedLog2LMUL:-1)",
+                        "(SFixedLog2LMUL:0)", "(SFixedLog2LMUL:1)", "(SFixedLog2LMUL:2)"] in {
+      def vlmul_trunc # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vv", "csilfd">;
+      def vlmul_trunc_u # dst_lmul : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "UvUv", "csil">;
+    }
+  }
+
+  // LMUL extension
+  // C/C++ Operand: SubVecTy, IR Operand: VecTy, SubVecTy, Index
+  let Name = "vlmul_ext_v",
+      ManualCodegen = [{
+        ID = Intrinsic::experimental_vector_insert;
+        IntrinsicTypes = {ResultType, Ops[0]->getType()};
+        Ops.push_back(llvm::UndefValue::get(ResultType));
+        std::swap(Ops[0], Ops[1]);
+        Ops.push_back(ConstantInt::get(Int64Ty, 0));
+        return Builder.CreateCall(CGM.getIntrinsic(ID, IntrinsicTypes), Ops, "");
+      }] in {
+    foreach dst_lmul = ["(LFixedLog2LMUL:-2)", "(LFixedLog2LMUL:-1)", "(LFixedLog2LMUL:-0)",
+                        "(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
+      def vlmul_ext # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vv", "csilfd">;
+      def vlmul_ext_u # dst_lmul : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "UvUv", "csil">;
+    }
+  }
 }
