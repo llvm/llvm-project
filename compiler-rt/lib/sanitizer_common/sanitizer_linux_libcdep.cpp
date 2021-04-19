@@ -328,8 +328,8 @@ static int CollectStaticTlsBlocks(struct dl_phdr_info *info, size_t size,
     // and FreeBSD.
     size_t mod_and_off[2] = {info->dlpi_tls_modid, 0};
     begin = (uptr)__tls_get_addr(mod_and_off);
-#endif
   }
+#endif
   for (unsigned i = 0; i != info->dlpi_phnum; ++i)
     if (info->dlpi_phdr[i].p_type == PT_TLS) {
       static_cast<InternalMmapVector<TlsBlock> *>(data)->push_back(
