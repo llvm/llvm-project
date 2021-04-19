@@ -331,7 +331,8 @@ std::string WriteGraph(const GraphType &G, const Twine &Name,
   if (Filename.empty()) {
     Filename = createGraphFilename(Name.str(), FD);
   } else {
-    std::error_code EC = sys::fs::openFileForWrite(Filename, FD);
+    std::error_code EC = sys::fs::openFileForWrite(
+        Filename, FD, sys::fs::CD_CreateAlways, sys::fs::OF_Text);
 
     // Writing over an existing file is not considered an error.
     if (EC == std::errc::file_exists) {
