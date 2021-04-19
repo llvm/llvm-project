@@ -154,7 +154,6 @@ declare void @use64(i64)
 define void @f_with_offset(i32* noalias %b, i32* noalias %c, i32* noalias %d, i32* noalias %e, i64 %N) {
 ; CHECK-LABEL: @f_with_offset(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GLOBAL_A:%.*]] = ptrtoint [8192 x i32]* @global_a to i64
 ; CHECK-NEXT:    [[A_BASE:%.*]] = getelementptr [8192 x i32], [8192 x i32]* @global_a, i32 0, i32 0
 ; CHECK-NEXT:    [[A_INTPTR:%.*]] = ptrtoint i32* [[A_BASE]] to i64
 ; CHECK-NEXT:    call void @use64(i64 [[A_INTPTR]])
@@ -175,18 +174,17 @@ define void @f_with_offset(i32* noalias %b, i32* noalias %c, i32* noalias %d, i3
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i1 false, [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[GLOBAL_A]], 168
 ; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 8, i64 [[TMP0]])
 ; CHECK-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP11]], [[MUL_RESULT3]]
-; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP11]], [[MUL_RESULT3]]
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp ugt i64 [[TMP13]], [[TMP11]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult i64 [[TMP12]], [[TMP11]]
-; CHECK-NEXT:    [[TMP16:%.*]] = select i1 false, i1 [[TMP14]], i1 [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP16]], [[MUL_OVERFLOW4]]
-; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP10]], [[TMP17]]
-; CHECK-NEXT:    br i1 [[TMP18]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH_LDIST1:%.*]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add i64 add (i64 ptrtoint ([8192 x i32]* @global_a to i64), i64 168), [[MUL_RESULT3]]
+; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 add (i64 ptrtoint ([8192 x i32]* @global_a to i64), i64 168), [[MUL_RESULT3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ugt i64 [[TMP12]], add (i64 ptrtoint ([8192 x i32]* @global_a to i64), i64 168)
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ult i64 [[TMP11]], add (i64 ptrtoint ([8192 x i32]* @global_a to i64), i64 168)
+; CHECK-NEXT:    [[TMP15:%.*]] = select i1 false, i1 [[TMP13]], i1 [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW4]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP10]], [[TMP16]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH_LDIST1:%.*]]
 ; CHECK:       for.body.ph.lver.orig:
 ; CHECK-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
 ; CHECK:       for.body.lver.orig:
