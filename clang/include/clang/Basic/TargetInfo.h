@@ -40,7 +40,6 @@
 
 namespace llvm {
 struct fltSemantics;
-class DataLayout;
 }
 
 namespace clang {
@@ -205,7 +204,8 @@ protected:
 
   unsigned char MaxAtomicPromoteWidth, MaxAtomicInlineWidth;
   unsigned short SimdDefaultAlign;
-  std::unique_ptr<llvm::DataLayout> DataLayout;
+  std::string DataLayoutString;
+  const char *UserLabelPrefix;
   const char *MCountName;
   unsigned char RegParmMax, SSERegParmMax;
   TargetCXXABI TheCXXABI;
@@ -238,7 +238,9 @@ protected:
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
 
-  void resetDataLayout(StringRef DL);
+  // UserLabelPrefix must match DL's getGlobalPrefix() when interpreted
+  // as a DataLayout object.
+  void resetDataLayout(StringRef DL, const char *UserLabelPrefix = "");
 
 public:
   /// Construct a target for the given options.
@@ -747,6 +749,12 @@ public:
     return PointerWidth;
   }
 
+  /// \brief Returns the default value of the __USER_LABEL_PREFIX__ macro,
+  /// which is the prefix given to user symbols by default.
+  ///
+  /// On most platforms this is "", but it is "_" on some.
+  const char *getUserLabelPrefix() const { return UserLabelPrefix; }
+
   /// Returns the name of the mcount instrumentation function.
   const char *getMCountName() const {
     return MCountName;
@@ -1096,9 +1104,9 @@ public:
   /// Returns the target ID if supported.
   virtual llvm::Optional<std::string> getTargetID() const { return llvm::None; }
 
-  const llvm::DataLayout &getDataLayout() const {
-    assert(DataLayout && "Uninitialized DataLayout!");
-    return *DataLayout;
+  const char *getDataLayoutString() const {
+    assert(!DataLayoutString.empty() && "Uninitialized DataLayout!");
+    return DataLayoutString.c_str();
   }
 
   struct GCCRegAlias {
