@@ -30,7 +30,9 @@ TEST(FeatureModulesTest, ContributesTweak) {
         return error("not implemented");
       }
       std::string title() const override { return id(); }
-      llvm::StringLiteral kind() const override { return ""; };
+      llvm::StringLiteral kind() const override {
+        return llvm::StringLiteral("");
+      };
     };
 
     void contributeTweaks(std::vector<std::unique_ptr<Tweak>> &Out) override {
