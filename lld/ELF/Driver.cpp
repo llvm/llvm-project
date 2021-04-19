@@ -1314,7 +1314,7 @@ static void readConfigs(opt::InputArgList &args) {
   }
 
   // When producing an executable, --dynamic-list specifies non-local defined
-  // symbols whith are required to be exported. When producing a shared object,
+  // symbols which are required to be exported. When producing a shared object,
   // symbols not specified by --dynamic-list are non-preemptible.
   config->symbolic =
       args.hasArg(OPT_Bsymbolic) || args.hasArg(OPT_dynamic_list);
