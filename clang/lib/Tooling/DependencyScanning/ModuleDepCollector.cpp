@@ -32,7 +32,6 @@ makeInvocationForModuleBuildWithoutPaths(const ModuleDeps &Deps) {
   CI.getFrontendOpts().IsSystemModule = Deps.IsSystem;
 
   CI.getLangOpts()->ImplicitModules = false;
-  CI.getHeaderSearchOpts().ImplicitModuleMaps = false;
 
   return CI;
 }

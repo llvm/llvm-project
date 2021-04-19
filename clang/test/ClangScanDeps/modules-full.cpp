@@ -40,7 +40,6 @@
 // CHECK:              "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap",
 // CHECK:              "-emit-module",
 // CHECK:              "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[CONTEXT_HASH_H1]]/header2-{{[A-Z0-9]+}}.pcm",
-// CHECK-NOT:          "-fimplicit-module-maps",
 // CHECK:              "-fmodule-name=header1",
 // CHECK:              "-fno-implicit-modules",
 // CHECK:            ],
@@ -56,7 +55,6 @@
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/Inputs/module.modulemap",
 // CHECK-NEXT:       "command-line": [
 // CHECK:              "-emit-module",
-// CHECK-NOT:          "-fimplicit-module-maps",
 // CHECK:              "-fmodule-name=header1",
 // CHECK:              "-fno-implicit-modules",
 // CHECK:            ],
@@ -72,7 +70,6 @@
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/Inputs/module.modulemap",
 // CHECK-NEXT:       "command-line": [
 // CHECK:              "-emit-module",
-// CHECK-NOT:          "-fimplicit-module-maps",
 // CHECK:              "-fmodule-name=header2",
 // CHECK:              "-fno-implicit-modules",
 // CHECK:            ],

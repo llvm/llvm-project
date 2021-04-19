@@ -23,11 +23,10 @@ inferred a = 0;
 // CHECK-NEXT:       "clang-module-deps": [],
 // CHECK-NEXT:       "clang-modulemap-file": "[[SOURCEDIR]]/Inputs/frameworks/module.modulemap",
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-remove-preceeding-explicit-module-build-incompatible-options",
-// CHECK-NEXT:         "-fno-implicit-modules",
-// CHECK-NEXT:         "-emit-module",
-// CHECK-NEXT:         "-fmodule-name=Inferred"
-// CHECK-NEXT:       ],
+// CHECK:              "-emit-module",
+// CHECK:              "-fmodule-name=Inferred",
+// CHECK:              "-fno-implicit-modules",
+// CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[CONTEXT_HASH_H1:[A-Z0-9]+]]",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[SOURCEDIR]]/Inputs/frameworks/Inferred.framework/Frameworks/Sub.framework/Headers/Sub.h",
