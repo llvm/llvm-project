@@ -102,7 +102,7 @@ let hasDelaySlot = 0 in
 let hasDelaySlot = 0 in
   def PseudoReturnNM : PseudoReturnBase<GPR32NMOpnd>, ISA_NANOMIPS;
 
-let Defs = [RA_NM] in
+let Defs = [RA_NM], isBarrier = 1 in
   def BALC_NM : BranchNM<"balc", MipsJmpLink, tglobaladdr>, ISA_NANOMIPS;
 
 def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, ISA_NANOMIPS;
