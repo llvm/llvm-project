@@ -3720,7 +3720,7 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
   SDValue StoreVal = Store->getValue();
   MVT VT = StoreVal.getSimpleValueType();
 
-  // If the size less than a byte, we need to the unused bits with 0s.
+  // If the size less than a byte, we need to pad with zeros to make a byte.
   if (VT.getVectorElementType() == MVT::i1 && VT.getVectorNumElements() < 8) {
     VT = MVT::v8i1;
     StoreVal = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
