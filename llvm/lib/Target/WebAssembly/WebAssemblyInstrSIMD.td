@@ -1160,12 +1160,15 @@ defm "" : SIMDNarrow<I32x4, 133>;
 // Use narrowing operations for truncating stores. Since the narrowing
 // operations are saturating instead of truncating, we need to mask
 // the stored values first.
-// TODO: Use consts instead of splats
 def store_v8i8_trunc_v8i16 :
   OutPatFrag<(ops node:$val),
              (EXTRACT_LANE_I64x2
                (NARROW_U_I8x16
-                 (AND (SPLAT_I32x4 (CONST_I32 0x00ff00ff)), node:$val),
+                 (AND
+                   (CONST_V128_I16x8
+                     0x00ff, 0x00ff, 0x00ff, 0x00ff,
+                     0x00ff, 0x00ff, 0x00ff, 0x00ff),
+                   node:$val),
                  $val), // Unused input
                0)>;
 
@@ -1173,7 +1176,10 @@ def store_v4i16_trunc_v4i32 :
   OutPatFrag<(ops node:$val),
              (EXTRACT_LANE_I64x2
                (NARROW_U_I16x8
-                 (AND (SPLAT_I32x4 (CONST_I32 0x0000ffff)), node:$val),
+                 (AND
+                  (CONST_V128_I32x4
+                    0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff),
+                  node:$val),
                  $val), // Unused input
                0)>;
 
