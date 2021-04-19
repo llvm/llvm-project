@@ -292,15 +292,15 @@ class ReversePostOrderTraversal {
 
   std::vector<NodeRef> Blocks; // Block list in normal PO order
 
-  void Initialize(NodeRef BB) {
-    std::copy(po_begin(BB), po_end(BB), std::back_inserter(Blocks));
+  void Initialize(const GraphT &G) {
+    std::copy(po_begin(G), po_end(G), std::back_inserter(Blocks));
   }
 
 public:
   using rpo_iterator = typename std::vector<NodeRef>::reverse_iterator;
   using const_rpo_iterator = typename std::vector<NodeRef>::const_reverse_iterator;
 
-  ReversePostOrderTraversal(GraphT G) { Initialize(GT::getEntryNode(G)); }
+  ReversePostOrderTraversal(const GraphT &G) { Initialize(G); }
 
   // Because we want a reverse post order, use reverse iterators from the vector
   rpo_iterator begin() { return Blocks.rbegin(); }
