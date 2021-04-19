@@ -436,7 +436,7 @@ static void analysisMain() {
 
   const Analysis Analyzer(*TheTarget, std::move(InstrInfo), Clustering,
                           AnalysisInconsistencyEpsilon,
-                          AnalysisDisplayUnstableOpcodes);
+                          AnalysisDisplayUnstableOpcodes, CpuName);
 
   maybeRunAnalysis<Analysis::PrintClusters>(Analyzer, "analysis clusters",
                                             AnalysisClustersOutputFile);
