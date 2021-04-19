@@ -466,7 +466,8 @@ bool TypeInfer::EnforceSmallerThan(TypeSetByHwMode &Small,
 
   assert(Small.hasDefault() && Big.hasDefault());
 
-  std::vector<unsigned> Modes = union_modes(Small, Big);
+  SmallVector<unsigned, 4> Modes;
+  union_modes(Small, Big, Modes);
 
   // 1. Only allow integer or floating point types and make sure that
   //    both sides are both integer or both floating point.
@@ -573,7 +574,9 @@ bool TypeInfer::EnforceVectorEltTypeIs(TypeSetByHwMode &Vec,
   if (Elem.empty())
     Changed |= EnforceScalar(Elem);
 
-  for (unsigned M : union_modes(Vec, Elem)) {
+  SmallVector<unsigned, 4> Modes;
+  union_modes(Vec, Elem, Modes);
+  for (unsigned M : Modes) {
     TypeSetByHwMode::SetType &V = Vec.get(M);
     TypeSetByHwMode::SetType &E = Elem.get(M);
 
@@ -656,7 +659,9 @@ bool TypeInfer::EnforceVectorSubVectorTypeIs(TypeSetByHwMode &Vec,
   if (Sub.empty())
     Changed |= EnforceVector(Sub);
 
-  for (unsigned M : union_modes(Vec, Sub)) {
+  SmallVector<unsigned, 4> Modes;
+  union_modes(Vec, Sub, Modes);
+  for (unsigned M : Modes) {
     TypeSetByHwMode::SetType &S = Sub.get(M);
     TypeSetByHwMode::SetType &V = Vec.get(M);
 
@@ -696,7 +701,9 @@ bool TypeInfer::EnforceSameNumElts(TypeSetByHwMode &V, TypeSetByHwMode &W) {
     return !Lengths.count(T.isVector() ? T.getVectorNumElements() : 0);
   };
 
-  for (unsigned M : union_modes(V, W)) {
+  SmallVector<unsigned, 4> Modes;
+  union_modes(V, W, Modes);
+  for (unsigned M : Modes) {
     TypeSetByHwMode::SetType &VS = V.get(M);
     TypeSetByHwMode::SetType &WS = W.get(M);
 
@@ -741,7 +748,9 @@ bool TypeInfer::EnforceSameSize(TypeSetByHwMode &A, TypeSetByHwMode &B) {
     return !Sizes.count(T.getSizeInBits());
   };
 
-  for (unsigned M : union_modes(A, B)) {
+  SmallVector<unsigned, 4> Modes;
+  union_modes(A, B, Modes);
+  for (unsigned M : Modes) {
     TypeSetByHwMode::SetType &AS = A.get(M);
     TypeSetByHwMode::SetType &BS = B.get(M);
     TypeSizeSet AN, BN;
