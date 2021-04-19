@@ -91,6 +91,9 @@ struct TestLinalgTransforms
       *this, "tile-sizes-for-padding",
       llvm::cl::desc("Linalg tile sizes when tile+pad"), llvm::cl::ZeroOrMore,
       llvm::cl::MiscFlags::CommaSeparated};
+  ListOption<unsigned> testInterchangePattern{
+      *this, "test-interchange-pattern", llvm::cl::MiscFlags::CommaSeparated,
+      llvm::cl::desc("Test the interchange pattern.")};
 };
 } // end anonymous namespace
 
@@ -540,6 +543,17 @@ static void applyTileAndPadPattern(FuncOp funcOp, ArrayRef<int64_t> tileSizes) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(tilingPattern));
 }
 
+static void applyInterchangePattern(FuncOp funcOp,
+                                    ArrayRef<unsigned> interchangeVector) {
+  MLIRContext *context = funcOp.getContext();
+  RewritePatternSet interchangePattern(context);
+  interchangePattern.add<LinalgInterchangePattern<GenericOp>>(
+      context, interchangeVector,
+      LinalgTransformationFilter(ArrayRef<Identifier>{},
+                                 Identifier::get("interchange", context)));
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(interchangePattern));
+}
+
 /// Apply transformations specified as patterns.
 void TestLinalgTransforms::runOnFunction() {
   auto lambda = [&](void *) {
@@ -580,6 +594,8 @@ void TestLinalgTransforms::runOnFunction() {
       (void)linalg::hoistPaddingOnTensors(padTensorOp, testHoistPadding);
     });
   }
+  if (testInterchangePattern.hasValue())
+    return applyInterchangePattern(getFunction(), testInterchangePattern);
 }
 
 namespace mlir {
