@@ -181,13 +181,13 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtbegin)));
   }
 
+  AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
+
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
   Args.AddAllArgs(CmdArgs,
                   {options::OPT_T_Group, options::OPT_e, options::OPT_s,
                    options::OPT_t, options::OPT_Z_Flag, options::OPT_r});
-
-  AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   // TODO: add C++ includes and libs if compiling C++.
 
