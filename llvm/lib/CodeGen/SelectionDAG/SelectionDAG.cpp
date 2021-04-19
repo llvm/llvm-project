@@ -4717,10 +4717,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "STEP_VECTOR can only be used with vectors of integers that are at "
            "least 8 bits wide");
     assert(isa<ConstantSDNode>(Operand) &&
-           cast<ConstantSDNode>(Operand)->getAPIntValue().isNonNegative() &&
            cast<ConstantSDNode>(Operand)->getAPIntValue().isSignedIntN(
                VT.getScalarSizeInBits()) &&
-           "Expected STEP_VECTOR integer constant to be positive and fit in "
+           "Expected STEP_VECTOR integer constant to fit in "
            "the vector element type");
     break;
   case ISD::FREEZE:
