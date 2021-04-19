@@ -253,23 +253,23 @@ vstr.f32 s0, [r0]
 # CHECK-NEXT: [0.0] - M7UnitALU
 # CHECK-NEXT: [0.1] - M7UnitALU
 # CHECK-NEXT: [1]   - M7UnitBranch
-# CHECK-NEXT: [2.0] - M7UnitLoad
-# CHECK-NEXT: [2.1] - M7UnitLoad
-# CHECK-NEXT: [3]   - M7UnitMAC
-# CHECK-NEXT: [4]   - M7UnitSIMD
-# CHECK-NEXT: [5]   - M7UnitShift1
-# CHECK-NEXT: [6]   - M7UnitShift2
-# CHECK-NEXT: [7]   - M7UnitStore
-# CHECK-NEXT: [8]   - M7UnitVFP
-# CHECK-NEXT: [9.0] - M7UnitVPort
-# CHECK-NEXT: [9.1] - M7UnitVPort
+# CHECK-NEXT: [2]   - M7UnitLoadH
+# CHECK-NEXT: [3]   - M7UnitLoadL
+# CHECK-NEXT: [4]   - M7UnitMAC
+# CHECK-NEXT: [5]   - M7UnitSIMD
+# CHECK-NEXT: [6]   - M7UnitShift1
+# CHECK-NEXT: [7]   - M7UnitShift2
+# CHECK-NEXT: [8]   - M7UnitStore
+# CHECK-NEXT: [9]   - M7UnitVFP
+# CHECK-NEXT: [10]  - M7UnitVPortH
+# CHECK-NEXT: [11]  - M7UnitVPortL
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2.0]  [2.1]  [3]    [4]    [5]    [6]    [7]    [8]    [9.0]  [9.1]
-# CHECK-NEXT:  -      -      -     1.00   1.00    -      -      -      -     2.00   104.00 81.00  81.00
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
+# CHECK-NEXT:  -      -      -     1.50   1.50    -      -      -      -     2.00   104.00 81.00  81.00
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2.0]  [2.1]  [3]    [4]    [5]    [6]    [7]    [8]    [9.0]  [9.1]  Instructions:
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   0.50   0.50   vabs.f32	s0, s2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00   1.00   vabs.f64	d0, d2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   0.50   0.50   vadd.f32	s0, s2, s1
@@ -384,7 +384,7 @@ vstr.f32 s0, [r0]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00   1.00   vsqrt.f64	d0, d2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   0.50   0.50   vsub.f32	s0, s2, s1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00   1.00   vsub.f64	d0, d2, d1
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -      -      -      -     1.00   1.00   vldr	d0, [r0]
+# CHECK-NEXT:  -      -      -     1.00   1.00    -      -      -      -      -      -     1.00   1.00   vldr	d0, [r0]
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -      -      -      -     0.50   0.50   vldr	s0, [r0]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -     1.00   1.00   vstr	d0, [r0]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -     0.50   0.50   vstr	s0, [r0]
