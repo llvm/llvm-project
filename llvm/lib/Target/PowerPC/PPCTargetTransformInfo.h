@@ -76,7 +76,7 @@ public:
   bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
                      TargetTransformInfo::LSRCost &C2);
   bool isNumRegsMajorCostOfLSR();
-
+  bool shouldBuildRelLookupTables() const;
   /// @}
 
   /// \name Vector TTI Implementations
