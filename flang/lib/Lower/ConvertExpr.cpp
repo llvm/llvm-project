@@ -1979,8 +1979,6 @@ public:
   using CC = std::function<ExtValue(IterSpace)>; // current continuation
   using PC =
       std::function<IterationSpace(IterSpace)>; // projection continuation
-  using MaskExpr = const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> *;
-  using MaskExprList = llvm::ArrayRef<MaskExpr>;
 
   static void lowerArrayAssignment(
       Fortran::lower::AbstractConverter &converter,
