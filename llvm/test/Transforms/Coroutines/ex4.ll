@@ -2,7 +2,7 @@
 ; RUN: opt < %s -O2 -enable-coroutines -S | FileCheck %s
 ; RUN: opt < %s -passes='default<O2>' -enable-coroutines -S | FileCheck %s
 
-define i8* @f(i32 %n) "coroutine.presplit"="0" {
+define i8* @f(i32 %n) {
 entry:
   %promise = alloca i32
   %pv = bitcast i32* %promise to i8*
