@@ -378,6 +378,10 @@ inline void DoNotOptimize(Tp const& value) {
 #define TEST_NOT_WIN32(...) __VA_ARGS__
 #endif
 
+#ifdef _WIN32
+#define TEST_WIN_NO_FILESYSTEM_PERMS_NONE
+#endif
+
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
