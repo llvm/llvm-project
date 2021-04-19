@@ -6522,7 +6522,7 @@ static llvm::GlobalValue::DLLStorageClassTypes getStorage(CodeGenModule &CGM,
   DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
 
   const VarDecl *VD = nullptr;
-  for (const auto &Result : DC->lookup(&II))
+  for (const auto *Result : DC->lookup(&II))
     if ((VD = dyn_cast<VarDecl>(Result)))
       break;
 
