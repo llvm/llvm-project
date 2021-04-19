@@ -76,13 +76,6 @@ struct MlirNamedAttribute {
 typedef struct MlirNamedAttribute MlirNamedAttribute;
 
 //===----------------------------------------------------------------------===//
-// Global API.
-//===----------------------------------------------------------------------===//
-
-/// Set the global debugging flag.
-MLIR_CAPI_EXPORTED void mlirEnableGlobalDebug(bool enable);
-
-//===----------------------------------------------------------------------===//
 // Context API.
 //===----------------------------------------------------------------------===//
 
