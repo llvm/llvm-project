@@ -37,13 +37,13 @@
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/Inputs/module.modulemap",
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-remove-preceeding-explicit-module-build-incompatible-options",
-// CHECK-NEXT:         "-fno-implicit-modules",
-// CHECK-NEXT:         "-emit-module",
-// CHECK-NEXT:         "-fmodule-name=header1",
-// CHECK-NEXT:         "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[CONTEXT_HASH_H1]]/header2-{{[A-Z0-9]+}}.pcm",
-// CHECK-NEXT:         "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap"
-// CHECK-NEXT:       ],
+// CHECK:              "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap",
+// CHECK:              "-emit-module",
+// CHECK:              "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[CONTEXT_HASH_H1]]/header2-{{[A-Z0-9]+}}.pcm",
+// CHECK-NOT:          "-fimplicit-module-maps",
+// CHECK:              "-fmodule-name=header1",
+// CHECK:              "-fno-implicit-modules",
+// CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[CONTEXT_HASH_H1]]",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h",
@@ -55,11 +55,11 @@
 // CHECK-NEXT:       "clang-module-deps": [],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/Inputs/module.modulemap",
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-remove-preceeding-explicit-module-build-incompatible-options",
-// CHECK-NEXT:         "-fno-implicit-modules",
-// CHECK-NEXT:         "-emit-module",
-// CHECK-NEXT:         "-fmodule-name=header1"
-// CHECK-NEXT:       ],
+// CHECK:              "-emit-module",
+// CHECK-NOT:          "-fimplicit-module-maps",
+// CHECK:              "-fmodule-name=header1",
+// CHECK:              "-fno-implicit-modules",
+// CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[CONTEXT_HASH_H2:[A-Z0-9]+]]",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h",
@@ -71,11 +71,11 @@
 // CHECK-NEXT:       "clang-module-deps": [],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/Inputs/module.modulemap",
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-remove-preceeding-explicit-module-build-incompatible-options",
-// CHECK-NEXT:         "-fno-implicit-modules",
-// CHECK-NEXT:         "-emit-module",
-// CHECK-NEXT:         "-fmodule-name=header2"
-// CHECK-NEXT:       ],
+// CHECK:              "-emit-module",
+// CHECK-NOT:          "-fimplicit-module-maps",
+// CHECK:              "-fmodule-name=header2",
+// CHECK:              "-fno-implicit-modules",
+// CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[CONTEXT_HASH_H1]]",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header2.h",
