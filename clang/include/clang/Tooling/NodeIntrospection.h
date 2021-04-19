@@ -86,6 +86,7 @@ NodeLocationAccessors GetLocations(clang::CXXCtorInitializer const *Object);
 NodeLocationAccessors GetLocations(clang::NestedNameSpecifierLoc const *);
 NodeLocationAccessors GetLocations(clang::TemplateArgumentLoc const *);
 NodeLocationAccessors GetLocations(clang::CXXBaseSpecifier const *);
+NodeLocationAccessors GetLocations(clang::TypeLoc const &);
 NodeLocationAccessors GetLocations(clang::DynTypedNode const &Node);
 } // namespace NodeIntrospection
 } // namespace tooling
