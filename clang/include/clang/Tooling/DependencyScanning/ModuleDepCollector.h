@@ -47,6 +47,9 @@ struct ModuleDeps {
   /// The identifier of the module.
   ModuleID ID;
 
+  /// Whether this is a "system" module.
+  bool IsSystem;
+
   /// The path to the modulemap file which defines this module.
   ///
   /// This can be used to explicitly build this module. This file will
@@ -83,6 +86,10 @@ struct ModuleDeps {
   std::vector<std::string> getFullCommandLine(
       std::function<StringRef(ModuleID)> LookupPCMPath,
       std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const;
+
+  /// Gets a partial command line suitable for appending to the original clang
+  /// invocation.
+  std::vector<std::string> getNonPathCommandLine() const;
 };
 
 namespace detail {

@@ -184,7 +184,7 @@ static CXFileDependencies *getFullDependencies(
       for (const ModuleID &MID : MD.ClangModuleDeps)
         Modules.push_back(MID.ModuleName + ":" + MID.ContextHash);
       M.ModuleDeps = cxstring::createSet(Modules);
-      M.BuildArguments = cxstring::createSet(MD.NonPathCommandLine);
+      M.BuildArguments = cxstring::createSet(MD.getNonPathCommandLine());
     }
     MDC(Context, MDS);
   }
