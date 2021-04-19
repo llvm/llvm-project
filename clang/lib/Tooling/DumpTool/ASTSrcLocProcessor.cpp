@@ -94,7 +94,7 @@ llvm::json::Object toJSON(llvm::StringMap<ClassData> const &Obj) {
   return JsonObj;
 }
 
-void WriteJSON(std::string JsonPath, llvm::json::Object &&ClassInheritance,
+void WriteJSON(StringRef JsonPath, llvm::json::Object &&ClassInheritance,
                llvm::json::Object &&ClassesInClade,
                llvm::json::Object &&ClassEntries) {
   llvm::json::Object JsonObj;
@@ -213,20 +213,21 @@ void ASTSrcLocProcessor::run(const MatchFinder::MatchResult &Result) {
 
       const auto &TArgs = Templ->getTemplateArgs();
 
-      std::string TArgsString = (DerivedFrom->getName() + "<").str();
+      SmallString<256> TArgsString;
+      llvm::raw_svector_ostream OS(TArgsString);
+      OS << DerivedFrom->getName() << '<';
+
+      clang::PrintingPolicy PPol(Result.Context->getLangOpts());
+      PPol.TerseOutput = true;
 
       for (unsigned I = 0; I < TArgs.size(); ++I) {
-        if (I > 0) {
-          TArgsString += ", ";
-        }
-        auto Ty = TArgs.get(I).getAsType();
-        clang::PrintingPolicy PPol(Result.Context->getLangOpts());
-        PPol.TerseOutput = true;
-        TArgsString += Ty.getAsString(PPol);
+        if (I > 0)
+          OS << ", ";
+        TArgs.get(I).getAsType().print(OS, PPol);
       }
-      TArgsString += ">";
+      OS << '>';
 
-      ClassInheritance[ClassName] = std::move(TArgsString);
+      ClassInheritance[ClassName] = TArgsString.str().str();
     } else {
       ClassInheritance[ClassName] = DerivedFrom->getName().str();
     }
