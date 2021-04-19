@@ -261,7 +261,7 @@ canonicalizeSelectedExpr(const Stmt *S, unsigned Index,
 
   // Look through the implicit casts in the parents.
   unsigned ParentIndex = Index + 1;
-  for (; ParentIndex <= NodeTree.size() && isa<ImplicitCastExpr>(Parent);
+  for (; (ParentIndex + 1) < NodeTree.size() && isa<ImplicitCastExpr>(Parent);
        ++ParentIndex) {
     const Stmt *NewParent = NodeTree[ParentIndex + 1].getStmtOrNull();
     if (!NewParent)
