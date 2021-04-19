@@ -404,8 +404,7 @@ mlir::linalg::LinalgBaseInterchangePattern::LinalgBaseInterchangePattern(
 LogicalResult mlir::linalg::LinalgBaseInterchangePattern::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
   LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
-  // TODO: remove hasIndexSemantics check once index ops are supported.
-  if (!linalgOp || linalgOp.hasIndexSemantics())
+  if (!linalgOp)
     return failure();
   if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
@@ -415,7 +414,7 @@ LogicalResult mlir::linalg::LinalgBaseInterchangePattern::matchAndRewrite(
   // TODO: figure out how this interplays with named ops. In particular this
   // should break the named op property.
   rewriter.updateRootInPlace(op, [&]() {
-    interchange(linalgOp, interchangeVector);
+    interchange(rewriter, linalgOp, interchangeVector);
     // New filter if specified.
     filter.replaceLinalgTransformationFilter(rewriter, op);
   });
