@@ -206,6 +206,12 @@ CppTypeFor<TypeCategory::Real, 10> RTNAME(Fraction10)(
 CppTypeFor<TypeCategory::Real, 16> RTNAME(Fraction16)(
     CppTypeFor<TypeCategory::Real, 16>);
 
+// ISNAN / IEEE_IS_NAN
+bool RTNAME(IsNaN4)(CppTypeFor<TypeCategory::Real, 4>);
+bool RTNAME(IsNaN8)(CppTypeFor<TypeCategory::Real, 8>);
+bool RTNAME(IsNaN10)(CppTypeFor<TypeCategory::Real, 10>);
+bool RTNAME(IsNaN16)(CppTypeFor<TypeCategory::Real, 16>);
+
 // MOD & MODULO
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(ModInteger1)(
     CppTypeFor<TypeCategory::Integer, 1>, CppTypeFor<TypeCategory::Integer, 1>);
