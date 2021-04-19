@@ -130,8 +130,17 @@ SCEVExpander::GetOptimalInsertionPointForCastOf(Value *V) const {
   }
 
   // Cast the instruction immediately after the instruction.
-  Instruction *I = cast<Instruction>(V);
-  return findInsertPointAfter(I, &*Builder.GetInsertPoint());
+  if (Instruction *I = dyn_cast<Instruction>(V))
+    return findInsertPointAfter(I, &*Builder.GetInsertPoint());
+
+  // Otherwise, this must be some kind of a constant,
+  // so let's plop this cast into the function's entry block.
+  assert(isa<Constant>(V) &&
+         "Expected the cast argument to be a global/constant");
+  return Builder.GetInsertBlock()
+      ->getParent()
+      ->getEntryBlock()
+      .getFirstInsertionPt();
 }
 
 /// InsertNoopCastOfTo - Insert a cast of V to the specified type,
