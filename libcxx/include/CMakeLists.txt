@@ -30,6 +30,7 @@ set(files
   __mutex_base
   __node_handle
   __nullptr
+  __ranges/enable_borrowed_range.h
   __split_buffer
   __sso_allocator
   __std_stream
@@ -141,6 +142,7 @@ set(files
   ostream
   queue
   random
+  ranges
   ratio
   regex
   scoped_allocator
