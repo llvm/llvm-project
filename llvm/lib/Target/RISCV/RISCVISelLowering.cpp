@@ -3717,10 +3717,16 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
   auto *Store = cast<StoreSDNode>(Op);
 
   SDLoc DL(Op);
-  MVT VT = Store->getValue().getSimpleValueType();
+  SDValue StoreVal = Store->getValue();
+  MVT VT = StoreVal.getSimpleValueType();
 
-  // FIXME: We probably need to zero any extra bits in a byte for mask stores.
-  // This is tricky to do.
+  // If the size less than a byte, we need to the unused bits with 0s.
+  if (VT.getVectorElementType() == MVT::i1 && VT.getVectorNumElements() < 8) {
+    VT = MVT::v8i1;
+    StoreVal = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
+                           DAG.getConstant(0, DL, VT), StoreVal,
+                           DAG.getIntPtrConstant(0, DL));
+  }
 
   MVT ContainerVT = getContainerForFixedLengthVector(VT);
 
@@ -3728,7 +3734,7 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
       DAG.getConstant(VT.getVectorNumElements(), DL, Subtarget.getXLenVT());
 
   SDValue NewValue =
-      convertToScalableVector(ContainerVT, Store->getValue(), DAG, Subtarget);
+      convertToScalableVector(ContainerVT, StoreVal, DAG, Subtarget);
   return DAG.getMemIntrinsicNode(
       RISCVISD::VSE_VL, DL, DAG.getVTList(MVT::Other),
       {Store->getChain(), NewValue, Store->getBasePtr(), VL},
