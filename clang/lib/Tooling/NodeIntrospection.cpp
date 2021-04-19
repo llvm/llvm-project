@@ -44,9 +44,6 @@ namespace internal {
 bool RangeLessThan::operator()(
     std::pair<SourceRange, SharedLocationCall> const &LHS,
     std::pair<SourceRange, SharedLocationCall> const &RHS) const {
-  if (!LHS.first.isValid() || !RHS.first.isValid())
-    return false;
-
   if (LHS.first.getBegin() < RHS.first.getBegin())
     return true;
   else if (LHS.first.getBegin() != RHS.first.getBegin())

@@ -91,6 +91,20 @@ TEST(Introspection, SourceLocations_CallContainer) {
   EXPECT_EQ(slm.size(), 2u);
 }
 
+TEST(Introspection, SourceLocations_CallContainer2) {
+  SourceRangeMap slm;
+  SharedLocationCall Prefix;
+  slm.insert(
+      std::make_pair(SourceRange(), llvm::makeIntrusiveRefCnt<LocationCall>(
+                                        Prefix, "getCXXOperatorNameRange")));
+  EXPECT_EQ(slm.size(), 1u);
+
+  slm.insert(std::make_pair(
+      SourceRange(),
+      llvm::makeIntrusiveRefCnt<LocationCall>(Prefix, "getSourceRange")));
+  EXPECT_EQ(slm.size(), 2u);
+}
+
 TEST(Introspection, SourceLocations_CallChainFormatting) {
   SharedLocationCall Prefix;
   auto chainedCall = llvm::makeIntrusiveRefCnt<LocationCall>(
