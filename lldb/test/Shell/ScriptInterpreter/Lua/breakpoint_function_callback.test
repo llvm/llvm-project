@@ -20,4 +20,4 @@ r
 # CHECK: nil
 breakpoint command add -s lua -F typo
 r
-# CHECK: attempt to call a nil value
+# CHECK: {{attempt to call a nil value|is not callable (a nil value)}}
