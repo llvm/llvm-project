@@ -1542,14 +1542,6 @@ private:
   getGatherCost(FixedVectorType *Ty,
                 const DenseSet<unsigned> &ShuffledIndices) const;
 
-  /// Checks if the gathered \p VL can be represented as shuffle(s) of previous
-  /// tree entries.
-  /// \returns ShuffleKind, if gathered values can be represented as shuffles of
-  /// previous tree entries. \p Mask is filled with the shuffle mask.
-  Optional<TargetTransformInfo::ShuffleKind>
-  isGatherShuffledEntry(const TreeEntry *TE, SmallVectorImpl<int> &Mask,
-                        SmallVectorImpl<const TreeEntry *> &Entries);
-
   /// \returns the scalarization cost for this list of values. Assuming that
   /// this subtree gets vectorized, we may need to extract the values from the
   /// roots. This method calculates the cost of extracting the values.
@@ -3568,27 +3560,7 @@ InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
         return ReuseShuffleCost + Cost;
       }
     }
-    InstructionCost GatherCost = 0;
-    SmallVector<int> Mask;
-    SmallVector<const TreeEntry *> Entries;
-    Optional<TargetTransformInfo::ShuffleKind> Shuffle =
-        isGatherShuffledEntry(E, Mask, Entries);
-    if (Shuffle.hasValue()) {
-      if (ShuffleVectorInst::isIdentityMask(Mask)) {
-        LLVM_DEBUG(
-            dbgs()
-            << "SLP: perfect diamond match for gather bundle that starts with "
-            << *VL.front() << ".\n");
-      } else {
-        LLVM_DEBUG(dbgs() << "SLP: shuffled " << Entries.size()
-                          << " entries for bundle that starts with "
-                          << *VL.front() << ".\n");
-        GatherCost = TTI->getShuffleCost(*Shuffle, VecTy, Mask);
-      }
-    } else {
-      GatherCost = getGatherCost(VL);
-    }
-    return ReuseShuffleCost + GatherCost;
+    return ReuseShuffleCost + getGatherCost(VL);
   }
   assert((E->State == TreeEntry::Vectorize ||
           E->State == TreeEntry::ScatterVectorize) &&
@@ -4244,61 +4216,6 @@ InstructionCost BoUpSLP::getTreeCost() {
   return Cost;
 }
 
-Optional<TargetTransformInfo::ShuffleKind>
-BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, SmallVectorImpl<int> &Mask,
-                               SmallVectorImpl<const TreeEntry *> &Entries) {
-  auto *VLIt = find_if(VectorizableTree,
-                       [TE](const std::unique_ptr<TreeEntry> &EntryPtr) {
-                         return EntryPtr.get() == TE;
-                       });
-  assert(VLIt != VectorizableTree.end() &&
-         "Gathered values should be in the tree.");
-  Mask.clear();
-  Entries.clear();
-  DenseMap<const TreeEntry *, int> Used;
-  int NumShuffles = 0;
-  for (int I = 0, E = TE->Scalars.size(); I < E; ++I) {
-    Value *V = TE->Scalars[I];
-    const TreeEntry *VTE = getTreeEntry(V);
-    if (!VTE) {
-      // Check if it is used in one of the gathered entries.
-      const auto *It =
-          find_if(make_range(VectorizableTree.begin(), VLIt),
-                  [V](const std::unique_ptr<TreeEntry> &EntryPtr) {
-                    return EntryPtr->State == TreeEntry::NeedToGather &&
-                           is_contained(EntryPtr->Scalars, V);
-                  });
-      if (It != VLIt)
-        VTE = It->get();
-    }
-    if (VTE) {
-      auto Res = Used.try_emplace(VTE, NumShuffles);
-      if (Res.second) {
-        Entries.push_back(VTE);
-        ++NumShuffles;
-      }
-      Mask.push_back(
-          Res.first->second * E +
-          std::distance(VTE->Scalars.begin(), find(VTE->Scalars, V)));
-      continue;
-    }
-    return None;
-  }
-  if (NumShuffles == 1) {
-    if (ShuffleVectorInst::isReverseMask(Mask))
-      return TargetTransformInfo::SK_Reverse;
-    return TargetTransformInfo::SK_PermuteSingleSrc;
-  }
-  if (NumShuffles == 2) {
-    if (ShuffleVectorInst::isSelectMask(Mask))
-      return TargetTransformInfo::SK_Select;
-    if (ShuffleVectorInst::isTransposeMask(Mask))
-      return TargetTransformInfo::SK_Transpose;
-    return TargetTransformInfo::SK_PermuteTwoSrc;
-  }
-  return None;
-}
-
 InstructionCost
 BoUpSLP::getGatherCost(FixedVectorType *Ty,
                        const DenseSet<unsigned> &ShuffledIndices) const {
@@ -4582,19 +4499,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
   bool NeedToShuffleReuses = !E->ReuseShuffleIndices.empty();
   if (E->State == TreeEntry::NeedToGather) {
     setInsertPointAfterBundle(E);
-    Value *Vec;
-    SmallVector<int> Mask;
-    SmallVector<const TreeEntry *> Entries;
-    Optional<TargetTransformInfo::ShuffleKind> Shuffle =
-        isGatherShuffledEntry(E, Mask, Entries);
-    if (Shuffle.hasValue()) {
-      assert((Entries.size() == 1 || Entries.size() == 2) &&
-             "Expected shuffle of 1 or 2 entries.");
-      Vec = Builder.CreateShuffleVector(Entries.front()->VectorizedValue,
-                                        Entries.back()->VectorizedValue, Mask);
-    } else {
-      Vec = gather(E->Scalars);
-    }
+    Value *Vec = gather(E->Scalars);
     if (NeedToShuffleReuses) {
       ShuffleBuilder.addMask(E->ReuseShuffleIndices);
       Vec = ShuffleBuilder.finalize(Vec);
