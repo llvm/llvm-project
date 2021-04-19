@@ -55,7 +55,7 @@ Value *SCEVExpander::ReuseOrCreateCast(Value *V, Type *Ty,
   // not allowed to move it.
   BasicBlock::iterator BIP = Builder.GetInsertPoint();
 
-  Instruction *Ret = nullptr;
+  Value *Ret = nullptr;
 
   // Check to see if there is already a cast!
   for (User *U : V->users()) {
@@ -76,14 +76,16 @@ Value *SCEVExpander::ReuseOrCreateCast(Value *V, Type *Ty,
 
   // Create a new cast.
   if (!Ret) {
-    Ret = CastInst::Create(Op, V, Ty, V->getName(), &*IP);
-    rememberInstruction(Ret);
+    SCEVInsertPointGuard Guard(Builder, this);
+    Builder.SetInsertPoint(&*IP);
+    Ret = Builder.CreateCast(Op, V, Ty, V->getName());
   }
 
   // We assert at the end of the function since IP might point to an
   // instruction with different dominance properties than a cast
   // (an invoke for example) and not dominate BIP (but the cast does).
-  assert(SE.DT.dominates(Ret, &*BIP));
+  assert(!isa<Instruction>(Ret) ||
+         SE.DT.dominates(cast<Instruction>(Ret), &*BIP));
 
   return Ret;
 }
