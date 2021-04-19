@@ -905,7 +905,7 @@ static void printRelocationTargetName(const MachOObjectFile *O,
   }
   if (IsExtern) {
     symbol_iterator SI = O->symbol_begin();
-    advance(SI, Val);
+    std::advance(SI, Val);
     Expected<StringRef> SOrErr = SI->getName();
     if (!SOrErr) {
       reportError(O->getFileName(), SOrErr.takeError());
@@ -914,7 +914,7 @@ static void printRelocationTargetName(const MachOObjectFile *O,
   } else {
     section_iterator SI = O->section_begin();
     // Adjust for the fact that sections are 1-indexed.
-    advance(SI, Val - 1);
+    std::advance(SI, Val - 1);
     Expected<StringRef> SOrErr = SI->getName();
     if (!SOrErr) {
       consumeError(SOrErr.takeError());
