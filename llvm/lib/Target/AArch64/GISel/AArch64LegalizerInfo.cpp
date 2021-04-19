@@ -22,9 +22,10 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Type.h"
-#include <initializer_list>
 #include "llvm/Support/MathExtras.h"
+#include <initializer_list>
 
 #define DEBUG_TYPE "aarch64-legalinfo"
 
@@ -718,7 +719,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_SBFX, G_UBFX})
       .customFor({{s32, s32}, {s64, s64}});
 
-  getActionDefinitionsBuilder(G_CTPOP).legalFor({{v8s8, v8s8}, {v16s8, v16s8}});
+  // TODO: s8, s16, s128
+  // TODO: v2s64, v2s32, v4s32, v4s16, v8s16
+  // TODO: Use generic lowering when custom lowering is not possible.
+  getActionDefinitionsBuilder(G_CTPOP)
+      .legalFor({{v8s8, v8s8}, {v16s8, v16s8}})
+      .customFor({{s32, s32}, {s64, s64}});
 
   computeTables();
   verify(*ST.getInstrInfo());
@@ -751,6 +757,8 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeBitfieldExtract(MI, MRI, Helper);
   case TargetOpcode::G_ROTR:
     return legalizeRotate(MI, MRI, Helper);
+  case TargetOpcode::G_CTPOP:
+    return legalizeCTPOP(MI, MRI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
@@ -994,4 +1002,48 @@ bool AArch64LegalizerInfo::legalizeBitfieldExtract(
   // TODO: Lower this otherwise.
   return getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI) &&
          getConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
+}
+
+bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
+                                         MachineRegisterInfo &MRI,
+                                         LegalizerHelper &Helper) const {
+  // While there is no integer popcount instruction, it can
+  // be more efficiently lowered to the following sequence that uses
+  // AdvSIMD registers/instructions as long as the copies to/from
+  // the AdvSIMD registers are cheap.
+  //  FMOV    D0, X0        // copy 64-bit int to vector, high bits zero'd
+  //  CNT     V0.8B, V0.8B  // 8xbyte pop-counts
+  //  ADDV    B0, V0.8B     // sum 8xbyte pop-counts
+  //  UMOV    X0, V0.B[0]   // copy byte result back to integer reg
+  if (!ST->hasNEON() ||
+      MI.getMF()->getFunction().hasFnAttribute(Attribute::NoImplicitFloat))
+    return false;
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  Register Dst = MI.getOperand(0).getReg();
+  Register Val = MI.getOperand(1).getReg();
+  LLT Ty = MRI.getType(Val);
+
+  // TODO: Handle vector types.
+  assert(!Ty.isVector() && "Vector types not handled yet!");
+  assert(Ty == MRI.getType(Dst) &&
+         "Expected src and dst to have the same type!");
+  // TODO: Handle s128.
+  unsigned Size = Ty.getSizeInBits();
+  assert((Size == 32 || Size == 64) && "Expected only 32 or 64 bit scalars!");
+  if (Size == 32)
+    Val = MIRBuilder.buildZExt(LLT::scalar(64), Val).getReg(0);
+  const LLT V8S8 = LLT::vector(8, LLT::scalar(8));
+  Val = MIRBuilder.buildBitcast(V8S8, Val).getReg(0);
+  auto CTPOP = MIRBuilder.buildCTPOP(V8S8, Val);
+  auto UADDLV =
+      MIRBuilder
+          .buildIntrinsic(Intrinsic::aarch64_neon_uaddlv, {LLT::scalar(32)},
+                          /*HasSideEffects = */ false)
+          .addUse(CTPOP.getReg(0));
+  if (Size == 64)
+    MIRBuilder.buildZExt(Dst, UADDLV);
+  else
+    UADDLV->getOperand(0).setReg(Dst);
+  MI.eraseFromParent();
+  return true;
 }
