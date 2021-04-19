@@ -99,7 +99,7 @@ public:
 
 private:
   int getDPPOp(unsigned Op, bool IsShrinkable) const;
-  bool isShrinkable(MachineInstr &OrigMI, unsigned OrigOp) const;
+  bool isShrinkable(MachineInstr &MI) const;
 };
 
 } // end anonymous namespace
@@ -114,20 +114,21 @@ FunctionPass *llvm::createGCNDPPCombinePass() {
   return new GCNDPPCombine();
 }
 
-bool GCNDPPCombine::isShrinkable(MachineInstr &OrigMI, unsigned OrigOp) const {
-  if (!TII->isVOP3(OrigOp)) {
+bool GCNDPPCombine::isShrinkable(MachineInstr &MI) const {
+  unsigned Op = MI.getOpcode();
+  if (!TII->isVOP3(Op)) {
     return false;
   }
-  if (!TII->hasVALU32BitEncoding(OrigOp)) {
+  if (!TII->hasVALU32BitEncoding(Op)) {
     LLVM_DEBUG(dbgs() << "  Inst hasn't e32 equivalent\n");
     return false;
   }
   // check if other than abs|neg modifiers are set (opsel for example)
   const int64_t Mask = ~(SISrcMods::ABS | SISrcMods::NEG);
-  if (!hasNoImmOrEqual(OrigMI, AMDGPU::OpName::src0_modifiers, 0, Mask) ||
-      !hasNoImmOrEqual(OrigMI, AMDGPU::OpName::src1_modifiers, 0, Mask) ||
-      !hasNoImmOrEqual(OrigMI, AMDGPU::OpName::clamp, 0) ||
-      !hasNoImmOrEqual(OrigMI, AMDGPU::OpName::omod, 0)) {
+  if (!hasNoImmOrEqual(MI, AMDGPU::OpName::src0_modifiers, 0, Mask) ||
+      !hasNoImmOrEqual(MI, AMDGPU::OpName::src1_modifiers, 0, Mask) ||
+      !hasNoImmOrEqual(MI, AMDGPU::OpName::clamp, 0) ||
+      !hasNoImmOrEqual(MI, AMDGPU::OpName::omod, 0)) {
     LLVM_DEBUG(dbgs() << "  Inst has non-default modifiers\n");
     return false;
   }
@@ -523,7 +524,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       continue;
     }
 
-    bool IsShrinkable = isShrinkable(OrigMI, OrigOp);
+    bool IsShrinkable = isShrinkable(OrigMI);
     if (!(IsShrinkable || TII->isVOP1(OrigOp) || TII->isVOP2(OrigOp))) {
       LLVM_DEBUG(dbgs() << "  failed: not VOP1/2/3\n");
       break;
