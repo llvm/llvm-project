@@ -67,12 +67,6 @@ struct ModuleDeps {
   /// determined that the differences are benign for this compilation.
   std::vector<ModuleID> ClangModuleDeps;
 
-  /// A partial command line that can be used to build this module.
-  ///
-  /// Call \c getFullCommandLine() to get a command line suitable for passing to
-  /// clang.
-  std::vector<std::string> NonPathCommandLine;
-
   // Used to track which modules that were discovered were directly imported by
   // the primary TU.
   bool ImportedByMainFile = false;
