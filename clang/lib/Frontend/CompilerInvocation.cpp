@@ -2027,8 +2027,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
-  Success &=
-      parsePointerAuthOptions(Opts.PointerAuth, Args, LangOptsRef, T, Diags);
+  parsePointerAuthOptions(Opts.PointerAuth, Args, LangOptsRef, T, Diags);
 
   // -f[no-]split-cold-code
   // This may only be enabled when optimizing, and when small code size
