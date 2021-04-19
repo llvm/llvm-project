@@ -40,6 +40,18 @@ std::vector<std::string> ModuleDeps::getFullCommandLine(
   return Ret;
 }
 
+std::vector<std::string> ModuleDeps::getNonPathCommandLine() const {
+  std::vector<std::string> Ret{
+    "-remove-preceeding-explicit-module-build-incompatible-options",
+    "-fno-implicit-modules", "-emit-module", "-fmodule-name=" + ID.ModuleName,
+  };
+
+  if (IsSystem)
+    Ret.push_back("-fsystem-module");
+
+  return Ret;
+}
+
 void dependencies::detail::collectPCMAndModuleMapPaths(
     llvm::ArrayRef<ModuleID> Modules,
     std::function<StringRef(ModuleID)> LookupPCMPath,
@@ -154,6 +166,7 @@ void ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MD.ID.ModuleName = M->getFullModuleName();
   MD.ImplicitModulePCMPath = std::string(M->getASTFile()->getName());
   MD.ID.ContextHash = MDC.ContextHash;
+  MD.IsSystem = M->IsSystem;
   serialization::ModuleFile *MF =
       MDC.Instance.getASTReader()->getModuleManager().lookup(M->getASTFile());
   MDC.Instance.getASTReader()->visitInputFiles(
@@ -169,13 +182,6 @@ void ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         }
         MD.FileDeps.insert(IF.getFile()->getName());
       });
-  MD.NonPathCommandLine = {
-    "-remove-preceeding-explicit-module-build-incompatible-options",
-    "-fno-implicit-modules", "-emit-module", "-fmodule-name=" + MD.ID.ModuleName,
-  };
-  
-  if (M->IsSystem)
-    MD.NonPathCommandLine.push_back("-fsystem-module");
 
   llvm::DenseSet<const Module *> AddedModules;
   addAllSubmoduleDeps(M, MD, AddedModules);
