@@ -322,11 +322,13 @@ static int CollectStaticTlsBlocks(struct dl_phdr_info *info, size_t size,
   if (!info->dlpi_tls_modid)
     return 0;
   uptr begin = (uptr)info->dlpi_tls_data;
+#ifndef __s390__
   if (!g_use_dlpi_tls_data) {
     // Call __tls_get_addr as a fallback. This forces TLS allocation on glibc
     // and FreeBSD.
     size_t mod_and_off[2] = {info->dlpi_tls_modid, 0};
     begin = (uptr)__tls_get_addr(mod_and_off);
+#endif
   }
   for (unsigned i = 0; i != info->dlpi_phnum; ++i)
     if (info->dlpi_phdr[i].p_type == PT_TLS) {
