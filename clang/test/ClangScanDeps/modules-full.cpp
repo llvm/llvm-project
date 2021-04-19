@@ -11,13 +11,13 @@
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/modules_cdb_clangcl.json > %t_clangcl.cdb
 //
 // RUN: echo %t.dir > %t.result
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 4 -full-command-line \
-// RUN:   -mode preprocess-minimized-sources -format experimental-full >> %t.result
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 4 -format experimental-full \
+// RUN:   -mode preprocess-minimized-sources >> %t.result
 // RUN: cat %t.result | sed 's/\\/\//g' | FileCheck --check-prefixes=CHECK %s
 
 // RUN: echo %t.dir > %t_clangcl.result
-// RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 4 -full-command-line \
-// RUN:   -mode preprocess-minimized-sources -format experimental-full >> %t_clangcl.result
+// RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 4 -format experimental-full \
+// RUN:   -mode preprocess-minimized-sources >> %t_clangcl.result
 // RUN: cat %t_clangcl.result | sed 's/\\/\//g' | FileCheck --check-prefixes=CHECK %s
 
 // FIXME: Backslash issues.
