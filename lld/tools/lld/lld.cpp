@@ -39,13 +39,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PluginLoader.h"
-#include "llvm/Support/Signals.h"
 #include <cstdlib>
-
-#if !defined(_MSC_VER) && !defined(__MINGW32__)
-#include <signal.h> // for raise
-#include <unistd.h> // for _exit
-#endif
 
 using namespace lld;
 using namespace llvm;
