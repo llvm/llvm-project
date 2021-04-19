@@ -298,7 +298,7 @@ void ns::A::foo() {}
 
   const auto *NNS = BoundNodes[0].getNodeAs<NestedNameSpecifierLoc>("nns");
 
-  auto Result = NodeIntrospection::GetLocations(NNS);
+  auto Result = NodeIntrospection::GetLocations(*NNS);
 
   auto ExpectedLocations =
       FormatExpected<SourceLocation>(Result.LocationAccessors);
@@ -352,7 +352,7 @@ void foo()
 
   const auto *TA = BoundNodes[0].getNodeAs<TemplateArgumentLoc>("ta");
 
-  auto Result = NodeIntrospection::GetLocations(TA);
+  auto Result = NodeIntrospection::GetLocations(*TA);
 
   auto ExpectedLocations =
       FormatExpected<SourceLocation>(Result.LocationAccessors);
@@ -407,7 +407,7 @@ void test() {
 
   const auto *TA = BoundNodes[0].getNodeAs<TemplateArgumentLoc>("ta");
 
-  auto Result = NodeIntrospection::GetLocations(TA);
+  auto Result = NodeIntrospection::GetLocations(*TA);
 
   auto ExpectedLocations =
       FormatExpected<SourceLocation>(Result.LocationAccessors);
@@ -444,7 +444,7 @@ void test() {
 
   const auto *TA = BoundNodes[0].getNodeAs<TemplateArgumentLoc>("ta");
 
-  auto Result = NodeIntrospection::GetLocations(TA);
+  auto Result = NodeIntrospection::GetLocations(*TA);
 
   auto ExpectedLocations =
       FormatExpected<SourceLocation>(Result.LocationAccessors);
@@ -480,7 +480,7 @@ void test() {
 
   const auto *TA = BoundNodes[0].getNodeAs<TemplateArgumentLoc>("ta");
 
-  auto Result = NodeIntrospection::GetLocations(TA);
+  auto Result = NodeIntrospection::GetLocations(*TA);
 
   auto ExpectedLocations =
       FormatExpected<SourceLocation>(Result.LocationAccessors);
@@ -517,7 +517,7 @@ void bar()
 
   const auto *TA = BoundNodes[0].getNodeAs<TemplateArgumentLoc>("ta");
 
-  auto Result = NodeIntrospection::GetLocations(TA);
+  auto Result = NodeIntrospection::GetLocations(*TA);
 
   auto ExpectedLocations =
       FormatExpected<SourceLocation>(Result.LocationAccessors);
@@ -555,7 +555,7 @@ template<template<typename> class ...> class B { };
 
   const auto *TA = BoundNodes[0].getNodeAs<TemplateArgumentLoc>("ta");
 
-  auto Result = NodeIntrospection::GetLocations(TA);
+  auto Result = NodeIntrospection::GetLocations(*TA);
 
   auto ExpectedLocations =
       FormatExpected<SourceLocation>(Result.LocationAccessors);
@@ -591,7 +591,7 @@ template<int I> class testExpr<I> { };
 
   const auto *TA = BoundNodes[0].getNodeAs<TemplateArgumentLoc>("ta");
 
-  auto Result = NodeIntrospection::GetLocations(TA);
+  auto Result = NodeIntrospection::GetLocations(*TA);
 
   auto ExpectedLocations =
       FormatExpected<SourceLocation>(Result.LocationAccessors);
@@ -628,7 +628,7 @@ void foo()
 
   const auto *TA = BoundNodes[0].getNodeAs<TemplateArgumentLoc>("ta");
 
-  auto Result = NodeIntrospection::GetLocations(TA);
+  auto Result = NodeIntrospection::GetLocations(*TA);
 
   auto ExpectedLocations =
       FormatExpected<SourceLocation>(Result.LocationAccessors);
