@@ -5134,6 +5134,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-H");
     CmdArgs.push_back("-sys-header-deps");
   }
+  Args.AddAllArgs(CmdArgs, options::OPT_fshow_skipped_includes);
 
   if (D.CCPrintHeaders && !D.CCGenDiagnostics) {
     CmdArgs.push_back("-header-include-file");
