@@ -615,22 +615,12 @@ define void @insert_v2i64_nxv16i64_hi(<2 x i64>* %psv, <vscale x 16 x i64>* %out
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
+; CHECK-NEXT:    addi a0, sp, 80
+; CHECK-NEXT:    vse64.v v25, (a0)
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    slli a2, a0, 4
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    addi a3, zero, 8
-; CHECK-NEXT:    bltu a2, a3, .LBB29_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    addi a2, zero, 8
-; CHECK-NEXT:  .LBB29_2:
-; CHECK-NEXT:    slli a2, a2, 3
-; CHECK-NEXT:    addi a3, sp, 16
-; CHECK-NEXT:    add a2, a3, a2
-; CHECK-NEXT:    vsetivli a4, 2, e64,m1,ta,mu
-; CHECK-NEXT:    vse64.v v25, (a2)
-; CHECK-NEXT:    slli a0, a0, 6
-; CHECK-NEXT:    add a2, a3, a0
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    addi a2, sp, 16
+; CHECK-NEXT:    add a2, a2, a0
 ; CHECK-NEXT:    vl8re64.v v8, (a2)
 ; CHECK-NEXT:    addi a2, sp, 16
 ; CHECK-NEXT:    vl8re64.v v16, (a2)

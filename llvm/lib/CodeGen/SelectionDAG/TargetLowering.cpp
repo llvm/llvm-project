@@ -7715,6 +7715,12 @@ static SDValue clampDynamicVectorIndex(SelectionDAG &DAG,
   EVT IdxVT = Idx.getValueType();
   unsigned NElts = VecVT.getVectorMinNumElements();
   if (VecVT.isScalableVector()) {
+    // If this is a constant index and we know the value is less than the
+    // minimum number of elements then it's safe to return Idx.
+    if (auto *IdxCst = dyn_cast<ConstantSDNode>(Idx))
+      if (IdxCst->getZExtValue() < NElts)
+        return Idx;
+
     SDValue VS = DAG.getVScale(dl, IdxVT,
                                APInt(IdxVT.getFixedSizeInBits(),
                                      NElts));

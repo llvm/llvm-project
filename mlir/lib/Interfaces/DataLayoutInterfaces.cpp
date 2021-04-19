@@ -13,6 +13,7 @@
 #include "mlir/IR/Operation.h"
 
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace mlir;
 
@@ -53,6 +54,17 @@ unsigned mlir::detail::getDefaultTypeSizeInBits(Type type,
   if (type.isa<IntegerType, FloatType>())
     return type.getIntOrFloatBitWidth();
 
+  if (auto ctype = type.dyn_cast<ComplexType>()) {
+    auto et = ctype.getElementType();
+    auto innerAlignment =
+        getDefaultPreferredAlignment(et, dataLayout, params) * 8;
+    auto innerSize = getDefaultTypeSizeInBits(et, dataLayout, params);
+
+    // Include padding required to align the imaginary value in the complex
+    // type.
+    return llvm::alignTo(innerSize, innerAlignment) + innerSize;
+  }
+
   // Index is an integer of some bitwidth.
   if (type.isa<IndexType>())
     return dataLayout.getTypeSizeInBits(
@@ -92,6 +104,9 @@ unsigned mlir::detail::getDefaultABIAlignment(
                : 4;
   }
 
+  if (auto ctype = type.dyn_cast<ComplexType>())
+    return getDefaultABIAlignment(ctype.getElementType(), dataLayout, params);
+
   if (auto typeInterface = type.dyn_cast<DataLayoutTypeInterface>())
     return typeInterface.getABIAlignment(dataLayout, params);
 
@@ -109,6 +124,10 @@ unsigned mlir::detail::getDefaultPreferredAlignment(
   // (ABI alignment may be smaller).
   if (type.isa<IntegerType, IndexType>())
     return llvm::PowerOf2Ceil(dataLayout.getTypeSize(type));
+
+  if (auto ctype = type.dyn_cast<ComplexType>())
+    return getDefaultPreferredAlignment(ctype.getElementType(), dataLayout,
+                                        params);
 
   if (auto typeInterface = type.dyn_cast<DataLayoutTypeInterface>())
     return typeInterface.getPreferredAlignment(dataLayout, params);

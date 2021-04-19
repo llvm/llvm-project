@@ -13,10 +13,9 @@
 #include "llvm/Transforms/Utils/AutoInitRemark.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 using namespace llvm::ore;
