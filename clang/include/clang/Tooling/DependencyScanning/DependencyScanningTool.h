@@ -39,6 +39,11 @@ struct FullDependencies {
   std::vector<ModuleID> ClangModuleDeps;
 
   /// Get additional arguments suitable for appending to the original Clang
+  /// command line, except for arguments containing absolute paths (e.g. module
+  /// maps, PCM files).
+  std::vector<std::string> getAdditionalCommandLine() const;
+
+  /// Get additional arguments suitable for appending to the original Clang
   /// command line.
   ///
   /// \param LookupPCMPath This function is called to fill in `-fmodule-file=`

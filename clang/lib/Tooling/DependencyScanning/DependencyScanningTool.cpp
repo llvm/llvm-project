@@ -13,6 +13,13 @@ namespace clang{
 namespace tooling{
 namespace dependencies{
 
+std::vector<std::string> FullDependencies::getAdditionalCommandLine() const {
+  return {
+      "-fno-implicit-modules",
+      "-fno-implicit-module-maps",
+  };
+}
+
 std::vector<std::string> FullDependencies::getAdditionalCommandLine(
     std::function<StringRef(ModuleID)> LookupPCMPath,
     std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const {
@@ -137,11 +144,6 @@ DependencyScanningTool::getFullDependencies(
         if (MD.ImportedByMainFile)
           FD.ClangModuleDeps.push_back({MD.ID.ModuleName, ContextHash});
       }
-      
-      FD.AdditionalNonPathCommandLine = {
-        "-fno-implicit-modules",
-        "-fno-implicit-module-maps",
-      };
 
       FullDependenciesResult FDR;
 

@@ -122,11 +122,6 @@ public:
         FD.ClangModuleDeps.push_back({MD.ID.ModuleName, ContextHash});
     }
 
-    FD.AdditionalNonPathCommandLine = {
-      "-fno-implicit-modules",
-      "-fno-implicit-module-maps",
-    };
-    
     FullDependenciesResult FDR;
 
     for (auto &&M : ClangModuleDeps) {
@@ -198,7 +193,7 @@ static CXFileDependencies *getFullDependencies(
     Modules.push_back(MID.ModuleName + ":" + MID.ContextHash);
   FDeps->ModuleDeps = cxstring::createSet(Modules);
   FDeps->AdditionalArguments =
-    cxstring::createSet(FD.AdditionalNonPathCommandLine);
+    cxstring::createSet(FD.getAdditionalCommandLine());
   return FDeps;
 }
 
