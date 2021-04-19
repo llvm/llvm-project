@@ -1,68 +1,54 @@
-// RUN: %clang -cc1 -triple x86_64-unknown-linux-gnu -std=c++2a %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s
-// RUN: %clang -cc1 -triple x86_64-unknown-linux-gnu -std=c++2a %s -emit-llvm -disable-llvm-passes -o - | opt -always-inline -S | FileCheck --check-prefix=INLINE %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fcoroutines-ts \
+// RUN:   -fexperimental-new-pass-manager -O0 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fcoroutines-ts \
+// RUN:   -fexperimental-new-pass-manager -fno-inline -O0 %s -o - | FileCheck %s
 
-#include "Inputs/coroutine.h"
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fcoroutines-ts \
+// RUN:   -O0 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fcoroutines-ts \
+// RUN:   -fno-inline -O0 %s -o - | FileCheck %s
 
-namespace coro = std::experimental::coroutines_v1;
+namespace std {
+namespace experimental {
 
-class task {
-public:
-  class promise_type {
-  public:
-    task get_return_object() noexcept;
-    coro::suspend_always initial_suspend() noexcept;
-    void return_void() noexcept;
-    void unhandled_exception() noexcept;
+struct handle {};
 
-    struct final_awaiter {
-      bool await_ready() noexcept;
-      void await_suspend(coro::coroutine_handle<promise_type> h) noexcept;
-      void await_resume() noexcept;
-    };
-
-    final_awaiter final_suspend() noexcept;
-
-    coro::coroutine_handle<> continuation;
-  };
-
-  task(task &&t) noexcept;
-  ~task();
-
-  class awaiter {
-  public:
-    bool await_ready() noexcept;
-    void await_suspend(coro::coroutine_handle<> continuation) noexcept;
-    void await_resume() noexcept;
-
-  private:
-    friend task;
-    explicit awaiter(coro::coroutine_handle<promise_type> h) noexcept;
-    coro::coroutine_handle<promise_type> coro_;
-  };
-
-  awaiter operator co_await() &&noexcept;
-
-private:
-  explicit task(coro::coroutine_handle<promise_type> h) noexcept;
-  coro::coroutine_handle<promise_type> coro_;
+struct awaitable {
+  bool await_ready() noexcept { return true; }
+  // CHECK-NOT: await_suspend
+  inline void __attribute__((__always_inline__)) await_suspend(handle) noexcept {}
+  bool await_resume() noexcept { return true; }
 };
 
-task cee();
+template <typename T>
+struct coroutine_handle {
+  static handle from_address(void *address) noexcept { return {}; }
+};
 
-__attribute__((always_inline)) inline task bar() {
-  co_await cee();
-  co_return;
-}
+template <typename T = void>
+struct coroutine_traits {
+  struct promise_type {
+    awaitable initial_suspend() { return {}; }
+    awaitable final_suspend() noexcept { return {}; }
+    void return_void() {}
+    T get_return_object() { return T(); }
+    void unhandled_exception() {}
+  };
+};
+} // namespace experimental
+} // namespace std
 
-task foo() {
-  co_await bar();
-  co_return;
-}
+// CHECK-LABEL: @_Z3foov
+// CHECK-LABEL: entry:
+// CHECK-NEXT: %this.addr.i{{[0-9]*}} = alloca %"struct.std::experimental::awaitable"*, align 8
+// CHECK-NEXT: %this.addr.i{{[0-9]*}} = alloca %"struct.std::experimental::awaitable"*, align 8
+// CHECK: [[CAST0:%[0-9]+]] = bitcast %"struct.std::experimental::awaitable"** %this.addr.i{{[0-9]*}} to i8*
+// CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[CAST0]])
+// CHECK: [[CAST1:%[0-9]+]] = bitcast %"struct.std::experimental::awaitable"** %this.addr.i{{[0-9]*}} to i8*
+// CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[CAST1]])
 
-// check that Clang front-end will tag bar with both alwaysinline and coroutine presplit
-// CHECK:       define linkonce_odr void @_Z3barv({{.*}}) #[[ATTR:[0-9]+]] {{.*}}
-// CHECK:       attributes #[[ATTR]] = { alwaysinline {{.*}} "coroutine.presplit"="0" {{.*}}}
-
-// check that bar is not inlined even it's marked as always_inline
-// INLINE-LABEL: define dso_local void @_Z3foov(
-// INLINE:         call void @_Z3barv(
+// CHECK: [[CAST2:%[0-9]+]] = bitcast %"struct.std::experimental::awaitable"** %this.addr.i{{[0-9]*}} to i8*
+// CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[CAST2]])
+// CHECK: [[CAST3:%[0-9]+]] = bitcast %"struct.std::experimental::awaitable"** %this.addr.i{{[0-9]*}} to i8*
+// CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[CAST3]])
+void foo() { co_return; }
