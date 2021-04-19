@@ -5,8 +5,8 @@
 // RUN: sed -e "s|DIR|%/t.dir|g" -e "s|FRAMEWORKS|%/S/Inputs/frameworks|g" \
 // RUN:   %S/Inputs/modules_inferred_cdb.json > %t.cdb
 //
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -full-command-line \
-// RUN:   -mode preprocess-minimized-sources -format experimental-full > %t.db
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -format experimental-full \
+// RUN:   -mode preprocess-minimized-sources > %t.db
 // RUN: %S/module-deps-to-rsp.py %t.db --module-name=Inferred > %t.inferred.rsp
 // RUN: %S/module-deps-to-rsp.py %t.db --module-name=System > %t.system.rsp
 // RUN: %S/module-deps-to-rsp.py %t.db --tu-index=0 > %t.tu.rsp
