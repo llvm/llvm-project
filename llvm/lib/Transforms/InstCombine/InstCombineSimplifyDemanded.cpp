@@ -1056,7 +1056,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   APInt EltMask(APInt::getAllOnesValue(VWidth));
   assert((DemandedElts & ~EltMask) == 0 && "Invalid DemandedElts!");
 
-  if (isa<UndefValue>(V)) {
+  if (match(V, m_Undef())) {
     // If the entire vector is undef or poison, just return this info.
     UndefElts = EltMask;
     return nullptr;
@@ -1157,7 +1157,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     // merge the undef bits here since gepping with either an undef base or
     // index results in undef.
     for (unsigned i = 0; i < I->getNumOperands(); i++) {
-      if (isa<UndefValue>(I->getOperand(i))) {
+      if (match(I->getOperand(i), m_Undef())) {
         // If the entire vector is undefined, just return this info.
         UndefElts = EltMask;
         return nullptr;
@@ -1226,7 +1226,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     // operand.
     if (all_of(Shuffle->getShuffleMask(), [](int Elt) { return Elt == 0; }) &&
         DemandedElts.isAllOnesValue()) {
-      if (!isa<UndefValue>(I->getOperand(1))) {
+      if (!match(I->getOperand(1), m_Undef())) {
         I->setOperand(1, UndefValue::get(I->getOperand(1)->getType()));
         MadeChange = true;
       }

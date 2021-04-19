@@ -425,7 +425,7 @@ define <8 x i32> @sdiv_v8i32_undefs(<8 x i32> %a) {
 ; CHECK-NEXT:    [[AB5:%.*]] = sdiv i32 [[A5]], 4
 ; CHECK-NEXT:    [[AB6:%.*]] = sdiv i32 [[A6]], 8
 ; CHECK-NEXT:    [[AB7:%.*]] = sdiv i32 [[A7]], 16
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 undef, i32 poison, i32 poison, i32 poison>, i32 [[AB1]], i32 1
+; CHECK-NEXT:    [[R1:%.*]] = insertelement <8 x i32> <i32 poison, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>, i32 [[AB1]], i32 1
 ; CHECK-NEXT:    [[R2:%.*]] = insertelement <8 x i32> [[R1]], i32 [[AB2]], i32 2
 ; CHECK-NEXT:    [[R3:%.*]] = insertelement <8 x i32> [[R2]], i32 [[AB3]], i32 3
 ; CHECK-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R3]], i32 [[AB5]], i32 5
