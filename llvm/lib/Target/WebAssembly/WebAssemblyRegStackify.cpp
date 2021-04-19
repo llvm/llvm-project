@@ -121,14 +121,9 @@ static void convertImplicitDefToConstZero(MachineInstr *MI,
         Type::getDoubleTy(MF.getFunction().getContext())));
     MI->addOperand(MachineOperand::CreateFPImm(Val));
   } else if (RegClass == &WebAssembly::V128RegClass) {
-    // TODO: Replace this with v128.const 0 once that is supported in V8
-    Register TempReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
-    MI->setDesc(TII->get(WebAssembly::SPLAT_I32x4));
-    MI->addOperand(MachineOperand::CreateReg(TempReg, false));
-    MachineInstr *Const = BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-                                  TII->get(WebAssembly::CONST_I32), TempReg)
-                              .addImm(0);
-    LIS.InsertMachineInstrInMaps(*Const);
+    MI->setDesc(TII->get(WebAssembly::CONST_V128_I64x2));
+    MI->addOperand(MachineOperand::CreateImm(0));
+    MI->addOperand(MachineOperand::CreateImm(0));
   } else {
     llvm_unreachable("Unexpected reg class");
   }
