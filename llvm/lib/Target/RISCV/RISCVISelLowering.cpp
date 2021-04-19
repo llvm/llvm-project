@@ -1453,6 +1453,74 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Called by type legalization to handle splat of i64 on RV32.
+// FIXME: We can optimize this when the type has sign or zero bits in one
+// of the halves.
+static SDValue splatSplitI64WithVL(const SDLoc &DL, MVT VT, SDValue Scalar,
+                                   SDValue VL, SelectionDAG &DAG) {
+  SDValue ThirtyTwoV = DAG.getConstant(32, DL, VT);
+  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
+                           DAG.getConstant(0, DL, MVT::i32));
+  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
+                           DAG.getConstant(1, DL, MVT::i32));
+
+  // vmv.v.x vX, hi
+  // vsll.vx vX, vX, /*32*/
+  // vmv.v.x vY, lo
+  // vsll.vx vY, vY, /*32*/
+  // vsrl.vx vY, vY, /*32*/
+  // vor.vv vX, vX, vY
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorElementCount());
+  SDValue Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
+  Lo = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Lo, VL);
+  Lo = DAG.getNode(RISCVISD::SHL_VL, DL, VT, Lo, ThirtyTwoV, Mask, VL);
+  Lo = DAG.getNode(RISCVISD::SRL_VL, DL, VT, Lo, ThirtyTwoV, Mask, VL);
+
+  Hi = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Hi, VL);
+  Hi = DAG.getNode(RISCVISD::SHL_VL, DL, VT, Hi, ThirtyTwoV, Mask, VL);
+
+  return DAG.getNode(RISCVISD::OR_VL, DL, VT, Lo, Hi, Mask, VL);
+}
+
+// This function lowers a splat of a scalar operand Splat with the vector
+// length VL. It ensures the final sequence is type legal, which is useful when
+// lowering a splat after type legalization.
+static SDValue lowerScalarSplat(SDValue Scalar, SDValue VL, MVT VT, SDLoc DL,
+                                SelectionDAG &DAG,
+                                const RISCVSubtarget &Subtarget) {
+  if (VT.isFloatingPoint())
+    return DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, VT, Scalar, VL);
+
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  // Simplest case is that the operand needs to be promoted to XLenVT.
+  if (Scalar.getValueType().bitsLE(XLenVT)) {
+    // If the operand is a constant, sign extend to increase our chances
+    // of being able to use a .vi instruction. ANY_EXTEND would become a
+    // a zero extend and the simm5 check in isel would fail.
+    // FIXME: Should we ignore the upper bits in isel instead?
+    unsigned ExtOpc =
+        isa<ConstantSDNode>(Scalar) ? ISD::SIGN_EXTEND : ISD::ANY_EXTEND;
+    Scalar = DAG.getNode(ExtOpc, DL, XLenVT, Scalar);
+    return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Scalar, VL);
+  }
+
+  assert(XLenVT == MVT::i32 && Scalar.getValueType() == MVT::i64 &&
+         "Unexpected scalar for splat lowering!");
+
+  // If this is a sign-extended 32-bit constant, we can truncate it and rely
+  // on the instruction to sign-extend since SEW>XLEN.
+  if (auto *CVal = dyn_cast<ConstantSDNode>(Scalar)) {
+    if (isInt<32>(CVal->getSExtValue()))
+      return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT,
+                         DAG.getConstant(CVal->getSExtValue(), DL, MVT::i32),
+                         VL);
+  }
+
+  // Otherwise use the more complicated splatting algorithm.
+  return splatSplitI64WithVL(DL, VT, Scalar, VL, DAG);
+}
+
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue V1 = Op.getOperand(0);
@@ -1463,48 +1531,130 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   unsigned NumElts = VT.getVectorNumElements();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
 
+  MVT ContainerVT =
+      RISCVTargetLowering::getContainerForFixedLengthVector(DAG, VT, Subtarget);
+
+  SDValue TrueMask, VL;
+  std::tie(TrueMask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+
   if (SVN->isSplat()) {
     int Lane = SVN->getSplatIndex();
     if (Lane >= 0) {
-      MVT ContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
-          DAG, VT, Subtarget);
-
       V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
       assert(Lane < (int)NumElts && "Unexpected lane!");
-
-      SDValue Mask, VL;
-      std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
       SDValue Gather =
           DAG.getNode(RISCVISD::VRGATHER_VX_VL, DL, ContainerVT, V1,
-                      DAG.getConstant(Lane, DL, XLenVT), Mask, VL);
+                      DAG.getConstant(Lane, DL, XLenVT), TrueMask, VL);
       return convertFromScalableVector(VT, Gather, DAG, Subtarget);
     }
   }
 
-  // Detect shuffles which can be re-expressed as vector selects.
-  SmallVector<SDValue> MaskVals;
-  // By default we preserve the original operand order, and select LHS as true
-  // and RHS as false. However, since RVV vector selects may feature splats but
-  // only on the LHS, we may choose to invert our mask and instead select
-  // between RHS and LHS.
-  bool SwapOps = DAG.isSplatValue(V2) && !DAG.isSplatValue(V1);
-
+  // Detect shuffles which can be re-expressed as vector selects; these are
+  // shuffles in which each element in the destination is taken from an element
+  // at the corresponding index in either source vectors.
   bool IsSelect = all_of(enumerate(SVN->getMask()), [&](const auto &MaskIdx) {
     int MaskIndex = MaskIdx.value();
-    bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ SwapOps;
-    MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
     return MaskIndex < 0 || MaskIdx.index() == (unsigned)MaskIndex % NumElts;
   });
 
-  if (IsSelect) {
-    assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
-    MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
-    SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
-    return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, SwapOps ? V2 : V1,
-                       SwapOps ? V1 : V2);
+  assert(!V1.isUndef() && "Unexpected shuffle canonicalization");
+
+  SmallVector<SDValue> MaskVals;
+  // As a backup, shuffles can be lowered via a vrgather instruction, possibly
+  // merged with a second vrgather.
+  SmallVector<SDValue> GatherIndicesLHS, GatherIndicesRHS;
+
+  // By default we preserve the original operand order, and use a mask to
+  // select LHS as true and RHS as false. However, since RVV vector selects may
+  // feature splats but only on the LHS, we may choose to invert our mask and
+  // instead select between RHS and LHS.
+  bool SwapOps = DAG.isSplatValue(V2) && !DAG.isSplatValue(V1);
+  bool InvertMask = IsSelect == SwapOps;
+
+  // Now construct the mask that will be used by the vselect or blended
+  // vrgather operation. For vrgathers, construct the appropriate indices into
+  // each vector.
+  for (int MaskIndex : SVN->getMask()) {
+    bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ InvertMask;
+    MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
+    if (!IsSelect) {
+      bool IsLHS = MaskIndex < (int)NumElts;
+      // For "undef" elements of -1, shuffle in element 0 instead.
+      GatherIndicesLHS.push_back(
+          DAG.getConstant(IsLHS ? std::max(MaskIndex, 0) : 0, DL, XLenVT));
+      // TODO: If we're masking out unused elements anyway, it might produce
+      // better code if we use the most-common element index instead of 0.
+      GatherIndicesRHS.push_back(
+          DAG.getConstant(IsLHS ? 0 : MaskIndex - NumElts, DL, XLenVT));
+    }
   }
 
-  return SDValue();
+  if (SwapOps) {
+    std::swap(V1, V2);
+    std::swap(GatherIndicesLHS, GatherIndicesRHS);
+  }
+
+  assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+  SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
+
+  if (IsSelect)
+    return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
+
+  if (VT.getScalarSizeInBits() == 8 && VT.getVectorNumElements() > 256) {
+    // On such a large vector we're unable to use i8 as the index type.
+    // FIXME: We could promote the index to i16 and use vrgatherei16, but that
+    // may involve vector splitting if we're already at LMUL=8, or our
+    // user-supplied maximum fixed-length LMUL.
+    return SDValue();
+  }
+
+  unsigned GatherOpc = RISCVISD::VRGATHER_VV_VL;
+  MVT IndexVT = VT.changeTypeToInteger();
+  // Since we can't introduce illegal index types at this stage, use i16 and
+  // vrgatherei16 if the corresponding index type for plain vrgather is greater
+  // than XLenVT.
+  if (IndexVT.getScalarType().bitsGT(XLenVT)) {
+    GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
+    IndexVT = IndexVT.changeVectorElementType(MVT::i16);
+  }
+
+  MVT IndexContainerVT =
+      ContainerVT.changeVectorElementType(IndexVT.getScalarType());
+
+  SDValue Gather;
+  // TODO: This doesn't trigger for i64 vectors on RV32, since there we
+  // encounter a bitcasted BUILD_VECTOR with low/high i32 values.
+  if (SDValue SplatValue = DAG.getSplatValue(V1)) {
+    Gather = lowerScalarSplat(SplatValue, VL, ContainerVT, DL, DAG, Subtarget);
+  } else {
+    SDValue LHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesLHS);
+    LHSIndices =
+        convertToScalableVector(IndexContainerVT, LHSIndices, DAG, Subtarget);
+
+    V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
+    Gather =
+        DAG.getNode(GatherOpc, DL, ContainerVT, V1, LHSIndices, TrueMask, VL);
+  }
+
+  // If a second vector operand is used by this shuffle, blend it in with an
+  // additional vrgather.
+  if (!V2.isUndef()) {
+    MVT MaskContainerVT = ContainerVT.changeVectorElementType(MVT::i1);
+    SelectMask =
+        convertToScalableVector(MaskContainerVT, SelectMask, DAG, Subtarget);
+
+    SDValue RHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesRHS);
+    RHSIndices =
+        convertToScalableVector(IndexContainerVT, RHSIndices, DAG, Subtarget);
+
+    V2 = convertToScalableVector(ContainerVT, V2, DAG, Subtarget);
+    V2 = DAG.getNode(GatherOpc, DL, ContainerVT, V2, RHSIndices, TrueMask, VL);
+    Gather = DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT, SelectMask, V2,
+                         Gather, VL);
+  }
+
+  return convertFromScalableVector(VT, Gather, DAG, Subtarget);
 }
 
 static SDValue getRVVFPExtendOrRound(SDValue Op, MVT VT, MVT ContainerVT,
@@ -2778,35 +2928,6 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   return DAG.getNode(ISD::TRUNCATE, DL, EltVT, Elt0);
 }
 
-// Called by type legalization to handle splat of i64 on RV32.
-// FIXME: We can optimize this when the type has sign or zero bits in one
-// of the halves.
-static SDValue splatSplitI64WithVL(const SDLoc &DL, MVT VT, SDValue Scalar,
-                                   SDValue VL, SelectionDAG &DAG) {
-  SDValue ThirtyTwoV = DAG.getConstant(32, DL, VT);
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
-                           DAG.getConstant(0, DL, MVT::i32));
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
-                           DAG.getConstant(1, DL, MVT::i32));
-
-  // vmv.v.x vX, hi
-  // vsll.vx vX, vX, /*32*/
-  // vmv.v.x vY, lo
-  // vsll.vx vY, vY, /*32*/
-  // vsrl.vx vY, vY, /*32*/
-  // vor.vv vX, vX, vY
-  MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorElementCount());
-  SDValue Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
-  Lo = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Lo, VL);
-  Lo = DAG.getNode(RISCVISD::SHL_VL, DL, VT, Lo, ThirtyTwoV, Mask, VL);
-  Lo = DAG.getNode(RISCVISD::SRL_VL, DL, VT, Lo, ThirtyTwoV, Mask, VL);
-
-  Hi = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Hi, VL);
-  Hi = DAG.getNode(RISCVISD::SHL_VL, DL, VT, Hi, ThirtyTwoV, Mask, VL);
-
-  return DAG.getNode(RISCVISD::OR_VL, DL, VT, Lo, Hi, Mask, VL);
-}
-
 // Some RVV intrinsics may claim that they want an integer operand to be
 // promoted or expanded.
 static SDValue lowerVectorIntrinsicSplats(SDValue Op, SelectionDAG &DAG,
@@ -2904,31 +3025,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     assert(Op.getValueType() == XLenVT && "Unexpected VT!");
     return DAG.getNode(RISCVISD::VMV_X_S, DL, Op.getValueType(),
                        Op.getOperand(1));
-  case Intrinsic::riscv_vmv_v_x: {
-    SDValue Scalar = Op.getOperand(1);
-    if (Scalar.getValueType().bitsLE(XLenVT)) {
-      unsigned ExtOpc =
-          isa<ConstantSDNode>(Scalar) ? ISD::SIGN_EXTEND : ISD::ANY_EXTEND;
-      Scalar = DAG.getNode(ExtOpc, DL, XLenVT, Scalar);
-      return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, Op.getValueType(), Scalar,
-                         Op.getOperand(2));
-    }
-
-    assert(Scalar.getValueType() == MVT::i64 && "Unexpected scalar VT!");
-
-    // If this is a sign-extended 32-bit constant, we can truncate it and rely
-    // on the instruction to sign-extend since SEW>XLEN.
-    if (auto *CVal = dyn_cast<ConstantSDNode>(Scalar)) {
-      if (isInt<32>(CVal->getSExtValue()))
-        return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, Op.getValueType(),
-                           DAG.getConstant(CVal->getSExtValue(), DL, MVT::i32),
-                           Op.getOperand(2));
-    }
-
-    // Otherwise use the more complicated splatting algorithm.
-    return splatSplitI64WithVL(DL, Op.getSimpleValueType(), Scalar,
-                               Op.getOperand(2), DAG);
-  }
+  case Intrinsic::riscv_vmv_v_x:
+    return lowerScalarSplat(Op.getOperand(1), Op.getOperand(2),
+                            Op.getSimpleValueType(), DL, DAG, Subtarget);
   case Intrinsic::riscv_vfmv_v_f:
     return DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2));
