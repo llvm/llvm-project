@@ -875,7 +875,7 @@ define i1 @lshr_eq_0_multiuse(i8 %x) {
 ; CHECK-LABEL: @lshr_eq_0_multiuse(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[X:%.*]], 2
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[S]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 4
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = lshr i8 %x, 2
@@ -888,7 +888,7 @@ define i1 @lshr_ne_0_multiuse(i8 %x) {
 ; CHECK-LABEL: @lshr_ne_0_multiuse(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[X:%.*]], 2
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[S]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X]], 3
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = lshr i8 %x, 2
@@ -901,7 +901,7 @@ define i1 @ashr_eq_0_multiuse(i8 %x) {
 ; CHECK-LABEL: @ashr_eq_0_multiuse(
 ; CHECK-NEXT:    [[S:%.*]] = ashr i8 [[X:%.*]], 2
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[S]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 4
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i8 %x, 2
@@ -914,7 +914,7 @@ define i1 @ashr_ne_0_multiuse(i8 %x) {
 ; CHECK-LABEL: @ashr_ne_0_multiuse(
 ; CHECK-NEXT:    [[S:%.*]] = ashr i8 [[X:%.*]], 2
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[S]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X]], 3
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i8 %x, 2
