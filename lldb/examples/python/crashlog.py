@@ -452,9 +452,9 @@ class JSONCrashLogParser:
             img_uuid = uuid.UUID(json_image['uuid'])
             low = int(json_image['base'])
             high = int(0)
-            name = json_image['name']
-            path = json_image['path']
-            version = ""
+            name = json_image['name'] if 'name' in json_image else ''
+            path = json_image['path'] if 'path' in json_image else ''
+            version = ''
             darwin_image = self.crashlog.DarwinImage(low, high, name, version,
                                                      img_uuid, path,
                                                      self.verbose)
