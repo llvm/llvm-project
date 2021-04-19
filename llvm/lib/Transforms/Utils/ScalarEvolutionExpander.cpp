@@ -1691,7 +1691,8 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
 Value *SCEVExpander::visitPtrToIntExpr(const SCEVPtrToIntExpr *S) {
   Value *V =
       expandCodeForImpl(S->getOperand(), S->getOperand()->getType(), false);
-  return Builder.CreatePtrToInt(V, S->getType());
+  return ReuseOrCreateCast(V, S->getType(), CastInst::PtrToInt,
+                           GetOptimalInsertionPointForCastOf(V));
 }
 
 Value *SCEVExpander::visitTruncateExpr(const SCEVTruncateExpr *S) {
