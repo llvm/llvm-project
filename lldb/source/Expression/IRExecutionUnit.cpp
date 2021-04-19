@@ -36,10 +36,6 @@
 #include "lldb/../../source/Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "lldb/../../source/Plugins/ObjectFile/JIT/ObjectFileJIT.h"
 
-#ifdef LLDB_ENABLE_SWIFT
-#include "lldb/Target/SwiftLanguageRuntime.h"
-#endif //LLDB_ENABLE_SWIFT
-
 using namespace lldb_private;
 
 IRExecutionUnit::IRExecutionUnit(std::unique_ptr<llvm::LLVMContext> &context_up,
