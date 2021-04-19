@@ -2495,7 +2495,10 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   Value *StepValue = expandCodeForImpl(Step, Ty, Loc, false);
   Value *NegStepValue =
       expandCodeForImpl(SE.getNegativeSCEV(Step), Ty, Loc, false);
-  Value *StartValue = expandCodeForImpl(Start, ARExpandTy, Loc, false);
+  Value *StartValue = expandCodeForImpl(
+      isa<PointerType>(ARExpandTy) ? Start
+                                   : SE.getPtrToIntExpr(Start, ARExpandTy),
+      ARExpandTy, Loc, false);
 
   ConstantInt *Zero =
       ConstantInt::get(Loc->getContext(), APInt::getNullValue(DstBits));
