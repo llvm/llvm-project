@@ -328,6 +328,9 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// Cache of declarations of the llvm.experimental.deoptimize.<ty> intrinsic.
   SmallVector<const Function *, 4> DeoptimizeDeclarations;
 
+  /// Cache of attribute lists verified.
+  SmallPtrSet<const void *, 32> AttributeListsVisited;
+
   // Verify that this GlobalValue is only used in this module.
   // This map is used to avoid visiting uses twice. We can arrive at a user
   // twice, if they have multiple operands. In particular for very large
@@ -1890,14 +1893,16 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   if (Attrs.isEmpty())
     return;
 
-  Assert(Attrs.hasParentContext(Context),
-         "Attribute list does not match Module context!", &Attrs);
-  for (const auto &AttrSet : Attrs) {
-    Assert(!AttrSet.hasAttributes() || AttrSet.hasParentContext(Context),
-           "Attribute set does not match Module context!", &AttrSet);
-    for (const auto &A : AttrSet) {
-      Assert(A.hasParentContext(Context),
-             "Attribute does not match Module context!", &A);
+  if (AttributeListsVisited.insert(Attrs.getRawPointer()).second) {
+    Assert(Attrs.hasParentContext(Context),
+           "Attribute list does not match Module context!", &Attrs);
+    for (const auto &AttrSet : Attrs) {
+      Assert(!AttrSet.hasAttributes() || AttrSet.hasParentContext(Context),
+             "Attribute set does not match Module context!", &AttrSet);
+      for (const auto &A : AttrSet) {
+        Assert(A.hasParentContext(Context),
+               "Attribute does not match Module context!", &A);
+      }
     }
   }
 
