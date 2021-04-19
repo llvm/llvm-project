@@ -1413,7 +1413,7 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 
 #ifndef _LIBCPP_NO_AUTO_LINK
 #  if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_BUILDING_LIBRARY)
-#    if defined(_DLL)
+#    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 #      pragma comment(lib, "c++.lib")
 #    else
 #      pragma comment(lib, "libc++.lib")
