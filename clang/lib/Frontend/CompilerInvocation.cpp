@@ -463,7 +463,8 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
 
   CodeGenOpts.CodeModel = TargetOpts.CodeModel;
 
-  if (LangOpts.getExceptionHandling() != llvm::ExceptionHandling::None &&
+  if (LangOpts.getExceptionHandling() !=
+          LangOptions::ExceptionHandlingKind::None &&
       T.isWindowsMSVCEnvironment())
     Diags.Report(diag::err_fe_invalid_exception_model)
         << static_cast<unsigned>(LangOpts.getExceptionHandling()) << T.str();
