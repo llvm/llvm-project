@@ -3793,15 +3793,32 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   return DAG.getBitcast(Op.getSimpleValueType(), Slidedown);
 }
 
-// Implement step_vector to the vid instruction.
+// Lower step_vector to the vid instruction. Any non-identity step value must
+// be accounted for my manual expansion.
 SDValue RISCVTargetLowering::lowerSTEP_VECTOR(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  assert(Op.getConstantOperandAPInt(0) == 1 && "Unexpected step value");
   MVT VT = Op.getSimpleValueType();
+  MVT XLenVT = Subtarget.getXLenVT();
   SDValue Mask, VL;
   std::tie(Mask, VL) = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
-  return DAG.getNode(RISCVISD::VID_VL, DL, VT, Mask, VL);
+  SDValue StepVec = DAG.getNode(RISCVISD::VID_VL, DL, VT, Mask, VL);
+  uint64_t StepValImm = Op.getConstantOperandVal(0);
+  if (StepValImm != 1) {
+    assert(Op.getOperand(0).getValueType() == XLenVT &&
+           "Unexpected step value type");
+    if (isPowerOf2_64(StepValImm)) {
+      SDValue StepVal =
+          DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT,
+                      DAG.getConstant(Log2_64(StepValImm), DL, XLenVT));
+      StepVec = DAG.getNode(ISD::SHL, DL, VT, StepVec, StepVal);
+    } else {
+      SDValue StepVal =
+          DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Op.getOperand(0));
+      StepVec = DAG.getNode(ISD::MUL, DL, VT, StepVec, StepVal);
+    }
+  }
+  return StepVec;
 }
 
 // Implement vector_reverse using vrgather.vv with indices determined by
