@@ -5392,6 +5392,10 @@ LegalizerHelper::lowerFunnelShiftWithInverse(MachineInstr &MI) {
   LLT ShTy = MRI.getType(Z);
 
   unsigned BW = Ty.getScalarSizeInBits();
+
+  if (!isPowerOf2_32(BW))
+    return UnableToLegalize;
+
   const bool IsFSHL = MI.getOpcode() == TargetOpcode::G_FSHL;
   unsigned RevOpcode = IsFSHL ? TargetOpcode::G_FSHR : TargetOpcode::G_FSHL;
 
@@ -5490,9 +5494,16 @@ LegalizerHelper::lowerFunnelShift(MachineInstr &MI) {
 
   bool IsFSHL = MI.getOpcode() == TargetOpcode::G_FSHL;
   unsigned RevOpcode = IsFSHL ? TargetOpcode::G_FSHR : TargetOpcode::G_FSHL;
+
+  // TODO: Use smarter heuristic that accounts for vector legalization.
   if (LI.getAction({RevOpcode, {Ty, ShTy}}).Action == Lower)
     return lowerFunnelShiftAsShifts(MI);
-  return lowerFunnelShiftWithInverse(MI);
+
+  // This only works for powers of 2, fallback to shifts if it fails.
+  LegalizerHelper::LegalizeResult Result = lowerFunnelShiftWithInverse(MI);
+  if (Result == UnableToLegalize)
+    return lowerFunnelShiftAsShifts(MI);
+  return Result;
 }
 
 LegalizerHelper::LegalizeResult
