@@ -1518,12 +1518,52 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
   // If the input is a trunc from the destination type, then turn sext(trunc(x))
   // into shifts.
   Value *X;
-  if (match(Src, m_OneUse(m_Trunc(m_Value(X)))) && X->getType() == DestTy) {
-    // sext(trunc(X)) --> ashr(shl(X, C), C)
+  if (match(Src, m_Trunc(m_Value(X)))) {
     unsigned SrcBitSize = SrcTy->getScalarSizeInBits();
     unsigned DestBitSize = DestTy->getScalarSizeInBits();
-    Constant *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
-    return BinaryOperator::CreateAShr(Builder.CreateShl(X, ShAmt), ShAmt);
+    unsigned XBitSize = X->getType()->getScalarSizeInBits();
+
+    // Iff we are chopping off all the zero bits that were just shifted-in,
+    // instead perform the arithmetic shift, and bypass trunc by sign-extending
+    // it directly. Either one of the lshr and trunc can have extra uses, we can
+    // fix them up, but only one of them, else we increase instruction count.
+    if (match(X,
+              m_LShr(m_Value(), m_SpecificInt_ICMP(
+                                    ICmpInst::Predicate::ICMP_EQ,
+                                    APInt(XBitSize, XBitSize - SrcBitSize)))) &&
+        (Src->hasOneUse() || X->hasOneUser())) {
+      auto *LShr = cast<Instruction>(X);
+      auto *AShr =
+          BinaryOperator::CreateAShr(LShr->getOperand(0), LShr->getOperand(1),
+                                     LShr->getName() + ".signed", LShr);
+      if (!LShr->hasOneUse()) {
+        auto *Mask =
+            ConstantExpr::getLShr(Constant::getAllOnesValue(AShr->getType()),
+                                  cast<Constant>(LShr->getOperand(1)));
+        auto *NewLShr =
+            BinaryOperator::CreateAnd(AShr, Mask, LShr->getName(), LShr);
+        replaceInstUsesWith(*LShr, NewLShr);
+      }
+      if (!Src->hasOneUse()) {
+        auto *OldTrunc = cast<Instruction>(Src);
+        auto *NewTrunc = CastInst::Create(Instruction::Trunc, AShr, SrcTy,
+                                          OldTrunc->getName(), OldTrunc);
+        replaceInstUsesWith(*OldTrunc, NewTrunc);
+      }
+      return CastInst::Create(Instruction::SExt, AShr, DestTy);
+    }
+
+    // Iff X had more sign bits than the number of bits that were chopped off
+    // by the truncation, we can directly sign-extend the X.
+    unsigned XNumSignBits = ComputeNumSignBits(X, 0, &CI);
+    if (XNumSignBits > (XBitSize - SrcBitSize))
+      return CastInst::Create(Instruction::SExt, X, DestTy);
+
+    if (Src->hasOneUse() && X->getType() == DestTy) {
+      // sext(trunc(X)) --> ashr(shl(X, C), C)
+      Constant *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
+      return BinaryOperator::CreateAShr(Builder.CreateShl(X, ShAmt), ShAmt);
+    }
   }
 
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(Src))
