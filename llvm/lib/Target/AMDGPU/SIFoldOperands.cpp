@@ -503,11 +503,11 @@ static bool getRegSeqInit(
 
   for (unsigned I = 1, E = Def->getNumExplicitOperands(); I < E; I += 2) {
     MachineOperand *Sub = &Def->getOperand(I);
-    assert (Sub->isReg());
+    assert(Sub->isReg());
 
     for (MachineInstr *SubDef = MRI.getVRegDef(Sub->getReg());
-         SubDef && Sub->isReg() && !Sub->getSubReg() &&
-         TII->isFoldableCopy(*SubDef);
+         SubDef && Sub->isReg() && Sub->getReg().isVirtual() &&
+         !Sub->getSubReg() && TII->isFoldableCopy(*SubDef);
          SubDef = MRI.getVRegDef(Sub->getReg())) {
       MachineOperand *Op = &SubDef->getOperand(1);
       if (Op->isImm()) {
@@ -515,7 +515,7 @@ static bool getRegSeqInit(
           Sub = Op;
         break;
       }
-      if (!Op->isReg())
+      if (!Op->isReg() || Op->getReg().isPhysical())
         break;
       Sub = Op;
     }
