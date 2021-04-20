@@ -555,6 +555,11 @@ private:
     unsigned Spills = 0;
     unsigned FoldedSpills = 0;
     unsigned Copies = 0;
+    float ReloadsCost = 0.0f;
+    float FoldedReloadsCost = 0.0f;
+    float SpillsCost = 0.0f;
+    float FoldedSpillsCost = 0.0f;
+    float CopiesCost = 0.0f;
 
     bool isEmpty() {
       return !(Reloads || FoldedReloads || Spills || FoldedSpills ||
@@ -568,6 +573,11 @@ private:
       Spills += other.Spills;
       FoldedSpills += other.FoldedSpills;
       Copies += other.Copies;
+      ReloadsCost += other.ReloadsCost;
+      FoldedReloadsCost += other.FoldedReloadsCost;
+      SpillsCost += other.SpillsCost;
+      FoldedSpillsCost += other.FoldedSpillsCost;
+      CopiesCost += other.CopiesCost;
     }
 
     void report(MachineOptimizationRemarkMissed &R);
@@ -3137,19 +3147,31 @@ MCRegister RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
 
 void RAGreedy::RAGreedyStats::report(MachineOptimizationRemarkMissed &R) {
   using namespace ore;
-  if (Spills)
+  if (Spills) {
     R << NV("NumSpills", Spills) << " spills ";
-  if (FoldedSpills)
+    R << NV("TotalSpillsCost", SpillsCost) << " total spills cost ";
+  }
+  if (FoldedSpills) {
     R << NV("NumFoldedSpills", FoldedSpills) << " folded spills ";
-  if (Reloads)
+    R << NV("TotalFoldedSpillsCost", FoldedSpillsCost)
+      << " total folded spills cost ";
+  }
+  if (Reloads) {
     R << NV("NumReloads", Reloads) << " reloads ";
-  if (FoldedReloads)
+    R << NV("TotalReloadsCost", ReloadsCost) << " total reloads cost ";
+  }
+  if (FoldedReloads) {
     R << NV("NumFoldedReloads", FoldedReloads) << " folded reloads ";
+    R << NV("TotalFoldedReloadsCost", FoldedReloadsCost)
+      << " total folded reloads cost ";
+  }
   if (ZeroCostFoldedReloads)
     R << NV("NumZeroCostFoldedReloads", ZeroCostFoldedReloads)
       << " zero cost folded reloads ";
-  if (Copies)
+  if (Copies) {
     R << NV("NumVRCopies", Copies) << " virtual registers copies ";
+    R << NV("TotalCopiesCost", CopiesCost) << " total copies cost ";
+  }
 }
 
 RAGreedy::RAGreedyStats RAGreedy::computeStats(MachineBasicBlock &MBB) {
@@ -3218,6 +3240,14 @@ RAGreedy::RAGreedyStats RAGreedy::computeStats(MachineBasicBlock &MBB) {
       Stats.FoldedSpills += Accesses.size();
     }
   }
+  // Set cost of collected statistic by multiplication to relative frequency of
+  // this basic block.
+  float RelFreq = MBFI->getBlockFreqRelativeToEntryBlock(&MBB);
+  Stats.ReloadsCost = RelFreq * Stats.Reloads;
+  Stats.FoldedReloadsCost = RelFreq * Stats.FoldedReloads;
+  Stats.SpillsCost = RelFreq * Stats.Spills;
+  Stats.FoldedSpillsCost = RelFreq * Stats.FoldedSpills;
+  Stats.CopiesCost = RelFreq * Stats.Copies;
   return Stats;
 }
 
