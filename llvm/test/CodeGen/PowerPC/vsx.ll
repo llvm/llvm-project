@@ -1369,10 +1369,8 @@ define <2 x float> @test44(<2 x i64> %a) {
 ; CHECK-LE-NEXT:    xxlor vs1, v2, v2
 ; CHECK-LE-NEXT:    xscvuxdsp f1, f1
 ; CHECK-LE-NEXT:    xscvuxdsp f0, f0
-; CHECK-LE-NEXT:    xscvdpspn vs1, f1
-; CHECK-LE-NEXT:    xscvdpspn vs0, f0
-; CHECK-LE-NEXT:    xxsldwi v3, vs1, vs1, 3
-; CHECK-LE-NEXT:    xxsldwi v2, vs0, vs0, 3
+; CHECK-LE-NEXT:    xscvdpspn v3, f1
+; CHECK-LE-NEXT:    xscvdpspn v2, f0
 ; CHECK-LE-NEXT:    vmrghw v2, v3, v2
 ; CHECK-LE-NEXT:    blr
   %v = uitofp <2 x i64> %a to <2 x float>
@@ -1451,10 +1449,8 @@ define <2 x float> @test45(<2 x i64> %a) {
 ; CHECK-LE-NEXT:    xxlor vs1, v2, v2
 ; CHECK-LE-NEXT:    xscvsxdsp f1, f1
 ; CHECK-LE-NEXT:    xscvsxdsp f0, f0
-; CHECK-LE-NEXT:    xscvdpspn vs1, f1
-; CHECK-LE-NEXT:    xscvdpspn vs0, f0
-; CHECK-LE-NEXT:    xxsldwi v3, vs1, vs1, 3
-; CHECK-LE-NEXT:    xxsldwi v2, vs0, vs0, 3
+; CHECK-LE-NEXT:    xscvdpspn v3, f1
+; CHECK-LE-NEXT:    xscvdpspn v2, f0
 ; CHECK-LE-NEXT:    vmrghw v2, v3, v2
 ; CHECK-LE-NEXT:    blr
   %v = sitofp <2 x i64> %a to <2 x float>

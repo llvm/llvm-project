@@ -12,10 +12,8 @@
 define <16 x i8> @buildc(i8 zeroext %a) {
 ; CHECK-LABEL: buildc:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi 4, 1, -16
-; CHECK-NEXT:    stb 3, -16(1)
-; CHECK-NEXT:    lxvw4x 34, 0, 4
-; CHECK-NEXT:    vspltb 2, 2, 0
+; CHECK-NEXT:    mtvsrwz 34, 3
+; CHECK-NEXT:    vspltb 2, 2, 7
 ; CHECK-NEXT:    blr
 entry:
   %splat.splatinsert = insertelement <16 x i8> undef, i8 %a, i32 0
@@ -78,7 +76,7 @@ define <4 x float> @buildf(float %a) {
 ; CHECK-LABEL: buildf:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpspn 0, 1
-; CHECK-NEXT:    xxspltw 34, 0, 0
+; CHECK-NEXT:    xxspltw 34, 0, 1
 ; CHECK-NEXT:    blr
 entry:
   %splat.splatinsert = insertelement <4 x float> undef, float %a, i32 0
