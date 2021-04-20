@@ -124,6 +124,7 @@ public:
   DenseIntElementsAttr getBoolVectorAttr(ArrayRef<bool> values);
   DenseIntElementsAttr getI32VectorAttr(ArrayRef<int32_t> values);
   DenseIntElementsAttr getI64VectorAttr(ArrayRef<int64_t> values);
+  DenseIntElementsAttr getIndexVectorAttr(ArrayRef<int64_t> values);
 
   /// Tensor-typed DenseIntElementsAttr getters. `values` can be empty.
   /// These are generally preferable for representing general lists of integers
