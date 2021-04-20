@@ -188,12 +188,6 @@ Fortran::lower::SymMap::lookupSymbol(Fortran::semantics::SymbolRef sym) {
     if (iter != jmap->end())
       return iter->second;
   }
-  // FIXME BUG: How does this know that the caller is expecting the host
-  // associated symbol?
-  // Follow host association
-  if (const auto *details =
-          sym->detailsIf<Fortran::semantics::HostAssocDetails>())
-    return lookupSymbol(details->symbol());
   return SymbolBox::None{};
 }
 

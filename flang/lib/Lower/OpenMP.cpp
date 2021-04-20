@@ -71,7 +71,11 @@ static void createBodyOfOp(Op &op, Fortran::lower::AbstractConverter &converter,
   // uses of the induction variable should use this mlir value.
   if (arg) {
     firOpBuilder.createBlock(&op.getRegion(), {}, {converter.genType(*arg)});
-    converter.bindSymbol(*arg, op.getRegion().front().getArgument(0));
+    [[maybe_unused]] bool success =
+        converter.bindSymbol(*arg, op.getRegion().front().getArgument(0));
+    assert(
+        success &&
+        "Existing binding prevents setting MLIR value for the index variable");
   } else {
     firOpBuilder.createBlock(&op.getRegion());
   }

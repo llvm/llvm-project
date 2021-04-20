@@ -79,7 +79,6 @@ struct IncrementLoopInfo {
   const Fortran::semantics::SomeExpr *maskExpr = nullptr;
   bool isUnordered; // do concurrent, forall
   llvm::SmallVector<const Fortran::semantics::Symbol *> localInitSymList;
-  llvm::SmallVector<const Fortran::semantics::Symbol *> sharedSymList;
   mlir::Value loopVariable = nullptr;
   mlir::Value stepValue = nullptr; // possible uses in multiple blocks
 
@@ -238,16 +237,12 @@ public:
     return lookupSymbol(sym).getAddr();
   }
 
-  void copySymbolBinding(Fortran::lower::SymbolRef src,
-                         Fortran::lower::SymbolRef target) override final {
-    localSymbols.addSymbol(target, lookupSymbol(src).toExtendedValue());
-  }
-
-  // TODO: Consider returning a vlue when the FIXME below is fixed.
-  void bindSymbol(Fortran::lower::SymbolRef sym,
+  bool bindSymbol(Fortran::lower::SymbolRef sym,
                   mlir::Value val) override final {
-    // FIXME: removed forced when symbol lookup stop following host association.
-    addSymbol(sym, val, /*forced=*/true);
+    if (lookupSymbol(sym))
+      return false;
+    addSymbol(sym, val);
+    return true;
   }
 
   bool lookupLabelSet(Fortran::lower::SymbolRef sym,
@@ -405,15 +400,8 @@ private:
     // FIXME: should return fir::ExtendedValue
     if (auto v = lookupSymbol(sym))
       return v.getAddr();
-    // OpenMP: Sometimes the OpenMP standard requires that variables,
-    // like indices of sequential loops, in a parallel region are
-    // privatised. These privatised variables should be placed inside
-    // the region and not in the entry block.
-    bool isPinned =
-        sym.test(Fortran::semantics::Symbol::Flag::OmpPrivate) &&
-        sym.test(Fortran::semantics::Symbol::Flag::OmpPreDetermined);
-    auto newVal = builder->createTemporary(
-        loc, genType(sym), toStringRef(sym.name()), shape, {}, {}, isPinned);
+    auto newVal = builder->createTemporary(loc, genType(sym),
+                                           toStringRef(sym.name()), shape);
     addSymbol(sym, newVal);
     return newVal;
   }
@@ -764,10 +752,6 @@ private:
               std::get_if<Fortran::parser::LocalitySpec::LocalInit>(&x.u))
         for (const auto &x : localInitList->v)
           info.localInitSymList.push_back(x.symbol);
-      if (const auto *sharedList =
-              std::get_if<Fortran::parser::LocalitySpec::Shared>(&x.u))
-        for (const auto &x : sharedList->v)
-          info.sharedSymList.push_back(x.symbol);
       if (std::get_if<Fortran::parser::LocalitySpec::Local>(&x.u))
         TODO(toLocation(), "do concurrent locality specs not implemented");
     }
@@ -888,8 +872,7 @@ private:
         return builder->createRealConstant(loc, controlType, 1u);
       return builder->createIntegerConstant(loc, controlType, 1); // step
     };
-    auto handleLocalitySpec = [&](IncrementLoopInfo &info) {
-      // Generate Local Init Assignments
+    auto genLocalInitAssignments = [&](IncrementLoopInfo &info) {
       for (const auto *sym : info.localInitSymList) {
         const auto *hostDetails =
             sym->detailsIf<Fortran::semantics::HostAssocDetails>();
@@ -898,14 +881,6 @@ private:
             hostDetails->symbol();
         TODO(loc, "do concurrent locality specs not implemented");
         // assign sym = hostSym
-      }
-      // Handle shared locality spec
-      for (const auto *sym : info.sharedSymList) {
-        const auto *hostDetails =
-            sym->detailsIf<Fortran::semantics::HostAssocDetails>();
-        assert(hostDetails && "missing shared variable host variable");
-        const Fortran::semantics::Symbol &hostSym = hostDetails->symbol();
-        copySymbolBinding(hostSym, *sym);
       }
     };
     for (auto &info : incrementLoopNestInfo) {
@@ -932,7 +907,7 @@ private:
                                                  /*withElseRegion=*/false);
           builder->setInsertionPointToStart(&ifOp.thenRegion().front());
         }
-        handleLocalitySpec(info);
+        genLocalInitAssignments(info);
         continue;
       }
 
@@ -984,7 +959,7 @@ private:
       if (!info.localInitSymList.empty()) {
         auto insertPt = builder->saveInsertionPoint();
         builder->setInsertionPointToStart(info.bodyBlock);
-        handleLocalitySpec(info);
+        genLocalInitAssignments(info);
         builder->restoreInsertionPoint(insertPt);
       }
     }
