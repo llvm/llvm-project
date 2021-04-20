@@ -2962,7 +2962,7 @@ taintExtent(unsigned ValNo, LaneBitmask TaintedLanes, JoinVals &Other,
 
 bool JoinVals::usesLanes(const MachineInstr &MI, Register Reg, unsigned SubIdx,
                          LaneBitmask Lanes) const {
-  if (MI.isDebugInstr())
+  if (MI.isDebugOrPseudoInstr())
     return false;
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg() || MO.isDef() || MO.getReg() != Reg)
@@ -3607,7 +3607,7 @@ void RegisterCoalescer::buildVRegToDbgValueMap(MachineFunction &MF)
               return MO.isReg() && MO.getReg().isVirtual();
             }))
           ToInsert.push_back(&MI);
-      } else if (!MI.isDebugInstr()) {
+      } else if (!MI.isDebugOrPseudoInstr()) {
         CurrentSlot = Slots.getInstructionIndex(MI);
         CloseNewDVRange(CurrentSlot);
       }

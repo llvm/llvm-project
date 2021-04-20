@@ -1484,7 +1484,7 @@ private:
 
     MachineBasicBlock::iterator Begin = MBB->begin();
     while (MII != Begin) {
-      if ((--MII)->isDebugInstr())
+      if ((--MII)->isDebugOrPseudoInstr())
         continue;
       SlotIndex Idx = Indexes->getInstructionIndex(*MII);
 
@@ -1579,7 +1579,7 @@ void LiveIntervals::repairOldRegInRange(const MachineBasicBlock::iterator Begin,
   for (MachineBasicBlock::iterator I = End; I != Begin;) {
     --I;
     MachineInstr &MI = *I;
-    if (MI.isDebugInstr())
+    if (MI.isDebugOrPseudoInstr())
       continue;
 
     SlotIndex instrIdx = getInstructionIndex(MI);
@@ -1676,7 +1676,7 @@ LiveIntervals::repairIntervalsInRange(MachineBasicBlock *MBB,
   for (MachineBasicBlock::iterator I = End; I != Begin;) {
     --I;
     MachineInstr &MI = *I;
-    if (MI.isDebugInstr())
+    if (MI.isDebugOrPseudoInstr())
       continue;
     for (MachineInstr::const_mop_iterator MOI = MI.operands_begin(),
                                           MOE = MI.operands_end();
