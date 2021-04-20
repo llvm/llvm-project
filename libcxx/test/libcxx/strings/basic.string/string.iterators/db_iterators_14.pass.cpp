@@ -8,7 +8,7 @@
 
 // <string>
 
-// Index const string out of bounds.
+// Increment iterator past end.
 
 // UNSUPPORTED: libcxx-no-debug-mode
 
@@ -22,12 +22,15 @@
 #include <cstdlib>
 
 #include "test_macros.h"
+#include "min_allocator.h"
 
 int main(int, char**) {
-  typedef std::string S;
-  const S s;
-  assert(s[0] == 0);
-  assert(s[1] == 0);
+  typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > C;
+  C c(1, '\0');
+  C::iterator i = c.begin();
+  ++i;
+  assert(i == c.end());
+  ++i;
   assert(false);
 
   return 0;
