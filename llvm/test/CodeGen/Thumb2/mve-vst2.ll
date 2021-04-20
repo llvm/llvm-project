@@ -520,9 +520,8 @@ define void @vst2_v2f16(<2 x half> *%src, <4 x half> *%dst) {
 ; CHECK-NEXT:    vins.f16 s4, s0
 ; CHECK-NEXT:    vmovx.f16 s0, s0
 ; CHECK-NEXT:    vins.f16 s5, s0
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    str r0, [r1, #4]
-; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov r0, r2, d2
+; CHECK-NEXT:    str r2, [r1, #4]
 ; CHECK-NEXT:    str r0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
