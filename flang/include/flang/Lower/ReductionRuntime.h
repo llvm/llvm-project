@@ -50,6 +50,51 @@ genAny(Fortran::lower::FirOpBuilder &builder,
        mlir::Location loc, mlir::Value maskBox,
        mlir::Value dim);
 
+/// Generate call to Maxloc intrinsic runtime routine. This is the version
+/// that does not take a dim argument.
+void
+genMaxloc(Fortran::lower::FirOpBuilder &builder,
+          mlir::Location loc,
+          mlir::Value resultBox,
+          mlir::Value arrayBox,
+          mlir::Value maskBox,
+          mlir::Value kind,
+          mlir::Value back);
+
+/// Generate call to Maxloc intrinsic runtime routine. This is the version
+/// that takes a dim argument.
+void
+genMaxlocDim(Fortran::lower::FirOpBuilder &builder,
+             mlir::Location loc,
+             mlir::Value resultBox,
+             mlir::Value arrayBox,
+             mlir::Value dim,
+             mlir::Value maskBox,
+             mlir::Value kind,
+             mlir::Value back);
+
+/// Generate call to Minloc intrinsic runtime routine. This is the version
+/// that does not take a dim argument.
+void
+genMinloc(Fortran::lower::FirOpBuilder &builder,
+          mlir::Location loc,
+          mlir::Value resultBox,
+          mlir::Value arrayBox,
+          mlir::Value maskBox,
+          mlir::Value kind,
+          mlir::Value back);
+
+/// Generate call to Minloc intrinsic runtime routine. This is the version
+/// that takes a dim argument.
+void
+genMinlocDim(Fortran::lower::FirOpBuilder &builder,
+             mlir::Location loc,
+             mlir::Value resultBox,
+             mlir::Value arrayBox,
+             mlir::Value dim,
+             mlir::Value maskBox,
+             mlir::Value kind,
+             mlir::Value back);
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_REDUCTIONRUNTIME_H
