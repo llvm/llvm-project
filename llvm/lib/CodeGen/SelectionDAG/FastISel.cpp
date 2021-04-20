@@ -1338,15 +1338,15 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     return true;
   }
   case Intrinsic::experimental_stackmap:
-    return selectStackmap(II);
+    return selectStackmap(cast<CallInst>(II));
   case Intrinsic::experimental_patchpoint_void:
   case Intrinsic::experimental_patchpoint_i64:
-    return selectPatchpoint(II);
+    return selectPatchpoint(cast<CallInst>(II));
 
   case Intrinsic::xray_customevent:
-    return selectXRayCustomEvent(II);
+    return selectXRayCustomEvent(cast<CallInst>(II));
   case Intrinsic::xray_typedevent:
-    return selectXRayTypedEvent(II);
+    return selectXRayTypedEvent(cast<CallInst>(II));
   }
 
   return fastLowerIntrinsicCall(II);

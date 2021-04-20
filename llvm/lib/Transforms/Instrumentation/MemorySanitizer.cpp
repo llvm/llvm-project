@@ -4142,7 +4142,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
   Value *VAArgTLSOriginCopy = nullptr;
   Value *VAArgOverflowSize = nullptr;
 
-  SmallVector<CallInst*, 16> VAStartInstrumentationList;
+  SmallVector<IntrinsicInst*, 16> VAStartInstrumentationList;
 
   enum ArgKind { AK_GeneralPurpose, AK_FloatingPoint, AK_Memory };
 
@@ -4351,7 +4351,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
     // Instrument va_start.
     // Copy va_list shadow from the backup copy of the TLS contents.
     for (size_t i = 0, n = VAStartInstrumentationList.size(); i < n; i++) {
-      CallInst *OrigInst = VAStartInstrumentationList[i];
+      auto *OrigInst = VAStartInstrumentationList[i];
       IRBuilder<> IRB(OrigInst->getNextNode());
       Value *VAListTag = OrigInst->getArgOperand(0);
 
@@ -4405,7 +4405,7 @@ struct VarArgMIPS64Helper : public VarArgHelper {
   Value *VAArgTLSCopy = nullptr;
   Value *VAArgSize = nullptr;
 
-  SmallVector<CallInst*, 16> VAStartInstrumentationList;
+  SmallVector<IntrinsicInst*, 16> VAStartInstrumentationList;
 
   VarArgMIPS64Helper(Function &F, MemorySanitizer &MS,
                     MemorySanitizerVisitor &MSV) : F(F), MS(MS), MSV(MSV) {}
@@ -4494,7 +4494,7 @@ struct VarArgMIPS64Helper : public VarArgHelper {
     // Instrument va_start.
     // Copy va_list shadow from the backup copy of the TLS contents.
     for (size_t i = 0, n = VAStartInstrumentationList.size(); i < n; i++) {
-      CallInst *OrigInst = VAStartInstrumentationList[i];
+      auto *OrigInst = VAStartInstrumentationList[i];
       IRBuilder<> IRB(OrigInst->getNextNode());
       Value *VAListTag = OrigInst->getArgOperand(0);
       Type *RegSaveAreaPtrTy = Type::getInt64PtrTy(*MS.C);
@@ -4533,7 +4533,7 @@ struct VarArgAArch64Helper : public VarArgHelper {
   Value *VAArgTLSCopy = nullptr;
   Value *VAArgOverflowSize = nullptr;
 
-  SmallVector<CallInst*, 16> VAStartInstrumentationList;
+  SmallVector<IntrinsicInst*, 16> VAStartInstrumentationList;
 
   enum ArgKind { AK_GeneralPurpose, AK_FloatingPoint, AK_Memory };
 
@@ -4688,7 +4688,7 @@ struct VarArgAArch64Helper : public VarArgHelper {
     // Instrument va_start, copy va_list shadow from the backup copy of
     // the TLS contents.
     for (size_t i = 0, n = VAStartInstrumentationList.size(); i < n; i++) {
-      CallInst *OrigInst = VAStartInstrumentationList[i];
+      auto *OrigInst = VAStartInstrumentationList[i];
       IRBuilder<> IRB(OrigInst->getNextNode());
 
       Value *VAListTag = OrigInst->getArgOperand(0);
@@ -4783,7 +4783,7 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
   Value *VAArgTLSCopy = nullptr;
   Value *VAArgSize = nullptr;
 
-  SmallVector<CallInst*, 16> VAStartInstrumentationList;
+  SmallVector<IntrinsicInst*, 16> VAStartInstrumentationList;
 
   VarArgPowerPC64Helper(Function &F, MemorySanitizer &MS,
                     MemorySanitizerVisitor &MSV) : F(F), MS(MS), MSV(MSV) {}
@@ -4932,7 +4932,7 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
     // Instrument va_start.
     // Copy va_list shadow from the backup copy of the TLS contents.
     for (size_t i = 0, n = VAStartInstrumentationList.size(); i < n; i++) {
-      CallInst *OrigInst = VAStartInstrumentationList[i];
+      auto *OrigInst = VAStartInstrumentationList[i];
       IRBuilder<> IRB(OrigInst->getNextNode());
       Value *VAListTag = OrigInst->getArgOperand(0);
       Type *RegSaveAreaPtrTy = Type::getInt64PtrTy(*MS.C);
@@ -4972,7 +4972,7 @@ struct VarArgSystemZHelper : public VarArgHelper {
   Value *VAArgTLSOriginCopy = nullptr;
   Value *VAArgOverflowSize = nullptr;
 
-  SmallVector<CallInst *, 16> VAStartInstrumentationList;
+  SmallVector<IntrinsicInst *, 16> VAStartInstrumentationList;
 
   enum class ArgKind {
     GeneralPurpose,
@@ -5255,7 +5255,7 @@ struct VarArgSystemZHelper : public VarArgHelper {
     // Copy va_list shadow from the backup copy of the TLS contents.
     for (size_t VaStartNo = 0, VaStartNum = VAStartInstrumentationList.size();
          VaStartNo < VaStartNum; VaStartNo++) {
-      CallInst *OrigInst = VAStartInstrumentationList[VaStartNo];
+      auto *OrigInst = VAStartInstrumentationList[VaStartNo];
       IRBuilder<> IRB(OrigInst->getNextNode());
       Value *VAListTag = OrigInst->getArgOperand(0);
       copyRegSaveArea(IRB, VAListTag);

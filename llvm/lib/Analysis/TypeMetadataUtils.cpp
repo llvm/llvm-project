@@ -83,7 +83,7 @@ void llvm::findDevirtualizableCallsForTypeTest(
   // Find llvm.assume intrinsics for this llvm.type.test call.
   for (const Use &CIU : CI->uses())
     if (auto *Assume = dyn_cast<AssumeInst>(CIU.getUser()))
-      Assumes.push_back(Assume);
+      Assumes.push_back(cast<CallInst>(Assume));
 
   // If we found any, search for virtual calls based on %p and add them to
   // DevirtCalls.

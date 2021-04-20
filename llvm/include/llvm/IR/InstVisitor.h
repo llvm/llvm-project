@@ -154,8 +154,8 @@ public:
   // instruction to a special delegation helper.
 #define HANDLE_INST(NUM, OPCODE, CLASS) \
     RetTy visit##OPCODE(CLASS &I) { \
-      if (NUM == Instruction::Call) \
-        return delegateCallInst(I); \
+      if (NUM == Instruction::Call || NUM == Instruction::Invoke) \
+        return delegateCallBase(I); \
       else \
         DELEGATE(CLASS); \
     }
@@ -215,7 +215,12 @@ public:
   RetTy visitVAStartInst(VAStartInst &I)          { DELEGATE(IntrinsicInst); }
   RetTy visitVAEndInst(VAEndInst &I)              { DELEGATE(IntrinsicInst); }
   RetTy visitVACopyInst(VACopyInst &I)            { DELEGATE(IntrinsicInst); }
-  RetTy visitIntrinsicInst(IntrinsicInst &I)      { DELEGATE(CallInst); }
+  RetTy visitIntrinsicInst(IntrinsicInst &I)      {
+    if (isa<CallInst>(I))
+      return static_cast<SubClass*>(this)->visitCallInst(cast<CallInst>(I));
+    else
+      return static_cast<SubClass*>(this)->visitInvokeInst(cast<InvokeInst>(I));
+  }
   RetTy visitCallInst(CallInst &I)                { DELEGATE(CallBase); }
   RetTy visitInvokeInst(InvokeInst &I)            { DELEGATE(CallBase); }
   RetTy visitCallBrInst(CallBrInst &I)            { DELEGATE(CallBase); }
@@ -280,7 +285,7 @@ public:
 
 private:
   // Special helper function to delegate to CallInst subclass visitors.
-  RetTy delegateCallInst(CallInst &I) {
+  RetTy delegateCallBase(CallBase &I) {
     if (const Function *F = I.getCalledFunction()) {
       switch (F->getIntrinsicID()) {
       default:                     DELEGATE(IntrinsicInst);
@@ -296,13 +301,16 @@ private:
       case Intrinsic::not_intrinsic: break;
       }
     }
-    DELEGATE(CallInst);
+    if (isa<CallInst>(I))
+      return static_cast<SubClass*>(this)->visitCallInst(cast<CallInst>(I));
+    else
+      return static_cast<SubClass*>(this)->visitInvokeInst(cast<InvokeInst>(I));
   }
 
   // An overload that will never actually be called, it is used only from dead
   // code in the dispatching from opcodes to instruction subclasses.
-  RetTy delegateCallInst(Instruction &I) {
-    llvm_unreachable("delegateCallInst called for non-CallInst");
+  RetTy delegateCallBase(Instruction &I) {
+    llvm_unreachable("delegateCallBase called for non-CallBase");
   }
 };
 

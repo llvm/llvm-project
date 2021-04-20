@@ -1143,7 +1143,7 @@ void Interpreter::visitIntrinsicInst(IntrinsicInst &I) {
   bool atBegin(Parent->begin() == Me);
   if (!atBegin)
     --Me;
-  IL->LowerIntrinsicCall(&I);
+  IL->LowerIntrinsicCall(cast<CallInst>(&I));
 
   // Restore the CurInst pointer to the first instruction newly inserted, if
   // any.

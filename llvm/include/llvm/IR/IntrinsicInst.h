@@ -13,10 +13,10 @@
 //     if (MemCpyInst *MCI = dyn_cast<MemCpyInst>(Inst))
 //        ... MCI->getDest() ... MCI->getSource() ...
 //
-// All intrinsic function calls are instances of the call instruction, so these
-// are all subclasses of the CallInst class.  Note that none of these classes
-// has state or virtual methods, which is an important part of this gross/neat
-// hack working.
+// All intrinsic function calls are instances of the call or invoke instruction,
+// so these are all subclasses of the CallBase class.  Note that none of these
+// classes has state or virtual methods, which is an important part of this
+// gross/neat hack working.
 //
 //===----------------------------------------------------------------------===//
 
@@ -42,7 +42,7 @@ namespace llvm {
 /// A wrapper class for inspecting calls to intrinsic functions.
 /// This allows the standard isa/dyncast/cast functionality to work with calls
 /// to intrinsic functions.
-class IntrinsicInst : public CallInst {
+class IntrinsicInst : public CallBase {
 public:
   IntrinsicInst() = delete;
   IntrinsicInst(const IntrinsicInst &) = delete;
@@ -107,13 +107,13 @@ public:
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const CallInst *I) {
+  static bool classof(const CallBase *I) {
     if (const Function *CF = I->getCalledFunction())
       return CF->isIntrinsic();
     return false;
   }
   static bool classof(const Value *V) {
-    return isa<CallInst>(V) && classof(cast<CallInst>(V));
+    return isa<CallBase>(V) && classof(cast<CallBase>(V));
   }
 };
 
