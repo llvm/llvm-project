@@ -18,7 +18,12 @@
 namespace std
 {
 template<class> struct incrementable_traits;       // since C++20
+template<class T>
+  using iter_difference_t = see below;             // since C++20
+
 template<class> struct indirectly_readable_traits; // since C++20
+template<class T>
+  using iter_value_t = see below;                  // since C++20
 
 template<class Iterator>
 struct iterator_traits;
