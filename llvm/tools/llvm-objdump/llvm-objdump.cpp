@@ -2867,8 +2867,8 @@ static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
   }
   if (InputArgs.hasArg(OTOOL_t))
     FilterSections.push_back("__TEXT,__text");
-  NonVerbose = !(InputArgs.hasArg(OTOOL_v) || InputArgs.hasArg(OTOOL_V) ||
-                 InputArgs.hasArg(OTOOL_o));
+  Verbose = (InputArgs.hasArg(OTOOL_v) || InputArgs.hasArg(OTOOL_V) ||
+             InputArgs.hasArg(OTOOL_o));
   NoSymbolicOperands = !InputArgs.hasArg(OTOOL_V);
   if (InputArgs.hasArg(OTOOL_x))
     FilterSections.push_back(",__text");
