@@ -1,5 +1,7 @@
 RUN: llvm-objdump -m --data-in-code %p/Inputs/data-in-code.macho-arm | FileCheck %s
+RUN: llvm-otool -Gv %p/Inputs/data-in-code.macho-arm | FileCheck %s
 RUN: llvm-objdump -m --data-in-code --non-verbose %p/Inputs/data-in-code.macho-arm | FileCheck %s --check-prefix=NON_VERBOSE
+RUN: llvm-otool -G %p/Inputs/data-in-code.macho-arm | FileCheck %s --check-prefix=NON_VERBOSE
 
 CHECK: Data in code table (4 entries)
 CHECK: offset     length kind

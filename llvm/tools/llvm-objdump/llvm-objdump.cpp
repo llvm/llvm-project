@@ -88,32 +88,84 @@ using namespace llvm::opt;
 
 namespace {
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+class CommonOptTable : public opt::OptTable {
+public:
+  CommonOptTable(ArrayRef<Info> OptionInfos, const char *Usage,
+                 const char *Description)
+      : OptTable(OptionInfos), Usage(Usage), Description(Description) {
+    setGroupedShortOptions(true);
+  }
+
+  void printHelp(StringRef Argv0, bool ShowHidden = false) const {
+    Argv0 = sys::path::filename(Argv0);
+    PrintHelp(outs(), (Argv0 + Usage).str().c_str(), Description, ShowHidden,
+              ShowHidden);
+    // TODO Replace this with OptTable API once it adds extrahelp support.
+    outs() << "\nPass @FILE as argument to read options from FILE.\n";
+  }
+
+private:
+  const char *Usage;
+  const char *Description;
+};
+
+// ObjdumpOptID is in ObjdumpOptID.h
+
+#define PREFIX(NAME, VALUE) const char *const OBJDUMP_##NAME[] = VALUE;
 #include "ObjdumpOpts.inc"
 #undef PREFIX
 
 static constexpr opt::OptTable::Info ObjdumpInfoTable[] = {
+#define OBJDUMP_nullptr nullptr
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
-  {PREFIX,          NAME,         HELPTEXT,                                    \
-   METAVAR,         OBJDUMP_##ID, opt::Option::KIND##Class,                    \
-   PARAM,           FLAGS,        OBJDUMP_##GROUP,                             \
-   OBJDUMP_##ALIAS, ALIASARGS,    VALUES},
+  {OBJDUMP_##PREFIX, NAME,         HELPTEXT,                                   \
+   METAVAR,          OBJDUMP_##ID, opt::Option::KIND##Class,                   \
+   PARAM,            FLAGS,        OBJDUMP_##GROUP,                            \
+   OBJDUMP_##ALIAS,  ALIASARGS,    VALUES},
 #include "ObjdumpOpts.inc"
+#undef OPTION
+#undef OBJDUMP_nullptr
+};
+
+class ObjdumpOptTable : public CommonOptTable {
+public:
+  ObjdumpOptTable()
+      : CommonOptTable(ObjdumpInfoTable, " [options] <input object files>",
+                       "llvm object file dumper") {}
+};
+
+enum OtoolOptID {
+  OTOOL_INVALID = 0, // This is not an option ID.
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  OTOOL_##ID,
+#include "OtoolOpts.inc"
 #undef OPTION
 };
 
-class ObjdumpOptTable : public opt::OptTable {
-public:
-  ObjdumpOptTable() : OptTable(ObjdumpInfoTable) {}
+#define PREFIX(NAME, VALUE) const char *const OTOOL_##NAME[] = VALUE;
+#include "OtoolOpts.inc"
+#undef PREFIX
 
-  void PrintObjdumpHelp(StringRef Argv0, bool ShowHidden = false) const {
-    Argv0 = sys::path::filename(Argv0);
-    PrintHelp(outs(), (Argv0 + " [options] <input object files>").str().c_str(),
-              "llvm object file dumper", ShowHidden, ShowHidden);
-    // TODO Replace this with OptTable API once it adds extrahelp support.
-    outs() << "\nPass @FILE as argument to read options from FILE.\n";
-  }
+static constexpr opt::OptTable::Info OtoolInfoTable[] = {
+#define OTOOL_nullptr nullptr
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  {OTOOL_##PREFIX, NAME,       HELPTEXT,                                       \
+   METAVAR,        OTOOL_##ID, opt::Option::KIND##Class,                       \
+   PARAM,          FLAGS,      OTOOL_##GROUP,                                  \
+   OTOOL_##ALIAS,  ALIASARGS,  VALUES},
+#include "OtoolOpts.inc"
+#undef OPTION
+#undef OTOOL_nullptr
+};
+
+class OtoolOptTable : public CommonOptTable {
+public:
+  OtoolOptTable()
+      : CommonOptTable(OtoolInfoTable, " [option...] [file...]",
+                       "Mach-O object file displaying tool") {}
 };
 
 } // namespace
@@ -2787,7 +2839,55 @@ commaSeparatedValues(const llvm::opt::InputArgList &InputArgs, int ID) {
   return Values;
 }
 
-static void parseOptions(const llvm::opt::InputArgList &InputArgs) {
+static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
+  MachOOpt = true;
+  FullLeadingAddr = true;
+  PrintImmHex = true;
+
+  ArchName = InputArgs.getLastArgValue(OTOOL_arch).str();
+  LinkOptHints = InputArgs.hasArg(OTOOL_C);
+  if (InputArgs.hasArg(OTOOL_d))
+    FilterSections.push_back("__DATA,__data");
+  DylibId = InputArgs.hasArg(OTOOL_D);
+  UniversalHeaders = InputArgs.hasArg(OTOOL_f);
+  DataInCode = InputArgs.hasArg(OTOOL_G);
+  FirstPrivateHeader = InputArgs.hasArg(OTOOL_h);
+  IndirectSymbols = InputArgs.hasArg(OTOOL_I);
+  NoShowRawInsn = !InputArgs.hasArg(OTOOL_j);
+  PrivateHeaders = InputArgs.hasArg(OTOOL_l);
+  DylibsUsed = InputArgs.hasArg(OTOOL_L);
+  MCPU = InputArgs.getLastArgValue(OTOOL_mcpu_EQ).str();
+  ObjcMetaData = InputArgs.hasArg(OTOOL_o);
+  DisSymName = InputArgs.getLastArgValue(OTOOL_p).str();
+  InfoPlist = InputArgs.hasArg(OTOOL_P);
+  Relocations = InputArgs.hasArg(OTOOL_r);
+  if (const Arg *A = InputArgs.getLastArg(OTOOL_s)) {
+    auto Filter = (A->getValue(0) + StringRef(",") + A->getValue(1)).str();
+    FilterSections.push_back(Filter);
+  }
+  if (InputArgs.hasArg(OTOOL_t))
+    FilterSections.push_back("__TEXT,__text");
+  NonVerbose = !(InputArgs.hasArg(OTOOL_v) || InputArgs.hasArg(OTOOL_V) ||
+                 InputArgs.hasArg(OTOOL_o));
+  NoSymbolicOperands = !InputArgs.hasArg(OTOOL_V);
+  if (InputArgs.hasArg(OTOOL_x))
+    FilterSections.push_back(",__text");
+  NoLeadingAddr = NoLeadingHeaders = InputArgs.hasArg(OTOOL_X);
+
+  InputFilenames = InputArgs.getAllArgValues(OTOOL_INPUT);
+  if (InputFilenames.empty())
+    reportCmdLineError("no input file");
+
+  for (const Arg *A : InputArgs) {
+    const Option &O = A->getOption();
+    if (O.getGroup().isValid() && O.getGroup().getID() == OTOOL_grp_obsolete) {
+      reportCmdLineWarning(O.getPrefixedName() +
+                           " is obsolete and not implemented");
+    }
+  }
+}
+
+static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   parseIntArg(InputArgs, OBJDUMP_adjust_vma_EQ, AdjustVMA);
   AllHeaders = InputArgs.hasArg(OBJDUMP_all_headers);
   ArchName = InputArgs.getLastArgValue(OBJDUMP_arch_name_EQ).str();
@@ -2880,6 +2980,10 @@ static void parseOptions(const llvm::opt::InputArgList &InputArgs) {
     LLVMArgs.push_back("--riscv-no-aliases");
   LLVMArgs.push_back(nullptr);
   llvm::cl::ParseCommandLineOptions(LLVMArgs.size() - 1, LLVMArgs.data());
+
+  // objdump defaults to a.out if no filenames specified.
+  if (InputFilenames.empty())
+    InputFilenames.push_back("a.out");
 }
 
 int main(int argc, char **argv) {
@@ -2887,27 +2991,46 @@ int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
   ToolName = argv[0];
+  std::unique_ptr<CommonOptTable> T;
+  OptSpecifier Unknown, HelpFlag, HelpHiddenFlag, VersionFlag;
 
-  ObjdumpOptTable T;
-  T.setGroupedShortOptions(true);
+  StringRef Stem = sys::path::stem(ToolName);
+  auto Is = [=](StringRef Tool) {
+    // We need to recognize the following filenames:
+    //
+    // llvm-objdump -> objdump
+    // llvm-otool-10.exe -> otool
+    // powerpc64-unknown-freebsd13-objdump -> objdump
+    auto I = Stem.rfind_lower(Tool);
+    return I != StringRef::npos &&
+           (I + Tool.size() == Stem.size() || !isAlnum(Stem[I + Tool.size()]));
+  };
+  if (Is("otool")) {
+    T = std::make_unique<OtoolOptTable>();
+    Unknown = OTOOL_UNKNOWN;
+    HelpFlag = OTOOL_help;
+    HelpHiddenFlag = OTOOL_help_hidden;
+    VersionFlag = OTOOL_version;
+  } else {
+    T = std::make_unique<ObjdumpOptTable>();
+    Unknown = OBJDUMP_UNKNOWN;
+    HelpFlag = OBJDUMP_help;
+    HelpHiddenFlag = OBJDUMP_help_hidden;
+    VersionFlag = OBJDUMP_version;
+  }
 
-  bool HasError = false;
   BumpPtrAllocator A;
   StringSaver Saver(A);
   opt::InputArgList InputArgs =
-      T.parseArgs(argc, argv, OBJDUMP_UNKNOWN, Saver, [&](StringRef Msg) {
-        errs() << "error: " << Msg << '\n';
-        HasError = true;
-      });
-  if (HasError)
-    exit(1);
+      T->parseArgs(argc, argv, Unknown, Saver,
+                   [&](StringRef Msg) { reportCmdLineError(Msg); });
 
-  if (InputArgs.size() == 0 || InputArgs.hasArg(OBJDUMP_help)) {
-    T.PrintObjdumpHelp(ToolName);
+  if (InputArgs.size() == 0 || InputArgs.hasArg(HelpFlag)) {
+    T->printHelp(ToolName);
     return 0;
   }
-  if (InputArgs.hasArg(OBJDUMP_help_hidden)) {
-    T.PrintObjdumpHelp(ToolName, /*show_hidden=*/true);
+  if (InputArgs.hasArg(HelpHiddenFlag)) {
+    T->printHelp(ToolName, /*show_hidden=*/true);
     return 0;
   }
 
@@ -2916,22 +3039,22 @@ int main(int argc, char **argv) {
   InitializeAllTargetMCs();
   InitializeAllDisassemblers();
 
-  if (InputArgs.hasArg(OBJDUMP_version)) {
+  if (InputArgs.hasArg(VersionFlag)) {
     cl::PrintVersionMessage();
-    outs() << '\n';
-    TargetRegistry::printRegisteredTargetsForVersion(outs());
-    exit(0);
+    if (!Is("otool")) {
+      outs() << '\n';
+      TargetRegistry::printRegisteredTargetsForVersion(outs());
+    }
+    return 0;
   }
 
-  parseOptions(InputArgs);
+  if (Is("otool"))
+    parseOtoolOptions(InputArgs);
+  else
+    parseObjdumpOptions(InputArgs);
 
   if (StartAddress >= StopAddress)
     reportCmdLineError("start address should be less than stop address");
-
-
-  // Defaults to a.out if no filenames specified.
-  if (InputFilenames.empty())
-    InputFilenames.push_back("a.out");
 
   // Removes trailing separators from prefix.
   while (!Prefix.empty() && sys::path::is_separator(Prefix.back()))
@@ -2954,7 +3077,7 @@ int main(int argc, char **argv) {
          FirstPrivateHeader || FunctionStarts || IndirectSymbols || InfoPlist ||
          LazyBind || LinkOptHints || ObjcMetaData || Rebase ||
          UniversalHeaders || WeakBind || !FilterSections.empty()))) {
-    T.PrintObjdumpHelp(ToolName);
+    T->printHelp(ToolName);
     return 2;
   }
 

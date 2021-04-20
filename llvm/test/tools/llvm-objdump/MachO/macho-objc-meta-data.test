@@ -1,4 +1,5 @@
 # RUN: llvm-objdump --macho --objc-meta-data %p/Inputs/Objc2.64bit.exe.macho-x86_64 | FileCheck %s --check-prefix=OBJC2_64BIT_EXE
+# RUN: llvm-otool -o %p/Inputs/Objc2.64bit.exe.macho-x86_64 | FileCheck %s --check-prefix=OBJC2_64BIT_EXE
 # RUN: llvm-objdump --macho --objc-meta-data %p/Inputs/Objc2.64bit.obj.macho-x86_64 | FileCheck %s --check-prefix=OBJC2_64BIT_OBJ
 # RUN: llvm-objdump --macho --objc-meta-data %p/Inputs/Objc2.32bit.exe.macho-i386 | FileCheck %s --check-prefix=OBJC2_32BIT_EXE
 # RUN: llvm-objdump --macho --objc-meta-data %p/Inputs/Objc2.32bit.obj.macho-i386 | FileCheck %s --check-prefix=OBJC2_32BIT_OBJ
