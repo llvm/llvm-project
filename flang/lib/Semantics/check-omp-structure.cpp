@@ -127,11 +127,52 @@ private:
   std::map<std::string, std::int64_t> labelNamesandLevels_;
 };
 
+bool OmpStructureChecker::IsCloselyNestedRegion(const OmpDirectiveSet &set) {
+  // Definition of close nesting:
+  //
+  // `A region nested inside another region with no parallel region nested
+  // between them`
+  //
+  // Examples:
+  //   non-parallel construct 1
+  //    non-parallel construct 2
+  //      parallel construct
+  //        construct 3
+  // In the above example, construct 3 is NOT closely nested inside construct 1
+  // or 2
+  //
+  //   non-parallel construct 1
+  //    non-parallel construct 2
+  //        construct 3
+  // In the above example, construct 3 is closely nested inside BOTH construct 1
+  // and 2
+  //
+  // Algorithm:
+  // Starting from the parent context, Check in a bottom-up fashion, each level
+  // of the context stack. If we have a match for one of the (supplied)
+  // violating directives, `close nesting` is satisfied. If no match is there in
+  // the entire stack, `close nesting` is not satisfied. If at any level, a
+  // `parallel` region is found, `close nesting` is not satisfied.
+
+  if (CurrentDirectiveIsNested()) {
+    int index = dirContext_.size() - 2;
+    while (index != -1) {
+      if (set.test(dirContext_[index].directive)) {
+        return true;
+      } else if (llvm::omp::parallelSet.test(dirContext_[index].directive)) {
+        return false;
+      }
+      index--;
+    }
+  }
+  return false;
+}
+
 bool OmpStructureChecker::HasInvalidWorksharingNesting(
     const parser::CharBlock &source, const OmpDirectiveSet &set) {
   // set contains all the invalid closely nested directives
   // for the given directive (`source` here)
-  if (CurrentDirectiveIsNested() && set.test(GetContextParent().directive)) {
+  if (IsCloselyNestedRegion(set)) {
     context_.Say(source,
         "A worksharing region may not be closely nested inside a "
         "worksharing, explicit task, taskloop, critical, ordered, atomic, or "

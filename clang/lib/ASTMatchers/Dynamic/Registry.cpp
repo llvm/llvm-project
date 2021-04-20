@@ -175,6 +175,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(coreturnStmt);
   REGISTER_MATCHER(coyieldExpr);
   REGISTER_MATCHER(cudaKernelCallExpr);
+  REGISTER_MATCHER(cxxBaseSpecifier);
   REGISTER_MATCHER(cxxBindTemporaryExpr);
   REGISTER_MATCHER(cxxBoolLiteral);
   REGISTER_MATCHER(cxxCatchStmt);

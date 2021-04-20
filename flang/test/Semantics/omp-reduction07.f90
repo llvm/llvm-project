@@ -54,6 +54,19 @@ program omp_reduction
   !$omp end do
 !$omp end sections
 
+!$omp sections private(k)
+  !$omp target
+  do j = 1,10
+    !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+    !$omp do reduction(+:k) reduction(max:j)
+    do i = 1, 10
+      k = k + 1
+    end do
+    !$omp end do
+  end do
+  !$omp end target
+!$omp end sections
+
 !$omp parallel reduction(+:a)
 !ERROR: REDUCTION variable 'a' is REDUCTION in outer context must be shared in the parallel regions to which any of the worksharing regions arising from the worksharing construct bind.
 !$omp sections reduction(-:a)

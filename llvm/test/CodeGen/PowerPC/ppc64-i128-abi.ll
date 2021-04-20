@@ -105,12 +105,12 @@ define <1 x i128> @v1i128_increment_by_val(<1 x i128> %a, <1 x i128> %b) nounwin
 ; CHECK-BE-LABEL: @v1i128_increment_by_val
 ; CHECK-BE-NOT: xxswapd {{[0-9]+}}, 34
 ; CHECK-BE-NOT: xxswapd {{[0-9]+}}, 35
-; CHECK-BE-NOT: xxswapd 34, [[RESULT]]
+; CHECK-BE-NOT: xxswapd 34, {{[0-9]+}}
 ; CHECK-BE: adduqm 2, 2, 3
 ; CHECK-BE: blr
 
 ; CHECK-NOVSX-LABEL: @v1i128_increment_by_val
-; CHECK-NOVSX-NOT: xxswapd 34, [[RESULT]]
+; CHECK-NOVSX-NOT: xxswapd 34, {{[0-9]+}}
 ; CHECK-NOVSX: adduqm 2, 2, 3
 ; CHECK-NOVSX: blr
 }

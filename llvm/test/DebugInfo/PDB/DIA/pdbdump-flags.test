@@ -5,7 +5,7 @@
 
 ; Check that neither symbols nor compilands are dumped when neither argument specified.
 ; NO_ARGS: empty.pdb
-; NO_ARGS: Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
+; NO_ARGS: Guid: {4156350B-A086-49A2-896F-9988FAE52FF0}
 ; NO_ARGS: Attributes: HasPrivateSymbols
 ; NO_ARGS-NOT: ---TYPES---
 ; NO_ARGS-NOT: ---COMPILANDS---
@@ -14,7 +14,7 @@
 
 ; Check that only types are dumped when only -types is specified.
 ; TYPES: empty.pdb
-; TYPES: Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
+; TYPES: Guid: {4156350B-A086-49A2-896F-9988FAE52FF0}
 ; TYPES: Attributes: HasPrivateSymbols
 ; TYPES: ---TYPES---
 ; TYPES-NOT: ---COMPILANDS---
@@ -23,7 +23,7 @@
 
 ; Check that only compilands are dumped when only -compilands is specified.
 ; COMPILANDS: empty.pdb
-; COMPILANDS: Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
+; COMPILANDS: Guid: {4156350B-A086-49A2-896F-9988FAE52FF0}
 ; COMPILANDS: Attributes: HasPrivateSymbols
 ; COMPILANDS: ---COMPILANDS---
 ; COMPILANDS-NOT: ---TYPES---
@@ -32,7 +32,7 @@
 
 ; Check that types and compilands are dumped when both arguments are specified.
 ; MULTIPLE: empty.pdb
-; MULTIPLE: Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
+; MULTIPLE: Guid: {4156350B-A086-49A2-896F-9988FAE52FF0}
 ; MULTIPLE: Attributes: HasPrivateSymbols
 ; MULTIPLE: ---COMPILANDS---
 ; MULTIPLE: ---TYPES---

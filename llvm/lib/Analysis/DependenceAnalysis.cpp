@@ -657,8 +657,8 @@ static AliasResult underlyingObjectsAlias(AAResults *AA,
       MemoryLocation::getBeforeOrAfter(LocA.Ptr, LocA.AATags);
   MemoryLocation LocBS =
       MemoryLocation::getBeforeOrAfter(LocB.Ptr, LocB.AATags);
-  if (AA->alias(LocAS, LocBS) == NoAlias)
-    return NoAlias;
+  if (AA->isNoAlias(LocAS, LocBS))
+    return AliasResult::NoAlias;
 
   // Check the underlying objects are the same
   const Value *AObj = getUnderlyingObject(LocA.Ptr);
@@ -666,16 +666,16 @@ static AliasResult underlyingObjectsAlias(AAResults *AA,
 
   // If the underlying objects are the same, they must alias
   if (AObj == BObj)
-    return MustAlias;
+    return AliasResult::MustAlias;
 
   // We may have hit the recursion limit for underlying objects, or have
   // underlying objects where we don't know they will alias.
   if (!isIdentifiedObject(AObj) || !isIdentifiedObject(BObj))
-    return MayAlias;
+    return AliasResult::MayAlias;
 
   // Otherwise we know the objects are different and both identified objects so
   // must not alias.
-  return NoAlias;
+  return AliasResult::NoAlias;
 }
 
 
@@ -3501,16 +3501,16 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   switch (underlyingObjectsAlias(AA, F->getParent()->getDataLayout(),
                                  MemoryLocation::get(Dst),
                                  MemoryLocation::get(Src))) {
-  case MayAlias:
-  case PartialAlias:
+  case AliasResult::MayAlias:
+  case AliasResult::PartialAlias:
     // cannot analyse objects if we don't understand their aliasing.
     LLVM_DEBUG(dbgs() << "can't analyze may or partial alias\n");
     return std::make_unique<Dependence>(Src, Dst);
-  case NoAlias:
+  case AliasResult::NoAlias:
     // If the objects noalias, they are distinct, accesses are independent.
     LLVM_DEBUG(dbgs() << "no alias\n");
     return nullptr;
-  case MustAlias:
+  case AliasResult::MustAlias:
     break; // The underlying objects alias; test accesses for dependence.
   }
 
@@ -3914,9 +3914,9 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   assert(isLoadOrStore(Dst));
   Value *SrcPtr = getLoadStorePointerOperand(Src);
   Value *DstPtr = getLoadStorePointerOperand(Dst);
-  assert(underlyingObjectsAlias(AA, F->getParent()->getDataLayout(),
-                                MemoryLocation::get(Dst),
-                                MemoryLocation::get(Src)) == MustAlias);
+  assert(underlyingObjectsAlias(
+             AA, F->getParent()->getDataLayout(), MemoryLocation::get(Dst),
+             MemoryLocation::get(Src)) == AliasResult::MustAlias);
 
   // establish loop nesting levels
   establishNestingLevels(Src, Dst);

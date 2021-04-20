@@ -1681,9 +1681,10 @@ struct FoldFillWithTensorReshape : OpRewritePattern<TensorReshapeOp> {
     if (!oldFill)
       return failure();
 
-    auto newInit = rewriter.create<InitTensorOp>(
-        oldFill.getLoc(), reshapeOp.getResultType().getShape(),
-        reshapeOp.getResultType().getElementType());
+    Location loc = oldFill.getLoc();
+    auto newInit = rewriter.create<TensorReshapeOp>(
+        loc, reshapeOp.getResultType(), oldFill.output(),
+        reshapeOp.reassociation());
     rewriter.replaceOpWithNewOp<FillOp>(reshapeOp, newInit, oldFill.value());
 
     return success();
@@ -1694,7 +1695,8 @@ struct FoldFillWithTensorReshape : OpRewritePattern<TensorReshapeOp> {
 void TensorReshapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
   results.add<CollapseReshapeOps<TensorReshapeOp>, FoldFillWithTensorReshape,
-              FoldReshapeWithConstant>(context);
+              FoldInitTensorWithTensorReshapeOp, FoldReshapeWithConstant>(
+      context);
 }
 
 LogicalResult TensorReshapeOp::reifyReturnTypeShapesPerResultDim(

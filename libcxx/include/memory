@@ -2702,7 +2702,6 @@ public:
                    typename enable_if
                    <
                        !is_lvalue_reference<_Dp>::value &&
-                       !is_array<_Yp>::value &&
                        is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, element_type*>::value,
                        __nat
                    >::type = __nat());
@@ -2711,7 +2710,6 @@ public:
                    typename enable_if
                    <
                        is_lvalue_reference<_Dp>::value &&
-                       !is_array<_Yp>::value &&
                        is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, element_type*>::value,
                        __nat
                    >::type = __nat());
@@ -2752,7 +2750,6 @@ public:
     template <class _Yp, class _Dp>
         typename enable_if
         <
-            !is_array<_Yp>::value &&
             is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, element_type*>::value,
             shared_ptr&
         >::type
@@ -3132,7 +3129,6 @@ shared_ptr<_Tp>::shared_ptr(unique_ptr<_Yp, _Dp>&& __r,
                             typename enable_if
                             <
                                 !is_lvalue_reference<_Dp>::value &&
-                                !is_array<_Yp>::value &&
                                 is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, element_type*>::value,
                                 __nat
                             >::type)
@@ -3145,7 +3141,7 @@ shared_ptr<_Tp>::shared_ptr(unique_ptr<_Yp, _Dp>&& __r,
 #endif
     {
         typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
-        typedef __shared_ptr_pointer<_Yp*, _Dp, _AllocT > _CntrlBlk;
+        typedef __shared_ptr_pointer<typename unique_ptr<_Yp, _Dp>::pointer, _Dp, _AllocT > _CntrlBlk;
         __cntrl_ = new _CntrlBlk(__r.get(), __r.get_deleter(), _AllocT());
         __enable_weak_this(__r.get(), __r.get());
     }
@@ -3158,7 +3154,6 @@ shared_ptr<_Tp>::shared_ptr(unique_ptr<_Yp, _Dp>&& __r,
                             typename enable_if
                             <
                                 is_lvalue_reference<_Dp>::value &&
-                                !is_array<_Yp>::value &&
                                 is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, element_type*>::value,
                                 __nat
                             >::type)
@@ -3171,7 +3166,7 @@ shared_ptr<_Tp>::shared_ptr(unique_ptr<_Yp, _Dp>&& __r,
 #endif
     {
         typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
-        typedef __shared_ptr_pointer<_Yp*,
+        typedef __shared_ptr_pointer<typename unique_ptr<_Yp, _Dp>::pointer,
                                      reference_wrapper<typename remove_reference<_Dp>::type>,
                                      _AllocT > _CntrlBlk;
         __cntrl_ = new _CntrlBlk(__r.get(), _VSTD::ref(__r.get_deleter()), _AllocT());
@@ -3255,7 +3250,6 @@ template <class _Yp, class _Dp>
 inline
 typename enable_if
 <
-    !is_array<_Yp>::value &&
     is_convertible<typename unique_ptr<_Yp, _Dp>::pointer,
                    typename shared_ptr<_Tp>::element_type*>::value,
     shared_ptr<_Tp>&

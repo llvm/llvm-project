@@ -1360,34 +1360,35 @@ are deprecated and should not be used.
   .. table:: AMDGPU Code Object V2 Supported Processors and Fixed Target Feature Settings
      :name: amdgpu-elf-note-record-supported_processors-v2-table
 
-     ==================== ==========================
-     Note Record ISA Name Target ID
-     ==================== ==========================
-     ``AMD:AMDGPU:6:0:0`` ``gfx600``
-     ``AMD:AMDGPU:6:0:1`` ``gfx601``
-     ``AMD:AMDGPU:6:0:2`` ``gfx602``
-     ``AMD:AMDGPU:7:0:0`` ``gfx700``
-     ``AMD:AMDGPU:7:0:1`` ``gfx701``
-     ``AMD:AMDGPU:7:0:2`` ``gfx702``
-     ``AMD:AMDGPU:7:0:3`` ``gfx703``
-     ``AMD:AMDGPU:7:0:4`` ``gfx704``
-     ``AMD:AMDGPU:7:0:5`` ``gfx705``
-     ``AMD:AMDGPU:8:0:0`` ``gfx802``
-     ``AMD:AMDGPU:8:0:1`` ``gfx801:xnack+``
-     ``AMD:AMDGPU:8:0:2`` ``gfx802``
-     ``AMD:AMDGPU:8:0:3`` ``gfx803``
-     ``AMD:AMDGPU:8:0:4`` ``gfx803``
-     ``AMD:AMDGPU:8:0:5`` ``gfx805``
-     ``AMD:AMDGPU:8:1:0`` ``gfx810:xnack+``
-     ``AMD:AMDGPU:9:0:0`` ``gfx900:xnack-``
-     ``AMD:AMDGPU:9:0:1`` ``gfx900:xnack+``
-     ``AMD:AMDGPU:9:0:2`` ``gfx902:xnack-``
-     ``AMD:AMDGPU:9:0:3`` ``gfx902:xnack+``
-     ``AMD:AMDGPU:9:0:4`` ``gfx904:xnack-``
-     ``AMD:AMDGPU:9:0:5`` ``gfx904:xnack+``
-     ``AMD:AMDGPU:9:0:6`` ``gfx906:sramecc-:xnack-``
-     ``AMD:AMDGPU:9:0:7`` ``gfx906:sramecc-:xnack+``
-     ==================== ==========================
+     ===================== ==========================
+     Note Record ISA Name  Target ID
+     ===================== ==========================
+     ``AMD:AMDGPU:6:0:0``  ``gfx600``
+     ``AMD:AMDGPU:6:0:1``  ``gfx601``
+     ``AMD:AMDGPU:6:0:2``  ``gfx602``
+     ``AMD:AMDGPU:7:0:0``  ``gfx700``
+     ``AMD:AMDGPU:7:0:1``  ``gfx701``
+     ``AMD:AMDGPU:7:0:2``  ``gfx702``
+     ``AMD:AMDGPU:7:0:3``  ``gfx703``
+     ``AMD:AMDGPU:7:0:4``  ``gfx704``
+     ``AMD:AMDGPU:7:0:5``  ``gfx705``
+     ``AMD:AMDGPU:8:0:0``  ``gfx802``
+     ``AMD:AMDGPU:8:0:1``  ``gfx801:xnack+``
+     ``AMD:AMDGPU:8:0:2``  ``gfx802``
+     ``AMD:AMDGPU:8:0:3``  ``gfx803``
+     ``AMD:AMDGPU:8:0:4``  ``gfx803``
+     ``AMD:AMDGPU:8:0:5``  ``gfx805``
+     ``AMD:AMDGPU:8:1:0``  ``gfx810:xnack+``
+     ``AMD:AMDGPU:9:0:0``  ``gfx900:xnack-``
+     ``AMD:AMDGPU:9:0:1``  ``gfx900:xnack+``
+     ``AMD:AMDGPU:9:0:2``  ``gfx902:xnack-``
+     ``AMD:AMDGPU:9:0:3``  ``gfx902:xnack+``
+     ``AMD:AMDGPU:9:0:4``  ``gfx904:xnack-``
+     ``AMD:AMDGPU:9:0:5``  ``gfx904:xnack+``
+     ``AMD:AMDGPU:9:0:6``  ``gfx906:sramecc-:xnack-``
+     ``AMD:AMDGPU:9:0:7``  ``gfx906:sramecc-:xnack+``
+     ``AMD:AMDGPU:9:0:12`` ``gfx90c:xnack-``
+     ===================== ==========================
 
 .. _amdgpu-note-records-v3-v4:
 

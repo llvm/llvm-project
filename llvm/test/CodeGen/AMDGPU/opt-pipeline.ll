@@ -141,11 +141,7 @@
 ; GCN-O1-NEXT:       Lazy Block Frequency Analysis
 ; GCN-O1-NEXT:       Loop Pass Manager
 ; GCN-O1-NEXT:         Loop Invariant Code Motion
-; GCN-O1-NEXT:       Loop Pass Manager
 ; GCN-O1-NEXT:         Rotate Loops
-; GCN-O1-NEXT:       Lazy Branch Probability Analysis
-; GCN-O1-NEXT:       Lazy Block Frequency Analysis
-; GCN-O1-NEXT:       Loop Pass Manager
 ; GCN-O1-NEXT:         Loop Invariant Code Motion
 ; GCN-O1-NEXT:       Post-Dominator Tree Construction
 ; GCN-O1-NEXT:       Legacy Divergence Analysis
@@ -467,11 +463,7 @@
 ; GCN-O2-NEXT:       Lazy Block Frequency Analysis
 ; GCN-O2-NEXT:       Loop Pass Manager
 ; GCN-O2-NEXT:         Loop Invariant Code Motion
-; GCN-O2-NEXT:       Loop Pass Manager
 ; GCN-O2-NEXT:         Rotate Loops
-; GCN-O2-NEXT:       Lazy Branch Probability Analysis
-; GCN-O2-NEXT:       Lazy Block Frequency Analysis
-; GCN-O2-NEXT:       Loop Pass Manager
 ; GCN-O2-NEXT:         Loop Invariant Code Motion
 ; GCN-O2-NEXT:       Post-Dominator Tree Construction
 ; GCN-O2-NEXT:       Legacy Divergence Analysis
@@ -830,11 +822,7 @@
 ; GCN-O3-NEXT:       Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:       Loop Pass Manager
 ; GCN-O3-NEXT:         Loop Invariant Code Motion
-; GCN-O3-NEXT:       Loop Pass Manager
 ; GCN-O3-NEXT:         Rotate Loops
-; GCN-O3-NEXT:       Lazy Branch Probability Analysis
-; GCN-O3-NEXT:       Lazy Block Frequency Analysis
-; GCN-O3-NEXT:       Loop Pass Manager
 ; GCN-O3-NEXT:         Loop Invariant Code Motion
 ; GCN-O3-NEXT:       Post-Dominator Tree Construction
 ; GCN-O3-NEXT:       Legacy Divergence Analysis

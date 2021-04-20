@@ -242,7 +242,8 @@ void Lint::visitCallBase(CallBase &I) {
               continue;
             if (AI != BI && (*BI)->getType()->isPointerTy()) {
               AliasResult Result = AA->alias(*AI, *BI);
-              Assert(Result != MustAlias && Result != PartialAlias,
+              Assert(Result != AliasResult::MustAlias &&
+                         Result != AliasResult::PartialAlias,
                      "Unusual: noalias argument aliases another argument", &I);
             }
           }
@@ -302,7 +303,7 @@ void Lint::visitCallBase(CallBase &I) {
         if (Len->getValue().isIntN(32))
           Size = LocationSize::precise(Len->getValue().getZExtValue());
       Assert(AA->alias(MCI->getSource(), Size, MCI->getDest(), Size) !=
-                 MustAlias,
+                 AliasResult::MustAlias,
              "Undefined behavior: memcpy source and destination overlap", &I);
       break;
     }
@@ -318,7 +319,8 @@ void Lint::visitCallBase(CallBase &I) {
       // isn't expressive enough for what we really want to do. Known partial
       // overlap is not distinguished from the case where nothing is known.
       const LocationSize LS = LocationSize::precise(Size);
-      Assert(AA->alias(MCII->getSource(), LS, MCII->getDest(), LS) != MustAlias,
+      Assert(AA->alias(MCII->getSource(), LS, MCII->getDest(), LS) !=
+                 AliasResult::MustAlias,
              "Undefined behavior: memcpy source and destination overlap", &I);
       break;
     }

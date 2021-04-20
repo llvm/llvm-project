@@ -153,6 +153,10 @@ SPIRVTypeConverter::getStorageClassForMemorySpace(unsigned space) {
 #undef STORAGE_SPACE_MAP_FN
 }
 
+const SPIRVTypeConverter::Options &SPIRVTypeConverter::getOptions() const {
+  return options;
+}
+
 #undef STORAGE_SPACE_MAP_LIST
 
 // TODO: This is a utility function that should probably be exposed by the
@@ -342,9 +346,66 @@ static Type convertTensorType(const spirv::TargetEnv &targetEnv,
   return spirv::ArrayType::get(arrayElemType, arrayElemCount, *arrayElemSize);
 }
 
+static Type convertBoolMemrefType(const spirv::TargetEnv &targetEnv,
+                                  const SPIRVTypeConverter::Options &options,
+                                  MemRefType type) {
+  if (!type.hasStaticShape()) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " dynamic shape on i1 is not supported yet\n");
+    return nullptr;
+  }
+
+  Optional<spirv::StorageClass> storageClass =
+      SPIRVTypeConverter::getStorageClassForMemorySpace(
+          type.getMemorySpaceAsInt());
+  if (!storageClass) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot convert memory space\n");
+    return nullptr;
+  }
+
+  unsigned numBoolBits = options.boolNumBits;
+  if (numBoolBits != 8) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "using non-8-bit storage for bool types unimplemented");
+    return nullptr;
+  }
+  auto elementType = IntegerType::get(type.getContext(), numBoolBits)
+                         .dyn_cast<spirv::ScalarType>();
+  if (!elementType)
+    return nullptr;
+  Type arrayElemType =
+      convertScalarType(targetEnv, options, elementType, storageClass);
+  if (!arrayElemType)
+    return nullptr;
+  Optional<int64_t> arrayElemSize = getTypeNumBytes(options, arrayElemType);
+  if (!arrayElemSize) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot deduce converted element size\n");
+    return nullptr;
+  }
+
+  int64_t memrefSize = (type.getNumElements() * numBoolBits + 7) / 8;
+  auto arrayElemCount = (memrefSize + *arrayElemSize - 1) / *arrayElemSize;
+  auto arrayType =
+      spirv::ArrayType::get(arrayElemType, arrayElemCount, *arrayElemSize);
+
+  // Wrap in a struct to satisfy Vulkan interface requirements. Memrefs with
+  // workgroup storage class do not need the struct to be laid out explicitly.
+  auto structType = *storageClass == spirv::StorageClass::Workgroup
+                        ? spirv::StructType::get(arrayType)
+                        : spirv::StructType::get(arrayType, 0);
+  return spirv::PointerType::get(structType, *storageClass);
+}
+
 static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
                               const SPIRVTypeConverter::Options &options,
                               MemRefType type) {
+  if (type.getElementType().isa<IntegerType>() &&
+      type.getElementTypeBitWidth() == 1) {
+    return convertBoolMemrefType(targetEnv, options, type);
+  }
+
   Optional<spirv::StorageClass> storageClass =
       SPIRVTypeConverter::getStorageClassForMemorySpace(
           type.getMemorySpaceAsInt());

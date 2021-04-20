@@ -3023,7 +3023,7 @@ bool AMDGPUInstructionSelector::selectGlobalAtomicFadd(
   // FIXME: This is only needed because tablegen requires number of dst operands
   // in match and replace pattern to be the same. Otherwise patterns can be
   // exported from SDag path.
-  auto Addr = selectFlatOffsetImpl<true>(AddrOp);
+  auto Addr = selectFlatOffsetImpl(AddrOp, SIInstrFlags::FlatGlobal);
 
   Register Data = DataOp.getReg();
   const unsigned Opc = MRI->getType(Data).isVector() ?
@@ -3437,9 +3437,9 @@ AMDGPUInstructionSelector::selectSmrdSgpr(MachineOperand &Root) const {
   }};
 }
 
-template <bool Signed>
 std::pair<Register, int>
-AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root) const {
+AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root,
+                                                uint64_t FlatVariant) const {
   MachineInstr *MI = Root.getParent();
 
   auto Default = std::make_pair(Root.getReg(), 0);
@@ -3455,7 +3455,7 @@ AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root) const {
     return Default;
 
   unsigned AddrSpace = (*MI->memoperands_begin())->getAddrSpace();
-  if (!TII.isLegalFLATOffset(ConstOffset, AddrSpace, Signed))
+  if (!TII.isLegalFLATOffset(ConstOffset, AddrSpace, FlatVariant))
     return Default;
 
   return std::make_pair(PtrBase, ConstOffset);
@@ -3463,7 +3463,7 @@ AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root) const {
 
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectFlatOffset(MachineOperand &Root) const {
-  auto PtrWithOffset = selectFlatOffsetImpl<false>(Root);
+  auto PtrWithOffset = selectFlatOffsetImpl(Root, SIInstrFlags::FLAT);
 
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrWithOffset.first); },
@@ -3472,8 +3472,18 @@ AMDGPUInstructionSelector::selectFlatOffset(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
-AMDGPUInstructionSelector::selectFlatOffsetSigned(MachineOperand &Root) const {
-  auto PtrWithOffset = selectFlatOffsetImpl<true>(Root);
+AMDGPUInstructionSelector::selectGlobalOffset(MachineOperand &Root) const {
+  auto PtrWithOffset = selectFlatOffsetImpl(Root, SIInstrFlags::FlatGlobal);
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrWithOffset.first); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(PtrWithOffset.second); },
+  }};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectScratchOffset(MachineOperand &Root) const {
+  auto PtrWithOffset = selectFlatOffsetImpl(Root, SIInstrFlags::FlatScratch);
 
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrWithOffset.first); },
@@ -3512,7 +3522,8 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
   std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(Addr, *MRI);
 
   if (ConstOffset != 0) {
-    if (TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::GLOBAL_ADDRESS, true)) {
+    if (TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::GLOBAL_ADDRESS,
+                              SIInstrFlags::FlatGlobal)) {
       Addr = PtrBase;
       ImmOffset = ConstOffset;
     } else if (ConstOffset > 0) {
@@ -3526,8 +3537,8 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
         // saddr + large_offset -> saddr + (voffset = large_offset & ~MaxOffset)
         //                         + (large_offset & MaxOffset);
         int64_t SplitImmOffset, RemainderOffset;
-        std::tie(SplitImmOffset, RemainderOffset)
-          = TII.splitFlatOffset(ConstOffset, AMDGPUAS::GLOBAL_ADDRESS, true);
+        std::tie(SplitImmOffset, RemainderOffset) = TII.splitFlatOffset(
+            ConstOffset, AMDGPUAS::GLOBAL_ADDRESS, SIInstrFlags::FlatGlobal);
 
         if (isUInt<32>(RemainderOffset)) {
           MachineInstr *MI = Root.getParent();
@@ -3619,7 +3630,8 @@ AMDGPUInstructionSelector::selectScratchSAddr(MachineOperand &Root) const {
   std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(Addr, *MRI);
 
   if (ConstOffset != 0 &&
-      TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::PRIVATE_ADDRESS, true)) {
+      TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::PRIVATE_ADDRESS,
+                            SIInstrFlags::FlatScratch)) {
     Addr = PtrBase;
     ImmOffset = ConstOffset;
   }

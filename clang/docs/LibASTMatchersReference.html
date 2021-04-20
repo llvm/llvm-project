@@ -573,6 +573,15 @@ recordDecl(decl().bind("id"), hasName("::MyClass"))
 <tr style="text-align:left"><th>Return type</th><th>Name</th><th>Parameters</th></tr>
 <!-- START_DECL_MATCHERS -->
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXBaseSpecifier.html">CXXBaseSpecifier</a>&gt;</td><td class="name" onclick="toggle('cxxBaseSpecifier0')"><a name="cxxBaseSpecifier0Anchor">cxxBaseSpecifier</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXBaseSpecifier.html">CXXBaseSpecifier</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="cxxBaseSpecifier0"><pre>Matches class bases.
+
+Examples matches public virtual B.
+  class B {};
+  class C : public virtual B {};
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;</td><td class="name" onclick="toggle('cxxCtorInitializer0')"><a name="cxxCtorInitializer0Anchor">cxxCtorInitializer</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="cxxCtorInitializer0"><pre>Matches constructor initializers.
 
@@ -6144,8 +6153,8 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Bloc
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXBaseSpecifier.html">CXXBaseSpecifier</a>&gt;</td><td class="name" onclick="toggle('hasType7')"><a name="hasType7Anchor">hasType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasType7"><pre>Overloaded to match the declaration of the expression's or value
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXBaseSpecifier.html">CXXBaseSpecifier</a>&gt;</td><td class="name" onclick="toggle('hasType8')"><a name="hasType8Anchor">hasType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasType8"><pre>Overloaded to match the declaration of the expression's or value
 declaration's type.
 
 In case of a value declaration (for example a variable declaration),
@@ -6157,9 +6166,12 @@ declaration of x.
 Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
             and z (matcher = varDecl(hasType(cxxRecordDecl(hasName("X")))))
             and friend class X (matcher = friendDecl(hasType("X"))
+            and public virtual X (matcher = cxxBaseSpecifier(hasType(
+                                              cxxRecordDecl(hasName("X"))))
  class X {};
  void y(X &amp;x) { x; X z; }
  class Y { friend class X; };
+ class Z : public virtual X {};
 
 Example matches class Derived
 (matcher = cxxRecordDecl(hasAnyBase(hasType(cxxRecordDecl(hasName("Base"))))))
@@ -6168,6 +6180,24 @@ class Derived : Base {};
 
 Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FriendDecl.html">FriendDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ValueDecl.html">ValueDecl</a>&gt;,
 Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXBaseSpecifier.html">CXXBaseSpecifier</a>&gt;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXBaseSpecifier.html">CXXBaseSpecifier</a>&gt;</td><td class="name" onclick="toggle('hasType4')"><a name="hasType4Anchor">hasType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasType4"><pre>Matches if the expression's or declaration's type matches a type
+matcher.
+
+Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
+            and z (matcher = varDecl(hasType(cxxRecordDecl(hasName("X")))))
+            and U (matcher = typedefDecl(hasType(asString("int")))
+            and friend class X (matcher = friendDecl(hasType("X"))
+            and public virtual X (matcher = cxxBaseSpecifier(hasType(
+                                              asString("class X")))
+ class X {};
+ void y(X &amp;x) { x; X z; }
+ typedef int U;
+ class Y { friend class X; };
+ class Z : public virtual X {};
 </pre></td></tr>
 
 
@@ -7282,8 +7312,8 @@ actual casts "explicit" casts.)
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt;</td><td class="name" onclick="toggle('hasType4')"><a name="hasType4Anchor">hasType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasType4"><pre>Overloaded to match the declaration of the expression's or value
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt;</td><td class="name" onclick="toggle('hasType5')"><a name="hasType5Anchor">hasType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasType5"><pre>Overloaded to match the declaration of the expression's or value
 declaration's type.
 
 In case of a value declaration (for example a variable declaration),
@@ -7295,9 +7325,12 @@ declaration of x.
 Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
             and z (matcher = varDecl(hasType(cxxRecordDecl(hasName("X")))))
             and friend class X (matcher = friendDecl(hasType("X"))
+            and public virtual X (matcher = cxxBaseSpecifier(hasType(
+                                              cxxRecordDecl(hasName("X"))))
  class X {};
  void y(X &amp;x) { x; X z; }
  class Y { friend class X; };
+ class Z : public virtual X {};
 
 Example matches class Derived
 (matcher = cxxRecordDecl(hasAnyBase(hasType(cxxRecordDecl(hasName("Base"))))))
@@ -7317,10 +7350,13 @@ Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
             and z (matcher = varDecl(hasType(cxxRecordDecl(hasName("X")))))
             and U (matcher = typedefDecl(hasType(asString("int")))
             and friend class X (matcher = friendDecl(hasType("X"))
+            and public virtual X (matcher = cxxBaseSpecifier(hasType(
+                                              asString("class X")))
  class X {};
  void y(X &amp;x) { x; X z; }
  typedef int U;
  class Y { friend class X; };
+ class Z : public virtual X {};
 </pre></td></tr>
 
 
@@ -7493,8 +7529,8 @@ matches 'int x = 0' in
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FriendDecl.html">FriendDecl</a>&gt;</td><td class="name" onclick="toggle('hasType5')"><a name="hasType5Anchor">hasType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasType5"><pre>Overloaded to match the declaration of the expression's or value
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FriendDecl.html">FriendDecl</a>&gt;</td><td class="name" onclick="toggle('hasType6')"><a name="hasType6Anchor">hasType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasType6"><pre>Overloaded to match the declaration of the expression's or value
 declaration's type.
 
 In case of a value declaration (for example a variable declaration),
@@ -7506,9 +7542,12 @@ declaration of x.
 Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
             and z (matcher = varDecl(hasType(cxxRecordDecl(hasName("X")))))
             and friend class X (matcher = friendDecl(hasType("X"))
+            and public virtual X (matcher = cxxBaseSpecifier(hasType(
+                                              cxxRecordDecl(hasName("X"))))
  class X {};
  void y(X &amp;x) { x; X z; }
  class Y { friend class X; };
+ class Z : public virtual X {};
 
 Example matches class Derived
 (matcher = cxxRecordDecl(hasAnyBase(hasType(cxxRecordDecl(hasName("Base"))))))
@@ -7528,10 +7567,13 @@ Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
             and z (matcher = varDecl(hasType(cxxRecordDecl(hasName("X")))))
             and U (matcher = typedefDecl(hasType(asString("int")))
             and friend class X (matcher = friendDecl(hasType("X"))
+            and public virtual X (matcher = cxxBaseSpecifier(hasType(
+                                              asString("class X")))
  class X {};
  void y(X &amp;x) { x; X z; }
  typedef int U;
  class Y { friend class X; };
+ class Z : public virtual X {};
 </pre></td></tr>
 
 
@@ -8750,10 +8792,13 @@ Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
             and z (matcher = varDecl(hasType(cxxRecordDecl(hasName("X")))))
             and U (matcher = typedefDecl(hasType(asString("int")))
             and friend class X (matcher = friendDecl(hasType("X"))
+            and public virtual X (matcher = cxxBaseSpecifier(hasType(
+                                              asString("class X")))
  class X {};
  void y(X &amp;x) { x; X z; }
  typedef int U;
  class Y { friend class X; };
+ class Z : public virtual X {};
 </pre></td></tr>
 
 
@@ -8896,8 +8941,8 @@ usingDecl(hasAnyUsingShadowDecl(hasTargetDecl(functionDecl())))
   matches using X::b but not using X::a </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ValueDecl.html">ValueDecl</a>&gt;</td><td class="name" onclick="toggle('hasType6')"><a name="hasType6Anchor">hasType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasType6"><pre>Overloaded to match the declaration of the expression's or value
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ValueDecl.html">ValueDecl</a>&gt;</td><td class="name" onclick="toggle('hasType7')"><a name="hasType7Anchor">hasType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasType7"><pre>Overloaded to match the declaration of the expression's or value
 declaration's type.
 
 In case of a value declaration (for example a variable declaration),
@@ -8909,9 +8954,12 @@ declaration of x.
 Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
             and z (matcher = varDecl(hasType(cxxRecordDecl(hasName("X")))))
             and friend class X (matcher = friendDecl(hasType("X"))
+            and public virtual X (matcher = cxxBaseSpecifier(hasType(
+                                              cxxRecordDecl(hasName("X"))))
  class X {};
  void y(X &amp;x) { x; X z; }
  class Y { friend class X; };
+ class Z : public virtual X {};
 
 Example matches class Derived
 (matcher = cxxRecordDecl(hasAnyBase(hasType(cxxRecordDecl(hasName("Base"))))))
@@ -8931,10 +8979,13 @@ Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
             and z (matcher = varDecl(hasType(cxxRecordDecl(hasName("X")))))
             and U (matcher = typedefDecl(hasType(asString("int")))
             and friend class X (matcher = friendDecl(hasType("X"))
+            and public virtual X (matcher = cxxBaseSpecifier(hasType(
+                                              asString("class X")))
  class X {};
  void y(X &amp;x) { x; X z; }
  typedef int U;
  class Y { friend class X; };
+ class Z : public virtual X {};
 </pre></td></tr>
 
 

@@ -28,7 +28,7 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
   // pointer values are. This allows the code below to ignore this special
   // case.
   if (LocA.Size.isZero() || LocB.Size.isZero())
-    return NoAlias;
+    return AliasResult::NoAlias;
 
   // This is SCEVAAResult. Get the SCEVs!
   const SCEV *AS = SE.getSCEV(const_cast<Value *>(LocA.Ptr));
@@ -36,7 +36,7 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
 
   // If they evaluate to the same expression, it's a MustAlias.
   if (AS == BS)
-    return MustAlias;
+    return AliasResult::MustAlias;
 
   // If something is known about the difference between the two addresses,
   // see if it's enough to prove a NoAlias.
@@ -58,7 +58,7 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
     // are non-zero, which is special-cased above.
     if (ASizeInt.ule(SE.getUnsignedRange(BA).getUnsignedMin()) &&
         (-BSizeInt).uge(SE.getUnsignedRange(BA).getUnsignedMax()))
-      return NoAlias;
+      return AliasResult::NoAlias;
 
     // Folding the subtraction while preserving range information can be tricky
     // (because of INT_MIN, etc.); if the prior test failed, swap AS and BS
@@ -72,7 +72,7 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
     // are non-zero, which is special-cased above.
     if (BSizeInt.ule(SE.getUnsignedRange(AB).getUnsignedMin()) &&
         (-ASizeInt).uge(SE.getUnsignedRange(AB).getUnsignedMax()))
-      return NoAlias;
+      return AliasResult::NoAlias;
   }
 
   // If ScalarEvolution can find an underlying object, form a new query.
@@ -89,8 +89,8 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
                              BO ? LocationSize::beforeOrAfterPointer()
                                 : LocB.Size,
                              BO ? AAMDNodes() : LocB.AATags),
-              AAQI) == NoAlias)
-      return NoAlias;
+              AAQI) == AliasResult::NoAlias)
+      return AliasResult::NoAlias;
 
   // Forward the query to the next analysis.
   return AAResultBase::alias(LocA, LocB, AAQI);

@@ -3,7 +3,7 @@
 
 # CHECK: Plugin name: pdb
 # CHECK: Architecture: x86_64-pc-windows-msvc
-# CHECK: UUID: 3F58AF61-A829-6C7A-4C4C-44205044422E-00000001
+# CHECK: UUID: 61AF583F-29A8-7A6C-4C4C-44205044422E-00000001
 # CHECK: Executable: false
 # CHECK: Stripped: false
 # CHECK: Type: debug info

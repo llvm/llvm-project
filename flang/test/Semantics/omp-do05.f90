@@ -6,7 +6,7 @@
 program omp_do
 
   integer n
-  integer i,j
+  integer i,j,k
   !$omp do
   do i=1,10
     !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
@@ -18,6 +18,65 @@ program omp_do
   end do
   !$omp end do
 
+  !$omp do
+  do i=1,10
+    !$omp task
+    do j=1,10
+      !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+      !$omp single
+      do k=1,10
+        print *,"hello"
+      end do
+      !$omp end single
+    end do
+    !$omp end task
+  end do
+  !$omp end do
+
+  !$omp do
+  do i=1,10
+    !$omp parallel
+    do j=1,10
+      !$omp single
+      do k=1,10
+        print *,"hello"
+      end do
+      !$omp end single
+    end do
+    !$omp end parallel
+  end do
+  !$omp end do
+
+!$omp do
+do i=1,10
+  !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+  !$omp single
+  do j=1,10
+    !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+    !$omp single
+    do k=1,10
+      print *,"hello"
+    end do
+    !$omp end single
+  end do
+  !$omp end single
+
+  !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+  !$omp single
+    do k=1,10
+      print *,"hello"
+    end do
+  !$omp end single
+
+  !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+  !$omp do
+    do k=1,10
+      print *,"hello"
+    end do
+  !$omp end do
+end do
+!$omp end do
+
   !$omp parallel default(shared)
   !$omp do
   do i = 1, n
@@ -25,6 +84,21 @@ program omp_do
     !$omp single
     call work(i, 1)
     !$omp end single
+  end do
+  !$omp end do
+  !$omp end parallel
+
+  !$omp parallel default(shared)
+  !$omp do
+  do i = 1, n
+    !$omp task
+    do j=1,10
+      !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+      !$omp single
+      call work(i, 1)
+      !$omp end single
+    end do
+    !$omp end task
   end do
   !$omp end do
   !$omp end parallel

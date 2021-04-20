@@ -84,6 +84,8 @@ public:
   void SetUnwindOnErrorInExpressions(bool ignore);
   bool GetStopOnSharedLibraryEvents() const;
   void SetStopOnSharedLibraryEvents(bool stop);
+  bool GetDisableLangRuntimeUnwindPlans() const;
+  void SetDisableLangRuntimeUnwindPlans(bool disable);
   bool GetDetachKeepsStopped() const;
   void SetDetachKeepsStopped(bool keep_stopped);
   bool GetWarningsOptimization() const;

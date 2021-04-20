@@ -671,7 +671,8 @@ bool SIRegisterInfo::needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
     return !SIInstrInfo::isLegalMUBUFImmOffset(FullOffset);
 
   const SIInstrInfo *TII = ST.getInstrInfo();
-  return !TII->isLegalFLATOffset(FullOffset, AMDGPUAS::PRIVATE_ADDRESS, true);
+  return !TII->isLegalFLATOffset(FullOffset, AMDGPUAS::PRIVATE_ADDRESS,
+                                 SIInstrFlags::FlatScratch);
 }
 
 Register SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
@@ -754,7 +755,8 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
   assert(TII->isMUBUF(MI) || TII->isFLATScratch(MI));
 
   if (IsFlat) {
-    assert(TII->isLegalFLATOffset(NewOffset, AMDGPUAS::PRIVATE_ADDRESS, true) &&
+    assert(TII->isLegalFLATOffset(NewOffset, AMDGPUAS::PRIVATE_ADDRESS,
+                                  SIInstrFlags::FlatScratch) &&
            "offset should be legal");
     FIOp->ChangeToRegister(BaseReg, false);
     OffsetOp->setImm(NewOffset);
@@ -785,7 +787,8 @@ bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
     return SIInstrInfo::isLegalMUBUFImmOffset(NewOffset);
 
   const SIInstrInfo *TII = ST.getInstrInfo();
-  return TII->isLegalFLATOffset(NewOffset, AMDGPUAS::PRIVATE_ADDRESS, true);
+  return TII->isLegalFLATOffset(NewOffset, AMDGPUAS::PRIVATE_ADDRESS,
+                                SIInstrFlags::FlatScratch);
 }
 
 const TargetRegisterClass *SIRegisterInfo::getPointerRegClass(
@@ -1096,9 +1099,10 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
   assert((IsFlat || ((Offset % EltSize) == 0)) &&
          "unexpected VGPR spill offset");
 
-  bool IsOffsetLegal = IsFlat
-      ? TII->isLegalFLATOffset(MaxOffset, AMDGPUAS::PRIVATE_ADDRESS, true)
-      : SIInstrInfo::isLegalMUBUFImmOffset(MaxOffset);
+  bool IsOffsetLegal =
+      IsFlat ? TII->isLegalFLATOffset(MaxOffset, AMDGPUAS::PRIVATE_ADDRESS,
+                                      SIInstrFlags::FlatScratch)
+             : SIInstrInfo::isLegalMUBUFImmOffset(MaxOffset);
   if (!IsOffsetLegal || (IsFlat && !SOffset && !ST.hasFlatScratchSTMode())) {
     SOffset = MCRegister();
 
@@ -1704,7 +1708,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             TII->getNamedOperand(*MI, AMDGPU::OpName::offset);
           int64_t NewOffset = Offset + OffsetOp->getImm();
           if (TII->isLegalFLATOffset(NewOffset, AMDGPUAS::PRIVATE_ADDRESS,
-                                     true)) {
+                                     SIInstrFlags::FlatScratch)) {
             OffsetOp->setImm(NewOffset);
             if (FrameReg)
               return;

@@ -70,10 +70,10 @@ def gi_smrd_sgpr :
 
 def gi_flat_offset :
     GIComplexOperandMatcher<s64, "selectFlatOffset">,
-    GIComplexPatternEquiv<FLATOffset>;
-def gi_flat_offset_signed :
-    GIComplexOperandMatcher<s64, "selectFlatOffsetSigned">,
-    GIComplexPatternEquiv<FLATOffsetSigned>;
+    GIComplexPatternEquiv<FlatOffset>;
+def gi_global_offset :
+    GIComplexOperandMatcher<s64, "selectGlobalOffset">,
+    GIComplexPatternEquiv<GlobalOffset>;
 def gi_global_saddr :
     GIComplexOperandMatcher<s64, "selectGlobalSAddr">,
     GIComplexPatternEquiv<GlobalSAddr>;
@@ -86,7 +86,7 @@ def gi_mubuf_scratch_offen :
     GIComplexPatternEquiv<MUBUFScratchOffen>;
 
 def gi_flat_scratch_offset :
-    GIComplexOperandMatcher<s32, "selectFlatOffsetSigned">,
+    GIComplexOperandMatcher<s32, "selectScratchOffset">,
     GIComplexPatternEquiv<ScratchOffset>;
 
 def gi_flat_scratch_saddr :

@@ -499,7 +499,8 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
   } else if (PerformInit && ISA) {
     EmitPointerToInitFunc(D, Addr, Fn, ISA);
   } else if (auto *IPA = D->getAttr<InitPriorityAttr>()) {
-    OrderGlobalInits Key(IPA->getPriority(), PrioritizedCXXGlobalInits.size());
+    OrderGlobalInitsOrStermFinalizers Key(IPA->getPriority(),
+                                          PrioritizedCXXGlobalInits.size());
     PrioritizedCXXGlobalInits.push_back(std::make_pair(Key, Fn));
   } else if (isTemplateInstantiation(D->getTemplateSpecializationKind()) ||
              getContext().GetGVALinkageForVariable(D) == GVA_DiscardableODR) {
@@ -566,6 +567,17 @@ static SmallString<128> getTransformedFileName(llvm::Module &M) {
   return FileName;
 }
 
+static std::string getPrioritySuffix(unsigned int Priority) {
+  assert(Priority <= 65535 && "Priority should always be <= 65535.");
+
+  // Compute the function suffix from priority. Prepend with zeroes to make
+  // sure the function names are also ordered as priorities.
+  std::string PrioritySuffix = llvm::utostr(Priority);
+  PrioritySuffix = std::string(6 - PrioritySuffix.size(), '0') + PrioritySuffix;
+
+  return PrioritySuffix;
+}
+
 void
 CodeGenModule::EmitCXXGlobalInitFunc() {
   while (!CXXGlobalInits.empty() && !CXXGlobalInits.back())
@@ -577,12 +589,8 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
   llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
   const CGFunctionInfo &FI = getTypes().arrangeNullaryFunction();
 
-  const bool UseSinitAndSterm = getCXXABI().useSinitAndSterm();
   // Create our global prioritized initialization function.
   if (!PrioritizedCXXGlobalInits.empty()) {
-    assert(!UseSinitAndSterm && "Prioritized sinit and sterm functions are not"
-                                " supported yet.");
-
     SmallVector<llvm::Function *, 8> LocalCXXGlobalInits;
     llvm::array_pod_sort(PrioritizedCXXGlobalInits.begin(),
                          PrioritizedCXXGlobalInits.end());
@@ -596,14 +604,10 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
         PrioE = std::upper_bound(I + 1, E, *I, GlobalInitPriorityCmp());
 
       LocalCXXGlobalInits.clear();
-      unsigned Priority = I->first.priority;
-      // Compute the function suffix from priority. Prepend with zeroes to make
-      // sure the function names are also ordered as priorities.
-      std::string PrioritySuffix = llvm::utostr(Priority);
-      // Priority is always <= 65535 (enforced by sema).
-      PrioritySuffix = std::string(6-PrioritySuffix.size(), '0')+PrioritySuffix;
+
+      unsigned int Priority = I->first.priority;
       llvm::Function *Fn = CreateGlobalInitOrCleanUpFunction(
-          FTy, "_GLOBAL__I_" + PrioritySuffix, FI);
+          FTy, "_GLOBAL__I_" + getPrioritySuffix(Priority), FI);
 
       for (; I < PrioE; ++I)
         LocalCXXGlobalInits.push_back(I->second);
@@ -614,7 +618,7 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
     PrioritizedCXXGlobalInits.clear();
   }
 
-  if (UseSinitAndSterm && CXXGlobalInits.empty())
+  if (getCXXABI().useSinitAndSterm() && CXXGlobalInits.empty())
     return;
 
   // Include the filename in the symbol name. Including "sub_" matches gcc
@@ -649,11 +653,49 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
 }
 
 void CodeGenModule::EmitCXXGlobalCleanUpFunc() {
-  if (CXXGlobalDtorsOrStermFinalizers.empty())
+  if (CXXGlobalDtorsOrStermFinalizers.empty() &&
+      PrioritizedCXXStermFinalizers.empty())
     return;
 
   llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
   const CGFunctionInfo &FI = getTypes().arrangeNullaryFunction();
+
+  // Create our global prioritized cleanup function.
+  if (!PrioritizedCXXStermFinalizers.empty()) {
+    SmallVector<CXXGlobalDtorsOrStermFinalizer_t, 8> LocalCXXStermFinalizers;
+    llvm::array_pod_sort(PrioritizedCXXStermFinalizers.begin(),
+                         PrioritizedCXXStermFinalizers.end());
+    // Iterate over "chunks" of dtors with same priority and emit each chunk
+    // into separate function. Note - everything is sorted first by priority,
+    // second - by lex order, so we emit dtor functions in proper order.
+    for (SmallVectorImpl<StermFinalizerData>::iterator
+             I = PrioritizedCXXStermFinalizers.begin(),
+             E = PrioritizedCXXStermFinalizers.end();
+         I != E;) {
+      SmallVectorImpl<StermFinalizerData>::iterator PrioE =
+          std::upper_bound(I + 1, E, *I, StermFinalizerPriorityCmp());
+
+      LocalCXXStermFinalizers.clear();
+
+      unsigned int Priority = I->first.priority;
+      llvm::Function *Fn = CreateGlobalInitOrCleanUpFunction(
+          FTy, "_GLOBAL__a_" + getPrioritySuffix(Priority), FI);
+
+      for (; I < PrioE; ++I) {
+        llvm::FunctionCallee DtorFn = I->second;
+        LocalCXXStermFinalizers.emplace_back(DtorFn.getFunctionType(),
+                                             DtorFn.getCallee(), nullptr);
+      }
+
+      CodeGenFunction(*this).GenerateCXXGlobalCleanUpFunc(
+          Fn, LocalCXXStermFinalizers);
+      AddGlobalDtor(Fn, Priority);
+    }
+    PrioritizedCXXStermFinalizers.clear();
+  }
+
+  if (CXXGlobalDtorsOrStermFinalizers.empty())
+    return;
 
   // Create our global cleanup function.
   llvm::Function *Fn =
@@ -761,8 +803,9 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
 
 void CodeGenFunction::GenerateCXXGlobalCleanUpFunc(
     llvm::Function *Fn,
-    const std::vector<std::tuple<llvm::FunctionType *, llvm::WeakTrackingVH,
-                                 llvm::Constant *>> &DtorsOrStermFinalizers) {
+    ArrayRef<std::tuple<llvm::FunctionType *, llvm::WeakTrackingVH,
+                        llvm::Constant *>>
+        DtorsOrStermFinalizers) {
   {
     auto NL = ApplyDebugLocation::CreateEmpty(*this);
     StartFunction(GlobalDecl(), getContext().VoidTy, Fn,
