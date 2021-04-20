@@ -9562,7 +9562,8 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     // which is strictly wider than the loaded value by 8 bytes. So we need to
     // adjust the splat index to point to the correct address in memory.
     if (IsPermutedLoad) {
-      assert(isLittleEndian && "Unexpected permuted load on big endian target");
+      assert((isLittleEndian || IsFourByte) &&
+             "Unexpected size for permuted load on big endian target");
       SplatIdx += IsFourByte ? 2 : 1;
       assert((SplatIdx < (IsFourByte ? 4 : 2)) &&
              "Splat of a value outside of the loaded memory");
@@ -9576,6 +9577,11 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
         Offset = isLittleEndian ? (3 - SplatIdx) * 4 : SplatIdx * 4;
       else
         Offset = isLittleEndian ? (1 - SplatIdx) * 8 : SplatIdx * 8;
+
+      // If the width of the load is the same as the width of the splat,
+      // loading with an offset would load the wrong memory.
+      if (LD->getValueType(0).getSizeInBits() == (IsFourByte ? 32 : 64))
+        Offset = 0;
 
       SDValue BasePtr = LD->getBasePtr();
       if (Offset != 0)
@@ -14200,13 +14206,24 @@ static SDValue isScalarToVec(SDValue Op) {
   return SDValue();
 }
 
+// Fix up the shuffle mask to account for the fact that the result of
+// scalar_to_vector is not in lane zero. This just takes all values in
+// the ranges specified by the min/max indices and adds the number of
+// elements required to ensure each element comes from the respective
+// position in the valid lane.
+// On little endian, that's just the corresponding element in the other
+// half of the vector. On big endian, it is in the same half but right
+// justified rather than left justified in that half.
 static void fixupShuffleMaskForPermutedSToV(SmallVectorImpl<int> &ShuffV,
                                             int LHSMaxIdx, int RHSMinIdx,
-                                            int RHSMaxIdx, int HalfVec) {
+                                            int RHSMaxIdx, int HalfVec,
+                                            unsigned ValidLaneWidth,
+                                            const PPCSubtarget &Subtarget) {
   for (int i = 0, e = ShuffV.size(); i < e; i++) {
     int Idx = ShuffV[i];
     if ((Idx >= 0 && Idx < LHSMaxIdx) || (Idx >= RHSMinIdx && Idx < RHSMaxIdx))
-      ShuffV[i] += HalfVec;
+      ShuffV[i] +=
+          Subtarget.isLittleEndian() ? HalfVec : HalfVec - ValidLaneWidth;
   }
 }
 
@@ -14215,7 +14232,8 @@ static void fixupShuffleMaskForPermutedSToV(SmallVectorImpl<int> &ShuffV,
 // (<n x Ty> (scalar_to_vector (Ty (extract_elt <n x Ty> %a, C))))
 // In such a case, just change the shuffle mask to extract the element
 // from the permuted index.
-static SDValue getSToVPermuted(SDValue OrigSToV, SelectionDAG &DAG) {
+static SDValue getSToVPermuted(SDValue OrigSToV, SelectionDAG &DAG,
+                               const PPCSubtarget &Subtarget) {
   SDLoc dl(OrigSToV);
   EVT VT = OrigSToV.getValueType();
   assert(OrigSToV.getOpcode() == ISD::SCALAR_TO_VECTOR &&
@@ -14229,8 +14247,14 @@ static SDValue getSToVPermuted(SDValue OrigSToV, SelectionDAG &DAG) {
     // Can't handle non-const element indices or different vector types
     // for the input to the extract and the output of the scalar_to_vector.
     if (Idx && VT == OrigVector.getValueType()) {
-      SmallVector<int, 16> NewMask(VT.getVectorNumElements(), -1);
-      NewMask[VT.getVectorNumElements() / 2] = Idx->getZExtValue();
+      unsigned NumElts = VT.getVectorNumElements();
+      assert(
+          NumElts > 1 &&
+          "Cannot produce a permuted scalar_to_vector for one element vector");
+      SmallVector<int, 16> NewMask(NumElts, -1);
+      unsigned ResultInElt = NumElts / 2;
+      ResultInElt -= Subtarget.isLittleEndian() ? 0 : 1;
+      NewMask[ResultInElt] = Idx->getZExtValue();
       return DAG.getVectorShuffle(VT, dl, OrigVector, OrigVector, NewMask);
     }
   }
@@ -14246,6 +14270,10 @@ static SDValue getSToVPermuted(SDValue OrigSToV, SelectionDAG &DAG) {
 // Furthermore, SCALAR_TO_VECTOR on little endian always involves a permute
 // to put the value into element zero. Adjust the shuffle mask so that the
 // vector can remain in permuted form (to prevent a swap prior to a shuffle).
+// On big endian targets, this is still useful for SCALAR_TO_VECTOR
+// nodes with elements smaller than doubleword because all the ways
+// of getting scalar data into a vector register put the value in the
+// rightmost element of the left half of the vector.
 SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
                                                 SelectionDAG &DAG) const {
   SDValue LHS = SVN->getOperand(0);
@@ -14254,10 +14282,12 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
   int NumElts = LHS.getValueType().getVectorNumElements();
   SDValue Res(SVN, 0);
   SDLoc dl(SVN);
+  bool IsLittleEndian = Subtarget.isLittleEndian();
 
-  // None of these combines are useful on big endian systems since the ISA
-  // already has a big endian bias.
-  if (!Subtarget.isLittleEndian() || !Subtarget.hasVSX())
+  // On little endian targets, do these combines on all VSX targets since
+  // canonical shuffles match efficient permutes. On big endian targets,
+  // this is only useful for targets with direct moves.
+  if (!Subtarget.hasDirectMove() && !(IsLittleEndian && Subtarget.hasVSX()))
     return Res;
 
   // If this is not a shuffle of a shuffle and the first element comes from
@@ -14280,6 +14310,18 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
     int NumEltsIn = SToVLHS ? SToVLHS.getValueType().getVectorNumElements()
                             : SToVRHS.getValueType().getVectorNumElements();
     int NumEltsOut = ShuffV.size();
+    unsigned InElemSizeInBits =
+        SToVLHS ? SToVLHS.getValueType().getScalarSizeInBits()
+                : SToVRHS.getValueType().getScalarSizeInBits();
+    unsigned OutElemSizeInBits = SToVLHS
+                                     ? LHS.getValueType().getScalarSizeInBits()
+                                     : RHS.getValueType().getScalarSizeInBits();
+
+    // The width of the "valid lane" (i.e. the lane that contains the value that
+    // is vectorized) needs to be expressed in terms of the number of elements
+    // of the shuffle. It is thereby the ratio of the values before and after
+    // any bitcast.
+    unsigned ValidLaneWidth = InElemSizeInBits / OutElemSizeInBits;
 
     // Initially assume that neither input is permuted. These will be adjusted
     // accordingly if either input is.
@@ -14290,18 +14332,25 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
 
     // Get the permuted scalar to vector nodes for the source(s) that come from
     // ISD::SCALAR_TO_VECTOR.
+    // On big endian systems, this only makes sense for element sizes smaller
+    // than 64 bits since for 64-bit elements, all instructions already put
+    // the value into element zero.
     if (SToVLHS) {
+      if (!IsLittleEndian && InElemSizeInBits >= 64)
+        return Res;
       // Set up the values for the shuffle vector fixup.
       LHSMaxIdx = NumEltsOut / NumEltsIn;
-      SToVLHS = getSToVPermuted(SToVLHS, DAG);
+      SToVLHS = getSToVPermuted(SToVLHS, DAG, Subtarget);
       if (SToVLHS.getValueType() != LHS.getValueType())
         SToVLHS = DAG.getBitcast(LHS.getValueType(), SToVLHS);
       LHS = SToVLHS;
     }
     if (SToVRHS) {
+      if (!IsLittleEndian && InElemSizeInBits >= 64)
+        return Res;
       RHSMinIdx = NumEltsOut;
       RHSMaxIdx = NumEltsOut / NumEltsIn + RHSMinIdx;
-      SToVRHS = getSToVPermuted(SToVRHS, DAG);
+      SToVRHS = getSToVPermuted(SToVRHS, DAG, Subtarget);
       if (SToVRHS.getValueType() != RHS.getValueType())
         SToVRHS = DAG.getBitcast(RHS.getValueType(), SToVRHS);
       RHS = SToVRHS;
@@ -14311,10 +14360,9 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
     // The minimum and maximum indices that correspond to element zero for both
     // the LHS and RHS are computed and will control which shuffle mask entries
     // are to be changed. For example, if the RHS is permuted, any shuffle mask
-    // entries in the range [RHSMinIdx,RHSMaxIdx) will be incremented by
-    // HalfVec to refer to the corresponding element in the permuted vector.
+    // entries in the range [RHSMinIdx,RHSMaxIdx) will be adjusted.
     fixupShuffleMaskForPermutedSToV(ShuffV, LHSMaxIdx, RHSMinIdx, RHSMaxIdx,
-                                    HalfVec);
+                                    HalfVec, ValidLaneWidth, Subtarget);
     Res = DAG.getVectorShuffle(SVN->getValueType(0), dl, LHS, RHS, ShuffV);
 
     // We may have simplified away the shuffle. We won't be able to do anything
@@ -14324,12 +14372,13 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
     Mask = cast<ShuffleVectorSDNode>(Res)->getMask();
   }
 
+  SDValue TheSplat = IsLittleEndian ? RHS : LHS;
   // The common case after we commuted the shuffle is that the RHS is a splat
   // and we have elements coming in from the splat at indices that are not
   // conducive to using a merge.
   // Example:
   // vector_shuffle<0,17,1,19,2,21,3,23,4,25,5,27,6,29,7,31> t1, <zero>
-  if (!isSplatBV(RHS))
+  if (!isSplatBV(TheSplat))
     return Res;
 
   // We are looking for a mask such that all even elements are from
@@ -14339,24 +14388,41 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
 
   // Adjust the mask so we are pulling in the same index from the splat
   // as the index from the interesting vector in consecutive elements.
-  // Example (even elements from first vector):
-  // vector_shuffle<0,16,1,17,2,18,3,19,4,20,5,21,6,22,7,23> t1, <zero>
-  if (Mask[0] < NumElts)
-    for (int i = 1, e = Mask.size(); i < e; i += 2)
-      ShuffV[i] = (ShuffV[i - 1] + NumElts);
-  // Example (odd elements from first vector):
-  // vector_shuffle<16,0,17,1,18,2,19,3,20,4,21,5,22,6,23,7> t1, <zero>
-  else
-    for (int i = 0, e = Mask.size(); i < e; i += 2)
-      ShuffV[i] = (ShuffV[i + 1] + NumElts);
+  if (IsLittleEndian) {
+    // Example (even elements from first vector):
+    // vector_shuffle<0,16,1,17,2,18,3,19,4,20,5,21,6,22,7,23> t1, <zero>
+    if (Mask[0] < NumElts)
+      for (int i = 1, e = Mask.size(); i < e; i += 2)
+        ShuffV[i] = (ShuffV[i - 1] + NumElts);
+    // Example (odd elements from first vector):
+    // vector_shuffle<16,0,17,1,18,2,19,3,20,4,21,5,22,6,23,7> t1, <zero>
+    else
+      for (int i = 0, e = Mask.size(); i < e; i += 2)
+        ShuffV[i] = (ShuffV[i + 1] + NumElts);
+  } else {
+    // Example (even elements from first vector):
+    // vector_shuffle<0,16,1,17,2,18,3,19,4,20,5,21,6,22,7,23> <zero>, t1
+    if (Mask[0] < NumElts)
+      for (int i = 0, e = Mask.size(); i < e; i += 2)
+        ShuffV[i] = ShuffV[i + 1] - NumElts;
+    // Example (odd elements from first vector):
+    // vector_shuffle<16,0,17,1,18,2,19,3,20,4,21,5,22,6,23,7> <zero>, t1
+    else
+      for (int i = 1, e = Mask.size(); i < e; i += 2)
+        ShuffV[i] = ShuffV[i - 1] - NumElts;
+  }
 
   // If the RHS has undefs, we need to remove them since we may have created
   // a shuffle that adds those instead of the splat value.
-  SDValue SplatVal = cast<BuildVectorSDNode>(RHS.getNode())->getSplatValue();
-  RHS = DAG.getSplatBuildVector(RHS.getValueType(), dl, SplatVal);
+  SDValue SplatVal =
+      cast<BuildVectorSDNode>(TheSplat.getNode())->getSplatValue();
+  TheSplat = DAG.getSplatBuildVector(TheSplat.getValueType(), dl, SplatVal);
 
-  Res = DAG.getVectorShuffle(SVN->getValueType(0), dl, LHS, RHS, ShuffV);
-  return Res;
+  if (IsLittleEndian)
+    RHS = TheSplat;
+  else
+    LHS = TheSplat;
+  return DAG.getVectorShuffle(SVN->getValueType(0), dl, LHS, RHS, ShuffV);
 }
 
 SDValue PPCTargetLowering::combineVReverseMemOP(ShuffleVectorSDNode *SVN,

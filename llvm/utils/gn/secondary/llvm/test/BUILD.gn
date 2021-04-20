@@ -250,7 +250,7 @@ group("test") {
     "//llvm/tools/llvm-mt",
     "//llvm/tools/llvm-nm",
     "//llvm/tools/llvm-objcopy:symlinks",
-    "//llvm/tools/llvm-objdump",
+    "//llvm/tools/llvm-objdump:symlinks",
     "//llvm/tools/llvm-opt-fuzzer",
     "//llvm/tools/llvm-opt-report",
     "//llvm/tools/llvm-pdbutil",

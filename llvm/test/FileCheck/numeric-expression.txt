@@ -400,15 +400,29 @@ UNDEF VAR USE
 UNDEFVAR: 11
 UNDEF-USE-LABEL: UNDEF VAR USE
 UNDEF-USE-NEXT: UNDEFVAR: [[#UNDEFVAR1+UNDEFVAR2]]
-UNDEF-USE-MSG: numeric-expression.txt:[[#@LINE-1]]:17: error: {{U}}NDEF-USE-NEXT: expected string not found in input
-UNDEF-USE-MSG-NEXT:      {{U}}NDEF-USE-NEXT: UNDEFVAR: {{\[\[#UNDEFVAR1\+UNDEFVAR2\]\]}}
-UNDEF-USE-MSG-NEXT:     {{^}}                ^{{$}}
-UNDEF-USE-MSG-NEXT:      numeric-expression.txt:[[#@LINE-7]]:14: note: scanning from here
-UNDEF-USE-MSG-NEXT:      UNDEF VAR USE
-UNDEF-USE-MSG-NEXT: {{^}}             ^{{$}}
-UNDEF-USE-MSG-NEXT:      numeric-expression.txt:[[#@LINE-10]]:14: note: uses undefined variable(s): "UNDEFVAR1" "UNDEFVAR2"
-UNDEF-USE-MSG-NEXT:      UNDEF VAR USE
-UNDEF-USE-MSG-NEXT: {{^}}             ^{{$}}
+UNDEF-USE-MSG:      numeric-expression.txt:[[#@LINE-1]]:30: error: undefined variable: UNDEFVAR1
+UNDEF-USE-MSG-NEXT:      {{U}}NDEF-USE-NEXT: {{U}}NDEFVAR: {{\[\[#UNDEFVAR1\+UNDEFVAR2\]\]}}
+UNDEF-USE-MSG-NEXT:             {{^}}                             ^{{$}}
+UNDEF-USE-MSG-NEXT:      numeric-expression.txt:[[#@LINE-4]]:40: error: undefined variable: UNDEFVAR2
+UNDEF-USE-MSG-NEXT:      {{U}}NDEF-USE-NEXT: {{U}}NDEFVAR: {{\[\[#UNDEFVAR1\+UNDEFVAR2\]\]}}
+UNDEF-USE-MSG-NEXT:              {{^}}                                       ^{{$}}
+
+; Numeric expression in negative directive using undefined variables.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck --check-prefix UNDEF-USE2 --input-file %s %s 2>&1 \
+RUN:   | FileCheck --strict-whitespace --check-prefix UNDEF-USE-MSG2 %s
+
+CHECK NOT UNDEF VAR USE
+END MARKER
+UNDEF-USE2-LABEL: CHECK NOT UNDEF VAR USE
+UNDEF-USE2-NOT: UNDEFVAR: [[#UNDEFVAR1+UNDEFVAR2]]
+UNDEF-USE2: END MARKER
+UNDEF-USE-MSG2:      numeric-expression.txt:[[#@LINE-2]]:30: error: undefined variable: UNDEFVAR1
+UNDEF-USE-MSG2-NEXT:      {{U}}NDEF-USE2-NOT: {{U}}NDEFVAR: {{\[\[#UNDEFVAR1\+UNDEFVAR2\]\]}}
+UNDEF-USE-MSG2-NEXT:             {{^}}                             ^{{$}}
+UNDEF-USE-MSG2-NEXT:      numeric-expression.txt:[[#@LINE-5]]:40: error: undefined variable: UNDEFVAR2
+UNDEF-USE-MSG2-NEXT:      {{U}}NDEF-USE2-NOT: {{U}}NDEFVAR: {{\[\[#UNDEFVAR1\+UNDEFVAR2\]\]}}
+UNDEF-USE-MSG2-NEXT:              {{^}}                                       ^{{$}}
 
 ; Numeric expression with unsupported operator.
 RUN: %ProtectFileCheckOutput \
