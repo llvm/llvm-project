@@ -6022,6 +6022,10 @@ class SBFrame(object):
         r"""GetDescription(SBFrame self, SBStream description) -> bool"""
         return _lldb.SBFrame_GetDescription(self, description)
 
+    def GetLanguageSpecificData(self):
+        r"""GetLanguageSpecificData(SBFrame self) -> SBStructuredData"""
+        return _lldb.SBFrame_GetLanguageSpecificData(self)
+
     def __str__(self):
         r"""__str__(SBFrame self) -> std::string"""
         return _lldb.SBFrame___str__(self)

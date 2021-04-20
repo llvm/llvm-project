@@ -332,6 +332,9 @@ public:
 
   lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                   bool stop_others) override;
+
+  StructuredDataImpl *GetLanguageSpecificData(StackFrame &frame) override;
+
   /// If you are at the initial instruction of the frame passed in,
   /// then this will examine the call arguments, and if any of them is
   /// a function pointer, this will push the address of the function

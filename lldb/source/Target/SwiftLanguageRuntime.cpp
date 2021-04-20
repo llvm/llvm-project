@@ -1038,6 +1038,22 @@ bool SwiftLanguageRuntimeImpl::GetObjectDescription(Stream &str,
   return GetObjectDescription_ObjectCopy(this, m_process, str, object);
 }
 
+StructuredDataImpl *
+SwiftLanguageRuntime::GetLanguageSpecificData(StackFrame &frame) {
+  auto sc = frame.GetSymbolContext(eSymbolContextFunction);
+  if (!sc.function)
+    return nullptr;
+
+  auto dict_sp = std::make_shared<StructuredData::Dictionary>();
+  auto symbol = sc.function->GetMangled().GetMangledName().GetStringRef();
+  auto is_async = SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(symbol);
+  dict_sp->AddBooleanItem("IsSwiftAsyncFunction", is_async);
+
+  auto *data = new StructuredDataImpl;
+  data->SetObjectSP(dict_sp);
+  return data;
+}
+
 void SwiftLanguageRuntime::FindFunctionPointersInCall(
     StackFrame &frame, std::vector<Address> &addresses, bool debug_only,
     bool resolve_thunks) {
