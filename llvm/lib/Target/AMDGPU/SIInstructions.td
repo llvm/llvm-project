@@ -492,6 +492,11 @@ def SI_TCRETURN : SPseudoInstSI <(outs),
   let isConvergent = 1;
 }
 
+// Handle selecting indirect tail calls
+def : GCNPat<
+  (AMDGPUtc_return i64:$src0, (i64 0), (i32 timm:$fpdiff)),
+  (SI_TCRETURN SReg_64:$src0, (i64 0), i32imm:$fpdiff)
+>;
 
 def ADJCALLSTACKUP : SPseudoInstSI<
   (outs), (ins i32imm:$amt0, i32imm:$amt1),
