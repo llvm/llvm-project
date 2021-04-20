@@ -54,6 +54,14 @@ public:
   unsigned getOImmOpValue(const MCInst &MI, unsigned Idx,
                           SmallVectorImpl<MCFixup> &Fixups,
                           const MCSubtargetInfo &STI) const;
+
+  unsigned getImmShiftOpValue(const MCInst &MI, unsigned Idx,
+                              SmallVectorImpl<MCFixup> &Fixups,
+                              const MCSubtargetInfo &STI) const {
+    const MCOperand &MO = MI.getOperand(Idx);
+    assert(MO.isImm() && "Unexpected MO type.");
+    return 1 << MO.getImm();
+  }
 };
 
 } // namespace llvm
