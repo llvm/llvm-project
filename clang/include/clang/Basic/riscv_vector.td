@@ -844,6 +844,23 @@ multiclass RVVPseudoVNotBuiltin<string IR, string type_range> {
   }
 }
 
+multiclass RVVPseudoMaskBuiltin<string IR, string type_range> {
+  let Name = NAME,
+      IRName = IR,
+      HasMask = false,
+      ManualCodegen = [{
+      {
+        // op1, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[1]->getType()};
+        Ops.insert(Ops.begin() + 1, Ops[0]);
+        break;
+      }
+      }] in {
+        def : RVVBuiltin<"m", "mm", type_range>;
+  }
+}
+
 // 6. Configuration-Setting Instructions
 // 6.1. vsetvli/vsetvl instructions
 let HasVL = false,
@@ -1300,6 +1317,8 @@ def vmxnor   : RVVMaskBinBuiltin;
 // pseudoinstructions
 def vmclr    : RVVMaskNullaryBuiltin;
 def vmset    : RVVMaskNullaryBuiltin;
+defm vmmv_m : RVVPseudoMaskBuiltin<"vmand", "c">;
+defm vmnot_m : RVVPseudoMaskBuiltin<"vmnand", "c">;
 
 // 16.2. Vector mask population count vpopc
 def vpopc : RVVMaskOp0Builtin<"um">;
