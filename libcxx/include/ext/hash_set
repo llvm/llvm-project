@@ -656,4 +656,4 @@ operator!=(const hash_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
 
 } // __gnu_cxx
 
-#endif  // _LIBCPP_HASH_SET
+#endif // _LIBCPP_HASH_SET

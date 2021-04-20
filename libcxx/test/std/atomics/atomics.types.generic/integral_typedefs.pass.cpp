@@ -63,7 +63,7 @@ int main(int, char**)
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     static_assert((std::is_same<std::atomic<char16_t>, std::atomic_char16_t>::value), "");
     static_assert((std::is_same<std::atomic<char32_t>, std::atomic_char32_t>::value), "");
-#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
 
 //  Added by LWG 2441
     static_assert((std::is_same<std::atomic<intptr_t>,  std::atomic_intptr_t>::value), "");

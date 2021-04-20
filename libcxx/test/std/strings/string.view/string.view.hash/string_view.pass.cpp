@@ -64,7 +64,7 @@ int main(int, char**)
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     test<std::u16string_view>();
     test<std::u32string_view>();
-#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
     test<std::wstring_view>();
 
   return 0;

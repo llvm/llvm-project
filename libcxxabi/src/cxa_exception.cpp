@@ -384,7 +384,7 @@ asm (
     "	bl	abort\n"
     "	.popsection"
 );
-#endif  // defined(_LIBCXXABI_ARM_EHABI)
+#endif // defined(_LIBCXXABI_ARM_EHABI)
 
 /*
 This routine can catch foreign or native exceptions.  If native, the exception

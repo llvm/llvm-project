@@ -1766,7 +1766,7 @@ template <class _T1, class _T2> struct _LIBCPP_TEMPLATE_VIS is_convertible
     static const size_t __complete_check2 = __is_convertible_check<_T2>::__v;
 };
 
-#endif  // __has_feature(is_convertible_to)
+#endif // __has_feature(is_convertible_to)
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _From, class _To>
@@ -1829,7 +1829,7 @@ template <class _Tp> struct __libcpp_empty<_Tp, false> : public false_type {};
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_empty : public __libcpp_empty<_Tp> {};
 
-#endif  // __has_feature(is_empty)
+#endif // __has_feature(is_empty)
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp>
@@ -2677,7 +2677,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_assignable_v
     = is_assignable<_Tp, _Arg>::value;
 #endif
 
-#endif  // __has_keyword(__is_assignable)
+#endif // __has_keyword(__is_assignable)
 
 // is_copy_assignable
 
@@ -3017,7 +3017,7 @@ struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param..., ...) const volatil
     typedef _Rp (_FnType) (_Param..., ...);
 };
 
-#endif  // __has_feature(cxx_reference_qualified_functions) || defined(_LIBCPP_COMPILER_GCC)
+#endif // __has_feature(cxx_reference_qualified_functions) || defined(_LIBCPP_COMPILER_GCC)
 
 
 template <class _Rp, class _Class>
@@ -3294,7 +3294,7 @@ struct _LIBCPP_TEMPLATE_VIS is_trivially_constructible<_Tp, _Tp&>
 {
 };
 
-#endif  // !__has_feature(is_trivially_constructible)
+#endif // !__has_feature(is_trivially_constructible)
 
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
@@ -3371,7 +3371,7 @@ template <class _Tp>
 struct is_trivially_assignable<_Tp&, _Tp&&>
     : integral_constant<bool, is_scalar<_Tp>::value> {};
 
-#endif  // !__has_feature(is_trivially_assignable)
+#endif // !__has_feature(is_trivially_assignable)
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp, class _Arg>
@@ -3481,7 +3481,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp[_Ns]>
 {
 };
 
-#endif  // _LIBCPP_HAS_NO_NOEXCEPT
+#endif // _LIBCPP_HAS_NO_NOEXCEPT
 
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
@@ -3556,7 +3556,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable
 {
 };
 
-#endif  // _LIBCPP_HAS_NO_NOEXCEPT
+#endif // _LIBCPP_HAS_NO_NOEXCEPT
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp, class _Arg>
@@ -4088,7 +4088,7 @@ class _LIBCPP_TEMPLATE_VIS result_of<_Fn(_Args...)>
 {
 };
 
-#endif  // C++03
+#endif // C++03
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using result_of_t = typename result_of<_Tp>::type;
@@ -4415,7 +4415,7 @@ struct __has_operator_addressof
                                   || __has_operator_addressof_free_imp<_Tp>::value>
 {};
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 // is_scoped_enum [meta.unary.prop]
 
@@ -4455,7 +4455,7 @@ struct negation : _Not<_Tp> {};
 template<class _Tp>
 _LIBCPP_INLINE_VAR constexpr bool negation_v
     = negation<_Tp>::value;
-#endif  // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER > 14
 
 // These traits are used in __tree and __hash_table
 struct __extract_key_fail_tag {};
@@ -4519,4 +4519,4 @@ namespace std  // purposefully not versioned
 }
 #endif
 
-#endif  // _LIBCPP_TYPE_TRAITS
+#endif // _LIBCPP_TYPE_TRAITS

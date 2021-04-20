@@ -30,7 +30,7 @@ int main(int, char**)
     static_assert((std::is_same<std::char_traits<char32_t>::off_type, std::streamoff>::value), "");
     static_assert((std::is_same<std::char_traits<char32_t>::pos_type, std::u32streampos>::value), "");
     static_assert((std::is_same<std::char_traits<char32_t>::state_type, std::mbstate_t>::value), "");
-#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
 
   return 0;
 }

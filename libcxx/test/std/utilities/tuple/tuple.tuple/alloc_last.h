@@ -54,4 +54,4 @@ struct alloc_last
 
 bool alloc_last::allocator_constructed = false;
 
-#endif  // ALLOC_LAST_H
+#endif // ALLOC_LAST_H

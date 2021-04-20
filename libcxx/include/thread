@@ -346,7 +346,7 @@ thread::thread(_Fp __f)
         __throw_system_error(__ec, "thread constructor failed");
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 inline _LIBCPP_INLINE_VISIBILITY
 void swap(thread& __x, thread& __y) _NOEXCEPT {__x.swap(__y);}
@@ -410,4 +410,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif  // _LIBCPP_THREAD
+#endif // _LIBCPP_THREAD

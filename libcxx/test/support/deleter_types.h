@@ -442,4 +442,4 @@ private:
 
 #endif // TEST_STD_VER >= 11
 
-#endif  // SUPPORT_DELETER_TYPES_H
+#endif // SUPPORT_DELETER_TYPES_H

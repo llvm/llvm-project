@@ -444,7 +444,7 @@ __split_buffer<_Tp, _Allocator>::shrink_to_fit() _NOEXCEPT
 #ifndef _LIBCPP_NO_EXCEPTIONS
         try
         {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
             __split_buffer<value_type, __alloc_rr&> __t(size(), 0, __alloc());
             __t.__construct_at_end(move_iterator<pointer>(__begin_),
                                    move_iterator<pointer>(__end_));
@@ -458,7 +458,7 @@ __split_buffer<_Tp, _Allocator>::shrink_to_fit() _NOEXCEPT
         catch (...)
         {
         }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     }
 }
 
@@ -625,4 +625,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif  // _LIBCPP_SPLIT_BUFFER
+#endif // _LIBCPP_SPLIT_BUFFER
