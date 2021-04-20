@@ -255,7 +255,7 @@ static const CallInst *findStackProtectorIntrinsic(Function &F) {
     for (const Instruction &I : BB)
       if (const auto *II = dyn_cast<IntrinsicInst>(&I))
         if (II->getIntrinsicID() == Intrinsic::stackprotector)
-          return cast<CallInst>(II);
+          return II;
   return nullptr;
 }
 
