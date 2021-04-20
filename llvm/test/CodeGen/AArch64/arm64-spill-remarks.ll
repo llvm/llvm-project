@@ -17,25 +17,25 @@
 ; then reloaded.
 
 ; (loop3:)
-; REMARK: remark: /tmp/kk.c:3:20: 1 spills 1.000000e+02 total spills cost 1 reloads 1.000000e+02 total reloads cost generated in loop{{$}}
+; REMARK: remark: /tmp/kk.c:3:20: 1 spills 1 reloads generated in loop{{$}}
 ; (loop2:)
-; REMARK: remark: /tmp/kk.c:2:20: 1 spills 1.000000e+04 total spills cost 1 reloads 1.000000e+04 total reloads cost generated in loop{{$}}
+; REMARK: remark: /tmp/kk.c:2:20: 1 spills 1 reloads generated in loop{{$}}
 ; (loop:)
-; REMARK: remark: /tmp/kk.c:1:20: 2 spills 1.010000e+04 total spills cost 2 reloads 1.010000e+04 total reloads cost generated in loop{{$}}
+; REMARK: remark: /tmp/kk.c:1:20: 2 spills 2 reloads generated in loop{{$}}
 ; (func:)
-; REMARK: remark: /tmp/kk.c:1:1: 3 spills 1.020000e+04 total spills cost 3 reloads 1.020000e+04 total reloads cost generated in function
+; REMARK: remark: /tmp/kk.c:1:1: 3 spills 3 reloads generated in function{{$}}
 
 ; (loop3:)
-; HOTNESS: remark: /tmp/kk.c:3:20: 1 spills 1.000000e+02 total spills cost 1 reloads 1.000000e+02 total reloads cost generated in loop (hotness: 300)
+; HOTNESS: remark: /tmp/kk.c:3:20: 1 spills 1 reloads generated in loop (hotness: 300)
 ; (loop2:)
-; HOTNESS: remark: /tmp/kk.c:2:20: 1 spills 1.000000e+04 total spills cost 1 reloads 1.000000e+04 total reloads cost generated in loop (hotness: 30000)
+; HOTNESS: remark: /tmp/kk.c:2:20: 1 spills 1 reloads generated in loop (hotness: 30000)
 ; (loop:)
-; HOTNESS: remark: /tmp/kk.c:1:20: 2 spills 1.010000e+04 total spills cost 2 reloads 1.010000e+04 total reloads cost generated in loop (hotness: 300)
+; HOTNESS: remark: /tmp/kk.c:1:20: 2 spills 2 reloads generated in loop (hotness: 300)
 
 ; NO_REMARK-NOT: remark
 
 ; THRESHOLD-NOT: (hotness: 300)
-; THRESHOLD: remark: /tmp/kk.c:2:20: 1 spills 1.000000e+04 total spills cost 1 reloads 1.000000e+04 total reloads cost generated in loop (hotness: 30000)
+; THRESHOLD: remark: /tmp/kk.c:2:20: 1 spills 1 reloads generated in loop (hotness: 30000)
 
 ; YAML: --- !Missed
 ; YAML: Pass:            regalloc
@@ -46,12 +46,8 @@
 ; YAML: Args:
 ; YAML:   - NumSpills:       '1'
 ; YAML:   - String:          ' spills '
-; YAML:   - TotalSpillsCost: '1.000000e+02'
-; YAML:   - String:          ' total spills cost '
 ; YAML:   - NumReloads:      '1'
 ; YAML:   - String:          ' reloads '
-; YAML:   - TotalReloadsCost: '1.000000e+02'
-; YAML:   - String:          ' total reloads cost '
 ; YAML:   - String:          generated in loop
 ; YAML: ...
 ; YAML: --- !Missed
@@ -63,12 +59,8 @@
 ; YAML: Args:
 ; YAML:   - NumSpills:       '1'
 ; YAML:   - String:          ' spills '
-; YAML:   - TotalSpillsCost: '1.000000e+04'
-; YAML:   - String:          ' total spills cost '
 ; YAML:   - NumReloads:      '1'
 ; YAML:   - String:          ' reloads '
-; YAML:   - TotalReloadsCost: '1.000000e+04'
-; YAML:   - String:          ' total reloads cost '
 ; YAML:   - String:          generated in loop
 ; YAML: ...
 ; YAML: --- !Missed
@@ -80,12 +72,8 @@
 ; YAML: Args:
 ; YAML:   - NumSpills:       '2'
 ; YAML:   - String:          ' spills '
-; YAML:   - TotalSpillsCost: '1.010000e+04'
-; YAML:   - String:          ' total spills cost '
 ; YAML:   - NumReloads:      '2'
 ; YAML:   - String:          ' reloads '
-; YAML:   - TotalReloadsCost: '1.010000e+04'
-; YAML:   - String:          ' total reloads cost '
 ; YAML:   - String:          generated in loop
 ; YAML: ...
 ; YAML: --- !Missed
@@ -97,12 +85,8 @@
 ; YAML: Args:
 ; YAML:   - NumSpills:       '3'
 ; YAML:   - String:          ' spills '
-; YAML:   - TotalSpillsCost: '1.020000e+04'
-; YAML:   - String:          ' total spills cost '
 ; YAML:   - NumReloads:      '3'
 ; YAML:   - String:          ' reloads '
-; YAML:   - TotalReloadsCost: '1.020000e+04'
-; YAML:   - String:          ' total reloads cost '
 ; YAML:   - String:          generated in function
 ; YAML: ...
 
@@ -116,12 +100,8 @@
 ; THRESHOLD_YAML: Args:
 ; THRESHOLD_YAML:   - NumSpills:       '1'
 ; THRESHOLD_YAML:   - String:          ' spills '
-; THRESHOLD_YAML:   - TotalSpillsCost: '1.000000e+04'
-; THRESHOLD_YAML:   - String:          ' total spills cost '
 ; THRESHOLD_YAML:   - NumReloads:      '1'
 ; THRESHOLD_YAML:   - String:          ' reloads '
-; THRESHOLD_YAML:   - TotalReloadsCost: '1.000000e+04'
-; THRESHOLD_YAML:   - String:          ' total reloads cost '
 ; THRESHOLD_YAML:   - String:          generated in loop
 ; THRESHOLD_YAML: ...
 
