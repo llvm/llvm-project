@@ -33,7 +33,7 @@ void do_insert_hint_const_lvalue_test()
     assert(c.size() == 1);
     assert(*r == 3.5);
 
-    r = c.insert(c.end(), v1);
+    r = c.insert(r, v1);
     assert(c.size() == 2);
     assert(*r == 3.5);
 
