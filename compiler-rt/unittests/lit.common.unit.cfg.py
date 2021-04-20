@@ -8,9 +8,25 @@ import os
 
 import lit.formats
 
+import shlex
+
+# Copied from libcxx's config.py
+def get_lit_conf(name, default=None):
+    # Allow overriding on the command line using --param=<name>=<val>
+    val = lit_config.params.get(name, None)
+    if val is None:
+        val = getattr(config, name, None)
+        if val is None:
+            val = default
+    return val
+
+emulator = get_lit_conf('emulator', None)
+if emulator:
+  emulator = shlex.split(emulator)
+
 # Setup test format
 llvm_build_mode = getattr(config, "llvm_build_mode", "Debug")
-config.test_format = lit.formats.GoogleTest(llvm_build_mode, "Test")
+config.test_format = lit.formats.GoogleTest(llvm_build_mode, "Test", emulator)
 
 # Setup test suffixes.
 config.suffixes = []
