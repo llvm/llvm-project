@@ -1,8 +1,8 @@
-; RUN: llc < %s -mtriple=aarch64-windows -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,DAGISEL
-; RUN: llc < %s -mtriple=aarch64-windows -verify-machineinstrs -O0 -fast-isel | FileCheck %s --check-prefixes=CHECK,O0
-; RUN: llc < %s -mtriple=aarch64-windows -verify-machineinstrs -O0 -global-isel | FileCheck %s --check-prefixes=CHECK,O0
+; RUN: llc < %s -mtriple=aarch64-linux -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,DAGISEL
+; RUN: llc < %s -mtriple=aarch64-linux -verify-machineinstrs -O0 -fast-isel | FileCheck %s --check-prefixes=CHECK,O0
+; RUN: llc < %s -mtriple=aarch64-linux -verify-machineinstrs -O0 -global-isel | FileCheck %s --check-prefixes=CHECK,O0
 
-define void @float_va_fn(float %a, i32 %b, ...) nounwind {
+define win64cc void @float_va_fn(float %a, i32 %b, ...) nounwind {
 entry:
 ; CHECK-LABEL: float_va_fn:
 ; O0: str x7, [sp, #72]
@@ -15,10 +15,10 @@ entry:
 ; O0: add x8, sp, #32
 ; O0: str x8, [sp, #8]
 ; O0: ldr x0, [sp, #8]
-; DAGISEL: add x0, sp, #16
-; DAGISEL: stp x2, x3, [sp, #16]
-; DAGISEL: stp x4, x5, [sp, #32]
-; DAGISEL: stp x6, x7, [sp, #48]
+; DAGISEL: add x0, sp, #32
+; DAGISEL: stp x2, x3, [sp, #32]
+; DAGISEL: stp x4, x5, [sp, #48]
+; DAGISEL: stp x6, x7, [sp, #64]
 ; CHECK: bl f_va_list
   %ap = alloca i8*, align 8
   %0 = bitcast i8** %ap to i8*
@@ -37,7 +37,7 @@ declare void @f_va_list(float, i8*)
 declare void @llvm.va_end(i8*)
 declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
 
-define void @double_va_fn(double %a, i32 %b, ...) nounwind {
+define win64cc void @double_va_fn(double %a, i32 %b, ...) nounwind {
 entry:
 ; CHECK-LABEL: double_va_fn:
 ; O0: str x7, [sp, #72]
@@ -50,10 +50,10 @@ entry:
 ; O0: add x8, sp, #32
 ; O0: str x8, [sp, #8]
 ; O0: ldr x0, [sp, #8]
-; DAGISEL: add x0, sp, #16
-; DAGISEL: stp x2, x3, [sp, #16]
-; DAGISEL: stp x4, x5, [sp, #32]
-; DAGISEL: stp x6, x7, [sp, #48]
+; DAGISEL: add x0, sp, #32
+; DAGISEL: stp x2, x3, [sp, #32]
+; DAGISEL: stp x4, x5, [sp, #48]
+; DAGISEL: stp x6, x7, [sp, #64]
 ; CHECK: bl d_va_list
   %ap = alloca i8*, align 8
   %0 = bitcast i8** %ap to i8*
@@ -81,12 +81,12 @@ entry:
 ; GISEL: fmov d0, #3.00000000
 ; GISEL: fmov x2, d0
 ; CHECK: mov w3, #4
-; CHECK: b other_f_va_fn
-  tail call void (float, i32, ...) @other_f_va_fn(float 1.000000e+00, i32 2, double 3.000000e+00, i32 4)
+; CHECK: bl other_f_va_fn
+  tail call win64cc void (float, i32, ...) @other_f_va_fn(float 1.000000e+00, i32 2, double 3.000000e+00, i32 4)
   ret void
 }
 
-declare void @other_f_va_fn(float, i32, ...)
+declare win64cc void @other_f_va_fn(float, i32, ...)
 
 define void @call_d_va() nounwind {
 entry:
@@ -100,12 +100,12 @@ entry:
 ; FASTISEL: mov x2, #4613937818241073152
 ; GISEL: fmov d0, #3.00000000
 ; CHECK: mov w3, #4
-; CHECK: b other_d_va_fn
-  tail call void (double, i32, ...) @other_d_va_fn(double 1.000000e+00, i32 2, double 3.000000e+00, i32 4)
+; CHECK: bl other_d_va_fn
+  tail call win64cc void (double, i32, ...) @other_d_va_fn(double 1.000000e+00, i32 2, double 3.000000e+00, i32 4)
   ret void
 }
 
-declare void @other_d_va_fn(double, i32, ...)
+declare win64cc void @other_d_va_fn(double, i32, ...)
 
 define void @call_d_non_va() nounwind {
 entry:
@@ -114,9 +114,9 @@ entry:
 ; CHECK-DAG: fmov d1, #3.00000000
 ; CHECK-DAG: mov w0, #2
 ; CHECK-DAG: mov w1, #4
-; CHECK: b other_d_non_va_fn
-  tail call void (double, i32, double, i32) @other_d_non_va_fn(double 1.000000e+00, i32 2, double 3.000000e+00, i32 4)
+; CHECK: bl other_d_non_va_fn
+  tail call win64cc void (double, i32, double, i32) @other_d_non_va_fn(double 1.000000e+00, i32 2, double 3.000000e+00, i32 4)
   ret void
 }
 
-declare void @other_d_non_va_fn(double, i32, double, i32)
+declare win64cc void @other_d_non_va_fn(double, i32, double, i32)
