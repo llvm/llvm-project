@@ -1,5 +1,5 @@
-; RUN: opt -S -pass-remarks=openmp-opt -attributor -openmpopt -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -S -pass-remarks=openmp-opt -passes='attributor,cgscc(openmpopt)' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -S -pass-remarks=openmp-opt -attributor -openmp-opt-cgscc -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -S -pass-remarks=openmp-opt -passes='attributor,cgscc(openmp-opt-cgscc)' -disable-output < %s 2>&1 | FileCheck %s
 ; ModuleID = 'parallel_deletion_remarks.ll'
 source_filename = "parallel_deletion_remarks.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

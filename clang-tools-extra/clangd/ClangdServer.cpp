@@ -549,7 +549,8 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
 // May generate several candidate selections, due to SelectionTree ambiguity.
 // vector of pointers because GCC doesn't like non-copyable Selection.
 static llvm::Expected<std::vector<std::unique_ptr<Tweak::Selection>>>
-tweakSelection(const Range &Sel, const InputsAndAST &AST) {
+tweakSelection(const Range &Sel, const InputsAndAST &AST,
+               llvm::vfs::FileSystem *FS) {
   auto Begin = positionToOffset(AST.Inputs.Contents, Sel.start);
   if (!Begin)
     return Begin.takeError();
@@ -561,7 +562,7 @@ tweakSelection(const Range &Sel, const InputsAndAST &AST) {
       AST.AST.getASTContext(), AST.AST.getTokens(), *Begin, *End,
       [&](SelectionTree T) {
         Result.push_back(std::make_unique<Tweak::Selection>(
-            AST.Inputs.Index, AST.AST, *Begin, *End, std::move(T)));
+            AST.Inputs.Index, AST.AST, *Begin, *End, std::move(T), FS));
         return false;
       });
   assert(!Result.empty() && "Expected at least one SelectionTree");
@@ -580,7 +581,7 @@ void ClangdServer::enumerateTweaks(
                     Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
-    auto Selections = tweakSelection(Sel, *InpAST);
+    auto Selections = tweakSelection(Sel, *InpAST, /*FS=*/nullptr);
     if (!Selections)
       return CB(Selections.takeError());
     std::vector<TweakRef> Res;
@@ -618,7 +619,8 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
                  this](Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
-    auto Selections = tweakSelection(Sel, *InpAST);
+    auto FS = DirtyFS->view(llvm::None);
+    auto Selections = tweakSelection(Sel, *InpAST, FS.get());
     if (!Selections)
       return CB(Selections.takeError());
     llvm::Optional<llvm::Expected<Tweak::Effect>> Effect;

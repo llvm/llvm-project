@@ -495,7 +495,7 @@ struct OpenMPOpt {
   }
 
   /// Run all OpenMP optimizations on the underlying SCC/ModuleSlice.
-  bool run() {
+  bool run(bool IsModulePass) {
     if (SCC.empty())
       return false;
 
@@ -505,28 +505,31 @@ struct OpenMPOpt {
                       << " functions in a slice with "
                       << OMPInfoCache.ModuleSlice.size() << " functions\n");
 
-    if (PrintICVValues)
-      printICVs();
-    if (PrintOpenMPKernels)
-      printKernels();
+    if (IsModulePass) {
+      if (remarksEnabled())
+        analysisGlobalization();
+    } else {
+      if (PrintICVValues)
+        printICVs();
+      if (PrintOpenMPKernels)
+        printKernels();
 
-    Changed |= rewriteDeviceCodeStateMachine();
+      Changed |= rewriteDeviceCodeStateMachine();
 
-    Changed |= runAttributor();
+      Changed |= runAttributor();
 
-    // Recollect uses, in case Attributor deleted any.
-    OMPInfoCache.recollectUses();
+      // Recollect uses, in case Attributor deleted any.
+      OMPInfoCache.recollectUses();
 
-    Changed |= deleteParallelRegions();
-    if (HideMemoryTransferLatency)
-      Changed |= hideMemTransfersLatency();
-    if (remarksEnabled())
-      analysisGlobalization();
-    Changed |= deduplicateRuntimeCalls();
-    if (EnableParallelRegionMerging) {
-      if (mergeParallelRegions()) {
-        deduplicateRuntimeCalls();
-        Changed = true;
+      Changed |= deleteParallelRegions();
+      if (HideMemoryTransferLatency)
+        Changed |= hideMemTransfersLatency();
+      Changed |= deduplicateRuntimeCalls();
+      if (EnableParallelRegionMerging) {
+        if (mergeParallelRegions()) {
+          deduplicateRuntimeCalls();
+          Changed = true;
+        }
       }
     }
 
@@ -967,6 +970,7 @@ private:
 
         for (auto &MergableCIs : MergableCIsVector)
           Merge(MergableCIs, BB);
+        MergableCIsVector.clear();
       }
     }
 
@@ -2263,9 +2267,52 @@ AAICVTracker &AAICVTracker::createForPosition(const IRPosition &IRP,
   return *AA;
 }
 
-PreservedAnalyses OpenMPOptPass::run(LazyCallGraph::SCC &C,
-                                     CGSCCAnalysisManager &AM,
-                                     LazyCallGraph &CG, CGSCCUpdateResult &UR) {
+PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
+  if (!containsOpenMP(M, OMPInModule))
+    return PreservedAnalyses::all();
+
+  if (DisableOpenMPOptimizations)
+    return PreservedAnalyses::all();
+
+  // Look at every function definition in the Module.
+  SmallVector<Function *, 16> SCC;
+  for (Function &Fn : M)
+    if (!Fn.isDeclaration())
+      SCC.push_back(&Fn);
+
+  if (SCC.empty())
+    return PreservedAnalyses::all();
+
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  AnalysisGetter AG(FAM);
+
+  auto OREGetter = [&FAM](Function *F) -> OptimizationRemarkEmitter & {
+    return FAM.getResult<OptimizationRemarkEmitterAnalysis>(*F);
+  };
+
+  BumpPtrAllocator Allocator;
+  CallGraphUpdater CGUpdater;
+
+  SetVector<Function *> Functions(SCC.begin(), SCC.end());
+  OMPInformationCache InfoCache(M, AG, Allocator, /*CGSCC*/ Functions,
+                                OMPInModule.getKernels());
+
+  Attributor A(Functions, InfoCache, CGUpdater);
+
+  OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
+  bool Changed = OMPOpt.run(true);
+  if (Changed)
+    return PreservedAnalyses::none();
+
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
+                                          CGSCCAnalysisManager &AM,
+                                          LazyCallGraph &CG,
+                                          CGSCCUpdateResult &UR) {
   if (!containsOpenMP(*C.begin()->getFunction().getParent(), OMPInModule))
     return PreservedAnalyses::all();
 
@@ -2299,33 +2346,32 @@ PreservedAnalyses OpenMPOptPass::run(LazyCallGraph::SCC &C,
     return FAM.getResult<OptimizationRemarkEmitterAnalysis>(*F);
   };
 
+  BumpPtrAllocator Allocator;
   CallGraphUpdater CGUpdater;
   CGUpdater.initialize(CG, C, AM, UR);
 
   SetVector<Function *> Functions(SCC.begin(), SCC.end());
-  BumpPtrAllocator Allocator;
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
                                 /*CGSCC*/ Functions, OMPInModule.getKernels());
 
   Attributor A(Functions, InfoCache, CGUpdater);
 
   OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
-  bool Changed = OMPOpt.run();
+  bool Changed = OMPOpt.run(false);
   if (Changed)
     return PreservedAnalyses::none();
 
   return PreservedAnalyses::all();
 }
-
 namespace {
 
-struct OpenMPOptLegacyPass : public CallGraphSCCPass {
+struct OpenMPOptCGSCCLegacyPass : public CallGraphSCCPass {
   CallGraphUpdater CGUpdater;
   OpenMPInModule OMPInModule;
   static char ID;
 
-  OpenMPOptLegacyPass() : CallGraphSCCPass(ID) {
-    initializeOpenMPOptLegacyPassPass(*PassRegistry::getPassRegistry());
+  OpenMPOptCGSCCLegacyPass() : CallGraphSCCPass(ID) {
+    initializeOpenMPOptCGSCCLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -2386,7 +2432,7 @@ struct OpenMPOptLegacyPass : public CallGraphSCCPass {
     Attributor A(Functions, InfoCache, CGUpdater);
 
     OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
-    return OMPOpt.run();
+    return OMPOpt.run(false);
   }
 
   bool doFinalization(CallGraph &CG) override { return CGUpdater.finalize(); }
@@ -2450,12 +2496,14 @@ bool llvm::omp::containsOpenMP(Module &M, OpenMPInModule &OMPInModule) {
   return OMPInModule = false;
 }
 
-char OpenMPOptLegacyPass::ID = 0;
+char OpenMPOptCGSCCLegacyPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(OpenMPOptLegacyPass, "openmpopt",
+INITIALIZE_PASS_BEGIN(OpenMPOptCGSCCLegacyPass, "openmp-opt-cgscc",
                       "OpenMP specific optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
-INITIALIZE_PASS_END(OpenMPOptLegacyPass, "openmpopt",
+INITIALIZE_PASS_END(OpenMPOptCGSCCLegacyPass, "openmp-opt-cgscc",
                     "OpenMP specific optimizations", false, false)
 
-Pass *llvm::createOpenMPOptLegacyPass() { return new OpenMPOptLegacyPass(); }
+Pass *llvm::createOpenMPOptCGSCCLegacyPass() {
+  return new OpenMPOptCGSCCLegacyPass();
+}

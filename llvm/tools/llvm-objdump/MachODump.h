@@ -48,7 +48,7 @@ extern bool LazyBind;
 extern bool LinkOptHints;
 extern bool NoLeadingHeaders;
 extern bool NoSymbolicOperands;
-extern bool NonVerbose;
+extern bool Verbose;
 extern bool ObjcMetaData;
 extern std::string DisSymName;
 extern bool Rebase;

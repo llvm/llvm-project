@@ -305,7 +305,7 @@ struct __invoke_return
 
 #include <__functional_base_03>
 
-#endif  // !defined(_LIBCPP_CXX03_LANG)
+#endif // !defined(_LIBCPP_CXX03_LANG)
 
 
 template <class _Ret, bool = is_void<_Ret>::value>
@@ -663,7 +663,7 @@ void __user_alloc_construct_impl (integral_constant<int, 2>, _Tp *__storage, con
     new (__storage) _Tp (_VSTD::forward<_Args>(__args)..., __a);
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 14
 
@@ -679,4 +679,4 @@ invoke(_Fn&& __f, _Args&&... __args)
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_FUNCTIONAL_BASE
+#endif // _LIBCPP_FUNCTIONAL_BASE

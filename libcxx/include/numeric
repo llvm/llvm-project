@@ -632,4 +632,4 @@ _LIBCPP_POP_MACROS
 #   include <__pstl_numeric>
 #endif
 
-#endif  // _LIBCPP_NUMERIC
+#endif // _LIBCPP_NUMERIC

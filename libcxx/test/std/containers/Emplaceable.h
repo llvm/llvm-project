@@ -53,5 +53,5 @@ struct hash<Emplaceable>
 
 }
 
-#endif  // TEST_STD_VER >= 11
-#endif  // EMPLACEABLE_H
+#endif // TEST_STD_VER >= 11
+#endif // EMPLACEABLE_H

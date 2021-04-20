@@ -35677,6 +35677,15 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       }
     }
 
+    // See if this is a blend with zero - in which case check if the zero'd
+    // elements are already zero.
+    if (isSequentialOrUndefOrZeroInRange(Mask, 0, NumMaskElts, 0)) {
+      assert(!KnownZero.isNullValue() && "Shuffle has no zero elements");
+      SDValue NewV1 = CanonicalizeShuffleInput(MaskVT, V1);
+      if (DAG.MaskedElementsAreZero(NewV1, KnownZero))
+        return DAG.getBitcast(RootVT, NewV1);
+    }
+
     SDValue NewV1 = V1; // Save operand in case early exit happens.
     if (matchUnaryShuffle(MaskVT, Mask, AllowFloatDomain, AllowIntDomain, NewV1,
                           DL, DAG, Subtarget, Shuffle, ShuffleSrcVT,

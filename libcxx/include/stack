@@ -148,7 +148,7 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     explicit stack(container_type&& __c) : c(_VSTD::move(__c)) {}
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
     explicit stack(const container_type& __c) : c(__c) {}
@@ -179,7 +179,7 @@ public:
         stack(stack&& __s, const _Alloc& __a,
               _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0)
             : c(_VSTD::move(__s.c), __a) {}
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     bool empty()     const      {return c.empty();}
@@ -205,7 +205,7 @@ public:
         void      emplace(_Args&&... __args)
         {        c.emplace_back(_VSTD::forward<_Args>(__args)...);}
 #endif
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
     void pop() {c.pop_back();}
@@ -310,4 +310,4 @@ struct _LIBCPP_TEMPLATE_VIS uses_allocator<stack<_Tp, _Container>, _Alloc>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_STACK
+#endif // _LIBCPP_STACK

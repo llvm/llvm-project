@@ -164,4 +164,4 @@ private:
 
 #endif // TEST_STD_VER > 17
 
-#endif  // TRANSPARENT_H
+#endif // TRANSPARENT_H
