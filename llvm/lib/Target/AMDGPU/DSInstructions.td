@@ -842,9 +842,6 @@ let AddedComplexity = 100 in {
 
 foreach vt = VReg_64.RegTypes in {
 defm : DSReadPat_mc <DS_READ_B64, vt, "load_align8_local">;
-}
-
-foreach vt = VReg_64.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B64, vt, "store_align8_local">;
 }
 
@@ -852,34 +849,25 @@ let SubtargetPredicate = isGFX7Plus in {
 
 foreach vt = VReg_96.RegTypes in {
 defm : DSReadPat_mc <DS_READ_B96, vt, "load_align16_local">;
-}
-
-foreach vt = VReg_96.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B96, vt, "store_align16_local">;
 }
 
 foreach vt = VReg_128.RegTypes in {
 defm : DSReadPat_mc <DS_READ_B128, vt, "load_align16_local">;
-}
-
-foreach vt = VReg_128.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_align16_local">;
 }
 
 let SubtargetPredicate = HasUnalignedAccessMode in {
 
-// FIXME: Is ds_read_b96/ds_write_b96 better choice in unaligned-access-mode?
+// FIXME: From performance point of view, is ds_read_b96/ds_write_b96 better choice
+// for unaligned accesses?
 foreach vt = VReg_96.RegTypes in {
 defm : DSReadPat_mc <DS_READ_B96, vt, "load_local">;
-}
-
-foreach vt = VReg_96.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B96, vt, "store_local">;
 }
 
-// For performance reasons, *do not* select ds_read_b128/ds_write_b128 in
-// unaligned-access-mode. At lower alignments ds_read2_b64/ds_write2_b64 is
-// always a better choice.
+// For performance reasons, *do not* select ds_read_b128/ds_write_b128 for unaligned
+// accesses.
 
 } // End SubtargetPredicate = HasUnalignedAccessMode
 
