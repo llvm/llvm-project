@@ -859,6 +859,13 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
     int RegScavFI = MFI.CreateStackObject(RegInfo->getSpillSize(*RC),
                                           RegInfo->getSpillAlign(*RC), false);
     RS->addScavengingFrameIndex(RegScavFI);
+    // For RVV, scalable stack offsets require up to two scratch registers to
+    // compute the final offset. Reserve an additional emergency spill slot.
+    if (RVVStackSize != 0) {
+      int RVVRegScavFI = MFI.CreateStackObject(
+          RegInfo->getSpillSize(*RC), RegInfo->getSpillAlign(*RC), false);
+      RS->addScavengingFrameIndex(RVVRegScavFI);
+    }
   }
 
   if (MFI.getCalleeSavedInfo().empty() || RVFI->useSaveRestoreLibCalls(MF)) {
