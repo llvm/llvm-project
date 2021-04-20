@@ -8,6 +8,8 @@
 
 // RUN: %clang -target arm64-apple-macos -arch arm64 -### -c %s 2>&1 | FileCheck %s
 
+// RUN: %clang -target arm64e-apple-macos            -### -c %s 2>&1 | FileCheck %s
+
 // RUN: %clang -target arm64-apple-macos -mcpu=apple-a11 -### -c %s 2>&1 | FileCheck --check-prefix=EXPLICIT-A11 %s
 // RUN: %clang -target arm64-apple-macos -mcpu=apple-a7  -### -c %s 2>&1 | FileCheck --check-prefix=EXPLICIT-A7 %s
 // RUN: %clang -target arm64-apple-macos -mcpu=apple-a14 -### -c %s 2>&1 | FileCheck --check-prefix=EXPLICIT-A14 %s
