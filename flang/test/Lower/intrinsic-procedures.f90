@@ -395,18 +395,18 @@ end function
 subroutine maxloc_test(arr,res)
   integer :: arr(:)
   integer :: res(:)
-! CHECK-DAG:  %[[c4:.*]] = constant 4 : index
+! CHECK-DAG: %[[c4:.*]] = constant 4 : index
 ! CHECK-DAG: %[[a0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK-DAG: %[[a1:.*]] = fir.absent !fir.box<i1>
-! CHECK-DAG:  %[[a6:.*]] = fir.convert %[[a0]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK-DAG:  %[[a7:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
-! CHECK-DAG:  %[[a8:.*]] = fir.convert %[[c4]] : (index) -> i32
-! CHECK-DAG:  %[[a10:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
+! CHECK-DAG: %[[a6:.*]] = fir.convert %[[a0]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK-DAG: %[[a7:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+! CHECK-DAG: %[[a8:.*]] = fir.convert %[[c4]] : (index) -> i32
+! CHECK-DAG: %[[a10:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
   res = maxloc(arr)
-! CHECK:  %{{.*}} = fir.call @_FortranAMaxloc(%[[a6]], %[[a7]], %[[a8]], %{{.*}}, %{{.*}}, %[[a10]], %false) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
-! CHECK-DAG:  %[[a12:.*]] = fir.load %[[a0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK-DAG:  %[[a14:.*]] = fir.box_addr %[[a12]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK-DAG:  fir.freemem %[[a14]] : !fir.heap<!fir.array<?xi32>>
+! CHECK: %{{.*}} = fir.call @_FortranAMaxloc(%[[a6]], %[[a7]], %[[a8]], %{{.*}}, %{{.*}}, %[[a10]], %false) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+! CHECK-DAG: %[[a12:.*]] = fir.load %[[a0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK-DAG: %[[a14:.*]] = fir.box_addr %[[a12]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK-DAG: fir.freemem %[[a14]] : !fir.heap<!fir.array<?xi32>>
 end subroutine
 
 ! MAXLOC
@@ -438,18 +438,18 @@ end subroutine
 subroutine minloc_test(arr,res)
   integer :: arr(:)
   integer :: res(:)
-! CHECK-DAG:  %[[c4:.*]] = constant 4 : index
+! CHECK-DAG: %[[c4:.*]] = constant 4 : index
 ! CHECK-DAG: %[[a0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK-DAG: %[[a1:.*]] = fir.absent !fir.box<i1>
-! CHECK-DAG:  %[[a6:.*]] = fir.convert %[[a0]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK-DAG:  %[[a7:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
-! CHECK-DAG:  %[[a8:.*]] = fir.convert %[[c4]] : (index) -> i32
-! CHECK-DAG:  %[[a10:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
+! CHECK-DAG: %[[a6:.*]] = fir.convert %[[a0]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK-DAG: %[[a7:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+! CHECK-DAG: %[[a8:.*]] = fir.convert %[[c4]] : (index) -> i32
+! CHECK-DAG: %[[a10:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
   res = minloc(arr)
-! CHECK:  %{{.*}} = fir.call @_FortranAMinloc(%[[a6]], %[[a7]], %[[a8]], %{{.*}}, %{{.*}}, %[[a10]], %false) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
-! CHECK-DAG:  %[[a12:.*]] = fir.load %[[a0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK-DAG:  %[[a14:.*]] = fir.box_addr %[[a12]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK-DAG:  fir.freemem %[[a14]] : !fir.heap<!fir.array<?xi32>>
+! CHECK: %{{.*}} = fir.call @_FortranAMinloc(%[[a6]], %[[a7]], %[[a8]], %{{.*}}, %{{.*}}, %[[a10]], %false) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+! CHECK-DAG: %[[a12:.*]] = fir.load %[[a0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK-DAG: %[[a14:.*]] = fir.box_addr %[[a12]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK-DAG: fir.freemem %[[a14]] : !fir.heap<!fir.array<?xi32>>
 end subroutine
 
 ! MINLOC
