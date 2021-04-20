@@ -14090,7 +14090,8 @@ PerformExtractEltToVMOVRRD(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   EVT VT = N->getValueType(0);
   SDLoc dl(N);
 
-  if (!DCI.isAfterLegalizeDAG() || VT != MVT::i32)
+  if (!DCI.isAfterLegalizeDAG() || VT != MVT::i32 ||
+      !DCI.DAG.getTargetLoweringInfo().isTypeLegal(MVT::f64))
     return SDValue();
 
   SDValue Ext = SDValue(N, 0);
