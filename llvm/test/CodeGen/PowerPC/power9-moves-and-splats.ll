@@ -247,16 +247,18 @@ define <4 x i32> @test14(<4 x i32> %a, i32* nocapture readonly %b) {
 ; CHECK-LABEL: test14:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz r3, 0(r5)
-; CHECK-NEXT:    mtvsrws v2, r3
+; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    addi r3, r3, 5
+; CHECK-NEXT:    xxspltw v2, vs0, 1
 ; CHECK-NEXT:    stw r3, 0(r5)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test14:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lwz r3, 0(r5)
-; CHECK-BE-NEXT:    mtvsrws v2, r3
+; CHECK-BE-NEXT:    mtfprwz f0, r3
 ; CHECK-BE-NEXT:    addi r3, r3, 5
+; CHECK-BE-NEXT:    xxspltw v2, vs0, 1
 ; CHECK-BE-NEXT:    stw r3, 0(r5)
 ; CHECK-BE-NEXT:    blr
 

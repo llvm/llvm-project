@@ -15,8 +15,7 @@ define <16 x i8> @test(i32* %s, i32* %t) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfiwzx f0, 0, r3
-; CHECK-NEXT:    xxsldwi vs0, f0, f0, 1
-; CHECK-NEXT:    xxspltw v2, vs0, 0
+; CHECK-NEXT:    xxspltw v2, vs0, 1
 ; CHECK-NEXT:    blr
 entry:
   %0 = bitcast i32* %s to <4 x i8>*
