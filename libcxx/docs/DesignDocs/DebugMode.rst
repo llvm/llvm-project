@@ -70,6 +70,12 @@ These checks are enabled when ``_LIBCPP_DEBUG`` is defined to either 0 or 1.
 
 The following checks are enabled by ``_LIBCPP_DEBUG``:
 
+  * Many algorithms, such as ``binary_search``, ``merge``, ``next_permutation``, and ``sort``,
+    wrap the user-provided comparator to assert that `!comp(y, x)` whenever
+    `comp(x, y)`. This can cause the user-provided comparator to be evaluated
+    up to twice as many times as it would be without ``_LIBCPP_DEBUG``, and
+    causes the library to violate some of the Standard's complexity clauses.
+
   * FIXME: Update this list
 
 Iterator Debugging Checks
