@@ -355,6 +355,15 @@ TEST_F(SortImportsTestJS, MergeImports) {
              "import {/* x */ X} from 'a';\n"
              "\n"
              "X + Y + Z;\n");
+
+  // do not merge imports and exports
+  verifySort("import {A} from 'foo';\n"
+             "export {B} from 'foo';",
+             "import {A} from 'foo';\n"
+             "export   {B} from 'foo';");
+  // do merge exports
+  verifySort("export {A, B} from 'foo';\n", "export {A} from 'foo';\n"
+                                            "export   {B} from 'foo';");
 }
 
 } // end namespace
