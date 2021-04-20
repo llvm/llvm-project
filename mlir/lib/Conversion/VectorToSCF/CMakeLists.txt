@@ -1,4 +1,5 @@
 add_mlir_conversion_library(MLIRVectorToSCF
+  ProgressiveVectorToSCF.cpp
   VectorToSCF.cpp
 
   ADDITIONAL_HEADER_DIRS
