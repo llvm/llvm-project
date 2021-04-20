@@ -890,14 +890,15 @@ exit:
   ret i1 %res
 }
 
-define i1 @recurrence_mul_noflags(i8 %A, i8 %B) {
+define i1 @recurrence_mul_noflags(i8 %A) {
 ; CHECK-LABEL: @recurrence_mul_noflags(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[A:%.*]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[A_IV:%.*]] = phi i8 [ [[A:%.*]], [[ENTRY]] ], [ [[A_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[B_IV:%.*]] = phi i8 [ [[B:%.*]], [[ENTRY]] ], [ [[B_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[A_IV:%.*]] = phi i8 [ [[A]], [[ENTRY]] ], [ [[A_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B_IV:%.*]] = phi i8 [ [[B]], [[ENTRY]] ], [ [[B_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[A_IV_NEXT]] = mul i8 [[A_IV]], 2
 ; CHECK-NEXT:    [[B_IV_NEXT]] = mul i8 [[B_IV]], 2
@@ -908,6 +909,7 @@ define i1 @recurrence_mul_noflags(i8 %A, i8 %B) {
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
+  %B = add i8 %A, 1
   br label %loop
 loop:
   %iv = phi i64 [0, %entry], [%iv.next, %loop]
@@ -1025,14 +1027,15 @@ exit:
   ret i1 %res
 }
 
-define i1 @recurrence_shl_noflags(i8 %A, i8 %B) {
+define i1 @recurrence_shl_noflags(i8 %A) {
 ; CHECK-LABEL: @recurrence_shl_noflags(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[A:%.*]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[A_IV:%.*]] = phi i8 [ [[A:%.*]], [[ENTRY]] ], [ [[A_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[B_IV:%.*]] = phi i8 [ [[B:%.*]], [[ENTRY]] ], [ [[B_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[A_IV:%.*]] = phi i8 [ [[A]], [[ENTRY]] ], [ [[A_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B_IV:%.*]] = phi i8 [ [[B]], [[ENTRY]] ], [ [[B_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[A_IV_NEXT]] = shl i8 [[A_IV]], 1
 ; CHECK-NEXT:    [[B_IV_NEXT]] = shl i8 [[B_IV]], 1
@@ -1043,6 +1046,7 @@ define i1 @recurrence_shl_noflags(i8 %A, i8 %B) {
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
+  %B = add i8 %A, 1
   br label %loop
 loop:
   %iv = phi i64 [0, %entry], [%iv.next, %loop]
@@ -1160,14 +1164,15 @@ exit:
   ret i1 %res
 }
 
-define i1 @recurrence_lshr_noflags(i8 %A, i8 %B) {
+define i1 @recurrence_lshr_noflags(i8 %A) {
 ; CHECK-LABEL: @recurrence_lshr_noflags(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[A:%.*]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[A_IV:%.*]] = phi i8 [ [[A:%.*]], [[ENTRY]] ], [ [[A_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[B_IV:%.*]] = phi i8 [ [[B:%.*]], [[ENTRY]] ], [ [[B_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[A_IV:%.*]] = phi i8 [ [[A]], [[ENTRY]] ], [ [[A_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B_IV:%.*]] = phi i8 [ [[B]], [[ENTRY]] ], [ [[B_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[A_IV_NEXT]] = lshr i8 [[A_IV]], 1
 ; CHECK-NEXT:    [[B_IV_NEXT]] = lshr i8 [[B_IV]], 1
@@ -1178,6 +1183,7 @@ define i1 @recurrence_lshr_noflags(i8 %A, i8 %B) {
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
+  %B = add i8 %A, 1
   br label %loop
 loop:
   %iv = phi i64 [0, %entry], [%iv.next, %loop]
@@ -1295,14 +1301,15 @@ exit:
   ret i1 %res
 }
 
-define i1 @recurrence_ashr_noflags(i8 %A, i8 %B) {
+define i1 @recurrence_ashr_noflags(i8 %A) {
 ; CHECK-LABEL: @recurrence_ashr_noflags(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[A:%.*]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[A_IV:%.*]] = phi i8 [ [[A:%.*]], [[ENTRY]] ], [ [[A_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[B_IV:%.*]] = phi i8 [ [[B:%.*]], [[ENTRY]] ], [ [[B_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[A_IV:%.*]] = phi i8 [ [[A]], [[ENTRY]] ], [ [[A_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B_IV:%.*]] = phi i8 [ [[B]], [[ENTRY]] ], [ [[B_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[A_IV_NEXT]] = ashr i8 [[A_IV]], 1
 ; CHECK-NEXT:    [[B_IV_NEXT]] = ashr i8 [[B_IV]], 1
@@ -1313,6 +1320,7 @@ define i1 @recurrence_ashr_noflags(i8 %A, i8 %B) {
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
+  %B = add i8 %A, 1
   br label %loop
 loop:
   %iv = phi i64 [0, %entry], [%iv.next, %loop]
