@@ -21,20 +21,40 @@ include "CSKYInstrFormats.td"
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
+class ImmAsmOperand<string prefix, int width, string suffix> : AsmOperandClass {
+  let Name = prefix # "Imm" # width # suffix;
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = !strconcat("Invalid", Name);
+}
+
+class SImmAsmOperand<int width, string suffix = "">
+    : ImmAsmOperand<"S", width, suffix> {
+}
+
+class UImmAsmOperand<int width, string suffix = "">
+    : ImmAsmOperand<"U", width, suffix> {
+}
+
+class OImmAsmOperand<int width, string suffix = "">
+    : ImmAsmOperand<"O", width, suffix> {
+}
 
 class oimm<int num> : Operand<i32>,
   ImmLeaf<i32, "return isUInt<"#num#">(Imm - 1);"> {
   let EncoderMethod = "getOImmOpValue";
+  let ParserMatchClass = OImmAsmOperand<num>;
 }
 
 class uimm<int num, int shift = 0> : Operand<i32>,
   ImmLeaf<i32, "return isShiftedUInt<"#num#", "#shift#">(Imm);"> {
   let EncoderMethod = "getImmOpValue<"#shift#">";
+  let ParserMatchClass = UImmAsmOperand<num>;
 }
 
 class simm<int num, int shift = 0> : Operand<i32>,
   ImmLeaf<i32, "return isShiftedInt<"#num#", "#shift#">(Imm);"> {
   let EncoderMethod = "getImmOpValue<"#shift#">";
+  let ParserMatchClass = SImmAsmOperand<num>;
 }
 
 def nimm_XFORM : SDNodeXForm<imm, [{
@@ -42,6 +62,7 @@ def nimm_XFORM : SDNodeXForm<imm, [{
 }]>;
 class nimm<int num> : Operand<i32>,
   ImmLeaf<i32, "return isUInt<"#num#">(~Imm);", nimm_XFORM> {
+  let ParserMatchClass = UImmAsmOperand<num>;
 }
 
 
@@ -105,4 +126,4 @@ def DIVU32 : R_YXZ_SP_F1<0x20, 0x1,
   BinOpFrag<(udiv node:$LHS, node:$RHS)>, "divu32">;
 
 def NOT32 : R_XXZ<0b001001, 0b00100, (outs GPR:$rz), (ins GPR:$rx),
-  "not", [(set GPR:$rz, (not GPR:$rx))]>;
+  "not32", [(set GPR:$rz, (not GPR:$rx))]>;
