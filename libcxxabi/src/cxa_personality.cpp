@@ -88,7 +88,7 @@ extern "C" EXCEPTION_DISPOSITION _GCC_specific_handler(PEXCEPTION_RECORD,
 | +-------------+---------------------------------+------------------------------+ |
 | ...                                                                              |
 +----------------------------------------------------------------------------------+
-#endif  // __USING_SJLJ_EXCEPTIONS__
+#endif // __USING_SJLJ_EXCEPTIONS__
 +---------------------------------------------------------------------+
 | Beginning of Action Table       ttypeIndex == 0 : cleanup           |
 | ...                             ttypeIndex  > 0 : catch             |
@@ -628,7 +628,7 @@ static void scan_eh_tab(scan_results &results, _Unwind_Action actions,
     // ip is 1-based index into call site table
 #else  // !__USING_SJLJ_EXCEPTIONS__
     uintptr_t ipOffset = ip - funcStart;
-#endif  // !defined(_USING_SLJL_EXCEPTIONS__)
+#endif // !defined(_USING_SLJL_EXCEPTIONS__)
     const uint8_t* classInfo = NULL;
     // Note: See JITDwarfEmitter::EmitExceptionTable(...) for corresponding
     //       dwarf emission
@@ -673,7 +673,7 @@ static void scan_eh_tab(scan_results &results, _Unwind_Action actions,
         uintptr_t landingPad = readULEB128(&callSitePtr);
         uintptr_t actionEntry = readULEB128(&callSitePtr);
         if (--ip == 0)
-#endif  // __USING_SJLJ_EXCEPTIONS__
+#endif // __USING_SJLJ_EXCEPTIONS__
         {
             // Found the call site containing ip.
 #ifndef __USING_SJLJ_EXCEPTIONS__
@@ -687,7 +687,7 @@ static void scan_eh_tab(scan_results &results, _Unwind_Action actions,
             results.landingPad = landingPad;
 #else  // __USING_SJLJ_EXCEPTIONS__
             ++landingPad;
-#endif  // __USING_SJLJ_EXCEPTIONS__
+#endif // __USING_SJLJ_EXCEPTIONS__
             if (actionEntry == 0)
             {
                 // Found a cleanup
@@ -820,7 +820,7 @@ static void scan_eh_tab(scan_results &results, _Unwind_Action actions,
             // Possible stack corruption.
             call_terminate(native_exception, unwind_exception);
         }
-#endif  // !__USING_SJLJ_EXCEPTIONS__
+#endif // !__USING_SJLJ_EXCEPTIONS__
     }  // there might be some tricky cases which break out of this loop
 
     // It is possible that no eh table entry specify how to handle

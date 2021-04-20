@@ -157,7 +157,7 @@ __generic_error_category::message(int ev) const
 #ifdef _LIBCPP_ELAST
     if (ev > _LIBCPP_ELAST)
       return string("unspecified generic_category error");
-#endif  // _LIBCPP_ELAST
+#endif // _LIBCPP_ELAST
     return __do_message::message(ev);
 }
 
@@ -189,7 +189,7 @@ __system_error_category::message(int ev) const
 #ifdef _LIBCPP_ELAST
     if (ev > _LIBCPP_ELAST)
       return string("unspecified system_category error");
-#endif  // _LIBCPP_ELAST
+#endif // _LIBCPP_ELAST
     return __do_message::message(ev);
 }
 
@@ -199,7 +199,7 @@ __system_error_category::default_error_condition(int ev) const noexcept
 #ifdef _LIBCPP_ELAST
     if (ev > _LIBCPP_ELAST)
       return error_condition(ev, system_category());
-#endif  // _LIBCPP_ELAST
+#endif // _LIBCPP_ELAST
     return error_condition(ev, generic_category());
 }
 

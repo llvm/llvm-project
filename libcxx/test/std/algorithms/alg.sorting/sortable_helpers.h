@@ -75,4 +75,4 @@ static_assert(std::is_trivially_copyable<TrivialSortableWithComp>::value, "");
 static_assert(!std::is_trivially_copyable<NonTrivialSortable>::value, "");
 static_assert(!std::is_trivially_copyable<NonTrivialSortableWithComp>::value, "");
 
-#endif  // SORTABLE_HELPERS_H
+#endif // SORTABLE_HELPERS_H
