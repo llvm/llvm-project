@@ -41,6 +41,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
@@ -1486,6 +1487,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::arm_mve_vctp16:
   case Intrinsic::arm_mve_vctp32:
   case Intrinsic::arm_mve_vctp64:
+  case Intrinsic::aarch64_sve_convert_from_svbool:
   // WebAssembly float semantics are always known
   case Intrinsic::wasm_trunc_signed:
   case Intrinsic::wasm_trunc_unsigned:
@@ -2847,20 +2849,10 @@ static Constant *ConstantFoldScalarCall(StringRef Name,
   return nullptr;
 }
 
-static Constant *ConstantFoldVectorCall(StringRef Name,
-                                        Intrinsic::ID IntrinsicID,
-                                        VectorType *VTy,
-                                        ArrayRef<Constant *> Operands,
-                                        const DataLayout &DL,
-                                        const TargetLibraryInfo *TLI,
-                                        const CallBase *Call) {
-  // Do not iterate on scalable vector. The number of elements is unknown at
-  // compile-time.
-  if (isa<ScalableVectorType>(VTy))
-    return nullptr;
-
-  auto *FVTy = cast<FixedVectorType>(VTy);
-
+static Constant *ConstantFoldFixedVectorCall(
+    StringRef Name, Intrinsic::ID IntrinsicID, FixedVectorType *FVTy,
+    ArrayRef<Constant *> Operands, const DataLayout &DL,
+    const TargetLibraryInfo *TLI, const CallBase *Call) {
   SmallVector<Constant *, 4> Result(FVTy->getNumElements());
   SmallVector<Constant *, 4> Lane(Operands.size());
   Type *Ty = FVTy->getElementType();
@@ -2977,6 +2969,24 @@ static Constant *ConstantFoldVectorCall(StringRef Name,
   return ConstantVector::get(Result);
 }
 
+static Constant *ConstantFoldScalableVectorCall(
+    StringRef Name, Intrinsic::ID IntrinsicID, ScalableVectorType *SVTy,
+    ArrayRef<Constant *> Operands, const DataLayout &DL,
+    const TargetLibraryInfo *TLI, const CallBase *Call) {
+  switch (IntrinsicID) {
+  case Intrinsic::aarch64_sve_convert_from_svbool: {
+    auto *Src = dyn_cast<Constant>(Operands[0]);
+    if (!Src || !Src->isNullValue())
+      break;
+
+    return ConstantInt::getFalse(SVTy);
+  }
+  default:
+    break;
+  }
+  return nullptr;
+}
+
 } // end anonymous namespace
 
 Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,
@@ -2990,9 +3000,15 @@ Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,
 
   Type *Ty = F->getReturnType();
 
-  if (auto *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantFoldVectorCall(Name, F->getIntrinsicID(), VTy, Operands,
-                                  F->getParent()->getDataLayout(), TLI, Call);
+  if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
+    return ConstantFoldFixedVectorCall(
+        Name, F->getIntrinsicID(), FVTy, Operands,
+        F->getParent()->getDataLayout(), TLI, Call);
+
+  if (auto *SVTy = dyn_cast<ScalableVectorType>(Ty))
+    return ConstantFoldScalableVectorCall(
+        Name, F->getIntrinsicID(), SVTy, Operands,
+        F->getParent()->getDataLayout(), TLI, Call);
 
   return ConstantFoldScalarCall(Name, F->getIntrinsicID(), Ty, Operands, TLI,
                                 Call);
