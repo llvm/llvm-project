@@ -39,28 +39,6 @@ extern __attribute__((const)) ushort __llvm_cttz_i16(ushort);
 extern __attribute__((const)) uint __llvm_cttz_i32(uint);
 extern __attribute__((const)) ulong __llvm_cttz_i64(ulong);
 
-// Fence intrinsics
-extern void __llvm_fence_acq_wi(void);
-extern void __llvm_fence_acq_sg(void);
-extern void __llvm_fence_acq_wg(void);
-extern void __llvm_fence_acq_dev(void);
-extern void __llvm_fence_acq_sys(void);
-extern void __llvm_fence_rel_wi(void);
-extern void __llvm_fence_rel_sg(void);
-extern void __llvm_fence_rel_wg(void);
-extern void __llvm_fence_rel_dev(void);
-extern void __llvm_fence_rel_sys(void);
-extern void __llvm_fence_ar_wi(void);
-extern void __llvm_fence_ar_sg(void);
-extern void __llvm_fence_ar_wg(void);
-extern void __llvm_fence_ar_dev(void);
-extern void __llvm_fence_ar_sys(void);
-extern void __llvm_fence_sc_wi(void);
-extern void __llvm_fence_sc_sg(void);
-extern void __llvm_fence_sc_wg(void);
-extern void __llvm_fence_sc_dev(void);
-extern void __llvm_fence_sc_sys(void);
-
 // Atomics
 extern uint __llvm_ld_atomic_a1_x_dev_i32(__global uint *);
 extern ulong __llvm_ld_atomic_a1_x_dev_i64(__global ulong *);

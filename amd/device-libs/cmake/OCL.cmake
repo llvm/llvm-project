@@ -21,7 +21,7 @@ endif()
 # potential mis-aligned atomic ops detected by clang
 set(CLANG_OCL_FLAGS -fcolor-diagnostics -Werror -Wno-error=atomic-alignment -x cl -Xclang
   -cl-std=CL2.0 -target "${AMDGPU_TARGET_TRIPLE}" -fvisibility=protected -fomit-frame-pointer
-  -Xclang -finclude-default-header -nogpulib "${CLANG_OPTIONS_APPEND}")
+  -Xclang -finclude-default-header -nogpulib -cl-no-stdinc "${CLANG_OPTIONS_APPEND}")
 
 # For compatibility with the MSVC headers we use a 32-bit wchar. Users linking
 # against us must also use a short wchar.

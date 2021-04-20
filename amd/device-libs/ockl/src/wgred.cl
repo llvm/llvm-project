@@ -43,9 +43,9 @@ my_sub_group_id(void)
 static void
 my_barrier(void)
 {
-    __llvm_fence_rel_wg();
+    __builtin_amdgcn_fence(__ATOMIC_RELEASE, "workgroup");
     __builtin_amdgcn_s_barrier();
-    __llvm_fence_acq_wg();
+    __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "workgroup");
 }
 
 #define AGEN(T,OP) \
