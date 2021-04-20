@@ -2493,6 +2493,8 @@ void Verifier::visitFunction(const Function &F) {
              "Function takes metadata but isn't an intrinsic", &Arg, &F);
       Assert(!Arg.getType()->isTokenTy(),
              "Function takes token but isn't an intrinsic", &Arg, &F);
+      Assert(!Arg.getType()->isX86_AMXTy(),
+             "Function takes x86_amx but isn't an intrinsic", &Arg, &F);
     }
 
     // Check that swifterror argument is only used by loads and stores.
@@ -2502,9 +2504,12 @@ void Verifier::visitFunction(const Function &F) {
     ++i;
   }
 
-  if (!isLLVMdotName)
+  if (!isLLVMdotName) {
     Assert(!F.getReturnType()->isTokenTy(),
-           "Functions returns a token but isn't an intrinsic", &F);
+           "Function returns a token but isn't an intrinsic", &F);
+    Assert(!F.getReturnType()->isX86_AMXTy(),
+           "Function returns a x86_amx but isn't an intrinsic", &F);
+  }
 
   // Get the function metadata attachments.
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
@@ -3265,9 +3270,12 @@ void Verifier::visitCallBase(CallBase &Call) {
   }
 
   // Verify that indirect calls don't return tokens.
-  if (!Call.getCalledFunction())
+  if (!Call.getCalledFunction()) {
     Assert(!FTy->getReturnType()->isTokenTy(),
            "Return type cannot be token for indirect call!");
+    Assert(!FTy->getReturnType()->isX86_AMXTy(),
+           "Return type cannot be x86_amx for indirect call!");
+  }
 
   if (Function *F = Call.getCalledFunction())
     if (Intrinsic::ID ID = (Intrinsic::ID)F->getIntrinsicID())
@@ -4636,9 +4644,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
   // If the intrinsic takes MDNode arguments, verify that they are either global
   // or are local to *this* function.
-  for (Value *V : Call.args())
+  for (Value *V : Call.args()) {
     if (auto *MD = dyn_cast<MetadataAsValue>(V))
       visitMetadataAsValue(*MD, Call.getCaller());
+    if (auto *Const = dyn_cast<Constant>(V))
+      Assert(!Const->getType()->isX86_AMXTy(),
+             "const x86_amx is not allowed in argument!");
+  }
 
   switch (ID) {
   default:
