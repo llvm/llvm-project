@@ -123,6 +123,13 @@ bool GCNDPPCombine::isShrinkable(MachineInstr &MI) const {
     LLVM_DEBUG(dbgs() << "  Inst hasn't e32 equivalent\n");
     return false;
   }
+  if (const auto *SDst = TII->getNamedOperand(MI, AMDGPU::OpName::sdst)) {
+    // Give up if there are any uses of the carry-out from instructions like
+    // V_ADD_CO_U32. The shrunken form of the instruction would write it to vcc
+    // instead of to a virtual register.
+    if (!MRI->use_nodbg_empty(SDst->getReg()))
+      return false;
+  }
   // check if other than abs|neg modifiers are set (opsel for example)
   const int64_t Mask = ~(SISrcMods::ABS | SISrcMods::NEG);
   if (!hasNoImmOrEqual(MI, AMDGPU::OpName::src0_modifiers, 0, Mask) ||
