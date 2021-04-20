@@ -213,7 +213,7 @@ public:
   bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
                             unsigned DefSubReg,
                             const TargetRegisterClass *SrcRC,
-                            unsigned SrcSubReg) const;
+                            unsigned SrcSubReg) const override;
 };
 
 } // end namespace llvm
