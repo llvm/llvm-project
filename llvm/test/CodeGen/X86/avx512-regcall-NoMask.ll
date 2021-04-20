@@ -323,12 +323,12 @@ define dso_local x86_regcallcc float @test_argRetFloat(float %a)  {
 ;
 ; WIN64-LABEL: test_argRetFloat:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    vaddss __real@{{.*}}(%rip), %xmm0, %xmm0
+; WIN64-NEXT:    vaddss __real@3f800000(%rip), %xmm0, %xmm0
 ; WIN64-NEXT:    retq
 ;
 ; LINUXOSX64-LABEL: test_argRetFloat:
 ; LINUXOSX64:       # %bb.0:
-; LINUXOSX64-NEXT:    vaddss {{.*}}(%rip), %xmm0, %xmm0
+; LINUXOSX64-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; LINUXOSX64-NEXT:    retq
   %add = fadd float 1.0, %a
   ret float %add
@@ -393,12 +393,12 @@ define dso_local x86_regcallcc double @test_argRetDouble(double %a)  {
 ;
 ; WIN64-LABEL: test_argRetDouble:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    vaddsd __real@{{.*}}(%rip), %xmm0, %xmm0
+; WIN64-NEXT:    vaddsd __real@3ff0000000000000(%rip), %xmm0, %xmm0
 ; WIN64-NEXT:    retq
 ;
 ; LINUXOSX64-LABEL: test_argRetDouble:
 ; LINUXOSX64:       # %bb.0:
-; LINUXOSX64-NEXT:    vaddsd {{.*}}(%rip), %xmm0, %xmm0
+; LINUXOSX64-NEXT:    vaddsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; LINUXOSX64-NEXT:    retq
   %add = fadd double %a, 1.0
   ret double %add
@@ -758,7 +758,7 @@ define dso_local x86_regcallcc <8 x i32> @test_argRet256Vector(<8 x i1> %x, <8 x
 define dso_local x86_regcallcc <8 x i32> @test_CallargRet256Vector(<8 x i1> %x, <8 x i32> %a)  {
 ; X32-LABEL: test_CallargRet256Vector:
 ; X32:       # %bb.0:
-; X32-NEXT:    subl $92, %esp
+; X32-NEXT:    subl $36, %esp
 ; X32-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; X32-NEXT:    kmovd %eax, %k1
 ; X32-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
@@ -767,13 +767,13 @@ define dso_local x86_regcallcc <8 x i32> @test_CallargRet256Vector(<8 x i1> %x, 
 ; X32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k1 # 2-byte Reload
 ; X32-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %ymm1 # 32-byte Reload
 ; X32-NEXT:    vmovdqa32 %ymm1, %ymm0 {%k1}
-; X32-NEXT:    addl $92, %esp
+; X32-NEXT:    addl $36, %esp
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_CallargRet256Vector:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    subq $88, %rsp
-; WIN64-NEXT:    .seh_stackalloc 88
+; WIN64-NEXT:    subq $56, %rsp
+; WIN64-NEXT:    .seh_stackalloc 56
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; WIN64-NEXT:    kmovd %eax, %k1
@@ -783,14 +783,14 @@ define dso_local x86_regcallcc <8 x i32> @test_CallargRet256Vector(<8 x i1> %x, 
 ; WIN64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
 ; WIN64-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
 ; WIN64-NEXT:    vmovdqa32 %ymm1, %ymm0 {%k1}
-; WIN64-NEXT:    addq $88, %rsp
+; WIN64-NEXT:    addq $56, %rsp
 ; WIN64-NEXT:    retq
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_CallargRet256Vector:
 ; LINUXOSX64:       # %bb.0:
-; LINUXOSX64-NEXT:    subq $88, %rsp
-; LINUXOSX64-NEXT:    .cfi_def_cfa_offset 96
+; LINUXOSX64-NEXT:    subq $56, %rsp
+; LINUXOSX64-NEXT:    .cfi_def_cfa_offset 64
 ; LINUXOSX64-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; LINUXOSX64-NEXT:    kmovd %eax, %k1
 ; LINUXOSX64-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
@@ -799,7 +799,7 @@ define dso_local x86_regcallcc <8 x i32> @test_CallargRet256Vector(<8 x i1> %x, 
 ; LINUXOSX64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
 ; LINUXOSX64-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
 ; LINUXOSX64-NEXT:    vmovdqa32 %ymm1, %ymm0 {%k1}
-; LINUXOSX64-NEXT:    addq $88, %rsp
+; LINUXOSX64-NEXT:    addq $56, %rsp
 ; LINUXOSX64-NEXT:    .cfi_def_cfa_offset 8
 ; LINUXOSX64-NEXT:    retq
   %b = call x86_regcallcc <8 x i32> @test_argRet256Vector(<8 x i1> %x, <8 x i32> %a, <8 x i32> %a)
@@ -834,7 +834,7 @@ define dso_local x86_regcallcc <16 x i32> @test_argRet512Vector(<16 x i1> %x, <1
 define dso_local x86_regcallcc <16 x i32> @test_CallargRet512Vector(<16 x i1> %x, <16 x i32> %a)  {
 ; X32-LABEL: test_CallargRet512Vector:
 ; X32:       # %bb.0:
-; X32-NEXT:    subl $188, %esp
+; X32-NEXT:    subl $68, %esp
 ; X32-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 64-byte Spill
 ; X32-NEXT:    kmovd %eax, %k1
 ; X32-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
@@ -843,13 +843,13 @@ define dso_local x86_regcallcc <16 x i32> @test_CallargRet512Vector(<16 x i1> %x
 ; X32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k1 # 2-byte Reload
 ; X32-NEXT:    vmovdqu64 {{[-0-9]+}}(%e{{[sb]}}p), %zmm1 # 64-byte Reload
 ; X32-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
-; X32-NEXT:    addl $188, %esp
+; X32-NEXT:    addl $68, %esp
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_CallargRet512Vector:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    subq $184, %rsp
-; WIN64-NEXT:    .seh_stackalloc 184
+; WIN64-NEXT:    subq $88, %rsp
+; WIN64-NEXT:    .seh_stackalloc 88
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; WIN64-NEXT:    kmovd %eax, %k1
@@ -859,14 +859,14 @@ define dso_local x86_regcallcc <16 x i32> @test_CallargRet512Vector(<16 x i1> %x
 ; WIN64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
 ; WIN64-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm1 # 64-byte Reload
 ; WIN64-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
-; WIN64-NEXT:    addq $184, %rsp
+; WIN64-NEXT:    addq $88, %rsp
 ; WIN64-NEXT:    retq
 ; WIN64-NEXT:    .seh_endproc
 ;
 ; LINUXOSX64-LABEL: test_CallargRet512Vector:
 ; LINUXOSX64:       # %bb.0:
-; LINUXOSX64-NEXT:    subq $184, %rsp
-; LINUXOSX64-NEXT:    .cfi_def_cfa_offset 192
+; LINUXOSX64-NEXT:    subq $88, %rsp
+; LINUXOSX64-NEXT:    .cfi_def_cfa_offset 96
 ; LINUXOSX64-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; LINUXOSX64-NEXT:    kmovd %eax, %k1
 ; LINUXOSX64-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
@@ -875,7 +875,7 @@ define dso_local x86_regcallcc <16 x i32> @test_CallargRet512Vector(<16 x i1> %x
 ; LINUXOSX64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
 ; LINUXOSX64-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm1 # 64-byte Reload
 ; LINUXOSX64-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
-; LINUXOSX64-NEXT:    addq $184, %rsp
+; LINUXOSX64-NEXT:    addq $88, %rsp
 ; LINUXOSX64-NEXT:    .cfi_def_cfa_offset 8
 ; LINUXOSX64-NEXT:    retq
   %b = call x86_regcallcc <16 x i32> @test_argRet512Vector(<16 x i1> %x, <16 x i32> %a, <16 x i32> %a)
@@ -1267,7 +1267,7 @@ define x86_regcallcc %struct.complex @test_argMultiRet(float, double, i32, i8, i
 ;
 ; WIN64-LABEL: test_argMultiRet:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    vaddsd __real@{{.*}}(%rip), %xmm1, %xmm1
+; WIN64-NEXT:    vaddsd __real@4014000000000000(%rip), %xmm1, %xmm1
 ; WIN64-NEXT:    movl $999, %edx # imm = 0x3E7
 ; WIN64-NEXT:    movl $4, %eax
 ; WIN64-NEXT:    movb $7, %cl
@@ -1275,7 +1275,7 @@ define x86_regcallcc %struct.complex @test_argMultiRet(float, double, i32, i8, i
 ;
 ; LINUXOSX64-LABEL: test_argMultiRet:
 ; LINUXOSX64:       # %bb.0:
-; LINUXOSX64-NEXT:    vaddsd {{.*}}(%rip), %xmm1, %xmm1
+; LINUXOSX64-NEXT:    vaddsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; LINUXOSX64-NEXT:    movl $999, %edx # imm = 0x3E7
 ; LINUXOSX64-NEXT:    movl $4, %eax
 ; LINUXOSX64-NEXT:    movb $7, %cl
