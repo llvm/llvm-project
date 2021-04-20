@@ -3,6 +3,7 @@ add_llvm_component_library(LLVMCSKYDesc
   CSKYELFObjectWriter.cpp
   CSKYInstPrinter.cpp
   CSKYMCAsmInfo.cpp
+  CSKYMCExpr.cpp
   CSKYMCTargetDesc.cpp
   CSKYMCCodeEmitter.cpp
 

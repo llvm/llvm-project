@@ -54,13 +54,14 @@ class J<bits<6> opcode, dag outs, dag ins, string op, list<dag> pattern>
                  pattern> {
   bits<26> offset;
   let Inst{25 - 0} = offset;
+  let isCall = 1;
+  let Defs = [ R15 ];
 }
 
 // Format< OP[6] | RZ[5] | SOP[3] | OFFSET[18] >
 // Instructions(7): grs, lrs32.b, lrs32.h, lrs32.w, srs32.b, srs32.h, srs32.w
-class I_18_Z_L<bits<3> sop, string op, dag outs, dag ins, list<dag> pattern>
-    : CSKY32Inst<AddrModeNone, 0x33, outs, ins,
-                 !strconcat(op, "\t$rz, $offset"), pattern> {
+class I_18_Z_L<bits<3> sop, string asm, dag outs, dag ins, list<dag> pattern>
+    : CSKY32Inst<AddrModeNone, 0x33, outs, ins, asm, pattern> {
   bits<5> rz;
   bits<18> offset;
   let Inst{25 - 21} = rz;
@@ -102,7 +103,7 @@ class I_16_MOV<bits<5> sop, string op, ImmLeaf ImmType>
 // Instructions(1): lrw32
 class I_16_Z_L<bits<5> sop, string op, dag ins, list<dag> pattern>
   : CSKY32Inst<AddrModeNone, 0x3a, (outs GPR:$rz), ins,
-  !strconcat(op, "\t$rz, [$imm16]"), pattern> {
+  !strconcat(op, "\t$rz, $imm16"), pattern> {
   bits<5> rz;
   bits<16> imm16;
   let Inst{25 - 21} = sop;
@@ -112,9 +113,8 @@ class I_16_Z_L<bits<5> sop, string op, dag ins, list<dag> pattern>
 
 // Format< OP[6] | SOP[5] | 00000[5] | OFFSET[16] >
 // Instructions(5): bt32, bf32, br32, jmpi32, jsri32
-class I_16_L<bits<5> sop, dag outs, dag ins, string op, list<dag> pattern>
-    : CSKY32Inst<AddrModeNone, 0x3a, outs, ins, !strconcat(op, "\t$imm16"),
-                 pattern> {
+class I_16_L<bits<5> sop, dag outs, dag ins, string asm, list<dag> pattern>
+    : CSKY32Inst<AddrModeNone, 0x3a, outs, ins, asm, pattern> {
   bits<16> imm16;
   let Inst{25 - 21} = sop;
   let Inst{20 - 16} = 0;
@@ -154,6 +154,19 @@ class I_16_RET<bits<5> sop, bits<5> pcode, string op, list<dag> pattern>
   let Inst{25 - 21} = sop;
   let Inst{20 - 16} = pcode;
   let Inst{15 - 0} = 0;
+  let isTerminator = 1;
+  let isReturn = 1;
+  let isBarrier = 1;
+}
+
+// Instructions(1): rte32
+class I_16_RET_I<bits<5> sop, bits<5> pcode, string op, list<dag> pattern>
+    : CSKY32Inst<AddrModeNone, 0x30, (outs), (ins), op, pattern> {
+  let Inst{25 - 21} = sop;
+  let Inst{20 - 16} = pcode;
+  let Inst{15 - 10} = 0x10;
+  let Inst{9 - 5} = 1;
+  let Inst{4 - 0} = 0;
   let isTerminator = 1;
   let isReturn = 1;
   let isBarrier = 1;

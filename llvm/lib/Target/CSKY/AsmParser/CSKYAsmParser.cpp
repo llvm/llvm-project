@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/CSKYMCExpr.h"
 #include "MCTargetDesc/CSKYMCTargetDesc.h"
 #include "TargetInfo/CSKYTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
@@ -58,6 +59,8 @@ class CSKYAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseImmediate(OperandVector &Operands);
   OperandMatchResultTy parseRegister(OperandVector &Operands);
   OperandMatchResultTy parseBaseRegImm(OperandVector &Operands);
+  OperandMatchResultTy parseCSKYSymbol(OperandVector &Operands);
+  OperandMatchResultTy parseConstpoolSymbol(OperandVector &Operands);
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
@@ -170,6 +173,20 @@ public:
 
   bool isUImm12Shift1() { return isUImm<12, 1>(); }
   bool isUImm12Shift2() { return isUImm<12, 2>(); }
+
+  bool isSImm16Shift1() { return isSImm<16, 1>(); }
+
+  bool isCSKYSymbol() const {
+    int64_t Imm;
+    // Must be of 'immediate' type but not a constant.
+    return isImm() && !evaluateConstantImm(getImm(), Imm);
+  }
+
+  bool isConstpoolSymbol() const {
+    int64_t Imm;
+    // Must be of 'immediate' type but not a constant.
+    return isImm() && !evaluateConstantImm(getImm(), Imm);
+  }
 
   /// Gets location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
@@ -350,6 +367,14 @@ bool CSKYAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         "immediate must be a multiple of 4 bytes in the range");
   case Match_InvalidUImm16:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 16) - 1);
+  case Match_InvalidCSKYSymbol: {
+    SMLoc ErrorLoc = ((CSKYOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "operand must be a symbol name");
+  }
+  case Match_InvalidConstpool: {
+    SMLoc ErrorLoc = ((CSKYOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "operand must be a constpool symbol name");
+  }
   }
 
   llvm_unreachable("Unknown match type detected!");
@@ -482,6 +507,15 @@ OperandMatchResultTy CSKYAsmParser::parseImmediate(OperandVector &Operands) {
 /// information, adding to Operands. If operand was parsed, returns false, else
 /// true.
 bool CSKYAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
+  // Check if the current operand has a custom associated parser, if so, try to
+  // custom parse the operand, or fallback to the general approach.
+  OperandMatchResultTy Result =
+      MatchOperandParserImpl(Operands, Mnemonic, /*ParseForAllFeatures=*/true);
+  if (Result == MatchOperand_Success)
+    return false;
+  if (Result == MatchOperand_ParseFail)
+    return true;
+
   // Attempt to parse token as register
   if (parseRegister(Operands) == MatchOperand_Success)
     return false;
@@ -498,6 +532,68 @@ bool CSKYAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   // Finally we have exhausted all options and must declare defeat.
   Error(getLoc(), "unknown operand");
   return true;
+}
+
+OperandMatchResultTy CSKYAsmParser::parseCSKYSymbol(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
+
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return MatchOperand_NoMatch;
+
+  StringRef Identifier;
+  if (getParser().parseIdentifier(Identifier))
+    return MatchOperand_ParseFail;
+
+  CSKYMCExpr::VariantKind Kind = CSKYMCExpr::VK_CSKY_None;
+
+  if (Identifier.consume_back("@GOT"))
+    Kind = CSKYMCExpr::VK_CSKY_GOT;
+  else if (Identifier.consume_back("@GOTOFF"))
+    Kind = CSKYMCExpr::VK_CSKY_GOTOFF;
+  else if (Identifier.consume_back("@PLT"))
+    Kind = CSKYMCExpr::VK_CSKY_PLT;
+  else if (Identifier.consume_back("@GOTPC"))
+    Kind = CSKYMCExpr::VK_CSKY_GOTPC;
+
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
+  const MCExpr *Res =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+
+  if (Kind != CSKYMCExpr::VK_CSKY_None)
+    Res = CSKYMCExpr::create(Res, Kind, getContext());
+
+  Operands.push_back(CSKYOperand::createImm(Res, S, E));
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy
+CSKYAsmParser::parseConstpoolSymbol(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
+
+  if (getLexer().getKind() != AsmToken::LBrac)
+    return MatchOperand_NoMatch;
+
+  getLexer().Lex(); // Eat '['.
+
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return MatchOperand_NoMatch;
+
+  StringRef Identifier;
+  if (getParser().parseIdentifier(Identifier))
+    return MatchOperand_ParseFail;
+
+  if (getLexer().getKind() != AsmToken::RBrac)
+    return MatchOperand_NoMatch;
+
+  getLexer().Lex(); // Eat ']'.
+
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
+  const MCExpr *Res =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+  Operands.push_back(CSKYOperand::createImm(Res, S, E));
+  return MatchOperand_Success;
 }
 
 bool CSKYAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
