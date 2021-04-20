@@ -29,10 +29,10 @@ define i64 @test2elt(<2 x double> %a) local_unnamed_addr #0 {
 ; CHECK-P9-NEXT:    xscvdpuxws f0, v2
 ; CHECK-P9-NEXT:    mffprwz r3, f0
 ; CHECK-P9-NEXT:    xxswapd vs0, v2
-; CHECK-P9-NEXT:    mtvsrws v3, r3
+; CHECK-P9-NEXT:    mtvsrwz v3, r3
 ; CHECK-P9-NEXT:    xscvdpuxws f0, f0
 ; CHECK-P9-NEXT:    mffprwz r3, f0
-; CHECK-P9-NEXT:    mtvsrws v2, r3
+; CHECK-P9-NEXT:    mtvsrwz v2, r3
 ; CHECK-P9-NEXT:    vmrghw v2, v3, v2
 ; CHECK-P9-NEXT:    mfvsrld r3, v2
 ; CHECK-P9-NEXT:    blr
@@ -42,11 +42,11 @@ define i64 @test2elt(<2 x double> %a) local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    xscvdpuxws f0, v2
 ; CHECK-BE-NEXT:    mffprwz r3, f0
 ; CHECK-BE-NEXT:    xxswapd vs0, v2
-; CHECK-BE-NEXT:    mtvsrws v3, r3
+; CHECK-BE-NEXT:    mtvsrwz v3, r3
 ; CHECK-BE-NEXT:    xscvdpuxws f0, f0
 ; CHECK-BE-NEXT:    mffprwz r3, f0
-; CHECK-BE-NEXT:    mtvsrws v2, r3
-; CHECK-BE-NEXT:    vmrghw v2, v3, v2
+; CHECK-BE-NEXT:    mtvsrwz v2, r3
+; CHECK-BE-NEXT:    vmrgow v2, v3, v2
 ; CHECK-BE-NEXT:    mfvsrd r3, v2
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -321,10 +321,10 @@ define i64 @test2elt_signed(<2 x double> %a) local_unnamed_addr #0 {
 ; CHECK-P9-NEXT:    xscvdpsxws f0, v2
 ; CHECK-P9-NEXT:    mffprwz r3, f0
 ; CHECK-P9-NEXT:    xxswapd vs0, v2
-; CHECK-P9-NEXT:    mtvsrws v3, r3
+; CHECK-P9-NEXT:    mtvsrwz v3, r3
 ; CHECK-P9-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P9-NEXT:    mffprwz r3, f0
-; CHECK-P9-NEXT:    mtvsrws v2, r3
+; CHECK-P9-NEXT:    mtvsrwz v2, r3
 ; CHECK-P9-NEXT:    vmrghw v2, v3, v2
 ; CHECK-P9-NEXT:    mfvsrld r3, v2
 ; CHECK-P9-NEXT:    blr
@@ -334,11 +334,11 @@ define i64 @test2elt_signed(<2 x double> %a) local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    xscvdpsxws f0, v2
 ; CHECK-BE-NEXT:    mffprwz r3, f0
 ; CHECK-BE-NEXT:    xxswapd vs0, v2
-; CHECK-BE-NEXT:    mtvsrws v3, r3
+; CHECK-BE-NEXT:    mtvsrwz v3, r3
 ; CHECK-BE-NEXT:    xscvdpsxws f0, f0
 ; CHECK-BE-NEXT:    mffprwz r3, f0
-; CHECK-BE-NEXT:    mtvsrws v2, r3
-; CHECK-BE-NEXT:    vmrghw v2, v3, v2
+; CHECK-BE-NEXT:    mtvsrwz v2, r3
+; CHECK-BE-NEXT:    vmrgow v2, v3, v2
 ; CHECK-BE-NEXT:    mfvsrd r3, v2
 ; CHECK-BE-NEXT:    blr
 entry:

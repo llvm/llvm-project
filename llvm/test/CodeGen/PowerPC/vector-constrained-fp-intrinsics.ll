@@ -79,13 +79,10 @@ define <3 x float> @constrained_vector_fdiv_v3f32() #0 {
 ; PC64LE-NEXT:    addi 3, 3, .LCPI2_4@toc@l
 ; PC64LE-NEXT:    lvx 4, 0, 3
 ; PC64LE-NEXT:    xsdivsp 0, 3, 0
-; PC64LE-NEXT:    xscvdpspn 1, 1
-; PC64LE-NEXT:    xscvdpspn 2, 2
-; PC64LE-NEXT:    xscvdpspn 0, 0
-; PC64LE-NEXT:    xxsldwi 34, 1, 1, 3
-; PC64LE-NEXT:    xxsldwi 35, 2, 2, 3
+; PC64LE-NEXT:    xscvdpspn 34, 1
+; PC64LE-NEXT:    xscvdpspn 35, 2
 ; PC64LE-NEXT:    vmrghw 2, 3, 2
-; PC64LE-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE-NEXT:    xscvdpspn 35, 0
 ; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    blr
 ;
@@ -105,13 +102,10 @@ define <3 x float> @constrained_vector_fdiv_v3f32() #0 {
 ; PC64LE9-NEXT:    lxvx 36, 0, 3
 ; PC64LE9-NEXT:    xsdivsp 2, 2, 0
 ; PC64LE9-NEXT:    xsdivsp 0, 3, 0
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 2
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 1
+; PC64LE9-NEXT:    xscvdpspn 35, 2
+; PC64LE9-NEXT:    xscvdpspn 34, 0
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 1
 ; PC64LE9-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE9-NEXT:    blr
 entry:
@@ -354,16 +348,13 @@ define <3 x float> @constrained_vector_frem_v3f32() #0 {
 ; PC64LE-NEXT:    lfs 1, .LCPI7_3@toc@l(3)
 ; PC64LE-NEXT:    bl fmodf
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xscvdpspn 0, 29
+; PC64LE-NEXT:    xscvdpspn 34, 29
 ; PC64LE-NEXT:    addis 3, 2, .LCPI7_4@toc@ha
-; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    addi 3, 3, .LCPI7_4@toc@l
 ; PC64LE-NEXT:    lvx 4, 0, 3
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 30
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
 ; PC64LE-NEXT:    vmrghw 2, 2, 3
-; PC64LE-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE-NEXT:    xscvdpspn 35, 30
 ; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    addi 1, 1, 64
 ; PC64LE-NEXT:    ld 0, 16(1)
@@ -400,16 +391,13 @@ define <3 x float> @constrained_vector_frem_v3f32() #0 {
 ; PC64LE9-NEXT:    lfs 1, .LCPI7_3@toc@l(3)
 ; PC64LE9-NEXT:    bl fmodf
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xscvdpspn 0, 1
+; PC64LE9-NEXT:    xscvdpspn 34, 1
+; PC64LE9-NEXT:    xscvdpspn 35, 29
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI7_4@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI7_4@toc@l
 ; PC64LE9-NEXT:    lxvx 36, 0, 3
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 29
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 30
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 30
 ; PC64LE9-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE9-NEXT:    addi 1, 1, 64
 ; PC64LE9-NEXT:    ld 0, 16(1)
@@ -695,13 +683,10 @@ define <3 x float> @constrained_vector_fmul_v3f32() #0 {
 ; PC64LE-NEXT:    addi 3, 3, .LCPI12_4@toc@l
 ; PC64LE-NEXT:    lvx 4, 0, 3
 ; PC64LE-NEXT:    xsmulsp 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 1, 1
-; PC64LE-NEXT:    xscvdpspn 2, 2
-; PC64LE-NEXT:    xscvdpspn 0, 0
-; PC64LE-NEXT:    xxsldwi 34, 1, 1, 3
-; PC64LE-NEXT:    xxsldwi 35, 2, 2, 3
+; PC64LE-NEXT:    xscvdpspn 34, 1
+; PC64LE-NEXT:    xscvdpspn 35, 2
 ; PC64LE-NEXT:    vmrghw 2, 3, 2
-; PC64LE-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE-NEXT:    xscvdpspn 35, 0
 ; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    blr
 ;
@@ -721,13 +706,10 @@ define <3 x float> @constrained_vector_fmul_v3f32() #0 {
 ; PC64LE9-NEXT:    lxvx 36, 0, 3
 ; PC64LE9-NEXT:    xsmulsp 2, 1, 2
 ; PC64LE9-NEXT:    xsmulsp 1, 1, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xscvdpspn 1, 1
-; PC64LE9-NEXT:    xxsldwi 34, 1, 1, 3
-; PC64LE9-NEXT:    xscvdpspn 1, 2
-; PC64LE9-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 2
+; PC64LE9-NEXT:    xscvdpspn 34, 1
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 0
 ; PC64LE9-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE9-NEXT:    blr
 entry:
@@ -910,13 +892,10 @@ define <3 x float> @constrained_vector_fadd_v3f32() #0 {
 ; PC64LE-NEXT:    lvx 4, 0, 3
 ; PC64LE-NEXT:    xsaddsp 2, 0, 2
 ; PC64LE-NEXT:    xsaddsp 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 1, 1
-; PC64LE-NEXT:    xscvdpspn 2, 2
-; PC64LE-NEXT:    xscvdpspn 0, 0
-; PC64LE-NEXT:    xxsldwi 34, 1, 1, 3
-; PC64LE-NEXT:    xxsldwi 35, 2, 2, 3
+; PC64LE-NEXT:    xscvdpspn 34, 1
+; PC64LE-NEXT:    xscvdpspn 35, 2
 ; PC64LE-NEXT:    vmrghw 2, 3, 2
-; PC64LE-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE-NEXT:    xscvdpspn 35, 0
 ; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    blr
 ;
@@ -935,13 +914,10 @@ define <3 x float> @constrained_vector_fadd_v3f32() #0 {
 ; PC64LE9-NEXT:    lxvx 36, 0, 3
 ; PC64LE9-NEXT:    xsaddsp 2, 0, 2
 ; PC64LE9-NEXT:    xsaddsp 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 2
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 1
+; PC64LE9-NEXT:    xscvdpspn 35, 2
+; PC64LE9-NEXT:    xscvdpspn 34, 0
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 1
 ; PC64LE9-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE9-NEXT:    blr
 entry:
@@ -1122,13 +1098,10 @@ define <3 x float> @constrained_vector_fsub_v3f32() #0 {
 ; PC64LE-NEXT:    lvx 4, 0, 3
 ; PC64LE-NEXT:    xssubsp 2, 0, 2
 ; PC64LE-NEXT:    xssubsp 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 1, 1
-; PC64LE-NEXT:    xscvdpspn 2, 2
-; PC64LE-NEXT:    xscvdpspn 0, 0
-; PC64LE-NEXT:    xxsldwi 34, 1, 1, 3
-; PC64LE-NEXT:    xxsldwi 35, 2, 2, 3
+; PC64LE-NEXT:    xscvdpspn 34, 1
+; PC64LE-NEXT:    xscvdpspn 35, 2
 ; PC64LE-NEXT:    vmrghw 2, 3, 2
-; PC64LE-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE-NEXT:    xscvdpspn 35, 0
 ; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    blr
 ;
@@ -1147,13 +1120,10 @@ define <3 x float> @constrained_vector_fsub_v3f32() #0 {
 ; PC64LE9-NEXT:    lxvx 36, 0, 3
 ; PC64LE9-NEXT:    xssubsp 2, 0, 2
 ; PC64LE9-NEXT:    xssubsp 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 2
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 1
+; PC64LE9-NEXT:    xscvdpspn 35, 2
+; PC64LE9-NEXT:    xscvdpspn 34, 0
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 1
 ; PC64LE9-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE9-NEXT:    blr
 entry:
@@ -1318,16 +1288,13 @@ define <3 x float> @constrained_vector_sqrt_v3f32() #0 {
 ; PC64LE-NEXT:    addis 3, 2, .LCPI27_3@toc@ha
 ; PC64LE-NEXT:    xssqrtsp 1, 1
 ; PC64LE-NEXT:    addi 3, 3, .LCPI27_3@toc@l
+; PC64LE-NEXT:    lvx 4, 0, 3
 ; PC64LE-NEXT:    xssqrtsp 2, 2
-; PC64LE-NEXT:    xscvdpspn 0, 0
-; PC64LE-NEXT:    xscvdpspn 1, 1
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 2
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    xscvdpspn 34, 0
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    vmrghw 2, 3, 2
-; PC64LE-NEXT:    lvx 3, 0, 3
-; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
-; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    xscvdpspn 35, 2
+; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_sqrt_v3f32:
@@ -1343,12 +1310,9 @@ define <3 x float> @constrained_vector_sqrt_v3f32() #0 {
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI27_3@toc@l
 ; PC64LE9-NEXT:    xssqrtsp 1, 1
 ; PC64LE9-NEXT:    xssqrtsp 2, 2
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xscvdpspn 1, 1
-; PC64LE9-NEXT:    xscvdpspn 2, 2
-; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
-; PC64LE9-NEXT:    xxsldwi 35, 1, 1, 3
-; PC64LE9-NEXT:    xxsldwi 34, 2, 2, 3
+; PC64LE9-NEXT:    xscvdpspn 36, 0
+; PC64LE9-NEXT:    xscvdpspn 35, 1
+; PC64LE9-NEXT:    xscvdpspn 34, 2
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    lxvx 35, 0, 3
 ; PC64LE9-NEXT:    vperm 2, 4, 2, 3
@@ -1571,16 +1535,13 @@ define <3 x float> @constrained_vector_pow_v3f32() #0 {
 ; PC64LE-NEXT:    lfs 1, .LCPI32_3@toc@l(3)
 ; PC64LE-NEXT:    bl powf
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xscvdpspn 0, 29
+; PC64LE-NEXT:    xscvdpspn 34, 29
 ; PC64LE-NEXT:    addis 3, 2, .LCPI32_4@toc@ha
-; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    addi 3, 3, .LCPI32_4@toc@l
 ; PC64LE-NEXT:    lvx 4, 0, 3
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 30
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
 ; PC64LE-NEXT:    vmrghw 2, 2, 3
-; PC64LE-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE-NEXT:    xscvdpspn 35, 30
 ; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    addi 1, 1, 64
 ; PC64LE-NEXT:    ld 0, 16(1)
@@ -1617,16 +1578,13 @@ define <3 x float> @constrained_vector_pow_v3f32() #0 {
 ; PC64LE9-NEXT:    lfs 1, .LCPI32_3@toc@l(3)
 ; PC64LE9-NEXT:    bl powf
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xscvdpspn 0, 1
+; PC64LE9-NEXT:    xscvdpspn 34, 1
+; PC64LE9-NEXT:    xscvdpspn 35, 29
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI32_4@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI32_4@toc@l
 ; PC64LE9-NEXT:    lxvx 36, 0, 3
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 29
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 30
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 30
 ; PC64LE9-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE9-NEXT:    addi 1, 1, 64
 ; PC64LE9-NEXT:    ld 0, 16(1)
@@ -1963,16 +1921,13 @@ define <3 x float> @constrained_vector_powi_v3f32() #0 {
 ; PC64LE-NEXT:    lfs 1, .LCPI37_2@toc@l(3)
 ; PC64LE-NEXT:    bl __powisf2
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xscvdpspn 0, 30
+; PC64LE-NEXT:    xscvdpspn 34, 30
 ; PC64LE-NEXT:    addis 3, 2, .LCPI37_3@toc@ha
-; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    addi 3, 3, .LCPI37_3@toc@l
 ; PC64LE-NEXT:    lvx 4, 0, 3
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 31
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
 ; PC64LE-NEXT:    vmrghw 2, 2, 3
-; PC64LE-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE-NEXT:    xscvdpspn 35, 31
 ; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    addi 1, 1, 48
 ; PC64LE-NEXT:    ld 0, 16(1)
@@ -2005,16 +1960,13 @@ define <3 x float> @constrained_vector_powi_v3f32() #0 {
 ; PC64LE9-NEXT:    lfs 1, .LCPI37_2@toc@l(3)
 ; PC64LE9-NEXT:    bl __powisf2
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xscvdpspn 0, 1
+; PC64LE9-NEXT:    xscvdpspn 34, 1
+; PC64LE9-NEXT:    xscvdpspn 35, 30
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI37_3@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI37_3@toc@l
 ; PC64LE9-NEXT:    lxvx 36, 0, 3
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 30
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 31
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 31
 ; PC64LE9-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE9-NEXT:    addi 1, 1, 48
 ; PC64LE9-NEXT:    ld 0, 16(1)
@@ -2320,17 +2272,14 @@ define <3 x float> @constrained_vector_sin_v3f32() #0 {
 ; PC64LE-NEXT:    lfs 1, .LCPI42_2@toc@l(3)
 ; PC64LE-NEXT:    bl sinf
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xscvdpspn 0, 30
+; PC64LE-NEXT:    xscvdpspn 34, 30
 ; PC64LE-NEXT:    addis 3, 2, .LCPI42_3@toc@ha
-; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    addi 3, 3, .LCPI42_3@toc@l
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 31
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    lvx 4, 0, 3
 ; PC64LE-NEXT:    vmrghw 2, 2, 3
-; PC64LE-NEXT:    lvx 3, 0, 3
-; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
-; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    xscvdpspn 35, 31
+; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    addi 1, 1, 48
 ; PC64LE-NEXT:    ld 0, 16(1)
 ; PC64LE-NEXT:    lfd 31, -8(1) # 8-byte Folded Reload
@@ -2359,16 +2308,13 @@ define <3 x float> @constrained_vector_sin_v3f32() #0 {
 ; PC64LE9-NEXT:    lfs 1, .LCPI42_2@toc@l(3)
 ; PC64LE9-NEXT:    bl sinf
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xscvdpspn 0, 1
+; PC64LE9-NEXT:    xscvdpspn 34, 1
+; PC64LE9-NEXT:    xscvdpspn 35, 30
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI42_3@toc@ha
+; PC64LE9-NEXT:    xscvdpspn 36, 31
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI42_3@toc@l
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 30
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 31
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    lxvx 35, 0, 3
-; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
 ; PC64LE9-NEXT:    vperm 2, 4, 2, 3
 ; PC64LE9-NEXT:    addi 1, 1, 48
 ; PC64LE9-NEXT:    ld 0, 16(1)
@@ -2657,17 +2603,14 @@ define <3 x float> @constrained_vector_cos_v3f32() #0 {
 ; PC64LE-NEXT:    lfs 1, .LCPI47_2@toc@l(3)
 ; PC64LE-NEXT:    bl cosf
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xscvdpspn 0, 30
+; PC64LE-NEXT:    xscvdpspn 34, 30
 ; PC64LE-NEXT:    addis 3, 2, .LCPI47_3@toc@ha
-; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    addi 3, 3, .LCPI47_3@toc@l
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 31
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    lvx 4, 0, 3
 ; PC64LE-NEXT:    vmrghw 2, 2, 3
-; PC64LE-NEXT:    lvx 3, 0, 3
-; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
-; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    xscvdpspn 35, 31
+; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    addi 1, 1, 48
 ; PC64LE-NEXT:    ld 0, 16(1)
 ; PC64LE-NEXT:    lfd 31, -8(1) # 8-byte Folded Reload
@@ -2696,16 +2639,13 @@ define <3 x float> @constrained_vector_cos_v3f32() #0 {
 ; PC64LE9-NEXT:    lfs 1, .LCPI47_2@toc@l(3)
 ; PC64LE9-NEXT:    bl cosf
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xscvdpspn 0, 1
+; PC64LE9-NEXT:    xscvdpspn 34, 1
+; PC64LE9-NEXT:    xscvdpspn 35, 30
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI47_3@toc@ha
+; PC64LE9-NEXT:    xscvdpspn 36, 31
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI47_3@toc@l
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 30
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 31
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    lxvx 35, 0, 3
-; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
 ; PC64LE9-NEXT:    vperm 2, 4, 2, 3
 ; PC64LE9-NEXT:    addi 1, 1, 48
 ; PC64LE9-NEXT:    ld 0, 16(1)
@@ -2994,17 +2934,14 @@ define <3 x float> @constrained_vector_exp_v3f32() #0 {
 ; PC64LE-NEXT:    lfs 1, .LCPI52_2@toc@l(3)
 ; PC64LE-NEXT:    bl expf
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xscvdpspn 0, 30
+; PC64LE-NEXT:    xscvdpspn 34, 30
 ; PC64LE-NEXT:    addis 3, 2, .LCPI52_3@toc@ha
-; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    addi 3, 3, .LCPI52_3@toc@l
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 31
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    lvx 4, 0, 3
 ; PC64LE-NEXT:    vmrghw 2, 2, 3
-; PC64LE-NEXT:    lvx 3, 0, 3
-; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
-; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    xscvdpspn 35, 31
+; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    addi 1, 1, 48
 ; PC64LE-NEXT:    ld 0, 16(1)
 ; PC64LE-NEXT:    lfd 31, -8(1) # 8-byte Folded Reload
@@ -3033,16 +2970,13 @@ define <3 x float> @constrained_vector_exp_v3f32() #0 {
 ; PC64LE9-NEXT:    lfs 1, .LCPI52_2@toc@l(3)
 ; PC64LE9-NEXT:    bl expf
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xscvdpspn 0, 1
+; PC64LE9-NEXT:    xscvdpspn 34, 1
+; PC64LE9-NEXT:    xscvdpspn 35, 30
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI52_3@toc@ha
+; PC64LE9-NEXT:    xscvdpspn 36, 31
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI52_3@toc@l
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 30
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 31
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    lxvx 35, 0, 3
-; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
 ; PC64LE9-NEXT:    vperm 2, 4, 2, 3
 ; PC64LE9-NEXT:    addi 1, 1, 48
 ; PC64LE9-NEXT:    ld 0, 16(1)
@@ -3331,17 +3265,14 @@ define <3 x float> @constrained_vector_exp2_v3f32() #0 {
 ; PC64LE-NEXT:    lfs 1, .LCPI57_2@toc@l(3)
 ; PC64LE-NEXT:    bl exp2f
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xscvdpspn 0, 30
+; PC64LE-NEXT:    xscvdpspn 34, 30
 ; PC64LE-NEXT:    addis 3, 2, .LCPI57_3@toc@ha
-; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    addi 3, 3, .LCPI57_3@toc@l
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 31
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    lvx 4, 0, 3
 ; PC64LE-NEXT:    vmrghw 2, 2, 3
-; PC64LE-NEXT:    lvx 3, 0, 3
-; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
-; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    xscvdpspn 35, 31
+; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    addi 1, 1, 48
 ; PC64LE-NEXT:    ld 0, 16(1)
 ; PC64LE-NEXT:    lfd 31, -8(1) # 8-byte Folded Reload
@@ -3370,16 +3301,13 @@ define <3 x float> @constrained_vector_exp2_v3f32() #0 {
 ; PC64LE9-NEXT:    lfs 1, .LCPI57_2@toc@l(3)
 ; PC64LE9-NEXT:    bl exp2f
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xscvdpspn 0, 1
+; PC64LE9-NEXT:    xscvdpspn 34, 1
+; PC64LE9-NEXT:    xscvdpspn 35, 30
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI57_3@toc@ha
+; PC64LE9-NEXT:    xscvdpspn 36, 31
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI57_3@toc@l
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 30
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 31
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    lxvx 35, 0, 3
-; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
 ; PC64LE9-NEXT:    vperm 2, 4, 2, 3
 ; PC64LE9-NEXT:    addi 1, 1, 48
 ; PC64LE9-NEXT:    ld 0, 16(1)
@@ -3668,17 +3596,14 @@ define <3 x float> @constrained_vector_log_v3f32() #0 {
 ; PC64LE-NEXT:    lfs 1, .LCPI62_2@toc@l(3)
 ; PC64LE-NEXT:    bl logf
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xscvdpspn 0, 30
+; PC64LE-NEXT:    xscvdpspn 34, 30
 ; PC64LE-NEXT:    addis 3, 2, .LCPI62_3@toc@ha
-; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    addi 3, 3, .LCPI62_3@toc@l
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 31
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    lvx 4, 0, 3
 ; PC64LE-NEXT:    vmrghw 2, 2, 3
-; PC64LE-NEXT:    lvx 3, 0, 3
-; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
-; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    xscvdpspn 35, 31
+; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    addi 1, 1, 48
 ; PC64LE-NEXT:    ld 0, 16(1)
 ; PC64LE-NEXT:    lfd 31, -8(1) # 8-byte Folded Reload
@@ -3707,16 +3632,13 @@ define <3 x float> @constrained_vector_log_v3f32() #0 {
 ; PC64LE9-NEXT:    lfs 1, .LCPI62_2@toc@l(3)
 ; PC64LE9-NEXT:    bl logf
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xscvdpspn 0, 1
+; PC64LE9-NEXT:    xscvdpspn 34, 1
+; PC64LE9-NEXT:    xscvdpspn 35, 30
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI62_3@toc@ha
+; PC64LE9-NEXT:    xscvdpspn 36, 31
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI62_3@toc@l
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 30
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 31
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    lxvx 35, 0, 3
-; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
 ; PC64LE9-NEXT:    vperm 2, 4, 2, 3
 ; PC64LE9-NEXT:    addi 1, 1, 48
 ; PC64LE9-NEXT:    ld 0, 16(1)
@@ -4005,17 +3927,14 @@ define <3 x float> @constrained_vector_log10_v3f32() #0 {
 ; PC64LE-NEXT:    lfs 1, .LCPI67_2@toc@l(3)
 ; PC64LE-NEXT:    bl log10f
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xscvdpspn 0, 30
+; PC64LE-NEXT:    xscvdpspn 34, 30
 ; PC64LE-NEXT:    addis 3, 2, .LCPI67_3@toc@ha
-; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    addi 3, 3, .LCPI67_3@toc@l
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 31
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    lvx 4, 0, 3
 ; PC64LE-NEXT:    vmrghw 2, 2, 3
-; PC64LE-NEXT:    lvx 3, 0, 3
-; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
-; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    xscvdpspn 35, 31
+; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    addi 1, 1, 48
 ; PC64LE-NEXT:    ld 0, 16(1)
 ; PC64LE-NEXT:    lfd 31, -8(1) # 8-byte Folded Reload
@@ -4044,16 +3963,13 @@ define <3 x float> @constrained_vector_log10_v3f32() #0 {
 ; PC64LE9-NEXT:    lfs 1, .LCPI67_2@toc@l(3)
 ; PC64LE9-NEXT:    bl log10f
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xscvdpspn 0, 1
+; PC64LE9-NEXT:    xscvdpspn 34, 1
+; PC64LE9-NEXT:    xscvdpspn 35, 30
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI67_3@toc@ha
+; PC64LE9-NEXT:    xscvdpspn 36, 31
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI67_3@toc@l
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 30
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 31
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    lxvx 35, 0, 3
-; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
 ; PC64LE9-NEXT:    vperm 2, 4, 2, 3
 ; PC64LE9-NEXT:    addi 1, 1, 48
 ; PC64LE9-NEXT:    ld 0, 16(1)
@@ -4342,17 +4258,14 @@ define <3 x float> @constrained_vector_log2_v3f32() #0 {
 ; PC64LE-NEXT:    lfs 1, .LCPI72_2@toc@l(3)
 ; PC64LE-NEXT:    bl log2f
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xscvdpspn 0, 30
+; PC64LE-NEXT:    xscvdpspn 34, 30
 ; PC64LE-NEXT:    addis 3, 2, .LCPI72_3@toc@ha
-; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    addi 3, 3, .LCPI72_3@toc@l
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 31
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    lvx 4, 0, 3
 ; PC64LE-NEXT:    vmrghw 2, 2, 3
-; PC64LE-NEXT:    lvx 3, 0, 3
-; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
-; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    xscvdpspn 35, 31
+; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    addi 1, 1, 48
 ; PC64LE-NEXT:    ld 0, 16(1)
 ; PC64LE-NEXT:    lfd 31, -8(1) # 8-byte Folded Reload
@@ -4381,16 +4294,13 @@ define <3 x float> @constrained_vector_log2_v3f32() #0 {
 ; PC64LE9-NEXT:    lfs 1, .LCPI72_2@toc@l(3)
 ; PC64LE9-NEXT:    bl log2f
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xscvdpspn 0, 1
+; PC64LE9-NEXT:    xscvdpspn 34, 1
+; PC64LE9-NEXT:    xscvdpspn 35, 30
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI72_3@toc@ha
+; PC64LE9-NEXT:    xscvdpspn 36, 31
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI72_3@toc@l
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 30
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 31
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    lxvx 35, 0, 3
-; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
 ; PC64LE9-NEXT:    vperm 2, 4, 2, 3
 ; PC64LE9-NEXT:    addi 1, 1, 48
 ; PC64LE9-NEXT:    ld 0, 16(1)
@@ -4625,16 +4535,13 @@ define <3 x float> @constrained_vector_rint_v3f32() #0 {
 ; PC64LE-NEXT:    addis 3, 2, .LCPI77_3@toc@ha
 ; PC64LE-NEXT:    xsrdpic 1, 1
 ; PC64LE-NEXT:    addi 3, 3, .LCPI77_3@toc@l
-; PC64LE-NEXT:    xsrdpic 2, 2
-; PC64LE-NEXT:    xscvdpspn 0, 0
-; PC64LE-NEXT:    xscvdpspn 1, 1
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 2
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    lvx 4, 0, 3
+; PC64LE-NEXT:    xscvdpspn 34, 0
+; PC64LE-NEXT:    xscvdpspn 35, 1
+; PC64LE-NEXT:    xsrdpic 0, 2
 ; PC64LE-NEXT:    vmrghw 2, 3, 2
-; PC64LE-NEXT:    lvx 3, 0, 3
-; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
-; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    xscvdpspn 35, 0
+; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_rint_v3f32:
@@ -4650,12 +4557,9 @@ define <3 x float> @constrained_vector_rint_v3f32() #0 {
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI77_3@toc@l
 ; PC64LE9-NEXT:    xsrdpic 1, 1
 ; PC64LE9-NEXT:    xsrdpic 2, 2
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xscvdpspn 1, 1
-; PC64LE9-NEXT:    xscvdpspn 2, 2
-; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
-; PC64LE9-NEXT:    xxsldwi 35, 1, 1, 3
-; PC64LE9-NEXT:    xxsldwi 34, 2, 2, 3
+; PC64LE9-NEXT:    xscvdpspn 36, 0
+; PC64LE9-NEXT:    xscvdpspn 35, 1
+; PC64LE9-NEXT:    xscvdpspn 34, 2
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    lxvx 35, 0, 3
 ; PC64LE9-NEXT:    vperm 2, 4, 2, 3
@@ -4854,17 +4758,14 @@ define <3 x float> @constrained_vector_nearbyint_v3f32() #0 {
 ; PC64LE-NEXT:    lfs 1, .LCPI82_2@toc@l(3)
 ; PC64LE-NEXT:    bl nearbyintf
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xscvdpspn 0, 30
+; PC64LE-NEXT:    xscvdpspn 34, 30
 ; PC64LE-NEXT:    addis 3, 2, .LCPI82_3@toc@ha
-; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    addi 3, 3, .LCPI82_3@toc@l
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 31
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    lvx 4, 0, 3
 ; PC64LE-NEXT:    vmrghw 2, 2, 3
-; PC64LE-NEXT:    lvx 3, 0, 3
-; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
-; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    xscvdpspn 35, 31
+; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    addi 1, 1, 48
 ; PC64LE-NEXT:    ld 0, 16(1)
 ; PC64LE-NEXT:    lfd 31, -8(1) # 8-byte Folded Reload
@@ -4893,16 +4794,13 @@ define <3 x float> @constrained_vector_nearbyint_v3f32() #0 {
 ; PC64LE9-NEXT:    lfs 1, .LCPI82_2@toc@l(3)
 ; PC64LE9-NEXT:    bl nearbyintf
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xscvdpspn 0, 1
+; PC64LE9-NEXT:    xscvdpspn 34, 1
+; PC64LE9-NEXT:    xscvdpspn 35, 30
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI82_3@toc@ha
+; PC64LE9-NEXT:    xscvdpspn 36, 31
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI82_3@toc@l
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 30
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 31
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    lxvx 35, 0, 3
-; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
 ; PC64LE9-NEXT:    vperm 2, 4, 2, 3
 ; PC64LE9-NEXT:    addi 1, 1, 48
 ; PC64LE9-NEXT:    ld 0, 16(1)
@@ -5177,16 +5075,13 @@ define <3 x float> @constrained_vector_maxnum_v3f32() #0 {
 ; PC64LE-NEXT:    lfs 2, .LCPI87_4@toc@l(3)
 ; PC64LE-NEXT:    bl fmaxf
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xscvdpspn 0, 29
+; PC64LE-NEXT:    xscvdpspn 34, 29
 ; PC64LE-NEXT:    addis 3, 2, .LCPI87_5@toc@ha
-; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    addi 3, 3, .LCPI87_5@toc@l
 ; PC64LE-NEXT:    lvx 4, 0, 3
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 30
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
 ; PC64LE-NEXT:    vmrghw 2, 2, 3
-; PC64LE-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE-NEXT:    xscvdpspn 35, 30
 ; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    addi 1, 1, 64
 ; PC64LE-NEXT:    ld 0, 16(1)
@@ -5224,16 +5119,13 @@ define <3 x float> @constrained_vector_maxnum_v3f32() #0 {
 ; PC64LE9-NEXT:    lfs 2, .LCPI87_4@toc@l(3)
 ; PC64LE9-NEXT:    bl fmaxf
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xscvdpspn 0, 1
+; PC64LE9-NEXT:    xscvdpspn 34, 1
+; PC64LE9-NEXT:    xscvdpspn 35, 29
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI87_5@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI87_5@toc@l
 ; PC64LE9-NEXT:    lxvx 36, 0, 3
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 29
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 30
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 30
 ; PC64LE9-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE9-NEXT:    addi 1, 1, 64
 ; PC64LE9-NEXT:    ld 0, 16(1)
@@ -5464,16 +5356,13 @@ define <3 x float> @constrained_vector_minnum_v3f32() #0 {
 ; PC64LE-NEXT:    lfs 2, .LCPI92_4@toc@l(3)
 ; PC64LE-NEXT:    bl fminf
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    xscvdpspn 0, 29
+; PC64LE-NEXT:    xscvdpspn 34, 29
 ; PC64LE-NEXT:    addis 3, 2, .LCPI92_5@toc@ha
-; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    addi 3, 3, .LCPI92_5@toc@l
 ; PC64LE-NEXT:    lvx 4, 0, 3
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 30
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
 ; PC64LE-NEXT:    vmrghw 2, 2, 3
-; PC64LE-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE-NEXT:    xscvdpspn 35, 30
 ; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    addi 1, 1, 64
 ; PC64LE-NEXT:    ld 0, 16(1)
@@ -5511,16 +5400,13 @@ define <3 x float> @constrained_vector_minnum_v3f32() #0 {
 ; PC64LE9-NEXT:    lfs 2, .LCPI92_4@toc@l(3)
 ; PC64LE9-NEXT:    bl fminf
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    xscvdpspn 0, 1
+; PC64LE9-NEXT:    xscvdpspn 34, 1
+; PC64LE9-NEXT:    xscvdpspn 35, 29
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI92_5@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI92_5@toc@l
 ; PC64LE9-NEXT:    lxvx 36, 0, 3
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 29
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 30
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 30
 ; PC64LE9-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE9-NEXT:    addi 1, 1, 64
 ; PC64LE9-NEXT:    ld 0, 16(1)
@@ -5696,12 +5582,12 @@ define <2 x i32> @constrained_vector_fptosi_v2i32_v2f32() #0 {
 ; PC64LE9-NEXT:    lfs 0, .LCPI96_0@toc@l(3)
 ; PC64LE9-NEXT:    xscvdpsxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 34, 3
+; PC64LE9-NEXT:    mtvsrwz 34, 3
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI96_1@toc@ha
 ; PC64LE9-NEXT:    lfs 0, .LCPI96_1@toc@l(3)
 ; PC64LE9-NEXT:    xscvdpsxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 35, 3
+; PC64LE9-NEXT:    mtvsrwz 35, 3
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    blr
 entry:
@@ -5745,9 +5631,9 @@ define <3 x i32> @constrained_vector_fptosi_v3i32_v3f32() #0 {
 ; PC64LE9-NEXT:    xscvdpsxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
 ; PC64LE9-NEXT:    xscvdpsxws 0, 1
-; PC64LE9-NEXT:    mtvsrws 34, 3
+; PC64LE9-NEXT:    mtvsrwz 34, 3
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 35, 3
+; PC64LE9-NEXT:    mtvsrwz 35, 3
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI97_2@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI97_2@toc@l
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
@@ -5756,7 +5642,7 @@ define <3 x i32> @constrained_vector_fptosi_v3i32_v3f32() #0 {
 ; PC64LE9-NEXT:    lfs 0, .LCPI97_3@toc@l(3)
 ; PC64LE9-NEXT:    xscvdpsxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 36, 3
+; PC64LE9-NEXT:    mtvsrwz 36, 3
 ; PC64LE9-NEXT:    vperm 2, 4, 2, 3
 ; PC64LE9-NEXT:    blr
 entry:
@@ -5991,12 +5877,12 @@ define <2 x i32> @constrained_vector_fptosi_v2i32_v2f64() #0 {
 ; PC64LE9-NEXT:    lfd 0, .LCPI104_0@toc@l(3)
 ; PC64LE9-NEXT:    xscvdpsxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 34, 3
+; PC64LE9-NEXT:    mtvsrwz 34, 3
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI104_1@toc@ha
 ; PC64LE9-NEXT:    lfd 0, .LCPI104_1@toc@l(3)
 ; PC64LE9-NEXT:    xscvdpsxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 35, 3
+; PC64LE9-NEXT:    mtvsrwz 35, 3
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    blr
 entry:
@@ -6037,12 +5923,12 @@ define <3 x i32> @constrained_vector_fptosi_v3i32_v3f64() #0 {
 ; PC64LE9-NEXT:    lfd 0, .LCPI105_0@toc@l(3)
 ; PC64LE9-NEXT:    xscvdpsxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 34, 3
+; PC64LE9-NEXT:    mtvsrwz 34, 3
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI105_1@toc@ha
 ; PC64LE9-NEXT:    lfd 0, .LCPI105_1@toc@l(3)
 ; PC64LE9-NEXT:    xscvdpsxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 35, 3
+; PC64LE9-NEXT:    mtvsrwz 35, 3
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI105_2@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI105_2@toc@l
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
@@ -6051,7 +5937,7 @@ define <3 x i32> @constrained_vector_fptosi_v3i32_v3f64() #0 {
 ; PC64LE9-NEXT:    lfd 0, .LCPI105_3@toc@l(3)
 ; PC64LE9-NEXT:    xscvdpsxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 36, 3
+; PC64LE9-NEXT:    mtvsrwz 36, 3
 ; PC64LE9-NEXT:    vperm 2, 4, 2, 3
 ; PC64LE9-NEXT:    blr
 entry:
@@ -6284,12 +6170,12 @@ define <2 x i32> @constrained_vector_fptoui_v2i32_v2f32() #0 {
 ; PC64LE9-NEXT:    lfs 0, .LCPI112_0@toc@l(3)
 ; PC64LE9-NEXT:    xscvdpuxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 34, 3
+; PC64LE9-NEXT:    mtvsrwz 34, 3
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI112_1@toc@ha
 ; PC64LE9-NEXT:    lfs 0, .LCPI112_1@toc@l(3)
 ; PC64LE9-NEXT:    xscvdpuxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 35, 3
+; PC64LE9-NEXT:    mtvsrwz 35, 3
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    blr
 entry:
@@ -6333,9 +6219,9 @@ define <3 x i32> @constrained_vector_fptoui_v3i32_v3f32() #0 {
 ; PC64LE9-NEXT:    xscvdpuxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
 ; PC64LE9-NEXT:    xscvdpuxws 0, 1
-; PC64LE9-NEXT:    mtvsrws 34, 3
+; PC64LE9-NEXT:    mtvsrwz 34, 3
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 35, 3
+; PC64LE9-NEXT:    mtvsrwz 35, 3
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI113_2@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI113_2@toc@l
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
@@ -6344,7 +6230,7 @@ define <3 x i32> @constrained_vector_fptoui_v3i32_v3f32() #0 {
 ; PC64LE9-NEXT:    lfs 0, .LCPI113_3@toc@l(3)
 ; PC64LE9-NEXT:    xscvdpuxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 36, 3
+; PC64LE9-NEXT:    mtvsrwz 36, 3
 ; PC64LE9-NEXT:    vperm 2, 4, 2, 3
 ; PC64LE9-NEXT:    blr
 entry:
@@ -6578,12 +6464,12 @@ define <2 x i32> @constrained_vector_fptoui_v2i32_v2f64() #0 {
 ; PC64LE9-NEXT:    lfd 0, .LCPI120_0@toc@l(3)
 ; PC64LE9-NEXT:    xscvdpuxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 34, 3
+; PC64LE9-NEXT:    mtvsrwz 34, 3
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI120_1@toc@ha
 ; PC64LE9-NEXT:    lfd 0, .LCPI120_1@toc@l(3)
 ; PC64LE9-NEXT:    xscvdpuxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 35, 3
+; PC64LE9-NEXT:    mtvsrwz 35, 3
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    blr
 entry:
@@ -6624,12 +6510,12 @@ define <3 x i32> @constrained_vector_fptoui_v3i32_v3f64() #0 {
 ; PC64LE9-NEXT:    lfd 0, .LCPI121_0@toc@l(3)
 ; PC64LE9-NEXT:    xscvdpuxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 34, 3
+; PC64LE9-NEXT:    mtvsrwz 34, 3
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI121_1@toc@ha
 ; PC64LE9-NEXT:    lfd 0, .LCPI121_1@toc@l(3)
 ; PC64LE9-NEXT:    xscvdpuxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 35, 3
+; PC64LE9-NEXT:    mtvsrwz 35, 3
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI121_2@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI121_2@toc@l
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
@@ -6638,7 +6524,7 @@ define <3 x i32> @constrained_vector_fptoui_v3i32_v3f64() #0 {
 ; PC64LE9-NEXT:    lfd 0, .LCPI121_3@toc@l(3)
 ; PC64LE9-NEXT:    xscvdpuxws 0, 0
 ; PC64LE9-NEXT:    mffprwz 3, 0
-; PC64LE9-NEXT:    mtvsrws 36, 3
+; PC64LE9-NEXT:    mtvsrwz 36, 3
 ; PC64LE9-NEXT:    vperm 2, 4, 2, 3
 ; PC64LE9-NEXT:    blr
 entry:
@@ -6857,10 +6743,8 @@ define <2 x float> @constrained_vector_fptrunc_v2f64() #0 {
 ; PC64LE-NEXT:    lfd 1, .LCPI128_1@toc@l(4)
 ; PC64LE-NEXT:    xsrsp 0, 0
 ; PC64LE-NEXT:    xsrsp 1, 1
-; PC64LE-NEXT:    xscvdpspn 0, 0
-; PC64LE-NEXT:    xscvdpspn 1, 1
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    xscvdpspn 34, 0
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    vmrghw 2, 3, 2
 ; PC64LE-NEXT:    blr
 ;
@@ -6870,12 +6754,10 @@ define <2 x float> @constrained_vector_fptrunc_v2f64() #0 {
 ; PC64LE9-NEXT:    lfd 0, .LCPI128_0@toc@l(3)
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI128_1@toc@ha
 ; PC64LE9-NEXT:    xsrsp 0, 0
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 34, 0
 ; PC64LE9-NEXT:    lfd 0, .LCPI128_1@toc@l(3)
 ; PC64LE9-NEXT:    xsrsp 0, 0
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 0
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    blr
 entry:
@@ -6899,16 +6781,13 @@ define <3 x float> @constrained_vector_fptrunc_v3f64() #0 {
 ; PC64LE-NEXT:    addis 3, 2, .LCPI129_2@toc@ha
 ; PC64LE-NEXT:    xsrsp 1, 1
 ; PC64LE-NEXT:    addi 3, 3, .LCPI129_2@toc@l
-; PC64LE-NEXT:    xsrsp 2, 2
-; PC64LE-NEXT:    xscvdpspn 0, 0
-; PC64LE-NEXT:    xscvdpspn 1, 1
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 2
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    lvx 4, 0, 3
+; PC64LE-NEXT:    xscvdpspn 34, 0
+; PC64LE-NEXT:    xscvdpspn 35, 1
+; PC64LE-NEXT:    xsrsp 0, 2
 ; PC64LE-NEXT:    vmrghw 2, 3, 2
-; PC64LE-NEXT:    lvx 3, 0, 3
-; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
-; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    xscvdpspn 35, 0
+; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_fptrunc_v3f64:
@@ -6917,21 +6796,18 @@ define <3 x float> @constrained_vector_fptrunc_v3f64() #0 {
 ; PC64LE9-NEXT:    lfd 0, .LCPI129_0@toc@l(3)
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI129_1@toc@ha
 ; PC64LE9-NEXT:    xsrsp 0, 0
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 34, 0
 ; PC64LE9-NEXT:    lfd 0, .LCPI129_1@toc@l(3)
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI129_2@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI129_2@toc@l
 ; PC64LE9-NEXT:    xsrsp 0, 0
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 0
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    lxvx 35, 0, 3
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI129_3@toc@ha
 ; PC64LE9-NEXT:    lfd 0, .LCPI129_3@toc@l(3)
 ; PC64LE9-NEXT:    xsrsp 0, 0
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 36, 0
 ; PC64LE9-NEXT:    vperm 2, 4, 2, 3
 ; PC64LE9-NEXT:    blr
 entry:
@@ -7780,10 +7656,8 @@ define <2 x float> @constrained_vector_sitofp_v2f32_v2i32(<2 x i32> %x) #0 {
 ; PC64LE-NEXT:    mtfprwa 1, 4
 ; PC64LE-NEXT:    xscvsxdsp 0, 0
 ; PC64LE-NEXT:    xscvsxdsp 1, 1
-; PC64LE-NEXT:    xscvdpspn 0, 0
-; PC64LE-NEXT:    xscvdpspn 1, 1
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    xscvdpspn 34, 0
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    vmrghw 2, 3, 2
 ; PC64LE-NEXT:    blr
 ;
@@ -7795,12 +7669,10 @@ define <2 x float> @constrained_vector_sitofp_v2f32_v2i32(<2 x i32> %x) #0 {
 ; PC64LE9-NEXT:    li 3, 4
 ; PC64LE9-NEXT:    xscvsxdsp 0, 0
 ; PC64LE9-NEXT:    vextuwrx 3, 3, 2
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 0
 ; PC64LE9-NEXT:    mtfprwa 0, 3
 ; PC64LE9-NEXT:    xscvsxdsp 0, 0
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 34, 0
 ; PC64LE9-NEXT:    vmrghw 2, 2, 3
 ; PC64LE9-NEXT:    blr
 entry:
@@ -7839,10 +7711,8 @@ define <2 x float> @constrained_vector_sitofp_v2f32_v2i64(<2 x i64> %x) #0 {
 ; PC64LE-NEXT:    mtfprd 1, 4
 ; PC64LE-NEXT:    xscvsxdsp 0, 0
 ; PC64LE-NEXT:    xscvsxdsp 1, 1
-; PC64LE-NEXT:    xscvdpspn 0, 0
-; PC64LE-NEXT:    xscvdpspn 1, 1
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    xscvdpspn 34, 0
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    vmrghw 2, 2, 3
 ; PC64LE-NEXT:    blr
 ;
@@ -7852,12 +7722,10 @@ define <2 x float> @constrained_vector_sitofp_v2f32_v2i64(<2 x i64> %x) #0 {
 ; PC64LE9-NEXT:    mtfprd 0, 3
 ; PC64LE9-NEXT:    mfvsrd 3, 34
 ; PC64LE9-NEXT:    xscvsxdsp 0, 0
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 0
 ; PC64LE9-NEXT:    mtfprd 0, 3
 ; PC64LE9-NEXT:    xscvsxdsp 0, 0
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 34, 0
 ; PC64LE9-NEXT:    vmrghw 2, 2, 3
 ; PC64LE9-NEXT:    blr
 entry:
@@ -7911,26 +7779,23 @@ define <3 x float> @constrained_vector_sitofp_v3f32_v3i32(<3 x i32> %x) #0 {
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    xxswapd 0, 34
 ; PC64LE-NEXT:    xxsldwi 1, 34, 34, 1
-; PC64LE-NEXT:    addis 3, 2, .LCPI161_0@toc@ha
-; PC64LE-NEXT:    addi 3, 3, .LCPI161_0@toc@l
-; PC64LE-NEXT:    mffprwz 4, 0
-; PC64LE-NEXT:    mffprwz 5, 1
-; PC64LE-NEXT:    mtfprwa 0, 4
-; PC64LE-NEXT:    mtfprwa 1, 5
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtfprwa 0, 3
+; PC64LE-NEXT:    mtfprwa 1, 4
 ; PC64LE-NEXT:    xscvsxdsp 0, 0
 ; PC64LE-NEXT:    xscvsxdsp 1, 1
-; PC64LE-NEXT:    mfvsrwz 4, 34
-; PC64LE-NEXT:    mtfprwa 2, 4
-; PC64LE-NEXT:    xscvsxdsp 2, 2
-; PC64LE-NEXT:    xscvdpspn 0, 0
-; PC64LE-NEXT:    xscvdpspn 1, 1
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 2
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    mfvsrwz 3, 34
+; PC64LE-NEXT:    mtfprwa 2, 3
+; PC64LE-NEXT:    addis 3, 2, .LCPI161_0@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI161_0@toc@l
+; PC64LE-NEXT:    xscvdpspn 34, 0
+; PC64LE-NEXT:    lvx 4, 0, 3
+; PC64LE-NEXT:    xscvdpspn 35, 1
+; PC64LE-NEXT:    xscvsxdsp 0, 2
 ; PC64LE-NEXT:    vmrghw 2, 3, 2
-; PC64LE-NEXT:    lvx 3, 0, 3
-; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
-; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    xscvdpspn 35, 0
+; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_sitofp_v3f32_v3i32:
@@ -7941,21 +7806,18 @@ define <3 x float> @constrained_vector_sitofp_v3f32_v3i32(<3 x i32> %x) #0 {
 ; PC64LE9-NEXT:    li 3, 4
 ; PC64LE9-NEXT:    xscvsxdsp 0, 0
 ; PC64LE9-NEXT:    vextuwrx 3, 3, 2
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 0
 ; PC64LE9-NEXT:    mtfprwa 0, 3
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI161_0@toc@ha
 ; PC64LE9-NEXT:    xscvsxdsp 0, 0
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI161_0@toc@l
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 36, 0
 ; PC64LE9-NEXT:    vmrghw 3, 4, 3
 ; PC64LE9-NEXT:    lxvx 36, 0, 3
 ; PC64LE9-NEXT:    mfvsrwz 3, 34
 ; PC64LE9-NEXT:    mtfprwa 0, 3
 ; PC64LE9-NEXT:    xscvsxdsp 0, 0
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 34, 0
 ; PC64LE9-NEXT:    vperm 2, 2, 3, 4
 ; PC64LE9-NEXT:    blr
 entry:
@@ -7998,22 +7860,19 @@ define <3 x float> @constrained_vector_sitofp_v3f32_v3i64(<3 x i64> %x) #0 {
 ; PC64LE-LABEL: constrained_vector_sitofp_v3f32_v3i64:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mtfprd 0, 3
-; PC64LE-NEXT:    addis 6, 2, .LCPI163_0@toc@ha
+; PC64LE-NEXT:    addis 3, 2, .LCPI163_0@toc@ha
 ; PC64LE-NEXT:    mtfprd 1, 4
-; PC64LE-NEXT:    addi 3, 6, .LCPI163_0@toc@l
+; PC64LE-NEXT:    addi 3, 3, .LCPI163_0@toc@l
 ; PC64LE-NEXT:    xscvsxdsp 0, 0
+; PC64LE-NEXT:    lvx 4, 0, 3
 ; PC64LE-NEXT:    xscvsxdsp 1, 1
 ; PC64LE-NEXT:    mtfprd 2, 5
-; PC64LE-NEXT:    xscvsxdsp 2, 2
-; PC64LE-NEXT:    xscvdpspn 0, 0
-; PC64LE-NEXT:    xscvdpspn 1, 1
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 2
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    xscvdpspn 34, 0
+; PC64LE-NEXT:    xscvdpspn 35, 1
+; PC64LE-NEXT:    xscvsxdsp 0, 2
 ; PC64LE-NEXT:    vmrghw 2, 3, 2
-; PC64LE-NEXT:    lvx 3, 0, 3
-; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
-; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    xscvdpspn 35, 0
+; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_sitofp_v3f32_v3i64:
@@ -8022,18 +7881,15 @@ define <3 x float> @constrained_vector_sitofp_v3f32_v3i64(<3 x i64> %x) #0 {
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI163_0@toc@ha
 ; PC64LE9-NEXT:    xscvsxdsp 0, 0
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI163_0@toc@l
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 34, 0
 ; PC64LE9-NEXT:    mtfprd 0, 4
 ; PC64LE9-NEXT:    xscvsxdsp 0, 0
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 0
 ; PC64LE9-NEXT:    mtfprd 0, 5
 ; PC64LE9-NEXT:    xscvsxdsp 0, 0
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    lxvx 35, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 36, 0
 ; PC64LE9-NEXT:    vperm 2, 4, 2, 3
 ; PC64LE9-NEXT:    blr
 entry:
@@ -8363,10 +8219,8 @@ define <2 x float> @constrained_vector_uitofp_v2f32_v2i32(<2 x i32> %x) #0 {
 ; PC64LE-NEXT:    mtfprwz 1, 4
 ; PC64LE-NEXT:    xscvuxdsp 0, 0
 ; PC64LE-NEXT:    xscvuxdsp 1, 1
-; PC64LE-NEXT:    xscvdpspn 0, 0
-; PC64LE-NEXT:    xscvdpspn 1, 1
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    xscvdpspn 34, 0
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    vmrghw 2, 3, 2
 ; PC64LE-NEXT:    blr
 ;
@@ -8378,12 +8232,10 @@ define <2 x float> @constrained_vector_uitofp_v2f32_v2i32(<2 x i32> %x) #0 {
 ; PC64LE9-NEXT:    li 3, 4
 ; PC64LE9-NEXT:    xscvuxdsp 0, 0
 ; PC64LE9-NEXT:    vextuwrx 3, 3, 2
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 0
 ; PC64LE9-NEXT:    mtfprwz 0, 3
 ; PC64LE9-NEXT:    xscvuxdsp 0, 0
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 34, 0
 ; PC64LE9-NEXT:    vmrghw 2, 2, 3
 ; PC64LE9-NEXT:    blr
 entry:
@@ -8422,10 +8274,8 @@ define <2 x float> @constrained_vector_uitofp_v2f32_v2i64(<2 x i64> %x) #0 {
 ; PC64LE-NEXT:    mtfprd 1, 4
 ; PC64LE-NEXT:    xscvuxdsp 0, 0
 ; PC64LE-NEXT:    xscvuxdsp 1, 1
-; PC64LE-NEXT:    xscvdpspn 0, 0
-; PC64LE-NEXT:    xscvdpspn 1, 1
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    xscvdpspn 34, 0
+; PC64LE-NEXT:    xscvdpspn 35, 1
 ; PC64LE-NEXT:    vmrghw 2, 2, 3
 ; PC64LE-NEXT:    blr
 ;
@@ -8435,12 +8285,10 @@ define <2 x float> @constrained_vector_uitofp_v2f32_v2i64(<2 x i64> %x) #0 {
 ; PC64LE9-NEXT:    mtfprd 0, 3
 ; PC64LE9-NEXT:    mfvsrd 3, 34
 ; PC64LE9-NEXT:    xscvuxdsp 0, 0
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 0
 ; PC64LE9-NEXT:    mtfprd 0, 3
 ; PC64LE9-NEXT:    xscvuxdsp 0, 0
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 34, 0
 ; PC64LE9-NEXT:    vmrghw 2, 2, 3
 ; PC64LE9-NEXT:    blr
 entry:
@@ -8494,26 +8342,23 @@ define <3 x float> @constrained_vector_uitofp_v3f32_v3i32(<3 x i32> %x) #0 {
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    xxswapd 0, 34
 ; PC64LE-NEXT:    xxsldwi 1, 34, 34, 1
-; PC64LE-NEXT:    addis 3, 2, .LCPI179_0@toc@ha
-; PC64LE-NEXT:    addi 3, 3, .LCPI179_0@toc@l
-; PC64LE-NEXT:    mffprwz 4, 0
-; PC64LE-NEXT:    mffprwz 5, 1
-; PC64LE-NEXT:    mtfprwz 0, 4
-; PC64LE-NEXT:    mtfprwz 1, 5
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtfprwz 0, 3
+; PC64LE-NEXT:    mtfprwz 1, 4
 ; PC64LE-NEXT:    xscvuxdsp 0, 0
 ; PC64LE-NEXT:    xscvuxdsp 1, 1
-; PC64LE-NEXT:    mfvsrwz 4, 34
-; PC64LE-NEXT:    mtfprwz 2, 4
-; PC64LE-NEXT:    xscvuxdsp 2, 2
-; PC64LE-NEXT:    xscvdpspn 0, 0
-; PC64LE-NEXT:    xscvdpspn 1, 1
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 2
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    mfvsrwz 3, 34
+; PC64LE-NEXT:    mtfprwz 2, 3
+; PC64LE-NEXT:    addis 3, 2, .LCPI179_0@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI179_0@toc@l
+; PC64LE-NEXT:    xscvdpspn 34, 0
+; PC64LE-NEXT:    lvx 4, 0, 3
+; PC64LE-NEXT:    xscvdpspn 35, 1
+; PC64LE-NEXT:    xscvuxdsp 0, 2
 ; PC64LE-NEXT:    vmrghw 2, 3, 2
-; PC64LE-NEXT:    lvx 3, 0, 3
-; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
-; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    xscvdpspn 35, 0
+; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_uitofp_v3f32_v3i32:
@@ -8524,21 +8369,18 @@ define <3 x float> @constrained_vector_uitofp_v3f32_v3i32(<3 x i32> %x) #0 {
 ; PC64LE9-NEXT:    li 3, 4
 ; PC64LE9-NEXT:    xscvuxdsp 0, 0
 ; PC64LE9-NEXT:    vextuwrx 3, 3, 2
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 0
 ; PC64LE9-NEXT:    mtfprwz 0, 3
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI179_0@toc@ha
 ; PC64LE9-NEXT:    xscvuxdsp 0, 0
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI179_0@toc@l
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 36, 0
 ; PC64LE9-NEXT:    vmrghw 3, 4, 3
 ; PC64LE9-NEXT:    lxvx 36, 0, 3
 ; PC64LE9-NEXT:    mfvsrwz 3, 34
 ; PC64LE9-NEXT:    mtfprwz 0, 3
 ; PC64LE9-NEXT:    xscvuxdsp 0, 0
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 34, 0
 ; PC64LE9-NEXT:    vperm 2, 2, 3, 4
 ; PC64LE9-NEXT:    blr
 entry:
@@ -8581,22 +8423,19 @@ define <3 x float> @constrained_vector_uitofp_v3f32_v3i64(<3 x i64> %x) #0 {
 ; PC64LE-LABEL: constrained_vector_uitofp_v3f32_v3i64:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mtfprd 0, 3
-; PC64LE-NEXT:    addis 6, 2, .LCPI181_0@toc@ha
+; PC64LE-NEXT:    addis 3, 2, .LCPI181_0@toc@ha
 ; PC64LE-NEXT:    mtfprd 1, 4
-; PC64LE-NEXT:    addi 3, 6, .LCPI181_0@toc@l
+; PC64LE-NEXT:    addi 3, 3, .LCPI181_0@toc@l
 ; PC64LE-NEXT:    xscvuxdsp 0, 0
+; PC64LE-NEXT:    lvx 4, 0, 3
 ; PC64LE-NEXT:    xscvuxdsp 1, 1
 ; PC64LE-NEXT:    mtfprd 2, 5
-; PC64LE-NEXT:    xscvuxdsp 2, 2
-; PC64LE-NEXT:    xscvdpspn 0, 0
-; PC64LE-NEXT:    xscvdpspn 1, 1
-; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE-NEXT:    xscvdpspn 0, 2
-; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    xscvdpspn 34, 0
+; PC64LE-NEXT:    xscvdpspn 35, 1
+; PC64LE-NEXT:    xscvuxdsp 0, 2
 ; PC64LE-NEXT:    vmrghw 2, 3, 2
-; PC64LE-NEXT:    lvx 3, 0, 3
-; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
-; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    xscvdpspn 35, 0
+; PC64LE-NEXT:    vperm 2, 3, 2, 4
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_uitofp_v3f32_v3i64:
@@ -8605,18 +8444,15 @@ define <3 x float> @constrained_vector_uitofp_v3f32_v3i64(<3 x i64> %x) #0 {
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI181_0@toc@ha
 ; PC64LE9-NEXT:    xscvuxdsp 0, 0
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI181_0@toc@l
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 34, 0
 ; PC64LE9-NEXT:    mtfprd 0, 4
 ; PC64LE9-NEXT:    xscvuxdsp 0, 0
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 35, 0
 ; PC64LE9-NEXT:    mtfprd 0, 5
 ; PC64LE9-NEXT:    xscvuxdsp 0, 0
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    lxvx 35, 0, 3
-; PC64LE9-NEXT:    xscvdpspn 0, 0
-; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 36, 0
 ; PC64LE9-NEXT:    vperm 2, 4, 2, 3
 ; PC64LE9-NEXT:    blr
 entry:
