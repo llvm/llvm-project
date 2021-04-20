@@ -238,3 +238,31 @@ body: |
     %1:_(<4 x s32>) = G_FPTOSI %0
     $q0 = COPY %1
 ...
+
+---
+name:            test_fptoui_s128_s32
+body: |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: name: test_fptoui_s128_s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK: [[FPTOUI:%[0-9]+]]:_(s128) = G_FPTOUI [[COPY]](s32)
+    ; CHECK: $q0 = COPY [[FPTOUI]](s128)
+    %0:_(s32) = COPY $w0
+    %1:_(s128) = G_FPTOUI %0
+    $q0 = COPY %1
+...
+
+---
+name:            test_fptosi_s128_s32
+body: |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: name: test_fptosi_s128_s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK: [[FPTOSI:%[0-9]+]]:_(s128) = G_FPTOSI [[COPY]](s32)
+    ; CHECK: $q0 = COPY [[FPTOSI]](s128)
+    %0:_(s32) = COPY $w0
+    %1:_(s128) = G_FPTOSI %0
+    $q0 = COPY %1
+...

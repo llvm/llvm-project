@@ -876,12 +876,11 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vmovn32_badlanes(<4 x i32> %src1) {
 ; CHECK-LABEL: vmovn32_badlanes:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    vmov.16 q1[1], r0
-; CHECK-NEXT:    vmov r0, s1
-; CHECK-NEXT:    vmov.16 q1[3], r0
-; CHECK-NEXT:    vmov.16 q1[5], r0
 ; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    vmov.16 q1[3], r1
+; CHECK-NEXT:    vmov.16 q1[5], r1
 ; CHECK-NEXT:    vmov.16 q1[7], r0
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
@@ -889,12 +888,11 @@ define arm_aapcs_vfpcc <8 x i16> @vmovn32_badlanes(<4 x i32> %src1) {
 ; CHECKBE-LABEL: vmovn32_badlanes:
 ; CHECKBE:       @ %bb.0: @ %entry
 ; CHECKBE-NEXT:    vrev64.32 q1, q0
-; CHECKBE-NEXT:    vmov r0, s4
+; CHECKBE-NEXT:    vmov r0, r1, d2
 ; CHECKBE-NEXT:    vmov.16 q2[1], r0
-; CHECKBE-NEXT:    vmov r0, s5
-; CHECKBE-NEXT:    vmov.16 q2[3], r0
-; CHECKBE-NEXT:    vmov.16 q2[5], r0
 ; CHECKBE-NEXT:    vmov r0, s6
+; CHECKBE-NEXT:    vmov.16 q2[3], r1
+; CHECKBE-NEXT:    vmov.16 q2[5], r1
 ; CHECKBE-NEXT:    vmov.16 q2[7], r0
 ; CHECKBE-NEXT:    vrev64.16 q0, q2
 ; CHECKBE-NEXT:    bx lr

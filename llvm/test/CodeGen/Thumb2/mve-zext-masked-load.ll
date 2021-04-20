@@ -50,10 +50,8 @@ entry:
 define arm_aapcs_vfpcc <4 x double> @foo_v4i32(<4 x i32>* nocapture readonly %pSrc, i32 %blockSize, <4 x i32> %a) {
 ; CHECK-LABEL: foo_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    .pad #4
-; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    vpt.s32 lt, q0, zr
@@ -62,36 +60,31 @@ define arm_aapcs_vfpcc <4 x double> @foo_v4i32(<4 x i32>* nocapture readonly %pS
 ; CHECK-NEXT:    vmov.i64 q5, #0xffffffff
 ; CHECK-NEXT:    vmov.f32 s2, s17
 ; CHECK-NEXT:    vand q6, q0, q5
-; CHECK-NEXT:    vmov r0, s24
-; CHECK-NEXT:    vmov r1, s25
+; CHECK-NEXT:    vmov r0, r1, d13
 ; CHECK-NEXT:    bl __aeabi_ul2d
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    vmov r0, s26
-; CHECK-NEXT:    vmov r1, s27
-; CHECK-NEXT:    bl __aeabi_ul2d
+; CHECK-NEXT:    vmov r2, r3, d12
 ; CHECK-NEXT:    vmov.f64 d0, d9
 ; CHECK-NEXT:    vmov.f32 s2, s19
-; CHECK-NEXT:    vand q0, q0, q5
 ; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    vmov r3, s3
-; CHECK-NEXT:    vmov r6, s0
-; CHECK-NEXT:    vmov r7, s1
-; CHECK-NEXT:    vmov d8, r4, r5
+; CHECK-NEXT:    vand q5, q0, q5
+; CHECK-NEXT:    vmov r4, r5, d11
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    bl __aeabi_ul2d
+; CHECK-NEXT:    vmov d8, r0, r1
+; CHECK-NEXT:    mov r0, r4
+; CHECK-NEXT:    mov r1, r5
+; CHECK-NEXT:    bl __aeabi_ul2d
+; CHECK-NEXT:    vmov r2, r3, d10
 ; CHECK-NEXT:    vmov d11, r0, r1
-; CHECK-NEXT:    mov r0, r6
-; CHECK-NEXT:    mov r1, r7
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    bl __aeabi_ul2d
 ; CHECK-NEXT:    vmov d10, r0, r1
 ; CHECK-NEXT:    vmov q0, q4
 ; CHECK-NEXT:    vmov q1, q5
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
-; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %active.lane.mask = icmp slt <4 x i32> %a, zeroinitializer
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %pSrc, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)

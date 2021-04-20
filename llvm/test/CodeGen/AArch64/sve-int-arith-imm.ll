@@ -776,7 +776,7 @@ define <vscale x 2 x i64> @lsr_i64(<vscale x 2 x i64> %a){
   ret <vscale x 2 x i64> %lshr
 }
 
-define <vscale x 4 x i32> @sdiv_const(<vscale x 4 x i32> %a) {
+define <vscale x 4 x i32> @sdiv_const(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: sdiv_const:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov z1.s, #3 // =0x3
@@ -788,7 +788,7 @@ entry:
   ret <vscale x 4 x i32> %div
 }
 
-define <vscale x 4 x i32> @udiv_const(<vscale x 4 x i32> %a) {
+define <vscale x 4 x i32> @udiv_const(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: udiv_const:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov z1.s, #3 // =0x3
@@ -799,3 +799,5 @@ entry:
   %div = udiv <vscale x 4 x i32> %a, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 3, i32 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer)
   ret <vscale x 4 x i32> %div
 }
+
+attributes #0 = { minsize }

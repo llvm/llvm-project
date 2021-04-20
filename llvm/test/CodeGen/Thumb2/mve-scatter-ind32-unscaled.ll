@@ -361,21 +361,19 @@ entry:
 define arm_aapcs_vfpcc void @trunc_signed_unscaled_i16_i8(i8* %base, <4 x i8>* %offptr, <4 x i16> %input) {
 ; CHECK-LABEL: trunc_signed_unscaled_i16_i8:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    vldrb.s32 q1, [r1]
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov r1, r3, d0
+; CHECK-NEXT:    vmov r4, r5, d1
 ; CHECK-NEXT:    vadd.i32 q1, q1, r0
-; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov r0, r12, d2
+; CHECK-NEXT:    vmov r2, lr, d3
 ; CHECK-NEXT:    strb r1, [r0]
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    vmov r1, s1
-; CHECK-NEXT:    strb r1, [r0]
-; CHECK-NEXT:    vmov r0, s6
-; CHECK-NEXT:    vmov r1, s2
-; CHECK-NEXT:    strb r1, [r0]
-; CHECK-NEXT:    vmov r0, s7
-; CHECK-NEXT:    vmov r1, s3
-; CHECK-NEXT:    strb r1, [r0]
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    strb.w r3, [r12]
+; CHECK-NEXT:    strb r4, [r2]
+; CHECK-NEXT:    strb.w r5, [lr]
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %offs = load <4 x i8>, <4 x i8>* %offptr, align 1
   %offs.sext = sext <4 x i8> %offs to <4 x i32>
@@ -388,21 +386,19 @@ entry:
 define arm_aapcs_vfpcc void @trunc_unsigned_unscaled_i16_i8(i8* %base, <4 x i8>* %offptr, <4 x i16> %input) {
 ; CHECK-LABEL: trunc_unsigned_unscaled_i16_i8:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    vldrb.u32 q1, [r1]
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov r1, r3, d0
+; CHECK-NEXT:    vmov r4, r5, d1
 ; CHECK-NEXT:    vadd.i32 q1, q1, r0
-; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov r0, r12, d2
+; CHECK-NEXT:    vmov r2, lr, d3
 ; CHECK-NEXT:    strb r1, [r0]
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    vmov r1, s1
-; CHECK-NEXT:    strb r1, [r0]
-; CHECK-NEXT:    vmov r0, s6
-; CHECK-NEXT:    vmov r1, s2
-; CHECK-NEXT:    strb r1, [r0]
-; CHECK-NEXT:    vmov r0, s7
-; CHECK-NEXT:    vmov r1, s3
-; CHECK-NEXT:    strb r1, [r0]
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    strb.w r3, [r12]
+; CHECK-NEXT:    strb r4, [r2]
+; CHECK-NEXT:    strb.w r5, [lr]
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %offs = load <4 x i8>, <4 x i8>* %offptr, align 1
   %offs.zext = zext <4 x i8> %offs to <4 x i32>
