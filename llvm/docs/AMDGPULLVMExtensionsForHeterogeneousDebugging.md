@@ -1481,7 +1481,8 @@ main() {
 }
 ```
 
-Which after `SROA+mem2reg` becomes:
+Which after `SROA+mem2reg` becomes (where `redundant` is `!17` and `loaded` is
+`!16`):
 
 ```llvm
 ; Function Attrs: noinline nounwind uwtable
@@ -1504,7 +1505,8 @@ entry:
 }
 ```
 
-And previously led to:
+And previously led to this after EarlyCSE, which removes the redundant load
+from `%bar`:
 
 ```llvm
 define dso_local i32 @foo(i32* %bar, i32 %arg, i32 %more) #0 !dbg !7 {
@@ -1512,11 +1514,20 @@ entry:
   call void @llvm.dbg.value(metadata i32* %bar, metadata !13, metadata !DIExpression()), !dbg !18
   call void @llvm.dbg.value(metadata i32 %arg, metadata !14, metadata !DIExpression()), !dbg !18
   call void @llvm.dbg.value(metadata i32 %more, metadata !15, metadata !DIExpression()), !dbg !18
+
+  ; This is not accurate to begin with, as a debugger which modifies
+  ; `redundant` will erroneously update the pointee of the parameter `bar`.
   call void @llvm.dbg.value(metadata i32* %bar, metadata !16, metadata !DIExpression(DW_OP_deref)), !dbg !18
+
   %0 = load i32, i32* %bar, align 4, !dbg !19, !tbaa !20
   call void @llvm.dbg.value(metadata i32 %0, metadata !17, metadata !DIExpression()), !dbg !18
   %add = add nsw i32 %more, %0, !dbg !24
   call void @llvm.dbg.value(metadata i32 undef, metadata !14, metadata !DIExpression()), !dbg !18
+
+  ; This store "clobbers" the debug location description for `redundant`, such
+  ; that a debugger about to execute the following `ret` will erroneously
+  ; report `redundant` as equal to `0` when the source semantics have it still
+  ; equal to the value pointed to by `bar` on entry.
   store i32 0, i32* %bar, align 4, !dbg !25, !tbaa !20
   ret i32 %more, !dbg !26
 }
@@ -1530,7 +1541,12 @@ entry:
   call void @llvm.dbg.value(metadata i32* %bar, metadata !13, metadata !DIExpression()), !dbg !18
   call void @llvm.dbg.value(metadata i32 %arg, metadata !14, metadata !DIExpression()), !dbg !18
   call void @llvm.dbg.value(metadata i32 %more, metadata !15, metadata !DIExpression()), !dbg !18
+
+  ; The above mentioned patch for PR40628 adds special treatment, dropping
+  ; the debug information for `redundant` completely in this case, making
+  ; this conservatively correct.
   call void @llvm.dbg.value(metadata i32 undef, metadata !16, metadata !DIExpression()), !dbg !18
+
   %0 = load i32, i32* %bar, align 4, !dbg !19, !tbaa !20
   call void @llvm.dbg.value(metadata i32 %0, metadata !17, metadata !DIExpression()), !dbg !18
   %add = add nsw i32 %more, %0, !dbg !24
@@ -1553,12 +1569,13 @@ further evidence of why this may need to be the case, because at the time
 implicit pointer is created it is not know which source variable to bind to in
 order to get the multiple lifetimes in this design.
 
-This seems to be supported by the fact that even in current LLVM trunk, with the
-more-conservative change to mark the `redundant` variable as `undef` in the
-above case, modifying `redundant` after the load results in both `redundant` and
-`loaded` referring to the same location, and both being read-write. A
-modification of `redundant` in the debugger before the use of `load` is
-permitted, and would cause unexpected behavior.
+This seems to be supported by the fact that even in current LLVM trunk, with
+the more conservative change to mark the `redundant` variable as `undef` in the
+above case, changing the source to modify `redundant` after the load results in
+both `redundant` and `loaded` referring to the same location, and both being
+read-write. A modification of `redundant` in the debugger before the use of
+`loaded` is permitted, and would have the effect of also updating `loaded`. An
+example of the modified source needed to cause this is:
 
 ```c
 int
@@ -1566,10 +1583,10 @@ foo(int *bar, int arg, int more)
 {
   int redundant = *bar;
   int loaded = *bar;
-  arg &= more + loaded; // a store to redundant here affects loaded
+  arg &= more + loaded; // A store to redundant here affects loaded.
 
-  *bar = redundant;
-  redundant = 1;
+  *bar = redundant; // The use and subsequent modification of `redundant` here
+  redundant = 1;    // effectively circumvents the patch for PR40628.
 
   return more + *bar;
 }
@@ -1581,7 +1598,8 @@ main() {
 }
 ```
 
-After Early CSE:
+Note that after EarlyCSE, this example produces the same location description
+for both `redundant` and `loaded` (metadata `!17` and `!18):
 
 ```llvm
 define dso_local i32 @foo(i32* %bar, i32 %arg, i32 %more) #0 !dbg !8 {
@@ -1590,8 +1608,14 @@ entry:
   call void @llvm.dbg.value(metadata i32 %arg, metadata !15, metadata !DIExpression()), !dbg !19
   call void @llvm.dbg.value(metadata i32 %more, metadata !16, metadata !DIExpression()), !dbg !19
   %0 = load i32, i32* %bar, align 4, !dbg !20, !tbaa !21
+
+  ; The same location is reused for both source variables, without it being
+  ; marked read-only (i.e. without it being made into an implicit location description).
   call void @llvm.dbg.value(metadata i32 %0, metadata !17, metadata !DIExpression()), !dbg !19
   call void @llvm.dbg.value(metadata i32 %0, metadata !18, metadata !DIExpression()), !dbg !19
+
+  ; Modifications to either source variable in a debugger affect the other from
+  ; this point on in the function.
   %add = add nsw i32 %more, %0, !dbg !25
   call void @llvm.dbg.value(metadata i32 undef, metadata !15, metadata !DIExpression()), !dbg !19
   call void @llvm.dbg.value(metadata i32 1, metadata !17, metadata !DIExpression()), !dbg !19
@@ -1602,39 +1626,44 @@ entry:
 _[Note: To see this result, i386 is required; x86_64 seems to do even more optimization
 which eliminates both `loaded` and `redundant`.]_
 
-> TODO: Mostly done, there are still some unique places lumped together before,
-> but believe should do as well or better at the ones looked at.
+Fixing this issue in the current debug information is technically possible, but
+as noted in the review for the attempted conservative patch, "this isn't
+something that can be fixed without a lot of work, thus it's safer to turn off
+for now."
 
-## Spilling
-
-> TODO: SSA -> stack slot
-
-```llvm
-%x = i32 ...
-call void @llvm.dbg.def(metadata !1, metadata i32 %x)
-...
-call void @llvm.dbg.kill(metadata !1)
-
-!0 = !DILocalVariable("x")
-!1 = distinct !DILifetime(object: !0, location: !DIExpr(DIOpReferrer(i32)))
-```
-
-spill %x:
+We believe the AMDGPU LLVM extensions will make this case tractable to support
+with full generality and composability with other optimizations. The expected
+result of EarlyCSE after our changes is:
 
 ```llvm
-%x.addr = alloca i32, addrspace(5)
-store i32* %x.addr, ...
-call void @llvm.dbg.def(metadata !1, metadata i32 *%x)
-...
-call void @llvm.dbg.kill(metadata !1)
+define dso_local i32 @foo(i32* %bar, i32 %arg, i32 %more) #0 !dbg !8 {
+entry:
+  call void @llvm.dbg.def(metadata i32* %bar, metadata !19), !dbg !19
+  call void @llvm.dbg.def(metadata i32 %arg, metadata !20), !dbg !19
+  call void @llvm.dbg.def(metadata i32 %more, metadata !21), !dbg !19
+  %0 = load i32, i32* %bar, align 4, !dbg !20, !tbaa !21
 
-!0 = !DILocalVariable("x")
-!1 = distinct !DILifetime(object: !0, location: !DIExpr(DIOpReferrer(i32 addrspace(5)*), DIOpDeref()))
+  call void @llvm.dbg.def(metadata i32 %0, metadata !22), !dbg !19
+  call void @llvm.dbg.def(metadata i32 %0, metadata !23), !dbg !19
+
+  %add = add nsw i32 %more, %0, !dbg !25
+  ret i32 %add, !dbg !26
+}
+
+!14 = !DILocalVariable("bar", ...)
+!15 = !DILocalVariable("arg", ...)
+!16 = !DILocalVariable("more", ...)
+!17 = !DILocalVariable("redundant", ...)
+!18 = !DILocalVariable("loaded", ...)
+!19 = distinct !DILifetime(object: !14, location: !DIExpr(DIOpReferrer(i32*)))
+!20 = distinct !DILifetime(object: !15, location: !DIExpr(DIOpReferrer(i32)))
+!21 = distinct !DILifetime(object: !16, location: !DIExpr(DIOpReferrer(i32)))
+!21 = distinct !DILifetime(object: !17, location: !DIExpr(DIOpReferrer(i32), DIOpRead()))
+!22 = distinct !DILifetime(object: !18, location: !DIExpr(DIOpReferrer(i32), DIOpRead()))
 ```
 
-> TODO: stack slot -> register
-
-> TODO: register -> stack slot
+Which accurately describes that both `redundant` and `loaded` are read-only
+after the common load.
 
 # References
 
@@ -1812,3 +1841,34 @@ call void @llvm.dbg.kill(metadata !7)
 !6 = distinct !DILifetime(object: 2, location: !DIExpr(referrer))
 !7 = distinct !DILifetime(object: 3, location: !DIExpr(referrer))
 ```
+
+### Spilling
+
+> TODO: SSA -> stack slot
+
+```llvm
+%x = i32 ...
+call void @llvm.dbg.def(metadata !1, metadata i32 %x)
+...
+call void @llvm.dbg.kill(metadata !1)
+
+!0 = !DILocalVariable("x")
+!1 = distinct !DILifetime(object: !0, location: !DIExpr(DIOpReferrer(i32)))
+```
+
+spill %x:
+
+```llvm
+%x.addr = alloca i32, addrspace(5)
+store i32* %x.addr, ...
+call void @llvm.dbg.def(metadata !1, metadata i32 *%x)
+...
+call void @llvm.dbg.kill(metadata !1)
+
+!0 = !DILocalVariable("x")
+!1 = distinct !DILifetime(object: !0, location: !DIExpr(DIOpReferrer(i32 addrspace(5)*), DIOpDeref()))
+```
+
+> TODO: stack slot -> register
+
+> TODO: register -> stack slot
