@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=nanomips -asm-show-inst -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=nanomips -verify-machineinstrs --stop-after=finalize-isel < %s | FileCheck %s --check-prefix=ADJSTACK
 
 declare i32 @foo(i32, i32, i32, i32, i32, i32, i32, i32, i32)
 
@@ -25,6 +26,8 @@ define i32 @bar(i32 %a, i32 %b) {
 ; CHECK: Li_NM
 ; CHECK: balc foo
 ; CHECK: BALC_NM
+; ADJSTACK: ADJCALLSTACKDOWN_NM 16
+; ADJSTACK: ADJCALLSTACKUP_NM 16
   %1 = call i32 @foo(i32 %a, i32 %b, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7)
   ret i32 %1
 }
