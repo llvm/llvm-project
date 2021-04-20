@@ -23,9 +23,9 @@ using namespace Fortran::runtime;
 /// arguments (mask, dim).
 template <typename FN>
 static void
-genRed2Args(FN func, Fortran::lower::FirOpBuilder &builder,
-            mlir::Location loc, mlir::Value resultBox,
-            mlir::Value maskBox, mlir::Value dim) {
+genReduction2Args(FN func, Fortran::lower::FirOpBuilder &builder,
+                  mlir::Location loc, mlir::Value resultBox,
+                  mlir::Value maskBox, mlir::Value dim) {
   auto fTy = func.getType();
   auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
   auto sourceLine =
@@ -47,8 +47,8 @@ genRed2Args(FN func, Fortran::lower::FirOpBuilder &builder,
 /// These take arguments such as (array, mask, kind, back).
 template <typename FN>
 static void
-genRed4Args(FN func, Fortran::lower::FirOpBuilder &builder,
-            mlir::Location loc, mlir::Value resultBox,
+genReduction4Args(FN func, Fortran::lower::FirOpBuilder &builder,
+                  mlir::Location loc, mlir::Value resultBox,
             mlir::Value arrayBox, mlir::Value maskBox,
             mlir::Value kind, mlir::Value back) {
   auto fTy = func.getType();
@@ -74,10 +74,10 @@ genRed4Args(FN func, Fortran::lower::FirOpBuilder &builder,
 /// These take arguments such as (array, dim, mask, kind, back).
 template <typename FN>
 static void
-genRed5Args(FN func, Fortran::lower::FirOpBuilder &builder,
-            mlir::Location loc, mlir::Value resultBox,
-            mlir::Value arrayBox, mlir::Value dim, mlir::Value maskBox,
-            mlir::Value kind, mlir::Value back) {
+genReduction5Args(FN func, Fortran::lower::FirOpBuilder &builder,
+                  mlir::Location loc, mlir::Value resultBox,
+                  mlir::Value arrayBox, mlir::Value dim, mlir::Value maskBox,
+                  mlir::Value kind, mlir::Value back) {
   auto fTy = func.getType();
   auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
   auto sourceLine =
@@ -107,7 +107,7 @@ Fortran::lower::genAllDescriptor(Fortran::lower::FirOpBuilder &builder,
                                  mlir::Value resultBox, mlir::Value maskBox,
                                  mlir::Value dim) {
   auto allFunc = Fortran::lower::getRuntimeFunc<mkRTKey(AllDim)>(loc, builder);
-  genRed2Args(allFunc, builder, loc, resultBox, maskBox, dim);
+  genReduction2Args(allFunc, builder, loc, resultBox, maskBox, dim);
 }
 
 
@@ -120,7 +120,7 @@ Fortran::lower::genAnyDescriptor(Fortran::lower::FirOpBuilder &builder,
                                  mlir::Value resultBox, mlir::Value maskBox,
                                  mlir::Value dim) {
   auto anyFunc = Fortran::lower::getRuntimeFunc<mkRTKey(AnyDim)>(loc, builder);
-  genRed2Args(anyFunc, builder, loc, resultBox, maskBox, dim);
+  genReduction2Args(anyFunc, builder, loc, resultBox, maskBox, dim);
 }
 
 /// Generate call to All intrinsic runtime routine. This routine is
@@ -178,7 +178,8 @@ Fortran::lower::genMaxloc(Fortran::lower::FirOpBuilder &builder,
                           mlir::Value kind, 
                           mlir::Value back) {
   auto func = Fortran::lower::getRuntimeFunc<mkRTKey(Maxloc)>(loc, builder);
-  genRed4Args(func, builder, loc, resultBox, arrayBox, maskBox, kind, back);
+  genReduction4Args(func, builder, loc, resultBox, arrayBox, maskBox, kind, 
+                    back);
 }
 
 /// Generate call to Maxloc intrinsic runtime routine. This is the version
@@ -193,8 +194,8 @@ Fortran::lower::genMaxlocDim(Fortran::lower::FirOpBuilder &builder,
                              mlir::Value kind, 
                              mlir::Value back) {
   auto func = Fortran::lower::getRuntimeFunc<mkRTKey(MaxlocDim)>(loc, builder);
-  genRed5Args(func, builder, loc, resultBox, arrayBox, dim, maskBox, kind, 
-              back);
+  genReduction5Args(func, builder, loc, resultBox, arrayBox, dim, maskBox, 
+                    kind, back);
 }
 
 /// Generate call to Minloc intrinsic runtime routine. This is the version
@@ -208,7 +209,8 @@ Fortran::lower::genMinloc(Fortran::lower::FirOpBuilder &builder,
                           mlir::Value kind, 
                           mlir::Value back) {
   auto func = Fortran::lower::getRuntimeFunc<mkRTKey(Minloc)>(loc, builder);
-  genRed4Args(func, builder, loc, resultBox, arrayBox, maskBox, kind, back);
+  genReduction4Args(func, builder, loc, resultBox, arrayBox, maskBox, kind, 
+                    back);
 }
 
 /// Generate call to Minloc intrinsic runtime routine. This is the version
@@ -223,7 +225,7 @@ Fortran::lower::genMinlocDim(Fortran::lower::FirOpBuilder &builder,
                              mlir::Value kind, 
                              mlir::Value back) {
   auto func = Fortran::lower::getRuntimeFunc<mkRTKey(MinlocDim)>(loc, builder);
-  genRed5Args(func, builder, loc, resultBox, arrayBox, dim, maskBox, kind, 
-              back);
+  genReduction5Args(func, builder, loc, resultBox, arrayBox, dim, maskBox, 
+                    kind, back);
 }
 
