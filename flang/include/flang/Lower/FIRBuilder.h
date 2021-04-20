@@ -124,7 +124,8 @@ public:
                               llvm::StringRef name = {},
                               mlir::ValueRange shape = {},
                               mlir::ValueRange lenParams = {},
-                              llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
+                              llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+                              bool isPinned = false);
 
   /// Create an unnamed and untracked temporary on the stack.
   mlir::Value createTemporary(mlir::Location loc, mlir::Type type,

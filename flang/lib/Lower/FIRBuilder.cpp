@@ -132,15 +132,19 @@ mlir::Value Fortran::lower::FirOpBuilder::allocateLocal(
 mlir::Value Fortran::lower::FirOpBuilder::createTemporary(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::ValueRange shape, mlir::ValueRange lenParams,
-    llvm::ArrayRef<mlir::NamedAttribute> attrs) {
-  auto insPt = saveInsertionPoint();
-  if (shape.empty())
-    setInsertionPointToStart(getEntryBlock());
-  else
-    setInsertionPointAfter(shape.back().getDefiningOp());
+    llvm::ArrayRef<mlir::NamedAttribute> attrs, bool isPinned) {
+  InsertPoint insPt;
+  if (!isPinned) {
+    insPt = saveInsertionPoint();
+    if (shape.empty())
+      setInsertionPointToStart(getEntryBlock());
+    else
+      setInsertionPointAfter(shape.back().getDefiningOp());
+  }
   assert(!type.isa<fir::ReferenceType>() && "cannot be a reference");
   auto ae = create<fir::AllocaOp>(loc, type, name, lenParams, shape, attrs);
-  restoreInsertionPoint(insPt);
+  if (!isPinned)
+    restoreInsertionPoint(insPt);
   return ae;
 }
 
