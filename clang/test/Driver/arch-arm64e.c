@@ -64,7 +64,5 @@
 // RUN: %clang -target arm64e-apple-darwin -c %s -### 2>&1 | FileCheck %s --check-prefix APPLE-A12
 // RUN: %clang -target arm64e-apple-darwin -mcpu=cyclone -c %s -### 2>&1 | FileCheck %s --check-prefix APPLE-A12
 // RUN: %clang -target arm64e-apple-darwin -mcpu=vortex -c %s -### 2>&1 | FileCheck %s --check-prefix VORTEX
-// RUN: %clang -target arm64e-apple-darwin -mcpu=lightning -c %s -### 2>&1 | FileCheck %s --check-prefix LIGHTNING
 // APPLE-A12: "-cc1"{{.*}} "-target-cpu" "apple-a12"
 // VORTEX: "-cc1"{{.*}} "-target-cpu" "vortex"
-// LIGHTNING: "-cc1"{{.*}} "-target-cpu" "lightning"
