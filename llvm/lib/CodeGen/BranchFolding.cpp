@@ -286,7 +286,7 @@ static unsigned HashMachineInstr(const MachineInstr &MI) {
 
 /// HashEndOfMBB - Hash the last instruction in the MBB.
 static unsigned HashEndOfMBB(const MachineBasicBlock &MBB) {
-  MachineBasicBlock::const_iterator I = MBB.getLastNonDebugInstr();
+  MachineBasicBlock::const_iterator I = MBB.getLastNonDebugInstr(false);
   if (I == MBB.end())
     return 0;
 
@@ -566,9 +566,9 @@ ProfitableToMerge(MachineBasicBlock *MBB1, MachineBasicBlock *MBB2,
   // Move the iterators to the beginning of the MBB if we only got debug
   // instructions before the tail. This is to avoid splitting a block when we
   // only got debug instructions before the tail (to be invariant on -g).
-  if (skipDebugInstructionsForward(MBB1->begin(), MBB1->end()) == I1)
+  if (skipDebugInstructionsForward(MBB1->begin(), MBB1->end(), false) == I1)
     I1 = MBB1->begin();
-  if (skipDebugInstructionsForward(MBB2->begin(), MBB2->end()) == I2)
+  if (skipDebugInstructionsForward(MBB2->begin(), MBB2->end(), false) == I2)
     I2 = MBB2->begin();
 
   bool FullBlockTail1 = I1 == MBB1->begin();
@@ -1929,8 +1929,8 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   MachineBasicBlock::iterator FIE = FBB->end();
   while (TIB != TIE && FIB != FIE) {
     // Skip dbg_value instructions. These do not count.
-    TIB = skipDebugInstructionsForward(TIB, TIE);
-    FIB = skipDebugInstructionsForward(FIB, FIE);
+    TIB = skipDebugInstructionsForward(TIB, TIE, false);
+    FIB = skipDebugInstructionsForward(FIB, FIE, false);
     if (TIB == TIE || FIB == FIE)
       break;
 
