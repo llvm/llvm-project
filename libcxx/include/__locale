@@ -1756,4 +1756,4 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP___LOCALE
+#endif // _LIBCPP___LOCALE

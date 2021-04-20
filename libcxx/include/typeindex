@@ -100,4 +100,4 @@ struct _LIBCPP_TEMPLATE_VIS hash<type_index>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_TYPEINDEX
+#endif // _LIBCPP_TYPEINDEX

@@ -101,7 +101,7 @@ void f2()
     std::call_once(flg2, init2(), 4, 5);
 }
 
-#endif  // TEST_STD_VER >= 11
+#endif // TEST_STD_VER >= 11
 
 std::once_flag flg41;
 std::once_flag flg42;
@@ -253,7 +253,7 @@ int main(int, char**)
         std::call_once(f2, std::move(rq));
         assert(rq.rv_called == 1);
     }
-#endif  // TEST_STD_VER >= 11
+#endif // TEST_STD_VER >= 11
 
   return 0;
 }

@@ -94,7 +94,7 @@ thread::hardware_concurrency() noexcept
 #       warning hardware_concurrency not yet implemented
 #   endif
     return 0;  // Means not computable [thread.thread.static]
-#endif  // defined(CTL_HW) && defined(HW_NCPU)
+#endif // defined(CTL_HW) && defined(HW_NCPU)
 }
 
 namespace this_thread

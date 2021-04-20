@@ -52,14 +52,14 @@ operator new(size_t size, const std::nothrow_t&) noexcept
 #ifndef _LIBCXXABI_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCXXABI_NO_EXCEPTIONS
+#endif // _LIBCXXABI_NO_EXCEPTIONS
         p = ::operator new(size);
 #ifndef _LIBCXXABI_NO_EXCEPTIONS
     }
     catch (...)
     {
     }
-#endif  // _LIBCXXABI_NO_EXCEPTIONS
+#endif // _LIBCXXABI_NO_EXCEPTIONS
     return p;
 }
 
@@ -78,14 +78,14 @@ operator new[](size_t size, const std::nothrow_t&) noexcept
 #ifndef _LIBCXXABI_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCXXABI_NO_EXCEPTIONS
+#endif // _LIBCXXABI_NO_EXCEPTIONS
         p = ::operator new[](size);
 #ifndef _LIBCXXABI_NO_EXCEPTIONS
     }
     catch (...)
     {
     }
-#endif  // _LIBCXXABI_NO_EXCEPTIONS
+#endif // _LIBCXXABI_NO_EXCEPTIONS
     return p;
 }
 
@@ -173,14 +173,14 @@ operator new(size_t size, std::align_val_t alignment, const std::nothrow_t&) noe
 #ifndef _LIBCXXABI_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCXXABI_NO_EXCEPTIONS
+#endif // _LIBCXXABI_NO_EXCEPTIONS
         p = ::operator new(size, alignment);
 #ifndef _LIBCXXABI_NO_EXCEPTIONS
     }
     catch (...)
     {
     }
-#endif  // _LIBCXXABI_NO_EXCEPTIONS
+#endif // _LIBCXXABI_NO_EXCEPTIONS
     return p;
 }
 
@@ -199,14 +199,14 @@ operator new[](size_t size, std::align_val_t alignment, const std::nothrow_t&) n
 #ifndef _LIBCXXABI_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCXXABI_NO_EXCEPTIONS
+#endif // _LIBCXXABI_NO_EXCEPTIONS
         p = ::operator new[](size, alignment);
 #ifndef _LIBCXXABI_NO_EXCEPTIONS
     }
     catch (...)
     {
     }
-#endif  // _LIBCXXABI_NO_EXCEPTIONS
+#endif // _LIBCXXABI_NO_EXCEPTIONS
     return p;
 }
 

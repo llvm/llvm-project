@@ -1056,7 +1056,7 @@ public:
     __deque_base(__deque_base&& __c)
         _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value);
     __deque_base(__deque_base&& __c, const allocator_type& __a);
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
     void swap(__deque_base& __c)
 #if _LIBCPP_STD_VER >= 14
@@ -1223,7 +1223,7 @@ __deque_base<_Tp, _Allocator>::__deque_base(__deque_base&& __c, const allocator_
     }
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 void
@@ -1338,7 +1338,7 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     void assign(initializer_list<value_type> __il) {assign(__il.begin(), __il.end());}
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
     template <class _InputIter>
         void assign(_InputIter __f, _InputIter __l,
@@ -1441,7 +1441,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(const_iterator __p, initializer_list<value_type> __il)
         {return insert(__p, __il.begin(), __il.end());}
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
     iterator insert(const_iterator __p, const value_type& __v);
     iterator insert(const_iterator __p, size_type __n, const value_type& __v);
     template <class _InputIter>
@@ -1747,7 +1747,7 @@ deque<_Tp, _Allocator>::__move_assign(deque& __c, true_type)
     __base::__move_assign(__c);
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 template <class _InputIter>
@@ -2129,7 +2129,7 @@ deque<_Tp, _Allocator>::emplace(const_iterator __p, _Args&&... __args)
     return __base::begin() + __pos;
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 
 template <class _Tp, class _Allocator>
@@ -2533,7 +2533,7 @@ deque<_Tp, _Allocator>::__add_front_capacity(size_type __n)
 #ifndef _LIBCPP_NO_EXCEPTIONS
         try
         {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
             for (; __nb > 0; --__nb)
                 __buf.push_back(__alloc_traits::allocate(__a, __base::__block_size));
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -2545,7 +2545,7 @@ deque<_Tp, _Allocator>::__add_front_capacity(size_type __n)
                 __alloc_traits::deallocate(__a, *__i, __base::__block_size);
             throw;
         }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         for (; __back_capacity > 0; --__back_capacity)
         {
             __buf.push_back(__base::__map_.back());
@@ -2675,7 +2675,7 @@ deque<_Tp, _Allocator>::__add_back_capacity(size_type __n)
 #ifndef _LIBCPP_NO_EXCEPTIONS
         try
         {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
             for (; __nb > 0; --__nb)
                 __buf.push_back(__alloc_traits::allocate(__a, __base::__block_size));
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -2687,7 +2687,7 @@ deque<_Tp, _Allocator>::__add_back_capacity(size_type __n)
                 __alloc_traits::deallocate(__a, *__i, __base::__block_size);
             throw;
         }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         for (; __front_capacity > 0; --__front_capacity)
         {
             __buf.push_back(__base::__map_.front());
@@ -3045,4 +3045,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif  // _LIBCPP_DEQUE
+#endif // _LIBCPP_DEQUE

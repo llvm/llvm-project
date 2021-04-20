@@ -2801,4 +2801,4 @@ typedef atomic<__libcpp_unsigned_lock_free> atomic_unsigned_lock_free;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_ATOMIC
+#endif // _LIBCPP_ATOMIC

@@ -254,7 +254,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
     struct rebind_traits {
         using other = allocator_traits<typename rebind_alloc<_Tp>::other>;
     };
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     static pointer allocate(allocator_type& __a, size_type __n) {
@@ -399,4 +399,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif  // _LIBCPP___MEMORY_ALLOCATOR_TRAITS_H
+#endif // _LIBCPP___MEMORY_ALLOCATOR_TRAITS_H

@@ -239,14 +239,14 @@ public:
     queue& operator=(queue&& __q)
         _NOEXCEPT_(is_nothrow_move_assignable<container_type>::value)
         {c = _VSTD::move(__q.c); return *this;}
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
     explicit queue(const container_type& __c)  : c(__c) {}
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     explicit queue(container_type&& __c) : c(_VSTD::move(__c)) {}
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         explicit queue(const _Alloc& __a,
@@ -274,7 +274,7 @@ public:
                        _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0)
             : c(_VSTD::move(__q.c), __a) {}
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     bool      empty() const {return c.empty();}
@@ -304,7 +304,7 @@ public:
         void     emplace(_Args&&... __args)
             {        c.emplace_back(_VSTD::forward<_Args>(__args)...);}
 #endif
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     void pop() {c.pop_front();}
 
@@ -451,7 +451,7 @@ public:
         _NOEXCEPT_(is_nothrow_move_assignable<container_type>::value &&
                    is_nothrow_move_assignable<value_compare>::value)
         {c = _VSTD::move(__q.c); comp = _VSTD::move(__q.comp); return *this;}
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
     explicit priority_queue(const value_compare& __comp)
@@ -475,7 +475,7 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         priority_queue(_InputIter __f, _InputIter __l,
                        const value_compare& __comp, container_type&& __c);
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
     template <class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         explicit priority_queue(const _Alloc& __a,
@@ -503,7 +503,7 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         priority_queue(priority_queue&& __q, const _Alloc& __a,
                        _EnableIf<uses_allocator<container_type, _Alloc>::value>* = 0);
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     bool            empty() const {return c.empty();}
@@ -520,7 +520,7 @@ public:
     template <class... _Args>
     _LIBCPP_INLINE_VISIBILITY
     void emplace(_Args&&... __args);
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     void pop();
 
@@ -582,7 +582,7 @@ priority_queue<_Tp, _Container, _Compare>::priority_queue(const value_compare& _
     _VSTD::make_heap(c.begin(), c.end(), comp);
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Container, class _Compare>
 template <class _InputIter>
@@ -623,7 +623,7 @@ priority_queue<_Tp, _Container, _Compare>::priority_queue(_InputIter __f, _Input
     _VSTD::make_heap(c.begin(), c.end(), comp);
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Container, class _Compare>
 template <class _Alloc>
@@ -697,7 +697,7 @@ priority_queue<_Tp, _Container, _Compare>::priority_queue(priority_queue&& __q,
     _VSTD::make_heap(c.begin(), c.end(), comp);
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Container, class _Compare>
 inline
@@ -729,7 +729,7 @@ priority_queue<_Tp, _Container, _Compare>::emplace(_Args&&... __args)
     _VSTD::push_heap(c.begin(), c.end(), comp);
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Container, class _Compare>
 inline
@@ -773,4 +773,4 @@ struct _LIBCPP_TEMPLATE_VIS uses_allocator<priority_queue<_Tp, _Container, _Comp
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_QUEUE
+#endif // _LIBCPP_QUEUE

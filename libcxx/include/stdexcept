@@ -306,4 +306,4 @@ void __throw_underflow_error(const char*__msg)
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_STDEXCEPT
+#endif // _LIBCPP_STDEXCEPT

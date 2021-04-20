@@ -253,7 +253,7 @@ __shared_ptr_pointer<_Tp, _Dp, _Alloc>::__get_deleter(const type_info& __t) cons
     return __t == typeid(_Dp) ? _VSTD::addressof(__data_.first().second()) : nullptr;
 }
 
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 
 template <class _Tp, class _Dp, class _Alloc>
 void
@@ -620,7 +620,7 @@ public:
             {return static_cast<_Dp*>(__cntrl_
                     ? const_cast<void *>(__cntrl_->__get_deleter(typeid(_Dp)))
                       : nullptr);}
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 
     template<class _Yp, class _CntrlBlk>
     static shared_ptr<_Tp>
@@ -715,7 +715,7 @@ shared_ptr<_Tp>::shared_ptr(_Yp* __p, _Dp __d,
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
         typedef __shared_ptr_pointer<_Yp*, _Dp, _AllocT > _CntrlBlk;
 #ifndef _LIBCPP_CXX03_LANG
@@ -731,7 +731,7 @@ shared_ptr<_Tp>::shared_ptr(_Yp* __p, _Dp __d,
         __d(__p);
         throw;
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
 }
 
 template<class _Tp>
@@ -742,7 +742,7 @@ shared_ptr<_Tp>::shared_ptr(nullptr_t __p, _Dp __d)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         typedef typename __shared_ptr_default_allocator<_Tp>::type _AllocT;
         typedef __shared_ptr_pointer<nullptr_t, _Dp, _AllocT > _CntrlBlk;
 #ifndef _LIBCPP_CXX03_LANG
@@ -757,7 +757,7 @@ shared_ptr<_Tp>::shared_ptr(nullptr_t __p, _Dp __d)
         __d(__p);
         throw;
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
 }
 
 template<class _Tp>
@@ -769,7 +769,7 @@ shared_ptr<_Tp>::shared_ptr(_Yp* __p, _Dp __d, _Alloc __a,
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         typedef __shared_ptr_pointer<_Yp*, _Dp, _Alloc> _CntrlBlk;
         typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _A2;
         typedef __allocator_destructor<_A2> _D2;
@@ -790,7 +790,7 @@ shared_ptr<_Tp>::shared_ptr(_Yp* __p, _Dp __d, _Alloc __a,
         __d(__p);
         throw;
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
 }
 
 template<class _Tp>
@@ -801,7 +801,7 @@ shared_ptr<_Tp>::shared_ptr(nullptr_t __p, _Dp __d, _Alloc __a)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         typedef __shared_ptr_pointer<nullptr_t, _Dp, _Alloc> _CntrlBlk;
         typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _A2;
         typedef __allocator_destructor<_A2> _D2;
@@ -821,7 +821,7 @@ shared_ptr<_Tp>::shared_ptr(nullptr_t __p, _Dp __d, _Alloc __a)
         __d(__p);
         throw;
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
 }
 
 template<class _Tp>
@@ -1315,7 +1315,7 @@ get_deleter(const shared_ptr<_Tp>& __p) _NOEXCEPT
     return __p.template __get_deleter<_Dp>();
 }
 
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 
 template<class _Tp>
 class _LIBCPP_SHARED_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS weak_ptr
@@ -1846,10 +1846,10 @@ atomic_compare_exchange_weak_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v
     return atomic_compare_exchange_weak(__p, __v, __w);
 }
 
-#endif  // !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
+#endif // !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
 
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif  // _LIBCPP___MEMORY_SHARED_PTR_H
+#endif // _LIBCPP___MEMORY_SHARED_PTR_H

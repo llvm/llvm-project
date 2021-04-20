@@ -55,7 +55,7 @@ __terminate(terminate_handler func) noexcept
 #ifndef _LIBCXXABI_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCXXABI_NO_EXCEPTIONS
+#endif // _LIBCXXABI_NO_EXCEPTIONS
         func();
         // handler should not return
         abort_message("terminate_handler unexpectedly returned");
@@ -66,7 +66,7 @@ __terminate(terminate_handler func) noexcept
         // handler should not throw exception
         abort_message("terminate_handler unexpectedly threw an exception");
     }
-#endif  // _LIBCXXABI_NO_EXCEPTIONS
+#endif // _LIBCXXABI_NO_EXCEPTIONS
 }
 
 __attribute__((noreturn))
