@@ -32,6 +32,33 @@ lsri32 a0, sp, 2
 # CHECK-ASM: encoding: [0x4e,0xc4,0x80,0x48]
 asri32 a0, sp, 2
 
+# CHECK-ASM: ori32 a0, sp, 2
+# CHECK-ASM: encoding: [0x0e,0xec,0x02,0x00]
+ori32 a0, sp, 2
+
+# CHECK-ASM: rotli32 a0, sp, 2
+# CHECK-ASM: encoding: [0x4e,0xc4,0x00,0x49]
+rotli32 a0, sp, 2
+
+# CHECK-ASM: cmpnei32 a0, 2
+# CHECK-ASM: encoding: [0x40,0xeb,0x02,0x00]
+cmpnei32 a0, 2
+
+# CHECK-ASM: cmphsi32 a0, 2
+# CHECK-ASM: encoding: [0x00,0xeb,0x01,0x00]
+cmphsi32 a0, 2
+
+# CHECK-ASM: cmplti32 a0, 2
+# CHECK-ASM: encoding: [0x20,0xeb,0x01,0x00]
+cmplti32 a0, 2
+
+# CHECK-ASM: movi32 a0, 2
+# CHECK-ASM: encoding: [0x00,0xea,0x02,0x00]
+movi32 a0, 2
+
+# CHECK-ASM: movih32 a0, 2
+# CHECK-ASM: encoding: [0x20,0xea,0x02,0x00]
+movih32 a0, 2
 
 # CHECK-ASM: addu32 a3, l0, l1
 # CHECK-ASM: encoding: [0xa4,0xc4,0x23,0x00]
@@ -85,10 +112,133 @@ divs32 a3, l0, l1
 # CHECK-ASM: encoding: [0xa4,0xc4,0x23,0x80]
 divu32 a3, l0, l1
 
+# CHECK-ASM: ixh32 a3, l0, l1
+# CHECK-ASM: encoding: [0xa4,0xc4,0x23,0x08]
+ixh32 a3, l0, l1
+
+# CHECK-ASM: ixw32 a3, l0, l1
+# CHECK-ASM: encoding: [0xa4,0xc4,0x43,0x08]
+ixw32 a3, l0, l1
+
+# CHECK-ASM: ixd32 a3, l0, l1
+# CHECK-ASM: encoding: [0xa4,0xc4,0x83,0x08]
+ixd32 a3, l0, l1
+
+# CHECK-ASM: addc32 a3, l0, l1
+# CHECK-ASM: encoding: [0xa4,0xc4,0x43,0x00]
+addc32 a3, l0, l1
+
+# CHECK-ASM: subc32 a3, l0, l1
+# CHECK-ASM: encoding: [0xa4,0xc4,0x03,0x01]
+subc32 a3, l0, l1
+
+# CHECK-ASM: ld32.b a0, (sp, 2)
+# CHECK-ASM: encoding: [0x0e,0xd8,0x02,0x00]
+ld32.b a0, (sp, 2)
+
+# CHECK-ASM: ld32.bs a0, (sp, 2)
+# CHECK-ASM: encoding: [0x0e,0xd8,0x02,0x40]
+ld32.bs a0, (sp, 2)
+
+# CHECK-ASM: ld32.h a0, (sp, 2)
+# CHECK-ASM: encoding: [0x0e,0xd8,0x01,0x10]
+ld32.h a0, (sp, 2)
+
+# CHECK-ASM: ld32.hs a0, (sp, 2)
+# CHECK-ASM: encoding: [0x0e,0xd8,0x01,0x50]
+ld32.hs a0, (sp, 2)
+
+# CHECK-ASM: ld32.w a0, (sp, 4)
+# CHECK-ASM: encoding: [0x0e,0xd8,0x01,0x20]
+ld32.w a0, (sp, 4)
+
+# CHECK-ASM: ldr32.b a0, (sp, l1 << 2)
+# CHECK-ASM: encoding: [0xae,0xd0,0x80,0x00]
+ldr32.b a0, (sp, l1 << 2)
+
+# CHECK-ASM: ldr32.bs a0, (sp, l1 << 2)
+# CHECK-ASM: encoding: [0xae,0xd0,0x80,0x10]
+ldr32.bs a0, (sp, l1 << 2)
+
+# CHECK-ASM: ldr32.h a0, (sp, l1 << 3)
+# CHECK-ASM: encoding: [0xae,0xd0,0x00,0x05]
+ldr32.h a0, (sp, l1 << 3)
+
+# CHECK-ASM: ldr32.hs a0, (sp, l1 << 3)
+# CHECK-ASM: encoding: [0xae,0xd0,0x00,0x15]
+ldr32.hs a0, (sp, l1 << 3)
+
+# CHECK-ASM: ldr32.w a0, (sp, l1 << 3)
+# CHECK-ASM: encoding: [0xae,0xd0,0x00,0x09]
+ldr32.w a0, (sp, l1 << 3)
+
+# CHECK-ASM: st32.b a0, (sp, 2)
+# CHECK-ASM: encoding: [0x0e,0xdc,0x02,0x00]
+st32.b a0, (sp, 2)
+
+# CHECK-ASM: st32.h a0, (sp, 2)
+# CHECK-ASM: encoding: [0x0e,0xdc,0x01,0x10]
+st32.h a0, (sp, 2)
+
+# CHECK-ASM: st32.w a0, (sp, 4)
+# CHECK-ASM: encoding: [0x0e,0xdc,0x01,0x20]
+st32.w a0, (sp, 4)
+
+# CHECK-ASM: str32.b a0, (sp, l1 << 2)
+# CHECK-ASM: encoding: [0xae,0xd4,0x80,0x00]
+str32.b a0, (sp, l1 << 2)
+
+# CHECK-ASM: str32.h a0, (sp, l1 << 3)
+# CHECK-ASM: encoding: [0xae,0xd4,0x00,0x05]
+str32.h a0, (sp, l1 << 3)
+
+# CHECK-ASM: str32.w a0, (sp, l1 << 3)
+# CHECK-ASM: encoding: [0xae,0xd4,0x00,0x09]
+str32.w a0, (sp, l1 << 3)
+
 # CHECK-ASM: not32 a3, l0
 # CHECK-ASM: encoding: [0x84,0xc4,0x83,0x24]
 not32 a3, l0
 
+# CHECK-ASM: mov32 a3, l0
+# CHECK-ASM: encoding: [0x04,0xc4,0x23,0x48]
+mov32 a3, l0
+
+# CHECK-ASM: movt32 a3, l0
+# CHECK-ASM: encoding: [0x64,0xc4,0x40,0x0c]
+movt32 a3, l0
+
+# CHECK-ASM: movf32 a3, l0
+# CHECK-ASM: encoding: [0x64,0xc4,0x20,0x0c]
+movf32 a3, l0
+
+# CHECK-ASM: mvc32 a3
+# CHECK-ASM: encoding: [0x00,0xc4,0x03,0x05]
+mvc32 a3
+
+# CHECK-ASM: mvcv32 a3
+# CHECK-ASM: encoding: [0x00,0xc4,0x03,0x06]
+mvcv32 a3
+
+# CHECK-ASM: cmpne32 a3, l0
+# CHECK-ASM: encoding: [0x83,0xc4,0x80,0x04]
+cmpne32 a3, l0
+
+# CHECK-ASM: cmphs32 a3, l0
+# CHECK-ASM: encoding: [0x83,0xc4,0x20,0x04]
+cmphs32 a3, l0
+
+# CHECK-ASM: cmplt32 a3, l0
+# CHECK-ASM: encoding: [0x83,0xc4,0x40,0x04]
+cmplt32 a3, l0
+
+# CHECK-ASM: zext32 a3, l0, 7, 0
+# CHECK-ASM: encoding: [0x04,0xc4,0xe3,0x54]
+zext32 a3, l0, 7, 0
+
+# CHECK-ASM: sext32 a3, l0, 7, 0
+# CHECK-ASM: encoding: [0x04,0xc4,0xe3,0x58]
+sext32 a3, l0, 7, 0
 
 # RUN: not llvm-mc -triple csky --defsym=ERR=1 < %s 2>&1 | FileCheck %s
 
@@ -106,7 +256,37 @@ xori32 a0, a0, 4096 # CHECK: :[[#@LINE]]:16: error: immediate must be an integer
 lsli32 a0, a0, 32 # CHECK: :[[#@LINE]]:16: error: immediate must be an integer in the range [0, 31]
 lsri32 a0, a0, 32 # CHECK: :[[#@LINE]]:16: error: immediate must be an integer in the range [0, 31]
 asri32 a0, a0, 32 # CHECK: :[[#@LINE]]:16: error: immediate must be an integer in the range [0, 31]
+rotli32 a0, a0, 32 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 31]
 
+# uimm12(shift0)/uimm12_1/uimm12_2
+ld32.b a0, (a0, -1)  # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 4095]
+ld32.h a0, (a0, 4095)  # CHECK: :[[@LINE]]:17: error: immediate must be a multiple of 2 bytes in the range [0, 4094]
+ld32.h a0, (a0, 4093)  # CHECK: :[[@LINE]]:17: error: immediate must be a multiple of 2 bytes in the range [0, 4094]
+ld32.w a0, (a0, 4093)  # CHECK: :[[@LINE]]:17: error: immediate must be a multiple of 4 bytes in the range [0, 4092]
+ld32.w a0, (a0, 2)  # CHECK: :[[@LINE]]:17: error: immediate must be a multiple of 4 bytes in the range [0, 4092]
+ldr32.b a0, (a0, a1 << 4) # CHECK: :[[@LINE]]:24: error: immediate must be an integer in the range [0, 3]
+ldr32.bs a0, (a0, a1 << 4) # CHECK: :[[@LINE]]:25: error: immediate must be an integer in the range [0, 3]
+ldr32.h a0, (a0, a1 << -1) # CHECK: :[[@LINE]]:24: error: immediate must be an integer in the range [0, 3]
+ldr32.hs a0, (a0, a1 << 4) # CHECK: :[[@LINE]]:25: error: immediate must be an integer in the range [0, 3]
+ldr32.w a0, (a0, a1 << 4) # CHECK: :[[@LINE]]:24: error: immediate must be an integer in the range [0, 3]
+
+st32.b a0, (a0, -1)  # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 4095]
+st32.h a0, (a0, 4095)  # CHECK: :[[@LINE]]:17: error: immediate must be a multiple of 2 bytes in the range [0, 4094]
+st32.h a0, (a0, 4093)  # CHECK: :[[@LINE]]:17: error: immediate must be a multiple of 2 bytes in the range [0, 4094]
+st32.w a0, (a0, 4093)  # CHECK: :[[@LINE]]:17: error: immediate must be a multiple of 4 bytes in the range [0, 4092]
+st32.w a0, (a0, 2)  # CHECK: :[[@LINE]]:17: error: immediate must be a multiple of 4 bytes in the range [0, 4092]
+
+str32.b a0, (a0, a1 << 4) # CHECK: :[[@LINE]]:24: error: immediate must be an integer in the range [0, 3]
+str32.h a0, (a0, a1 << -1) # CHECK: :[[@LINE]]:24: error: immediate must be an integer in the range [0, 3]
+str32.w a0, (a0, a1 << 4) # CHECK: :[[@LINE]]:24: error: immediate must be an integer in the range [0, 3]
+
+# uimm16/oimm16
+ori32 a0, a0, 0x10000 # CHECK: :[[@LINE]]:15: error: immediate must be an integer in the range [0, 65535]
+cmpnei32 a0, 0x10000 # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [0, 65535]
+cmphsi32 a0, 0x10001 # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [1, 65536]
+cmplti32 a0, 0 # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [1, 65536]
+movi32 a0, 0x10000 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [0, 65535]
+movih32 a0, 0x10000 # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 65535]
 
 # Invalid mnemonics
 subs t0, t2, t1 # CHECK: :[[#@LINE]]:1: error: unrecognized instruction mnemonic
@@ -122,7 +302,7 @@ xori32 sp, 22, 220 # CHECK: :[[#@LINE]]:12: error: invalid operand for instructi
 subu32 t0, t2, 1 # CHECK: :[[#@LINE]]:16: error: invalid operand for instruction
 
 # Too many operands
-subu32 t2, t3, 0x50, 0x60 # CHECK: :[[#@LINE]]:22: error: invalid operand for instruction
+subi32 t2, t3, 0x50, 0x60 # CHECK: :[[@LINE]]:22: error: invalid operand for instruction
 
 # Too few operands
 xori32 a0, a1 # CHECK: :[[#@LINE]]:1: error: too few operands for instruction

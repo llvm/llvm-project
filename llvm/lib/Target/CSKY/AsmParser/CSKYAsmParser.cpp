@@ -57,6 +57,7 @@ class CSKYAsmParser : public MCTargetAsmParser {
 
   OperandMatchResultTy parseImmediate(OperandVector &Operands);
   OperandMatchResultTy parseRegister(OperandVector &Operands);
+  OperandMatchResultTy parseBaseRegImm(OperandVector &Operands);
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
@@ -132,13 +133,13 @@ public:
     return false;
   }
 
-  template <unsigned num> bool isUImm() const {
+  template <unsigned num, unsigned shift = 0> bool isUImm() const {
     if (!isImm())
       return false;
 
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm);
-    return IsConstantImm && isUInt<num>(Imm);
+    return IsConstantImm && isShiftedUInt<num, shift>(Imm);
   }
 
   template <unsigned num> bool isOImm() const {
@@ -150,18 +151,25 @@ public:
     return IsConstantImm && isUInt<num>(Imm - 1);
   }
 
-  template <unsigned num> bool isSImm() const {
+  template <unsigned num, unsigned shift = 0> bool isSImm() const {
     if (!isImm())
       return false;
 
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm);
-    return IsConstantImm && isInt<num>(Imm);
+    return IsConstantImm && isShiftedInt<num, shift>(Imm);
   }
 
+  bool isUImm2() const { return isUImm<2>(); }
   bool isUImm5() const { return isUImm<5>(); }
   bool isUImm12() const { return isUImm<12>(); }
+  bool isUImm16() const { return isUImm<16>(); }
+
   bool isOImm12() const { return isOImm<12>(); }
+  bool isOImm16() const { return isOImm<16>(); }
+
+  bool isUImm12Shift1() { return isUImm<12, 1>(); }
+  bool isUImm12Shift2() { return isUImm<12, 2>(); }
 
   /// Gets location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
@@ -295,6 +303,7 @@ bool CSKYAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         CSKYMnemonicSpellCheck(((CSKYOperand &)*Operands[0]).getToken(), FBS);
     return Error(IDLoc, "unrecognized instruction mnemonic" + Suggestion);
   }
+  case Match_InvalidTiedOperand:
   case Match_InvalidOperand: {
     SMLoc ErrorLoc = IDLoc;
     if (ErrorInfo != ~0U) {
@@ -323,10 +332,24 @@ bool CSKYAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     break;
   case Match_InvalidOImm12:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 12));
-  case Match_InvalidUImm12:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 12) - 1);
+  case Match_InvalidOImm16:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 16));
+  case Match_InvalidUImm2:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 2) - 1);
   case Match_InvalidUImm5:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
+  case Match_InvalidUImm12:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 12) - 1);
+  case Match_InvalidUImm12Shift1:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, 0, (1 << 12) - 2,
+        "immediate must be a multiple of 2 bytes in the range");
+  case Match_InvalidUImm12Shift2:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, 0, (1 << 12) - 4,
+        "immediate must be a multiple of 4 bytes in the range");
+  case Match_InvalidUImm16:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 16) - 1);
   }
 
   llvm_unreachable("Unknown match type detected!");
@@ -381,6 +404,58 @@ OperandMatchResultTy CSKYAsmParser::parseRegister(OperandVector &Operands) {
   }
 }
 
+OperandMatchResultTy CSKYAsmParser::parseBaseRegImm(OperandVector &Operands) {
+  assert(getLexer().is(AsmToken::LParen));
+
+  Operands.push_back(CSKYOperand::createToken("(", getLoc()));
+
+  auto Tok = getParser().Lex(); // Eat '('
+
+  if (parseRegister(Operands) != MatchOperand_Success) {
+    getLexer().UnLex(Tok);
+    Operands.pop_back();
+    return MatchOperand_ParseFail;
+  }
+
+  if (getLexer().isNot(AsmToken::Comma)) {
+    Error(getLoc(), "expected ','");
+    return MatchOperand_ParseFail;
+  }
+
+  getParser().Lex(); // Eat ','
+
+  if (parseRegister(Operands) == MatchOperand_Success) {
+    if (getLexer().isNot(AsmToken::LessLess)) {
+      Error(getLoc(), "expected '<<'");
+      return MatchOperand_ParseFail;
+    }
+
+    Operands.push_back(CSKYOperand::createToken("<<", getLoc()));
+
+    getParser().Lex(); // Eat '<<'
+
+    if (parseImmediate(Operands) != MatchOperand_Success) {
+      Error(getLoc(), "expected imm");
+      return MatchOperand_ParseFail;
+    }
+
+  } else if (parseImmediate(Operands) != MatchOperand_Success) {
+    Error(getLoc(), "expected imm");
+    return MatchOperand_ParseFail;
+  }
+
+  if (getLexer().isNot(AsmToken::RParen)) {
+    Error(getLoc(), "expected ')'");
+    return MatchOperand_ParseFail;
+  }
+
+  Operands.push_back(CSKYOperand::createToken(")", getLoc()));
+
+  getParser().Lex(); // Eat ')'
+
+  return MatchOperand_Success;
+}
+
 OperandMatchResultTy CSKYAsmParser::parseImmediate(OperandVector &Operands) {
   switch (getLexer().getKind()) {
   default:
@@ -410,6 +485,11 @@ bool CSKYAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   // Attempt to parse token as register
   if (parseRegister(Operands) == MatchOperand_Success)
     return false;
+
+  // Attempt to parse token as (register, imm)
+  if (getLexer().is(AsmToken::LParen))
+    if (parseBaseRegImm(Operands) == MatchOperand_Success)
+      return false;
 
   // Attempt to parse token as a imm.
   if (parseImmediate(Operands) == MatchOperand_Success)
