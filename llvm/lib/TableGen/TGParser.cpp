@@ -365,8 +365,7 @@ bool TGParser::addEntry(RecordsEntry E) {
 
   // If it is an assertion, then it's a top-level one, so check it.
   if (E.Assertion) {
-    CheckAssert(std::get<0>(*E.Assertion), std::get<1>(*E.Assertion), 
-                std::get<2>(*E.Assertion));
+    CheckAssert(E.Assertion->Loc, E.Assertion->Condition, E.Assertion->Message);
     return false;
   }
 
@@ -430,18 +429,14 @@ bool TGParser::resolve(const std::vector<RecordsEntry> &Source,
       MapResolver R;
       for (const auto &S : Substs)
         R.set(S.first, S.second);
-      Init *Condition = std::get<1>(*E.Assertion)->resolveReferences(R);
-      Init *Message = std::get<2>(*E.Assertion)->resolveReferences(R);
+      Init *Condition = E.Assertion->Condition->resolveReferences(R);
+      Init *Message = E.Assertion->Message->resolveReferences(R);
 
-      if (Dest) {
-        std::unique_ptr<Record::AssertionTuple> Tuple =
-            std::make_unique<Record::AssertionTuple>(std::get<0>(*E.Assertion),
-                                                     std::move(Condition),
-                                                     std::move(Message));
-        Dest->push_back(std::move(Tuple));
-      } else {
-        CheckAssert(std::get<0>(*E.Assertion), Condition, Message);
-      }
+      if (Dest)
+        Dest->push_back(std::make_unique<Record::AssertionInfo>(
+            E.Assertion->Loc, Condition, Message));
+      else
+        CheckAssert(E.Assertion->Loc, Condition, Message);
 
     } else {
       auto Rec = std::make_unique<Record>(*E.Rec);
@@ -3219,14 +3214,11 @@ bool TGParser::ParseAssert(MultiClass *CurMultiClass, Record *CurRec) {
   if (!consume(tgtok::semi))
     return TokError("expected ';'");
 
-  if (CurRec) {
+  if (CurRec)
     CurRec->addAssertion(ConditionLoc, Condition, Message);
-  } else {
-    std::unique_ptr<Record::AssertionTuple> Tuple =
-         std::make_unique<Record::AssertionTuple>(ConditionLoc, Condition, Message);
-    addEntry(std::move(Tuple));
-  }
- 
+  else
+    addEntry(std::make_unique<Record::AssertionInfo>(ConditionLoc, Condition,
+                                                     Message));
   return false;
 }
 
