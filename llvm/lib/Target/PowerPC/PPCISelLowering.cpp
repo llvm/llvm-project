@@ -121,11 +121,6 @@ cl::desc("don't always align innermost loop to 32 bytes on ppc"), cl::Hidden);
 static cl::opt<bool> UseAbsoluteJumpTables("ppc-use-absolute-jumptables",
 cl::desc("use absolute jump tables on ppc"), cl::Hidden);
 
-// TODO - Remove this option if soft fp128 has been fully supported .
-static cl::opt<bool>
-    EnableSoftFP128("enable-soft-fp128",
-                    cl::desc("temp option to enable soft fp128"), cl::Hidden);
-
 STATISTIC(NumTailCalls, "Number of tail calls");
 STATISTIC(NumSiblingCalls, "Number of sibling calls");
 STATISTIC(ShufflesHandledWithVPERM, "Number of shuffles lowered to a VPERM");
@@ -1102,6 +1097,23 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::STRICT_FROUND, MVT::v2f64, Legal);
 
       addRegisterClass(MVT::v2i64, &PPC::VSRCRegClass);
+      addRegisterClass(MVT::f128, &PPC::VRRCRegClass);
+
+      for (MVT FPT : MVT::fp_valuetypes())
+        setLoadExtAction(ISD::EXTLOAD, MVT::f128, FPT, Expand);
+
+      // Expand the SELECT to SELECT_CC
+      setOperationAction(ISD::SELECT, MVT::f128, Expand);
+
+      setTruncStoreAction(MVT::f128, MVT::f64, Expand);
+      setTruncStoreAction(MVT::f128, MVT::f32, Expand);
+
+      // No implementation for these ops for PowerPC.
+      setOperationAction(ISD::FSIN, MVT::f128, Expand);
+      setOperationAction(ISD::FCOS, MVT::f128, Expand);
+      setOperationAction(ISD::FPOW, MVT::f128, Expand);
+      setOperationAction(ISD::FPOWI, MVT::f128, Expand);
+      setOperationAction(ISD::FREM, MVT::f128, Expand);
     }
 
     if (Subtarget.hasP8Altivec()) {
@@ -1120,15 +1132,12 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::SRL, MVT::v1i128, Legal);
       setOperationAction(ISD::SRA, MVT::v1i128, Expand);
 
-      addRegisterClass(MVT::f128, &PPC::VRRCRegClass);
       setOperationAction(ISD::FADD, MVT::f128, Legal);
       setOperationAction(ISD::FSUB, MVT::f128, Legal);
       setOperationAction(ISD::FDIV, MVT::f128, Legal);
       setOperationAction(ISD::FMUL, MVT::f128, Legal);
       setOperationAction(ISD::FP_EXTEND, MVT::f128, Legal);
-      // No extending loads to f128 on PPC.
-      for (MVT FPT : MVT::fp_valuetypes())
-        setLoadExtAction(ISD::EXTLOAD, MVT::f128, FPT, Expand);
+
       setOperationAction(ISD::FMA, MVT::f128, Legal);
       setCondCodeAction(ISD::SETULT, MVT::f128, Expand);
       setCondCodeAction(ISD::SETUGT, MVT::f128, Expand);
@@ -1144,18 +1153,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::FNEARBYINT, MVT::f128, Legal);
       setOperationAction(ISD::FROUND, MVT::f128, Legal);
 
-      setOperationAction(ISD::SELECT, MVT::f128, Expand);
       setOperationAction(ISD::FP_ROUND, MVT::f64, Legal);
       setOperationAction(ISD::FP_ROUND, MVT::f32, Legal);
-      setTruncStoreAction(MVT::f128, MVT::f64, Expand);
-      setTruncStoreAction(MVT::f128, MVT::f32, Expand);
       setOperationAction(ISD::BITCAST, MVT::i128, Custom);
-      // No implementation for these ops for PowerPC.
-      setOperationAction(ISD::FSIN, MVT::f128, Expand);
-      setOperationAction(ISD::FCOS, MVT::f128, Expand);
-      setOperationAction(ISD::FPOW, MVT::f128, Expand);
-      setOperationAction(ISD::FPOWI, MVT::f128, Expand);
-      setOperationAction(ISD::FREM, MVT::f128, Expand);
 
       // Handle constrained floating-point operations of fp128
       setOperationAction(ISD::STRICT_FADD, MVT::f128, Legal);
@@ -1178,12 +1178,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::BSWAP, MVT::v4i32, Legal);
       setOperationAction(ISD::BSWAP, MVT::v2i64, Legal);
       setOperationAction(ISD::BSWAP, MVT::v1i128, Legal);
-    } else if (Subtarget.hasAltivec() && EnableSoftFP128) {
-      addRegisterClass(MVT::f128, &PPC::VRRCRegClass);
-
-      for (MVT FPT : MVT::fp_valuetypes())
-        setLoadExtAction(ISD::EXTLOAD, MVT::f128, FPT, Expand);
-
+    } else if (Subtarget.hasVSX()) {
       setOperationAction(ISD::LOAD, MVT::f128, Promote);
       setOperationAction(ISD::STORE, MVT::f128, Promote);
 
@@ -1199,17 +1194,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::FDIV, MVT::f128, Expand);
       setOperationAction(ISD::FNEG, MVT::f128, Expand);
       setOperationAction(ISD::FABS, MVT::f128, Expand);
-      setOperationAction(ISD::FSIN, MVT::f128, Expand);
-      setOperationAction(ISD::FCOS, MVT::f128, Expand);
-      setOperationAction(ISD::FPOW, MVT::f128, Expand);
-      setOperationAction(ISD::FPOWI, MVT::f128, Expand);
-      setOperationAction(ISD::FREM, MVT::f128, Expand);
       setOperationAction(ISD::FSQRT, MVT::f128, Expand);
       setOperationAction(ISD::FMA, MVT::f128, Expand);
       setOperationAction(ISD::FCOPYSIGN, MVT::f128, Expand);
-
-      setTruncStoreAction(MVT::f128, MVT::f64, Expand);
-      setTruncStoreAction(MVT::f128, MVT::f32, Expand);
 
       // Expand the fp_extend if the target type is fp128.
       setOperationAction(ISD::FP_EXTEND, MVT::f128, Expand);
@@ -14131,6 +14118,9 @@ SDValue PPCTargetLowering::combineStoreFPToInt(SDNode *N,
   bool ValidTypeForStoreFltAsInt =
         (Op1VT == MVT::i32 || Op1VT == MVT::i64 ||
          (Subtarget.hasP9Vector() && (Op1VT == MVT::i16 || Op1VT == MVT::i8)));
+
+  if (ResVT == MVT::f128 && !Subtarget.hasP9Vector())
+    return SDValue();
 
   if (ResVT == MVT::ppcf128 || !Subtarget.hasP8Vector() ||
       cast<StoreSDNode>(N)->isTruncatingStore() || !ValidTypeForStoreFltAsInt)
