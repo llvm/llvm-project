@@ -32,10 +32,10 @@ class TestCase(lldbtest.TestBase):
                 # Run until the next `await` breakpoint.
                 process.Continue()
             elif stop_reason == lldb.eStopReasonBreakpoint:
-                caller_before = thread().frames[0].function.name
+                caller_before = thread().frames[0].function.GetDisplayName()
                 line_before = thread().frames[0].line_entry.line
                 thread().StepInto()
-                caller_after = thread().frames[1].function.name
+                caller_after = thread().frames[1].function.GetDisplayName()
                 line_after = thread().frames[0].line_entry.line
 
 		# Breakpoints on lines with an `await` may result in more than
@@ -54,10 +54,7 @@ class TestCase(lldbtest.TestBase):
                         process.Continue()
                     continue
 
-                # The entry function is missing this prefix dedicating resume functions.
-                prefix = re.compile(r'^\([0-9]+\) (await|suspend) resume partial function for ')
-                self.assertEqual(prefix.sub('', caller_after),
-                                 prefix.sub('', caller_before))
+                self.assertEqual(caller_after, caller_before)
                 num_async_steps += 1
 
         self.assertGreater(num_async_steps, 0)
