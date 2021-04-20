@@ -1918,19 +1918,19 @@ struct FormatStyle {
     /// \code
     ///   struct foo {
     ///   private:
-    //
+    ///
     ///     int i;
     ///   protected:
-    //
+    ///
     ///     int j;
     ///     /* comment */
     ///   public:
-    //
+    ///
     ///     foo() {}
     ///   private:
     ///
     ///   protected:
-    //
+    ///
     ///   };
     /// \endcode
     ELAAMS_Always,
