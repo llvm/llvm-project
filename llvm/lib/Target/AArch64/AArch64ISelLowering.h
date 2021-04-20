@@ -95,6 +95,8 @@ enum NodeType : unsigned {
   FMUL_PRED,
   FSUB_PRED,
   MUL_PRED,
+  MULHS_PRED,
+  MULHU_PRED,
   SDIV_PRED,
   SHL_PRED,
   SMAX_PRED,
