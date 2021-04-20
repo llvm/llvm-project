@@ -369,4 +369,4 @@
 // RUN: %clang -target x86_64-apple-darwin10 -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=INSTALL-DIR %s < %t.log
 // INSTALL-DIR: InstalledDir: [[INSTALLDIR:.+$]]
-// INSTALL-DIR: "-L[[INSTALLDIR]]/../lib"
+// INSTALL-DIR: "-L[[INSTALLDIR]]{{/|\\\\}}..{{/|\\\\}}lib"
