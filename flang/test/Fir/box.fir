@@ -131,20 +131,30 @@ func @box6(%0 : !fir.ref<!fir.array<?x?x?x?xf32>>, %1 : index, %2 : index) -> i3
   %c24 = constant 24 : index
   %c1 = constant 1 : index
   %c3 = constant 3 : index
-  // CHECK: %[[BASE:.*]] = getelementptr float, float* %[[ARG0]], i64 40
-  // CHECK: %[[B0:.*]] = insertvalue {{.*}} { float* undef, i64 4, i32 20180515, i8 2, i8 25, i8 0, i8 0, {{.*}} undef }, i64 %{{.*}}, 7, 0, 0
-  // CHECK: %[[B1:.*]] = insertvalue {{.*}} %[[B0]], i64 %{{.*}}, 7, 0, 1
-  // CHECK: %[[B2:.*]] = insertvalue {{.*}} %[[B1]], i64 800, 7, 0, 2
-  // CHECK: %[[B3:.*]] = insertvalue {{.*}} %[[B2]], i64 -5, 7, 1, 0
-  // CHECK: %[[B4:.*]] = insertvalue {{.*}} %[[B3]], i64 4, 7, 1, 1
-  // CHECK: %[[B5:.*]] = insertvalue {{.*}} %[[B4]], i64 120000, 7, 1, 2
+
+  // CHECK: %[[i:.*]] = sub i64 %[[ARG1]], 1
+  // CHECK: %[[i100:.*]] = mul i64 %[[i]], 100
+  // CHECK: %[[i100p40:.*]] = add i64 %[[i100]], 40
+  // CHECK: %[[diff:.*]] = sub i64 %[[ARG2]], %[[ARG1]]
+  // CHECK: %[[dp2:.*]] = add i64 %[[diff]], 2
+  // CHECK: %[[sdp2:.*]] = sdiv i64 %[[dp2]], 2
+  // CHECK: insertvalue { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] } { float* undef, i64 4, i32 20180515, i8 2, i8 25, i8 0, i8 0, [2 x [3 x i64]] [{{\[}}3 x i64] [i64 0, i64 undef, i64 undef], [3 x i64] undef] }, i64 %[[sdp2]], 7, 0, 1
+  // CHECK: insertvalue { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] } %{{.*}}, i64 800, 7, 0, 2
+  // CHECK: %[[op25:.*]] = add i64 25000, %[[i100p40]]
+  // CHECK: insertvalue { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] } %{{.*}}, i64 0, 7, 1, 0
+  // CHECK: insertvalue { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] } %{{.*}}, i64 4, 7, 1, 1
+  // CHECK: insertvalue { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] } %{{.*}}, i64 120000, 7, 1, 2
+  // CHECK: %[[op300:.*]] = add i64 300000, %[[op25]]
+  // CHECK: %[[ptr:.*]] = getelementptr float, float* %[[ARG0]], i64 %[[op300]]
+  // CHECK: insertvalue { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] } %{{.*}}, float* %[[ptr]], 0
+  // CHECK: store { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] } %{{.*}}, { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }* %[[mem:[0-9]+]]
+  // CHECK: %[[desc:.*]] = bitcast { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }* %[[mem]] to { {}*, i64, i32, i8, i8, i8, i8 }*
+
   %slice = fir.slice %c41, %3, %3, %1, %2, %c2, %c6, %c24, %c6, %c3, %3, %3 : (index, index, index, index, index, index, index, index, index, index, index, index) -> !fir.slice<4>
-  // CHECK: %[[BASE2:.*]] = getelementptr float, float* %[[BASE]], i64 300000
-  // CHECK: insertvalue {{.*}} %[[B5]], float* %[[BASE2]], 0
   %box = fir.embox %0(%shape)[%slice] : (!fir.ref<!fir.array<?x?x?x?xf32>>, !fir.shape<4>, !fir.slice<4>) -> !fir.box<!fir.array<?x?x?x?xf32>>
   %nonebox = fir.convert %box : (!fir.box<!fir.array<?x?x?x?xf32>>) -> !fir.box<none>
-  // CHECK: call i32 @callee6({{.*}}* %
+  // CHECK: %[[call:.*]] = call i32 @callee6({ {}*, i64, i32, i8, i8, i8, i8 }* %[[desc]])
   %rv = fir.call @callee6(%nonebox) : (!fir.box<none>) -> i32
+  // CHECK: ret i32 %[[call]]
   return %rv : i32
 }
-

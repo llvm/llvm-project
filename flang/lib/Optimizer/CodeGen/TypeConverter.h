@@ -234,9 +234,9 @@ public:
         kindMapping.getIntegerBitsize(kindMapping.defaultIntegerKind()));
   }
 
-  static bool hasDynamicSize(mlir::Type type) {
+  static bool characterWithDynamicLen(mlir::Type type) {
     if (auto charTy = type.dyn_cast<fir::CharacterType>())
-      return charTy.getLen() == fir::CharacterType::unknownLen();
+      return charTy.hasDynamicLen();
     return false;
   }
 
@@ -248,7 +248,8 @@ public:
     // degenerate the array and do not want a the type to become `T**` but
     // merely `T*`.
     if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>()) {
-      if (!seqTy.hasConstantShape() || hasDynamicSize(seqTy.getEleTy())) {
+      if (!seqTy.hasConstantShape() ||
+          characterWithDynamicLen(seqTy.getEleTy())) {
         if (seqTy.hasConstantInterior())
           return unwrap(convertType(seqTy));
         eleTy = seqTy.getEleTy();
@@ -297,7 +298,7 @@ public:
   // fir.array<c ... :any>  -->  llvm<"[...[c x any]]">
   mlir::Type convertSequenceType(SequenceType seq) {
     auto baseTy = unwrap(convertType(seq.getEleTy()));
-    if (hasDynamicSize(seq.getEleTy()))
+    if (characterWithDynamicLen(seq.getEleTy()))
       return mlir::LLVM::LLVMPointerType::get(baseTy);
     auto shape = seq.getShape();
     auto constRows = seq.getConstantRows();
@@ -374,9 +375,8 @@ public:
       if (auto arr = field.second.dyn_cast<SequenceType>()) {
         if (unknownShape(arr.getShape()))
           return true;
-      } else if (auto str = field.second.dyn_cast<fir::CharacterType>()) {
-        if (str.hasDynamicLen())
-          return true;
+      } else if (characterWithDynamicLen(field.second)) {
+         return true;
       } else if (auto rec = field.second.dyn_cast<fir::RecordType>()) {
         if (dynamicallySized(rec))
           return true;
@@ -388,6 +388,8 @@ public:
   static bool dynamicallySized(mlir::Type ty) {
     if (auto arr = ty.dyn_cast<SequenceType>())
       ty = arr.getEleTy();
+    if (characterWithDynamicLen(ty))
+      return true;
     if (auto rec = ty.dyn_cast<fir::RecordType>())
       return dynamicallySized(rec);
     return false;
