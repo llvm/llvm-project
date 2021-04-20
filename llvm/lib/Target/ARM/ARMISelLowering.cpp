@@ -14081,6 +14081,69 @@ static SDValue PerformInsertEltCombine(SDNode *N,
   return DAG.getNode(ISD::BITCAST, dl, VT, InsElt);
 }
 
+// Convert a pair of extracts from the same base vector to a VMOVRRD. Either
+// directly or bitcast to an integer if the original is a float vector.
+// extract(x, n); extract(x, n+1)  ->  VMOVRRD(extract v2f64 x, n/2)
+// bitcast(extract(x, n)); bitcast(extract(x, n+1))  ->  VMOVRRD(extract x, n/2)
+static SDValue
+PerformExtractEltToVMOVRRD(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  EVT VT = N->getValueType(0);
+  SDLoc dl(N);
+
+  if (!DCI.isAfterLegalizeDAG() || VT != MVT::i32)
+    return SDValue();
+
+  SDValue Ext = SDValue(N, 0);
+  if (Ext.getOpcode() == ISD::BITCAST &&
+      Ext.getOperand(0).getValueType() == MVT::f32)
+    Ext = Ext.getOperand(0);
+  if (Ext.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+      !isa<ConstantSDNode>(Ext.getOperand(1)) ||
+      Ext.getConstantOperandVal(1) % 2 != 0)
+    return SDValue();
+  if (Ext->use_size() == 1 &&
+      (Ext->use_begin()->getOpcode() == ISD::SINT_TO_FP ||
+       Ext->use_begin()->getOpcode() == ISD::UINT_TO_FP))
+    return SDValue();
+
+  SDValue Op0 = Ext.getOperand(0);
+  EVT VecVT = Op0.getValueType();
+  unsigned Lane = Ext.getConstantOperandVal(1);
+  if (VecVT.getVectorNumElements() != 4)
+    return SDValue();
+
+  // Find another extract, of Lane + 1
+  auto OtherIt = find_if(Op0->uses(), [&](SDNode *V) {
+    return V->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+           isa<ConstantSDNode>(V->getOperand(1)) &&
+           V->getConstantOperandVal(1) == Lane + 1;
+  });
+  if (OtherIt == Op0->uses().end())
+    return SDValue();
+
+  // For float extracts, we need to be converting to a i32 for both vector
+  // lanes.
+  SDValue OtherExt(*OtherIt, 0);
+  if (OtherExt.getValueType() != MVT::i32) {
+    if (OtherExt->use_size() != 1 ||
+        OtherExt->use_begin()->getOpcode() != ISD::BITCAST ||
+        OtherExt->use_begin()->getValueType(0) != MVT::i32)
+      return SDValue();
+    OtherExt = SDValue(*OtherExt->use_begin(), 0);
+  }
+
+  // Convert the type to a f64 and extract with a VMOVRRD.
+  SDValue F64 = DCI.DAG.getNode(
+      ISD::EXTRACT_VECTOR_ELT, dl, MVT::f64,
+      DCI.DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, MVT::v2f64, Op0),
+      DCI.DAG.getConstant(Ext.getConstantOperandVal(1) / 2, dl, MVT::i32));
+  SDValue VMOVRRD =
+      DCI.DAG.getNode(ARMISD::VMOVRRD, dl, {MVT::i32, MVT::i32}, F64);
+
+  DCI.CombineTo(OtherExt.getNode(), SDValue(VMOVRRD.getNode(), 1));
+  return VMOVRRD;
+}
+
 static SDValue PerformExtractEltCombine(SDNode *N,
                                         TargetLowering::DAGCombinerInfo &DCI,
                                         const ARMSubtarget *ST) {
@@ -14114,6 +14177,10 @@ static SDValue PerformExtractEltCombine(SDNode *N,
     if (MOV.getOpcode() == ARMISD::VMOVDRR)
       return MOV.getOperand(ST->isLittle() ? Offset % 2 : 1 - Offset % 2);
   }
+
+  // extract x, n; extract x, n+1  ->  VMOVRRD x
+  if (SDValue R = PerformExtractEltToVMOVRRD(N, DCI))
+    return R;
 
   return SDValue();
 }
@@ -16535,8 +16602,10 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
   return Res;
 }
 
-static SDValue PerformBITCASTCombine(SDNode *N, SelectionDAG &DAG,
-                                    const ARMSubtarget *ST) {
+static SDValue PerformBITCASTCombine(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     const ARMSubtarget *ST) {
+  SelectionDAG &DAG = DCI.DAG;
   SDValue Src = N->getOperand(0);
   EVT DstVT = N->getValueType(0);
 
@@ -16561,6 +16630,10 @@ static SDValue PerformBITCASTCombine(SDNode *N, SelectionDAG &DAG,
       SrcVT.getScalarSizeInBits() <= DstVT.getScalarSizeInBits() &&
       DAG.getDataLayout().isBigEndian())
     return DAG.getNode(ARMISD::VECTOR_REG_CAST, SDLoc(N), DstVT, Src);
+
+  // bitcast(extract(x, n)); bitcast(extract(x, n+1))  ->  VMOVRRD x
+  if (SDValue R = PerformExtractEltToVMOVRRD(N, DCI))
+    return R;
 
   return SDValue();
 }
@@ -16633,7 +16706,7 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ARMISD::BUILD_VECTOR:
     return PerformARMBUILD_VECTORCombine(N, DCI);
   case ISD::BITCAST:
-    return PerformBITCASTCombine(N, DCI.DAG, Subtarget);
+    return PerformBITCASTCombine(N, DCI, Subtarget);
   case ARMISD::PREDICATE_CAST:
     return PerformPREDICATE_CASTCombine(N, DCI);
   case ARMISD::VECTOR_REG_CAST:
