@@ -171,6 +171,8 @@ genMinMaxloc(FN func, FD funcDim, mlir::Type resultType,
         });
   }
 
+  // Note: The Min/Maxloc cases below have an array result.
+
   // Create mutable fir.box to be passed to the runtime for the result.
   auto resultArrayType = builder.getVarLenSeqTy(resultType, absentDim ? 1 :
                                                 rank - 1);
@@ -179,11 +181,11 @@ genMinMaxloc(FN func, FD funcDim, mlir::Type resultType,
   auto resultIrBox =
        Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
 
-  if (absentDim) {
+  if (absentDim)
     // Handle min/maxloc case where there is no dim argument
     // (calls Min/Maxloc() runtime routine)
     func(builder, loc, resultIrBox, array, mask, kind, back);
-  } else {
+  else {
     // else handle min/maxloc case with dim argument (calls Min/MaxlocDim() 
     // runtime routine).
     auto dim = fir::getBase(args[1]);
