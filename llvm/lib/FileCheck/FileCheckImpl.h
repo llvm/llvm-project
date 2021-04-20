@@ -229,8 +229,7 @@ public:
 
   /// Print name of variable associated with this error.
   void log(raw_ostream &OS) const override {
-    OS << "\"";
-    OS.write_escaped(VarName) << "\"";
+    OS << "undefined variable: " << VarName;
   }
 };
 
@@ -756,8 +755,7 @@ public:
   /// current values of FileCheck numeric variables and is updated if this
   /// match defines new numeric values.
   MatchResult match(StringRef Buffer, const SourceMgr &SM) const;
-  /// Prints the value of successful substitutions or the name of the undefined
-  /// string or numeric variables preventing a successful substitution.
+  /// Prints the value of successful substitutions.
   void printSubstitutions(const SourceMgr &SM, StringRef Buffer,
                           SMRange MatchRange, FileCheckDiag::MatchType MatchTy,
                           std::vector<FileCheckDiag> *Diags) const;
