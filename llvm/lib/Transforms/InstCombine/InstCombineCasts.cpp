@@ -1493,12 +1493,22 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
   // If the input is a trunc from the destination type, then turn sext(trunc(x))
   // into shifts.
   Value *X;
-  if (match(Src, m_OneUse(m_Trunc(m_Value(X)))) && X->getType() == DestTy) {
-    // sext(trunc(X)) --> ashr(shl(X, C), C)
+  if (match(Src, m_Trunc(m_Value(X)))) {
     unsigned SrcBitSize = SrcTy->getScalarSizeInBits();
     unsigned DestBitSize = DestTy->getScalarSizeInBits();
-    Constant *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
-    return BinaryOperator::CreateAShr(Builder.CreateShl(X, ShAmt), ShAmt);
+    unsigned XBitSize = X->getType()->getScalarSizeInBits();
+
+    // Iff X had more sign bits than the number of bits that were chopped off
+    // by the truncation, we can directly sign-extend the X.
+    unsigned XNumSignBits = ComputeNumSignBits(X, 0, &CI);
+    if (XNumSignBits > (XBitSize - SrcBitSize))
+      return CastInst::Create(Instruction::SExt, X, DestTy);
+
+    if (Src->hasOneUse() && X->getType() == DestTy) {
+      // sext(trunc(X)) --> ashr(shl(X, C), C)
+      Constant *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
+      return BinaryOperator::CreateAShr(Builder.CreateShl(X, ShAmt), ShAmt);
+    }
   }
 
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(Src))
