@@ -3189,7 +3189,9 @@ TargetMVPriority(const TargetInfo &TI,
 }
 
 void CodeGenModule::emitMultiVersionFunctions() {
-  for (GlobalDecl GD : MultiVersionFuncs) {
+  std::vector<GlobalDecl> MVFuncsToEmit;
+  MultiVersionFuncs.swap(MVFuncsToEmit);
+  for (GlobalDecl GD : MVFuncsToEmit) {
     SmallVector<CodeGenFunction::MultiVersionResolverOption, 10> Options;
     const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
     getContext().forEachMultiversionedFunctionVersion(
@@ -3243,6 +3245,17 @@ void CodeGenModule::emitMultiVersionFunctions() {
     CodeGenFunction CGF(*this);
     CGF.EmitMultiVersionResolver(ResolverFunc, Options);
   }
+
+  // Ensure that any additions to the deferred decls list caused by emitting a
+  // variant are emitted.  This can happen when the variant itself is inline and
+  // calls a function without linkage.
+  if (!MVFuncsToEmit.empty())
+    EmitDeferred();
+
+  // Ensure that any additions to the multiversion funcs list from either the
+  // deferred decls or the multiversion functions themselves are emitted.
+  if (!MultiVersionFuncs.empty())
+    emitMultiVersionFunctions();
 }
 
 void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
