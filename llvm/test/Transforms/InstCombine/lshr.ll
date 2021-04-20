@@ -328,8 +328,8 @@ define i32 @mul_splat_fold_no_nuw(i32 %x) {
 
 define i32 @negative_and_odd(i32 %x) {
 ; CHECK-LABEL: @negative_and_odd(
-; CHECK-NEXT:    [[S:%.*]] = srem i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[S]], 31
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = srem i32 %x, 2
@@ -339,14 +339,16 @@ define i32 @negative_and_odd(i32 %x) {
 
 define <2 x i7> @negative_and_odd_vec(<2 x i7> %x) {
 ; CHECK-LABEL: @negative_and_odd_vec(
-; CHECK-NEXT:    [[S:%.*]] = srem <2 x i7> [[X:%.*]], <i7 2, i7 2>
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i7> [[S]], <i7 6, i7 6>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i7> [[X:%.*]], <i7 6, i7 6>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i7> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <2 x i7> [[R]]
 ;
   %s = srem <2 x i7> %x, <i7 2, i7 2>
   %r = lshr <2 x i7> %s, <i7 6, i7 6>
   ret <2 x i7> %r
 }
+
+; Negative test - this is still worth trying to avoid srem?
 
 define i32 @negative_and_odd_uses(i32 %x, i32* %p) {
 ; CHECK-LABEL: @negative_and_odd_uses(
@@ -361,6 +363,8 @@ define i32 @negative_and_odd_uses(i32 %x, i32* %p) {
   ret i32 %r
 }
 
+; Negative test - wrong divisor
+
 define i32 @srem3(i32 %x) {
 ; CHECK-LABEL: @srem3(
 ; CHECK-NEXT:    [[S:%.*]] = srem i32 [[X:%.*]], 3
@@ -371,6 +375,8 @@ define i32 @srem3(i32 %x) {
   %r = lshr i32 %s, 31
   ret i32 %r
 }
+
+; Negative test - wrong shift amount
 
 define i32 @srem2_lshr30(i32 %x) {
 ; CHECK-LABEL: @srem2_lshr30(
