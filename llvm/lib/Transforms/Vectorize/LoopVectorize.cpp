@@ -5836,7 +5836,7 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(unsigned ConstTripCount,
   }
 
   ElementCount MaxVF = MaxVectorSize;
-  if (TTI.shouldMaximizeVectorBandwidth(!isScalarEpilogueAllowed()) ||
+  if (TTI.shouldMaximizeVectorBandwidth() ||
       (MaximizeBandwidth && isScalarEpilogueAllowed())) {
     // Collect all viable vectorization factors larger than the default MaxVF
     // (i.e. MaxVectorSize).

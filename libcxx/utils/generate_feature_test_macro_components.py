@@ -340,7 +340,8 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_integer_comparison_functions",
     "values": { "c++20": 202002 },
     "headers": ["utility"],
-    "unimplemented": True,
+    "test_suite_guard": "defined(__cpp_concepts) && __cpp_concepts >= 201907L",
+    "libcxx_guard": "!defined(_LIBCPP_HAS_NO_CONCEPTS)",
   }, {
     "name": "__cpp_lib_integer_sequence",
     "values": { "c++14": 201304 },

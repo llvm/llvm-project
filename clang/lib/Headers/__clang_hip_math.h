@@ -38,7 +38,7 @@ template<bool>
 struct __compare_result{};
 template<>
 struct __compare_result<true> {
-  static const bool valid;
+  static const __device__ bool valid;
 };
 
 __DEVICE__

@@ -11,6 +11,8 @@ class Generator(object):
 
     implementationContent = ''
 
+    RefClades = {"NestedNameSpecifierLoc", "TemplateArgumentLoc", "TypeLoc"}
+
     def __init__(self, templateClasses):
         self.templateClasses = templateClasses
 
@@ -54,7 +56,7 @@ std::vector<clang::TypeLoc> &TLRG;
 
     def GenerateBaseGetLocationsDeclaration(self, CladeName):
         InstanceDecoration = "*"
-        if CladeName == "TypeLoc":
+        if CladeName in self.RefClades:
             InstanceDecoration = "&"
 
         self.implementationContent += \
@@ -164,7 +166,7 @@ static void GetLocations{0}(SharedLocationCall const& Prefix,
 
         MethodReturnType = 'NodeLocationAccessors'
         InstanceDecoration = "*"
-        if CladeName == "TypeLoc":
+        if CladeName in self.RefClades:
             InstanceDecoration = "&"
 
         Signature = \
@@ -196,7 +198,7 @@ static void GetLocations{0}(SharedLocationCall const& Prefix,
             RecursionGuardParam = ', TypeLocRecursionGuard'
 
         ArgPrefix = '*'
-        if CladeName == "TypeLoc":
+        if CladeName in self.RefClades:
             ArgPrefix = ''
         self.implementationContent += \
             'GetLocations{0}(Prefix, {1}Object, Locs, Rngs {2});'.format(
@@ -290,7 +292,7 @@ if (auto Derived = llvm::dyn_cast<clang::{0}>(Object)) {{
     if (const auto *N = Node.get<{0}>())
     """.format(CladeName)
             ArgPrefix = ""
-            if CladeName == "TypeLoc":
+            if CladeName in self.RefClades:
                 ArgPrefix = "*"
             self.implementationContent += \
             """
@@ -351,11 +353,11 @@ NodeLocationAccessors NodeIntrospection::GetLocations(
   return {};
 }
 NodeLocationAccessors NodeIntrospection::GetLocations(
-    clang::NestedNameSpecifierLoc const*) {
+    clang::NestedNameSpecifierLoc const&) {
   return {};
 }
 NodeLocationAccessors NodeIntrospection::GetLocations(
-    clang::TemplateArgumentLoc const*) {
+    clang::TemplateArgumentLoc const&) {
   return {};
 }
 NodeLocationAccessors NodeIntrospection::GetLocations(

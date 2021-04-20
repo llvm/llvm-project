@@ -8,7 +8,15 @@ define void @splat_ones_v1i1(<1 x i1>* %x) {
 ; CHECK-LABEL: splat_ones_v1i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli a1, 1, e8,m1,ta,mu
-; CHECK-NEXT:    vmset.m v25
+; CHECK-NEXT:    vmset.m v0
+; CHECK-NEXT:    vmv.v.i v25, 0
+; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
+; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vmv.v.i v26, 0
+; CHECK-NEXT:    vsetivli a1, 1, e8,m1,tu,mu
+; CHECK-NEXT:    vslideup.vi v26, v25, 0
+; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vmsne.vi v25, v26, 0
 ; CHECK-NEXT:    vse1.v v25, (a0)
 ; CHECK-NEXT:    ret
   store <1 x i1> <i1 1>, <1 x i1>* %x
@@ -19,7 +27,15 @@ define void @splat_zeros_v2i1(<2 x i1>* %x) {
 ; CHECK-LABEL: splat_zeros_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli a1, 2, e8,m1,ta,mu
-; CHECK-NEXT:    vmclr.m v25
+; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    vmv.v.i v25, 0
+; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
+; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vmv.v.i v26, 0
+; CHECK-NEXT:    vsetivli a1, 2, e8,m1,tu,mu
+; CHECK-NEXT:    vslideup.vi v26, v25, 0
+; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vmsne.vi v25, v26, 0
 ; CHECK-NEXT:    vse1.v v25, (a0)
 ; CHECK-NEXT:    ret
   store <2 x i1> zeroinitializer, <2 x i1>* %x
@@ -30,7 +46,15 @@ define void @splat_ones_v4i1(<4 x i1>* %x) {
 ; CHECK-LABEL: splat_ones_v4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli a1, 4, e8,m1,ta,mu
-; CHECK-NEXT:    vmset.m v25
+; CHECK-NEXT:    vmset.m v0
+; CHECK-NEXT:    vmv.v.i v25, 0
+; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
+; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vmv.v.i v26, 0
+; CHECK-NEXT:    vsetivli a1, 4, e8,m1,tu,mu
+; CHECK-NEXT:    vslideup.vi v26, v25, 0
+; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vmsne.vi v25, v26, 0
 ; CHECK-NEXT:    vse1.v v25, (a0)
 ; CHECK-NEXT:    ret
   store <4 x i1> <i1 1, i1 1, i1 1, i1 1>, <4 x i1>* %x

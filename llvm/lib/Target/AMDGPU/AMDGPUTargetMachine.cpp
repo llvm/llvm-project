@@ -1090,7 +1090,6 @@ void GCNPassConfig::addMachineSSAOptimization() {
   addPass(&SIFoldOperandsID);
   if (EnableDPPCombine)
     addPass(&GCNDPPCombineID);
-  addPass(&DeadMachineInstructionElimID);
   addPass(&SILoadStoreOptimizerID);
   addPass(&SIBufMemMergeID);
   if (EnableSDWAPeephole) {
@@ -1098,8 +1097,8 @@ void GCNPassConfig::addMachineSSAOptimization() {
     addPass(&EarlyMachineLICMID);
     addPass(&MachineCSEID);
     addPass(&SIFoldOperandsID);
-    addPass(&DeadMachineInstructionElimID);
   }
+  addPass(&DeadMachineInstructionElimID);
   addPass(createSIShrinkInstructionsPass());
 }
 

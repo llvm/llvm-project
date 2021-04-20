@@ -194,16 +194,17 @@ tileAndFuseLinalgOps(OpBuilder &builder, ArrayRef<LinalgOp> ops,
                      const LinalgDependenceGraph &dependenceGraph,
                      const LinalgTilingOptions &tilingOptions);
 
-/// Interchanges the `iterator_types` and `iterator_maps` dimensions of `op`.
-/// This is an in-place transformation controlled by `interchangeVector`.
-/// An empty vector is interpreted as the identity permutation and the
-/// transformation returns early.
+/// Interchanges the `iterator_types` and `iterator_maps` dimensions and adapts
+/// the index accesses of `op`. This is an in-place transformation controlled by
+/// `interchangeVector`. An empty vector is interpreted as the identity
+/// permutation and the transformation returns early.
 ///
 /// E.g. the permutation `(i,j,k) -> (j,k,i)` is expressed with
 /// `interchangeVector = [1,2,0]`. All values in `interchangeVector` must be
 /// integers, in the range 0..`op.rank` without duplications
 /// (i.e. `[1,1,2]` is an invalid permutation).
-LinalgOp interchange(LinalgOp op, ArrayRef<unsigned> interchangeVector);
+void interchange(PatternRewriter &rewriter, LinalgOp op,
+                 ArrayRef<unsigned> interchangeVector);
 
 /// Callback function type used to perform the allocation for the promoted
 /// `subView`. In `boundingSubViewsize` a best attempt is made to find the

@@ -870,3 +870,109 @@ define i1 @ashr_ult_15(i4 %x) {
   %r = icmp ult i4 %s, 15 ; 0b1111
   ret i1 %r
 }
+
+define i1 @lshr_eq_0_multiuse(i8 %x) {
+; CHECK-LABEL: @lshr_eq_0_multiuse(
+; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[X:%.*]], 2
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 4
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = lshr i8 %x, 2
+  call void @use(i8 %s)
+  %c = icmp eq i8 %s, 0
+  ret i1 %c
+}
+
+define i1 @lshr_ne_0_multiuse(i8 %x) {
+; CHECK-LABEL: @lshr_ne_0_multiuse(
+; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[X:%.*]], 2
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X]], 3
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = lshr i8 %x, 2
+  call void @use(i8 %s)
+  %c = icmp ne i8 %s, 0
+  ret i1 %c
+}
+
+define i1 @ashr_eq_0_multiuse(i8 %x) {
+; CHECK-LABEL: @ashr_eq_0_multiuse(
+; CHECK-NEXT:    [[S:%.*]] = ashr i8 [[X:%.*]], 2
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 4
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 2
+  call void @use(i8 %s)
+  %c = icmp eq i8 %s, 0
+  ret i1 %c
+}
+
+define i1 @ashr_ne_0_multiuse(i8 %x) {
+; CHECK-LABEL: @ashr_ne_0_multiuse(
+; CHECK-NEXT:    [[S:%.*]] = ashr i8 [[X:%.*]], 2
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X]], 3
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 2
+  call void @use(i8 %s)
+  %c = icmp ne i8 %s, 0
+  ret i1 %c
+}
+
+define i1 @lshr_exact_eq_0_multiuse(i8 %x) {
+; CHECK-LABEL: @lshr_exact_eq_0_multiuse(
+; CHECK-NEXT:    [[S:%.*]] = lshr exact i8 [[X:%.*]], 2
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = lshr exact i8 %x, 2
+  call void @use(i8 %s)
+  %c = icmp eq i8 %s, 0
+  ret i1 %c
+}
+
+define i1 @lshr_exact_ne_0_multiuse(i8 %x) {
+; CHECK-LABEL: @lshr_exact_ne_0_multiuse(
+; CHECK-NEXT:    [[S:%.*]] = lshr exact i8 [[X:%.*]], 2
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = lshr exact i8 %x, 2
+  call void @use(i8 %s)
+  %c = icmp ne i8 %s, 0
+  ret i1 %c
+}
+
+define i1 @ashr_exact_eq_0_multiuse(i8 %x) {
+; CHECK-LABEL: @ashr_exact_eq_0_multiuse(
+; CHECK-NEXT:    [[S:%.*]] = ashr exact i8 [[X:%.*]], 2
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 2
+  call void @use(i8 %s)
+  %c = icmp eq i8 %s, 0
+  ret i1 %c
+}
+
+define i1 @ashr_exact_ne_0_multiuse(i8 %x) {
+; CHECK-LABEL: @ashr_exact_ne_0_multiuse(
+; CHECK-NEXT:    [[S:%.*]] = ashr exact i8 [[X:%.*]], 2
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 2
+  call void @use(i8 %s)
+  %c = icmp ne i8 %s, 0
+  ret i1 %c
+}
+
+declare void @use(i8)

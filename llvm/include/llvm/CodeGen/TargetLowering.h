@@ -4202,6 +4202,10 @@ public:
   virtual unsigned getInlineAsmMemConstraint(StringRef ConstraintCode) const {
     if (ConstraintCode == "m")
       return InlineAsm::Constraint_m;
+    if (ConstraintCode == "o")
+      return InlineAsm::Constraint_o;
+    if (ConstraintCode == "X")
+      return InlineAsm::Constraint_X;
     return InlineAsm::Constraint_Unknown;
   }
 

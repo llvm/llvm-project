@@ -1260,6 +1260,14 @@ bool PPCTTIImpl::isNumRegsMajorCostOfLSR() {
   return false;
 }
 
+bool PPCTTIImpl::shouldBuildRelLookupTables() const {
+  const PPCTargetMachine &TM = ST->getTargetMachine();
+  // XCOFF hasn't implemented lowerRelativeReference, disable non-ELF for now.
+  if (!TM.isELFv2ABI())
+    return false;
+  return BaseT::shouldBuildRelLookupTables();
+}
+
 bool PPCTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
                                     MemIntrinsicInfo &Info) {
   switch (Inst->getIntrinsicID()) {

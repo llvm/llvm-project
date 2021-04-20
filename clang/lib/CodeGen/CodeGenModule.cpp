@@ -3644,8 +3644,8 @@ GetRuntimeFunctionDecl(ASTContext &C, StringRef Name) {
   DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
 
   IdentifierInfo &CII = C.Idents.get(Name);
-  for (const auto &Result : DC->lookup(&CII))
-    if (const auto FD = dyn_cast<FunctionDecl>(Result))
+  for (const auto *Result : DC->lookup(&CII))
+    if (const auto *FD = dyn_cast<FunctionDecl>(Result))
       return FD;
 
   if (!C.getLangOpts().CPlusPlus)
@@ -3659,15 +3659,15 @@ GetRuntimeFunctionDecl(ASTContext &C, StringRef Name) {
 
   for (const auto &N : {"__cxxabiv1", "std"}) {
     IdentifierInfo &NS = C.Idents.get(N);
-    for (const auto &Result : DC->lookup(&NS)) {
-      NamespaceDecl *ND = dyn_cast<NamespaceDecl>(Result);
-      if (auto LSD = dyn_cast<LinkageSpecDecl>(Result))
-        for (const auto &Result : LSD->lookup(&NS))
+    for (const auto *Result : DC->lookup(&NS)) {
+      const NamespaceDecl *ND = dyn_cast<NamespaceDecl>(Result);
+      if (auto *LSD = dyn_cast<LinkageSpecDecl>(Result))
+        for (const auto *Result : LSD->lookup(&NS))
           if ((ND = dyn_cast<NamespaceDecl>(Result)))
             break;
 
       if (ND)
-        for (const auto &Result : ND->lookup(&CXXII))
+        for (const auto *Result : ND->lookup(&CXXII))
           if (const auto *FD = dyn_cast<FunctionDecl>(Result))
             return FD;
     }
@@ -5038,7 +5038,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
         DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
 
         const VarDecl *VD = nullptr;
-        for (const auto &Result : DC->lookup(&II))
+        for (const auto *Result : DC->lookup(&II))
           if ((VD = dyn_cast<VarDecl>(Result)))
             break;
 

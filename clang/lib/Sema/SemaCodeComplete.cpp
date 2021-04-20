@@ -5257,7 +5257,7 @@ QualType getApproximateType(const Expr *E) {
       Base = Base->getPointeeType(); // could handle unique_ptr etc here?
     RecordDecl *RD = Base.isNull() ? nullptr : getAsRecordDecl(Base);
     if (RD && RD->isCompleteDefinition()) {
-      for (const auto &Member : RD->lookup(CDSME->getMember()))
+      for (const auto *Member : RD->lookup(CDSME->getMember()))
         if (const ValueDecl *VD = llvm::dyn_cast<ValueDecl>(Member))
           return VD->getType().getNonReferenceType();
     }
@@ -5891,7 +5891,7 @@ static QualType getDesignatedType(QualType BaseType, const Designation &Desig) {
       assert(D.isFieldDesignator());
       auto *RD = getAsRecordDecl(BaseType);
       if (RD && RD->isCompleteDefinition()) {
-        for (const auto &Member : RD->lookup(D.getField()))
+        for (const auto *Member : RD->lookup(D.getField()))
           if (const FieldDecl *FD = llvm::dyn_cast<FieldDecl>(Member)) {
             NextType = FD->getType();
             break;

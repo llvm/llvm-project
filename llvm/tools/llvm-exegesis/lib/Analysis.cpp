@@ -198,9 +198,8 @@ Error Analysis::run<Analysis::PrintClusters>(raw_ostream &OS) const {
   OS << "\n";
 
   // Write the points.
-  const auto &Clusters = Clustering_.getValidClusters();
-  for (size_t I = 0, E = Clusters.size(); I < E; ++I) {
-    for (const size_t PointId : Clusters[I].PointIndices) {
+  for (const auto &ClusterIt : Clustering_.getValidClusters()) {
+    for (const size_t PointId : ClusterIt.PointIndices) {
       printInstructionRowCsv(PointId, OS);
     }
     OS << "\n\n";

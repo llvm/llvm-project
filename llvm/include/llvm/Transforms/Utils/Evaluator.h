@@ -92,7 +92,7 @@ private:
   bool getFormalParams(CallBase &CB, Function *F,
                        SmallVectorImpl<Constant *> &Formals);
 
-  Constant *ComputeLoadResult(Constant *P);
+  Constant *ComputeLoadResult(Constant *P, Type *Ty);
 
   /// As we compute SSA register values, we store their contents here. The back
   /// of the deque contains the current function and the stack contains the

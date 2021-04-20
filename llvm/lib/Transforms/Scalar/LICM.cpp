@@ -1954,10 +1954,21 @@ public:
   }
 };
 
+bool isNotCapturedBeforeOrInLoop(const Value *V, const Loop *L,
+                                 DominatorTree *DT) {
+  // We can perform the captured-before check against any instruction in the
+  // loop header, as the loop header is reachable from any instruction inside
+  // the loop.
+  // TODO: ReturnCaptures=true shouldn't be necessary here.
+  return !PointerMayBeCapturedBefore(V, /* ReturnCaptures */ true,
+                                     /* StoreCaptures */ true,
+                                     L->getHeader()->getTerminator(), DT);
+}
 
 /// Return true iff we can prove that a caller of this function can not inspect
 /// the contents of the provided object in a well defined program.
-bool isKnownNonEscaping(Value *Object, const TargetLibraryInfo *TLI) {
+bool isKnownNonEscaping(Value *Object, const Loop *L,
+                        const TargetLibraryInfo *TLI, DominatorTree *DT) {
   if (isa<AllocaInst>(Object))
     // Since the alloca goes out of scope, we know the caller can't retain a
     // reference to it and be well defined.  Thus, we don't need to check for
@@ -1974,7 +1985,7 @@ bool isKnownNonEscaping(Value *Object, const TargetLibraryInfo *TLI) {
   //      weaker condition and handle only AllocLikeFunctions (which are
   //      known to be noalias).  TODO
   return isAllocLikeFn(Object, TLI) &&
-    !PointerMayBeCaptured(Object, true, true);
+         isNotCapturedBeforeOrInLoop(Object, L, DT);
 }
 
 } // namespace
@@ -2060,7 +2071,7 @@ bool llvm::promoteLoopAccessesToScalars(
     // this by proving that the caller can't have a reference to the object
     // after return and thus can't possibly load from the object.
     Value *Object = getUnderlyingObject(SomePtr);
-    if (!isKnownNonEscaping(Object, TLI))
+    if (!isKnownNonEscaping(Object, CurLoop, TLI, DT))
       return false;
     // Subtlety: Alloca's aren't visible to callers, but *are* potentially
     // visible to other threads if captured and used during their lifetimes.
@@ -2195,7 +2206,7 @@ bool llvm::promoteLoopAccessesToScalars(
       Value *Object = getUnderlyingObject(SomePtr);
       SafeToInsertStore =
           (isAllocLikeFn(Object, TLI) || isa<AllocaInst>(Object)) &&
-          !PointerMayBeCaptured(Object, true, true);
+          isNotCapturedBeforeOrInLoop(Object, CurLoop, DT);
     }
   }
 

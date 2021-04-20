@@ -12,30 +12,68 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "llvm/Support/StringSaver.h"
 
 using namespace clang;
 using namespace tooling;
 using namespace dependencies;
 
-std::vector<std::string> ModuleDeps::getFullCommandLine(
-    std::function<StringRef(ModuleID)> LookupPCMPath,
-    std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const {
-  std::vector<std::string> Ret = NonPathCommandLine;
+static CompilerInvocation
+makeInvocationForModuleBuildWithoutPaths(const ModuleDeps &Deps) {
+  // Make a deep copy of the invocation.
+  CompilerInvocation CI(*Deps.Invocation);
 
-  // TODO: Build full command line. That also means capturing the original
-  //       command line into NonPathCommandLine.
+  // Remove options incompatible with explicit module build.
+  CI.getFrontendOpts().Inputs.clear();
+  CI.getFrontendOpts().OutputFile.clear();
 
-  dependencies::detail::appendCommonModuleArguments(
-      ClangModuleDeps, LookupPCMPath, LookupModuleDeps, Ret);
+  CI.getFrontendOpts().ProgramAction = frontend::GenerateModule;
+  CI.getLangOpts()->ModuleName = Deps.ID.ModuleName;
+  CI.getFrontendOpts().IsSystemModule = Deps.IsSystem;
+
+  CI.getLangOpts()->ImplicitModules = false;
+  CI.getHeaderSearchOpts().ImplicitModuleMaps = false;
+
+  return CI;
+}
+
+static std::vector<std::string>
+serializeCompilerInvocation(CompilerInvocation &CI) {
+  // Set up string allocator.
+  llvm::BumpPtrAllocator Alloc;
+  llvm::StringSaver Strings(Alloc);
+  auto SA = [&Strings](const Twine &Arg) { return Strings.save(Arg).data(); };
+  SmallVector<const char *, 32> Args;
+
+  // Synthesize full command line from the CompilerInvocation.
+  CI.generateCC1CommandLine(Args, SA);
+
+  // Convert arguments to the return type.
+  std::vector<std::string> Ret;
+  Ret.reserve(Args.size());
+  for (const char *Arg : Args)
+    Ret.emplace_back(Arg);
 
   return Ret;
 }
 
-void dependencies::detail::appendCommonModuleArguments(
+std::vector<std::string> ModuleDeps::getFullCommandLine(
+    std::function<StringRef(ModuleID)> LookupPCMPath,
+    std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const {
+  CompilerInvocation CI(makeInvocationForModuleBuildWithoutPaths(*this));
+
+  dependencies::detail::collectPCMAndModuleMapPaths(
+      ClangModuleDeps, LookupPCMPath, LookupModuleDeps,
+      CI.getFrontendOpts().ModuleFiles, CI.getFrontendOpts().ModuleMapFiles);
+
+  return serializeCompilerInvocation(CI);
+}
+
+void dependencies::detail::collectPCMAndModuleMapPaths(
     llvm::ArrayRef<ModuleID> Modules,
     std::function<StringRef(ModuleID)> LookupPCMPath,
     std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps,
-    std::vector<std::string> &Result) {
+    std::vector<std::string> &PCMPaths, std::vector<std::string> &ModMapPaths) {
   llvm::StringSet<> AlreadyAdded;
 
   std::function<void(llvm::ArrayRef<ModuleID>)> AddArgs =
@@ -46,15 +84,12 @@ void dependencies::detail::appendCommonModuleArguments(
           const ModuleDeps &M = LookupModuleDeps(MID);
           // Depth first traversal.
           AddArgs(M.ClangModuleDeps);
-          Result.push_back(("-fmodule-file=" + LookupPCMPath(MID)).str());
-          if (!M.ClangModuleMapFile.empty()) {
-            Result.push_back("-fmodule-map-file=" + M.ClangModuleMapFile);
-          }
+          PCMPaths.push_back(LookupPCMPath(MID).str());
+          if (!M.ClangModuleMapFile.empty())
+            ModMapPaths.push_back(M.ClangModuleMapFile);
         }
       };
 
-  Result.push_back("-fno-implicit-modules");
-  Result.push_back("-fno-implicit-module-maps");
   AddArgs(Modules);
 }
 
@@ -143,10 +178,12 @@ void ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
                                    .getModuleMap()
                                    .getContainingModuleMapFile(M);
 
+  MD.Invocation = Instance.getInvocationPtr();
   MD.ClangModuleMapFile = std::string(ModuleMap ? ModuleMap->getName() : "");
   MD.ID.ModuleName = M->getFullModuleName();
   MD.ImplicitModulePCMPath = std::string(M->getASTFile()->getName());
   MD.ID.ContextHash = MDC.ContextHash;
+  MD.IsSystem = M->IsSystem;
   serialization::ModuleFile *MF =
       MDC.Instance.getASTReader()->getModuleManager().lookup(M->getASTFile());
   MDC.Instance.getASTReader()->visitInputFiles(

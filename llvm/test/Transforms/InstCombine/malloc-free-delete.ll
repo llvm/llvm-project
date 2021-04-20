@@ -149,7 +149,7 @@ define void @test6a(i8* %foo) minsize {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8* [[FOO:%.*]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @_ZdlPv(i8* [[FOO]]) [[ATTR8:#.*]]
+; CHECK-NEXT:    tail call void @_ZdlPv(i8* [[FOO]]) #[[ATTR8:[0-9]+]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -352,7 +352,7 @@ define void @test10()  {
 
 define void @test11() {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable(8) i8* @_Znwm(i64 8) [[ATTR8]]
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable(8) i8* @_Znwm(i64 8) #[[ATTR8]]
 ; CHECK-NEXT:    call void @_ZdlPv(i8* nonnull [[CALL]])
 ; CHECK-NEXT:    ret void
 ;

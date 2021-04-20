@@ -12,6 +12,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -47,6 +48,9 @@ struct ModuleDeps {
   /// The identifier of the module.
   ModuleID ID;
 
+  /// Whether this is a "system" module.
+  bool IsSystem;
+
   /// The path to the modulemap file which defines this module.
   ///
   /// This can be used to explicitly build this module. This file will
@@ -67,23 +71,21 @@ struct ModuleDeps {
   /// determined that the differences are benign for this compilation.
   std::vector<ModuleID> ClangModuleDeps;
 
-  /// A partial command line that can be used to build this module.
-  ///
-  /// Call \c getFullCommandLine() to get a command line suitable for passing to
-  /// clang.
-  std::vector<std::string> NonPathCommandLine;
-
   // Used to track which modules that were discovered were directly imported by
   // the primary TU.
   bool ImportedByMainFile = false;
 
+  /// The compiler invocation associated with the translation unit that imports
+  /// this module.
+  std::shared_ptr<CompilerInvocation> Invocation;
+
   /// Gets the full command line suitable for passing to clang.
   ///
-  /// \param LookupPCMPath this function is called to fill in `-fmodule-file=`
+  /// \param LookupPCMPath This function is called to fill in `-fmodule-file=`
   ///                      flags and for the `-o` flag. It needs to return a
   ///                      path for where the PCM for the given module is to
   ///                      be located.
-  /// \param LookupModuleDeps this fucntion is called to collect the full
+  /// \param LookupModuleDeps This function is called to collect the full
   ///                         transitive set of dependencies for this
   ///                         compilation.
   std::vector<std::string> getFullCommandLine(
@@ -92,14 +94,13 @@ struct ModuleDeps {
 };
 
 namespace detail {
-/// Append the `-fmodule-file=` and `-fmodule-map-file=` arguments for the
-/// modules in \c Modules transitively, along with other needed arguments to
-/// use explicitly built modules.
-void appendCommonModuleArguments(
+/// Collect the paths of PCM and module map files for the modules in \c Modules
+/// transitively.
+void collectPCMAndModuleMapPaths(
     llvm::ArrayRef<ModuleID> Modules,
     std::function<StringRef(ModuleID)> LookupPCMPath,
     std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps,
-    std::vector<std::string> &Result);
+    std::vector<std::string> &PCMPaths, std::vector<std::string> &ModMapPaths);
 } // namespace detail
 
 class ModuleDepCollector;

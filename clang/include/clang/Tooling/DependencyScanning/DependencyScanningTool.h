@@ -38,13 +38,6 @@ struct FullDependencies {
   /// determined that the differences are benign for this compilation.
   std::vector<ModuleID> ClangModuleDeps;
 
-  /// A partial addtional set of command line arguments that can be used to
-  /// build this translation unit.
-  ///
-  /// Call \c getFullAdditionalCommandLine() to get a command line suitable for
-  /// appending to the original command line to pass to clang.
-  std::vector<std::string> AdditionalNonPathCommandLine;
-
   /// Get additional arguments suitable for appending to the original Clang
   /// command line.
   ///

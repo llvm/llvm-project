@@ -158,7 +158,11 @@ void simplifyExternals(Module &M) {
     Function *NewF =
         Function::Create(EmptyFT, GlobalValue::ExternalLinkage,
                          F.getAddressSpace(), "", &M);
-    NewF->setVisibility(F.getVisibility());
+    NewF->copyAttributesFrom(&F);
+    // Only copy function attribtues.
+    NewF->setAttributes(
+        AttributeList::get(M.getContext(), AttributeList::FunctionIndex,
+                           F.getAttributes().getFnAttributes()));
     NewF->takeName(&F);
     F.replaceAllUsesWith(ConstantExpr::getBitCast(NewF, F.getType()));
     F.eraseFromParent();
