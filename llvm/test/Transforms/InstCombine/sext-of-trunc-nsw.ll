@@ -13,7 +13,8 @@ define i16 @t0(i8 %x) {
 ; CHECK-LABEL: @t0(
 ; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 5
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
-; CHECK-NEXT:    [[C:%.*]] = sext i8 [[A]] to i16
+; CHECK-NEXT:    [[B:%.*]] = trunc i8 [[A]] to i4
+; CHECK-NEXT:    [[C:%.*]] = sext i4 [[B]] to i16
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = ashr i8 %x, 5
@@ -27,7 +28,8 @@ define i16 @t1(i8 %x) {
 ; CHECK-LABEL: @t1(
 ; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 4
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
-; CHECK-NEXT:    [[C:%.*]] = sext i8 [[A]] to i16
+; CHECK-NEXT:    [[B:%.*]] = trunc i8 [[A]] to i4
+; CHECK-NEXT:    [[C:%.*]] = sext i4 [[B]] to i16
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = ashr i8 %x, 4
@@ -57,7 +59,8 @@ define <2 x i16> @t3_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @t3_vec(
 ; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 4, i8 4>
 ; CHECK-NEXT:    call void @usevec(<2 x i8> [[A]])
-; CHECK-NEXT:    [[C:%.*]] = sext <2 x i8> [[A]] to <2 x i16>
+; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i8> [[A]] to <2 x i4>
+; CHECK-NEXT:    [[C:%.*]] = sext <2 x i4> [[B]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[C]]
 ;
   %a = ashr <2 x i8> %x, <i8 4, i8 4>
@@ -88,7 +91,7 @@ define i16 @t5_extrause(i8 %x) {
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = trunc i8 [[A]] to i4
 ; CHECK-NEXT:    call void @use4(i4 [[B]])
-; CHECK-NEXT:    [[C:%.*]] = sext i8 [[A]] to i16
+; CHECK-NEXT:    [[C:%.*]] = sext i4 [[B]] to i16
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = ashr i8 %x, 5
