@@ -28,10 +28,6 @@ using namespace mlir::linalg;
 /// Implementation of fusion of generic ops and indexed_generic ops.
 static bool areElementwiseOpsFusable(LinalgOp producer, LinalgOp consumer,
                                      unsigned consumerIdx) {
-  // TODO: remove once index ops are supported.
-  if (producer.hasIndexSemantics() || consumer.hasIndexSemantics())
-    return false;
-
   // Producer and consumer must have tensor semantics.
   if (!producer.hasTensorSemantics() || !consumer.hasTensorSemantics())
     return false;
@@ -138,7 +134,7 @@ generateFusedElementwiseOpRegion(PatternRewriter &rewriter, Operation *fusedOp,
   // 1. Map consumer indices to fusedBlock indices 1-1.
   mapper.map(consumerBlock.getArguments().take_front(numConsumerIndices),
              fusedBlock->getArguments().take_front(numConsumerIndices));
-  // 2. Embed producer indices into fusedBlock index space 1-1.
+  // 2a. Embed producer indices into fusedBlock index space 1-1.
   for (auto it :
        llvm::zip(producerBlock.getArguments().take_front(numProducerIndices),
                  fusedBlock->getArguments().take_front(numProducerIndices))) {
@@ -147,6 +143,28 @@ generateFusedElementwiseOpRegion(PatternRewriter &rewriter, Operation *fusedOp,
         consumerToProducerLoopsMap.getSubMap(std::get<0>(it).getArgNumber()),
         fusedBlock->getArguments().take_front(numFusedOpIndices));
     mapper.map(std::get<0>(it), newIndex);
+  }
+  // 2b. Replace the producer index operations by index operations placed in the
+  // fused block using the `consumerToProducerLoopsMap` to map the index spaces.
+  unsigned numFusedOpLoops =
+      std::max(producer.getNumLoops(), consumer.getNumLoops());
+  if (producer.hasIndexSemantics()) {
+    SmallVector<Value> fusedIndices;
+    fusedIndices.reserve(numFusedOpLoops);
+    llvm::transform(llvm::seq<int64_t>(0, numFusedOpLoops),
+                    std::back_inserter(fusedIndices), [&](int64_t dim) {
+                      return rewriter.create<IndexOp>(producer.getLoc(), dim);
+                    });
+    for (IndexOp indexOp :
+         llvm::make_early_inc_range(producerBlock.getOps<IndexOp>())) {
+      Value newIndex = rewriter.create<mlir::AffineApplyOp>(
+          producer.getLoc(),
+          consumerToProducerLoopsMap.getSubMap(indexOp.dim()), fusedIndices);
+      // Replace the producer index operation by the index value computed in the
+      // fused block. All remaining operations in the producer block are later
+      // on cloned to the fused block.
+      rewriter.replaceOp(indexOp, newIndex);
+    }
   }
   // TODO: allow fusing the producer of an output operand.
   assert(consumerIdx < consumer.getNumInputs() &&
@@ -329,8 +347,8 @@ fuseElementwiseOpsImpl(LinalgOp producer, OpOperand &consumerOpOperand,
       invProducerResultIndexMap.compose(consumerResultIndexMap);
 
   generateFusedElementwiseOpRegion(rewriter, fusedOp, producer, consumer,
-                              consumerToProducerLoopsMap, consumerIdx,
-                              consumer.getNumLoops());
+                                   consumerToProducerLoopsMap, consumerIdx,
+                                   consumer.getNumLoops());
   return SmallVector<Value, 1>(fusedOp->getResults());
 }
 
@@ -602,17 +620,16 @@ LogicalResult ExpansionInfo::compute(LinalgOp linalgOp,
   return success();
 }
 
-/// To expand an indexed_generic operation, the body of the indexed generic op
-/// need to be modified appropriately. Specifically, uses of arguments for
-/// induction variables in the original operation need to be replaced with
-/// linearization of the corresponding arguments in the expanded op. That
-/// requires the shape of the expanded dimensions (at least all but the most
-/// significant. For now check that these are all statically sized. Note that
-/// this could be extended to handle dynamic case, but the implementation below
-/// uses `affine.apply` which seems to have issues when the shapes are not
-/// static.
-LogicalResult isIndexedGenericOpExpandable(LinalgOp linalgOp,
-                                           const ExpansionInfo &expansionInfo) {
+/// Epanding the body of a linalg operation requires adaptations of the accessed
+/// loop indices. Specifically, access of indices in the original operation need
+/// to be replaced with linearizations of indices in the expanded op. That
+/// requires the shape of the expanded dimensions to be static (at least all but
+/// the most significant). For now check that these are all statically sized.
+/// Note that this could be extended to handle dynamic case, but the
+/// implementation below uses `affine.apply` which seems to have issues when the
+/// shapes are not static.
+LogicalResult isIndexedOpExpandable(LinalgOp linalgOp,
+                                    const ExpansionInfo &expansionInfo) {
   for (unsigned i : llvm::seq<unsigned>(0, expansionInfo.getOrigOpNumDims())) {
     ArrayRef<int64_t> expandedShape = expansionInfo.getExpandedShapeOfDim(i);
     if (expandedShape.size() == 1)
@@ -734,6 +751,49 @@ static void buildExpandedIndexedGenericOpRegion(
                        argReplacements);
 }
 
+/// Update the body of an expanded linalg operation having index semantics. The
+/// indices of the original operation need to be recovered by linearizing the
+/// indices of the correspoding dimensions of the expanded operation. For now it
+/// is assumed that the shapes of the expanded operation needed for
+/// linearization are static.
+static void updateExpandedIndexOpRegion(PatternRewriter &rewriter, Location loc,
+                                        Region &fusedRegion,
+                                        const ExpansionInfo &expansionInfo) {
+  // Replace the original indices by the linearization of the expanded indices.
+  for (IndexOp indexOp :
+       llvm::make_early_inc_range(fusedRegion.front().getOps<IndexOp>())) {
+    ArrayRef<int64_t> expandedDims =
+        expansionInfo.getExpandedDims(indexOp.dim());
+    assert(!expandedDims.empty() && "expected valid expansion info");
+
+    // Skip index operations that are not affected by the expansion.
+    if (expandedDims.size() == 1 &&
+        expandedDims.front() == (int64_t)indexOp.dim())
+      continue;
+
+    // Linearize the expanded indices of the original index dimension.
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointAfter(indexOp);
+    ArrayRef<int64_t> expandedDimsShape =
+        expansionInfo.getExpandedShapeOfDim(indexOp.dim()).drop_front();
+    SmallVector<Value> expandedIndices;
+    expandedIndices.reserve(expandedDims.size() - 1);
+    llvm::transform(
+        expandedDims.drop_front(), std::back_inserter(expandedIndices),
+        [&](int64_t dim) { return rewriter.create<IndexOp>(loc, dim); });
+    Value newIndex = rewriter.create<IndexOp>(loc, expandedDims.front());
+    for (auto it : llvm::zip(expandedDimsShape, expandedIndices)) {
+      assert(!ShapedType::isDynamic(std::get<0>(it)));
+      AffineExpr idx, acc;
+      bindDims(rewriter.getContext(), idx, acc);
+      newIndex = rewriter.create<AffineApplyOp>(
+          indexOp.getLoc(), idx + acc * std::get<0>(it),
+          ValueRange{std::get<1>(it), newIndex});
+    }
+    rewriter.replaceOp(indexOp, newIndex);
+  }
+}
+
 /// Implements the fusion of a tensor_reshape op and a generic/indexed_generic
 /// op as explained in `isFusableWithReshapeByExpansion`. Assumes that those
 /// conditions have been satisfied.
@@ -748,6 +808,8 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, TensorReshapeOp reshapeOp,
       reshapeOp.getSrcType().getRank() < reshapeOp.getResultType().getRank();
   RankedTensorType expandedType =
       isExpanding ? reshapeOp.getResultType() : reshapeOp.getSrcType();
+  bool hasIndexSemantics = linalgOp.hasIndexSemantics() ||
+                           isa<IndexedGenericOp>(linalgOp.getOperation());
 
   ExpansionInfo expansionInfo;
   if (failed(expansionInfo.compute(linalgOp, fusedTensorIndex,
@@ -755,8 +817,8 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, TensorReshapeOp reshapeOp,
                                    expandedType.getShape())))
     return llvm::None;
 
-  if (isa<IndexedGenericOp>(linalgOp.getOperation()) &&
-      failed(isIndexedGenericOpExpandable(linalgOp, expansionInfo)))
+  if (hasIndexSemantics &&
+      failed(isIndexedOpExpandable(linalgOp, expansionInfo)))
     return llvm::None;
 
   SmallVector<AffineMap, 4> expandedOpIndexingMaps = llvm::to_vector<4>(
@@ -822,6 +884,10 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, TensorReshapeOp reshapeOp,
     buildExpandedIndexedGenericOpRegion(rewriter, loc, originalRegion,
                                         fusedRegion, expansionInfo);
   }
+
+  // Update the index accesses after the expansion.
+  if (linalgOp.hasIndexSemantics())
+    updateExpandedIndexOpRegion(rewriter, loc, fusedRegion, expansionInfo);
 
   // Reshape the result values to their original shape if this is a collapsing
   // reshape folded into its consumer.
@@ -1261,6 +1327,7 @@ void mlir::linalg::populateElementwiseOpsFusionPatterns(
           context, options.controlElementwiseOpsFusionFn);
   populateFoldReshapeOpsByExpansionPatterns(
       patterns, options.allowFoldingUnitDimReshapes);
+  AffineApplyOp::getCanonicalizationPatterns(patterns, context);
   GenericOp::getCanonicalizationPatterns(patterns, context);
   IndexedGenericOp::getCanonicalizationPatterns(patterns, context);
   TensorReshapeOp::getCanonicalizationPatterns(patterns, context);
