@@ -15,7 +15,9 @@
 // CSKY specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
-// TODO: Add CSKY specific DAG Nodes.
+// Target-dependent nodes.
+def CSKY_RET : SDNode<"CSKYISD::RET", SDTNone,
+    [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -81,6 +83,41 @@ def uimm_shift : Operand<i32>, ImmLeaf<i32, "return isUInt<2>(Imm);"> {
   let ParserMatchClass = UImmAsmOperand<2>;
 }
 
+def CSKYSymbol : AsmOperandClass {
+  let Name = "CSKYSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidCSKYSymbol";
+  let ParserMethod = "parseCSKYSymbol";
+}
+
+def br_symbol : Operand<iPTR> {
+  let EncoderMethod =
+    "getBranchSymbolOpValue<CSKY::fixup_csky_pcrel_imm16_scale2>";
+  let ParserMatchClass = CSKYSymbol;
+}
+
+def call_symbol : Operand<iPTR> {
+  let ParserMatchClass = CSKYSymbol;
+  let EncoderMethod = "getCallSymbolOpValue";
+}
+
+def Constpool : AsmOperandClass {
+  let Name = "ConstpoolSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidConstpool";
+  let ParserMethod = "parseConstpoolSymbol";
+}
+
+def constpool_symbol : Operand<iPTR> {
+  let ParserMatchClass = Constpool;
+  let EncoderMethod =
+    "getConstpoolSymbolOpValue<CSKY::fixup_csky_pcrel_uimm16_scale4>";
+}
+
+def bare_symbol : Operand<iPTR> {
+  let ParserMatchClass = CSKYSymbol;
+  let EncoderMethod = "getBareSymbolOpValue";
+}
 
 def oimm12 : oimm<12>;
 def oimm16 : oimm<16>;
@@ -229,3 +266,69 @@ def MOVIH32 : I_16_MOV<0x11, "movih32", uimm16_16_xform>;
 
 def MVC32 : R_Z_1<0x1, 0x8, "mvc32">;
 def MVCV32 : R_Z_1<0x1, 0x10, "mvcv32">;
+
+//===----------------------------------------------------------------------===//
+// Branch and call instructions.
+//===----------------------------------------------------------------------===//
+
+let isBranch = 1, isTerminator = 1 in {
+  let isBarrier = 1, isPredicable = 1 in
+    def BR32 : I_16_L<0x0, (outs), (ins br_symbol:$imm16), "br32\t$imm16",
+                     [(br bb:$imm16)]>;
+
+  def BT32 : I_16_L<0x3, (outs), (ins CARRY:$ca, br_symbol:$imm16),
+    "bt32\t$imm16", [(brcond CARRY:$ca, bb:$imm16)]>;
+  def BF32 : I_16_L<0x2, (outs), (ins CARRY:$ca, br_symbol:$imm16),
+    "bf32\t$imm16", []>;
+}
+
+
+def BEZ32 : I_16_X_L<0x8, "bez32", br_symbol>;
+def BNEZ32 : I_16_X_L<0x9, "bnez32", br_symbol>;
+def BHZ32 : I_16_X_L<0xA, "bhz32", br_symbol>;
+def BLSZ32 : I_16_X_L<0xB, "blsz32", br_symbol>;
+def BLZ32 : I_16_X_L<0xC, "blz32", br_symbol>;
+def BHSZ32 : I_16_X_L<0xD, "bhsz32", br_symbol>;
+
+let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
+  def JMP32 : I_16_JX<0x6, "jmp32", [(brind GPR:$rx)]>; // jmp to register
+  def JMPI32 : I_16_L<0x16, (outs), (ins constpool_symbol:$imm16),
+                   "jmpi32\t$imm16", []>;
+}
+
+let isCall = 1, Defs = [ R15 ] in
+  def JSR32 : I_16_JX<0x7, "jsr32", []>;
+
+let isCall = 1, Defs = [ R15 ] , mayLoad = 1 in
+  def JSRI32: I_16_L<0x17, (outs),
+    (ins constpool_symbol:$imm16), "jsri32\t$imm16", []>;
+
+
+def BSR32 : J<0x38, (outs), (ins call_symbol:$offset), "bsr32", []>;
+
+def BSR32_BR : J<0x38, (outs), (ins call_symbol:$offset), "bsr32", []>{
+  let isCodeGenOnly = 1;
+  let isBranch = 1;
+  let isTerminator = 1;
+  let isBarrier = 1;
+  let isPredicable = 1;
+  let Defs = [ R15 ];
+}
+
+def RTS32 : I_16_RET<0x6, 0xF, "rts32", [(CSKY_RET)]>;
+
+
+def RTE32 : I_16_RET_I<0, 0, "rte32", []>;
+
+//===----------------------------------------------------------------------===//
+// Symbol address instructions.
+//===----------------------------------------------------------------------===//
+
+def GRS32 : I_18_Z_L<0x3, "grs32\t$rz, $offset",
+                    (outs GPR:$rz), (ins bare_symbol:$offset), []>;
+
+let mayLoad = 1, mayStore = 0 in {
+def LRW32 : I_16_Z_L<0x14, "lrw32", (ins constpool_symbol:$imm16), []>;
+let isCodeGenOnly = 1 in
+def LRW32_Gen : I_16_Z_L<0x14, "lrw32", (ins bare_symbol:$src1, constpool_symbol:$imm16), []>;
+}
