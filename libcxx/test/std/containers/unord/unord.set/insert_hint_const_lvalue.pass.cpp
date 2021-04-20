@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: LIBCXX-DEBUG-FIXME
+
 // <unordered_set>
 
 // template <class Value, class Hash = hash<Value>, class Pred = equal_to<Value>,
