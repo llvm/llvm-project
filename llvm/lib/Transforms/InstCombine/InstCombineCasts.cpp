@@ -2409,10 +2409,11 @@ Instruction *InstCombinerImpl::optimizeBitCastFromPhi(CastInst &CI,
         Value *Addr = LI->getOperand(0);
         if (Addr == &CI || isa<LoadInst>(Addr))
           return nullptr;
-        // If there is any loss for the pointer bitcast, abandon.
-        auto *DestPtrTy = DestTy->getPointerTo(LI->getPointerAddressSpace());
-        auto *SrcPtrTy = Addr->getType();
-        if (!SrcPtrTy->canLosslesslyBitCastTo(DestPtrTy))
+        // Don't tranform "load <256 x i32>, <256 x i32>*" to
+        // "load x86_amx, x86_amx*", because x86_amx* is invalid.
+        // TODO: Remove this check when bitcast between vector and x86_amx
+        // is replaced with a specific intrinsic.
+        if (DestTy->isX86_AMXTy())
           return nullptr;
         if (LI->hasOneUse() && LI->isSimple())
           continue;
