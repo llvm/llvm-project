@@ -89,6 +89,8 @@
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-O3-NEXT: Running pass: CallSiteSplittingPass
 ; CHECK-O-NEXT: Finished llvm::Function pass manager run.
+; CHECK-O2-NEXT: Running pass: OpenMPOptPass
+; CHECK-O3-NEXT: Running pass: OpenMPOptPass
 ; CHECK-EP-PIPELINE-EARLY-SIMPLIFICATION-NEXT: Running pass: NoOpModulePass
 ; CHECK-O-NEXT: Running pass: IPSCCPPass
 ; CHECK-O-NEXT: Running pass: CalledValuePropagationPass
@@ -124,8 +126,8 @@
 ; CHECK-O-NEXT: Running pass: InlinerPass
 ; CHECK-O-NEXT: Running pass: PostOrderFunctionAttrsPass
 ; CHECK-O3-NEXT: Running pass: ArgumentPromotionPass
-; CHECK-O2-NEXT: Running pass: OpenMPOptPass on (foo)
-; CHECK-O3-NEXT: Running pass: OpenMPOptPass on (foo)
+; CHECK-O2-NEXT: Running pass: OpenMPOptCGSCCPass on (foo)
+; CHECK-O3-NEXT: Running pass: OpenMPOptCGSCCPass on (foo)
 ; CHECK-EP-CGSCC-LATE-NEXT: Running pass: NoOpCGSCCPass
 ; CHECK-O-NEXT: Starting llvm::Function pass manager run.
 ; CHECK-O-NEXT: Running pass: SROA
