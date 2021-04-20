@@ -781,25 +781,24 @@ bool Value::canBeFreed() const {
     return true;
   
   const auto &GCName = F->getGC();
-  const StringRef StatepointExampleName("statepoint-example");
-  if (GCName != StatepointExampleName)
-    return true;
-
-  auto *PT = cast<PointerType>(this->getType());
-  if (PT->getAddressSpace() != 1)
-    // For the sake of this example GC, we arbitrarily pick addrspace(1) as our
-    // GC managed heap.  This must match the same check in
-    // RewriteStatepointsForGC (and probably needs better factored.)
-    return true;
-
-  // It is cheaper to scan for a declaration than to scan for a use in this
-  // function.  Note that gc.statepoint is a type overloaded function so the
-  // usual trick of requesting declaration of the intrinsic from the module
-  // doesn't work.
-  for (auto &Fn : *F->getParent())
-    if (Fn.getIntrinsicID() == Intrinsic::experimental_gc_statepoint)
+  if (GCName == "statepoint-example") {
+    auto *PT = cast<PointerType>(this->getType());
+    if (PT->getAddressSpace() != 1)
+      // For the sake of this example GC, we arbitrarily pick addrspace(1) as
+      // our GC managed heap.  This must match the same check in
+      // RewriteStatepointsForGC (and probably needs better factored.)
       return true;
-  return false;
+
+    // It is cheaper to scan for a declaration than to scan for a use in this
+    // function.  Note that gc.statepoint is a type overloaded function so the
+    // usual trick of requesting declaration of the intrinsic from the module
+    // doesn't work.
+    for (auto &Fn : *F->getParent())
+      if (Fn.getIntrinsicID() == Intrinsic::experimental_gc_statepoint)
+        return true;
+    return false;
+  }
+  return true;
 }
 
 uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
