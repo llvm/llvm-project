@@ -487,6 +487,9 @@ GlobalOp Importer::processGlobal(llvm::GlobalVariable *GV) {
       return nullptr;
     b.create<ReturnOp>(op.getLoc(), ArrayRef<Value>({v}));
   }
+  if (GV->hasAtLeastLocalUnnamedAddr())
+    op.unnamed_addrAttr(UnnamedAddrAttr::get(
+        context, convertUnnamedAddrFromLLVM(GV->getUnnamedAddr())));
   return globals[GV] = op;
 }
 

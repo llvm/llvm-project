@@ -59,6 +59,16 @@ llvm.mlir.global weak_odr @weak_odr(42 : i32) : i32
 // CHECK: @external = external global i32
 llvm.mlir.global external @external() : i32
 
+//
+// UnnamedAddr attribute.
+//
+
+// CHECK: @no_unnamed_addr = private constant i64 42
+llvm.mlir.global private constant @no_unnamed_addr(42 : i64) : i64
+// CHECK: @local_unnamed_addr = private local_unnamed_addr constant i64 42
+llvm.mlir.global private local_unnamed_addr constant @local_unnamed_addr(42 : i64) : i64
+// CHECK: @unnamed_addr = private unnamed_addr constant i64 42
+llvm.mlir.global private unnamed_addr constant @unnamed_addr(42 : i64) : i64
 
 //
 // Declarations of the allocation functions to be linked against. These are
