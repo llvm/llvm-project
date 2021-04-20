@@ -20,18 +20,10 @@
 # FULL-NEXT: stackPtrOffsetReg:  '$sgpr13'
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-# FULL-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-# FULL-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
 # FULL-NEXT: kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-# FULL-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
-# FULL-NEXT: workGroupIDX:    { reg: '$sgpr6' }
-# FULL-NEXT: workGroupIDY:    { reg: '$sgpr13' }
-# FULL-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# FULL-NEXT: workGroupIDX: { reg: '$sgpr6' }
 # FULL-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr7' }
-# FULL-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
-# FULL-NEXT: workItemIDX:     { reg: '$vgpr0' }
-# FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
-# FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+# FULL-NEXT: workItemIDX: { reg: '$vgpr0' }
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -55,18 +47,10 @@
 # SIMPLE-NEXT: stackPtrOffsetReg:  '$sgpr13'
 # SIMPLE-NEXT: argumentInfo:
 # SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-# SIMPLE-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-# SIMPLE-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
 # SIMPLE-NEXT: kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-# SIMPLE-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
-# SIMPLE-NEXT: workGroupIDX:    { reg: '$sgpr6' }
-# SIMPLE-NEXT: workGroupIDY:    { reg: '$sgpr13' }
-# SIMPLE-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# SIMPLE-NEXT: workGroupIDX: { reg: '$sgpr6' }
 # SIMPLE-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr7' }
-# SIMPLE-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
-# SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr0' }
-# SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
-# SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+# SIMPLE-NEXT: workItemIDX: { reg: '$vgpr0' }
 # SIMPLE-NEXT: occupancy: 10
 # SIMPLE-NEXT: body:
 name: kernel0
@@ -112,16 +96,6 @@ body:             |
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-# FULL-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-# FULL-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
-# FULL-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
-# FULL-NEXT: workGroupIDX:    { reg: '$sgpr12' }
-# FULL-NEXT: workGroupIDY:    { reg: '$sgpr13' }
-# FULL-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
-# FULL-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
-# FULL-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
-# FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
-# FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -137,16 +111,6 @@ body:             |
 # SIMPLE-NEXT: maxKernArgAlign: 1
 # SIMPLE-NEXT: argumentInfo:
 # SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-# SIMPLE-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-# SIMPLE-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
-# SIMPLE-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
-# SIMPLE-NEXT: workGroupIDX:    { reg: '$sgpr12' }
-# SIMPLE-NEXT: workGroupIDY:    { reg: '$sgpr13' }
-# SIMPLE-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
-# SIMPLE-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
-# SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
-# SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
-# SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT:  occupancy: 10
 # SIMPLE-NEXT: body:
 
@@ -175,16 +139,6 @@ body:             |
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-# FULL-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-# FULL-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
-# FULL-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
-# FULL-NEXT: workGroupIDX:    { reg: '$sgpr12' }
-# FULL-NEXT: workGroupIDY:    { reg: '$sgpr13' }
-# FULL-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
-# FULL-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
-# FULL-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
-# FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
-# FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -200,16 +154,6 @@ body:             |
 # SIMPLE-NEXT: maxKernArgAlign: 1
 # SIMPLE-NEXT: argumentInfo:
 # SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-# SIMPLE-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-# SIMPLE-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
-# SIMPLE-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
-# SIMPLE-NEXT: workGroupIDX:    { reg: '$sgpr12' }
-# SIMPLE-NEXT: workGroupIDY:    { reg: '$sgpr13' }
-# SIMPLE-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
-# SIMPLE-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
-# SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
-# SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
-# SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT:  occupancy: 10
 # SIMPLE-NEXT: body:
 
@@ -239,16 +183,6 @@ body:             |
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-# FULL-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-# FULL-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
-# FULL-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
-# FULL-NEXT: workGroupIDX:    { reg: '$sgpr12' }
-# FULL-NEXT: workGroupIDY:    { reg: '$sgpr13' }
-# FULL-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
-# FULL-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
-# FULL-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
-# FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
-# FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -265,16 +199,6 @@ body:             |
 # SIMPLE-NEXT: isEntryFunction: true
 # SIMPLE-NEXT: argumentInfo:
 # SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-# SIMPLE-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-# SIMPLE-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
-# SIMPLE-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
-# SIMPLE-NEXT: workGroupIDX:    { reg: '$sgpr12' }
-# SIMPLE-NEXT: workGroupIDY:    { reg: '$sgpr13' }
-# SIMPLE-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
-# SIMPLE-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
-# SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
-# SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
-# SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT: occupancy: 10
 # SIMPLE-NEXT: body:
 
@@ -311,31 +235,13 @@ body:             |
 
 # FULL: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-# FULL-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-# FULL-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
-# FULL-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
 # FULL-NEXT: flatScratchInit: { offset: 4 }
-# FULL-NEXT: workGroupIDX:    { reg: '$sgpr12' }
-# FULL-NEXT: workGroupIDY:    { reg: '$sgpr13' }
-# FULL-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
-# FULL-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
-# FULL-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
-# FULL-NEXT: workItemIDY:     { reg: '$vgpr0', mask: 65280 }
-# FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+# FULL-NEXT: workItemIDY: { reg: '$vgpr0', mask: 65280 }
 
 # SIMPLE: argumentInfo:
 # SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-# SIMPLE-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
-# SIMPLE-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
-# SIMPLE-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
 # SIMPLE-NEXT: flatScratchInit: { offset: 4 }
-# SIMPLE-NEXT: workGroupIDX:    { reg: '$sgpr12' }
-# SIMPLE-NEXT: workGroupIDY:    { reg: '$sgpr13' }
-# SIMPLE-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
-# SIMPLE-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
-# SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
-# SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr0', mask: 65280 }
-# SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+# SIMPLE-NEXT: workItemIDY: { reg: '$vgpr0', mask: 65280 }
 name: fake_stack_arginfo
 machineFunctionInfo:
   argumentInfo:
