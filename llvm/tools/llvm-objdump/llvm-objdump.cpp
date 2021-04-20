@@ -193,8 +193,8 @@ static bool PrintLines;
 static bool MachOOpt;
 std::string objdump::MCPU;
 std::vector<std::string> objdump::MAttrs;
-bool objdump::NoShowRawInsn;
-bool objdump::NoLeadingAddr;
+bool objdump::ShowRawInsn;
+bool objdump::LeadingAddr;
 static bool RawClangAST;
 bool objdump::Relocations;
 bool objdump::PrintImmHex;
@@ -432,7 +432,7 @@ namespace {
 /// Get the column at which we want to start printing the instruction
 /// disassembly, taking into account anything which appears to the left of it.
 unsigned getInstStartColumn(const MCSubtargetInfo &STI) {
-  return NoShowRawInsn ? 16 : STI.getTargetTriple().isX86() ? 40 : 24;
+  return !ShowRawInsn ? 16 : STI.getTargetTriple().isX86() ? 40 : 24;
 }
 
 /// Stores a single expression representing the location of a source-level
@@ -998,9 +998,9 @@ public:
     LVP.printBetweenInsts(OS, false);
 
     size_t Start = OS.tell();
-    if (!NoLeadingAddr)
+    if (LeadingAddr)
       OS << format("%8" PRIx64 ":", Address.Address);
-    if (!NoShowRawInsn) {
+    if (ShowRawInsn) {
       OS << ' ';
       dumpBytes(Bytes, OS);
     }
@@ -1031,9 +1031,9 @@ public:
                  formatted_raw_ostream &OS) {
     uint32_t opcode =
       (Bytes[3] << 24) | (Bytes[2] << 16) | (Bytes[1] << 8) | Bytes[0];
-    if (!NoLeadingAddr)
+    if (LeadingAddr)
       OS << format("%8" PRIx64 ":", Address);
-    if (!NoShowRawInsn) {
+    if (ShowRawInsn) {
       OS << "\t";
       dumpBytes(Bytes.slice(0, 4), OS);
       OS << format("\t%08" PRIx32, opcode);
@@ -1168,9 +1168,9 @@ public:
                  LiveVariablePrinter &LVP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LVP);
-    if (!NoLeadingAddr)
+    if (LeadingAddr)
       OS << format("%8" PRId64 ":", Address.Address / 8);
-    if (!NoShowRawInsn) {
+    if (ShowRawInsn) {
       OS << "\t";
       dumpBytes(Bytes, OS);
     }
@@ -1735,7 +1735,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       }
 
       outs() << '\n';
-      if (!NoLeadingAddr)
+      if (LeadingAddr)
         outs() << format(Is64Bits ? "%016" PRIx64 " " : "%08" PRIx64 " ",
                          SectionAddr + Start + VMAAdjustment);
       if (Obj->isXCOFF() && SymbolDescription) {
@@ -2853,7 +2853,7 @@ static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
   DataInCode = InputArgs.hasArg(OTOOL_G);
   FirstPrivateHeader = InputArgs.hasArg(OTOOL_h);
   IndirectSymbols = InputArgs.hasArg(OTOOL_I);
-  NoShowRawInsn = !InputArgs.hasArg(OTOOL_j);
+  ShowRawInsn = InputArgs.hasArg(OTOOL_j);
   PrivateHeaders = InputArgs.hasArg(OTOOL_l);
   DylibsUsed = InputArgs.hasArg(OTOOL_L);
   MCPU = InputArgs.getLastArgValue(OTOOL_mcpu_EQ).str();
@@ -2867,12 +2867,12 @@ static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
   }
   if (InputArgs.hasArg(OTOOL_t))
     FilterSections.push_back("__TEXT,__text");
-  Verbose = (InputArgs.hasArg(OTOOL_v) || InputArgs.hasArg(OTOOL_V) ||
-             InputArgs.hasArg(OTOOL_o));
-  NoSymbolicOperands = !InputArgs.hasArg(OTOOL_V);
+  Verbose = InputArgs.hasArg(OTOOL_v) || InputArgs.hasArg(OTOOL_V) ||
+            InputArgs.hasArg(OTOOL_o);
+  SymbolicOperands = InputArgs.hasArg(OTOOL_V);
   if (InputArgs.hasArg(OTOOL_x))
     FilterSections.push_back(",__text");
-  NoLeadingAddr = NoLeadingHeaders = InputArgs.hasArg(OTOOL_X);
+  LeadingAddr = LeadingHeaders = !InputArgs.hasArg(OTOOL_X);
 
   InputFilenames = InputArgs.getAllArgValues(OTOOL_INPUT);
   if (InputFilenames.empty())
@@ -2914,8 +2914,8 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   MachOOpt = InputArgs.hasArg(OBJDUMP_macho);
   MCPU = InputArgs.getLastArgValue(OBJDUMP_mcpu_EQ).str();
   MAttrs = commaSeparatedValues(InputArgs, OBJDUMP_mattr_EQ);
-  NoShowRawInsn = InputArgs.hasArg(OBJDUMP_no_show_raw_insn);
-  NoLeadingAddr = InputArgs.hasArg(OBJDUMP_no_leading_addr);
+  ShowRawInsn = !InputArgs.hasArg(OBJDUMP_no_show_raw_insn);
+  LeadingAddr = !InputArgs.hasArg(OBJDUMP_no_leading_addr);
   RawClangAST = InputArgs.hasArg(OBJDUMP_raw_clang_ast);
   Relocations = InputArgs.hasArg(OBJDUMP_reloc);
   PrintImmHex =

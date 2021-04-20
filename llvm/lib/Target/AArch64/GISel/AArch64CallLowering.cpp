@@ -450,9 +450,10 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
       }))
     return true;
   const auto &ST = MF.getSubtarget<AArch64Subtarget>();
-  LLVM_DEBUG(dbgs() << "Falling back to SDAG because we don't support no-NEON");
-  if (!ST.hasNEON() || !ST.hasFPARMv8())
+  if (!ST.hasNEON() || !ST.hasFPARMv8()) {
+    LLVM_DEBUG(dbgs() << "Falling back to SDAG because we don't support no-NEON\n");
     return true;
+  }
   return false;
 }
 
