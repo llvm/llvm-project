@@ -3,10 +3,5 @@
   "directory": "DIR",
   "command": "clang -E -fsyntax-only DIR/strip_diag_serialize_input.cpp --serialize-diagnostics /does/not/exist",
   "file": "DIR/strip_diag_serialize_input.cpp"
-},
-{
-  "directory": "DIR",
-  "command": "clang-cl /E --serialize-diagnostics A:/does/not/exist -- DIR/strip_diag_serialize_input_clangcl.cpp",
-  "file": "DIR/strip_diag_serialize_input_clangcl.cpp"
 }
 ]

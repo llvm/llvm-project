@@ -164,7 +164,7 @@
 "`P1961 <https://wg21.link/P1961>`__","LWG","Harmonizing the definitions of total order for pointers","Belfast","* *",""
 "`P1965 <https://wg21.link/P1965>`__","LWG","Blanket Wording for Specifying ""Hidden Friends""","Belfast","* *",""
 "","","","","",""
-"`P0586 <https://wg21.link/P0586>`__","LWG","Safe integral comparisons","Prague","* *",""
+"`P0586 <https://wg21.link/P0586>`__","LWG","Safe integral comparisons","Prague","|Complete|","13.0"
 "`P0593 <https://wg21.link/P0593>`__","CWG","Implicit creation of objects for low-level object manipulation","Prague","* *",""
 "`P1115 <https://wg21.link/P1115>`__","LWG","Improving the Return Value of Erase-Like Algorithms II: Free erase/erase if","Prague","|Complete|","11.0"
 "`P1243 <https://wg21.link/P1243>`__","LWG","Rangify New Algorithms","Prague","* *",""

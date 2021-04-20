@@ -29,7 +29,7 @@ namespace linalg {
 // function. The implementation of the function can be either in the same module
 // or in an externally linked library.
 // This is a generic entry point for all LinalgOp, except for CopyOp and
-// IndexedGenericOp, for which omre specialized patterns are provided.
+// IndexedGenericOp, for which more specialized patterns are provided.
 class LinalgOpToLibraryCallRewrite
     : public OpInterfaceRewritePattern<LinalgOp> {
 public:

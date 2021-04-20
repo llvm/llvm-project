@@ -145,7 +145,7 @@ def uimmlog2xlen : Operand<XLenVT>, ImmLeaf<XLenVT, [{
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
     if (STI.getTargetTriple().isArch64Bit())
-      return  isUInt<6>(Imm);
+      return isUInt<6>(Imm);
     return isUInt<5>(Imm);
   }];
   let OperandType = "OPERAND_UIMMLOG2XLEN";
@@ -340,6 +340,22 @@ def ImmSubFromXLen : SDNodeXForm<imm, [{
 // Return an immediate subtracted from 32.
 def ImmSubFrom32 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(32 - N->getZExtValue(), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
+// Check if an addition can be broken to a pair of ADDI.
+def AddiPair : ComplexPattern<XLenVT, 1, "selectAddiPair">;
+
+// Return imm/2.
+def AddiPairImmA : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() / 2, SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
+// Return imm - imm/2.
+def AddiPairImmB : SDNodeXForm<imm, [{
+  int64_t Imm = N->getSExtValue();
+  return CurDAG->getTargetConstant(Imm - Imm / 2, SDLoc(N),
                                    N->getValueType(0));
 }]>;
 
@@ -1273,6 +1289,11 @@ def : Pat<(trap), (UNIMP)>;
 // We lower `debugtrap` to `ebreak`, as this will get the attention of the
 // debugger if possible.
 def : Pat<(debugtrap), (EBREAK)>;
+
+/// Simple optimization
+def : Pat<(add GPR:$rs1, (AddiPair GPR:$rs2)),
+          (ADDI (ADDI GPR:$rs1, (AddiPairImmB GPR:$rs2)),
+                (AddiPairImmA GPR:$rs2))>;
 
 //===----------------------------------------------------------------------===//
 // Standard extensions

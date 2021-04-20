@@ -18,6 +18,7 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <algorithm>
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -277,6 +278,101 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+}
+
+static Optional<Instruction *> instCombineSVELast(InstCombiner &IC,
+                                                  IntrinsicInst &II) {
+  Value *Pg = II.getArgOperand(0);
+  Value *Vec = II.getArgOperand(1);
+  bool IsAfter = II.getIntrinsicID() == Intrinsic::aarch64_sve_lasta;
+
+  auto *C = dyn_cast<Constant>(Pg);
+  if (IsAfter && C && C->isNullValue()) {
+    // The intrinsic is extracting lane 0 so use an extract instead.
+    auto *IdxTy = Type::getInt64Ty(II.getContext());
+    auto *Extract = ExtractElementInst::Create(Vec, ConstantInt::get(IdxTy, 0));
+    Extract->insertBefore(&II);
+    Extract->takeName(&II);
+    return IC.replaceInstUsesWith(II, Extract);
+  }
+
+  auto *IntrPG = dyn_cast<IntrinsicInst>(Pg);
+  if (!IntrPG)
+    return None;
+
+  if (IntrPG->getIntrinsicID() != Intrinsic::aarch64_sve_ptrue)
+    return None;
+
+  const auto PTruePattern =
+      cast<ConstantInt>(IntrPG->getOperand(0))->getZExtValue();
+
+  // Can the intrinsic's predicate be converted to a known constant index?
+  unsigned Idx;
+  switch (PTruePattern) {
+  default:
+    return None;
+  case AArch64SVEPredPattern::vl1:
+    Idx = 0;
+    break;
+  case AArch64SVEPredPattern::vl2:
+    Idx = 1;
+    break;
+  case AArch64SVEPredPattern::vl3:
+    Idx = 2;
+    break;
+  case AArch64SVEPredPattern::vl4:
+    Idx = 3;
+    break;
+  case AArch64SVEPredPattern::vl5:
+    Idx = 4;
+    break;
+  case AArch64SVEPredPattern::vl6:
+    Idx = 5;
+    break;
+  case AArch64SVEPredPattern::vl7:
+    Idx = 6;
+    break;
+  case AArch64SVEPredPattern::vl8:
+    Idx = 7;
+    break;
+  case AArch64SVEPredPattern::vl16:
+    Idx = 15;
+    break;
+  }
+
+  // Increment the index if extracting the element after the last active
+  // predicate element.
+  if (IsAfter)
+    ++Idx;
+
+  // Ignore extracts whose index is larger than the known minimum vector
+  // length. NOTE: This is an artificial constraint where we prefer to
+  // maintain what the user asked for until an alternative is proven faster.
+  auto *PgVTy = cast<ScalableVectorType>(Pg->getType());
+  if (Idx >= PgVTy->getMinNumElements())
+    return None;
+
+  // The intrinsic is extracting a fixed lane so use an extract instead.
+  auto *IdxTy = Type::getInt64Ty(II.getContext());
+  auto *Extract = ExtractElementInst::Create(Vec, ConstantInt::get(IdxTy, Idx));
+  Extract->insertBefore(&II);
+  Extract->takeName(&II);
+  return IC.replaceInstUsesWith(II, Extract);
+}
+
+Optional<Instruction *>
+AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
+                                     IntrinsicInst &II) const {
+  Intrinsic::ID IID = II.getIntrinsicID();
+  switch (IID) {
+  default:
+    break;
+  case Intrinsic::aarch64_sve_lasta:
+  case Intrinsic::aarch64_sve_lastb:
+    return instCombineSVELast(IC, II);
+  }
+
+  return None;
 }
 
 bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,

@@ -38,13 +38,37 @@ define noalias i8* @aligned_alloc_constant_size() {
   ret i8* %call
 }
 
+define noalias i8* @aligned_alloc_unknown_size_nonzero(i1 %c) {
+; CHECK-LABEL: @aligned_alloc_unknown_size_nonzero(
+; CHECK-NEXT:    [[SIZE:%.*]] = select i1 [[C:%.*]], i64 64, i64 128
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias align 32 i8* @aligned_alloc(i64 32, i64 [[SIZE]])
+; CHECK-NEXT:    ret i8* [[CALL]]
+;
+  %size = select i1 %c, i64 64, i64 128
+  %call = tail call noalias i8* @aligned_alloc(i64 32, i64 %size)
+  ret i8* %call
+}
+
+define noalias i8* @aligned_alloc_unknown_size_possibly_zero(i1 %c) {
+; CHECK-LABEL: @aligned_alloc_unknown_size_possibly_zero(
+; CHECK-NEXT:    [[SIZE:%.*]] = select i1 [[C:%.*]], i64 64, i64 0
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @aligned_alloc(i64 32, i64 [[SIZE]])
+; CHECK-NEXT:    ret i8* [[CALL]]
+;
+  %size = select i1 %c, i64 64, i64 0
+  %call = tail call noalias i8* @aligned_alloc(i64 32, i64 %size)
+  ret i8* %call
+}
+
 declare noalias i8* @foo(i8*, i8*, i8*)
 
 define noalias i8* @aligned_alloc_dynamic_args(i64 %align, i64 %size) {
 ; CHECK-LABEL: @aligned_alloc_dynamic_args(
-; CHECK-NEXT:    tail call noalias dereferenceable_or_null(1024) i8* @aligned_alloc(i64 %{{.*}}, i64 1024)
-; CHECK-NEXT:    tail call noalias i8* @aligned_alloc(i64 0, i64 1024)
-; CHECK-NEXT:    tail call noalias i8* @aligned_alloc(i64 32, i64 %{{.*}})
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(1024) i8* @aligned_alloc(i64 [[ALIGN:%.*]], i64 1024)
+; CHECK-NEXT:    [[CALL_1:%.*]] = tail call noalias i8* @aligned_alloc(i64 0, i64 1024)
+; CHECK-NEXT:    [[CALL_2:%.*]] = tail call noalias i8* @aligned_alloc(i64 32, i64 [[SIZE:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @foo(i8* [[CALL]], i8* [[CALL_1]], i8* [[CALL_2]])
+; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = tail call noalias i8* @aligned_alloc(i64 %align, i64 1024)
   %call_1 = tail call noalias i8* @aligned_alloc(i64 0, i64 1024)

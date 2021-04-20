@@ -2594,6 +2594,16 @@ static void RemoveNonValidAttrAtIndex(LLVMContext &Ctx, AttrHolder &AH,
 static void stripNonValidAttributesFromPrototype(Function &F) {
   LLVMContext &Ctx = F.getContext();
 
+  // Intrinsics are very delicate.  Lowering sometimes depends the presence
+  // of certain attributes for correctness, but we may have also inferred
+  // additional ones in the abstract machine model which need stripped.  This
+  // assumes that the attributes defined in Intrinsic.td are conservatively
+  // correct for both physical and abstract model.
+  if (Intrinsic::ID id = F.getIntrinsicID()) {
+    F.setAttributes(Intrinsic::getAttributes(Ctx, id));
+    return;
+  }
+
   for (Argument &A : F.args())
     if (isa<PointerType>(A.getType()))
       RemoveNonValidAttrAtIndex(Ctx, F,

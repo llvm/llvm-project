@@ -2958,12 +2958,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (!CLI.CB)
     report_fatal_error("unsupported libcall legalization");
 
-  if (!AMDGPUTargetMachine::EnableFixedFunctionABI &&
-      !CLI.CB->getCalledFunction() && CallConv != CallingConv::AMDGPU_Gfx) {
-    return lowerUnhandledCall(CLI, InVals,
-                              "unsupported indirect call to function ");
-  }
-
   if (IsTailCall && MF.getTarget().Options.GuaranteedTailCallOpt) {
     return lowerUnhandledCall(CLI, InVals,
                               "unsupported required tail call to function ");

@@ -259,6 +259,10 @@ def AArch64dup_mt : SDNode<"AArch64ISD::DUP_MERGE_PASSTHRU", SDT_AArch64DUP_PRED
 
 def SDT_IndexVector : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<1, 2>, SDTCisInt<2>]>;
 def index_vector : SDNode<"AArch64ISD::INDEX_VECTOR", SDT_IndexVector, []>;
+def index_vector_oneuse : PatFrag<(ops node:$base, node:$idx),
+                                  (index_vector node:$base, node:$idx), [{
+  return N->hasOneUse();
+}]>;
 
 def reinterpret_cast : SDNode<"AArch64ISD::REINTERPRET_CAST", SDTUnaryOp>;
 
@@ -1362,10 +1366,10 @@ let Predicates = [HasSVE] in {
   defm INCP_ZP     : sve_int_count_v<0b10000, "incp">;
   defm DECP_ZP     : sve_int_count_v<0b10100, "decp">;
 
-  defm INDEX_RR : sve_int_index_rr<"index", index_vector>;
-  defm INDEX_IR : sve_int_index_ir<"index", index_vector>;
-  defm INDEX_RI : sve_int_index_ri<"index", index_vector>;
-  defm INDEX_II : sve_int_index_ii<"index", index_vector>;
+  defm INDEX_RR : sve_int_index_rr<"index", index_vector, index_vector_oneuse>;
+  defm INDEX_IR : sve_int_index_ir<"index", index_vector, index_vector_oneuse>;
+  defm INDEX_RI : sve_int_index_ri<"index", index_vector, index_vector_oneuse>;
+  defm INDEX_II : sve_int_index_ii<"index", index_vector, index_vector_oneuse>;
 
   // Unpredicated shifts
   defm ASR_ZZI : sve_int_bin_cons_shift_imm_right<0b00, "asr", AArch64asr_p>;

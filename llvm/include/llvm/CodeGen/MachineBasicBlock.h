@@ -656,7 +656,7 @@ public:
   /// Return the first instruction in MBB after I that is not a PHI, label or
   /// debug.  This is the correct point to insert copies at the beginning of a
   /// basic block.
-  iterator SkipPHIsLabelsAndDebug(iterator I);
+  iterator SkipPHIsLabelsAndDebug(iterator I, bool SkipPseudoOp = true);
 
   /// Returns an iterator to the first terminator instruction of this basic
   /// block. If a terminator does not exist, it returns end().
@@ -681,11 +681,12 @@ public:
   /// Therefore, they should be considered as a valid instruction when this
   /// function is called in a context of such optimizations. On the other hand,
   /// \c SkipPseudoOp should be true when it's used in optimizations that
-  /// unlikely hurt profile quality, e.g., without block merging.
-  /// TODO: flip the default value of \c SkipPseudoOp to maximize code quality
-  /// with pseudo probes.
-  iterator getFirstNonDebugInstr(bool SkipPseudoOp = false);
-  const_iterator getFirstNonDebugInstr(bool SkipPseudoOp = false) const {
+  /// unlikely hurt profile quality, e.g., without block merging. The default
+  /// value of \c SkipPseudoOp is set to true to maximize code quality in
+  /// general, with an explict false value passed in in a few places like branch
+  /// folding and if-conversion to favor profile quality.
+  iterator getFirstNonDebugInstr(bool SkipPseudoOp = true);
+  const_iterator getFirstNonDebugInstr(bool SkipPseudoOp = true) const {
     return const_cast<MachineBasicBlock *>(this)->getFirstNonDebugInstr(
         SkipPseudoOp);
   }
@@ -702,9 +703,12 @@ public:
   /// Therefore, they should be considered as a valid instruction when this
   /// function is called in a context of such optimizations. On the other hand,
   /// \c SkipPseudoOp should be true when it's used in optimizations that
-  /// unlikely hurt profile quality, e.g., without block merging.
-  iterator getLastNonDebugInstr(bool SkipPseudoOp = false);
-  const_iterator getLastNonDebugInstr(bool SkipPseudoOp = false) const {
+  /// unlikely hurt profile quality, e.g., without block merging. The default
+  /// value of \c SkipPseudoOp is set to true to maximize code quality in
+  /// general, with an explict false value passed in in a few places like branch
+  /// folding and if-conversion to favor profile quality.
+  iterator getLastNonDebugInstr(bool SkipPseudoOp = true);
+  const_iterator getLastNonDebugInstr(bool SkipPseudoOp = true) const {
     return const_cast<MachineBasicBlock *>(this)->getLastNonDebugInstr(
         SkipPseudoOp);
   }
@@ -1113,7 +1117,7 @@ public:
 /// const_instr_iterator} and the respective reverse iterators.
 template <typename IterT>
 inline IterT skipDebugInstructionsForward(IterT It, IterT End,
-                                          bool SkipPseudoOp = false) {
+                                          bool SkipPseudoOp = true) {
   while (It != End &&
          (It->isDebugInstr() || (SkipPseudoOp && It->isPseudoProbe())))
     ++It;
@@ -1126,7 +1130,7 @@ inline IterT skipDebugInstructionsForward(IterT It, IterT End,
 /// const_instr_iterator} and the respective reverse iterators.
 template <class IterT>
 inline IterT skipDebugInstructionsBackward(IterT It, IterT Begin,
-                                           bool SkipPseudoOp = false) {
+                                           bool SkipPseudoOp = true) {
   while (It != Begin &&
          (It->isDebugInstr() || (SkipPseudoOp && It->isPseudoProbe())))
     --It;
@@ -1136,14 +1140,14 @@ inline IterT skipDebugInstructionsBackward(IterT It, IterT Begin,
 /// Increment \p It, then continue incrementing it while it points to a debug
 /// instruction. A replacement for std::next.
 template <typename IterT>
-inline IterT next_nodbg(IterT It, IterT End, bool SkipPseudoOp = false) {
+inline IterT next_nodbg(IterT It, IterT End, bool SkipPseudoOp = true) {
   return skipDebugInstructionsForward(std::next(It), End, SkipPseudoOp);
 }
 
 /// Decrement \p It, then continue decrementing it while it points to a debug
 /// instruction. A replacement for std::prev.
 template <typename IterT>
-inline IterT prev_nodbg(IterT It, IterT Begin, bool SkipPseudoOp = false) {
+inline IterT prev_nodbg(IterT It, IterT Begin, bool SkipPseudoOp = true) {
   return skipDebugInstructionsBackward(std::prev(It), Begin, SkipPseudoOp);
 }
 
@@ -1151,7 +1155,7 @@ inline IterT prev_nodbg(IterT It, IterT Begin, bool SkipPseudoOp = false) {
 /// \p End is reached, skipping any debug instructions.
 template <typename IterT>
 inline auto instructionsWithoutDebug(IterT It, IterT End,
-                                     bool SkipPseudoOp = false) {
+                                     bool SkipPseudoOp = true) {
   return make_filter_range(make_range(It, End), [=](const MachineInstr &MI) {
     return !MI.isDebugInstr() && !(SkipPseudoOp && MI.isPseudoProbe());
   });

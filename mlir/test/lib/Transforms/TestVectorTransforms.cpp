@@ -9,6 +9,7 @@
 #include <type_traits>
 
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Conversion/VectorToSCF/ProgressiveVectorToSCF.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -375,6 +376,19 @@ struct TestVectorTransferLoweringPatterns
   }
 };
 
+struct TestProgressiveVectorToSCFLoweringPatterns
+    : public PassWrapper<TestProgressiveVectorToSCFLoweringPatterns,
+                         FunctionPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<memref::MemRefDialect, scf::SCFDialect, AffineDialect>();
+  }
+  void runOnFunction() override {
+    RewritePatternSet patterns(&getContext());
+    populateProgressiveVectorToSCFConversionPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+  }
+};
+
 } // end anonymous namespace
 
 namespace mlir {
@@ -421,6 +435,10 @@ void registerTestVectorConversions() {
   PassRegistration<TestVectorTransferLoweringPatterns> transferOpLoweringPass(
       "test-vector-transfer-lowering-patterns",
       "Test conversion patterns to lower transfer ops to other vector ops");
+
+  PassRegistration<TestProgressiveVectorToSCFLoweringPatterns> transferOpToSCF(
+      "test-progressive-convert-vector-to-scf",
+      "Test conversion patterns to progressively lower transfer ops to SCF");
 }
 } // namespace test
 } // namespace mlir

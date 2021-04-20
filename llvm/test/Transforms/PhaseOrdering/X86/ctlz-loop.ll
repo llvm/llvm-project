@@ -32,7 +32,7 @@ define i32 @ctlz_loop_with_abs(i32 %n) {
 ; CHECK-NEXT:    [[I_02:%.*]] = phi i32 [ [[INC:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP1]] = lshr i32 [[N_ADDR_03]], 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_02]], 1
-; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ult i32 [[N_ADDR_03]], 2
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[WHILE_END]], label [[WHILE_BODY]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    [[I_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC]], [[WHILE_BODY]] ]

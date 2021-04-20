@@ -48,11 +48,11 @@ NodeLocationAccessors NodeIntrospection::GetLocations(
   return {};
 }
 NodeLocationAccessors NodeIntrospection::GetLocations(
-    clang::NestedNameSpecifierLoc const*) {
+    clang::NestedNameSpecifierLoc const&) {
   return {};
 }
 NodeLocationAccessors NodeIntrospection::GetLocations(
-    clang::TemplateArgumentLoc const*) {
+    clang::TemplateArgumentLoc const&) {
   return {};
 }
 NodeLocationAccessors NodeIntrospection::GetLocations(

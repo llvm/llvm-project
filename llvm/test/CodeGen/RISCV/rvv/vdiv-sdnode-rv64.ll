@@ -317,7 +317,6 @@ define <vscale x 1 x i16> @vdiv_vi_nxv1i16_0(<vscale x 1 x i16> %va) {
 ; CHECK-NEXT:    addiw a0, a0, 1755
 ; CHECK-NEXT:    vsetvli a1, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vmulh.vx v25, v8, a0
-; CHECK-NEXT:    vadd.vi v25, v25, 0
 ; CHECK-NEXT:    vsra.vi v25, v25, 1
 ; CHECK-NEXT:    vsrl.vi v26, v25, 15
 ; CHECK-NEXT:    vand.vi v26, v26, -1
@@ -358,7 +357,6 @@ define <vscale x 2 x i16> @vdiv_vi_nxv2i16_0(<vscale x 2 x i16> %va) {
 ; CHECK-NEXT:    addiw a0, a0, 1755
 ; CHECK-NEXT:    vsetvli a1, zero, e16,mf2,ta,mu
 ; CHECK-NEXT:    vmulh.vx v25, v8, a0
-; CHECK-NEXT:    vadd.vi v25, v25, 0
 ; CHECK-NEXT:    vsra.vi v25, v25, 1
 ; CHECK-NEXT:    vsrl.vi v26, v25, 15
 ; CHECK-NEXT:    vand.vi v26, v26, -1
@@ -399,7 +397,6 @@ define <vscale x 4 x i16> @vdiv_vi_nxv4i16_0(<vscale x 4 x i16> %va) {
 ; CHECK-NEXT:    addiw a0, a0, 1755
 ; CHECK-NEXT:    vsetvli a1, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmulh.vx v25, v8, a0
-; CHECK-NEXT:    vadd.vi v25, v25, 0
 ; CHECK-NEXT:    vsra.vi v25, v25, 1
 ; CHECK-NEXT:    vsrl.vi v26, v25, 15
 ; CHECK-NEXT:    vand.vi v26, v26, -1
@@ -440,7 +437,6 @@ define <vscale x 8 x i16> @vdiv_vi_nxv8i16_0(<vscale x 8 x i16> %va) {
 ; CHECK-NEXT:    addiw a0, a0, 1755
 ; CHECK-NEXT:    vsetvli a1, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vmulh.vx v26, v8, a0
-; CHECK-NEXT:    vadd.vi v26, v26, 0
 ; CHECK-NEXT:    vsra.vi v26, v26, 1
 ; CHECK-NEXT:    vsrl.vi v28, v26, 15
 ; CHECK-NEXT:    vand.vi v28, v28, -1
@@ -481,7 +477,6 @@ define <vscale x 16 x i16> @vdiv_vi_nxv16i16_0(<vscale x 16 x i16> %va) {
 ; CHECK-NEXT:    addiw a0, a0, 1755
 ; CHECK-NEXT:    vsetvli a1, zero, e16,m4,ta,mu
 ; CHECK-NEXT:    vmulh.vx v28, v8, a0
-; CHECK-NEXT:    vadd.vi v28, v28, 0
 ; CHECK-NEXT:    vsra.vi v28, v28, 1
 ; CHECK-NEXT:    vsrl.vi v8, v28, 15
 ; CHECK-NEXT:    vand.vi v8, v8, -1
@@ -522,7 +517,6 @@ define <vscale x 32 x i16> @vdiv_vi_nxv32i16_0(<vscale x 32 x i16> %va) {
 ; CHECK-NEXT:    addiw a0, a0, 1755
 ; CHECK-NEXT:    vsetvli a1, zero, e16,m8,ta,mu
 ; CHECK-NEXT:    vmulh.vx v8, v8, a0
-; CHECK-NEXT:    vadd.vi v8, v8, 0
 ; CHECK-NEXT:    vsra.vi v8, v8, 1
 ; CHECK-NEXT:    vsrl.vi v16, v8, 15
 ; CHECK-NEXT:    vand.vi v16, v16, -1
@@ -779,7 +773,6 @@ define <vscale x 1 x i64> @vdiv_vi_nxv1i64_0(<vscale x 1 x i64> %va) {
 ; CHECK-NEXT:    addi a0, a0, 1755
 ; CHECK-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmulh.vx v25, v8, a0
-; CHECK-NEXT:    vadd.vi v25, v25, 0
 ; CHECK-NEXT:    vsra.vi v26, v25, 1
 ; CHECK-NEXT:    addi a0, zero, 63
 ; CHECK-NEXT:    vsrl.vx v25, v25, a0
@@ -827,7 +820,6 @@ define <vscale x 2 x i64> @vdiv_vi_nxv2i64_0(<vscale x 2 x i64> %va) {
 ; CHECK-NEXT:    addi a0, a0, 1755
 ; CHECK-NEXT:    vsetvli a1, zero, e64,m2,ta,mu
 ; CHECK-NEXT:    vmulh.vx v26, v8, a0
-; CHECK-NEXT:    vadd.vi v26, v26, 0
 ; CHECK-NEXT:    vsra.vi v28, v26, 1
 ; CHECK-NEXT:    addi a0, zero, 63
 ; CHECK-NEXT:    vsrl.vx v26, v26, a0
@@ -875,7 +867,6 @@ define <vscale x 4 x i64> @vdiv_vi_nxv4i64_0(<vscale x 4 x i64> %va) {
 ; CHECK-NEXT:    addi a0, a0, 1755
 ; CHECK-NEXT:    vsetvli a1, zero, e64,m4,ta,mu
 ; CHECK-NEXT:    vmulh.vx v28, v8, a0
-; CHECK-NEXT:    vadd.vi v28, v28, 0
 ; CHECK-NEXT:    vsra.vi v8, v28, 1
 ; CHECK-NEXT:    addi a0, zero, 63
 ; CHECK-NEXT:    vsrl.vx v28, v28, a0
@@ -923,7 +914,6 @@ define <vscale x 8 x i64> @vdiv_vi_nxv8i64_0(<vscale x 8 x i64> %va) {
 ; CHECK-NEXT:    addi a0, a0, 1755
 ; CHECK-NEXT:    vsetvli a1, zero, e64,m8,ta,mu
 ; CHECK-NEXT:    vmulh.vx v8, v8, a0
-; CHECK-NEXT:    vadd.vi v8, v8, 0
 ; CHECK-NEXT:    vsra.vi v16, v8, 1
 ; CHECK-NEXT:    addi a0, zero, 63
 ; CHECK-NEXT:    vsrl.vx v8, v8, a0

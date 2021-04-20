@@ -153,24 +153,24 @@ define void @local_var_m8() {
 define void @local_var_m2_mix_local_scalar() {
 ; RV64IV-LABEL: local_var_m2_mix_local_scalar:
 ; RV64IV:       # %bb.0:
-; RV64IV-NEXT:    addi sp, sp, -16
-; RV64IV-NEXT:    .cfi_def_cfa_offset 16
+; RV64IV-NEXT:    addi sp, sp, -32
+; RV64IV-NEXT:    .cfi_def_cfa_offset 32
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 2
 ; RV64IV-NEXT:    sub sp, sp, a0
-; RV64IV-NEXT:    lw a0, 12(sp)
+; RV64IV-NEXT:    lw a0, 28(sp)
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 1
 ; RV64IV-NEXT:    add a0, sp, a0
-; RV64IV-NEXT:    addi a0, a0, 16
+; RV64IV-NEXT:    addi a0, a0, 32
 ; RV64IV-NEXT:    vl2r.v v26, (a0)
-; RV64IV-NEXT:    addi a0, sp, 16
+; RV64IV-NEXT:    addi a0, sp, 32
 ; RV64IV-NEXT:    vl2r.v v26, (a0)
-; RV64IV-NEXT:    lw a0, 8(sp)
+; RV64IV-NEXT:    lw a0, 24(sp)
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 2
 ; RV64IV-NEXT:    add sp, sp, a0
-; RV64IV-NEXT:    addi sp, sp, 16
+; RV64IV-NEXT:    addi sp, sp, 32
 ; RV64IV-NEXT:    ret
   %local_scalar0 = alloca i32
   %local0 = alloca <vscale x 16 x i8>

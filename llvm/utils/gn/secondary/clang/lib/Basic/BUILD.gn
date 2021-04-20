@@ -31,6 +31,10 @@ static_library("Basic") {
     "//clang/include/clang/Basic:diags_tablegen",
     "//clang/include/clang/Basic:riscv_vector_builtins",
     "//clang/include/clang/Basic:version",
+    # public_dep because public header AttributeCommonInfo.h includes generated AttrParsedAttrList.inc.
+    "//clang/include/clang/Sema:AttrParsedAttrList",
+    # public_dep because public header OpenMPKinds.h includes generated OMP.h.inc
+    "//llvm/include/llvm/Frontend/OpenMP:public_tablegen",
   ]
   deps = [
     ":write_vcsversion",
@@ -38,6 +42,8 @@ static_library("Basic") {
     "//clang/include/clang/Basic:arm_fp16",
     "//clang/include/clang/Basic:arm_neon",
     "//clang/include/clang/Config",
+    "//clang/include/clang/Sema:AttrParsedAttrKinds",
+    "//clang/include/clang/Sema:AttrSpellingListIndex",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/IR",
     "//llvm/lib/MC",

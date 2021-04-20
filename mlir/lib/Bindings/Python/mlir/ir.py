@@ -7,7 +7,3 @@ from ._cext_loader import _reexport_cext
 _reexport_cext("ir", __name__)
 del _reexport_cext
 
-# Extra functions that are not visible to _reexport_cext.
-# TODO: is this really necessary?
-from _mlir.ir import _enable_debug
-_enable_debug = _enable_debug

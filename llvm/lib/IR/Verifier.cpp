@@ -328,6 +328,9 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// Cache of declarations of the llvm.experimental.deoptimize.<ty> intrinsic.
   SmallVector<const Function *, 4> DeoptimizeDeclarations;
 
+  /// Cache of attribute lists verified.
+  SmallPtrSet<const void *, 32> AttributeListsVisited;
+
   // Verify that this GlobalValue is only used in this module.
   // This map is used to avoid visiting uses twice. We can arrive at a user
   // twice, if they have multiple operands. In particular for very large
@@ -1890,14 +1893,16 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   if (Attrs.isEmpty())
     return;
 
-  Assert(Attrs.hasParentContext(Context),
-         "Attribute list does not match Module context!", &Attrs);
-  for (const auto &AttrSet : Attrs) {
-    Assert(!AttrSet.hasAttributes() || AttrSet.hasParentContext(Context),
-           "Attribute set does not match Module context!", &AttrSet);
-    for (const auto &A : AttrSet) {
-      Assert(A.hasParentContext(Context),
-             "Attribute does not match Module context!", &A);
+  if (AttributeListsVisited.insert(Attrs.getRawPointer()).second) {
+    Assert(Attrs.hasParentContext(Context),
+           "Attribute list does not match Module context!", &Attrs);
+    for (const auto &AttrSet : Attrs) {
+      Assert(!AttrSet.hasAttributes() || AttrSet.hasParentContext(Context),
+             "Attribute set does not match Module context!", &AttrSet);
+      for (const auto &A : AttrSet) {
+        Assert(A.hasParentContext(Context),
+               "Attribute does not match Module context!", &A);
+      }
     }
   }
 
@@ -2488,6 +2493,8 @@ void Verifier::visitFunction(const Function &F) {
              "Function takes metadata but isn't an intrinsic", &Arg, &F);
       Assert(!Arg.getType()->isTokenTy(),
              "Function takes token but isn't an intrinsic", &Arg, &F);
+      Assert(!Arg.getType()->isX86_AMXTy(),
+             "Function takes x86_amx but isn't an intrinsic", &Arg, &F);
     }
 
     // Check that swifterror argument is only used by loads and stores.
@@ -2497,9 +2504,12 @@ void Verifier::visitFunction(const Function &F) {
     ++i;
   }
 
-  if (!isLLVMdotName)
+  if (!isLLVMdotName) {
     Assert(!F.getReturnType()->isTokenTy(),
-           "Functions returns a token but isn't an intrinsic", &F);
+           "Function returns a token but isn't an intrinsic", &F);
+    Assert(!F.getReturnType()->isX86_AMXTy(),
+           "Function returns a x86_amx but isn't an intrinsic", &F);
+  }
 
   // Get the function metadata attachments.
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
@@ -3260,9 +3270,12 @@ void Verifier::visitCallBase(CallBase &Call) {
   }
 
   // Verify that indirect calls don't return tokens.
-  if (!Call.getCalledFunction())
+  if (!Call.getCalledFunction()) {
     Assert(!FTy->getReturnType()->isTokenTy(),
            "Return type cannot be token for indirect call!");
+    Assert(!FTy->getReturnType()->isX86_AMXTy(),
+           "Return type cannot be x86_amx for indirect call!");
+  }
 
   if (Function *F = Call.getCalledFunction())
     if (Intrinsic::ID ID = (Intrinsic::ID)F->getIntrinsicID())
@@ -4631,9 +4644,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
   // If the intrinsic takes MDNode arguments, verify that they are either global
   // or are local to *this* function.
-  for (Value *V : Call.args())
+  for (Value *V : Call.args()) {
     if (auto *MD = dyn_cast<MetadataAsValue>(V))
       visitMetadataAsValue(*MD, Call.getCaller());
+    if (auto *Const = dyn_cast<Constant>(V))
+      Assert(!Const->getType()->isX86_AMXTy(),
+             "const x86_amx is not allowed in argument!");
+  }
 
   switch (ID) {
   default:

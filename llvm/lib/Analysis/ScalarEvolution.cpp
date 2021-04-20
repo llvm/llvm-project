@@ -1053,6 +1053,9 @@ const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty,
   if (!Op->getType()->isPointerTy())
     return getTruncateOrZeroExtend(Op, Ty);
 
+  assert(!getDataLayout().isNonIntegralPointerType(Op->getType()) &&
+         "Source pointer type must be integral for ptrtoint!");
+
   // What would be an ID for such a SCEV cast expression?
   FoldingSetNodeID ID;
   ID.AddInteger(scPtrToInt);

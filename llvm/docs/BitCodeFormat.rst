@@ -1322,6 +1322,13 @@ operand fields are
 * *paramty*: Zero or more type indices representing the parameter types of the
   function
 
+TYPE_CODE_X86_AMX Record
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+``[X86_AMX]``
+
+The ``X86_AMX`` record (code 24) adds an ``x86_amx`` type to the type table.
+
 .. _CONSTANTS_BLOCK:
 
 CONSTANTS_BLOCK Contents

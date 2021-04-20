@@ -10,13 +10,6 @@ def run(f):
   assert Context._get_live_count() == 0
 
 
-# CHECK-LABEL: TEST: testExports
-def testExports():
-  from mlir.ir import _enable_debug
-
-run(testExports)
-
-
 # CHECK-LABEL: TEST: testContextEnterExit
 def testContextEnterExit():
   with Context() as ctx:

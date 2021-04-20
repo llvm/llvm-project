@@ -337,7 +337,7 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
   IdentifierInfo &cudaLaunchKernelII =
       CGM.getContext().Idents.get(LaunchKernelName);
   FunctionDecl *cudaLaunchKernelFD = nullptr;
-  for (const auto &Result : DC->lookup(&cudaLaunchKernelII)) {
+  for (auto *Result : DC->lookup(&cudaLaunchKernelII)) {
     if (FunctionDecl *FD = dyn_cast<FunctionDecl>(Result))
       cudaLaunchKernelFD = FD;
   }

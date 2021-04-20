@@ -16,10 +16,19 @@ namespace dependencies{
 std::vector<std::string> FullDependencies::getAdditionalCommandLine(
     std::function<StringRef(ModuleID)> LookupPCMPath,
     std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const {
-  std::vector<std::string> Ret = AdditionalNonPathCommandLine;
+  std::vector<std::string> Ret{
+      "-fno-implicit-modules",
+      "-fno-implicit-module-maps",
+  };
 
-  dependencies::detail::appendCommonModuleArguments(
-      ClangModuleDeps, LookupPCMPath, LookupModuleDeps, Ret);
+  std::vector<std::string> PCMPaths;
+  std::vector<std::string> ModMapPaths;
+  dependencies::detail::collectPCMAndModuleMapPaths(
+      ClangModuleDeps, LookupPCMPath, LookupModuleDeps, PCMPaths, ModMapPaths);
+  for (const std::string &PCMPath : PCMPaths)
+    Ret.push_back("-fmodule-file=" + PCMPath);
+  for (const std::string &ModMapPath : ModMapPaths)
+    Ret.push_back("-fmodule-map-file=" + ModMapPath);
 
   return Ret;
 }

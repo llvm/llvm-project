@@ -1025,6 +1025,19 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
+  // Subvector insertions are cheap if the subvectors are aligned.
+  // Note that in general, the insertion starting at the beginning of a vector
+  // isn't free, because we need to preserve the rest of the wide vector.
+  if (Kind == TTI::SK_InsertSubvector && LT.second.isVector()) {
+    int NumElts = LT.second.getVectorNumElements();
+    std::pair<int, MVT> SubLT = TLI->getTypeLegalizationCost(DL, SubTp);
+    if (SubLT.second.isVector()) {
+      int NumSubElts = SubLT.second.getVectorNumElements();
+      if ((Index % NumSubElts) == 0 && (NumElts % NumSubElts) == 0)
+        return SubLT.first;
+    }
+  }
+
   // Handle some common (illegal) sub-vector types as they are often very cheap
   // to shuffle even on targets without PSHUFB.
   EVT VT = TLI->getValueType(DL, BaseTp);

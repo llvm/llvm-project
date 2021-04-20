@@ -19,7 +19,7 @@ include "CSKYInstrInfo.td"
 // CSKY processors supported.
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"generic-csky", NoSchedModel, []>;
+def : ProcessorModel<"generic", NoSchedModel, []>;
 
 //===----------------------------------------------------------------------===//
 // Define the CSKY target.
@@ -27,6 +27,19 @@ def : ProcessorModel<"generic-csky", NoSchedModel, []>;
 
 def CSKYInstrInfo : InstrInfo;
 
+
+def CSKYAsmParser : AsmParser {
+  let ShouldEmitMatchRegisterAltName = 1;
+  let AllowDuplicateRegisterNames = 1;
+}
+
+def CSKYAsmWriter : AsmWriter {
+  int PassSubtarget = 1;
+}
+
 def CSKY : Target {
   let InstructionSet = CSKYInstrInfo;
+  let AssemblyParsers = [CSKYAsmParser];
+  let AssemblyWriters = [CSKYAsmWriter];
+  let AllowRegisterRenaming = 1;
 }

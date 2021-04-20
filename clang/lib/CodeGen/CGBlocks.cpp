@@ -2887,7 +2887,7 @@ static void configureBlocksRuntimeObject(CodeGenModule &CGM,
            "expected Function or GlobalVariable");
 
     const NamedDecl *ND = nullptr;
-    for (const auto &Result : DC->lookup(&II))
+    for (const auto *Result : DC->lookup(&II))
       if ((ND = dyn_cast<FunctionDecl>(Result)) ||
           (ND = dyn_cast<VarDecl>(Result)))
         break;

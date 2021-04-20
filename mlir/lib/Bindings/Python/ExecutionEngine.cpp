@@ -93,5 +93,13 @@ void mlir::python::populateExecutionEngineSubmodule(py::module &m) {
                 mlirStringRefCreate(name.c_str(), name.size()),
                 reinterpret_cast<void *>(sym));
           },
-          "Lookup function `func` in the ExecutionEngine.");
+          "Lookup function `func` in the ExecutionEngine.")
+      .def(
+          "dump_to_object_file",
+          [](PyExecutionEngine &executionEngine, const std::string &fileName) {
+            mlirExecutionEngineDumpToObjectFile(
+                executionEngine.get(),
+                mlirStringRefCreate(fileName.c_str(), fileName.size()));
+          },
+          "Dump ExecutionEngine to an object file.");
 }

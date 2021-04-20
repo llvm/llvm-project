@@ -97,3 +97,25 @@ define i64 @test_objectsize_byref_arg([42 x i8]* byref([42 x i8]) %ptr) {
   %size = tail call i64 @llvm.objectsize.i64(i8* %cast, i1 true, i1 false, i1 false)
   ret i64 %size
 }
+
+; https://llvm.org/PR50023
+; The alloca operand type may not match pointer type size.
+
+define i64 @vla_pointer_size_mismatch(i42 %x) {
+; CHECK-LABEL: @vla_pointer_size_mismatch(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i42 [[X:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 1, [[TMP1]]
+; CHECK-NEXT:    [[A:%.*]] = alloca i8, i42 [[X]], align 1
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr i8, i8* [[A]], i8 17
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 17
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP2]], 17
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[TMP5]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP6]])
+; CHECK-NEXT:    ret i64 [[TMP5]]
+;
+  %A = alloca i8, i42 %x, align 1
+  %G1 = getelementptr i8, i8* %A, i8 17
+  %objsize = call i64 @llvm.objectsize.i64(i8* %G1, i1 false, i1 true, i1 true)
+  ret i64 %objsize
+}
