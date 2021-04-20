@@ -103,6 +103,7 @@ static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
   {LibFunc_msvc_new_array_longlong,         {OpNewLike,   1, 0,  -1}}, // new[](unsigned long long)
   {LibFunc_msvc_new_array_longlong_nothrow, {MallocLike,  2, 0,  -1}}, // new[](unsigned long long, nothrow)
   {LibFunc_aligned_alloc,       {AlignedAllocLike, 2, 1,  -1}},
+  {LibFunc_memalign,            {AlignedAllocLike, 2, 1,  -1}},
   {LibFunc_calloc,              {CallocLike,  2, 0,   1}},
   {LibFunc_vec_calloc,          {CallocLike,  2, 0,   1}},
   {LibFunc_realloc,             {ReallocLike, 2, 1,  -1}},
