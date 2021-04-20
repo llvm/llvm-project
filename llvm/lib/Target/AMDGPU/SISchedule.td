@@ -107,6 +107,9 @@ def HWVMEM   : ProcResource<1> {
 def HWVALU   : ProcResource<1> {
   let BufferSize = 1;
 }
+def HWTransVALU : ProcResource<1> { // Transcendental VALU
+  let BufferSize = 1;
+}
 def HWRC   : ProcResource<1> { // Register destination cache
   let BufferSize = 1;
 }
@@ -240,14 +243,14 @@ let SchedModel = GFX10SpeedModel in {
 def : HWWriteRes<Write32Bit,         [HWVALU, HWRC],   5>;
 def : HWWriteRes<WriteFloatCvt,      [HWVALU, HWRC],   5>;
 def : HWWriteRes<Write64Bit,         [HWVALU, HWRC],   6>;
-def : HWWriteRes<WriteTrans32,       [HWVALU, HWRC],   10>;
+def : HWWriteRes<WriteTrans32,       [HWTransVALU, HWRC], 10>;
 def : HWWriteRes<WriteQuarterRate32, [HWVALU, HWRC],   8>;
 def : HWWriteRes<WriteFloatFMA,      [HWVALU, HWRC],   5>;
 def : HWWriteRes<WriteDouble,        [HWVALU, HWRC],   22>;
 def : HWWriteRes<WriteDoubleAdd,     [HWVALU, HWRC],   22>;
 def : HWWriteRes<WriteDoubleCvt,     [HWVALU, HWRC],   22>;
 def : HWWriteRes<WriteIntMul,        [HWVALU, HWRC],   8>;
-def : HWWriteRes<WriteTrans64,       [HWVALU, HWRC],   24>;
+def : HWWriteRes<WriteTrans64,       [HWVALU, HWTransVALU, HWRC], 24>;
 
 def : HWWriteRes<WriteBranch,        [HWBranch],       32>;
 def : HWWriteRes<WriteExport,        [HWExport, HWRC], 16>;
