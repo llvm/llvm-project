@@ -955,13 +955,13 @@ multiclass SIRegOperand64 <string rc, string MatchName, string opType,
       let ParserMatchClass = RegImmMatcher<MatchName#"F64">;
     }
 
-    foreach _ = BoolToList<Vectors>.ret in
+    if Vectors then
     def _v2f32 : RegisterOperand<!cast<RegisterClass>(rc#rc_suffix)> {
       let OperandType = opType#"_V2FP32";
       let ParserMatchClass = RegImmMatcher<MatchName#"V2FP32">;
       let DecoderMethod = "decodeOperand_VSrcV232";
     }
-    foreach _ = BoolToList<Vectors>.ret in
+    if Vectors then
     def _v2b32 : RegisterOperand<!cast<RegisterClass>(rc#rc_suffix)> {
       let OperandType = opType#"_V2INT32";
       let ParserMatchClass = RegImmMatcher<MatchName#"V2INT32">;
