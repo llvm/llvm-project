@@ -1366,33 +1366,32 @@ Register RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
   DebugLoc DL = II->getDebugLoc();
   int64_t NumOfVReg = Amount / 8;
 
-  Register SizeOfVector = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-  BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), SizeOfVector);
-  Register FactorRegister = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), VL);
   assert(isInt<12>(NumOfVReg) &&
          "Expect the number of vector registers within 12-bits.");
   if (isPowerOf2_32(NumOfVReg)) {
     uint32_t ShiftAmount = Log2_32(NumOfVReg);
     if (ShiftAmount == 0)
-      return SizeOfVector;
-    BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), FactorRegister)
-        .addReg(SizeOfVector, RegState::Kill)
+      return VL;
+    BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), VL)
+        .addReg(VL, RegState::Kill)
         .addImm(ShiftAmount);
   } else {
-    Register VN = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    BuildMI(MBB, II, DL, TII->get(RISCV::ADDI), VN)
+    Register N = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    BuildMI(MBB, II, DL, TII->get(RISCV::ADDI), N)
         .addReg(RISCV::X0)
         .addImm(NumOfVReg);
     if (!MF.getSubtarget<RISCVSubtarget>().hasStdExtM())
       MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported{
           MF.getFunction(),
           "M-extension must be enabled to calculate the vscaled size/offset."});
-    BuildMI(MBB, II, DL, TII->get(RISCV::MUL), FactorRegister)
-        .addReg(SizeOfVector, RegState::Kill)
-        .addReg(VN, RegState::Kill);
+    BuildMI(MBB, II, DL, TII->get(RISCV::MUL), VL)
+        .addReg(VL, RegState::Kill)
+        .addReg(N, RegState::Kill);
   }
 
-  return FactorRegister;
+  return VL;
 }
 
 Optional<std::pair<unsigned, unsigned>>
