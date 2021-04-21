@@ -1078,6 +1078,10 @@ void Writer::createExportTable() {
     edataStart = edataSec->chunks.front();
     edataEnd = edataSec->chunks.back();
   }
+  // Warn on exported deleting destructor.
+  for (auto e : config->exports)
+    if (e.sym && e.sym->getName().startswith("??_G"))
+      warn("export of deleting dtor: " + toString(*e.sym));
 }
 
 void Writer::removeUnusedSections() {
