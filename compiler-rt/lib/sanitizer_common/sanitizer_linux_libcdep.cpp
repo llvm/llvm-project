@@ -216,10 +216,7 @@ void InitTlsSize() { }
 // On glibc x86_64, ThreadDescriptorSize() needs to be precise due to the usage
 // of g_tls_size. On other targets, ThreadDescriptorSize() is only used by lsan
 // to get the pointer to thread-specific data keys in the thread control block.
-#if (defined(__x86_64__) || defined(__i386__) || defined(__mips__) ||       \
-     defined(__aarch64__) || defined(__powerpc64__) || defined(__s390__) || \
-     defined(__arm__) || SANITIZER_RISCV64) &&                              \
-    (SANITIZER_FREEBSD || SANITIZER_LINUX) && !SANITIZER_ANDROID
+#if (SANITIZER_FREEBSD || SANITIZER_LINUX) && !SANITIZER_ANDROID
 // sizeof(struct pthread) from glibc.
 static atomic_uintptr_t thread_descriptor_size;
 
@@ -257,6 +254,13 @@ uptr ThreadDescriptorSize() {
     else  // minor == 32
       val = FIRST_32_SECOND_64(1344, 2496);
   }
+#elif defined(__s390__) || defined(__sparc__)
+  // The size of a prefix of TCB including pthread::{specific_1stblock,specific}
+  // suffices. Just return offsetof(struct pthread, specific_used), which hasn't
+  // changed since 2007-05. Technically this applies to i386/x86_64 as well but
+  // we call _dl_get_tls_static_info and need the precise size of struct
+  // pthread.
+  return FIRST_32_SECOND_64(524, 1552);
 #elif defined(__mips__)
   // TODO(sagarthakur): add more values as per different glibc versions.
   val = FIRST_32_SECOND_64(1152, 1776);
@@ -280,8 +284,6 @@ uptr ThreadDescriptorSize() {
   val = 1776;
 #elif defined(__powerpc64__)
   val = 1776; // from glibc.ppc64le 2.20-8.fc21
-#elif defined(__s390__)
-  val = FIRST_32_SECOND_64(1152, 1776); // valid for glibc 2.22
 #endif
   if (val)
     atomic_store_relaxed(&thread_descriptor_size, val);
@@ -441,12 +443,13 @@ static void GetTls(uptr *addr, uptr *size) {
 #elif SANITIZER_FREEBSD || SANITIZER_LINUX
   uptr align;
   GetStaticTlsBoundary(addr, size, &align);
-#if defined(__x86_64__) || defined(__i386__) || defined(__s390__)
+#if defined(__x86_64__) || defined(__i386__) || defined(__s390__) || \
+    defined(__sparc__)
   if (SANITIZER_GLIBC) {
-#if defined(__s390__)
-    align = Max<uptr>(align, 16);
-#else
+#if defined(__x86_64__) || defined(__i386__)
     align = Max<uptr>(align, 64);
+#else
+    align = Max<uptr>(align, 16);
 #endif
   }
   const uptr tp = RoundUpTo(*addr + *size, align);
