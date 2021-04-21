@@ -189,13 +189,15 @@ extern llvm::SetVector<InputFile *> inputFiles;
 
 llvm::Optional<MemoryBufferRef> readFile(StringRef path);
 
-template <class CommandType = llvm::MachO::load_command, class Header>
-const CommandType *findCommand(const Header *hdr, uint32_t type) {
+template <class CommandType = llvm::MachO::load_command, class Header,
+          class... Types>
+const CommandType *findCommand(const Header *hdr, Types... types) {
+  std::initializer_list<uint32_t> typesList{types...};
   const uint8_t *p = reinterpret_cast<const uint8_t *>(hdr) + sizeof(Header);
 
   for (uint32_t i = 0, n = hdr->ncmds; i < n; ++i) {
     auto *cmd = reinterpret_cast<const CommandType *>(p);
-    if (cmd->cmd == type)
+    if (llvm::is_contained(typesList, cmd->cmd))
       return cmd;
     p += cmd->cmdsize;
   }

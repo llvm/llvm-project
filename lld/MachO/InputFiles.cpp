@@ -109,29 +109,31 @@ static Optional<PlatformInfo> getPlatformInfo(const InputFile *input) {
 
   using Header = typename LP::mach_header;
   auto *hdr = reinterpret_cast<const Header *>(input->mb.getBufferStart());
+
   PlatformInfo platformInfo;
   if (const auto *cmd =
           findCommand<build_version_command>(hdr, LC_BUILD_VERSION)) {
     platformInfo.target.Platform = static_cast<PlatformKind>(cmd->platform);
     platformInfo.minimum = decodeVersion(cmd->minos);
     return platformInfo;
-  } else if (const auto *cmd =
-                 findCommand<version_min_command>(hdr, LC_VERSION_MIN_MACOSX)) {
-    platformInfo.target.Platform = PlatformKind::macOS;
-    platformInfo.minimum = decodeVersion(cmd->version);
-    return platformInfo;
-  } else if (const auto *cmd = findCommand<version_min_command>(
-                 hdr, LC_VERSION_MIN_IPHONEOS)) {
-    platformInfo.target.Platform = PlatformKind::iOS;
-    platformInfo.minimum = decodeVersion(cmd->version);
-    return platformInfo;
-  } else if (const auto *cmd =
-                 findCommand<version_min_command>(hdr, LC_VERSION_MIN_TVOS)) {
-    platformInfo.target.Platform = PlatformKind::tvOS;
-    platformInfo.minimum = decodeVersion(cmd->version);
-  } else if (const auto *cmd = findCommand<version_min_command>(
-                 hdr, LC_VERSION_MIN_WATCHOS)) {
-    platformInfo.target.Platform = PlatformKind::watchOS;
+  }
+  if (const auto *cmd = findCommand<version_min_command>(
+          hdr, LC_VERSION_MIN_MACOSX, LC_VERSION_MIN_IPHONEOS,
+          LC_VERSION_MIN_TVOS, LC_VERSION_MIN_WATCHOS)) {
+    switch (cmd->cmd) {
+    case LC_VERSION_MIN_MACOSX:
+      platformInfo.target.Platform = PlatformKind::macOS;
+      break;
+    case LC_VERSION_MIN_IPHONEOS:
+      platformInfo.target.Platform = PlatformKind::iOS;
+      break;
+    case LC_VERSION_MIN_TVOS:
+      platformInfo.target.Platform = PlatformKind::tvOS;
+      break;
+    case LC_VERSION_MIN_WATCHOS:
+      platformInfo.target.Platform = PlatformKind::watchOS;
+      break;
+    }
     platformInfo.minimum = decodeVersion(cmd->version);
     return platformInfo;
   }
