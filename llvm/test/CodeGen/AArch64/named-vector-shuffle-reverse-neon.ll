@@ -150,23 +150,25 @@ define <2 x i8> @reverse_v2i8(<2 x i8> %a) #0 {
 
 ; Verify splitvec type legalisation works as expected.
 define <8 x i32> @reverse_v8i32(<8 x i32> %a) #0 {
-; CHECK-LABEL: reverse_v8i32:
+; CHECK-SELDAG-LABEL: reverse_v8i32:
 ; CHECK-SELDAG:       // %bb.0:
 ; CHECK-SELDAG-NEXT:    rev64 v1.4s, v1.4s
 ; CHECK-SELDAG-NEXT:    rev64 v2.4s, v0.4s
 ; CHECK-SELDAG-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
 ; CHECK-SELDAG-NEXT:    ext v1.16b, v2.16b, v2.16b, #8
 ; CHECK-SELDAG-NEXT:    ret
+;
+; CHECK-FASTISEL-LABEL: reverse_v8i32:
 ; CHECK-FASTISEL:       // %bb.0:
-; CHECK-FASTISEL-NEXT:    sub    sp, sp, #16
-; CHECK-FASTISEL-NEXT:    str    q1, [sp]
-; CHECK-FASTISEL-NEXT:    mov    v1.16b, v0.16b
-; CHECK-FASTISEL-NEXT:    ldr    q0, [sp]
-; CHECK-FASTISEL-NEXT:    rev64    v0.4s, v0.4s
-; CHECK-FASTISEL-NEXT:    ext    v0.16b, v0.16b, v0.16b, #8
-; CHECK-FASTISEL-NEXT:    rev64    v1.4s, v1.4s
-; CHECK-FASTISEL-NEXT:    ext    v1.16b, v1.16b, v1.16b, #8
-; CHECK-FASTISEL-NEXT:    add    sp, sp, #16
+; CHECK-FASTISEL-NEXT:    sub sp, sp, #16 // =16
+; CHECK-FASTISEL-NEXT:    str q1, [sp] // 16-byte Folded Spill
+; CHECK-FASTISEL-NEXT:    mov v1.16b, v0.16b
+; CHECK-FASTISEL-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-FASTISEL-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-FASTISEL-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-FASTISEL-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-FASTISEL-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-FASTISEL-NEXT:    add sp, sp, #16 // =16
 ; CHECK-FASTISEL-NEXT:    ret
 
   %res = call <8 x i32> @llvm.experimental.vector.reverse.v8i32(<8 x i32> %a)
@@ -175,7 +177,7 @@ define <8 x i32> @reverse_v8i32(<8 x i32> %a) #0 {
 
 ; Verify splitvec type legalisation works as expected.
 define <16 x float> @reverse_v16f32(<16 x float> %a) #0 {
-; CHECK-LABEL: reverse_v16f32:
+; CHECK-SELDAG-LABEL: reverse_v16f32:
 ; CHECK-SELDAG:       // %bb.0:
 ; CHECK-SELDAG-NEXT:    rev64 v3.4s, v3.4s
 ; CHECK-SELDAG-NEXT:    rev64 v2.4s, v2.4s
@@ -186,23 +188,25 @@ define <16 x float> @reverse_v16f32(<16 x float> %a) #0 {
 ; CHECK-SELDAG-NEXT:    ext v2.16b, v4.16b, v4.16b, #8
 ; CHECK-SELDAG-NEXT:    ext v3.16b, v5.16b, v5.16b, #8
 ; CHECK-SELDAG-NEXT:    ret
+;
+; CHECK-FASTISEL-LABEL: reverse_v16f32:
 ; CHECK-FASTISEL:       // %bb.0:
-; CHECK-FASTISEL-NEXT:    sub    sp, sp, #32
-; CHECK-FASTISEL-NEXT:    str    q3, [sp, #16]
-; CHECK-FASTISEL-NEXT:    str    q2, [sp]
-; CHECK-FASTISEL-NEXT:    mov    v2.16b, v1.16b
-; CHECK-FASTISEL-NEXT:    ldr    q1, [sp]
-; CHECK-FASTISEL-NEXT:    mov    v3.16b, v0.16b
-; CHECK-FASTISEL-NEXT:    ldr    q0, [sp, #16]
-; CHECK-FASTISEL-NEXT:    rev64    v0.4s, v0.4s
-; CHECK-FASTISEL-NEXT:    ext    v0.16b, v0.16b, v0.16b, #8
-; CHECK-FASTISEL-NEXT:    rev64    v1.4s, v1.4s
-; CHECK-FASTISEL-NEXT:    ext    v1.16b, v1.16b, v1.16b, #8
-; CHECK-FASTISEL-NEXT:    rev64    v2.4s, v2.4s
-; CHECK-FASTISEL-NEXT:    ext    v2.16b, v2.16b, v2.16b, #8
-; CHECK-FASTISEL-NEXT:    rev64    v3.4s, v3.4s
-; CHECK-FASTISEL-NEXT:    ext    v3.16b, v3.16b, v3.16b, #8
-; CHECK-FASTISEL-NEXT:    add    sp, sp, #32
+; CHECK-FASTISEL-NEXT:    sub sp, sp, #32 // =32
+; CHECK-FASTISEL-NEXT:    str q3, [sp, #16] // 16-byte Folded Spill
+; CHECK-FASTISEL-NEXT:    str q2, [sp] // 16-byte Folded Spill
+; CHECK-FASTISEL-NEXT:    mov v2.16b, v1.16b
+; CHECK-FASTISEL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-FASTISEL-NEXT:    mov v3.16b, v0.16b
+; CHECK-FASTISEL-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-FASTISEL-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-FASTISEL-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-FASTISEL-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-FASTISEL-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-FASTISEL-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-FASTISEL-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-FASTISEL-NEXT:    rev64 v3.4s, v3.4s
+; CHECK-FASTISEL-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; CHECK-FASTISEL-NEXT:    add sp, sp, #32 // =32
 ; CHECK-FASTISEL-NEXT:    ret
 
   %res = call <16 x float> @llvm.experimental.vector.reverse.v16f32(<16 x float> %a)
