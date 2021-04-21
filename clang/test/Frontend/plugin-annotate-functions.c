@@ -14,8 +14,8 @@
 
 // PRAGMA: [[STR_VAR:@.+]] = private unnamed_addr constant [19 x i8] c"example_annotation\00"
 // PRAGMA: @llvm.global.annotations = {{.*}}@fn1{{.*}}[[STR_VAR]]{{.*}}@fn2{{.*}}[[STR_VAR]]
-// NOPRAGMA-NOT: [[STR_VAR:@.+]] = private unnamed_addr constant [19 x i8] c"example_annotation\00"
-// NOPRAGMA-NOT: @llvm.global.annotations = {{.*}}@fn1{{.*}}[[STR_VAR]]{{.*}}@fn2{{.*}}[[STR_VAR]]
+// NOPRAGMA-NOT: {{@.+}} = private unnamed_addr constant [19 x i8] c"example_annotation\00"
+// NOPRAGMA-NOT: @llvm.global.annotations = {{.*}}
 void fn1() { }
 void fn2() { }
 
