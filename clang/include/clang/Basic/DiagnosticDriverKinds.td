@@ -540,6 +540,9 @@ def err_drv_invalid_object_mode : Error<"OBJECT_MODE setting %0 is not recognize
 def err_aix_default_altivec_abi : Error<
   "The default Altivec ABI on AIX is not yet supported, use '-mabi=vec-extabi' for the extended Altivec ABI">;
 
+def err_invalid_cxx_abi : Error<"Invalid C++ ABI name '%0'">;
+def err_unsupported_cxx_abi : Error<"C++ ABI '%0' is not supported on target triple '%1'">;
+
 def note_cc1_round_trip_original : Note<"Original arguments in round-trip: %0">;
 def note_cc1_round_trip_generated : Note<"Generated arguments #%0 in round-trip: %1">;
 def remark_cc1_round_trip_generated : Remark<"Generated arguments #%0 in round-trip: %1">, InGroup<RoundTripCC1Args>;

@@ -3512,6 +3512,10 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
   if (Opts.getSignReturnAddressKey() ==
       LangOptions::SignReturnAddressKeyKind::BKey)
     GenerateArg(Args, OPT_msign_return_address_key_EQ, "b_key", SA);
+
+  if (Opts.CXXABI)
+    GenerateArg(Args, OPT_fcxx_abi_EQ, TargetCXXABI::getSpelling(*Opts.CXXABI),
+                SA);
 }
 
 bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
@@ -3993,6 +3997,20 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
           Diags.Report(diag::err_drv_invalid_value)
               << A->getAsString(Args) << SignKey;
       }
+    }
+  }
+
+  // The value can be empty, which indicates the system default should be used.
+  StringRef CXXABI = Args.getLastArgValue(OPT_fcxx_abi_EQ);
+  if (!CXXABI.empty()) {
+    if (!TargetCXXABI::isABI(CXXABI)) {
+      Diags.Report(diag::err_invalid_cxx_abi) << CXXABI;
+    } else {
+      auto Kind = TargetCXXABI::getKind(CXXABI);
+      if (!TargetCXXABI::isSupportedCXXABI(T, Kind))
+        Diags.Report(diag::err_unsupported_cxx_abi) << CXXABI << T.str();
+      else
+        Opts.CXXABI = Kind;
     }
   }
 
