@@ -82,7 +82,7 @@ bool objdump::LinkOptHints;
 bool objdump::InfoPlist;
 bool objdump::DylibsUsed;
 bool objdump::DylibId;
-bool objdump::NonVerbose;
+bool objdump::Verbose;
 bool objdump::ObjcMetaData;
 std::string objdump::DisSymName;
 bool objdump::NoSymbolicOperands;
@@ -111,7 +111,7 @@ void objdump::parseMachOOptions(const llvm::opt::InputArgList &InputArgs) {
   InfoPlist = InputArgs.hasArg(OBJDUMP_info_plist);
   DylibsUsed = InputArgs.hasArg(OBJDUMP_dylibs_used);
   DylibId = InputArgs.hasArg(OBJDUMP_dylib_id);
-  NonVerbose = InputArgs.hasArg(OBJDUMP_non_verbose);
+  Verbose = !InputArgs.hasArg(OBJDUMP_non_verbose);
   ObjcMetaData = InputArgs.hasArg(OBJDUMP_objc_meta_data);
   DisSymName = InputArgs.getLastArgValue(OBJDUMP_dis_symname).str();
   NoSymbolicOperands = InputArgs.hasArg(OBJDUMP_no_symbolic_operands);
@@ -1937,21 +1937,21 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
       DisassembleMachO(FileName, MachOOF, "__TEXT", "__text");
   }
   if (IndirectSymbols)
-    PrintIndirectSymbols(MachOOF, !NonVerbose);
+    PrintIndirectSymbols(MachOOF, Verbose);
   if (DataInCode)
-    PrintDataInCodeTable(MachOOF, !NonVerbose);
+    PrintDataInCodeTable(MachOOF, Verbose);
   if (FunctionStarts)
     PrintFunctionStarts(MachOOF);
   if (LinkOptHints)
     PrintLinkOptHints(MachOOF);
   if (Relocations)
-    PrintRelocations(MachOOF, !NonVerbose);
+    PrintRelocations(MachOOF, Verbose);
   if (SectionHeaders)
     printSectionHeaders(MachOOF);
   if (SectionContents)
     printSectionContents(MachOOF);
   if (!FilterSections.empty())
-    DumpSectionContents(FileName, MachOOF, !NonVerbose);
+    DumpSectionContents(FileName, MachOOF, Verbose);
   if (InfoPlist)
     DumpInfoPlistSectionContents(FileName, MachOOF);
   if (DylibsUsed)
@@ -1969,7 +1969,7 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
   if (FirstPrivateHeader)
     printMachOFileHeader(MachOOF);
   if (ObjcMetaData)
-    printObjcMetaData(MachOOF, !NonVerbose);
+    printObjcMetaData(MachOOF, Verbose);
   if (ExportsTrie)
     printExportsTrie(MachOOF);
   if (Rebase)
@@ -2308,7 +2308,7 @@ void objdump::parseInputMachO(StringRef Filename) {
   if (Archive *A = dyn_cast<Archive>(&Bin)) {
     outs() << "Archive : " << Filename << "\n";
     if (ArchiveHeaders)
-      printArchiveHeaders(Filename, A, !NonVerbose, ArchiveMemberOffsets);
+      printArchiveHeaders(Filename, A, Verbose, ArchiveMemberOffsets);
 
     Error Err = Error::success();
     unsigned I = -1;
@@ -2355,7 +2355,7 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
   auto Filename = UB->getFileName();
 
   if (UniversalHeaders)
-    printMachOUniversalHeaders(UB, !NonVerbose);
+    printMachOUniversalHeaders(UB, Verbose);
 
   // If we have a list of architecture flags specified dump only those.
   if (!ArchAll && !ArchFlags.empty()) {
@@ -2389,7 +2389,7 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
               outs() << " (architecture " << ArchitectureName << ")";
             outs() << "\n";
             if (ArchiveHeaders)
-              printArchiveHeaders(Filename, A.get(), !NonVerbose,
+              printArchiveHeaders(Filename, A.get(), Verbose,
                                   ArchiveMemberOffsets, ArchitectureName);
             Error Err = Error::success();
             unsigned I = -1;
@@ -2450,7 +2450,7 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
           std::unique_ptr<Archive> &A = *AOrErr;
           outs() << "Archive : " << Filename << "\n";
           if (ArchiveHeaders)
-            printArchiveHeaders(Filename, A.get(), !NonVerbose,
+            printArchiveHeaders(Filename, A.get(), Verbose,
                                 ArchiveMemberOffsets);
           Error Err = Error::success();
           unsigned I = -1;
@@ -2503,8 +2503,8 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
         outs() << " (architecture " << ArchitectureName << ")";
       outs() << "\n";
       if (ArchiveHeaders)
-        printArchiveHeaders(Filename, A.get(), !NonVerbose,
-                            ArchiveMemberOffsets, ArchitectureName);
+        printArchiveHeaders(Filename, A.get(), Verbose, ArchiveMemberOffsets,
+                            ArchitectureName);
       Error Err = Error::success();
       unsigned I = -1;
       for (auto &C : A->children(Err)) {
@@ -10211,7 +10211,7 @@ static void PrintMachHeader(const MachOObjectFile *Obj, bool verbose) {
 
 void objdump::printMachOFileHeader(const object::ObjectFile *Obj) {
   const MachOObjectFile *file = dyn_cast<const MachOObjectFile>(Obj);
-  PrintMachHeader(file, !NonVerbose);
+  PrintMachHeader(file, Verbose);
 }
 
 void objdump::printMachOLoadCommands(const object::ObjectFile *Obj) {
@@ -10229,7 +10229,7 @@ void objdump::printMachOLoadCommands(const object::ObjectFile *Obj) {
     filetype = H.filetype;
     cputype = H.cputype;
   }
-  PrintLoadCommands(file, filetype, cputype, !NonVerbose);
+  PrintLoadCommands(file, filetype, cputype, Verbose);
 }
 
 //===----------------------------------------------------------------------===//
