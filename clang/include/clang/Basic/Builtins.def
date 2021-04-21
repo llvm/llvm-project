@@ -980,6 +980,8 @@ LIBBUILTIN(strtol, "LicC*c**i",   "f",     "stdlib.h", ALL_LANGUAGES)
 LIBBUILTIN(strtoll, "LLicC*c**i", "f",     "stdlib.h", ALL_LANGUAGES)
 LIBBUILTIN(strtoul, "ULicC*c**i", "f",     "stdlib.h", ALL_LANGUAGES)
 LIBBUILTIN(strtoull, "ULLicC*c**i", "f",   "stdlib.h", ALL_LANGUAGES)
+// C11 stdlib.h
+LIBBUILTIN(aligned_alloc, "v*zz", "f",     "stdlib.h", ALL_LANGUAGES)
 // C99 string.h
 LIBBUILTIN(memcpy, "v*v*vC*z",    "f",     "string.h", ALL_LANGUAGES)
 LIBBUILTIN(memcmp, "ivC*vC*z",    "f",     "string.h", ALL_LANGUAGES)
@@ -1061,6 +1063,8 @@ LIBBUILTIN(longjmp, "vJi",        "frT",   "setjmp.h", ALL_LANGUAGES)
 // all languages, because losing this attribute would result in miscompilation
 // when these functions are used in non-GNU mode. PR16138.
 LIBBUILTIN(alloca, "v*z",         "f",     "stdlib.h", ALL_GNU_LANGUAGES)
+// POSIX malloc.h
+LIBBUILTIN(memalign, "v*zz",      "f",     "malloc.h", ALL_GNU_LANGUAGES)
 // POSIX string.h
 LIBBUILTIN(memccpy, "v*v*vC*iz",  "f",     "string.h", ALL_GNU_LANGUAGES)
 LIBBUILTIN(mempcpy, "v*v*vC*z",   "f",     "string.h", ALL_GNU_LANGUAGES)
