@@ -686,7 +686,7 @@ their patch with every possible configuration.
 * 2nd step: If the owner does not respond or fix the worker, please escalate 
   to Galina Kostanova, the maintainer of the BuildBot master.
 * 3rd step: If Galina could not help you, please escalate to the 
-  Infrastructure Working Group `mailto:iwg@llvm.org`.
+  `Infrastructure Working Group <mailto:iwg@llvm.org>`_.
 
 .. _new-llvm-components:
 
