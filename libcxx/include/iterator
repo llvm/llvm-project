@@ -35,6 +35,14 @@ struct iterator_traits<T*>;
 template<dereferenceable T>
   using iter_reference_t = decltype(*declval<T&>());
 
+namespace ranges::inline unspecified {
+    inline constexpr unspecified iter_move = unspecified; // since C++20, nodiscard as an extension
+}}
+
+template<dereferenceable T>
+  requires ...
+using iter_rvalue_reference_t = decltype(ranges::iter_move(declval<T&>())); // since C++20
+
 template<class Category, class T, class Distance = ptrdiff_t,
          class Pointer = T*, class Reference = T&>
 struct iterator
@@ -422,6 +430,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <cstddef>
 #include <initializer_list>
 #include <__iterator/incrementable_traits.h>
+#include <__iterator/iter_move.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/readable_traits.h>
 #include <__memory/addressof.h>
