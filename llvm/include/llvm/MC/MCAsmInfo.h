@@ -181,9 +181,26 @@ protected:
   /// Defaults to false.
   bool AllowAtInName = false;
 
-  /// This is true if the assembler allows $ @ ? characters at the start of
-  /// symbol names. Defaults to false.
-  bool AllowSymbolAtNameStart = false;
+  /// This is true if the assembler allows the "?" character at the start of
+  /// of a string to be lexed as an AsmToken::Identifier.
+  /// If the CommentString is also set to "?", setting this option will have
+  /// no effect, and the string will be lexed as a comment.
+  /// Defaults to false.
+  bool AllowQuestionAtStartOfIdentifier = false;
+
+  /// This is true if the assembler allows the "$" character at the start of
+  /// of a string to be lexed as an AsmToken::Identifier.
+  /// If the CommentString is also set to "$", setting this option will have
+  /// no effect, and the string will be lexed as a comment.
+  /// Defaults to false.
+  bool AllowDollarAtStartOfIdentifier = false;
+
+  /// This is true if the assembler allows the "@" character at the start of
+  /// a string to be lexed as an AsmToken::Identifier.
+  /// If the CommentString is also set to "@", setting this option will have
+  /// no effect, and the string will be lexed as a comment.
+  /// Defaults to false.
+  bool AllowAtAtStartOfIdentifier = false;
 
   /// If this is true, symbol names with invalid characters will be printed in
   /// quotes.
@@ -600,7 +617,15 @@ public:
   const char *getCode64Directive() const { return Code64Directive; }
   unsigned getAssemblerDialect() const { return AssemblerDialect; }
   bool doesAllowAtInName() const { return AllowAtInName; }
-  bool doesAllowSymbolAtNameStart() const { return AllowSymbolAtNameStart; }
+  bool doesAllowQuestionAtStartOfIdentifier() const {
+    return AllowQuestionAtStartOfIdentifier;
+  }
+  bool doesAllowAtAtStartOfIdentifier() const {
+    return AllowAtAtStartOfIdentifier;
+  }
+  bool doesAllowDollarAtStartOfIdentifier() const {
+    return AllowDollarAtStartOfIdentifier;
+  }
   bool supportsNameQuoting() const { return SupportsQuotedNames; }
 
   bool doesSupportDataRegionDirectives() const {
