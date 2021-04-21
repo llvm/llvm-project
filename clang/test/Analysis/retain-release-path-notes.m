@@ -339,7 +339,7 @@ int seed();
                                        // expected-note@216 {{Returning pointer (loaded from 'self')}}
                                        // expected-note@-3 {{Returning from 'initY'}}
                                        // expected-note@-4 {{'Original' initialized here}}
-  id New = Original;                   // expected-note {{'New' initialized here}}
+  id New = Original;                   // expected-note {{'New' initialized to the value of 'Original'}}
   Original = [[MyObj alloc] initZ];
   (void)New;
   [Original release]; // expected-warning {{Potential leak of an object stored into 'New'}}
@@ -352,8 +352,8 @@ int seed();
                                        // expected-note@216 {{Returning pointer (loaded from 'self')}}
                                        // expected-note@-3 {{Returning from 'initY'}}
                                        // expected-note@-4 {{'Original' initialized here}}
-  id Intermediate = Original;          // expected-note {{'Intermediate' initialized here}}
-  id New = Intermediate;               // expected-note {{'New' initialized here}}
+  id Intermediate = Original;          // expected-note {{'Intermediate' initialized to the value of 'Original'}}
+  id New = Intermediate;               // expected-note {{'New' initialized to the value of 'Intermediate'}}
   Original = [[MyObj alloc] initZ];
   (void)New;
   [Original release]; // expected-warning {{Potential leak of an object stored into 'New'}}
@@ -380,7 +380,7 @@ int seed();
                                        // expected-note@-3 {{Returning from 'initY'}}
                                        // expected-note@-4 {{'Original' initialized here}}
   id New = 0;
-  New = Original; // expected-note {{Value assigned to 'New'}}
+  New = Original; // expected-note {{The value of 'Original' is assigned to 'New'}}
   Original = [[MyObj alloc] initZ];
   [self log:New with:[self calculate]];
   [Original release]; // expected-warning {{Potential leak of an object stored into 'New'}}
