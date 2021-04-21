@@ -566,6 +566,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
                        << "Stripped pointer casts for alias analysis for "
                           "intrinsic call.\n");
             StrippedPointerCastsForAliasAnalysis = true;
+            InstResult = ConstantExpr::getBitCast(InstResult, II->getType());
           } else {
             LLVM_DEBUG(dbgs() << "Unknown intrinsic. Cannot evaluate.\n");
             return false;
