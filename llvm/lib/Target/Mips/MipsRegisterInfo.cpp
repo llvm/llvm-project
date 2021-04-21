@@ -295,12 +295,14 @@ getFrameRegister(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
   bool IsN64 =
       static_cast<const MipsTargetMachine &>(MF.getTarget()).getABI().IsN64();
+  bool IsP32 =
+      static_cast<const MipsTargetMachine &>(MF.getTarget()).getABI().IsP32();
 
   if (Subtarget.inMips16Mode())
     return TFI->hasFP(MF) ? Mips::S0 : Mips::SP;
   else
-    return TFI->hasFP(MF) ? (IsN64 ? Mips::FP_64 : Mips::FP) :
-                            (IsN64 ? Mips::SP_64 : Mips::SP);
+    return TFI->hasFP(MF) ? (IsN64 ? Mips::FP_64 : (IsP32 ? Mips::FP_NM : Mips::FP)) :
+                            (IsN64 ? Mips::SP_64 : (IsP32 ? Mips::SP_NM : Mips::SP));
 }
 
 bool MipsRegisterInfo::canRealignStack(const MachineFunction &MF) const {
