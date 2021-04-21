@@ -37,6 +37,7 @@ class TarWriter;
 namespace lld {
 namespace macho {
 
+struct PlatformInfo;
 class InputSection;
 class Symbol;
 struct Reloc;

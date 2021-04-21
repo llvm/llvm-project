@@ -33,6 +33,7 @@ using SectionRenameMap = llvm::DenseMap<NamePair, NamePair>;
 using SegmentRenameMap = llvm::DenseMap<llvm::StringRef, llvm::StringRef>;
 
 struct PlatformInfo {
+  llvm::MachO::Target target;
   llvm::VersionTuple minimum;
   llvm::VersionTuple sdk;
 };
@@ -101,7 +102,6 @@ struct Configuration {
   llvm::StringRef ltoObjPath;
   llvm::StringRef thinLTOJobs;
   bool demangle = false;
-  llvm::MachO::Target target;
   PlatformInfo platformInfo;
   NamespaceKind namespaceKind = NamespaceKind::twolevel;
   UndefinedSymbolTreatment undefinedSymbolTreatment =
