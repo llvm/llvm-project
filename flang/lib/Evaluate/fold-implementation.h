@@ -1177,14 +1177,23 @@ Expr<TO> FoldOperation(
           // Conversion of non-constant in same type category
           if constexpr (std::is_same_v<Operand, TO>) {
             return std::move(kindExpr); // remove needless conversion
-          } else if constexpr (std::is_same_v<TO, DescriptorInquiry::Result>) {
+          } else if constexpr (TO::category == TypeCategory::Logical ||
+              TO::category == TypeCategory::Integer) {
             if (auto *innerConv{
-                    std::get_if<Convert<Operand, TypeCategory::Integer>>(
-                        &kindExpr.u)}) {
+                    std::get_if<Convert<Operand, TO::category>>(&kindExpr.u)}) {
+              // Conversion of conversion of same category & kind
               if (auto *x{std::get_if<Expr<TO>>(&innerConv->left().u)}) {
-                if (std::holds_alternative<DescriptorInquiry>(x->u)) {
-                  // int(int(size(...),kind=k),kind=8) -> size(...)
-                  return std::move(*x);
+                if constexpr (TO::category == TypeCategory::Logical ||
+                    TO::kind <= Operand::kind) {
+                  return std::move(*x); // no-op Logical or Integer
+                                        // widening/narrowing conversion pair
+                } else if constexpr (std::is_same_v<TO,
+                                         DescriptorInquiry::Result>) {
+                  if (std::holds_alternative<DescriptorInquiry>(x->u) ||
+                      std::holds_alternative<TypeParamInquiry>(x->u)) {
+                    // int(int(size(...),kind=k),kind=8) -> size(...)
+                    return std::move(*x);
+                  }
                 }
               }
             }
