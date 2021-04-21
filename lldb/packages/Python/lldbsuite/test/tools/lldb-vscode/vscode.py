@@ -494,7 +494,7 @@ class DebugCommunication(object):
                        initCommands=None, preRunCommands=None,
                        stopCommands=None, exitCommands=None,
                        attachCommands=None, terminateCommands=None,
-                       coreFile=None):
+                       coreFile=None, postRunCommands=None):
         args_dict = {}
         if pid is not None:
             args_dict['pid'] = pid
@@ -519,6 +519,8 @@ class DebugCommunication(object):
             args_dict['attachCommands'] = attachCommands
         if coreFile:
             args_dict['coreFile'] = coreFile
+        if postRunCommands:
+            args_dict['postRunCommands'] = postRunCommands
         command_dict = {
             'command': 'attach',
             'type': 'request',
@@ -621,7 +623,8 @@ class DebugCommunication(object):
                        stopCommands=None, exitCommands=None,
                        terminateCommands=None ,sourcePath=None,
                        debuggerRoot=None, launchCommands=None, sourceMap=None,
-                       runInTerminal=False, expectFailure=False):
+                       runInTerminal=False, expectFailure=False,
+                       postRunCommands=None):
         args_dict = {
             'program': program
         }
@@ -662,6 +665,8 @@ class DebugCommunication(object):
             args_dict['sourceMap'] = sourceMap
         if runInTerminal:
             args_dict['runInTerminal'] = runInTerminal
+        if postRunCommands:
+            args_dict['postRunCommands'] = postRunCommands
         command_dict = {
             'command': 'launch',
             'type': 'request',
