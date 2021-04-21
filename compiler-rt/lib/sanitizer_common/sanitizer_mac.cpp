@@ -1185,7 +1185,9 @@ static uptr GetTaskInfoMaxAddress() {
 uptr GetMaxUserVirtualAddress() {
   static uptr max_vm = GetTaskInfoMaxAddress();
   if (max_vm != 0) {
-    return max_vm - 1;
+    const uptr ret_value = max_vm - 1;
+    CHECK_LE(ret_value, SANITIZER_MMAP_RANGE_SIZE);
+    return ret_value;
   }
 
   // xnu cannot provide vm address limit
