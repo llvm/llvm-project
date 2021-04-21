@@ -85,7 +85,6 @@ class VSCodeTestCaseBase(TestBase):
                 # the right breakpoint matches and not worry about the actual
                 # location.
                 description = body['description']
-                print("description: %s" % (description))
                 for breakpoint_id in breakpoint_ids:
                     match_desc = 'breakpoint %s.' % (breakpoint_id)
                     if match_desc in description:
