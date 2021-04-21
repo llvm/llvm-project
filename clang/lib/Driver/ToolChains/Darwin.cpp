@@ -615,6 +615,8 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
 
+  getToolChain().AddFilePathLibArgs(Args, CmdArgs);
+
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
   // Build the input file for -filelist (list of linker input files) in case we
   // need it later
@@ -802,6 +804,7 @@ MachO::MachO(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   getProgramPaths().push_back(getDriver().getInstalledDir());
   if (getDriver().getInstalledDir() != getDriver().Dir)
     getProgramPaths().push_back(getDriver().Dir);
+  getFilePaths().push_back(getDriver().Dir + "/../lib");
 }
 
 /// Darwin - Darwin tool chain for i386 and x86_64.
