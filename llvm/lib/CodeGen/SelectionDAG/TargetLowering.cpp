@@ -973,11 +973,12 @@ bool TargetLowering::SimplifyDemandedBits(
     Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
     return false; // Don't fall through, will infinitely loop.
   case ISD::LOAD: {
-    LoadSDNode *LD = cast<LoadSDNode>(Op);
+    auto *LD = cast<LoadSDNode>(Op);
     if (getTargetConstantFromLoad(LD)) {
       Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
       return false; // Don't fall through, will infinitely loop.
-    } else if (ISD::isZEXTLoad(Op.getNode()) && Op.getResNo() == 0) {
+    }
+    if (ISD::isZEXTLoad(Op.getNode()) && Op.getResNo() == 0) {
       // If this is a ZEXTLoad and we are looking at the loaded value.
       EVT MemVT = LD->getMemoryVT();
       unsigned MemBits = MemVT.getScalarSizeInBits();
@@ -4502,40 +4503,39 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
                                                  GA->getValueType(0),
                                                  Offset + GA->getOffset()));
         return;
-      } else if ((C = dyn_cast<ConstantSDNode>(Op)) &&
-                 ConstraintLetter != 's') {
+      }
+      if ((C = dyn_cast<ConstantSDNode>(Op)) && ConstraintLetter != 's') {
         // gcc prints these as sign extended.  Sign extend value to 64 bits
         // now; without this it would get ZExt'd later in
         // ScheduleDAGSDNodes::EmitNode, which is very generic.
         bool IsBool = C->getConstantIntValue()->getBitWidth() == 1;
         BooleanContent BCont = getBooleanContents(MVT::i64);
-        ISD::NodeType ExtOpc = IsBool ? getExtendForContent(BCont)
-                                      : ISD::SIGN_EXTEND;
-        int64_t ExtVal = ExtOpc == ISD::ZERO_EXTEND ? C->getZExtValue()
-                                                    : C->getSExtValue();
-        Ops.push_back(DAG.getTargetConstant(Offset + ExtVal,
-                                            SDLoc(C), MVT::i64));
+        ISD::NodeType ExtOpc =
+            IsBool ? getExtendForContent(BCont) : ISD::SIGN_EXTEND;
+        int64_t ExtVal =
+            ExtOpc == ISD::ZERO_EXTEND ? C->getZExtValue() : C->getSExtValue();
+        Ops.push_back(
+            DAG.getTargetConstant(Offset + ExtVal, SDLoc(C), MVT::i64));
         return;
-      } else if ((BA = dyn_cast<BlockAddressSDNode>(Op)) &&
-                 ConstraintLetter != 'n') {
+      }
+      if ((BA = dyn_cast<BlockAddressSDNode>(Op)) && ConstraintLetter != 'n') {
         Ops.push_back(DAG.getTargetBlockAddress(
             BA->getBlockAddress(), BA->getValueType(0),
             Offset + BA->getOffset(), BA->getTargetFlags()));
         return;
-      } else {
-        const unsigned OpCode = Op.getOpcode();
-        if (OpCode == ISD::ADD || OpCode == ISD::SUB) {
-          if ((C = dyn_cast<ConstantSDNode>(Op.getOperand(0))))
-            Op = Op.getOperand(1);
-          // Subtraction is not commutative.
-          else if (OpCode == ISD::ADD &&
-                   (C = dyn_cast<ConstantSDNode>(Op.getOperand(1))))
-            Op = Op.getOperand(0);
-          else
-            return;
-          Offset += (OpCode == ISD::ADD ? 1 : -1) * C->getSExtValue();
-          continue;
-        }
+      }
+      const unsigned OpCode = Op.getOpcode();
+      if (OpCode == ISD::ADD || OpCode == ISD::SUB) {
+        if ((C = dyn_cast<ConstantSDNode>(Op.getOperand(0))))
+          Op = Op.getOperand(1);
+        // Subtraction is not commutative.
+        else if (OpCode == ISD::ADD &&
+                 (C = dyn_cast<ConstantSDNode>(Op.getOperand(1))))
+          Op = Op.getOperand(0);
+        else
+          return;
+        Offset += (OpCode == ISD::ADD ? 1 : -1) * C->getSExtValue();
+        continue;
       }
       return;
     }
@@ -7720,23 +7720,17 @@ static SDValue clampDynamicVectorIndex(SelectionDAG &DAG,
     if (auto *IdxCst = dyn_cast<ConstantSDNode>(Idx))
       if (IdxCst->getZExtValue() < NElts)
         return Idx;
-
-    SDValue VS = DAG.getVScale(dl, IdxVT,
-                               APInt(IdxVT.getFixedSizeInBits(),
-                                     NElts));
-    SDValue Sub = DAG.getNode(ISD::SUB, dl, IdxVT, VS,
-                              DAG.getConstant(1, dl, IdxVT));
-
+    SDValue VS =
+        DAG.getVScale(dl, IdxVT, APInt(IdxVT.getFixedSizeInBits(), NElts));
+    SDValue Sub =
+        DAG.getNode(ISD::SUB, dl, IdxVT, VS, DAG.getConstant(1, dl, IdxVT));
     return DAG.getNode(ISD::UMIN, dl, IdxVT, Idx, Sub);
-  } else {
-    if (isPowerOf2_32(NElts)) {
-      APInt Imm = APInt::getLowBitsSet(IdxVT.getSizeInBits(),
-                                       Log2_32(NElts));
-      return DAG.getNode(ISD::AND, dl, IdxVT, Idx,
-                         DAG.getConstant(Imm, dl, IdxVT));
-    }
   }
-
+  if (isPowerOf2_32(NElts)) {
+    APInt Imm = APInt::getLowBitsSet(IdxVT.getSizeInBits(), Log2_32(NElts));
+    return DAG.getNode(ISD::AND, dl, IdxVT, Idx,
+                       DAG.getConstant(Imm, dl, IdxVT));
+  }
   return DAG.getNode(ISD::UMIN, dl, IdxVT, Idx,
                      DAG.getConstant(NElts - 1, dl, IdxVT));
 }
@@ -8531,7 +8525,8 @@ bool TargetLowering::expandREM(SDNode *Node, SDValue &Result,
     SDVTList VTs = DAG.getVTList(VT, VT);
     Result = DAG.getNode(DivRemOpc, dl, VTs, Dividend, Divisor).getValue(1);
     return true;
-  } else if (isOperationLegalOrCustom(DivOpc, VT)) {
+  }
+  if (isOperationLegalOrCustom(DivOpc, VT)) {
     // X % Y -> X-X/Y*Y
     SDValue Divide = DAG.getNode(DivOpc, dl, VT, Dividend, Divisor);
     SDValue Mul = DAG.getNode(ISD::MUL, dl, VT, Divide, Divisor);
