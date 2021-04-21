@@ -244,7 +244,7 @@ void ShadowStackGCLowering::CollectRoots(Function &F) {
         if (Function *F = CI->getCalledFunction())
           if (F->getIntrinsicID() == Intrinsic::gcroot) {
             std::pair<CallInst *, AllocaInst *> Pair = std::make_pair(
-                CI,
+                cast<CallInst>(CI),
                 cast<AllocaInst>(CI->getArgOperand(0)->stripPointerCasts()));
             if (IsNullValue(CI->getArgOperand(1)))
               Roots.push_back(Pair);
