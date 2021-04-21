@@ -11,7 +11,7 @@
   - [Location Description](#location-description)
   - [LLVM Debug Information Expressions](#llvm-debug-information-expressions)
   - [LLVM Expression Evaluation Context](#llvm-expression-evaluation-context)
-  - [Location Descriptions of LLVM Entities](#location-descriptions-of-llvm-entities)
+  - [Location Descriptions Of LLVM Entities](#location-descriptions-of-llvm-entities)
   - [High Level Structure](#high-level-structure)
     - [Global Variable](#global-variable)
   - [Metadata](#metadata)
@@ -45,31 +45,36 @@
     - [`llvm.dbg.def`](#llvmdbgdef)
     - [`llvm.dbg.kill`](#llvmdbgkill)
 - [Examples](#examples)
-  - [A variable "x" located in an alloca](#a-variable-x-located-in-an-alloca)
-  - [The variable "x" promoted to an SSA register](#the-variable-x-promoted-to-an-ssa-register)
-  - [Implicit pointer](#implicit-pointer)
-  - [A variable "x" is broken into two scalars](#a-variable-x-is-broken-into-two-scalars)
-  - [Example of further decomposition of an already SRoA'd variable](#example-of-further-decomposition-of-an-already-sroad-variable)
-  - [Example of multiple live ranges for a single variable](#example-of-multiple-live-ranges-for-a-single-variable)
-  - [A global variable "g" is broken into two scalars](#a-global-variable-g-is-broken-into-two-scalars)
-  - [Example of induction variable](#example-of-induction-variable)
-  - [Proven constant](#proven-constant)
-  - [CSE](#cse)
-  - [Spilling](#spilling)
+  - [Variable Located In An `alloca`](#variable-located-in-an-alloca)
+  - [Variable Promoted To An SSA Register](#variable-promoted-to-an-ssa-register)
+  - [Implicit Pointer Location Description](#implicit-pointer-location-description)
+  - [Variable Broken Into Two Scalars](#variable-broken-into-two-scalars)
+  - [Further Decomposition Of An Already SRoA'd Variable](#further-decomposition-of-an-already-sroad-variable)
+  - [Multiple Live Ranges For A Single Variable](#multiple-live-ranges-for-a-single-variable)
+  - [Global Variable Broken Into Two Scalars](#global-variable-broken-into-two-scalars)
+  - [Induction Variable](#induction-variable)
+  - [Proven Constant](#proven-constant)
+  - [Common Subexpression Elimination (CSE)](#common-subexpression-elimination-cse)
 - [References](#references)
 - [Other Ideas](#other-ideas)
-  - [Translating to DWARF](#translating-to-dwarf)
-  - [Translating to PDB (CodeView)](#translating-to-pdb-codeview)
-  - [Comparison with GCC](#comparison-with-gcc)
+  - [Translating To DWARF](#translating-to-dwarf)
+  - [Translating To PDB (CodeView)](#translating-to-pdb-codeview)
+  - [Comparison With GCC](#comparison-with-gcc)
   - [Example Ideas](#example-ideas)
-  - [Integer fragment IDs](#integer-fragment-ids)
-    - [A variable "x" is broken into two scalars](#a-variable-x-is-broken-into-two-scalars-1)
-    - [Example of further decomposition of an already SRoA'd variable](#example-of-further-decomposition-of-an-already-sroad-variable-1)
-    - [Example of multiple live ranges for a fragment](#example-of-multiple-live-ranges-for-a-fragment)
+    - [Spilling](#spilling)
+    - [Divergent Lane PC](#divergent-lane-pc)
+    - [Simultaneous Lifetimes In Multiple Places](#simultaneous-lifetimes-in-multiple-places)
+    - [File Scope Globals](#file-scope-globals)
+    - [Lds Variables](#lds-variables)
+    - [Make Sure The Non-SSA MIR Form Works With def/kill Scheme](#make-sure-the-non-ssa-mir-form-works-with-defkill-scheme)
+  - [Integer Fragment IDs](#integer-fragment-ids)
+    - [Variable Broken Into Two Scalars](#variable-broken-into-two-scalars-1)
+    - [Further Decomposition Of An Already SRoA'd Variable](#further-decomposition-of-an-already-sroad-variable-1)
+    - [Multiple Live Ranges For A Fragment](#multiple-live-ranges-for-a-fragment)
 
 # Introduction
 
-As described in the [DWARF Extensions For Heterogeneous Debugging][17] (the
+As described in the [DWARF Extensions For Heterogeneous Debugging][18] (the
 "DWARF extensions"), AMD has been working to support debugging of heterogeneous
 programs. This document describes changes to the LLVM representation of debug
 information (the "LLVM extensions") required to support the DWARF extensions.
@@ -141,7 +146,7 @@ with only incremental changes to the existing approach.
 
 The original motivation for this proposal was to make the minimum required
 changes to the existing LLVM representation of debug information needed to
-support the [DWARF Extensions For Heterogeneous Debugging][17]. This involved an
+support the [DWARF Extensions For Heterogeneous Debugging][18]. This involved an
 evaluation of the existing debug information for machine locations in LLVM,
 which uncovered some hard-to-fix bugs rooted in the incidental complexity and
 inconsistency of LLVM's debug intrinsics and expressions.
@@ -182,11 +187,12 @@ influences include:
   support in LLVM IR][03] (continued at [[llvm-dev] Proposal for multi location
   debug info support in LLVM IR][04]) and [Multi Location Debug Info support for
   LLVM][05]. Support for overlapping location list entries was added in DWARF 5.
-- Bugs, like those partially worked around in [D57962 [DebugInfo] PR40628:
-  Don't salvage load operations][08], often result from passes being unable to
-  accurately represent the relationship between source variables. Our approach
-  supports encoding that information in debug information in a mechanical way,
-  with straightforward semantics.
+- Bugs, like [Bug 40628 - [DebugInfo@O2] Salvaged memory loads can observe
+  subsequent memory writes][09] which was partially worked around in [D57962
+  [DebugInfo] PR40628: Don't salvage load operations][08], often result from
+  passes being unable to accurately represent the relationship between source
+  variables. Our approach supports encoding that information in debug
+  information in a mechanical way, with straightforward semantics.
 - Use of `distinct` for our new metadata nodes is motivated by use cases
   similar to those in [[LLVMdev] [RFC] Separating Metadata from the Value
   hierarchy (David Blaikie)][01] where the content of a node is not sufficient
@@ -223,7 +229,7 @@ usually trivial at the time the expression is created, but expensive to infer
 later. Factored expressions can result in more compact debug information by
 leveraging dynamic calling of DWARF procedures in DWARF 5, and we expect to be
 able to use factoring for other purposes, such as debug information for
-[divergent control flow][22]. It is possible to statically "flatten" this
+[divergent control flow][24]. It is possible to statically "flatten" this
 factored representation later, if required by the debug information format
 being emitted, or if the emitter determines it would be more profitable to do
 so.
@@ -256,7 +262,7 @@ such object. None of these tradeoffs were considered acceptable.
 
 # Changes from LLVM Language Reference Manual
 
-This section defines the changes from the [LLVM Language Reference Manual][09].
+This section defines the changes from the [LLVM Language Reference Manual][10].
 
 ## External Definitions
 
@@ -267,23 +273,23 @@ this proposal and any extensions.
 ### Well-Formed
 
 The definition of "well-formed" is the one from the section titled
-[Well-Formedness in the LLVM Language Reference Manual][10].
+[Well-Formedness in the LLVM Language Reference Manual][11].
 
 ### Type
 
 The definition of "type" is the one from the [LLVM Language Reference
-Manual][11].
+Manual][12].
 
 ### Value
 
 The definition of "value" is the one from the [LLVM Language Reference
-Manual][09].
+Manual][10].
 
 ## Location Description
 
 The definitions of "location description", "single location description", and
 "location storage" are the ones from the section titled [DWARF Location
-Description][20] in the DWARF Extensions For Heterogeneous Debugging.
+Description][21] in the DWARF Extensions For Heterogeneous Debugging.
 
 A location description can consist of one or more single location descriptions.
 A single location description specifies a location storage and bit offset. A
@@ -297,7 +303,7 @@ description at the same instruction.
 ## LLVM Debug Information Expressions
 
 _[Note: LLVM expressions derive much of their semantics from the DWARF
-expressions described in the [AMDGPU Dwarf Expressions][18].]_
+expressions described in the [AMDGPU Dwarf Expressions][19].]_
 
 LLVM debug information expressions ("LLVM expressions") specify a typed
 location. _[Note: Unlike DWARF expressions, they cannot directly describe how to
@@ -318,12 +324,12 @@ well-formed or results in an evaluation error.
 ## LLVM Expression Evaluation Context
 
 An LLVM expression is evaluated in a context that includes the same context
-elements as described in [DWARF Expression Evaluation Context][21] with the
+elements as described in [DWARF Expression Evaluation Context][22] with the
 following exceptions.  The _current result kind_ is not applicable as all LLVM
 expressions are location descriptions.  The _current object_ and _initial stack_
 are not applicable as LLVM expressions have no implicit inputs.
 
-## Location Descriptions of LLVM Entities
+## Location Descriptions Of LLVM Entities
 
 The notion of location storage is extended to include the abstract LLVM entities
 of _values_, _global variables_, _stack slots_, _virtual registers_, and
@@ -348,7 +354,7 @@ storage kinds.
 ### Global Variable
 
 The definition of "global variable" is the one from the [LLVM Language Reference
-Manual][12] with the following addition.
+Manual][13] with the following addition.
 
 The optional `dbg.default` metadata attachment can be used to specify a
 `DILifetime` as the default lifetime segment of the global variable.
@@ -386,12 +392,12 @@ in the `flags` field.
 ##### `DIGlobalVariable`
 
 A `DIGlobalVariable` is a `DIVariable` which represents the identity of a global
-source language program variable. See [DIGlobalVariable][15].
+source language program variable. See [DIGlobalVariable][16].
 
 ##### `DILocalVariable`
 
 A `DILocalVariable` is a `DIVariable` which represents the identity of a local
-source language program variable. See [DILocalVariable][14].
+source language program variable. See [DILocalVariable][15].
 
 #### `DIFragment`
 
@@ -435,7 +441,7 @@ expression factoring.]_
 ### `DICompositeType`
 
 A `DICompositeType` represents the identity of a composite source program type.
-See [DICompositeType][13].
+See [DICompositeType][14].
 
 For `DICompositeType` with a `tag` field of `DW_TAG_array_type`, the optional
 `dataLocation`, `associated`, and `rank` fields specify a `DILifetime` as a type
@@ -562,7 +568,7 @@ referencing the same lifetime as the intrinsic that started it.]_
 ### `DICompileUnit`
 
 A `DICompileUnit` represents the identity of source program compile unit. See
-[DICompileUnit][16].
+[DICompileUnit][17].
 
 All `DIGlobalVariable` global variables of the compile unit must be referenced
 by the `globals` field of the `DICompileUnit`.
@@ -957,7 +963,7 @@ The intrinsics define the program location range over which the location
 description specified by a bounded lifetime segment of a `DILifetime` is active.
 They support defining a single or multiple locations for a source program
 variable. Multiple locations can be active at the same program location as
-supported by [DWARF location lists][19].
+supported by [DWARF location lists][20].
 
 ### `llvm.dbg.def`
 
@@ -1010,17 +1016,17 @@ DBG_KILL metadata
 Examples which need meta-syntactic variables prefix them with a sigil to
 concisely give context. The prefix sigils are:
 
-| __Sigil__ | __Meaning__                                       |
-| :-------: | :------------------------------------------------ |
-|     %     | SSA IR Value                                      |
-|     $     | Non-SSA MIR Register (for example, post phi-elim) |
-|     #     | Arbitrary literal constant                        |
+| __Sigil__ | __Meaning__                                              |
+| :-------: | :------------------------------------------------------- |
+|     %     | SSA IR Value                                             |
+|     $     | Non-SSA MIR Register (for example, post phi-elimination) |
+|     #     | Arbitrary literal constant                               |
 
 The syntax used in the examples attempts to match LLVM IR/MIR as closely as
 possible, with the only new syntax required being that of the expression
 language.
 
-## A variable "x" located in an alloca
+## Variable Located In An `alloca`
 
 The frontend will generate `alloca`s for every variable, and can trivially
 insert a single `DILifetime` covering the whole body of the function, with the
@@ -1039,7 +1045,7 @@ call void @llvm.dbg.kill(metadata !2)
 !2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpReferrer(i64 addrspace(5)*), DIOpDeref()))
 ```
 
-## The variable "x" promoted to an SSA register
+## Variable Promoted To An SSA Register
 
 The promotion semantically removes one level of indirection, and correspondingly
 in the debug expressions for which the `alloca` being replaced was the referrer,
@@ -1070,7 +1076,7 @@ call void @llvm.dbg.kill(metadata !2)
 !2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpReferrer(i64)))
 ```
 
-## Implicit pointer
+## Implicit Pointer Location Description
 
 The transformation for removing a level of indirection is always to add an
 `DIOpAddrOf(N)`, which may result in a location description for a pointer to a
@@ -1183,7 +1189,7 @@ return i64 ...
 !4 = distinct !DILifetime(object: !3, location: !DIExpr(DIOpConstant(i64 ...), DIOpAddrOf(5)))
 ```
 
-## A variable "x" is broken into two scalars
+## Variable Broken Into Two Scalars
 
 When a transformation decomposes one location into multiple distinct ones, it
 must follow all `llvm.dbg.def` intrinsics to the `DILifetime`s referencing the
@@ -1236,7 +1242,7 @@ call void @llvm.dbg.kill(metadata !4)
 !6 = distinct !DILifetime(object: !5, location: !DIExpr(DIOpReferrer(i32)))
 ```
 
-## Example of further decomposition of an already SRoA'd variable
+## Further Decomposition Of An Already SRoA'd Variable
 
 An example to demonstrate the "shallow update" property is to take the above
 IR:
@@ -1289,7 +1295,7 @@ Note that the expression for the original source variable `x` did not need to
 be changed, as it is defined in terms of the `DIFragment`, the identity of
 which is never changed after it is created.
 
-## Example of multiple live ranges for a single variable
+## Multiple Live Ranges For A Single Variable
 
 Once out of SSA, or even while in SSA via memory, there may be multiple re-uses
 of the same storage for completely disparate variables, and disjoint and/or
@@ -1338,7 +1344,7 @@ intrinsics/pseudo-instructions do not have the notion of live ranges for source
 variables, and simply throw away at least one of the true lifetimes in these
 cases.
 
-## A global variable "g" is broken into two scalars
+## Global Variable Broken Into Two Scalars
 
 ```llvm
 @g = i64 !dbg.default !2
@@ -1365,7 +1371,7 @@ Becomes:
 for example, a function to override the location of a global over some range
 without needing to "kill" and "def" a global lifetime.
 
-## Example of induction variable
+## Induction Variable
 
 Starting with some program:
 
@@ -1429,7 +1435,7 @@ source variable, even when other parts are not available. This may be the case
 if a `struct` with many fields is broken up during SRoA and the lifetimes of
 each piece diverge.
 
-## Proven constant
+## Proven Constant
 
 As a very similar example to the above induction variable case (in terms of the
 updates needed in the debug information), the case where a variable is proven to
@@ -1456,10 +1462,10 @@ call void @llvm.dbg.kill(metadata !2)
 !2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpConstant(i64 ...)))
 ```
 
-## CSE
+## Common Subexpression Elimination (CSE)
 
-Example from [Bug 40628 - [DebugInfo@O2] Salvaged memory loads can observe
-subsequent memory writes][23].
+This is the example from [Bug 40628 - [DebugInfo@O2] Salvaged memory loads can
+observe subsequent memory writes][09]:
 
 ```c
  int
@@ -1505,7 +1511,7 @@ entry:
 }
 ```
 
-And previously led to this after EarlyCSE, which removes the redundant load
+And previously led to this after `EarlyCSE`, which removes the redundant load
 from `%bar`:
 
 ```llvm
@@ -1598,8 +1604,8 @@ main() {
 }
 ```
 
-Note that after EarlyCSE, this example produces the same location description
-for both `redundant` and `loaded` (metadata `!17` and `!18):
+Note that after `EarlyCSE`, this example produces the same location description
+for both `redundant` and `loaded` (metadata `!17` and `!18`):
 
 ```llvm
 define dso_local i32 @foo(i32* %bar, i32 %arg, i32 %more) #0 !dbg !8 {
@@ -1610,7 +1616,8 @@ entry:
   %0 = load i32, i32* %bar, align 4, !dbg !20, !tbaa !21
 
   ; The same location is reused for both source variables, without it being
-  ; marked read-only (i.e. without it being made into an implicit location description).
+  ; marked read-only (namely without it being made into an implicit location
+  ; description).
   call void @llvm.dbg.value(metadata i32 %0, metadata !17, metadata !DIExpression()), !dbg !19
   call void @llvm.dbg.value(metadata i32 %0, metadata !18, metadata !DIExpression()), !dbg !19
 
@@ -1631,9 +1638,9 @@ as noted in the review for the attempted conservative patch, "this isn't
 something that can be fixed without a lot of work, thus it's safer to turn off
 for now."
 
-We believe the AMDGPU LLVM extensions will make this case tractable to support
-with full generality and composability with other optimizations. The expected
-result of EarlyCSE after our changes is:
+The AMDGPU LLVM extensions make this case tractable to support with full
+generality and composability with other optimizations. The expected result of
+`EarlyCSE` would be:
 
 ```llvm
 define dso_local i32 @foo(i32* %bar, i32 %arg, i32 %more) #0 !dbg !8 {
@@ -1676,21 +1683,22 @@ after the common load.
    DBG_VALUE instructions][06]
 7. [D70601 Disallow DIExpressions with shift operators from being fragmented][07]
 8. [D57962 [DebugInfo] PR40628: Don't salvage load operations][08]
-9. [LLVM Language Reference Manual][09]
-    1. [Well-Formedness][10]
-    2. [Type System][11]
-    3. [Global Variables][12]
-    4. [DICompositeType][13]
-    5. [DILocalVariable][14]
-    6. [DIGlobalVariable][15]
-    6. [DICompileUnit][16]
-10. [LLVM DWARF Extensions For Heterogeneous Debugging][17]
-    1. [DWARF Expressions][18]
-    2. [DWARF Location List Expressions][19]
-    3. [DWARF Location Description][20]
-    4. [DWARF Expression Evaluation Context][21]
-11. [LLVM User Guide for AMDGPU Backend - DW_AT_LLVM_lane_pc][22]
-12. [Bug 40628 - [DebugInfo@O2] Salvaged memory loads can observe subsequent memory writes][23]
+9. [Bug 40628 - [DebugInfo@O2] Salvaged memory loads can observe subsequent memory writes][09]
+10. [LLVM Language Reference Manual][10]
+    1. [Well-Formedness][11]
+    2. [Type System][12]
+    3. [Global Variables][13]
+    4. [DICompositeType][14]
+    5. [DILocalVariable][15]
+    6. [DIGlobalVariable][16]
+    7. [DICompileUnit][17]
+11. [LLVM DWARF Extensions For Heterogeneous Debugging][18]
+    1. [DWARF Expressions][19]
+    2. [DWARF Location List Expressions][20]
+    3. [DWARF Location Description][21]
+    4. [DWARF Expression Evaluation Context][22]
+12. [LLVM User Guide for AMDGPU Backend][23]
+    1. [DW_AT_LLVM_lane_pc][24]
 
 [01]: https://lists.llvm.org/pipermail/llvm-dev/2014-November/078656.html
 [02]: https://lists.llvm.org/pipermail/llvm-dev/2014-November/078682.html
@@ -1700,25 +1708,26 @@ after the common load.
 [06]: https://reviews.llvm.org/D81852
 [07]: https://reviews.llvm.org/D70601
 [08]: https://reviews.llvm.org/D57962
-[09]: https://llvm.org/docs/LangRef.html
-[10]: https://llvm.org/docs/LangRef.html#well-formedness
-[11]: https://llvm.org/docs/LangRef.html#type-system
-[12]: https://llvm.org/docs/LangRef.html#global-variables
-[13]: https://llvm.org/docs/LangRef.html#dicompositetype
-[14]: https://llvm.org/docs/LangRef.html#dilocalvariable
-[15]: https://llvm.org/docs/LangRef.html#diglobalvariable
-[16]: https://llvm.org/docs/LangRef.html#dicompileunit
-[17]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html
-[18]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-expressions
-[19]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-location-list-expressions
-[20]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-location-description
-[21]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-expression-evaluation-context
-[22]: https://llvm.org/docs/AMDGPUUsage.html#dw-at-llvm-lane-pc
-[23]: https://bugs.llvm.org/show_bug.cgi?id=40628
+[09]: https://bugs.llvm.org/show_bug.cgi?id=40628
+[10]: https://llvm.org/docs/LangRef.html
+[11]: https://llvm.org/docs/LangRef.html#well-formedness
+[12]: https://llvm.org/docs/LangRef.html#type-system
+[13]: https://llvm.org/docs/LangRef.html#global-variables
+[14]: https://llvm.org/docs/LangRef.html#dicompositetype
+[15]: https://llvm.org/docs/LangRef.html#dilocalvariable
+[16]: https://llvm.org/docs/LangRef.html#diglobalvariable
+[17]: https://llvm.org/docs/LangRef.html#dicompileunit
+[18]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html
+[19]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-expressions
+[20]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-location-list-expressions
+[21]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-location-description
+[22]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-expression-evaluation-context
+[23]: https://llvm.org/docs/AMDGPUUsage.html
+[24]: https://llvm.org/docs/AMDGPUUsage.html#dw-at-llvm-lane-pc
 
 # Other Ideas
 
-## Translating to DWARF
+## Translating To DWARF
 
 > TODO: Define algorithm for computing DWARF location descriptions and loclists.
 >
@@ -1729,118 +1738,15 @@ after the common load.
 >     arbitrary location descriptions, eliminating the need for the artificial
 >     variable, and make translation simpler.
 
-## Translating to PDB (CodeView)
+## Translating To PDB (CodeView)
 
 > TODO: Define.
 
-## Comparison with GCC
+## Comparison With GCC
 
-> TODO: understand how this compares to what GCC is doing?
+> TODO: Understand how this compares to what GCC is doing?
 
 ## Example Ideas
-
-> TODO:
->
-> - divergent control flow case
-> - simultaneous lifetimes in multiple places
-> - file scope globals
-
-> TODO: LDS variables, one variable but multiple kernels with distinct
-> lifetimes, is that possible in LLVM?
->
-> Could allow the `llvm.dbg.def` intrinsic to refer to a global, and use that
-> to define live ranges which live in functions and refer to storage outside
-> of the function.
->
-> I would expect tha LDS variables would have no `!dbg.default` and instead have
-> `llvm.dbg.def` in each function that can access it. The bounded lifetime
-> segment would have an expression that evaluates to the location of the LDS
-> variable in the specific subprogram. For a kernel it would likely be an
-> absolute address in the LDS address space. Each kernel may have a different
-> address. In functions that can be called from multiple kernels it may be an
-> expression that uses the LDS indirection variables to determine the actual LDS
-> address.
->
-> Make sure the non-SSA MIR form works with def/kill scheme, and
-> additionally confirm why we don't seem to need the work upstream that is
-> trying to move to referring to an instruction rather than a register? See:
->
-> - [[llvm-dev] [RFC] DebugInfo: A different way of specifying variable
->   locations
->   post-isel](https://lists.llvm.org/pipermail/llvm-dev/2020-February/139440.html)
-
-
-## Integer fragment IDs
-
-_[Note: This was just a quick jotting-down of one idea for eliminating the need
-for a distincit `DIFragment` to represent the identity of fragments.]_
-
-### A variable "x" is broken into two scalars
-
-```llvm
-%x.lo = i32 ...
-call void @llvm.dbg.def(metadata i32 %x.lo, metadata !4)
-...
-%x.hi = i32 ...
-call void @llvm.dbg.def(metadata i32 %x.hi, metadata !6)
-...
-call void @llvm.dbg.kill(metadata !4)
-call void @llvm.dbg.kill(metadata !6)
-
-!1 = !DILocalVariable("x", ...)
-!2 = distinct !DILifetime(object: !1, location: !DIExpr(var 0, var 1, composite 2))
-!3 = distinct !DILifetime(object: 0, location: !DIExpr(referrer))
-!4 = distinct !DILifetime(object: 1, location: !DIExpr(referrer))
-```
-
-### Example of further decomposition of an already SRoA'd variable
-
-```llvm
-%x.lo = i32 ...
-call void @llvm.dbg.def(metadata i32 %x.lo, metadata !3)
-%x.hi.lo = i16 ...
-call void @llvm.dbg.def(metadata i16 %x.hi.lo, metadata !5)
-%x.hi.hi = i16 ...
-call void @llvm.dbg.def(metadata i16 %x.hi.hi, metadata !6)
-...
-call void @llvm.dbg.kill(metadata !4)
-call void @llvm.dbg.kill(metadata !8)
-call void @llvm.dbg.kill(metadata !10)
-
-!1 = !DILocalVariable("x", ...)
-!2 = distinct !DILifetime(object: !1, location: !DIExpr(var 0, var 1, composite 2))
-!3 = distinct !DILifetime(object: 0, location: !DIExpr(referrer))
-!4 = distinct !DILifetime(object: 1, location: !DIExpr(var 2, var 3, composite 2))
-!5 = distinct !DILifetime(object: 2, location: !DIExpr(referrer))
-!6 = distinct !DILifetime(object: 3, location: !DIExpr(referrer))
-```
-
-### Example of multiple live ranges for a fragment
-
-```llvm
-%x.lo.0 = i32 ...
-call void @llvm.dbg.def(metadata i32 %x.lo, metadata !3)
-...
-call void @llvm.dbg.kill(metadata !3)
-%x.lo.1 = i32 ...
-call void @llvm.dbg.def(metadata i32 %x.lo, metadata !4)
-%x.hi.lo = i16 ...
-call void @llvm.dbg.def(metadata i16 %x.hi.lo, metadata !6)
-%x.hi.hi = i16 ...
-call void @llvm.dbg.def(metadata i16 %x.hi.hi, metadata !7)
-...
-call void @llvm.dbg.kill(metadata !4)
-call void @llvm.dbg.kill(metadata !6)
-call void @llvm.dbg.kill(metadata !7)
-
-!1 = !DILocalVariable("x", ...)
-!2 = distinct !DILifetime(object: !1, location: !DIExpr(var 0, var 1, composite 2))
-!3 = distinct !DILifetime(object: 0, location: !DIExpr(referrer))
-!4 = distinct !DILifetime(object: 0, location: !DIExpr(referrer))
-!5 = distinct !DILifetime(object: 1, location: !DIExpr(var 2, var 3, composite 2))
-!6 = distinct !DILifetime(object: 2, location: !DIExpr(referrer))
-!7 = distinct !DILifetime(object: 3, location: !DIExpr(referrer))
-```
 
 ### Spilling
 
@@ -1872,3 +1778,114 @@ call void @llvm.dbg.kill(metadata !1)
 > TODO: stack slot -> register
 
 > TODO: register -> stack slot
+
+### Divergent Lane PC
+
+> TODO: Re-do example given in [LLVM User Guide for AMDGPU Backend -
+> DW_AT_LLVM_lane_pc][24] using these extesions.
+
+### Simultaneous Lifetimes In Multiple Places
+
+> TODO: Define.
+
+### File Scope Globals
+
+> TODO: Define.
+
+### Lds Variables
+
+> TODO: LDS variables, one variable but multiple kernels with distinct
+> lifetimes, is that possible in LLVM?
+>
+> Could allow the `llvm.dbg.def` intrinsic to refer to a global, and use that
+> to define live ranges which live in functions and refer to storage outside
+> of the function.
+>
+> I would expect tha LDS variables would have no `!dbg.default` and instead have
+> `llvm.dbg.def` in each function that can access it. The bounded lifetime
+> segment would have an expression that evaluates to the location of the LDS
+> variable in the specific subprogram. For a kernel it would likely be an
+> absolute address in the LDS address space. Each kernel may have a different
+> address. In functions that can be called from multiple kernels it may be an
+> expression that uses the LDS indirection variables to determine the actual LDS
+> address.
+
+### Make Sure The Non-SSA MIR Form Works With def/kill Scheme
+
+> TODO: Make sure the non-SSA MIR form works with def/kill scheme, and
+> additionally confirm why we don't seem to need the work upstream that is
+> trying to move to referring to an instruction rather than a register? See
+> [[llvm-dev] [RFC] DebugInfo: A different way of specifying variable locations
+> post-isel](https://lists.llvm.org/pipermail/llvm-dev/2020-February/139440.html).
+
+## Integer Fragment IDs
+
+> TODO: This was just a quick jotting-down of one idea for eliminating the need
+> for a distincit `DIFragment` to represent the identity of fragments.
+
+### Variable Broken Into Two Scalars
+
+```llvm
+%x.lo = i32 ...
+call void @llvm.dbg.def(metadata i32 %x.lo, metadata !4)
+...
+%x.hi = i32 ...
+call void @llvm.dbg.def(metadata i32 %x.hi, metadata !6)
+...
+call void @llvm.dbg.kill(metadata !4)
+call void @llvm.dbg.kill(metadata !6)
+
+!1 = !DILocalVariable("x", ...)
+!2 = distinct !DILifetime(object: !1, location: !DIExpr(var 0, var 1, composite 2))
+!3 = distinct !DILifetime(object: 0, location: !DIExpr(referrer))
+!4 = distinct !DILifetime(object: 1, location: !DIExpr(referrer))
+```
+
+### Further Decomposition Of An Already SRoA'd Variable
+
+```llvm
+%x.lo = i32 ...
+call void @llvm.dbg.def(metadata i32 %x.lo, metadata !3)
+%x.hi.lo = i16 ...
+call void @llvm.dbg.def(metadata i16 %x.hi.lo, metadata !5)
+%x.hi.hi = i16 ...
+call void @llvm.dbg.def(metadata i16 %x.hi.hi, metadata !6)
+...
+call void @llvm.dbg.kill(metadata !4)
+call void @llvm.dbg.kill(metadata !8)
+call void @llvm.dbg.kill(metadata !10)
+
+!1 = !DILocalVariable("x", ...)
+!2 = distinct !DILifetime(object: !1, location: !DIExpr(var 0, var 1, composite 2))
+!3 = distinct !DILifetime(object: 0, location: !DIExpr(referrer))
+!4 = distinct !DILifetime(object: 1, location: !DIExpr(var 2, var 3, composite 2))
+!5 = distinct !DILifetime(object: 2, location: !DIExpr(referrer))
+!6 = distinct !DILifetime(object: 3, location: !DIExpr(referrer))
+```
+
+### Multiple Live Ranges For A Fragment
+
+```llvm
+%x.lo.0 = i32 ...
+call void @llvm.dbg.def(metadata i32 %x.lo, metadata !3)
+...
+call void @llvm.dbg.kill(metadata !3)
+%x.lo.1 = i32 ...
+call void @llvm.dbg.def(metadata i32 %x.lo, metadata !4)
+%x.hi.lo = i16 ...
+call void @llvm.dbg.def(metadata i16 %x.hi.lo, metadata !6)
+%x.hi.hi = i16 ...
+call void @llvm.dbg.def(metadata i16 %x.hi.hi, metadata !7)
+...
+call void @llvm.dbg.kill(metadata !4)
+call void @llvm.dbg.kill(metadata !6)
+call void @llvm.dbg.kill(metadata !7)
+
+!1 = !DILocalVariable("x", ...)
+!2 = distinct !DILifetime(object: !1, location: !DIExpr(var 0, var 1, composite 2))
+!3 = distinct !DILifetime(object: 0, location: !DIExpr(referrer))
+!4 = distinct !DILifetime(object: 0, location: !DIExpr(referrer))
+!5 = distinct !DILifetime(object: 1, location: !DIExpr(var 2, var 3, composite 2))
+!6 = distinct !DILifetime(object: 2, location: !DIExpr(referrer))
+!7 = distinct !DILifetime(object: 3, location: !DIExpr(referrer))
+```
