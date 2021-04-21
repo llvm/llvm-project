@@ -17,6 +17,7 @@
 
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBBreakpointLocation.h"
+#include "lldb/API/SBDeclaration.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/Host/PosixApi.h"
 
@@ -904,6 +905,25 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
   return llvm::json::Value(std::move(event));
 }
 
+std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
+                                               bool is_name_duplicated) {
+  lldb::SBStream name_builder;
+  const char *name = v.GetName();
+  name_builder.Print(name ? name : "<null>");
+  if (is_name_duplicated) {
+    name_builder.Print(" @ ");
+    lldb::SBDeclaration declaration = v.GetDeclaration();
+    std::string file_name(declaration.GetFileSpec().GetFilename());
+    const uint32_t line = declaration.GetLine();
+
+    if (!file_name.empty() && line > 0)
+      name_builder.Printf("%s:%u", file_name.c_str(), line);
+    else
+      name_builder.Print(v.GetLocation());
+  }
+  return name_builder.GetData();
+}
+
 // "Variable": {
 //   "type": "object",
 //   "description": "A Variable is a name/value pair. Optionally a variable
@@ -967,10 +987,12 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
 //   "required": [ "name", "value", "variablesReference" ]
 // }
 llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
-                                 int64_t varID, bool format_hex) {
+                                 int64_t varID, bool format_hex,
+                                 bool is_name_duplicated) {
   llvm::json::Object object;
-  auto name = v.GetName();
-  EmplaceSafeString(object, "name", name ? name : "<null>");
+  EmplaceSafeString(object, "name",
+                    CreateUniqueVariableNameForDisplay(v, is_name_duplicated));
+
   if (format_hex)
     v.SetFormat(lldb::eFormatHex);
   SetValueForKey(v, object, "value");

@@ -399,6 +399,14 @@ llvm::json::Value CreateThread(lldb::SBThread &thread);
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateThreadStopped(lldb::SBThread &thread, uint32_t stop_id);
 
+/// VSCode can't display two variables with the same name, so we need to
+/// distinguish them by using a suffix.
+///
+/// If the source and line information is present, we use it as the suffix.
+/// Otherwise, we fallback to the variable address or register location.
+std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
+                                               bool is_name_duplicated);
+
 /// Create a "Variable" object for a LLDB thread object.
 ///
 /// This function will fill in the following keys in the returned
@@ -435,11 +443,20 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread, uint32_t stop_id);
 ///     It set to true the variable will be formatted as hex in
 ///     the "value" key value pair for the value of the variable.
 ///
+/// \param[in] is_name_duplicated
+///     Whether the same variable name appears multiple times within the same
+///     context (e.g. locals). This can happen due to shadowed variables in
+///     nested blocks.
+///
+///     As VSCode doesn't render two of more variables with the same name, we
+///     apply a suffix to distinguish duplicated variables.
+///
 /// \return
 ///     A "Variable" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
-                                 int64_t varID, bool format_hex);
+                                 int64_t varID, bool format_hex,
+                                 bool is_name_duplicated = false);
 
 llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit);
 
