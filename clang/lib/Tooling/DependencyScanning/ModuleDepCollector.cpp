@@ -43,18 +43,13 @@ serializeCompilerInvocation(CompilerInvocation &CI) {
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Strings(Alloc);
   auto SA = [&Strings](const Twine &Arg) { return Strings.save(Arg).data(); };
-  SmallVector<const char *, 32> Args;
 
-  // Synthesize full command line from the CompilerInvocation.
+  // Synthesize full command line from the CompilerInvocation, including "-cc1".
+  SmallVector<const char *, 32> Args{"-cc1"};
   CI.generateCC1CommandLine(Args, SA);
 
   // Convert arguments to the return type.
-  std::vector<std::string> Ret;
-  Ret.reserve(Args.size());
-  for (const char *Arg : Args)
-    Ret.emplace_back(Arg);
-
-  return Ret;
+  return std::vector<std::string>{Args.begin(), Args.end()};
 }
 
 std::vector<std::string> ModuleDeps::getFullCommandLine(
