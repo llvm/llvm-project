@@ -440,6 +440,60 @@ unreachable:
   br label %for.cond2295
 }
 
+; Was pr49856.  We can match the recurrence without a loop
+; since dominance collapses in unreachable code.  Conceptually,
+; this is a recurrence which only executes one iteration.
+define void @nonloop_recurrence() {
+; CHECK-LABEL: 'nonloop_recurrence'
+; CHECK-NEXT:  Classifying expressions for: @nonloop_recurrence
+; CHECK-NEXT:    %tmp = phi i32 [ 2, %bb ], [ %tmp2, %bb3 ]
+; CHECK-NEXT:    --> %tmp U: [1,-2147483648) S: [0,-2147483648)
+; CHECK-NEXT:    %tmp2 = add nuw nsw i32 %tmp, 1
+; CHECK-NEXT:    --> (1 + %tmp)<nuw> U: [1,-2147483647) S: [1,-2147483647)
+; CHECK-NEXT:  Determining loop execution counts for: @nonloop_recurrence
+;
+bb:
+  br label %bb1
+
+bb1:                                              ; preds = %bb3, %bb
+  %tmp = phi i32 [ 2, %bb ], [ %tmp2, %bb3 ]
+  %tmp2 = add nuw nsw i32 %tmp, 1
+  ret void
+
+bb3:                                              ; No predecessors!
+  br label %bb1
+}
+
+; Tweak of pr49856 test case - analogous, but there is a loop
+; it's trip count simply doesn't relate to the single iteration
+; "recurrence" we found.
+define void @nonloop_recurrence_2() {
+; CHECK-LABEL: 'nonloop_recurrence_2'
+; CHECK-NEXT:  Classifying expressions for: @nonloop_recurrence_2
+; CHECK-NEXT:    %tmp = phi i32 [ 2, %loop ], [ %tmp2, %bb3 ]
+; CHECK-NEXT:    --> %tmp U: [1,-2147483648) S: [0,-2147483648) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %tmp2 = add nuw nsw i32 %tmp, 1
+; CHECK-NEXT:    --> (1 + %tmp)<nuw> U: [1,-2147483647) S: [1,-2147483647) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @nonloop_recurrence_2
+; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
+;
+bb:
+  br label %loop
+
+loop:
+  br label %bb1
+bb1:                                              ; preds = %bb3, %loop
+  %tmp = phi i32 [ 2, %loop ], [ %tmp2, %bb3 ]
+  %tmp2 = add nuw nsw i32 %tmp, 1
+  br label %loop
+
+bb3:                                              ; No predecessors!
+  br label %bb1
+}
+
+
 ; Next batch of tests show where we can get tighter ranges on ashr/lshr
 ; by using the trip count information on the loop.
 
