@@ -19,6 +19,7 @@
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Debug.h"
 
 //===----------------------------------------------------------------------===//
 // Codegen rewrite: rewriting of subgraphs of ops
