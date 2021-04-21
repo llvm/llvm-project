@@ -99,6 +99,13 @@ DEFAULT_PARAMETERS = [
               AddCompileFlag('-D_LIBCPP_DISABLE_AVAILABILITY')
             ]),
 
+  Parameter(name='debug_level', choices=['', '0', '1'], type=str, default='',
+            help="The debugging level to enable in the test suite.",
+            actions=lambda debugLevel: [] if debugLevel is '' else [
+              AddFeature('debug_level={}'.format(debugLevel)),
+              AddCompileFlag('-D_LIBCPP_DEBUG={}'.format(debugLevel))
+            ]),
+
   # Parameters to enable or disable parts of the test suite
   Parameter(name='enable_experimental', choices=[True, False], type=bool, default=False,
             help="Whether to enable tests for experimental C++ libraries (typically Library Fundamentals TSes).",
