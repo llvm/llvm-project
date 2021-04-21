@@ -2078,8 +2078,15 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
   case bitc::METADATA_ARG_LIST: {
     SmallVector<ValueAsMetadata *, 4> Elts;
     Elts.reserve(Record.size());
-    for (uint64_t Elt : Record)
-      Elts.push_back(dyn_cast_or_null<ValueAsMetadata>(getMDOrNull(Elt)));
+    for (uint64_t Elt : Record) {
+      Metadata *MD = getMD(Elt);
+      if (isa<MDNode>(MD) && cast<MDNode>(MD)->isTemporary())
+        return error(
+            "Invalid record: DIArgList should not contain forward refs");
+      if (!isa<ValueAsMetadata>(MD))
+        return error("Invalid record");
+      Elts.push_back(cast<ValueAsMetadata>(MD));
+    }
 
     MetadataList.assignValue(DIArgList::get(Context, Elts), NextMetadataNo);
     NextMetadataNo++;
