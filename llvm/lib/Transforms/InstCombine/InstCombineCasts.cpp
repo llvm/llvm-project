@@ -1498,36 +1498,6 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
     unsigned DestBitSize = DestTy->getScalarSizeInBits();
     unsigned XBitSize = X->getType()->getScalarSizeInBits();
 
-    // Iff we are chopping off all the zero bits that were just shifted-in,
-    // instead perform the arithmetic shift, and bypass trunc by sign-extending
-    // it directly. Either one of the lshr and trunc can have extra uses, we can
-    // fix them up, but only one of them, else we increase instruction count.
-    if (match(X,
-              m_LShr(m_Value(), m_SpecificInt_ICMP(
-                                    ICmpInst::Predicate::ICMP_EQ,
-                                    APInt(XBitSize, XBitSize - SrcBitSize)))) &&
-        (Src->hasOneUse() || X->hasOneUser())) {
-      auto *LShr = cast<Instruction>(X);
-      auto *AShr =
-          BinaryOperator::CreateAShr(LShr->getOperand(0), LShr->getOperand(1),
-                                     LShr->getName() + ".signed", LShr);
-      if (!LShr->hasOneUse()) {
-        auto *Mask =
-            ConstantExpr::getLShr(Constant::getAllOnesValue(AShr->getType()),
-                                  cast<Constant>(LShr->getOperand(1)));
-        auto *NewLShr =
-            BinaryOperator::CreateAnd(AShr, Mask, LShr->getName(), LShr);
-        replaceInstUsesWith(*LShr, NewLShr);
-      }
-      if (!Src->hasOneUse()) {
-        auto *OldTrunc = cast<Instruction>(Src);
-        auto *NewTrunc = CastInst::Create(Instruction::Trunc, AShr, SrcTy,
-                                          OldTrunc->getName(), OldTrunc);
-        replaceInstUsesWith(*OldTrunc, NewTrunc);
-      }
-      return CastInst::Create(Instruction::SExt, AShr, DestTy);
-    }
-
     // Iff X had more sign bits than the number of bits that were chopped off
     // by the truncation, we can directly sign-extend the X.
     unsigned XNumSignBits = ComputeNumSignBits(X, 0, &CI);
