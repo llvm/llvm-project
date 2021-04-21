@@ -75,10 +75,8 @@ define i64 @severalUses(<2 x i64>* %addr, <8 x i8>* %addr2) {
 ; CHECK-LABEL: severalUses:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
-; CHECK-NEXT:    vmov.32 r2, d16[1]
-; CHECK-NEXT:    vmov.32 r0, d16[0]
+; CHECK-NEXT:    vmov r0, r2, d16
 ; CHECK-NEXT:    vldr d18, [r1]
-; CHECK-NEXT:    vmov d16, r0, r2
 ; CHECK-NEXT:    vtbl.8 d16, {d16, d17}, d18
 ; CHECK-NEXT:    vstr d16, [r1]
 ; CHECK-NEXT:    mov r1, r2

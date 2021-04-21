@@ -1,9 +1,9 @@
-; RUN: llvm-rc /FO %t -- %p/Inputs/tag-menu.rc
+; RUN: llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-menu.rc
 ; RUN: llvm-readobj %t | FileCheck %s --check-prefix=MENU
 
-; Test running llvm-rc without an explicit output file.
+; Test running llvm-rc -no-preprocess without an explicit output file.
 ; RUN: cp %p/Inputs/tag-menu.rc %t.implicit.rc
-; RUN: llvm-rc -- %t.implicit.rc
+; RUN: llvm-rc -no-preprocess -- %t.implicit.rc
 ; RUN: llvm-readobj %t.implicit.res | FileCheck --check-prefix=MENU %s
 
 ; MENU: Resource type (int): MENU (ID 4)
@@ -74,7 +74,7 @@
 ; MENU-NEXT: )
 
 
-; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-menu-bad-menuitem-id.rc 2>&1 | FileCheck %s --check-prefix BADID
+; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-menu-bad-menuitem-id.rc 2>&1 | FileCheck %s --check-prefix BADID
 
 ; BADID: llvm-rc: Error in MENU statement (ID 1):
 ; BADID-NEXT: MENUITEM action ID (100000) does not fit in 16 bits.

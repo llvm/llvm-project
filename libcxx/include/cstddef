@@ -65,7 +65,7 @@ template <>          struct __libcpp_is_integral<char8_t>            { enum { va
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 template <>          struct __libcpp_is_integral<char16_t>           { enum { value = 1 }; };
 template <>          struct __libcpp_is_integral<char32_t>           { enum { value = 1 }; };
-#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
 template <>          struct __libcpp_is_integral<short>              { enum { value = 1 }; };
 template <>          struct __libcpp_is_integral<unsigned short>     { enum { value = 1 }; };
 template <>          struct __libcpp_is_integral<int>                { enum { value = 1 }; };
@@ -158,4 +158,4 @@ template <class _Integer, class = _EnableByteOverload<_Integer> >
 
 #endif
 
-#endif  // _LIBCPP_CSTDDEF
+#endif // _LIBCPP_CSTDDEF

@@ -692,22 +692,17 @@
 ; SUBST-POS-NEXT:check:1'0     ^~~~~~~~~~~~~~~~~~~~~
 ; SUBST-POS-NEXT:check:1'1                            with "DEF_MATCH1" equal to "def-match1"
 ; SUBST-POS-NEXT:check:1'2                            with "DEF_MATCH2" equal to "def-match2"
-; SUBST-POS-NEXT:check:2'0                          X error: no match found
-; SUBST-POS-NEXT:check:2'1                            with "DEF_MATCH1" equal to "def-match1"
-; SUBST-POS-NEXT:check:2'2                            uses undefined variable(s): "UNDEF"
+; SUBST-POS-NEXT:check:2'0     X error: match failed for invalid pattern
+; SUBST-POS-NEXT:check:2'1                            undefined variable: UNDEF
+; SUBST-POS-NEXT:check:2'2                            with "DEF_MATCH1" equal to "def-match1"
 ; SUBST-POS-NEXT:check:2'3                            with "DEF_NOMATCH" equal to "foobar"
-; SUBST-POS-NEXT:           2: def-match1 def-nomatch 
+; SUBST-POS-NEXT:           2: def-match1 def-nomatch
 ; SUBST-POS-NEXT:check:2'0     ~~~~~~~~~~~~~~~~~~~~~~~
-; SUBST-POS-NEXT:check:2'4              ?              possible intended match
+; SUBST-POS-NEXT:check:2'4 ? possible intended match
 ; SUBST-POS-NEXT:>>>>>>
 
 ;--------------------------------------------------
 ; Substitutions: successful and failed negative directives.
-;
-; FIXME: The first CHECK-NOT directive below uses an undefined variable.
-; Because it therefore cannot match regardless of the input, the directive
-; succeeds.  However, it should fail in this case.  Update the example below
-; once that's fixed.
 ;--------------------------------------------------
 
 ; RUN: echo 'def-match1 def-nomatch' >  %t.in
@@ -725,17 +720,17 @@
 ; RUN: | FileCheck -match-full-lines %s -check-prefix=SUBST-NEG
 
 ;      SUBST-NEG:<<<<<<
-; SUBST-NEG-NEXT:         1: def-match1 def-nomatch 
-; SUBST-NEG-NEXT:not:1'0     X~~~~~~~~~~~~~~~~~~~~~~
-; SUBST-NEG-NEXT:not:1'1                             with "DEF_MATCH1" equal to "def-match1"
-; SUBST-NEG-NEXT:not:1'2                             uses undefined variable(s): "UNDEF"
+; SUBST-NEG-NEXT:         1: def-match1 def-nomatch
+; SUBST-NEG-NEXT:not:1'0     X~~~~~~~~~~~~~~~~~~~~~~ error: match failed for invalid pattern
+; SUBST-NEG-NEXT:not:1'1                             undefined variable: UNDEF
+; SUBST-NEG-NEXT:not:1'2                             with "DEF_MATCH1" equal to "def-match1"
 ; SUBST-NEG-NEXT:not:1'3                             with "DEF_NOMATCH" equal to "foobar"
-; SUBST-NEG-NEXT:         2: def-match1 def-match2 
+; SUBST-NEG-NEXT:         2: def-match1 def-match2
 ; SUBST-NEG-NEXT:not:1'0     ~~~~~~~~~~~~~~~~~~~~~~
 ; SUBST-NEG-NEXT:not:2'0     !~~~~~~~~~~~~~~~~~~~~  error: no match expected
 ; SUBST-NEG-NEXT:not:2'1                            with "DEF_MATCH1" equal to "def-match1"
 ; SUBST-NEG-NEXT:not:2'2                            with "DEF_MATCH2" equal to "def-match2"
-; SUBST-NEG-NEXT:         3: END 
+; SUBST-NEG-NEXT:         3: END
 ; SUBST-NEG-NEXT:check:3     ^~~
 ; SUBST-NEG-NEXT:>>>>>>
 

@@ -7,11 +7,11 @@ RUN: FileCheck --check-prefixes CHECK,LOCAL3,GLOBAL --input-file %s %s
 
 RUN: FileCheck --check-prefixes CHECK,GLOBAL --enable-var-scope --input-file %s %s
 RUN: %ProtectFileCheckOutput not FileCheck --check-prefixes CHECK,LOCAL1 --enable-var-scope --input-file %s %s 2>&1 \
-RUN:   | FileCheck --check-prefixes ERRUNDEF,ERRUNDEFLOCAL %s
+RUN:   | FileCheck --check-prefix ERRUNDEFLOCAL %s
 RUN: %ProtectFileCheckOutput not FileCheck --check-prefixes CHECK,LOCAL2 --enable-var-scope --input-file %s %s 2>&1 \
-RUN:   | FileCheck --check-prefixes ERRUNDEF,ERRUNDEFLOCNUM %s
+RUN:   | FileCheck --check-prefix ERRUNDEFLOCNUM %s
 RUN: %ProtectFileCheckOutput not FileCheck --check-prefixes CHECK,LOCAL3 --enable-var-scope --input-file %s %s 2>&1 \
-RUN:   | FileCheck --check-prefixes ERRUNDEF,ERRUNDEFLOCAL,ERRUNDEFLOCNUM %s
+RUN:   | FileCheck --check-prefixes ERRUNDEFLOCAL,ERRUNDEFLOCNUM %s
 
 local1
 global1
@@ -33,6 +33,5 @@ LOCAL2: local[[#LOCNUM+2]]
 LOCAL3: [[LOCAL]][[#LOCNUM+2]]
 GLOBAL: [[$GLOBAL]][[#$GLOBNUM+2]]
 
-ERRUNDEF: expected string not found in input
-ERRUNDEFLOCAL: uses undefined variable(s): "LOCAL"
-ERRUNDEFLOCNUM: uses undefined variable(s): "LOCNUM"
+ERRUNDEFLOCAL: undefined variable: LOCAL
+ERRUNDEFLOCNUM: undefined variable: LOCNUM

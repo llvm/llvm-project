@@ -312,12 +312,21 @@ class StdSharedPointerPrinter(object):
             return "%s is nullptr" % typename
         refcount = self.val["__cntrl_"]
         if refcount != 0:
-            usecount = refcount["__shared_owners_"] + 1
-            weakcount = refcount["__shared_weak_owners_"]
-            if usecount == 0:
-                state = "expired, weak %d" % weakcount
-            else:
-                state = "count %d, weak %d" % (usecount, weakcount)
+            try:
+                usecount = refcount["__shared_owners_"] + 1
+                weakcount = refcount["__shared_weak_owners_"]
+                if usecount == 0:
+                    state = "expired, weak %d" % weakcount
+                else:
+                    state = "count %d, weak %d" % (usecount, weakcount)
+            except:
+                # Debug info for a class with virtual functions is emitted
+                # in the same place as its key function. That means that
+                # for std::shared_ptr, __shared_owners_ is emitted into
+                # into libcxx.[so|a] itself, rather than into the shared_ptr
+                # instantiation point. So if libcxx.so was built without
+                # debug info, these fields will be missing.
+                state = "count ?, weak ? (libc++ missing debug info)"
         return "%s<%s> %s containing" % (typename, pointee_type, state)
 
     def __iter__(self):

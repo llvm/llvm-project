@@ -970,7 +970,7 @@ define void @udiv_v32i64(<32 x i64>* %a, <32 x i64>* %b) #0 {
 
 ; This used to crash because isUnaryPredicate and BuildUDIV don't know how
 ; a SPLAT_VECTOR of fixed vector type should be handled.
-define void @udiv_constantsplat_v8i32(<8 x i32>* %a) #0 {
+define void @udiv_constantsplat_v8i32(<8 x i32>* %a) #1 {
 ; CHECK-LABEL: udiv_constantsplat_v8i32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),8)]]
 ; CHECK-NEXT: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
@@ -985,3 +985,4 @@ define void @udiv_constantsplat_v8i32(<8 x i32>* %a) #0 {
 }
 
 attributes #0 = { "target-features"="+sve" }
+attributes #1 = { "target-features"="+sve" minsize }

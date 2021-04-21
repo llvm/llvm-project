@@ -160,4 +160,4 @@ using ::aligned_alloc;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_CSTDLIB
+#endif // _LIBCPP_CSTDLIB

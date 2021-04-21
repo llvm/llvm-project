@@ -376,4 +376,4 @@ void __throw_bad_cast()
 }
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // __LIBCPP_TYPEINFO
+#endif // __LIBCPP_TYPEINFO

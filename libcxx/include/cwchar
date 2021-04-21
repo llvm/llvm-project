@@ -189,4 +189,4 @@ using ::wprintf;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_CWCHAR
+#endif // _LIBCPP_CWCHAR

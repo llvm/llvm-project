@@ -437,10 +437,6 @@ private:
     unsigned Val;
   };
 
-  struct ExtendOp {
-    unsigned Val;
-  };
-
   union {
     struct TokOp Tok;
     struct RegOp Reg;

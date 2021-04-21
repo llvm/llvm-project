@@ -961,4 +961,4 @@ _LIBCPP_POP_MACROS
 #   include <__pstl_memory>
 #endif
 
-#endif  // _LIBCPP_MEMORY
+#endif // _LIBCPP_MEMORY

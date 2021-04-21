@@ -1,4 +1,4 @@
-//===-- Implementation of fmaf function -----------------------------------===//
+//===-- Common header for FMA implementations -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/fmaf.h"
-#include "src/__support/common.h"
+#ifndef LLVM_LIBC_UTILS_FPUTIL_GENERIC_FMA_H
+#define LLVM_LIBC_UTILS_FPUTIL_GENERIC_FMA_H
 
-#include "utils/FPUtil/FEnv.h"
-#include "utils/FPUtil/FPBits.h"
+#include "utils/CPP/TypeTraits.h"
 
 namespace __llvm_libc {
+namespace fputil {
+namespace generic {
 
-LLVM_LIBC_FUNCTION(float, fmaf, (float x, float y, float z)) {
+template <typename T>
+static inline cpp::EnableIfType<cpp::IsSame<T, float>::Value, T> fma(T x, T y,
+                                                                     T z) {
   // Product is exact.
   double prod = static_cast<double>(x) * static_cast<double>(y);
   double z_d = static_cast<double>(z);
@@ -62,4 +65,10 @@ LLVM_LIBC_FUNCTION(float, fmaf, (float x, float y, float z)) {
   return static_cast<float>(static_cast<double>(bit_sum));
 }
 
+} // namespace generic
+} // namespace fputil
 } // namespace __llvm_libc
+
+#endif // Generic fma implementations
+
+#endif // LLVM_LIBC_UTILS_FPUTIL_GENERIC_FMA_H

@@ -47,7 +47,6 @@ int64_t ARM64Common::getEmbeddedAddend(MemoryBufferRef mb, uint64_t offset,
 void ARM64Common::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
                               uint64_t pc) const {
   uint32_t base = ((r.length == 2) ? read32le(loc) : 0);
-  value += r.addend;
   switch (r.type) {
   case ARM64_RELOC_BRANCH26:
     value = encodeBranch26(r, base, value - pc);

@@ -280,6 +280,8 @@ void ObjFile::parseRelocations(ArrayRef<Section> sectionHeaders,
     if (relInfo.r_address & R_SCATTERED)
       fatal("TODO: Scattered relocations not supported");
 
+    bool isSubtrahend =
+        target->hasAttr(relInfo.r_type, RelocAttrBits::SUBTRAHEND);
     int64_t embeddedAddend = target->getEmbeddedAddend(mb, sec.offset, relInfo);
     assert(!(embeddedAddend && pairedAddend));
     int64_t totalAddend = pairedAddend + embeddedAddend;
@@ -290,9 +292,9 @@ void ObjFile::parseRelocations(ArrayRef<Section> sectionHeaders,
     r.offset = relInfo.r_address;
     if (relInfo.r_extern) {
       r.referent = symbols[relInfo.r_symbolnum];
-      r.addend = totalAddend;
+      r.addend = isSubtrahend ? 0 : totalAddend;
     } else {
-      SubsectionMap &referentSubsecMap = subsections[relInfo.r_symbolnum - 1];
+      assert(!isSubtrahend);
       const Section &referentSec = sectionHeaders[relInfo.r_symbolnum - 1];
       uint64_t referentOffset;
       if (relInfo.r_pcrel) {
@@ -309,6 +311,7 @@ void ObjFile::parseRelocations(ArrayRef<Section> sectionHeaders,
         // The addend for a non-pcrel relocation is its absolute address.
         referentOffset = totalAddend - referentSec.addr;
       }
+      SubsectionMap &referentSubsecMap = subsections[relInfo.r_symbolnum - 1];
       r.referent = findContainingSubsection(referentSubsecMap, &referentOffset);
       r.addend = referentOffset;
     }
@@ -316,15 +319,26 @@ void ObjFile::parseRelocations(ArrayRef<Section> sectionHeaders,
     InputSection *subsec = findContainingSubsection(subsecMap, &r.offset);
     subsec->relocs.push_back(r);
 
-    if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
-      relInfo = relInfos[++i];
+    if (isSubtrahend) {
+      relocation_info minuendInfo = relInfos[++i];
       // SUBTRACTOR relocations should always be followed by an UNSIGNED one
-      // indicating the minuend symbol.
-      assert(target->hasAttr(relInfo.r_type, RelocAttrBits::UNSIGNED) &&
-             relInfo.r_extern);
+      // attached to the same address.
+      assert(target->hasAttr(minuendInfo.r_type, RelocAttrBits::UNSIGNED) &&
+             relInfo.r_address == minuendInfo.r_address);
       Reloc p;
-      p.type = relInfo.r_type;
-      p.referent = symbols[relInfo.r_symbolnum];
+      p.type = minuendInfo.r_type;
+      if (minuendInfo.r_extern) {
+        p.referent = symbols[minuendInfo.r_symbolnum];
+        p.addend = totalAddend;
+      } else {
+        uint64_t referentOffset =
+            totalAddend - sectionHeaders[minuendInfo.r_symbolnum - 1].addr;
+        SubsectionMap &referentSubsecMap =
+            subsections[minuendInfo.r_symbolnum - 1];
+        p.referent =
+            findContainingSubsection(referentSubsecMap, &referentOffset);
+        p.addend = referentOffset;
+      }
       subsec->relocs.push_back(p);
     }
   }
@@ -769,7 +783,15 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   compatibilityVersion = interface.getCompatibilityVersion().rawValue();
   currentVersion = interface.getCurrentVersion().rawValue();
 
-  if (!is_contained(interface.targets(), config->target)) {
+  // Some versions of XCode ship with .tbd files that don't have the right
+  // platform settings.
+  static constexpr std::array<StringRef, 3> skipPlatformChecks{
+      "/usr/lib/system/libsystem_kernel.dylib",
+      "/usr/lib/system/libsystem_platform.dylib",
+      "/usr/lib/system/libsystem_pthread.dylib"};
+
+  if (!is_contained(skipPlatformChecks, dylibName) &&
+      !is_contained(interface.targets(), config->target)) {
     error(toString(this) + " is incompatible with " +
           std::string(config->target));
     return;
@@ -811,7 +833,8 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
 
   for (InterfaceFileRef intfRef : interface.reexportedLibraries()) {
     InterfaceFile::const_target_range targets = intfRef.targets();
-    if (is_contained(targets, config->target))
+    if (is_contained(skipPlatformChecks, intfRef.getInstallName()) ||
+        is_contained(targets, config->target))
       loadReexport(intfRef.getInstallName(), exportingFile, topLevel);
   }
 }

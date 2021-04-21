@@ -37,4 +37,4 @@ public:
         {return !(x == y);}
 };
 
-#endif  // INPUT_ITERATOR_H
+#endif // INPUT_ITERATOR_H

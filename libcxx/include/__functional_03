@@ -36,7 +36,7 @@ public:
 #ifndef _LIBCPP_NO_RTTI
     virtual const void* target(const type_info&) const = 0;
     virtual const std::type_info& target_type() const = 0;
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 };
 
 template<class _Rp, class _A0>
@@ -55,7 +55,7 @@ public:
 #ifndef _LIBCPP_NO_RTTI
     virtual const void* target(const type_info&) const = 0;
     virtual const std::type_info& target_type() const = 0;
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 };
 
 template<class _Rp, class _A0, class _A1>
@@ -74,7 +74,7 @@ public:
 #ifndef _LIBCPP_NO_RTTI
     virtual const void* target(const type_info&) const = 0;
     virtual const std::type_info& target_type() const = 0;
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 };
 
 template<class _Rp, class _A0, class _A1, class _A2>
@@ -93,7 +93,7 @@ public:
 #ifndef _LIBCPP_NO_RTTI
     virtual const void* target(const type_info&) const = 0;
     virtual const std::type_info& target_type() const = 0;
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 };
 
 template<class _FD, class _Alloc, class _FB> class __func;
@@ -114,7 +114,7 @@ public:
 #ifndef _LIBCPP_NO_RTTI
     virtual const void* target(const type_info&) const;
     virtual const std::type_info& target_type() const;
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 };
 
 template<class _Fp, class _Alloc, class _Rp>
@@ -181,7 +181,7 @@ __func<_Fp, _Alloc, _Rp()>::target_type() const
     return typeid(_Fp);
 }
 
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 
 template<class _Fp, class _Alloc, class _Rp, class _A0>
 class __func<_Fp, _Alloc, _Rp(_A0)>
@@ -200,7 +200,7 @@ public:
 #ifndef _LIBCPP_NO_RTTI
     virtual const void* target(const type_info&) const;
     virtual const std::type_info& target_type() const;
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 };
 
 template<class _Fp, class _Alloc, class _Rp, class _A0>
@@ -267,7 +267,7 @@ __func<_Fp, _Alloc, _Rp(_A0)>::target_type() const
     return typeid(_Fp);
 }
 
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 
 template<class _Fp, class _Alloc, class _Rp, class _A0, class _A1>
 class __func<_Fp, _Alloc, _Rp(_A0, _A1)>
@@ -286,7 +286,7 @@ public:
 #ifndef _LIBCPP_NO_RTTI
     virtual const void* target(const type_info&) const;
     virtual const std::type_info& target_type() const;
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 };
 
 template<class _Fp, class _Alloc, class _Rp, class _A0, class _A1>
@@ -353,7 +353,7 @@ __func<_Fp, _Alloc, _Rp(_A0, _A1)>::target_type() const
     return typeid(_Fp);
 }
 
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 
 template<class _Fp, class _Alloc, class _Rp, class _A0, class _A1, class _A2>
 class __func<_Fp, _Alloc, _Rp(_A0, _A1, _A2)>
@@ -372,7 +372,7 @@ public:
 #ifndef _LIBCPP_NO_RTTI
     virtual const void* target(const type_info&) const;
     virtual const std::type_info& target_type() const;
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 };
 
 template<class _Fp, class _Alloc, class _Rp, class _A0, class _A1, class _A2>
@@ -439,7 +439,7 @@ __func<_Fp, _Alloc, _Rp(_A0, _A1, _A2)>::target_type() const
     return typeid(_Fp);
 }
 
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 
 }  // __function
 
@@ -510,7 +510,7 @@ public:
     const std::type_info& target_type() const;
     template <typename _Tp> _Tp* target();
     template <typename _Tp> const _Tp* target() const;
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 };
 
 template<class _Rp>
@@ -720,7 +720,7 @@ function<_Rp()>::target() const
     return (const _Tp*)__f_->target(typeid(_Tp));
 }
 
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 
 template<class _Rp, class _A0>
 class _LIBCPP_TEMPLATE_VIS function<_Rp(_A0)>
@@ -790,7 +790,7 @@ public:
     const std::type_info& target_type() const;
     template <typename _Tp> _Tp* target();
     template <typename _Tp> const _Tp* target() const;
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 };
 
 template<class _Rp, class _A0>
@@ -1000,7 +1000,7 @@ function<_Rp(_A0)>::target() const
     return (const _Tp*)__f_->target(typeid(_Tp));
 }
 
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 
 template<class _Rp, class _A0, class _A1>
 class _LIBCPP_TEMPLATE_VIS function<_Rp(_A0, _A1)>
@@ -1070,7 +1070,7 @@ public:
     const std::type_info& target_type() const;
     template <typename _Tp> _Tp* target();
     template <typename _Tp> const _Tp* target() const;
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 };
 
 template<class _Rp, class _A0, class _A1>
@@ -1280,7 +1280,7 @@ function<_Rp(_A0, _A1)>::target() const
     return (const _Tp*)__f_->target(typeid(_Tp));
 }
 
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 
 template<class _Rp, class _A0, class _A1, class _A2>
 class _LIBCPP_TEMPLATE_VIS function<_Rp(_A0, _A1, _A2)>
@@ -1349,7 +1349,7 @@ public:
     const std::type_info& target_type() const;
     template <typename _Tp> _Tp* target();
     template <typename _Tp> const _Tp* target() const;
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 };
 
 template<class _Rp, class _A0, class _A1, class _A2>
@@ -1560,7 +1560,7 @@ function<_Rp(_A0, _A1, _A2)>::target() const
     return (const _Tp*)__f_->target(typeid(_Tp));
 }
 
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 
 template <class _Fp>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1588,4 +1588,4 @@ void
 swap(function<_Fp>& __x, function<_Fp>& __y)
 {return __x.swap(__y);}
 
-#endif  // _LIBCPP_FUNCTIONAL_03
+#endif // _LIBCPP_FUNCTIONAL_03

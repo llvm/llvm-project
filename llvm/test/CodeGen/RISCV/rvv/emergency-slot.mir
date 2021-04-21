@@ -90,12 +90,12 @@ body:             |
   ; CHECK:   $x2 = ANDI $x2, -128
   ; CHECK:   dead renamable $x15 = PseudoVSETIVLI 1, 72, implicit-def $vl, implicit-def $vtype
   ; CHECK:   renamable $v25 = PseudoVMV_V_X_M1 killed renamable $x12, $noreg, 16, implicit $vl, implicit $vtype
+  ; CHECK:   $x11 = PseudoReadVLENB
+  ; CHECK:   $x10 = ADDI $x0, 50
+  ; CHECK:   $x11 = MUL killed $x11, killed $x10
   ; CHECK:   $x10 = LUI 1
   ; CHECK:   $x10 = ADDIW killed $x10, -1896
   ; CHECK:   $x10 = ADD $x2, killed $x10
-  ; CHECK:   $x11 = PseudoReadVLENB
-  ; CHECK:   $x12 = ADDI $x0, 50
-  ; CHECK:   $x11 = MUL killed $x11, killed $x12
   ; CHECK:   $x10 = ADD killed $x10, killed $x11
   ; CHECK:   PseudoVSPILL_M1 killed renamable $v25, killed $x10 :: (store unknown-size into %stack.1, align 8)
   ; CHECK:   renamable $x1 = ADDI $x0, 255
@@ -133,25 +133,25 @@ body:             |
   ; CHECK:   renamable $x9 = SRLI killed renamable $x9, 62
   ; CHECK:   renamable $x9 = ADD renamable $x13, killed renamable $x9
   ; CHECK:   renamable $x9 = ANDI killed renamable $x9, -4
-  ; CHECK:   renamable $x16 = SUB killed renamable $x13, killed renamable $x9
+  ; CHECK:   renamable $x16 = SUB killed renamable $x13, renamable $x9
   ; CHECK:   dead renamable $x13 = PseudoVSETIVLI 1, 64, implicit-def $vl, implicit-def $vtype
   ; CHECK:   renamable $x13 = nsw ADDI renamable $x16, -2
-  ; CHECK:   $x5 = LUI 1
-  ; CHECK:   $x9 = ADDIW killed $x5, -1896
-  ; CHECK:   $x9 = ADD $x2, killed $x9
-  ; CHECK:   $x1 = PseudoReadVLENB
-  ; CHECK:   $x5 = ADDI $x0, 50
-  ; CHECK:   $x1 = MUL killed $x1, killed $x5
+  ; CHECK:   $x5 = PseudoReadVLENB
+  ; CHECK:   $x1 = ADDI $x0, 50
+  ; CHECK:   $x5 = MUL killed $x5, killed $x1
+  ; CHECK:   $x1 = LUI 1
+  ; CHECK:   $x1 = ADDIW killed $x1, -1896
+  ; CHECK:   $x1 = ADD $x2, killed $x1
+  ; CHECK:   $x1 = ADD killed $x1, killed $x5
   ; CHECK:   $x5 = LD $x2, 0 :: (load 8 from %stack.17)
-  ; CHECK:   $x9 = ADD killed $x9, killed $x1
+  ; CHECK:   renamable $v0 = PseudoVRELOAD_M1 killed $x1 :: (load unknown-size from %stack.1, align 8)
   ; CHECK:   $x1 = LD $x2, 8 :: (load 8 from %stack.16)
-  ; CHECK:   renamable $v0 = PseudoVRELOAD_M1 killed $x9 :: (load unknown-size from %stack.1, align 8)
   ; CHECK:   renamable $v0 = PseudoVSLIDEDOWN_VX_M1 undef renamable $v0, killed renamable $v0, killed renamable $x13, $noreg, 8, implicit $vl, implicit $vtype
   ; CHECK:   renamable $x13 = PseudoVMV_X_S_M1 killed renamable $v0, 8, implicit $vl, implicit $vtype
   ; CHECK:   BLT killed renamable $x16, renamable $x27, %bb.2
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   liveins: $x1, $x5, $x6, $x7, $x10, $x11, $x12, $x13, $x14, $x15, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $x29, $x30, $x31
+  ; CHECK:   liveins: $x1, $x5, $x6, $x7, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $x29, $x30, $x31
   ; CHECK:   renamable $x9 = COPY killed renamable $x13
   ; CHECK:   PseudoBR %bb.2
   ; CHECK: bb.2:
@@ -212,7 +212,7 @@ body:             |
     renamable $x9 = SRLI killed renamable $x9, 62
     renamable $x9 = ADD renamable $x13, killed renamable $x9
     renamable $x9 = ANDI killed renamable $x9, -4
-    renamable $x16 = SUB killed renamable $x13, killed renamable $x9
+    renamable $x16 = SUB killed renamable $x13, renamable $x9
     dead renamable $x13 = PseudoVSETIVLI 1, 64, implicit-def $vl, implicit-def $vtype
     renamable $x13 = nsw ADDI renamable $x16, -2
     renamable $v0 = PseudoVRELOAD_M1 %stack.1 :: (load unknown-size from %stack.1, align 8)
@@ -222,7 +222,7 @@ body:             |
 
   bb.1:
     successors: %bb.2
-    liveins: $x1, $x5, $x6, $x7, $x10, $x11, $x12, $x13, $x14, $x15, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $x29, $x30, $x31
+    liveins: $x1, $x5, $x6, $x7, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $x29, $x30, $x31
 
     renamable $x9 = COPY killed renamable $x13
     PseudoBR %bb.2

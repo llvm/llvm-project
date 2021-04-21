@@ -13,8 +13,15 @@
 # into scripts. This is critical to being able to reproduce CI issues outside
 # of the CI environment, which is important for debugging.
 #
+# It is also worth noting that this script is split into several sections, the
+# goal being to reduce the load on testers when a commit is known to fail.
+#
 
 steps:
+  #
+  # Light pre-commit tests for things like formatting or when people forget
+  # to update generated files.
+  #
   - label: "Format"
     command: "libcxx/utils/ci/run-buildbot check-format"
     artifact_paths:
@@ -39,11 +46,11 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
-  # All jobs defined before this `wait` will run whenever a CI job is started.
-  # Jobs defined after the `wait` will run only if all the jobs above
-  # succeeded. The build failures before this `wait` can be fixed by running
-  # the proper scripts or clang-format. We use this to reduce the load on the
-  # testers and avoid running builds that we know fail anyway.
+  #
+  # General testing with the default configuration, under all the supported
+  # Standard modes, with Clang and GCC and on Apple. This catches most issues
+  # upfront.
+  #
   - wait
 
   - label: "C++03"
@@ -118,6 +125,34 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
+  - label: "MacOS C++20"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx20"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    agents:
+      queue: "libcxx-builders-macos"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "GCC/C++20"
+    command: "libcxx/utils/ci/run-buildbot generic-gcc"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  #
+  # All other supported configurations of libc++.
+  #
+  - wait
+
   - label: "-fno-exceptions"
     command: "libcxx/utils/ci/run-buildbot generic-noexceptions"
     artifact_paths:
@@ -131,17 +166,6 @@ steps:
 
   - label: "Static libraries"
     command: "libcxx/utils/ci/run-buildbot generic-static"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-
-  - label: "GCC/C++20"
-    command: "libcxx/utils/ci/run-buildbot generic-gcc"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -250,18 +274,6 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
-  - label: "MacOS C++20"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx20"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
-    agents:
-      queue: "libcxx-builders-macos"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-
   - label: "Benchmarks"
     command: "libcxx/utils/ci/run-buildbot benchmarks"
     artifact_paths:
@@ -329,12 +341,6 @@ steps:
       automatic:
         - exit_status: -1  # Agent was lost
           limit: 2
-
-  # All jobs defined before this `wait` will run whenever a CI job is started.
-  # Jobs defined after the `wait` will run only if all the jobs above succeeded.
-  # We use this to reduce the load on testers that have more constrained resources
-  # and avoid running builds that we know fail anyway.
-  - wait
 
   # Build with the configuration we use to generate libc++.dylib on Apple platforms
   - label: "Apple system"

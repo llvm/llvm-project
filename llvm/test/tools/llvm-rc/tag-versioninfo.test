@@ -1,4 +1,4 @@
-; RUN: llvm-rc /FO %t -- %p/Inputs/tag-versioninfo.rc
+; RUN: llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-versioninfo.rc
 ; RUN: llvm-readobj %t | FileCheck %s
 
 ; CHECK:      Resource type (int): VERSIONINFO (ID 16)
@@ -56,11 +56,11 @@
 ; CHECK-NEXT: )
 
 
-; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-versioninfo-mixed-ints-strings.rc 2>&1 | FileCheck %s --check-prefix STRINT
+; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-versioninfo-mixed-ints-strings.rc 2>&1 | FileCheck %s --check-prefix STRINT
 ; STRINT: llvm-rc: Error in VERSIONINFO statement (ID 1):
 ; STRINT-NEXT: VALUE "FileDescription" cannot contain both strings and integers
 
 
-; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-versioninfo-word-too-large.rc 2>&1 | FileCheck %s --check-prefix WORD
+; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-versioninfo-word-too-large.rc 2>&1 | FileCheck %s --check-prefix WORD
 ; WORD: llvm-rc: Error in VERSIONINFO statement (ID 1):
 ; WORD-NEXT: VERSIONINFO integer value (65536) does not fit in 16 bits.

@@ -318,11 +318,9 @@ entry:
 define arm_aapcs_vfpcc void @store_v2i1(<2 x i1> *%dst, <2 x i64> %a) {
 ; CHECK-LE-LABEL: store_v2i1:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vmov r1, s1
-; CHECK-LE-NEXT:    vmov r2, s0
-; CHECK-LE-NEXT:    vmov r3, s2
+; CHECK-LE-NEXT:    vmov r1, r2, d0
 ; CHECK-LE-NEXT:    orrs r1, r2
-; CHECK-LE-NEXT:    vmov r2, s3
+; CHECK-LE-NEXT:    vmov r2, r3, d1
 ; CHECK-LE-NEXT:    cset r1, eq
 ; CHECK-LE-NEXT:    orrs r2, r3
 ; CHECK-LE-NEXT:    cset r2, eq
@@ -337,11 +335,9 @@ define arm_aapcs_vfpcc void @store_v2i1(<2 x i1> *%dst, <2 x i64> %a) {
 ; CHECK-BE-LABEL: store_v2i1:
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    vmov r1, s6
-; CHECK-BE-NEXT:    vmov r2, s7
-; CHECK-BE-NEXT:    vmov r3, s5
+; CHECK-BE-NEXT:    vmov r1, r2, d3
 ; CHECK-BE-NEXT:    orrs r1, r2
-; CHECK-BE-NEXT:    vmov r2, s4
+; CHECK-BE-NEXT:    vmov r2, r3, d2
 ; CHECK-BE-NEXT:    cset r1, eq
 ; CHECK-BE-NEXT:    orrs r2, r3
 ; CHECK-BE-NEXT:    cset r2, eq
