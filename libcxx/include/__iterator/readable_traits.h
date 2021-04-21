@@ -70,6 +70,17 @@ requires __has_member_element_type<_Tp> &&
 struct indirectly_readable_traits<_Tp>
   : __cond_value_type<typename _Tp::value_type> {};
 
+template <class>
+struct iterator_traits;
+
+// Let `RI` be `remove_­cvref_­t<I>`. The type `iter_­value_­t<I>` denotes
+// `indirectly_­readable_­traits<RI>::value_­type` if `iterator_­traits<RI>` names a specialization
+// generated from the primary template, and `iterator_­traits<RI>::value_­type` otherwise.
+template <class _Ip>
+using iter_value_t = typename conditional_t<__is_primary_template<iterator_traits<remove_cvref_t<_Ip> > >::value,
+                                            indirectly_readable_traits<remove_cvref_t<_Ip> >,
+                                            iterator_traits<remove_cvref_t<_Ip> > >::value_type;
+
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 
 _LIBCPP_END_NAMESPACE_STD
