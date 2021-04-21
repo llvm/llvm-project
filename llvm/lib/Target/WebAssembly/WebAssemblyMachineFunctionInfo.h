@@ -188,6 +188,8 @@ namespace yaml {
 using BBNumberMap = DenseMap<int, int>;
 
 struct WebAssemblyFunctionInfo final : public yaml::MachineFunctionInfo {
+  std::vector<FlowStringValue> Params;
+  std::vector<FlowStringValue> Results;
   bool CFGStackified = false;
   // The same as WasmEHFuncInfo's SrcToUnwindDest, but stored in the mapping of
   // BB numbers
@@ -202,6 +204,8 @@ struct WebAssemblyFunctionInfo final : public yaml::MachineFunctionInfo {
 
 template <> struct MappingTraits<WebAssemblyFunctionInfo> {
   static void mapping(IO &YamlIO, WebAssemblyFunctionInfo &MFI) {
+    YamlIO.mapOptional("params", MFI.Params, std::vector<FlowStringValue>());
+    YamlIO.mapOptional("results", MFI.Results, std::vector<FlowStringValue>());
     YamlIO.mapOptional("isCFGStackified", MFI.CFGStackified, false);
     YamlIO.mapOptional("wasmEHFuncInfo", MFI.SrcToUnwindDest);
   }
