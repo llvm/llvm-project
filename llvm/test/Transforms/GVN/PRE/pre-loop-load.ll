@@ -54,6 +54,56 @@ exit:
   ret i32 %x
 }
 
+; Do not PRE here because a loop-variant pointer.
+define i32 @test_load_on_cold_path_gc_variant_neg(i32 addrspace(1)* addrspace(1)* %pp) gc "statepoint-example" personality i32 ()* @"personality_function" {
+; CHECK-LABEL: @test_load_on_cold_path_gc_variant_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[P:%.*]] = load volatile i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* [[PP:%.*]], align 8
+; CHECK-NEXT:    [[X:%.*]] = load i32, i32 addrspace(1)* [[P]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
+; CHECK:       hot_path:
+; CHECK-NEXT:    br label [[BACKEDGE]]
+; CHECK:       cold_path:
+; CHECK-NEXT:    call void @may_free_memory()
+; CHECK-NEXT:    br label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[X]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry], [%iv.next, %backedge]
+  %p = load volatile i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* %pp
+  %x = load i32, i32 addrspace(1)* %p
+  %cond = icmp ne i32 %x, 0
+  br i1 %cond, label %hot_path, label %cold_path
+
+hot_path:
+  br label %backedge
+
+cold_path:
+  call void @may_free_memory()
+  br label %backedge
+
+backedge:
+  %iv.next = add i32 %iv, %x
+  %loop.cond = icmp ult i32 %iv.next, 1000
+  br i1 %loop.cond, label %loop, label %exit
+
+exit:
+  ret i32 %x
+}
+
+
 ; TODO: We can PRE the load away from the hot path.
 define i32 @test_load_on_cold_path(i32* %p) {
 ; CHECK-LABEL: @test_load_on_cold_path(
