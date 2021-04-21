@@ -527,7 +527,6 @@ void Writer::scanRelocations() {
         // minuend, and doesn't have the usual UNSIGNED semantics. We don't want
         // to emit rebase opcodes for it.
         it = std::next(it);
-        assert(isa<Defined>(it->referent.dyn_cast<Symbol *>()));
         continue;
       }
       if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
