@@ -1219,7 +1219,6 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     mlir::Value ptrOffset = zero;
     if (auto memEleTy = fir::dyn_cast_ptrEleTy(xbox.memref().getType()))
       if (auto seqTy = memEleTy.dyn_cast<fir::SequenceType>()) {
-        constRows = seqTy.getConstantRows();
         auto seqEleTy = seqTy.getEleTy();
         // Adjust the element scaling factor if the element is a dependent type.
         if (fir::LLVMTypeConverter::dynamicallySized(seqEleTy)) {
@@ -1233,6 +1232,8 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
           } else {
             fir::emitFatalError(loc, "unexpected dynamic type");
           }
+        } else {
+          constRows = seqTy.getConstantRows();
         }
       }
 

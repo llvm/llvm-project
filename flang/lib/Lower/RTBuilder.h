@@ -352,6 +352,34 @@ static mlir::FuncOp getRuntimeFunc(mlir::Location loc,
   func->setAttr("fir.runtime", builder.getUnitAttr());
   return func;
 }
+
+namespace helper {
+template <int N, typename A>
+void createArguments(llvm::SmallVectorImpl<mlir::Value> &result,
+                     Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::FunctionType fTy, A arg) {
+  result.emplace_back(builder.createConvert(loc, fTy.getInput(N), arg));
+}
+
+template <int N, typename A, typename... As>
+void createArguments(llvm::SmallVectorImpl<mlir::Value> &result,
+                     Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::FunctionType fTy, A arg, As... args) {
+  result.emplace_back(builder.createConvert(loc, fTy.getInput(N), arg));
+  createArguments<N + 1>(result, builder, loc, fTy, args...);
+}
+} // namespace helper
+
+/// Create a SmallVector of arguments for a runtime call.
+template <typename... As>
+llvm::SmallVector<mlir::Value>
+createArguments(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+                mlir::FunctionType fTy, As... args) {
+  llvm::SmallVector<mlir::Value> result;
+  helper::createArguments<0>(result, builder, loc, fTy, args...);
+  return result;
+}
+
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_RTBUILDER_H

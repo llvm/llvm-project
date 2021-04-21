@@ -19,14 +19,13 @@
 using namespace Fortran::runtime;
 
 /// Generate calls to string handling intrinsics such as index, scan, and
-/// verify. These are the descriptor based implementations that take four 
+/// verify. These are the descriptor based implementations that take four
 /// arguments (string1, string2, back, kind).
 template <typename FN>
-static void
-genCharacterSearch(FN func, Fortran::lower::FirOpBuilder &builder,
-                   mlir::Location loc, mlir::Value resultBox,
-                   mlir::Value string1Box, mlir::Value string2Box,
-                   mlir::Value backBox, mlir::Value kind);
+static void genCharacterSearch(FN func, Fortran::lower::FirOpBuilder &builder,
+                               mlir::Location loc, mlir::Value resultBox,
+                               mlir::Value string1Box, mlir::Value string2Box,
+                               mlir::Value backBox, mlir::Value kind);
 
 /// Helper function to recover the KIND from the FIR type.
 static int discoverKind(mlir::Type ty) {
@@ -67,11 +66,8 @@ Fortran::lower::genRawCharCompare(Fortran::lower::FirOpBuilder &builder,
     llvm_unreachable("runtime does not support CHARACTER KIND");
   }
   auto fTy = beginFunc.getType();
-  auto lptr = builder.createConvert(loc, fTy.getInput(0), lhsBuff);
-  auto llen = builder.createConvert(loc, fTy.getInput(2), lhsLen);
-  auto rptr = builder.createConvert(loc, fTy.getInput(1), rhsBuff);
-  auto rlen = builder.createConvert(loc, fTy.getInput(3), rhsLen);
-  llvm::SmallVector<mlir::Value> args = {lptr, rptr, llen, rlen};
+  auto args = Fortran::lower::createArguments(builder, loc, fTy, lhsBuff,
+                                              lhsLen, rhsBuff, rhsLen);
   auto tri = builder.create<fir::CallOp>(loc, beginFunc, args).getResult(0);
   auto zero = builder.createIntegerConstant(loc, tri.getType(), 0);
   return builder.create<mlir::CmpIOp>(loc, cmp, tri, zero);
@@ -118,12 +114,9 @@ Fortran::lower::genIndex(Fortran::lower::FirOpBuilder &builder,
         loc, "unsupported CHARACTER kind value. Runtime expects 1, 2, or 4.");
   }
   auto fTy = indexFunc.getType();
-  llvm::SmallVector<mlir::Value> args = {
-      builder.createConvert(loc, fTy.getInput(0), stringBase),
-      builder.createConvert(loc, fTy.getInput(1), stringLen),
-      builder.createConvert(loc, fTy.getInput(2), substringBase),
-      builder.createConvert(loc, fTy.getInput(3), substringLen),
-      builder.createConvert(loc, fTy.getInput(4), back)};
+  auto args =
+      Fortran::lower::createArguments(builder, loc, fTy, stringBase, stringLen,
+                                      substringBase, substringLen, back);
   return builder.create<fir::CallOp>(loc, indexFunc, args).getResult(0);
 }
 
@@ -134,7 +127,7 @@ void Fortran::lower::genIndexDescriptor(Fortran::lower::FirOpBuilder &builder,
                                         mlir::Value substringBox,
                                         mlir::Value backOpt, mlir::Value kind) {
   auto indexFunc = getRuntimeFunc<mkRTKey(Index)>(loc, builder);
-  genCharacterSearch(indexFunc, builder, loc, resultBox, stringBox, 
+  genCharacterSearch(indexFunc, builder, loc, resultBox, stringBox,
                      substringBox, backOpt, kind);
 }
 
@@ -147,40 +140,37 @@ void Fortran::lower::genTrim(Fortran::lower::FirOpBuilder &builder,
   auto sourceLine =
       Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(3));
 
-  llvm::SmallVector<mlir::Value> args;
-  args.emplace_back(builder.createConvert(loc, fTy.getInput(0), resultBox));
-  args.emplace_back(builder.createConvert(loc, fTy.getInput(1), stringBox));
-  args.emplace_back(builder.createConvert(loc, fTy.getInput(2), sourceFile));
-  args.emplace_back(builder.createConvert(loc, fTy.getInput(3), sourceLine));
+  auto args = Fortran::lower::createArguments(
+      builder, loc, fTy, resultBox, stringBox, sourceFile, sourceLine);
   builder.create<fir::CallOp>(loc, trimFunc, args);
 }
 
 /// Generate call to scan runtime routine.
 /// This calls the descriptor based runtime call implementation of the scan
 /// intrinsic.
-void
-Fortran::lower::genScanDescriptor(Fortran::lower::FirOpBuilder &builder,
-                                  mlir::Location loc, mlir::Value resultBox,
-                                  mlir::Value stringBox, mlir::Value setBox,
-                                  mlir::Value backBox, mlir::Value kind) {
+void Fortran::lower::genScanDescriptor(Fortran::lower::FirOpBuilder &builder,
+                                       mlir::Location loc,
+                                       mlir::Value resultBox,
+                                       mlir::Value stringBox,
+                                       mlir::Value setBox, mlir::Value backBox,
+                                       mlir::Value kind) {
   auto func = getRuntimeFunc<mkRTKey(Scan)>(loc, builder);
   genCharacterSearch(func, builder, loc, resultBox, stringBox, setBox, backBox,
                      kind);
 }
 
-/// Generate call to scan runtime routine that is specialized on 
+/// Generate call to scan runtime routine that is specialized on
 /// \param kind.
 /// The \param kind represents the kind of the elements in the strings.
-mlir::Value
-Fortran::lower::genScan(Fortran::lower::FirOpBuilder &builder,
-                                  mlir::Location loc, int kind, 
-                                  mlir::Value stringBase,
-                                  mlir::Value stringLen, mlir::Value setBase,
-                                  mlir::Value setLen, mlir::Value back) {
+mlir::Value Fortran::lower::genScan(Fortran::lower::FirOpBuilder &builder,
+                                    mlir::Location loc, int kind,
+                                    mlir::Value stringBase,
+                                    mlir::Value stringLen, mlir::Value setBase,
+                                    mlir::Value setLen, mlir::Value back) {
   mlir::FuncOp func;
   switch (kind) {
   case 1:
-    func = getRuntimeFunc<mkRTKey(Scan1)>(loc, builder); 
+    func = getRuntimeFunc<mkRTKey(Scan1)>(loc, builder);
     break;
   case 2:
     func = getRuntimeFunc<mkRTKey(Scan2)>(loc, builder);
@@ -193,41 +183,36 @@ Fortran::lower::genScan(Fortran::lower::FirOpBuilder &builder,
         loc, "unsupported CHARACTER kind value. Runtime expects 1, 2, or 4.");
   }
   auto fTy = func.getType();
-  llvm::SmallVector<mlir::Value> args = {
-      builder.createConvert(loc, fTy.getInput(0), stringBase),
-      builder.createConvert(loc, fTy.getInput(1), stringLen),
-      builder.createConvert(loc, fTy.getInput(2), setBase),
-      builder.createConvert(loc, fTy.getInput(3), setLen),
-      builder.createConvert(loc, fTy.getInput(4), back)};
+  auto args = Fortran::lower::createArguments(builder, loc, fTy, stringBase,
+                                              stringLen, setBase, setLen, back);
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
 
 /// Generate call to verify runtime routine.
-/// This calls the descriptor based runtime call implementation of the 
+/// This calls the descriptor based runtime call implementation of the
 /// verify intrinsic.
-void
-Fortran::lower::genVerifyDescriptor(Fortran::lower::FirOpBuilder &builder,
-                                    mlir::Location loc, mlir::Value resultBox,
-                                    mlir::Value stringBox, mlir::Value setBox,
-                                    mlir::Value backBox, mlir::Value kind) {
+void Fortran::lower::genVerifyDescriptor(
+    Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+    mlir::Value resultBox, mlir::Value stringBox, mlir::Value setBox,
+    mlir::Value backBox, mlir::Value kind) {
   auto func = getRuntimeFunc<mkRTKey(Verify)>(loc, builder);
-  genCharacterSearch(func, builder, loc, resultBox, stringBox, 
-                                     setBox, backBox, kind);
+  genCharacterSearch(func, builder, loc, resultBox, stringBox, setBox, backBox,
+                     kind);
 }
 
-/// Generate call to verify runtime routine that is specialized on 
+/// Generate call to verify runtime routine that is specialized on
 /// \param kind.
 /// The \param kind represents the kind of the elements in the strings.
-mlir::Value
-Fortran::lower::genVerify(Fortran::lower::FirOpBuilder &builder,
-                                  mlir::Location loc, int kind, 
-                                  mlir::Value stringBase,
-                                  mlir::Value stringLen, mlir::Value setBase,
-                                  mlir::Value setLen, mlir::Value back) {
+mlir::Value Fortran::lower::genVerify(Fortran::lower::FirOpBuilder &builder,
+                                      mlir::Location loc, int kind,
+                                      mlir::Value stringBase,
+                                      mlir::Value stringLen,
+                                      mlir::Value setBase, mlir::Value setLen,
+                                      mlir::Value back) {
   mlir::FuncOp func;
   switch (kind) {
   case 1:
-    func = getRuntimeFunc<mkRTKey(Verify1)>(loc, builder); 
+    func = getRuntimeFunc<mkRTKey(Verify1)>(loc, builder);
     break;
   case 2:
     func = getRuntimeFunc<mkRTKey(Verify2)>(loc, builder);
@@ -240,39 +225,27 @@ Fortran::lower::genVerify(Fortran::lower::FirOpBuilder &builder,
         loc, "unsupported CHARACTER kind value. Runtime expects 1, 2, or 4.");
   }
   auto fTy = func.getType();
-  llvm::SmallVector<mlir::Value> args = {
-      builder.createConvert(loc, fTy.getInput(0), stringBase),
-      builder.createConvert(loc, fTy.getInput(1), stringLen),
-      builder.createConvert(loc, fTy.getInput(2), setBase),
-      builder.createConvert(loc, fTy.getInput(3), setLen),
-      builder.createConvert(loc, fTy.getInput(4), back)};
+  auto args = Fortran::lower::createArguments(builder, loc, fTy, stringBase,
+                                              stringLen, setBase, setLen, back);
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
 
 /// Generate calls to string handling intrinsics such as index, scan, and
-/// verify. These are the descriptor based implementations that take four 
+/// verify. These are the descriptor based implementations that take four
 /// arguments (string1, string2, back, kind).
 template <typename FN>
-static void
-genCharacterSearch(FN func, Fortran::lower::FirOpBuilder &builder,
-                   mlir::Location loc, mlir::Value resultBox,
-                   mlir::Value string1Box, mlir::Value string2Box,
-                   mlir::Value backBox, mlir::Value kind) {
+static void genCharacterSearch(FN func, Fortran::lower::FirOpBuilder &builder,
+                               mlir::Location loc, mlir::Value resultBox,
+                               mlir::Value string1Box, mlir::Value string2Box,
+                               mlir::Value backBox, mlir::Value kind) {
 
   auto fTy = func.getType();
   auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
   auto sourceLine =
-       Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(6));
+      Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(6));
 
-  llvm::SmallVector<mlir::Value> args = {
-    builder.createConvert(loc, fTy.getInput(0), resultBox),
-    builder.createConvert(loc, fTy.getInput(1), string1Box),
-    builder.createConvert(loc, fTy.getInput(2), string2Box),
-    builder.createConvert(loc, fTy.getInput(3), backBox),
-    builder.createConvert(loc, fTy.getInput(4), kind),
-    builder.createConvert(loc, fTy.getInput(5), sourceFile),
-    builder.createConvert(loc, fTy.getInput(6), sourceLine) 
-  };
-   
+  auto args = Fortran::lower::createArguments(builder, loc, fTy, resultBox,
+                                              string1Box, string2Box, backBox,
+                                              kind, sourceFile, sourceLine);
   builder.create<fir::CallOp>(loc, func, args);
 }
