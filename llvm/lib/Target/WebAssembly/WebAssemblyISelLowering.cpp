@@ -1276,6 +1276,15 @@ static bool IsWebAssemblyGlobal(SDValue Op) {
   return false;
 }
 
+static Optional<unsigned> IsWebAssemblyLocal(SDValue Op, SelectionDAG &DAG) {
+  const FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Op);
+  if (!FI)
+    return None;
+
+  auto &MF = DAG.getMachineFunction();
+  return WebAssembly::getLocalForStackObject(MF, FI->getIndex());
+}
+
 SDValue WebAssemblyTargetLowering::LowerStore(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -1293,6 +1302,17 @@ SDValue WebAssemblyTargetLowering::LowerStore(SDValue Op,
     SDValue Ops[] = {SN->getChain(), Value, Base};
     return DAG.getMemIntrinsicNode(WebAssemblyISD::GLOBAL_SET, DL, Tys, Ops,
                                    SN->getMemoryVT(), SN->getMemOperand());
+  }
+
+  if (Optional<unsigned> Local = IsWebAssemblyLocal(Base, DAG)) {
+    if (!Offset->isUndef())
+      report_fatal_error("unexpected offset when storing to webassembly local",
+                         false);
+
+    SDValue Idx = DAG.getTargetConstant(*Local, Base, MVT::i32);
+    SDVTList Tys = DAG.getVTList(MVT::Other); // The chain.
+    SDValue Ops[] = {SN->getChain(), Idx, Value};
+    return DAG.getNode(WebAssemblyISD::LOCAL_SET, DL, Tys, Ops);
   }
 
   return Op;
@@ -1314,6 +1334,20 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
     SDValue Ops[] = {LN->getChain(), Base};
     return DAG.getMemIntrinsicNode(WebAssemblyISD::GLOBAL_GET, DL, Tys, Ops,
                                    LN->getMemoryVT(), LN->getMemOperand());
+  }
+
+  if (Optional<unsigned> Local = IsWebAssemblyLocal(Base, DAG)) {
+    if (!Offset->isUndef())
+      report_fatal_error(
+          "unexpected offset when loading from webassembly local", false);
+
+    SDValue Idx = DAG.getTargetConstant(*Local, Base, MVT::i32);
+    EVT LocalVT = LN->getValueType(0);
+    SDValue LocalGet = DAG.getNode(WebAssemblyISD::LOCAL_GET, DL, LocalVT,
+                                   {LN->getChain(), Idx});
+    SDValue Result = DAG.getMergeValues({LocalGet, LN->getChain()}, DL);
+    assert(Result->getNumValues() == 2 && "Loads must carry a chain!");
+    return Result;
   }
 
   return Op;
