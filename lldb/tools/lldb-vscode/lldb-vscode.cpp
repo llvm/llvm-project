@@ -3158,6 +3158,11 @@ int main(int argc, char *argv[]) {
   llvm::ArrayRef<const char *> ArgsArr = llvm::makeArrayRef(argv + 1, argc);
   llvm::opt::InputArgList input_args = T.ParseArgs(ArgsArr, MAI, MAC);
 
+  if (input_args.hasArg(OPT_help)) {
+    printHelp(T, llvm::sys::path::filename(argv[0]));
+    return EXIT_SUCCESS;
+  }
+
   if (llvm::opt::Arg *target_arg = input_args.getLastArg(OPT_launch_target)) {
     if (llvm::opt::Arg *comm_file = input_args.getLastArg(OPT_comm_file)) {
       int target_args_pos = argc;
@@ -3188,11 +3193,6 @@ int main(int argc, char *argv[]) {
   RegisterRequestCallbacks();
 
   int portno = -1;
-
-  if (input_args.hasArg(OPT_help)) {
-    printHelp(T, llvm::sys::path::filename(argv[0]));
-    return EXIT_SUCCESS;
-  }
 
   if (auto *arg = input_args.getLastArg(OPT_port)) {
     auto optarg = arg->getValue();
