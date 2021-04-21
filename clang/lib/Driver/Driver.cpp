@@ -716,29 +716,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   // the -fopenmp-targets option.
   if (Arg *OpenMPTargets =
           C.getInputArgs().getLastArg(options::OPT_fopenmp_targets_EQ)) {
-    bool is_host_offloading =
-        (OpenMPTargets->getNumValues() == 1) &&
-        StringRef(OpenMPTargets->getValue())
-            .startswith_lower(C.getSingleOffloadToolChain<Action::OFK_Host>()
-                                  ->getTriple()
-                                  .getArchName());
-    if (!is_host_offloading) {
-      // Ensure at least one -Xopenm-target exists with a gpu -march
-      if (Arg *XOpenMPTargets =
-              C.getInputArgs().getLastArg(options::OPT_Xopenmp_target_EQ)) {
-        bool has_valid_march = false;
-        for (auto *V : XOpenMPTargets->getValues())
-          if (StringRef(V).startswith("-march="))
-            has_valid_march = true;
-        if (!has_valid_march) {
-          Diag(diag::err_drv_missing_Xopenmptarget_or_march);
-          return;
-        }
-      } else {
-        Diag(diag::err_drv_missing_Xopenmptarget_or_march);
-        return;
-      }
-    }
     if (OpenMPTargets->getNumValues()) {
       // We expect that -fopenmp-targets is always used in conjunction with the
       // option -fopenmp specifying a valid runtime with offloading support,
@@ -3387,11 +3364,6 @@ class OffloadingActionBuilder final {
       for (CudaArch Arch : GpuArchs)
         GpuArchList.push_back(Arch);
 
-      // Default to sm_20 which is the lowest common denominator for
-      // supported GPUs.  sm_20 code should work correctly, if
-      // suboptimally, on all newer GPUs.
-      if (GpuArchList.empty())
-        GpuArchList.push_back(CudaArch::SM_20);
       return Error;
     }
 

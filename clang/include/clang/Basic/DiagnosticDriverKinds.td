@@ -67,6 +67,8 @@ def err_drv_no_hip_runtime : Error<
   "cannot find HIP runtime. Provide its path via --rocm-path, or pass "
   "-nogpuinc to build without HIP runtime.">;
 
+def err_drv_undetermined_amdgpu_arch : Error<
+  "Cannot determine AMDGPU architecture: %0. Consider passing it via --march.">;
 def err_drv_cuda_version_unsupported : Error<
   "GPU arch %0 is supported by CUDA versions between %1 and %2 (inclusive), "
   "but installation at %3 is %4. Use --cuda-path to specify a different CUDA "
@@ -123,9 +125,6 @@ def err_drv_invalid_diagnotics_hotness_threshold : Error<
   "invalid argument in '%0', only integer or 'auto' is supported">;
 def err_drv_missing_argument : Error<
   "argument to '%0' is missing (expected %1 value%s1)">;
-def err_drv_missing_Xopenmptarget_or_march: Error<
-  "The option -fopenmp-targets= requires additional options -Xopenmp-target= and -march= .">,
-  DefaultFatal;
 def err_drv_invalid_Xarch_argument_with_args : Error<
   "invalid Xarch argument: '%0', options requiring arguments are unsupported">;
 def err_drv_Xopenmp_target_missing_triple : Error<
