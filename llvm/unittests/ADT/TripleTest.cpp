@@ -1511,6 +1511,7 @@ TEST(TripleTest, getARMCPUForArch) {
   {
     llvm::Triple Triple("arm--win32");
     EXPECT_EQ("cortex-a9", Triple.getARMCPUForArch());
+    EXPECT_EQ("generic", Triple.getARMCPUForArch("armv8-a"));
   }
   // Some alternative architectures
   {
