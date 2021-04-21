@@ -37,6 +37,7 @@
 #ifndef _OMPTARGET_DEBUG_H
 #define _OMPTARGET_DEBUG_H
 
+#include <atomic>
 #include <mutex>
 
 /// 32-Bit field data attributes controlling information presented to the user.
@@ -64,16 +65,18 @@ enum OpenMPInfoType : uint32_t {
 #define USED
 #endif
 
+// Interface to the InfoLevel variable defined by each library.
+extern std::atomic<uint32_t> InfoLevel;
+
 // Add __attribute__((used)) to work around a bug in gcc 5/6.
 USED static inline uint32_t getInfoLevel() {
-  static uint32_t InfoLevel = 0;
   static std::once_flag Flag{};
   std::call_once(Flag, []() {
     if (char *EnvStr = getenv("LIBOMPTARGET_INFO"))
-      InfoLevel = std::stoi(EnvStr);
+      InfoLevel.store(std::stoi(EnvStr));
   });
 
-  return InfoLevel;
+  return InfoLevel.load();
 }
 
 // Add __attribute__((used)) to work around a bug in gcc 5/6.

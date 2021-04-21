@@ -457,3 +457,14 @@ EXTERN void __kmpc_push_target_tripcount_mapper(ident_t *loc, int64_t device_id,
                                              loop_tripcount);
   PM->TblMapMtx.unlock();
 }
+
+EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
+  InfoLevel.store(NewInfoLevel);
+  for (auto &R : PM->RTLs.AllRTLs) {
+    if (R.set_info_flag)
+      R.set_info_flag(NewInfoLevel);
+  }
+}
+
+// Libomptarget's InfoLevel storage.
+std::atomic<uint32_t> InfoLevel;

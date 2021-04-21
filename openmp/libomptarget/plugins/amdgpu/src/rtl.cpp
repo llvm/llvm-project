@@ -1966,3 +1966,6 @@ int32_t __tgt_rtl_synchronize(int32_t device_id, __tgt_async_info *AsyncInfo) {
   }
   return OFFLOAD_SUCCESS;
 }
+
+// AMDGPU plugin's internal InfoLevel.
+std::atomic<uint32_t> InfoLevel;
