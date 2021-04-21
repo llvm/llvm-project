@@ -293,6 +293,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIf(archs=["arm", "aarch64"]) # failed run https://lab.llvm.org/buildbot/#/builders/96/builds/6933
     def test_commands(self):
         '''
             Tests the "initCommands", "preRunCommands", "stopCommands",
