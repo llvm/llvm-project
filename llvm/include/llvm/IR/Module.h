@@ -886,6 +886,10 @@ public:
   /// Set that PLT should be avoid for RTLib calls.
   void setRtLibUseGOT();
 
+  /// Get/set whether synthesized functions should get the uwtable attribute.
+  bool getUwtable() const;
+  void setUwtable();
+
   /// @name Utility functions for querying and setting the build SDK version
   /// @{
 
