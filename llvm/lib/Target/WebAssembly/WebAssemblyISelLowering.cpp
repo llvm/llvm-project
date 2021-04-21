@@ -135,9 +135,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setTargetDAGCombine(ISD::SIGN_EXTEND);
     setTargetDAGCombine(ISD::ZERO_EXTEND);
 
-    // Combine {s,u}int_to_fp of extract_vectors into conversion ops
+    // Combine int_to_fp of extract_vectors and vice versa into conversions ops
     setTargetDAGCombine(ISD::SINT_TO_FP);
     setTargetDAGCombine(ISD::UINT_TO_FP);
+    setTargetDAGCombine(ISD::EXTRACT_SUBVECTOR);
 
     // Combine concat of {s,u}int_to_fp_sat to i32x4.trunc_sat_f64x2_zero_{s,u}
     setTargetDAGCombine(ISD::CONCAT_VECTORS);
@@ -2062,36 +2063,65 @@ static SDValue
 performVectorConvertLowCombine(SDNode *N,
                                TargetLowering::DAGCombinerInfo &DCI) {
   auto &DAG = DCI.DAG;
-  assert(N->getOpcode() == ISD::SINT_TO_FP ||
-         N->getOpcode() == ISD::UINT_TO_FP);
 
-  // Combine ({s,u}int_to_fp (extract_subvector ... 0)) to an
-  // f64x2.convert_low_i32x4_{s,u} SDNode.
-  auto Extract = N->getOperand(0);
-  if (Extract.getOpcode() != ISD::EXTRACT_SUBVECTOR)
-    return SDValue();
-  auto Source = Extract.getOperand(0);
-  if (Source.getValueType() != MVT::v4i32)
-    return SDValue();
-  auto *IndexNode = dyn_cast<ConstantSDNode>(Extract.getOperand(1));
-  if (IndexNode == nullptr)
-    return SDValue();
-  auto Index = IndexNode->getZExtValue();
-
-  // The types must be correct.
   EVT ResVT = N->getValueType(0);
-  if (ResVT != MVT::v2f64 || Extract.getValueType() != MVT::v2i32)
+  if (ResVT != MVT::v2f64)
     return SDValue();
 
-  // The extracted vector must be the low half.
-  if (Index != 0)
-    return SDValue();
+  if (N->getOpcode() == ISD::SINT_TO_FP || N->getOpcode() == ISD::UINT_TO_FP) {
+    // Combine this:
+    //
+    //   (v2f64 ({s,u}int_to_fp
+    //     (v2i32 (extract_subvector (v4i32 $x), 0))))
+    //
+    // into (f64x2.convert_low_i32x4_{s,u} $x).
+    auto Extract = N->getOperand(0);
+    if (Extract.getOpcode() != ISD::EXTRACT_SUBVECTOR)
+      return SDValue();
+    if (Extract.getValueType() != MVT::v2i32)
+      return SDValue();
+    auto Source = Extract.getOperand(0);
+    if (Source.getValueType() != MVT::v4i32)
+      return SDValue();
+    auto *IndexNode = dyn_cast<ConstantSDNode>(Extract.getOperand(1));
+    if (IndexNode == nullptr || IndexNode->getZExtValue() != 0)
+      return SDValue();
 
-  unsigned Op = N->getOpcode() == ISD::SINT_TO_FP
-                    ? WebAssemblyISD::CONVERT_LOW_S
-                    : WebAssemblyISD::CONVERT_LOW_U;
+    unsigned Op = N->getOpcode() == ISD::SINT_TO_FP
+                      ? WebAssemblyISD::CONVERT_LOW_S
+                      : WebAssemblyISD::CONVERT_LOW_U;
 
-  return DAG.getNode(Op, SDLoc(N), ResVT, Source);
+    return DAG.getNode(Op, SDLoc(N), ResVT, Source);
+
+  } else if (N->getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+    // Combine this:
+    //
+    //   (v2f64 (extract_subvector
+    //     (v4f64 ({s,u}int_to_fp (v4i32 $x))), 0))
+    //
+    // into (f64x2.convert_low_i32x4_{s,u} $x).
+    auto IntToFP = N->getOperand(0);
+    if (IntToFP.getOpcode() != ISD::SINT_TO_FP &&
+        IntToFP.getOpcode() != ISD::UINT_TO_FP)
+      return SDValue();
+    if (IntToFP.getValueType() != MVT::v4f64)
+      return SDValue();
+    auto Source = IntToFP.getOperand(0);
+    if (Source.getValueType() != MVT::v4i32)
+      return SDValue();
+    auto IndexNode = dyn_cast<ConstantSDNode>(N->getOperand(1));
+    if (IndexNode == nullptr || IndexNode->getZExtValue() != 0)
+      return SDValue();
+
+    unsigned Op = IntToFP->getOpcode() == ISD::SINT_TO_FP
+                      ? WebAssemblyISD::CONVERT_LOW_S
+                      : WebAssemblyISD::CONVERT_LOW_U;
+
+    return DAG.getNode(Op, SDLoc(N), ResVT, Source);
+
+  } else {
+    llvm_unreachable("unexpected opcode");
+  }
 }
 
 static SDValue
@@ -2150,6 +2180,7 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performVectorExtendCombine(N, DCI);
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
+  case ISD::EXTRACT_SUBVECTOR:
     return performVectorConvertLowCombine(N, DCI);
   case ISD::CONCAT_VECTORS:
     return performVectorTruncSatLowCombine(N, DCI);
