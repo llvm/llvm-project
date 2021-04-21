@@ -52,7 +52,7 @@ static cl::opt<unsigned> VerifyStallCycles("amdgpu-verify-regbanks-reassign",
 // Threshold to keep compile time reasonable.
 static cl::opt<unsigned> VRegThresh("amdgpu-regbanks-reassign-threshold",
   cl::desc("Max number of vregs to run the regbanks reassign pass"),
-  cl::init(100000), cl::Hidden);
+  cl::init(15000), cl::Hidden);
 
 #define DEBUG_TYPE "amdgpu-regbanks-reassign"
 
