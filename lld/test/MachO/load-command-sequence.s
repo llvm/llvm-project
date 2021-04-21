@@ -47,7 +47,7 @@
 # DYLIB: cmd LC_ID_DYLIB
 
 # COMMON: cmd LC_UUID
-# COMMON: cmd LC_BUILD_VERSION
+# COMMON: cmd LC_VERSION_MIN_MACOSX
 # COMMON: cmd LC_LOAD_DYLIB
 
 .section __TEXT,__cstring

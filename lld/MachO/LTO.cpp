@@ -117,9 +117,10 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
     uint32_t modTime = 0;
     if (!config->ltoObjPath.empty()) {
       filePath = config->ltoObjPath;
-      path::append(filePath, Twine(i) + "." +
-                                 getArchitectureName(config->target.Arch) +
-                                 ".lto.o");
+      path::append(filePath,
+                   Twine(i) + "." +
+                       getArchitectureName(config->platformInfo.target.Arch) +
+                       ".lto.o");
       saveBuffer(buf[i], filePath);
       modTime = getModTime(filePath);
     }

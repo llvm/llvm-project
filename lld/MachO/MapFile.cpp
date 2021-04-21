@@ -108,8 +108,9 @@ void macho::writeMapFile() {
   os << format("# Path: %s\n", config->outputFile.str().c_str());
 
   // Dump output architecture.
-  os << format("# Arch: %s\n",
-               getArchitectureName(config->target.Arch).str().c_str());
+  os << format(
+      "# Arch: %s\n",
+      getArchitectureName(config->platformInfo.target.Arch).str().c_str());
 
   // Dump table of object files.
   os << "# Object files:\n";
