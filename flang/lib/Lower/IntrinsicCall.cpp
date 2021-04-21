@@ -144,7 +144,7 @@ genExtremumloc(FN func, FD funcDim, mlir::Type resultType,
   if (!absentDim && rank == 1) {
     // If dim argument is present and the array is rank 1, then the result is
     // a scalar (since the the result is rank-1 or 0).
-    // Therefore, we us a scalar result descriptor with Min/MaxlocDim().
+    // Therefore, we use a scalar result descriptor with Min/MaxlocDim().
     auto dim = fir::getBase(args[1]);
     // Create mutable fir.box to be passed to the runtime for the result.
     auto resultMutableBox =
