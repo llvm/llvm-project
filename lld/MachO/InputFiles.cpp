@@ -146,11 +146,11 @@ template <class LP> static bool checkCompatibility(const InputFile *input) {
   if (!platformInfo)
     return true;
   // TODO: Correctly detect simulator platforms or relax this check.
-  if (config->platformInfo.target.Platform != platformInfo->target.Platform) {
+  if (config->platform() != platformInfo->target.Platform) {
     error(toString(input) + " has platform " +
           getPlatformName(platformInfo->target.Platform) +
           Twine(", which is different from target platform ") +
-          getPlatformName(config->platformInfo.target.Platform));
+          getPlatformName(config->platform()));
     return false;
   }
   if (platformInfo->minimum >= config->platformInfo.minimum)
@@ -583,10 +583,10 @@ template <class LP> void ObjFile::parse() {
   auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
 
   Architecture arch = getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
-  if (arch != config->platformInfo.target.Arch) {
+  if (arch != config->arch()) {
     error(toString(this) + " has architecture " + getArchitectureName(arch) +
           " which is incompatible with target architecture " +
-          getArchitectureName(config->platformInfo.target.Arch));
+          getArchitectureName(config->arch()));
     return;
   }
 
@@ -841,7 +841,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   // TODO(compnerd) filter out symbols based on the target platform
   // TODO: handle weak defs, thread locals
   for (const auto *symbol : interface.symbols()) {
-    if (!symbol->getArchitectures().has(config->platformInfo.target.Arch))
+    if (!symbol->getArchitectures().has(config->arch()))
       continue;
 
     switch (symbol->getKind()) {

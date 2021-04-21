@@ -619,7 +619,7 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
   config->platformInfo.target =
       MachO::Target(getArchitectureFromName(archName), platform);
 
-  switch (getCPUTypeFromArchitecture(config->platformInfo.target.Arch).first) {
+  switch (getCPUTypeFromArchitecture(config->arch()).first) {
   case CPU_TYPE_X86_64:
     return createX86_64TargetInfo();
   case CPU_TYPE_ARM64:
@@ -700,16 +700,14 @@ static const char *getReproduceOption(InputArgList &args) {
 static bool isPie(InputArgList &args) {
   if (config->outputType != MH_EXECUTE || args.hasArg(OPT_no_pie))
     return false;
-  if (config->platformInfo.target.Arch == AK_arm64 ||
-      config->platformInfo.target.Arch == AK_arm64e ||
-      config->platformInfo.target.Arch == AK_arm64_32)
+  if (config->arch() == AK_arm64 || config->arch() == AK_arm64e ||
+      config->arch() == AK_arm64_32)
     return true;
 
   // TODO: add logic here as we support more archs. E.g. i386 should default
   // to PIE from 10.7
-  assert(config->platformInfo.target.Arch == AK_x86_64 ||
-         config->platformInfo.target.Arch == AK_x86_64h ||
-         config->platformInfo.target.Arch == AK_arm64_32);
+  assert(config->arch() == AK_x86_64 || config->arch() == AK_x86_64h ||
+         config->arch() == AK_arm64_32);
 
   PlatformKind kind = config->platformInfo.target.Platform;
   if (kind == PlatformKind::macOS &&
@@ -965,9 +963,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   std::array<PlatformKind, 3> encryptablePlatforms{
       PlatformKind::iOS, PlatformKind::watchOS, PlatformKind::tvOS};
-  config->emitEncryptionInfo = args.hasFlag(
-      OPT_encryptable, OPT_no_encryption,
-      is_contained(encryptablePlatforms, config->platformInfo.target.Platform));
+  config->emitEncryptionInfo =
+      args.hasFlag(OPT_encryptable, OPT_no_encryption,
+                   is_contained(encryptablePlatforms, config->platform()));
 
 #ifndef HAVE_LIBXAR
   if (config->emitBitcodeBundle)
@@ -1037,7 +1035,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     StringRef segName = arg->getValue(0);
     uint32_t maxProt = parseProtection(arg->getValue(1));
     uint32_t initProt = parseProtection(arg->getValue(2));
-    if (maxProt != initProt && config->platformInfo.target.Arch != AK_i386)
+    if (maxProt != initProt && config->arch() != AK_i386)
       error("invalid argument '" + arg->getAsString(args) +
             "': max and init must be the same for non-i386 archs");
     if (segName == segment_names::linkEdit)
@@ -1059,9 +1057,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   config->adhocCodesign = args.hasFlag(
       OPT_adhoc_codesign, OPT_no_adhoc_codesign,
-      (config->platformInfo.target.Arch == AK_arm64 ||
-       config->platformInfo.target.Arch == AK_arm64e) &&
-          config->platformInfo.target.Platform == PlatformKind::macOS);
+      (config->arch() == AK_arm64 || config->arch() == AK_arm64e) &&
+          config->platform() == PlatformKind::macOS);
 
   if (args.hasArg(OPT_v)) {
     message(getLLDVersion());

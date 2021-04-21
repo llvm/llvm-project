@@ -124,6 +124,12 @@ struct Configuration {
 
   SymbolPatterns exportedSymbols;
   SymbolPatterns unexportedSymbols;
+
+  llvm::MachO::Architecture arch() const { return platformInfo.target.Arch; }
+
+  llvm::MachO::PlatformKind platform() const {
+    return platformInfo.target.Platform;
+  }
 };
 
 // The symbol with the highest priority should be ordered first in the output
