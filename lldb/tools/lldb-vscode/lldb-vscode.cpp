@@ -3149,9 +3149,6 @@ int main(int argc, char *argv[]) {
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
   llvm::PrettyStackTraceProgram X(argc, argv);
 
-  // stdout/stderr redirection to the IDE's console
-  int new_stdout_fd = SetupStdoutStderrRedirection();
-
   llvm::SmallString<256> program_path(argv[0]);
   llvm::sys::fs::make_absolute(program_path);
   g_vsc.debug_adaptor_path = program_path.str().str();
@@ -3177,6 +3174,9 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
   }
+
+  // stdout/stderr redirection to the IDE's console
+  int new_stdout_fd = SetupStdoutStderrRedirection();
 
   // Initialize LLDB first before we do anything.
   lldb::SBDebugger::Initialize();
