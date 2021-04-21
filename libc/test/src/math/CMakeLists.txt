@@ -1119,5 +1119,18 @@ add_fp_unittest(
     libc.utils.FPUtil.fputil
 )
 
+add_fp_unittest(
+  fma_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    fma_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.fma
+    libc.utils.FPUtil.fputil
+)
+
 add_subdirectory(generic)
 add_subdirectory(exhaustive)

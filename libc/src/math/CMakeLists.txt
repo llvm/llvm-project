@@ -32,6 +32,30 @@ function(add_math_entrypoint_object name)
   message(FATAL_ERROR "No machine specific or generic implementation found for ${name}.")
 endfunction()
 
+add_entrypoint_object(
+  fmaf
+  SRCS
+    fmaf.cpp
+  HDRS
+    fmaf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  fma
+  SRCS
+    fma.cpp
+  HDRS
+    fma.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
 add_math_entrypoint_object(ceil)
 add_math_entrypoint_object(ceilf)
 add_math_entrypoint_object(ceill)
@@ -57,8 +81,6 @@ add_math_entrypoint_object(fdiml)
 add_math_entrypoint_object(floor)
 add_math_entrypoint_object(floorf)
 add_math_entrypoint_object(floorl)
-
-add_math_entrypoint_object(fmaf)
 
 add_math_entrypoint_object(fmax)
 add_math_entrypoint_object(fmaxf)
