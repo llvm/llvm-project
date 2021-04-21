@@ -67,6 +67,9 @@ enum ActionKind {
   /// Parse, run semantics and then output the pre-FIR tree
   DebugPreFIRTree,
 
+  /// `-fget-definition`
+  GetDefinition,
+
   /// Parse, run semantics and then dump symbol sources map
   GetSymbolsSources
 
@@ -205,6 +208,14 @@ public:
   /// symbols based on source-code location. This is not needed in regular
   /// compilation.
   unsigned needProvenanceRangeToCharBlockMappings_ : 1;
+
+  /// Input values from `-fget-definition`
+  struct GetDefinitionVals {
+    unsigned line;
+    unsigned startColumn;
+    unsigned endColumn;
+  };
+  GetDefinitionVals getDefVals_;
 
   /// The input files and their types.
   std::vector<FrontendInputFile> inputs_;
