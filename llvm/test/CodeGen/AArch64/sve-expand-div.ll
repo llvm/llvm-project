@@ -14,8 +14,6 @@ define <vscale x 16 x i8> @sdiv_i8(<vscale x 16 x i8> %a) #0 {
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    smulh z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    lsr z1.b, z0.b, #7
-; CHECK-NEXT:    mov z2.b, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z1.d, z1.d, z2.d
 ; CHECK-NEXT:    add z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %div = sdiv <vscale x 16 x i8> %a, shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> undef, i8 3, i32 0), <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer)
@@ -26,12 +24,10 @@ define <vscale x 8 x i16> @sdiv_i16(<vscale x 8 x i16> %a) #0 {
 ; CHECK-LABEL: sdiv_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #21846
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    smulh z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    lsr z1.h, z0.h, #15
-; CHECK-NEXT:    mov z2.h, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z1.d, z1.d, z2.d
 ; CHECK-NEXT:    add z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %div = sdiv <vscale x 8 x i16> %a, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> undef, i16 3, i32 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer)
@@ -43,12 +39,10 @@ define <vscale x 4 x i32> @sdiv_i32(<vscale x 4 x i32> %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #21846
 ; CHECK-NEXT:    movk w8, #21845, lsl #16
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z1.s, w8
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    smulh z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    lsr z1.s, z0.s, #31
-; CHECK-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z1.d, z1.d, z2.d
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %div = sdiv <vscale x 4 x i32> %a, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 3, i32 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer)
@@ -60,12 +54,10 @@ define <vscale x 2 x i64> @sdiv_i64(<vscale x 2 x i64> %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #6148914691236517205
 ; CHECK-NEXT:    movk x8, #21846
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.d, x8
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    smulh z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    lsr z1.d, z0.d, #63
-; CHECK-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z1.d, z1.d, z2.d
 ; CHECK-NEXT:    add z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %div = sdiv <vscale x 2 x i64> %a, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 3, i32 0), <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer)
