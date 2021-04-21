@@ -1756,7 +1756,7 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
   bool is_readonly = false;
   // Read from file cache if read-only section.
   if (!force_live_memory && resolved_addr.IsSectionOffset()) {
-    SectionSP section_sp(addr.GetSection());
+    SectionSP section_sp(resolved_addr.GetSection());
     if (section_sp) {
       auto permissions = Flags(section_sp->GetPermissions());
       is_readonly = !permissions.Test(ePermissionsWritable) &&
