@@ -45,7 +45,6 @@ class CheckResult(gdb.Command):
             # Ignore the convenience variable name and newline
             value = value_str[value_str.find("= ") + 2:-1]
             gdb.newest_frame().select()
-
             expectation_val = compare_frame.read_var("expectation")
             check_literal = expectation_val.string(encoding="utf-8")
             if "PrettyPrintToRegex" in compare_frame.name():
