@@ -75,10 +75,8 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
                      const ArgList &Args)
     : D(D), Triple(T), Args(Args), CachedRTTIArg(GetRTTIArgument(Args)),
       CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)) {
-  if (D.CCCIsCXX()) {
-    if (auto CXXStdlibPath = getCXXStdlibPath())
-      getFilePaths().push_back(*CXXStdlibPath);
-  }
+  if (auto StdlibPath = getStdlibPath())
+    getFilePaths().push_back(*StdlibPath);
 
   if (auto RuntimePath = getRuntimePath())
     getLibraryPaths().push_back(*RuntimePath);
@@ -500,18 +498,18 @@ Optional<std::string> ToolChain::getRuntimePath() const {
   return None;
 }
 
-Optional<std::string> ToolChain::getCXXStdlibPath() const {
+Optional<std::string> ToolChain::getStdlibPath() const {
   SmallString<128> P;
 
   // First try the triple passed to driver as --target=<triple>.
   P.assign(D.Dir);
-  llvm::sys::path::append(P, "..", "lib", D.getTargetTriple(), "c++");
+  llvm::sys::path::append(P, "..", "lib", D.getTargetTriple());
   if (getVFS().exists(P))
     return llvm::Optional<std::string>(std::string(P.str()));
 
   // Second try the normalized triple.
   P.assign(D.Dir);
-  llvm::sys::path::append(P, "..", "lib", Triple.str(), "c++");
+  llvm::sys::path::append(P, "..", "lib", Triple.str());
   if (getVFS().exists(P))
     return llvm::Optional<std::string>(std::string(P.str()));
 

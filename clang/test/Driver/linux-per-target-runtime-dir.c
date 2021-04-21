@@ -12,7 +12,7 @@
 // CHECK-PER-TARGET-RUNTIME: "-internal-isystem" "{{.*}}/../include/c++/v1"
 // CHECK-PER-TARGET-RUNTIME: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-PER-TARGET-RUNTIME: "--sysroot=[[SYSROOT]]"
-// CHECK-PER-TARGET-RUNTIME: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-linux-gnu{{/|\\\\}}c++"
+// CHECK-PER-TARGET-RUNTIME: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-linux-gnu"
 
 // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \
 // RUN:     --target=x86_64-linux-gnu \
