@@ -85,7 +85,13 @@ template <class LP> MachHeaderSection *macho::makeMachHeaderSection() {
 }
 
 template <class LP> uint64_t MachHeaderSectionImpl<LP>::getSize() const {
-  return sizeof(typename LP::mach_header) + sizeOfCmds + config->headerPad;
+  uint64_t size =
+      sizeof(typename LP::mach_header) + sizeOfCmds + config->headerPad;
+  // If we are emitting an encryptable binary, our load commands must have a
+  // separate (non-encrypted) page to themselves.
+  if (config->emitEncryptionInfo)
+    size = alignTo(size, target->getPageSize());
+  return size;
 }
 
 static uint32_t cpuSubtype() {
