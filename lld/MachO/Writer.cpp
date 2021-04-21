@@ -471,6 +471,29 @@ public:
   mutable uint8_t *uuidBuf;
 };
 
+template <class LP> class LCEncryptionInfo : public LoadCommand {
+public:
+  LCEncryptionInfo() {}
+
+  uint32_t getSize() const override {
+    return sizeof(typename LP::encryption_info_command);
+  }
+
+  void writeTo(uint8_t *buf) const override {
+    using EncryptionInfo = typename LP::encryption_info_command;
+    auto *c = reinterpret_cast<EncryptionInfo *>(buf);
+    buf += sizeof(EncryptionInfo);
+    c->cmd = LP::encryptionInfoLCType;
+    c->cmdsize = getSize();
+    c->cryptoff = in.header->getSize();
+    auto it = find_if(outputSegments, [](const OutputSegment *seg) {
+      return seg->name == segment_names::text;
+    });
+    assert(it != outputSegments.end());
+    c->cryptsize = (*it)->fileSize - c->cryptoff;
+  }
+};
+
 class LCCodeSignature : public LoadCommand {
 public:
   LCCodeSignature(CodeSignatureSection *section) : section(section) {}
@@ -621,6 +644,8 @@ template <class LP> void Writer::createLoadCommands() {
       make<LCDysymtab>(symtabSection, indirectSymtabSection));
   if (functionStartsSection)
     in.header->addLoadCommand(make<LCFunctionStarts>(functionStartsSection));
+  if (config->emitEncryptionInfo)
+    in.header->addLoadCommand(make<LCEncryptionInfo<LP>>());
   for (StringRef path : config->runtimePaths)
     in.header->addLoadCommand(make<LCRPath>(path));
 
