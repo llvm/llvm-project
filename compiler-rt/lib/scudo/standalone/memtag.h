@@ -152,20 +152,65 @@ inline uptr addFixedTag(uptr Ptr, uptr Tag) { return Ptr | (Tag << 56); }
 
 inline uptr storeTags(uptr Begin, uptr End) {
   DCHECK(Begin % 16 == 0);
-  if (Begin != End) {
-    __asm__ __volatile__(
-        R"(
-      .arch_extension memtag
+  uptr LineSize, Next, Tmp;
+  __asm__ __volatile__(
+      R"(
+    .arch_extension memtag
 
-    1:
-      stzg %[Cur], [%[Cur]], #16
-      cmp %[Cur], %[End]
-      b.lt 1b
-    )"
-        : [Cur] "+&r"(Begin)
-        : [End] "r"(End)
-        : "memory");
-  }
+    // Compute the cache line size in bytes (DCZID_EL0 stores it as the log2
+    // of the number of 4-byte words) and bail out to the slow path if DCZID_EL0
+    // indicates that the DC instructions are unavailable.
+    DCZID .req %[Tmp]
+    mrs DCZID, dczid_el0
+    tbnz DCZID, #4, 3f
+    and DCZID, DCZID, #15
+    mov %[LineSize], #4
+    lsl %[LineSize], %[LineSize], DCZID
+    .unreq DCZID
+
+    // Our main loop doesn't handle the case where we don't need to perform any
+    // DC GZVA operations. If the size of our tagged region is less than
+    // twice the cache line size, bail out to the slow path since it's not
+    // guaranteed that we'll be able to do a DC GZVA.
+    Size .req %[Tmp]
+    sub Size, %[End], %[Cur]
+    cmp Size, %[LineSize], lsl #1
+    b.lt 3f
+    .unreq Size
+
+    LineMask .req %[Tmp]
+    sub LineMask, %[LineSize], #1
+
+    // STZG until the start of the next cache line.
+    orr %[Next], %[Cur], LineMask
+  1:
+    stzg %[Cur], [%[Cur]], #16
+    cmp %[Cur], %[Next]
+    b.lt 1b
+
+    // DC GZVA cache lines until we have no more full cache lines.
+    bic %[Next], %[End], LineMask
+    .unreq LineMask
+  2:
+    dc gzva, %[Cur]
+    add %[Cur], %[Cur], %[LineSize]
+    cmp %[Cur], %[Next]
+    b.lt 2b
+
+    // STZG until the end of the tagged region. This loop is also used to handle
+    // slow path cases.
+  3:
+    cmp %[Cur], %[End]
+    b.ge 4f
+    stzg %[Cur], [%[Cur]], #16
+    b 3b
+
+  4:
+  )"
+      : [Cur] "+&r"(Begin), [LineSize] "=&r"(LineSize), [Next] "=&r"(Next),
+        [Tmp] "=&r"(Tmp)
+      : [End] "r"(End)
+      : "memory");
   return Begin;
 }
 
