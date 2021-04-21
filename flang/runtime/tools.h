@@ -13,6 +13,7 @@
 #include "descriptor.h"
 #include "memory.h"
 #include "terminator.h"
+#include "flang/Common/long-double.h"
 #include <functional>
 #include <map>
 #include <type_traits>
@@ -98,6 +99,84 @@ inline bool SetInteger(INT &x, int kind, std::int64_t value) {
     return true;
   default:
     return false;
+  }
+}
+
+// Maps a runtime INTEGER kind value to the appropriate instantiation of
+// a function object template and calls it with the supplied arguments.
+template <template <int KIND> class FUNC, typename RESULT, typename... A>
+inline RESULT ApplyIntegerKind(int kind, Terminator &terminator, A &&...x) {
+  switch (kind) {
+  case 1:
+    return FUNC<1>{}(std::forward<A>(x)...);
+  case 2:
+    return FUNC<2>{}(std::forward<A>(x)...);
+  case 4:
+    return FUNC<4>{}(std::forward<A>(x)...);
+  case 8:
+    return FUNC<8>{}(std::forward<A>(x)...);
+#ifdef __SIZEOF_INT128__
+  case 16:
+    return FUNC<16>{}(std::forward<A>(x)...);
+#endif
+  default:
+    terminator.Crash("unsupported INTEGER(KIND=%d)", kind);
+  }
+}
+
+template <template <int KIND> class FUNC, typename RESULT, typename... A>
+inline RESULT ApplyFloatingPointKind(
+    int kind, Terminator &terminator, A &&...x) {
+  switch (kind) {
+#if 0 // TODO: REAL/COMPLEX (2 & 3)
+  case 2:
+    return FUNC<2>{}(std::forward<A>(x)...);
+  case 3:
+    return FUNC<3>{}(std::forward<A>(x)...);
+#endif
+  case 4:
+    return FUNC<4>{}(std::forward<A>(x)...);
+  case 8:
+    return FUNC<8>{}(std::forward<A>(x)...);
+#if LONG_DOUBLE == 80
+  case 10:
+    return FUNC<10>{}(std::forward<A>(x)...);
+#elif LONG_DOUBLE == 128
+  case 16:
+    return FUNC<16>{}(std::forward<A>(x)...);
+#endif
+  default:
+    terminator.Crash("unsupported REAL/COMPLEX(KIND=%d)", kind);
+  }
+}
+
+template <template <int KIND> class FUNC, typename RESULT, typename... A>
+inline RESULT ApplyCharacterKind(int kind, Terminator &terminator, A &&...x) {
+  switch (kind) {
+  case 1:
+    return FUNC<1>{}(std::forward<A>(x)...);
+  case 2:
+    return FUNC<2>{}(std::forward<A>(x)...);
+  case 4:
+    return FUNC<4>{}(std::forward<A>(x)...);
+  default:
+    terminator.Crash("unsupported CHARACTER(KIND=%d)", kind);
+  }
+}
+
+template <template <int KIND> class FUNC, typename RESULT, typename... A>
+inline RESULT ApplyLogicalKind(int kind, Terminator &terminator, A &&...x) {
+  switch (kind) {
+  case 1:
+    return FUNC<1>{}(std::forward<A>(x)...);
+  case 2:
+    return FUNC<2>{}(std::forward<A>(x)...);
+  case 4:
+    return FUNC<4>{}(std::forward<A>(x)...);
+  case 8:
+    return FUNC<8>{}(std::forward<A>(x)...);
+  default:
+    terminator.Crash("unsupported LOGICAL(KIND=%d)", kind);
   }
 }
 

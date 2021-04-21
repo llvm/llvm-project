@@ -24,8 +24,8 @@ namespace Fortran::runtime {
 extern "C" {
 
 // Reductions that are known to return scalars have per-type entry
-// points.  These cover the casse that either have no DIM=
-// argument, or have an argument rank of 1.  Pass 0 for no DIM=
+// points.  These cover the cases that either have no DIM=
+// argument or have an argument rank of 1.  Pass 0 for no DIM=
 // or the value of the DIM= argument so that it may be checked.
 // The data type in the descriptor is checked against the expected
 // return type.
@@ -144,20 +144,42 @@ void RTNAME(CppProductComplex16)(std::complex<long double> &,
 void RTNAME(ProductDim)(Descriptor &result, const Descriptor &array, int dim,
     const char *source, int line, const Descriptor *mask = nullptr);
 
-// MAXLOC and MINLOC
+// IPARITY()
+std::int8_t RTNAME(IParity1)(const Descriptor &, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr);
+std::int16_t RTNAME(IParity2)(const Descriptor &, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr);
+std::int32_t RTNAME(IParity4)(const Descriptor &, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr);
+std::int64_t RTNAME(IParity8)(const Descriptor &, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr);
+#ifdef __SIZEOF_INT128__
+common::int128_t RTNAME(IParity16)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+#endif
+void RTNAME(IParityDim)(Descriptor &result, const Descriptor &array, int dim,
+    const char *source, int line, const Descriptor *mask = nullptr);
+
+// FINDLOC, MAXLOC, & MINLOC
 // These return allocated arrays in the supplied descriptor.
 // The default value for KIND= should be the default INTEGER in effect at
 // compilation time.
-void RTNAME(Maxloc)(Descriptor &, const Descriptor &, int kind,
+void RTNAME(Findloc)(Descriptor &, const Descriptor &x,
+    const Descriptor &target, int kind, const char *source, int line,
+    const Descriptor *mask = nullptr, bool back = false);
+void RTNAME(FindlocDim)(Descriptor &, const Descriptor &x,
+    const Descriptor &target, int kind, int dim, const char *source, int line,
+    const Descriptor *mask = nullptr, bool back = false);
+void RTNAME(Maxloc)(Descriptor &, const Descriptor &x, int kind,
     const char *source, int line, const Descriptor *mask = nullptr,
     bool back = false);
-void RTNAME(MaxlocDim)(Descriptor &, const Descriptor &, int kind, int dim,
+void RTNAME(MaxlocDim)(Descriptor &, const Descriptor &x, int kind, int dim,
     const char *source, int line, const Descriptor *mask = nullptr,
     bool back = false);
-void RTNAME(Minloc)(Descriptor &, const Descriptor &, int kind,
+void RTNAME(Minloc)(Descriptor &, const Descriptor &x, int kind,
     const char *source, int line, const Descriptor *mask = nullptr,
     bool back = false);
-void RTNAME(MinlocDim)(Descriptor &, const Descriptor &, int kind, int dim,
+void RTNAME(MinlocDim)(Descriptor &, const Descriptor &x, int kind, int dim,
     const char *source, int line, const Descriptor *mask = nullptr,
     bool back = false);
 
@@ -221,7 +243,7 @@ void RTNAME(MaxvalDim)(Descriptor &, const Descriptor &, int dim,
 void RTNAME(MinvalDim)(Descriptor &, const Descriptor &, int dim,
     const char *source, int line, const Descriptor *mask = nullptr);
 
-// ALL, ANY, & COUNT logical reductions
+// ALL, ANY, COUNT, & PARITY logical reductions
 bool RTNAME(All)(const Descriptor &, const char *source, int line, int dim = 0);
 void RTNAME(AllDim)(Descriptor &result, const Descriptor &, int dim,
     const char *source, int line);
@@ -231,6 +253,10 @@ void RTNAME(AnyDim)(Descriptor &result, const Descriptor &, int dim,
 std::int64_t RTNAME(Count)(
     const Descriptor &, const char *source, int line, int dim = 0);
 void RTNAME(CountDim)(Descriptor &result, const Descriptor &, int dim, int kind,
+    const char *source, int line);
+bool RTNAME(Parity)(
+    const Descriptor &, const char *source, int line, int dim = 0);
+void RTNAME(ParityDim)(Descriptor &result, const Descriptor &, int dim,
     const char *source, int line);
 
 } // extern "C"
