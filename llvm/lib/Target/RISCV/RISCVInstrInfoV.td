@@ -88,6 +88,7 @@ class VUnitStrideLoadMask<string opcodestr>
                 (outs VR:$vd),
                 (ins GPR:$rs1), opcodestr, "$vd, (${rs1})"> {
   let vm = 1;
+  let RVVConstraint = NoConstraint;
 }
 
 // load vd, (rs1), vm
