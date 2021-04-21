@@ -53,6 +53,28 @@ eh.resume:
   resume { i8*, i32 } %0
 }
 
+;; If the function is in a comdat group with noduplicates kind, the generated
+;; .gcc_except_table should is lowered to a zero-flag ELF section group.
+$zero = comdat noduplicates
+define i32 @zero() uwtable comdat personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL:       zero:
+; CHECK:             .cfi_endproc
+; NORMAL-NEXT:       .section .gcc_except_table.zero,"aG",@progbits,zero{{$}}
+; SEP_BFD-NEXT:      .section .gcc_except_table.zero,"aG",@progbits,zero{{$}}
+; SEP-NEXT:          .section .gcc_except_table.zero,"aGo",@progbits,zero,zero{{$}}
+; SEP_NOUNIQUE-NEXT: .section .gcc_except_table,"aG",@progbits,zero{{$}}
+; NOUNIQUE-NEXT:     .section .gcc_except_table,"aG",@progbits,zero{{$}}
+entry:
+  invoke void @ext() to label %try.cont unwind label %lpad
+lpad:
+  %0 = landingpad { i8*, i32 } catch i8* bitcast (i8** @_ZTIi to i8*)
+  br label %eh.resume
+try.cont:
+  ret i32 0
+eh.resume:
+  resume { i8*, i32 } %0
+}
+
 declare void @ext()
 
 declare i32 @__gxx_personality_v0(...)
