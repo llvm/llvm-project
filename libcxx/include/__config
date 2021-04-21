@@ -976,7 +976,7 @@ typedef unsigned int   char32_t;
 #endif
 
 #if _LIBCPP_STD_VER <= 17 || !defined(__cpp_char8_t)
-#define _LIBCPP_NO_HAS_CHAR8_T
+#define _LIBCPP_HAS_NO_CHAR8_T
 #endif
 
 // Deprecation macros.
@@ -1019,7 +1019,7 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_DEPRECATED_IN_CXX20
 #endif
 
-#if !defined(_LIBCPP_NO_HAS_CHAR8_T)
+#if !defined(_LIBCPP_HAS_NO_CHAR8_T)
 #  define _LIBCPP_DEPRECATED_WITH_CHAR8_T _LIBCPP_DEPRECATED
 #else
 #  define _LIBCPP_DEPRECATED_WITH_CHAR8_T
