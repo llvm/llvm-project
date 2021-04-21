@@ -1,0 +1,70 @@
+{
+	"name": "mlir",
+	"displayName": "MLIR",
+	"description": "MLIR Language Extension",
+	"version": "0.0.1",
+	"publisher": "llvm-vs-code-extensions",
+	"repository": "https://github.com/llvm/llvm-project/",
+	"engines": {
+		"vscode": "^1.52.0"
+	},
+	"categories": [
+		"Programming Languages"
+	],
+	"activationEvents": [
+		"onLanguage:mlir"
+	],
+	"main": "./out/extension",
+	"contributes": {
+		"languages": [
+			{
+				"id": "mlir",
+				"aliases": [
+					"MLIR",
+					"mlir"
+				],
+				"extensions": [
+					".mlir"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "mlir",
+				"scopeName": "source.mlir",
+				"path": "./grammar.json"
+			}
+		],
+		"configuration": {
+			"type": "object",
+			"title": "MLIR",
+			"properties": {
+				"mlir.server_path": {
+					"scope": "resource",
+					"type": "string",
+					"description": "The file path of the mlir-lsp-server executable."
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "tsc -p ./",
+		"compile": "tsc -watch -p ./",
+		"format": "clang-format -i --glob=\"{src,test}/*.ts\"",
+		"test": "tsc -p ./ && node ./out/test/index.js",
+		"package": "vsce package"
+	},
+	"devDependencies": {
+		"@types/mocha": "^5.2.0",
+		"@types/node": "^8.0.0",
+		"@types/vscode": "1.52.*",
+		"clang-format": "1.4.0",
+		"tslint": "^5.16.0",
+		"typescript": "^3.5.1",
+		"vsce": "^1.75.0",
+		"vscode-languageclient": "^5.2.1",
+		"vscode-test": "^1.3.0"
+	},
+	"dependencies": {}
+}
