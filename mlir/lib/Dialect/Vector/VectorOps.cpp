@@ -2683,6 +2683,11 @@ static LogicalResult verify(TransferWriteOp op) {
   if (llvm::size(op.indices()) != shapedType.getRank())
     return op.emitOpError("requires ") << shapedType.getRank() << " indices";
 
+  // We do not allow broadcast dimensions on TransferWriteOps for the moment,
+  // as the semantics is unclear. This can be revisited later if necessary.
+  if (op.hasBroadcastDim())
+    return op.emitOpError("should not have broadcast dimensions");
+
   if (failed(verifyTransferOp(op.getOperation(), shapedType, vectorType,
                               permutationMap,
                               op.in_bounds() ? *op.in_bounds() : ArrayAttr())))
