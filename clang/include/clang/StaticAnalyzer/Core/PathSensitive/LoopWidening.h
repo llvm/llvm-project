@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
+/// \file
 /// This header contains the declarations of functions which are used to widen
 /// loops which do not otherwise exit. The widening is done by invalidating
 /// anything which might be modified by the body of the loop.
