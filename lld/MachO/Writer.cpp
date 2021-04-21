@@ -197,17 +197,11 @@ public:
       return;
 
     c->vmaddr = seg->firstSection()->addr;
-    c->vmsize =
-        seg->lastSection()->addr + seg->lastSection()->getSize() - c->vmaddr;
+    c->vmsize = seg->vmSize;
+    c->filesize = seg->fileSize;
     c->nsects = seg->numNonHiddenSections();
 
     for (const OutputSection *osec : seg->getSections()) {
-      if (!isZeroFill(osec->flags)) {
-        assert(osec->fileOff >= seg->fileOff);
-        c->filesize = std::max<uint64_t>(
-            c->filesize, osec->fileOff + osec->getFileSize() - seg->fileOff);
-      }
-
       if (osec->isHidden())
         continue;
 
@@ -682,6 +676,7 @@ static int segmentOrder(OutputSegment *seg) {
       .Case(segment_names::text, -3)
       .Case(segment_names::dataConst, -2)
       .Case(segment_names::data, -1)
+      .Case(segment_names::llvm, std::numeric_limits<int>::max() - 1)
       // Make sure __LINKEDIT is the last segment (i.e. all its hidden
       // sections must be ordered after other sections).
       .Case(segment_names::linkEdit, std::numeric_limits<int>::max())
@@ -855,15 +850,26 @@ template <class LP> void Writer::createOutputSections() {
 
 void Writer::finalizeAddresses() {
   TimeTraceScope timeScope("Finalize addresses");
+  uint64_t pageSize = target->getPageSize();
   // Ensure that segments (and the sections they contain) are allocated
   // addresses in ascending order, which dyld requires.
   //
   // Note that at this point, __LINKEDIT sections are empty, but we need to
   // determine addresses of other segments/sections before generating its
   // contents.
-  for (OutputSegment *seg : outputSegments)
-    if (seg != linkEditSegment)
-      assignAddresses(seg);
+  for (OutputSegment *seg : outputSegments) {
+    if (seg == linkEditSegment)
+      continue;
+    assignAddresses(seg);
+    // codesign / libstuff checks for segment ordering by verifying that
+    // `fileOff + fileSize == next segment fileOff`. So we call alignTo() before
+    // (instead of after) computing fileSize to ensure that the segments are
+    // contiguous. We handle addr / vmSize similarly for the same reason.
+    fileOff = alignTo(fileOff, pageSize);
+    addr = alignTo(addr, pageSize);
+    seg->vmSize = addr - seg->firstSection()->addr;
+    seg->fileSize = fileOff - seg->fileOff;
+  }
 
   // FIXME(gkm): create branch-extension thunks here, then adjust addresses
 }
@@ -883,12 +889,12 @@ void Writer::finalizeLinkEditSegment() {
   // Now that __LINKEDIT is filled out, do a proper calculation of its
   // addresses and offsets.
   assignAddresses(linkEditSegment);
+  // No need to page-align fileOff / addr here since this is the last segment.
+  linkEditSegment->vmSize = addr - linkEditSegment->firstSection()->addr;
+  linkEditSegment->fileSize = fileOff - linkEditSegment->fileOff;
 }
 
 void Writer::assignAddresses(OutputSegment *seg) {
-  uint64_t pageSize = target->getPageSize();
-  addr = alignTo(addr, pageSize);
-  fileOff = alignTo(fileOff, pageSize);
   seg->fileOff = fileOff;
 
   for (OutputSection *osec : seg->getSections()) {
@@ -903,7 +909,6 @@ void Writer::assignAddresses(OutputSegment *seg) {
     addr += osec->getSize();
     fileOff += osec->getFileSize();
   }
-  seg->fileSize = fileOff - seg->fileOff;
 }
 
 void Writer::openFile() {
