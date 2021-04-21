@@ -1651,10 +1651,12 @@ Kernel OpenMPOpt::getUniqueKernelFor(Function &F) {
       // Allow direct calls.
       if (CB->isCallee(&U))
         return getUniqueKernelFor(*CB);
-      // Allow the use in __kmpc_kernel_prepare_parallel calls.
-      if (Function *Callee = CB->getCalledFunction())
-        if (Callee->getName() == "__kmpc_kernel_prepare_parallel")
-          return getUniqueKernelFor(*CB);
+
+      OMPInformationCache::RuntimeFunctionInfo &KernelParallelRFI =
+          OMPInfoCache.RFIs[OMPRTL___kmpc_parallel_51];
+      // Allow the use in __kmpc_parallel_51 calls.
+      if (OpenMPOpt::getCallIfRegularCall(*U.getUser(), &KernelParallelRFI))
+        return getUniqueKernelFor(*CB);
       return nullptr;
     }
     // Disallow every other use.
@@ -1678,19 +1680,19 @@ Kernel OpenMPOpt::getUniqueKernelFor(Function &F) {
 }
 
 bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
-  OMPInformationCache::RuntimeFunctionInfo &KernelPrepareParallelRFI =
-      OMPInfoCache.RFIs[OMPRTL___kmpc_kernel_prepare_parallel];
+  OMPInformationCache::RuntimeFunctionInfo &KernelParallelRFI =
+      OMPInfoCache.RFIs[OMPRTL___kmpc_parallel_51];
 
   bool Changed = false;
-  if (!KernelPrepareParallelRFI)
+  if (!KernelParallelRFI)
     return Changed;
 
   for (Function *F : SCC) {
 
-    // Check if the function is uses in a __kmpc_kernel_prepare_parallel call at
+    // Check if the function is a use in a __kmpc_parallel_51 call at
     // all.
     bool UnknownUse = false;
-    bool KernelPrepareUse = false;
+    bool KernelParallelUse = false;
     unsigned NumDirectCalls = 0;
 
     SmallVector<Use *, 2> ToBeReplacedStateMachineUses;
@@ -1705,25 +1707,30 @@ bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
         ToBeReplacedStateMachineUses.push_back(&U);
         return;
       }
-      if (!KernelPrepareUse && OpenMPOpt::getCallIfRegularCall(
-                                   *U.getUser(), &KernelPrepareParallelRFI)) {
-        KernelPrepareUse = true;
+
+      // Find wrapper functions that represent parallel kernels.
+      CallInst *CI =
+          OpenMPOpt::getCallIfRegularCall(*U.getUser(), &KernelParallelRFI);
+      const unsigned int WrapperFunctionArgNo = 6;
+      if (!KernelParallelUse && CI &&
+          CI->getArgOperandNo(&U) == WrapperFunctionArgNo) {
+        KernelParallelUse = true;
         ToBeReplacedStateMachineUses.push_back(&U);
         return;
       }
       UnknownUse = true;
     });
 
-    // Do not emit a remark if we haven't seen a __kmpc_kernel_prepare_parallel
+    // Do not emit a remark if we haven't seen a __kmpc_parallel_51
     // use.
-    if (!KernelPrepareUse)
+    if (!KernelParallelUse)
       continue;
 
     {
       auto Remark = [&](OptimizationRemark OR) {
         return OR << "Found a parallel region that is called in a target "
                      "region but not part of a combined target construct nor "
-                     "nesed inside a target construct without intermediate "
+                     "nested inside a target construct without intermediate "
                      "code. This can lead to excessive register usage for "
                      "unrelated target regions in the same translation unit "
                      "due to spurious call edges assumed by ptxas.";
@@ -1747,7 +1754,7 @@ bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
       continue;
     }
 
-    // Even if we have __kmpc_kernel_prepare_parallel calls, we (for now) give
+    // Even if we have __kmpc_parallel_51 calls, we (for now) give
     // up if the function is not called from a unique kernel.
     Kernel K = getUniqueKernelFor(*F);
     if (!K) {
