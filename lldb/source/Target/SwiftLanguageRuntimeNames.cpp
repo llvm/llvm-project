@@ -644,6 +644,7 @@ SwiftLanguageRuntime::DemangleSymbolAsString(StringRef symbol, DemangleMode mode
   switch (mode) {
   case eSimplified:
     options = swift::Demangle::DemangleOptions::SimplifiedUIDemangleOptions();
+    options.ShowAsyncResumePartial = false;
     break;
   case eTypeName:
     options.DisplayModuleNames = true;
