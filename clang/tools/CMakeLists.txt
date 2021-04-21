@@ -17,6 +17,9 @@ add_clang_subdirectory(IndexStore)
 
 add_clang_subdirectory(clang-rename)
 add_clang_subdirectory(clang-refactor)
+
+add_clang_subdirectory(clang-refactor-test)
+
 # For MinGW we only enable shared library if LLVM_LINK_LLVM_DYLIB=ON.
 # Without that option resulting library is too close to 2^16 DLL exports limit.
 if(UNIX OR (MINGW AND LLVM_LINK_LLVM_DYLIB))
@@ -44,7 +47,3 @@ add_llvm_external_project(clang-tools-extra extra)
 
 # libclang may require clang-tidy in clang-tools-extra.
 add_clang_subdirectory(libclang)
-
-add_clang_subdirectory(amdgpu-arch)
-
-add_clang_subdirectory(clang-refactor-test)
