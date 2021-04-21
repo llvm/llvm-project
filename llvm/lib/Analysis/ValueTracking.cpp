@@ -2580,35 +2580,6 @@ static Optional<unsigned> getInvertibleOperand(const Operator *Op1,
     if (Op1->getOperand(0)->getType() == Op2->getOperand(0)->getType())
       return 0;
     break;
-  case Instruction::PHI: {
-    const PHINode *PN1 = cast<PHINode>(Op1);
-    const PHINode *PN2 = cast<PHINode>(Op2);
-
-    // If PN1 and PN2 are both recurrences, can we prove the entire recurrences
-    // are a single invertible function of the start values? Note that repeated
-    // application of an invertible function is also invertible
-    BinaryOperator *BO1 = nullptr;
-    Value *Start1 = nullptr, *Step1 = nullptr;
-    BinaryOperator *BO2 = nullptr;
-    Value *Start2 = nullptr, *Step2 = nullptr;
-    if (PN1->getParent() != PN2->getParent() ||
-        !matchSimpleRecurrence(PN1, BO1, Start1, Step1) ||
-        !matchSimpleRecurrence(PN2, BO2, Start2, Step2))
-      break;
-
-    Optional<unsigned> Idx = getInvertibleOperand(cast<Operator>(BO1),
-                                                  cast<Operator>(BO2));
-    if (!Idx || *Idx != 0)
-      break;
-    assert(BO1->getOperand(*Idx) == PN1 && BO2->getOperand(*Idx) == PN2);
-
-    if (PN1->getOperand(0) == BO1) {
-      assert(PN2->getOperand(0) == BO2);
-      return 1;
-    }
-    assert(PN1->getOperand(1) == BO1 && PN2->getOperand(1) == BO2);
-    return 0;
-  }
   }
   return None;
 }
