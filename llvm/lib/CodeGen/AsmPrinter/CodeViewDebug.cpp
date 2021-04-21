@@ -804,6 +804,9 @@ void CodeViewDebug::emitCompilerInformation() {
   // The low byte of the flags indicates the source language.
   Flags = MapDWLangToCVLang(CU->getSourceLanguage());
   // TODO:  Figure out which other flags need to be set.
+  if (MMI->getModule()->getProfileSummary(/*IsCS*/ false) != nullptr) {
+    Flags |= static_cast<uint32_t>(CompileSym3Flags::PGO);
+  }
 
   OS.AddComment("Flags and language");
   OS.emitInt32(Flags);
@@ -1428,6 +1431,10 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
   if (Asm->TM.getOptLevel() != CodeGenOpt::None &&
       !GV.hasOptSize() && !GV.hasOptNone())
     FPO |= FrameProcedureOptions::OptimizedForSpeed;
+  if (GV.hasProfileData()) {
+    FPO |= FrameProcedureOptions::ValidProfileCounts;
+    FPO |= FrameProcedureOptions::ProfileGuidedOptimization;
+  }
   // FIXME: Set GuardCfg when it is implemented.
   CurFn->FrameProcOpts = FPO;
 
