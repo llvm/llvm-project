@@ -2419,6 +2419,8 @@ void RISCVAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
     // pseudoinstruction: vmsge{u}.vx vd, va, x, v0.t, vt
     // expansion: vmslt{u}.vx vt, va, x; vmandnot.mm vt, v0, vt; vmandnot.mm vd,
     // vd, v0; vmor.mm vd, vt, vd
+    assert(Inst.getOperand(1).getReg() != RISCV::V0 &&
+           "The temporary vector register should not be V0.");
     emitToStreamer(Out, MCInstBuilder(Opcode)
                             .addOperand(Inst.getOperand(1))
                             .addOperand(Inst.getOperand(2))
