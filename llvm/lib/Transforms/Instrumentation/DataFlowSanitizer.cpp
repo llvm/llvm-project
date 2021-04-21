@@ -505,6 +505,10 @@ class DataFlowSanitizer {
   /// Returns whether fast8 or fast16 mode has been specified.
   bool hasFastLabelsEnabled();
 
+  /// Returns whether the given load byte size is amenable to inlined
+  /// optimization patterns.
+  bool hasLoadSizeForFastPath(uint64_t Size);
+
   /// Returns whether the pass tracks origins. Support only fast16 mode in TLS
   /// ABI mode.
   bool shouldTrackOrigins();
@@ -883,10 +887,15 @@ bool DataFlowSanitizer::hasFastLabelsEnabled() {
   return HasFastLabelsEnabled;
 }
 
+bool DataFlowSanitizer::hasLoadSizeForFastPath(uint64_t Size) {
+  uint64_t ShadowSize = Size * ShadowWidthBytes;
+  return ShadowSize % 8 == 0 || ShadowSize == 4;
+}
+
 bool DataFlowSanitizer::shouldTrackOrigins() {
   static const bool ShouldTrackOrigins =
       ClTrackOrigins && getInstrumentedABI() == DataFlowSanitizer::IA_TLS &&
-      ClFast16Labels;
+      hasFastLabelsEnabled();
   return ShouldTrackOrigins;
 }
 
@@ -2037,11 +2046,7 @@ bool DFSanFunction::useCallbackLoadLabelAndOrigin(uint64_t Size,
     return false;
 
   const Align Alignment = llvm::assumeAligned(InstAlignment.value());
-  if (Alignment >= MinOriginAlignment &&
-      Size % (64 / DFS.ShadowWidthBits) == 0)
-    return false;
-
-  return true;
+  return Alignment < MinOriginAlignment || !DFS.hasLoadSizeForFastPath(Size);
 }
 
 std::pair<Value *, Value *> DFSanFunction::loadFast16ShadowFast(
@@ -2284,8 +2289,7 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowOrigin(Value *Addr,
     return {combineShadows(Load, Load1, Pos), Origin};
   }
   }
-  uint64_t ShadowSize = Size * DFS.ShadowWidthBytes;
-  bool HasSizeForFastPath = ShadowSize % 8 == 0 || ShadowSize == 4;
+  bool HasSizeForFastPath = DFS.hasLoadSizeForFastPath(Size);
   bool HasFastLabelsEnabled = DFS.hasFastLabelsEnabled();
 
   if (HasFastLabelsEnabled && HasSizeForFastPath)

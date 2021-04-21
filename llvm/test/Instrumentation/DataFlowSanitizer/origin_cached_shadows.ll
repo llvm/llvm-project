@@ -1,4 +1,5 @@
-; RUN: opt < %s -dfsan -dfsan-track-origins=1 -dfsan-fast-16-labels=true -S | FileCheck %s --check-prefix=CHECK
+; RUN: opt < %s -dfsan -dfsan-track-origins=1 -dfsan-fast-8-labels=true  -S | FileCheck %s
+; RUN: opt < %s -dfsan -dfsan-track-origins=1 -dfsan-fast-16-labels=true -S | FileCheck %s
 ;
 ; %15 and %17 have the same key in shadow cache. They should not reuse the same
 ; shadow because their blocks do not dominate each other. Origin tracking
@@ -14,7 +15,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @cached_shadows(double %0) {
   ; CHECK: @"dfs$cached_shadows"
   ; CHECK:  [[AO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
-  ; CHECK:  [[AS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[#SBYTES]]
+  ; CHECK:  [[AS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
   ; CHECK: [[L1:[0-9]+]]:
   ; CHECK:  {{.*}} = phi i[[#SBITS]]
   ; CHECK:  {{.*}} = phi i32
@@ -39,7 +40,7 @@ define void @cached_shadows(double %0) {
   ; CHECK:  [[S_L6:%.*]] = or i[[#SBITS]]
   ; CHECK:  [[AS_NE_L6:%.*]] = icmp ne i[[#SBITS]] [[AS]], 0
   ; CHECK:  [[O_L6:%.*]] = select i1 [[AS_NE_L6]], i32 [[AO]], i32 [[O_L1]]
-  ; CHECK:  [[V_L6:%.*]] = fadd double %24, %0
+  ; CHECK:  [[V_L6:%.*]] = fadd double [[V_L1]], %0
   ; CHECK:  br label %[[L7]]
   ; CHECK: [[L7]]:
   ; CHECK:  [[S_L7]] = phi i[[#SBITS]] [ [[S_L3]], %[[L3]] ], [ [[S_L1]], %[[L2]] ], [ [[S_L6]], %[[L6]] ]
