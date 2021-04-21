@@ -1480,6 +1480,13 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       { TTI::SK_PermuteSingleSrc, MVT::v2f32, 1 }, // mov.
       { TTI::SK_PermuteSingleSrc, MVT::v4f32, 3 }, // perfectshuffle worst case.
       { TTI::SK_PermuteSingleSrc, MVT::v2f64, 1 }, // mov.
+      // Reverse can be lowered with `rev`.
+      { TTI::SK_Reverse, MVT::v2i32, 1 }, // mov.
+      { TTI::SK_Reverse, MVT::v4i32, 2 }, // REV64; EXT
+      { TTI::SK_Reverse, MVT::v2i64, 1 }, // mov.
+      { TTI::SK_Reverse, MVT::v2f32, 1 }, // mov.
+      { TTI::SK_Reverse, MVT::v4f32, 2 }, // REV64; EXT
+      { TTI::SK_Reverse, MVT::v2f64, 1 }, // mov.
       // Broadcast shuffle kinds for scalable vectors
       { TTI::SK_Broadcast, MVT::nxv16i8,  1 },
       { TTI::SK_Broadcast, MVT::nxv8i16,  1 },
