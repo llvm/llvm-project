@@ -114,10 +114,25 @@ ErrorOr<std::string> findClang(const char *Argv0) {
 
 std::string getClangClTriple() {
   Triple T(sys::getDefaultTargetTriple());
-  T.setOS(llvm::Triple::Win32);
-  T.setVendor(llvm::Triple::PC);
-  T.setEnvironment(llvm::Triple::MSVC);
-  T.setObjectFormat(llvm::Triple::COFF);
+  switch (T.getArch()) {
+  case Triple::x86:
+  case Triple::x86_64:
+  case Triple::arm:
+  case Triple::thumb:
+  case Triple::aarch64:
+    // These work properly with the clang driver, setting the expected
+    // defines such as _WIN32 etc.
+    break;
+  default:
+    // Other archs aren't set up for use with windows as target OS, (clang
+    // doesn't define e.g. _WIN32 etc), so set a reasonable default arch.
+    T.setArch(Triple::x86_64);
+    break;
+  }
+  T.setOS(Triple::Win32);
+  T.setVendor(Triple::PC);
+  T.setEnvironment(Triple::MSVC);
+  T.setObjectFormat(Triple::COFF);
   return T.str();
 }
 
