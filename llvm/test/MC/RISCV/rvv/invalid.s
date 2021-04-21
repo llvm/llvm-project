@@ -661,3 +661,8 @@ vs8r.v v6, (a0)
 vs8r.v v7, (a0)
 # CHECK-ERROR: invalid operand for instruction
 
+vmsge.vx v2, v4, a0, v0.t, v0
+# CHECK-ERROR: invalid operand for instruction
+
+vmsgeu.vx v2, v4, a0, v0.t, v0
+# CHECK-ERROR: invalid operand for instruction
