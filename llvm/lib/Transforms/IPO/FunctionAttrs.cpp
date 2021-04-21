@@ -1632,8 +1632,12 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
     Functions.push_back(&N.getFunction());
   }
 
-  if (deriveAttrsInPostOrder(Functions, AARGetter))
-    return PreservedAnalyses::none();
+  if (deriveAttrsInPostOrder(Functions, AARGetter)) {
+    // We have not changed the call graph or removed/added functions.
+    PreservedAnalyses PA;
+    PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
+    return PA;
+  }
 
   return PreservedAnalyses::all();
 }
