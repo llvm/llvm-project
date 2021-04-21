@@ -963,6 +963,12 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->emitFunctionStarts = !args.hasArg(OPT_no_function_starts);
   config->emitBitcodeBundle = args.hasArg(OPT_bitcode_bundle);
 
+  std::array<PlatformKind, 3> encryptablePlatforms{
+      PlatformKind::iOS, PlatformKind::watchOS, PlatformKind::tvOS};
+  config->emitEncryptionInfo = args.hasFlag(
+      OPT_encryptable, OPT_no_encryption,
+      is_contained(encryptablePlatforms, config->platformInfo.target.Platform));
+
 #ifndef HAVE_LIBXAR
   if (config->emitBitcodeBundle)
     error("-bitcode_bundle unsupported because LLD wasn't built with libxar");
