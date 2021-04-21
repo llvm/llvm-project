@@ -5693,8 +5693,16 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
     // until the caller issue can be fixed.  PR49566 tracks the bug.
     return CR;
 
-  // TODO: Handle ashr and lshr cases to increase minimum value reported
-  if (BO->getOpcode() != Instruction::Shl || BO->getOperand(0) != P)
+  // TODO: Extend to other opcodes such as ashr, mul, and div
+  switch (BO->getOpcode()) {
+  default:
+    return CR;
+  case Instruction::Shl:
+    break;
+  };
+
+  if (BO->getOperand(0) != P)
+    // TODO: Handle the power function forms some day.
     return CR;
 
   unsigned TC = getSmallConstantMaxTripCount(L);
@@ -5714,12 +5722,19 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   if (Overflow)
     return CR;
 
-  // Iff no bits are shifted out, value increases on every shift.
-  auto KnownEnd = KnownBits::shl(KnownStart,
-                                 KnownBits::makeConstant(TotalShift));
-  if (TotalShift.ult(KnownStart.countMinLeadingZeros()))
-    CR = CR.intersectWith(ConstantRange(KnownStart.getMinValue(),
-                                        KnownEnd.getMaxValue() + 1));
+  switch (BO->getOpcode()) {
+  default:
+    llvm_unreachable("filtered out above");
+  case Instruction::Shl: {
+    // Iff no bits are shifted out, value increases on every shift.
+    auto KnownEnd = KnownBits::shl(KnownStart,
+                                   KnownBits::makeConstant(TotalShift));
+    if (TotalShift.ult(KnownStart.countMinLeadingZeros()))
+      CR = CR.intersectWith(ConstantRange(KnownStart.getMinValue(),
+                                          KnownEnd.getMaxValue() + 1));
+    break;
+  }
+  };
   return CR;
 }
 
