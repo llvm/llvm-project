@@ -297,6 +297,17 @@ TEST_F(RegistryTest, TypeTraversal) {
   EXPECT_TRUE(matches("int b[7];", M));
 }
 
+TEST_F(RegistryTest, CXXBaseSpecifier) {
+  // TODO: rewrite with top-level cxxBaseSpecifier matcher when available
+  DeclarationMatcher ClassHasAnyDirectBase =
+      constructMatcher("cxxRecordDecl",
+                       constructMatcher("hasDirectBase",
+                                        constructMatcher("cxxBaseSpecifier")))
+          .getTypedMatcher<Decl>();
+  EXPECT_TRUE(matches("class X {}; class Y : X {};", ClassHasAnyDirectBase));
+  EXPECT_TRUE(notMatches("class X {};", ClassHasAnyDirectBase));
+}
+
 TEST_F(RegistryTest, CXXCtorInitializer) {
   Matcher<Decl> CtorDecl = constructMatcher(
       "cxxConstructorDecl",

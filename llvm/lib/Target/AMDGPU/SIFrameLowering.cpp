@@ -133,7 +133,8 @@ static void buildPrologSpill(const GCNSubtarget &ST, LivePhysRegs &LiveRegs,
       MFI.getObjectAlign(FI));
 
   if (ST.enableFlatScratch()) {
-    if (TII->isLegalFLATOffset(Offset, AMDGPUAS::PRIVATE_ADDRESS, true)) {
+    if (TII->isLegalFLATOffset(Offset, AMDGPUAS::PRIVATE_ADDRESS,
+                               SIInstrFlags::FlatScratch)) {
       BuildMI(MBB, I, DebugLoc(), TII->get(AMDGPU::SCRATCH_STORE_DWORD_SADDR))
         .addReg(SpillReg, RegState::Kill)
         .addReg(SPReg)
@@ -242,7 +243,8 @@ static void buildEpilogReload(const GCNSubtarget &ST, LivePhysRegs &LiveRegs,
       MFI.getObjectAlign(FI));
 
   if (ST.enableFlatScratch()) {
-    if (TII->isLegalFLATOffset(Offset, AMDGPUAS::PRIVATE_ADDRESS, true)) {
+    if (TII->isLegalFLATOffset(Offset, AMDGPUAS::PRIVATE_ADDRESS,
+                               SIInstrFlags::FlatScratch)) {
       BuildMI(MBB, I, DebugLoc(),
               TII->get(AMDGPU::SCRATCH_LOAD_DWORD_SADDR), SpillReg)
         .addReg(SPReg)

@@ -827,6 +827,23 @@ func @fold_fill_reshape() -> tensor<6x4xf32> {
 
 // -----
 
+//       CHECK: func @fold_fill_reshape_dynamic
+//  CHECK-SAME:   %[[ARG0:.+]]: tensor<?x?x?x?x?xf32>
+func @fold_fill_reshape_dynamic(%arg0 : tensor<?x?x?x?x?xf32>) -> tensor<?x?xf32> {
+  %zero = constant 0.0 : f32
+  // CHECK: %[[RESHAPE:.+]] = linalg.tensor_reshape %[[ARG0]]
+  %0 = linalg.fill(%arg0, %zero) : tensor<?x?x?x?x?xf32>, f32 -> tensor<?x?x?x?x?xf32>
+  // CHECK: %[[RESULT:.+]] = linalg.fill(%[[RESHAPE]], %{{.+}})
+  %1 = linalg.tensor_reshape %0
+      [affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>,
+       affine_map<(d0, d1, d2, d3, d4) -> (d3, d4)>]
+      : tensor<?x?x?x?x?xf32> into tensor<?x?xf32>
+  // CHECK: return %[[RESULT]]
+  return %1 : tensor<?x?xf32>
+}
+
+// -----
+
 #map0 = affine_map<(d0) -> (24, -d0 + 192)>
 #map1 = affine_map<(d0, d1)[s0] -> (d0 * 192 + s0 + d1)>
 #map2 = affine_map<(d0) -> (16, -d0 + 192)>

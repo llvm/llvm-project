@@ -397,7 +397,7 @@ GCNRegBankReassign::analyzeInst(const MachineInstr &MI, Register Reg,
   unsigned StallCycles = 0;
   unsigned UsedBanks = 0;
 
-  if (MI.isDebugValue())
+  if (MI.isMetaInstruction())
     return std::make_pair(StallCycles, UsedBanks);
 
   if (!(Mode & RM_SGPR) &&

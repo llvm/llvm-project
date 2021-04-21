@@ -3146,23 +3146,31 @@ RAGreedy::computeNumberOfSplillsReloads(MachineBasicBlock &MBB) {
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   int FI;
 
+  auto isSpillSlotAccess = [&MFI](const MachineMemOperand *A) {
+    return MFI.isSpillSlotObjectIndex(cast<FixedStackPseudoSourceValue>(
+        A->getPseudoValue())->getFrameIndex());
+  };
   for (MachineInstr &MI : MBB) {
     SmallVector<const MachineMemOperand *, 2> Accesses;
-    auto isSpillSlotAccess = [&MFI](const MachineMemOperand *A) {
-      return MFI.isSpillSlotObjectIndex(cast<FixedStackPseudoSourceValue>(
-          A->getPseudoValue())->getFrameIndex());
-    };
 
-    if (TII->isLoadFromStackSlot(MI, FI) && MFI.isSpillSlotObjectIndex(FI))
+    if (TII->isLoadFromStackSlot(MI, FI) && MFI.isSpillSlotObjectIndex(FI)) {
       ++Stats.Reloads;
-    else if (TII->hasLoadFromStackSlot(MI, Accesses) &&
-             llvm::any_of(Accesses, isSpillSlotAccess))
-      ++Stats.FoldedReloads;
-    else if (TII->isStoreToStackSlot(MI, FI) && MFI.isSpillSlotObjectIndex(FI))
+      continue;
+    }
+    if (TII->isStoreToStackSlot(MI, FI) && MFI.isSpillSlotObjectIndex(FI)) {
       ++Stats.Spills;
-    else if (TII->hasStoreToStackSlot(MI, Accesses) &&
-             llvm::any_of(Accesses, isSpillSlotAccess))
+      continue;
+    }
+    if (TII->hasLoadFromStackSlot(MI, Accesses) &&
+        llvm::any_of(Accesses, isSpillSlotAccess)) {
+      ++Stats.FoldedReloads;
+      continue;
+    }
+    Accesses.clear();
+    if (TII->hasStoreToStackSlot(MI, Accesses) &&
+        llvm::any_of(Accesses, isSpillSlotAccess)) {
       ++Stats.FoldedSpills;
+    }
   }
   return Stats;
 }

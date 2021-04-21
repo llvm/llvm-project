@@ -1198,6 +1198,10 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     if (isLoadInvariantInLoop(LI, DT, CurLoop))
       return true;
 
+    // Stores with an invariant.group metadata are ok to sink/hoist.
+    if (LI->hasMetadata(LLVMContext::MD_invariant_group))
+      return true;
+
     bool Invalidated;
     if (CurAST)
       Invalidated = pointerInvalidatedByLoop(MemoryLocation::get(LI), CurAST,

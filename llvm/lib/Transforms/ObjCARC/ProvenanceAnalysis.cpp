@@ -112,12 +112,12 @@ static bool IsStoredObjCPointer(const Value *P) {
 bool ProvenanceAnalysis::relatedCheck(const Value *A, const Value *B) {
   // Ask regular AliasAnalysis, for a first approximation.
   switch (AA->alias(A, B)) {
-  case NoAlias:
+  case AliasResult::NoAlias:
     return false;
-  case MustAlias:
-  case PartialAlias:
+  case AliasResult::MustAlias:
+  case AliasResult::PartialAlias:
     return true;
-  case MayAlias:
+  case AliasResult::MayAlias:
     break;
   }
 

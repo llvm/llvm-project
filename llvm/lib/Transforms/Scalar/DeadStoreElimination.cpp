@@ -402,9 +402,9 @@ isOverwrite(const Instruction *LaterI, const Instruction *EarlierI,
   }
 
   // If we hit a partial alias we may have a full overwrite
-  if (AAR == AliasResult::PartialAlias) {
-    int64_t Off = AA.getClobberOffset(Later, Earlier).getValueOr(0);
-    if (Off > 0 && (uint64_t)Off + EarlierSize <= LaterSize)
+  if (AAR == AliasResult::PartialAlias && AAR.hasOffset()) {
+    int32_t Off = AAR.getOffset();
+    if (Off >= 0 && (uint64_t)Off + EarlierSize <= LaterSize)
       return OW_Complete;
   }
 
@@ -996,8 +996,8 @@ struct DSEState {
 
   DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA, DominatorTree &DT,
            PostDominatorTree &PDT, const TargetLibraryInfo &TLI)
-      : F(F), AA(AA), BatchAA(AA, /*CacheOffsets =*/true), MSSA(MSSA), DT(DT),
-        PDT(PDT), TLI(TLI), DL(F.getParent()->getDataLayout()) {}
+      : F(F), AA(AA), BatchAA(AA), MSSA(MSSA), DT(DT), PDT(PDT), TLI(TLI),
+        DL(F.getParent()->getDataLayout()) {}
 
   static DSEState get(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
                       DominatorTree &DT, PostDominatorTree &PDT,

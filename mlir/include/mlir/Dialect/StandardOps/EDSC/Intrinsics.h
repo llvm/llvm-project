@@ -59,6 +59,15 @@ struct CmpFValueBuilder : public ValueBuilder<CmpFOp> {
 using std_cmpf_ogt = CmpFValueBuilder<CmpFPredicate::OGT>;
 using std_cmpf_olt = CmpFValueBuilder<CmpFPredicate::OLT>;
 
+template <CmpIPredicate Predicate>
+struct CmpIValueBuilder : public ValueBuilder<CmpIOp> {
+  using ValueBuilder<CmpIOp>::ValueBuilder;
+  template <typename... Args>
+  CmpIValueBuilder(Args... args) : ValueBuilder<CmpIOp>(Predicate, args...) {}
+};
+
+using std_cmpi_sgt = CmpIValueBuilder<CmpIPredicate::sgt>;
+
 /// Branches into `block` with `operands`.
 BranchOp std_br(Block *block, ValueRange operands);
 

@@ -103,17 +103,17 @@ enum ForDefinition_t : bool {
   ForDefinition = true
 };
 
-struct OrderGlobalInits {
+struct OrderGlobalInitsOrStermFinalizers {
   unsigned int priority;
   unsigned int lex_order;
-  OrderGlobalInits(unsigned int p, unsigned int l)
+  OrderGlobalInitsOrStermFinalizers(unsigned int p, unsigned int l)
       : priority(p), lex_order(l) {}
 
-  bool operator==(const OrderGlobalInits &RHS) const {
+  bool operator==(const OrderGlobalInitsOrStermFinalizers &RHS) const {
     return priority == RHS.priority && lex_order == RHS.lex_order;
   }
 
-  bool operator<(const OrderGlobalInits &RHS) const {
+  bool operator<(const OrderGlobalInitsOrStermFinalizers &RHS) const {
     return std::tie(priority, lex_order) <
            std::tie(RHS.priority, RHS.lex_order);
   }
@@ -457,7 +457,8 @@ private:
   /// that we don't re-emit the initializer.
   llvm::DenseMap<const Decl*, unsigned> DelayedCXXInitPosition;
 
-  typedef std::pair<OrderGlobalInits, llvm::Function*> GlobalInitData;
+  typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
+      GlobalInitData;
 
   struct GlobalInitPriorityCmp {
     bool operator()(const GlobalInitData &LHS,
@@ -473,9 +474,25 @@ private:
   /// Global destructor functions and arguments that need to run on termination.
   /// When UseSinitAndSterm is set, it instead contains sterm finalizer
   /// functions, which also run on unloading a shared library.
-  std::vector<
-      std::tuple<llvm::FunctionType *, llvm::WeakTrackingVH, llvm::Constant *>>
+  typedef std::tuple<llvm::FunctionType *, llvm::WeakTrackingVH,
+                     llvm::Constant *>
+      CXXGlobalDtorsOrStermFinalizer_t;
+  SmallVector<CXXGlobalDtorsOrStermFinalizer_t, 8>
       CXXGlobalDtorsOrStermFinalizers;
+
+  typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
+      StermFinalizerData;
+
+  struct StermFinalizerPriorityCmp {
+    bool operator()(const StermFinalizerData &LHS,
+                    const StermFinalizerData &RHS) const {
+      return LHS.first.priority < RHS.first.priority;
+    }
+  };
+
+  /// Global variables with sterm finalizers whose order of initialization is
+  /// set by init_priority attribute.
+  SmallVector<StermFinalizerData, 8> PrioritizedCXXStermFinalizers;
 
   /// The complete set of modules that has been imported.
   llvm::SetVector<clang::Module *> ImportedModules;
@@ -1076,6 +1093,14 @@ public:
   void AddCXXStermFinalizerToGlobalDtor(llvm::Function *StermFinalizer,
                                         int Priority) {
     AddGlobalDtor(StermFinalizer, Priority);
+  }
+
+  void AddCXXPrioritizedStermFinalizerEntry(llvm::Function *StermFinalizer,
+                                            int Priority) {
+    OrderGlobalInitsOrStermFinalizers Key(Priority,
+                                          PrioritizedCXXStermFinalizers.size());
+    PrioritizedCXXStermFinalizers.push_back(
+        std::make_pair(Key, StermFinalizer));
   }
 
   /// Create or return a runtime function declaration with the specified type

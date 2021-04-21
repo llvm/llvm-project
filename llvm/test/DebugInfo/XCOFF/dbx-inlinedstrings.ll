@@ -1,5 +1,10 @@
-; RUN: llc -debugger-tune=dbx -filetype=obj < %s | llvm-dwarfdump -v - | \
-; RUN:   FileCheck %s -implicit-check-not DW_FORM_strp
+; The original purpose of this test case was to verify DBX under AIX, 
+; but XCOFF does not support object mode for now. Since the option
+; `-debugger-tune=dbx` is target-independent, set `-mtriple` to 
+; `powerpc-unknown-linux` for now.
+
+; RUN: llc -mtriple powerpc-unknown-linux -debugger-tune=dbx -filetype=obj < %s \
+; RUN:   | llvm-dwarfdump -v - | FileCheck %s -implicit-check-not DW_FORM_strp
 
 ; CHECK:  DW_AT_producer [DW_FORM_string]	("clang version 12.0.0")
 

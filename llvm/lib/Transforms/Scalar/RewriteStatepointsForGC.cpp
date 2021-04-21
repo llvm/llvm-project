@@ -706,6 +706,39 @@ public:
   bool isUnknown() const { return getStatus() == Unknown; }
   bool isConflict() const { return getStatus() == Conflict; }
 
+  // Values of type BDVState form a lattice, and this function implements the
+  // meet
+  // operation.
+  void meet(const BDVState &Other) {
+    auto markConflict = [&]() {
+      Status = BDVState::Conflict;
+      BaseValue = nullptr;
+    };
+    // Conflict is a final state.
+    if (isConflict())
+      return;
+    // if we are not known - just take other state.
+    if (isUnknown()) {
+      Status = Other.getStatus();
+      BaseValue = Other.getBaseValue();
+      return;
+    }
+    // We are base.
+    assert(isBase() && "Unknown state");
+    // If other is unknown - just keep our state.
+    if (Other.isUnknown())
+      return;
+    // If other is conflict - it is a final state.
+    if (Other.isConflict())
+      return markConflict();
+    // Other is base as well.
+    assert(Other.isBase() && "Unknown state");
+    // If bases are different - Conflict.
+    if (getBaseValue() != Other.getBaseValue())
+      return markConflict();
+    // We are identical, do nothing.
+  }
+
   bool operator==(const BDVState &Other) const {
     return OriginalValue == OriginalValue && BaseValue == Other.BaseValue &&
       Status == Other.Status;
@@ -750,43 +783,6 @@ static raw_ostream &operator<<(raw_ostream &OS, const BDVState &State) {
   return OS;
 }
 #endif
-
-static BDVState::StatusTy meet(const BDVState::StatusTy &LHS,
-                               const BDVState::StatusTy &RHS) {
-  switch (LHS) {
-  case BDVState::Unknown:
-    return RHS;
-  case BDVState::Base:
-    switch (RHS) {
-    case BDVState::Unknown:
-    case BDVState::Base:
-      return BDVState::Base;
-    case BDVState::Conflict:
-      return BDVState::Conflict;
-    };
-    llvm_unreachable("covered switch");
-  case BDVState::Conflict:
-    return BDVState::Conflict;
-  }
-  llvm_unreachable("covered switch");
-}
-
-// Values of type BDVState form a lattice, and this function implements the meet
-// operation.
-static BDVState meetBDVState(const BDVState &LHS, const BDVState &RHS) {
-  auto NewStatus = meet(LHS.getStatus(), RHS.getStatus());
-  assert(NewStatus == meet(RHS.getStatus(), LHS.getStatus()));
-
-  Value *BaseValue = LHS.getStatus() == BDVState::Base ?
-    LHS.getBaseValue() : RHS.getBaseValue();
-  if (LHS.getStatus() == BDVState::Base && RHS.getStatus() == BDVState::Base &&
-      LHS.getBaseValue() != RHS.getBaseValue()) {
-    NewStatus = BDVState::Conflict;
-  }
-  if (NewStatus == BDVState::Conflict)
-    BaseValue = nullptr;
-  return BDVState(LHS.getOriginalValue(), NewStatus, BaseValue);
-}
 
 /// For a given value or instruction, figure out what base ptr its derived from.
 /// For gc objects, this is simply itself.  On success, returns a value which is
@@ -971,10 +967,10 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
                  "why did it get added?");
 
       BDVState NewState(BDV);
-      visitBDVOperands(BDV, [&] (Value *Op) {
+      visitBDVOperands(BDV, [&](Value *Op) {
         Value *BDV = findBaseOrBDV(Op, Cache);
         auto OpState = GetStateForBDV(BDV, Op);
-        NewState = meetBDVState(NewState, OpState);
+        NewState.meet(OpState);
       });
 
       BDVState OldState = States[BDV];

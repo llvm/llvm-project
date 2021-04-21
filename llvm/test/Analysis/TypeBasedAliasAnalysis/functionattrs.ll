@@ -73,12 +73,12 @@ declare void @callee(i32* %p) nounwind
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1) nounwind
 
 ; CHECK: attributes #0 = { norecurse nosync nounwind readnone willreturn }
-; CHECK: attributes #1 = { nofree norecurse nounwind willreturn writeonly }
+; CHECK: attributes #1 = { nofree norecurse nosync nounwind willreturn writeonly }
 ; CHECK: attributes #2 = { nounwind readonly }
 ; CHECK: attributes #3 = { nounwind }
 ; CHECK: attributes #4 = { nosync nounwind readnone willreturn }
-; CHECK: attributes #5 = { nofree nounwind willreturn }
-; CHECK: attributes #6 = { nofree norecurse nounwind willreturn }
+; CHECK: attributes #5 = { nofree nosync nounwind willreturn }
+; CHECK: attributes #6 = { nofree norecurse nosync nounwind willreturn }
 ; CHECK: attributes #7 = { argmemonly nofree nosync nounwind willreturn }
 
 ; Root note.

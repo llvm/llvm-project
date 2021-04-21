@@ -4400,6 +4400,13 @@ TEST_P(ASTMatchersTest, HasDirectBase) {
     return;
   }
 
+  DeclarationMatcher ClassHasAnyDirectBase =
+      cxxRecordDecl(hasDirectBase(cxxBaseSpecifier()));
+  EXPECT_TRUE(notMatches("class X {};", ClassHasAnyDirectBase));
+  EXPECT_TRUE(matches("class X {}; class Y : X {};", ClassHasAnyDirectBase));
+  EXPECT_TRUE(matches("class X {}; class Y : public virtual X {};",
+                      ClassHasAnyDirectBase));
+
   EXPECT_TRUE(matches(
       R"cc(
     class Base {};
