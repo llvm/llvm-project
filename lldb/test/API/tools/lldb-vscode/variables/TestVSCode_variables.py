@@ -110,6 +110,9 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
                     'y': {'equals': {'type': 'int', 'value': '22'}},
                     'buffer': {'children': buffer_children}
                 }
+            },
+            'x': {
+                'equals': {'type': 'int'}
             }
         }
         verify_globals = {
@@ -221,3 +224,61 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         value = response['body']['variables'][0]['value']
         self.assertEqual(value, '111',
                         'verify pt.x got set to 111 (111 != %s)' % (value))
+
+        # We check shadowed variables and that a new get_local_variables request
+        # gets the right data
+        breakpoint2_line = line_number(source, '// breakpoint 2')
+        lines = [breakpoint2_line]
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        self.assertEqual(len(breakpoint_ids), len(lines),
+                        "expect correct number of breakpoints")
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        verify_locals['argc']['equals']['value'] = '123'
+        verify_locals['pt']['children']['x']['equals']['value'] = '111'
+        verify_locals['x @ main.cpp:17'] = {'equals': {'type': 'int', 'value': '89'}}
+        verify_locals['x @ main.cpp:19'] = {'equals': {'type': 'int', 'value': '42'}}
+        verify_locals['x @ main.cpp:21'] = {'equals': {'type': 'int', 'value': '72'}}
+
+        self.verify_variables(verify_locals, self.vscode.get_local_variables())
+
+        # Now we verify that we correctly change the name of a variable with and without differentiator suffix
+        self.assertFalse(self.vscode.request_setVariable(1, "x2", 9)['success'])
+        self.assertFalse(self.vscode.request_setVariable(1, "x @ main.cpp:0", 9)['success'])
+
+        self.assertTrue(self.vscode.request_setVariable(1, "x @ main.cpp:17", 17)['success'])
+        self.assertTrue(self.vscode.request_setVariable(1, "x @ main.cpp:19", 19)['success'])
+        self.assertTrue(self.vscode.request_setVariable(1, "x @ main.cpp:21", 21)['success'])
+
+        # The following should have no effect
+        self.assertFalse(self.vscode.request_setVariable(1, "x @ main.cpp:21", "invalid")['success'])
+
+        verify_locals['x @ main.cpp:17']['equals']['value'] = '17'
+        verify_locals['x @ main.cpp:19']['equals']['value'] = '19'
+        verify_locals['x @ main.cpp:21']['equals']['value'] = '21'
+
+        self.verify_variables(verify_locals, self.vscode.get_local_variables())
+
+        # The plain x variable shold refer to the innermost x
+        self.assertTrue(self.vscode.request_setVariable(1, "x", 22)['success'])
+        verify_locals['x @ main.cpp:21']['equals']['value'] = '22'
+
+        self.verify_variables(verify_locals, self.vscode.get_local_variables())
+
+        # In breakpoint 3, there should be no shadowed variables
+        breakpoint3_line = line_number(source, '// breakpoint 3')
+        lines = [breakpoint3_line]
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        self.assertEqual(len(breakpoint_ids), len(lines),
+                        "expect correct number of breakpoints")
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        locals = self.vscode.get_local_variables()
+        names = [var['name'] for var in locals]
+        # The first shadowed x shouldn't have a suffix anymore
+        verify_locals['x'] = {'equals': {'type': 'int', 'value': '17'}}
+        self.assertNotIn('x @ main.cpp:17', names)
+        self.assertNotIn('x @ main.cpp:19', names)
+        self.assertNotIn('x @ main.cpp:21', names)
+
+        self.verify_variables(verify_locals, locals)
