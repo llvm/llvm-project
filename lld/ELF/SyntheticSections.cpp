@@ -3125,7 +3125,8 @@ void VersionTableSection::writeTo(uint8_t *buf) {
   for (const SymbolTableEntry &s : getPartition().dynSymTab->getSymbols()) {
     // Use the original versionId for an unfetched lazy symbol (undefined weak),
     // which must be VER_NDX_GLOBAL (an undefined versioned symbol is an error).
-    write16(buf, s.sym->isLazy() ? VER_NDX_GLOBAL : s.sym->versionId);
+    write16(buf, s.sym->isLazy() ? static_cast<uint16_t>(VER_NDX_GLOBAL)
+                                 : s.sym->versionId);
     buf += 2;
   }
 }
