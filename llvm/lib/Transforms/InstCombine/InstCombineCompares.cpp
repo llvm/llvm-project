@@ -3672,22 +3672,19 @@ foldShiftIntoShiftInAnotherHandOfAndInICmp(ICmpInst &I, const SimplifyQuery SQ,
 
 /// Fold
 ///   (-1 u/ x) u< y
-///   ((x * y) ?/ x) != y
+///   ((x * y) u/ x) != y
 /// to
-///   @llvm.?mul.with.overflow(x, y) plus extraction of overflow bit
+///   @llvm.umul.with.overflow(x, y) plus extraction of overflow bit
 /// Note that the comparison is commutative, while inverted (u>=, ==) predicate
 /// will mean that we are looking for the opposite answer.
-Value *InstCombinerImpl::foldMultiplicationOverflowCheck(ICmpInst &I) {
+Value *InstCombinerImpl::foldUnsignedMultiplicationOverflowCheck(ICmpInst &I) {
   ICmpInst::Predicate Pred;
   Value *X, *Y;
   Instruction *Mul;
-  Instruction *Div;
   bool NeedNegation;
   // Look for: (-1 u/ x) u</u>= y
   if (!I.isEquality() &&
-      match(&I, m_c_ICmp(Pred,
-                         m_CombineAnd(m_OneUse(m_UDiv(m_AllOnes(), m_Value(X))),
-                                      m_Instruction(Div)),
+      match(&I, m_c_ICmp(Pred, m_OneUse(m_UDiv(m_AllOnes(), m_Value(X))),
                          m_Value(Y)))) {
     Mul = nullptr;
 
@@ -3702,16 +3699,13 @@ Value *InstCombinerImpl::foldMultiplicationOverflowCheck(ICmpInst &I) {
     default:
       return nullptr; // Wrong predicate.
     }
-  } else // Look for: ((x * y) / x) !=/== y
+  } else // Look for: ((x * y) u/ x) !=/== y
       if (I.isEquality() &&
-          match(&I,
-                m_c_ICmp(Pred, m_Value(Y),
-                         m_CombineAnd(
-                             m_OneUse(m_IDiv(m_CombineAnd(m_c_Mul(m_Deferred(Y),
+          match(&I, m_c_ICmp(Pred, m_Value(Y),
+                             m_OneUse(m_UDiv(m_CombineAnd(m_c_Mul(m_Deferred(Y),
                                                                   m_Value(X)),
                                                           m_Instruction(Mul)),
-                                             m_Deferred(X))),
-                             m_Instruction(Div))))) {
+                                             m_Deferred(X)))))) {
     NeedNegation = Pred == ICmpInst::Predicate::ICMP_EQ;
   } else
     return nullptr;
@@ -3723,22 +3717,19 @@ Value *InstCombinerImpl::foldMultiplicationOverflowCheck(ICmpInst &I) {
   if (MulHadOtherUses)
     Builder.SetInsertPoint(Mul);
 
-  Function *F = Intrinsic::getDeclaration(I.getModule(),
-                                          Div->getOpcode() == Instruction::UDiv
-                                              ? Intrinsic::umul_with_overflow
-                                              : Intrinsic::smul_with_overflow,
-                                          X->getType());
-  CallInst *Call = Builder.CreateCall(F, {X, Y}, "mul");
+  Function *F = Intrinsic::getDeclaration(
+      I.getModule(), Intrinsic::umul_with_overflow, X->getType());
+  CallInst *Call = Builder.CreateCall(F, {X, Y}, "umul");
 
   // If the multiplication was used elsewhere, to ensure that we don't leave
   // "duplicate" instructions, replace uses of that original multiplication
   // with the multiplication result from the with.overflow intrinsic.
   if (MulHadOtherUses)
-    replaceInstUsesWith(*Mul, Builder.CreateExtractValue(Call, 0, "mul.val"));
+    replaceInstUsesWith(*Mul, Builder.CreateExtractValue(Call, 0, "umul.val"));
 
-  Value *Res = Builder.CreateExtractValue(Call, 1, "mul.ov");
+  Value *Res = Builder.CreateExtractValue(Call, 1, "umul.ov");
   if (NeedNegation) // This technically increases instruction count.
-    Res = Builder.CreateNot(Res, "mul.not.ov");
+    Res = Builder.CreateNot(Res, "umul.not.ov");
 
   // If we replaced the mul, erase it. Do this after all uses of Builder,
   // as the mul is used as insertion point.
@@ -4135,7 +4126,7 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     }
   }
 
-  if (Value *V = foldMultiplicationOverflowCheck(I))
+  if (Value *V = foldUnsignedMultiplicationOverflowCheck(I))
     return replaceInstUsesWith(I, V);
 
   if (Value *V = foldICmpWithLowBitMaskedVal(I, Builder))
