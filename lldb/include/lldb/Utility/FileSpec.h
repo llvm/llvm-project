@@ -38,7 +38,7 @@ template <typename T> class SmallVectorImpl;
 
 namespace lldb_private {
 
-/// \class FileSpec FileSpec.h "lldb/Host/FileSpec.h"
+/// \class FileSpec FileSpec.h "lldb/Utility/FileSpec.h"
 /// A file utility class.
 ///
 /// A file specification class that divides paths up into a directory
