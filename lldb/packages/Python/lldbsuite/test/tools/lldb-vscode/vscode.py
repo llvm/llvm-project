@@ -81,7 +81,7 @@ def read_packet(f, verbose=False, trace_file=None):
         # Decode the JSON bytes into a python dictionary
         return json.loads(json_str)
 
-    return None
+    raise Exception("unexpected malformed message from lldb-vscode: " + line)
 
 
 def packet_type_is(packet, packet_type):
@@ -928,10 +928,13 @@ class DebugCommunication(object):
 
 
 class DebugAdaptor(DebugCommunication):
-    def __init__(self, executable=None, port=None, init_commands=[], log_file=None):
+    def __init__(self, executable=None, port=None, init_commands=[], log_file=None, env=None):
         self.process = None
         if executable is not None:
             adaptor_env = os.environ.copy()
+            if env is not None:
+                adaptor_env.update(env)
+
             if log_file:
                 adaptor_env['LLDBVSCODE_LOG'] = log_file
             self.process = subprocess.Popen([executable],
