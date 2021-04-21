@@ -1245,13 +1245,8 @@ bool HoistSpillHelper::rmFromMergeableSpills(MachineInstr &Spill,
 /// i.e., there should be a living sibling of OrigReg at the insert point.
 bool HoistSpillHelper::isSpillCandBB(LiveInterval &OrigLI, VNInfo &OrigVNI,
                                      MachineBasicBlock &BB, Register &LiveReg) {
-  SlotIndex Idx;
+  SlotIndex Idx = IPA.getLastInsertPoint(OrigLI, BB);
   Register OrigReg = OrigLI.reg();
-  MachineBasicBlock::iterator MI = IPA.getLastInsertPointIter(OrigLI, BB);
-  if (MI != BB.end())
-    Idx = LIS.getInstructionIndex(*MI);
-  else
-    Idx = LIS.getMBBEndIdx(&BB).getPrevSlot();
   SmallSetVector<Register, 16> &Siblings = Virt2SiblingsMap[OrigReg];
   assert(OrigLI.getVNInfoAt(Idx) == &OrigVNI && "Unexpected VNI");
 
