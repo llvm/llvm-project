@@ -95,4 +95,9 @@ unsigned long PadBytes(unsigned long size, unsigned long alignment);
 unsigned int *GetTeamsReductionTimestamp();
 char *GetTeamsReductionScratchpad();
 
+// Invoke an outlined parallel function unwrapping global, shared arguments (up
+// to 128).
+void __kmp_invoke_microtask(kmp_int32 global_tid, kmp_int32 bound_tid, void *fn,
+                            void **args, size_t nargs);
+
 #endif
