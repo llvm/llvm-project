@@ -783,7 +783,15 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   compatibilityVersion = interface.getCompatibilityVersion().rawValue();
   currentVersion = interface.getCurrentVersion().rawValue();
 
-  if (!is_contained(interface.targets(), config->target)) {
+  // Some versions of XCode ship with .tbd files that don't have the right
+  // platform settings.
+  static constexpr std::array<StringRef, 3> skipPlatformChecks{
+      "/usr/lib/system/libsystem_kernel.dylib",
+      "/usr/lib/system/libsystem_platform.dylib",
+      "/usr/lib/system/libsystem_pthread.dylib"};
+
+  if (!is_contained(skipPlatformChecks, dylibName) &&
+      !is_contained(interface.targets(), config->target)) {
     error(toString(this) + " is incompatible with " +
           std::string(config->target));
     return;
@@ -825,7 +833,8 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
 
   for (InterfaceFileRef intfRef : interface.reexportedLibraries()) {
     InterfaceFile::const_target_range targets = intfRef.targets();
-    if (is_contained(targets, config->target))
+    if (is_contained(skipPlatformChecks, intfRef.getInstallName()) ||
+        is_contained(targets, config->target))
       loadReexport(intfRef.getInstallName(), exportingFile, topLevel);
   }
 }
