@@ -172,7 +172,9 @@ public:
            T::getHasTraitFn());
   }
 
-private:
+  /// Register a new operation in a Dialect object.
+  /// The use of this method is in general discouraged in favor of
+  /// 'insert<CustomOp>(dialect)'.
   static void insert(StringRef name, Dialect &dialect, TypeID typeID,
                      ParseAssemblyFn parseAssembly,
                      PrintAssemblyFn printAssembly,
@@ -180,6 +182,7 @@ private:
                      GetCanonicalizationPatternsFn getCanonicalizationPatterns,
                      detail::InterfaceMap &&interfaceMap, HasTraitFn hasTrait);
 
+private:
   AbstractOperation(StringRef name, Dialect &dialect, TypeID typeID,
                     ParseAssemblyFn parseAssembly,
                     PrintAssemblyFn printAssembly,
