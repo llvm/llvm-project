@@ -10819,3 +10819,51 @@ __m512i test_mm512_zextsi256_si512(__m256i A) {
   // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   return _mm512_zextsi256_si512(A);
 }
+
+__m512d test_mm512_i32logather_pd(__m512i __index, void const *__addr) {
+  // CHECK-LABEL: @test_mm512_i32logather_pd
+  // CHECK: @llvm.x86.avx512.mask.gather.dpd.512
+  return _mm512_i32logather_pd(__index, __addr, 2);
+}
+
+__m512d test_mm512_mask_i32logather_pd(__m512d __v1_old, __mmask8 __mask, __m512i __index, void const *__addr) {
+  // CHECK-LABEL: @test_mm512_mask_i32logather_pd
+  // CHECK: @llvm.x86.avx512.mask.gather.dpd.512
+  return _mm512_mask_i32logather_pd(__v1_old, __mask, __index, __addr, 2);
+}
+
+void test_mm512_i32loscatter_pd(void *__addr, __m512i __index, __m512d __v1) {
+  // CHECK-LABEL: @test_mm512_i32loscatter_pd
+  // CHECK: @llvm.x86.avx512.mask.scatter.dpd.512
+  return _mm512_i32loscatter_pd(__addr, __index, __v1, 2);
+}
+
+void test_mm512_mask_i32loscatter_pd(void *__addr, __mmask8 __mask, __m512i __index, __m512d __v1) {
+  // CHECK-LABEL: @test_mm512_mask_i32loscatter_pd
+  // CHECK: @llvm.x86.avx512.mask.scatter.dpd.512
+  return _mm512_mask_i32loscatter_pd(__addr, __mask, __index, __v1, 2);
+}
+
+__m512i test_mm512_i32logather_epi64(__m512i __index, void const *__addr) {
+  // CHECK-LABEL: @test_mm512_i32logather_epi64
+  // CHECK: @llvm.x86.avx512.mask.gather.dpq.512
+  return _mm512_i32logather_epi64(__index, __addr, 2);
+}
+
+__m512i test_mm512_mask_i32logather_epi64(__m512i __v1_old, __mmask8 __mask, __m512i __index, void const *__addr) {
+  // CHECK-LABEL: @test_mm512_mask_i32logather_epi64
+  // CHECK: @llvm.x86.avx512.mask.gather.dpq.512
+  return _mm512_mask_i32logather_epi64(__v1_old, __mask, __index, __addr, 2);
+}
+
+void test_mm512_i32loscatter_epi64(void *__addr, __m512i __index, __m512i __v1) {
+  // CHECK-LABEL: @test_mm512_i32loscatter_epi64
+  // CHECK: @llvm.x86.avx512.mask.scatter.dpq.512
+  _mm512_i32loscatter_epi64(__addr, __index, __v1, 2);
+}
+
+void test_mm512_mask_i32loscatter_epi64(void *__addr, __mmask8 __mask, __m512i __index, __m512i __v1) {
+  // CHECK-LABEL: @test_mm512_mask_i32loscatter_epi64
+  // CHECK: @llvm.x86.avx512.mask.scatter.dpq.512
+  _mm512_mask_i32loscatter_epi64(__addr, __mask, __index, __v1, 2);
+}
