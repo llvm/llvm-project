@@ -518,7 +518,16 @@ struct FoldReshapeOpWithUnitExtent : OpRewritePattern<TensorReshapeOp> {
       } else {
         return failure();
       }
+
       foldedDim++;
+      // If inner most dims are folded there shouldn't be any leading 1 dims.
+      // otherwise these dims are not mapped and will lead into an illegal
+      // reshape.
+      if (expandedDim == expandedShape.size()) {
+        if (foldedDim < foldedShape.size() && foldedShape[foldedDim] == 1) {
+          return failure();
+        }
+      }
     }
     if (expandedDim != expandedShape.size())
       return failure();
