@@ -1716,7 +1716,9 @@ StringRef Triple::getARMCPUForArch(StringRef MArch) const {
     break;
   case llvm::Triple::Win32:
     // FIXME: this is invalid for WindowsCE
-    return "cortex-a9";
+    if (ARM::parseArchVersion(MArch) <= 7)
+      return "cortex-a9";
+    break;
   case llvm::Triple::IOS:
   case llvm::Triple::MacOSX:
   case llvm::Triple::TvOS:

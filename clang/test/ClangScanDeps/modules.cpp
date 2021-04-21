@@ -1,6 +1,8 @@
 // RUN: rm -rf %t.dir
 // RUN: rm -rf %t.cdb
+// RUN: rm -rf %t_clangcl.cdb
 // RUN: rm -rf %t.module-cache
+// RUN: rm -rf %t.module-cache_clangcl
 // RUN: mkdir -p %t.dir
 // RUN: cp %s %t.dir/modules_cdb_input.cpp
 // RUN: cp %s %t.dir/modules_cdb_input2.cpp
@@ -9,8 +11,11 @@
 // RUN: cp %S/Inputs/header2.h %t.dir/Inputs/header2.h
 // RUN: cp %S/Inputs/module.modulemap %t.dir/Inputs/module.modulemap
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/modules_cdb.json > %t.cdb
+// RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/modules_cdb_clangcl.json > %t_clangcl.cdb
 //
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess-minimized-sources | \
+// RUN:   FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO %s
+// RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 1 -mode preprocess-minimized-sources | \
 // RUN:   FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO %s
 //
 // The output order is non-deterministic when using more than one thread,
@@ -20,11 +25,19 @@
 //
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess-minimized-sources | \
 // RUN:   FileCheck --check-prefix=CHECK1 %s
+// RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 2 -mode preprocess-minimized-sources | \
+// RUN:   FileCheck --check-prefix=CHECK1 %s
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess | \
+// RUN:   FileCheck --check-prefix=CHECK1 %s
+// RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 2 -mode preprocess | \
 // RUN:   FileCheck --check-prefix=CHECK1 %s
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess-minimized-sources | \
 // RUN:   FileCheck --check-prefix=CHECK2 %s
+// RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 2 -mode preprocess-minimized-sources | \
+// RUN:   FileCheck --check-prefix=CHECK2 %s
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess | \
+// RUN:   FileCheck --check-prefix=CHECK2 %s
+// RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 2 -mode preprocess | \
 // RUN:   FileCheck --check-prefix=CHECK2 %s
 
 #include "header.h"

@@ -21,6 +21,7 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <clang/Basic/Diagnostic.h>
 #include <memory>
 
@@ -369,6 +370,53 @@ void DebugDumpParsingLogAction::ExecuteAction() {
 
   ci.parsing().Parse(llvm::errs());
   ci.parsing().DumpParsingLog(llvm::outs());
+}
+
+void GetDefinitionAction::ExecuteAction() {
+  // Report and exit if fatal semantic errors are present
+  if (reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
+          GetCurrentFileOrBufferName()))
+    return;
+
+  CompilerInstance &ci = this->instance();
+  parser::AllCookedSources &cs = ci.allCookedSources();
+  unsigned diagID = ci.diagnostics().getCustomDiagID(
+      clang::DiagnosticsEngine::Error, "Symbol not found");
+
+  auto gdv = ci.invocation().frontendOpts().getDefVals_;
+  auto charBlock{cs.GetCharBlockFromLineAndColumns(
+      gdv.line, gdv.startColumn, gdv.endColumn)};
+  if (!charBlock) {
+    ci.diagnostics().Report(diagID);
+    return;
+  }
+
+  llvm::outs() << "String range: >" << charBlock->ToString() << "<\n";
+
+  auto *symbol{ci.invocation()
+                   .semanticsContext()
+                   .FindScope(*charBlock)
+                   .FindSymbol(*charBlock)};
+  if (!symbol) {
+    ci.diagnostics().Report(diagID);
+    return;
+  }
+
+  llvm::outs() << "Found symbol name: " << symbol->name().ToString() << "\n";
+
+  auto sourceInfo{cs.GetSourcePositionRange(symbol->name())};
+  if (!sourceInfo) {
+    llvm_unreachable(
+        "Failed to obtain SourcePosition."
+        "TODO: Please, write a test and replace this with a diagnostic!");
+    return;
+  }
+
+  llvm::outs() << "Found symbol name: " << symbol->name().ToString() << "\n";
+  llvm::outs() << symbol->name().ToString() << ": "
+               << sourceInfo->first.file.path() << ", "
+               << sourceInfo->first.line << ", " << sourceInfo->first.column
+               << "-" << sourceInfo->second.column << "\n";
 }
 
 void GetSymbolsSourcesAction::ExecuteAction() {
