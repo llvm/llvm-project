@@ -141,6 +141,11 @@
 // CHECK-V7S-NOT: __ARM_FEATURE_DIRECTED_ROUNDING
 // CHECK-V7S: #define __ARM_FP 0xe
 
+// RUN: %clang -target arm-arm-none-eabi -march=armv7-m -mfloat-abi=soft -x c -E -dM %s | FileCheck -match-full-lines --check-prefix=CHECK-VFP-FP %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv7-m -mfloat-abi=softfp -x c -E -dM %s | FileCheck -match-full-lines --check-prefix=CHECK-VFP-FP %s
+// RUN: %clang -target arm-arm-none-eabi -march=armv7-m -mfloat-abi=hard -x c -E -dM %s | FileCheck -match-full-lines --check-prefix=CHECK-VFP-FP %s
+// CHECK-VFP-FP: #define __VFP_FP__ 1
+
 // RUN: %clang -target armv8a -mfloat-abi=hard -x c -E -dM %s | FileCheck -match-full-lines --check-prefix=CHECK-V8-BAREHF %s
 // CHECK-V8-BAREHF: #define __ARMEL__ 1
 // CHECK-V8-BAREHF: #define __ARM_ARCH 8
