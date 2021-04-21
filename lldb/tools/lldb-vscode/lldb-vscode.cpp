@@ -57,6 +57,7 @@
 
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
+#include "OutputRedirector.h"
 
 #if defined(_WIN32)
 #ifndef PATH_MAX
@@ -3090,9 +3091,48 @@ void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 #endif
 }
 
+/// used only by TestVSCode_redirection_to_console.py
+void redirection_test() {
+  printf("stdout message\n");
+  fprintf(stderr, "stderr message\n");
+  fflush(stdout);
+  fflush(stderr);
+}
+
+/// Redirect stdout and stderr fo the IDE's console output.
+///
+/// Errors in this operation will be printed to the log file and the IDE's
+/// console output as well.
+///
+/// \return
+///     A fd pointing to the original stdout.
+int SetupStdoutStderrRedirection() {
+  int new_stdout_fd = dup(fileno(stdout));
+  auto stdout_err_redirector_callback = [&](llvm::StringRef data) {
+    g_vsc.SendOutput(OutputType::Console, data);
+  };
+
+  for (int fd : {fileno(stdout), fileno(stderr)}) {
+    if (llvm::Error err = RedirectFd(fd, stdout_err_redirector_callback)) {
+      std::string error_message = llvm::toString(std::move(err));
+      if (g_vsc.log)
+        *g_vsc.log << error_message << std::endl;
+      stdout_err_redirector_callback(error_message);
+    }
+  }
+
+  /// used only by TestVSCode_redirection_to_console.py
+  if (getenv("LLDB_VSCODE_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
+    redirection_test();
+  return new_stdout_fd;
+}
+
 int main(int argc, char *argv[]) {
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
   llvm::PrettyStackTraceProgram X(argc, argv);
+
+  // stdout/stderr redirection to the IDE's console
+  int new_stdout_fd = SetupStdoutStderrRedirection();
 
   llvm::SmallString<256> program_path(argv[0]);
   llvm::sys::fs::make_absolute(program_path);
@@ -3163,9 +3203,9 @@ int main(int argc, char *argv[]) {
     }
   } else {
     g_vsc.input.descriptor = StreamDescriptor::from_file(fileno(stdin), false);
-    g_vsc.output.descriptor =
-        StreamDescriptor::from_file(fileno(stdout), false);
+    g_vsc.output.descriptor = StreamDescriptor::from_file(new_stdout_fd, false);
   }
+
   uint32_t packet_idx = 0;
   while (!g_vsc.sent_terminated_event) {
     llvm::json::Object object;
