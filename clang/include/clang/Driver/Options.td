@@ -956,6 +956,9 @@ def gpu_max_threads_per_block_EQ : Joined<["--"], "gpu-max-threads-per-block=">,
   HelpText<"Default max threads per block for kernel launch bounds for HIP">,
   MarshallingInfoInt<LangOpts<"GPUMaxThreadsPerBlock">, "1024">,
   ShouldParseIf<hip.KeyPath>;
+def fgpu_inline_threshold_EQ : Joined<["-"], "fgpu-inline-threshold=">,
+  Flags<[HelpHidden]>,
+  HelpText<"Inline threshold for device compilation for CUDA/HIP">;
 def gpu_instrument_lib_EQ : Joined<["--"], "gpu-instrument-lib=">,
   HelpText<"Instrument device library for HIP, which is a LLVM bitcode containing "
   "__cyg_profile_func_enter and __cyg_profile_func_exit">;

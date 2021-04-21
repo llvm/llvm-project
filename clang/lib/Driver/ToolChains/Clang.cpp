@@ -6473,6 +6473,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (IsHIP)
     CmdArgs.push_back("-fcuda-allow-variadic-functions");
 
+  if (IsCudaDevice || IsHIPDevice) {
+    StringRef InlineThresh =
+        Args.getLastArgValue(options::OPT_fgpu_inline_threshold_EQ);
+    if (!InlineThresh.empty()) {
+      std::string ArgStr =
+          std::string("-inline-threshold=") + InlineThresh.str();
+      CmdArgs.append({"-mllvm", Args.MakeArgStringRef(ArgStr)});
+    }
+  }
+
   // OpenMP offloading device jobs take the argument -fopenmp-host-ir-file-path
   // to specify the result of the compile phase on the host, so the meaningful
   // device declarations can be identified. Also, -fopenmp-is-device is passed
