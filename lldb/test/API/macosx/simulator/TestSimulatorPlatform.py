@@ -57,10 +57,12 @@ class TestSimulatorPlatformLaunching(TestBase):
             version_min = '-m{}-version-min={}'.format(os, vers)
 
         sdk_root = lldbutil.get_xcode_sdk_root(sdk)
+        clang = lldbutil.get_xcode_clang(sdk)
 
         self.build(
             dictionary={
                 'ARCH': arch,
+                'CC': clang,
                 'ARCH_CFLAGS': '-target {} {}'.format(triple, version_min),
                 'SDKROOT': sdk_root
             })
