@@ -95,12 +95,14 @@ static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
   if (opts.programAction_ == DebugDumpParsingLog)
     opts.instrumentedParse_ = true;
 
-  if (opts.programAction_ == DebugDumpProvenance)
+  if (opts.programAction_ == DebugDumpProvenance ||
+      opts.programAction_ == Fortran::frontend::GetDefinition)
     opts.needProvenanceRangeToCharBlockMappings_ = true;
 }
 
-static void ParseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
+static bool ParseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     clang::DiagnosticsEngine &diags) {
+  unsigned numErrorsBefore = diags.getNumErrors();
 
   // By default the frontend driver creates a ParseSyntaxOnly action.
   opts.programAction_ = ParseSyntaxOnly;
@@ -157,6 +159,9 @@ static void ParseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     case clang::driver::options::OPT_fget_symbols_sources:
       opts.programAction_ = GetSymbolsSources;
       break;
+    case clang::driver::options::OPT_fget_definition:
+      opts.programAction_ = GetDefinition;
+      break;
 
       // TODO:
       // case calng::driver::options::OPT_emit_llvm:
@@ -164,6 +169,27 @@ static void ParseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       // case clang::driver::options::OPT_emit_codegen_only:
       // case clang::driver::options::OPT_emit_module:
       // (...)
+    }
+
+    // Parse the values provided with `-fget-definition` (there should be 3
+    // integers)
+    if (llvm::opt::OptSpecifier(a->getOption().getID()) ==
+        clang::driver::options::OPT_fget_definition) {
+      unsigned optVals[3] = {0, 0, 0};
+
+      for (unsigned i = 0; i < 3; i++) {
+        llvm::StringRef val = a->getValue(i);
+
+        if (val.getAsInteger(10, optVals[i])) {
+          // A non-integer was encountered - that's an error.
+          diags.Report(clang::diag::err_drv_invalid_value)
+              << a->getOption().getName() << val;
+          break;
+        }
+      }
+      opts.getDefVals_.line = optVals[0];
+      opts.getDefVals_.startColumn = optVals[1];
+      opts.getDefVals_.endColumn = optVals[2];
     }
   }
 
@@ -293,6 +319,8 @@ static void ParseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
 
   setUpFrontendBasedOnAction(opts);
   opts.dashX_ = dashX;
+
+  return diags.getNumErrors() == numErrorsBefore;
 }
 
 // Generate the path to look for intrinsic modules
@@ -481,8 +509,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
     success = false;
   }
 
-  // Parse the frontend args
-  ParseFrontendArgs(res.frontendOpts(), args, diags);
+  success &= ParseFrontendArgs(res.frontendOpts(), args, diags);
   parsePreprocessorArgs(res.preprocessorOpts(), args);
   success &= parseSemaArgs(res, args, diags);
   success &= parseDialectArgs(res, args, diags);

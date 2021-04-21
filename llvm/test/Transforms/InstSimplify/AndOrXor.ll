@@ -1192,7 +1192,8 @@ define i8 @noop_and_t0(i8 %x) {
 ; CHECK-LABEL: @noop_and_t0(
 ; CHECK-NEXT:    [[A:%.*]] = shl i8 [[X:%.*]], 3
 ; CHECK-NEXT:    [[B:%.*]] = lshr i8 [[A]], 2
-; CHECK-NEXT:    ret i8 [[B]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[B]], 62
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = shl i8 %x, 3
   %b = lshr i8 %a, 2
@@ -1203,7 +1204,8 @@ define i8 @noop_and_t1(i8 %x) {
 ; CHECK-LABEL: @noop_and_t1(
 ; CHECK-NEXT:    [[A:%.*]] = shl i8 [[X:%.*]], 3
 ; CHECK-NEXT:    [[B:%.*]] = lshr i8 [[A]], 2
-; CHECK-NEXT:    ret i8 [[B]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[B]], 126
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = shl i8 %x, 3
   %b = lshr i8 %a, 2

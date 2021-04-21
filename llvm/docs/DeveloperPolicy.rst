@@ -643,6 +643,51 @@ Here's a `sample RFC
 <http://lists.llvm.org/pipermail/llvm-dev/2019-January/129452.html>`_ and the
 `corresponding change <https://reviews.llvm.org/D57264>`_.
 
+.. _ci-usage:
+
+Working with the CI system
+--------------------------
+
+The main continuous integration (CI) tool for the LLVM project is the 
+`LLVM Buildbot <https://lab.llvm.org/buildbot/>`_. It uses different *builders* 
+to cover a wide variety of sub-projects and configurations. The builds are 
+executed on different *workers*. Builders and workers are configured and 
+provided by community members.
+
+The Buildbot tracks the commits on the main branch and the release branches. 
+This means that patches are built and tested after they are merged to the these
+branches (aka. post-merge testing). This also means it's okay to break the build
+occasionally, as it's unreasonable to expect contributors to build and test
+their patch with every possible configuration. 
+
+*If your commit broke the build:*
+
+* Fix the build as soon as possible as this might block other contributors or
+  downstream users.
+* If you need more time analyze and fix the bug, please revert your change to
+  unblock others.
+
+*If someone else broke the build and this blocks your work*
+
+* Comment on the code review in `Phabricator <https://reviews.llvm.org/>`_ 
+  (if available) or email the author, explain the problem and how this impacts
+  you. Add a link to the broken build and the error message so folks can
+  understand the problem.
+* Revert the commit if this blocks your work, see revert_policy_ .
+
+*If a build/worker is permanently broken*
+
+* 1st step: contact the owner of the worker. You can find the name and contact
+  information for the *Admin* of worker on the page of the build in the 
+  *Worker* tab:
+
+  .. image:: buildbot_worker_contact.png
+
+* 2nd step: If the owner does not respond or fix the worker, please escalate 
+  to Galina Kostanova, the maintainer of the BuildBot master.
+* 3rd step: If Galina could not help you, please escalate to the 
+  `Infrastructure Working Group <mailto:iwg@llvm.org>`_.
+
 .. _new-llvm-components:
 
 Introducing New Components into LLVM
