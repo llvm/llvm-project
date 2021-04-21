@@ -71,10 +71,11 @@ bool isOpLoopInvariant(Operation &op, Value indVar,
     if (!checkInvarianceOfNestedIfOps(&op, indVar, opsWithUsers, opsToHoist)) {
       return false;
     }
-  } else if (isa<AffineForOp>(op)) {
-    // If the body of a predicated region has a for loop, we don't hoist the
-    // 'affine.if'.
-    return false;
+  } else if (auto forOp = dyn_cast<AffineForOp>(op)) {
+    if (!areAllOpsInTheBlockListInvariant(forOp.getLoopBody(), indVar,
+                                          opsWithUsers, opsToHoist)) {
+      return false;
+    }
   } else if (isa<AffineDmaStartOp, AffineDmaWaitOp>(op)) {
     // TODO: Support DMA ops.
     return false;
@@ -113,29 +114,29 @@ bool isOpLoopInvariant(Operation &op, Value indVar,
       LLVM_DEBUG(llvm::dbgs() << "\nNon-constant op with 0 operands\n");
       return false;
     }
-    for (unsigned int i = 0; i < op.getNumOperands(); ++i) {
-      auto *operandSrc = op.getOperand(i).getDefiningOp();
+  }
 
-      LLVM_DEBUG(
-          op.getOperand(i).print(llvm::dbgs() << "\nIterating on operand\n"));
+  // Check operands.
+  for (unsigned int i = 0; i < op.getNumOperands(); ++i) {
+    auto *operandSrc = op.getOperand(i).getDefiningOp();
 
-      // If the loop IV is the operand, this op isn't loop invariant.
-      if (indVar == op.getOperand(i)) {
-        LLVM_DEBUG(llvm::dbgs() << "\nLoop IV is the operand\n");
+    LLVM_DEBUG(
+        op.getOperand(i).print(llvm::dbgs() << "\nIterating on operand\n"));
+
+    // If the loop IV is the operand, this op isn't loop invariant.
+    if (indVar == op.getOperand(i)) {
+      LLVM_DEBUG(llvm::dbgs() << "\nLoop IV is the operand\n");
+      return false;
+    }
+
+    if (operandSrc != nullptr) {
+      LLVM_DEBUG(llvm::dbgs() << *operandSrc << "\nIterating on operand src\n");
+
+      // If the value was defined in the loop (outside of the
+      // if/else region), and that operation itself wasn't meant to
+      // be hoisted, then mark this operation loop dependent.
+      if (opsWithUsers.count(operandSrc) && opsToHoist.count(operandSrc) == 0) {
         return false;
-      }
-
-      if (operandSrc != nullptr) {
-        LLVM_DEBUG(llvm::dbgs()
-                   << *operandSrc << "\nIterating on operand src\n");
-
-        // If the value was defined in the loop (outside of the
-        // if/else region), and that operation itself wasn't meant to
-        // be hoisted, then mark this operation loop dependent.
-        if (opsWithUsers.count(operandSrc) &&
-            opsToHoist.count(operandSrc) == 0) {
-          return false;
-        }
       }
     }
   }
@@ -198,12 +199,9 @@ void LoopInvariantCodeMotion::runOnAffineForOp(AffineForOp forOp) {
     // not being hoisted.
     if (!op.use_empty())
       opsWithUsers.insert(&op);
-    // We don't hoist for loops.
-    if (!isa<AffineForOp>(op)) {
-      if (!isa<AffineYieldOp>(op)) {
-        if (isOpLoopInvariant(op, indVar, opsWithUsers, opsToHoist)) {
-          opsToMove.push_back(&op);
-        }
+    if (!isa<AffineYieldOp>(op)) {
+      if (isOpLoopInvariant(op, indVar, opsWithUsers, opsToHoist)) {
+        opsToMove.push_back(&op);
       }
     }
   }
