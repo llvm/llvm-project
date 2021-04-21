@@ -13,9 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyMachineFunctionInfo.h"
+#include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 

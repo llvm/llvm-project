@@ -16,13 +16,13 @@
 #define LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYMACHINEFUNCTIONINFO_H
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
-#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/MC/MCSymbolWasm.h"
 
 namespace llvm {
+
+struct WasmEHFuncInfo;
 
 namespace yaml {
 struct WebAssemblyFunctionInfo;

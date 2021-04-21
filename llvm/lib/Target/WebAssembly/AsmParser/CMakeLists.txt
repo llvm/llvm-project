@@ -5,6 +5,7 @@ add_llvm_component_library(LLVMWebAssemblyAsmParser
   MC
   MCParser
   WebAssemblyInfo
+  WebAssemblyUtils
   Support
 
   ADD_TO_COMPONENT
