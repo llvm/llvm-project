@@ -1651,7 +1651,7 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
   // Other instructions must have one, unless they are inside a bundle.
   if (LiveInts) {
     bool mapped = !LiveInts->isNotInMIMap(*MI);
-    if (MI->isDebugInstr()) {
+    if (MI->isDebugOrPseudoInstr()) {
       if (mapped)
         report("Debug instruction has a slot index", MI);
     } else if (MI->isInsideBundle()) {
