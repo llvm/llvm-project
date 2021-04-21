@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: aarch64, x86
 # RUN: rm -rf %t; mkdir -p %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/test.o
 # RUN: llvm-mc -filetype=obj -triple=arm64_32-apple-watchos %s -o %t/watchos-test.o
