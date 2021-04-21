@@ -570,6 +570,8 @@ void request_attach(const llvm::json::Object &request) {
   llvm::StringRef core_file = GetString(arguments, "coreFile");
   g_vsc.stop_at_entry =
       core_file.empty() ? GetBoolean(arguments, "stopOnEntry", false) : true;
+  std::vector<std::string> postRunCommands =
+      GetStrings(arguments, "postRunCommands");
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
@@ -638,12 +640,14 @@ void request_attach(const llvm::json::Object &request) {
   if (error.Fail()) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", std::string(error.GetCString()));
+  } else {
+    g_vsc.RunLLDBCommands("Running postRunCommands:", postRunCommands);
   }
+
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
   if (error.Success()) {
     SendProcessEvent(Attach);
     g_vsc.SendJSON(CreateEventObject("initialized"));
-    // SendThreadStoppedEvent();
   }
 }
 
@@ -1608,6 +1612,8 @@ void request_launch(const llvm::json::Object &request) {
   g_vsc.exit_commands = GetStrings(arguments, "exitCommands");
   g_vsc.terminate_commands = GetStrings(arguments, "terminateCommands");
   auto launchCommands = GetStrings(arguments, "launchCommands");
+  std::vector<std::string> postRunCommands =
+      GetStrings(arguments, "postRunCommands");
   g_vsc.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
 
@@ -1689,7 +1695,10 @@ void request_launch(const llvm::json::Object &request) {
   if (error.Fail()) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", std::string(error.GetCString()));
+  } else {
+    g_vsc.RunLLDBCommands("Running postRunCommands:", postRunCommands);
   }
+
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 
   if (g_vsc.is_attach)
