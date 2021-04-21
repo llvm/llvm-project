@@ -13,7 +13,7 @@
 # RUN: llvm-readobj --macho-segment %t/arm64_32 > %t/arm64-32.out
 # RUN: echo "Total file size" >> %t/arm64-32.out
 # RUN: wc -c %t/arm64_32 >> %t/arm64-32.out
-# RUN: FileCheck %s -DSUFFIX= -DPAGEZERO_SIZE=0x1000 -DTEXT_ADDR=0x4000 < %t/arm64-32.out
+# RUN: FileCheck %s -DSUFFIX= -DPAGEZERO_SIZE=0x4000 -DTEXT_ADDR=0x4000 < %t/arm64-32.out
 
 ## These two segments must always be present at the start of an executable.
 # CHECK-NOT:  Segment {
