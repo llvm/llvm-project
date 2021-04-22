@@ -234,8 +234,6 @@ void M68kMemOp::print(raw_ostream &OS) const {
     OS << OuterDisp << "(%" << OuterReg << ", " << InnerReg << "." << Size
        << ", " << InnerDisp << ")";
     break;
-  default:
-    llvm_unreachable("unknown MemOp kind");
   }
 }
 
@@ -858,8 +856,5 @@ void M68kOperand::print(raw_ostream &OS) const {
   case Kind::MemOp:
     MemOp.print(OS);
     break;
-
-  default:
-    llvm_unreachable("unhandled operand kind");
   }
 }
