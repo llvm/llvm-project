@@ -11052,6 +11052,7 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
     return SetCGInfo(new M68kTargetCodeGenInfo(Types));
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
+  case llvm::Triple::nanomips:
     if (Triple.getOS() == llvm::Triple::NaCl)
       return SetCGInfo(new PNaClTargetCodeGenInfo(Types));
     return SetCGInfo(new MIPSTargetCodeGenInfo(Types, true));
