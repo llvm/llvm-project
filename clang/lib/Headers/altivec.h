@@ -17407,19 +17407,59 @@ vec_xl_zext(ptrdiff_t __offset, const unsigned long long *__pointer) {
 
 /* vec_xlds */
 #ifdef __VSX__
-static __inline__ vector signed long long __ATTRS_o_ai vec_xlds(ptrdiff_t __offset, const signed long long *__ptr) {
+static __inline__ vector signed long long __ATTRS_o_ai
+vec_xlds(ptrdiff_t __offset, const signed long long *__ptr) {
   signed long long *__addr = (signed char *)__ptr + __offset;
   return (vector signed long long) *__addr;
 }
 
-static __inline__ vector unsigned long long __ATTRS_o_ai vec_xlds(ptrdiff_t __offset, const unsigned long long *__ptr) {
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_xlds(ptrdiff_t __offset, const unsigned long long *__ptr) {
   unsigned long long *__addr = (signed char *)__ptr + __offset;
   return (unaligned_vec_ull) *__addr;
 }
 
-static __inline__ vector double __ATTRS_o_ai vec_xlds(ptrdiff_t __offset, const double *__ptr) {
+static __inline__ vector double __ATTRS_o_ai vec_xlds(ptrdiff_t __offset,
+                                                      const double *__ptr) {
   double *__addr = (signed char *)__ptr + __offset;
   return (unaligned_vec_double) *__addr;
+}
+
+/* vec_load_splats */
+static __inline__ vector signed int __ATTRS_o_ai
+vec_load_splats(signed long long __offset, const signed int *__ptr) {
+  signed int *__addr = (signed char *)__ptr + __offset;
+  return (vector signed int)*__addr;
+}
+
+static __inline__ vector signed int __ATTRS_o_ai
+vec_load_splats(unsigned long long __offset, const signed int *__ptr) {
+  signed int *__addr = (signed char *)__ptr + __offset;
+  return (vector signed int)*__addr;
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_load_splats(signed long long __offset, const unsigned int *__ptr) {
+  unsigned int *__addr = (signed char *)__ptr + __offset;
+  return (vector unsigned int)*__addr;
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_load_splats(unsigned long long __offset, const unsigned int *__ptr) {
+  unsigned int *__addr = (signed char *)__ptr + __offset;
+  return (vector unsigned int)*__addr;
+}
+
+static __inline__ vector float __ATTRS_o_ai
+vec_load_splats(signed long long __offset, const float *__ptr) {
+  float *__addr = (signed char *)__ptr + __offset;
+  return (vector float)*__addr;
+}
+
+static __inline__ vector float __ATTRS_o_ai
+vec_load_splats(unsigned long long __offset, const float *__ptr) {
+  float *__addr = (signed char *)__ptr + __offset;
+  return (vector float)*__addr;
 }
 #endif
 

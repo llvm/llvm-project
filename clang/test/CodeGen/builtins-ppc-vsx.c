@@ -1972,6 +1972,54 @@ res_vd = vec_xlds(sll, ad);
 // CHECK-LE: insertelement <2 x double>
 // CHECK-LE: shufflevector <2 x double>
 
+res_vsll = vec_load_splats(sll, asi);
+// CHECK: load i32
+// CHECK: insertelement <4 x i32>
+// CHECK: shufflevector <4 x i32>
+// CHECK-LE: load i32
+// CHECK-LE: insertelement <4 x i32>
+// CHECK-LE: shufflevector <4 x i32>
+
+res_vsll = vec_load_splats(ull, asi);
+// CHECK: load i32
+// CHECK: insertelement <4 x i32>
+// CHECK: shufflevector <4 x i32>
+// CHECK-LE: load i32
+// CHECK-LE: insertelement <4 x i32>
+// CHECK-LE: shufflevector <4 x i32>
+
+res_vsll = vec_load_splats(sll, aui);
+// CHECK: load i32
+// CHECK: insertelement <4 x i32>
+// CHECK: shufflevector <4 x i32>
+// CHECK-LE: load i32
+// CHECK-LE: insertelement <4 x i32>
+// CHECK-LE: shufflevector <4 x i32>
+
+res_vsll = vec_load_splats(ull, aui);
+// CHECK: load i32
+// CHECK: insertelement <4 x i32>
+// CHECK: shufflevector <4 x i32>
+// CHECK-LE: load i32
+// CHECK-LE: insertelement <4 x i32>
+// CHECK-LE: shufflevector <4 x i32>
+
+res_vsll = vec_load_splats(sll, af);
+// CHECK: load float
+// CHECK: insertelement <4 x float>
+// CHECK: shufflevector <4 x float>
+// CHECK-LE: load float
+// CHECK-LE: insertelement <4 x float>
+// CHECK-LE: shufflevector <4 x float>
+
+res_vsll = vec_load_splats(ull, af);
+// CHECK: load float
+// CHECK: insertelement <4 x float>
+// CHECK: shufflevector <4 x float>
+// CHECK-LE: load float
+// CHECK-LE: insertelement <4 x float>
+// CHECK-LE: shufflevector <4 x float>
+
 vec_xst_be(vsll, sll, asll);
 // CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 1
 // CHECK-LE: call void @llvm.ppc.vsx.stxvd2x.be(<2 x double> %{{[0-9]+}}, i8* %{{[0-9]+}})
