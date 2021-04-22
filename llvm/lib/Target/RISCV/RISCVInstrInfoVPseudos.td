@@ -3952,10 +3952,12 @@ defm : VPatBinaryM_VX_VI<"int_riscv_vmsgt", "PseudoVMSGT", AllIntegerVectors>;
 defm : VPatBinarySwappedM_VV<"int_riscv_vmsgtu", "PseudoVMSLTU", AllIntegerVectors>;
 defm : VPatBinarySwappedM_VV<"int_riscv_vmsgt", "PseudoVMSLT", AllIntegerVectors>;
 
+defm : VPatBinarySwappedM_VV<"int_riscv_vmsgeu", "PseudoVMSLEU", AllIntegerVectors>;
+defm : VPatBinarySwappedM_VV<"int_riscv_vmsge", "PseudoVMSLE", AllIntegerVectors>;
+
 // Match vmslt(u).vx intrinsics to vmsle(u).vi if the scalar is -15 to 16. This
 // avoids the user needing to know that there is no vmslt(u).vi instruction.
-// This is limited to vmslt(u).vx as there is no vmsge().vx intrinsic or
-// instruction.
+// Similar for vmsge(u).vx intrinsics using vmslt(u).vi.
 foreach vti = AllIntegerVectors in {
   def : Pat<(vti.Mask (int_riscv_vmslt (vti.Vector vti.RegClass:$rs1),
                                        (vti.Scalar simm5_plus1:$rs2),
@@ -4011,6 +4013,67 @@ foreach vti = AllIntegerVectors in {
                                              (vti.Mask V0),
                                              VLOpFrag)),
             (!cast<Instruction>("PseudoVMSNE_VV_"#vti.LMul.MX#"_MASK")
+                                                     VR:$merge,
+                                                     vti.RegClass:$rs1,
+                                                     vti.RegClass:$rs1,
+                                                     (vti.Mask V0),
+                                                     GPR:$vl,
+                                                     vti.SEW)>;
+
+  def : Pat<(vti.Mask (int_riscv_vmsge (vti.Vector vti.RegClass:$rs1),
+                                       (vti.Scalar simm5_plus1:$rs2),
+                                       VLOpFrag)),
+            (!cast<Instruction>("PseudoVMSGT_VI_"#vti.LMul.MX) vti.RegClass:$rs1,
+                                                               (DecImm simm5_plus1:$rs2),
+                                                               GPR:$vl,
+                                                               vti.SEW)>;
+  def : Pat<(vti.Mask (int_riscv_vmsge_mask (vti.Mask VR:$merge),
+                                            (vti.Vector vti.RegClass:$rs1),
+                                            (vti.Scalar simm5_plus1:$rs2),
+                                            (vti.Mask V0),
+                                            VLOpFrag)),
+            (!cast<Instruction>("PseudoVMSGT_VI_"#vti.LMul.MX#"_MASK")
+                                                      VR:$merge,
+                                                      vti.RegClass:$rs1,
+                                                      (DecImm simm5_plus1:$rs2),
+                                                      (vti.Mask V0),
+                                                      GPR:$vl,
+                                                      vti.SEW)>;
+
+  def : Pat<(vti.Mask (int_riscv_vmsgeu (vti.Vector vti.RegClass:$rs1),
+                                        (vti.Scalar simm5_plus1:$rs2),
+                                        VLOpFrag)),
+            (!cast<Instruction>("PseudoVMSGTU_VI_"#vti.LMul.MX) vti.RegClass:$rs1,
+                                                                (DecImm simm5_plus1:$rs2),
+                                                                GPR:$vl,
+                                                                vti.SEW)>;
+  def : Pat<(vti.Mask (int_riscv_vmsgeu_mask (vti.Mask VR:$merge),
+                                             (vti.Vector vti.RegClass:$rs1),
+                                             (vti.Scalar simm5_plus1:$rs2),
+                                             (vti.Mask V0),
+                                             VLOpFrag)),
+            (!cast<Instruction>("PseudoVMSGTU_VI_"#vti.LMul.MX#"_MASK")
+                                                      VR:$merge,
+                                                      vti.RegClass:$rs1,
+                                                      (DecImm simm5_plus1:$rs2),
+                                                      (vti.Mask V0),
+                                                      GPR:$vl,
+                                                      vti.SEW)>;
+
+  // Special cases to avoid matching vmsgeu.vi 0 (always true) to
+  // vmsgtu.vi -1 (always false). Instead match to vmsne.vv.
+  def : Pat<(vti.Mask (int_riscv_vmsgeu (vti.Vector vti.RegClass:$rs1),
+                                        (vti.Scalar 0), VLOpFrag)),
+            (!cast<Instruction>("PseudoVMSEQ_VV_"#vti.LMul.MX) vti.RegClass:$rs1,
+                                                               vti.RegClass:$rs1,
+                                                               GPR:$vl,
+                                                               vti.SEW)>;
+  def : Pat<(vti.Mask (int_riscv_vmsgeu_mask (vti.Mask VR:$merge),
+                                             (vti.Vector vti.RegClass:$rs1),
+                                             (vti.Scalar 0),
+                                             (vti.Mask V0),
+                                             VLOpFrag)),
+            (!cast<Instruction>("PseudoVMSEQ_VV_"#vti.LMul.MX#"_MASK")
                                                      VR:$merge,
                                                      vti.RegClass:$rs1,
                                                      vti.RegClass:$rs1,
