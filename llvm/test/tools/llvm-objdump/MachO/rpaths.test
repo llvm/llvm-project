@@ -1,0 +1,13 @@
+## Validate fetching rpaths from a binary results in the correct output.
+# RUN: llvm-objdump --macho --rpaths --arch x86_64 %p/Inputs/Objc2.64bit.exe.macho-x86_64 | FileCheck --implicit-check-not={{.}} %s
+# RUN: llvm-objdump --macho --rpaths %p/Inputs/Objc2.64bit.exe.macho-x86_64 | FileCheck --implicit-check-not={{.}} %s
+
+# CHECK: {{.*}}Objc2.64bit.exe.macho-x86_64:
+# CHECK: @executable_path/../Frameworks
+
+## Validate binaries with no rpaths should print nothing.
+# RUN: llvm-objdump --macho --no-leading-headers --rpaths %p/Inputs/hello.exe.macho-i386 | count 0
+
+## Validate passing --rpaths without --macho fails.
+# RUN: not llvm-objdump --rpaths %p/Inputs/hello.exe.macho-i386 2>&1 | FileCheck --check-prefix=ERROR %s
+# ERROR: USAGE
