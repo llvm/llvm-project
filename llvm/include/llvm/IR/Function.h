@@ -153,6 +153,11 @@ public:
   static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
                           const Twine &N, Module &M);
 
+  static Function *createWithDefaultAttr(FunctionType *Ty, LinkageTypes Linkage,
+                                         unsigned AddrSpace,
+                                         const Twine &N = "",
+                                         Module *M = nullptr);
+
   // Provide fast operand accessors.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 

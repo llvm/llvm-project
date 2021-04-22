@@ -743,6 +743,8 @@ void CodeGenModule::Release() {
 
   if (CodeGenOpts.NoPLT)
     getModule().setRtLibUseGOT();
+  if (CodeGenOpts.UnwindTables)
+    getModule().setUwtable();
 
   SimplifyPersonality();
 
