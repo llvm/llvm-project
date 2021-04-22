@@ -418,11 +418,15 @@ class JSONCrashLogParser:
             self.parse_images(self.data['usedImages'])
             self.parse_threads(self.data['threads'])
             thread = self.crashlog.threads[self.crashlog.crashed_thread_idx]
-            thread.reason = self.parse_crash_reason(self.data['exception'])
+            reason = self.parse_crash_reason(self.data['exception'])
+            if thread.reason:
+                thread.reason = '{} {}'.format(thread.reason, reason)
+            else:
+                thread.reason = reason
         except (KeyError, ValueError, TypeError) as e:
-           raise CrashLogParseException(
-               'Failed to parse JSON crashlog: {}: {}'.format(
-                   type(e).__name__, e))
+            raise CrashLogParseException(
+                'Failed to parse JSON crashlog: {}: {}'.format(
+                    type(e).__name__, e))
 
         return self.crashlog
 
@@ -480,6 +484,8 @@ class JSONCrashLogParser:
         idx = 0
         for json_thread in json_threads:
             thread = self.crashlog.Thread(idx, False)
+            if 'name' in json_thread:
+                thread.reason = json_thread['name']
             if json_thread.get('triggered', False):
                 self.crashlog.crashed_thread_idx = idx
                 self.registers = self.parse_thread_registers(
