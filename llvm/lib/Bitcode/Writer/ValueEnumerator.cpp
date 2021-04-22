@@ -78,16 +78,6 @@ struct OrderMap {
 
 } // end anonymous namespace
 
-/// Look for a value that might be wrapped as metadata, e.g. a value in a
-/// metadata operand. Returns nullptr for a non-wrapped input value if
-/// OnlyWrapped is true, or it returns the input value as-is if false.
-static const Value *skipMetadataWrapper(const Value *V, bool OnlyWrapped) {
-  if (const auto *MAV = dyn_cast<MetadataAsValue>(V))
-    if (const auto *VAM = dyn_cast<ValueAsMetadata>(MAV->getMetadata()))
-      return VAM->getValue();
-  return OnlyWrapped ? nullptr : V;
-}
-
 static void orderValue(const Value *V, OrderMap &OM) {
   if (OM.lookup(V).first)
     return;
@@ -139,16 +129,25 @@ static OrderMap orderModule(const Module &M) {
   // these before global values, as these will be read before setting the
   // global values' initializers. The latter matters for constants which have
   // uses towards other constants that are used as initializers.
+  auto orderConstantValue = [&OM](const Value *V) {
+    if ((isa<Constant>(V) && !isa<GlobalValue>(V)) || isa<InlineAsm>(V))
+      orderValue(V, OM);
+  };
   for (const Function &F : M) {
     if (F.isDeclaration())
       continue;
     for (const BasicBlock &BB : F)
       for (const Instruction &I : BB)
         for (const Value *V : I.operands()) {
-          if (const Value *Op = skipMetadataWrapper(V, true)) {
-            if ((isa<Constant>(*Op) && !isa<GlobalValue>(*Op)) ||
-                isa<InlineAsm>(*Op))
-              orderValue(Op, OM);
+          if (const auto *MAV = dyn_cast<MetadataAsValue>(V)) {
+            if (const auto *VAM =
+                    dyn_cast<ValueAsMetadata>(MAV->getMetadata())) {
+              orderConstantValue(VAM->getValue());
+            } else if (const auto *AL =
+                           dyn_cast<DIArgList>(MAV->getMetadata())) {
+              for (const auto *VAM : AL->getArgs())
+                orderConstantValue(VAM->getValue());
+            }
           }
         }
   }
@@ -448,10 +447,17 @@ ValueEnumerator::ValueEnumerator(const Module &M,
             continue;
           }
 
-          // Local metadata is enumerated during function-incorporation.
-          if (isa<LocalAsMetadata>(MD->getMetadata()) ||
-              isa<DIArgList>(MD->getMetadata()))
+          // Local metadata is enumerated during function-incorporation, but
+          // any ConstantAsMetadata arguments in a DIArgList should be examined
+          // now.
+          if (isa<LocalAsMetadata>(MD->getMetadata()))
             continue;
+          if (auto *AL = dyn_cast<DIArgList>(MD->getMetadata())) {
+            for (auto *VAM : AL->getArgs())
+              if (isa<ConstantAsMetadata>(VAM))
+                EnumerateMetadata(&F, VAM);
+            continue;
+          }
 
           EnumerateMetadata(&F, MD->getMetadata());
         }
@@ -620,6 +626,11 @@ void ValueEnumerator::EnumerateFunctionLocalMetadata(
   EnumerateFunctionLocalMetadata(getMetadataFunctionID(&F), Local);
 }
 
+void ValueEnumerator::EnumerateFunctionLocalListMetadata(
+    const Function &F, const DIArgList *ArgList) {
+  EnumerateFunctionLocalListMetadata(getMetadataFunctionID(&F), ArgList);
+}
+
 void ValueEnumerator::dropFunctionFromMetadata(
     MetadataMapType::value_type &FirstMD) {
   SmallVector<const MDNode *, 64> Worklist;
@@ -730,7 +741,7 @@ const MDNode *ValueEnumerator::enumerateMetadataImpl(unsigned F, const Metadata 
   return nullptr;
 }
 
-/// EnumerateFunctionLocalMetadataa - Incorporate function-local metadata
+/// EnumerateFunctionLocalMetadata - Incorporate function-local metadata
 /// information reachable from the metadata.
 void ValueEnumerator::EnumerateFunctionLocalMetadata(
     unsigned F, const LocalAsMetadata *Local) {
@@ -748,6 +759,39 @@ void ValueEnumerator::EnumerateFunctionLocalMetadata(
   Index.ID = MDs.size();
 
   EnumerateValue(Local->getValue());
+}
+
+/// EnumerateFunctionLocalListMetadata - Incorporate function-local metadata
+/// information reachable from the metadata.
+void ValueEnumerator::EnumerateFunctionLocalListMetadata(
+    unsigned F, const DIArgList *ArgList) {
+  assert(F && "Expected a function");
+
+  // Check to see if it's already in!
+  MDIndex &Index = MetadataMap[ArgList];
+  if (Index.ID) {
+    assert(Index.F == F && "Expected the same function");
+    return;
+  }
+
+  for (ValueAsMetadata *VAM : ArgList->getArgs()) {
+    if (isa<LocalAsMetadata>(VAM)) {
+      assert(MetadataMap.count(VAM) &&
+             "LocalAsMetadata should be enumerated before DIArgList");
+      assert(MetadataMap[VAM].F == F &&
+             "Expected LocalAsMetadata in the same function");
+    } else {
+      assert(isa<ConstantAsMetadata>(VAM) &&
+             "Expected LocalAsMetadata or ConstantAsMetadata");
+      assert(ValueMap.count(VAM->getValue()) &&
+             "Constant should be enumerated beforeDIArgList");
+      EnumerateMetadata(F, VAM);
+    }
+  }
+
+  MDs.push_back(ArgList);
+  Index.F = F;
+  Index.ID = MDs.size();
 }
 
 static unsigned getMetadataTypeOrder(const Metadata *MD) {
@@ -1072,7 +1116,7 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
   // DIArgList entries must come after function-local metadata, as it is not
   // possible to forward-reference them.
   for (const DIArgList *ArgList : ArgListMDVector)
-    EnumerateMetadata(&F, ArgList);
+    EnumerateFunctionLocalListMetadata(F, ArgList);
 }
 
 void ValueEnumerator::purgeFunction() {

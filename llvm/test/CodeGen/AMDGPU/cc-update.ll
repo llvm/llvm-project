@@ -151,7 +151,6 @@ define amdgpu_kernel void @test_kern_call() local_unnamed_addr #0 {
 ; GFX1100-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX1100-NEXT:    s_endpgm
 
-
 entry:
   tail call void @ex() #0
   ret void
@@ -247,7 +246,6 @@ define amdgpu_kernel void @test_kern_stack_and_call() local_unnamed_addr #0 {
 ; GFX1100-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX1100-NEXT:    s_endpgm
 
-
 entry:
   %x = alloca i32, align 4, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %x, align 4
@@ -274,7 +272,6 @@ define amdgpu_kernel void @test_force_fp_kern_empty() local_unnamed_addr #2 {
 ; GFX1100-LABEL: test_force_fp_kern_empty:
 ; GFX1100:       ; %bb.0: ; %entry
 ; GFX1100-NEXT:    s_endpgm
-
 
 entry:
   ret void

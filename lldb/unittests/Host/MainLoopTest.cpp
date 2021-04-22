@@ -158,8 +158,8 @@ TEST_F(MainLoopTest, UnmonitoredSignal) {
 TEST_F(MainLoopTest, TwoSignalCallbacks) {
   MainLoop loop;
   Status error;
-  int callback2_count = 0;
-  int callback3_count = 0;
+  unsigned callback2_count = 0;
+  unsigned callback3_count = 0;
 
   auto handle = loop.RegisterSignal(SIGUSR1, make_callback(), error);
   ASSERT_TRUE(error.Success());
