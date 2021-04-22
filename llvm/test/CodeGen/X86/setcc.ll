@@ -2,9 +2,6 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck %s
 ; rdar://7329206
 
-; Use sbb x, x to materialize carry bit in a GPR. The value is either
-; all 1's or all 0's.
-
 define zeroext i16 @t1(i16 zeroext %x) nounwind readnone ssp {
 ; CHECK-LABEL: t1:
 ; CHECK:       ## %bb.0:
