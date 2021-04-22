@@ -97,3 +97,36 @@ func @tensor.generate(%m : index, %n : index)
   } : tensor<?x3x?xf32>
   return %tnsr : tensor<?x3x?xf32>
 }
+// -----
+
+func @tensor.reshape_element_type_mismatch(
+       %buf: tensor<*xf32>, %shape: tensor<1xi32>) {
+  // expected-error @+1 {{element types of source and destination tensor types should be the same}}
+  tensor.reshape %buf(%shape) : (tensor<*xf32>, tensor<1xi32>) -> tensor<?xi32>
+}
+
+// -----
+
+func @tensor.reshape_dst_ranked_shape_unranked(
+       %buf: tensor<*xf32>, %shape: tensor<?xi32>) {
+  // expected-error @+1 {{cannot use shape operand with dynamic length to reshape to statically-ranked tensor type}}
+  tensor.reshape %buf(%shape) : (tensor<*xf32>, tensor<?xi32>) -> tensor<?xf32>
+}
+
+// -----
+
+func @tensor.reshape_dst_shape_rank_mismatch(
+       %buf: tensor<*xf32>, %shape: tensor<1xi32>) {
+  // expected-error @+1 {{length of shape operand differs from the result's tensor rank}}
+  tensor.reshape %buf(%shape)
+    : (tensor<*xf32>, tensor<1xi32>) -> tensor<?x?xf32>
+}
+
+// -----
+
+func @tensor.reshape_num_elements_mismatch(
+       %buf: tensor<1xf32>, %shape: tensor<1xi32>) {
+  // expected-error @+1 {{source and destination tensor should have the same number of elements}}
+  tensor.reshape %buf(%shape)
+    : (tensor<1xf32>, tensor<1xi32>) -> tensor<10xf32>
+}
