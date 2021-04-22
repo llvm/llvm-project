@@ -2642,6 +2642,12 @@ SDValue RISCVTargetLowering::lowerSPLAT_VECTOR_PARTS(SDValue Op,
       return DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, Lo);
   }
 
+  // Detect cases where Hi is (SRA Lo, 31) which means Hi is Lo sign extended.
+  if (Hi.getOpcode() == ISD::SRA && Hi.getOperand(0) == Lo &&
+      isa<ConstantSDNode>(Hi.getOperand(1)) &&
+      Hi.getConstantOperandVal(1) == 31)
+    return DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, Lo);
+
   // Else, on RV32 we lower an i64-element SPLAT_VECTOR thus, being careful not
   // to accidentally sign-extend the 32-bit halves to the e64 SEW:
   // vmv.v.x vX, hi
