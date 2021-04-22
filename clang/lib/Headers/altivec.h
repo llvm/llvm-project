@@ -1627,6 +1627,17 @@ static __inline__ vector double __ATTRS_o_ai vec_ceil(vector double __a) {
 }
 #endif
 
+/* vec_roundp */
+static __inline__ vector float __ATTRS_o_ai vec_roundp(vector float __a) {
+  return vec_ceil(__a);
+}
+
+#ifdef __VSX__
+static __inline__ vector double __ATTRS_o_ai vec_roundp(vector double __a) {
+  return vec_ceil(__a);
+}
+#endif
+
 /* vec_vrfip */
 
 static __inline__ vector float __attribute__((__always_inline__))
