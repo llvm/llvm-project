@@ -1824,11 +1824,11 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
   }
 
   if (C.getArgs().hasArg(options::OPT_print_runtime_dir)) {
-    if (auto RuntimePath = TC.getRuntimePath()) {
-      llvm::outs() << *RuntimePath << '\n';
-      return false;
-    }
-    llvm::outs() << TC.getCompilerRTPath() << '\n';
+    std::string CandidateRuntimePath = TC.getRuntimePath();
+    if (getVFS().exists(CandidateRuntimePath))
+      llvm::outs() << CandidateRuntimePath << '\n';
+    else
+      llvm::outs() << TC.getCompilerRTPath() << '\n';
     return false;
   }
 
