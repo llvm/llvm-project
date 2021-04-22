@@ -12145,6 +12145,17 @@ static __inline__ vector double __ATTRS_o_ai vec_trunc(vector double __a) {
 }
 #endif
 
+/* vec_roundz */
+static __inline__ vector float __ATTRS_o_ai vec_roundz(vector float __a) {
+  return vec_trunc(__a);
+}
+
+#ifdef __VSX__
+static __inline__ vector double __ATTRS_o_ai vec_roundz(vector double __a) {
+  return vec_trunc(__a);
+}
+#endif
+
 /* vec_vrfiz */
 
 static __inline__ vector float __attribute__((__always_inline__))
