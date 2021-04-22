@@ -272,7 +272,8 @@ public:
 #endif
   }
 
-  uptr computeOddEvenMaskForPointerMaybe(Options Options, uptr Ptr, uptr Size) {
+  uptr computeOddEvenMaskForPointerMaybe(Options Options, uptr Ptr,
+                                         uptr ClassId) {
     if (!Options.get(OptionBit::UseOddEvenTags))
       return 0;
 
@@ -281,8 +282,7 @@ public:
     // Size to Ptr will flip the least significant set bit of Size in Ptr, so
     // that bit will have the pattern 010101... for consecutive blocks, which we
     // can use to determine which tag mask to use.
-    return (Ptr & (1ULL << getLeastSignificantSetBitIndex(Size))) ? 0xaaaa
-                                                                  : 0x5555;
+    return 0x5555U << ((Ptr >> SizeClassMap::getSizeLSBByClassId(ClassId)) & 1);
   }
 
   NOINLINE void *allocate(uptr Size, Chunk::Origin Origin,
@@ -444,7 +444,7 @@ public:
           }
         } else {
           const uptr OddEvenMask =
-              computeOddEvenMaskForPointerMaybe(Options, BlockUptr, BlockSize);
+              computeOddEvenMaskForPointerMaybe(Options, BlockUptr, ClassId);
           TaggedPtr = prepareTaggedChunk(Ptr, Size, OddEvenMask, BlockEnd);
         }
         storePrimaryAllocationStackMaybe(Options, Ptr);
@@ -1043,7 +1043,7 @@ private:
           uptr TaggedBegin, TaggedEnd;
           const uptr OddEvenMask = computeOddEvenMaskForPointerMaybe(
               Options, reinterpret_cast<uptr>(getBlockBegin(Ptr, &NewHeader)),
-              SizeClassMap::getSizeByClassId(NewHeader.ClassId));
+              NewHeader.ClassId);
           // Exclude the previous tag so that immediate use after free is
           // detected 100% of the time.
           setRandomTag(Ptr, Size, OddEvenMask | (1UL << PrevTag), &TaggedBegin,
