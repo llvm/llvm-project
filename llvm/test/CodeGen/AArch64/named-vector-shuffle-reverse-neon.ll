@@ -9,28 +9,10 @@ target triple = "aarch64-unknown-linux-gnu"
 ;
 
 define <16 x i8> @reverse_v16i8(<16 x i8> %a) #0 {
-; CHECK-LABEL: .LCPI0_0:
-; CHECK:        .byte   15                      // 0xf
-; CHECK-NEXT:   .byte   14                      // 0xe
-; CHECK-NEXT:   .byte   13                      // 0xd
-; CHECK-NEXT:   .byte   12                      // 0xc
-; CHECK-NEXT:   .byte   11                      // 0xb
-; CHECK-NEXT:   .byte   10                      // 0xa
-; CHECK-NEXT:   .byte   9                       // 0x9
-; CHECK-NEXT:   .byte   8                       // 0x8
-; CHECK-NEXT:   .byte   7                       // 0x7
-; CHECK-NEXT:   .byte   6                       // 0x6
-; CHECK-NEXT:   .byte   5                       // 0x5
-; CHECK-NEXT:   .byte   4                       // 0x4
-; CHECK-NEXT:   .byte   3                       // 0x3
-; CHECK-NEXT:   .byte   2                       // 0x2
-; CHECK-NEXT:   .byte   1                       // 0x1
-; CHECK-NEXT:   .byte   0                       // 0x0
 ; CHECK-LABEL: reverse_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
-; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    ret
 
   %res = call <16 x i8> @llvm.experimental.vector.reverse.v16i8(<16 x i8> %a)
@@ -38,28 +20,10 @@ define <16 x i8> @reverse_v16i8(<16 x i8> %a) #0 {
 }
 
 define <8 x i16> @reverse_v8i16(<8 x i16> %a) #0 {
-; CHECK-LABEL: .LCPI1_0:
-; CHECK:        .byte   14                      // 0xe
-; CHECK-NEXT:   .byte   15                      // 0xf
-; CHECK-NEXT:   .byte   12                      // 0xc
-; CHECK-NEXT:   .byte   13                      // 0xd
-; CHECK-NEXT:   .byte   10                      // 0xa
-; CHECK-NEXT:   .byte   11                      // 0xb
-; CHECK-NEXT:   .byte   8                       // 0x8
-; CHECK-NEXT:   .byte   9                       // 0x9
-; CHECK-NEXT:   .byte   6                       // 0x6
-; CHECK-NEXT:   .byte   7                       // 0x7
-; CHECK-NEXT:   .byte   4                       // 0x4
-; CHECK-NEXT:   .byte   5                       // 0x5
-; CHECK-NEXT:   .byte   2                       // 0x2
-; CHECK-NEXT:   .byte   3                       // 0x3
-; CHECK-NEXT:   .byte   0                       // 0x0
-; CHECK-NEXT:   .byte   1                       // 0x1
 ; CHECK-LABEL: reverse_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI1_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
-; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    ret
 
   %res = call <8 x i16> @llvm.experimental.vector.reverse.v8i16(<8 x i16> %a)
@@ -88,28 +52,10 @@ define <2 x i64> @reverse_v2i64(<2 x i64> %a) #0 {
 }
 
 define <8 x half> @reverse_v8f16(<8 x half> %a) #0 {
-; CHECK-LABEL: .LCPI4_0:
-; CHECK:        .byte   14                      // 0xe
-; CHECK-NEXT:   .byte   15                      // 0xf
-; CHECK-NEXT:   .byte   12                      // 0xc
-; CHECK-NEXT:   .byte   13                      // 0xd
-; CHECK-NEXT:   .byte   10                      // 0xa
-; CHECK-NEXT:   .byte   11                      // 0xb
-; CHECK-NEXT:   .byte   8                       // 0x8
-; CHECK-NEXT:   .byte   9                       // 0x9
-; CHECK-NEXT:   .byte   6                       // 0x6
-; CHECK-NEXT:   .byte   7                       // 0x7
-; CHECK-NEXT:   .byte   4                       // 0x4
-; CHECK-NEXT:   .byte   5                       // 0x5
-; CHECK-NEXT:   .byte   2                       // 0x2
-; CHECK-NEXT:   .byte   3                       // 0x3
-; CHECK-NEXT:   .byte   0                       // 0x0
-; CHECK-NEXT:   .byte   1                       // 0x1
 ; CHECK-LABEL: reverse_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI4_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI4_0]
-; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    ret
 
   %res = call <8 x half> @llvm.experimental.vector.reverse.v8f16(<8 x half> %a)
