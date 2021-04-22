@@ -775,6 +775,14 @@ void test1() {
 // CHECK: call <2 x double> @llvm.floor.v2f64(<2 x double> %{{[0-9]+}})
 // CHECK-LE: call <2 x double> @llvm.floor.v2f64(<2 x double> %{{[0-9]+}})
 
+  res_vf = vec_roundm(vf);
+// CHECK: call <4 x float> @llvm.floor.v4f32(<4 x float> %{{[0-9]+}})
+// CHECK-LE: call <4 x float> @llvm.floor.v4f32(<4 x float> %{{[0-9]+}})
+
+  res_vd = vec_roundm(vd);
+// CHECK: call <2 x double> @llvm.floor.v2f64(<2 x double> %{{[0-9]+}})
+// CHECK-LE: call <2 x double> @llvm.floor.v2f64(<2 x double> %{{[0-9]+}})
+
   res_vf = vec_madd(vf, vf, vf);
 // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{[0-9]+}}, <4 x float> %{{[0-9]+}}, <4 x float> %{{[0-9]+}})
 // CHECK-LE: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{[0-9]+}}, <4 x float> %{{[0-9]+}}, <4 x float> %{{[0-9]+}})
