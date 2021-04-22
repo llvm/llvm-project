@@ -524,5 +524,14 @@ bool hasUnstableLinkage(const Decl *D) {
   return VD && !VD->getType().isNull() && VD->getType()->isUndeducedType();
 }
 
+bool isDeeplyNested(const Decl *D, unsigned MaxDepth) {
+  size_t ContextDepth = 0;
+  for (auto *Ctx = D->getDeclContext(); Ctx && !Ctx->isTranslationUnit();
+       Ctx = Ctx->getParent()) {
+    if (++ContextDepth == MaxDepth)
+      return true;
+  }
+  return false;
+}
 } // namespace clangd
 } // namespace clang
