@@ -46,7 +46,7 @@ void test_algorithms() {
   std::binary_search(std::begin(arr), std::end(arr), 1, std::greater<int>());
 #if TEST_STD_VER >= 17
   std::clamp(2, 1, 3);
-  std::clamp(2, 1, 3, std::greater<int>());
+  std::clamp(2, 3, 1, std::greater<int>());
 #endif
   std::count_if(std::begin(arr), std::end(arr), P());
   std::count(std::begin(arr), std::end(arr), 1);
