@@ -732,6 +732,7 @@ public:
           BO->getLHS()->getType().getCanonicalType());
       auto *RHSMatTy = dyn_cast<ConstantMatrixType>(
           BO->getRHS()->getType().getCanonicalType());
+      CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Ops.FPFeatures);
       if (LHSMatTy && RHSMatTy)
         return MB.CreateMatrixMultiply(Ops.LHS, Ops.RHS, LHSMatTy->getNumRows(),
                                        LHSMatTy->getNumColumns(),
@@ -3258,6 +3259,7 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
         "first operand must be a matrix");
     assert(BO->getRHS()->getType().getCanonicalType()->isArithmeticType() &&
            "second operand must be an arithmetic type");
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Ops.FPFeatures);
     return MB.CreateScalarDiv(Ops.LHS, Ops.RHS,
                               Ops.Ty->hasUnsignedIntegerRepresentation());
   }
@@ -3637,6 +3639,7 @@ Value *ScalarExprEmitter::EmitAdd(const BinOpInfo &op) {
 
   if (op.Ty->isConstantMatrixType()) {
     llvm::MatrixBuilder<CGBuilderTy> MB(Builder);
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, op.FPFeatures);
     return MB.CreateAdd(op.LHS, op.RHS);
   }
 
@@ -3786,6 +3789,7 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
 
     if (op.Ty->isConstantMatrixType()) {
       llvm::MatrixBuilder<CGBuilderTy> MB(Builder);
+      CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, op.FPFeatures);
       return MB.CreateSub(op.LHS, op.RHS);
     }
 
