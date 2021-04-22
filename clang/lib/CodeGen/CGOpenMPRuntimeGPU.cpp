@@ -562,10 +562,16 @@ static llvm::Value *getThreadLimit(CodeGenFunction &CGF,
                                    bool IsInSPMDExecutionMode = false) {
   CGBuilderTy &Bld = CGF.Builder;
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
-  return IsInSPMDExecutionMode
-             ? RT.getGPUNumThreads(CGF)
-             : Bld.CreateNUWSub(RT.getGPUNumThreads(CGF),
-                                RT.getGPUWarpSize(CGF), "thread_limit");
+  llvm::Value *ThreadLimit = nullptr;
+  if (IsInSPMDExecutionMode)
+    ThreadLimit = RT.getGPUNumThreads(CGF);
+  else {
+    llvm::Value *GPUNumThreads = RT.getGPUNumThreads(CGF);
+    llvm::Value *GPUWarpSize = RT.getGPUWarpSize(CGF);
+    ThreadLimit = Bld.CreateNUWSub(GPUNumThreads, GPUWarpSize, "thread_limit");
+  }
+  assert(ThreadLimit != nullptr && "Expected non-null ThreadLimit");
+  return ThreadLimit;
 }
 
 /// Get the thread id of the OMP master thread.
@@ -582,8 +588,8 @@ static llvm::Value *getMasterThreadID(CodeGenFunction &CGF) {
   // We assume that the warp size is a power of 2.
   llvm::Value *Mask = Bld.CreateNUWSub(RT.getGPUWarpSize(CGF), Bld.getInt32(1));
 
-  return Bld.CreateAnd(Bld.CreateNUWSub(NumThreads, Bld.getInt32(1)),
-                       Bld.CreateNot(Mask), "master_tid");
+  llvm::Value *NumThreadsSubOne = Bld.CreateNUWSub(NumThreads, Bld.getInt32(1));
+  return Bld.CreateAnd(NumThreadsSubOne, Bld.CreateNot(Mask), "master_tid");
 }
 
 CGOpenMPRuntimeGPU::WorkerFunctionState::WorkerFunctionState(
@@ -1131,8 +1137,9 @@ void CGOpenMPRuntimeGPU::emitNonSPMDEntryHeader(CodeGenFunction &CGF,
   EST.ExitBB = CGF.createBasicBlock(".exit");
 
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
-  llvm::Value *IsWorker =
-      Bld.CreateICmpULT(RT.getGPUThreadID(CGF), getThreadLimit(CGF));
+  llvm::Value *GPUThreadID = RT.getGPUThreadID(CGF);
+  llvm::Value *ThreadLimit = getThreadLimit(CGF);
+  llvm::Value *IsWorker = Bld.CreateICmpULT(GPUThreadID, ThreadLimit);
   Bld.CreateCondBr(IsWorker, WorkerBB, MasterCheckBB);
 
   CGF.EmitBlock(WorkerBB);
@@ -1140,8 +1147,9 @@ void CGOpenMPRuntimeGPU::emitNonSPMDEntryHeader(CodeGenFunction &CGF,
   CGF.EmitBranch(EST.ExitBB);
 
   CGF.EmitBlock(MasterCheckBB);
-  llvm::Value *IsMaster =
-      Bld.CreateICmpEQ(RT.getGPUThreadID(CGF), getMasterThreadID(CGF));
+  GPUThreadID = RT.getGPUThreadID(CGF);
+  llvm::Value *MasterThreadID = getMasterThreadID(CGF);
+  llvm::Value *IsMaster = Bld.CreateICmpEQ(GPUThreadID, MasterThreadID);
   Bld.CreateCondBr(IsMaster, MasterBB, EST.ExitBB);
 
   CGF.EmitBlock(MasterBB);
@@ -2073,105 +2081,41 @@ void CGOpenMPRuntimeGPU::emitTeamsCall(CodeGenFunction &CGF,
   emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
 }
 
-void CGOpenMPRuntimeGPU::emitParallelCall(
-    CodeGenFunction &CGF, SourceLocation Loc, llvm::Function *OutlinedFn,
-    ArrayRef<llvm::Value *> CapturedVars, const Expr *IfCond) {
+void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
+                                          SourceLocation Loc,
+                                          llvm::Function *OutlinedFn,
+                                          ArrayRef<llvm::Value *> CapturedVars,
+                                          const Expr *IfCond) {
   if (!CGF.HaveInsertPoint())
     return;
 
-  if (getExecutionMode() == CGOpenMPRuntimeGPU::EM_SPMD)
-    emitSPMDParallelCall(CGF, Loc, OutlinedFn, CapturedVars, IfCond);
-  else
-    emitNonSPMDParallelCall(CGF, Loc, OutlinedFn, CapturedVars, IfCond);
-}
-
-void CGOpenMPRuntimeGPU::emitNonSPMDParallelCall(
-    CodeGenFunction &CGF, SourceLocation Loc, llvm::Value *OutlinedFn,
-    ArrayRef<llvm::Value *> CapturedVars, const Expr *IfCond) {
-  llvm::Function *Fn = cast<llvm::Function>(OutlinedFn);
-
-  // Force inline this outlined function at its call site.
-  Fn->setLinkage(llvm::GlobalValue::InternalLinkage);
-
-  Address ZeroAddr = CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty,
-                                                      /*Name=*/".zero.addr");
-  CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C*/ 0));
-  // ThreadId for serialized parallels is 0.
-  Address ThreadIDAddr = ZeroAddr;
-  auto &&CodeGen = [this, Fn, CapturedVars, Loc, &ThreadIDAddr](
-                       CodeGenFunction &CGF, PrePostActionTy &Action) {
-    Action.Enter(CGF);
-
-    Address ZeroAddr =
-        CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty,
-                                         /*Name=*/".bound.zero.addr");
-    CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C*/ 0));
-    llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
-    OutlinedFnArgs.push_back(ThreadIDAddr.getPointer());
-    OutlinedFnArgs.push_back(ZeroAddr.getPointer());
-    OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
-    emitOutlinedFunctionCall(CGF, Loc, Fn, OutlinedFnArgs);
-  };
-  auto &&SeqGen = [this, &CodeGen, Loc](CodeGenFunction &CGF,
-                                        PrePostActionTy &) {
-
-    RegionCodeGenTy RCG(CodeGen);
-    llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
-    llvm::Value *ThreadID = getThreadID(CGF, Loc);
-    llvm::Value *Args[] = {RTLoc, ThreadID};
-
-    NVPTXActionTy Action(
-        OMPBuilder.getOrCreateRuntimeFunction(
-            CGM.getModule(), OMPRTL___kmpc_serialized_parallel),
-        Args,
-        OMPBuilder.getOrCreateRuntimeFunction(
-            CGM.getModule(), OMPRTL___kmpc_end_serialized_parallel),
-        Args);
-    RCG.setAction(Action);
-    RCG(CGF);
-  };
-
-  auto &&L0ParallelGen = [this, CapturedVars, Fn](CodeGenFunction &CGF,
-                                                  PrePostActionTy &Action) {
+  auto &&ParallelGen = [this, Loc, OutlinedFn, CapturedVars,
+                        IfCond](CodeGenFunction &CGF, PrePostActionTy &Action) {
     CGBuilderTy &Bld = CGF.Builder;
-    llvm::Function *WFn = WrapperFunctionsMap[Fn];
-    assert(WFn && "Wrapper function does not exist!");
-    llvm::Value *ID = Bld.CreateBitOrPointerCast(WFn, CGM.Int8PtrTy);
-
-    // Prepare for parallel region. Indicate the outlined function.
-    llvm::Value *Args[] = {ID};
-    CGF.EmitRuntimeCall(
-        OMPBuilder.getOrCreateRuntimeFunction(
-            CGM.getModule(), OMPRTL___kmpc_kernel_prepare_parallel),
-        Args);
+    llvm::Function *WFn = WrapperFunctionsMap[OutlinedFn];
+    llvm::Value *ID = llvm::ConstantPointerNull::get(CGM.Int8PtrTy);
+    if (WFn) {
+      ID = Bld.CreateBitOrPointerCast(WFn, CGM.Int8PtrTy);
+      // Remember for post-processing in worker loop.
+      Work.emplace_back(WFn);
+    }
+    llvm::Value *FnPtr = Bld.CreateBitOrPointerCast(OutlinedFn, CGM.Int8PtrTy);
 
     // Create a private scope that will globalize the arguments
     // passed from the outside of the target region.
+    // TODO: Is that needed?
     CodeGenFunction::OMPPrivateScope PrivateArgScope(CGF);
 
+    Address CapturedVarsAddrs = CGF.CreateDefaultAlignTempAlloca(
+        llvm::ArrayType::get(CGM.VoidPtrTy, CapturedVars.size()),
+        "captured_vars_addrs");
     // There's something to share.
     if (!CapturedVars.empty()) {
       // Prepare for parallel region. Indicate the outlined function.
-      Address SharedArgs =
-          CGF.CreateDefaultAlignTempAlloca(CGF.VoidPtrPtrTy, "shared_arg_refs");
-      llvm::Value *SharedArgsPtr = SharedArgs.getPointer();
-
-      llvm::Value *DataSharingArgs[] = {
-          SharedArgsPtr,
-          llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
-      CGF.EmitRuntimeCall(
-          OMPBuilder.getOrCreateRuntimeFunction(
-              CGM.getModule(), OMPRTL___kmpc_begin_sharing_variables),
-          DataSharingArgs);
-
-      // Store variable address in a list of references to pass to workers.
-      unsigned Idx = 0;
       ASTContext &Ctx = CGF.getContext();
-      Address SharedArgListAddress = CGF.EmitLoadOfPointer(
-          SharedArgs, Ctx.getPointerType(Ctx.getPointerType(Ctx.VoidPtrTy))
-                          .castAs<PointerType>());
+      unsigned Idx = 0;
       for (llvm::Value *V : CapturedVars) {
-        Address Dst = Bld.CreateConstInBoundsGEP(SharedArgListAddress, Idx);
+        Address Dst = Bld.CreateConstArrayGEP(CapturedVarsAddrs, Idx);
         llvm::Value *PtrV;
         if (V->getType()->isIntegerTy())
           PtrV = Bld.CreateIntToPtr(V, CGF.VoidPtrTy);
@@ -2183,141 +2127,33 @@ void CGOpenMPRuntimeGPU::emitNonSPMDParallelCall(
       }
     }
 
-    // Activate workers. This barrier is used by the master to signal
-    // work for the workers.
-    syncCTAThreads(CGF);
+    llvm::Value *IfCondVal = nullptr;
+    if (IfCond)
+      IfCondVal = Bld.CreateIntCast(CGF.EvaluateExprAsBool(IfCond), CGF.Int32Ty,
+                                    /* isSigned */ false);
+    else
+      IfCondVal = llvm::ConstantInt::get(CGF.Int32Ty, 1);
 
-    // OpenMP [2.5, Parallel Construct, p.49]
-    // There is an implied barrier at the end of a parallel region. After the
-    // end of a parallel region, only the master thread of the team resumes
-    // execution of the enclosing task region.
-    //
-    // The master waits at this barrier until all workers are done.
-    syncCTAThreads(CGF);
-
-    if (!CapturedVars.empty())
-      CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-          CGM.getModule(), OMPRTL___kmpc_end_sharing_variables));
-
-    // Remember for post-processing in worker loop.
-    Work.emplace_back(WFn);
-  };
-
-  auto &&LNParallelGen = [this, Loc, &SeqGen, &L0ParallelGen](
-                             CodeGenFunction &CGF, PrePostActionTy &Action) {
-    if (IsInParallelRegion) {
-      SeqGen(CGF, Action);
-    } else if (IsInTargetMasterThreadRegion) {
-      L0ParallelGen(CGF, Action);
-    } else {
-      // Check for master and then parallelism:
-      // if (__kmpc_is_spmd_exec_mode() || __kmpc_parallel_level(loc, gtid)) {
-      //   Serialized execution.
-      // } else {
-      //   Worker call.
-      // }
-      CGBuilderTy &Bld = CGF.Builder;
-      llvm::BasicBlock *ExitBB = CGF.createBasicBlock(".exit");
-      llvm::BasicBlock *SeqBB = CGF.createBasicBlock(".sequential");
-      llvm::BasicBlock *ParallelCheckBB = CGF.createBasicBlock(".parcheck");
-      llvm::BasicBlock *MasterBB = CGF.createBasicBlock(".master");
-      llvm::Value *IsSPMD = Bld.CreateIsNotNull(
-          CGF.EmitNounwindRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-              CGM.getModule(), OMPRTL___kmpc_is_spmd_exec_mode)));
-      Bld.CreateCondBr(IsSPMD, SeqBB, ParallelCheckBB);
-      // There is no need to emit line number for unconditional branch.
-      (void)ApplyDebugLocation::CreateEmpty(CGF);
-      CGF.EmitBlock(ParallelCheckBB);
-      llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
-      llvm::Value *ThreadID = getThreadID(CGF, Loc);
-      llvm::Value *PL = CGF.EmitRuntimeCall(
-          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                                OMPRTL___kmpc_parallel_level),
-          {RTLoc, ThreadID});
-      llvm::Value *Res = Bld.CreateIsNotNull(PL);
-      Bld.CreateCondBr(Res, SeqBB, MasterBB);
-      CGF.EmitBlock(SeqBB);
-      SeqGen(CGF, Action);
-      CGF.EmitBranch(ExitBB);
-      // There is no need to emit line number for unconditional branch.
-      (void)ApplyDebugLocation::CreateEmpty(CGF);
-      CGF.EmitBlock(MasterBB);
-      L0ParallelGen(CGF, Action);
-      CGF.EmitBranch(ExitBB);
-      // There is no need to emit line number for unconditional branch.
-      (void)ApplyDebugLocation::CreateEmpty(CGF);
-      // Emit the continuation block for code after the if.
-      CGF.EmitBlock(ExitBB, /*IsFinished=*/true);
-    }
-  };
-
-  if (IfCond) {
-    emitIfClause(CGF, IfCond, LNParallelGen, SeqGen);
-  } else {
-    CodeGenFunction::RunCleanupsScope Scope(CGF);
-    RegionCodeGenTy ThenRCG(LNParallelGen);
-    ThenRCG(CGF);
-  }
-}
-
-void CGOpenMPRuntimeGPU::emitSPMDParallelCall(
-    CodeGenFunction &CGF, SourceLocation Loc, llvm::Function *OutlinedFn,
-    ArrayRef<llvm::Value *> CapturedVars, const Expr *IfCond) {
-  // Just call the outlined function to execute the parallel region.
-  // OutlinedFn(&GTid, &zero, CapturedStruct);
-  //
-  llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
-
-  Address ZeroAddr = CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty,
-                                                      /*Name=*/".zero.addr");
-  CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C*/ 0));
-  // ThreadId for serialized parallels is 0.
-  Address ThreadIDAddr = ZeroAddr;
-  auto &&CodeGen = [this, OutlinedFn, CapturedVars, Loc, &ThreadIDAddr](
-                       CodeGenFunction &CGF, PrePostActionTy &Action) {
-    Action.Enter(CGF);
-
-    Address ZeroAddr =
-        CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty,
-                                         /*Name=*/".bound.zero.addr");
-    CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C*/ 0));
-    llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
-    OutlinedFnArgs.push_back(ThreadIDAddr.getPointer());
-    OutlinedFnArgs.push_back(ZeroAddr.getPointer());
-    OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
-    emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
-  };
-  auto &&SeqGen = [this, &CodeGen, Loc](CodeGenFunction &CGF,
-                                        PrePostActionTy &) {
-
-    RegionCodeGenTy RCG(CodeGen);
+    assert(IfCondVal && "Expected a value");
     llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
-    llvm::Value *ThreadID = getThreadID(CGF, Loc);
-    llvm::Value *Args[] = {RTLoc, ThreadID};
-
-    NVPTXActionTy Action(
-        OMPBuilder.getOrCreateRuntimeFunction(
-            CGM.getModule(), OMPRTL___kmpc_serialized_parallel),
-        Args,
-        OMPBuilder.getOrCreateRuntimeFunction(
-            CGM.getModule(), OMPRTL___kmpc_end_serialized_parallel),
-        Args);
-    RCG.setAction(Action);
-    RCG(CGF);
+    llvm::Value *Args[] = {
+        RTLoc,
+        getThreadID(CGF, Loc),
+        IfCondVal,
+        llvm::ConstantInt::get(CGF.Int32Ty, -1),
+        llvm::ConstantInt::get(CGF.Int32Ty, -1),
+        FnPtr,
+        ID,
+        Bld.CreateBitOrPointerCast(CapturedVarsAddrs.getPointer(),
+                                   CGF.VoidPtrPtrTy),
+        llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
+    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                            CGM.getModule(), OMPRTL___kmpc_parallel_51),
+                        Args);
   };
 
-  if (IsInTargetMasterThreadRegion) {
-    // In the worker need to use the real thread id.
-    ThreadIDAddr = emitThreadIDAddress(CGF, Loc);
-    RegionCodeGenTy RCG(CodeGen);
-    RCG(CGF);
-  } else {
-    // If we are not in the target region, it is definitely L2 parallelism or
-    // more, because for SPMD mode we always has L1 parallel level, sowe don't
-    // need to check for orphaned directives.
-    RegionCodeGenTy RCG(SeqGen);
-    RCG(CGF);
-  }
+  RegionCodeGenTy RCG(ParallelGen);
+  RCG(CGF);
 }
 
 void CGOpenMPRuntimeGPU::syncCTAThreads(CodeGenFunction &CGF) {
