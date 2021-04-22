@@ -2915,7 +2915,8 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   }
   if (ClEventCallbacks) {
     IRB.CreateCall(DFSF.DFS.DFSanMemTransferCallbackFn,
-                   {RawDestShadow, I.getLength()});
+                   {RawDestShadow,
+                    IRB.CreateZExtOrTrunc(I.getLength(), DFSF.DFS.IntptrTy)});
   }
 }
 
