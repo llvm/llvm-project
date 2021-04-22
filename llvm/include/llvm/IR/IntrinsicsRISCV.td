@@ -989,6 +989,8 @@ let TargetPrefix = "riscv" in {
   defm vmsle : RISCVCompare;
   defm vmsgtu : RISCVCompare;
   defm vmsgt : RISCVCompare;
+  defm vmsgeu : RISCVCompare;
+  defm vmsge : RISCVCompare;
 
   defm vminu : RISCVBinaryAAX;
   defm vmin : RISCVBinaryAAX;
