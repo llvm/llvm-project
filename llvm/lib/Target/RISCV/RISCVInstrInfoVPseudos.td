@@ -2220,6 +2220,24 @@ class VPatBinaryNoMask<string intrinsic_name,
                    (op2_type op2_kind:$rs2),
                    GPR:$vl, sew)>;
 
+// Same as above but source operands are swapped.
+class VPatBinaryNoMaskSwapped<string intrinsic_name,
+                              string inst,
+                              ValueType result_type,
+                              ValueType op1_type,
+                              ValueType op2_type,
+                              int sew,
+                              VReg op1_reg_class,
+                              DAGOperand op2_kind> :
+  Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
+                   (op2_type op2_kind:$rs2),
+                   (op1_type op1_reg_class:$rs1),
+                   VLOpFrag)),
+                   (!cast<Instruction>(inst)
+                   (op1_type op1_reg_class:$rs1),
+                   (op2_type op2_kind:$rs2),
+                   GPR:$vl, sew)>;
+
 class VPatBinaryMask<string intrinsic_name,
                      string inst,
                      ValueType result_type,
@@ -2234,6 +2252,29 @@ class VPatBinaryMask<string intrinsic_name,
                    (result_type result_reg_class:$merge),
                    (op1_type op1_reg_class:$rs1),
                    (op2_type op2_kind:$rs2),
+                   (mask_type V0),
+                   VLOpFrag)),
+                   (!cast<Instruction>(inst#"_MASK")
+                   (result_type result_reg_class:$merge),
+                   (op1_type op1_reg_class:$rs1),
+                   (op2_type op2_kind:$rs2),
+                   (mask_type V0), GPR:$vl, sew)>;
+
+// Same as above but source operands are swapped.
+class VPatBinaryMaskSwapped<string intrinsic_name,
+                            string inst,
+                            ValueType result_type,
+                            ValueType op1_type,
+                            ValueType op2_type,
+                            ValueType mask_type,
+                            int sew,
+                            VReg result_reg_class,
+                            VReg op1_reg_class,
+                            DAGOperand op2_kind> :
+  Pat<(result_type (!cast<Intrinsic>(intrinsic_name#"_mask")
+                   (result_type result_reg_class:$merge),
+                   (op2_type op2_kind:$rs2),
+                   (op1_type op1_reg_class:$rs1),
                    (mask_type V0),
                    VLOpFrag)),
                    (!cast<Instruction>(inst#"_MASK")
@@ -2438,6 +2479,24 @@ multiclass VPatBinary<string intrinsic,
   def : VPatBinaryMask<intrinsic, inst, result_type, op1_type, op2_type,
                        mask_type, sew, result_reg_class, op1_reg_class,
                        op2_kind>;
+}
+
+multiclass VPatBinarySwapped<string intrinsic,
+                      string inst,
+                      ValueType result_type,
+                      ValueType op1_type,
+                      ValueType op2_type,
+                      ValueType mask_type,
+                      int sew,
+                      VReg result_reg_class,
+                      VReg op1_reg_class,
+                      DAGOperand op2_kind>
+{
+  def : VPatBinaryNoMaskSwapped<intrinsic, inst, result_type, op1_type, op2_type,
+                                sew, op1_reg_class, op2_kind>;
+  def : VPatBinaryMaskSwapped<intrinsic, inst, result_type, op1_type, op2_type,
+                              mask_type, sew, result_reg_class, op1_reg_class,
+                              op2_kind>;
 }
 
 multiclass VPatBinaryCarryIn<string intrinsic,
@@ -2727,6 +2786,15 @@ multiclass VPatBinaryM_VV<string intrinsic, string instruction,
                       vti.Mask, vti.Vector, vti.Vector, vti.Mask,
                       vti.SEW, VR,
                       vti.RegClass, vti.RegClass>;
+}
+
+multiclass VPatBinarySwappedM_VV<string intrinsic, string instruction,
+                                 list<VTypeInfo> vtilist> {
+  foreach vti = vtilist in
+    defm : VPatBinarySwapped<intrinsic, instruction # "_VV_" # vti.LMul.MX,
+                             vti.Mask, vti.Vector, vti.Vector, vti.Mask,
+                             vti.SEW, VR,
+                             vti.RegClass, vti.RegClass>;
 }
 
 multiclass VPatBinaryM_VX<string intrinsic, string instruction,
@@ -4179,6 +4247,8 @@ defm : VPatBinaryM_VV_VX<"int_riscv_vmflt", "PseudoVMFLT", AllFloatVectors>;
 defm : VPatBinaryM_VV_VX<"int_riscv_vmfne", "PseudoVMFNE", AllFloatVectors>;
 defm : VPatBinaryM_VX<"int_riscv_vmfgt", "PseudoVMFGT", AllFloatVectors>;
 defm : VPatBinaryM_VX<"int_riscv_vmfge", "PseudoVMFGE", AllFloatVectors>;
+defm : VPatBinarySwappedM_VV<"int_riscv_vmfgt", "PseudoVMFLT", AllFloatVectors>;
+defm : VPatBinarySwappedM_VV<"int_riscv_vmfge", "PseudoVMFLE", AllFloatVectors>;
 
 //===----------------------------------------------------------------------===//
 // 14.14. Vector Floating-Point Classify Instruction
