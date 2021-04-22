@@ -9684,6 +9684,24 @@ s_sendmsg_rtn_b64 s[2:3], 0x12
 s_sendmsg_rtn_b64 s[4:5], 0xff
 // GFX11: encoding: [0xff,0x4d,0x84,0xbe]
 
+s_sendmsg_rtn_b32 s0, sendmsg(MSG_GET_DOORBELL)
+// GFX11: encoding: [0x80,0x4c,0x80,0xbe]
+
+s_sendmsg_rtn_b32 s0, sendmsg(MSG_GET_DDID)
+// GFX11: encoding: [0x81,0x4c,0x80,0xbe]
+
+s_sendmsg_rtn_b32 s0, sendmsg(MSG_GET_TMA)
+// GFX11: encoding: [0x82,0x4c,0x80,0xbe]
+
+s_sendmsg_rtn_b32 s0, sendmsg(MSG_GET_REALTIME)
+// GFX11: encoding: [0x83,0x4c,0x80,0xbe]
+
+s_sendmsg_rtn_b32 s0, sendmsg(MSG_SAVEWAVE)
+// GFX11: encoding: [0x84,0x4c,0x80,0xbe]
+
+s_sendmsg_rtn_b32 s0, sendmsg(MSG_GET_TBA)
+// GFX11: encoding: [0x85,0x4c,0x80,0xbe]
+
 s_trap 0x0
 // GFX11: encoding: [0x00,0x00,0x90,0xbf]
 

@@ -1240,6 +1240,10 @@ int64_t getMsgId(const StringRef Name, const MCSubtargetInfo &STI) {
         return i;
     }
   }
+  for (int i = ID_RTN_FIRST_; i < ID_RTN_LAST_; ++i) {
+    if (Name == IdRtnSymbolic[i - ID_RTN_FIRST_])
+      return i;
+  }
   return ID_UNKNOWN_;
 }
 
@@ -1260,8 +1264,9 @@ bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI, bool Strict) {
     case ID_GET_DDID:
       return isGFX10(STI);
     default:
-      return 0 <= MsgId && MsgId < ID_GAPS_LAST_ &&
-          (isGFX11Plus(STI) ? IdSymbolic_GFX11Plus : IdSymbolic_PreGFX11)[MsgId];
+      if (0 <= MsgId && MsgId < ID_GAPS_LAST_)
+        return (isGFX11Plus(STI) ? IdSymbolic_GFX11Plus : IdSymbolic_PreGFX11)[MsgId];
+      return isGFX11Plus(STI) && ID_RTN_FIRST_ <= MsgId && MsgId < ID_RTN_LAST_;
     }
   } else {
     return 0 <= MsgId && isUInt<ID_WIDTH_>(MsgId);
@@ -1269,6 +1274,10 @@ bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI, bool Strict) {
 }
 
 StringRef getMsgName(int64_t MsgId, const MCSubtargetInfo &STI) {
+  if (MsgId >= ID_RTN_FIRST_) {
+    assert(MsgId < ID_RTN_LAST_);
+    return IdRtnSymbolic[MsgId - ID_RTN_FIRST_];
+  }
   assert(0 <= MsgId && MsgId < ID_GAPS_LAST_);
   return (isGFX11Plus(STI) ? IdSymbolic_GFX11Plus : IdSymbolic_PreGFX11)[MsgId];
 }

@@ -21,6 +21,7 @@ namespace SendMsg { // Symbolic names for the sendmsg(...) syntax.
 
 extern const char *const IdSymbolic_PreGFX11[ID_GAPS_LAST_];
 extern const char *const IdSymbolic_GFX11Plus[ID_GAPS_LAST_];
+extern const char *const IdRtnSymbolic[ID_RTN_LAST_ - ID_RTN_FIRST_];
 extern const char *const OpSysSymbolic[OP_SYS_LAST_];
 extern const char *const OpGsSymbolic[OP_GS_LAST_];
 
