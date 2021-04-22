@@ -4,8 +4,6 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple=i386-unknown-unknown | FileCheck -check-prefix GLOBAL-LP32 %s
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple=armv7-unknown-unknown | FileCheck -check-prefix GLOBAL-ARM %s
 
-// PNaCl uses the same representation of method pointers as ARM.
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=le32-unknown-nacl | FileCheck -check-prefix GLOBAL-ARM %s
 // MIPS uses the same representation of method pointers as ARM.
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple=mips-unknown-linux-gnu | FileCheck -check-prefix GLOBAL-ARM %s
 // WebAssembly uses the same representation of method pointers as ARM.

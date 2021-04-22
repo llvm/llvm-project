@@ -43,3 +43,5 @@ add_llvm_external_project(clang-tools-extra extra)
 
 # libclang may require clang-tidy in clang-tools-extra.
 add_clang_subdirectory(libclang)
+
+add_clang_subdirectory(amdgpu-arch)

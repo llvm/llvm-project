@@ -2851,6 +2851,11 @@ bool SITargetLowering::isEligibleForTailCallOptimization(
   if (!mayTailCallThisCC(CalleeCC))
     return false;
 
+  // For a divergent call target, we need to do a waterfall loop over the
+  // possible callees which precludes us from using a simple jump.
+  if (Callee->isDivergent())
+    return false;
+
   MachineFunction &MF = DAG.getMachineFunction();
   const Function &CallerF = MF.getFunction();
   CallingConv::ID CallerCC = CallerF.getCallingConv();

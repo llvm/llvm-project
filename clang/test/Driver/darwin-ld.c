@@ -365,3 +365,7 @@
 // RUN: FileCheck -check-prefix=MNO_OUTLINE %s < %t.log
 // MNO_OUTLINE: {{ld(.exe)?"}}
 // MNO_OUTLINE-SAME: "-mllvm" "-enable-machine-outliner=never"
+
+// RUN: %clang -target x86_64-apple-darwin10 -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=INSTALL-DIR %s < %t.log
+// INSTALL-DIR: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib"

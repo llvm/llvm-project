@@ -7,6 +7,7 @@
 #===----------------------------------------------------------------------===##
 
 from libcxx.test.dsl import *
+from libcxx.test.features import _isMSVC
 
 _warningFlags = [
   '-Werror',
@@ -99,12 +100,24 @@ DEFAULT_PARAMETERS = [
               AddCompileFlag('-D_LIBCPP_DISABLE_AVAILABILITY')
             ]),
 
+  Parameter(name='debug_level', choices=['', '0', '1'], type=str, default='',
+            help="The debugging level to enable in the test suite.",
+            actions=lambda debugLevel: [] if debugLevel is '' else [
+              AddFeature('debug_level={}'.format(debugLevel)),
+              AddCompileFlag('-D_LIBCPP_DEBUG={}'.format(debugLevel))
+            ]),
+
   # Parameters to enable or disable parts of the test suite
   Parameter(name='enable_experimental', choices=[True, False], type=bool, default=False,
             help="Whether to enable tests for experimental C++ libraries (typically Library Fundamentals TSes).",
             actions=lambda experimental: [] if not experimental else [
               AddFeature('c++experimental'),
-              PrependLinkFlag('-lc++experimental')
+              # When linking in MSVC mode via the Clang driver, a -l<foo>
+              # maps to <foo>.lib, so we need to use -llibc++experimental here
+              # to make it link against the static libc++experimental.lib.
+              # We can't check for the feature 'msvc' in available_features
+              # as those features are added after processing parameters.
+              PrependLinkFlag(lambda config: '-llibc++experimental' if _isMSVC(config) else '-lc++experimental')
             ]),
 
   Parameter(name='long_tests', choices=[True, False], type=bool, default=True,

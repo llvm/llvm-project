@@ -95,6 +95,73 @@ SetVector<InputFile *> macho::inputFiles;
 std::unique_ptr<TarWriter> macho::tar;
 int InputFile::idCount = 0;
 
+static VersionTuple decodeVersion(uint32_t version) {
+  unsigned major = version >> 16;
+  unsigned minor = (version >> 8) & 0xffu;
+  unsigned subMinor = version & 0xffu;
+  return VersionTuple(major, minor, subMinor);
+}
+
+template <class LP>
+static Optional<PlatformInfo> getPlatformInfo(const InputFile *input) {
+  if (!isa<ObjFile>(input) && !isa<DylibFile>(input))
+    return None;
+
+  using Header = typename LP::mach_header;
+  auto *hdr = reinterpret_cast<const Header *>(input->mb.getBufferStart());
+
+  PlatformInfo platformInfo;
+  if (const auto *cmd =
+          findCommand<build_version_command>(hdr, LC_BUILD_VERSION)) {
+    platformInfo.target.Platform = static_cast<PlatformKind>(cmd->platform);
+    platformInfo.minimum = decodeVersion(cmd->minos);
+    return platformInfo;
+  }
+  if (const auto *cmd = findCommand<version_min_command>(
+          hdr, LC_VERSION_MIN_MACOSX, LC_VERSION_MIN_IPHONEOS,
+          LC_VERSION_MIN_TVOS, LC_VERSION_MIN_WATCHOS)) {
+    switch (cmd->cmd) {
+    case LC_VERSION_MIN_MACOSX:
+      platformInfo.target.Platform = PlatformKind::macOS;
+      break;
+    case LC_VERSION_MIN_IPHONEOS:
+      platformInfo.target.Platform = PlatformKind::iOS;
+      break;
+    case LC_VERSION_MIN_TVOS:
+      platformInfo.target.Platform = PlatformKind::tvOS;
+      break;
+    case LC_VERSION_MIN_WATCHOS:
+      platformInfo.target.Platform = PlatformKind::watchOS;
+      break;
+    }
+    platformInfo.minimum = decodeVersion(cmd->version);
+    return platformInfo;
+  }
+
+  return None;
+}
+
+template <class LP> static bool checkCompatibility(const InputFile *input) {
+  Optional<PlatformInfo> platformInfo = getPlatformInfo<LP>(input);
+  if (!platformInfo)
+    return true;
+  // TODO: Correctly detect simulator platforms or relax this check.
+  if (config->platform() != platformInfo->target.Platform) {
+    error(toString(input) + " has platform " +
+          getPlatformName(platformInfo->target.Platform) +
+          Twine(", which is different from target platform ") +
+          getPlatformName(config->platform()));
+    return false;
+  }
+  if (platformInfo->minimum >= config->platformInfo.minimum)
+    return true;
+  error(toString(input) + " has version " +
+        platformInfo->minimum.getAsString() +
+        ", which is incompatible with target version of " +
+        config->platformInfo.minimum.getAsString());
+  return false;
+}
+
 // Open a given file path and return it as a memory-mapped file.
 Optional<MemoryBufferRef> macho::readFile(StringRef path) {
   // Open a file.
@@ -365,32 +432,6 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
                        /*isExternal=*/false, /*isPrivateExtern=*/false);
 }
 
-// Checks if the version specified in `cmd` is compatible with target
-// version. IOW, check if cmd's version >= config's version.
-static bool hasCompatVersion(const InputFile *input,
-                             const build_version_command *cmd) {
-
-  if (config->target.Platform != static_cast<PlatformKind>(cmd->platform)) {
-    error(toString(input) + " has platform " +
-          getPlatformName(static_cast<PlatformKind>(cmd->platform)) +
-          Twine(", which is different from target platform ") +
-          getPlatformName(config->target.Platform));
-    return false;
-  }
-
-  unsigned major = cmd->minos >> 16;
-  unsigned minor = (cmd->minos >> 8) & 0xffu;
-  unsigned subMinor = cmd->minos & 0xffu;
-  VersionTuple version(major, minor, subMinor);
-  if (version >= config->platformInfo.minimum)
-    return true;
-
-  error(toString(input) + " has version " + version.getAsString() +
-        ", which is incompatible with target version of " +
-        config->platformInfo.minimum.getAsString());
-  return false;
-}
-
 // Absolute symbols are defined symbols that do not have an associated
 // InputSection. They cannot be weak.
 template <class NList>
@@ -542,18 +583,15 @@ template <class LP> void ObjFile::parse() {
   auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
 
   Architecture arch = getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
-  if (arch != config->target.Arch) {
+  if (arch != config->arch()) {
     error(toString(this) + " has architecture " + getArchitectureName(arch) +
           " which is incompatible with target architecture " +
-          getArchitectureName(config->target.Arch));
+          getArchitectureName(config->arch()));
     return;
   }
 
-  if (const auto *cmd =
-          findCommand<build_version_command>(hdr, LC_BUILD_VERSION)) {
-    if (!hasCompatVersion(this, cmd))
-      return;
-  }
+  if (!checkCompatibility<LP>(this))
+    return;
 
   if (const load_command *cmd = findCommand(hdr, LC_LINKER_OPTION)) {
     auto *c = reinterpret_cast<const linker_option_command *>(cmd);
@@ -719,11 +757,8 @@ template <class LP> void DylibFile::parse(DylibFile *umbrella) {
     return;
   }
 
-  if (const build_version_command *cmd =
-          findCommand<build_version_command>(hdr, LC_BUILD_VERSION)) {
-    if (!hasCompatVersion(this, cmd))
-      return;
-  }
+  if (!checkCompatibility<LP>(this))
+    return;
 
   // Initialize symbols.
   DylibFile *exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
@@ -791,9 +826,9 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
       "/usr/lib/system/libsystem_pthread.dylib"};
 
   if (!is_contained(skipPlatformChecks, dylibName) &&
-      !is_contained(interface.targets(), config->target)) {
+      !is_contained(interface.targets(), config->platformInfo.target)) {
     error(toString(this) + " is incompatible with " +
-          std::string(config->target));
+          std::string(config->platformInfo.target));
     return;
   }
 
@@ -806,7 +841,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   // TODO(compnerd) filter out symbols based on the target platform
   // TODO: handle weak defs, thread locals
   for (const auto *symbol : interface.symbols()) {
-    if (!symbol->getArchitectures().has(config->target.Arch))
+    if (!symbol->getArchitectures().has(config->arch()))
       continue;
 
     switch (symbol->getKind()) {
@@ -834,7 +869,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   for (InterfaceFileRef intfRef : interface.reexportedLibraries()) {
     InterfaceFile::const_target_range targets = intfRef.targets();
     if (is_contained(skipPlatformChecks, intfRef.getInstallName()) ||
-        is_contained(targets, config->target))
+        is_contained(targets, config->platformInfo.target))
       loadReexport(intfRef.getInstallName(), exportingFile, topLevel);
   }
 }

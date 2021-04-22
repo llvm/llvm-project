@@ -666,7 +666,9 @@ static void
 mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
                    StringRef OutputFilename, ProfileFormat OutputFormat,
                    StringRef ProfileSymbolListFile, bool CompressAllSections,
-                   bool UseMD5, bool GenPartialProfile, FailureMode FailMode) {
+                   bool UseMD5, bool GenPartialProfile,
+                   bool SampleMergeColdContext, bool SampleTrimColdContext,
+                   FailureMode FailMode) {
   using namespace sampleprof;
   StringMap<FunctionSamples> ProfileMap;
   SmallVector<std::unique_ptr<sampleprof::SampleProfileReader>, 5> Readers;
@@ -723,6 +725,22 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
     if (ReaderList)
       WriterList.merge(*ReaderList);
   }
+
+  if (ProfileIsCS && (SampleMergeColdContext || SampleTrimColdContext)) {
+    // Use threshold calculated from profile summary unless specified.
+    SampleProfileSummaryBuilder Builder(ProfileSummaryBuilder::DefaultCutoffs);
+    auto Summary = Builder.computeSummaryForProfiles(ProfileMap);
+    uint64_t SampleProfColdThreshold =
+        ProfileSummaryBuilder::getColdCountThreshold(
+            (Summary->getDetailedSummary()));
+
+    // Trim and merge cold context profile using cold threshold above;
+    SampleContextTrimmer(ProfileMap)
+        .trimAndMergeColdContextProfiles(SampleProfColdThreshold,
+                                         SampleTrimColdContext,
+                                         SampleMergeColdContext);
+  }
+
   auto WriterOrErr =
       SampleProfileWriter::create(OutputFilename, FormatMap[OutputFormat]);
   if (std::error_code EC = WriterOrErr.getError())
@@ -866,6 +884,14 @@ static int merge_main(int argc, const char *argv[]) {
       "use-md5", cl::init(false), cl::Hidden,
       cl::desc("Choose to use MD5 to represent string in name table (only "
                "meaningful for -extbinary)"));
+  cl::opt<bool> SampleMergeColdContext(
+      "sample-merge-cold-context", cl::init(false), cl::Hidden,
+      cl::desc(
+          "Merge context sample profiles whose count is below cold threshold"));
+  cl::opt<bool> SampleTrimColdContext(
+      "sample-trim-cold-context", cl::init(false), cl::Hidden,
+      cl::desc(
+          "Trim context sample profiles whose count is below cold threshold"));
   cl::opt<bool> GenPartialProfile(
       "gen-partial-profile", cl::init(false), cl::Hidden,
       cl::desc("Generate a partial profile (only meaningful for -extbinary)"));
@@ -936,7 +962,8 @@ static int merge_main(int argc, const char *argv[]) {
   else
     mergeSampleProfile(WeightedInputs, Remapper.get(), OutputFilename,
                        OutputFormat, ProfileSymbolListFile, CompressAllSections,
-                       UseMD5, GenPartialProfile, FailureMode);
+                       UseMD5, GenPartialProfile, SampleMergeColdContext,
+                       SampleTrimColdContext, FailureMode);
 
   return 0;
 }

@@ -4773,10 +4773,9 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
              "Currently unsupported for scalable vectors");
       unsigned Lanes = IsUniform ? 1 : State.VF.getFixedValue();
 
-      Value *RuntimeVF = getRuntimeVF(Builder, PtrInd->getType(), VF);
       for (unsigned Part = 0; Part < UF; ++Part) {
-        Value *PartStart = Builder.CreateMul(
-            RuntimeVF, ConstantInt::get(PtrInd->getType(), Part));
+        Value *PartStart = createStepForVF(
+            Builder, ConstantInt::get(PtrInd->getType(), Part), VF);
         for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
           Value *Idx = Builder.CreateAdd(
               PartStart, ConstantInt::get(PtrInd->getType(), Lane));

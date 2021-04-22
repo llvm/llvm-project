@@ -611,7 +611,7 @@ enum NodeType {
   MULHU,
   MULHS,
 
-  /// [US]{MIN/MAX} - Binary minimum or maximum or signed or unsigned
+  /// [US]{MIN/MAX} - Binary minimum or maximum of signed or unsigned
   /// integers.
   SMIN,
   SMAX,

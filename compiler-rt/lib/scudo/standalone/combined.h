@@ -518,6 +518,7 @@ public:
     if (UNLIKELY(!isAligned(reinterpret_cast<uptr>(Ptr), MinAlignment)))
       reportMisalignedPointer(AllocatorAction::Deallocating, Ptr);
 
+    void *TaggedPtr = Ptr;
     Ptr = getHeaderTaggedPointer(Ptr);
 
     Chunk::UnpackedHeader Header;
@@ -543,7 +544,7 @@ public:
         reportDeleteSizeMismatch(Ptr, DeleteSize, Size);
     }
 
-    quarantineOrDeallocateChunk(Options, Ptr, &Header, Size);
+    quarantineOrDeallocateChunk(Options, TaggedPtr, &Header, Size);
   }
 
   void *reallocate(void *OldPtr, uptr NewSize, uptr Alignment = MinAlignment) {
@@ -639,7 +640,7 @@ public:
     void *NewPtr = allocate(NewSize, Chunk::Origin::Malloc, Alignment);
     if (LIKELY(NewPtr)) {
       memcpy(NewPtr, OldTaggedPtr, Min(NewSize, OldSize));
-      quarantineOrDeallocateChunk(Options, OldPtr, &OldHeader, OldSize);
+      quarantineOrDeallocateChunk(Options, OldTaggedPtr, &OldHeader, OldSize);
     }
     return NewPtr;
   }
@@ -1031,13 +1032,13 @@ private:
            reinterpret_cast<uptr>(Ptr) - SizeOrUnusedBytes;
   }
 
-  void quarantineOrDeallocateChunk(Options Options, void *Ptr,
+  void quarantineOrDeallocateChunk(Options Options, void *TaggedPtr,
                                    Chunk::UnpackedHeader *Header, uptr Size) {
+    void *Ptr = getHeaderTaggedPointer(TaggedPtr);
     Chunk::UnpackedHeader NewHeader = *Header;
     if (UNLIKELY(useMemoryTagging<Params>(Options))) {
-      u8 PrevTag = 0;
+      u8 PrevTag = extractTag(reinterpret_cast<uptr>(TaggedPtr));
       if (NewHeader.ClassId) {
-        PrevTag = extractTag(loadTag(reinterpret_cast<uptr>(Ptr)));
         if (!TSDRegistry.getDisableMemInit()) {
           uptr TaggedBegin, TaggedEnd;
           const uptr OddEvenMask = computeOddEvenMaskForPointerMaybe(
@@ -1101,6 +1102,50 @@ private:
     if (reinterpret_cast<const u32 *>(Block)[0] == BlockMarker)
       Offset = reinterpret_cast<const u32 *>(Block)[1];
     return Offset + Chunk::getHeaderSize();
+  }
+
+  void *prepareTaggedChunk(void *Ptr, uptr Size, uptr ExcludeMask,
+                           uptr BlockEnd) {
+    // Prepare the granule before the chunk to store the chunk header by setting
+    // its tag to 0. Normally its tag will already be 0, but in the case where a
+    // chunk holding a low alignment allocation is reused for a higher alignment
+    // allocation, the chunk may already have a non-zero tag from the previous
+    // allocation.
+    storeTag(reinterpret_cast<uptr>(Ptr) - archMemoryTagGranuleSize());
+
+    uptr TaggedBegin, TaggedEnd;
+    setRandomTag(Ptr, Size, ExcludeMask, &TaggedBegin, &TaggedEnd);
+
+    // Finally, set the tag of the granule past the end of the allocation to 0,
+    // to catch linear overflows even if a previous larger allocation used the
+    // same block and tag. Only do this if the granule past the end is in our
+    // block, because this would otherwise lead to a SEGV if the allocation
+    // covers the entire block and our block is at the end of a mapping. The tag
+    // of the next block's header granule will be set to 0, so it will serve the
+    // purpose of catching linear overflows in this case.
+    uptr UntaggedEnd = untagPointer(TaggedEnd);
+    if (UntaggedEnd != BlockEnd)
+      storeTag(UntaggedEnd);
+    return reinterpret_cast<void *>(TaggedBegin);
+  }
+
+  void resizeTaggedChunk(uptr OldPtr, uptr NewPtr, uptr BlockEnd) {
+    uptr RoundOldPtr = roundUpTo(OldPtr, archMemoryTagGranuleSize());
+    uptr RoundNewPtr;
+    if (RoundOldPtr >= NewPtr) {
+      // If the allocation is shrinking we just need to set the tag past the end
+      // of the allocation to 0. See explanation in prepareTaggedChunk above.
+      RoundNewPtr = roundUpTo(NewPtr, archMemoryTagGranuleSize());
+    } else {
+      // Set the memory tag of the region
+      // [RoundOldPtr, roundUpTo(NewPtr, archMemoryTagGranuleSize()))
+      // to the pointer tag stored in OldPtr.
+      RoundNewPtr = storeTags(RoundOldPtr, NewPtr);
+    }
+
+    uptr UntaggedNewPtr = untagPointer(RoundNewPtr);
+    if (UntaggedNewPtr != BlockEnd)
+      storeTag(UntaggedNewPtr);
   }
 
   void storePrimaryAllocationStackMaybe(Options Options, void *Ptr) {

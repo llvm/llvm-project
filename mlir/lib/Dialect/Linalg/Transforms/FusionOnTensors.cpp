@@ -998,6 +998,161 @@ struct FoldProducerReshapeOpByLinearization
   }
 };
 
+static SmallVector<ReassociationIndices>
+getReassociationIndices(ArrayRef<AffineMap> maps) {
+  SmallVector<ReassociationIndices> reassociation;
+  for (AffineMap map : maps) {
+    ReassociationIndices indices;
+    for (unsigned i = 0, e = map.getNumResults(); i < e; i++) {
+      unsigned pos = map.getResult(i).cast<AffineDimExpr>().getPosition();
+      indices.push_back(pos);
+    }
+    reassociation.push_back(indices);
+  }
+  return reassociation;
+}
+
+/// Pattern to move rank reducing reshape after an elementwise linalg generic
+/// op. This is useful to expose more fusion opportunities between named ops and
+/// generic op. This can only be done if there is no broadcast or permuation
+/// within the dimensions we need to merge.
+///
+/// For example,
+///
+///  %0 = linalg.tensor_reshape %A [
+///    affine_map<(d0, d1, d2) -> (d0, d1)>, affine_map<(d0, d1, d2) -> (d2)>]
+///      : tensor<12544x16xf32> into tensor<112x112x16xf32>
+///  %2 = linalg.generic {indexing_maps = [
+///    affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+///    affine_map<(d0, d1, d2) -> (d2)>,
+///    affine_map<(d0, d1, d2) -> (d0, d1, d2)>], iterator_types =
+///    ["parallel", "parallel", "parallel"]} {
+///  } -> tensor<112x112x16xf32>
+///
+///  into
+///
+///  %2 = linalg.generic {indexing_maps = [
+///    affine_map<(d0, d1) -> (d0, d1)>,
+///    affine_map<(d0, d1) -> (d1)>,
+///    affine_map<(d0, d1) -> (d0, d1)>],
+///    iterator_types = ["parallel", "parallel"]} ins(%arg0, %arg1
+///    : tensor<12544x16xf32>, tensor<16xf32>) outs(%1 : tensor<12544x16xf32>) {
+///  } -> tensor<12544x16xf32>
+///  %3 = linalg.tensor_reshape %2 [
+///    #affine_map<(d0, d1, d2) -> (d0, d1)>, affine_map<(d0, d1, d2) -> (d2)>]
+///    : tensor<12544x16xf32> into tensor<112x112x16xf32>
+template <typename GenericOpTy>
+struct PushExpandingReshape : public OpRewritePattern<GenericOpTy> {
+  using OpRewritePattern<GenericOpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(GenericOpTy op,
+                                PatternRewriter &rewriter) const override {
+    // Only apply to elementwise linalg on tensor.
+    if (!op.hasTensorSemantics() ||
+        op.getNumParallelLoops() != op.getNumLoops())
+      return failure();
+    // Only support identity output maps. It could be extended to permuations if
+    // needed.
+    if (llvm::any_of(op.getOutputIndexingMaps(),
+                     [](AffineMap map) { return !map.isIdentity(); }))
+      return failure();
+    int64_t destRank = op.getNumParallelLoops();
+    SmallVector<Value, 4> newOperands = llvm::to_vector<4>(op.getInputs());
+    TensorReshapeOp reshapeFound;
+    // 1. Look for tensor_reshape operands and figure out save the dimensions
+    // merged.
+    for (auto operand : llvm::enumerate(op.getInputs())) {
+      TensorReshapeOp reshapeOp =
+          operand.value().template getDefiningOp<TensorReshapeOp>();
+      if (!reshapeOp || reshapeOp.getSrcType().getRank() >
+                            reshapeOp.getResultType().getRank()) {
+        continue;
+      }
+      // TODO: We could support non-identity map as long as the merged
+      // dimensions are still contiguous.
+      if (!op.getIndexingMaps()[operand.index()].isIdentity())
+        continue;
+      if (reshapeFound) {
+        // Only support a second reshape op if it has the same reassociate maps.
+        if (reshapeFound.getReassociationMaps() ==
+            reshapeOp.getReassociationMaps())
+          newOperands[operand.index()] = reshapeOp.src();
+        continue;
+      }
+      reshapeFound = reshapeOp;
+      newOperands[operand.index()] = reshapeOp.src();
+    }
+    if (!reshapeFound)
+      return failure();
+
+    // Calculate the reassociation indices and rassociated reverse map.
+    SmallVector<ReassociationIndices> reassociation =
+        getReassociationIndices(reshapeFound.getReassociationMaps());
+    SmallVector<unsigned, 4> remap(destRank);
+    for (auto &indices : llvm::enumerate(reassociation)) {
+      for (int64_t index : indices.value()) {
+        remap[index] = indices.index();
+      }
+    }
+    // 2. Verify that we can merge the dimensions in the linalg and that we
+    // don't need to create new reshapes operands. Inserting new reshape
+    // operands would defeat the purpose of the transformation.
+    for (auto operand : llvm::enumerate(op.getInputs())) {
+      if (operand.value() == newOperands[operand.index()]) {
+        AffineMap map = op.getIndexingMaps()[operand.index()];
+        for (unsigned i : llvm::seq(unsigned(0), map.getNumResults())) {
+          if (reassociation[remap[map.getDimPosition(i)]].size() > 1)
+            return failure();
+        }
+      }
+    }
+
+    // 3. Calculate the affine map remapping and the reassociation to apply to
+    // output tensors.
+    SmallVector<AffineMap, 4> newMaps;
+    unsigned newRank = reassociation.size();
+    for (auto map : op.getIndexingMaps()) {
+      SmallVector<AffineExpr> newExprs;
+      for (auto expr : map.getResults()) {
+        unsigned position = expr.template cast<AffineDimExpr>().getPosition();
+        // Skip dimension merged except for the last of the group.
+        if (reassociation[remap[position]].back() == position) {
+          newExprs.push_back(
+              getAffineDimExpr(remap[position], op.getContext()));
+        }
+      }
+      newMaps.push_back(AffineMap::get(newRank, 0, newExprs, op.getContext()));
+    }
+
+    // 4. Reshape the output tensors.
+    SmallVector<Value> newOutputs;
+    SmallVector<Type> newOutputTypes;
+    for (auto output : op.outputs()) {
+      Value newOutput = rewriter.create<TensorReshapeOp>(
+          op->getLoc(), reshapeFound.getSrcType(), output, reassociation);
+      newOutputTypes.push_back(newOutput.getType());
+      newOutputs.push_back(newOutput);
+    }
+    // 5. Create a new generic op with lowerer rank.
+    SmallVector<StringRef, 4> iteratorTypes(newRank,
+                                            getParallelIteratorTypeName());
+    auto newOp =
+        rewriter.create<GenericOpTy>(op->getLoc(), newOutputTypes, newOperands,
+                                     newOutputs, newMaps, iteratorTypes);
+    rewriter.inlineRegionBefore(op.region(), newOp.region(),
+                                newOp.region().begin());
+    // 6. Reshape the so that the type matches the uses.
+    SmallVector<Value> newResults;
+    for (auto result : llvm::enumerate(newOp->getResults())) {
+      newResults.push_back(rewriter.create<TensorReshapeOp>(
+          op->getLoc(), op.getOutputTensorTypes()[result.index()],
+          result.value(), reassociation));
+    }
+    rewriter.replaceOp(op, newResults);
+    return success();
+  }
+};
+
 /// Pattern to fuse a tensor_reshape op with its consumer
 /// generic/indexed_generic op, when the reshape op is collapsing
 /// dimensions. The dimensionality of the loop in the consumer is expanded.
@@ -1331,6 +1486,12 @@ void mlir::linalg::populateElementwiseOpsFusionPatterns(
   GenericOp::getCanonicalizationPatterns(patterns, context);
   IndexedGenericOp::getCanonicalizationPatterns(patterns, context);
   TensorReshapeOp::getCanonicalizationPatterns(patterns, context);
+}
+
+void mlir::linalg::populatePushReshapeOpsPatterns(RewritePatternSet &patterns) {
+  auto *context = patterns.getContext();
+  patterns.add<PushExpandingReshape<GenericOp>,
+               PushExpandingReshape<IndexedGenericOp>>(context);
 }
 
 std::unique_ptr<Pass> mlir::createLinalgFusionOfTensorOpsPass() {

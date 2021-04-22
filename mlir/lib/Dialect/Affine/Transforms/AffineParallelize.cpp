@@ -22,6 +22,7 @@
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "llvm/Support/Debug.h"
+#include <deque>
 
 #define DEBUG_TYPE "affine-parallel"
 

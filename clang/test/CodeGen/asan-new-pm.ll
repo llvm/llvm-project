@@ -12,7 +12,7 @@ entry:
 
 ; CHECK: __asan_init
 
-; CHECK-DAG: define internal void @asan.module_ctor() {
+; CHECK-DAG: define internal void @asan.module_ctor() #[[#]] {
 ; CHECK:       {{.*}} call void @__asan_init()
 ; CHECK:       {{.*}} call void @__asan_version_mismatch_check_v8()
 ; CHECK:       ret void

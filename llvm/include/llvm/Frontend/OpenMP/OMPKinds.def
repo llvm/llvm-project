@@ -414,6 +414,8 @@ __OMP_RTL(__kmpc_kernel_deinit, false, Void, Int16)
 __OMP_RTL(__kmpc_spmd_kernel_init, false, Void, Int32, Int16)
 __OMP_RTL(__kmpc_spmd_kernel_deinit_v2, false, Void, Int16)
 __OMP_RTL(__kmpc_kernel_prepare_parallel, false, Void, VoidPtr)
+__OMP_RTL(__kmpc_parallel_51, false, Void, IdentPtr, Int32, Int32, Int32, Int32,
+          VoidPtr, VoidPtr, VoidPtrPtr, SizeTy)
 __OMP_RTL(__kmpc_kernel_parallel, false, Int1, VoidPtrPtr)
 __OMP_RTL(__kmpc_kernel_end_parallel, false, Void, )
 __OMP_RTL(__kmpc_serialized_parallel, false, Void, IdentPtr, Int32)

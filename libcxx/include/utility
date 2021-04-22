@@ -303,7 +303,7 @@ struct _IsSameAsAny : _Or<_IsSame<_Tp, _Up>...> {};
 template<class _Tp>
 concept __is_safe_integral_cmp = is_integral_v<_Tp> &&
                       !_IsSameAsAny<_Tp, bool, char,
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
                                     char8_t,
 #endif
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
@@ -1460,7 +1460,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<unsigned char>
     size_t operator()(unsigned char __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
 };
 
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<char8_t>
     : public unary_function<char8_t, size_t>
@@ -1468,7 +1468,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<char8_t>
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(char8_t __v) const _NOEXCEPT {return static_cast<size_t>(__v);}
 };
-#endif // !_LIBCPP_NO_HAS_CHAR8_T
+#endif // !_LIBCPP_HAS_NO_CHAR8_T
 
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 
