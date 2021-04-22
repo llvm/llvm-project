@@ -3543,8 +3543,10 @@ InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
         TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, VecTy,
                             E->ReuseShuffleIndices);
   }
-  auto &&AdjustExtractsCost = [this, CostKind, VL, VecTy](InstructionCost &Cost,
-                                                          bool IsGather) {
+  // FIXME: it tries to fix a problem with MSVC buildbots.
+  TargetTransformInfo &TTIRef = *TTI;
+  auto &&AdjustExtractsCost = [this, &TTIRef, CostKind, VL,
+                               VecTy](InstructionCost &Cost, bool IsGather) {
     DenseMap<Value *, int> ExtractVectorsTys;
     for (auto *V : VL) {
       // If all users of instruction are going to be vectorized and this
@@ -3556,8 +3558,8 @@ InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
         continue;
       auto *EE = cast<ExtractElementInst>(V);
       unsigned Idx = *getExtractIndex(EE);
-      if (TTI->getNumberOfParts(VecTy) !=
-          TTI->getNumberOfParts(EE->getVectorOperandType())) {
+      if (TTIRef.getNumberOfParts(VecTy) !=
+          TTIRef.getNumberOfParts(EE->getVectorOperandType())) {
         auto It =
             ExtractVectorsTys.try_emplace(EE->getVectorOperand(), Idx).first;
         It->getSecond() = std::min<int>(It->second, Idx);
@@ -3571,17 +3573,17 @@ InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
           // Use getExtractWithExtendCost() to calculate the cost of
           // extractelement/ext pair.
           Cost -=
-              TTI->getExtractWithExtendCost(Ext->getOpcode(), Ext->getType(),
-                                            EE->getVectorOperandType(), Idx);
+              TTIRef.getExtractWithExtendCost(Ext->getOpcode(), Ext->getType(),
+                                              EE->getVectorOperandType(), Idx);
           // Add back the cost of s|zext which is subtracted separately.
-          Cost += TTI->getCastInstrCost(
+          Cost += TTIRef.getCastInstrCost(
               Ext->getOpcode(), Ext->getType(), EE->getType(),
               TTI::getCastContextHint(Ext), CostKind, Ext);
           continue;
         }
       }
-      Cost -= TTI->getVectorInstrCost(Instruction::ExtractElement,
-                                      EE->getVectorOperandType(), Idx);
+      Cost -= TTIRef.getVectorInstrCost(Instruction::ExtractElement,
+                                        EE->getVectorOperandType(), Idx);
     }
     // Add a cost for subvector extracts/inserts if required.
     for (const auto &Data : ExtractVectorsTys) {
