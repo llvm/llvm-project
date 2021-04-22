@@ -1655,11 +1655,10 @@ void DAGTypeLegalizer::SplitVecRes_STEP_VECTOR(SDNode *N, SDValue &Lo,
 
   // Hi = Lo + (EltCnt * Step)
   EVT EltVT = Step.getValueType();
+  APInt StepVal = cast<ConstantSDNode>(Step)->getAPIntValue();
   SDValue StartOfHi =
-      DAG.getVScale(dl, EltVT,
-                    cast<ConstantSDNode>(Step)->getAPIntValue() *
-                        LoVT.getVectorMinNumElements());
-  StartOfHi = DAG.getZExtOrTrunc(StartOfHi, dl, HiVT.getVectorElementType());
+      DAG.getVScale(dl, EltVT, StepVal * LoVT.getVectorMinNumElements());
+  StartOfHi = DAG.getSExtOrTrunc(StartOfHi, dl, HiVT.getVectorElementType());
   StartOfHi = DAG.getNode(ISD::SPLAT_VECTOR, dl, HiVT, StartOfHi);
 
   Hi = DAG.getNode(ISD::STEP_VECTOR, dl, HiVT, Step);

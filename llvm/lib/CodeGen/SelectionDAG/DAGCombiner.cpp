@@ -3544,6 +3544,14 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return DAG.getNode(ISD::ADD, DL, VT, N0, DAG.getVScale(DL, VT, -IntVal));
   }
 
+  // canonicalize (sub X, step_vector(C)) to (add X, step_vector(-C))
+  if (N1.getOpcode() == ISD::STEP_VECTOR && N1.hasOneUse()) {
+    SDValue NewStep = DAG.getConstant(-N1.getConstantOperandAPInt(0), DL,
+                                      N1.getOperand(0).getValueType());
+    return DAG.getNode(ISD::ADD, DL, VT, N0,
+                       DAG.getStepVector(DL, VT, NewStep));
+  }
+
   // Prefer an add for more folding potential and possibly better codegen:
   // sub N0, (lshr N10, width-1) --> add N0, (ashr N10, width-1)
   if (!LegalOperations && N1.getOpcode() == ISD::SRL && N1.hasOneUse()) {
