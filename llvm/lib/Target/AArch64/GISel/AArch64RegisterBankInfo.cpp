@@ -719,10 +719,15 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     OpRegBankIdx = {PMI_FirstGPR, PMI_FirstFPR};
     break;
-  case TargetOpcode::G_FCMP:
-    OpRegBankIdx = {PMI_FirstGPR,
+  case TargetOpcode::G_FCMP: {
+    // If the result is a vector, it must use a FPR.
+    AArch64GenRegisterBankInfo::PartialMappingIdx Idx0 =
+        MRI.getType(MI.getOperand(0).getReg()).isVector() ? PMI_FirstFPR
+                                                          : PMI_FirstGPR;
+    OpRegBankIdx = {Idx0,
                     /* Predicate */ PMI_None, PMI_FirstFPR, PMI_FirstFPR};
     break;
+  }
   case TargetOpcode::G_BITCAST:
     // This is going to be a cross register bank copy and this is expensive.
     if (OpRegBankIdx[0] != OpRegBankIdx[1])
