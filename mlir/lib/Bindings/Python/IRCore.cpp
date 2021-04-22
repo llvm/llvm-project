@@ -15,6 +15,7 @@
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Debug.h"
+#include "mlir-c/IR.h"
 #include "mlir-c/Registration.h"
 #include "llvm/ADT/SmallVector.h"
 #include <pybind11/stl.h>
@@ -1467,6 +1468,27 @@ PyType PyType::createFromCapsule(py::object capsule) {
 // PyValue and subclases.
 //------------------------------------------------------------------------------
 
+pybind11::object PyValue::getCapsule() {
+  return py::reinterpret_steal<py::object>(mlirPythonValueToCapsule(get()));
+}
+
+PyValue PyValue::createFromCapsule(pybind11::object capsule) {
+  MlirValue value = mlirPythonCapsuleToValue(capsule.ptr());
+  if (mlirValueIsNull(value))
+    throw py::error_already_set();
+  MlirOperation owner;
+  if (mlirValueIsAOpResult(value))
+    owner = mlirOpResultGetOwner(value);
+  if (mlirValueIsABlockArgument(value))
+    owner = mlirBlockGetParentOperation(mlirBlockArgumentGetOwner(value));
+  if (mlirOperationIsNull(owner))
+    throw py::error_already_set();
+  MlirContext ctx = mlirOperationGetContext(owner);
+  PyOperationRef ownerRef =
+      PyOperation::forOperation(PyMlirContext::forContext(ctx), owner);
+  return PyValue(ownerRef, value);
+}
+
 namespace {
 /// CRTP base class for Python MLIR values that subclass Value and should be
 /// castable from it. The value hierarchy is one level deep and is not supposed
@@ -2353,6 +2375,8 @@ void mlir::python::populateIRCore(py::module &m) {
   // Mapping of Value.
   //----------------------------------------------------------------------------
   py::class_<PyValue>(m, "Value")
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR, &PyValue::getCapsule)
+      .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyValue::createFromCapsule)
       .def_property_readonly(
           "context",
           [](PyValue &self) { return self.getParentOperation()->getContext(); },
