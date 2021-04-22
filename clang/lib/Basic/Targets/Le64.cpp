@@ -19,12 +19,6 @@
 using namespace clang;
 using namespace clang::targets;
 
-const Builtin::Info Le64TargetInfo::BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
-#include "clang/Basic/BuiltinsLe64.def"
-};
-
 ArrayRef<Builtin::Info> Le64TargetInfo::getTargetBuiltins() const {
   return {};
 }
