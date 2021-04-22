@@ -30,12 +30,15 @@ void foo(void) {
     A[i] = 1.0;
   }
 }
-// OMP-LABEL: @foo(
+// OMP-LABEL: @main(
 // OMP-NEXT:  entry:
+// OMP-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // OMP-NEXT:    [[I:%.*]] = alloca i32, align 4
+// OMP-NEXT:    store i32 0, i32* [[RETVAL]], align 4
 // OMP-NEXT:    store i32 0, i32* [[I]], align 4
 // OMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*))
-// OMP-NEXT:    ret void
+// OMP-NEXT:    call void @foo()
+// OMP-NEXT:    ret i32 0
 //
 //
 // OMP-LABEL: @.omp_outlined.(
@@ -85,7 +88,7 @@ void foo(void) {
 // OMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[I]], align 4
 // OMP-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP8]] to i64
 // OMP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [33554432 x double], [33554432 x double]* @A, i64 0, i64 [[IDXPROM]]
-// OMP-NEXT:    store double 1.000000e+00, double* [[ARRAYIDX]], align 8
+// OMP-NEXT:    store double 0.000000e+00, double* [[ARRAYIDX]], align 8
 // OMP-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // OMP:       omp.body.continue:
 // OMP-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -101,15 +104,12 @@ void foo(void) {
 // OMP-NEXT:    ret void
 //
 //
-// OMP-LABEL: @main(
+// OMP-LABEL: @foo(
 // OMP-NEXT:  entry:
-// OMP-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // OMP-NEXT:    [[I:%.*]] = alloca i32, align 4
-// OMP-NEXT:    store i32 0, i32* [[RETVAL]], align 4
 // OMP-NEXT:    store i32 0, i32* [[I]], align 4
 // OMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB2]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*))
-// OMP-NEXT:    call void @foo()
-// OMP-NEXT:    ret i32 0
+// OMP-NEXT:    ret void
 //
 //
 // OMP-LABEL: @.omp_outlined..1(
@@ -159,7 +159,7 @@ void foo(void) {
 // OMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[I]], align 4
 // OMP-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP8]] to i64
 // OMP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [33554432 x double], [33554432 x double]* @A, i64 0, i64 [[IDXPROM]]
-// OMP-NEXT:    store double 0.000000e+00, double* [[ARRAYIDX]], align 8
+// OMP-NEXT:    store double 1.000000e+00, double* [[ARRAYIDX]], align 8
 // OMP-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // OMP:       omp.body.continue:
 // OMP-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]

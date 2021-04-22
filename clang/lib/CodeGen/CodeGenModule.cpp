@@ -2669,18 +2669,23 @@ bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
 }
 
 bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
+  // In OpenMP 5.0 variables and function may be marked as
+  // device_type(host/nohost) and we should not emit them eagerly unless we sure
+  // that they must be emitted on the host/device. To be sure we need to have
+  // seen a declare target with an explicit mentioning of the function, we know
+  // we have if the level of the declare target attribute is -1. Note that we
+  // check somewhere else if we should emit this at all.
+  if (LangOpts.OpenMP >= 50 && !LangOpts.OpenMPSimd) {
+    llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr =
+        OMPDeclareTargetDeclAttr::getActiveAttr(Global);
+    if (!ActiveAttr || (*ActiveAttr)->getLevel() != (unsigned)-1)
+      return false;
+  }
+
   if (const auto *FD = dyn_cast<FunctionDecl>(Global)) {
     if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
       // Implicit template instantiations may change linkage if they are later
       // explicitly instantiated, so they should not be emitted eagerly.
-      return false;
-    // In OpenMP 5.0 function may be marked as device_type(nohost) and we should
-    // not emit them eagerly unless we sure that the function must be emitted on
-    // the host.
-    if (LangOpts.OpenMP >= 50 && !LangOpts.OpenMPSimd &&
-        !LangOpts.OpenMPIsDevice &&
-        !OMPDeclareTargetDeclAttr::getDeviceType(FD) &&
-        !FD->isUsed(/*CheckUsedAttr=*/false) && !FD->isReferenced())
       return false;
   }
   if (const auto *VD = dyn_cast<VarDecl>(Global))
@@ -4362,7 +4367,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
 
     // Replace all uses of the old global with the new global
     llvm::Constant *NewPtrForOldDecl =
-        llvm::ConstantExpr::getBitCast(GV, Entry->getType());
+        llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV,
+                                                             Entry->getType());
     Entry->replaceAllUsesWith(NewPtrForOldDecl);
 
     // Erase the old global, since it is no longer used.
@@ -5873,6 +5879,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     break;
 
   case Decl::OMPAllocate:
+    EmitOMPAllocateDecl(cast<OMPAllocateDecl>(D));
     break;
 
   case Decl::OMPDeclareReduction:

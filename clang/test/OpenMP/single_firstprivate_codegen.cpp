@@ -161,6 +161,28 @@ int main() {
 // CHECK1-NEXT:    ret void
 //
 //
+// CHECK1-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ev
+// CHECK1-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
+// CHECK1-NEXT:  entry:
+// CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
+// CHECK1-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
+// CHECK1-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
+// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP0:%.*]] = load volatile i32, i32* @g, align 4
+// CHECK1-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP0]] to float
+// CHECK1-NEXT:    store float [[CONV]], float* [[F]], align 4
+// CHECK1-NEXT:    ret void
+//
+//
+// CHECK1-LABEL: define {{[^@]+}}@_ZN1SIfED2Ev
+// CHECK1-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
+// CHECK1-NEXT:  entry:
+// CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
+// CHECK1-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
+// CHECK1-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
+// CHECK1-NEXT:    ret void
+//
+//
 // CHECK1-LABEL: define {{[^@]+}}@__cxx_global_var_init.1
 // CHECK1-SAME: () #[[ATTR0]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK1-NEXT:  entry:
@@ -196,6 +218,23 @@ int main() {
 // CHECK1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S* [[ARRAYDESTROY_ELEMENT]], getelementptr inbounds ([2 x %struct.S], [2 x %struct.S]* @s_arr, i32 0, i32 0)
 // CHECK1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK1:       arraydestroy.done1:
+// CHECK1-NEXT:    ret void
+//
+//
+// CHECK1-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ef
+// CHECK1-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]], float [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
+// CHECK1-NEXT:  entry:
+// CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
+// CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// CHECK1-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
+// CHECK1-NEXT:    store float [[A]], float* [[A_ADDR]], align 4
+// CHECK1-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
+// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP0:%.*]] = load float, float* [[A_ADDR]], align 4
+// CHECK1-NEXT:    [[TMP1:%.*]] = load volatile i32, i32* @g, align 4
+// CHECK1-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP1]] to float
+// CHECK1-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[CONV]]
+// CHECK1-NEXT:    store float [[ADD]], float* [[F]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -567,45 +606,6 @@ int main() {
 // CHECK1-NEXT:    ret void
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ev
-// CHECK1-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
-// CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
-// CHECK1-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP0:%.*]] = load volatile i32, i32* @g, align 4
-// CHECK1-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP0]] to float
-// CHECK1-NEXT:    store float [[CONV]], float* [[F]], align 4
-// CHECK1-NEXT:    ret void
-//
-//
-// CHECK1-LABEL: define {{[^@]+}}@_ZN1SIfED2Ev
-// CHECK1-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
-// CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
-// CHECK1-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    ret void
-//
-//
-// CHECK1-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ef
-// CHECK1-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]], float [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
-// CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
-// CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
-// CHECK1-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    store float [[A]], float* [[A_ADDR]], align 4
-// CHECK1-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP0:%.*]] = load float, float* [[A_ADDR]], align 4
-// CHECK1-NEXT:    [[TMP1:%.*]] = load volatile i32, i32* @g, align 4
-// CHECK1-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP1]] to float
-// CHECK1-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[CONV]]
-// CHECK1-NEXT:    store float [[ADD]], float* [[F]], align 4
-// CHECK1-NEXT:    ret void
-//
-//
 // CHECK1-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_single_firstprivate_codegen.cpp
 // CHECK1-SAME: () #[[ATTR0]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK1-NEXT:  entry:
@@ -640,6 +640,28 @@ int main() {
 // CHECK2-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
 // CHECK2-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
 // CHECK2-NEXT:    call void @_ZN1SIfED2Ev(%struct.S* nonnull dereferenceable(4) [[THIS1]]) #[[ATTR2]]
+// CHECK2-NEXT:    ret void
+//
+//
+// CHECK2-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ev
+// CHECK2-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
+// CHECK2-NEXT:  entry:
+// CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
+// CHECK2-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
+// CHECK2-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
+// CHECK2-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP0:%.*]] = load volatile i32, i32* @g, align 4
+// CHECK2-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP0]] to float
+// CHECK2-NEXT:    store float [[CONV]], float* [[F]], align 4
+// CHECK2-NEXT:    ret void
+//
+//
+// CHECK2-LABEL: define {{[^@]+}}@_ZN1SIfED2Ev
+// CHECK2-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
+// CHECK2-NEXT:  entry:
+// CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
+// CHECK2-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
+// CHECK2-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
 // CHECK2-NEXT:    ret void
 //
 //
@@ -678,6 +700,23 @@ int main() {
 // CHECK2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S* [[ARRAYDESTROY_ELEMENT]], getelementptr inbounds ([2 x %struct.S], [2 x %struct.S]* @s_arr, i32 0, i32 0)
 // CHECK2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK2:       arraydestroy.done1:
+// CHECK2-NEXT:    ret void
+//
+//
+// CHECK2-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ef
+// CHECK2-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]], float [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
+// CHECK2-NEXT:  entry:
+// CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
+// CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// CHECK2-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
+// CHECK2-NEXT:    store float [[A]], float* [[A_ADDR]], align 4
+// CHECK2-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
+// CHECK2-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP0:%.*]] = load float, float* [[A_ADDR]], align 4
+// CHECK2-NEXT:    [[TMP1:%.*]] = load volatile i32, i32* @g, align 4
+// CHECK2-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP1]] to float
+// CHECK2-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[CONV]]
+// CHECK2-NEXT:    store float [[ADD]], float* [[F]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1049,45 +1088,6 @@ int main() {
 // CHECK2-NEXT:    ret void
 //
 //
-// CHECK2-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ev
-// CHECK2-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
-// CHECK2-NEXT:  entry:
-// CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
-// CHECK2-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
-// CHECK2-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
-// CHECK2-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP0:%.*]] = load volatile i32, i32* @g, align 4
-// CHECK2-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP0]] to float
-// CHECK2-NEXT:    store float [[CONV]], float* [[F]], align 4
-// CHECK2-NEXT:    ret void
-//
-//
-// CHECK2-LABEL: define {{[^@]+}}@_ZN1SIfED2Ev
-// CHECK2-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
-// CHECK2-NEXT:  entry:
-// CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
-// CHECK2-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
-// CHECK2-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
-// CHECK2-NEXT:    ret void
-//
-//
-// CHECK2-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ef
-// CHECK2-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]], float [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
-// CHECK2-NEXT:  entry:
-// CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
-// CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
-// CHECK2-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
-// CHECK2-NEXT:    store float [[A]], float* [[A_ADDR]], align 4
-// CHECK2-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
-// CHECK2-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP0:%.*]] = load float, float* [[A_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP1:%.*]] = load volatile i32, i32* @g, align 4
-// CHECK2-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP1]] to float
-// CHECK2-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[CONV]]
-// CHECK2-NEXT:    store float [[ADD]], float* [[F]], align 4
-// CHECK2-NEXT:    ret void
-//
-//
 // CHECK2-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_single_firstprivate_codegen.cpp
 // CHECK2-SAME: () #[[ATTR0]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK2-NEXT:  entry:
@@ -1122,6 +1122,28 @@ int main() {
 // CHECK3-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
 // CHECK3-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
 // CHECK3-NEXT:    call void @_ZN1SIfED2Ev(%struct.S* nonnull dereferenceable(4) [[THIS1]]) #[[ATTR2]]
+// CHECK3-NEXT:    ret void
+//
+//
+// CHECK3-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ev
+// CHECK3-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
+// CHECK3-NEXT:  entry:
+// CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
+// CHECK3-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
+// CHECK3-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
+// CHECK3-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
+// CHECK3-NEXT:    [[TMP0:%.*]] = load volatile i32, i32* @g, align 4
+// CHECK3-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP0]] to float
+// CHECK3-NEXT:    store float [[CONV]], float* [[F]], align 4
+// CHECK3-NEXT:    ret void
+//
+//
+// CHECK3-LABEL: define {{[^@]+}}@_ZN1SIfED2Ev
+// CHECK3-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
+// CHECK3-NEXT:  entry:
+// CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
+// CHECK3-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
+// CHECK3-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
 // CHECK3-NEXT:    ret void
 //
 //
@@ -1160,6 +1182,23 @@ int main() {
 // CHECK3-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S* [[ARRAYDESTROY_ELEMENT]], getelementptr inbounds ([2 x %struct.S], [2 x %struct.S]* @s_arr, i32 0, i32 0)
 // CHECK3-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK3:       arraydestroy.done1:
+// CHECK3-NEXT:    ret void
+//
+//
+// CHECK3-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ef
+// CHECK3-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]], float [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
+// CHECK3-NEXT:  entry:
+// CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
+// CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// CHECK3-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
+// CHECK3-NEXT:    store float [[A]], float* [[A_ADDR]], align 4
+// CHECK3-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
+// CHECK3-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
+// CHECK3-NEXT:    [[TMP0:%.*]] = load float, float* [[A_ADDR]], align 4
+// CHECK3-NEXT:    [[TMP1:%.*]] = load volatile i32, i32* @g, align 4
+// CHECK3-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP1]] to float
+// CHECK3-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[CONV]]
+// CHECK3-NEXT:    store float [[ADD]], float* [[F]], align 4
 // CHECK3-NEXT:    ret void
 //
 //
@@ -1220,45 +1259,6 @@ int main() {
 // CHECK3-NEXT:    ret void
 //
 //
-// CHECK3-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ev
-// CHECK3-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
-// CHECK3-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
-// CHECK3-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
-// CHECK3-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
-// CHECK3-NEXT:    [[TMP0:%.*]] = load volatile i32, i32* @g, align 4
-// CHECK3-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP0]] to float
-// CHECK3-NEXT:    store float [[CONV]], float* [[F]], align 4
-// CHECK3-NEXT:    ret void
-//
-//
-// CHECK3-LABEL: define {{[^@]+}}@_ZN1SIfED2Ev
-// CHECK3-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
-// CHECK3-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
-// CHECK3-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
-// CHECK3-NEXT:    ret void
-//
-//
-// CHECK3-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ef
-// CHECK3-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]], float [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
-// CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
-// CHECK3-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
-// CHECK3-NEXT:    store float [[A]], float* [[A_ADDR]], align 4
-// CHECK3-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
-// CHECK3-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
-// CHECK3-NEXT:    [[TMP0:%.*]] = load float, float* [[A_ADDR]], align 4
-// CHECK3-NEXT:    [[TMP1:%.*]] = load volatile i32, i32* @g, align 4
-// CHECK3-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP1]] to float
-// CHECK3-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[CONV]]
-// CHECK3-NEXT:    store float [[ADD]], float* [[F]], align 4
-// CHECK3-NEXT:    ret void
-//
-//
 // CHECK3-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_single_firstprivate_codegen.cpp
 // CHECK3-SAME: () #[[ATTR0]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK3-NEXT:  entry:
@@ -1293,6 +1293,28 @@ int main() {
 // CHECK4-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
 // CHECK4-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
 // CHECK4-NEXT:    call void @_ZN1SIfED2Ev(%struct.S* nonnull dereferenceable(4) [[THIS1]]) #[[ATTR2]]
+// CHECK4-NEXT:    ret void
+//
+//
+// CHECK4-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ev
+// CHECK4-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
+// CHECK4-NEXT:  entry:
+// CHECK4-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
+// CHECK4-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
+// CHECK4-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
+// CHECK4-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
+// CHECK4-NEXT:    [[TMP0:%.*]] = load volatile i32, i32* @g, align 4
+// CHECK4-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP0]] to float
+// CHECK4-NEXT:    store float [[CONV]], float* [[F]], align 4
+// CHECK4-NEXT:    ret void
+//
+//
+// CHECK4-LABEL: define {{[^@]+}}@_ZN1SIfED2Ev
+// CHECK4-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
+// CHECK4-NEXT:  entry:
+// CHECK4-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
+// CHECK4-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
+// CHECK4-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
 // CHECK4-NEXT:    ret void
 //
 //
@@ -1331,6 +1353,23 @@ int main() {
 // CHECK4-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S* [[ARRAYDESTROY_ELEMENT]], getelementptr inbounds ([2 x %struct.S], [2 x %struct.S]* @s_arr, i32 0, i32 0)
 // CHECK4-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK4:       arraydestroy.done1:
+// CHECK4-NEXT:    ret void
+//
+//
+// CHECK4-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ef
+// CHECK4-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]], float [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
+// CHECK4-NEXT:  entry:
+// CHECK4-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
+// CHECK4-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
+// CHECK4-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
+// CHECK4-NEXT:    store float [[A]], float* [[A_ADDR]], align 4
+// CHECK4-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
+// CHECK4-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
+// CHECK4-NEXT:    [[TMP0:%.*]] = load float, float* [[A_ADDR]], align 4
+// CHECK4-NEXT:    [[TMP1:%.*]] = load volatile i32, i32* @g, align 4
+// CHECK4-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP1]] to float
+// CHECK4-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[CONV]]
+// CHECK4-NEXT:    store float [[ADD]], float* [[F]], align 4
 // CHECK4-NEXT:    ret void
 //
 //
@@ -1450,45 +1489,6 @@ int main() {
 // CHECK4-NEXT:    store i32 2, i32* [[BLOCK_CAPTURE_ADDR]], align 8
 // CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32, i32 }>, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32, i32 }>* [[BLOCK]], i32 0, i32 6
 // CHECK4-NEXT:    store i32 31, i32* [[BLOCK_CAPTURE_ADDR1]], align 4
-// CHECK4-NEXT:    ret void
-//
-//
-// CHECK4-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ev
-// CHECK4-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
-// CHECK4-NEXT:  entry:
-// CHECK4-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
-// CHECK4-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
-// CHECK4-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
-// CHECK4-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
-// CHECK4-NEXT:    [[TMP0:%.*]] = load volatile i32, i32* @g, align 4
-// CHECK4-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP0]] to float
-// CHECK4-NEXT:    store float [[CONV]], float* [[F]], align 4
-// CHECK4-NEXT:    ret void
-//
-//
-// CHECK4-LABEL: define {{[^@]+}}@_ZN1SIfED2Ev
-// CHECK4-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
-// CHECK4-NEXT:  entry:
-// CHECK4-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
-// CHECK4-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
-// CHECK4-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
-// CHECK4-NEXT:    ret void
-//
-//
-// CHECK4-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ef
-// CHECK4-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]], float [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
-// CHECK4-NEXT:  entry:
-// CHECK4-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
-// CHECK4-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
-// CHECK4-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
-// CHECK4-NEXT:    store float [[A]], float* [[A_ADDR]], align 4
-// CHECK4-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
-// CHECK4-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
-// CHECK4-NEXT:    [[TMP0:%.*]] = load float, float* [[A_ADDR]], align 4
-// CHECK4-NEXT:    [[TMP1:%.*]] = load volatile i32, i32* @g, align 4
-// CHECK4-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP1]] to float
-// CHECK4-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[CONV]]
-// CHECK4-NEXT:    store float [[ADD]], float* [[F]], align 4
 // CHECK4-NEXT:    ret void
 //
 //
