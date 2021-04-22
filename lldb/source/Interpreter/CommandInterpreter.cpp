@@ -823,8 +823,8 @@ void CommandInterpreter::LoadCommandDictionary() {
         list_regex_cmd_up->AddRegexCommand(
             "^-([[:digit:]]+)[[:space:]]*$",
             "source list --reverse --count %1") &&
-        list_regex_cmd_up->AddRegexCommand("^([^.]+)\\.([^.]+)$",
-                                           "source list --file \"%1.%2\"") &&
+        list_regex_cmd_up->AddRegexCommand("^([^.]+\\.[^.[:space:]]+)[[:space:]]*$",
+                                           "source list --file \"%1\"") &&
         list_regex_cmd_up->AddRegexCommand("^(.+)$",
                                            "source list --name \"%1\"") &&
         list_regex_cmd_up->AddRegexCommand("^$", "source list")) {
