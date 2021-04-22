@@ -43,15 +43,6 @@ template<dereferenceable T>
   requires ...
 using iter_rvalue_reference_t = decltype(ranges::iter_move(declval<T&>())); // since C++20
 
-// [iterator.concepts], iterator concepts
-// [iterator.concept.readable], concept indirectly_­readable
-template<class In>
-  concept indirectly_readable = see below;                // since C++20
-
-// [iterator.concept.writable], concept indirectly_­writable
-template<class Out, class T>
-  concept indirectly_writable = see below;                // since C++20
-
 template<class Category, class T, class Distance = ptrdiff_t,
          class Pointer = T*, class Reference = T&>
 struct iterator
