@@ -630,11 +630,11 @@ define void @test_lshr_tc_positive() {
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,5) S: [0,5) Exits: 4 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.lshr = phi i64 [ 1023, %entry ], [ %iv.lshr.next, %loop ]
-; CHECK-NEXT:    --> %iv.lshr U: [0,1024) S: [0,1024) Exits: 63 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv.lshr U: [63,1024) S: [63,1024) Exits: 63 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.lshr.next = lshr i64 %iv.lshr, 1
-; CHECK-NEXT:    --> (%iv.lshr /u 2) U: [0,512) S: [0,512) Exits: 31 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%iv.lshr /u 2) U: [31,512) S: [31,512) Exits: 31 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_lshr_tc_positive
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4
@@ -661,11 +661,11 @@ define void @test_lshr_tc_negative() {
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,5) S: [0,5) Exits: 4 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.lshr = phi i8 [ -1, %entry ], [ %iv.lshr.next, %loop ]
-; CHECK-NEXT:    --> %iv.lshr U: [-1,-128) S: [-1,-128) Exits: 15 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv.lshr U: [15,0) S: [-1,-128) Exits: 15 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.lshr.next = lshr i8 %iv.lshr, 1
-; CHECK-NEXT:    --> (%iv.lshr /u 2) U: [0,-128) S: [0,-128) Exits: 7 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%iv.lshr /u 2) U: [7,-128) S: [7,-128) Exits: 7 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_lshr_tc_negative
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4
@@ -726,11 +726,11 @@ define void @test_lshr_zero_shift() {
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,5) S: [0,5) Exits: 4 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.lshr = phi i64 [ 1023, %entry ], [ %iv.lshr.next, %loop ]
-; CHECK-NEXT:    --> %iv.lshr U: [0,1024) S: [0,1024) Exits: 1023 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv.lshr U: [1023,1024) S: [1023,1024) Exits: 1023 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.lshr.next = lshr i64 %iv.lshr, 0
-; CHECK-NEXT:    --> %iv.lshr U: [0,1024) S: [0,1024) Exits: 1023 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv.lshr U: [1023,1024) S: [1023,1024) Exits: 1023 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_lshr_zero_shift
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4
@@ -758,11 +758,11 @@ define void @test_lshr_power_of_2_start() {
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,5) S: [0,5) Exits: 4 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.lshr = phi i64 [ 1024, %entry ], [ %iv.lshr.next, %loop ]
-; CHECK-NEXT:    --> %iv.lshr U: [0,1025) S: [0,1025) Exits: 4 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv.lshr U: [4,1025) S: [4,1025) Exits: 4 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.lshr.next = lshr i64 %iv.lshr, 2
-; CHECK-NEXT:    --> (%iv.lshr /u 4) U: [0,512) S: [0,512) Exits: 1 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%iv.lshr /u 4) U: [1,257) S: [1,257) Exits: 1 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_lshr_power_of_2_start
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4
@@ -790,11 +790,11 @@ define void @test_lshr_arbitrary_start() {
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,5) S: [0,5) Exits: 4 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.lshr = phi i64 [ 957, %entry ], [ %iv.lshr.next, %loop ]
-; CHECK-NEXT:    --> %iv.lshr U: [0,958) S: [0,958) Exits: 3 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv.lshr U: [3,958) S: [3,958) Exits: 3 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.lshr.next = lshr i64 %iv.lshr, 2
-; CHECK-NEXT:    --> (%iv.lshr /u 4) U: [0,256) S: [0,256) Exits: 0 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%iv.lshr /u 4) U: [0,240) S: [0,240) Exits: 0 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_lshr_arbitrary_start
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4
@@ -821,11 +821,11 @@ define void @test_lshr_start_power_of_2_plus_one() {
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,5) S: [0,5) Exits: 4 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.lshr = phi i64 [ 1025, %entry ], [ %iv.lshr.next, %loop ]
-; CHECK-NEXT:    --> %iv.lshr U: [0,1026) S: [0,1026) Exits: 4 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv.lshr U: [4,1026) S: [4,1026) Exits: 4 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.lshr.next = lshr i64 %iv.lshr, 2
-; CHECK-NEXT:    --> (%iv.lshr /u 4) U: [0,512) S: [0,512) Exits: 1 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%iv.lshr /u 4) U: [1,257) S: [1,257) Exits: 1 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_lshr_start_power_of_2_plus_one
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4

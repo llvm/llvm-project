@@ -331,6 +331,8 @@ void __kmpc_push_target_tripcount(int64_t device_id, uint64_t loop_tripcount);
 void __kmpc_push_target_tripcount_mapper(ident_t *loc, int64_t device_id,
                                          uint64_t loop_tripcount);
 
+void __tgt_set_info_flag(uint32_t);
+
 #ifdef __cplusplus
 }
 #endif

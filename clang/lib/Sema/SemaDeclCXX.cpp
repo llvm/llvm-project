@@ -14027,12 +14027,20 @@ static void diagnoseDeprecatedCopyOperation(Sema &S, CXXMethodDecl *CopyOp) {
     assert(UserDeclaredOperation);
   }
 
-  if (UserDeclaredOperation && UserDeclaredOperation->isUserProvided()) {
-    S.Diag(UserDeclaredOperation->getLocation(),
-           isa<CXXDestructorDecl>(UserDeclaredOperation)
-               ? diag::warn_deprecated_copy_dtor_operation
-               : diag::warn_deprecated_copy_operation)
-        << RD << /*copy assignment*/ !isa<CXXConstructorDecl>(CopyOp);
+  if (UserDeclaredOperation) {
+    bool UDOIsUserProvided = UserDeclaredOperation->isUserProvided();
+    bool UDOIsDestructor = isa<CXXDestructorDecl>(UserDeclaredOperation);
+    bool IsCopyAssignment = !isa<CXXConstructorDecl>(CopyOp);
+    unsigned DiagID =
+        (UDOIsUserProvided && UDOIsDestructor)
+            ? diag::warn_deprecated_copy_with_user_provided_dtor
+        : (UDOIsUserProvided && !UDOIsDestructor)
+            ? diag::warn_deprecated_copy_with_user_provided_copy
+        : (!UDOIsUserProvided && UDOIsDestructor)
+            ? diag::warn_deprecated_copy_with_dtor
+            : diag::warn_deprecated_copy;
+    S.Diag(UserDeclaredOperation->getLocation(), DiagID)
+        << RD << IsCopyAssignment;
   }
 }
 

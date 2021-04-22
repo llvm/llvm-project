@@ -173,3 +173,6 @@ int32_t __tgt_rtl_run_target_team_region_async(
 #ifdef __cplusplus
 }
 #endif
+
+// Remote Offloading interal InfoLevel.
+std::atomic<uint32_t> InfoLevel;

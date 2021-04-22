@@ -39,6 +39,7 @@ VERS1.0 {
     llvm_omp_target_alloc_host;
     llvm_omp_target_alloc_shared;
     llvm_omp_target_alloc_device;
+    __tgt_set_info_flag;
   local:
     *;
 };
