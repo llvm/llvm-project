@@ -2918,20 +2918,21 @@ void ObjectFileELF::ParseUnwindSymbols(Symtab *symbol_table,
       if (section_sp) {
         addr_t offset = file_addr - section_sp->GetFileAddress();
         const char *symbol_name = GetNextSyntheticSymbolName().GetCString();
+        uint64_t symbol_id = ++last_symbol_id;
         Symbol eh_symbol(
-            ++last_symbol_id, // Symbol table index.
-            symbol_name,      // Symbol name.
-            eSymbolTypeCode,  // Type of this symbol.
-            true,             // Is this globally visible?
-            false,            // Is this symbol debug info?
-            false,            // Is this symbol a trampoline?
-            true,             // Is this symbol artificial?
-            section_sp, // Section in which this symbol is defined or null.
-            offset,     // Offset in section or symbol value.
-            0,          // Size:          Don't specify the size as an FDE can
-            false,      // Size is valid: cover multiple symbols.
-            false,      // Contains linker annotations?
-            0);         // Symbol flags.
+            symbol_id,       // Symbol table index.
+            symbol_name,     // Symbol name.
+            eSymbolTypeCode, // Type of this symbol.
+            true,            // Is this globally visible?
+            false,           // Is this symbol debug info?
+            false,           // Is this symbol a trampoline?
+            true,            // Is this symbol artificial?
+            section_sp,      // Section in which this symbol is defined or null.
+            offset,          // Offset in section or symbol value.
+            0,     // Size:          Don't specify the size as an FDE can
+            false, // Size is valid: cover multiple symbols.
+            false, // Contains linker annotations?
+            0);    // Symbol flags.
         new_symbols.push_back(eh_symbol);
       }
     }
