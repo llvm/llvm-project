@@ -3729,6 +3729,15 @@ static __inline__ vector double __ATTRS_o_ai vec_floor(vector double __a) {
 }
 #endif
 
+/* vec_roundm */
+static __inline__ vector float __ATTRS_o_ai vec_roundm(vector float __a) {
+  return vec_floor(__a);
+}
+
+static __inline__ vector double __ATTRS_o_ai vec_roundm(vector double __a) {
+  return vec_floor(__a);
+}
+
 /* vec_vrfim */
 
 static __inline__ vector float __attribute__((__always_inline__))
