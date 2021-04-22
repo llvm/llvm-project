@@ -85,6 +85,10 @@ public:
     return T + (T >> S) * (ClassId & M) + SizeDelta;
   }
 
+  static u8 getSizeLSBByClassId(uptr ClassId) {
+    return u8(getLeastSignificantSetBitIndex(getSizeByClassId(ClassId)));
+  }
+
   static uptr getClassIdBySize(uptr Size) {
     if (Size <= SizeDelta + (1 << Config::MinSizeLog))
       return 1;
@@ -137,7 +141,24 @@ class TableSizeClassMap : public SizeClassMapBase<Config> {
     u8 Tab[getTableSize()] = {};
   };
 
-  static constexpr SizeTable Table = {};
+  static constexpr SizeTable SzTable = {};
+
+  struct LSBTable {
+    constexpr LSBTable() {
+      for (uptr I = 0; I != ClassesSize; ++I) {
+        for (u8 Bit = 0; Bit != 64; ++Bit) {
+          if (Config::Classes[I] & (1 << Bit)) {
+            Tab[I] = Bit;
+            break;
+          }
+        }
+      }
+    }
+
+    u8 Tab[ClassesSize] = {};
+  };
+
+  static constexpr LSBTable LTable = {};
 
 public:
   static const u32 MaxNumCachedHint = Config::MaxNumCachedHint;
@@ -152,6 +173,10 @@ public:
     return Config::Classes[ClassId - 1];
   }
 
+  static u8 getSizeLSBByClassId(uptr ClassId) {
+    return LTable.Tab[ClassId - 1];
+  }
+
   static uptr getClassIdBySize(uptr Size) {
     if (Size <= Config::Classes[0])
       return 1;
@@ -159,7 +184,7 @@ public:
     DCHECK_LE(Size, MaxSize);
     if (Size <= (1 << Config::MidSizeLog))
       return ((Size - 1) >> Config::MinSizeLog) + 1;
-    return Table.Tab[scaledLog2(Size - 1, Config::MidSizeLog, S)];
+    return SzTable.Tab[scaledLog2(Size - 1, Config::MidSizeLog, S)];
   }
 
   static u32 getMaxCachedHint(uptr Size) {
