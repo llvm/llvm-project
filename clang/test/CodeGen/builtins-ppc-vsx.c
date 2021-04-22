@@ -280,6 +280,14 @@ void test1() {
 // CHECK: call <4 x float> @llvm.ceil.v4f32(<4 x float> %{{[0-9]*}})
 // CHECK-LE: call <4 x float> @llvm.ceil.v4f32(<4 x float> %{{[0-9]*}})
 
+  res_vd = vec_roundp(vd);
+// CHECK: call <2 x double> @llvm.ceil.v2f64(<2 x double> %{{[0-9]*}})
+// CHECK-LE: call <2 x double> @llvm.ceil.v2f64(<2 x double> %{{[0-9]*}})
+
+  res_vf = vec_roundp(vf);
+// CHECK: call <4 x float> @llvm.ceil.v4f32(<4 x float> %{{[0-9]*}})
+// CHECK-LE: call <4 x float> @llvm.ceil.v4f32(<4 x float> %{{[0-9]*}})
+
   res_vbll = vec_cmpeq(vd, vd);
 // CHECK: call <2 x i64> @llvm.ppc.vsx.xvcmpeqdp(<2 x double> %{{[0-9]*}}, <2 x double> %{{[0-9]*}})
 // CHECK-LE: call <2 x i64> @llvm.ppc.vsx.xvcmpeqdp(<2 x double> %{{[0-9]*}}, <2 x double> %{{[0-9]*}})
@@ -775,6 +783,14 @@ void test1() {
 // CHECK: call <2 x double> @llvm.floor.v2f64(<2 x double> %{{[0-9]+}})
 // CHECK-LE: call <2 x double> @llvm.floor.v2f64(<2 x double> %{{[0-9]+}})
 
+  res_vf = vec_roundm(vf);
+// CHECK: call <4 x float> @llvm.floor.v4f32(<4 x float> %{{[0-9]+}})
+// CHECK-LE: call <4 x float> @llvm.floor.v4f32(<4 x float> %{{[0-9]+}})
+
+  res_vd = vec_roundm(vd);
+// CHECK: call <2 x double> @llvm.floor.v2f64(<2 x double> %{{[0-9]+}})
+// CHECK-LE: call <2 x double> @llvm.floor.v2f64(<2 x double> %{{[0-9]+}})
+
   res_vf = vec_madd(vf, vf, vf);
 // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{[0-9]+}}, <4 x float> %{{[0-9]+}}, <4 x float> %{{[0-9]+}})
 // CHECK-LE: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{[0-9]+}}, <4 x float> %{{[0-9]+}}, <4 x float> %{{[0-9]+}})
@@ -1134,6 +1150,14 @@ void test1() {
 // CHECK-LE: call <4 x float> @llvm.trunc.v4f32(<4 x float> %{{[0-9]+}})
 
   res_vd = vec_trunc(vd);
+// CHECK: call <2 x double> @llvm.trunc.v2f64(<2 x double> %{{[0-9]+}})
+// CHECK-LE: call <2 x double> @llvm.trunc.v2f64(<2 x double> %{{[0-9]+}})
+
+  res_vf = vec_roundz(vf);
+// CHECK: call <4 x float> @llvm.trunc.v4f32(<4 x float> %{{[0-9]+}})
+// CHECK-LE: call <4 x float> @llvm.trunc.v4f32(<4 x float> %{{[0-9]+}})
+
+  res_vd = vec_roundz(vd);
 // CHECK: call <2 x double> @llvm.trunc.v2f64(<2 x double> %{{[0-9]+}})
 // CHECK-LE: call <2 x double> @llvm.trunc.v2f64(<2 x double> %{{[0-9]+}})
 
@@ -1923,6 +1947,78 @@ res_vull = vec_xl_be(sll, aull);
 res_vd = vec_xl_be(sll, ad);
 // CHECK: load <2 x double>, <2 x double>* %{{[0-9]+}}, align 1
 // CHECK-LE: call <2 x double> @llvm.ppc.vsx.lxvd2x.be(i8* %{{[0-9]+}})
+
+res_vsll = vec_xlds(sll, asll);
+// CHECK: load i64
+// CHECK: insertelement <2 x i64>
+// CHECK: shufflevector <2 x i64>
+// CHECK-LE: load i64
+// CHECK-LE: insertelement <2 x i64>
+// CHECK-LE: shufflevector <2 x i64>
+
+res_vull = vec_xlds(sll, aull);
+// CHECK: load i64
+// CHECK: insertelement <2 x i64>
+// CHECK: shufflevector <2 x i64>
+// CHECK-LE: load i64
+// CHECK-LE: insertelement <2 x i64>
+// CHECK-LE: shufflevector <2 x i64>
+
+res_vd = vec_xlds(sll, ad);
+// CHECK: load double
+// CHECK: insertelement <2 x double>
+// CHECK: shufflevector <2 x double>
+// CHECK-LE: load double
+// CHECK-LE: insertelement <2 x double>
+// CHECK-LE: shufflevector <2 x double>
+
+res_vsll = vec_load_splats(sll, asi);
+// CHECK: load i32
+// CHECK: insertelement <4 x i32>
+// CHECK: shufflevector <4 x i32>
+// CHECK-LE: load i32
+// CHECK-LE: insertelement <4 x i32>
+// CHECK-LE: shufflevector <4 x i32>
+
+res_vsll = vec_load_splats(ull, asi);
+// CHECK: load i32
+// CHECK: insertelement <4 x i32>
+// CHECK: shufflevector <4 x i32>
+// CHECK-LE: load i32
+// CHECK-LE: insertelement <4 x i32>
+// CHECK-LE: shufflevector <4 x i32>
+
+res_vsll = vec_load_splats(sll, aui);
+// CHECK: load i32
+// CHECK: insertelement <4 x i32>
+// CHECK: shufflevector <4 x i32>
+// CHECK-LE: load i32
+// CHECK-LE: insertelement <4 x i32>
+// CHECK-LE: shufflevector <4 x i32>
+
+res_vsll = vec_load_splats(ull, aui);
+// CHECK: load i32
+// CHECK: insertelement <4 x i32>
+// CHECK: shufflevector <4 x i32>
+// CHECK-LE: load i32
+// CHECK-LE: insertelement <4 x i32>
+// CHECK-LE: shufflevector <4 x i32>
+
+res_vsll = vec_load_splats(sll, af);
+// CHECK: load float
+// CHECK: insertelement <4 x float>
+// CHECK: shufflevector <4 x float>
+// CHECK-LE: load float
+// CHECK-LE: insertelement <4 x float>
+// CHECK-LE: shufflevector <4 x float>
+
+res_vsll = vec_load_splats(ull, af);
+// CHECK: load float
+// CHECK: insertelement <4 x float>
+// CHECK: shufflevector <4 x float>
+// CHECK-LE: load float
+// CHECK-LE: insertelement <4 x float>
+// CHECK-LE: shufflevector <4 x float>
 
 vec_xst_be(vsll, sll, asll);
 // CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 1

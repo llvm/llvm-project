@@ -179,8 +179,9 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(InputSection *isec) {
       // symbols for them in the GOT.
       Symbol *&s = personalityTable[{referentIsec, r.addend}];
       if (s == nullptr) {
-        s = make<Defined>("<internal>", nullptr, referentIsec, r.addend, 0,
-                          false, false, false);
+        s = make<Defined>("<internal>", /*file=*/nullptr, referentIsec,
+                          r.addend, /*size=*/0, /*isWeakDef=*/false,
+                          /*isExternal=*/false, /*isPrivateExtern=*/false);
         in.got->addEntry(s);
       }
       r.referent = s;

@@ -1627,6 +1627,17 @@ static __inline__ vector double __ATTRS_o_ai vec_ceil(vector double __a) {
 }
 #endif
 
+/* vec_roundp */
+static __inline__ vector float __ATTRS_o_ai vec_roundp(vector float __a) {
+  return vec_ceil(__a);
+}
+
+#ifdef __VSX__
+static __inline__ vector double __ATTRS_o_ai vec_roundp(vector double __a) {
+  return vec_ceil(__a);
+}
+#endif
+
 /* vec_vrfip */
 
 static __inline__ vector float __attribute__((__always_inline__))
@@ -2389,6 +2400,7 @@ vec_popcnt(vector unsigned long long __a) {
   return __builtin_altivec_vpopcntd(__a);
 }
 
+#define vec_vclz vec_cntlz
 /* vec_cntlz */
 
 static __inline__ vector signed char __ATTRS_o_ai
@@ -3726,6 +3738,17 @@ static __inline__ vector float __ATTRS_o_ai vec_floor(vector float __a) {
 #ifdef __VSX__
 static __inline__ vector double __ATTRS_o_ai vec_floor(vector double __a) {
   return __builtin_vsx_xvrdpim(__a);
+}
+#endif
+
+/* vec_roundm */
+static __inline__ vector float __ATTRS_o_ai vec_roundm(vector float __a) {
+  return vec_floor(__a);
+}
+
+#ifdef __VSX__
+static __inline__ vector double __ATTRS_o_ai vec_roundm(vector double __a) {
+  return vec_floor(__a);
 }
 #endif
 
@@ -12123,6 +12146,17 @@ static __inline__ vector double __ATTRS_o_ai vec_trunc(vector double __a) {
 }
 #endif
 
+/* vec_roundz */
+static __inline__ vector float __ATTRS_o_ai vec_roundz(vector float __a) {
+  return vec_trunc(__a);
+}
+
+#ifdef __VSX__
+static __inline__ vector double __ATTRS_o_ai vec_roundz(vector double __a) {
+  return vec_trunc(__a);
+}
+#endif
+
 /* vec_vrfiz */
 
 static __inline__ vector float __attribute__((__always_inline__))
@@ -17370,6 +17404,64 @@ vec_xl_zext(ptrdiff_t __offset, const unsigned long long *__pointer) {
   return (vector unsigned __int128)*(__pointer + __offset);
 }
 
+#endif
+
+/* vec_xlds */
+#ifdef __VSX__
+static __inline__ vector signed long long __ATTRS_o_ai
+vec_xlds(ptrdiff_t __offset, const signed long long *__ptr) {
+  signed long long *__addr = (signed long long*)((signed char *)__ptr + __offset);
+  return (vector signed long long) *__addr;
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_xlds(ptrdiff_t __offset, const unsigned long long *__ptr) {
+  unsigned long long *__addr = (unsigned long long *)((signed char *)__ptr + __offset);
+  return (unaligned_vec_ull) *__addr;
+}
+
+static __inline__ vector double __ATTRS_o_ai vec_xlds(ptrdiff_t __offset,
+                                                      const double *__ptr) {
+  double *__addr = (double*)((signed char *)__ptr + __offset);
+  return (unaligned_vec_double) *__addr;
+}
+
+/* vec_load_splats */
+static __inline__ vector signed int __ATTRS_o_ai
+vec_load_splats(signed long long __offset, const signed int *__ptr) {
+  signed int *__addr = (signed int*)((signed char *)__ptr + __offset);
+  return (vector signed int)*__addr;
+}
+
+static __inline__ vector signed int __ATTRS_o_ai
+vec_load_splats(unsigned long long __offset, const signed int *__ptr) {
+  signed int *__addr = (signed int*)((signed char *)__ptr + __offset);
+  return (vector signed int)*__addr;
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_load_splats(signed long long __offset, const unsigned int *__ptr) {
+  unsigned int *__addr = (unsigned int*)((signed char *)__ptr + __offset);
+  return (vector unsigned int)*__addr;
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_load_splats(unsigned long long __offset, const unsigned int *__ptr) {
+  unsigned int *__addr = (unsigned int*)((signed char *)__ptr + __offset);
+  return (vector unsigned int)*__addr;
+}
+
+static __inline__ vector float __ATTRS_o_ai
+vec_load_splats(signed long long __offset, const float *__ptr) {
+  float *__addr = (float*)((signed char *)__ptr + __offset);
+  return (vector float)*__addr;
+}
+
+static __inline__ vector float __ATTRS_o_ai
+vec_load_splats(unsigned long long __offset, const float *__ptr) {
+  float *__addr = (float*)((signed char *)__ptr + __offset);
+  return (vector float)*__addr;
+}
 #endif
 
 /* vec_xst */

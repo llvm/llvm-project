@@ -12592,6 +12592,11 @@ static SDValue tryCombineToBSL(SDNode *N,
   if (!VT.isVector())
     return SDValue();
 
+  // The combining code currently only works for NEON vectors. In particular,
+  // it does not work for SVE when dealing with vectors wider than 128 bits.
+  if (!VT.is64BitVector() && !VT.is128BitVector())
+    return SDValue();
+
   SDValue N0 = N->getOperand(0);
   if (N0.getOpcode() != ISD::AND)
     return SDValue();
