@@ -55,7 +55,7 @@
 
 #ifdef LLDB_ENABLE_SWIFT
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #endif // LLDB_ENABLE_SWIFT
 
 #include "llvm/ADT/STLExtras.h"

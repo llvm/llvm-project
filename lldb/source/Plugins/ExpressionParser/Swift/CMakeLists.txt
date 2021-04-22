@@ -27,6 +27,7 @@ add_lldb_library(lldbPluginExpressionParserSwift PLUGIN
     lldbTarget
     lldbUtility
     lldbPluginTypeSystemSwift
+    lldbPluginSwiftLanguageRuntime
     swiftAST
     swiftBasic
     swiftClangImporter

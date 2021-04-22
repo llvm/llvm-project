@@ -54,8 +54,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 
 // BEGIN SWIFT
-#include "lldb/Target/LanguageRuntime.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 // END SWIFT
 
 using namespace lldb;

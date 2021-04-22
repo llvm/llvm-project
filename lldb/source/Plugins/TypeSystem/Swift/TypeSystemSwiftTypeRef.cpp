@@ -13,11 +13,11 @@
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Utility/Log.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangExternalASTSourceCallbacks.h"

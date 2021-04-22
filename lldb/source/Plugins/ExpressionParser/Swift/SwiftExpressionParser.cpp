@@ -20,6 +20,7 @@
 
 #include "Plugins/ExpressionParser/Swift/SwiftDiagnostic.h"
 #include "Plugins/ExpressionParser/Swift/SwiftExpressionVariable.h"
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -34,7 +35,6 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/StackFrame.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Log.h"

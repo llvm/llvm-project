@@ -6,25 +6,6 @@ lldb_tablegen(TargetPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE TargetProperties.td
   TARGET LLDBTargetPropertiesEnumGen)
 
-set(SWIFT_SOURCES
-  SwiftLanguageRuntime.cpp
-  SwiftLanguageRuntimeDynamicTypeResolution.cpp
-  SwiftLanguageRuntimeNames.cpp
-)
-set(SWIFT_LIBS
-    swiftAST
-    swiftBasic
-    swiftReflection
-    swiftRemoteAST
-    lldbPluginExpressionParserSwift
-    lldbPluginSwiftLanguage
-)
-set(LLVM_OPTIONAL_SOURCES ${SWIFT_SOURCES})
-if (NOT LLDB_ENABLE_SWIFT_SUPPORT)
-  unset(SWIFT_SOURCES)
-  unset(SWIFT_LIBS)
-endif()
-
 add_lldb_library(lldbTarget
   ABI.cpp
   AssertFrameRecognizer.cpp
@@ -92,8 +73,6 @@ add_lldb_library(lldbTarget
   UnwindAssembly.cpp
   UnwindLLDB.cpp
 
-  ${SWIFT_SOURCES}
-
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -104,8 +83,6 @@ add_lldb_library(lldbTarget
     lldbUtility
     lldbPluginExpressionParserClang
     lldbPluginProcessUtility
-
-    ${SWIFT_LIBS}
 
   LINK_COMPONENTS
     Support

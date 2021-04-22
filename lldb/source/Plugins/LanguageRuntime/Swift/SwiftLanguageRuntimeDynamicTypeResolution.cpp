@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SwiftLanguageRuntimeImpl.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
+#include "SwiftLanguageRuntime.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"

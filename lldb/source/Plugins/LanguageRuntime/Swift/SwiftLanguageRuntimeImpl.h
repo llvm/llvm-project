@@ -13,7 +13,7 @@
 #ifndef liblldb_SwiftLanguageRuntimeImpl_h_
 #define liblldb_SwiftLanguageRuntimeImpl_h_
 
-#include "lldb/Target/SwiftLanguageRuntime.h"
+#include "SwiftLanguageRuntime.h"
 #include "swift/Reflection/TypeLowering.h"
 
 namespace swift {

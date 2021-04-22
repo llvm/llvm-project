@@ -50,7 +50,7 @@
 #include "ObjectFileMachO.h"
 #ifdef LLDB_ENABLE_SWIFT
 #include "swift/ABI/ObjectFile.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #endif //LLDB_ENABLE_SWIFT
 
 #if defined(__APPLE__)
