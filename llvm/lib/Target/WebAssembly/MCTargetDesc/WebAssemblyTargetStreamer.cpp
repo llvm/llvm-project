@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
-#include "MCTargetDesc/WebAssemblyInstPrinter.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "Utils/WebAssemblyTypeUtilities.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSubtargetInfo.h"

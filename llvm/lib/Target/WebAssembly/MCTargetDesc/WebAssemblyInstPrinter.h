@@ -56,16 +56,6 @@ public:
   static const char *getRegisterName(unsigned RegNo);
 };
 
-namespace WebAssembly {
-
-const char *typeToString(wasm::ValType Ty);
-const char *anyTypeToString(unsigned Ty);
-
-std::string typeListToString(ArrayRef<wasm::ValType> List);
-std::string signatureToString(const wasm::WasmSignature *Sig);
-
-} // end namespace WebAssembly
-
 } // end namespace llvm
 
 #endif
