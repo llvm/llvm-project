@@ -223,6 +223,26 @@ exit:
   ret i32 %5
 }
 
+define void @foo9(i1 zeroext %0) nounwind #0 !prof !14 {
+;; Check that function with section attribute is not split.
+; MFS-DEFAULTS-LABEL: foo9
+; MFS-DEFAULTS-NOT:   foo9.cold:
+  br i1 %0, label %2, label %4, !prof !17
+
+2:                                                ; preds = %1
+  %3 = call i32 @bar()
+  br label %6
+
+4:                                                ; preds = %1
+  %5 = call i32 @baz()
+  br label %6
+
+6:                                                ; preds = %4, %2
+  %7 = tail call i32 @qux()
+  ret void
+}
+
+
 declare i32 @bar()
 declare i32 @baz()
 declare i32 @bam()
@@ -231,6 +251,8 @@ declare void @_Z1fv()
 declare i32 @__gxx_personality_v0(...)
 
 @_ZTIi = external constant i8*
+
+attributes #0 = { "implicit-section-name"="nosplit" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
