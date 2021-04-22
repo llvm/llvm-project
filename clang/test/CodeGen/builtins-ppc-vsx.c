@@ -1948,6 +1948,30 @@ res_vd = vec_xl_be(sll, ad);
 // CHECK: load <2 x double>, <2 x double>* %{{[0-9]+}}, align 1
 // CHECK-LE: call <2 x double> @llvm.ppc.vsx.lxvd2x.be(i8* %{{[0-9]+}})
 
+res_vsll = vec_xlds(sll, asll);
+// CHECK: load i64
+// CHECK: insertelement <2 x i64>
+// CHECK: shufflevector <2 x i64>
+// CHECK-LE: load i64
+// CHECK-LE: insertelement <2 x i64>
+// CHECK-LE: shufflevector <2 x i64>
+
+res_vull = vec_xlds(sll, aull);
+// CHECK: load i64
+// CHECK: insertelement <2 x i64>
+// CHECK: shufflevector <2 x i64>
+// CHECK-LE: load i64
+// CHECK-LE: insertelement <2 x i64>
+// CHECK-LE: shufflevector <2 x i64>
+
+res_vd = vec_xlds(sll, ad);
+// CHECK: load double
+// CHECK: insertelement <2 x double>
+// CHECK: shufflevector <2 x double>
+// CHECK-LE: load double
+// CHECK-LE: insertelement <2 x double>
+// CHECK-LE: shufflevector <2 x double>
+
 vec_xst_be(vsll, sll, asll);
 // CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 1
 // CHECK-LE: call void @llvm.ppc.vsx.stxvd2x.be(<2 x double> %{{[0-9]+}}, i8* %{{[0-9]+}})
