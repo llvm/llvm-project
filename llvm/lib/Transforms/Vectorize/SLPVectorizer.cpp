@@ -4308,6 +4308,8 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, SmallVectorImpl<int> &Mask,
   int NumShuffles = 0;
   for (int I = 0, E = TE->Scalars.size(); I < E; ++I) {
     Value *V = TE->Scalars[I];
+    if (isa<UndefValue>(V))
+      continue;
     const TreeEntry *VTE = getTreeEntry(V);
     if (!VTE) {
       // Check if it is used in one of the gathered entries.
