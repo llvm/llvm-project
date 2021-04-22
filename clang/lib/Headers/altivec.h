@@ -3734,9 +3734,11 @@ static __inline__ vector float __ATTRS_o_ai vec_roundm(vector float __a) {
   return vec_floor(__a);
 }
 
+#ifdef __VSX__
 static __inline__ vector double __ATTRS_o_ai vec_roundm(vector double __a) {
   return vec_floor(__a);
 }
+#endif
 
 /* vec_vrfim */
 
