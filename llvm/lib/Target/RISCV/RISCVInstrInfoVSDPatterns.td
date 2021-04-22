@@ -635,6 +635,10 @@ foreach vti = AllFloatVectors in {
                  vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, vti.AVL, vti.SEW)>;
 }
 
+// 14.11. Vector Floating-Point MIN/MAX Instructions
+defm : VPatBinaryFPSDNode_VV_VF<fminnum, "PseudoVFMIN">;
+defm : VPatBinaryFPSDNode_VV_VF<fmaxnum, "PseudoVFMAX">;
+
 // 14.13. Vector Floating-Point Compare Instructions
 defm : VPatFPSetCCSDNode_VV_VF_FV<SETEQ,  "PseudoVMFEQ", "PseudoVMFEQ">;
 defm : VPatFPSetCCSDNode_VV_VF_FV<SETOEQ, "PseudoVMFEQ", "PseudoVMFEQ">;
