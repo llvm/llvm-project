@@ -364,6 +364,13 @@ TEST_F(SortImportsTestJS, MergeImports) {
   // do merge exports
   verifySort("export {A, B} from 'foo';\n", "export {A} from 'foo';\n"
                                             "export   {B} from 'foo';");
+
+  // do not merge side effect imports with named ones
+  verifySort("import './a';\n"
+             "\n"
+             "import {bar} from './a';\n",
+             "import {bar} from './a';\n"
+             "import './a';\n");
 }
 
 } // end namespace

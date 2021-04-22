@@ -255,6 +255,7 @@ group("test") {
     "//llvm/tools/llvm-opt-report",
     "//llvm/tools/llvm-pdbutil",
     "//llvm/tools/llvm-profdata",
+    "//llvm/tools/llvm-profgen",
     "//llvm/tools/llvm-rc",
     "//llvm/tools/llvm-readobj:symlinks",
     "//llvm/tools/llvm-reduce",

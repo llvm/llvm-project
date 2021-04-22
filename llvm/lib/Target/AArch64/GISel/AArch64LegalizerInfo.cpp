@@ -686,8 +686,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_BZERO, G_MEMCPY, G_MEMMOVE, G_MEMSET})
       .libcall();
 
-  getActionDefinitionsBuilder(G_ABS).lowerIf(
-      [=](const LegalityQuery &Query) { return Query.Types[0].isScalar(); });
+  // FIXME: Legal types are only legal with NEON.
+  getActionDefinitionsBuilder(G_ABS)
+      .lowerIf(isScalar(0))
+      .legalFor(PackedVectorAllTypeList);
 
   getActionDefinitionsBuilder(G_VECREDUCE_FADD)
       // We only have FADDP to do reduction-like operations. Lower the rest.

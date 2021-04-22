@@ -558,7 +558,7 @@ struct __can_convert_char<wchar_t> {
   static const bool value = true;
   using __char_type = wchar_t;
 };
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
 template <>
 struct __can_convert_char<char8_t> {
   static const bool value = true;
@@ -586,7 +586,7 @@ __is_separator(_ECharT __e) {
 #endif
 }
 
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
 typedef u8string __u8_string;
 #else
 typedef string __u8_string;
@@ -893,7 +893,7 @@ struct _PathExport<char16_t> {
   }
 };
 
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
 template <>
 struct _PathExport<char8_t> {
   typedef __narrow_to_utf8<sizeof(wchar_t) * __CHAR_BIT__> _Narrower;
@@ -903,7 +903,7 @@ struct _PathExport<char8_t> {
     _Narrower()(back_inserter(__dest), __src.data(), __src.data() + __src.size());
   }
 };
-#endif /* !_LIBCPP_NO_HAS_CHAR8_T */
+#endif /* !_LIBCPP_HAS_NO_CHAR8_T */
 #endif /* _LIBCPP_WIN32API */
 
 class _LIBCPP_TYPE_VIS path {
@@ -1264,7 +1264,7 @@ public:
 #else /* _LIBCPP_WIN32API */
 
   _LIBCPP_INLINE_VISIBILITY _VSTD::string string() const { return __pn_; }
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
   _LIBCPP_INLINE_VISIBILITY _VSTD::u8string u8string() const { return _VSTD::u8string(__pn_.begin(), __pn_.end()); }
 #else
   _LIBCPP_INLINE_VISIBILITY _VSTD::string u8string() const { return __pn_; }
@@ -1296,7 +1296,7 @@ public:
 
   // generic format observers
   _VSTD::string generic_string() const { return __pn_; }
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
   _VSTD::u8string generic_u8string() const { return _VSTD::u8string(__pn_.begin(), __pn_.end()); }
 #else
   _VSTD::string generic_u8string() const { return __pn_; }
@@ -1520,7 +1520,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
     typename enable_if<__is_pathable<_InputIt>::value, path>::type
     u8path(_InputIt __f, _InputIt __l) {
   static_assert(
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
       is_same<typename __is_pathable<_InputIt>::__char_type, char8_t>::value ||
 #endif
       is_same<typename __is_pathable<_InputIt>::__char_type, char>::value,
@@ -1544,7 +1544,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
     typename enable_if<__is_pathable<_InputIt>::value, path>::type
     u8path(_InputIt __f, _NullSentinel) {
   static_assert(
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
       is_same<typename __is_pathable<_InputIt>::__char_type, char8_t>::value ||
 #endif
       is_same<typename __is_pathable<_InputIt>::__char_type, char>::value,
@@ -1567,7 +1567,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
     typename enable_if<__is_pathable<_Source>::value, path>::type
     u8path(const _Source& __s) {
   static_assert(
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
       is_same<typename __is_pathable<_Source>::__char_type, char8_t>::value ||
 #endif
       is_same<typename __is_pathable<_Source>::__char_type, char>::value,

@@ -3853,6 +3853,9 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
          Left.isOneOf(tok::r_square, tok::r_paren)) &&
         Right.isOneOf(tok::l_square, tok::l_paren))
       return false; // Otherwise automatic semicolon insertion would trigger.
+    if (NonComment && NonComment->is(tok::identifier) &&
+        NonComment->TokenText == "asserts")
+      return false;
     if (Left.is(TT_JsFatArrow) && Right.is(tok::l_brace))
       return false;
     if (Left.is(TT_JsTypeColon))

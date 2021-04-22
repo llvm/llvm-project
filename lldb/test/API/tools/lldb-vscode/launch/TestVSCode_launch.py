@@ -293,6 +293,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIf(archs=["arm", "aarch64"]) # failed run https://lab.llvm.org/buildbot/#/builders/96/builds/6933
     def test_commands(self):
         '''
             Tests the "initCommands", "preRunCommands", "stopCommands",
@@ -313,12 +314,14 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         program = self.getBuildArtifact("a.out")
         initCommands = ['target list', 'platform list']
         preRunCommands = ['image list a.out', 'image dump sections a.out']
+        postRunCommands = ['help trace', 'help process trace']
         stopCommands = ['frame variable', 'bt']
         exitCommands = ['expr 2+3', 'expr 3+4']
         terminateCommands = ['expr 4+2']
         self.build_and_launch(program,
                               initCommands=initCommands,
                               preRunCommands=preRunCommands,
+                              postRunCommands=postRunCommands,
                               stopCommands=stopCommands,
                               exitCommands=exitCommands,
                               terminateCommands=terminateCommands)
@@ -330,6 +333,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.verify_commands('initCommands', output, initCommands)
         # Verify all "preRunCommands" were found in console output
         self.verify_commands('preRunCommands', output, preRunCommands)
+        # Verify all "postRunCommands" were found in console output
+        self.verify_commands('postRunCommands', output, postRunCommands)
 
         source = 'main.c'
         first_line = line_number(source, '// breakpoint 1')

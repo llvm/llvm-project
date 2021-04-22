@@ -7,22 +7,25 @@ declare void @may_free_memory()
 
 declare i32 @personality_function()
 
-; TODO: We can PRE the load from gc-managed memory away from the hot path.
+; We can PRE the load from gc-managed memory away from the hot path.
 define i32 @test_load_on_cold_path_gc(i32 addrspace(1)* %p) gc "statepoint-example" personality i32 ()* @"personality_function" {
 ; CHECK-LABEL: @test_load_on_cold_path_gc(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_PRE1:%.*]] = load i32, i32 addrspace(1)* [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32 addrspace(1)* [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[X_PRE1]], [[ENTRY:%.*]] ], [ [[X2:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
 ; CHECK:       hot_path:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       cold_path:
 ; CHECK-NEXT:    call void @may_free_memory()
+; CHECK-NEXT:    [[X_PRE:%.*]] = load i32, i32 addrspace(1)* [[P]], align 4
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
+; CHECK-NEXT:    [[X2]] = phi i32 [ [[X_PRE]], [[COLD_PATH]] ], [ [[X]], [[HOT_PATH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]

@@ -14,12 +14,16 @@
 #define MLIR_DIALECT_SCF_UTILS_H_
 
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 class FuncOp;
 class Operation;
 class OpBuilder;
 class ValueRange;
+class Value;
+class AffineExpr;
+class Operation;
 
 namespace scf {
 class IfOp;
@@ -63,6 +67,15 @@ void outlineIfOp(OpBuilder &b, scf::IfOp ifOp, FuncOp *thenFn,
 /// loops are those that do not contain further parallel loops themselves.
 bool getInnermostParallelLoops(Operation *rootOp,
                                SmallVectorImpl<scf::ParallelOp> &result);
+
+/// Return the min/max expressions for `value` if it is an induction variable
+/// from scf.for or scf.parallel loop.
+/// if `loopFilter` is passed, the filter determines which loop to consider.
+/// Other induction variables are ignored.
+Optional<std::pair<AffineExpr, AffineExpr>>
+getSCFMinMaxExpr(Value value, SmallVectorImpl<Value> &dims,
+                 SmallVectorImpl<Value> &symbols,
+                 llvm::function_ref<bool(Operation *)> loopFilter = nullptr);
 
 } // end namespace mlir
 #endif // MLIR_DIALECT_SCF_UTILS_H_

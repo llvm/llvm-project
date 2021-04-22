@@ -71,7 +71,7 @@ constexpr void test() {
   std::in_range<T>(int()); // expected-error11{{no matching function for call to 'in_range'}}
   std::in_range<int>(T()); // expected-error11{{no matching function for call to 'in_range'}}
 }
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
 template <class T>
 constexpr void test_char8t() {
   std::cmp_equal(T(), T()); // expected-error1{{no matching function for call to 'cmp_equal'}}
@@ -95,7 +95,7 @@ constexpr void test_char8t() {
   std::in_range<T>(int()); // expected-error1{{no matching function for call to 'in_range'}}
   std::in_range<int>(T()); // expected-error1{{no matching function for call to 'in_range'}}
 }
-#endif // _LIBCPP_NO_HAS_CHAR8_T
+#endif // _LIBCPP_HAS_NO_CHAR8_T
 
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 template <class T>
@@ -135,13 +135,15 @@ int main() {
   test<ColorT>();
   test<nullptr_t>();
   test<EmptyT>();
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
   test_char8t<char8_t>();
-#endif // !_LIBCPP_NO_HAS_CHAR8_T
+#endif // _LIBCPP_HAS_NO_CHAR8_T
 
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
   test_uchars<char16_t>();
   test_uchars<char32_t>();
-#endif // !_LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
+
   return 0;
 }

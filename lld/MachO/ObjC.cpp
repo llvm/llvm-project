@@ -23,8 +23,8 @@ template <class LP> static bool hasObjCSection(MemoryBufferRef mb) {
 
   auto *hdr =
       reinterpret_cast<const typename LP::mach_header *>(mb.getBufferStart());
-  if (const load_command *cmd = findCommand(hdr, LP::segmentLCType)) {
-    auto *c = reinterpret_cast<const typename LP::segment_command *>(cmd);
+  if (const auto *c =
+          findCommand<typename LP::segment_command>(hdr, LP::segmentLCType)) {
     auto sectionHeaders =
         ArrayRef<Section>{reinterpret_cast<const Section *>(c + 1), c->nsects};
     for (const Section &sec : sectionHeaders) {

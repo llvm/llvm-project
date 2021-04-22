@@ -66,6 +66,22 @@ struct TestLinalgElementwiseFusion
                                        std::move(fusionPatterns));
   }
 };
+
+struct TestPushExpandingReshape
+    : public PassWrapper<TestPushExpandingReshape, FunctionPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry
+        .insert<AffineDialect, linalg::LinalgDialect, tensor::TensorDialect>();
+  }
+
+  void runOnFunction() override {
+    MLIRContext *context = &this->getContext();
+    FuncOp funcOp = this->getFunction();
+    RewritePatternSet patterns(context);
+    linalg::populatePushReshapeOpsPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
+  }
+};
 } // namespace
 
 namespace test {
@@ -73,6 +89,11 @@ void registerTestLinalgElementwiseFusion() {
   PassRegistration<TestLinalgElementwiseFusion> testElementwiseFusionPass(
       "test-linalg-elementwise-fusion-patterns",
       "Test Linalg element wise operation fusion patterns");
+}
+
+void registerTestPushExpandingReshape() {
+  PassRegistration<TestPushExpandingReshape> testPushExpandingReshapePass(
+      "test-linalg-push-reshape", "Test Linalg reshape push patterns");
 }
 } // namespace test
 

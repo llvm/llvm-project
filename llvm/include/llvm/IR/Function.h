@@ -153,6 +153,16 @@ public:
   static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
                           const Twine &N, Module &M);
 
+  /// Creates a function with some attributes recorded in llvm.module.flags
+  /// applied.
+  ///
+  /// Use this when synthesizing new functions that need attributes that would
+  /// have been set by command line options.
+  static Function *createWithDefaultAttr(FunctionType *Ty, LinkageTypes Linkage,
+                                         unsigned AddrSpace,
+                                         const Twine &N = "",
+                                         Module *M = nullptr);
+
   // Provide fast operand accessors.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 

@@ -59,10 +59,6 @@ allocateBuffersForResults(Location loc, LinalgOp linalgOp, ValueRange outputs,
       continue;
     }
 
-    if (auto alloc = resultTensor.getDefiningOp<memref::AllocOp>()) {
-      resultBuffers.push_back(resultTensor);
-      continue;
-    }
     // Allocate buffers for statically-shaped results.
     if (memrefType.hasStaticShape()) {
       resultBuffers.push_back(b.create<memref::AllocOp>(loc, memrefType));

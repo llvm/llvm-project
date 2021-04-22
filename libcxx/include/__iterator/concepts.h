@@ -12,6 +12,10 @@
 
 #include <__config>
 #include <concepts>
+#include <__iterator/iter_move.h>
+#include <__iterator/incrementable_traits.h>
+#include <__iterator/iterator_traits.h>
+#include <__iterator/readable_traits.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -24,18 +28,36 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
-template<class _Tp>
-using __with_reference = _Tp&;
+// clang-format off
 
-template<class _Tp>
-concept __referenceable = requires {
-  typename __with_reference<_Tp>;
-};
+// [iterator.concept.readable]
+template<class _In>
+concept __indirectly_readable_impl =
+  requires(const _In __in) {
+    typename iter_value_t<_In>;
+    typename iter_reference_t<_In>;
+    typename iter_rvalue_reference_t<_In>;
+    { *__in } -> same_as<iter_reference_t<_In> >;
+    { ranges::iter_move(__in) } -> same_as<iter_rvalue_reference_t<_In> >;
+  } &&
+  common_reference_with<iter_reference_t<_In>&&, iter_value_t<_In>&> &&
+  common_reference_with<iter_reference_t<_In>&&, iter_rvalue_reference_t<_In>&&> &&
+  common_reference_with<iter_rvalue_reference_t<_In>&&, const iter_value_t<_In>&>;
 
-template<class _Tp>
-concept __dereferenceable = requires(_Tp& __t) {
-  { *__t } -> __referenceable; // not required to be equality-preserving
-};
+template<class _In>
+concept indirectly_readable = __indirectly_readable_impl<remove_cvref_t<_In> >;
+
+// [iterator.concept.writable]
+template<class _Out, class _Tp>
+concept indirectly_writable =
+  requires(_Out&& __o, _Tp&& __t) {
+    *__o = _VSTD::forward<_Tp>(__t);                        // not required to be equality-preserving
+    *_VSTD::forward<_Out>(__o) = _VSTD::forward<_Tp>(__t);  // not required to be equality-preserving
+    const_cast<const iter_reference_t<_Out>&&>(*__o) = _VSTD::forward<_Tp>(__t);                       // not required to be equality-preserving
+    const_cast<const iter_reference_t<_Out>&&>(*_VSTD::forward<_Out>(__o)) = _VSTD::forward<_Tp>(__t); // not required to be equality-preserving
+  };
+
+// clang-format on
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 
