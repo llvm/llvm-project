@@ -514,11 +514,6 @@ int main(int argc, char *const argv[]) {
     } else if (arg.find("-W") != std::string::npos) {
       if (arg == "-Werror")
         driver.warningsAreErrors = true;
-      else {
-        // Only -Werror is supported currently
-        llvm::errs() << "Only `-Werror` is supported currently.\n";
-        return EXIT_FAILURE;
-      }
     } else if (arg == "-ed") {
       options.features.Enable(Fortran::common::LanguageFeature::OldDebugLines);
     } else if (arg == "-E") {
