@@ -2729,8 +2729,8 @@ VarInit *TGParser::ParseForeachDeclaration(Init *&ForeachListValue) {
 
 /// ParseTemplateArgList - Read a template argument list, which is a non-empty
 /// sequence of template-declarations in <>'s.  If CurRec is non-null, these are
-/// template args for a class, which may or may not be in a multiclass. If null,
-/// these are the template args for a multiclass.
+/// template args for a class. If null, these are the template args for a
+/// multiclass.
 ///
 ///    TemplateArgList ::= '<' Declaration (',' Declaration)* '>'
 ///
@@ -2772,6 +2772,7 @@ bool TGParser::ParseTemplateArgList(Record *CurRec) {
 ///   BodyItem ::= LET ID OptionalBitList '=' Value ';'
 ///   BodyItem ::= Defvar
 ///   BodyItem ::= Assert
+///
 bool TGParser::ParseBodyItem(Record *CurRec) {
   if (Lex.getCode() == tgtok::Assert)
     return ParseAssert(nullptr, CurRec);
@@ -3361,15 +3362,14 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
 ///
 ///  MultiClassInst ::= MULTICLASS ID TemplateArgList?
 ///                     ':' BaseMultiClassList '{' MultiClassObject+ '}'
+///  MultiClassObject ::= Assert
 ///  MultiClassObject ::= DefInst
-///  MultiClassObject ::= MultiClassInst
 ///  MultiClassObject ::= DefMInst
 ///  MultiClassObject ::= Defvar
 ///  MultiClassObject ::= Foreach
 ///  MultiClassObject ::= If
 ///  MultiClassObject ::= LETCommand '{' ObjectList '}'
 ///  MultiClassObject ::= LETCommand Object
-///  MultiClassObject ::= Assert
 ///
 bool TGParser::ParseMultiClass() {
   assert(Lex.getCode() == tgtok::MultiClass && "Unexpected token");
