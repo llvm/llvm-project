@@ -139,6 +139,57 @@ llvm.func @arm_sve_arithf_masked(%arg0: !llvm.vec<? x 4 x f32>,
   llvm.return %3 : !llvm.vec<? x 4 x f32>
 }
 
+// CHECK-LABEL: define <vscale x 4 x i1> @arm_sve_mask_genf
+llvm.func @arm_sve_mask_genf(%arg0: !llvm.vec<? x 4 x f32>,
+                             %arg1: !llvm.vec<? x 4 x f32>)
+                             -> !llvm.vec<? x 4 x i1> {
+  // CHECK: fcmp oeq <vscale x 4 x float>
+  %0 = llvm.fcmp "oeq" %arg0, %arg1 : !llvm.vec<? x 4 x f32>
+  llvm.return %0 : !llvm.vec<? x 4 x i1>
+}
+
+// CHECK-LABEL: define <vscale x 4 x i1> @arm_sve_mask_geni
+llvm.func @arm_sve_mask_geni(%arg0: !llvm.vec<? x 4 x i32>,
+                             %arg1: !llvm.vec<? x 4 x i32>)
+                             -> !llvm.vec<? x 4 x i1> {
+  // CHECK: icmp uge <vscale x 4 x i32>
+  %0 = llvm.icmp "uge" %arg0, %arg1 : !llvm.vec<? x 4 x i32>
+  llvm.return %0 : !llvm.vec<? x 4 x i1>
+}
+
+// CHECK-LABEL: define <vscale x 4 x i32> @arm_sve_abs_diff
+llvm.func @arm_sve_abs_diff(%arg0: !llvm.vec<? x 4 x i32>,
+                            %arg1: !llvm.vec<? x 4 x i32>)
+                            -> !llvm.vec<? x 4 x i32> {
+  // CHECK: sub <vscale x 4 x i32>
+  %0 = llvm.sub %arg0, %arg0  : !llvm.vec<? x 4 x i32>
+  // CHECK: icmp sge <vscale x 4 x i32>
+  %1 = llvm.icmp "sge" %arg0, %arg1 : !llvm.vec<? x 4 x i32>
+  // CHECK: icmp slt <vscale x 4 x i32>
+  %2 = llvm.icmp "slt" %arg0, %arg1 : !llvm.vec<? x 4 x i32>
+  // CHECK: call <vscale x 4 x i32> @llvm.aarch64.sve.sub.nxv4i32
+  %3 = "arm_sve.intr.sub"(%1, %arg0, %arg1) : (!llvm.vec<? x 4 x i1>,
+                                               !llvm.vec<? x 4 x i32>,
+                                               !llvm.vec<? x 4 x i32>)
+                                               -> !llvm.vec<? x 4 x i32>
+  // CHECK: call <vscale x 4 x i32> @llvm.aarch64.sve.sub.nxv4i32
+  %4 = "arm_sve.intr.sub"(%2, %arg1, %arg0) : (!llvm.vec<? x 4 x i1>,
+                                               !llvm.vec<? x 4 x i32>,
+                                               !llvm.vec<? x 4 x i32>)
+                                               -> !llvm.vec<? x 4 x i32>
+  // CHECK: call <vscale x 4 x i32> @llvm.aarch64.sve.add.nxv4i32
+  %5 = "arm_sve.intr.add"(%1, %0, %3) : (!llvm.vec<? x 4 x i1>,
+                                         !llvm.vec<? x 4 x i32>,
+                                         !llvm.vec<? x 4 x i32>)
+                                         -> !llvm.vec<? x 4 x i32>
+  // CHECK: call <vscale x 4 x i32> @llvm.aarch64.sve.add.nxv4i32
+  %6 = "arm_sve.intr.add"(%2, %5, %4) : (!llvm.vec<? x 4 x i1>,
+                                         !llvm.vec<? x 4 x i32>,
+                                         !llvm.vec<? x 4 x i32>)
+                                         -> !llvm.vec<? x 4 x i32>
+  llvm.return %6 : !llvm.vec<? x 4 x i32>
+}
+
 // CHECK-LABEL: define i64 @get_vector_scale()
 llvm.func @get_vector_scale() -> i64 {
   // CHECK: call i64 @llvm.vscale.i64()
