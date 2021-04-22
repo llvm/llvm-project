@@ -52,7 +52,7 @@ serializeCompilerInvocation(CompilerInvocation &CI) {
   return std::vector<std::string>{Args.begin(), Args.end()};
 }
 
-std::vector<std::string> ModuleDeps::getFullCommandLine(
+std::vector<std::string> ModuleDeps::getCanonicalCommandLine(
     std::function<StringRef(ModuleID)> LookupPCMPath,
     std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const {
   CompilerInvocation CI(makeInvocationForModuleBuildWithoutPaths(*this));
@@ -60,6 +60,13 @@ std::vector<std::string> ModuleDeps::getFullCommandLine(
   dependencies::detail::collectPCMAndModuleMapPaths(
       ClangModuleDeps, LookupPCMPath, LookupModuleDeps,
       CI.getFrontendOpts().ModuleFiles, CI.getFrontendOpts().ModuleMapFiles);
+
+  return serializeCompilerInvocation(CI);
+}
+
+std::vector<std::string>
+ModuleDeps::getCanonicalCommandLineWithoutModulePaths() const {
+  CompilerInvocation CI(makeInvocationForModuleBuildWithoutPaths(*this));
 
   return serializeCompilerInvocation(CI);
 }
