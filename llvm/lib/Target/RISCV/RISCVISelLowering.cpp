@@ -1556,8 +1556,43 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   std::tie(TrueMask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   if (SVN->isSplat()) {
-    int Lane = SVN->getSplatIndex();
+    const int Lane = SVN->getSplatIndex();
     if (Lane >= 0) {
+      MVT SVT = VT.getVectorElementType();
+
+      // Turn splatted vector load into a strided load with an X0 stride.
+      SDValue V = V1;
+      // Peek through CONCAT_VECTORS as VectorCombine can concat a vector
+      // with undef.
+      // FIXME: Peek through INSERT_SUBVECTOR, EXTRACT_SUBVECTOR, bitcasts?
+      int Offset = Lane;
+      if (V.getOpcode() == ISD::CONCAT_VECTORS) {
+        int OpElements =
+            V.getOperand(0).getSimpleValueType().getVectorNumElements();
+        V = V.getOperand(Offset / OpElements);
+        Offset %= OpElements;
+      }
+
+      // We need to ensure the load isn't atomic or volatile.
+      if (ISD::isNormalLoad(V.getNode()) && cast<LoadSDNode>(V)->isSimple()) {
+        auto *Ld = cast<LoadSDNode>(V);
+        Offset *= SVT.getStoreSize();
+        SDValue NewAddr = DAG.getMemBasePlusOffset(Ld->getBasePtr(),
+                                                   TypeSize::Fixed(Offset), DL);
+
+        SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
+        SDValue IntID =
+            DAG.getTargetConstant(Intrinsic::riscv_vlse, DL, XLenVT);
+        SDValue Ops[] = {Ld->getChain(), IntID, NewAddr,
+                         DAG.getRegister(RISCV::X0, XLenVT), VL};
+        SDValue NewLoad = DAG.getMemIntrinsicNode(
+            ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, SVT,
+            DAG.getMachineFunction().getMachineMemOperand(
+                Ld->getMemOperand(), Offset, SVT.getStoreSize()));
+        DAG.makeEquivalentMemoryOrdering(Ld, NewLoad);
+        return convertFromScalableVector(VT, NewLoad, DAG, Subtarget);
+      }
+
       V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
       assert(Lane < (int)NumElts && "Unexpected lane!");
       SDValue Gather =
