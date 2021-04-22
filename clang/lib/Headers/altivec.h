@@ -17405,6 +17405,24 @@ vec_xl_zext(ptrdiff_t __offset, const unsigned long long *__pointer) {
 
 #endif
 
+/* vec_xlds */
+#ifdef __VSX__
+static __inline__ vector signed long long __ATTRS_o_ai vec_xlds(ptrdiff_t __offset, const signed long long *__ptr) {
+  signed long long *__addr = (signed char *)__ptr + __offset;
+  return (vector signed long long) *__addr;
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai vec_xlds(ptrdiff_t __offset, const unsigned long long *__ptr) {
+  unsigned long long *__addr = (signed char *)__ptr + __offset;
+  return (unaligned_vec_ull) *__addr;
+}
+
+static __inline__ vector double __ATTRS_o_ai vec_xlds(ptrdiff_t __offset, const double *__ptr) {
+  double *__addr = (signed char *)__ptr + __offset;
+  return (unaligned_vec_double) *__addr;
+}
+#endif
+
 /* vec_xst */
 
 #define vec_xstd2 vec_xst
