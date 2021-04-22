@@ -179,8 +179,17 @@ void addX86AlignBranchArgs(const Driver &D, const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs, bool IsLTO);
 
 unsigned getOrCheckAMDGPUCodeObjectVersion(const Driver &D,
-                                           const llvm::opt::ArgList &Args,
-                                           bool Diagnose = false);
+                              const llvm::opt::ArgList &Args,
+                              bool Diagnose = false);
+
+void checkAMDGPUCodeObjectVersion(const Driver &D,
+                                  const llvm::opt::ArgList &Args);
+
+unsigned getAMDGPUCodeObjectVersion(const Driver &D,
+                                    const llvm::opt::ArgList &Args);
+
+bool haveAMDGPUCodeObjectVersionArgument(const Driver &D,
+                                         const llvm::opt::ArgList &Args);
 
 void addMachineOutlinerArgs(const Driver &D, const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs,
