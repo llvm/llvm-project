@@ -273,7 +273,7 @@ struct AndroidSizeClassConfig {
 
 typedef TableSizeClassMap<AndroidSizeClassConfig> AndroidSizeClassMap;
 
-#if SCUDO_WORDSIZE == 64U
+#if SCUDO_WORDSIZE == 64U && defined(__clang__)
 static_assert(AndroidSizeClassMap::usesCompressedLSBFormat(), "");
 #endif
 
