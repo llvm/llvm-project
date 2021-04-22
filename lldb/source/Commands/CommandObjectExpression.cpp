@@ -408,6 +408,13 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
   lldb::ValueObjectSP result_valobj_sp;
   StackFrame *frame = exe_ctx.GetFramePtr();
 
+  if (m_command_options.top_level && !m_command_options.allow_jit) {
+    result.AppendErrorWithFormat(
+        "Can't disable JIT compilation for top-level expressions.\n");
+    result.SetStatus(eReturnStatusFailed);
+    return false;
+  }
+
   const EvaluateExpressionOptions options = GetEvalOptions(target);
   ExpressionResults success = target.EvaluateExpression(
       expr, frame, result_valobj_sp, options, &m_fixed_expression);
