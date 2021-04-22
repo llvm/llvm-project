@@ -23,6 +23,8 @@ namespace std::ranges {
     inline constexpr unspecified end = unspecified;
     inline constexpr unspecified cbegin = unspecified;
     inline constexpr unspecified cend = unspecified;
+
+    inline constexpr unspecified size = unspecified;
   }
 
   // [range.range], ranges
@@ -77,6 +79,7 @@ namespace std::ranges {
 #include <__ranges/concepts.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/view.h>
+#include <__ranges/size.h>
 #include <compare>          // Required by the standard.
 #include <initializer_list> // Required by the standard.
 #include <iterator>         // Required by the standard.
