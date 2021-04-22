@@ -296,6 +296,9 @@ namespace std {
 } // std
 
 namespace dr1467 {  // dr1467: 3.7 c++11
+  // Note that the change to [over.best.ics] was partially undone by DR2076;
+  // the resulting rule is tested with the tests for that change.
+
   // List-initialization of aggregate from same-type object
 
   namespace basic0 {
@@ -419,7 +422,7 @@ namespace dr1467 {  // dr1467: 3.7 c++11
     void f() { Value{{{1,2},{3,4}}}; }
   }
   namespace NonAmbiguous {
-  // The original implementation made this case ambigious due to the special
+  // The original implementation made this case ambiguous due to the special
   // handling of one element initialization lists.
   void f(int(&&)[1]);
   void f(unsigned(&&)[1]);
