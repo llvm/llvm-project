@@ -182,8 +182,9 @@ mips::FloatABI mips::getMipsFloatABI(const Driver &D, const ArgList &Args,
 
   // If unspecified, choose the default based on the platform.
   if (ABI == mips::FloatABI::Invalid) {
-    if (Triple.isOSFreeBSD()) {
+    if (Triple.isOSFreeBSD() || Triple.isNanoMips()) {
       // For FreeBSD, assume "soft" on all flavors of MIPS.
+      // nanoMIPS currently only supports "soft" ABI.
       ABI = mips::FloatABI::Soft;
     } else {
       // Assume "hard", because it's a default value used by gcc.
@@ -194,6 +195,8 @@ mips::FloatABI mips::getMipsFloatABI(const Driver &D, const ArgList &Args,
   }
 
   assert(ABI != mips::FloatABI::Invalid && "must select an ABI");
+  assert(Triple.isNanoMips() && ABI != mips::FloatABI::Hard &&
+         "nanoMIPS does not support hard-float ABI");
   return ABI;
 }
 
