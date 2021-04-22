@@ -41,10 +41,10 @@
 #include <set>
 #include <sstream>
 #include <thread>
-#include <unordered_map>
 #include <vector>
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -2931,7 +2931,7 @@ void request_variables(const llvm::json::Object &request) {
     const int64_t end_idx = start_idx + ((count == 0) ? num_children : count);
 
     // We first find out which variable names are duplicated
-    std::unordered_map<const char *, int> variable_name_counts;
+    llvm::DenseMap<const char *, int> variable_name_counts;
     for (auto i = start_idx; i < end_idx; ++i) {
       lldb::SBValue variable = g_vsc.variables.GetValueAtIndex(i);
       if (!variable.IsValid())
