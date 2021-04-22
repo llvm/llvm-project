@@ -82,6 +82,9 @@ def FuncExtKhrMipmapImage                : FunctionExtension<"cl_khr_mipmap_imag
 def FuncExtKhrMipmapImageWrites          : FunctionExtension<"cl_khr_mipmap_image_writes">;
 def FuncExtKhrGlMsaaSharing              : FunctionExtension<"cl_khr_gl_msaa_sharing">;
 
+// Not a real extension, but a workaround to add C++ for OpenCL specific builtins.
+def FuncExtOpenCLCxx                     : FunctionExtension<"__cplusplus">;
+
 // Multiple extensions
 def FuncExtKhrMipmapWritesAndWrite3d     : FunctionExtension<"cl_khr_mipmap_image_writes cl_khr_3d_image_writes">;
 
@@ -1077,6 +1080,17 @@ foreach AS = [GlobalAS, LocalAS] in {
     }
   }
 }
+
+let Extension = FuncExtOpenCLCxx in {
+  foreach Type = [Int, UInt] in {
+    foreach name = ["atomic_add", "atomic_sub", "atomic_xchg",
+                    "atomic_min", "atomic_max", "atomic_and",
+                    "atomic_or", "atomic_xor"] in {
+      def : Builtin<name, [Type, PointerType<VolatileType<Type>, GenericAS>, Type]>;
+    }
+  }
+}
+
 // OpenCL v2.0 s6.13.11 - Atomic Functions.
 let MinVersion = CL20 in {
   def : Builtin<"atomic_work_item_fence", [Void, MemFenceFlags, MemoryOrder, MemoryScope]>;
