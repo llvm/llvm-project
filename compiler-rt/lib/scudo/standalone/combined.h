@@ -518,6 +518,7 @@ public:
     if (UNLIKELY(!isAligned(reinterpret_cast<uptr>(Ptr), MinAlignment)))
       reportMisalignedPointer(AllocatorAction::Deallocating, Ptr);
 
+    void *TaggedPtr = Ptr;
     Ptr = getHeaderTaggedPointer(Ptr);
 
     Chunk::UnpackedHeader Header;
@@ -543,7 +544,7 @@ public:
         reportDeleteSizeMismatch(Ptr, DeleteSize, Size);
     }
 
-    quarantineOrDeallocateChunk(Options, Ptr, &Header, Size);
+    quarantineOrDeallocateChunk(Options, TaggedPtr, &Header, Size);
   }
 
   void *reallocate(void *OldPtr, uptr NewSize, uptr Alignment = MinAlignment) {
@@ -639,7 +640,7 @@ public:
     void *NewPtr = allocate(NewSize, Chunk::Origin::Malloc, Alignment);
     if (LIKELY(NewPtr)) {
       memcpy(NewPtr, OldTaggedPtr, Min(NewSize, OldSize));
-      quarantineOrDeallocateChunk(Options, OldPtr, &OldHeader, OldSize);
+      quarantineOrDeallocateChunk(Options, OldTaggedPtr, &OldHeader, OldSize);
     }
     return NewPtr;
   }
@@ -1031,13 +1032,13 @@ private:
            reinterpret_cast<uptr>(Ptr) - SizeOrUnusedBytes;
   }
 
-  void quarantineOrDeallocateChunk(Options Options, void *Ptr,
+  void quarantineOrDeallocateChunk(Options Options, void *TaggedPtr,
                                    Chunk::UnpackedHeader *Header, uptr Size) {
+    void *Ptr = getHeaderTaggedPointer(TaggedPtr);
     Chunk::UnpackedHeader NewHeader = *Header;
     if (UNLIKELY(useMemoryTagging<Params>(Options))) {
-      u8 PrevTag = 0;
+      u8 PrevTag = extractTag(reinterpret_cast<uptr>(TaggedPtr));
       if (NewHeader.ClassId) {
-        PrevTag = extractTag(loadTag(reinterpret_cast<uptr>(Ptr)));
         if (!TSDRegistry.getDisableMemInit()) {
           uptr TaggedBegin, TaggedEnd;
           const uptr OddEvenMask = computeOddEvenMaskForPointerMaybe(
