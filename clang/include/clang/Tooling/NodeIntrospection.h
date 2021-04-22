@@ -67,6 +67,10 @@ struct RangeLessThan {
 
 } // namespace internal
 
+// Note that this container stores unique results in a deterministic, but
+// unspecified order.  Clients which desire a particular order, such as
+// alphabetical, should sort results after retrieval, because the order
+// is dependent on how the LocationCalls are formatted.
 template <typename T, typename U>
 using UniqueMultiMap = std::set<std::pair<T, U>, internal::RangeLessThan>;
 
