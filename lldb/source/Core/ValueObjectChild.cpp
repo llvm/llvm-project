@@ -140,7 +140,7 @@ bool ValueObjectChild::UpdateValue() {
                 // Read the pointer to the Objective-C object.
                 Target &target = process_sp->GetTarget();
                 size_t ptr_size = process_sp->GetAddressByteSize();
-                target.ReadMemory(addr, false, &addr, ptr_size, m_error);
+                target.ReadMemory(addr, &addr, ptr_size, m_error, true);
               }
             }
 

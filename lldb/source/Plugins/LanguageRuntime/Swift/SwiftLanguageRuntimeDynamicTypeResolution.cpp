@@ -372,11 +372,11 @@ public:
     Status error;
     auto load_addr = sym_ctx.symbol->GetLoadAddress(&m_process.GetTarget());
     uint64_t sym_value = m_process.GetTarget().ReadUnsignedIntegerFromMemory(
-        load_addr, false, m_process.GetAddressByteSize(), 0, error);
+        load_addr, m_process.GetAddressByteSize(), 0, error, true);
     for (unsigned i = 1; i < sc_list.GetSize(); ++i) {
       uint64_t other_sym_value =
           m_process.GetTarget().ReadUnsignedIntegerFromMemory(
-              load_addr, false, m_process.GetAddressByteSize(), 0, error);
+              load_addr, m_process.GetAddressByteSize(), 0, error, true);
       if (sym_value != other_sym_value) {
         LLDB_LOGV(log, "[MemoryReader] symbol resolution failed {0}", name);
         return swift::remote::RemoteAddress(nullptr);
@@ -413,7 +413,7 @@ public:
     Target &target(m_process.GetTarget());
     Address addr(address.getAddressData());
     Status error;
-    if (size > target.ReadMemory(addr, dest, size, error)) {
+    if (size > target.ReadMemory(addr, dest, size, error, true)) {
       LLDB_LOGV(log, "[MemoryReader] memory read returned fewer bytes than asked for");
       return false;
     }
@@ -2801,7 +2801,7 @@ lldb::addr_t SwiftLanguageRuntimeImpl::FixupAddress(lldb::addr_t addr,
     Target &target = m_process.GetTarget();
     size_t ptr_size = m_process.GetAddressByteSize();
     lldb::addr_t refd_addr = LLDB_INVALID_ADDRESS;
-    target.ReadMemory(addr, &refd_addr, ptr_size, error);
+    target.ReadMemory(addr, &refd_addr, ptr_size, error, true);
     if (error.Success()) {
       bool extra_deref;
       std::tie(refd_addr, extra_deref) = FixupPointerValue(refd_addr, type);

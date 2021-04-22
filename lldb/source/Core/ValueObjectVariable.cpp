@@ -275,8 +275,7 @@ bool ValueObjectVariable::UpdateValue() {
                   Target &target = process_sp->GetTarget();
                   size_t ptr_size = process_sp->GetAddressByteSize();
                   lldb::addr_t deref_addr;
-                  target.ReadMemory(addr, false, &deref_addr, ptr_size,
-                                    m_error);
+                  target.ReadMemory(addr, &deref_addr, ptr_size, m_error, true);
                   m_value.GetScalar() = deref_addr;
                 }
               }
