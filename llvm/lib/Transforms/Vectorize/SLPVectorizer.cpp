@@ -3589,13 +3589,13 @@ InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
     for (const auto &Data : ExtractVectorsTys) {
       auto *EEVTy = cast<FixedVectorType>(Data.first->getType());
       unsigned NumElts = VecTy->getNumElements();
-      if (TTI->getNumberOfParts(EEVTy) > TTI->getNumberOfParts(VecTy))
-        Cost +=
-            TTI->getShuffleCost(TargetTransformInfo::SK_ExtractSubvector, EEVTy,
-                                None, (Data.second / NumElts) * NumElts, VecTy);
+      if (TTIRef.getNumberOfParts(EEVTy) > TTIRef.getNumberOfParts(VecTy))
+        Cost += TTIRef.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                                      EEVTy, None,
+                                      (Data.second / NumElts) * NumElts, VecTy);
       else
-        Cost += TTI->getShuffleCost(TargetTransformInfo::SK_InsertSubvector,
-                                    VecTy, None, 0, EEVTy);
+        Cost += TTIRef.getShuffleCost(TargetTransformInfo::SK_InsertSubvector,
+                                      VecTy, None, 0, EEVTy);
     }
   };
   if (E->State == TreeEntry::NeedToGather) {
