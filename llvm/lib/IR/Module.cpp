@@ -669,6 +669,13 @@ void Module::setRtLibUseGOT() {
   addModuleFlag(ModFlagBehavior::Max, "RtLibUseGOT", 1);
 }
 
+bool Module::getUwtable() const {
+  auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("uwtable"));
+  return Val && (cast<ConstantInt>(Val->getValue())->getZExtValue() > 0);
+}
+
+void Module::setUwtable() { addModuleFlag(ModFlagBehavior::Max, "uwtable", 1); }
+
 void Module::setSDKVersion(const VersionTuple &V) {
   SmallVector<unsigned, 3> Entries;
   Entries.push_back(V.getMajor());
