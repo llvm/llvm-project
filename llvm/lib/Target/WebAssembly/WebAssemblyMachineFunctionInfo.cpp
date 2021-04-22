@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyMachineFunctionInfo.h"
+#include "MCTargetDesc/WebAssemblyInstPrinter.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblySubtarget.h"
@@ -109,6 +110,12 @@ yaml::WebAssemblyFunctionInfo::WebAssemblyFunctionInfo(
     : CFGStackified(MFI.isCFGStackified()) {
   auto *EHInfo = MFI.getWasmEHFuncInfo();
   const llvm::MachineFunction &MF = MFI.getMachineFunction();
+
+  for (auto VT : MFI.getParams())
+    Params.push_back(EVT(VT).getEVTString());
+  for (auto VT : MFI.getResults())
+    Results.push_back(EVT(VT).getEVTString());
+
   //  MFI.getWasmEHFuncInfo() is non-null only for functions with the
   //  personality function.
   if (EHInfo) {
@@ -134,6 +141,10 @@ void yaml::WebAssemblyFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
 void WebAssemblyFunctionInfo::initializeBaseYamlFields(
     const yaml::WebAssemblyFunctionInfo &YamlMFI) {
   CFGStackified = YamlMFI.CFGStackified;
+  for (auto VT : YamlMFI.Params)
+    addParam(WebAssembly::parseMVT(VT.Value));
+  for (auto VT : YamlMFI.Results)
+    addResult(WebAssembly::parseMVT(VT.Value));
   if (WasmEHInfo) {
     for (auto KV : YamlMFI.SrcToUnwindDest)
       WasmEHInfo->setUnwindDest(MF.getBlockNumbered(KV.first),

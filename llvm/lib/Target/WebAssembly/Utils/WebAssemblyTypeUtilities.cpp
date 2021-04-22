@@ -58,6 +58,22 @@ WebAssembly::BlockType WebAssembly::parseBlockType(StringRef Type) {
       .Default(WebAssembly::BlockType::Invalid);
 }
 
+MVT WebAssembly::parseMVT(StringRef Type) {
+  return StringSwitch<MVT>(Type)
+      .Case("i32", MVT::i32)
+      .Case("i64", MVT::i64)
+      .Case("f32", MVT::f32)
+      .Case("f64", MVT::f64)
+      .Case("i64", MVT::i64)
+      .Case("v16i8", MVT::v16i8)
+      .Case("v8i16", MVT::v8i16)
+      .Case("v4i32", MVT::v4i32)
+      .Case("v2i64", MVT::v2i64)
+      .Case("funcref", MVT::funcref)
+      .Case("externref", MVT::externref)
+      .Default(MVT::INVALID_SIMPLE_VALUE_TYPE);
+}
+
 // We have various enums representing a subset of these types, use this
 // function to convert any of them to text.
 const char *WebAssembly::anyTypeToString(unsigned Type) {
