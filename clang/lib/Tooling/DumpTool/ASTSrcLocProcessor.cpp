@@ -83,6 +83,8 @@ llvm::json::Object toJSON(ClassData const &Obj) {
     JsonObj["typeSourceInfos"] = Obj.TypeSourceInfos;
   if (!Obj.TypeLocs.empty())
     JsonObj["typeLocs"] = Obj.TypeLocs;
+  if (!Obj.NestedNameLocs.empty())
+    JsonObj["nestedNameLocs"] = Obj.NestedNameLocs;
   return JsonObj;
 }
 
@@ -218,6 +220,8 @@ void ASTSrcLocProcessor::run(const MatchFinder::MatchResult &Result) {
   CD.TypeSourceInfos =
       CaptureMethods("class clang::TypeSourceInfo *", ASTClass, Result);
   CD.TypeLocs = CaptureMethods("class clang::TypeLoc", ASTClass, Result);
+  CD.NestedNameLocs =
+      CaptureMethods("class clang::NestedNameSpecifierLoc", ASTClass, Result);
 
   if (const auto *DerivedFrom =
           Result.Nodes.getNodeAs<clang::CXXRecordDecl>("derivedFrom")) {

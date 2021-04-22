@@ -119,7 +119,8 @@ static void GetLocations{0}(SharedLocationCall const& Prefix,
 
             self.implementationContent += '\n'
 
-        if 'typeLocs' in ClassData or 'typeSourceInfos' in ClassData:
+        if 'typeLocs' in ClassData or 'typeSourceInfos' in ClassData \
+                or 'nestedNameLocs' in ClassData:
             if CreateLocalRecursionGuard:
                 self.implementationContent += \
                     'std::vector<clang::TypeLoc> TypeLocRecursionGuard;\n'
@@ -152,6 +153,17 @@ static void GetLocations{0}(SharedLocationCall const& Prefix,
               """.format(tsi)
 
                 self.implementationContent += '\n'
+
+            if 'nestedNameLocs' in ClassData:
+                for NN in ClassData['nestedNameLocs']:
+                    self.implementationContent += \
+                        """
+              if (Object.{0}())
+                GetLocationsImpl(
+                    llvm::makeIntrusiveRefCnt<LocationCall>(Prefix, "{0}"),
+                    Object.{0}(), Locs, Rngs, TypeLocRecursionGuard);
+              """.format(NN)
+
 
         self.implementationContent += '}\n'
 
