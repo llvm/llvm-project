@@ -1024,8 +1024,5 @@ void RTNAME(CharacterMin)(Descriptor &accumulator, const Descriptor &x,
     const char *sourceFile, int sourceLine) {
   MaxMin<true>(accumulator, x, sourceFile, sourceLine);
 }
-
-// TODO: Character MAXVAL/MINVAL
-// TODO: Character MAXLOC/MINLOC
 }
 } // namespace Fortran::runtime
