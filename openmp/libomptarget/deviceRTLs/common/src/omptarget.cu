@@ -88,11 +88,6 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit,
   int threadId = GetThreadIdInBlock();
   if (threadId == 0) {
     usedSlotIdx = __kmpc_impl_smid() % MAX_SM;
-    parallelLevel[0] =
-        1 + (GetNumberOfThreadsInBlock() > 1 ? OMP_ACTIVE_PARALLEL_LEVEL : 0);
-  } else if (GetLaneId() == 0) {
-    parallelLevel[GetWarpId()] =
-        1 + (GetNumberOfThreadsInBlock() > 1 ? OMP_ACTIVE_PARALLEL_LEVEL : 0);
   }
   if (!RequiresOMPRuntime) {
     // Runtime is not required - exit.
