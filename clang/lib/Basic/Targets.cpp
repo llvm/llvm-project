@@ -21,7 +21,6 @@
 #include "Targets/BPF.h"
 #include "Targets/Hexagon.h"
 #include "Targets/Lanai.h"
-#include "Targets/Le64.h"
 #include "Targets/M68k.h"
 #include "Targets/MSP430.h"
 #include "Targets/Mips.h"
@@ -313,17 +312,6 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     default:
       return new M68kTargetInfo(Triple, Opts);
     }
-
-  case llvm::Triple::le32:
-    switch (os) {
-    case llvm::Triple::NaCl:
-      return new NaClTargetInfo<PNaClTargetInfo>(Triple, Opts);
-    default:
-      return nullptr;
-    }
-
-  case llvm::Triple::le64:
-    return new Le64TargetInfo(Triple, Opts);
 
   case llvm::Triple::ppc:
     if (Triple.isOSDarwin())
