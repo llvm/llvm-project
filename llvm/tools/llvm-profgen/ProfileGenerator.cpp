@@ -510,22 +510,19 @@ void PseudoProbeCSProfileGenerator::populateBodySamplesWithProbes(
   // Extract the top frame probes by looking up each address among the range in
   // the Address2ProbeMap
   extractProbesFromRange(RangeCounter, ProbeCounter, Binary);
+  std::unordered_map<PseudoProbeInlineTree *, FunctionSamples *> FrameSamples;
   for (auto PI : ProbeCounter) {
     const PseudoProbe *Probe = PI.first;
     uint64_t Count = PI.second;
+    // Ignore dangling probes since they will be reported later if needed.
+    if (Probe->isDangling())
+      continue;
     FunctionSamples &FunctionProfile =
         getFunctionProfileForLeafProbe(ContextStrStack, Probe, Binary);
-
-    // Use InvalidProbeCount(UINT64_MAX) to mark sample count for a dangling
-    // probe. Dangling probes are the probes associated to an empty block. With
-    // this place holder, sample count on dangling probe will not be trusted by
-    // the compiler and it will rely on the counts inference algorithm to get
-    // the probe a reasonable count.
-    if (Probe->isDangling()) {
-      FunctionProfile.addBodySamplesForProbe(
-          Probe->Index, FunctionSamples::InvalidProbeCount);
-      continue;
-    }
+    // Record the current frame and FunctionProfile whenever samples are
+    // collected for non-danglie probes. This is for reporting all of the
+    // dangling probes of the frame later.
+    FrameSamples[Probe->getInlineTreeNode()] = &FunctionProfile;
     FunctionProfile.addBodySamplesForProbe(Probe->Index, Count);
     FunctionProfile.addTotalSamples(Count);
     if (Probe->isEntry()) {
@@ -552,6 +549,22 @@ void PseudoProbeCSProfileGenerator::populateBodySamplesWithProbes(
         CallerProfile.addCalledTargetSamples(
             CallerIndex, 0,
             FunctionProfile.getContext().getNameWithoutContext(), Count);
+      }
+    }
+
+    // Report dangling probes for frames that have real samples collected.
+    // Dangling probes are the probes associated to an empty block. With this
+    // place holder, sample count on a dangling probe will not be trusted by the
+    // compiler and we will rely on the counts inference algorithm to get the
+    // probe a reasonable count. Use InvalidProbeCount to mark sample count for
+    // a dangling probe.
+    for (auto &I : FrameSamples) {
+      auto *FunctionProfile = I.second;
+      for (auto *Probe : I.first->getProbes()) {
+        if (Probe->isDangling()) {
+          FunctionProfile->addBodySamplesForProbe(
+              Probe->Index, FunctionSamples::InvalidProbeCount);
+        }
       }
     }
   }
