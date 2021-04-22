@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
 ! OpenMP Version 5.0
 ! 2.11.3 allocate Directive
 ! The allocate directive must appear in the same scope as the declarations of
