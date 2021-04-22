@@ -594,10 +594,10 @@ enum NodeType {
 
   /// STEP_VECTOR(IMM) - Returns a scalable vector whose lanes are comprised
   /// of a linear sequence of unsigned values starting from 0 with a step of
-  /// IMM, where IMM must be a vector index constant positive integer value
-  /// which must fit in the vector element type.
+  /// IMM, where IMM must be a vector index constant integer value which must
+  /// fit in the vector element type.
   /// Note that IMM may be a smaller type than the vector element type, in
-  /// which case the step is implicitly zero-extended to the vector element
+  /// which case the step is implicitly sign-extended to the vector element
   /// type. IMM may also be a larger type than the vector element type, in
   /// which case the step is implicitly truncated to the vector element type.
   /// The operation does not support returning fixed-width vectors or

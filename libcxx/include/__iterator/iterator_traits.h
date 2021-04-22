@@ -27,23 +27,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
-template <class _Tp>
-using __with_reference = _Tp&;
-
-template <class _Tp>
-concept __referenceable = requires {
-  typename __with_reference<_Tp>;
-};
-
-template <class _Tp>
-concept __dereferenceable = requires(_Tp& __t) {
-  { *__t } -> __referenceable; // not required to be equality-preserving
-};
-
 // [iterator.traits]
 template<__dereferenceable _Tp>
 using iter_reference_t = decltype(*declval<_Tp&>());
-
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 
 template <class _Iter>

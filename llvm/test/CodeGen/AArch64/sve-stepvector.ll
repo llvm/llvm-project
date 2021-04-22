@@ -259,6 +259,69 @@ entry:
   ret <vscale x 8 x i8> %3
 }
 
+define <vscale x 8 x i16> @sub_multiple_use_stepvector_nxv8i16() {
+; CHECK-LABEL: sub_multiple_use_stepvector_nxv8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    index z0.h, #0, #1
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    subr z1.h, z1.h, #2 // =0x2
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+entry:
+  %0 = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
+  %1 = shufflevector <vscale x 8 x i16> %0, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+  %2 = call <vscale x 8 x i16> @llvm.experimental.stepvector.nxv8i16()
+  %3 = sub <vscale x 8 x i16> %1, %2
+  %4 = shl <vscale x 8 x i16> %2, %3
+  ret <vscale x 8 x i16> %4
+}
+
+define <vscale x 8 x i16> @sub_stepvector_nxv8i16() {
+; CHECK-LABEL: sub_stepvector_nxv8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    index z0.h, #2, #-1
+; CHECK-NEXT:    ret
+entry:
+  %0 = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
+  %1 = shufflevector <vscale x 8 x i16> %0, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+  %2 = call <vscale x 8 x i16> @llvm.experimental.stepvector.nxv8i16()
+  %3 = sub <vscale x 8 x i16> %1, %2
+  ret <vscale x 8 x i16> %3
+}
+
+define <vscale x 8 x i8> @promote_sub_stepvector_nxv8i8() {
+; CHECK-LABEL: promote_sub_stepvector_nxv8i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    index z0.h, #2, #-1
+; CHECK-NEXT:    ret
+entry:
+  %0 = insertelement <vscale x 8 x i8> poison, i8 2, i32 0
+  %1 = shufflevector <vscale x 8 x i8> %0, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
+  %2 = call <vscale x 8 x i8> @llvm.experimental.stepvector.nxv8i8()
+  %3 = sub <vscale x 8 x i8> %1, %2
+  ret <vscale x 8 x i8> %3
+}
+
+define <vscale x 16 x i32> @split_sub_stepvector_nxv16i32() {
+; CHECK-LABEL: split_sub_stepvector_nxv16i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cntw x9
+; CHECK-NEXT:    cnth x8
+; CHECK-NEXT:    neg x9, x9
+; CHECK-NEXT:    index z0.s, #0, #-1
+; CHECK-NEXT:    neg x8, x8
+; CHECK-NEXT:    mov z1.s, w9
+; CHECK-NEXT:    mov z3.s, w8
+; CHECK-NEXT:    add z1.s, z0.s, z1.s
+; CHECK-NEXT:    add z2.s, z0.s, z3.s
+; CHECK-NEXT:    add z3.s, z1.s, z3.s
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <vscale x 16 x i32> @llvm.experimental.stepvector.nxv16i32()
+  %1 = sub <vscale x 16 x i32> zeroinitializer, %0
+  ret <vscale x 16 x i32> %1
+}
 
 declare <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
 declare <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()

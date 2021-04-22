@@ -39,9 +39,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "tile-pre-config"
-#define ASSERT_VALID_COMPARE                                                   \
-  assert((!MBB || !RHS.MBB || MBB == RHS.MBB) &&                               \
-         "Cannot compare between different BBs");
 #define REPORT_CONFIG_FAIL                                                     \
   report_fatal_error(                                                          \
       MF.getName() +                                                           \
@@ -70,12 +67,10 @@ struct MIRef {
     return MI == RHS.MI && MBB == RHS.MBB;
   }
   bool operator<(const MIRef &RHS) const {
-    ASSERT_VALID_COMPARE;
-    return Pos < RHS.Pos;
+    return (!MBB && RHS.MBB) || (MBB == RHS.MBB && Pos < RHS.Pos);
   }
   bool operator>(const MIRef &RHS) const {
-    ASSERT_VALID_COMPARE;
-    return Pos > RHS.Pos;
+    return (!RHS.MBB && MBB) || (MBB == RHS.MBB && Pos > RHS.Pos);
   }
 };
 
