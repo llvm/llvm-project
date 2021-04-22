@@ -16,7 +16,8 @@
 ## This is different from ld64, which makes private extern weak symbols non-weak
 ## for binds and relocations, but it still marks them as weak in the symbol table.
 ## Since `nm -m` doesn't look at N_WEAK_DEF for N_PEXT symbols this is not
-## observable, but it feels slightly more correct.
+## observable via nm, but it feels slightly more correct.
+## (It is observable in `llvm-objdump --syms` output.)
 # RUN: llvm-readobj --syms %t.dylib | FileCheck --check-prefix=SYMS %s
 # SYMS-NOT: WeakDef (0x80)
 
