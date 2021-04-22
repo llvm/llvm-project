@@ -112,7 +112,7 @@ void AMDGCN::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
   // for backward compatibility. For code object version 4 and greater, the
   // offload kind in bundle ID is 'hipv4'.
   std::string OffloadKind = "hip";
-  if (getOrCheckAMDGPUCodeObjectVersion(C.getDriver(), Args) >= 4)
+  if (getAMDGPUCodeObjectVersion(C.getDriver(), Args) >= 4)
     OffloadKind = OffloadKind + "v4";
   for (const auto &II : Inputs) {
     const auto* A = II.getAction();
