@@ -5696,6 +5696,7 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   switch (BO->getOpcode()) {
   default:
     return CR;
+  case Instruction::LShr:
   case Instruction::Shl:
     break;
   };
@@ -5724,6 +5725,19 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   switch (BO->getOpcode()) {
   default:
     llvm_unreachable("filtered out above");
+  case Instruction::LShr: {
+    // For each lshr, three cases:
+    //   shift = 0 => unchanged value
+    //   saturation => 0
+    //   other => a smaller positive number
+    // Thus, the low end of the unsigned range is the last value produced.
+    auto KnownEnd = KnownBits::lshr(KnownStart,
+                                    KnownBits::makeConstant(TotalShift));
+    auto R = ConstantRange::getNonEmpty(KnownEnd.getMinValue(),
+                                        KnownStart.getMaxValue() + 1);
+    CR = CR.intersectWith(R);
+    break;
+  }
   case Instruction::Shl: {
     // Iff no bits are shifted out, value increases on every shift.
     auto KnownEnd = KnownBits::shl(KnownStart,
