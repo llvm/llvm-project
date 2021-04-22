@@ -42,7 +42,7 @@ class TestSimulatorPlatformLaunching(TestBase):
         if expected_version:
             self.assertEquals(aout_info['min_version_os_sdk'], expected_version)
 
-
+    @skipIf(bugnumber="rdar://76995109")
     def run_with(self, arch, os, vers, env, expected_load_command):
         env_list = [env] if env else []
         triple = '-'.join([arch, 'apple', os + vers] + env_list)
