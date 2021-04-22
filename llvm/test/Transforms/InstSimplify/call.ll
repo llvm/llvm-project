@@ -1406,6 +1406,15 @@ define i32 @ctlz_lshr_sign_bit(i32 %x) {
   ret i32 %r
 }
 
+define i32 @ctlz_lshr_negative(i32 %x) {
+; CHECK-LABEL: @ctlz_lshr_negative(
+; CHECK-NEXT:    ret i32 [[X:%.*]]
+;
+  %s = lshr i32 -42, %x
+  %r = call i32 @llvm.ctlz.i32(i32 %s, i1 true)
+  ret i32 %r
+}
+
 define <3 x i33> @ctlz_lshr_sign_bit_vec(<3 x i33> %x) {
 ; CHECK-LABEL: @ctlz_lshr_sign_bit_vec(
 ; CHECK-NEXT:    ret <3 x i33> [[X:%.*]]
@@ -1417,35 +1426,38 @@ define <3 x i33> @ctlz_lshr_sign_bit_vec(<3 x i33> %x) {
 
 ; Negative test - this could be generalized in instcombine though.
 
-define i32 @ctlz_lshr_not_sign_bit(i32 %x) {
-; CHECK-LABEL: @ctlz_lshr_not_sign_bit(
-; CHECK-NEXT:    [[S:%.*]] = lshr i32 -1, [[X:%.*]]
+define i32 @ctlz_lshr_not_negative(i32 %x) {
+; CHECK-LABEL: @ctlz_lshr_not_negative(
+; CHECK-NEXT:    [[S:%.*]] = lshr i32 42, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.ctlz.i32(i32 [[S]], i1 true)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %s = lshr i32 4294967295, %x
+  %s = lshr i32 42, %x
   %r = call i32 @llvm.ctlz.i32(i32 %s, i1 true)
   ret i32 %r
 }
 
-; TODO: Reduce to 0.
-
 define i32 @ctlz_ashr_sign_bit(i32 %x) {
 ; CHECK-LABEL: @ctlz_ashr_sign_bit(
-; CHECK-NEXT:    [[S:%.*]] = ashr i32 -2147483648, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.ctlz.i32(i32 [[S]], i1 false)
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 0
 ;
   %s = ashr i32 2147483648, %x
   %r = call i32 @llvm.ctlz.i32(i32 %s, i1 false)
   ret i32 %r
 }
 
+define i32 @ctlz_ashr_negative(i32 %x) {
+; CHECK-LABEL: @ctlz_ashr_negative(
+; CHECK-NEXT:    ret i32 0
+;
+  %s = ashr i32 -42, %x
+  %r = call i32 @llvm.ctlz.i32(i32 %s, i1 false)
+  ret i32 %r
+}
+
 define <3 x i33> @ctlz_ashr_sign_bit_vec(<3 x i33> %x) {
 ; CHECK-LABEL: @ctlz_ashr_sign_bit_vec(
-; CHECK-NEXT:    [[S:%.*]] = ashr <3 x i33> <i33 -4294967296, i33 undef, i33 -4294967296>, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call <3 x i33> @llvm.ctlz.v3i33(<3 x i33> [[S]], i1 true)
-; CHECK-NEXT:    ret <3 x i33> [[R]]
+; CHECK-NEXT:    ret <3 x i33> zeroinitializer
 ;
   %s = ashr <3 x i33> <i33 4294967296, i33 undef, i33 4294967296>, %x
   %r = call <3 x i33> @llvm.ctlz.v3i33(<3 x i33> %s, i1 true)

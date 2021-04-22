@@ -12,8 +12,9 @@ set(files
   __functional_base_03
   __hash_table
   __iterator/concepts.h
-  __iterator/iterator_traits.h
   __iterator/incrementable_traits.h
+  __iterator/iter_move.h
+  __iterator/iterator_traits.h
   __iterator/readable_traits.h
   __libcpp_version
   __locale

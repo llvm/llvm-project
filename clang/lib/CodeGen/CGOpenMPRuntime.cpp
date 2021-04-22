@@ -10005,8 +10005,10 @@ void CGOpenMPRuntime::emitUDMapperArrayInitOrDel(
   llvm::Value *MapTypeArg = MapperCGF.Builder.CreateAnd(
       MapType,
       MapperCGF.Builder.getInt64(~(MappableExprsHandler::OMP_MAP_TO |
-                                   MappableExprsHandler::OMP_MAP_FROM |
-                                   MappableExprsHandler::OMP_MAP_MEMBER_OF)));
+                                   MappableExprsHandler::OMP_MAP_FROM)));
+  MapTypeArg = MapperCGF.Builder.CreateOr(
+      MapTypeArg,
+      MapperCGF.Builder.getInt64(MappableExprsHandler::OMP_MAP_IMPLICIT));
 
   // Call the runtime API __tgt_push_mapper_component to fill up the runtime
   // data structure.

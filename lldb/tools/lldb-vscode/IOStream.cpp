@@ -8,7 +8,7 @@
 
 #include "IOStream.h"
 
-#if defined(_WIN32) 
+#if defined(_WIN32)
 #include <io.h>
 #else
 #include <netinet/in.h>

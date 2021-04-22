@@ -225,8 +225,12 @@ define void @test_swifterror_3() sanitize_address {
   ret void
 }
 
-; CHECK: define internal void @asan.module_ctor()
+;; ctor/dtor have the nounwind attribute. See uwtable.ll, they additionally have
+;; the uwtable attribute with the module flag "uwtable".
+; CHECK: define internal void @asan.module_ctor() #[[#ATTR:]] {{(comdat )?}}{
 ; CHECK: call void @__asan_init()
+
+; CHECK: attributes #[[#ATTR]] = { nounwind }
 
 ; PROF
 ; CHECK: ![[PROF]] = !{!"branch_weights", i32 1, i32 100000}

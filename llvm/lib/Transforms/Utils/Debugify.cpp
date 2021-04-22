@@ -25,6 +25,7 @@
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 
 #define DEBUG_TYPE "debugify"

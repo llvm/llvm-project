@@ -6,7 +6,7 @@
 
 void bar1(void) {    // all-remark {{[OMP100] Potentially unknown OpenMP target region caller}}
 #pragma omp parallel // #0
-                     // all-remark@#0 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nesed inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
+                     // all-remark@#0 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nested inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
                      // safe-remark@#0 {{Parallel region is not known to be called from a unique single target region, maybe the surrounding function has external linkage?; will not attempt to rewrite the state machine use.}}
                      // force-remark@#0 {{[UNSAFE] Parallel region is not known to be called from a unique single target region, maybe the surrounding function has external linkage?; will rewrite the state machine use due to command line flag, this can lead to undefined behavior if the parallel region is called from a target region outside this translation unit.}}
                      // force-remark@#0 {{Specialize parallel region that is only reached from a single target region to avoid spurious call edges and excessive register usage in other target regions. (parallel region ID: __omp_outlined__2_wrapper, kernel ID: <NONE>}}
@@ -15,7 +15,7 @@ void bar1(void) {    // all-remark {{[OMP100] Potentially unknown OpenMP target 
 }
 void bar2(void) {    // all-remark {{[OMP100] Potentially unknown OpenMP target region caller}}
 #pragma omp parallel // #1
-                     // all-remark@#1 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nesed inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
+                     // all-remark@#1 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nested inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
                      // safe-remark@#1 {{Parallel region is not known to be called from a unique single target region, maybe the surrounding function has external linkage?; will not attempt to rewrite the state machine use.}}
                      // force-remark@#1 {{[UNSAFE] Parallel region is not known to be called from a unique single target region, maybe the surrounding function has external linkage?; will rewrite the state machine use due to command line flag, this can lead to undefined behavior if the parallel region is called from a target region outside this translation unit.}}
                      // force-remark@#1 {{Specialize parallel region that is only reached from a single target region to avoid spurious call edges and excessive register usage in other target regions. (parallel region ID: __omp_outlined__6_wrapper, kernel ID: <NONE>}}
@@ -29,13 +29,13 @@ void foo1(void) {
                          // all-remark@#2 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__3_wrapper, kernel ID: __omp_offloading}}
   {
 #pragma omp parallel // #3
-                     // all-remark@#3 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nesed inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
+                     // all-remark@#3 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nested inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
                      // all-remark@#3 {{Specialize parallel region that is only reached from a single target region to avoid spurious call edges and excessive register usage in other target regions. (parallel region ID: __omp_outlined__1_wrapper, kernel ID: __omp_offloading}}
     {
     }
     bar1();
 #pragma omp parallel // #4
-                     // all-remark@#4 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nesed inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
+                     // all-remark@#4 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nested inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
                      // all-remark@#4 {{Specialize parallel region that is only reached from a single target region to avoid spurious call edges and excessive register usage in other target regions. (parallel region ID: __omp_outlined__3_wrapper, kernel ID: __omp_offloading}}
     {
     }
@@ -48,14 +48,14 @@ void foo2(void) {
                          // all-remark@#5 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__7_wrapper, kernel ID: __omp_offloading}}
   {
 #pragma omp parallel // #6
-                     // all-remark@#6 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nesed inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
+                     // all-remark@#6 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nested inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
                      // all-remark@#6 {{Specialize parallel region that is only reached from a single target region to avoid spurious call edges and excessive register usage in other target regions. (parallel region ID: __omp_outlined__5_wrapper, kernel ID: __omp_offloading}}
     {
     }
     bar1();
     bar2();
 #pragma omp parallel // #7
-                     // all-remark@#7 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nesed inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
+                     // all-remark@#7 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nested inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
                      // all-remark@#7 {{Specialize parallel region that is only reached from a single target region to avoid spurious call edges and excessive register usage in other target regions. (parallel region ID: __omp_outlined__7_wrapper, kernel ID: __omp_offloading}}
     {
     }
@@ -70,14 +70,14 @@ void foo3(void) {
                          // all-remark@#8 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__10_wrapper, kernel ID: __omp_offloading}}
   {
 #pragma omp parallel // #9
-                     // all-remark@#9 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nesed inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
+                     // all-remark@#9 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nested inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
                      // all-remark@#9 {{Specialize parallel region that is only reached from a single target region to avoid spurious call edges and excessive register usage in other target regions. (parallel region ID: __omp_outlined__9_wrapper, kernel ID: __omp_offloading}}
     {
     }
     bar1();
     bar2();
 #pragma omp parallel // #10
-                     // all-remark@#10 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nesed inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
+                     // all-remark@#10 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nested inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
                      // all-remark@#10 {{Specialize parallel region that is only reached from a single target region to avoid spurious call edges and excessive register usage in other target regions. (parallel region ID: __omp_outlined__10_wrapper, kernel ID: __omp_offloading}}
     {
     }
@@ -98,5 +98,5 @@ void spmd(void) {
   }
 }
 
-// all-remark@* 3 {{OpenMP runtime call __kmpc_global_thread_num moved to}}
-// all-remark@* 3 {{OpenMP runtime call __kmpc_global_thread_num deduplicated}}
+// all-remark@* 5 {{OpenMP runtime call __kmpc_global_thread_num moved to}}
+// all-remark@* 12 {{OpenMP runtime call __kmpc_global_thread_num deduplicated}}

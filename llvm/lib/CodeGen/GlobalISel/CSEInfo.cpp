@@ -11,6 +11,7 @@
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/Error.h"
 
 #define DEBUG_TYPE "cseinfo"
 

@@ -8150,6 +8150,16 @@ static __inline__ vector double __ATTRS_o_ai vec_rint(vector double __a) {
   return __builtin_vsx_xvrdpic(__a);
 }
 
+/* vec_roundc */
+
+static __inline__ vector float __ATTRS_o_ai vec_roundc(vector float __a) {
+  return __builtin_vsx_xvrspic(__a);
+}
+
+static __inline__ vector double __ATTRS_o_ai vec_roundc(vector double __a) {
+  return __builtin_vsx_xvrdpic(__a);
+}
+
 /* vec_nearbyint */
 
 static __inline__ vector float __ATTRS_o_ai vec_nearbyint(vector float __a) {

@@ -1432,6 +1432,12 @@ static bool addNoReturnAttrs(const SCCNodeSet &SCCNodes) {
 }
 
 static bool functionWillReturn(const Function &F) {
+  // We can infer and propagate function attributes only when we know that the
+  // definition we'll get at link time is *exactly* the definition we see now.
+  // For more details, see GlobalValue::mayBeDerefined.
+  if (!F.hasExactDefinition())
+    return false;
+
   // Must-progress function without side-effects must return.
   if (F.mustProgress() && F.onlyReadsMemory())
     return true;

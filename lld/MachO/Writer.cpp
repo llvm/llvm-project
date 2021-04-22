@@ -359,10 +359,54 @@ private:
   StringRef path;
 };
 
+static uint32_t encodeVersion(const VersionTuple &version) {
+  return ((version.getMajor() << 020) |
+          (version.getMinor().getValueOr(0) << 010) |
+          version.getSubminor().getValueOr(0));
+}
+
+class LCMinVersion : public LoadCommand {
+public:
+  explicit LCMinVersion(const PlatformInfo &platformInfo)
+      : platformInfo(platformInfo) {}
+
+  uint32_t getSize() const override { return sizeof(version_min_command); }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<version_min_command *>(buf);
+    switch (platformInfo.target.Platform) {
+    case PlatformKind::macOS:
+      c->cmd = LC_VERSION_MIN_MACOSX;
+      break;
+    case PlatformKind::iOS:
+    case PlatformKind::iOSSimulator:
+      c->cmd = LC_VERSION_MIN_IPHONEOS;
+      break;
+    case PlatformKind::tvOS:
+    case PlatformKind::tvOSSimulator:
+      c->cmd = LC_VERSION_MIN_TVOS;
+      break;
+    case PlatformKind::watchOS:
+    case PlatformKind::watchOSSimulator:
+      c->cmd = LC_VERSION_MIN_WATCHOS;
+      break;
+    default:
+      llvm_unreachable("invalid platform");
+      break;
+    }
+    c->cmdsize = getSize();
+    c->version = encodeVersion(platformInfo.minimum);
+    c->sdk = encodeVersion(platformInfo.sdk);
+  }
+
+private:
+  const PlatformInfo &platformInfo;
+};
+
 class LCBuildVersion : public LoadCommand {
 public:
-  LCBuildVersion(PlatformKind platform, const PlatformInfo &platformInfo)
-      : platform(platform), platformInfo(platformInfo) {}
+  explicit LCBuildVersion(const PlatformInfo &platformInfo)
+      : platformInfo(platformInfo) {}
 
   const int ntools = 1;
 
@@ -374,21 +418,17 @@ public:
     auto *c = reinterpret_cast<build_version_command *>(buf);
     c->cmd = LC_BUILD_VERSION;
     c->cmdsize = getSize();
-    c->platform = static_cast<uint32_t>(platform);
-    c->minos = ((platformInfo.minimum.getMajor() << 020) |
-                (platformInfo.minimum.getMinor().getValueOr(0) << 010) |
-                platformInfo.minimum.getSubminor().getValueOr(0));
-    c->sdk = ((platformInfo.sdk.getMajor() << 020) |
-              (platformInfo.sdk.getMinor().getValueOr(0) << 010) |
-              platformInfo.sdk.getSubminor().getValueOr(0));
+    c->platform = static_cast<uint32_t>(platformInfo.target.Platform);
+    c->minos = encodeVersion(platformInfo.minimum);
+    c->sdk = encodeVersion(platformInfo.sdk);
     c->ntools = ntools;
     auto *t = reinterpret_cast<build_tool_version *>(&c[1]);
     t->tool = TOOL_LD;
-    t->version = (LLVM_VERSION_MAJOR << 020) | (LLVM_VERSION_MINOR << 010) |
-                 LLVM_VERSION_PATCH;
+    t->version = encodeVersion(llvm::VersionTuple(
+        LLVM_VERSION_MAJOR, LLVM_VERSION_MINOR, LLVM_VERSION_PATCH));
   }
 
-  PlatformKind platform;
+private:
   const PlatformInfo &platformInfo;
 };
 
@@ -429,6 +469,29 @@ public:
   }
 
   mutable uint8_t *uuidBuf;
+};
+
+template <class LP> class LCEncryptionInfo : public LoadCommand {
+public:
+  LCEncryptionInfo() {}
+
+  uint32_t getSize() const override {
+    return sizeof(typename LP::encryption_info_command);
+  }
+
+  void writeTo(uint8_t *buf) const override {
+    using EncryptionInfo = typename LP::encryption_info_command;
+    auto *c = reinterpret_cast<EncryptionInfo *>(buf);
+    buf += sizeof(EncryptionInfo);
+    c->cmd = LP::encryptionInfoLCType;
+    c->cmdsize = getSize();
+    c->cryptoff = in.header->getSize();
+    auto it = find_if(outputSegments, [](const OutputSegment *seg) {
+      return seg->name == segment_names::text;
+    });
+    assert(it != outputSegments.end());
+    c->cryptsize = (*it)->fileSize - c->cryptoff;
+  }
 };
 
 class LCCodeSignature : public LoadCommand {
@@ -553,6 +616,20 @@ void Writer::scanSymbols() {
   }
 }
 
+// TODO: ld64 enforces the old load commands in a few other cases.
+static bool useLCBuildVersion(const PlatformInfo &platformInfo) {
+  static const std::map<PlatformKind, llvm::VersionTuple> minVersion = {
+      {PlatformKind::macOS, llvm::VersionTuple(10, 14)},
+      {PlatformKind::iOS, llvm::VersionTuple(12, 0)},
+      {PlatformKind::iOSSimulator, llvm::VersionTuple(13, 0)},
+      {PlatformKind::tvOS, llvm::VersionTuple(12, 0)},
+      {PlatformKind::tvOSSimulator, llvm::VersionTuple(13, 0)},
+      {PlatformKind::watchOS, llvm::VersionTuple(5, 0)},
+      {PlatformKind::watchOSSimulator, llvm::VersionTuple(6, 0)}};
+  auto it = minVersion.find(platformInfo.target.Platform);
+  return it == minVersion.end() ? true : platformInfo.minimum >= it->second;
+}
+
 template <class LP> void Writer::createLoadCommands() {
   uint8_t segIndex = 0;
   for (OutputSegment *seg : outputSegments) {
@@ -567,6 +644,8 @@ template <class LP> void Writer::createLoadCommands() {
       make<LCDysymtab>(symtabSection, indirectSymtabSection));
   if (functionStartsSection)
     in.header->addLoadCommand(make<LCFunctionStarts>(functionStartsSection));
+  if (config->emitEncryptionInfo)
+    in.header->addLoadCommand(make<LCEncryptionInfo<LP>>());
   for (StringRef path : config->runtimePaths)
     in.header->addLoadCommand(make<LCRPath>(path));
 
@@ -589,8 +668,10 @@ template <class LP> void Writer::createLoadCommands() {
   uuidCommand = make<LCUuid>();
   in.header->addLoadCommand(uuidCommand);
 
-  in.header->addLoadCommand(
-      make<LCBuildVersion>(config->target.Platform, config->platformInfo));
+  if (useLCBuildVersion(config->platformInfo))
+    in.header->addLoadCommand(make<LCBuildVersion>(config->platformInfo));
+  else
+    in.header->addLoadCommand(make<LCMinVersion>(config->platformInfo));
 
   int64_t dylibOrdinal = 1;
   for (InputFile *file : inputFiles) {

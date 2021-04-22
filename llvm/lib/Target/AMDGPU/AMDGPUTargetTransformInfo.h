@@ -197,7 +197,7 @@ public:
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) const;
 
-  unsigned getVectorSplitCost() { return 0; }
+  InstructionCost getVectorSplitCost() { return 0; }
 
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask, int Index,

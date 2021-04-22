@@ -101,8 +101,22 @@ entry:
 ; GISEL: fmov d0, #3.00000000
 ; CHECK: mov w3, #4
 ; CHECK: b other_d_va_fn
-  tail call void (double, i32, ...) @other_d_va_fn(double 1.000000e+00, i32 2, double 3.000000e+00, i32 4) #4
+  tail call void (double, i32, ...) @other_d_va_fn(double 1.000000e+00, i32 2, double 3.000000e+00, i32 4)
   ret void
 }
 
-declare dso_local void @other_d_va_fn(double, i32, ...)
+declare void @other_d_va_fn(double, i32, ...)
+
+define void @call_d_non_va() nounwind {
+entry:
+; CHECK-LABEL: call_d_non_va:
+; CHECK-DAG: fmov d0, #1.00000000
+; CHECK-DAG: fmov d1, #3.00000000
+; CHECK-DAG: mov w0, #2
+; CHECK-DAG: mov w1, #4
+; CHECK: b other_d_non_va_fn
+  tail call void (double, i32, double, i32) @other_d_non_va_fn(double 1.000000e+00, i32 2, double 3.000000e+00, i32 4)
+  ret void
+}
+
+declare void @other_d_non_va_fn(double, i32, double, i32)

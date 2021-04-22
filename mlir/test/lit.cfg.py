@@ -21,7 +21,7 @@ config.name = 'MLIR'
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
-config.suffixes = ['.td', '.mlir', '.toy', '.ll', '.tc', '.py']
+config.suffixes = ['.td', '.mlir', '.toy', '.ll', '.tc', '.py', '.test']
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -58,6 +58,7 @@ tools = [
     'mlir-opt',
     'mlir-tblgen',
     'mlir-translate',
+    'mlir-lsp-server',
     'mlir-capi-ir-test',
     'mlir-capi-pass-test',
     'mlir-edsc-builder-api-test',

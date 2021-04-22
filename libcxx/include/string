@@ -677,7 +677,7 @@ struct __padding<_CharT, 1>
 
 #endif // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
 typedef basic_string<char8_t> u8string;
 #endif
 
@@ -689,7 +689,7 @@ typedef basic_string<char32_t> u32string;
 template<class _CharT, class _Traits, class _Allocator>
 class
     _LIBCPP_TEMPLATE_VIS
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
     _LIBCPP_PREFERRED_NAME(u8string)
 #endif
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
@@ -4540,7 +4540,7 @@ inline namespace literals
         return basic_string<wchar_t> (__str, __len);
     }
 
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
     inline _LIBCPP_INLINE_VISIBILITY
     basic_string<char8_t> operator "" s(const char8_t *__str, size_t __len) _NOEXCEPT
     {

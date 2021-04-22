@@ -18,9 +18,6 @@
 
 namespace scudo {
 
-void setRandomTag(void *Ptr, uptr Size, uptr ExcludeMask, uptr *TaggedBegin,
-                  uptr *TaggedEnd);
-
 #if defined(__aarch64__) || defined(SCUDO_FUZZ)
 
 // We assume that Top-Byte Ignore is enabled if the architecture supports memory
@@ -152,101 +149,75 @@ inline uptr addFixedTag(uptr Ptr, uptr Tag) { return Ptr | (Tag << 56); }
 
 inline uptr storeTags(uptr Begin, uptr End) {
   DCHECK(Begin % 16 == 0);
-  if (Begin != End) {
-    __asm__ __volatile__(
-        R"(
-      .arch_extension memtag
+  uptr LineSize, Next, Tmp;
+  __asm__ __volatile__(
+      R"(
+    .arch_extension memtag
 
-    1:
-      stzg %[Cur], [%[Cur]], #16
-      cmp %[Cur], %[End]
-      b.lt 1b
-    )"
-        : [Cur] "+&r"(Begin)
-        : [End] "r"(End)
-        : "memory");
-  }
+    // Compute the cache line size in bytes (DCZID_EL0 stores it as the log2
+    // of the number of 4-byte words) and bail out to the slow path if DCZID_EL0
+    // indicates that the DC instructions are unavailable.
+    DCZID .req %[Tmp]
+    mrs DCZID, dczid_el0
+    tbnz DCZID, #4, 3f
+    and DCZID, DCZID, #15
+    mov %[LineSize], #4
+    lsl %[LineSize], %[LineSize], DCZID
+    .unreq DCZID
+
+    // Our main loop doesn't handle the case where we don't need to perform any
+    // DC GZVA operations. If the size of our tagged region is less than
+    // twice the cache line size, bail out to the slow path since it's not
+    // guaranteed that we'll be able to do a DC GZVA.
+    Size .req %[Tmp]
+    sub Size, %[End], %[Cur]
+    cmp Size, %[LineSize], lsl #1
+    b.lt 3f
+    .unreq Size
+
+    LineMask .req %[Tmp]
+    sub LineMask, %[LineSize], #1
+
+    // STZG until the start of the next cache line.
+    orr %[Next], %[Cur], LineMask
+  1:
+    stzg %[Cur], [%[Cur]], #16
+    cmp %[Cur], %[Next]
+    b.lt 1b
+
+    // DC GZVA cache lines until we have no more full cache lines.
+    bic %[Next], %[End], LineMask
+    .unreq LineMask
+  2:
+    dc gzva, %[Cur]
+    add %[Cur], %[Cur], %[LineSize]
+    cmp %[Cur], %[Next]
+    b.lt 2b
+
+    // STZG until the end of the tagged region. This loop is also used to handle
+    // slow path cases.
+  3:
+    cmp %[Cur], %[End]
+    b.ge 4f
+    stzg %[Cur], [%[Cur]], #16
+    b 3b
+
+  4:
+  )"
+      : [Cur] "+&r"(Begin), [LineSize] "=&r"(LineSize), [Next] "=&r"(Next),
+        [Tmp] "=&r"(Tmp)
+      : [End] "r"(End)
+      : "memory");
   return Begin;
 }
 
-inline void *prepareTaggedChunk(void *Ptr, uptr Size, uptr ExcludeMask,
-                                uptr BlockEnd) {
-  // Prepare the granule before the chunk to store the chunk header by setting
-  // its tag to 0. Normally its tag will already be 0, but in the case where a
-  // chunk holding a low alignment allocation is reused for a higher alignment
-  // allocation, the chunk may already have a non-zero tag from the previous
-  // allocation.
-  __asm__ __volatile__(
-      R"(
-      .arch_extension memtag
-      stg %0, [%0, #-16]
-      )"
-      :
-      : "r"(Ptr)
-      : "memory");
-
-  uptr TaggedBegin, TaggedEnd;
-  setRandomTag(Ptr, Size, ExcludeMask, &TaggedBegin, &TaggedEnd);
-
-  // Finally, set the tag of the granule past the end of the allocation to 0,
-  // to catch linear overflows even if a previous larger allocation used the
-  // same block and tag. Only do this if the granule past the end is in our
-  // block, because this would otherwise lead to a SEGV if the allocation
-  // covers the entire block and our block is at the end of a mapping. The tag
-  // of the next block's header granule will be set to 0, so it will serve the
-  // purpose of catching linear overflows in this case.
-  uptr UntaggedEnd = untagPointer(TaggedEnd);
-  if (UntaggedEnd != BlockEnd)
-    __asm__ __volatile__(
-        R"(
-        .arch_extension memtag
-        stg %0, [%0]
-        )"
-        :
-        : "r"(UntaggedEnd)
-        : "memory");
-  return reinterpret_cast<void *>(TaggedBegin);
-}
-
-inline void resizeTaggedChunk(uptr OldPtr, uptr NewPtr, uptr BlockEnd) {
-  uptr RoundOldPtr = roundUpTo(OldPtr, 16);
-  if (RoundOldPtr >= NewPtr) {
-    // If the allocation is shrinking we just need to set the tag past the end
-    // of the allocation to 0. See explanation in prepareTaggedChunk above.
-    uptr RoundNewPtr = untagPointer(roundUpTo(NewPtr, 16));
-    if (RoundNewPtr != BlockEnd)
-      __asm__ __volatile__(
-          R"(
-          .arch_extension memtag
-          stg %0, [%0]
-          )"
-          :
-          : "r"(RoundNewPtr)
-          : "memory");
-    return;
-  }
-
+inline void storeTag(uptr Ptr) {
   __asm__ __volatile__(R"(
     .arch_extension memtag
-
-    // Set the memory tag of the region
-    // [roundUpTo(OldPtr, 16), roundUpTo(NewPtr, 16))
-    // to the pointer tag stored in OldPtr.
-  1:
-    stzg %[Cur], [%[Cur]], #16
-    cmp %[Cur], %[End]
-    b.lt 1b
-
-    // Finally, set the tag of the granule past the end of the allocation to 0.
-    and %[Cur], %[Cur], #(1 << 56) - 1
-    cmp %[Cur], %[BlockEnd]
-    b.eq 2f
-    stg %[Cur], [%[Cur]]
-
-  2:
+    stg %0, [%0]
   )"
-                       : [Cur] "+&r"(RoundOldPtr), [End] "+&r"(NewPtr)
-                       : [BlockEnd] "r"(BlockEnd)
+                       :
+                       : "r"(Ptr)
                        : "memory");
 }
 
@@ -303,19 +274,8 @@ inline uptr storeTags(uptr Begin, uptr End) {
   UNREACHABLE("memory tagging not supported");
 }
 
-inline void *prepareTaggedChunk(void *Ptr, uptr Size, uptr ExcludeMask,
-                                uptr BlockEnd) {
+inline void storeTag(uptr Ptr) {
   (void)Ptr;
-  (void)Size;
-  (void)ExcludeMask;
-  (void)BlockEnd;
-  UNREACHABLE("memory tagging not supported");
-}
-
-inline void resizeTaggedChunk(uptr OldPtr, uptr NewPtr, uptr BlockEnd) {
-  (void)OldPtr;
-  (void)NewPtr;
-  (void)BlockEnd;
   UNREACHABLE("memory tagging not supported");
 }
 

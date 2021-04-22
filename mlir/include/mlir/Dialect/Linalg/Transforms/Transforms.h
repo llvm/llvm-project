@@ -10,6 +10,7 @@
 #define DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H_
 
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/SCF/Utils.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/PatternMatch.h"
@@ -104,6 +105,10 @@ struct LinalgElementwiseFusionOptions {
 void populateElementwiseOpsFusionPatterns(
     RewritePatternSet &patterns,
     LinalgElementwiseFusionOptions options = LinalgElementwiseFusionOptions());
+
+/// Patterns to push reshape op towards the end of the graph in order to expose
+/// more fusion opportunities.
+void populatePushReshapeOpsPatterns(RewritePatternSet &patterns);
 
 /// Performs standalone tiling of a single LinalgOp by `tileSizes`.
 /// and permute the loop nest according to `interchangeVector`
@@ -333,28 +338,16 @@ LogicalResult vectorizeLinalgOp(OpBuilder &builder, Operation *op,
 
 /// Emits a loop nest of `LoopTy` with the proper body for `op`.
 template <typename LoopTy>
-Optional<LinalgLoops>
-linalgLowerOpToLoops(OpBuilder &builder, Operation *op,
-                     ArrayRef<unsigned> interchangeVector = {});
+Optional<LinalgLoops> linalgLowerOpToLoops(OpBuilder &builder, Operation *op);
 
-/// Emits a loop nest of `scf.for` with the proper body for `op`. The generated
-/// loop nest will follow the `interchangeVector`-permutated iterator order. If
-/// `interchangeVector` is empty, then no permutation happens.
-LogicalResult linalgOpToLoops(OpBuilder &builder, Operation *op,
-                              ArrayRef<unsigned> interchangeVector = {});
+/// Emits a loop nest of `scf.for` with the proper body for `op`.
+LogicalResult linalgOpToLoops(OpBuilder &builder, Operation *op);
 
-/// Emits a loop nest of `scf.parallel` with the proper body for `op`. The
-/// generated loop nest will follow the `interchangeVector`-permutated
-// iterator order. If `interchangeVector` is empty, then no permutation happens.
-LogicalResult
-linalgOpToParallelLoops(OpBuilder &builder, Operation *op,
-                        ArrayRef<unsigned> interchangeVector = {});
+/// Emits a loop nest of `scf.parallel` with the proper body for `op`.
+LogicalResult linalgOpToParallelLoops(OpBuilder &builder, Operation *op);
 
-/// Emits a loop nest of `affine.for` with the proper body for `op`. The
-/// generated loop nest will follow the `interchangeVector`-permutated
-// iterator order. If `interchangeVector` is empty, then no permutation happens.
-LogicalResult linalgOpToAffineLoops(OpBuilder &builder, Operation *op,
-                                    ArrayRef<unsigned> interchangeVector = {});
+/// Emits a loop nest of `affine.for` with the proper body for `op`.
+LogicalResult linalgOpToAffineLoops(OpBuilder &builder, Operation *op);
 
 //===----------------------------------------------------------------------===//
 // Preconditions that ensure the corresponding transformation succeeds and can
@@ -803,10 +796,9 @@ struct LinalgLoweringPattern : public RewritePattern {
   LinalgLoweringPattern(
       MLIRContext *context, LinalgLoweringType loweringType,
       LinalgTransformationFilter filter = LinalgTransformationFilter(),
-      ArrayRef<unsigned> interchangeVector = {}, PatternBenefit benefit = 1)
+      PatternBenefit benefit = 1)
       : RewritePattern(OpTy::getOperationName(), benefit, context),
-        filter(filter), loweringType(loweringType),
-        interchangeVector(interchangeVector.begin(), interchangeVector.end()) {}
+        filter(filter), loweringType(loweringType) {}
 
   // TODO: Move implementation to .cpp once named ops are auto-generated.
   LogicalResult matchAndRewrite(Operation *op,
@@ -822,15 +814,15 @@ struct LinalgLoweringPattern : public RewritePattern {
       // TODO: Move lowering to library calls here.
       return failure();
     case LinalgLoweringType::Loops:
-      if (failed(linalgOpToLoops(rewriter, op, interchangeVector)))
+      if (failed(linalgOpToLoops(rewriter, op)))
         return failure();
       break;
     case LinalgLoweringType::AffineLoops:
-      if (failed(linalgOpToAffineLoops(rewriter, op, interchangeVector)))
+      if (failed(linalgOpToAffineLoops(rewriter, op)))
         return failure();
       break;
     case LinalgLoweringType::ParallelLoops:
-      if (failed(linalgOpToParallelLoops(rewriter, op, interchangeVector)))
+      if (failed(linalgOpToParallelLoops(rewriter, op)))
         return failure();
       break;
     }
@@ -845,8 +837,6 @@ private:
   /// Controls whether the pattern lowers to library calls, scf.for, affine.for
   /// or scf.parallel.
   LinalgLoweringType loweringType;
-  /// Permutated loop order in the generated loop nest.
-  SmallVector<unsigned, 4> interchangeVector;
 };
 
 /// Linalg generalization patterns
@@ -934,24 +924,44 @@ struct LinalgCopyVTWForwardingPattern
                                 PatternRewriter &rewriter) const override;
 };
 
-/// Canonicalize AffineMinOp operations in the context of enclosing scf.for and
-/// scf.parallel by:
-///   1. building an affine map where uses of the induction variable of a loop
-///   are replaced by either the min (i.e. `%lb`) of the max
-///   (i.e. `%lb + %step * floordiv(%ub -1 - %lb, %step)`) expression, depending
-///   on whether the induction variable is used with a positive or negative
-///   coefficient.
+using GetMinMaxExprFn =
+    std::function<Optional<std::pair<AffineExpr, AffineExpr>>(
+        Value value, SmallVectorImpl<Value> &dims,
+        SmallVectorImpl<Value> &symbols)>;
+
+/// Canonicalize AffineMinOp operations in the context of ops with a known range
+/// by:
+///   1. building an affine map where uses of the known ops are replaced by
+///   their min annd max expressions returned by the lambda `getMinMaxFn`.
 ///   2. checking whether any of the results of this affine map is known to be
 ///   greater than all other results.
 ///   3. replacing the AffineMinOp by the result of (2).
+struct AffineMinRangeCanonicalizationPattern
+    : public OpRewritePattern<AffineMinOp> {
+  AffineMinRangeCanonicalizationPattern(MLIRContext *context,
+                                        GetMinMaxExprFn getMinMaxFn)
+      : OpRewritePattern<AffineMinOp>(context), getMinMaxFn(getMinMaxFn) {}
+  LogicalResult matchAndRewrite(AffineMinOp minOp,
+                                PatternRewriter &rewriter) const override;
+
+protected:
+  GetMinMaxExprFn getMinMaxFn;
+};
+
+/// Specialized version of `AffineMinRangeCanonicalizationPattern` pattern
+/// using `getSCFMinMaxExpr` to know the min and max expression of induction
+/// variables from scf loops.
 // TODO: move to a more appropriate place when it is determined. For now Linalg
 // depends both on Affine and SCF but they do not depend on each other.
 struct AffineMinSCFCanonicalizationPattern
-    : public OpRewritePattern<AffineMinOp> {
-  using OpRewritePattern<AffineMinOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(AffineMinOp minOp,
-                                PatternRewriter &rewriter) const override;
+    : public AffineMinRangeCanonicalizationPattern {
+  static Optional<std::pair<AffineExpr, AffineExpr>>
+  getMinMax(Value value, SmallVectorImpl<Value> &dims,
+            SmallVectorImpl<Value> &symbols) {
+    return getSCFMinMaxExpr(value, dims, symbols);
+  }
+  AffineMinSCFCanonicalizationPattern(MLIRContext *context)
+      : AffineMinRangeCanonicalizationPattern(context, getMinMax) {}
 };
 
 /// Helper struct to return the results of `substituteMin`.
@@ -960,23 +970,22 @@ struct AffineMapAndOperands {
   SmallVector<Value> dims;
   SmallVector<Value> symbols;
 };
-/// Traverse the dims of the AffineMap of `affineMinOp` and substitute scf loop
-/// induction variables by new expressions involving the lower or upper bound:
-///   - If the AffineDimExpr mapped to a loop IV has a positive sign, it is
-///     replaced by the loop upper bound.
-///   - If the AffineDimExpr mapped to a loop IV has a negative sign, it is
-///     replaced by the loop lower bound.
-/// All loop induction variables are iteratively replaced, unless a
-/// `substituteOperation` hook is passed to more finely determine which
-/// operations are substituted.
+
+/// Traverse the dims of the AffineMap of `affineMinOp` and substitute
+/// dimensions with known range by new expressions involving the min or max
+/// expression:
+///   - If the AffineDimExpr mapped to a known value has a positive sign, it
+///     is replaced by the min expression.
+///   - If the AffineDimExpr mapped to a known value has a negative sign, it is
+///     replaced by the max expression.
+/// All known values are iteratively replaced.
 /// This is used as an intermediate step in computing bounding boxes and
 /// canonicalize AffineMinOps. All dim and symbol operands are assumed to have
 /// positive values (positive orthant assumptions).
 /// Return a new AffineMap, dims and symbols that have been canonicalized and
 /// simplified.
-AffineMapAndOperands substituteMin(
-    AffineMinOp affineMinOp,
-    llvm::function_ref<bool(Operation *)> substituteOperation = nullptr);
+AffineMapAndOperands substituteMin(AffineMinOp affineMinOp,
+                                   GetMinMaxExprFn getMinMaxExpr);
 
 /// Converts Convolution op into vector contraction.
 ///

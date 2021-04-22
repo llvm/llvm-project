@@ -17,8 +17,8 @@ detection phase.
 Usage
 =====
 
-LeakSanitizer is supported on x86\_64 Linux and macOS. In order to use it,
-simply build your program with :doc:`AddressSanitizer`:
+:doc:`AddressSanitizer`: integrates LeakSanitizer and enables it by default on
+supported platforms.
 
 .. code-block:: console
 
@@ -42,6 +42,15 @@ To use LeakSanitizer in stand-alone mode, link your program with
 ``-fsanitize=leak`` flag. Make sure to use ``clang`` (not ``ld``) for the
 link step, so that it would link in proper LeakSanitizer run-time library
 into the final executable.
+
+Supported Platforms
+===================
+
+* Android aarch64/i386/x86_64
+* Fuchsia aarch64/x86_64
+* Linux arm/aarch64/mips64/ppc64/ppc64le/riscv64/s390x/i386/x86\_64
+* macOS aarch64/i386/x86\_64
+* NetBSD i386/x86_64
 
 More Information
 ================
