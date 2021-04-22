@@ -30,46 +30,10 @@ if (NOT Python3_EXECUTABLE
     OR NOT LLVM_NATIVE_ARCH IN_LIST LLVM_TARGETS_TO_BUILD
     OR NOT X86 IN_LIST LLVM_TARGETS_TO_BUILD
     )
-  file(GENERATE OUTPUT ${BINARY_INCLUDE_DIR}/NodeIntrospection.inc
-    CONTENT "
-namespace clang {
-namespace tooling {
-
-bool NodeIntrospection::hasIntrospectionSupport() { return false; }
-
-NodeLocationAccessors NodeIntrospection::GetLocations(clang::Stmt const *) {
-  return {};
-}
-NodeLocationAccessors NodeIntrospection::GetLocations(clang::Decl const *) {
-  return {};
-}
-NodeLocationAccessors NodeIntrospection::GetLocations(
-    clang::CXXCtorInitializer const *) {
-  return {};
-}
-NodeLocationAccessors NodeIntrospection::GetLocations(
-    clang::NestedNameSpecifierLoc const&) {
-  return {};
-}
-NodeLocationAccessors NodeIntrospection::GetLocations(
-    clang::TemplateArgumentLoc const&) {
-  return {};
-}
-NodeLocationAccessors NodeIntrospection::GetLocations(
-    clang::CXXBaseSpecifier const*) {
-  return {};
-}
-NodeLocationAccessors NodeIntrospection::GetLocations(
-    clang::TypeLoc const&) {
-  return {};
-}
-NodeLocationAccessors
-NodeIntrospection::GetLocations(clang::DynTypedNode const &) {
-  return {};
-}
-} // namespace tooling
-} // namespace clang
-"
+    configure_file(
+      EmptyNodeIntrospection.inc.in
+      ${BINARY_INCLUDE_DIR}/NodeIntrospection.inc
+      COPYONLY
     )
     set(CLANG_TOOLING_BUILD_AST_INTROSPECTION "OFF" CACHE BOOL "")
 else()
@@ -115,11 +79,14 @@ else()
       OUTPUT ${BINARY_INCLUDE_DIR}/NodeIntrospection.inc
       DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/ASTNodeAPI.json
         ${CMAKE_CURRENT_SOURCE_DIR}/DumpTool/generate_cxx_src_locs.py
+        ${CMAKE_CURRENT_SOURCE_DIR}/EmptyNodeIntrospection.inc.in
       COMMAND
       ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/DumpTool/generate_cxx_src_locs.py
         --json-input-path ${CMAKE_CURRENT_BINARY_DIR}/ASTNodeAPI.json
         --output-file NodeIntrospection.inc
-        --empty-implementation ${skip_expensive_processing}
+        --use-empty-implementation ${skip_expensive_processing}
+        --empty-implementation
+          "${CMAKE_CURRENT_SOURCE_DIR}/EmptyNodeIntrospection.inc.in"
       COMMAND
       ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_BINARY_DIR}/NodeIntrospection.inc
