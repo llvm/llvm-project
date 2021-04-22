@@ -362,33 +362,30 @@ void GlobalSection::writeBody() {
     writeGlobalType(os, g->getType());
     writeInitExpr(os, g->getInitExpr());
   }
-  // TODO(wvo): when do these need I64_CONST?
+  bool is64 = config->is64.getValueOr(false);
+  uint8_t itype = is64 ? WASM_TYPE_I64 : WASM_TYPE_I32;
   for (const Symbol *sym : internalGotSymbols) {
     // In the case of dynamic linking, internal GOT entries
     // need to be mutable since they get updated to the correct
     // runtime value during `__wasm_apply_global_relocs`.
     bool mutable_ = config->isPic & !sym->isStub;
-    WasmGlobalType type{WASM_TYPE_I32, mutable_};
+    WasmGlobalType type{itype, mutable_};
     WasmInitExpr initExpr;
-    initExpr.Opcode = WASM_OPCODE_I32_CONST;
     if (auto *d = dyn_cast<DefinedData>(sym))
-      initExpr.Value.Int32 = d->getVA();
+      initExpr = intConst(d->getVA(), is64);
     else if (auto *f = dyn_cast<FunctionSymbol>(sym))
-      initExpr.Value.Int32 = f->isStub ? 0 : f->getTableIndex();
+      initExpr = intConst(f->isStub ? 0 : f->getTableIndex(), is64);
     else {
       assert(isa<UndefinedData>(sym));
-      initExpr.Value.Int32 = 0;
+      initExpr = intConst(0, is64);
     }
     writeGlobalType(os, type);
     writeInitExpr(os, initExpr);
   }
   for (const DefinedData *sym : dataAddressGlobals) {
-    WasmGlobalType type{WASM_TYPE_I32, false};
-    WasmInitExpr initExpr;
-    initExpr.Opcode = WASM_OPCODE_I32_CONST;
-    initExpr.Value.Int32 = sym->getVA();
+    WasmGlobalType type{itype, false};
     writeGlobalType(os, type);
-    writeInitExpr(os, initExpr);
+    writeInitExpr(os, intConst(sym->getVA(), is64));
   }
 }
 
@@ -443,7 +440,10 @@ void ElemSection::writeBody() {
   WasmInitExpr initExpr;
   if (config->isPic) {
     initExpr.Opcode = WASM_OPCODE_GLOBAL_GET;
-    initExpr.Value.Global = WasmSym::tableBase->getGlobalIndex();
+    initExpr.Value.Global =
+        (config->is64.getValueOr(false) ? WasmSym::tableBase32
+                                        : WasmSym::tableBase)
+            ->getGlobalIndex();
   } else {
     initExpr.Opcode = WASM_OPCODE_I32_CONST;
     initExpr.Value.Int32 = config->tableBase;
