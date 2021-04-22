@@ -6532,3 +6532,131 @@ entry:
   %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
   ret <2 x double> %vecinit3
 }
+
+define dso_local <2 x i64> @test_xvcvspsxds13(<4 x float> %a) local_unnamed_addr {
+; P9BE-LABEL: test_xvcvspsxds13:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P9BE-NEXT:    xvcvspsxds v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: test_xvcvspsxds13:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xvcvspsxds v2, v2
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: test_xvcvspsxds13:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P8BE-NEXT:    xvcvspsxds v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: test_xvcvspsxds13:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xvcvspsxds v2, v2
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 1
+  %conv = fptosi float %vecext to i64
+  %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
+  %vecext1 = extractelement <4 x float> %a, i32 3
+  %conv2 = fptosi float %vecext1 to i64
+  %vecinit3 = insertelement <2 x i64> %vecinit, i64 %conv2, i32 1
+  ret <2 x i64> %vecinit3
+}
+
+define dso_local <2 x i64> @test_xvcvspuxds13(<4 x float> %a) local_unnamed_addr {
+; P9BE-LABEL: test_xvcvspuxds13:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P9BE-NEXT:    xvcvspuxds v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: test_xvcvspuxds13:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xvcvspuxds v2, v2
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: test_xvcvspuxds13:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P8BE-NEXT:    xvcvspuxds v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: test_xvcvspuxds13:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xvcvspuxds v2, v2
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 1
+  %conv = fptoui float %vecext to i64
+  %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
+  %vecext1 = extractelement <4 x float> %a, i32 3
+  %conv2 = fptoui float %vecext1 to i64
+  %vecinit3 = insertelement <2 x i64> %vecinit, i64 %conv2, i32 1
+  ret <2 x i64> %vecinit3
+}
+
+define dso_local <2 x i64> @test_xvcvspsxds02(<4 x float> %a) local_unnamed_addr {
+; P9BE-LABEL: test_xvcvspsxds02:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xvcvspsxds v2, v2
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: test_xvcvspsxds02:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P9LE-NEXT:    xvcvspsxds v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: test_xvcvspsxds02:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xvcvspsxds v2, v2
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: test_xvcvspsxds02:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P8LE-NEXT:    xvcvspsxds v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 0
+  %conv = fptosi float %vecext to i64
+  %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
+  %vecext1 = extractelement <4 x float> %a, i32 2
+  %conv2 = fptosi float %vecext1 to i64
+  %vecinit3 = insertelement <2 x i64> %vecinit, i64 %conv2, i32 1
+  ret <2 x i64> %vecinit3
+}
+
+define dso_local <2 x i64> @test_xvcvspuxds02(<4 x float> %a) local_unnamed_addr {
+; P9BE-LABEL: test_xvcvspuxds02:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xvcvspuxds v2, v2
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: test_xvcvspuxds02:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P9LE-NEXT:    xvcvspuxds v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: test_xvcvspuxds02:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xvcvspuxds v2, v2
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: test_xvcvspuxds02:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P8LE-NEXT:    xvcvspuxds v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 0
+  %conv = fptoui float %vecext to i64
+  %vecinit = insertelement <2 x i64> undef, i64 %conv, i32 0
+  %vecext1 = extractelement <4 x float> %a, i32 2
+  %conv2 = fptoui float %vecext1 to i64
+  %vecinit3 = insertelement <2 x i64> %vecinit, i64 %conv2, i32 1
+  ret <2 x i64> %vecinit3
+}
