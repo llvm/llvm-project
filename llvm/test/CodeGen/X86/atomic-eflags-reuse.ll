@@ -222,13 +222,22 @@ entry:
   ret i8 %tmp2
 }
 
-define i8 @test_add_1_cmov_cmov(i64* %p, i8* %q) #0 {
 ; TODO: It's possible to use "lock inc" here, but both cmovs need to be updated.
+define i8 @test_add_1_cmov_cmov(i64* %p, i8* %q) #0 {
 ; CHECK-LABEL: test_add_1_cmov_cmov:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    lock xaddq %rax, (%rdi)
-; CHECK-NEXT:    testq   %rax, %rax
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    movl $12, %eax
+; CHECK-NEXT:    movl $34, %ecx
+; CHECK-NEXT:    cmovsl %eax, %ecx
+; CHECK-NEXT:    movb %cl, (%rsi)
+; CHECK-NEXT:    movl $56, %ecx
+; CHECK-NEXT:    movl $78, %eax
+; CHECK-NEXT:    cmovsl %ecx, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
 entry:
   %add = atomicrmw add i64* %p, i64 1 seq_cst
   %cmp = icmp slt i64 %add, 0
