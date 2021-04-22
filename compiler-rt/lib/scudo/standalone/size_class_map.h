@@ -89,6 +89,10 @@ public:
     return u8(getLeastSignificantSetBitIndex(getSizeByClassId(ClassId)));
   }
 
+  static constexpr bool usesCompressedLSBFormat() {
+    return false;
+  }
+
   static uptr getClassIdBySize(uptr Size) {
     if (Size <= SizeDelta + (1 << Config::MinSizeLog))
       return 1;
@@ -145,17 +149,34 @@ class TableSizeClassMap : public SizeClassMapBase<Config> {
 
   struct LSBTable {
     constexpr LSBTable() {
+      u8 Min = 255, Max = 0;
       for (uptr I = 0; I != ClassesSize; ++I) {
         for (u8 Bit = 0; Bit != 64; ++Bit) {
           if (Config::Classes[I] & (1 << Bit)) {
             Tab[I] = Bit;
+            if (Bit < Min)
+              Min = Bit;
+            if (Bit > Max)
+              Max = Bit;
             break;
           }
         }
       }
+
+      if (Max - Min > 3 || ClassesSize > 32)
+        return;
+
+      UseCompressedFormat = true;
+      CompressedMin = Min;
+      for (uptr I = 0; I != ClassesSize; ++I)
+        CompressedValue |= u64(Tab[I] - Min) << (I * 2);
     }
 
     u8 Tab[ClassesSize] = {};
+
+    bool UseCompressedFormat = false;
+    u8 CompressedMin = 0;
+    u64 CompressedValue = 0;
   };
 
   static constexpr LSBTable LTable = {};
@@ -174,7 +195,15 @@ public:
   }
 
   static u8 getSizeLSBByClassId(uptr ClassId) {
-    return LTable.Tab[ClassId - 1];
+    if (LTable.UseCompressedFormat)
+      return ((LTable.CompressedValue >> ((ClassId - 1) * 2)) & 3) +
+             LTable.CompressedMin;
+    else
+      return LTable.Tab[ClassId - 1];
+  }
+
+  static constexpr bool usesCompressedLSBFormat() {
+    return LTable.UseCompressedFormat;
   }
 
   static uptr getClassIdBySize(uptr Size) {
@@ -243,6 +272,10 @@ struct AndroidSizeClassConfig {
 };
 
 typedef TableSizeClassMap<AndroidSizeClassConfig> AndroidSizeClassMap;
+
+#if SCUDO_WORDSIZE == 64U
+static_assert(AndroidSizeClassMap::usesCompressedLSBFormat(), "");
+#endif
 
 struct SvelteSizeClassConfig {
 #if SCUDO_WORDSIZE == 64U
