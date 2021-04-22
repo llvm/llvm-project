@@ -66,17 +66,18 @@ class StoreNM<string opstr, DAGOperand RO, SDPatternOperator OpNode = null_frag,
   let EncodingPredicates = [HasNanoMips];
 }
 
-class BranchNM<string opstr,
-               SDPatternOperator OpNode = null_frag,
-               SDPatternOperator imm_type = null_frag> :
+class CallNM<string opstr,
+             SDPatternOperator OpNode = null_frag,
+             SDPatternOperator imm_type = null_frag> :
   InstSE<(outs), (ins calltarget:$addr), !strconcat(opstr, "\t$addr"),
          [(OpNode imm_type:$addr)], NoItinerary, FrmI, opstr> {
   let Namespace = "Mips";
   let DecoderNamespace = "NanoMips";
   let EncodingPredicates = [HasNanoMips];
   let DecoderMethod = "DecodeJumpTarget";
-  let isBranch = 1;
-  let isCodeGenOnly = 1;
+  let isCall = 1;
+  let isCTI = 1;
+  let Defs = [RA_NM];
 }
 
 //===----------------------------------------------------------------------===//
@@ -102,8 +103,7 @@ let hasDelaySlot = 0 in
 let hasDelaySlot = 0 in
   def PseudoReturnNM : PseudoReturnBase<GPR32NMOpnd>, ISA_NANOMIPS;
 
-let Defs = [RA_NM], isBarrier = 1 in
-  def BALC_NM : BranchNM<"balc", MipsJmpLink, tglobaladdr>, ISA_NANOMIPS;
+def BALC_NM : CallNM<"balc", MipsJmpLink, tglobaladdr>, ISA_NANOMIPS;
 
 def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, ISA_NANOMIPS;
 
