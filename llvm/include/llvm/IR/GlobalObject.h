@@ -18,8 +18,6 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
-#include <string>
-#include <utility>
 
 namespace llvm {
 

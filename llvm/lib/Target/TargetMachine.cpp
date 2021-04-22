@@ -56,7 +56,7 @@ bool TargetMachine::isPositionIndependent() const {
 void TargetMachine::resetTargetOptions(const Function &F) const {
 #define RESET_OPTION(X, Y)                                              \
   do {                                                                  \
-    Options.X = (F.getFnAttribute(Y).getValueAsString() == "true");     \
+    Options.X = F.getFnAttribute(Y).getValueAsBool();     \
   } while (0)
 
   RESET_OPTION(UnsafeFPMath, "unsafe-fp-math");

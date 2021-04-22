@@ -97,10 +97,7 @@ X:                                                ; preds = %0, C
 }
 
 ; CHECK-LABEL: implicit_def_v4i32:
-; CHECK:      i32.const $push{{[0-9]+}}=, 0{{$}}
-; CHECK:      i32.const $push{{[0-9]+}}=, 0{{$}}
-; CHECK:      i32.const $push[[L0:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: i32x4.splat $push[[R:[0-9]+]]=, $pop[[L0]]
+; CHECK:      v128.const $push[[R:[0-9]+]]=, 0, 0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @implicit_def_v4i32() {
   br i1 undef, label %A, label %X

@@ -32,6 +32,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 #include <map>
@@ -64,7 +66,6 @@ static llvm::cl::opt<bool> testEmitIncludeTdHeader(
                    "tblgen testing."),
     llvm::cl::init(false), llvm::cl::cat(ODSGenCat));
 
-using llvm::SetVector;
 using llvm::SMLoc;
 using llvm::StringRef;
 using llvm::Twine;
@@ -1010,8 +1011,7 @@ struct TensorUse : public Expression {
 
   /// Visitation function. Performs preorder or postorder traversal depending on
   /// `PreOrder` and applies `callback` on each node.
-  template <typename Lambda, bool PreOrder>
-  void visit(Lambda callback) const;
+  template <typename Lambda, bool PreOrder> void visit(Lambda callback) const;
 
   StringRef tensorId;
   AffineMap indexingMap;
@@ -1055,8 +1055,7 @@ struct TensorExpr : public Expression {
 
   /// Visitation function. Performs preorder or postorder traversal depending on
   /// `PreOrder` and applies `callback` on each node.
-  template <typename Lambda, bool PreOrder>
-  void visit(Lambda callback) const;
+  template <typename Lambda, bool PreOrder> void visit(Lambda callback) const;
 
   StringRef operationName;
   SmallVector<std::unique_ptr<Expression>, 4> expressions;
@@ -1204,8 +1203,7 @@ private:
 
 namespace llvm {
 
-template <>
-struct DenseMapInfo<TensorUse> {
+template <> struct DenseMapInfo<TensorUse> {
   static TensorUse getEmptyKey() { return TensorUse("", AffineMap()); }
   static TensorUse getTombstoneKey() {
     return TensorUse(DenseMapInfo<StringRef>::getTombstoneKey(),

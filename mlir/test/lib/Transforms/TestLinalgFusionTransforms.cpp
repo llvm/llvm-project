@@ -55,6 +55,19 @@ static void fillFusionPatterns(MLIRContext *context,
   patterns.add<LinalgTileAndFusePattern<MatmulOp>>(
       context, dependenceGraph,
       LinalgTilingOptions().setTileSizes({32, 64, 16}).setLoopType(LoopType),
+      LinalgFusionOptions().setIndicesToFuse({2}),
+      LinalgTransformationFilter(Identifier::get("out_fusion", context),
+                                 Identifier::get("after_out_fusion", context)),
+      LinalgTransformationFilter(
+          ArrayRef<Identifier>(),
+          Identifier::get("after_out_fusion_producer", context)),
+      LinalgTransformationFilter(
+          ArrayRef<Identifier>(),
+          Identifier::get("after_out_fusion_original", context)));
+
+  patterns.add<LinalgTileAndFusePattern<MatmulOp>>(
+      context, dependenceGraph,
+      LinalgTilingOptions().setTileSizes({32, 64, 16}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({1}),
       LinalgTransformationFilter(Identifier::get("rhs_fusion", context),
                                  Identifier::get("after_rhs_fusion", context)),

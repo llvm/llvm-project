@@ -200,9 +200,7 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   TypeSetByHwMode(ArrayRef<ValueTypeByHwMode> VTList);
 
   SetType &getOrCreate(unsigned Mode) {
-    if (hasMode(Mode))
-      return get(Mode);
-    return Map.insert({Mode,SetType()}).first->second;
+    return Map[Mode];
   }
 
   bool isValueTypeByHwMode(bool AllowEmpty) const;
@@ -1080,7 +1078,8 @@ public:
   }
 
   bool operator==(const Predicate &P) const {
-    return IfCond == P.IfCond && IsHwMode == P.IsHwMode && Def == P.Def;
+    return IfCond == P.IfCond && IsHwMode == P.IsHwMode && Def == P.Def &&
+           Features == P.Features;
   }
   bool operator<(const Predicate &P) const {
     if (IsHwMode != P.IsHwMode)

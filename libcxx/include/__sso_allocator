@@ -74,4 +74,4 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP___SSO_ALLOCATOR
+#endif // _LIBCPP___SSO_ALLOCATOR

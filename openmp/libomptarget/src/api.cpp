@@ -78,7 +78,7 @@ EXTERN void omp_target_free(void *device_ptr, int device_num) {
   DP("omp_target_free deallocated device ptr\n");
 }
 
-EXTERN int omp_target_is_present(void *ptr, int device_num) {
+EXTERN int omp_target_is_present(const void *ptr, int device_num) {
   TIMESCOPE();
   DP("Call to omp_target_is_present for device %d and address " DPxMOD "\n",
      device_num, DPxPTR(ptr));
@@ -105,7 +105,8 @@ EXTERN int omp_target_is_present(void *ptr, int device_num) {
   DeviceTy &Device = PM->Devices[device_num];
   bool IsLast; // not used
   bool IsHostPtr;
-  void *TgtPtr = Device.getTgtPtrBegin(ptr, 0, IsLast, false, IsHostPtr);
+  void *TgtPtr = Device.getTgtPtrBegin(const_cast<void *>(ptr), 0, IsLast,
+                                       false, IsHostPtr);
   int rc = (TgtPtr != NULL);
   // Under unified memory the host pointer can be returned by the
   // getTgtPtrBegin() function which means that there is no device
@@ -117,7 +118,7 @@ EXTERN int omp_target_is_present(void *ptr, int device_num) {
   return rc;
 }
 
-EXTERN int omp_target_memcpy(void *dst, void *src, size_t length,
+EXTERN int omp_target_memcpy(void *dst, const void *src, size_t length,
                              size_t dst_offset, size_t src_offset,
                              int dst_device, int src_device) {
   TIMESCOPE();
@@ -148,7 +149,7 @@ EXTERN int omp_target_memcpy(void *dst, void *src, size_t length,
   }
 
   int rc = OFFLOAD_SUCCESS;
-  void *srcAddr = (char *)src + src_offset;
+  void *srcAddr = (char *)const_cast<void *>(src) + src_offset;
   void *dstAddr = (char *)dst + dst_offset;
 
   if (src_device == omp_get_initial_device() &&
@@ -196,13 +197,11 @@ EXTERN int omp_target_memcpy(void *dst, void *src, size_t length,
   return rc;
 }
 
-EXTERN int omp_target_memcpy_rect(void *dst, void *src, size_t element_size,
-                                  int num_dims, const size_t *volume,
-                                  const size_t *dst_offsets,
-                                  const size_t *src_offsets,
-                                  const size_t *dst_dimensions,
-                                  const size_t *src_dimensions, int dst_device,
-                                  int src_device) {
+EXTERN int omp_target_memcpy_rect(
+    void *dst, const void *src, size_t element_size, int num_dims,
+    const size_t *volume, const size_t *dst_offsets, const size_t *src_offsets,
+    const size_t *dst_dimensions, const size_t *src_dimensions, int dst_device,
+    int src_device) {
   TIMESCOPE();
   DP("Call to omp_target_memcpy_rect, dst device %d, src device %d, "
      "dst addr " DPxMOD ", src addr " DPxMOD ", dst offsets " DPxMOD ", "
@@ -242,9 +241,10 @@ EXTERN int omp_target_memcpy_rect(void *dst, void *src, size_t element_size,
     for (size_t i = 0; i < volume[0]; ++i) {
       rc = omp_target_memcpy_rect(
           (char *)dst + dst_off + dst_slice_size * i,
-          (char *)src + src_off + src_slice_size * i, element_size,
-          num_dims - 1, volume + 1, dst_offsets + 1, src_offsets + 1,
-          dst_dimensions + 1, src_dimensions + 1, dst_device, src_device);
+          (char *)const_cast<void *>(src) + src_off + src_slice_size * i,
+          element_size, num_dims - 1, volume + 1, dst_offsets + 1,
+          src_offsets + 1, dst_dimensions + 1, src_dimensions + 1, dst_device,
+          src_device);
 
       if (rc) {
         DP("Recursive call to omp_target_memcpy_rect returns unsuccessfully\n");
@@ -257,9 +257,9 @@ EXTERN int omp_target_memcpy_rect(void *dst, void *src, size_t element_size,
   return rc;
 }
 
-EXTERN int omp_target_associate_ptr(void *host_ptr, void *device_ptr,
-                                    size_t size, size_t device_offset,
-                                    int device_num) {
+EXTERN int omp_target_associate_ptr(const void *host_ptr,
+                                    const void *device_ptr, size_t size,
+                                    size_t device_offset, int device_num) {
   TIMESCOPE();
   DP("Call to omp_target_associate_ptr with host_ptr " DPxMOD ", "
      "device_ptr " DPxMOD ", size %zu, device_offset %zu, device_num %d\n",
@@ -282,12 +282,13 @@ EXTERN int omp_target_associate_ptr(void *host_ptr, void *device_ptr,
 
   DeviceTy &Device = PM->Devices[device_num];
   void *device_addr = (void *)((uint64_t)device_ptr + (uint64_t)device_offset);
-  int rc = Device.associatePtr(host_ptr, device_addr, size);
+  int rc = Device.associatePtr(const_cast<void *>(host_ptr),
+                               const_cast<void *>(device_addr), size);
   DP("omp_target_associate_ptr returns %d\n", rc);
   return rc;
 }
 
-EXTERN int omp_target_disassociate_ptr(void *host_ptr, int device_num) {
+EXTERN int omp_target_disassociate_ptr(const void *host_ptr, int device_num) {
   TIMESCOPE();
   DP("Call to omp_target_disassociate_ptr with host_ptr " DPxMOD ", "
      "device_num %d\n",
@@ -310,7 +311,7 @@ EXTERN int omp_target_disassociate_ptr(void *host_ptr, int device_num) {
   }
 
   DeviceTy &Device = PM->Devices[device_num];
-  int rc = Device.disassociatePtr(host_ptr);
+  int rc = Device.disassociatePtr(const_cast<void *>(host_ptr));
   DP("omp_target_disassociate_ptr returns %d\n", rc);
   return rc;
 }

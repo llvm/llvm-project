@@ -24,7 +24,7 @@ int main(int, char**)
     assert(std::char_traits<char32_t>::eq(U'a', U'a'));
     assert(!std::char_traits<char32_t>::eq(U'a', U'A'));
 #endif
-#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
 
   return 0;
 }

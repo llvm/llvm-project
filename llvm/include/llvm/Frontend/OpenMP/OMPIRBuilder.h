@@ -355,7 +355,7 @@ public:
   /// \param CLI      A descriptor of the canonical loop to workshare.
   /// \param AllocaIP An insertion point for Alloca instructions usable in the
   ///                 preheader of the loop.
-  /// \param NeedsBarrier Indicates whether a barrier must be insterted after
+  /// \param NeedsBarrier Indicates whether a barrier must be inserted after
   ///                     the loop.
   /// \param Chunk    The size of loop chunk considered as a unit when
   ///                 scheduling. If \p nullptr, defaults to 1.
@@ -366,6 +366,30 @@ public:
                                                InsertPointTy AllocaIP,
                                                bool NeedsBarrier,
                                                Value *Chunk = nullptr);
+
+  /// Modifies the canonical loop to be a dynamically-scheduled workshare loop.
+  ///
+  /// This takes a \p LoopInfo representing a canonical loop, such as the one
+  /// created by \p createCanonicalLoop and emits additional instructions to
+  /// turn it into a workshare loop. In particular, it calls to an OpenMP
+  /// runtime function in the preheader to obtain, and then in each iteration
+  /// to update the loop counter.
+  /// \param Loc      The source location description, the insertion location
+  ///                 is not used.
+  /// \param CLI      A descriptor of the canonical loop to workshare.
+  /// \param AllocaIP An insertion point for Alloca instructions usable in the
+  ///                 preheader of the loop.
+  /// \param NeedsBarrier Indicates whether a barrier must be insterted after
+  ///                     the loop.
+  /// \param Chunk    The size of loop chunk considered as a unit when
+  ///                 scheduling. If \p nullptr, defaults to 1.
+  ///
+  /// \returns Point where to insert code after the loop.
+  InsertPointTy createDynamicWorkshareLoop(const LocationDescription &Loc,
+                                           CanonicalLoopInfo *CLI,
+                                           InsertPointTy AllocaIP,
+                                           bool NeedsBarrier,
+                                           Value *Chunk = nullptr);
 
   /// Modifies the canonical loop to be a workshare loop.
   ///
@@ -628,6 +652,17 @@ public:
   InsertPointTy createMaster(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
                              FinalizeCallbackTy FiniCB);
+
+  /// Generator for '#omp masked'
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param BodyGenCB Callback that will generate the region code.
+  /// \param FiniCB Callback to finialize variable copies.
+  ///
+  /// \returns The insertion position *after* the master.
+  InsertPointTy createMasked(const LocationDescription &Loc,
+                             BodyGenCallbackTy BodyGenCB,
+                             FinalizeCallbackTy FiniCB, Value *Filter);
 
   /// Generator for '#omp critical'
   ///

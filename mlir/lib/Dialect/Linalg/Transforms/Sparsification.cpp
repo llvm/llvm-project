@@ -771,12 +771,14 @@ static Value genLoad(CodeGen &codegen, PatternRewriter &rewriter, Location loc,
     // extremely large offsets.
     Type etp = ptr.getType().cast<MemRefType>().getElementType();
     Value vload = genVectorLoad(codegen, rewriter, ptr, {s});
-    if (etp.getIntOrFloatBitWidth() < 32)
-      vload = rewriter.create<ZeroExtendIOp>(
-          loc, vload, vectorType(codegen, rewriter.getIntegerType(32)));
-    else if (etp.getIntOrFloatBitWidth() < 64)
-      vload = rewriter.create<ZeroExtendIOp>(
-          loc, vload, vectorType(codegen, rewriter.getIntegerType(64)));
+    if (!etp.isa<IndexType>()) {
+      if (etp.getIntOrFloatBitWidth() < 32)
+        vload = rewriter.create<ZeroExtendIOp>(
+            loc, vload, vectorType(codegen, rewriter.getIntegerType(32)));
+      else if (etp.getIntOrFloatBitWidth() < 64)
+        vload = rewriter.create<ZeroExtendIOp>(
+            loc, vload, vectorType(codegen, rewriter.getIntegerType(64)));
+    }
     return vload;
   }
   // For the scalar case, we simply zero extend narrower indices into 64-bit

@@ -9588,6 +9588,169 @@ _mm512_cvtsi512_si32(__m512i __A) {
   return __b[0];
 }
 
+/// Loads 8 double-precision (64-bit) floating-point elements stored at memory
+/// locations starting at location \a base_addr at packed 32-bit integer indices
+/// stored in the lower half of \a vindex scaled by \a scale them in dst.
+///
+/// This intrinsic corresponds to the <c> VGATHERDPD </c> instructions.
+///
+/// \operation
+/// FOR j := 0 to 7
+///   i := j*64
+///   m := j*32
+///   addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///   dst[i+63:i] := MEM[addr+63:addr]
+/// ENDFOR
+/// dst[MAX:512] := 0
+/// \endoperation
+#define _mm512_i32logather_pd(vindex, base_addr, scale)                        \
+  _mm512_i32gather_pd(_mm512_castsi512_si256(vindex), (base_addr), (scale))
+
+/// Loads 8 double-precision (64-bit) floating-point elements from memory
+/// starting at location \a base_addr at packed 32-bit integer indices stored in
+/// the lower half of \a vindex scaled by \a scale into dst using writemask
+/// \a mask (elements are copied from \a src when the corresponding mask bit is
+/// not set).
+///
+/// This intrinsic corresponds to the <c> VGATHERDPD </c> instructions.
+///
+/// \operation
+/// FOR j := 0 to 7
+///   i := j*64
+///   m := j*32
+///   IF mask[j]
+///     addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///     dst[i+63:i] := MEM[addr+63:addr]
+///   ELSE
+///     dst[i+63:i] := src[i+63:i]
+///   FI
+/// ENDFOR
+/// dst[MAX:512] := 0
+/// \endoperation
+#define _mm512_mask_i32logather_pd(src, mask, vindex, base_addr, scale)        \
+  _mm512_mask_i32gather_pd((src), (mask), _mm512_castsi512_si256(vindex),      \
+                           (base_addr), (scale))
+
+/// Loads 8 64-bit integer elements from memory starting at location \a base_addr
+/// at packed 32-bit integer indices stored in the lower half of \a vindex
+/// scaled by \a scale and stores them in dst.
+///
+/// This intrinsic corresponds to the <c> VPGATHERDQ </c> instructions.
+///
+/// \operation
+/// FOR j := 0 to 7
+///   i := j*64
+///   m := j*32
+///   addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///   dst[i+63:i] := MEM[addr+63:addr]
+/// ENDFOR
+/// dst[MAX:512] := 0
+/// \endoperation
+#define _mm512_i32logather_epi64(vindex, base_addr, scale)                     \
+  _mm512_i32gather_epi64(_mm512_castsi512_si256(vindex), (base_addr), (scale))
+
+/// Loads 8 64-bit integer elements from memory starting at location \a base_addr
+/// at packed 32-bit integer indices stored in the lower half of \a vindex
+/// scaled by \a scale and stores them in dst using writemask \a mask (elements
+/// are copied from \a src when the corresponding mask bit is not set).
+///
+/// This intrinsic corresponds to the <c> VPGATHERDQ </c> instructions.
+///
+/// \operation
+/// FOR j := 0 to 7
+///   i := j*64
+///   m := j*32
+///   IF mask[j]
+///     addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///     dst[i+63:i] := MEM[addr+63:addr]
+///   ELSE
+///     dst[i+63:i] := src[i+63:i]
+///   FI
+/// ENDFOR
+/// dst[MAX:512] := 0
+/// \endoperation
+#define _mm512_mask_i32logather_epi64(src, mask, vindex, base_addr, scale)     \
+  _mm512_mask_i32gather_epi64((src), (mask), _mm512_castsi512_si256(vindex),   \
+                              (base_addr), (scale))
+
+/// Stores 8 packed double-precision (64-bit) floating-point elements in \a v1
+/// and to memory locations starting at location \a base_addr at packed 32-bit
+/// integer indices stored in \a vindex scaled by \a scale.
+///
+/// This intrinsic corresponds to the <c> VSCATTERDPD </c> instructions.
+///
+/// \operation
+/// FOR j := 0 to 7
+///   i := j*64
+///   m := j*32
+///   addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///   MEM[addr+63:addr] := v1[i+63:i]
+/// ENDFOR
+/// \endoperation
+#define _mm512_i32loscatter_pd(base_addr, vindex, v1, scale)                   \
+  _mm512_i32scatter_pd((base_addr), _mm512_castsi512_si256(vindex), (v1), (scale))
+
+/// Stores 8 packed double-precision (64-bit) floating-point elements in \a v1
+/// to memory locations starting at location \a base_addr at packed 32-bit
+/// integer indices stored in \a vindex scaled by \a scale. Only those elements
+/// whose corresponding mask bit is set in writemask \a mask are written to
+/// memory.
+///
+/// This intrinsic corresponds to the <c> VSCATTERDPD </c> instructions.
+///
+/// \operation
+/// FOR j := 0 to 7
+///   i := j*64
+///   m := j*32
+///   IF mask[j]
+///     addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///     MEM[addr+63:addr] := a[i+63:i]
+///   FI
+/// ENDFOR
+/// \endoperation
+#define _mm512_mask_i32loscatter_pd(base_addr, mask, vindex, v1, scale)        \
+  _mm512_mask_i32scatter_pd((base_addr), (mask),                               \
+                            _mm512_castsi512_si256(vindex), (v1), (scale))
+
+/// Stores 8 packed 64-bit integer elements located in \a v1 and stores them in
+/// memory locations starting at location \a base_addr at packed 32-bit integer
+/// indices stored in \a vindex scaled by \a scale.
+///
+/// This intrinsic corresponds to the <c> VPSCATTERDQ </c> instructions.
+///
+/// \operation
+/// FOR j := 0 to 7
+///   i := j*64
+///   m := j*32
+///   addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///   MEM[addr+63:addr] := a[i+63:i]
+/// ENDFOR
+/// \endoperation
+#define _mm512_i32loscatter_epi64(base_addr, vindex, v1, scale)                \
+  _mm512_i32scatter_epi64((base_addr),                                         \
+                          _mm512_castsi512_si256(vindex), (v1), (scale))
+
+/// Stores 8 packed 64-bit integer elements located in a and stores them in
+/// memory locations starting at location \a base_addr at packed 32-bit integer
+/// indices stored in \a vindex scaled by scale using writemask \a mask (elements
+/// whose corresponding mask bit is not set are not written to memory).
+///
+/// This intrinsic corresponds to the <c> VPSCATTERDQ </c> instructions.
+///
+/// \operation
+/// FOR j := 0 to 7
+///   i := j*64
+///   m := j*32
+///   IF mask[j]
+///     addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///     MEM[addr+63:addr] := a[i+63:i]
+///   FI
+/// ENDFOR
+/// \endoperation
+#define _mm512_mask_i32loscatter_epi64(base_addr, mask, vindex, v1, scale)     \
+  _mm512_mask_i32scatter_epi64((base_addr), (mask),                            \
+                               _mm512_castsi512_si256(vindex), (v1), (scale))
+
 #undef __DEFAULT_FN_ATTRS512
 #undef __DEFAULT_FN_ATTRS128
 #undef __DEFAULT_FN_ATTRS

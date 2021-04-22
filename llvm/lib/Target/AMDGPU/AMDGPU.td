@@ -1137,6 +1137,7 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureDot2Insts,
    FeatureDot5Insts,
    FeatureDot6Insts,
+   FeatureDot7Insts,
    FeatureNSAEncoding,
    FeatureWavefrontSize32,
    FeatureArchitectedFlatScratch,
@@ -1449,6 +1450,10 @@ def Has64BitDPP : Predicate<"Subtarget->has64BitDPP()">,
 
 def HasPackedFP32Ops : Predicate<"Subtarget->hasPackedFP32Ops()">,
   AssemblerPredicate<(all_of FeaturePackedFP32Ops)>;
+
+def HasFmaakFmamkF32Insts :
+  Predicate<"Subtarget->hasFmaakFmamkF32Insts()">,
+  AssemblerPredicate<(any_of FeatureGFX10Insts)>;
 
 def HasExtendedImageInsts : Predicate<"Subtarget->hasExtendedImageInsts()">,
   AssemblerPredicate<(all_of FeatureExtendedImageInsts)>;

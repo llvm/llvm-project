@@ -271,6 +271,8 @@ private:
       //   import Default from 'foo'; on either previous or this.
       //   mismatching
       if (Reference->Category == JsModuleReference::SIDE_EFFECT ||
+          PreviousReference->Category == JsModuleReference::SIDE_EFFECT ||
+          Reference->IsExport != PreviousReference->IsExport ||
           !PreviousReference->Prefix.empty() || !Reference->Prefix.empty() ||
           !PreviousReference->DefaultImport.empty() ||
           !Reference->DefaultImport.empty() || Reference->Symbols.empty() ||

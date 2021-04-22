@@ -46,8 +46,7 @@
 ; BAR-OLD-NOT: IR Dump
 ; BAR-OLD-NOT:  ; Loop
 
-; FOO-MODULE: IR Dump After {{Unroll|LoopFullUnrollPass}}
-; FOO-MODULE-SAME: loop: %loop
+; FOO-MODULE: IR Dump After {{Unroll|LoopFullUnrollPass}} {{.*}}%loop
 ; FOO-MODULE-NEXT: ModuleID =
 ; FOO-MODULE: define void @foo
 ; FOO-MODULE: define void @bar

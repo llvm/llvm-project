@@ -193,6 +193,14 @@ writing, the following sync-ups are organized:
      - Every 2 months on Thursday
      - 
      - `Minutes/docs <https://docs.google.com/document/d/1A-W0Sas_oHWTEl_x_djZYoRtzAdTONMW_6l1BH9G6Bo/edit?usp=sharing>`__
+   * - Vector Predication
+     - Every 2 weeks on Tuesdays, 3pm UTC
+     -
+     - `Minutes/docs <https://docs.google.com/document/d/1q26ToudQjnqN5x31zk8zgq_s0lem1-BF8pQmciLa4k8/edit?usp=sharing>`__
+   * - LLVM Pointer Authentication
+     - Every month on Mondays
+     - `ics <https://calendar.google.com/calendar/ical/fr1qtmrmt2s9odufjvurkb6j70%40group.calendar.google.com/public/basic.ics>`__
+     - `Minutes/docs <https://docs.google.com/document/d/14IDnh3YY9m6Ej_PaRKOz8tTTZlObgtLl8mYeRbytAec/edit?usp=sharing>`__
 
 
 IRC

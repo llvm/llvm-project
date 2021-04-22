@@ -141,12 +141,12 @@
     extern int   __KAI_KMPC_CONVENTION  omp_get_initial_device (void);
     extern void* __KAI_KMPC_CONVENTION  omp_target_alloc(size_t, int);
     extern void  __KAI_KMPC_CONVENTION  omp_target_free(void *, int);
-    extern int   __KAI_KMPC_CONVENTION  omp_target_is_present(void *, int);
-    extern int   __KAI_KMPC_CONVENTION  omp_target_memcpy(void *, void *, size_t, size_t, size_t, int, int);
-    extern int   __KAI_KMPC_CONVENTION  omp_target_memcpy_rect(void *, void *, size_t, int, const size_t *,
+    extern int   __KAI_KMPC_CONVENTION  omp_target_is_present(const void *, int);
+    extern int   __KAI_KMPC_CONVENTION  omp_target_memcpy(void *, const void *, size_t, size_t, size_t, int, int);
+    extern int   __KAI_KMPC_CONVENTION  omp_target_memcpy_rect(void *, const void *, size_t, int, const size_t *,
                                             const size_t *, const size_t *, const size_t *, const size_t *, int, int);
-    extern int   __KAI_KMPC_CONVENTION  omp_target_associate_ptr(void *, void *, size_t, size_t, int);
-    extern int   __KAI_KMPC_CONVENTION  omp_target_disassociate_ptr(void *, int);
+    extern int   __KAI_KMPC_CONVENTION  omp_target_associate_ptr(const void *, const void *, size_t, size_t, int);
+    extern int   __KAI_KMPC_CONVENTION  omp_target_disassociate_ptr(const void *, int);
 
     /* OpenMP 5.0 */
     extern int   __KAI_KMPC_CONVENTION  omp_get_device_num (void);
@@ -230,6 +230,7 @@
      * The `omp_get_mapped_ptr` routine returns the device pointer that is associated with a host pointer for a given device.
      */
     extern void * __KAI_KMPC_CONVENTION  omp_get_mapped_ptr(const void *, int);
+    extern int    __KAI_KMPC_CONVENTION  omp_target_is_accessible(const void *, size_t, int);
 
     /* kmp API functions */
     extern int    __KAI_KMPC_CONVENTION  kmp_get_stacksize          (void);

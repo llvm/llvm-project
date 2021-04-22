@@ -28,7 +28,7 @@ declare void @unknown()
 
 define void @test1() {
 ; BEFORE-NOT: Function Attrs
-; AFTER: Function Attrs: nosync readnone
+; AFTER: Function Attrs: nofree nosync readnone
 ; CHECK-LABEL: define void @test1()
 entry:
   %fptr = alloca void ()*
@@ -56,8 +56,8 @@ declare void @readnone_with_arg(void ()**) readnone
 
 define void @test2_a(void ()** %ignore) {
 ; BEFORE-NOT: Function Attrs
-; AFTER1: Function Attrs: readonly
-; AFTER2: Function Attrs: nosync readnone
+; AFTER1: Function Attrs: nofree readonly
+; AFTER2: Function Attrs: nofree nosync readnone
 ; BEFORE: define void @test2_a(void ()** %ignore)
 ; AFTER: define void @test2_a(void ()** readnone %ignore)
 entry:
@@ -77,8 +77,8 @@ entry:
 
 define void @test2_b() {
 ; BEFORE-NOT: Function Attrs
-; AFTER1: Function Attrs: readonly
-; AFTER2: Function Attrs: nosync readnone
+; AFTER1: Function Attrs: nofree readonly
+; AFTER2: Function Attrs: nofree nosync readnone
 ; CHECK-LABEL: define void @test2_b()
 entry:
   %f2ptr = alloca void ()*

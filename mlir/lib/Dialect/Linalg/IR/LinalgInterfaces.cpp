@@ -193,6 +193,16 @@ SmallVector<Value, 4> LinalgOp::createFlatListOfOperandDims(OpBuilder &b,
   return res;
 }
 
+SmallVector<int64_t, 4> LinalgOp::createFlatListOfOperandStaticDims() {
+  SmallVector<int64_t, 4> res;
+  for (Value v : getShapedOperands()) {
+    ShapedType t = v.getType().template cast<ShapedType>();
+    assert(t.hasStaticShape() && "expected operands to have static shapes");
+    llvm::append_range(res, t.getShape());
+  }
+  return res;
+}
+
 SmallVector<Range, 4> LinalgOp::createLoopRanges(OpBuilder &b, Location loc) {
   AffineMap map = getLoopsToShapesMap();
   unsigned numDims = map.getNumDims(), numRes = map.getNumResults();
@@ -207,6 +217,19 @@ SmallVector<Range, 4> LinalgOp::createLoopRanges(OpBuilder &b, Location loc) {
         continue;
       res[d.getPosition()] = Range{zeroVal, viewSizes[idx], oneVal};
     }
+  }
+  return res;
+}
+
+SmallVector<int64_t, 4> LinalgOp::computeStaticLoopSizes() {
+  AffineMap map = getLoopsToShapesMap();
+  unsigned numDims = map.getNumDims(), numRes = map.getNumResults();
+  SmallVector<int64_t, 4> allShapeSizes = createFlatListOfOperandStaticDims();
+  SmallVector<int64_t, 4> res(numDims, 0);
+  for (unsigned idx = 0; idx < numRes; ++idx) {
+    auto result = map.getResult(idx);
+    if (auto d = result.dyn_cast<AffineDimExpr>())
+      res[d.getPosition()] = allShapeSizes[idx];
   }
   return res;
 }

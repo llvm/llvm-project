@@ -154,6 +154,7 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
   const AttributeList &Attrs = FuncInfo.getAttributes();
   addArgFlagsFromAttributes(Flags, Attrs, OpIdx);
 
+  Align MemAlign;
   if (Flags.isByVal() || Flags.isInAlloca() || Flags.isPreallocated()) {
     Type *ElementTy = cast<PointerType>(Arg.Ty)->getElementType();
 
@@ -162,13 +163,18 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
 
     // For ByVal, alignment should be passed from FE.  BE will guess if
     // this info is not there but there are cases it cannot get right.
-    Align FrameAlign;
-    if (auto ParamAlign = FuncInfo.getParamAlign(OpIdx - 1))
-      FrameAlign = *ParamAlign;
+    if (auto ParamAlign = FuncInfo.getParamStackAlign(OpIdx - 1))
+      MemAlign = *ParamAlign;
+    else if ((ParamAlign = FuncInfo.getParamAlign(OpIdx - 1)))
+      MemAlign = *ParamAlign;
     else
-      FrameAlign = Align(getTLI()->getByValTypeAlignment(ElementTy, DL));
-    Flags.setByValAlign(FrameAlign);
+      MemAlign = Align(getTLI()->getByValTypeAlignment(ElementTy, DL));
+  } else if (auto ParamAlign = FuncInfo.getParamStackAlign(OpIdx - 1)) {
+    MemAlign = *ParamAlign;
+  } else {
+    MemAlign = Align(DL.getABITypeAlign(Arg.Ty));
   }
+  Flags.setMemAlign(MemAlign);
   Flags.setOrigAlign(DL.getABITypeAlign(Arg.Ty));
 
   // Don't try to use the returned attribute if the argument is marked as
@@ -500,20 +506,8 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
       if (Handler.assignArg(i, NewVT, NewVT, CCValAssign::Full, Args[i],
                             Args[i].Flags[0], CCInfo))
         return false;
-
-      // If we couldn't directly assign this part, some casting may be
-      // necessary. Create the new register, but defer inserting the conversion
-      // instructions.
-      assert(Args[i].OrigRegs.empty());
-      Args[i].OrigRegs.push_back(Args[i].Regs[0]);
-      assert(Args[i].Regs.size() == 1);
-
-      const LLT VATy(NewVT);
-      Args[i].Regs[0] = MRI.createGenericVirtualRegister(VATy);
       continue;
     }
-
-    const LLT NewLLT(NewVT);
 
     // For incoming arguments (physregs to vregs), we could have values in
     // physregs (or memlocs) which we want to extract and copy to vregs.
@@ -523,56 +517,23 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
     // If we have outgoing args, then we have the opposite case. We have a
     // vreg with an LLT which we want to assign to a physical location, and
     // we might have to record that the value has to be split later.
-    if (Handler.isIncomingArgumentHandler()) {
-      // We're handling an incoming arg which is split over multiple regs.
-      // E.g. passing an s128 on AArch64.
-      ISD::ArgFlagsTy OrigFlags = Args[i].Flags[0];
-      Args[i].OrigRegs.push_back(Args[i].Regs[0]);
-      Args[i].Regs.clear();
-      Args[i].Flags.clear();
-      // For each split register, create and assign a vreg that will store
-      // the incoming component of the larger value. These will later be
-      // merged to form the final vreg.
-      for (unsigned Part = 0; Part < NumParts; ++Part) {
-        Register Reg = MRI.createGenericVirtualRegister(NewLLT);
-        ISD::ArgFlagsTy Flags = OrigFlags;
-        if (Part == 0) {
-          Flags.setSplit();
-        } else {
-          Flags.setOrigAlign(Align(1));
-          if (Part == NumParts - 1)
-            Flags.setSplitEnd();
-        }
-        Args[i].Regs.push_back(Reg);
-        Args[i].Flags.push_back(Flags);
-        if (Handler.assignArg(i, NewVT, NewVT, CCValAssign::Full, Args[i],
-                              Args[i].Flags[Part], CCInfo)) {
-          // Still couldn't assign this smaller part type for some reason.
-          return false;
-        }
+
+    // We're handling an incoming arg which is split over multiple regs.
+    // E.g. passing an s128 on AArch64.
+    ISD::ArgFlagsTy OrigFlags = Args[i].Flags[0];
+    Args[i].Flags.clear();
+
+    for (unsigned Part = 0; Part < NumParts; ++Part) {
+      ISD::ArgFlagsTy Flags = OrigFlags;
+      if (Part == 0) {
+        Flags.setSplit();
+      } else {
+        Flags.setOrigAlign(Align(1));
+        if (Part == NumParts - 1)
+          Flags.setSplitEnd();
       }
-    } else {
-      assert(Args[i].Regs.size() == 1);
 
-      // This type is passed via multiple registers in the calling convention.
-      // We need to extract the individual parts.
-      assert(Args[i].OrigRegs.empty());
-      Args[i].OrigRegs.push_back(Args[i].Regs[0]);
-
-      ISD::ArgFlagsTy OrigFlags = Args[i].Flags[0];
-      // We're going to replace the regs and flags with the split ones.
-      Args[i].Regs.clear();
-      Args[i].Flags.clear();
-      for (unsigned PartIdx = 0; PartIdx < NumParts; ++PartIdx) {
-        ISD::ArgFlagsTy Flags = OrigFlags;
-        if (PartIdx == 0) {
-          Flags.setSplit();
-        } else {
-          Flags.setOrigAlign(Align(1));
-          if (PartIdx == NumParts - 1)
-            Flags.setSplitEnd();
-        }
-
+      if (!Handler.isIncomingArgumentHandler()) {
         // TODO: Also check if there is a valid extension that preserves the
         // bits. However currently this call lowering doesn't support non-exact
         // split parts, so that can't be tested.
@@ -580,21 +541,19 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
             (NumParts * NewVT.getSizeInBits() != CurVT.getSizeInBits())) {
           Flags.setReturned(false);
         }
+      }
 
-        Register NewReg = MRI.createGenericVirtualRegister(NewLLT);
-
-        Args[i].Regs.push_back(NewReg);
-        Args[i].Flags.push_back(Flags);
-        if (Handler.assignArg(i, NewVT, NewVT, CCValAssign::Full,
-                              Args[i], Args[i].Flags[PartIdx], CCInfo))
-          return false;
+      Args[i].Flags.push_back(Flags);
+      if (Handler.assignArg(i, NewVT, NewVT, CCValAssign::Full, Args[i],
+                            Args[i].Flags[Part], CCInfo)) {
+        // Still couldn't assign this smaller part type for some reason.
+        return false;
       }
     }
   }
 
-  for (unsigned i = 0, e = Args.size(), j = 0; i != e; ++i, ++j) {
+  for (unsigned i = 0, j = 0; i != NumArgs; ++i, ++j) {
     assert(j < ArgLocs.size() && "Skipped too many arg locs");
-
     CCValAssign &VA = ArgLocs[j];
     assert(VA.getValNo() == i && "Location doesn't correspond to current arg");
 
@@ -607,14 +566,33 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
       continue;
     }
 
-    EVT VAVT = VA.getValVT();
+    const EVT VAVT = VA.getValVT();
+    const LLT NewLLT(VAVT.getSimpleVT());
     const LLT OrigTy = getLLTForType(*Args[i].Ty, DL);
-    const LLT VATy(VAVT.getSimpleVT());
 
     // Expected to be multiple regs for a single incoming arg.
     // There should be Regs.size() ArgLocs per argument.
-    unsigned NumArgRegs = Args[i].Regs.size();
-    assert((j + (NumArgRegs - 1)) < ArgLocs.size() &&
+    // This should be the same as getNumRegistersForCallingConv
+    const unsigned NumParts = Args[i].Flags.size();
+
+    // Now split the registers into the assigned types.
+    Args[i].OrigRegs.assign(Args[i].Regs.begin(), Args[i].Regs.end());
+
+    if (NumParts != 1 || NewLLT != OrigTy) {
+      // If we can't directly assign the register, we need one or more
+      // intermediate values.
+      Args[i].Regs.resize(NumParts);
+
+      // For each split register, create and assign a vreg that will store
+      // the incoming component of the larger value. These will later be
+      // merged to form the final vreg.
+      for (unsigned Part = 0; Part < NumParts; ++Part)
+        Args[i].Regs[Part] = MRI.createGenericVirtualRegister(NewLLT);
+    }
+
+    const LLT VATy(VAVT.getSimpleVT());
+
+    assert((j + (NumParts - 1)) < ArgLocs.size() &&
            "Too many regs for number of args");
 
     // Coerce into outgoing value types before register assignment.
@@ -624,7 +602,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
                       VATy, extendOpFromFlags(Args[i].Flags[0]));
     }
 
-    for (unsigned Part = 0; Part < NumArgRegs; ++Part) {
+    for (unsigned Part = 0; Part < NumParts; ++Part) {
       Register ArgReg = Args[i].Regs[Part];
       // There should be Regs.size() ArgLocs per argument.
       VA = ArgLocs[j + Part];
@@ -710,7 +688,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
                         VATy);
     }
 
-    j += NumArgRegs - 1;
+    j += NumParts - 1;
   }
 
   return true;

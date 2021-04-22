@@ -101,6 +101,11 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, RISCV::VXSAT);
   markSuperRegs(Reserved, RISCV::VXRM);
 
+  // Floating point environment registers.
+  markSuperRegs(Reserved, RISCV::FRM);
+  markSuperRegs(Reserved, RISCV::FFLAGS);
+  markSuperRegs(Reserved, RISCV::FCSR);
+
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
@@ -208,6 +213,24 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineBasicBlock &MBB = *MI.getParent();
   bool FrameRegIsKill = false;
 
+  // If required, pre-compute the scalable factor amount which will be used in
+  // later offset computation. Since this sequence requires up to two scratch
+  // registers -- after which one is made free -- this grants us better
+  // scavenging of scratch registers as only up to two are live at one time,
+  // rather than three.
+  Register ScalableFactorRegister;
+  unsigned ScalableAdjOpc = RISCV::ADD;
+  if (Offset.getScalable()) {
+    int64_t ScalableValue = Offset.getScalable();
+    if (ScalableValue < 0) {
+      ScalableValue = -ScalableValue;
+      ScalableAdjOpc = RISCV::SUB;
+    }
+    // 1. Get vlenb && multiply vlen with the number of vector registers.
+    ScalableFactorRegister =
+        TII->getVLENFactoredAmount(MF, MBB, II, ScalableValue);
+  }
+
   if (!isInt<12>(Offset.getFixed())) {
     // The offset won't fit in an immediate, so use a scratch register instead
     // Modify Offset and FrameReg appropriately
@@ -246,29 +269,22 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     }
   } else {
     // Offset = (fixed offset, scalable offset)
-    unsigned Opc = RISCV::ADD;
-    int64_t ScalableValue = Offset.getScalable();
-    if (ScalableValue < 0) {
-      ScalableValue = -ScalableValue;
-      Opc = RISCV::SUB;
-    }
-
-    // 1. Get vlenb && multiply vlen with number of vector register.
-    Register FactorRegister =
-        TII->getVLENFactoredAmount(MF, MBB, II, ScalableValue);
+    // Step 1, the scalable offset, has already been computed.
+    assert(ScalableFactorRegister &&
+           "Expected pre-computation of scalable factor in earlier step");
 
     // 2. Calculate address: FrameReg + result of multiply
     if (MI.getOpcode() == RISCV::ADDI && !Offset.getFixed()) {
-      BuildMI(MBB, II, DL, TII->get(Opc), MI.getOperand(0).getReg())
+      BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), MI.getOperand(0).getReg())
           .addReg(FrameReg, getKillRegState(FrameRegIsKill))
-          .addReg(FactorRegister, RegState::Kill);
+          .addReg(ScalableFactorRegister, RegState::Kill);
       MI.eraseFromParent();
       return;
     }
     Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    BuildMI(MBB, II, DL, TII->get(Opc), VL)
+    BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), VL)
         .addReg(FrameReg, getKillRegState(FrameRegIsKill))
-        .addReg(FactorRegister, RegState::Kill);
+        .addReg(ScalableFactorRegister, RegState::Kill);
 
     if (isRVV && Offset.getFixed()) {
       // Scalable load/store has no immediate argument. We need to add the

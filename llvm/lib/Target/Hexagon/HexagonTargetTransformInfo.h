@@ -85,7 +85,7 @@ public:
   unsigned getMinVectorRegisterBitWidth() const;
   ElementCount getMinimumVF(unsigned ElemWidth, bool IsScalable) const;
 
-  bool shouldMaximizeVectorBandwidth(bool OptSize) const {
+  bool shouldMaximizeVectorBandwidth() const {
     return true;
   }
   bool supportsEfficientVectorElementLoadStore() {

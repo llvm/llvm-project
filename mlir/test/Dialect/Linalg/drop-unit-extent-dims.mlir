@@ -78,6 +78,56 @@ func @drop_one_trip_loops_indexed_generic
 
 // -----
 
+#accesses = [
+  affine_map<(i, j, k, l, m) -> (i, k, m)>,
+  affine_map<(i, j, k, l, m) -> (i, k, j, l, m)>
+]
+
+#trait = {
+  iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel"],
+  indexing_maps = #accesses,
+  library_call = "some_external_func"
+}
+
+func @drop_one_trip_loops_indexed
+  (%arg0 : tensor<?x1x?xi32>, %shape: tensor<?x1x?x1x?xi32>) -> tensor<?x1x?x1x?xi32>
+{
+  %0 = linalg.generic #trait
+     ins(%arg0 : tensor<?x1x?xi32>)
+    outs(%shape: tensor<?x1x?x1x?xi32>) {
+       ^bb0(%arg6 : i32, %arg7 : i32) :
+         %idx0 = linalg.index 0 : index
+         %idx1 = linalg.index 1 : index
+         %idx2 = linalg.index 2 : index
+         %idx3 = linalg.index 3 : index
+         %idx4 = linalg.index 4 : index
+         %1 = addi %idx0, %idx1 : index
+         %2 = subi %1, %idx2 : index
+         %3 = subi %2, %idx3 : index
+         %4 = addi %3, %idx4 : index
+         %5 = index_cast %4 : index to i32
+         %6 = addi %5, %arg6 : i32
+         linalg.yield %6 : i32
+       } -> tensor<?x1x?x1x?xi32>
+  return %0 : tensor<?x1x?x1x?xi32>
+}
+// The subtractions disappear the access map of the output tensor maps its unit
+// dimensions 1 and 3 to the index dimensions 2 and 3.
+// CHECK-LABEL: func @drop_one_trip_loops_indexed
+//       CHECK:   linalg.generic
+//       CHECK:   ^{{.+}}(
+//  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: i32, %{{.*}}: i32)
+//       CHECK:     %[[IDX0:.+]] = linalg.index 0 : index
+//       CHECK:     %[[IDX1:.+]] = linalg.index 1 : index
+//       CHECK:     %[[IDX2:.+]] = linalg.index 2 : index
+//       CHECK:     %[[T3:.+]] = addi %[[IDX0]], %[[IDX1]]
+//       CHECK:     %[[T4:.+]] = addi %[[T3]], %[[IDX2]]
+//       CHECK:     %[[T5:.+]] = index_cast %[[T4]] : index to i32
+//       CHECK:     %[[T6:.+]] = addi %[[T5]], %[[ARG4]] : i32
+//       CHECK:     linalg.yield %[[T6]] : i32
+
+// -----
+
 #map0 = affine_map<(i, j) -> (i, j)>
 #access = [#map0, #map0]
 #trait = {
@@ -129,6 +179,37 @@ func @drop_all_loops_indexed_generic
 
 // CHECK-LABEL: func @drop_all_loops_indexed_generic
 //       CHECK:   linalg.indexed_generic
+//       CHECK:   ^{{.+}}(%[[ARG1:.+]]: i32, %[[ARG2:.+]]: i32)
+//       CHECK:     linalg.yield %[[ARG1]] : i32
+
+// -----
+
+#map0 = affine_map<(i, j) -> (i, j)>
+#access = [#map0, #map0]
+#trait = {
+  iterator_types = ["parallel", "parallel"],
+  indexing_maps = #access,
+  library_call = "some_external_func"
+}
+
+func @drop_all_loops_indexed
+  (%arg0 : tensor<1x1xi32>) -> tensor<1x1xi32>{
+  %0 = linalg.generic #trait
+     ins(%arg0 : tensor<1x1xi32>)
+    outs(%arg0 : tensor<1x1xi32>) {
+       ^bb0(%arg3: i32, %arg4: i32) :
+         %idx0 = linalg.index 0 : index
+         %idx1 = linalg.index 1 : index
+         %1 = addi %idx0, %idx1 : index
+         %2 = index_cast %1 : index to i32
+         %3 = addi %2, %arg3 : i32
+         linalg.yield %3 : i32
+       } -> tensor<1x1xi32>
+  return %0 : tensor<1x1xi32>
+}
+
+// CHECK-LABEL: func @drop_all_loops_indexed
+//       CHECK:   linalg.generic
 //       CHECK:   ^{{.+}}(%[[ARG1:.+]]: i32, %[[ARG2:.+]]: i32)
 //       CHECK:     linalg.yield %[[ARG1]] : i32
 
@@ -569,16 +650,18 @@ func @unit_dim_for_reduction_inner(%arg0: tensor<?x1x?x1xf32>) -> tensor<?x1xf32
 
 // -----
 
-//  CHECK: #{{.+}} = affine_map<(d0, d1) -> (d0, d1)>
-// CHECK-LABEL: @index_op
-func @index_op(%arg0: memref<1x8xindex>) {
-  linalg.generic {
-    indexing_maps = [affine_map<(i, j) -> (i, j)>],
-    iterator_types = ["parallel", "parallel"]}
-  outs(%arg0 : memref<1x8xindex>) {
-  ^bb0(%arg1: index):   // no predecessors
-    %0 = linalg.index 1 : index
-    linalg.yield %0 : index
-  }
-  return
+func @no_fold_reshape_empty_expr(%arg0: tensor<3x2x2xf32>) -> tensor<12x1xf32> {
+  %0 = linalg.tensor_reshape %arg0 [affine_map<(d0, d1, d2, d3) -> (d0)>, affine_map<(d0, d1, d2, d3) -> (d1)>, affine_map<(d0, d1, d2, d3) -> (d2, d3)>] : tensor<3x2x2xf32> into tensor<3x2x2x1xf32>
+  %1 = linalg.tensor_reshape %0 [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>, affine_map<(d0, d1, d2, d3) -> (d3)>] : tensor<3x2x2x1xf32> into tensor<12x1xf32>
+  return %1 : tensor<12x1xf32>
 }
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3) -> (d0)>
+//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (d1)>
+//  CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3) -> (d2, d3)>
+//  CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+//  CHECK-DAG: #[[MAP4:.+]] = affine_map<(d0, d1, d2, d3) -> (d3)>
+//      CHECK: func @no_fold_reshape_empty_expr
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<3x2x2xf32>
+//      CHECK:    %[[RARG0:.+]] = linalg.tensor_reshape %[[ARG0:.+]] [#[[MAP0]], #[[MAP1]], #[[MAP2]]
+//      CHECK:    %[[RES:.+]] = linalg.tensor_reshape %[[RARG0:.+]] [#[[MAP3]], #[[MAP4]]]
+//      CHECK:    return %[[RES:.+]] : tensor<12x1xf32>

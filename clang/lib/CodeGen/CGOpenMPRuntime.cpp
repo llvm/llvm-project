@@ -2279,6 +2279,35 @@ void CGOpenMPRuntime::emitMasterRegion(CodeGenFunction &CGF,
   Action.Done(CGF);
 }
 
+void CGOpenMPRuntime::emitMaskedRegion(CodeGenFunction &CGF,
+                                       const RegionCodeGenTy &MaskedOpGen,
+                                       SourceLocation Loc, const Expr *Filter) {
+  if (!CGF.HaveInsertPoint())
+    return;
+  // if(__kmpc_masked(ident_t *, gtid, filter)) {
+  //   MaskedOpGen();
+  //   __kmpc_end_masked(iden_t *, gtid);
+  // }
+  // Prepare arguments and build a call to __kmpc_masked
+  llvm::Value *FilterVal = Filter
+                               ? CGF.EmitScalarExpr(Filter, CGF.Int32Ty)
+                               : llvm::ConstantInt::get(CGM.Int32Ty, /*V=*/0);
+  llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc),
+                         FilterVal};
+  llvm::Value *ArgsEnd[] = {emitUpdateLocation(CGF, Loc),
+                            getThreadID(CGF, Loc)};
+  CommonActionTy Action(OMPBuilder.getOrCreateRuntimeFunction(
+                            CGM.getModule(), OMPRTL___kmpc_masked),
+                        Args,
+                        OMPBuilder.getOrCreateRuntimeFunction(
+                            CGM.getModule(), OMPRTL___kmpc_end_masked),
+                        ArgsEnd,
+                        /*Conditional=*/true);
+  MaskedOpGen.setAction(Action);
+  emitInlinedDirective(CGF, OMPD_masked, MaskedOpGen);
+  Action.Done(CGF);
+}
+
 void CGOpenMPRuntime::emitTaskyieldCall(CodeGenFunction &CGF,
                                         SourceLocation Loc) {
   if (!CGF.HaveInsertPoint())
@@ -6232,7 +6261,8 @@ void CGOpenMPRuntime::emitInlinedDirective(CodeGenFunction &CGF,
     return;
   InlinedOpenMPRegionRAII Region(CGF, CodeGen, InnerKind, HasCancel,
                                  InnerKind != OMPD_critical &&
-                                     InnerKind != OMPD_master);
+                                     InnerKind != OMPD_master &&
+                                     InnerKind != OMPD_masked);
   CGF.CapturedStmtInfo->EmitBody(CGF, /*S=*/nullptr);
 }
 
@@ -9975,8 +10005,10 @@ void CGOpenMPRuntime::emitUDMapperArrayInitOrDel(
   llvm::Value *MapTypeArg = MapperCGF.Builder.CreateAnd(
       MapType,
       MapperCGF.Builder.getInt64(~(MappableExprsHandler::OMP_MAP_TO |
-                                   MappableExprsHandler::OMP_MAP_FROM |
-                                   MappableExprsHandler::OMP_MAP_MEMBER_OF)));
+                                   MappableExprsHandler::OMP_MAP_FROM)));
+  MapTypeArg = MapperCGF.Builder.CreateOr(
+      MapTypeArg,
+      MapperCGF.Builder.getInt64(MappableExprsHandler::OMP_MAP_IMPLICIT));
 
   // Call the runtime API __tgt_push_mapper_component to fill up the runtime
   // data structure.
@@ -12593,6 +12625,13 @@ void CGOpenMPSIMDRuntime::emitCriticalRegion(
 void CGOpenMPSIMDRuntime::emitMasterRegion(CodeGenFunction &CGF,
                                            const RegionCodeGenTy &MasterOpGen,
                                            SourceLocation Loc) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitMaskedRegion(CodeGenFunction &CGF,
+                                           const RegionCodeGenTy &MasterOpGen,
+                                           SourceLocation Loc,
+                                           const Expr *Filter) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 

@@ -40,8 +40,7 @@ using llvm::dbgs;
 
 /// Return the unique instance of OpType in `block` if it is indeed unique.
 /// Return null if none or more than 1 instances exist.
-template <typename OpType>
-static OpType getSingleOpOfType(Block &block) {
+template <typename OpType> static OpType getSingleOpOfType(Block &block) {
   OpType res;
   block.walk([&](OpType op) {
     if (res) {
@@ -167,6 +166,42 @@ vectorizeLinalgYield(OpBuilder &builder, Operation *op,
   return VectorizationResult{VectorizationStatus::NoReplace, nullptr};
 }
 
+/// Helper function to vectorize the index operations of a `linalgOp`. Return
+/// VectorizationStatus::NewOp to signal the vectorization algorithm that it
+/// should map the produced operations. This function is meant to be used as a
+/// CustomVectorizationHook.
+static VectorizationResult
+vectorizeLinalgIndex(OpBuilder &builder, Operation *op, LinalgOp linalgOp) {
+  IndexOp indexOp = dyn_cast<linalg::IndexOp>(op);
+  if (!indexOp)
+    return VectorizationResult{VectorizationStatus::Failure, nullptr};
+  auto loc = indexOp.getLoc();
+  // Compute the static loop sizes of the index op.
+  auto targetShape = linalgOp.computeStaticLoopSizes();
+  // Compute a one-dimensional index vector for the index op dimension.
+  SmallVector<int64_t> constantSeq(
+      llvm::seq<int64_t>(0, targetShape[indexOp.dim()]));
+  ConstantOp constantOp =
+      builder.create<ConstantOp>(loc, builder.getIndexVectorAttr(constantSeq));
+  // Return the one-dimensional index vector if it lives in the trailing
+  // dimension of the iteration space since the vectorization algorithm in this
+  // case can handle the broadcast.
+  if (indexOp.dim() == targetShape.size() - 1)
+    return VectorizationResult{VectorizationStatus::NewOp, constantOp};
+  // Otherwise permute the targetShape to move the index dimension last,
+  // broadcast the one-dimensional index vector to the permuted shape, and
+  // finally transpose the broadcasted index vector to undo the permutation.
+  std::swap(targetShape[indexOp.dim()], targetShape.back());
+  auto broadCastOp = builder.create<vector::BroadcastOp>(
+      loc, VectorType::get(targetShape, builder.getIndexType()), constantOp);
+  SmallVector<int64_t> transposition(
+      llvm::seq<int64_t>(0, linalgOp.getNumLoops()));
+  std::swap(transposition.back(), transposition[indexOp.dim()]);
+  auto transposeOp =
+      builder.create<vector::TransposeOp>(loc, broadCastOp, transposition);
+  return VectorizationResult{VectorizationStatus::NewOp, transposeOp};
+}
+
 /// Generic vectorization for a single operation `op`, given already vectorized
 /// operands carried by `bvm`. Vectorization occurs as follows:
 ///   1. Try to apply any of the `customVectorizationHooks` and return its
@@ -246,7 +281,7 @@ static bool hasOnlyScalarElementwiseOp(Region &r) {
   if (!llvm::hasSingleElement(r))
     return false;
   for (Operation &op : r.front()) {
-    if (!(isa<ConstantOp, linalg::YieldOp>(op) ||
+    if (!(isa<ConstantOp, linalg::YieldOp, linalg::IndexOp>(op) ||
           OpTrait::hasElementwiseMappableTraits(&op)) ||
         llvm::any_of(op.getResultTypes(),
                      [](Type type) { return !type.isIntOrIndexOrFloat(); }))
@@ -294,7 +329,9 @@ static AffineMap getTransferReadMap(LinalgOp linalgOp, unsigned argIndex) {
 ///   3. Each region argument is vectorized into a vector.transfer_read (or 0-d
 ///   load).
 ///   TODO: Reuse opportunities for RAR dependencies.
-///   4. Register CustomVectorizationHook for YieldOp to capture the results.
+///   4a. Register CustomVectorizationHook for YieldOp to capture the results.
+///   4b. Register CustomVectorizationHook for IndexOp to access the iteration
+///   indices.
 ///   5. Iteratively call vectorizeOneOp on the region operations.
 LogicalResult vectorizeAsLinalgGeneric(
     OpBuilder &builder, LinalgOp linalgOp, SmallVectorImpl<Value> &newResults,
@@ -307,7 +344,7 @@ LogicalResult vectorizeAsLinalgGeneric(
   BlockAndValueMapping bvm;
   // 2. Values defined above the region can only be broadcast for now. Make them
   // map to themselves.
-  llvm::SetVector<Value> valuesSet;
+  SetVector<Value> valuesSet;
   mlir::getUsedValuesDefinedAbove(linalgOp->getRegion(0), valuesSet);
   bvm.map(valuesSet.getArrayRef(), valuesSet.getArrayRef());
 
@@ -334,15 +371,22 @@ LogicalResult vectorizeAsLinalgGeneric(
     bvm.map(vectorArg, vectorRead);
   }
 
-  // 4. Register CustomVectorizationHook for yieldOp.
+  auto hooks = llvm::to_vector<4>(customVectorizationHooks);
+  // 4a. Register CustomVectorizationHook for yieldOp.
   CustomVectorizationHook vectorizeYield =
       [&](Operation *op,
           const BlockAndValueMapping &bvm) -> VectorizationResult {
     return vectorizeLinalgYield(builder, op, bvm, linalgOp, newResults);
   };
-  // Append the vectorizeYield hook.
-  auto hooks = llvm::to_vector<4>(customVectorizationHooks);
   hooks.push_back(vectorizeYield);
+
+  // 4b. Register CustomVectorizationHook for indexOp.
+  CustomVectorizationHook vectorizeIndex =
+      [&](Operation *op,
+          const BlockAndValueMapping &bvm) -> VectorizationResult {
+    return vectorizeLinalgIndex(builder, op, linalgOp);
+  };
+  hooks.push_back(vectorizeIndex);
 
   // 5. Iteratively call `vectorizeOneOp` to each op in the slice.
   for (Operation &op : block.getOperations()) {
@@ -402,9 +446,6 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
   for (Type outputTensorType : linalgOp.getOutputTensorTypes())
     if (!outputTensorType.cast<ShapedType>().hasStaticShape())
       return failure();
-  // TODO: remove once index ops are supported.
-  if (linalgOp.hasIndexSemantics())
-    return failure();
   if (isElementwise(op))
     return success();
   return success(isaContractionOpInterface(linalgOp));

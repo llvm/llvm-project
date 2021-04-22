@@ -721,7 +721,7 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
         if (target) {
           heap_buf_ptr->SetByteSize(bytes);
           size_t bytes_read = target->ReadMemory(
-              so_addr, false, heap_buf_ptr->GetBytes(), bytes, error);
+              so_addr, heap_buf_ptr->GetBytes(), bytes, error, true);
           if (error.Success()) {
             data.SetData(data_sp);
             return bytes_read;

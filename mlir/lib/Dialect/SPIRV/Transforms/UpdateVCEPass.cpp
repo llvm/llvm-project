@@ -21,6 +21,7 @@
 #include "mlir/IR/Visitors.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace mlir;
 
@@ -42,7 +43,7 @@ class UpdateVCEPass final : public SPIRVUpdateVCEBase<UpdateVCEPass> {
 static LogicalResult checkAndUpdateExtensionRequirements(
     Operation *op, const spirv::TargetEnv &targetEnv,
     const spirv::SPIRVType::ExtensionArrayRefVector &candidates,
-    llvm::SetVector<spirv::Extension> &deducedExtensions) {
+    SetVector<spirv::Extension> &deducedExtensions) {
   for (const auto &ors : candidates) {
     if (Optional<spirv::Extension> chosen = targetEnv.allows(ors)) {
       deducedExtensions.insert(*chosen);
@@ -70,7 +71,7 @@ static LogicalResult checkAndUpdateExtensionRequirements(
 static LogicalResult checkAndUpdateCapabilityRequirements(
     Operation *op, const spirv::TargetEnv &targetEnv,
     const spirv::SPIRVType::CapabilityArrayRefVector &candidates,
-    llvm::SetVector<spirv::Capability> &deducedCapabilities) {
+    SetVector<spirv::Capability> &deducedCapabilities) {
   for (const auto &ors : candidates) {
     if (Optional<spirv::Capability> chosen = targetEnv.allows(ors)) {
       deducedCapabilities.insert(*chosen);
@@ -101,8 +102,8 @@ void UpdateVCEPass::runOnOperation() {
   spirv::Version allowedVersion = targetAttr.getVersion();
 
   spirv::Version deducedVersion = spirv::Version::V_1_0;
-  llvm::SetVector<spirv::Extension> deducedExtensions;
-  llvm::SetVector<spirv::Capability> deducedCapabilities;
+  SetVector<spirv::Extension> deducedExtensions;
+  SetVector<spirv::Capability> deducedCapabilities;
 
   // Walk each SPIR-V op to deduce the minimal version/extension/capability
   // requirements.

@@ -188,84 +188,35 @@ __attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
 #endif
 }
 
+// True if we can use dlpi_tls_data. glibc before 2.25 may leave NULL (BZ
+// #19826) so dlpi_tls_data cannot be used.
+//
+// musl before 1.2.3 and FreeBSD as of 12.2 incorrectly set dlpi_tls_data to
+// the TLS initialization image
+// https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=254774
+__attribute__((unused)) static int g_use_dlpi_tls_data;
+
 #if SANITIZER_GLIBC && !SANITIZER_GO
-static uptr g_tls_size;
-
-#ifdef __i386__
-#define CHECK_GET_TLS_STATIC_INFO_VERSION (!__GLIBC_PREREQ(2, 27))
-#else
-#define CHECK_GET_TLS_STATIC_INFO_VERSION 0
-#endif
-
-#if CHECK_GET_TLS_STATIC_INFO_VERSION
-#define DL_INTERNAL_FUNCTION __attribute__((regparm(3), stdcall))
-#else
-#define DL_INTERNAL_FUNCTION
-#endif
-
-namespace {
-struct GetTlsStaticInfoCall {
-  typedef void (*get_tls_func)(size_t*, size_t*);
-};
-struct GetTlsStaticInfoRegparmCall {
-  typedef void (*get_tls_func)(size_t*, size_t*) DL_INTERNAL_FUNCTION;
-};
-
-template <typename T>
-void CallGetTls(void* ptr, size_t* size, size_t* align) {
-  typename T::get_tls_func get_tls;
-  CHECK_EQ(sizeof(get_tls), sizeof(ptr));
-  internal_memcpy(&get_tls, &ptr, sizeof(ptr));
-  CHECK_NE(get_tls, 0);
-  get_tls(size, align);
-}
-
-bool CmpLibcVersion(int major, int minor, int patch) {
-  int ma;
-  int mi;
-  int pa;
-  if (!GetLibcVersion(&ma, &mi, &pa))
-    return false;
-  if (ma > major)
-    return true;
-  if (ma < major)
-    return false;
-  if (mi > minor)
-    return true;
-  if (mi < minor)
-    return false;
-  return pa >= patch;
-}
-
-}  // namespace
-
+__attribute__((unused)) static uptr g_tls_size;
 void InitTlsSize() {
-  // all current supported platforms have 16 bytes stack alignment
-  const size_t kStackAlign = 16;
-  void *get_tls_static_info_ptr = dlsym(RTLD_NEXT, "_dl_get_tls_static_info");
-  size_t tls_size = 0;
-  size_t tls_align = 0;
-  // On i?86, _dl_get_tls_static_info used to be internal_function, i.e.
-  // __attribute__((regparm(3), stdcall)) before glibc 2.27 and is normal
-  // function in 2.27 and later.
-  if (CHECK_GET_TLS_STATIC_INFO_VERSION && !CmpLibcVersion(2, 27, 0))
-    CallGetTls<GetTlsStaticInfoRegparmCall>(get_tls_static_info_ptr,
-                                            &tls_size, &tls_align);
-  else
-    CallGetTls<GetTlsStaticInfoCall>(get_tls_static_info_ptr,
-                                     &tls_size, &tls_align);
-  if (tls_align < kStackAlign)
-    tls_align = kStackAlign;
-  g_tls_size = RoundUpTo(tls_size, tls_align);
+  int major, minor, patch;
+  g_use_dlpi_tls_data =
+      GetLibcVersion(&major, &minor, &patch) && major == 2 && minor >= 25;
+
+#if defined(__x86_64__) || defined(__powerpc64__)
+  void *get_tls_static_info = dlsym(RTLD_NEXT, "_dl_get_tls_static_info");
+  size_t tls_align;
+  ((void (*)(size_t *, size_t *))get_tls_static_info)(&g_tls_size, &tls_align);
+#endif
 }
 #else
 void InitTlsSize() { }
 #endif  // SANITIZER_GLIBC && !SANITIZER_GO
 
-#if (defined(__x86_64__) || defined(__i386__) || defined(__mips__) ||       \
-     defined(__aarch64__) || defined(__powerpc64__) || defined(__s390__) || \
-     defined(__arm__) || SANITIZER_RISCV64) &&                              \
-    SANITIZER_LINUX && !SANITIZER_ANDROID
+// On glibc x86_64, ThreadDescriptorSize() needs to be precise due to the usage
+// of g_tls_size. On other targets, ThreadDescriptorSize() is only used by lsan
+// to get the pointer to thread-specific data keys in the thread control block.
+#if (SANITIZER_FREEBSD || SANITIZER_LINUX) && !SANITIZER_ANDROID
 // sizeof(struct pthread) from glibc.
 static atomic_uintptr_t thread_descriptor_size;
 
@@ -303,6 +254,13 @@ uptr ThreadDescriptorSize() {
     else  // minor == 32
       val = FIRST_32_SECOND_64(1344, 2496);
   }
+#elif defined(__s390__) || defined(__sparc__)
+  // The size of a prefix of TCB including pthread::{specific_1stblock,specific}
+  // suffices. Just return offsetof(struct pthread, specific_used), which hasn't
+  // changed since 2007-05. Technically this applies to i386/x86_64 as well but
+  // we call _dl_get_tls_static_info and need the precise size of struct
+  // pthread.
+  return FIRST_32_SECOND_64(524, 1552);
 #elif defined(__mips__)
   // TODO(sagarthakur): add more values as per different glibc versions.
   val = FIRST_32_SECOND_64(1152, 1776);
@@ -326,19 +284,10 @@ uptr ThreadDescriptorSize() {
   val = 1776;
 #elif defined(__powerpc64__)
   val = 1776; // from glibc.ppc64le 2.20-8.fc21
-#elif defined(__s390__)
-  val = FIRST_32_SECOND_64(1152, 1776); // valid for glibc 2.22
 #endif
   if (val)
     atomic_store_relaxed(&thread_descriptor_size, val);
   return val;
-}
-
-// The offset at which pointer to self is located in the thread descriptor.
-const uptr kThreadSelfOffset = FIRST_32_SECOND_64(8, 16);
-
-uptr ThreadSelfOffset() {
-  return kThreadSelfOffset;
 }
 
 #if defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64
@@ -359,68 +308,74 @@ static uptr TlsPreTcbSize() {
 }
 #endif
 
-uptr ThreadSelf() {
-  uptr descr_addr;
-#if defined(__i386__)
-  asm("mov %%gs:%c1,%0" : "=r"(descr_addr) : "i"(kThreadSelfOffset));
-#elif defined(__x86_64__)
-  asm("mov %%fs:%c1,%0" : "=r"(descr_addr) : "i"(kThreadSelfOffset));
-#elif defined(__mips__)
-  // MIPS uses TLS variant I. The thread pointer (in hardware register $29)
-  // points to the end of the TCB + 0x7000. The pthread_descr structure is
-  // immediately in front of the TCB. TlsPreTcbSize() includes the size of the
-  // TCB and the size of pthread_descr.
-  const uptr kTlsTcbOffset = 0x7000;
-  uptr thread_pointer;
-  asm volatile(".set push;\
-                .set mips64r2;\
-                rdhwr %0,$29;\
-                .set pop" : "=r" (thread_pointer));
-  descr_addr = thread_pointer - kTlsTcbOffset - TlsPreTcbSize();
-#elif defined(__aarch64__) || defined(__arm__)
-  descr_addr = reinterpret_cast<uptr>(__builtin_thread_pointer()) -
-                                      ThreadDescriptorSize();
-#elif SANITIZER_RISCV64
-  // https://github.com/riscv/riscv-elf-psabi-doc/issues/53
-  uptr thread_pointer = reinterpret_cast<uptr>(__builtin_thread_pointer());
-  descr_addr = thread_pointer - TlsPreTcbSize();
-#elif defined(__s390__)
-  descr_addr = reinterpret_cast<uptr>(__builtin_thread_pointer());
-#elif defined(__powerpc64__)
-  // PPC64LE uses TLS variant I. The thread pointer (in GPR 13)
-  // points to the end of the TCB + 0x7000. The pthread_descr structure is
-  // immediately in front of the TCB. TlsPreTcbSize() includes the size of the
-  // TCB and the size of pthread_descr.
-  const uptr kTlsTcbOffset = 0x7000;
-  uptr thread_pointer;
-  asm("addi %0,13,%1" : "=r"(thread_pointer) : "I"(-kTlsTcbOffset));
-  descr_addr = thread_pointer - TlsPreTcbSize();
-#else
-#error "unsupported CPU arch"
-#endif
-  return descr_addr;
-}
-#endif  // (x86_64 || i386 || MIPS) && SANITIZER_LINUX
+#if !SANITIZER_GO
+namespace {
+struct TlsBlock {
+  uptr begin, end, align;
+  size_t tls_modid;
+  bool operator<(const TlsBlock &rhs) const { return begin < rhs.begin; }
+};
+}  // namespace
 
-#if SANITIZER_FREEBSD
-static void **ThreadSelfSegbase() {
-  void **segbase = 0;
-#if defined(__i386__)
-  // sysarch(I386_GET_GSBASE, segbase);
-  __asm __volatile("mov %%gs:0, %0" : "=r" (segbase));
-#elif defined(__x86_64__)
-  // sysarch(AMD64_GET_FSBASE, segbase);
-  __asm __volatile("movq %%fs:0, %0" : "=r" (segbase));
-#else
-#error "unsupported CPU arch"
+extern "C" void *__tls_get_addr(size_t *);
+
+static int CollectStaticTlsBlocks(struct dl_phdr_info *info, size_t size,
+                                  void *data) {
+  if (!info->dlpi_tls_modid)
+    return 0;
+  uptr begin = (uptr)info->dlpi_tls_data;
+#ifndef __s390__
+  if (!g_use_dlpi_tls_data) {
+    // Call __tls_get_addr as a fallback. This forces TLS allocation on glibc
+    // and FreeBSD.
+    size_t mod_and_off[2] = {info->dlpi_tls_modid, 0};
+    begin = (uptr)__tls_get_addr(mod_and_off);
+  }
 #endif
-  return segbase;
+  for (unsigned i = 0; i != info->dlpi_phnum; ++i)
+    if (info->dlpi_phdr[i].p_type == PT_TLS) {
+      static_cast<InternalMmapVector<TlsBlock> *>(data)->push_back(
+          TlsBlock{begin, begin + info->dlpi_phdr[i].p_memsz,
+                   info->dlpi_phdr[i].p_align, info->dlpi_tls_modid});
+      break;
+    }
+  return 0;
 }
 
-uptr ThreadSelf() {
-  return (uptr)ThreadSelfSegbase()[2];
+__attribute__((unused)) static void GetStaticTlsBoundary(uptr *addr, uptr *size,
+                                                         uptr *align) {
+  InternalMmapVector<TlsBlock> ranges;
+  dl_iterate_phdr(CollectStaticTlsBlocks, &ranges);
+  uptr len = ranges.size();
+  Sort(ranges.begin(), len);
+  // Find the range with tls_modid=1. For glibc, because libc.so uses PT_TLS,
+  // this module is guaranteed to exist and is one of the initially loaded
+  // modules.
+  uptr one = 0;
+  while (one != len && ranges[one].tls_modid != 1) ++one;
+  if (one == len) {
+    // This may happen with musl if no module uses PT_TLS.
+    *addr = 0;
+    *size = 0;
+    *align = 1;
+    return;
+  }
+  // Find the maximum consecutive ranges. We consider two modules consecutive if
+  // the gap is smaller than the alignment. The dynamic loader places static TLS
+  // blocks this way not to waste space.
+  uptr l = one;
+  *align = ranges[l].align;
+  while (l != 0 && ranges[l].begin < ranges[l - 1].end + ranges[l - 1].align)
+    *align = Max(*align, ranges[--l].align);
+  uptr r = one + 1;
+  while (r != len && ranges[r].begin < ranges[r - 1].end + ranges[r - 1].align)
+    *align = Max(*align, ranges[r++].align);
+  *addr = ranges[l].begin;
+  *size = ranges[r - 1].end - ranges[l].begin;
 }
-#endif  // SANITIZER_FREEBSD
+#endif  // !SANITIZER_GO
+#endif  // (x86_64 || i386 || mips || ...) && (SANITIZER_FREEBSD ||
+        // SANITIZER_LINUX) && !SANITIZER_ANDROID
 
 #if SANITIZER_NETBSD
 static struct tls_tcb * ThreadSelfTlsTcb() {
@@ -471,33 +426,67 @@ static void GetTls(uptr *addr, uptr *size) {
     *addr = 0;
     *size = 0;
   }
-#elif SANITIZER_LINUX
-#if defined(__x86_64__) || defined(__i386__) || defined(__s390__)
-  *addr = ThreadSelf();
-  *size = GetTlsSize();
+#elif SANITIZER_GLIBC && defined(__x86_64__)
+  // For x86-64, use an O(1) approach which requires precise
+  // ThreadDescriptorSize. g_tls_size was initialized in InitTlsSize.
+  asm("mov %%fs:16,%0" : "=r"(*addr));
+  *size = g_tls_size;
   *addr -= *size;
   *addr += ThreadDescriptorSize();
-#elif defined(__mips__) || defined(__aarch64__) || defined(__powerpc64__) || \
-    defined(__arm__) || SANITIZER_RISCV64
-  *addr = ThreadSelf();
-  *size = GetTlsSize();
+#elif SANITIZER_GLIBC && defined(__powerpc64__)
+  // Workaround for glibc<2.25(?). 2.27 is known to not need this.
+  uptr tp;
+  asm("addi %0,13,-0x7000" : "=r"(tp));
+  const uptr pre_tcb_size = TlsPreTcbSize();
+  *addr = tp - pre_tcb_size;
+  *size = g_tls_size + pre_tcb_size;
+#elif SANITIZER_FREEBSD || SANITIZER_LINUX
+  uptr align;
+  GetStaticTlsBoundary(addr, size, &align);
+#if defined(__x86_64__) || defined(__i386__) || defined(__s390__) || \
+    defined(__sparc__)
+  if (SANITIZER_GLIBC) {
+#if defined(__x86_64__) || defined(__i386__)
+    align = Max<uptr>(align, 64);
 #else
-  *addr = 0;
-  *size = 0;
+    align = Max<uptr>(align, 16);
 #endif
-#elif SANITIZER_FREEBSD
-  void** segbase = ThreadSelfSegbase();
-  *addr = 0;
-  *size = 0;
-  if (segbase != 0) {
-    // tcbalign = 16
-    // tls_size = round(tls_static_space, tcbalign);
-    // dtv = segbase[1];
-    // dtv[2] = segbase - tls_static_space;
-    void **dtv = (void**) segbase[1];
-    *addr = (uptr) dtv[2];
-    *size = (*addr == 0) ? 0 : ((uptr) segbase[0] - (uptr) dtv[2]);
   }
+  const uptr tp = RoundUpTo(*addr + *size, align);
+
+  // lsan requires the range to additionally cover the static TLS surplus
+  // (elf/dl-tls.c defines 1664). Otherwise there may be false positives for
+  // allocations only referenced by tls in dynamically loaded modules.
+  if (SANITIZER_GLIBC)
+    *size += 1644;
+  else if (SANITIZER_FREEBSD)
+    *size += 128;  // RTLD_STATIC_TLS_EXTRA
+
+  // Extend the range to include the thread control block. On glibc, lsan needs
+  // the range to include pthread::{specific_1stblock,specific} so that
+  // allocations only referenced by pthread_setspecific can be scanned. This may
+  // underestimate by at most TLS_TCB_ALIGN-1 bytes but it should be fine
+  // because the number of bytes after pthread::specific is larger.
+  *addr = tp - RoundUpTo(*size, align);
+  *size = tp - *addr + ThreadDescriptorSize();
+#else
+  if (SANITIZER_GLIBC)
+    *size += 1664;
+  else if (SANITIZER_FREEBSD)
+    *size += 128;  // RTLD_STATIC_TLS_EXTRA
+#if defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64
+  const uptr pre_tcb_size = TlsPreTcbSize();
+  *addr -= pre_tcb_size;
+  *size += pre_tcb_size;
+#else
+  // arm and aarch64 reserve two words at TP, so this underestimates the range.
+  // However, this is sufficient for the purpose of finding the pointers to
+  // thread-specific data keys.
+  const uptr tcb_size = ThreadDescriptorSize();
+  *addr -= tcb_size;
+  *size += tcb_size;
+#endif
+#endif
 #elif SANITIZER_NETBSD
   struct tls_tcb * const tcb = ThreadSelfTlsTcb();
   *addr = 0;
@@ -524,17 +513,11 @@ static void GetTls(uptr *addr, uptr *size) {
 
 #if !SANITIZER_GO
 uptr GetTlsSize() {
-#if SANITIZER_FREEBSD || SANITIZER_ANDROID || SANITIZER_NETBSD || \
+#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
     SANITIZER_SOLARIS
   uptr addr, size;
   GetTls(&addr, &size);
   return size;
-#elif SANITIZER_GLIBC
-#if defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64
-  return RoundUpTo(g_tls_size + TlsPreTcbSize(), 16);
-#else
-  return g_tls_size;
-#endif
 #else
   return 0;
 #endif
@@ -557,10 +540,9 @@ void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
   if (!main) {
     // If stack and tls intersect, make them non-intersecting.
     if (*tls_addr > *stk_addr && *tls_addr < *stk_addr + *stk_size) {
-      CHECK_GT(*tls_addr + *tls_size, *stk_addr);
-      CHECK_LE(*tls_addr + *tls_size, *stk_addr + *stk_size);
-      *stk_size -= *tls_size;
-      *tls_addr = *stk_addr + *stk_size;
+      if (*stk_addr + *stk_size < *tls_addr + *tls_size)
+        *tls_size = *stk_addr + *stk_size - *tls_addr;
+      *stk_size = *tls_addr - *stk_addr;
     }
   }
 #endif

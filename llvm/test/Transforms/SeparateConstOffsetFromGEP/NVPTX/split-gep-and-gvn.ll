@@ -15,7 +15,7 @@
 ;
 ; so the backend can emit PTX that uses fewer virtual registers.
 
-@array = internal addrspace(3) constant [32 x [32 x float]] zeroinitializer, align 4
+@array = internal addrspace(3) global [32 x [32 x float]] zeroinitializer, align 4
 
 define void @sum_of_array(i32 %x, i32 %y, float* nocapture %output) {
 .preheader:

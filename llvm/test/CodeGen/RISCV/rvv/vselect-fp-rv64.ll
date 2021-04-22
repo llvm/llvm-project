@@ -102,6 +102,25 @@ define <vscale x 8 x half> @vfmerge_zv_nxv8f16(<vscale x 8 x half> %va, <vscale 
   ret <vscale x 8 x half> %vc
 }
 
+define <vscale x 8 x half> @vmerge_truelhs_nxv8f16_0(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) {
+; CHECK-LABEL: vmerge_truelhs_nxv8f16_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %mhead = insertelement <vscale x 8 x i1> undef, i1 1, i32 0
+  %mtrue = shufflevector <vscale x 8 x i1> %mhead, <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer
+  %vc = select <vscale x 8 x i1> %mtrue, <vscale x 8 x half> %va, <vscale x 8 x half> %vb
+  ret <vscale x 8 x half> %vc
+}
+
+define <vscale x 8 x half> @vmerge_falselhs_nxv8f16_0(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) {
+; CHECK-LABEL: vmerge_falselhs_nxv8f16_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    ret
+  %vc = select <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %va, <vscale x 8 x half> %vb
+  ret <vscale x 8 x half> %vc
+}
+
 define <vscale x 16 x half> @vfmerge_vv_nxv16f16(<vscale x 16 x half> %va, <vscale x 16 x half> %vb, <vscale x 16 x i1> %cond) {
 ; CHECK-LABEL: vfmerge_vv_nxv16f16:
 ; CHECK:       # %bb.0:

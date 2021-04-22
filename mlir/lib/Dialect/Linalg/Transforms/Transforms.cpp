@@ -206,7 +206,7 @@ static LogicalResult rewriteAsPaddedOp(PatternRewriter &rewriter,
   // This later folds away.
   SmallVector<Value> paddedSubviewResults;
   paddedSubviewResults.reserve(opToPad->getNumResults());
-  llvm::SetVector<Operation *> newUsersOfOpToPad;
+  SetVector<Operation *> newUsersOfOpToPad;
   for (auto it : llvm::zip(opToPad->getResults(), paddedOp->getResults())) {
     auto rank = std::get<0>(it).getType().cast<RankedTensorType>().getRank();
     SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
@@ -257,11 +257,8 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
     return failure();
 
   // Setup RAII guard to return properly.
-  bool succeeded = true;
   LinalgOp tiledOp = res->op;
   auto guard = llvm::make_scope_exit([&]() {
-    if (!succeeded)
-      return;
     // Return relevant information to derived pattern.
     result = *res;
     // Replace filter on both tiledOp and tiledAndPaddedOp, if necessary.
@@ -278,7 +275,6 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
   // Try to pad on the fly by rewriting res->op as a padded op.
   if (failed(rewriteAsPaddedOp(rewriter, *res, options))) {
     // Set so RAII guard does not propagate TiledLinalgOp to `result`.
-    succeeded = false;
     return failure();
   }
 
@@ -408,8 +404,7 @@ mlir::linalg::LinalgBaseInterchangePattern::LinalgBaseInterchangePattern(
 LogicalResult mlir::linalg::LinalgBaseInterchangePattern::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
   LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
-  // TODO: remove hasIndexSemantics check once index ops are supported.
-  if (!linalgOp || linalgOp.hasIndexSemantics())
+  if (!linalgOp)
     return failure();
   if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
@@ -419,7 +414,7 @@ LogicalResult mlir::linalg::LinalgBaseInterchangePattern::matchAndRewrite(
   // TODO: figure out how this interplays with named ops. In particular this
   // should break the named op property.
   rewriter.updateRootInPlace(op, [&]() {
-    interchange(linalgOp, interchangeVector);
+    interchange(rewriter, linalgOp, interchangeVector);
     // New filter if specified.
     filter.replaceLinalgTransformationFilter(rewriter, op);
   });
@@ -467,8 +462,7 @@ mlir::linalg::LinalgBaseVectorizationPattern::LinalgBaseVectorizationPattern(
 LogicalResult mlir::linalg::LinalgBaseVectorizationPattern::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
   LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
-  // TODO: remove hasIndexSemantics check once index ops are supported.
-  if (!linalgOp || linalgOp.hasIndexSemantics())
+  if (!linalgOp)
     return failure();
   if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
@@ -513,37 +507,11 @@ LogicalResult mlir::linalg::applyStagedPatterns(
   return success();
 }
 
-/// Given the `lbVal`, `ubVal` and `stepVal` of a loop, append `lbVal` and
-/// `ubVal` to `dims` and `stepVal` to `symbols`.
-/// Create new AffineDimExpr (`%lb` and `%ub`) and AffineSymbolExpr (`%step`)
-/// with positions matching the newly appended values. Substitute occurrences of
-/// `dimExpr` by either the min expression (i.e. `%lb`) or the max expression
-/// (i.e. `%lb + %step * floordiv(%ub -1 - %lb, %step)`), depending on whether
-/// the induction variable is used with a positive or negative  coefficient.
-static AffineExpr substituteLoopInExpr(AffineExpr expr, AffineExpr dimExpr,
-                                       Value lbVal, Value ubVal, Value stepVal,
-                                       SmallVectorImpl<Value> &dims,
-                                       SmallVectorImpl<Value> &symbols) {
-  MLIRContext *ctx = lbVal.getContext();
-  AffineExpr lb = getAffineDimExpr(dims.size(), ctx);
-  dims.push_back(lbVal);
-  AffineExpr ub = getAffineDimExpr(dims.size(), ctx);
-  dims.push_back(ubVal);
-  AffineExpr step = getAffineSymbolExpr(symbols.size(), ctx);
-  symbols.push_back(stepVal);
-  LLVM_DEBUG(DBGS() << "Before: " << expr << "\n");
-  AffineExpr ee = substWithMin(expr, dimExpr, lb,
-                               lb + step * ((ub - 1) - lb).floorDiv(step));
-  LLVM_DEBUG(DBGS() << "After: " << expr << "\n");
-  return ee;
-}
-
-/// Traverse the `dims` and substitute known min or max expressions in place of
-/// induction variables in `exprs`.
-static AffineMap substitute(
-    AffineMap map, SmallVectorImpl<Value> &dims,
-    SmallVectorImpl<Value> &symbols,
-    llvm::function_ref<bool(Operation *)> substituteOperation = nullptr) {
+/// Traverse the `dims` and substitute known min or max expressions returned by
+/// the lambda |getMinMaxExpr|.
+static AffineMap substitute(AffineMap map, SmallVectorImpl<Value> &dims,
+                            SmallVectorImpl<Value> &symbols,
+                            GetMinMaxExprFn getMinMaxExpr) {
   auto exprs = llvm::to_vector<4>(map.getResults());
   for (AffineExpr &expr : exprs) {
     bool substituted = true;
@@ -551,27 +519,18 @@ static AffineMap substitute(
       substituted = false;
       for (unsigned dimIdx = 0; dimIdx < dims.size(); ++dimIdx) {
         Value dim = dims[dimIdx];
+        auto minMax = getMinMaxExpr(dim, dims, symbols);
+        if (!minMax)
+          continue;
         AffineExpr dimExpr = getAffineDimExpr(dimIdx, expr.getContext());
         LLVM_DEBUG(DBGS() << "Subst: " << dim << " @ " << dimExpr << "\n");
-        AffineExpr substitutedExpr;
-        if (auto forOp = scf::getForInductionVarOwner(dim))
-          if (!substituteOperation || substituteOperation(forOp))
-            substitutedExpr = substituteLoopInExpr(
-                expr, dimExpr, forOp.lowerBound(), forOp.upperBound(),
-                forOp.step(), dims, symbols);
-
-        if (auto parallelForOp = scf::getParallelForInductionVarOwner(dim))
-          if (!substituteOperation || substituteOperation(parallelForOp))
-            for (unsigned idx = 0, e = parallelForOp.getNumLoops(); idx < e;
-                 ++idx)
-              substitutedExpr = substituteLoopInExpr(
-                  expr, dimExpr, parallelForOp.lowerBound()[idx],
-                  parallelForOp.upperBound()[idx], parallelForOp.step()[idx],
-                  dims, symbols);
-
-        if (!substitutedExpr)
-          continue;
-
+        LLVM_DEBUG(DBGS() << "Before: " << expr << "\n");
+        // Substitute occurrences of `dimExpr` by either the min expression or
+        // the max expression depending on whether the value is used with a
+        // positive or negative  coefficient.
+        AffineExpr substitutedExpr =
+            substWithMin(expr, dimExpr, minMax->first, minMax->second);
+        LLVM_DEBUG(DBGS() << "After: " << substitutedExpr << "\n");
         substituted = (substitutedExpr != expr);
         expr = substitutedExpr;
       }
@@ -609,37 +568,36 @@ static AffineMap substitute(
   return AffineMap::get(dims.size(), symbols.size(), exprs, map.getContext());
 }
 
-/// Traverse the dims of the AffineMap of `affineMinOp` and substitute scf loop
-/// induction variables by new expressions involving the lower or upper bound:
-///   - If the AffineDimExpr mapped to a loop IV has a positive sign, it is
-///     replaced by the loop upper bound.
-///   - If the AffineDimExpr mapped to a loop IV has a negative sign, it is
-///     replaced by the loop lower bound.
-/// All loop induction variables are iteratively replaced, unless a
-/// `substituteOperation` hook is passed to more finely determine which
-/// operations are substituted.
+/// Traverse the dims of the AffineMap of `affineMinOp` and substitute
+/// dimensions with known range by new expressions involving the min or max
+/// expression:
+///   - If the AffineDimExpr mapped to a known value has a positive sign, it
+///     is replaced by the min expression.
+///   - If the AffineDimExpr mapped to a known value has a negative sign, it is
+///     replaced by the max expression.
+/// All known values are iteratively replaced.
 /// This is used as an intermediate step in computing bounding boxes and
 /// canonicalize AffineMinOps. All dim and symbol operands are assumed to have
 /// positive values (positive orthant assumptions).
 /// Return a new AffineMap, dims and symbols that have been canonicalized and
 /// simplified.
-AffineMapAndOperands mlir::linalg::substituteMin(
-    AffineMinOp affineMinOp,
-    llvm::function_ref<bool(Operation *)> substituteOperation) {
+AffineMapAndOperands
+mlir::linalg::substituteMin(AffineMinOp affineMinOp,
+                            GetMinMaxExprFn getMinMaxExpr) {
   AffineMapAndOperands res{affineMinOp.getAffineMap(),
                            SmallVector<Value>(affineMinOp.getDimOperands()),
                            SmallVector<Value>(affineMinOp.getSymbolOperands())};
   res.map = substitute(affineMinOp.getAffineMap(), res.dims, res.symbols,
-                       substituteOperation);
+                       getMinMaxExpr);
   return res;
 }
 
-LogicalResult AffineMinSCFCanonicalizationPattern::matchAndRewrite(
+LogicalResult AffineMinRangeCanonicalizationPattern::matchAndRewrite(
     AffineMinOp minOp, PatternRewriter &rewriter) const {
   LLVM_DEBUG(DBGS() << "Canonicalize AffineMinSCF: " << *minOp.getOperation()
                     << "\n");
 
-  auto affineMapAndOperands = substituteMin(minOp);
+  auto affineMapAndOperands = substituteMin(minOp, getMinMaxFn);
   AffineMap map = affineMapAndOperands.map;
 
   LLVM_DEBUG(DBGS() << "Resulting map: " << map << "\n");

@@ -54,3 +54,11 @@ func @avx_rsqrt(%a: vector<8xf32>) -> (vector<8xf32>)
   %0 = x86vector.avx.rsqrt %a : vector<8xf32>
   return %0 : vector<8xf32>
 }
+
+// CHECK-LABEL: func @avx_dot
+func @avx_dot(%a: vector<8xf32>, %b: vector<8xf32>) -> (vector<8xf32>)
+{
+  // CHECK: x86vector.avx.intr.dot {{.*}} : vector<8xf32>
+  %0 = x86vector.avx.intr.dot %a, %b : vector<8xf32>
+  return %0 : vector<8xf32>
+}

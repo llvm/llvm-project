@@ -10,83 +10,127 @@
 #define LLVM_LIBC_UTILS_CPP_ARRAYREF_H
 
 #include "Array.h"
+#include "TypeTraits.h" //RemoveCVType
 
 #include <stddef.h> // For size_t.
 
 namespace __llvm_libc {
 namespace cpp {
 
-// The implementations of ArrayRef and MutualArrayRef in this file are based
+// The implementations of ArrayRef and MutableArrayRef in this file are based
 // on the implementations of the types with the same names in
 // llvm/ADT/ArrayRef.h. The implementations in this file are of a limited
 // functionality, but can be extended in an as needed basis.
-
-template <typename T> class ArrayRef {
+namespace internal {
+template <typename QualifiedT> class ArrayRefBase {
 public:
-  using iterator = const T *;
+  using value_type = RemoveCVType<QualifiedT>;
+  using pointer = value_type *;
+  using const_pointer = const value_type *;
+  using reference = value_type &;
+  using const_reference = const value_type &;
+  using iterator = const_pointer;
+  using const_iterator = const_pointer;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
 
-private:
-  const T *Data = nullptr;
-  size_t Length = 0;
+  ArrayRefBase() = default;
 
-public:
-  ArrayRef() = default;
+  // Construct an ArrayRefBase from a single element.
+  explicit ArrayRefBase(QualifiedT &OneElt) : Data(&OneElt), Length(1) {}
 
-  // From Array.
+  // Construct an ArrayRefBase from a pointer and length.
+  ArrayRefBase(QualifiedT *Data, size_t Length) : Data(Data), Length(Length) {}
+
+  // Construct an ArrayRefBase from a range.
+  ArrayRefBase(QualifiedT *Begin, QualifiedT *End)
+      : Data(Begin), Length(End - Begin) {}
+
+  // Construct an ArrayRefBase from a C array.
   template <size_t N>
-  ArrayRef(const Array<T, N> &Arr) : Data(Arr.Data), Length(N) {}
+  constexpr ArrayRefBase(QualifiedT (&Arr)[N]) : Data(Arr), Length(N) {}
 
-  // Construct an ArrayRef from a single element.
-  explicit ArrayRef(const T &OneElt) : Data(&OneElt), Length(1) {}
-
-  // Construct an ArrayRef from a pointer and length.
-  ArrayRef(const T *data, size_t length) : Data(data), Length(length) {}
-
-  // Construct an ArrayRef from a range.
-  ArrayRef(const T *begin, const T *end) : Data(begin), Length(end - begin) {}
-
-  // Construct an ArrayRef from a C array.
-  template <size_t N>
-  constexpr ArrayRef(const T (&Arr)[N]) : Data(Arr), Length(N) {}
-
-  iterator begin() const { return Data; }
-  iterator end() const { return Data + Length; }
-
-  bool empty() const { return Length == 0; }
-
-  const T *data() const { return Data; }
-
+  QualifiedT *data() const { return Data; }
   size_t size() const { return Length; }
 
-  const T &operator[](size_t Index) const { return Data[Index]; }
+  auto begin() const { return data(); }
+  auto end() const { return data() + size(); }
+
+  bool empty() const { return size() == 0; }
+
+  auto operator[](size_t Index) const { return data()[Index]; }
+
+  // slice(n, m) - Chop off the first N elements of the array, and keep M
+  // elements in the array.
+  auto slice(size_t N, size_t M) const { return ArrayRefBase(data() + N, M); }
+  // slice(n) - Chop off the first N elements of the array.
+  auto slice(size_t N) const { return slice(N, size() - N); }
+
+  // Drop the first \p N elements of the array.
+  auto drop_front(size_t N = 1) const { return slice(N, size() - N); }
+
+  // Drop the last \p N elements of the array.
+  auto drop_back(size_t N = 1) const { return slice(0, size() - N); }
+
+  // Return a copy of *this with only the first \p N elements.
+  auto take_front(size_t N = 1) const {
+    if (N >= size())
+      return *this;
+    return drop_back(size() - N);
+  }
+
+  // Return a copy of *this with only the last \p N elements.
+  auto take_back(size_t N = 1) const {
+    if (N >= size())
+      return *this;
+    return drop_front(size() - N);
+  }
+
+  // equals - Check for element-wise equality.
+  bool equals(ArrayRefBase<QualifiedT> RHS) const {
+    if (Length != RHS.Length)
+      return false;
+    auto First1 = begin();
+    auto Last1 = end();
+    auto First2 = RHS.begin();
+    for (; First1 != Last1; ++First1, ++First2) {
+      if (!(*First1 == *First2)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+private:
+  QualifiedT *Data = nullptr;
+  size_t Length = 0;
+};
+} // namespace internal
+
+template <typename T> struct ArrayRef : public internal::ArrayRefBase<const T> {
+private:
+  static_assert(IsSameV<T, RemoveCVType<T>>,
+                "ArrayRef must have a non-const, non-volatile value_type");
+  using Impl = internal::ArrayRefBase<const T>;
+  using Impl::Impl;
+
+public:
+  // From Array.
+  template <size_t N> ArrayRef(const Array<T, N> &Arr) : Impl(Arr.Data, N) {}
 };
 
-template <typename T> class MutableArrayRef : public ArrayRef<T> {
+template <typename T>
+struct MutableArrayRef : public internal::ArrayRefBase<T> {
+private:
+  static_assert(
+      IsSameV<T, RemoveCVType<T>>,
+      "MutableArrayRef must have a non-const, non-volatile value_type");
+  using Impl = internal::ArrayRefBase<T>;
+  using Impl::Impl;
+
 public:
-  using iterator = T *;
-
   // From Array.
-  template <size_t N> MutableArrayRef(Array<T, N> &Arr) : ArrayRef<T>(Arr) {}
-
-  // Construct from a single element.
-  explicit MutableArrayRef(T &OneElt) : ArrayRef<T>(OneElt) {}
-
-  // Construct from a pointer and length.
-  MutableArrayRef(T *data, size_t length) : ArrayRef<T>(data, length) {}
-
-  // Construct from a range.
-  MutableArrayRef(T *begin, T *end) : ArrayRef<T>(begin, end) {}
-
-  // Construct from a C array.
-  template <size_t N>
-  constexpr MutableArrayRef(T (&Arr)[N]) : ArrayRef<T>(Arr) {}
-
-  T *data() const { return const_cast<T *>(ArrayRef<T>::data()); }
-
-  iterator begin() const { return data(); }
-  iterator end() const { return data() + this->size(); }
-
-  T &operator[](size_t Index) const { return data()[Index]; }
+  template <size_t N> MutableArrayRef(Array<T, N> &Arr) : Impl(Arr.Data, N) {}
 };
 
 } // namespace cpp

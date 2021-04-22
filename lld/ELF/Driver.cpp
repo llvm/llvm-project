@@ -1133,7 +1133,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->zShstk = hasZOption(args, "shstk");
   config->zStackSize = args::getZOptionValue(args, OPT_z, "stack-size", 0);
   config->zStartStopGC =
-      getZFlag(args, "start-stop-gc", "nostart-stop-gc", false);
+      getZFlag(args, "start-stop-gc", "nostart-stop-gc", true);
   config->zStartStopVisibility = getZStartStopVisibility(args);
   config->zText = getZFlag(args, "text", "notext", true);
   config->zWxneeded = hasZOption(args, "wxneeded");
@@ -1314,7 +1314,7 @@ static void readConfigs(opt::InputArgList &args) {
   }
 
   // When producing an executable, --dynamic-list specifies non-local defined
-  // symbols whith are required to be exported. When producing a shared object,
+  // symbols which are required to be exported. When producing a shared object,
   // symbols not specified by --dynamic-list are non-preemptible.
   config->symbolic =
       args.hasArg(OPT_Bsymbolic) || args.hasArg(OPT_dynamic_list);
@@ -1888,8 +1888,9 @@ static Symbol *addUndefined(StringRef name) {
       Undefined{nullptr, name, STB_GLOBAL, STV_DEFAULT, 0});
 }
 
-static Symbol *addUnusedUndefined(StringRef name) {
-  Undefined sym{nullptr, name, STB_GLOBAL, STV_DEFAULT, 0};
+static Symbol *addUnusedUndefined(StringRef name,
+                                  uint8_t binding = STB_GLOBAL) {
+  Undefined sym{nullptr, name, binding, STV_DEFAULT, 0};
   sym.isUsedInRegularObj = false;
   return symtab->addSymbol(sym);
 }
@@ -1953,7 +1954,8 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
       continue;
 
     Symbol *real = addUnusedUndefined(saver.save("__real_" + name));
-    Symbol *wrap = addUnusedUndefined(saver.save("__wrap_" + name));
+    Symbol *wrap =
+        addUnusedUndefined(saver.save("__wrap_" + name), sym->binding);
     v.push_back({sym, real, wrap});
 
     // We want to tell LTO not to inline symbols to be overwritten

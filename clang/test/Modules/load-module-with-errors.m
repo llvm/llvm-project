@@ -2,10 +2,13 @@
 // matter in this test.
 
 // pcherror-error@* {{PCH file contains compiler errors}}
-@import error; // notallowerror-error {{could not build module 'error'}}
+@import use_error_a; // notallowerror-error {{could not build module 'use_error_a'}}
+@import use_error_b;
 // expected-no-diagnostics
 
 void test(Error *x) {
+  funca(x);
+  funcb(x);
   [x method];
 }
 
@@ -16,7 +19,16 @@ void test(Error *x) {
 // RUN: %clang_cc1 -fmodules -fallow-pcm-with-compiler-errors \
 // RUN:   -fmodule-name=error -o %t/prebuilt/error.pcm \
 // RUN:   -x objective-c -emit-module %S/Inputs/error/module.modulemap
+// RUN: %clang_cc1 -fmodules -fallow-pcm-with-compiler-errors \
+// RUN:   -fmodule-file=error=%t/prebuilt/error.pcm \
+// RUN:   -fmodule-name=use_error_a -o %t/prebuilt/use_error_a.pcm \
+// RUN:   -x objective-c -emit-module %S/Inputs/error/module.modulemap
+// RUN: %clang_cc1 -fmodules -fallow-pcm-with-compiler-errors \
+// RUN:   -fmodule-file=error=%t/prebuilt/error.pcm \
+// RUN:   -fmodule-name=use_error_b -o %t/prebuilt/use_error_b.pcm \
+// RUN:   -x objective-c -emit-module %S/Inputs/error/module.modulemap
 
+// Prebuilt modules
 // RUN: %clang_cc1 -fsyntax-only -fmodules -fallow-pcm-with-compiler-errors \
 // RUN:   -fprebuilt-module-path=%t/prebuilt -fmodules-cache-path=%t \
 // RUN:   -ast-print %s | FileCheck %s
@@ -24,33 +36,49 @@ void test(Error *x) {
 // RUN:   -fprebuilt-module-path=%t/prebuilt -fmodules-cache-path=%t \
 // RUN:   -verify=pcherror %s
 
+// Explicit prebuilt modules (loaded when needed)
 // RUN: %clang_cc1 -fsyntax-only -fmodules -fallow-pcm-with-compiler-errors \
-// RUN:   -fmodule-file=error=%t/prebuilt/error.pcm -fmodules-cache-path=%t \
-// RUN:   -ast-print %s | FileCheck %s
+// RUN:   -fmodule-file=error=%t/prebuilt/error.pcm \
+// RUN:   -fmodule-file=use_error_a=%t/prebuilt/use_error_a.pcm \
+// RUN:   -fmodule-file=use_error_b=%t/prebuilt/use_error_b.pcm \
+// RUN:   -fmodules-cache-path=%t -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fsyntax-only -fmodules \
-// RUN:   -fmodule-file=error=%t/prebuilt/error.pcm -fmodules-cache-path=%t \
-// RUN:   -verify=pcherror %s
+// RUN:   -fmodule-file=error=%t/prebuilt/error.pcm \
+// RUN:   -fmodule-file=use_error_a=%t/prebuilt/use_error_a.pcm \
+// RUN:   -fmodule-file=use_error_b=%t/prebuilt/use_error_b.pcm \
+// RUN:   -fmodules-cache-path=%t -verify=pcherror %s
 
+// Explicit prebuilt modules without name (always loaded)
 // RUN: %clang_cc1 -fsyntax-only -fmodules -fallow-pcm-with-compiler-errors \
-// RUN:   -fmodule-file=%t/prebuilt/error.pcm -fmodules-cache-path=%t \
-// RUN:   -ast-print %s | FileCheck %s
+// RUN:   -fmodule-file=%t/prebuilt/error.pcm \
+// RUN:   -fmodule-file=%t/prebuilt/use_error_a.pcm \
+// RUN:   -fmodule-file=%t/prebuilt/use_error_b.pcm \
+// RUN:   -fmodules-cache-path=%t -ast-print %s | FileCheck %s
+// As the modules are always loaded, compiling will fail before even parsing
+// this file - this means that -verify can't be used, so do a grep instead.
 // RUN: not %clang_cc1 -fsyntax-only -fmodules \
-// RUN:   -fmodule-file=%t/prebuilt/error.pcm -fmodules-cache-path=%t \
-// RUN:   -verify=pcherror %s
+// RUN:   -fmodule-file=%t/prebuilt/error.pcm \
+// RUN:   -fmodule-file=%t/prebuilt/use_error_a.pcm \
+// RUN:   -fmodule-file=%t/prebuilt/use_error_b.pcm \
+// RUN:   -fmodules-cache-path=%t 2>&1 | \
+// RUN: grep "PCH file contains compiler errors"
 
-// Shouldn't build the cached module (that has errors) when not allowing errors
+// Shouldn't build the cached modules (that have errors) when not allowing
+// errors
 // RUN: not %clang_cc1 -fsyntax-only -fmodules \
 // RUN:   -fmodules-cache-path=%t -fimplicit-module-maps -I %S/Inputs/error \
 // RUN:   -x objective-c %s
 // RUN: find %t -name "error-*.pcm" | not grep error
 
-// Should build the cached module when allowing errors
+// Should build the cached modules when allowing errors
 // RUN: %clang_cc1 -fsyntax-only -fmodules -fallow-pcm-with-compiler-errors \
 // RUN:   -fmodules-cache-path=%t -fimplicit-module-maps -I %S/Inputs/error \
 // RUN:   -x objective-c -verify %s
 // RUN: find %t -name "error-*.pcm" | grep error
+// RUN: find %t -name "use_error_a-*.pcm" | grep use_error_a
+// RUN: find %t -name "use_error_b-*.pcm" | grep use_error_b
 
-// Make sure there is still an error after the module is already in the cache
+// Check build when the modules are already cached
 // RUN: %clang_cc1 -fsyntax-only -fmodules -fallow-pcm-with-compiler-errors \
 // RUN:   -fmodules-cache-path=%t -fimplicit-module-maps -I %S/Inputs/error \
 // RUN:   -x objective-c -verify %s
@@ -59,7 +87,7 @@ void test(Error *x) {
 // the verify would fail as it would be the PCH error instead)
 // RUN: %clang_cc1 -fsyntax-only -fmodules \
 // RUN:   -fmodules-cache-path=%t -fimplicit-module-maps -I %S/Inputs/error \
-// RUN:   -x objective-c -verify=notallowerror %s
+// RUN:   -x objective-c  %s -verify=notallowerror
 
 // allow-pcm-with-compiler-errors should also allow errors in PCH
 // RUN: %clang_cc1 -fallow-pcm-with-compiler-errors -x objective-c \
@@ -71,15 +99,17 @@ void test(Error *x) {
 // CHECK-NEXT: @end
 // CHECK: void test(Error *x)
 
-// RUN: c-index-test -code-completion-at=%s:9:6 %s -fmodules -fmodules-cache-path=%t \
+// RUN: c-index-test -code-completion-at=%s:12:6 %s -fmodules -fmodules-cache-path=%t \
 // RUN:   -Xclang -fallow-pcm-with-compiler-errors -I %S/Inputs/error | FileCheck -check-prefix=COMPLETE %s
 // COMPLETE: ObjCInstanceMethodDecl:{ResultType int}{TypedText method}
 // COMPLETE: ObjCInstanceMethodDecl:{ResultType id}{TypedText method2}
 
 // RUN: c-index-test -test-load-source local %s -fmodules -fmodules-cache-path=%t \
 // RUN:   -Xclang -fallow-pcm-with-compiler-errors -I %S/Inputs/error | FileCheck -check-prefix=SOURCE %s
-// SOURCE: load-module-with-errors.m:8:6: FunctionDecl=test:8:6 (Definition) Extent=[8:1 - 10:2]
-// SOURCE: load-module-with-errors.m:8:18: ParmDecl=x:8:18 (Definition) Extent=[8:11 - 8:19]
-// SOURCE: load-module-with-errors.m:8:11: ObjCClassRef=Error:3:12 Extent=[8:11 - 8:16]
-// SOURCE: load-module-with-errors.m:8:21: CompoundStmt= Extent=[8:21 - 10:2]
-// SOURCE: load-module-with-errors.m:9:3: ObjCMessageExpr=method:4:8 Extent=[9:3 - 9:13]
+// SOURCE: load-module-with-errors.m:9:6: FunctionDecl=test:9:6 (Definition) Extent=[9:1 - 13:2]
+// SOURCE: load-module-with-errors.m:9:18: ParmDecl=x:9:18 (Definition) Extent=[9:11 - 9:19]
+// SOURCE: load-module-with-errors.m:9:11: ObjCClassRef=Error:5:12 Extent=[9:11 - 9:16]
+// SOURCE: load-module-with-errors.m:9:21: CompoundStmt= Extent=[9:21 - 13:2]
+// SOURCE: load-module-with-errors.m:10:3: CallExpr=funca:3:6 Extent=[10:3 - 10:11]
+// SOURCE: load-module-with-errors.m:11:3: CallExpr=funcb:3:6 Extent=[11:3 - 11:11]
+// SOURCE: load-module-with-errors.m:12:3: ObjCMessageExpr=method:6:8 Extent=[12:3 - 12:13]

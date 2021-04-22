@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
 #include "mlir/IR/BlockAndValueMapping.h"
+#include "llvm/Support/Debug.h"
 #include "mlir/Support/LLVM.h"
 
 using namespace mlir;

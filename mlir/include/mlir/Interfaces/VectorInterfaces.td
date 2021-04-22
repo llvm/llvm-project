@@ -115,6 +115,21 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*defaultImplementation=*/
     >,
     InterfaceMethod<
+      /*desc=*/[{ Returns true if at least one of the dimensions in the
+                  permutation map is a broadcast.}],
+      /*retTy=*/"bool",
+      /*methodName=*/"hasBroadcastDim",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return llvm::any_of(
+            $_op.permutation_map().getResults(),
+            [](AffineExpr e) {
+                return e.isa<AffineConstantExpr>() &&
+                       e.dyn_cast<AffineConstantExpr>().getValue() == 0; });
+      }]
+    >,
+    InterfaceMethod<
       /*desc=*/"Return the `in_bounds` boolean ArrayAttr.",
       /*retTy=*/"Optional<ArrayAttr>",
       /*methodName=*/"in_bounds",

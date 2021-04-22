@@ -41,4 +41,4 @@ class non_const_compare
 };
 
 
-#endif  // TEST_COMPARE_H
+#endif // TEST_COMPARE_H

@@ -20,23 +20,6 @@
 #include <time.h>
 #include <vector>
 
-static const char *const RETVAL_PREFIX = "retval:";
-static const char *const SLEEP_PREFIX = "sleep:";
-static const char *const STDERR_PREFIX = "stderr:";
-static const char *const SET_MESSAGE_PREFIX = "set-message:";
-static const char *const PRINT_MESSAGE_COMMAND = "print-message:";
-static const char *const GET_DATA_ADDRESS_PREFIX = "get-data-address-hex:";
-static const char *const GET_STACK_ADDRESS_COMMAND = "get-stack-address-hex:";
-static const char *const GET_HEAP_ADDRESS_COMMAND = "get-heap-address-hex:";
-
-static const char *const GET_CODE_ADDRESS_PREFIX = "get-code-address-hex:";
-static const char *const CALL_FUNCTION_PREFIX = "call-function:";
-
-static const char *const THREAD_PREFIX = "thread:";
-static const char *const THREAD_COMMAND_NEW = "new";
-static const char *const THREAD_COMMAND_PRINT_IDS = "print-ids";
-static const char *const THREAD_COMMAND_SEGFAULT = "segfault";
-
 static const char *const PRINT_PID_COMMAND = "print-pid";
 
 static bool g_print_thread_ids = false;
@@ -202,6 +185,14 @@ static void *thread_func(void *arg) {
   return nullptr;
 }
 
+static bool consume_front(std::string &str, const std::string &front) {
+  if (str.find(front) != 0)
+    return false;
+
+  str = str.substr(front.size());
+  return true;
+}
+
 int main(int argc, char **argv) {
   lldb_enable_attach();
 
@@ -232,15 +223,16 @@ int main(int argc, char **argv) {
 
   // Process command line args.
   for (int i = 1; i < argc; ++i) {
-    if (std::strstr(argv[i], STDERR_PREFIX)) {
+    std::string arg = argv[i];
+    if (consume_front(arg, "stderr:")) {
       // Treat remainder as text to go to stderr.
-      fprintf(stderr, "%s\n", (argv[i] + strlen(STDERR_PREFIX)));
-    } else if (std::strstr(argv[i], RETVAL_PREFIX)) {
+      fprintf(stderr, "%s\n", arg.c_str());
+    } else if (consume_front(arg, "retval:")) {
       // Treat as the return value for the program.
-      return_value = std::atoi(argv[i] + strlen(RETVAL_PREFIX));
-    } else if (std::strstr(argv[i], SLEEP_PREFIX)) {
+      return_value = std::atoi(arg.c_str());
+    } else if (consume_front(arg, "sleep:")) {
       // Treat as the amount of time to have this process sleep (in seconds).
-      int sleep_seconds_remaining = std::atoi(argv[i] + strlen(SLEEP_PREFIX));
+      int sleep_seconds_remaining = std::atoi(arg.c_str());
 
       // Loop around, sleeping until all sleep time is used up.  Note that
       // signals will cause sleep to end early with the number of seconds
@@ -248,32 +240,31 @@ int main(int argc, char **argv) {
       std::this_thread::sleep_for(
           std::chrono::seconds(sleep_seconds_remaining));
 
-    } else if (std::strstr(argv[i], SET_MESSAGE_PREFIX)) {
+    } else if (consume_front(arg, "set-message:")) {
       // Copy the contents after "set-message:" to the g_message buffer.
       // Used for reading inferior memory and verifying contents match
       // expectations.
-      strncpy(g_message, argv[i] + strlen(SET_MESSAGE_PREFIX),
-              sizeof(g_message));
+      strncpy(g_message, arg.c_str(), sizeof(g_message));
 
       // Ensure we're null terminated.
       g_message[sizeof(g_message) - 1] = '\0';
 
-    } else if (std::strstr(argv[i], PRINT_MESSAGE_COMMAND)) {
+    } else if (consume_front(arg, "print-message:")) {
       std::lock_guard<std::mutex> lock(g_print_mutex);
       printf("message: %s\n", g_message);
-    } else if (std::strstr(argv[i], GET_DATA_ADDRESS_PREFIX)) {
+    } else if (consume_front(arg, "get-data-address-hex:")) {
       volatile void *data_p = nullptr;
 
-      if (std::strstr(argv[i] + strlen(GET_DATA_ADDRESS_PREFIX), "g_message"))
+      if (arg == "g_message")
         data_p = &g_message[0];
-      else if (std::strstr(argv[i] + strlen(GET_DATA_ADDRESS_PREFIX), "g_c1"))
+      else if (arg == "g_c1")
         data_p = &g_c1;
-      else if (std::strstr(argv[i] + strlen(GET_DATA_ADDRESS_PREFIX), "g_c2"))
+      else if (arg == "g_c2")
         data_p = &g_c2;
 
       std::lock_guard<std::mutex> lock(g_print_mutex);
       printf("data address: %p\n", data_p);
-    } else if (std::strstr(argv[i], GET_HEAP_ADDRESS_COMMAND)) {
+    } else if (consume_front(arg, "get-heap-address-hex:")) {
       // Create a byte array if not already present.
       if (!heap_array_up)
         heap_array_up.reset(new uint8_t[32]);
@@ -281,58 +272,41 @@ int main(int argc, char **argv) {
       std::lock_guard<std::mutex> lock(g_print_mutex);
       printf("heap address: %p\n", heap_array_up.get());
 
-    } else if (std::strstr(argv[i], GET_STACK_ADDRESS_COMMAND)) {
+    } else if (consume_front(arg, "get-stack-address-hex:")) {
       std::lock_guard<std::mutex> lock(g_print_mutex);
       printf("stack address: %p\n", &return_value);
-    } else if (std::strstr(argv[i], GET_CODE_ADDRESS_PREFIX)) {
+    } else if (consume_front(arg, "get-code-address-hex:")) {
       void (*func_p)() = nullptr;
 
-      if (std::strstr(argv[i] + strlen(GET_CODE_ADDRESS_PREFIX), "hello"))
+      if (arg == "hello")
         func_p = hello;
-      else if (std::strstr(argv[i] + strlen(GET_CODE_ADDRESS_PREFIX),
-                           "swap_chars"))
+      else if (arg == "swap_chars")
         func_p = swap_chars;
 
       std::lock_guard<std::mutex> lock(g_print_mutex);
       printf("code address: %p\n", func_p);
-    } else if (std::strstr(argv[i], CALL_FUNCTION_PREFIX)) {
+    } else if (consume_front(arg, "call-function:")) {
       void (*func_p)() = nullptr;
 
-      // Default to providing the address of main.
-      if (std::strcmp(argv[i] + strlen(CALL_FUNCTION_PREFIX), "hello") == 0)
+      if (arg == "hello")
         func_p = hello;
-      else if (std::strcmp(argv[i] + strlen(CALL_FUNCTION_PREFIX),
-                           "swap_chars") == 0)
+      else if (arg == "swap_chars")
         func_p = swap_chars;
-      else {
-        std::lock_guard<std::mutex> lock(g_print_mutex);
-        printf("unknown function: %s\n",
-               argv[i] + strlen(CALL_FUNCTION_PREFIX));
-      }
-      if (func_p)
-        func_p();
-    } else if (std::strstr(argv[i], THREAD_PREFIX)) {
-      // Check if we're creating a new thread.
-      if (std::strstr(argv[i] + strlen(THREAD_PREFIX), THREAD_COMMAND_NEW)) {
+      func_p();
+    } else if (consume_front(arg, "thread:new")) {
         threads.push_back(std::thread(thread_func, nullptr));
-      } else if (std::strstr(argv[i] + strlen(THREAD_PREFIX),
-                             THREAD_COMMAND_PRINT_IDS)) {
-        // Turn on thread id announcing.
-        g_print_thread_ids = true;
+    } else if (consume_front(arg, "thread:print-ids")) {
+      // Turn on thread id announcing.
+      g_print_thread_ids = true;
 
-        // And announce us.
-        {
-          std::lock_guard<std::mutex> lock(g_print_mutex);
-          printf("thread 0 id: %" PRIx64 "\n", get_thread_id());
-        }
-      } else if (std::strstr(argv[i] + strlen(THREAD_PREFIX),
-                             THREAD_COMMAND_SEGFAULT)) {
-        g_threads_do_segfault = true;
-      } else {
-        // At this point we don't do anything else with threads.
-        // Later use thread index and send command to thread.
+      // And announce us.
+      {
+        std::lock_guard<std::mutex> lock(g_print_mutex);
+        printf("thread 0 id: %" PRIx64 "\n", get_thread_id());
       }
-    } else if (std::strstr(argv[i], PRINT_PID_COMMAND)) {
+    } else if (consume_front(arg, "thread:segfault")) {
+      g_threads_do_segfault = true;
+    } else if (consume_front(arg, "print-pid")) {
       print_pid();
     } else {
       // Treat the argument as text for stdout.

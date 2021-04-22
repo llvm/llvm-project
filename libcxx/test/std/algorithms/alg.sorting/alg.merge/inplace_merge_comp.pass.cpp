@@ -53,7 +53,7 @@ struct S {
     };
 
 
-#endif  // TEST_STD_VER >= 11
+#endif // TEST_STD_VER >= 11
 
 #include "test_iterators.h"
 #include "counting_predicates.h"
@@ -164,7 +164,7 @@ int main(int, char**)
     }
     delete [] ia;
     }
-#endif  // TEST_STD_VER >= 11
+#endif // TEST_STD_VER >= 11
 
     test_PR31166();
 

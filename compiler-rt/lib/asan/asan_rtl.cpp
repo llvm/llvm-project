@@ -568,7 +568,7 @@ void UnpoisonStack(uptr bottom, uptr top, const char *type) {
         type, top, bottom, top - bottom, top - bottom);
     return;
   }
-  PoisonShadow(bottom, top - bottom, 0);
+  PoisonShadow(bottom, RoundUpTo(top - bottom, SHADOW_GRANULARITY), 0);
 }
 
 static void UnpoisonDefaultStack() {

@@ -220,4 +220,4 @@ template <class _Ret, class _Class, class _A0, class _A1, class _A2>
 struct __invoke_return2<_Ret _Class::*, _A0, _A1, _A2> {
     typedef typename __enable_invoke<_Ret _Class::*, _A0>::type type;
 };
-#endif  // _LIBCPP_FUNCTIONAL_BASE_03
+#endif // _LIBCPP_FUNCTIONAL_BASE_03

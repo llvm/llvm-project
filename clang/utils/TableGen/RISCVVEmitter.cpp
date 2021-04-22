@@ -31,11 +31,8 @@ using VScaleVal = Optional<unsigned>;
 namespace {
 
 // Exponential LMUL
-class LMULType {
-private:
+struct LMULType {
   int Log2LMUL;
-
-public:
   LMULType(int Log2LMUL);
   // Return the C/C++ string representation of LMUL
   std::string str() const;
@@ -139,7 +136,8 @@ enum RISCVExtension : uint8_t {
   Basic = 0,
   F = 1 << 1,
   D = 1 << 2,
-  Zfh = 1 << 3
+  Zfh = 1 << 3,
+  Zvamo = 1 << 4,
 };
 
 // TODO refactor RVVIntrinsic class design after support all intrinsic
@@ -174,7 +172,8 @@ public:
                bool HasMaskedOffOperand, bool HasVL, bool HasNoMaskedOverloaded,
                bool HasAutoDef, StringRef ManualCodegen, const RVVTypes &Types,
                const std::vector<int64_t> &IntrinsicTypes,
-               const std::vector<int64_t> &PermuteOperands);
+               const std::vector<int64_t> &PermuteOperands,
+               StringRef RequiredExtension);
   ~RVVIntrinsic() = default;
 
   StringRef getName() const { return Name; }
@@ -188,6 +187,7 @@ public:
   bool isMask() const { return IsMask; }
   size_t getNumOperand() const { return InputTypes.size(); }
   StringRef getIRName() const { return IRName; }
+  StringRef getManualCodegen() const { return ManualCodegen; }
   uint8_t getRISCVExtensions() const { return RISCVExtensions; }
 
   // Return the type string for a BUILTIN() macro in Builtins.def.
@@ -655,6 +655,20 @@ void RVVType::applyModifier(StringRef Transformer) {
         PrintFatalError(
             "Illegal type transformer for Complex type transformer");
     };
+    auto ComputeFixedLog2LMUL =
+        [&](StringRef Value,
+            std::function<bool(const int32_t &, const int32_t &)> Compare) {
+          int32_t Log2LMUL;
+          Value.getAsInteger(10, Log2LMUL);
+          if (!Compare(Log2LMUL, LMUL.Log2LMUL)) {
+            ScalarType = Invalid;
+            return false;
+          }
+          // Update new LMUL
+          LMUL = LMULType(Log2LMUL);
+          UpdateAndCheckComplexProto();
+          return true;
+        };
     auto ComplexTT = ComplexType.split(":");
     if (ComplexTT.first == "Log2EEW") {
       uint32_t Log2EEW;
@@ -665,6 +679,25 @@ void RVVType::applyModifier(StringRef Transformer) {
       ElementBitwidth = 1 << Log2EEW;
       ScalarType = ScalarTypeKind::SignedInteger;
       UpdateAndCheckComplexProto();
+    } else if (ComplexTT.first == "FixedSEW") {
+      uint32_t NewSEW;
+      ComplexTT.second.getAsInteger(10, NewSEW);
+      // Set invalid type if src and dst SEW are same.
+      if (ElementBitwidth == NewSEW) {
+        ScalarType = Invalid;
+        return;
+      }
+      // Update new SEW
+      ElementBitwidth = NewSEW;
+      UpdateAndCheckComplexProto();
+    } else if (ComplexTT.first == "LFixedLog2LMUL") {
+      // New LMUL should be larger than old
+      if (!ComputeFixedLog2LMUL(ComplexTT.second, std::greater<int32_t>()))
+        return;
+    } else if (ComplexTT.first == "SFixedLog2LMUL") {
+      // New LMUL should be smaller than old
+      if (!ComputeFixedLog2LMUL(ComplexTT.second, std::less<int32_t>()))
+        return;
     } else {
       PrintFatalError("Illegal complex type transformers!");
     }
@@ -718,7 +751,8 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
                            bool HasNoMaskedOverloaded, bool HasAutoDef,
                            StringRef ManualCodegen, const RVVTypes &OutInTypes,
                            const std::vector<int64_t> &NewIntrinsicTypes,
-                           const std::vector<int64_t> &PermuteOperands)
+                           const std::vector<int64_t> &PermuteOperands,
+                           StringRef RequiredExtension)
     : IRName(IRName), HasSideEffects(HasSideEffects), IsMask(IsMask),
       HasMaskedOffOperand(HasMaskedOffOperand), HasVL(HasVL),
       HasNoMaskedOverloaded(HasNoMaskedOverloaded), HasAutoDef(HasAutoDef),
@@ -744,6 +778,8 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
     else if (T->isFloatVector(64))
       RISCVExtensions |= RISCVExtension::D;
   }
+  if (RequiredExtension == "Zvamo")
+    RISCVExtensions |= RISCVExtension::Zvamo;
 
   // Init OutputType and InputTypes
   OutputType = OutInTypes[0];
@@ -806,8 +842,8 @@ std::string RVVIntrinsic::getBuiltinTypeStr() const {
 }
 
 void RVVIntrinsic::emitCodeGenSwitchBody(raw_ostream &OS) const {
-
-  OS << "  ID = Intrinsic::riscv_" + getIRName() + ";\n";
+  if (!getIRName().empty())
+    OS << "  ID = Intrinsic::riscv_" + getIRName() + ";\n";
   if (hasManualCodegen()) {
     OS << ManualCodegen;
     OS << "break;\n";
@@ -1007,18 +1043,20 @@ void RVVEmitter::createBuiltins(raw_ostream &OS) {
 void RVVEmitter::createCodeGen(raw_ostream &OS) {
   std::vector<std::unique_ptr<RVVIntrinsic>> Defs;
   createRVVIntrinsics(Defs);
-
-  // The same intrinsic IR name has the same switch body.
+  // IR name could be empty, use the stable sort preserves the relative order.
   std::stable_sort(Defs.begin(), Defs.end(),
                    [](const std::unique_ptr<RVVIntrinsic> &A,
                       const std::unique_ptr<RVVIntrinsic> &B) {
                      return A->getIRName() < B->getIRName();
                    });
-  // Print switch body when the ir name changes from previous iteration.
+  // Print switch body when the ir name or ManualCodegen changes from previous
+  // iteration.
   RVVIntrinsic *PrevDef = Defs.begin()->get();
   for (auto &Def : Defs) {
     StringRef CurIRName = Def->getIRName();
-    if (CurIRName != PrevDef->getIRName()) {
+    if (CurIRName != PrevDef->getIRName() ||
+        (CurIRName.empty() &&
+         Def->getManualCodegen() != PrevDef->getManualCodegen())) {
       PrevDef->emitCodeGenSwitchBody(OS);
     }
     PrevDef = Def.get();
@@ -1075,6 +1113,7 @@ void RVVEmitter::createRVVIntrinsics(
         R->getValueAsListOfInts("IntrinsicTypes");
     std::vector<int64_t> PermuteOperands =
         R->getValueAsListOfInts("PermuteOperands");
+    StringRef RequiredExtension = R->getValueAsString("RequiredExtension");
     StringRef IRName = R->getValueAsString("IRName");
     StringRef IRNameMask = R->getValueAsString("IRNameMask");
 
@@ -1119,7 +1158,7 @@ void RVVEmitter::createRVVIntrinsics(
             Name, SuffixStr, MangledName, IRName, HasSideEffects,
             /*IsMask=*/false, /*HasMaskedOffOperand=*/false, HasVL,
             HasNoMaskedOverloaded, HasAutoDef, ManualCodegen, Types.getValue(),
-            IntrinsicTypes, PermuteOperands));
+            IntrinsicTypes, PermuteOperands, RequiredExtension));
         if (HasMask) {
           // Create a mask intrinsic
           Optional<RVVTypes> MaskTypes =
@@ -1128,7 +1167,8 @@ void RVVEmitter::createRVVIntrinsics(
               Name, SuffixStr, MangledName, IRNameMask, HasSideEffects,
               /*IsMask=*/true, HasMaskedOffOperand, HasVL,
               HasNoMaskedOverloaded, HasAutoDef, ManualCodegenMask,
-              MaskTypes.getValue(), IntrinsicTypes, PermuteOperands));
+              MaskTypes.getValue(), IntrinsicTypes, PermuteOperands,
+              RequiredExtension));
         }
       } // end for Log2LMULList
     }   // end for TypeRange
@@ -1201,6 +1241,8 @@ bool RVVEmitter::emitExtDefStr(uint8_t Extents, raw_ostream &OS) {
     OS << LS << "defined(__riscv_d)";
   if (Extents & RISCVExtension::Zfh)
     OS << LS << "defined(__riscv_zfh)";
+  if (Extents & RISCVExtension::Zvamo)
+    OS << LS << "defined(__riscv_zvamo)";
   OS << "\n";
   return true;
 }

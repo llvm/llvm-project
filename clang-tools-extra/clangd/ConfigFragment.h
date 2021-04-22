@@ -94,6 +94,9 @@ struct Fragment {
     /// Absolute path to directory the fragment is associated with. Relative
     /// paths mentioned in the fragment are resolved against this.
     std::string Directory;
+    /// Whether this fragment is allowed to make critical security/privacy
+    /// decisions.
+    bool Trusted = false;
   };
   SourceInfo Source;
 

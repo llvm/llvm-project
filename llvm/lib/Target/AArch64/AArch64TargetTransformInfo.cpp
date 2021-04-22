@@ -18,6 +18,7 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <algorithm>
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -279,6 +280,101 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
+static Optional<Instruction *> instCombineSVELast(InstCombiner &IC,
+                                                  IntrinsicInst &II) {
+  Value *Pg = II.getArgOperand(0);
+  Value *Vec = II.getArgOperand(1);
+  bool IsAfter = II.getIntrinsicID() == Intrinsic::aarch64_sve_lasta;
+
+  auto *C = dyn_cast<Constant>(Pg);
+  if (IsAfter && C && C->isNullValue()) {
+    // The intrinsic is extracting lane 0 so use an extract instead.
+    auto *IdxTy = Type::getInt64Ty(II.getContext());
+    auto *Extract = ExtractElementInst::Create(Vec, ConstantInt::get(IdxTy, 0));
+    Extract->insertBefore(&II);
+    Extract->takeName(&II);
+    return IC.replaceInstUsesWith(II, Extract);
+  }
+
+  auto *IntrPG = dyn_cast<IntrinsicInst>(Pg);
+  if (!IntrPG)
+    return None;
+
+  if (IntrPG->getIntrinsicID() != Intrinsic::aarch64_sve_ptrue)
+    return None;
+
+  const auto PTruePattern =
+      cast<ConstantInt>(IntrPG->getOperand(0))->getZExtValue();
+
+  // Can the intrinsic's predicate be converted to a known constant index?
+  unsigned Idx;
+  switch (PTruePattern) {
+  default:
+    return None;
+  case AArch64SVEPredPattern::vl1:
+    Idx = 0;
+    break;
+  case AArch64SVEPredPattern::vl2:
+    Idx = 1;
+    break;
+  case AArch64SVEPredPattern::vl3:
+    Idx = 2;
+    break;
+  case AArch64SVEPredPattern::vl4:
+    Idx = 3;
+    break;
+  case AArch64SVEPredPattern::vl5:
+    Idx = 4;
+    break;
+  case AArch64SVEPredPattern::vl6:
+    Idx = 5;
+    break;
+  case AArch64SVEPredPattern::vl7:
+    Idx = 6;
+    break;
+  case AArch64SVEPredPattern::vl8:
+    Idx = 7;
+    break;
+  case AArch64SVEPredPattern::vl16:
+    Idx = 15;
+    break;
+  }
+
+  // Increment the index if extracting the element after the last active
+  // predicate element.
+  if (IsAfter)
+    ++Idx;
+
+  // Ignore extracts whose index is larger than the known minimum vector
+  // length. NOTE: This is an artificial constraint where we prefer to
+  // maintain what the user asked for until an alternative is proven faster.
+  auto *PgVTy = cast<ScalableVectorType>(Pg->getType());
+  if (Idx >= PgVTy->getMinNumElements())
+    return None;
+
+  // The intrinsic is extracting a fixed lane so use an extract instead.
+  auto *IdxTy = Type::getInt64Ty(II.getContext());
+  auto *Extract = ExtractElementInst::Create(Vec, ConstantInt::get(IdxTy, Idx));
+  Extract->insertBefore(&II);
+  Extract->takeName(&II);
+  return IC.replaceInstUsesWith(II, Extract);
+}
+
+Optional<Instruction *>
+AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
+                                     IntrinsicInst &II) const {
+  Intrinsic::ID IID = II.getIntrinsicID();
+  switch (IID) {
+  default:
+    break;
+  case Intrinsic::aarch64_sve_lasta:
+  case Intrinsic::aarch64_sve_lastb:
+    return instCombineSVELast(IC, II);
+  }
+
+  return None;
+}
+
 bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
                                            ArrayRef<const Value *> Args) {
 
@@ -490,20 +586,13 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::FP_TO_UINT, MVT::v4i16, MVT::v4f32, 2 },
     { ISD::FP_TO_UINT, MVT::v4i8,  MVT::v4f32, 2 },
 
-    // Lowering scalable
+    // Complex, from nxv2f32.
+    { ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f32, 1 },
     { ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f32, 1 },
-    { ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f32, 1 },
-    { ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f64, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f32, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f32, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f64, 1 },
-
-
-    // Complex, from nxv2f32 legal type is nxv2i32 (no cost) or nxv2i64 (1 ext)
-    { ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f32, 2 },
     { ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f32, 1 },
     { ISD::FP_TO_SINT, MVT::nxv2i8,  MVT::nxv2f32, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f32, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f32, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f32, 1 },
     { ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f32, 1 },
     { ISD::FP_TO_UINT, MVT::nxv2i8,  MVT::nxv2f32, 1 },
 
@@ -515,43 +604,75 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::FP_TO_UINT, MVT::v2i16, MVT::v2f64, 2 },
     { ISD::FP_TO_UINT, MVT::v2i8,  MVT::v2f64, 2 },
 
-    // Complex, from nxv2f64: legal type is nxv2i32, 1 narrowing => ~2.
-    { ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f64, 2 },
-    { ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f64, 2 },
-    { ISD::FP_TO_SINT, MVT::nxv2i8,  MVT::nxv2f64, 2 },
-    { ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f64, 2 },
-    { ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f64, 2 },
-    { ISD::FP_TO_UINT, MVT::nxv2i8,  MVT::nxv2f64, 2 },
+    // Complex, from nxv2f64.
+    { ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f64, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f64, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f64, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv2i8,  MVT::nxv2f64, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f64, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f64, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f64, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv2i8,  MVT::nxv2f64, 1 },
 
-    // Complex, from nxv4f32 legal type is nxv4i16, 1 narrowing => ~2
-    { ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f32, 2 },
-    { ISD::FP_TO_SINT, MVT::nxv4i8,  MVT::nxv4f32, 2 },
-    { ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f32, 2 },
-    { ISD::FP_TO_UINT, MVT::nxv4i8,  MVT::nxv4f32, 2 },
+    // Complex, from nxv4f32.
+    { ISD::FP_TO_SINT, MVT::nxv4i64, MVT::nxv4f32, 4 },
+    { ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f32, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f32, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv4i8,  MVT::nxv4f32, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv4i64, MVT::nxv4f32, 4 },
+    { ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f32, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f32, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv4i8,  MVT::nxv4f32, 1 },
 
-    // Complex, from nxv8f64: legal type is nxv8i32, 1 narrowing => ~2.
-    { ISD::FP_TO_SINT, MVT::nxv8i32, MVT::nxv8f64, 2 },
-    { ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f64, 2 },
-    { ISD::FP_TO_SINT, MVT::nxv8i8,  MVT::nxv8f64, 2 },
-    { ISD::FP_TO_UINT, MVT::nxv8i32, MVT::nxv8f64, 2 },
-    { ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f64, 2 },
-    { ISD::FP_TO_UINT, MVT::nxv8i8,  MVT::nxv8f64, 2 },
+    // Complex, from nxv8f64. Illegal -> illegal conversions not required.
+    { ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f64, 7 },
+    { ISD::FP_TO_SINT, MVT::nxv8i8,  MVT::nxv8f64, 7 },
+    { ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f64, 7 },
+    { ISD::FP_TO_UINT, MVT::nxv8i8,  MVT::nxv8f64, 7 },
 
-    // Complex, from nxv4f64: legal type is nxv4i32, 1 narrowing => ~2.
-    { ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f64, 2 },
-    { ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f64, 2 },
-    { ISD::FP_TO_SINT, MVT::nxv4i8,  MVT::nxv4f64, 2 },
-    { ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f64, 2 },
-    { ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f64, 2 },
-    { ISD::FP_TO_UINT, MVT::nxv4i8,  MVT::nxv4f64, 2 },
+    // Complex, from nxv4f64. Illegal -> illegal conversions not required.
+    { ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f64, 3 },
+    { ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f64, 3 },
+    { ISD::FP_TO_SINT, MVT::nxv4i8,  MVT::nxv4f64, 3 },
+    { ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f64, 3 },
+    { ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f64, 3 },
+    { ISD::FP_TO_UINT, MVT::nxv4i8,  MVT::nxv4f64, 3 },
 
-    // Complex, from nxv8f32: legal type is nxv8i32 (no cost) or nxv8i64 (1 ext).
-    { ISD::FP_TO_SINT, MVT::nxv8i64, MVT::nxv8f32, 2 },
+    // Complex, from nxv8f32. Illegal -> illegal conversions not required.
     { ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f32, 3 },
-    { ISD::FP_TO_SINT, MVT::nxv8i8,  MVT::nxv8f32, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv8i64, MVT::nxv8f32, 2 },
-    { ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f32, 1 },
-    { ISD::FP_TO_UINT, MVT::nxv8i8,  MVT::nxv8f32, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv8i8,  MVT::nxv8f32, 3 },
+    { ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f32, 3 },
+    { ISD::FP_TO_UINT, MVT::nxv8i8,  MVT::nxv8f32, 3 },
+
+    // Complex, from nxv8f16.
+    { ISD::FP_TO_SINT, MVT::nxv8i64, MVT::nxv8f16, 10 },
+    { ISD::FP_TO_SINT, MVT::nxv8i32, MVT::nxv8f16, 4 },
+    { ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f16, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv8i8,  MVT::nxv8f16, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv8i64, MVT::nxv8f16, 10 },
+    { ISD::FP_TO_UINT, MVT::nxv8i32, MVT::nxv8f16, 4 },
+    { ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f16, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv8i8,  MVT::nxv8f16, 1 },
+
+    // Complex, from nxv4f16.
+    { ISD::FP_TO_SINT, MVT::nxv4i64, MVT::nxv4f16, 4 },
+    { ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f16, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f16, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv4i8,  MVT::nxv4f16, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv4i64, MVT::nxv4f16, 4 },
+    { ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f16, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f16, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv4i8,  MVT::nxv4f16, 1 },
+
+    // Complex, from nxv2f16.
+    { ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f16, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f16, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f16, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv2i8,  MVT::nxv2f16, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f16, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f16, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f16, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv2i8,  MVT::nxv2f16, 1 },
 
     // Truncate from nxvmf32 to nxvmf16.
     { ISD::FP_ROUND, MVT::nxv2f16, MVT::nxv2f32, 1 },
@@ -1384,6 +1505,13 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       { TTI::SK_PermuteSingleSrc, MVT::v2f32, 1 }, // mov.
       { TTI::SK_PermuteSingleSrc, MVT::v4f32, 3 }, // perfectshuffle worst case.
       { TTI::SK_PermuteSingleSrc, MVT::v2f64, 1 }, // mov.
+      // Reverse can be lowered with `rev`.
+      { TTI::SK_Reverse, MVT::v2i32, 1 }, // mov.
+      { TTI::SK_Reverse, MVT::v4i32, 2 }, // REV64; EXT
+      { TTI::SK_Reverse, MVT::v2i64, 1 }, // mov.
+      { TTI::SK_Reverse, MVT::v2f32, 1 }, // mov.
+      { TTI::SK_Reverse, MVT::v4f32, 2 }, // REV64; EXT
+      { TTI::SK_Reverse, MVT::v2f64, 1 }, // mov.
       // Broadcast shuffle kinds for scalable vectors
       { TTI::SK_Broadcast, MVT::nxv16i8,  1 },
       { TTI::SK_Broadcast, MVT::nxv8i16,  1 },

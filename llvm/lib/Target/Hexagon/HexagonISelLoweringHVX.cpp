@@ -1954,6 +1954,8 @@ HexagonTargetLowering::WidenHvxSetCC(SDValue Op, SelectionDAG &DAG) const {
   unsigned WideOpLen = (8 * HwLen) / ElemTy.getSizeInBits();
   assert(WideOpLen * ElemTy.getSizeInBits() == 8 * HwLen);
   MVT WideOpTy = MVT::getVectorVT(ElemTy, WideOpLen);
+  if (!Subtarget.isHVXVectorType(WideOpTy, true))
+    return SDValue();
 
   SDValue WideOp0 = appendUndef(Op0, WideOpTy, DAG);
   SDValue WideOp1 = appendUndef(Op1, WideOpTy, DAG);

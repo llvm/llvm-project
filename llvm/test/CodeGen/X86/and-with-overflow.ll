@@ -75,7 +75,6 @@ define i16 @and_i16_ri(i16 zeroext %0, i16 zeroext %1) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    andl $-17, %eax
-; X64-NEXT:    testw %ax, %ax
 ; X64-NEXT:    cmovel %edi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq

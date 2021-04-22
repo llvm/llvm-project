@@ -32,6 +32,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
@@ -436,7 +437,7 @@ static void analysisMain() {
 
   const Analysis Analyzer(*TheTarget, std::move(InstrInfo), Clustering,
                           AnalysisInconsistencyEpsilon,
-                          AnalysisDisplayUnstableOpcodes);
+                          AnalysisDisplayUnstableOpcodes, CpuName);
 
   maybeRunAnalysis<Analysis::PrintClusters>(Analyzer, "analysis clusters",
                                             AnalysisClustersOutputFile);

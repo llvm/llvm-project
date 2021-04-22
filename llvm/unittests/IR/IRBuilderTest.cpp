@@ -180,6 +180,14 @@ TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {
     EXPECT_EQ(FTy->getParamType(i), ArgTys[i]->getType());
 }
 
+TEST_F(IRBuilderTest, CreateVScale) {
+  IRBuilder<> Builder(BB);
+
+  Constant *Zero = Builder.getInt32(0);
+  Value *VScale = Builder.CreateVScale(Zero);
+  EXPECT_TRUE(isa<ConstantInt>(VScale) && cast<ConstantInt>(VScale)->isZero());
+}
+
 TEST_F(IRBuilderTest, CreateStepVector) {
   IRBuilder<> Builder(BB);
 

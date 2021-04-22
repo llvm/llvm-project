@@ -4,55 +4,62 @@ include "llvm/Option/OptParser.td"
 // These options seem to be important for the tool
 // and should be implemented.
 
-def fileout : JoinedOrSeparate<[ "/", "-" ], "FO">,
-              HelpText<"Change the output file location.">;
+class S<string name, string help> :
+      Separate<["/", "-"], name>, HelpText<help>;
 
-def define : Separate<[ "/", "-" ], "D">,
-             HelpText<"Define a symbol for the C preprocessor.">;
-def undef : Separate<[ "/", "-" ], "U">,
-            HelpText<"Undefine a symbol for the C preprocessor.">;
+class JS<string name, string help> :
+      JoinedOrSeparate<["/", "-"], name>, HelpText<help>;
 
-def lang_id : JoinedOrSeparate<[ "/", "-" ], "L">,
-              HelpText<"Set the default language identifier.">;
-def lang_name : Separate<[ "/", "-" ], "LN">,
-                HelpText<"Set the default language name.">;
+class F<string name, string help> : Flag<["/", "-"], name>, HelpText<help>;
 
-def includepath : Separate<[ "/", "-" ], "I">, HelpText<"Add an include path.">;
-def noinclude : Flag<[ "/", "-" ], "X">, HelpText<"Ignore 'include' variable.">;
+class F_nodoc<string name> : Flag<["/", "-"], name>;
+class S_nodoc<string name> : Separate<["/", "-"], name>;
 
-def add_null : Flag<[ "/", "-" ], "N">,
-               HelpText<"Null-terminate all strings in the string table.">;
+def fileout : JS<"FO", "Change the output file location.">;
 
-def dupid_nowarn : Flag<[ "/", "-" ], "Y">,
-                   HelpText<"Suppress warnings on duplicate resource IDs.">;
+def define : JS<"D", "Define a symbol for the C preprocessor.">;
+def undef : JS<"U", "Undefine a symbol for the C preprocessor.">;
 
-def verbose : Flag<[ "/", "-" ], "V">, HelpText<"Be verbose.">;
-def help : Flag<[ "/", "-" ], "?">, HelpText<"Display this help and exit.">;
-def h : Flag<[ "/", "-" ], "H">,
-        Alias<help>,
-        HelpText<"Display this help and exit.">;
+def lang_id : JS<"L", "Set the default language identifier.">;
+def lang_name : S<"LN", "Set the default language name.">;
 
-def dry_run : Flag<[ "/", "-" ], "dry-run">,
-              HelpText<"Don't compile the input; only try to parse it.">;
+def includepath : JS<"I", "Add an include path.">;
+def noinclude : F<"X", "Ignore 'include' variable.">;
 
-def codepage : JoinedOrSeparate<[ "/", "-" ], "C">,
-               HelpText<"Set the codepage used for input strings.">;
+def add_null : F<"N", "Null-terminate all strings in the string table.">;
+
+def dupid_nowarn : F<"Y", "Suppress warnings on duplicate resource IDs.">;
+
+def verbose : F<"V", "Be verbose.">;
+def help : F<"?", "Display this help and exit.">;
+def h : F<"H", "Display this help and exit.">, Alias<help>;
+
+def codepage : JS<"C", "Set the codepage used for input strings.">;
+
+// llvm-rc specific options:
+
+def dry_run : F<"dry-run", "Don't compile the input; only try to parse it.">;
+
+def no_preprocess : F<"no-preprocess", "Don't try to preprocess the input file.">;
+
+// Print (but do not run) the commands to run for preprocessing
+def _HASH_HASH_HASH : F_nodoc<"###">;
 
 // Unused switches (at least for now). These will stay unimplemented
 // in an early stage of development and can be ignored. However, we need to
 // parse them in order to preserve the compatibility with the original tool.
 
-def nologo : Flag<[ "/", "-" ], "NOLOGO">;
-def r : Flag<[ "/", "-" ], "R">;
-def sl : Flag<[ "/", "-" ], "SL">;
+def nologo : F_nodoc<"NOLOGO">;
+def r : F_nodoc<"R">;
+def sl : F_nodoc<"SL">;
 
 // (Codepages support.)
-def w : Flag<[ "/", "-" ], "W">;
+def w : F_nodoc<"W">;
 
 // (Support of MUI and similar.)
-def fm : Separate<[ "/", "-" ], "FM">;
-def q : Separate<[ "/", "-" ], "Q">;
-def g : Flag<[ "/", "-" ], "G">;
-def gn : Flag<[ "/", "-" ], "GN">;
-def g1 : Flag<[ "/", "-" ], "G1">;
-def g2 : Flag<[ "/", "-" ], "G2">;
+def fm : S_nodoc<"FM">;
+def q : S_nodoc<"Q">;
+def g : F_nodoc<"G">;
+def gn : F_nodoc<"GN">;
+def g1 : F_nodoc<"G1">;
+def g2 : F_nodoc<"G2">;

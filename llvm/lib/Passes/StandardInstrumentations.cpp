@@ -193,20 +193,18 @@ std::string doSystemDiff(StringRef Before, StringRef After,
   return Diff;
 }
 
-/// Extracting Module out of \p IR unit. Also fills a textual description
-/// of \p IR for use in header when printing.
-Optional<std::pair<const Module *, std::string>>
-unwrapModule(Any IR, bool Force = false) {
+/// Extract Module out of \p IR unit. May return nullptr if \p IR does not match
+/// certain global filters. Will never return nullptr if \p Force is true.
+const Module *unwrapModule(Any IR, bool Force = false) {
   if (any_isa<const Module *>(IR))
-    return std::make_pair(any_cast<const Module *>(IR), std::string());
+    return any_cast<const Module *>(IR);
 
   if (any_isa<const Function *>(IR)) {
     const Function *F = any_cast<const Function *>(IR);
     if (!Force && !isFunctionInPrintList(F->getName()))
-      return None;
+      return nullptr;
 
-    const Module *M = F->getParent();
-    return std::make_pair(M, formatv(" (function: {0})", F->getName()).str());
+    return F->getParent();
   }
 
   if (any_isa<const LazyCallGraph::SCC *>(IR)) {
@@ -214,130 +212,156 @@ unwrapModule(Any IR, bool Force = false) {
     for (const LazyCallGraph::Node &N : *C) {
       const Function &F = N.getFunction();
       if (Force || (!F.isDeclaration() && isFunctionInPrintList(F.getName()))) {
-        const Module *M = F.getParent();
-        return std::make_pair(M, formatv(" (scc: {0})", C->getName()).str());
+        return F.getParent();
       }
     }
-    assert(!Force && "Expected to have made a pair when forced.");
-    return None;
+    assert(!Force && "Expected a module");
+    return nullptr;
   }
 
   if (any_isa<const Loop *>(IR)) {
     const Loop *L = any_cast<const Loop *>(IR);
     const Function *F = L->getHeader()->getParent();
     if (!Force && !isFunctionInPrintList(F->getName()))
-      return None;
-    const Module *M = F->getParent();
-    std::string LoopName;
-    raw_string_ostream ss(LoopName);
-    L->getHeader()->printAsOperand(ss, false);
-    return std::make_pair(M, formatv(" (loop: {0})", ss.str()).str());
+      return nullptr;
+    return F->getParent();
   }
 
   llvm_unreachable("Unknown IR unit");
 }
 
-void printIR(raw_ostream &OS, const Function *F, StringRef Banner,
-             StringRef Extra = StringRef(), bool Brief = false) {
-  if (Brief) {
-    OS << F->getName() << '\n';
-    return;
-  }
-
+void printIR(raw_ostream &OS, const Function *F) {
   if (!isFunctionInPrintList(F->getName()))
     return;
-  OS << Banner << Extra << "\n" << static_cast<const Value &>(*F);
+  OS << *F;
 }
 
-void printIR(raw_ostream &OS, const Module *M, StringRef Banner,
-             StringRef Extra = StringRef(), bool Brief = false,
+void printIR(raw_ostream &OS, const Module *M,
              bool ShouldPreserveUseListOrder = false) {
-  if (Brief) {
-    OS << M->getName() << '\n';
-    return;
-  }
-
   if (isFunctionInPrintList("*") || forcePrintModuleIR()) {
-    OS << Banner << Extra << "\n";
     M->print(OS, nullptr, ShouldPreserveUseListOrder);
   } else {
     for (const auto &F : M->functions()) {
-      printIR(OS, &F, Banner, Extra);
+      printIR(OS, &F);
     }
   }
 }
 
-void printIR(raw_ostream &OS, const LazyCallGraph::SCC *C, StringRef Banner,
-             StringRef Extra = StringRef(), bool Brief = false) {
-  if (Brief) {
-    OS << *C << '\n';
-    return;
-  }
-
-  bool BannerPrinted = false;
+void printIR(raw_ostream &OS, const LazyCallGraph::SCC *C) {
   for (const LazyCallGraph::Node &N : *C) {
     const Function &F = N.getFunction();
     if (!F.isDeclaration() && isFunctionInPrintList(F.getName())) {
-      if (!BannerPrinted) {
-        OS << Banner << Extra << "\n";
-        BannerPrinted = true;
-      }
       F.print(OS);
     }
   }
 }
 
-void printIR(raw_ostream &OS, const Loop *L, StringRef Banner,
-             bool Brief = false) {
-  if (Brief) {
-    OS << *L;
-    return;
-  }
-
+void printIR(raw_ostream &OS, const Loop *L) {
   const Function *F = L->getHeader()->getParent();
   if (!isFunctionInPrintList(F->getName()))
     return;
-  printLoop(const_cast<Loop &>(*L), OS, std::string(Banner));
+  printLoop(const_cast<Loop &>(*L), OS);
+}
+
+std::string getIRName(Any IR) {
+  if (any_isa<const Module *>(IR))
+    return "[module]";
+
+  if (any_isa<const Function *>(IR)) {
+    const Function *F = any_cast<const Function *>(IR);
+    return F->getName().str();
+  }
+
+  if (any_isa<const LazyCallGraph::SCC *>(IR)) {
+    const LazyCallGraph::SCC *C = any_cast<const LazyCallGraph::SCC *>(IR);
+    return C->getName();
+  }
+
+  if (any_isa<const Loop *>(IR)) {
+    const Loop *L = any_cast<const Loop *>(IR);
+    std::string S;
+    raw_string_ostream OS(S);
+    L->print(OS, /*Verbose*/ false, /*PrintNested*/ false);
+    return OS.str();
+  }
+
+  llvm_unreachable("Unknown wrapped IR type");
+}
+
+bool moduleContainsFilterPrintFunc(const Module &M) {
+  return any_of(M.functions(),
+                [](const Function &F) {
+                  return isFunctionInPrintList(F.getName());
+                }) ||
+         isFunctionInPrintList("*");
+}
+
+bool sccContainsFilterPrintFunc(const LazyCallGraph::SCC &C) {
+  return any_of(C,
+                [](const LazyCallGraph::Node &N) {
+                  return isFunctionInPrintList(N.getName());
+                }) ||
+         isFunctionInPrintList("*");
+}
+
+bool shouldPrintIR(Any IR) {
+  if (any_isa<const Module *>(IR)) {
+    const Module *M = any_cast<const Module *>(IR);
+    return moduleContainsFilterPrintFunc(*M);
+  }
+
+  if (any_isa<const Function *>(IR)) {
+    const Function *F = any_cast<const Function *>(IR);
+    return isFunctionInPrintList(F->getName());
+  }
+
+  if (any_isa<const LazyCallGraph::SCC *>(IR)) {
+    const LazyCallGraph::SCC *C = any_cast<const LazyCallGraph::SCC *>(IR);
+    return sccContainsFilterPrintFunc(*C);
+  }
+
+  if (any_isa<const Loop *>(IR)) {
+    const Loop *L = any_cast<const Loop *>(IR);
+    return isFunctionInPrintList(L->getHeader()->getParent()->getName());
+  }
+  llvm_unreachable("Unknown wrapped IR type");
 }
 
 /// Generic IR-printing helper that unpacks a pointer to IRUnit wrapped into
 /// llvm::Any and does actual print job.
-void unwrapAndPrint(raw_ostream &OS, Any IR, StringRef Banner,
-                    bool ForceModule = false, bool Brief = false,
+void unwrapAndPrint(raw_ostream &OS, Any IR,
                     bool ShouldPreserveUseListOrder = false) {
-  if (ForceModule) {
-    if (auto UnwrappedModule = unwrapModule(IR))
-      printIR(OS, UnwrappedModule->first, Banner, UnwrappedModule->second,
-              Brief, ShouldPreserveUseListOrder);
+  if (!shouldPrintIR(IR))
+    return;
+
+  if (forcePrintModuleIR()) {
+    auto *M = unwrapModule(IR);
+    assert(M && "should have unwrapped module");
+    printIR(OS, M, ShouldPreserveUseListOrder);
     return;
   }
 
   if (any_isa<const Module *>(IR)) {
     const Module *M = any_cast<const Module *>(IR);
-    assert(M && "module should be valid for printing");
-    printIR(OS, M, Banner, "", Brief, ShouldPreserveUseListOrder);
+    printIR(OS, M, ShouldPreserveUseListOrder);
     return;
   }
 
   if (any_isa<const Function *>(IR)) {
     const Function *F = any_cast<const Function *>(IR);
-    assert(F && "function should be valid for printing");
-    printIR(OS, F, Banner, "", Brief);
+    printIR(OS, F);
     return;
   }
 
   if (any_isa<const LazyCallGraph::SCC *>(IR)) {
     const LazyCallGraph::SCC *C = any_cast<const LazyCallGraph::SCC *>(IR);
-    assert(C && "scc should be valid for printing");
-    std::string Extra = std::string(formatv(" (scc: {0})", C->getName()));
-    printIR(OS, C, Banner, Extra, Brief);
+    printIR(OS, C);
     return;
   }
 
   if (any_isa<const Loop *>(IR)) {
     const Loop *L = any_cast<const Loop *>(IR);
-    assert(L && "Loop should be valid for printing");
-    printIR(OS, L, Banner, Brief);
+    printIR(OS, L);
     return;
   }
   llvm_unreachable("Unknown wrapped IR type");
@@ -346,7 +370,8 @@ void unwrapAndPrint(raw_ostream &OS, Any IR, StringRef Banner,
 // Return true when this is a pass for which changes should be ignored
 bool isIgnored(StringRef PassID) {
   return isSpecialPass(PassID,
-                       {"PassManager", "PassAdaptor", "AnalysisManagerProxy"});
+                       {"PassManager", "PassAdaptor", "AnalysisManagerProxy",
+                        "DevirtSCCRepeatedPass", "ModuleInlinerWrapperPass"});
 }
 
 } // namespace
@@ -406,18 +431,8 @@ void ChangeReporter<IRUnitT>::saveIRBeforePass(Any IR, StringRef PassID) {
 template <typename IRUnitT>
 void ChangeReporter<IRUnitT>::handleIRAfterPass(Any IR, StringRef PassID) {
   assert(!BeforeStack.empty() && "Unexpected empty stack encountered.");
-  std::string Name;
 
-  // unwrapModule has inconsistent handling of names for function IRs.
-  if (any_isa<const Function *>(IR)) {
-    const Function *F = any_cast<const Function *>(IR);
-    Name = formatv(" (function: {0})", F->getName()).str();
-  } else {
-    if (auto UM = unwrapModule(IR))
-      Name = UM->second;
-  }
-  if (Name == "")
-    Name = " (module)";
+  std::string Name = getIRName(IR);
 
   if (isIgnored(PassID)) {
     if (VerboseMode)
@@ -485,17 +500,17 @@ template <typename IRUnitT>
 void TextChangeReporter<IRUnitT>::handleInitialIR(Any IR) {
   // Always print the module.
   // Unwrap and print directly to avoid filtering problems in general routines.
-  auto UnwrappedModule = unwrapModule(IR, /*Force=*/true);
-  assert(UnwrappedModule && "Expected module to be unwrapped when forced.");
-  Out << "*** IR Dump At Start: ***" << UnwrappedModule->second << "\n";
-  UnwrappedModule->first->print(Out, nullptr,
-                                /*ShouldPreserveUseListOrder=*/true);
+  auto *M = unwrapModule(IR, /*Force=*/true);
+  assert(M && "Expected module to be unwrapped when forced.");
+  Out << "*** IR Dump At Start ***\n";
+  M->print(Out, nullptr,
+           /*ShouldPreserveUseListOrder=*/true);
 }
 
 template <typename IRUnitT>
 void TextChangeReporter<IRUnitT>::omitAfter(StringRef PassID,
                                             std::string &Name) {
-  Out << formatv("*** IR Dump After {0}{1} omitted because no change ***\n",
+  Out << formatv("*** IR Dump After {0} on {1} omitted because no change ***\n",
                  PassID, Name);
 }
 
@@ -508,14 +523,14 @@ template <typename IRUnitT>
 void TextChangeReporter<IRUnitT>::handleFiltered(StringRef PassID,
                                                  std::string &Name) {
   SmallString<20> Banner =
-      formatv("*** IR Dump After {0}{1} filtered out ***\n", PassID, Name);
+      formatv("*** IR Dump After {0} on {1} filtered out ***\n", PassID, Name);
   Out << Banner;
 }
 
 template <typename IRUnitT>
 void TextChangeReporter<IRUnitT>::handleIgnored(StringRef PassID,
                                                 std::string &Name) {
-  Out << formatv("*** IR Pass {0}{1} ignored ***\n", PassID, Name);
+  Out << formatv("*** IR Pass {0} on {1} ignored ***\n", PassID, Name);
 }
 
 IRChangedPrinter::~IRChangedPrinter() {}
@@ -529,49 +544,27 @@ void IRChangedPrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
 void IRChangedPrinter::generateIRRepresentation(Any IR, StringRef PassID,
                                                 std::string &Output) {
   raw_string_ostream OS(Output);
-  // use the after banner for all cases so it will match
-  SmallString<20> Banner = formatv("*** IR Dump After {0} ***", PassID);
-  unwrapAndPrint(OS, IR, Banner, forcePrintModuleIR(),
-                 /*Brief=*/false, /*ShouldPreserveUseListOrder=*/true);
-
+  unwrapAndPrint(OS, IR,
+                 /*ShouldPreserveUseListOrder=*/true);
   OS.str();
 }
 
 void IRChangedPrinter::handleAfter(StringRef PassID, std::string &Name,
                                    const std::string &Before,
                                    const std::string &After, Any) {
+  // Report the IR before the changes when requested.
+  if (PrintChangedBefore)
+    Out << "*** IR Dump Before " << PassID << " on " << Name << " ***\n"
+        << Before;
+
   // We might not get anything to print if we only want to print a specific
   // function but it gets deleted.
   if (After.empty()) {
-    Out << "*** IR Deleted After " << PassID << Name << " ***\n";
+    Out << "*** IR Deleted After " << PassID << " on " << Name << " ***\n";
     return;
   }
 
-  assert(After.find("*** IR Dump") == 0 && "Unexpected banner format.");
-  StringRef AfterRef = After;
-  StringRef Banner =
-      AfterRef.take_until([](char C) -> bool { return C == '\n'; });
-
-  // Report the IR before the changes when requested.
-  if (PrintChangedBefore) {
-    Out << "*** IR Dump Before" << Banner.substr(17);
-    // LazyCallGraph::SCC already has "(scc:..." in banner so only add
-    // in the name if it isn't already there.
-    if (Name.substr(0, 6) != " (scc:" && !forcePrintModuleIR())
-      Out << Name;
-
-    StringRef BeforeRef = Before;
-    Out << BeforeRef.substr(Banner.size());
-  }
-
-  Out << Banner;
-
-  // LazyCallGraph::SCC already has "(scc:..." in banner so only add
-  // in the name if it isn't already there.
-  if (Name.substr(0, 6) != " (scc:" && !forcePrintModuleIR())
-    Out << Name;
-
-  Out << After.substr(Banner.size());
+  Out << "*** IR Dump After " << PassID << " on " << Name << " ***\n" << After;
 }
 
 bool IRChangedPrinter::same(const std::string &S1, const std::string &S2) {
@@ -723,11 +716,8 @@ PrintIRInstrumentation::~PrintIRInstrumentation() {
 
 void PrintIRInstrumentation::pushModuleDesc(StringRef PassID, Any IR) {
   assert(StoreModuleDesc);
-  const Module *M = nullptr;
-  std::string Extra;
-  if (auto UnwrappedModule = unwrapModule(IR))
-    std::tie(M, Extra) = UnwrappedModule.getValue();
-  ModuleDescStack.emplace_back(M, Extra, PassID);
+  const Module *M = unwrapModule(IR);
+  ModuleDescStack.emplace_back(M, getIRName(IR), PassID);
 }
 
 PrintIRInstrumentation::PrintModuleDesc
@@ -752,8 +742,12 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
   if (!shouldPrintBeforePass(PassID))
     return;
 
-  SmallString<20> Banner = formatv("*** IR Dump Before {0} ***", PassID);
-  unwrapAndPrint(dbgs(), IR, Banner, forcePrintModuleIR());
+  if (!shouldPrintIR(IR))
+    return;
+
+  dbgs() << "*** IR Dump Before " << PassID << " on " << getIRName(IR)
+         << " ***\n";
+  unwrapAndPrint(dbgs(), IR);
 }
 
 void PrintIRInstrumentation::printAfterPass(StringRef PassID, Any IR) {
@@ -763,11 +757,20 @@ void PrintIRInstrumentation::printAfterPass(StringRef PassID, Any IR) {
   if (!shouldPrintAfterPass(PassID))
     return;
 
-  if (StoreModuleDesc)
-    popModuleDesc(PassID);
+  if (StoreModuleDesc) {
+    const Module *M;
+    std::string IRName;
+    StringRef StoredPassID;
+    std::tie(M, IRName, StoredPassID) = popModuleDesc(PassID);
+    assert(StoredPassID == PassID && "mismatched PassID");
+  }
 
-  SmallString<20> Banner = formatv("*** IR Dump After {0} ***", PassID);
-  unwrapAndPrint(dbgs(), IR, Banner, forcePrintModuleIR());
+  if (!shouldPrintIR(IR))
+    return;
+
+  dbgs() << "*** IR Dump After " << PassID << " on " << getIRName(IR)
+         << " ***\n";
+  unwrapAndPrint(dbgs(), IR);
 }
 
 void PrintIRInstrumentation::printAfterPassInvalidated(StringRef PassID) {
@@ -779,17 +782,19 @@ void PrintIRInstrumentation::printAfterPassInvalidated(StringRef PassID) {
     return;
 
   const Module *M;
-  std::string Extra;
+  std::string IRName;
   StringRef StoredPassID;
-  std::tie(M, Extra, StoredPassID) = popModuleDesc(PassID);
+  std::tie(M, IRName, StoredPassID) = popModuleDesc(PassID);
+  assert(StoredPassID == PassID && "mismatched PassID");
   // Additional filtering (e.g. -filter-print-func) can lead to module
   // printing being skipped.
   if (!M)
     return;
 
   SmallString<20> Banner =
-      formatv("*** IR Dump After {0} *** invalidated: ", PassID);
-  printIR(dbgs(), M, Banner, Extra);
+      formatv("*** IR Dump After {0} on {1} (invalidated) ***", PassID, IRName);
+  dbgs() << Banner << "\n";
+  printIR(dbgs(), M);
 }
 
 bool PrintIRInstrumentation::shouldPrintBeforePass(StringRef PassID) {
@@ -852,39 +857,12 @@ bool OptNoneInstrumentation::shouldRun(StringRef PassID, Any IR) {
   return ShouldRun;
 }
 
-static std::string getBisectDescription(Any IR) {
-  if (any_isa<const Module *>(IR)) {
-    const Module *M = any_cast<const Module *>(IR);
-    assert(M && "module should be valid for printing");
-    return "module (" + M->getName().str() + ")";
-  }
-
-  if (any_isa<const Function *>(IR)) {
-    const Function *F = any_cast<const Function *>(IR);
-    assert(F && "function should be valid for printing");
-    return "function (" + F->getName().str() + ")";
-  }
-
-  if (any_isa<const LazyCallGraph::SCC *>(IR)) {
-    const LazyCallGraph::SCC *C = any_cast<const LazyCallGraph::SCC *>(IR);
-    assert(C && "scc should be valid for printing");
-    return "SCC " + C->getName();
-  }
-
-  if (any_isa<const Loop *>(IR)) {
-    return "loop";
-  }
-
-  llvm_unreachable("Unknown wrapped IR type");
-}
-
 void OptBisectInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
   if (!OptBisector->isEnabled())
     return;
   PIC.registerShouldRunOptionalPassCallback([](StringRef PassID, Any IR) {
-    return isIgnored(PassID) ||
-           OptBisector->checkPass(PassID, getBisectDescription(IR));
+    return isIgnored(PassID) || OptBisector->checkPass(PassID, getIRName(IR));
   });
 }
 
@@ -902,8 +880,8 @@ void PrintPassInstrumentation::registerCallbacks(
         assert(!isSpecialPass(PassID, SpecialPasses) &&
                "Unexpectedly skipping special pass");
 
-        dbgs() << "Skipping pass: " << PassID << " on ";
-        unwrapAndPrint(dbgs(), IR, "", false, true);
+        dbgs() << "Skipping pass: " << PassID << " on " << getIRName(IR)
+               << "\n";
       });
 
   PIC.registerBeforeNonSkippedPassCallback(
@@ -911,13 +889,11 @@ void PrintPassInstrumentation::registerCallbacks(
         if (isSpecialPass(PassID, SpecialPasses))
           return;
 
-        dbgs() << "Running pass: " << PassID << " on ";
-        unwrapAndPrint(dbgs(), IR, "", false, true);
+        dbgs() << "Running pass: " << PassID << " on " << getIRName(IR) << "\n";
       });
 
   PIC.registerBeforeAnalysisCallback([](StringRef PassID, Any IR) {
-    dbgs() << "Running analysis: " << PassID << " on ";
-    unwrapAndPrint(dbgs(), IR, "", false, true);
+    dbgs() << "Running analysis: " << PassID << " on " << getIRName(IR) << "\n";
   });
 }
 
@@ -1163,10 +1139,8 @@ void InLineChangePrinter::generateIRRepresentation(Any IR, StringRef PassID,
 void InLineChangePrinter::handleAfter(StringRef PassID, std::string &Name,
                                       const ChangedIRData &Before,
                                       const ChangedIRData &After, Any IR) {
-  if (Name == "")
-    Name = " (module)";
   SmallString<20> Banner =
-      formatv("*** IR Dump After {0} ***{1}\n", PassID, Name);
+      formatv("*** IR Dump After {0} on {1} ***\n", PassID, Name);
   Out << Banner;
   ChangedIRComparer(Out, Before, After, UseColour)
       .compare(IR, "", PassID, Name);

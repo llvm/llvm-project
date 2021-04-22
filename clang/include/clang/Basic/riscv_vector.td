@@ -92,6 +92,17 @@
 //      (SEW=16, LMUL=4) and Log2EEW is 3 (EEW=8), and then equivalent vector
 //      type is __rvv_uint8m2_t (elmul=(8/16)*4 = 2). Ignore to define a new
 //      builtins if its equivalent type has illegal lmul.
+//   (FixedSEW:Value): Given a vector type (SEW and LMUL), and computes another
+//      vector type which only changed SEW as given value. Ignore to define a new
+//      builtin if its equivalent type has illegal lmul or the SEW does not changed.
+//   (SFixedLog2LMUL:Value): Smaller Fixed Log2LMUL. Given a vector type (SEW
+//      and LMUL), and computes another vector type which only changed LMUL as
+//      given value. The new LMUL should be smaller than the old one. Ignore to
+//      define a new builtin if its equivalent type has illegal lmul.
+//   (LFixedLog2LMUL:Value): Larger Fixed Log2LMUL. Given a vector type (SEW
+//      and LMUL), and computes another vector type which only changed LMUL as
+//      given value. The new LMUL should be larger than the old one. Ignore to
+//      define a new builtin if its equivalent type has illegal lmul.
 //
 // Following with the example above, if t is "i", then "Ue" will yield unsigned
 // int and "Fv" will yield __rvv_float32m1_t (again assuming LMUL=1), Fw would
@@ -194,6 +205,9 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // If non empty, this is the code emitted in the header, otherwise
   // an automatic definition in header is emitted.
   string HeaderCode = "";
+
+  // Sub extension of vector spec. Currently only support Zvamo or Zvlsseg.
+  string RequiredExtension = "";
 
 }
 
@@ -743,6 +757,34 @@ multiclass RVVIndexedStore<string op> {
   }
 }
 
+multiclass RVVAMOBuiltinSet<bit has_signed = false, bit has_unsigned = false,
+                            bit has_fp = false> {
+  defvar type_list = !if(has_fp, ["i","l","f","d"], ["i","l"]);
+  foreach type = type_list in
+    foreach eew_list = EEWList in {
+      defvar eew = eew_list[0];
+      defvar eew_index = eew_list[1];
+      let Name = NAME # "ei" # eew # "_" # "v",
+          IRName = NAME,
+          IRNameMask = NAME # "_mask",
+          HasMaskedOffOperand = false,
+          ManualCodegen = [{
+            // base, bindex, value, vl
+            IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[3]->getType()};
+            Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
+          }],
+          ManualCodegenMask = [{
+            IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[4]->getType()};
+            Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
+          }] in {
+        if has_signed then
+          def : RVVBuiltin<"v", "vPe" # eew_index # "Uvv", type>;
+        if !and(!not(IsFloat<type>.val), has_unsigned) then
+          def : RVVBuiltin<"Uv", "UvPUe" # eew_index # "UvUv", type>;
+      }
+    }
+}
+
 // 6. Configuration-Setting Instructions
 // 6.1. vsetvli/vsetvl instructions
 let HasVL = false,
@@ -852,6 +894,19 @@ defm vle8ff: RVVVLEFFBuiltin<["c"]>;
 defm vle16ff: RVVVLEFFBuiltin<["s"]>;
 defm vle32ff: RVVVLEFFBuiltin<["i", "f"]>;
 defm vle64ff: RVVVLEFFBuiltin<["l", "d"]>;
+
+// 8. Vector AMO Operations
+let RequiredExtension = "Zvamo" in {
+defm vamoswap : RVVAMOBuiltinSet< /* hasSigned */ true, /* hasUnsigned */ true, /* hasFP */ true>;
+defm vamoadd : RVVAMOBuiltinSet< /* hasSigned */ true, /* hasUnsigned */ true>;
+defm vamoxor : RVVAMOBuiltinSet< /* hasSigned */ true, /* hasUnsigned */ true>;
+defm vamoand : RVVAMOBuiltinSet< /* hasSigned */ true, /* hasUnsigned */ true>;
+defm vamoor : RVVAMOBuiltinSet< /* hasSigned */ true, /* hasUnsigned */ true>;
+defm vamomin : RVVAMOBuiltinSet< /* hasSigned */ true>;
+defm vamomax : RVVAMOBuiltinSet< /* hasSigned */ true>;
+defm vamominu : RVVAMOBuiltinSet< /* hasSigned */ false, /* hasUnsigned */ true>;
+defm vamomaxu : RVVAMOBuiltinSet< /* hasSigned */ false, /* hasUnsigned */ true>;
+}
 
 // 12. Vector Integer Arithmetic Instructions
 // 12.1. Vector Single-Width Integer Add and Subtract
@@ -1271,4 +1326,70 @@ let HasMask = false, PermuteOperands = [2, 0, 1] in {
   // unsigned type
   defm vcompress : RVVOutBuiltinSet<"vcompress", "csil",
                                     [["vm", "Uv", "UvUvUvm"]]>;
+}
+
+// Miscellaneous
+let HasMask = false, HasVL = false, HasNoMaskedOverloaded = false,
+    IRName = "" in {
+  let Name = "vreinterpret_v",
+      ManualCodegen = [{
+        return Builder.CreateBitCast(Ops[0], ResultType);
+      }] in {
+    // Reinterpret between different type under the same SEW and LMUL
+    def vreinterpret_i_u : RVVBuiltin<"Uvv", "vUv", "csil">;
+    def vreinterpret_i_f : RVVBuiltin<"Fvv", "vFv", "il">;
+    def vreinterpret_u_i : RVVBuiltin<"vUv", "Uvv", "csil">;
+    def vreinterpret_u_f : RVVBuiltin<"FvUv", "UvFv", "il">;
+    def vreinterpret_f_i : RVVBuiltin<"vFv", "Fvv", "il">;
+    def vreinterpret_f_u : RVVBuiltin<"UvFv", "FvUv", "il">;
+
+    // Reinterpret between different SEW under the same LMUL
+    foreach dst_sew = ["(FixedSEW:8)", "(FixedSEW:16)", "(FixedSEW:32)",
+                       "(FixedSEW:64)"] in {
+      def vreinterpret_i_ # dst_sew : RVVBuiltin<"v" # dst_sew # "v", dst_sew # "vv", "csil">;
+      def vreinterpret_u_ # dst_sew : RVVBuiltin<"Uv" # dst_sew # "Uv", dst_sew # "UvUv", "csil">;
+    }
+  }
+
+  let Name = "vundefined",
+      ManualCodegen = [{
+        return llvm::UndefValue::get(ResultType);
+      }] in {
+    def vundefined : RVVBuiltin<"v", "v", "csilfd">;
+    def vundefined_u : RVVBuiltin<"Uv", "Uv", "csil">;
+  }
+
+  // LMUL truncation
+  // C/C++ Operand: VecTy, IR Operand: VecTy, Index
+  let Name = "vlmul_trunc_v",
+      ManualCodegen = [{ {
+        ID = Intrinsic::experimental_vector_extract;
+        IntrinsicTypes = {ResultType, Ops[0]->getType()};
+        Ops.push_back(ConstantInt::get(Int64Ty, 0));
+        return Builder.CreateCall(CGM.getIntrinsic(ID, IntrinsicTypes), Ops, "");
+      } }] in {
+    foreach dst_lmul = ["(SFixedLog2LMUL:-3)", "(SFixedLog2LMUL:-2)", "(SFixedLog2LMUL:-1)",
+                        "(SFixedLog2LMUL:0)", "(SFixedLog2LMUL:1)", "(SFixedLog2LMUL:2)"] in {
+      def vlmul_trunc # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vv", "csilfd">;
+      def vlmul_trunc_u # dst_lmul : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "UvUv", "csil">;
+    }
+  }
+
+  // LMUL extension
+  // C/C++ Operand: SubVecTy, IR Operand: VecTy, SubVecTy, Index
+  let Name = "vlmul_ext_v",
+      ManualCodegen = [{
+        ID = Intrinsic::experimental_vector_insert;
+        IntrinsicTypes = {ResultType, Ops[0]->getType()};
+        Ops.push_back(llvm::UndefValue::get(ResultType));
+        std::swap(Ops[0], Ops[1]);
+        Ops.push_back(ConstantInt::get(Int64Ty, 0));
+        return Builder.CreateCall(CGM.getIntrinsic(ID, IntrinsicTypes), Ops, "");
+      }] in {
+    foreach dst_lmul = ["(LFixedLog2LMUL:-2)", "(LFixedLog2LMUL:-1)", "(LFixedLog2LMUL:-0)",
+                        "(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
+      def vlmul_ext # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vv", "csilfd">;
+      def vlmul_ext_u # dst_lmul : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "UvUv", "csil">;
+    }
+  }
 }

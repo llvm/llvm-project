@@ -2,9 +2,12 @@ add_llvm_component_group(CSKY)
 
 set(LLVM_TARGET_DEFINITIONS CSKY.td)
 
-tablegen(LLVM CSKYGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM CSKYGenAsmMatcher.inc -gen-asm-matcher)
+tablegen(LLVM CSKYGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM CSKYGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM CSKYGenMCCodeEmitter.inc -gen-emitter)
+tablegen(LLVM CSKYGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM CSKYGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(CSKYCommonTableGen)
 
@@ -22,5 +25,6 @@ add_llvm_target(CSKYCodeGen
   CSKY
   )
 
-add_subdirectory(TargetInfo)
+add_subdirectory(AsmParser)
 add_subdirectory(MCTargetDesc)
+add_subdirectory(TargetInfo)

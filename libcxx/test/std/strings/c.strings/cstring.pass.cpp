@@ -37,12 +37,17 @@ int main(int, char**)
     ASSERT_SAME_TYPE(int,         decltype(std::strcoll(cpc, cpc)));
     ASSERT_SAME_TYPE(std::size_t, decltype(std::strxfrm(cp, cpc, s)));
     ASSERT_SAME_TYPE(void*,       decltype(std::memchr(vp, 0, s)));
+    ASSERT_SAME_TYPE(const void*, decltype(std::memchr(vpc, 0, s)));
     ASSERT_SAME_TYPE(char*,       decltype(std::strchr(cp, 0)));
+    ASSERT_SAME_TYPE(const char*, decltype(std::strchr(cpc, 0)));
     ASSERT_SAME_TYPE(std::size_t, decltype(std::strcspn(cpc, cpc)));
     ASSERT_SAME_TYPE(char*,       decltype(std::strpbrk(cp, cpc)));
+    ASSERT_SAME_TYPE(const char*, decltype(std::strpbrk(cpc, cpc)));
     ASSERT_SAME_TYPE(char*,       decltype(std::strrchr(cp, 0)));
+    ASSERT_SAME_TYPE(const char*, decltype(std::strrchr(cpc, 0)));
     ASSERT_SAME_TYPE(std::size_t, decltype(std::strspn(cpc, cpc)));
     ASSERT_SAME_TYPE(char*,       decltype(std::strstr(cp, cpc)));
+    ASSERT_SAME_TYPE(const char*, decltype(std::strstr(cpc, cpc)));
 #ifndef _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS
     ASSERT_SAME_TYPE(char*,       decltype(std::strtok(cp, cpc)));
 #endif
@@ -50,16 +55,5 @@ int main(int, char**)
     ASSERT_SAME_TYPE(char*,       decltype(std::strerror(0)));
     ASSERT_SAME_TYPE(std::size_t, decltype(std::strlen(cpc)));
 
-    // These tests fail on systems whose C library doesn't provide a correct overload
-    // set for strchr, strpbrk, strrchr, strstr, and memchr, unless the compiler is
-    // a suitably recent version of Clang.
-#if !defined(__APPLE__) || defined(_LIBCPP_PREFERRED_OVERLOAD)
-    ASSERT_SAME_TYPE(const void*, decltype(std::memchr(vpc, 0, s)));
-    ASSERT_SAME_TYPE(const char*, decltype(std::strchr(cpc, 0)));
-    ASSERT_SAME_TYPE(const char*, decltype(std::strpbrk(cpc, cpc)));
-    ASSERT_SAME_TYPE(const char*, decltype(std::strrchr(cpc, 0)));
-    ASSERT_SAME_TYPE(const char*, decltype(std::strstr(cpc, cpc)));
-#endif
-
-  return 0;
+    return 0;
 }

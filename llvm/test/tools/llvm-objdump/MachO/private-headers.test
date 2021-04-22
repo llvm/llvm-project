@@ -1,4 +1,5 @@
 // RUN: llvm-objdump -p %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
+// RUN: llvm-otool -lv %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
 // RUN: llvm-objdump -p %p/Inputs/hello.exe.macho-x86_64 \
 // RUN:     | FileCheck %s -check-prefix=EXE
 // RUN: llvm-objdump -p %p/Inputs/dylibLoadKinds.macho-x86_64 \

@@ -610,6 +610,103 @@ TEST(VPRecipeTest, CastVPWidenMemoryInstructionRecipeToVPUserAndVPDef) {
   delete Load;
 }
 
+TEST(VPRecipeTest, MayHaveSideEffects) {
+  LLVMContext C;
+  IntegerType *Int1 = IntegerType::get(C, 1);
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  PointerType *Int32Ptr = PointerType::get(Int32, 0);
+
+  {
+    auto *AI = BinaryOperator::CreateAdd(UndefValue::get(Int32),
+                                         UndefValue::get(Int32));
+    VPValue Op1;
+    VPValue Op2;
+    SmallVector<VPValue *, 2> Args;
+    Args.push_back(&Op1);
+    Args.push_back(&Op1);
+    VPWidenRecipe Recipe(*AI, make_range(Args.begin(), Args.end()));
+    EXPECT_FALSE(Recipe.mayHaveSideEffects());
+
+    delete AI;
+  }
+
+  {
+    auto *SelectI = SelectInst::Create(
+        UndefValue::get(Int1), UndefValue::get(Int32), UndefValue::get(Int32));
+    VPValue Op1;
+    VPValue Op2;
+    VPValue Op3;
+    SmallVector<VPValue *, 4> Args;
+    Args.push_back(&Op1);
+    Args.push_back(&Op2);
+    Args.push_back(&Op3);
+    VPWidenSelectRecipe Recipe(*SelectI, make_range(Args.begin(), Args.end()),
+                               false);
+    EXPECT_FALSE(Recipe.mayHaveSideEffects());
+    delete SelectI;
+  }
+
+  {
+    auto *GEP = GetElementPtrInst::Create(Int32, UndefValue::get(Int32Ptr),
+                                          UndefValue::get(Int32));
+    VPValue Op1;
+    VPValue Op2;
+    SmallVector<VPValue *, 4> Args;
+    Args.push_back(&Op1);
+    Args.push_back(&Op2);
+    VPWidenGEPRecipe Recipe(GEP, make_range(Args.begin(), Args.end()));
+    EXPECT_FALSE(Recipe.mayHaveSideEffects());
+    delete GEP;
+  }
+
+  {
+    VPValue Mask;
+    VPBranchOnMaskRecipe Recipe(&Mask);
+    EXPECT_FALSE(Recipe.mayHaveSideEffects());
+  }
+
+  {
+    VPValue ChainOp;
+    VPValue VecOp;
+    VPValue CondOp;
+    VPReductionRecipe Recipe(nullptr, nullptr, &ChainOp, &CondOp, &VecOp,
+                             nullptr);
+    EXPECT_FALSE(Recipe.mayHaveSideEffects());
+  }
+
+  {
+    auto *Load =
+        new LoadInst(Int32, UndefValue::get(Int32Ptr), "", false, Align(1));
+    VPValue Addr;
+    VPValue Mask;
+    VPWidenMemoryInstructionRecipe Recipe(*Load, &Addr, &Mask);
+    EXPECT_TRUE(Recipe.mayHaveSideEffects());
+
+    delete Load;
+  }
+
+  {
+    FunctionType *FTy = FunctionType::get(Int32, false);
+    auto *Call = CallInst::Create(FTy, UndefValue::get(FTy));
+    VPValue Op1;
+    VPValue Op2;
+    SmallVector<VPValue *, 2> Args;
+    Args.push_back(&Op1);
+    Args.push_back(&Op2);
+    VPWidenCallRecipe Recipe(*Call, make_range(Args.begin(), Args.end()));
+    EXPECT_TRUE(Recipe.mayHaveSideEffects());
+    delete Call;
+  }
+
+  // The initial implementation is conservative with respect to VPInstructions.
+  {
+    VPValue Op1;
+    VPValue Op2;
+    VPInstruction Recipe(Instruction::Add, {&Op1, &Op2});
+    EXPECT_TRUE(Recipe.mayHaveSideEffects());
+  }
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST(VPRecipeTest, dump) {
   VPlan Plan;

@@ -160,7 +160,7 @@ tools.extend([
     'llvm-isel-fuzzer', 'llvm-ifs',
     'llvm-install-name-tool', 'llvm-jitlink', 'llvm-opt-fuzzer', 'llvm-lib',
     'llvm-link', 'llvm-lto', 'llvm-lto2', 'llvm-mc', 'llvm-mca',
-    'llvm-modextract', 'llvm-nm', 'llvm-objcopy', 'llvm-objdump',
+    'llvm-modextract', 'llvm-nm', 'llvm-objcopy', 'llvm-objdump', 'llvm-otool',
     'llvm-pdbutil', 'llvm-profdata', 'llvm-ranlib', 'llvm-rc', 'llvm-readelf',
     'llvm-readobj', 'llvm-rtdyld', 'llvm-size', 'llvm-split', 'llvm-strings',
     'llvm-strip', 'llvm-tblgen', 'llvm-undname', 'llvm-c-test', 'llvm-cxxfilt',
@@ -268,6 +268,10 @@ if have_cxx_shared_library():
 
 if config.libcxx_used:
     config.available_features.add('libcxx-used')
+
+# Direct object generation
+if not 'xcore' in config.target_triple:
+    config.available_features.add('object-emission')
 
 # LLVM can be configured with an empty default triple
 # Some tests are "generic" and require a valid default triple

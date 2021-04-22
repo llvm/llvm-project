@@ -17073,8 +17073,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   case WebAssembly::BI__builtin_wasm_trunc_saturate_s_i32x4_f32x4: {
     Value *Src = EmitScalarExpr(E->getArg(0));
     llvm::Type *ResT = ConvertType(E->getType());
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_trunc_saturate_signed,
-                                        {ResT, Src->getType()});
+    Function *Callee =
+        CGM.getIntrinsic(Intrinsic::fptosi_sat, {ResT, Src->getType()});
     return Builder.CreateCall(Callee, {Src});
   }
   case WebAssembly::BI__builtin_wasm_trunc_saturate_u_i32_f32:
@@ -17084,8 +17084,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   case WebAssembly::BI__builtin_wasm_trunc_saturate_u_i32x4_f32x4: {
     Value *Src = EmitScalarExpr(E->getArg(0));
     llvm::Type *ResT = ConvertType(E->getType());
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_trunc_saturate_unsigned,
-                                        {ResT, Src->getType()});
+    Function *Callee =
+        CGM.getIntrinsic(Intrinsic::fptoui_sat, {ResT, Src->getType()});
     return Builder.CreateCall(Callee, {Src});
   }
   case WebAssembly::BI__builtin_wasm_min_f32:
@@ -17481,16 +17481,24 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     unsigned IntNo;
     switch (BuiltinID) {
     case WebAssembly::BI__builtin_wasm_trunc_sat_zero_s_f64x2_i32x4:
-      IntNo = Intrinsic::wasm_trunc_sat_zero_signed;
+      IntNo = Intrinsic::fptosi_sat;
       break;
     case WebAssembly::BI__builtin_wasm_trunc_sat_zero_u_f64x2_i32x4:
-      IntNo = Intrinsic::wasm_trunc_sat_zero_unsigned;
+      IntNo = Intrinsic::fptoui_sat;
       break;
     default:
       llvm_unreachable("unexpected builtin ID");
     }
-    Function *Callee = CGM.getIntrinsic(IntNo);
-    return Builder.CreateCall(Callee, Vec);
+    llvm::Type *SrcT = Vec->getType();
+    llvm::Type *TruncT =
+        SrcT->getWithNewType(llvm::IntegerType::get(getLLVMContext(), 32));
+    Function *Callee = CGM.getIntrinsic(IntNo, {TruncT, SrcT});
+    Value *Trunc = Builder.CreateCall(Callee, Vec);
+    Value *Splat = Builder.CreateVectorSplat(2, Builder.getInt32(0));
+    Value *ConcatMask =
+        llvm::ConstantVector::get({Builder.getInt32(0), Builder.getInt32(1),
+                                   Builder.getInt32(2), Builder.getInt32(3)});
+    return Builder.CreateShuffleVector(Trunc, Splat, ConcatMask);
   }
   case WebAssembly::BI__builtin_wasm_demote_zero_f64x2_f32x4: {
     Value *Vec = EmitScalarExpr(E->getArg(0));

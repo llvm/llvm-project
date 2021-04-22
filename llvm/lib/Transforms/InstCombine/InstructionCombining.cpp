@@ -1682,7 +1682,7 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
         Constant *MaybeUndef =
             ConstOp1 ? ConstantExpr::get(Opcode, UndefScalar, CElt)
                      : ConstantExpr::get(Opcode, CElt, UndefScalar);
-        if (!isa<UndefValue>(MaybeUndef)) {
+        if (!match(MaybeUndef, m_Undef())) {
           MayChange = false;
           break;
         }
@@ -2799,17 +2799,22 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI) {
   if (isa<ConstantPointerNull>(Op))
     return eraseInstFromFunction(FI);
 
-  // If we free a pointer we've been explicitly told won't be freed, this
-  // would be full UB and thus we can conclude this is unreachable. Cases:
+  
+  // If we free a non-null pointer we've been explicitly told won't be freed,
+  // this would be full UB and thus we can conclude that the argument must
+  // be null at the point of the free. Cases:
   // 1) freeing a pointer which is explicitly nofree
-  // 2) calling free from a call site marked nofree
-  // 3) calling free in a function scope marked nofree
+  // 2) calling free from a call site marked nofree (TODO: can generalize
+  //    for non-arguments)
+  // 3) calling free in a function scope marked nofree (when we can prove
+  //    the allocation existed before the start of the function scope)
   if (auto *A = dyn_cast<Argument>(Op->stripPointerCasts()))
     if (A->hasAttribute(Attribute::NoFree) ||
         FI.hasFnAttr(Attribute::NoFree) ||
         FI.getFunction()->hasFnAttribute(Attribute::NoFree)) {
-      // Leave a marker since we can't modify the CFG here.
-      CreateNonTerminatorUnreachable(&FI);
+      Value *Null = ConstantPointerNull::get(cast<PointerType>(A->getType()));
+      Value *Cond = Builder.CreateICmpEQ(A, Null);
+      Builder.CreateAssumption(Cond);
       return eraseInstFromFunction(FI);
     }
 

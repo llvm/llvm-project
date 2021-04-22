@@ -275,11 +275,11 @@ void mlir::LLVM::detail::connectPHINodes(Region &region,
 }
 
 /// Sort function blocks topologically.
-llvm::SetVector<Block *>
+SetVector<Block *>
 mlir::LLVM::detail::getTopologicallySortedBlocks(Region &region) {
   // For each block that has not been visited yet (i.e. that has no
   // predecessors), add it to the list as well as its successors.
-  llvm::SetVector<Block *> blocks;
+  SetVector<Block *> blocks;
   for (Block &b : region) {
     if (blocks.count(&b) == 0) {
       llvm::ReversePostOrderTraversal<Block *> traversal(&b);
@@ -406,6 +406,9 @@ LogicalResult ModuleTranslation::convertGlobals() {
         shouldDropGlobalInitializer(linkage, cst) ? nullptr : cst,
         op.sym_name(),
         /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal, addrSpace);
+
+    if (op.unnamed_addr().hasValue())
+      var->setUnnamedAddr(convertUnnamedAddrToLLVM(*op.unnamed_addr()));
 
     globalsMapping.try_emplace(op, var);
   }

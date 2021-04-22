@@ -50,6 +50,18 @@
 @external = external global i32
 
 ;
+; UnnamedAddr attribute.
+;
+
+
+; CHECK: llvm.mlir.global private constant @no_unnamed_addr(42 : i64) : i64
+@no_unnamed_addr = private constant i64 42
+; CHECK: llvm.mlir.global private local_unnamed_addr constant @local_unnamed_addr(42 : i64) : i64
+@local_unnamed_addr = private local_unnamed_addr constant i64 42
+; CHECK: llvm.mlir.global private unnamed_addr constant @unnamed_addr(42 : i64) : i64
+@unnamed_addr = private unnamed_addr constant i64 42
+
+;
 ; Sequential constants.
 ;
 
@@ -109,7 +121,7 @@ entry:
 if.then:
 ; CHECK: llvm.return %[[c42]] : i32
   ret i32 42
-  
+
 ; CHECK: ^bb2:
 if.end:
 ; CHECK: %[[orcond:[0-9]+]] = llvm.or %[[e]], %[[c1]] : i1

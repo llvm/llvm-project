@@ -38,14 +38,9 @@ public:
   LocationCall(SharedLocationCall on, std::string name,
                LocationCallFlags flags = NoFlags)
       : m_flags(flags), m_on(std::move(on)), m_name(std::move(name)) {}
-  LocationCall(SharedLocationCall on, std::string name,
-               std::vector<std::string> args, LocationCallFlags flags = NoFlags)
-      : m_flags(flags), m_on(std::move(on)), m_name(std::move(name)),
-        m_args(std::move(args)) {}
 
   LocationCall *on() const { return m_on.get(); }
   StringRef name() const { return m_name; }
-  ArrayRef<std::string> args() const { return m_args; }
   bool returnsPointer() const { return m_flags & ReturnsPointer; }
   bool isCast() const { return m_flags & IsCast; }
 
@@ -53,12 +48,12 @@ private:
   LocationCallFlags m_flags;
   SharedLocationCall m_on;
   std::string m_name;
-  std::vector<std::string> m_args;
 };
 
 class LocationCallFormatterCpp {
 public:
-  static std::string format(LocationCall *Call);
+  static void print(const LocationCall &Call, llvm::raw_ostream &OS);
+  static std::string format(const LocationCall &Call);
 };
 
 namespace internal {
@@ -84,12 +79,14 @@ struct NodeLocationAccessors {
 };
 
 namespace NodeIntrospection {
+bool hasIntrospectionSupport();
 NodeLocationAccessors GetLocations(clang::Stmt const *Object);
 NodeLocationAccessors GetLocations(clang::Decl const *Object);
 NodeLocationAccessors GetLocations(clang::CXXCtorInitializer const *Object);
-NodeLocationAccessors GetLocations(clang::NestedNameSpecifierLoc const *);
-NodeLocationAccessors GetLocations(clang::TemplateArgumentLoc const *);
+NodeLocationAccessors GetLocations(clang::NestedNameSpecifierLoc const &);
+NodeLocationAccessors GetLocations(clang::TemplateArgumentLoc const &);
 NodeLocationAccessors GetLocations(clang::CXXBaseSpecifier const *);
+NodeLocationAccessors GetLocations(clang::TypeLoc const &);
 NodeLocationAccessors GetLocations(clang::DynTypedNode const &Node);
 } // namespace NodeIntrospection
 } // namespace tooling

@@ -545,7 +545,6 @@ def grp_bitcode : OptionGroup<"bitcode">, HelpText<"BITCODE BUILD FLOW">;
 
 def bitcode_bundle : Flag<["-"], "bitcode_bundle">,
     HelpText<"Generate an embedded bitcode bundle in the __LLVM,__bundle section of the output">,
-    Flags<[HelpHidden]>,
     Group<grp_bitcode>;
 def bitcode_hide_symbols : Flag<["-"], "bitcode_hide_symbols">,
     HelpText<"With -bitcode_bundle, hide all non-exported symbols from output bitcode bundle.">,
@@ -1159,8 +1158,10 @@ def dyld_env : Flag<["-"], "dyld_env">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
 def encryptable : Flag<["-"], "encryptable">,
-    HelpText<"This option is undocumented in ld64">,
-    Flags<[HelpHidden]>,
+    HelpText<"Generate the LC_ENCRYPTION_INFO load command">,
+    Group<grp_undocumented>;
+def no_encryption : Flag<["-"], "no_encryption">,
+    HelpText<"Do not generate the LC_ENCRYPTION_INFO load command">,
     Group<grp_undocumented>;
 def executable_path : Flag<["-"], "executable_path">,
     HelpText<"This option is undocumented in ld64">,
@@ -1251,10 +1252,6 @@ def no_compact_unwind : Flag<["-"], "no_compact_unwind">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
 def no_dtrace_dof : Flag<["-"], "no_dtrace_dof">,
-    HelpText<"This option is undocumented in ld64">,
-    Flags<[HelpHidden]>,
-    Group<grp_undocumented>;
-def no_encryption : Flag<["-"], "no_encryption">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;

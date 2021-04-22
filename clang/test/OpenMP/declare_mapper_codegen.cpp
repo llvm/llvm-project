@@ -118,8 +118,11 @@ public:
 // CK0: [[INIT]]
 // CK0-64-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
 // CK0-32-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 8
-// CK0-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], 281474976710652
-// CK0: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE]], {{.*}})
+
+// Remove movement mappings and mark as implicit
+// CK0-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], -4
+// CK0-DAG: [[ITYPE1:%.+]] = or i64 [[ITYPE]], 512
+// CK0: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE1]], {{.*}})
 // CK0: br label %[[LHEAD:[^,]+]]
 
 // CK0: [[LHEAD]]
@@ -228,8 +231,11 @@ public:
 // CK0: [[EVALDEL]]
 // CK0-64-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
 // CK0-32-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 8
-// CK0-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], 281474976710652
-// CK0: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE]], {{.*}})
+
+// Remove movement mappings and mark as implicit
+// CK0-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], -4
+// CK0-DAG: [[DTYPE1:%.+]] = or i64 [[DTYPE]], 512
+// CK0: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE1]], {{.*}})
 // CK0: br label %[[DONE]]
 // CK0: [[DONE]]
 // CK0: ret void
@@ -672,8 +678,11 @@ public:
 
 // CK1: [[INITEVALDEL]]
 // CK1-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 4
-// CK1-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], 281474976710652
-// CK1: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE]], {{.*}})
+
+// Remove movement mappings and mark as implicit
+// CK1-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], -4
+// CK1-DAG: [[ITYPE1:%.+]] = or i64 [[ITYPE]], 512
+// CK1: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE1]], {{.*}})
 // CK1: br label %[[LHEAD:[^,]+]]
 
 // CK1: [[LHEAD]]
@@ -718,8 +727,11 @@ public:
 // CK1: [[ISNOTDEL:%.+]] = icmp ne i64 [[TYPEDEL]], 0
 // CK1: [[CMP1:%.+]] = and i1 [[ISARRAY]], [[ISNOTDEL]]
 // CK1-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 4
-// CK1-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], 281474976710652
-// CK1: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE]], {{.*}})
+
+// Remove movement mappings and mark as implicit
+// CK1-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], -4
+// CK1-DAG: [[DTYPE1:%.+]] = or i64 [[DTYPE]], 512
+// CK1: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE1]], {{.*}})
 // CK1: br label %[[DONE]]
 // CK1: [[DONE]]
 // CK1: ret void
@@ -793,8 +805,11 @@ public:
 
 // CK2: [[INITEVALDEL]]
 // CK2-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
-// CK2-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], 281474976710652
-// CK2: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE]], {{.*}})
+
+// Remove movement mappings and mark as implicit
+// CK2-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], -4
+// CK2-DAG: [[ITYPE1:%.+]] = or i64 [[ITYPE]], 512
+// CK2: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE1]], {{.*}})
 // CK2: br label %[[LHEAD:[^,]+]]
 
 // CK2: [[LHEAD]]
@@ -841,8 +856,11 @@ public:
 // CK2: br i1 [[CMP1]], label %[[EVALDEL:[^,]+]], label %[[DONE]]
 // CK2: [[EVALDEL]]
 // CK2-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
-// CK2-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], 281474976710652
-// CK2: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE]], {{.*}})
+
+// Remove movement mappings and mark as implicit
+// CK2-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], -4
+// CK2-DAG: [[DTYPE1:%.+]] = or i64 [[DTYPE]], 512
+// CK2: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE1]], {{.*}})
 // CK2: br label %[[DONE]]
 // CK2: [[DONE]]
 // CK2: ret void
@@ -998,8 +1016,11 @@ public:
 // CK4: [[INITEVALDEL]]
 // CK4-64-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
 // CK4-32-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 8
-// CK4-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], 281474976710652
-// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE]], {{.*}})
+
+// Remove movement mappings and mark as implicit
+// CK4-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], -4
+// CK4-DAG: [[ITYPE1:%.+]] = or i64 [[ITYPE]], 512
+// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE1]], {{.*}})
 // CK4: br label %[[LHEAD:[^,]+]]
 
 // CK4: [[LHEAD]]
@@ -1108,8 +1129,11 @@ public:
 // CK4: [[EVALDEL]]
 // CK4-64-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 16
 // CK4-32-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], 8
-// CK4-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], 281474976710652
-// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE]], {{.*}})
+
+// Remove movement mappings and mark as implicit
+// CK4-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], -4
+// CK4-DAG: [[DTYPE1:%.+]] = or i64 [[DTYPE]], 512
+// CK4: call void @__tgt_push_mapper_component(i8* [[HANDLE]], i8* [[BPTR]], i8* [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE1]], {{.*}})
 // CK4: br label %[[DONE]]
 // CK4: [[DONE]]
 // CK4: ret void

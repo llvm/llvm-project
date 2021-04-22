@@ -1891,6 +1891,54 @@ struct FormatStyle {
   /// Disables formatting completely.
   bool DisableFormat;
 
+  /// Different styles for empty line after access modifiers.
+  /// ``EmptyLineBeforeAccessModifier`` configuration handles the number of
+  /// empty lines between two access modifiers.
+  enum EmptyLineAfterAccessModifierStyle : unsigned char {
+    /// Remove all empty lines after access modifiers.
+    /// \code
+    ///   struct foo {
+    ///   private:
+    ///     int i;
+    ///   protected:
+    ///     int j;
+    ///     /* comment */
+    ///   public:
+    ///     foo() {}
+    ///   private:
+    ///   protected:
+    ///   };
+    /// \endcode
+    ELAAMS_Never,
+    /// Keep existing empty lines after access modifiers.
+    /// MaxEmptyLinesToKeep is applied instead.
+    ELAAMS_Leave,
+    /// Always add empty line after access modifiers if there are none.
+    /// MaxEmptyLinesToKeep is applied also.
+    /// \code
+    ///   struct foo {
+    ///   private:
+    ///
+    ///     int i;
+    ///   protected:
+    ///
+    ///     int j;
+    ///     /* comment */
+    ///   public:
+    ///
+    ///     foo() {}
+    ///   private:
+    ///
+    ///   protected:
+    ///
+    ///   };
+    /// \endcode
+    ELAAMS_Always,
+  };
+
+  /// Defines in which cases to put empty line after access modifiers.
+  EmptyLineAfterAccessModifierStyle EmptyLineAfterAccessModifier;
+
   /// Different styles for empty line before access modifiers.
   enum EmptyLineBeforeAccessModifierStyle : unsigned char {
     /// Remove all empty lines before access modifiers.
@@ -3200,6 +3248,7 @@ struct FormatStyle {
            DeriveLineEnding == R.DeriveLineEnding &&
            DerivePointerAlignment == R.DerivePointerAlignment &&
            DisableFormat == R.DisableFormat &&
+           EmptyLineAfterAccessModifier == R.EmptyLineAfterAccessModifier &&
            EmptyLineBeforeAccessModifier == R.EmptyLineBeforeAccessModifier &&
            ExperimentalAutoDetectBinPacking ==
                R.ExperimentalAutoDetectBinPacking &&

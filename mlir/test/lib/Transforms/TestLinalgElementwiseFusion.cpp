@@ -19,7 +19,7 @@
 
 namespace mlir {
 
-static void addOperands(Operation *op, llvm::SetVector<Value> &operandSet) {
+static void addOperands(Operation *op, SetVector<Value> &operandSet) {
   if (!op)
     return;
   TypeSwitch<Operation *, void>(op)
@@ -35,7 +35,7 @@ static void addOperands(Operation *op, llvm::SetVector<Value> &operandSet) {
 template <int limit = 3>
 static bool setFusedOpOperandLimit(const OpResult &producer,
                                    const OpOperand &consumer) {
-  llvm::SetVector<Value> fusedOpOperands;
+  SetVector<Value> fusedOpOperands;
   if (producer.getOwner()->getNumResults() != 1)
     return false;
   addOperands(consumer.getOwner(), fusedOpOperands);
@@ -66,6 +66,22 @@ struct TestLinalgElementwiseFusion
                                        std::move(fusionPatterns));
   }
 };
+
+struct TestPushExpandingReshape
+    : public PassWrapper<TestPushExpandingReshape, FunctionPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry
+        .insert<AffineDialect, linalg::LinalgDialect, tensor::TensorDialect>();
+  }
+
+  void runOnFunction() override {
+    MLIRContext *context = &this->getContext();
+    FuncOp funcOp = this->getFunction();
+    RewritePatternSet patterns(context);
+    linalg::populatePushReshapeOpsPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
+  }
+};
 } // namespace
 
 namespace test {
@@ -73,6 +89,11 @@ void registerTestLinalgElementwiseFusion() {
   PassRegistration<TestLinalgElementwiseFusion> testElementwiseFusionPass(
       "test-linalg-elementwise-fusion-patterns",
       "Test Linalg element wise operation fusion patterns");
+}
+
+void registerTestPushExpandingReshape() {
+  PassRegistration<TestPushExpandingReshape> testPushExpandingReshapePass(
+      "test-linalg-push-reshape", "Test Linalg reshape push patterns");
 }
 } // namespace test
 

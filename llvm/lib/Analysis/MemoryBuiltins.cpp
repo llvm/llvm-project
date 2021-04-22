@@ -103,6 +103,7 @@ static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
   {LibFunc_msvc_new_array_longlong,         {OpNewLike,   1, 0,  -1}}, // new[](unsigned long long)
   {LibFunc_msvc_new_array_longlong_nothrow, {MallocLike,  2, 0,  -1}}, // new[](unsigned long long, nothrow)
   {LibFunc_aligned_alloc,       {AlignedAllocLike, 2, 1,  -1}},
+  {LibFunc_memalign,            {AlignedAllocLike, 2, 1,  -1}},
   {LibFunc_calloc,              {CallocLike,  2, 0,   1}},
   {LibFunc_vec_calloc,          {CallocLike,  2, 0,   1}},
   {LibFunc_realloc,             {ReallocLike, 2, 1,  -1}},
@@ -955,7 +956,14 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
 
   // must be a VLA
   assert(I.isArrayAllocation());
-  Value *ArraySize = I.getArraySize();
+
+  // If needed, adjust the alloca's operand size to match the pointer size.
+  // Subsequent math operations expect the types to match.
+  Value *ArraySize = Builder.CreateZExtOrTrunc(
+      I.getArraySize(), DL.getIntPtrType(I.getContext()));
+  assert(ArraySize->getType() == Zero->getType() &&
+         "Expected zero constant to have pointer type");
+
   Value *Size = ConstantInt::get(ArraySize->getType(),
                                  DL.getTypeAllocSize(I.getAllocatedType()));
   Size = Builder.CreateMul(Size, ArraySize);

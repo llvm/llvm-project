@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // <filesystem>
 
 // uintmax_t remove_all(const path& p);
@@ -38,6 +36,10 @@ TEST_CASE(test_signatures)
 
 TEST_CASE(test_error_reporting)
 {
+    scoped_test_env env;
+    // Windows doesn't support setting perms::none to trigger failures
+    // reading directories.
+#ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
     auto checkThrow = [](path const& f, const std::error_code& ec)
     {
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -54,7 +56,6 @@ TEST_CASE(test_error_reporting)
         return true;
 #endif
     };
-    scoped_test_env env;
     const path non_empty_dir = env.create_dir("dir");
     env.create_file(non_empty_dir / "file1", 42);
     const path bad_perms_dir = env.create_dir("bad_dir");
@@ -74,6 +75,7 @@ TEST_CASE(test_error_reporting)
         TEST_CHECK(ec);
         TEST_CHECK(checkThrow(p, ec));
     }
+#endif
 
     // PR#35780
     const path testCasesNonexistant[] = {

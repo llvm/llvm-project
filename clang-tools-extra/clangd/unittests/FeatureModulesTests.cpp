@@ -30,7 +30,9 @@ TEST(FeatureModulesTest, ContributesTweak) {
         return error("not implemented");
       }
       std::string title() const override { return id(); }
-      llvm::StringLiteral kind() const override { return ""; };
+      llvm::StringLiteral kind() const override {
+        return llvm::StringLiteral("");
+      };
     };
 
     void contributeTweaks(std::vector<std::unique_ptr<Tweak>> &Out) override {
@@ -45,7 +47,8 @@ TEST(FeatureModulesTest, ContributesTweak) {
   auto Tree =
       SelectionTree::createRight(AST.getASTContext(), AST.getTokens(), 0, 0);
   auto Actual = prepareTweak(
-      TweakID, Tweak::Selection(nullptr, AST, 0, 0, std::move(Tree)), &Set);
+      TweakID, Tweak::Selection(nullptr, AST, 0, 0, std::move(Tree), nullptr),
+      &Set);
   ASSERT_TRUE(bool(Actual));
   EXPECT_EQ(Actual->get()->id(), TweakID);
 }

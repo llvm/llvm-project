@@ -25,18 +25,18 @@
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONPLANNER_H
 
 #include "VPlan.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 
 namespace llvm {
 
+class LoopInfo;
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class PredicatedScalarEvolution;
 class LoopVectorizationRequirements;
 class LoopVectorizeHints;
 class OptimizationRemarkEmitter;
+class TargetTransformInfo;
+class TargetLibraryInfo;
 class VPRecipeBuilder;
 
 /// VPlan-based builder utility analogous to IRBuilder.
@@ -181,7 +181,10 @@ struct VectorizationFactor {
   // Vector width with best cost
   ElementCount Width;
   // Cost of the loop with that width
-  unsigned Cost;
+  InstructionCost Cost;
+
+  VectorizationFactor(ElementCount Width, InstructionCost Cost)
+      : Width(Width), Cost(Cost) {}
 
   // Width 1 means no vectorization, cost 0 means uncomputed cost.
   static VectorizationFactor Disabled() {

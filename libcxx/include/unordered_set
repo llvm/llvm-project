@@ -514,7 +514,7 @@ public:
                                   const hasher& __hf, const allocator_type& __a)
         : unordered_set(__il, __n, __hf, key_equal(), __a) {}
 #endif
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     ~unordered_set() {
         static_assert(sizeof(__diagnose_unordered_container_requirements<_Value, _Hash, _Pred>(0)), "");
@@ -532,7 +532,7 @@ public:
         _NOEXCEPT_(is_nothrow_move_assignable<__table>::value);
     _LIBCPP_INLINE_VISIBILITY
     unordered_set& operator=(initializer_list<value_type> __il);
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
     allocator_type get_allocator() const _NOEXCEPT
@@ -597,7 +597,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void insert(initializer_list<value_type> __il)
         {insert(__il.begin(), __il.end());}
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, bool> insert(const value_type& __x)
         {return __table_.__insert_unique(__x);}
@@ -794,7 +794,7 @@ public:
     bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const
         {return __table_.__addable(__i, __n);}
 
-#endif  // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_DEBUG_LEVEL == 2
 
 };
 
@@ -1041,7 +1041,7 @@ unordered_set<_Value, _Hash, _Pred, _Alloc>::operator=(
     return *this;
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
@@ -1210,7 +1210,7 @@ public:
     unordered_multiset(initializer_list<value_type> __il, size_type __n, const hasher& __hf, const allocator_type& __a)
       : unordered_multiset(__il, __n, __hf, key_equal(), __a) {}
 #endif
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     ~unordered_multiset() {
         static_assert(sizeof(__diagnose_unordered_container_requirements<_Value, _Hash, _Pred>(0)), "");
@@ -1227,7 +1227,7 @@ public:
     unordered_multiset& operator=(unordered_multiset&& __u)
         _NOEXCEPT_(is_nothrow_move_assignable<__table>::value);
     unordered_multiset& operator=(initializer_list<value_type> __il);
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
     allocator_type get_allocator() const _NOEXCEPT
@@ -1271,7 +1271,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void insert(initializer_list<value_type> __il)
         {insert(__il.begin(), __il.end());}
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(const value_type& __x) {return __table_.__insert_multi(__x);}
@@ -1460,7 +1460,7 @@ public:
     bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const
         {return __table_.__addable(__i, __n);}
 
-#endif  // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_DEBUG_LEVEL == 2
 
 };
 
@@ -1707,7 +1707,7 @@ unordered_multiset<_Value, _Hash, _Pred, _Alloc>::operator=(
     return *this;
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
@@ -1775,4 +1775,4 @@ operator!=(const unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_UNORDERED_SET
+#endif // _LIBCPP_UNORDERED_SET

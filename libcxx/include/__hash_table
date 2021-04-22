@@ -317,7 +317,7 @@ public:
         }
         return *this;
     }
-#endif  // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_DEBUG_LEVEL == 2
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {
@@ -438,7 +438,7 @@ public:
         }
         return *this;
     }
-#endif  // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_DEBUG_LEVEL == 2
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {
@@ -550,7 +550,7 @@ public:
         }
         return *this;
     }
-#endif  // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_DEBUG_LEVEL == 2
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {
@@ -695,7 +695,7 @@ public:
         }
         return *this;
     }
-#endif  // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_DEBUG_LEVEL == 2
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {
@@ -1337,7 +1337,7 @@ public:
     bool __addable(const const_iterator* __i, ptrdiff_t __n) const;
     bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const;
 
-#endif  // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_DEBUG_LEVEL == 2
 
 private:
     void __rehash(size_type __n);
@@ -1645,7 +1645,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(
 #ifndef _LIBCPP_NO_EXCEPTIONS
             try
             {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
                 const_iterator __i = __u.begin();
                 while (__cache != nullptr && __u.size() != 0)
                 {
@@ -1662,7 +1662,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(
                 __deallocate_node(__cache);
                 throw;
             }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
             __deallocate_node(__cache);
         }
         const_iterator __i = __u.begin();
@@ -1707,7 +1707,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_unique(_InputIterator __first
 #ifndef _LIBCPP_NO_EXCEPTIONS
         try
         {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
             for (; __cache != nullptr && __first != __last; ++__first)
             {
                 __cache->__upcast()->__value_ = *__first;
@@ -1722,7 +1722,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_unique(_InputIterator __first
             __deallocate_node(__cache);
             throw;
         }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         __deallocate_node(__cache);
     }
     for (; __first != __last; ++__first)
@@ -1747,7 +1747,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_multi(_InputIterator __first,
 #ifndef _LIBCPP_NO_EXCEPTIONS
         try
         {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
             for (; __cache != nullptr && __first != __last; ++__first)
             {
                 __cache->__upcast()->__value_ = *__first;
@@ -1762,7 +1762,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_multi(_InputIterator __first,
             __deallocate_node(__cache);
             throw;
         }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         __deallocate_node(__cache);
     }
     for (; __first != __last; ++__first)
@@ -2299,7 +2299,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_merge_multi(
         __node_insert_multi_perform(__src_ptr, __pn);
     }
 }
-#endif  // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER > 14
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 void
@@ -2804,10 +2804,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__subscriptable(const const_iterator*,
     return false;
 }
 
-#endif  // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_DEBUG_LEVEL == 2
 
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif  // _LIBCPP__HASH_TABLE
+#endif // _LIBCPP__HASH_TABLE

@@ -206,7 +206,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     install(&make<codecvt<char16_t, char, mbstate_t> >(1u));
     install(&make<codecvt<char32_t, char, mbstate_t> >(1u));
 _LIBCPP_SUPPRESS_DEPRECATED_POP
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
     install(&make<codecvt<char16_t, char8_t, mbstate_t> >(1u));
     install(&make<codecvt<char32_t, char8_t, mbstate_t> >(1u));
 #endif
@@ -240,7 +240,7 @@ locale::__imp::__imp(const string& name, size_t refs)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         facets_ = locale::classic().__locale_->facets_;
         for (unsigned i = 0; i < facets_.size(); ++i)
             if (facets_[i])
@@ -255,7 +255,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_PUSH
         install(new codecvt_byname<char16_t, char, mbstate_t>(name_));
         install(new codecvt_byname<char32_t, char, mbstate_t>(name_));
 _LIBCPP_SUPPRESS_DEPRECATED_POP
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
         install(new codecvt_byname<char16_t, char8_t, mbstate_t>(name_));
         install(new codecvt_byname<char32_t, char8_t, mbstate_t>(name_));
 #endif
@@ -280,7 +280,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
                 facets_[i]->__release_shared();
         throw;
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
 }
 
 // NOTE avoid the `base class should be explicitly initialized in the
@@ -315,7 +315,7 @@ locale::__imp::__imp(const __imp& other, const string& name, locale::category c)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         if (c & locale::collate)
         {
             install(new collate_byname<char>(name));
@@ -331,7 +331,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_PUSH
             install(new codecvt_byname<char16_t, char, mbstate_t>(name));
             install(new codecvt_byname<char32_t, char, mbstate_t>(name));
 _LIBCPP_SUPPRESS_DEPRECATED_POP
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
             install(new codecvt_byname<char16_t, char8_t, mbstate_t>(name));
             install(new codecvt_byname<char32_t, char8_t, mbstate_t>(name));
 #endif
@@ -369,7 +369,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
                 facets_[i]->__release_shared();
         throw;
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
 }
 
 template<class F>
@@ -392,7 +392,7 @@ locale::__imp::__imp(const __imp& other, const __imp& one, locale::category c)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         if (c & locale::collate)
         {
             install_from<_VSTD::collate<char> >(one);
@@ -407,7 +407,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_PUSH
             install_from<_VSTD::codecvt<char16_t, char, mbstate_t> >(one);
             install_from<_VSTD::codecvt<char32_t, char, mbstate_t> >(one);
 _LIBCPP_SUPPRESS_DEPRECATED_POP
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
             install_from<_VSTD::codecvt<char16_t, char8_t, mbstate_t> >(one);
             install_from<_VSTD::codecvt<char32_t, char8_t, mbstate_t> >(one);
 #endif
@@ -454,7 +454,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
                 facets_[i]->__release_shared();
         throw;
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
 }
 
 locale::__imp::__imp(const __imp& other, facet* f, long id)
@@ -3195,7 +3195,7 @@ codecvt<char16_t, char, mbstate_t>::do_max_length() const noexcept
     return 4;
 }
 
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
 
 // template <> class codecvt<char16_t, char8_t, mbstate_t>
 
@@ -3353,7 +3353,7 @@ codecvt<char32_t, char, mbstate_t>::do_max_length() const noexcept
     return 4;
 }
 
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
 
 // template <> class codecvt<char32_t, char8_t, mbstate_t>
 
@@ -6336,7 +6336,7 @@ template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char, cha
 template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<wchar_t, char, mbstate_t>;
 template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char16_t, char, mbstate_t>;
 template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char32_t, char, mbstate_t>;
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
 template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char16_t, char8_t, mbstate_t>;
 template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char32_t, char8_t, mbstate_t>;
 #endif

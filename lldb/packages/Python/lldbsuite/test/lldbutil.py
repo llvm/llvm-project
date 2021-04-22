@@ -95,6 +95,11 @@ def get_xcode_sdk_root(sdk):
                                     ]).rstrip().decode('utf-8')
 
 
+def get_xcode_clang(sdk):
+    return subprocess.check_output(['xcrun', '-sdk', sdk, '-f', 'clang'
+                                    ]).rstrip().decode("utf-8")
+
+
 # ===================================================
 # Disassembly for an SBFunction or an SBSymbol object
 # ===================================================

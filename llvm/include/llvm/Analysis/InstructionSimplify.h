@@ -37,6 +37,7 @@
 
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 
 namespace llvm {
 
@@ -133,7 +134,9 @@ struct SimplifyQuery {
   bool isUndefValue(Value *V) const {
     if (!CanUseUndef)
       return false;
-    return isa<UndefValue>(V);
+
+    using namespace PatternMatch;
+    return match(V, m_Undef());
   }
 };
 

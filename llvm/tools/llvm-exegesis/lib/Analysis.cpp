@@ -154,7 +154,8 @@ void Analysis::printInstructionRowCsv(const size_t PointId,
 Analysis::Analysis(const Target &Target, std::unique_ptr<MCInstrInfo> InstrInfo,
                    const InstructionBenchmarkClustering &Clustering,
                    double AnalysisInconsistencyEpsilon,
-                   bool AnalysisDisplayUnstableOpcodes)
+                   bool AnalysisDisplayUnstableOpcodes,
+                   const std::string &ForceCpuName)
     : Clustering_(Clustering), InstrInfo_(std::move(InstrInfo)),
       AnalysisInconsistencyEpsilonSquared_(AnalysisInconsistencyEpsilon *
                                            AnalysisInconsistencyEpsilon),
@@ -163,12 +164,14 @@ Analysis::Analysis(const Target &Target, std::unique_ptr<MCInstrInfo> InstrInfo,
     return;
 
   const InstructionBenchmark &FirstPoint = Clustering.getPoints().front();
+  const std::string CpuName =
+      ForceCpuName.empty() ? FirstPoint.CpuName : ForceCpuName;
   RegInfo_.reset(Target.createMCRegInfo(FirstPoint.LLVMTriple));
   MCTargetOptions MCOptions;
   AsmInfo_.reset(
       Target.createMCAsmInfo(*RegInfo_, FirstPoint.LLVMTriple, MCOptions));
-  SubtargetInfo_.reset(Target.createMCSubtargetInfo(FirstPoint.LLVMTriple,
-                                                    FirstPoint.CpuName, ""));
+  SubtargetInfo_.reset(
+      Target.createMCSubtargetInfo(FirstPoint.LLVMTriple, CpuName, ""));
   InstPrinter_.reset(Target.createMCInstPrinter(
       Triple(FirstPoint.LLVMTriple), 0 /*default variant*/, *AsmInfo_,
       *InstrInfo_, *RegInfo_));
@@ -195,9 +198,8 @@ Error Analysis::run<Analysis::PrintClusters>(raw_ostream &OS) const {
   OS << "\n";
 
   // Write the points.
-  const auto &Clusters = Clustering_.getValidClusters();
-  for (size_t I = 0, E = Clusters.size(); I < E; ++I) {
-    for (const size_t PointId : Clusters[I].PointIndices) {
+  for (const auto &ClusterIt : Clustering_.getValidClusters()) {
+    for (const size_t PointId : ClusterIt.PointIndices) {
       printInstructionRowCsv(PointId, OS);
     }
     OS << "\n\n";

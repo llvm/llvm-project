@@ -1,6 +1,6 @@
-; RUN: opt -S -passes=openmpopt -openmp-ir-builder-optimistic-attributes -pass-remarks=openmp-opt -openmp-print-gpu-kernels < %s | FileCheck %s
-; RUN: opt -S -passes=openmpopt -pass-remarks=openmp-opt -openmp-print-gpu-kernels < %s | FileCheck %s
-; RUN: opt -S        -openmpopt -pass-remarks=openmp-opt -openmp-print-gpu-kernels < %s | FileCheck %s
+; RUN: opt -S -passes=openmp-opt-cgscc -openmp-ir-builder-optimistic-attributes -pass-remarks=openmp-opt -openmp-print-gpu-kernels < %s | FileCheck %s
+; RUN: opt -S -passes=openmp-opt-cgscc -pass-remarks=openmp-opt -openmp-print-gpu-kernels < %s | FileCheck %s
+; RUN: opt -S        -openmp-opt-cgscc -pass-remarks=openmp-opt -openmp-print-gpu-kernels < %s | FileCheck %s
 
 ; C input used for this test:
 
@@ -29,14 +29,17 @@
 ; CHECK-DAG:   icmp eq i8* %5, @__omp_outlined__1_wrapper.ID
 ; CHECK-DAG:   icmp eq i8* %7, @__omp_outlined__3_wrapper.ID
 
-; CHECK-DAG:   call void @__kmpc_kernel_prepare_parallel(i8* @__omp_outlined__1_wrapper.ID)
-; CHECK-DAG:   call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void ()* @__omp_outlined__2_wrapper to i8*))
-; CHECK-DAG:   call void @__kmpc_kernel_prepare_parallel(i8* @__omp_outlined__3_wrapper.ID)
+; CHECK-DAG:   call void @__kmpc_parallel_51(%struct.ident_t* @1, i32 %1, i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__1 to i8*), i8* @__omp_outlined__1_wrapper.ID, i8** %2, i64 0)
+; CHECK-DAG:   call void @__kmpc_parallel_51(%struct.ident_t* @1, i32 %0, i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__2 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__2_wrapper to i8*), i8** %1, i64 0)
+; CHECK-DAG:   call void @__kmpc_parallel_51(%struct.ident_t* @1, i32 %1, i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* @__omp_outlined__3_wrapper.ID, i8** %3, i64 0)
 
 
 %struct.ident_t = type { i32, i32, i32, i32, i8* }
 
-define internal void @__omp_offloading_35_a1e179_foo_l7_worker() {
+@0 = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
+@1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @0, i32 0, i32 0) }, align 8
+
+define internal void @__omp_offloading_50_6dfa0f01_foo_l6_worker()  {
 entry:
   %work_fn = alloca i8*, align 8
   %exec_status = alloca i8, align 1
@@ -59,36 +62,36 @@ entry:
   br i1 %is_active, label %.execute.parallel, label %.barrier.parallel
 
 .execute.parallel:                                ; preds = %.select.workers
-  %4 = call i32 @__kmpc_global_thread_num(%struct.ident_t* null)
+  %4 = call i32 @__kmpc_global_thread_num(%struct.ident_t* @1)
   %5 = load i8*, i8** %work_fn, align 8
-  %work_match = icmp eq i8* %5, bitcast (void ()* @__omp_outlined__1_wrapper to i8*)
+  %work_match = icmp eq i8* %5, bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*)
   br i1 %work_match, label %.execute.fn, label %.check.next
 
 .execute.fn:                                      ; preds = %.execute.parallel
-  call void @__omp_outlined__1_wrapper()
+  call void @__omp_outlined__1_wrapper(i16 0, i32 %4) 
   br label %.terminate.parallel
 
 .check.next:                                      ; preds = %.execute.parallel
   %6 = load i8*, i8** %work_fn, align 8
-  %work_match1 = icmp eq i8* %6, bitcast (void ()* @__omp_outlined__2_wrapper to i8*)
+  %work_match1 = icmp eq i8* %6, bitcast (void (i16, i32)* @__omp_outlined__2_wrapper to i8*)
   br i1 %work_match1, label %.execute.fn2, label %.check.next3
 
 .execute.fn2:                                     ; preds = %.check.next
-  call void @__omp_outlined__2_wrapper()
+  call void @__omp_outlined__2_wrapper(i16 0, i32 %4) 
   br label %.terminate.parallel
 
 .check.next3:                                     ; preds = %.check.next
   %7 = load i8*, i8** %work_fn, align 8
-  %work_match4 = icmp eq i8* %7, bitcast (void ()* @__omp_outlined__3_wrapper to i8*)
+  %work_match4 = icmp eq i8* %7, bitcast (void (i16, i32)* @__omp_outlined__3_wrapper to i8*)
   br i1 %work_match4, label %.execute.fn5, label %.check.next6
 
 .execute.fn5:                                     ; preds = %.check.next3
-  call void @__omp_outlined__3_wrapper()
+  call void @__omp_outlined__3_wrapper(i16 0, i32 %4) 
   br label %.terminate.parallel
 
 .check.next6:                                     ; preds = %.check.next3
-  %8 = bitcast i8* %2 to void ()*
-  call void %8()
+  %8 = bitcast i8* %2 to void (i16, i32)*
+  call void %8(i16 0, i32 %4)
   br label %.terminate.parallel
 
 .terminate.parallel:                              ; preds = %.check.next6, %.execute.fn5, %.execute.fn2, %.execute.fn
@@ -103,52 +106,174 @@ entry:
   ret void
 }
 
-define weak void @__omp_offloading_35_a1e179_foo_l7() {
-  call void @__omp_offloading_35_a1e179_foo_l7_worker()
-  call void @__omp_outlined__()
+define weak void @__omp_offloading_50_6dfa0f01_foo_l6()  {
+entry:
+  %.zero.addr = alloca i32, align 4
+  %.threadid_temp. = alloca i32, align 4
+  store i32 0, i32* %.zero.addr, align 4
+  %nvptx_tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %nvptx_num_threads = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+  %nvptx_warp_size = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+  %thread_limit = sub nuw i32 %nvptx_num_threads, %nvptx_warp_size
+  %0 = icmp ult i32 %nvptx_tid, %thread_limit
+  br i1 %0, label %.worker, label %.mastercheck
+
+.worker:                                          ; preds = %entry
+  call void @__omp_offloading_50_6dfa0f01_foo_l6_worker() 
+  br label %.exit
+
+.mastercheck:                                     ; preds = %entry
+  %nvptx_tid1 = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %nvptx_num_threads2 = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+  %nvptx_warp_size3 = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+  %1 = sub nuw i32 %nvptx_warp_size3, 1
+  %2 = sub nuw i32 %nvptx_num_threads2, 1
+  %3 = xor i32 %1, -1
+  %master_tid = and i32 %2, %3
+  %4 = icmp eq i32 %nvptx_tid1, %master_tid
+  br i1 %4, label %.master, label %.exit
+
+.master:                                          ; preds = %.mastercheck
+  %nvptx_num_threads4 = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+  %nvptx_warp_size5 = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+  %thread_limit6 = sub nuw i32 %nvptx_num_threads4, %nvptx_warp_size5
+  call void @__kmpc_kernel_init(i32 %thread_limit6, i16 1)
+  call void @__kmpc_data_sharing_init_stack()
+  %5 = call i32 @__kmpc_global_thread_num(%struct.ident_t* @1)
+  store i32 %5, i32* %.threadid_temp., align 4
+  call void @__omp_outlined__(i32* %.threadid_temp., i32* %.zero.addr) 
+  br label %.termination.notifier
+
+.termination.notifier:                            ; preds = %.master
+  call void @__kmpc_kernel_deinit(i16 1)
+  call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
+  br label %.exit
+
+.exit:                                            ; preds = %.termination.notifier, %.mastercheck, %.worker
   ret void
 }
 
-define internal void @__omp_outlined__() {
-  call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void ()* @__omp_outlined__1_wrapper to i8*))
-  call void @bar()
-  call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void ()* @__omp_outlined__3_wrapper to i8*))
+declare i32 @llvm.nvvm.read.ptx.sreg.tid.x() 
+
+declare i32 @llvm.nvvm.read.ptx.sreg.ntid.x() 
+
+declare i32 @llvm.nvvm.read.ptx.sreg.warpsize() 
+
+declare void @__kmpc_kernel_init(i32, i16)
+
+declare void @__kmpc_data_sharing_init_stack()
+
+define internal void @__omp_outlined__(i32* noalias %.global_tid., i32* noalias %.bound_tid.)  {
+entry:
+  %.global_tid..addr = alloca i32*, align 8
+  %.bound_tid..addr = alloca i32*, align 8
+  %captured_vars_addrs = alloca [0 x i8*], align 8
+  %captured_vars_addrs1 = alloca [0 x i8*], align 8
+  store i32* %.global_tid., i32** %.global_tid..addr, align 8
+  store i32* %.bound_tid., i32** %.bound_tid..addr, align 8
+  %0 = load i32*, i32** %.global_tid..addr, align 8
+  %1 = load i32, i32* %0, align 4
+  %2 = bitcast [0 x i8*]* %captured_vars_addrs to i8**
+  call void @__kmpc_parallel_51(%struct.ident_t* @1, i32 %1, i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** %2, i64 0)
+  call void @bar() 
+  %3 = bitcast [0 x i8*]* %captured_vars_addrs1 to i8**
+  call void @__kmpc_parallel_51(%struct.ident_t* @1, i32 %1, i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__3_wrapper to i8*), i8** %3, i64 0)
   ret void
 }
 
-define internal void @__omp_outlined__1() {
+define internal void @__omp_outlined__1(i32* noalias %.global_tid., i32* noalias %.bound_tid.)  {
+entry:
+  %.global_tid..addr = alloca i32*, align 8
+  %.bound_tid..addr = alloca i32*, align 8
+  store i32* %.global_tid., i32** %.global_tid..addr, align 8
+  store i32* %.bound_tid., i32** %.bound_tid..addr, align 8
   ret void
 }
 
-define internal void @__omp_outlined__1_wrapper() {
-  call void @__omp_outlined__1()
+define internal void @__omp_outlined__1_wrapper(i16 zeroext %0, i32 %1)  {
+entry:
+  %.addr = alloca i16, align 2
+  %.addr1 = alloca i32, align 4
+  %.zero.addr = alloca i32, align 4
+  %global_args = alloca i8**, align 8
+  store i32 0, i32* %.zero.addr, align 4
+  store i16 %0, i16* %.addr, align 2
+  store i32 %1, i32* %.addr1, align 4
+  call void @__kmpc_get_shared_variables(i8*** %global_args)
+  call void @__omp_outlined__1(i32* %.addr1, i32* %.zero.addr) 
   ret void
 }
 
-define hidden void @bar() {
-  call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void ()* @__omp_outlined__2_wrapper to i8*))
+declare void @__kmpc_get_shared_variables(i8***)
+
+declare void @__kmpc_parallel_51(%struct.ident_t*, i32, i32, i32, i32, i8*, i8*, i8**, i64)
+
+define hidden void @bar()  {
+entry:
+  %captured_vars_addrs = alloca [0 x i8*], align 8
+  %0 = call i32 @__kmpc_global_thread_num(%struct.ident_t* @1)
+  %1 = bitcast [0 x i8*]* %captured_vars_addrs to i8**
+  call void @__kmpc_parallel_51(%struct.ident_t* @1, i32 %0, i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__2 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__2_wrapper to i8*), i8** %1, i64 0)
   ret void
 }
 
-define internal void @__omp_outlined__2_wrapper() {
+define internal void @__omp_outlined__2(i32* noalias %.global_tid., i32* noalias %.bound_tid.)  {
+entry:
+  %.global_tid..addr = alloca i32*, align 8
+  %.bound_tid..addr = alloca i32*, align 8
+  store i32* %.global_tid., i32** %.global_tid..addr, align 8
+  store i32* %.bound_tid., i32** %.bound_tid..addr, align 8
   ret void
 }
 
-define internal void @__omp_outlined__3_wrapper() {
+define internal void @__omp_outlined__2_wrapper(i16 zeroext %0, i32 %1)  {
+entry:
+  %.addr = alloca i16, align 2
+  %.addr1 = alloca i32, align 4
+  %.zero.addr = alloca i32, align 4
+  %global_args = alloca i8**, align 8
+  store i32 0, i32* %.zero.addr, align 4
+  store i16 %0, i16* %.addr, align 2
+  store i32 %1, i32* %.addr1, align 4
+  call void @__kmpc_get_shared_variables(i8*** %global_args)
+  call void @__omp_outlined__2(i32* %.addr1, i32* %.zero.addr) 
   ret void
 }
 
-declare void @__kmpc_kernel_prepare_parallel(i8* %WorkFn)
+declare i32 @__kmpc_global_thread_num(%struct.ident_t*) 
 
-declare zeroext i1 @__kmpc_kernel_parallel(i8** nocapture %WorkFn)
+define internal void @__omp_outlined__3(i32* noalias %.global_tid., i32* noalias %.bound_tid.)  {
+entry:
+  %.global_tid..addr = alloca i32*, align 8
+  %.bound_tid..addr = alloca i32*, align 8
+  store i32* %.global_tid., i32** %.global_tid..addr, align 8
+  store i32* %.bound_tid., i32** %.bound_tid..addr, align 8
+  ret void
+}
+
+define internal void @__omp_outlined__3_wrapper(i16 zeroext %0, i32 %1)  {
+entry:
+  %.addr = alloca i16, align 2
+  %.addr1 = alloca i32, align 4
+  %.zero.addr = alloca i32, align 4
+  %global_args = alloca i8**, align 8
+  store i32 0, i32* %.zero.addr, align 4
+  store i16 %0, i16* %.addr, align 2
+  store i32 %1, i32* %.addr1, align 4
+  call void @__kmpc_get_shared_variables(i8*** %global_args)
+  call void @__omp_outlined__3(i32* %.addr1, i32* %.zero.addr) 
+  ret void
+}
+
+declare void @__kmpc_kernel_deinit(i16)
+
+declare void @__kmpc_barrier_simple_spmd(%struct.ident_t*, i32) 
+
+declare i1 @__kmpc_kernel_parallel(i8**)
 
 declare void @__kmpc_kernel_end_parallel()
 
-declare void @__kmpc_barrier_simple_spmd(%struct.ident_t* nocapture readonly %loc_ref, i32 %tid)
 
-declare i32 @__kmpc_global_thread_num(%struct.ident_t* nocapture readonly)
+!nvvm.annotations = !{!1}
 
-
-!nvvm.annotations = !{!0}
-
-!0 = !{void ()* @__omp_offloading_35_a1e179_foo_l7, !"kernel", i32 1}
+!1 = !{void ()* @__omp_offloading_50_6dfa0f01_foo_l6, !"kernel", i32 1}

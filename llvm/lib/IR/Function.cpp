@@ -200,6 +200,10 @@ MaybeAlign Argument::getParamAlign() const {
   return getParent()->getParamAlign(getArgNo());
 }
 
+MaybeAlign Argument::getParamStackAlign() const {
+  return getParent()->getParamStackAlign(getArgNo());
+}
+
 Type *Argument::getParamByValType() const {
   assert(getType()->isPointerTy() && "Only pointers have byval types");
   return getParent()->getParamByValType(getArgNo());
@@ -324,6 +328,16 @@ unsigned Function::getInstructionCount() const {
 Function *Function::Create(FunctionType *Ty, LinkageTypes Linkage,
                            const Twine &N, Module &M) {
   return Create(Ty, Linkage, M.getDataLayout().getProgramAddressSpace(), N, &M);
+}
+
+Function *Function::createWithDefaultAttr(FunctionType *Ty,
+                                          LinkageTypes Linkage,
+                                          unsigned AddrSpace, const Twine &N,
+                                          Module *M) {
+  auto *F = new Function(Ty, Linkage, AddrSpace, N, M);
+  if (M->getUwtable())
+    F->addAttribute(AttributeList::FunctionIndex, Attribute::UWTable);
+  return F;
 }
 
 void Function::removeFromParent() {

@@ -1,6 +1,6 @@
 ; RUN: rm -rf %t && mkdir %t && cd %t
 ; RUN: cp %p/Inputs/webpage*.html .
-; RUN: llvm-rc /FO %t/tag-html.res -- %p/Inputs/tag-html.rc
+; RUN: llvm-rc -no-preprocess /FO %t/tag-html.res -- %p/Inputs/tag-html.rc
 ; RUN: llvm-readobj %t/tag-html.res | FileCheck %s --check-prefix HTML
 
 ; HTML: Resource type (int): HTML (ID 23)

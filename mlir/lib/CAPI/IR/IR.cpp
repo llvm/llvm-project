@@ -21,6 +21,8 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Parser.h"
 
+#include "llvm/Support/Debug.h"
+
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
@@ -62,6 +64,10 @@ MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
 
 bool mlirContextIsRegisteredOperation(MlirContext context, MlirStringRef name) {
   return unwrap(context)->isOperationRegistered(unwrap(name));
+}
+
+void mlirContextEnableMultithreading(MlirContext context, bool enable) {
+  return unwrap(context)->enableMultithreading(enable);
 }
 
 //===----------------------------------------------------------------------===//

@@ -14,6 +14,7 @@ include "mlir/Interfaces/SideEffectInterfaceBase.td"
 
 // A type interface used to test the ODS generation of type interfaces.
 def TestTypeInterface : TypeInterface<"TestTypeInterface"> {
+  let cppNamespace = "::mlir::test";
   let methods = [
     InterfaceMethod<"Prints the type name.",
       "void", "printTypeA", (ins "Location":$loc), [{

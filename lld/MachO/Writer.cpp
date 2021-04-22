@@ -71,7 +71,6 @@ public:
   SymtabSection *symtabSection = nullptr;
   IndirectSymtabSection *indirectSymtabSection = nullptr;
   CodeSignatureSection *codeSignatureSection = nullptr;
-  UnwindInfoSection *unwindInfoSection = nullptr;
   FunctionStartsSection *functionStartsSection = nullptr;
 
   LCUuid *uuidCommand = nullptr;
@@ -198,17 +197,11 @@ public:
       return;
 
     c->vmaddr = seg->firstSection()->addr;
-    c->vmsize =
-        seg->lastSection()->addr + seg->lastSection()->getSize() - c->vmaddr;
+    c->vmsize = seg->vmSize;
+    c->filesize = seg->fileSize;
     c->nsects = seg->numNonHiddenSections();
 
     for (const OutputSection *osec : seg->getSections()) {
-      if (!isZeroFill(osec->flags)) {
-        assert(osec->fileOff >= seg->fileOff);
-        c->filesize = std::max<uint64_t>(
-            c->filesize, osec->fileOff + osec->getFileSize() - seg->fileOff);
-      }
-
       if (osec->isHidden())
         continue;
 
@@ -234,10 +227,12 @@ private:
 };
 
 class LCMain : public LoadCommand {
-  uint32_t getSize() const override { return sizeof(entry_point_command); }
+  uint32_t getSize() const override {
+    return sizeof(structs::entry_point_command);
+  }
 
   void writeTo(uint8_t *buf) const override {
-    auto *c = reinterpret_cast<entry_point_command *>(buf);
+    auto *c = reinterpret_cast<structs::entry_point_command *>(buf);
     c->cmd = LC_MAIN;
     c->cmdsize = getSize();
 
@@ -364,10 +359,54 @@ private:
   StringRef path;
 };
 
+static uint32_t encodeVersion(const VersionTuple &version) {
+  return ((version.getMajor() << 020) |
+          (version.getMinor().getValueOr(0) << 010) |
+          version.getSubminor().getValueOr(0));
+}
+
+class LCMinVersion : public LoadCommand {
+public:
+  explicit LCMinVersion(const PlatformInfo &platformInfo)
+      : platformInfo(platformInfo) {}
+
+  uint32_t getSize() const override { return sizeof(version_min_command); }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<version_min_command *>(buf);
+    switch (platformInfo.target.Platform) {
+    case PlatformKind::macOS:
+      c->cmd = LC_VERSION_MIN_MACOSX;
+      break;
+    case PlatformKind::iOS:
+    case PlatformKind::iOSSimulator:
+      c->cmd = LC_VERSION_MIN_IPHONEOS;
+      break;
+    case PlatformKind::tvOS:
+    case PlatformKind::tvOSSimulator:
+      c->cmd = LC_VERSION_MIN_TVOS;
+      break;
+    case PlatformKind::watchOS:
+    case PlatformKind::watchOSSimulator:
+      c->cmd = LC_VERSION_MIN_WATCHOS;
+      break;
+    default:
+      llvm_unreachable("invalid platform");
+      break;
+    }
+    c->cmdsize = getSize();
+    c->version = encodeVersion(platformInfo.minimum);
+    c->sdk = encodeVersion(platformInfo.sdk);
+  }
+
+private:
+  const PlatformInfo &platformInfo;
+};
+
 class LCBuildVersion : public LoadCommand {
 public:
-  LCBuildVersion(PlatformKind platform, const PlatformInfo &platformInfo)
-      : platform(platform), platformInfo(platformInfo) {}
+  explicit LCBuildVersion(const PlatformInfo &platformInfo)
+      : platformInfo(platformInfo) {}
 
   const int ntools = 1;
 
@@ -379,21 +418,17 @@ public:
     auto *c = reinterpret_cast<build_version_command *>(buf);
     c->cmd = LC_BUILD_VERSION;
     c->cmdsize = getSize();
-    c->platform = static_cast<uint32_t>(platform);
-    c->minos = ((platformInfo.minimum.getMajor() << 020) |
-                (platformInfo.minimum.getMinor().getValueOr(0) << 010) |
-                platformInfo.minimum.getSubminor().getValueOr(0));
-    c->sdk = ((platformInfo.sdk.getMajor() << 020) |
-              (platformInfo.sdk.getMinor().getValueOr(0) << 010) |
-              platformInfo.sdk.getSubminor().getValueOr(0));
+    c->platform = static_cast<uint32_t>(platformInfo.target.Platform);
+    c->minos = encodeVersion(platformInfo.minimum);
+    c->sdk = encodeVersion(platformInfo.sdk);
     c->ntools = ntools;
     auto *t = reinterpret_cast<build_tool_version *>(&c[1]);
     t->tool = TOOL_LD;
-    t->version = (LLVM_VERSION_MAJOR << 020) | (LLVM_VERSION_MINOR << 010) |
-                 LLVM_VERSION_PATCH;
+    t->version = encodeVersion(llvm::VersionTuple(
+        LLVM_VERSION_MAJOR, LLVM_VERSION_MINOR, LLVM_VERSION_PATCH));
   }
 
-  PlatformKind platform;
+private:
   const PlatformInfo &platformInfo;
 };
 
@@ -434,6 +469,29 @@ public:
   }
 
   mutable uint8_t *uuidBuf;
+};
+
+template <class LP> class LCEncryptionInfo : public LoadCommand {
+public:
+  LCEncryptionInfo() {}
+
+  uint32_t getSize() const override {
+    return sizeof(typename LP::encryption_info_command);
+  }
+
+  void writeTo(uint8_t *buf) const override {
+    using EncryptionInfo = typename LP::encryption_info_command;
+    auto *c = reinterpret_cast<EncryptionInfo *>(buf);
+    buf += sizeof(EncryptionInfo);
+    c->cmd = LP::encryptionInfoLCType;
+    c->cmdsize = getSize();
+    c->cryptoff = in.header->getSize();
+    auto it = find_if(outputSegments, [](const OutputSegment *seg) {
+      return seg->name == segment_names::text;
+    });
+    assert(it != outputSegments.end());
+    c->cryptsize = (*it)->fileSize - c->cryptoff;
+  }
 };
 
 class LCCodeSignature : public LoadCommand {
@@ -515,7 +573,7 @@ void Writer::scanRelocations() {
   TimeTraceScope timeScope("Scan relocations");
   for (InputSection *isec : inputSections) {
     if (isec->segname == segment_names::ld) {
-      prepareCompactUnwind(isec);
+      in.unwindInfo->prepareRelocations(isec);
       continue;
     }
 
@@ -526,7 +584,6 @@ void Writer::scanRelocations() {
         // minuend, and doesn't have the usual UNSIGNED semantics. We don't want
         // to emit rebase opcodes for it.
         it = std::next(it);
-        assert(isa<Defined>(it->referent.dyn_cast<Symbol *>()));
         continue;
       }
       if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
@@ -559,6 +616,20 @@ void Writer::scanSymbols() {
   }
 }
 
+// TODO: ld64 enforces the old load commands in a few other cases.
+static bool useLCBuildVersion(const PlatformInfo &platformInfo) {
+  static const std::map<PlatformKind, llvm::VersionTuple> minVersion = {
+      {PlatformKind::macOS, llvm::VersionTuple(10, 14)},
+      {PlatformKind::iOS, llvm::VersionTuple(12, 0)},
+      {PlatformKind::iOSSimulator, llvm::VersionTuple(13, 0)},
+      {PlatformKind::tvOS, llvm::VersionTuple(12, 0)},
+      {PlatformKind::tvOSSimulator, llvm::VersionTuple(13, 0)},
+      {PlatformKind::watchOS, llvm::VersionTuple(5, 0)},
+      {PlatformKind::watchOSSimulator, llvm::VersionTuple(6, 0)}};
+  auto it = minVersion.find(platformInfo.target.Platform);
+  return it == minVersion.end() ? true : platformInfo.minimum >= it->second;
+}
+
 template <class LP> void Writer::createLoadCommands() {
   uint8_t segIndex = 0;
   for (OutputSegment *seg : outputSegments) {
@@ -573,6 +644,8 @@ template <class LP> void Writer::createLoadCommands() {
       make<LCDysymtab>(symtabSection, indirectSymtabSection));
   if (functionStartsSection)
     in.header->addLoadCommand(make<LCFunctionStarts>(functionStartsSection));
+  if (config->emitEncryptionInfo)
+    in.header->addLoadCommand(make<LCEncryptionInfo<LP>>());
   for (StringRef path : config->runtimePaths)
     in.header->addLoadCommand(make<LCRPath>(path));
 
@@ -595,8 +668,10 @@ template <class LP> void Writer::createLoadCommands() {
   uuidCommand = make<LCUuid>();
   in.header->addLoadCommand(uuidCommand);
 
-  in.header->addLoadCommand(
-      make<LCBuildVersion>(config->target.Platform, config->platformInfo));
+  if (useLCBuildVersion(config->platformInfo))
+    in.header->addLoadCommand(make<LCBuildVersion>(config->platformInfo));
+  else
+    in.header->addLoadCommand(make<LCMinVersion>(config->platformInfo));
 
   int64_t dylibOrdinal = 1;
   for (InputFile *file : inputFiles) {
@@ -682,6 +757,7 @@ static int segmentOrder(OutputSegment *seg) {
       .Case(segment_names::text, -3)
       .Case(segment_names::dataConst, -2)
       .Case(segment_names::data, -1)
+      .Case(segment_names::llvm, std::numeric_limits<int>::max() - 1)
       // Make sure __LINKEDIT is the last segment (i.e. all its hidden
       // sections must be ordered after other sections).
       .Case(segment_names::linkEdit, std::numeric_limits<int>::max())
@@ -796,13 +872,14 @@ template <class LP> void Writer::createOutputSections() {
   TimeTraceScope timeScope("Create output sections");
   // First, create hidden sections
   stringTableSection = make<StringTableSection>();
-  unwindInfoSection = make<UnwindInfoSection>(); // TODO(gkm): only when no -r
   symtabSection = makeSymtabSection<LP>(*stringTableSection);
   indirectSymtabSection = make<IndirectSymtabSection>();
   if (config->adhocCodesign)
     codeSignatureSection = make<CodeSignatureSection>();
   if (config->emitFunctionStarts)
     functionStartsSection = make<FunctionStartsSection>();
+  if (config->emitBitcodeBundle)
+    make<BitcodeBundleSection>();
 
   switch (config->outputType) {
   case MH_EXECUTE:
@@ -828,9 +905,9 @@ template <class LP> void Writer::createOutputSections() {
   for (const auto &it : mergedOutputSections) {
     StringRef segname = it.first.first;
     MergedOutputSection *osec = it.second;
-    if (unwindInfoSection && segname == segment_names::ld) {
+    if (segname == segment_names::ld) {
       assert(osec->name == section_names::compactUnwind);
-      unwindInfoSection->setCompactUnwindSection(osec);
+      in.unwindInfo->setCompactUnwindSection(osec);
     } else {
       getOrCreateOutputSegment(segname)->addOutputSection(osec);
     }
@@ -854,15 +931,26 @@ template <class LP> void Writer::createOutputSections() {
 
 void Writer::finalizeAddresses() {
   TimeTraceScope timeScope("Finalize addresses");
+  uint64_t pageSize = target->getPageSize();
   // Ensure that segments (and the sections they contain) are allocated
   // addresses in ascending order, which dyld requires.
   //
   // Note that at this point, __LINKEDIT sections are empty, but we need to
   // determine addresses of other segments/sections before generating its
   // contents.
-  for (OutputSegment *seg : outputSegments)
-    if (seg != linkEditSegment)
-      assignAddresses(seg);
+  for (OutputSegment *seg : outputSegments) {
+    if (seg == linkEditSegment)
+      continue;
+    assignAddresses(seg);
+    // codesign / libstuff checks for segment ordering by verifying that
+    // `fileOff + fileSize == next segment fileOff`. So we call alignTo() before
+    // (instead of after) computing fileSize to ensure that the segments are
+    // contiguous. We handle addr / vmSize similarly for the same reason.
+    fileOff = alignTo(fileOff, pageSize);
+    addr = alignTo(addr, pageSize);
+    seg->vmSize = addr - seg->firstSection()->addr;
+    seg->fileSize = fileOff - seg->fileOff;
+  }
 
   // FIXME(gkm): create branch-extension thunks here, then adjust addresses
 }
@@ -882,12 +970,12 @@ void Writer::finalizeLinkEditSegment() {
   // Now that __LINKEDIT is filled out, do a proper calculation of its
   // addresses and offsets.
   assignAddresses(linkEditSegment);
+  // No need to page-align fileOff / addr here since this is the last segment.
+  linkEditSegment->vmSize = addr - linkEditSegment->firstSection()->addr;
+  linkEditSegment->fileSize = fileOff - linkEditSegment->fileOff;
 }
 
 void Writer::assignAddresses(OutputSegment *seg) {
-  uint64_t pageSize = target->getPageSize();
-  addr = alignTo(addr, pageSize);
-  fileOff = alignTo(fileOff, pageSize);
   seg->fileOff = fileOff;
 
   for (OutputSection *osec : seg->getSections()) {
@@ -902,7 +990,6 @@ void Writer::assignAddresses(OutputSegment *seg) {
     addr += osec->getSize();
     fileOff += osec->getFileSize();
   }
-  seg->fileSize = fileOff - seg->fileOff;
 }
 
 void Writer::openFile() {
@@ -991,6 +1078,7 @@ template <class LP> void macho::createSyntheticSections() {
   in.stubs = make<StubsSection>();
   in.stubHelper = make<StubHelperSection>();
   in.imageLoaderCache = make<ImageLoaderCacheSection>();
+  in.unwindInfo = makeUnwindInfoSection();
 }
 
 OutputSection *macho::firstTLVDataSection = nullptr;

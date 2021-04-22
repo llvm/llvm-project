@@ -40,6 +40,7 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/InstructionCost.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -681,6 +682,9 @@ public:
     // All VPDefs are also VPRecipeBases.
     return true;
   }
+
+  /// Returns true if the recipe may have side-effects.
+  bool mayHaveSideEffects() const;
 };
 
 inline bool VPUser::classof(const VPDef *Def) {

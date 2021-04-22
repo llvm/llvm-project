@@ -251,27 +251,27 @@ def : InstAlias<"fge.s $rd, $rs, $rt",
 // The following csr instructions actually alias instructions from the base ISA.
 // However, it only makes sense to support them when the F extension is enabled.
 // NOTE: "frcsr", "frrm", and "frflags" are more specialized version of "csrr".
-def : InstAlias<"frcsr $rd",      (CSRRS GPR:$rd, FCSR.Encoding, X0), 2>;
-def : InstAlias<"fscsr $rd, $rs", (CSRRW GPR:$rd, FCSR.Encoding, GPR:$rs)>;
-def : InstAlias<"fscsr $rs",      (CSRRW      X0, FCSR.Encoding, GPR:$rs), 2>;
+def : InstAlias<"frcsr $rd",      (CSRRS GPR:$rd, SysRegFCSR.Encoding, X0), 2>;
+def : InstAlias<"fscsr $rd, $rs", (CSRRW GPR:$rd, SysRegFCSR.Encoding, GPR:$rs)>;
+def : InstAlias<"fscsr $rs",      (CSRRW      X0, SysRegFCSR.Encoding, GPR:$rs), 2>;
 
 // frsr, fssr are obsolete aliases replaced by frcsr, fscsr, so give them
 // zero weight.
-def : InstAlias<"frsr $rd",       (CSRRS GPR:$rd, FCSR.Encoding, X0), 0>;
-def : InstAlias<"fssr $rd, $rs",  (CSRRW GPR:$rd, FCSR.Encoding, GPR:$rs), 0>;
-def : InstAlias<"fssr $rs",       (CSRRW      X0, FCSR.Encoding, GPR:$rs), 0>;
+def : InstAlias<"frsr $rd",       (CSRRS GPR:$rd, SysRegFCSR.Encoding, X0), 0>;
+def : InstAlias<"fssr $rd, $rs",  (CSRRW GPR:$rd, SysRegFCSR.Encoding, GPR:$rs), 0>;
+def : InstAlias<"fssr $rs",       (CSRRW      X0, SysRegFCSR.Encoding, GPR:$rs), 0>;
 
-def : InstAlias<"frrm $rd",        (CSRRS  GPR:$rd, FRM.Encoding, X0), 2>;
-def : InstAlias<"fsrm $rd, $rs",   (CSRRW  GPR:$rd, FRM.Encoding, GPR:$rs)>;
-def : InstAlias<"fsrm $rs",        (CSRRW       X0, FRM.Encoding, GPR:$rs), 2>;
-def : InstAlias<"fsrmi $rd, $imm", (CSRRWI GPR:$rd, FRM.Encoding, uimm5:$imm)>;
-def : InstAlias<"fsrmi $imm",      (CSRRWI      X0, FRM.Encoding, uimm5:$imm), 2>;
+def : InstAlias<"frrm $rd",        (CSRRS  GPR:$rd, SysRegFRM.Encoding, X0), 2>;
+def : InstAlias<"fsrm $rd, $rs",   (CSRRW  GPR:$rd, SysRegFRM.Encoding, GPR:$rs)>;
+def : InstAlias<"fsrm $rs",        (CSRRW       X0, SysRegFRM.Encoding, GPR:$rs), 2>;
+def : InstAlias<"fsrmi $rd, $imm", (CSRRWI GPR:$rd, SysRegFRM.Encoding, uimm5:$imm)>;
+def : InstAlias<"fsrmi $imm",      (CSRRWI      X0, SysRegFRM.Encoding, uimm5:$imm), 2>;
 
-def : InstAlias<"frflags $rd",        (CSRRS  GPR:$rd, FFLAGS.Encoding, X0), 2>;
-def : InstAlias<"fsflags $rd, $rs",   (CSRRW  GPR:$rd, FFLAGS.Encoding, GPR:$rs)>;
-def : InstAlias<"fsflags $rs",        (CSRRW       X0, FFLAGS.Encoding, GPR:$rs), 2>;
-def : InstAlias<"fsflagsi $rd, $imm", (CSRRWI GPR:$rd, FFLAGS.Encoding, uimm5:$imm)>;
-def : InstAlias<"fsflagsi $imm",      (CSRRWI      X0, FFLAGS.Encoding, uimm5:$imm), 2>;
+def : InstAlias<"frflags $rd",        (CSRRS  GPR:$rd, SysRegFFLAGS.Encoding, X0), 2>;
+def : InstAlias<"fsflags $rd, $rs",   (CSRRW  GPR:$rd, SysRegFFLAGS.Encoding, GPR:$rs)>;
+def : InstAlias<"fsflags $rs",        (CSRRW       X0, SysRegFFLAGS.Encoding, GPR:$rs), 2>;
+def : InstAlias<"fsflagsi $rd, $imm", (CSRRWI GPR:$rd, SysRegFFLAGS.Encoding, uimm5:$imm)>;
+def : InstAlias<"fsflagsi $imm",      (CSRRWI      X0, SysRegFFLAGS.Encoding, uimm5:$imm), 2>;
 
 // fmv.w.x and fmv.x.w were previously known as fmv.s.x and fmv.x.s. Both
 // spellings should be supported by standard tools.
@@ -337,11 +337,8 @@ def : Pat<(fma (fneg FPR32:$rs1), FPR32:$rs2, FPR32:$rs3),
 def : Pat<(fma (fneg FPR32:$rs1), FPR32:$rs2, (fneg FPR32:$rs3)),
           (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
 
-// The RISC-V 2.2 user-level ISA spec defines fmin and fmax as returning the
-// canonical NaN when given a signaling NaN. This doesn't match the LLVM
-// behaviour (see https://bugs.llvm.org/show_bug.cgi?id=27363). However, the
-// draft 2.3 ISA spec changes the definition of fmin and fmax in a way that
-// matches LLVM's fminnum and fmaxnum
+// The ratified 20191213 ISA spec defines fmin and fmax in a way that matches
+// LLVM's fminnum and fmaxnum
 // <https://github.com/riscv/riscv-isa-manual/commit/cd20cee7efd9bac7c5aa127ec3b451749d2b3cce>.
 def : PatFpr32Fpr32<fminnum, FMIN_S>;
 def : PatFpr32Fpr32<fmaxnum, FMAX_S>;

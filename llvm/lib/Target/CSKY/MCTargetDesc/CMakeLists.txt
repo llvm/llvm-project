@@ -1,13 +1,15 @@
 add_llvm_component_library(LLVMCSKYDesc
   CSKYAsmBackend.cpp
   CSKYELFObjectWriter.cpp
+  CSKYInstPrinter.cpp
   CSKYMCAsmInfo.cpp
+  CSKYMCExpr.cpp
   CSKYMCTargetDesc.cpp
   CSKYMCCodeEmitter.cpp
 
   LINK_COMPONENTS
-  MC
   CSKYInfo
+  MC
   Support
 
   ADD_TO_COMPONENT

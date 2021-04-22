@@ -281,7 +281,7 @@
 "`3374 <https://wg21.link/LWG3374>`__","P0653 + P1006 should have made the other ``std::to_address``\  overload ``constexpr``\ ","Prague","|Complete|","12.0"
 "`3375 <https://wg21.link/LWG3375>`__","``decay``\  in ``viewable_range``\  should be ``remove_cvref``\ ","Prague","",""
 "`3377 <https://wg21.link/LWG3377>`__","``elements_view::iterator``\  befriends a specialization of itself","Prague","",""
-"`3379 <https://wg21.link/LWG3379>`__","""``safe``\ "" in several library names is misleading","Prague","",""
+"`3379 <https://wg21.link/LWG3379>`__","""``safe``\ "" in several library names is misleading","Prague","|In Progress|",""
 "`3380 <https://wg21.link/LWG3380>`__","``common_type``\  and comparison categories","Prague","",""
 "`3381 <https://wg21.link/LWG3381>`__","``begin``\  and ``data``\  must agree for ``contiguous_range``\ ","Prague","",""
 "`3382 <https://wg21.link/LWG3382>`__","NTTP for ``pair``\  and ``array``\ ","Prague","",""
@@ -297,3 +297,4 @@
 "`3396 <https://wg21.link/LWG3396>`__","Clarify point of reference for ``source_location::current()``\  (DE 169)","Prague","",""
 "`3397 <https://wg21.link/LWG3397>`__","``ranges::basic_istream_view::iterator``\  should not provide ``iterator_category``\ ","Prague","",""
 "`3398 <https://wg21.link/LWG3398>`__","``tuple_element_t``\  is also wrong for ``const subrange``\ ","Prague","",""
+"`3446 <https://wg21.link/LWG3446>`__","``indirectly_readable_traits``\ ambiguity for types with both ``value_type``\ and ``element_type``\ ","November virtual meeting","|Complete|","13.0"

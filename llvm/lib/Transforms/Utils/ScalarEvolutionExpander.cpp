@@ -55,7 +55,7 @@ Value *SCEVExpander::ReuseOrCreateCast(Value *V, Type *Ty,
   // not allowed to move it.
   BasicBlock::iterator BIP = Builder.GetInsertPoint();
 
-  Instruction *Ret = nullptr;
+  Value *Ret = nullptr;
 
   // Check to see if there is already a cast!
   for (User *U : V->users()) {
@@ -76,20 +76,23 @@ Value *SCEVExpander::ReuseOrCreateCast(Value *V, Type *Ty,
 
   // Create a new cast.
   if (!Ret) {
-    Ret = CastInst::Create(Op, V, Ty, V->getName(), &*IP);
-    rememberInstruction(Ret);
+    SCEVInsertPointGuard Guard(Builder, this);
+    Builder.SetInsertPoint(&*IP);
+    Ret = Builder.CreateCast(Op, V, Ty, V->getName());
   }
 
   // We assert at the end of the function since IP might point to an
   // instruction with different dominance properties than a cast
   // (an invoke for example) and not dominate BIP (but the cast does).
-  assert(SE.DT.dominates(Ret, &*BIP));
+  assert(!isa<Instruction>(Ret) ||
+         SE.DT.dominates(cast<Instruction>(Ret), &*BIP));
 
   return Ret;
 }
 
 BasicBlock::iterator
-SCEVExpander::findInsertPointAfter(Instruction *I, Instruction *MustDominate) {
+SCEVExpander::findInsertPointAfter(Instruction *I,
+                                   Instruction *MustDominate) const {
   BasicBlock::iterator IP = ++I->getIterator();
   if (auto *II = dyn_cast<InvokeInst>(I))
     IP = II->getNormalDest()->begin();
@@ -112,6 +115,34 @@ SCEVExpander::findInsertPointAfter(Instruction *I, Instruction *MustDominate) {
     ++IP;
 
   return IP;
+}
+
+BasicBlock::iterator
+SCEVExpander::GetOptimalInsertionPointForCastOf(Value *V) const {
+  // Cast the argument at the beginning of the entry block, after
+  // any bitcasts of other arguments.
+  if (Argument *A = dyn_cast<Argument>(V)) {
+    BasicBlock::iterator IP = A->getParent()->getEntryBlock().begin();
+    while ((isa<BitCastInst>(IP) &&
+            isa<Argument>(cast<BitCastInst>(IP)->getOperand(0)) &&
+            cast<BitCastInst>(IP)->getOperand(0) != A) ||
+           isa<DbgInfoIntrinsic>(IP))
+      ++IP;
+    return IP;
+  }
+
+  // Cast the instruction immediately after the instruction.
+  if (Instruction *I = dyn_cast<Instruction>(V))
+    return findInsertPointAfter(I, &*Builder.GetInsertPoint());
+
+  // Otherwise, this must be some kind of a constant,
+  // so let's plop this cast into the function's entry block.
+  assert(isa<Constant>(V) &&
+         "Expected the cast argument to be a global/constant");
+  return Builder.GetInsertBlock()
+      ->getParent()
+      ->getEntryBlock()
+      .getFirstInsertionPt();
 }
 
 /// InsertNoopCastOfTo - Insert a cast of V to the specified type,
@@ -172,22 +203,8 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
   if (Constant *C = dyn_cast<Constant>(V))
     return ConstantExpr::getCast(Op, C, Ty);
 
-  // Cast the argument at the beginning of the entry block, after
-  // any bitcasts of other arguments.
-  if (Argument *A = dyn_cast<Argument>(V)) {
-    BasicBlock::iterator IP = A->getParent()->getEntryBlock().begin();
-    while ((isa<BitCastInst>(IP) &&
-            isa<Argument>(cast<BitCastInst>(IP)->getOperand(0)) &&
-            cast<BitCastInst>(IP)->getOperand(0) != A) ||
-           isa<DbgInfoIntrinsic>(IP))
-      ++IP;
-    return ReuseOrCreateCast(A, Ty, Op, IP);
-  }
-
-  // Cast the instruction immediately after the instruction.
-  Instruction *I = cast<Instruction>(V);
-  BasicBlock::iterator IP = findInsertPointAfter(I, &*Builder.GetInsertPoint());
-  return ReuseOrCreateCast(I, Ty, Op, IP);
+  // Try to reuse existing cast, or insert one.
+  return ReuseOrCreateCast(V, Ty, Op, GetOptimalInsertionPointForCastOf(V));
 }
 
 /// InsertBinop - Insert the specified binary operator, doing a small amount
@@ -1676,7 +1693,8 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
 Value *SCEVExpander::visitPtrToIntExpr(const SCEVPtrToIntExpr *S) {
   Value *V =
       expandCodeForImpl(S->getOperand(), S->getOperand()->getType(), false);
-  return Builder.CreatePtrToInt(V, S->getType());
+  return ReuseOrCreateCast(V, S->getType(), CastInst::PtrToInt,
+                           GetOptimalInsertionPointForCastOf(V));
 }
 
 Value *SCEVExpander::visitTruncateExpr(const SCEVTruncateExpr *S) {
@@ -2495,7 +2513,10 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   Value *StepValue = expandCodeForImpl(Step, Ty, Loc, false);
   Value *NegStepValue =
       expandCodeForImpl(SE.getNegativeSCEV(Step), Ty, Loc, false);
-  Value *StartValue = expandCodeForImpl(Start, ARExpandTy, Loc, false);
+  Value *StartValue = expandCodeForImpl(
+      isa<PointerType>(ARExpandTy) ? Start
+                                   : SE.getPtrToIntExpr(Start, ARExpandTy),
+      ARExpandTy, Loc, false);
 
   ConstantInt *Zero =
       ConstantInt::get(Loc->getContext(), APInt::getNullValue(DstBits));

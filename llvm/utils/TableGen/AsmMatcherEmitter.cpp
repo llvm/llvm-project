@@ -2726,7 +2726,7 @@ static void emitMnemonicAliasVariant(raw_ostream &OS,const AsmMatcherInfo &Info,
     StringRef AsmVariantName = R->getValueAsString("AsmVariantName");
     if (AsmVariantName != AsmParserVariantName)
       continue;
-    AliasesFromMnemonic[std::string(R->getValueAsString("FromMnemonic"))]
+    AliasesFromMnemonic[R->getValueAsString("FromMnemonic").lower()]
         .push_back(R);
   }
   if (AliasesFromMnemonic.empty())
@@ -2768,7 +2768,7 @@ static void emitMnemonicAliasVariant(raw_ostream &OS,const AsmMatcherInfo &Info,
         MatchCode += "else ";
       MatchCode += "if (" + FeatureMask + ")\n";
       MatchCode += "  Mnemonic = \"";
-      MatchCode += R->getValueAsString("ToMnemonic");
+      MatchCode += R->getValueAsString("ToMnemonic").lower();
       MatchCode += "\";\n";
     }
 
@@ -2777,7 +2777,7 @@ static void emitMnemonicAliasVariant(raw_ostream &OS,const AsmMatcherInfo &Info,
       if (!MatchCode.empty())
         MatchCode += "else\n  ";
       MatchCode += "Mnemonic = \"";
-      MatchCode += R->getValueAsString("ToMnemonic");
+      MatchCode += R->getValueAsString("ToMnemonic").lower();
       MatchCode += "\";\n";
     }
 

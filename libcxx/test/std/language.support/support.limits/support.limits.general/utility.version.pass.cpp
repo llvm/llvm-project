@@ -184,16 +184,16 @@
 #   error "__cpp_lib_exchange_function should have the value 201304L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if defined(__cpp_concepts) && __cpp_concepts >= 201907L
 #   ifndef __cpp_lib_integer_comparison_functions
 #     error "__cpp_lib_integer_comparison_functions should be defined in c++20"
 #   endif
 #   if __cpp_lib_integer_comparison_functions != 202002L
 #     error "__cpp_lib_integer_comparison_functions should have the value 202002L in c++20"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_integer_comparison_functions
-#     error "__cpp_lib_integer_comparison_functions should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_integer_comparison_functions should not be defined when defined(__cpp_concepts) && __cpp_concepts >= 201907L is not defined!"
 #   endif
 # endif
 
@@ -251,16 +251,16 @@
 #   error "__cpp_lib_exchange_function should have the value 201304L in c++2b"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if defined(__cpp_concepts) && __cpp_concepts >= 201907L
 #   ifndef __cpp_lib_integer_comparison_functions
 #     error "__cpp_lib_integer_comparison_functions should be defined in c++2b"
 #   endif
 #   if __cpp_lib_integer_comparison_functions != 202002L
 #     error "__cpp_lib_integer_comparison_functions should have the value 202002L in c++2b"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_integer_comparison_functions
-#     error "__cpp_lib_integer_comparison_functions should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_integer_comparison_functions should not be defined when defined(__cpp_concepts) && __cpp_concepts >= 201907L is not defined!"
 #   endif
 # endif
 

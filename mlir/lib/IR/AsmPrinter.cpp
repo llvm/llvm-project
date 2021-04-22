@@ -33,6 +33,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SaveAndRestore.h"
 using namespace mlir;
@@ -461,8 +462,9 @@ private:
     printOptionalAttrDict(attrs, elidedAttrs);
   }
 
-  /// Return 'nulls' as the output stream, this will ignore any data fed to it.
-  raw_ostream &getStream() const override { return llvm::nulls(); }
+  /// Return a null stream as the output stream, this will ignore any data fed
+  /// to it.
+  raw_ostream &getStream() const override { return os; }
 
   /// The following are hooks of `OpAsmPrinter` that are not necessary for
   /// determining potential aliases.
@@ -485,6 +487,9 @@ private:
 
   /// The initializer to use when identifying aliases.
   AliasInitializer &initializer;
+
+  /// A dummy output stream.
+  mutable llvm::raw_null_ostream os;
 };
 } // end anonymous namespace
 

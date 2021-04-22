@@ -592,6 +592,9 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
         PM.addPass(AMDGPUPrintfRuntimeBindingPass());
 
         if (InternalizeSymbols) {
+          // Global variables may have dead uses which need to be removed.
+          // Otherwise these useless global variables will not get internalized.
+          PM.addPass(GlobalDCEPass());
           PM.addPass(InternalizePass(mustPreserveGV));
         }
         PM.addPass(AMDGPUPropagateAttributesLatePass(*this));
@@ -1099,7 +1102,6 @@ void GCNPassConfig::addMachineSSAOptimization() {
   addPass(&SIFoldOperandsID);
   if (EnableDPPCombine)
     addPass(&GCNDPPCombineID);
-  addPass(&DeadMachineInstructionElimID);
   addPass(&SILoadStoreOptimizerID);
   addPass(&SIBufMemMergeID);
   if (EnableSDWAPeephole) {
@@ -1107,8 +1109,8 @@ void GCNPassConfig::addMachineSSAOptimization() {
     addPass(&EarlyMachineLICMID);
     addPass(&MachineCSEID);
     addPass(&SIFoldOperandsID);
-    addPass(&DeadMachineInstructionElimID);
   }
+  addPass(&DeadMachineInstructionElimID);
   addPass(createSIShrinkInstructionsPass());
 }
 

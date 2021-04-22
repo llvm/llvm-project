@@ -2252,6 +2252,7 @@ typedef struct kmp_taskgroup {
   // Block of data to perform task reduction
   void *reduce_data; // reduction related info
   kmp_int32 reduce_num_data; // number of data items to reduce
+  uintptr_t *gomp_data; // gomp reduction data
 } kmp_taskgroup_t;
 
 // forward declarations

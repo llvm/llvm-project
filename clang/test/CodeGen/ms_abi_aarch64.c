@@ -84,3 +84,39 @@ void f5(int a, ...) {
   __builtin_va_end(ap);
   // WIN64: call void @llvm.va_end
 }
+
+struct HFA {
+  float a, b, c;
+};
+
+__attribute__((ms_abi)) void msabi_hfa(struct HFA a);
+__attribute__((ms_abi)) void msabi_hfa_vararg(struct HFA a, int b, ...);
+
+void call_msabi_hfa(void) {
+  // COMMON-LABEL: define{{.*}} void @call_msabi_hfa()
+  // WIN64: call void @msabi_hfa([3 x float] {{.*}})
+  // LINUX: call win64cc void @msabi_hfa([3 x float] {{.*}})
+  msabi_hfa((struct HFA){1.0f, 2.0f, 3.0f});
+}
+
+void call_msabi_hfa_vararg(void) {
+  // COMMON-LABEL: define{{.*}} void @call_msabi_hfa_vararg()
+  // WIN64: call void ([2 x i64], i32, ...) @msabi_hfa_vararg([2 x i64] {{.*}}, i32 4, [2 x i64] {{.*}})
+  // LINUX: call win64cc void ([2 x i64], i32, ...) @msabi_hfa_vararg([2 x i64] {{.*}}, i32 4, [2 x i64] {{.*}})
+  msabi_hfa_vararg((struct HFA){1.0f, 2.0f, 3.0f}, 4,
+                   (struct HFA){5.0f, 6.0f, 7.0f});
+}
+
+__attribute__((ms_abi)) void get_msabi_hfa_vararg(int a, ...) {
+  // COMMON-LABEL: define{{.*}} void @get_msabi_hfa_vararg
+  __builtin_ms_va_list ap;
+  __builtin_ms_va_start(ap, a);
+  // COMMON: %[[AP:.*]] = alloca i8*
+  // COMMON: call void @llvm.va_start
+  struct HFA b = __builtin_va_arg(ap, struct HFA);
+  // COMMON: %[[AP_CUR:.*]] = load i8*, i8** %[[AP]]
+  // COMMON-NEXT: %[[AP_NEXT:.*]] = getelementptr inbounds i8, i8* %[[AP_CUR]], i64 16
+  // COMMON-NEXT: store i8* %[[AP_NEXT]], i8** %[[AP]]
+  // COMMON-NEXT: bitcast i8* %[[AP_CUR]] to %struct.HFA*
+  __builtin_ms_va_end(ap);
+}

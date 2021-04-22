@@ -1,17 +1,18 @@
 ; Used the data from recursion-compression.test, refer it for the unmerged output
-; RUN: llvm-profgen --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --compress-recursion=-1 --csprof-cold-thres=8
-; RUN: FileCheck %s --input-file %t
+; RUN: llvm-profgen --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t1 --compress-recursion=-1 --csprof-cold-thres=8
+; RUN: FileCheck %s --input-file %t1
 
 ; Test --csprof-trim-cold-context=0
-; RUN: llvm-profgen --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --compress-recursion=-1 --csprof-cold-thres=100 --csprof-trim-cold-context=0
-; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-KEEP-COLD
+; RUN: llvm-profgen --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t2 --compress-recursion=-1 --csprof-cold-thres=100 --csprof-trim-cold-context=0
+; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-KEEP-COLD
 
 ; Test --csprof-merge-cold-context=0
-; RUN: llvm-profgen --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --compress-recursion=-1 --csprof-cold-thres=10 --csprof-merge-cold-context=0
-; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNMERGED
+; RUN: llvm-profgen --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t3 --compress-recursion=-1 --csprof-cold-thres=10 --csprof-merge-cold-context=0
+; RUN: FileCheck %s --input-file %t3 --check-prefix=CHECK-UNMERGED
 
 ; CHECK:     [fa]:14:4
 ; CHECK-NEXT: 1: 4
+; CHECK-NEXT: 2: 18446744073709551615
 ; CHECK-NEXT: 3: 4
 ; CHECK-NEXT: 4: 2
 ; CHECK-NEXT: 5: 1
@@ -37,6 +38,7 @@
 ; CHECK-KEEP-COLD-NEXT: !Attributes: 0
 ; CHECK-KEEP-COLD-NEXT:[fa]:14:4
 ; CHECK-KEEP-COLD-NEXT: 1: 4
+; CHECK-KEEP-COLD-NEXT: 2: 18446744073709551615
 ; CHECK-KEEP-COLD-NEXT: 3: 4
 ; CHECK-KEEP-COLD-NEXT: 4: 2
 ; CHECK-KEEP-COLD-NEXT: 5: 1

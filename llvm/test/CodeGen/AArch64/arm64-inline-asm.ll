@@ -297,3 +297,13 @@ entry:
   call void asm sideeffect "", "=*r|m,0,~{memory}"(<9 x float>* nonnull %m.addr, <9 x float> %m)
   ret void
 }
+
+define void @test_o_output_constraint() {
+; CHECK-LABEL: test_o_output_constraint:
+; CHECK: sub sp, sp, #16
+; CHECK: add x[[REG:[0-9]+]], sp, #15
+; CHECK: mov [x[[REG]]], 7
+  %b = alloca i8, align 1
+  call void asm "mov $0, 7", "=*o"(i8* %b)
+  ret void
+}

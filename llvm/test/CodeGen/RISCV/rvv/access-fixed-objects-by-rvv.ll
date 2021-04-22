@@ -30,20 +30,20 @@ declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(
 define <vscale x 1 x i64> @access_fixed_and_vector_objects(i64 *%val) {
 ; RV64IV-LABEL: access_fixed_and_vector_objects:
 ; RV64IV:       # %bb.0:
-; RV64IV-NEXT:    addi sp, sp, -528
-; RV64IV-NEXT:    .cfi_def_cfa_offset 528
+; RV64IV-NEXT:    addi sp, sp, -544
+; RV64IV-NEXT:    .cfi_def_cfa_offset 544
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    sub sp, sp, a0
-; RV64IV-NEXT:    addi a0, sp, 8
+; RV64IV-NEXT:    addi a0, sp, 24
 ; RV64IV-NEXT:    vl1re64.v v25, (a0)
-; RV64IV-NEXT:    ld a0, 520(sp)
-; RV64IV-NEXT:    addi a1, sp, 528
+; RV64IV-NEXT:    ld a0, 536(sp)
+; RV64IV-NEXT:    addi a1, sp, 544
 ; RV64IV-NEXT:    vl1re64.v v26, (a1)
 ; RV64IV-NEXT:    vsetvli a0, a0, e64,m1,ta,mu
 ; RV64IV-NEXT:    vadd.vv v8, v25, v26
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    add sp, sp, a0
-; RV64IV-NEXT:    addi sp, sp, 528
+; RV64IV-NEXT:    addi sp, sp, 544
 ; RV64IV-NEXT:    ret
   %local = alloca i64
   %vector = alloca <vscale x 1 x i64>

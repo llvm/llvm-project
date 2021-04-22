@@ -18,6 +18,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DerivedUser.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -531,6 +532,17 @@ void Value::replaceNonMetadataUsesWith(Value *New) {
   doRAUW(New, ReplaceMetadataUses::No);
 }
 
+/// Replace llvm.dbg.* uses of MetadataAsValue(ValueAsMetadata(V)) outside BB
+/// with New.
+static void replaceDbgUsesOutsideBlock(Value *V, Value *New, BasicBlock *BB) {
+  SmallVector<DbgVariableIntrinsic *> DbgUsers;
+  findDbgUsers(DbgUsers, V);
+  for (auto *DVI : DbgUsers) {
+    if (DVI->getParent() != BB)
+      DVI->replaceVariableLocationOp(V, New);
+  }
+}
+
 // Like replaceAllUsesWith except it does not handle constants or basic blocks.
 // This routine leaves uses within BB.
 void Value::replaceUsesOutsideBlock(Value *New, BasicBlock *BB) {
@@ -541,6 +553,7 @@ void Value::replaceUsesOutsideBlock(Value *New, BasicBlock *BB) {
          "replaceUses of value with new value of different type!");
   assert(BB && "Basic block that may contain a use of 'New' must be defined\n");
 
+  replaceDbgUsesOutsideBlock(this, New, BB);
   replaceUsesWithIf(New, [BB](Use &U) {
     auto *I = dyn_cast<Instruction>(U.getUser());
     // Don't replace if it's an instruction in the BB basic block.
@@ -736,9 +749,18 @@ bool Value::canBeFreed() const {
 
   // Handle byval/byref/sret/inalloca/preallocated arguments.  The storage
   // lifetime is guaranteed to be longer than the callee's lifetime.
-  if (auto *A = dyn_cast<Argument>(this))
+  if (auto *A = dyn_cast<Argument>(this)) {
     if (A->hasPointeeInMemoryValueAttr())
       return false;
+    // A pointer to an object in a function which neither frees, nor can arrange
+    // for another thread to free on its behalf, can not be freed in the scope
+    // of the function.  Note that this logic is restricted to memory
+    // allocations in existance before the call; a nofree function *is* allowed
+    // to free memory it allocated.
+    const Function *F = A->getParent();
+    if (F->doesNotFreeMemory() && F->hasNoSync())
+      return false;
+  }
 
   const Function *F = nullptr;
   if (auto *I = dyn_cast<Instruction>(this))
@@ -748,12 +770,6 @@ bool Value::canBeFreed() const {
 
   if (!F)
     return true;
-
-  // A pointer to an object in a function which neither frees, nor can arrange
-  // for another thread to free on its behalf, can not be freed in the scope
-  // of the function.
-  if (F->doesNotFreeMemory() && F->hasNoSync())
-    return false;
 
   // With garbage collection, deallocation typically occurs solely at or after
   // safepoints.  If we're compiling for a collector which uses the
@@ -765,25 +781,24 @@ bool Value::canBeFreed() const {
     return true;
   
   const auto &GCName = F->getGC();
-  const StringRef StatepointExampleName("statepoint-example");
-  if (GCName != StatepointExampleName)
-    return true;
-
-  auto *PT = cast<PointerType>(this->getType());
-  if (PT->getAddressSpace() != 1)
-    // For the sake of this example GC, we arbitrarily pick addrspace(1) as our
-    // GC managed heap.  This must match the same check in
-    // RewriteStatepointsForGC (and probably needs better factored.)
-    return true;
-
-  // It is cheaper to scan for a declaration than to scan for a use in this
-  // function.  Note that gc.statepoint is a type overloaded function so the
-  // usual trick of requesting declaration of the intrinsic from the module
-  // doesn't work.
-  for (auto &Fn : *F->getParent())
-    if (Fn.getIntrinsicID() == Intrinsic::experimental_gc_statepoint)
+  if (GCName == "statepoint-example") {
+    auto *PT = cast<PointerType>(this->getType());
+    if (PT->getAddressSpace() != 1)
+      // For the sake of this example GC, we arbitrarily pick addrspace(1) as
+      // our GC managed heap.  This must match the same check in
+      // RewriteStatepointsForGC (and probably needs better factored.)
       return true;
-  return false;
+
+    // It is cheaper to scan for a declaration than to scan for a use in this
+    // function.  Note that gc.statepoint is a type overloaded function so the
+    // usual trick of requesting declaration of the intrinsic from the module
+    // doesn't work.
+    for (auto &Fn : *F->getParent())
+      if (Fn.getIntrinsicID() == Intrinsic::experimental_gc_statepoint)
+        return true;
+    return false;
+  }
+  return true;
 }
 
 uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,

@@ -229,6 +229,10 @@ public:
                          ArrayRef<DependenceType> depTypes = {
                              DependenceType::RAW, DependenceType::WAW}) const;
 
+  void print(raw_ostream &os) const;
+
+  void dump() const;
+
 private:
   // Keep dependences in both directions, this is not just a performance gain
   // but it also reduces usage errors.

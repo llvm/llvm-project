@@ -28,6 +28,11 @@ class Value;
 class VectorType;
 class VectorTransferOpInterface;
 
+namespace vector {
+class TransferWriteOp;
+class TransferReadOp;
+} // namespace vector
+
 /// Return the number of elements of basis, `0` if empty.
 int64_t computeMaxLinearIndex(ArrayRef<int64_t> basis);
 
@@ -176,6 +181,16 @@ bool isDisjointTransferSet(VectorTransferOpInterface transferA,
 /// different tensors.
 bool isDisjointTransferIndices(VectorTransferOpInterface transferA,
                                VectorTransferOpInterface transferB);
+
+/// Return true if the transfer_write fully writes the data accessed by the
+/// transfer_read.
+bool checkSameValueRAW(vector::TransferWriteOp defWrite,
+                       vector::TransferReadOp read);
+
+/// Return true if the write op fully over-write the priorWrite transfer_write
+/// op.
+bool checkSameValueWAW(vector::TransferWriteOp write,
+                       vector::TransferWriteOp priorWrite);
 
 namespace matcher {
 

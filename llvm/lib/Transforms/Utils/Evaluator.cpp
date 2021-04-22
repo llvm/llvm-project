@@ -127,7 +127,7 @@ isSimpleEnoughValueToCommit(Constant *C,
 /// another pointer type, we punt.  We basically just support direct accesses to
 /// globals and GEP's of globals.  This should be kept up to date with
 /// CommitValueTo.
-static bool isSimpleEnoughPointerToCommit(Constant *C) {
+static bool isSimpleEnoughPointerToCommit(Constant *C, const DataLayout &DL) {
   // Conservatively, avoid aggregate types. This is because we don't
   // want to worry about them partially overlapping other stores.
   if (!cast<PointerType>(C->getType())->getElementType()->isSingleValueType())
@@ -157,13 +157,14 @@ static bool isSimpleEnoughPointerToCommit(Constant *C) {
       if (!CE->isGEPWithNoNotionalOverIndexing())
         return false;
 
-      return ConstantFoldLoadThroughGEPConstantExpr(GV->getInitializer(), CE);
-
-    // A constantexpr bitcast from a pointer to another pointer is a no-op,
-    // and we know how to evaluate it by moving the bitcast from the pointer
-    // operand to the value operand.
+      return ConstantFoldLoadThroughGEPConstantExpr(
+          GV->getInitializer(), CE,
+          cast<GEPOperator>(CE)->getResultElementType(), DL);
     } else if (CE->getOpcode() == Instruction::BitCast &&
                isa<GlobalVariable>(CE->getOperand(0))) {
+      // A constantexpr bitcast from a pointer to another pointer is a no-op,
+      // and we know how to evaluate it by moving the bitcast from the pointer
+      // operand to the value operand.
       // Do not allow weak/*_odr/linkonce/dllimport/dllexport linkage or
       // external globals.
       return cast<GlobalVariable>(CE->getOperand(0))->hasUniqueInitializer();
@@ -207,7 +208,7 @@ static Constant *getInitializer(Constant *C) {
 
 /// Return the value that would be computed by a load from P after the stores
 /// reflected by 'memory' have been performed.  If we can't decide, return null.
-Constant *Evaluator::ComputeLoadResult(Constant *P) {
+Constant *Evaluator::ComputeLoadResult(Constant *P, Type *Ty) {
   // If this memory location has been recently stored, use the stored value: it
   // is the most up-to-date.
   auto findMemLoc = [this](Constant *Ptr) { return MutatedMemory.lookup(Ptr); };
@@ -227,7 +228,7 @@ Constant *Evaluator::ComputeLoadResult(Constant *P) {
     // Handle a constantexpr getelementptr.
     case Instruction::GetElementPtr:
       if (auto *I = getInitializer(CE->getOperand(0)))
-        return ConstantFoldLoadThroughGEPConstantExpr(I, CE);
+        return ConstantFoldLoadThroughGEPConstantExpr(I, CE, Ty, DL);
       break;
     // Handle a constantexpr bitcast.
     case Instruction::BitCast:
@@ -340,7 +341,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
         Ptr = FoldedPtr;
         LLVM_DEBUG(dbgs() << "; To: " << *Ptr << "\n");
       }
-      if (!isSimpleEnoughPointerToCommit(Ptr)) {
+      if (!isSimpleEnoughPointerToCommit(Ptr, DL)) {
         // If this is too complex for us to commit, reject it.
         LLVM_DEBUG(
             dbgs() << "Pointer is too complex for us to evaluate store.");
@@ -450,7 +451,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
                              "folding: "
                           << *Ptr << "\n");
       }
-      InstResult = ComputeLoadResult(Ptr);
+      InstResult = ComputeLoadResult(Ptr, LI->getType());
       if (!InstResult) {
         LLVM_DEBUG(
             dbgs() << "Failed to compute load result. Can not evaluate load."
@@ -496,7 +497,8 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
           }
           Constant *Ptr = getVal(MSI->getDest());
           Constant *Val = getVal(MSI->getValue());
-          Constant *DestVal = ComputeLoadResult(getVal(Ptr));
+          Constant *DestVal =
+              ComputeLoadResult(getVal(Ptr), MSI->getValue()->getType());
           if (Val->isNullValue() && DestVal && DestVal->isNullValue()) {
             // This memset is a no-op.
             LLVM_DEBUG(dbgs() << "Ignoring no-op memset.\n");
@@ -564,6 +566,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
                        << "Stripped pointer casts for alias analysis for "
                           "intrinsic call.\n");
             StrippedPointerCastsForAliasAnalysis = true;
+            InstResult = ConstantExpr::getBitCast(InstResult, II->getType());
           } else {
             LLVM_DEBUG(dbgs() << "Unknown intrinsic. Cannot evaluate.\n");
             return false;

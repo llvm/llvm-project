@@ -99,7 +99,7 @@ public:
 
 private:
   int getDPPOp(unsigned Op, bool HasVOP3DPP, bool IsShrinkable) const;
-  bool isShrinkable(MachineInstr &OrigMI, unsigned OrigOp) const;
+  bool isShrinkable(MachineInstr &MI) const;
 };
 
 } // end anonymous namespace
@@ -114,21 +114,29 @@ FunctionPass *llvm::createGCNDPPCombinePass() {
   return new GCNDPPCombine();
 }
 
-bool GCNDPPCombine::isShrinkable(MachineInstr &OrigMI, unsigned OrigOp) const {
+bool GCNDPPCombine::isShrinkable(MachineInstr &MI) const {
   // TODO-GFX11 shrink 64bit VOPC
-  if (!TII->isVOP3(OrigOp)) {
+  unsigned Op = MI.getOpcode();
+  if (!TII->isVOP3(Op)) {
     return false;
   }
-  if (!TII->hasVALU32BitEncoding(OrigOp)) {
+  if (!TII->hasVALU32BitEncoding(Op)) {
     LLVM_DEBUG(dbgs() << "  Inst hasn't e32 equivalent\n");
     return false;
   }
+  if (const auto *SDst = TII->getNamedOperand(MI, AMDGPU::OpName::sdst)) {
+    // Give up if there are any uses of the carry-out from instructions like
+    // V_ADD_CO_U32. The shrunken form of the instruction would write it to vcc
+    // instead of to a virtual register.
+    if (!MRI->use_nodbg_empty(SDst->getReg()))
+      return false;
+  }
   // check if other than abs|neg modifiers are set (opsel for example)
   const int64_t Mask = ~(SISrcMods::ABS | SISrcMods::NEG);
-  if (!hasNoImmOrEqual(OrigMI, AMDGPU::OpName::src0_modifiers, 0, Mask) ||
-      !hasNoImmOrEqual(OrigMI, AMDGPU::OpName::src1_modifiers, 0, Mask) ||
-      !hasNoImmOrEqual(OrigMI, AMDGPU::OpName::clamp, 0) ||
-      !hasNoImmOrEqual(OrigMI, AMDGPU::OpName::omod, 0)) {
+  if (!hasNoImmOrEqual(MI, AMDGPU::OpName::src0_modifiers, 0, Mask) ||
+      !hasNoImmOrEqual(MI, AMDGPU::OpName::src1_modifiers, 0, Mask) ||
+      !hasNoImmOrEqual(MI, AMDGPU::OpName::clamp, 0) ||
+      !hasNoImmOrEqual(MI, AMDGPU::OpName::omod, 0)) {
     LLVM_DEBUG(dbgs() << "  Inst has non-default modifiers\n");
     return false;
   }
@@ -564,7 +572,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       continue;
     }
 
-    bool IsShrinkable = isShrinkable(OrigMI, OrigOp);
+    bool IsShrinkable = isShrinkable(OrigMI);
     if (!(IsShrinkable ||
           (TII->isVOP3(OrigOp) && ST->hasVOP3DPP()) ||
           TII->isVOP1(OrigOp) || TII->isVOP2(OrigOp))) {

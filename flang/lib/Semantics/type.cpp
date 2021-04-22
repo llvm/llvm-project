@@ -189,6 +189,36 @@ ParamValue *DerivedTypeSpec::FindParameter(SourceName target) {
       const_cast<const DerivedTypeSpec *>(this)->FindParameter(target));
 }
 
+// Objects of derived types might be assignment compatible if they are equal
+// with respect to everything other than their instantiated type parameters
+// and their constant instantiated type parameters have the same values.
+bool DerivedTypeSpec::MightBeAssignmentCompatibleWith(
+    const DerivedTypeSpec &that) const {
+  if (!RawEquals(that)) {
+    return false;
+  }
+  const std::map<SourceName, ParamValue> &theseParams{this->parameters()};
+  const std::map<SourceName, ParamValue> &thoseParams{that.parameters()};
+  auto thatIter{thoseParams.begin()};
+  for (const auto &[thisName, thisValue] : theseParams) {
+    CHECK(thatIter != thoseParams.end());
+    const ParamValue &thatValue{thatIter->second};
+    if (MaybeIntExpr thisExpr{thisValue.GetExplicit()}) {
+      if (evaluate::IsConstantExpr(*thisExpr)) {
+        if (MaybeIntExpr thatExpr{thatValue.GetExplicit()}) {
+          if (evaluate::IsConstantExpr(*thatExpr)) {
+            if (evaluate::ToInt64(*thisExpr) != evaluate::ToInt64(*thatExpr)) {
+              return false;
+            }
+          }
+        }
+      }
+    }
+    thatIter++;
+  }
+  return true;
+}
+
 class InstantiateHelper {
 public:
   InstantiateHelper(Scope &scope) : scope_{scope} {}

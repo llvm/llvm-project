@@ -44,7 +44,7 @@ static void convertOmpOpRegions(Region &region, StringRef blockName,
 
   // Convert blocks one by one in topological order to ensure
   // defs are converted before uses.
-  llvm::SetVector<Block *> blocks =
+  SetVector<Block *> blocks =
       LLVM::detail::getTopologicallySortedBlocks(region);
   for (Block *bb : blocks) {
     llvm::BasicBlock *llvmBB = moduleTranslation.lookupBlock(bb);
@@ -179,11 +179,17 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   if (loop.getNumLoops() != 1)
     return opInst.emitOpError("collapsed loops not yet supported");
 
-  if (loop.schedule_val().hasValue() &&
-      omp::symbolizeClauseScheduleKind(loop.schedule_val().getValue()) !=
-          omp::ClauseScheduleKind::Static)
-    return opInst.emitOpError(
-        "only static (default) loop schedule is currently supported");
+  bool isStatic = true;
+
+  if (loop.schedule_val().hasValue()) {
+    auto schedule =
+        omp::symbolizeClauseScheduleKind(loop.schedule_val().getValue());
+    if (schedule != omp::ClauseScheduleKind::Static &&
+        schedule != omp::ClauseScheduleKind::Dynamic)
+      return opInst.emitOpError("only static (default) and dynamic loop "
+                                "schedule is currently supported");
+    isStatic = (schedule == omp::ClauseScheduleKind::Static);
+  }
 
   // Find the loop configuration.
   llvm::Value *lowerBound = moduleTranslation.lookupValue(loop.lowerBound()[0]);
@@ -241,11 +247,19 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   // Put them at the start of the current block for now.
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP(
       insertBlock, insertBlock->getFirstInsertionPt());
-  loopInfo = moduleTranslation.getOpenMPBuilder()->createStaticWorkshareLoop(
-      ompLoc, loopInfo, allocaIP, !loop.nowait(), chunk);
+  llvm::OpenMPIRBuilder::InsertPointTy afterIP;
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  if (isStatic) {
+    loopInfo = ompBuilder->createStaticWorkshareLoop(ompLoc, loopInfo, allocaIP,
+                                                     !loop.nowait(), chunk);
+    afterIP = loopInfo->getAfterIP();
+  } else {
+    afterIP = ompBuilder->createDynamicWorkshareLoop(ompLoc, loopInfo, allocaIP,
+                                                     !loop.nowait(), chunk);
+  }
 
   // Continue building IR after the loop.
-  builder.restoreIP(loopInfo->getAfterIP());
+  builder.restoreIP(afterIP);
   return success();
 }
 

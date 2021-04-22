@@ -1184,26 +1184,35 @@ static uptr GetTaskInfoMaxAddress() {
 
 uptr GetMaxUserVirtualAddress() {
   static uptr max_vm = GetTaskInfoMaxAddress();
-  if (max_vm != 0)
-    return max_vm - 1;
+  if (max_vm != 0) {
+    const uptr ret_value = max_vm - 1;
+    CHECK_LE(ret_value, SANITIZER_MMAP_RANGE_SIZE);
+    return ret_value;
+  }
 
   // xnu cannot provide vm address limit
 # if SANITIZER_WORDSIZE == 32
-  return 0xffe00000 - 1;
+  constexpr uptr fallback_max_vm = 0xffe00000 - 1;
 # else
-  return 0x200000000 - 1;
+  constexpr uptr fallback_max_vm = 0x200000000 - 1;
 # endif
+  static_assert(fallback_max_vm <= SANITIZER_MMAP_RANGE_SIZE,
+                "Max virtual address must be less than mmap range size.");
+  return fallback_max_vm;
 }
 
 #else // !SANITIZER_IOS
 
 uptr GetMaxUserVirtualAddress() {
 # if SANITIZER_WORDSIZE == 64
-  return (1ULL << 47) - 1;  // 0x00007fffffffffffUL;
+  constexpr uptr max_vm = (1ULL << 47) - 1;  // 0x00007fffffffffffUL;
 # else // SANITIZER_WORDSIZE == 32
   static_assert(SANITIZER_WORDSIZE == 32, "Wrong wordsize");
-  return (1ULL << 32) - 1;  // 0xffffffff;
+  constexpr uptr max_vm = (1ULL << 32) - 1;  // 0xffffffff;
 # endif
+  static_assert(max_vm <= SANITIZER_MMAP_RANGE_SIZE,
+                "Max virtual address must be less than mmap range size.");
+  return max_vm;
 }
 #endif
 

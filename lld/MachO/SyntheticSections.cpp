@@ -20,6 +20,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Config/config.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
@@ -28,6 +29,11 @@
 
 #if defined(__APPLE__)
 #include <sys/mman.h>
+#endif
+
+#ifdef HAVE_LIBXAR
+#include <fcntl.h>
+#include <xar/xar.h>
 #endif
 
 using namespace llvm;
@@ -79,7 +85,13 @@ template <class LP> MachHeaderSection *macho::makeMachHeaderSection() {
 }
 
 template <class LP> uint64_t MachHeaderSectionImpl<LP>::getSize() const {
-  return sizeof(typename LP::mach_header) + sizeOfCmds + config->headerPad;
+  uint64_t size =
+      sizeof(typename LP::mach_header) + sizeOfCmds + config->headerPad;
+  // If we are emitting an encryptable binary, our load commands must have a
+  // separate (non-encrypted) page to themselves.
+  if (config->emitEncryptionInfo)
+    size = alignTo(size, target->getPageSize());
+  return size;
 }
 
 static uint32_t cpuSubtype() {
@@ -87,7 +99,7 @@ static uint32_t cpuSubtype() {
 
   if (config->outputType == MH_EXECUTE && !config->staticLink &&
       target->cpuSubtype == CPU_SUBTYPE_X86_64_ALL &&
-      config->target.Platform == PlatformKind::macOS &&
+      config->platform() == PlatformKind::macOS &&
       config->platformInfo.minimum >= VersionTuple(10, 5))
     subtype |= CPU_SUBTYPE_LIB64;
 
@@ -1031,6 +1043,59 @@ void CodeSignatureSection::writeTo(uint8_t *buf) const {
   auto *id = reinterpret_cast<char *>(&codeDirectory[1]);
   memcpy(id, fileName.begin(), fileName.size());
   memset(id + fileName.size(), 0, fileNamePad);
+}
+
+BitcodeBundleSection::BitcodeBundleSection()
+    : SyntheticSection(segment_names::llvm, section_names::bitcodeBundle) {}
+
+class ErrorCodeWrapper {
+public:
+  ErrorCodeWrapper(std::error_code ec) : errorCode(ec.value()) {}
+  ErrorCodeWrapper(int ec) : errorCode(ec) {}
+  operator int() const { return errorCode; }
+
+private:
+  int errorCode;
+};
+
+#define CHECK_EC(exp)                                                          \
+  do {                                                                         \
+    ErrorCodeWrapper ec(exp);                                                  \
+    if (ec)                                                                    \
+      fatal(Twine("operation failed with error code ") + Twine(ec) + ": " +    \
+            #exp);                                                             \
+  } while (0);
+
+void BitcodeBundleSection::finalize() {
+#ifdef HAVE_LIBXAR
+  using namespace llvm::sys::fs;
+  CHECK_EC(createTemporaryFile("bitcode-bundle", "xar", xarPath));
+
+  xar_t xar(xar_open(xarPath.data(), O_RDWR));
+  if (!xar)
+    fatal("failed to open XAR temporary file at " + xarPath);
+  CHECK_EC(xar_opt_set(xar, XAR_OPT_COMPRESSION, XAR_OPT_VAL_NONE));
+  // FIXME: add more data to XAR
+  CHECK_EC(xar_close(xar));
+
+  file_size(xarPath, xarSize);
+#endif // defined(HAVE_LIBXAR)
+}
+
+void BitcodeBundleSection::writeTo(uint8_t *buf) const {
+  using namespace llvm::sys::fs;
+  file_t handle =
+      CHECK(openNativeFile(xarPath, CD_OpenExisting, FA_Read, OF_None),
+            "failed to open XAR file");
+  std::error_code ec;
+  mapped_file_region xarMap(handle, mapped_file_region::mapmode::readonly,
+                            xarSize, 0, ec);
+  if (ec)
+    fatal("failed to map XAR file");
+  memcpy(buf, xarMap.const_data(), xarSize);
+
+  closeFile(handle);
+  remove(xarPath);
 }
 
 void macho::createSyntheticSymbols() {

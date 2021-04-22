@@ -246,14 +246,16 @@ concept copy_constructible =
   constructible_from<_Tp, const _Tp&> && convertible_to<const _Tp&, _Tp> &&
   constructible_from<_Tp, const _Tp> && convertible_to<const _Tp, _Tp>;
 
+// Whether a type is a class type or enumeration type according to the Core wording.
+template<class _Tp>
+concept __class_or_enum = is_class_v<_Tp> || is_union_v<_Tp> || is_enum_v<_Tp>;
+
 // [concept.swappable]
 namespace ranges::__swap {
   // Deleted to inhibit ADL
   template<class _Tp>
   void swap(_Tp&, _Tp&) = delete;
 
-  template<class _Tp>
-  concept __class_or_enum = is_class_v<_Tp> || is_union_v<_Tp> || is_enum_v<_Tp>;
 
   // [1]
   template<class _Tp, class _Up>
@@ -439,7 +441,8 @@ concept equivalence_relation = relation<_Rp, _Tp, _Up>;
 // [concept.strictweakorder]
 template<class _Rp, class _Tp, class _Up>
 concept strict_weak_order = relation<_Rp, _Tp, _Up>;
-#endif //_LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+
+#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD
 

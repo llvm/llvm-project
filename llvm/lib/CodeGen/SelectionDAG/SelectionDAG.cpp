@@ -145,7 +145,8 @@ bool ISD::isConstantSplatVector(const SDNode *N, APInt &SplatVal) {
     if (auto *Op0 = dyn_cast<ConstantSDNode>(N->getOperand(0))) {
       SplatVal = Op0->getAPIntValue().truncOrSelf(EltSize);
       return true;
-    } else if (auto *Op0 = dyn_cast<ConstantFPSDNode>(N->getOperand(0))) {
+    }
+    if (auto *Op0 = dyn_cast<ConstantFPSDNode>(N->getOperand(0))) {
       SplatVal = Op0->getValueAPF().bitcastToAPInt().truncOrSelf(EltSize);
       return true;
     }
@@ -1528,17 +1529,17 @@ SDValue SelectionDAG::getConstantFP(double Val, const SDLoc &DL, EVT VT,
   EVT EltVT = VT.getScalarType();
   if (EltVT == MVT::f32)
     return getConstantFP(APFloat((float)Val), DL, VT, isTarget);
-  else if (EltVT == MVT::f64)
+  if (EltVT == MVT::f64)
     return getConstantFP(APFloat(Val), DL, VT, isTarget);
-  else if (EltVT == MVT::f80 || EltVT == MVT::f128 || EltVT == MVT::ppcf128 ||
-           EltVT == MVT::f16 || EltVT == MVT::bf16) {
+  if (EltVT == MVT::f80 || EltVT == MVT::f128 || EltVT == MVT::ppcf128 ||
+      EltVT == MVT::f16 || EltVT == MVT::bf16) {
     bool Ignored;
     APFloat APF = APFloat(Val);
     APF.convert(EVTToAPFloatSemantics(EltVT), APFloat::rmNearestTiesToEven,
                 &Ignored);
     return getConstantFP(APF, DL, VT, isTarget);
-  } else
-    llvm_unreachable("Unsupported type in getConstantFP");
+  }
+  llvm_unreachable("Unsupported type in getConstantFP");
 }
 
 SDValue SelectionDAG::getGlobalAddress(const GlobalValue *GV, const SDLoc &DL,
@@ -2441,6 +2442,15 @@ bool SelectionDAG::MaskedValueIsZero(SDValue V, const APInt &Mask,
   return Mask.isSubsetOf(computeKnownBits(V, DemandedElts, Depth).Zero);
 }
 
+/// Return true if the DemandedElts of the vector Op are all zero.  We
+/// use this predicate to simplify operations downstream.
+bool SelectionDAG::MaskedElementsAreZero(SDValue Op, const APInt &DemandedElts,
+                                         unsigned Depth) const {
+  unsigned BitWidth = Op.getScalarValueSizeInBits();
+  APInt DemandedBits = APInt::getAllOnesValue(BitWidth);
+  return MaskedValueIsZero(Op, DemandedBits, DemandedElts, Depth);
+}
+
 /// MaskedValueIsAllOnes - Return true if '(Op & Mask) == Mask'.
 bool SelectionDAG::MaskedValueIsAllOnes(SDValue V, const APInt &Mask,
                                         unsigned Depth) const {
@@ -2472,7 +2482,7 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
     return true;
   case ISD::ADD:
   case ISD::SUB:
-  case ISD::AND: 
+  case ISD::AND:
   case ISD::XOR:
   case ISD::OR: {
     APInt UndefLHS, UndefRHS;
@@ -2483,7 +2493,7 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
       UndefElts = UndefLHS | UndefRHS;
       return true;
     }
-    break;
+    return false;
   }
   case ISD::ABS:
   case ISD::TRUNCATE:
@@ -4644,9 +4654,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         return getConstant((uint16_t)V.bitcastToAPInt().getZExtValue(), DL, VT);
       if (VT == MVT::i16 && C->getValueType(0) == MVT::bf16)
         return getConstant((uint16_t)V.bitcastToAPInt().getZExtValue(), DL, VT);
-      else if (VT == MVT::i32 && C->getValueType(0) == MVT::f32)
+      if (VT == MVT::i32 && C->getValueType(0) == MVT::f32)
         return getConstant((uint32_t)V.bitcastToAPInt().getZExtValue(), DL, VT);
-      else if (VT == MVT::i64 && C->getValueType(0) == MVT::f64)
+      if (VT == MVT::i64 && C->getValueType(0) == MVT::f64)
         return getConstant(V.bitcastToAPInt().getZExtValue(), DL, VT);
       break;
     case ISD::FP_TO_FP16: {
@@ -4706,11 +4716,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(VT.getScalarSizeInBits() >= 8 &&
            "STEP_VECTOR can only be used with vectors of integers that are at "
            "least 8 bits wide");
-    assert(Operand.getValueType().bitsGE(VT.getScalarType()) &&
-           "Operand type should be at least as large as the element type");
     assert(isa<ConstantSDNode>(Operand) &&
            cast<ConstantSDNode>(Operand)->getAPIntValue().isNonNegative() &&
-           "Expected positive integer constant for STEP_VECTOR");
+           cast<ConstantSDNode>(Operand)->getAPIntValue().isSignedIntN(
+               VT.getScalarSizeInBits()) &&
+           "Expected STEP_VECTOR integer constant to be positive and fit in "
+           "the vector element type");
     break;
   case ISD::FREEZE:
     assert(VT == Operand.getValueType() && "Unexpected VT!");
@@ -4766,7 +4777,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "Invalid sext node, dst < src!");
     if (OpOpcode == ISD::SIGN_EXTEND || OpOpcode == ISD::ZERO_EXTEND)
       return getNode(OpOpcode, DL, VT, Operand.getOperand(0));
-    else if (OpOpcode == ISD::UNDEF)
+    if (OpOpcode == ISD::UNDEF)
       // sext(undef) = 0, because the top bits will all be the same.
       return getConstant(0, DL, VT);
     break;
@@ -4785,7 +4796,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "Invalid zext node, dst < src!");
     if (OpOpcode == ISD::ZERO_EXTEND)   // (zext (zext x)) -> (zext x)
       return getNode(ISD::ZERO_EXTEND, DL, VT, Operand.getOperand(0));
-    else if (OpOpcode == ISD::UNDEF)
+    if (OpOpcode == ISD::UNDEF)
       // zext(undef) = 0, because the top bits will be zero.
       return getConstant(0, DL, VT);
     break;
@@ -4807,7 +4818,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         OpOpcode == ISD::ANY_EXTEND)
       // (ext (zext x)) -> (zext x)  and  (ext (sext x)) -> (sext x)
       return getNode(OpOpcode, DL, VT, Operand.getOperand(0));
-    else if (OpOpcode == ISD::UNDEF)
+    if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
 
     // (ext (trunc x)) -> x
@@ -5694,10 +5705,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         if (N1Op2C->getZExtValue() == N2C->getZExtValue()) {
           if (VT == N1.getOperand(1).getValueType())
             return N1.getOperand(1);
-          else
-            return getSExtOrTrunc(N1.getOperand(1), DL, VT);
+          return getSExtOrTrunc(N1.getOperand(1), DL, VT);
         }
-
         return getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, N1.getOperand(0), N2);
       }
     }
@@ -6115,17 +6124,17 @@ static SDValue getMemsetStringVal(EVT VT, const SDLoc &dl, SelectionDAG &DAG,
   if (Slice.Array == nullptr) {
     if (VT.isInteger())
       return DAG.getConstant(0, dl, VT);
-    else if (VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f128)
+    if (VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f128)
       return DAG.getConstantFP(0.0, dl, VT);
-    else if (VT.isVector()) {
+    if (VT.isVector()) {
       unsigned NumElts = VT.getVectorNumElements();
       MVT EltVT = (VT.getVectorElementType() == MVT::f32) ? MVT::i32 : MVT::i64;
       return DAG.getNode(ISD::BITCAST, dl, VT,
                          DAG.getConstant(0, dl,
                                          EVT::getVectorVT(*DAG.getContext(),
                                                           EltVT, NumElts)));
-    } else
-      llvm_unreachable("Expected type!");
+    }
+    llvm_unreachable("Expected type!");
   }
 
   assert(!VT.isVector() && "Can't handle vector type here!");
@@ -9570,11 +9579,9 @@ const EVT *SDNode::getValueTypeList(EVT VT) {
   if (VT.isExtended()) {
     sys::SmartScopedLock<true> Lock(*VTMutex);
     return &(*EVTs->insert(VT).first);
-  } else {
-    assert(VT.getSimpleVT() < MVT::LAST_VALUETYPE &&
-           "Value type out of range!");
-    return &SimpleVTArray->VTs[VT.getSimpleVT().SimpleTy];
   }
+  assert(VT.getSimpleVT() < MVT::LAST_VALUETYPE && "Value type out of range!");
+  return &SimpleVTArray->VTs[VT.getSimpleVT().SimpleTy];
 }
 
 /// hasNUsesOfValue - Return true if there are exactly NUSES uses of the
