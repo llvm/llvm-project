@@ -370,7 +370,8 @@ void unwrapAndPrint(raw_ostream &OS, Any IR,
 // Return true when this is a pass for which changes should be ignored
 bool isIgnored(StringRef PassID) {
   return isSpecialPass(PassID,
-                       {"PassManager", "PassAdaptor", "AnalysisManagerProxy"});
+                       {"PassManager", "PassAdaptor", "AnalysisManagerProxy",
+                        "DevirtSCCRepeatedPass", "ModuleInlinerWrapperPass"});
 }
 
 } // namespace
