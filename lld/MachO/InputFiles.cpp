@@ -153,11 +153,11 @@ template <class LP> static bool checkCompatibility(const InputFile *input) {
           getPlatformName(config->platform()));
     return false;
   }
-  if (platformInfo->minimum >= config->platformInfo.minimum)
+  if (platformInfo->minimum <= config->platformInfo.minimum)
     return true;
   error(toString(input) + " has version " +
         platformInfo->minimum.getAsString() +
-        ", which is incompatible with target version of " +
+        ", which is newer than target minimum of " +
         config->platformInfo.minimum.getAsString());
   return false;
 }
