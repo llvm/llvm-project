@@ -4,7 +4,8 @@
 import os
 import sys
 import json
-
+import filecmp
+import shutil
 import argparse
 
 class Generator(object):
@@ -326,13 +327,16 @@ def main():
                       help='Read API description from FILE', metavar='FILE')
     parser.add_argument('--output-file', help='Generate output in FILEPATH',
                       metavar='FILEPATH')
-    parser.add_argument('--empty-implementation',
+    parser.add_argument('--use-empty-implementation',
                       help='Generate empty implementation',
                       action="store", type=int)
+    parser.add_argument('--empty-implementation',
+                      help='Copy empty implementation from FILEPATH',
+                      action="store", metavar='FILEPATH')
 
     options = parser.parse_args()
 
-    use_empty_implementation = options.empty_implementation
+    use_empty_implementation = options.use_empty_implementation
 
     if (not use_empty_implementation
             and not os.path.exists(options.json_input_path)):
@@ -346,47 +350,9 @@ def main():
             use_empty_implementation = True
 
     if use_empty_implementation:
-        with open(os.path.join(os.getcwd(),
-                  options.output_file), 'w') as f:
-            f.write("""
-namespace clang {
-namespace tooling {
-
-bool NodeIntrospection::hasIntrospectionSupport() { return false; }
-
-NodeLocationAccessors NodeIntrospection::GetLocations(clang::Stmt const *) {
-  return {};
-}
-NodeLocationAccessors NodeIntrospection::GetLocations(clang::Decl const *) {
-  return {};
-}
-NodeLocationAccessors NodeIntrospection::GetLocations(
-    clang::CXXCtorInitializer const *) {
-  return {};
-}
-NodeLocationAccessors NodeIntrospection::GetLocations(
-    clang::NestedNameSpecifierLoc const&) {
-  return {};
-}
-NodeLocationAccessors NodeIntrospection::GetLocations(
-    clang::TemplateArgumentLoc const&) {
-  return {};
-}
-NodeLocationAccessors NodeIntrospection::GetLocations(
-    clang::CXXBaseSpecifier const*) {
-  return {};
-}
-NodeLocationAccessors NodeIntrospection::GetLocations(
-    clang::TypeLoc const&) {
-  return {};
-}
-NodeLocationAccessors
-NodeIntrospection::GetLocations(clang::DynTypedNode const &) {
-  return {};
-}
-} // namespace tooling
-} // namespace clang
-    """)
+        if not os.path.exists(options.output_file) or \
+                not filecmp.cmp(options.empty_implementation, options.output_file):
+            shutil.copyfile(options.empty_implementation, options.output_file)
         sys.exit(0)
 
     templateClasses = []
