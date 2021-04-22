@@ -9007,6 +9007,10 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   SDValue V1 = Op.getOperand(0);
   SDValue V2 = Op.getOperand(1);
 
+  assert(V1.getValueType() == VT && "Unexpected VECTOR_SHUFFLE type!");
+  assert(ShuffleMask.size() == VT.getVectorNumElements() &&
+         "Unexpected VECTOR_SHUFFLE mask size!");
+
   if (SVN->isSplat()) {
     int Lane = SVN->getSplatIndex();
     // If this is undef splat, generate it via "just" vdup, if possible.
@@ -9052,6 +9056,14 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     return DAG.getNode(AArch64ISD::REV32, dl, V1.getValueType(), V1, V2);
   if (isREVMask(ShuffleMask, VT, 16))
     return DAG.getNode(AArch64ISD::REV16, dl, V1.getValueType(), V1, V2);
+
+  if (((VT.getVectorNumElements() == 8 && VT.getScalarSizeInBits() == 16) ||
+       (VT.getVectorNumElements() == 16 && VT.getScalarSizeInBits() == 8)) &&
+      ShuffleVectorInst::isReverseMask(ShuffleMask)) {
+    SDValue Rev = DAG.getNode(AArch64ISD::REV64, dl, VT, V1);
+    return DAG.getNode(AArch64ISD::EXT, dl, VT, Rev, Rev,
+                       DAG.getConstant(8, dl, MVT::i32));
+  }
 
   bool ReverseEXT = false;
   unsigned Imm;
