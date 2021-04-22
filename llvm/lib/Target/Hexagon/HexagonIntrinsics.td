@@ -402,4 +402,74 @@ def: Pat<(int_hexagon_V6_vscattermhw_add_128B IntRegs:$src1, ModRegs:$src2, HvxW
 def: Pat<(int_hexagon_V6_vscattermhwq_128B HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxWR:$src4, HvxVR:$src5),
          (V6_vscattermhwq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxWR:$src4, HvxVR:$src5)>, Requires<[HasV65, UseHVX]>;
 
+multiclass T_pRI_pat<InstHexagon MI, Intrinsic IntID> {
+  def: Pat<(IntID PredRegs:$P, IntRegs:$R, timm:$s),
+           (MI    PredRegs:$P, IntRegs:$R, imm:$s)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B")
+                  PredRegs:$P, IntRegs:$R, timm:$s),
+           (MI    PredRegs:$P, IntRegs:$R, imm:$s)>;
+}
+
+multiclass T_pRM_pat<InstHexagon MI, Intrinsic IntID> {
+  def: Pat<(IntID PredRegs:$P, IntRegs:$R, ModRegs:$M),
+           (MI    PredRegs:$P, IntRegs:$R, ModRegs:$M)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B")
+                  PredRegs:$P, IntRegs:$R, ModRegs:$M),
+           (MI    PredRegs:$P, IntRegs:$R, ModRegs:$M)>;
+}
+
+let Predicates = [HasV62, UseHVX] in {
+  defm: T_pRI_pat<V6_vL32b_pred_ai,       int_hexagon_V6_vL32b_pred_ai>;
+  defm: T_pRI_pat<V6_vL32b_npred_ai,      int_hexagon_V6_vL32b_npred_ai>;
+  defm: T_pRI_pat<V6_vL32b_pred_pi,       int_hexagon_V6_vL32b_pred_pi>;
+  defm: T_pRI_pat<V6_vL32b_npred_pi,      int_hexagon_V6_vL32b_npred_pi>;
+  defm: T_pRI_pat<V6_vL32b_nt_pred_ai,    int_hexagon_V6_vL32b_nt_pred_ai>;
+  defm: T_pRI_pat<V6_vL32b_nt_npred_ai,   int_hexagon_V6_vL32b_nt_npred_ai>;
+  defm: T_pRI_pat<V6_vL32b_nt_pred_pi,    int_hexagon_V6_vL32b_nt_pred_pi>;
+  defm: T_pRI_pat<V6_vL32b_nt_npred_pi,   int_hexagon_V6_vL32b_nt_npred_pi>;
+
+  defm: T_pRM_pat<V6_vL32b_pred_ppu,      int_hexagon_V6_vL32b_pred_ppu>;
+  defm: T_pRM_pat<V6_vL32b_npred_ppu,     int_hexagon_V6_vL32b_npred_ppu>;
+  defm: T_pRM_pat<V6_vL32b_nt_pred_ppu,   int_hexagon_V6_vL32b_nt_pred_ppu>;
+  defm: T_pRM_pat<V6_vL32b_nt_npred_ppu,  int_hexagon_V6_vL32b_nt_npred_ppu>;
+}
+
+multiclass T_pRIV_pat<InstHexagon MI, Intrinsic IntID> {
+  def: Pat<(IntID PredRegs:$P, IntRegs:$R, timm:$s, HvxVR:$V),
+           (MI    PredRegs:$P, IntRegs:$R, imm:$s, HvxVR:$V)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B")
+                  PredRegs:$P, IntRegs:$R, timm:$s, HvxVR:$V),
+           (MI    PredRegs:$P, IntRegs:$R, imm:$s, HvxVR:$V)>;
+}
+
+multiclass T_pRMV_pat<InstHexagon MI, Intrinsic IntID> {
+  def: Pat<(IntID PredRegs:$P, IntRegs:$R, ModRegs:$M, HvxVR:$V),
+           (MI    PredRegs:$P, IntRegs:$R, ModRegs:$M, HvxVR:$V)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B")
+                  PredRegs:$P, IntRegs:$R, ModRegs:$M, HvxVR:$V),
+           (MI    PredRegs:$P, IntRegs:$R, ModRegs:$M, HvxVR:$V)>;
+}
+
+let Predicates = [HasV60, UseHVX] in {
+  defm: T_pRIV_pat<V6_vS32b_pred_ai,      int_hexagon_V6_vS32b_pred_ai>;
+  defm: T_pRIV_pat<V6_vS32b_npred_ai,     int_hexagon_V6_vS32b_npred_ai>;
+  defm: T_pRIV_pat<V6_vS32b_pred_pi,      int_hexagon_V6_vS32b_pred_pi>;
+  defm: T_pRIV_pat<V6_vS32b_npred_pi,     int_hexagon_V6_vS32b_npred_pi>;
+  defm: T_pRIV_pat<V6_vS32Ub_pred_ai,     int_hexagon_V6_vS32Ub_pred_ai>;
+  defm: T_pRIV_pat<V6_vS32Ub_npred_ai,    int_hexagon_V6_vS32Ub_npred_ai>;
+  defm: T_pRIV_pat<V6_vS32Ub_pred_pi,     int_hexagon_V6_vS32Ub_pred_pi>;
+  defm: T_pRIV_pat<V6_vS32Ub_npred_pi,    int_hexagon_V6_vS32Ub_npred_pi>;
+  defm: T_pRIV_pat<V6_vS32b_nt_pred_ai,   int_hexagon_V6_vS32b_nt_pred_ai>;
+  defm: T_pRIV_pat<V6_vS32b_nt_npred_ai,  int_hexagon_V6_vS32b_nt_npred_ai>;
+  defm: T_pRIV_pat<V6_vS32b_nt_pred_pi,   int_hexagon_V6_vS32b_nt_pred_pi>;
+  defm: T_pRIV_pat<V6_vS32b_nt_npred_pi,  int_hexagon_V6_vS32b_nt_npred_pi>;
+
+  defm: T_pRMV_pat<V6_vS32b_pred_ppu,     int_hexagon_V6_vS32b_pred_ppu>;
+  defm: T_pRMV_pat<V6_vS32b_npred_ppu,    int_hexagon_V6_vS32b_npred_ppu>;
+  defm: T_pRMV_pat<V6_vS32Ub_pred_ppu,    int_hexagon_V6_vS32Ub_pred_ppu>;
+  defm: T_pRMV_pat<V6_vS32Ub_npred_ppu,   int_hexagon_V6_vS32Ub_npred_ppu>;
+  defm: T_pRMV_pat<V6_vS32b_nt_pred_ppu,  int_hexagon_V6_vS32b_nt_pred_ppu>;
+  defm: T_pRMV_pat<V6_vS32b_nt_npred_ppu, int_hexagon_V6_vS32b_nt_npred_ppu>;
+}
+
 include "HexagonDepMapAsm2Intrin.td"
