@@ -1429,7 +1429,8 @@ public:
         return InstructionCost::getInvalid();
 
       // Assume that we need to scalarize this intrinsic.
-      InstructionCost ScalarizationCost = ScalarizationCostPassed;
+      InstructionCost ScalarizationCost =
+          SkipScalarizationCost ? ScalarizationCostPassed : 0;
       unsigned ScalarCalls = 1;
       Type *ScalarRetTy = RetTy;
       if (auto *RetVTy = dyn_cast<VectorType>(RetTy)) {
