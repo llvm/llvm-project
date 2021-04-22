@@ -2400,6 +2400,7 @@ vec_popcnt(vector unsigned long long __a) {
   return __builtin_altivec_vpopcntd(__a);
 }
 
+#define vec_vclz vec_cntlz
 /* vec_cntlz */
 
 static __inline__ vector signed char __ATTRS_o_ai
