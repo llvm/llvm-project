@@ -2899,6 +2899,22 @@ def : Pat<(v2f64 (build_vector (f64 (fpextend (extractelt v4f32:$A, 3))),
                                (f64 (fpextend (extractelt v4f32:$B, 3))))),
           (v2f64 (XVCVSPDP (XXSLDWI (XXPERMDI $A, $B, 3),
                                     (XXPERMDI $A, $B, 3), 1)))>;
+def : Pat<(v2i64 (fp_to_sint
+                   (build_vector (f64 (fpextend (extractelt v4f32:$A, 0))),
+                                 (f64 (fpextend (extractelt v4f32:$A, 2)))))),
+          (v2i64 (XVCVSPSXDS $A))>;
+def : Pat<(v2i64 (fp_to_uint
+                   (build_vector (f64 (fpextend (extractelt v4f32:$A, 0))),
+                                 (f64 (fpextend (extractelt v4f32:$A, 2)))))),
+          (v2i64 (XVCVSPUXDS $A))>;
+def : Pat<(v2i64 (fp_to_sint
+                   (build_vector (f64 (fpextend (extractelt v4f32:$A, 1))),
+                                 (f64 (fpextend (extractelt v4f32:$A, 3)))))),
+          (v2i64 (XVCVSPSXDS (XXSLDWI $A, $A, 1)))>;
+def : Pat<(v2i64 (fp_to_uint
+                   (build_vector (f64 (fpextend (extractelt v4f32:$A, 1))),
+                                 (f64 (fpextend (extractelt v4f32:$A, 3)))))),
+          (v2i64 (XVCVSPUXDS (XXSLDWI $A, $A, 1)))>;
 def : Pat<WToDPExtractConv.BV02S,
           (v2f64 (XVCVSXWDP $A))>;
 def : Pat<WToDPExtractConv.BV13S,
@@ -3008,6 +3024,22 @@ def : Pat<(v2f64 (build_vector (f64 (fpextend (extractelt v4f32:$A, 0))),
 def : Pat<(v2f64 (build_vector (f64 (fpextend (extractelt v4f32:$A, 3))),
                                (f64 (fpextend (extractelt v4f32:$B, 3))))),
           (v2f64 (XVCVSPDP (XXPERMDI $B, $A, 0)))>;
+def : Pat<(v2i64 (fp_to_sint
+                   (build_vector (f64 (fpextend (extractelt v4f32:$A, 1))),
+                                 (f64 (fpextend (extractelt v4f32:$A, 3)))))),
+          (v2i64 (XVCVSPSXDS $A))>;
+def : Pat<(v2i64 (fp_to_uint
+                   (build_vector (f64 (fpextend (extractelt v4f32:$A, 1))),
+                                 (f64 (fpextend (extractelt v4f32:$A, 3)))))),
+          (v2i64 (XVCVSPUXDS $A))>;
+def : Pat<(v2i64 (fp_to_sint
+                   (build_vector (f64 (fpextend (extractelt v4f32:$A, 0))),
+                                 (f64 (fpextend (extractelt v4f32:$A, 2)))))),
+          (v2i64 (XVCVSPSXDS (XXSLDWI $A, $A, 1)))>;
+def : Pat<(v2i64 (fp_to_uint
+                   (build_vector (f64 (fpextend (extractelt v4f32:$A, 0))),
+                                 (f64 (fpextend (extractelt v4f32:$A, 2)))))),
+          (v2i64 (XVCVSPUXDS (XXSLDWI $A, $A, 1)))>;
 def : Pat<WToDPExtractConv.BV02S,
           (v2f64 (XVCVSXWDP (XXSLDWI $A, $A, 1)))>;
 def : Pat<WToDPExtractConv.BV13S,
