@@ -2944,9 +2944,11 @@ OptimizeGlobalAliases(Module &M,
     Constant *Aliasee = J->getAliasee();
     GlobalValue *Target = dyn_cast<GlobalValue>(Aliasee->stripPointerCasts());
     // We can't trivially replace the alias with the aliasee if the aliasee is
-    // non-trivial in some way.
+    // non-trivial in some way. We also can't replace the alias with the aliasee
+    // if the aliasee is interposable because aliases point to the local
+    // definition.
     // TODO: Try to handle non-zero GEPs of local aliasees.
-    if (!Target)
+    if (!Target || Target->isInterposable())
       continue;
     Target->removeDeadConstantUsers();
 
