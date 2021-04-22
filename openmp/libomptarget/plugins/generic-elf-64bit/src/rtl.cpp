@@ -335,6 +335,3 @@ int32_t __tgt_rtl_run_target_region(int32_t device_id, void *tgt_entry_ptr,
 #ifdef __cplusplus
 }
 #endif
-
-// Elf-64 plugin's internal InfoLevel.
-std::atomic<uint32_t> InfoLevel;

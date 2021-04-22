@@ -1252,12 +1252,10 @@ int32_t __tgt_rtl_synchronize(int32_t device_id,
 }
 
 void __tgt_rtl_set_info_flag(uint32_t NewInfoLevel) {
+  std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
 }
 
 #ifdef __cplusplus
 }
 #endif
-
-// Cuda plugin's internal InfoLevel.
-std::atomic<uint32_t> InfoLevel;
