@@ -1050,8 +1050,8 @@ BitcodeBundleSection::BitcodeBundleSection()
 
 class ErrorCodeWrapper {
 public:
-  ErrorCodeWrapper(std::error_code ec) : errorCode(ec.value()) {}
-  ErrorCodeWrapper(int ec) : errorCode(ec) {}
+  explicit ErrorCodeWrapper(std::error_code ec) : errorCode(ec.value()) {}
+  explicit ErrorCodeWrapper(int ec) : errorCode(ec) {}
   operator int() const { return errorCode; }
 
 private:

@@ -97,7 +97,7 @@ class CrashLog(symbolication.Symbolicator):
             if self.registers:
                 print("%s  Registers:" % (prefix))
                 for reg in self.registers.keys():
-                    print("%s    %-5s = %#16.16x" % (prefix, reg, self.registers[reg]))
+                    print("%s    %-8s = %#16.16x" % (prefix, reg, self.registers[reg]))
 
         def dump_symbolicated(self, crash_log, options):
             this_thread_crashed = self.app_specific_backtrace
@@ -156,6 +156,10 @@ class CrashLog(symbolication.Symbolicator):
                         symbolicated_frame_address_idx += 1
                 else:
                     print(frame)
+            if self.registers:
+                print()
+                for reg in self.registers.keys():
+                    print("    %-8s = %#16.16x" % (reg, self.registers[reg]))
 
         def add_ident(self, ident):
             if ident not in self.idents:
@@ -488,7 +492,7 @@ class JSONCrashLogParser:
                 thread.reason = json_thread['name']
             if json_thread.get('triggered', False):
                 self.crashlog.crashed_thread_idx = idx
-                self.registers = self.parse_thread_registers(
+                thread.registers = self.parse_thread_registers(
                     json_thread['threadState'])
             thread.queue = json_thread.get('queue')
             self.parse_frames(thread, json_thread.get('frames', []))
@@ -496,19 +500,13 @@ class JSONCrashLogParser:
             idx += 1
 
     def parse_thread_registers(self, json_thread_state):
-        idx = 0
         registers = dict()
-        for json_reg in json_thread_state.get('x', []):
-            key = str('x{}'.format(idx))
-            value = int(json_reg['value'])
-            registers[key] = value
-            idx += 1
-
-        for register in ['lr', 'cpsr', 'fp', 'sp', 'esr', 'pc']:
-            if register in json_thread_state:
-                json_reg = json_thread_state[register]
-                registers[register] = int(json_reg['value'])
-
+        for key, state in json_thread_state.items():
+            try:
+               value = int(state['value'])
+               registers[key] = value
+            except (TypeError, ValueError):
+               pass
         return registers
 
 

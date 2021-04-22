@@ -66,6 +66,7 @@ using namespace llvm::objdump;
 bool objdump::FirstPrivateHeader;
 bool objdump::ExportsTrie;
 bool objdump::Rebase;
+bool objdump::Rpaths;
 bool objdump::Bind;
 bool objdump::LazyBind;
 bool objdump::WeakBind;
@@ -95,6 +96,7 @@ void objdump::parseMachOOptions(const llvm::opt::InputArgList &InputArgs) {
   FirstPrivateHeader = InputArgs.hasArg(OBJDUMP_private_header);
   ExportsTrie = InputArgs.hasArg(OBJDUMP_exports_trie);
   Rebase = InputArgs.hasArg(OBJDUMP_rebase);
+  Rpaths = InputArgs.hasArg(OBJDUMP_rpaths);
   Bind = InputArgs.hasArg(OBJDUMP_bind);
   LazyBind = InputArgs.hasArg(OBJDUMP_lazy_bind);
   WeakBind = InputArgs.hasArg(OBJDUMP_weak_bind);
@@ -1233,6 +1235,16 @@ static void PrintDylibs(MachOObjectFile *O, bool JustId) {
   }
 }
 
+static void printRpaths(MachOObjectFile *O) {
+  for (const auto &Command : O->load_commands()) {
+    if (Command.C.cmd == MachO::LC_RPATH) {
+      auto Rpath = O->getRpathCommand(Command);
+      const char *P = (const char *)(Command.Ptr) + Rpath.path;
+      outs() << P << "\n";
+    }
+  }
+}
+
 typedef DenseMap<uint64_t, StringRef> SymbolAddressMap;
 
 static void CreateSymbolAddressMap(MachOObjectFile *O,
@@ -1885,7 +1897,7 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
   if (Disassemble || Relocations || PrivateHeaders || ExportsTrie || Rebase ||
       Bind || SymbolTable || LazyBind || WeakBind || IndirectSymbols ||
       DataInCode || FunctionStarts || LinkOptHints || DylibsUsed || DylibId ||
-      ObjcMetaData || (!FilterSections.empty())) {
+      Rpaths || ObjcMetaData || (!FilterSections.empty())) {
     if (LeadingHeaders) {
       outs() << Name;
       if (!ArchiveMemberName.empty())
@@ -1974,6 +1986,8 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
     printExportsTrie(MachOOF);
   if (Rebase)
     printRebaseTable(MachOOF);
+  if (Rpaths)
+    printRpaths(MachOOF);
   if (Bind)
     printBindTable(MachOOF);
   if (LazyBind)

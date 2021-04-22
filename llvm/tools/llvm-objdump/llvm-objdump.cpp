@@ -3075,7 +3075,7 @@ int main(int argc, char **argv) {
       !(MachOOpt &&
         (Bind || DataInCode || DylibId || DylibsUsed || ExportsTrie ||
          FirstPrivateHeader || FunctionStarts || IndirectSymbols || InfoPlist ||
-         LazyBind || LinkOptHints || ObjcMetaData || Rebase ||
+         LazyBind || LinkOptHints || ObjcMetaData || Rebase || Rpaths ||
          UniversalHeaders || WeakBind || !FilterSections.empty()))) {
     T->printHelp(ToolName);
     return 2;

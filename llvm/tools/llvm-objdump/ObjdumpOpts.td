@@ -396,6 +396,11 @@ def dylib_id : Flag<["--"], "dylib-id">,
            "dylib Mach-O file (requires --macho)">,
   Group<grp_mach_o>;
 
+def rpaths : Flag<["--"], "rpaths">,
+  HelpText<"Print the runtime search paths for the "
+           "Mach-O file (requires --macho)">,
+  Group<grp_mach_o>;
+
 def non_verbose : Flag<["--"], "non-verbose">,
   HelpText<"Print the info for Mach-O objects in non-verbose or "
            "numeric form (requires --macho)">,

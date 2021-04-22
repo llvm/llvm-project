@@ -49,6 +49,7 @@ extern bool LeadingHeaders;
 extern bool LinkOptHints;
 extern bool ObjcMetaData;
 extern bool Rebase;
+extern bool Rpaths;
 extern bool SymbolicOperands;
 extern bool UniversalHeaders;
 extern bool Verbose;
