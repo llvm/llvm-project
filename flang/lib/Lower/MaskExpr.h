@@ -20,7 +20,7 @@
 #include <functional>
 
 namespace Fortran::evaluate {
-class SomeType;
+struct SomeType;
 template <typename>
 class Expr;
 } // namespace Fortran::evaluate
