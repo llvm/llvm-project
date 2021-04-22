@@ -1524,6 +1524,7 @@ void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
       }
       case WebAssembly::END_BLOCK:
       case WebAssembly::END_LOOP:
+      case WebAssembly::DELEGATE:
         EndToBegin[&MI]->getOperand(0).setImm(int32_t(RetType));
         continue;
       default:
