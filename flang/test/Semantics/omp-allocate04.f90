@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
 ! OpenMP Version 5.0
 ! 2.11.3 allocate Directive
 ! Only the allocator clause is allowed on the allocate directive
