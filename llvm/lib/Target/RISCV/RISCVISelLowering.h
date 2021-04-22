@@ -96,6 +96,9 @@ enum NodeType : unsigned {
   GORC,
   GORCW,
   SHFL,
+  SHFLW,
+  UNSHFL,
+  UNSHFLW,
   // Vector Extension
   // VMV_V_X_VL matches the semantics of vmv.v.x but includes an extra operand
   // for the VL value to be used for the operation.
