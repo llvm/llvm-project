@@ -53,6 +53,7 @@ enum class HeapType : unsigned {
 Optional<wasm::ValType> parseType(StringRef Type);
 HeapType parseHeapType(StringRef Type);
 BlockType parseBlockType(StringRef Type);
+MVT parseMVT(StringRef Type);
 
 // Convert ValType or a list/signature of ValTypes to a string.
 
