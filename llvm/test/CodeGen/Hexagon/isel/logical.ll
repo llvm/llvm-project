@@ -16,12 +16,6 @@ define i1 @f0(i32 %a0, i32 %a1) #1 {
 ; CHECK-NEXT:     p0 = and(p0,p1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = p0
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = tstbit(r2,#0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = p0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
@@ -49,12 +43,6 @@ define i1 @f1(i32 %a0, i32 %a1) #1 {
 ; CHECK-NEXT:     p0 = or(p0,p1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = p0
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = tstbit(r2,#0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = p0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
@@ -80,12 +68,6 @@ define i1 @f2(i32 %a0, i32 %a1) #1 {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = xor(p0,p1)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = p0
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = tstbit(r2,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = p0
@@ -127,7 +109,7 @@ define i1 @f3(i32 %a0, i32 %a1) #1 {
 ; CHECK-NEXT:     p0 = and(p0,!p1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = p0
+; CHECK-NEXT:     r0 = mux(p0,#1,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
@@ -167,7 +149,7 @@ define i1 @f4(i32 %a0, i32 %a1) #1 {
 ; CHECK-NEXT:     p0 = or(p0,!p1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = p0
+; CHECK-NEXT:     r0 = mux(p0,#1,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
@@ -196,12 +178,6 @@ define i1 @f5(i32 %a0, i32 %a1, i32 %a2) #1 {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = and(p2,and(p0,p1))
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = p0
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = tstbit(r2,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = p0
@@ -237,12 +213,6 @@ define i1 @f6(i32 %a0, i32 %a1, i32 %a2) #1 {
 ; CHECK-NEXT:     p0 = and(p2,or(p0,p1))
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = p0
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = tstbit(r2,#0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = p0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
@@ -276,12 +246,6 @@ define i1 @f7(i32 %a0, i32 %a1, i32 %a2) #1 {
 ; CHECK-NEXT:     p0 = or(p2,and(p0,p1))
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = p0
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = tstbit(r2,#0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = p0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
@@ -313,12 +277,6 @@ define i1 @f8(i32 %a0, i32 %a1, i32 %a2) #1 {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = or(p2,or(p0,p1))
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = p0
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = tstbit(r2,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = p0
@@ -372,7 +330,7 @@ define i1 @f9(i32 %a0, i32 %a1, i32 %a2) #1 {
 ; CHECK-NEXT:     p0 = and(p2,and(p0,!p1))
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = p0
+; CHECK-NEXT:     r0 = mux(p0,#1,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
@@ -424,7 +382,7 @@ define i1 @f10(i32 %a0, i32 %a1, i32 %a2) #1 {
 ; CHECK-NEXT:     p0 = and(p2,or(p0,!p1))
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = p0
+; CHECK-NEXT:     r0 = mux(p0,#1,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
@@ -476,7 +434,7 @@ define i1 @f11(i32 %a0, i32 %a1, i32 %a2) #1 {
 ; CHECK-NEXT:     p0 = or(p2,and(p0,!p1))
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = p0
+; CHECK-NEXT:     r0 = mux(p0,#1,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
@@ -528,7 +486,7 @@ define i1 @f12(i32 %a0, i32 %a1, i32 %a2) #1 {
 ; CHECK-NEXT:     p0 = or(p2,or(p0,!p1))
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = p0
+; CHECK-NEXT:     r0 = mux(p0,#1,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
