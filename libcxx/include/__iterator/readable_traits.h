@@ -11,7 +11,8 @@
 #define _LIBCPP___ITERATOR_READABLE_TRAITS_H
 
 #include <__config>
-#include <__iterator/concepts.h>
+#include <concepts>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
