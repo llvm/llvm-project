@@ -1462,29 +1462,42 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 // FIXME: We can optimize this when the type has sign or zero bits in one
 // of the halves.
 static SDValue splatSplitI64WithVL(const SDLoc &DL, MVT VT, SDValue Scalar,
-                                   SDValue VL, SelectionDAG &DAG) {
-  SDValue ThirtyTwoV = DAG.getConstant(32, DL, VT);
+                                   SDValue VL, SelectionDAG &DAG,
+                                   const RISCVSubtarget &Subtarget) {
   SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
                            DAG.getConstant(0, DL, MVT::i32));
   SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
                            DAG.getConstant(1, DL, MVT::i32));
 
-  // vmv.v.x vX, hi
-  // vsll.vx vX, vX, /*32*/
-  // vmv.v.x vY, lo
-  // vsll.vx vY, vY, /*32*/
-  // vsrl.vx vY, vY, /*32*/
-  // vor.vv vX, vX, vY
-  MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorElementCount());
-  SDValue Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
-  Lo = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Lo, VL);
-  Lo = DAG.getNode(RISCVISD::SHL_VL, DL, VT, Lo, ThirtyTwoV, Mask, VL);
-  Lo = DAG.getNode(RISCVISD::SRL_VL, DL, VT, Lo, ThirtyTwoV, Mask, VL);
+  // Fall back to a stack store and stride x0 vector load.
+  MachineFunction &MF = DAG.getMachineFunction();
+  RISCVMachineFunctionInfo *FuncInfo = MF.getInfo<RISCVMachineFunctionInfo>();
 
-  Hi = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Hi, VL);
-  Hi = DAG.getNode(RISCVISD::SHL_VL, DL, VT, Hi, ThirtyTwoV, Mask, VL);
+  // We use the same frame index we use for moving two i32s into 64-bit FPR.
+  // This is an analogous operation.
+  int FI = FuncInfo->getMoveF64FrameIndex(MF);
+  MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue StackSlot =
+      DAG.getFrameIndex(FI, TLI.getPointerTy(DAG.getDataLayout()));
 
-  return DAG.getNode(RISCVISD::OR_VL, DL, VT, Lo, Hi, Mask, VL);
+  SDValue Chain = DAG.getEntryNode();
+  Lo = DAG.getStore(Chain, DL, Lo, StackSlot, MPI, Align(8));
+
+  SDValue OffsetSlot =
+      DAG.getMemBasePlusOffset(StackSlot, TypeSize::Fixed(4), DL);
+  Hi = DAG.getStore(Chain, DL, Hi, OffsetSlot, MPI.getWithOffset(4), Align(8));
+
+  Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo, Hi);
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDVTList VTs = DAG.getVTList({VT, MVT::Other});
+  SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vlse, DL, XLenVT);
+  SDValue Ops[] = {Chain, IntID, StackSlot, DAG.getRegister(RISCV::X0, XLenVT),
+                   VL};
+
+  return DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, MVT::i64,
+                                 MPI, Align(8), MachineMemOperand::MOLoad);
 }
 
 // This function lowers a splat of a scalar operand Splat with the vector
@@ -1523,7 +1536,7 @@ static SDValue lowerScalarSplat(SDValue Scalar, SDValue VL, MVT VT, SDLoc DL,
   }
 
   // Otherwise use the more complicated splatting algorithm.
-  return splatSplitI64WithVL(DL, VT, Scalar, VL, DAG);
+  return splatSplitI64WithVL(DL, VT, Scalar, VL, DAG, Subtarget);
 }
 
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
@@ -3015,7 +3028,7 @@ static SDValue lowerVectorIntrinsicSplats(SDValue Op, SelectionDAG &DAG,
   // VL should be the last operand.
   SDValue VL = Op.getOperand(Op.getNumOperands() - 1);
   assert(VL.getValueType() == XLenVT);
-  ScalarOp = splatSplitI64WithVL(DL, VT, ScalarOp, VL, DAG);
+  ScalarOp = splatSplitI64WithVL(DL, VT, ScalarOp, VL, DAG, Subtarget);
   return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(), Operands);
 }
 
@@ -3079,7 +3092,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue Vec = Op.getOperand(1);
     SDValue VL = Op.getOperand(3);
 
-    SDValue SplattedVal = splatSplitI64WithVL(DL, VT, Scalar, VL, DAG);
+    SDValue SplattedVal =
+        splatSplitI64WithVL(DL, VT, Scalar, VL, DAG, Subtarget);
     SDValue SplattedIdx = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT,
                                       DAG.getConstant(0, DL, MVT::i32), VL);
 
