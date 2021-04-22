@@ -3546,6 +3546,8 @@ Set DWARF fission mode to either 'split' or 'single'
 
 .. option:: -gstrict-dwarf, -gno-strict-dwarf
 
+Restrict DWARF features to those defined in the specified version, avoiding features from later versions.
+
 .. option:: -gz=<arg>, -gz (equivalent to -gz=zlib)
 
 DWARF debug sections compression type
