@@ -1436,8 +1436,11 @@ void SIWholeQuadMode::lowerCopyInstrs() {
       const unsigned MovOp = TII->getMovOpcode(regClass);
       MI->setDesc(TII->get(MovOp));
 
-      // And make it implicitly depend on exec (like all VALU movs should do).
-      MI->addOperand(MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
+      // Check that it already implicitly depends on exec (like all VALU movs
+      // should do).
+      assert(any_of(MI->implicit_operands(), [](const MachineOperand &MO) {
+        return MO.isUse() && MO.getReg() == AMDGPU::EXEC;
+      }));
     } else {
       // Remove early-clobber and exec dependency from simple SGPR copies.
       // This allows some to be eliminated during/post RA.
