@@ -2,6 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %s -o %t.o
 # RUN: %lld -dylib %t.o -o %t.dylib -lSystem
+
 # RUN: llvm-objdump --macho --weak-bind %t.dylib | FileCheck %s
 # CHECK-NOT: __got
 # CHECK-NOT: __la_symbol_ptr
