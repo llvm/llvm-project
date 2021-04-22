@@ -1813,7 +1813,7 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(CompileUnit &comp_unit,
             sequence.get(), prev_addr + prev_length, prev_line, 0,
             prev_source_idx, false, false, false, false, true);
 
-        line_table->InsertSequence(sequence.release());
+        line_table->InsertSequence(sequence.get());
         sequence = line_table->CreateLineSequenceContainer();
       }
 
