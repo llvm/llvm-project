@@ -13,11 +13,13 @@
 #error "This file is for HIP and OpenMP AMDGCN device compilation only."
 #endif
 
+#if !defined(__HIPCC_RTC__)
 #if defined(__cplusplus)
 #include <algorithm>
 #endif
 #include <limits.h>
 #include <stdint.h>
+#endif // __HIPCC_RTC__
 
 // __DEVICE__ is a helper macro with common set of attributes for the wrappers
 // we implement in this file. We need static in order to avoid emitting unused
@@ -1372,6 +1374,7 @@ __DEVICE__
 double min(double __x, double __y) { return fmin(__x, __y); }
 
 #ifndef __OPENMP_AMDGCN__
+#if !defined(__HIPCC_RTC__)
 __host__ inline static int min(int __arg1, int __arg2) {
   return std::min(__arg1, __arg2);
 }
@@ -1379,6 +1382,7 @@ __host__ inline static int min(int __arg1, int __arg2) {
 __host__ inline static int max(int __arg1, int __arg2) {
   return std::max(__arg1, __arg2);
 }
+#endif // __HIPCC_RTC__
 #endif
 #endif // defined(__cplusplus)
 

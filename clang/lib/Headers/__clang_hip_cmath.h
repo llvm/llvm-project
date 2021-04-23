@@ -14,6 +14,7 @@
 #error "This file is for HIP and OpenMP AMDGCN device compilation only."
 #endif
 
+#if !defined(__HIPCC_RTC__)
 #if defined(__cplusplus)
 #include <limits>
 #include <type_traits>
@@ -21,6 +22,7 @@
 #endif
 #include <limits.h>
 #include <stdint.h>
+#endif // __HIPCC_RTC__
 
 // __DEVICE__ is a helper macro with common set of attributes for the wrappers
 // we implement in this file. We need static in order to avoid emitting unused
