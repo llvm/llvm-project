@@ -117,3 +117,56 @@ define <2 x i32> @mask_one_bit_splat(<2 x i32> %x, <2 x i32>* %p) {
   %r = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a)
   ret <2 x i32> %r
 }
+
+define i32 @_parity_of_not(i32 %x) {
+; CHECK-LABEL: @_parity_of_not(
+; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[CNT:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[NEG]]), !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[CNT]], 1
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %neg = xor i32 %x, -1
+  %cnt = tail call i32 @llvm.ctpop.i32(i32 %neg)
+  %r = and i32 %cnt, 1
+  ret i32 %r
+}
+
+
+define <2 x i32> @_parity_of_not_vec(<2 x i32> %x) {
+; CHECK-LABEL: @_parity_of_not_vec(
+; CHECK-NEXT:    [[NEG:%.*]] = xor <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[CNT:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[NEG]])
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[CNT]], <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %neg = xor <2 x i32> %x, <i32 -1 ,i32 -1>
+  %cnt = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %neg)
+  %r = and <2 x i32> %cnt, <i32 1 ,i32 1>
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @_parity_of_not_undef(<2 x i32> %x) {
+; CHECK-LABEL: @_parity_of_not_undef(
+; CHECK-NEXT:    [[NEG:%.*]] = xor <2 x i32> [[X:%.*]], <i32 undef, i32 -1>
+; CHECK-NEXT:    [[CNT:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[NEG]])
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[CNT]], <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %neg = xor <2 x i32> %x, <i32 undef ,i32 -1>
+  %cnt = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %neg)
+  %r = and <2 x i32> %cnt, <i32 1 ,i32 1>
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @_parity_of_not_undef2(<2 x i32> %x) {
+; CHECK-LABEL: @_parity_of_not_undef2(
+; CHECK-NEXT:    [[NEG:%.*]] = xor <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[CNT:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[NEG]])
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[CNT]], <i32 1, i32 undef>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %neg = xor <2 x i32> %x, <i32 -1 ,i32 -1>
+  %cnt = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %neg)
+  %r = and <2 x i32> %cnt, <i32 1 ,i32 undef>
+  ret <2 x i32> %r
+}
