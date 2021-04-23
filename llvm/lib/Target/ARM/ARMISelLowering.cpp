@@ -17177,9 +17177,10 @@ bool ARMTargetLowering::allowTruncateForTailCall(Type *Ty1, Type *Ty2) const {
   return true;
 }
 
-int ARMTargetLowering::getScalingFactorCost(const DataLayout &DL,
-                                                const AddrMode &AM, Type *Ty,
-                                                unsigned AS) const {
+InstructionCost ARMTargetLowering::getScalingFactorCost(const DataLayout &DL,
+                                                        const AddrMode &AM,
+                                                        Type *Ty,
+                                                        unsigned AS) const {
   if (isLegalAddressingMode(DL, AM, Ty, AS)) {
     if (Subtarget->hasFPAO())
       return AM.Scale < 0 ? 1 : 0; // positive offsets execute faster
