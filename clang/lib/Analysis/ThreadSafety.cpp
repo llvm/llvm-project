@@ -2207,27 +2207,25 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &FSet1,
 
   // Find locks in FSet2 that conflict or are not in FSet1, and warn.
   for (const auto &Fact : FSet2) {
-    const FactEntry *LDat1 = nullptr;
-    const FactEntry *LDat2 = &FactMan[Fact];
-    FactSet::iterator Iter1  = FSet1.findLockIter(FactMan, *LDat2);
-    if (Iter1 != FSet1.end()) LDat1 = &FactMan[*Iter1];
+    const FactEntry &LDat2 = FactMan[Fact];
 
-    if (LDat1) {
-      if (LDat1->kind() != LDat2->kind()) {
-        Handler.handleExclusiveAndShared("mutex", LDat2->toString(),
-                                         LDat2->loc(), LDat1->loc());
-        if (Modify && LDat1->kind() != LK_Exclusive) {
+    FactSet::iterator Iter1 = FSet1.findLockIter(FactMan, LDat2);
+    if (Iter1 != FSet1.end()) {
+      const FactEntry &LDat1 = FactMan[*Iter1];
+      if (LDat1.kind() != LDat2.kind()) {
+        Handler.handleExclusiveAndShared("mutex", LDat2.toString(), LDat2.loc(),
+                                         LDat1.loc());
+        if (Modify && LDat1.kind() != LK_Exclusive) {
           // Take the exclusive lock, which is the one in FSet2.
           *Iter1 = Fact;
         }
-      }
-      else if (Modify && LDat1->asserted() && !LDat2->asserted()) {
+      } else if (Modify && LDat1.asserted() && !LDat2.asserted()) {
         // The non-asserted lock in FSet2 is the one we want to track.
         *Iter1 = Fact;
       }
     } else {
-      LDat2->handleRemovalFromIntersection(FSet2, FactMan, JoinLoc, LEK1,
-                                           Handler);
+      LDat2.handleRemovalFromIntersection(FSet2, FactMan, JoinLoc, LEK1,
+                                          Handler);
     }
   }
 
