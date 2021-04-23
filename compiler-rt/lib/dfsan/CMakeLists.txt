@@ -7,6 +7,7 @@ set(DFSAN_RTL_SOURCES
   dfsan_chained_origin_depot.cpp
   dfsan_custom.cpp
   dfsan_interceptors.cpp
+  dfsan_new_delete.cpp
   dfsan_thread.cpp
   )
 
