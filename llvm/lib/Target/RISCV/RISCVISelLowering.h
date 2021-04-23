@@ -194,6 +194,8 @@ enum NodeType : unsigned {
   SMAX_VL,
   UMIN_VL,
   UMAX_VL,
+  FMINNUM_VL,
+  FMAXNUM_VL,
   MULHS_VL,
   MULHU_VL,
   FP_TO_SINT_VL,
