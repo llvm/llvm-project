@@ -1766,7 +1766,7 @@ correctly in any circumstances. It can be used if:
   metaprogramming algorithms to be able to specify/detect types generically.
 
 - the generated kernel binary does not contain indirect calls because they
-  are eliminated using compiler optimizations e.g. devirtualization. 
+  are eliminated using compiler optimizations e.g. devirtualization.
 
 - the selected target supports the function pointer like functionality e.g.
   most CPU targets.
@@ -2311,6 +2311,30 @@ argument.
   int *pb =__builtin_preserve_access_index(&v->c[3].b);
   __builtin_preserve_access_index(v->j);
 
+``__builtin_unique_stable_name``
+------------------------
+
+``__builtin_unique_stable_name()`` is a builtin that takes a type or expression and
+produces a string literal containing a unique name for the type (or type of the
+expression) that is stable across split compilations.
+
+In cases where the split compilation needs to share a unique token for a type
+across the boundary (such as in an offloading situation), this name can be used
+for lookup purposes.
+
+This builtin is superior to RTTI for this purpose for two reasons.  First, this
+value is computed entirely at compile time, so it can be used in constant
+expressions. Second, this value encodes lambda functions based on line-number
+rather than the order in which it appears in a function. This is valuable
+because it is stable in cases where an unrelated lambda is introduced
+conditionally in the same function.
+
+The current implementation of this builtin uses a slightly modified Itanium
+Mangler to produce the unique name. The lambda ordinal is replaced with one or
+more line/column pairs in the format ``LINE->COL``, separated with a ``~``
+character. Typically, only one pair will be included, however in the case of
+macro expansions the entire macro expansion stack is expressed.
+
 Multiprecision Arithmetic Builtins
 ----------------------------------
 
@@ -2505,7 +2529,7 @@ Guaranteed inlined copy
 ``__builtin_memcpy_inline`` has been designed as a building block for efficient
 ``memcpy`` implementations. It is identical to ``__builtin_memcpy`` but also
 guarantees not to call any external functions. See LLVM IR `llvm.memcpy.inline
-<https://llvm.org/docs/LangRef.html#llvm-memcpy-inline-intrinsic>`_ intrinsic 
+<https://llvm.org/docs/LangRef.html#llvm-memcpy-inline-intrinsic>`_ intrinsic
 for more information.
 
 This is useful to implement a custom version of ``memcpy``, implement a
