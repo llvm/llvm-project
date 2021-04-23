@@ -5176,9 +5176,17 @@ public:
   ExprResult ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind);
   ExprResult ActOnIntegerConstant(SourceLocation Loc, uint64_t Val);
 
+  ExprResult BuildUniqueStableNameExpr(SourceLocation OpLoc,
+                                       SourceLocation LParen,
+                                       SourceLocation RParen,
+                                       TypeSourceInfo *TSI);
+  ExprResult BuildUniqueStableNameExpr(SourceLocation OpLoc,
+                                       SourceLocation LParen,
+                                       SourceLocation RParen, Expr *E);
   ExprResult ActOnUniqueStableNameExpr(SourceLocation OpLoc,
                                        SourceLocation LParen,
-                                       SourceLocation RParen, ParsedType Ty);
+                                       SourceLocation RParen,
+                                       ParsedType ParsedTy);
   ExprResult ActOnUniqueStableNameExpr(SourceLocation OpLoc,
                                        SourceLocation LParen,
                                        SourceLocation RParen, Expr *Operand);

@@ -1190,6 +1190,17 @@ void StmtProfiler::VisitDeclRefExpr(const DeclRefExpr *S) {
   }
 }
 
+void StmtProfiler::VisitUniqueStableNameExpr(const UniqueStableNameExpr *S) {
+  // TODO: ERICH: is this how this is supposed to work?  I'm not sure what this
+  // is doing.
+  VisitExpr(S);
+  ID.AddBoolean(S->isExpr());
+  if (S->isExpr())
+    VisitStmt(S->getExpr());
+  else
+    VisitType(S->getTypeSourceInfo()->getType());
+}
+
 void StmtProfiler::VisitPredefinedExpr(const PredefinedExpr *S) {
   VisitExpr(S);
   ID.AddInteger(S->getIdentKind());
@@ -2067,7 +2078,7 @@ void StmtProfiler::VisitSizeOfPackExpr(const SizeOfPackExpr *S) {
   VisitDecl(S->getPack());
   if (S->isPartiallySubstituted()) {
     auto Args = S->getPartialArguments();
-    ID.AddInteger(Args.size());
+
     for (const auto &TA : Args)
       VisitTemplateArgument(TA);
   } else {

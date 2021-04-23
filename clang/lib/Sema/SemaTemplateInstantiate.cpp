@@ -1076,6 +1076,7 @@ namespace {
 
     const LoopHintAttr *TransformLoopHintAttr(const LoopHintAttr *LH);
 
+    ExprResult TransformUniqueStableNameExpr(UniqueStableNameExpr *E);
     ExprResult TransformPredefinedExpr(PredefinedExpr *E);
     ExprResult TransformDeclRefExpr(DeclRefExpr *E);
     ExprResult TransformCXXDefaultArgExpr(CXXDefaultArgExpr *E);
@@ -1417,6 +1418,19 @@ TemplateName TemplateInstantiator::TransformTemplateName(
   return inherited::TransformTemplateName(SS, Name, NameLoc, ObjectType,
                                           FirstQualifierInScope,
                                           AllowInjectedClassName);
+}
+
+ExprResult
+TemplateInstantiator::TransformUniqueStableNameExpr(UniqueStableNameExpr *E) {
+  // Build automatically changes to the non-dependent version in the 'Expr'
+  // overload.
+  if (E->isExpr())
+    return getSema().BuildUniqueStableNameExpr(
+        E->getLocation(), E->getLParenLocation(), E->getRParenLocation(),
+        E->getExpr());
+  return getSema().BuildUniqueStableNameExpr(
+      E->getLocation(), E->getLParenLocation(), E->getRParenLocation(),
+      E->getTypeSourceInfo());
 }
 
 ExprResult

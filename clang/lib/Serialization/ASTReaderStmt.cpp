@@ -579,6 +579,21 @@ void ASTStmtReader::VisitConstantExpr(ConstantExpr *E) {
   E->setSubExpr(Record.readSubExpr());
 }
 
+void ASTStmtReader::VisitUniqueStableNameExpr(UniqueStableNameExpr *E) {
+  VisitExpr(E);
+
+  bool IsExpr = Record.readBool();
+  assert(E->isExpr() == IsExpr && "Wrong unique-stable-name trailing type");
+  E->setLocation(readSourceLocation());
+  E->setLParenLocation(readSourceLocation());
+  E->setRParenLocation(readSourceLocation());
+
+  if (IsExpr)
+    E->setExpr(Record.readExpr());
+  else
+    E->setTypeSourceInfo(Record.readTypeSourceInfo());
+}
+
 void ASTStmtReader::VisitPredefinedExpr(PredefinedExpr *E) {
   VisitExpr(E);
   bool HasFunctionName = Record.readInt();
@@ -2799,6 +2814,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = ConstantExpr::CreateEmpty(
           Context, static_cast<ConstantExpr::ResultStorageKind>(
                        /*StorageKind=*/Record[ASTStmtReader::NumExprFields]));
+      break;
+
+    case EXPR_UNIQUESTABLENAME:
+      S = UniqueStableNameExpr::CreateEmpty(
+          Context, /*IsExpr*/ Record[ASTStmtReader::NumExprFields]);
       break;
 
     case EXPR_PREDEFINED:

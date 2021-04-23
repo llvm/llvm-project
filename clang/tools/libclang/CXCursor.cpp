@@ -338,6 +338,10 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::RecoveryExprClass:
     K = CXCursor_UnexposedExpr;
     break;
+  case Stmt::UniqueStableNameExprClass:
+    // TODO: ERICH: Figureout what a CXCursor is, and how to expose it here.
+    K = CXCursor_NotImplemented;
+    break;
 
   case Stmt::OpaqueValueExprClass:
     if (Expr *Src = cast<OpaqueValueExpr>(S)->getSourceExpr())
