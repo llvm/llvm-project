@@ -10,12 +10,15 @@ entry:
   ret i32 %tmp
 }
 
-!llvm.module.flags = !{!0}
+!llvm.module.flags = !{!0, !1}
 
 ;; Due to -fasynchronous-unwind-tables.
 !0 = !{i32 7, !"uwtable", i32 1}
 
+;; Due to -fno-omit-frame-pointer.
+!1 = !{i32 7, !"frame-pointer", i32 2}
+
 ;; Set the uwtable attribute on ctor/dtor.
 ; CHECK: define internal void @asan.module_ctor() #[[#ATTR:]]
 ; CHECK: define internal void @asan.module_dtor() #[[#ATTR]]
-; CHECK: attributes #[[#ATTR]] = { nounwind uwtable }
+; CHECK: attributes #[[#ATTR]] = { nounwind uwtable "frame-pointer"="all" }
