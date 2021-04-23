@@ -160,7 +160,7 @@ public:
   bool isBundleLoader;
 
 private:
-  template <class LP> void parse(DylibFile *umbrella = nullptr);
+  template <class LP> void parse(DylibFile *umbrella);
 };
 
 // .a file
