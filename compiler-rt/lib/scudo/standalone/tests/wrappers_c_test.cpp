@@ -94,6 +94,18 @@ TEST(ScudoWrappersCTest, Calloc) {
   EXPECT_EQ(errno, ENOMEM);
 }
 
+TEST(ScudoWrappersCTest, SmallAlign) {
+  void *P;
+  for (size_t Size = 1; Size <= 0x10000; Size <<= 1) {
+    for (size_t Align = 1; Align <= 0x10000; Align <<= 1) {
+      for (size_t Count = 0; Count < 3; ++Count) {
+        P = memalign(Align, Size);
+        EXPECT_TRUE(reinterpret_cast<uintptr_t>(P) % Align == 0);
+      }
+    }
+  }
+}
+
 TEST(ScudoWrappersCTest, Memalign) {
   void *P;
   for (size_t I = FIRST_32_SECOND_64(2U, 3U); I <= 18U; I++) {
