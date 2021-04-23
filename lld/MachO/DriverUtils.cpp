@@ -188,8 +188,8 @@ static DenseMap<CachedHashStringRef, DylibFile *> loadedDylibs;
 Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
                                        DylibFile *umbrella,
                                        bool isBundleLoader) {
-  StringRef path = mbref.getBufferIdentifier();
-  DylibFile *&file = loadedDylibs[CachedHashStringRef(path)];
+  CachedHashStringRef path(mbref.getBufferIdentifier());
+  DylibFile *file = loadedDylibs[path];
   if (file)
     return file;
 
@@ -209,6 +209,11 @@ Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
            magic == file_magic::macho_bundle);
     file = make<DylibFile>(mbref, umbrella, isBundleLoader);
   }
+  // Note that DylibFile's ctor may recursively invoke loadDylib(), which can
+  // cause loadedDylibs to get resized and its iterators invalidated. As such,
+  // we redo the key lookup here instead of caching an iterator from our earlier
+  // lookup at the start of the function.
+  loadedDylibs[path] = file;
   return file;
 }
 
