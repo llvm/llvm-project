@@ -182,3 +182,93 @@ define <2 x i32> @_parity_of_not_undef2(<2 x i32> %x) {
   %r = and <2 x i32> %cnt, <i32 1 ,i32 undef>
   ret <2 x i32> %r
 }
+
+; PR48999
+define i32 @ctpop_add(i32 %a, i32 %b) {
+; CHECK-LABEL: @ctpop_add(
+; CHECK-NEXT:    [[AND8:%.*]] = lshr i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[CTPOP1:%.*]] = and i32 [[AND8]], 1
+; CHECK-NEXT:    [[AND2:%.*]] = lshr i32 [[B:%.*]], 1
+; CHECK-NEXT:    [[CTPOP2:%.*]] = and i32 [[AND2]], 1
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[CTPOP1]], [[CTPOP2]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %and8 = and i32 %a, 8
+  %ctpop1 = tail call i32 @llvm.ctpop.i32(i32 %and8)
+  %and2 = and i32 %b, 2
+  %ctpop2 = tail call i32 @llvm.ctpop.i32(i32 %and2)
+  %res = add i32 %ctpop1, %ctpop2
+  ret i32 %res
+}
+
+define i32 @ctpop_add_no_common_bits(i32 %a, i32 %b) {
+; CHECK-LABEL: @ctpop_add_no_common_bits(
+; CHECK-NEXT:    [[SHL16:%.*]] = shl i32 [[B:%.*]], 16
+; CHECK-NEXT:    [[CTPOP1:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[SHL16]]), !range [[RNG3:![0-9]+]]
+; CHECK-NEXT:    [[LSHL16:%.*]] = lshr i32 [[B]], 16
+; CHECK-NEXT:    [[CTPOP2:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[LSHL16]]), !range [[RNG3]]
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[CTPOP1]], [[CTPOP2]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %shl16 = shl i32 %b, 16
+  %ctpop1 = tail call i32 @llvm.ctpop.i32(i32 %shl16)
+  %lshl16 = lshr i32 %b, 16
+  %ctpop2 = tail call i32 @llvm.ctpop.i32(i32 %lshl16)
+  %res = add i32 %ctpop1, %ctpop2
+  ret i32 %res
+}
+
+define <2 x i32> @ctpop_add_no_common_bits_vec(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @ctpop_add_no_common_bits_vec(
+; CHECK-NEXT:    [[SHL16:%.*]] = shl <2 x i32> [[A:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[CTPOP1:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHL16]])
+; CHECK-NEXT:    [[LSHL16:%.*]] = lshr <2 x i32> [[B:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[CTPOP2:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[LSHL16]])
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <2 x i32> [[CTPOP1]], [[CTPOP2]]
+; CHECK-NEXT:    ret <2 x i32> [[RES]]
+;
+  %shl16 = shl <2 x i32> %a, <i32 16, i32 16>
+  %ctpop1 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %shl16)
+  %lshl16 = lshr <2 x i32> %b, <i32 16, i32 16>
+  %ctpop2 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %lshl16)
+  %res = add <2 x i32> %ctpop1, %ctpop2
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @ctpop_add_no_common_bits_vec_use(<2 x i32> %a, <2 x i32> %b, <2 x i32>* %p) {
+; CHECK-LABEL: @ctpop_add_no_common_bits_vec_use(
+; CHECK-NEXT:    [[SHL16:%.*]] = shl <2 x i32> [[A:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[CTPOP1:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHL16]])
+; CHECK-NEXT:    [[LSHL16:%.*]] = lshr <2 x i32> [[B:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[CTPOP2:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[LSHL16]])
+; CHECK-NEXT:    store <2 x i32> [[CTPOP2]], <2 x i32>* [[P:%.*]], align 8
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <2 x i32> [[CTPOP1]], [[CTPOP2]]
+; CHECK-NEXT:    ret <2 x i32> [[RES]]
+;
+  %shl16 = shl <2 x i32> %a, <i32 16, i32 16>
+  %ctpop1 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %shl16)
+  %lshl16 = lshr <2 x i32> %b, <i32 16, i32 16>
+  %ctpop2 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %lshl16)
+  store <2 x i32> %ctpop2, <2 x i32>* %p
+  %res = add <2 x i32> %ctpop1, %ctpop2
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @ctpop_add_no_common_bits_vec_use2(<2 x i32> %a, <2 x i32> %b, <2 x i32>* %p) {
+; CHECK-LABEL: @ctpop_add_no_common_bits_vec_use2(
+; CHECK-NEXT:    [[SHL16:%.*]] = shl <2 x i32> [[A:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[CTPOP1:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHL16]])
+; CHECK-NEXT:    store <2 x i32> [[CTPOP1]], <2 x i32>* [[P:%.*]], align 8
+; CHECK-NEXT:    [[LSHL16:%.*]] = lshr <2 x i32> [[B:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[CTPOP2:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[LSHL16]])
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <2 x i32> [[CTPOP1]], [[CTPOP2]]
+; CHECK-NEXT:    ret <2 x i32> [[RES]]
+;
+  %shl16 = shl <2 x i32> %a, <i32 16, i32 16>
+  %ctpop1 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %shl16)
+  store <2 x i32> %ctpop1, <2 x i32>* %p
+  %lshl16 = lshr <2 x i32> %b, <i32 16, i32 16>
+  %ctpop2 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %lshl16)
+  %res = add <2 x i32> %ctpop1, %ctpop2
+  ret <2 x i32> %res
+}
