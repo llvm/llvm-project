@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef TEST_STD_CONCEPTS_COMPARISON_TYPES_H
-#define TEST_STD_CONCEPTS_COMPARISON_TYPES_H
+#ifndef TEST_SUPPORT_COMPARE_TYPES_H
+#define TEST_SUPPORT_COMPARE_TYPES_H
 
 #include <compare>
 #include <concepts>
@@ -23,8 +23,7 @@ struct cxx20_member_eq {
 };
 
 struct cxx20_friend_eq {
-  friend bool operator==(cxx20_friend_eq const&,
-                         cxx20_friend_eq const&) = default;
+  friend bool operator==(cxx20_friend_eq const&, cxx20_friend_eq const&) = default;
 };
 
 struct member_three_way_comparable {
@@ -32,8 +31,7 @@ struct member_three_way_comparable {
 };
 
 struct friend_three_way_comparable {
-  friend auto operator<=>(friend_three_way_comparable const&,
-                          friend_three_way_comparable const&) = default;
+  friend auto operator<=>(friend_three_way_comparable const&, friend_three_way_comparable const&) = default;
 };
 
 struct explicit_operators {
@@ -43,16 +41,11 @@ struct explicit_operators {
   friend bool operator>(explicit_operators, explicit_operators) noexcept;
   friend bool operator<=(explicit_operators, explicit_operators) noexcept;
   friend bool operator>=(explicit_operators, explicit_operators) noexcept;
-  friend bool operator<=>(explicit_operators, explicit_operators) noexcept;
 
-  friend bool operator==(explicit_operators const&,
-                         equality_comparable_with_ec1 const&) noexcept;
-  friend bool operator==(equality_comparable_with_ec1 const&,
-                         explicit_operators const&) noexcept;
-  friend bool operator!=(explicit_operators const&,
-                         equality_comparable_with_ec1 const&) noexcept;
-  friend bool operator!=(equality_comparable_with_ec1 const&,
-                         explicit_operators const&) noexcept;
+  friend bool operator==(explicit_operators const&, equality_comparable_with_ec1 const&) noexcept;
+  friend bool operator==(equality_comparable_with_ec1 const&, explicit_operators const&) noexcept;
+  friend bool operator!=(explicit_operators const&, equality_comparable_with_ec1 const&) noexcept;
+  friend bool operator!=(equality_comparable_with_ec1 const&, explicit_operators const&) noexcept;
 };
 
 struct different_return_types {
@@ -76,8 +69,7 @@ struct boolean {
 };
 
 struct one_member_one_friend {
-  friend boolean operator==(one_member_one_friend,
-                            one_member_one_friend) noexcept;
+  friend boolean operator==(one_member_one_friend, one_member_one_friend) noexcept;
   boolean operator!=(one_member_one_friend) const noexcept;
 
   operator explicit_operators() const noexcept;
@@ -208,51 +200,39 @@ struct wrong_return_type {
 };
 
 struct cxx20_member_eq_operator_with_deleted_ne {
-  bool
-  operator==(cxx20_member_eq_operator_with_deleted_ne const&) const = default;
-  bool
-  operator!=(cxx20_member_eq_operator_with_deleted_ne const&) const = delete;
+  bool operator==(cxx20_member_eq_operator_with_deleted_ne const&) const = default;
+  bool operator!=(cxx20_member_eq_operator_with_deleted_ne const&) const = delete;
 };
 
 struct cxx20_friend_eq_operator_with_deleted_ne {
-  friend bool
-  operator==(cxx20_friend_eq_operator_with_deleted_ne const&,
-             cxx20_friend_eq_operator_with_deleted_ne const&) = default;
-  friend bool
-  operator!=(cxx20_friend_eq_operator_with_deleted_ne const&,
-             cxx20_friend_eq_operator_with_deleted_ne const&) = delete;
+  friend bool operator==(cxx20_friend_eq_operator_with_deleted_ne const&,
+                         cxx20_friend_eq_operator_with_deleted_ne const&) = default;
+  friend bool operator!=(cxx20_friend_eq_operator_with_deleted_ne const&,
+                         cxx20_friend_eq_operator_with_deleted_ne const&) = delete;
 };
 
 struct member_three_way_comparable_with_deleted_eq {
-  auto operator<=>(member_three_way_comparable_with_deleted_eq const&) const =
-      default;
-  bool
-  operator==(member_three_way_comparable_with_deleted_eq const&) const = delete;
+  auto operator<=>(member_three_way_comparable_with_deleted_eq const&) const = default;
+  bool operator==(member_three_way_comparable_with_deleted_eq const&) const = delete;
 };
 
 struct member_three_way_comparable_with_deleted_ne {
-  auto operator<=>(member_three_way_comparable_with_deleted_ne const&) const =
-      default;
-  bool
-  operator!=(member_three_way_comparable_with_deleted_ne const&) const = delete;
+  auto operator<=>(member_three_way_comparable_with_deleted_ne const&) const = default;
+  bool operator!=(member_three_way_comparable_with_deleted_ne const&) const = delete;
 };
 
 struct friend_three_way_comparable_with_deleted_eq {
-  friend auto
-  operator<=>(friend_three_way_comparable_with_deleted_eq const&,
-              friend_three_way_comparable_with_deleted_eq const&) = default;
-  friend bool
-  operator==(friend_three_way_comparable_with_deleted_eq const&,
-             friend_three_way_comparable_with_deleted_eq const&) = delete;
+  friend auto operator<=>(friend_three_way_comparable_with_deleted_eq const&,
+                          friend_three_way_comparable_with_deleted_eq const&) = default;
+  friend bool operator==(friend_three_way_comparable_with_deleted_eq const&,
+                         friend_three_way_comparable_with_deleted_eq const&) = delete;
 };
 
 struct friend_three_way_comparable_with_deleted_ne {
-  friend auto
-  operator<=>(friend_three_way_comparable_with_deleted_ne const&,
-              friend_three_way_comparable_with_deleted_ne const&) = default;
-  friend bool
-  operator!=(friend_three_way_comparable_with_deleted_ne const&,
-             friend_three_way_comparable_with_deleted_ne const&) = delete;
+  friend auto operator<=>(friend_three_way_comparable_with_deleted_ne const&,
+                          friend_three_way_comparable_with_deleted_ne const&) = default;
+  friend bool operator!=(friend_three_way_comparable_with_deleted_ne const&,
+                         friend_three_way_comparable_with_deleted_ne const&) = delete;
 };
 
 struct one_way_eq {
@@ -270,9 +250,7 @@ struct one_way_ne {
 
   operator explicit_operators() const;
 };
-static_assert(requires(explicit_operators const x, one_way_ne const y) {
-  x != y;
-});
+static_assert(requires(explicit_operators const x, one_way_ne const y) { x != y; });
 
 struct explicit_bool {
   explicit operator bool() const noexcept;
@@ -283,10 +261,8 @@ struct totally_ordered_with_others {
 };
 
 struct no_lt_not_totally_ordered_with {
-  [[nodiscard]] bool
-  operator==(no_lt_not_totally_ordered_with const&) const = default;
-  [[nodiscard]] auto
-  operator<=>(no_lt_not_totally_ordered_with const&) const = default;
+  [[nodiscard]] bool operator==(no_lt_not_totally_ordered_with const&) const = default;
+  [[nodiscard]] auto operator<=>(no_lt_not_totally_ordered_with const&) const = default;
   operator totally_ordered_with_others() const noexcept;
 
   [[nodiscard]] bool operator==(totally_ordered_with_others const&) const;
@@ -295,10 +271,8 @@ struct no_lt_not_totally_ordered_with {
 };
 
 struct no_gt_not_totally_ordered_with {
-  [[nodiscard]] bool
-  operator==(no_gt_not_totally_ordered_with const&) const = default;
-  [[nodiscard]] auto
-  operator<=>(no_gt_not_totally_ordered_with const&) const = default;
+  [[nodiscard]] bool operator==(no_gt_not_totally_ordered_with const&) const = default;
+  [[nodiscard]] auto operator<=>(no_gt_not_totally_ordered_with const&) const = default;
   operator totally_ordered_with_others() const noexcept;
 
   [[nodiscard]] bool operator==(totally_ordered_with_others const&) const;
@@ -307,10 +281,8 @@ struct no_gt_not_totally_ordered_with {
 };
 
 struct no_le_not_totally_ordered_with {
-  [[nodiscard]] bool
-  operator==(no_le_not_totally_ordered_with const&) const = default;
-  [[nodiscard]] auto
-  operator<=>(no_le_not_totally_ordered_with const&) const = default;
+  [[nodiscard]] bool operator==(no_le_not_totally_ordered_with const&) const = default;
+  [[nodiscard]] auto operator<=>(no_le_not_totally_ordered_with const&) const = default;
   operator totally_ordered_with_others() const noexcept;
 
   [[nodiscard]] bool operator==(totally_ordered_with_others const&) const;
@@ -319,10 +291,8 @@ struct no_le_not_totally_ordered_with {
 };
 
 struct no_ge_not_totally_ordered_with {
-  [[nodiscard]] bool
-  operator==(no_ge_not_totally_ordered_with const&) const = default;
-  [[nodiscard]] auto
-  operator<=>(no_ge_not_totally_ordered_with const&) const = default;
+  [[nodiscard]] bool operator==(no_ge_not_totally_ordered_with const&) const = default;
+  [[nodiscard]] auto operator<=>(no_ge_not_totally_ordered_with const&) const = default;
   operator totally_ordered_with_others() const noexcept;
 
   [[nodiscard]] bool operator==(totally_ordered_with_others const&) const;
@@ -331,35 +301,28 @@ struct no_ge_not_totally_ordered_with {
 };
 
 struct partial_ordering_totally_ordered_with {
-  [[nodiscard]] auto operator<=>(
-      partial_ordering_totally_ordered_with const&) const noexcept = default;
-  [[nodiscard]] std::partial_ordering
-  operator<=>(totally_ordered_with_others const&) const noexcept;
+  [[nodiscard]] auto operator<=>(partial_ordering_totally_ordered_with const&) const noexcept = default;
+  [[nodiscard]] std::partial_ordering operator<=>(totally_ordered_with_others const&) const noexcept;
 
   operator totally_ordered_with_others() const;
 };
 
 struct weak_ordering_totally_ordered_with {
-  [[nodiscard]] auto operator<=>(
-      weak_ordering_totally_ordered_with const&) const noexcept = default;
-  [[nodiscard]] std::weak_ordering
-  operator<=>(totally_ordered_with_others const&) const noexcept;
+  [[nodiscard]] auto operator<=>(weak_ordering_totally_ordered_with const&) const noexcept = default;
+  [[nodiscard]] std::weak_ordering operator<=>(totally_ordered_with_others const&) const noexcept;
 
   operator totally_ordered_with_others() const;
 };
 
 struct strong_ordering_totally_ordered_with {
-  [[nodiscard]] auto operator<=>(
-      strong_ordering_totally_ordered_with const&) const noexcept = default;
-  [[nodiscard]] std::strong_ordering
-  operator<=>(totally_ordered_with_others const&) const noexcept;
+  [[nodiscard]] auto operator<=>(strong_ordering_totally_ordered_with const&) const noexcept = default;
+  [[nodiscard]] std::strong_ordering operator<=>(totally_ordered_with_others const&) const noexcept;
 
   operator totally_ordered_with_others() const;
 };
 
 struct eq_returns_explicit_bool {
-  friend explicit_bool operator==(eq_returns_explicit_bool,
-                                  eq_returns_explicit_bool);
+  friend explicit_bool operator==(eq_returns_explicit_bool, eq_returns_explicit_bool);
   friend bool operator!=(eq_returns_explicit_bool, eq_returns_explicit_bool);
   friend bool operator<(eq_returns_explicit_bool, eq_returns_explicit_bool);
   friend bool operator>(eq_returns_explicit_bool, eq_returns_explicit_bool);
@@ -368,10 +331,8 @@ struct eq_returns_explicit_bool {
 
   operator totally_ordered_with_others() const;
 
-  friend explicit_bool operator==(eq_returns_explicit_bool,
-                                  totally_ordered_with_others);
-  friend explicit_bool operator==(totally_ordered_with_others,
-                                  eq_returns_explicit_bool);
+  friend explicit_bool operator==(eq_returns_explicit_bool, totally_ordered_with_others);
+  friend explicit_bool operator==(totally_ordered_with_others, eq_returns_explicit_bool);
   friend bool operator!=(eq_returns_explicit_bool, totally_ordered_with_others);
   friend bool operator!=(totally_ordered_with_others, eq_returns_explicit_bool);
   friend bool operator<(eq_returns_explicit_bool, totally_ordered_with_others);
@@ -386,8 +347,7 @@ struct eq_returns_explicit_bool {
 
 struct ne_returns_explicit_bool {
   friend bool operator==(ne_returns_explicit_bool, ne_returns_explicit_bool);
-  friend explicit_bool operator!=(ne_returns_explicit_bool,
-                                  ne_returns_explicit_bool);
+  friend explicit_bool operator!=(ne_returns_explicit_bool, ne_returns_explicit_bool);
   friend bool operator<(ne_returns_explicit_bool, ne_returns_explicit_bool);
   friend bool operator>(ne_returns_explicit_bool, ne_returns_explicit_bool);
   friend bool operator<=(ne_returns_explicit_bool, ne_returns_explicit_bool);
@@ -396,10 +356,8 @@ struct ne_returns_explicit_bool {
   operator totally_ordered_with_others() const;
 
   friend bool operator==(ne_returns_explicit_bool, totally_ordered_with_others);
-  friend explicit_bool operator!=(ne_returns_explicit_bool,
-                                  totally_ordered_with_others);
-  friend explicit_bool operator!=(totally_ordered_with_others,
-                                  ne_returns_explicit_bool);
+  friend explicit_bool operator!=(ne_returns_explicit_bool, totally_ordered_with_others);
+  friend explicit_bool operator!=(totally_ordered_with_others, ne_returns_explicit_bool);
   friend bool operator<(ne_returns_explicit_bool, totally_ordered_with_others);
   friend bool operator<(totally_ordered_with_others, ne_returns_explicit_bool);
   friend bool operator>(ne_returns_explicit_bool, totally_ordered_with_others);
@@ -413,8 +371,7 @@ struct ne_returns_explicit_bool {
 struct lt_returns_explicit_bool {
   friend bool operator==(lt_returns_explicit_bool, lt_returns_explicit_bool);
   friend bool operator!=(lt_returns_explicit_bool, lt_returns_explicit_bool);
-  friend explicit_bool operator<(lt_returns_explicit_bool,
-                                 lt_returns_explicit_bool);
+  friend explicit_bool operator<(lt_returns_explicit_bool, lt_returns_explicit_bool);
   friend bool operator>(lt_returns_explicit_bool, lt_returns_explicit_bool);
   friend bool operator<=(lt_returns_explicit_bool, lt_returns_explicit_bool);
   friend bool operator>=(lt_returns_explicit_bool, lt_returns_explicit_bool);
@@ -424,8 +381,7 @@ struct lt_returns_explicit_bool {
   friend bool operator==(lt_returns_explicit_bool, totally_ordered_with_others);
   friend bool operator!=(lt_returns_explicit_bool, totally_ordered_with_others);
   friend bool operator!=(totally_ordered_with_others, lt_returns_explicit_bool);
-  friend explicit_bool operator<(lt_returns_explicit_bool,
-                                 totally_ordered_with_others);
+  friend explicit_bool operator<(lt_returns_explicit_bool, totally_ordered_with_others);
   friend bool operator<(totally_ordered_with_others, lt_returns_explicit_bool);
   friend bool operator>(lt_returns_explicit_bool, totally_ordered_with_others);
   friend bool operator>(totally_ordered_with_others, lt_returns_explicit_bool);
@@ -439,8 +395,7 @@ struct gt_returns_explicit_bool {
   friend bool operator==(gt_returns_explicit_bool, gt_returns_explicit_bool);
   friend bool operator!=(gt_returns_explicit_bool, gt_returns_explicit_bool);
   friend bool operator<(gt_returns_explicit_bool, gt_returns_explicit_bool);
-  friend explicit_bool operator>(gt_returns_explicit_bool,
-                                 gt_returns_explicit_bool);
+  friend explicit_bool operator>(gt_returns_explicit_bool, gt_returns_explicit_bool);
   friend bool operator<=(gt_returns_explicit_bool, gt_returns_explicit_bool);
   friend bool operator>=(gt_returns_explicit_bool, gt_returns_explicit_bool);
 
@@ -451,8 +406,7 @@ struct gt_returns_explicit_bool {
   friend bool operator!=(totally_ordered_with_others, gt_returns_explicit_bool);
   friend bool operator<(gt_returns_explicit_bool, totally_ordered_with_others);
   friend bool operator<(totally_ordered_with_others, gt_returns_explicit_bool);
-  friend explicit_bool operator>(gt_returns_explicit_bool,
-                                 totally_ordered_with_others);
+  friend explicit_bool operator>(gt_returns_explicit_bool, totally_ordered_with_others);
   friend bool operator>(totally_ordered_with_others, gt_returns_explicit_bool);
   friend bool operator<=(gt_returns_explicit_bool, totally_ordered_with_others);
   friend bool operator<=(totally_ordered_with_others, gt_returns_explicit_bool);
@@ -465,8 +419,7 @@ struct le_returns_explicit_bool {
   friend bool operator!=(le_returns_explicit_bool, le_returns_explicit_bool);
   friend bool operator<(le_returns_explicit_bool, le_returns_explicit_bool);
   friend bool operator>(le_returns_explicit_bool, le_returns_explicit_bool);
-  friend explicit_bool operator<=(le_returns_explicit_bool,
-                                  le_returns_explicit_bool);
+  friend explicit_bool operator<=(le_returns_explicit_bool, le_returns_explicit_bool);
   friend bool operator>=(le_returns_explicit_bool, le_returns_explicit_bool);
 
   operator totally_ordered_with_others() const;
@@ -479,8 +432,7 @@ struct le_returns_explicit_bool {
   friend bool operator>(le_returns_explicit_bool, totally_ordered_with_others);
   friend bool operator>(totally_ordered_with_others, le_returns_explicit_bool);
   friend bool operator<=(le_returns_explicit_bool, totally_ordered_with_others);
-  friend explicit_bool operator<=(totally_ordered_with_others,
-                                  le_returns_explicit_bool);
+  friend explicit_bool operator<=(totally_ordered_with_others, le_returns_explicit_bool);
   friend bool operator>=(le_returns_explicit_bool, totally_ordered_with_others);
   friend bool operator>=(totally_ordered_with_others, le_returns_explicit_bool);
 };
@@ -491,8 +443,7 @@ struct ge_returns_explicit_bool {
   friend bool operator<(ge_returns_explicit_bool, ge_returns_explicit_bool);
   friend bool operator>(ge_returns_explicit_bool, ge_returns_explicit_bool);
   friend bool operator<=(ge_returns_explicit_bool, ge_returns_explicit_bool);
-  friend explicit_bool operator>=(ge_returns_explicit_bool,
-                                  ge_returns_explicit_bool);
+  friend explicit_bool operator>=(ge_returns_explicit_bool, ge_returns_explicit_bool);
 
   operator totally_ordered_with_others() const;
 
@@ -506,8 +457,7 @@ struct ge_returns_explicit_bool {
   friend bool operator<=(ge_returns_explicit_bool, totally_ordered_with_others);
   friend bool operator<=(totally_ordered_with_others, ge_returns_explicit_bool);
   friend bool operator>=(ge_returns_explicit_bool, totally_ordered_with_others);
-  friend explicit_bool operator>=(totally_ordered_with_others,
-                                  ge_returns_explicit_bool);
+  friend explicit_bool operator>=(totally_ordered_with_others, ge_returns_explicit_bool);
 };
 
 struct returns_true_type {
@@ -520,30 +470,18 @@ struct returns_true_type {
 
   operator totally_ordered_with_others() const;
 
-  friend std::true_type operator==(returns_true_type,
-                                   totally_ordered_with_others);
-  friend std::true_type operator==(totally_ordered_with_others,
-                                   returns_true_type);
-  friend std::true_type operator!=(returns_true_type,
-                                   totally_ordered_with_others);
-  friend std::true_type operator!=(totally_ordered_with_others,
-                                   returns_true_type);
-  friend std::true_type operator<(returns_true_type,
-                                  totally_ordered_with_others);
-  friend std::true_type operator<(totally_ordered_with_others,
-                                  returns_true_type);
-  friend std::true_type operator>(returns_true_type,
-                                  totally_ordered_with_others);
-  friend std::true_type operator>(totally_ordered_with_others,
-                                  returns_true_type);
-  friend std::true_type operator<=(returns_true_type,
-                                   totally_ordered_with_others);
-  friend std::true_type operator<=(totally_ordered_with_others,
-                                   returns_true_type);
-  friend std::true_type operator>=(returns_true_type,
-                                   totally_ordered_with_others);
-  friend std::true_type operator>=(totally_ordered_with_others,
-                                   returns_true_type);
+  friend std::true_type operator==(returns_true_type, totally_ordered_with_others);
+  friend std::true_type operator==(totally_ordered_with_others, returns_true_type);
+  friend std::true_type operator!=(returns_true_type, totally_ordered_with_others);
+  friend std::true_type operator!=(totally_ordered_with_others, returns_true_type);
+  friend std::true_type operator<(returns_true_type, totally_ordered_with_others);
+  friend std::true_type operator<(totally_ordered_with_others, returns_true_type);
+  friend std::true_type operator>(returns_true_type, totally_ordered_with_others);
+  friend std::true_type operator>(totally_ordered_with_others, returns_true_type);
+  friend std::true_type operator<=(returns_true_type, totally_ordered_with_others);
+  friend std::true_type operator<=(totally_ordered_with_others, returns_true_type);
+  friend std::true_type operator>=(returns_true_type, totally_ordered_with_others);
+  friend std::true_type operator>=(totally_ordered_with_others, returns_true_type);
 };
 
 struct returns_int_ptr {
@@ -570,4 +508,24 @@ struct returns_int_ptr {
   friend int* operator>=(totally_ordered_with_others, returns_int_ptr);
 };
 
-#endif // TEST_STD_CONCEPTS_COMPARISON_TYPES_H
+struct ForwardingTestObject {
+  constexpr bool operator<(ForwardingTestObject&&) && { return true; }
+  constexpr bool operator<(const ForwardingTestObject&) const& { return false; }
+
+  constexpr bool operator==(ForwardingTestObject&&) && { return true; }
+  constexpr bool operator==(const ForwardingTestObject&) const& { return false; }
+
+  constexpr bool operator!=(ForwardingTestObject&&) && { return true; }
+  constexpr bool operator!=(const ForwardingTestObject&) const& { return false; }
+
+  constexpr bool operator<=(ForwardingTestObject&&) && { return true; }
+  constexpr bool operator<=(const ForwardingTestObject&) const& { return false; }
+
+  constexpr bool operator>(ForwardingTestObject&&) && { return true; }
+  constexpr bool operator>(const ForwardingTestObject&) const& { return false; }
+
+  constexpr bool operator>=(ForwardingTestObject&&) && { return true; }
+  constexpr bool operator>=(const ForwardingTestObject&) const& { return false; }
+};
+
+#endif // TEST_SUPPORT_COMPARE_TYPES_H

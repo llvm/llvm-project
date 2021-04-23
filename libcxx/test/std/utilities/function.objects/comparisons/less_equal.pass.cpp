@@ -30,7 +30,7 @@ int main(int, char**)
     {
         // test total ordering of int* for less_equal<int*> and
         // less_equal<void>.
-        do_pointer_comparison_test<int, std::less_equal>();
+        do_pointer_comparison_test<std::less_equal>();
     }
 #if TEST_STD_VER > 11
     typedef std::less_equal<> F2;

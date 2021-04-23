@@ -29,7 +29,7 @@ int main(int, char**)
     assert(f(6, 36));
     {
         // test total ordering of int* for less<int*> and less<void>.
-        do_pointer_comparison_test<int, std::less>();
+        do_pointer_comparison_test<std::less>();
     }
 #if TEST_STD_VER > 11
     typedef std::less<> F2;
