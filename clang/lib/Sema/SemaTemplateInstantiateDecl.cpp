@@ -554,19 +554,12 @@ static void instantiateDependentAMDGPUWavesPerEUAttr(
 static void instantiateDependentSYCLKernelAttr(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
     const SYCLKernelAttr &Attr, Decl *New) {
-  const auto *FD = cast<FunctionDecl>(New);
-  (void)FD;
-
   // Functions cannot be partially specialized, so if we are being instantiated,
   // we are obviously a complete specialization. Since this attribute is only
   // valid on function template declarations, we know that this is a full
   // instantiation of a kernel.
+  S.AddSYCLKernelLambda(cast<FunctionDecl>(New));
 
-  // TODO: ERICH: get the kernel object type here.
-  // getKernelObjectType
-  // TODO: ERICH: run the itanium mangler with a null-target and a callback that
-  // will save the lambdas we visit.
-  // TODO: ERICH: see the PredefinedExpr::ComputeName for an example.
   New->addAttr(Attr.clone(S.getASTContext()));
 }
 

@@ -173,6 +173,9 @@ public:
 
 class ItaniumMangleContext : public MangleContext {
 public:
+  // TODO: ERICH: this is obviously not going to be sufficient, type will change
+  // during dev.
+  using KernelMangleCallbackTy = void (*)();
   explicit ItaniumMangleContext(ASTContext &C, DiagnosticsEngine &D)
       : MangleContext(C, D, MK_Itanium) {}
 
@@ -195,12 +198,21 @@ public:
 
   virtual void mangleDynamicStermFinalizer(const VarDecl *D, raw_ostream &) = 0;
 
+  // This seemingly has to live here, otherwise the CXXNameMangler won't have
+  // access to it.
+  virtual KernelMangleCallbackTy getKernelMangleCallback() = 0;
+
   static bool classof(const MangleContext *C) {
     return C->getKind() == MK_Itanium;
   }
 
   static ItaniumMangleContext *create(ASTContext &Context,
                                       DiagnosticsEngine &Diags);
+  static ItaniumMangleContext *create(ASTContext &Context,
+                                      DiagnosticsEngine &Diags,
+                                      KernelMangleCallbackTy Callback);
+
+private:
 };
 
 class MicrosoftMangleContext : public MangleContext {

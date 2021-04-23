@@ -8,6 +8,7 @@
 // This implements Semantic Analysis for SYCL constructs.
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/Mangle.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
 
@@ -46,4 +47,17 @@ bool Sema::checkSYCLDeviceFunction(SourceLocation Loc, FunctionDecl *Callee) {
 
   return DiagKind != SemaDiagnosticBuilder::K_Immediate &&
          DiagKind != SemaDiagnosticBuilder::K_ImmediateWithCallStack;
+}
+
+void Sema::AddSYCLKernelLambda(const FunctionDecl *FD) {
+  auto Callback = [](){/*TODO ERICH: Implement*/};
+
+  // TODO: ERICH: get the kernel object type here.
+  // getKernelObjectType
+  QualType Ty;
+  std::unique_ptr<MangleContext> Ctx{ItaniumMangleContext::create(
+      Context, Context.getDiagnostics(), Callback)};
+  llvm::raw_null_ostream Out;
+  Ctx->mangleTypeName(Ty, Out);
+  (void)FD;
 }

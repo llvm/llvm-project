@@ -124,14 +124,16 @@ class ItaniumMangleContextImpl : public ItaniumMangleContext {
   typedef std::pair<const DeclContext*, IdentifierInfo*> DiscriminatorKeyTy;
   llvm::DenseMap<DiscriminatorKeyTy, unsigned> Discriminator;
   llvm::DenseMap<const NamedDecl*, unsigned> Uniquifier;
+  KernelMangleCallbackTy KernelMangleCallback;
 
   bool IsDevCtx = false;
   bool NeedsUniqueInternalLinkageNames = false;
 
 public:
   explicit ItaniumMangleContextImpl(ASTContext &Context,
-                                    DiagnosticsEngine &Diags)
-      : ItaniumMangleContext(Context, Diags) {}
+                                    DiagnosticsEngine &Diags,
+                                    KernelMangleCallbackTy Callback)
+      : ItaniumMangleContext(Context, Diags), KernelMangleCallback(Callback) {}
 
   /// @name Mangler Entry Points
   /// @{
@@ -243,6 +245,10 @@ public:
     Name += llvm::utostr(LambdaId);
     Name += '>';
     return Name;
+  }
+
+  KernelMangleCallbackTy getKernelMangleCallback() override {
+    return KernelMangleCallback;
   }
 
   /// @}
@@ -6281,7 +6287,14 @@ void ItaniumMangleContextImpl::mangleLambdaSig(const CXXRecordDecl *Lambda,
   Mangler.mangleLambdaSig(Lambda);
 }
 
+
 ItaniumMangleContext *
 ItaniumMangleContext::create(ASTContext &Context, DiagnosticsEngine &Diags) {
-  return new ItaniumMangleContextImpl(Context, Diags);
+  // TODO: ERICH: will have to update the default callback here.
+  return new ItaniumMangleContextImpl(Context, Diags, [](){});
+}
+
+ItaniumMangleContext *
+ItaniumMangleContext::create(ASTContext &Context, DiagnosticsEngine &Diags, KernelMangleCallbackTy Callback) {
+  return new ItaniumMangleContextImpl(Context, Diags, Callback);
 }
