@@ -416,17 +416,62 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
                                     InputSection *isec, uint64_t value,
                                     uint64_t size) {
   // Symbol scope is determined by sym.n_type & (N_EXT | N_PEXT):
-  // N_EXT: Global symbols
-  // N_EXT | N_PEXT: Linkage unit (think: dylib) scoped
+  // N_EXT: Global symbols. These go in the symbol table during the link,
+  //        and also in the export table of the output so that the dynamic
+  //        linker sees them.
+  // N_EXT | N_PEXT: Linkage unit (think: dylib) scoped. These go in the
+  //                 symbol table during the link so that duplicates are
+  //                 either reported (for non-weak symbols) or merged
+  //                 (for weak symbols), but they do not go in the export
+  //                 table of the output.
   // N_PEXT: Does not occur in input files in practice,
   //         a private extern must be external.
-  // 0: Translation-unit scoped. These are not in the symbol table.
+  // 0: Translation-unit scoped. These are not in the symbol table during
+  //    link, and not in the export table of the output either.
+
+  bool isWeakDefCanBeHidden =
+      (sym.n_desc & (N_WEAK_DEF | N_WEAK_REF)) == (N_WEAK_DEF | N_WEAK_REF);
 
   if (sym.n_type & (N_EXT | N_PEXT)) {
     assert((sym.n_type & N_EXT) && "invalid input");
+    bool isPrivateExtern = sym.n_type & N_PEXT;
+
+    // lld's behavior for merging symbols is slightly different from ld64:
+    // ld64 picks the winning symbol based on several criteria (see
+    // pickBetweenRegularAtoms() in ld64's SymbolTable.cpp), while lld
+    // just merges metadata and keeps the contents of the first symbol
+    // with that name (see SymbolTable::addDefined). For:
+    // * inline function F in a TU built with -fvisibility-inlines-hidden
+    // * and inline function F in another TU built without that flag
+    // ld64 will pick the one from the file built without
+    // -fvisibility-inlines-hidden.
+    // lld will instead pick the one listed first on the link command line and
+    // give it visibility as if the function was built without
+    // -fvisibility-inlines-hidden.
+    // If both functions have the same contents, this will have the same
+    // behavior. If not, it won't, but the input had an ODR violation in
+    // that case.
+    //
+    // Similarly, merging a symbol
+    // that's isPrivateExtern and not isWeakDefCanBeHidden with one
+    // that's not isPrivateExtern but isWeakDefCanBeHidden technically
+    // should produce one
+    // that's not isPrivateExtern but isWeakDefCanBeHidden. That matters
+    // with ld64's semantics, because it means the non-private-extern
+    // definition will continue to take priority if more private extern
+    // definitions are encountered. With lld's semantics there's no observable
+    // difference between a symbol that's isWeakDefCanBeHidden or one that's
+    // privateExtern -- neither makes it into the dynamic symbol table. So just
+    // promote isWeakDefCanBeHidden to isPrivateExtern here.
+    if (isWeakDefCanBeHidden)
+      isPrivateExtern = true;
+
     return symtab->addDefined(name, isec->file, isec, value, size,
-                              sym.n_desc & N_WEAK_DEF, sym.n_type & N_PEXT);
+                              sym.n_desc & N_WEAK_DEF, isPrivateExtern);
   }
+
+  assert(!isWeakDefCanBeHidden &&
+         "weak_def_can_be_hidden on already-hidden symbol?");
   return make<Defined>(name, isec->file, isec, value, size,
                        sym.n_desc & N_WEAK_DEF,
                        /*isExternal=*/false, /*isPrivateExtern=*/false);
