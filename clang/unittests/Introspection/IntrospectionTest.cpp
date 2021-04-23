@@ -1226,6 +1226,8 @@ STRING_LOCATION_PAIR(Base, getTypeSourceInfo()->getTypeLoc().getLocalSourceRange
 }
 
 TEST(Introspection, SourceLocations_FunctionProtoTypeLoc) {
+  if (!NodeIntrospection::hasIntrospectionSupport())
+    return;
   auto AST =
       buildASTFromCode(R"cpp(
 int foo();
@@ -1241,10 +1243,6 @@ int foo();
 
   const auto *TL = BoundNodes[0].getNodeAs<TypeLoc>("tl");
   auto Result = NodeIntrospection::GetLocations(*TL);
-
-  if (Result.LocationAccessors.empty() && Result.RangeAccessors.empty()) {
-    return;
-  }
 
   auto ExpectedLocations =
       FormatExpected<SourceLocation>(Result.LocationAccessors);
@@ -1290,6 +1288,8 @@ STRING_LOCATION_PAIR(TL, getSourceRange())
 }
 
 TEST(Introspection, SourceLocations_PointerTypeLoc) {
+  if (!NodeIntrospection::hasIntrospectionSupport())
+    return;
   auto AST =
       buildASTFromCode(R"cpp(
 int* i;
@@ -1307,10 +1307,6 @@ int* i;
 
   const auto *TL = BoundNodes[0].getNodeAs<TypeLoc>("tl");
   auto Result = NodeIntrospection::GetLocations(*TL);
-
-  if (Result.LocationAccessors.empty() && Result.RangeAccessors.empty()) {
-    return;
-  }
 
   auto ExpectedLocations =
       FormatExpected<SourceLocation>(Result.LocationAccessors);
@@ -1355,6 +1351,8 @@ STRING_LOCATION_PAIR(TL, getSourceRange())
 #ifndef _WIN32
 // This test doesn't work on windows due to use of the typeof extension.
 TEST(Introspection, SourceLocations_TypeOfTypeLoc) {
+  if (!NodeIntrospection::hasIntrospectionSupport())
+    return;
   auto AST =
       buildASTFromCode(R"cpp(
 typeof (static_cast<void *>(0)) i;
@@ -1372,10 +1370,6 @@ typeof (static_cast<void *>(0)) i;
 
   const auto *TL = BoundNodes[0].getNodeAs<TypeLoc>("tl");
   auto Result = NodeIntrospection::GetLocations(*TL);
-
-  if (Result.LocationAccessors.empty() && Result.RangeAccessors.empty()) {
-    return;
-  }
 
   auto ExpectedLocations =
       FormatExpected<SourceLocation>(Result.LocationAccessors);
