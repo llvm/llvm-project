@@ -849,14 +849,16 @@ let hasSideEffects = 0 in {
                       [(set v2f64:$XT, (int_ppc_vsx_xvcvspdp v4f32:$XB))]>;
   def XVCVSPSXDS : XX2Form<60, 408,
                       (outs vsrc:$XT), (ins vsrc:$XB),
-                      "xvcvspsxds $XT, $XB", IIC_VecFP, []>;
+                      "xvcvspsxds $XT, $XB", IIC_VecFP,
+                      [(set v2i64:$XT, (int_ppc_vsx_xvcvspsxds v4f32:$XB))]>;
   def XVCVSPSXWS : XX2Form<60, 152,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvspsxws $XT, $XB", IIC_VecFP,
                       [(set v4i32:$XT, (any_fp_to_sint v4f32:$XB))]>;
   def XVCVSPUXDS : XX2Form<60, 392,
                       (outs vsrc:$XT), (ins vsrc:$XB),
-                      "xvcvspuxds $XT, $XB", IIC_VecFP, []>;
+                      "xvcvspuxds $XT, $XB", IIC_VecFP,
+                      [(set v2i64:$XT, (int_ppc_vsx_xvcvspuxds v4f32:$XB))]>;
   def XVCVSPUXWS : XX2Form<60, 136,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvspuxws $XT, $XB", IIC_VecFP,

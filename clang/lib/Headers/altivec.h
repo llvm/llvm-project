@@ -3150,6 +3150,90 @@ static __inline__ vector double __ATTRS_o_ai vec_cpsgn(vector double __a,
 #define vec_ctu __builtin_altivec_vctuxs
 #endif
 
+#ifdef __LITTLE_ENDIAN__
+/* vec_ctsl */
+
+#ifdef __VSX__
+#define vec_ctsl(__a, __b)                                                     \
+  _Generic((__a), vector float                                                 \
+           : __extension__({                                                   \
+               vector float __ret =                                            \
+                   (vector float)(__a) *                                       \
+                   (vector float)(vector unsigned)((0x7f + (__b)) << 23);      \
+               __builtin_vsx_xvcvspsxds(                                       \
+                   __builtin_vsx_xxsldwi(__ret, __ret, 1));                    \
+             }),                                                               \
+             vector double                                                     \
+           : __extension__({                                                   \
+             vector double __ret =                                             \
+                 (vector double)(__a) *                                        \
+                 (vector double)(vector unsigned long long)((0x3ffULL + __b)   \
+                                                            << 52);            \
+             __builtin_convertvector(__ret, vector signed long long);          \
+           }))
+
+/* vec_ctul */
+
+#define vec_ctul(__a, __b)                                                     \
+  _Generic((__a), vector float                                                 \
+           : __extension__({                                                   \
+               vector float __ret =                                            \
+                   (vector float)(__a) *                                       \
+                   (vector float)(vector unsigned)((0x7f + (__b)) << 23);      \
+               __builtin_vsx_xvcvspuxds(                                       \
+                   __builtin_vsx_xxsldwi(__ret, __ret, 1));                    \
+             }),                                                               \
+             vector double                                                     \
+           : __extension__({                                                   \
+             vector double __ret =                                             \
+                 (vector double)(__a) *                                        \
+                 (vector double)(vector unsigned long long)((0x3ffULL + __b)   \
+                                                            << 52);            \
+             __builtin_convertvector(__ret, vector unsigned long long);        \
+           }))
+#endif
+#else // __LITTLE_ENDIAN__
+/* vec_ctsl */
+
+#ifdef __VSX__
+#define vec_ctsl(__a, __b)                                                     \
+  _Generic((__a), vector float                                                 \
+           : __extension__({                                                   \
+               vector float __ret =                                            \
+                   (vector float)(__a) *                                       \
+                   (vector float)(vector unsigned)((0x7f + (__b)) << 23);      \
+               __builtin_vsx_xvcvspsxds(__ret);                                \
+             }),                                                               \
+             vector double                                                     \
+           : __extension__({                                                   \
+             vector double __ret =                                             \
+                 (vector double)(__a) *                                        \
+                 (vector double)(vector unsigned long long)((0x3ffULL + __b)   \
+                                                            << 52);            \
+             __builtin_convertvector(__ret, vector signed long long);          \
+           }))
+
+/* vec_ctul */
+
+#define vec_ctul(__a, __b)                                                     \
+  _Generic((__a), vector float                                                 \
+           : __extension__({                                                   \
+               vector float __ret =                                            \
+                   (vector float)(__a) *                                       \
+                   (vector float)(vector unsigned)((0x7f + (__b)) << 23);      \
+               __builtin_vsx_xvcvspuxds(__ret);                                \
+             }),                                                               \
+             vector double                                                     \
+           : __extension__({                                                   \
+             vector double __ret =                                             \
+                 (vector double)(__a) *                                        \
+                 (vector double)(vector unsigned long long)((0x3ffULL + __b)   \
+                                                            << 52);            \
+             __builtin_convertvector(__ret, vector unsigned long long);        \
+           }))
+#endif
+#endif // __LITTLE_ENDIAN__
+
 /* vec_vctuxs */
 
 #define vec_vctuxs __builtin_altivec_vctuxs
