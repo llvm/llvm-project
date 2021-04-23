@@ -887,9 +887,10 @@ template that expands into multiple records.
 .. productionlist::
    MultiClass: "multiclass" `TokIdentifier` [`TemplateArgList`]
              : [":" `ParentMultiClassList`]
-             : "{" `Statement`+ "}"
+             : "{" `MultiClassStatement`+ "}"
    ParentMultiClassList: `MultiClassID` ("," `MultiClassID`)*
    MultiClassID: `TokIdentifier`
+   MultiClassStatement: `Assert` | `Def` | `Defm` | `Defvar` | `Foreach` | `If` | `Let`
 
 As with regular classes, the multiclass has a name and can accept template
 arguments. A multiclass can inherit from other multiclasses, which causes
