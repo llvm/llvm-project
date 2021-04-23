@@ -19,6 +19,16 @@ func @transfer_read_3d(%A : memref<?x?x?x?xf32>,
   return
 }
 
+func @transfer_read_3d_transposed(%A : memref<?x?x?x?xf32>,
+                                  %o: index, %a: index, %b: index, %c: index) {
+  %fm42 = constant -42.0: f32
+  %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42
+      {permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d0, d1)>}
+      : memref<?x?x?x?xf32>, vector<3x5x3xf32>
+  vector.print %f: vector<3x5x3xf32>
+  return
+}
+
 func @transfer_write_3d(%A : memref<?x?x?x?xf32>,
                         %o: index, %a: index, %b: index, %c: index) {
   %fn1 = constant -1.0 : f32
@@ -66,8 +76,11 @@ func @entry() {
       : (memref<?x?x?x?xf32>, index, index, index, index) -> ()
   call @transfer_read_3d(%A, %c0, %c0, %c0, %c0)
       : (memref<?x?x?x?xf32>, index, index, index, index) -> ()
+  call @transfer_read_3d_transposed(%A, %c0, %c0, %c0, %c0)
+      : (memref<?x?x?x?xf32>, index, index, index, index) -> ()
   return
 }
 
 // CHECK: ( ( ( 0, 0, -42 ), ( 2, 3, -42 ), ( 4, 6, -42 ), ( 6, 9, -42 ), ( -42, -42, -42 ) ), ( ( 20, 30, -42 ), ( 22, 33, -42 ), ( 24, 36, -42 ), ( 26, 39, -42 ), ( -42, -42, -42 ) ) )
 // CHECK: ( ( ( 0, 0, -42 ), ( 2, -1, -42 ), ( 4, -1, -42 ), ( 6, -1, -42 ), ( -42, -42, -42 ) ), ( ( 20, 30, -42 ), ( 22, -1, -42 ), ( 24, -1, -42 ), ( 26, -1, -42 ), ( -42, -42, -42 ) ) )
+// CHECK: ( ( ( 0, 20, 40 ), ( 0, 20, 40 ), ( 0, 20, 40 ), ( 0, 20, 40 ), ( 0, 20, 40 ) ), ( ( 0, 30, 60 ), ( 0, 30, 60 ), ( 0, 30, 60 ), ( 0, 30, 60 ), ( 0, 30, 60 ) ), ( ( -42, -42, -42 ), ( -42, -42, -42 ), ( -42, -42, -42 ), ( -42, -42, -42 ), ( -42, -42, -42 ) ) )
