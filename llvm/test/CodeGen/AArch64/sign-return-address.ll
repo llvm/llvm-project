@@ -122,3 +122,33 @@ define i32 @leaf_sign_all_b_key(i32 %x) "sign-return-address"="all" "sign-return
 define i32 @leaf_sign_all_v83_b_key(i32 %x) "sign-return-address"="all" "target-features"="+v8.3a" "sign-return-address-key"="b_key" {
   ret i32 %x
 }
+
+; CHECK-LABEL: @leaf_sign_all_a_key_bti
+; CHECK-NOT:   hint #34
+; CHECK:       hint #25
+; CHECK:       hint #29
+; CHECK-V83A:  paciasp
+; CHECK-V83A:  retaa
+define i32 @leaf_sign_all_a_key_bti(i32 %x) "sign-return-address"="all" "sign-return-address-key"="a_key" "branch-target-enforcement"="true"{
+  ret i32 %x
+}
+
+; CHECK-LABEL: @leaf_sign_all_b_key_bti
+; CHECK-NOT:   hint #34
+; CHECK:       hint #27
+; CHECK:       hint #31
+; CHECK-V83A:  pacibsp
+; CHECK-V83A:  retab
+define i32 @leaf_sign_all_b_key_bti(i32 %x) "sign-return-address"="all" "sign-return-address-key"="b_key" "branch-target-enforcement"="true"{
+  ret i32 %x
+}
+
+; CHECK-LABEL: @leaf_sign_all_v83_b_key_bti
+; CHECK-NOT:   hint #34
+; CHECK: pacibsp
+; CHECK-NOT: ret
+; CHECK: retab
+; CHECK-NOT: ret
+define i32 @leaf_sign_all_v83_b_key_bti(i32 %x) "sign-return-address"="all" "target-features"="+v8.3a" "sign-return-address-key"="b_key" "branch-target-enforcement"="true" {
+  ret i32 %x
+}
