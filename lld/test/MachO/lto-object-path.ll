@@ -19,7 +19,7 @@
 ; CHECK-NEXT:     0000000000000000                - 01 0000    SO
 ; CHECK-NEXT:     {{[0-9a-f]+}}                   T _main
 
-target triple = "x86_64-apple-macosx10.0.0"
+target triple = "x86_64-apple-macosx10.15.0"
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @main() #0 !dbg !4 {

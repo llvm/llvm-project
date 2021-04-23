@@ -32,7 +32,7 @@
 # NO-OBJC-EMPTY:
 # NO-OBJC-NEXT:  SYMBOL TABLE:
 # NO-OBJC-NEXT:  g     F __TEXT,__text _main
-# NO-OBJC-NEXT:  g *ABS* __mh_execute_header
+# NO-OBJC-NEXT:  g     F __TEXT,__text __mh_execute_header
 # NO-OBJC-EMPTY:
 
 #--- has-objc-symbol.s
