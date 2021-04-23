@@ -365,42 +365,32 @@ def: Pat<(int_hexagon_V6_vdd0),
 def: Pat<(int_hexagon_V6_vdd0_128B),
          (V6_vdd0)>, Requires<[HasV65, UseHVX128B]>;
 
-def: Pat<(int_hexagon_V6_vscattermw IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4),
-         (V6_vscattermw IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX]>;
-def: Pat<(int_hexagon_V6_vscattermh IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4),
-         (V6_vscattermh IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX]>;
-def: Pat<(int_hexagon_V6_vscattermw_add IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4),
-         (V6_vscattermw_add IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX]>;
-def: Pat<(int_hexagon_V6_vscattermh_add IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4),
-         (V6_vscattermh_add IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX]>;
-def: Pat<(int_hexagon_V6_vscattermwq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5),
-         (V6_vscattermwq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5)>, Requires<[HasV65, UseHVX]>;
-def: Pat<(int_hexagon_V6_vscattermhq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5),
-         (V6_vscattermhq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5)>, Requires<[HasV65, UseHVX]>;
-def: Pat<(int_hexagon_V6_vscattermhw IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4),
-         (V6_vscattermhw IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX]>;
-def: Pat<(int_hexagon_V6_vscattermhw_add IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4),
-         (V6_vscattermhw_add IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX]>;
-def: Pat<(int_hexagon_V6_vscattermhwq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxWR:$src4, HvxVR:$src5),
-         (V6_vscattermhwq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxWR:$src4, HvxVR:$src5)>, Requires<[HasV65, UseHVX]>;
-def: Pat<(int_hexagon_V6_vscattermw_128B IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4),
-         (V6_vscattermw IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX]>;
-def: Pat<(int_hexagon_V6_vscattermh_128B IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4),
-         (V6_vscattermh IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX]>;
-def: Pat<(int_hexagon_V6_vscattermw_add_128B IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4),
-         (V6_vscattermw_add IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX]>;
-def: Pat<(int_hexagon_V6_vscattermh_add_128B IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4),
-         (V6_vscattermh_add IntRegs:$src1, ModRegs:$src2, HvxVR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX]>;
-def: Pat<(int_hexagon_V6_vscattermwq_128B HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5),
-         (V6_vscattermwq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5)>, Requires<[HasV65, UseHVX]>;
-def: Pat<(int_hexagon_V6_vscattermhq_128B HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5),
-         (V6_vscattermhq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxVR:$src4, HvxVR:$src5)>, Requires<[HasV65, UseHVX]>;
-def: Pat<(int_hexagon_V6_vscattermhw_128B IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4),
-         (V6_vscattermhw IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX]>;
-def: Pat<(int_hexagon_V6_vscattermhw_add_128B IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4),
-         (V6_vscattermhw_add IntRegs:$src1, ModRegs:$src2, HvxWR:$src3, HvxVR:$src4)>, Requires<[HasV65, UseHVX]>;
-def: Pat<(int_hexagon_V6_vscattermhwq_128B HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxWR:$src4, HvxVR:$src5),
-         (V6_vscattermhwq HvxQR:$src1, IntRegs:$src2, ModRegs:$src3, HvxWR:$src4, HvxVR:$src5)>, Requires<[HasV65, UseHVX]>;
+
+multiclass T_VP_pat<InstHexagon MI, Intrinsic IntID> {
+  def: Pat<(IntID HvxVR:$Vu, DoubleRegs:$Rt),
+           (MI    HvxVR:$Vu, DoubleRegs:$Rt)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B")
+                  HvxVR:$Vu, DoubleRegs:$Rt),
+           (MI    HvxVR:$Vu, DoubleRegs:$Rt)>;
+}
+
+multiclass T_WVP_pat<InstHexagon MI, Intrinsic IntID> {
+  def: Pat<(IntID HvxWR:$Vx, HvxVR:$Vu, DoubleRegs:$Rt),
+           (MI    HvxWR:$Vx, HvxVR:$Vu, DoubleRegs:$Rt)>;
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B")
+                  HvxWR:$Vx, HvxVR:$Vu, DoubleRegs:$Rt),
+           (MI    HvxWR:$Vx, HvxVR:$Vu, DoubleRegs:$Rt)>;
+}
+
+// These are actually only in V65.
+let Predicates = [HasV65, UseHVX] in {
+  defm: T_VP_pat<V6_vrmpyub_rtt,        int_hexagon_V6_vrmpyub_rtt>;
+  defm: T_VP_pat<V6_vrmpybub_rtt,       int_hexagon_V6_vrmpybub_rtt>;
+
+  defm: T_WVP_pat<V6_vrmpyub_rtt_acc,   int_hexagon_V6_vrmpyub_rtt_acc>;
+  defm: T_WVP_pat<V6_vrmpybub_rtt_acc,  int_hexagon_V6_vrmpybub_rtt_acc>;
+}
+
 
 multiclass T_pRI_pat<InstHexagon MI, Intrinsic IntID> {
   def: Pat<(IntID PredRegs:$P, IntRegs:$R, timm:$s),
