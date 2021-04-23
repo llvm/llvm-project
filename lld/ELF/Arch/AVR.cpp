@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// AVR is a Harvard-architecture 8-bit micrcontroller designed for small
+// AVR is a Harvard-architecture 8-bit microcontroller designed for small
 // baremetal programs. All AVR-family processors have 32 8-bit registers.
 // The tiniest AVR has 32 byte RAM and 1 KiB program memory, and the largest
 // one supports up to 2^24 data address space and 2^22 code address space.
