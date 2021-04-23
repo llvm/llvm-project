@@ -71,10 +71,10 @@ struct MIRef {
   }
   bool operator!=(const MIRef &RHS) const { return !(*this == RHS); }
   bool operator<(const MIRef &RHS) const {
-    return (!MBB && RHS.MBB) || (MBB == RHS.MBB && Pos < RHS.Pos);
+    return MBB < RHS.MBB || (MBB == RHS.MBB && Pos < RHS.Pos);
   }
   bool operator>(const MIRef &RHS) const {
-    return (!RHS.MBB && MBB) || (MBB == RHS.MBB && Pos > RHS.Pos);
+    return MBB > RHS.MBB || (MBB == RHS.MBB && Pos > RHS.Pos);
   }
 };
 
