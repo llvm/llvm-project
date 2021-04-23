@@ -503,6 +503,68 @@ SourceLocation DeclRefExpr::getEndLoc() const {
   return getNameInfo().getEndLoc();
 }
 
+UniqueStableNameExpr::UniqueStableNameExpr(SourceLocation OpLoc,
+                                           SourceLocation LParen,
+                                           SourceLocation RParen,
+                                           QualType ResultTy,
+                                           TypeSourceInfo *TSI)
+    : Expr(UniqueStableNameExprClass, ResultTy, VK_LValue, OK_Ordinary),
+      OpLoc(OpLoc), LParen(LParen), RParen(RParen), Kind(ParamKind::Type) {
+  setTypeSourceInfo(TSI);
+  // Fixme: Do we have to do anything to make this work?
+  setDependence(computeDependence(this));
+}
+
+UniqueStableNameExpr::UniqueStableNameExpr(EmptyShell Empty, QualType ResultTy,
+                                           bool IsExpr)
+    : Expr(UniqueStableNameExprClass, ResultTy, VK_LValue, OK_Ordinary) {
+  Kind = IsExpr ? ParamKind::Expr : ParamKind::Expr;
+}
+
+UniqueStableNameExpr::UniqueStableNameExpr(SourceLocation OpLoc,
+                                           SourceLocation LParen,
+                                           SourceLocation RParen,
+                                           QualType ResultTy, Expr *E)
+    : Expr(UniqueStableNameExprClass, ResultTy, VK_LValue, OK_Ordinary),
+      OpLoc(OpLoc), LParen(LParen), RParen(RParen), Kind(ParamKind::Expr) {
+  setExpr(E);
+  setDependence(computeDependence(this));
+}
+
+UniqueStableNameExpr *UniqueStableNameExpr::Create(const ASTContext &Ctx,
+                                                   SourceLocation OpLoc,
+                                                   SourceLocation LParen,
+                                                   SourceLocation RParen,
+                                                   Expr *E) {
+  assert(E->isInstantiationDependent() &&
+         "Expr type only valid if the expr is dependent");
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt *, TypeSourceInfo *>(1, 0),
+                           alignof(UniqueStableNameExpr));
+
+  QualType ResultTy = Ctx.getPointerType(Ctx.CharTy.withConst());
+  return new (Mem) UniqueStableNameExpr(OpLoc, LParen, RParen, ResultTy, E);
+}
+
+UniqueStableNameExpr *UniqueStableNameExpr::Create(const ASTContext &Ctx,
+                                                   SourceLocation OpLoc,
+                                                   SourceLocation LParen,
+                                                   SourceLocation RParen,
+                                                   TypeSourceInfo *TSI) {
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt *, TypeSourceInfo *>(1, 0),
+                           alignof(UniqueStableNameExpr));
+  QualType ResultTy = Ctx.getPointerType(Ctx.CharTy.withConst());
+  return new (Mem) UniqueStableNameExpr(OpLoc, LParen, RParen, ResultTy, TSI);
+}
+
+UniqueStableNameExpr *UniqueStableNameExpr::CreateEmpty(const ASTContext &Ctx,
+                                                        bool IsExpr) {
+  void *Mem =
+      Ctx.Allocate(totalSizeToAlloc<Stmt *, TypeSourceInfo *>(IsExpr, !IsExpr),
+                   alignof(UniqueStableNameExpr));
+  QualType ResultTy = Ctx.getPointerType(Ctx.CharTy.withConst());
+  return new (Mem) UniqueStableNameExpr(EmptyShell(), ResultTy, IsExpr);
+}
+
 PredefinedExpr::PredefinedExpr(SourceLocation L, QualType FNTy, IdentKind IK,
                                StringLiteral *SL)
     : Expr(PredefinedExprClass, FNTy, VK_LValue, OK_Ordinary) {
@@ -3308,6 +3370,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case SourceLocExprClass:
   case ConceptSpecializationExprClass:
   case RequiresExprClass:
+  case UniqueStableNameExprClass:
     // These never have a side-effect.
     return false;
 

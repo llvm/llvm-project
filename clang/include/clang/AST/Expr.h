@@ -2037,6 +2037,112 @@ public:
   }
 };
 
+// This represents a use of the __builtin_unique_stable_name, which takes either
+// a type-id or an expression, and at CodeGen time emits a unique string
+// representation of the type (or type of the expression) in a way that permits
+// us to properly encode information about the SYCL Kernels.
+class UniqueStableNameExpr final
+    : public Expr,
+      private llvm::TrailingObjects<UniqueStableNameExpr, Stmt *,
+                                    TypeSourceInfo *> {
+  friend class ASTStmtReader;
+  friend TrailingObjects;
+  SourceLocation OpLoc, LParen, RParen;
+  // Note: We store a Stmt* instead of the Expr* so that we can implement
+  // 'children'.
+  enum class ParamKind { Type, Expr };
+  ParamKind Kind;
+
+  UniqueStableNameExpr(EmptyShell Empty, QualType ResultTy, bool IsExpr);
+  UniqueStableNameExpr(SourceLocation OpLoc, SourceLocation LParen,
+                       SourceLocation RParen, QualType ResultTy,
+                       TypeSourceInfo *TSI);
+  UniqueStableNameExpr(SourceLocation OpLoc, SourceLocation LParen,
+                       SourceLocation RParen, QualType ResultTy, Expr *E);
+
+  size_t numTrailingObjects(OverloadToken<TypeSourceInfo *>) const {
+    return Kind == ParamKind::Type ? 1 : 0;
+  }
+  size_t numTrailingObjects(OverloadToken<Stmt *>) const {
+    return Kind == ParamKind::Expr ? 1 : 0;
+  }
+  void setTypeSourceInfo(TypeSourceInfo *Ty) {
+    assert(Kind == ParamKind::Type &&
+           "TypeSourceInfo only valid for UniqueStableName of a Type");
+    *getTrailingObjects<TypeSourceInfo *>() = Ty;
+  }
+  void setExpr(Expr *E) {
+    assert(Kind == ParamKind::Expr &&
+           "Expr only valid for UniqueStableName of an Expr");
+    assert(E->isInstantiationDependent() &&
+           "Expr type only valid if the expr is dependent");
+    *getTrailingObjects<Stmt *>() = E;
+  }
+
+  void setLocation(SourceLocation L) { OpLoc = L; }
+  void setLParenLocation(SourceLocation L) { LParen = L; }
+  void setRParenLocation(SourceLocation L) { RParen = L; }
+
+public:
+  TypeSourceInfo *getTypeSourceInfo() {
+    assert(Kind == ParamKind::Type &&
+           "TypeSourceInfo only valid for UniqueStableName of a Type");
+    return *getTrailingObjects<TypeSourceInfo *>();
+  }
+
+  const TypeSourceInfo *getTypeSourceInfo() const {
+    assert(Kind == ParamKind::Type &&
+           "TypeSourceInfo only valid for UniqueStableName of a Type");
+    return *getTrailingObjects<TypeSourceInfo *>();
+  }
+
+  Expr *getExpr() {
+    assert(Kind == ParamKind::Expr &&
+           "Expr only valid for UniqueStableName of an Expr");
+    return static_cast<Expr *>(*getTrailingObjects<Stmt *>());
+  }
+
+  const Expr *getExpr() const {
+    assert(Kind == ParamKind::Expr &&
+           "Expr only valid for UniqueStableName of an Expr");
+    return static_cast<Expr *>(*getTrailingObjects<Stmt *>());
+  }
+
+  bool isExpr() const { return Kind == ParamKind::Expr; }
+
+  bool isTypeSourceInfo() const { return Kind == ParamKind::Type; }
+
+  static UniqueStableNameExpr *
+  Create(const ASTContext &Ctx, SourceLocation OpLoc, SourceLocation LParen,
+         SourceLocation RParen, TypeSourceInfo *TSI);
+
+  static UniqueStableNameExpr *Create(const ASTContext &Ctx,
+                                      SourceLocation OpLoc,
+                                      SourceLocation LParen,
+                                      SourceLocation RParen, Expr *E);
+  static UniqueStableNameExpr *CreateEmpty(const ASTContext &Ctx, bool IsExpr);
+
+  SourceLocation getBeginLoc() const { return getLocation(); }
+  SourceLocation getEndLoc() const { return RParen; }
+  SourceLocation getLocation() const { return OpLoc; }
+  SourceLocation getLParenLocation() const { return LParen; }
+  SourceLocation getRParenLocation() const { return RParen; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == UniqueStableNameExprClass;
+  }
+
+  // Iterators
+  child_range children() {
+    return child_range(getTrailingObjects<Stmt *>(),
+                       getTrailingObjects<Stmt *>() + isExpr());
+  }
+  const_child_range children() const {
+    return const_child_range(getTrailingObjects<Stmt *>(),
+                             getTrailingObjects<Stmt *>() + isExpr());
+  }
+};
+
 /// ParenExpr - This represents a parethesized expression, e.g. "(1)".  This
 /// AST node is only formed if full location information is requested.
 class ParenExpr : public Expr {

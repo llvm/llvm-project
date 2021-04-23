@@ -556,6 +556,12 @@ ExprDependence clang::computeDependence(RecoveryExpr *E) {
   return D;
 }
 
+ExprDependence clang::computeDependence(UniqueStableNameExpr *E) {
+  if (E->isExpr())
+    return E->getExpr()->getDependence();
+  return toExprDependence(E->getTypeSourceInfo()->getType()->getDependence());
+}
+
 ExprDependence clang::computeDependence(PredefinedExpr *E) {
   return toExprDependence(E->getType()->getDependence()) &
          ~ExprDependence::UnexpandedPack;
