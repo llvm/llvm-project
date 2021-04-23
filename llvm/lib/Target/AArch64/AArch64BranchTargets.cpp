@@ -121,8 +121,10 @@ void AArch64BranchTargets::addBTI(MachineBasicBlock &MBB, bool CouldCall,
 
   auto MBBI = MBB.begin();
 
-  // Skip the meta instuctions, those will be removed anyway.
-  for (; MBBI != MBB.end() && MBBI->isMetaInstruction(); ++MBBI)
+  // Skip the meta instructions, those will be removed anyway.
+  for (; MBBI != MBB.end() &&
+         (MBBI->isMetaInstruction() || MBBI->getOpcode() == AArch64::EMITBKEY);
+       ++MBBI)
     ;
 
   // SCTLR_EL1.BT[01] is set to 0 by default which means
