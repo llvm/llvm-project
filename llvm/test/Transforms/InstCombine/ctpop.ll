@@ -3,6 +3,7 @@
 
 declare i32 @llvm.ctpop.i32(i32)
 declare i8 @llvm.ctpop.i8(i8)
+declare i7 @llvm.ctpop.i7(i7)
 declare i1 @llvm.ctpop.i1(i1)
 declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>)
 declare void @llvm.assume(i1)
@@ -131,6 +132,18 @@ define i32 @_parity_of_not(i32 %x) {
   ret i32 %r
 }
 
+define i7 @_parity_of_not_odd_type(i7 %x) {
+; CHECK-LABEL: @_parity_of_not_odd_type(
+; CHECK-NEXT:    [[NEG:%.*]] = xor i7 [[X:%.*]], -1
+; CHECK-NEXT:    [[CNT:%.*]] = tail call i7 @llvm.ctpop.i7(i7 [[NEG]]), !range [[RNG2:![0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = and i7 [[CNT]], 1
+; CHECK-NEXT:    ret i7 [[R]]
+;
+  %neg = xor i7 %x, -1
+  %cnt = tail call i7 @llvm.ctpop.i7(i7 %neg)
+  %r = and i7 %cnt, 1
+  ret i7 %r
+}
 
 define <2 x i32> @_parity_of_not_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @_parity_of_not_vec(
