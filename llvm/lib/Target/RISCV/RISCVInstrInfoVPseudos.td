@@ -884,23 +884,6 @@ class VPseudoMaskUnarySOutMask:
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-// Masked mask operation have no $rd=$merge constraints
-class VPseudoUnaryMOutMask:
-        Pseudo<(outs VR:$rd),
-               (ins VR:$merge, VR:$rs1, VMaskOp:$vm, GPR:$vl, ixlenimm:$sew), []>,
-        RISCVVPseudo {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let usesCustomInserter = 1;
-  let Constraints = "$rd = $merge";
-  let Uses = [VL, VTYPE];
-  let HasVLOp = 1;
-  let HasSEWOp = 1;
-  let HasMergeOp = 1;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
-}
-
 // Mask can be V0~V31
 class VPseudoUnaryAnyMask<VReg RetClass,
                           VReg Op1Class> :
@@ -980,6 +963,28 @@ class VPseudoBinaryMask<VReg RetClass,
                         string Constraint> :
         Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                 (ins GetVRegNoV0<RetClass>.R:$merge,
+                     Op1Class:$rs2, Op2Class:$rs1,
+                     VMaskOp:$vm, GPR:$vl, ixlenimm:$sew), []>,
+        RISCVVPseudo {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let usesCustomInserter = 1;
+  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
+  let Uses = [VL, VTYPE];
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let HasMergeOp = 1;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
+// Like VPseudoBinaryMask, but output can be V0.
+class VPseudoBinaryMOutMask<VReg RetClass,
+                            RegisterClass Op1Class,
+                            DAGOperand Op2Class,
+                            string Constraint> :
+        Pseudo<(outs RetClass:$rd),
+                (ins RetClass:$merge,
                      Op1Class:$rs2, Op2Class:$rs1,
                      VMaskOp:$vm, GPR:$vl, ixlenimm:$sew), []>,
         RISCVVPseudo {
@@ -1507,6 +1512,19 @@ multiclass VPseudoBinary<VReg RetClass,
   }
 }
 
+multiclass VPseudoBinaryM<VReg RetClass,
+                          VReg Op1Class,
+                          DAGOperand Op2Class,
+                          LMULInfo MInfo,
+                          string Constraint = ""> {
+  let VLMul = MInfo.value in {
+    def "_" # MInfo.MX : VPseudoBinaryNoMask<RetClass, Op1Class, Op2Class,
+                                             Constraint>;
+    def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMOutMask<RetClass, Op1Class,
+                                                         Op2Class, Constraint>;
+  }
+}
+
 multiclass VPseudoBinaryEmul<VReg RetClass,
                              VReg Op1Class,
                              DAGOperand Op2Class,
@@ -1740,25 +1758,25 @@ multiclass PseudoUnaryV_VF8 {
 // @earlyclobber to avoid the overlap between destination and source registers.
 multiclass VPseudoBinaryM_VV {
   foreach m = MxList.m in
-    defm _VV : VPseudoBinary<VR, m.vrclass, m.vrclass, m, "@earlyclobber $rd">;
+    defm _VV : VPseudoBinaryM<VR, m.vrclass, m.vrclass, m, "@earlyclobber $rd">;
 }
 
 multiclass VPseudoBinaryM_VX {
   foreach m = MxList.m in
     defm "_VX" :
-      VPseudoBinary<VR, m.vrclass, GPR, m, "@earlyclobber $rd">;
+      VPseudoBinaryM<VR, m.vrclass, GPR, m, "@earlyclobber $rd">;
 }
 
 multiclass VPseudoBinaryM_VF {
   foreach m = MxList.m in
     foreach f = FPList.fpinfo in
       defm "_V" # f.FX :
-        VPseudoBinary<VR, m.vrclass, f.fprclass, m, "@earlyclobber $rd">;
+        VPseudoBinaryM<VR, m.vrclass, f.fprclass, m, "@earlyclobber $rd">;
 }
 
 multiclass VPseudoBinaryM_VI {
   foreach m = MxList.m in
-    defm _VI : VPseudoBinary<VR, m.vrclass, simm5, m, "@earlyclobber $rd">;
+    defm _VI : VPseudoBinaryM<VR, m.vrclass, simm5, m, "@earlyclobber $rd">;
 }
 
 multiclass VPseudoBinaryV_VV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
