@@ -248,8 +248,8 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   return None;
 }
 
-int ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
-                              TTI::TargetCostKind CostKind) {
+InstructionCost ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
+                                          TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy());
 
  unsigned Bits = Ty->getPrimitiveSizeInBits();
@@ -324,10 +324,10 @@ static bool isSSATMinMaxPattern(Instruction *Inst, const APInt &Imm) {
   return false;
 }
 
-int ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
-                                  const APInt &Imm, Type *Ty,
-                                  TTI::TargetCostKind CostKind,
-                                  Instruction *Inst) {
+InstructionCost ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
+                                              const APInt &Imm, Type *Ty,
+                                              TTI::TargetCostKind CostKind,
+                                              Instruction *Inst) {
   // Division by a constant can be turned into multiplication, but only if we
   // know it's constant. So it's not so much that the immediate is cheap (it's
   // not), but that the alternative is worse.

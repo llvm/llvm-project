@@ -45,7 +45,7 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
 /// Calculate the cost of materializing a 64-bit value. This helper
 /// method might only calculate a fraction of a larger immediate. Therefore it
 /// is valid to return a cost of ZERO.
-int AArch64TTIImpl::getIntImmCost(int64_t Val) {
+InstructionCost AArch64TTIImpl::getIntImmCost(int64_t Val) {
   // Check if the immediate can be encoded within an instruction.
   if (Val == 0 || AArch64_AM::isLogicalImmediate(Val, 64))
     return 0;
@@ -60,8 +60,8 @@ int AArch64TTIImpl::getIntImmCost(int64_t Val) {
 }
 
 /// Calculate the cost of materializing the given constant.
-int AArch64TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
-                                  TTI::TargetCostKind CostKind) {
+InstructionCost AArch64TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
+                                              TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
@@ -75,20 +75,20 @@ int AArch64TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
 
   // Split the constant into 64-bit chunks and calculate the cost for each
   // chunk.
-  int Cost = 0;
+  InstructionCost Cost = 0;
   for (unsigned ShiftVal = 0; ShiftVal < BitSize; ShiftVal += 64) {
     APInt Tmp = ImmVal.ashr(ShiftVal).sextOrTrunc(64);
     int64_t Val = Tmp.getSExtValue();
     Cost += getIntImmCost(Val);
   }
   // We need at least one instruction to materialze the constant.
-  return std::max(1, Cost);
+  return std::max<InstructionCost>(1, Cost);
 }
 
-int AArch64TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
-                                      const APInt &Imm, Type *Ty,
-                                      TTI::TargetCostKind CostKind,
-                                      Instruction *Inst) {
+InstructionCost AArch64TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
+                                                  const APInt &Imm, Type *Ty,
+                                                  TTI::TargetCostKind CostKind,
+                                                  Instruction *Inst) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
@@ -145,7 +145,7 @@ int AArch64TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
 
   if (Idx == ImmIdx) {
     int NumConstants = (BitSize + 63) / 64;
-    int Cost = AArch64TTIImpl::getIntImmCost(Imm, Ty, CostKind);
+    InstructionCost Cost = AArch64TTIImpl::getIntImmCost(Imm, Ty, CostKind);
     return (Cost <= NumConstants * TTI::TCC_Basic)
                ? static_cast<int>(TTI::TCC_Free)
                : Cost;
@@ -153,9 +153,10 @@ int AArch64TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   return AArch64TTIImpl::getIntImmCost(Imm, Ty, CostKind);
 }
 
-int AArch64TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
-                                        const APInt &Imm, Type *Ty,
-                                        TTI::TargetCostKind CostKind) {
+InstructionCost
+AArch64TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
+                                    const APInt &Imm, Type *Ty,
+                                    TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
@@ -181,7 +182,7 @@ int AArch64TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   case Intrinsic::umul_with_overflow:
     if (Idx == 1) {
       int NumConstants = (BitSize + 63) / 64;
-      int Cost = AArch64TTIImpl::getIntImmCost(Imm, Ty, CostKind);
+      InstructionCost Cost = AArch64TTIImpl::getIntImmCost(Imm, Ty, CostKind);
       return (Cost <= NumConstants * TTI::TCC_Basic)
                  ? static_cast<int>(TTI::TCC_Free)
                  : Cost;

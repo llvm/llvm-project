@@ -351,20 +351,21 @@ public:
     return 0;
   }
 
-  unsigned getIntImmCost(const APInt &Imm, Type *Ty,
-                         TTI::TargetCostKind CostKind) const {
+  InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
+                                TTI::TargetCostKind CostKind) const {
     return TTI::TCC_Basic;
   }
 
-  unsigned getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Imm,
-                             Type *Ty, TTI::TargetCostKind CostKind,
-                             Instruction *Inst = nullptr) const {
+  InstructionCost getIntImmCostInst(unsigned Opcode, unsigned Idx,
+                                    const APInt &Imm, Type *Ty,
+                                    TTI::TargetCostKind CostKind,
+                                    Instruction *Inst = nullptr) const {
     return TTI::TCC_Free;
   }
 
-  unsigned getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
-                               const APInt &Imm, Type *Ty,
-                               TTI::TargetCostKind CostKind) const {
+  InstructionCost getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
+                                      const APInt &Imm, Type *Ty,
+                                      TTI::TargetCostKind CostKind) const {
     return TTI::TCC_Free;
   }
 
