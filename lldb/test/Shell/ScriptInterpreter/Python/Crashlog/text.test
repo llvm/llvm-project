@@ -7,3 +7,4 @@
 # CHECK: [  0] {{.*}}out`foo + 16 at test.c
 # CHECK: [  1] {{.*}}out`bar + 8 at test.c
 # CHECK: [  2] {{.*}}out`main + 19 at test.c
+# CHECK: rbp = 0x00007ffee42d8020
