@@ -386,3 +386,18 @@ void evaluatable(bool CondVar) {
   do {
   } while (false && CondVar);
 }
+
+struct logger {
+  void (*debug)(struct logger *, const char *, ...);
+};
+
+int foo(void) {
+  struct logger *pl = 0;
+  int iterator = 0;
+  while (iterator < 10) {
+    char *l_tmp_msg = 0;
+    pl->debug(pl, "%d: %s\n", iterator, l_tmp_msg);
+    iterator++;
+  }
+  return 0;
+}
