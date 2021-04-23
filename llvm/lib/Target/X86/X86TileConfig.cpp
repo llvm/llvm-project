@@ -150,19 +150,23 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
       // ... (sequence continues)
       // 55     tile7.rows Tile 7 rows.
       // 56-63  reserved, must be zero
-      int ImmCount = 0;
-      (void)ImmCount;
+      int64_t Imm = INT64_MAX;
       int Offset = IsRow ? 48 + I : 16 + I * 2;
       for (auto &DefMI : MRI.def_instructions(R)) {
         MachineBasicBlock &MBB = *DefMI.getParent();
         if (DefMI.isMoveImmediate()) {
-          // FIXME: We should handle this case in future.
-          assert(++ImmCount == 1 && "Cannot initialize with different shapes");
+          if (Imm != INT64_MAX) {
+            // FIXME: We should handle this case in future.
+            assert(Imm == DefMI.getOperand(1).getImm() &&
+                   "Cannot initialize with different shapes");
+            continue;
+          }
+          Imm = DefMI.getOperand(1).getImm();
           NewMI = addFrameReference(
                       BuildMI(MF.front(), ++ConstMI->getIterator(), DL,
                               TII->get(IsRow ? X86::MOV8mi : X86::MOV16mi)),
                       SS, Offset)
-                      .addImm(DefMI.getOperand(1).getImm());
+                      .addImm(Imm);
           ConstMI = NewMI;
           LIS.InsertMachineInstrInMaps(*NewMI);
         } else {
