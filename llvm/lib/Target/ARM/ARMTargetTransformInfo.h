@@ -183,7 +183,7 @@ public:
     return isLegalMaskedGather(Ty, Alignment);
   }
 
-  int getMemcpyCost(const Instruction *I);
+  InstructionCost getMemcpyCost(const Instruction *I);
 
   int getNumMemOps(const IntrinsicInst *I) const;
 

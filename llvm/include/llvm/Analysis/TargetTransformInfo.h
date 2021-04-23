@@ -293,7 +293,7 @@ public:
 
   /// \return the expected cost of a memcpy, which could e.g. depend on the
   /// source/destination type and alignment and the number of bytes copied.
-  int getMemcpyCost(const Instruction *I) const;
+  InstructionCost getMemcpyCost(const Instruction *I) const;
 
   /// \return The estimated number of case clusters when lowering \p 'SI'.
   /// \p JTSize Set a jump table size only when \p SI is suitable for a jump
@@ -1408,7 +1408,7 @@ public:
   virtual unsigned getInliningThresholdMultiplier() = 0;
   virtual unsigned adjustInliningThreshold(const CallBase *CB) = 0;
   virtual int getInlinerVectorBonusPercent() = 0;
-  virtual int getMemcpyCost(const Instruction *I) = 0;
+  virtual InstructionCost getMemcpyCost(const Instruction *I) = 0;
   virtual unsigned
   getEstimatedNumberOfCaseClusters(const SwitchInst &SI, unsigned &JTSize,
                                    ProfileSummaryInfo *PSI,
@@ -1709,7 +1709,7 @@ public:
   int getInlinerVectorBonusPercent() override {
     return Impl.getInlinerVectorBonusPercent();
   }
-  int getMemcpyCost(const Instruction *I) override {
+  InstructionCost getMemcpyCost(const Instruction *I) override {
     return Impl.getMemcpyCost(I);
   }
   InstructionCost getUserCost(const User *U, ArrayRef<const Value *> Operands,
