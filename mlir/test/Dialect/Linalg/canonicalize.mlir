@@ -861,10 +861,12 @@ func @fold_tiled_loop_results(%A: memref<192x192xf32>, %B: memref<192x192xf32>,
   %c192 = constant 192 : index
   %useless = linalg.tiled_loop (%i, %j) = (%c0, %c0) to (%c192, %c192)
       step (%c24, %c16)
-      ins (%A, %B: memref<192x192xf32>, memref<192x192xf32>)
-      outs (%C_tensor, %C :tensor<192x192xf32>, memref<192x192xf32>) {
-        call @foo(%A, %B, %C) : (memref<192x192xf32>, memref<192x192xf32>, memref<192x192xf32>)-> ()
-    linalg.yield %C_tensor : tensor<192x192xf32>
+      ins (%A_ = %A: memref<192x192xf32>, %B_ = %B: memref<192x192xf32>)
+      outs (%CT_ = %C_tensor: tensor<192x192xf32>,
+            %C_ = %C: memref<192x192xf32>) {
+        call @foo(%A_, %B_, %C_)
+          : (memref<192x192xf32>, memref<192x192xf32>, memref<192x192xf32>)-> ()
+    linalg.yield %CT_ : tensor<192x192xf32>
   }
   return
 }
@@ -880,9 +882,9 @@ func @fold_tiled_loop_results(%A: memref<192x192xf32>, %B: memref<192x192xf32>,
 // CHECK-NOT: %{{.*}} = linalg.tiled_loop
 // CHECK:  linalg.tiled_loop (%{{.*}}, %{{.*}}) = (%[[C0]], %[[C0]])
 // CHECK-SAME: to (%[[C192]], %[[C192]]) step (%[[C24]], %[[C16]])
-// CHECK-SAME: ins (%[[A]], %[[B]]: memref<192x192xf32>, memref<192x192xf32>)
-// CHECK-SAME: outs (%[[C]]:memref<192x192xf32>) {
-// CHECK-NEXT:   call @foo(%[[A]], %[[B]], %[[C]])
+// CHECK-SAME: ins (%[[A_:.*]] = %[[A]]: memref<192x192xf32>, %[[B_:.*]] = %[[B]]: memref<192x192xf32>)
+// CHECK-SAME: outs (%[[C_:.*]] = %[[C]]: memref<192x192xf32>) {
+// CHECK-NEXT:   call @foo(%[[A_]], %[[B_]], %[[C_]])
 // CHECK-NEXT:   linalg.yield
 
 // -----
