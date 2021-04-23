@@ -1290,6 +1290,19 @@ void test1() {
 // CHECK-LE: fmul <2 x double>
 // CHECK-LE: fptosi <2 x double> %{{.*}} to <2 x i64>
 
+  res_vsll = vec_ctsl(vf, 3);
+  // CHECK: fmul <4 x float> {{%.*}}, <float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00>
+  // CHECK: call <2 x i64> @llvm.ppc.vsx.xvcvspsxds(<4 x float>
+  // CHECK-LE: fmul <4 x float> {{%.*}}, <float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00>
+  // CHECK-LE:  shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 7, i32 0, i32 1, i32 2>
+  // CHECK-LE: call <2 x i64> @llvm.ppc.vsx.xvcvspsxds(<4 x float>
+
+  res_vsll = vec_ctsl(vd, 3);
+  // CHECK: fmul <2 x double> {{%.*}}, <double 8.000000e+00, double 8.000000e+00>
+  // CHECK: fptosi <2 x double> {{%.*}} to <2 x i64>
+  // CHECK-LE: fmul <2 x double> {{%.*}}, <double 8.000000e+00, double 8.000000e+00>
+  // CHECK-LE: fptosi <2 x double> {{%.*}} to <2 x i64>
+
   res_vsll = vec_ctu(vd, 0);
 // CHECK: fmul <2 x double>
 // CHECK: fptoui <2 x double> %{{.*}} to <2 x i64>
@@ -1301,6 +1314,19 @@ void test1() {
 // CHECK: fptoui <2 x double> %{{.*}} to <2 x i64>
 // CHECK-LE: fmul <2 x double>
 // CHECK-LE: fptoui <2 x double> %{{.*}} to <2 x i64>
+
+  res_vull = vec_ctul(vf, 3);
+  // CHECK: fmul <4 x float> {{%.*}}, <float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00>
+  // CHECK: call <2 x i64> @llvm.ppc.vsx.xvcvspuxds(<4 x float>
+  // CHECK-LE: fmul <4 x float> {{%.*}}, <float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00>
+  // CHECK-LE:  shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 7, i32 0, i32 1, i32 2>
+  // CHECK-LE: call <2 x i64> @llvm.ppc.vsx.xvcvspuxds(<4 x float>
+
+  res_vull = vec_ctul(vd, 3);
+  // CHECK: fmul <2 x double> {{%.*}}, <double 8.000000e+00, double 8.000000e+00>
+  // CHECK: fptoui <2 x double> {{%.*}} to <2 x i64>
+  // CHECK-LE: fmul <2 x double> {{%.*}}, <double 8.000000e+00, double 8.000000e+00>
+  // CHECK-LE: fptoui <2 x double> {{%.*}} to <2 x i64>
 
   res_vd = vec_ctf(vsll, 0);
 // CHECK: sitofp <2 x i64> %{{.*}} to <2 x double>

@@ -546,6 +546,8 @@ BUILTIN(__builtin_vsx_xvxsigsp, "V4UiV4f", "")
 // Conversion builtins
 BUILTIN(__builtin_vsx_xvcvdpsxws, "V4SiV2d", "")
 BUILTIN(__builtin_vsx_xvcvdpuxws, "V4UiV2d", "")
+BUILTIN(__builtin_vsx_xvcvspsxds, "V2SLLiV4f", "")
+BUILTIN(__builtin_vsx_xvcvspuxds, "V2ULLiV4f", "")
 BUILTIN(__builtin_vsx_xvcvsxwdp, "V2dV4Si", "")
 BUILTIN(__builtin_vsx_xvcvuxwdp, "V2dV4Ui", "")
 BUILTIN(__builtin_vsx_xvcvspdp, "V2dV4f", "")
