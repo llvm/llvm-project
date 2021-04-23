@@ -1694,6 +1694,29 @@ public:
     return parser.parseCommaSeparatedListUntil(Token::r_paren, parseElt);
   }
 
+  /// Parse a list of assignments of the form
+  ///   (%x1 = %y1 : type1, %x2 = %y2 : type2, ...).
+  OptionalParseResult
+  parseOptionalAssignmentListWithTypes(SmallVectorImpl<OperandType> &lhs,
+                                       SmallVectorImpl<OperandType> &rhs,
+                                       SmallVectorImpl<Type> &types) override {
+    if (failed(parseOptionalLParen()))
+      return llvm::None;
+
+    auto parseElt = [&]() -> ParseResult {
+      OperandType regionArg, operand;
+      Type type;
+      if (parseRegionArgument(regionArg) || parseEqual() ||
+          parseOperand(operand) || parseColon() || parseType(type))
+        return failure();
+      lhs.push_back(regionArg);
+      rhs.push_back(operand);
+      types.push_back(type);
+      return success();
+    };
+    return parser.parseCommaSeparatedListUntil(Token::r_paren, parseElt);
+  }
+
 private:
   /// The source location of the operation name.
   SMLoc nameLoc;

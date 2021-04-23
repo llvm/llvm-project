@@ -804,13 +804,13 @@ func @tiled_loop(%lhs: tensor<24x64xi8>, %rhs: tensor<24x64xi8>,
  %c24 = constant 24 : index
  %c64 = constant 64 : index
  %prod = linalg.tiled_loop (%i) = (%c0) to (%c24) step (%c4)
-      ins(%lhs, %rhs : tensor<24x64xi8>, tensor<24x64xi8>)
-      outs(%out : tensor<24x64xi8>) {
-    %lhs_sub = subtensor %lhs[%i, 0] [%c4, %c64] [1, 1]
+      ins(%lhs_ = %lhs: tensor<24x64xi8>, %rhs_ = %rhs: tensor<24x64xi8>)
+      outs(%out_ = %out: tensor<24x64xi8>) {
+    %lhs_sub = subtensor %lhs_[%i, 0] [%c4, %c64] [1, 1]
         : tensor<24x64xi8> to tensor<?x?xi8>
-    %rhs_sub = subtensor %rhs[%i, 0] [%c4, %c64] [1, 1]
+    %rhs_sub = subtensor %rhs_[%i, 0] [%c4, %c64] [1, 1]
         : tensor<24x64xi8> to tensor<?x?xi8>
-    %out_sub = subtensor %out[%i, 0] [%c4, %c64] [1, 1]
+    %out_sub = subtensor %out_[%i, 0] [%c4, %c64] [1, 1]
         : tensor<24x64xi8> to tensor<?x?xi8>
 
     %sum = linalg.generic #trait_4
@@ -821,7 +821,7 @@ func @tiled_loop(%lhs: tensor<24x64xi8>, %rhs: tensor<24x64xi8>,
         linalg.yield %s : i8
       } -> tensor<?x?xi8>
 
-    %sum_sub = subtensor_insert %sum into %out[%i, 0][%c4, %c64][1, 1]
+    %sum_sub = subtensor_insert %sum into %out_[%i, 0][%c4, %c64][1, 1]
       : tensor<?x?xi8> into tensor<24x64xi8>
     linalg.yield %sum_sub : tensor<24x64xi8>
   }
@@ -860,16 +860,18 @@ func @tiled_loop_reduction(%input_3d: tensor<16x24x32xf32>,
   %Z = memref.dim %input_3d, %c2 : tensor<16x24x32xf32>
   %result = linalg.tiled_loop (%i, %j, %k)
       = (%c0, %c0, %c0) to (%X, %Y, %Z) step (%c2, %c4, %c8)
-      ins(%input_3d, %input_2d: tensor<16x24x32xf32>, tensor<16x32xf32>)
-      outs( %output: tensor<24xf32>)
+      ins(%i3d_ = %input_3d: tensor<16x24x32xf32>,
+          %i2d_ = %input_2d: tensor<16x32xf32>,
+          %i1d_ = %input_1d: tensor<24xf32>)
+      outs(%o_ =  %output: tensor<24xf32>)
       iterators["reduction", "parallel", "reduction"] {
-    %sub_3d = subtensor %input_3d[%i, %j, %k][2, 4, 8][1, 1, 1]
+    %sub_3d = subtensor %i3d_[%i, %j, %k][2, 4, 8][1, 1, 1]
       : tensor<16x24x32xf32> to tensor<2x4x8xf32>
-    %sub_2d = subtensor %input_2d[%i, %k][2, 8][1, 1]
+    %sub_2d = subtensor %i2d_[%i, %k][2, 8][1, 1]
       : tensor<16x32xf32> to tensor<2x8xf32>
-    %sub_1d = subtensor %input_1d[%j] [4] [1]
+    %sub_1d = subtensor %i1d_[%j] [4] [1]
       : tensor<24xf32> to tensor<4xf32>
-    %sub_out = subtensor %output[%j] [4] [1]
+    %sub_out = subtensor %o_[%j] [4] [1]
       : tensor<24xf32> to tensor<4xf32>
     %acc = linalg.generic #trait_5
       ins(%sub_3d, %sub_2d, %sub_1d
@@ -881,7 +883,7 @@ func @tiled_loop_reduction(%input_3d: tensor<16x24x32xf32>,
       linalg.yield %1 : f32
     } -> tensor<4xf32>
 
-    %sum_sub = subtensor_insert %acc into %output[%j][%c4][1]
+    %sum_sub = subtensor_insert %acc into %o_[%j][%c4][1]
       : tensor<4xf32> into tensor<24xf32>
     linalg.yield %sum_sub : tensor<24xf32>
   }
@@ -919,16 +921,18 @@ func @tiled_loop_on_buffers(%input_3d: memref<16x24x32xf32>,
   %Z = memref.dim %input_3d, %c2 : memref<16x24x32xf32>
   linalg.tiled_loop (%i, %j, %k) = (%c0, %c0, %c0)
       to (%X, %Y, %Z) step (%c2, %c4, %c8)
-      ins(%input_3d, %input_2d: memref<16x24x32xf32>, memref<16x32xf32>)
-      outs( %output: memref<24xf32>)
+      ins(%i3d_ = %input_3d: memref<16x24x32xf32>,
+          %i2d_ = %input_2d: memref<16x32xf32>,
+          %i1d_ = %input_1d: memref<24xf32>)
+      outs(%o_ =  %output: memref<24xf32>)
       iterators["reduction", "parallel", "reduction"] {
-    %sub_3d = memref.subview %input_3d[%i, %j, %k][2, 4, 8][1, 1, 1]
+    %sub_3d = memref.subview %i3d_[%i, %j, %k][2, 4, 8][1, 1, 1]
       : memref<16x24x32xf32> to memref<2x4x8xf32, #map_1>
-    %sub_2d = memref.subview %input_2d[%i, %k][2, 8][1, 1]
+    %sub_2d = memref.subview %i2d_[%i, %k][2, 8][1, 1]
       : memref<16x32xf32> to memref<2x8xf32, #map_2>
-    %sub_1d = memref.subview %input_1d[%j] [4] [1]
+    %sub_1d = memref.subview %i1d_[%j] [4] [1]
       : memref<24xf32> to memref<4xf32, #map_3>
-    %sub_out = memref.subview %output[%j] [4] [1]
+    %sub_out = memref.subview %o_[%j] [4] [1]
       : memref<24xf32> to memref<4xf32, #map_3>
     linalg.generic #trait_6
       ins(%sub_3d, %sub_2d, %sub_1d
