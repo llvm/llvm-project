@@ -41849,6 +41849,7 @@ static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
 
   SDValue CmpLHS = Cmp.getOperand(0);
   SDValue CmpRHS = Cmp.getOperand(1);
+  EVT CmpVT = CmpLHS.getValueType();
 
   if (!CmpLHS.hasOneUse())
     return SDValue();
@@ -41871,21 +41872,21 @@ static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
     return SDValue();
 
   APInt Comparison = CmpRHSC->getAPIntValue();
+  APInt NegAddend = -Addend;
 
   // If the addend is the negation of the comparison value, then we can do
   // a full comparison by emitting the atomic arithmetic as a locked sub.
-  if (Comparison == -Addend) {
+  if (Comparison == NegAddend) {
     // The CC is fine, but we need to rewrite the LHS of the comparison as an
     // atomic sub.
     auto *AN = cast<AtomicSDNode>(CmpLHS.getNode());
     auto AtomicSub = DAG.getAtomic(
-        ISD::ATOMIC_LOAD_SUB, SDLoc(CmpLHS), CmpLHS.getValueType(),
+        ISD::ATOMIC_LOAD_SUB, SDLoc(CmpLHS), CmpVT,
         /*Chain*/ CmpLHS.getOperand(0), /*LHS*/ CmpLHS.getOperand(1),
-        /*RHS*/ DAG.getConstant(-Addend, SDLoc(CmpRHS), CmpRHS.getValueType()),
+        /*RHS*/ DAG.getConstant(NegAddend, SDLoc(CmpRHS), CmpVT),
         AN->getMemOperand());
     auto LockOp = lowerAtomicArithWithLOCK(AtomicSub, DAG, Subtarget);
-    DAG.ReplaceAllUsesOfValueWith(CmpLHS.getValue(0),
-                                  DAG.getUNDEF(CmpLHS.getValueType()));
+    DAG.ReplaceAllUsesOfValueWith(CmpLHS.getValue(0), DAG.getUNDEF(CmpVT));
     DAG.ReplaceAllUsesOfValueWith(CmpLHS.getValue(1), LockOp.getValue(1));
     return LockOp;
   }
@@ -41907,8 +41908,7 @@ static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
     return SDValue();
 
   SDValue LockOp = lowerAtomicArithWithLOCK(CmpLHS, DAG, Subtarget);
-  DAG.ReplaceAllUsesOfValueWith(CmpLHS.getValue(0),
-                                DAG.getUNDEF(CmpLHS.getValueType()));
+  DAG.ReplaceAllUsesOfValueWith(CmpLHS.getValue(0), DAG.getUNDEF(CmpVT));
   DAG.ReplaceAllUsesOfValueWith(CmpLHS.getValue(1), LockOp.getValue(1));
   return LockOp;
 }
