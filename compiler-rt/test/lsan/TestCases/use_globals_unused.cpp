@@ -15,7 +15,7 @@
 #ifdef TEST_LIB
 
 void set(char *a) {
-  strcpy(a, "hello");
+  sprintf(a, "hello");
 }
 
 #else
