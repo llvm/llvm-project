@@ -10,10 +10,29 @@
 
 // Test for special cases of 1D vector transfer ops.
 
+func @transfer_read_2d(%A : memref<?x?xf32>, %base1 : index, %base2 : index) {
+  %fm42 = constant -42.0: f32
+  %f = vector.transfer_read %A[%base1, %base2], %fm42
+      {permutation_map = affine_map<(d0, d1) -> (d0, d1)>}
+      : memref<?x?xf32>, vector<5x6xf32>
+  vector.print %f: vector<5x6xf32>
+  return
+}
+
 func @transfer_read_1d(%A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fm42 = constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
       {permutation_map = affine_map<(d0, d1) -> (d0)>}
+      : memref<?x?xf32>, vector<9xf32>
+  vector.print %f: vector<9xf32>
+  return
+}
+
+func @transfer_read_1d_broadcast(
+    %A : memref<?x?xf32>, %base1 : index, %base2 : index) {
+  %fm42 = constant -42.0: f32
+  %f = vector.transfer_read %A[%base1, %base2], %fm42
+      {permutation_map = affine_map<(d0, d1) -> (0)>}
       : memref<?x?xf32>, vector<9xf32>
   vector.print %f: vector<9xf32>
   return
@@ -53,8 +72,11 @@ func @entry() {
   call @transfer_read_1d(%A, %c1, %c2) : (memref<?x?xf32>, index, index) -> ()
   call @transfer_write_1d(%A, %c3, %c2) : (memref<?x?xf32>, index, index) -> ()
   call @transfer_read_1d(%A, %c0, %c2) : (memref<?x?xf32>, index, index) -> ()
+  call @transfer_read_1d_broadcast(%A, %c1, %c2)
+      : (memref<?x?xf32>, index, index) -> ()
   return
 }
 
 // CHECK: ( 12, 22, 32, 42, -42, -42, -42, -42, -42 )
 // CHECK: ( 2, 12, 22, -1, -1, -42, -42, -42, -42 )
+// CHECK: ( 12, 12, 12, 12, 12, 12, 12, 12, 12 )
