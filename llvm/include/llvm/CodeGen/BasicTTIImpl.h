@@ -1376,7 +1376,7 @@ public:
     // Assume that we need to scalarize this intrinsic.
     // Compute the scalarization overhead based on Args for a vector
     // intrinsic.
-    unsigned ScalarizationCost = std::numeric_limits<unsigned>::max();
+    InstructionCost ScalarizationCost = InstructionCost::getInvalid();
     if (RetVF.isVector() && !RetVF.isScalable()) {
       ScalarizationCost = 0;
       if (!RetTy->isVoidTy())
@@ -1402,7 +1402,7 @@ public:
     Type *RetTy = ICA.getReturnType();
     const SmallVectorImpl<Type *> &Tys = ICA.getArgTypes();
     FastMathFlags FMF = ICA.getFlags();
-    unsigned ScalarizationCostPassed = ICA.getScalarizationCost();
+    InstructionCost ScalarizationCostPassed = ICA.getScalarizationCost();
     bool SkipScalarizationCost = ICA.skipScalarizationCost();
 
     VectorType *VecOpTy = nullptr;
@@ -1846,8 +1846,9 @@ public:
           }))
         return InstructionCost::getInvalid();
 
-      unsigned ScalarizationCost = SkipScalarizationCost ?
-        ScalarizationCostPassed : getScalarizationOverhead(RetVTy, true, false);
+      InstructionCost ScalarizationCost =
+          SkipScalarizationCost ? ScalarizationCostPassed
+                                : getScalarizationOverhead(RetVTy, true, false);
 
       unsigned ScalarCalls = cast<FixedVectorType>(RetVTy)->getNumElements();
       SmallVector<Type *, 4> ScalarTys;

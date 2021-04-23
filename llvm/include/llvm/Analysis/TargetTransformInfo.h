@@ -122,17 +122,17 @@ class IntrinsicCostAttributes {
   FastMathFlags FMF;
   // If ScalarizationCost is UINT_MAX, the cost of scalarizing the
   // arguments and the return value will be computed based on types.
-  unsigned ScalarizationCost = std::numeric_limits<unsigned>::max();
+  InstructionCost ScalarizationCost = InstructionCost::getInvalid();
 
 public:
   IntrinsicCostAttributes(
       Intrinsic::ID Id, const CallBase &CI,
-      unsigned ScalarizationCost = std::numeric_limits<unsigned>::max());
+      InstructionCost ScalarCost = InstructionCost::getInvalid());
 
   IntrinsicCostAttributes(
       Intrinsic::ID Id, Type *RTy, ArrayRef<Type *> Tys,
       FastMathFlags Flags = FastMathFlags(), const IntrinsicInst *I = nullptr,
-      unsigned ScalarCost = std::numeric_limits<unsigned>::max());
+      InstructionCost ScalarCost = InstructionCost::getInvalid());
 
   IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
                           ArrayRef<const Value *> Args);
@@ -141,13 +141,13 @@ public:
       Intrinsic::ID Id, Type *RTy, ArrayRef<const Value *> Args,
       ArrayRef<Type *> Tys, FastMathFlags Flags = FastMathFlags(),
       const IntrinsicInst *I = nullptr,
-      unsigned ScalarCost = std::numeric_limits<unsigned>::max());
+      InstructionCost ScalarCost = InstructionCost::getInvalid());
 
   Intrinsic::ID getID() const { return IID; }
   const IntrinsicInst *getInst() const { return II; }
   Type *getReturnType() const { return RetTy; }
   FastMathFlags getFlags() const { return FMF; }
-  unsigned getScalarizationCost() const { return ScalarizationCost; }
+  InstructionCost getScalarizationCost() const { return ScalarizationCost; }
   const SmallVectorImpl<const Value *> &getArgs() const { return Arguments; }
   const SmallVectorImpl<Type *> &getArgTypes() const { return ParamTys; }
 
@@ -155,9 +155,7 @@ public:
     return Arguments.empty();
   }
 
-  bool skipScalarizationCost() const {
-    return ScalarizationCost != std::numeric_limits<unsigned>::max();
-  }
+  bool skipScalarizationCost() const { return ScalarizationCost.isValid(); }
 };
 
 class TargetTransformInfo;
