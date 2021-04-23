@@ -13449,6 +13449,15 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       if (!containsAddRecurrence(RHS))
         RewriteMap[LHSUnknown->getValue()] = getUMinExpr(RewrittenLHS, RHS);
       break;
+    case CmpInst::ICMP_UGT:
+      if (!containsAddRecurrence(RHS))
+        RewriteMap[LHSUnknown->getValue()] =
+            getUMaxExpr(RewrittenLHS, getAddExpr(RHS, getOne(RHS->getType())));
+      break;
+    case CmpInst::ICMP_UGE:
+      if (!containsAddRecurrence(RHS))
+        RewriteMap[LHSUnknown->getValue()] = getUMaxExpr(RewrittenLHS, RHS);
+      break;
     case CmpInst::ICMP_EQ:
       if (isa<SCEVConstant>(RHS))
         RewriteMap[LHSUnknown->getValue()] = RHS;
