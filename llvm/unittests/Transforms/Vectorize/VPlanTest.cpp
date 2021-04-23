@@ -324,6 +324,299 @@ TEST(VPBasicBlockTest, getPlan) {
   }
 }
 
+TEST(VPBasicBlockTest, TraversingIteratorTest) {
+  {
+    // VPBasicBlocks only
+    //     VPBB1
+    //     /   \
+    // VPBB2  VPBB3
+    //    \    /
+    //    VPBB4
+    //
+    VPBasicBlock *VPBB1 = new VPBasicBlock();
+    VPBasicBlock *VPBB2 = new VPBasicBlock();
+    VPBasicBlock *VPBB3 = new VPBasicBlock();
+    VPBasicBlock *VPBB4 = new VPBasicBlock();
+
+    VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+    VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+    VPBlockUtils::connectBlocks(VPBB2, VPBB4);
+    VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+
+    VPBlockRecursiveTraversalWrapper<const VPBlockBase *> Start(VPBB1);
+    SmallVector<const VPBlockBase *> FromIterator(depth_first(Start));
+    EXPECT_EQ(4u, FromIterator.size());
+    EXPECT_EQ(VPBB1, FromIterator[0]);
+    EXPECT_EQ(VPBB2, FromIterator[1]);
+
+    // Use Plan to properly clean up created blocks.
+    VPlan Plan;
+    Plan.setEntry(VPBB1);
+  }
+
+  {
+    // 2 consecutive regions.
+    // R1 {
+    //     \
+    //     R1BB1
+    //    /     \   |--|
+    //  R1BB2   R1BB3 -|
+    //    \      /
+    //     R1BB4
+    //  }
+    //   |
+    // R2 {
+    //   \
+    //    R2BB1
+    //      |
+    //    R2BB2
+    //
+    VPBasicBlock *R1BB1 = new VPBasicBlock();
+    VPBasicBlock *R1BB2 = new VPBasicBlock();
+    VPBasicBlock *R1BB3 = new VPBasicBlock();
+    VPBasicBlock *R1BB4 = new VPBasicBlock();
+    VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB4, "R1");
+    R1BB2->setParent(R1);
+    R1BB3->setParent(R1);
+    VPBlockUtils::connectBlocks(R1BB1, R1BB2);
+    VPBlockUtils::connectBlocks(R1BB1, R1BB3);
+    VPBlockUtils::connectBlocks(R1BB2, R1BB4);
+    VPBlockUtils::connectBlocks(R1BB3, R1BB4);
+    // Cycle.
+    VPBlockUtils::connectBlocks(R1BB3, R1BB3);
+
+    VPBasicBlock *R2BB1 = new VPBasicBlock();
+    VPBasicBlock *R2BB2 = new VPBasicBlock();
+    VPRegionBlock *R2 = new VPRegionBlock(R2BB1, R2BB2, "R2");
+    VPBlockUtils::connectBlocks(R2BB1, R2BB2);
+    VPBlockUtils::connectBlocks(R1, R2);
+
+    // Depth-first.
+    VPBlockRecursiveTraversalWrapper<VPBlockBase *> Start(R1);
+    SmallVector<const VPBlockBase *> FromIterator(df_begin(Start),
+                                                  df_end(Start));
+    EXPECT_EQ(8u, FromIterator.size());
+    EXPECT_EQ(R1, FromIterator[0]);
+    EXPECT_EQ(R1BB1, FromIterator[1]);
+    EXPECT_EQ(R1BB2, FromIterator[2]);
+    EXPECT_EQ(R1BB4, FromIterator[3]);
+    EXPECT_EQ(R2, FromIterator[4]);
+    EXPECT_EQ(R2BB1, FromIterator[5]);
+    EXPECT_EQ(R2BB2, FromIterator[6]);
+    EXPECT_EQ(R1BB3, FromIterator[7]);
+
+    // Post-order.
+    FromIterator.clear();
+    copy(post_order(Start), std::back_inserter(FromIterator));
+    EXPECT_EQ(8u, FromIterator.size());
+    EXPECT_EQ(R2BB2, FromIterator[0]);
+    EXPECT_EQ(R2BB1, FromIterator[1]);
+    EXPECT_EQ(R2, FromIterator[2]);
+    EXPECT_EQ(R1BB4, FromIterator[3]);
+    EXPECT_EQ(R1BB2, FromIterator[4]);
+    EXPECT_EQ(R1BB3, FromIterator[5]);
+    EXPECT_EQ(R1BB1, FromIterator[6]);
+    EXPECT_EQ(R1, FromIterator[7]);
+
+    // Use Plan to properly clean up created blocks.
+    VPlan Plan;
+    Plan.setEntry(R1);
+  }
+
+  {
+    // 2 nested regions.
+    //  VPBB1
+    //    |
+    //  R1 {
+    //         R1BB1
+    //       /        \
+    //   R2 {          |
+    //     \           |
+    //     R2BB1       |
+    //       |   \    R1BB2
+    //     R2BB2-|     |
+    //        \        |
+    //         R2BB3   |
+    //   }            /
+    //      \        /
+    //        R1BB3
+    //  }
+    //   |
+    //  VPBB2
+    //
+    VPBasicBlock *R1BB1 = new VPBasicBlock("R1BB1");
+    VPBasicBlock *R1BB2 = new VPBasicBlock("R1BB2");
+    VPBasicBlock *R1BB3 = new VPBasicBlock("R1BB3");
+    VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB3, "R1");
+
+    VPBasicBlock *R2BB1 = new VPBasicBlock("R2BB1");
+    VPBasicBlock *R2BB2 = new VPBasicBlock("R2BB2");
+    VPBasicBlock *R2BB3 = new VPBasicBlock("R2BB3");
+    VPRegionBlock *R2 = new VPRegionBlock(R2BB1, R2BB3, "R2");
+    R2BB2->setParent(R2);
+    VPBlockUtils::connectBlocks(R2BB1, R2BB2);
+    VPBlockUtils::connectBlocks(R2BB2, R2BB1);
+    VPBlockUtils::connectBlocks(R2BB2, R2BB3);
+
+    R2->setParent(R1);
+    VPBlockUtils::connectBlocks(R1BB1, R2);
+    R1BB2->setParent(R1);
+    VPBlockUtils::connectBlocks(R1BB1, R1BB2);
+    VPBlockUtils::connectBlocks(R1BB2, R1BB3);
+    VPBlockUtils::connectBlocks(R2, R1BB3);
+
+    VPBasicBlock *VPBB1 = new VPBasicBlock("VPBB1");
+    VPBlockUtils::connectBlocks(VPBB1, R1);
+    VPBasicBlock *VPBB2 = new VPBasicBlock("VPBB2");
+    VPBlockUtils::connectBlocks(R1, VPBB2);
+
+    // Depth-first.
+    VPBlockRecursiveTraversalWrapper<VPBlockBase *> Start(VPBB1);
+    SmallVector<VPBlockBase *> FromIterator(depth_first(Start));
+    EXPECT_EQ(10u, FromIterator.size());
+    EXPECT_EQ(VPBB1, FromIterator[0]);
+    EXPECT_EQ(R1, FromIterator[1]);
+    EXPECT_EQ(R1BB1, FromIterator[2]);
+    EXPECT_EQ(R2, FromIterator[3]);
+    EXPECT_EQ(R2BB1, FromIterator[4]);
+    EXPECT_EQ(R2BB2, FromIterator[5]);
+    EXPECT_EQ(R2BB3, FromIterator[6]);
+    EXPECT_EQ(R1BB3, FromIterator[7]);
+    EXPECT_EQ(VPBB2, FromIterator[8]);
+    EXPECT_EQ(R1BB2, FromIterator[9]);
+
+    // Post-order.
+    FromIterator.clear();
+    FromIterator.append(po_begin(Start), po_end(Start));
+    EXPECT_EQ(10u, FromIterator.size());
+    EXPECT_EQ(VPBB2, FromIterator[0]);
+    EXPECT_EQ(R1BB3, FromIterator[1]);
+    EXPECT_EQ(R2BB3, FromIterator[2]);
+    EXPECT_EQ(R2BB2, FromIterator[3]);
+    EXPECT_EQ(R2BB1, FromIterator[4]);
+    EXPECT_EQ(R2, FromIterator[5]);
+    EXPECT_EQ(R1BB2, FromIterator[6]);
+    EXPECT_EQ(R1BB1, FromIterator[7]);
+    EXPECT_EQ(R1, FromIterator[8]);
+    EXPECT_EQ(VPBB1, FromIterator[9]);
+
+    // Use Plan to properly clean up created blocks.
+    VPlan Plan;
+    Plan.setEntry(VPBB1);
+  }
+
+  {
+    //  VPBB1
+    //    |
+    //  R1 {
+    //    \
+    //     R2 {
+    //      R2BB1
+    //        |
+    //      R2BB2
+    //   }
+    //
+    VPBasicBlock *R2BB1 = new VPBasicBlock("R2BB1");
+    VPBasicBlock *R2BB2 = new VPBasicBlock("R2BB2");
+    VPRegionBlock *R2 = new VPRegionBlock(R2BB1, R2BB2, "R2");
+    VPBlockUtils::connectBlocks(R2BB1, R2BB2);
+
+    VPRegionBlock *R1 = new VPRegionBlock(R2, R2, "R1");
+    R2->setParent(R1);
+
+    VPBasicBlock *VPBB1 = new VPBasicBlock("VPBB1");
+    VPBlockUtils::connectBlocks(VPBB1, R1);
+
+    // Depth-first.
+    VPBlockRecursiveTraversalWrapper<VPBlockBase *> Start(VPBB1);
+    SmallVector<VPBlockBase *> FromIterator(depth_first(Start));
+    EXPECT_EQ(5u, FromIterator.size());
+    EXPECT_EQ(VPBB1, FromIterator[0]);
+    EXPECT_EQ(R1, FromIterator[1]);
+    EXPECT_EQ(R2, FromIterator[2]);
+    EXPECT_EQ(R2BB1, FromIterator[3]);
+    EXPECT_EQ(R2BB2, FromIterator[4]);
+
+    // Post-order.
+    FromIterator.clear();
+    FromIterator.append(po_begin(Start), po_end(Start));
+    EXPECT_EQ(5u, FromIterator.size());
+    EXPECT_EQ(R2BB2, FromIterator[0]);
+    EXPECT_EQ(R2BB1, FromIterator[1]);
+    EXPECT_EQ(R2, FromIterator[2]);
+    EXPECT_EQ(R1, FromIterator[3]);
+    EXPECT_EQ(VPBB1, FromIterator[4]);
+
+    // Use Plan to properly clean up created blocks.
+    VPlan Plan;
+    Plan.setEntry(VPBB1);
+  }
+
+  {
+    //  Nested regions with both R3 and R2 being exit nodes without successors.
+    //  The successors of R1 should be used.
+    //
+    //  VPBB1
+    //    |
+    //  R1 {
+    //    \
+    //     R2 {
+    //      \
+    //      R2BB1
+    //        |
+    //       R3 {
+    //          R3BB1
+    //      }
+    //   }
+    //   |
+    //  VPBB2
+    //
+    VPBasicBlock *R3BB1 = new VPBasicBlock("R3BB1");
+    VPRegionBlock *R3 = new VPRegionBlock(R3BB1, R3BB1, "R3");
+
+    VPBasicBlock *R2BB1 = new VPBasicBlock("R2BB1");
+    VPRegionBlock *R2 = new VPRegionBlock(R2BB1, R3, "R2");
+    R3->setParent(R2);
+    VPBlockUtils::connectBlocks(R2BB1, R3);
+
+    VPRegionBlock *R1 = new VPRegionBlock(R2, R2, "R1");
+    R2->setParent(R1);
+
+    VPBasicBlock *VPBB1 = new VPBasicBlock("VPBB1");
+    VPBasicBlock *VPBB2 = new VPBasicBlock("VPBB2");
+    VPBlockUtils::connectBlocks(VPBB1, R1);
+    VPBlockUtils::connectBlocks(R1, VPBB2);
+
+    // Depth-first.
+    VPBlockRecursiveTraversalWrapper<VPBlockBase *> Start(VPBB1);
+    SmallVector<VPBlockBase *> FromIterator(depth_first(Start));
+    EXPECT_EQ(7u, FromIterator.size());
+    EXPECT_EQ(VPBB1, FromIterator[0]);
+    EXPECT_EQ(R1, FromIterator[1]);
+    EXPECT_EQ(R2, FromIterator[2]);
+    EXPECT_EQ(R2BB1, FromIterator[3]);
+    EXPECT_EQ(R3, FromIterator[4]);
+    EXPECT_EQ(R3BB1, FromIterator[5]);
+    EXPECT_EQ(VPBB2, FromIterator[6]);
+
+    // Post-order.
+    FromIterator.clear();
+    copy(post_order(Start), std::back_inserter(FromIterator));
+    EXPECT_EQ(7u, FromIterator.size());
+    EXPECT_EQ(VPBB2, FromIterator[0]);
+    EXPECT_EQ(R3BB1, FromIterator[1]);
+    EXPECT_EQ(R3, FromIterator[2]);
+    EXPECT_EQ(R2BB1, FromIterator[3]);
+    EXPECT_EQ(R2, FromIterator[4]);
+    EXPECT_EQ(R1, FromIterator[5]);
+    EXPECT_EQ(VPBB1, FromIterator[6]);
+
+    // Use Plan to properly clean up created blocks.
+    VPlan Plan;
+    Plan.setEntry(VPBB1);
+  }
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST(VPBasicBlockTest, print) {
   VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
