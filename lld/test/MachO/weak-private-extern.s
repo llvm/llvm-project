@@ -3,11 +3,11 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %s -o %t.o
 # RUN: %lld -dylib %t.o -o %t.dylib -lSystem
 
-# RUN: llvm-objdump --macho --weak-bind %t.dylib | FileCheck %s
+# RUN: llvm-objdump --macho --bind --weak-bind %t.dylib | FileCheck %s
 # CHECK-NOT: __got
 # CHECK-NOT: __la_symbol_ptr
 
-# RUN: llvm-objdump --macho --all-headers %t.dylib | \
+# RUN: llvm-objdump --macho --private-header %t.dylib | \
 # RUN:     FileCheck --check-prefix=HEADERS %s
 # HEADERS-NOT: WEAK_DEFINES
 # HEADERS-NOT: BINDS_TO_WEAK
