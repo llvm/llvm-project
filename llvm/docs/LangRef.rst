@@ -19285,7 +19285,11 @@ The quiet comparison operation performed by
 '``llvm.experimental.constrained.fcmp``' will only raise an exception
 if either operand is a SNAN.  The signaling comparison operation
 performed by '``llvm.experimental.constrained.fcmps``' will raise an
-exception if either operand is a NAN (QNAN or SNAN).
+exception if either operand is a NAN (QNAN or SNAN). Such an exception
+does not preclude a result being produced (e.g. exception might only
+set a flag), therefore the distinction between ordered and unordered
+comparisons is also relevant for the
+'``llvm.experimental.constrained.fcmps``' intrinsic.
 
 '``llvm.experimental.constrained.fmuladd``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

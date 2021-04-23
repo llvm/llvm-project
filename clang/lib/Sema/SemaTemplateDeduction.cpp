@@ -5466,6 +5466,9 @@ static bool isAtLeastAsSpecializedAs(Sema &S, QualType T1, QualType T2,
                                                Deduced.end());
   Sema::InstantiatingTemplate Inst(S, Info.getLocation(), P2, DeducedArgs,
                                    Info);
+  if (Inst.isInvalid())
+    return false;
+
   auto *TST1 = T1->castAs<TemplateSpecializationType>();
   bool AtLeastAsSpecialized;
   S.runWithSufficientStackSpace(Info.getLocation(), [&] {

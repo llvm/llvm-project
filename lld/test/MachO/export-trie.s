@@ -15,9 +15,9 @@
 # EXPORTS-DAG:   [[#%x, HELLO_WORLD_ADDR:]] {{.*}} _hello_world
 # EXPORTS-DAG:   [[#%x, HELLO_ITS_ME_ADDR:]] {{.*}} _hello_its_me
 # EXPORTS-DAG:   [[#%x, HELLO_ITS_YOU_ADDR:]] {{.*}} _hello_its_you
-# EXPORTS-DAG:   {{0+}} g *ABS* __mh_execute_header
+# EXPORTS-DAG:   [[#%x, HEADER_ADDR:]] g F __TEXT,__text __mh_execute_header
 # EXPORTS-LABEL: Exports trie:
-# EXPORTS-DAG:   0x{{0+}} __mh_execute_header [absolute]
+# EXPORTS-DAG:   0x{{0*}}[[#%X, HEADER_ADDR]] __mh_execute_header
 # EXPORTS-DAG:   0x{{0*}}[[#%X, MAIN_ADDR]] _main
 # EXPORTS-DAG:   0x{{0*}}[[#%X, HELLO_ADDR]] _hello
 # EXPORTS-DAG:   0x{{0*}}[[#%X, HELLO_WORLD_ADDR]] _hello_world

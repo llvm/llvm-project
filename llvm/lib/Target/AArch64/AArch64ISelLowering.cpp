@@ -11754,9 +11754,8 @@ bool AArch64TargetLowering::shouldConsiderGEPOffsetSplit() const {
   return true;
 }
 
-int AArch64TargetLowering::getScalingFactorCost(const DataLayout &DL,
-                                                const AddrMode &AM, Type *Ty,
-                                                unsigned AS) const {
+InstructionCost AArch64TargetLowering::getScalingFactorCost(
+    const DataLayout &DL, const AddrMode &AM, Type *Ty, unsigned AS) const {
   // Scaling factors are not free at all.
   // Operands                     | Rt Latency
   // -------------------------------------------
@@ -17221,6 +17220,16 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorIntDivideToSVE(
   EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
   EVT FixedWidenedVT = HalfVT.widenIntegerVectorElementType(*DAG.getContext());
   EVT ScalableWidenedVT = getContainerForFixedLengthVector(DAG, FixedWidenedVT);
+
+  // If this is not a full vector, extend, div, and truncate it.
+  EVT WidenedVT = VT.widenIntegerVectorElementType(*DAG.getContext());
+  if (DAG.getTargetLoweringInfo().isTypeLegal(WidenedVT)) {
+    unsigned ExtendOpcode = Signed ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+    SDValue Op0 = DAG.getNode(ExtendOpcode, dl, WidenedVT, Op.getOperand(0));
+    SDValue Op1 = DAG.getNode(ExtendOpcode, dl, WidenedVT, Op.getOperand(1));
+    SDValue Div = DAG.getNode(Op.getOpcode(), dl, WidenedVT, Op0, Op1);
+    return DAG.getNode(ISD::TRUNCATE, dl, VT, Div);
+  }
 
   // Convert the operands to scalable vectors.
   SDValue Op0 = convertToScalableVector(DAG, ContainerVT, Op.getOperand(0));

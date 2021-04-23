@@ -443,8 +443,9 @@ class VectorType;
     /// addressing mode represented by AM.
     /// If the AM is supported, the return value must be >= 0.
     /// If the AM is not supported, the return value must be negative.
-    int getScalingFactorCost(const DataLayout &DL, const AddrMode &AM, Type *Ty,
-                             unsigned AS) const override;
+    InstructionCost getScalingFactorCost(const DataLayout &DL,
+                                         const AddrMode &AM, Type *Ty,
+                                         unsigned AS) const override;
 
     bool isLegalT2ScaledAddressingMode(const AddrMode &AM, EVT VT) const;
 
