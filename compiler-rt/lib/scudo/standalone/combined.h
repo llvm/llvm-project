@@ -1049,8 +1049,10 @@ private:
     const bool BypassQuarantine = !Quarantine.getCacheSize() ||
                                   ((Size - 1) >= QuarantineMaxChunkSize) ||
                                   !NewHeader.ClassId;
-    NewHeader.State =
-        BypassQuarantine ? Chunk::State::Available : Chunk::State::Quarantined;
+    if (BypassQuarantine)
+      NewHeader.State = Chunk::State::Available;
+    else
+      NewHeader.State = Chunk::State::Quarantined;
     NewHeader.OriginOrWasZeroed = useMemoryTagging<Params>(Options) &&
                                   NewHeader.ClassId &&
                                   !TSDRegistry.getDisableMemInit();
