@@ -668,8 +668,23 @@ public:
   bool runGVN();
 
 private:
+  /// Helper struct return a Expression with an optional extra dependency.
+  struct ExprResult {
+    const Expression *Expr;
+    Value *ExtraDep;
+
+    ~ExprResult() { assert(!ExtraDep && "unhandled ExtraDep"); }
+
+    operator bool() const { return Expr; }
+
+    static ExprResult none() { return {nullptr, nullptr}; }
+    static ExprResult some(const Expression *Expr, Value *ExtraDep = nullptr) {
+      return {Expr, ExtraDep};
+    }
+  };
+
   // Expression handling.
-  const Expression *createExpression(Instruction *) const;
+  ExprResult createExpression(Instruction *) const;
   const Expression *createBinaryExpression(unsigned, Type *, Value *, Value *,
                                            Instruction *) const;
 
@@ -742,10 +757,9 @@ private:
   void valueNumberInstruction(Instruction *);
 
   // Symbolic evaluation.
-  const Expression *checkSimplificationResults(Expression *, Instruction *,
-                                               Value *) const;
-  const Expression *performSymbolicEvaluation(Value *,
-                                              SmallPtrSetImpl<Value *> &) const;
+  ExprResult checkExprResults(Expression *, Instruction *, Value *) const;
+  ExprResult performSymbolicEvaluation(Value *,
+                                       SmallPtrSetImpl<Value *> &) const;
   const Expression *performSymbolicLoadCoercion(Type *, Value *, LoadInst *,
                                                 Instruction *,
                                                 MemoryAccess *) const;
@@ -757,7 +771,7 @@ private:
                                                  Instruction *I,
                                                  BasicBlock *PHIBlock) const;
   const Expression *performSymbolicAggrValueEvaluation(Instruction *) const;
-  const Expression *performSymbolicCmpEvaluation(Instruction *) const;
+  ExprResult performSymbolicCmpEvaluation(Instruction *) const;
   const Expression *performSymbolicPredicateInfoEvaluation(Instruction *) const;
 
   // Congruence finding.
@@ -814,6 +828,7 @@ private:
   void addPredicateUsers(const PredicateBase *, Instruction *) const;
   void addMemoryUsers(const MemoryAccess *To, MemoryAccess *U) const;
   void addAdditionalUsers(Value *To, Value *User) const;
+  void addAdditionalUsers(ExprResult &Res, Value *User) const;
 
   // Main loop of value numbering
   void iterateTouchedInstructions();
@@ -1052,19 +1067,21 @@ const Expression *NewGVN::createBinaryExpression(unsigned Opcode, Type *T,
   E->op_push_back(lookupOperandLeader(Arg2));
 
   Value *V = SimplifyBinOp(Opcode, E->getOperand(0), E->getOperand(1), SQ);
-  if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
-    return SimplifiedE;
+  if (auto Simplified = checkExprResults(E, I, V)) {
+    addAdditionalUsers(Simplified, I);
+    return Simplified.Expr;
+  }
   return E;
 }
 
 // Take a Value returned by simplification of Expression E/Instruction
 // I, and see if it resulted in a simpler expression. If so, return
 // that expression.
-const Expression *NewGVN::checkSimplificationResults(Expression *E,
-                                                     Instruction *I,
-                                                     Value *V) const {
+NewGVN::ExprResult NewGVN::checkExprResults(Expression *E, Instruction *I,
+                                            Value *V) const {
   if (!V)
-    return nullptr;
+    return ExprResult::none();
+
   if (auto *C = dyn_cast<Constant>(V)) {
     if (I)
       LLVM_DEBUG(dbgs() << "Simplified " << *I << " to "
@@ -1073,52 +1090,37 @@ const Expression *NewGVN::checkSimplificationResults(Expression *E,
     assert(isa<BasicExpression>(E) &&
            "We should always have had a basic expression here");
     deleteExpression(E);
-    return createConstantExpression(C);
+    return ExprResult::some(createConstantExpression(C));
   } else if (isa<Argument>(V) || isa<GlobalVariable>(V)) {
     if (I)
       LLVM_DEBUG(dbgs() << "Simplified " << *I << " to "
                         << " variable " << *V << "\n");
     deleteExpression(E);
-    return createVariableExpression(V);
+    return ExprResult::some(createVariableExpression(V));
   }
 
   CongruenceClass *CC = ValueToClass.lookup(V);
   if (CC) {
     if (CC->getLeader() && CC->getLeader() != I) {
-      // If we simplified to something else, we need to communicate
-      // that we're users of the value we simplified to.
-      if (I != V) {
-        // Don't add temporary instructions to the user lists.
-        if (!AllTempInstructions.count(I))
-          addAdditionalUsers(V, I);
-      }
-      return createVariableOrConstant(CC->getLeader());
+      return ExprResult::some(createVariableOrConstant(CC->getLeader()), V);
     }
     if (CC->getDefiningExpr()) {
-      // If we simplified to something else, we need to communicate
-      // that we're users of the value we simplified to.
-      if (I != V) {
-        // Don't add temporary instructions to the user lists.
-        if (!AllTempInstructions.count(I))
-          addAdditionalUsers(V, I);
-      }
-
       if (I)
         LLVM_DEBUG(dbgs() << "Simplified " << *I << " to "
                           << " expression " << *CC->getDefiningExpr() << "\n");
       NumGVNOpsSimplified++;
       deleteExpression(E);
-      return CC->getDefiningExpr();
+      return ExprResult::some(CC->getDefiningExpr(), V);
     }
   }
 
-  return nullptr;
+  return ExprResult::none();
 }
 
 // Create a value expression from the instruction I, replacing operands with
 // their leaders.
 
-const Expression *NewGVN::createExpression(Instruction *I) const {
+NewGVN::ExprResult NewGVN::createExpression(Instruction *I) const {
   auto *E = new (ExpressionAllocator) BasicExpression(I->getNumOperands());
 
   bool AllConstant = setBasicExpressionInfo(I, E);
@@ -1149,8 +1151,8 @@ const Expression *NewGVN::createExpression(Instruction *I) const {
             E->getOperand(1)->getType() == I->getOperand(1)->getType()));
     Value *V =
         SimplifyCmpInst(Predicate, E->getOperand(0), E->getOperand(1), SQ);
-    if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
-      return SimplifiedE;
+    if (auto Simplified = checkExprResults(E, I, V))
+      return Simplified;
   } else if (isa<SelectInst>(I)) {
     if (isa<Constant>(E->getOperand(0)) ||
         E->getOperand(1) == E->getOperand(2)) {
@@ -1158,24 +1160,24 @@ const Expression *NewGVN::createExpression(Instruction *I) const {
              E->getOperand(2)->getType() == I->getOperand(2)->getType());
       Value *V = SimplifySelectInst(E->getOperand(0), E->getOperand(1),
                                     E->getOperand(2), SQ);
-      if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
-        return SimplifiedE;
+      if (auto Simplified = checkExprResults(E, I, V))
+        return Simplified;
     }
   } else if (I->isBinaryOp()) {
     Value *V =
         SimplifyBinOp(E->getOpcode(), E->getOperand(0), E->getOperand(1), SQ);
-    if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
-      return SimplifiedE;
+    if (auto Simplified = checkExprResults(E, I, V))
+      return Simplified;
   } else if (auto *CI = dyn_cast<CastInst>(I)) {
     Value *V =
         SimplifyCastInst(CI->getOpcode(), E->getOperand(0), CI->getType(), SQ);
-    if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
-      return SimplifiedE;
+    if (auto Simplified = checkExprResults(E, I, V))
+      return Simplified;
   } else if (isa<GetElementPtrInst>(I)) {
     Value *V = SimplifyGEPInst(
         E->getType(), ArrayRef<Value *>(E->op_begin(), E->op_end()), SQ);
-    if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
-      return SimplifiedE;
+    if (auto Simplified = checkExprResults(E, I, V))
+      return Simplified;
   } else if (AllConstant) {
     // We don't bother trying to simplify unless all of the operands
     // were constant.
@@ -1189,10 +1191,10 @@ const Expression *NewGVN::createExpression(Instruction *I) const {
       C.emplace_back(cast<Constant>(Arg));
 
     if (Value *V = ConstantFoldInstOperands(I, C, DL, TLI))
-      if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
-        return SimplifiedE;
+      if (auto Simplified = checkExprResults(E, I, V))
+        return Simplified;
   }
-  return E;
+  return ExprResult::some(E);
 }
 
 const AggregateValueExpression *
@@ -1778,7 +1780,7 @@ NewGVN::performSymbolicAggrValueEvaluation(Instruction *I) const {
   return createAggregateValueExpression(I);
 }
 
-const Expression *NewGVN::performSymbolicCmpEvaluation(Instruction *I) const {
+NewGVN::ExprResult NewGVN::performSymbolicCmpEvaluation(Instruction *I) const {
   assert(isa<CmpInst>(I) && "Expected a cmp instruction.");
 
   auto *CI = cast<CmpInst>(I);
@@ -1798,14 +1800,17 @@ const Expression *NewGVN::performSymbolicCmpEvaluation(Instruction *I) const {
   // of an assume.
   auto *CmpPI = PredInfo->getPredicateInfoFor(I);
   if (dyn_cast_or_null<PredicateAssume>(CmpPI))
-    return createConstantExpression(ConstantInt::getTrue(CI->getType()));
+    return ExprResult::some(
+        createConstantExpression(ConstantInt::getTrue(CI->getType())));
 
   if (Op0 == Op1) {
     // This condition does not depend on predicates, no need to add users
     if (CI->isTrueWhenEqual())
-      return createConstantExpression(ConstantInt::getTrue(CI->getType()));
+      return ExprResult::some(
+          createConstantExpression(ConstantInt::getTrue(CI->getType())));
     else if (CI->isFalseWhenEqual())
-      return createConstantExpression(ConstantInt::getFalse(CI->getType()));
+      return ExprResult::some(
+          createConstantExpression(ConstantInt::getFalse(CI->getType())));
   }
 
   // NOTE: Because we are comparing both operands here and below, and using
@@ -1865,15 +1870,15 @@ const Expression *NewGVN::performSymbolicCmpEvaluation(Instruction *I) const {
           if (CmpInst::isImpliedTrueByMatchingCmp(BranchPredicate,
                                                   OurPredicate)) {
             addPredicateUsers(PI, I);
-            return createConstantExpression(
-                ConstantInt::getTrue(CI->getType()));
+            return ExprResult::some(
+                createConstantExpression(ConstantInt::getTrue(CI->getType())));
           }
 
           if (CmpInst::isImpliedFalseByMatchingCmp(BranchPredicate,
                                                    OurPredicate)) {
             addPredicateUsers(PI, I);
-            return createConstantExpression(
-                ConstantInt::getFalse(CI->getType()));
+            return ExprResult::some(
+                createConstantExpression(ConstantInt::getFalse(CI->getType())));
           }
         } else {
           // Just handle the ne and eq cases, where if we have the same
@@ -1881,14 +1886,14 @@ const Expression *NewGVN::performSymbolicCmpEvaluation(Instruction *I) const {
           if (BranchPredicate == OurPredicate) {
             addPredicateUsers(PI, I);
             // Same predicate, same ops,we know it was false, so this is false.
-            return createConstantExpression(
-                ConstantInt::getFalse(CI->getType()));
+            return ExprResult::some(
+                createConstantExpression(ConstantInt::getFalse(CI->getType())));
           } else if (BranchPredicate ==
                      CmpInst::getInversePredicate(OurPredicate)) {
             addPredicateUsers(PI, I);
             // Inverse predicate, we know the other was false, so this is true.
-            return createConstantExpression(
-                ConstantInt::getTrue(CI->getType()));
+            return ExprResult::some(
+                createConstantExpression(ConstantInt::getTrue(CI->getType())));
           }
         }
       }
@@ -1899,9 +1904,10 @@ const Expression *NewGVN::performSymbolicCmpEvaluation(Instruction *I) const {
 }
 
 // Substitute and symbolize the value before value numbering.
-const Expression *
+NewGVN::ExprResult
 NewGVN::performSymbolicEvaluation(Value *V,
                                   SmallPtrSetImpl<Value *> &Visited) const {
+
   const Expression *E = nullptr;
   if (auto *C = dyn_cast<Constant>(V))
     E = createConstantExpression(C);
@@ -1937,11 +1943,11 @@ NewGVN::performSymbolicEvaluation(Value *V,
       break;
     case Instruction::BitCast:
     case Instruction::AddrSpaceCast:
-      E = createExpression(I);
+      return createExpression(I);
       break;
     case Instruction::ICmp:
     case Instruction::FCmp:
-      E = performSymbolicCmpEvaluation(I);
+      return performSymbolicCmpEvaluation(I);
       break;
     case Instruction::FNeg:
     case Instruction::Add:
@@ -1977,16 +1983,16 @@ NewGVN::performSymbolicEvaluation(Value *V,
     case Instruction::ExtractElement:
     case Instruction::InsertElement:
     case Instruction::GetElementPtr:
-      E = createExpression(I);
+      return createExpression(I);
       break;
     case Instruction::ShuffleVector:
       // FIXME: Add support for shufflevector to createExpression.
-      return nullptr;
+      return ExprResult::none();
     default:
-      return nullptr;
+      return ExprResult::none();
     }
   }
-  return E;
+  return ExprResult::some(E);
 }
 
 // Look up a container of values/instructions in a map, and touch all the
@@ -2005,6 +2011,12 @@ void NewGVN::addAdditionalUsers(Value *To, Value *User) const {
   assert(User && To != User);
   if (isa<Instruction>(To))
     AdditionalUsers[To].insert(User);
+}
+
+void NewGVN::addAdditionalUsers(ExprResult &Res, Value *User) const {
+  if (Res.ExtraDep && Res.ExtraDep != User)
+    addAdditionalUsers(Res.ExtraDep, User);
+  Res.ExtraDep = nullptr;
 }
 
 void NewGVN::markUsersTouched(Value *V) {
@@ -2414,9 +2426,14 @@ void NewGVN::processOutgoingEdges(Instruction *TI, BasicBlock *B) {
     Value *CondEvaluated = findConditionEquivalence(Cond);
     if (!CondEvaluated) {
       if (auto *I = dyn_cast<Instruction>(Cond)) {
-        const Expression *E = createExpression(I);
-        if (const auto *CE = dyn_cast<ConstantExpression>(E)) {
+        auto Res = createExpression(I);
+        if (const auto *CE = dyn_cast<ConstantExpression>(Res.Expr)) {
           CondEvaluated = CE->getConstantValue();
+          addAdditionalUsers(Res, I);
+        } else {
+          // Did not use simplification result, no need to add the extra
+          // dependency.
+          Res.ExtraDep = nullptr;
         }
       } else if (isa<ConstantInt>(Cond)) {
         CondEvaluated = Cond;
@@ -2600,7 +2617,9 @@ Value *NewGVN::findLeaderForInst(Instruction *TransInst,
   TempToBlock.insert({TransInst, PredBB});
   InstrDFS.insert({TransInst, IDFSNum});
 
-  const Expression *E = performSymbolicEvaluation(TransInst, Visited);
+  auto Res = performSymbolicEvaluation(TransInst, Visited);
+  const Expression *E = Res.Expr;
+  addAdditionalUsers(Res, OrigInst);
   InstrDFS.erase(TransInst);
   AllTempInstructions.erase(TransInst);
   TempToBlock.erase(TransInst);
@@ -3027,7 +3046,10 @@ void NewGVN::valueNumberInstruction(Instruction *I) {
     const Expression *Symbolized = nullptr;
     SmallPtrSet<Value *, 2> Visited;
     if (DebugCounter::shouldExecute(VNCounter)) {
-      Symbolized = performSymbolicEvaluation(I, Visited);
+      auto Res = performSymbolicEvaluation(I, Visited);
+      Symbolized = Res.Expr;
+      addAdditionalUsers(Res, I);
+
       // Make a phi of ops if necessary
       if (Symbolized && !isa<ConstantExpression>(Symbolized) &&
           !isa<VariableExpression>(Symbolized) && PHINodeUses.count(I)) {
