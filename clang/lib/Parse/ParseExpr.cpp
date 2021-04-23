@@ -1469,6 +1469,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::kw_this:
     Res = ParseCXXThis();
     break;
+  case tok::kw___builtin_unique_stable_name:
+    Res = ParseUniqueStableNameExpression();
+    break;
 
   case tok::annot_typename:
     if (isStartOfObjCClassMessageMissingOpenBracket()) {
@@ -2322,6 +2325,45 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
   // If we get here, the operand to the typeof/sizeof/alignof was an expression.
   isCastExpr = false;
   return Operand;
+}
+
+/// Parse a __builtin_unique_stable_name expression.  Accepts a type-id or an
+/// arbitrary expression as a parameter.
+ExprResult Parser::ParseUniqueStableNameExpression() {
+  assert(Tok.is(tok::kw___builtin_unique_stable_name) &&
+         "Not __bulitin_unique_stable_name");
+
+  SourceLocation OpLoc = ConsumeToken();
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+
+  // typeid expressions are always parenthesized.
+  if (T.expectAndConsume(diag::err_expected_lparen_after,
+                         "__builtin_unique_stable_name"))
+    return ExprError();
+
+  if (isTypeIdInParens()) {
+    TypeResult Ty = ParseTypeName();
+    T.consumeClose();
+
+    if (Ty.isInvalid())
+      return ExprError();
+
+    return Actions.ActOnUniqueStableNameExpr(OpLoc, T.getOpenLocation(),
+                                             T.getCloseLocation(), Ty.get());
+  }
+
+  EnterExpressionEvaluationContext Unevaluated(
+      Actions, Sema::ExpressionEvaluationContext::Unevaluated);
+  ExprResult Result = ParseExpression();
+
+  if (Result.isInvalid()) {
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return Result;
+  }
+
+  T.consumeClose();
+  return Actions.ActOnUniqueStableNameExpr(OpLoc, T.getOpenLocation(),
+                                           T.getCloseLocation(), Result.get());
 }
 
 

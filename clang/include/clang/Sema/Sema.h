@@ -5176,6 +5176,13 @@ public:
   ExprResult ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind);
   ExprResult ActOnIntegerConstant(SourceLocation Loc, uint64_t Val);
 
+  ExprResult ActOnUniqueStableNameExpr(SourceLocation OpLoc,
+                                       SourceLocation LParen,
+                                       SourceLocation RParen, ParsedType Ty);
+  ExprResult ActOnUniqueStableNameExpr(SourceLocation OpLoc,
+                                       SourceLocation LParen,
+                                       SourceLocation RParen, Expr *Operand);
+
   bool CheckLoopHintExpr(Expr *E, SourceLocation Loc);
 
   ExprResult ActOnNumericConstant(const Token &Tok, Scope *UDLScope = nullptr);
