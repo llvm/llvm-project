@@ -1651,7 +1651,7 @@ bool SIFoldOperands::tryFoldLCSSAPhi(MachineInstr &PHI) {
 // Attempt to convert VGPR load to an AGPR load.
 bool SIFoldOperands::tryFoldLoad(MachineInstr &MI) {
   assert(MI.mayLoad());
-  if (!ST->hasGFX90AInsts() || !MI.getNumOperands())
+  if (!ST->hasGFX90AInsts() || MI.getNumExplicitDefs() != 1)
     return false;
 
   MachineOperand &Def = MI.getOperand(0);
