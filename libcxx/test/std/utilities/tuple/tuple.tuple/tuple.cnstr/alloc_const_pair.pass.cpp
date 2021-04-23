@@ -56,6 +56,13 @@ int main(int, char**)
         assert(std::get<0>(t1) == 2);
         assert(std::get<1>(t1) == 3);
     }
+    {
+        // Test that we can use a tag derived from allocator_arg_t
+        struct DerivedFromAllocatorArgT : std::allocator_arg_t { };
+        DerivedFromAllocatorArgT derived;
+        std::pair<int, int> p(1, 2);
+        std::tuple<int, int> t(derived, A1<int>(), p);
+    }
 
-  return 0;
+    return 0;
 }
