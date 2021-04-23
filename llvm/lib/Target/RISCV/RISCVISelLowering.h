@@ -470,10 +470,6 @@ public:
                                            unsigned InsertExtractIdx,
                                            const RISCVRegisterInfo *TRI);
   MVT getContainerForFixedLengthVector(MVT VT) const;
-  static MVT getContainerForFixedLengthVector(const TargetLowering &TLI, MVT VT,
-                                              const RISCVSubtarget &Subtarget);
-  static MVT getContainerForFixedLengthVector(SelectionDAG &DAG, MVT VT,
-                                              const RISCVSubtarget &Subtarget);
 
   bool shouldRemoveExtendFromGSIndex(EVT VT) const override;
 

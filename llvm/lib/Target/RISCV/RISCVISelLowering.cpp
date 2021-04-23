@@ -42,6 +42,19 @@ using namespace llvm;
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 
+static unsigned getLMULForFixedLengthVector(MVT VT,
+                                            const RISCVSubtarget &Subtarget) {
+  unsigned MinVLen = Subtarget.getMinRVVVectorSizeInBits();
+
+  // Masks only occupy a single register. An LMUL==1 operation can only use
+  // at most 1/8 of the register. Only an LMUL==8 operaton on i8 types can
+  // use the whole register.
+  if (VT.getVectorElementType() == MVT::i1)
+    MinVLen /= 8;
+
+  return divideCeil(VT.getSizeInBits(), MinVLen);
+}
+
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -143,7 +156,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     if (Subtarget.useRVVForFixedLengthVectors()) {
       auto addRegClassForFixedVectors = [this](MVT VT) {
-        unsigned LMul = Subtarget.getLMULForFixedLengthVector(VT);
+        unsigned LMul = getLMULForFixedLengthVector(VT, Subtarget);
         const TargetRegisterClass *RC;
         if (LMul == 1 || VT.getVectorElementType() == MVT::i1)
           RC = &RISCV::VRRegClass;
@@ -1106,12 +1119,12 @@ RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
 }
 
 // Return the largest legal scalable vector type that matches VT's element type.
-MVT RISCVTargetLowering::getContainerForFixedLengthVector(
-    const TargetLowering &TLI, MVT VT, const RISCVSubtarget &Subtarget) {
+static MVT getContainerForFixedLengthVector(const TargetLowering &TLI, MVT VT,
+                                            const RISCVSubtarget &Subtarget) {
   assert(VT.isFixedLengthVector() && TLI.isTypeLegal(VT) &&
          "Expected legal fixed length vector!");
 
-  unsigned LMul = Subtarget.getLMULForFixedLengthVector(VT);
+  unsigned LMul = getLMULForFixedLengthVector(VT, Subtarget);
   assert(LMul <= 8 && isPowerOf2_32(LMul) && "Unexpected LMUL!");
 
   MVT EltVT = VT.getVectorElementType();
@@ -1137,14 +1150,14 @@ MVT RISCVTargetLowering::getContainerForFixedLengthVector(
   }
 }
 
-MVT RISCVTargetLowering::getContainerForFixedLengthVector(
-    SelectionDAG &DAG, MVT VT, const RISCVSubtarget &Subtarget) {
+static MVT getContainerForFixedLengthVector(SelectionDAG &DAG, MVT VT,
+                                            const RISCVSubtarget &Subtarget) {
   return getContainerForFixedLengthVector(DAG.getTargetLoweringInfo(), VT,
                                           Subtarget);
 }
 
 MVT RISCVTargetLowering::getContainerForFixedLengthVector(MVT VT) const {
-  return getContainerForFixedLengthVector(*this, VT, getSubtarget());
+  return ::getContainerForFixedLengthVector(*this, VT, getSubtarget());
 }
 
 // Grow V to consume an entire RVV register.
@@ -1221,8 +1234,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   MVT VT = Op.getSimpleValueType();
   assert(VT.isFixedLengthVector() && "Unexpected vector!");
 
-  MVT ContainerVT =
-      RISCVTargetLowering::getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
 
   SDLoc DL(Op);
   SDValue Mask, VL;
@@ -1383,8 +1395,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       SDValue ViaVL =
           DAG.getConstant(ViaVecVT.getVectorNumElements(), DL, XLenVT);
       MVT ViaContainerVT =
-          RISCVTargetLowering::getContainerForFixedLengthVector(DAG, ViaVecVT,
-                                                                Subtarget);
+          getContainerForFixedLengthVector(DAG, ViaVecVT, Subtarget);
       SDValue Splat =
           DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ViaContainerVT,
                       DAG.getConstant(SplatValue, DL, XLenVT), ViaVL);
@@ -1555,8 +1566,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   unsigned NumElts = VT.getVectorNumElements();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
 
-  MVT ContainerVT =
-      RISCVTargetLowering::getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
 
   SDValue TrueMask, VL;
   std::tie(TrueMask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
@@ -8030,7 +8040,7 @@ bool RISCVTargetLowering::useRVVForFixedLengthVectorVT(MVT VT) const {
     break;
   }
 
-  unsigned LMul = Subtarget.getLMULForFixedLengthVector(VT);
+  unsigned LMul = getLMULForFixedLengthVector(VT, Subtarget);
   // Don't use RVV for types that don't fit.
   if (LMul > Subtarget.getMaxLMULForFixedLengthVectors())
     return false;

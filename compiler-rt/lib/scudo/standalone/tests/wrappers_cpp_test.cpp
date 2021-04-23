@@ -66,10 +66,6 @@ public:
 };
 
 TEST(ScudoWrappersCppTest, New) {
-  if (getenv("SKIP_TYPE_MISMATCH")) {
-    printf("Skipped type mismatch tests.\n");
-    return;
-  }
   testCxxNew<bool>();
   testCxxNew<uint8_t>();
   testCxxNew<uint16_t>();

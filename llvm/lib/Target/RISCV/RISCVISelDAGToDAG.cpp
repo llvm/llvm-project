@@ -1047,14 +1047,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     auto Idx = Node->getConstantOperandVal(2);
     MVT SubVecVT = SubV.getSimpleValueType();
 
+    const RISCVTargetLowering &TLI = *Subtarget->getTargetLowering();
     MVT SubVecContainerVT = SubVecVT;
     // Establish the correct scalable-vector types for any fixed-length type.
     if (SubVecVT.isFixedLengthVector())
-      SubVecContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
-          *CurDAG, SubVecVT, *Subtarget);
+      SubVecContainerVT = TLI.getContainerForFixedLengthVector(SubVecVT);
     if (VT.isFixedLengthVector())
-      VT = RISCVTargetLowering::getContainerForFixedLengthVector(*CurDAG, VT,
-                                                                 *Subtarget);
+      VT = TLI.getContainerForFixedLengthVector(VT);
 
     const auto *TRI = Subtarget->getRegisterInfo();
     unsigned SubRegIdx;
@@ -1101,14 +1100,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     MVT InVT = V.getSimpleValueType();
     SDLoc DL(V);
 
+    const RISCVTargetLowering &TLI = *Subtarget->getTargetLowering();
     MVT SubVecContainerVT = VT;
     // Establish the correct scalable-vector types for any fixed-length type.
     if (VT.isFixedLengthVector())
-      SubVecContainerVT = RISCVTargetLowering::getContainerForFixedLengthVector(
-          *CurDAG, VT, *Subtarget);
+      SubVecContainerVT = TLI.getContainerForFixedLengthVector(VT);
     if (InVT.isFixedLengthVector())
-      InVT = RISCVTargetLowering::getContainerForFixedLengthVector(
-          *CurDAG, InVT, *Subtarget);
+      InVT = TLI.getContainerForFixedLengthVector(InVT);
 
     const auto *TRI = Subtarget->getRegisterInfo();
     unsigned SubRegIdx;
