@@ -1212,6 +1212,27 @@ unsigned PPCTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
+bool PPCTTIImpl::areFunctionArgsABICompatible(
+    const Function *Caller, const Function *Callee,
+    SmallPtrSetImpl<Argument *> &Args) const {
+
+  // We need to ensure that argument promotion does not
+  // attempt to promote pointers to MMA types (__vector_pair
+  // and __vector_quad) since these types explicitly cannot be
+  // passed as arguments. Both of these types are larger than
+  // the 128-bit Altivec vectors and have a scalar size of 1 bit.
+  if (!BaseT::areFunctionArgsABICompatible(Caller, Callee, Args))
+    return false;
+
+  return llvm::none_of(Args, [](Argument *A) {
+    auto *EltTy = cast<PointerType>(A->getType())->getElementType();
+    if (EltTy->isSized())
+      return (EltTy->isIntOrIntVectorTy(1) &&
+              EltTy->getPrimitiveSizeInBits() > 128);
+    return false;
+  });
+}
+
 bool PPCTTIImpl::canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
                             LoopInfo *LI, DominatorTree *DT,
                             AssumptionCache *AC, TargetLibraryInfo *LibInfo) {
