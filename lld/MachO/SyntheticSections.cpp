@@ -1115,12 +1115,12 @@ void macho::createSyntheticSymbols() {
     if (config->isPic)
       symtab->addSynthetic("__mh_execute_header", in.header->isec, 0,
                            /*privateExtern=*/false,
-                           /*includeInSymbtab=*/true);
+                           /*includeInSymtab=*/true);
     else
       symtab->addSynthetic("__mh_execute_header",
                            /*isec*/ nullptr, 0,
                            /*privateExtern=*/false,
-                           /*includeInSymbtab=*/true);
+                           /*includeInSymtab=*/true);
     break;
 
     // The following symbols are  N_SECT symbols, even though the header is not
