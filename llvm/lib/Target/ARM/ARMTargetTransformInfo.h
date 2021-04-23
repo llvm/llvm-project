@@ -215,8 +215,8 @@ public:
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      unsigned Index);
 
-  int getAddressComputationCost(Type *Val, ScalarEvolution *SE,
-                                const SCEV *Ptr);
+  InstructionCost getAddressComputationCost(Type *Val, ScalarEvolution *SE,
+                                            const SCEV *Ptr);
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,

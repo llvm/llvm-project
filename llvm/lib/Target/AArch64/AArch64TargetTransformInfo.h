@@ -169,7 +169,8 @@ public:
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr);
 
-  int getAddressComputationCost(Type *Ty, ScalarEvolution *SE, const SCEV *Ptr);
+  InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
+                                            const SCEV *Ptr);
 
   InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                                      CmpInst::Predicate VecPred,

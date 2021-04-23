@@ -977,8 +977,9 @@ InstructionCost ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
          BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
 }
 
-int ARMTTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
-                                          const SCEV *Ptr) {
+InstructionCost ARMTTIImpl::getAddressComputationCost(Type *Ty,
+                                                      ScalarEvolution *SE,
+                                                      const SCEV *Ptr) {
   // Address computations in vectorized code with non-consecutive addresses will
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting

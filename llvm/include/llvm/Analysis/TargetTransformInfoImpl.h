@@ -611,8 +611,8 @@ public:
 
   unsigned getNumberOfParts(Type *Tp) const { return 0; }
 
-  unsigned getAddressComputationCost(Type *Tp, ScalarEvolution *,
-                                     const SCEV *) const {
+  InstructionCost getAddressComputationCost(Type *Tp, ScalarEvolution *,
+                                            const SCEV *) const {
     return 0;
   }
 
