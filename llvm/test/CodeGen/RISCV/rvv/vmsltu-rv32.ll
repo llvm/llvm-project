@@ -1683,12 +1683,12 @@ define <vscale x 1 x i1> @intrinsic_vmsltu_mask_vx_nxv1i64_i64(<vscale x 1 x i1>
 ; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    vsetvli a0, a2, e64,m1,ta,mu
 ; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vlse64.v v25, (a0), zero
-; CHECK-NEXT:    vmv1r.v v26, v0
+; CHECK-NEXT:    vlse64.v v26, (a0), zero
+; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    vsetvli a0, a2, e64,m1,tu,mu
 ; CHECK-NEXT:    vmv1r.v v0, v9
-; CHECK-NEXT:    vmsltu.vv v26, v8, v25, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v26
+; CHECK-NEXT:    vmsltu.vv v25, v8, v26, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
