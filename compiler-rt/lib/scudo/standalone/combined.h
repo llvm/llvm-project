@@ -1036,8 +1036,22 @@ private:
                                    Chunk::UnpackedHeader *Header, uptr Size) {
     void *Ptr = getHeaderTaggedPointer(TaggedPtr);
     Chunk::UnpackedHeader NewHeader = *Header;
+    // If the quarantine is disabled, the actual size of a chunk is 0 or larger
+    // than the maximum allowed, we return a chunk directly to the backend.
+    // This purposefully underflows for Size == 0.
+    const bool BypassQuarantine = !Quarantine.getCacheSize() ||
+                                  ((Size - 1) >= QuarantineMaxChunkSize) ||
+                                  !NewHeader.ClassId;
+    NewHeader.State =
+        BypassQuarantine ? Chunk::State::Available : Chunk::State::Quarantined;
+    NewHeader.OriginOrWasZeroed = useMemoryTagging<Params>(Options) &&
+                                  NewHeader.ClassId &&
+                                  !TSDRegistry.getDisableMemInit();
+    Chunk::compareExchangeHeader(Cookie, Ptr, &NewHeader, Header);
+
     if (UNLIKELY(useMemoryTagging<Params>(Options))) {
       u8 PrevTag = extractTag(reinterpret_cast<uptr>(TaggedPtr));
+      storeDeallocationStackMaybe(Options, Ptr, PrevTag, Size);
       if (NewHeader.ClassId) {
         if (!TSDRegistry.getDisableMemInit()) {
           uptr TaggedBegin, TaggedEnd;
@@ -1049,19 +1063,9 @@ private:
           setRandomTag(Ptr, Size, OddEvenMask | (1UL << PrevTag), &TaggedBegin,
                        &TaggedEnd);
         }
-        NewHeader.OriginOrWasZeroed = !TSDRegistry.getDisableMemInit();
       }
-      storeDeallocationStackMaybe(Options, Ptr, PrevTag, Size);
     }
-    // If the quarantine is disabled, the actual size of a chunk is 0 or larger
-    // than the maximum allowed, we return a chunk directly to the backend.
-    // This purposefully underflows for Size == 0.
-    const bool BypassQuarantine = !Quarantine.getCacheSize() ||
-                                  ((Size - 1) >= QuarantineMaxChunkSize) ||
-                                  !NewHeader.ClassId;
     if (BypassQuarantine) {
-      NewHeader.State = Chunk::State::Available;
-      Chunk::compareExchangeHeader(Cookie, Ptr, &NewHeader, Header);
       if (allocatorSupportsMemoryTagging<Params>())
         Ptr = untagPointer(Ptr);
       void *BlockBegin = getBlockBegin(Ptr, &NewHeader);
@@ -1079,8 +1083,6 @@ private:
         Secondary.deallocate(Options, BlockBegin);
       }
     } else {
-      NewHeader.State = Chunk::State::Quarantined;
-      Chunk::compareExchangeHeader(Cookie, Ptr, &NewHeader, Header);
       bool UnlockRequired;
       auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
       Quarantine.put(&TSD->QuarantineCache,
