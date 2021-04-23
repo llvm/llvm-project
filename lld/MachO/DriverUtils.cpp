@@ -140,12 +140,15 @@ std::string macho::createResponseFile(const InputArgList &args) {
         for (StringRef path : args::getLines(*buffer))
           os << quote(rewritePath(path)) << "\n";
       break;
-    case OPT_force_load:
-    case OPT_rpath:
-    case OPT_syslibroot:
     case OPT_F:
     case OPT_L:
+    case OPT_bundle_loader:
+    case OPT_exported_symbols_list:
+    case OPT_force_load:
     case OPT_order_file:
+    case OPT_rpath:
+    case OPT_syslibroot:
+    case OPT_unexported_symbols_list:
       os << arg->getSpelling() << " " << quote(rewritePath(arg->getValue()))
          << "\n";
       break;
