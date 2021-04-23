@@ -146,15 +146,3 @@ unsigned RISCVSubtarget::getMaxLMULForFixedLengthVectors() const {
 bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
   return hasStdExtV() && getMinRVVVectorSizeInBits() != 0;
 }
-
-unsigned RISCVSubtarget::getLMULForFixedLengthVector(MVT VT) const {
-  unsigned MinVLen = getMinRVVVectorSizeInBits();
-
-  // Masks only occupy a single register. An LMUL==1 operation can only use
-  // at most 1/8 of the register. Only an LMUL==8 operaton on i8 types can
-  // use the whole register.
-  if (VT.getVectorElementType() == MVT::i1)
-    MinVLen /= 8;
-
-  return divideCeil(VT.getSizeInBits(), MinVLen);
-}
