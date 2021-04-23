@@ -144,6 +144,9 @@ void checkAMDGPUCodeObjectVersion(const Driver &D,
 unsigned getAMDGPUCodeObjectVersion(const Driver &D,
                                     const llvm::opt::ArgList &Args);
 
+bool haveAMDGPUCodeObjectVersionArgument(const Driver &D,
+                                         const llvm::opt::ArgList &Args);
+
 void addMachineOutlinerArgs(const Driver &D, const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs,
                             const llvm::Triple &Triple, bool IsLTO);
