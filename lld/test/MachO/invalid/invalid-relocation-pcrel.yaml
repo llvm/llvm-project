@@ -54,7 +54,7 @@ LoadCommands:
   - cmd:             LC_BUILD_VERSION
     cmdsize:         24
     platform:        1
-    minos:           659200
+    minos:           655360
     sdk:             0
     ntools:          0
   - cmd:             LC_SYMTAB
