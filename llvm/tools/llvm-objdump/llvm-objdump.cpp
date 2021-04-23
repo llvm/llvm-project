@@ -972,6 +972,62 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, const MCInstrAnalysis *MIA,
   }
 }
 
+// Create an MCSymbolizer for the target and add it to the MCDisassembler.
+// This is currently only used on AMDGPU, and assumes the format of the
+// void * argument passed to AMDGPU's createMCSymbolizer.
+static void addSymbolizer(MCContext &Ctx, const Target *Target,
+                          StringRef TripleName, MCDisassembler *DisAsm,
+                          uint64_t SectionAddr, ArrayRef<uint8_t> Bytes,
+                          SectionSymbolsTy &Symbols,
+                          std::vector<std::string *> &SynthesizedLabelNames) {
+
+  std::unique_ptr<MCRelocationInfo> RelInfo(
+      Target->createMCRelocationInfo(TripleName, Ctx));
+  if (!RelInfo)
+    return;
+  std::unique_ptr<MCSymbolizer> Symbolizer(Target->createMCSymbolizer(
+      TripleName, nullptr, nullptr, &Symbols, &Ctx, std::move(RelInfo)));
+  MCSymbolizer *SymbolizerPtr = &*Symbolizer;
+  DisAsm->setSymbolizer(std::move(Symbolizer));
+
+  if (!SymbolizeOperands)
+    return;
+
+  // Synthesize labels referenced by branch instructions by
+  // disassembling, discarding the output, and collecting the referenced
+  // addresses from the symbolizer.
+  for (size_t Index = 0; Index != Bytes.size();) {
+    MCInst Inst;
+    uint64_t Size;
+    DisAsm->getInstruction(Inst, Size, Bytes.slice(Index), SectionAddr + Index,
+                           nulls());
+    if (Size == 0)
+      Size = 1;
+    Index += Size;
+  }
+  ArrayRef<uint64_t> LabelAddrsRef = SymbolizerPtr->getReferencedAddresses();
+  // Copy and sort to remove duplicates.
+  std::vector<uint64_t> LabelAddrs;
+  LabelAddrs.insert(LabelAddrs.end(), LabelAddrsRef.begin(),
+                    LabelAddrsRef.end());
+  llvm::sort(LabelAddrs);
+  LabelAddrs.resize(std::unique(LabelAddrs.begin(), LabelAddrs.end()) -
+                    LabelAddrs.begin());
+  // Add the labels.
+  for (unsigned LabelNum = 0; LabelNum != LabelAddrs.size(); ++LabelNum) {
+    SynthesizedLabelNames.push_back(
+        new std::string((Twine("L") + Twine(LabelNum)).str()));
+    Symbols.push_back(SymbolInfoTy(
+        LabelAddrs[LabelNum], *SynthesizedLabelNames.back(), ELF::STT_NOTYPE));
+  }
+  llvm::stable_sort(Symbols);
+  // Recreate the symbolizer with the new symbols list.
+  RelInfo.reset(Target->createMCRelocationInfo(TripleName, Ctx));
+  Symbolizer.reset(Target->createMCSymbolizer(
+      TripleName, nullptr, nullptr, &Symbols, &Ctx, std::move(RelInfo)));
+  DisAsm->setSymbolizer(std::move(Symbolizer));
+}
+
 static StringRef getSegmentName(const MachOObjectFile *MachO,
                                 const SectionRef &Section) {
   if (MachO) {
@@ -1134,16 +1190,14 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
     llvm::sort(MappingSymbols);
 
+    ArrayRef<uint8_t> Bytes = arrayRefFromStringRef(
+        unwrapOrError(Section.getContents(), Obj->getFileName()));
+
+    std::vector<std::string *> SynthesizedLabelNames;
     if (Obj->isELF() && Obj->getArch() == Triple::amdgcn) {
       // AMDGPU disassembler uses symbolizer for printing labels
-      std::unique_ptr<MCRelocationInfo> RelInfo(
-        TheTarget->createMCRelocationInfo(TripleName, Ctx));
-      if (RelInfo) {
-        std::unique_ptr<MCSymbolizer> Symbolizer(
-          TheTarget->createMCSymbolizer(
-            TripleName, nullptr, nullptr, &Symbols, &Ctx, std::move(RelInfo)));
-        DisAsm->setSymbolizer(std::move(Symbolizer));
-      }
+      addSymbolizer(Ctx, TheTarget, TripleName, DisAsm, SectionAddr, Bytes,
+                    Symbols, SynthesizedLabelNames);
     }
 
     StringRef SegmentName = getSegmentName(MachO, Section);
@@ -1158,9 +1212,6 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
     SmallString<40> Comments;
     raw_svector_ostream CommentStream(Comments);
-
-    ArrayRef<uint8_t> Bytes = arrayRefFromStringRef(
-        unwrapOrError(Section.getContents(), Obj->getFileName()));
 
     uint64_t VMAAdjustment = 0;
     if (shouldAdjustVA(Section))

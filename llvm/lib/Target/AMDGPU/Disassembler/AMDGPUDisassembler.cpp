@@ -1834,6 +1834,8 @@ bool AMDGPUSymbolizer::tryAddingSymbolicOperand(MCInst &Inst,
     Inst.addOperand(MCOperand::createExpr(Add));
     return true;
   }
+  // Add to list of referenced addresses, so caller can synthesize a label.
+  ReferencedAddresses.push_back(static_cast<uint64_t>(Value));
   return false;
 }
 
