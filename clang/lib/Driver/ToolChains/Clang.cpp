@@ -1114,11 +1114,18 @@ static const char *RelocationModelName(llvm::Reloc::Model Model) {
 static void handleAMDGPUCodeObjectVersionOptions(const Driver &D,
                                                  const ArgList &Args,
                                                  ArgStringList &CmdArgs) {
-  unsigned CodeObjVer = getAMDGPUCodeObjectVersion(D, Args);
-  CmdArgs.insert(CmdArgs.begin() + 1,
-                 Args.MakeArgString(Twine("--amdhsa-code-object-version=") +
-                                    Twine(CodeObjVer)));
-  CmdArgs.insert(CmdArgs.begin() + 1, "-mllvm");
+  // If no version was requested by the user, use the default value from the
+  // back end. This is consistent with the value returned from
+  // getAMDGPUCodeObjectVersion. This lets clang emit IR for amdgpu without
+  // requiring the corresponding llvm to have the AMDGPU target enabled,
+  // provided the user (e.g. front end tests) can use the default.
+  if (haveAMDGPUCodeObjectVersionArgument(D, Args)) {
+    unsigned CodeObjVer = getAMDGPUCodeObjectVersion(D, Args);
+    CmdArgs.insert(CmdArgs.begin() + 1,
+                   Args.MakeArgString(Twine("--amdhsa-code-object-version=") +
+                                      Twine(CodeObjVer)));
+    CmdArgs.insert(CmdArgs.begin() + 1, "-mllvm");
+  }
 }
 
 void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
