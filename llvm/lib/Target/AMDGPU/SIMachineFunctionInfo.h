@@ -461,9 +461,9 @@ public:
     bool FullyAllocated = false;
   };
 
-  // Map WWM VGPR to a stack slot that is used to save/restore it in the
-  // prolog/epilog.
-  SmallDenseMap<Register, Optional<int>> WWMReservedRegs;
+  SparseBitVector<> WWMReservedRegs;
+
+  void ReserveWWMRegister(Register Reg) { WWMReservedRegs.set(Reg); }
 
 private:
   // Track VGPR + wave index for each subregister of the SGPR spilled to
@@ -502,10 +502,6 @@ public:
   SIMachineFunctionInfo(const MachineFunction &MF);
 
   bool initializeBaseYamlFields(const yaml::SIMachineFunctionInfo &YamlMFI);
-
-  void reserveWWMRegister(Register Reg, Optional<int> FI) {
-    WWMReservedRegs.insert(std::make_pair(Reg, FI));
-  }
 
   ArrayRef<SpilledReg> getSGPRToVGPRSpills(int FrameIndex) const {
     auto I = SGPRToVGPRSpills.find(FrameIndex);
