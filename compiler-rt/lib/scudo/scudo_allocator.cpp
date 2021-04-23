@@ -303,6 +303,13 @@ struct Allocator {
                  bool ForceZeroContents = false) {
     initThreadMaybe();
 
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.shouldSample())) {
+      if (void *Ptr = GuardedAlloc.allocate(Size))
+        return Ptr;
+    }
+#endif // GWP_ASAN_HOOKS
+
     if (UNLIKELY(Alignment > MaxAlignment)) {
       if (AllocatorMayReturnNull())
         return nullptr;
@@ -310,16 +317,6 @@ struct Allocator {
     }
     if (UNLIKELY(Alignment < MinAlignment))
       Alignment = MinAlignment;
-
-#ifdef GWP_ASAN_HOOKS
-    if (UNLIKELY(GuardedAlloc.shouldSample())) {
-      if (void *Ptr = GuardedAlloc.allocate(Size, Alignment)) {
-        if (SCUDO_CAN_USE_HOOKS && &__sanitizer_malloc_hook)
-          __sanitizer_malloc_hook(Ptr, Size);
-        return Ptr;
-      }
-    }
-#endif // GWP_ASAN_HOOKS
 
     const uptr NeededSize = RoundUpTo(Size ? Size : 1, MinAlignment) +
         Chunk::getHeaderSize();
