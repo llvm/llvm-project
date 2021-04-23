@@ -12640,6 +12640,8 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
           return;
         }
       }
+      // The declaration is unitialized, no need for further checks.
+      return;
     }
 
     VarDecl::DefinitionKind DefKind = Var->isThisDeclarationADefinition();

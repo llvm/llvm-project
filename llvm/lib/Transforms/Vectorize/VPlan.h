@@ -1748,6 +1748,136 @@ struct GraphTraits<Inverse<VPRegionBlock *>>
   }
 };
 
+/// Iterator to traverse all successors of a VPBlockBase node. This includes the
+/// entry node of VPRegionBlocks. Exit blocks of a region implicitly have their
+/// parent region's successors. This ensures all blocks in a region are visited
+/// before any blocks in a successor region when doing a reverse post-order
+// traversal of the graph.
+template <typename BlockPtrTy>
+class VPAllSuccessorsIterator
+    : public iterator_facade_base<VPAllSuccessorsIterator<BlockPtrTy>,
+                                  std::forward_iterator_tag, VPBlockBase> {
+  BlockPtrTy Block;
+  /// Index of the current successor. For VPBasicBlock nodes, this simply is the
+  /// index for the successor array. For VPRegionBlock, SuccessorIdx == 0 is
+  /// used for the region's entry block, and SuccessorIdx - 1 are the indices
+  /// for the successor array.
+  size_t SuccessorIdx;
+
+  static BlockPtrTy getBlockWithSuccs(BlockPtrTy Current) {
+    while (Current && Current->getNumSuccessors() == 0)
+      Current = Current->getParent();
+    return Current;
+  }
+
+  /// Templated helper to dereference successor \p SuccIdx of \p Block. Used by
+  /// both the const and non-const operator* implementations.
+  template <typename T1> static T1 deref(T1 Block, unsigned SuccIdx) {
+    if (auto *R = dyn_cast<VPRegionBlock>(Block)) {
+      if (SuccIdx == 0)
+        return R->getEntry();
+      SuccIdx--;
+    }
+
+    // For exit blocks, use the next parent region with successors.
+    return getBlockWithSuccs(Block)->getSuccessors()[SuccIdx];
+  }
+
+public:
+  VPAllSuccessorsIterator(BlockPtrTy Block, size_t Idx = 0)
+      : Block(Block), SuccessorIdx(Idx) {}
+  VPAllSuccessorsIterator(const VPAllSuccessorsIterator &Other)
+      : Block(Other.Block), SuccessorIdx(Other.SuccessorIdx) {}
+
+  VPAllSuccessorsIterator &operator=(const VPAllSuccessorsIterator &R) {
+    Block = R.Block;
+    SuccessorIdx = R.SuccessorIdx;
+    return *this;
+  }
+
+  static VPAllSuccessorsIterator end(BlockPtrTy Block) {
+    BlockPtrTy ParentWithSuccs = getBlockWithSuccs(Block);
+    unsigned NumSuccessors = ParentWithSuccs
+                                 ? ParentWithSuccs->getNumSuccessors()
+                                 : Block->getNumSuccessors();
+
+    if (auto *R = dyn_cast<VPRegionBlock>(Block))
+      return {R, NumSuccessors + 1};
+    return {Block, NumSuccessors};
+  }
+
+  bool operator==(const VPAllSuccessorsIterator &R) const {
+    return Block == R.Block && SuccessorIdx == R.SuccessorIdx;
+  }
+
+  const VPBlockBase *operator*() const { return deref(Block, SuccessorIdx); }
+
+  BlockPtrTy operator*() { return deref(Block, SuccessorIdx); }
+
+  VPAllSuccessorsIterator &operator++() {
+    SuccessorIdx++;
+    return *this;
+  }
+
+  VPAllSuccessorsIterator operator++(int X) {
+    VPAllSuccessorsIterator Orig = *this;
+    SuccessorIdx++;
+    return Orig;
+  }
+};
+
+/// Helper for GraphTraits specialization that traverses through VPRegionBlocks.
+template <typename BlockTy> class VPBlockRecursiveTraversalWrapper {
+  BlockTy Entry;
+
+public:
+  VPBlockRecursiveTraversalWrapper(BlockTy Entry) : Entry(Entry) {}
+  BlockTy getEntry() { return Entry; }
+};
+
+/// GraphTraits specialization to recursively traverse VPBlockBase nodes,
+/// including traversing through VPRegionBlocks.  Exit blocks of a region
+/// implicitly have their parent region's successors. This ensures all blocks in
+/// a region are visited before any blocks in a successor region when doing a
+/// reverse post-order traversal of the graph.
+template <>
+struct GraphTraits<VPBlockRecursiveTraversalWrapper<VPBlockBase *>> {
+  using NodeRef = VPBlockBase *;
+  using ChildIteratorType = VPAllSuccessorsIterator<VPBlockBase *>;
+
+  static NodeRef
+  getEntryNode(VPBlockRecursiveTraversalWrapper<VPBlockBase *> N) {
+    return N.getEntry();
+  }
+
+  static inline ChildIteratorType child_begin(NodeRef N) {
+    return ChildIteratorType(N);
+  }
+
+  static inline ChildIteratorType child_end(NodeRef N) {
+    return ChildIteratorType::end(N);
+  }
+};
+
+template <>
+struct GraphTraits<VPBlockRecursiveTraversalWrapper<const VPBlockBase *>> {
+  using NodeRef = const VPBlockBase *;
+  using ChildIteratorType = VPAllSuccessorsIterator<const VPBlockBase *>;
+
+  static NodeRef
+  getEntryNode(VPBlockRecursiveTraversalWrapper<const VPBlockBase *> N) {
+    return N.getEntry();
+  }
+
+  static inline ChildIteratorType child_begin(NodeRef N) {
+    return ChildIteratorType(N);
+  }
+
+  static inline ChildIteratorType child_end(NodeRef N) {
+    return ChildIteratorType::end(N);
+  }
+};
+
 /// VPlan models a candidate for vectorization, encoding various decisions take
 /// to produce efficient output IR, including which branches, basic-blocks and
 /// output IR instructions to generate, and their cost. VPlan holds a

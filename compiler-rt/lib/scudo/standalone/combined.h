@@ -290,19 +290,7 @@ public:
                           bool ZeroContents = false) {
     initThreadMaybe();
 
-#ifdef GWP_ASAN_HOOKS
-    if (UNLIKELY(GuardedAlloc.shouldSample())) {
-      if (void *Ptr = GuardedAlloc.allocate(roundUpTo(Size, Alignment)))
-        return Ptr;
-    }
-#endif // GWP_ASAN_HOOKS
-
     const Options Options = Primary.Options.load();
-    const FillContentsMode FillContents = ZeroContents ? ZeroFill
-                                          : TSDRegistry.getDisableMemInit()
-                                              ? NoFill
-                                              : Options.getFillContentsMode();
-
     if (UNLIKELY(Alignment > MaxAlignment)) {
       if (Options.get(OptionBit::MayReturnNull))
         return nullptr;
@@ -310,6 +298,22 @@ public:
     }
     if (Alignment < MinAlignment)
       Alignment = MinAlignment;
+
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.shouldSample())) {
+      if (void *Ptr = GuardedAlloc.allocate(Size, Alignment)) {
+        if (UNLIKELY(&__scudo_allocate_hook))
+          __scudo_allocate_hook(Ptr, Size);
+        Stats.add(StatAllocated, Size);
+        return Ptr;
+      }
+    }
+#endif // GWP_ASAN_HOOKS
+
+    const FillContentsMode FillContents = ZeroContents ? ZeroFill
+                                          : TSDRegistry.getDisableMemInit()
+                                              ? NoFill
+                                              : Options.getFillContentsMode();
 
     // If the requested size happens to be 0 (more common than you might think),
     // allocate MinAlignment bytes on top of the header. Then add the extra
@@ -503,18 +507,20 @@ public:
     // being destroyed properly. Any other heap operation will do a full init.
     initThreadMaybe(/*MinimalInit=*/true);
 
-#ifdef GWP_ASAN_HOOKS
-    if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr))) {
-      GuardedAlloc.deallocate(Ptr);
-      return;
-    }
-#endif // GWP_ASAN_HOOKS
-
     if (UNLIKELY(&__scudo_deallocate_hook))
       __scudo_deallocate_hook(Ptr);
 
     if (UNLIKELY(!Ptr))
       return;
+
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr))) {
+      GuardedAlloc.deallocate(Ptr);
+      Stats.add(StatFree, GuardedAlloc.getSize(Ptr));
+      return;
+    }
+#endif // GWP_ASAN_HOOKS
+
     if (UNLIKELY(!isAligned(reinterpret_cast<uptr>(Ptr), MinAlignment)))
       reportMisalignedPointer(AllocatorAction::Deallocating, Ptr);
 
@@ -571,6 +577,7 @@ public:
       if (NewPtr)
         memcpy(NewPtr, OldPtr, (NewSize < OldSize) ? NewSize : OldSize);
       GuardedAlloc.deallocate(OldPtr);
+      Stats.add(StatFree, OldSize);
       return NewPtr;
     }
 #endif // GWP_ASAN_HOOKS
@@ -1036,8 +1043,22 @@ private:
                                    Chunk::UnpackedHeader *Header, uptr Size) {
     void *Ptr = getHeaderTaggedPointer(TaggedPtr);
     Chunk::UnpackedHeader NewHeader = *Header;
+    // If the quarantine is disabled, the actual size of a chunk is 0 or larger
+    // than the maximum allowed, we return a chunk directly to the backend.
+    // This purposefully underflows for Size == 0.
+    const bool BypassQuarantine = !Quarantine.getCacheSize() ||
+                                  ((Size - 1) >= QuarantineMaxChunkSize) ||
+                                  !NewHeader.ClassId;
+    NewHeader.State =
+        BypassQuarantine ? Chunk::State::Available : Chunk::State::Quarantined;
+    NewHeader.OriginOrWasZeroed = useMemoryTagging<Params>(Options) &&
+                                  NewHeader.ClassId &&
+                                  !TSDRegistry.getDisableMemInit();
+    Chunk::compareExchangeHeader(Cookie, Ptr, &NewHeader, Header);
+
     if (UNLIKELY(useMemoryTagging<Params>(Options))) {
       u8 PrevTag = extractTag(reinterpret_cast<uptr>(TaggedPtr));
+      storeDeallocationStackMaybe(Options, Ptr, PrevTag, Size);
       if (NewHeader.ClassId) {
         if (!TSDRegistry.getDisableMemInit()) {
           uptr TaggedBegin, TaggedEnd;
@@ -1049,19 +1070,9 @@ private:
           setRandomTag(Ptr, Size, OddEvenMask | (1UL << PrevTag), &TaggedBegin,
                        &TaggedEnd);
         }
-        NewHeader.OriginOrWasZeroed = !TSDRegistry.getDisableMemInit();
       }
-      storeDeallocationStackMaybe(Options, Ptr, PrevTag, Size);
     }
-    // If the quarantine is disabled, the actual size of a chunk is 0 or larger
-    // than the maximum allowed, we return a chunk directly to the backend.
-    // This purposefully underflows for Size == 0.
-    const bool BypassQuarantine = !Quarantine.getCacheSize() ||
-                                  ((Size - 1) >= QuarantineMaxChunkSize) ||
-                                  !NewHeader.ClassId;
     if (BypassQuarantine) {
-      NewHeader.State = Chunk::State::Available;
-      Chunk::compareExchangeHeader(Cookie, Ptr, &NewHeader, Header);
       if (allocatorSupportsMemoryTagging<Params>())
         Ptr = untagPointer(Ptr);
       void *BlockBegin = getBlockBegin(Ptr, &NewHeader);
@@ -1079,8 +1090,6 @@ private:
         Secondary.deallocate(Options, BlockBegin);
       }
     } else {
-      NewHeader.State = Chunk::State::Quarantined;
-      Chunk::compareExchangeHeader(Cookie, Ptr, &NewHeader, Header);
       bool UnlockRequired;
       auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
       Quarantine.put(&TSD->QuarantineCache,
