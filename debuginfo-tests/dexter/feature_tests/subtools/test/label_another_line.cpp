@@ -1,3 +1,6 @@
+// REQUIRES: lldb
+// UNSUPPORTED: system-windows
+//
 // Purpose:
 //    Check that the optional keyword argument 'on_line' makes a \DexLabel label
 //    that line instead of the line the command is found on.
