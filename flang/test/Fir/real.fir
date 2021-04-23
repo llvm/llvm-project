@@ -16,7 +16,7 @@ func @bar(%a : f16, %b : f32, %c : f64, %d : f80, %e : f128) -> f80 {
   // CHECK: fptrunc fp128 %{{.*}} to x86_fp80
   %5 = fir.convert %e : (f128) -> f80
   // CHECK-NEXT: call x86_fp80
-  %6 = call @foop(%1, %2, %3, %4, %5) : (f80, f80, f80, f80, f80) -> f80
+  %6 = fir.call @foop(%1, %2, %3, %4, %5) : (f80, f80, f80, f80, f80) -> f80
   return %6 : f80
 }
 
@@ -31,7 +31,7 @@ func @foo(%a : f128, %b : f128, %c : f128, %d : f128, %e : f128) -> f128 {
   // CHECK: fdiv fp128
   %4 = divf %3, %e : f128
   // CHECK: frem fp128
-  %5 = fir.modf %4, %a : f128
+  %5 = remf %4, %a : f128
   return %5 : f128
 }
 
@@ -46,6 +46,6 @@ func @foop(%a : f80, %b : f80, %c : f80, %d : f80, %e : f80) -> f80 {
   // CHECK: fdiv x86_fp80
   %4 = divf %3, %e : f80
   // CHECK: frem x86_fp80
-  %5 = fir.modf %4, %a : f80
+  %5 = remf %4, %a : f80
   return %5 : f80
 }

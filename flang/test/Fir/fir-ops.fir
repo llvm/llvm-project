@@ -541,7 +541,7 @@ func @arith_real(%a : f128, %b : f128) -> f128 {
 // CHECK: [[VAL_175:%.*]] = subf [[VAL_174]], [[VAL_170]] : f128
 // CHECK: [[VAL_176:%.*]] = mulf [[VAL_173]], [[VAL_175]] : f128
 // CHECK: [[VAL_177:%.*]] = divf [[VAL_176]], [[VAL_169]] : f128
-// CHECK: [[VAL_178:%.*]] = fir.modf [[VAL_177]], [[VAL_170]] : f128
+// CHECK: [[VAL_178:%.*]] = remf [[VAL_177]], [[VAL_170]] : f128
   %c1 = constant 1.0 : f32
   %0 = fir.convert %c1 : (f32) -> f128
   %1 = fir.negf %a : f128
@@ -549,7 +549,7 @@ func @arith_real(%a : f128, %b : f128) -> f128 {
   %3 = subf %2, %b : f128
   %4 = mulf %1, %3 : f128
   %5 = divf %4, %a : f128
-  %6 = fir.modf %5, %b : f128
+  %6 = remf %5, %b : f128
 // CHECK: return [[VAL_178]] : f128
 // CHECK: }
   return %6 : f128

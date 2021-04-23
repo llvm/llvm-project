@@ -2837,12 +2837,6 @@ class RealUnaryArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
 
 def fir_NegfOp : RealUnaryArithmeticOp<"negf">;
 
-class RealArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
-      fir_ArithmeticOp<mnemonic, traits>,
-      Arguments<(ins AnyRealLike:$lhs, AnyRealLike:$rhs)>;
-
-def fir_ModfOp : RealArithmeticOp<"modf">;
-
 def fir_CmpfOp : fir_Op<"cmpf",
     [NoSideEffect, SameTypeOperands, SameOperandsAndResultShape]> {
   let summary = "floating-point comparison operator";

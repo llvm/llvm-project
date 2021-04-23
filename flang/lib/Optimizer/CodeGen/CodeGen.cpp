@@ -2712,17 +2712,6 @@ void lowerRealBinaryOp(BINOP binop, OperandTy operands,
   rewriter.replaceOpWithNewOp<LLVMOP>(binop, ty, operands);
 }
 
-struct ModfOpConversion : public FIROpConversion<fir::ModfOp> {
-  using FIROpConversion::FIROpConversion;
-
-  mlir::LogicalResult
-  matchAndRewrite(fir::ModfOp op, OperandTy operands,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    lowerRealBinaryOp<mlir::LLVM::FRemOp>(op, operands, rewriter, lowerTy());
-    return success();
-  }
-};
-
 struct NegfOpConversion : public FIROpConversion<fir::NegfOp> {
   using FIROpConversion::FIROpConversion;
 
@@ -2959,8 +2948,8 @@ public:
         ExtractValueOpConversion, IsPresentOpConversion, FreeMemOpConversion,
         GenTypeDescOpConversion, GlobalLenOpConversion, GlobalOpConversion,
         HasValueOpConversion, InsertOnRangeOpConversion,
-        InsertValueOpConversion, ModfOpConversion, LenParamIndexOpConversion,
-        LoadOpConversion, MulcOpConversion, NegcOpConversion, NegfOpConversion,
+        InsertValueOpConversion, LenParamIndexOpConversion, LoadOpConversion,
+        MulcOpConversion, NegcOpConversion, NegfOpConversion,
         NoReassocOpConversion, SelectCaseOpConversion, SelectOpConversion,
         SelectRankOpConversion, SelectTypeOpConversion, ShapeOpConversion,
         ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
