@@ -813,6 +813,37 @@ multiclass RVVPseudoUnaryBuiltin<string IR, string type_range> {
   }
 }
 
+multiclass RVVPseudoVNotBuiltin<string IR, string type_range> {
+  let Name = NAME,
+      IRName = IR,
+      IRNameMask = IR # "_mask",
+      ManualCodegen = [{
+      {
+        // op1, vl
+        IntrinsicTypes = {ResultType,
+                          cast<llvm::VectorType>(ResultType)->getElementType(),
+                          Ops[1]->getType()};
+        Ops.insert(Ops.begin() + 1,
+                   llvm::Constant::getAllOnesValue(IntrinsicTypes[1]));
+        break;
+      }
+      }],
+      ManualCodegenMask = [{
+      {
+        // maskedoff, op1, mask, vl
+        IntrinsicTypes = {ResultType,
+                          cast<llvm::VectorType>(ResultType)->getElementType(),
+                          Ops[3]->getType()};
+        Ops.insert(Ops.begin() + 2,
+                   llvm::Constant::getAllOnesValue(IntrinsicTypes[1]));
+        break;
+      }
+      }] in {
+        def : RVVBuiltin<"v", "vv", type_range>;
+        def : RVVBuiltin<"Uv", "UvUv", type_range>;
+  }
+}
+
 // 6. Configuration-Setting Instructions
 // 6.1. vsetvli/vsetvl instructions
 let HasVL = false,
@@ -987,6 +1018,7 @@ let HasMask = false in {
 defm vand : RVVIntBinBuiltinSet;
 defm vxor : RVVIntBinBuiltinSet;
 defm vor : RVVIntBinBuiltinSet;
+defm vnot_v : RVVPseudoVNotBuiltin<"vxor", "csil">;
 
 // 12.6. Vector Single-Width Bit Shift Instructions
 defm vsll : RVVShiftBuiltinSet;
