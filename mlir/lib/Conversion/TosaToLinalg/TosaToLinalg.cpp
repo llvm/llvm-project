@@ -1126,6 +1126,277 @@ public:
   }
 };
 
+class ResizeConverter : public OpRewritePattern<tosa::ResizeOp> {
+public:
+  using OpRewritePattern<tosa::ResizeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::ResizeOp op,
+                                PatternRewriter &rewriter) const final {
+    Location loc = op.getLoc();
+    auto input = op.input();
+    auto inputTy = input.getType().cast<ShapedType>();
+    auto resultTy = op.getType().cast<ShapedType>();
+    auto resultElementTy = resultTy.getElementType();
+
+    auto imageH = inputTy.getShape()[1];
+    auto imageW = inputTy.getShape()[2];
+
+    if (!resultTy.hasStaticShape())
+      return failure();
+    if (op.mode() != "NEAREST_NEIGHBOR" && op.mode() != "BILINEAR")
+      return failure();
+
+    auto initTensor =
+        rewriter
+            .create<linalg::InitTensorOp>(loc, ArrayRef<Value>{},
+                                          resultTy.getShape(), resultElementTy)
+            .result();
+
+    SmallVector<AffineMap, 2> affineMaps = {
+        rewriter.getMultiDimIdentityMap(resultTy.getRank())};
+
+    auto genericOp = rewriter.create<linalg::IndexedGenericOp>(
+        loc, resultTy, ValueRange({}), ValueRange{initTensor}, affineMaps,
+        getNParallelLoopsAttrs(resultTy.getRank()));
+    rewriter.replaceOp(op, genericOp.getResult(0));
+
+    {
+      OpBuilder::InsertionGuard regionGuard(rewriter);
+      Block *block = rewriter.createBlock(
+          &genericOp.region(), genericOp.region().end(),
+          TypeRange({rewriter.getIndexType(), rewriter.getIndexType(),
+                     rewriter.getIndexType(), rewriter.getIndexType(),
+                     resultElementTy}));
+      Value batch = block->getArgument(0);
+      Value channel = block->getArgument(3);
+
+      auto hwMin =
+          rewriter.create<ConstantOp>(loc, rewriter.getI32IntegerAttr(0));
+      auto hMax = rewriter.create<ConstantOp>(
+          loc, rewriter.getI32IntegerAttr(imageH - 1));
+      auto wMax = rewriter.create<ConstantOp>(
+          loc, rewriter.getI32IntegerAttr(imageW - 1));
+
+      Value inY = rewriter.create<IndexCastOp>(loc, rewriter.getI32Type(),
+                                               block->getArgument(1));
+      Value inX = rewriter.create<IndexCastOp>(loc, rewriter.getI32Type(),
+                                               block->getArgument(2));
+
+      int32_t shift = op.shift();
+      bool floatingPointMode = shift == 0;
+
+      Value yStride, xStride, yOffset, xOffset;
+      if (floatingPointMode) {
+        yStride = rewriter.create<ConstantOp>(loc, op.stride_fp()[0]);
+        xStride = rewriter.create<ConstantOp>(loc, op.stride_fp()[1]);
+        yOffset = rewriter.create<ConstantOp>(loc, op.offset_fp()[0]);
+        xOffset = rewriter.create<ConstantOp>(loc, op.offset_fp()[1]);
+      } else {
+        SmallVector<int32_t> stride, offset;
+        getValuesFromIntArrayAttribute(op.stride(), stride);
+        getValuesFromIntArrayAttribute(op.offset(), offset);
+
+        yStride = rewriter.create<ConstantOp>(
+            loc, rewriter.getI32IntegerAttr(stride[0]));
+        xStride = rewriter.create<ConstantOp>(
+            loc, rewriter.getI32IntegerAttr(stride[1]));
+        yOffset = rewriter.create<ConstantOp>(
+            loc, rewriter.getI32IntegerAttr(offset[0]));
+        xOffset = rewriter.create<ConstantOp>(
+            loc, rewriter.getI32IntegerAttr(offset[1]));
+      }
+
+      // Compute the the integer index and partial offset.
+      // x = x * stride + offset;
+      // ix = floor(x)
+      // dx = x - ix
+      Value ix, iy, dx, dy;
+      if (floatingPointMode) {
+        Value y = rewriter.create<UIToFPOp>(loc, rewriter.getF32Type(), inY);
+        Value x = rewriter.create<UIToFPOp>(loc, rewriter.getF32Type(), inX);
+
+        y = rewriter.create<MulFOp>(loc, y, yStride);
+        x = rewriter.create<MulFOp>(loc, x, xStride);
+
+        y = rewriter.create<AddFOp>(loc, y, yOffset);
+        x = rewriter.create<AddFOp>(loc, x, xOffset);
+
+        iy = rewriter.create<FloorFOp>(loc, y);
+        ix = rewriter.create<FloorFOp>(loc, x);
+
+        dy = rewriter.create<SubFOp>(loc, y, iy);
+        dx = rewriter.create<SubFOp>(loc, x, ix);
+
+        iy = rewriter.create<FPToSIOp>(loc, rewriter.getI32Type(), iy);
+        ix = rewriter.create<FPToSIOp>(loc, rewriter.getI32Type(), ix);
+      } else {
+        Value shiftVal =
+            rewriter.create<ConstantOp>(loc, rewriter.getI32IntegerAttr(shift));
+
+        Value y = rewriter.create<MulIOp>(loc, inY, yStride);
+        Value x = rewriter.create<MulIOp>(loc, inX, xStride);
+
+        y = rewriter.create<AddIOp>(loc, y, yOffset);
+        x = rewriter.create<AddIOp>(loc, x, xOffset);
+
+        iy = rewriter.create<SignedShiftRightOp>(loc, y, shiftVal);
+        ix = rewriter.create<SignedShiftRightOp>(loc, x, shiftVal);
+
+        Value yTrunc = rewriter.create<ShiftLeftOp>(loc, iy, shiftVal);
+        Value xTrunc = rewriter.create<ShiftLeftOp>(loc, ix, shiftVal);
+
+        dy = rewriter.create<SubIOp>(loc, y, yTrunc);
+        dx = rewriter.create<SubIOp>(loc, x, xTrunc);
+      }
+
+      if (op.mode() == "NEAREST_NEIGHBOR") {
+        Value yPred, xPred;
+        // Round the index position towards the closest pixel location.
+        if (floatingPointMode) {
+          auto halfVal =
+              rewriter.create<ConstantOp>(loc, rewriter.getF32FloatAttr(0.5f));
+          yPred = rewriter.create<mlir::CmpFOp>(loc, CmpFPredicate::OGE, dy,
+                                                halfVal);
+          xPred = rewriter.create<mlir::CmpFOp>(loc, CmpFPredicate::OGE, dx,
+                                                halfVal);
+        } else {
+          auto halfVal = rewriter.create<ConstantOp>(
+              loc, rewriter.getI32IntegerAttr(1 << (shift - 1)));
+          yPred = rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sge, dy,
+                                                halfVal);
+          xPred = rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sge, dx,
+                                                halfVal);
+        }
+
+        auto zeroVal =
+            rewriter.create<ConstantOp>(loc, rewriter.getI32IntegerAttr(0));
+        auto oneVal =
+            rewriter.create<ConstantOp>(loc, rewriter.getI32IntegerAttr(1));
+
+        auto yOffset =
+            rewriter.create<mlir::SelectOp>(loc, yPred, oneVal, zeroVal);
+        auto xOffset =
+            rewriter.create<mlir::SelectOp>(loc, xPred, oneVal, zeroVal);
+
+        iy = rewriter.create<AddIOp>(loc, iy, yOffset);
+        ix = rewriter.create<AddIOp>(loc, ix, xOffset);
+
+        // Clamp the to be within the bounds of the input image.
+
+        iy = clampHelper<mlir::CmpIOp>(loc, iy, hwMin, hMax, CmpIPredicate::slt,
+                                       rewriter);
+        ix = clampHelper<mlir::CmpIOp>(loc, ix, hwMin, wMax, CmpIPredicate::slt,
+                                       rewriter);
+
+        // Read the value from the input array.
+        iy = rewriter.create<IndexCastOp>(loc, rewriter.getIndexType(), iy);
+        ix = rewriter.create<IndexCastOp>(loc, rewriter.getIndexType(), ix);
+
+        Value result = rewriter.create<tensor::ExtractOp>(
+            loc, input, ValueRange{batch, iy, ix, channel});
+
+        rewriter.create<linalg::YieldOp>(loc, result);
+
+        return success();
+      }
+
+      if (op.mode() == "BILINEAR") {
+        Value y0 = iy;
+        Value x0 = ix;
+
+        auto oneVal =
+            rewriter.create<ConstantOp>(loc, rewriter.getI32IntegerAttr(1));
+        Value y1 = rewriter.create<AddIOp>(loc, y0, oneVal);
+        Value x1 = rewriter.create<AddIOp>(loc, x0, oneVal);
+
+        y0 = clampHelper<mlir::CmpIOp>(loc, y0, hwMin, hMax, CmpIPredicate::slt,
+                                       rewriter);
+        y1 = clampHelper<mlir::CmpIOp>(loc, y1, hwMin, hMax, CmpIPredicate::slt,
+                                       rewriter);
+
+        x0 = clampHelper<mlir::CmpIOp>(loc, x0, hwMin, wMax, CmpIPredicate::slt,
+                                       rewriter);
+        x1 = clampHelper<mlir::CmpIOp>(loc, x1, hwMin, wMax, CmpIPredicate::slt,
+                                       rewriter);
+
+        y0 = rewriter.create<IndexCastOp>(loc, rewriter.getIndexType(), y0);
+        y1 = rewriter.create<IndexCastOp>(loc, rewriter.getIndexType(), y1);
+        x0 = rewriter.create<IndexCastOp>(loc, rewriter.getIndexType(), x0);
+        x1 = rewriter.create<IndexCastOp>(loc, rewriter.getIndexType(), x1);
+
+        Value y0x0 = rewriter.create<tensor::ExtractOp>(
+            loc, input, ValueRange{batch, y0, x0, channel});
+        Value y0x1 = rewriter.create<tensor::ExtractOp>(
+            loc, input, ValueRange{batch, y0, x1, channel});
+        Value y1x0 = rewriter.create<tensor::ExtractOp>(
+            loc, input, ValueRange{batch, y1, x0, channel});
+        Value y1x1 = rewriter.create<tensor::ExtractOp>(
+            loc, input, ValueRange{batch, y1, x1, channel});
+
+        if (floatingPointMode) {
+          auto oneVal =
+              rewriter.create<ConstantOp>(loc, rewriter.getF32FloatAttr(1.f));
+          Value rightPart = dx;
+          Value leftPart = rewriter.create<SubFOp>(loc, oneVal, dx);
+
+          y0x0 = rewriter.create<MulFOp>(loc, y0x0, leftPart);
+          y0x1 = rewriter.create<MulFOp>(loc, y0x1, rightPart);
+          Value topAcc = rewriter.create<AddFOp>(loc, y0x0, y0x1);
+
+          y1x0 = rewriter.create<MulFOp>(loc, y1x0, leftPart);
+          y1x1 = rewriter.create<MulFOp>(loc, y1x1, rightPart);
+          Value bottomAcc = rewriter.create<AddFOp>(loc, y1x0, y1x1);
+
+          Value bottomPart = dy;
+          Value topPart = rewriter.create<SubFOp>(loc, oneVal, dy);
+          topAcc = rewriter.create<MulFOp>(loc, topAcc, topPart);
+          bottomAcc = rewriter.create<MulFOp>(loc, bottomAcc, bottomPart);
+          Value result = rewriter.create<AddFOp>(loc, topAcc, bottomAcc);
+
+          rewriter.create<linalg::YieldOp>(loc, result);
+          return success();
+        } else {
+          y0x0 = rewriter.create<SignExtendIOp>(loc, resultElementTy, y0x0);
+          y0x1 = rewriter.create<SignExtendIOp>(loc, resultElementTy, y0x1);
+          y1x0 = rewriter.create<SignExtendIOp>(loc, resultElementTy, y1x0);
+          y1x1 = rewriter.create<SignExtendIOp>(loc, resultElementTy, y1x1);
+
+          if (resultElementTy.getIntOrFloatBitWidth() > 32) {
+            dx = rewriter.create<SignExtendIOp>(loc, resultElementTy, dx);
+            dy = rewriter.create<SignExtendIOp>(loc, resultElementTy, dy);
+          }
+
+          auto unitVal = rewriter.create<ConstantOp>(
+              loc, rewriter.getIntegerAttr(resultElementTy, 1 << shift));
+          Value rightPart = dx;
+          Value leftPart = rewriter.create<SubIOp>(loc, unitVal, dx);
+
+          y0x0 = rewriter.create<MulIOp>(loc, y0x0, leftPart);
+          y0x1 = rewriter.create<MulIOp>(loc, y0x1, rightPart);
+          Value topAcc = rewriter.create<AddIOp>(loc, y0x0, y0x1);
+
+          y1x0 = rewriter.create<MulIOp>(loc, y1x0, leftPart);
+          y1x1 = rewriter.create<MulIOp>(loc, y1x1, rightPart);
+          Value bottomAcc = rewriter.create<AddIOp>(loc, y1x0, y1x1);
+
+          Value bottomPart = dy;
+          Value topPart = rewriter.create<SubIOp>(loc, unitVal, dy);
+          topAcc = rewriter.create<MulIOp>(loc, topAcc, topPart);
+          bottomAcc = rewriter.create<MulIOp>(loc, bottomAcc, bottomPart);
+          Value result = rewriter.create<AddIOp>(loc, topAcc, bottomAcc);
+
+          rewriter.create<linalg::YieldOp>(loc, result);
+          return success();
+        }
+      }
+
+      return failure();
+    }
+
+    return success();
+  }
+};
+
 // At the codegen level any identity operations should be removed. Any cases
 // where identity is load-bearing (e.g. cross device computation) should be
 // handled before lowering to codegen.
@@ -1817,6 +2088,7 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       PadConverter,
       ReshapeConverter,
       RescaleConverter,
+      ResizeConverter,
       ReverseConverter,
       TableConverter,
       TileConverter,
