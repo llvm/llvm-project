@@ -366,6 +366,30 @@ static Optional<Instruction *> instCombineConvertFromSVBool(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, EarliestReplacement);
 }
 
+static Optional<Instruction *> instCombineSVEDup(InstCombiner &IC,
+                                                 IntrinsicInst &II) {
+  IntrinsicInst *Pg = dyn_cast<IntrinsicInst>(II.getArgOperand(1));
+  if (!Pg)
+    return None;
+
+  if (Pg->getIntrinsicID() != Intrinsic::aarch64_sve_ptrue)
+    return None;
+
+  const auto PTruePattern =
+      cast<ConstantInt>(Pg->getOperand(0))->getZExtValue();
+  if (PTruePattern != AArch64SVEPredPattern::vl1)
+    return None;
+
+  // The intrinsic is inserting into lane zero so use an insert instead.
+  auto *IdxTy = Type::getInt64Ty(II.getContext());
+  auto *Insert = InsertElementInst::Create(
+      II.getArgOperand(0), II.getArgOperand(2), ConstantInt::get(IdxTy, 0));
+  Insert->insertBefore(&II);
+  Insert->takeName(&II);
+
+  return IC.replaceInstUsesWith(II, Insert);
+}
+
 static Optional<Instruction *> instCombineSVELast(InstCombiner &IC,
                                                   IntrinsicInst &II) {
   Value *Pg = II.getArgOperand(0);
@@ -455,6 +479,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     break;
   case Intrinsic::aarch64_sve_convert_from_svbool:
     return instCombineConvertFromSVBool(IC, II);
+  case Intrinsic::aarch64_sve_dup:
+    return instCombineSVEDup(IC, II);
   case Intrinsic::aarch64_sve_lasta:
   case Intrinsic::aarch64_sve_lastb:
     return instCombineSVELast(IC, II);
