@@ -70,13 +70,16 @@ static Value setAllocAtFunctionEntry(MemRefType type, Operation *op) {
 
 /// Given a vector transfer op, calculate which dimension of the `source`
 /// memref should be unpacked in the next application of TransferOpConversion.
+/// A return value of None indicates a broadcast.
 template <typename OpTy>
-static unsigned unpackedDim(OpTy xferOp) {
+static Optional<int64_t> unpackedDim(OpTy xferOp) {
   auto map = xferOp.permutation_map();
-  // TODO: Handle broadcast
-  auto expr = map.getResult(0).template dyn_cast<AffineDimExpr>();
-  assert(expr && "Expected AffineDimExpr in permutation map result");
-  return expr.getPosition();
+  if (auto expr = map.getResult(0).template dyn_cast<AffineDimExpr>())
+    return expr.getPosition();
+
+  assert(map.getResult(0).template isa<AffineConstantExpr>() &&
+         "Expected AffineDimExpr or AffineConstantExpr");
+  return None;
 }
 
 /// Compute the permutation map for the new (N-1)-D vector transfer op. This
@@ -103,8 +106,12 @@ static void getXferIndices(OpTy xferOp, Value iv,
   auto dim = unpackedDim(xferOp);
   auto prevIndices = adaptor.indices();
   indices.append(prevIndices.begin(), prevIndices.end());
-  using edsc::op::operator+;
-  indices[dim] = adaptor.indices()[dim] + iv;
+
+  bool isBroadcast = !dim.hasValue();
+  if (!isBroadcast) {
+    using edsc::op::operator+;
+    indices[dim.getValue()] = adaptor.indices()[dim.getValue()] + iv;
+  }
 }
 
 static void maybeYieldValue(bool hasRetVal, OpBuilder builder, Location loc,
@@ -116,7 +123,7 @@ static void maybeYieldValue(bool hasRetVal, OpBuilder builder, Location loc,
   }
 }
 
-/// Helper function TransferOpConversion and Strided1dTransferOpConversion.
+/// Helper function TransferOpConversion and TransferOp1dConversion.
 /// Generate an in-bounds check if the transfer op may go out-of-bounds on the
 /// specified dimension `dim` with the loop iteration variable `iv`.
 /// E.g., when unpacking dimension 0 from:
@@ -138,15 +145,17 @@ static void maybeYieldValue(bool hasRetVal, OpBuilder builder, Location loc,
 /// `resultTypes`.
 template <typename OpTy>
 static Value generateInBoundsCheck(
-    OpTy xferOp, Value iv, OpBuilder &builder, unsigned dim,
+    OpTy xferOp, Value iv, OpBuilder &builder, Optional<int64_t> dim,
     TypeRange resultTypes,
     function_ref<Value(OpBuilder &, Location)> inBoundsCase,
     function_ref<Value(OpBuilder &, Location)> outOfBoundsCase = nullptr) {
   bool hasRetVal = !resultTypes.empty();
-  if (!xferOp.isDimInBounds(0)) {
-    auto memrefDim = memref_dim(xferOp.source(), std_constant_index(dim));
+  bool isBroadcast = !dim.hasValue(); // No in-bounds check for broadcasts.
+  if (!xferOp.isDimInBounds(0) && !isBroadcast) {
+    auto memrefDim =
+        memref_dim(xferOp.source(), std_constant_index(dim.getValue()));
     using edsc::op::operator+;
-    auto memrefIdx = xferOp.indices()[dim] + iv;
+    auto memrefIdx = xferOp.indices()[dim.getValue()] + iv;
     auto cond = std_cmpi_sgt(memrefDim.value, memrefIdx);
     auto check = builder.create<scf::IfOp>(
         xferOp.getLoc(), resultTypes, cond,
@@ -175,7 +184,7 @@ static Value generateInBoundsCheck(
 /// a return value. Consequently, this function does not have a return value.
 template <typename OpTy>
 static void generateInBoundsCheck(
-    OpTy xferOp, Value iv, OpBuilder &builder, int64_t dim,
+    OpTy xferOp, Value iv, OpBuilder &builder, Optional<int64_t> dim,
     function_ref<void(OpBuilder &, Location)> inBoundsCase,
     function_ref<void(OpBuilder &, Location)> outOfBoundsCase = nullptr) {
   generateInBoundsCheck(
@@ -534,27 +543,31 @@ struct TransferOpConversion : public OpRewritePattern<OpTy> {
 };
 
 /// Compute the indices into the memref for the LoadOp/StoreOp generated as
-/// part of Strided1dTransferOpConversion. Return the memref dimension on which
-/// the transfer is operating.
+/// part of TransferOp1dConversion. Return the memref dimension on which
+/// the transfer is operating. A return value of None indicates a broadcast.
 template <typename OpTy>
-static unsigned get1dMemrefIndices(OpTy xferOp, Value iv,
-                                   SmallVector<Value, 8> &memrefIndices) {
+static Optional<int64_t>
+get1dMemrefIndices(OpTy xferOp, Value iv,
+                   SmallVector<Value, 8> &memrefIndices) {
   auto indices = xferOp.indices();
   auto map = xferOp.permutation_map();
 
   memrefIndices.append(indices.begin(), indices.end());
   assert(map.getNumResults() == 1 &&
          "Expected 1 permutation map result for 1D transfer");
-  // TODO: Handle broadcast
-  auto expr = map.getResult(0).template dyn_cast<AffineDimExpr>();
-  assert(expr && "Expected AffineDimExpr in permutation map result");
-  auto dim = expr.getPosition();
-  using edsc::op::operator+;
-  memrefIndices[dim] = memrefIndices[dim] + iv;
-  return dim;
+  if (auto expr = map.getResult(0).template dyn_cast<AffineDimExpr>()) {
+    auto dim = expr.getPosition();
+    using edsc::op::operator+;
+    memrefIndices[dim] = memrefIndices[dim] + iv;
+    return dim;
+  }
+
+  assert(map.getResult(0).template isa<AffineConstantExpr>() &&
+         "Expected AffineDimExpr or AffineConstantExpr");
+  return None;
 }
 
-/// Codegen strategy for Strided1dTransferOpConversion, depending on the
+/// Codegen strategy for TransferOp1dConversion, depending on the
 /// operation.
 template <typename OpTy>
 struct Strategy1d;
@@ -613,13 +626,23 @@ struct Strategy1d<TransferWriteOp> {
   static Value initialLoopState(TransferWriteOp xferOp) { return Value(); }
 };
 
-/// Lower a 1D vector transfer op that operates on a dimension different from
-/// the last one. Instead of accessing contiguous chunks (vectors) of memory,
-/// such ops access memory in a strided fashion.
+/// Lower a 1D vector transfer op to SCF using scalar loads/stores. This is
+/// necessary in cases where a 1D vector transfer op cannot be lowered into
+/// vector load/stores due to non-unit strides or broadcasts:
+///
+/// * Transfer dimension is not the last memref dimension
+/// * Transfer dimension is a broadcast (i.e., scalar load + broadcast)
+/// * Memref has a layout map with non-unit stride on the last dimension
+///
+/// This pattern generates IR as follows:
 ///
 /// 1. Generate a for loop iterating over each vector element.
 /// 2. Inside the loop, generate a InsertElementOp or ExtractElementOp,
 ///    depending on OpTy.
+///
+/// TODO: In some cases (no masking, etc.), LLVM::MatrixColumnMajorLoadOp
+///       can be generated instead of TransferOp1dConversion. Add such a pattern
+///       to ConvertVectorToLLVM.
 ///
 /// E.g.:
 /// ```
@@ -635,7 +658,7 @@ struct Strategy1d<TransferWriteOp> {
 /// }
 /// ```
 template <typename OpTy>
-struct Strided1dTransferOpConversion : public OpRewritePattern<OpTy> {
+struct TransferOp1dConversion : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(OpTy xferOp,
@@ -681,8 +704,8 @@ void populateProgressiveVectorToSCFConversionPatterns(
                TransferOpConversion<TransferWriteOp>>(patterns.getContext());
 
   if (kTargetRank == 1) {
-    patterns.add<Strided1dTransferOpConversion<TransferReadOp>,
-                 Strided1dTransferOpConversion<TransferWriteOp>>(
+    patterns.add<TransferOp1dConversion<TransferReadOp>,
+                 TransferOp1dConversion<TransferWriteOp>>(
         patterns.getContext());
   }
 }
