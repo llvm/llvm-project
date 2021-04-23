@@ -7,7 +7,7 @@
 // RUN: %clang --target=i386-pc-windows-msvc --cuda-gpu-arch=gfx906 -nogpulib \
 // RUN:   --cuda-host-only %s -### 2>&1 | FileCheck --check-prefix=HOST %s
 
-// DEV: "-cc1" "-mllvm" "--amdhsa-code-object-version={{[0-9]+}}" "-triple" "amdgcn-amd-amdhsa"
+// DEV: "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // DEV-SAME: "-fno-autolink"
 
 // HOST: "-cc1" "-triple" "i386-pc-windows-msvc{{.*}}"
