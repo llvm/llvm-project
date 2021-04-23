@@ -1,4 +1,5 @@
 ; RUN: opt -S -inline %s -debug-only=inline-cost 2>&1 | FileCheck %s
+; REQUIRES: asserts
 ; Only the load and ret should be included in the instruction count, not
 ; the instructions feeding the assume.
 ; CHECK: NumInstructions: 2
