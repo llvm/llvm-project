@@ -156,7 +156,7 @@ test, the API test also allow for much more complex scenarios when it comes to
 building inferiors. Every test has its own ``Makefile``, most of them only a
 few lines long. A shared ``Makefile`` (``Makefile.rules``) with about a
 thousand lines of rules takes care of most if not all of the boiler plate,
-while individual make files can be used to build more advanced tests.  
+while individual make files can be used to build more advanced tests.
 
 Here's an example of a simple ``Makefile`` used by the example test.
 
