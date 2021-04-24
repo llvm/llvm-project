@@ -25,12 +25,16 @@ using value_type = iterator::value_type;
 
 static_assert(std::indirectly_readable<iterator>);
 static_assert(!std::indirectly_writable<iterator, value_type>);
+static_assert(std::incrementable<iterator>);
 
 static_assert(std::indirectly_readable<const_iterator>);
 static_assert(!std::indirectly_writable<const_iterator, value_type>);
+static_assert(std::incrementable<const_iterator>);
 
 static_assert(std::indirectly_readable<local_iterator>);
 static_assert(!std::indirectly_writable<local_iterator, value_type>);
+static_assert(std::incrementable<local_iterator>);
 
 static_assert(std::indirectly_readable<const_local_iterator>);
 static_assert(!std::indirectly_writable<const_local_iterator, value_type>);
+static_assert(std::incrementable<const_local_iterator>);

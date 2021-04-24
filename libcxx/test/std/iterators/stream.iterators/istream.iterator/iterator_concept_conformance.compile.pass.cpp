@@ -20,3 +20,4 @@
 using iterator = std::istream_iterator<int, std::istream>;
 static_assert(std::indirectly_readable<iterator>);
 static_assert(!std::indirectly_writable<iterator, int>);
+static_assert(std::incrementable<iterator>);
