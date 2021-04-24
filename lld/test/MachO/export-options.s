@@ -38,6 +38,8 @@ _hide_globl:
 .private_extern _private_extern
 _private_extern:
   retq
+_private:
+  retq
 
 ## Check that the export trie is unaltered
 # RUN: %lld -dylib %t/default.o -o %t/default
