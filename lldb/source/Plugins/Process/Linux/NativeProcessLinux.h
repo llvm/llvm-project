@@ -49,6 +49,8 @@ public:
     llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Attach(lldb::pid_t pid, NativeDelegate &native_delegate,
            MainLoop &mainloop) const override;
+
+    Extension GetSupportedExtensions() const override;
   };
 
   // NativeProcessProtocol Interface
@@ -136,6 +138,7 @@ protected:
 private:
   MainLoop::SignalHandleUP m_sigchld_handle;
   ArchSpec m_arch;
+  MainLoop& m_main_loop;
 
   LazyBool m_supports_mem_region = eLazyBoolCalculate;
   std::vector<std::pair<MemoryRegionInfo, FileSpec>> m_mem_region_cache;
