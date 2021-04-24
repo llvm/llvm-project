@@ -3594,15 +3594,22 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
   std::vector<std::string> ret =
       GDBRemoteCommunicationServerCommon::HandleFeatures(client_features);
   ret.insert(ret.end(), {
-    "QThreadSuffixSupported+", "QListThreadsInStopReply+",
-        "qXfer:features:read+",
-#if defined(__linux__) || defined(__NetBSD__) || defined(__FreeBSD__)
-        "QPassSignals+", "qXfer:auxv:read+", "qXfer:libraries-svr4:read+",
-#endif
-  });
+                            "QThreadSuffixSupported+",
+                            "QListThreadsInStopReply+",
+                            "qXfer:features:read+",
+                        });
+
+  // report server-only features
+  using Extension = NativeProcessProtocol::Extension;
+  Extension plugin_features = m_process_factory.GetSupportedExtensions();
+  if (bool(plugin_features & Extension::pass_signals))
+    ret.push_back("QPassSignals+");
+  if (bool(plugin_features & Extension::auxv))
+    ret.push_back("qXfer:auxv:read+");
+  if (bool(plugin_features & Extension::libraries_svr4))
+    ret.push_back("qXfer:libraries-svr4:read+");
 
   // check for client features
-  using Extension = NativeProcessProtocol::Extension;
   m_extensions_supported = {};
   for (llvm::StringRef x : client_features)
     m_extensions_supported |=
@@ -3611,7 +3618,8 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
             .Case("fork-events+", Extension::fork)
             .Case("vfork-events+", Extension::vfork)
             .Default({});
-  m_extensions_supported &= m_process_factory.GetSupportedExtensions();
+
+  m_extensions_supported &= plugin_features;
 
   // fork & vfork require multiprocess
   if (!bool(m_extensions_supported & Extension::multiprocess))
