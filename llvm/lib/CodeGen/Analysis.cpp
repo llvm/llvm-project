@@ -560,14 +560,12 @@ bool llvm::attributesPermitTailCall(const Function *F, const Instruction *I,
 
   // Following attributes are completely benign as far as calling convention
   // goes, they shouldn't affect whether the call is a tail call.
-  CallerAttrs.removeAttribute(Attribute::NoAlias);
-  CalleeAttrs.removeAttribute(Attribute::NoAlias);
-  CallerAttrs.removeAttribute(Attribute::NonNull);
-  CalleeAttrs.removeAttribute(Attribute::NonNull);
-  CallerAttrs.removeAttribute(Attribute::Dereferenceable);
-  CalleeAttrs.removeAttribute(Attribute::Dereferenceable);
-  CallerAttrs.removeAttribute(Attribute::DereferenceableOrNull);
-  CalleeAttrs.removeAttribute(Attribute::DereferenceableOrNull);
+  for (const auto &Attr : {Attribute::Alignment, Attribute::Dereferenceable,
+                           Attribute::DereferenceableOrNull, Attribute::NoAlias,
+                           Attribute::NonNull}) {
+    CallerAttrs.removeAttribute(Attr);
+    CalleeAttrs.removeAttribute(Attr);
+  }
 
   if (CallerAttrs.contains(Attribute::ZExt)) {
     if (!CalleeAttrs.contains(Attribute::ZExt))

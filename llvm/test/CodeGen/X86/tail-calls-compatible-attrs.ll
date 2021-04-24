@@ -34,3 +34,19 @@ define i8* @test4() nounwind {
   %ret = tail call dereferenceable_or_null(8) i8* @foo()
   ret i8* %ret
 }
+
+define align 8 i8* @test5() nounwind {
+; CHECK-LABEL: test5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    jmp foo # TAILCALL
+  %ret = tail call i8* @foo()
+  ret i8* %ret
+}
+
+define i8* @test6() nounwind {
+; CHECK-LABEL: test6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    jmp foo # TAILCALL
+  %ret = tail call align 8 i8* @foo()
+  ret i8* %ret
+}
