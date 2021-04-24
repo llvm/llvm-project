@@ -49,7 +49,7 @@ test()
 TEST_CONSTEXPR_CXX20 bool
 test()
 {
-    test<input_iterator<const int*> >();
+    test<cpp17_input_iterator<const int*> >();
     test<forward_iterator<const int*> >();
     test<bidirectional_iterator<const int*> >();
     test<random_access_iterator<const int*> >();

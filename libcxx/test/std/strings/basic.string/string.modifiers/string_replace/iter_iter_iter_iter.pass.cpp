@@ -1006,7 +1006,7 @@ int main(int, char**)
     { // test iterator operations that throw
     typedef std::string S;
     typedef ThrowingIterator<char> TIter;
-    typedef input_iterator<TIter> IIter;
+    typedef cpp17_input_iterator<TIter> IIter;
     const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, IIter(TIter(s, s+10, 4, TIter::TAIncrement)), IIter());
     test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, IIter(TIter(s, s+10, 5, TIter::TADereference)), IIter());

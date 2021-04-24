@@ -44,8 +44,8 @@ int main(int, char**)
     };
     typedef test_compare<std::less<V> > C;
     typedef test_allocator<V> A;
-    std::set<V, C, A> m(input_iterator<const V*>(ar),
-                        input_iterator<const V*>(ar+sizeof(ar)/sizeof(ar[0])),
+    std::set<V, C, A> m(cpp17_input_iterator<const V*>(ar),
+                        cpp17_input_iterator<const V*>(ar+sizeof(ar)/sizeof(ar[0])),
                         C(5), A(7));
     assert(m.value_comp() == C(5));
     assert(m.get_allocator() == A(7));
