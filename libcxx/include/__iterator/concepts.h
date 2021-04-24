@@ -137,7 +137,22 @@ concept bidirectional_iterator =
     { __i-- } -> same_as<_Ip>;
   };
 
-  // clang-format on
+template<class _Ip>
+concept random_access_iterator =
+  bidirectional_iterator<_Ip> &&
+  derived_from<_ITER_CONCEPT<_Ip>, random_access_iterator_tag> &&
+  totally_ordered<_Ip> &&
+  sized_sentinel_for<_Ip, _Ip> &&
+  requires(_Ip __i, const _Ip __j, const iter_difference_t<_Ip> __n) {
+    { __i += __n } -> same_as<_Ip&>;
+    { __j +  __n } -> same_as<_Ip>;
+    { __n +  __j } -> same_as<_Ip>;
+    { __i -= __n } -> same_as<_Ip&>;
+    { __j -  __n } -> same_as<_Ip>;
+    {  __j[__n]  } -> same_as<iter_reference_t<_Ip>>;
+  };
+
+// clang-format on
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 

@@ -21,10 +21,10 @@ namespace stdr = std::ranges;
 
 static_assert(std::same_as<stdr::iterator_t<std::string_view>, std::string_view::iterator>);
 static_assert(stdr::common_range<std::string_view>);
-static_assert(stdr::bidirectional_range<std::string_view>);
+static_assert(stdr::random_access_range<std::string_view>);
 static_assert(!stdr::view<std::string_view>);
 
 static_assert(std::same_as<stdr::iterator_t<std::string_view const>, std::string_view::const_iterator>);
 static_assert(stdr::common_range<std::string_view const>);
-static_assert(stdr::bidirectional_range<std::string_view const>);
+static_assert(stdr::random_access_range<std::string_view const>);
 static_assert(!stdr::view<std::string_view const>);

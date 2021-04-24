@@ -87,6 +87,10 @@ template<class I>
 template<class I>
   concept bidirectional_iterator = see below;              // since C++20
 
+// [iterator.concept.random.access], concept random_access_iterator
+template<class I>
+  concept random_access_iterator = see below;              // since C++20
+
 template<class Category, class T, class Distance = ptrdiff_t,
          class Pointer = T*, class Reference = T&>
 struct iterator
