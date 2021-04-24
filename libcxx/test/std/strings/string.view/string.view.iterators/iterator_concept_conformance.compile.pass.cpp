@@ -22,6 +22,8 @@ using const_iterator = std::string_view::const_iterator;
 
 static_assert(std::indirectly_readable<iterator>);
 static_assert(!std::indirectly_writable<iterator, char>);
+static_assert(std::incrementable<iterator>);
 
 static_assert(std::indirectly_readable<const_iterator>);
 static_assert(!std::indirectly_writable<const_iterator, char>);
+static_assert(std::incrementable<const_iterator>);

@@ -18,3 +18,4 @@
 using iterator = std::move_iterator<int*>;
 static_assert(std::indirectly_readable<iterator>);
 static_assert(!std::indirectly_writable<iterator, int>);
+static_assert(std::incrementable<iterator>);

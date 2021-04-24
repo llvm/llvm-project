@@ -19,3 +19,4 @@
 
 static_assert(std::indirectly_readable<std::cregex_token_iterator>);
 static_assert(!std::indirectly_writable<std::cregex_token_iterator, char>);
+static_assert(std::incrementable<std::cregex_token_iterator>);

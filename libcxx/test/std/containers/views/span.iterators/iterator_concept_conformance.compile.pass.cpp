@@ -22,3 +22,4 @@ using value_type = iterator::value_type;
 
 static_assert(std::indirectly_readable<iterator>);
 static_assert(std::indirectly_writable<iterator, value_type>);
+static_assert(std::incrementable<iterator>);
