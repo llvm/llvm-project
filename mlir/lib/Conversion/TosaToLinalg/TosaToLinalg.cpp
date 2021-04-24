@@ -745,26 +745,28 @@ public:
   LogicalResult
   matchAndRewrite(tosa::FullyConnectedOp op, ArrayRef<Value> args,
                   ConversionPatternRewriter &rewriter) const final {
-    tosa::FullyConnectedOp::Adaptor adaptor(args);
-
     Location loc = op.getLoc();
     auto outputTy = op.getType().cast<ShapedType>();
-    auto biasTy = op->getOperand(2).getType().cast<ShapedType>();
+    auto input = op.input();
+    auto weight = op.weight();
+    auto bias = op.bias();
 
-    // Reshaping the bias from n to [1, n] for broadcasting
-    SmallVector<int64_t> biasShapeReshaped;
-    biasShapeReshaped.push_back(1);
-    biasShapeReshaped.push_back(biasTy.getShape()[0]);
+    auto weightTy = weight.getType().cast<ShapedType>();
+    auto biasTy = bias.getType().cast<ShapedType>();
 
-    RankedTensorType reshapedBias =
-        RankedTensorType::get(biasShapeReshaped, outputTy.getElementType());
-    auto reshapeResult =
-        rewriter.create<tosa::ReshapeOp>(loc, reshapedBias, args[2])
-            ->getResult(0);
+    auto weightShape = weightTy.getShape();
+
+    if (op.quantization_info())
+      return failure();
 
     // Creating maps for the output of MatMul and the bias
     SmallVector<AffineMap, 4> indexingMaps;
-    indexingMaps.push_back(createAffineMapForType(reshapedBias, rewriter));
+
+    // Broadcast the bias.
+    indexingMaps.push_back(AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
+                                          {rewriter.getAffineDimExpr(1)},
+                                          rewriter.getContext()));
+
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(outputTy.getRank()));
 
     auto initTensor =
@@ -776,7 +778,7 @@ public:
     auto linalgOp =
         rewriter
             .create<linalg::GenericOp>(
-                loc, outputTy, reshapeResult, initTensor, indexingMaps,
+                loc, outputTy, bias, initTensor, indexingMaps,
                 getNParallelLoopsAttrs(outputTy.getRank()),
                 [&](OpBuilder &nested_builder, Location nested_loc,
                     ValueRange args) {
@@ -784,9 +786,21 @@ public:
                 })
             ->getResults();
 
+    SmallVector<int64_t> permutation{1, 0};
+    auto permutationAttr = DenseIntElementsAttr::get(
+        RankedTensorType::get({2}, rewriter.getI64Type()), permutation);
+    Value permutationValue = rewriter.create<ConstantOp>(loc, permutationAttr);
+
+    SmallVector<int64_t> newWeightShape{weightShape[1], weightShape[0]};
+    Type newWeightTy =
+        RankedTensorType::get(newWeightShape, biasTy.getElementType());
+
+    Value transposedWeight = rewriter.create<tosa::TransposeOp>(
+        loc, newWeightTy, weight, permutationValue);
+
     rewriter.replaceOpWithNewOp<linalg::MatmulOp>(
-        op, TypeRange{op.getType()},
-        ValueRange{adaptor.input(), adaptor.weight()}, linalgOp);
+        op, TypeRange{op.getType()}, ValueRange{input, transposedWeight},
+        linalgOp);
     return success();
   }
 };
