@@ -269,22 +269,22 @@ define <2 x i32> @ctpop_add_no_common_bits_vec_use2(<2 x i32> %a, <2 x i32> %b, 
 
 define i8 @ctpop_rotate_left(i8 %a, i8 %amt)  {
 ; CHECK-LABEL: @ctpop_rotate_left(
-; CHECK-NEXT:    [[CTPOP:%.*]] = tail call i8 @llvm.ctpop.i8(i8 [[A:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    ret i8 [[CTPOP]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call i8 @llvm.ctpop.i8(i8 [[A:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %rotl = tail call i8 @llvm.fshl.i8(i8 %a, i8 %a, i8 %amt)
-  %ctpop = tail call i8 @llvm.ctpop.i8(i8 %rotl)
-  ret i8 %ctpop
+  %res = tail call i8 @llvm.ctpop.i8(i8 %rotl)
+  ret i8 %res
 }
 
 define i8 @ctpop_rotate_right(i8 %a, i8 %amt)  {
 ; CHECK-LABEL: @ctpop_rotate_right(
-; CHECK-NEXT:    [[CTPOP:%.*]] = tail call i8 @llvm.ctpop.i8(i8 [[A:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    ret i8 [[CTPOP]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call i8 @llvm.ctpop.i8(i8 [[A:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %rotr = tail call i8 @llvm.fshr.i8(i8 %a, i8 %a, i8 %amt)
-  %ctpop = tail call i8 @llvm.ctpop.i8(i8 %rotr)
-  ret i8 %ctpop
+  %res = tail call i8 @llvm.ctpop.i8(i8 %rotr)
+  ret i8 %res
 }
 
 declare i8 @llvm.fshl.i8(i8, i8, i8)
