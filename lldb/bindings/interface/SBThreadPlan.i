@@ -73,6 +73,9 @@ public:
     eStopReasonSignal        1     unix signal number
     eStopReasonException     N     exception data
     eStopReasonExec          0
+    eStopReasonFork          1     pid of the child process
+    eStopReasonVFork         1     pid of the child process
+    eStopReasonVForkDone     0
     eStopReasonPlanComplete  0") GetStopReasonDataAtIndex;
     uint64_t
     GetStopReasonDataAtIndex(uint32_t idx);

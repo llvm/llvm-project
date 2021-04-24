@@ -1679,6 +1679,12 @@ std::string Thread::StopReasonAsString(lldb::StopReason reason) {
     return "exception";
   case eStopReasonExec:
     return "exec";
+  case eStopReasonFork:
+    return "fork";
+  case eStopReasonVFork:
+    return "vfork";
+  case eStopReasonVForkDone:
+    return "vfork done";
   case eStopReasonPlanComplete:
     return "plan complete";
   case eStopReasonThreadExiting:
