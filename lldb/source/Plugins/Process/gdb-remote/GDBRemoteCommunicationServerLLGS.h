@@ -103,6 +103,8 @@ protected:
   bool m_thread_suffix_supported = false;
   bool m_list_threads_in_stop_reply = false;
 
+  NativeProcessProtocol::Extension m_extensions_supported = {};
+
   PacketResult SendONotification(const char *buffer, uint32_t len);
 
   PacketResult SendWResponse(NativeProcessProtocol *process);
@@ -263,6 +265,9 @@ private:
   // debugged and rejects pid values that do no match that inferior.
   llvm::Expected<lldb::tid_t> ReadTid(StringExtractorGDBRemote &packet,
                                       bool allow_all, lldb::pid_t default_pid);
+
+  // Call SetEnabledExtensions() with appropriate flags on the process.
+  void SetEnabledExtensions(NativeProcessProtocol &process);
 
   // For GDBRemoteCommunicationServerLLGS only
   GDBRemoteCommunicationServerLLGS(const GDBRemoteCommunicationServerLLGS &) =
