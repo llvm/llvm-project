@@ -11,15 +11,24 @@
 // UNSUPPORTED: gcc-10
 // XFAIL: msvc && clang
 
-// back_insert_iterator
+// template<class S, class I>
+// concept sentinel_for;
 
 #include <iterator>
 
+#include <concepts>
 #include <vector>
 
-using iterator = std::back_insert_iterator<std::vector<int> >;
-static_assert(!std::indirectly_readable<iterator>);
-static_assert(std::indirectly_writable<iterator, int>);
-static_assert(!std::weakly_incrementable<iterator>);
-static_assert(!std::input_or_output_iterator<iterator>);
-static_assert(!std::sentinel_for<iterator, iterator>);
+// clang-format off
+template<std::input_or_output_iterator, std::semiregular>
+[[nodiscard]] constexpr bool check_sentinel_subsumption() {
+  return false;
+}
+
+template<class I, std::sentinel_for<I> >
+[[nodiscard]] constexpr bool check_subsumption() {
+  return true;
+}
+// clang-format on
+
+static_assert(check_subsumption<std::vector<int>::iterator, std::vector<int>::iterator>());

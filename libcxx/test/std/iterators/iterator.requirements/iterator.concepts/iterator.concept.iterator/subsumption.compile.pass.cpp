@@ -11,15 +11,21 @@
 // UNSUPPORTED: gcc-10
 // XFAIL: msvc && clang
 
-// back_insert_iterator
+// template<class In>
+// concept input_or_output_iterator;
 
 #include <iterator>
 
-#include <vector>
+// clang-format off
+template<std::weakly_incrementable>
+[[nodiscard]] constexpr bool check_subsumption() {
+  return false;
+}
 
-using iterator = std::back_insert_iterator<std::vector<int> >;
-static_assert(!std::indirectly_readable<iterator>);
-static_assert(std::indirectly_writable<iterator, int>);
-static_assert(!std::weakly_incrementable<iterator>);
-static_assert(!std::input_or_output_iterator<iterator>);
-static_assert(!std::sentinel_for<iterator, iterator>);
+template<std::input_or_output_iterator>
+[[nodiscard]] constexpr bool check_subsumption() {
+  return true;
+}
+// clang-format on
+
+static_assert(check_subsumption<int*>());

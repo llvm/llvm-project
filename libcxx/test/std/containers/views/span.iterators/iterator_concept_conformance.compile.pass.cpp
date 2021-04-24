@@ -18,8 +18,12 @@
 #include <iterator>
 
 using iterator = std::span<int>::iterator;
+using reverse_iterator = std::span<int>::reverse_iterator;
 using value_type = iterator::value_type;
 
 static_assert(std::indirectly_readable<iterator>);
 static_assert(std::indirectly_writable<iterator, value_type>);
 static_assert(std::incrementable<iterator>);
+static_assert(std::input_or_output_iterator<iterator>);
+static_assert(std::sentinel_for<iterator, iterator>);
+static_assert(!std::sentinel_for<iterator, reverse_iterator>);
