@@ -91,7 +91,10 @@ void OffsetToProvenanceMappings::Put(const OffsetToProvenanceMappings &that) {
 }
 
 ProvenanceRange OffsetToProvenanceMappings::Map(std::size_t at) const {
-  //  CHECK(!provenanceMap_.empty());
+  if (provenanceMap_.empty()) {
+    CHECK(at == 0);
+    return {};
+  }
   std::size_t low{0}, count{provenanceMap_.size()};
   while (count > 1) {
     std::size_t mid{low + (count >> 1)};

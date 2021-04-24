@@ -57,18 +57,20 @@ bool TargetLowering::isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
     return false;
 
   // Conservatively require the attributes of the call to match those of
-  // the return. Ignore NoAlias and NonNull because they don't affect the
+  // the return. Ignore following attributes because they don't affect the
   // call sequence.
-  AttributeList CallerAttrs = F.getAttributes();
-  if (AttrBuilder(CallerAttrs, AttributeList::ReturnIndex)
-          .removeAttribute(Attribute::NoAlias)
-          .removeAttribute(Attribute::NonNull)
-          .hasAttributes())
+  AttrBuilder CallerAttrs(F.getAttributes(), AttributeList::ReturnIndex);
+  for (const auto &Attr : {Attribute::Alignment, Attribute::Dereferenceable,
+                           Attribute::DereferenceableOrNull, Attribute::NoAlias,
+                           Attribute::NonNull})
+    CallerAttrs.removeAttribute(Attr);
+
+  if (CallerAttrs.hasAttributes())
     return false;
 
   // It's not safe to eliminate the sign / zero extension of the return value.
-  if (CallerAttrs.hasAttribute(AttributeList::ReturnIndex, Attribute::ZExt) ||
-      CallerAttrs.hasAttribute(AttributeList::ReturnIndex, Attribute::SExt))
+  if (CallerAttrs.contains(Attribute::ZExt) ||
+      CallerAttrs.contains(Attribute::SExt))
     return false;
 
   // Check if the only use is a function return node.

@@ -351,21 +351,18 @@ bool AsmPrinter::doInitialization(Module &M) {
   case ExceptionHandling::SjLj:
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:
-    isCFIMoveForDebugging = true;
-    if (MAI->getExceptionHandlingType() != ExceptionHandling::DwarfCFI)
-      break;
-    for (auto &F: M.getFunctionList()) {
-      // If the module contains any function with unwind data,
-      // .eh_frame has to be emitted.
-      // Ignore functions that won't get emitted.
-      if (!F.isDeclarationForLinker() && F.needsUnwindTableEntry()) {
-        isCFIMoveForDebugging = false;
+    for (auto &F : M.getFunctionList()) {
+      // If any function needsUnwindTableEntry(), it needs .eh_frame and hence
+      // the module needs .eh_frame. If we have found that case, we are done.
+      if (ModuleCFISection == AsmPrinter::CFISection::EH)
         break;
-      }
+      if (ModuleCFISection == AsmPrinter::CFISection::None)
+        ModuleCFISection = getFunctionCFISectionType(F);
     }
+    assert(MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI ||
+           ModuleCFISection != AsmPrinter::CFISection::EH);
     break;
   default:
-    isCFIMoveForDebugging = false;
     break;
   }
 
@@ -1037,15 +1034,25 @@ static bool emitDebugLabelComment(const MachineInstr *MI, AsmPrinter &AP) {
   return true;
 }
 
-AsmPrinter::CFIMoveType AsmPrinter::needsCFIMoves() const {
+AsmPrinter::CFISection
+AsmPrinter::getFunctionCFISectionType(const Function &F) const {
+  // Ignore functions that won't get emitted.
+  if (F.isDeclarationForLinker())
+    return CFISection::None;
+
   if (MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI &&
-      MF->getFunction().needsUnwindTableEntry())
-    return CFI_M_EH;
+      F.needsUnwindTableEntry())
+    return CFISection::EH;
 
-  if (MMI->hasDebugInfo() || MF->getTarget().Options.ForceDwarfFrameSection)
-    return CFI_M_Debug;
+  if (MMI->hasDebugInfo() || TM.Options.ForceDwarfFrameSection)
+    return CFISection::Debug;
 
-  return CFI_M_None;
+  return CFISection::None;
+}
+
+AsmPrinter::CFISection
+AsmPrinter::getFunctionCFISectionType(const MachineFunction &MF) const {
+  return getFunctionCFISectionType(MF.getFunction());
 }
 
 bool AsmPrinter::needsSEHMoves() {
@@ -1058,7 +1065,7 @@ void AsmPrinter::emitCFIInstruction(const MachineInstr &MI) {
       ExceptionHandlingType != ExceptionHandling::ARM)
     return;
 
-  if (needsCFIMoves() == CFI_M_None)
+  if (getFunctionCFISectionType(*MF) == AsmPrinter::CFISection::None)
     return;
 
   // If there is no "real" instruction following this CFI instruction, skip
