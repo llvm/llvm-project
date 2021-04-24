@@ -3712,6 +3712,15 @@ system) and does not imply undefined behavior, making it more widely applicable.
   }];
 }
 
+def RestrictDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``malloc`` attribute indicates that the function acts like a system memory
+allocation function, returning a pointer to allocated storage disjoint from the
+storage for any other object accessible to the caller.
+  }];
+}
+
 def ReturnsNonNullDocs : Documentation {
   let Category = NullabilityDocs;
   let Content = [{
