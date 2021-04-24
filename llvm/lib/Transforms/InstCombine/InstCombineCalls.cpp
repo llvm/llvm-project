@@ -497,11 +497,17 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
   Type *Ty = II.getType();
   unsigned BitWidth = Ty->getScalarSizeInBits();
   Value *Op0 = II.getArgOperand(0);
-  Value *X;
+  Value *X, *Y;
 
   // ctpop(bitreverse(x)) -> ctpop(x)
   // ctpop(bswap(x)) -> ctpop(x)
   if (match(Op0, m_BitReverse(m_Value(X))) || match(Op0, m_BSwap(m_Value(X))))
+    return IC.replaceOperand(II, 0, X);
+
+  // ctpop(rot(x)) -> ctpop(x)
+  if ((match(Op0, m_FShl(m_Value(X), m_Value(Y), m_Value())) ||
+       match(Op0, m_FShr(m_Value(X), m_Value(Y), m_Value()))) &&
+      X == Y)
     return IC.replaceOperand(II, 0, X);
 
   // ctpop(x | -x) -> bitwidth - cttz(x, false)
