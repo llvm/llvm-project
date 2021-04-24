@@ -67,6 +67,10 @@ enum : __kmpc_impl_lanemask_t {
   __kmpc_impl_all_lanes = ~(__kmpc_impl_lanemask_t)0
 };
 
-EXTERN int printf(const char *, ...);
+// The return code of printf is not checked in the call sites in this library.
+// A call to a function named printf currently hits some special case handling
+// for opencl, which translates to calls that do not presently exist for openmp
+// Therefore, for now, stub out printf while building this library.
+#define printf(...)
 
 #endif
