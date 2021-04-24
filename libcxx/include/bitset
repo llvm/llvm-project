@@ -775,10 +775,7 @@ bitset<_Size>::bitset(const _CharT* __str,
     for (; __i < _Mp; ++__i)
     {
         _CharT __c = __str[_Mp - 1 - __i];
-        if (__c == __zero)
-            (*this)[__i] = false;
-        else
-            (*this)[__i] = true;
+        (*this)[__i] = (__c == __one);
     }
     _VSTD::fill(base::__make_iter(__i), base::__make_iter(_Size), false);
 }
@@ -803,10 +800,7 @@ bitset<_Size>::bitset(const basic_string<_CharT,_Traits,_Allocator>& __str,
     for (; __i < _Mp; ++__i)
     {
         _CharT __c = __str[__pos + _Mp - 1 - __i];
-        if (_Traits::eq(__c, __zero))
-            (*this)[__i] = false;
-        else
-            (*this)[__i] = true;
+        (*this)[__i] = _Traits::eq(__c, __one);
     }
     _VSTD::fill(base::__make_iter(__i), base::__make_iter(_Size), false);
 }
