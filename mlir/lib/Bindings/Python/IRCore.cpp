@@ -1566,7 +1566,7 @@ public:
           mlirOperationEqual(self.getParentOperation()->get(),
                              mlirOpResultGetOwner(self.get())) &&
           "expected the owner of the value in Python to match that in the IR");
-      return self.getParentOperation();
+      return self.getParentOperation().getObject();
     });
     c.def_property_readonly("result_number", [](PyOpResult &self) {
       return mlirOpResultGetResultNumber(self.get());
