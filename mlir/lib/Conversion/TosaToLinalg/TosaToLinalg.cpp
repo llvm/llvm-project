@@ -1781,6 +1781,59 @@ public:
   }
 };
 
+class GatherConverter : public OpConversionPattern<tosa::GatherOp> {
+public:
+  using OpConversionPattern<tosa::GatherOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tosa::GatherOp op, ArrayRef<Value> args,
+                  ConversionPatternRewriter &rewriter) const final {
+    auto input = args[0];
+    auto indices = args[1];
+
+    auto inputTy = input.getType().cast<ShapedType>();
+    auto indicesTy = indices.getType().cast<ShapedType>();
+    auto resultTy = op.getType().cast<ShapedType>();
+
+    if (!inputTy.hasStaticShape() || !indicesTy.hasStaticShape())
+      return rewriter.notifyMatchFailure(
+          op, "require input type to have static shape");
+
+    auto resultElementTy = resultTy.getElementType();
+
+    auto loc = op.getLoc();
+
+    auto initTensor =
+        rewriter
+            .create<linalg::InitTensorOp>(loc, ArrayRef<Value>{},
+                                          resultTy.getShape(), resultElementTy)
+            .result();
+
+    SmallVector<AffineMap, 2> affineMaps = {
+        AffineMap::get(
+            /*dimCount=*/resultTy.getRank(), /*symbolCount=*/0,
+            {rewriter.getAffineDimExpr(0), rewriter.getAffineDimExpr(1)},
+            rewriter.getContext()),
+        rewriter.getMultiDimIdentityMap(resultTy.getRank())};
+
+    auto genericOp = rewriter.create<linalg::IndexedGenericOp>(
+        loc, ArrayRef<Type>({resultTy}), ValueRange{indices},
+        ValueRange{initTensor}, affineMaps,
+        getNParallelLoopsAttrs(resultTy.getRank()),
+        [&](OpBuilder &b, Location loc, ValueRange indices, ValueRange args) {
+          auto indexValue = args[0];
+          auto index0 = indices[0];
+          Value index1 = rewriter.create<IndexCastOp>(
+              loc, rewriter.getIndexType(), indexValue);
+          auto index2 = indices[2];
+          Value extract = rewriter.create<tensor::ExtractOp>(
+              loc, input, ValueRange{index0, index1, index2});
+          rewriter.create<linalg::YieldOp>(loc, extract);
+        });
+    rewriter.replaceOp(op, genericOp.getResult(0));
+    return success();
+  }
+};
+
 // Lowerings the TableOp to a series of gathers and numerica operations. This
 // includes interpolation between the high/low values. For the I8 varient, this
 // simplifies to a single gather operation.
@@ -2085,6 +2138,7 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       ArgMaxConverter,
       ConcatConverter,
       Conv2DConverter,
+      GatherConverter,
       PadConverter,
       ReshapeConverter,
       RescaleConverter,
