@@ -22,6 +22,8 @@ using const_iterator = std::array<int, 10>::const_iterator;
 
 static_assert(std::indirectly_readable<iterator>);
 static_assert(std::indirectly_writable<iterator, int>);
+static_assert(std::incrementable<iterator>);
 
 static_assert(std::indirectly_readable<const_iterator>);
 static_assert(!std::indirectly_writable<const_iterator, int>);
+static_assert(std::incrementable<const_iterator>);

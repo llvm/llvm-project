@@ -52,6 +52,14 @@ template<class In>
 template<class Out, class T>
   concept indirectly_writable = see below;                // since C++20
 
+// [iterator.concept.winc], concept weakly_­incrementable
+template<class I>
+  concept weakly_incrementable = see below;                // since C++20
+
+// [iterator.concept.inc], concept incrementable
+template<class I>
+  concept incrementable = see below;                       // since C++20
+
 template<class Category, class T, class Distance = ptrdiff_t,
          class Pointer = T*, class Reference = T&>
 struct iterator
