@@ -203,11 +203,11 @@ define i32 @ctpop_add(i32 %a, i32 %b) {
 
 define i32 @ctpop_add_no_common_bits(i32 %a, i32 %b) {
 ; CHECK-LABEL: @ctpop_add_no_common_bits(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fshl.i32(i32 [[B:%.*]], i32 [[B]], i32 16)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fshl.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 16)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP1]]), !range [[RNG1]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
-  %shl16 = shl i32 %b, 16
+  %shl16 = shl i32 %a, 16
   %ctpop1 = tail call i32 @llvm.ctpop.i32(i32 %shl16)
   %lshl16 = lshr i32 %b, 16
   %ctpop2 = tail call i32 @llvm.ctpop.i32(i32 %lshl16)
@@ -266,3 +266,26 @@ define <2 x i32> @ctpop_add_no_common_bits_vec_use2(<2 x i32> %a, <2 x i32> %b, 
   %res = add <2 x i32> %ctpop1, %ctpop2
   ret <2 x i32> %res
 }
+
+define i8 @ctpop_rotate_left(i8 %a, i8 %amt)  {
+; CHECK-LABEL: @ctpop_rotate_left(
+; CHECK-NEXT:    [[CTPOP:%.*]] = tail call i8 @llvm.ctpop.i8(i8 [[A:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    ret i8 [[CTPOP]]
+;
+  %rotl = tail call i8 @llvm.fshl.i8(i8 %a, i8 %a, i8 %amt)
+  %ctpop = tail call i8 @llvm.ctpop.i8(i8 %rotl)
+  ret i8 %ctpop
+}
+
+define i8 @ctpop_rotate_right(i8 %a, i8 %amt)  {
+; CHECK-LABEL: @ctpop_rotate_right(
+; CHECK-NEXT:    [[CTPOP:%.*]] = tail call i8 @llvm.ctpop.i8(i8 [[A:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    ret i8 [[CTPOP]]
+;
+  %rotr = tail call i8 @llvm.fshr.i8(i8 %a, i8 %a, i8 %amt)
+  %ctpop = tail call i8 @llvm.ctpop.i8(i8 %rotr)
+  ret i8 %ctpop
+}
+
+declare i8 @llvm.fshl.i8(i8, i8, i8)
+declare i8 @llvm.fshr.i8(i8, i8, i8)
