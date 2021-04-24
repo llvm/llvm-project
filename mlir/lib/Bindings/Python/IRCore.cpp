@@ -753,6 +753,9 @@ PyOperation::PyOperation(PyMlirContextRef contextRef, MlirOperation operation)
     : BaseContextObject(std::move(contextRef)), operation(operation) {}
 
 PyOperation::~PyOperation() {
+  // If the operation has already been invalidated there is nothing to do.
+  if (!valid)
+    return;
   auto &liveOperations = getContext()->liveOperations;
   assert(liveOperations.count(operation.ptr) == 1 &&
          "destroying operation not in live map");
@@ -869,6 +872,7 @@ py::object PyOperationBase::getAsm(bool binary,
 }
 
 PyOperationRef PyOperation::getParentOperation() {
+  checkValid();
   if (!isAttached())
     throw SetPyError(PyExc_ValueError, "Detached operations have no parent");
   MlirOperation operation = mlirOperationGetParentOperation(get());
@@ -878,6 +882,7 @@ PyOperationRef PyOperation::getParentOperation() {
 }
 
 PyBlock PyOperation::getBlock() {
+  checkValid();
   PyOperationRef parentOperation = getParentOperation();
   MlirBlock block = mlirOperationGetBlock(get());
   assert(!mlirBlockIsNull(block) && "Attached operation has null parent");
@@ -885,6 +890,7 @@ PyBlock PyOperation::getBlock() {
 }
 
 py::object PyOperation::getCapsule() {
+  checkValid();
   return py::reinterpret_steal<py::object>(mlirPythonOperationToCapsule(get()));
 }
 
@@ -1032,6 +1038,7 @@ py::object PyOperation::create(
 }
 
 py::object PyOperation::createOpView() {
+  checkValid();
   MlirIdentifier ident = mlirOperationGetName(get());
   MlirStringRef identStr = mlirIdentifierStr(ident);
   auto opViewClass = PyGlobals::get().lookupRawOpViewClass(
@@ -1039,6 +1046,18 @@ py::object PyOperation::createOpView() {
   if (opViewClass)
     return (*opViewClass)(getRef().getObject());
   return py::cast(PyOpView(getRef().getObject()));
+}
+
+void PyOperation::erase() {
+  checkValid();
+  // TODO: Fix memory hazards when erasing a tree of operations for which a deep
+  // Python reference to a child operation is live. All children should also
+  // have their `valid` bit set to false.
+  auto &liveOperations = getContext()->liveOperations;
+  if (liveOperations.count(operation.ptr))
+    liveOperations.erase(operation.ptr);
+  mlirOperationDestroy(operation);
+  valid = false;
 }
 
 //------------------------------------------------------------------------------
@@ -2094,11 +2113,13 @@ void mlir::python::populateIRCore(py::module &m) {
                   py::arg("successors") = py::none(), py::arg("regions") = 0,
                   py::arg("loc") = py::none(), py::arg("ip") = py::none(),
                   kOperationCreateDocstring)
+      .def("erase", &PyOperation::erase)
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
                              &PyOperation::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyOperation::createFromCapsule)
       .def_property_readonly("name",
                              [](PyOperation &self) {
+                               self.checkValid();
                                MlirOperation operation = self.get();
                                MlirStringRef name = mlirIdentifierStr(
                                    mlirOperationGetName(operation));
@@ -2106,7 +2127,10 @@ void mlir::python::populateIRCore(py::module &m) {
                              })
       .def_property_readonly(
           "context",
-          [](PyOperation &self) { return self.getContext().getObject(); },
+          [](PyOperation &self) {
+            self.checkValid();
+            return self.getContext().getObject();
+          },
           "Context that owns the Operation")
       .def_property_readonly("opview", &PyOperation::createOpView);
 
