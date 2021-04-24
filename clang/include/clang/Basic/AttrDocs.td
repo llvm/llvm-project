@@ -3714,6 +3714,7 @@ system) and does not imply undefined behavior, making it more widely applicable.
 
 def RestrictDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "malloc";
   let Content = [{
 The ``malloc`` attribute indicates that the function acts like a system memory
 allocation function, returning a pointer to allocated storage disjoint from the
