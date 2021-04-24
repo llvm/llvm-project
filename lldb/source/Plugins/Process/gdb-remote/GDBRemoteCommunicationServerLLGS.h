@@ -78,6 +78,10 @@ public:
 
   void DidExec(NativeProcessProtocol *process) override;
 
+  void
+  NewSubprocess(NativeProcessProtocol *parent_process,
+                std::unique_ptr<NativeProcessProtocol> child_process) override;
+
   Status InitializeConnection(std::unique_ptr<Connection> connection);
 
 protected:
@@ -89,7 +93,8 @@ protected:
   NativeProcessProtocol *m_current_process;
   NativeProcessProtocol *m_continue_process;
   std::recursive_mutex m_debugged_process_mutex;
-  std::unique_ptr<NativeProcessProtocol> m_debugged_process_up;
+  std::unordered_map<lldb::pid_t, std::unique_ptr<NativeProcessProtocol>>
+      m_debugged_processes;
 
   Communication m_stdio_communication;
   MainLoop::ReadHandleUP m_stdio_handle_up;
