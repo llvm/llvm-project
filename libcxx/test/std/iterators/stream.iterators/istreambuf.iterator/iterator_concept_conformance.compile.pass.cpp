@@ -21,3 +21,5 @@
 using iterator = std::istreambuf_iterator<char>;
 static_assert(std::indirectly_readable<iterator>);
 static_assert(!std::indirectly_writable<iterator, char>);
+static_assert(std::weakly_incrementable<iterator>);
+static_assert(!std::incrementable<iterator>);

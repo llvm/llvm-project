@@ -19,6 +19,8 @@
 
 static_assert(std::indirectly_readable<std::unique_ptr<int> >);
 static_assert(std::indirectly_writable<std::unique_ptr<int>, int>);
+static_assert(!std::weakly_incrementable<std::unique_ptr<int> >);
 
 static_assert(!std::indirectly_readable<std::unique_ptr<void> >);
 static_assert(!std::indirectly_writable<std::unique_ptr<void>, void>);
+static_assert(!std::weakly_incrementable<std::unique_ptr<void> >);
