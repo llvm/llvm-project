@@ -141,4 +141,3 @@ function alpha() bind(c, name =" bEtA ")
 end function
 
 ! CHECK-LABEL: fir.global internal @_QFfooEpi : f32 {
-! CHECK-LABEL: fir.global internal @_QFfunctnECpi constant : f32 {

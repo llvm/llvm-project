@@ -19,6 +19,7 @@
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/symbol.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
@@ -493,6 +494,20 @@ std::string Fortran::lower::uniqueCGIdent(llvm::StringRef prefix,
   std::string nm = prefix.str();
   return fir::NameUniquer::doGenerated(
       nm.append(".").append(llvm::toHex(name)));
+}
+
+std::string Fortran::lower::LiteralNameHelper::getName(
+    Fortran::lower::FirOpBuilder &builder) {
+  auto name = fir::NameUniquer::doGenerated("ro."s.append(typeId).append("."));
+  if (!size)
+    return name += "null";
+  llvm::MD5 hashValue{};
+  hashValue.update(ArrayRef<uint8_t>{address, size});
+  llvm::MD5::MD5Result hashResult;
+  hashValue.final(hashResult);
+  llvm::SmallString<32> hashString;
+  llvm::MD5::stringifyResult(hashResult, hashString);
+  return name += hashString.c_str();
 }
 
 mlir::Value

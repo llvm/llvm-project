@@ -79,32 +79,53 @@ end subroutine s
 ! CHECK-LABEL range
 subroutine range()
   ! Compile-time initalized arrays
+  integer, dimension(10) :: a0
+  real, dimension(2,3) ::  a1
+  integer, dimension(3,4) :: a2
+ 
+  a0 = (/1, 2, 3, 3, 3, 3, 3, 3, 3, 3/)
+  a1 = reshape((/3.5, 3.5, 3.5, 3.5, 3.5, 3.5/), shape(a1))
+  a2 = reshape((/1, 3, 3, 5, 3, 3, 3, 3, 9, 9, 9, 8/), shape(a2))
+end subroutine range
+
+! a0 array constructor
+! CHECK: fir.global internal @_QQro.10xi4.{{.*}} constant : !fir.array<10xi32> {
+  ! CHECK-DAG: %[[c1_i32:.*]] = constant 1 : i32
+  ! CHECK-DAG: %[[c2_i32:.*]] = constant 2 : i32
   ! CHECK-DAG: %[[c3_i32:.*]] = constant 3 : i32
+  ! CHECK-DAG: %[[c0:.*]] = constant 0 : index
+  ! CHECK-DAG: %[[c1:.*]] = constant 1 : index
+  ! CHECK-DAG: %[[c2:.*]] = constant 2 : index
+  ! CHECK-DAG: %[[c9:.*]] = constant 9 : index
+  ! CHECK: %[[r1:.*]] = fir.insert_value %{{.*}}, %{{.*}}, %{{.*}} :
+  ! CHECK: %[[r2:.*]] = fir.insert_value %[[r1]], %{{.*}}, %{{.*}} :
+  ! CHECK: %[[r3:.*]] = fir.insert_on_range %[[r2]], %[[c3_i32]], %[[c2]], %[[c9]] :
+
+! a1 array constructor
+! CHECK: fir.global internal @_QQro.2x3xr4.{{.*}} constant : !fir.array<2x3xf32> {
+  ! CHECK-DAG: %cst = constant {{.*}} : f32
+  ! CHECK-DAG: %[[c0:.*]] = constant 0 : index
+  ! CHECK-DAG: %[[c1:.*]] = constant 1 : index
+  ! CHECK-DAG: %[[c2:.*]] = constant 2 : index
+  ! CHECK: %{{.*}} = fir.insert_on_range %{{[0-9]+}}, %cst, %[[c0]], %[[c1]], %[[c0]], %[[c2]] :
+
+! a2 array constructor
+! CHECK: fir.global internal @_QQro.3x4xi4.{{.*}} constant : !fir.array<3x4xi32> {
+  ! CHECK-DAG: %[[c1_i32:.*]] = constant 1 : i32
+  ! CHECK-DAG: %[[c3_i32:.*]] = constant 3 : i32
+  ! CHECK-DAG: %[[c5_i32:.*]] = constant 5 : i32
+  ! CHECK-DAG: %[[c8_i32:.*]] = constant 8 : i32
   ! CHECK-DAG: %[[c9_i32:.*]] = constant 9 : i32
   ! CHECK-DAG: %[[c0:.*]] = constant 0 : index
   ! CHECK-DAG: %[[c1:.*]] = constant 1 : index
   ! CHECK-DAG: %[[c2:.*]] = constant 2 : index
   ! CHECK-DAG: %[[c3:.*]] = constant 3 : index
-  ! CHECK-DAG: %[[c9:.*]] = constant 9 : index
-  integer, dimension(10) :: a0
-  real, dimension(2,3) ::  a1
-  integer, dimension(3,4) :: a2
- 
-  ! CHECK: %[[r1:.*]] = fir.insert_value %{{.*}}, %{{.*}}, %{{.*}} :
-  ! CHECK: %[[r2:.*]] = fir.insert_value %[[r1]], %{{.*}}, %{{.*}} :
-  ! CHECK: %[[r3:.*]] = fir.insert_on_range %[[r2]], %[[c3_i32]], %[[c2]], %[[c9]] :
-  a0 = (/1, 2, 3, 3, 3, 3, 3, 3, 3, 3/)
-  ! CHECK: %{{.*}} = fir.insert_on_range %{{[0-9]+}}, %{{.*}}, %[[c0]], %[[c1]], %[[c0]], %[[c2]] :
-  a1 = reshape((/3.5, 3.5, 3.5, 3.5, 3.5, 3.5/), shape(a1))
-  ! CHECK: %[[r4:.*]] = fir.insert_value %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} :
-  ! CHECK: %[[r5:.*]] = fir.insert_on_range %[[r4]], %[[c3_i32]], %[[c1]], %[[c2]], %[[c0]], %[[c0]] :
+  ! CHECK: %[[r1:.*]] = fir.insert_value %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} :
+  ! CHECK: %[[r2:.*]] = fir.insert_on_range %[[r1]], %[[c3_i32]], %[[c1]], %[[c2]], %[[c0]], %[[c0]] :
+  ! CHECK: %[[r3:.*]] = fir.insert_value %[[r2]], %{{.*}}, %{{.*}}, %{{.*}} :
+  ! CHECK: %[[r4:.*]] = fir.insert_on_range %[[r3]], %[[c3_i32]], %[[c1]], %[[c1]], %[[c1]], %[[c2]] :
+  ! CHECK: %[[r5:.*]] = fir.insert_on_range %[[r4]], %[[c9_i32]], %[[c2]], %[[c1]], %[[c2]], %[[c3]] :
   ! CHECK: %[[r6:.*]] = fir.insert_value %[[r5]], %{{.*}}, %{{.*}}, %{{.*}} :
-  ! CHECK: %[[r7:.*]] = fir.insert_on_range %[[r6]], %[[c3_i32]], %[[c1]], %[[c1]], %[[c1]], %[[c2]] :
-  ! CHECK: %[[r8:.*]] = fir.insert_on_range %[[r7]], %[[c9_i32]], %[[c2]], %[[c1]], %[[c2]], %[[c3]] :
-  ! CHECK: %[[r9:.*]] = fir.insert_value %[[r8]], %{{.*}}, %{{.*}}, %{{.*}} :
-  a2 = reshape((/1, 3, 3, 5, 3, 3, 3, 3, 9, 9, 9, 8/), shape(a2))
-
-end subroutine range
 
 ! CHECK-LABEL rangeGlobal
 subroutine rangeGlobal()

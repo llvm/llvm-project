@@ -1297,6 +1297,8 @@ struct SymbolDependenceDepth {
     LLVM_DEBUG(llvm::dbgs() << "analyze symbol: " << sym << '\n');
     if (!done.second)
       return 0;
+    if (sym.attrs().test(Fortran::semantics::Attr::PARAMETER))
+      return 0; // References to PARAMETERs appear as values, not symbols.
     if (semantics::IsProcedure(sym)) {
       // TODO: add declaration?
       return 0;
@@ -1348,7 +1350,7 @@ struct SymbolDependenceDepth {
       }
       // handle any symbols in initialization expressions
       if (auto e = details->init()) {
-        // A PARAMETER may not be marked as implicitly SAVE, so set the flag.
+        // An object that is initialized is implicitly SAVE, so set the flag.
         global = true;
         for (const auto &s : evaluate::CollectSymbols(*e))
           depth = std::max(analyze(s) + 1, depth);

@@ -2658,18 +2658,39 @@ public:
 
   template <typename A>
   CC genarr(const Fortran::evaluate::Constant<A> &x) {
-    // TODO: Constants get expanded out as inline array values. We want to
-    // reconsider that an outline array constants in expressions.
     auto loc = getLoc();
-    LLVM_DEBUG(mlir::emitWarning(loc, "array constant should be outlined"));
-    auto exv = Fortran::lower::createSomeInitializerExpression(
-        loc, converter, toEvExpr(x), symMap, stmtCtx);
-    auto val = fir::getBase(exv);
-    auto *bldr = &converter.getFirOpBuilder();
-    mlir::Value mem = bldr->create<fir::AllocMemOp>(loc, val.getType());
-    stmtCtx.attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, mem); });
-    bldr->create<fir::StoreOp>(loc, val, mem);
-    auto lambda = genarr(fir::substBase(exv, mem));
+    auto idxTy = builder.getIndexType();
+    auto arrTy = converter.genType(toEvExpr(x));
+    auto globalName = Fortran::lower::LiteralNameHelper{x}.getName(builder);
+    auto global = builder.getNamedGlobal(globalName);
+    if (!global) {
+      global = builder.createGlobalConstant(
+          loc, arrTy, globalName,
+          [&](Fortran::lower::FirOpBuilder &builder) {
+            Fortran::lower::StatementContext stmtCtx;
+            auto result = Fortran::lower::createSomeInitializerExpression(
+                loc, converter, toEvExpr(x), symMap, stmtCtx);
+            auto castTo =
+                builder.createConvert(loc, arrTy, fir::getBase(result));
+            builder.create<fir::HasValueOp>(loc, castTo);
+          },
+          builder.createInternalLinkage());
+    }
+    auto addr = builder.create<fir::AddrOfOp>(getLoc(), global.resultType(),
+                                              global.getSymbol());
+    auto seqTy = global.getType().cast<fir::SequenceType>();
+    llvm::SmallVector<mlir::Value> extents;
+    for (auto extent : seqTy.getShape())
+      extents.push_back(builder.createIntegerConstant(loc, idxTy, extent));
+    auto getArrayBox = [&]() {
+      if constexpr (A::category == Fortran::common::TypeCategory::Character) {
+        auto len = builder.createIntegerConstant(loc, idxTy, x.LEN());
+        return fir::CharArrayBoxValue{addr, len, extents};
+      } else {
+        return fir::ArrayBoxValue{addr, extents};
+      }
+    };
+    auto lambda = genarr(getArrayBox());
     return [=](IterSpace iters) { return lambda(iters); };
   }
 
