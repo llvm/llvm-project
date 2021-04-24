@@ -4,22 +4,32 @@
 # RUN: mkdir -p %t.dir/build1
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %s -o %t.dir/build1/foo.o
 # RUN: echo '_main' > %t.dir/main.exports
+# RUN: echo '_main' > %t.dir/main.order
+# RUN: echo 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' > %t.dir/sectdata.txt
 # RUN: cd %t.dir
 # RUN: %lld -platform_version macos 10.10.0 11.0 \
 # RUN:     -exported_symbols_list main.exports \
+# RUN:     -order_file main.order \
+# RUN:     -sectcreate __COMPLETELY __legit sectdata.txt \
 # RUN:     build1/foo.o -o bar --reproduce repro1.tar
 
 # RUN: tar tf repro1.tar | FileCheck -DPATH='%:t.dir' --check-prefix=LIST %s
 # LIST: repro1/response.txt
 # LIST: [[PATH]]/main.exports
 # LIST: [[PATH]]/build1/foo.o
+# LIST: [[PATH]]/main.order
+# LIST: [[PATH]]/sectdata.txt
 
 # RUN: tar xf repro1.tar
 # RUN: cmp build1/foo.o repro1/%:t.dir/build1/foo.o
 # RUN: diff main.exports repro1/%:t.dir/main.exports
+# RUN: diff main.order repro1/%:t.dir/main.order
+# RUN: diff sectdata.txt repro1/%:t.dir/sectdata.txt
 # RUN: FileCheck %s --check-prefix=RSP1 < repro1/response.txt
 # RSP1:      {{^}}-platform_version macos 10.10.0 11.0{{$}}
 # RSP1-NEXT: -exported_symbols_list [[BASEDIR:.+]]/main.exports
+# RSP1-NEXT: -order_file [[BASEDIR]]/main.order
+# RSP1-NEXT: -sectcreate __COMPLETELY __legit [[BASEDIR]]/sectdata.txt
 # RSP1-NOT:  {{^}}repro1{{[/\\]}}
 # RSP1-NEXT: [[BASEDIR]]/build1/foo.o
 # RSP1-NEXT: -o bar
