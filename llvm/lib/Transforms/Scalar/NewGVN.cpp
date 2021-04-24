@@ -2437,8 +2437,9 @@ void NewGVN::processOutgoingEdges(Instruction *TI, BasicBlock *B) {
     Value *CondEvaluated = findConditionEquivalence(Cond);
     if (!CondEvaluated) {
       if (auto *I = dyn_cast<Instruction>(Cond)) {
-        auto Res = createExpression(I);
-        if (const auto *CE = dyn_cast<ConstantExpression>(Res.Expr)) {
+        SmallPtrSet<Value *, 4> Visited;
+        auto Res = performSymbolicEvaluation(I, Visited);
+        if (const auto *CE = dyn_cast_or_null<ConstantExpression>(Res.Expr)) {
           CondEvaluated = CE->getConstantValue();
           addAdditionalUsers(Res, I);
         } else {
