@@ -45,8 +45,6 @@ option(COMPILER_RT_BUILD_MEMPROF "Build memory profiling runtime" ON)
 mark_as_advanced(COMPILER_RT_BUILD_MEMPROF)
 option(COMPILER_RT_BUILD_XRAY_NO_PREINIT "Build xray with no preinit patching" OFF)
 mark_as_advanced(COMPILER_RT_BUILD_XRAY_NO_PREINIT)
-option(COMPILER_RT_BUILD_ORC "Build ORC runtime" ON)
-mark_as_advanced(COMPILER_RT_BUILD_ORC)
 
 set(COMPILER_RT_ASAN_SHADOW_SCALE ""
     CACHE STRING "Override the shadow scale to be used in ASan runtime")
