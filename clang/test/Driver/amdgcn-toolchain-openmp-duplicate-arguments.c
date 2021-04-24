@@ -22,7 +22,7 @@
 // DUP-NOT:  "-mllvm" "-amdgpu-dump-hsa-metadata" "-mllvm" "-amdgpu-dump-hsa-metadata"
 // CHECK-SAME: "-fopenmp-is-device"
 
-// CHECK: [[OPT:".*llc.*"]] {{".*-gfx906-linked.*bc"}} "-mtriple=amdgcn-amd-amdhsa"
+// CHECK: [[OPT:".*llc.*"]] {{".*-gfx906-optimized.*bc"}} "-mtriple=amdgcn-amd-amdhsa"
 // CHECK-SAME: "-mcpu=gfx906"
 // CHECK-SAME: "-amdgpu-dump-hsa-metadata"
 // DUP-NOT: "-amdgpu-dump-hsa-metadata" "-amdgpu-dump-hsa-metadata"

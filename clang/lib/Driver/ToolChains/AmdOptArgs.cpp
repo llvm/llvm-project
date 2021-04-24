@@ -47,7 +47,6 @@ static bool hasLlvmAoccOption(const ArgList &Args) {
   Flags.insert(std::make_pair("-enable-branch-combine", true));
   Flags.insert(std::make_pair("-simplifycfg-no-storesink", true));
   Flags.insert(std::make_pair("-inline-aggressive", true));
-  Flags.insert(std::make_pair("-global-vectorize-slp", true));
 
   for (Arg *A : Args) {
     if (!A->getNumValues()) continue;
@@ -92,7 +91,7 @@ static bool checkForPropOpts(const ToolChain &TC, const Driver &D,
   // Enable -loop-unswitch-aggressive opt flag, only when
   // 1) -Ofast
   // 2) -floop-unswitch-aggressive
-  if (((OFastEnabled &&
+  if (((ClosedToolChainNeeded && OFastEnabled &&
         !Args.hasArg(options::OPT_fno_loop_unswitch_aggressive)) ||
        Args.hasArg(options::OPT_floop_unswitch_aggressive)) &&
       !hasOption(Args, Args.MakeArgString("-aggressive-loop-unswitch"))) {
@@ -135,7 +134,7 @@ static bool checkForPropOpts(const ToolChain &TC, const Driver &D,
         }
       }
     }
-    ClosedToolChainNeeded = true;
+    // fveclib supported prior to amd-opt, so not a trigger for closed.
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_fstruct_layout_EQ)) {
@@ -176,21 +175,21 @@ static bool checkForPropOpts(const ToolChain &TC, const Driver &D,
     StringRef Val = A->getValue();
     addCmdArgs(Args, CmdArgs, isLLD, checkOnly,
                Args.MakeArgString("-pass-remarks=" + Val));
-    ClosedToolChainNeeded = true;
+    // RPass supported prior to famd-opt, so not a trigger.
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_Rpass_missed_EQ)) {
     StringRef Val = A->getValue();
     addCmdArgs(Args, CmdArgs, isLLD, checkOnly,
                Args.MakeArgString("-pass-remarks-missed=" + Val));
-    ClosedToolChainNeeded = true;
+    // RPass_missed supported prior to famd-opt, so not a trigger.
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_Rpass_analysis_EQ)) {
     StringRef Val = A->getValue();
     addCmdArgs(Args, CmdArgs, isLLD, checkOnly,
                Args.MakeArgString("-pass-remarks-analysis=" + Val));
-    ClosedToolChainNeeded = true;
+    // RPass_analysis supported prior to famd-opt, so not a trigger.
   }
 
   if (Args.hasFlag(options::OPT_fsimplify_pow, options::OPT_fno_simplify_pow,
