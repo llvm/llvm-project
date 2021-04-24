@@ -848,7 +848,7 @@ typedef unsigned int   char32_t;
 #define _LIBCPP_HAS_NO_CONCEPTS
 #endif
 
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_HAS_NO_CONCEPTS) || defined(_MSC_VER)
 #define _LIBCPP_HAS_NO_RANGES
 #endif
 
