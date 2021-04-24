@@ -358,7 +358,7 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                       .buildBuildVector({NewLLT}, {CurVReg, Undef.getReg(0)})
                       .getReg(0);
             } else {
-              LLVM_DEBUG(dbgs() << "Could not handle ret ty");
+              LLVM_DEBUG(dbgs() << "Could not handle ret ty\n");
               return false;
             }
           } else {
