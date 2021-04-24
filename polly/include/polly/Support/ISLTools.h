@@ -35,7 +35,6 @@ struct isl_iterator
       : List(&List), Position(std::max(List.size(), 0)) {}
   isl_iterator(const ListT &List, int Position)
       : List(&List), Position(Position) {}
-  isl_iterator &operator=(const isl_iterator &R) = default;
 
   bool operator==(const isl_iterator &O) const {
     return List == O.List && Position == O.Position;
