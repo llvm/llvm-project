@@ -433,6 +433,11 @@ bool MachineCSE::isProfitableToCSE(Register CSReg, Register Reg,
                                    MachineBasicBlock *CSBB, MachineInstr *MI) {
   // FIXME: Heuristics that works around the lack the live range splitting.
 
+  MachineBasicBlock *BB = MI->getParent();
+  // Prevent CSE-ing non-local convergent instructions.
+  if (MI->isConvergent() && CSBB != BB)
+    return false;
+
   // If CSReg is used at all uses of Reg, CSE should not increase register
   // pressure of CSReg.
   bool MayIncreasePressure = true;
@@ -455,7 +460,6 @@ bool MachineCSE::isProfitableToCSE(Register CSReg, Register Reg,
   // an immediate predecessor. We don't want to increase register pressure and
   // end up causing other computation to be spilled.
   if (TII->isAsCheapAsAMove(*MI)) {
-    MachineBasicBlock *BB = MI->getParent();
     if (CSBB != BB && !CSBB->isSuccessor(BB))
       return false;
   }

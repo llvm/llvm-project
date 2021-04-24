@@ -42,19 +42,6 @@ using namespace llvm;
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 
-static unsigned getLMULForFixedLengthVector(MVT VT,
-                                            const RISCVSubtarget &Subtarget) {
-  unsigned MinVLen = Subtarget.getMinRVVVectorSizeInBits();
-
-  // Masks only occupy a single register. An LMUL==1 operation can only use
-  // at most 1/8 of the register. Only an LMUL==8 operaton on i8 types can
-  // use the whole register.
-  if (VT.getVectorElementType() == MVT::i1)
-    MinVLen /= 8;
-
-  return divideCeil(VT.getSizeInBits(), MinVLen);
-}
-
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -156,20 +143,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     if (Subtarget.useRVVForFixedLengthVectors()) {
       auto addRegClassForFixedVectors = [this](MVT VT) {
-        unsigned LMul = getLMULForFixedLengthVector(VT, Subtarget);
-        const TargetRegisterClass *RC;
-        if (LMul == 1 || VT.getVectorElementType() == MVT::i1)
-          RC = &RISCV::VRRegClass;
-        else if (LMul == 2)
-          RC = &RISCV::VRM2RegClass;
-        else if (LMul == 4)
-          RC = &RISCV::VRM4RegClass;
-        else if (LMul == 8)
-          RC = &RISCV::VRM8RegClass;
-        else
-          llvm_unreachable("Unexpected LMul!");
-
-        addRegisterClass(VT, RC);
+        MVT ContainerVT = getContainerForFixedLengthVector(VT);
+        unsigned RCID = getRegClassIDForVecVT(ContainerVT);
+        const RISCVRegisterInfo &TRI = *Subtarget.getRegisterInfo();
+        addRegisterClass(VT, TRI.getRegClass(RCID));
       };
       for (MVT VT : MVT::integer_fixedlen_vector_valuetypes())
         if (useRVVForFixedLengthVectorVT(VT))
@@ -1118,14 +1095,70 @@ RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
   return {SubRegIdx, InsertExtractIdx};
 }
 
+static bool useRVVForFixedLengthVectorVT(MVT VT,
+                                         const RISCVSubtarget &Subtarget) {
+  assert(VT.isFixedLengthVector() && "Expected a fixed length vector type!");
+  if (!Subtarget.useRVVForFixedLengthVectors())
+    return false;
+
+  unsigned MinVLen = Subtarget.getMinRVVVectorSizeInBits();
+
+  // Don't use RVV for vectors we cannot scalarize if required.
+  switch (VT.getVectorElementType().SimpleTy) {
+  // i1 is supported but has different rules.
+  default:
+    return false;
+  case MVT::i1:
+    // Masks can only use a single register.
+    if (VT.getVectorNumElements() > MinVLen)
+      return false;
+    MinVLen /= 8;
+    break;
+  case MVT::i8:
+  case MVT::i16:
+  case MVT::i32:
+  case MVT::i64:
+    break;
+  case MVT::f16:
+    if (!Subtarget.hasStdExtZfh())
+      return false;
+    break;
+  case MVT::f32:
+    if (!Subtarget.hasStdExtF())
+      return false;
+    break;
+  case MVT::f64:
+    if (!Subtarget.hasStdExtD())
+      return false;
+    break;
+  }
+
+  unsigned LMul = divideCeil(VT.getSizeInBits(), MinVLen);
+  // Don't use RVV for types that don't fit.
+  if (LMul > Subtarget.getMaxLMULForFixedLengthVectors())
+    return false;
+
+  // TODO: Perhaps an artificial restriction, but worth having whilst getting
+  // the base fixed length RVV support in place.
+  if (!VT.isPow2VectorType())
+    return false;
+
+  return true;
+}
+
+bool RISCVTargetLowering::useRVVForFixedLengthVectorVT(MVT VT) const {
+  return ::useRVVForFixedLengthVectorVT(VT, Subtarget);
+}
+
 // Return the largest legal scalable vector type that matches VT's element type.
 static MVT getContainerForFixedLengthVector(const TargetLowering &TLI, MVT VT,
                                             const RISCVSubtarget &Subtarget) {
-  assert(VT.isFixedLengthVector() && TLI.isTypeLegal(VT) &&
+  // This may be called before legal types are setup.
+  assert(((VT.isFixedLengthVector() && TLI.isTypeLegal(VT)) ||
+          useRVVForFixedLengthVectorVT(VT, Subtarget)) &&
          "Expected legal fixed length vector!");
 
-  unsigned LMul = getLMULForFixedLengthVector(VT, Subtarget);
-  assert(LMul <= 8 && isPowerOf2_32(LMul) && "Unexpected LMUL!");
+  unsigned MinVLen = Subtarget.getMinRVVVectorSizeInBits();
 
   MVT EltVT = VT.getVectorElementType();
   switch (EltVT.SimpleTy) {
@@ -1134,6 +1167,8 @@ static MVT getContainerForFixedLengthVector(const TargetLowering &TLI, MVT VT,
   case MVT::i1: {
     // Masks are calculated assuming 8-bit elements since that's when we need
     // the most elements.
+    MinVLen /= 8;
+    unsigned LMul = divideCeil(VT.getSizeInBits(), MinVLen);
     unsigned EltsPerBlock = RISCV::RVVBitsPerBlock / 8;
     return MVT::getScalableVectorVT(MVT::i1, LMul * EltsPerBlock);
   }
@@ -1144,6 +1179,7 @@ static MVT getContainerForFixedLengthVector(const TargetLowering &TLI, MVT VT,
   case MVT::f16:
   case MVT::f32:
   case MVT::f64: {
+    unsigned LMul = divideCeil(VT.getSizeInBits(), MinVLen);
     unsigned EltsPerBlock = RISCV::RVVBitsPerBlock / EltVT.getSizeInBits();
     return MVT::getScalableVectorVT(EltVT, LMul * EltsPerBlock);
   }
@@ -4014,8 +4050,6 @@ SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op, SelectionDAG &DAG,
                                                unsigned NewOpc,
                                                bool HasMask) const {
   MVT VT = Op.getSimpleValueType();
-  assert(useRVVForFixedLengthVectorVT(VT) &&
-         "Only expected to lower fixed length vector operation!");
   MVT ContainerVT = getContainerForFixedLengthVector(VT);
 
   // Create list of operands by converting existing ones to scalable types.
@@ -8002,55 +8036,6 @@ bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
   }
 
   return false;
-}
-
-bool RISCVTargetLowering::useRVVForFixedLengthVectorVT(MVT VT) const {
-  if (!Subtarget.useRVVForFixedLengthVectors())
-    return false;
-
-  if (!VT.isFixedLengthVector())
-    return false;
-
-  // Don't use RVV for vectors we cannot scalarize if required.
-  switch (VT.getVectorElementType().SimpleTy) {
-  // i1 is supported but has different rules.
-  default:
-    return false;
-  case MVT::i1:
-    // Masks can only use a single register.
-    if (VT.getVectorNumElements() > Subtarget.getMinRVVVectorSizeInBits())
-      return false;
-    break;
-  case MVT::i8:
-  case MVT::i16:
-  case MVT::i32:
-  case MVT::i64:
-    break;
-  case MVT::f16:
-    if (!Subtarget.hasStdExtZfh())
-      return false;
-    break;
-  case MVT::f32:
-    if (!Subtarget.hasStdExtF())
-      return false;
-    break;
-  case MVT::f64:
-    if (!Subtarget.hasStdExtD())
-      return false;
-    break;
-  }
-
-  unsigned LMul = getLMULForFixedLengthVector(VT, Subtarget);
-  // Don't use RVV for types that don't fit.
-  if (LMul > Subtarget.getMaxLMULForFixedLengthVectors())
-    return false;
-
-  // TODO: Perhaps an artificial restriction, but worth having whilst getting
-  // the base fixed length RVV support in place.
-  if (!VT.isPow2VectorType())
-    return false;
-
-  return true;
 }
 
 bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(

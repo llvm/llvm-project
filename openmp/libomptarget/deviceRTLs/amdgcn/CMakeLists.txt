@@ -36,6 +36,18 @@ else()
   set(AOMP_BINDIR ${LLVM_BUILD_BINARY_DIR}/bin)
 endif()
 
+# Copied from nvptx CMakeLists
+if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64")
+  set(aux_triple x86_64-unknown-linux-gnu)
+elseif(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "ppc64le")
+  set(aux_triple powerpc64le-unknown-linux-gnu)
+elseif(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "aarch64")
+  set(aux_triple aarch64-unknown-linux-gnu)
+else()
+  libomptarget_say("Not building AMDGCN device RTL: unknown host arch: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+  return()
+endif()
+
 libomptarget_say("Building AMDGCN device RTL. LLVM_COMPILER_PATH=${AOMP_BINDIR}")
 
 project(omptarget-amdgcn)
@@ -104,7 +116,7 @@ macro(add_cuda_bc_library)
     -ffreestanding
     -target amdgcn-amd-amdhsa
     -emit-llvm
-    -Xclang -aux-triple -Xclang x86_64-unknown-linux-gnu # see nvptx
+    -Xclang -aux-triple -Xclang ${aux_triple}
     -fopenmp -fopenmp-cuda-mode -Xclang -fopenmp-is-device
     -D__AMDGCN__
     -Xclang -target-cpu -Xclang ${mcpu}
@@ -154,6 +166,6 @@ foreach(mcpu ${mcpus})
   add_custom_target(lib${libname}-${mcpu} ALL DEPENDS ${bc_libname})
 
   install(FILES ${OUTPUTDIR}/${bc_libname}
-     DESTINATION "${OPENMP_INSTALL_LIBDIR}/libdevice"
+     DESTINATION "${OPENMP_INSTALL_LIBDIR}"
   )
 endforeach()
