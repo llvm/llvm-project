@@ -203,12 +203,9 @@ define i32 @ctpop_add(i32 %a, i32 %b) {
 
 define i32 @ctpop_add_no_common_bits(i32 %a, i32 %b) {
 ; CHECK-LABEL: @ctpop_add_no_common_bits(
-; CHECK-NEXT:    [[SHL16:%.*]] = shl i32 [[B:%.*]], 16
-; CHECK-NEXT:    [[CTPOP1:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[SHL16]]), !range [[RNG3:![0-9]+]]
-; CHECK-NEXT:    [[LSHL16:%.*]] = lshr i32 [[B]], 16
-; CHECK-NEXT:    [[CTPOP2:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[LSHL16]]), !range [[RNG3]]
-; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[CTPOP1]], [[CTPOP2]]
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fshl.i32(i32 [[B:%.*]], i32 [[B]], i32 16)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP1]]), !range [[RNG1]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %shl16 = shl i32 %b, 16
   %ctpop1 = tail call i32 @llvm.ctpop.i32(i32 %shl16)
@@ -220,12 +217,9 @@ define i32 @ctpop_add_no_common_bits(i32 %a, i32 %b) {
 
 define <2 x i32> @ctpop_add_no_common_bits_vec(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @ctpop_add_no_common_bits_vec(
-; CHECK-NEXT:    [[SHL16:%.*]] = shl <2 x i32> [[A:%.*]], <i32 16, i32 16>
-; CHECK-NEXT:    [[CTPOP1:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHL16]])
-; CHECK-NEXT:    [[LSHL16:%.*]] = lshr <2 x i32> [[B:%.*]], <i32 16, i32 16>
-; CHECK-NEXT:    [[CTPOP2:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[LSHL16]])
-; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <2 x i32> [[CTPOP1]], [[CTPOP2]]
-; CHECK-NEXT:    ret <2 x i32> [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[A:%.*]], <2 x i32> [[B:%.*]], <2 x i32> <i32 16, i32 16>)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[TMP1]])
+; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %shl16 = shl <2 x i32> %a, <i32 16, i32 16>
   %ctpop1 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %shl16)
