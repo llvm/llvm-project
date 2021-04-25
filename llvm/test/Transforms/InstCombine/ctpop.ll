@@ -289,3 +289,60 @@ define i8 @ctpop_rotate_right(i8 %a, i8 %amt)  {
 
 declare i8 @llvm.fshl.i8(i8, i8, i8)
 declare i8 @llvm.fshr.i8(i8, i8, i8)
+
+define i8 @sub_ctpop(i8 %a)  {
+; CHECK-LABEL: @sub_ctpop(
+; CHECK-NEXT:    [[CNT:%.*]] = tail call i8 @llvm.ctpop.i8(i8 [[A:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[RES:%.*]] = sub nuw nsw i8 8, [[CNT]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %cnt = tail call i8 @llvm.ctpop.i8(i8 %a)
+  %res = sub i8 8, %cnt
+  ret i8 %res
+}
+
+define i8 @sub_ctpop_wrong_cst(i8 %a)  {
+; CHECK-LABEL: @sub_ctpop_wrong_cst(
+; CHECK-NEXT:    [[CNT:%.*]] = tail call i8 @llvm.ctpop.i8(i8 [[A:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[RES:%.*]] = sub nsw i8 5, [[CNT]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %cnt = tail call i8 @llvm.ctpop.i8(i8 %a)
+  %res = sub i8 5, %cnt
+  ret i8 %res
+}
+
+define i8 @sub_ctpop_unknown(i8 %a, i8 %b)  {
+; CHECK-LABEL: @sub_ctpop_unknown(
+; CHECK-NEXT:    [[CNT:%.*]] = tail call i8 @llvm.ctpop.i8(i8 [[A:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[RES:%.*]] = sub i8 [[B:%.*]], [[CNT]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %cnt = tail call i8 @llvm.ctpop.i8(i8 %a)
+  %res = sub i8 %b, %cnt
+  ret i8 %res
+}
+
+define <2 x i32> @sub_ctpop_vec(<2 x i32> %a) {
+; CHECK-LABEL: @sub_ctpop_vec(
+; CHECK-NEXT:    [[CNT:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[A:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = sub nuw nsw <2 x i32> <i32 32, i32 32>, [[CNT]]
+; CHECK-NEXT:    ret <2 x i32> [[RES]]
+;
+  %cnt = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a)
+  %res = sub <2 x i32> <i32 32, i32 32>, %cnt
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @sub_ctpop_vec_extra_use(<2 x i32> %a, <2 x i32>* %p) {
+; CHECK-LABEL: @sub_ctpop_vec_extra_use(
+; CHECK-NEXT:    [[CNT:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[A:%.*]])
+; CHECK-NEXT:    store <2 x i32> [[CNT]], <2 x i32>* [[P:%.*]], align 8
+; CHECK-NEXT:    [[RES:%.*]] = sub nuw nsw <2 x i32> <i32 32, i32 32>, [[CNT]]
+; CHECK-NEXT:    ret <2 x i32> [[RES]]
+;
+  %cnt = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a)
+  store <2 x i32> %cnt, <2 x i32>* %p
+  %res = sub <2 x i32> <i32 32, i32 32>, %cnt
+  ret <2 x i32> %res
+}
