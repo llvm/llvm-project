@@ -405,6 +405,25 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(R2BB2, FromIterator[6]);
     EXPECT_EQ(R1BB3, FromIterator[7]);
 
+    // const VPBasicBlocks only.
+    FromIterator.clear();
+    copy(VPBlockUtils::blocksOnly<const VPBasicBlock>(depth_first(Start)),
+         std::back_inserter(FromIterator));
+    EXPECT_EQ(6u, FromIterator.size());
+    EXPECT_EQ(R1BB1, FromIterator[0]);
+    EXPECT_EQ(R1BB2, FromIterator[1]);
+    EXPECT_EQ(R1BB4, FromIterator[2]);
+    EXPECT_EQ(R2BB1, FromIterator[3]);
+    EXPECT_EQ(R2BB2, FromIterator[4]);
+    EXPECT_EQ(R1BB3, FromIterator[5]);
+
+    // VPRegionBlocks only.
+    SmallVector<VPRegionBlock *> FromIteratorVPRegion(
+        VPBlockUtils::blocksOnly<VPRegionBlock>(depth_first(Start)));
+    EXPECT_EQ(2u, FromIteratorVPRegion.size());
+    EXPECT_EQ(R1, FromIteratorVPRegion[0]);
+    EXPECT_EQ(R2, FromIteratorVPRegion[1]);
+
     // Post-order.
     FromIterator.clear();
     copy(post_order(Start), std::back_inserter(FromIterator));
@@ -599,6 +618,14 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(R3BB1, FromIterator[5]);
     EXPECT_EQ(VPBB2, FromIterator[6]);
 
+    SmallVector<VPBlockBase *> FromIteratorVPBB;
+    copy(VPBlockUtils::blocksOnly<VPBasicBlock>(depth_first(Start)),
+         std::back_inserter(FromIteratorVPBB));
+    EXPECT_EQ(VPBB1, FromIteratorVPBB[0]);
+    EXPECT_EQ(R2BB1, FromIteratorVPBB[1]);
+    EXPECT_EQ(R3BB1, FromIteratorVPBB[2]);
+    EXPECT_EQ(VPBB2, FromIteratorVPBB[3]);
+
     // Post-order.
     FromIterator.clear();
     copy(post_order(Start), std::back_inserter(FromIterator));
@@ -610,6 +637,24 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(R2, FromIterator[4]);
     EXPECT_EQ(R1, FromIterator[5]);
     EXPECT_EQ(VPBB1, FromIterator[6]);
+
+    // Post-order, const VPRegionBlocks only.
+    SmallVector<const VPRegionBlock *> FromIteratorVPRegion(
+        VPBlockUtils::blocksOnly<const VPRegionBlock>(post_order(Start)));
+    EXPECT_EQ(3u, FromIteratorVPRegion.size());
+    EXPECT_EQ(R3, FromIteratorVPRegion[0]);
+    EXPECT_EQ(R2, FromIteratorVPRegion[1]);
+    EXPECT_EQ(R1, FromIteratorVPRegion[2]);
+
+    // Post-order, VPBasicBlocks only.
+    FromIterator.clear();
+    copy(VPBlockUtils::blocksOnly<VPBasicBlock>(post_order(Start)),
+         std::back_inserter(FromIterator));
+    EXPECT_EQ(FromIterator.size(), 4u);
+    EXPECT_EQ(VPBB2, FromIterator[0]);
+    EXPECT_EQ(R3BB1, FromIterator[1]);
+    EXPECT_EQ(R2BB1, FromIterator[2]);
+    EXPECT_EQ(VPBB1, FromIterator[3]);
 
     // Use Plan to properly clean up created blocks.
     VPlan Plan;
