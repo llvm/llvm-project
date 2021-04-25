@@ -863,7 +863,7 @@ def checkForkVForkSupport():
     from lldbsuite.test import lldbplatformutil
 
     platform = lldbplatformutil.getPlatform()
-    if platform not in ["freebsd", "linux"]:
+    if platform not in ["freebsd", "linux", "netbsd"]:
         configuration.skip_categories.append("fork")
 
 
