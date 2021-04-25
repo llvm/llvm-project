@@ -322,6 +322,20 @@ TEST(ParameterHints, UserDefinedLiteral) {
   )cpp");
 }
 
+TEST(ParameterHints, ParamNameComment) {
+  // Do not hint an argument which already has a comment
+  // with the parameter name preceding it.
+  assertParameterHints(R"cpp(
+    void foo(int param);
+    void bar() {
+      foo(/*param*/42);
+      foo( /* param = */ 42);
+      foo(/* the answer */$param[[42]]);
+    }
+  )cpp",
+                       ExpectedHint{"param: ", "param"});
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
