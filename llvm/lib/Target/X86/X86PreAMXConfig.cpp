@@ -161,7 +161,7 @@ bool X86PreAMXConfig::preWriteTileCfg(Value *I8Ptr, Instruction *Pos,
   Value *PaletteValue = ConstantInt::get(Type::getInt8Ty(Ctx), 1);
   Value *PalettePos =
       GetElementPtrInst::Create(I8Ty, I8Ptr, PaletteOffset, "", Pos);
-  new StoreInst(PaletteValue, PalettePos, "", Pos);
+  new StoreInst(PaletteValue, PalettePos, Pos);
 
   for (int I = 0, E = Shapes.size() / 2; I < E; I++) {
     Value *RowOffset = ConstantInt::get(Type::getInt64Ty(Ctx), 48 + I);
@@ -175,8 +175,8 @@ bool X86PreAMXConfig::preWriteTileCfg(Value *I8Ptr, Instruction *Pos,
     Value *Row = Shapes[I * 2];
     Value *Col = Shapes[I * 2 + 1];
     Row = new TruncInst(Row, I8Ty, "", Pos);
-    new StoreInst(Row, RowPos, "", Pos);
-    new StoreInst(Col, ColPos, "", Pos);
+    new StoreInst(Row, RowPos, Pos);
+    new StoreInst(Col, ColPos, Pos);
     Write = true;
   }
   return Write;
