@@ -129,7 +129,6 @@ struct TiledLinalgOp {
   LinalgOp op;
   SmallVector<Operation *, 8> loops;
   SmallVector<Value, 4> tensorResults;
-  TiledLinalgOp &operator=(const TiledLinalgOp &) = default;
 };
 Optional<TiledLinalgOp> tileLinalgOp(OpBuilder &b, LinalgOp op,
                                      const LinalgTilingOptions &options);
