@@ -218,7 +218,7 @@ TEST_F(QueryParserTest, Complete) {
   EXPECT_EQ("output", Comps[0].DisplayText);
 
   Comps = QueryParser::complete("enable output ", 14, QS);
-  ASSERT_EQ(4u, Comps.size());
+  ASSERT_EQ(5u, Comps.size());
 
   EXPECT_EQ("diag ", Comps[0].TypedText);
   EXPECT_EQ("diag", Comps[0].DisplayText);
@@ -226,8 +226,10 @@ TEST_F(QueryParserTest, Complete) {
   EXPECT_EQ("print", Comps[1].DisplayText);
   EXPECT_EQ("detailed-ast ", Comps[2].TypedText);
   EXPECT_EQ("detailed-ast", Comps[2].DisplayText);
-  EXPECT_EQ("dump ", Comps[3].TypedText);
-  EXPECT_EQ("dump", Comps[3].DisplayText);
+  EXPECT_EQ("srcloc ", Comps[3].TypedText);
+  EXPECT_EQ("srcloc", Comps[3].DisplayText);
+  EXPECT_EQ("dump ", Comps[4].TypedText);
+  EXPECT_EQ("dump", Comps[4].DisplayText);
 
   Comps = QueryParser::complete("set traversal ", 14, QS);
   ASSERT_EQ(2u, Comps.size());
