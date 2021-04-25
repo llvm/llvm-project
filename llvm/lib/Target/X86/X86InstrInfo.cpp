@@ -4020,12 +4020,10 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
   case X86::SBB8ri:    case X86::SBB64rr:  case X86::SBB32rr:
   case X86::SBB16rr:   case X86::SBB8rr:   case X86::SBB64rm:
   case X86::SBB32rm:   case X86::SBB16rm:  case X86::SBB8rm:
-  case X86::NEG8r:     case X86::NEG16r:   case X86::NEG32r:  case X86::NEG64r:
-  case X86::LXADD64:   case X86::LXADD32:  case X86::LXADD16: case X86::LXADD8:
-  // TODO: Add additional LOCK/XADD instructions when we have test coverage.
-  case X86::SAR8r1:    case X86::SAR16r1:  case X86::SAR32r1: case X86::SAR64r1:
-  case X86::SHR8r1:    case X86::SHR16r1:  case X86::SHR32r1: case X86::SHR64r1:
-  case X86::SHL8r1:    case X86::SHL16r1:  case X86::SHL32r1: case X86::SHL64r1:
+  case X86::NEG8r:     case X86::NEG16r:   case X86::NEG32r: case X86::NEG64r:
+  case X86::SAR8r1:    case X86::SAR16r1:  case X86::SAR32r1:case X86::SAR64r1:
+  case X86::SHR8r1:    case X86::SHR16r1:  case X86::SHR32r1:case X86::SHR64r1:
+  case X86::SHL8r1:    case X86::SHL16r1:  case X86::SHL32r1:case X86::SHL64r1:
   case X86::LZCNT16rr: case X86::LZCNT16rm:
   case X86::LZCNT32rr: case X86::LZCNT32rm:
   case X86::LZCNT64rr: case X86::LZCNT64rm:
