@@ -10,13 +10,13 @@
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i32mf2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i8.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5:#.*]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i8.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i8.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5:#.*]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i8.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vint32mf2_t test_vamoswapei8_v_i32mf2(int32_t *base, vuint8mf8_t bindex,
@@ -27,13 +27,13 @@ vint32mf2_t test_vamoswapei8_v_i32mf2(int32_t *base, vuint8mf8_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i32m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i8.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i8.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i8.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i8.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vint32m1_t test_vamoswapei8_v_i32m1(int32_t *base, vuint8mf4_t bindex,
@@ -44,13 +44,13 @@ vint32m1_t test_vamoswapei8_v_i32m1(int32_t *base, vuint8mf4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i32m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i8.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i8.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i8.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i8.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vint32m2_t test_vamoswapei8_v_i32m2(int32_t *base, vuint8mf2_t bindex,
@@ -61,13 +61,13 @@ vint32m2_t test_vamoswapei8_v_i32m2(int32_t *base, vuint8mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i32m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i8.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i8.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i8.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i8.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vint32m4_t test_vamoswapei8_v_i32m4(int32_t *base, vuint8m1_t bindex,
@@ -78,13 +78,13 @@ vint32m4_t test_vamoswapei8_v_i32m4(int32_t *base, vuint8m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i32m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i8.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i8.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i8.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i8.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 vint32m8_t test_vamoswapei8_v_i32m8(int32_t *base, vuint8m2_t bindex,
@@ -95,13 +95,13 @@ vint32m8_t test_vamoswapei8_v_i32m8(int32_t *base, vuint8m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i32mf2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i16.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i16.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i16.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i16.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vint32mf2_t test_vamoswapei16_v_i32mf2(int32_t *base, vuint16mf4_t bindex,
@@ -112,13 +112,13 @@ vint32mf2_t test_vamoswapei16_v_i32mf2(int32_t *base, vuint16mf4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i32m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i16.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i16.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i16.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i16.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vint32m1_t test_vamoswapei16_v_i32m1(int32_t *base, vuint16mf2_t bindex,
@@ -129,13 +129,13 @@ vint32m1_t test_vamoswapei16_v_i32m1(int32_t *base, vuint16mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i32m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i16.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i16.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i16.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i16.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vint32m2_t test_vamoswapei16_v_i32m2(int32_t *base, vuint16m1_t bindex,
@@ -146,13 +146,13 @@ vint32m2_t test_vamoswapei16_v_i32m2(int32_t *base, vuint16m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i32m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i16.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i16.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i16.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i16.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vint32m4_t test_vamoswapei16_v_i32m4(int32_t *base, vuint16m2_t bindex,
@@ -163,13 +163,13 @@ vint32m4_t test_vamoswapei16_v_i32m4(int32_t *base, vuint16m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i32m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i16.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i16.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i16.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i16.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 vint32m8_t test_vamoswapei16_v_i32m8(int32_t *base, vuint16m4_t bindex,
@@ -180,13 +180,13 @@ vint32m8_t test_vamoswapei16_v_i32m8(int32_t *base, vuint16m4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i32mf2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i32.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i32.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i32.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i32.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vint32mf2_t test_vamoswapei32_v_i32mf2(int32_t *base, vuint32mf2_t bindex,
@@ -197,13 +197,13 @@ vint32mf2_t test_vamoswapei32_v_i32mf2(int32_t *base, vuint32mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i32m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i32.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i32.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i32.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i32.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vint32m1_t test_vamoswapei32_v_i32m1(int32_t *base, vuint32m1_t bindex,
@@ -214,13 +214,13 @@ vint32m1_t test_vamoswapei32_v_i32m1(int32_t *base, vuint32m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i32m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i32.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i32.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i32.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i32.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vint32m2_t test_vamoswapei32_v_i32m2(int32_t *base, vuint32m2_t bindex,
@@ -231,13 +231,13 @@ vint32m2_t test_vamoswapei32_v_i32m2(int32_t *base, vuint32m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i32m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i32.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i32.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i32.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i32.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vint32m4_t test_vamoswapei32_v_i32m4(int32_t *base, vuint32m4_t bindex,
@@ -248,13 +248,13 @@ vint32m4_t test_vamoswapei32_v_i32m4(int32_t *base, vuint32m4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i32m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i32.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i32.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i32.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i32.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 vint32m8_t test_vamoswapei32_v_i32m8(int32_t *base, vuint32m8_t bindex,
@@ -265,13 +265,13 @@ vint32m8_t test_vamoswapei32_v_i32m8(int32_t *base, vuint32m8_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_i32mf2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i64.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i64.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i64.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i64.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vint32mf2_t test_vamoswapei64_v_i32mf2(int32_t *base, vuint64m1_t bindex,
@@ -282,13 +282,13 @@ vint32mf2_t test_vamoswapei64_v_i32mf2(int32_t *base, vuint64m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_i32m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i64.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i64.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i64.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i64.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vint32m1_t test_vamoswapei64_v_i32m1(int32_t *base, vuint64m2_t bindex,
@@ -299,13 +299,13 @@ vint32m1_t test_vamoswapei64_v_i32m1(int32_t *base, vuint64m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_i32m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i64.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i64.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i64.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i64.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vint32m2_t test_vamoswapei64_v_i32m2(int32_t *base, vuint64m4_t bindex,
@@ -316,13 +316,13 @@ vint32m2_t test_vamoswapei64_v_i32m2(int32_t *base, vuint64m4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_i32m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i64.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i64.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i64.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i64.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vint32m4_t test_vamoswapei64_v_i32m4(int32_t *base, vuint64m8_t bindex,
@@ -333,13 +333,13 @@ vint32m4_t test_vamoswapei64_v_i32m4(int32_t *base, vuint64m8_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i64m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i8.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i8.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i8.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i8.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vint64m1_t test_vamoswapei8_v_i64m1(int64_t *base, vuint8mf8_t bindex,
@@ -350,13 +350,13 @@ vint64m1_t test_vamoswapei8_v_i64m1(int64_t *base, vuint8mf8_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i64m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i8.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i8.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i8.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i8.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vint64m2_t test_vamoswapei8_v_i64m2(int64_t *base, vuint8mf4_t bindex,
@@ -367,13 +367,13 @@ vint64m2_t test_vamoswapei8_v_i64m2(int64_t *base, vuint8mf4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i64m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i8.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i8.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i8.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i8.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vint64m4_t test_vamoswapei8_v_i64m4(int64_t *base, vuint8mf2_t bindex,
@@ -384,13 +384,13 @@ vint64m4_t test_vamoswapei8_v_i64m4(int64_t *base, vuint8mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i64m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i8.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i8.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i8.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i8.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vint64m8_t test_vamoswapei8_v_i64m8(int64_t *base, vuint8m1_t bindex,
@@ -401,13 +401,13 @@ vint64m8_t test_vamoswapei8_v_i64m8(int64_t *base, vuint8m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i64m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i16.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i16.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i16.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i16.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vint64m1_t test_vamoswapei16_v_i64m1(int64_t *base, vuint16mf4_t bindex,
@@ -418,13 +418,13 @@ vint64m1_t test_vamoswapei16_v_i64m1(int64_t *base, vuint16mf4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i64m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i16.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i16.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i16.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i16.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vint64m2_t test_vamoswapei16_v_i64m2(int64_t *base, vuint16mf2_t bindex,
@@ -435,13 +435,13 @@ vint64m2_t test_vamoswapei16_v_i64m2(int64_t *base, vuint16mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i64m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i16.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i16.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i16.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i16.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vint64m4_t test_vamoswapei16_v_i64m4(int64_t *base, vuint16m1_t bindex,
@@ -452,13 +452,13 @@ vint64m4_t test_vamoswapei16_v_i64m4(int64_t *base, vuint16m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i64m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i16.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i16.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i16.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i16.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vint64m8_t test_vamoswapei16_v_i64m8(int64_t *base, vuint16m2_t bindex,
@@ -469,13 +469,13 @@ vint64m8_t test_vamoswapei16_v_i64m8(int64_t *base, vuint16m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i64m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i32.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i32.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i32.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i32.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vint64m1_t test_vamoswapei32_v_i64m1(int64_t *base, vuint32mf2_t bindex,
@@ -486,13 +486,13 @@ vint64m1_t test_vamoswapei32_v_i64m1(int64_t *base, vuint32mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i64m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i32.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i32.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i32.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i32.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vint64m2_t test_vamoswapei32_v_i64m2(int64_t *base, vuint32m1_t bindex,
@@ -503,13 +503,13 @@ vint64m2_t test_vamoswapei32_v_i64m2(int64_t *base, vuint32m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i64m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i32.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i32.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i32.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i32.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vint64m4_t test_vamoswapei32_v_i64m4(int64_t *base, vuint32m2_t bindex,
@@ -520,13 +520,13 @@ vint64m4_t test_vamoswapei32_v_i64m4(int64_t *base, vuint32m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i64m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i32.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i32.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i32.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i32.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vint64m8_t test_vamoswapei32_v_i64m8(int64_t *base, vuint32m4_t bindex,
@@ -537,13 +537,13 @@ vint64m8_t test_vamoswapei32_v_i64m8(int64_t *base, vuint32m4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_i64m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i64.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i64.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vint64m1_t test_vamoswapei64_v_i64m1(int64_t *base, vuint64m1_t bindex,
@@ -554,13 +554,13 @@ vint64m1_t test_vamoswapei64_v_i64m1(int64_t *base, vuint64m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_i64m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i64.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i64.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i64.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i64.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vint64m2_t test_vamoswapei64_v_i64m2(int64_t *base, vuint64m2_t bindex,
@@ -571,13 +571,13 @@ vint64m2_t test_vamoswapei64_v_i64m2(int64_t *base, vuint64m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_i64m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i64.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i64.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i64.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i64.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vint64m4_t test_vamoswapei64_v_i64m4(int64_t *base, vuint64m4_t bindex,
@@ -588,13 +588,13 @@ vint64m4_t test_vamoswapei64_v_i64m4(int64_t *base, vuint64m4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_i64m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i64.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i64.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i64.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i64.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vint64m8_t test_vamoswapei64_v_i64m8(int64_t *base, vuint64m8_t bindex,
@@ -605,13 +605,13 @@ vint64m8_t test_vamoswapei64_v_i64m8(int64_t *base, vuint64m8_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u32mf2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i8.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i8.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i8.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i8.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vuint32mf2_t test_vamoswapei8_v_u32mf2(uint32_t *base, vuint8mf8_t bindex,
@@ -622,13 +622,13 @@ vuint32mf2_t test_vamoswapei8_v_u32mf2(uint32_t *base, vuint8mf8_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u32m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i8.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i8.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i8.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i8.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vuint32m1_t test_vamoswapei8_v_u32m1(uint32_t *base, vuint8mf4_t bindex,
@@ -639,13 +639,13 @@ vuint32m1_t test_vamoswapei8_v_u32m1(uint32_t *base, vuint8mf4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u32m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i8.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i8.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i8.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i8.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vuint32m2_t test_vamoswapei8_v_u32m2(uint32_t *base, vuint8mf2_t bindex,
@@ -656,13 +656,13 @@ vuint32m2_t test_vamoswapei8_v_u32m2(uint32_t *base, vuint8mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u32m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i8.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i8.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i8.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i8.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vuint32m4_t test_vamoswapei8_v_u32m4(uint32_t *base, vuint8m1_t bindex,
@@ -673,13 +673,13 @@ vuint32m4_t test_vamoswapei8_v_u32m4(uint32_t *base, vuint8m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u32m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i8.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i8.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i8.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i8.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 vuint32m8_t test_vamoswapei8_v_u32m8(uint32_t *base, vuint8m2_t bindex,
@@ -690,13 +690,13 @@ vuint32m8_t test_vamoswapei8_v_u32m8(uint32_t *base, vuint8m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u32mf2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i16.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i16.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i16.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i16.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vuint32mf2_t test_vamoswapei16_v_u32mf2(uint32_t *base, vuint16mf4_t bindex,
@@ -707,13 +707,13 @@ vuint32mf2_t test_vamoswapei16_v_u32mf2(uint32_t *base, vuint16mf4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u32m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i16.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i16.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i16.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i16.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vuint32m1_t test_vamoswapei16_v_u32m1(uint32_t *base, vuint16mf2_t bindex,
@@ -724,13 +724,13 @@ vuint32m1_t test_vamoswapei16_v_u32m1(uint32_t *base, vuint16mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u32m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i16.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i16.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i16.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i16.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vuint32m2_t test_vamoswapei16_v_u32m2(uint32_t *base, vuint16m1_t bindex,
@@ -741,13 +741,13 @@ vuint32m2_t test_vamoswapei16_v_u32m2(uint32_t *base, vuint16m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u32m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i16.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i16.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i16.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i16.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vuint32m4_t test_vamoswapei16_v_u32m4(uint32_t *base, vuint16m2_t bindex,
@@ -758,13 +758,13 @@ vuint32m4_t test_vamoswapei16_v_u32m4(uint32_t *base, vuint16m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u32m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i16.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i16.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i16.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i16.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 vuint32m8_t test_vamoswapei16_v_u32m8(uint32_t *base, vuint16m4_t bindex,
@@ -775,13 +775,13 @@ vuint32m8_t test_vamoswapei16_v_u32m8(uint32_t *base, vuint16m4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u32mf2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i32.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i32.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i32.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i32.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vuint32mf2_t test_vamoswapei32_v_u32mf2(uint32_t *base, vuint32mf2_t bindex,
@@ -792,13 +792,13 @@ vuint32mf2_t test_vamoswapei32_v_u32mf2(uint32_t *base, vuint32mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u32m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i32.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i32.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i32.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i32.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vuint32m1_t test_vamoswapei32_v_u32m1(uint32_t *base, vuint32m1_t bindex,
@@ -809,13 +809,13 @@ vuint32m1_t test_vamoswapei32_v_u32m1(uint32_t *base, vuint32m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u32m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i32.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i32.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i32.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i32.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vuint32m2_t test_vamoswapei32_v_u32m2(uint32_t *base, vuint32m2_t bindex,
@@ -826,13 +826,13 @@ vuint32m2_t test_vamoswapei32_v_u32m2(uint32_t *base, vuint32m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u32m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i32.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i32.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i32.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i32.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vuint32m4_t test_vamoswapei32_v_u32m4(uint32_t *base, vuint32m4_t bindex,
@@ -843,13 +843,13 @@ vuint32m4_t test_vamoswapei32_v_u32m4(uint32_t *base, vuint32m4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u32m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i32.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i32.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i32.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.nxv16i32.nxv16i32.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 vuint32m8_t test_vamoswapei32_v_u32m8(uint32_t *base, vuint32m8_t bindex,
@@ -860,13 +860,13 @@ vuint32m8_t test_vamoswapei32_v_u32m8(uint32_t *base, vuint32m8_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_u32mf2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i64.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i64.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i64.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.nxv1i32.nxv1i64.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vuint32mf2_t test_vamoswapei64_v_u32mf2(uint32_t *base, vuint64m1_t bindex,
@@ -877,13 +877,13 @@ vuint32mf2_t test_vamoswapei64_v_u32mf2(uint32_t *base, vuint64m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_u32m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i64.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i64.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i64.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.nxv2i32.nxv2i64.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vuint32m1_t test_vamoswapei64_v_u32m1(uint32_t *base, vuint64m2_t bindex,
@@ -894,13 +894,13 @@ vuint32m1_t test_vamoswapei64_v_u32m1(uint32_t *base, vuint64m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_u32m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i64.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i64.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i64.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.nxv4i32.nxv4i64.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vuint32m2_t test_vamoswapei64_v_u32m2(uint32_t *base, vuint64m4_t bindex,
@@ -911,13 +911,13 @@ vuint32m2_t test_vamoswapei64_v_u32m2(uint32_t *base, vuint64m4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_u32m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i64.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i64.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i64.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.nxv8i32.nxv8i64.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vuint32m4_t test_vamoswapei64_v_u32m4(uint32_t *base, vuint64m8_t bindex,
@@ -928,13 +928,13 @@ vuint32m4_t test_vamoswapei64_v_u32m4(uint32_t *base, vuint64m8_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u64m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i8.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i8.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i8.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i8.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vuint64m1_t test_vamoswapei8_v_u64m1(uint64_t *base, vuint8mf8_t bindex,
@@ -945,13 +945,13 @@ vuint64m1_t test_vamoswapei8_v_u64m1(uint64_t *base, vuint8mf8_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u64m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i8.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i8.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i8.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i8.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vuint64m2_t test_vamoswapei8_v_u64m2(uint64_t *base, vuint8mf4_t bindex,
@@ -962,13 +962,13 @@ vuint64m2_t test_vamoswapei8_v_u64m2(uint64_t *base, vuint8mf4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u64m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i8.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i8.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i8.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i8.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vuint64m4_t test_vamoswapei8_v_u64m4(uint64_t *base, vuint8mf2_t bindex,
@@ -979,13 +979,13 @@ vuint64m4_t test_vamoswapei8_v_u64m4(uint64_t *base, vuint8mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u64m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i8.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i8.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i8.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i8.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vuint64m8_t test_vamoswapei8_v_u64m8(uint64_t *base, vuint8m1_t bindex,
@@ -996,13 +996,13 @@ vuint64m8_t test_vamoswapei8_v_u64m8(uint64_t *base, vuint8m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u64m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i16.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i16.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i16.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i16.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vuint64m1_t test_vamoswapei16_v_u64m1(uint64_t *base, vuint16mf4_t bindex,
@@ -1013,13 +1013,13 @@ vuint64m1_t test_vamoswapei16_v_u64m1(uint64_t *base, vuint16mf4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u64m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i16.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i16.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i16.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i16.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vuint64m2_t test_vamoswapei16_v_u64m2(uint64_t *base, vuint16mf2_t bindex,
@@ -1030,13 +1030,13 @@ vuint64m2_t test_vamoswapei16_v_u64m2(uint64_t *base, vuint16mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u64m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i16.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i16.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i16.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i16.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vuint64m4_t test_vamoswapei16_v_u64m4(uint64_t *base, vuint16m1_t bindex,
@@ -1047,13 +1047,13 @@ vuint64m4_t test_vamoswapei16_v_u64m4(uint64_t *base, vuint16m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u64m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i16.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i16.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i16.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i16.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vuint64m8_t test_vamoswapei16_v_u64m8(uint64_t *base, vuint16m2_t bindex,
@@ -1064,13 +1064,13 @@ vuint64m8_t test_vamoswapei16_v_u64m8(uint64_t *base, vuint16m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u64m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i32.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i32.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i32.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i32.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vuint64m1_t test_vamoswapei32_v_u64m1(uint64_t *base, vuint32mf2_t bindex,
@@ -1081,13 +1081,13 @@ vuint64m1_t test_vamoswapei32_v_u64m1(uint64_t *base, vuint32mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u64m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i32.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i32.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i32.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i32.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vuint64m2_t test_vamoswapei32_v_u64m2(uint64_t *base, vuint32m1_t bindex,
@@ -1098,13 +1098,13 @@ vuint64m2_t test_vamoswapei32_v_u64m2(uint64_t *base, vuint32m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u64m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i32.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i32.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i32.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i32.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vuint64m4_t test_vamoswapei32_v_u64m4(uint64_t *base, vuint32m2_t bindex,
@@ -1115,13 +1115,13 @@ vuint64m4_t test_vamoswapei32_v_u64m4(uint64_t *base, vuint32m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u64m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i32.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i32.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i32.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i32.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vuint64m8_t test_vamoswapei32_v_u64m8(uint64_t *base, vuint32m4_t bindex,
@@ -1132,13 +1132,13 @@ vuint64m8_t test_vamoswapei32_v_u64m8(uint64_t *base, vuint32m4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_u64m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i64.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i64.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vuint64m1_t test_vamoswapei64_v_u64m1(uint64_t *base, vuint64m1_t bindex,
@@ -1149,13 +1149,13 @@ vuint64m1_t test_vamoswapei64_v_u64m1(uint64_t *base, vuint64m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_u64m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i64.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i64.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i64.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.nxv2i64.nxv2i64.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vuint64m2_t test_vamoswapei64_v_u64m2(uint64_t *base, vuint64m2_t bindex,
@@ -1166,13 +1166,13 @@ vuint64m2_t test_vamoswapei64_v_u64m2(uint64_t *base, vuint64m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_u64m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i64.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i64.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i64.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.nxv4i64.nxv4i64.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vuint64m4_t test_vamoswapei64_v_u64m4(uint64_t *base, vuint64m4_t bindex,
@@ -1183,13 +1183,13 @@ vuint64m4_t test_vamoswapei64_v_u64m4(uint64_t *base, vuint64m4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_u64m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i64.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i64.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i64.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.nxv8i64.nxv8i64.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vuint64m8_t test_vamoswapei64_v_u64m8(uint64_t *base, vuint64m8_t bindex,
@@ -1200,13 +1200,13 @@ vuint64m8_t test_vamoswapei64_v_u64m8(uint64_t *base, vuint64m8_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f32mf2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i8.i32(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i8.i32(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i8.i64(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i8.i64(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP1]]
 //
 vfloat32mf2_t test_vamoswapei8_v_f32mf2(float *base, vuint8mf8_t bindex,
@@ -1217,13 +1217,13 @@ vfloat32mf2_t test_vamoswapei8_v_f32mf2(float *base, vuint8mf8_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f32m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i8.i32(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i8.i32(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i8.i64(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i8.i64(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 //
 vfloat32m1_t test_vamoswapei8_v_f32m1(float *base, vuint8mf4_t bindex,
@@ -1234,13 +1234,13 @@ vfloat32m1_t test_vamoswapei8_v_f32m1(float *base, vuint8mf4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f32m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i8.i32(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i8.i32(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i8.i64(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i8.i64(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 vfloat32m2_t test_vamoswapei8_v_f32m2(float *base, vuint8mf2_t bindex,
@@ -1251,13 +1251,13 @@ vfloat32m2_t test_vamoswapei8_v_f32m2(float *base, vuint8mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f32m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i8.i32(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i8.i32(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i8.i64(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i8.i64(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP1]]
 //
 vfloat32m4_t test_vamoswapei8_v_f32m4(float *base, vuint8m1_t bindex,
@@ -1268,13 +1268,13 @@ vfloat32m4_t test_vamoswapei8_v_f32m4(float *base, vuint8m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f32m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i8.i32(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i8.i32(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 16 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i8.i64(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i8.i64(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 16 x float> [[TMP1]]
 //
 vfloat32m8_t test_vamoswapei8_v_f32m8(float *base, vuint8m2_t bindex,
@@ -1285,13 +1285,13 @@ vfloat32m8_t test_vamoswapei8_v_f32m8(float *base, vuint8m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f32mf2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i16.i32(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i16.i32(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i16.i64(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i16.i64(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP1]]
 //
 vfloat32mf2_t test_vamoswapei16_v_f32mf2(float *base, vuint16mf4_t bindex,
@@ -1302,13 +1302,13 @@ vfloat32mf2_t test_vamoswapei16_v_f32mf2(float *base, vuint16mf4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f32m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i16.i32(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i16.i32(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i16.i64(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i16.i64(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 //
 vfloat32m1_t test_vamoswapei16_v_f32m1(float *base, vuint16mf2_t bindex,
@@ -1319,13 +1319,13 @@ vfloat32m1_t test_vamoswapei16_v_f32m1(float *base, vuint16mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f32m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i16.i32(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i16.i32(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i16.i64(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i16.i64(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 vfloat32m2_t test_vamoswapei16_v_f32m2(float *base, vuint16m1_t bindex,
@@ -1336,13 +1336,13 @@ vfloat32m2_t test_vamoswapei16_v_f32m2(float *base, vuint16m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f32m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i16.i32(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i16.i32(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i16.i64(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i16.i64(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP1]]
 //
 vfloat32m4_t test_vamoswapei16_v_f32m4(float *base, vuint16m2_t bindex,
@@ -1353,13 +1353,13 @@ vfloat32m4_t test_vamoswapei16_v_f32m4(float *base, vuint16m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f32m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i16.i32(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i16.i32(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 16 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i16.i64(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i16.i64(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 16 x float> [[TMP1]]
 //
 vfloat32m8_t test_vamoswapei16_v_f32m8(float *base, vuint16m4_t bindex,
@@ -1370,13 +1370,13 @@ vfloat32m8_t test_vamoswapei16_v_f32m8(float *base, vuint16m4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f32mf2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i32.i32(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i32.i32(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i32.i64(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i32.i64(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP1]]
 //
 vfloat32mf2_t test_vamoswapei32_v_f32mf2(float *base, vuint32mf2_t bindex,
@@ -1387,13 +1387,13 @@ vfloat32mf2_t test_vamoswapei32_v_f32mf2(float *base, vuint32mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f32m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i32.i32(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i32.i32(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i32.i64(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i32.i64(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 //
 vfloat32m1_t test_vamoswapei32_v_f32m1(float *base, vuint32m1_t bindex,
@@ -1404,13 +1404,13 @@ vfloat32m1_t test_vamoswapei32_v_f32m1(float *base, vuint32m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f32m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i32.i32(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i32.i32(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i32.i64(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i32.i64(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 vfloat32m2_t test_vamoswapei32_v_f32m2(float *base, vuint32m2_t bindex,
@@ -1421,13 +1421,13 @@ vfloat32m2_t test_vamoswapei32_v_f32m2(float *base, vuint32m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f32m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i32.i32(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i32.i32(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i32.i64(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i32.i64(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP1]]
 //
 vfloat32m4_t test_vamoswapei32_v_f32m4(float *base, vuint32m4_t bindex,
@@ -1438,13 +1438,13 @@ vfloat32m4_t test_vamoswapei32_v_f32m4(float *base, vuint32m4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f32m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i32.i32(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i32.i32(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 16 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i32.i64(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.nxv16f32.nxv16i32.i64(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 16 x float> [[TMP1]]
 //
 vfloat32m8_t test_vamoswapei32_v_f32m8(float *base, vuint32m8_t bindex,
@@ -1455,13 +1455,13 @@ vfloat32m8_t test_vamoswapei32_v_f32m8(float *base, vuint32m8_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_f32mf2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i64.i32(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i64.i32(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i64.i64(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.nxv1f32.nxv1i64.i64(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP1]]
 //
 vfloat32mf2_t test_vamoswapei64_v_f32mf2(float *base, vuint64m1_t bindex,
@@ -1472,13 +1472,13 @@ vfloat32mf2_t test_vamoswapei64_v_f32mf2(float *base, vuint64m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_f32m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i64.i32(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i64.i32(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i64.i64(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.nxv2f32.nxv2i64.i64(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 //
 vfloat32m1_t test_vamoswapei64_v_f32m1(float *base, vuint64m2_t bindex,
@@ -1489,13 +1489,13 @@ vfloat32m1_t test_vamoswapei64_v_f32m1(float *base, vuint64m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_f32m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i64.i32(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i64.i32(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i64.i64(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.nxv4f32.nxv4i64.i64(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 vfloat32m2_t test_vamoswapei64_v_f32m2(float *base, vuint64m4_t bindex,
@@ -1506,13 +1506,13 @@ vfloat32m2_t test_vamoswapei64_v_f32m2(float *base, vuint64m4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_f32m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i64.i32(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i64.i32(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i64.i64(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.nxv8f32.nxv8i64.i64(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP1]]
 //
 vfloat32m4_t test_vamoswapei64_v_f32m4(float *base, vuint64m8_t bindex,
@@ -1523,13 +1523,13 @@ vfloat32m4_t test_vamoswapei64_v_f32m4(float *base, vuint64m8_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f64m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i8.i32(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i8.i32(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i8.i64(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i8.i64(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 vfloat64m1_t test_vamoswapei8_v_f64m1(double *base, vuint8mf8_t bindex,
@@ -1540,13 +1540,13 @@ vfloat64m1_t test_vamoswapei8_v_f64m1(double *base, vuint8mf8_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f64m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i8.i32(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i8.i32(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i8.i64(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i8.i64(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 vfloat64m2_t test_vamoswapei8_v_f64m2(double *base, vuint8mf4_t bindex,
@@ -1557,13 +1557,13 @@ vfloat64m2_t test_vamoswapei8_v_f64m2(double *base, vuint8mf4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f64m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i8.i32(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i8.i32(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i8.i64(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i8.i64(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 vfloat64m4_t test_vamoswapei8_v_f64m4(double *base, vuint8mf2_t bindex,
@@ -1574,13 +1574,13 @@ vfloat64m4_t test_vamoswapei8_v_f64m4(double *base, vuint8mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f64m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i8.i32(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i8.i32(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i8.i64(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i8.i64(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 vfloat64m8_t test_vamoswapei8_v_f64m8(double *base, vuint8m1_t bindex,
@@ -1591,13 +1591,13 @@ vfloat64m8_t test_vamoswapei8_v_f64m8(double *base, vuint8m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f64m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i16.i32(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i16.i32(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i16.i64(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i16.i64(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 vfloat64m1_t test_vamoswapei16_v_f64m1(double *base, vuint16mf4_t bindex,
@@ -1608,13 +1608,13 @@ vfloat64m1_t test_vamoswapei16_v_f64m1(double *base, vuint16mf4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f64m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i16.i32(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i16.i32(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i16.i64(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i16.i64(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 vfloat64m2_t test_vamoswapei16_v_f64m2(double *base, vuint16mf2_t bindex,
@@ -1625,13 +1625,13 @@ vfloat64m2_t test_vamoswapei16_v_f64m2(double *base, vuint16mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f64m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i16.i32(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i16.i32(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i16.i64(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i16.i64(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 vfloat64m4_t test_vamoswapei16_v_f64m4(double *base, vuint16m1_t bindex,
@@ -1642,13 +1642,13 @@ vfloat64m4_t test_vamoswapei16_v_f64m4(double *base, vuint16m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f64m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i16.i32(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i16.i32(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i16.i64(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i16.i64(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 vfloat64m8_t test_vamoswapei16_v_f64m8(double *base, vuint16m2_t bindex,
@@ -1659,13 +1659,13 @@ vfloat64m8_t test_vamoswapei16_v_f64m8(double *base, vuint16m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f64m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i32.i32(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i32.i32(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i32.i64(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i32.i64(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 vfloat64m1_t test_vamoswapei32_v_f64m1(double *base, vuint32mf2_t bindex,
@@ -1676,13 +1676,13 @@ vfloat64m1_t test_vamoswapei32_v_f64m1(double *base, vuint32mf2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f64m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i32.i32(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i32.i32(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i32.i64(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i32.i64(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 vfloat64m2_t test_vamoswapei32_v_f64m2(double *base, vuint32m1_t bindex,
@@ -1693,13 +1693,13 @@ vfloat64m2_t test_vamoswapei32_v_f64m2(double *base, vuint32m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f64m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i32.i32(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i32.i32(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i32.i64(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i32.i64(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 vfloat64m4_t test_vamoswapei32_v_f64m4(double *base, vuint32m2_t bindex,
@@ -1710,13 +1710,13 @@ vfloat64m4_t test_vamoswapei32_v_f64m4(double *base, vuint32m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f64m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i32.i32(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i32.i32(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i32.i64(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i32.i64(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 vfloat64m8_t test_vamoswapei32_v_f64m8(double *base, vuint32m4_t bindex,
@@ -1727,13 +1727,13 @@ vfloat64m8_t test_vamoswapei32_v_f64m8(double *base, vuint32m4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_f64m1(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i64.i32(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i64.i32(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i64.i64(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.nxv1f64.nxv1i64.i64(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 vfloat64m1_t test_vamoswapei64_v_f64m1(double *base, vuint64m1_t bindex,
@@ -1744,13 +1744,13 @@ vfloat64m1_t test_vamoswapei64_v_f64m1(double *base, vuint64m1_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_f64m2(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i64.i32(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i64.i32(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i64.i64(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.nxv2f64.nxv2i64.i64(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 vfloat64m2_t test_vamoswapei64_v_f64m2(double *base, vuint64m2_t bindex,
@@ -1761,13 +1761,13 @@ vfloat64m2_t test_vamoswapei64_v_f64m2(double *base, vuint64m2_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_f64m4(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i64.i32(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i64.i32(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i64.i64(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.nxv4f64.nxv4i64.i64(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 vfloat64m4_t test_vamoswapei64_v_f64m4(double *base, vuint64m4_t bindex,
@@ -1778,13 +1778,13 @@ vfloat64m4_t test_vamoswapei64_v_f64m4(double *base, vuint64m4_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_f64m8(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i64.i32(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i64.i32(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i64.i64(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.nxv8f64.nxv8i64.i64(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 vfloat64m8_t test_vamoswapei64_v_f64m8(double *base, vuint64m8_t bindex,
@@ -1795,13 +1795,13 @@ vfloat64m8_t test_vamoswapei64_v_f64m8(double *base, vuint64m8_t bindex,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i32mf2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i8.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i8.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1:[0-9]+]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i8.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i8.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1:[0-9]+]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vint32mf2_t test_vamoswapei8_v_i32mf2_m(vbool64_t mask, int32_t *base,
@@ -1813,13 +1813,13 @@ vint32mf2_t test_vamoswapei8_v_i32mf2_m(vbool64_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i32m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i8.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i8.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i8.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i8.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vint32m1_t test_vamoswapei8_v_i32m1_m(vbool32_t mask, int32_t *base,
@@ -1831,13 +1831,13 @@ vint32m1_t test_vamoswapei8_v_i32m1_m(vbool32_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i32m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i8.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i8.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i8.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i8.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vint32m2_t test_vamoswapei8_v_i32m2_m(vbool16_t mask, int32_t *base,
@@ -1849,13 +1849,13 @@ vint32m2_t test_vamoswapei8_v_i32m2_m(vbool16_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i32m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i8.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i8.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i8.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i8.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vint32m4_t test_vamoswapei8_v_i32m4_m(vbool8_t mask, int32_t *base,
@@ -1867,13 +1867,13 @@ vint32m4_t test_vamoswapei8_v_i32m4_m(vbool8_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i32m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i8.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i8.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i8.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i8.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 vint32m8_t test_vamoswapei8_v_i32m8_m(vbool4_t mask, int32_t *base,
@@ -1885,13 +1885,13 @@ vint32m8_t test_vamoswapei8_v_i32m8_m(vbool4_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i32mf2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i16.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i16.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i16.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i16.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vint32mf2_t test_vamoswapei16_v_i32mf2_m(vbool64_t mask, int32_t *base,
@@ -1903,13 +1903,13 @@ vint32mf2_t test_vamoswapei16_v_i32mf2_m(vbool64_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i32m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i16.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i16.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i16.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i16.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vint32m1_t test_vamoswapei16_v_i32m1_m(vbool32_t mask, int32_t *base,
@@ -1921,13 +1921,13 @@ vint32m1_t test_vamoswapei16_v_i32m1_m(vbool32_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i32m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i16.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i16.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i16.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i16.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vint32m2_t test_vamoswapei16_v_i32m2_m(vbool16_t mask, int32_t *base,
@@ -1939,13 +1939,13 @@ vint32m2_t test_vamoswapei16_v_i32m2_m(vbool16_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i32m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i16.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i16.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i16.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i16.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vint32m4_t test_vamoswapei16_v_i32m4_m(vbool8_t mask, int32_t *base,
@@ -1957,13 +1957,13 @@ vint32m4_t test_vamoswapei16_v_i32m4_m(vbool8_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i32m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i16.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i16.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i16.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i16.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 vint32m8_t test_vamoswapei16_v_i32m8_m(vbool4_t mask, int32_t *base,
@@ -1975,13 +1975,13 @@ vint32m8_t test_vamoswapei16_v_i32m8_m(vbool4_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i32mf2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i32.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i32.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vint32mf2_t test_vamoswapei32_v_i32mf2_m(vbool64_t mask, int32_t *base,
@@ -1993,13 +1993,13 @@ vint32mf2_t test_vamoswapei32_v_i32mf2_m(vbool64_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i32m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i32.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i32.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i32.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i32.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vint32m1_t test_vamoswapei32_v_i32m1_m(vbool32_t mask, int32_t *base,
@@ -2011,13 +2011,13 @@ vint32m1_t test_vamoswapei32_v_i32m1_m(vbool32_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i32m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i32.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i32.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i32.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i32.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vint32m2_t test_vamoswapei32_v_i32m2_m(vbool16_t mask, int32_t *base,
@@ -2029,13 +2029,13 @@ vint32m2_t test_vamoswapei32_v_i32m2_m(vbool16_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i32m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i32.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i32.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i32.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i32.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vint32m4_t test_vamoswapei32_v_i32m4_m(vbool8_t mask, int32_t *base,
@@ -2047,13 +2047,13 @@ vint32m4_t test_vamoswapei32_v_i32m4_m(vbool8_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i32m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i32.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i32.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i32.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i32.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 vint32m8_t test_vamoswapei32_v_i32m8_m(vbool4_t mask, int32_t *base,
@@ -2065,13 +2065,13 @@ vint32m8_t test_vamoswapei32_v_i32m8_m(vbool4_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_i32mf2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i64.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i64.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i64.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i64.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vint32mf2_t test_vamoswapei64_v_i32mf2_m(vbool64_t mask, int32_t *base,
@@ -2083,13 +2083,13 @@ vint32mf2_t test_vamoswapei64_v_i32mf2_m(vbool64_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_i32m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i64.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i64.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i64.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i64.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vint32m1_t test_vamoswapei64_v_i32m1_m(vbool32_t mask, int32_t *base,
@@ -2101,13 +2101,13 @@ vint32m1_t test_vamoswapei64_v_i32m1_m(vbool32_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_i32m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i64.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i64.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i64.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i64.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vint32m2_t test_vamoswapei64_v_i32m2_m(vbool16_t mask, int32_t *base,
@@ -2119,13 +2119,13 @@ vint32m2_t test_vamoswapei64_v_i32m2_m(vbool16_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_i32m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i64.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i64.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i64.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i64.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vint32m4_t test_vamoswapei64_v_i32m4_m(vbool8_t mask, int32_t *base,
@@ -2137,13 +2137,13 @@ vint32m4_t test_vamoswapei64_v_i32m4_m(vbool8_t mask, int32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i64m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i8.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i8.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i8.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i8.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vint64m1_t test_vamoswapei8_v_i64m1_m(vbool64_t mask, int64_t *base,
@@ -2155,13 +2155,13 @@ vint64m1_t test_vamoswapei8_v_i64m1_m(vbool64_t mask, int64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i64m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i8.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i8.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i8.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i8.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vint64m2_t test_vamoswapei8_v_i64m2_m(vbool32_t mask, int64_t *base,
@@ -2173,13 +2173,13 @@ vint64m2_t test_vamoswapei8_v_i64m2_m(vbool32_t mask, int64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i64m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i8.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i8.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i8.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i8.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vint64m4_t test_vamoswapei8_v_i64m4_m(vbool16_t mask, int64_t *base,
@@ -2191,13 +2191,13 @@ vint64m4_t test_vamoswapei8_v_i64m4_m(vbool16_t mask, int64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_i64m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i8.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i8.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_i64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i8.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i8.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vint64m8_t test_vamoswapei8_v_i64m8_m(vbool8_t mask, int64_t *base,
@@ -2209,13 +2209,13 @@ vint64m8_t test_vamoswapei8_v_i64m8_m(vbool8_t mask, int64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i64m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i16.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i16.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i16.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i16.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vint64m1_t test_vamoswapei16_v_i64m1_m(vbool64_t mask, int64_t *base,
@@ -2227,13 +2227,13 @@ vint64m1_t test_vamoswapei16_v_i64m1_m(vbool64_t mask, int64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i64m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i16.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i16.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i16.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i16.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vint64m2_t test_vamoswapei16_v_i64m2_m(vbool32_t mask, int64_t *base,
@@ -2245,13 +2245,13 @@ vint64m2_t test_vamoswapei16_v_i64m2_m(vbool32_t mask, int64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i64m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i16.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i16.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i16.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i16.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vint64m4_t test_vamoswapei16_v_i64m4_m(vbool16_t mask, int64_t *base,
@@ -2263,13 +2263,13 @@ vint64m4_t test_vamoswapei16_v_i64m4_m(vbool16_t mask, int64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_i64m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i16.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i16.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_i64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i16.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i16.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vint64m8_t test_vamoswapei16_v_i64m8_m(vbool8_t mask, int64_t *base,
@@ -2281,13 +2281,13 @@ vint64m8_t test_vamoswapei16_v_i64m8_m(vbool8_t mask, int64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i64m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i32.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i32.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i32.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i32.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vint64m1_t test_vamoswapei32_v_i64m1_m(vbool64_t mask, int64_t *base,
@@ -2299,13 +2299,13 @@ vint64m1_t test_vamoswapei32_v_i64m1_m(vbool64_t mask, int64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i64m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i32.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i32.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i32.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i32.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vint64m2_t test_vamoswapei32_v_i64m2_m(vbool32_t mask, int64_t *base,
@@ -2317,13 +2317,13 @@ vint64m2_t test_vamoswapei32_v_i64m2_m(vbool32_t mask, int64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i64m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i32.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i32.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i32.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i32.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vint64m4_t test_vamoswapei32_v_i64m4_m(vbool16_t mask, int64_t *base,
@@ -2335,13 +2335,13 @@ vint64m4_t test_vamoswapei32_v_i64m4_m(vbool16_t mask, int64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_i64m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i32.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i32.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_i64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i32.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i32.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vint64m8_t test_vamoswapei32_v_i64m8_m(vbool8_t mask, int64_t *base,
@@ -2353,13 +2353,13 @@ vint64m8_t test_vamoswapei32_v_i64m8_m(vbool8_t mask, int64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_i64m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i64.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i64.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vint64m1_t test_vamoswapei64_v_i64m1_m(vbool64_t mask, int64_t *base,
@@ -2371,13 +2371,13 @@ vint64m1_t test_vamoswapei64_v_i64m1_m(vbool64_t mask, int64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_i64m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i64.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i64.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i64.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i64.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vint64m2_t test_vamoswapei64_v_i64m2_m(vbool32_t mask, int64_t *base,
@@ -2389,13 +2389,13 @@ vint64m2_t test_vamoswapei64_v_i64m2_m(vbool32_t mask, int64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_i64m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i64.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i64.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i64.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i64.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vint64m4_t test_vamoswapei64_v_i64m4_m(vbool16_t mask, int64_t *base,
@@ -2407,13 +2407,13 @@ vint64m4_t test_vamoswapei64_v_i64m4_m(vbool16_t mask, int64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_i64m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i64.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i64.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_i64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i64.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i64.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vint64m8_t test_vamoswapei64_v_i64m8_m(vbool8_t mask, int64_t *base,
@@ -2425,13 +2425,13 @@ vint64m8_t test_vamoswapei64_v_i64m8_m(vbool8_t mask, int64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u32mf2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i8.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i8.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i8.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i8.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vuint32mf2_t test_vamoswapei8_v_u32mf2_m(vbool64_t mask, uint32_t *base,
@@ -2443,13 +2443,13 @@ vuint32mf2_t test_vamoswapei8_v_u32mf2_m(vbool64_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u32m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i8.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i8.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i8.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i8.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vuint32m1_t test_vamoswapei8_v_u32m1_m(vbool32_t mask, uint32_t *base,
@@ -2461,13 +2461,13 @@ vuint32m1_t test_vamoswapei8_v_u32m1_m(vbool32_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u32m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i8.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i8.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i8.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i8.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vuint32m2_t test_vamoswapei8_v_u32m2_m(vbool16_t mask, uint32_t *base,
@@ -2479,13 +2479,13 @@ vuint32m2_t test_vamoswapei8_v_u32m2_m(vbool16_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u32m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i8.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i8.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i8.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i8.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vuint32m4_t test_vamoswapei8_v_u32m4_m(vbool8_t mask, uint32_t *base,
@@ -2497,13 +2497,13 @@ vuint32m4_t test_vamoswapei8_v_u32m4_m(vbool8_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u32m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i8.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i8.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i8.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i8.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 vuint32m8_t test_vamoswapei8_v_u32m8_m(vbool4_t mask, uint32_t *base,
@@ -2515,13 +2515,13 @@ vuint32m8_t test_vamoswapei8_v_u32m8_m(vbool4_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u32mf2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i16.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i16.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i16.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i16.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vuint32mf2_t test_vamoswapei16_v_u32mf2_m(vbool64_t mask, uint32_t *base,
@@ -2533,13 +2533,13 @@ vuint32mf2_t test_vamoswapei16_v_u32mf2_m(vbool64_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u32m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i16.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i16.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i16.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i16.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vuint32m1_t test_vamoswapei16_v_u32m1_m(vbool32_t mask, uint32_t *base,
@@ -2551,13 +2551,13 @@ vuint32m1_t test_vamoswapei16_v_u32m1_m(vbool32_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u32m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i16.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i16.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i16.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i16.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vuint32m2_t test_vamoswapei16_v_u32m2_m(vbool16_t mask, uint32_t *base,
@@ -2569,13 +2569,13 @@ vuint32m2_t test_vamoswapei16_v_u32m2_m(vbool16_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u32m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i16.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i16.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i16.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i16.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vuint32m4_t test_vamoswapei16_v_u32m4_m(vbool8_t mask, uint32_t *base,
@@ -2587,13 +2587,13 @@ vuint32m4_t test_vamoswapei16_v_u32m4_m(vbool8_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u32m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i16.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i16.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i16.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i16.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 vuint32m8_t test_vamoswapei16_v_u32m8_m(vbool4_t mask, uint32_t *base,
@@ -2605,13 +2605,13 @@ vuint32m8_t test_vamoswapei16_v_u32m8_m(vbool4_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u32mf2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i32.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i32.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vuint32mf2_t test_vamoswapei32_v_u32mf2_m(vbool64_t mask, uint32_t *base,
@@ -2623,13 +2623,13 @@ vuint32mf2_t test_vamoswapei32_v_u32mf2_m(vbool64_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u32m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i32.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i32.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i32.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i32.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vuint32m1_t test_vamoswapei32_v_u32m1_m(vbool32_t mask, uint32_t *base,
@@ -2641,13 +2641,13 @@ vuint32m1_t test_vamoswapei32_v_u32m1_m(vbool32_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u32m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i32.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i32.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i32.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i32.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vuint32m2_t test_vamoswapei32_v_u32m2_m(vbool16_t mask, uint32_t *base,
@@ -2659,13 +2659,13 @@ vuint32m2_t test_vamoswapei32_v_u32m2_m(vbool16_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u32m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i32.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i32.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i32.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i32.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vuint32m4_t test_vamoswapei32_v_u32m4_m(vbool8_t mask, uint32_t *base,
@@ -2677,13 +2677,13 @@ vuint32m4_t test_vamoswapei32_v_u32m4_m(vbool8_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u32m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i32.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i32.i32(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i32.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vamoswap.mask.nxv16i32.nxv16i32.i64(<vscale x 16 x i32>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x i32> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 vuint32m8_t test_vamoswapei32_v_u32m8_m(vbool4_t mask, uint32_t *base,
@@ -2695,13 +2695,13 @@ vuint32m8_t test_vamoswapei32_v_u32m8_m(vbool4_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_u32mf2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i64.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i64.i32(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i64.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vamoswap.mask.nxv1i32.nxv1i64.i64(<vscale x 1 x i32>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i32> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vuint32mf2_t test_vamoswapei64_v_u32mf2_m(vbool64_t mask, uint32_t *base,
@@ -2713,13 +2713,13 @@ vuint32mf2_t test_vamoswapei64_v_u32mf2_m(vbool64_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_u32m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i64.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i64.i32(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i64.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vamoswap.mask.nxv2i32.nxv2i64.i64(<vscale x 2 x i32>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i32> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vuint32m1_t test_vamoswapei64_v_u32m1_m(vbool32_t mask, uint32_t *base,
@@ -2731,13 +2731,13 @@ vuint32m1_t test_vamoswapei64_v_u32m1_m(vbool32_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_u32m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i64.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i64.i32(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i64.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.riscv.vamoswap.mask.nxv4i32.nxv4i64.i64(<vscale x 4 x i32>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i32> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vuint32m2_t test_vamoswapei64_v_u32m2_m(vbool16_t mask, uint32_t *base,
@@ -2749,13 +2749,13 @@ vuint32m2_t test_vamoswapei64_v_u32m2_m(vbool16_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_u32m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i64.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i64.i32(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i64.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.riscv.vamoswap.mask.nxv8i32.nxv8i64.i64(<vscale x 8 x i32>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i32> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vuint32m4_t test_vamoswapei64_v_u32m4_m(vbool8_t mask, uint32_t *base,
@@ -2767,13 +2767,13 @@ vuint32m4_t test_vamoswapei64_v_u32m4_m(vbool8_t mask, uint32_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u64m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i8.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i8.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i8.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i8.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vuint64m1_t test_vamoswapei8_v_u64m1_m(vbool64_t mask, uint64_t *base,
@@ -2785,13 +2785,13 @@ vuint64m1_t test_vamoswapei8_v_u64m1_m(vbool64_t mask, uint64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u64m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i8.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i8.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i8.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i8.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vuint64m2_t test_vamoswapei8_v_u64m2_m(vbool32_t mask, uint64_t *base,
@@ -2803,13 +2803,13 @@ vuint64m2_t test_vamoswapei8_v_u64m2_m(vbool32_t mask, uint64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u64m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i8.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i8.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i8.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i8.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vuint64m4_t test_vamoswapei8_v_u64m4_m(vbool16_t mask, uint64_t *base,
@@ -2821,13 +2821,13 @@ vuint64m4_t test_vamoswapei8_v_u64m4_m(vbool16_t mask, uint64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_u64m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i8.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i8.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_u64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i8.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i8.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vuint64m8_t test_vamoswapei8_v_u64m8_m(vbool8_t mask, uint64_t *base,
@@ -2839,13 +2839,13 @@ vuint64m8_t test_vamoswapei8_v_u64m8_m(vbool8_t mask, uint64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u64m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i16.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i16.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i16.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i16.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vuint64m1_t test_vamoswapei16_v_u64m1_m(vbool64_t mask, uint64_t *base,
@@ -2857,13 +2857,13 @@ vuint64m1_t test_vamoswapei16_v_u64m1_m(vbool64_t mask, uint64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u64m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i16.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i16.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i16.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i16.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vuint64m2_t test_vamoswapei16_v_u64m2_m(vbool32_t mask, uint64_t *base,
@@ -2875,13 +2875,13 @@ vuint64m2_t test_vamoswapei16_v_u64m2_m(vbool32_t mask, uint64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u64m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i16.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i16.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i16.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i16.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vuint64m4_t test_vamoswapei16_v_u64m4_m(vbool16_t mask, uint64_t *base,
@@ -2893,13 +2893,13 @@ vuint64m4_t test_vamoswapei16_v_u64m4_m(vbool16_t mask, uint64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_u64m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i16.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i16.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_u64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i16.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i16.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vuint64m8_t test_vamoswapei16_v_u64m8_m(vbool8_t mask, uint64_t *base,
@@ -2911,13 +2911,13 @@ vuint64m8_t test_vamoswapei16_v_u64m8_m(vbool8_t mask, uint64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u64m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i32.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i32.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i32.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i32.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vuint64m1_t test_vamoswapei32_v_u64m1_m(vbool64_t mask, uint64_t *base,
@@ -2929,13 +2929,13 @@ vuint64m1_t test_vamoswapei32_v_u64m1_m(vbool64_t mask, uint64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u64m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i32.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i32.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i32.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i32.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vuint64m2_t test_vamoswapei32_v_u64m2_m(vbool32_t mask, uint64_t *base,
@@ -2947,13 +2947,13 @@ vuint64m2_t test_vamoswapei32_v_u64m2_m(vbool32_t mask, uint64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u64m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i32.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i32.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i32.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i32.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vuint64m4_t test_vamoswapei32_v_u64m4_m(vbool16_t mask, uint64_t *base,
@@ -2965,13 +2965,13 @@ vuint64m4_t test_vamoswapei32_v_u64m4_m(vbool16_t mask, uint64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_u64m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i32.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i32.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_u64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i32.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i32.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vuint64m8_t test_vamoswapei32_v_u64m8_m(vbool8_t mask, uint64_t *base,
@@ -2983,13 +2983,13 @@ vuint64m8_t test_vamoswapei32_v_u64m8_m(vbool8_t mask, uint64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_u64m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i64.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i64.i32(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vamoswap.mask.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x i64> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
 //
 vuint64m1_t test_vamoswapei64_v_u64m1_m(vbool64_t mask, uint64_t *base,
@@ -3001,13 +3001,13 @@ vuint64m1_t test_vamoswapei64_v_u64m1_m(vbool64_t mask, uint64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_u64m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i64.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i64.i32(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i64.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vamoswap.mask.nxv2i64.nxv2i64.i64(<vscale x 2 x i64>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x i64> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 vuint64m2_t test_vamoswapei64_v_u64m2_m(vbool32_t mask, uint64_t *base,
@@ -3019,13 +3019,13 @@ vuint64m2_t test_vamoswapei64_v_u64m2_m(vbool32_t mask, uint64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_u64m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i64.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i64.i32(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i64.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vamoswap.mask.nxv4i64.nxv4i64.i64(<vscale x 4 x i64>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x i64> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP1]]
 //
 vuint64m4_t test_vamoswapei64_v_u64m4_m(vbool16_t mask, uint64_t *base,
@@ -3037,13 +3037,13 @@ vuint64m4_t test_vamoswapei64_v_u64m4_m(vbool16_t mask, uint64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_u64m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i64.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i64.i32(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_u64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i64.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vamoswap.mask.nxv8i64.nxv8i64.i64(<vscale x 8 x i64>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x i64> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP1]]
 //
 vuint64m8_t test_vamoswapei64_v_u64m8_m(vbool8_t mask, uint64_t *base,
@@ -3055,13 +3055,13 @@ vuint64m8_t test_vamoswapei64_v_u64m8_m(vbool8_t mask, uint64_t *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f32mf2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i8.i32(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i8.i32(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i8.i64(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i8.i64(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP1]]
 //
 vfloat32mf2_t test_vamoswapei8_v_f32mf2_m(vbool64_t mask, float *base,
@@ -3073,13 +3073,13 @@ vfloat32mf2_t test_vamoswapei8_v_f32mf2_m(vbool64_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f32m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i8.i32(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i8.i32(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i8.i64(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i8.i64(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 //
 vfloat32m1_t test_vamoswapei8_v_f32m1_m(vbool32_t mask, float *base,
@@ -3091,13 +3091,13 @@ vfloat32m1_t test_vamoswapei8_v_f32m1_m(vbool32_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f32m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i8.i32(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i8.i32(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i8.i64(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i8.i64(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 vfloat32m2_t test_vamoswapei8_v_f32m2_m(vbool16_t mask, float *base,
@@ -3109,13 +3109,13 @@ vfloat32m2_t test_vamoswapei8_v_f32m2_m(vbool16_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f32m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i8.i32(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i8.i32(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i8.i64(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i8.i64(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP1]]
 //
 vfloat32m4_t test_vamoswapei8_v_f32m4_m(vbool8_t mask, float *base,
@@ -3127,13 +3127,13 @@ vfloat32m4_t test_vamoswapei8_v_f32m4_m(vbool8_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f32m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i8.i32(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i8.i32(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 16 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i8.i64(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i8.i64(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i8> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 16 x float> [[TMP1]]
 //
 vfloat32m8_t test_vamoswapei8_v_f32m8_m(vbool4_t mask, float *base,
@@ -3145,13 +3145,13 @@ vfloat32m8_t test_vamoswapei8_v_f32m8_m(vbool4_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f32mf2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i16.i32(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i16.i32(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i16.i64(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i16.i64(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP1]]
 //
 vfloat32mf2_t test_vamoswapei16_v_f32mf2_m(vbool64_t mask, float *base,
@@ -3163,13 +3163,13 @@ vfloat32mf2_t test_vamoswapei16_v_f32mf2_m(vbool64_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f32m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i16.i32(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i16.i32(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i16.i64(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i16.i64(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 //
 vfloat32m1_t test_vamoswapei16_v_f32m1_m(vbool32_t mask, float *base,
@@ -3181,13 +3181,13 @@ vfloat32m1_t test_vamoswapei16_v_f32m1_m(vbool32_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f32m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i16.i32(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i16.i32(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i16.i64(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i16.i64(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 vfloat32m2_t test_vamoswapei16_v_f32m2_m(vbool16_t mask, float *base,
@@ -3199,13 +3199,13 @@ vfloat32m2_t test_vamoswapei16_v_f32m2_m(vbool16_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f32m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i16.i32(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i16.i32(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i16.i64(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i16.i64(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP1]]
 //
 vfloat32m4_t test_vamoswapei16_v_f32m4_m(vbool8_t mask, float *base,
@@ -3217,13 +3217,13 @@ vfloat32m4_t test_vamoswapei16_v_f32m4_m(vbool8_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f32m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i16.i32(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i16.i32(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 16 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i16.i64(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i16.i64(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i16> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 16 x float> [[TMP1]]
 //
 vfloat32m8_t test_vamoswapei16_v_f32m8_m(vbool4_t mask, float *base,
@@ -3235,13 +3235,13 @@ vfloat32m8_t test_vamoswapei16_v_f32m8_m(vbool4_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f32mf2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i32.i32(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i32.i32(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i32.i64(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i32.i64(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP1]]
 //
 vfloat32mf2_t test_vamoswapei32_v_f32mf2_m(vbool64_t mask, float *base,
@@ -3253,13 +3253,13 @@ vfloat32mf2_t test_vamoswapei32_v_f32mf2_m(vbool64_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f32m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i32.i32(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i32.i32(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i32.i64(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i32.i64(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 //
 vfloat32m1_t test_vamoswapei32_v_f32m1_m(vbool32_t mask, float *base,
@@ -3271,13 +3271,13 @@ vfloat32m1_t test_vamoswapei32_v_f32m1_m(vbool32_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f32m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i32.i32(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i32.i32(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i32.i64(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i32.i64(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 vfloat32m2_t test_vamoswapei32_v_f32m2_m(vbool16_t mask, float *base,
@@ -3289,13 +3289,13 @@ vfloat32m2_t test_vamoswapei32_v_f32m2_m(vbool16_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f32m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i32.i32(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i32.i32(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i32.i64(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i32.i64(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP1]]
 //
 vfloat32m4_t test_vamoswapei32_v_f32m4_m(vbool8_t mask, float *base,
@@ -3307,13 +3307,13 @@ vfloat32m4_t test_vamoswapei32_v_f32m4_m(vbool8_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f32m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i32.i32(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i32.i32(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 16 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f32m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i32.i64(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x float> @llvm.riscv.vamoswap.mask.nxv16f32.nxv16i32.i64(<vscale x 16 x float>* [[TMP0]], <vscale x 16 x i32> [[BINDEX:%.*]], <vscale x 16 x float> [[VALUE:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 16 x float> [[TMP1]]
 //
 vfloat32m8_t test_vamoswapei32_v_f32m8_m(vbool4_t mask, float *base,
@@ -3325,13 +3325,13 @@ vfloat32m8_t test_vamoswapei32_v_f32m8_m(vbool4_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_f32mf2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i64.i32(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i64.i32(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f32mf2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i64.i64(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x float> @llvm.riscv.vamoswap.mask.nxv1f32.nxv1i64.i64(<vscale x 1 x float>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x float> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP1]]
 //
 vfloat32mf2_t test_vamoswapei64_v_f32mf2_m(vbool64_t mask, float *base,
@@ -3343,13 +3343,13 @@ vfloat32mf2_t test_vamoswapei64_v_f32mf2_m(vbool64_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_f32m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i64.i32(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i64.i32(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f32m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i64.i64(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.riscv.vamoswap.mask.nxv2f32.nxv2i64.i64(<vscale x 2 x float>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x float> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 //
 vfloat32m1_t test_vamoswapei64_v_f32m1_m(vbool32_t mask, float *base,
@@ -3361,13 +3361,13 @@ vfloat32m1_t test_vamoswapei64_v_f32m1_m(vbool32_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_f32m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i64.i32(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i64.i32(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f32m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i64.i64(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.riscv.vamoswap.mask.nxv4f32.nxv4i64.i64(<vscale x 4 x float>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x float> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 vfloat32m2_t test_vamoswapei64_v_f32m2_m(vbool16_t mask, float *base,
@@ -3379,13 +3379,13 @@ vfloat32m2_t test_vamoswapei64_v_f32m2_m(vbool16_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_f32m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i64.i32(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i64.i32(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x float> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f32m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i64.i64(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.riscv.vamoswap.mask.nxv8f32.nxv8i64.i64(<vscale x 8 x float>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x float> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP1]]
 //
 vfloat32m4_t test_vamoswapei64_v_f32m4_m(vbool8_t mask, float *base,
@@ -3397,13 +3397,13 @@ vfloat32m4_t test_vamoswapei64_v_f32m4_m(vbool8_t mask, float *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f64m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i8.i32(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i8.i32(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i8.i64(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i8.i64(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i8> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 vfloat64m1_t test_vamoswapei8_v_f64m1_m(vbool64_t mask, double *base,
@@ -3415,13 +3415,13 @@ vfloat64m1_t test_vamoswapei8_v_f64m1_m(vbool64_t mask, double *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f64m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i8.i32(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i8.i32(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i8.i64(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i8.i64(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i8> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 vfloat64m2_t test_vamoswapei8_v_f64m2_m(vbool32_t mask, double *base,
@@ -3433,13 +3433,13 @@ vfloat64m2_t test_vamoswapei8_v_f64m2_m(vbool32_t mask, double *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f64m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i8.i32(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i8.i32(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i8.i64(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i8.i64(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i8> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 vfloat64m4_t test_vamoswapei8_v_f64m4_m(vbool16_t mask, double *base,
@@ -3451,13 +3451,13 @@ vfloat64m4_t test_vamoswapei8_v_f64m4_m(vbool16_t mask, double *base,
 // CHECK-RV32-LABEL: @test_vamoswapei8_v_f64m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i8.i32(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i8.i32(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei8_v_f64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i8.i64(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i8.i64(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i8> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 vfloat64m8_t test_vamoswapei8_v_f64m8_m(vbool8_t mask, double *base,
@@ -3469,13 +3469,13 @@ vfloat64m8_t test_vamoswapei8_v_f64m8_m(vbool8_t mask, double *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f64m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i16.i32(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i16.i32(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i16.i64(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i16.i64(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i16> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 vfloat64m1_t test_vamoswapei16_v_f64m1_m(vbool64_t mask, double *base,
@@ -3487,13 +3487,13 @@ vfloat64m1_t test_vamoswapei16_v_f64m1_m(vbool64_t mask, double *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f64m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i16.i32(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i16.i32(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i16.i64(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i16.i64(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i16> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 vfloat64m2_t test_vamoswapei16_v_f64m2_m(vbool32_t mask, double *base,
@@ -3505,13 +3505,13 @@ vfloat64m2_t test_vamoswapei16_v_f64m2_m(vbool32_t mask, double *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f64m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i16.i32(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i16.i32(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i16.i64(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i16.i64(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i16> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 vfloat64m4_t test_vamoswapei16_v_f64m4_m(vbool16_t mask, double *base,
@@ -3523,13 +3523,13 @@ vfloat64m4_t test_vamoswapei16_v_f64m4_m(vbool16_t mask, double *base,
 // CHECK-RV32-LABEL: @test_vamoswapei16_v_f64m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i16.i32(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i16.i32(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei16_v_f64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i16.i64(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i16.i64(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i16> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 vfloat64m8_t test_vamoswapei16_v_f64m8_m(vbool8_t mask, double *base,
@@ -3541,13 +3541,13 @@ vfloat64m8_t test_vamoswapei16_v_f64m8_m(vbool8_t mask, double *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f64m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i32.i32(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i32.i32(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i32.i64(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i32.i64(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 vfloat64m1_t test_vamoswapei32_v_f64m1_m(vbool64_t mask, double *base,
@@ -3559,13 +3559,13 @@ vfloat64m1_t test_vamoswapei32_v_f64m1_m(vbool64_t mask, double *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f64m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i32.i32(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i32.i32(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i32.i64(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i32.i64(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i32> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 vfloat64m2_t test_vamoswapei32_v_f64m2_m(vbool32_t mask, double *base,
@@ -3577,13 +3577,13 @@ vfloat64m2_t test_vamoswapei32_v_f64m2_m(vbool32_t mask, double *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f64m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i32.i32(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i32.i32(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i32.i64(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i32.i64(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i32> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 vfloat64m4_t test_vamoswapei32_v_f64m4_m(vbool16_t mask, double *base,
@@ -3595,13 +3595,13 @@ vfloat64m4_t test_vamoswapei32_v_f64m4_m(vbool16_t mask, double *base,
 // CHECK-RV32-LABEL: @test_vamoswapei32_v_f64m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i32.i32(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i32.i32(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei32_v_f64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i32.i64(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i32.i64(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i32> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 vfloat64m8_t test_vamoswapei32_v_f64m8_m(vbool8_t mask, double *base,
@@ -3613,13 +3613,13 @@ vfloat64m8_t test_vamoswapei32_v_f64m8_m(vbool8_t mask, double *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_f64m1_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i64.i32(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i64.i32(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f64m1_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i64.i64(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x double> @llvm.riscv.vamoswap.mask.nxv1f64.nxv1i64.i64(<vscale x 1 x double>* [[TMP0]], <vscale x 1 x i64> [[BINDEX:%.*]], <vscale x 1 x double> [[VALUE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP1]]
 //
 vfloat64m1_t test_vamoswapei64_v_f64m1_m(vbool64_t mask, double *base,
@@ -3631,13 +3631,13 @@ vfloat64m1_t test_vamoswapei64_v_f64m1_m(vbool64_t mask, double *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_f64m2_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i64.i32(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i64.i32(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f64m2_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i64.i64(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.riscv.vamoswap.mask.nxv2f64.nxv2i64.i64(<vscale x 2 x double>* [[TMP0]], <vscale x 2 x i64> [[BINDEX:%.*]], <vscale x 2 x double> [[VALUE:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 vfloat64m2_t test_vamoswapei64_v_f64m2_m(vbool32_t mask, double *base,
@@ -3649,13 +3649,13 @@ vfloat64m2_t test_vamoswapei64_v_f64m2_m(vbool32_t mask, double *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_f64m4_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i64.i32(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i64.i32(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f64m4_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i64.i64(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x double> @llvm.riscv.vamoswap.mask.nxv4f64.nxv4i64.i64(<vscale x 4 x double>* [[TMP0]], <vscale x 4 x i64> [[BINDEX:%.*]], <vscale x 4 x double> [[VALUE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP1]]
 //
 vfloat64m4_t test_vamoswapei64_v_f64m4_m(vbool16_t mask, double *base,
@@ -3667,13 +3667,13 @@ vfloat64m4_t test_vamoswapei64_v_f64m4_m(vbool16_t mask, double *base,
 // CHECK-RV32-LABEL: @test_vamoswapei64_v_f64m8_m(
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
-// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i64.i32(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV32-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i64.i32(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV32-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 // CHECK-RV64-LABEL: @test_vamoswapei64_v_f64m8_m(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i64.i64(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) [[ATTR5]]
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x double> @llvm.riscv.vamoswap.mask.nxv8f64.nxv8i64.i64(<vscale x 8 x double>* [[TMP0]], <vscale x 8 x i64> [[BINDEX:%.*]], <vscale x 8 x double> [[VALUE:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR1]]
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP1]]
 //
 vfloat64m8_t test_vamoswapei64_v_f64m8_m(vbool8_t mask, double *base,

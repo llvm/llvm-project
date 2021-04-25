@@ -164,6 +164,8 @@ private:
   // C/C++ intrinsic operand order is different to builtin operand order. Record
   // the mapping of InputTypes index.
   SmallVector<unsigned> CTypeOrder;
+  // Operands are reordered in the header.
+  bool IsOperandReordered = false;
   uint8_t RISCVExtensions = 0;
 
 public:
@@ -185,6 +187,7 @@ public:
   bool hasManualCodegen() const { return !ManualCodegen.empty(); }
   bool hasAutoDef() const { return HasAutoDef; }
   bool isMask() const { return IsMask; }
+  bool isOperandReordered() const { return IsOperandReordered; }
   size_t getNumOperand() const { return InputTypes.size(); }
   StringRef getIRName() const { return IRName; }
   StringRef getManualCodegen() const { return ManualCodegen; }
@@ -788,6 +791,7 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
   std::iota(CTypeOrder.begin(), CTypeOrder.end(), 0);
   // Update default order if we need permutate.
   if (!PermuteOperands.empty()) {
+    IsOperandReordered = true;
     // PermuteOperands is nonmasked version index. Update index when there is
     // maskedoff operand which is always in first operand.
 
@@ -884,6 +888,11 @@ void RVVIntrinsic::emitIntrinsicMacro(raw_ostream &OS) const {
 }
 
 void RVVIntrinsic::emitMangledFuncDef(raw_ostream &OS) const {
+  bool UseAliasAttr = !isMask() && !isOperandReordered();
+  if (UseAliasAttr) {
+    OS << "__attribute__((clang_builtin_alias(";
+    OS << "__builtin_rvv_" << getName() << ")))\n";
+  }
   OS << OutputType->getTypeStr() << " " << getMangledName() << "(";
   // Emit function arguments
   if (getNumOperand() > 0) {
@@ -891,16 +900,20 @@ void RVVIntrinsic::emitMangledFuncDef(raw_ostream &OS) const {
     for (unsigned i = 0; i < CTypeOrder.size(); ++i)
       OS << LS << InputTypes[CTypeOrder[i]]->getTypeStr() << " op" << i;
   }
-  OS << "){\n";
-  OS << "  return " << getName() << "(";
-  // Emit parameter variables
-  if (getNumOperand() > 0) {
-    ListSeparator LS;
-    for (unsigned i = 0; i < CTypeOrder.size(); ++i)
-      OS << LS << "op" << i;
+  if (UseAliasAttr) {
+    OS << ");\n\n";
+  } else {
+    OS << "){\n";
+    OS << "  return " << getName() << "(";
+    // Emit parameter variables
+    if (getNumOperand() > 0) {
+      ListSeparator LS;
+      for (unsigned i = 0; i < CTypeOrder.size(); ++i)
+        OS << LS << "op" << i;
+    }
+    OS << ");\n";
+    OS << "}\n\n";
   }
-  OS << ");\n";
-  OS << "}\n\n";
 }
 
 //===----------------------------------------------------------------------===//
