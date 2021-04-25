@@ -679,9 +679,10 @@ private:
         : Expr(Expr), ExtraDep(ExtraDep), PredDep(PredDep) {}
     ExprResult(const ExprResult &) = delete;
     ExprResult(ExprResult &&Other)
-        : Expr(Other.Expr), ExtraDep(Other.ExtraDep) {
+        : Expr(Other.Expr), ExtraDep(Other.ExtraDep), PredDep(Other.PredDep) {
       Other.Expr = nullptr;
       Other.ExtraDep = nullptr;
+      Other.PredDep = nullptr;
     }
     ExprResult &operator=(const ExprResult &Other) = delete;
     ExprResult &operator=(ExprResult &&Other) = delete;
