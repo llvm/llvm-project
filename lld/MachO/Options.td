@@ -635,6 +635,16 @@ def trace_symbol_layout : Flag<["-"], "trace_symbol_layout">,
     HelpText<"Show where and why symbols move, as specified by -move_to_ro_segment, -move_to_rw_segment, -rename_section, and -rename_segment">,
     Flags<[HelpHidden]>,
     Group<grp_rare>;
+def data_const : Flag<["-"], "data_const">,
+    HelpText<"Force migration of readonly data into __DATA_CONST segment">,
+    Group<grp_rare>;
+def no_data_const : Flag<["-"], "no_data_const">,
+    HelpText<"Block migration of readonly data away from __DATA segment">,
+    Group<grp_rare>;
+def text_exec : Flag<["-"], "text_exec">,
+    HelpText<"Rename __segment TEXT to __TEXT_EXEC for sections __text and __stubs">,
+    Flags<[HelpHidden]>,
+    Group<grp_rare>;
 def section_order : MultiArg<["-"], "section_order", 2>,
     MetaVarName<"<segment> <sections>">,
     HelpText<"With -preload, specify layout sequence of colon-separated <sections> in <segment>">,
@@ -1134,14 +1144,6 @@ def classic_linker : Flag<["-"], "classic_linker">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
-def data_const : Flag<["-"], "data_const">,
-    HelpText<"This option is undocumented in ld64">,
-    Flags<[HelpHidden]>,
-    Group<grp_undocumented>;
-def no_data_const : Flag<["-"], "no_data_const">,
-    HelpText<"This option is undocumented in ld64">,
-    Flags<[HelpHidden]>,
-    Group<grp_undocumented>;
 def data_in_code_info : Flag<["-"], "data_in_code_info">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
@@ -1283,10 +1285,6 @@ def snapshot_dir : Flag<["-"], "snapshot_dir">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
 def source_version : Flag<["-"], "source_version">,
-    HelpText<"This option is undocumented in ld64">,
-    Flags<[HelpHidden]>,
-    Group<grp_undocumented>;
-def text_exec : Flag<["-"], "text_exec">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
