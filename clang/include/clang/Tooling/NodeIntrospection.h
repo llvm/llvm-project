@@ -26,6 +26,7 @@ class CXXCtorInitializer;
 class NestedNameSpecifierLoc;
 class TemplateArgumentLoc;
 class CXXBaseSpecifier;
+struct DeclarationNameInfo;
 
 namespace tooling {
 
@@ -92,6 +93,7 @@ NodeLocationAccessors GetLocations(clang::NestedNameSpecifierLoc const &);
 NodeLocationAccessors GetLocations(clang::TemplateArgumentLoc const &);
 NodeLocationAccessors GetLocations(clang::CXXBaseSpecifier const *);
 NodeLocationAccessors GetLocations(clang::TypeLoc const &);
+NodeLocationAccessors GetLocations(clang::DeclarationNameInfo const &);
 NodeLocationAccessors GetLocations(clang::DynTypedNode const &Node);
 } // namespace NodeIntrospection
 } // namespace tooling
