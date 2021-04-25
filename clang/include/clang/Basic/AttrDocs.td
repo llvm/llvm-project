@@ -4701,6 +4701,7 @@ the old mangled name and the new code will use the new mangled name with tags.
 
 def BuiltinAliasDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "clang::builtin_alias, clang_builtin_alias";
   let Content = [{
 This attribute is used in the implementation of the C intrinsics.
 It allows the C intrinsic functions to be declared using the names defined
