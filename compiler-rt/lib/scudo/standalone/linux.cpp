@@ -96,7 +96,7 @@ static bool madviseNeedsMemset() {
                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   if (!P)
     dieOnMapUnmapError(errno == ENOMEM);
-  *P = -1;
+  *P = 1;
   while (madvise(P, Size, MADV_DONTNEED) == -1 && errno == EAGAIN) {
   }
   bool R = (*P != 0);
