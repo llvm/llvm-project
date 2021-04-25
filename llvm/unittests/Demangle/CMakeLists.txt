@@ -7,4 +7,5 @@ add_llvm_unittest(DemangleTests
   DemangleTest.cpp
   ItaniumDemangleTest.cpp
   PartialDemangleTest.cpp
+  StringViewTest.cpp
 )
