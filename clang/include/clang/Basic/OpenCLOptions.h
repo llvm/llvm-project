@@ -154,7 +154,6 @@ public:
   void support(llvm::StringRef Ext, bool V = true);
 
   OpenCLOptions();
-  OpenCLOptions(const OpenCLOptions &) = default;
 
   // Set supported options based on target settings and language version
   void addSupport(const llvm::StringMap<bool> &FeaturesMap,

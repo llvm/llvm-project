@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import os
+import shlex
 import subprocess
 import sys
 
@@ -11,7 +12,7 @@ from .base import TestFormat
 kIsWindows = sys.platform in ['win32', 'cygwin']
 
 class GoogleTest(TestFormat):
-    def __init__(self, test_sub_dirs, test_suffix):
+    def __init__(self, test_sub_dirs, test_suffix, run_under = []):
         self.test_sub_dirs = str(test_sub_dirs).split(';')
 
         # On Windows, assume tests will also end in '.exe'.
@@ -21,6 +22,7 @@ class GoogleTest(TestFormat):
 
         # Also check for .py files for testing purposes.
         self.test_suffixes = {exe_suffix, test_suffix + '.py'}
+        self.run_under = run_under
 
     def getGTestTests(self, path, litConfig, localConfig):
         """getGTestTests(path) - [name]
@@ -32,7 +34,7 @@ class GoogleTest(TestFormat):
           litConfig: LitConfig instance
           localConfig: TestingConfig instance"""
 
-        list_test_cmd = self.maybeAddPythonToCmd([path, '--gtest_list_tests'])
+        list_test_cmd = self.prepareCmd([path, '--gtest_list_tests'])
 
         try:
             output = subprocess.check_output(list_test_cmd,
@@ -113,7 +115,7 @@ class GoogleTest(TestFormat):
             testName = namePrefix + '/' + testName
 
         cmd = [testPath, '--gtest_filter=' + testName]
-        cmd = self.maybeAddPythonToCmd(cmd)
+        cmd = self.prepareCmd(cmd)
         if litConfig.useValgrind:
             cmd = litConfig.valgrindArgs + cmd
 
@@ -141,13 +143,20 @@ class GoogleTest(TestFormat):
 
         return lit.Test.PASS,''
 
-    def maybeAddPythonToCmd(self, cmd):
-        """Insert the python exe into the command if cmd[0] ends in .py
+    def prepareCmd(self, cmd):
+        """Insert interpreter if needed.
 
+        It inserts the python exe into the command if cmd[0] ends in .py or caller
+        specified run_under.
         We cannot rely on the system to interpret shebang lines for us on
         Windows, so add the python executable to the command if this is a .py
         script.
         """
         if cmd[0].endswith('.py'):
-            return [sys.executable] + cmd
+            cmd = [sys.executable] + cmd
+        if self.run_under:
+            if isinstance(self.run_under, list):
+                cmd = self.run_under + cmd
+            else:
+                cmd = shlex.split(self.run_under) + cmd
         return cmd

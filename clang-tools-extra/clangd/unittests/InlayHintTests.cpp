@@ -322,6 +322,44 @@ TEST(ParameterHints, UserDefinedLiteral) {
   )cpp");
 }
 
+TEST(ParameterHints, ParamNameComment) {
+  // Do not hint an argument which already has a comment
+  // with the parameter name preceding it.
+  assertParameterHints(R"cpp(
+    void foo(int param);
+    void bar() {
+      foo(/*param*/42);
+      foo( /* param = */ 42);
+      foo(/* the answer */$param[[42]]);
+    }
+  )cpp",
+                       ExpectedHint{"param: ", "param"});
+}
+
+TEST(ParameterHints, SetterFunctions) {
+  assertParameterHints(R"cpp(
+    struct S {
+      void setParent(S* parent);
+      void set_parent(S* parent);
+      void setTimeout(int timeoutMillis);
+      void setTimeoutMillis(int timeout_millis);
+    };
+    void bar() {
+      S s;
+      // Parameter name matches setter name - omit hint.
+      s.setParent(nullptr);
+      // Support snake_case
+      s.set_parent(nullptr);
+      // Parameter name may contain extra info - show hint.
+      s.setTimeout($timeoutMillis[[120]]);
+      // FIXME: Ideally we'd want to omit this.
+      s.setTimeoutMillis($timeout_millis[[120]]);
+    }
+  )cpp",
+                       ExpectedHint{"timeoutMillis: ", "timeoutMillis"},
+                       ExpectedHint{"timeout_millis: ", "timeout_millis"});
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

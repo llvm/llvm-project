@@ -999,7 +999,6 @@ struct TensorUse : public Expression {
   TensorUse() : TensorUse("", AffineMap()) {}
   TensorUse(StringRef name, AffineMap map)
       : Expression(Kind::TensorUse), tensorId(name), indexingMap(map) {}
-  TensorUse(const TensorUse &use) = default;
 
   static bool classof(const Expression *e) {
     return e->kind == Kind::TensorUse;
