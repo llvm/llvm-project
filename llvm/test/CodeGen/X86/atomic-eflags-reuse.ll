@@ -228,6 +228,7 @@ define i8 @test_add_1_cmov_cmov(i64* %p, i8* %q) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    lock xaddq %rax, (%rdi)
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    movl $12, %eax
 ; CHECK-NEXT:    movl $34, %ecx
 ; CHECK-NEXT:    cmovsl %eax, %ecx
