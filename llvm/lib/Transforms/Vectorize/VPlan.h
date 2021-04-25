@@ -2201,6 +2201,20 @@ public:
     }
     return Count;
   }
+
+  /// Return an iterator range over \p Iter which only includes \p BlockTy
+  /// blocks. The accesses are casted to \p BlockTy.
+  template <typename BlockTy, typename T> static auto blocksOnly(T Iter) {
+    // We need to first create an iterator range over VPBlockBase & instead of
+    // VPBlockBase * for filter_range to work properly.
+    auto Mapped = map_range(
+        Iter, [](VPBlockBase *Block) -> VPBlockBase & { return *Block; });
+    auto Filter = make_filter_range(
+        Mapped, [](VPBlockBase &Block) { return isa<BlockTy>(&Block); });
+    return map_range(Filter, [](VPBlockBase &Block) -> BlockTy * {
+      return cast<BlockTy>(&Block);
+    });
+  }
 };
 
 class VPInterleavedAccessInfo {
