@@ -695,10 +695,10 @@ sizeof...($TemplateParameter[[Elements]]);
         };
         template <typename $TemplateParameter_decl[[T]]>
         struct $Class_decl[[Derived]] : $Class[[Base]]<$TemplateParameter[[T]]> {
-          using $Class[[Base]]<$TemplateParameter[[T]]>::$Unknown_dependentName[[member]];
+          using $Class[[Base]]<$TemplateParameter[[T]]>::$Field_dependentName[[member]];
 
           void $Method_decl[[method]]() {
-            (void)$Unknown_dependentName[[member]];
+            (void)$Field_dependentName[[member]];
           }
         };
       )cpp",
