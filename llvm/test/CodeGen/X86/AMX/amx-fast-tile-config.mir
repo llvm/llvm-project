@@ -1,0 +1,465 @@
+# RUN: llc -o - -mtriple=x86_64-unknown-unknown -mattr=+amx-int8 -mattr=+avx512f -run-pass=fasttileconfig %s | FileCheck %s
+
+--- |
+
+  @buf = dso_local global [1024 x i8] zeroinitializer, align 16
+  @buf2 = dso_local global [1024 x i8] zeroinitializer, align 16
+
+  define dso_local void @test_api(i32 %cond, i16 signext %row, i16 signext %col) local_unnamed_addr #0 {
+  entry:
+    %0 = alloca <16 x i32>, align 4
+    %1 = alloca <16 x i32>, align 4
+    %2 = alloca <16 x i32>, align 4
+    %3 = alloca <16 x i32>, align 4
+    %4 = alloca <16 x i32>, align 4
+    %5 = alloca <16 x i32>, align 4
+    %6 = alloca <16 x i32>, align 4
+    %7 = alloca <16 x i32>, align 4
+    %8 = alloca <256 x i32>, align 1024
+    %9 = bitcast <256 x i32>* %8 to i8*
+    %10 = alloca <256 x i32>, align 1024
+    %11 = bitcast <256 x i32>* %10 to i8*
+    %12 = alloca <256 x i32>, align 1024
+    %13 = bitcast <256 x i32>* %12 to i8*
+    %14 = alloca <256 x i32>, align 1024
+    %15 = bitcast <256 x i32>* %14 to i8*
+    %tobool.not = icmp eq i32 %cond, 0
+    br i1 %tobool.not, label %if.else, label %if.then
+
+  if.then:                                          ; preds = %entry
+    %16 = bitcast <16 x i32>* %6 to i8*
+    store <16 x i32> zeroinitializer, <16 x i32>* %6, align 64
+    %amx.tmm.0.shape.row1 = getelementptr i8, i8* %16, i64 48
+    %17 = getelementptr i8, i8* %16, i64 16
+    %amx.tmm.0.shape.col2 = bitcast i8* %17 to i16*
+    %18 = trunc i16 %row to i8
+    store volatile i8 %18, i8* %amx.tmm.0.shape.row1, align 1
+    store volatile i16 8, i16* %amx.tmm.0.shape.col2, align 2
+    call void @llvm.x86.ldtilecfg(i8* %16)
+    %19 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
+    call void @llvm.x86.tilestored64.internal(i16 %row, i16 8, i8* %13, i64 64, x86_amx %19)
+    %20 = bitcast <16 x i32>* %2 to i8*
+    store <16 x i32> zeroinitializer, <16 x i32>* %2, align 64
+    %amx.tmm.0.shape.row9 = getelementptr i8, i8* %20, i64 48
+    %21 = getelementptr i8, i8* %20, i64 16
+    %amx.tmm.0.shape.col10 = bitcast i8* %21 to i16*
+    %22 = trunc i16 8 to i8
+    store volatile i8 %22, i8* %amx.tmm.0.shape.row9, align 1
+    store volatile i16 %col, i16* %amx.tmm.0.shape.col10, align 2
+    call void @llvm.x86.ldtilecfg(i8* %20)
+    %23 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 %col, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
+    call void @llvm.x86.tilestored64.internal(i16 8, i16 %col, i8* %11, i64 64, x86_amx %23)
+    %24 = bitcast <16 x i32>* %3 to i8*
+    store <16 x i32> zeroinitializer, <16 x i32>* %3, align 64
+    %amx.tmm.0.shape.row7 = getelementptr i8, i8* %24, i64 48
+    %25 = getelementptr i8, i8* %24, i64 16
+    %amx.tmm.0.shape.col8 = bitcast i8* %25 to i16*
+    %26 = trunc i16 %row to i8
+    store volatile i8 %26, i8* %amx.tmm.0.shape.row7, align 1
+    store volatile i16 %col, i16* %amx.tmm.0.shape.col8, align 2
+    call void @llvm.x86.ldtilecfg(i8* %24)
+    %27 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 %col, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
+    call void @llvm.x86.tilestored64.internal(i16 %row, i16 %col, i8* %9, i64 64, x86_amx %27)
+    br label %if.end
+
+  if.else:                                          ; preds = %entry
+    %28 = bitcast <16 x i32>* %1 to i8*
+    store <16 x i32> zeroinitializer, <16 x i32>* %1, align 64
+    %amx.tmm.0.shape.row11 = getelementptr i8, i8* %28, i64 48
+    %29 = getelementptr i8, i8* %28, i64 16
+    %amx.tmm.0.shape.col12 = bitcast i8* %29 to i16*
+    %30 = trunc i16 %row to i8
+    store volatile i8 %30, i8* %amx.tmm.0.shape.row11, align 1
+    store volatile i16 8, i16* %amx.tmm.0.shape.col12, align 2
+    call void @llvm.x86.ldtilecfg(i8* %28)
+    %31 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf2, i64 0, i64 0), i64 32)
+    call void @llvm.x86.tilestored64.internal(i16 %row, i16 8, i8* %13, i64 64, x86_amx %31)
+    %32 = bitcast <16 x i32>* %7 to i8*
+    store <16 x i32> zeroinitializer, <16 x i32>* %7, align 64
+    %amx.tmm.0.shape.row = getelementptr i8, i8* %32, i64 48
+    %33 = getelementptr i8, i8* %32, i64 16
+    %amx.tmm.0.shape.col = bitcast i8* %33 to i16*
+    %34 = trunc i16 8 to i8
+    store volatile i8 %34, i8* %amx.tmm.0.shape.row, align 1
+    store volatile i16 %col, i16* %amx.tmm.0.shape.col, align 2
+    call void @llvm.x86.ldtilecfg(i8* %32)
+    %35 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 %col, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf2, i64 0, i64 0), i64 32)
+    call void @llvm.x86.tilestored64.internal(i16 8, i16 %col, i8* %11, i64 64, x86_amx %35)
+    %36 = bitcast <16 x i32>* %0 to i8*
+    store <16 x i32> zeroinitializer, <16 x i32>* %0, align 64
+    %amx.tmm.0.shape.row13 = getelementptr i8, i8* %36, i64 48
+    %37 = getelementptr i8, i8* %36, i64 16
+    %amx.tmm.0.shape.col14 = bitcast i8* %37 to i16*
+    %38 = trunc i16 %row to i8
+    store volatile i8 %38, i8* %amx.tmm.0.shape.row13, align 1
+    store volatile i16 %col, i16* %amx.tmm.0.shape.col14, align 2
+    call void @llvm.x86.ldtilecfg(i8* %36)
+    %39 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 %col, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf2, i64 0, i64 0), i64 32)
+    call void @llvm.x86.tilestored64.internal(i16 %row, i16 %col, i8* %9, i64 64, x86_amx %39)
+    br label %if.end
+
+  if.end:                                           ; preds = %if.else, %if.then
+    %40 = bitcast <16 x i32>* %4 to i8*
+    store <16 x i32> zeroinitializer, <16 x i32>* %4, align 64
+    %amx.tmm.0.shape.row5 = getelementptr i8, i8* %40, i64 48
+    %41 = getelementptr i8, i8* %40, i64 16
+    %amx.tmm.0.shape.col6 = bitcast i8* %41 to i16*
+    %42 = trunc i16 %row to i8
+    store volatile i8 %42, i8* %amx.tmm.0.shape.row5, align 1
+    store volatile i16 %col, i16* %amx.tmm.0.shape.col6, align 2
+    %amx.tmm.1.shape.row = getelementptr i8, i8* %40, i64 49
+    %43 = getelementptr i8, i8* %40, i64 18
+    %amx.tmm.1.shape.col = bitcast i8* %43 to i16*
+    %44 = trunc i16 %row to i8
+    store volatile i8 %44, i8* %amx.tmm.1.shape.row, align 1
+    store volatile i16 8, i16* %amx.tmm.1.shape.col, align 2
+    %amx.tmm.2.shape.row = getelementptr i8, i8* %40, i64 50
+    %45 = getelementptr i8, i8* %40, i64 20
+    %amx.tmm.2.shape.col = bitcast i8* %45 to i16*
+    %46 = trunc i16 8 to i8
+    store volatile i8 %46, i8* %amx.tmm.2.shape.row, align 1
+    store volatile i16 %col, i16* %amx.tmm.2.shape.col, align 2
+    %amx.tmm.3.shape.row = getelementptr i8, i8* %40, i64 51
+    %47 = getelementptr i8, i8* %40, i64 22
+    %amx.tmm.3.shape.col = bitcast i8* %47 to i16*
+    %48 = trunc i16 %row to i8
+    store volatile i8 %48, i8* %amx.tmm.3.shape.row, align 1
+    store volatile i16 %col, i16* %amx.tmm.3.shape.col, align 2
+    call void @llvm.x86.ldtilecfg(i8* %40)
+    %49 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 8, i8* %13, i64 64)
+    %50 = call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 %col, i8* %11, i64 64)
+    %51 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 %col, i8* %9, i64 64)
+    %52 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 %row, i16 %col, i16 8, x86_amx %51, x86_amx %49, x86_amx %50)
+    call void @llvm.x86.tilestored64.internal(i16 %row, i16 %col, i8* %15, i64 64, x86_amx %52)
+    %53 = bitcast <16 x i32>* %5 to i8*
+    store <16 x i32> zeroinitializer, <16 x i32>* %5, align 64
+    %amx.tmm.0.shape.row3 = getelementptr i8, i8* %53, i64 48
+    %54 = getelementptr i8, i8* %53, i64 16
+    %amx.tmm.0.shape.col4 = bitcast i8* %54 to i16*
+    %55 = trunc i16 %row to i8
+    store volatile i8 %55, i8* %amx.tmm.0.shape.row3, align 1
+    store volatile i16 %col, i16* %amx.tmm.0.shape.col4, align 2
+    call void @llvm.x86.ldtilecfg(i8* %53)
+    %56 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 %col, i8* %15, i64 64)
+    tail call void @llvm.x86.tilestored64.internal(i16 %row, i16 %col, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32, x86_amx %56)
+    ret void
+  }
+
+  ; Function Attrs: nounwind
+  declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, i8*, i64) #1
+
+  ; Function Attrs: nounwind
+  declare x86_amx @llvm.x86.tdpbssd.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx) #1
+
+  ; Function Attrs: nounwind
+  declare void @llvm.x86.tilestored64.internal(i16, i16, i8*, i64, x86_amx) #1
+
+  ; Function Attrs: nounwind
+  declare void @llvm.x86.ldtilecfg(i8*) #2
+
+  attributes #0 = { "target-features"="+amx-int8,+avx512f" }
+  attributes #1 = { nounwind "target-features"="+amx-int8,+avx512f" }
+  attributes #2 = { nounwind }
+
+...
+---
+name:            test_api
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$edi', virtual-reg: '' }
+  - { reg: '$esi', virtual-reg: '' }
+  - { reg: '$edx', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1024
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 64, alignment: 16,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: default, offset: 0, size: 64, alignment: 16,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: default, offset: 0, size: 64, alignment: 16,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: default, offset: 0, size: 64, alignment: 16,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, name: '', type: default, offset: 0, size: 64, alignment: 16,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 5, name: '', type: default, offset: 0, size: 64, alignment: 16,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 6, name: '', type: default, offset: 0, size: 64, alignment: 16,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 7, name: '', type: default, offset: 0, size: 64, alignment: 16,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 8, name: '', type: default, offset: 0, size: 1024, alignment: 1024,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 9, name: '', type: default, offset: 0, size: 1024, alignment: 1024,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 10, name: '', type: default, offset: 0, size: 1024, alignment: 1024,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 11, name: '', type: default, offset: 0, size: 1024, alignment: 1024,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 12, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 13, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 14, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 15, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 16, name: '', type: spill-slot, offset: 0, size: 2, alignment: 2,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 17, name: '', type: spill-slot, offset: 0, size: 2, alignment: 2,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x40000000), %bb.1(0x40000000)
+    liveins: $edi, $esi, $edx
+
+    renamable $ax = COPY renamable $dx, implicit killed $edx
+    MOV16mr %stack.17, 1, $noreg, 0, $noreg, killed $ax :: (store 2 into %stack.17)
+    renamable $ax = COPY renamable $si, implicit killed $esi
+    MOV16mr %stack.16, 1, $noreg, 0, $noreg, killed $ax :: (store 2 into %stack.16)
+    renamable $rax = LEA64r %stack.8, 1, $noreg, 0, $noreg
+    MOV64mr %stack.15, 1, $noreg, 0, $noreg, killed $rax :: (store 8 into %stack.15)
+    renamable $rax = LEA64r %stack.9, 1, $noreg, 0, $noreg
+    MOV64mr %stack.14, 1, $noreg, 0, $noreg, killed $rax :: (store 8 into %stack.14)
+    renamable $rax = LEA64r %stack.10, 1, $noreg, 0, $noreg
+    MOV64mr %stack.13, 1, $noreg, 0, $noreg, killed $rax :: (store 8 into %stack.13)
+    renamable $rax = LEA64r %stack.11, 1, $noreg, 0, $noreg
+    MOV64mr %stack.12, 1, $noreg, 0, $noreg, killed $rax :: (store 8 into %stack.12)
+    CMP32ri8 killed renamable $edi, 0, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1.if.then:
+    successors: %bb.3(0x80000000)
+     ; CHECK-LABEL: bb.1.if.then
+     ; tmm0 --> row_offset = 48, col_offset = 16
+     ; CHECK: MOV8mr %stack.6, 1, $noreg, 48, $noreg, killed renamable $sil :: (volatile store 1 into %ir.amx.tmm.0.shape.row1)
+     ; CHECK: MOV16mi %stack.6, 1, $noreg, 16, $noreg, 8 :: (volatile store 2 into %ir.amx.tmm.0.shape.col2)
+     ; CHECK: LDTILECFG %stack.6, 1, $noreg, 0, $noreg
+     ; CHECK: renamable $tmm0 = PTILELOADDV renamable $ax, renamable $si, renamable $r9, 1, renamable $r10, 0, $noreg
+     ; CHECK: PTILESTOREDV renamable $ax, renamable $si, renamable $r11, 1, renamable $r8, 0, $noreg, killed renamable $tmm0
+
+     ; tmm1 --> row_offset = 49, col_offset = 18
+     ; CHECK: MOV8mi %stack.2, 1, $noreg, 49, $noreg, 8 :: (volatile store 1 into %ir.amx.tmm.0.shape.row9)
+     ; CHECK: MOV16mr %stack.2, 1, $noreg, 18, $noreg, renamable $cx :: (volatile store 2 into %ir.amx.tmm.0.shape.col10)
+     ; CHECK: LDTILECFG %stack.2, 1, $noreg, 0, $noreg
+     ; CHECK: renamable $tmm1 = PTILELOADDV renamable $si, renamable $cx, killed renamable $r9, 1, killed renamable $r10, 0, $noreg
+     ; CHECK: PTILESTOREDV killed renamable $si, renamable $cx, renamable $rdi, 1, killed renamable $r8, 0, $noreg, killed renamable $tmm1
+
+     ; tmm2 --> row_offset = 50, col_offset = 20
+     ; CHECK: MOV8mr %stack.3, 1, $noreg, 50, $noreg, killed renamable $dil :: (volatile store 1 into %ir.amx.tmm.0.shape.row7)
+     ; CHECK: MOV16mr %stack.3, 1, $noreg, 20, $noreg, renamable $cx :: (volatile store 2 into %ir.amx.tmm.0.shape.col8)
+     ; CHECK: LDTILECFG killed renamable $rsi, 1, $noreg, 0, $noreg
+     ; CHECK: renamable $tmm2 = PTILELOADDV renamable $ax, renamable $cx, killed renamable $rsi, 1, killed renamable $rdi, 0, $noreg
+     ; CHECK: PTILESTOREDV renamable $ax, renamable $cx, renamable $rdx, 1, killed renamable $rsi, 0, $noreg, killed renamable $tmm2
+
+    $ax = MOV16rm %stack.16, 1, $noreg, 0, $noreg :: (load 2 from %stack.16)
+    $cx = MOV16rm %stack.17, 1, $noreg, 0, $noreg :: (load 2 from %stack.17)
+    $rdx = MOV64rm %stack.15, 1, $noreg, 0, $noreg :: (load 8 from %stack.15)
+    $rdi = MOV64rm %stack.14, 1, $noreg, 0, $noreg :: (load 8 from %stack.14)
+    $r11 = MOV64rm %stack.13, 1, $noreg, 0, $noreg :: (load 8 from %stack.13)
+    renamable $zmm0 = AVX512_512_SET0
+    VMOVDQA64Zmr %stack.6, 1, $noreg, 0, $noreg, renamable $zmm0 :: (store 64 into %ir.6)
+    renamable $sil = COPY renamable $al
+    MOV8mr %stack.6, 1, $noreg, 48, $noreg, killed renamable $sil :: (volatile store 1 into %ir.amx.tmm.0.shape.row1)
+    MOV16mi %stack.6, 1, $noreg, 16, $noreg, 8 :: (volatile store 2 into %ir.amx.tmm.0.shape.col2)
+    LDTILECFG %stack.6, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7
+    renamable $r9 = MOV32ri64 @buf
+    renamable $r10 = MOV32ri64 32
+    renamable $si = MOV16ri 8
+    renamable $tmm0 = PTILELOADDV renamable $ax, renamable $si, renamable $r9, 1, renamable $r10, 0, $noreg
+    renamable $r8 = MOV32ri64 64
+    PTILESTOREDV renamable $ax, renamable $si, renamable $r11, 1, renamable $r8, 0, $noreg, killed renamable $tmm0
+    VMOVDQA64Zmr %stack.2, 1, $noreg, 0, $noreg, renamable $zmm0 :: (store 64 into %ir.2)
+    MOV8mi %stack.2, 1, $noreg, 48, $noreg, 8 :: (volatile store 1 into %ir.amx.tmm.0.shape.row9)
+    MOV16mr %stack.2, 1, $noreg, 16, $noreg, renamable $cx :: (volatile store 2 into %ir.amx.tmm.0.shape.col10)
+    LDTILECFG %stack.2, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7
+    renamable $tmm1 = PTILELOADDV renamable $si, renamable $cx, killed renamable $r9, 1, killed renamable $r10, 0, $noreg
+    PTILESTOREDV killed renamable $si, renamable $cx, renamable $rdi, 1, killed renamable $r8, 0, $noreg, killed renamable $tmm1
+    renamable $rsi = LEA64r %stack.3, 1, $noreg, 0, $noreg
+    VMOVDQA64Zmr %stack.3, 1, $noreg, 0, $noreg, killed renamable $zmm0 :: (store 64 into %ir.3)
+    renamable $dil = COPY renamable $al
+    MOV8mr %stack.3, 1, $noreg, 48, $noreg, killed renamable $dil :: (volatile store 1 into %ir.amx.tmm.0.shape.row7)
+    MOV16mr %stack.3, 1, $noreg, 16, $noreg, renamable $cx :: (volatile store 2 into %ir.amx.tmm.0.shape.col8)
+    LDTILECFG killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7
+    renamable $rsi = MOV32ri64 @buf
+    renamable $rdi = MOV32ri64 32
+    renamable $tmm2 = PTILELOADDV renamable $ax, renamable $cx, killed renamable $rsi, 1, killed renamable $rdi, 0, $noreg
+    renamable $rsi = MOV32ri64 64
+    PTILESTOREDV renamable $ax, renamable $cx, renamable $rdx, 1, killed renamable $rsi, 0, $noreg, killed renamable $tmm2
+    JMP_1 %bb.3
+
+  bb.2.if.else:
+    successors: %bb.3(0x80000000)
+
+     ; CHECK-LABEL: bb.2.if.else
+     ; tmm3 --> row_offset = 51, col_offset = 22
+     ; CHECK: MOV8mr %stack.1, 1, $noreg, 51, $noreg, killed renamable $sil :: (volatile store 1 into %ir.amx.tmm.0.shape.row11)
+     ; CHECK: MOV16mi %stack.1, 1, $noreg, 22, $noreg, 8 :: (volatile store 2 into %ir.amx.tmm.0.shape.col12)
+     ; CHECK: LDTILECFG %stack.1, 1, $noreg, 0, $noreg
+     ; CHECK: renamable $tmm3 = PTILELOADDV renamable $ax, renamable $si, renamable $r9, 1, renamable $r10, 0, $noreg
+     ; CHECK: PTILESTOREDV renamable $ax, renamable $si, renamable $r11, 1, renamable $r8, 0, $noreg, killed renamable $tmm3
+
+     ; tmm4 --> row_offset = 52, col_offset = 24
+     ; CHECK: MOV8mi %stack.7, 1, $noreg, 52, $noreg, 8 :: (volatile store 1 into %ir.amx.tmm.0.shape.row)
+     ; CHECK: MOV16mr %stack.7, 1, $noreg, 24, $noreg, renamable $cx :: (volatile store 2 into %ir.amx.tmm.0.shape.col)
+     ; CHECK: LDTILECFG %stack.7, 1, $noreg, 0, $noreg
+     ; CHECK: renamable $tmm4 = PTILELOADDV renamable $si, renamable $cx, killed renamable $r9, 1, killed renamable $r10, 0, $noreg
+     ; CHECK: PTILESTOREDV killed renamable $si, renamable $cx, renamable $rdi, 1, killed renamable $r8, 0, $noreg, killed renamable $tmm4
+
+     ; tmm4 --> row_offset = 53, col_offset = 26
+     ; CHECK: MOV8mr %stack.0, 1, $noreg, 53, $noreg, killed renamable $dil :: (volatile store 1 into %ir.amx.tmm.0.shape.row13)
+     ; CHECK: MOV16mr %stack.0, 1, $noreg, 26, $noreg, renamable $cx :: (volatile store 2 into %ir.amx.tmm.0.shape.col14)
+     ; CHECK: LDTILECFG killed renamable $rsi, 1, $noreg, 0, $noreg
+     ; CHECK: renamable $tmm5 = PTILELOADDV renamable $ax, renamable $cx, killed renamable $rsi, 1, killed renamable $rdi, 0, $noreg
+     ; CHECK: PTILESTOREDV renamable $ax, renamable $cx, renamable $rdx, 1, killed renamable $rsi, 0, $noreg, killed renamable $tmm5
+
+    $ax = MOV16rm %stack.16, 1, $noreg, 0, $noreg :: (load 2 from %stack.16)
+    $cx = MOV16rm %stack.17, 1, $noreg, 0, $noreg :: (load 2 from %stack.17)
+    $rdx = MOV64rm %stack.15, 1, $noreg, 0, $noreg :: (load 8 from %stack.15)
+    $rdi = MOV64rm %stack.14, 1, $noreg, 0, $noreg :: (load 8 from %stack.14)
+    $r11 = MOV64rm %stack.13, 1, $noreg, 0, $noreg :: (load 8 from %stack.13)
+    renamable $zmm0 = AVX512_512_SET0
+    VMOVDQA64Zmr %stack.1, 1, $noreg, 0, $noreg, renamable $zmm0 :: (store 64 into %ir.1)
+    renamable $sil = COPY renamable $al
+    MOV8mr %stack.1, 1, $noreg, 48, $noreg, killed renamable $sil :: (volatile store 1 into %ir.amx.tmm.0.shape.row11)
+    MOV16mi %stack.1, 1, $noreg, 16, $noreg, 8 :: (volatile store 2 into %ir.amx.tmm.0.shape.col12)
+    LDTILECFG %stack.1, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7
+    renamable $r9 = MOV32ri64 @buf2
+    renamable $r10 = MOV32ri64 32
+    renamable $si = MOV16ri 8
+    renamable $tmm3 = PTILELOADDV renamable $ax, renamable $si, renamable $r9, 1, renamable $r10, 0, $noreg
+    renamable $r8 = MOV32ri64 64
+    PTILESTOREDV renamable $ax, renamable $si, renamable $r11, 1, renamable $r8, 0, $noreg, killed renamable $tmm3
+    VMOVDQA64Zmr %stack.7, 1, $noreg, 0, $noreg, renamable $zmm0 :: (store 64 into %ir.7)
+    MOV8mi %stack.7, 1, $noreg, 48, $noreg, 8 :: (volatile store 1 into %ir.amx.tmm.0.shape.row)
+    MOV16mr %stack.7, 1, $noreg, 16, $noreg, renamable $cx :: (volatile store 2 into %ir.amx.tmm.0.shape.col)
+    LDTILECFG %stack.7, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7
+    renamable $tmm4 = PTILELOADDV renamable $si, renamable $cx, killed renamable $r9, 1, killed renamable $r10, 0, $noreg
+    PTILESTOREDV killed renamable $si, renamable $cx, renamable $rdi, 1, killed renamable $r8, 0, $noreg, killed renamable $tmm4
+    renamable $rsi = LEA64r %stack.0, 1, $noreg, 0, $noreg
+    VMOVDQA64Zmr %stack.0, 1, $noreg, 0, $noreg, killed renamable $zmm0 :: (store 64 into %ir.0)
+    renamable $dil = COPY renamable $al
+    MOV8mr %stack.0, 1, $noreg, 48, $noreg, killed renamable $dil :: (volatile store 1 into %ir.amx.tmm.0.shape.row13)
+    MOV16mr %stack.0, 1, $noreg, 16, $noreg, renamable $cx :: (volatile store 2 into %ir.amx.tmm.0.shape.col14)
+    LDTILECFG killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7
+    renamable $rsi = MOV32ri64 @buf2
+    renamable $rdi = MOV32ri64 32
+    renamable $tmm5 = PTILELOADDV renamable $ax, renamable $cx, killed renamable $rsi, 1, killed renamable $rdi, 0, $noreg
+    renamable $rsi = MOV32ri64 64
+    PTILESTOREDV renamable $ax, renamable $cx, renamable $rdx, 1, killed renamable $rsi, 0, $noreg, killed renamable $tmm5
+
+  bb.3.if.end:
+     ; CHECK-LABEL: bb.3.if.end
+     ; tmm0 --> row_offset = 48, col_offset = 16
+     ; tmm1 --> row_offset = 49, col_offset = 18
+     ; tmm2 --> row_offset = 50, col_offset = 20
+     ; CHECK: MOV8mr %stack.4, 1, $noreg, 48, $noreg, renamable $sil :: (volatile store 1 into %ir.amx.tmm.0.shape.row5)
+     ; CHECK: MOV16mr %stack.4, 1, $noreg, 16, $noreg, renamable $cx :: (volatile store 2 into %ir.amx.tmm.0.shape.col6)
+     ; CHECK: MOV8mr %stack.4, 1, $noreg, 49, $noreg, renamable $sil :: (volatile store 1 into %ir.amx.tmm.1.shape.row)
+     ; CHECK: MOV16mi %stack.4, 1, $noreg, 18, $noreg, 8 :: (volatile store 2 into %ir.amx.tmm.1.shape.col)
+     ; CHECK: MOV8mi %stack.4, 1, $noreg, 50, $noreg, 8 :: (volatile store 1 into %ir.amx.tmm.2.shape.row)
+     ; CHECK: MOV16mr %stack.4, 1, $noreg, 20, $noreg, renamable $cx :: (volatile store 2 into %ir.amx.tmm.2.shape.col)
+     ; CHECK: MOV8mr %stack.4, 1, $noreg, 48, $noreg, killed renamable $sil :: (volatile store 1 into %ir.amx.tmm.3.shape.row)
+     ; CHECK: MOV16mr %stack.4, 1, $noreg, 16, $noreg, renamable $cx :: (volatile store 2 into %ir.amx.tmm.3.shape.col)
+     ; CHECK: LDTILECFG %stack.4, 1, $noreg, 0, $noreg, implicit-def dead $tmm0
+     ; CHECK: renamable $tmm1 = PTILELOADDV renamable $ax, renamable $di, killed renamable $r10, 1, renamable $rsi, 0, $noreg
+     ; CHECK: renamable $tmm2 = PTILELOADDV renamable $di, renamable $cx, killed renamable $r9, 1, renamable $rsi, 0, $noreg
+     ; CHECK: renamable $tmm0 = PTILELOADDV renamable $ax, renamable $cx, killed renamable $r8, 1, renamable $rsi, 0, $noreg
+     ; CHECK: renamable $tmm0 = PTDPBSSDV renamable $ax, renamable $cx, killed renamable $di, renamable $tmm0, killed renamable $tmm1, killed renamable $tmm2
+     ; CHECK: PTILESTOREDV renamable $ax, renamable $cx, renamable $rdx, 1, killed renamable $rsi, 0, $noreg, killed renamable $tmm0
+
+     ; tmm6 --> row_offset = 54, col_offset = 28
+     ; CHECK: MOV8mr %stack.5, 1, $noreg, 54, $noreg, killed renamable $dil :: (volatile store 1 into %ir.amx.tmm.0.shape.row3)
+     ; CHECK: MOV16mr %stack.5, 1, $noreg, 28, $noreg, renamable $cx :: (volatile store 2 into %ir.amx.tmm.0.shape.col4)
+     ; CHECK: LDTILECFG killed renamable $rsi, 1, $noreg, 0, $noreg
+     ; CHECK: renamable $tmm6 = PTILELOADDV renamable $ax, renamable $cx, killed renamable $rdx, 1, killed renamable $rsi, 0, $noreg
+     ; CHECK: PTILESTOREDV killed renamable $ax, killed renamable $cx, killed renamable $rdx, 1, killed renamable $rsi, 0, $noreg, killed renamable $tmm6
+
+    $ax = MOV16rm %stack.16, 1, $noreg, 0, $noreg :: (load 2 from %stack.16)
+    $cx = MOV16rm %stack.17, 1, $noreg, 0, $noreg :: (load 2 from %stack.17)
+    $rdx = MOV64rm %stack.12, 1, $noreg, 0, $noreg :: (load 8 from %stack.12)
+    $r8 = MOV64rm %stack.15, 1, $noreg, 0, $noreg :: (load 8 from %stack.15)
+    $r9 = MOV64rm %stack.14, 1, $noreg, 0, $noreg :: (load 8 from %stack.14)
+    $r10 = MOV64rm %stack.13, 1, $noreg, 0, $noreg :: (load 8 from %stack.13)
+    renamable $zmm0 = AVX512_512_SET0
+    VMOVDQA64Zmr %stack.4, 1, $noreg, 0, $noreg, renamable $zmm0 :: (store 64 into %ir.4)
+    renamable $sil = COPY renamable $al
+    MOV8mr %stack.4, 1, $noreg, 48, $noreg, renamable $sil :: (volatile store 1 into %ir.amx.tmm.0.shape.row5)
+    MOV16mr %stack.4, 1, $noreg, 16, $noreg, renamable $cx :: (volatile store 2 into %ir.amx.tmm.0.shape.col6)
+    MOV8mr %stack.4, 1, $noreg, 49, $noreg, renamable $sil :: (volatile store 1 into %ir.amx.tmm.1.shape.row)
+    MOV16mi %stack.4, 1, $noreg, 18, $noreg, 8 :: (volatile store 2 into %ir.amx.tmm.1.shape.col)
+    MOV8mi %stack.4, 1, $noreg, 50, $noreg, 8 :: (volatile store 1 into %ir.amx.tmm.2.shape.row)
+    MOV16mr %stack.4, 1, $noreg, 20, $noreg, renamable $cx :: (volatile store 2 into %ir.amx.tmm.2.shape.col)
+    MOV8mr %stack.4, 1, $noreg, 51, $noreg, killed renamable $sil :: (volatile store 1 into %ir.amx.tmm.3.shape.row)
+    MOV16mr %stack.4, 1, $noreg, 22, $noreg, renamable $cx :: (volatile store 2 into %ir.amx.tmm.3.shape.col)
+    LDTILECFG %stack.4, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7
+    renamable $rsi = MOV32ri64 64
+    renamable $di = MOV16ri 8
+    renamable $tmm1 = PTILELOADDV renamable $ax, renamable $di, killed renamable $r10, 1, renamable $rsi, 0, $noreg
+    renamable $tmm2 = PTILELOADDV renamable $di, renamable $cx, killed renamable $r9, 1, renamable $rsi, 0, $noreg
+    renamable $tmm0 = PTILELOADDV renamable $ax, renamable $cx, killed renamable $r8, 1, renamable $rsi, 0, $noreg
+    renamable $tmm0 = PTDPBSSDV renamable $ax, renamable $cx, killed renamable $di, renamable $tmm0, killed renamable $tmm1, killed renamable $tmm2
+    PTILESTOREDV renamable $ax, renamable $cx, renamable $rdx, 1, killed renamable $rsi, 0, $noreg, killed renamable $tmm0
+    renamable $rsi = LEA64r %stack.5, 1, $noreg, 0, $noreg
+    VMOVDQA64Zmr %stack.5, 1, $noreg, 0, $noreg, killed renamable $zmm0 :: (store 64 into %ir.5)
+    renamable $dil = COPY renamable $al
+    MOV8mr %stack.5, 1, $noreg, 48, $noreg, killed renamable $dil :: (volatile store 1 into %ir.amx.tmm.0.shape.row3)
+    MOV16mr %stack.5, 1, $noreg, 16, $noreg, renamable $cx :: (volatile store 2 into %ir.amx.tmm.0.shape.col4)
+    LDTILECFG killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7
+    renamable $rsi = MOV32ri64 64
+    renamable $tmm6 = PTILELOADDV renamable $ax, renamable $cx, killed renamable $rdx, 1, killed renamable $rsi, 0, $noreg
+    renamable $rdx = MOV32ri64 @buf
+    renamable $rsi = MOV32ri64 32
+    PTILESTOREDV killed renamable $ax, killed renamable $cx, killed renamable $rdx, 1, killed renamable $rsi, 0, $noreg, killed renamable $tmm6
+    RETQ
+
+...
