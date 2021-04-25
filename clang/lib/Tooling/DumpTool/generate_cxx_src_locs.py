@@ -12,7 +12,10 @@ class Generator(object):
 
     implementationContent = ''
 
-    RefClades = {"NestedNameSpecifierLoc", "TemplateArgumentLoc", "TypeLoc"}
+    RefClades = {"DeclarationNameInfo",
+        "NestedNameSpecifierLoc",
+        "TemplateArgumentLoc",
+        "TypeLoc"}
 
     def __init__(self, templateClasses):
         self.templateClasses = templateClasses
@@ -121,7 +124,8 @@ static void GetLocations{0}(SharedLocationCall const& Prefix,
             self.implementationContent += '\n'
 
         if 'typeLocs' in ClassData or 'typeSourceInfos' in ClassData \
-                or 'nestedNameLocs' in ClassData:
+                or 'nestedNameLocs' in ClassData \
+                or 'declNameInfos' in ClassData:
             if CreateLocalRecursionGuard:
                 self.implementationContent += \
                     'std::vector<clang::TypeLoc> TypeLocRecursionGuard;\n'
@@ -165,6 +169,15 @@ static void GetLocations{0}(SharedLocationCall const& Prefix,
                     Object.{0}(), Locs, Rngs, TypeLocRecursionGuard);
               """.format(NN)
 
+            if 'declNameInfos' in ClassData:
+                for declName in ClassData['declNameInfos']:
+
+                    self.implementationContent += \
+                        """
+                      GetLocationsImpl(
+                          llvm::makeIntrusiveRefCnt<LocationCall>(Prefix, "{0}"),
+                          Object.{0}(), Locs, Rngs, TypeLocRecursionGuard);
+                      """.format(declName)
 
         self.implementationContent += '}\n'
 
@@ -300,6 +313,8 @@ if (auto Derived = llvm::dyn_cast<clang::{0}>(Object)) {{
             + ' NodeIntrospection::' + Signature + '{'
 
         for CladeName in CladeNames:
+            if CladeName == "DeclarationNameInfo":
+                continue
             self.implementationContent += \
                 """
     if (const auto *N = Node.get<{0}>())
@@ -376,10 +391,7 @@ def main():
         cladeName = getCladeName(ClassName)
         g.GenerateSrcLocMethod(
             ClassName, ClassAccessors,
-            cladeName not in [
-                      'NestedNameSpecifierLoc',
-                      'TemplateArgumentLoc',
-                      'TypeLoc'])
+            cladeName not in Generator.RefClades)
 
     for (CladeName, ClassNameData) in jsonData['classesInClade'].items():
         g.GenerateBaseGetLocationsFunction(
@@ -387,10 +399,7 @@ def main():
             jsonData['classEntries'],
             CladeName,
             jsonData["classInheritance"],
-            CladeName not in [
-                      'NestedNameSpecifierLoc',
-                      'TemplateArgumentLoc',
-                      'TypeLoc'])
+            CladeName not in Generator.RefClades)
 
     g.GenerateDynNodeVisitor(jsonData['classesInClade'].keys())
 
