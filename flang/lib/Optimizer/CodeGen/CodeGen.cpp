@@ -752,19 +752,6 @@ struct CmpcOpConversion : public FIROpConversion<fir::CmpcOp> {
   }
 };
 
-struct CmpfOpConversion : public FIROpConversion<fir::CmpfOp> {
-  using FIROpConversion::FIROpConversion;
-
-  mlir::LogicalResult
-  matchAndRewrite(fir::CmpfOp cmp, OperandTy operands,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    auto type = convertType(cmp.getType());
-    rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(cmp, type, operands,
-                                                    cmp->getAttrs());
-    return success();
-  }
-};
-
 struct ConstcOpConversion : public FIROpConversion<fir::ConstcOp> {
   using FIROpConversion::FIROpConversion;
 
@@ -2937,7 +2924,7 @@ public:
         BoxCharLenOpConversion, BoxDimsOpConversion, BoxEleSizeOpConversion,
         BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
         BoxProcHostOpConversion, BoxRankOpConversion, BoxTypeDescOpConversion,
-        CallOpConversion, CmpcOpConversion, CmpfOpConversion,
+        CallOpConversion, CmpcOpConversion,
         ConstcOpConversion, ConvertOpConversion, CoordinateOpConversion,
         DispatchOpConversion, DispatchTableOpConversion, DivcOpConversion,
         DTEntryOpConversion, EmboxOpConversion, EmboxCharOpConversion,

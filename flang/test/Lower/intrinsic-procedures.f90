@@ -168,7 +168,7 @@ subroutine dim_testr(x, y, z)
   ! CHECK-DAG: %[[y:.*]] = fir.load %arg1
   ! CHECK-DAG: %[[zero:.*]] = constant 0.0
   ! CHECK-DAG: %[[diff:.*]] = subf %[[x]], %[[y]]
-  ! CHECK: %[[cmp:.*]] = fir.cmpf "ogt", %[[diff]], %[[zero]]
+  ! CHECK: %[[cmp:.*]] = cmpf ogt, %[[diff]], %[[zero]]
   ! CHECK: %[[res:.*]] = select %[[cmp]], %[[diff]], %[[zero]]
   ! CHECK: fir.store %[[res]] to %arg2
   z = dim(x, y)
@@ -604,7 +604,7 @@ subroutine sign_testr(a, b, c)
   real a, b, c
   ! CHECK-DAG: fir.call {{.*}}fabs
   ! CHECK-DAG: fir.negf
-  ! CHECK-DAG: fir.cmpf "olt"
+  ! CHECK-DAG: cmpf olt
   ! CHECK: select
   c = sign(a, b)
 end subroutine

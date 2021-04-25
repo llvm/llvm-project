@@ -1,19 +1,5 @@
 // RUN: fir-opt %s | tco --target=x86_64-unknown-linux-gnu | FileCheck %s
 
-// CHECK-LABEL: define i1 @cmp(x86_fp80 %0, x86_fp80 %1)
-func @cmp(%a : !fir.real<10>, %b : !fir.real<10>) -> i1 {
-// CHECK: fcmp oeq x86_fp80 %0, %1
-  %1 = "fir.cmpf"(%a, %b) {predicate = 1} : (!fir.real<10>, !fir.real<10>) -> i1
-  return %1 : i1
-}
-
-// CHECK-LABEL: define i1 @cmp2(fp128 %0, fp128 %1)
-func @cmp2(%a : !fir.real<16>, %b : !fir.real<16>) -> i1 {
- // CHECK: fcmp ult fp128 %0, %1
-  %1 = fir.cmpf "ult", %a, %b : !fir.real<16>
-  return %1 : i1
-}
-
 // CHECK-LABEL: define i1 @cmp3(<2 x float> %0, <2 x float> %1)
 func @cmp3(%a : !fir.complex<4>, %b : !fir.complex<4>) -> i1 {
   // CHECK: fcmp oeq float

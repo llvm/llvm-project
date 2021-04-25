@@ -59,7 +59,7 @@ func @foo(%arg0: !fir.ref<f32>) -> f32 {
   %cst = constant 0.000000e+00 : f32
   // CHECK: load float, float* %[[var]],
   %2 = fir.load %0 : !fir.ref<f32>
-  %3 = fir.cmpf "olt", %2, %cst : f32
+  %3 = cmpf olt, %2, %cst : f32
   fir.if %3 {
     // CHECK: load float, float* %[[var]]
     %7 = fir.load %0 : !fir.ref<f32>

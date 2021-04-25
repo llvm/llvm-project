@@ -441,51 +441,6 @@ fir.dispatch_table @dispatch_tbl {
   fir.dt_entry "method", @method_impl
 }
 
-// CHECK-LABEL: func @compare_real(
-// CHECK-SAME: [[VAL_133:%.*]]: f128, [[VAL_134:%.*]]: f128) {
-func @compare_real(%a : f128, %b : f128) {
-
-// CHECK: [[VAL_135:%.*]] = fir.cmpf "false", [[VAL_133]], [[VAL_134]] : f128
-// CHECK: [[VAL_136:%.*]] = fir.cmpf "oeq", [[VAL_133]], [[VAL_134]] : f128
-// CHECK: [[VAL_137:%.*]] = fir.cmpf "ogt", [[VAL_133]], [[VAL_134]] : f128
-// CHECK: [[VAL_138:%.*]] = fir.cmpf "oge", [[VAL_133]], [[VAL_134]] : f128
-  %d0 = fir.cmpf "false", %a, %b : f128
-  %d1 = fir.cmpf "oeq", %a, %b : f128
-  %d2 = fir.cmpf "ogt", %a, %b : f128
-  %d3 = fir.cmpf "oge", %a, %b : f128
-
-// CHECK: [[VAL_139:%.*]] = fir.cmpf "olt", [[VAL_133]], [[VAL_134]] : f128
-// CHECK: [[VAL_140:%.*]] = fir.cmpf "ole", [[VAL_133]], [[VAL_134]] : f128
-// CHECK: [[VAL_141:%.*]] = fir.cmpf "one", [[VAL_133]], [[VAL_134]] : f128
-// CHECK: [[VAL_142:%.*]] = fir.cmpf "ord", [[VAL_133]], [[VAL_134]] : f128
-  %a0 = fir.cmpf "olt", %a, %b : f128
-  %a1 = fir.cmpf "ole", %a, %b : f128
-  %a2 = fir.cmpf "one", %a, %b : f128
-  %a3 = fir.cmpf "ord", %a, %b : f128
-
-// CHECK: [[VAL_143:%.*]] = fir.cmpf "ueq", [[VAL_133]], [[VAL_134]] : f128
-// CHECK: [[VAL_144:%.*]] = fir.cmpf "ugt", [[VAL_133]], [[VAL_134]] : f128
-// CHECK: [[VAL_145:%.*]] = fir.cmpf "uge", [[VAL_133]], [[VAL_134]] : f128
-// CHECK: [[VAL_146:%.*]] = fir.cmpf "ult", [[VAL_133]], [[VAL_134]] : f128
-  %b0 = fir.cmpf "ueq", %a, %b : f128
-  %b1 = fir.cmpf "ugt", %a, %b : f128
-  %b2 = fir.cmpf "uge", %a, %b : f128
-  %b3 = fir.cmpf "ult", %a, %b : f128
-
-// CHECK: [[VAL_147:%.*]] = fir.cmpf "ule", [[VAL_133]], [[VAL_134]] : f128
-// CHECK: [[VAL_148:%.*]] = fir.cmpf "une", [[VAL_133]], [[VAL_134]] : f128
-// CHECK: [[VAL_149:%.*]] = fir.cmpf "uno", [[VAL_133]], [[VAL_134]] : f128
-// CHECK: [[VAL_150:%.*]] = fir.cmpf "true", [[VAL_133]], [[VAL_134]] : f128
-  %c0 = fir.cmpf "ule", %a, %b : f128
-  %c1 = fir.cmpf "une", %a, %b : f128
-  %c2 = fir.cmpf "uno", %a, %b : f128
-  %c3 = fir.cmpf "true", %a, %b : f128
-
-// CHECK: return
-// CHECK: }
-  return
-}
-
 // CHECK-LABEL: func @compare_complex(
 // CHECK-SAME: [[VAL_151:%.*]]: !fir.complex<16>, [[VAL_152:%.*]]: !fir.complex<16>) {
 func @compare_complex(%a : !fir.complex<16>, %b : !fir.complex<16>) {

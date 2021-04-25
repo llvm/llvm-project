@@ -485,24 +485,8 @@ static mlir::LogicalResult verify(fir::CharConvertOp op) {
 }
 
 //===----------------------------------------------------------------------===//
-// CmpfOp
+// CmpcOp
 //===----------------------------------------------------------------------===//
-
-// Note: getCmpFPredicateNames() is inline static in StandardOps/IR/Ops.cpp
-mlir::CmpFPredicate fir::CmpfOp::getPredicateByName(llvm::StringRef name) {
-  auto pred = mlir::symbolizeCmpFPredicate(name);
-  assert(pred.hasValue() && "invalid predicate name");
-  return pred.getValue();
-}
-
-void fir::buildCmpFOp(OpBuilder &builder, OperationState &result,
-                      CmpFPredicate predicate, Value lhs, Value rhs) {
-  result.addOperands({lhs, rhs});
-  result.types.push_back(builder.getI1Type());
-  result.addAttribute(
-      CmpfOp::getPredicateAttrName(),
-      builder.getI64IntegerAttr(static_cast<int64_t>(predicate)));
-}
 
 template <typename OPTY>
 static void printCmpOp(OpAsmPrinter &p, OPTY op) {
@@ -520,8 +504,6 @@ static void printCmpOp(OpAsmPrinter &p, OPTY op) {
                           /*elidedAttrs=*/{OPTY::getPredicateAttrName()});
   p << " : " << op.lhs().getType();
 }
-
-static void printCmpfOp(OpAsmPrinter &p, CmpfOp op) { printCmpOp(p, op); }
 
 template <typename OPTY>
 static mlir::ParseResult parseCmpOp(mlir::OpAsmParser &parser,
@@ -544,7 +526,7 @@ static mlir::ParseResult parseCmpOp(mlir::OpAsmParser &parser,
   // Rewrite string attribute to an enum value.
   llvm::StringRef predicateName =
       predicateNameAttr.cast<mlir::StringAttr>().getValue();
-  auto predicate = fir::CmpfOp::getPredicateByName(predicateName);
+  auto predicate = fir::CmpcOp::getPredicateByName(predicateName);
   auto builder = parser.getBuilder();
   mlir::Type i1Type = builder.getI1Type();
   attrs.set(OPTY::getPredicateAttrName(),
@@ -553,15 +535,6 @@ static mlir::ParseResult parseCmpOp(mlir::OpAsmParser &parser,
   result.addTypes({i1Type});
   return success();
 }
-
-mlir::ParseResult fir::parseCmpfOp(mlir::OpAsmParser &parser,
-                                   mlir::OperationState &result) {
-  return parseCmpOp<fir::CmpfOp>(parser, result);
-}
-
-//===----------------------------------------------------------------------===//
-// CmpcOp
-//===----------------------------------------------------------------------===//
 
 void fir::buildCmpCOp(OpBuilder &builder, OperationState &result,
                       CmpFPredicate predicate, Value lhs, Value rhs) {
@@ -577,6 +550,12 @@ static void printCmpcOp(OpAsmPrinter &p, fir::CmpcOp op) { printCmpOp(p, op); }
 mlir::ParseResult fir::parseCmpcOp(mlir::OpAsmParser &parser,
                                    mlir::OperationState &result) {
   return parseCmpOp<fir::CmpcOp>(parser, result);
+}
+
+mlir::CmpFPredicate fir::CmpcOp::getPredicateByName(llvm::StringRef name) {
+  auto pred = mlir::symbolizeCmpFPredicate(name);
+  assert(pred.hasValue() && "invalid predicate name");
+  return pred.getValue();
 }
 
 //===----------------------------------------------------------------------===//

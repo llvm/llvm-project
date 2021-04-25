@@ -12,7 +12,7 @@
    ! CHECK: %[[tvec:.*]] = fir.allocmem !fir.array<10x!fir.logical
    ! CHECK-DAG: fir.array_load %[[tvec]]
    ! CHECK: fir.do_loop
-   ! CHECK: fir.cmpf "ogt", %{{.*}}, %[[four]]
+   ! CHECK: cmpf ogt, %{{.*}}, %[[four]]
    ! CHECK: fir.array_merge_store %{{.*}}, %{{.*}} to %[[tvec]]
    ! CHECK: fir.do_loop
    ! CHECK: fir.coordinate_of %[[tvec]]
@@ -35,7 +35,7 @@
      ! CHECK: %[[tvec:.*]] = fir.allocmem !fir.array<10x!fir.logical
      ! CHECK: fir.array_load
      ! CHECK: fir.do_loop
-     ! CHECK: fir.cmpf "ogt", %{{.*}}, %[[cst]]
+     ! CHECK: cmpf ogt, %{{.*}}, %[[cst]]
      ! CHECK: fir.array_merge_store %{{.*}}, %{{.*}} to %[[tvec]]
      ! CHECK: fir.do_loop
      ! CHECK: fir.coordinate_of %[[tvec]]
@@ -55,7 +55,7 @@
      ! CHECK: %[[uvec:.*]] = fir.allocmem !fir.array<10x!fir.logical
      ! CHECK: fir.array_load
      ! CHECK: fir.do_loop
-     ! CHECK: fir.cmpf "ogt", %{{.*}}, %[[cst50]]
+     ! CHECK: cmpf ogt, %{{.*}}, %[[cst50]]
      ! CHECK: fir.array_merge_store %{{.*}}, %{{.*}} to %[[uvec]]
      ! CHECK: fir.do_loop
      ! CHECK: fir.coordinate_of %[[tvec]]
