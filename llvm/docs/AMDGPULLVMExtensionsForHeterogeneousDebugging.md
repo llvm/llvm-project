@@ -83,56 +83,55 @@ standard, including DWARF 5 without extensions, as well as other debug formats
 which LLVM currently supports, such as CodeView.
 
 The LLVM extensions do not constitute a direct implementation of all concepts
-from the DWARF extensions, although wherever reasonable the most fundamental
-aspects are kept identical. The concepts defined in the DWARF extensions which
-are used directly in the LLVM extensions with their semantics unchanged are
-enumerated in the [External Definitions](#external-definitions) section below.
+from the DWARF extensions, although wherever reasonable the fundamental aspects
+were kept identical. The concepts defined in the DWARF extensions which are used
+directly in the LLVM extensions with their semantics unchanged are enumerated in
+the [External Definitions](#external-definitions) section below.
 
-The most significant departure from the DWARF extensions is in the
-consolidation of expression evaluation stack entries. In the DWARF extensions,
-each entry on the expression evaluation stack contains either a typed value or
-an untyped location description. In the LLVM extensions, each entry on the
-expression evaluation stack instead contains a pair of a location description
-and a type.
+A significant departure from the DWARF extensions is in the consolidation of
+expression evaluation stack entries. In the DWARF extensions, each entry on the
+expression evaluation stack contains either a typed value or an untyped location
+description. In the LLVM extensions, each entry on the expression evaluation
+stack instead contains a pair of a location description and a type.
 
 Additionally, the concept of a "generic type", used as a default when a type is
-needed but not stated explicitly, is eliminated. Together these changes imply
+needed but not stated explicitly, is eliminated. Together, these changes imply
 that the concrete set of operations available differ between the DWARF and LLVM
 extensions.
 
-These changes are made to remove redundant representations of semantically
-equivalent expressions, which simplifies the work the compiler must do when
-updating debug information expressions to reflect code transformations. This is
-possible in the LLVM extensions as there is no requirement for backwards
-compatibility, nor any requirement that the intermediate representation of debug
-information conform to any particular external specification. Consequently we
-are able to increase the accuracy of existing debug information, while also
-extending the debug information to cover cases which were previously not
-described at all.
+These changes were made to remove redundant representations of semantically
+equivalent expressions, which can simplify the compiler's work in updating debug
+information expressions to reflect code transformations. The LLVM extensions'
+changes are possible as LLVM has no requirement for backwards compatibility, nor
+any requirement that the intermediate representation of debug information
+conform to any particular external specification. Consequently, the LLVM
+extensions are able to increase the accuracy of existing debug information,
+while also extending the debug information to cover cases which were previously
+not described at all.
 
 # High-Level Goals
 
-There are several specific cases where our approach will allow for more
-accurate or more complete debug information than would be feasible
-with only incremental changes to the existing approach.
+There are several specific cases where the LLVM extensions' approach can allow
+for more accurate or more complete debug information than would be feasible with
+only incremental changes to the existing approach.
 
 - Support describing the location of induction variables. LLVM currently has a
-  new implementation of partial support for expressions which depend on
-  multiple LLVM values, although it is currently limited exclusively to a
-  subset of cases for induction variables. This support is also inherently
-  limited as it can only refer directly to LLVM values, not to source variables
+  new implementation of partial support for an expression which depends on
+  multiple LLVM values, although it is currently limited exclusively to a subset
+  of cases for induction variables. This support is also inherently limited as
+  it can only refer directly to LLVM values, not to source variables
   symbolically. This means it is not possible to describe an induction variable
   which, for example, depends on a variable whose location is not static over
   the whole lifetime of the induction variable.
 - Support describing the location of arbitrary expressions over scalar-replaced
-  aggregate values, even in the face of other dependant expressions. LLVM
-  currently must drop debug information when any expression would depend on a
+  aggregate values, even in the face of other dependent expressions. LLVM
+  currently drops debug information when any expression would depend on a
   composite value.
 - Support describing all locations of values which are live in multiple machine
-  locations at the same instruction. LLVM currently must pick only one such
-  location to describe. This means values which are resident in multiple places
-  must be conservatively marked read-only, even when they could be read-write
-  if all of their locations were reported accurately.
+  locations at the same instruction. LLVM currently picks only one such location
+  to describe. This means values which are resident in multiple places need to
+  be conservatively marked read-only, even when they could be read-write if all
+  of their locations were reported accurately.
 - Accurately support describing the range over which a given location is active.
   LLVM currently pessimizes debug information as there is no rigorous means to
   limit the range of a described location.
@@ -144,7 +143,7 @@ with only incremental changes to the existing approach.
 
 # Motivation
 
-The original motivation for this proposal was to make the minimum required
+The original motivation for the LLVM extensions was to make the minimum required
 changes to the existing LLVM representation of debug information needed to
 support the [DWARF Extensions For Heterogeneous Debugging][18]. This involved an
 evaluation of the existing debug information for machine locations in LLVM,
@@ -161,7 +160,7 @@ a more tractable design for LLVM. We had already worked to address the
 complexity and ambiguity of DWARF by defining a formalization for its expression
 language, and improved the composability by unifying values and location
 descriptions on the evaluation stack. Together, these changes also increased the
-expressiveness of DWARF. Using similar ideas in LLVM, allowed us to support
+expressiveness of DWARF. Using similar ideas in LLVM allowed us to support
 additional real world cases, and describe existing cases with greater accuracy.
 
 This led us to start from the DWARF extensions and design a new set of debug
@@ -188,7 +187,7 @@ influences include:
   debug info support in LLVM IR][04]) and [Multi Location Debug Info support for
   LLVM][05]. Support for overlapping location list entries was added in DWARF 5.
 - Bugs, like [Bug 40628 - [DebugInfo@O2] Salvaged memory loads can observe
-  subsequent memory writes][09] which was partially worked around in [D57962
+  subsequent memory writes][09], which was partially worked around in [D57962
   [DebugInfo] PR40628: Don't salvage load operations][08], often result from
   passes being unable to accurately represent the relationship between source
   variables. Our approach supports encoding that information in debug
@@ -198,22 +197,22 @@ influences include:
   hierarchy (David Blaikie)][01] where the content of a node is not sufficient
   context to unique it.
 
-Recognizing that the least error prone place to make changes to debug
-information is at the point where the underlying code is being transformed, we
-biased the representation for this case.
+The least error prone place to make changes to debug information is at the point
+where the underlying code is being transformed, hence the LLVM extensions'
+representation is biased for this case.
 
 The expression evaluation stack contains uniform pairs of location description
 and type, such that all operations have well-defined semantics and no
 side-effects on the evaluation of the surrounding expression. These same
 semantics apply equally throughout the compiler. This allows for referentially
-transparent updates which can be reasoned about in the context of a single
+transparent updates, which can be reasoned about in the context of a single
 operation and its inputs and outputs, rather than the space of all possible
-surrounding operations and dependant expressions.
+surrounding operations and dependent expressions.
 
 By eliminating any implicit expression inputs or operations, and constraining
-the state space of expressions using well-formedness rules, it is always
-unambiguous whether a given transformation is valid and semantics-preserving,
-without ever having to consider anything outside of the expression itself.
+the state space of expressions using well-formedness rules, it is unambiguous
+whether a given transformation is valid and semantics-preserving, without ever
+having to consider anything outside of the expression itself.
 
 Designing around a separation of concerns regarding expression modification and
 simplification allows each update to the debug information to introduce
@@ -236,33 +235,35 @@ so.
 
 Leveraging the DWARF extensions as a foundation, the concept of a location
 description is used as the fundamental means of recording debug information. To
-support this, every LLVM entity which can be referenced by an expression has a
+support this, each LLVM entity which can be referenced by an expression has a
 well-defined location description, and is referred to by expressions in an
 explicit, referentially transparent manner. This makes updates to reflect
 changes in the underlying LLVM representation mechanical, robust, and simple.
 Due to factoring, these updates are also more localized, as updates to an
-expression are transparently reflected in all dependant expressions without
+expression are transparently reflected in all dependent expressions without
 having to traverse them, or even be aware of their existence.
 
-Without this factoring, any changes to an LLVM entity which is effectively used
-as an input to one or more expressions must be "macro-expanded" at the time
-they are made, in each place they are referenced. This in turn inhibits the
-valid transformations the context-insensitive "optimizer" can safely perform,
-as perturbing the macro-expanded expression for an LLVM entity makes it
-impossible to reflect future changes to that entity in the expression. Even if
-this is considered acceptable, once expressions begin to effectively depend on
-other expressions (for example, in the description of induction variables,
-where one program object depends on multiple other program objects) there is no
-longer a bound on the recursive depth of expressions which must be visited for
-any given update, making even simple updates expensive in terms of compiler
+Without this factoring, any changes to an LLVM entity which are effectively used
+as an input to one or more expressions would need to be "macro-expanded" at the
+time they are made, in each place they are referenced. This in turn inhibits the
+valid transformations the context-insensitive "optimizer" can safely perform, as
+perturbing the macro-expanded expression for an LLVM entity makes it impossible
+to reflect future changes to that entity in the expression. Even if this is
+considered acceptable, once expressions begin to effectively depend on other
+expressions (for example, in the description of induction variables, where one
+program object depends on multiple other program objects) there is no longer a
+bound on the recursive depth of expressions which need to be visited for any
+given update, making even simple updates expensive in terms of compiler
 resources. Furthermore, this approach requires either a combinatorial explosion
 of expressions to describe cases when the live ranges of multiple program
-objects are not equal, or the dropping of debug information for all but one
-such object. None of these tradeoffs were considered acceptable.
+objects are not equal, or the dropping of debug information for all but one such
+object. None of these tradeoffs were considered acceptable.
 
 # Changes from LLVM Language Reference Manual
 
-This section defines the changes from the [LLVM Language Reference Manual][10].
+This section describes a provisional set of changes to the [LLVM Language
+Reference Manual][10] to support the [DWARF Extensions For Heterogeneous
+Debugging][18]. It is not currently fully implemented and is subject to change.
 
 ## External Definitions
 
@@ -384,19 +385,19 @@ kinds of program objects.
 
 #### `DIVariable`
 
-A `DIVariable` is a `DIObject` which represents the identity of a source
+A `DIVariable` is a `DIObject`, which represents the identity of a source
 language program variable. If is also used for non-source language program
 variables that should be exposed to the debugger by including `DIFlagArtificial`
 in the `flags` field.
 
 ##### `DIGlobalVariable`
 
-A `DIGlobalVariable` is a `DIVariable` which represents the identity of a global
-source language program variable. See [DIGlobalVariable][16].
+A `DIGlobalVariable` is a `DIVariable`, which represents the identity of a
+global source language program variable. See [DIGlobalVariable][16].
 
 ##### `DILocalVariable`
 
-A `DILocalVariable` is a `DIVariable` which represents the identity of a local
+A `DILocalVariable` is a `DIVariable`, which represents the identity of a local
 source language program variable. See [DILocalVariable][15].
 
 #### `DIFragment`
@@ -405,7 +406,7 @@ source language program variable. See [DILocalVariable][15].
 distinct !DIFragment()
 ```
 
-A `DIFragment` is a `DIObject` which represents the identity of a non-source
+A `DIFragment` is a `DIObject`, which represents the identity of a non-source
 language variable program object, or a piece of a source language or non-source
 language program variable. These are used in the definition of other `DIObject`s
 and are not exposed as named variables for the debugger.
@@ -480,8 +481,8 @@ well-formed.
 The `object` field is required for a default, bounded, and computed lifetime
 segment. It explicitly specifies the data object of the lifetime segment.
 
-The `object` field must be omitted for a type lifetime segment. The data object
-is implicitly the instance of the type being accessed with the lifetime segment.
+The `object` field is omitted for a type lifetime segment. The data object is
+implicitly the instance of the type being accessed with the lifetime segment.
 
 A bounded lifetime segment is only active if the current program location's
 instruction is in the range covered. The call to the `llvm.dbg.def` intrinsic
@@ -513,7 +514,7 @@ clobbered.]_
 
 _[Note: A `DIObject` with no `DILifetime`s has an undefined location
 description. If the `argObjects` field of a `DILifetime` references such a
-`DIObject` then the argument can be removed and the `location` expression
+`DIObject` then the argument can be removed, and the `location` expression
 updated to use the `DIOpConstant` with an `undef` value.]_
 
 The optional `argObjects` field specifies a tuple of zero or more input
@@ -570,8 +571,8 @@ referencing the same lifetime as the intrinsic that started it.]_
 A `DICompileUnit` represents the identity of source program compile unit. See
 [DICompileUnit][17].
 
-All `DIGlobalVariable` global variables of the compile unit must be referenced
-by the `globals` field of the `DICompileUnit`.
+All `DIGlobalVariable` global variables of the compile unit are required to be
+referenced by the `globals` field of the `DICompileUnit`.
 
 _[Note: This is different to the current debug information in which the
 `globals` field of `DICompileUnit` references `DIGlobalVariableExpression`.
@@ -600,7 +601,7 @@ The evaluation of an expression is done in the context of an associated
 
 The evaluation of the expression is performed on a stack where each stack
 element is a tuple of a type and a location description. If the stack does not
-have a single element after evaluation then the expression is not well-formed.
+have a single element after evaluation, then the expression is not well-formed.
 The evaluation is the typed location description of the single resulting stack
 element.
 
@@ -657,7 +658,7 @@ entries it pushes onto the stack in a right-to-left order. In both cases the top
 stack element comes first on the left.
 
 If evaluation can result in a stack with fewer entries than required by an
-operation then the expression is not well-formed.
+operation, then the expression is not well-formed.
 
 Each `<stack-binding>` is a pair of `<binding-identifier>`s. The first
 `<binding-identifier>` binds to the location description of the stack entry.
@@ -667,7 +668,7 @@ Each `<binding-identifier>` identifies a meta-syntactic variable. When reading
 the `specification` left-to-right, the first mention binds the meta-syntactic
 variable to an entity, subsequent mentions are an assertion that they are the
 identical bound entity. If evaluation can result in parameters and stack inputs
-that do not conform to the assertions then the expression is not well-formed.
+that do not conform to the assertions, then the expression is not well-formed.
 The assertions for stack outputs define post-conditions of the operation output.
 
 The remaining body of the definition for an operation may reference the bound
@@ -686,10 +687,10 @@ DIOpReferrer(T:type)
 ```
 
 `L` is the location description of the referrer `R` of the associated lifetime
-segment `LS`. If `LS` is a computed lifetime segment then the expression is
+segment `LS`. If `LS` is a computed lifetime segment, then the expression is
 ill-formed.
 
-`bitsizeof(T)` must equal `bitsizeof(R)`, otherwise the expression is not
+If `bitsizeof(T)` is not equal to `bitsizeof(R)`, then the expression is not
 well-formed.
 
 #### `DIOpArg`
@@ -702,15 +703,15 @@ DIOpArg(N:index, T:type)
 `L` is the location description of the `N`th element, `O`, of the `argObjects`
 field `F` of the associated lifetime segment `LS`.
 
-If `F` is not a tuple of `DIObject`s with at least `N` elements then the
-expression is not well-formed. `bitsizeof(T)` must equal `bitsizeof(O)`,
-otherwise the expression is not well-formed.
+If `F` is not a tuple of `DIObject`s with at least `N` elements, then the
+expression is not well-formed. If `bitsizeof(T)` is not equal to `bitsizeof(O)`,
+then the expression is not well-formed.
 
 _[Note: As with any location description, `L` may consist of multiple single
-location descriptions. For example, this will occur if the `O` has more than one
-bounded lifetime segment active. By definition these must all describe the same
+location descriptions. For example, this will occur if `O` has more than one
+bounded lifetime segment active. By definition, these all describe the same
 object. This implies that when reading from them, any of the single location
-descriptions may be chosen, whereas when writing to them the write must be
+descriptions may be chosen, whereas when writing to them the write needs to be
 performed into each single location description.]_
 
 #### `DIOpConstant`
@@ -722,7 +723,7 @@ DIOpConstant(T:type V:literal)
 
 `V` is a literal value of type `T` or `undef`.
 
-If `V` is `undef` then `L` comprises one undefined location description `IL`.
+If `V` is `undef`, then `L` comprises one undefined location description `IL`.
 
 Otherwise, `L` comprises one implicit location description `IL`. `IL` specifies
 implicit location storage `ILS` and offset 0. `ILS` has value `V` and size
@@ -758,7 +759,7 @@ DIOpReinterpret(T':type)
 Reads `bitsizeof(T)` bits from `L` and treats the bits as value `V'` of type
 `T'`.
 
-If `bitsizeof(T)` is not equal to `bitsizeof(T')` then the expression is not well-formed.
+If `bitsizeof(T)` is not equal to `bitsizeof(T')`, then the expression is not well-formed.
 
 `L'` comprises one implicit location description `IL'`. `IL'` specifies implicit
 location storage `ILS'` and offset 0. `ILS'` has value `V'` and size
@@ -775,7 +776,7 @@ DIOpOffset()
 obtained by reading `bitsizeof(U)` bits from `B` as an integral type `I`. `I`
 may be a signed or unsigned integral type.
 
-If `I` is not an integral type then the expression is not well-defined.
+If `I` is not an integral type, then the expression is not well-defined.
 
 #### `DIOpBitOffset`
 
@@ -788,7 +789,7 @@ DIOpBitOffset()
 obtained by reading `bitsizeof(U)` bits from `B` as an integral type `I`. `I`
 may be a signed or unsigned integral type.
 
-If `I` is not an integral type then the expression is not well-defined.
+If `I` is not an integral type, then the expression is not well-defined.
 
 #### `DIOpComposite`
 
@@ -804,7 +805,7 @@ parts are concatenated starting at offset 0 in the order with `M` from `N` to 1
 and no padding between the parts.
 
 If the sum of `bitsizeof(TM)` for `M` from 1 to `N` does not equal
-`bitsizeof(T)` then the expression is not well-formed.
+`bitsizeof(T)`, then the expression is not well-formed.
 
 #### `DIOpAddrOf`
 
@@ -818,8 +819,8 @@ pointer to `T` in address space `N`. `IAL` specifies implicit address location
 storage `IALS` and offset 0.
 
 `IALS` is `bitsizeof(T')` bits and conceptually holds a reference to the storage
-that `L` denotes. If `DIOpDeref` is applied to the resulting `L':T'` then it
-will result in `L:T`. If any other operation is applied then the expression is
+that `L` denotes. If `DIOpDeref` is applied to the resulting `L':T'`, then it
+will result in `L:T`. If any other operation is applied, then the expression is
 not well-formed.
 
 _[Note: `DIOpAddrOf` can be used for any location description kind of 'L', not
@@ -844,9 +845,9 @@ DIOpDeref()
 
 `T` is a pointer to `T'` in address space `N`.
 
-If `T` is not a pointer type then the expression is not well-formed.
+If `T` is not a pointer type, then the expression is not well-formed.
 
-If `L:T` was produced by a `DIOpAddrOf` operation then see
+If `L:T` was produced by a `DIOpAddrOf` operation, then see
 [`DIOpAddrOf`](#DIOpAddrOf).
 
 Otherwise, `L'` comprises one memory location description `MLD`. `MLD` specifies
@@ -935,11 +936,11 @@ DIOpShr()
 
 `L` comprises one implicit location description `IL`. `IL` specifies implicit
 location storage `ILS` and offset 0. `ILS` has value `V2 >> V1` and size
-`bitsizeof(T)`. If `T` is an unsigned integral type then the result is filled
-with 0 bits. If `T` is a signed integral type then the result is filled with the
+`bitsizeof(T)`. If `T` is an unsigned integral type, then the result is filled
+with 0 bits. If `T` is a signed integral type, then the result is filled with the
 sign bit of `V1`.
 
-If `T` is not an integral type the expression is not well-formed.
+If `T` is not an integral type, then the expression is not well-formed.
 
 #### `DIOpShl`
 
@@ -955,7 +956,7 @@ DIOpShl()
 location storage `ILS` and offset 0. `ILS` has value `V2 << V1` and size
 `bitsizeof(T)`. The result is filled with 0 bits.
 
-If `T` is not an integral type the expression is not well-formed.
+If `T` is not an integral type, then the expression is not well-formed.
 
 ## Intrinsics
 
@@ -971,13 +972,13 @@ supported by [DWARF location lists][20].
 void @llvm.dbg.def(metadata, metadata)
 ```
 
-The first argument to `llvm.dbg.def` must be a `DILifetime`, and is the
-beginning of the bounded lifetime being defined.
+The first argument to `llvm.dbg.def` is required to be a `DILifetime`, and is
+the beginning of the bounded lifetime being defined.
 
-The second argument to `llvm.dbg.def` must be a value-as-metadata, and defines
-the LLVM entity acting as the referrer of the bounded lifetime segment specified
-by the first argument. A value of `undef` is allowed and specifies the undefined
-location description.
+The second argument to `llvm.dbg.def` is required to be a value-as-metadata, and
+defines the LLVM entity acting as the referrer of the bounded lifetime segment
+specified by the first argument. A value of `undef` is allowed and specifies the
+undefined location description.
 
 _[Note: `undef` can be used when the lifetime segment expression does not use a
 `DIOpReferrer` operation, either because the expression evaluates to a constant
@@ -997,12 +998,12 @@ DBG_DEF metadata, <value>
 void @llvm.dbg.kill(metadata)
 ```
 
-The first argument to `llvm.dbg.kill` must be a `DILifetime`, and is the
-end of the lifetime being killed.
+The first argument to `llvm.dbg.kill` is required to be a `DILifetime`, and is
+the end of the lifetime being killed.
 
-Every call to the `llvm.dbg.kill` intrinsic must be reachable from a call to
-the `llvm.dbg.def` intrinsic which specifies the same `DILifetime`, otherwise
-it is not well-formed.
+Every call to the `llvm.dbg.kill` intrinsic is required to be reachable from a
+call to the `llvm.dbg.def` intrinsic which specifies the same `DILifetime`,
+otherwise it is not well-formed.
 
 The MC pseudo instruction equivalent is `DBG_KILL` which has the same argument
 with the same meaning:
@@ -1078,7 +1079,7 @@ call void @llvm.dbg.kill(metadata !2)
 
 ## Implicit Pointer Location Description
 
-The transformation for removing a level of indirection is always to add an
+The transformation for removing a level of indirection is to add an
 `DIOpAddrOf(N)`, which may result in a location description for a pointer to a
 non-memory object.
 
@@ -1175,7 +1176,7 @@ return i64 %x
 !4 = distinct !DILifetime(object: !3, location: !DIExpr(DIOpReferrer(i64), DIOpAddrOf(5)))
 ```
 
-If `%x` was being assigned a constant then can eliminated `%x` entirely and
+If `%x` was being assigned a constant, then can eliminated `%x` entirely and
 substitute all uses with the constant:
 
 ```llvm
@@ -1192,8 +1193,9 @@ return i64 ...
 ## Variable Broken Into Two Scalars
 
 When a transformation decomposes one location into multiple distinct ones, it
-must follow all `llvm.dbg.def` intrinsics to the `DILifetime`s referencing the
-original location and update the expression and positional arguments such that:
+needs to follow all `llvm.dbg.def` intrinsics to the `DILifetime`s referencing
+the original location and update the expression and positional arguments such
+that:
 
 - All instances of `DIOpReferrer()` in the original expression are replaced with
   the appropriate composition of all the new location pieces, now encoded via
@@ -1205,11 +1207,11 @@ original location and update the expression and positional arguments such that:
   and `llvm.dbg.kill` intrinsics.
 
 It is assumed that any transformation capable of doing the decomposition in the
-first place must have all of this information available, and the structure of
-the new intrinsics and metadata avoids any costly operations during
+first place needs to have all of this information available, and the structure
+of the new intrinsics and metadata avoids any costly operations during
 transformations. This update is also "shallow", in that only the `DILifetime`
 which is immediately referenced by the relevant `llvm.dbg.def`s need to be
-updated, as the result is referentially transparent to any other dependant
+updated, as the result is referentially transparent to any other dependent
 `DILifetime`s.
 
 ```llvm
@@ -1293,7 +1295,7 @@ call void @llvm.dbg.kill(metadata !4)
 
 Note that the expression for the original source variable `x` did not need to
 be changed, as it is defined in terms of the `DIFragment`, the identity of
-which is never changed after it is created.
+which is not changed after it is created.
 
 ## Multiple Live Ranges For A Single Variable
 
@@ -1397,9 +1399,9 @@ call void @llvm.dbg.kill(metadata !2)
 !6 = distinct !DILifetime(object: !5, location: !DIExpr(DIOpReferrer(i64)))
 ```
 
-If analysis proves `i` over some range is always equal to `x + y`, the storage
-for `i` can be eliminated, and it can be materialized at every use. The
-corresponding change needed in the debug information is:
+If analysis proves `i` over some range is equal to `x + y`, the storage for `i`
+can be eliminated, and it can be materialized at every use. The corresponding
+change needed in the debug information is:
 
 ```llvm
 %x = i64 ...
@@ -1568,12 +1570,12 @@ marks the source variable `redundant` as optimized out.
 It seems like the semantics that CSE really wants to encode in the debug
 intrinsics is that, after the point at which the common load occurs, the
 location for both `redundant` and `loaded` is `%0`, and that they are both
-read-only. It seems like it must prove this to combine them, and if it can only
-combine them over some range it can insert additional live ranges to describe
-their separate locations outside of that range. The implicit pointer example is
-further evidence of why this may need to be the case, because at the time
-implicit pointer is created it is not know which source variable to bind to in
-order to get the multiple lifetimes in this design.
+read-only. It seems like it needs to prove this to combine them, and if it can
+only combine them over some range, it can insert additional live ranges to
+describe their separate locations outside of that range. The implicit pointer
+example further suggests why this may need to be the case, because at the time
+the implicit pointer is created, it is not known which source variable to bind
+to in order to get the multiple lifetimes in this design.
 
 This seems to be supported by the fact that even in current LLVM trunk, with
 the more conservative change to mark the `redundant` variable as `undef` in the
@@ -1634,13 +1636,15 @@ _[Note: To see this result, i386 is required; x86_64 seems to do even more optim
 which eliminates both `loaded` and `redundant`.]_
 
 Fixing this issue in the current debug information is technically possible, but
-as noted in the review for the attempted conservative patch, "this isn't
-something that can be fixed without a lot of work, thus it's safer to turn off
-for now."
+as noted by the LLVM community in the review for the attempted conservative
+patch:
 
-The AMDGPU LLVM extensions make this case tractable to support with full
-generality and composability with other optimizations. The expected result of
-`EarlyCSE` would be:
+> _"this isn't something that can be fixed without a lot of work, thus it's
+> safer to turn off for now."_
+
+The LLVM extensions make this case tractable to support with full generality and
+composability with other optimizations. The expected result of `EarlyCSE` would
+be:
 
 ```llvm
 define dso_local i32 @foo(i32* %bar, i32 %arg, i32 %more) #0 !dbg !8 {
