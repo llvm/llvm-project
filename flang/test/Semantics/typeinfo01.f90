@@ -1,4 +1,4 @@
-!RUN: %f18 -fdebug-dump-symbols %s | FileCheck %s
+!RUN: %flang_fc1 -fdebug-dump-symbols %s | FileCheck %s
 ! Tests for derived type runtime descriptions
 
 module m01
