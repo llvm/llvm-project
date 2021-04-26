@@ -207,8 +207,8 @@ typedef struct LLVMOrcOpaqueLookupState *LLVMOrcLookupStateRef;
  * asynchronous definition process has been completed clients must call
  * LLVMOrcLookupStateContinueLookup to continue the lookup (this should be
  * done unconditionally, even if errors have occurred in the mean time, to
- * free the lookup state memory and notify the query object of the failures. If
- * LookupState is captured this function must return LLVMErrorSuccess.
+ * free the lookup state memory and notify the query object of the failures).
+ * If LookupState is captured this function must return LLVMErrorSuccess.
  *
  * The Kind argument can be inspected to determine the lookup kind (e.g.
  * as-if-during-static-link, or as-if-during-dlsym).
