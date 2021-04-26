@@ -13,4 +13,6 @@ add_llvm_library(
   ExecuteFunction.h
   ${FDReaderFile}
   FDReader.h
+  Timer.h
+  Timer.cpp
 )
