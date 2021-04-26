@@ -37,20 +37,20 @@ namespace llvm {
   };
 
   /// RecordsEntry - Holds exactly one of a Record, ForeachLoop, or
-  /// assertion tuple.
+  /// AssertionInfo.
   struct RecordsEntry {
     std::unique_ptr<Record> Rec;
     std::unique_ptr<ForeachLoop> Loop;
-    std::unique_ptr<Record::AssertionTuple> Assertion;
+    std::unique_ptr<Record::AssertionInfo> Assertion;
 
     void dump() const;
 
     RecordsEntry() {}
     RecordsEntry(std::unique_ptr<Record> Rec) : Rec(std::move(Rec)) {}
     RecordsEntry(std::unique_ptr<ForeachLoop> Loop)
-      : Loop(std::move(Loop)) {}
-    RecordsEntry(std::unique_ptr<Record::AssertionTuple> Assertion)
-      : Assertion(std::move(Assertion)) {}
+        : Loop(std::move(Loop)) {}
+    RecordsEntry(std::unique_ptr<Record::AssertionInfo> Assertion)
+        : Assertion(std::move(Assertion)) {}
   };
 
   /// ForeachLoop - Record the iteration state associated with a for loop.

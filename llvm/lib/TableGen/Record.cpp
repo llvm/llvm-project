@@ -2379,10 +2379,10 @@ void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
 
   // Resolve the assertion expressions.
   for (auto &Assertion : Assertions) {
-    Init *Value = std::get<1>(Assertion)->resolveReferences(R);
-    std::get<1>(Assertion) = Value;
-    Value = std::get<2>(Assertion)->resolveReferences(R);
-    std::get<2>(Assertion) = Value;
+    Init *Value = Assertion.Condition->resolveReferences(R);
+    Assertion.Condition = Value;
+    Value = Assertion.Message->resolveReferences(R);
+    Assertion.Message = Value;
   }
 }
 
@@ -2634,9 +2634,9 @@ void Record::checkRecordAssertions() {
   R.setFinal(true);
 
   for (auto Assertion : getAssertions()) {
-    Init *Condition = std::get<1>(Assertion)->resolveReferences(R);
-    Init *Message = std::get<2>(Assertion)->resolveReferences(R);
-    CheckAssert(std::get<0>(Assertion), Condition, Message);
+    Init *Condition = Assertion.Condition->resolveReferences(R);
+    Init *Message = Assertion.Message->resolveReferences(R);
+    CheckAssert(Assertion.Loc, Condition, Message);
   }
 }
 
