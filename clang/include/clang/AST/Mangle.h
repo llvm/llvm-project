@@ -200,7 +200,7 @@ public:
 
   // This seemingly has to live here, otherwise the CXXNameMangler won't have
   // access to it.
-  virtual KernelMangleCallbackTy getKernelMangleCallback() = 0;
+  virtual KernelMangleCallbackTy getKernelMangleCallback() const = 0;
 
   static bool classof(const MangleContext *C) {
     return C->getKind() == MK_Itanium;
@@ -212,7 +212,6 @@ public:
                                       DiagnosticsEngine &Diags,
                                       KernelMangleCallbackTy Callback);
 
-private:
 };
 
 class MicrosoftMangleContext : public MangleContext {

@@ -247,7 +247,7 @@ public:
     return Name;
   }
 
-  KernelMangleCallbackTy getKernelMangleCallback() override {
+  KernelMangleCallbackTy getKernelMangleCallback() const override {
     return KernelMangleCallback;
   }
 
@@ -4075,8 +4075,10 @@ recurse:
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
   case Expr::CXXInheritedCtorInitExprClass:
-  case Expr::UniqueStableNameExprClass:
     llvm_unreachable("unexpected statement kind");
+  case Expr::UniqueStableNameExprClass:
+    // TODO: ERICH: Figure out if this is possible to reach here.
+    llvm_unreachable("unique-stable-name mangling not implemented yet");
 
   case Expr::ConstantExprClass:
     E = cast<ConstantExpr>(E)->getSubExpr();

@@ -1163,6 +1163,12 @@ void JSONNodeDumper::VisitDeclRefExpr(const DeclRefExpr *DRE) {
   }
 }
 
+void JSONNodeDumper::VisitUniqueStableNameExpr(const UniqueStableNameExpr *E) {
+  if (E->isTypeSourceInfo())
+    JOS.attribute("typeSourceInfo",
+                  createQualType(E->getTypeSourceInfo()->getType()));
+}
+
 void JSONNodeDumper::VisitPredefinedExpr(const PredefinedExpr *PE) {
   JOS.attribute("name", PredefinedExpr::getIdentKindName(PE->getIdentKind()));
 }

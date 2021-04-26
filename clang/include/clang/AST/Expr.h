@@ -2040,7 +2040,7 @@ public:
 // This represents a use of the __builtin_unique_stable_name, which takes either
 // a type-id or an expression, and at CodeGen time emits a unique string
 // representation of the type (or type of the expression) in a way that permits
-// us to properly encode information about the SYCL Kernels.
+// us to properly encode information about the SYCL kernels.
 class UniqueStableNameExpr final
     : public Expr,
       private llvm::TrailingObjects<UniqueStableNameExpr, Stmt *,
@@ -2099,13 +2099,13 @@ public:
   Expr *getExpr() {
     assert(Kind == ParamKind::Expr &&
            "Expr only valid for UniqueStableName of an Expr");
-    return static_cast<Expr *>(*getTrailingObjects<Stmt *>());
+    return cast<Expr>(*getTrailingObjects<Stmt *>());
   }
 
   const Expr *getExpr() const {
     assert(Kind == ParamKind::Expr &&
            "Expr only valid for UniqueStableName of an Expr");
-    return static_cast<Expr *>(*getTrailingObjects<Stmt *>());
+    return cast<Expr>(*getTrailingObjects<Stmt *>());
   }
 
   bool isExpr() const { return Kind == ParamKind::Expr; }

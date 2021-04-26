@@ -2336,10 +2336,15 @@ ExprResult Parser::ParseUniqueStableNameExpression() {
   SourceLocation OpLoc = ConsumeToken();
   BalancedDelimiterTracker T(*this, tok::l_paren);
 
-  // typeid expressions are always parenthesized.
+  // __builtin_unique_stable_name expressions are always parenthesized.
   if (T.expectAndConsume(diag::err_expected_lparen_after,
                          "__builtin_unique_stable_name"))
     return ExprError();
+
+  // TODO: ERICH: Does moving this above hte isTypeIdInParens avoid the issue of
+  // evaluating a VLA?
+  EnterExpressionEvaluationContext Unevaluated(
+      Actions, Sema::ExpressionEvaluationContext::Unevaluated);
 
   if (isTypeIdInParens()) {
     TypeResult Ty = ParseTypeName();
@@ -2352,8 +2357,6 @@ ExprResult Parser::ParseUniqueStableNameExpression() {
                                              T.getCloseLocation(), Ty.get());
   }
 
-  EnterExpressionEvaluationContext Unevaluated(
-      Actions, Sema::ExpressionEvaluationContext::Unevaluated);
   ExprResult Result = ParseExpression();
 
   if (Result.isInvalid()) {

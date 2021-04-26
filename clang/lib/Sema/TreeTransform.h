@@ -10195,8 +10195,7 @@ ExprResult
 TreeTransform<Derived>::TransformUniqueStableNameExpr(UniqueStableNameExpr *E) {
   if (!E->isTypeDependent())
     return E;
-  // We only have to handle the 'Expr' case, since the type case cannot be
-  // dependent.
+
   if (E->isExpr()) {
     ExprResult ER = getDerived().TransformExpr(E->getExpr());
 
