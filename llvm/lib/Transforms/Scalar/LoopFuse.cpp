@@ -372,13 +372,11 @@ private:
   bool reportInvalidCandidate(llvm::Statistic &Stat) const {
     using namespace ore;
     assert(L && Preheader && "Fusion candidate not initialized properly!");
-#if LLVM_ENABLE_STATS
     ++Stat;
     ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, Stat.getName(),
                                         L->getStartLoc(), Preheader)
              << "[" << Preheader->getParent()->getName() << "]: "
              << "Loop is not a candidate for fusion: " << Stat.getDesc());
-#endif
     return false;
   }
 };
@@ -1535,7 +1533,6 @@ private:
     assert(FC0.Preheader && FC1.Preheader &&
            "Expecting valid fusion candidates");
     using namespace ore;
-#if LLVM_ENABLE_STATS
     ++Stat;
     ORE.emit(RemarkKind(DEBUG_TYPE, Stat.getName(), FC0.L->getStartLoc(),
                         FC0.Preheader)
@@ -1543,7 +1540,6 @@ private:
              << "]: " << NV("Cand1", StringRef(FC0.Preheader->getName()))
              << " and " << NV("Cand2", StringRef(FC1.Preheader->getName()))
              << ": " << Stat.getDesc());
-#endif
   }
 
   /// Fuse two guarded fusion candidates, creating a new fused loop.

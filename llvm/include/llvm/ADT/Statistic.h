@@ -46,22 +46,27 @@ class raw_ostream;
 class raw_fd_ostream;
 class StringRef;
 
-class TrackingStatistic {
+class StatisticBase {
 public:
-  const char *const DebugType;
-  const char *const Name;
-  const char *const Desc;
+  const char *DebugType;
+  const char *Name;
+  const char *Desc;
 
-  std::atomic<unsigned> Value;
-  std::atomic<bool> Initialized;
-
-  TrackingStatistic(const char *DebugType, const char *Name, const char *Desc)
-      : DebugType(DebugType), Name(Name), Desc(Desc), Value(0),
-        Initialized(false) {}
+  StatisticBase(const char *DebugType, const char *Name, const char *Desc)
+      : DebugType(DebugType), Name(Name), Desc(Desc) {}
 
   const char *getDebugType() const { return DebugType; }
   const char *getName() const { return Name; }
   const char *getDesc() const { return Desc; }
+};
+
+class TrackingStatistic : public StatisticBase {
+public:
+  std::atomic<unsigned> Value;
+  std::atomic<bool> Initialized;
+
+  TrackingStatistic(const char *DebugType, const char *Name, const char *Desc)
+      : StatisticBase(DebugType, Name, Desc), Value(0), Initialized(false) {}
 
   unsigned getValue() const { return Value.load(std::memory_order_relaxed); }
 
@@ -127,10 +132,9 @@ protected:
   void RegisterStatistic();
 };
 
-class NoopStatistic {
+class NoopStatistic : public StatisticBase {
 public:
-  NoopStatistic(const char * /*DebugType*/, const char * /*Name*/,
-                const char * /*Desc*/) {}
+  using StatisticBase::StatisticBase;
 
   unsigned getValue() const { return 0; }
 
