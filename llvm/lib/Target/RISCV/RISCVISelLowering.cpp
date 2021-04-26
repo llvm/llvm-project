@@ -191,6 +191,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtZbb() && Subtarget.is64Bit())
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i32, Custom);
 
+  if (Subtarget.hasStdExtZbe() && Subtarget.is64Bit())
+    setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i32, Custom);
+
   if (Subtarget.is64Bit()) {
     setOperationAction(ISD::ADD, MVT::i32, Custom);
     setOperationAction(ISD::SUB, MVT::i32, Custom);
@@ -3152,6 +3155,12 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         IntNo == Intrinsic::riscv_shfl ? RISCVISD::SHFL : RISCVISD::UNSHFL;
     return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1), Op.getOperand(2));
   }
+  case Intrinsic::riscv_bcompress:
+  case Intrinsic::riscv_bdecompress: {
+    unsigned Opc = IntNo == Intrinsic::riscv_bcompress ? RISCVISD::BCOMPRESS
+                                                       : RISCVISD::BDECOMPRESS;
+    return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1), Op.getOperand(2));
+  }
   case Intrinsic::riscv_vmv_x_s:
     assert(Op.getValueType() == XLenVT && "Unexpected VT!");
     return DAG.getNode(RISCVISD::VMV_X_S, DL, Op.getValueType(),
@@ -4753,6 +4762,21 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       break;
     }
+    case Intrinsic::riscv_bcompress:
+    case Intrinsic::riscv_bdecompress: {
+      assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+             "Unexpected custom legalisation");
+      SDValue NewOp1 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+      SDValue NewOp2 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
+      unsigned Opc = IntNo == Intrinsic::riscv_bcompress
+                         ? RISCVISD::BCOMPRESSW
+                         : RISCVISD::BDECOMPRESSW;
+      SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp1, NewOp2);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      break;
+    }
     case Intrinsic::riscv_vmv_x_s: {
       EVT VT = N->getValueType(0);
       MVT XLenVT = Subtarget.getXLenVT();
@@ -5708,6 +5732,8 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   case RISCVISD::FSRW:
   case RISCVISD::SHFLW:
   case RISCVISD::UNSHFLW:
+  case RISCVISD::BCOMPRESSW:
+  case RISCVISD::BDECOMPRESSW:
     // TODO: As the result is sign-extended, this is conservatively correct. A
     // more precise answer could be calculated for SRAW depending on known
     // bits in the shift amount.
@@ -7458,6 +7484,10 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SHFLW)
   NODE_NAME_CASE(UNSHFL)
   NODE_NAME_CASE(UNSHFLW)
+  NODE_NAME_CASE(BCOMPRESS)
+  NODE_NAME_CASE(BCOMPRESSW)
+  NODE_NAME_CASE(BDECOMPRESS)
+  NODE_NAME_CASE(BDECOMPRESSW)
   NODE_NAME_CASE(VMV_V_X_VL)
   NODE_NAME_CASE(VFMV_V_F_VL)
   NODE_NAME_CASE(VMV_X_S)

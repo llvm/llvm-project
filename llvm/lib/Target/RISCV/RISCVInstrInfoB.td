@@ -33,6 +33,10 @@ def riscv_shfl   : SDNode<"RISCVISD::SHFL",   SDTIntBinOp>;
 def riscv_shflw  : SDNode<"RISCVISD::SHFLW",  SDT_RISCVIntBinOpW>;
 def riscv_unshfl : SDNode<"RISCVISD::UNSHFL", SDTIntBinOp>;
 def riscv_unshflw: SDNode<"RISCVISD::UNSHFLW",SDT_RISCVIntBinOpW>;
+def riscv_bcompress    : SDNode<"RISCVISD::BCOMPRESS",   SDTIntBinOp>;
+def riscv_bcompressw   : SDNode<"RISCVISD::BCOMPRESSW",  SDT_RISCVIntBinOpW>;
+def riscv_bdecompress  : SDNode<"RISCVISD::BDECOMPRESS", SDTIntBinOp>;
+def riscv_bdecompressw : SDNode<"RISCVISD::BDECOMPRESSW",SDT_RISCVIntBinOpW>;
 
 def UImmLog2XLenHalfAsmOperand : AsmOperandClass {
   let Name = "UImmLog2XLenHalf";
@@ -933,6 +937,16 @@ def : PatGprGpr<int_riscv_clmul, CLMUL>;
 def : PatGprGpr<int_riscv_clmulh, CLMULH>;
 def : PatGprGpr<int_riscv_clmulr, CLMULR>;
 } // Predicates = [HasStdExtZbc]
+
+let Predicates = [HasStdExtZbe] in {
+def : PatGprGpr<riscv_bcompress, BCOMPRESS>;
+def : PatGprGpr<riscv_bdecompress, BDECOMPRESS>;
+} // Predicates = [HasStdExtZbe]
+
+let Predicates = [HasStdExtZbe, IsRV64] in {
+def : PatGprGpr<riscv_bcompressw, BCOMPRESSW>;
+def : PatGprGpr<riscv_bdecompressw, BDECOMPRESSW>;
+} // Predicates = [HasStdExtZbe, IsRV64]
 
 let Predicates = [HasStdExtZbr] in {
 def : PatGpr<int_riscv_crc32_b, CRC32B>;
