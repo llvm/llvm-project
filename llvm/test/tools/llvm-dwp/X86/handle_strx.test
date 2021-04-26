@@ -1,0 +1,14 @@
+RUN: llvm-dwp %p/../Inputs/handle_strx/dw5.dwo -o %t 2>/dev/null
+RUN: llvm-dwarfdump --verbose %t 2>/dev/null | FileCheck --check-prefix=READ_STRX %s
+
+RUN: not llvm-dwp %p/../Inputs/handle_strx/dw5.dwo %p/../Inputs/handle_strx/dw5.dwo -o %t 2>&1 \
+RUN:   | FileCheck --check-prefix=PARSE_STRX %s
+
+
+dw5.o is compiled from a file that contains a single empty void function,
+with options -gdwarf-5 and -gsplit-dwarf.
+
+READ_STRX: DW_AT_name [DW_FORM_strx1]{{.*}}dw5.cc
+
+PARSE_STRX: error: duplicate DWO ID ({{.*}}) in 'dw5.cc' and 'dw5.cc'
+
