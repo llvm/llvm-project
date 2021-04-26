@@ -12,6 +12,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
@@ -687,6 +688,16 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
                                const FileSpec &outfile,
                                lldb::SaveCoreStyle &core_style,
                                const ConstString plugin_name) {
+  if (!plugin_name) {
+    // Try saving core directly from the process plugin first.
+    llvm::Expected<bool> ret = process_sp->SaveCore(outfile.GetPath());
+    if (!ret)
+      return Status(std::move(ret.takeError()));
+    if (ret.get())
+      return Status();
+  }
+
+  // Fall back to object plugins.
   Status error;
   auto &instances = GetObjectFileInstances().GetInstances();
   for (auto &instance : instances) {
