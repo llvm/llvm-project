@@ -1766,7 +1766,7 @@ correctly in any circumstances. It can be used if:
   metaprogramming algorithms to be able to specify/detect types generically.
 
 - the generated kernel binary does not contain indirect calls because they
-  are eliminated using compiler optimizations e.g. devirtualization.
+  are eliminated using compiler optimizations e.g. devirtualization. 
 
 - the selected target supports the function pointer like functionality e.g.
   most CPU targets.
@@ -2312,11 +2312,11 @@ argument.
   __builtin_preserve_access_index(v->j);
 
 ``__builtin_unique_stable_name``
-------------------------
+--------------------------------
 
-``__builtin_unique_stable_name()`` is a builtin that takes a type or expression and
-produces a string literal containing a unique name for the type (or type of the
-expression) that is stable across split compilations.
+``__builtin_unique_stable_name()`` is a builtin that takes a type or unevaluated
+expression and produces a string literal containing a unique name for the type
+(or type of the expression) that is stable across split compilations.
 
 In cases where the split compilation needs to share a unique token for a type
 across the boundary (such as in an offloading situation), this name can be used
@@ -2529,7 +2529,7 @@ Guaranteed inlined copy
 ``__builtin_memcpy_inline`` has been designed as a building block for efficient
 ``memcpy`` implementations. It is identical to ``__builtin_memcpy`` but also
 guarantees not to call any external functions. See LLVM IR `llvm.memcpy.inline
-<https://llvm.org/docs/LangRef.html#llvm-memcpy-inline-intrinsic>`_ intrinsic
+<https://llvm.org/docs/LangRef.html#llvm-memcpy-inline-intrinsic>`_ intrinsic 
 for more information.
 
 This is useful to implement a custom version of ``memcpy``, implement a
