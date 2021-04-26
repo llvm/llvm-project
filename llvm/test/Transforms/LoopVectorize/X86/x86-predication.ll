@@ -65,9 +65,12 @@ for.end:
 ; sink-scalar-operands optimization for predicated instructions.
 ;
 ; SINK-GATHER: vector.body:
-; SINK-GATHER: pred.udiv.if:
+; SINK-GATHER: pred.load.if:
 ; SINK-GATHER:   %[[T0:.+]] = load i32, i32* %{{.*}}, align 4
-; SINK-GATHER:   %{{.*}} = udiv i32 %[[T0]], %{{.*}}
+; SINK-GATHER: pred.load.continue:
+; SINK-GATHER:   %[[T1:.+]] = phi i32 [ poison, %vector.body ], [ %[[T0]], %pred.load.if ]
+; SINK-GATHER: pred.udiv.if:
+; SINK-GATHER:   %{{.*}} = udiv i32 %[[T1]], %{{.*}}
 ; SINK-GATHER: pred.udiv.continue:
 define i32 @scalarize_and_sink_gather(i32* %a, i1 %c, i32 %x, i64 %n) {
 entry:

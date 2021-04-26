@@ -53,7 +53,6 @@
 // RUN:   --offload-arch=gfx906 -nogpulib \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=VD %s
 
-// VD: "-mllvm" "--amdhsa-code-object-version=4"
 // VD: "-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx906"
 
 // Check invalid code object version option.

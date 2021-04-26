@@ -3336,8 +3336,9 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
   return Cost + LT.first;
 }
 
-int X86TTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
-                                          const SCEV *Ptr) {
+InstructionCost X86TTIImpl::getAddressComputationCost(Type *Ty,
+                                                      ScalarEvolution *SE,
+                                                      const SCEV *Ptr) {
   // Address computations in vectorized code with non-consecutive addresses will
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting
@@ -3379,6 +3380,7 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
   static const CostTblEntry SSE2CostTblNoPairWise[] = {
     { ISD::FADD,  MVT::v2f64,   2 },
+    { ISD::FADD,  MVT::v2f32,   2 },
     { ISD::FADD,  MVT::v4f32,   4 },
     { ISD::ADD,   MVT::v2i64,   2 },      // The data reported by the IACA tool is "1.6".
     { ISD::ADD,   MVT::v2i32,   2 }, // FIXME: chosen to be less than v4i32
@@ -3923,7 +3925,7 @@ X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
 /// Calculate the cost of materializing a 64-bit value. This helper
 /// method might only calculate a fraction of a larger immediate. Therefore it
 /// is valid to return a cost of ZERO.
-int X86TTIImpl::getIntImmCost(int64_t Val) {
+InstructionCost X86TTIImpl::getIntImmCost(int64_t Val) {
   if (Val == 0)
     return TTI::TCC_Free;
 
@@ -3933,8 +3935,8 @@ int X86TTIImpl::getIntImmCost(int64_t Val) {
   return 2 * TTI::TCC_Basic;
 }
 
-int X86TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
-                              TTI::TargetCostKind CostKind) {
+InstructionCost X86TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
+                                          TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
@@ -3958,20 +3960,20 @@ int X86TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
 
   // Split the constant into 64-bit chunks and calculate the cost for each
   // chunk.
-  int Cost = 0;
+  InstructionCost Cost = 0;
   for (unsigned ShiftVal = 0; ShiftVal < BitSize; ShiftVal += 64) {
     APInt Tmp = ImmVal.ashr(ShiftVal).sextOrTrunc(64);
     int64_t Val = Tmp.getSExtValue();
     Cost += getIntImmCost(Val);
   }
   // We need at least one instruction to materialize the constant.
-  return std::max(1, Cost);
+  return std::max<InstructionCost>(1, Cost);
 }
 
-int X86TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
-                                  const APInt &Imm, Type *Ty,
-                                  TTI::TargetCostKind CostKind,
-                                  Instruction *Inst) {
+InstructionCost X86TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
+                                              const APInt &Imm, Type *Ty,
+                                              TTI::TargetCostKind CostKind,
+                                              Instruction *Inst) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
@@ -4058,7 +4060,7 @@ int X86TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
 
   if (Idx == ImmIdx) {
     int NumConstants = divideCeil(BitSize, 64);
-    int Cost = X86TTIImpl::getIntImmCost(Imm, Ty, CostKind);
+    InstructionCost Cost = X86TTIImpl::getIntImmCost(Imm, Ty, CostKind);
     return (Cost <= NumConstants * TTI::TCC_Basic)
                ? static_cast<int>(TTI::TCC_Free)
                : Cost;
@@ -4067,9 +4069,9 @@ int X86TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   return X86TTIImpl::getIntImmCost(Imm, Ty, CostKind);
 }
 
-int X86TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
-                                    const APInt &Imm, Type *Ty,
-                                    TTI::TargetCostKind CostKind) {
+InstructionCost X86TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
+                                                const APInt &Imm, Type *Ty,
+                                                TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();

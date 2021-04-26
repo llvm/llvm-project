@@ -25,12 +25,12 @@
 // RUN:   -fgpu-rdc \
 // RUN:   %s 2>&1 | FileCheck --check-prefixes=CHECK %s
 
-// CHECK: [[CLANG:"[^"]*clang[^"]*"]] "-cc1" "-mllvm" "--amdhsa-code-object-version={{[0-9]+}}" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: [[CLANG:"[^"]*clang[^"]*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-target-cpu" "gfx908"
 // CHECK-SAME: "-target-feature" "+sramecc"
 // CHECK-SAME: "-target-feature" "+xnack"
 
-// TMP: [[CLANG:"[^"]*clang[^"]*"]] "-cc1as" "-mllvm" "--amdhsa-code-object-version={{[0-9]+}}" "-triple" "amdgcn-amd-amdhsa"
+// TMP: [[CLANG:"[^"]*clang[^"]*"]] "-cc1as" "-triple" "amdgcn-amd-amdhsa"
 // TMP-SAME: "-target-cpu" "gfx908"
 // TMP-SAME: "-target-feature" "+sramecc"
 // TMP-SAME: "-target-feature" "+xnack"
@@ -38,7 +38,7 @@
 // CHECK: [[LLD:"[^"]*lld[^"]*"]] {{.*}} "-plugin-opt=mcpu=gfx908"
 // CHECK-SAME: "-plugin-opt=-mattr=+sramecc,+xnack"
 
-// CHECK: [[CLANG]] "-cc1" "-mllvm" "--amdhsa-code-object-version={{[0-9]+}}" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-target-cpu" "gfx908"
 // CHECK-SAME: "-target-feature" "-sramecc"
 // CHECK-SAME: "-target-feature" "+xnack"

@@ -13,9 +13,10 @@
 
 #include "MCTargetDesc/WebAssemblyInstPrinter.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "Utils/WebAssemblyTypeUtilities.h"
+#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
-#include "WebAssemblyUtilities.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -387,53 +388,4 @@ void WebAssemblyInstPrinter::printWebAssemblyHeapTypeOperand(const MCInst *MI,
     // currently unimplemented.
     O << "unsupported_heap_type_operand";
   }
-}
-
-// We have various enums representing a subset of these types, use this
-// function to convert any of them to text.
-const char *WebAssembly::anyTypeToString(unsigned Ty) {
-  switch (Ty) {
-  case wasm::WASM_TYPE_I32:
-    return "i32";
-  case wasm::WASM_TYPE_I64:
-    return "i64";
-  case wasm::WASM_TYPE_F32:
-    return "f32";
-  case wasm::WASM_TYPE_F64:
-    return "f64";
-  case wasm::WASM_TYPE_V128:
-    return "v128";
-  case wasm::WASM_TYPE_FUNCREF:
-    return "funcref";
-  case wasm::WASM_TYPE_EXTERNREF:
-    return "externref";
-  case wasm::WASM_TYPE_FUNC:
-    return "func";
-  case wasm::WASM_TYPE_NORESULT:
-    return "void";
-  default:
-    return "invalid_type";
-  }
-}
-
-const char *WebAssembly::typeToString(wasm::ValType Ty) {
-  return anyTypeToString(static_cast<unsigned>(Ty));
-}
-
-std::string WebAssembly::typeListToString(ArrayRef<wasm::ValType> List) {
-  std::string S;
-  for (auto &Ty : List) {
-    if (&Ty != &List[0]) S += ", ";
-    S += WebAssembly::typeToString(Ty);
-  }
-  return S;
-}
-
-std::string WebAssembly::signatureToString(const wasm::WasmSignature *Sig) {
-  std::string S("(");
-  S += typeListToString(Sig->Params);
-  S += ") -> (";
-  S += typeListToString(Sig->Returns);
-  S += ")";
-  return S;
 }

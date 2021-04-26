@@ -57,6 +57,48 @@ concept indirectly_writable =
     const_cast<const iter_reference_t<_Out>&&>(*_VSTD::forward<_Out>(__o)) = _VSTD::forward<_Tp>(__t); // not required to be equality-preserving
   };
 
+// [iterator.concept.winc]
+template<class _Tp>
+concept __integer_like = integral<_Tp> && !same_as<_Tp, bool>;
+
+template<class _Tp>
+concept __signed_integer_like = signed_integral<_Tp>;
+
+template<class _Ip>
+concept weakly_incrementable =
+  default_initializable<_Ip> &&
+  movable<_Ip> &&
+  requires(_Ip __i) {
+    typename iter_difference_t<_Ip>;
+    requires __signed_integer_like<iter_difference_t<_Ip> >;
+    { ++__i } -> same_as<_Ip&>;   // not required to be equality-preserving
+    __i++;                        // not required to be equality-preserving
+  };
+
+// [iterator.concept.inc]
+template<class _Ip>
+concept incrementable =
+  regular<_Ip> &&
+  weakly_incrementable<_Ip> &&
+  requires(_Ip __i) {
+    { __i++ } -> same_as<_Ip>;
+  };
+
+// [iterator.concept.iterator]
+template<class _Ip>
+concept input_or_output_iterator =
+  requires(_Ip __i) {
+    { *__i } -> __referenceable;
+  } &&
+  weakly_incrementable<_Ip>;
+
+// [iterator.concept.sentinel]
+template<class _Sp, class _Ip>
+concept sentinel_for =
+  semiregular<_Sp> &&
+  input_or_output_iterator<_Ip> &&
+  __weakly_equality_comparable_with<_Sp, _Ip>;
+
 // clang-format on
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)

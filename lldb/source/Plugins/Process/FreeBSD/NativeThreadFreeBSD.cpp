@@ -130,6 +130,30 @@ void NativeThreadFreeBSD::SetStoppedByWatchpoint(uint32_t wp_index) {
   m_stop_info.details.signal.signo = SIGTRAP;
 }
 
+void NativeThreadFreeBSD::SetStoppedByFork(lldb::pid_t child_pid,
+                                           lldb::tid_t child_tid) {
+  SetStopped();
+
+  m_stop_info.reason = StopReason::eStopReasonFork;
+  m_stop_info.details.fork.child_pid = child_pid;
+  m_stop_info.details.fork.child_tid = child_tid;
+}
+
+void NativeThreadFreeBSD::SetStoppedByVFork(lldb::pid_t child_pid,
+                                            lldb::tid_t child_tid) {
+  SetStopped();
+
+  m_stop_info.reason = StopReason::eStopReasonVFork;
+  m_stop_info.details.fork.child_pid = child_pid;
+  m_stop_info.details.fork.child_tid = child_tid;
+}
+
+void NativeThreadFreeBSD::SetStoppedByVForkDone() {
+  SetStopped();
+
+  m_stop_info.reason = StopReason::eStopReasonVForkDone;
+}
+
 void NativeThreadFreeBSD::SetStoppedWithNoReason() {
   SetStopped();
 

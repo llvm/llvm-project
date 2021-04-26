@@ -559,14 +559,26 @@ static void WriteShadowIfDifferent(dfsan_label label, uptr shadow_addr,
   }
 }
 
+#define RET_CHAIN_ORIGIN(id)           \
+  GET_CALLER_PC_BP_SP;                 \
+  (void)sp;                            \
+  GET_STORE_STACK_TRACE_PC_BP(pc, bp); \
+  return ChainOrigin(id, &stack);
+
 // Return a new origin chain with the previous ID id and the current stack
 // trace.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_origin
 __dfsan_chain_origin(dfsan_origin id) {
-  GET_CALLER_PC_BP_SP;
-  (void)sp;
-  GET_STORE_STACK_TRACE_PC_BP(pc, bp);
-  return ChainOrigin(id, &stack);
+  RET_CHAIN_ORIGIN(id)
+}
+
+// Return a new origin chain with the previous ID id and the current stack
+// trace if the label is tainted.
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_origin
+__dfsan_chain_origin_if_tainted(dfsan_label label, dfsan_origin id) {
+  if (!label)
+    return id;
+  RET_CHAIN_ORIGIN(id)
 }
 
 // Copy or move the origins of the len bytes from src to dst.

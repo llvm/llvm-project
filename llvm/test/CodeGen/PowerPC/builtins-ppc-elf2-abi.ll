@@ -230,7 +230,21 @@ entry:
 ; CHECK: xvcvdpsp 34, 34
 }
 
-; Function Attrs: nounwind readnone
+define dso_local <2 x i64> @emit_xvcvspsxds(<4 x float> %a) local_unnamed_addr #0 {
+entry:
+  %0 = tail call <2 x i64> @llvm.ppc.vsx.xvcvspsxds(<4 x float> %a)
+  ret <2 x i64> %0
+; CHECK-LABEL: @emit_xvcvspsxds
+; CHECK: xvcvspsxds 34, 34
+}
+
+define dso_local <2 x i64> @emit_xvcvspuxds(<4 x float> %a) local_unnamed_addr #0 {
+entry:
+  %0 = tail call <2 x i64> @llvm.ppc.vsx.xvcvspuxds(<4 x float> %a)
+  ret <2 x i64> %0
+; CHECK-LABEL: @emit_xvcvspuxds
+; CHECK: xvcvspuxds 34, 34
+}
 
 ; Function Attrs: nounwind readnone
 declare <4 x float> @llvm.ppc.vsx.xvresp(<4 x float>)
@@ -275,3 +289,5 @@ declare <2 x double> @llvm.ppc.vsx.xvcvuxwdp(<4 x i32>) #1
 declare <2 x double> @llvm.ppc.vsx.xvcvspdp(<4 x float>) #1
 declare <4 x float> @llvm.ppc.vsx.xvcvsxdsp(<2 x i64>) #1
 declare <4 x float> @llvm.ppc.vsx.xvcvuxdsp(<2 x i64>) #1
+declare <2 x i64> @llvm.ppc.vsx.xvcvspsxds(<4 x float>) #1
+declare <2 x i64> @llvm.ppc.vsx.xvcvspuxds(<4 x float>) #1

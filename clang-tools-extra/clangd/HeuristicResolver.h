@@ -53,7 +53,8 @@ public:
   resolveMemberExpr(const CXXDependentScopeMemberExpr *ME) const;
   std::vector<const NamedDecl *>
   resolveDeclRefExpr(const DependentScopeDeclRefExpr *RE) const;
-  std::vector<const NamedDecl *> resolveCallExpr(const CallExpr *CE) const;
+  std::vector<const NamedDecl *>
+  resolveTypeOfCallExpr(const CallExpr *CE) const;
   std::vector<const NamedDecl *>
   resolveUsingValueDecl(const UnresolvedUsingValueDecl *UUVD) const;
   std::vector<const NamedDecl *>

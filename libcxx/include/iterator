@@ -44,13 +44,29 @@ template<dereferenceable T>
 using iter_rvalue_reference_t = decltype(ranges::iter_move(declval<T&>())); // since C++20
 
 // [iterator.concepts], iterator concepts
-// [iterator.concept.readable], concept indirectly_­readable
+// [iterator.concept.readable], concept indirectly_readable
 template<class In>
   concept indirectly_readable = see below;                // since C++20
 
-// [iterator.concept.writable], concept indirectly_­writable
+// [iterator.concept.writable], concept indirectly_writable
 template<class Out, class T>
   concept indirectly_writable = see below;                // since C++20
+
+// [iterator.concept.winc], concept weakly_­incrementable
+template<class I>
+  concept weakly_incrementable = see below;                // since C++20
+
+// [iterator.concept.inc], concept incrementable
+template<class I>
+  concept incrementable = see below;                       // since C++20
+
+// [iterator.concept.iterator], concept input_­or_­output_­iterator
+  template<class I>
+    concept input_or_output_iterator = see below;          // since C++20
+
+// [iterator.concept.sentinel], concept sentinel_­for
+template<class S, class I>
+  concept sentinel_for = see below;                        // since C++20
 
 template<class Category, class T, class Distance = ptrdiff_t,
          class Pointer = T*, class Reference = T&>
@@ -438,6 +454,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <concepts> // Mandated by the Standard.
 #include <cstddef>
 #include <initializer_list>
+#include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>
 #include <__iterator/iterator_traits.h>

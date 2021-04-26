@@ -26,6 +26,7 @@ class CXXCtorInitializer;
 class NestedNameSpecifierLoc;
 class TemplateArgumentLoc;
 class CXXBaseSpecifier;
+struct DeclarationNameInfo;
 
 namespace tooling {
 
@@ -67,6 +68,11 @@ struct RangeLessThan {
 
 } // namespace internal
 
+// Note that this container stores unique results in a deterministic, but
+// the location calls are in an unspecified order.  Clients which desire
+// a particular order for the location calls, such as alphabetical,
+// should sort results after retrieval, because the order is dependent
+// on how the LocationCalls are formatted.
 template <typename T, typename U>
 using UniqueMultiMap = std::set<std::pair<T, U>, internal::RangeLessThan>;
 
@@ -87,6 +93,7 @@ NodeLocationAccessors GetLocations(clang::NestedNameSpecifierLoc const &);
 NodeLocationAccessors GetLocations(clang::TemplateArgumentLoc const &);
 NodeLocationAccessors GetLocations(clang::CXXBaseSpecifier const *);
 NodeLocationAccessors GetLocations(clang::TypeLoc const &);
+NodeLocationAccessors GetLocations(clang::DeclarationNameInfo const &);
 NodeLocationAccessors GetLocations(clang::DynTypedNode const &Node);
 } // namespace NodeIntrospection
 } // namespace tooling

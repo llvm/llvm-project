@@ -5696,6 +5696,7 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   switch (BO->getOpcode()) {
   default:
     return CR;
+  case Instruction::LShr:
   case Instruction::Shl:
     break;
   };
@@ -5724,6 +5725,19 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   switch (BO->getOpcode()) {
   default:
     llvm_unreachable("filtered out above");
+  case Instruction::LShr: {
+    // For each lshr, three cases:
+    //   shift = 0 => unchanged value
+    //   saturation => 0
+    //   other => a smaller positive number
+    // Thus, the low end of the unsigned range is the last value produced.
+    auto KnownEnd = KnownBits::lshr(KnownStart,
+                                    KnownBits::makeConstant(TotalShift));
+    auto R = ConstantRange::getNonEmpty(KnownEnd.getMinValue(),
+                                        KnownStart.getMaxValue() + 1);
+    CR = CR.intersectWith(R);
+    break;
+  }
   case Instruction::Shl: {
     // Iff no bits are shifted out, value increases on every shift.
     auto KnownEnd = KnownBits::shl(KnownStart,
@@ -13419,30 +13433,22 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
     if (!LHSUnknown)
       return;
 
+    // Check whether LHS has already been rewritten. In that case we want to
+    // chain further rewrites onto the already rewritten value.
+    auto I = RewriteMap.find(LHSUnknown->getValue());
+    const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : LHS;
+
     // TODO: use information from more predicates.
     switch (Predicate) {
-    case CmpInst::ICMP_ULT: {
-      if (!containsAddRecurrence(RHS)) {
-        const SCEV *Base = LHS;
-        auto I = RewriteMap.find(LHSUnknown->getValue());
-        if (I != RewriteMap.end())
-          Base = I->second;
-
-        RewriteMap[LHSUnknown->getValue()] =
-            getUMinExpr(Base, getMinusSCEV(RHS, getOne(RHS->getType())));
-      }
+    case CmpInst::ICMP_ULT:
+      if (!containsAddRecurrence(RHS))
+        RewriteMap[LHSUnknown->getValue()] = getUMinExpr(
+            RewrittenLHS, getMinusSCEV(RHS, getOne(RHS->getType())));
       break;
-    }
-    case CmpInst::ICMP_ULE: {
-      if (!containsAddRecurrence(RHS)) {
-        const SCEV *Base = LHS;
-        auto I = RewriteMap.find(LHSUnknown->getValue());
-        if (I != RewriteMap.end())
-          Base = I->second;
-        RewriteMap[LHSUnknown->getValue()] = getUMinExpr(Base, RHS);
-      }
+    case CmpInst::ICMP_ULE:
+      if (!containsAddRecurrence(RHS))
+        RewriteMap[LHSUnknown->getValue()] = getUMinExpr(RewrittenLHS, RHS);
       break;
-    }
     case CmpInst::ICMP_EQ:
       if (isa<SCEVConstant>(RHS))
         RewriteMap[LHSUnknown->getValue()] = RHS;
@@ -13451,7 +13457,7 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       if (isa<SCEVConstant>(RHS) &&
           cast<SCEVConstant>(RHS)->getValue()->isNullValue())
         RewriteMap[LHSUnknown->getValue()] =
-            getUMaxExpr(LHS, getOne(RHS->getType()));
+            getUMaxExpr(RewrittenLHS, getOne(RHS->getType()));
       break;
     default:
       break;

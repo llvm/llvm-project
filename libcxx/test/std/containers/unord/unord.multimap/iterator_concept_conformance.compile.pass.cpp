@@ -9,6 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
+// XFAIL: msvc && clang
 
 // iterator, const_iterator, local_iterator, const_local_iterator
 
@@ -24,12 +25,36 @@ using value_type = iterator::value_type;
 
 static_assert(std::indirectly_readable<iterator>);
 static_assert(!std::indirectly_writable<iterator, value_type>);
+static_assert(std::incrementable<iterator>);
+static_assert(std::input_or_output_iterator<iterator>);
+static_assert(std::sentinel_for<iterator, iterator>);
+static_assert(std::sentinel_for<iterator, const_iterator>);
+static_assert(!std::sentinel_for<iterator, local_iterator>);
+static_assert(!std::sentinel_for<iterator, const_local_iterator>);
 
 static_assert(std::indirectly_readable<const_iterator>);
 static_assert(!std::indirectly_writable<const_iterator, value_type>);
+static_assert(std::incrementable<const_iterator>);
+static_assert(std::input_or_output_iterator<iterator>);
+static_assert(std::sentinel_for<const_iterator, iterator>);
+static_assert(std::sentinel_for<const_iterator, const_iterator>);
+static_assert(!std::sentinel_for<const_iterator, local_iterator>);
+static_assert(!std::sentinel_for<const_iterator, const_local_iterator>);
 
 static_assert(std::indirectly_readable<local_iterator>);
 static_assert(!std::indirectly_writable<local_iterator, value_type>);
+static_assert(std::incrementable<local_iterator>);
+static_assert(std::input_or_output_iterator<iterator>);
+static_assert(!std::sentinel_for<local_iterator, iterator>);
+static_assert(!std::sentinel_for<local_iterator, const_iterator>);
+static_assert(std::sentinel_for<local_iterator, local_iterator>);
+static_assert(std::sentinel_for<local_iterator, const_local_iterator>);
 
 static_assert(std::indirectly_readable<const_local_iterator>);
 static_assert(!std::indirectly_writable<const_local_iterator, value_type>);
+static_assert(std::incrementable<const_local_iterator>);
+static_assert(std::input_or_output_iterator<iterator>);
+static_assert(!std::sentinel_for<const_local_iterator, iterator>);
+static_assert(!std::sentinel_for<const_local_iterator, const_iterator>);
+static_assert(std::sentinel_for<const_local_iterator, local_iterator>);
+static_assert(std::sentinel_for<const_local_iterator, const_local_iterator>);

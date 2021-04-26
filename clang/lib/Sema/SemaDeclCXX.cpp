@@ -10874,26 +10874,6 @@ static void DiagnoseNamespaceInlineMismatch(Sema &S, SourceLocation KeywordLoc,
                                             NamespaceDecl *PrevNS) {
   assert(*IsInline != PrevNS->isInline());
 
-  // HACK: Work around a bug in libstdc++4.6's <atomic>, where
-  // std::__atomic[0,1,2] are defined as non-inline namespaces, then reopened as
-  // inline namespaces, with the intention of bringing names into namespace std.
-  //
-  // We support this just well enough to get that case working; this is not
-  // sufficient to support reopening namespaces as inline in general.
-  if (*IsInline && II && II->getName().startswith("__atomic") &&
-      S.getSourceManager().isInSystemHeader(Loc)) {
-    // Mark all prior declarations of the namespace as inline.
-    for (NamespaceDecl *NS = PrevNS->getMostRecentDecl(); NS;
-         NS = NS->getPreviousDecl())
-      NS->setInline(*IsInline);
-    // Patch up the lookup table for the containing namespace. This isn't really
-    // correct, but it's good enough for this particular case.
-    for (auto *I : PrevNS->decls())
-      if (auto *ND = dyn_cast<NamedDecl>(I))
-        PrevNS->getParent()->makeDeclVisibleInContext(ND);
-    return;
-  }
-
   if (PrevNS->isInline())
     // The user probably just forgot the 'inline', so suggest that it
     // be added back.
@@ -14047,12 +14027,20 @@ static void diagnoseDeprecatedCopyOperation(Sema &S, CXXMethodDecl *CopyOp) {
     assert(UserDeclaredOperation);
   }
 
-  if (UserDeclaredOperation && UserDeclaredOperation->isUserProvided()) {
-    S.Diag(UserDeclaredOperation->getLocation(),
-           isa<CXXDestructorDecl>(UserDeclaredOperation)
-               ? diag::warn_deprecated_copy_dtor_operation
-               : diag::warn_deprecated_copy_operation)
-        << RD << /*copy assignment*/ !isa<CXXConstructorDecl>(CopyOp);
+  if (UserDeclaredOperation) {
+    bool UDOIsUserProvided = UserDeclaredOperation->isUserProvided();
+    bool UDOIsDestructor = isa<CXXDestructorDecl>(UserDeclaredOperation);
+    bool IsCopyAssignment = !isa<CXXConstructorDecl>(CopyOp);
+    unsigned DiagID =
+        (UDOIsUserProvided && UDOIsDestructor)
+            ? diag::warn_deprecated_copy_with_user_provided_dtor
+        : (UDOIsUserProvided && !UDOIsDestructor)
+            ? diag::warn_deprecated_copy_with_user_provided_copy
+        : (!UDOIsUserProvided && UDOIsDestructor)
+            ? diag::warn_deprecated_copy_with_dtor
+            : diag::warn_deprecated_copy;
+    S.Diag(UserDeclaredOperation->getLocation(), DiagID)
+        << RD << IsCopyAssignment;
   }
 }
 

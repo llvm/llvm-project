@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 #===- clang-format-diff.py - ClangFormat Diff Reformatter ----*- python -*--===#
 #

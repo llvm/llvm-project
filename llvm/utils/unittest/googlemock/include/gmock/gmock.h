@@ -55,6 +55,11 @@
 //
 // where all clauses are optional and WillOnce() can be repeated.
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-copy"
+#endif
+
 #include "gmock/gmock-actions.h"
 #include "gmock/gmock-cardinalities.h"
 #include "gmock/gmock-generated-actions.h"
@@ -91,4 +96,7 @@ GTEST_API_ void InitGoogleMock(int* argc, wchar_t** argv);
 
 }  // namespace testing
 
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 #endif  // GMOCK_INCLUDE_GMOCK_GMOCK_H_

@@ -10970,6 +10970,8 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   default:
     return SetCGInfo(new DefaultTargetCodeGenInfo(Types));
 
+  case llvm::Triple::le32:
+    return SetCGInfo(new PNaClTargetCodeGenInfo(Types));
   case llvm::Triple::m68k:
     return SetCGInfo(new M68kTargetCodeGenInfo(Types));
   case llvm::Triple::mips:

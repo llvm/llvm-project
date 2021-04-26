@@ -53,8 +53,7 @@ void DwarfCFIExceptionBase::endFragment() {
 
 DwarfCFIException::DwarfCFIException(AsmPrinter *A)
     : DwarfCFIExceptionBase(A), shouldEmitPersonality(false),
-      forceEmitPersonality(false), shouldEmitLSDA(false),
-      shouldEmitMoves(false) {}
+      forceEmitPersonality(false), shouldEmitLSDA(false) {}
 
 DwarfCFIException::~DwarfCFIException() {}
 
@@ -87,16 +86,15 @@ static MCSymbol *getExceptionSym(AsmPrinter *Asm,
 }
 
 void DwarfCFIException::beginFunction(const MachineFunction *MF) {
-  shouldEmitMoves = shouldEmitPersonality = shouldEmitLSDA = false;
+  shouldEmitPersonality = shouldEmitLSDA = false;
   const Function &F = MF->getFunction();
 
   // If any landing pads survive, we need an EH table.
   bool hasLandingPads = !MF->getLandingPads().empty();
 
   // See if we need frame move info.
-  AsmPrinter::CFIMoveType MoveType = Asm->needsCFIMoves();
-
-  shouldEmitMoves = MoveType != AsmPrinter::CFI_M_None;
+  bool shouldEmitMoves =
+      Asm->getFunctionCFISectionType(*MF) != AsmPrinter::CFISection::None;
 
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   unsigned PerEncoding = TLOF.getPersonalityEncoding();
@@ -133,10 +131,14 @@ void DwarfCFIException::beginFragment(const MachineBasicBlock *MBB,
     return;
 
   if (!hasEmittedCFISections) {
-    if (Asm->needsOnlyDebugCFIMoves())
-      Asm->OutStreamer->emitCFISections(false, true);
-    else if (Asm->TM.Options.ForceDwarfFrameSection)
-      Asm->OutStreamer->emitCFISections(true, true);
+    AsmPrinter::CFISection CFISecType = Asm->getModuleCFISectionType();
+    // If we don't say anything it implies `.cfi_sections .eh_frame`, so we
+    // chose not to be verbose in that case. And with `ForceDwarfFrameSection`,
+    // we should always emit .debug_frame.
+    if (CFISecType == AsmPrinter::CFISection::Debug ||
+        Asm->TM.Options.ForceDwarfFrameSection)
+      Asm->OutStreamer->emitCFISections(
+          CFISecType == AsmPrinter::CFISection::EH, true);
     hasEmittedCFISections = true;
   }
 

@@ -4464,7 +4464,6 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     return failedImport(
         "Dst pattern child def is an unsupported tablegen class");
   }
-
   return failedImport("Dst pattern child is an unsupported kind");
 }
 

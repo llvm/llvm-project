@@ -41,6 +41,23 @@ std::string LocationCallFormatterCpp::format(const LocationCall &Call) {
 }
 
 namespace internal {
+
+static bool locationCallLessThan(const LocationCall *LHS,
+                                 const LocationCall *RHS) {
+  if (!LHS && !RHS)
+    return false;
+  if (LHS && !RHS)
+    return true;
+  if (!LHS && RHS)
+    return false;
+  auto compareResult = LHS->name().compare(RHS->name());
+  if (compareResult < 0)
+    return true;
+  if (compareResult > 0)
+    return false;
+  return locationCallLessThan(LHS->on(), RHS->on());
+}
+
 bool RangeLessThan::operator()(
     std::pair<SourceRange, SharedLocationCall> const &LHS,
     std::pair<SourceRange, SharedLocationCall> const &RHS) const {
@@ -54,15 +71,13 @@ bool RangeLessThan::operator()(
   else if (LHS.first.getEnd() != RHS.first.getEnd())
     return false;
 
-  return LocationCallFormatterCpp::format(*LHS.second) <
-         LocationCallFormatterCpp::format(*RHS.second);
+  return locationCallLessThan(LHS.second.get(), RHS.second.get());
 }
 bool RangeLessThan::operator()(
     std::pair<SourceLocation, SharedLocationCall> const &LHS,
     std::pair<SourceLocation, SharedLocationCall> const &RHS) const {
   if (LHS.first == RHS.first)
-    return LocationCallFormatterCpp::format(*LHS.second) <
-           LocationCallFormatterCpp::format(*RHS.second);
+    return locationCallLessThan(LHS.second.get(), RHS.second.get());
   return LHS.first < RHS.first;
 }
 } // namespace internal

@@ -885,6 +885,10 @@ def SLLIUWPat : PatFrag<(ops node:$A, node:$B),
   return MatchSLLIUW(N);
 }]>;
 
+def add_oneuse : PatFrag<(ops node:$A, node:$B), (add node:$A, node:$B), [{
+  return N->hasOneUse();
+}]>;
+
 /// Simple arithmetic operations
 
 def : PatGprGpr<add, ADD>;
@@ -1298,6 +1302,12 @@ def : Pat<(debugtrap), (EBREAK)>;
 def : Pat<(add GPR:$rs1, (AddiPair GPR:$rs2)),
           (ADDI (ADDI GPR:$rs1, (AddiPairImmB GPR:$rs2)),
                 (AddiPairImmA GPR:$rs2))>;
+
+let Predicates = [IsRV64] in {
+def : Pat<(sext_inreg (add_oneuse GPR:$rs1, (AddiPair GPR:$rs2)), i32),
+          (ADDIW (ADDIW GPR:$rs1, (AddiPairImmB GPR:$rs2)),
+                 (AddiPairImmA GPR:$rs2))>;
+}
 
 //===----------------------------------------------------------------------===//
 // Standard extensions

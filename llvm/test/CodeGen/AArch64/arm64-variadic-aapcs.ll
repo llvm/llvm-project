@@ -132,9 +132,10 @@ define dso_local void @test_va_copy() {
 
 ; CHECK: add x[[SRC:[0-9]+]], {{x[0-9]+}}, :lo12:var
 
-; CHECK: ldp [[BLOCK:q[0-9]+]], [[BLOCK:q[0-9]+]], [x[[SRC]]]
+; CHECK: ldr [[BLOCKB:q[0-9]+]], [x[[SRC]], #16]
 ; CHECK: add x[[DST:[0-9]+]], {{x[0-9]+}}, :lo12:second_list
-; CHECK: stp [[BLOCK:q[0-9]+]], [[BLOCK:q[0-9]+]], [x[[DST]]]
+; CHECK: ldr [[BLOCKA:q[0-9]+]], [x[[SRC]]]
+; CHECK: stp [[BLOCKA]], [[BLOCKB]], [x[[DST]]]
   ret void
 ; CHECK: ret
 }

@@ -85,6 +85,14 @@ public:
     return T + (T >> S) * (ClassId & M) + SizeDelta;
   }
 
+  static u8 getSizeLSBByClassId(uptr ClassId) {
+    return u8(getLeastSignificantSetBitIndex(getSizeByClassId(ClassId)));
+  }
+
+  static constexpr bool usesCompressedLSBFormat() {
+    return false;
+  }
+
   static uptr getClassIdBySize(uptr Size) {
     if (Size <= SizeDelta + (1 << Config::MinSizeLog))
       return 1;
@@ -137,7 +145,41 @@ class TableSizeClassMap : public SizeClassMapBase<Config> {
     u8 Tab[getTableSize()] = {};
   };
 
-  static constexpr SizeTable Table = {};
+  static constexpr SizeTable SzTable = {};
+
+  struct LSBTable {
+    constexpr LSBTable() {
+      u8 Min = 255, Max = 0;
+      for (uptr I = 0; I != ClassesSize; ++I) {
+        for (u8 Bit = 0; Bit != 64; ++Bit) {
+          if (Config::Classes[I] & (1 << Bit)) {
+            Tab[I] = Bit;
+            if (Bit < Min)
+              Min = Bit;
+            if (Bit > Max)
+              Max = Bit;
+            break;
+          }
+        }
+      }
+
+      if (Max - Min > 3 || ClassesSize > 32)
+        return;
+
+      UseCompressedFormat = true;
+      CompressedMin = Min;
+      for (uptr I = 0; I != ClassesSize; ++I)
+        CompressedValue |= u64(Tab[I] - Min) << (I * 2);
+    }
+
+    u8 Tab[ClassesSize] = {};
+
+    bool UseCompressedFormat = false;
+    u8 CompressedMin = 0;
+    u64 CompressedValue = 0;
+  };
+
+  static constexpr LSBTable LTable = {};
 
 public:
   static const u32 MaxNumCachedHint = Config::MaxNumCachedHint;
@@ -152,6 +194,18 @@ public:
     return Config::Classes[ClassId - 1];
   }
 
+  static u8 getSizeLSBByClassId(uptr ClassId) {
+    if (LTable.UseCompressedFormat)
+      return ((LTable.CompressedValue >> ((ClassId - 1) * 2)) & 3) +
+             LTable.CompressedMin;
+    else
+      return LTable.Tab[ClassId - 1];
+  }
+
+  static constexpr bool usesCompressedLSBFormat() {
+    return LTable.UseCompressedFormat;
+  }
+
   static uptr getClassIdBySize(uptr Size) {
     if (Size <= Config::Classes[0])
       return 1;
@@ -159,7 +213,7 @@ public:
     DCHECK_LE(Size, MaxSize);
     if (Size <= (1 << Config::MidSizeLog))
       return ((Size - 1) >> Config::MinSizeLog) + 1;
-    return Table.Tab[scaledLog2(Size - 1, Config::MidSizeLog, S)];
+    return SzTable.Tab[scaledLog2(Size - 1, Config::MidSizeLog, S)];
   }
 
   static u32 getMaxCachedHint(uptr Size) {
@@ -218,6 +272,10 @@ struct AndroidSizeClassConfig {
 };
 
 typedef TableSizeClassMap<AndroidSizeClassConfig> AndroidSizeClassMap;
+
+#if SCUDO_WORDSIZE == 64U && defined(__clang__)
+static_assert(AndroidSizeClassMap::usesCompressedLSBFormat(), "");
+#endif
 
 struct SvelteSizeClassConfig {
 #if SCUDO_WORDSIZE == 64U

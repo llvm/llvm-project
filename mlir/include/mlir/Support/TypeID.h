@@ -57,7 +57,6 @@ class TypeID {
 
 public:
   TypeID() : TypeID(get<void>()) {}
-  TypeID(const TypeID &) = default;
 
   /// Comparison operations.
   bool operator==(const TypeID &other) const {

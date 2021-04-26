@@ -230,7 +230,10 @@ emitInBoundsCondition(PatternRewriter &rewriter,
     Value iv = std::get<0>(it), off = std::get<1>(it), ub = std::get<2>(it);
     using namespace mlir::edsc::op;
     majorIvsPlusOffsets.push_back(iv + off);
-    if (!xferOp.isDimInBounds(leadingRank + idx)) {
+    auto affineConstExpr =
+        xferOp.permutation_map().getResult(idx).dyn_cast<AffineConstantExpr>();
+    bool isBroadcast = affineConstExpr && affineConstExpr.getValue() == 0;
+    if (!xferOp.isDimInBounds(leadingRank + idx) && !isBroadcast) {
       Value inBoundsCond = onTheFlyFoldSLT(majorIvsPlusOffsets.back(), ub);
       if (inBoundsCond)
         inBoundsCondition = (inBoundsCondition)

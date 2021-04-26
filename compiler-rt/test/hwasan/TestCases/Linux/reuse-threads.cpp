@@ -1,5 +1,5 @@
 // Test that Thread objects are reused.
-// RUN: %clangxx_hwasan -mllvm -hwasan-instrument-stack=0 %s -o %t && %env_hwasan_opts=verbose_threads=1 %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_hwasan -mllvm -hwasan-globals=0 -mllvm -hwasan-instrument-stack=0 %s -o %t && %env_hwasan_opts=verbose_threads=1 %run %t 2>&1 | FileCheck %s
 
 #include <assert.h>
 #include <fcntl.h>
@@ -10,12 +10,10 @@
 
 #include <sanitizer/hwasan_interface.h>
 
-#include "utils.h"
-
 pthread_barrier_t bar;
 
 void *threadfn(void *) {
-  pthread_barrier_wait(UNTAG(&bar));
+  pthread_barrier_wait(&bar);
   return nullptr;
 }
 
@@ -23,15 +21,15 @@ void start_stop_threads() {
   constexpr int N = 2;
   pthread_t threads[N];
 
-  pthread_barrier_init(UNTAG(&bar), nullptr, N + 1);
+  pthread_barrier_init(&bar, nullptr, N + 1);
   for (auto &t : threads)
     pthread_create(&t, nullptr, threadfn, nullptr);
 
-  pthread_barrier_wait(UNTAG(&bar));
+  pthread_barrier_wait(&bar);
 
   for (auto &t : threads)
     pthread_join(t, nullptr);
-  pthread_barrier_destroy(UNTAG(&bar));
+  pthread_barrier_destroy(&bar);
 }
 
 int main() {

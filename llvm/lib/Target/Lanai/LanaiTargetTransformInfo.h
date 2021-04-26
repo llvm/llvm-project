@@ -49,7 +49,8 @@ public:
     return TTI::PSK_Software;
   }
 
-  int getIntImmCost(const APInt &Imm, Type *Ty, TTI::TargetCostKind CostKind) {
+  InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
+                                TTI::TargetCostKind CostKind) {
     assert(Ty->isIntegerTy());
     if (Imm == 0)
       return TTI::TCC_Free;
@@ -66,14 +67,16 @@ public:
     return 4 * TTI::TCC_Basic;
   }
 
-  int getIntImmCostInst(unsigned Opc, unsigned Idx, const APInt &Imm, Type *Ty,
-                        TTI::TargetCostKind CostKind,
-                        Instruction *Inst = nullptr) {
+  InstructionCost getIntImmCostInst(unsigned Opc, unsigned Idx,
+                                    const APInt &Imm, Type *Ty,
+                                    TTI::TargetCostKind CostKind,
+                                    Instruction *Inst = nullptr) {
     return getIntImmCost(Imm, Ty, CostKind);
   }
 
-  int getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
-                          Type *Ty, TTI::TargetCostKind CostKind) {
+  InstructionCost getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
+                                      const APInt &Imm, Type *Ty,
+                                      TTI::TargetCostKind CostKind) {
     return getIntImmCost(Imm, Ty, CostKind);
   }
 

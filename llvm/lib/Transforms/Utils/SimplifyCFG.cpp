@@ -2371,21 +2371,23 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
                                          SpeculatedStore->getDebugLoc());
   }
 
-  // Metadata can be dependent on the condition we are hoisting above.
-  // Conservatively strip all metadata on the instruction. Drop the debug loc
-  // to avoid making it appear as if the condition is a constant, which would
-  // be misleading while debugging.
-  for (auto &I : *ThenBB) {
-    if (!SpeculatedStoreValue || &I != SpeculatedStore)
-      I.setDebugLoc(DebugLoc());
-    I.dropUnknownNonDebugMetadata();
-  }
-
   // A hoisted conditional probe should be treated as dangling so that it will
   // not be over-counted when the samples collected on the non-conditional path
   // are counted towards the conditional path. We leave it for the counts
   // inference algorithm to figure out a proper count for a danglng probe.
   moveAndDanglePseudoProbes(ThenBB, BI);
+
+  // Metadata can be dependent on the condition we are hoisting above.
+  // Conservatively strip all metadata on the instruction. Drop the debug loc
+  // to avoid making it appear as if the condition is a constant, which would
+  // be misleading while debugging.
+  for (auto &I : *ThenBB) {
+    assert(!isa<PseudoProbeInst>(I) &&
+           "Should not drop debug info from any pseudo probes.");
+    if (!SpeculatedStoreValue || &I != SpeculatedStore)
+      I.setDebugLoc(DebugLoc());
+    I.dropUnknownNonDebugMetadata();
+  }
 
   // Hoist the instructions.
   BB->getInstList().splice(BI->getIterator(), ThenBB->getInstList(),

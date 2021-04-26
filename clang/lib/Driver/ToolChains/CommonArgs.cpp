@@ -1573,29 +1573,46 @@ void tools::addX86AlignBranchArgs(const Driver &D, const ArgList &Args,
   }
 }
 
-unsigned tools::getOrCheckAMDGPUCodeObjectVersion(
-    const Driver &D, const llvm::opt::ArgList &Args, bool Diagnose) {
-  const unsigned MinCodeObjVer = 2;
-  const unsigned MaxCodeObjVer = 4;
-  unsigned CodeObjVer = 4;
-
-  // Emit warnings for legacy options even if they are overridden.
-  if (Diagnose) {
-    if (Args.hasArg(options::OPT_mno_code_object_v3_legacy))
-      D.Diag(diag::warn_drv_deprecated_arg) << "-mno-code-object-v3"
-                                            << "-mcode-object-version=2";
-
-    if (Args.hasArg(options::OPT_mcode_object_v3_legacy))
-      D.Diag(diag::warn_drv_deprecated_arg) << "-mcode-object-v3"
-                                            << "-mcode-object-version=3";
-  }
-
+static llvm::opt::Arg *
+getAMDGPUCodeObjectArgument(const Driver &D, const llvm::opt::ArgList &Args) {
   // The last of -mcode-object-v3, -mno-code-object-v3 and
   // -mcode-object-version=<version> wins.
-  if (auto *CodeObjArg =
-          Args.getLastArg(options::OPT_mcode_object_v3_legacy,
-                          options::OPT_mno_code_object_v3_legacy,
-                          options::OPT_mcode_object_version_EQ)) {
+  return Args.getLastArg(options::OPT_mcode_object_v3_legacy,
+                         options::OPT_mno_code_object_v3_legacy,
+                         options::OPT_mcode_object_version_EQ);
+}
+
+void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
+                                         const llvm::opt::ArgList &Args) {
+  const unsigned MinCodeObjVer = 2;
+  const unsigned MaxCodeObjVer = 4;
+
+  // Emit warnings for legacy options even if they are overridden.
+  if (Args.hasArg(options::OPT_mno_code_object_v3_legacy))
+    D.Diag(diag::warn_drv_deprecated_arg) << "-mno-code-object-v3"
+                                          << "-mcode-object-version=2";
+
+  if (Args.hasArg(options::OPT_mcode_object_v3_legacy))
+    D.Diag(diag::warn_drv_deprecated_arg) << "-mcode-object-v3"
+                                          << "-mcode-object-version=3";
+
+  if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args)) {
+    if (CodeObjArg->getOption().getID() ==
+        options::OPT_mcode_object_version_EQ) {
+      unsigned CodeObjVer = MaxCodeObjVer;
+      auto Remnant =
+          StringRef(CodeObjArg->getValue()).getAsInteger(0, CodeObjVer);
+      if (Remnant || CodeObjVer < MinCodeObjVer || CodeObjVer > MaxCodeObjVer)
+        D.Diag(diag::err_drv_invalid_int_value)
+            << CodeObjArg->getAsString(Args) << CodeObjArg->getValue();
+    }
+  }
+}
+
+unsigned tools::getAMDGPUCodeObjectVersion(const Driver &D,
+                                           const llvm::opt::ArgList &Args) {
+  unsigned CodeObjVer = 4; // default
+  if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args)) {
     if (CodeObjArg->getOption().getID() ==
         options::OPT_mno_code_object_v3_legacy) {
       CodeObjVer = 2;
@@ -1603,15 +1620,15 @@ unsigned tools::getOrCheckAMDGPUCodeObjectVersion(
                options::OPT_mcode_object_v3_legacy) {
       CodeObjVer = 3;
     } else {
-      auto Remnant =
-          StringRef(CodeObjArg->getValue()).getAsInteger(0, CodeObjVer);
-      if (Diagnose &&
-          (Remnant || CodeObjVer < MinCodeObjVer || CodeObjVer > MaxCodeObjVer))
-        D.Diag(diag::err_drv_invalid_int_value)
-            << CodeObjArg->getAsString(Args) << CodeObjArg->getValue();
+      StringRef(CodeObjArg->getValue()).getAsInteger(0, CodeObjVer);
     }
   }
   return CodeObjVer;
+}
+
+bool tools::haveAMDGPUCodeObjectVersionArgument(
+    const Driver &D, const llvm::opt::ArgList &Args) {
+  return getAMDGPUCodeObjectArgument(D, Args) != nullptr;
 }
 
 void tools::addMachineOutlinerArgs(const Driver &D,

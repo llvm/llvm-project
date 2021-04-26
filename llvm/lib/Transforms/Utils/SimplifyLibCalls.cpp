@@ -2388,7 +2388,7 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
   }
 
   // printf("foo\n") --> puts("foo")
-  if (FormatStr[FormatStr.size() - 1] == '\n' &&
+  if (FormatStr.back() == '\n' &&
       FormatStr.find('%') == StringRef::npos) { // No format characters.
     // Create a string literal with no \n on it.  We expect the constant merge
     // pass to be run after this pass, to merge duplicate strings.

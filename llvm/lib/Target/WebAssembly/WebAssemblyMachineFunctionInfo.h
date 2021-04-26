@@ -16,13 +16,13 @@
 #define LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYMACHINEFUNCTIONINFO_H
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
-#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/MC/MCSymbolWasm.h"
 
 namespace llvm {
+
+struct WasmEHFuncInfo;
 
 namespace yaml {
 struct WebAssemblyFunctionInfo;
@@ -188,6 +188,8 @@ namespace yaml {
 using BBNumberMap = DenseMap<int, int>;
 
 struct WebAssemblyFunctionInfo final : public yaml::MachineFunctionInfo {
+  std::vector<FlowStringValue> Params;
+  std::vector<FlowStringValue> Results;
   bool CFGStackified = false;
   // The same as WasmEHFuncInfo's SrcToUnwindDest, but stored in the mapping of
   // BB numbers
@@ -202,6 +204,8 @@ struct WebAssemblyFunctionInfo final : public yaml::MachineFunctionInfo {
 
 template <> struct MappingTraits<WebAssemblyFunctionInfo> {
   static void mapping(IO &YamlIO, WebAssemblyFunctionInfo &MFI) {
+    YamlIO.mapOptional("params", MFI.Params, std::vector<FlowStringValue>());
+    YamlIO.mapOptional("results", MFI.Results, std::vector<FlowStringValue>());
     YamlIO.mapOptional("isCFGStackified", MFI.CFGStackified, false);
     YamlIO.mapOptional("wasmEHFuncInfo", MFI.SrcToUnwindDest);
   }

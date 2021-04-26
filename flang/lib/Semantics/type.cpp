@@ -10,6 +10,7 @@
 #include "check-declarations.h"
 #include "compute-offsets.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/characters.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
@@ -197,26 +198,7 @@ bool DerivedTypeSpec::MightBeAssignmentCompatibleWith(
   if (!RawEquals(that)) {
     return false;
   }
-  const std::map<SourceName, ParamValue> &theseParams{this->parameters()};
-  const std::map<SourceName, ParamValue> &thoseParams{that.parameters()};
-  auto thatIter{thoseParams.begin()};
-  for (const auto &[thisName, thisValue] : theseParams) {
-    CHECK(thatIter != thoseParams.end());
-    const ParamValue &thatValue{thatIter->second};
-    if (MaybeIntExpr thisExpr{thisValue.GetExplicit()}) {
-      if (evaluate::IsConstantExpr(*thisExpr)) {
-        if (MaybeIntExpr thatExpr{thatValue.GetExplicit()}) {
-          if (evaluate::IsConstantExpr(*thatExpr)) {
-            if (evaluate::ToInt64(*thisExpr) != evaluate::ToInt64(*thatExpr)) {
-              return false;
-            }
-          }
-        }
-      }
-    }
-    thatIter++;
-  }
-  return true;
+  return AreTypeParamCompatible(*this, that);
 }
 
 class InstantiateHelper {
@@ -230,7 +212,7 @@ private:
   evaluate::FoldingContext &foldingContext() {
     return context().foldingContext();
   }
-  template <typename T> T Fold(T &&expr) {
+  template <typename A> A Fold(A &&expr) {
     return evaluate::Fold(foldingContext(), std::move(expr));
   }
   void InstantiateComponent(const Symbol &);
@@ -395,7 +377,7 @@ void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
       // in PARAMETER structure constructors.
       auto restorer{foldingContext().messages().SetLocation(newSymbol.name())};
       init = IsPointer(newSymbol)
-          ? evaluate::Fold(foldingContext(), std::move(*init))
+          ? Fold(std::move(*init))
           : evaluate::NonPointerInitializationExpr(
                 newSymbol, std::move(*init), foldingContext());
     }

@@ -120,6 +120,36 @@ func @f() -> !shape.shape {
 
 // -----
 
+// All but one operands are known empty shapes.
+// CHECK-LABEL: @all_but_one_empty
+// CHECK-SAME:  (%[[ARG:.*]]: !shape.shape)
+func @all_but_one_empty(%arg0 : !shape.shape) -> !shape.shape {
+  // CHECK: return %[[ARG]]
+  %0 = shape.const_shape [] : !shape.shape
+  %1 = shape.const_shape [] : tensor<0xindex>
+  %2 = shape.broadcast %0, %arg0, %1, %0 : !shape.shape, !shape.shape,
+      tensor<0xindex>, !shape.shape -> !shape.shape
+  return %2 : !shape.shape
+}
+
+// -----
+
+// Partial folding.
+// CHECK-LABEL: @partial_folding
+// CHECK-SAME:  (%[[ARG:.*]]: !shape.shape)
+func @partial_folding(%arg0 : !shape.shape) -> !shape.shape {
+  // CHECK: %[[CST_SHAPE:.*]] = constant dense<[1, 2, 3]> : tensor<3xindex>
+  // CHECK: %[[RESULT:.*]] = shape.broadcast %[[ARG]], %[[CST_SHAPE]] : !shape.shape, tensor<3xindex> -> !shape.shape
+  // CHECK: return %[[RESULT]]
+  %0 = shape.const_shape [2, 1] : !shape.shape
+  %1 = shape.const_shape [1, 2, 3] : tensor<3xindex>
+  %2 = shape.broadcast %0, %arg0, %1, %0 : !shape.shape, !shape.shape,
+      tensor<3xindex>, !shape.shape -> !shape.shape
+  return %2 : !shape.shape
+}
+
+// -----
+
 // Incompatible shapes. No folding.
 // CHECK-LABEL: func @f
 func @f() -> !shape.shape {

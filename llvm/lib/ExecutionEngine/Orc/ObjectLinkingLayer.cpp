@@ -654,13 +654,23 @@ Error EHFrameRegistrationPlugin::notifyRemovingResources(ResourceKey K) {
 void EHFrameRegistrationPlugin::notifyTransferringResources(
     ResourceKey DstKey, ResourceKey SrcKey) {
   auto SI = EHFrameRanges.find(SrcKey);
-  if (SI != EHFrameRanges.end()) {
+  if (SI == EHFrameRanges.end())
+    return;
+
+  auto DI = EHFrameRanges.find(DstKey);
+  if (DI != EHFrameRanges.end()) {
     auto &SrcRanges = SI->second;
-    auto &DstRanges = EHFrameRanges[DstKey];
+    auto &DstRanges = DI->second;
     DstRanges.reserve(DstRanges.size() + SrcRanges.size());
     for (auto &SrcRange : SrcRanges)
       DstRanges.push_back(std::move(SrcRange));
     EHFrameRanges.erase(SI);
+  } else {
+    // We need to move SrcKey's ranges over without invalidating the SI
+    // iterator.
+    auto Tmp = std::move(SI->second);
+    EHFrameRanges.erase(SI);
+    EHFrameRanges[DstKey] = std::move(Tmp);
   }
 }
 

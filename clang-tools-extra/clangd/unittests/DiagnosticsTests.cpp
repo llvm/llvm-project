@@ -1373,6 +1373,25 @@ TEST(ParsedASTTest, ModuleSawDiag) {
   EXPECT_THAT(*AST.getDiagnostics(),
               testing::Contains(Diag(Code.range(), KDiagMsg.str())));
 }
+
+TEST(Preamble, EndsOnNonEmptyLine) {
+  TestTU TU;
+  TU.ExtraArgs = {"-Wnewline-eof"};
+
+  {
+    TU.Code = "#define FOO\n  void bar();\n";
+    auto AST = TU.build();
+    EXPECT_THAT(*AST.getDiagnostics(), IsEmpty());
+  }
+  {
+    Annotations Code("#define FOO[[]]");
+    TU.Code = Code.code().str();
+    auto AST = TU.build();
+    EXPECT_THAT(
+        *AST.getDiagnostics(),
+        testing::Contains(Diag(Code.range(), "no newline at end of file")));
+  }
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

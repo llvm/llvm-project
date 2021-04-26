@@ -337,7 +337,7 @@ private:
 
 class LCRPath : public LoadCommand {
 public:
-  LCRPath(StringRef path) : path(path) {}
+  explicit LCRPath(StringRef path) : path(path) {}
 
   uint32_t getSize() const override {
     return alignTo(sizeof(rpath_command) + path.size() + 1, target->wordSize);
@@ -473,8 +473,6 @@ public:
 
 template <class LP> class LCEncryptionInfo : public LoadCommand {
 public:
-  LCEncryptionInfo() {}
-
   uint32_t getSize() const override {
     return sizeof(typename LP::encryption_info_command);
   }

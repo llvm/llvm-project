@@ -1780,7 +1780,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator[](const key_type& __k)
     return __r.first->second;
 }
 
-#endif // _LIBCPP_CXX03_MODE
+#endif // _LIBCPP_CXX03_LANG
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 _Tp&

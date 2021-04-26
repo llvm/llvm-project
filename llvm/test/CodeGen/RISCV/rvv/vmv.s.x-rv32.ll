@@ -240,17 +240,16 @@ declare <vscale x 1 x i64> @llvm.riscv.vmv.s.x.nxv1i64(<vscale x 1 x i64>, i64, 
 define <vscale x 1 x i64> @intrinsic_vmv.s.x_x_nxv1i64(<vscale x 1 x i64> %0, i64 %1, i32 %2) nounwind {
 ; CHECK-LABEL: intrinsic_vmv.s.x_x_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
-; CHECK-NEXT:    vmv.v.x v25, a1
-; CHECK-NEXT:    addi a1, zero, 32
-; CHECK-NEXT:    vsll.vx v25, v25, a1
-; CHECK-NEXT:    vmv.v.x v26, a0
-; CHECK-NEXT:    vsll.vx v26, v26, a1
-; CHECK-NEXT:    vsrl.vx v26, v26, a1
-; CHECK-NEXT:    vor.vv v25, v26, v25
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sw a1, 12(sp)
+; CHECK-NEXT:    sw a0, 8(sp)
+; CHECK-NEXT:    vsetvli a0, a2, e64,m1,ta,mu
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vlse64.v v25, (a0), zero
 ; CHECK-NEXT:    vid.v v26
 ; CHECK-NEXT:    vmseq.vi v0, v26, 0
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v25, v0
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vmv.s.x.nxv1i64(<vscale x 1 x i64> %0, i64 %1, i32 %2)
@@ -262,17 +261,16 @@ declare <vscale x 2 x i64> @llvm.riscv.vmv.s.x.nxv2i64(<vscale x 2 x i64>, i64, 
 define <vscale x 2 x i64> @intrinsic_vmv.s.x_x_nxv2i64(<vscale x 2 x i64> %0, i64 %1, i32 %2) nounwind {
 ; CHECK-LABEL: intrinsic_vmv.s.x_x_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, a2, e64,m2,ta,mu
-; CHECK-NEXT:    vmv.v.x v26, a1
-; CHECK-NEXT:    addi a1, zero, 32
-; CHECK-NEXT:    vsll.vx v26, v26, a1
-; CHECK-NEXT:    vmv.v.x v28, a0
-; CHECK-NEXT:    vsll.vx v28, v28, a1
-; CHECK-NEXT:    vsrl.vx v28, v28, a1
-; CHECK-NEXT:    vor.vv v26, v28, v26
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sw a1, 12(sp)
+; CHECK-NEXT:    sw a0, 8(sp)
+; CHECK-NEXT:    vsetvli a0, a2, e64,m2,ta,mu
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vlse64.v v26, (a0), zero
 ; CHECK-NEXT:    vid.v v28
 ; CHECK-NEXT:    vmseq.vi v0, v28, 0
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v26, v0
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i64> @llvm.riscv.vmv.s.x.nxv2i64(<vscale x 2 x i64> %0, i64 %1, i32 %2)
@@ -284,17 +282,16 @@ declare <vscale x 4 x i64> @llvm.riscv.vmv.s.x.nxv4i64(<vscale x 4 x i64>, i64, 
 define <vscale x 4 x i64> @intrinsic_vmv.s.x_x_nxv4i64(<vscale x 4 x i64> %0, i64 %1, i32 %2) nounwind {
 ; CHECK-LABEL: intrinsic_vmv.s.x_x_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, a2, e64,m4,ta,mu
-; CHECK-NEXT:    vmv.v.x v28, a1
-; CHECK-NEXT:    addi a1, zero, 32
-; CHECK-NEXT:    vsll.vx v28, v28, a1
-; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsll.vx v12, v12, a1
-; CHECK-NEXT:    vsrl.vx v12, v12, a1
-; CHECK-NEXT:    vor.vv v28, v12, v28
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sw a1, 12(sp)
+; CHECK-NEXT:    sw a0, 8(sp)
+; CHECK-NEXT:    vsetvli a0, a2, e64,m4,ta,mu
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vlse64.v v28, (a0), zero
 ; CHECK-NEXT:    vid.v v12
 ; CHECK-NEXT:    vmseq.vi v0, v12, 0
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v28, v0
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i64> @llvm.riscv.vmv.s.x.nxv4i64(<vscale x 4 x i64> %0, i64 %1, i32 %2)
@@ -306,17 +303,16 @@ declare <vscale x 8 x i64> @llvm.riscv.vmv.s.x.nxv8i64(<vscale x 8 x i64>, i64, 
 define <vscale x 8 x i64> @intrinsic_vmv.s.x_x_nxv8i64(<vscale x 8 x i64> %0, i64 %1, i32 %2) nounwind {
 ; CHECK-LABEL: intrinsic_vmv.s.x_x_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, a2, e64,m8,ta,mu
-; CHECK-NEXT:    vmv.v.x v16, a1
-; CHECK-NEXT:    addi a1, zero, 32
-; CHECK-NEXT:    vsll.vx v16, v16, a1
-; CHECK-NEXT:    vmv.v.x v24, a0
-; CHECK-NEXT:    vsll.vx v24, v24, a1
-; CHECK-NEXT:    vsrl.vx v24, v24, a1
-; CHECK-NEXT:    vor.vv v16, v24, v16
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sw a1, 12(sp)
+; CHECK-NEXT:    sw a0, 8(sp)
+; CHECK-NEXT:    vsetvli a0, a2, e64,m8,ta,mu
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vlse64.v v16, (a0), zero
 ; CHECK-NEXT:    vid.v v24
 ; CHECK-NEXT:    vmseq.vi v0, v24, 0
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v16, v0
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i64> @llvm.riscv.vmv.s.x.nxv8i64(<vscale x 8 x i64> %0, i64 %1, i32 %2)
