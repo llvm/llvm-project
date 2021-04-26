@@ -34,14 +34,21 @@ template <class S, class It>
 void
 test_exceptions(S s, It first, It last)
 {
-    S aCopy = s;
+    S original = s;
+    typename S::iterator begin = s.begin();
+    typename S::iterator end = s.end();
+
     try {
         s.append(first, last);
         assert(false);
-        }
-    catch (...) {}
+    } catch (...) {}
+
+    // Part of "no effects" is that iterators and pointers
+    // into the string must not have been invalidated.
     LIBCPP_ASSERT(s.__invariants());
-    assert(s == aCopy);
+    assert(s == original);
+    assert(s.begin() == begin);
+    assert(s.end() == end);
 }
 #endif
 
