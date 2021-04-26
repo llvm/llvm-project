@@ -849,18 +849,20 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     CmdArgs.push_back("-march");
     CmdArgs.push_back(CPUName.data());
 
-    CmdArgs.push_back("-mabi");
-    CmdArgs.push_back(ABIName.data());
+    if (ABIName != "p32") {
+      CmdArgs.push_back("-mabi");
+      CmdArgs.push_back(ABIName.data());
 
-    // -mno-shared should be emitted unless -fpic, -fpie, -fPIC, -fPIE,
-    // or -mshared (not implemented) is in effect.
-    if (RelocationModel == llvm::Reloc::Static)
-      CmdArgs.push_back("-mno-shared");
+      // -mno-shared should be emitted unless -fpic, -fpie, -fPIC, -fPIE,
+      // or -mshared (not implemented) is in effect.
+      if (RelocationModel == llvm::Reloc::Static)
+        CmdArgs.push_back("-mno-shared");
 
-    // LLVM doesn't support -mplt yet and acts as if it is always given.
-    // However, -mplt has no effect with the N64 ABI.
-    if (ABIName != "64" && !Args.hasArg(options::OPT_mno_abicalls))
-      CmdArgs.push_back("-call_nonpic");
+      // LLVM doesn't support -mplt yet and acts as if it is always given.
+      // However, -mplt has no effect with the N64 ABI.
+      if (ABIName != "64" && !Args.hasArg(options::OPT_mno_abicalls))
+        CmdArgs.push_back("-call_nonpic");
+    }
 
     if (getToolChain().getTriple().isLittleEndian())
       CmdArgs.push_back("-EL");

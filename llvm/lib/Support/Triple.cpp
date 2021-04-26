@@ -292,7 +292,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("mipsel", mipsel)
     .Case("mips64", mips64)
     .Case("mips64el", mips64el)
-    .Case("nanomips", nanomips)
+    .Cases("nanomips", "nms1", "i7200", Triple::nanomips)
     .Case("msp430", msp430)
     .Case("ppc64", ppc64)
     .Case("ppc32", ppc)
@@ -437,7 +437,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
            "mips64r6", "mipsn32r6", Triple::mips64)
     .Cases("mips64el", "mipsn32el", "mipsisa64r6el", "mips64r6el",
            "mipsn32r6el", Triple::mips64el)
-    .Case("nanomips", Triple::nanomips)
+    .Cases("nanomips", "nms1", "i7200", Triple::nanomips)
     .Case("r600", Triple::r600)
     .Case("amdgcn", Triple::amdgcn)
     .Case("riscv32", Triple::riscv32)

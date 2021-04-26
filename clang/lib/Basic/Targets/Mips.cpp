@@ -47,7 +47,8 @@ static constexpr llvm::StringLiteral ValidCPUNames[] = {
     {"mips1"},  {"mips2"},    {"mips3"},    {"mips4"},    {"mips5"},
     {"mips32"}, {"mips32r2"}, {"mips32r3"}, {"mips32r5"}, {"mips32r6"},
     {"mips64"}, {"mips64r2"}, {"mips64r3"}, {"mips64r5"}, {"mips64r6"},
-    {"octeon"}, {"octeon+"}, {"p5600"}, {"nanomips"}};
+    {"octeon"}, {"octeon+"}, {"p5600"},
+    {"i7200"}, {"nms1"} };
 
 bool MipsTargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::find(ValidCPUNames, Name) != std::end(ValidCPUNames);
@@ -64,7 +65,7 @@ unsigned MipsTargetInfo::getISARev() const {
              .Cases("mips32r2", "mips64r2", "octeon", "octeon+", 2)
              .Cases("mips32r3", "mips64r3", 3)
              .Cases("mips32r5", "mips64r5", 5)
-             .Cases("mips32r6", "mips64r6", "nanomips", 6)
+             .Cases("mips32r6", "mips64r6", "i7200", "nms1", 6)
              .Default(0);
 }
 
