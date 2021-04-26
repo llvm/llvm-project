@@ -2056,8 +2056,6 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
 
     // Loop through the arguments that were not specified and make sure
     // they have a complete value.
-    // TODO: If we just keep a required argument count, we can do away
-    //       with this checking.
     ArrayRef<Init *> TArgs = Class->getTemplateArgs();
     for (unsigned I = Args.size(), E = TArgs.size(); I < E; ++I) {
       RecordVal *Arg = Class->getValue(TArgs[I]);
