@@ -1186,20 +1186,21 @@ declare i64 @llvm.vector.reduce.smax.nxv1i64(<vscale x 1 x i64>)
 define i64 @vreduce_smax_nxv1i64(<vscale x 1 x i64> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv1i64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
-; CHECK-NEXT:    vmv.v.x v25, a0
-; CHECK-NEXT:    addi a1, zero, 32
-; CHECK-NEXT:    vsll.vx v25, v25, a1
-; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsll.vx v26, v26, a1
-; CHECK-NEXT:    vsrl.vx v26, v26, a1
-; CHECK-NEXT:    vor.vv v25, v26, v25
+; CHECK-NEXT:    sw a0, 12(sp)
+; CHECK-NEXT:    sw zero, 8(sp)
+; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vlse64.v v25, (a0), zero
 ; CHECK-NEXT:    vredmax.vs v25, v8, v25
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    addi a1, zero, 32
 ; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vmv.x.s a1, v25
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %red = call i64 @llvm.vector.reduce.smax.nxv1i64(<vscale x 1 x i64> %v)
   ret i64 %red
@@ -1228,21 +1229,23 @@ declare i64 @llvm.vector.reduce.smin.nxv1i64(<vscale x 1 x i64>)
 define i64 @vreduce_smin_nxv1i64(<vscale x 1 x i64> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv1i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
-; CHECK-NEXT:    vmv.v.i v25, -1
-; CHECK-NEXT:    addi a1, zero, 32
-; CHECK-NEXT:    vsll.vx v25, v25, a1
-; CHECK-NEXT:    vsrl.vx v25, v25, a1
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    addi a0, zero, -1
+; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    lui a0, 524288
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vmv.v.x v26, a0
-; CHECK-NEXT:    vsll.vx v26, v26, a1
-; CHECK-NEXT:    vor.vv v25, v25, v26
+; CHECK-NEXT:    sw a0, 12(sp)
+; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vlse64.v v25, (a0), zero
 ; CHECK-NEXT:    vredmin.vs v25, v8, v25
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    addi a1, zero, 32
 ; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vmv.x.s a1, v25
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %red = call i64 @llvm.vector.reduce.smin.nxv1i64(<vscale x 1 x i64> %v)
   ret i64 %red
@@ -1347,22 +1350,23 @@ declare i64 @llvm.vector.reduce.smax.nxv2i64(<vscale x 2 x i64>)
 define i64 @vreduce_smax_nxv2i64(<vscale x 2 x i64> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv2i64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
-; CHECK-NEXT:    vmv.v.x v25, a0
-; CHECK-NEXT:    addi a1, zero, 32
-; CHECK-NEXT:    vsll.vx v25, v25, a1
-; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsll.vx v26, v26, a1
-; CHECK-NEXT:    vsrl.vx v26, v26, a1
-; CHECK-NEXT:    vor.vv v25, v26, v25
+; CHECK-NEXT:    sw a0, 12(sp)
+; CHECK-NEXT:    sw zero, 8(sp)
+; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vlse64.v v25, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e64,m2,ta,mu
 ; CHECK-NEXT:    vredmax.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    addi a1, zero, 32
 ; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vmv.x.s a1, v25
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %red = call i64 @llvm.vector.reduce.smax.nxv2i64(<vscale x 2 x i64> %v)
   ret i64 %red
@@ -1393,23 +1397,25 @@ declare i64 @llvm.vector.reduce.smin.nxv2i64(<vscale x 2 x i64>)
 define i64 @vreduce_smin_nxv2i64(<vscale x 2 x i64> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
-; CHECK-NEXT:    vmv.v.i v25, -1
-; CHECK-NEXT:    addi a1, zero, 32
-; CHECK-NEXT:    vsll.vx v25, v25, a1
-; CHECK-NEXT:    vsrl.vx v25, v25, a1
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    addi a0, zero, -1
+; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    lui a0, 524288
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vmv.v.x v26, a0
-; CHECK-NEXT:    vsll.vx v26, v26, a1
-; CHECK-NEXT:    vor.vv v25, v25, v26
+; CHECK-NEXT:    sw a0, 12(sp)
+; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vlse64.v v25, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e64,m2,ta,mu
 ; CHECK-NEXT:    vredmin.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    addi a1, zero, 32
 ; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vmv.x.s a1, v25
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %red = call i64 @llvm.vector.reduce.smin.nxv2i64(<vscale x 2 x i64> %v)
   ret i64 %red
@@ -1520,22 +1526,23 @@ declare i64 @llvm.vector.reduce.smax.nxv4i64(<vscale x 4 x i64>)
 define i64 @vreduce_smax_nxv4i64(<vscale x 4 x i64> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv4i64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    lui a0, 524288
-; CHECK-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
-; CHECK-NEXT:    vmv.v.x v25, a0
-; CHECK-NEXT:    addi a1, zero, 32
-; CHECK-NEXT:    vsll.vx v25, v25, a1
-; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsll.vx v26, v26, a1
-; CHECK-NEXT:    vsrl.vx v26, v26, a1
-; CHECK-NEXT:    vor.vv v25, v26, v25
+; CHECK-NEXT:    sw a0, 12(sp)
+; CHECK-NEXT:    sw zero, 8(sp)
+; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vlse64.v v25, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e64,m4,ta,mu
 ; CHECK-NEXT:    vredmax.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    addi a1, zero, 32
 ; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vmv.x.s a1, v25
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %red = call i64 @llvm.vector.reduce.smax.nxv4i64(<vscale x 4 x i64> %v)
   ret i64 %red
@@ -1566,23 +1573,25 @@ declare i64 @llvm.vector.reduce.smin.nxv4i64(<vscale x 4 x i64>)
 define i64 @vreduce_smin_nxv4i64(<vscale x 4 x i64> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
-; CHECK-NEXT:    vmv.v.i v25, -1
-; CHECK-NEXT:    addi a1, zero, 32
-; CHECK-NEXT:    vsll.vx v25, v25, a1
-; CHECK-NEXT:    vsrl.vx v25, v25, a1
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    addi a0, zero, -1
+; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    lui a0, 524288
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vmv.v.x v26, a0
-; CHECK-NEXT:    vsll.vx v26, v26, a1
-; CHECK-NEXT:    vor.vv v25, v25, v26
+; CHECK-NEXT:    sw a0, 12(sp)
+; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vlse64.v v25, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e64,m4,ta,mu
 ; CHECK-NEXT:    vredmin.vs v25, v8, v25
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
+; CHECK-NEXT:    addi a1, zero, 32
 ; CHECK-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; CHECK-NEXT:    vsrl.vx v25, v25, a1
 ; CHECK-NEXT:    vmv.x.s a1, v25
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %red = call i64 @llvm.vector.reduce.smin.nxv4i64(<vscale x 4 x i64> %v)
   ret i64 %red
