@@ -1,5 +1,5 @@
 
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff < %s | \
+; RUN: llc -debugger-tune=gdb -mtriple powerpc-ibm-aix-xcoff < %s | \
 ; RUN:   FileCheck %s
 
 source_filename = "2.c"

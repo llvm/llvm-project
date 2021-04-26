@@ -1,5 +1,5 @@
 
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -function-sections \
+; RUN: llc -debugger-tune=gdb -mtriple powerpc-ibm-aix-xcoff -function-sections \
 ; RUN:   < %s | FileCheck %s
 
 source_filename = "1.c"
