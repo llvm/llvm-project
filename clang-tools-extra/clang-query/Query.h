@@ -18,7 +18,7 @@
 namespace clang {
 namespace query {
 
-enum OutputKind { OK_Diag, OK_Print, OK_DetailedAST };
+enum OutputKind { OK_Diag, OK_Print, OK_DetailedAST, OK_SrcLoc };
 
 enum QueryKind {
   QK_Invalid,
