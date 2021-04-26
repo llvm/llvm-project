@@ -524,19 +524,16 @@ entry:
 define <4 x i32> @insertextract(i32 %x, i32 %y) {
 ; CHECK-LE-LABEL: insertextract:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    vdup.32 q0, r0
-; CHECK-LE-NEXT:    vmov.32 q0[3], r1
-; CHECK-LE-NEXT:    vmov r0, r1, d0
-; CHECK-LE-NEXT:    vmov r2, r3, d1
+; CHECK-LE-NEXT:    mov r3, r1
+; CHECK-LE-NEXT:    mov r1, r0
+; CHECK-LE-NEXT:    mov r2, r0
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: insertextract:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    vdup.32 q0, r0
-; CHECK-BE-NEXT:    vmov.32 q0[3], r1
-; CHECK-BE-NEXT:    vrev64.32 q1, q0
-; CHECK-BE-NEXT:    vmov r1, r0, d2
-; CHECK-BE-NEXT:    vmov r3, r2, d3
+; CHECK-BE-NEXT:    mov r3, r1
+; CHECK-BE-NEXT:    mov r1, r0
+; CHECK-BE-NEXT:    mov r2, r0
 ; CHECK-BE-NEXT:    bx lr
   %1 = insertelement <4 x i32> undef, i32 %x, i32 0
   %2 = insertelement <4 x i32> %1, i32 %x, i32 1
