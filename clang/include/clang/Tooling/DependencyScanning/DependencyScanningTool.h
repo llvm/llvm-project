@@ -41,16 +41,22 @@ struct FullDependencies {
   /// Get additional arguments suitable for appending to the original Clang
   /// command line.
   ///
-  /// \param LookupPCMPath This function is called to fill in `-fmodule-file=`
-  ///                      flags and for the `-o` flag. It needs to return a
-  ///                      path for where the PCM for the given module is to
+  /// \param LookupPCMPath This function is called to fill in "-fmodule-file="
+  ///                      arguments and the "-o" argument. It needs to return
+  ///                      a path for where the PCM for the given module is to
   ///                      be located.
   /// \param LookupModuleDeps This function is called to collect the full
   ///                         transitive set of dependencies for this
-  ///                         compilation.
-  std::vector<std::string> getAdditionalCommandLine(
+  ///                         compilation and fill in "-fmodule-map-file="
+  ///                         arguments.
+  std::vector<std::string> getAdditionalArgs(
       std::function<StringRef(ModuleID)> LookupPCMPath,
       std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const;
+
+  /// Get additional arguments suitable for appending to the original Clang
+  /// command line, excluding arguments containing modules-related paths:
+  /// "-fmodule-file=", "-fmodule-map-file=".
+  std::vector<std::string> getAdditionalArgsWithoutModulePaths() const;
 };
 
 struct FullDependenciesResult {

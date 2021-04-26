@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 -std=c++2a -fcoroutines-ts -triple=x86_64 -dwarf-version=4 -debug-info-kind=limited -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -disable-llvm-optzns -std=c++2a -fcoroutines-ts \
+// RUN:            -triple=x86_64 -dwarf-version=4 -debug-info-kind=limited \
+// RUN:            -emit-llvm -o - %s | \
+// RUN:            FileCheck %s --implicit-check-not=DILocalVariable
 
 namespace std::experimental {
 template <typename... T> struct coroutine_traits;
@@ -63,15 +66,7 @@ void f_coro(int val, MoveOnly moParam, MoveAndCopy mcParam) {
 }
 
 // CHECK: ![[SP:[0-9]+]] = distinct !DISubprogram(name: "f_coro", linkageName: "_Z6f_coroi8MoveOnly11MoveAndCopy"
-// CHECK: !{{[0-9]+}} = !DILocalVariable(name: "val", arg: 1, scope: ![[SP]], file: !8, line: 60, type: !{{[0-9]+}})
-// CHECK: !{{[0-9]+}} = !DILocation(line: 60, column: 17, scope: ![[SP]])
-// CHECK: !{{[0-9]+}} = !DILocalVariable(name: "moParam", arg: 2, scope: ![[SP]], file: !8, line: 60, type: !{{[0-9]+}})
-// CHECK: !{{[0-9]+}} = !DILocation(line: 60, column: 31, scope: ![[SP]])
-// CHECK: !{{[0-9]+}} = !DILocalVariable(name: "mcParam", arg: 3, scope: ![[SP]], file: !8, line: 60, type: !{{[0-9]+}})
-// CHECK: !{{[0-9]+}} = !DILocation(line: 60, column: 52, scope: ![[SP]])
-// CHECK: !{{[0-9]+}} = !DILocation(line: 60, column: 61, scope: ![[SP]])
-// CHECK: !{{[0-9]+}} = !DILocation(line: 60, column: 6, scope: ![[SP]])
-// CHECK: !{{[0-9]+}} = !DILocation(line: 0, scope: ![[SP]])
-// CHECK-NOT: !{{[0-9]+}} = !DILocalVariable(name: "val", scope: ![[SP]], type: !{{[0-9]+}}, flags: DIFlagArtificial)
-// CHECK-NOT: !{{[0-9]+}} = !DILocalVariable(name: "moParam", scope: ![[SP]], type: !{{[0-9]+}}, flags: DIFlagArtificial)
-// CHECK-NOT:: !{{[0-9]+}} = !DILocalVariable(name: "mcParam", scope: ![[SP]], type: !{{[0-9]+}}, flags: DIFlagArtificial)
+// CHECK: !{{[0-9]+}} = !DILocalVariable(name: "val", arg: 1, scope: ![[SP]], file: !8, line: {{[0-9]+}}, type: !{{[0-9]+}})
+// CHECK: !{{[0-9]+}} = !DILocalVariable(name: "moParam", arg: 2, scope: ![[SP]], file: !8, line: {{[0-9]+}}, type: !{{[0-9]+}})
+// CHECK: !{{[0-9]+}} = !DILocalVariable(name: "mcParam", arg: 3, scope: ![[SP]], file: !8, line: {{[0-9]+}}, type: !{{[0-9]+}})
+// CHECK: !{{[0-9]+}} = !DILocalVariable(name: "__promise",
