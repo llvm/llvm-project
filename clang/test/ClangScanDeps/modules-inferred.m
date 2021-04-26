@@ -8,7 +8,7 @@
 // RUN: echo -%t.dir > %t.result
 // RUN: echo -%S >> %t.result
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -format experimental-full \
-// RUN:   -mode preprocess-minimized-sources >> %t.result
+// RUN:   -generate-modules-path-args -mode preprocess-minimized-sources >> %t.result
 // RUN: cat %t.result | sed 's/\\/\//g' | FileCheck --check-prefixes=CHECK %s
 
 #include <Inferred/Inferred.h>

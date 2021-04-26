@@ -193,7 +193,7 @@ static CXFileDependencies *getFullDependencies(
     Modules.push_back(MID.ModuleName + ":" + MID.ContextHash);
   FDeps->ModuleDeps = cxstring::createSet(Modules);
   FDeps->AdditionalArguments =
-    cxstring::createSet(FD.getAdditionalCommandLine());
+    cxstring::createSet(FD.getAdditionalArgsWithoutModulePaths());
   return FDeps;
 }
 

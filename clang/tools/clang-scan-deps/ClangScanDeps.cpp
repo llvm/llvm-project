@@ -138,6 +138,31 @@ static llvm::cl::opt<ScanningOutputFormat> Format(
     llvm::cl::init(ScanningOutputFormat::Make),
     llvm::cl::cat(DependencyScannerCategory));
 
+// This mode is mostly useful for development of explicitly built modules.
+// Command lines will contain arguments specifying modulemap file paths and
+// absolute paths to PCM files in the module cache directory.
+//
+// Build tools that want to put the PCM files in a different location should use
+// the C++ APIs instead, of which there are two flavors:
+//
+// 1. APIs that generate arguments with paths to modulemap and PCM files via
+//    callbacks provided by the client:
+//     * ModuleDeps::getCanonicalCommandLine(LookupPCMPath, LookupModuleDeps)
+//     * FullDependencies::getAdditionalArgs(LookupPCMPath, LookupModuleDeps)
+//
+// 2. APIs that don't generate arguments with paths to modulemap or PCM files
+//    and instead expect the client to append them manually after the fact:
+//     * ModuleDeps::getCanonicalCommandLineWithoutModulePaths()
+//     * FullDependencies::getAdditionalArgsWithoutModulePaths()
+//
+static llvm::cl::opt<bool> GenerateModulesPathArgs(
+    "generate-modules-path-args",
+    llvm::cl::desc(
+        "With '-format experimental-full', include arguments specifying "
+        "modules-related paths in the generated command lines: "
+        "'-fmodule-file=', '-o', '-fmodule-map-file='."),
+    llvm::cl::init(false), llvm::cl::cat(DependencyScannerCategory));
+
 llvm::cl::opt<unsigned>
     NumThreads("j", llvm::cl::Optional,
                llvm::cl::desc("Number of worker threads to use (default: use "
@@ -260,11 +285,14 @@ public:
       Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
     }
 
-    ID.AdditonalCommandLine = FD.getAdditionalCommandLine(
-        [&](ModuleID MID) { return lookupPCMPath(MID); },
-        [&](ModuleID MID) -> const ModuleDeps & {
-          return lookupModuleDeps(MID);
-        });
+    ID.AdditonalCommandLine =
+        GenerateModulesPathArgs
+            ? FD.getAdditionalArgs(
+                  [&](ModuleID MID) { return lookupPCMPath(MID); },
+                  [&](ModuleID MID) -> const ModuleDeps & {
+                    return lookupModuleDeps(MID);
+                  })
+            : FD.getAdditionalArgsWithoutModulePaths();
 
     Inputs.push_back(std::move(ID));
   }
@@ -295,11 +323,14 @@ public:
           {"file-deps", toJSONSorted(MD.FileDeps)},
           {"clang-module-deps", toJSONSorted(MD.ClangModuleDeps)},
           {"clang-modulemap-file", MD.ClangModuleMapFile},
-          {"command-line", MD.getFullCommandLine(
-                               [&](ModuleID MID) { return lookupPCMPath(MID); },
-                               [&](ModuleID MID) -> const ModuleDeps & {
-                                 return lookupModuleDeps(MID);
-                               })},
+          {"command-line",
+           GenerateModulesPathArgs
+               ? MD.getCanonicalCommandLine(
+                     [&](ModuleID MID) { return lookupPCMPath(MID); },
+                     [&](ModuleID MID) -> const ModuleDeps & {
+                       return lookupModuleDeps(MID);
+                     })
+               : MD.getCanonicalCommandLineWithoutModulePaths()},
       };
       OutModules.push_back(std::move(O));
     }
