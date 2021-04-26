@@ -778,12 +778,11 @@ void WhitespaceManager::alignChainedConditionals() {
         Changes, /*StartAt=*/0);
   } else {
     static auto AlignWrappedOperand = [](Change const &C) {
-      auto Previous = C.Tok->getPreviousNonComment(); // Previous;
+      FormatToken *Previous = C.Tok->getPreviousNonComment();
       return C.NewlinesBefore && Previous && Previous->is(TT_ConditionalExpr) &&
-             (Previous->is(tok::question) ||
-              (Previous->is(tok::colon) &&
-               (C.Tok->FakeLParens.size() == 0 ||
-                C.Tok->FakeLParens.back() != prec::Conditional)));
+             (Previous->is(tok::colon) &&
+              (C.Tok->FakeLParens.size() == 0 ||
+               C.Tok->FakeLParens.back() != prec::Conditional));
     };
     // Ensure we keep alignment of wrapped operands with non-wrapped operands
     // Since we actually align the operators, the wrapped operands need the
