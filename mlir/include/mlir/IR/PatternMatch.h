@@ -993,10 +993,6 @@ private:
   PDLPatternModule pdlPatterns;
 };
 
-// TODO: OwningRewritePatternList is soft-deprecated and will be removed in the
-// future.
-using OwningRewritePatternList = RewritePatternSet;
-
 } // end namespace mlir
 
 #endif // MLIR_PATTERN_MATCH_H
