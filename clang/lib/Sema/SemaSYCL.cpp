@@ -49,12 +49,31 @@ bool Sema::checkSYCLDeviceFunction(SourceLocation Loc, FunctionDecl *Callee) {
          DiagKind != SemaDiagnosticBuilder::K_ImmediateWithCallStack;
 }
 
+// The SYCL kernel's 'object type' used for diagnostics and naming/mangling is
+// the first parameter to a sycl_kernel labeled function template. In SYCL1.2.1,
+// this was passed by value, and in SYCL2020, it is passed by reference.
+static const CXXRecordDecl *
+GetSYCLKernelObjectDecl(const FunctionDecl *KernelCaller) {
+  assert(KernelCaller->getNumParams() > 0 && "Insufficient kernel parameters");
+  QualType KernelParamTy = KernelCaller->getParamDecl(0)->getType();
+
+  // SYCL 2020 kernels are passed by reference.
+  if (KernelParamTy->isReferenceType())
+    return KernelParamTy->getPointeeCXXRecordDecl();
+
+  // SYCL 1.2.1
+  return KernelParamTy->getAsCXXRecordDecl();
+}
+
 void Sema::AddSYCLKernelLambda(const FunctionDecl *FD) {
-  auto Callback = [](){/*TODO ERICH: Implement*/};
+  auto Callback = [](ASTContext &Ctx, const TagDecl *TD, raw_ostream &) {
+    Ctx.AddSYCLKernelNamingDecl(TD);
+  };
 
   // TODO: ERICH: get the kernel object type here.
   // getKernelObjectType
-  QualType Ty;
+  const CXXRecordDecl *KernelObjectDecl = GetSYCLKernelObjectDecl(FD);
+  QualType Ty{KernelObjectDecl->getTypeForDecl(), 0};
   std::unique_ptr<MangleContext> Ctx{ItaniumMangleContext::create(
       Context, Context.getDiagnostics(), Callback)};
   llvm::raw_null_ostream Out;

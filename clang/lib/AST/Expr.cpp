@@ -566,7 +566,8 @@ UniqueStableNameExpr *UniqueStableNameExpr::CreateEmpty(const ASTContext &Ctx,
 }
 
 std::string UniqueStableNameExpr::ComputeName(ASTContext &Context) {
-  auto Callback = []() { /*TODO ERICH: Implement*/ };
+  auto Callback = [](ASTContext &Ctx, const TagDecl *TD,
+                     raw_ostream &OS) { /*TODO ERICH: Implement*/ };
   std::unique_ptr<MangleContext> Ctx{ItaniumMangleContext::create(
       Context, Context.getDiagnostics(), Callback)};
 

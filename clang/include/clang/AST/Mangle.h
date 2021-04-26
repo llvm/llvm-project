@@ -175,7 +175,8 @@ class ItaniumMangleContext : public MangleContext {
 public:
   // TODO: ERICH: this is obviously not going to be sufficient, type will change
   // during dev.
-  using KernelMangleCallbackTy = void (*)();
+  using KernelMangleCallbackTy = void (*)(ASTContext &, const TagDecl *,
+                                          raw_ostream &);
   explicit ItaniumMangleContext(ASTContext &C, DiagnosticsEngine &D)
       : MangleContext(C, D, MK_Itanium) {}
 

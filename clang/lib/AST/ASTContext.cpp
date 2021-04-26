@@ -2448,7 +2448,7 @@ unsigned ASTContext::getPreferredTypeAlign(const Type *T) const {
   // The preferred alignment of member pointers is that of a pointer.
   if (T->isMemberPointerType())
     return getPreferredTypeAlign(getPointerDiffType().getTypePtr());
- 
+
   if (!Target->allowsLargerPreferedTypeAlignment())
     return ABIAlign;
 
@@ -11637,4 +11637,33 @@ StringRef ASTContext::getCUIDHash() const {
     return StringRef();
   CUIDHash = llvm::utohexstr(llvm::MD5Hash(LangOpts.CUID), /*LowerCase=*/true);
   return CUIDHash;
+}
+
+void ASTContext::AddSYCLKernelNamingDecl(const TagDecl *TD) {
+  TD = TD->getCanonicalDecl();
+  const DeclContext *DC = TD->getDeclContext();
+
+  (void)SYCLKernelNamingTypes[DC].insert(TD);
+}
+
+bool ASTContext::IsSYCLKernelNamingDecl(const TagDecl *TD) const {
+  TD = TD->getCanonicalDecl();
+  const DeclContext *DC = TD->getDeclContext();
+
+  auto Itr = SYCLKernelNamingTypes.find(DC);
+
+  if (Itr == SYCLKernelNamingTypes.end())
+    return false;
+
+  return Itr->getSecond().count(TD);
+}
+
+unsigned ASTContext::GetSYCLKernelNamingIndex(const TagDecl *TD) const {
+  assert(IsSYCLKernelNamingDecl(TD) &&
+         "Lambda not involved in mangling asked for a naming index?");
+
+  // TODO: ERICH: Come up with some way to sort the collection and come up with
+  // an 'order' for this number.  For now, just return 5 so we can look at it in
+  // the demangler.
+  return 5;
 }

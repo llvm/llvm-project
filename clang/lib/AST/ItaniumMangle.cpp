@@ -1927,9 +1927,17 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   // if the host-side CXX ABI has different numbering for lambda. In such case,
   // if the mangle context is that device-side one, use the device-side lambda
   // mangling number for this lambda.
+
   unsigned Number = Context.isDeviceMangleContext()
                         ? Lambda->getDeviceLambdaManglingNumber()
                         : Lambda->getLambdaManglingNumber();
+
+  // TODO:  ERICH: I think our callback needs to happen here?  Should it just
+  // produce the number/modify the number?  Could we get away with just making
+  // the 'number' be different, instead of making it clear that the
+  // kernel-lambda mangled diferently? We should figure that out.
+  Context.getKernelMangleCallback()(Context.getASTContext(), Lambda, Out);
+
   assert(Number > 0 && "Lambda should be mangled as an unnamed class");
   if (Number > 1)
     mangleNumber(Number - 2);
@@ -6292,8 +6300,10 @@ void ItaniumMangleContextImpl::mangleLambdaSig(const CXXRecordDecl *Lambda,
 
 ItaniumMangleContext *
 ItaniumMangleContext::create(ASTContext &Context, DiagnosticsEngine &Diags) {
-  // TODO: ERICH: will have to update the default callback here.
-  return new ItaniumMangleContextImpl(Context, Diags, [](){});
+  // Provide a default do-nothing callback so we don't have to check on it
+  // later.
+  return new ItaniumMangleContextImpl(
+      Context, Diags, [](ASTContext &, const TagDecl *, raw_ostream &) {});
 }
 
 ItaniumMangleContext *
