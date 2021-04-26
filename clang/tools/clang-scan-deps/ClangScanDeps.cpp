@@ -285,7 +285,7 @@ public:
       Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
     }
 
-    ID.AdditonalCommandLine =
+    ID.AdditionalCommandLine =
         GenerateModulesPathArgs
             ? FD.getAdditionalArgs(
                   [&](ModuleID MID) { return lookupPCMPath(MID); },
@@ -342,7 +342,7 @@ public:
           {"clang-context-hash", I.ContextHash},
           {"file-deps", I.FileDeps},
           {"clang-module-deps", toJSONSorted(I.ModuleDeps)},
-          {"command-line", I.AdditonalCommandLine},
+          {"command-line", I.AdditionalCommandLine},
       };
       TUs.push_back(std::move(O));
     }
@@ -389,7 +389,7 @@ private:
     std::string ContextHash;
     std::vector<std::string> FileDeps;
     std::vector<ModuleID> ModuleDeps;
-    std::vector<std::string> AdditonalCommandLine;
+    std::vector<std::string> AdditionalCommandLine;
   };
 
   std::mutex Lock;
