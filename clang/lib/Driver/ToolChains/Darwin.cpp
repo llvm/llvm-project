@@ -74,12 +74,12 @@ void darwin::setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str) {
   const llvm::Triple::ArchType Arch = getArchTypeForMachOArchName(Str);
   llvm::ARM::ArchKind ArchKind = llvm::ARM::parseArch(Str);
   T.setArch(Arch);
-  if (Arch != llvm::Triple::UnknownArch)
-    T.setArchName(Str);
 
-  if (ArchKind == llvm::ARM::ArchKind::ARMV6M ||
-      ArchKind == llvm::ARM::ArchKind::ARMV7M ||
-      ArchKind == llvm::ARM::ArchKind::ARMV7EM) {
+  if (Str == "x86_64h" || Str == "arm64e")
+    T.setArchName(Str);
+  else if (ArchKind == llvm::ARM::ArchKind::ARMV6M ||
+           ArchKind == llvm::ARM::ArchKind::ARMV7M ||
+           ArchKind == llvm::ARM::ArchKind::ARMV7EM) {
     T.setOS(llvm::Triple::UnknownOS);
     T.setObjectFormat(llvm::Triple::MachO);
   }
