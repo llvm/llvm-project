@@ -2347,6 +2347,7 @@ ICmpInst *LSRInstance::OptimizeMax(ICmpInst *Cond, IVStrideUse* &CondUse) {
     new ICmpInst(Cond, Pred, Cond->getOperand(0), NewRHS, "scmp");
 
   // Delete the max calculation instructions.
+  NewCond->setDebugLoc(Cond->getDebugLoc());
   Cond->replaceAllUsesWith(NewCond);
   CondUse->setUser(NewCond);
   Instruction *Cmp = cast<Instruction>(Sel->getOperand(0));
