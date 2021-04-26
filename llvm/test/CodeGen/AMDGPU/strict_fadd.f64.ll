@@ -65,12 +65,8 @@ define <2 x double> @v_constained_fadd_v2f64_fpexcept_strict(<2 x double> %x, <2
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_mov_b32_e32 v9, v3
-; GFX10-NEXT:    v_mov_b32_e32 v8, v2
-; GFX10-NEXT:    v_mov_b32_e32 v11, v1
-; GFX10-NEXT:    v_mov_b32_e32 v10, v0
-; GFX10-NEXT:    v_add_f64 v[2:3], v[8:9], v[6:7]
-; GFX10-NEXT:    v_add_f64 v[0:1], v[10:11], v[4:5]
+; GFX10-NEXT:    v_add_f64 v[0:1], v[0:1], v[4:5]
+; GFX10-NEXT:    v_add_f64 v[2:3], v[2:3], v[6:7]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %val = call <2 x double> @llvm.experimental.constrained.fadd.v2f64(<2 x double> %x, <2 x double> %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <2 x double> %val
@@ -88,12 +84,8 @@ define <2 x double> @v_constained_fadd_v2f64_fpexcept_ignore(<2 x double> %x, <2
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_mov_b32_e32 v9, v3
-; GFX10-NEXT:    v_mov_b32_e32 v8, v2
-; GFX10-NEXT:    v_mov_b32_e32 v11, v1
-; GFX10-NEXT:    v_mov_b32_e32 v10, v0
-; GFX10-NEXT:    v_add_f64 v[2:3], v[8:9], v[6:7]
-; GFX10-NEXT:    v_add_f64 v[0:1], v[10:11], v[4:5]
+; GFX10-NEXT:    v_add_f64 v[0:1], v[0:1], v[4:5]
+; GFX10-NEXT:    v_add_f64 v[2:3], v[2:3], v[6:7]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %val = call <2 x double> @llvm.experimental.constrained.fadd.v2f64(<2 x double> %x, <2 x double> %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret <2 x double> %val
@@ -111,12 +103,8 @@ define <2 x double> @v_constained_fadd_v2f64_fpexcept_maytrap(<2 x double> %x, <
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_mov_b32_e32 v9, v3
-; GFX10-NEXT:    v_mov_b32_e32 v8, v2
-; GFX10-NEXT:    v_mov_b32_e32 v11, v1
-; GFX10-NEXT:    v_mov_b32_e32 v10, v0
-; GFX10-NEXT:    v_add_f64 v[2:3], v[8:9], v[6:7]
-; GFX10-NEXT:    v_add_f64 v[0:1], v[10:11], v[4:5]
+; GFX10-NEXT:    v_add_f64 v[0:1], v[0:1], v[4:5]
+; GFX10-NEXT:    v_add_f64 v[2:3], v[2:3], v[6:7]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %val = call <2 x double> @llvm.experimental.constrained.fadd.v2f64(<2 x double> %x, <2 x double> %y, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
   ret <2 x double> %val

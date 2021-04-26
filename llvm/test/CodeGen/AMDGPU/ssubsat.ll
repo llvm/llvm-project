@@ -1100,17 +1100,17 @@ define i64 @v_ssubsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_sub_co_u32 v10, vcc_lo, v0, v2
+; GFX10-NEXT:    v_sub_co_u32 v4, vcc_lo, v0, v2
 ; GFX10-NEXT:    v_bfrev_b32_e32 v6, -2
-; GFX10-NEXT:    v_sub_co_ci_u32_e32 v11, vcc_lo, v1, v3, vcc_lo
+; GFX10-NEXT:    v_sub_co_ci_u32_e32 v5, vcc_lo, v1, v3, vcc_lo
 ; GFX10-NEXT:    v_cmp_lt_i64_e64 s4, 0, v[2:3]
-; GFX10-NEXT:    v_cmp_gt_i64_e64 s5, 0, v[10:11]
-; GFX10-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[10:11], v[0:1]
-; GFX10-NEXT:    v_ashrrev_i32_e32 v0, 31, v11
+; GFX10-NEXT:    v_cmp_gt_i64_e64 s5, 0, v[4:5]
+; GFX10-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[4:5], v[0:1]
+; GFX10-NEXT:    v_ashrrev_i32_e32 v0, 31, v5
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, 0x80000000, v6, s5
 ; GFX10-NEXT:    s_xor_b32 vcc_lo, s4, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e32 v0, v10, v0, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, v11, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %result = call i64 @llvm.ssub.sat.i64(i64 %lhs, i64 %rhs)
   ret i64 %result

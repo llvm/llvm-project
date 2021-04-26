@@ -458,16 +458,16 @@ define amdgpu_kernel void @v_saddo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
 ; GFX10-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    global_load_dwordx2 v[9:10], v6, s[8:9]
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v6, s[8:9]
 ; GFX10-NEXT:    global_load_dwordx2 v[2:3], v6, s[10:11]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_add_co_u32 v7, vcc_lo, v9, v2
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v8, vcc_lo, v10, v3, vcc_lo
+; GFX10-NEXT:    v_add_co_u32 v4, vcc_lo, v0, v2
+; GFX10-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, v1, v3, vcc_lo
 ; GFX10-NEXT:    v_cmp_gt_i64_e32 vcc_lo, 0, v[2:3]
-; GFX10-NEXT:    v_cmp_lt_i64_e64 s0, v[7:8], v[9:10]
+; GFX10-NEXT:    v_cmp_lt_i64_e64 s0, v[4:5], v[0:1]
 ; GFX10-NEXT:    s_xor_b32 s0, vcc_lo, s0
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX10-NEXT:    global_store_dwordx2 v6, v[7:8], s[4:5]
+; GFX10-NEXT:    global_store_dwordx2 v6, v[4:5], s[4:5]
 ; GFX10-NEXT:    global_store_byte v6, v0, s[6:7]
 ; GFX10-NEXT:    s_endpgm
   %a = load i64, i64 addrspace(1)* %aptr, align 4
@@ -575,14 +575,14 @@ define amdgpu_kernel void @v_saddo_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32>
 ; GFX10-NEXT:    global_load_dwordx2 v[2:3], v4, s[6:7]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_add_nc_i32 v5, v1, v3 clamp
-; GFX10-NEXT:    v_add_nc_u32_e32 v10, v1, v3
+; GFX10-NEXT:    v_add_nc_u32_e32 v1, v1, v3
 ; GFX10-NEXT:    v_add_nc_i32 v6, v0, v2 clamp
-; GFX10-NEXT:    v_add_nc_u32_e32 v9, v0, v2
-; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v10, v5
+; GFX10-NEXT:    v_add_nc_u32_e32 v0, v0, v2
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v5
 ; GFX10-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
-; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v9, v6
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v0, v6
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
-; GFX10-NEXT:    global_store_dwordx2 v4, v[9:10], s[0:1]
+; GFX10-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
 ; GFX10-NEXT:    global_store_dwordx2 v4, v[2:3], s[2:3]
 ; GFX10-NEXT:    s_endpgm
   %a = load <2 x i32>, <2 x i32> addrspace(1)* %aptr, align 4
