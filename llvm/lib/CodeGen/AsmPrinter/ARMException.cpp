@@ -39,13 +39,13 @@ void ARMException::beginFunction(const MachineFunction *MF) {
   if (Asm->MAI->getExceptionHandlingType() == ExceptionHandling::ARM)
     getTargetStreamer().emitFnStart();
   // See if we need call frame info.
-  AsmPrinter::CFISection CFISecType = Asm->getFunctionCFISectionType(*MF);
-  assert(CFISecType != AsmPrinter::CFISection::EH &&
+  AsmPrinter::CFIMoveType MoveType = Asm->needsCFIMoves();
+  assert(MoveType != AsmPrinter::CFI_M_EH &&
          "non-EH CFI not yet supported in prologue with EHABI lowering");
 
-  if (CFISecType == AsmPrinter::CFISection::Debug) {
+  if (MoveType == AsmPrinter::CFI_M_Debug) {
     if (!hasEmittedCFISections) {
-      if (Asm->getModuleCFISectionType() == AsmPrinter::CFISection::Debug)
+      if (Asm->needsOnlyDebugCFIMoves())
         Asm->OutStreamer->emitCFISections(false, true);
       hasEmittedCFISections = true;
     }

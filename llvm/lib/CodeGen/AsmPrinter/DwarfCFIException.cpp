@@ -93,8 +93,9 @@ void DwarfCFIException::beginFunction(const MachineFunction *MF) {
   bool hasLandingPads = !MF->getLandingPads().empty();
 
   // See if we need frame move info.
-  bool shouldEmitMoves =
-      Asm->getFunctionCFISectionType(*MF) != AsmPrinter::CFISection::None;
+  AsmPrinter::CFIMoveType MoveType = Asm->needsCFIMoves();
+
+  bool shouldEmitMoves = MoveType != AsmPrinter::CFI_M_None;
 
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   unsigned PerEncoding = TLOF.getPersonalityEncoding();
@@ -131,14 +132,10 @@ void DwarfCFIException::beginFragment(const MachineBasicBlock *MBB,
     return;
 
   if (!hasEmittedCFISections) {
-    AsmPrinter::CFISection CFISecType = Asm->getModuleCFISectionType();
-    // If we don't say anything it implies `.cfi_sections .eh_frame`, so we
-    // chose not to be verbose in that case. And with `ForceDwarfFrameSection`,
-    // we should always emit .debug_frame.
-    if (CFISecType == AsmPrinter::CFISection::Debug ||
-        Asm->TM.Options.ForceDwarfFrameSection)
-      Asm->OutStreamer->emitCFISections(
-          CFISecType == AsmPrinter::CFISection::EH, true);
+    if (Asm->needsOnlyDebugCFIMoves())
+      Asm->OutStreamer->emitCFISections(false, true);
+    else if (Asm->TM.Options.ForceDwarfFrameSection)
+      Asm->OutStreamer->emitCFISections(true, true);
     hasEmittedCFISections = true;
   }
 
