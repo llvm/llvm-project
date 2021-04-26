@@ -36,6 +36,8 @@ test(S s, typename S::size_type pos1, typename S::size_type n1, It f, It l, S ex
 }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
+struct Widget { operator char() const { throw 42; } };
+
 template <class S, class It>
 void
 test_exceptions(S s, typename S::size_type pos1, typename S::size_type n1, It f, It l)
@@ -1005,6 +1007,9 @@ int main(int, char**)
     test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, TIter(s, s+10, 4, TIter::TAIncrement), TIter());
     test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, TIter(s, s+10, 5, TIter::TADereference), TIter());
     test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, TIter(s, s+10, 6, TIter::TAComparison), TIter());
+
+    Widget w[100];
+    test_exceptions(S("abcdefghijklmnopqrst"), 10, 5, w, w+100);
     }
 #endif
 

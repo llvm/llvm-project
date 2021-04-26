@@ -28,6 +28,8 @@ test(S s, It first, It last, S expected)
 }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
+struct Widget { operator char() const { throw 42; } };
+
 template <class S, class It>
 void
 test_exceptions(S s, It first, It last)
@@ -176,6 +178,9 @@ int main(int, char**)
     test_exceptions(S(), TIter(s, s+10, 4, TIter::TAIncrement), TIter());
     test_exceptions(S(), TIter(s, s+10, 5, TIter::TADereference), TIter());
     test_exceptions(S(), TIter(s, s+10, 6, TIter::TAComparison), TIter());
+
+    Widget w[100];
+    test_exceptions(S(), w, w+100);
     }
 #endif
 
@@ -205,5 +210,12 @@ int main(int, char**)
     assert(s == "ABCD");
     }
 
-  return 0;
+    { // regression-test assigning to self in sneaky ways
+    std::string sneaky = "hello";
+    sneaky.resize(sneaky.capacity(), 'x');
+    std::string expected = sneaky + std::string(1, '\0');
+    test(sneaky, sneaky.data(), sneaky.data() + sneaky.size() + 1, expected);
+    }
+
+    return 0;
 }
