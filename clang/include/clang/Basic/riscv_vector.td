@@ -888,6 +888,74 @@ multiclass RVVPseudoVFUnaryBuiltin<string IR, string type_range> {
   }
 }
 
+multiclass RVVPseudoVWCVTBuiltin<string IR, string MName, string type_range,
+                                 list<list<string>> suffixes_prototypes> {
+  let Name = NAME,
+      MangledName = MName,
+      IRName = IR,
+      IRNameMask = IR # "_mask",
+      ManualCodegen = [{
+      {
+        // op1, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[0]->getType(),
+                          cast<llvm::VectorType>(Ops[0]->getType())->getElementType(),
+                          Ops[1]->getType()};
+        Ops.insert(Ops.begin() + 1, llvm::Constant::getNullValue(IntrinsicTypes[2]));
+        break;
+      }
+      }],
+      ManualCodegenMask = [{
+      {
+        // maskedoff, op1, mask, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[1]->getType(),
+                          cast<llvm::VectorType>(Ops[1]->getType())->getElementType(),
+                          Ops[3]->getType()};
+        Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(IntrinsicTypes[2]));
+        break;
+      }
+      }] in {
+        foreach s_p = suffixes_prototypes in {
+          def : RVVBuiltin<s_p[0], s_p[1], type_range>;
+        }
+  }
+}
+
+multiclass RVVPseudoVNCVTBuiltin<string IR, string MName, string type_range,
+                                 list<list<string>> suffixes_prototypes> {
+  let Name = NAME,
+      MangledName = MName,
+      IRName = IR,
+      IRNameMask = IR # "_mask",
+      ManualCodegen = [{
+      {
+        // op1, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[0]->getType(),
+                          Ops[1]->getType(),
+                          Ops[1]->getType()};
+        Ops.insert(Ops.begin() + 1, llvm::Constant::getNullValue(IntrinsicTypes[2]));
+        break;
+      }
+      }],
+      ManualCodegenMask = [{
+      {
+        // maskedoff, op1, mask, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[1]->getType(),
+                          Ops[3]->getType(),
+                          Ops[3]->getType()};
+        Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(IntrinsicTypes[2]));
+        break;
+      }
+      }] in {
+        foreach s_p = suffixes_prototypes in {
+          def : RVVBuiltin<s_p[0], s_p[1], type_range>;
+        }
+  }
+}
+
 // 6. Configuration-Setting Instructions
 // 6.1. vsetvli/vsetvl instructions
 let HasVL = false,
@@ -1033,6 +1101,10 @@ defm vwsubu : RVVUnsignedWidenOp0BinBuiltinSet;
 // Widening signed integer add/subtract, 2*SEW = 2*SEW +/- SEW
 defm vwadd : RVVSignedWidenOp0BinBuiltinSet;
 defm vwsub : RVVSignedWidenOp0BinBuiltinSet;
+defm vwcvtu_x_x_v : RVVPseudoVWCVTBuiltin<"vwaddu", "vwcvtu_x", "csi",
+                                          [["Uw", "UwUv"]]>;
+defm vwcvt_x_x_v : RVVPseudoVWCVTBuiltin<"vwadd", "vwcvt_x", "csi",
+                                         [["w", "wv"]]>;
 
 // 12.3. Vector Integer Extension
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
@@ -1072,6 +1144,9 @@ defm vsra : RVVSignedShiftBuiltinSet;
 // 12.7. Vector Narrowing Integer Right Shift Instructions
 defm vnsrl : RVVUnsignedNShiftBuiltinSet;
 defm vnsra : RVVSignedNShiftBuiltinSet;
+defm vncvt_x_x_w : RVVPseudoVNCVTBuiltin<"vnsrl", "vncvt_x", "csi",
+                                         [["v", "vw"],
+                                          ["Uv", "UvUw"]]>;
 
 // 12.8. Vector Integer Comparison Instructions
 defm vmseq : RVVIntMaskOutBuiltinSet;
