@@ -233,7 +233,7 @@ define amdgpu_kernel void @v_ctlz_v2i32(<2 x i32> addrspace(1)* noalias %out, <2
 ; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX10-NEXT:    v_mov_b32_e32 v7, 0
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v0, s[2:3]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -243,7 +243,7 @@ define amdgpu_kernel void @v_ctlz_v2i32(<2 x i32> addrspace(1)* noalias %out, <2
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 32, v2, vcc_lo
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, 32, v3, vcc_lo
-; GFX10-NEXT:    global_store_dwordx2 v7, v[0:1], s[0:1]
+; GFX10-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
 ; GFX10-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %valptr, i32 %tid
