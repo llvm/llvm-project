@@ -58,7 +58,7 @@
 # include <initializer_list>  // NOLINT -- must be after gtest.h
 #endif
 
-#if defined(__clang__) && __has_warning("-Wdeprecated-copy")
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-copy"
 #endif
@@ -4421,7 +4421,7 @@ inline InnerMatcher AllArgs(const InnerMatcher& matcher) { return matcher; }
 
 }  // namespace testing
 
-#if defined(__clang__) && __has_warning("-Wdeprecated-copy")
+#ifdef __clang__
 #pragma clang diagnostic pop
 #endif
 
