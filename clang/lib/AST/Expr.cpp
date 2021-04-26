@@ -565,6 +565,20 @@ UniqueStableNameExpr *UniqueStableNameExpr::CreateEmpty(const ASTContext &Ctx,
   return new (Mem) UniqueStableNameExpr(EmptyShell(), ResultTy, IsExpr);
 }
 
+std::string UniqueStableNameExpr::ComputeName(ASTContext &Context) {
+  auto Callback = []() { /*TODO ERICH: Implement*/ };
+  std::unique_ptr<MangleContext> Ctx{ItaniumMangleContext::create(
+      Context, Context.getDiagnostics(), Callback)};
+
+  QualType Ty = getTypeSourceInfo()->getType();
+  std::string Buffer;
+  Buffer.reserve(128);
+  llvm::raw_string_ostream Out(Buffer);
+  Ctx->mangleTypeName(Ty, Out);
+
+  return std::move(Buffer);
+}
+
 PredefinedExpr::PredefinedExpr(SourceLocation L, QualType FNTy, IdentKind IK,
                                StringLiteral *SL)
     : Expr(PredefinedExprClass, FNTy, VK_LValue, OK_Ordinary) {

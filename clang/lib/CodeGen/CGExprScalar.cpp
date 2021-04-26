@@ -1588,17 +1588,9 @@ Value *ScalarExprEmitter::VisitExpr(Expr *E) {
 }
 
 Value *ScalarExprEmitter::VisitUniqueStableNameExpr(UniqueStableNameExpr *E) {
-  auto Callback = []() { /*TODO ERICH: Implement*/ };
   ASTContext &Context = CGF.getContext();
-  std::unique_ptr<MangleContext> Ctx{ItaniumMangleContext::create(
-      Context, Context.getDiagnostics(), Callback)};
-
-  QualType Ty = E->getTypeSourceInfo()->getType();
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  Ctx->mangleTypeName(Ty, Out);
-
-  llvm::Constant *Str = Builder.CreateGlobalStringPtr(Buffer, "usn_str");
+  llvm::Constant *Str = Builder.CreateGlobalStringPtr(
+      E->ComputeName(Context), "usn_str");
   Address GVAddr = Address(Str, Context.getTypeAlignInChars(E->getType()));
   return Builder.CreateLoad(GVAddr, llvm::Twine{"usn_str_load"});
 }

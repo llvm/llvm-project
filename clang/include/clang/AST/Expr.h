@@ -2141,6 +2141,10 @@ public:
     return const_child_range(getTrailingObjects<Stmt *>(),
                              getTrailingObjects<Stmt *>() + isExpr());
   }
+
+  // Get the generated name of the type.  Note that this only works after all
+  // kernels have been instantiated.
+  std::string ComputeName(ASTContext &Context);
 };
 
 /// ParenExpr - This represents a parethesized expression, e.g. "(1)".  This
