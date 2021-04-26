@@ -486,6 +486,8 @@ public:
     return CGF.EmitPseudoObjectRValue(E).getScalarVal();
   }
 
+  Value *VisitUniqueStableNameExpr(UniqueStableNameExpr *E);
+
   Value *VisitOpaqueValueExpr(OpaqueValueExpr *E) {
     if (E->isGLValue())
       return EmitLoadOfLValue(CGF.getOrCreateOpaqueLValueMapping(E),
@@ -1583,6 +1585,22 @@ Value *ScalarExprEmitter::VisitExpr(Expr *E) {
   if (E->getType()->isVoidType())
     return nullptr;
   return llvm::UndefValue::get(CGF.ConvertType(E->getType()));
+}
+
+Value *ScalarExprEmitter::VisitUniqueStableNameExpr(UniqueStableNameExpr *E) {
+  auto Callback = []() { /*TODO ERICH: Implement*/ };
+  ASTContext &Context = CGF.getContext();
+  std::unique_ptr<MangleContext> Ctx{ItaniumMangleContext::create(
+      Context, Context.getDiagnostics(), Callback)};
+
+  QualType Ty = E->getTypeSourceInfo()->getType();
+  SmallString<256> Buffer;
+  llvm::raw_svector_ostream Out(Buffer);
+  Ctx->mangleTypeName(Ty, Out);
+
+  llvm::Constant *Str = Builder.CreateGlobalStringPtr(Buffer, "usn_str");
+  Address GVAddr = Address(Str, Context.getTypeAlignInChars(E->getType()));
+  return Builder.CreateLoad(GVAddr, llvm::Twine{"usn_str_load"});
 }
 
 Value *ScalarExprEmitter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
