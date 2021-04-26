@@ -776,6 +776,11 @@ SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
   std::error_code EC;
   std::unique_ptr<SampleProfileWriter> Writer;
 
+  // Currently only Text and Extended Binary format are supported for CSSPGO.
+  if ((FunctionSamples::ProfileIsCS || FunctionSamples::ProfileIsProbeBased) &&
+      (Format == SPF_Binary || Format == SPF_Compact_Binary))
+    return sampleprof_error::unsupported_writing_format;
+
   if (Format == SPF_Binary)
     Writer.reset(new SampleProfileWriterRawBinary(OS));
   else if (Format == SPF_Ext_Binary)
