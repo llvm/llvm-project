@@ -843,31 +843,31 @@ define <3 x i16> @v_fshr_v3i16(<3 x i16> %src0, <3 x i16> %src1, <3 x i16> %src2
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_lshrrev_b32_e32 v6, 16, v4
 ; GFX10-NEXT:    v_xor_b32_e32 v8, -1, v4
+; GFX10-NEXT:    v_lshrrev_b32_e32 v6, 16, v4
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v10, 16, v0
 ; GFX10-NEXT:    v_lshlrev_b16 v0, 1, v0
 ; GFX10-NEXT:    v_and_b32_e32 v4, 15, v4
+; GFX10-NEXT:    v_and_b32_e32 v8, 15, v8
 ; GFX10-NEXT:    v_and_b32_e32 v9, 15, v6
 ; GFX10-NEXT:    v_xor_b32_e32 v6, -1, v6
-; GFX10-NEXT:    v_and_b32_e32 v15, 15, v8
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v7, 16, v2
 ; GFX10-NEXT:    v_lshrrev_b16 v2, v4, v2
+; GFX10-NEXT:    v_lshlrev_b16 v0, v8, v0
 ; GFX10-NEXT:    v_lshlrev_b16 v10, 1, v10
-; GFX10-NEXT:    v_and_b32_e32 v19, 15, v6
-; GFX10-NEXT:    v_lshlrev_b16 v0, v15, v0
+; GFX10-NEXT:    v_and_b32_e32 v6, 15, v6
 ; GFX10-NEXT:    v_xor_b32_e32 v11, -1, v5
 ; GFX10-NEXT:    v_lshrrev_b16 v4, v9, v7
-; GFX10-NEXT:    v_lshlrev_b16 v1, 1, v1
-; GFX10-NEXT:    v_lshlrev_b16 v6, v19, v10
 ; GFX10-NEXT:    v_or_b32_e32 v0, v0, v2
-; GFX10-NEXT:    v_and_b32_e32 v7, 15, v11
 ; GFX10-NEXT:    v_and_b32_e32 v2, 15, v5
-; GFX10-NEXT:    v_or_b32_e32 v11, v6, v4
+; GFX10-NEXT:    v_lshlrev_b16 v6, v6, v10
+; GFX10-NEXT:    v_lshlrev_b16 v1, 1, v1
+; GFX10-NEXT:    v_and_b32_e32 v7, 15, v11
 ; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX10-NEXT:    v_lshlrev_b16 v1, v7, v1
 ; GFX10-NEXT:    v_lshrrev_b16 v2, v2, v3
-; GFX10-NEXT:    v_lshl_or_b32 v0, v11, 16, v0
+; GFX10-NEXT:    v_or_b32_e32 v4, v6, v4
+; GFX10-NEXT:    v_lshlrev_b16 v1, v7, v1
+; GFX10-NEXT:    v_lshl_or_b32 v0, v4, 16, v0
 ; GFX10-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %ret = call <3 x i16> @llvm.fshr.v3i16(<3 x i16> %src0, <3 x i16> %src1, <3 x i16> %src2)
@@ -1005,28 +1005,28 @@ define <4 x i16> @v_fshr_v4i16(<4 x i16> %src0, <4 x i16> %src1, <4 x i16> %src2
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v12, 16, v2
 ; GFX10-NEXT:    v_lshlrev_b16 v11, 1, v11
 ; GFX10-NEXT:    v_lshlrev_b16 v7, v9, v8
+; GFX10-NEXT:    v_xor_b32_e32 v8, -1, v4
 ; GFX10-NEXT:    v_xor_b32_e32 v9, -1, v10
 ; GFX10-NEXT:    v_xor_b32_e32 v10, -1, v5
-; GFX10-NEXT:    v_xor_b32_e32 v8, -1, v4
 ; GFX10-NEXT:    v_and_b32_e32 v4, 15, v4
 ; GFX10-NEXT:    v_and_b32_e32 v5, 15, v5
+; GFX10-NEXT:    v_and_b32_e32 v8, 15, v8
 ; GFX10-NEXT:    v_and_b32_e32 v9, 15, v9
 ; GFX10-NEXT:    v_and_b32_e32 v10, 15, v10
-; GFX10-NEXT:    v_and_b32_e32 v15, 15, v8
 ; GFX10-NEXT:    v_lshrrev_b16 v2, v4, v2
 ; GFX10-NEXT:    v_lshrrev_b16 v3, v5, v3
+; GFX10-NEXT:    v_lshlrev_b16 v0, v8, v0
 ; GFX10-NEXT:    v_lshrrev_b16 v4, v13, v12
 ; GFX10-NEXT:    v_lshlrev_b16 v1, v10, v1
-; GFX10-NEXT:    v_lshlrev_b16 v0, v15, v0
 ; GFX10-NEXT:    v_lshlrev_b16 v5, v9, v11
-; GFX10-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GFX10-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0xffff
+; GFX10-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GFX10-NEXT:    v_or_b32_e32 v3, v7, v6
-; GFX10-NEXT:    v_or_b32_e32 v7, v5, v4
+; GFX10-NEXT:    v_or_b32_e32 v4, v5, v4
 ; GFX10-NEXT:    v_and_b32_e32 v0, v2, v0
 ; GFX10-NEXT:    v_and_b32_e32 v1, v2, v1
-; GFX10-NEXT:    v_lshl_or_b32 v0, v7, 16, v0
+; GFX10-NEXT:    v_lshl_or_b32 v0, v4, 16, v0
 ; GFX10-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %ret = call <4 x i16> @llvm.fshr.v4i16(<4 x i16> %src0, <4 x i16> %src1, <4 x i16> %src2)
@@ -1085,9 +1085,9 @@ define i64 @v_fshr_i64(i64 %src0, i64 %src1, i64 %src2) {
 ; GFX10-NEXT:    v_not_b32_e32 v5, v4
 ; GFX10-NEXT:    v_lshlrev_b64 v[0:1], 1, v[0:1]
 ; GFX10-NEXT:    v_and_b32_e32 v4, 63, v4
-; GFX10-NEXT:    v_and_b32_e32 v7, 63, v5
+; GFX10-NEXT:    v_and_b32_e32 v5, 63, v5
 ; GFX10-NEXT:    v_lshrrev_b64 v[2:3], v4, v[2:3]
-; GFX10-NEXT:    v_lshlrev_b64 v[0:1], v7, v[0:1]
+; GFX10-NEXT:    v_lshlrev_b64 v[0:1], v5, v[0:1]
 ; GFX10-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX10-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -1172,18 +1172,18 @@ define <2 x i64> @v_fshr_v2i64(<2 x i64> %src0, <2 x i64> %src1, <2 x i64> %src2
 ; GFX10-NEXT:    v_not_b32_e32 v11, v10
 ; GFX10-NEXT:    v_lshlrev_b64 v[0:1], 1, v[0:1]
 ; GFX10-NEXT:    v_lshlrev_b64 v[2:3], 1, v[2:3]
-; GFX10-NEXT:    v_and_b32_e32 v15, 63, v8
-; GFX10-NEXT:    v_and_b32_e32 v19, 63, v9
-; GFX10-NEXT:    v_and_b32_e32 v9, 63, v10
-; GFX10-NEXT:    v_and_b32_e32 v13, 63, v11
-; GFX10-NEXT:    v_lshrrev_b64 v[4:5], v15, v[4:5]
-; GFX10-NEXT:    v_lshlrev_b64 v[11:12], v19, v[0:1]
-; GFX10-NEXT:    v_lshrrev_b64 v[6:7], v9, v[6:7]
-; GFX10-NEXT:    v_lshlrev_b64 v[15:16], v13, v[2:3]
-; GFX10-NEXT:    v_or_b32_e32 v0, v11, v4
-; GFX10-NEXT:    v_or_b32_e32 v1, v12, v5
-; GFX10-NEXT:    v_or_b32_e32 v2, v15, v6
-; GFX10-NEXT:    v_or_b32_e32 v3, v16, v7
+; GFX10-NEXT:    v_and_b32_e32 v8, 63, v8
+; GFX10-NEXT:    v_and_b32_e32 v9, 63, v9
+; GFX10-NEXT:    v_and_b32_e32 v10, 63, v10
+; GFX10-NEXT:    v_and_b32_e32 v11, 63, v11
+; GFX10-NEXT:    v_lshrrev_b64 v[4:5], v8, v[4:5]
+; GFX10-NEXT:    v_lshlrev_b64 v[0:1], v9, v[0:1]
+; GFX10-NEXT:    v_lshrrev_b64 v[6:7], v10, v[6:7]
+; GFX10-NEXT:    v_lshlrev_b64 v[2:3], v11, v[2:3]
+; GFX10-NEXT:    v_or_b32_e32 v0, v0, v4
+; GFX10-NEXT:    v_or_b32_e32 v1, v1, v5
+; GFX10-NEXT:    v_or_b32_e32 v2, v2, v6
+; GFX10-NEXT:    v_or_b32_e32 v3, v3, v7
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %ret = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %src0, <2 x i64> %src1, <2 x i64> %src2)
   ret <2 x i64> %ret
@@ -1331,10 +1331,10 @@ define <2 x i24> @v_fshr_v2i24(<2 x i24> %src0, <2 x i24> %src1, <2 x i24> %src2
 ; GFX10-NEXT:    v_mul_lo_u32 v7, v7, 24
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v4, v4, v6
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v5, v5, v7
-; GFX10-NEXT:    v_add_nc_u32_e32 v7, 8, v4
-; GFX10-NEXT:    v_add_nc_u32_e32 v6, 8, v5
-; GFX10-NEXT:    v_alignbit_b32 v0, v0, v2, v7
-; GFX10-NEXT:    v_alignbit_b32 v1, v1, v3, v6
+; GFX10-NEXT:    v_add_nc_u32_e32 v4, 8, v4
+; GFX10-NEXT:    v_add_nc_u32_e32 v5, 8, v5
+; GFX10-NEXT:    v_alignbit_b32 v0, v0, v2, v4
+; GFX10-NEXT:    v_alignbit_b32 v1, v1, v3, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %ret = call <2 x i24> @llvm.fshr.v2i24(<2 x i24> %src0, <2 x i24> %src1, <2 x i24> %src2)
   ret <2 x i24> %ret

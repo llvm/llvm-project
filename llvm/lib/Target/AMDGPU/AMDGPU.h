@@ -74,16 +74,6 @@ FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *createAMDGPULowerModuleLDSPass();
 FunctionPass *createSIModeRegisterPass();
 
-namespace AMDGPU {
-enum RegBankReassignMode {
-  RM_VGPR = 1,
-  RM_SGPR = 2,
-  RM_BOTH = RM_VGPR | RM_SGPR
-};
-}
-MachineFunctionPass *
-createGCNRegBankReassignPass(AMDGPU::RegBankReassignMode Mode);
-
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
   AMDGPUSimplifyLibCallsPass(TargetMachine &TM) : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -341,9 +331,6 @@ void initializeAMDGPUArgumentUsageInfoPass(PassRegistry &);
 ModulePass *createAMDGPUOpenCLEnqueuedBlockLoweringPass();
 void initializeAMDGPUOpenCLEnqueuedBlockLoweringPass(PassRegistry &);
 extern char &AMDGPUOpenCLEnqueuedBlockLoweringID;
-
-void initializeGCNRegBankReassignPass(PassRegistry &);
-extern char &GCNRegBankReassignID;
 
 void initializeGCNNSAReassignPass(PassRegistry &);
 extern char &GCNNSAReassignID;

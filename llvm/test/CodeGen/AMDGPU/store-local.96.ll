@@ -196,11 +196,11 @@ define amdgpu_kernel void @store_lds_v3i32_align1(<3 x i32> addrspace(3)* %out, 
 ; GFX10-NEXT:    s_lshr_b32 s5, s4, 8
 ; GFX10-NEXT:    v_mov_b32_e32 v3, s4
 ; GFX10-NEXT:    s_lshr_b32 s4, s4, 24
-; GFX10-NEXT:    v_mov_b32_e32 v11, s0
+; GFX10-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX10-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s2
 ; GFX10-NEXT:    v_mov_b32_e32 v7, s3
-; GFX10-NEXT:    v_mov_b32_e32 v15, s5
+; GFX10-NEXT:    v_mov_b32_e32 v8, s5
 ; GFX10-NEXT:    v_mov_b32_e32 v9, s4
 ; GFX10-NEXT:    ds_write_b8 v0, v1 offset:8
 ; GFX10-NEXT:    ds_write_b8_d16_hi v0, v1 offset:10
@@ -208,11 +208,11 @@ define amdgpu_kernel void @store_lds_v3i32_align1(<3 x i32> addrspace(3)* %out, 
 ; GFX10-NEXT:    ds_write_b8_d16_hi v0, v2 offset:6
 ; GFX10-NEXT:    ds_write_b8 v0, v3
 ; GFX10-NEXT:    ds_write_b8_d16_hi v0, v3 offset:2
-; GFX10-NEXT:    ds_write_b8 v0, v11 offset:9
+; GFX10-NEXT:    ds_write_b8 v0, v4 offset:9
 ; GFX10-NEXT:    ds_write_b8 v0, v5 offset:11
 ; GFX10-NEXT:    ds_write_b8 v0, v6 offset:5
 ; GFX10-NEXT:    ds_write_b8 v0, v7 offset:7
-; GFX10-NEXT:    ds_write_b8 v0, v15 offset:1
+; GFX10-NEXT:    ds_write_b8 v0, v8 offset:1
 ; GFX10-NEXT:    ds_write_b8 v0, v9 offset:3
 ; GFX10-NEXT:    s_endpgm
   store <3 x i32> %x, <3 x i32> addrspace(3)* %out, align 1

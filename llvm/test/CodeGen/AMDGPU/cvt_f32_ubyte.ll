@@ -1121,7 +1121,7 @@ define amdgpu_kernel void @load_v7i8_to_v7f32(<7 x float> addrspace(1)* noalias 
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX10-NEXT:    v_mov_b32_e32 v11, 0
+; GFX10-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0x5
 ; GFX10-NEXT:    global_load_ubyte v1, v0, s[2:3] offset:2
@@ -1144,9 +1144,9 @@ define amdgpu_kernel void @load_v7i8_to_v7f32(<7 x float> addrspace(1)* noalias 
 ; GFX10-NEXT:    v_cvt_f32_ubyte2_e32 v2, v0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_cvt_f32_ubyte0_e32 v0, v7
-; GFX10-NEXT:    global_store_dword v11, v6, s[0:1] offset:24
-; GFX10-NEXT:    global_store_dwordx2 v11, v[4:5], s[0:1] offset:16
-; GFX10-NEXT:    global_store_dwordx4 v11, v[0:3], s[0:1]
+; GFX10-NEXT:    global_store_dword v8, v6, s[0:1] offset:24
+; GFX10-NEXT:    global_store_dwordx2 v8, v[4:5], s[0:1] offset:16
+; GFX10-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
 ; GFX10-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <7 x i8>, <7 x i8> addrspace(1)* %in, i32 %tid
