@@ -160,12 +160,12 @@ TEST(LlvmLibcMemcpyUtilsTest, CopyBlockOverlap) {
   EXPECT_STREQ(trace.Read(), "01112111");
 }
 
-TEST(LlvmLibcMemcpyUtilsTest, CopyAlignedBlocks) {
+TEST(LlvmLibcMemcpyUtilsTest, CopySrcAlignedBlocks) {
   auto &trace = GetTrace();
   // Source is aligned and multiple of alignment.
   //   "1111"
   trace.Clear();
-  CopyAlignedBlocks<4>(I(0), I(0), 4);
+  CopySrcAlignedBlocks<4>(I(0), I(0), 4);
   EXPECT_STREQ(trace.Write(), "2222");
   EXPECT_STREQ(trace.Read(), "2222");
 
@@ -174,7 +174,7 @@ TEST(LlvmLibcMemcpyUtilsTest, CopyAlignedBlocks) {
   // + "00001111"
   // = "11111111"
   trace.Clear();
-  CopyAlignedBlocks<4>(I(0), I(0), 8);
+  CopySrcAlignedBlocks<4>(I(0), I(0), 8);
   EXPECT_STREQ(trace.Write(), "11111111");
   EXPECT_STREQ(trace.Read(), "11111111");
 
@@ -185,7 +185,7 @@ TEST(LlvmLibcMemcpyUtilsTest, CopyAlignedBlocks) {
   // + "0000000001111"
   // = "1111111112221"
   trace.Clear();
-  CopyAlignedBlocks<4>(I(0), I(0), 13);
+  CopySrcAlignedBlocks<4>(I(0), I(0), 13);
   EXPECT_STREQ(trace.Write(), "1111111112221");
   EXPECT_STREQ(trace.Read(), "1111111112221");
 
@@ -196,7 +196,7 @@ TEST(LlvmLibcMemcpyUtilsTest, CopyAlignedBlocks) {
   // + "00000000001111"
   // = "01112111112211"
   trace.Clear();
-  CopyAlignedBlocks<4>(I(0), I(1), 13);
+  CopySrcAlignedBlocks<4>(I(0), I(1), 13);
   EXPECT_STREQ(trace.Write(), "1112111112211");
   EXPECT_STREQ(trace.Read(), "01112111112211");
 
@@ -206,9 +206,60 @@ TEST(LlvmLibcMemcpyUtilsTest, CopyAlignedBlocks) {
   // + "000000001111"
   // = "011121111111"
   trace.Clear();
-  CopyAlignedBlocks<4>(I(0), I(1), 11);
+  CopySrcAlignedBlocks<4>(I(0), I(1), 11);
   EXPECT_STREQ(trace.Write(), "11121111111");
   EXPECT_STREQ(trace.Read(), "011121111111");
+}
+
+TEST(LlvmLibcMemcpyUtilsTest, CopyDstAlignedBlocks) {
+  auto &trace = GetTrace();
+  // Destination is aligned and multiple of alignment.
+  //   "1111"
+  trace.Clear();
+  CopyDstAlignedBlocks<4>(I(0), I(0), 4);
+  EXPECT_STREQ(trace.Write(), "2222");
+  EXPECT_STREQ(trace.Read(), "2222");
+
+  // Destination is aligned and multiple of alignment.
+  //   "11110000"
+  // + "00001111"
+  // = "11111111"
+  trace.Clear();
+  CopyDstAlignedBlocks<4>(I(0), I(0), 8);
+  EXPECT_STREQ(trace.Write(), "11111111");
+  EXPECT_STREQ(trace.Read(), "11111111");
+
+  // Destination is aligned already overlap at end.
+  //   "1111000000000"
+  // + "0000111100000"
+  // + "0000000011110"
+  // + "0000000001111"
+  // = "1111111112221"
+  trace.Clear();
+  CopyDstAlignedBlocks<4>(I(0), I(0), 13);
+  EXPECT_STREQ(trace.Write(), "1111111112221");
+  EXPECT_STREQ(trace.Read(), "1111111112221");
+
+  // Misaligned destination.
+  //   "01111000000000"
+  // + "00001111000000"
+  // + "00000000111100"
+  // + "00000000001111"
+  // = "01112111112211"
+  trace.Clear();
+  CopyDstAlignedBlocks<4>(I(1), I(0), 13);
+  EXPECT_STREQ(trace.Write(), "01112111112211");
+  EXPECT_STREQ(trace.Read(), "1112111112211");
+
+  // Misaligned destination aligned at end.
+  //   "011110000000"
+  // + "000011110000"
+  // + "000000001111"
+  // = "011121111111"
+  trace.Clear();
+  CopyDstAlignedBlocks<4>(I(1), I(0), 11);
+  EXPECT_STREQ(trace.Write(), "011121111111");
+  EXPECT_STREQ(trace.Read(), "11121111111");
 }
 
 TEST(LlvmLibcMemcpyUtilsTest, CopyAlignedBlocksWithAlignment) {
@@ -216,14 +267,28 @@ TEST(LlvmLibcMemcpyUtilsTest, CopyAlignedBlocksWithAlignment) {
   // Source is aligned and multiple of alignment.
   //   "11111111"
   trace.Clear();
-  CopyAlignedBlocks<8, 4>(I(0), I(0), 8);
+  CopySrcAlignedBlocks<8, 4>(I(0), I(0), 8);
+  EXPECT_STREQ(trace.Write(), "22221111");
+  EXPECT_STREQ(trace.Read(), "22221111");
+
+  // Destination is aligned and multiple of alignment.
+  //   "11111111"
+  trace.Clear();
+  CopyDstAlignedBlocks<8, 4>(I(0), I(0), 8);
   EXPECT_STREQ(trace.Write(), "22221111");
   EXPECT_STREQ(trace.Read(), "22221111");
 
   // Source is aligned and multiple of alignment.
   //   "111111111"
   trace.Clear();
-  CopyAlignedBlocks<8, 4>(I(0), I(0), 9);
+  CopySrcAlignedBlocks<8, 4>(I(0), I(0), 9);
+  EXPECT_STREQ(trace.Write(), "122211111");
+  EXPECT_STREQ(trace.Read(), "122211111");
+
+  // Destination is aligned and multiple of alignment.
+  //   "111111111"
+  trace.Clear();
+  CopyDstAlignedBlocks<8, 4>(I(0), I(0), 9);
   EXPECT_STREQ(trace.Write(), "122211111");
   EXPECT_STREQ(trace.Read(), "122211111");
 }
@@ -234,7 +299,7 @@ TEST(LlvmLibcMemcpyUtilsTest, CopyAlignedBlocksMaxReloads) {
     for (size_t count = 64; count < 768; ++count) {
       trace.Clear();
       // We should never reload more than twice when copying from count = 2x32.
-      CopyAlignedBlocks<32>(I(alignment), I(0), count);
+      CopySrcAlignedBlocks<32>(I(alignment), I(0), count);
       const char *const written = trace.Write();
       // First bytes are untouched.
       for (size_t i = 0; i < alignment; ++i)
@@ -254,7 +319,7 @@ TEST(LlvmLibcMemcpyUtilsTest, CopyAlignedBlocksWithAlignmentMaxReloads) {
     for (size_t count = 64; count < 768; ++count) {
       trace.Clear();
       // We should never reload more than twice when copying from count = 2x32.
-      CopyAlignedBlocks<32, 16>(I(alignment), I(0), count);
+      CopySrcAlignedBlocks<32, 16>(I(alignment), I(0), count);
       const char *const written = trace.Write();
       // First bytes are untouched.
       for (size_t i = 0; i < alignment; ++i)
