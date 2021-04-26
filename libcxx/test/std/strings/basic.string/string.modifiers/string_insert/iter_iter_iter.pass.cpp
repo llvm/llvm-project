@@ -37,14 +37,22 @@ void
 test_exceptions(S s, typename S::difference_type pos, It first, It last)
 {
     typename S::const_iterator p = s.cbegin() + pos;
-    S aCopy = s;
+
+    S original = s;
+    typename S::iterator begin = s.begin();
+    typename S::iterator end = s.end();
+
     try {
         s.insert(p, first, last);
         assert(false);
-        }
-    catch (...) {}
+    } catch (...) {}
+
+    // Part of "no effects" is that iterators and pointers
+    // into the string must not have been invalidated.
     LIBCPP_ASSERT(s.__invariants());
-    assert(s == aCopy);
+    assert(s == original);
+    assert(s.begin() == begin);
+    assert(s.end() == end);
 }
 #endif
 
