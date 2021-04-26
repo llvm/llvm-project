@@ -26,6 +26,7 @@ struct ClassMember { int i; };
 struct StaticClassMember { int i; };
 struct UnusedClassMember { int i; };
 struct UnusedClassMemberPtr { int i; };
+struct PointerToMember { int i; };
 
 namespace NS {
 class ClassInNamespace {
@@ -36,6 +37,7 @@ public:
   int dummy; // Prevent bug where LLDB always completes first member.
   ClassMember member;
   static StaticClassMember static_member;
+  int (PointerToMember::*ptr_to_member);
   UnusedClassMember unused_member;
   UnusedClassMemberPtr *unused_member_ptr;
   int enteredFunction() {
