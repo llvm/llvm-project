@@ -99,6 +99,18 @@ concept sentinel_for =
   input_or_output_iterator<_Ip> &&
   __weakly_equality_comparable_with<_Sp, _Ip>;
 
+template<class, class>
+inline constexpr bool disable_sized_sentinel_for = false;
+
+template<class _Sp, class _Ip>
+concept sized_sentinel_for =
+  sentinel_for<_Sp, _Ip> &&
+  !disable_sized_sentinel_for<remove_cv_t<_Sp>, remove_cv_t<_Ip> > &&
+  requires(const _Ip& __i, const _Sp& __s) {
+    { __s - __i } -> same_as<iter_difference_t<_Ip> >;
+    { __i - __s } -> same_as<iter_difference_t<_Ip> >;
+  };
+
 // clang-format on
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
