@@ -695,7 +695,8 @@ void CstrBroadcastableOp::getCanonicalizationPatterns(
   // folding in case additional shape information is inferred at some point that
   // does not result in folding.
   patterns.add<CstrBroadcastableEqOps,
-               RemoveDuplicateOperandsPattern<CstrBroadcastableOp>>(context);
+               RemoveDuplicateOperandsPattern<CstrBroadcastableOp>,
+               RemoveEmptyShapeOperandsPattern<CstrBroadcastableOp>>(context);
 }
 
 // Return true if there is exactly one attribute not representing a scalar
