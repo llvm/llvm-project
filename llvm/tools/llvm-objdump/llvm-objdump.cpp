@@ -975,11 +975,11 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, const MCInstrAnalysis *MIA,
 // Create an MCSymbolizer for the target and add it to the MCDisassembler.
 // This is currently only used on AMDGPU, and assumes the format of the
 // void * argument passed to AMDGPU's createMCSymbolizer.
-static void addSymbolizer(MCContext &Ctx, const Target *Target,
-                          StringRef TripleName, MCDisassembler *DisAsm,
-                          uint64_t SectionAddr, ArrayRef<uint8_t> Bytes,
-                          SectionSymbolsTy &Symbols,
-                          std::vector<std::string *> &SynthesizedLabelNames) {
+static void addSymbolizer(
+    MCContext &Ctx, const Target *Target, StringRef TripleName,
+    MCDisassembler *DisAsm, uint64_t SectionAddr, ArrayRef<uint8_t> Bytes,
+    SectionSymbolsTy &Symbols,
+    std::vector<std::unique_ptr<std::string>> &SynthesizedLabelNames) {
 
   std::unique_ptr<MCRelocationInfo> RelInfo(
       Target->createMCRelocationInfo(TripleName, Ctx));
@@ -1015,8 +1015,9 @@ static void addSymbolizer(MCContext &Ctx, const Target *Target,
                     LabelAddrs.begin());
   // Add the labels.
   for (unsigned LabelNum = 0; LabelNum != LabelAddrs.size(); ++LabelNum) {
-    SynthesizedLabelNames.push_back(
-        new std::string((Twine("L") + Twine(LabelNum)).str()));
+    std::unique_ptr<std::string> Name(new std::string);
+    *Name = (Twine("L") + Twine(LabelNum)).str();
+    SynthesizedLabelNames.push_back(std::move(Name));
     Symbols.push_back(SymbolInfoTy(
         LabelAddrs[LabelNum], *SynthesizedLabelNames.back(), ELF::STT_NOTYPE));
   }
@@ -1193,7 +1194,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
     ArrayRef<uint8_t> Bytes = arrayRefFromStringRef(
         unwrapOrError(Section.getContents(), Obj->getFileName()));
 
-    std::vector<std::string *> SynthesizedLabelNames;
+    std::vector<std::unique_ptr<std::string>> SynthesizedLabelNames;
     if (Obj->isELF() && Obj->getArch() == Triple::amdgcn) {
       // AMDGPU disassembler uses symbolizer for printing labels
       addSymbolizer(Ctx, TheTarget, TripleName, DisAsm, SectionAddr, Bytes,
