@@ -351,8 +351,8 @@ define amdgpu_ps <4 x float> @wqm_demote_1(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX10-32-NEXT:    s_andn2_b32 s12, s12, exec_lo
 ; GFX10-32-NEXT:    s_cbranch_scc0 BB3_4
 ; GFX10-32-NEXT:  ; %bb.2: ; %.demote
-; GFX10-32-NEXT:    s_wqm_b32 s28, s12
-; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s28
+; GFX10-32-NEXT:    s_wqm_b32 s14, s12
+; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s14
 ; GFX10-32-NEXT:  BB3_3: ; %.continue
 ; GFX10-32-NEXT:    s_or_b32 exec_lo, exec_lo, s13
 ; GFX10-32-NEXT:    image_sample v[0:3], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
@@ -374,7 +374,7 @@ define amdgpu_ps <4 x float> @wqm_demote_1(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX10-64-NEXT:    s_wqm_b64 exec, exec
 ; GFX10-64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v1
 ; GFX10-64-NEXT:    s_and_saveexec_b64 s[14:15], vcc
-; GFX10-64-NEXT:    s_xor_b64 s[28:29], exec, s[14:15]
+; GFX10-64-NEXT:    s_xor_b64 s[14:15], exec, s[14:15]
 ; GFX10-64-NEXT:    s_cbranch_execz BB3_3
 ; GFX10-64-NEXT:  ; %bb.1: ; %.demote
 ; GFX10-64-NEXT:    s_andn2_b64 s[12:13], s[12:13], exec
@@ -383,7 +383,7 @@ define amdgpu_ps <4 x float> @wqm_demote_1(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX10-64-NEXT:    s_wqm_b64 s[16:17], s[12:13]
 ; GFX10-64-NEXT:    s_and_b64 exec, exec, s[16:17]
 ; GFX10-64-NEXT:  BB3_3: ; %.continue
-; GFX10-64-NEXT:    s_or_b64 exec, exec, s[28:29]
+; GFX10-64-NEXT:    s_or_b64 exec, exec, s[14:15]
 ; GFX10-64-NEXT:    image_sample v[0:3], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-64-NEXT:    v_add_f32_e32 v0, v0, v0
@@ -487,8 +487,8 @@ define amdgpu_ps <4 x float> @wqm_demote_2(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX10-32-NEXT:    s_andn2_b32 s12, s12, exec_lo
 ; GFX10-32-NEXT:    s_cbranch_scc0 BB4_4
 ; GFX10-32-NEXT:  ; %bb.2: ; %.demote
-; GFX10-32-NEXT:    s_wqm_b32 s28, s12
-; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s28
+; GFX10-32-NEXT:    s_wqm_b32 s14, s12
+; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s14
 ; GFX10-32-NEXT:  BB4_3: ; %.continue
 ; GFX10-32-NEXT:    s_or_b32 exec_lo, exec_lo, s13
 ; GFX10-32-NEXT:    v_add_f32_e32 v0, v0, v0
@@ -510,7 +510,7 @@ define amdgpu_ps <4 x float> @wqm_demote_2(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-64-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
 ; GFX10-64-NEXT:    s_and_saveexec_b64 s[14:15], vcc
-; GFX10-64-NEXT:    s_xor_b64 s[28:29], exec, s[14:15]
+; GFX10-64-NEXT:    s_xor_b64 s[14:15], exec, s[14:15]
 ; GFX10-64-NEXT:    s_cbranch_execz BB4_3
 ; GFX10-64-NEXT:  ; %bb.1: ; %.demote
 ; GFX10-64-NEXT:    s_andn2_b64 s[12:13], s[12:13], exec
@@ -519,7 +519,7 @@ define amdgpu_ps <4 x float> @wqm_demote_2(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX10-64-NEXT:    s_wqm_b64 s[16:17], s[12:13]
 ; GFX10-64-NEXT:    s_and_b64 exec, exec, s[16:17]
 ; GFX10-64-NEXT:  BB4_3: ; %.continue
-; GFX10-64-NEXT:    s_or_b64 exec, exec, s[28:29]
+; GFX10-64-NEXT:    s_or_b64 exec, exec, s[14:15]
 ; GFX10-64-NEXT:    v_add_f32_e32 v0, v0, v0
 ; GFX10-64-NEXT:    s_and_b64 exec, exec, s[12:13]
 ; GFX10-64-NEXT:    image_sample v[0:3], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
@@ -632,8 +632,8 @@ define amdgpu_ps <4 x float> @wqm_demote_dynamic(<8 x i32> inreg %rsrc, <4 x i32
 ; GFX10-64-NEXT:    s_andn2_b64 s[12:13], s[12:13], s[14:15]
 ; GFX10-64-NEXT:    s_cbranch_scc0 BB5_2
 ; GFX10-64-NEXT:  ; %bb.1: ; %.entry
-; GFX10-64-NEXT:    s_wqm_b64 s[28:29], s[12:13]
-; GFX10-64-NEXT:    s_and_b64 exec, exec, s[28:29]
+; GFX10-64-NEXT:    s_wqm_b64 s[14:15], s[12:13]
+; GFX10-64-NEXT:    s_and_b64 exec, exec, s[14:15]
 ; GFX10-64-NEXT:    v_add_f32_e32 v0, v0, v0
 ; GFX10-64-NEXT:    s_and_b64 exec, exec, s[12:13]
 ; GFX10-64-NEXT:    image_sample v[0:3], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
