@@ -116,3 +116,50 @@ latch:
 exit:
   ret void
 }
+
+define void @pr49873_cmp_simplification_dependency(i32* %ptr, i1 %c.0) {
+; CHECK-LABEL: @pr49873_cmp_simplification_dependency(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_1:%.*]]
+; CHECK:       loop.1:
+; CHECK-NEXT:    br i1 [[C_0:%.*]], label [[LOOP_1_LATCH:%.*]], label [[LOOP_2:%.*]]
+; CHECK:       loop.2:
+; CHECK-NEXT:    [[I130:%.*]] = phi i32 [ [[I132:%.*]], [[LOOP_2]] ], [ 0, [[LOOP_1]] ]
+; CHECK-NEXT:    [[I132]] = add nuw i32 [[I130]], 1
+; CHECK-NEXT:    [[I133:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i32 [[I132]], [[I133]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_2]], label [[LOOP_2_EXIT:%.*]]
+; CHECK:       loop.2.exit:
+; CHECK-NEXT:    br label [[LOOP_1_LATCH]]
+; CHECK:       loop.1.latch:
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ 0, [[LOOP_1]] ], [ [[I133]], [[LOOP_2_EXIT]] ]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i32 1, [[DOTLCSSA]]
+; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_1]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.1
+
+loop.1:
+  %i65 = add nuw i32 0, 1
+  br i1 %c.0, label %loop.1.latch, label %loop.2
+
+loop.2:
+  %i130 = phi i32 [ %i132, %loop.2 ], [ 0, %loop.1 ]
+  %i132 = add nuw i32 %i130, 1
+  %i133 = load i32, i32* %ptr, align 4
+  %c.1 = icmp ult i32 %i132, %i133
+  br i1 %c.1, label %loop.2, label %loop.2.exit
+
+loop.2.exit:
+  br label %loop.1.latch
+
+loop.1.latch:                                      ; preds = %loop.2.exit, %loop.1
+  %.lcssa = phi i32 [ 0, %loop.1 ], [ %i133, %loop.2.exit ]
+  %c.2 = icmp ult i32 %i65, %.lcssa
+  br i1 %c.2, label %loop.1, label %exit
+
+exit:
+  ret void
+}
