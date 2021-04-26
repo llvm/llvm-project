@@ -861,6 +861,33 @@ multiclass RVVPseudoMaskBuiltin<string IR, string type_range> {
   }
 }
 
+multiclass RVVPseudoVFUnaryBuiltin<string IR, string type_range> {
+  let Name = NAME,
+      IRName = IR,
+      IRNameMask = IR # "_mask",
+      ManualCodegen = [{
+      {
+        // op1, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[0]->getType(), Ops[1]->getType()};
+        Ops.insert(Ops.begin() + 1, Ops[0]);
+        break;
+      }
+      }],
+      ManualCodegenMask = [{
+      {
+        // maskedoff, op1, mask, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[1]->getType(),
+                          Ops[3]->getType()};
+        Ops.insert(Ops.begin() + 2, Ops[1]);
+        break;
+      }
+      }] in {
+        def : RVVBuiltin<"v", "vv", type_range>;
+  }
+}
+
 // 6. Configuration-Setting Instructions
 // 6.1. vsetvli/vsetvl instructions
 let HasVL = false,
@@ -1216,6 +1243,8 @@ defm vfmax : RVVFloatingBinBuiltinSet;
 defm vfsgnj  : RVVFloatingBinBuiltinSet;
 defm vfsgnjn : RVVFloatingBinBuiltinSet;
 defm vfsgnjx : RVVFloatingBinBuiltinSet;
+defm vfneg_v : RVVPseudoVFUnaryBuiltin<"vfsgnjn", "fd">;
+defm vfabs_v : RVVPseudoVFUnaryBuiltin<"vfsgnjx", "fd">;
 
 // 14.13. Vector Floating-Point Compare Instructions
 defm vmfeq : RVVFloatingMaskOutBuiltinSet;
