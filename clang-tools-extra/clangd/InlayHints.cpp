@@ -19,7 +19,13 @@ namespace clangd {
 class InlayHintVisitor : public RecursiveASTVisitor<InlayHintVisitor> {
 public:
   InlayHintVisitor(std::vector<InlayHint> &Results, ParsedAST &AST)
-      : Results(Results), AST(AST.getASTContext()) {}
+      : Results(Results), AST(AST.getASTContext()),
+        MainFileID(AST.getSourceManager().getMainFileID()) {
+    bool Invalid = false;
+    llvm::StringRef Buf =
+        AST.getSourceManager().getBufferData(MainFileID, &Invalid);
+    MainFileBuf = Invalid ? StringRef{} : Buf;
+  }
 
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
     // Weed out constructor calls that don't look like a function call with
@@ -102,9 +108,35 @@ private:
     if (ParamName == getSpelledIdentifier(Arg))
       return false;
 
-    // FIXME: Exclude argument expressions preceded by a /*paramName=*/ comment.
+    // Exclude argument expressions preceded by a /*paramName*/.
+    if (isPrecededByParamNameComment(Arg, ParamName))
+      return false;
 
     return true;
+  }
+
+  // Checks if "E" is spelled in the main file and preceded by a C-style comment
+  // whose contents match ParamName (allowing for whitespace and an optional "="
+  // at the end.
+  bool isPrecededByParamNameComment(const Expr *E, StringRef ParamName) {
+    auto &SM = AST.getSourceManager();
+    auto ExprStartLoc = SM.getTopMacroCallerLoc(E->getBeginLoc());
+    auto Decomposed = SM.getDecomposedLoc(ExprStartLoc);
+    if (Decomposed.first != MainFileID)
+      return false;
+
+    StringRef SourcePrefix = MainFileBuf.substr(0, Decomposed.second);
+    // Allow whitespace between comment and expression.
+    SourcePrefix = SourcePrefix.rtrim();
+    // Check for comment ending.
+    if (!SourcePrefix.consume_back("*/"))
+      return false;
+    // Allow whitespace and "=" at end of comment.
+    SourcePrefix = SourcePrefix.rtrim().rtrim('=').rtrim();
+    // Other than that, the comment must contain exactly ParamName.
+    if (!SourcePrefix.consume_back(ParamName))
+      return false;
+    return SourcePrefix.rtrim().endswith("/*");
   }
 
   // If "E" spells a single unqualified identifier, return that name.
@@ -208,6 +240,8 @@ private:
 
   std::vector<InlayHint> &Results;
   ASTContext &AST;
+  FileID MainFileID;
+  StringRef MainFileBuf;
 };
 
 std::vector<InlayHint> inlayHints(ParsedAST &AST) {
