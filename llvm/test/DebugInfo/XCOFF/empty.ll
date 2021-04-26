@@ -1,7 +1,7 @@
 
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff < %s | \
+; RUN: llc -debugger-tune=gdb -mtriple powerpc-ibm-aix-xcoff < %s | \
 ; RUN:   FileCheck %s --check-prefix=ASM32
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff < %s | \
+; RUN: llc -debugger-tune=gdb -mtriple powerpc64-ibm-aix-xcoff < %s | \
 ; RUN:   FileCheck %s --check-prefix=ASM64
 
 source_filename = "1.c"

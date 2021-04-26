@@ -362,6 +362,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
     DebuggerTuning = DebuggerKind::LLDB;
   else if (TT.isPS4CPU())
     DebuggerTuning = DebuggerKind::SCE;
+  else if (TT.isOSAIX())
+    DebuggerTuning = DebuggerKind::DBX;
   else
     DebuggerTuning = DebuggerKind::GDB;
 
