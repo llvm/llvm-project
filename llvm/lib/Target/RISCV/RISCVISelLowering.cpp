@@ -1632,17 +1632,40 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
         SDValue NewAddr = DAG.getMemBasePlusOffset(Ld->getBasePtr(),
                                                    TypeSize::Fixed(Offset), DL);
 
-        SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
-        SDValue IntID =
-            DAG.getTargetConstant(Intrinsic::riscv_vlse, DL, XLenVT);
-        SDValue Ops[] = {Ld->getChain(), IntID, NewAddr,
-                         DAG.getRegister(RISCV::X0, XLenVT), VL};
-        SDValue NewLoad = DAG.getMemIntrinsicNode(
-            ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, SVT,
-            DAG.getMachineFunction().getMachineMemOperand(
-                Ld->getMemOperand(), Offset, SVT.getStoreSize()));
-        DAG.makeEquivalentMemoryOrdering(Ld, NewLoad);
-        return convertFromScalableVector(VT, NewLoad, DAG, Subtarget);
+        // If this is SEW=64 on RV32, use a strided load with a stride of x0.
+        if (SVT.isInteger() && SVT.bitsGT(XLenVT)) {
+          SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
+          SDValue IntID =
+              DAG.getTargetConstant(Intrinsic::riscv_vlse, DL, XLenVT);
+          SDValue Ops[] = {Ld->getChain(), IntID, NewAddr,
+                           DAG.getRegister(RISCV::X0, XLenVT), VL};
+          SDValue NewLoad = DAG.getMemIntrinsicNode(
+              ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, SVT,
+              DAG.getMachineFunction().getMachineMemOperand(
+                  Ld->getMemOperand(), Offset, SVT.getStoreSize()));
+          DAG.makeEquivalentMemoryOrdering(Ld, NewLoad);
+          return convertFromScalableVector(VT, NewLoad, DAG, Subtarget);
+        }
+
+        // Otherwise use a scalar load and splat. This will give the best
+        // opportunity to fold a splat into the operation. ISel can turn it into
+        // the x0 strided load if we aren't able to fold away the select.
+        if (SVT.isFloatingPoint())
+          V = DAG.getLoad(SVT, DL, Ld->getChain(), NewAddr,
+                          Ld->getPointerInfo().getWithOffset(Offset),
+                          Ld->getOriginalAlign(),
+                          Ld->getMemOperand()->getFlags());
+        else
+          V = DAG.getExtLoad(ISD::SEXTLOAD, DL, XLenVT, Ld->getChain(), NewAddr,
+                             Ld->getPointerInfo().getWithOffset(Offset), SVT,
+                             Ld->getOriginalAlign(),
+                             Ld->getMemOperand()->getFlags());
+        DAG.makeEquivalentMemoryOrdering(Ld, V);
+
+        unsigned Opc =
+            VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL : RISCVISD::VMV_V_X_VL;
+        SDValue Splat = DAG.getNode(Opc, DL, ContainerVT, V, VL);
+        return convertFromScalableVector(VT, Splat, DAG, Subtarget);
       }
 
       V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
