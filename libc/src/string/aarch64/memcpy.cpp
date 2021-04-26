@@ -54,7 +54,7 @@ static void memcpy_aarch64(char *__restrict dst, const char *__restrict src,
     return CopyBlockOverlap<32>(dst, src, count);
   if (count < 128)
     return CopyBlockOverlap<64>(dst, src, count);
-  return CopyAlignedBlocks<64, 16>(dst, src, count);
+  return CopySrcAlignedBlocks<64, 16>(dst, src, count);
 }
 
 LLVM_LIBC_FUNCTION(void *, memcpy,
