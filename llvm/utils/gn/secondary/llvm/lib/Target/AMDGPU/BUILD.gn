@@ -177,7 +177,6 @@ static_library("LLVMAMDGPUCodeGen") {
     "GCNIterativeScheduler.cpp",
     "GCNMinRegStrategy.cpp",
     "GCNNSAReassign.cpp",
-    "GCNRegBankReassign.cpp",
     "GCNRegPressure.cpp",
     "GCNSchedStrategy.cpp",
     "R600AsmPrinter.cpp",

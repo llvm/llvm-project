@@ -208,6 +208,11 @@ LLVMErrorRef LLVMOrcLLJITLookup(LLVMOrcLLJITRef J,
                                 LLVMOrcJITTargetAddress *Result,
                                 const char *Name);
 
+/**
+ * Returns a non-owning reference to the LLJIT instance's object linking layer.
+ */
+LLVMOrcObjectLayerRef LLVMOrcLLJITGetObjLinkingLayer(LLVMOrcLLJITRef J);
+
 LLVM_C_EXTERN_C_END
 
 #endif /* LLVM_C_LLJIT_H */
