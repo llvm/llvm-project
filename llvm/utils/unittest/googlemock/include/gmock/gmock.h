@@ -55,7 +55,7 @@
 //
 // where all clauses are optional and WillOnce() can be repeated.
 
-#ifdef __clang__
+#if defined(__clang__) && __has_warning("-Wdeprecated-copy")
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-copy"
 #endif
@@ -96,7 +96,7 @@ GTEST_API_ void InitGoogleMock(int* argc, wchar_t** argv);
 
 }  // namespace testing
 
-#ifdef __clang__
+#if defined(__clang__) && __has_warning("-Wdeprecated-copy")
 #pragma clang diagnostic pop
 #endif
 #endif  // GMOCK_INCLUDE_GMOCK_GMOCK_H_
