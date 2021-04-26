@@ -1080,10 +1080,10 @@ defm vmsltu : RVVUnsignedMaskOutBuiltinSet;
 defm vmslt : RVVSignedMaskOutBuiltinSet;
 defm vmsleu : RVVUnsignedMaskOutBuiltinSet;
 defm vmsle : RVVSignedMaskOutBuiltinSet;
-defm vmsgtu : RVVOp0Op1BuiltinSet<"vmsgtu", "csil",
-                                  [["vx", "Uvm", "mUvUe"]]>;
-defm vmsgt : RVVOp0Op1BuiltinSet<"vmsgt", "csil",
-                                 [["vx", "vm", "mve"]]>;
+defm vmsgtu : RVVUnsignedMaskOutBuiltinSet;
+defm vmsgt : RVVSignedMaskOutBuiltinSet;
+defm vmsgeu : RVVUnsignedMaskOutBuiltinSet;
+defm vmsge : RVVSignedMaskOutBuiltinSet;
 
 // 12.9. Vector Integer Min/Max Instructions
 defm vminu : RVVUnsignedBinBuiltinSet;
@@ -1251,8 +1251,8 @@ defm vmfeq : RVVFloatingMaskOutBuiltinSet;
 defm vmfne : RVVFloatingMaskOutBuiltinSet;
 defm vmflt : RVVFloatingMaskOutBuiltinSet;
 defm vmfle : RVVFloatingMaskOutBuiltinSet;
-defm vmfgt : RVVFloatingMaskOutVFBuiltinSet;
-defm vmfge : RVVFloatingMaskOutVFBuiltinSet;
+defm vmfgt : RVVFloatingMaskOutBuiltinSet;
+defm vmfge : RVVFloatingMaskOutBuiltinSet;
 
 // 14.14. Vector Floating-Point Classify Instruction
 let Name = "vfclass_v" in
