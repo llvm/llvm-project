@@ -49,7 +49,7 @@ typedef enum {
 /**
  * Represents target specific flags for a symbol definition.
  */
-typedef uint8_t LLVMJITTargetSymbolFlags;
+typedef uint8_t LLVMJITSymbolTargetFlags;
 
 /**
  * Represents the linkage flags for a symbol definition.
