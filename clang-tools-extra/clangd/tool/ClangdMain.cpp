@@ -60,8 +60,9 @@ namespace clang {
 namespace clangd {
 
 // Implemented in Check.cpp.
-bool check(const llvm::StringRef File, const ThreadsafeFS &TFS,
-           const ClangdLSPServer::Options &Opts);
+bool check(const llvm::StringRef File,
+           llvm::function_ref<bool(const Position &)> ShouldCheckLine,
+           const ThreadsafeFS &TFS, const ClangdLSPServer::Options &Opts);
 
 namespace {
 
@@ -343,6 +344,17 @@ opt<Path> CheckFile{
     desc("Parse one file in isolation instead of acting as a language server. "
          "Useful to investigate/reproduce crashes or configuration problems. "
          "With --check=<filename>, attempts to parse a particular file."),
+    init(""),
+    ValueOptional,
+};
+
+opt<std::string> CheckFileLines{
+    "check-lines",
+    cat(Misc),
+    desc("If specified, limits the range of tokens in -check file on which "
+         "various features are tested. Example --check-lines=3-7 restricts "
+         "testing to lines 3 to 7 (inclusive) or --check-lines=5 to restrict "
+         "to one line. Default is testing entire file."),
     init(""),
     ValueOptional,
 };
@@ -883,9 +895,32 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     llvm::SmallString<256> Path;
     llvm::sys::fs::real_path(CheckFile, Path, /*expand_tilde=*/true);
     log("Entering check mode (no LSP server)");
-    return check(Path, TFS, Opts)
+    uint32_t Begin = 0, End = std::numeric_limits<uint32_t>::max();
+    if (!CheckFileLines.empty()) {
+      StringRef RangeStr(CheckFileLines);
+      bool ParseError = RangeStr.consumeInteger(0, Begin);
+      if (RangeStr.empty()) {
+        End = Begin;
+      } else {
+        ParseError |= !RangeStr.consume_front("-");
+        ParseError |= RangeStr.consumeInteger(0, End);
+      }
+      if (ParseError || !RangeStr.empty()) {
+        elog("Invalid --check-line specified. Use Begin-End format, e.g. 3-17");
+        return 1;
+      }
+    }
+    auto ShouldCheckLine = [&](const Position &Pos) {
+      uint32_t Line = Pos.line + 1; // Position::line is 0-based.
+      return Line >= Begin && Line <= End;
+    };
+    return check(Path, ShouldCheckLine, TFS, Opts)
                ? 0
                : static_cast<int>(ErrorResultCode::CheckFailed);
+  }
+  if (!CheckFileLines.empty()) {
+    elog("--check-lines requires --check");
+    return 1;
   }
 
   // Initialize and run ClangdLSPServer.

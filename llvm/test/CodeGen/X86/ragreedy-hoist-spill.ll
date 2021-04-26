@@ -37,9 +37,7 @@ define i8* @SyFgets(i8* %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq %rdx, %rax
-; CHECK-NEXT:    orq $2, %rax
-; CHECK-NEXT:    cmpq $2, %rax
+; CHECK-NEXT:    testq $-3, %rdx
 ; CHECK-NEXT:    jne LBB0_4
 ; CHECK-NEXT:  ## %bb.1: ## %if.end
 ; CHECK-NEXT:    xorl %eax, %eax

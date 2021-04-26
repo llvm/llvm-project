@@ -2010,6 +2010,8 @@ public:
 
   StringRef getName() const { return getStringOperand(2); }
   StringRef getLinkageName() const { return getStringOperand(3); }
+  /// Only used by clients of CloneFunction, and only right after the cloning.
+  void replaceLinkageName(MDString *LN) { replaceOperandWith(3, LN); }
 
   DISubroutineType *getType() const {
     return cast_or_null<DISubroutineType>(getRawType());

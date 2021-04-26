@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++1y %s -verify
+// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify %s
 
 int a;
 int &b = [] (int &r) -> decltype(auto) { return r; } (a);
@@ -7,7 +9,6 @@ int &d = [] (int &r) -> auto & { return r; } (a);
 int &e = [] (int &r) -> auto { return r; } (a); // expected-error {{cannot bind to a temporary}}
 int &f = [] (int r) -> decltype(auto) { return r; } (a); // expected-error {{cannot bind to a temporary}}
 int &g = [] (int r) -> decltype(auto) { return (r); } (a); // expected-warning {{reference to stack}}
-
 
 int test_explicit_auto_return()
 {

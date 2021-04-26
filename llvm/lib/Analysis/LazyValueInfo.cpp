@@ -658,7 +658,7 @@ bool LazyValueInfoImpl::isNonNullAtEndOfBlock(Value *Val, BasicBlock *BB) {
                            Val->getType()->getPointerAddressSpace()))
     return false;
 
-  Val = getUnderlyingObject(Val);
+  Val = Val->stripInBoundsOffsets();
   return TheCache.isNonNullAtEndOfBlock(Val, BB, [](BasicBlock *BB) {
     NonNullPointerSet NonNullPointers;
     for (Instruction &I : *BB)

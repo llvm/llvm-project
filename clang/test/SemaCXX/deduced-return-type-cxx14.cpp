@@ -1,5 +1,11 @@
-// RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only %s
-// RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx20_2b %s
+// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx20_2b %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx20_2b %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx20_2b %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14    %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
 auto f(); // expected-note {{previous}}
 int f(); // expected-error {{differ only in their return type}}
@@ -287,7 +293,8 @@ namespace Constexpr {
     Y<void>().f();
     constexpr int q = Y<int>().f(); // expected-error {{must be initialized by a constant expression}} expected-note {{in call to '&Y<int>()->f()'}}
   }
-  struct NonLiteral { ~NonLiteral(); } nl; // expected-note {{user-provided destructor}}
+  struct NonLiteral { ~NonLiteral(); } nl; // cxx14-note {{user-provided destructor}}
+  // cxx20_2b-note@-1 {{'NonLiteral' is not literal because its destructor is not constexpr}}
   constexpr auto f2(int n) { return nl; } // expected-error {{return type 'Constexpr::NonLiteral' is not a literal type}}
 }
 
@@ -624,7 +631,7 @@ namespace PR33222 {
 namespace PR46637 {
   using A = auto () -> auto; // expected-error {{'auto' not allowed in type alias}}
   using B = auto (*)() -> auto; // expected-error {{'auto' not allowed in type alias}}
-  template<auto (*)() -> auto> struct X {}; // expected-error {{'auto' not allowed in template parameter until C++17}}
+  template<auto (*)() -> auto> struct X {}; // cxx14-error {{'auto' not allowed in template parameter until C++17}}
   template<typename T> struct Y { T x; };
   Y<auto() -> auto> y; // expected-error {{'auto' not allowed in template argument}}
 }
