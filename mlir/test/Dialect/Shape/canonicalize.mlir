@@ -639,6 +639,20 @@ func @f() {
 }
 
 // -----
+// Empty shape arguments can be removed from broadcastable ops.
+// CHECK-LABEL: func @f
+// CHECK-SAME:  (%[[ARG0:.*]]: tensor<?xindex>, %[[ARG1:.*]]: tensor<?xindex>)
+func @f(%arg0 : tensor<?xindex>, %arg1 : tensor<?xindex>) {
+  // CHECK-NOT: const_shape
+  // CHECK: cstr_broadcastable %[[ARG0]], %[[ARG1]] : tensor<?xindex>, tensor<?xindex>
+  %0 = shape.const_shape [] : !shape.shape
+  %1 = shape.cstr_broadcastable %arg0, %arg1, %0
+      : tensor<?xindex>, tensor<?xindex>, !shape.shape
+  "consume.witness"(%1) : (!shape.witness) -> ()
+  return
+}
+
+// -----
 // Broadcastable with non-broadcastable constant shapes is always false
 // CHECK-LABEL: func @static_non_broadcastable
 func @static_non_broadcastable() {
