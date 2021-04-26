@@ -714,11 +714,19 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   StringRef FormatName = Obj.getFileFormatName();
   GlobalStats GlobalStats;
   LocationStats LocStats;
-  InlinedVarsTyMap GlobalInlinedFnInfo;
-  InlinedFnInstacesTy InlinedFnsToBeProcessed;
   StringMap<PerFunctionStats> Statistics;
   for (const auto &CU : static_cast<DWARFContext *>(&DICtx)->compile_units()) {
     if (DWARFDie CUDie = CU->getNonSkeletonUnitDIE(false)) {
+      // These variables are being reset for each CU, since there could be
+      // a situation where we have two subprogram DIEs with the same offsets
+      // in two diferent CUs, and we can end up using wrong variables info
+      // when trying to resolve abstract_orign attribute.
+      // TODO: Handle LTO cases where the abstract origin of
+      // the function is in a different CU than the one it's
+      // referenced from or inlined into.
+      InlinedVarsTyMap GlobalInlinedFnInfo;
+      InlinedFnInstacesTy InlinedFnsToBeProcessed;
+
       collectStatsRecursive(CUDie, "/", "g", 0, 0, Statistics, GlobalStats,
                             LocStats, GlobalInlinedFnInfo,
                             InlinedFnsToBeProcessed);
