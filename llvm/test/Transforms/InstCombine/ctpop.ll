@@ -292,9 +292,9 @@ declare i8 @llvm.fshr.i8(i8, i8, i8)
 
 define i8 @sub_ctpop(i8 %a)  {
 ; CHECK-LABEL: @sub_ctpop(
-; CHECK-NEXT:    [[CNT:%.*]] = tail call i8 @llvm.ctpop.i8(i8 [[A:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[RES:%.*]] = sub nuw nsw i8 8, [[CNT]]
-; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[A:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP1]]), !range [[RNG0]]
+; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %cnt = tail call i8 @llvm.ctpop.i8(i8 %a)
   %res = sub i8 8, %cnt
@@ -325,9 +325,9 @@ define i8 @sub_ctpop_unknown(i8 %a, i8 %b)  {
 
 define <2 x i32> @sub_ctpop_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @sub_ctpop_vec(
-; CHECK-NEXT:    [[CNT:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[A:%.*]])
-; CHECK-NEXT:    [[RES:%.*]] = sub nuw nsw <2 x i32> <i32 32, i32 32>, [[CNT]]
-; CHECK-NEXT:    ret <2 x i32> [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[TMP1]])
+; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %cnt = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a)
   %res = sub <2 x i32> <i32 32, i32 32>, %cnt
