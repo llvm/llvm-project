@@ -157,13 +157,6 @@ public:
           TimerGroupDescription(TimerGroupDescription) {}
   };
 
-  // Flags representing which CFI section is required for a function/module.
-  enum class CFISection : unsigned {
-    None = 0, ///< Do not emit either .eh_frame or .debug_frame
-    EH = 1,   ///< Emit .eh_frame
-    Debug = 2 ///< Emit .debug_frame
-  };
-
 private:
   MCSymbol *CurrentFnEnd = nullptr;
 
@@ -206,8 +199,8 @@ private:
   /// context.
   PseudoProbeHandler *PP = nullptr;
 
-  /// CFISection type the module needs i.e. either .eh_frame or .debug_frame.
-  CFISection ModuleCFISection = CFISection::None;
+  /// If the current module uses dwarf CFI annotations strictly for debugging.
+  bool isCFIMoveForDebugging = false;
 
 protected:
   explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
@@ -364,14 +357,12 @@ public:
 
   void emitRemarksSection(remarks::RemarkStreamer &RS);
 
-  /// Get the CFISection type for a function.
-  CFISection getFunctionCFISectionType(const Function &F) const;
+  enum CFIMoveType { CFI_M_None, CFI_M_EH, CFI_M_Debug };
+  CFIMoveType needsCFIMoves() const;
 
-  /// Get the CFISection type for a function.
-  CFISection getFunctionCFISectionType(const MachineFunction &MF) const;
-
-  /// Get the CFISection type for the module.
-  CFISection getModuleCFISectionType() const { return ModuleCFISection; }
+  /// Returns false if needsCFIMoves() == CFI_M_EH for any function
+  /// in the module.
+  bool needsOnlyDebugCFIMoves() const { return isCFIMoveForDebugging; }
 
   bool needsSEHMoves();
 
