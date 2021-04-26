@@ -861,6 +861,15 @@ def checkDebugServerSupport():
             if configuration.verbose:
                 print(skip_msg%"lldb-server");
 
+
+def checkForkVForkSupport():
+    from lldbsuite.test import lldbplatformutil
+
+    platform = lldbplatformutil.getPlatform()
+    if platform not in []:
+        configuration.skip_categories.append("fork")
+
+
 def run_suite():
     # On MacOS X, check to make sure that domain for com.apple.DebugSymbols defaults
     # does not exist before proceeding to running the test suite.
@@ -957,6 +966,7 @@ def run_suite():
     checkDebugInfoSupport()
     checkDebugServerSupport()
     checkObjcSupport()
+    checkForkVForkSupport()
 
     print("Skipping the following test categories: {}".format(configuration.skip_categories))
 
