@@ -78,6 +78,9 @@ void LLVMOrcDisposeLLJITBuilder(LLVMOrcLLJITBuilderRef Builder);
  * instance. Calling this function is optional: if it is not called then the
  * LLJITBuilder will use JITTargeTMachineBuilder::detectHost to construct a
  * JITTargetMachineBuilder.
+ *
+ * This function takes ownership of the JTMB argument: clients should not
+ * dispose of the JITTargetMachineBuilder after calling this function.
  */
 void LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(
     LLVMOrcLLJITBuilderRef Builder, LLVMOrcJITTargetMachineBuilderRef JTMB);
