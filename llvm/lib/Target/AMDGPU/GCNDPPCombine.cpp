@@ -587,9 +587,12 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       break;
     }
 
+    auto *Src2 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src2);
     assert(Src0 && "Src1 without Src0?");
-    if (Src1 && Src1->isIdenticalTo(*Src0)) {
-      assert(Src1->isReg());
+    if ((Use == Src0 && ((Src1 && Src1->isIdenticalTo(*Src0)) ||
+                         (Src2 && Src2->isIdenticalTo(*Src0)))) ||
+        (Use == Src1 && (Src1->isIdenticalTo(*Src0) ||
+                         (Src2 && Src2->isIdenticalTo(*Src1))))) {
       LLVM_DEBUG(
           dbgs()
           << "  " << OrigMI
