@@ -167,7 +167,12 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       OldDest->removePredecessor(BB);
 
       // Replace the conditional branch with an unconditional one.
-      Builder.CreateBr(Destination);
+      BranchInst *NewBI = Builder.CreateBr(Destination);
+
+      // Transfer the metadata to the new branch instruction.
+      NewBI->copyMetadata(*BI, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
+                                LLVMContext::MD_annotation});
+
       BI->eraseFromParent();
       if (DTU)
         DTU->applyUpdates({{DominatorTree::Delete, BB, OldDest}});

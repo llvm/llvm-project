@@ -225,6 +225,9 @@ void ASTSrcLocProcessor::run(const MatchFinder::MatchResult &Result) {
       CaptureMethods("class clang::NestedNameSpecifierLoc", ASTClass, Result);
   CD.DeclNameInfos =
       CaptureMethods("struct clang::DeclarationNameInfo", ASTClass, Result);
+  auto DI = CaptureMethods("const struct clang::DeclarationNameInfo &",
+                           ASTClass, Result);
+  CD.DeclNameInfos.insert(CD.DeclNameInfos.end(), DI.begin(), DI.end());
 
   if (const auto *DerivedFrom =
           Result.Nodes.getNodeAs<clang::CXXRecordDecl>("derivedFrom")) {

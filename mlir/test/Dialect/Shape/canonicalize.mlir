@@ -639,6 +639,20 @@ func @f() {
 }
 
 // -----
+// Empty shape arguments can be removed from broadcastable ops.
+// CHECK-LABEL: func @f
+// CHECK-SAME:  (%[[ARG0:.*]]: tensor<?xindex>, %[[ARG1:.*]]: tensor<?xindex>)
+func @f(%arg0 : tensor<?xindex>, %arg1 : tensor<?xindex>) {
+  // CHECK-NOT: const_shape
+  // CHECK: cstr_broadcastable %[[ARG0]], %[[ARG1]] : tensor<?xindex>, tensor<?xindex>
+  %0 = shape.const_shape [] : !shape.shape
+  %1 = shape.cstr_broadcastable %arg0, %arg1, %0
+      : tensor<?xindex>, tensor<?xindex>, !shape.shape
+  "consume.witness"(%1) : (!shape.witness) -> ()
+  return
+}
+
+// -----
 // Broadcastable with non-broadcastable constant shapes is always false
 // CHECK-LABEL: func @static_non_broadcastable
 func @static_non_broadcastable() {
@@ -1217,10 +1231,21 @@ func @broadcast_on_duplicate_shapes(%a : !shape.shape, %b : !shape.shape)
 // -----
 
 // CHECK-LABEL: @broadcast_on_single_operand
-// CHECK-SAME: (%[[A:.*]]: tensor<3xindex>)
-func @broadcast_on_single_operand(%a : tensor<3xindex>) {
+// CHECK-SAME: (%[[A:.*]]: tensor<?xindex>)
+func @broadcast_on_single_operand(%a : tensor<?xindex>) {
   // CHECK-NOT: broadcast
   // CHECK: "use"(%[[A]])
+  %0 = shape.broadcast %a : tensor<?xindex> -> tensor<?xindex>
+  "use"(%0) : (tensor<?xindex>) -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @broadcast_on_single_operand
+// CHECK-SAME: (%[[A:.*]]: tensor<3xindex>)
+func @broadcast_on_single_operand(%a : tensor<3xindex>) {
+  // CHECK: broadcast %[[A]]
   %0 = shape.broadcast %a : tensor<3xindex> -> tensor<?xindex>
   "use"(%0) : (tensor<?xindex>) -> ()
   return

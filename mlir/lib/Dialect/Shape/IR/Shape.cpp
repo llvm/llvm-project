@@ -470,8 +470,12 @@ void AssumingAllOp::build(OpBuilder &b, OperationState &state,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
-  if (shapes().size() == 1)
+  if (shapes().size() == 1) {
+    // Otherwise, we need a cast which would be a canonicalization, not folding.
+    if (shapes().front().getType() != getType())
+      return nullptr;
     return shapes().front();
+  }
 
   // TODO: Support folding with more than 2 input shapes
   if (shapes().size() > 2)
@@ -556,8 +560,10 @@ struct BroadcastForwardSingleOperandPattern
                                 PatternRewriter &rewriter) const override {
     if (op.getNumOperands() == 1) {
       Value uniqueShapeOperand = op.shapes().front();
-      rewriter.replaceOp(op, uniqueShapeOperand);
-      return success();
+      if (uniqueShapeOperand.getType() == op.getType()) {
+        rewriter.replaceOp(op, uniqueShapeOperand);
+        return success();
+      }
     }
     return failure();
   }
@@ -689,7 +695,8 @@ void CstrBroadcastableOp::getCanonicalizationPatterns(
   // folding in case additional shape information is inferred at some point that
   // does not result in folding.
   patterns.add<CstrBroadcastableEqOps,
-               RemoveDuplicateOperandsPattern<CstrBroadcastableOp>>(context);
+               RemoveDuplicateOperandsPattern<CstrBroadcastableOp>,
+               RemoveEmptyShapeOperandsPattern<CstrBroadcastableOp>>(context);
 }
 
 // Return true if there is exactly one attribute not representing a scalar
