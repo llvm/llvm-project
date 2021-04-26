@@ -59,6 +59,8 @@ public:
   // FIXME: Handle RecoveryExpr to try to hint some invalid calls.
 
 private:
+  using NameVec = SmallVector<StringRef, 8>;
+
   // The purpose of Anchor is to deal with macros. It should be the call's
   // opening or closing parenthesis or brace. (Always using the opening would
   // make more sense but CallExpr only exposes the closing.) We heuristically
@@ -79,15 +81,16 @@ private:
       if (Ctor->isCopyOrMoveConstructor())
         return;
 
-    // FIXME: Exclude setters (i.e. functions with one argument whose name
-    // begins with "set"), as their parameter name is also not likely to be
-    // interesting.
-
     // Don't show hints for variadic parameters.
     size_t FixedParamCount = getFixedParamCount(Callee);
     size_t ArgCount = std::min(FixedParamCount, Args.size());
 
     NameVec ParameterNames = chooseParameterNames(Callee, ArgCount);
+
+    // Exclude setters (i.e. functions with one argument whose name begins with
+    // "set"), as their parameter name is also not likely to be interesting.
+    if (isSetter(Callee, ParameterNames))
+      return;
 
     for (size_t I = 0; I < ArgCount; ++I) {
       StringRef Name = ParameterNames[I];
@@ -97,6 +100,29 @@ private:
       addInlayHint(Args[I]->getSourceRange(), InlayHintKind::ParameterHint,
                    Name.str() + ": ");
     }
+  }
+
+  static bool isSetter(const FunctionDecl *Callee, const NameVec &ParamNames) {
+    if (ParamNames.size() != 1)
+      return false;
+
+    StringRef Name = getSimpleName(*Callee);
+    if (!Name.startswith_lower("set"))
+      return false;
+
+    // In addition to checking that the function has one parameter and its
+    // name starts with "set", also check that the part after "set" matches
+    // the name of the parameter (ignoring case). The idea here is that if
+    // the parameter name differs, it may contain extra information that
+    // may be useful to show in a hint, as in:
+    //   void setTimeout(int timeoutMillis);
+    // This currently doesn't handle cases where params use snake_case
+    // and functions don't, e.g.
+    //   void setExceptionHandler(EHFunc exception_handler);
+    // We could improve this by replacing `equals_lower` with some
+    // `sloppy_equals` which ignores case and also skips underscores.
+    StringRef WhatItIsSetting = Name.substr(3).ltrim("_");
+    return WhatItIsSetting.equals_lower(ParamNames[0]);
   }
 
   bool shouldHint(const Expr *Arg, StringRef ParamName) {
@@ -154,8 +180,6 @@ private:
 
     return {};
   }
-
-  using NameVec = SmallVector<StringRef, 8>;
 
   NameVec chooseParameterNames(const FunctionDecl *Callee, size_t ArgCount) {
     // The current strategy here is to use all the parameter names from the
