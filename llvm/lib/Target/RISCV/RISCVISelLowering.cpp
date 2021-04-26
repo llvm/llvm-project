@@ -1511,18 +1511,15 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   return SDValue();
 }
 
-// Called by type legalization to handle splat of i64 on RV32.
-// FIXME: We can optimize this when the type has sign or zero bits in one
-// of the halves.
-static SDValue splatSplitI64WithVL(const SDLoc &DL, MVT VT, SDValue Scalar,
-                                   SDValue VL, SelectionDAG &DAG,
-                                   const RISCVSubtarget &Subtarget) {
-  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
-                           DAG.getConstant(0, DL, MVT::i32));
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
-                           DAG.getConstant(1, DL, MVT::i32));
-
-  // Fall back to a stack store and stride x0 vector load.
+// Use a stack slot to splat the two i32 values in Lo/Hi to the vector desired
+// vector nxvXi64 VT.
+static SDValue splatPartsI64ThroughStack(const SDLoc &DL, MVT VT, SDValue Lo,
+                                         SDValue Hi, SDValue VL,
+                                         SelectionDAG &DAG,
+                                         const RISCVSubtarget &Subtarget) {
+  assert(VT.getVectorElementType() == MVT::i64 && VT.isScalableVector() &&
+         Lo.getValueType() == MVT::i32 && Hi.getValueType() == MVT::i32 &&
+         "Unexpected VTs!");
   MachineFunction &MF = DAG.getMachineFunction();
   RISCVMachineFunctionInfo *FuncInfo = MF.getInfo<RISCVMachineFunctionInfo>();
 
@@ -1551,6 +1548,21 @@ static SDValue splatSplitI64WithVL(const SDLoc &DL, MVT VT, SDValue Scalar,
 
   return DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, MVT::i64,
                                  MPI, Align(8), MachineMemOperand::MOLoad);
+}
+
+// Called by type legalization to handle splat of i64 on RV32.
+// FIXME: We can optimize this when the type has sign or zero bits in one
+// of the halves.
+static SDValue splatSplitI64WithVL(const SDLoc &DL, MVT VT, SDValue Scalar,
+                                   SDValue VL, SelectionDAG &DAG,
+                                   const RISCVSubtarget &Subtarget) {
+  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
+                           DAG.getConstant(0, DL, MVT::i32));
+  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
+                           DAG.getConstant(1, DL, MVT::i32));
+
+  // Fall back to a stack store and stride x0 vector load.
+  return splatPartsI64ThroughStack(DL, VT, Lo, Hi, VL, DAG, Subtarget);
 }
 
 // This function lowers a splat of a scalar operand Splat with the vector
@@ -2761,7 +2773,7 @@ SDValue RISCVTargetLowering::lowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
 SDValue RISCVTargetLowering::lowerSPLAT_VECTOR_PARTS(SDValue Op,
                                                      SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  EVT VecVT = Op.getValueType();
+  MVT VecVT = Op.getSimpleValueType();
   assert(!Subtarget.is64Bit() && VecVT.getVectorElementType() == MVT::i64 &&
          "Unexpected SPLAT_VECTOR_PARTS lowering");
 
@@ -2784,27 +2796,9 @@ SDValue RISCVTargetLowering::lowerSPLAT_VECTOR_PARTS(SDValue Op,
       Hi.getConstantOperandVal(1) == 31)
     return DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, Lo);
 
-  // Else, on RV32 we lower an i64-element SPLAT_VECTOR thus, being careful not
-  // to accidentally sign-extend the 32-bit halves to the e64 SEW:
-  // vmv.v.x vX, hi
-  // vsll.vx vX, vX, /*32*/
-  // vmv.v.x vY, lo
-  // vsll.vx vY, vY, /*32*/
-  // vsrl.vx vY, vY, /*32*/
-  // vor.vv vX, vX, vY
-  SDValue ThirtyTwoV = DAG.getConstant(32, DL, VecVT);
-
-  Lo = DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, Lo);
-  Lo = DAG.getNode(ISD::SHL, DL, VecVT, Lo, ThirtyTwoV);
-  Lo = DAG.getNode(ISD::SRL, DL, VecVT, Lo, ThirtyTwoV);
-
-  if (isNullConstant(Hi))
-    return Lo;
-
-  Hi = DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, Hi);
-  Hi = DAG.getNode(ISD::SHL, DL, VecVT, Hi, ThirtyTwoV);
-
-  return DAG.getNode(ISD::OR, DL, VecVT, Lo, Hi);
+  // Fall back to use a stack store and stride x0 vector load. Use X0 as VL.
+  return splatPartsI64ThroughStack(
+      DL, VecVT, Lo, Hi, DAG.getRegister(RISCV::X0, MVT::i64), DAG, Subtarget);
 }
 
 // Custom-lower extensions from mask vectors by using a vselect either with 1

@@ -15480,6 +15480,9 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
 
   BD->setBody(cast<CompoundStmt>(Body));
 
+  // wait to diagnose unused but set parameters until after setBody
+  DiagnoseUnusedButSetParameters(BD->parameters());
+
   if (Body && getCurFunction()->HasPotentialAvailabilityViolations)
     DiagnoseUnguardedAvailabilityViolations(BD);
 

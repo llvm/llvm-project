@@ -68,6 +68,13 @@ template<class I>
 template<class S, class I>
   concept sentinel_for = see below;                        // since C++20
 
+// [iterator.concept.sizedsentinel], concept sized_sentinel_for
+template<class S, class I>
+  inline constexpr bool disable_sized_sentinel_for = false;
+
+template<class S, class I>
+  concept sized_sentinel_for = see below;
+
 template<class Category, class T, class Distance = ptrdiff_t,
          class Pointer = T*, class Reference = T&>
 struct iterator
@@ -459,6 +466,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__iterator/iter_move.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/readable_traits.h>
+#include <__iterator/concepts.h>
 #include <__memory/addressof.h>
 #include <__memory/pointer_traits.h>
 #include <version>
