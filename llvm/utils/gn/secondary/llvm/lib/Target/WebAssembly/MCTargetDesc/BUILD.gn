@@ -42,8 +42,8 @@ static_library("MCTargetDesc") {
   # by other targets. .inc files only used by .cpp files in this directory
   # should be in deps instead.
   public_deps = [
-    ":tablegen",
     ":WebAssemblyGenSubtargetInfo",
+    ":tablegen",
   ]
   deps = [
     ":WebAssemblyGenAsmWriter",
