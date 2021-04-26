@@ -792,7 +792,7 @@ struct _PathCVT<__path_value> {
   template <class _Iter>
   static typename enable_if<__is_cpp17_forward_iterator<_Iter>::value>::type
   __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
-    __dest.__append_forward_unsafe(__b, __e);
+    __dest.append(__b, __e);
   }
 
   template <class _Iter>

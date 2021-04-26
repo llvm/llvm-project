@@ -1587,23 +1587,6 @@ operator+(typename __wrap_iter<_Iter>::difference_type __n,
     return __x;
 }
 
-template <class _Iter>
-struct __libcpp_is_trivial_iterator
-    : public _LIBCPP_BOOL_CONSTANT(is_pointer<_Iter>::value) {};
-
-template <class _Iter>
-struct __libcpp_is_trivial_iterator<move_iterator<_Iter> >
-    : public _LIBCPP_BOOL_CONSTANT(__libcpp_is_trivial_iterator<_Iter>::value) {};
-
-template <class _Iter>
-struct __libcpp_is_trivial_iterator<reverse_iterator<_Iter> >
-    : public _LIBCPP_BOOL_CONSTANT(__libcpp_is_trivial_iterator<_Iter>::value) {};
-
-template <class _Iter>
-struct __libcpp_is_trivial_iterator<__wrap_iter<_Iter> >
-    : public _LIBCPP_BOOL_CONSTANT(__libcpp_is_trivial_iterator<_Iter>::value) {};
-
-
 template <class _Tp, size_t _Np>
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 _Tp*
