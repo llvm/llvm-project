@@ -526,6 +526,8 @@ class Configuration(object):
                 self.config.available_features.add('sanitizer-new-delete')
             elif san == 'DataFlow':
                 self.cxx.flags += ['-fsanitize=dataflow']
+            elif san == 'Leaks':
+                self.cxx.link_flags += ['-fsanitize=leaks']
             else:
                 self.lit_config.fatal('unsupported value for '
                                       'use_sanitizer: {0}'.format(san))
