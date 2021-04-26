@@ -876,6 +876,11 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   MachOOptTable parser;
   InputArgList args = parser.parse(argsArr.slice(1));
 
+  errorHandler().errorLimitExceededMsg =
+      "too many errors emitted, stopping now "
+      "(use --error-limit=0 to see all errors)";
+  errorHandler().errorLimit = args::getInteger(args, OPT_error_limit_eq, 20);
+
   if (args.hasArg(OPT_help_hidden)) {
     parser.printHelp(argsArr[0], /*showHidden=*/true);
     return true;
