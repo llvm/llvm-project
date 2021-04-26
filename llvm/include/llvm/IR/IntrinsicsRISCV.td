@@ -89,6 +89,10 @@ let TargetPrefix = "riscv" in {
   def int_riscv_clmulh : BitManipGPRGPRIntrinsics;
   def int_riscv_clmulr : BitManipGPRGPRIntrinsics;
 
+  // Zbe
+  def int_riscv_bcompress   : BitManipGPRGPRIntrinsics;
+  def int_riscv_bdecompress : BitManipGPRGPRIntrinsics;
+
   // Zbp
   def int_riscv_grev  : BitManipGPRGPRIntrinsics;
   def int_riscv_gorc  : BitManipGPRGPRIntrinsics;

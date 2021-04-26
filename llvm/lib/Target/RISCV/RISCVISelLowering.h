@@ -99,6 +99,14 @@ enum NodeType : unsigned {
   SHFLW,
   UNSHFL,
   UNSHFLW,
+  // Bit Compress/Decompress implement the generic bit extract and bit deposit
+  // functions. This operation is also referred to as bit gather/scatter, bit
+  // pack/unpack, parallel extract/deposit, compress/expand, or right
+  // compress/right expand.
+  BCOMPRESS,
+  BCOMPRESSW,
+  BDECOMPRESS,
+  BDECOMPRESSW,
   // Vector Extension
   // VMV_V_X_VL matches the semantics of vmv.v.x but includes an extra operand
   // for the VL value to be used for the operation.
