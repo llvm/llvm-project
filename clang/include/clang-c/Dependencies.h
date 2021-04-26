@@ -68,11 +68,11 @@ typedef struct {
    * `<module-name>:<context-hash>`
    */
   CXStringSet *ModuleDeps;
-  
+
   /**
-   * The full command line needed to build this module.
-   *
-   * Not including `-fmodule-file=` or `-o`.
+   * The canonical command-line or additional arguments needed to build this
+   * module, excluding arguments containing modules-related paths:
+   * "-fmodule-file=", "-o", "-fmodule-map-file=".
    */
   CXStringSet *BuildArguments;
 } CXModuleDependency;
@@ -212,6 +212,16 @@ clang_experimental_DependencyScannerWorker_getFileDependencies_v0(
     const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
     void *Context, CXString *error);
 
+/**
+ * Same as \c clang_experimental_DependencyScannerWorker_getFileDependencies_v0,
+ * but \c BuildArguments of each \c CXModuleDependency passed to \c MDC contains
+ * the canonical Clang command line, not just additional arguments.
+ */
+CINDEX_LINKAGE CXFileDependencies *
+clang_experimental_DependencyScannerWorker_getFileDependencies_v1(
+    CXDependencyScannerWorker Worker, int argc, const char *const *argv,
+    const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
+    void *Context, CXString *error);
 /**
  * @}
  */
