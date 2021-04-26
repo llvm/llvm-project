@@ -932,8 +932,8 @@ def MWAITX :
 defm LCMPXCHG : LCMPXCHG_BinOp<0xB0, 0xB1, MRMDestMem, "cmpxchg", X86cas>;
 
 // Atomic exchange and add
-multiclass ATOMIC_LOAD_BINOP<bits<8> opc8, bits<8> opc, string mnemonic,
-                             string frag> {
+multiclass ATOMIC_RMW_BINOP<bits<8> opc8, bits<8> opc, string mnemonic,
+                            string frag> {
   let Constraints = "$val = $dst", Defs = [EFLAGS], isCodeGenOnly = 1,
       SchedRW = [WriteALURMW] in {
     def NAME#8  : I<opc8, MRMSrcMem, (outs GR8:$dst),
@@ -964,7 +964,7 @@ multiclass ATOMIC_LOAD_BINOP<bits<8> opc8, bits<8> opc, string mnemonic,
   }
 }
 
-defm LXADD : ATOMIC_LOAD_BINOP<0xc0, 0xc1, "xadd", "atomic_load_add">, TB, LOCK;
+defm LXADD : ATOMIC_RMW_BINOP<0xc0, 0xc1, "xadd", "atomic_load_add">, TB, LOCK;
 
 /* The following multiclass tries to make sure that in code like
  *    x.store (immediate op x.load(acquire), release)
