@@ -856,6 +856,9 @@ bool Process::HandleProcessStateChangedEvent(const EventSP &event_sp,
               LLVM_FALLTHROUGH;
             case eStopReasonException:
             case eStopReasonExec:
+            case eStopReasonFork:
+            case eStopReasonVFork:
+            case eStopReasonVForkDone:
             case eStopReasonThreadExiting:
             case eStopReasonInstrumentation:
             case eStopReasonProcessorTrace:
