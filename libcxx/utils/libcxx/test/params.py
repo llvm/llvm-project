@@ -13,7 +13,6 @@ _warningFlags = [
   '-Werror',
   '-Wall',
   '-Wextra',
-  '-Wno-deprecated-copy',
   '-Wshadow',
   '-Wundef',
   '-Wno-unused-command-line-argument',
