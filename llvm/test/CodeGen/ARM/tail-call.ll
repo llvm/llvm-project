@@ -99,7 +99,7 @@ entry:
   ret void
 }
 
-; Check that NonNull attributes don't inhibit tailcalls.
+; Check that nonnull attributes don't inhibit tailcalls.
 
 declare nonnull i8* @nonnull_callee(i8* %p, i32 %val)
 define i8* @nonnull_caller(i8* %p, i32 %val) {
@@ -108,5 +108,30 @@ define i8* @nonnull_caller(i8* %p, i32 %val) {
 ; CHECK-NO-TAIL: bl nonnull_callee
 entry:
   %call = tail call i8* @nonnull_callee(i8* %p, i32 %val)
+  ret i8* %call
+}
+
+; Check that noalias attributes don't inhibit tailcalls.
+
+declare noalias i8* @noalias_callee(i8* %p, i32 %val)
+define i8* @noalias_caller(i8* %p, i32 %val) {
+; CHECK-LABEL: noalias_caller:
+; CHECK-TAIL: b noalias_callee
+; CHECK-NO-TAIL: bl noalias_callee
+entry:
+  %call = tail call i8* @noalias_callee(i8* %p, i32 %val)
+  ret i8* %call
+}
+
+
+; Check that alignment attributes don't inhibit tailcalls.
+
+declare align 8 i8* @align8_callee(i8* %p, i32 %val)
+define i8* @align8_caller(i8* %p, i32 %val) {
+; CHECK-LABEL: align8_caller:
+; CHECK-TAIL: b align8_callee
+; CHECK-NO-TAIL: bl align8_callee
+entry:
+  %call = tail call i8* @align8_callee(i8* %p, i32 %val)
   ret i8* %call
 }
