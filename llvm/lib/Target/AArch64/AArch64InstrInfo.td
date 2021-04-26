@@ -95,6 +95,7 @@ def HasCRC           : Predicate<"Subtarget->hasCRC()">,
                                  AssemblerPredicate<(all_of FeatureCRC), "crc">;
 def HasLSE           : Predicate<"Subtarget->hasLSE()">,
                                  AssemblerPredicate<(all_of FeatureLSE), "lse">;
+def HasNoLSE         : Predicate<"!Subtarget->hasLSE()">;
 def HasRAS           : Predicate<"Subtarget->hasRAS()">,
                                  AssemblerPredicate<(all_of FeatureRAS), "ras">;
 def HasRDM           : Predicate<"Subtarget->hasRDM()">,
