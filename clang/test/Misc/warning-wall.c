@@ -60,6 +60,7 @@ CHECK-NEXT:      -Wuninitialized-const-reference
 CHECK-NEXT:    -Wunknown-pragmas
 CHECK-NEXT:    -Wunused
 CHECK-NEXT:      -Wunused-argument
+CHECK-NEXT:      -Wunused-but-set-variable
 CHECK-NEXT:      -Wunused-function
 CHECK-NEXT:        -Wunneeded-internal-declaration
 CHECK-NEXT:      -Wunused-label
