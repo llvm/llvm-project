@@ -54,7 +54,7 @@
 
 #if GTEST_HAS_PARAM_TEST
 
-#if defined(__clang__) && __has_warning("-Wdeprecated-copy")
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-copy"
 #endif
@@ -5146,7 +5146,7 @@ CartesianProductHolder10(const Generator1& g1, const Generator2& g2,
 }  // namespace internal
 }  // namespace testing
 
-#if defined(__clang__) &&  __has_warning("-Wdeprecated-copy")
+#ifdef __clang__
 #pragma clang diagnostic pop
 #endif
 
