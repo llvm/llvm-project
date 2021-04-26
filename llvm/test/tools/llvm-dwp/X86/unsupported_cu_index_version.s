@@ -2,12 +2,15 @@
 # RUN: not llvm-dwp %t.dwp -o %t 2>&1 | FileCheck %s
 
 # CHECK: error: unsupported cu_index version: 5 (only version 2 is supported)
-
-## To reach the test point, no real data is needed in .debug_info.dwo,
-## but the section should not be empty.
     .section .debug_info.dwo, "e", @progbits
-    .space 1
-
+    .long	.Ldebug_info_dwo_end0-.Ldebug_info_dwo_start0 # Length of Unit
+.Ldebug_info_dwo_start0:
+    .short 5                       # DWARF version number
+    .byte 5                        # DWARF Unit type
+    .byte 8                        # Address Size (in bytes)
+    .long 0                        # Offset Into Abbrev. Section
+    .quad	-346972125991005518
+.Ldebug_info_dwo_end0:
     .section .debug_cu_index, "", @progbits
 ## Header:
     .short 5                        # Version
