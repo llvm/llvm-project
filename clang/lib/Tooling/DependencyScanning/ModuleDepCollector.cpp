@@ -70,7 +70,8 @@ ModuleDeps::getCanonicalCommandLineWithoutModulePaths() const {
   return serializeCompilerInvocation(CI);
 }
 
-std::vector<std::string> ModuleDeps::getNonPathCommandLine() const {
+std::vector<std::string>
+ModuleDeps::getAdditionalArgsWithoutModulePaths() const {
   std::vector<std::string> Ret{
     "-remove-preceeding-explicit-module-build-incompatible-options",
     "-fno-implicit-modules", "-emit-module", "-fmodule-name=" + ID.ModuleName,

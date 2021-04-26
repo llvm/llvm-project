@@ -98,9 +98,10 @@ struct ModuleDeps {
   /// "-fmodule-map-file=".
   std::vector<std::string> getCanonicalCommandLineWithoutModulePaths() const;
 
-  /// Gets a partial command line suitable for appending to the original clang
-  /// invocation.
-  std::vector<std::string> getNonPathCommandLine() const;
+  /// Gets additional arguments suitable for appending to the original Clang
+  /// command line, excluding arguments containing modules-related paths:
+  /// "-fmodule-file=", "-o", "-fmodule-map-file=".
+  std::vector<std::string> getAdditionalArgsWithoutModulePaths() const;
 };
 
 namespace detail {

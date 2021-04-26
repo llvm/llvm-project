@@ -682,7 +682,7 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory) {
       functionObjectToCCallbackRef<void(CXModuleDependencySet *)>(Callback);
 
   CXFileDependencies *Result =
-      clang_experimental_DependencyScannerWorker_getFileDependencies_v0(
+      clang_experimental_DependencyScannerWorker_getFileDependencies_v1(
           Worker, Args.size(), Args.data(), WorkingDirectory.c_str(),
           CB.Callback, CB.Context, &Error);
   if (!Result) {
