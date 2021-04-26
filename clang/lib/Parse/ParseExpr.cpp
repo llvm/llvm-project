@@ -2341,11 +2341,6 @@ ExprResult Parser::ParseUniqueStableNameExpression() {
                          "__builtin_unique_stable_name"))
     return ExprError();
 
-  // TODO: ERICH: Does moving this above hte isTypeIdInParens avoid the issue of
-  // evaluating a VLA?
-  EnterExpressionEvaluationContext Unevaluated(
-      Actions, Sema::ExpressionEvaluationContext::Unevaluated);
-
   if (isTypeIdInParens()) {
     TypeResult Ty = ParseTypeName();
     T.consumeClose();
@@ -2357,6 +2352,8 @@ ExprResult Parser::ParseUniqueStableNameExpression() {
                                              T.getCloseLocation(), Ty.get());
   }
 
+  EnterExpressionEvaluationContext Unevaluated(
+      Actions, Sema::ExpressionEvaluationContext::Unevaluated);
   ExprResult Result = ParseExpression();
 
   if (Result.isInvalid()) {

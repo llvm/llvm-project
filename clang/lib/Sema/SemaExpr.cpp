@@ -3497,6 +3497,11 @@ ExprResult Sema::BuildUniqueStableNameExpr(SourceLocation OpLoc,
                                            SourceLocation LParen,
                                            SourceLocation RParen,
                                            TypeSourceInfo *TSI) {
+  if (RequireCompleteSizedType(
+          OpLoc, TSI->getType(),
+          diag::err_sizeof_alignof_incomplete_or_sizeless_type,
+          "__builtin_unique_stable_name", SourceRange{LParen, RParen}))
+    return ExprError();
   return UniqueStableNameExpr::Create(Context, OpLoc, LParen, RParen, TSI);
 }
 ExprResult Sema::BuildUniqueStableNameExpr(SourceLocation OpLoc,
@@ -3507,9 +3512,8 @@ ExprResult Sema::BuildUniqueStableNameExpr(SourceLocation OpLoc,
   if (E->isInstantiationDependent())
     return UniqueStableNameExpr::Create(Context, OpLoc, LParen, RParen, E);
 
-  return UniqueStableNameExpr::Create(
-      Context, OpLoc, LParen, RParen,
-      Context.getTrivialTypeSourceInfo(E->getType()));
+  return BuildUniqueStableNameExpr(
+      OpLoc, LParen, RParen, Context.getTrivialTypeSourceInfo(E->getType()));
 }
 
 ExprResult Sema::ActOnUniqueStableNameExpr(SourceLocation OpLoc,
