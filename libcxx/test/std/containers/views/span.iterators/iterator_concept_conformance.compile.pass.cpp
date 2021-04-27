@@ -20,7 +20,7 @@ using iterator = std::span<int>::iterator;
 using reverse_iterator = std::span<int>::reverse_iterator;
 using value_type = int;
 
-static_assert(std::random_access_iterator<iterator>);
+static_assert(std::contiguous_iterator<iterator>);
 static_assert(std::indirectly_writable<iterator, value_type>);
 static_assert(std::sentinel_for<iterator, iterator>);
 static_assert(!std::sentinel_for<iterator, reverse_iterator>);

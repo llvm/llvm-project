@@ -12,10 +12,11 @@
 
 #include <__config>
 #include <concepts>
-#include <__iterator/iter_move.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/iter_move.h>
 #include <__iterator/readable_traits.h>
+#include <__memory/pointer_traits.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -150,6 +151,17 @@ concept random_access_iterator =
     { __i -= __n } -> same_as<_Ip&>;
     { __j -  __n } -> same_as<_Ip>;
     {  __j[__n]  } -> same_as<iter_reference_t<_Ip>>;
+  };
+
+template<class _Ip>
+concept contiguous_iterator =
+  random_access_iterator<_Ip> &&
+  derived_from<_ITER_CONCEPT<_Ip>, contiguous_iterator_tag> &&
+  is_lvalue_reference_v<iter_reference_t<_Ip>> &&
+  same_as<iter_value_t<_Ip>, remove_cvref_t<iter_reference_t<_Ip>>> &&
+  (is_pointer_v<_Ip> || requires { sizeof(__pointer_traits_element_type<_Ip>); }) &&
+  requires(const _Ip& __i) {
+    { _VSTD::to_address(__i) } -> same_as<add_pointer_t<iter_reference_t<_Ip>>>;
   };
 
 // clang-format on
