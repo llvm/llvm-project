@@ -635,8 +635,9 @@ LLVMErrorRef LLVMOrcJITTargetMachineBuilderDetectHost(
  *
  * This operation takes ownership of the given TargetMachine and destroys it
  * before returing. The resulting JITTargetMachineBuilder is owned by the client
- * and must be passed to a consuming operation (e.g. LLVMOrcCreateLLJITBuilder)
- * or disposed of by calling LLVMOrcDisposeJITTargetMachineBuilder.
+ * and must be passed to a consuming operation (e.g.
+ * LLVMOrcLLJITBuilderSetJITTargetMachineBuilder) or disposed of by calling
+ * LLVMOrcDisposeJITTargetMachineBuilder.
  */
 LLVMOrcJITTargetMachineBuilderRef
 LLVMOrcJITTargetMachineBuilderCreateFromTargetMachine(LLVMTargetMachineRef TM);
