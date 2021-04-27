@@ -14,6 +14,7 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/TensorEncoding.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Sequence.h"
@@ -446,7 +447,9 @@ RankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
   for (int64_t s : shape)
     if (s < -1)
       return emitError() << "invalid tensor dimension size";
-  // TODO: verify contents of encoding attribute.
+  if (auto v = encoding.dyn_cast_or_null<VerifiableTensorEncoding>())
+    if (failed(v.verifyEncoding(shape, elementType, emitError)))
+      return failure();
   return checkTensorElementType(emitError, elementType);
 }
 
