@@ -1250,26 +1250,6 @@ void VPSlotTracker::assignSlot(const VPValue *V) {
   Slots[V] = NextSlot++;
 }
 
-void VPSlotTracker::assignSlots(const VPBlockBase *VPBB) {
-  if (auto *Region = dyn_cast<VPRegionBlock>(VPBB))
-    assignSlots(Region);
-  else
-    assignSlots(cast<VPBasicBlock>(VPBB));
-}
-
-void VPSlotTracker::assignSlots(const VPRegionBlock *Region) {
-  ReversePostOrderTraversal<const VPBlockBase *> RPOT(Region->getEntry());
-  for (const VPBlockBase *Block : RPOT)
-    assignSlots(Block);
-}
-
-void VPSlotTracker::assignSlots(const VPBasicBlock *VPBB) {
-  for (const VPRecipeBase &Recipe : *VPBB) {
-    for (VPValue *Def : Recipe.definedValues())
-      assignSlot(Def);
-  }
-}
-
 void VPSlotTracker::assignSlots(const VPlan &Plan) {
 
   for (const VPValue *V : Plan.VPExternalDefs)
@@ -1278,7 +1258,13 @@ void VPSlotTracker::assignSlots(const VPlan &Plan) {
   if (Plan.BackedgeTakenCount)
     assignSlot(Plan.BackedgeTakenCount);
 
-  ReversePostOrderTraversal<const VPBlockBase *> RPOT(Plan.getEntry());
-  for (const VPBlockBase *Block : RPOT)
-    assignSlots(Block);
+  ReversePostOrderTraversal<
+      VPBlockRecursiveTraversalWrapper<const VPBlockBase *>>
+      RPOT(VPBlockRecursiveTraversalWrapper<const VPBlockBase *>(
+          Plan.getEntry()));
+  for (const VPBasicBlock *VPBB :
+       VPBlockUtils::blocksOnly<const VPBasicBlock>(RPOT))
+    for (const VPRecipeBase &Recipe : *VPBB)
+      for (VPValue *Def : Recipe.definedValues())
+        assignSlot(Def);
 }
