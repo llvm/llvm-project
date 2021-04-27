@@ -19,6 +19,7 @@ void MCAsmInfoXCOFF::anchor() {}
 MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   IsLittleEndian = false;
   HasVisibilityOnlyWithLinkage = true;
+  HasBasenameOnlyForFileDirective = false;
   PrivateGlobalPrefix = "L..";
   PrivateLabelPrefix = "L..";
   SupportsQuotedNames = false;

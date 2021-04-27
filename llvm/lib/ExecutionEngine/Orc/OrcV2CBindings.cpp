@@ -473,6 +473,24 @@ void LLVMOrcDisposeJITTargetMachineBuilder(
   delete unwrap(JTMB);
 }
 
+char *LLVMOrcJITTargetMachineBuilderGetTargetTriple(
+    LLVMOrcJITTargetMachineBuilderRef JTMB) {
+  auto Tmp = unwrap(JTMB)->getTargetTriple().str();
+  char *TargetTriple = (char *)malloc(Tmp.size() + 1);
+  strcpy(TargetTriple, Tmp.c_str());
+  return TargetTriple;
+}
+
+void LLVMOrcJITTargetMachineBuilderSetTargetTriple(
+    LLVMOrcJITTargetMachineBuilderRef JTMB, const char *TargetTriple) {
+  unwrap(JTMB)->getTargetTriple() = Triple(TargetTriple);
+}
+
+void LLVMOrcJITTargetMachineBuilderDisposeTargetTriple(
+    LLVMOrcJITTargetMachineBuilderRef JTMB, char *TargetTriple) {
+  free(TargetTriple);
+}
+
 void LLVMOrcObjectLayerEmit(LLVMOrcObjectLayerRef ObjLayer,
                             LLVMOrcMaterializationResponsibilityRef R,
                             LLVMMemoryBufferRef ObjBuffer) {
@@ -495,7 +513,8 @@ void LLVMOrcDisposeLLJITBuilder(LLVMOrcLLJITBuilderRef Builder) {
 
 void LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(
     LLVMOrcLLJITBuilderRef Builder, LLVMOrcJITTargetMachineBuilderRef JTMB) {
-  unwrap(Builder)->setJITTargetMachineBuilder(*unwrap(JTMB));
+  unwrap(Builder)->setJITTargetMachineBuilder(std::move(*unwrap(JTMB)));
+  LLVMOrcDisposeJITTargetMachineBuilder(JTMB);
 }
 
 void LLVMOrcLLJITBuilderSetObjectLinkingLayerCreator(

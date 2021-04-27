@@ -201,10 +201,9 @@ static void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
 }
 
 static uint64_t getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
-  uint64_t CurCode;
   uint64_t Offset = 0;
   DataExtractor AbbrevData(Abbrev, true, 0);
-  while ((CurCode = AbbrevData.getULEB128(&Offset)) != AbbrCode) {
+  while (AbbrevData.getULEB128(&Offset) != AbbrCode) {
     // Tag
     AbbrevData.getULEB128(&Offset);
     // DW_CHILDREN

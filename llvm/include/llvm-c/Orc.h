@@ -623,8 +623,9 @@ void LLVMOrcDisposeThreadSafeModule(LLVMOrcThreadSafeModuleRef TSM);
  * Create a JITTargetMachineBuilder by detecting the host.
  *
  * On success the client owns the resulting JITTargetMachineBuilder. It must be
- * passed to a consuming operation (e.g. LLVMOrcCreateLLJITBuilder) or disposed
- * of by calling LLVMOrcDisposeJITTargetMachineBuilder.
+ * passed to a consuming operation (e.g.
+ * LLVMOrcLLJITBuilderSetJITTargetMachineBuilder) or disposed of by calling
+ * LLVMOrcDisposeJITTargetMachineBuilder.
  */
 LLVMErrorRef LLVMOrcJITTargetMachineBuilderDetectHost(
     LLVMOrcJITTargetMachineBuilderRef *Result);
@@ -634,8 +635,9 @@ LLVMErrorRef LLVMOrcJITTargetMachineBuilderDetectHost(
  *
  * This operation takes ownership of the given TargetMachine and destroys it
  * before returing. The resulting JITTargetMachineBuilder is owned by the client
- * and must be passed to a consuming operation (e.g. LLVMOrcCreateLLJITBuilder)
- * or disposed of by calling LLVMOrcDisposeJITTargetMachineBuilder.
+ * and must be passed to a consuming operation (e.g.
+ * LLVMOrcLLJITBuilderSetJITTargetMachineBuilder) or disposed of by calling
+ * LLVMOrcDisposeJITTargetMachineBuilder.
  */
 LLVMOrcJITTargetMachineBuilderRef
 LLVMOrcJITTargetMachineBuilderCreateFromTargetMachine(LLVMTargetMachineRef TM);
@@ -645,6 +647,29 @@ LLVMOrcJITTargetMachineBuilderCreateFromTargetMachine(LLVMTargetMachineRef TM);
  */
 void LLVMOrcDisposeJITTargetMachineBuilder(
     LLVMOrcJITTargetMachineBuilderRef JTMB);
+
+/**
+ * Returns the target triple for the given JITTargetMachineBuilder as a string.
+ *
+ * The caller owns the resulting string as must dispose of it by calling
+ * LLVMOrcJITTargetMachineBuilderDisposeTargetTriple.
+ */
+char *LLVMOrcJITTargetMachineBuilderGetTargetTriple(
+    LLVMOrcJITTargetMachineBuilderRef JTMB);
+
+/**
+ * Sets the target triple for the given JITTargetMachineBuilder to the given
+ * string.
+ */
+void LLVMOrcJITTargetMachineBuilderSetTargetTriple(
+    LLVMOrcJITTargetMachineBuilderRef JTMB, const char *TargetTriple);
+
+/**
+ * Destroy a triple string returned by
+ * LLVMOrcJITTargetMachineBuilderGetTargetTriple.
+ */
+void LLVMOrcJITTargetMachineBuilderDisposeTargetTriple(
+    LLVMOrcJITTargetMachineBuilderRef JTMB, char *TargetTriple);
 
 /**
  * Emit an object buffer to an ObjectLayer.
