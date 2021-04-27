@@ -184,12 +184,6 @@ protected:
   virtual Tool *buildStaticLibTool() const;
   virtual Tool *getTool(Action::ActionClass AC) const;
 
-  virtual std::string getMultiarchTriple(const Driver &D,
-                                         const llvm::Triple &TargetTriple,
-                                         StringRef SysRoot) const {
-    return TargetTriple.str();
-  }
-
   virtual std::string buildCompilerRTBasename(const llvm::opt::ArgList &Args,
                                               StringRef Component,
                                               FileType Type,
@@ -547,6 +541,12 @@ public:
 
   /// isThreadModelSupported() - Does this target support a thread model?
   virtual bool isThreadModelSupported(const StringRef Model) const;
+
+  virtual std::string getMultiarchTriple(const Driver &D,
+                                         const llvm::Triple &TargetTriple,
+                                         StringRef SysRoot) const {
+    return TargetTriple.str();
+  }
 
   /// ComputeLLVMTriple - Return the LLVM target triple to use, after taking
   /// command line arguments into account.
