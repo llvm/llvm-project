@@ -25,6 +25,11 @@ bool mi_match(Reg R, const MachineRegisterInfo &MRI, Pattern &&P) {
   return P.match(MRI, R);
 }
 
+template <typename Pattern>
+bool mi_match(MachineInstr &MI, const MachineRegisterInfo &MRI, Pattern &&P) {
+  return P.match(MRI, &MI);
+}
+
 // TODO: Extend for N use.
 template <typename SubPatternT> struct OneUse_match {
   SubPatternT SubPat;
@@ -181,6 +186,11 @@ template <> struct bind_helper<MachineInstr *> {
     if (MI)
       return true;
     return false;
+  }
+  static bool bind(const MachineRegisterInfo &MRI, MachineInstr *&MI,
+                   MachineInstr *Inst) {
+    MI = Inst;
+    return MI;
   }
 };
 
