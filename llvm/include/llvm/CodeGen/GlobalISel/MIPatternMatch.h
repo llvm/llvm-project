@@ -255,6 +255,43 @@ struct BinaryOp_match {
   }
 };
 
+// Helper for (commutative) binary generic MI that checks Opcode.
+template <typename LHS_P, typename RHS_P, bool Commutable = false>
+struct BinaryOpc_match {
+  unsigned Opc;
+  LHS_P L;
+  RHS_P R;
+
+  BinaryOpc_match(unsigned Opcode, const LHS_P &LHS, const RHS_P &RHS)
+      : Opc(Opcode), L(LHS), R(RHS) {}
+  template <typename OpTy>
+  bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
+    MachineInstr *TmpMI;
+    if (mi_match(Op, MRI, m_MInstr(TmpMI))) {
+      if (TmpMI->getOpcode() == Opc && TmpMI->getNumDefs() == 1 &&
+          TmpMI->getNumOperands() == 3) {
+        return (L.match(MRI, TmpMI->getOperand(1).getReg()) &&
+                R.match(MRI, TmpMI->getOperand(2).getReg())) ||
+               (Commutable && (R.match(MRI, TmpMI->getOperand(1).getReg()) &&
+                               L.match(MRI, TmpMI->getOperand(2).getReg())));
+      }
+    }
+    return false;
+  }
+};
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, false> m_BinOp(unsigned Opcode, const LHS &L,
+                                                const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, false>(Opcode, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, true>
+m_CommutativeBinOp(unsigned Opcode, const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(Opcode, L, R);
+}
+
 template <typename LHS, typename RHS>
 inline BinaryOp_match<LHS, RHS, TargetOpcode::G_ADD, true>
 m_GAdd(const LHS &L, const RHS &R) {

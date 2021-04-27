@@ -194,6 +194,64 @@ TEST_F(AArch64GISelMITest, MatchBinaryOp) {
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, PtrAdd->getOperand(1).getReg());
   EXPECT_EQ(Src1, Copies[0]);
+
+  auto MIBCst = B.buildConstant(s64, 42);
+  auto MIBAddCst = B.buildAdd(s64, MIBCst, Copies[0]);
+  auto MIBUnmerge = B.buildUnmerge({s32, s32}, B.buildConstant(s64, 42));
+
+  // m_BinOp with opcode.
+  // Match binary instruction, opcode and its non-commutative operands.
+  match = mi_match(MIBAddCst, *MRI,
+                   m_BinOp(TargetOpcode::G_ADD, m_ICst(Cst), m_Reg(Src0)));
+  EXPECT_TRUE(match);
+  EXPECT_EQ(Src0, Copies[0]);
+  EXPECT_EQ(Cst, 42);
+
+  // Opcode doesn't match.
+  match = mi_match(MIBAddCst, *MRI,
+                   m_BinOp(TargetOpcode::G_MUL, m_ICst(Cst), m_Reg(Src0)));
+  EXPECT_FALSE(match);
+
+  match = mi_match(MIBAddCst, *MRI,
+                   m_BinOp(TargetOpcode::G_ADD, m_Reg(Src0), m_ICst(Cst)));
+  EXPECT_FALSE(match);
+
+  // Instruction is not binary.
+  match = mi_match(MIBCst, *MRI,
+                   m_BinOp(TargetOpcode::G_MUL, m_Reg(Src0), m_Reg(Src1)));
+  EXPECT_FALSE(match);
+  match = mi_match(MIBUnmerge, *MRI,
+                   m_BinOp(TargetOpcode::G_MUL, m_Reg(Src0), m_Reg(Src1)));
+  EXPECT_FALSE(match);
+
+  // m_CommutativeBinOp with opcode.
+  match = mi_match(
+      MIBAddCst, *MRI,
+      m_CommutativeBinOp(TargetOpcode::G_ADD, m_ICst(Cst), m_Reg(Src0)));
+  EXPECT_TRUE(match);
+  EXPECT_EQ(Src0, Copies[0]);
+  EXPECT_EQ(Cst, 42);
+
+  match = mi_match(
+      MIBAddCst, *MRI,
+      m_CommutativeBinOp(TargetOpcode::G_MUL, m_ICst(Cst), m_Reg(Src0)));
+  EXPECT_FALSE(match);
+
+  match = mi_match(
+      MIBAddCst, *MRI,
+      m_CommutativeBinOp(TargetOpcode::G_ADD, m_Reg(Src0), m_ICst(Cst)));
+  EXPECT_TRUE(match);
+  EXPECT_EQ(Src0, Copies[0]);
+  EXPECT_EQ(Cst, 42);
+
+  match = mi_match(
+      MIBCst, *MRI,
+      m_CommutativeBinOp(TargetOpcode::G_MUL, m_Reg(Src0), m_Reg(Src1)));
+  EXPECT_FALSE(match);
+  match = mi_match(
+      MIBUnmerge, *MRI,
+      m_CommutativeBinOp(TargetOpcode::G_MUL, m_Reg(Src0), m_Reg(Src1)));
+  EXPECT_FALSE(match);
 }
 
 TEST_F(AArch64GISelMITest, MatchICmp) {
