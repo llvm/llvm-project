@@ -558,14 +558,26 @@ struct BroadcastForwardSingleOperandPattern
 
   LogicalResult matchAndRewrite(BroadcastOp op,
                                 PatternRewriter &rewriter) const override {
-    if (op.getNumOperands() == 1) {
-      Value uniqueShapeOperand = op.shapes().front();
-      if (uniqueShapeOperand.getType() == op.getType()) {
-        rewriter.replaceOp(op, uniqueShapeOperand);
-        return success();
+    if (op.getNumOperands() != 1)
+      return failure();
+    Value replacement = op.shapes().front();
+
+    // Insert cast if needed.
+    if (replacement.getType() != op.getType()) {
+      auto loc = op.getLoc();
+      if (op.getType().isa<ShapeType>()) {
+        replacement = rewriter.create<FromExtentTensorOp>(loc, replacement);
+      } else {
+        assert(!op.getType().isa<ShapeType>() &&
+               !replacement.getType().isa<ShapeType>() &&
+               "expect extent tensor cast");
+        replacement =
+            rewriter.create<tensor::CastOp>(loc, op.getType(), replacement);
       }
     }
-    return failure();
+
+    rewriter.replaceOp(op, replacement);
+    return success();
   }
 };
 
