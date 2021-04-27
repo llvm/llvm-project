@@ -947,10 +947,28 @@ TEST_F(TargetDeclTest, ObjC) {
     @class C;
     @protocol Foo
     @end
+    void test([[C]]<Foo> *p);
+  )cpp";
+  EXPECT_DECLS("ObjCInterfaceTypeLoc", "@class C;");
+
+  Code = R"cpp(
+    @class C;
+    @protocol Foo
+    @end
     void test(C<[[Foo]]> *p);
   )cpp";
-  // FIXME: there's no AST node corresponding to 'Foo', so we're stuck.
-  EXPECT_DECLS("ObjCObjectTypeLoc");
+  EXPECT_DECLS("ObjCObjectTypeLoc", "@protocol Foo");
+
+  Code = R"cpp(
+    @class C;
+    @protocol Foo
+    @end
+    @protocol Bar
+    @end
+    void test(C<[[Foo]], Bar> *p);
+  )cpp";
+  // FIXME: We currently can't disambiguate between multiple protocols.
+  EXPECT_DECLS("ObjCObjectTypeLoc", "@protocol Foo", "@protocol Bar");
 }
 
 class FindExplicitReferencesTest : public ::testing::Test {
@@ -1610,12 +1628,12 @@ TEST_F(FindExplicitReferencesTest, All) {
             @protocol P
             @end
             void foo() {
-              // FIXME: should reference P
-              $0^I<P> *$1^x;
+              $0^I<$1^P> *$2^x;
             }
           )cpp",
         "0: targets = {I}\n"
-        "1: targets = {x}, decl\n"},
+        "1: targets = {P}\n"
+        "2: targets = {x}, decl\n"},
 
        // Designated initializers.
        {R"cpp(
