@@ -41,6 +41,7 @@ class TargetLowering;
 class TargetPassConfig;
 class TargetRegisterInfo;
 class TargetRegisterClass;
+class ConstantInt;
 class ConstantFP;
 class APFloat;
 
@@ -189,6 +190,8 @@ getConstantVRegValWithLookThrough(Register VReg, const MachineRegisterInfo &MRI,
                                   bool LookThroughInstrs = true,
                                   bool HandleFConstants = true,
                                   bool LookThroughAnyExt = false);
+const ConstantInt *getConstantIntVRegVal(Register VReg,
+                                         const MachineRegisterInfo &MRI);
 const ConstantFP* getConstantFPVRegVal(Register VReg,
                                        const MachineRegisterInfo &MRI);
 

@@ -2,6 +2,7 @@
 ; RUN: opt -S -loop-fusion < %s | FileCheck %s
 ; RUN: opt -S -loop-fusion -pass-remarks-output=%t < %s
 ; RUN: FileCheck --input-file=%t %s --check-prefix REMARKS
+; REQUIRES: asserts
 
 define dso_local void @pr48060(i1 %cond) {
 ; CHECK-LABEL: @pr48060(
