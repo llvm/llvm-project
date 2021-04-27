@@ -471,6 +471,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Custom);
   setOperationAction(ISD::STRICT_FP_ROUND, MVT::f64, Custom);
 
+  setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i32, Custom);
+  setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
+  setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i32, Custom);
+  setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
+
   // Variable arguments.
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
   setOperationAction(ISD::VAARG, MVT::Other, Custom);
@@ -876,6 +881,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::SINT_TO_FP);
   setTargetDAGCombine(ISD::UINT_TO_FP);
 
+  // TODO: Do the same for FP_TO_*INT_SAT.
   setTargetDAGCombine(ISD::FP_TO_SINT);
   setTargetDAGCombine(ISD::FP_TO_UINT);
   setTargetDAGCombine(ISD::FDIV);
@@ -3292,6 +3298,44 @@ SDValue AArch64TargetLowering::LowerFP_TO_INT(SDValue Op,
   return SDValue();
 }
 
+SDValue AArch64TargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  // AArch64 FP-to-int conversions saturate to the destination register size, so
+  // we can lower common saturating conversions to simple instructions.
+  SDValue SrcVal = Op.getOperand(0);
+
+  EVT SrcVT = SrcVal.getValueType();
+  EVT DstVT = Op.getValueType();
+
+  EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
+  uint64_t SatWidth = SatVT.getScalarSizeInBits();
+  uint64_t DstWidth = DstVT.getScalarSizeInBits();
+  assert(SatWidth <= DstWidth && "Saturation width cannot exceed result width");
+
+  // TODO: Support lowering of NEON and SVE conversions.
+  if (SrcVT.isVector())
+    return SDValue();
+
+  // TODO: Saturate to SatWidth explicitly.
+  if (SatWidth != DstWidth)
+    return SDValue();
+
+  // In the absence of FP16 support, promote f32 to f16, like LowerFP_TO_INT().
+  if (SrcVT == MVT::f16 && !Subtarget->hasFullFP16())
+    return DAG.getNode(Op.getOpcode(), SDLoc(Op), Op.getValueType(),
+                       DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), MVT::f32, SrcVal),
+                       Op.getOperand(1));
+
+  // Cases that we can emit directly.
+  if ((SrcVT == MVT::f64 || SrcVT == MVT::f32 ||
+       (SrcVT == MVT::f16 && Subtarget->hasFullFP16())) &&
+      (DstVT == MVT::i64 || DstVT == MVT::i32))
+    return Op;
+
+  // For all other cases, fall back on the expanded form.
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
                                                     SelectionDAG &DAG) const {
   // Warning: We maintain cost tables in AArch64TargetTransformInfo.cpp.
@@ -4553,6 +4597,9 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::STRICT_FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:
     return LowerFP_TO_INT(Op, DAG);
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+    return LowerFP_TO_INT_SAT(Op, DAG);
   case ISD::FSINCOS:
     return LowerFSINCOS(Op, DAG);
   case ISD::FLT_ROUNDS_:
