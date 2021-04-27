@@ -184,6 +184,12 @@ protected:
   virtual Tool *buildStaticLibTool() const;
   virtual Tool *getTool(Action::ActionClass AC) const;
 
+  virtual std::string getMultiarchTriple(const Driver &D,
+                                         const llvm::Triple &TargetTriple,
+                                         StringRef SysRoot) const {
+    return TargetTriple.str();
+  }
+
   virtual std::string buildCompilerRTBasename(const llvm::opt::ArgList &Args,
                                               StringRef Component,
                                               FileType Type,
@@ -442,10 +448,10 @@ public:
                                     FileType Type = ToolChain::FT_Static) const;
 
   // Returns target specific runtime path if it exists.
-  virtual Optional<std::string> getRuntimePath() const;
+  virtual std::string getRuntimePath() const;
 
   // Returns target specific standard library path if it exists.
-  virtual Optional<std::string> getStdlibPath() const;
+  virtual std::string getStdlibPath() const;
 
   // Returns <ResourceDir>/lib/<OSName>/<arch>.  This is used by runtimes (such
   // as OpenMP) to find arch-specific libraries.
