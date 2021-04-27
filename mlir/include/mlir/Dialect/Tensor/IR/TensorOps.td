@@ -10,6 +10,7 @@
 #define TENSOR_OPS
 
 include "mlir/Dialect/Tensor/IR/TensorBase.td"
+include "mlir/Dialect/Tensor/IR/TensorAttrDefs.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
