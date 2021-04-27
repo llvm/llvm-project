@@ -372,11 +372,7 @@ class VPSlotTracker {
   DenseMap<const VPValue *, unsigned> Slots;
   unsigned NextSlot = 0;
 
-  void assignSlots(const VPBlockBase *VPBB);
-  void assignSlots(const VPRegionBlock *Region);
-  void assignSlots(const VPBasicBlock *VPBB);
   void assignSlot(const VPValue *V);
-
   void assignSlots(const VPlan &Plan);
 
 public:
