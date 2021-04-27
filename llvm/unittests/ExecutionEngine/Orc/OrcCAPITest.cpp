@@ -36,8 +36,8 @@ protected:
 public:
   static void SetUpTestCase() {
     LLVMInitializeNativeTarget();
-    LLVMInitializeNativeTargetAsmParser();
-    LLVMInitializeNativeTargetAsmPrinter();
+    LLVMInitializeNativeAsmParser();
+    LLVMInitializeNativeAsmPrinter();
 
     // Attempt to set up a JIT instance once to verify that we can.
     LLVMOrcJITTargetMachineBuilderRef JTMB = nullptr;
