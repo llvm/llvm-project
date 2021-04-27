@@ -20,6 +20,7 @@
 // NEWPM-NEXT:   RequireAnalysisPass<{{.*}}> on [module]
 // NEWPM-NEXT:     GlobalsAA analysis on [module]
 // NEWPM-NEXT:       CallGraphAnalysis analysis on [module]
+// NEWPM-NEXT:   ModuleToFunctionPassAdaptor on [module]
 // NEWPM-NEXT:   RequireAnalysisPass<{{.*}}> on [module]
 // NEWPM-NEXT:     ProfileSummaryAnalysis analysis on [module]
 // NEWPM-NEXT:   ModuleToPostOrderCGSCCPassAdaptor on [module]

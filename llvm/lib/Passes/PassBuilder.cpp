@@ -977,11 +977,15 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
 
   // Require the GlobalsAA analysis for the module so we can query it within
   // the CGSCC pipeline.
-  MIWP.addRequiredModuleAnalysis<GlobalsAA>();
+  MIWP.addModulePass(RequireAnalysisPass<GlobalsAA, Module>());
+  // Invalidate AAManager so it can be recreated and pick up the newly available
+  // GlobalsAA.
+  MIWP.addModulePass(
+      createModuleToFunctionPassAdaptor(InvalidateAnalysisPass<AAManager>()));
 
   // Require the ProfileSummaryAnalysis for the module so we can query it within
   // the inliner pass.
-  MIWP.addRequiredModuleAnalysis<ProfileSummaryAnalysis>();
+  MIWP.addModulePass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
 
   // Now begin the main postorder CGSCC pipeline.
   // FIXME: The current CGSCC pipeline has its origins in the legacy pass
