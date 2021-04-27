@@ -1463,7 +1463,16 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayConstructor &array) {
 MaybeExpr ExpressionAnalyzer::Analyze(
     const parser::StructureConstructor &structure) {
   auto &parsedType{std::get<parser::DerivedTypeSpec>(structure.t)};
-  parser::CharBlock typeName{std::get<parser::Name>(parsedType.t).source};
+  parser::Name structureType{std::get<parser::Name>(parsedType.t)};
+  parser::CharBlock &typeName{structureType.source};
+  if (semantics::Symbol * typeSymbol{structureType.symbol}) {
+    if (typeSymbol->has<semantics::DerivedTypeDetails>()) {
+      semantics::DerivedTypeSpec dtSpec{typeName, typeSymbol->GetUltimate()};
+      if (!CheckIsValidForwardReference(dtSpec)) {
+        return std::nullopt;
+      }
+    }
+  }
   if (!parsedType.derivedTypeSpec) {
     return std::nullopt;
   }
@@ -2182,6 +2191,17 @@ const Symbol *AssumedTypeDummy<parser::PointerObject>(
   return AssumedTypePointerOrAllocatableDummy(x);
 }
 
+bool ExpressionAnalyzer::CheckIsValidForwardReference(
+    const semantics::DerivedTypeSpec &dtSpec) {
+  if (dtSpec.IsForwardReferenced()) {
+    Say("Cannot construct value for derived type '%s' "
+        "before it is defined"_err_en_US,
+        dtSpec.name());
+    return false;
+  }
+  return true;
+}
+
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
     std::optional<parser::StructureConstructor> *structureConstructor) {
   const parser::Call &call{funcRef.v};
@@ -2209,11 +2229,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
         semantics::Scope &scope{context_.FindScope(name->source)};
         semantics::DerivedTypeSpec dtSpec{
             name->source, derivedType.GetUltimate()};
-        if (dtSpec.IsForwardReferenced()) {
-          Say(call.source,
-              "Cannot construct value for derived type '%s' "
-              "before it is defined"_err_en_US,
-              name->source);
+        if (!CheckIsValidForwardReference(dtSpec)) {
           return std::nullopt;
         }
         const semantics::DeclTypeSpec &type{
