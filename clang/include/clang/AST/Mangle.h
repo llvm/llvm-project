@@ -173,7 +173,7 @@ public:
 
 class ItaniumMangleContext : public MangleContext {
 public:
-  using KernelMangleCallbackTy = void (*)(ASTContext &, const TagDecl *,
+  using KernelMangleCallbackTy = bool (*)(ASTContext &, const TagDecl *,
                                           raw_ostream &);
   explicit ItaniumMangleContext(ASTContext &C, DiagnosticsEngine &D)
       : MangleContext(C, D, MK_Itanium) {}

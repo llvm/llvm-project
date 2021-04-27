@@ -68,6 +68,7 @@ GetSYCLKernelObjectDecl(const FunctionDecl *KernelCaller) {
 void Sema::AddSYCLKernelLambda(const FunctionDecl *FD) {
   auto Callback = [](ASTContext &Ctx, const TagDecl *TD, raw_ostream &) {
     Ctx.AddSYCLKernelNamingDecl(TD);
+    return false;
   };
 
   // TODO: ERICH: get the kernel object type here.
