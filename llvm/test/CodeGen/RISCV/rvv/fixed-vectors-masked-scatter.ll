@@ -1903,15 +1903,14 @@ define void @mscatter_baseidx_v32i8(<32 x i8> %val, i8* %base, <32 x i8> %idxs, 
 ; RV64-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v16, v0.t
 ; RV64-NEXT:    vsetivli a1, 16, e8,m2,ta,mu
-; RV64-NEXT:    vslidedown.vi v26, v10, 16
-; RV64-NEXT:    vsetivli a1, 16, e64,m8,ta,mu
-; RV64-NEXT:    vsext.vf8 v16, v26
-; RV64-NEXT:    vsetivli a1, 16, e8,m2,ta,mu
 ; RV64-NEXT:    vslidedown.vi v26, v8, 16
+; RV64-NEXT:    vslidedown.vi v28, v10, 16
+; RV64-NEXT:    vsetivli a1, 16, e64,m8,ta,mu
+; RV64-NEXT:    vsext.vf8 v8, v28
 ; RV64-NEXT:    vsetivli a1, 2, e8,m1,ta,mu
 ; RV64-NEXT:    vslidedown.vi v0, v0, 2
 ; RV64-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
-; RV64-NEXT:    vsoxei64.v v26, (a0), v16, v0.t
+; RV64-NEXT:    vsoxei64.v v26, (a0), v8, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds i8, i8* %base, <32 x i8> %idxs
   call void @llvm.masked.scatter.v32i8.v32p0i8(<32 x i8> %val, <32 x i8*> %ptrs, i32 1, <32 x i1> %m)
