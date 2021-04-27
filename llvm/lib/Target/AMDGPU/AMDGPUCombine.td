@@ -45,6 +45,17 @@ def clamp_i64_to_i16 : GICombineRule<
       [{ return PreLegalizerHelper.matchClampI64ToI16(*${clamp_i64_to_i16}, MRI, *MF, ${matchinfo}); }]),
   (apply [{ PreLegalizerHelper.applyClampI64ToI16(*${clamp_i64_to_i16}, ${matchinfo}); }])>;
 
+def med3_matchdata : GIDefMatchData<"AMDGPURegBankCombinerHelper::Med3MatchInfo">;
+
+def int_minmax_to_med3 : GICombineRule<
+  (defs root:$min_or_max, med3_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SMAX,
+                           G_SMIN,
+                           G_UMAX,
+                           G_UMIN):$min_or_max,
+         [{ return RegBankHelper.matchIntMinMaxToMed3(*${min_or_max}, ${matchinfo}); }]),
+  (apply [{ RegBankHelper.applyMed3(*${min_or_max}, ${matchinfo}); }])>;
+
 // Combines which should only apply on SI/VI
 def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;
 
@@ -64,6 +75,8 @@ def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<
 }
 
 def AMDGPURegBankCombinerHelper : GICombinerHelper<
-  "AMDGPUGenRegBankCombinerHelper", [zext_trunc_fold]> {
+  "AMDGPUGenRegBankCombinerHelper", [zext_trunc_fold, int_minmax_to_med3]> {
   let DisableRuleOption = "amdgpuregbankcombiner-disable-rule";
+  let StateClass = "AMDGPURegBankCombinerHelperState";
+  let AdditionalArguments = [];
 }
