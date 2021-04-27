@@ -60,9 +60,9 @@ struct incrementable_traits<_Tp> {
 template <class>
 struct iterator_traits;
 
-// Let `RI` be `remove_­cvref_­t<I>`. The type `iter_­difference_­t<I>` denotes
-// `incrementable_­traits<RI>::difference_­type` if `iterator_­traits<RI>` names a specialization
-// generated from the primary template, and `iterator_­traits<RI>::difference_­type` otherwise.
+// Let `RI` be `remove_cvref_t<I>`. The type `iter_difference_t<I>` denotes
+// `incrementable_traits<RI>::difference_type` if `iterator_traits<RI>` names a specialization
+// generated from the primary template, and `iterator_traits<RI>::difference_type` otherwise.
 template <class _Ip>
 using iter_difference_t = typename conditional_t<__is_primary_template<iterator_traits<remove_cvref_t<_Ip> > >::value,
                                                  incrementable_traits<remove_cvref_t<_Ip> >,

@@ -844,6 +844,118 @@ multiclass RVVPseudoVNotBuiltin<string IR, string type_range> {
   }
 }
 
+multiclass RVVPseudoMaskBuiltin<string IR, string type_range> {
+  let Name = NAME,
+      IRName = IR,
+      HasMask = false,
+      ManualCodegen = [{
+      {
+        // op1, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[1]->getType()};
+        Ops.insert(Ops.begin() + 1, Ops[0]);
+        break;
+      }
+      }] in {
+        def : RVVBuiltin<"m", "mm", type_range>;
+  }
+}
+
+multiclass RVVPseudoVFUnaryBuiltin<string IR, string type_range> {
+  let Name = NAME,
+      IRName = IR,
+      IRNameMask = IR # "_mask",
+      ManualCodegen = [{
+      {
+        // op1, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[0]->getType(), Ops[1]->getType()};
+        Ops.insert(Ops.begin() + 1, Ops[0]);
+        break;
+      }
+      }],
+      ManualCodegenMask = [{
+      {
+        // maskedoff, op1, mask, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[1]->getType(),
+                          Ops[3]->getType()};
+        Ops.insert(Ops.begin() + 2, Ops[1]);
+        break;
+      }
+      }] in {
+        def : RVVBuiltin<"v", "vv", type_range>;
+  }
+}
+
+multiclass RVVPseudoVWCVTBuiltin<string IR, string MName, string type_range,
+                                 list<list<string>> suffixes_prototypes> {
+  let Name = NAME,
+      MangledName = MName,
+      IRName = IR,
+      IRNameMask = IR # "_mask",
+      ManualCodegen = [{
+      {
+        // op1, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[0]->getType(),
+                          cast<llvm::VectorType>(Ops[0]->getType())->getElementType(),
+                          Ops[1]->getType()};
+        Ops.insert(Ops.begin() + 1, llvm::Constant::getNullValue(IntrinsicTypes[2]));
+        break;
+      }
+      }],
+      ManualCodegenMask = [{
+      {
+        // maskedoff, op1, mask, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[1]->getType(),
+                          cast<llvm::VectorType>(Ops[1]->getType())->getElementType(),
+                          Ops[3]->getType()};
+        Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(IntrinsicTypes[2]));
+        break;
+      }
+      }] in {
+        foreach s_p = suffixes_prototypes in {
+          def : RVVBuiltin<s_p[0], s_p[1], type_range>;
+        }
+  }
+}
+
+multiclass RVVPseudoVNCVTBuiltin<string IR, string MName, string type_range,
+                                 list<list<string>> suffixes_prototypes> {
+  let Name = NAME,
+      MangledName = MName,
+      IRName = IR,
+      IRNameMask = IR # "_mask",
+      ManualCodegen = [{
+      {
+        // op1, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[0]->getType(),
+                          Ops[1]->getType(),
+                          Ops[1]->getType()};
+        Ops.insert(Ops.begin() + 1, llvm::Constant::getNullValue(IntrinsicTypes[2]));
+        break;
+      }
+      }],
+      ManualCodegenMask = [{
+      {
+        // maskedoff, op1, mask, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[1]->getType(),
+                          Ops[3]->getType(),
+                          Ops[3]->getType()};
+        Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(IntrinsicTypes[2]));
+        break;
+      }
+      }] in {
+        foreach s_p = suffixes_prototypes in {
+          def : RVVBuiltin<s_p[0], s_p[1], type_range>;
+        }
+  }
+}
+
 // 6. Configuration-Setting Instructions
 // 6.1. vsetvli/vsetvl instructions
 let HasVL = false,
@@ -989,6 +1101,10 @@ defm vwsubu : RVVUnsignedWidenOp0BinBuiltinSet;
 // Widening signed integer add/subtract, 2*SEW = 2*SEW +/- SEW
 defm vwadd : RVVSignedWidenOp0BinBuiltinSet;
 defm vwsub : RVVSignedWidenOp0BinBuiltinSet;
+defm vwcvtu_x_x_v : RVVPseudoVWCVTBuiltin<"vwaddu", "vwcvtu_x", "csi",
+                                          [["Uw", "UwUv"]]>;
+defm vwcvt_x_x_v : RVVPseudoVWCVTBuiltin<"vwadd", "vwcvt_x", "csi",
+                                         [["w", "wv"]]>;
 
 // 12.3. Vector Integer Extension
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
@@ -1028,6 +1144,9 @@ defm vsra : RVVSignedShiftBuiltinSet;
 // 12.7. Vector Narrowing Integer Right Shift Instructions
 defm vnsrl : RVVUnsignedNShiftBuiltinSet;
 defm vnsra : RVVSignedNShiftBuiltinSet;
+defm vncvt_x_x_w : RVVPseudoVNCVTBuiltin<"vnsrl", "vncvt_x", "csi",
+                                         [["v", "vw"],
+                                          ["Uv", "UvUw"]]>;
 
 // 12.8. Vector Integer Comparison Instructions
 defm vmseq : RVVIntMaskOutBuiltinSet;
@@ -1036,10 +1155,10 @@ defm vmsltu : RVVUnsignedMaskOutBuiltinSet;
 defm vmslt : RVVSignedMaskOutBuiltinSet;
 defm vmsleu : RVVUnsignedMaskOutBuiltinSet;
 defm vmsle : RVVSignedMaskOutBuiltinSet;
-defm vmsgtu : RVVOp0Op1BuiltinSet<"vmsgtu", "csil",
-                                  [["vx", "Uvm", "mUvUe"]]>;
-defm vmsgt : RVVOp0Op1BuiltinSet<"vmsgt", "csil",
-                                 [["vx", "vm", "mve"]]>;
+defm vmsgtu : RVVUnsignedMaskOutBuiltinSet;
+defm vmsgt : RVVSignedMaskOutBuiltinSet;
+defm vmsgeu : RVVUnsignedMaskOutBuiltinSet;
+defm vmsge : RVVSignedMaskOutBuiltinSet;
 
 // 12.9. Vector Integer Min/Max Instructions
 defm vminu : RVVUnsignedBinBuiltinSet;
@@ -1199,14 +1318,16 @@ defm vfmax : RVVFloatingBinBuiltinSet;
 defm vfsgnj  : RVVFloatingBinBuiltinSet;
 defm vfsgnjn : RVVFloatingBinBuiltinSet;
 defm vfsgnjx : RVVFloatingBinBuiltinSet;
+defm vfneg_v : RVVPseudoVFUnaryBuiltin<"vfsgnjn", "fd">;
+defm vfabs_v : RVVPseudoVFUnaryBuiltin<"vfsgnjx", "fd">;
 
 // 14.13. Vector Floating-Point Compare Instructions
 defm vmfeq : RVVFloatingMaskOutBuiltinSet;
 defm vmfne : RVVFloatingMaskOutBuiltinSet;
 defm vmflt : RVVFloatingMaskOutBuiltinSet;
 defm vmfle : RVVFloatingMaskOutBuiltinSet;
-defm vmfgt : RVVFloatingMaskOutVFBuiltinSet;
-defm vmfge : RVVFloatingMaskOutVFBuiltinSet;
+defm vmfgt : RVVFloatingMaskOutBuiltinSet;
+defm vmfge : RVVFloatingMaskOutBuiltinSet;
 
 // 14.14. Vector Floating-Point Classify Instruction
 let Name = "vfclass_v" in
@@ -1300,6 +1421,8 @@ def vmxnor   : RVVMaskBinBuiltin;
 // pseudoinstructions
 def vmclr    : RVVMaskNullaryBuiltin;
 def vmset    : RVVMaskNullaryBuiltin;
+defm vmmv_m : RVVPseudoMaskBuiltin<"vmand", "c">;
+defm vmnot_m : RVVPseudoMaskBuiltin<"vmnand", "c">;
 
 // 16.2. Vector mask population count vpopc
 def vpopc : RVVMaskOp0Builtin<"um">;

@@ -30,19 +30,29 @@ test(S s, typename S::difference_type pos, It first, It last, S expected)
 }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
+struct Widget { operator char() const { throw 42; } };
+
 template <class S, class It>
 void
 test_exceptions(S s, typename S::difference_type pos, It first, It last)
 {
     typename S::const_iterator p = s.cbegin() + pos;
-    S aCopy = s;
+
+    S original = s;
+    typename S::iterator begin = s.begin();
+    typename S::iterator end = s.end();
+
     try {
         s.insert(p, first, last);
         assert(false);
-        }
-    catch (...) {}
+    } catch (...) {}
+
+    // Part of "no effects" is that iterators and pointers
+    // into the string must not have been invalidated.
     LIBCPP_ASSERT(s.__invariants());
-    assert(s == aCopy);
+    assert(s == original);
+    assert(s.begin() == begin);
+    assert(s.end() == end);
 }
 #endif
 
@@ -153,6 +163,9 @@ int main(int, char**)
     test_exceptions(S(), 0, TIter(s, s+10, 4, TIter::TAIncrement), TIter());
     test_exceptions(S(), 0, TIter(s, s+10, 5, TIter::TADereference), TIter());
     test_exceptions(S(), 0, TIter(s, s+10, 6, TIter::TAComparison), TIter());
+
+    Widget w[100];
+    test_exceptions(S(), 0, w, w+100);
     }
 #endif
 
@@ -179,6 +192,19 @@ int main(int, char**)
     S s;
     s.insert(s.begin(), p, p + 4);
     assert(s == "ABCD");
+    }
+
+    { // regression-test inserting into self in sneaky ways
+    std::string s_short = "hello";
+    std::string s_long = "Lorem ipsum dolor sit amet, consectetur/";
+    std::string s_othertype = "hello";
+    const unsigned char *first = reinterpret_cast<const unsigned char*>(s_othertype.data());
+
+    test(s_short, 0, s_short.data() + s_short.size(), s_short.data() + s_short.size() + 1,
+         std::string("\0hello", 6));
+    test(s_long, 0, s_long.data() + s_long.size(), s_long.data() + s_long.size() + 1,
+         std::string("\0Lorem ipsum dolor sit amet, consectetur/", 41));
+    test(s_othertype, 1, first + 2, first + 5, std::string("hlloello"));
     }
 
   { // test with a move iterator that returns char&&

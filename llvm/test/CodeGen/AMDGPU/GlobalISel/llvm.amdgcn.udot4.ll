@@ -79,9 +79,9 @@ define i32 @v_udot4_cast_v4i8(<4 x i8> %a, <4 x i8> %b, i32 %c) {
 ; GFX10-NEXT:    v_and_or_b32 v3, v4, s5, v3
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 16, v5
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v5, 24, v6
-; GFX10-NEXT:    v_or3_b32 v7, v0, v1, v2
+; GFX10-NEXT:    v_or3_b32 v0, v0, v1, v2
 ; GFX10-NEXT:    v_or3_b32 v1, v3, v4, v5
-; GFX10-NEXT:    v_dot4_u32_u8 v0, v7, v1, v8
+; GFX10-NEXT:    v_dot4_u32_u8 v0, v0, v1, v8
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %a.cast = bitcast <4 x i8> %a to i32
   %b.cast = bitcast <4 x i8> %b to i32

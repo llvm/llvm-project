@@ -22,6 +22,8 @@ static_assert(std::indirectly_writable<iterator, int>);
 static_assert(std::incrementable<iterator>);
 static_assert(std::input_or_output_iterator<iterator>);
 static_assert(std::sentinel_for<iterator, iterator>);
+static_assert(std::sized_sentinel_for<iterator, iterator>);
 
 using other_iterator = std::reverse_iterator<float*>;
 static_assert(std::sentinel_for<iterator, other_iterator>);
+static_assert(!std::sized_sentinel_for<iterator, other_iterator>);

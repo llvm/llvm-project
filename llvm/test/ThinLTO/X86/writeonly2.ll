@@ -19,8 +19,8 @@
 ; with corresponsing stores
 ; RUN: llvm-dis %t3.2.5.precodegen.bc -o - | FileCheck %s --check-prefix=CODEGEN-SRC
 
-; IMPORT:       @gFoo.llvm.0 = internal unnamed_addr global i32 0, align 4
-; IMPORT-NEXT:  @gBar = internal local_unnamed_addr global i32 0, align 4
+; IMPORT:       @gBar = internal local_unnamed_addr global i32 0, align 4
+; IMPORT-NEXT:  @gFoo.llvm.0 = internal unnamed_addr global i32 0, align 4
 ; IMPORT:       !DICompileUnit({{.*}})
 
 ; CODEGEN-NOT:  gFoo

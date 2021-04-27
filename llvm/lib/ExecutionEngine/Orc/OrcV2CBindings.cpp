@@ -29,13 +29,22 @@ public:
   using PoolEntry = SymbolStringPtr::PoolEntry;
   using PoolEntryPtr = SymbolStringPtr::PoolEntryPtr;
 
-  static PoolEntryPtr releaseSymbolStringPtr(SymbolStringPtr S) {
+  // Move from SymbolStringPtr to PoolEntryPtr (no change in ref count).
+  static PoolEntryPtr moveFromSymbolStringPtr(SymbolStringPtr S) {
     PoolEntryPtr Result = nullptr;
     std::swap(Result, S.S);
     return Result;
   }
 
-  static SymbolStringPtr retainSymbolStringPtr(PoolEntryPtr P) {
+  // Move from a PoolEntryPtr to a SymbolStringPtr (no change in ref count).
+  static SymbolStringPtr moveToSymbolStringPtr(PoolEntryPtr P) {
+    SymbolStringPtr S;
+    S.S = P;
+    return S;
+  }
+
+  // Copy a pool entry to a SymbolStringPtr (increments ref count).
+  static SymbolStringPtr copyToSymbolStringPtr(PoolEntryPtr P) {
     return SymbolStringPtr(P);
   }
 
@@ -71,6 +80,8 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(OrcV2CAPIHelper::PoolEntry,
                                    LLVMOrcSymbolStringPoolEntryRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(MaterializationUnit,
                                    LLVMOrcMaterializationUnitRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(MaterializationResponsibility,
+                                   LLVMOrcMaterializationResponsibilityRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(JITDylib, LLVMOrcJITDylibRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ResourceTracker, LLVMOrcResourceTrackerRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DefinitionGenerator,
@@ -163,6 +174,66 @@ private:
 } // end namespace orc
 } // end namespace llvm
 
+namespace {
+
+class OrcCAPIMaterializationUnit : public llvm::orc::MaterializationUnit {
+public:
+  OrcCAPIMaterializationUnit(
+      std::string Name, SymbolFlagsMap InitialSymbolFlags,
+      SymbolStringPtr InitSymbol, void *Ctx,
+      LLVMOrcMaterializationUnitMaterializeFunction Materialize,
+      LLVMOrcMaterializationUnitDiscardFunction Discard,
+      LLVMOrcMaterializationUnitDestroyFunction Destroy)
+      : llvm::orc::MaterializationUnit(std::move(InitialSymbolFlags),
+                                       std::move(InitSymbol)),
+        Name(std::move(Name)), Ctx(Ctx), Materialize(Materialize),
+        Discard(Discard), Destroy(Destroy) {}
+
+  ~OrcCAPIMaterializationUnit() {
+    if (Ctx)
+      Destroy(Ctx);
+  }
+
+  StringRef getName() const override { return Name; }
+
+  void materialize(std::unique_ptr<MaterializationResponsibility> R) override {
+    void *Tmp = Ctx;
+    Ctx = nullptr;
+    Materialize(Tmp, wrap(R.release()));
+  }
+
+private:
+  void discard(const JITDylib &JD, const SymbolStringPtr &Name) override {
+    Discard(Ctx, wrap(&JD), wrap(OrcV2CAPIHelper::getRawPoolEntryPtr(Name)));
+  }
+
+  std::string Name;
+  void *Ctx = nullptr;
+  LLVMOrcMaterializationUnitMaterializeFunction Materialize = nullptr;
+  LLVMOrcMaterializationUnitDiscardFunction Discard = nullptr;
+  LLVMOrcMaterializationUnitDestroyFunction Destroy = nullptr;
+};
+
+static JITSymbolFlags toJITSymbolFlags(LLVMJITSymbolFlags F) {
+
+  JITSymbolFlags JSF;
+
+  if (F.GenericFlags & LLVMJITSymbolGenericFlagsExported)
+    JSF |= JITSymbolFlags::Exported;
+  if (F.GenericFlags & LLVMJITSymbolGenericFlagsWeak)
+    JSF |= JITSymbolFlags::Weak;
+  if (F.GenericFlags & LLVMJITSymbolGenericFlagsCallable)
+    JSF |= JITSymbolFlags::Callable;
+  if (F.GenericFlags & LLVMJITSymbolGenericFlagsMaterializationSideEffectsOnly)
+    JSF |= JITSymbolFlags::MaterializationSideEffectsOnly;
+
+  JSF.getTargetFlags() = F.TargetFlags;
+
+  return JSF;
+}
+
+} // end anonymous namespace
+
 void LLVMOrcExecutionSessionSetErrorReporter(
     LLVMOrcExecutionSessionRef ES, LLVMOrcErrorReporterFunction ReportError,
     void *Ctx) {
@@ -182,7 +253,7 @@ void LLVMOrcSymbolStringPoolClearDeadEntries(LLVMOrcSymbolStringPoolRef SSP) {
 LLVMOrcSymbolStringPoolEntryRef
 LLVMOrcExecutionSessionIntern(LLVMOrcExecutionSessionRef ES, const char *Name) {
   return wrap(
-      OrcV2CAPIHelper::releaseSymbolStringPtr(unwrap(ES)->intern(Name)));
+      OrcV2CAPIHelper::moveFromSymbolStringPtr(unwrap(ES)->intern(Name)));
 }
 
 void LLVMOrcRetainSymbolStringPoolEntry(LLVMOrcSymbolStringPoolEntryRef S) {
@@ -236,20 +307,29 @@ void LLVMOrcDisposeMaterializationUnit(LLVMOrcMaterializationUnitRef MU) {
   std::unique_ptr<MaterializationUnit> TmpMU(unwrap(MU));
 }
 
+LLVMOrcMaterializationUnitRef LLVMOrcCreateCustomMaterializationUnit(
+    const char *Name, void *Ctx, LLVMOrcCSymbolFlagsMapPairs Syms,
+    size_t NumSyms, LLVMOrcSymbolStringPoolEntryRef InitSym,
+    LLVMOrcMaterializationUnitMaterializeFunction Materialize,
+    LLVMOrcMaterializationUnitDiscardFunction Discard,
+    LLVMOrcMaterializationUnitDestroyFunction Destroy) {
+  SymbolFlagsMap SFM;
+  for (size_t I = 0; I != NumSyms; ++I)
+    SFM[OrcV2CAPIHelper::moveToSymbolStringPtr(unwrap(Syms[I].Name))] =
+        toJITSymbolFlags(Syms[I].Flags);
+
+  auto IS = OrcV2CAPIHelper::moveToSymbolStringPtr(unwrap(InitSym));
+
+  return wrap(new OrcCAPIMaterializationUnit(
+      Name, std::move(SFM), std::move(IS), Ctx, Materialize, Discard, Destroy));
+}
+
 LLVMOrcMaterializationUnitRef
 LLVMOrcAbsoluteSymbols(LLVMOrcCSymbolMapPairs Syms, size_t NumPairs) {
   SymbolMap SM;
   for (size_t I = 0; I != NumPairs; ++I) {
-    JITSymbolFlags Flags;
-
-    if (Syms[I].Sym.Flags.GenericFlags & LLVMJITSymbolGenericFlagsExported)
-      Flags |= JITSymbolFlags::Exported;
-    if (Syms[I].Sym.Flags.GenericFlags & LLVMJITSymbolGenericFlagsWeak)
-      Flags |= JITSymbolFlags::Weak;
-
-    Flags.getTargetFlags() = Syms[I].Sym.Flags.TargetFlags;
-
-    SM[OrcV2CAPIHelper::retainSymbolStringPtr(unwrap(Syms[I].Name))] =
+    JITSymbolFlags Flags = toJITSymbolFlags(Syms[I].Sym.Flags);
+    SM[OrcV2CAPIHelper::moveToSymbolStringPtr(unwrap(Syms[I].Name))] =
         JITEvaluatedSymbol(Syms[I].Sym.Address, Flags);
   }
 
@@ -393,6 +473,32 @@ void LLVMOrcDisposeJITTargetMachineBuilder(
   delete unwrap(JTMB);
 }
 
+char *LLVMOrcJITTargetMachineBuilderGetTargetTriple(
+    LLVMOrcJITTargetMachineBuilderRef JTMB) {
+  auto Tmp = unwrap(JTMB)->getTargetTriple().str();
+  char *TargetTriple = (char *)malloc(Tmp.size() + 1);
+  strcpy(TargetTriple, Tmp.c_str());
+  return TargetTriple;
+}
+
+void LLVMOrcJITTargetMachineBuilderSetTargetTriple(
+    LLVMOrcJITTargetMachineBuilderRef JTMB, const char *TargetTriple) {
+  unwrap(JTMB)->getTargetTriple() = Triple(TargetTriple);
+}
+
+void LLVMOrcJITTargetMachineBuilderDisposeTargetTriple(
+    LLVMOrcJITTargetMachineBuilderRef JTMB, char *TargetTriple) {
+  free(TargetTriple);
+}
+
+void LLVMOrcObjectLayerEmit(LLVMOrcObjectLayerRef ObjLayer,
+                            LLVMOrcMaterializationResponsibilityRef R,
+                            LLVMMemoryBufferRef ObjBuffer) {
+  unwrap(ObjLayer)->emit(
+      std::unique_ptr<MaterializationResponsibility>(unwrap(R)),
+      std::unique_ptr<MemoryBuffer>(unwrap(ObjBuffer)));
+}
+
 void LLVMOrcDisposeObjectLayer(LLVMOrcObjectLayerRef ObjLayer) {
   delete unwrap(ObjLayer);
 }
@@ -407,7 +513,8 @@ void LLVMOrcDisposeLLJITBuilder(LLVMOrcLLJITBuilderRef Builder) {
 
 void LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(
     LLVMOrcLLJITBuilderRef Builder, LLVMOrcJITTargetMachineBuilderRef JTMB) {
-  unwrap(Builder)->setJITTargetMachineBuilder(*unwrap(JTMB));
+  unwrap(Builder)->setJITTargetMachineBuilder(std::move(*unwrap(JTMB)));
+  LLVMOrcDisposeJITTargetMachineBuilder(JTMB);
 }
 
 void LLVMOrcLLJITBuilderSetObjectLinkingLayerCreator(
@@ -463,7 +570,7 @@ char LLVMOrcLLJITGetGlobalPrefix(LLVMOrcLLJITRef J) {
 
 LLVMOrcSymbolStringPoolEntryRef
 LLVMOrcLLJITMangleAndIntern(LLVMOrcLLJITRef J, const char *UnmangledName) {
-  return wrap(OrcV2CAPIHelper::releaseSymbolStringPtr(
+  return wrap(OrcV2CAPIHelper::moveFromSymbolStringPtr(
       unwrap(J)->mangleAndIntern(UnmangledName)));
 }
 
@@ -509,6 +616,10 @@ LLVMErrorRef LLVMOrcLLJITLookup(LLVMOrcLLJITRef J,
 
   *Result = Sym->getAddress();
   return LLVMErrorSuccess;
+}
+
+LLVMOrcObjectLayerRef LLVMOrcLLJITGetObjLinkingLayer(LLVMOrcLLJITRef J) {
+  return wrap(&unwrap(J)->getObjLinkingLayer());
 }
 
 LLVMOrcObjectLayerRef

@@ -13,7 +13,7 @@ namespace clang{
 namespace tooling{
 namespace dependencies{
 
-std::vector<std::string> FullDependencies::getAdditionalCommandLine(
+std::vector<std::string> FullDependencies::getAdditionalArgs(
     std::function<StringRef(ModuleID)> LookupPCMPath,
     std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const {
   std::vector<std::string> Ret{
@@ -31,6 +31,14 @@ std::vector<std::string> FullDependencies::getAdditionalCommandLine(
     Ret.push_back("-fmodule-map-file=" + ModMapPath);
 
   return Ret;
+}
+
+std::vector<std::string>
+FullDependencies::getAdditionalArgsWithoutModulePaths() const {
+  return {
+      "-fno-implicit-modules",
+      "-fno-implicit-module-maps",
+  };
 }
 
 DependencyScanningTool::DependencyScanningTool(

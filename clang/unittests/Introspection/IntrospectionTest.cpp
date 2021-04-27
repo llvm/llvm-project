@@ -1456,6 +1456,72 @@ getNamedTypeInfo()->getTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc()),
           STRING_LOCATION_PAIR((&NI), getSourceRange())));
 }
 
+TEST(Introspection, SourceLocations_DeclarationNameInfo_CRef) {
+  if (!NodeIntrospection::hasIntrospectionSupport())
+    return;
+
+  auto AST = buildASTFromCodeWithArgs(
+      R"cpp(
+template<typename T>
+struct MyContainer
+{
+    template <typename U>
+    void pushBack();
+};
+
+template<typename T>
+void foo()
+{
+    MyContainer<T> mc;
+    mc.template pushBack<int>();
+}
+)cpp",
+      {"-fno-delayed-template-parsing"}, "foo.cpp", "clang-tool",
+      std::make_shared<PCHContainerOperations>());
+
+  auto &Ctx = AST->getASTContext();
+  auto &TU = *Ctx.getTranslationUnitDecl();
+
+  auto BoundNodes = ast_matchers::match(
+      decl(hasDescendant(cxxDependentScopeMemberExpr(hasMemberName("pushBack")).bind("member"))), TU,
+      Ctx);
+
+  EXPECT_EQ(BoundNodes.size(), 1u);
+
+  const auto *Member = BoundNodes[0].getNodeAs<CXXDependentScopeMemberExpr>("member");
+  auto Result = NodeIntrospection::GetLocations(Member);
+
+  auto ExpectedLocations =
+      FormatExpected<SourceLocation>(Result.LocationAccessors);
+
+  llvm::sort(ExpectedLocations);
+
+  EXPECT_EQ(
+      llvm::makeArrayRef(ExpectedLocations),
+      (ArrayRef<std::pair<std::string, SourceLocation>>{
+    STRING_LOCATION_STDPAIR(Member, getBeginLoc()),
+    STRING_LOCATION_STDPAIR(Member, getEndLoc()),
+    STRING_LOCATION_STDPAIR(Member, getExprLoc()),
+    STRING_LOCATION_STDPAIR(Member, getLAngleLoc()),
+    STRING_LOCATION_STDPAIR(Member, getMemberLoc()),
+    STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getBeginLoc()),
+    STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getEndLoc()),
+    STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getLoc()),
+    STRING_LOCATION_STDPAIR(Member, getOperatorLoc()),
+    STRING_LOCATION_STDPAIR(Member, getRAngleLoc()),
+    STRING_LOCATION_STDPAIR(Member, getTemplateKeywordLoc())
+        }));
+
+  auto ExpectedRanges = FormatExpected<SourceRange>(Result.RangeAccessors);
+
+  EXPECT_THAT(
+      ExpectedRanges,
+      UnorderedElementsAre(
+          STRING_LOCATION_PAIR(Member, getMemberNameInfo().getSourceRange()),
+          STRING_LOCATION_PAIR(Member, getSourceRange())
+          ));
+}
+
 TEST(Introspection, SourceLocations_DeclarationNameInfo_ConvOp) {
   if (!NodeIntrospection::hasIntrospectionSupport())
     return;

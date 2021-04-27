@@ -51,6 +51,9 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
     Global,   // cuda_device
     Constant, // cuda_constant
     Local,    // cuda_shared
+    Global,   // sycl_global
+    Local,    // sycl_local
+    Private,  // sycl_private
     Generic,  // ptr32_sptr
     Generic,  // ptr32_uptr
     Generic   // ptr64
@@ -68,6 +71,10 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
     Global,   // cuda_device
     Constant, // cuda_constant
     Local,    // cuda_shared
+    // SYCL address space values for this map are dummy
+    Generic,  // sycl_global
+    Generic,  // sycl_local
+    Generic,  // sycl_private
     Generic,  // ptr32_sptr
     Generic,  // ptr32_uptr
     Generic   // ptr64

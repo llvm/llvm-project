@@ -301,16 +301,16 @@ define <4 x half> @v_constained_fsub_v4f16_fpexcept_strict(<4 x half> %x, <4 x h
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v7, 16, v0
+; GFX11-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
+; GFX11-NEXT:    v_sub_f16_e32 v1, v1, v3
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
 ; GFX11-NEXT:    v_sub_f16_e32 v0, v0, v2
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0xffff
-; GFX11-NEXT:    v_sub_f16_e32 v1, v1, v3
-; GFX11-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; GFX11-NEXT:    v_sub_f16_e32 v7, v7, v6
+; GFX11-NEXT:    v_sub_f16_e32 v3, v5, v4
+; GFX11-NEXT:    v_sub_f16_e32 v4, v7, v6
 ; GFX11-NEXT:    v_and_b32_e32 v0, v2, v0
 ; GFX11-NEXT:    v_and_b32_e32 v1, v2, v1
-; GFX11-NEXT:    v_sub_f16_e32 v3, v5, v4
-; GFX11-NEXT:    v_lshl_or_b32 v0, v7, 16, v0
+; GFX11-NEXT:    v_lshl_or_b32 v0, v4, 16, v0
 ; GFX11-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val = call <4 x half> @llvm.experimental.constrained.fsub.v4f16(<4 x half> %x, <4 x half> %y, metadata !"round.tonearest", metadata !"fpexcept.strict")

@@ -1099,10 +1099,9 @@ void ASTStmtReader::VisitCastExpr(CastExpr *E) {
 
 void ASTStmtReader::VisitBinaryOperator(BinaryOperator *E) {
   bool hasFP_Features;
-  BinaryOperator::Opcode opc;
   VisitExpr(E);
   E->setHasStoredFPFeatures(hasFP_Features = Record.readInt());
-  E->setOpcode(opc = (BinaryOperator::Opcode)Record.readInt());
+  E->setOpcode((BinaryOperator::Opcode)Record.readInt());
   E->setLHS(Record.readSubExpr());
   E->setRHS(Record.readSubExpr());
   E->setOperatorLoc(readSourceLocation());

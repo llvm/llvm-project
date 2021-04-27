@@ -54,6 +54,10 @@ bool Symbolizer::GetModuleNameAndOffsetForPC(uptr pc, const char **module_name,
   return false;
 }
 
+// This is mainly used by hwasan for online symbolization. This isn't needed
+// since hwasan can always just dump stack frames for offline symbolization.
+bool Symbolizer::SymbolizeFrame(uptr addr, FrameInfo *info) { return false; }
+
 // This is used in some places for suppression checking, which we
 // don't really support for Fuchsia.  It's also used in UBSan to
 // identify a PC location to a function name, so we always fill in

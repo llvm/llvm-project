@@ -2202,16 +2202,22 @@ public:
     return Count;
   }
 
-  /// Return an iterator range over \p Iter which only includes \p BlockTy
+  /// Return an iterator range over \p Range which only includes \p BlockTy
   /// blocks. The accesses are casted to \p BlockTy.
-  template <typename BlockTy, typename T> static auto blocksOnly(T Iter) {
-    // We need to first create an iterator range over VPBlockBase & instead of
-    // VPBlockBase * for filter_range to work properly.
-    auto Mapped = map_range(
-        Iter, [](VPBlockBase *Block) -> VPBlockBase & { return *Block; });
+  template <typename BlockTy, typename T>
+  static auto blocksOnly(const T &Range) {
+    // Create BaseTy with correct const-ness based on BlockTy.
+    using BaseTy =
+        typename std::conditional<std::is_const<BlockTy>::value,
+                                  const VPBlockBase, VPBlockBase>::type;
+
+    // We need to first create an iterator range over (const) BlocktTy & instead
+    // of (const) BlockTy * for filter_range to work properly.
+    auto Mapped =
+        map_range(Range, [](BaseTy *Block) -> BaseTy & { return *Block; });
     auto Filter = make_filter_range(
-        Mapped, [](VPBlockBase &Block) { return isa<BlockTy>(&Block); });
-    return map_range(Filter, [](VPBlockBase &Block) -> BlockTy * {
+        Mapped, [](BaseTy &Block) { return isa<BlockTy>(&Block); });
+    return map_range(Filter, [](BaseTy &Block) -> BlockTy * {
       return cast<BlockTy>(&Block);
     });
   }
