@@ -534,8 +534,14 @@ struct RemoveEmptyShapeOperandsPattern : public OpRewritePattern<OpTy> {
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
     auto isPotentiallyNonEmptyShape = [](Value shape) {
-      if (auto constShape = shape.getDefiningOp<ConstShapeOp>())
-        return constShape.shape().size() != 0;
+      if (auto extentTensorTy = shape.getType().dyn_cast<RankedTensorType>()) {
+        if (extentTensorTy.getDimSize(0) == 0)
+          return false;
+      }
+      if (auto constShape = shape.getDefiningOp<ConstShapeOp>()) {
+        if (constShape.shape().empty())
+          return false;
+      }
       return true;
     };
     auto newOperands = llvm::to_vector<8>(

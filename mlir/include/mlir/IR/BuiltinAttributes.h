@@ -70,6 +70,9 @@ public:
   /// Returns the number of elements held by this attribute.
   int64_t size() const { return getNumElements(); }
 
+  /// Returns if the number of elements held by this attribute is 0.
+  bool empty() const { return size() == 0; }
+
   /// Generates a new ElementsAttr by mapping each int value to a new
   /// underlying APInt. The new values can represent either an integer or float.
   /// This ElementsAttr should contain integers.
