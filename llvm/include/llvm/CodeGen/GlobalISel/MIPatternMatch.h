@@ -68,6 +68,22 @@ struct ConstantMatch {
 
 inline ConstantMatch m_ICst(int64_t &Cst) { return ConstantMatch(Cst); }
 
+struct ICstRegMatch {
+  Register &CR;
+  ICstRegMatch(Register &C) : CR(C) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    if (auto MaybeCst = getConstantVRegValWithLookThrough(
+            Reg, MRI, /*LookThroughInstrs*/ true,
+            /*HandleFConstants*/ false)) {
+      CR = MaybeCst->VReg;
+      return true;
+    }
+    return false;
+  }
+};
+
+inline ICstRegMatch m_ICst(Register &Reg) { return ICstRegMatch(Reg); }
+
 /// Matcher for a specific constant value.
 struct SpecificConstantMatch {
   int64_t RequestedVal;
