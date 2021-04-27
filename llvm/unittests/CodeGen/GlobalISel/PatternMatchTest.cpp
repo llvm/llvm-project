@@ -51,6 +51,37 @@ TEST_F(AArch64GISelMITest, MatchIntConstantRegister) {
   EXPECT_EQ(Src0, MIBCst.getReg(0));
 }
 
+TEST_F(AArch64GISelMITest, MachineInstrPtrBind) {
+  setUp();
+  if (!TM)
+    return;
+  auto MIBAdd = B.buildAdd(LLT::scalar(64), Copies[0], Copies[1]);
+  // Test 'MachineInstr *' bind.
+  // Default mi_match.
+  MachineInstr *MIPtr = MIBAdd.getInstr();
+  bool match = mi_match(MIPtr, *MRI, m_GAdd(m_Reg(), m_Reg()));
+  EXPECT_TRUE(match);
+  // Specialized mi_match for MachineInstr &.
+  MachineInstr &MI = *MIBAdd.getInstr();
+  match = mi_match(MI, *MRI, m_GAdd(m_Reg(), m_Reg()));
+  EXPECT_TRUE(match);
+  // MachineInstrBuilder has automatic conversion to MachineInstr *.
+  match = mi_match(MIBAdd, *MRI, m_GAdd(m_Reg(), m_Reg()));
+  EXPECT_TRUE(match);
+  // Match instruction without def.
+  auto MIBBrcond = B.buildBrCond(Copies[0], B.getMBB());
+  MachineInstr *MatchedMI;
+  match = mi_match(MIBBrcond, *MRI, m_MInstr(MatchedMI));
+  EXPECT_TRUE(match);
+  EXPECT_TRUE(MIBBrcond.getInstr() == MatchedMI);
+  // Match instruction with two defs.
+  auto MIBUAddO =
+      B.buildUAddo(LLT::scalar(64), LLT::scalar(1), Copies[0], Copies[1]);
+  match = mi_match(MIBUAddO, *MRI, m_MInstr(MatchedMI));
+  EXPECT_TRUE(match);
+  EXPECT_TRUE(MIBUAddO.getInstr() == MatchedMI);
+}
+
 TEST_F(AArch64GISelMITest, MatchBinaryOp) {
   setUp();
   if (!TM)
