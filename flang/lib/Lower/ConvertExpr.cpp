@@ -2682,16 +2682,12 @@ public:
     llvm::SmallVector<mlir::Value> extents;
     for (auto extent : seqTy.getShape())
       extents.push_back(builder.createIntegerConstant(loc, idxTy, extent));
-    auto getArrayBox = [&]() {
-      if constexpr (A::category == Fortran::common::TypeCategory::Character) {
-        auto len = builder.createIntegerConstant(loc, idxTy, x.LEN());
-        return fir::CharArrayBoxValue{addr, len, extents};
-      } else {
-        return fir::ArrayBoxValue{addr, extents};
-      }
-    };
-    auto lambda = genarr(getArrayBox());
-    return [=](IterSpace iters) { return lambda(iters); };
+    if (auto charTy = seqTy.getEleTy().dyn_cast<fir::CharacterType>()) {
+      auto len = builder.createIntegerConstant(loc, builder.getI64Type(),
+                                               charTy.getLen());
+      return genarr(fir::CharArrayBoxValue{addr, len, extents});
+    }
+    return genarr(fir::ArrayBoxValue{addr, extents});
   }
 
   // A vector subscript expression may be wrapped with a cast to INTEGER*8.
