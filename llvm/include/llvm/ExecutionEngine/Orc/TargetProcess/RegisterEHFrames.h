@@ -16,7 +16,6 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/Support/Error.h"
-#include <vector>
 
 namespace llvm {
 namespace orc {
