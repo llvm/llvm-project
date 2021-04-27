@@ -2964,9 +2964,7 @@ bool Generic_GCC::addLibStdCXXIncludePaths(Twine IncludeDir, StringRef Triple,
 bool Generic_GCC::addGCCLibStdCxxIncludePaths(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     StringRef DebianMultiarch) const {
-  // Use GCCInstallation to know where libstdc++ headers are installed.
-  if (!GCCInstallation.isValid())
-    return false;
+  assert(GCCInstallation.isValid());
 
   // By default, look for the C++ headers in an include directory adjacent to
   // the lib directory of the GCC installation. Note that this is expect to be
