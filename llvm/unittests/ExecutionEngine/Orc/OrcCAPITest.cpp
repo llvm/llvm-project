@@ -11,9 +11,6 @@
 #include "llvm-c/Orc.h"
 #include "gtest/gtest.h"
 
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
-
 using namespace llvm;
 
 // OrcCAPITestBase contains several helper methods and pointers for unit tests
