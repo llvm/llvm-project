@@ -192,4 +192,17 @@ body:             |
     $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     S_WAITCNT 3952
     KILL $vgpr0
+
+# Combine preexisting waitcnt with wait added to the start of a non-entry function.
+
+---
+name:            test_waitcnt_preexisting_func_start
+body:             |
+  bb.0:
+    ; GFX9-LABEL: name: test_waitcnt_preexisting_func_start
+    ; GFX9: S_WAITCNT 0
+    ; GFX9-NOT: S_WAITCNT 0
+    ; GFX9: S_ENDPGM 0
+    S_WAITCNT 0
+    S_ENDPGM 0
 ...

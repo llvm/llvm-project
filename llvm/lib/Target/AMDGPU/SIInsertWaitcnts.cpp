@@ -1600,6 +1600,28 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
   TrackedWaitcntSet.clear();
   BlockInfos.clear();
+  bool Modified = false;
+
+  if (!MFI->isEntryFunction()) {
+    // Wait for any outstanding memory operations that the input registers may
+    // depend on. We can't track them and it's better to do the wait after the
+    // costly call sequence.
+
+    // TODO: Could insert earlier and schedule more liberally with operations
+    // that only use caller preserved registers.
+    MachineBasicBlock &EntryBB = MF.front();
+    MachineBasicBlock::iterator I = EntryBB.begin();
+    for (MachineBasicBlock::iterator E = EntryBB.end();
+         I != E && (I->isPHI() || I->isMetaInstruction()); ++I)
+      ;
+    BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT)).addImm(0);
+    if (ST->hasVscnt())
+      BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT_VSCNT))
+          .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
+          .addImm(0);
+
+    Modified = true;
+  }
 
   // Keep iterating over the blocks in reverse post order, inserting and
   // updating s_waitcnt where needed, until a fix point is reached.
@@ -1607,7 +1629,6 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     BlockInfos.insert({MBB, BlockInfo(MBB)});
 
   std::unique_ptr<WaitcntBrackets> Brackets;
-  bool Modified = false;
   bool Repeat;
   do {
     Repeat = false;
@@ -1705,27 +1726,6 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
         }
       }
     }
-  }
-
-  if (!MFI->isEntryFunction()) {
-    // Wait for any outstanding memory operations that the input registers may
-    // depend on. We can't track them and it's better to the wait after the
-    // costly call sequence.
-
-    // TODO: Could insert earlier and schedule more liberally with operations
-    // that only use caller preserved registers.
-    MachineBasicBlock &EntryBB = MF.front();
-    MachineBasicBlock::iterator I = EntryBB.begin();
-    for (MachineBasicBlock::iterator E = EntryBB.end();
-         I != E && (I->isPHI() || I->isMetaInstruction()); ++I)
-      ;
-    BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT)).addImm(0);
-    if (ST->hasVscnt())
-      BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT_VSCNT))
-          .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
-          .addImm(0);
-
-    Modified = true;
   }
 
   return Modified;
