@@ -19,57 +19,6 @@
 
 namespace __tsan {
 
-const int kTracePartSizeBits = 13;
-const int kTracePartSize = 1 << kTracePartSizeBits;
-const int kTraceParts = 2 * 1024 * 1024 / kTracePartSize;
-const int kTraceSize = kTracePartSize * kTraceParts;
-
-// Must fit into 3 bits.
-enum EventType {
-  EventTypeMop,
-  EventTypeFuncEnter,
-  EventTypeFuncExit,
-  EventTypeLock,
-  EventTypeUnlock,
-  EventTypeRLock,
-  EventTypeRUnlock
-};
-
-// Represents a thread event (from most significant bit):
-// u64 typ  : 3;   // EventType.
-// u64 addr : 61;  // Associated pc.
-typedef u64 Event;
-
-const uptr kEventPCBits = 61;
-
-struct TraceHeader {
-#if !SANITIZER_GO
-  BufferedStackTrace stack0;  // Start stack for the trace.
-#else
-  VarSizeStackTrace stack0;
-#endif
-  u64        epoch0;  // Start epoch for the trace.
-  MutexSet   mset0;
-
-  TraceHeader() : stack0(), epoch0() {}
-};
-
-struct Trace {
-  Mutex mtx;
-#if !SANITIZER_GO
-  // Must be last to catch overflow as paging fault.
-  // Go shadow stack is dynamically allocated.
-  uptr shadow_stack[kShadowStackSize];
-#endif
-  // Must be the last field, because we unmap the unused part in
-  // CreateThreadContext.
-  TraceHeader headers[kTraceParts];
-
-  Trace() : mtx(MutexTypeTrace) {}
-};
-
-namespace v3 {
-
 enum class EventType : u64 {
   kAccessExt,
   kAccessRange,
@@ -217,6 +166,7 @@ struct Trace;
 struct TraceHeader {
   Trace* trace = nullptr;  // back-pointer to Trace containing this part
   INode trace_parts;       // in Trace::parts
+  INode global;            // in Contex::trace_part_recycle
 };
 
 struct TracePart : TraceHeader {
@@ -239,13 +189,26 @@ static_assert(sizeof(TracePart) == TracePart::kByteSize, "bad TracePart size");
 struct Trace {
   Mutex mtx;
   IList<TraceHeader, &TraceHeader::trace_parts, TracePart> parts;
-  Event* final_pos =
-      nullptr;  // final position in the last part for finished threads
+  // First node non-queued into ctx->trace_part_recycle.
+  TracePart* local_head;
+  // Final position in the last part for finished threads.
+  Event* final_pos = nullptr;
+  // Number of trace parts allocated on behalf of this trace specifically.
+  // Total number of parts in this trace can be larger if we retake some
+  // parts from other traces.
+  uptr parts_allocated = 0;
 
   Trace() : mtx(MutexTypeTrace) {}
-};
 
-}  // namespace v3
+  // We need at least 3 parts per thread, because we want to keep at last
+  // 2 parts per thread that are not queued into ctx->trace_part_recycle
+  // (the current one being filled and one full part that ensures that
+  // we always have at least one part worth of previous memory accesses).
+  static constexpr uptr kMinParts = 3;
+
+  static constexpr uptr kFinishedThreadLo = 16;
+  static constexpr uptr kFinishedThreadHi = 64;
+};
 
 }  // namespace __tsan
 
