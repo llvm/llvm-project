@@ -131,7 +131,6 @@ define zeroext i1 @xadd_cmp0_i64(i64* %x) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    lock xaddq %rax, (%rdi)
-; X64-NEXT:    testq %rax, %rax
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 ;
@@ -167,7 +166,6 @@ define zeroext i1 @xadd_cmp0_i32(i32* %x) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    lock xaddl %eax, (%rdi)
-; X64-NEXT:    testl %eax, %eax
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
 ;
@@ -176,7 +174,6 @@ define zeroext i1 @xadd_cmp0_i32(i32* %x) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl $1, %ecx
 ; X86-NEXT:    lock xaddl %ecx, (%eax)
-; X86-NEXT:    testl %ecx, %ecx
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
   %add = atomicrmw add i32* %x, i32 1 seq_cst
@@ -189,7 +186,6 @@ define zeroext i1 @xadd_cmp0_i16(i16* %x) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movw $1, %ax
 ; X64-NEXT:    lock xaddw %ax, (%rdi)
-; X64-NEXT:    testw %ax, %ax
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 ;
@@ -198,7 +194,6 @@ define zeroext i1 @xadd_cmp0_i16(i16* %x) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movw $1, %cx
 ; X86-NEXT:    lock xaddw %cx, (%eax)
-; X86-NEXT:    testw %cx, %cx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
   %add = atomicrmw add i16* %x, i16 1 seq_cst
@@ -211,7 +206,6 @@ define zeroext i1 @xadd_cmp0_i8(i8* %x) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movb $1, %al
 ; X64-NEXT:    lock xaddb %al, (%rdi)
-; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
 ;
@@ -220,7 +214,6 @@ define zeroext i1 @xadd_cmp0_i8(i8* %x) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb $1, %cl
 ; X86-NEXT:    lock xaddb %cl, (%eax)
-; X86-NEXT:    testb %cl, %cl
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
   %add = atomicrmw add i8* %x, i8 1 seq_cst
