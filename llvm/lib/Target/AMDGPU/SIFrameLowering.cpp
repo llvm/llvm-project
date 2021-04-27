@@ -120,6 +120,7 @@ static void getVGPRSpillLaneOrTempRegister(MachineFunction &MF,
 static void buildPrologSpill(const GCNSubtarget &ST, const SIRegisterInfo &TRI,
                              const SIMachineFunctionInfo &FuncInfo,
                              LivePhysRegs &LiveRegs, MachineFunction &MF,
+                             MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator I, Register SpillReg,
                              int FI, int64_t DwordOff = 0) {
   unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
@@ -131,7 +132,7 @@ static void buildPrologSpill(const GCNSubtarget &ST, const SIRegisterInfo &TRI,
       PtrInfo, MachineMemOperand::MOStore, FrameInfo.getObjectSize(FI),
       FrameInfo.getObjectAlign(FI));
   LiveRegs.addReg(SpillReg);
-  TRI.buildSpillLoadStore(I, Opc, FI, SpillReg, true,
+  TRI.buildSpillLoadStore(MBB, I, Opc, FI, SpillReg, true,
                           FuncInfo.getStackPtrOffsetReg(), DwordOff, MMO,
                           nullptr, &LiveRegs);
   LiveRegs.removeReg(SpillReg);
@@ -141,6 +142,7 @@ static void buildEpilogRestore(const GCNSubtarget &ST,
                                const SIRegisterInfo &TRI,
                                const SIMachineFunctionInfo &FuncInfo,
                                LivePhysRegs &LiveRegs, MachineFunction &MF,
+                               MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I, Register SpillReg,
                                int FI) {
   unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
@@ -151,7 +153,7 @@ static void buildEpilogRestore(const GCNSubtarget &ST,
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       PtrInfo, MachineMemOperand::MOLoad, FrameInfo.getObjectSize(FI),
       FrameInfo.getObjectAlign(FI));
-  TRI.buildSpillLoadStore(I, Opc, FI, SpillReg, false,
+  TRI.buildSpillLoadStore(MBB, I, Opc, FI, SpillReg, false,
                           FuncInfo.getStackPtrOffsetReg(), 0, MMO, nullptr,
                           &LiveRegs);
 }
@@ -836,14 +838,14 @@ void SIFrameLowering::emitCFISavedRegSpills(MachineFunction &MF,
           .addReg(TRI.getSubReg(RetAddrReg, AMDGPU::sub0));
 
       int DwordOff = 0;
-      buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBBI, TmpVGPR, FI,
+      buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, TmpVGPR, FI,
                        DwordOff);
 
       BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_MOV_B32_e32), TmpVGPR)
           .addReg(TRI.getSubReg(RetAddrReg, AMDGPU::sub1));
 
       DwordOff = 4;
-      buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBBI, TmpVGPR, FI,
+      buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, TmpVGPR, FI,
                        DwordOff);
 
       buildCFI(MBB, MBBI, DL,
@@ -870,7 +872,7 @@ void SIFrameLowering::emitCFISavedRegSpills(MachineFunction &MF,
           .addReg(TRI.getSubReg(ScratchExecCopy, AMDGPU::sub0));
 
       int DwordOff = 0;
-      buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBBI, TmpVGPR, FI,
+      buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, TmpVGPR, FI,
                        DwordOff);
 
       if (!ST.isWave32()) {
@@ -878,8 +880,8 @@ void SIFrameLowering::emitCFISavedRegSpills(MachineFunction &MF,
             .addReg(TRI.getSubReg(ScratchExecCopy, AMDGPU::sub1));
 
         DwordOff = 4;
-        buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBBI, TmpVGPR, FI,
-                         DwordOff);
+        buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, TmpVGPR,
+                         FI, DwordOff);
       }
 
       buildCFI(MBB, MBBI, DL,
@@ -993,7 +995,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
       ScratchExecCopy = buildScratchExecCopy(LiveRegs, MF, MBB, MBBI,
                                              /*IsProlog*/ true);
 
-    buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBBI, Reg.VGPR, *Reg.FI);
+    buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, Reg.VGPR,
+                     *Reg.FI);
 
     if (needsFrameMoves)
       // We spill the entire VGPR, so we can get away with just cfi_offset
@@ -1032,7 +1035,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_MOV_B32_e32), TmpVGPR)
         .addReg(FramePtrReg);
 
-    buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBBI, TmpVGPR,
+    buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, TmpVGPR,
                      FramePtrFI);
     if (needsFrameMoves)
       buildCFI(MBB, MBBI, DL,
@@ -1055,7 +1058,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_MOV_B32_e32), TmpVGPR)
         .addReg(BasePtrReg);
 
-    buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBBI, TmpVGPR,
+    buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, TmpVGPR,
                      BasePtrFI);
     if (needsFrameMoves)
       buildCFI(MBB, MBBI, DL,
@@ -1286,7 +1289,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
           MRI, LiveRegs, AMDGPU::VGPR_32RegClass);
       if (!TmpVGPR)
         report_fatal_error("failed to find free scratch register");
-      buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBBI, TmpVGPR,
+      buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, TmpVGPR,
                          FramePtrFI);
       BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), FramePtrReg)
           .addReg(TmpVGPR, RegState::Kill);
@@ -1321,7 +1324,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
           MRI, LiveRegs, AMDGPU::VGPR_32RegClass);
       if (!TmpVGPR)
         report_fatal_error("failed to find free scratch register");
-      buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBBI, TmpVGPR,
+      buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, TmpVGPR,
                          BasePtrFI);
       BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), BasePtrReg)
           .addReg(TmpVGPR, RegState::Kill);
@@ -1347,7 +1350,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
       ScratchExecCopy =
           buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, /*IsProlog*/ false);
 
-    buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBBI, Reg.VGPR,
+    buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, Reg.VGPR,
                        *Reg.FI);
   }
 
