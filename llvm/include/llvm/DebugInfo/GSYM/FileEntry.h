@@ -13,7 +13,6 @@
 #include "llvm/ADT/Hashing.h"
 #include <functional>
 #include <stdint.h>
-#include <utility>
 
 namespace llvm {
 namespace gsym {
