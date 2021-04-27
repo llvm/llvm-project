@@ -48,16 +48,20 @@ public:
       return;
     }
 
-    char *Triple = LLVMOrcJITTargetMachineBuilderGetTargetTriple(JTMB);
-    if (!isSupported(Triple)) {
+    // Capture the target triple. We'll use it for both verification that
+    // this target is *supposed* to be supported, and error messages in
+    // the case that it fails anyway.
+    char *TT = LLVMOrcJITTargetMachineBuilderGetTargetTriple(JTMB);
+    TargetTriple = TT;
+    LLVMOrcJITTargetMachineBuilderDisposeTargetTriple(JTMB, TT);
+
+    if (!isSupported(TargetTriple)) {
       // If this triple isn't supported then bail out.
       TargetSupported = false;
-      LLVMOrcJITTargetMachineBuilderDisposeTargetTriple(JTMB, Triple);
       LLVMOrcDisposeJITTargetMachineBuilder(JTMB);
       return;
     }
 
-    LLVMOrcJITTargetMachineBuilderDisposeTargetTriple(JTMB, Triple);
     LLVMOrcLLJITBuilderRef Builder = LLVMOrcCreateLLJITBuilder();
     LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(Builder, JTMB);
     LLVMOrcLLJITRef J;
@@ -149,9 +153,11 @@ protected:
     return TSM;
   }
 
+  static std::string TargetTriple;
   static bool TargetSupported;
 };
 
+std::string OrcCAPITestBase::TargetTriple;
 bool OrcCAPITestBase::TargetSupported = false;
 
 TEST_F(OrcCAPITestBase, SymbolStringPoolUniquing) {
@@ -208,7 +214,8 @@ TEST_F(OrcCAPITestBase, MaterializationUnitCreation) {
   LLVMOrcJITDylibDefine(MainDylib, MU);
   LLVMOrcJITTargetAddress OutAddr;
   if (LLVMOrcLLJITLookup(Jit, &OutAddr, "test")) {
-    FAIL() << "Failed to look up \"test\" symbol";
+    FAIL() << "Failed to look up \"test\" symbol (triple = "
+           << TargetTriple << ")";
   }
   ASSERT_EQ(Addr, OutAddr);
 }
@@ -225,7 +232,8 @@ TEST_F(OrcCAPITestBase, DefinitionGenerators) {
   LLVMOrcJITDylibAddGenerator(MainDylib, Gen);
   LLVMOrcJITTargetAddress OutAddr;
   if (LLVMOrcLLJITLookup(Jit, &OutAddr, "test")) {
-    FAIL() << "The DefinitionGenerator did not create symbol \"test\"";
+    FAIL() << "The DefinitionGenerator did not create symbol \"test\" "
+           << "(triple = " << TargetTriple << ")";
   }
   LLVMOrcJITTargetAddress ExpectedAddr =
       (LLVMOrcJITTargetAddress)(&materializationUnitFn);
@@ -245,11 +253,13 @@ TEST_F(OrcCAPITestBase, ResourceTrackerDefinitionLifetime) {
       LLVMOrcJITDylibCreateResourceTracker(MainDylib);
   LLVMOrcThreadSafeModuleRef TSM = createTestModule();
   if (LLVMErrorRef E = LLVMOrcLLJITAddLLVMIRModuleWithRT(Jit, RT, TSM)) {
-    FAIL() << "Failed to add LLVM IR module to LLJIT";
+    FAIL() << "Failed to add LLVM IR module to LLJIT (triple = "
+           << TargetTriple << ")";
   }
   LLVMOrcJITTargetAddress TestFnAddr;
   if (LLVMOrcLLJITLookup(Jit, &TestFnAddr, "sum")) {
-    FAIL() << "Symbol \"sum\" was not added into JIT";
+    FAIL() << "Symbol \"sum\" was not added into JIT (triple = "
+           << TargetTriple << ")";
   }
   ASSERT_TRUE(!!TestFnAddr);
   LLVMOrcResourceTrackerRemove(RT);
@@ -273,11 +283,13 @@ TEST_F(OrcCAPITestBase, ResourceTrackerTransfer) {
       LLVMOrcJITDylibCreateResourceTracker(MainDylib);
   LLVMOrcThreadSafeModuleRef TSM = createTestModule();
   if (LLVMErrorRef E = LLVMOrcLLJITAddLLVMIRModuleWithRT(Jit, DefaultRT, TSM)) {
-    FAIL() << "Failed to add LLVM IR module to LLJIT";
+    FAIL() << "Failed to add LLVM IR module to LLJIT (triple = "
+           << TargetTriple << ")";
   }
   LLVMOrcJITTargetAddress Addr;
   if (LLVMOrcLLJITLookup(Jit, &Addr, "sum")) {
-    FAIL() << "Symbol \"sum\" was not added into JIT";
+    FAIL() << "Symbol \"sum\" was not added into JIT (triple = "
+           << TargetTriple << ")";
   }
   LLVMOrcResourceTrackerTransferTo(DefaultRT, RT2);
   LLVMErrorRef Err = LLVMOrcLLJITLookup(Jit, &Addr, "sum");
@@ -298,12 +310,14 @@ TEST_F(OrcCAPITestBase, ExecutionTest) {
   LLVMOrcThreadSafeModuleRef TSM = createTestModule();
   if (LLVMErrorRef E = LLVMOrcLLJITAddLLVMIRModule(Jit, MainDylib, TSM)) {
     LLVMConsumeError(E);
-    FAIL() << "Failed to add LLVM IR module to LLJIT";
+    FAIL() << "Failed to add LLVM IR module to LLJIT (triple = "
+           << TargetTriple << ")";
   }
   LLVMOrcJITTargetAddress TestFnAddr;
   if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &TestFnAddr, "sum")) {
     LLVMConsumeError(E);
-    FAIL() << "Symbol \"sum\" was not added into JIT";
+    FAIL() << "Symbol \"sum\" was not added into JIT (triple = "
+           << TargetTriple << ")";
   }
   auto *SumFn = (SumFunctionType)(TestFnAddr);
   int32_t Result = SumFn(1, 1);
