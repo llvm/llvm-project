@@ -106,7 +106,7 @@ void __tsan_java_free(jptr ptr, jptr size) {
   DCHECK_GE(ptr, jctx->heap_begin);
   DCHECK_LE(ptr + size, jctx->heap_begin + jctx->heap_size);
 
-  ctx->metamap.FreeRange(thr->proc(), ptr, size);
+  ctx->metamap.FreeRange(thr->proc(), ptr, size, false);
 }
 
 void __tsan_java_move(jptr src, jptr dst, jptr size) {
@@ -133,7 +133,7 @@ void __tsan_java_move(jptr src, jptr dst, jptr size) {
   // support that anymore as it contains addresses of accesses.
   RawShadow *d = MemToShadow(dst);
   RawShadow *dend = MemToShadow(dst + size);
-  internal_memset(d, 0, (dend - d) * sizeof(*d));
+  ShadowSet(d, dend, Shadow::kEmpty);
 }
 
 jptr __tsan_java_find(jptr *from_ptr, jptr to) {
