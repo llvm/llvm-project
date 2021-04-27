@@ -135,7 +135,8 @@ NativeProcessNetBSD::Factory::Attach(
 
 NativeProcessNetBSD::Extension
 NativeProcessNetBSD::Factory::GetSupportedExtensions() const {
-  return Extension::multiprocess | Extension::fork | Extension::vfork;
+  return Extension::multiprocess | Extension::fork | Extension::vfork |
+         Extension::pass_signals | Extension::auxv | Extension::libraries_svr4;
 }
 
 // Public Instance Methods

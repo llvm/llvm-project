@@ -998,14 +998,17 @@ void MipsGotSection::build() {
     for (std::pair<Symbol *, size_t> &p : got.tls) {
       Symbol *s = p.first;
       uint64_t offset = p.second * config->wordsize;
-      if (s->isPreemptible)
+      // When building a shared library we still need a dynamic relocation
+      // for the TP-relative offset as we don't know how much other data will
+      // be allocated before us in the static TLS block.
+      if (s->isPreemptible || config->shared)
         mainPart->relaDyn->addReloc(target->tlsGotRel, this, offset, s);
     }
     for (std::pair<Symbol *, size_t> &p : got.dynTlsSymbols) {
       Symbol *s = p.first;
       uint64_t offset = p.second * config->wordsize;
       if (s == nullptr) {
-        if (!config->isPic)
+        if (!config->shared)
           continue;
         mainPart->relaDyn->addReloc(target->tlsModuleIndexRel, this, offset, s);
       } else {
@@ -1013,7 +1016,7 @@ void MipsGotSection::build() {
         // for the module index. Therefore only checking for
         // S->isPreemptible is not sufficient (this happens e.g. for
         // thread-locals that have been marked as local through a linker script)
-        if (!s->isPreemptible && !config->isPic)
+        if (!s->isPreemptible && !config->shared)
           continue;
         mainPart->relaDyn->addReloc(target->tlsModuleIndexRel, this, offset, s);
         // However, we can skip writing the TLS offset reloc for non-preemptible
@@ -1117,15 +1120,16 @@ void MipsGotSection::writeTo(uint8_t *buf) {
     for (const std::pair<Symbol *, size_t> &p : g.relocs)
       write(p.second, p.first, 0);
     for (const std::pair<Symbol *, size_t> &p : g.tls)
-      write(p.second, p.first, p.first->isPreemptible ? 0 : -0x7000);
+      write(p.second, p.first,
+            p.first->isPreemptible || config->shared ? 0 : -0x7000);
     for (const std::pair<Symbol *, size_t> &p : g.dynTlsSymbols) {
-      if (p.first == nullptr && !config->isPic)
+      if (p.first == nullptr && !config->shared)
         write(p.second, nullptr, 1);
       else if (p.first && !p.first->isPreemptible) {
-        // If we are emitting PIC code with relocations we mustn't write
+        // If we are emitting a shared libary with relocations we mustn't write
         // anything to the GOT here. When using Elf_Rel relocations the value
         // one will be treated as an addend and will cause crashes at runtime
-        if (!config->isPic)
+        if (!config->shared)
           write(p.second, nullptr, 1);
         write(p.second + 1, p.first, -0x8000);
       }

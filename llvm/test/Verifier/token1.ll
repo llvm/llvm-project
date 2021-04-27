@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not --crash llvm-as %s -o /dev/null 2>&1 | FileCheck %s
 
 define void @f(token %A, token %B) {
 entry:
