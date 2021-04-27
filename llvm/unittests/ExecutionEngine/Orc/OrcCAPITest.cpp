@@ -213,7 +213,8 @@ TEST_F(OrcCAPITestBase, MaterializationUnitCreation) {
   LLVMOrcMaterializationUnitRef MU = LLVMOrcAbsoluteSymbols(Pairs, 1);
   LLVMOrcJITDylibDefine(MainDylib, MU);
   LLVMOrcJITTargetAddress OutAddr;
-  if (LLVMOrcLLJITLookup(Jit, &OutAddr, "test")) {
+  if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &OutAddr, "test")) {
+    LLVMConsumeError(E);
     FAIL() << "Failed to look up \"test\" symbol (triple = "
            << TargetTriple << ")";
   }
@@ -231,7 +232,8 @@ TEST_F(OrcCAPITestBase, DefinitionGenerators) {
                                                  nullptr);
   LLVMOrcJITDylibAddGenerator(MainDylib, Gen);
   LLVMOrcJITTargetAddress OutAddr;
-  if (LLVMOrcLLJITLookup(Jit, &OutAddr, "test")) {
+  if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &OutAddr, "test")) {
+    LLVMConsumeError(E);
     FAIL() << "The DefinitionGenerator did not create symbol \"test\" "
            << "(triple = " << TargetTriple << ")";
   }
@@ -253,11 +255,13 @@ TEST_F(OrcCAPITestBase, ResourceTrackerDefinitionLifetime) {
       LLVMOrcJITDylibCreateResourceTracker(MainDylib);
   LLVMOrcThreadSafeModuleRef TSM = createTestModule();
   if (LLVMErrorRef E = LLVMOrcLLJITAddLLVMIRModuleWithRT(Jit, RT, TSM)) {
+    LLVMConsumeError(E);
     FAIL() << "Failed to add LLVM IR module to LLJIT (triple = "
            << TargetTriple << ")";
   }
   LLVMOrcJITTargetAddress TestFnAddr;
-  if (LLVMOrcLLJITLookup(Jit, &TestFnAddr, "sum")) {
+  if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &TestFnAddr, "sum")) {
+    LLVMConsumeError(E);
     FAIL() << "Symbol \"sum\" was not added into JIT (triple = "
            << TargetTriple << ")";
   }
@@ -283,11 +287,13 @@ TEST_F(OrcCAPITestBase, ResourceTrackerTransfer) {
       LLVMOrcJITDylibCreateResourceTracker(MainDylib);
   LLVMOrcThreadSafeModuleRef TSM = createTestModule();
   if (LLVMErrorRef E = LLVMOrcLLJITAddLLVMIRModuleWithRT(Jit, DefaultRT, TSM)) {
+    LLVMConsumeError(E);
     FAIL() << "Failed to add LLVM IR module to LLJIT (triple = "
            << TargetTriple << ")";
   }
   LLVMOrcJITTargetAddress Addr;
-  if (LLVMOrcLLJITLookup(Jit, &Addr, "sum")) {
+  if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &Addr, "sum")) {
+    LLVMConsumeError(E);
     FAIL() << "Symbol \"sum\" was not added into JIT (triple = "
            << TargetTriple << ")";
   }
