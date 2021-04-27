@@ -40,6 +40,17 @@ TEST_F(AArch64GISelMITest, MatchIntConstant) {
   EXPECT_EQ(Cst, 42);
 }
 
+TEST_F(AArch64GISelMITest, MatchIntConstantRegister) {
+  setUp();
+  if (!TM)
+    return;
+  auto MIBCst = B.buildConstant(LLT::scalar(64), 42);
+  Register Src0;
+  bool match = mi_match(MIBCst.getReg(0), *MRI, m_ICst(Src0));
+  EXPECT_TRUE(match);
+  EXPECT_EQ(Src0, MIBCst.getReg(0));
+}
+
 TEST_F(AArch64GISelMITest, MatchBinaryOp) {
   setUp();
   if (!TM)
