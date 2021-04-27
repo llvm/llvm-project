@@ -1330,8 +1330,8 @@ static unsigned setBufferOffsets(MachineIRBuilder &B,
       AMDGPU::getBaseWithConstantOffset(*MRI, CombinedOffset);
 
   uint32_t SOffset, ImmOffset;
-  if (Offset > 0 && AMDGPU::splitMUBUFOffset(Offset, SOffset, ImmOffset,
-                                             &RBI.Subtarget, Alignment)) {
+  if ((int)Offset > 0 && AMDGPU::splitMUBUFOffset(Offset, SOffset, ImmOffset,
+                                                  &RBI.Subtarget, Alignment)) {
     if (RBI.getRegBank(Base, *MRI, *RBI.TRI) == &AMDGPU::VGPRRegBank) {
       VOffsetReg = Base;
       SOffsetReg = B.buildConstant(S32, SOffset).getReg(0);
@@ -1351,7 +1351,8 @@ static unsigned setBufferOffsets(MachineIRBuilder &B,
   }
 
   // Handle the variable sgpr + vgpr case.
-  if (MachineInstr *Add = getOpcodeDef(AMDGPU::G_ADD, CombinedOffset, *MRI)) {
+  MachineInstr *Add = getOpcodeDef(AMDGPU::G_ADD, CombinedOffset, *MRI);
+  if (Add && (int)Offset >= 0) {
     Register Src0 = getSrcRegIgnoringCopies(*MRI, Add->getOperand(1).getReg());
     Register Src1 = getSrcRegIgnoringCopies(*MRI, Add->getOperand(2).getReg());
 
