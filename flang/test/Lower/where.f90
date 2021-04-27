@@ -8,9 +8,9 @@
    ! CHECK-DAG: %[[b:.*]] = fir.address_of(@_QEb) : !fir.ref<!fir.array<10xf32>>
    ! CHECK-DAG: fir.array_load %[[b]](%{{.*}}) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.array<10xf32>
    ! CHECK-DAG: fir.array_load %[[a]](%{{.*}}) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.array<10xf32>
+   ! CHECK-DAG: %[[four:.*]] = constant 4.0{{.*}} : f32
    ! CHECK: %[[tvec:.*]] = fir.allocmem !fir.array<10x!fir.logical
    ! CHECK-DAG: fir.array_load %[[tvec]]
-   ! CHECK-DAG: %[[four:.*]] = constant 4.0{{.*}} : f32
    ! CHECK: fir.do_loop
    ! CHECK: fir.cmpf "ogt", %{{.*}}, %[[four]]
    ! CHECK: fir.array_merge_store %{{.*}}, %{{.*}} to %[[tvec]]
@@ -30,10 +30,10 @@
    ! Test that the basic structure is correct
    where (a > 100.0)
    ! loop with an if
-     ! CHECK: %[[tvec:.*]] = fir.allocmem !fir.array<10x!fir.logical
-     ! CHECK: fir.array_load
      ! CHECK: fir.array_load
      ! CHECK: %[[cst:.*]] = constant 1.0{{.*}}2 : f32
+     ! CHECK: %[[tvec:.*]] = fir.allocmem !fir.array<10x!fir.logical
+     ! CHECK: fir.array_load
      ! CHECK: fir.do_loop
      ! CHECK: fir.cmpf "ogt", %{{.*}}, %[[cst]]
      ! CHECK: fir.array_merge_store %{{.*}}, %{{.*}} to %[[tvec]]
@@ -50,10 +50,10 @@
      b = 2.0 * a
    elsewhere (a > 50.0)
    ! loop with else if
-     ! CHECK: %[[uvec:.*]] = fir.allocmem !fir.array<10x!fir.logical
-     ! CHECK: fir.array_load
      ! CHECK: fir.array_load
      ! CHECK: %[[cst50:.*]] = constant 5.0{{.*}}1 : f32
+     ! CHECK: %[[uvec:.*]] = fir.allocmem !fir.array<10x!fir.logical
+     ! CHECK: fir.array_load
      ! CHECK: fir.do_loop
      ! CHECK: fir.cmpf "ogt", %{{.*}}, %[[cst50]]
      ! CHECK: fir.array_merge_store %{{.*}}, %{{.*}} to %[[uvec]]

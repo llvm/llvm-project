@@ -288,8 +288,8 @@ mlir::Value readLowerBound(FirOpBuilder &, mlir::Location,
                            mlir::Value defaultValue);
 
 /// Read extents from an BoxValue into \p result.
-void readExtents(FirOpBuilder &, mlir::Location, const fir::BoxValue &,
-                 llvm::SmallVectorImpl<mlir::Value> &result);
+llvm::SmallVector<mlir::Value> readExtents(FirOpBuilder &, mlir::Location,
+                                           const fir::BoxValue &);
 
 //===--------------------------------------------------------------------===//
 // String literal helper helpers

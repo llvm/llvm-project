@@ -96,21 +96,13 @@ void createMaskedArrayAssignment(AbstractConverter &converter,
                                  Fortran::lower::MaskExpr &masks,
                                  SymMap &symMap, StatementContext &stmtCtx);
 
-/// Create an array temporary.
-/// When lowering an array expression, it may be necessary to allocate temporary
-/// space for a ephemeral array value to be stored.
-fir::AllocMemOp
-createSomeArrayTemp(AbstractConverter &converter,
-                    const evaluate::Expr<evaluate::SomeType> &expr,
-                    SymMap &symMap, StatementContext &stmtCtx);
-
 /// Lower an array expression with "parallel" semantics. Such a rhs expression
-/// is fully evaluated prior to being assigned back to the destination array.
+/// is fully evaluated prior to being assigned back to a temporary array.
 fir::ExtendedValue
-createSomeNewArrayValue(AbstractConverter &converter, fir::ArrayLoadOp dst,
-                        const std::optional<evaluate::Shape> &shape,
-                        const evaluate::Expr<evaluate::SomeType> &expr,
-                        SymMap &symMap, StatementContext &stmtCtx);
+createSomeArrayTempValue(AbstractConverter &converter,
+                         const std::optional<evaluate::Shape> &shape,
+                         const evaluate::Expr<evaluate::SomeType> &expr,
+                         SymMap &symMap, StatementContext &stmtCtx);
 
 /// Lower an array expression to a value of type box.
 fir::ExtendedValue

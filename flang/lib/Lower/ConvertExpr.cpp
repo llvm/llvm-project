@@ -1783,40 +1783,11 @@ public:
 
   template <typename A>
   fir::ExtendedValue asArray(const A &x) {
-    auto temp = createSomeArrayTemp(converter, toEvExpr(x), symMap, stmtCtx);
-    auto arrTy = fir::dyn_cast_ptrEleTy(temp.getType())
-                     .template cast<fir::SequenceType>();
-    auto arrShape = arrTy.getShape();
-    auto shapeTy = fir::ShapeType::get(builder.getContext(), arrShape.size());
-    auto idxTy = builder.getIndexType();
-    llvm::SmallVector<mlir::Value> exprShape;
-    auto loc = getLoc();
-    if (arrTy.hasConstantShape()) {
-      for (auto s : arrShape)
-        exprShape.push_back(builder.createIntegerConstant(loc, idxTy, s));
-    } else {
-      for (auto s : temp.getShapeOperands())
-        exprShape.push_back(builder.createConvert(loc, idxTy, s));
-    }
-    auto shape = builder.create<fir::ShapeOp>(loc, shapeTy, exprShape);
-    mlir::Value slice;
-    auto arrLd = builder.create<fir::ArrayLoadOp>(loc, arrTy, temp, shape,
-                                                  slice, temp.typeparams());
-    auto loopRes = Fortran::lower::createSomeNewArrayValue(
-        converter, arrLd, {}, toEvExpr(x), symMap, stmtCtx);
-    auto tempRes = temp.getResult();
-    builder.create<fir::ArrayMergeStoreOp>(loc, arrLd, fir::getBase(loopRes),
-                                           tempRes, temp.typeparams());
-    if (auto charTy =
-            arrTy.getEleTy().template dyn_cast<fir::CharacterType>()) {
-      auto len =
-          charTy.hasConstantLen()
-              ? builder.createIntegerConstant(
-                    loc, builder.getCharacterLengthType(), charTy.getLen())
-              : temp.typeparams()[0];
-      return fir::CharArrayBoxValue(tempRes, len, exprShape);
-    }
-    return fir::ArrayBoxValue(tempRes, exprShape);
+    auto expr = toEvExpr(x);
+    auto optShape =
+        Fortran::evaluate::GetShape(converter.getFoldingContext(), expr);
+    return Fortran::lower::createSomeArrayTempValue(converter, optShape, expr,
+                                                    symMap, stmtCtx);
   }
 
   /// Lower an array value as an argument. This argument can be passed as a box
@@ -2080,14 +2051,33 @@ public:
 
   /// Entry point into lowering an expression with rank. This entry point is for
   /// lowering a rhs expression, for example. (RefTransparent semantics.)
-  static ExtValue lowerArrayExpression(
+  static ExtValue lowerSomeNewArrayExpression(
       Fortran::lower::AbstractConverter &converter,
       Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
-      fir::ArrayLoadOp dst,
       const std::optional<Fortran::evaluate::Shape> &shape,
       const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr) {
-    ArrayExprLowering ael{converter, stmtCtx, symMap, dst, shape};
-    return ael.lowerArrayExpression(expr);
+
+    ArrayExprLowering ael{converter, stmtCtx, symMap, /*destination=*/{},
+                          shape};
+    auto loopRes = ael.lowerArrayExpression(expr);
+    auto dest = ael.destination;
+    auto tempRes = dest.memref();
+    auto &builder = converter.getFirOpBuilder();
+    auto loc = converter.getCurrentLocation();
+    builder.create<fir::ArrayMergeStoreOp>(loc, dest, fir::getBase(loopRes),
+                                           tempRes, dest.typeparams());
+
+    auto arrTy =
+        fir::dyn_cast_ptrEleTy(tempRes.getType()).cast<fir::SequenceType>();
+    if (auto charTy =
+            arrTy.getEleTy().template dyn_cast<fir::CharacterType>()) {
+      if (charTy.getLen() <= 0)
+        TODO(loc, "CHARACTER does not have constant LEN");
+      auto len = builder.createIntegerConstant(
+          loc, builder.getCharacterLengthType(), charTy.getLen());
+      return fir::CharArrayBoxValue(tempRes, len, dest.getExtents());
+    }
+    return fir::ArrayBoxValue(tempRes, dest.getExtents());
   }
 
   /// CHARACTER and derived type elements are treated as memory references. The
@@ -2111,11 +2101,12 @@ public:
   /// 4. Return the resulting array value.
   ExtValue lowerArrayExpression(
       const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &exp) {
+    auto resultType = converter.genType(exp);
     return std::visit(
         [&](const auto &e) {
           auto loc = getLoc();
           auto f = genarr(e);
-          auto [iterSpace, insPt] = genIterSpace();
+          auto [iterSpace, insPt] = genIterSpace(resultType);
           auto innerArg = iterSpace.innerArgument();
           // Convert to array elemental type is needed for logical.
           auto eleTy = innerArg.getType().cast<fir::SequenceType>().getEleTy();
@@ -2146,8 +2137,74 @@ public:
         exp.u);
   }
 
+  /// Compute the shape of a slice.
+  llvm::SmallVector<mlir::Value> computeSliceShape(mlir::Value slice) {
+    llvm::SmallVector<mlir::Value> slicedShape;
+    auto slOp = mlir::cast<fir::SliceOp>(slice.getDefiningOp());
+    auto triples = slOp.triples();
+    auto idxTy = builder.getIndexType();
+    auto loc = getLoc();
+    for (unsigned i = 0, end = triples.size(); i < end; i += 3) {
+      if (!mlir::isa_and_nonnull<fir::UndefOp>(
+              triples[i + 1].getDefiningOp())) {
+        // (..., lb:ub:step, ...) case:  extent = (ub-lb+step)/step
+        auto lb = builder.createConvert(loc, idxTy, triples[i]);
+        auto ub = builder.createConvert(loc, idxTy, triples[i + 1]);
+        auto step = builder.createConvert(loc, idxTy, triples[i + 2]);
+        auto diff = builder.create<mlir::SubIOp>(loc, ub, lb);
+        auto add = builder.create<mlir::AddIOp>(loc, diff, step);
+        slicedShape.emplace_back(
+            builder.create<mlir::SignedDivIOp>(loc, add, step));
+      }
+      // else (..., i, ...) case: dimension is dropped (do nothing).
+    }
+    return slicedShape;
+  }
+
+  /// Get the shape from an array load.
+  llvm::SmallVector<mlir::Value> getShape(fir::ArrayLoadOp arrayLoad) {
+    if (arrayLoad.slice())
+      return computeSliceShape(arrayLoad.slice());
+    auto memref = arrayLoad.memref();
+    if (memref.getType().isa<fir::BoxType>())
+      return Fortran::lower::readExtents(builder, getLoc(),
+                                         fir::BoxValue{memref});
+    auto extents = arrayLoad.getExtents();
+    return {extents.begin(), extents.end()};
+  }
+
+  /// Generate the shape of the array expressions based on the destination and
+  /// operand array loads, or the optional evaluate::Shape.
+  llvm::SmallVector<mlir::Value> genIterationShape() {
+    // Use the optional evaluate::Shape if it has constant expressions,
+    // otherwise, use the runtime destination or operand shapes. This could be
+    // finned to find the shape that is the most expressive (for instance, the
+    // one with the most constant extents).
+    auto loc = getLoc();
+    auto destShapeIsConstant = [&](const auto &shape) -> bool {
+      for (const auto &s : shape)
+        if (!s || !Fortran::evaluate::IsConstantExpr(*s))
+          return false;
+      return true;
+    };
+    if (destShape.has_value() && destShapeIsConstant(*destShape)) {
+      auto idxTy = builder.getIndexType();
+      llvm::SmallVector<mlir::Value> shape;
+      for (const auto &s : *destShape)
+        shape.emplace_back(builder.createConvert(
+            loc, idxTy, convertOptExtentExpr(converter, stmtCtx, s)));
+      return shape;
+    }
+    if (destination)
+      return getShape(destination);
+    if (!arrayOperandLoads.empty())
+      return getShape(arrayOperandLoads[0]);
+    fir::emitFatalError(loc, "failed to compute the array expression shape");
+  }
+
   /// Build the iteration space into which the array expression will be lowered.
-  std::pair<IterationSpace, mlir::OpBuilder::InsertPoint> genIterSpace() {
+  std::pair<IterationSpace, mlir::OpBuilder::InsertPoint>
+  genIterSpace(mlir::Type resultType) {
     auto loc = getLoc();
     auto idxTy = builder.getIndexType();
     auto zero = builder.createIntegerConstant(loc, idxTy, 0);
@@ -2165,22 +2222,15 @@ public:
         }
     }
 
+    auto shape = genIterationShape();
+    // Allocate a storage for the result is it is not already provided.
+    if (!destination)
+      destination = createAndLoadSomeArrayTemp(resultType, shape);
     // Convert the shape to closed interval form.
-    if (destShape.has_value()) {
-      // Use the shape provided.
-      for (const auto &s : *destShape) {
-        auto ub = builder.createConvert(
-            loc, idxTy, convertOptExtentExpr(converter, stmtCtx, s));
-        auto up = builder.create<mlir::SubIOp>(loc, ub, one);
-        loopUppers.push_back(up);
-      }
-    } else {
-      // Otherwise, use the array's declared shape.
-      for (auto s : destination.getExtents()) {
-        auto ub = builder.createConvert(loc, idxTy, s);
-        auto up = builder.create<mlir::SubIOp>(loc, ub, one);
-        loopUppers.push_back(up);
-      }
+    for (auto extent : shape) {
+      auto ub = builder.createConvert(loc, idxTy, extent);
+      auto up = builder.create<mlir::SubIOp>(loc, ub, one);
+      loopUppers.push_back(up);
     }
 
     // Iteration space is created with outermost columns, innermost rows
@@ -2266,6 +2316,38 @@ public:
 
     // We're ready to lower the body of this loop nest now.
     return {iters, insPt};
+  }
+
+  fir::ArrayLoadOp
+  createAndLoadSomeArrayTemp(mlir::Type type,
+                             llvm::ArrayRef<mlir::Value> shape) {
+    auto seqTy = type.dyn_cast<fir::SequenceType>();
+    assert(seqTy && "must be an array");
+    auto loc = getLoc();
+    // TODO: Need to thread the length parameters here. For character, they may
+    // differ from the operands length (e.g concatenation). So the array loads
+    // type parameters are not enough.
+    if (auto charTy = seqTy.getEleTy().dyn_cast<fir::CharacterType>())
+      if (charTy.hasDynamicLen())
+        TODO(loc, "character array expression temp with dynamic length");
+    if (auto recTy = seqTy.getEleTy().dyn_cast<fir::RecordType>())
+      if (recTy.getNumLenParams() > 0)
+        TODO(loc, "derived type array expression temp with length parameters");
+    mlir::Value temp = seqTy.hasConstantShape()
+                           ? builder.create<fir::AllocMemOp>(loc, type)
+                           : builder.create<fir::AllocMemOp>(
+                                 loc, type, ".array.expr", llvm::None, shape);
+    auto *bldr = &converter.getFirOpBuilder();
+    stmtCtx.attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, temp); });
+    auto idxTy = builder.getIndexType();
+    llvm::SmallVector<mlir::Value> idxShape;
+    for (auto s : shape)
+      idxShape.push_back(builder.createConvert(loc, idxTy, s));
+    auto shapeTy = fir::ShapeType::get(builder.getContext(), idxShape.size());
+    auto shapeOp = builder.create<fir::ShapeOp>(loc, shapeTy, idxShape);
+    mlir::Value slice;
+    return builder.create<fir::ArrayLoadOp>(loc, seqTy, temp, shapeOp, slice,
+                                            llvm::None);
   }
 
   //===--------------------------------------------------------------------===//
@@ -2968,6 +3050,7 @@ public:
   CC genarr(const Fortran::semantics::SymbolRef &sym) {
     return genarr(asScalarRef(sym));
   }
+
   CC genarr(const ExtValue &extMemref) {
     auto loc = getLoc();
     auto memref = fir::getBase(extMemref);
@@ -3034,21 +3117,6 @@ public:
     auto arrLoad = builder.create<fir::ArrayLoadOp>(
         loc, arrTy, memref, shape, slice, fir::getTypeParams(extMemref));
     auto arrLd = arrLoad.getResult();
-    auto arrLdTypeParams = arrLoad.typeparams();
-    if (isCopyInCopyOut())
-      return [=](IterSpace) -> ExtValue { return arrLd; };
-    if (isValueAttribute())
-      return [=](IterSpace iters) -> ExtValue {
-        auto resTy = adjustedArrayElementType(eleTy);
-        auto arrFetch = builder.create<fir::ArrayFetchOp>(
-            loc, resTy, arrLd, iters.iterVec(), arrLdTypeParams);
-        auto base = arrFetch.getResult();
-        auto temp = builder.createTemporary(
-            loc, base.getType(),
-            llvm::ArrayRef<mlir::NamedAttribute>{getAdaptToByRefAttr()});
-        builder.create<fir::StoreOp>(loc, base, temp);
-        return arrayElementToExtendedValue(builder, loc, extMemref, temp);
-      };
     if (isProjectedCopyInCopyOut()) {
       destination = arrLoad;
       return [=](IterSpace iters) -> ExtValue {
@@ -3060,7 +3128,22 @@ public:
         return arrayElementToExtendedValue(builder, loc, extMemref, arrUpdate);
       };
     }
+    arrayOperandLoads.emplace_back(arrLoad);
+    if (isCopyInCopyOut())
+      return [=](IterSpace) -> ExtValue { return arrLd; };
+    auto arrLdTypeParams = arrLoad.typeparams();
     auto resTy = adjustedArrayElementType(eleTy);
+    if (isValueAttribute())
+      return [=](IterSpace iters) -> ExtValue {
+        auto arrFetch = builder.create<fir::ArrayFetchOp>(
+            loc, resTy, arrLd, iters.iterVec(), arrLdTypeParams);
+        auto base = arrFetch.getResult();
+        auto temp = builder.createTemporary(
+            loc, base.getType(),
+            llvm::ArrayRef<mlir::NamedAttribute>{getAdaptToByRefAttr()});
+        builder.create<fir::StoreOp>(loc, base, temp);
+        return arrayElementToExtendedValue(builder, loc, extMemref, temp);
+      };
     return [=](IterSpace iters) -> ExtValue {
       auto arrFetch = builder.create<fir::ArrayFetchOp>(
           loc, resTy, arrLd, iters.iterVec(), arrLdTypeParams);
@@ -3186,7 +3269,7 @@ public:
         Fortran::common::visitors{
             [&](const Fortran::evaluate::DataRef &p) { return genarr(p); },
             [&](const Fortran::evaluate::StaticDataObject::Pointer &) -> CC {
-               fir::emitFatalError(loc, "substring of static array object");
+              fir::emitFatalError(loc, "substring of static array object");
             }},
         x.parent());
     // lower and upper *must* be scalars
@@ -3425,6 +3508,7 @@ private:
   llvm::Optional<CC> ccDest;
   fir::ArrayLoadOp destination;
   std::optional<Fortran::evaluate::Shape> destShape;
+  llvm::SmallVector<fir::ArrayLoadOp> arrayOperandLoads;
   llvm::SmallVector<mlir::Value> sliceTriple;
   llvm::SmallVector<mlir::Value> slicePath;
   Fortran::lower::MaskExpr *masks{};
@@ -3432,30 +3516,6 @@ private:
   bool inSlice{false};
 };
 } // namespace
-
-/// Given an array expression, `x`, the shape of the expression might be a
-/// runtime value. In that case, drill down into the expression and find the
-/// subexpression for which that dynamic shape can be found.
-/// Return a vector of the ssa-values that describe the shape.
-template <typename A>
-static std::vector<mlir::Value>
-scavengeShapeFromSomeExpr(Fortran::lower::AbstractConverter &converter,
-                          const A &x,
-                          Fortran::lower::StatementContext &stmtCtx) {
-  auto optShape = Fortran::evaluate::GetShape(converter.getFoldingContext(), x);
-  auto loc = converter.getCurrentLocation();
-  if (optShape.has_value()) {
-    std::vector<mlir::Value> extents;
-    for (const auto &se : *optShape) {
-      auto ext = convertOptExtentExpr(converter, stmtCtx, se);
-      auto &builder = converter.getFirOpBuilder();
-      auto idxTy = builder.getIndexType();
-      extents.push_back(builder.createConvert(loc, idxTy, ext));
-    }
-    return extents;
-  }
-  fir::emitFatalError(loc, "shape analysis failed");
-}
 
 fir::ExtendedValue Fortran::lower::createSomeExtendedExpression(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
@@ -3506,50 +3566,14 @@ void Fortran::lower::createMaskedArrayAssignment(
                                                 rhs, masks);
 }
 
-fir::AllocMemOp Fortran::lower::createSomeArrayTemp(
-    AbstractConverter &converter,
-    const evaluate::Expr<evaluate::SomeType> &expr,
-    Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
-  auto loc = converter.getCurrentLocation();
-  auto *bldr = &converter.getFirOpBuilder();
-  auto ty = converter.genType(expr);
-  LLVM_DEBUG(expr.AsFortran(llvm::dbgs() << "temp array: ") << '\n');
-  auto seqTy = ty.dyn_cast<fir::SequenceType>();
-  llvm::SmallVector<mlir::Value> typeParams;
-  if (fir::hasDynamicSize(seqTy.getEleTy())) {
-    const auto *sym = Fortran::evaluate::GetFirstSymbol(expr);
-    assert(sym && "symbol not in map");
-    symMap.lookupSymbol(sym).match(
-        [&](const fir::CharBoxValue &x) { typeParams.push_back(x.getLen()); },
-        [&](const fir::CharArrayBoxValue &x) {
-          typeParams.push_back(x.getLen());
-        },
-        [&](const fir::BoxValue &x) {
-          const auto &extents = x.getExtents();
-          typeParams.append(extents.begin(), extents.end());
-        },
-        [=](auto) { TODO(loc, "unhandled symbol"); });
-  }
-  assert(seqTy && "must be an array");
-  fir::AllocMemOp result =
-      seqTy.hasConstantShape()
-          ? bldr->create<fir::AllocMemOp>(loc, ty, ".array", typeParams)
-          : bldr->create<fir::AllocMemOp>(
-                loc, ty, ".array.expr", typeParams,
-                scavengeShapeFromSomeExpr(converter, expr, stmtCtx));
-  auto res = result.getResult();
-  stmtCtx.attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, res); });
-  return result;
-}
-
-fir::ExtendedValue Fortran::lower::createSomeNewArrayValue(
-    Fortran::lower::AbstractConverter &converter, fir::ArrayLoadOp dst,
+fir::ExtendedValue Fortran::lower::createSomeArrayTempValue(
+    Fortran::lower::AbstractConverter &converter,
     const std::optional<Fortran::evaluate::Shape> &shape,
     const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
   LLVM_DEBUG(expr.AsFortran(llvm::dbgs() << "array value: ") << '\n');
-  return ArrayExprLowering::lowerArrayExpression(converter, symMap, stmtCtx,
-                                                 dst, shape, expr);
+  return ArrayExprLowering::lowerSomeNewArrayExpression(converter, symMap,
+                                                        stmtCtx, shape, expr);
 }
 
 fir::ExtendedValue Fortran::lower::createSomeArrayBox(

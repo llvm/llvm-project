@@ -272,10 +272,10 @@ subroutine test12(a,b,c,d,n,m)
   ! CHECK: %[[A:.*]] = fir.array_load %arg0(%[[sha]])
   ! CHECK: %[[shb:.*]] = fir.shape %
   ! CHECK: %[[B:.*]] = fir.array_load %arg1(%[[shb]])
-  ! CHECK: %[[tmp:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {{{.*}}uniq_name = ".array.expr"}
-  ! CHECK: %[[T:.*]] = fir.array_load %[[tmp]](%
   ! CHECK: %[[C:.*]] = fir.array_load %arg2(%
   ! CHECK: %[[D:.*]] = fir.array_load %arg3(%
+  ! CHECK: %[[tmp:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {{{.*}}uniq_name = ".array.expr"}
+  ! CHECK: %[[T:.*]] = fir.array_load %[[tmp]](%
   real, external :: bar
   real :: a(n), b(n), c(m), d(m)
   ! CHECK: %[[LOOP:.*]] = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %[[T]])
@@ -443,8 +443,8 @@ end subroutine
 ! CHECK-SAME:  %[[x:.*]]: !fir.box<!fir.array<?xi32>>
 subroutine test_assigning_to_assumed_shape_slices(x)
   integer :: x(:)
-  ! CHECK: %[[slice:.*]] = fir.array_load %[[x]] [%{{.*}}] : (!fir.box<!fir.array<?xi32>>, !fir.slice<1>) -> !fir.array<?xi32>
   ! CHECK: fir.box_dims %[[x]], %c0{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+  ! CHECK: %[[slice:.*]] = fir.array_load %[[x]] [%{{.*}}] : (!fir.box<!fir.array<?xi32>>, !fir.slice<1>) -> !fir.array<?xi32>
   ! CHECK: %[[loop:.*]] = fir.do_loop %[[idx:.*]] = %c0{{.*}} to %{{.*}} step %c1{{.*}} iter_args(%[[dest:.*]] = %[[slice]]) -> (!fir.array<?xi32>) {
     ! CHECK: %[[res:.*]] = fir.array_update %[[dest]], %c42{{.*}}, %[[idx]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
     ! CHECK: fir.result %[[res]] : !fir.array<?xi32>

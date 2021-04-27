@@ -313,8 +313,7 @@ mlir::Value Fortran::lower::FirOpBuilder::createSlice(
           return fullShape(box.getLBounds(), box.getExtents());
         },
         [&](const fir::BoxValue &box) {
-          llvm::SmallVector<mlir::Value> extents;
-          Fortran::lower::readExtents(*this, loc, box, extents);
+          auto extents = Fortran::lower::readExtents(*this, loc, box);
           return fullShape(box.getLBounds(), extents);
         },
         [&](const fir::MutableBoxValue &) -> mlir::Value {
@@ -463,14 +462,14 @@ mlir::Value Fortran::lower::readLowerBound(Fortran::lower::FirOpBuilder &,
   return defaultValue;
 }
 
-void Fortran::lower::readExtents(Fortran::lower::FirOpBuilder &builder,
-                                 mlir::Location loc, const fir::BoxValue &box,
-                                 llvm::SmallVectorImpl<mlir::Value> &result) {
-  assert(result.empty());
+llvm::SmallVector<mlir::Value>
+Fortran::lower::readExtents(Fortran::lower::FirOpBuilder &builder,
+                            mlir::Location loc, const fir::BoxValue &box) {
+  llvm::SmallVector<mlir::Value> result;
   auto explicitExtents = box.getExplicitExtents();
   if (!explicitExtents.empty()) {
     result.append(explicitExtents.begin(), explicitExtents.end());
-    return;
+    return result;
   }
   auto rank = box.rank();
   auto idxTy = builder.getIndexType();
@@ -480,6 +479,7 @@ void Fortran::lower::readExtents(Fortran::lower::FirOpBuilder &builder,
                                                   box.getAddr(), dimVal);
     result.emplace_back(dimInfo.getResult(1));
   }
+  return result;
 }
 
 std::string Fortran::lower::uniqueCGIdent(llvm::StringRef prefix,

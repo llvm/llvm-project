@@ -44,9 +44,9 @@ program main
   print *, A
   ! CHECK: %[[A:.*]] = fir.address_of(@_QEa)
   ! CHECK: %[[shape10:.*]] = fir.shape %c10
+  ! CHECK: %[[slice:.*]] = fir.slice %
   ! CHECK: %[[mem:.*]] = fir.allocmem !fir.array<3xi32>
   ! CHECK: %[[shape:.*]] = fir.shape %c3
-  ! CHECK: %[[slice:.*]] = fir.slice %
   ! CHECK: fir.array_coor %[[A]](%[[shape10]]) [%[[slice]]] %
   ! CHECK: fir.array_coor %[[mem]](%[[shape]]) %
   print*, A(1:3:1)

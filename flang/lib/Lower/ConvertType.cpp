@@ -154,10 +154,18 @@ struct TypeBuilder {
     }
     auto shapeExpr =
         Fortran::evaluate::GetShape(converter.getFoldingContext(), expr);
-    if (!shapeExpr)
-      TODO(converter.genLocation(), "Assumed rank expression type lowering");
     fir::SequenceType::Shape shape;
-    translateShape(shape, std::move(*shapeExpr));
+    if (shapeExpr) {
+      translateShape(shape, std::move(*shapeExpr));
+    } else {
+      // Shape static analysis cannot return something useful for the shape.
+      // Use unknown extents.
+      auto rank = expr.Rank();
+      if (rank < 0)
+        TODO(converter.genLocation(), "Assumed rank expression type lowering");
+      for (auto dim = 0; dim < rank; ++dim)
+        shape.emplace_back(fir::SequenceType::getUnknownExtent());
+    }
     if (!shape.empty())
       return fir::SequenceType::get(shape, baseType);
     return baseType;
