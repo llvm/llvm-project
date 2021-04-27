@@ -6,7 +6,7 @@ target triple = "aarch64--linux-gnu"
 
 ; CHECK-LABEL: all_scalar
 ; CHECK:       LV: Found scalar instruction: %i.next = add nuw nsw i64 %i, 2
-; CHECK:       LV: Found an estimated cost of 1 for VF 2 For instruction: %i.next = add nuw nsw i64 %i, 2
+; CHECK:       LV: Found an estimated cost of 2 for VF 2 For instruction: %i.next = add nuw nsw i64 %i, 2
 ; CHECK:       LV: Not considering vector loop of width 2 because it will not generate any vector instructions
 ;
 define void @all_scalar(i64* %a, i64 %n) {
