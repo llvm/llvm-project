@@ -22,6 +22,7 @@ add_mlir_library(MLIRIR
   Region.cpp
   RegionKindInterface.cpp
   SymbolTable.cpp
+  TensorEncoding.cpp
   Types.cpp
   TypeRange.cpp
   TypeUtilities.cpp
@@ -45,6 +46,7 @@ add_mlir_library(MLIRIR
   MLIRRegionKindInterfaceIncGen
   MLIRSideEffectInterfacesIncGen
   MLIRSymbolInterfacesIncGen
+  MLIRTensorEncodingIncGen
 
   LINK_LIBS PUBLIC
   MLIRSupport
