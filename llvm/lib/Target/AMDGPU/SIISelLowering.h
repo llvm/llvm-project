@@ -444,7 +444,10 @@ public:
 
   bool isCanonicalized(SelectionDAG &DAG, SDValue Op,
                        unsigned MaxDepth = 5) const;
+  bool isCanonicalized(Register Reg, MachineFunction &MF,
+                       unsigned MaxDepth = 5) const;
   bool denormalsEnabledForType(const SelectionDAG &DAG, EVT VT) const;
+  bool denormalsEnabledForType(LLT Ty, MachineFunction &MF) const;
 
   bool isKnownNeverNaNForTargetNode(SDValue Op,
                                     const SelectionDAG &DAG,
