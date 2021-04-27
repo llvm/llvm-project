@@ -1166,6 +1166,8 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Reverse, MVT::v16f32, 1}, // vpermps
       {TTI::SK_Reverse, MVT::v8i64, 1},  // vpermq
       {TTI::SK_Reverse, MVT::v16i32, 1}, // vpermd
+      {TTI::SK_Reverse, MVT::v32i16, 7}, // per mca
+      {TTI::SK_Reverse, MVT::v64i8,  7}, // per mca
 
       {TTI::SK_PermuteSingleSrc, MVT::v8f64, 1},  // vpermpd
       {TTI::SK_PermuteSingleSrc, MVT::v4f64, 1},  // vpermpd
