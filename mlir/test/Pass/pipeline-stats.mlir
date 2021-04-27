@@ -1,3 +1,4 @@
+// REQUIRES: asserts
 // RUN: mlir-opt %s -verify-each=true -pass-pipeline='func(test-stats-pass,test-stats-pass)' -pass-statistics -pass-statistics-display=list 2>&1 | FileCheck -check-prefix=LIST %s
 // RUN: mlir-opt %s -verify-each=true -pass-pipeline='func(test-stats-pass,test-stats-pass)' -pass-statistics -pass-statistics-display=pipeline 2>&1 | FileCheck -check-prefix=PIPELINE %s
 
