@@ -184,6 +184,21 @@ void Hurd::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   addExternCSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/include");
 }
 
+void Hurd::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                                    llvm::opt::ArgStringList &CC1Args) const {
+  // We need a detected GCC installation on Linux to provide libstdc++'s
+  // headers in odd Linuxish places.
+  if (!GCCInstallation.isValid())
+    return;
+
+  StringRef TripleStr = GCCInstallation.getTriple().str();
+  StringRef DebianMultiarch =
+      GCCInstallation.getTriple().getArch() == llvm::Triple::x86 ? "i386-gnu"
+                                                                 : TripleStr;
+
+  addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args, DebianMultiarch);
+}
+
 void Hurd::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {
   for (const auto &Opt : ExtraOpts)
     CmdArgs.push_back(Opt.c_str());
