@@ -1,5 +1,5 @@
-tblgen Family - Description to C++ Code
-=======================================
+tblgen - Description to C++ Code
+================================
 
 .. program:: tblgen
 
@@ -22,10 +22,10 @@ description (``.td``) files into C++ code and other output formats. Most
 users of LLVM will not need to use this program. It is used only for
 writing parts of the compiler, debugger, and LLVM target backends.
 
-The details of the input and output of :program:`*-tblgen` is beyond the
-scope of this short introduction; please see the :doc:`TableGen Overview
-<../TableGen/index>` for an introduction and for references to additional
-TableGen documents.
+The details of the input and output of the :program:`*-tblgen` programs is
+beyond the scope of this short introduction; please see the :doc:`TableGen
+Overview <../TableGen/index>` for an introduction and for references to
+additional TableGen documents.
 
 The *filename* argument specifies the name of the Target Description (``.td``)
 file that TableGen processes.

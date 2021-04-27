@@ -991,6 +991,13 @@ def PPCDispRIXOperand : AsmOperandClass {
 def dispRIX : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIXOperand;
 }
+def PPCDispRIHashOperand : AsmOperandClass {
+  let Name = "DispRIHash"; let PredicateMethod = "isHashImmX8";
+  let RenderMethod = "addImmOperands";
+}
+def dispRIHash : Operand<iPTR> {
+  let ParserMatchClass = PPCDispRIHashOperand;
+}
 def PPCDispRIX16Operand : AsmOperandClass {
  let Name = "DispRIX16"; let PredicateMethod = "isS16ImmX16";
  let RenderMethod = "addImmOperands";
@@ -1037,6 +1044,14 @@ def memrix : Operand<iPTR> {   // memri where the imm is 4-aligned.
   let MIOperandInfo = (ops dispRIX:$imm, ptr_rc_nor0:$reg);
   let EncoderMethod = "getMemRIXEncoding";
   let DecoderMethod = "decodeMemRIXOperands";
+  let OperandType = "OPERAND_MEMORY";
+}
+def memrihash : Operand<iPTR> {
+  // memrihash 8-aligned for ROP Protection Instructions.
+  let PrintMethod = "printMemRegImmHash";
+  let MIOperandInfo = (ops dispRIHash:$imm, ptr_rc_nor0:$reg);
+  let EncoderMethod = "getMemRIHashEncoding";
+  let DecoderMethod = "decodeMemRIHashOperands";
   let OperandType = "OPERAND_MEMORY";
 }
 def memrix16 : Operand<iPTR> { // memri, imm is 16-aligned, 12-bit, Inst{16:27}

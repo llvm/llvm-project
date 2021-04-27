@@ -23,24 +23,25 @@
 #ifndef __ARM_FP
 // For soft float targets, allow changing rounding mode by overriding the weak
 // __arm_fe_default_rmode symbol.
-FE_ROUND_MODE __attribute__((weak)) __arm_fe_default_rmode = FE_TONEAREST;
+CRT_FE_ROUND_MODE __attribute__((weak)) __arm_fe_default_rmode =
+    CRT_FE_TONEAREST;
 #endif
 
-FE_ROUND_MODE __fe_getround() {
+CRT_FE_ROUND_MODE __fe_getround() {
 #ifdef __ARM_FP
   uint32_t fpscr;
   __asm__ __volatile__("vmrs  %0, fpscr" : "=r" (fpscr));
   fpscr = fpscr >> ARM_RMODE_SHIFT & ARM_RMODE_MASK;
   switch (fpscr) {
     case ARM_UPWARD:
-      return FE_UPWARD;
+      return CRT_FE_UPWARD;
     case ARM_DOWNWARD:
-      return FE_DOWNWARD;
+      return CRT_FE_DOWNWARD;
     case ARM_TOWARDZERO:
-      return FE_TOWARDZERO;
+      return CRT_FE_TOWARDZERO;
     case ARM_TONEAREST:
     default:
-      return FE_TONEAREST;
+      return CRT_FE_TONEAREST;
   }
 #else
   return __arm_fe_default_rmode;

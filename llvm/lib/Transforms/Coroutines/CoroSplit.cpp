@@ -846,6 +846,9 @@ void CoroCloner::create() {
 
   CloneFunctionInto(NewF, &OrigF, VMap,
                     CloneFunctionChangeType::LocalChangesOnly, Returns);
+
+  auto &Context = NewF->getContext();
+
   // For async functions / continuations, adjust the scope line of the
   // clone to the line number of the suspend point. The scope line is
   // associated with all pre-prologue instructions. This avoids a jump
@@ -855,14 +858,23 @@ void CoroCloner::create() {
     if (ActiveSuspend)
       if (auto DL = ActiveSuspend->getDebugLoc())
         SP->setScopeLine(DL->getLine());
+    // Update the linkage name to reflect the modified symbol name. It
+    // is necessary to update the linkage name in Swift, since the
+    // mangling changes for resume functions. It might also be the
+    // right thing to do in C++, but due to a limitation in LLVM's
+    // AsmPrinter we can only do this if the function doesn't have an
+    // abstract specification, since the DWARF backend expects the
+    // abstract specification to contain the linkage name and asserts
+    // that they are identical.
+    if (!SP->getDeclaration() && SP->getUnit() &&
+        SP->getUnit()->getSourceLanguage() == dwarf::DW_LANG_Swift)
+      SP->replaceLinkageName(MDString::get(Context, NewF->getName()));
   }
 
   NewF->setLinkage(savedLinkage);
   NewF->setVisibility(savedVisibility);
   NewF->setUnnamedAddr(savedUnnamedAddr);
   NewF->setDLLStorageClass(savedDLLStorageClass);
-
-  auto &Context = NewF->getContext();
 
   // Replace the attributes of the new function:
   auto OrigAttrs = NewF->getAttributes();

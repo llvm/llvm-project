@@ -389,12 +389,16 @@ struct AssumingAllToCstrEqCanonicalization
   LogicalResult matchAndRewrite(AssumingAllOp op,
                                 PatternRewriter &rewriter) const override {
     SmallVector<Value, 8> shapes;
-    for (Value v : op.inputs()) {
-      auto cstrEqOp = v.getDefiningOp<CstrEqOp>();
+    for (Value w : op.inputs()) {
+      auto cstrEqOp = w.getDefiningOp<CstrEqOp>();
       if (!cstrEqOp)
         return failure();
-      auto range = cstrEqOp.shapes();
-      shapes.append(range.begin(), range.end());
+      bool disjointShapes = llvm::none_of(cstrEqOp.shapes(), [&](Value s) {
+        return llvm::is_contained(shapes, s);
+      });
+      if (!shapes.empty() && !cstrEqOp.shapes().empty() && disjointShapes)
+        return failure();
+      shapes.append(cstrEqOp.shapes().begin(), cstrEqOp.shapes().end());
     }
     rewriter.replaceOpWithNewOp<CstrEqOp>(op, shapes);
     return success();

@@ -1,4 +1,8 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++98 -fsyntax-only -verify %s
+// RUN: %clang_cc1            -fsyntax-only -verify %s
+
 struct A {
   template <class T> operator T*();
 };

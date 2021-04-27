@@ -12,7 +12,6 @@
 // CHECK-NEXT: AcquireHandle (SubjectMatchRule_function, SubjectMatchRule_type_alias, SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: Alias (SubjectMatchRule_function, SubjectMatchRule_variable_is_global)
 // CHECK-NEXT: AlignValue (SubjectMatchRule_variable, SubjectMatchRule_type_alias)
-// CHECK-NEXT: AllocSize (SubjectMatchRule_function)
 // CHECK-NEXT: AlwaysDestroy (SubjectMatchRule_variable)
 // CHECK-NEXT: AlwaysInline (SubjectMatchRule_function)
 // CHECK-NEXT: Annotate ()
