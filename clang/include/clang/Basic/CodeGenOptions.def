@@ -371,7 +371,7 @@ ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel)
 VALUE_CODEGENOPT(TLSSize, 8, 0)
 
 /// The default stack protector guard offset to use.
-VALUE_CODEGENOPT(StackProtectorGuardOffset, 32, (unsigned)-1)
+VALUE_CODEGENOPT(StackProtectorGuardOffset, 32, INT_MAX)
 
 /// Number of path components to strip when emitting checks. (0 == full
 /// filename)

@@ -80,7 +80,7 @@ CGOPT(bool, IgnoreXCOFFVisibility)
 CGOPT(bool, XCOFFTracebackTable)
 CGOPT(std::string, BBSections)
 CGOPT(std::string, StackProtectorGuard)
-CGOPT(unsigned, StackProtectorGuardOffset)
+CGOPT(int, StackProtectorGuardOffset)
 CGOPT(std::string, StackProtectorGuardReg)
 CGOPT(unsigned, TLSSize)
 CGOPT(bool, EmulatedTLS)
@@ -375,9 +375,9 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init("none"));
   CGBINDOPT(StackProtectorGuardReg);
 
-  static cl::opt<unsigned> StackProtectorGuardOffset(
+  static cl::opt<int> StackProtectorGuardOffset(
       "stack-protector-guard-offset", cl::desc("Stack protector guard offset"),
-      cl::init((unsigned)-1));
+      cl::init(INT_MAX));
   CGBINDOPT(StackProtectorGuardOffset);
 
   static cl::opt<unsigned> TLSSize(
