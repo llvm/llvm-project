@@ -342,9 +342,9 @@ protected:
   addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const;
 
-  bool
-  addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                           llvm::opt::ArgStringList &CC1Args) const;
+  bool addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                                   llvm::opt::ArgStringList &CC1Args,
+                                   StringRef DebianMultiarch) const;
 
   bool addLibStdCXXIncludePaths(Twine IncludeDir, StringRef Triple,
                                 Twine IncludeSuffix,
