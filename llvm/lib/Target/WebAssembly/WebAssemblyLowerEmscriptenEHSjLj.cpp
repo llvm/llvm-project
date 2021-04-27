@@ -681,13 +681,18 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   bool LongjmpUsed = LongjmpF && !LongjmpF->use_empty();
   bool DoSjLj = EnableSjLj && (SetjmpUsed || LongjmpUsed);
 
-  if ((EnableEH || DoSjLj) &&
-      Triple(M.getTargetTriple()).getArch() == Triple::wasm64)
-    report_fatal_error("Emscripten EH/SjLj is not supported with wasm64 yet");
-
   auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
   assert(TPC && "Expected a TargetPassConfig");
   auto &TM = TPC->getTM<WebAssemblyTargetMachine>();
+
+  if ((EnableEH || DoSjLj) &&
+      Triple(M.getTargetTriple()).getArch() == Triple::wasm64)
+    report_fatal_error("Emscripten EH/SjLj is not supported with wasm64 yet");
+  if (EnableEH && TM.Options.ExceptionModel == ExceptionHandling::Wasm)
+    report_fatal_error("-exception-model=wasm not allowed with "
+                       "-enable-emscripten-cxx-exceptions");
+  if (DoSjLj && TM.Options.ExceptionModel == ExceptionHandling::Wasm)
+    report_fatal_error("Emscripten SjLj is not supported with Wasm EH yet");
 
   // Declare (or get) global variables __THREW__, __threwValue, and
   // getTempRet0/setTempRet0 function which are used in common for both
