@@ -1239,6 +1239,38 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   if (ST->getProcFamily() == AArch64Subtarget::Falkor &&
       EnableFalkorHWPFUnrollFix)
     getFalkorUnrollingPreferences(L, SE, UP);
+
+  // Scan the loop: don't unroll loops with calls as this could prevent
+  // inlining. Don't unroll vector loops either, as they don't benefit much from
+  // unrolling.
+  for (auto *BB : L->getBlocks()) {
+    for (auto &I : *BB) {
+      // Don't unroll vectorised loop.
+      if (I.getType()->isVectorTy())
+        return;
+
+      if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
+        if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
+          if (!isLoweredToCall(F))
+            continue;
+        }
+        return;
+      }
+    }
+  }
+
+  // Enable runtime unrolling for in-order models
+  // If mcpu is omitted, getProcFamily() returns AArch64Subtarget::Others, so by
+  // checking for that case, we can ensure that the default behaviour is
+  // unchanged
+  if (ST->getProcFamily() != AArch64Subtarget::Others &&
+      !ST->getSchedModel().isOutOfOrder()) {
+    UP.Runtime = true;
+    UP.Partial = true;
+    UP.UpperBound = true;
+    UP.UnrollRemainder = true;
+    UP.DefaultUnrollRuntimeCount = 4;
+  }
 }
 
 void AArch64TTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,

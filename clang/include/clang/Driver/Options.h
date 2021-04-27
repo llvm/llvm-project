@@ -9,8 +9,6 @@
 #ifndef LLVM_CLANG_DRIVER_OPTIONS_H
 #define LLVM_CLANG_DRIVER_OPTIONS_H
 
-#include <memory>
-
 namespace llvm {
 namespace opt {
 class OptTable;

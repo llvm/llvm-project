@@ -20,7 +20,6 @@
 #include "llvm/Support/Allocator.h"
 #include <cassert>
 #include <cstdint>
-#include <memory>
 
 namespace llvm {
 namespace codeview {

@@ -3124,7 +3124,7 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
     if (!EffectiveTriple.isX86())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
-    unsigned Offset;
+    int Offset;
     if (Value.getAsInteger(10, Offset)) {
       D.Diag(diag::err_drv_invalid_value) << A->getOption().getName() << Value;
       return;
