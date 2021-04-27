@@ -215,6 +215,9 @@ class VectorType;
            // lanes
     VCVTL, // MVE vcvt f16 -> f32, extending from either the bottom or top lanes
 
+    // MVE VIDUP instruction, taking a start value and increment.
+    VIDUP,
+
     // Vector multiply long:
     VMULLs, // ...signed
     VMULLu, // ...unsigned
