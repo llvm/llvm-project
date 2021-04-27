@@ -1366,6 +1366,18 @@ bool AArch64InstrInfo::optimizePTestInstr(
       OpChanged = true;
       break;
     }
+    case AArch64::RDFFR_PPz: {
+      // rdffr   p1.b, PredMask=p0/z <--- Definition of Pred
+      // ptest   Mask=p0, Pred=p1.b  <--- If equal masks, remove this and use
+      //                                  `rdffrs p1.b, p0/z` above.
+      auto *PredMask = MRI->getUniqueVRegDef(Pred->getOperand(1).getReg());
+      if (Mask != PredMask)
+        return false;
+
+      NewOp = AArch64::RDFFRS_PPz;
+      OpChanged = true;
+      break;
+    }
     default:
       // Bail out if we don't recognize the input
       return false;
@@ -1374,22 +1386,10 @@ bool AArch64InstrInfo::optimizePTestInstr(
 
   const TargetRegisterInfo *TRI = &getRegisterInfo();
 
-  // If the predicate is in a different block (possibly because its been
-  // hoisted out), then assume the flags are set in between statements.
-  if (Pred->getParent() != PTest->getParent())
+  // If another instruction between Pred and PTest accesses flags, don't remove
+  // the ptest or update the earlier instruction to modify them.
+  if (areCFlagsAccessedBetweenInstrs(Pred, PTest, TRI))
     return false;
-
-  // If another instruction between the propagation and test sets the
-  // flags, don't remove the ptest.
-  MachineBasicBlock::iterator I = Pred, E = PTest;
-  ++I; // Skip past the predicate op itself.
-  for (; I != E; ++I) {
-    const MachineInstr &Inst = *I;
-
-    // TODO: If the ptest flags are unused, we could still remove it.
-    if (Inst.modifiesRegister(AArch64::NZCV, TRI))
-      return false;
-  }
 
   // If we pass all the checks, it's safe to remove the PTEST and use the flags
   // as they are prior to PTEST. Sometimes this requires the tested PTEST
