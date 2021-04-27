@@ -424,6 +424,7 @@ enum class LinalgTilingLoopType {
   Loops = 0,
   AffineLoops = 1,
   ParallelLoops = 2,
+  TiledLoops = 3,
 };
 
 using TileSizeComputationFunction =

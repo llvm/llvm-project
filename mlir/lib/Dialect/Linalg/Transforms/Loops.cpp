@@ -473,7 +473,7 @@ static Optional<LinalgLoops> linalgOpToLoopsImpl(Operation *op,
 
   SmallVector<Value, 4> allIvs;
   GenerateLoopNest<LoopTy>::doit(
-      loopRanges, /*iterInitArgs=*/{}, iteratorTypes,
+      loopRanges, linalgOp, iteratorTypes,
       [&](ValueRange ivs, ValueRange iterArgs) -> scf::ValueVector {
         assert(iterArgs.empty() && "unexpected iterArgs");
         allIvs.append(ivs.begin(), ivs.end());
