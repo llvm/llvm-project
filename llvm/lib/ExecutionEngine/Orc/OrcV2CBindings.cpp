@@ -513,7 +513,8 @@ void LLVMOrcDisposeLLJITBuilder(LLVMOrcLLJITBuilderRef Builder) {
 
 void LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(
     LLVMOrcLLJITBuilderRef Builder, LLVMOrcJITTargetMachineBuilderRef JTMB) {
-  unwrap(Builder)->setJITTargetMachineBuilder(*unwrap(JTMB));
+  unwrap(Builder)->setJITTargetMachineBuilder(std::move(*unwrap(JTMB)));
+  LLVMOrcDisposeJITTargetMachineBuilder(JTMB);
 }
 
 void LLVMOrcLLJITBuilderSetObjectLinkingLayerCreator(
