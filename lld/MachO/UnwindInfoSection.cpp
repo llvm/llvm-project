@@ -20,6 +20,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/MachO.h"
 
 using namespace llvm;
@@ -288,11 +289,10 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
   cuPtrVector.reserve(cuCount);
   for (CompactUnwindEntry<Ptr> &cuEntry : cuVector)
     cuPtrVector.emplace_back(&cuEntry);
-  std::sort(
-      cuPtrVector.begin(), cuPtrVector.end(),
-      [](const CompactUnwindEntry<Ptr> *a, const CompactUnwindEntry<Ptr> *b) {
-        return a->functionAddress < b->functionAddress;
-      });
+  llvm::sort(cuPtrVector, [](const CompactUnwindEntry<Ptr> *a,
+                             const CompactUnwindEntry<Ptr> *b) {
+    return a->functionAddress < b->functionAddress;
+  });
 
   // Fold adjacent entries with matching encoding+personality+lsda
   // We use three iterators on the same cuPtrVector to fold in-situ:
@@ -324,15 +324,15 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
   // Make a vector of encodings, sorted by descending frequency
   for (const auto &frequency : encodingFrequencies)
     commonEncodings.emplace_back(frequency);
-  std::sort(commonEncodings.begin(), commonEncodings.end(),
-            [](const std::pair<compact_unwind_encoding_t, size_t> &a,
-               const std::pair<compact_unwind_encoding_t, size_t> &b) {
-              if (a.second == b.second)
-                // When frequencies match, secondarily sort on encoding
-                // to maintain parity with validate-unwind-info.py
-                return a.first > b.first;
-              return a.second > b.second;
-            });
+  llvm::sort(commonEncodings,
+             [](const std::pair<compact_unwind_encoding_t, size_t> &a,
+                const std::pair<compact_unwind_encoding_t, size_t> &b) {
+               if (a.second == b.second)
+                 // When frequencies match, secondarily sort on encoding
+                 // to maintain parity with validate-unwind-info.py
+                 return a.first > b.first;
+               return a.second > b.second;
+             });
 
   // Truncate the vector to 127 elements.
   // Common encoding indexes are limited to 0..126, while encoding
