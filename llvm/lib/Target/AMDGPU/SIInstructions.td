@@ -2652,7 +2652,13 @@ def G_AMDGPU_CVT_PK_I16_I32 : AMDGPUGenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_AMDGPU_MED3 : AMDGPUGenericInstruction {
+def G_AMDGPU_SMED3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_UMED3 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
   let hasSideEffects = 0;
