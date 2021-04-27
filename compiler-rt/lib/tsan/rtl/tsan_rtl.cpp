@@ -519,22 +519,23 @@ int Finalize(ThreadState *thr) {
 void ForkBefore(ThreadState *thr, uptr pc) {
   ctx->thread_registry->Lock();
   ctx->report_mtx.Lock();
-  // Suppress all reports in the pthread_atfork callbacks.
-  // Reports will deadlock on the report_mtx.
+  // Ignore memory accesses in the pthread_atfork callbacks.
+  // If any of them triggers a data race we will deadlock
+  // on the report_mtx.
   // We could ignore interceptors and sync operations as well,
   // but so far it's unclear if it will do more good or harm.
   // Unnecessarily ignoring things can lead to false positives later.
-  thr->suppress_reports++;
+  ThreadIgnoreBegin(thr, pc);
 }
 
 void ForkParentAfter(ThreadState *thr, uptr pc) {
-  thr->suppress_reports--;  // Enabled in ForkBefore.
+  ThreadIgnoreEnd(thr, pc);  // Begin is in ForkBefore.
   ctx->report_mtx.Unlock();
   ctx->thread_registry->Unlock();
 }
 
 void ForkChildAfter(ThreadState *thr, uptr pc) {
-  thr->suppress_reports--;  // Enabled in ForkBefore.
+  ThreadIgnoreEnd(thr, pc);  // Begin is in ForkBefore.
   ctx->report_mtx.Unlock();
   ctx->thread_registry->Unlock();
 
