@@ -1106,12 +1106,172 @@ struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
     return success();
   }
 };
+
+// Allow the true region of an if to assume the condition is true
+// and vice versa. For example:
+//
+//   scf.if %cmp {
+//      print(%cmp)
+//   }
+//
+//  becomes
+//
+//   scf.if %cmp {
+//      print(true)
+//   }
+//
+struct ConditionPropagation : public OpRewritePattern<IfOp> {
+  using OpRewritePattern<IfOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IfOp op,
+                                PatternRewriter &rewriter) const override {
+    // Early exit if the condition is constant since replacing a constant
+    // in the body with another constant isn't a simplification.
+    if (op.condition().getDefiningOp<ConstantOp>())
+      return failure();
+
+    bool changed = false;
+    mlir::Type i1Ty = rewriter.getI1Type();
+
+    // These variables serve to prevent creating duplicate constants
+    // and hold constant true or false values.
+    Value constantTrue = nullptr;
+    Value constantFalse = nullptr;
+
+    for (OpOperand &use :
+         llvm::make_early_inc_range(op.condition().getUses())) {
+      if (op.thenRegion().isAncestor(use.getOwner()->getParentRegion())) {
+        changed = true;
+
+        if (!constantTrue)
+          constantTrue = rewriter.create<mlir::ConstantOp>(
+              op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1));
+
+        rewriter.updateRootInPlace(use.getOwner(),
+                                   [&]() { use.set(constantTrue); });
+      } else if (op.elseRegion().isAncestor(
+                     use.getOwner()->getParentRegion())) {
+        changed = true;
+
+        if (!constantFalse)
+          constantFalse = rewriter.create<mlir::ConstantOp>(
+              op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 0));
+
+        rewriter.updateRootInPlace(use.getOwner(),
+                                   [&]() { use.set(constantFalse); });
+      }
+    }
+
+    return success(changed);
+  }
+};
+
+/// Remove any statements from an if that are equivalent to the condition
+/// or its negation. For example:
+///
+///    %res:2 = scf.if %cmp {
+///       yield something(), true
+///    } else {
+///       yield something2(), false
+///    }
+///    print(%res#1)
+///
+///  becomes
+///    %res = scf.if %cmp {
+///       yield something()
+///    } else {
+///       yield something2()
+///    }
+///    print(%cmp)
+///
+/// Additionally if both branches yield the same value, replace all uses
+/// of the result with the yielded value
+///
+///    %res:2 = scf.if %cmp {
+///       yield something(), %arg1
+///    } else {
+///       yield something2(), %arg1
+///    }
+///    print(%res#1)
+///
+///  becomes
+///    %res = scf.if %cmp {
+///       yield something()
+///    } else {
+///       yield something2()
+///    }
+//    print(%arg1)
+struct ReplaceIfYieldWithConditionOrValue : public OpRewritePattern<IfOp> {
+  using OpRewritePattern<IfOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IfOp op,
+                                PatternRewriter &rewriter) const override {
+    // Early exit if there are no results that could be replaced.
+    if (op.getNumResults() == 0)
+      return failure();
+
+    auto trueYield = cast<scf::YieldOp>(op.thenRegion().back().getTerminator());
+    auto falseYield =
+        cast<scf::YieldOp>(op.elseRegion().back().getTerminator());
+
+    rewriter.setInsertionPoint(op->getBlock(),
+                               op.getOperation()->getIterator());
+    bool changed = false;
+    Type i1Ty = rewriter.getI1Type();
+    for (auto tup :
+         llvm::zip(trueYield.results(), falseYield.results(), op.results())) {
+      Value trueResult, falseResult, opResult;
+      std::tie(trueResult, falseResult, opResult) = tup;
+
+      if (trueResult == falseResult) {
+        if (!opResult.use_empty()) {
+          opResult.replaceAllUsesWith(trueResult);
+          changed = true;
+        }
+        continue;
+      }
+
+      auto trueYield = trueResult.getDefiningOp<ConstantOp>();
+      if (!trueYield)
+        continue;
+
+      if (!trueYield.getType().isInteger(1))
+        continue;
+
+      auto falseYield = falseResult.getDefiningOp<ConstantOp>();
+      if (!falseYield)
+        continue;
+
+      bool trueVal = trueYield.getValue().cast<BoolAttr>().getValue();
+      bool falseVal = falseYield.getValue().cast<BoolAttr>().getValue();
+      if (!trueVal && falseVal) {
+        if (!opResult.use_empty()) {
+          Value notCond = rewriter.create<XOrOp>(
+              op.getLoc(), op.condition(),
+              rewriter.create<mlir::ConstantOp>(
+                  op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1)));
+          opResult.replaceAllUsesWith(notCond);
+          changed = true;
+        }
+      }
+      if (trueVal && !falseVal) {
+        if (!opResult.use_empty()) {
+          opResult.replaceAllUsesWith(op.condition());
+          changed = true;
+        }
+      }
+    }
+    return success(changed);
+  }
+};
+
 } // namespace
 
 void IfOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                        MLIRContext *context) {
-  results.add<RemoveUnusedResults, RemoveStaticCondition,
-              ConvertTrivialIfToSelect>(context);
+  results
+      .add<RemoveUnusedResults, RemoveStaticCondition, ConvertTrivialIfToSelect,
+           ConditionPropagation, ReplaceIfYieldWithConditionOrValue>(context);
 }
 
 //===----------------------------------------------------------------------===//
