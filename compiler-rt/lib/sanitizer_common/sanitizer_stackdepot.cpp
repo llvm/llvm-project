@@ -94,8 +94,8 @@ StackDepotStats *StackDepotGetStats() {
   return theDepot.GetStats();
 }
 
-u32 StackDepotPut(StackTrace stack) {
-  StackDepotHandle h = theDepot.Put(stack);
+u32 StackDepotPut(StackTrace stack, bool *inserted) {
+  StackDepotHandle h = theDepot.Put(stack, inserted);
   return h.valid() ? h.id() : 0;
 }
 

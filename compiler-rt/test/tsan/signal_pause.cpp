@@ -33,3 +33,4 @@ int main(int argc, char** argv) {
 }
 
 // CHECK: DONE
+// CHECK-NOT: WARNING: ThreadSanitizer:

@@ -103,6 +103,18 @@ class DenseSlabAlloc {
     internal_memset(c->cache, 0, sizeof(c->cache));
   }
 
+  template <typename Func> void ForEach(Func func) {
+    SpinMutexLock lock(&mtx_);
+    for (uptr l1 = 0; l1 < fillpos_; l1++) {
+      for (IndexT l2 = l1 == 0 ? 1 : 0; l2 < kL2Size; l2++)
+        func(&map_[l1][l2]);
+    }
+  }
+
+  uptr AllocatedMemory() const {
+    return fillpos_ * kL2Size * sizeof(T);
+  }
+
  private:
   T *map_[kL1Size];
   SpinMutex mtx_;

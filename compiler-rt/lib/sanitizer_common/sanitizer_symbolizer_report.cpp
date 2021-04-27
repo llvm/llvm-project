@@ -168,7 +168,7 @@ static void MaybeDumpRegisters(void *context) {
   SignalContext::DumpAllRegisters(context);
 }
 
-static void ReportStackOverflowImpl(const SignalContext &sig, u32 tid,
+static void ReportStackOverflowImpl(const SignalContext &sig, Tid tid,
                                     UnwindSignalStackCallbackType unwind,
                                     const void *unwind_context) {
   SanitizerCommonDecorator d;
@@ -186,7 +186,7 @@ static void ReportStackOverflowImpl(const SignalContext &sig, u32 tid,
   ReportErrorSummary(kDescription, stack);
 }
 
-static void ReportDeadlySignalImpl(const SignalContext &sig, u32 tid,
+static void ReportDeadlySignalImpl(const SignalContext &sig, Tid tid,
                                    UnwindSignalStackCallbackType unwind,
                                    const void *unwind_context) {
   SanitizerCommonDecorator d;
@@ -228,7 +228,7 @@ static void ReportDeadlySignalImpl(const SignalContext &sig, u32 tid,
   ReportErrorSummary(description, stack);
 }
 
-void ReportDeadlySignal(const SignalContext &sig, u32 tid,
+void ReportDeadlySignal(const SignalContext &sig, Tid tid,
                         UnwindSignalStackCallbackType unwind,
                         const void *unwind_context) {
   if (sig.IsStackOverflow())
@@ -237,7 +237,7 @@ void ReportDeadlySignal(const SignalContext &sig, u32 tid,
     ReportDeadlySignalImpl(sig, tid, unwind, unwind_context);
 }
 
-void HandleDeadlySignal(void *siginfo, void *context, u32 tid,
+void HandleDeadlySignal(void *siginfo, void *context, Tid tid,
                         UnwindSignalStackCallbackType unwind,
                         const void *unwind_context) {
   StartReportDeadlySignal();
@@ -253,7 +253,7 @@ void HandleDeadlySignal(void *siginfo, void *context, u32 tid,
 static atomic_uintptr_t reporting_thread = {0};
 static StaticSpinMutex CommonSanitizerReportMutex;
 
-ScopedErrorReportLock::ScopedErrorReportLock() {
+void ScopedErrorReportLock::Lock() {
   uptr current = GetThreadSelf();
   for (;;) {
     uptr expected = 0;
@@ -282,7 +282,7 @@ ScopedErrorReportLock::ScopedErrorReportLock() {
   }
 }
 
-ScopedErrorReportLock::~ScopedErrorReportLock() {
+void ScopedErrorReportLock::Unlock() {
   CommonSanitizerReportMutex.Unlock();
   atomic_store_relaxed(&reporting_thread, 0);
 }

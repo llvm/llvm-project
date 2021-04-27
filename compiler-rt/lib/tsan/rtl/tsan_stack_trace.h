@@ -33,8 +33,8 @@ struct VarSizeStackTrace : public StackTrace {
  private:
   void ResizeBuffer(uptr new_size);
 
-  VarSizeStackTrace(const VarSizeStackTrace &);
-  void operator=(const VarSizeStackTrace &);
+  VarSizeStackTrace(const VarSizeStackTrace&) = delete;
+  void operator=(const VarSizeStackTrace&) = delete;
 };
 
 }  // namespace __tsan

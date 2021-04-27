@@ -13,60 +13,147 @@
 #define TSAN_TRACE_H
 
 #include "tsan_defs.h"
+#include "tsan_ilist.h"
 #include "tsan_mutex.h"
-#include "tsan_stack_trace.h"
 #include "tsan_mutexset.h"
+#include "tsan_stack_trace.h"
 
 namespace __tsan {
 
-const int kTracePartSizeBits = 13;
-const int kTracePartSize = 1 << kTracePartSizeBits;
-const int kTraceParts = 2 * 1024 * 1024 / kTracePartSize;
-const int kTraceSize = kTracePartSize * kTraceParts;
-
-// Must fit into 3 bits.
 enum EventType {
-  EventTypeMop,
-  EventTypeFuncEnter,
-  EventTypeFuncExit,
+  EventTypeAccessExt,
+  EventTypeAccessRange,
   EventTypeLock,
-  EventTypeUnlock,
   EventTypeRLock,
-  EventTypeRUnlock
+  EventTypeUnlock,
+  EventTypeTime,
 };
 
-// Represents a thread event (from most significant bit):
-// u64 typ  : 3;   // EventType.
-// u64 addr : 61;  // Associated pc.
-typedef u64 Event;
+struct Event {
+  u64 is_access : 1;
+  u64 is_func : 1;
+  u64 type : 3;
+  u64 _ : 59;
+};
+static_assert(sizeof(Event) == 8, "bad Event size");
+static constexpr Event NopEvent = {1, 0, 0, 0};
 
-const uptr kEventPCBits = 61;
+constexpr uptr kCompressedAddrBits = 44;
+
+struct EventAccess {
+  static constexpr uptr kPCBits = 15;
+
+  u64 is_access : 1;
+  u64 isRead : 1;
+  u64 isAtomic : 1;
+  u64 sizeLog : 2;
+  u64 pcDelta : kPCBits;
+  u64 addr : kCompressedAddrBits;
+};
+static_assert(sizeof(EventAccess) == 8, "bad EventAccess size");
+
+struct EventFunc {
+  u64 is_access : 1;
+  u64 is_func : 1;
+  u64 pc : 62;
+};
+static_assert(sizeof(EventFunc) == 8, "bad EventFunc size");
+
+struct EventAccessExt {
+  u64 is_access : 1;
+  u64 is_func : 1;
+  u64 type : 3;
+  u64 isRead : 1;
+  u64 isAtomic : 1;
+  u64 sizeLog : 2;
+  u64 _ : 11;
+  u64 addr : kCompressedAddrBits;
+  u64 pc;
+};
+static_assert(sizeof(EventAccessExt) == 16, "bad EventAccessExt size");
+
+struct EventAccessRange {
+  static constexpr uptr kSizeLoBits = 13;
+
+  u64 is_access : 1;
+  u64 is_func : 1;
+  u64 type : 3;
+  u64 isRead : 1;
+  u64 isFreed : 1;
+  u64 sizeLo : kSizeLoBits;
+  u64 pc : kCompressedAddrBits;
+  u64 addr : kCompressedAddrBits;
+  u64 sizeHi : 64 - kCompressedAddrBits;
+};
+static_assert(sizeof(EventAccessRange) == 16, "bad EventAccessRange size");
+
+struct EventLock {
+  static constexpr uptr kStackIDLoBits = 15;
+
+  u64 is_access : 1;
+  u64 is_func : 1;
+  u64 type : 3;
+  u64 pc : kCompressedAddrBits;
+  u64 stackIDLo : kStackIDLoBits;
+  u64 stackIDHi : sizeof(StackID) * kByteBits - kStackIDLoBits;
+  u64 _ : 3;
+  u64 addr : kCompressedAddrBits;
+};
+static_assert(sizeof(EventLock) == 16, "bad EventLock size");
+
+struct EventUnlock {
+  u64 is_access : 1;
+  u64 is_func : 1;
+  u64 type : 3;
+  u64 _ : 15;
+  u64 addr : kCompressedAddrBits;
+};
+static_assert(sizeof(EventUnlock) == 8, "bad EventUnlock size");
+
+struct EventTime {
+  u64 is_access : 1;
+  u64 is_func : 1;
+  u64 type : 3;
+  u64 sid : 8;
+  u64 epoch : kEpochBits;
+  u64 _ : 64 - 13 - kEpochBits;
+};
+static_assert(sizeof(EventTime) == 8, "bad EventTime size");
 
 struct TraceHeader {
+  Trace* trace = nullptr;
+  INode trace_parts; // in Trace::parts
+  INode global; // in Contex::trace_part_recycle
+  VarSizeStackTrace start_stack;
+  MutexSet start_mset;
+  uptr prev_pc = 0;
 #if !SANITIZER_GO
   BufferedStackTrace stack0;  // Start stack for the trace.
 #else
   VarSizeStackTrace stack0;
 #endif
-  u64        epoch0;  // Start epoch for the trace.
-  MutexSet   mset0;
-
-  TraceHeader() : stack0(), epoch0() {}
 };
+
+struct TracePart : TraceHeader {
+  static constexpr uptr kByteSize = 256 << 10;
+  static constexpr uptr kSize =
+      (kByteSize - sizeof(TraceHeader)) / sizeof(Event);
+  // Note: TracePos assumes this to be the last field.
+  Event events[kSize];
+
+  TracePart() {
+  }
+};
+static_assert(sizeof(TracePart) == TracePart::kByteSize, "bad TracePart size");
 
 struct Trace {
   Mutex mtx;
-#if !SANITIZER_GO
-  // Must be last to catch overflow as paging fault.
-  // Go shadow stack is dynamically allocated.
-  uptr shadow_stack[kShadowStackSize];
-#endif
-  // Must be the last field, because we unmap the unused part in
-  // CreateThreadContext.
-  TraceHeader headers[kTraceParts];
+  IList<TraceHeader, &TraceHeader::trace_parts, TracePart> parts;
+  TracePart* local_head; // first node non-queued into ctx->trace_part_recycle
+  Event* final_pos = nullptr;
+  uptr parts_allocated = 0;
 
-  Trace()
-    : mtx(MutexTypeTrace, StatMtxTrace) {
+  Trace() : mtx(MutexTypeTrace) {
   }
 };
 

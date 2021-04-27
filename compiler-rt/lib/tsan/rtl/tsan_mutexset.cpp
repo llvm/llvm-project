@@ -17,54 +17,48 @@ namespace __tsan {
 const uptr MutexSet::kMaxSize;
 
 MutexSet::MutexSet() {
+  seq_ = 0;
   size_ = 0;
   internal_memset(&descs_, 0, sizeof(descs_));
 }
 
-void MutexSet::Add(u64 id, bool write, u64 epoch) {
+void MutexSet::Add(uptr addr, StackID stack_id, bool write) {
   // Look up existing mutex with the same id.
   for (uptr i = 0; i < size_; i++) {
-    if (descs_[i].id == id) {
+    if (descs_[i].addr == addr) {
       descs_[i].count++;
-      descs_[i].epoch = epoch;
+      descs_[i].seq = seq_++;
       return;
     }
   }
   // On overflow, find the oldest mutex and drop it.
   if (size_ == kMaxSize) {
-    u64 minepoch = (u64)-1;
-    u64 mini = (u64)-1;
+    u32 minSeq = (u32)-1;
+    uptr minIndex = (uptr)-1;
     for (uptr i = 0; i < size_; i++) {
-      if (descs_[i].epoch < minepoch) {
-        minepoch = descs_[i].epoch;
-        mini = i;
+      if (descs_[i].seq < minSeq) {
+        minSeq = descs_[i].seq;
+        minIndex = i;
       }
     }
-    RemovePos(mini);
+    RemovePos(minIndex);
     CHECK_EQ(size_, kMaxSize - 1);
   }
   // Add new mutex descriptor.
-  descs_[size_].id = id;
+  descs_[size_].addr = addr;
+  descs_[size_].stack_id = stack_id;
   descs_[size_].write = write;
-  descs_[size_].epoch = epoch;
+  //!!! handle seq overflow.
+  descs_[size_].seq = seq_++;
   descs_[size_].count = 1;
   size_++;
 }
 
-void MutexSet::Del(u64 id, bool write) {
+void MutexSet::Del(uptr addr, bool destroy) {
   for (uptr i = 0; i < size_; i++) {
-    if (descs_[i].id == id) {
-      if (--descs_[i].count == 0)
+    if (descs_[i].addr == addr) {
+      if (destroy || --descs_[i].count == 0)
         RemovePos(i);
-      return;
-    }
-  }
-}
-
-void MutexSet::Remove(u64 id) {
-  for (uptr i = 0; i < size_; i++) {
-    if (descs_[i].id == id) {
-      RemovePos(i);
       return;
     }
   }

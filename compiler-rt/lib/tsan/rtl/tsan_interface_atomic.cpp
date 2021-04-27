@@ -32,6 +32,7 @@ using namespace __tsan;
 static StaticSpinMutex mutex128;
 #endif
 
+#if SANITIZER_DEBUG
 static bool IsLoadOrder(morder mo) {
   return mo == mo_relaxed || mo == mo_consume
       || mo == mo_acquire || mo == mo_seq_cst;
@@ -40,6 +41,7 @@ static bool IsLoadOrder(morder mo) {
 static bool IsStoreOrder(morder mo) {
   return mo == mo_relaxed || mo == mo_release || mo == mo_seq_cst;
 }
+#endif
 
 static bool IsReleaseOrder(morder mo) {
   return mo == mo_release || mo == mo_acq_rel || mo == mo_seq_cst;
@@ -161,16 +163,15 @@ a128 func_cas(volatile a128 *v, a128 cmp, a128 xch) {
 }
 #endif
 
-template<typename T>
-static int SizeLog() {
+template <typename T> static int AccessSize() {
   if (sizeof(T) <= 1)
-    return kSizeLog1;
+    return 1;
   else if (sizeof(T) <= 2)
-    return kSizeLog2;
+    return 2;
   else if (sizeof(T) <= 4)
-    return kSizeLog4;
+    return 4;
   else
-    return kSizeLog8;
+    return 8;
   // For 16-byte atomics we also use 8-byte memory access,
   // this leads to false negatives only in very obscure cases.
 }
@@ -193,7 +194,7 @@ static atomic_uint64_t *to_atomic(const volatile a64 *a) {
   return reinterpret_cast<atomic_uint64_t *>(const_cast<a64 *>(a));
 }
 
-static memory_order to_mo(morder mo) {
+ALWAYS_INLINE static memory_order to_mo(morder mo) {
   switch (mo) {
   case mo_relaxed: return memory_order_relaxed;
   case mo_consume: return memory_order_consume;
@@ -202,12 +203,12 @@ static memory_order to_mo(morder mo) {
   case mo_acq_rel: return memory_order_acq_rel;
   case mo_seq_cst: return memory_order_seq_cst;
   }
-  CHECK(0);
+  DCHECK(0);
   return memory_order_seq_cst;
 }
 
-template<typename T>
-static T NoTsanAtomicLoad(const volatile T *a, morder mo) {
+template <typename T>
+ALWAYS_INLINE static T NoTsanAtomicLoad(const volatile T* a, morder mo) {
   return atomic_load(to_atomic(a), to_mo(mo));
 }
 
@@ -220,25 +221,26 @@ static a128 NoTsanAtomicLoad(const volatile a128 *a, morder mo) {
 
 template<typename T>
 static T AtomicLoad(ThreadState *thr, uptr pc, const volatile T *a, morder mo) {
-  CHECK(IsLoadOrder(mo));
+  DCHECK(IsLoadOrder(mo));
   // This fast-path is critical for performance.
   // Assume the access is atomic.
-  if (!IsAcquireOrder(mo)) {
-    MemoryReadAtomic(thr, pc, (uptr)a, SizeLog<T>());
+  if (LIKELY(!IsAcquireOrder(mo))) {
+    MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), AccessRead | AccessAtomic);
     return NoTsanAtomicLoad(a, mo);
   }
+  T v = NoTsanAtomicLoad(a, mo);
   // Don't create sync object if it does not exist yet. For example, an atomic
   // pointer is initialized to nullptr and then periodically acquire-loaded.
-  T v = NoTsanAtomicLoad(a, mo);
-  SyncVar *s = ctx->metamap.GetIfExistsAndLock((uptr)a, false);
+  auto s = ctx->metamap.GetSyncIfExists(thr, pc, (uptr)a);
   if (s) {
-    AcquireImpl(thr, pc, &s->clock);
+    SlotLocker locker(thr);
+    ReadLock lock(&s->mtx);
+    thr->clock.Acquire(s->clock);
     // Re-read under sync mutex because we need a consistent snapshot
     // of the value and the clock we acquire.
     v = NoTsanAtomicLoad(a, mo);
-    s->mtx.ReadUnlock();
   }
-  MemoryReadAtomic(thr, pc, (uptr)a, SizeLog<T>());
+  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), AccessRead | AccessAtomic);
   return v;
 }
 
@@ -257,45 +259,45 @@ static void NoTsanAtomicStore(volatile a128 *a, a128 v, morder mo) {
 template<typename T>
 static void AtomicStore(ThreadState *thr, uptr pc, volatile T *a, T v,
     morder mo) {
-  CHECK(IsStoreOrder(mo));
-  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>());
+  DCHECK(IsStoreOrder(mo));
+  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), AccessWrite | AccessAtomic);
   // This fast-path is critical for performance.
   // Assume the access is atomic.
   // Strictly saying even relaxed store cuts off release sequence,
   // so must reset the clock.
-  if (!IsReleaseOrder(mo)) {
+  if (LIKELY(!IsReleaseOrder(mo))) {
     NoTsanAtomicStore(a, v, mo);
     return;
   }
-  __sync_synchronize();
-  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, (uptr)a, true);
-  thr->fast_state.IncrementEpoch();
-  // Can't increment epoch w/o writing to the trace as well.
-  TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
-  ReleaseStoreImpl(thr, pc, &s->clock);
-  NoTsanAtomicStore(a, v, mo);
-  s->mtx.Unlock();
+  SlotLocker locker(thr);
+  {
+    auto s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
+    Lock lock(&s->mtx);
+    thr->clock.ReleaseStore(&s->clock);
+    NoTsanAtomicStore(a, v, mo);
+  }
+  IncrementEpoch(thr);
 }
 
 template<typename T, T (*F)(volatile T *v, T op)>
 static T AtomicRMW(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
-  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>());
-  SyncVar *s = 0;
-  if (mo != mo_relaxed) {
-    s = ctx->metamap.GetOrCreateAndLock(thr, pc, (uptr)a, true);
-    thr->fast_state.IncrementEpoch();
-    // Can't increment epoch w/o writing to the trace as well.
-    TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
+  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), AccessWrite | AccessAtomic);
+  if (LIKELY(mo == mo_relaxed))
+    return F(a, v);
+  SlotLocker locker(thr);
+  {
+    auto s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
+    RWLock lock(&s->mtx, IsReleaseOrder(mo));
     if (IsAcqRelOrder(mo))
-      AcquireReleaseImpl(thr, pc, &s->clock);
+      thr->clock.ReleaseAcquire(&s->clock);
     else if (IsReleaseOrder(mo))
-      ReleaseImpl(thr, pc, &s->clock);
+      thr->clock.Release(&s->clock);
     else if (IsAcquireOrder(mo))
-      AcquireImpl(thr, pc, &s->clock);
+      thr->clock.Acquire(s->clock);
+    v = F(a, v);
   }
-  v = F(a, v);
-  if (s)
-    s->mtx.Unlock();
+  if (IsReleaseOrder(mo))
+    IncrementEpoch(thr);
   return v;
 }
 
@@ -405,41 +407,40 @@ static bool AtomicCAS(ThreadState *thr, uptr pc,
   // 31.7.2.18: "The failure argument shall not be memory_order_release
   // nor memory_order_acq_rel". LLVM (2021-05) fallbacks to Monotonic
   // (mo_relaxed) when those are used.
-  CHECK(IsLoadOrder(fmo));
+  DCHECK(IsLoadOrder(fmo));
 
-  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>());
-  SyncVar *s = 0;
-  bool write_lock = IsReleaseOrder(mo);
-
-  if (mo != mo_relaxed || fmo != mo_relaxed)
-    s = ctx->metamap.GetOrCreateAndLock(thr, pc, (uptr)a, write_lock);
-
-  T cc = *c;
-  T pr = func_cas(a, cc, v);
-  bool success = pr == cc;
-  if (!success) {
+  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), AccessWrite | AccessAtomic);
+  if (LIKELY(mo == mo_relaxed && fmo == mo_relaxed)) {
+    T cc = *c;
+    T pr = func_cas(a, cc, v);
+    if (pr == cc)
+      return true;
     *c = pr;
     mo = fmo;
+    return false;
   }
-
-  if (s) {
-    thr->fast_state.IncrementEpoch();
-    // Can't increment epoch w/o writing to the trace as well.
-    TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
-
+  SlotLocker locker(thr);
+  bool release = IsReleaseOrder(mo);
+  bool success;
+  {
+    auto s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
+    RWLock lock(&s->mtx, release);
+    T cc = *c;
+    T pr = func_cas(a, cc, v);
+    success = pr == cc;
+    if (!success) {
+      *c = pr;
+      mo = fmo;
+    }
     if (success && IsAcqRelOrder(mo))
-      AcquireReleaseImpl(thr, pc, &s->clock);
+      thr->clock.ReleaseAcquire(&s->clock);
     else if (success && IsReleaseOrder(mo))
-      ReleaseImpl(thr, pc, &s->clock);
+      thr->clock.Release(&s->clock);
     else if (IsAcquireOrder(mo))
-      AcquireImpl(thr, pc, &s->clock);
-
-    if (write_lock)
-      s->mtx.Unlock();
-    else
-      s->mtx.ReadUnlock();
+      thr->clock.Acquire(s->clock);
   }
-
+  if (success && release)
+    IncrementEpoch(thr);
   return success;
 }
 
@@ -483,51 +484,14 @@ static morder convert_morder(morder mo) {
   return (morder)(mo & 0x7fff);
 }
 
-#define SCOPED_ATOMIC(func, ...) \
-    ThreadState *const thr = cur_thread(); \
-    if (UNLIKELY(thr->ignore_sync || thr->ignore_interceptors)) { \
-      ProcessPendingSignals(thr); \
-      return NoTsanAtomic##func(__VA_ARGS__); \
-    } \
-    const uptr callpc = (uptr)__builtin_return_address(0); \
-    uptr pc = StackTrace::GetCurrentPc(); \
-    mo = convert_morder(mo); \
-    AtomicStatInc(thr, sizeof(*a), mo, StatAtomic##func); \
-    ScopedAtomic sa(thr, callpc, a, mo, __func__); \
-    return Atomic##func(thr, pc, __VA_ARGS__); \
-/**/
-
-class ScopedAtomic {
- public:
-  ScopedAtomic(ThreadState *thr, uptr pc, const volatile void *a,
-               morder mo, const char *func)
-      : thr_(thr) {
-    FuncEntry(thr_, pc);
-    DPrintf("#%d: %s(%p, %d)\n", thr_->tid, func, a, mo);
-  }
-  ~ScopedAtomic() {
-    ProcessPendingSignals(thr_);
-    FuncExit(thr_);
-  }
- private:
-  ThreadState *thr_;
-};
-
-static void AtomicStatInc(ThreadState *thr, uptr size, morder mo, StatType t) {
-  StatInc(thr, StatAtomic);
-  StatInc(thr, t);
-  StatInc(thr, size == 1 ? StatAtomic1
-             : size == 2 ? StatAtomic2
-             : size == 4 ? StatAtomic4
-             : size == 8 ? StatAtomic8
-             :             StatAtomic16);
-  StatInc(thr, mo == mo_relaxed ? StatAtomicRelaxed
-             : mo == mo_consume ? StatAtomicConsume
-             : mo == mo_acquire ? StatAtomicAcquire
-             : mo == mo_release ? StatAtomicRelease
-             : mo == mo_acq_rel ? StatAtomicAcq_Rel
-             :                    StatAtomicSeq_Cst);
-}
+#  define SCOPED_ATOMIC(func, ...)                                             \
+    ThreadState* const thr = cur_thread();                                     \
+    ProcessPendingSignals(thr);                                                \
+    if (UNLIKELY(thr->ignore_sync || thr->ignore_interceptors))                \
+      return NoTsanAtomic##func(__VA_ARGS__);                                  \
+    mo = convert_morder(mo);                                                   \
+    return Atomic##func(thr, GET_CALLER_PC(), __VA_ARGS__);                    \
+    /**/
 
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -871,7 +835,6 @@ a128 __tsan_atomic128_compare_exchange_val(volatile a128 *a, a128 c, a128 v,
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_atomic_thread_fence(morder mo) {
-  char* a = 0;
   SCOPED_ATOMIC(Fence, mo);
 }
 

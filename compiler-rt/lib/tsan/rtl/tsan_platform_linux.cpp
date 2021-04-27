@@ -27,41 +27,48 @@
 #include "tsan_platform.h"
 #include "tsan_rtl.h"
 
-#include <fcntl.h>
-#include <pthread.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
-#include <sys/mman.h>
-#if SANITIZER_LINUX
-#include <sys/personality.h>
-#include <setjmp.h>
-#endif
-#include <sys/syscall.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/resource.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <sched.h>
-#include <dlfcn.h>
-#if SANITIZER_LINUX
-#define __need_res_state
-#include <resolv.h>
-#endif
+#  include <errno.h>
+#  include <fcntl.h>
+#  include <link.h>
+#  include <pthread.h>
+#  include <signal.h>
+#  include <stdarg.h>
+#  include <stdio.h>
+#  include <stdlib.h>
+#  include <string.h>
+#  include <sys/mman.h>
+#  if SANITIZER_LINUX
+#    include <setjmp.h>
+#    include <sys/personality.h>
+#  endif
+#  include <dlfcn.h>
+#  include <sched.h>
+#  include <sys/resource.h>
+#  include <sys/socket.h>
+#  include <sys/stat.h>
+#  include <sys/syscall.h>
+#  include <sys/time.h>
+#  include <sys/types.h>
+#  include <unistd.h>
+#  if SANITIZER_LINUX
+#    define __need_res_state
+#    include <resolv.h>
+#  endif
 
-#ifdef sa_handler
-# undef sa_handler
-#endif
+// p_type from resolv.h conflicts with Elf_Phdr.p_type in link.h.
+#  ifdef p_type
+#    undef p_type
+#  endif
 
-#ifdef sa_sigaction
-# undef sa_sigaction
-#endif
+#  ifdef sa_handler
+#    undef sa_handler
+#  endif
 
-#if SANITIZER_FREEBSD
+#  ifdef sa_sigaction
+#    undef sa_sigaction
+#  endif
+
+#  if SANITIZER_FREEBSD
 extern "C" void *__libc_stack_end;
 void *__libc_stack_end = 0;
 #endif
@@ -91,15 +98,14 @@ uptr vmaSize;
 #endif
 
 enum {
-  MemTotal  = 0,
-  MemShadow = 1,
-  MemMeta   = 2,
-  MemFile   = 3,
-  MemMmap   = 4,
-  MemTrace  = 5,
-  MemHeap   = 6,
-  MemOther  = 7,
-  MemCount  = 8,
+  MemTotal,
+  MemShadow,
+  MemMeta,
+  MemFile,
+  MemMmap,
+  MemHeap,
+  MemOther,
+  MemCount,
 };
 
 void FillProfileCallback(uptr p, uptr rss, bool file,
@@ -120,39 +126,45 @@ void FillProfileCallback(uptr p, uptr rss, bool file,
   else if (p >= AppMemBeg() && p < AppMemEnd())
     mem[file ? MemFile : MemMmap] += rss;
 #endif
-  else if (p >= TraceMemBeg() && p < TraceMemEnd())
-    mem[MemTrace] += rss;
   else
     mem[MemOther] += rss;
 }
 
-void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive) {
+void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime) {
   uptr mem[MemCount];
-  internal_memset(mem, 0, sizeof(mem[0]) * MemCount);
-  __sanitizer::GetMemoryProfile(FillProfileCallback, mem, 7);
+  internal_memset(mem, 0, sizeof(mem));
+  if (flags()->profile_memory_fast)
+    mem[MemTotal] = GetRSS();
+  else
+    GetMemoryProfile(FillProfileCallback, mem, MemCount);
   StackDepotStats *stacks = StackDepotGetStats();
+  uptr mem_block_mem, sync_obj_mem;
+  ctx->metamap.GetMemoryStats(&mem_block_mem, &sync_obj_mem);
+  uptr trace_mem;
+  {
+    Lock l(&ctx->slot_mtx);
+    trace_mem = ctx->trace_part_count * sizeof(TracePart);
+  }
+  u32 nrunning = ctx->thread_registry.RunningThreads();
+  u32 nthread = ctx->thread_registry.TotalThreads();
+  uptr internal_stats[AllocatorStatCount];
+  internal_allocator()->GetStats(internal_stats);
+  // All these are allocated from the common mmap region.
+  mem[MemMmap] -= mem_block_mem + sync_obj_mem + trace_mem +
+      stacks->allocated + internal_stats[AllocatorStatMapped];
+  if (s64(mem[MemMmap]) < 0)
+    mem[MemMmap] = 0;
   internal_snprintf(buf, buf_size,
-      "RSS %zd MB: shadow:%zd meta:%zd file:%zd mmap:%zd"
-      " trace:%zd heap:%zd other:%zd stacks=%zd[%zd] nthr=%zd/%zd\n",
-      mem[MemTotal] >> 20, mem[MemShadow] >> 20, mem[MemMeta] >> 20,
-      mem[MemFile] >> 20, mem[MemMmap] >> 20, mem[MemTrace] >> 20,
-      mem[MemHeap] >> 20, mem[MemOther] >> 20,
-      stacks->allocated >> 20, stacks->n_uniq_ids,
-      nlive, nthread);
-}
-
-#if SANITIZER_LINUX
-void FlushShadowMemoryCallback(
-    const SuspendedThreadsList &suspended_threads_list,
-    void *argument) {
-  ReleaseMemoryPagesToOS(ShadowBeg(), ShadowEnd());
-}
-#endif
-
-void FlushShadowMemory() {
-#if SANITIZER_LINUX
-  StopTheWorld(FlushShadowMemoryCallback, 0);
-#endif
+      "%llus [%zu]: RSS %zd MB: shadow:%zd meta:%zd file:%zd"
+      " mmap:%zd heap:%zd other:%zd intalloc:%zd memblocks:%zd syncobj:%zu"
+      " trace:%zu stacks=%zd threads=%u/%u\n",
+      uptime / (1000*1000*1000), ctx->global_epoch,
+      mem[MemTotal] >> 20, mem[MemShadow] >> 20,
+                    mem[MemMeta] >> 20, mem[MemFile] >> 20, mem[MemMmap] >> 20,
+                    mem[MemHeap] >> 20, mem[MemOther] >> 20,
+                    internal_stats[AllocatorStatMapped] >> 20,
+                    mem_block_mem >> 20, sync_obj_mem >> 20, trace_mem >> 20,
+                    stacks->allocated >> 20, nrunning, nthread);
 }
 
 #if !SANITIZER_GO
@@ -178,12 +190,13 @@ static void MapRodata() {
   internal_unlink(name);  // Unlink it now, so that we can reuse the buffer.
   fd_t fd = openrv;
   // Fill the file with kShadowRodata.
-  const uptr kMarkerSize = 512 * 1024 / sizeof(u64);
-  InternalMmapVector<u64> marker(kMarkerSize);
+  const uptr kMarkerSize = 512 * 1024 / sizeof(RawShadow);
+  InternalMmapVector<RawShadow> marker(kMarkerSize);
   // volatile to prevent insertion of memset
-  for (volatile u64 *p = marker.data(); p < marker.data() + kMarkerSize; p++)
-    *p = kShadowRodata;
-  internal_write(fd, marker.data(), marker.size() * sizeof(u64));
+  for (volatile RawShadow* p = marker.data(); p < marker.data() + kMarkerSize;
+       p++)
+    *p = Shadow::kShadowRodata;
+  internal_write(fd, marker.data(), marker.size() * sizeof(RawShadow));
   // Map the file into memory.
   uptr page = internal_mmap(0, GetPageSizeCached(), PROT_READ | PROT_WRITE,
                             MAP_PRIVATE | MAP_ANONYMOUS, fd, 0);
@@ -202,10 +215,11 @@ static void MapRodata() {
       // Assume it's .rodata
       char *shadow_start = (char *)MemToShadow(segment.start);
       char *shadow_end = (char *)MemToShadow(segment.end);
-      for (char *p = shadow_start; p < shadow_end;
-           p += marker.size() * sizeof(u64)) {
-        internal_mmap(p, Min<uptr>(marker.size() * sizeof(u64), shadow_end - p),
-                      PROT_READ, MAP_PRIVATE | MAP_FIXED, fd, 0);
+      for (char* p = shadow_start; p < shadow_end;
+           p += marker.size() * sizeof(RawShadow)) {
+        internal_mmap(
+            p, Min<uptr>(marker.size() * sizeof(RawShadow), shadow_end - p),
+            PROT_READ, MAP_PRIVATE | MAP_FIXED, fd, 0);
       }
     }
   }
@@ -317,7 +331,7 @@ void InitializePlatform() {
       ReExec();
   }
 
-  CheckAndProtect();
+  MappingCheckAndProtect();
   InitTlsSize();
 #endif  // !SANITIZER_GO
 }
@@ -494,7 +508,7 @@ ThreadState *cur_thread() {
       if (dead_thread_state == nullptr) {
         dead_thread_state = reinterpret_cast<ThreadState*>(
             MmapOrDie(sizeof(ThreadState), "ThreadState"));
-        dead_thread_state->fast_state.SetIgnoreBit();
+        dead_thread_state->ignore_enabled_ = true;
         dead_thread_state->ignore_interceptors = 1;
         dead_thread_state->is_dead = true;
         *const_cast<u32*>(&dead_thread_state->tid) = -1;

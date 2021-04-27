@@ -47,42 +47,24 @@ uptr user_alloc_usable_size(const void *p);
 void invoke_malloc_hook(void *ptr, uptr size);
 void invoke_free_hook(void *ptr);
 
-enum MBlockType {
-  MBlockScopedBuf,
-  MBlockString,
-  MBlockStackTrace,
-  MBlockShadowStack,
-  MBlockSync,
-  MBlockClock,
-  MBlockThreadContex,
-  MBlockDeadInfo,
-  MBlockRacyStacks,
-  MBlockRacyAddresses,
-  MBlockAtExit,
-  MBlockFlag,
-  MBlockReport,
-  MBlockReportMop,
-  MBlockReportThread,
-  MBlockReportMutex,
-  MBlockReportLoc,
-  MBlockReportStack,
-  MBlockSuppression,
-  MBlockExpectRace,
-  MBlockSignal,
-  MBlockJmpBuf,
-
-  // This must be the last.
-  MBlockTypeCount
-};
-
 // For internal data structures.
-void *internal_alloc(MBlockType typ, uptr sz);
-void internal_free(void *p);
+void* Alloc(uptr sz);
+void FreeImpl(void* p);
 
-template <typename T>
-void DestroyAndFree(T *p) {
+template <typename T> T* New() {
+  return new (Alloc(sizeof(T))) T();
+}
+
+template <typename T> void Free(T*& p) {
+  if (p == nullptr)
+    return;
+  FreeImpl(p);
+  p = nullptr;
+}
+
+template <typename T> void DestroyAndFree(T*& p) {
   p->~T();
-  internal_free(p);
+  Free(p);
 }
 
 }  // namespace __tsan

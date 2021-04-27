@@ -41,10 +41,7 @@ static void internal_nanosleep(zx_time_t ns) {
   CHECK_EQ(status, ZX_OK);
 }
 
-unsigned int internal_sleep(unsigned int seconds) {
-  internal_nanosleep(ZX_SEC(seconds));
-  return 0;
-}
+void internal_sleep(u64 useconds) { internal_nanosleep(ZX_USEC(useconds)); }
 
 u64 NanoTime() {
   zx_handle_t utc_clock = _zx_utc_reference_get();
@@ -77,10 +74,6 @@ tid_t GetTid() { return GetThreadSelf(); }
 void Abort() { abort(); }
 
 int Atexit(void (*function)(void)) { return atexit(function); }
-
-void SleepForSeconds(int seconds) { internal_sleep(seconds); }
-
-void SleepForMillis(int millis) { internal_nanosleep(ZX_MSEC(millis)); }
 
 void GetThreadStackTopAndBottom(bool, uptr *stack_top, uptr *stack_bottom) {
   pthread_attr_t attr;

@@ -42,6 +42,60 @@ struct SizeClassAllocator64FlagMasks {  //  Bit masks.
   };
 };
 
+template <typename Allocator>
+class MemoryMapperT {
+ public:
+  typedef typename Allocator::CompactPtrT CompactPtrT;
+
+  MemoryMapperT(const Allocator &allocator) : allocator_(allocator) {}
+
+  ~MemoryMapperT() {
+    if (buffer_)
+      UnmapOrDie(buffer_, buffer_size_);
+  }
+
+  bool GetAndResetStats(uptr &ranges, uptr &bytes) {
+    ranges = released_ranges_count_;
+    released_ranges_count_ = 0;
+    bytes = released_bytes_;
+    released_bytes_ = 0;
+    return ranges != 0;
+  }
+
+  void *MapPackedCounterArrayBuffer(uptr buffer_size) {
+    // TODO(alekseyshl): The idea to explore is to check if we have enough
+    // space between num_freed_chunks*sizeof(CompactPtrT) and
+    // mapped_free_array to fit buffer_size bytes and use that space instead
+    // of mapping a temporary one.
+    if (buffer_size_ < buffer_size) {
+      if (buffer_)
+        UnmapOrDie(buffer_, buffer_size_);
+      buffer_ = MmapOrDieOnFatalError(buffer_size, "ReleaseToOSPageCounters");
+      buffer_size_ = buffer_size;
+    } else {
+      internal_memset(buffer_, 0, buffer_size);
+    }
+    return buffer_;
+  }
+
+  // Releases [from, to) range of pages back to OS.
+  void ReleasePageRangeToOS(CompactPtrT from, CompactPtrT to, uptr class_id) {
+    const uptr region_base = allocator_.GetRegionBeginBySizeClass(class_id);
+    const uptr from_page = allocator_.CompactPtrToPointer(region_base, from);
+    const uptr to_page = allocator_.CompactPtrToPointer(region_base, to);
+    ReleaseMemoryPagesToOS(from_page, to_page);
+    released_ranges_count_++;
+    released_bytes_ += to_page - from_page;
+  }
+
+ private:
+  const Allocator &allocator_;
+  uptr released_ranges_count_ = 0;
+  uptr released_bytes_ = 0;
+  void *buffer_ = nullptr;
+  uptr buffer_size_ = 0;
+};
+
 template <class Params>
 class SizeClassAllocator64 {
  public:
@@ -57,6 +111,7 @@ class SizeClassAllocator64 {
 
   typedef SizeClassAllocator64<Params> ThisT;
   typedef SizeClassAllocator64LocalCache<ThisT> AllocatorCache;
+  typedef MemoryMapperT<ThisT> MemoryMapper;
 
   // When we know the size class (the region base) we can represent a pointer
   // as a 4-byte integer (offset from the region start shifted right by 4).
@@ -120,9 +175,10 @@ class SizeClassAllocator64 {
   }
 
   void ForceReleaseToOS() {
+    MemoryMapper memory_mapper(*this);
     for (uptr class_id = 1; class_id < kNumClasses; class_id++) {
       BlockingMutexLock l(&GetRegionInfo(class_id)->mutex);
-      MaybeReleaseToOS(class_id, true /*force*/);
+      MaybeReleaseToOS(&memory_mapper, class_id, true /*force*/);
     }
   }
 
@@ -131,7 +187,8 @@ class SizeClassAllocator64 {
       alignment <= SizeClassMap::kMaxSize;
   }
 
-  NOINLINE void ReturnToAllocator(AllocatorStats *stat, uptr class_id,
+  NOINLINE void ReturnToAllocator(MemoryMapper *memory_mapper,
+                                  AllocatorStats *stat, uptr class_id,
                                   const CompactPtrT *chunks, uptr n_chunks) {
     RegionInfo *region = GetRegionInfo(class_id);
     uptr region_beg = GetRegionBeginBySizeClass(class_id);
@@ -154,7 +211,7 @@ class SizeClassAllocator64 {
     region->num_freed_chunks = new_num_freed_chunks;
     region->stats.n_freed += n_chunks;
 
-    MaybeReleaseToOS(class_id, false /*force*/);
+    MaybeReleaseToOS(memory_mapper, class_id, false /*force*/);
   }
 
   NOINLINE bool GetFromAllocator(AllocatorStats *stat, uptr class_id,
@@ -312,13 +369,13 @@ class SizeClassAllocator64 {
 
   // ForceLock() and ForceUnlock() are needed to implement Darwin malloc zone
   // introspection API.
-  void ForceLock() {
+  void ForceLock() NO_THREAD_SAFETY_ANALYSIS {
     for (uptr i = 0; i < kNumClasses; i++) {
       GetRegionInfo(i)->mutex.Lock();
     }
   }
 
-  void ForceUnlock() {
+  void ForceUnlock() NO_THREAD_SAFETY_ANALYSIS {
     for (int i = (int)kNumClasses - 1; i >= 0; i--) {
       GetRegionInfo(i)->mutex.Unlock();
     }
@@ -362,10 +419,10 @@ class SizeClassAllocator64 {
   // For the performance sake, none of the accessors check the validity of the
   // arguments, it is assumed that index is always in [0, n) range and the value
   // is not incremented past max_value.
-  template<class MemoryMapperT>
+  template <typename MemoryMapper>
   class PackedCounterArray {
    public:
-    PackedCounterArray(u64 num_counters, u64 max_value, MemoryMapperT *mapper)
+    PackedCounterArray(u64 num_counters, u64 max_value, MemoryMapper *mapper)
         : n(num_counters), memory_mapper(mapper) {
       CHECK_GT(num_counters, 0);
       CHECK_GT(max_value, 0);
@@ -388,11 +445,6 @@ class SizeClassAllocator64 {
           sizeof(*buffer);
       buffer = reinterpret_cast<u64*>(
           memory_mapper->MapPackedCounterArrayBuffer(buffer_size));
-    }
-    ~PackedCounterArray() {
-      if (buffer) {
-        memory_mapper->UnmapPackedCounterArrayBuffer(buffer, buffer_size);
-      }
     }
 
     bool IsAllocated() const {
@@ -430,18 +482,21 @@ class SizeClassAllocator64 {
     u64 packing_ratio_log;
     u64 bit_offset_mask;
 
-    MemoryMapperT* const memory_mapper;
+    MemoryMapper *const memory_mapper;
     u64 buffer_size;
     u64* buffer;
   };
 
-  template<class MemoryMapperT>
+  template <class MemoryMapperT>
   class FreePagesRangeTracker {
    public:
-    explicit FreePagesRangeTracker(MemoryMapperT* mapper)
+    explicit FreePagesRangeTracker(MemoryMapperT *mapper, uptr class_id)
         : memory_mapper(mapper),
+          class_id(class_id),
           page_size_scaled_log(Log2(GetPageSizeCached() >> kCompactPtrScale)),
-          in_the_range(false), current_page(0), current_range_start_page(0) {}
+          in_the_range(false),
+          current_page(0),
+          current_range_start_page(0) {}
 
     void NextPage(bool freed) {
       if (freed) {
@@ -463,13 +518,14 @@ class SizeClassAllocator64 {
     void CloseOpenedRange() {
       if (in_the_range) {
         memory_mapper->ReleasePageRangeToOS(
-            current_range_start_page << page_size_scaled_log,
+            class_id, current_range_start_page << page_size_scaled_log,
             current_page << page_size_scaled_log);
         in_the_range = false;
       }
     }
 
-    MemoryMapperT* const memory_mapper;
+    MemoryMapperT *const memory_mapper;
+    const uptr class_id;
     const uptr page_size_scaled_log;
     bool in_the_range;
     uptr current_page;
@@ -480,11 +536,12 @@ class SizeClassAllocator64 {
   // chunks only and returns these pages back to OS.
   // allocated_pages_count is the total number of pages allocated for the
   // current bucket.
-  template<class MemoryMapperT>
+  template <typename MemoryMapper>
   static void ReleaseFreeMemoryToOS(CompactPtrT *free_array,
                                     uptr free_array_count, uptr chunk_size,
                                     uptr allocated_pages_count,
-                                    MemoryMapperT *memory_mapper) {
+                                    MemoryMapper *memory_mapper,
+                                    uptr class_id) {
     const uptr page_size = GetPageSizeCached();
 
     // Figure out the number of chunks per page and whether we can take a fast
@@ -520,9 +577,8 @@ class SizeClassAllocator64 {
       UNREACHABLE("All chunk_size/page_size ratios must be handled.");
     }
 
-    PackedCounterArray<MemoryMapperT> counters(allocated_pages_count,
-                                               full_pages_chunk_count_max,
-                                               memory_mapper);
+    PackedCounterArray<MemoryMapper> counters(
+        allocated_pages_count, full_pages_chunk_count_max, memory_mapper);
     if (!counters.IsAllocated())
       return;
 
@@ -547,7 +603,7 @@ class SizeClassAllocator64 {
 
     // Iterate over pages detecting ranges of pages with chunk counters equal
     // to the expected number of chunks for the particular page.
-    FreePagesRangeTracker<MemoryMapperT> range_tracker(memory_mapper);
+    FreePagesRangeTracker<MemoryMapper> range_tracker(memory_mapper, class_id);
     if (same_chunk_count_per_page) {
       // Fast path, every page has the same number of chunks affecting it.
       for (uptr i = 0; i < counters.GetCount(); i++)
@@ -586,7 +642,7 @@ class SizeClassAllocator64 {
   }
 
  private:
-  friend class MemoryMapper;
+  friend class MemoryMapperT<ThisT>;
 
   ReservedAddressRange address_range;
 
@@ -820,57 +876,13 @@ class SizeClassAllocator64 {
     return true;
   }
 
-  class MemoryMapper {
-   public:
-    MemoryMapper(const ThisT& base_allocator, uptr class_id)
-        : allocator(base_allocator),
-          region_base(base_allocator.GetRegionBeginBySizeClass(class_id)),
-          released_ranges_count(0),
-          released_bytes(0) {
-    }
-
-    uptr GetReleasedRangesCount() const {
-      return released_ranges_count;
-    }
-
-    uptr GetReleasedBytes() const {
-      return released_bytes;
-    }
-
-    void *MapPackedCounterArrayBuffer(uptr buffer_size) {
-      // TODO(alekseyshl): The idea to explore is to check if we have enough
-      // space between num_freed_chunks*sizeof(CompactPtrT) and
-      // mapped_free_array to fit buffer_size bytes and use that space instead
-      // of mapping a temporary one.
-      return MmapOrDieOnFatalError(buffer_size, "ReleaseToOSPageCounters");
-    }
-
-    void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {
-      UnmapOrDie(buffer, buffer_size);
-    }
-
-    // Releases [from, to) range of pages back to OS.
-    void ReleasePageRangeToOS(CompactPtrT from, CompactPtrT to) {
-      const uptr from_page = allocator.CompactPtrToPointer(region_base, from);
-      const uptr to_page = allocator.CompactPtrToPointer(region_base, to);
-      ReleaseMemoryPagesToOS(from_page, to_page);
-      released_ranges_count++;
-      released_bytes += to_page - from_page;
-    }
-
-   private:
-    const ThisT& allocator;
-    const uptr region_base;
-    uptr released_ranges_count;
-    uptr released_bytes;
-  };
-
   // Attempts to release RAM occupied by freed chunks back to OS. The region is
   // expected to be locked.
   //
   // TODO(morehouse): Support a callback on memory release so HWASan can release
   // aliases as well.
-  void MaybeReleaseToOS(uptr class_id, bool force) {
+  void MaybeReleaseToOS(MemoryMapper *memory_mapper, uptr class_id,
+                        bool force) {
     RegionInfo *region = GetRegionInfo(class_id);
     const uptr chunk_size = ClassIdToSize(class_id);
     const uptr page_size = GetPageSizeCached();
@@ -894,17 +906,16 @@ class SizeClassAllocator64 {
       }
     }
 
-    MemoryMapper memory_mapper(*this, class_id);
-
-    ReleaseFreeMemoryToOS<MemoryMapper>(
+    ReleaseFreeMemoryToOS(
         GetFreeArray(GetRegionBeginBySizeClass(class_id)), n, chunk_size,
-        RoundUpTo(region->allocated_user, page_size) / page_size,
-        &memory_mapper);
+        RoundUpTo(region->allocated_user, page_size) / page_size, memory_mapper,
+        class_id);
 
-    if (memory_mapper.GetReleasedRangesCount() > 0) {
+    uptr ranges, bytes;
+    if (memory_mapper->GetAndResetStats(ranges, bytes)) {
       region->rtoi.n_freed_at_last_release = region->stats.n_freed;
-      region->rtoi.num_releases += memory_mapper.GetReleasedRangesCount();
-      region->rtoi.last_released_bytes = memory_mapper.GetReleasedBytes();
+      region->rtoi.num_releases += ranges;
+      region->rtoi.last_released_bytes = bytes;
     }
     region->rtoi.last_release_at_ns = MonotonicNanoTime();
   }

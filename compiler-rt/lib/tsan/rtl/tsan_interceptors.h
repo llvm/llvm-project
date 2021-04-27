@@ -10,16 +10,53 @@ class ScopedInterceptor {
  public:
   ScopedInterceptor(ThreadState *thr, const char *fname, uptr pc);
   ~ScopedInterceptor();
-  void DisableIgnores();
-  void EnableIgnores();
+  void DisableIgnores() {
+    if (UNLIKELY(ignoring_))
+      DisableIgnoresImpl();
+  }
+  void EnableIgnores() {
+    if (UNLIKELY(ignoring_))
+      EnableIgnoresImpl();
+  }
+
  private:
-  ThreadState *const thr_;
-  const uptr pc_;
-  bool in_ignored_lib_;
-  bool ignoring_;
+   ThreadState* const thr_;
+   bool in_ignored_lib_ = false;
+   bool ignoring_ = false;
+
+   void DisableIgnoresImpl();
+   void EnableIgnoresImpl();
 };
 
 LibIgnore *libignore();
+
+ALWAYS_INLINE
+ScopedInterceptor::ScopedInterceptor(ThreadState* thr, const char* fname,
+                                     uptr pc)
+    : thr_(thr) {
+
+  InitializeMaybe(thr);
+  if (!thr_->is_inited)
+    return;
+  if (!thr_->ignore_interceptors)
+    FuncEntry(thr, pc);
+  DPrintf2("#%d: intercept %s()\n", thr_->tid, fname);
+  ignoring_ =
+      !thr_->in_ignored_lib && (flags()->ignore_interceptors_accesses ||
+                                libignore()->IsIgnored(pc, &in_ignored_lib_));
+  EnableIgnores();
+}
+
+ALWAYS_INLINE
+ScopedInterceptor::~ScopedInterceptor() {
+  if (!thr_->is_inited)
+    return;
+  DisableIgnores();
+  if (!thr_->ignore_interceptors) {
+    ProcessPendingSignals(thr_);
+    FuncExit(thr_);
+  }
+}
 
 #if !SANITIZER_GO
 inline bool in_symbolizer() {
@@ -30,24 +67,29 @@ inline bool in_symbolizer() {
 
 }  // namespace __tsan
 
-#define SCOPED_INTERCEPTOR_RAW(func, ...) \
-    cur_thread_init(); \
-    ThreadState *thr = cur_thread(); \
-    const uptr caller_pc = GET_CALLER_PC(); \
-    ScopedInterceptor si(thr, #func, caller_pc); \
-    const uptr pc = StackTrace::GetCurrentPc(); \
-    (void)pc; \
+#define SCOPED_INTERCEPTOR_RAW(func, ...)                                      \
+  ThreadState* thr = cur_thread_init_maybe();                                  \
+  ScopedInterceptor si(thr, #func, GET_CALLER_PC());                           \
+this_pc:                                                                       \
+  const uptr pc = (uptr) && this_pc;                                           \
+  (void)pc;                                                                    \
 /**/
 
-#define SCOPED_TSAN_INTERCEPTOR(func, ...) \
-    SCOPED_INTERCEPTOR_RAW(func, __VA_ARGS__); \
-    if (REAL(func) == 0) { \
-      Report("FATAL: ThreadSanitizer: failed to intercept %s\n", #func); \
-      Die(); \
-    }                                                    \
-    if (!thr->is_inited || thr->ignore_interceptors || thr->in_ignored_lib) \
-      return REAL(func)(__VA_ARGS__); \
-/**/
+//!!! we need to calculate in_ignored_lib for _this_ interceptor
+#define SCOPED_TSAN_INTERCEPTOR(func, ...)                                     \
+  ThreadState* thr = cur_thread_init_maybe();                                  \
+  if (UNLIKELY(REAL(func) == 0)) {                                             \
+    Report("FATAL: ThreadSanitizer: failed to intercept %s\n", #func);         \
+    Die();                                                                     \
+  }                                                                            \
+  if (UNLIKELY(!thr->is_inited || thr->ignore_interceptors ||                  \
+               thr->in_ignored_lib))                                           \
+    return REAL(func)(__VA_ARGS__);                                            \
+  ScopedInterceptor si(thr, #func, GET_CALLER_PC());                           \
+this_pc:                                                                       \
+  const uptr pc = (uptr) && this_pc;                                           \
+  (void)pc;                                                                    \
+  /**/
 
 #define SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START() \
     si.DisableIgnores();

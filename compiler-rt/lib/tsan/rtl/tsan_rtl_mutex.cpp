@@ -23,6 +23,10 @@
 namespace __tsan {
 
 void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r);
+void ReportDestroyLocked(ThreadState* thr, uptr pc, uptr addr, FastState last_lock,
+                         StackID creation_stack_id);
+void ReportMutexMisuse(ThreadState* thr, uptr pc, ReportType typ, uptr addr,
+                       StackID creation_stack_id);
 
 struct Callback final : public DDCallback {
   ThreadState *thr;
@@ -35,125 +39,87 @@ struct Callback final : public DDCallback {
     DDCallback::lt = thr->dd_lt;
   }
 
-  u32 Unwind() override { return CurrentStackId(thr, pc); }
-  int UniqueTid() override { return thr->unique_id; }
+  StackID Unwind() override {
+    return CurrentStackId(thr, pc);
+  }
+  int UniqueTid() override {
+    return thr->tid;
+  }
 };
 
 void DDMutexInit(ThreadState *thr, uptr pc, SyncVar *s) {
   Callback cb(thr, pc);
   ctx->dd->MutexInit(&cb, &s->dd);
-  s->dd.ctx = s->GetId();
-}
-
-static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
-    uptr addr, u64 mid) {
-  // In Go, these misuses are either impossible, or detected by std lib,
-  // or false positives (e.g. unlock in a different thread).
-  if (SANITIZER_GO)
-    return;
-  if (!ShouldReport(thr, typ))
-    return;
-  ThreadRegistryLock l(ctx->thread_registry);
-  ScopedReport rep(typ);
-  rep.AddMutex(mid);
-  VarSizeStackTrace trace;
-  ObtainCurrentStack(thr, pc, &trace);
-  rep.AddStack(trace, true);
-  rep.AddLocation(addr, 1);
-  OutputReport(thr, rep);
+  s->dd.ctx = s->addr;
 }
 
 void MutexCreate(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   DPrintf("#%d: MutexCreate %zx flagz=0x%x\n", thr->tid, addr, flagz);
-  StatInc(thr, StatMutexCreate);
-  if (!(flagz & MutexFlagLinkerInit) && IsAppMem(addr)) {
-    CHECK(!thr->is_freeing);
-    thr->is_freeing = true;
-    MemoryWrite(thr, pc, addr, kSizeLog1);
-    thr->is_freeing = false;
-  }
-  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, true);
+  if (!(flagz & MutexFlagLinkerInit) && pc && IsAppMem(addr))
+    MemoryAccess(thr, pc, addr, 1, AccessWrite);
+  SlotLocker locker(thr);
+  auto s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
   s->SetFlags(flagz & MutexCreationFlagMask);
-  if (!SANITIZER_GO && s->creation_stack_id == 0)
+  // Save stack in the case the sync object was created before as atomic.
+  if (!SANITIZER_GO && s->creation_stack_id == kInvalidStackID)
     s->creation_stack_id = CurrentStackId(thr, pc);
-  s->mtx.Unlock();
 }
 
 void MutexDestroy(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   DPrintf("#%d: MutexDestroy %zx\n", thr->tid, addr);
-  StatInc(thr, StatMutexDestroy);
-  SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr, true);
-  if (s == 0)
-    return;
-  if ((flagz & MutexFlagLinkerInit)
-      || s->IsFlagSet(MutexFlagLinkerInit)
-      || ((flagz & MutexFlagNotStatic) && !s->IsFlagSet(MutexFlagNotStatic))) {
-    // Destroy is no-op for linker-initialized mutexes.
-    s->mtx.Unlock();
-    return;
-  }
-  if (common_flags()->detect_deadlocks) {
-    Callback cb(thr, pc);
-    ctx->dd->MutexDestroy(&cb, &s->dd);
-    ctx->dd->MutexInit(&cb, &s->dd);
-  }
   bool unlock_locked = false;
-  if (flags()->report_destroy_locked && s->owner_tid != kInvalidTid &&
-      !s->IsFlagSet(MutexFlagBroken)) {
-    s->SetFlags(MutexFlagBroken);
-    unlock_locked = true;
-  }
-  u64 mid = s->GetId();
-  u64 last_lock = s->last_lock;
-  if (!unlock_locked)
-    s->Reset(thr->proc());  // must not reset it before the report is printed
-  s->mtx.Unlock();
-  if (unlock_locked && ShouldReport(thr, ReportTypeMutexDestroyLocked)) {
-    ThreadRegistryLock l(ctx->thread_registry);
-    ScopedReport rep(ReportTypeMutexDestroyLocked);
-    rep.AddMutex(mid);
-    VarSizeStackTrace trace;
-    ObtainCurrentStack(thr, pc, &trace);
-    rep.AddStack(trace, true);
-    FastState last(last_lock);
-    RestoreStack(last.tid(), last.epoch(), &trace, 0);
-    rep.AddStack(trace, true);
-    rep.AddLocation(addr, 1);
-    OutputReport(thr, rep);
-
-    SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr, true);
-    if (s != 0) {
-      s->Reset(thr->proc());
-      s->mtx.Unlock();
+  StackID creation_stack_id;
+  FastState last_lock;
+  {
+    SlotLocker locker(thr);
+    auto s = ctx->metamap.GetSyncIfExists(thr, pc, addr);
+    if (!s)
+      return;
+    Lock lock(&s->mtx);
+    creation_stack_id = s->creation_stack_id;
+    last_lock = s->last_lock;
+    if ((flagz & MutexFlagLinkerInit) || s->IsFlagSet(MutexFlagLinkerInit) ||
+        ((flagz & MutexFlagNotStatic) && !s->IsFlagSet(MutexFlagNotStatic))) {
+      // Destroy is no-op for linker-initialized mutexes.
+      return;
     }
+    if (common_flags()->detect_deadlocks) {
+      Callback cb(thr, pc);
+      ctx->dd->MutexDestroy(&cb, &s->dd);
+      ctx->dd->MutexInit(&cb, &s->dd);
+    }
+    if (flags()->report_destroy_locked && s->owner_tid != kInvalidTid &&
+        !s->IsFlagSet(MutexFlagBroken)) {
+      s->SetFlags(MutexFlagBroken);
+      unlock_locked = true;
+    }
+    s->Reset();
   }
-  thr->mset.Remove(mid);
   // Imitate a memory write to catch unlock-destroy races.
-  // Do this outside of sync mutex, because it can report a race which locks
-  // sync mutexes.
-  if (IsAppMem(addr)) {
-    CHECK(!thr->is_freeing);
-    thr->is_freeing = true;
-    MemoryWrite(thr, pc, addr, kSizeLog1);
-    thr->is_freeing = false;
-  }
+  if (pc && IsAppMem(addr))
+    MemoryAccess(thr, pc, addr, 1, AccessWrite | AccessFree);
+  if (unlock_locked && ShouldReport(thr, ReportTypeMutexDestroyLocked))
+    ReportDestroyLocked(thr, pc, addr, last_lock, creation_stack_id);
+  thr->mset.Del(addr, true);
   // s will be destroyed and freed in MetaMap::FreeBlock.
 }
 
 void MutexPreLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   DPrintf("#%d: MutexPreLock %zx flagz=0x%x\n", thr->tid, addr, flagz);
-  if (!(flagz & MutexFlagTryLock) && common_flags()->detect_deadlocks) {
-    SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, false);
+  if (flagz & MutexFlagTryLock)
+    return;
+  if (!common_flags()->detect_deadlocks)
+    return;
+  Callback cb(thr, pc);
+  {
+    SlotLocker locker(thr);
+    auto s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
+    ReadLock lock(&s->mtx);
     s->UpdateFlags(flagz);
-    if (s->owner_tid != thr->tid) {
-      Callback cb(thr, pc);
+    if (s->owner_tid != thr->tid)
       ctx->dd->MutexBeforeLock(&cb, &s->dd, true);
-      s->mtx.ReadUnlock();
-      ReportDeadlock(thr, pc, ctx->dd->GetReport(&cb));
-    } else {
-      s->mtx.ReadUnlock();
-    }
   }
+  ReportDeadlock(thr, pc, ctx->dd->GetReport(&cb));
 }
 
 void MutexPostLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz, int rec) {
@@ -163,48 +129,49 @@ void MutexPostLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz, int rec) {
     CHECK_GT(rec, 0);
   else
     rec = 1;
-  if (IsAppMem(addr))
-    MemoryReadAtomic(thr, pc, addr, kSizeLog1);
-  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, true);
-  s->UpdateFlags(flagz);
-  thr->fast_state.IncrementEpoch();
-  TraceAddEvent(thr, thr->fast_state, EventTypeLock, s->GetId());
+  if (pc && IsAppMem(addr))
+    MemoryAccess(thr, pc, addr, 1, AccessRead | AccessAtomic);
+  SlotLocker locker(thr);
+  auto s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
+  StackID creation_stack_id = s->creation_stack_id;
+  TraceMutexLock(thr, EventTypeLock, pc, addr, creation_stack_id);
+  thr->mset.Add(addr, creation_stack_id, true);
   bool report_double_lock = false;
-  if (s->owner_tid == kInvalidTid) {
-    CHECK_EQ(s->recursion, 0);
-    s->owner_tid = thr->tid;
-    s->last_lock = thr->fast_state.raw();
-  } else if (s->owner_tid == thr->tid) {
-    CHECK_GT(s->recursion, 0);
-  } else if (flags()->report_mutex_bugs && !s->IsFlagSet(MutexFlagBroken)) {
-    s->SetFlags(MutexFlagBroken);
-    report_double_lock = true;
-  }
-  const bool first = s->recursion == 0;
-  s->recursion += rec;
-  if (first) {
-    StatInc(thr, StatMutexLock);
-    AcquireImpl(thr, pc, &s->clock);
-    AcquireImpl(thr, pc, &s->read_clock);
-  } else if (!s->IsFlagSet(MutexFlagWriteReentrant)) {
-    StatInc(thr, StatMutexRecLock);
-  }
-  thr->mset.Add(s->GetId(), true, thr->fast_state.epoch());
   bool pre_lock = false;
-  if (first && common_flags()->detect_deadlocks) {
-    pre_lock = (flagz & MutexFlagDoPreLockOnPostLock) &&
-        !(flagz & MutexFlagTryLock);
-    Callback cb(thr, pc);
-    if (pre_lock)
-      ctx->dd->MutexBeforeLock(&cb, &s->dd, true);
-    ctx->dd->MutexAfterLock(&cb, &s->dd, true, flagz & MutexFlagTryLock);
+  bool first = false;
+  {
+    Lock lock(&s->mtx);
+    first = s->recursion == 0;
+    s->UpdateFlags(flagz);
+    if (s->owner_tid == kInvalidTid) {
+      CHECK_EQ(s->recursion, 0);
+      s->owner_tid = thr->tid;
+      s->last_lock = thr->fast_state;
+    } else if (s->owner_tid == thr->tid) {
+      CHECK_GT(s->recursion, 0);
+    } else if (flags()->report_mutex_bugs && !s->IsFlagSet(MutexFlagBroken)) {
+      s->SetFlags(MutexFlagBroken);
+      report_double_lock = true;
+    }
+    s->recursion += rec;
+    if (first) {
+      if (!thr->ignore_sync) {
+        thr->clock.Acquire(s->clock);
+        thr->clock.Acquire(s->read_clock);
+      }
+    }
+    if (first && common_flags()->detect_deadlocks) {
+      pre_lock =
+          (flagz & MutexFlagDoPreLockOnPostLock) && !(flagz & MutexFlagTryLock);
+      Callback cb(thr, pc);
+      if (pre_lock)
+        ctx->dd->MutexBeforeLock(&cb, &s->dd, true);
+      ctx->dd->MutexAfterLock(&cb, &s->dd, true, flagz & MutexFlagTryLock);
+    }
   }
-  u64 mid = s->GetId();
-  s->mtx.Unlock();
-  // Can't touch s after this point.
-  s = 0;
   if (report_double_lock)
-    ReportMutexMisuse(thr, pc, ReportTypeMutexDoubleLock, addr, mid);
+    ReportMutexMisuse(thr, pc, ReportTypeMutexDoubleLock, addr,
+                      creation_stack_id);
   if (first && pre_lock && common_flags()->detect_deadlocks) {
     Callback cb(thr, pc);
     ReportDeadlock(thr, pc, ctx->dd->GetReport(&cb));
@@ -213,40 +180,48 @@ void MutexPostLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz, int rec) {
 
 int MutexUnlock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   DPrintf("#%d: MutexUnlock %zx flagz=0x%x\n", thr->tid, addr, flagz);
-  if (IsAppMem(addr))
-    MemoryReadAtomic(thr, pc, addr, kSizeLog1);
-  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, true);
-  thr->fast_state.IncrementEpoch();
-  TraceAddEvent(thr, thr->fast_state, EventTypeUnlock, s->GetId());
-  int rec = 0;
+  if (pc && IsAppMem(addr))
+    MemoryAccess(thr, pc, addr, 1, AccessRead | AccessAtomic);
+  StackID creation_stack_id;
+  TraceMutexUnlock(thr, addr);
+  thr->mset.Del(addr);
   bool report_bad_unlock = false;
-  if (!SANITIZER_GO && (s->recursion == 0 || s->owner_tid != thr->tid)) {
-    if (flags()->report_mutex_bugs && !s->IsFlagSet(MutexFlagBroken)) {
-      s->SetFlags(MutexFlagBroken);
-      report_bad_unlock = true;
+  int rec = 0;
+  {
+    SlotLocker locker(thr);
+    auto s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
+    bool released = false;
+    {
+      Lock lock(&s->mtx);
+      creation_stack_id = s->creation_stack_id;
+      if (!SANITIZER_GO && (s->recursion == 0 || s->owner_tid != thr->tid)) {
+        if (flags()->report_mutex_bugs && !s->IsFlagSet(MutexFlagBroken)) {
+          s->SetFlags(MutexFlagBroken);
+          report_bad_unlock = true;
+        }
+      } else {
+        rec = (flagz & MutexFlagRecursiveUnlock) ? s->recursion : 1;
+        s->recursion -= rec;
+        if (s->recursion == 0) {
+          s->owner_tid = kInvalidTid;
+          if (!thr->ignore_sync) {
+            thr->clock.ReleaseStore(&s->clock);
+            released = true;
+          }
+        }
+      }
+      if (common_flags()->detect_deadlocks && s->recursion == 0 &&
+          !report_bad_unlock) {
+        Callback cb(thr, pc);
+        ctx->dd->MutexBeforeUnlock(&cb, &s->dd, true);
+      }
     }
-  } else {
-    rec = (flagz & MutexFlagRecursiveUnlock) ? s->recursion : 1;
-    s->recursion -= rec;
-    if (s->recursion == 0) {
-      StatInc(thr, StatMutexUnlock);
-      s->owner_tid = kInvalidTid;
-      ReleaseStoreImpl(thr, pc, &s->clock);
-    } else {
-      StatInc(thr, StatMutexRecUnlock);
-    }
+    if (released)
+      IncrementEpoch(thr);
   }
-  thr->mset.Del(s->GetId(), true);
-  if (common_flags()->detect_deadlocks && s->recursion == 0 &&
-      !report_bad_unlock) {
-    Callback cb(thr, pc);
-    ctx->dd->MutexBeforeUnlock(&cb, &s->dd, true);
-  }
-  u64 mid = s->GetId();
-  s->mtx.Unlock();
-  // Can't touch s after this point.
   if (report_bad_unlock)
-    ReportMutexMisuse(thr, pc, ReportTypeMutexBadUnlock, addr, mid);
+    ReportMutexMisuse(thr, pc, ReportTypeMutexBadUnlock, addr,
+                      creation_stack_id);
   if (common_flags()->detect_deadlocks && !report_bad_unlock) {
     Callback cb(thr, pc);
     ReportDeadlock(thr, pc, ctx->dd->GetReport(&cb));
@@ -256,50 +231,56 @@ int MutexUnlock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
 
 void MutexPreReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   DPrintf("#%d: MutexPreReadLock %zx flagz=0x%x\n", thr->tid, addr, flagz);
-  if (!(flagz & MutexFlagTryLock) && common_flags()->detect_deadlocks) {
-    SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, false);
+  if ((flagz & MutexFlagTryLock) || !common_flags()->detect_deadlocks)
+    return;
+  Callback cb(thr, pc);
+  {
+    SlotLocker locker(thr);
+    auto s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
+    ReadLock lock(&s->mtx);
     s->UpdateFlags(flagz);
-    Callback cb(thr, pc);
     ctx->dd->MutexBeforeLock(&cb, &s->dd, false);
-    s->mtx.ReadUnlock();
-    ReportDeadlock(thr, pc, ctx->dd->GetReport(&cb));
   }
+  ReportDeadlock(thr, pc, ctx->dd->GetReport(&cb));
 }
 
 void MutexPostReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   DPrintf("#%d: MutexPostReadLock %zx flagz=0x%x\n", thr->tid, addr, flagz);
-  StatInc(thr, StatMutexReadLock);
-  if (IsAppMem(addr))
-    MemoryReadAtomic(thr, pc, addr, kSizeLog1);
-  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, false);
-  s->UpdateFlags(flagz);
-  thr->fast_state.IncrementEpoch();
-  TraceAddEvent(thr, thr->fast_state, EventTypeRLock, s->GetId());
+  if (pc && IsAppMem(addr))
+    MemoryAccess(thr, pc, addr, 1, AccessRead | AccessAtomic);
+  SlotLocker locker(thr);
+  auto s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
+  StackID creation_stack_id = s->creation_stack_id;
+  //!!! Every trace can now reset state, double check that it's ok and leaves
+  //! state consistent, e.g. mutex set or release epoch.
+  TraceMutexLock(thr, EventTypeRLock, pc, addr, creation_stack_id);
+  thr->mset.Add(addr, creation_stack_id, false);
   bool report_bad_lock = false;
-  if (s->owner_tid != kInvalidTid) {
-    if (flags()->report_mutex_bugs && !s->IsFlagSet(MutexFlagBroken)) {
-      s->SetFlags(MutexFlagBroken);
-      report_bad_lock = true;
+  bool pre_lock = false;
+  {
+    ReadLock lock(&s->mtx);
+    s->UpdateFlags(flagz);
+    if (s->owner_tid != kInvalidTid) {
+      if (flags()->report_mutex_bugs && !s->IsFlagSet(MutexFlagBroken)) {
+        s->SetFlags(MutexFlagBroken);
+        report_bad_lock = true;
+      }
+    }
+    if (!thr->ignore_sync)
+      thr->clock.Acquire(s->clock);
+    s->last_lock = thr->fast_state;
+    if (common_flags()->detect_deadlocks) {
+      pre_lock =
+          (flagz & MutexFlagDoPreLockOnPostLock) && !(flagz & MutexFlagTryLock);
+      Callback cb(thr, pc);
+      if (pre_lock)
+        ctx->dd->MutexBeforeLock(&cb, &s->dd, false);
+      ctx->dd->MutexAfterLock(&cb, &s->dd, false, flagz & MutexFlagTryLock);
     }
   }
-  AcquireImpl(thr, pc, &s->clock);
-  s->last_lock = thr->fast_state.raw();
-  thr->mset.Add(s->GetId(), false, thr->fast_state.epoch());
-  bool pre_lock = false;
-  if (common_flags()->detect_deadlocks) {
-    pre_lock = (flagz & MutexFlagDoPreLockOnPostLock) &&
-        !(flagz & MutexFlagTryLock);
-    Callback cb(thr, pc);
-    if (pre_lock)
-      ctx->dd->MutexBeforeLock(&cb, &s->dd, false);
-    ctx->dd->MutexAfterLock(&cb, &s->dd, false, flagz & MutexFlagTryLock);
-  }
-  u64 mid = s->GetId();
-  s->mtx.ReadUnlock();
-  // Can't touch s after this point.
-  s = 0;
   if (report_bad_lock)
-    ReportMutexMisuse(thr, pc, ReportTypeMutexBadReadLock, addr, mid);
+    ReportMutexMisuse(thr, pc, ReportTypeMutexBadReadLock, addr,
+                      creation_stack_id);
   if (pre_lock  && common_flags()->detect_deadlocks) {
     Callback cb(thr, pc);
     ReportDeadlock(thr, pc, ctx->dd->GetReport(&cb));
@@ -308,30 +289,40 @@ void MutexPostReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
 
 void MutexReadUnlock(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: MutexReadUnlock %zx\n", thr->tid, addr);
-  StatInc(thr, StatMutexReadUnlock);
-  if (IsAppMem(addr))
-    MemoryReadAtomic(thr, pc, addr, kSizeLog1);
-  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, true);
-  thr->fast_state.IncrementEpoch();
-  TraceAddEvent(thr, thr->fast_state, EventTypeRUnlock, s->GetId());
+  if (pc && IsAppMem(addr))
+    MemoryAccess(thr, pc, addr, 1, AccessRead | AccessAtomic);
+  TraceMutexUnlock(thr, addr);
+  thr->mset.Del(addr);
+  StackID creation_stack_id;
   bool report_bad_unlock = false;
-  if (s->owner_tid != kInvalidTid) {
-    if (flags()->report_mutex_bugs && !s->IsFlagSet(MutexFlagBroken)) {
-      s->SetFlags(MutexFlagBroken);
-      report_bad_unlock = true;
+  {
+    SlotLocker locker(thr);
+    auto s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
+    bool released = false;
+    {
+      Lock lock(&s->mtx);
+      creation_stack_id = s->creation_stack_id;
+      if (s->owner_tid != kInvalidTid) {
+        if (flags()->report_mutex_bugs && !s->IsFlagSet(MutexFlagBroken)) {
+          s->SetFlags(MutexFlagBroken);
+          report_bad_unlock = true;
+        }
+      }
+      if (!thr->ignore_sync) {
+        thr->clock.Release(&s->read_clock);
+        released = true;
+      }
+      if (common_flags()->detect_deadlocks && s->recursion == 0) {
+        Callback cb(thr, pc);
+        ctx->dd->MutexBeforeUnlock(&cb, &s->dd, false);
+      }
     }
+    if (released)
+      IncrementEpoch(thr);
   }
-  ReleaseImpl(thr, pc, &s->read_clock);
-  if (common_flags()->detect_deadlocks && s->recursion == 0) {
-    Callback cb(thr, pc);
-    ctx->dd->MutexBeforeUnlock(&cb, &s->dd, false);
-  }
-  u64 mid = s->GetId();
-  s->mtx.Unlock();
-  // Can't touch s after this point.
-  thr->mset.Del(mid, false);
   if (report_bad_unlock)
-    ReportMutexMisuse(thr, pc, ReportTypeMutexBadReadUnlock, addr, mid);
+    ReportMutexMisuse(thr, pc, ReportTypeMutexBadReadUnlock, addr,
+                      creation_stack_id);
   if (common_flags()->detect_deadlocks) {
     Callback cb(thr, pc);
     ReportDeadlock(thr, pc, ctx->dd->GetReport(&cb));
@@ -340,45 +331,53 @@ void MutexReadUnlock(ThreadState *thr, uptr pc, uptr addr) {
 
 void MutexReadOrWriteUnlock(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: MutexReadOrWriteUnlock %zx\n", thr->tid, addr);
-  if (IsAppMem(addr))
-    MemoryReadAtomic(thr, pc, addr, kSizeLog1);
-  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, true);
-  bool write = true;
+  if (pc && IsAppMem(addr))
+    MemoryAccess(thr, pc, addr, 1, AccessRead | AccessAtomic);
+  TraceMutexUnlock(thr, addr);
+  thr->mset.Del(addr);
+  StackID creation_stack_id;
   bool report_bad_unlock = false;
-  if (s->owner_tid == kInvalidTid) {
-    // Seems to be read unlock.
-    write = false;
-    StatInc(thr, StatMutexReadUnlock);
-    thr->fast_state.IncrementEpoch();
-    TraceAddEvent(thr, thr->fast_state, EventTypeRUnlock, s->GetId());
-    ReleaseImpl(thr, pc, &s->read_clock);
-  } else if (s->owner_tid == thr->tid) {
-    // Seems to be write unlock.
-    thr->fast_state.IncrementEpoch();
-    TraceAddEvent(thr, thr->fast_state, EventTypeUnlock, s->GetId());
-    CHECK_GT(s->recursion, 0);
-    s->recursion--;
-    if (s->recursion == 0) {
-      StatInc(thr, StatMutexUnlock);
-      s->owner_tid = kInvalidTid;
-      ReleaseStoreImpl(thr, pc, &s->clock);
-    } else {
-      StatInc(thr, StatMutexRecUnlock);
+  bool write = true;
+  {
+    SlotLocker locker(thr);
+    auto s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
+    bool released = false;
+    {
+      Lock lock(&s->mtx);
+      creation_stack_id = s->creation_stack_id;
+      if (s->owner_tid == kInvalidTid) {
+        // Seems to be read unlock.
+        write = false;
+        if (!thr->ignore_sync) {
+          thr->clock.Release(&s->read_clock);
+          released = true;
+        }
+      } else if (s->owner_tid == thr->tid) {
+        // Seems to be write unlock.
+        CHECK_GT(s->recursion, 0);
+        s->recursion--;
+        if (s->recursion == 0) {
+          s->owner_tid = kInvalidTid;
+          if (!thr->ignore_sync) {
+            thr->clock.ReleaseStore(&s->clock);
+            released = true;
+          }
+        }
+      } else if (!s->IsFlagSet(MutexFlagBroken)) {
+        s->SetFlags(MutexFlagBroken);
+        report_bad_unlock = true;
+      }
+      if (common_flags()->detect_deadlocks && s->recursion == 0) {
+        Callback cb(thr, pc);
+        ctx->dd->MutexBeforeUnlock(&cb, &s->dd, write);
+      }
     }
-  } else if (!s->IsFlagSet(MutexFlagBroken)) {
-    s->SetFlags(MutexFlagBroken);
-    report_bad_unlock = true;
+    if (released)
+      IncrementEpoch(thr);
   }
-  thr->mset.Del(s->GetId(), write);
-  if (common_flags()->detect_deadlocks && s->recursion == 0) {
-    Callback cb(thr, pc);
-    ctx->dd->MutexBeforeUnlock(&cb, &s->dd, write);
-  }
-  u64 mid = s->GetId();
-  s->mtx.Unlock();
-  // Can't touch s after this point.
   if (report_bad_unlock)
-    ReportMutexMisuse(thr, pc, ReportTypeMutexBadUnlock, addr, mid);
+    ReportMutexMisuse(thr, pc, ReportTypeMutexBadUnlock, addr,
+                      creation_stack_id);
   if (common_flags()->detect_deadlocks) {
     Callback cb(thr, pc);
     ReportDeadlock(thr, pc, ctx->dd->GetReport(&cb));
@@ -387,177 +386,179 @@ void MutexReadOrWriteUnlock(ThreadState *thr, uptr pc, uptr addr) {
 
 void MutexRepair(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: MutexRepair %zx\n", thr->tid, addr);
-  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, true);
+  SlotLocker locker(thr);
+  auto s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
+  Lock lock(&s->mtx);
   s->owner_tid = kInvalidTid;
   s->recursion = 0;
-  s->mtx.Unlock();
 }
 
 void MutexInvalidAccess(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: MutexInvalidAccess %zx\n", thr->tid, addr);
-  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, true);
-  u64 mid = s->GetId();
-  s->mtx.Unlock();
-  ReportMutexMisuse(thr, pc, ReportTypeMutexInvalidAccess, addr, mid);
+  SlotLocker locker(thr);
+  auto s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
+  StackID creation_stack_id = s ? s->creation_stack_id : kInvalidStackID;
+  ReportMutexMisuse(thr, pc, ReportTypeMutexInvalidAccess, addr,
+                    creation_stack_id);
 }
 
 void Acquire(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: Acquire %zx\n", thr->tid, addr);
   if (thr->ignore_sync)
     return;
-  SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr, false);
-  if (!s)
+  SlotLocker locker(thr);
+  auto s = ctx->metamap.GetSyncIfExists(thr, pc, addr);
+  if (!s || !s->clock)
     return;
-  AcquireImpl(thr, pc, &s->clock);
-  s->mtx.ReadUnlock();
+  ReadLock lock(&s->mtx);
+  thr->clock.Acquire(s->clock);
 }
 
-static void UpdateClockCallback(ThreadContextBase *tctx_base, void *arg) {
-  ThreadState *thr = reinterpret_cast<ThreadState*>(arg);
-  ThreadContext *tctx = static_cast<ThreadContext*>(tctx_base);
-  u64 epoch = tctx->epoch1;
-  if (tctx->status == ThreadStatusRunning) {
-    epoch = tctx->thr->fast_state.epoch();
-    tctx->thr->clock.NoteGlobalAcquire(epoch);
-  }
-  thr->clock.set(&thr->proc()->clock_cache, tctx->tid, epoch);
-}
-
-void AcquireGlobal(ThreadState *thr, uptr pc) {
-  DPrintf("#%d: AcquireGlobal\n", thr->tid);
-  if (thr->ignore_sync)
-    return;
-  ThreadRegistryLock l(ctx->thread_registry);
-  ctx->thread_registry->RunCallbackForEachThreadLocked(
-      UpdateClockCallback, thr);
-}
-
-void ReleaseStoreAcquire(ThreadState *thr, uptr pc, uptr addr) {
-  DPrintf("#%d: ReleaseStoreAcquire %zx\n", thr->tid, addr);
-  if (thr->ignore_sync)
-    return;
-  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, true);
-  thr->fast_state.IncrementEpoch();
-  // Can't increment epoch w/o writing to the trace as well.
-  TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
-  ReleaseStoreAcquireImpl(thr, pc, &s->clock);
-  s->mtx.Unlock();
-}
-
-void Release(ThreadState *thr, uptr pc, uptr addr) {
+void Release(ThreadState* thr, uptr pc, uptr addr) {
   DPrintf("#%d: Release %zx\n", thr->tid, addr);
   if (thr->ignore_sync)
     return;
-  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, true);
-  thr->fast_state.IncrementEpoch();
-  // Can't increment epoch w/o writing to the trace as well.
-  TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
-  ReleaseImpl(thr, pc, &s->clock);
-  s->mtx.Unlock();
+  SlotLocker locker(thr);
+  {
+    auto s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, false);
+    Lock lock(&s->mtx);
+    thr->clock.Release(&s->clock);
+  }
+  IncrementEpoch(thr);
 }
 
-void ReleaseStore(ThreadState *thr, uptr pc, uptr addr) {
+void ReleaseStore(ThreadState* thr, uptr pc, uptr addr) {
   DPrintf("#%d: ReleaseStore %zx\n", thr->tid, addr);
   if (thr->ignore_sync)
     return;
-  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, true);
-  thr->fast_state.IncrementEpoch();
-  // Can't increment epoch w/o writing to the trace as well.
-  TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
-  ReleaseStoreImpl(thr, pc, &s->clock);
-  s->mtx.Unlock();
+  SlotLocker locker(thr);
+  {
+    auto s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, false);
+    Lock lock(&s->mtx);
+    thr->clock.ReleaseStore(&s->clock);
+  }
+  IncrementEpoch(thr);
+}
+
+void ReleaseStoreAcquire(ThreadState* thr, uptr pc, uptr addr) {
+  DPrintf("#%d: ReleaseStoreAcquire %zx\n", thr->tid, addr);
+  if (thr->ignore_sync)
+    return;
+  SlotLocker locker(thr);
+  {
+    auto s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, false);
+    Lock lock(&s->mtx);
+    thr->clock.ReleaseStoreAcquire(&s->clock);
+  }
+  IncrementEpoch(thr);
+}
+
+void IncrementEpoch(ThreadState* thr) {
+  DCHECK(!thr->ignore_sync);
+  DCHECK(thr->slot_locked);
+  Epoch epoch = EpochInc(thr->fast_state.epoch());
+  if (!EpochOverflow(epoch)) {
+    Sid sid = thr->fast_state.sid();
+    thr->clock.Set(sid, epoch);
+    thr->slot->clock.Set(sid, epoch);
+    thr->fast_state.SetEpoch(epoch);
+    TraceTime(thr);
+  }
+}
+
+void AcquireGlobal(ThreadState* thr) {
+  DPrintf("#%d: AcquireGlobal\n", thr->tid);
+  if (thr->ignore_sync)
+    return;
+  SlotLocker locker(thr);
+  for (auto& slot : ctx->slots)
+    thr->clock.Set(slot.sid, slot.clock.Get(slot.sid));
 }
 
 #if !SANITIZER_GO
-static void UpdateSleepClockCallback(ThreadContextBase *tctx_base, void *arg) {
-  ThreadState *thr = reinterpret_cast<ThreadState*>(arg);
-  ThreadContext *tctx = static_cast<ThreadContext*>(tctx_base);
-  u64 epoch = tctx->epoch1;
-  if (tctx->status == ThreadStatusRunning)
-    epoch = tctx->thr->fast_state.epoch();
-  thr->last_sleep_clock.set(&thr->proc()->clock_cache, tctx->tid, epoch);
-}
-
 void AfterSleep(ThreadState *thr, uptr pc) {
-  DPrintf("#%d: AfterSleep %zx\n", thr->tid);
+  DPrintf("#%d: AfterSleep\n", thr->tid);
   if (thr->ignore_sync)
     return;
   thr->last_sleep_stack_id = CurrentStackId(thr, pc);
-  ThreadRegistryLock l(ctx->thread_registry);
-  ctx->thread_registry->RunCallbackForEachThreadLocked(
-      UpdateSleepClockCallback, thr);
+  thr->last_sleep_clock.Reset();
+  SlotLocker locker(thr);
+  for (auto& slot : ctx->slots)
+    thr->last_sleep_clock.Set(slot.sid, slot.clock.Get(slot.sid));
 }
 #endif
 
-void AcquireImpl(ThreadState *thr, uptr pc, SyncClock *c) {
-  if (thr->ignore_sync)
-    return;
-  thr->clock.set(thr->fast_state.epoch());
-  thr->clock.acquire(&thr->proc()->clock_cache, c);
-  StatInc(thr, StatSyncAcquire);
-}
-
-void ReleaseStoreAcquireImpl(ThreadState *thr, uptr pc, SyncClock *c) {
-  if (thr->ignore_sync)
-    return;
-  thr->clock.set(thr->fast_state.epoch());
-  thr->fast_synch_epoch = thr->fast_state.epoch();
-  thr->clock.releaseStoreAcquire(&thr->proc()->clock_cache, c);
-  StatInc(thr, StatSyncReleaseStoreAcquire);
-}
-
-void ReleaseImpl(ThreadState *thr, uptr pc, SyncClock *c) {
-  if (thr->ignore_sync)
-    return;
-  thr->clock.set(thr->fast_state.epoch());
-  thr->fast_synch_epoch = thr->fast_state.epoch();
-  thr->clock.release(&thr->proc()->clock_cache, c);
-  StatInc(thr, StatSyncRelease);
-}
-
-void ReleaseStoreImpl(ThreadState *thr, uptr pc, SyncClock *c) {
-  if (thr->ignore_sync)
-    return;
-  thr->clock.set(thr->fast_state.epoch());
-  thr->fast_synch_epoch = thr->fast_state.epoch();
-  thr->clock.ReleaseStore(&thr->proc()->clock_cache, c);
-  StatInc(thr, StatSyncRelease);
-}
-
-void AcquireReleaseImpl(ThreadState *thr, uptr pc, SyncClock *c) {
-  if (thr->ignore_sync)
-    return;
-  thr->clock.set(thr->fast_state.epoch());
-  thr->fast_synch_epoch = thr->fast_state.epoch();
-  thr->clock.acq_rel(&thr->proc()->clock_cache, c);
-  StatInc(thr, StatSyncAcquire);
-  StatInc(thr, StatSyncRelease);
-}
-
-void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {
+void ReportDeadlock(ThreadState* thr, uptr pc, DDReport* r) {
   if (r == 0 || !ShouldReport(thr, ReportTypeDeadlock))
     return;
-  ThreadRegistryLock l(ctx->thread_registry);
-  ScopedReport rep(ReportTypeDeadlock);
-  for (int i = 0; i < r->n; i++) {
-    rep.AddMutex(r->loop[i].mtx_ctx0);
-    rep.AddUniqueTid((int)r->loop[i].thr_ctx);
-    rep.AddThread((int)r->loop[i].thr_ctx);
-  }
-  uptr dummy_pc = 0x42;
-  for (int i = 0; i < r->n; i++) {
-    for (int j = 0; j < (flags()->second_deadlock_stack ? 2 : 1); j++) {
-      u32 stk = r->loop[i].stk[j];
-      if (stk && stk != 0xffffffff) {
-        rep.AddStack(StackDepotGet(stk), true);
-      } else {
-        // Sometimes we fail to extract the stack trace (FIXME: investigate),
-        // but we should still produce some stack trace in the report.
-        rep.AddStack(StackTrace(&dummy_pc, 1), true);
+  ReportDesc rep;
+  {
+    ReportScope report_scope(thr);
+    rep.typ = ReportTypeDeadlock;
+    for (int i = 0; i < r->n; i++) {
+      rep.AddMutex(r->loop[i].mtx_ctx0, r->loop[i].stk[0]);
+      rep.AddUniqueTid(r->loop[i].thr_ctx);
+      if (r->loop[i].thr_ctx != kInvalidTid)
+        rep.AddThread(r->loop[i].thr_ctx);
+    }
+    uptr dummy_pc = 0x42;
+    for (int i = 0; i < r->n; i++) {
+      for (int j = 0; j < (flags()->second_deadlock_stack ? 2 : 1); j++) {
+        StackID stk = r->loop[i].stk[j];
+        if (stk != kInvalidStackID) {
+          rep.AddStack(StackDepotGet(stk), true);
+        } else {
+          // Sometimes we fail to extract the stack trace (FIXME: investigate),
+          // but we should still produce some stack trace in the report.
+          rep.AddStack(StackTrace(&dummy_pc, 1), true);
+        }
       }
     }
   }
-  OutputReport(thr, rep);
+  OutputReport(thr, &rep);
+}
+
+void ReportDestroyLocked(ThreadState* thr, uptr pc, uptr addr, FastState last_lock,
+                         StackID creation_stack_id) {
+  MutexSet mset;
+  //!!! this won't restore read lock stack because type == EventTypeLock.
+  VarSizeStackTrace trace[2];
+  ReportDesc rep;
+  rep.typ = ReportTypeMutexDestroyLocked;
+  {
+    ReportScope report_scope(thr);
+    Tid tid;
+    if (!RestoreStack(EventTypeLock, last_lock.sid(), last_lock.epoch(), addr, 0, false,
+                      false, false, &tid, &trace[1], &mset))
+      return;
+    rep.AddMutex(addr, creation_stack_id);
+    ObtainCurrentStack(thr, pc, &trace[0]);
+    rep.AddStack(trace[0], true);
+    rep.AddStack(trace[1], true);
+    rep.AddLocation(addr, 1);
+  }
+  OutputReport(thr, &rep);
+}
+
+void ReportMutexMisuse(ThreadState* thr, uptr pc, ReportType typ, uptr addr,
+                       StackID creation_stack_id) {
+  // In Go, these misuses are either impossible, or detected by std lib,
+  // or false positives (e.g. unlock in a different thread).
+  if (SANITIZER_GO)
+    return;
+  if (!ShouldReport(thr, typ))
+    return;
+  VarSizeStackTrace trace;
+  ObtainCurrentStack(thr, pc, &trace);
+  ReportDesc rep;
+  {
+    ReportScope report_scope(thr);
+    rep.typ = typ;
+    rep.AddMutex(addr, creation_stack_id);
+    rep.AddStack(trace, true);
+    rep.AddLocation(addr, 1);
+  }
+  OutputReport(thr, &rep);
 }
 
 }  // namespace __tsan

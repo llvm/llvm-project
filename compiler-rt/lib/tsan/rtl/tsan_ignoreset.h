@@ -19,17 +19,16 @@ namespace __tsan {
 
 class IgnoreSet {
  public:
-  static const uptr kMaxSize = 16;
-
   IgnoreSet();
-  void Add(u32 stack_id);
-  void Reset();
+  void Add(StackID stack_id);
+  void Reset() { size_ = 0; }
   uptr Size() const;
-  u32 At(uptr i) const;
+  StackID At(uptr i) const;
 
- private:
+private:
+  static const uptr kMaxSize = 16;
   uptr size_;
-  u32 stacks_[kMaxSize];
+  StackID stacks_[kMaxSize];
 };
 
 }  // namespace __tsan

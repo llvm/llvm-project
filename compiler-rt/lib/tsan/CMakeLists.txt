@@ -14,16 +14,18 @@ append_rtti_flag(OFF TSAN_CFLAGS)
 if(COMPILER_RT_TSAN_DEBUG_OUTPUT)
   # Add extra debug information to TSan runtime. This configuration is rarely
   # used, but we need to support it so that debug output will not bitrot.
-  list(APPEND TSAN_CFLAGS -DTSAN_COLLECT_STATS=1
-                          -DTSAN_DEBUG_OUTPUT=2)
+  list(APPEND TSAN_CFLAGS -DTSAN_DEBUG_OUTPUT=2)
 endif()
 
+list(APPEND TSAN_CFLAGS -Wno-pedantic)
+
 set(TSAN_RTL_CFLAGS ${TSAN_CFLAGS})
-append_list_if(COMPILER_RT_HAS_MSSE3_FLAG -msse3 TSAN_RTL_CFLAGS)
-append_list_if(SANITIZER_LIMIT_FRAME_SIZE -Wframe-larger-than=530
+append_list_if(COMPILER_RT_HAS_MSSE3_FLAG -msse4.1 TSAN_RTL_CFLAGS)
+append_list_if(SANITIZER_LIMIT_FRAME_SIZE -Wframe-larger-than=1000
                TSAN_RTL_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG -Wglobal-constructors
                TSAN_RTL_CFLAGS)
+
 
 set(TSAN_SOURCES
   rtl/tsan_clock.cpp
@@ -50,7 +52,6 @@ set(TSAN_SOURCES
   rtl/tsan_rtl_report.cpp
   rtl/tsan_rtl_thread.cpp
   rtl/tsan_stack_trace.cpp
-  rtl/tsan_stat.cpp
   rtl/tsan_suppressions.cpp
   rtl/tsan_symbolize.cpp
   rtl/tsan_sync.cpp
@@ -102,13 +103,12 @@ set(TSAN_HEADERS
   rtl/tsan_ppc_regs.h
   rtl/tsan_report.h
   rtl/tsan_rtl.h
+  rtl/tsan_shadow.h
   rtl/tsan_stack_trace.h
-  rtl/tsan_stat.h
   rtl/tsan_suppressions.h
   rtl/tsan_symbolize.h
   rtl/tsan_sync.h
   rtl/tsan_trace.h
-  rtl/tsan_update_shadow_word_inl.h
   )
 
 set(TSAN_RUNTIME_LIBRARIES)

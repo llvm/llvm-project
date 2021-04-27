@@ -112,9 +112,6 @@ void cur_thread_finalize() {
 }
 #endif
 
-void FlushShadowMemory() {
-}
-
 static void RegionMemUsage(uptr start, uptr end, uptr *res, uptr *dirty) {
   vm_address_t address = start;
   vm_address_t end_address = end;
@@ -139,7 +136,10 @@ static void RegionMemUsage(uptr start, uptr end, uptr *res, uptr *dirty) {
   *dirty = dirty_pages * GetPageSizeCached();
 }
 
-void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive) {
+void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime) {
+  uptr nthread, nlive;
+  ctx->thread_registry.GetNumberOfThreads(&nthread, &nlive);
+
   uptr shadow_res, shadow_dirty;
   uptr meta_res, meta_dirty;
   uptr trace_res, trace_dirty;
@@ -249,7 +249,7 @@ static uptr longjmp_xor_key = 0;
 void InitializePlatform() {
   DisableCoreDumperIfNecessary();
 #if !SANITIZER_GO
-  CheckAndProtect();
+  MappingCheckAndProtect();
 
   CHECK_EQ(main_thread_identity, 0);
   main_thread_identity = (uptr)pthread_self();

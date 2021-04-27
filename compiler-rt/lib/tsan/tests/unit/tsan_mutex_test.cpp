@@ -9,11 +9,12 @@
 // This file is a part of ThreadSanitizer (TSan), a race detector.
 //
 //===----------------------------------------------------------------------===//
-#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "tsan_mutex.h"
+#include "tsan_rtl.h"
 #include "gtest/gtest.h"
 
 namespace __tsan {
@@ -45,7 +46,8 @@ class TestData {
   }
 
   void Backoff() {
-    volatile T data[kSize] = {};
+    volatile T data[kSize];
+    internal_memset((void*)data, 0, sizeof(data));
     for (int i = 0; i < kSize; i++) {
       data[i]++;
       CHECK_EQ(data[i], 1);
@@ -93,7 +95,7 @@ static void *read_mutex_thread(void *param) {
 }
 
 TEST(Mutex, Write) {
-  Mutex mtx(MutexTypeAnnotations, StatMtxAnnotations);
+  Mutex mtx(MutexTypeGlobalProc);
   TestData<Mutex> data(&mtx);
   pthread_t threads[kThreads];
   for (int i = 0; i < kThreads; i++)
@@ -103,7 +105,7 @@ TEST(Mutex, Write) {
 }
 
 TEST(Mutex, ReadWrite) {
-  Mutex mtx(MutexTypeAnnotations, StatMtxAnnotations);
+  Mutex mtx(MutexTypeGlobalProc);
   TestData<Mutex> data(&mtx);
   pthread_t threads[kThreads];
   for (int i = 0; i < kThreads; i++)

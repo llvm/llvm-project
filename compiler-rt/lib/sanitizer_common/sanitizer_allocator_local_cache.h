@@ -17,6 +17,7 @@
 template <class SizeClassAllocator>
 struct SizeClassAllocator64LocalCache {
   typedef SizeClassAllocator Allocator;
+  typedef MemoryMapperT<Allocator> MemoryMapper;
 
   void Init(AllocatorGlobalStats *s) {
     stats_.Init();
@@ -53,7 +54,7 @@ struct SizeClassAllocator64LocalCache {
     PerClass *c = &per_class_[class_id];
     InitCache(c);
     if (UNLIKELY(c->count == c->max_count))
-      Drain(c, allocator, class_id, c->max_count / 2);
+      Drain(c, allocator, class_id);
     CompactPtrT chunk = allocator->PointerToCompactPtr(
         allocator->GetRegionBeginBySizeClass(class_id),
         reinterpret_cast<uptr>(p));
@@ -62,10 +63,10 @@ struct SizeClassAllocator64LocalCache {
   }
 
   void Drain(SizeClassAllocator *allocator) {
+    MemoryMapper memory_mapper(*allocator);
     for (uptr i = 1; i < kNumClasses; i++) {
       PerClass *c = &per_class_[i];
-      while (c->count > 0)
-        Drain(c, allocator, i, c->count);
+      while (c->count > 0) Drain(&memory_mapper, c, allocator, i, c->count);
     }
   }
 
@@ -106,12 +107,18 @@ struct SizeClassAllocator64LocalCache {
     return true;
   }
 
-  NOINLINE void Drain(PerClass *c, SizeClassAllocator *allocator, uptr class_id,
-                      uptr count) {
+  NOINLINE void Drain(PerClass *c, SizeClassAllocator *allocator,
+                      uptr class_id) {
+    MemoryMapper memory_mapper(*allocator);
+    Drain(&memory_mapper, c, allocator, class_id, c->max_count / 2);
+  }
+
+  void Drain(MemoryMapper *memory_mapper, PerClass *c,
+             SizeClassAllocator *allocator, uptr class_id, uptr count) {
     CHECK_GE(c->count, count);
     const uptr first_idx_to_drain = c->count - count;
     c->count -= count;
-    allocator->ReturnToAllocator(&stats_, class_id,
+    allocator->ReturnToAllocator(memory_mapper, &stats_, class_id,
                                  &c->chunks[first_idx_to_drain], count);
   }
 };
@@ -228,6 +235,7 @@ struct SizeClassAllocator32LocalCache {
               batch_class_id : 0;
       }
     }
+    atomic_signal_fence(memory_order_seq_cst); //!!! w/o this gcc fails the check below (does not understand that c aliases with this)
     DCHECK_NE(c->max_count, 0UL);
   }
 

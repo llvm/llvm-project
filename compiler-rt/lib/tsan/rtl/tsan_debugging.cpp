@@ -42,24 +42,26 @@ static const char *ReportTypeDescription(ReportType typ) {
 
 static const char *ReportLocationTypeDescription(ReportLocationType typ) {
   switch (typ) {
-    case ReportLocationGlobal: return "global";
-    case ReportLocationHeap: return "heap";
-    case ReportLocationStack: return "stack";
-    case ReportLocationTLS: return "tls";
-    case ReportLocationFD: return "fd";
+  case ReportLocationInvalid:
+    break;
+  case ReportLocationGlobal:
+    return "global";
+  case ReportLocationHeap:
+    return "heap";
+  case ReportLocationStack:
+    return "stack";
+  case ReportLocationTLS:
+    return "tls";
+  case ReportLocationFD:
+    return "fd";
     // No default case so compiler warns us if we miss one
   }
   UNREACHABLE("missing case");
 }
 
-static void CopyTrace(SymbolizedStack *first_frame, void **trace,
-                      uptr trace_size) {
-  uptr i = 0;
-  for (SymbolizedStack *frame = first_frame; frame != nullptr;
-       frame = frame->next) {
-    trace[i++] = (void *)frame->info.address;
-    if (i >= trace_size) break;
-  }
+static void CopyTrace(StackTrace stack, void** trace, uptr trace_size) {
+  for (uptr i = 0; i < Min<uptr>(stack.size, trace_size); i++)
+    trace[i] = (void*)stack.trace[i];
 }
 
 // Meant to be called by the debugger.
@@ -83,7 +85,8 @@ int __tsan_get_report_data(void *report, const char **description, int *count,
   *mutex_count = rep->mutexes.Size();
   *thread_count = rep->threads.Size();
   *unique_tid_count = rep->unique_tids.Size();
-  if (rep->sleep) CopyTrace(rep->sleep->frames, sleep_trace, trace_size);
+  if (rep->sleep)
+    CopyTrace(rep->sleep->stack, sleep_trace, trace_size);
   return 1;
 }
 
@@ -99,9 +102,8 @@ int __tsan_get_report_stack(void *report, uptr idx, void **trace,
                             uptr trace_size) {
   const ReportDesc *rep = (ReportDesc *)report;
   CHECK_LT(idx, rep->stacks.Size());
-  ReportStack *stack = rep->stacks[idx];
-  if (stack) CopyTrace(stack->frames, trace, trace_size);
-  return stack ? 1 : 0;
+  CopyTrace(rep->stacks[idx]->stack, trace, trace_size);
+  return 1;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -111,12 +113,12 @@ int __tsan_get_report_mop(void *report, uptr idx, int *tid, void **addr,
   const ReportDesc *rep = (ReportDesc *)report;
   CHECK_LT(idx, rep->mops.Size());
   ReportMop *mop = rep->mops[idx];
-  *tid = mop->tid;
+  *tid = static_cast<int>(mop->tid);
   *addr = (void *)mop->addr;
   *size = mop->size;
   *write = mop->write ? 1 : 0;
   *atomic = mop->atomic ? 1 : 0;
-  if (mop->stack) CopyTrace(mop->stack->frames, trace, trace_size);
+  CopyTrace(mop->stack.stack, trace, trace_size);
   return 1;
 }
 
@@ -132,10 +134,10 @@ int __tsan_get_report_loc(void *report, uptr idx, const char **type,
   *addr = (void *)loc->global.start;
   *start = loc->heap_chunk_start;
   *size = loc->heap_chunk_size;
-  *tid = loc->tid;
+  *tid = static_cast<int>(loc->tid);
   *fd = loc->fd;
   *suppressable = loc->suppressable;
-  if (loc->stack) CopyTrace(loc->stack->frames, trace, trace_size);
+  CopyTrace(loc->stack.stack, trace, trace_size);
   return 1;
 }
 
@@ -157,8 +159,8 @@ int __tsan_get_report_mutex(void *report, uptr idx, uptr *mutex_id, void **addr,
   ReportMutex *mutex = rep->mutexes[idx];
   *mutex_id = mutex->id;
   *addr = (void *)mutex->addr;
-  *destroyed = mutex->destroyed;
-  if (mutex->stack) CopyTrace(mutex->stack->frames, trace, trace_size);
+  *destroyed = false;
+  CopyTrace(mutex->stack.stack, trace, trace_size);
   return 1;
 }
 
@@ -169,12 +171,12 @@ int __tsan_get_report_thread(void *report, uptr idx, int *tid, tid_t *os_id,
   const ReportDesc *rep = (ReportDesc *)report;
   CHECK_LT(idx, rep->threads.Size());
   ReportThread *thread = rep->threads[idx];
-  *tid = thread->id;
+  *tid = static_cast<int>(thread->id);
   *os_id = thread->os_id;
   *running = thread->running;
   *name = thread->name;
-  *parent_tid = thread->parent_tid;
-  if (thread->stack) CopyTrace(thread->stack->frames, trace, trace_size);
+  *parent_tid = static_cast<int>(thread->parent_tid);
+  CopyTrace(thread->stack.stack, trace, trace_size);
   return 1;
 }
 
@@ -182,7 +184,7 @@ SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_get_report_unique_tid(void *report, uptr idx, int *tid) {
   const ReportDesc *rep = (ReportDesc *)report;
   CHECK_LT(idx, rep->unique_tids.Size());
-  *tid = rep->unique_tids[idx];
+  *tid = static_cast<int>(rep->unique_tids[idx]);
   return 1;
 }
 
@@ -215,9 +217,9 @@ const char *__tsan_locate_address(uptr addr, char *name, uptr name_size,
     } else {
       // TODO(kuba.brecka): We should not lock. This is supposed to be called
       // from within the debugger when other threads are stopped.
-      ctx->thread_registry->Lock();
+      ctx->thread_registry.Lock();
       ThreadContext *tctx = IsThreadStackOrTls(addr, &is_stack);
-      ctx->thread_registry->Unlock();
+      ctx->thread_registry.Unlock();
       if (tctx) {
         region_kind = is_stack ? "stack" : "tls";
       } else {
@@ -249,10 +251,10 @@ int __tsan_get_alloc_stack(uptr addr, uptr *trace, uptr size, int *thread_id,
   }
   if (b == 0) return 0;
 
-  *thread_id = b->tid;
+  *thread_id = static_cast<u32>(b->tid);
   // No locking.  This is supposed to be called from within the debugger when
   // other threads are stopped.
-  ThreadContextBase *tctx = ctx->thread_registry->GetThreadLocked(b->tid);
+  auto tctx = ctx->thread_registry.GetThreadLocked(b->tid);
   *os_id = tctx->os_id;
 
   StackTrace stack = StackDepotGet(b->stk);

@@ -109,12 +109,6 @@ void InitializeFlags(Flags *f, const char *env, const char *env_option_name) {
 
   if (common_flags()->help) parser.PrintFlagDescriptions();
 
-  if (f->history_size < 0 || f->history_size > 7) {
-    Printf("ThreadSanitizer: incorrect value for history_size"
-           " (must be [0..7])\n");
-    Die();
-  }
-
   if (f->io_sync < 0 || f->io_sync > 2) {
     Printf("ThreadSanitizer: incorrect value for io_sync"
            " (must be [0..2])\n");

@@ -21,20 +21,6 @@
 
 namespace __tsan {
 
-void EnterSymbolizer() {
-  ThreadState *thr = cur_thread();
-  CHECK(!thr->in_symbolizer);
-  thr->in_symbolizer = true;
-  thr->ignore_interceptors++;
-}
-
-void ExitSymbolizer() {
-  ThreadState *thr = cur_thread();
-  CHECK(thr->in_symbolizer);
-  thr->in_symbolizer = false;
-  thr->ignore_interceptors--;
-}
-
 // Legacy API.
 // May be overriden by JIT/JAVA/etc,
 // whatever produces PCs marked with kExternalPCBit.
@@ -79,43 +65,56 @@ static void AddFrame(void *ctx, const char *function_name, const char *file,
   info->column = column;
 }
 
-SymbolizedStack *SymbolizeCode(uptr addr) {
-  // Check if PC comes from non-native land.
-  if (addr & kExternalPCBit) {
-    SymbolizedStackBuilder ssb = {nullptr, nullptr, addr};
-    __tsan_symbolize_external_ex(addr, AddFrame, &ssb);
-    if (ssb.head)
-      return ssb.head;
-    // Legacy code: remove along with the declaration above
-    // once all clients using this API are gone.
-    // Declare static to not consume too much stack space.
-    // We symbolize reports in a single thread, so this is fine.
-    static char func_buf[1024];
-    static char file_buf[1024];
-    int line, col;
-    SymbolizedStack *frame = SymbolizedStack::New(addr);
-    if (__tsan_symbolize_external(addr, func_buf, sizeof(func_buf), file_buf,
-                                  sizeof(file_buf), &line, &col)) {
-      frame->info.function = internal_strdup(func_buf);
-      frame->info.file = internal_strdup(file_buf);
-      frame->info.line = line;
-      frame->info.column = col;
-    }
-    return frame;
+// Symbolizer makes lots of intercepted calls. If we try to process them,
+// at best it will cause deadlocks on internal mutexes.
+struct SymbolizerScope : ScopedIgnoreInterceptors {
+#if !SANITIZER_GO
+  SymbolizerScope() {
+    cur_thread()->in_symbolizer++;
   }
-  return Symbolizer::GetOrInit()->SymbolizePC(addr);
+  ~SymbolizerScope() {
+    cur_thread()->in_symbolizer--;
+  }
+#endif
+};
+
+SymbolizedStack *SymbolizeCode(uptr addr) {
+  SymbolizerScope scope;
+  // Check if PC comes from non-native land.
+  if (!(addr & kExternalPCBit))
+    return Symbolizer::GetOrInit()->SymbolizePC(addr);
+  SymbolizedStackBuilder ssb = {nullptr, nullptr, addr};
+  __tsan_symbolize_external_ex(addr, AddFrame, &ssb);
+  if (ssb.head)
+    return ssb.head;
+  // Legacy code: remove along with the declaration above
+  // once all clients using this API are gone.
+  // Declare static to not consume too much stack space.
+  // We symbolize reports in a single thread, so this is fine.
+  static char func_buf[1024];
+  static char file_buf[1024];
+  int line, col;
+  SymbolizedStack* frame = SymbolizedStack::New(addr);
+  if (__tsan_symbolize_external(addr, func_buf, sizeof(func_buf), file_buf,
+                                sizeof(file_buf), &line, &col)) {
+    frame->info.function = internal_strdup(func_buf);
+    frame->info.file = internal_strdup(file_buf);
+    frame->info.line = line;
+    frame->info.column = col;
+  }
+  return frame;
 }
 
-ReportLocation *SymbolizeData(uptr addr) {
-  DataInfo info;
-  if (!Symbolizer::GetOrInit()->SymbolizeData(addr, &info))
-    return 0;
-  ReportLocation *ent = ReportLocation::New(ReportLocationGlobal);
-  internal_memcpy(&ent->global, &info, sizeof(info));
-  return ent;
+bool SymbolizeData(uptr addr, ReportLocation* loc) {
+  SymbolizerScope scope;
+  if (!Symbolizer::GetOrInit()->SymbolizeData(addr, &loc->global))
+    return false;
+  loc->type = ReportLocationGlobal;
+  return true;
 }
 
-void SymbolizeFlush() {
+void SymbolizerFlush() {
+  SymbolizerScope scope;
   Symbolizer::GetOrInit()->Flush();
 }
 

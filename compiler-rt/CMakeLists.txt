@@ -359,6 +359,14 @@ endif()
 
 append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 SANITIZER_COMMON_CFLAGS)
 
+if(CMAKE_C_COMPILER_ID MATCHES Clang)
+  list(APPEND SANITIZER_COMMON_CFLAGS
+      "-Werror=thread-safety"
+      "-Werror=thread-safety-reference"
+      "-Werror=thread-safety-beta"
+)
+endif()
+
 # If we're using MSVC,
 # always respect the optimization flags set by CMAKE_BUILD_TYPE instead.
 if (NOT MSVC)

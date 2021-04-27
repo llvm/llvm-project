@@ -1,14 +1,14 @@
-#include <pthread.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
+#include "sanitizer_common/print_address.h"
 #include <dlfcn.h>
-#include <stddef.h>
+#include <pthread.h>
+#include <sanitizer/common_interface_defs.h>
+#include <sanitizer/tsan_interface.h>
 #include <sched.h>
 #include <stdarg.h>
-#include "sanitizer_common/print_address.h"
-
-#include <sanitizer/tsan_interface.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #ifdef __APPLE__
 #include <mach/mach_time.h>

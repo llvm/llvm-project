@@ -60,8 +60,8 @@ ThreadRegistry &asanThreadRegistry() {
     // in TSD and can't reliably tell when no more TSD destructors will
     // be called. It would be wrong to reuse AsanThreadContext for another
     // thread before all TSD destructors will be called for it.
-    asan_thread_registry = new(thread_registry_placeholder) ThreadRegistry(
-        GetAsanThreadContext, kMaxNumberOfThreads, kMaxNumberOfThreads);
+    asan_thread_registry =
+        new (thread_registry_placeholder) ThreadRegistry(GetAsanThreadContext);
     initialized = true;
   }
   return *asan_thread_registry;
@@ -510,11 +510,11 @@ void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
   fake_stack->ForEachFakeFrame(callback, arg);
 }
 
-void LockThreadRegistry() {
+void LockThreadRegistry() ACQUIRE(__asan::asanThreadRegistry()) {
   __asan::asanThreadRegistry().Lock();
 }
 
-void UnlockThreadRegistry() {
+void UnlockThreadRegistry() RELEASE(__asan::asanThreadRegistry()) {
   __asan::asanThreadRegistry().Unlock();
 }
 

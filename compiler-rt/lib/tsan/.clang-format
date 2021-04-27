@@ -1,3 +1,8 @@
 BasedOnStyle: Google
+DerivePointerAlignment: false
+PointerAlignment: Left
+AllowShortBlocksOnASingleLine: false
+AllowShortFunctionsOnASingleLine: false
 AllowShortIfStatementsOnASingleLine: false
-IndentPPDirectives: AfterHash
+AllowShortLoopsOnASingleLine: false
+ColumnLimit: 80

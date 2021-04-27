@@ -247,4 +247,9 @@ MD5Hash md5_hash(const void *data, uptr size) {
   MD5_Final((unsigned char*)&res.hash[0], &ctx);
   return res;
 }
+
+bool MD5Hash::operator==(const MD5Hash& other) const {
+  return hash[0] == other.hash[0] && hash[1] == other.hash[1];
+}
+
 }  // namespace __tsan

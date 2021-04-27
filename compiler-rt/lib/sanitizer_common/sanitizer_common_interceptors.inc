@@ -134,11 +134,11 @@ extern const short *_tolower_tab_;
 
 // Platform-specific options.
 #if SANITIZER_MAC
-#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE false
+#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 0
 #elif SANITIZER_WINDOWS64
-#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE false
+#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 0
 #else
-#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE true
+#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 1
 #endif  // SANITIZER_MAC
 
 #ifndef COMMON_INTERCEPTOR_INITIALIZE_RANGE
@@ -221,14 +221,6 @@ extern const short *_tolower_tab_;
 
 #ifndef COMMON_INTERCEPTOR_RELEASE
 #define COMMON_INTERCEPTOR_RELEASE(ctx, u) {}
-#endif
-
-#ifndef COMMON_INTERCEPTOR_USER_CALLBACK_START
-#define COMMON_INTERCEPTOR_USER_CALLBACK_START() {}
-#endif
-
-#ifndef COMMON_INTERCEPTOR_USER_CALLBACK_END
-#define COMMON_INTERCEPTOR_USER_CALLBACK_END() {}
 #endif
 
 #ifdef SANITIZER_NLDBL_VERSION
@@ -823,11 +815,11 @@ INTERCEPTOR(void *, memcpy, void *dst, const void *src, uptr size) {
   // N.B.: If we switch this to internal_ we'll have to use internal_memmove
   // due to memcpy being an alias of memmove on OS X.
   void *ctx;
-  if (PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE) {
+#if PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE
     COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, dst, src, size);
-  } else {
+#else
     COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, dst, src, size);
-  }
+#endif
 }
 
 #define INIT_MEMCPY                                  \
@@ -4235,9 +4227,7 @@ INTERCEPTOR(char **, backtrace_symbols, void **buffer, int size) {
 INTERCEPTOR(void, _exit, int status) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, _exit, status);
-  COMMON_INTERCEPTOR_USER_CALLBACK_START();
   int status1 = COMMON_INTERCEPTOR_ON_EXIT(ctx);
-  COMMON_INTERCEPTOR_USER_CALLBACK_END();
   if (status == 0) status = status1;
   REAL(_exit)(status);
 }
@@ -4251,7 +4241,7 @@ INTERCEPTOR(int, pthread_mutex_lock, void *m) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, pthread_mutex_lock, m);
   COMMON_INTERCEPTOR_MUTEX_PRE_LOCK(ctx, m);
-  int res = REAL(pthread_mutex_lock)(m);
+  int res = COMMON_INTERCEPTOR_BLOCK_REAL(pthread_mutex_lock)(m);
   if (res == errno_EOWNERDEAD)
     COMMON_INTERCEPTOR_MUTEX_REPAIR(ctx, m);
   if (res == 0 || res == errno_EOWNERDEAD)
@@ -6463,7 +6453,7 @@ INTERCEPTOR(int, sem_wait, __sanitizer_sem_t *s) {
 INTERCEPTOR(int, sem_trywait, __sanitizer_sem_t *s) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, sem_trywait, s);
-  int res = COMMON_INTERCEPTOR_BLOCK_REAL(sem_trywait)(s);
+  int res = REAL(sem_trywait)(s);
   if (res == 0) {
     COMMON_INTERCEPTOR_ACQUIRE(ctx, (uptr)s);
   }

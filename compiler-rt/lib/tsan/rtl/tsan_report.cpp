@@ -10,30 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 #include "tsan_report.h"
-#include "tsan_platform.h"
-#include "tsan_rtl.h"
 #include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stacktrace_printer.h"
+#include "tsan_fd.h"
+#include "tsan_platform.h"
+#include "tsan_rtl.h"
 
 namespace __tsan {
-
-ReportStack::ReportStack() : frames(nullptr), suppressable(false) {}
-
-ReportStack *ReportStack::New() {
-  void *mem = internal_alloc(MBlockReportStack, sizeof(ReportStack));
-  return new(mem) ReportStack();
-}
-
-ReportLocation::ReportLocation(ReportLocationType type)
-    : type(type), global(), heap_chunk_start(0), heap_chunk_size(0), tid(0),
-      fd(0), suppressable(false), stack(nullptr) {}
-
-ReportLocation *ReportLocation::New(ReportLocationType type) {
-  void *mem = internal_alloc(MBlockReportStack, sizeof(ReportLocation));
-  return new(mem) ReportLocation(type);
-}
 
 class Decorator: public __sanitizer::SanitizerCommonDecorator {
  public:
@@ -45,30 +31,170 @@ class Decorator: public __sanitizer::SanitizerCommonDecorator {
   const char *Mutex()   { return Magenta(); }
 };
 
-ReportDesc::ReportDesc()
-    : tag(kExternalTagNone)
-    , stacks()
-    , mops()
-    , locs()
-    , mutexes()
-    , threads()
-    , unique_tids()
-    , sleep()
-    , count() {
+void* RegionAlloc::Alloc(uptr size) {
+  void* obj = __tsan::Alloc(size);
+  objects_.PushBack({obj, FreeImpl});
+  return obj;
 }
 
-ReportMop::ReportMop()
-    : mset() {
+char* RegionAlloc::Strdup(const char* str) {
+  uptr len = internal_strlen(str);
+  char* s2 = static_cast<char*>(Alloc(len + 1));
+  internal_memcpy(s2, str, len);
+  s2[len] = 0;
+  return s2;
 }
 
-ReportDesc::~ReportDesc() {
-  // FIXME(dvyukov): it must be leaking a lot of memory.
+RegionAlloc::~RegionAlloc() {
+  for (uptr i = 0; i < objects_.Size(); i++) {
+    objects_[i].fn(objects_[i].obj);
+  }
 }
+
+void ReportDesc::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
+                                 Tid tid, StackTrace stack,
+                                 const MutexSet* mset) {
+  auto mop = *mops.PushBack(region.Alloc<ReportMop>());
+  mop->tid = tid;
+  mop->addr = addr + s.addr0();
+  mop->size = s.size();
+  mop->write = s.IsWrite();
+  mop->atomic = s.IsAtomic();
+  mop->stack.stack = stack;
+  mop->stack.suppressable = true;
+  mop->external_tag = external_tag;
+  for (uptr i = 0; i < mset->Size(); i++) {
+    MutexSet::Desc d = mset->Get(i);
+    int id = this->AddMutex(d.addr, d.stack_id);
+    ReportMopMutex mtx = {id, d.write};
+    mop->mset.PushBack(mtx);
+  }
+}
+
+void ReportDesc::AddThread(const ThreadContext* tctx, bool suppressable) {
+  for (uptr i = 0; i < threads.Size(); i++) {
+    if (threads[i]->id == tctx->tid)
+      return;
+  }
+  auto rt = *threads.PushBack(region.Alloc<ReportThread>());
+  rt->id = tctx->tid;
+  rt->os_id = tctx->os_id;
+  rt->running = (tctx->status == ThreadStatusRunning);
+  rt->name = region.Strdup(tctx->name);
+  rt->parent_tid = tctx->parent_tid;
+  rt->thread_type = tctx->thread_type;
+  rt->stack.stack = StackDepotGet(tctx->creation_stack_id);
+  rt->stack.suppressable = suppressable;
+}
+
+#if !SANITIZER_GO
+static ThreadContext* FindThreadByTidLocked(Tid tid) {
+  return static_cast<ThreadContext*>(ctx->thread_registry.GetThreadLocked(tid));
+}
+#endif
+
+void ReportDesc::AddThread(Tid tid, bool suppressable) {
+#if !SANITIZER_GO
+  if (const ThreadContext* tctx = FindThreadByTidLocked(tid))
+    AddThread(tctx, suppressable);
+#endif
+}
+
+int ReportDesc::AddMutex(uptr addr, StackID creation_stack_id) {
+  for (uptr i = 0; i < mutexes.Size(); i++) {
+    auto rm = mutexes[i];
+    if (rm->addr == addr)
+      return rm->id;
+  }
+  auto rm = *mutexes.PushBack(region.Alloc<ReportMutex>());
+  rm->id = mutexes.Size() - 1;
+  rm->addr = addr;
+  rm->stack.stack = StackDepotGet(creation_stack_id);
+  return rm->id;
+}
+
+void ReportDesc::AddLocation(uptr addr, uptr size) {
+  if (addr == 0)
+    return;
+#if !SANITIZER_GO
+  int fd = -1;
+  Tid create_tid = kInvalidTid;
+  StackID create_stack = kInvalidStackID;
+  if (FdLocation(addr, &fd, &create_tid, &create_stack)) {
+    auto loc = *locs.PushBack(region.Alloc<ReportLocation>());
+    loc->type = ReportLocationFD;
+    loc->fd = fd;
+    loc->tid = create_tid;
+    loc->stack.stack = StackDepotGet(create_stack);
+    AddThread(create_tid);
+    return;
+  }
+  //!!! check if this is Java heap and find block start
+  Allocator* a = allocator();
+  if (a->PointerIsMine((void*)addr)) {
+    void* block_begin = a->GetBlockBegin((void*)addr);
+    if (block_begin) {
+      if (MBlock* b = ctx->metamap.GetBlock((uptr)block_begin))
+        AddHeapLocation((uptr)block_begin, b);
+    }
+    return;
+  }
+  uptr block_begin = 0;
+  if (MBlock* b = JavaHeapBlock(addr, &block_begin)) {
+    AddHeapLocation(block_begin, b);
+    return;
+  }
+  bool is_stack = false;
+  if (ThreadContext* tctx = IsThreadStackOrTls(addr, &is_stack)) {
+    auto loc = *locs.PushBack(region.Alloc<ReportLocation>());
+    loc->type = is_stack ? ReportLocationStack : ReportLocationTLS;
+    loc->tid = tctx->tid;
+    AddThread(tctx);
+    return;
+  }
+#endif
+  // We will try to symbolize this as a global later.
+  auto loc = *locs.PushBack(region.Alloc<ReportLocation>());
+  loc->type = ReportLocationInvalid;
+  loc->suppressable = true;
+  loc->global.start = addr;
+}
+
+#if !SANITIZER_GO
+void ReportDesc::AddHeapLocation(uptr addr, MBlock* b) {
+  auto loc = *locs.PushBack(region.Alloc<ReportLocation>());
+  loc->type = ReportLocationHeap;
+  loc->heap_chunk_start = addr;
+  loc->heap_chunk_size = b->siz;
+  loc->external_tag = b->tag;
+  loc->tid = b->tid;
+  loc->stack.stack = StackDepotGet(b->stk);
+  if (ThreadContext* tctx = FindThreadByTidLocked(b->tid))
+    AddThread(tctx);
+}
+#endif
+
+void ReportDesc::AddStack(StackTrace stack, bool suppressable) {
+  auto rs = *stacks.PushBack(region.Alloc<ReportStack>());
+  rs->stack = stack;
+  rs->suppressable = suppressable;
+}
+
+void ReportDesc::AddUniqueTid(Tid unique_tid) {
+  unique_tids.PushBack(unique_tid);
+}
+
+#if !SANITIZER_GO
+void ReportDesc::AddSleep(StackID stack_id) {
+  sleep = region.Alloc<ReportStack>();
+  sleep->stack = StackDepotGet(stack_id);
+}
+#endif
 
 #if !SANITIZER_GO
 
 const int kThreadBufSize = 32;
-const char *thread_name(char *buf, int tid) {
+const char* thread_name(char* buf, Tid tid) {
   if (tid == kMainTid)
     return "main thread";
   internal_snprintf(buf, kThreadBufSize, "thread T%d", tid);
@@ -114,18 +240,13 @@ static const char *ReportTypeString(ReportType typ, uptr tag) {
   UNREACHABLE("missing case");
 }
 
-#if SANITIZER_MAC
-static const char *const kInterposedFunctionPrefix = "wrap_";
-#else
-static const char *const kInterposedFunctionPrefix = "__interceptor_";
-#endif
-
-void PrintStack(const ReportStack *ent) {
-  if (ent == 0 || ent->frames == 0) {
+void PrintStack(const SymbolizedStack* frame) {
+  if (frame == nullptr) {
     Printf("    [failed to restore the stack]\n\n");
     return;
   }
-  SymbolizedStack *frame = ent->frames;
+  const char* const kInterposedFunctionPrefix =
+      SANITIZER_MAC ? "wrap_" : "__interceptor_";
   for (int i = 0; frame && frame->info.address; frame = frame->next, i++) {
     InternalScopedString res;
     RenderFrame(&res, common_flags()->stack_trace_format, i,
@@ -142,7 +263,7 @@ static void PrintMutexSet(Vector<ReportMopMutex> const& mset) {
     if (i == 0)
       Printf(" (mutexes:");
     const ReportMopMutex m = mset[i];
-    Printf(" %s M%llu", m.write ? "write" : "read", m.id);
+    Printf(" %s M%d", m.write ? "write" : "read", m.id);
     Printf(i == mset.Size() - 1 ? ")" : ",");
   }
 }
@@ -178,7 +299,7 @@ static void PrintMop(const ReportMop *mop, bool first) {
   PrintMutexSet(mop->mset);
   Printf(":\n");
   Printf("%s", d.Default());
-  PrintStack(mop->stack);
+  PrintStack(mop->stack.frames);
 }
 
 static void PrintLocation(const ReportLocation *loc) {
@@ -220,32 +341,26 @@ static void PrintLocation(const ReportLocation *loc) {
   }
   Printf("%s", d.Default());
   if (print_stack)
-    PrintStack(loc->stack);
+    PrintStack(loc->stack.frames);
 }
 
 static void PrintMutexShort(const ReportMutex *rm, const char *after) {
   Decorator d;
-  Printf("%sM%zd%s%s", d.Mutex(), rm->id, d.Default(), after);
+  Printf("%sM%d%s%s", d.Mutex(), rm->id, d.Default(), after);
 }
 
 static void PrintMutexShortWithAddress(const ReportMutex *rm,
                                        const char *after) {
   Decorator d;
-  Printf("%sM%zd (%p)%s%s", d.Mutex(), rm->id, rm->addr, d.Default(), after);
+  Printf("%sM%d (%p)%s%s", d.Mutex(), rm->id, rm->addr, d.Default(), after);
 }
 
 static void PrintMutex(const ReportMutex *rm) {
   Decorator d;
-  if (rm->destroyed) {
-    Printf("%s", d.Mutex());
-    Printf("  Mutex M%llu is already destroyed.\n\n", rm->id);
-    Printf("%s", d.Default());
-  } else {
-    Printf("%s", d.Mutex());
-    Printf("  Mutex M%llu (%p) created at:\n", rm->id, rm->addr);
-    Printf("%s", d.Default());
-    PrintStack(rm->stack);
-  }
+  Printf("%s", d.Mutex());
+  Printf("  Mutex M%d (%p) created at:\n", rm->id, rm->addr);
+  Printf("%s", d.Default());
+  PrintStack(rm->stack.frames);
 }
 
 static void PrintThread(const ReportThread *rt) {
@@ -266,11 +381,12 @@ static void PrintThread(const ReportThread *rt) {
   }
   Printf(" (tid=%zu, %s) created by %s", rt->os_id, thread_status,
          thread_name(thrbuf, rt->parent_tid));
-  if (rt->stack)
+  if (rt->stack.frames)
     Printf(" at:");
   Printf("\n");
   Printf("%s", d.Default());
-  PrintStack(rt->stack);
+  if (rt->stack.frames)
+    PrintStack(rt->stack.frames);
 }
 
 static void PrintSleep(const ReportStack *s) {
@@ -278,19 +394,19 @@ static void PrintSleep(const ReportStack *s) {
   Printf("%s", d.Sleep());
   Printf("  As if synchronized via sleep:\n");
   Printf("%s", d.Default());
-  PrintStack(s);
+  PrintStack(s->frames);
 }
 
 static ReportStack *ChooseSummaryStack(const ReportDesc *rep) {
   if (rep->mops.Size())
-    return rep->mops[0]->stack;
+    return &rep->mops[0]->stack;
   if (rep->stacks.Size())
     return rep->stacks[0];
   if (rep->mutexes.Size())
-    return rep->mutexes[0]->stack;
+    return &rep->mutexes[0]->stack;
   if (rep->threads.Size())
-    return rep->threads[0]->stack;
-  return 0;
+    return &rep->threads[0]->stack;
+  return nullptr;
 }
 
 static bool FrameIsInternal(const SymbolizedStack *frame) {
@@ -341,13 +457,13 @@ void PrintReport(const ReportDesc *rep) {
       Printf("%s:\n", thread_name(thrbuf, rep->unique_tids[i]));
       Printf("%s", d.Default());
       if (flags()->second_deadlock_stack) {
-        PrintStack(rep->stacks[2*i]);
+        PrintStack(rep->stacks[2 * i]->frames);
         Printf("  Mutex ");
         PrintMutexShort(rep->mutexes[i],
                         " previously acquired by the same thread here:\n");
-        PrintStack(rep->stacks[2*i+1]);
+        PrintStack(rep->stacks[2 * i + 1]->frames);
       } else {
-        PrintStack(rep->stacks[i]);
+        PrintStack(rep->stacks[i]->frames);
         if (i == 0)
           Printf("    Hint: use TSAN_OPTIONS=second_deadlock_stack=1 "
                  "to get more informative warning message\n\n");
@@ -357,7 +473,7 @@ void PrintReport(const ReportDesc *rep) {
     for (uptr i = 0; i < rep->stacks.Size(); i++) {
       if (i)
         Printf("  and:\n");
-      PrintStack(rep->stacks[i]);
+      PrintStack(rep->stacks[i]->frames);
     }
   }
 
@@ -382,7 +498,7 @@ void PrintReport(const ReportDesc *rep) {
     Printf("  And %d more similar thread leaks.\n\n", rep->count - 1);
 
   if (ReportStack *stack = ChooseSummaryStack(rep)) {
-    if (SymbolizedStack *frame = SkipTsanInternalFrames(stack->frames))
+    if (SymbolizedStack* frame = SkipTsanInternalFrames(stack->frames))
       ReportErrorSummary(rep_typ_str, frame->info);
   }
 
@@ -394,14 +510,13 @@ void PrintReport(const ReportDesc *rep) {
 
 #else  // #if !SANITIZER_GO
 
-const u32 kMainGoroutineId = 1;
+const Tid kMainGoroutineId = static_cast<Tid>(1);
 
-void PrintStack(const ReportStack *ent) {
-  if (ent == 0 || ent->frames == 0) {
+void PrintStack(const SymbolizedStack* frame) {
+  if (frame == nullptr) {
     Printf("  [failed to restore the stack]\n");
     return;
   }
-  SymbolizedStack *frame = ent->frames;
   for (int i = 0; frame; frame = frame->next, i++) {
     const AddressInfo &info = frame->info;
     Printf("  %s()\n      %s:%d +0x%zx\n", info.function,
@@ -419,7 +534,7 @@ static void PrintMop(const ReportMop *mop, bool first) {
     Printf("main goroutine:\n");
   else
     Printf("goroutine %d:\n", mop->tid);
-  PrintStack(mop->stack);
+  PrintStack(mop->stack.frames);
 }
 
 static void PrintLocation(const ReportLocation *loc) {
@@ -432,7 +547,7 @@ static void PrintLocation(const ReportLocation *loc) {
       Printf("main goroutine:\n");
     else
       Printf("goroutine %d:\n", loc->tid);
-    PrintStack(loc->stack);
+    PrintStack(loc->stack.frames);
     break;
   }
   case ReportLocationGlobal: {
@@ -453,7 +568,7 @@ static void PrintThread(const ReportThread *rt) {
   Printf("\n");
   Printf("Goroutine %d (%s) created at:\n",
     rt->id, rt->running ? "running" : "finished");
-  PrintStack(rt->stack);
+  PrintStack(rt->stack.frames);
 }
 
 void PrintReport(const ReportDesc *rep) {
@@ -469,14 +584,13 @@ void PrintReport(const ReportDesc *rep) {
   } else if (rep->typ == ReportTypeDeadlock) {
     Printf("WARNING: DEADLOCK\n");
     for (uptr i = 0; i < rep->mutexes.Size(); i++) {
-      Printf("Goroutine %d lock mutex %d while holding mutex %d:\n",
-          999, rep->mutexes[i]->id,
-          rep->mutexes[(i+1) % rep->mutexes.Size()]->id);
-      PrintStack(rep->stacks[2*i]);
+      uptr next = (i + 1) % rep->mutexes.Size();
+      Printf("Goroutine %d lock mutex %d while holding mutex %d:\n", 999, i,
+             next);
+      PrintStack(rep->stacks[2 * i]->frames);
       Printf("\n");
-      Printf("Mutex %d was previously locked here:\n",
-          rep->mutexes[(i+1) % rep->mutexes.Size()]->id);
-      PrintStack(rep->stacks[2*i + 1]);
+      Printf("Mutex %d was previously locked here:\n", next);
+      PrintStack(rep->stacks[2 * i + 1]->frames);
       Printf("\n");
     }
   }

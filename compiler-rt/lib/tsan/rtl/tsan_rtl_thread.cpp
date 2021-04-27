@@ -21,12 +21,7 @@ namespace __tsan {
 
 // ThreadContext implementation.
 
-ThreadContext::ThreadContext(int tid)
-  : ThreadContextBase(tid)
-  , thr()
-  , sync()
-  , epoch0()
-  , epoch1() {
+ThreadContext::ThreadContext(Tid tid) : ThreadContextBase(tid), thr(), sync() {
 }
 
 #if !SANITIZER_GO
@@ -35,124 +30,15 @@ ThreadContext::~ThreadContext() {
 #endif
 
 void ThreadContext::OnDead() {
-  CHECK_EQ(sync.size(), 0);
-}
-
-void ThreadContext::OnJoined(void *arg) {
-  ThreadState *caller_thr = static_cast<ThreadState *>(arg);
-  AcquireImpl(caller_thr, 0, &sync);
-  sync.Reset(&caller_thr->proc()->clock_cache);
-}
-
-struct OnCreatedArgs {
-  ThreadState *thr;
-  uptr pc;
-};
-
-void ThreadContext::OnCreated(void *arg) {
-  thr = 0;
-  if (tid == kMainTid)
-    return;
-  OnCreatedArgs *args = static_cast<OnCreatedArgs *>(arg);
-  if (!args->thr)  // GCD workers don't have a parent thread.
-    return;
-  args->thr->fast_state.IncrementEpoch();
-  // Can't increment epoch w/o writing to the trace as well.
-  TraceAddEvent(args->thr, args->thr->fast_state, EventTypeMop, 0);
-  ReleaseImpl(args->thr, 0, &sync);
-  creation_stack_id = CurrentStackId(args->thr, args->pc);
-  if (reuse_count == 0)
-    StatInc(args->thr, StatThreadMaxTid);
+  CHECK_EQ(sync, nullptr);
 }
 
 void ThreadContext::OnReset() {
-  CHECK_EQ(sync.size(), 0);
-  uptr trace_p = GetThreadTrace(tid);
-  ReleaseMemoryPagesToOS(trace_p, trace_p + TraceSize() * sizeof(Event));
-  //!!! ReleaseMemoryToOS(GetThreadTraceHeader(tid), sizeof(Trace));
+  CHECK(!sync);
 }
 
 void ThreadContext::OnDetached(void *arg) {
-  ThreadState *thr1 = static_cast<ThreadState*>(arg);
-  sync.Reset(&thr1->proc()->clock_cache);
-}
-
-struct OnStartedArgs {
-  ThreadState *thr;
-  uptr stk_addr;
-  uptr stk_size;
-  uptr tls_addr;
-  uptr tls_size;
-};
-
-void ThreadContext::OnStarted(void *arg) {
-  OnStartedArgs *args = static_cast<OnStartedArgs*>(arg);
-  thr = args->thr;
-  // RoundUp so that one trace part does not contain events
-  // from different threads.
-  epoch0 = RoundUp(epoch1 + 1, kTracePartSize);
-  epoch1 = (u64)-1;
-  new(thr) ThreadState(ctx, tid, unique_id, epoch0, reuse_count,
-      args->stk_addr, args->stk_size, args->tls_addr, args->tls_size);
-#if !SANITIZER_GO
-  thr->shadow_stack = &ThreadTrace(thr->tid)->shadow_stack[0];
-  thr->shadow_stack_pos = thr->shadow_stack;
-  thr->shadow_stack_end = thr->shadow_stack + kShadowStackSize;
-#else
-  // Setup dynamic shadow stack.
-  const int kInitStackSize = 8;
-  thr->shadow_stack = (uptr*)internal_alloc(MBlockShadowStack,
-      kInitStackSize * sizeof(uptr));
-  thr->shadow_stack_pos = thr->shadow_stack;
-  thr->shadow_stack_end = thr->shadow_stack + kInitStackSize;
-#endif
-  if (common_flags()->detect_deadlocks)
-    thr->dd_lt = ctx->dd->CreateLogicalThread(unique_id);
-  thr->fast_state.SetHistorySize(flags()->history_size);
-  // Commit switch to the new part of the trace.
-  // TraceAddEvent will reset stack0/mset0 in the new part for us.
-  TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
-
-  thr->fast_synch_epoch = epoch0;
-  AcquireImpl(thr, 0, &sync);
-  StatInc(thr, StatSyncAcquire);
-  sync.Reset(&thr->proc()->clock_cache);
-  thr->is_inited = true;
-  DPrintf("#%d: ThreadStart epoch=%zu stk_addr=%zx stk_size=%zx "
-          "tls_addr=%zx tls_size=%zx\n",
-          tid, (uptr)epoch0, args->stk_addr, args->stk_size,
-          args->tls_addr, args->tls_size);
-}
-
-void ThreadContext::OnFinished() {
-#if SANITIZER_GO
-  internal_free(thr->shadow_stack);
-  thr->shadow_stack = nullptr;
-  thr->shadow_stack_pos = nullptr;
-  thr->shadow_stack_end = nullptr;
-#endif
-  if (!detached) {
-    thr->fast_state.IncrementEpoch();
-    // Can't increment epoch w/o writing to the trace as well.
-    TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
-    ReleaseImpl(thr, 0, &sync);
-  }
-  epoch1 = thr->fast_state.epoch();
-
-  if (common_flags()->detect_deadlocks)
-    ctx->dd->DestroyLogicalThread(thr->dd_lt);
-  thr->clock.ResetCached(&thr->proc()->clock_cache);
-#if !SANITIZER_GO
-  thr->last_sleep_clock.ResetCached(&thr->proc()->clock_cache);
-#endif
-#if !SANITIZER_GO
-  PlatformCleanUpThreadState(thr);
-#endif
-  thr->~ThreadState();
-#if TSAN_COLLECT_STATS
-  StatAggregate(ctx->stat, thr->stat);
-#endif
-  thr = 0;
+  Free(sync);
 }
 
 #if !SANITIZER_GO
@@ -161,8 +47,8 @@ struct ThreadLeak {
   int count;
 };
 
-static void MaybeReportThreadLeak(ThreadContextBase *tctx_base, void *arg) {
-  Vector<ThreadLeak> &leaks = *(Vector<ThreadLeak>*)arg;
+static void CollectThreadLeaks(ThreadContextBase* tctx_base, void* arg) {
+  auto& leaks = *static_cast<Vector<ThreadLeak>*>(arg);
   ThreadContext *tctx = static_cast<ThreadContext*>(tctx_base);
   if (tctx->detached || tctx->status != ThreadStatusFinished)
     return;
@@ -172,8 +58,7 @@ static void MaybeReportThreadLeak(ThreadContextBase *tctx_base, void *arg) {
       return;
     }
   }
-  ThreadLeak leak = {tctx, 1};
-  leaks.PushBack(leak);
+  leaks.PushBack({tctx, 1});
 }
 #endif
 
@@ -184,13 +69,13 @@ static void ReportIgnoresEnabled(ThreadContext *tctx, IgnoreSet *set) {
   } else {
     Printf("ThreadSanitizer: thread T%d %s finished with ignores enabled,"
       " created at:\n", tctx->tid, tctx->name);
-    PrintStack(SymbolizeStackId(tctx->creation_stack_id));
+    PrintStack(tctx->creation_stack_id);
   }
   Printf("  One of the following ignores was not ended"
       " (in order of probability)\n");
   for (uptr i = 0; i < set->Size(); i++) {
     Printf("  Ignore was enabled at:\n");
-    PrintStack(SymbolizeStackId(set->At(i)));
+    PrintStack(set->At(i));
   }
   Die();
 }
@@ -198,7 +83,7 @@ static void ReportIgnoresEnabled(ThreadContext *tctx, IgnoreSet *set) {
 static void ThreadCheckIgnore(ThreadState *thr) {
   if (ctx->after_multithreaded_fork)
     return;
-  if (thr->ignore_reads_and_writes)
+  if (thr->ignore_accesses)
     ReportIgnoresEnabled(thr->tctx, &thr->mop_ignore_set);
   if (thr->ignore_sync)
     ReportIgnoresEnabled(thr->tctx, &thr->sync_ignore_set);
@@ -212,38 +97,70 @@ void ThreadFinalize(ThreadState *thr) {
 #if !SANITIZER_GO
   if (!ShouldReport(thr, ReportTypeThreadLeak))
     return;
-  ThreadRegistryLock l(ctx->thread_registry);
-  Vector<ThreadLeak> leaks;
-  ctx->thread_registry->RunCallbackForEachThreadLocked(
-      MaybeReportThreadLeak, &leaks);
-  for (uptr i = 0; i < leaks.Size(); i++) {
-    ScopedReport rep(ReportTypeThreadLeak);
-    rep.AddThread(leaks[i].tctx, true);
-    rep.SetCount(leaks[i].count);
+  Vector<ReportDesc*> reports;
+  {
+    ReportScope report_scope(thr);
+    Vector<ThreadLeak> leaks;
+    ctx->thread_registry.RunCallbackForEachThreadLocked(CollectThreadLeaks,
+                                                        &leaks);
+    for (uptr i = 0; i < leaks.Size(); i++) {
+      auto rep = *reports.PushBack(New<ReportDesc>());
+      rep->typ = ReportTypeThreadLeak;
+      rep->AddThread(leaks[i].tctx, true);
+      rep->count = leaks[i].count;
+    }
+  }
+  for (uptr i = 0; i < reports.Size(); i++) {
+    auto rep = reports[i];
     OutputReport(thr, rep);
+    DestroyAndFree(rep);
   }
 #endif
 }
 
-int ThreadCount(ThreadState *thr) {
-  uptr result;
-  ctx->thread_registry->GetNumberOfThreads(0, 0, &result);
-  return (int)result;
-}
+struct OnCreatedArgs {
+  VectorClock* sync;
+  uptr sync_epoch;
+  StackID stack;
+};
 
-int ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached) {
-  StatInc(thr, StatThreadCreate);
-  OnCreatedArgs args = { thr, pc };
-  u32 parent_tid = thr ? thr->tid : kInvalidTid;  // No parent for GCD workers.
-  int tid =
-      ctx->thread_registry->CreateThread(uid, detached, parent_tid, &args);
-  DPrintf("#%d: ThreadCreate tid=%d uid=%zu\n", parent_tid, tid, uid);
-  StatSet(thr, StatThreadMaxAlive, ctx->thread_registry->GetMaxAliveThreads());
+Tid ThreadCreate(ThreadState* thr, uptr pc, uptr uid, bool detached) {
+  // The main thread and GCD workers don't have a parent thread.
+  Tid parent = kInvalidTid;
+  OnCreatedArgs arg = {nullptr, 0, kInvalidStackID};
+  if (thr) {
+    parent = thr->tid;
+    arg.stack = CurrentStackId(thr, pc);
+    if (!thr->ignore_sync) {
+      SlotLocker locker(thr);
+      thr->clock.ReleaseStore(&arg.sync);
+      arg.sync_epoch = ctx->global_epoch;
+      IncrementEpoch(thr);
+    }
+  }
+  Tid tid = ctx->thread_registry.CreateThread(uid, detached, parent, &arg);
+  DPrintf("#%d: ThreadCreate tid=%d uid=%zu\n", parent, tid, uid);
   return tid;
 }
 
-void ThreadStart(ThreadState *thr, int tid, tid_t os_id,
+void ThreadContext::OnCreated(void* arg) {
+  OnCreatedArgs* args = static_cast<OnCreatedArgs*>(arg);
+  sync = args->sync;
+  sync_epoch = args->sync_epoch;
+  creation_stack_id = args->stack;
+}
+
+void ThreadStart(ThreadState* thr, Tid tid, tid_t os_id,
                  ThreadType thread_type) {
+  ctx->thread_registry.StartThread(tid, os_id, thread_type, thr);
+  if (!thr->ignore_sync) {
+    SlotAttachAndLock(thr);
+    if (thr->tctx->sync_epoch == ctx->global_epoch)
+      thr->clock.Acquire(thr->tctx->sync);
+    SlotUnlock(thr);
+  }
+  Free(thr->tctx->sync);
+
   uptr stk_addr = 0;
   uptr stk_size = 0;
   uptr tls_addr = 0;
@@ -260,14 +177,10 @@ void ThreadStart(ThreadState *thr, int tid, tid_t os_id,
     if (tls_addr && tls_size) ImitateTlsWrite(thr, tls_addr, tls_size);
   }
 #endif
-
-  ThreadRegistry *tr = ctx->thread_registry;
-  OnStartedArgs args = { thr, stk_addr, stk_size, tls_addr, tls_size };
-  tr->StartThread(tid, os_id, thread_type, &args);
-
-  tr->Lock();
-  thr->tctx = (ThreadContext*)tr->GetThreadLocked(tid);
-  tr->Unlock();
+  thr->stk_addr = stk_addr;
+  thr->stk_size = stk_size;
+  thr->tls_addr = tls_addr;
+  thr->tls_size = tls_size;
 
 #if !SANITIZER_GO
   if (ctx->after_multithreaded_fork) {
@@ -278,15 +191,67 @@ void ThreadStart(ThreadState *thr, int tid, tid_t os_id,
 #endif
 }
 
+void ThreadContext::OnStarted(void* arg) {
+  thr = static_cast<ThreadState*>(arg);
+  DPrintf("#%d: ThreadStart\n", tid);
+  new (thr) ThreadState(tid);
+  if (common_flags()->detect_deadlocks)
+    thr->dd_lt = ctx->dd->CreateLogicalThread(tid);
+#if !SANITIZER_GO
+  thr->is_inited = true;
+#endif
+  thr->tctx = this;
+}
+
 void ThreadFinish(ThreadState *thr) {
   ThreadCheckIgnore(thr);
-  StatInc(thr, StatThreadFinish);
   if (thr->stk_addr && thr->stk_size)
     DontNeedShadowFor(thr->stk_addr, thr->stk_size);
   if (thr->tls_addr && thr->tls_size)
     DontNeedShadowFor(thr->tls_addr, thr->tls_size);
   thr->is_dead = true;
-  ctx->thread_registry->FinishThread(thr->tid);
+#if !SANITIZER_GO
+  thr->ignore_interceptors = true;
+  PlatformCleanUpThreadState(thr);
+#endif
+#if SANITIZER_GO
+  Free(thr->shadow_stack);
+  thr->shadow_stack_pos = nullptr;
+  thr->shadow_stack_end = nullptr;
+#endif
+  bool detached = thr->tctx->detached;
+  if (!detached && !thr->ignore_sync) {
+    SlotLocker locker(thr);
+    thr->clock.ReleaseStore(&thr->tctx->sync);
+    thr->tctx->sync_epoch = ctx->global_epoch;
+    IncrementEpoch(thr);
+  }
+
+  if (common_flags()->detect_deadlocks)
+    ctx->dd->DestroyLogicalThread(thr->dd_lt);
+  SlotDetach(thr);
+  ctx->thread_registry.FinishThread(thr->tid);
+  thr->~ThreadState();
+}
+
+void ThreadContext::OnFinished() {
+  Lock lock(&ctx->slot_mtx);
+  Trace* trace = &thr->tctx->trace;
+  Lock lock1(&trace->mtx);
+  auto parts = &trace->parts;
+  while (trace->local_head) {
+    CHECK(parts->Queued(trace->local_head));
+    ctx->trace_part_recycle.PushBack(trace->local_head);
+    trace->local_head = parts->Next(trace->local_head);
+  }
+  trace->final_pos = (Event*)atomic_load_relaxed(&thr->trace_pos);
+  atomic_store_relaxed(&thr->trace_pos, 0);
+  if (trace->parts_allocated > 1) {
+    ctx->trace_part_slack += trace->parts_allocated - 1;
+    trace->parts_allocated = 1;
+  }
+  thr->tctx = nullptr;
+  thr = nullptr;
 }
 
 struct ConsumeThreadContext {
@@ -311,117 +276,52 @@ static bool ConsumeThreadByUid(ThreadContextBase *tctx, void *arg) {
   return false;
 }
 
-int ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid) {
+Tid ThreadConsumeTid(ThreadState* thr, uptr pc, uptr uid) {
   ConsumeThreadContext findCtx = {uid, nullptr};
-  ctx->thread_registry->FindThread(ConsumeThreadByUid, &findCtx);
-  int tid = findCtx.tctx ? findCtx.tctx->tid : kInvalidTid;
+  ctx->thread_registry.FindThread(ConsumeThreadByUid, &findCtx);
+  Tid tid = findCtx.tctx ? findCtx.tctx->tid : kInvalidTid;
   DPrintf("#%d: ThreadTid uid=%zu tid=%d\n", thr->tid, uid, tid);
   return tid;
 }
 
-void ThreadJoin(ThreadState *thr, uptr pc, int tid) {
+struct JoinArg {
+  VectorClock* sync;
+  uptr sync_epoch;
+};
+
+void ThreadJoin(ThreadState* thr, uptr pc, Tid tid) {
   CHECK_GT(tid, 0);
-  CHECK_LT(tid, kMaxTid);
   DPrintf("#%d: ThreadJoin tid=%d\n", thr->tid, tid);
-  ctx->thread_registry->JoinThread(tid, thr);
+  JoinArg arg = {};
+  ctx->thread_registry.JoinThread(tid, &arg);
+  if (!thr->ignore_sync) {
+    SlotLocker locker(thr);
+    if (arg.sync_epoch == ctx->global_epoch)
+      thr->clock.Acquire(arg.sync);
+  }
+  Free(arg.sync);
 }
 
-void ThreadDetach(ThreadState *thr, uptr pc, int tid) {
+void ThreadContext::OnJoined(void* ptr) {
+  auto arg = static_cast<JoinArg*>(ptr);
+  arg->sync = sync;
+  arg->sync_epoch = sync_epoch;
+  sync = nullptr;
+  sync_epoch = 0;
+}
+
+void ThreadDetach(ThreadState* thr, uptr pc, Tid tid) {
   CHECK_GT(tid, 0);
-  CHECK_LT(tid, kMaxTid);
-  ctx->thread_registry->DetachThread(tid, thr);
+  ctx->thread_registry.DetachThread(tid, thr);
 }
 
-void ThreadNotJoined(ThreadState *thr, uptr pc, int tid, uptr uid) {
+void ThreadNotJoined(ThreadState* thr, uptr pc, Tid tid, uptr uid) {
   CHECK_GT(tid, 0);
-  CHECK_LT(tid, kMaxTid);
-  ctx->thread_registry->SetThreadUserId(tid, uid);
+  ctx->thread_registry.SetThreadUserId(tid, uid);
 }
 
-void ThreadSetName(ThreadState *thr, const char *name) {
-  ctx->thread_registry->SetThreadName(thr->tid, name);
-}
-
-void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
-                       uptr size, bool is_write) {
-  if (size == 0)
-    return;
-
-  u64 *shadow_mem = (u64*)MemToShadow(addr);
-  DPrintf2("#%d: MemoryAccessRange: @%p %p size=%d is_write=%d\n",
-      thr->tid, (void*)pc, (void*)addr,
-      (int)size, is_write);
-
-#if SANITIZER_DEBUG
-  if (!IsAppMem(addr)) {
-    Printf("Access to non app mem %zx\n", addr);
-    DCHECK(IsAppMem(addr));
-  }
-  if (!IsAppMem(addr + size - 1)) {
-    Printf("Access to non app mem %zx\n", addr + size - 1);
-    DCHECK(IsAppMem(addr + size - 1));
-  }
-  if (!IsShadowMem((uptr)shadow_mem)) {
-    Printf("Bad shadow addr %p (%zx)\n", shadow_mem, addr);
-    DCHECK(IsShadowMem((uptr)shadow_mem));
-  }
-  if (!IsShadowMem((uptr)(shadow_mem + size * kShadowCnt / 8 - 1))) {
-    Printf("Bad shadow addr %p (%zx)\n",
-               shadow_mem + size * kShadowCnt / 8 - 1, addr + size - 1);
-    DCHECK(IsShadowMem((uptr)(shadow_mem + size * kShadowCnt / 8 - 1)));
-  }
-#endif
-
-  StatInc(thr, StatMopRange);
-
-  if (*shadow_mem == kShadowRodata) {
-    DCHECK(!is_write);
-    // Access to .rodata section, no races here.
-    // Measurements show that it can be 10-20% of all memory accesses.
-    StatInc(thr, StatMopRangeRodata);
-    return;
-  }
-
-  FastState fast_state = thr->fast_state;
-  if (fast_state.GetIgnoreBit())
-    return;
-
-  fast_state.IncrementEpoch();
-  thr->fast_state = fast_state;
-  TraceAddEvent(thr, fast_state, EventTypeMop, pc);
-
-  bool unaligned = (addr % kShadowCell) != 0;
-
-  // Handle unaligned beginning, if any.
-  for (; addr % kShadowCell && size; addr++, size--) {
-    int const kAccessSizeLog = 0;
-    Shadow cur(fast_state);
-    cur.SetWrite(is_write);
-    cur.SetAddr0AndSizeLog(addr & (kShadowCell - 1), kAccessSizeLog);
-    MemoryAccessImpl(thr, addr, kAccessSizeLog, is_write, false,
-        shadow_mem, cur);
-  }
-  if (unaligned)
-    shadow_mem += kShadowCnt;
-  // Handle middle part, if any.
-  for (; size >= kShadowCell; addr += kShadowCell, size -= kShadowCell) {
-    int const kAccessSizeLog = 3;
-    Shadow cur(fast_state);
-    cur.SetWrite(is_write);
-    cur.SetAddr0AndSizeLog(0, kAccessSizeLog);
-    MemoryAccessImpl(thr, addr, kAccessSizeLog, is_write, false,
-        shadow_mem, cur);
-    shadow_mem += kShadowCnt;
-  }
-  // Handle ending, if any.
-  for (; size; addr++, size--) {
-    int const kAccessSizeLog = 0;
-    Shadow cur(fast_state);
-    cur.SetWrite(is_write);
-    cur.SetAddr0AndSizeLog(addr & (kShadowCell - 1), kAccessSizeLog);
-    MemoryAccessImpl(thr, addr, kAccessSizeLog, is_write, false,
-        shadow_mem, cur);
-  }
+void ThreadSetName(ThreadState* thr, const char* name) {
+  ctx->thread_registry.SetThreadName(thr->tid, name);
 }
 
 #if !SANITIZER_GO
@@ -433,10 +333,10 @@ void FiberSwitchImpl(ThreadState *from, ThreadState *to) {
 }
 
 ThreadState *FiberCreate(ThreadState *thr, uptr pc, unsigned flags) {
-  void *mem = internal_alloc(MBlockThreadContex, sizeof(ThreadState));
+  void* mem = Alloc(sizeof(ThreadState));
   ThreadState *fiber = static_cast<ThreadState *>(mem);
   internal_memset(fiber, 0, sizeof(*fiber));
-  int tid = ThreadCreate(thr, pc, 0, true);
+  Tid tid = ThreadCreate(thr, pc, 0, true);
   FiberSwitchImpl(thr, fiber);
   ThreadStart(fiber, tid, 0, ThreadType::Fiber);
   FiberSwitchImpl(fiber, thr);
@@ -447,7 +347,7 @@ void FiberDestroy(ThreadState *thr, uptr pc, ThreadState *fiber) {
   FiberSwitchImpl(thr, fiber);
   ThreadFinish(fiber);
   FiberSwitchImpl(fiber, thr);
-  internal_free(fiber);
+  Free(fiber);
 }
 
 void FiberSwitch(ThreadState *thr, uptr pc,

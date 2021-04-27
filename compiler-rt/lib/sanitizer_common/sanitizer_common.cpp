@@ -330,6 +330,9 @@ static int InstallMallocFreeHooks(void (*malloc_hook)(const void *, uptr),
   return 0;
 }
 
+void SleepForSeconds(int seconds) { internal_usleep(seconds * 1000 * 1000); }
+void SleepForMillis(int millis) { internal_usleep(millis * 1000); }
+
 } // namespace __sanitizer
 
 using namespace __sanitizer;

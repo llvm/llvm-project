@@ -1,18 +1,12 @@
-#include <pthread.h>
-#include <stdlib.h>
-#include <stddef.h>
-#include <unistd.h>
-#include <stdio.h>
+#include "test.h"
 #include <time.h>
 
 int bench_nthread;
 int bench_niter;
-int grow_clock_var;
-pthread_barrier_t glow_clock_barrier;
+int bench_mode;
 
 void bench();  // defined by user
 void start_thread_group(int nth, void(*f)(int tid));
-void grow_clock_worker(int tid);
 
 int main(int argc, char **argv) {
   bench_nthread = 2;
@@ -21,15 +15,8 @@ int main(int argc, char **argv) {
   bench_niter = 100;
   if (argc > 2)
     bench_niter = atoi(argv[2]);
-
-  // Grow thread's clock.
-  int clock_size = 10;
-  if (argc > 1)
-    clock_size = 1000;
-  pthread_barrier_init(&glow_clock_barrier, 0, clock_size);
-  start_thread_group(clock_size, grow_clock_worker);
-  pthread_barrier_destroy(&glow_clock_barrier);
-  __atomic_load_n(&grow_clock_var, __ATOMIC_ACQUIRE);
+  if (argc > 3)
+    bench_mode = atoi(argv[3]);
 
   timespec tp0;
   clock_gettime(CLOCK_MONOTONIC, &tp0);
@@ -50,10 +37,3 @@ void start_thread_group(int nth, void(*f)(int tid)) {
   for (int i = 0; i < nth; i++)
     pthread_join(th[i], 0);
 }
-
-void grow_clock_worker(int tid) {
-  int res = pthread_barrier_wait(&glow_clock_barrier);
-  if (res == PTHREAD_BARRIER_SERIAL_THREAD)
-    __atomic_store_n(&grow_clock_var, 0, __ATOMIC_RELEASE);
-}
-

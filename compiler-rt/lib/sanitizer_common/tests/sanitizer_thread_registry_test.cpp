@@ -28,9 +28,6 @@ static ThreadContextBase *GetThreadContext(u32 tid) {
   return new(tctx_allocator) TCTX(tid);
 }
 
-static const u32 kMaxRegistryThreads = 1000;
-static const u32 kRegistryQuarantine = 2;
-
 static void CheckThreadQuantity(ThreadRegistry *registry, uptr exp_total,
                                 uptr exp_running, uptr exp_alive) {
   uptr total, running, alive;
@@ -63,87 +60,72 @@ static void MarkUidAsPresent(ThreadContextBase *tctx, void *arg) {
   arr[tctx->tid] = true;
 }
 
-static void TestRegistry(ThreadRegistry *registry, bool has_quarantine) {
+TEST(SanitizerCommon, ThreadRegistryTest) {
+  ThreadRegistry registry(GetThreadContext<ThreadContextBase>);
   // Create and start a main thread.
-  EXPECT_EQ(0U, registry->CreateThread(get_uid(0), true, -1, 0));
-  registry->StartThread(0, 0, ThreadType::Regular, 0);
+  EXPECT_EQ(0U, registry.CreateThread(get_uid(0), true, -1, 0));
+  registry.StartThread(0, 0, ThreadType::Regular, 0);
   // Create a bunch of threads.
   for (u32 i = 1; i <= 10; i++) {
-    EXPECT_EQ(i, registry->CreateThread(get_uid(i), is_detached(i), 0, 0));
+    EXPECT_EQ(i, registry.CreateThread(get_uid(i), is_detached(i), 0, 0));
   }
-  CheckThreadQuantity(registry, 11, 1, 11);
+  CheckThreadQuantity(&registry, 11, 1, 11);
   // Start some of them.
   for (u32 i = 1; i <= 5; i++) {
-    registry->StartThread(i, 0, ThreadType::Regular, 0);
+    registry.StartThread(i, 0, ThreadType::Regular, 0);
   }
-  CheckThreadQuantity(registry, 11, 6, 11);
+  CheckThreadQuantity(&registry, 11, 6, 11);
   // Finish, create and start more threads.
   for (u32 i = 1; i <= 5; i++) {
-    registry->FinishThread(i);
+    registry.FinishThread(i);
     if (!is_detached(i))
-      registry->JoinThread(i, 0);
+      registry.JoinThread(i, 0);
   }
   for (u32 i = 6; i <= 10; i++) {
-    registry->StartThread(i, 0, ThreadType::Regular, 0);
+    registry.StartThread(i, 0, ThreadType::Regular, 0);
   }
   std::vector<u32> new_tids;
   for (u32 i = 11; i <= 15; i++) {
-    new_tids.push_back(
-        registry->CreateThread(get_uid(i), is_detached(i), 0, 0));
+    new_tids.push_back(registry.CreateThread(get_uid(i), is_detached(i), 0, 0));
   }
-  ASSERT_LE(kRegistryQuarantine, 5U);
-  u32 exp_total = 16 - (has_quarantine ? 5 - kRegistryQuarantine  : 0);
-  CheckThreadQuantity(registry, exp_total, 6, 11);
+  CheckThreadQuantity(&registry, 16, 6, 11);
   // Test SetThreadName and FindThread.
-  registry->SetThreadName(6, "six");
-  registry->SetThreadName(7, "seven");
-  EXPECT_EQ(7U, registry->FindThread(HasName, (void*)"seven"));
-  EXPECT_EQ(kInvalidTid, registry->FindThread(HasName, (void *)"none"));
-  EXPECT_EQ(0U, registry->FindThread(HasUid, (void*)get_uid(0)));
-  EXPECT_EQ(10U, registry->FindThread(HasUid, (void*)get_uid(10)));
-  EXPECT_EQ(kInvalidTid, registry->FindThread(HasUid, (void *)0x1234));
+  registry.SetThreadName(6, "six");
+  registry.SetThreadName(7, "seven");
+  EXPECT_EQ(7U, registry.FindThread(HasName, (void *)"seven"));
+  EXPECT_EQ(kInvalidTid, registry.FindThread(HasName, (void *)"none"));
+  EXPECT_EQ(0U, registry.FindThread(HasUid, (void *)get_uid(0)));
+  EXPECT_EQ(10U, registry.FindThread(HasUid, (void *)get_uid(10)));
+  EXPECT_EQ(kInvalidTid, registry.FindThread(HasUid, (void *)0x1234));
   // Detach and finish and join remaining threads.
   for (u32 i = 6; i <= 10; i++) {
-    registry->DetachThread(i, 0);
-    registry->FinishThread(i);
+    registry.DetachThread(i, 0);
+    registry.FinishThread(i);
   }
   for (u32 i = 0; i < new_tids.size(); i++) {
     u32 tid = new_tids[i];
-    registry->StartThread(tid, 0, ThreadType::Regular, 0);
-    registry->DetachThread(tid, 0);
-    registry->FinishThread(tid);
+    registry.StartThread(tid, 0, ThreadType::Regular, 0);
+    registry.DetachThread(tid, 0);
+    registry.FinishThread(tid);
   }
-  CheckThreadQuantity(registry, exp_total, 1, 1);
+  CheckThreadQuantity(&registry, 16, 1, 1);
   // Test methods that require the caller to hold a ThreadRegistryLock.
   bool has_tid[16];
   internal_memset(&has_tid[0], 0, sizeof(has_tid));
   {
-    ThreadRegistryLock l(registry);
-    registry->RunCallbackForEachThreadLocked(MarkUidAsPresent, &has_tid[0]);
+    ThreadRegistryLock l(&registry);
+    registry.RunCallbackForEachThreadLocked(MarkUidAsPresent, &has_tid[0]);
   }
-  for (u32 i = 0; i < exp_total; i++) {
+  for (u32 i = 0; i < 16; i++) {
     EXPECT_TRUE(has_tid[i]);
   }
   {
-    ThreadRegistryLock l(registry);
-    registry->CheckLocked();
-    ThreadContextBase *main_thread = registry->GetThreadLocked(0);
-    EXPECT_EQ(main_thread, registry->FindThreadContextLocked(
-        HasUid, (void*)get_uid(0)));
+    ThreadRegistryLock l(&registry);
+    registry.CheckLocked();
+    ThreadContextBase *main_thread = registry.GetThreadLocked(kMainTid);
+    EXPECT_EQ(main_thread,
+              registry.FindThreadContextLocked(HasUid, (void *)get_uid(0)));
   }
-  EXPECT_EQ(11U, registry->GetMaxAliveThreads());
-}
-
-TEST(SanitizerCommon, ThreadRegistryTest) {
-  ThreadRegistry quarantine_registry(GetThreadContext<ThreadContextBase>,
-                                     kMaxRegistryThreads,
-                                     kRegistryQuarantine);
-  TestRegistry(&quarantine_registry, true);
-
-  ThreadRegistry no_quarantine_registry(GetThreadContext<ThreadContextBase>,
-                                        kMaxRegistryThreads,
-                                        kMaxRegistryThreads);
-  TestRegistry(&no_quarantine_registry, false);
 }
 
 static const int kThreadsPerShard = 20;
@@ -226,8 +208,7 @@ TEST(SanitizerCommon, ThreadRegistryThreadedTest) {
   memset(&num_started, 0, sizeof(num_created));
   memset(&num_joined, 0, sizeof(num_created));
 
-  ThreadRegistry registry(GetThreadContext<TestThreadContext>,
-                          kThreadsPerShard * kNumShards + 1, 10);
+  ThreadRegistry registry(GetThreadContext<TestThreadContext>);
   ThreadedTestRegistry(&registry);
 }
 

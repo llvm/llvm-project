@@ -17,13 +17,9 @@
 
 namespace __tsan {
 
-void EnterSymbolizer();
-void ExitSymbolizer();
 SymbolizedStack *SymbolizeCode(uptr addr);
-ReportLocation *SymbolizeData(uptr addr);
-void SymbolizeFlush();
-
-ReportStack *NewReportStackEntry(uptr addr);
+bool SymbolizeData(uptr addr, ReportLocation* loc);
+void SymbolizerFlush();
 
 }  // namespace __tsan
 

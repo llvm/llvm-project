@@ -20,8 +20,12 @@
 #include "sanitizer_common/sanitizer_procmaps.h"
 #include "tsan_platform.h"
 #include "tsan_rtl.h"
+#  include <dlfcn.h>
 
 namespace __tsan {
+
+void* __tsan_on_initialize;
+void* __tsan_on_finalize;
 
 static const char kShadowMemoryMappingWarning[] =
     "FATAL: %s can not madvise shadow region [%zx, %zx] with %s (errno: %d)\n";
@@ -29,6 +33,7 @@ static const char kShadowMemoryMappingHint[] =
     "HINT: if %s is not supported in your environment, you may set "
     "TSAN_OPTIONS=%s=0\n";
 
+#  if !SANITIZER_GO
 static void DontDumpShadow(uptr addr, uptr size) {
   if (common_flags()->use_madv_dontdump)
     if (!DontDumpShadowMemory(addr, size)) {
@@ -39,7 +44,6 @@ static void DontDumpShadow(uptr addr, uptr size) {
     }
 }
 
-#if !SANITIZER_GO
 void InitializeShadowMemory() {
   // Map memory shadow.
   if (!MmapFixedSuperNoReserve(ShadowBeg(), ShadowEnd() - ShadowBeg(),
@@ -70,6 +74,9 @@ void InitializeShadowMemory() {
       meta, meta + meta_size, meta_size >> 30);
 
   InitializeShadowMemoryPlatform();
+
+  __tsan_on_initialize = dlsym(RTLD_DEFAULT, "__tsan_on_initialize");
+  __tsan_on_finalize = dlsym(RTLD_DEFAULT, "__tsan_on_finalize");
 }
 
 static void ProtectRange(uptr beg, uptr end) {
@@ -83,7 +90,7 @@ static void ProtectRange(uptr beg, uptr end) {
   }
 }
 
-void CheckAndProtect() {
+void MappingCheckAndProtect() {
   // Ensure that the binary is indeed compiled with -pie.
   MemoryMappingLayout proc_maps(true);
   MemoryMappedSegment segment;
@@ -108,18 +115,14 @@ void CheckAndProtect() {
   ProtectRange(ShadowEnd(), MetaShadowBeg());
 #ifdef TSAN_MID_APP_RANGE
   ProtectRange(MetaShadowEnd(), MidAppMemBeg());
-  ProtectRange(MidAppMemEnd(), TraceMemBeg());
+  ProtectRange(MidAppMemEnd(), HeapMemBeg());
 #else
-  ProtectRange(MetaShadowEnd(), TraceMemBeg());
+  ProtectRange(MetaShadowEnd(), HeapMemBeg());
 #endif
-  // Memory for traces is mapped lazily in MapThreadTrace.
-  // Protect the whole range for now, so that user does not map something here.
-  ProtectRange(TraceMemBeg(), TraceMemEnd());
-  ProtectRange(TraceMemEnd(), HeapMemBeg());
   ProtectRange(HeapEnd(), HiAppMemBeg());
 #endif
 }
-#endif
+#  endif
 
 }  // namespace __tsan
 

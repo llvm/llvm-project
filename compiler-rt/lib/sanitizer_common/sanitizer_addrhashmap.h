@@ -163,7 +163,7 @@ AddrHashMap<T, kSize>::AddrHashMap() {
 }
 
 template<typename T, uptr kSize>
-void AddrHashMap<T, kSize>::acquire(Handle *h) {
+void AddrHashMap<T, kSize>::acquire(Handle *h) NO_THREAD_SAFETY_ANALYSIS {
   uptr addr = h->addr_;
   uptr hash = calcHash(addr);
   Bucket *b = &table_[hash];
@@ -292,7 +292,7 @@ void AddrHashMap<T, kSize>::acquire(Handle *h) {
 }
 
 template<typename T, uptr kSize>
-void AddrHashMap<T, kSize>::release(Handle *h) {
+void AddrHashMap<T, kSize>::release(Handle *h) NO_THREAD_SAFETY_ANALYSIS {
   if (!h->cell_)
     return;
   Bucket *b = h->bucket_;
