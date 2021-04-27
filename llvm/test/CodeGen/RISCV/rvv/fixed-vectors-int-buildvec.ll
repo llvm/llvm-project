@@ -265,6 +265,8 @@ define void @buildvec_seq2_v16i8_v2i64(<16 x i8>* %x) {
 define void @buildvec_seq_v9i8(<9 x i8>* %x) {
 ; RV32-LABEL: buildvec_seq_v9i8:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi a1, zero, 3
+; RV32-NEXT:    sb a1, 8(a0)
 ; RV32-NEXT:    addi a1, zero, 73
 ; RV32-NEXT:    vsetivli a2, 1, e8,m1,ta,mu
 ; RV32-NEXT:    vmv.s.x v0, a1
@@ -277,8 +279,6 @@ define void @buildvec_seq_v9i8(<9 x i8>* %x) {
 ; RV32-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
 ; RV32-NEXT:    vmerge.vim v25, v25, 3, v0
 ; RV32-NEXT:    vse8.v v25, (a0)
-; RV32-NEXT:    addi a1, zero, 3
-; RV32-NEXT:    sb a1, 8(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: buildvec_seq_v9i8:

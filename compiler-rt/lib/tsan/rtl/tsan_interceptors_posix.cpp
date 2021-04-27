@@ -81,6 +81,8 @@ extern "C" int pthread_attr_init(void *attr);
 extern "C" int pthread_attr_destroy(void *attr);
 DECLARE_REAL(int, pthread_attr_getdetachstate, void *, void *)
 extern "C" int pthread_attr_setstacksize(void *attr, uptr stacksize);
+extern "C" int pthread_atfork(void (*prepare)(void), void (*parent)(void),
+                              void (*child)(void));
 extern "C" int pthread_key_create(unsigned *key, void (*destructor)(void* v));
 extern "C" int pthread_setspecific(unsigned key, const void *v);
 DECLARE_REAL(int, pthread_mutexattr_gettype, void *, void *)
@@ -1976,7 +1978,8 @@ static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
   // because in async signal processing case (when handler is called directly
   // from rtl_generic_sighandler) we have not yet received the reraised
   // signal; and it looks too fragile to intercept all ways to reraise a signal.
-  if (flags()->report_bugs && !sync && sig != SIGTERM && errno != 99) {
+  if (ShouldReport(thr, ReportTypeErrnoInSignal) && !sync && sig != SIGTERM &&
+      errno != 99) {
     VarSizeStackTrace stack;
     // StackTrace::GetNestInstructionPc(pc) is used because return address is
     // expected, OutputReport() will undo this.
@@ -2146,26 +2149,32 @@ TSAN_INTERCEPTOR(int, fork, int fake) {
   if (in_symbolizer())
     return REAL(fork)(fake);
   SCOPED_INTERCEPTOR_RAW(fork, fake);
+  return REAL(fork)(fake);
+}
+
+void atfork_prepare() {
+  if (in_symbolizer())
+    return;
+  ThreadState *thr = cur_thread();
+  const uptr pc = StackTrace::GetCurrentPc();
   ForkBefore(thr, pc);
-  int pid;
-  {
-    // On OS X, REAL(fork) can call intercepted functions (OSSpinLockLock), and
-    // we'll assert in CheckNoLocks() unless we ignore interceptors.
-    ScopedIgnoreInterceptors ignore;
-    pid = REAL(fork)(fake);
-  }
-  if (pid == 0) {
-    // child
-    ForkChildAfter(thr, pc);
-    FdOnFork(thr, pc);
-  } else if (pid > 0) {
-    // parent
-    ForkParentAfter(thr, pc);
-  } else {
-    // error
-    ForkParentAfter(thr, pc);
-  }
-  return pid;
+}
+
+void atfork_parent() {
+  if (in_symbolizer())
+    return;
+  ThreadState *thr = cur_thread();
+  const uptr pc = StackTrace::GetCurrentPc();
+  ForkParentAfter(thr, pc);
+}
+
+void atfork_child() {
+  if (in_symbolizer())
+    return;
+  ThreadState *thr = cur_thread();
+  const uptr pc = StackTrace::GetCurrentPc();
+  ForkChildAfter(thr, pc);
+  FdOnFork(thr, pc);
 }
 
 TSAN_INTERCEPTOR(int, vfork, int fake) {
@@ -2838,6 +2847,10 @@ void InitializeInterceptors() {
 
   if (REAL(__cxa_atexit)(&finalize, 0, 0)) {
     Printf("ThreadSanitizer: failed to setup atexit callback\n");
+    Die();
+  }
+  if (pthread_atfork(atfork_prepare, atfork_parent, atfork_child)) {
+    Printf("ThreadSanitizer: failed to setup atfork callbacks\n");
     Die();
   }
 

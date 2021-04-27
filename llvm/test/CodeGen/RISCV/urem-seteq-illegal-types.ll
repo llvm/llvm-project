@@ -576,8 +576,8 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV32MV-NEXT:    vsub.vv v25, v25, v27
 ; RV32MV-NEXT:    vmul.vv v25, v25, v26
 ; RV32MV-NEXT:    vsll.vi v26, v25, 1
-; RV32MV-NEXT:    vmv.v.i v27, 10
 ; RV32MV-NEXT:    addi a1, zero, 9
+; RV32MV-NEXT:    vmv.v.i v27, 10
 ; RV32MV-NEXT:    vmv.s.x v27, a1
 ; RV32MV-NEXT:    vsll.vv v26, v26, v27
 ; RV32MV-NEXT:    addi a1, zero, 2047
@@ -637,8 +637,8 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64MV-NEXT:    vsub.vv v25, v25, v27
 ; RV64MV-NEXT:    vmul.vv v25, v25, v26
 ; RV64MV-NEXT:    vsll.vi v26, v25, 1
-; RV64MV-NEXT:    vmv.v.i v27, 10
 ; RV64MV-NEXT:    addi a1, zero, 9
+; RV64MV-NEXT:    vmv.v.i v27, 10
 ; RV64MV-NEXT:    vmv.s.x v27, a1
 ; RV64MV-NEXT:    vsll.vv v26, v26, v27
 ; RV64MV-NEXT:    addi a1, zero, 2047
