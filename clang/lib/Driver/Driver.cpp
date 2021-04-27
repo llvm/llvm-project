@@ -1902,6 +1902,12 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
     return false;
   }
 
+  if (C.getArgs().hasArg(options::OPT_print_multiarch)) {
+    llvm::outs() << TC.getMultiarchTriple(*this, TC.getTriple(), SysRoot)
+                 << "\n";
+    return false;
+  }
+
   if (C.getArgs().hasArg(options::OPT_print_targets)) {
     llvm::TargetRegistry::printRegisteredTargetsForVersion(llvm::outs());
     return false;
