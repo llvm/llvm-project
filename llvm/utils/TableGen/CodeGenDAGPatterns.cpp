@@ -4306,11 +4306,11 @@ static void collectModes(std::set<unsigned> &Modes, const TreePatternNode *N) {
 
 void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
   const CodeGenHwModes &CGH = getTargetInfo().getHwModes();
-  std::map<unsigned,std::vector<Predicate>> ModeChecks;
   std::vector<PatternToMatch> Copy;
   PatternsToMatch.swap(Copy);
 
-  auto AppendPattern = [this, &ModeChecks](PatternToMatch &P, unsigned Mode) {
+  auto AppendPattern = [this](PatternToMatch &P, unsigned Mode,
+                              ArrayRef<Predicate> Check) {
     TreePatternNodePtr NewSrc = P.getSrcPattern()->clone();
     TreePatternNodePtr NewDst = P.getDstPattern()->clone();
     if (!NewSrc->setDefaultMode(Mode) || !NewDst->setDefaultMode(Mode)) {
@@ -4318,8 +4318,7 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
     }
 
     std::vector<Predicate> Preds = P.getPredicates();
-    const std::vector<Predicate> &MC = ModeChecks[Mode];
-    llvm::append_range(Preds, MC);
+    llvm::append_range(Preds, Check);
     PatternsToMatch.emplace_back(P.getSrcRecord(), std::move(Preds),
                                  std::move(NewSrc), std::move(NewDst),
                                  P.getDstRegs(),
@@ -4355,31 +4354,23 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
     // duplicated patterns with different predicate checks, construct the
     // default check as a negation of all predicates that are actually present
     // in the source/destination patterns.
-    std::vector<Predicate> DefaultPred;
+    SmallVector<Predicate, 2> DefaultCheck;
 
     for (unsigned M : Modes) {
       if (M == DefaultMode)
-        continue;
-      if (ModeChecks.find(M) != ModeChecks.end())
         continue;
 
       // Fill the map entry for this mode.
       const HwMode &HM = CGH.getMode(M);
-      ModeChecks[M].emplace_back(Predicate(HM.Features, true));
+      AppendPattern(P, M, Predicate(HM.Features, true));
 
       // Add negations of the HM's predicates to the default predicate.
-      DefaultPred.emplace_back(Predicate(HM.Features, false));
-    }
-
-    for (unsigned M : Modes) {
-      if (M == DefaultMode)
-        continue;
-      AppendPattern(P, M);
+      DefaultCheck.push_back(Predicate(HM.Features, false));
     }
 
     bool HasDefault = Modes.count(DefaultMode);
     if (HasDefault)
-      AppendPattern(P, DefaultMode);
+      AppendPattern(P, DefaultMode, DefaultCheck);
   }
 }
 
