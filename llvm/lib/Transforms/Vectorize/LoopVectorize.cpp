@@ -4288,17 +4288,17 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi, VPTransformState &State) {
 
   // Reductions do not have to start at zero. They can start with
   // any loop invariant values.
-  BasicBlock *Latch = OrigLoop->getLoopLatch();
-  Value *LoopVal = Phi->getIncomingValueForBlock(Latch);
+  BasicBlock *OrigLatch = OrigLoop->getLoopLatch();
+  Value *OrigLoopVal = Phi->getIncomingValueForBlock(OrigLatch);
+  BasicBlock *VectorLoopLatch = LI->getLoopFor(LoopVectorBody)->getLoopLatch();
 
   for (unsigned Part = 0; Part < UF; ++Part) {
     Value *VecRdxPhi = State.get(State.Plan->getVPValue(Phi), Part);
-    Value *Val = State.get(State.Plan->getVPValue(LoopVal), Part);
+    Value *Val = State.get(State.Plan->getVPValue(OrigLoopVal), Part);
     if (IsInLoopReductionPhi && useOrderedReductions(RdxDesc) &&
         State.VF.isVector())
-      Val = State.get(State.Plan->getVPValue(LoopVal), UF - 1);
-    cast<PHINode>(VecRdxPhi)
-      ->addIncoming(Val, LI->getLoopFor(LoopVectorBody)->getLoopLatch());
+      Val = State.get(State.Plan->getVPValue(OrigLoopVal), UF - 1);
+    cast<PHINode>(VecRdxPhi)->addIncoming(Val, VectorLoopLatch);
   }
 
   // Before each round, move the insertion point right between
