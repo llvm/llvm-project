@@ -5,7 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %s -o %t.dir/build1/foo.o
 # RUN: echo '_main' > %t.dir/main.exports
 # RUN: echo '_main' > %t.dir/main.order
-# RUN: echo 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' > %t.dir/sectdata.txt
+# RUN: echo 'not a virus' > %t.dir/sectdata.txt
 # RUN: cd %t.dir
 # RUN: %lld -platform_version macos 10.10.0 11.0 \
 # RUN:     -exported_symbols_list main.exports \
