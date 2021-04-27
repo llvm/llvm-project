@@ -6,7 +6,7 @@
 // RUN: %env_lsan_opts="" %run %t 2>&1 | FileCheck %s --implicit-check-not=leak
 
 // FIXME: This check is not very important and fails on arm7.
-// DONTRUN: %env_lsan_opts=$LSAN_BASE:"use_globals=0" not %run %t 2>&1 | FileCheck %s --check-prefixes=LEAK
+// %env_lsan_opts=$LSAN_BASE:"use_globals=0" not %run %t 2>&1 | FileCheck %s --check-prefixes=LEAK
 
 #include <stdio.h>
 #include <stdlib.h>
