@@ -297,10 +297,12 @@ TEST_F(OrcCAPITestBase, ExecutionTest) {
   LLVMInitializeNativeAsmPrinter();
   LLVMOrcThreadSafeModuleRef TSM = createTestModule();
   if (LLVMErrorRef E = LLVMOrcLLJITAddLLVMIRModule(Jit, MainDylib, TSM)) {
+    LLVMConsumeError(E);
     FAIL() << "Failed to add LLVM IR module to LLJIT";
   }
   LLVMOrcJITTargetAddress TestFnAddr;
-  if (LLVMOrcLLJITLookup(Jit, &TestFnAddr, "sum")) {
+  if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &TestFnAddr, "sum")) {
+    LLVMConsumeError(E);
     FAIL() << "Symbol \"sum\" was not added into JIT";
   }
   auto *SumFn = (SumFunctionType)(TestFnAddr);
