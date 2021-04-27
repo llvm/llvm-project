@@ -16,6 +16,11 @@
 # RUN:   | FileCheck -check-prefix=DIS %s
 # RUN: llvm-readobj -r -A %t.exe | FileCheck %s
 
+# RUN: ld.lld -pie %t.o %t.so -script %t.script -o %t.pie
+# RUN: llvm-objdump -d -s -t --no-show-raw-insn %t.pie \
+# RUN:   | FileCheck -check-prefix=DIS %s
+# RUN: llvm-readobj -r -A %t.pie | FileCheck %s
+
 # RUN: ld.lld -shared %t.o %t.so -script %t.script -o %t-out.so
 # RUN: llvm-objdump -d -s -t --no-show-raw-insn %t-out.so \
 # RUN:   | FileCheck -check-prefix=DIS-SO %s
