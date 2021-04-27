@@ -9649,6 +9649,45 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   llvm_unreachable("invalid operation");
 }
 
+bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
+                                       unsigned MaxDepth) const {
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineInstr *MI = MRI.getVRegDef(Reg);
+  unsigned Opcode = MI->getOpcode();
+
+  if (Opcode == AMDGPU::G_FCANONICALIZE)
+    return true;
+
+  if (Opcode == AMDGPU::G_FCONSTANT) {
+    auto F = MI->getOperand(1).getFPImm()->getValueAPF();
+    if (F.isNaN() && F.isSignaling())
+      return false;
+    return !F.isDenormal() || denormalsEnabledForType(MRI.getType(Reg), MF);
+  }
+
+  if (MaxDepth == 0)
+    return false;
+
+  switch (Opcode) {
+  case AMDGPU::G_FMINNUM_IEEE:
+  case AMDGPU::G_FMAXNUM_IEEE: {
+    if (Subtarget->supportsMinMaxDenormModes() ||
+        denormalsEnabledForType(MRI.getType(Reg), MF))
+      return true;
+    for (unsigned I = 1, E = MI->getNumOperands(); I != E; ++I) {
+      if (!isCanonicalized(MI->getOperand(I).getReg(), MF, MaxDepth - 1))
+        return false;
+    }
+    return true;
+  }
+  default:
+    return denormalsEnabledForType(MRI.getType(Reg), MF) &&
+           isKnownNeverSNaN(Reg, MRI);
+  }
+
+  llvm_unreachable("invalid operation");
+}
+
 // Constant fold canonicalize.
 SDValue SITargetLowering::getCanonicalConstantFP(
   SelectionDAG &DAG, const SDLoc &SL, EVT VT, const APFloat &C) const {
@@ -12009,6 +12048,19 @@ bool SITargetLowering::denormalsEnabledForType(const SelectionDAG &DAG,
   case MVT::f64:
   case MVT::f16:
     return hasFP64FP16Denormals(DAG.getMachineFunction());
+  default:
+    return false;
+  }
+}
+
+bool SITargetLowering::denormalsEnabledForType(LLT Ty,
+                                               MachineFunction &MF) const {
+  switch (Ty.getScalarSizeInBits()) {
+  case 32:
+    return hasFP32Denormals(MF);
+  case 64:
+  case 16:
+    return hasFP64FP16Denormals(MF);
   default:
     return false;
   }
