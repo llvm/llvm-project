@@ -408,7 +408,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // to speed up scalar BSWAP64.
   // CTPOP or CTTZ were introduced in P8/P9 respectively
   setOperationAction(ISD::BSWAP, MVT::i32  , Expand);
-  if (Subtarget.hasP9Vector())
+  if (Subtarget.hasP9Vector() && Subtarget.isPPC64())
     setOperationAction(ISD::BSWAP, MVT::i64  , Custom);
   else
     setOperationAction(ISD::BSWAP, MVT::i64  , Expand);
@@ -10254,6 +10254,8 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 // Lower scalar BSWAP64 to xxbrd.
 SDValue PPCTargetLowering::LowerBSWAP(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
+  if (!Subtarget.isPPC64())
+    return Op;
   // MTVSRDD
   Op = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v2i64, Op.getOperand(0),
                    Op.getOperand(0));

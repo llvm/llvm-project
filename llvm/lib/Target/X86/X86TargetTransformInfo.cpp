@@ -3121,10 +3121,11 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   return BaseT::getVectorInstrCost(Opcode, Val, Index) + RegisterFileMoveCost;
 }
 
-unsigned X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
-                                              const APInt &DemandedElts,
-                                              bool Insert, bool Extract) {
-  unsigned Cost = 0;
+InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
+                                                     const APInt &DemandedElts,
+                                                     bool Insert,
+                                                     bool Extract) {
+  InstructionCost Cost = 0;
 
   // For insertions, a ISD::BUILD_VECTOR style vector initialization can be much
   // cheaper than an accumulation of ISD::INSERT_VECTOR_ELT.
