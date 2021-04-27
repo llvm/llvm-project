@@ -657,6 +657,52 @@ exit:
   ret void
 }
 
+define void @PR49993() {
+; CHECK-LABEL: @PR49993(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       d:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ADD:%.*]], [[D:%.*]] ], [ [[REM10:%.*]], [[IF_END]] ]
+; CHECK-NEXT:    [[ADD]] = add nsw i32 [[PHI]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[PHI]], 3
+; CHECK-NEXT:    br i1 [[CMP]], label [[D]], label [[IF_END_LOOPEXIT:%.*]]
+; CHECK:       if.end.loopexit:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[REM1:%.*]] = urem i32 undef, undef
+; CHECK-NEXT:    [[REM2:%.*]] = urem i32 [[REM1]], undef
+; CHECK-NEXT:    [[REM3:%.*]] = urem i32 [[REM2]], undef
+; CHECK-NEXT:    [[REM4:%.*]] = urem i32 [[REM3]], undef
+; CHECK-NEXT:    [[REM5:%.*]] = urem i32 [[REM4]], undef
+; CHECK-NEXT:    [[REM6:%.*]] = urem i32 [[REM5]], undef
+; CHECK-NEXT:    [[REM7:%.*]] = urem i32 [[REM6]], undef
+; CHECK-NEXT:    [[REM8:%.*]] = urem i32 [[REM7]], undef
+; CHECK-NEXT:    [[REM9:%.*]] = urem i32 [[REM8]], undef
+; CHECK-NEXT:    [[REM10]] = urem i32 [[REM9]], undef
+; CHECK-NEXT:    br label [[D]]
+;
+entry:
+  br label %if.end
+
+d:
+  %phi = phi i32 [ %add, %d ], [ %rem10, %if.end ]
+  %add = add nsw i32 %phi, 1
+  %cmp = icmp slt i32 %phi, 3
+  br i1 %cmp, label %d, label %if.end
+
+if.end:
+  %rem1 = urem i32 undef, undef
+  %rem2 = urem i32 %rem1, undef
+  %rem3 = urem i32 %rem2, undef
+  %rem4 = urem i32 %rem3, undef
+  %rem5 = urem i32 %rem4, undef
+  %rem6 = urem i32 %rem5, undef
+  %rem7 = urem i32 %rem6, undef
+  %rem8 = urem i32 %rem7, undef
+  %rem9 = urem i32 %rem8, undef
+  %rem10 = urem i32 %rem9, undef
+  br label %d
+}
 
 declare i32 @llvm.loop.decrement.reg.i32(i32, i32)
 
