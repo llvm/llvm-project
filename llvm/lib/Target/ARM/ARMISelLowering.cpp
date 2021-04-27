@@ -1716,6 +1716,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(ARMISD::VQMOVNu)
     MAKE_CASE(ARMISD::VCVTN)
     MAKE_CASE(ARMISD::VCVTL)
+    MAKE_CASE(ARMISD::VIDUP)
     MAKE_CASE(ARMISD::VMULLs)
     MAKE_CASE(ARMISD::VMULLu)
     MAKE_CASE(ARMISD::VQDMULH)
@@ -7430,6 +7431,39 @@ static SDValue LowerBUILD_VECTOR_i1(SDValue Op, SelectionDAG &DAG,
   return Base;
 }
 
+static SDValue LowerBUILD_VECTORToVIDUP(SDValue Op, SelectionDAG &DAG,
+                                        const ARMSubtarget *ST) {
+  if (!ST->hasMVEIntegerOps())
+    return SDValue();
+
+  // We are looking for a buildvector where each element is Op[0] + i*N
+  EVT VT = Op.getValueType();
+  SDValue Op0 = Op.getOperand(0);
+  unsigned NumElts = VT.getVectorNumElements();
+
+  // Get the increment value from operand 1
+  SDValue Op1 = Op.getOperand(1);
+  if (Op1.getOpcode() != ISD::ADD || Op1.getOperand(0) != Op0 ||
+      !isa<ConstantSDNode>(Op1.getOperand(1)))
+    return SDValue();
+  unsigned N = Op1.getConstantOperandVal(1);
+  if (N != 1 && N != 2 && N != 4 && N != 8)
+    return SDValue();
+
+  // Check that each other operand matches
+  for (unsigned I = 2; I < NumElts; I++) {
+    SDValue OpI = Op.getOperand(I);
+    if (OpI.getOpcode() != ISD::ADD || OpI.getOperand(0) != Op0 ||
+        !isa<ConstantSDNode>(OpI.getOperand(1)) ||
+        OpI.getConstantOperandVal(1) != I * N)
+      return SDValue();
+  }
+
+  SDLoc DL(Op);
+  return DAG.getNode(ARMISD::VIDUP, DL, DAG.getVTList(VT, MVT::i32), Op0,
+                     DAG.getConstant(N, DL, MVT::i32));
+}
+
 // If this is a case we can't handle, return null and let the default
 // expansion code take care of it.
 SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
@@ -7440,6 +7474,9 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   if (ST->hasMVEIntegerOps() && VT.getScalarSizeInBits() == 1)
     return LowerBUILD_VECTOR_i1(Op, DAG, ST);
+
+  if (SDValue R = LowerBUILD_VECTORToVIDUP(Op, DAG, ST))
+    return R;
 
   APInt SplatBits, SplatUndef;
   unsigned SplatBitSize;
