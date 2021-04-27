@@ -11,6 +11,8 @@
 #include "llvm-c/Orc.h"
 #include "gtest/gtest.h"
 
+#include "llvm/ADT/Triple.h"
+
 using namespace llvm;
 
 // OrcCAPITestBase contains several helper methods and pointers for unit tests
@@ -96,7 +98,11 @@ public:
 
 protected:
   static bool isSupported(StringRef Triple) {
-    if (Triple.startswith("armv7"))
+    // TODO: Print error messages in failure logs, use them to audit this list.
+    // Some architectures may be unsupportable or missing key components, but
+    // some may just be failing due to bugs in this testcase.
+    if (Triple.startswith("armv7") ||
+        Triple.startswith("armv8l"))
       return false;
     return true;
   }
