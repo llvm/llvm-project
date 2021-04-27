@@ -1514,9 +1514,9 @@ InstructionCost ARMTTIImpl::getGatherScatterOpCost(
       NumElems * LT.first * ST->getMVEVectorCostFactor(CostKind);
   // The scalarization cost should be a lot higher. We use the number of vector
   // elements plus the scalarization overhead.
-  unsigned ScalarCost = NumElems * LT.first +
-                        BaseT::getScalarizationOverhead(VTy, true, false) +
-                        BaseT::getScalarizationOverhead(VTy, false, true);
+  InstructionCost ScalarCost =
+      NumElems * LT.first + BaseT::getScalarizationOverhead(VTy, true, false) +
+      BaseT::getScalarizationOverhead(VTy, false, true);
 
   if (EltSize < 8 || Alignment < EltSize / 8)
     return ScalarCost;

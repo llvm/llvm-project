@@ -213,8 +213,8 @@ private:
          getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind));
 
     // Next, compute the cost of packing the result in a vector.
-    int PackingCost = getScalarizationOverhead(VT, Opcode != Instruction::Store,
-                                               Opcode == Instruction::Store);
+    InstructionCost PackingCost = getScalarizationOverhead(
+        VT, Opcode != Instruction::Store, Opcode == Instruction::Store);
 
     InstructionCost ConditionalCost = 0;
     if (VariableMask) {
@@ -650,8 +650,9 @@ public:
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
   /// extracted from vectors.
-  unsigned getScalarizationOverhead(VectorType *InTy, const APInt &DemandedElts,
-                                    bool Insert, bool Extract) {
+  InstructionCost getScalarizationOverhead(VectorType *InTy,
+                                           const APInt &DemandedElts,
+                                           bool Insert, bool Extract) {
     /// FIXME: a bitfield is not a reasonable abstraction for talking about
     /// which elements are needed from a scalable vector
     auto *Ty = cast<FixedVectorType>(InTy);
@@ -670,12 +671,12 @@ public:
         Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty, i);
     }
 
-    return *Cost.getValue();
+    return Cost;
   }
 
   /// Helper wrapper for the DemandedElts variant of getScalarizationOverhead.
-  unsigned getScalarizationOverhead(VectorType *InTy, bool Insert,
-                                    bool Extract) {
+  InstructionCost getScalarizationOverhead(VectorType *InTy, bool Insert,
+                                           bool Extract) {
     auto *Ty = cast<FixedVectorType>(InTy);
 
     APInt DemandedElts = APInt::getAllOnesValue(Ty->getNumElements());
@@ -685,11 +686,11 @@ public:
   /// Estimate the overhead of scalarizing an instructions unique
   /// non-constant operands. The (potentially vector) types to use for each of
   /// argument are passes via Tys.
-  unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                            ArrayRef<Type *> Tys) {
+  InstructionCost getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
+                                                   ArrayRef<Type *> Tys) {
     assert(Args.size() == Tys.size() && "Expected matching Args and Tys");
 
-    unsigned Cost = 0;
+    InstructionCost Cost = 0;
     SmallPtrSet<const Value*, 4> UniqueOperands;
     for (int I = 0, E = Args.size(); I != E; I++) {
       // Disregard things like metadata arguments.
@@ -712,12 +713,10 @@ public:
   /// instruction, with return type RetTy and arguments Args of type Tys. If
   /// Args are unknown (empty), then the cost associated with one argument is
   /// added as a heuristic.
-  unsigned getScalarizationOverhead(VectorType *RetTy,
-                                    ArrayRef<const Value *> Args,
-                                    ArrayRef<Type *> Tys) {
-    unsigned Cost = 0;
-
-    Cost += getScalarizationOverhead(RetTy, true, false);
+  InstructionCost getScalarizationOverhead(VectorType *RetTy,
+                                           ArrayRef<const Value *> Args,
+                                           ArrayRef<Type *> Tys) {
+    InstructionCost Cost = getScalarizationOverhead(RetTy, true, false);
     if (!Args.empty())
       Cost += getOperandsScalarizationOverhead(Args, Tys);
     else
@@ -756,7 +755,7 @@ public:
     bool IsFloat = Ty->isFPOrFPVectorTy();
     // Assume that floating point arithmetic operations cost twice as much as
     // integer operations.
-    unsigned OpCost = (IsFloat ? 2 : 1);
+    InstructionCost OpCost = (IsFloat ? 2 : 1);
 
     if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
       // The operation is legal. Assume it costs 1.
