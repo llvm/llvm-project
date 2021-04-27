@@ -253,7 +253,7 @@ struct GenerateLoopNest {
                                 edsc::intrinsics::MemRefIndexedValue>::type;
 
   static void
-  doit(ArrayRef<Range> loopRanges, ValueRange iterArgInitValues,
+  doit(ArrayRef<Range> loopRanges, LinalgOp linalgOp,
        ArrayRef<Attribute> iteratorTypes,
        function_ref<scf::ValueVector(ValueRange, ValueRange)> bodyBuilderFn,
        Optional<LinalgLoopDistributionOptions> = None);

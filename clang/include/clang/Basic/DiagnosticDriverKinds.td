@@ -67,6 +67,8 @@ def err_drv_no_hip_runtime : Error<
   "cannot find HIP runtime. Provide its path via --rocm-path, or pass "
   "-nogpuinc to build without HIP runtime.">;
 
+def err_drv_undetermined_amdgpu_arch : Error<
+  "Cannot determine AMDGPU architecture: %0. Consider passing it via --march.">;
 def err_drv_cuda_version_unsupported : Error<
   "GPU arch %0 is supported by CUDA versions between %1 and %2 (inclusive), "
   "but installation at %3 is %4. Use --cuda-path to specify a different CUDA "

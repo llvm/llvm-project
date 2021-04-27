@@ -351,6 +351,32 @@ TEST(ClangdAST, PrintType) {
     }
   }
 }
+
+TEST(ClangdAST, IsDeeplyNested) {
+  Annotations Test(
+      R"cpp(
+        namespace ns {
+        class Foo {
+          void bar() {
+            class Bar {};
+          }
+        };
+        })cpp");
+  TestTU TU = TestTU::withCode(Test.code());
+  ParsedAST AST = TU.build();
+
+  EXPECT_TRUE(isDeeplyNested(&findUnqualifiedDecl(AST, "Foo"), /*MaxDepth=*/1));
+  EXPECT_FALSE(
+      isDeeplyNested(&findUnqualifiedDecl(AST, "Foo"), /*MaxDepth=*/2));
+
+  EXPECT_TRUE(isDeeplyNested(&findUnqualifiedDecl(AST, "bar"), /*MaxDepth=*/2));
+  EXPECT_FALSE(
+      isDeeplyNested(&findUnqualifiedDecl(AST, "bar"), /*MaxDepth=*/3));
+
+  EXPECT_TRUE(isDeeplyNested(&findUnqualifiedDecl(AST, "Bar"), /*MaxDepth=*/3));
+  EXPECT_FALSE(
+      isDeeplyNested(&findUnqualifiedDecl(AST, "Bar"), /*MaxDepth=*/4));
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
