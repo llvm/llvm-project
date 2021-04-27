@@ -312,9 +312,8 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
   // 2. Create the tiled loops.
   LinalgOp res = op;
   SmallVector<Value, 4> ivs, tensorResults;
-  auto outputTensors = op.getOutputTensors();
   GenerateLoopNest<LoopTy>::doit(
-      loopRanges, /*iterArgInitValues*/ outputTensors, iteratorTypes,
+      loopRanges, op, iteratorTypes,
       [&](ValueRange localIvs, ValueRange iterArgs) -> scf::ValueVector {
         auto &b = ScopedContext::getBuilderRef();
         auto loc = ScopedContext::getLocation();
@@ -439,6 +438,8 @@ mlir::linalg::tileLinalgOp(OpBuilder &b, LinalgOp op,
     return tileLinalgOpImpl<scf::ForOp>(b, op, options);
   case LinalgTilingLoopType::ParallelLoops:
     return tileLinalgOpImpl<scf::ParallelOp>(b, op, options);
+  case LinalgTilingLoopType::TiledLoops:
+    return tileLinalgOpImpl<linalg::TiledLoopOp>(b, op, options);
   default:;
   }
   return llvm::None;
@@ -567,6 +568,17 @@ struct LinalgTilingToParallelLoopsPass
   }
 };
 
+struct LinalgTilingToTiledLoopsPass
+    : public LinalgTilingToTiledLoopsBase<LinalgTilingToTiledLoopsPass> {
+  LinalgTilingToTiledLoopsPass() = default;
+  LinalgTilingToTiledLoopsPass(ArrayRef<int64_t> sizes) { tileSizes = sizes; }
+
+  void runOnFunction() override {
+    applyTilingToLoopPatterns(LinalgTilingLoopType::TiledLoops, getFunction(),
+                              tileSizes);
+  }
+};
+
 } // namespace
 
 std::unique_ptr<OperationPass<FuncOp>>
@@ -577,4 +589,9 @@ mlir::createLinalgTilingPass(ArrayRef<int64_t> tileSizes) {
 std::unique_ptr<OperationPass<FuncOp>>
 mlir::createLinalgTilingToParallelLoopsPass(ArrayRef<int64_t> tileSizes) {
   return std::make_unique<LinalgTilingToParallelLoopsPass>(tileSizes);
+}
+
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createLinalgTilingToTiledLoopPass(ArrayRef<int64_t> tileSizes) {
+  return std::make_unique<LinalgTilingToTiledLoopsPass>(tileSizes);
 }

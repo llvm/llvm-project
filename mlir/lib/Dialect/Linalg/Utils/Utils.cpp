@@ -142,6 +142,7 @@ bool mlir::linalg::isWindowIteratorType(Attribute attr) {
 template struct mlir::linalg::GenerateLoopNest<scf::ForOp>;
 template struct mlir::linalg::GenerateLoopNest<scf::ParallelOp>;
 template struct mlir::linalg::GenerateLoopNest<AffineForOp>;
+template struct mlir::linalg::GenerateLoopNest<TiledLoopOp>;
 
 /// Given a list of subview ranges, extract individual values for lower, upper
 /// bounds and steps and put them into the corresponding vectors.
@@ -186,10 +187,11 @@ IntegerAttr getSmallestBoundingIndex(Value size) {
 /// Specialization to build an scf "for" nest.
 template <>
 void GenerateLoopNest<scf::ForOp>::doit(
-    ArrayRef<Range> loopRanges, ValueRange iterArgInitValues,
+    ArrayRef<Range> loopRanges, LinalgOp linalgOp,
     ArrayRef<Attribute> iteratorTypes,
     function_ref<scf::ValueVector(ValueRange, ValueRange)> bodyBuilderFn,
     Optional<LinalgLoopDistributionOptions> distributionOptions) {
+  auto iterArgInitValues = linalgOp.getOutputTensors();
   // Create procInfo so it dominates loops, if appropriate.
   OpBuilder &builder = edsc::ScopedContext::getBuilderRef();
   Location loc = edsc::ScopedContext::getLocation();
@@ -216,10 +218,11 @@ void GenerateLoopNest<scf::ForOp>::doit(
 /// Specialization to build affine "for" nest.
 template <>
 void GenerateLoopNest<AffineForOp>::doit(
-    ArrayRef<Range> loopRanges, ValueRange iterArgInitValues,
+    ArrayRef<Range> loopRanges, LinalgOp linalgOp,
     ArrayRef<Attribute> iteratorTypes,
     function_ref<scf::ValueVector(ValueRange, ValueRange)> bodyBuilderFn,
     Optional<LinalgLoopDistributionOptions>) {
+  auto iterArgInitValues = linalgOp.getOutputTensors();
   assert(iterArgInitValues.empty() && "unexpected AffineForOp init values");
   SmallVector<Value, 4> lbs, ubs, steps;
   unpackRanges(loopRanges, lbs, ubs, steps);
@@ -238,6 +241,44 @@ void GenerateLoopNest<AffineForOp>::doit(
   };
   edsc::affineLoopNestBuilder(lbs, ubs, constantSteps,
                               bodyBuilderWithoutIterArgsFn);
+}
+
+/// Specialization to build an linalg.tiled_loop
+template <>
+void GenerateLoopNest<TiledLoopOp>::doit(
+    ArrayRef<Range> loopRanges, LinalgOp linalgOp,
+    ArrayRef<Attribute> iteratorTypes,
+    function_ref<scf::ValueVector(ValueRange, ValueRange)> bodyBuilderFn,
+    Optional<LinalgLoopDistributionOptions>) {
+  OpBuilder &builder = edsc::ScopedContext::getBuilderRef();
+  Location loc = edsc::ScopedContext::getLocation();
+  SmallVector<ProcInfo, 2> procInfo;
+
+  SmallVector<Value, 4> lbs, ubs, steps;
+  unpackRanges(loopRanges, lbs, ubs, steps);
+
+  auto wrappedBuilderFn = [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                              ValueRange ivs, ValueRange inputs,
+                              ValueRange outputs) {
+    ScopedContext context(nestedBuilder, nestedLoc);
+    scf::ValueVector results = bodyBuilderFn(ivs, linalgOp.getOutputTensors());
+    nestedBuilder.create<linalg::YieldOp>(nestedLoc, results);
+  };
+
+  auto tiledLoop = builder.create<TiledLoopOp>(
+      loc, lbs, ubs, steps, linalgOp.getInputs(), linalgOp.getOutputs(),
+      builder.getArrayAttr(iteratorTypes), wrappedBuilderFn);
+
+  // Replace inputs/outputs with the corresponding region args.
+  auto isInsideTiledLoop = [&](OpOperand &operand) {
+    return operand.getOwner()->getBlock() == tiledLoop.getBody();
+  };
+  for (auto it :
+       llvm::zip(linalgOp.getInputs(), tiledLoop.getRegionInputArgs()))
+    std::get<0>(it).replaceUsesWithIf(std::get<1>(it), isInsideTiledLoop);
+  for (auto it :
+       llvm::zip(linalgOp.getOutputs(), tiledLoop.getRegionOutputArgs()))
+    std::get<0>(it).replaceUsesWithIf(std::get<1>(it), isInsideTiledLoop);
 }
 
 /// Update the `lb`, `ub` and `step` to get per processor `lb`, `ub` and `step`.
@@ -373,10 +414,11 @@ generateParallelLoopNest(ValueRange lbs, ValueRange ubs, ValueRange steps,
 /// Specialization for generating a mix of parallel and sequential scf loops.
 template <>
 void GenerateLoopNest<scf::ParallelOp>::doit(
-    ArrayRef<Range> loopRanges, ValueRange iterArgInitValues,
+    ArrayRef<Range> loopRanges, LinalgOp linalgOp,
     ArrayRef<Attribute> iteratorTypes,
     function_ref<scf::ValueVector(ValueRange, ValueRange)> bodyBuilderFn,
     Optional<LinalgLoopDistributionOptions> distributionOptions) {
+  auto iterArgInitValues = linalgOp.getOutputTensors();
   assert(iterArgInitValues.empty() && "unexpected ParallelOp init values");
   // This function may be passed more iterator types than ranges.
   assert(iteratorTypes.size() >= loopRanges.size() &&

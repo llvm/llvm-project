@@ -121,8 +121,7 @@ def LinalgTiling : FunctionPass<"linalg-tile"> {
     "scf::SCFDialect"
   ];
   let options = [
-    ListOption<"tileSizes", "linalg-tile-sizes", "int64_t",
-               "Test generation of dynamic promoted buffers",
+    ListOption<"tileSizes", "linalg-tile-sizes", "int64_t", "Tile sizes",
                "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
   ];
 }
@@ -132,8 +131,23 @@ def LinalgTilingToParallelLoops
   let summary = "Tile operations in the linalg dialect to parallel loops";
   let constructor = "mlir::createLinalgTilingToParallelLoopsPass()";
   let options = [
-    ListOption<"tileSizes", "linalg-tile-sizes", "int64_t",
-               "Test generation of dynamic promoted buffers",
+    ListOption<"tileSizes", "linalg-tile-sizes", "int64_t", "Tile sizes",
+               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
+  ];
+  let dependentDialects = [
+    "AffineDialect",
+    "linalg::LinalgDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect"
+  ];
+}
+
+def LinalgTilingToTiledLoops
+    : FunctionPass<"linalg-tile-to-tiled-loop"> {
+  let summary = "Tile operations in the linalg dialect to linalg.tiled_loop";
+  let constructor = "mlir::createLinalgTilingToTiledLoopPass()";
+  let options = [
+    ListOption<"tileSizes", "linalg-tile-sizes", "int64_t", "Tile sizes",
                "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
   ];
   let dependentDialects = [
