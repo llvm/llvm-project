@@ -31,7 +31,7 @@ static constexpr StringLiteral ImplicitAttrNames[] = {
     "amdgpu-work-item-id-z",  "amdgpu-work-group-id-x",
     "amdgpu-work-group-id-y", "amdgpu-work-group-id-z",
     "amdgpu-dispatch-ptr",    "amdgpu-dispatch-id",
-    "amdgpu-implicitarg-ptr"};
+    "amdgpu-queue-ptr",       "amdgpu-implicitarg-ptr"};
 
 class AMDGPUAnnotateKernelFeatures : public CallGraphSCCPass {
 private:
