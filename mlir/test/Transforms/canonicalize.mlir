@@ -1198,11 +1198,12 @@ func @clone_loop_alloc(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<2
 // -----
 
 // CHECK-LABEL: func @clone_nested_region
-func @clone_nested_region(%arg0: index, %arg1: index) -> memref<?x?xf32> {
+func @clone_nested_region(%arg0: index, %arg1: index, %arg2: index) -> memref<?x?xf32> {
+  %cmp = cmpi eq, %arg0, %arg1 : index
   %0 = cmpi eq, %arg0, %arg1 : index
   %1 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
   %2 = scf.if %0 -> (memref<?x?xf32>) {
-    %3 = scf.if %0 -> (memref<?x?xf32>) {
+    %3 = scf.if %cmp -> (memref<?x?xf32>) {
       %9 = memref.clone %1 : memref<?x?xf32> to memref<?x?xf32>
       scf.yield %9 : memref<?x?xf32>
     } else {
