@@ -4,11 +4,7 @@
 define arm_aapcs_vfpcc <4 x i32> @vidup_v4i32_1(i32 %index) {
 ; CHECK-LABEL: vidup_v4i32_1:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    adds r1, r0, #2
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
-; CHECK-NEXT:    adds r1, r0, #3
-; CHECK-NEXT:    adds r0, #1
-; CHECK-NEXT:    vmov q0[3], q0[1], r0, r1
+; CHECK-NEXT:    vidup.u32 q0, r0, #1
 ; CHECK-NEXT:    bx lr
   %a1 = add i32 %index, 1
   %a2 = add i32 %index, 2
@@ -24,11 +20,7 @@ define arm_aapcs_vfpcc <4 x i32> @vidup_v4i32_1(i32 %index) {
 define arm_aapcs_vfpcc <4 x i32> @vidup_v4i32_2(i32 %index) {
 ; CHECK-LABEL: vidup_v4i32_2:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    adds r1, r0, #4
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
-; CHECK-NEXT:    adds r1, r0, #6
-; CHECK-NEXT:    adds r0, #2
-; CHECK-NEXT:    vmov q0[3], q0[1], r0, r1
+; CHECK-NEXT:    vidup.u32 q0, r0, #2
 ; CHECK-NEXT:    bx lr
   %a1 = add i32 %index, 2
   %a2 = add i32 %index, 4
@@ -64,11 +56,7 @@ define arm_aapcs_vfpcc <4 x i32> @vidup_v4i32_3(i32 %index) {
 define arm_aapcs_vfpcc <4 x i32> @vidup_v4i32_4(i32 %index) {
 ; CHECK-LABEL: vidup_v4i32_4:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    add.w r1, r0, #8
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
-; CHECK-NEXT:    add.w r1, r0, #12
-; CHECK-NEXT:    adds r0, #4
-; CHECK-NEXT:    vmov q0[3], q0[1], r0, r1
+; CHECK-NEXT:    vidup.u32 q0, r0, #4
 ; CHECK-NEXT:    bx lr
   %a1 = add i32 %index, 4
   %a2 = add i32 %index, 8
@@ -84,11 +72,7 @@ define arm_aapcs_vfpcc <4 x i32> @vidup_v4i32_4(i32 %index) {
 define arm_aapcs_vfpcc <4 x i32> @vidup_v4i32_8(i32 %index) {
 ; CHECK-LABEL: vidup_v4i32_8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    add.w r1, r0, #16
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
-; CHECK-NEXT:    add.w r1, r0, #24
-; CHECK-NEXT:    adds r0, #8
-; CHECK-NEXT:    vmov q0[3], q0[1], r0, r1
+; CHECK-NEXT:    vidup.u32 q0, r0, #8
 ; CHECK-NEXT:    bx lr
   %a1 = add i32 %index, 8
   %a2 = add i32 %index, 16
@@ -125,21 +109,7 @@ define arm_aapcs_vfpcc <4 x i32> @vidup_v4i32_1_i(i32 %index) {
 define arm_aapcs_vfpcc <8 x i16> @vidup_v8i16_1(i16 %index) {
 ; CHECK-LABEL: vidup_v8i16_1:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.16 q0[0], r0
-; CHECK-NEXT:    adds r1, r0, #1
-; CHECK-NEXT:    vmov.16 q0[1], r1
-; CHECK-NEXT:    adds r1, r0, #2
-; CHECK-NEXT:    vmov.16 q0[2], r1
-; CHECK-NEXT:    adds r1, r0, #3
-; CHECK-NEXT:    vmov.16 q0[3], r1
-; CHECK-NEXT:    adds r1, r0, #4
-; CHECK-NEXT:    vmov.16 q0[4], r1
-; CHECK-NEXT:    adds r1, r0, #5
-; CHECK-NEXT:    vmov.16 q0[5], r1
-; CHECK-NEXT:    adds r1, r0, #6
-; CHECK-NEXT:    vmov.16 q0[6], r1
-; CHECK-NEXT:    adds r0, #7
-; CHECK-NEXT:    vmov.16 q0[7], r0
+; CHECK-NEXT:    vidup.u16 q0, r0, #1
 ; CHECK-NEXT:    bx lr
   %a1 = add i16 %index, 1
   %a2 = add i16 %index, 2
@@ -163,21 +133,7 @@ define arm_aapcs_vfpcc <8 x i16> @vidup_v8i16_1(i16 %index) {
 define arm_aapcs_vfpcc <8 x i16> @vidup_v8i16_2(i16 %index) {
 ; CHECK-LABEL: vidup_v8i16_2:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.16 q0[0], r0
-; CHECK-NEXT:    adds r1, r0, #2
-; CHECK-NEXT:    vmov.16 q0[1], r1
-; CHECK-NEXT:    adds r1, r0, #4
-; CHECK-NEXT:    vmov.16 q0[2], r1
-; CHECK-NEXT:    adds r1, r0, #6
-; CHECK-NEXT:    vmov.16 q0[3], r1
-; CHECK-NEXT:    add.w r1, r0, #8
-; CHECK-NEXT:    vmov.16 q0[4], r1
-; CHECK-NEXT:    add.w r1, r0, #10
-; CHECK-NEXT:    vmov.16 q0[5], r1
-; CHECK-NEXT:    add.w r1, r0, #12
-; CHECK-NEXT:    vmov.16 q0[6], r1
-; CHECK-NEXT:    adds r0, #14
-; CHECK-NEXT:    vmov.16 q0[7], r0
+; CHECK-NEXT:    vidup.u16 q0, r0, #2
 ; CHECK-NEXT:    bx lr
   %a1 = add i16 %index, 2
   %a2 = add i16 %index, 4
@@ -201,21 +157,7 @@ define arm_aapcs_vfpcc <8 x i16> @vidup_v8i16_2(i16 %index) {
 define arm_aapcs_vfpcc <8 x i16> @vidup_v8i16_4(i16 %index) {
 ; CHECK-LABEL: vidup_v8i16_4:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.16 q0[0], r0
-; CHECK-NEXT:    adds r1, r0, #4
-; CHECK-NEXT:    vmov.16 q0[1], r1
-; CHECK-NEXT:    add.w r1, r0, #8
-; CHECK-NEXT:    vmov.16 q0[2], r1
-; CHECK-NEXT:    add.w r1, r0, #12
-; CHECK-NEXT:    vmov.16 q0[3], r1
-; CHECK-NEXT:    add.w r1, r0, #16
-; CHECK-NEXT:    vmov.16 q0[4], r1
-; CHECK-NEXT:    add.w r1, r0, #20
-; CHECK-NEXT:    vmov.16 q0[5], r1
-; CHECK-NEXT:    add.w r1, r0, #24
-; CHECK-NEXT:    vmov.16 q0[6], r1
-; CHECK-NEXT:    adds r0, #28
-; CHECK-NEXT:    vmov.16 q0[7], r0
+; CHECK-NEXT:    vidup.u16 q0, r0, #4
 ; CHECK-NEXT:    bx lr
   %a1 = add i16 %index, 4
   %a2 = add i16 %index, 8
@@ -239,21 +181,7 @@ define arm_aapcs_vfpcc <8 x i16> @vidup_v8i16_4(i16 %index) {
 define arm_aapcs_vfpcc <8 x i16> @vidup_v8i16_8(i16 %index) {
 ; CHECK-LABEL: vidup_v8i16_8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.16 q0[0], r0
-; CHECK-NEXT:    add.w r1, r0, #8
-; CHECK-NEXT:    vmov.16 q0[1], r1
-; CHECK-NEXT:    add.w r1, r0, #16
-; CHECK-NEXT:    vmov.16 q0[2], r1
-; CHECK-NEXT:    add.w r1, r0, #24
-; CHECK-NEXT:    vmov.16 q0[3], r1
-; CHECK-NEXT:    add.w r1, r0, #32
-; CHECK-NEXT:    vmov.16 q0[4], r1
-; CHECK-NEXT:    add.w r1, r0, #40
-; CHECK-NEXT:    vmov.16 q0[5], r1
-; CHECK-NEXT:    add.w r1, r0, #48
-; CHECK-NEXT:    vmov.16 q0[6], r1
-; CHECK-NEXT:    adds r0, #56
-; CHECK-NEXT:    vmov.16 q0[7], r0
+; CHECK-NEXT:    vidup.u16 q0, r0, #8
 ; CHECK-NEXT:    bx lr
   %a1 = add i16 %index, 8
   %a2 = add i16 %index, 16
@@ -277,37 +205,7 @@ define arm_aapcs_vfpcc <8 x i16> @vidup_v8i16_8(i16 %index) {
 define arm_aapcs_vfpcc <16 x i8> @vidup_v16i8_1(i8 %index) {
 ; CHECK-LABEL: vidup_v16i8_1:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.8 q0[0], r0
-; CHECK-NEXT:    adds r1, r0, #1
-; CHECK-NEXT:    vmov.8 q0[1], r1
-; CHECK-NEXT:    adds r1, r0, #2
-; CHECK-NEXT:    vmov.8 q0[2], r1
-; CHECK-NEXT:    adds r1, r0, #3
-; CHECK-NEXT:    vmov.8 q0[3], r1
-; CHECK-NEXT:    adds r1, r0, #4
-; CHECK-NEXT:    vmov.8 q0[4], r1
-; CHECK-NEXT:    adds r1, r0, #5
-; CHECK-NEXT:    vmov.8 q0[5], r1
-; CHECK-NEXT:    adds r1, r0, #6
-; CHECK-NEXT:    vmov.8 q0[6], r1
-; CHECK-NEXT:    adds r1, r0, #7
-; CHECK-NEXT:    vmov.8 q0[7], r1
-; CHECK-NEXT:    add.w r1, r0, #8
-; CHECK-NEXT:    vmov.8 q0[8], r1
-; CHECK-NEXT:    add.w r1, r0, #9
-; CHECK-NEXT:    vmov.8 q0[9], r1
-; CHECK-NEXT:    add.w r1, r0, #10
-; CHECK-NEXT:    vmov.8 q0[10], r1
-; CHECK-NEXT:    add.w r1, r0, #11
-; CHECK-NEXT:    vmov.8 q0[11], r1
-; CHECK-NEXT:    add.w r1, r0, #12
-; CHECK-NEXT:    vmov.8 q0[12], r1
-; CHECK-NEXT:    add.w r1, r0, #13
-; CHECK-NEXT:    vmov.8 q0[13], r1
-; CHECK-NEXT:    add.w r1, r0, #14
-; CHECK-NEXT:    vmov.8 q0[14], r1
-; CHECK-NEXT:    adds r0, #15
-; CHECK-NEXT:    vmov.8 q0[15], r0
+; CHECK-NEXT:    vidup.u8 q0, r0, #1
 ; CHECK-NEXT:    bx lr
   %a1 = add i8 %index, 1
   %a2 = add i8 %index, 2
@@ -347,37 +245,7 @@ define arm_aapcs_vfpcc <16 x i8> @vidup_v16i8_1(i8 %index) {
 define arm_aapcs_vfpcc <16 x i8> @vidup_v16i8_4(i8 %index) {
 ; CHECK-LABEL: vidup_v16i8_4:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.8 q0[0], r0
-; CHECK-NEXT:    adds r1, r0, #4
-; CHECK-NEXT:    vmov.8 q0[1], r1
-; CHECK-NEXT:    add.w r1, r0, #8
-; CHECK-NEXT:    vmov.8 q0[2], r1
-; CHECK-NEXT:    add.w r1, r0, #12
-; CHECK-NEXT:    vmov.8 q0[3], r1
-; CHECK-NEXT:    add.w r1, r0, #16
-; CHECK-NEXT:    vmov.8 q0[4], r1
-; CHECK-NEXT:    add.w r1, r0, #20
-; CHECK-NEXT:    vmov.8 q0[5], r1
-; CHECK-NEXT:    add.w r1, r0, #24
-; CHECK-NEXT:    vmov.8 q0[6], r1
-; CHECK-NEXT:    add.w r1, r0, #28
-; CHECK-NEXT:    vmov.8 q0[7], r1
-; CHECK-NEXT:    add.w r1, r0, #32
-; CHECK-NEXT:    vmov.8 q0[8], r1
-; CHECK-NEXT:    add.w r1, r0, #36
-; CHECK-NEXT:    vmov.8 q0[9], r1
-; CHECK-NEXT:    add.w r1, r0, #40
-; CHECK-NEXT:    vmov.8 q0[10], r1
-; CHECK-NEXT:    add.w r1, r0, #44
-; CHECK-NEXT:    vmov.8 q0[11], r1
-; CHECK-NEXT:    add.w r1, r0, #48
-; CHECK-NEXT:    vmov.8 q0[12], r1
-; CHECK-NEXT:    add.w r1, r0, #52
-; CHECK-NEXT:    vmov.8 q0[13], r1
-; CHECK-NEXT:    add.w r1, r0, #56
-; CHECK-NEXT:    vmov.8 q0[14], r1
-; CHECK-NEXT:    adds r0, #60
-; CHECK-NEXT:    vmov.8 q0[15], r0
+; CHECK-NEXT:    vidup.u8 q0, r0, #4
 ; CHECK-NEXT:    bx lr
   %a1 = add i8 %index, 4
   %a2 = add i8 %index, 8
