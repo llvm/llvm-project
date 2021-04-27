@@ -9,7 +9,7 @@ program wsloop
 
 !FIRDialect:  omp.parallel {
         !$OMP PARALLEL
-!FIRDialect:    %[[PRIVATE_INDX:.*]] = fir.alloca i32 {name = "i"}
+!FIRDialect:    %[[PRIVATE_INDX:.*]] = fir.alloca i32 {{{.*}}uniq_name = "i"}
 !FIRDialect:    %[[FINAL_INDX:.*]] = fir.do_loop %[[INDX:.*]] = {{.*}} {
         do i=1, 9
         print*, i

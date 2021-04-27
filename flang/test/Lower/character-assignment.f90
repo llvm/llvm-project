@@ -1,38 +1,21 @@
 ! RUN: bbc %s -o - -emit-fir | FileCheck %s
 
 ! Simple character assignment tests
-! CHECK-LABEL: assign1
+! CHECK-LABEL: _QPassign1
 subroutine assign1(lhs, rhs)
   character(*, 1) :: lhs, rhs
-  ! CHECK-DAG: %[[lhs:.*]]:2 = fir.unboxchar %arg0
-  ! CHECK-DAG: %[[rhs:.*]]:2 = fir.unboxchar %arg1
+  ! CHECK: %[[lhs:.*]]:2 = fir.unboxchar %arg0
+  ! CHECK: %[[rhs:.*]]:2 = fir.unboxchar %arg1
   lhs = rhs
   ! Compute minimum length
   ! CHECK: %[[cmp_len:[0-9]+]] = cmpi slt, %[[lhs:.*]]#1, %[[rhs:.*]]#1
   ! CHECK-NEXT: %[[min_len:[0-9]+]] = select %[[cmp_len]], %[[lhs]]#1, %[[rhs]]#1
 
-  ! Allocate temp in case rhs and lhs may overlap
-  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.char<1,?>, %[[min_len]]
-
-  ! Copy of rhs into temp
-  ! CHECK: fir.do_loop %[[i:.*]] =
-    ! CHECK-DAG: %[[rhs_cast:.*]] = fir.convert %[[rhs]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
-    ! CHECK-DAG: %[[rhs_addr:.*]] = fir.coordinate_of %[[rhs_cast]], %[[i]]
-    ! CHECK-DAG: %[[rhs_elt:.*]] = fir.load %[[rhs_addr]]
-    ! CHECK-DAG: %[[tmp_cast:.*]] = fir.convert %[[tmp]]
-    ! CHECK-DAG: %[[tmp_addr:.*]] = fir.coordinate_of %[[tmp_cast]], %[[i]]
-    ! CHECK: fir.store %[[rhs_elt]] to %[[tmp_addr]]
-  ! CHECK-NEXT: }
-
-  ! Copy of temp into lhs
-  ! CHECK: fir.do_loop %[[ii:.*]] =
-    ! CHECK-DAG: %[[tmp_cast:.*]] = fir.convert %[[tmp]]
-    ! CHECK-DAG: %[[tmp_addr:.*]] = fir.coordinate_of %[[tmp_cast]], %[[ii]]
-    ! CHECK-DAG: %[[tmp_elt:.*]] = fir.load %[[tmp_addr]]
-    ! CHECK-DAG: %[[lhs_cast:.*]] = fir.convert %[[lhs]]#0
-    ! CHECK-DAG: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs_cast]], %[[ii]]
-    ! CHECK: fir.store %[[tmp_elt]] to %[[lhs_addr]]
-  ! CHECK-NEXT: }
+  ! Copy of rhs into lhs
+  ! CHECK: %[[count:.*]] = muli %{{.*}}, %{{.*}} : i64
+  ! CHECk-DAG: %[[bug:.*]] = fir.convert %[[lhs]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+  ! CHECK-DAG: %[[src:.*]] = fir.convert %[[rhs]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+  ! CHECK: fir.call @llvm.memmove.p0i8.p0i8.i64(%{{.*}}, %[[src]], %[[count]], %false) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 
   ! Padding
   ! CHECK-DAG: %[[blank:.*]] = fir.insert_value %{{.*}}, %c32{{.*}}, %c0{{.*}} : (!fir.char<1>, i8, index) -> !fir.char<1>
@@ -44,7 +27,7 @@ subroutine assign1(lhs, rhs)
 end subroutine
 
 ! Test substring assignment
-! CHECK-LABEL: assign_substring1
+! CHECK-LABEL: _QPassign_substring1
 subroutine assign_substring1(str, rhs, lb, ub)
   character(*, 1) :: rhs, str
   integer(8) :: lb, ub
@@ -73,26 +56,23 @@ subroutine assign_substring1(str, rhs, lb, ub)
   ! The rest of the assignment is just as the one above, only test that the
   ! substring is the one used as lhs.
   ! ...
+  ! CHECK: fir.do_loop %arg4 =
   ! CHECK: %[[lhs_addr3:.*]] = fir.convert %[[lhs_addr]]
-  ! CHECK-NEXT: fir.coordinate_of %[[lhs_addr3]], %arg4
+  ! CHECK: fir.coordinate_of %[[lhs_addr3]], %arg4
   ! ...
 end subroutine
 
-! CHECK-LABEL: assign_constant
-! CHECK: (%[[ARG:.*]]:{{.*}})
+! CHECK-LABEL: _QPassign_constant
+! CHECK-SAME: (%[[ARG:.*]]:
 subroutine assign_constant(lhs)
   character(*, 1) :: lhs
   ! CHECK: %[[lhs:.*]]:2 = fir.unboxchar %arg0
   ! CHECK: %[[cst:.*]] = fir.address_of(@{{.*}}) :
-  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.char<1,?>, %{{.*}}
   lhs = "Hello World"
-  ! CHECK: fir.do_loop %[[i:.*]] = %{{.*}} to %{{.*}} {
-    ! CHECK: %[[cst2:.*]] = fir.convert %[[cst]]
-    ! CHECK-DAG: %[[cst_addr:.*]] = fir.coordinate_of %[[cst2]], %[[i]]
-    ! CHECK-DAG: %[[cst_elt:.*]] = fir.load %[[cst_addr]]
-    ! CHECK: %[[lhs_addr:.*]] = fir.coordinate_of %[[tmp:.*]], %[[i]]
-    ! CHECK: fir.store %[[cst_elt]] to %[[lhs_addr]]
-  ! CHECK: }
+  ! CHECK-DAG: %[[dst:.*]] = fir.convert %[[lhs]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+  ! CHECK-DAG: %[[src:.*]] = fir.convert %[[cst]] : (!fir.ref<!fir.char<1,11>>) -> !fir.ref<i8>
+  ! CHECK-DAG: %[[count:.*]] = muli %{{.*}}, %{{.*}} : i64
+  ! CHECK: fir.call @llvm.memmove.p0i8.p0i8.i64(%[[dst]], %[[src]], %[[count]], %false) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 
   ! Padding
   ! CHECK-DAG: %[[blank:.*]] = fir.insert_value %{{.*}}, %c32{{.*}}, %c0{{.*}} : (!fir.char<1>, i8, index) -> !fir.char<1>

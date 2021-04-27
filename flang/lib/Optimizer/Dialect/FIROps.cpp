@@ -62,38 +62,168 @@ static bool verifyInType(mlir::Type inType,
   return false;
 }
 
-static bool verifyRecordLenParams(mlir::Type inType, unsigned numLenParams) {
-  if (numLenParams > 0) {
-    if (auto rt = inType.dyn_cast<fir::RecordType>())
-      return numLenParams != rt.getNumLenParams();
+static bool verifyTypeParamCount(mlir::Type inType, unsigned numParams) {
+  auto ty = fir::unwrapSequenceType(inType);
+  if (numParams > 0) {
+    if (auto recTy = ty.dyn_cast<fir::RecordType>())
+      return numParams != recTy.getNumLenParams();
+    if (auto chrTy = ty.dyn_cast<fir::CharacterType>())
+      return !(numParams == 1 && chrTy.hasDynamicLen());
     return true;
   }
+  if (auto chrTy = ty.dyn_cast<fir::CharacterType>())
+    return !chrTy.hasConstantLen();
   return false;
+}
+
+// Parser shared by Alloca and Allocmem
+template <typename FN>
+static mlir::ParseResult parseAllocatableOp(FN wrapResultType,
+                                            mlir::OpAsmParser &parser,
+                                            mlir::OperationState &result) {
+  mlir::Type intype;
+  if (parser.parseType(intype))
+    return mlir::failure();
+  auto &builder = parser.getBuilder();
+  result.addAttribute("in_type", mlir::TypeAttr::get(intype));
+  llvm::SmallVector<mlir::OpAsmParser::OperandType> operands;
+  llvm::SmallVector<mlir::Type> typeVec;
+  bool hasOperands = false;
+  std::int32_t typeparamsSize = 0;
+  if (!parser.parseOptionalLParen()) {
+    // parse the LEN params of the derived type. (<params> : <types>)
+    if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(typeVec) || parser.parseRParen())
+      return mlir::failure();
+    typeparamsSize = operands.size();
+    hasOperands = true;
+  }
+  std::int32_t shapeSize = 0;
+  if (!parser.parseOptionalComma()) {
+    // parse size to scale by, vector of n dimensions of type index
+    if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None))
+      return mlir::failure();
+    shapeSize = operands.size() - typeparamsSize;
+    auto idxTy = builder.getIndexType();
+    for (std::int32_t i = typeparamsSize, end = operands.size(); i != end; ++i)
+      typeVec.push_back(idxTy);
+    hasOperands = true;
+  }
+  if (hasOperands &&
+      parser.resolveOperands(operands, typeVec, parser.getNameLoc(),
+                             result.operands))
+    return mlir::failure();
+  mlir::Type restype = wrapResultType(intype);
+  if (!restype) {
+    parser.emitError(parser.getNameLoc(), "invalid allocate type: ") << intype;
+    return mlir::failure();
+  }
+  result.addAttribute("operand_segment_sizes",
+                      builder.getI32VectorAttr({typeparamsSize, shapeSize}));
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.addTypeToList(restype, result.types))
+    return mlir::failure();
+  return mlir::success();
+}
+
+template <typename OP>
+static void printAllocatableOp(mlir::OpAsmPrinter &p, OP &op) {
+  p << op.getOperationName() << ' ' << op.in_type();
+  if (!op.typeparams().empty()) {
+    p << '(' << op.typeparams() << " : " << op.typeparams().getTypes() << ')';
+  }
+  // print the shape of the allocation (if any); all must be index type
+  for (auto sh : op.shape()) {
+    p << ", ";
+    p.printOperand(sh);
+  }
+  p.printOptionalAttrDict(op->getAttrs(), {"in_type", "operand_segment_sizes"});
 }
 
 //===----------------------------------------------------------------------===//
 // AllocaOp
 //===----------------------------------------------------------------------===//
 
-mlir::Type fir::AllocaOp::getAllocatedType() {
-  return getType().cast<ReferenceType>().getEleTy();
-}
-
 /// Create a legal memory reference as return type
-mlir::Type fir::AllocaOp::wrapResultType(mlir::Type intype) {
+static mlir::Type wrapAllocaResultType(mlir::Type intype) {
   // FIR semantics: memory references to memory references are disallowed
   if (intype.isa<ReferenceType>())
     return {};
   return ReferenceType::get(intype);
 }
 
+static mlir::ParseResult parseAlloca(mlir::OpAsmParser &parser,
+                                     mlir::OperationState &result) {
+  return parseAllocatableOp(wrapAllocaResultType, parser, result);
+}
+
+static void printAlloca(mlir::OpAsmPrinter &p, fir::AllocaOp &op) {
+  printAllocatableOp(p, op);
+}
+
+mlir::Type fir::AllocaOp::getAllocatedType() {
+  return getType().cast<ReferenceType>().getEleTy();
+}
+
 mlir::Type fir::AllocaOp::getRefTy(mlir::Type ty) {
   return ReferenceType::get(ty);
+}
+
+void fir::AllocaOp::build(mlir::OpBuilder &builder,
+                          mlir::OperationState &result, mlir::Type in_type,
+                          llvm::StringRef uniq_name,
+                          mlir::ValueRange typeparams, mlir::ValueRange shape,
+                          llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  auto nameAttr = builder.getStringAttr(uniq_name);
+  build(builder, result, wrapAllocaResultType(in_type), in_type, nameAttr, {},
+        typeparams, shape);
+  result.addAttributes(attributes);
+}
+
+void fir::AllocaOp::build(mlir::OpBuilder &builder,
+                          mlir::OperationState &result, mlir::Type in_type,
+                          llvm::StringRef uniq_name, llvm::StringRef bindc_name,
+                          mlir::ValueRange typeparams, mlir::ValueRange shape,
+                          llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  auto nameAttr = builder.getStringAttr(uniq_name);
+  auto bindcAttr = builder.getStringAttr(bindc_name);
+  build(builder, result, wrapAllocaResultType(in_type), in_type, nameAttr,
+        bindcAttr, typeparams, shape);
+  result.addAttributes(attributes);
+}
+
+void fir::AllocaOp::build(mlir::OpBuilder &builder,
+                          mlir::OperationState &result, mlir::Type in_type,
+                          mlir::ValueRange typeparams, mlir::ValueRange shape,
+                          llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  build(builder, result, wrapAllocaResultType(in_type), in_type, {}, {},
+        typeparams, shape);
+  result.addAttributes(attributes);
 }
 
 //===----------------------------------------------------------------------===//
 // AllocMemOp
 //===----------------------------------------------------------------------===//
+
+/// Create a legal heap reference as return type
+static mlir::Type wrapAllocMemResultType(mlir::Type intype) {
+  // Fortran semantics: C852 an entity cannot be both ALLOCATABLE and POINTER
+  // 8.5.3 note 1 prohibits ALLOCATABLE procedures as well
+  // FIR semantics: one may not allocate a memory reference value
+  if (intype.isa<ReferenceType>() || intype.isa<HeapType>() ||
+      intype.isa<PointerType>() || intype.isa<FunctionType>())
+    return {};
+  return HeapType::get(intype);
+}
+
+static mlir::ParseResult parseAllocMem(mlir::OpAsmParser &parser,
+                                       mlir::OperationState &result) {
+  return parseAllocatableOp(wrapAllocMemResultType, parser, result);
+}
+
+static void printAllocMem(mlir::OpAsmPrinter &p, fir::AllocMemOp &op) {
+  printAllocatableOp(p, op);
+}
 
 mlir::Type fir::AllocMemOp::getAllocatedType() {
   return getType().cast<HeapType>().getEleTy();
@@ -103,15 +233,37 @@ mlir::Type fir::AllocMemOp::getRefTy(mlir::Type ty) {
   return HeapType::get(ty);
 }
 
-/// Create a legal heap reference as return type
-mlir::Type fir::AllocMemOp::wrapResultType(mlir::Type intype) {
-  // Fortran semantics: C852 an entity cannot be both ALLOCATABLE and POINTER
-  // 8.5.3 note 1 prohibits ALLOCATABLE procedures as well
-  // FIR semantics: one may not allocate a memory reference value
-  if (intype.isa<ReferenceType>() || intype.isa<HeapType>() ||
-      intype.isa<PointerType>() || intype.isa<FunctionType>())
-    return {};
-  return HeapType::get(intype);
+void fir::AllocMemOp::build(mlir::OpBuilder &builder,
+                            mlir::OperationState &result, mlir::Type in_type,
+                            llvm::StringRef uniq_name,
+                            mlir::ValueRange typeparams, mlir::ValueRange shape,
+                            llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  auto nameAttr = builder.getStringAttr(uniq_name);
+  build(builder, result, wrapAllocMemResultType(in_type), in_type, nameAttr, {},
+        typeparams, shape);
+  result.addAttributes(attributes);
+}
+
+void fir::AllocMemOp::build(mlir::OpBuilder &builder,
+                            mlir::OperationState &result, mlir::Type in_type,
+                            llvm::StringRef uniq_name,
+                            llvm::StringRef bindc_name,
+                            mlir::ValueRange typeparams, mlir::ValueRange shape,
+                            llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  auto nameAttr = builder.getStringAttr(uniq_name);
+  auto bindcAttr = builder.getStringAttr(bindc_name);
+  build(builder, result, wrapAllocMemResultType(in_type), in_type, nameAttr,
+        bindcAttr, typeparams, shape);
+  result.addAttributes(attributes);
+}
+
+void fir::AllocMemOp::build(mlir::OpBuilder &builder,
+                            mlir::OperationState &result, mlir::Type in_type,
+                            mlir::ValueRange typeparams, mlir::ValueRange shape,
+                            llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  build(builder, result, wrapAllocMemResultType(in_type), in_type, {}, {},
+        typeparams, shape);
+  result.addAttributes(attributes);
 }
 
 //===----------------------------------------------------------------------===//
@@ -155,6 +307,19 @@ static mlir::LogicalResult verify(fir::ArrayCoorOp op) {
 //===----------------------------------------------------------------------===//
 // ArrayLoadOp
 //===----------------------------------------------------------------------===//
+
+/// Return the element type, adjusting for reference types (interior to the
+/// array value).
+static mlir::Type adjustedElementType(mlir::Type t) {
+  if (auto ty = t.dyn_cast<fir::ReferenceType>()) {
+    auto eleTy = ty.getEleTy();
+    if (fir::isa_char(eleTy))
+      return eleTy;
+    if (eleTy.isa<fir::RecordType>())
+      return eleTy;
+  }
+  return t;
+}
 
 std::vector<mlir::Value> fir::ArrayLoadOp::getExtents() {
   if (auto sh = shape())
@@ -298,6 +463,24 @@ static mlir::ParseResult parseCallOp(mlir::OpAsmParser &parser,
   }
   result.addTypes(funcType.getResults());
   result.attributes = attrs;
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// CharConvertOp
+//===----------------------------------------------------------------------===//
+
+static mlir::LogicalResult verify(fir::CharConvertOp op) {
+  auto unwrap = [&](mlir::Type t) {
+    t = fir::unwrapSequenceType(fir::dyn_cast_ptrEleTy(t));
+    return t.dyn_cast<fir::CharacterType>();
+  };
+  auto inTy = unwrap(op.from().getType());
+  auto outTy = unwrap(op.to().getType());
+  if (!(inTy && outTy))
+    return op.emitOpError("not a reference to a character");
+  if (inTy.getFKind() == outTy.getFKind())
+    return op.emitOpError("buffers must have different KIND values");
   return mlir::success();
 }
 
@@ -545,7 +728,7 @@ static mlir::LogicalResult verify(fir::EmboxOp op) {
     } else {
       return op.emitOpError("LEN parameters require CHARACTER or derived type");
     }
-    for (auto lp : op.lenParams())
+    for (auto lp : op.typeparams())
       if (!fir::isa_integer(lp.getType()))
         return op.emitOpError("LEN parameters must be integral type");
   }
@@ -569,6 +752,10 @@ void fir::GenTypeDescOp::build(OpBuilder &, OperationState &result,
 //===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
+
+mlir::Type fir::GlobalOp::resultType() {
+  return wrapAllocaResultType(getType());
+}
 
 static ParseResult parseGlobalOp(OpAsmParser &parser, OperationState &result) {
   // Parse the optional linkage
@@ -1341,7 +1528,7 @@ static mlir::LogicalResult verify(fir::SaveResultOp op) {
         "value operand must be a fir.box, fir.array or fir.type");
 
   if (resultType.isa<fir::BoxType>()) {
-    if (op.shape() || !op.lenParams().empty())
+    if (op.shape() || !op.typeparams().empty())
       return op.emitOpError(
           "must not have shape or length operands if the value is a fir.box");
     return mlir::success();
@@ -1370,15 +1557,15 @@ static mlir::LogicalResult verify(fir::SaveResultOp op) {
   }
 
   if (auto recTy = eleTy.dyn_cast<fir::RecordType>()) {
-    if (recTy.getNumLenParams() != op.lenParams().size())
+    if (recTy.getNumLenParams() != op.typeparams().size())
       op.emitOpError("length parameters number must match with the value type "
                      "length parameters");
   } else if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
-    if (op.lenParams().size() > 1)
+    if (op.typeparams().size() > 1)
       op.emitOpError("no more than one length parameter must be provided for "
                      "character value");
   } else {
-    if (!op.lenParams().empty())
+    if (!op.typeparams().empty())
       op.emitOpError(
           "length parameters must not be provided for this value type");
   }
@@ -1808,6 +1995,69 @@ mlir::Type fir::StoreOp::elementType(mlir::Type refType) {
 bool fir::StringLitOp::isWideValue() {
   auto eleTy = getType().cast<fir::SequenceType>().getEleTy();
   return eleTy.cast<fir::CharacterType>().getFKind() != 1;
+}
+
+static mlir::NamedAttribute
+mkNamedIntegerAttr(mlir::OpBuilder &builder, llvm::StringRef name, int64_t v) {
+  assert(v > 0);
+  return builder.getNamedAttr(
+      name, builder.getIntegerAttr(builder.getIntegerType(64), v));
+}
+
+void fir::StringLitOp::build(mlir::OpBuilder &builder, OperationState &result,
+                             fir::CharacterType in_type, llvm::StringRef val,
+                             llvm::Optional<int64_t> len) {
+  auto valAttr = builder.getNamedAttr(value(), builder.getStringAttr(val));
+  int64_t length = len.hasValue() ? len.getValue() : in_type.getLen();
+  auto lenAttr = mkNamedIntegerAttr(builder, size(), length);
+  result.addAttributes({valAttr, lenAttr});
+  result.addTypes(in_type);
+}
+
+template <typename C>
+static mlir::ArrayAttr convertToArrayAttr(mlir::OpBuilder &builder,
+                                          llvm::ArrayRef<C> xlist) {
+  llvm::SmallVector<mlir::Attribute> attrs;
+  auto ty = builder.getIntegerType(8 * sizeof(C));
+  for (auto ch : xlist)
+    attrs.push_back(builder.getIntegerAttr(ty, ch));
+  return builder.getArrayAttr(attrs);
+}
+
+void fir::StringLitOp::build(mlir::OpBuilder &builder, OperationState &result,
+                             fir::CharacterType in_type,
+                             llvm::ArrayRef<char> vlist,
+                             llvm::Optional<int64_t> len) {
+  auto valAttr =
+      builder.getNamedAttr(xlist(), convertToArrayAttr(builder, vlist));
+  std::int64_t length = len.hasValue() ? len.getValue() : in_type.getLen();
+  auto lenAttr = mkNamedIntegerAttr(builder, size(), length);
+  result.addAttributes({valAttr, lenAttr});
+  result.addTypes(in_type);
+}
+
+void fir::StringLitOp::build(mlir::OpBuilder &builder, OperationState &result,
+                             fir::CharacterType in_type,
+                             llvm::ArrayRef<char16_t> vlist,
+                             llvm::Optional<int64_t> len) {
+  auto valAttr =
+      builder.getNamedAttr(xlist(), convertToArrayAttr(builder, vlist));
+  std::int64_t length = len.hasValue() ? len.getValue() : in_type.getLen();
+  auto lenAttr = mkNamedIntegerAttr(builder, size(), length);
+  result.addAttributes({valAttr, lenAttr});
+  result.addTypes(in_type);
+}
+
+void fir::StringLitOp::build(mlir::OpBuilder &builder, OperationState &result,
+                             fir::CharacterType in_type,
+                             llvm::ArrayRef<char32_t> vlist,
+                             llvm::Optional<int64_t> len) {
+  auto valAttr =
+      builder.getNamedAttr(xlist(), convertToArrayAttr(builder, vlist));
+  std::int64_t length = len.hasValue() ? len.getValue() : in_type.getLen();
+  auto lenAttr = mkNamedIntegerAttr(builder, size(), length);
+  result.addAttributes({valAttr, lenAttr});
+  result.addTypes(in_type);
 }
 
 //===----------------------------------------------------------------------===//

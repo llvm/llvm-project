@@ -39,7 +39,7 @@ end
 
 ! CHECK-LABEL: func @_QPs
 subroutine s(n1, *, n2, *)
-  ! CHECK: [[retval:%[0-9]+]] = fir.alloca index {name = "s"}
+  ! CHECK: [[retval:%[0-9]+]] = fir.alloca index {{{.*}}uniq_name = "s"}
   ! CHECK-COUNT-3: fir.store {{.*}} to [[retval]] : !fir.ref<index>
   if (n1 < n2) return 1
   if (n1 > n2) return 2

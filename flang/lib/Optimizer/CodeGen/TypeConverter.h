@@ -234,12 +234,6 @@ public:
         kindMapping.getIntegerBitsize(kindMapping.defaultIntegerKind()));
   }
 
-  static bool characterWithDynamicLen(mlir::Type type) {
-    if (auto charTy = type.dyn_cast<fir::CharacterType>())
-      return charTy.hasDynamicLen();
-    return false;
-  }
-
   template <typename A>
   mlir::Type convertPointerLike(A &ty) {
     mlir::Type eleTy = ty.getEleTy();
@@ -353,46 +347,6 @@ public:
       emitError(UnknownLoc::get(mlirContext),
                 "conversion resulted in a non-LLVM type");
     return wrappedLLVMType;
-  }
-
-  /// Returns false iff the sequence type has a shape and the shape is constant.
-  static bool unknownShape(SequenceType::ShapeRef shape) {
-    // does the shape even exist?
-    auto size = shape.size();
-    if (size == 0)
-      return true;
-    // if it exists, are any dimensions deferred?
-    for (decltype(size) i = 0, sz = size; i < sz; ++i)
-      if (shape[i] == SequenceType::getUnknownExtent())
-        return true;
-    return false;
-  }
-
-  /// Does this record type have dynamically inlined subobjects? Note: this
-  /// should not look through references as they are not inlined.
-  static bool dynamicallySized(fir::RecordType seqTy) {
-    for (auto field : seqTy.getTypeList()) {
-      if (auto arr = field.second.dyn_cast<SequenceType>()) {
-        if (unknownShape(arr.getShape()))
-          return true;
-      } else if (characterWithDynamicLen(field.second)) {
-         return true;
-      } else if (auto rec = field.second.dyn_cast<fir::RecordType>()) {
-        if (dynamicallySized(rec))
-          return true;
-      }
-    }
-    return false;
-  }
-
-  static bool dynamicallySized(mlir::Type ty) {
-    if (auto arr = ty.dyn_cast<SequenceType>())
-      ty = arr.getEleTy();
-    if (characterWithDynamicLen(ty))
-      return true;
-    if (auto rec = ty.dyn_cast<fir::RecordType>())
-      return dynamicallySized(rec);
-    return false;
   }
 
   KindMapping &getKindMap() { return kindMapping; }

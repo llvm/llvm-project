@@ -35,34 +35,6 @@ class fir_SimpleOp<string mnemonic, list<OpTrait> traits>
   }];
 }
 
-// Base builder for allocate operations
-def fir_AllocateOpBuilder : OpBuilder<(ins
-    "mlir::Type":$inType,
-    CArg<"mlir::ValueRange", "{}">:$lenParams,
-    CArg<"mlir::ValueRange", "{}">:$sizes,
-    CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes),
-  [{
-    $_state.addTypes(getRefTy(inType));
-    $_state.addAttribute("in_type", TypeAttr::get(inType));
-    $_state.addOperands(sizes);
-    $_state.addAttributes(attributes);
-  }]>;
-
-def fir_NamedAllocateOpBuilder : OpBuilder<(ins
-    "mlir::Type":$inType,
-    "llvm::StringRef":$name,
-    CArg<"mlir::ValueRange", "{}">:$lenParams,
-    CArg<"mlir::ValueRange","{}">:$sizes,
-    CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes),
-  [{
-    $_state.addTypes(getRefTy(inType));
-    $_state.addAttribute("in_type", TypeAttr::get(inType));
-    if (!name.empty())
-      $_state.addAttribute("name", $_builder.getStringAttr(name));
-    $_state.addOperands(sizes);
-    $_state.addAttributes(attributes);
-  }]>;
-
 def fir_OneResultOpBuilder : OpBuilder<(ins
     "mlir::Type":$resultType,
     "mlir::ValueRange":$operands,
@@ -86,134 +58,12 @@ class fir_SimpleOneResultOp<string mnemonic, list<OpTrait> traits = []> :
   let builders = [fir_OneResultOpBuilder];
 }
 
-class fir_TwoBuilders<OpBuilder b1, OpBuilder b2> {
-  list<OpBuilder> builders = [b1, b2];
-}
-
-class fir_AllocatableBaseOp<string mnemonic, list<OpTrait> traits = []> :
-    fir_Op<mnemonic, traits>, Results<(outs fir_Type:$res)> {
-  let arguments = (ins
-    OptionalAttr<StrAttr>:$name,
-    OptionalAttr<BoolAttr>:$target
-  );
-}
-
-class fir_AllocatableOp<string mnemonic, Resource resource,
-      list<OpTrait> traits = []> :
-    fir_AllocatableBaseOp<mnemonic,
-	!listconcat(traits, [MemoryEffects<[MemAlloc<resource>]>])>,
-    fir_TwoBuilders<fir_AllocateOpBuilder, fir_NamedAllocateOpBuilder>,
-    Arguments<(ins TypeAttr:$in_type, Variadic<AnyIntegerType>:$args)> {
-
-  let parser = [{
-    mlir::Type intype;
-    if (parser.parseType(intype))
-      return mlir::failure();
-    auto &builder = parser.getBuilder();
-    result.addAttribute(inType(), mlir::TypeAttr::get(intype));
-    llvm::SmallVector<mlir::OpAsmParser::OperandType> operands;
-    llvm::SmallVector<mlir::Type> typeVec;
-    bool hasOperands = false;
-    if (!parser.parseOptionalLParen()) {
-      // parse the LEN params of the derived type. (<params> : <types>)
-      if (parser.parseOperandList(operands,
-                                  mlir::OpAsmParser::Delimiter::None) ||
-          parser.parseColonTypeList(typeVec) ||
-          parser.parseRParen())
-        return mlir::failure();
-      auto lens = builder.getI32IntegerAttr(operands.size());
-      result.addAttribute(lenpName(), lens);
-      hasOperands = true;
-    }
-    if (!parser.parseOptionalComma()) {
-      // parse size to scale by, vector of n dimensions of type index
-      auto opSize = operands.size();
-      if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None))
-        return mlir::failure();
-      for (auto i = opSize, end = operands.size(); i != end; ++i)
-        typeVec.push_back(builder.getIndexType());
-      hasOperands = true;
-    }
-    if (hasOperands &&
-        parser.resolveOperands(operands, typeVec, parser.getNameLoc(),
-                               result.operands))
-      return mlir::failure();
-    mlir::Type restype = wrapResultType(intype);
-    if (!restype) {
-      parser.emitError(parser.getNameLoc(), "invalid allocate type: ")
-          << intype;
-      return mlir::failure();
-    }
-    if (parser.parseOptionalAttrDict(result.attributes) ||
-        parser.addTypeToList(restype, result.types))
-      return mlir::failure();
-    return mlir::success();
-  }];
-
-  let printer = [{
-    p << getOperationName() << ' ' << (*this)->getAttr(inType());
-    if (hasLenParams()) {
-      // print the LEN parameters to a derived type in parens
-      p << '(' << getLenParams() << " : " << getLenParams().getTypes() << ')';
-    }
-    // print the shape of the allocation (if any); all must be index type
-    for (auto sh : getShapeOperands()) {
-      p << ", ";
-      p.printOperand(sh);
-    }
-    p.printOptionalAttrDict((*this)->getAttrs(), {inType(), lenpName()});
-  }];
-
-  string extraAllocClassDeclaration = [{
-    static constexpr llvm::StringRef inType() { return "in_type"; }
-    static constexpr llvm::StringRef lenpName() { return "len_param_count"; }
-    mlir::Type getAllocatedType();
-
-    bool hasLenParams() { return bool{(*this)->getAttr(lenpName())}; }
-    bool hasShapeOperands() { return numShapeOperands() > 0; }
-
-    unsigned numLenParams() {
-      if (auto val = (*this)->getAttrOfType<mlir::IntegerAttr>(lenpName()))
-        return val.getInt();
-      return 0;
-    }
-
-    operand_range getLenParams() {
-      return {operand_begin(), operand_begin() + numLenParams()};
-    }
-
-    unsigned numShapeOperands() {
-      return operand_end() - operand_begin() + numLenParams();
-    }
-
-    operand_range getShapeOperands() {
-      return {operand_begin() + numLenParams(), operand_end()};
-    }
-
-    static mlir::Type getRefTy(mlir::Type ty);
-
-    /// Get the input type of the allocation
-    mlir::Type getInType() {
-      return (*this)->getAttrOfType<mlir::TypeAttr>(inType()).getValue();
-    }
-  }];
-
-  // Verify checks common to all allocation operations
-  string allocVerify = [{
-    llvm::SmallVector<llvm::StringRef> visited;
-    if (verifyInType(getInType(), visited, numShapeOperands()))
-      return emitOpError("invalid type for allocation");
-    if (verifyRecordLenParams(getInType(), numLenParams()))
-      return emitOpError("LEN params do not correspond to type");
-  }];
-}
-
 //===----------------------------------------------------------------------===//
 // Memory SSA operations
 //===----------------------------------------------------------------------===//
 
-def fir_AllocaOp :
-      fir_AllocatableOp<"alloca", AutomaticAllocationScopeResource> {
+def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments,
+    MemoryEffects<[MemAlloc<AutomaticAllocationScopeResource>]>]> {
   let summary = "allocate storage for a temporary on the stack given a type";
   let description = [{
     This primitive operation is used to allocate an object on the stack.  A
@@ -275,9 +125,38 @@ def fir_AllocaOp :
     whether the procedure is recursive or not.
   }];
 
+  let arguments = (ins
+    TypeAttr:$in_type,
+    OptionalAttr<StrAttr>:$uniq_name,
+    OptionalAttr<StrAttr>:$bindc_name,
+    Variadic<AnyIntegerType>:$typeparams,
+    Variadic<AnyIntegerType>:$shape
+  );
   let results = (outs fir_ReferenceType);
 
-  let verifier = allocVerify#[{
+  let parser = "return parseAlloca(parser, result);";
+  let printer = "printAlloca(p, *this);";
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$in_type, "llvm::StringRef":$uniq_name,
+      "llvm::StringRef":$bindc_name, CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "mlir::Type":$in_type, "llvm::StringRef":$uniq_name,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "mlir::Type":$in_type,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+
+  let verifier = [{
+    llvm::SmallVector<llvm::StringRef> visited;
+    if (verifyInType(getInType(), visited, numShapeOperands()))
+      return emitOpError("invalid type for allocation");
+    if (verifyTypeParamCount(getInType(), numLenParams()))
+      return emitOpError("LEN params do not correspond to type");
     mlir::Type outType = getType();
     if (!outType.isa<fir::ReferenceType>())
       return emitOpError("must be a !fir.ref type");
@@ -286,9 +165,108 @@ def fir_AllocaOp :
     return mlir::success();
   }];
 
-  let extraClassDeclaration = extraAllocClassDeclaration#[{
-    static mlir::Type wrapResultType(mlir::Type intype);
+  let extraClassDeclaration = [{
+    mlir::Type getAllocatedType();
+    bool hasLenParams() { return !typeparams().empty(); }
+    bool hasShapeOperands() { return !shape().empty(); }
+    unsigned numLenParams() { return typeparams().size(); }
+    operand_range getLenParams() { return typeparams(); }
+    unsigned numShapeOperands() { return shape().size(); }
+    operand_range getShapeOperands() { return shape(); }
+    static mlir::Type getRefTy(mlir::Type ty);
+    mlir::Type getInType() { return in_type(); }
   }];
+}
+
+def fir_AllocMemOp : fir_Op<"allocmem",
+    [MemoryEffects<[MemAlloc<DefaultResource>]>, AttrSizedOperandSegments]> {
+  let summary = "allocate storage on the heap for an object of a given type";
+
+  let description = [{
+    Creates a heap memory reference suitable for storing a value of the
+    given type, T.  The heap refernce returned has type `!fir.heap<T>`.
+    The memory object is in an undefined state.  `allocmem` operations must
+    be paired with `freemem` operations to avoid memory leaks.
+
+    ```mlir
+      %0 = fir.allocmem !fir.array<10 x f32>
+      fir.freemem %0 : !fir.heap<!fir.array<10 x f32>>
+    ```
+  }];
+
+  let arguments = (ins
+    TypeAttr:$in_type,
+    OptionalAttr<StrAttr>:$uniq_name,
+    OptionalAttr<StrAttr>:$bindc_name,
+    Variadic<AnyIntegerType>:$typeparams,
+    Variadic<AnyIntegerType>:$shape
+  );
+  let results = (outs fir_HeapType);
+
+  let parser = "return parseAllocMem(parser, result);";
+  let printer = "printAllocMem(p, *this);";
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$in_type, "llvm::StringRef":$uniq_name,
+      "llvm::StringRef":$bindc_name, CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "mlir::Type":$in_type, "llvm::StringRef":$uniq_name,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "mlir::Type":$in_type,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+
+  let verifier = [{
+    llvm::SmallVector<llvm::StringRef> visited;
+    if (verifyInType(getInType(), visited, numShapeOperands()))
+      return emitOpError("invalid type for allocation");
+    if (verifyTypeParamCount(getInType(), numLenParams()))
+      return emitOpError("LEN params do not correspond to type");
+    mlir::Type outType = getType();
+    if (!outType.dyn_cast<fir::HeapType>())
+      return emitOpError("must be a !fir.heap type");
+    if (fir::isa_unknown_size_box(fir::dyn_cast_ptrEleTy(outType)))
+      return emitOpError("cannot allocate !fir.box of unknown rank or type");
+    return mlir::success();
+  }];
+
+  let extraClassDeclaration = [{
+    mlir::Type getAllocatedType();
+    bool hasLenParams() { return !typeparams().empty(); }
+    bool hasShapeOperands() { return !shape().empty(); }
+    unsigned numLenParams() { return typeparams().size(); }
+    operand_range getLenParams() { return typeparams(); }
+    unsigned numShapeOperands() { return shape().size(); }
+    operand_range getShapeOperands() { return shape(); }
+    static mlir::Type getRefTy(mlir::Type ty);
+    mlir::Type getInType() { return in_type(); }
+  }];
+}
+
+def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
+  let summary = "free a heap object";
+
+  let description = [{
+    Deallocates a heap memory reference that was allocated by an `allocmem`.
+    The memory object that is deallocated is placed in an undefined state
+    after `fir.freemem`.  Optimizations may treat the loading of an object
+    in the undefined state as undefined behavior.  This includes aliasing
+    references, such as the result of an `fir.embox`.
+
+    ```mlir
+      %21 = fir.allocmem !fir.type<ZT(p:i32){field:i32}>
+      ...
+      fir.freemem %21 : !fir.heap<!fir.type<ZT>>
+    ```
+  }];
+
+  let arguments = (ins Arg<fir_HeapType, "", [MemFree]>:$heapref);
+
+  let assemblyFormat = "$heapref attr-dict `:` type($heapref)";
 }
 
 def fir_LoadOp : fir_OneResultOp<"load"> {
@@ -413,22 +391,26 @@ def fir_StoreOp : fir_Op<"store", []> {
 }
 
 def fir_SaveResultOp : fir_Op<"save_result", [AttrSizedOperandSegments]> {
-  let summary = "save an array, box, or record function result SSA-value to a memory location";
+  let summary = [{
+    save an array, box, or record function result SSA-value to a memory location
+  }];
 
   let description = [{
     Save the result of a function returning an array, box, or record type value
     into a memory location given the shape and length parameters of the result.
 
-    Function results of type fir.box, fir.array, or fir.rec are abstract values that
-    require a storage to be manipulated on the caller side. This operation allows
-    associating such abstract result to a storage. In later lowering of the function
-    interfaces, this storage might be used to pass the result in memory.
+    Function results of type fir.box, fir.array, or fir.rec are abstract values
+    that require a storage to be manipulated on the caller side. This operation
+    allows associating such abstract result to a storage. In later lowering of
+    the function interfaces, this storage might be used to pass the result in
+    memory.
     
-    For arrays, result, it is required to provide the shape of the result. For character arrays
-    and derived types with length parameters, the length parameter values must be provided.
+    For arrays, result, it is required to provide the shape of the result. For
+    character arrays and derived types with length parameters, the length
+    parameter values must be provided.
 
-    The fir.save_result associated to a function call must immediately follow the call and be
-    in the same block.  
+    The fir.save_result associated to a function call must immediately follow
+    the call and be in the same block.  
 
     ```mlir
       %buffer = fir.alloca fir.array<?xf32>, %c100
@@ -447,15 +429,53 @@ def fir_SaveResultOp : fir_Op<"save_result", [AttrSizedOperandSegments]> {
   let arguments = (ins AnyType:$value,
                    Arg<AnyReferenceLike, "", [MemWrite]>:$memref,
                    Optional<AnyShapeType>:$shape,
-                   Variadic<AnyIntegerType>:$lenParams);
+                   Variadic<AnyIntegerType>:$typeparams);
 
   let assemblyFormat = [{
-    $value `to` $memref (`(` $shape^ `)`)? (`typeparams` $lenParams^)?
+    $value `to` $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
     attr-dict `:` type(operands)
   }];
 
   let verifier = [{ return ::verify(*this); }];
+}
 
+def fir_CharConvertOp : fir_Op<"char_convert", []> {
+  let summary = [{
+    Primitive to convert an entity of type CHARACTER from one KIND to a
+    different KIND.
+  }];
+
+  let description = [{
+    Copy a CHARACTER (must be in memory) of KIND _k1_ to a CHARACTER (also must
+    be in memory) of KIND _k2_ where _k1_ != _k2_ and the buffers do not
+    overlap. This latter restriction is unchecked, as the Fortran language
+    definition eliminates the overlapping in memory case.
+
+    The number of code points copied is specified explicitly as the second
+    argument. The length of the !fir.char type is ignored.
+
+    ```mlir
+      fir.char_convert %1 for %2 to %3 : !fir.ref<!fir.char<1,?>>, i32, !fir.ref<!fir.char<2,20>>
+    ```
+
+    Should future support for encodings other than ASCII be supported, codegen
+    can generate a call to a runtime helper routine which will map the code
+    points from UTF-8 to UCS-2, for example. Such remappings may not always
+    be possible as they may involve the creation of more code points than the
+    `count` limit. These details are left as future to-dos.
+  }];
+
+  let arguments = (ins
+    Arg<AnyReferenceLike, "", [MemRead]>:$from,
+    AnyIntegerType:$count,
+    Arg<AnyReferenceLike, "", [MemWrite]>:$to
+  );
+
+  let assemblyFormat = [{
+    $from `for` $count `to` $to attr-dict `:` type(operands)
+  }];
+
+  let verifier = [{ return ::verify(*this); }];
 }
 
 def fir_UndefOp : fir_OneResultOp<"undefined", [NoSideEffect]> {
@@ -499,59 +519,6 @@ def fir_ZeroOp : fir_OneResultOp<"zero_bits", [NoSideEffect]> {
   let results = (outs AnyType:$intype);
 
   let assemblyFormat = "type($intype) attr-dict";
-}
-
-def fir_AllocMemOp : fir_AllocatableOp<"allocmem", DefaultResource> {
-  let summary = "allocate storage on the heap for an object of a given type";
-
-  let description = [{
-    Creates a heap memory reference suitable for storing a value of the
-    given type, T.  The heap refernce returned has type `!fir.heap<T>`.
-    The memory object is in an undefined state.  `allocmem` operations must
-    be paired with `freemem` operations to avoid memory leaks.
-
-    ```mlir
-      %0 = fir.allocmem !fir.array<10 x f32>
-      fir.freemem %0 : !fir.heap<!fir.array<10 x f32>>
-    ```
-  }];
-
-  let results = (outs fir_HeapType);
-
-  let verifier = allocVerify#[{
-    mlir::Type outType = getType();
-    if (!outType.dyn_cast<fir::HeapType>())
-      return emitOpError("must be a !fir.heap type");
-    if (fir::isa_unknown_size_box(fir::dyn_cast_ptrEleTy(outType)))
-      return emitOpError("cannot allocate !fir.box of unknown rank or type");
-    return mlir::success();
-  }];
-
-  let extraClassDeclaration = extraAllocClassDeclaration#[{
-    static mlir::Type wrapResultType(mlir::Type intype);
-  }];
-}
-
-def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
-  let summary = "free a heap object";
-
-  let description = [{
-    Deallocates a heap memory reference that was allocated by an `allocmem`.
-    The memory object that is deallocated is placed in an undefined state
-    after `fir.freemem`.  Optimizations may treat the loading of an object
-    in the undefined state as undefined behavior.  This includes aliasing
-    references, such as the result of an `fir.embox`.
-
-    ```mlir
-      %21 = fir.allocmem !fir.type<ZT(p:i32){field:i32}>
-      ...
-      fir.freemem %21 : !fir.heap<!fir.type<ZT>>
-    ```
-  }];
-
-  let arguments = (ins Arg<fir_HeapType, "", [MemFree]>:$heapref);
-
-  let assemblyFormat = "$heapref attr-dict `:` type($heapref)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -701,7 +668,8 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
     p << getOperationName() << ' ';
     p.printOperand(getSelector());
     p << " : " << getSelector().getType() << " [";
-    auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
+    auto cases =
+      (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
     auto count = getNumConditions();
     for (decltype(count) i = 0; i != count; ++i) {
       if (i)
@@ -715,8 +683,9 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
       printSuccessorAtIndex(p, i);
     }
     p << ']';
-    p.printOptionalAttrDict((*this)->getAttrs(), {getCasesAttr(), getCompareOffsetAttr(),
-        getTargetOffsetAttr(), getOperandSegmentSizeAttr()});
+    p.printOptionalAttrDict((*this)->getAttrs(), {getCasesAttr(),
+        getCompareOffsetAttr(), getTargetOffsetAttr(),
+        getOperandSegmentSizeAttr()});
   }];
 
   let verifier = [{
@@ -1058,7 +1027,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
         - shape: emboxing an array may require shape information (an array's
           lower bounds and extents may not be known until runtime),
         - slice: an array section can be described with a slice triple,
-        - lenParams: for emboxing a derived type with LEN type parameters,
+        - typeparams: for emboxing a derived type with LEN type parameters,
         - accessMap: unused/experimental.
   }];
 
@@ -1066,7 +1035,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
     AnyReferenceLike:$memref,
     Optional<AnyShapeType>:$shape,
     Optional<fir_SliceType>:$slice,
-    Variadic<AnyIntegerType>:$lenParams,
+    Variadic<AnyIntegerType>:$typeparams,
     OptionalAttr<AffineMapAttr>:$accessMap
   );
 
@@ -1076,13 +1045,13 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
     OpBuilder<(ins "llvm::ArrayRef<mlir::Type>":$resultTypes,
       "mlir::Value":$memref, CArg<"mlir::Value", "{}">:$shape,
       CArg<"mlir::Value", "{}">:$slice,
-      CArg<"mlir::ValueRange", "{}">:$lenParams),
+      CArg<"mlir::ValueRange", "{}">:$typeparams),
     [{ return build($_builder, $_state, resultTypes, memref, shape, slice,
-                    lenParams, mlir::AffineMapAttr{}); }]>
+                    typeparams, mlir::AffineMapAttr{}); }]>
   ];
 
   let assemblyFormat = [{
-    $memref (`(` $shape^ `)`)? (`[` $slice^ `]`)? (`typeparams` $lenParams^)?
+    $memref (`(` $shape^ `)`)? (`[` $slice^ `]`)? (`typeparams` $typeparams^)?
       (`map` $accessMap^)? attr-dict `:` functional-type(operands, results)
   }];
 
@@ -1091,8 +1060,8 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
   let extraClassDeclaration = [{
     mlir::Value getShape() { return shape(); }
     mlir::Value getSlice() { return slice(); }
-    bool hasLenParams() { return !lenParams().empty(); }
-    unsigned numLenParams() { return lenParams().size(); }
+    bool hasLenParams() { return !typeparams().empty(); }
+    unsigned numLenParams() { return typeparams().size(); }
   }];
 }
 
@@ -1601,13 +1570,14 @@ def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
     Arg<AnyRefOrBox, "", [MemRead]>:$memref,
     Optional<AnyShapeOrShiftType>:$shape,
     Optional<fir_SliceType>:$slice,
-    Variadic<AnyIntegerType>:$lenParams
+    Variadic<AnyIntegerType>:$typeparams
   );
 
   let results = (outs fir_SequenceType);
 
   let assemblyFormat = [{
-    $memref (`(`$shape^`)`)? (`[`$slice^`]`)? (`typeparams` $lenParams^)? attr-dict `:` functional-type(operands, results)
+    $memref (`(`$shape^`)`)? (`[`$slice^`]`)? (`typeparams` $typeparams^)?
+    attr-dict `:` functional-type(operands, results)
   }];
 
   let verifier = [{ return ::verify(*this); }];
@@ -1617,8 +1587,8 @@ def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
   }];
 }
 
-def fir_ArrayFetchOp : fir_Op<"array_fetch", [NoSideEffect]> {
-
+def fir_ArrayFetchOp : fir_Op<"array_fetch", [AttrSizedOperandSegments,
+    NoSideEffect]> {
   let summary = "Fetch the value of an element of an array value";
 
   let description = [{
@@ -1648,20 +1618,22 @@ def fir_ArrayFetchOp : fir_Op<"array_fetch", [NoSideEffect]> {
 
   let arguments = (ins
     fir_SequenceType:$sequence,
-    Variadic<AnyCoordinateType>:$indices
+    Variadic<AnyCoordinateType>:$indices,
+    Variadic<AnyIntegerType>:$typeparams
   );
 
   let results = (outs AnyType:$element);
 
   let assemblyFormat = [{
-    $sequence `,` $indices attr-dict `:` functional-type(operands, results)
+    $sequence `,` $indices (`typeparams` $typeparams^)? attr-dict `:`
+      functional-type(operands, results)
   }];
 
   let verifier = [{
     auto arrTy = sequence().getType().cast<fir::SequenceType>();
     if (indices().size() != arrTy.getDimension())
       return emitOpError("number of indices != dimension of array");
-    if (element().getType() != arrTy.getEleTy())
+    if (adjustedElementType(element().getType()) != arrTy.getEleTy())
       return emitOpError("return type does not match array");
     if (!isa<fir::ArrayLoadOp>(sequence().getDefiningOp()))
       return emitOpError("argument #0 must be result of fir.array_load");
@@ -1669,8 +1641,8 @@ def fir_ArrayFetchOp : fir_Op<"array_fetch", [NoSideEffect]> {
   }];
 }
 
-def fir_ArrayUpdateOp : fir_Op<"array_update", [NoSideEffect]> {
-
+def fir_ArrayUpdateOp : fir_Op<"array_update", [AttrSizedOperandSegments,
+    NoSideEffect]> {
   let summary = "Update the value of an element of an array value";
 
   let description = [{
@@ -1706,18 +1678,20 @@ def fir_ArrayUpdateOp : fir_Op<"array_update", [NoSideEffect]> {
   let arguments = (ins
     fir_SequenceType:$sequence,
     AnyType:$merge,
-    Variadic<AnyCoordinateType>:$indices
+    Variadic<AnyCoordinateType>:$indices,
+    Variadic<AnyIntegerType>:$typeparams
   );
 
   let results = (outs fir_SequenceType);
 
   let assemblyFormat = [{
-    $sequence `,` $merge `,` $indices attr-dict `:` functional-type(operands, results)
+    $sequence `,` $merge `,` $indices (`typeparams` $typeparams^)? attr-dict
+      `:` functional-type(operands, results)
   }];
 
   let verifier = [{
     auto arrTy = sequence().getType().cast<fir::SequenceType>();
-    if (merge().getType() != arrTy.getEleTy())
+    if (adjustedElementType(merge().getType()) != arrTy.getEleTy())
       return emitOpError("merged value does not have element type");
     if (indices().size() != arrTy.getDimension())
       return emitOpError("number of indices != dimension of array");
@@ -1760,10 +1734,14 @@ def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store", [
   let arguments = (ins
     fir_SequenceType:$original,
     fir_SequenceType:$sequence,
-    Arg<AnyRefOrBox, "", [MemWrite]>:$memref
+    Arg<AnyRefOrBox, "", [MemWrite]>:$memref,
+    Variadic<AnyIntegerType>:$typeparams
   );
 
-  let assemblyFormat = "$original `,` $sequence `to` $memref attr-dict `:` type($memref)";
+  let assemblyFormat = [{
+    $original `,` $sequence `to` $memref (`typeparams` $typeparams^)?
+      attr-dict `:` type($memref) (`,` type($typeparams)^)?
+  }];
 
   let verifier = [{
     if (!isa<ArrayLoadOp>(original().getDefiningOp()))
@@ -1808,13 +1786,14 @@ def fir_ArrayCoorOp : fir_Op<"array_coor",
     Optional<AnyShapeOrShiftType>:$shape,
     Optional<fir_SliceType>:$slice,
     Variadic<AnyCoordinateType>:$indices,
-    Variadic<AnyIntegerType>:$lenParams
+    Variadic<AnyIntegerType>:$typeparams
   );
 
   let results = (outs fir_ReferenceType);
 
   let assemblyFormat = [{
-    $memref (`(`$shape^`)`)? (`[`$slice^`]`)? $indices (`typeparams` $lenParams^)? attr-dict `:` functional-type(operands, results)
+    $memref (`(`$shape^`)`)? (`[`$slice^`]`)? $indices (`typeparams`
+      $typeparams^)? attr-dict `:` functional-type(operands, results)
   }];
 
   let verifier = [{ return ::verify(*this); }];
@@ -1919,7 +1898,7 @@ def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoSideEffect]> {
   let arguments = (ins
     StrAttr:$field_id,
     TypeAttr:$on_type,
-    Variadic<AnyIntegerType>:$lenparams
+    Variadic<AnyIntegerType>:$typeparams
   );
 
   let parser = [{
@@ -1957,9 +1936,9 @@ def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoSideEffect]> {
       << ", " << (*this)->getAttr(typeAttrName());
     if (getNumOperands()) {
       p << '(';
-      p.printOperands(lenparams());
+      p.printOperands(typeparams());
       auto sep = ") : ";
-      for (auto op : lenparams()) {
+      for (auto op : typeparams()) {
         p << sep;
         if (op)
           p.printType(op.getType());
@@ -2776,6 +2755,20 @@ def fir_StringLitOp : fir_Op<"string_lit", [NoSideEffect]> {
     p.printType(getType());
   }];
 
+  let builders = [
+    OpBuilder<(ins "fir::CharacterType":$in_type,
+      "llvm::StringRef":$value,
+      CArg<"llvm::Optional<int64_t>", "{}">:$len)>,
+    OpBuilder<(ins "fir::CharacterType":$in_type,
+      "llvm::ArrayRef<char>":$xlist,
+      CArg<"llvm::Optional<int64_t>", "{}">:$len)>,
+    OpBuilder<(ins "fir::CharacterType":$in_type,
+      "llvm::ArrayRef<char16_t>":$xlist,
+      CArg<"llvm::Optional<int64_t>", "{}">:$len)>,
+    OpBuilder<(ins "fir::CharacterType":$in_type,
+      "llvm::ArrayRef<char32_t>":$xlist,
+      CArg<"llvm::Optional<int64_t>", "{}">:$len)>];
+
   let verifier = [{
     if (getSize().cast<mlir::IntegerAttr>().getValue().isNegative())
       return emitOpError("size must be non-negative");
@@ -3228,9 +3221,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     }
 
     /// The semantic type of the global
-    mlir::Type resultType() {
-      return fir::AllocaOp::wrapResultType(getType());
-    }
+    mlir::Type resultType();
 
     /// Return the initializer attribute if it exists, or a null attribute.
     Attribute getValueOrNull() { return initVal().getValueOr(Attribute()); }

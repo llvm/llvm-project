@@ -268,7 +268,7 @@ static void addSymbolAttribute(mlir::FuncOp func,
   if (!Fortran::semantics::IsBindCProcedure(sym))
     return;
   auto name =
-      Fortran::lower::mangle::mangleName(sym, /*keepExternalInScope*/ true);
+      Fortran::lower::mangle::mangleName(sym, /*keepExternalInScope=*/true);
   auto strAttr = mlir::StringAttr::get(&mlirContext, name);
   func->setAttr(fir::getSymbolAttrName(), strAttr);
 }

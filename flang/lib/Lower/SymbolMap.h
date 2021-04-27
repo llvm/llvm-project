@@ -296,6 +296,9 @@ public:
 
   /// Find `symbol` and return its value if it appears in the current mappings.
   SymbolBox lookupSymbol(semantics::SymbolRef sym);
+  SymbolBox lookupSymbol(const semantics::Symbol *sym) {
+    return lookupSymbol(*sym);
+  }
 
   /// Remove all symbols from the map.
   void clear() {

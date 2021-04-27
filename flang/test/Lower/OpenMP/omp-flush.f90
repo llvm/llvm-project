@@ -13,14 +13,14 @@ program flush
         integer :: a,b,c
 
 !FIRDialect-LABEL:func @_QQmain() {
-!FIRDialect:  %{{.*}} = fir.alloca i32 {name = "{{.*}}Ea"}
-!FIRDialect:  %{{.*}} = fir.alloca i32 {name = "{{.*}}Eb"}
-!FIRDialect:  %{{.*}} = fir.alloca i32 {name = "{{.*}}Ec"}
+!FIRDialect:  %{{.*}} = fir.alloca i32 {{{.*}}uniq_name = "{{.*}}Ea"}
+!FIRDialect:  %{{.*}} = fir.alloca i32 {{{.*}}uniq_name = "{{.*}}Eb"}
+!FIRDialect:  %{{.*}} = fir.alloca i32 {{{.*}}uniq_name = "{{.*}}Ec"}
 
 !LLVMIRDialect-LABEL: llvm.func @_QQmain() {
-!LLVMIRDialect:   %{{.*}} = llvm.alloca %{{.*}} x i32 {in_type = i32, name = "{{.*}}Ea"} : (i64) -> !llvm.ptr<i32>
-!LLVMIRDialect:   %{{.*}} = llvm.alloca %{{.*}} x i32 {in_type = i32, name = "{{.*}}Eb"} : (i64) -> !llvm.ptr<i32>
-!LLVMIRDialect:   %{{.*}} = llvm.alloca %{{.*}} x i32 {in_type = i32, name = "{{.*}}Ec"} : (i64) -> !llvm.ptr<i32>
+!LLVMIRDialect:   %{{.*}} = llvm.alloca %{{.*}} x i32 {{{.*}}, uniq_name = "{{.*}}Ea"} : (i64) -> !llvm.ptr<i32>
+!LLVMIRDialect:   %{{.*}} = llvm.alloca %{{.*}} x i32 {{{.*}}, uniq_name = "{{.*}}Eb"} : (i64) -> !llvm.ptr<i32>
+!LLVMIRDialect:   %{{.*}} = llvm.alloca %{{.*}} x i32 {{{.*}}, uniq_name = "{{.*}}Ec"} : (i64) -> !llvm.ptr<i32>
 
 !LLVMIR-LABEL: define void @_QQmain() {{.*}} {
 !LLVMIR:   %{{.*}} = alloca i32, i64 1, align 4

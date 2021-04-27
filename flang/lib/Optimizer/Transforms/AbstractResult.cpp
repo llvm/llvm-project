@@ -101,7 +101,7 @@ public:
     if (mustEmboxResult(result.getType(), options))
       arg = rewriter.create<fir::EmboxOp>(
           loc, argType, buffer, saveResult.shape(), /*slice*/ mlir::Value{},
-          saveResult.lenParams());
+          saveResult.typeparams());
 
     llvm::SmallVector<mlir::Type> newResultTypes;
     if (callOp.callee()) {
@@ -220,7 +220,7 @@ public:
     mlir::OwningRewritePatternList patterns;
     mlir::ConversionTarget target = *context;
     AbstractResultOptions options{passResultAsBox.getValue(),
-                                  /*newArg*/ {}};
+                                  /*newArg=*/{}};
 
     // Convert function type itself if it has an abstract result
     auto funcTy = func.getType().cast<mlir::FunctionType>();

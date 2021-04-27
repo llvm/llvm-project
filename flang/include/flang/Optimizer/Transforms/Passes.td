@@ -156,7 +156,26 @@ def AbstractResultOpt : Pass<"abstract-result-opt", "mlir::FuncOp"> {
   let options = [
     Option<"passResultAsBox", "abstract-result-as-box",
            "bool", /*default=*/"false",
-           "Pass fir.array<T> result as fir.box<fir.array<T>> argument instead of fir.ref<fir.array<T>>.">,
+           "Pass fir.array<T> result as fir.box<fir.array<T>> argument instead"
+           " of fir.ref<fir.array<T>>.">
+  ];
+}
+
+def CharacterConversion : Pass<"character-conversion"> {
+  let summary = "Convert CHARACTER entities with different KINDs";
+  let description = [{
+    Translates entities of one CHARACTER KIND to another.
+
+    By default the translation is to naively zero-extend or truncate a code
+    point to fit the destination size.
+  }];
+  let constructor = "::fir::createCharacterConversionPass()";
+  let dependentDialects = [ "fir::FIROpsDialect" ];
+  let options = [
+    Option<"useRuntimeCalls", "use-runtime-calls",
+           "std::string", /*default=*/"std::string{}",
+           "Generate runtime calls to a named set of conversion routines. "
+           "By default, the conversions may produce unexpected results.">
   ];
 }
 

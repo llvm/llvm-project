@@ -454,3 +454,47 @@ func @bad_save_result(%buffer : !fir.ref<!fir.array<?xf32>>, %n :index) {
   fir.save_result %res to %buffer(%shape) typeparams %n : !fir.array<?xf32>, !fir.ref<!fir.array<?xf32>>, !fir.shape<1>, index
   return
 }
+
+// -----
+
+func @ugly_char_convert() {
+  %1 = fir.undefined i32
+  %2 = fir.undefined !fir.ref<!fir.char<1>>
+  %3 = fir.undefined !fir.ref<!fir.array<?x!fir.char<1>>>
+  // expected-error@+1 {{'fir.char_convert' op buffers must have different KIND values}}
+  fir.char_convert %2 for %1 to %3 : !fir.ref<!fir.char<1>>, i32, !fir.ref<!fir.array<?x!fir.char<1>>>
+  return
+}
+
+// -----
+
+func @ugly_char_convert() {
+  %1 = fir.undefined i32
+  %2 = fir.undefined !fir.ref<!fir.char<1>>
+  %3 = fir.undefined !fir.ref<!fir.array<?xf32>>
+  // expected-error@+1 {{'fir.char_convert' op not a reference to a character}}
+  fir.char_convert %2 for %1 to %3 : !fir.ref<!fir.char<1>>, i32, !fir.ref<!fir.array<?xf32>>
+  return
+}
+
+// -----
+
+func @ugly_char_convert() {
+  %1 = fir.undefined i32
+  %2 = fir.undefined !fir.ref<!fir.char<1>>
+  %3 = fir.undefined !fir.ref<!fir.array<?x!fir.char<2,?>>>
+  // expected-error@+1 {{'fir.char_convert' op operand #0 must be any reference, but got 'i32'}}
+  fir.char_convert %1 for %1 to %3 : i32, i32, !fir.ref<!fir.array<?x!fir.char<2,?>>>
+  return
+}
+
+// -----
+
+func @ugly_char_convert() {
+  %1 = fir.undefined i32
+  %2 = fir.undefined !fir.ref<!fir.char<1>>
+  %3 = fir.undefined !fir.ref<!fir.array<?x!fir.char<2,?>>>
+  // expected-error@+1 {{'fir.char_convert' op operand #1 must be any integer, but got '!fir.ref<!fir.char<1>>'}}
+  fir.char_convert %2 for %2 to %3 : !fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>, !fir.ref<!fir.array<?x!fir.char<2,?>>>
+  return
+}

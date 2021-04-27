@@ -113,6 +113,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   } else {
     // simplify the IR
     pm.addNestedPass<mlir::FuncOp>(fir::createArrayValueCopyPass());
+    pm.addNestedPass<mlir::FuncOp>(fir::createCharacterConversionPass());
     pm.addPass(mlir::createCanonicalizerPass());
     fir::addCSE(pm);
     pm.addPass(mlir::createInlinerPass());

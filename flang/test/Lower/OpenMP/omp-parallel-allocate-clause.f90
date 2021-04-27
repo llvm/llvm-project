@@ -5,17 +5,17 @@
 ! RUN:   FileCheck %s --check-prefix=FIRDialect
 
 !FIRDialect: func @_QPallocate_clause(%arg0: !fir.ref<f32>, %arg1: !fir.ref<f32>) {
-!FIRDialect-DAG: %[[A:.*]] = fir.alloca i32 {name = "{{.*}}Ea"}
-!FIRDialect-DAG: %[[B:.*]] = fir.alloca i32 {name = "{{.*}}Eb"}
-!FIRDialect-DAG: %[[C:.*]] = fir.alloca i32 {name = "{{.*}}Ec"}
-!FIRDialect-DAG: %[[D:.*]] = fir.alloca i32 {name = "{{.*}}Ed"}
-!FIRDialect-DAG: %[[E:.*]] = fir.alloca i32 {name = "{{.*}}Ee"}
-!FIRDialect-DAG: %[[F:.*]] = fir.alloca i32 {name = "{{.*}}Ef"}
-!FIRDialect-DAG: %[[G:.*]] = fir.alloca i32 {name = "{{.*}}Eg"}
-!FIRDialect-DAG: %[[H:.*]] = fir.alloca i32 {name = "{{.*}}Eh"}
-!FIRDialect-DAG: %[[X:.*]] = fir.alloca i32 {name = "{{.*}}Ex"}
-!FIRDialect-DAG: %[[Y:.*]] = fir.alloca i32 {name = "{{.*}}Ey"}
-!FIRDialect-DAG: %[[Z:.*]] = fir.alloca i32 {name = "{{.*}}Ez"}
+!FIRDialect-DAG: %[[A:.*]] = fir.alloca i32 {{{.*}}uniq_name = "{{.*}}Ea"}
+!FIRDialect-DAG: %[[B:.*]] = fir.alloca i32 {{{.*}}uniq_name = "{{.*}}Eb"}
+!FIRDialect-DAG: %[[C:.*]] = fir.alloca i32 {{{.*}}uniq_name = "{{.*}}Ec"}
+!FIRDialect-DAG: %[[D:.*]] = fir.alloca i32 {{{.*}}uniq_name = "{{.*}}Ed"}
+!FIRDialect-DAG: %[[E:.*]] = fir.alloca i32 {{{.*}}uniq_name = "{{.*}}Ee"}
+!FIRDialect-DAG: %[[F:.*]] = fir.alloca i32 {{{.*}}uniq_name = "{{.*}}Ef"}
+!FIRDialect-DAG: %[[G:.*]] = fir.alloca i32 {{{.*}}uniq_name = "{{.*}}Eg"}
+!FIRDialect-DAG: %[[H:.*]] = fir.alloca i32 {{{.*}}uniq_name = "{{.*}}Eh"}
+!FIRDialect-DAG: %[[X:.*]] = fir.alloca i32 {{{.*}}uniq_name = "{{.*}}Ex"}
+!FIRDialect-DAG: %[[Y:.*]] = fir.alloca i32 {{{.*}}uniq_name = "{{.*}}Ey"}
+!FIRDialect-DAG: %[[Z:.*]] = fir.alloca i32 {{{.*}}uniq_name = "{{.*}}Ez"}
 
 subroutine allocate_clause(arg1, arg2)
 use omp_lib

@@ -354,6 +354,9 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
   auto &builder = converter.getFirOpBuilder();
   auto nm = Fortran::lower::mangle::mangleName(var.getSymbol());
   auto ty = converter.genType(var);
+  const auto &ultimateSymbol = var.getSymbol().GetUltimate();
+  auto symNm = toStringRef(ultimateSymbol.name());
+  auto isTarg = var.isTarget();
   if (shape.size())
     if (auto arrTy = ty.dyn_cast<fir::SequenceType>()) {
       // elide the constant dimensions before construction
@@ -363,10 +366,9 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
       for (unsigned i = 0, end = arrTy.getDimension(); i < end; ++i)
         if (typeShape[i] == fir::SequenceType::getUnknownExtent())
           args.push_back(shape[i]);
-      return builder.allocateLocal(loc, ty, nm, args, lenParams,
-                                   var.isTarget());
+      return builder.allocateLocal(loc, ty, nm, symNm, args, lenParams, isTarg);
     }
-  return builder.allocateLocal(loc, ty, nm, shape, lenParams, var.isTarget());
+  return builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg);
 }
 
 /// Instantiate a local variable. Precondition: Each variable will be visited
@@ -559,8 +561,9 @@ instantiateAggregateStore(Fortran::lower::AbstractConverter &converter,
   auto size = std::get<1>(var.getInterval());
   fir::SequenceType::Shape shape(1, size);
   auto seqTy = fir::SequenceType::get(shape, i8Ty);
-  auto local = builder.allocateLocal(loc, seqTy, "", llvm::None, llvm::None,
-                                     /*target=*/false);
+  auto local =
+      builder.allocateLocal(loc, seqTy, ".aggtmp", "", llvm::None, llvm::None,
+                            /*target=*/false);
   insertAggregateStore(storeMap, var, local);
 }
 

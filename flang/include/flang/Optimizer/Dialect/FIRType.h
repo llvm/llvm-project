@@ -109,9 +109,7 @@ inline bool isa_complex(mlir::Type t) {
   return t.isa<fir::ComplexType>() || t.isa<mlir::ComplexType>();
 }
 
-inline bool isa_char(mlir::Type t) {
-   return t.isa<fir::CharacterType>();
-}
+inline bool isa_char(mlir::Type t) { return t.isa<fir::CharacterType>(); }
 
 /// Is `t` a trivial intrinsic type? CHARACTER is <em>excluded</em> because it
 /// is a dependent type.
@@ -130,6 +128,29 @@ inline bool isa_char_string(mlir::Type t) {
 /// It is not possible to deduce the size of a box that describes an entity
 /// of unknown rank or type.
 bool isa_unknown_size_box(mlir::Type t);
+
+/// Returns true iff `t` is a fir.char type and has an unknown length.
+inline bool characterWithDynamicLen(mlir::Type t) {
+  if (auto charTy = t.dyn_cast<fir::CharacterType>())
+    return charTy.hasDynamicLen();
+  return false;
+}
+
+/// Returns true iff `seqTy` has either an unknown shape or a non-constant shape
+/// (where rank > 0).
+inline bool sequenceWithNonConstantShape(fir::SequenceType seqTy) {
+  return seqTy.hasUnknownShape() || !seqTy.hasConstantShape();
+}
+
+/// Returns true iff the type `t` does not have a constant size.
+bool hasDynamicSize(mlir::Type t);
+
+/// If `t` is a SequenceType return its element type, otherwise return `t`.
+inline mlir::Type unwrapSequenceType(mlir::Type t) {
+  if (auto seqTy = t.dyn_cast<fir::SequenceType>())
+    return seqTy.getEleTy();
+  return t;
+}
 
 #ifndef NDEBUG
 // !fir.ptr<X> and !fir.heap<X> where X is !fir.ptr, !fir.heap, or !fir.ref

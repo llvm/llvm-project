@@ -9,8 +9,8 @@ subroutine test1
      integer b
   end type t
   type(t) :: t1, t2
-  ! CHECK-DAG: %[[t1:.*]] = fir.alloca !fir.type<_QFtest1Tt{a:i32,b:i32}> {name = "_QFtest1Et1"}
-  ! CHECK-DAG: %[[t2:.*]] = fir.alloca !fir.type<_QFtest1Tt{a:i32,b:i32}> {name = "_QFtest1Et2"}
+  ! CHECK-DAG: %[[t1:.*]] = fir.alloca !fir.type<_QFtest1Tt{a:i32,b:i32}> {{{.*}}uniq_name = "_QFtest1Et1"}
+  ! CHECK-DAG: %[[t2:.*]] = fir.alloca !fir.type<_QFtest1Tt{a:i32,b:i32}> {{{.*}}uniq_name = "_QFtest1Et2"}
   ! CHECK-DAG: %[[a:.*]] = fir.field_index a, !fir.type<_QFtest1Tt{a:i32,b:i32}>
   ! CHECK: %[[ac:.*]] = fir.coordinate_of %[[t2]], %[[a]] : (!fir.ref<!fir.type<_QFtest1Tt{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
   ! CHECK: %[[ld:.*]] = fir.load %[[ac]] : !fir.ref<i32>
@@ -74,20 +74,24 @@ subroutine test3
      integer :: m_i
   end type t
   type(t) :: t1, t2
+  ! CHECK-DAG: %[[t1:.*]] = fir.alloca !fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}> {{{.*}}uniq_name = "_QFtest3Et1"}
+  ! CHECK-DAG: %[[t2:.*]] = fir.alloca !fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}> {{{.*}}uniq_name = "_QFtest3Et2"}
+
   ! CHECK: %[[mc:.*]] = fir.field_index m_c, !fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>
-  ! CHECK: %{{.*}} = fir.coordinate_of %{{.*}}, %[[mc]] : (!fir.ref<!fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.char<1,20>>
-  ! CHECK: fir.do_loop %[[i:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %{{.*}}, %[[i]] : (!fir.ref<!fir.array<20x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-  ! CHECK: %[[v:.*]] = fir.load %[[coor]] : !fir.ref<!fir.char<1>>
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %{{.*}}, %[[i]] : (!fir.ref<!fir.array<20x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-  ! CHECK: fir.store %[[v]] to %[[coor]] : !fir.ref<!fir.char<1>>
-  ! CHECK: fir.do_loop %[[i:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %{{.*}}, %[[i]] : (!fir.ref<!fir.array<20x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-  ! CHECK: %[[v:.*]] = fir.load %[[coor]] : !fir.ref<!fir.char<1>>
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %{{.*}}, %[[i]] : (!fir.ref<!fir.array<20x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-  ! CHECK: fir.store %[[v]] to %[[coor]] : !fir.ref<!fir.char<1>>
+  ! CHECK: %[[t2x:.*]] = fir.coordinate_of %[[t2]], %[[mc]] : (!fir.ref<!fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.char<1,20>>
+  ! CHECK: %[[t1x:.*]] = fir.coordinate_of %[[t1]], %[[mc]] : (!fir.ref<!fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.char<1,20>>
+  ! CHECK-DAG: %[[one:.*]] = constant 1
+  ! CHECK: %[[count:.*]] = muli %[[one]], %
+  ! CHECK: constant false
+  ! CHECK: %[[dst:.*]] = fir.convert %[[t1x]] : (!fir.ref<!fir.char<1,20>>) -> !fir.ref<i8>
+  ! CHECK: %[[src:.*]] = fir.convert %[[t2x]] : (!fir.ref<!fir.char<1,20>>) -> !fir.ref<i8>
+  ! CHECK: fir.call @llvm.memmove.p0i8.p0i8.i64(%[[dst]], %[[src]], %[[count]], %false) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+
+
   ! CHECK: %[[mi:.*]] = fir.field_index m_i, !fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>
-  ! CHECK: = fir.coordinate_of %{{.*}}, %[[mi]] : (!fir.ref<!fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
+  ! CHECK: %[[ii:.*]] = fir.load
+  ! CHECK: %[[mip:.*]] = fir.coordinate_of %{{.*}}, %[[mi]] : (!fir.ref<!fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
+  ! CHECK: fir.store %[[ii]] to %[[mip]] : !fir.ref<i32>
   t1 = t2
   ! CHECK: return
 end subroutine test3

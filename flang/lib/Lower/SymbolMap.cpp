@@ -47,14 +47,30 @@ fir::ExtendedValue fir::substBase(const fir::ExtendedValue &exv,
       [=](const auto &x) { return fir::ExtendedValue(x.clone(base)); });
 }
 
-llvm::ArrayRef<mlir::Value> fir::getTypeParams(const ExtendedValue &exv) {
-  // FIXME: We should be keeping track of the type parameters for a particular
-  // variable binding, but that seems to have been erased.
-  auto *ctx = fir::getBase(exv).getContext();
-  LLVM_DEBUG(
-      mlir::emitWarning(mlir::UnknownLoc::get(ctx),
-                        "TODO: extended value is missing type parameters"));
-  return llvm::None;
+llvm::SmallVector<mlir::Value> fir::getTypeParams(const ExtendedValue &exv) {
+  using RT = llvm::SmallVector<mlir::Value>;
+  auto baseTy = fir::getBase(exv).getType();
+  if (auto t = fir::dyn_cast_ptrEleTy(baseTy))
+    baseTy = t;
+  if (!fir::hasDynamicSize(baseTy))
+    return {}; // type has constant size, no type parameters needed
+  [[maybe_unused]] auto loc = fir::getBase(exv).getLoc();
+  return exv.match(
+      [](const fir::CharBoxValue &x) -> RT { return {x.getLen()}; },
+      [](const fir::CharArrayBoxValue &x) -> RT { return {x.getLen()}; },
+      [&](const fir::BoxValue &) -> RT {
+        LLVM_DEBUG(mlir::emitWarning(
+            loc, "TODO: box value is missing type parameters"));
+        return {};
+      },
+      [&](const fir::MutableBoxValue &) -> RT {
+        // In this case, the type params may be bound to the variable in an
+        // ALLOCATE statement as part of a type-spec.
+        LLVM_DEBUG(mlir::emitWarning(
+            loc, "TODO: mutable box value is missing type parameters"));
+        return {};
+      },
+      [](const auto &) -> RT { return {}; });
 }
 
 bool fir::isArray(const fir::ExtendedValue &exv) {

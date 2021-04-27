@@ -1,17 +1,17 @@
 ! RUN: bbc -emit-fir -o - %s | FileCheck %s
 
 subroutine loop_test
-  ! CHECK-DAG: fir.alloca i16 {name = "i"}
-  ! CHECK-DAG: fir.alloca i8 {name = "k"}
-  ! CHECK-DAG: fir.alloca i8 {name = "j"}
-  ! CHECK-DAG: fir.alloca i8 {name = "i"}
-  ! CHECK-DAG: fir.alloca i32 {name = "k"}
-  ! CHECK-DAG: fir.alloca i32 {name = "j"}
-  ! CHECK-DAG: fir.alloca i32 {name = "i"}
-  ! CHECK-DAG: fir.alloca !fir.array<5x5x5xi32> {name = "{{.*}}Ea"}
-  ! CHECK-DAG: fir.alloca i32 {name = "{{.*}}Ei"}
-  ! CHECK-DAG: fir.alloca i32 {name = "{{.*}}Ej"}
-  ! CHECK-DAG: fir.alloca i32 {name = "{{.*}}Ek"}
+  ! CHECK-DAG: fir.alloca i16 {{{.*}}uniq_name = "i"}
+  ! CHECK-DAG: fir.alloca i8 {{{.*}}uniq_name = "k"}
+  ! CHECK-DAG: fir.alloca i8 {{{.*}}uniq_name = "j"}
+  ! CHECK-DAG: fir.alloca i8 {{{.*}}uniq_name = "i"}
+  ! CHECK-DAG: fir.alloca i32 {{{.*}}uniq_name = "k"}
+  ! CHECK-DAG: fir.alloca i32 {{{.*}}uniq_name = "j"}
+  ! CHECK-DAG: fir.alloca i32 {{{.*}}uniq_name = "i"}
+  ! CHECK-DAG: fir.alloca !fir.array<5x5x5xi32> {{{.*}}uniq_name = "{{.*}}Ea"}
+  ! CHECK-DAG: fir.alloca i32 {{{.*}}uniq_name = "{{.*}}Ei"}
+  ! CHECK-DAG: fir.alloca i32 {{{.*}}uniq_name = "{{.*}}Ej"}
+  ! CHECK-DAG: fir.alloca i32 {{{.*}}uniq_name = "{{.*}}Ek"}
   integer(4) :: a(5,5,5), i, j, k, asum, xsum
 
   i = 100

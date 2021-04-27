@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "flang/Lower/Todo.h" // delete!
 #include "flang/Optimizer/Dialect/FIRDialect.h"
-#include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Transforms/Factory.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 #define DEBUG_TYPE "flang-array-value-copy"
@@ -440,7 +439,7 @@ originateIndices(mlir::Location loc, mlir::PatternRewriter &rewriter,
       result.push_back(rewriter.create<mlir::AddIOp>(loc, i, lb));
     return result;
   }
-  assert(!shapeVal || mlir::dyn_cast<fir::ShapeOp>(shapeVal.getDefiningOp()));
+  assert(!shapeVal || mlir::isa<fir::ShapeOp>(shapeVal.getDefiningOp()));
   auto one = rewriter.create<mlir::ConstantIndexOp>(loc, 1);
   for (auto v : indices)
     result.push_back(rewriter.create<mlir::AddIOp>(loc, one, v));
@@ -450,7 +449,7 @@ originateIndices(mlir::Location loc, mlir::PatternRewriter &rewriter,
 // Extract extents from the ShapeOp/ShapeShiftOp into the result vector.
 static void getExtents(llvm::SmallVectorImpl<mlir::Value> &result,
                        mlir::Value shape) {
-  auto shapeOp = shape.getDefiningOp();
+  auto *shapeOp = shape.getDefiningOp();
   if (auto s = mlir::dyn_cast<fir::ShapeOp>(shapeOp)) {
     auto e = s.getExtents();
     result.insert(result.end(), e.begin(), e.end());
@@ -522,14 +521,14 @@ public:
       auto shapeOp = getOrReadExtentsAndShapeOp(loc, rewriter, load, extents);
       auto allocmem = rewriter.create<AllocMemOp>(
           loc, dyn_cast_ptrOrBoxEleTy(load.memref().getType()),
-          mlir::ValueRange{}, extents);
+          load.typeparams(), extents);
       genArrayCopy(load.getLoc(), rewriter, allocmem, load.memref(), shapeOp,
                    load.getType());
       rewriter.setInsertionPoint(op);
       auto coor = rewriter.create<ArrayCoorOp>(
           loc, getEleTy(load.getType()), allocmem, shapeOp, load.slice(),
           originateIndices(loc, rewriter, shapeOp, update.indices()),
-          load.lenParams());
+          load.typeparams());
       rewriter.create<fir::StoreOp>(loc, update.merge(), coor);
       auto *storeOp = useMap.lookup(loadOp);
       rewriter.setInsertionPoint(storeOp);
@@ -541,16 +540,56 @@ public:
     } else {
       LLVM_DEBUG(llvm::outs() << "No, conflict wasn't found\n");
       rewriter.setInsertionPoint(op);
+      auto coorTy = getEleTy(load.getType());
       auto coor = rewriter.create<ArrayCoorOp>(
-          loc, getEleTy(load.getType()), load.memref(), load.shape(),
-          load.slice(),
+          loc, coorTy, load.memref(), load.shape(), load.slice(),
           originateIndices(loc, rewriter, load.shape(), update.indices()),
-          load.lenParams());
-      rewriter.create<fir::StoreOp>(loc, update.merge(), coor);
+          load.typeparams());
+      auto input = update.merge();
+      if (auto inEleTy = fir::dyn_cast_ptrEleTy(input.getType())) {
+        auto outEleTy = fir::unwrapSequenceType(update.getType());
+        if (auto inChrTy = inEleTy.dyn_cast<fir::CharacterType>()) {
+          assert(outEleTy.isa<fir::CharacterType>());
+          fir::factory::genCharacterCopy(input, recoverCharLen(input), coor,
+                                         recoverCharLen(coor), rewriter, loc);
+        } else if (inEleTy.isa<fir::RecordType>()) {
+          TODO(loc, "copy derived type");
+        } else {
+          llvm::report_fatal_error("not a legal reference type");
+        }
+      } else {
+        rewriter.create<fir::StoreOp>(loc, input, coor);
+      }
     }
     update.replaceAllUsesWith(load.getResult());
     rewriter.replaceOp(update, load.getResult());
     return mlir::success();
+  }
+
+  static llvm::SmallVector<mlir::Value> recoverTypeParams(mlir::Value val) {
+    auto *op = val.getDefiningOp();
+    if (!fir::hasDynamicSize(fir::dyn_cast_ptrEleTy(val.getType())))
+      return {};
+    if (auto co = mlir::dyn_cast<fir::ConvertOp>(op))
+      return recoverTypeParams(co.value());
+    if (auto ao = mlir::dyn_cast<fir::ArrayFetchOp>(op))
+      return {ao.typeparams().begin(), ao.typeparams().end()};
+    if (auto ao = mlir::dyn_cast<fir::ArrayUpdateOp>(op))
+      return {ao.typeparams().begin(), ao.typeparams().end()};
+    if (auto ao = mlir::dyn_cast<fir::ArrayLoadOp>(op))
+      return {ao.typeparams().begin(), ao.typeparams().end()};
+    if (auto ao = mlir::dyn_cast<fir::ArrayCoorOp>(op))
+      return {ao.typeparams().begin(), ao.typeparams().end()};
+    if (auto ao = mlir::dyn_cast<fir::AllocaOp>(op))
+      return {ao.typeparams().begin(), ao.typeparams().end()};
+    if (auto ao = mlir::dyn_cast<fir::AllocMemOp>(op))
+      return {ao.typeparams().begin(), ao.typeparams().end()};
+    llvm::report_fatal_error("unexpected buffer");
+  }
+
+  static mlir::Value recoverCharLen(mlir::Value val) {
+    auto params = recoverTypeParams(val);
+    return params.empty() ? mlir::Value{} : params[0];
   }
 
   void genArrayCopy(mlir::Location loc, mlir::PatternRewriter &rewriter,
@@ -607,8 +646,11 @@ public:
         loc, getEleTy(load.getType()), load.memref(), load.shape(),
         load.slice(),
         originateIndices(loc, rewriter, load.shape(), fetch.indices()),
-        load.lenParams());
-    rewriter.replaceOpWithNewOp<fir::LoadOp>(fetch, coor);
+        load.typeparams());
+    if (fir::isa_ref_type(fetch.getType()))
+      rewriter.replaceOp(fetch, coor.getResult());
+    else
+      rewriter.replaceOpWithNewOp<fir::LoadOp>(fetch, coor);
     return mlir::success();
   }
 

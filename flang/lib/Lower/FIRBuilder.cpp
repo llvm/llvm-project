@@ -106,26 +106,32 @@ mlir::Value Fortran::lower::FirOpBuilder::createRealConstant(
   llvm_unreachable("should use builtin floating-point type");
 }
 
+/// Allocate a local variable.
+/// A local variable ought to have a name in the source code.
 mlir::Value Fortran::lower::FirOpBuilder::allocateLocal(
-    mlir::Location loc, mlir::Type ty, llvm::StringRef nm,
-    llvm::ArrayRef<mlir::Value> shape, llvm::ArrayRef<mlir::Value> lenParams,
-    bool asTarget) {
+    mlir::Location loc, mlir::Type ty, llvm::StringRef uniqName,
+    llvm::StringRef name, llvm::ArrayRef<mlir::Value> shape,
+    llvm::ArrayRef<mlir::Value> lenParams, bool asTarget) {
+  // Convert the shape extents to `index`, as needed.
   llvm::SmallVector<mlir::Value> indices;
   auto idxTy = getIndexType();
-  // FIXME: AllocaOp has a lenParams argument, but it is ignored, so add lengths
-  // into the index so far (for characters, that works OK).
-  llvm::for_each(lenParams, [&](mlir::Value sh) {
-    indices.push_back(createConvert(loc, idxTy, sh));
-  });
   llvm::for_each(shape, [&](mlir::Value sh) {
     indices.push_back(createConvert(loc, idxTy, sh));
   });
+  // Add a target attribute, if needed.
   llvm::SmallVector<mlir::NamedAttribute> attrs;
   if (asTarget)
     attrs.emplace_back(
         mlir::Identifier::get(fir::getTargetAttrName(), getContext()),
         getUnitAttr());
-  return create<fir::AllocaOp>(loc, ty, nm, llvm::None, indices, attrs);
+  // Create the local variable.
+  if (name.empty()) {
+    if (uniqName.empty())
+      return create<fir::AllocaOp>(loc, ty, lenParams, indices, attrs);
+    return create<fir::AllocaOp>(loc, ty, uniqName, lenParams, indices, attrs);
+  }
+  return create<fir::AllocaOp>(loc, ty, uniqName, name, lenParams, indices,
+                               attrs);
 }
 
 /// Create a temporary variable on the stack. Anonymous temporaries have no

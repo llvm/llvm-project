@@ -337,16 +337,25 @@ struct AllocaOpConversion : public FIROpConversion<fir::AllocaOp> {
       for (; i < end; ++i)
         lenParams.push_back(operands[i]);
       auto i64Ty = mlir::IntegerType::get(alloc.getContext(), 64);
-      auto recTy = alloc.getInType().dyn_cast<fir::RecordType>();
-      assert(recTy && "expected fir.type");
-      auto memSizeFn = getDependentTypeMemSizeFn(recTy, alloc, rewriter);
-      auto attr =
-          rewriter.getNamedAttr("callee", rewriter.getSymbolRefAttr(memSizeFn));
-      auto call = rewriter.create<mlir::LLVM::CallOp>(
-          loc, i64Ty, lenParams, llvm::ArrayRef<mlir::NamedAttribute>{attr});
-      size = call.getResult(0);
-      ty = mlir::LLVM::LLVMPointerType::get(
-          mlir::IntegerType::get(alloc.getContext(), 8));
+      if (auto chrTy = alloc.getInType().dyn_cast<fir::CharacterType>()) {
+        auto rawCharTy = fir::CharacterType::getUnknownLen(chrTy.getContext(),
+                                                           chrTy.getFKind());
+        ty = mlir::LLVM::LLVMPointerType::get(convertType(rawCharTy));
+        assert(end == 1);
+        size = lenParams[0];
+      } else if (auto recTy = alloc.getInType().dyn_cast<fir::RecordType>()) {
+        auto memSizeFn = getDependentTypeMemSizeFn(recTy, alloc, rewriter);
+        auto attr = rewriter.getNamedAttr("callee",
+                                          rewriter.getSymbolRefAttr(memSizeFn));
+        auto call = rewriter.create<mlir::LLVM::CallOp>(
+            loc, i64Ty, lenParams, llvm::ArrayRef<mlir::NamedAttribute>{attr});
+        size = call.getResult(0);
+        ty = mlir::LLVM::LLVMPointerType::get(
+            mlir::IntegerType::get(alloc.getContext(), 8));
+      } else {
+        return emitError(loc, "unexpected type ")
+               << alloc.getInType() << " with type parameters";
+      }
     }
     if (alloc.hasShapeOperands()) {
       unsigned end = operands.size();
@@ -1221,7 +1230,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
       if (auto seqTy = memEleTy.dyn_cast<fir::SequenceType>()) {
         auto seqEleTy = seqTy.getEleTy();
         // Adjust the element scaling factor if the element is a dependent type.
-        if (fir::LLVMTypeConverter::dynamicallySized(seqEleTy)) {
+        if (fir::hasDynamicSize(seqEleTy)) {
           if (fir::isa_char(seqEleTy)) {
             assert(xbox.lenParams().size() == 1);
             prevPtrOff = integerCast(loc, rewriter, i64Ty,
@@ -1940,7 +1949,7 @@ struct CoordinateOpConversion
       }
     }
 
-    if (fir::LLVMTypeConverter::dynamicallySized(cpnTy))
+    if (fir::hasDynamicSize(fir::unwrapSequenceType(cpnTy)))
       TODO(loc, "type has dynamic size");
 
     if (hasKnownShape || columnIsDeferred) {
@@ -2002,7 +2011,7 @@ struct CoordinateOpConversion
   }
 
   unsigned getFieldNumber(fir::RecordType ty, mlir::Value op) const {
-    return fir::LLVMTypeConverter::dynamicallySized(ty)
+    return fir::hasDynamicSize(ty)
                ? op.getDefiningOp()
                      ->getAttrOfType<mlir::IntegerAttr>("field")
                      .getInt()
@@ -2023,7 +2032,7 @@ struct CoordinateOpConversion
     for (; i < sz; ++i) {
       auto nxtOpnd = coors[i];
       if (auto arrTy = type.dyn_cast<fir::SequenceType>()) {
-        if (fir::LLVMTypeConverter::unknownShape(arrTy.getShape()))
+        if (fir::sequenceWithNonConstantShape(arrTy))
           return false;
         i += arrTy.getDimension() - 1;
         type = arrTy.getEleTy();
@@ -2116,7 +2125,7 @@ struct FieldIndexOpConversion : public FIROpConversion<fir::FieldIndexOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto recTy = field.on_type().cast<fir::RecordType>();
     auto index = recTy.getFieldIndex(field.field_id());
-    if (!fir::LLVMTypeConverter::dynamicallySized(recTy)) {
+    if (!fir::hasDynamicSize(recTy)) {
       // Derived type has compile-time constant layout. Returns index of the
       // component type in the parent type (to be used in GEP).
       rewriter.replaceOp(field, mlir::ValueRange{genConstantOffset(

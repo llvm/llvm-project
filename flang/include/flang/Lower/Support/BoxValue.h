@@ -384,7 +384,7 @@ ExtendedValue substBase(const ExtendedValue &exv, mlir::Value base);
 bool isArray(const ExtendedValue &exv);
 
 /// Get the type parameters for `exv`.
-llvm::ArrayRef<mlir::Value> getTypeParams(const ExtendedValue &exv);
+llvm::SmallVector<mlir::Value> getTypeParams(const ExtendedValue &exv);
 
 /// An extended value is a box of values pertaining to a discrete entity. It is
 /// used in lowering to track all the runtime values related to an entity. For

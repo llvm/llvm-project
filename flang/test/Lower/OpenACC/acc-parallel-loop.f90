@@ -21,9 +21,9 @@ subroutine acc_parallel_loop
   integer :: vectorNum = 128
   integer, parameter :: tileSize = 2
 
-!CHECK: [[A:%.*]] = fir.alloca !fir.array<10xf32> {name = "{{.*}}Ea"}
-!CHECK: [[B:%.*]] = fir.alloca !fir.array<10xf32> {name = "{{.*}}Eb"}
-!CHECK: [[C:%.*]] = fir.alloca !fir.array<10xf32> {name = "{{.*}}Ec"}
+!CHECK: [[A:%.*]] = fir.alloca !fir.array<10xf32> {{{.*}}uniq_name = "{{.*}}Ea"}
+!CHECK: [[B:%.*]] = fir.alloca !fir.array<10xf32> {{{.*}}uniq_name = "{{.*}}Eb"}
+!CHECK: [[C:%.*]] = fir.alloca !fir.array<10xf32> {{{.*}}uniq_name = "{{.*}}Ec"}
 !CHECK: [[IFCONDITION:%.*]] = fir.address_of(@{{.*}}ifcondition) : !fir.ref<!fir.logical<4>>
 
   !$acc parallel loop

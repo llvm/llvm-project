@@ -4,19 +4,19 @@
 ! CHECK-LABEL: _QPfoo
 subroutine foo()
   real, allocatable :: x(:), y(:, :), z
-  ! CHECK: %[[xBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {name = "_QFfooEx"}
+  ! CHECK: %[[xBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {{{.*}}uniq_name = "_QFfooEx"}
   ! CHECK-DAG: %[[xNullAddr:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   ! CHECK-DAG: %[[xNullShape:.*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
   ! CHECK: %[[xInitEmbox:.*]] = fir.embox %[[xNullAddr]](%[[xNullShape]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   ! CHECK: fir.store %[[xInitEmbox]] to %[[xBoxAddr]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 
-  ! CHECK: %[[yBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xf32>>> {name = "_QFfooEy"}
+  ! CHECK: %[[yBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xf32>>> {{{.*}}uniq_name = "_QFfooEy"}
   ! CHECK-DAG: %[[yNullAddr:.*]] = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
   ! CHECK-DAG: %[[yNullShape:.*]] = fir.shape %c0{{.*}}, %c0{{.*}} : (index, index) -> !fir.shape<2>
   ! CHECK: %[[yInitEmbox:.*]] = fir.embox %[[yNullAddr]](%[[yNullShape]]) : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
   ! CHECK: fir.store %[[yInitEmbox]] to %[[yBoxAddr]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
 
-  ! CHECK: %[[zBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<f32>> {name = "_QFfooEz"}
+  ! CHECK: %[[zBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<f32>> {{{.*}}uniq_name = "_QFfooEz"}
   ! CHECK: %[[zNullAddr:.*]] = fir.zero_bits !fir.heap<f32>
   ! CHECK: %[[zInitEmbox:.*]] = fir.embox %[[zNullAddr]] : (!fir.heap<f32>) -> !fir.box<!fir.heap<f32>>
   ! CHECK: fir.store %[[zInitEmbox]] to %[[zBoxAddr]] : !fir.ref<!fir.box<!fir.heap<f32>>>
@@ -63,12 +63,12 @@ end subroutine
 subroutine char_deferred(n)
   integer :: n
   character(:), allocatable :: scalar, array(:)
-  ! CHECK-DAG: %[[sBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {name = "_QFchar_deferredEscalar"}
+  ! CHECK-DAG: %[[sBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {{{.*}}uniq_name = "_QFchar_deferredEscalar"}
   ! CHECK-DAG: %[[sNullAddr:.*]] = fir.zero_bits !fir.heap<!fir.char<1,?>>
   ! CHECK-DAG: %[[sInitBox:.*]] = fir.embox %[[sNullAddr]] typeparams %c0{{.*}} : (!fir.heap<!fir.char<1,?>>, index) -> !fir.box<!fir.heap<!fir.char<1,?>>>
   ! CHECK-DAG: fir.store %[[sInitBox]] to %[[sBoxAddr]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 
-  ! CHECK-DAG: %[[aBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> {name = "_QFchar_deferredEarray"}
+  ! CHECK-DAG: %[[aBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> {{{.*}}uniq_name = "_QFchar_deferredEarray"}
   ! CHECK-DAG: %[[aNullAddr:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.char<1,?>>>
   ! CHECK-DAG: %[[aNullShape:.*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
   ! CHECK-DAG: %[[aInitBox:.*]] = fir.embox %[[aNullAddr]](%[[aNullShape]]) typeparams %c0{{.*}} : (!fir.heap<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>
@@ -111,12 +111,12 @@ end subroutine
 subroutine char_explicit_cst(n)
   integer :: n
   character(10), allocatable :: scalar, array(:)
-  ! CHECK-DAG: %[[sBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,10>>> {name = "_QFchar_explicit_cstEscalar"}
+  ! CHECK-DAG: %[[sBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,10>>> {{{.*}}uniq_name = "_QFchar_explicit_cstEscalar"}
   ! CHECK-DAG: %[[sNullAddr:.*]] = fir.zero_bits !fir.heap<!fir.char<1,10>>
   ! CHECK-DAG: %[[sInitBox:.*]] = fir.embox %[[sNullAddr]] : (!fir.heap<!fir.char<1,10>>) -> !fir.box<!fir.heap<!fir.char<1,10>>>
   ! CHECK-DAG: fir.store %[[sInitBox]] to %[[sBoxAddr]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,10>>>>
 
-  ! CHECK-DAG: %[[aBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>> {name = "_QFchar_explicit_cstEarray"}
+  ! CHECK-DAG: %[[aBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>> {{{.*}}uniq_name = "_QFchar_explicit_cstEarray"}
   ! CHECK-DAG: %[[aNullAddr:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.char<1,10>>>
   ! CHECK-DAG: %[[aNullShape:.*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
   ! CHECK-DAG: %[[aInitBox:.*]] = fir.embox %[[aNullAddr]](%[[aNullShape]]) : (!fir.heap<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>
@@ -136,14 +136,14 @@ subroutine char_explicit_dyn(n, l1, l2)
   integer :: n, l1, l2
   character(l1), allocatable :: scalar
   ! CHECK-DAG: %[[l1:.*]] = fir.load %arg1 : !fir.ref<i32>
-  ! CHECK-DAG: %[[sBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {name = "_QFchar_explicit_dynEscalar"}
+  ! CHECK-DAG: %[[sBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {{{.*}}uniq_name = "_QFchar_explicit_dynEscalar"}
   ! CHECK-DAG: %[[sNullAddr:.*]] = fir.zero_bits !fir.heap<!fir.char<1,?>>
   ! CHECK-DAG: %[[sInitBox:.*]] = fir.embox %[[sNullAddr]] typeparams %[[l1]] : (!fir.heap<!fir.char<1,?>>, i32) -> !fir.box<!fir.heap<!fir.char<1,?>>>
   ! CHECK-DAG: fir.store %[[sInitBox]] to %[[sBoxAddr]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 
   character(l2), allocatable :: array(:)
   ! CHECK-DAG: %[[l2:.*]] = fir.load %arg2 : !fir.ref<i32>
-  ! CHECK-DAG: %[[aBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> {name = "_QFchar_explicit_dynEarray"}
+  ! CHECK-DAG: %[[aBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> {{{.*}}uniq_name = "_QFchar_explicit_dynEarray"}
   ! CHECK-DAG: %[[aNullAddr:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.char<1,?>>>
   ! CHECK-DAG: %[[aNullShape:.*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
   ! CHECK-DAG: %[[aInitBox:.*]] = fir.embox %[[aNullAddr]](%[[aNullShape]]) typeparams %[[l2]] : (!fir.heap<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>

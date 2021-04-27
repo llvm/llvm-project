@@ -4,6 +4,7 @@ add_flang_library(FIRTransforms
   AffineDemotion.cpp
   AffinePromotion.cpp
   ArrayValueCopy.cpp
+  CharacterConversion.cpp
   ControlFlowConverter.cpp
   CSE.cpp
   FirLoopResultOpt.cpp

@@ -893,7 +893,7 @@ private:
       if (info.isStructured()) {
         info.doLoop = builder->create<fir::DoLoopOp>(
             loc, lowerValue, upperValue, info.stepValue, info.isUnordered,
-            /*finalCountValue*/ !info.isUnordered);
+            /*finalCountValue=*/!info.isUnordered);
         builder->setInsertionPointToStart(info.doLoop.getBody());
         // Update the loop variable value, as it may have non-index references.
         auto value = builder->createConvert(loc, genType(info.loopVariableSym),

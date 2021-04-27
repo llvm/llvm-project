@@ -272,7 +272,7 @@ subroutine test12(a,b,c,d,n,m)
   ! CHECK: %[[A:.*]] = fir.array_load %arg0(%[[sha]])
   ! CHECK: %[[shb:.*]] = fir.shape %
   ! CHECK: %[[B:.*]] = fir.array_load %arg1(%[[shb]])
-  ! CHECK: %[[tmp:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {name = ".array.expr"}
+  ! CHECK: %[[tmp:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {{{.*}}uniq_name = ".array.expr"}
   ! CHECK: %[[T:.*]] = fir.array_load %[[tmp]](%
   ! CHECK: %[[C:.*]] = fir.array_load %arg2(%
   ! CHECK: %[[D:.*]] = fir.array_load %arg3(%
@@ -358,7 +358,7 @@ end subroutine test15
 ! CHECK-SAME: %[[a:.*]]: !fir.ref<!fir.array<100xf32>>,
 ! CHECK-SAME: %[[b:.*]]: !fir.ref<!fir.array<100xf32>>)
 subroutine test16(a,b)
-  ! CHECK: %[[tmp:.*]] = fir.alloca f32 {adapt.valuebyref}
+  ! CHECK: %[[tmp:.*]] = fir.alloca f32 {adapt.valuebyref
   ! CHECK-DAG: %[[aarr:.*]] = fir.array_load %[[a]](%{{.*}}) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
   ! CHECK-DAG: %[[barr:.*]] = fir.array_load %[[b]](%{{.*}}) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
   interface
@@ -416,7 +416,7 @@ end subroutine test17
 subroutine test18
   integer, target :: array(10,10)
   integer, pointer :: row_i(:)
-  ! CHECK: %[[iaddr:.*]] = fir.alloca i32 {name = "_QFtest18Ei"}
+  ! CHECK: %[[iaddr:.*]] = fir.alloca i32 {{{.*}}uniq_name = "_QFtest18Ei"}
   ! CHECK: %[[i:.*]] = fir.load %[[iaddr]] : !fir.ref<i32>
   ! CHECK: %[[icast:.*]] = fir.convert %[[i]] : (i32) -> i64
   ! CHECK: %[[exact:.*]] = fir.undefined index
@@ -451,5 +451,139 @@ subroutine test_assigning_to_assumed_shape_slices(x)
   ! CHECK: fir.array_merge_store %[[slice]], %[[loop]] to %[[x]] : !fir.box<!fir.array<?xi32>>
   x(::2) = 42
 end subroutine
+
+! CHECK-LABEL: func @_QPtest19a
+subroutine test19a(a,b)
+  character(LEN=10) a(10)
+  character(LEN=10) b(10)
+
+  ! CHECK-DAG: fir.array_load %{{.*}}(%{{.*}}) : (!fir.ref<!fir.array<10x!fir.char<1,10>>>, !fir.shape<1>) -> !fir.array<10x!fir.char<1,10>>
+  ! CHECK-DAG: fir.array_load %{{.*}}(%{{.*}}) : (!fir.ref<!fir.array<10x!fir.char<1,10>>>, !fir.shape<1>) -> !fir.array<10x!fir.char<1,10>>
+  ! CHECK: fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<10x!fir.char<1,10>>) {
+  ! CHECK: fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10x!fir.char<1,10>>, index) -> !fir.ref<!fir.char<1,10>>
+  ! CHECK: fir.array_update %{{.*}}, %{{.*}}, %{{.*}} : (!fir.array<10x!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>, index) -> !fir.array<10x!fir.char<1,10>>
+  ! CHECK: fir.array_merge_store %{{.*}}, %{{.*}} to %{{.*}} : !fir.ref<!fir.array<10x!fir.char<1,10>>>
+  ! CHECK: return
+
+  a = b
+end subroutine test19a
+
+! CHECK-LABEL: func @_QPtest19b
+subroutine test19b(a,b)
+  character(KIND=2, LEN=8) a(20)
+  character(KIND=2, LEN=10) b(20)
+
+  ! CHECK-DAG: fir.array_load %{{.*}}(%{{.*}}) : (!fir.ref<!fir.array<20x!fir.char<2,8>>>, !fir.shape<1>) -> !fir.array<20x!fir.char<2,8>>
+  ! CHECK-DAG: fir.array_load %{{.*}}(%{{.*}}) : (!fir.ref<!fir.array<20x!fir.char<2,10>>>, !fir.shape<1>) -> !fir.array<20x!fir.char<2,10>>
+  ! CHECK: fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<20x!fir.char<2,8>>) {
+  ! CHECK: fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<20x!fir.char<2,10>>, index) -> !fir.ref<!fir.char<2,10>>
+  ! CHECK: fir.array_update %{{.*}}, %{{.*}}, %{{.*}} : (!fir.array<20x!fir.char<2,8>>, !fir.ref<!fir.char<2,8>>, index) -> !fir.array<20x!fir.char<2,8>>
+  ! CHECK: fir.array_merge_store %{{.*}}, %{{.*}} to %{{.*}} : !fir.ref<!fir.array<20x!fir.char<2,8>>>
+  ! CHECK: return
+
+  a = b
+end subroutine test19b
+
+! CHECK-LABEL: func @_QPtest19c
+subroutine test19c(a,b,i)
+  character(KIND=4, LEN=i) a(30)
+  character(KIND=4, LEN=10) b(30)
+
+  ! CHECK-DAG: fir.array_load %{{.*}}(%{{.*}}) typeparams %{{.*}} : (!fir.ref<!fir.array<30x!fir.char<4,?>>>, !fir.shape<1>, i32) -> !fir.array<30x!fir.char<4,?>>
+  ! CHECK-DAG: fir.array_load %{{.*}}(%{{.*}}) : (!fir.ref<!fir.array<30x!fir.char<4,10>>>, !fir.shape<1>) -> !fir.array<30x!fir.char<4,10>>
+  ! CHECK: fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<30x!fir.char<4,?>>) {
+  ! CHECK: fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<30x!fir.char<4,10>>, index) -> !fir.ref<!fir.char<4,10>>
+  ! CHECK: fir.array_update %{{.*}}, %{{.*}}, %{{.*}} typeparams %{{.*}} : (!fir.array<30x!fir.char<4,?>>, !fir.ref<!fir.char<4,?>>, index, i32) -> !fir.array<30x!fir.char<4,?>>
+  ! CHECK: fir.array_merge_store %{{.*}}, %{{.*}} to %{{.*}} typeparams %{{.*}} : !fir.ref<!fir.array<30x!fir.char<4,?>>>, i32
+
+  a = b
+end subroutine test19c
+
+! CHECK-LABEL: func @_QPtest19d
+subroutine test19d(a,b,i,j)
+  character(i) a(40)
+  character(j) b(40)
+
+  ! CHECK-DAG: fir.array_load %{{.*}}(%{{.*}}) typeparams %{{.*}} : (!fir.ref<!fir.array<40x!fir.char<1,?>>>, !fir.shape<1>, i32) -> !fir.array<40x!fir.char<1,?>>
+  ! CHECK-DAG: fir.array_load %{{.*}}(%{{.*}}) typeparams %{{.*}} : (!fir.ref<!fir.array<40x!fir.char<1,?>>>, !fir.shape<1>, i32) -> !fir.array<40x!fir.char<1,?>>
+  ! CHECK: fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<40x!fir.char<1,?>>) {
+  ! CHECK: fir.array_fetch %{{.*}}, %{{.*}} typeparams %{{.*}} : (!fir.array<40x!fir.char<1,?>>, index, i32) -> !fir.ref<!fir.char<1,?>>
+  ! CHECK: fir.array_update %{{.*}}, %{{.*}}, %{{.*}} typeparams %{{.*}} : (!fir.array<40x!fir.char<1,?>>, !fir.ref<!fir.char<1,?>>, index, i32) -> !fir.array<40x!fir.char<1,?>>
+  ! CHECK: fir.array_merge_store %{{.*}}, %{{.*}} to %{{.*}} typeparams %{{.*}} : !fir.ref<!fir.array<40x!fir.char<1,?>>>, i32
+
+  a = b
+end subroutine test19d
+
+! CHECK-LABEL: func @_QPtest19e
+subroutine test19e(a,b)
+  character(*) a(50)
+  character(*) b(50)
+
+  ! CHECK-DAG: fir.array_load %{{.*}}(%{{.*}}) typeparams %{{.*}}#1 : (!fir.ref<!fir.array<50x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.array<50x!fir.char<1,?>>
+  ! CHECK-DAG: fir.array_load %{{.*}}(%{{.*}}) typeparams %{{.*}}#1 : (!fir.ref<!fir.array<50x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.array<50x!fir.char<1,?>>
+  ! CHECK: fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<50x!fir.char<1,?>>) {
+  ! CHECK: fir.array_fetch %{{.*}}, %{{.*}} typeparams %{{.*}}#1 : (!fir.array<50x!fir.char<1,?>>, index, index) -> !fir.ref<!fir.char<1,?>>
+  ! CHECK: fir.array_update %{{.*}}, %{{.*}}, %{{.*}} typeparams %{{.*}}#1 : (!fir.array<50x!fir.char<1,?>>, !fir.ref<!fir.char<1,?>>, index, index) -> !fir.array<50x!fir.char<1,?>>
+  ! CHECK: fir.array_merge_store %{{.*}}, %{{.*}} to %{{.*}} typeparams %{{.*}}#1 : !fir.ref<!fir.array<50x!fir.char<1,?>>>, index
+
+  a = b
+end subroutine test19e
+
+! CHECK-LABEL: func @_QPtest19f
+subroutine test19f(a,b)
+  character(*) a(60)
+  character(*) b(60)
+
+  ! CHECK-DAG: fir.array_load %{{.*}}(%{{.*}}) typeparams %{{.*}} : (!fir.ref<!fir.array<60x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.array<60x!fir.char<1,?>>
+  ! CHECK-DAG: fir.address_of(@_QQcl.70726566697820) : !fir.ref<!fir.char<1,7>>
+  ! CHECk-DAG: fir.array_load %{{.*}}(%{{.*}}) typeparams %{{.*}} : (!fir.ref<!fir.array<60x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.array<60x!fir.char<1,?>>
+  ! CHECK: fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<60x!fir.char<1,?>>) {
+  ! CHECK: fir.array_fetch %{{.*}}, %{{.*}} typeparams %{{.*}} : (!fir.array<60x!fir.char<1,?>>, index, index) -> !fir.ref<!fir.char<1,?>>
+  ! CHECK: fir.call @llvm.memmove.p0i8.p0i8.i64(%{{.*}}, %{{.*}}, %{{.*}}, %false) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+  ! CHECK: fir.load %{{.*}} : !fir.ref<!fir.char<1>>
+  ! CHECK: fir.store %{{.*}} to %{{.*}} : !fir.ref<!fir.char<1>>
+  ! CHECK: fir.array_update %{{.*}}, %{{.*}}, %{{.*}} typeparams %{{.*}} : (!fir.array<60x!fir.char<1,?>>, !fir.ref<!fir.char<1,?>>, index, index) -> !fir.array<60x!fir.char<1,?>>
+  ! CHECK: fir.array_merge_store %{{.*}}, %{{.*}} to %{{.*}} typeparams %{{.*}} : !fir.ref<!fir.array<60x!fir.char<1,?>>>, index
+  a = "prefix " // b
+end subroutine test19f
+
+! CHECK-LABEL: func @_QPtest19g
+subroutine test19g(a,b,i)
+  character(kind=4,len=i) a(70)
+  character(kind=2,len=13) b(140)
+
+  ! CHECK: fir.shape %c70{{.*}} : (index) -> !fir.shape<1>
+  ! CHECK: fir.array_load %{{.*}}(%{{.*}}) typeparams %{{.*}} : (!fir.ref<!fir.array<70x!fir.char<4,?>>>, !fir.shape<1>, i32) -> !fir.array<70x!fir.char<4,?>>
+  ! CHECK: fir.shape %c140{{.*}} : (index) -> !fir.shape<1>
+  ! CHECK: fir.slice %c1{{.*}}, %c140{{.*}}, %c2{{.*}} : (i64, i64, i64) -> !fir.slice<1>
+  ! CHECK: fir.array_load %{{.*}}(%{{.*}}) [%{{.*}}] : (!fir.ref<!fir.array<140x!fir.char<2,13>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.array<140x!fir.char<2,13>>
+  ! CHECK: fir.do_loop
+  ! CHECK: fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<140x!fir.char<2,13>>, index) -> !fir.ref<!fir.char<2,13>>
+  ! CHECK: fir.array_update
+  ! CHECK: fir.array_merge_store %{{.*}}, %{{.*}} to %{{.*}} typeparams %{{.*}} : !fir.ref<!fir.array<70x!fir.char<4,?>>>, i32
+
+  a = b(1:140:2)
+end subroutine test19g
+
+! CHECK-LABEL: func @_QPtest19h
+subroutine test19h(a,b,i,j)
+  character(i) a(70)
+  character(*) b(j)
+
+  ! CHECK: %[[a:.*]]:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  ! CHECK: %[[b:.*]]:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  ! CHECK: %[[j:.*]] = fir.load %arg3 : !fir.ref<i32>
+  ! CHECK: %[[ashape:.*]] = fir.shape %c70{{.*}} : (index) -> !fir.shape<1>
+  ! CHECK: %[[aval:.*]] = fir.array_load %{{.*}}(%[[ashape]]) typeparams %{{.*}} : (!fir.ref<!fir.array<70x!fir.char<1,?>>>, !fir.shape<1>, i32) -> !fir.array<70x!fir.char<1,?>>
+  ! CHECK: %[[bshape:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+  ! CHECK: %[[slice:.*]] = fir.slice %c{{.*}}, %c{{.*}}, %c{{.*}} : (i64, i64, i64) -> !fir.slice<1>
+  ! CHECK: %[[bval:.*]] = fir.array_load %{{.*}}(%[[bshape]]) [%[[slice]]] typeparams %{{.*}}#1 : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.array<?x!fir.char<1,?>>
+  ! CHECK: fir.do_loop
+  ! CHECK: fir.array_fetch %{{.*}}, %{{.*}} typeparams %
+  ! CHECK: fir.array_update %{{.*}}, %{{.*}}, %{{.*}} typeparams %
+  ! CHECK: fir.array_merge_store %{{.*}}, %{{.*}} to %{{.*}} typeparams %{{.*}}
+  a = b(1:140:2)
+end subroutine test19h
 
 ! CHECK: func private @_QPbar(

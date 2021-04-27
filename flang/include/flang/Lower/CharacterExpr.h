@@ -51,11 +51,6 @@ public:
   void createAssign(const fir::ExtendedValue &lhs,
                     const fir::ExtendedValue &rhs);
 
-  /// Lower an assignment where the buffer and LEN parameter are known and do
-  /// not need to be unboxed.
-  void createAssign(mlir::Value lptr, mlir::Value llen, mlir::Value rptr,
-                    mlir::Value rlen);
-
   /// Create lhs // rhs in temp obtained with fir.alloca
   fir::CharBoxValue createConcatenate(const fir::CharBoxValue &lhs,
                                       const fir::CharBoxValue &rhs);

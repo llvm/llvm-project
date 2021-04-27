@@ -179,7 +179,7 @@ func private @chararrayfunc(index, index) -> !fir.array<?x!fir.char<1,?>>
 func @call_chararrayfunc() {
   %c100 = constant 100 : index
   %c50 = constant 50 : index
-  %buffer = fir.alloca !fir.array<?x!fir.char<1,?>>, %c100, %c50
+  %buffer = fir.alloca !fir.array<?x!fir.char<1,?>>(%c100 : index), %c50
   %shape = fir.shape %c100 : (index) -> !fir.shape<1>
   %res = fir.call @chararrayfunc(%c100, %c50) : (index, index) -> !fir.array<?x!fir.char<1,?>>
   fir.save_result %res to %buffer(%shape) typeparams %c50 : !fir.array<?x!fir.char<1,?>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index
@@ -187,13 +187,13 @@ func @call_chararrayfunc() {
 
   // CHECK: %[[c100:.*]] = constant 100 : index
   // CHECK: %[[c50:.*]] = constant 50 : index
-  // CHECK: %[[buffer:.*]] = fir.alloca !fir.array<?x!fir.char<1,?>>, %[[c100]], %[[c50]]
+  // CHECK: %[[buffer:.*]] = fir.alloca !fir.array<?x!fir.char<1,?>>(%[[c100]] : index), %[[c50]]
   // CHECK: fir.call @chararrayfunc(%[[buffer]], %[[c100]], %[[c50]]) : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, index, index) -> ()
   // CHECK-NOT: fir.save_result
 
   // CHECK-BOX: %[[c100:.*]] = constant 100 : index
   // CHECK-BOX: %[[c50:.*]] = constant 50 : index
-  // CHECK-BOX: %[[buffer:.*]] = fir.alloca !fir.array<?x!fir.char<1,?>>, %[[c100]], %[[c50]]
+  // CHECK-BOX: %[[buffer:.*]] = fir.alloca !fir.array<?x!fir.char<1,?>>(%[[c100]] : index), %[[c50]]
   // CHECK-BOX: %[[shape:.*]] = fir.shape %[[c100]] : (index) -> !fir.shape<1>
   // CHECK-BOX: %[[box:.*]] = fir.embox %[[buffer]](%[[shape]]) typeparams %[[c50]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
   // CHECK-BOX: fir.call @chararrayfunc(%[[box]], %[[c100]], %[[c50]]) : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index, index) -> ()

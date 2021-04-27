@@ -623,12 +623,8 @@ private:
       }
     }
 
-    // FIXME: AllocMemOp is ignoring its length arguments. Squeezed in into the
-    // extents for now.
-    llvm::SmallVector<mlir::Value> sizes = extents;
-    sizes.append(lengths.begin(), lengths.end());
     mlir::Value heap = builder.create<fir::AllocMemOp>(
-        loc, box.getBaseTy(), mangleAlloc(alloc), llvm::None, sizes);
+        loc, box.getBaseTy(), mangleAlloc(alloc), lengths, extents);
     MutablePropertyWriter{builder, loc, box}.updateMutableBox(heap, lbounds,
                                                               extents, lengths);
   }
@@ -891,18 +887,18 @@ createMutableProperties(Fortran::lower::AbstractConverter &converter,
   // Allocate and set a variable to hold the address.
   // It will be set to null in setUnallocatedStatus.
   mutableProperties.addr =
-      builder.allocateLocal(loc, baseAddrTy, name + ".addr",
-                            /*shape=*/llvm::None, /*lenParams=*/llvm::None);
+      builder.allocateLocal(loc, baseAddrTy, name + ".addr", "",
+                            /*shape=*/llvm::None, /*typeparams=*/llvm::None);
   // Allocate variables to hold lower bounds and extents.
   auto rank = sym.Rank();
   auto idxTy = builder.getIndexType();
   for (decltype(rank) i = 0; i < rank; ++i) {
     auto lboundVar =
-        builder.allocateLocal(loc, idxTy, name + ".lb" + std::to_string(i),
-                              /*shape=*/llvm::None, /*lenParams=*/llvm::None);
+        builder.allocateLocal(loc, idxTy, name + ".lb" + std::to_string(i), "",
+                              /*shape=*/llvm::None, /*typeparams=*/llvm::None);
     auto extentVar =
-        builder.allocateLocal(loc, idxTy, name + ".ext" + std::to_string(i),
-                              /*shape=*/llvm::None, /*lenParams=*/llvm::None);
+        builder.allocateLocal(loc, idxTy, name + ".ext" + std::to_string(i), "",
+                              /*shape=*/llvm::None, /*typeparams=*/llvm::None);
     mutableProperties.lbounds.emplace_back(lboundVar);
     mutableProperties.extents.emplace_back(extentVar);
   }
@@ -918,8 +914,8 @@ createMutableProperties(Fortran::lower::AbstractConverter &converter,
       TODO(loc, "deferred length type parameters.");
   if (fir::isa_char(eleTy) && nonDeferredParams.empty()) {
     auto lenVar = builder.allocateLocal(loc, builder.getCharacterLengthType(),
-                                        name + ".len", /*shape=*/llvm::None,
-                                        /*lenParams=*/llvm::None);
+                                        name + ".len", "", /*shape=*/llvm::None,
+                                        /*typeparams=*/llvm::None);
     mutableProperties.deferredParams.emplace_back(lenVar);
   }
   return mutableProperties;

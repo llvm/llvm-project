@@ -35,9 +35,7 @@ static fir::CharacterType recoverCharacterType(mlir::Type type) {
     else
       break;
   }
-  if (auto seqType = type.dyn_cast<fir::SequenceType>())
-    type = seqType.getEleTy();
-  return type.cast<fir::CharacterType>();
+  return fir::unwrapSequenceType(type).cast<fir::CharacterType>();
 }
 
 /// Get fir.char<kind> type with the same kind as inside str.
@@ -291,7 +289,19 @@ mlir::Value Fortran::lower::CharacterExprHelper::getCharBoxBuffer(
   return buff;
 }
 
-/// Create a loop to copy `count` characters from `src` to `dest`.
+/// Get the LLVM intrinsic for `memmove`. Use the 64 bit version.
+static mlir::FuncOp getLlvmMemmove(Fortran::lower::FirOpBuilder &builder) {
+  auto ptrTy = builder.getRefType(builder.getIntegerType(8));
+  llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type(),
+                                        builder.getI1Type()};
+  auto memmoveTy =
+      mlir::FunctionType::get(builder.getContext(), args, llvm::None);
+  return builder.addNamedFunction(builder.getUnknownLoc(),
+                                  "llvm.memmove.p0i8.p0i8.i64", memmoveTy);
+}
+
+/// Create a loop to copy `count` characters from `src` to `dest`. Note that the
+/// KIND indicates the number of bits in a code point. (ASCII, UCS-2, or UCS-4.)
 void Fortran::lower::CharacterExprHelper::createCopy(
     const fir::CharBoxValue &dest, const fir::CharBoxValue &src,
     mlir::Value count) {
@@ -300,11 +310,28 @@ void Fortran::lower::CharacterExprHelper::createCopy(
   LLVM_DEBUG(llvm::dbgs() << "create char copy from: "; src.dump();
              llvm::dbgs() << " to: "; dest.dump();
              llvm::dbgs() << " count: " << count << '\n');
-  Fortran::lower::DoLoopHelper{builder, loc}.createLoop(
-      count, [&](Fortran::lower::FirOpBuilder &, mlir::Value index) {
-        auto charVal = createLoadCharAt(fromBuff, index);
-        createStoreCharAt(toBuff, index, charVal);
-      });
+  auto kind = getCharacterKind(src.getBuffer().getType());
+  // If the src and dest are the same KIND, then use memmove to move the bits.
+  // We don't have to worry about overlapping ranges with memmove.
+  if (getCharacterKind(dest.getBuffer().getType()) == kind) {
+    auto bytes = builder.getKindMap().getCharacterBitsize(kind) / 8;
+    auto i64Ty = builder.getI64Type();
+    auto kindBytes = builder.createIntegerConstant(loc, i64Ty, bytes);
+    auto castCount = builder.createConvert(loc, i64Ty, count);
+    auto totalBytes = builder.create<mlir::MulIOp>(loc, kindBytes, castCount);
+    auto notVolatile = builder.createBool(loc, false);
+    auto memmv = getLlvmMemmove(builder);
+    auto argTys = memmv.getType().getInputs();
+    auto toPtr = builder.createConvert(loc, argTys[0], toBuff);
+    auto fromPtr = builder.createConvert(loc, argTys[1], fromBuff);
+    builder.create<fir::CallOp>(
+        loc, memmv, mlir::ValueRange{toPtr, fromPtr, totalBytes, notVolatile});
+    return;
+  }
+
+  // Convert a CHARACTER of one KIND into a CHARACTER of another KIND.
+  builder.create<fir::CharConvertOp>(loc, src.getBuffer(), count,
+                                     dest.getBuffer());
 }
 
 void Fortran::lower::CharacterExprHelper::createPadding(
@@ -332,8 +359,8 @@ Fortran::lower::CharacterExprHelper::createCharacterTemp(mlir::Type type,
   llvm::SmallVector<mlir::Value> lenParams;
   if (typeLen == fir::CharacterType::unknownLen())
     lenParams.push_back(len);
-  auto ref = builder.allocateLocal(loc, charTy, llvm::StringRef{}, llvm::None,
-                                   lenParams);
+  auto ref = builder.allocateLocal(loc, charTy, ".chrtmp", "",
+                                   /*shape=*/llvm::None, lenParams);
   return {ref, len};
 }
 
@@ -369,18 +396,8 @@ void Fortran::lower::CharacterExprHelper::createAssign(
     copyCount = Fortran::lower::genMin(builder, loc, {lhsLen, rhsLen});
   }
 
-  // If rhs is in memory, always assumes rhs might overlap with lhs
-  // in a way that require a temp for the copy. That can be optimize later.
-  // Only create a temp of copyCount size because we do not need more from
-  // rhs.
-  // TODO: It should be rare that the assignment is between overlapping
-  // substrings of the same variable. So this extra copy is pessimistic in the
-  // common case.
-  auto temp = createCharacterTemp(getCharacterType(rhs), copyCount);
-  createCopy(temp, rhs, copyCount);
-
   // Actual copy
-  createCopy(lhs, temp, copyCount);
+  createCopy(lhs, rhs, copyCount);
 
   // Pad if needed.
   if (!compileTimeSameLength) {
@@ -593,7 +610,7 @@ bool Fortran::lower::CharacterExprHelper::isArray(mlir::Type type) {
 bool Fortran::lower::CharacterExprHelper::hasConstantLengthInType(
     const fir::ExtendedValue &exv) {
   auto charTy = recoverCharacterType(fir::getBase(exv).getType());
-  return charTy.getLen() != fir::CharacterType::unknownLen();
+  return charTy.hasConstantLen();
 }
 
 mlir::Value
