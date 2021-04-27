@@ -622,12 +622,12 @@ define void @test_guard_uge(i32 %blockSize) {
 ; CHECK-NEXT:    %shr = lshr i32 %blockSize, 2
 ; CHECK-NEXT:    --> (%blockSize /u 4) U: [0,1073741824) S: [0,1073741824)
 ; CHECK-NEXT:    %iv = phi i32 [ %dec, %while.body ], [ %shr, %while.body.preheader ]
-; CHECK-NEXT:    --> {(%blockSize /u 4),+,-1}<%while.body> U: full-set S: full-set Exits: 1 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    --> {(%blockSize /u 4),+,-1}<%while.body> U: [-1073741822,1073741824) S: [-1073741822,1073741824) Exits: 1 LoopDispositions: { %while.body: Computable }
 ; CHECK-NEXT:    %dec = add i32 %iv, -1
-; CHECK-NEXT:    --> {(-1 + (%blockSize /u 4))<nsw>,+,-1}<%while.body> U: full-set S: full-set Exits: 0 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    --> {(-1 + (%blockSize /u 4))<nsw>,+,-1}<%while.body> U: [-1073741823,1073741823) S: [-1073741823,1073741823) Exits: 0 LoopDispositions: { %while.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_uge
 ; CHECK-NEXT:  Loop %while.body: backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
-; CHECK-NEXT:  Loop %while.body: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %while.body: max backedge-taken count is 1073741822
 ; CHECK-NEXT:  Loop %while.body: Predicated backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %while.body: Trip multiple is 1
@@ -658,12 +658,12 @@ define void @test_guard_ugt(i32 %blockSize) {
 ; CHECK-NEXT:    %shr = lshr i32 %blockSize, 2
 ; CHECK-NEXT:    --> (%blockSize /u 4) U: [0,1073741824) S: [0,1073741824)
 ; CHECK-NEXT:    %iv = phi i32 [ %dec, %while.body ], [ %shr, %while.body.preheader ]
-; CHECK-NEXT:    --> {(%blockSize /u 4),+,-1}<%while.body> U: full-set S: full-set Exits: 1 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    --> {(%blockSize /u 4),+,-1}<%while.body> U: [-1073741822,1073741824) S: [-1073741822,1073741824) Exits: 1 LoopDispositions: { %while.body: Computable }
 ; CHECK-NEXT:    %dec = add i32 %iv, -1
-; CHECK-NEXT:    --> {(-1 + (%blockSize /u 4))<nsw>,+,-1}<%while.body> U: full-set S: full-set Exits: 0 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    --> {(-1 + (%blockSize /u 4))<nsw>,+,-1}<%while.body> U: [-1073741823,1073741823) S: [-1073741823,1073741823) Exits: 0 LoopDispositions: { %while.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_ugt
 ; CHECK-NEXT:  Loop %while.body: backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
-; CHECK-NEXT:  Loop %while.body: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %while.body: max backedge-taken count is 1073741822
 ; CHECK-NEXT:  Loop %while.body: Predicated backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %while.body: Trip multiple is 1
@@ -694,12 +694,12 @@ define void @test_guard_uge_and_ule(i32 %blockSize) {
 ; CHECK-NEXT:    %shr = lshr i32 %blockSize, 2
 ; CHECK-NEXT:    --> (%blockSize /u 4) U: [0,1073741824) S: [0,1073741824)
 ; CHECK-NEXT:    %iv = phi i32 [ %dec, %while.body ], [ %shr, %while.body.preheader ]
-; CHECK-NEXT:    --> {(%blockSize /u 4),+,-1}<%while.body> U: full-set S: full-set Exits: 1 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    --> {(%blockSize /u 4),+,-1}<%while.body> U: [-255,1073741824) S: [-255,1073741824) Exits: 1 LoopDispositions: { %while.body: Computable }
 ; CHECK-NEXT:    %dec = add i32 %iv, -1
-; CHECK-NEXT:    --> {(-1 + (%blockSize /u 4))<nsw>,+,-1}<%while.body> U: full-set S: full-set Exits: 0 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    --> {(-1 + (%blockSize /u 4))<nsw>,+,-1}<%while.body> U: [-256,1073741823) S: [-256,1073741823) Exits: 0 LoopDispositions: { %while.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_uge_and_ule
 ; CHECK-NEXT:  Loop %while.body: backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
-; CHECK-NEXT:  Loop %while.body: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %while.body: max backedge-taken count is 255
 ; CHECK-NEXT:  Loop %while.body: Predicated backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %while.body: Trip multiple is 1
@@ -734,12 +734,12 @@ define void @test_guard_ugt_and_ult(i32 %blockSize) {
 ; CHECK-NEXT:    %shr = lshr i32 %blockSize, 2
 ; CHECK-NEXT:    --> (%blockSize /u 4) U: [0,1073741824) S: [0,1073741824)
 ; CHECK-NEXT:    %iv = phi i32 [ %dec, %while.body ], [ %shr, %while.body.preheader ]
-; CHECK-NEXT:    --> {(%blockSize /u 4),+,-1}<%while.body> U: full-set S: full-set Exits: 1 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    --> {(%blockSize /u 4),+,-1}<%while.body> U: [-255,1073741824) S: [-255,1073741824) Exits: 1 LoopDispositions: { %while.body: Computable }
 ; CHECK-NEXT:    %dec = add i32 %iv, -1
-; CHECK-NEXT:    --> {(-1 + (%blockSize /u 4))<nsw>,+,-1}<%while.body> U: full-set S: full-set Exits: 0 LoopDispositions: { %while.body: Computable }
+; CHECK-NEXT:    --> {(-1 + (%blockSize /u 4))<nsw>,+,-1}<%while.body> U: [-256,1073741823) S: [-256,1073741823) Exits: 0 LoopDispositions: { %while.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_ugt_and_ult
 ; CHECK-NEXT:  Loop %while.body: backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
-; CHECK-NEXT:  Loop %while.body: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %while.body: max backedge-taken count is 255
 ; CHECK-NEXT:  Loop %while.body: Predicated backedge-taken count is (-1 + (%blockSize /u 4))<nsw>
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %while.body: Trip multiple is 1
