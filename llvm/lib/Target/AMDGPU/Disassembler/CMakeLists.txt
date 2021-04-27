@@ -10,6 +10,7 @@ add_llvm_component_library(LLVMAMDGPUDisassembler
   AMDGPUUtils
   MC
   MCDisassembler
+  Object
   Support
 
   ADD_TO_COMPONENT
