@@ -1965,6 +1965,7 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc) {
 static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
                                   int sig, __sanitizer_siginfo *info,
                                   void *uctx) {
+  CHECK(thr->slot);
   __sanitizer_sigaction *sigactions = interceptor_ctx()->sigactions;
   if (acquire)
     Acquire(thr, 0, (uptr)&sigactions[sig]);

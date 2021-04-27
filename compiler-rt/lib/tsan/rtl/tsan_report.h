@@ -43,7 +43,7 @@ struct ReportStack {
 };
 
 struct ReportMopMutex {
-  u64 id;
+  int id;
   bool write;
 };
 
@@ -91,9 +91,8 @@ struct ReportThread {
 };
 
 struct ReportMutex {
-  u64 id;
+  int id;
   uptr addr;
-  bool destroyed;
   ReportStack *stack;
 };
 

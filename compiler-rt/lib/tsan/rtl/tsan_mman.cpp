@@ -219,8 +219,17 @@ void *user_reallocarray(ThreadState *thr, uptr pc, void *p, uptr size, uptr n) {
 
 void OnUserAlloc(ThreadState *thr, uptr pc, uptr p, uptr sz, bool write) {
   DPrintf("#%d: alloc(%zu) = 0x%zx\n", thr->tid, sz, p);
+  // Note: this can run before thread initialization/after finalization.
+  // As a result this is not necessarily synchronized with DoReset,
+  // which iterates over and resets all sync objects,
+  // but it is fine to create new MBlocks in this context.
   ctx->metamap.AllocBlock(thr, pc, p, sz);
-  if (write && thr->ignore_reads_and_writes == 0)
+  // If this runs before thread initialization/after finalization
+  // and we don't have trace initialized, we can't imitate writes.
+  // In such case just reset the shadow range, it is fine since
+  // it affects only a small fraction of special objects.
+  if (write && thr->ignore_reads_and_writes == 0 &&
+      atomic_load_relaxed(&thr->trace_pos))
     MemoryRangeImitateWrite(thr, pc, (uptr)p, sz);
   else
     MemoryResetRange(thr, pc, (uptr)p, sz);
@@ -228,7 +237,12 @@ void OnUserAlloc(ThreadState *thr, uptr pc, uptr p, uptr sz, bool write) {
 
 void OnUserFree(ThreadState *thr, uptr pc, uptr p, bool write) {
   CHECK_NE(p, (void*)0);
-  uptr sz = ctx->metamap.FreeBlock(thr->proc(), p);
+  if (!thr->slot) {
+    ctx->metamap.FreeBlock(thr->proc(), p, false);
+    return;
+  }
+  SlotLocker locker(thr);
+  uptr sz = ctx->metamap.FreeBlock(thr->proc(), p, true);
   DPrintf("#%d: free(0x%zx, %zu)\n", thr->tid, p, sz);
   if (write && thr->ignore_reads_and_writes == 0)
     MemoryRangeFreed(thr, pc, (uptr)p, sz);
@@ -393,8 +407,6 @@ uptr __sanitizer_get_allocated_size(const void *p) {
 
 void __tsan_on_thread_idle() {
   ThreadState *thr = cur_thread();
-  thr->clock.ResetCached(&thr->proc()->clock_cache);
-  thr->last_sleep_clock.ResetCached(&thr->proc()->clock_cache);
   allocator()->SwallowCache(&thr->proc()->alloc_cache);
   internal_allocator()->SwallowCache(&thr->proc()->internal_alloc_cache);
   ctx->metamap.OnProcIdle(thr->proc());
