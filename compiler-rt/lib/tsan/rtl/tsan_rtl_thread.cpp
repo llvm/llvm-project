@@ -210,7 +210,7 @@ static void ThreadCheckIgnore(ThreadState *thr) {}
 void ThreadFinalize(ThreadState *thr) {
   ThreadCheckIgnore(thr);
 #if !SANITIZER_GO
-  if (!ShouldReport(thr, ReportTypeThreadLeak))
+  if (!flags()->report_thread_leaks)
     return;
   ThreadRegistryLock l(ctx->thread_registry);
   Vector<ThreadLeak> leaks;
