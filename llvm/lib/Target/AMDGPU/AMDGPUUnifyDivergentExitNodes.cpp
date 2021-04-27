@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "GCNSubtarget.h"
 #include "SIDefines.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -29,6 +30,7 @@
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -43,6 +45,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -56,6 +59,7 @@ namespace {
 class AMDGPUUnifyDivergentExitNodes : public FunctionPass {
 private:
   const TargetTransformInfo *TTI = nullptr;
+  const GCNSubtarget *ST = nullptr;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -110,6 +114,7 @@ void AMDGPUUnifyDivergentExitNodes::getAnalysisUsage(AnalysisUsage &AU) const{
   FunctionPass::getAnalysisUsage(AU);
 
   AU.addRequired<TargetTransformInfoWrapperPass>();
+  AU.addRequired<TargetPassConfig>();
 }
 
 /// \returns true if \p BB is reachable through only uniform branches.
@@ -165,14 +170,16 @@ BasicBlock *AMDGPUUnifyDivergentExitNodes::unifyReturnBlockSet(
     removeDoneExport(F);
 
     Value *Undef = UndefValue::get(B.getFloatTy());
-    B.CreateIntrinsic(Intrinsic::amdgcn_exp, { B.getFloatTy() },
-                      {
-                        B.getInt32(AMDGPU::Exp::ET_NULL),
-                        B.getInt32(0), // enabled channels
-                        Undef, Undef, Undef, Undef, // values
-                        B.getTrue(), // done
-                        B.getTrue(), // valid mask
-                      });
+    B.CreateIntrinsic(
+        Intrinsic::amdgcn_exp, {B.getFloatTy()},
+        {
+            B.getInt32(ST->hasNullExportTarget() ? AMDGPU::Exp::ET_NULL
+                                                 : AMDGPU::Exp::ET_MRT0),
+            B.getInt32(0),              // enabled channels
+            Undef, Undef, Undef, Undef, // values
+            B.getTrue(),                // done
+            B.getTrue(),                // valid mask
+        });
   }
 
   PHINode *PN = nullptr;
@@ -230,6 +237,10 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
 
   LegacyDivergenceAnalysis &DA = getAnalysis<LegacyDivergenceAnalysis>();
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+
+  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
+  const TargetMachine &TM = TPC.getTM<TargetMachine>();
+  ST = &TM.getSubtarget<GCNSubtarget>(F);
 
   // Loop over all of the blocks in a function, tracking all of the blocks that
   // return.
