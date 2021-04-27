@@ -56,6 +56,14 @@ def int_minmax_to_med3 : GICombineRule<
          [{ return RegBankHelper.matchIntMinMaxToMed3(*${min_or_max}, ${matchinfo}); }]),
   (apply [{ RegBankHelper.applyMed3(*${min_or_max}, ${matchinfo}); }])>;
 
+def remove_fcanonicalize_matchinfo : GIDefMatchData<"Register">;
+
+def remove_fcanonicalize : GICombineRule<
+  (defs root:$fcanonicalize, remove_fcanonicalize_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_FCANONICALIZE):$fcanonicalize,
+         [{ return PostLegalizerHelper.matchRemoveFcanonicalize(*${fcanonicalize}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${fcanonicalize}, ${matchinfo}); }])>;
+
 // Combines which should only apply on SI/VI
 def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;
 
@@ -68,7 +76,7 @@ def AMDGPUPreLegalizerCombinerHelper: GICombinerHelper<
 def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<
   "AMDGPUGenPostLegalizerCombinerHelper",
   [all_combines, gfx6gfx7_combines,
-   uchar_to_float, cvt_f32_ubyteN]> {
+   uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize]> {
   let DisableRuleOption = "amdgpupostlegalizercombiner-disable-rule";
   let StateClass = "AMDGPUPostLegalizerCombinerHelperState";
   let AdditionalArguments = [];
