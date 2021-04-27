@@ -676,8 +676,7 @@ sizeof...($TemplateParameter[[Elements]]);
         @end
         @interface $Class_decl[[Klass]] <$Interface[[Protocol]]>
         @end
-        // FIXME: protocol list in ObjCObjectType should be highlighted.
-        id<Protocol> $Variable_decl[[x]];
+        id<$Interface[[Protocol]]> $Variable_decl[[x]];
       )cpp",
       R"cpp(
         // ObjC: Categories
