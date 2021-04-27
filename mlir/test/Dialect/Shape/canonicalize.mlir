@@ -1242,13 +1242,24 @@ func @broadcast_on_single_operand(%a : tensor<?xindex>) {
 
 // -----
 
-// CHECK-LABEL: @broadcast_on_single_operand
+// CHECK-LABEL: @broadcast_as_tensor_cast
 // CHECK-SAME: (%[[A:.*]]: tensor<3xindex>)
-func @broadcast_on_single_operand(%a : tensor<3xindex>) {
-  // CHECK: broadcast %[[A]]
+func @broadcast_as_tensor_cast(%a : tensor<3xindex>) -> tensor<?xindex> {
+  // CHECK: %[[RESULT:.*]] = tensor.cast %[[A]] : tensor<3xindex> to tensor<?xindex>
+  // CHECK: return %[[RESULT]] : tensor<?xindex>
   %0 = shape.broadcast %a : tensor<3xindex> -> tensor<?xindex>
-  "use"(%0) : (tensor<?xindex>) -> ()
-  return
+  return %0 : tensor<?xindex>
+}
+
+// -----
+
+// CHECK-LABEL: @broadcast_as_from_extent_tensor
+// CHECK-SAME: (%[[A:.*]]: tensor<?xindex>)
+func @broadcast_as_from_extent_tensor(%a : tensor<?xindex>) -> !shape.shape {
+  // CHECK: %[[RESULT:.*]] = shape.from_extent_tensor %[[A]] : tensor<?xindex>
+  // CHECK: return %[[RESULT]] : !shape.shape
+  %0 = shape.broadcast %a : tensor<?xindex> -> !shape.shape
+  return %0 : !shape.shape
 }
 
 // -----
