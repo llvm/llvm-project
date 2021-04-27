@@ -371,6 +371,8 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     case MachO::LC_LOAD_WEAK_DYLIB:
     case MachO::LC_UUID:
     case MachO::LC_SOURCE_VERSION:
+    case MachO::LC_THREAD:
+    case MachO::LC_UNIXTHREAD:
       // Nothing to update.
       break;
     default:
