@@ -30,6 +30,10 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   unsigned FPU;
   bool HasCRC;
   bool HasCrypto;
+  bool HasAES;
+  bool HasSHA2;
+  bool HasSHA3;
+  bool HasSM4;
   bool HasUnaligned;
   bool HasFullFP16;
   bool HasDotProd;
