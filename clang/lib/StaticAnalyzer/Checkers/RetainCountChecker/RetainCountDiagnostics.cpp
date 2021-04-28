@@ -616,7 +616,7 @@ static Optional<std::string> describeRegion(const MemRegion *MR) {
   return None;
 }
 
-using Bindings = llvm::SmallVector<const MemRegion *, 4>;
+using Bindings = llvm::SmallVector<std::pair<const MemRegion *, SVal>, 4>;
 
 class VarBindingsCollector : public StoreManager::BindingsHandler {
   SymbolRef Sym;
@@ -633,7 +633,7 @@ public:
       return true;
 
     if (isa<NonParamVarRegion>(R))
-      Result.push_back(R);
+      Result.emplace_back(R, Val);
 
     return true;
   }
@@ -968,11 +968,28 @@ void RefLeakReport::findBindingToReport(CheckerContext &Ctx,
   // `AllocFirstBinding` to be one of them.  In situations like this,
   // it would still be the easiest case to explain to our users.
   if (!AllVarBindings.empty() &&
-      llvm::count(AllVarBindings, AllocFirstBinding) == 0)
+      llvm::count_if(AllVarBindings,
+                     [this](const std::pair<const MemRegion *, SVal> Binding) {
+                       return Binding.first == AllocFirstBinding;
+                     }) == 0) {
     // Let's pick one of them at random (if there is something to pick from).
-    AllocBindingToReport = AllVarBindings[0];
-  else
+    AllocBindingToReport = AllVarBindings[0].first;
+
+    // Because 'AllocBindingToReport' is not the the same as
+    // 'AllocFirstBinding', we need to explain how the leaking object
+    // got from one to another.
+    //
+    // NOTE: We use the actual SVal stored in AllocBindingToReport here because
+    //       FindLastStoreBRVisitor compares SVal's and it can get trickier for
+    //       something like derived regions if we want to construct SVal from
+    //       Sym. Instead, we take the value that is definitely stored in that
+    //       region, thus guaranteeing that FindLastStoreBRVisitor will work.
+    addVisitor(std::make_unique<FindLastStoreBRVisitor>(
+        AllVarBindings[0].second.castAs<KnownSVal>(), AllocBindingToReport,
+        false, bugreporter::TrackingKind::Thorough));
+  } else {
     AllocBindingToReport = AllocFirstBinding;
+  }
 }
 
 RefLeakReport::RefLeakReport(const RefCountBug &D, const LangOptions &LOpts,

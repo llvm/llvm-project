@@ -335,8 +335,11 @@ int seed();
 @implementation LeakReassignmentTests
 +(void)testLeakAliasSimple {
   id Original = [[MyObj alloc] initY]; // expected-note {{Calling 'initY'}}
-                                       // expected-note@-1 {{Returning from 'initY'}}
-  id New = Original;
+                                       // expected-note@215 {{Value assigned to 'self'}}
+                                       // expected-note@216 {{Returning pointer (loaded from 'self')}}
+                                       // expected-note@-3 {{Returning from 'initY'}}
+                                       // expected-note@-4 {{'Original' initialized here}}
+  id New = Original;                   // expected-note {{'New' initialized here}}
   Original = [[MyObj alloc] initZ];
   (void)New;
   [Original release]; // expected-warning {{Potential leak of an object stored into 'New'}}
@@ -345,9 +348,12 @@ int seed();
 
 +(void)testLeakAliasChain {
   id Original = [[MyObj alloc] initY]; // expected-note {{Calling 'initY'}}
-                                       // expected-note@-1 {{Returning from 'initY'}}
-  id Intermediate = Original;
-  id New = Intermediate;
+                                       // expected-note@215 {{Value assigned to 'self'}}
+                                       // expected-note@216 {{Returning pointer (loaded from 'self')}}
+                                       // expected-note@-3 {{Returning from 'initY'}}
+                                       // expected-note@-4 {{'Original' initialized here}}
+  id Intermediate = Original;          // expected-note {{'Intermediate' initialized here}}
+  id New = Intermediate;               // expected-note {{'New' initialized here}}
   Original = [[MyObj alloc] initZ];
   (void)New;
   [Original release]; // expected-warning {{Potential leak of an object stored into 'New'}}
@@ -369,8 +375,12 @@ int seed();
 
 +(void)testLeakAliasDeathInExpr {
   id Original = [[MyObj alloc] initY]; // expected-note {{Calling 'initY'}}
-                                       // expected-note@-1 {{Returning from 'initY'}}
-  id New = Original;
+                                       // expected-note@215 {{Value assigned to 'self'}}
+                                       // expected-note@216 {{Returning pointer (loaded from 'self')}}
+                                       // expected-note@-3 {{Returning from 'initY'}}
+                                       // expected-note@-4 {{'Original' initialized here}}
+  id New = 0;
+  New = Original; // expected-note {{Value assigned to 'New'}}
   Original = [[MyObj alloc] initZ];
   [self log:New with:[self calculate]];
   [Original release]; // expected-warning {{Potential leak of an object stored into 'New'}}
