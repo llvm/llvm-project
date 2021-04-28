@@ -2094,7 +2094,7 @@ namespace {
 
 static constexpr int64_t kNoMatch = -1;
 
-// Folds away TiledLoopOp input tensors if they have no uses within the body.
+// Folds away TiledLoopOp inputs if they have no uses within the body.
 //
 // Example:
 //
@@ -2117,7 +2117,7 @@ struct TiledLoopInputsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
       Value in, bbArg;
       size_t index = en.index();
       std::tie(in, bbArg) = en.value();
-      if (!in.getType().isa<RankedTensorType>() || !bbArg.use_empty()) {
+      if (!bbArg.use_empty()) {
         oldInputIdToNew[index] = newInputs.size();
         newInputs.push_back(in);
       }
@@ -2142,7 +2142,7 @@ struct TiledLoopInputsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
         OpBuilder::atBlockEnd(newTiledLoop.getBody(), rewriter.getListener());
     for (auto &op : *tiledLoop.getBody())
       innerBuilder.clone(op, bvm);
-    rewriter.eraseOp(tiledLoop);
+    rewriter.replaceOp(tiledLoop, newTiledLoop.getResults());
 
     return success();
   }
@@ -2184,6 +2184,10 @@ struct TiledLoopResultsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
     // Store ids of the corresponding old and new output operands.
     SmallVector<int64_t, 2> oldOutputIdToNew(tiledLoop.outputs().size(),
                                              kNoMatch);
+    // Store ids of the corresponding old and new results.
+    SmallVector<int64_t, 2> oldResultIdToNew(tiledLoop.getNumResults(),
+                                             kNoMatch);
+    SmallVector<Value, 2> resultReplacement(tiledLoop.getNumResults());
     for (auto en : llvm::enumerate(
              llvm::zip(tiledLoop.outputs(), tiledLoop.getRegionOutputArgs()))) {
       size_t index = en.index();
@@ -2199,6 +2203,8 @@ struct TiledLoopResultsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
       Value yieldArg = yieldOp.getOperand(resultId);
       if (yieldArg != outRegionArg || !result.use_empty()) {
         oldOutputIdToNew[index] = newOutputOperands.size();
+        oldResultIdToNew[resultId] = newYieldArgs.size();
+        resultReplacement[resultId] = out;
         newOutputOperands.push_back(out);
         newYieldArgs.push_back(yieldArg);
       }
@@ -2228,8 +2234,14 @@ struct TiledLoopResultsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
         OpBuilder::atBlockEnd(newTiledLoop.getBody(), rewriter.getListener());
     for (auto &op : tiledLoop.getBody()->without_terminator())
       innerBuilder.clone(op, bvm);
-    innerBuilder.create<linalg::YieldOp>(loc, newYieldArgs);
-    rewriter.eraseOp(tiledLoop);
+    innerBuilder.create<linalg::YieldOp>(
+        loc, llvm::to_vector<2>(llvm::map_range(
+                 newYieldArgs, [&](Value arg) { return bvm.lookup(arg); })));
+
+    for (const auto &en : llvm::enumerate(oldResultIdToNew))
+      if (en.value() != kNoMatch)
+        resultReplacement[en.index()] = newTiledLoop.getResult(en.value());
+    rewriter.replaceOp(tiledLoop, resultReplacement);
 
     return success();
   }
