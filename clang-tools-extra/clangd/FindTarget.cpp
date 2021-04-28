@@ -306,6 +306,9 @@ public:
         Outer.add(OME->getMethodDecl(), Flags);
       }
       void VisitObjCPropertyRefExpr(const ObjCPropertyRefExpr *OPRE) {
+        // FIXME: We miss visiting the class receiver if one exists, which
+        // means we skip the corresponding ObjCInterfaceDecl ref since it
+        // doesn't have a corresponding node.
         if (OPRE->isExplicitProperty())
           Outer.add(OPRE->getExplicitProperty(), Flags);
         else {
@@ -763,6 +766,13 @@ llvm::SmallVector<ReferenceLoc> refInStmt(const Stmt *S,
     }
 
     void VisitObjCPropertyRefExpr(const ObjCPropertyRefExpr *E) {
+      // There's no contained TypeLoc node for a class receiver type.
+      if (E->isClassReceiver()) {
+        Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                    E->getReceiverLocation(),
+                                    /*IsDecl=*/false,
+                                    {E->getClassReceiver()}});
+      }
       Refs.push_back(ReferenceLoc{
           NestedNameSpecifierLoc(), E->getLocation(),
           /*IsDecl=*/false,
