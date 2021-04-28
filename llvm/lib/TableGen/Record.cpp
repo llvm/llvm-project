@@ -1398,6 +1398,26 @@ Init *TernOpInit::Fold(Record *CurRec) const {
     }
     break;
   }
+
+  case FIND: {
+    StringInit *LHSs = dyn_cast<StringInit>(LHS);
+    StringInit *MHSs = dyn_cast<StringInit>(MHS);
+    IntInit *RHSi = dyn_cast<IntInit>(RHS);
+    if (LHSs && MHSs && RHSi) {
+      int64_t SourceSize = LHSs->getValue().size();
+      int64_t Start = RHSi->getValue();
+      if (Start < 0 || Start > SourceSize)
+        PrintError(CurRec->getLoc(),
+                   Twine("!find start position is out of range 0...") +
+                       std::to_string(SourceSize) + ": " +
+                       std::to_string(Start));
+      auto I = LHSs->getValue().find(MHSs->getValue(), Start);
+      if (I == std::string::npos)
+        return IntInit::get(-1);
+      return IntInit::get(I);
+    }
+    break;
+  }
   }
 
   return const_cast<TernOpInit *>(this);
@@ -1443,6 +1463,7 @@ std::string TernOpInit::getAsString() const {
   case IF: Result = "!if"; break;
   case SUBST: Result = "!subst"; break;
   case SUBSTR: Result = "!substr"; break;
+  case FIND: Result = "!find"; break;
   }
   return (Result + "(" +
           (UnquotedLHS ? LHS->getAsUnquotedString() : LHS->getAsString()) +
