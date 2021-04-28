@@ -299,6 +299,10 @@
 // RUN: %clang_cl /d1PP -### -- %s 2>&1 | FileCheck -check-prefix=d1PP %s
 // d1PP: -dD
 
+// RUN: %clang_cl /c /QIntel-jcc-erratum -### -- %s 2>&1 | FileCheck -check-prefix=jcceratum %s
+// jcceratum: "-mllvm" "-x86-branches-within-32B-boundaries"
+
+
 // We forward any unrecognized -W diagnostic options to cc1.
 // RUN: %clang_cl -Wunused-pragmas -### -- %s 2>&1 | FileCheck -check-prefix=WJoined %s
 // WJoined: "-cc1"
