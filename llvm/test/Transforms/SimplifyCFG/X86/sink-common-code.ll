@@ -1381,6 +1381,32 @@ if.end:
   ret i32 1
 }
 
+define void @direct_caller(i1 %c) {
+; CHECK-LABEL: @direct_caller(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[CALL_FOO:%.*]], label [[CALL_BAR:%.*]]
+; CHECK:       call_foo:
+; CHECK-NEXT:    call void @direct_callee()
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       call_bar:
+; CHECK-NEXT:    call void @direct_callee2()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+  br i1 %c, label %call_foo, label %call_bar
+
+call_foo:
+  call void @direct_callee()
+  br label %end
+
+call_bar:
+  call void @direct_callee2()
+  br label %end
+
+end:
+  ret void
+}
+
 define void @indirect_caller(i1 %c, i32 %v, void (i32)* %foo, void (i32)* %bar) {
 ; CHECK-LABEL: @indirect_caller(
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[CALL_FOO:%.*]], label [[CALL_BAR:%.*]]
@@ -1406,6 +1432,63 @@ call_bar:
 end:
   ret void
 }
+
+define void @maybe_indirect_caller(void ()* %fun) {
+; CHECK-LABEL: @maybe_indirect_caller(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq void ()* [[FUN:%.*]], @direct_callee
+; CHECK-NEXT:    br i1 [[C]], label [[IF_TRUE_DIRECT_TARG:%.*]], label [[IF_FALSE_ORIG_INDIRECT:%.*]]
+; CHECK:       if.true.direct_targ:
+; CHECK-NEXT:    tail call void @direct_callee()
+; CHECK-NEXT:    br label [[IF_END_ICP:%.*]]
+; CHECK:       if.false.orig_indirect:
+; CHECK-NEXT:    tail call void [[FUN]]()
+; CHECK-NEXT:    br label [[IF_END_ICP]]
+; CHECK:       if.end.icp:
+; CHECK-NEXT:    ret void
+;
+  %c = icmp eq void ()* %fun, @direct_callee
+  br i1 %c, label %if.true.direct_targ, label %if.false.orig_indirect
+
+if.true.direct_targ:
+  tail call void @direct_callee()
+  br label %if.end.icp
+
+if.false.orig_indirect:
+  tail call void %fun()
+  br label %if.end.icp
+
+if.end.icp:
+  ret void
+}
+define void @maybe_indirect_caller2(void ()* %fun) {
+; CHECK-LABEL: @maybe_indirect_caller2(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq void ()* [[FUN:%.*]], @direct_callee
+; CHECK-NEXT:    br i1 [[C]], label [[IF_TRUE_DIRECT_TARG:%.*]], label [[IF_FALSE_ORIG_INDIRECT:%.*]]
+; CHECK:       if.false.orig_indirect:
+; CHECK-NEXT:    tail call void [[FUN]]()
+; CHECK-NEXT:    br label [[IF_END_ICP:%.*]]
+; CHECK:       if.true.direct_targ:
+; CHECK-NEXT:    tail call void @direct_callee()
+; CHECK-NEXT:    br label [[IF_END_ICP]]
+; CHECK:       if.end.icp:
+; CHECK-NEXT:    ret void
+;
+  %c = icmp eq void ()* %fun, @direct_callee
+  br i1 %c, label %if.true.direct_targ, label %if.false.orig_indirect
+
+if.false.orig_indirect:
+  tail call void %fun()
+  br label %if.end.icp
+
+if.true.direct_targ:
+  tail call void @direct_callee()
+  br label %if.end.icp
+
+if.end.icp:
+  ret void
+}
+declare void @direct_callee()
+declare void @direct_callee2()
 
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
