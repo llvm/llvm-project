@@ -1,14 +1,14 @@
-// RUN: %clangxx %s -### -no-canonical-prefixes --target=x86_64-fuchsia \
+// RUN: %clangxx %s -### -no-canonical-prefixes --target=x86_64-unknown-fuchsia \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
-// RUN: %clangxx %s -### -no-canonical-prefixes --target=aarch64-fuchsia \
+// RUN: %clangxx %s -### -no-canonical-prefixes --target=aarch64-unknown-fuchsia \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64 %s
-// RUN: %clangxx %s -### -no-canonical-prefixes --target=riscv64-fuchsia \
+// RUN: %clangxx %s -### -no-canonical-prefixes --target=riscv64-unknown-fuchsia \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
@@ -36,9 +36,9 @@
 // CHECK: "-lc++"
 // CHECK: "-lm"
 // CHECK: "--pop-state"
-// CHECK-X86_64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
-// CHECK-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
-// CHECK-RISCV64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}riscv64-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
+// CHECK-X86_64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
+// CHECK-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aarch64-unknown-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
+// CHECK-RISCV64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}riscv64-unknown-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
 // CHECK: "-lc"
 // CHECK-NOT: crtend.o
 // CHECK-NOT: crtn.o
@@ -60,97 +60,97 @@
 // CHECK-STATIC: "--pop-state"
 // CHECK-STATIC: "-lc"
 
-// RUN: %clangxx %s -### --target=x86_64-fuchsia -nostdlib++ -fuse-ld=lld 2>&1 \
+// RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -nostdlib++ -fuse-ld=lld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-NOSTDLIBXX
 // CHECK-NOSTDLIBXX-NOT: "-lc++"
 // CHECK-NOSTDLIBXX-NOT: "-lm"
 // CHECK-NOSTDLIBXX: "-lc"
 
-// RUN: %clangxx %s -### --target=x86_64-fuchsia \
+// RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86
-// RUN: %clangxx %s -### --target=x86_64-fuchsia -fsanitize=address \
+// RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -fsanitize=address \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-ASAN-X86
-// RUN: %clangxx %s -### --target=x86_64-fuchsia -fno-exceptions \
+// RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -fno-exceptions \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-NOEXCEPT-X86
-// RUN: %clangxx %s -### --target=x86_64-fuchsia -fsanitize=address -fno-exceptions \
+// RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -fsanitize=address -fno-exceptions \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-ASAN-NOEXCEPT-X86
-// RUN: %clangxx %s -### --target=x86_64-fuchsia -fexperimental-relative-c++-abi-vtables \
+// RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -fexperimental-relative-c++-abi-vtables \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-RELATIVE-VTABLES-X86
-// RUN: %clangxx %s -### --target=x86_64-fuchsia -fexperimental-relative-c++-abi-vtables -fno-exceptions \
+// RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -fexperimental-relative-c++-abi-vtables -fno-exceptions \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-RELATIVE-VTABLES-NOEXCEPT-X86
-// RUN: %clangxx %s -### --target=x86_64-fuchsia -fexperimental-relative-c++-abi-vtables -fsanitize=address \
+// RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -fexperimental-relative-c++-abi-vtables -fsanitize=address \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-RELATIVE-VTABLES-ASAN-X86
-// RUN: %clangxx %s -### --target=x86_64-fuchsia -fexperimental-relative-c++-abi-vtables -fno-exceptions -fsanitize=address \
+// RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -fexperimental-relative-c++-abi-vtables -fno-exceptions -fsanitize=address \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-RELATIVE-VTABLES-ASAN-NOEXCEPT-X86
-// RUN: %clangxx %s -### --target=x86_64-fuchsia -fno-experimental-relative-c++-abi-vtables \
+// RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -fno-experimental-relative-c++-abi-vtables \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86
-// RUN: %clangxx %s -### --target=x86_64-fuchsia -fno-experimental-relative-c++-abi-vtables \
+// RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -fno-experimental-relative-c++-abi-vtables \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86
-// RUN: %clangxx %s -### --target=x86_64-fuchsia -fno-experimental-relative-c++-abi-vtables -fexperimental-relative-c++-abi-vtables \
+// RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -fno-experimental-relative-c++-abi-vtables -fexperimental-relative-c++-abi-vtables \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86
-// RUN: %clangxx %s -### --target=x86_64-fuchsia -fsanitize=hwaddress \
+// RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -fsanitize=hwaddress \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-HWASAN-X86
-// RUN: %clangxx %s -### --target=x86_64-fuchsia -fsanitize=hwaddress -fno-exceptions \
+// RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -fsanitize=hwaddress -fno-exceptions \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-HWASAN-NOEXCEPT-X86
-// RUN: %clangxx %s -### --target=x86_64-fuchsia -fexperimental-relative-c++-abi-vtables -fsanitize=hwaddress \
+// RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -fexperimental-relative-c++-abi-vtables -fsanitize=hwaddress \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-RELATIVE-VTABLES-HWASAN-X86
-// RUN: %clangxx %s -### --target=x86_64-fuchsia -fexperimental-relative-c++-abi-vtables -fno-exceptions -fsanitize=hwaddress \
+// RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -fexperimental-relative-c++-abi-vtables -fno-exceptions -fsanitize=hwaddress \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-RELATIVE-VTABLES-HWASAN-NOEXCEPT-X86
 // CHECK-MULTILIB-X86: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
-// CHECK-MULTILIB-ASAN-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}asan"
-// CHECK-MULTILIB-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}noexcept"
-// CHECK-MULTILIB-ASAN-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}asan+noexcept"
-// CHECK-MULTILIB-RELATIVE-VTABLES-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}relative-vtables"
-// CHECK-MULTILIB-RELATIVE-VTABLES-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}relative-vtables+noexcept"
-// CHECK-MULTILIB-RELATIVE-VTABLES-ASAN-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}relative-vtables+asan"
-// CHECK-MULTILIB-RELATIVE-VTABLES-ASAN-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}relative-vtables+asan+noexcept"
-// CHECK-MULTILIB-HWASAN-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}hwasan"
-// CHECK-MULTILIB-HWASAN-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}hwasan+noexcept"
-// CHECK-MULTILIB-RELATIVE-VTABLES-HWASAN-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}relative-vtables+hwasan"
-// CHECK-MULTILIB-RELATIVE-VTABLES-HWASAN-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}relative-vtables+hwasan+noexcept"
-// CHECK-MULTILIB-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-fuchsia"
+// CHECK-MULTILIB-ASAN-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}asan"
+// CHECK-MULTILIB-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}noexcept"
+// CHECK-MULTILIB-ASAN-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}asan+noexcept"
+// CHECK-MULTILIB-RELATIVE-VTABLES-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}relative-vtables"
+// CHECK-MULTILIB-RELATIVE-VTABLES-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}relative-vtables+noexcept"
+// CHECK-MULTILIB-RELATIVE-VTABLES-ASAN-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}relative-vtables+asan"
+// CHECK-MULTILIB-RELATIVE-VTABLES-ASAN-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}relative-vtables+asan+noexcept"
+// CHECK-MULTILIB-HWASAN-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}hwasan"
+// CHECK-MULTILIB-HWASAN-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}hwasan+noexcept"
+// CHECK-MULTILIB-RELATIVE-VTABLES-HWASAN-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}relative-vtables+hwasan"
+// CHECK-MULTILIB-RELATIVE-VTABLES-HWASAN-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}relative-vtables+hwasan+noexcept"
+// CHECK-MULTILIB-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia"
