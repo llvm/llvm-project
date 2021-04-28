@@ -1440,24 +1440,50 @@ getPatternComplexity(const CodeGenDAGPatterns &CGP) const {
   return getPatternSize(getSrcPattern(), CGP) + getAddedComplexity();
 }
 
+void PatternToMatch::getPredicateRecords(
+    SmallVectorImpl<Record *> &PredicateRecs) const {
+  for (Init *I : Predicates->getValues()) {
+    if (DefInit *Pred = dyn_cast<DefInit>(I)) {
+      Record *Def = Pred->getDef();
+      if (!Def->isSubClassOf("Predicate")) {
+#ifndef NDEBUG
+        Def->dump();
+#endif
+        llvm_unreachable("Unknown predicate type!");
+      }
+      PredicateRecs.push_back(Def);
+    }
+  }
+  // Sort so that different orders get canonicalized to the same string.
+  llvm::sort(PredicateRecs, LessRecord());
+}
+
 /// getPredicateCheck - Return a single string containing all of this
 /// pattern's predicates concatenated with "&&" operators.
 ///
 std::string PatternToMatch::getPredicateCheck() const {
-  SmallVector<const Predicate*,4> PredList;
-  for (const Predicate &P : Predicates) {
-    if (!P.getCondString().empty())
-      PredList.push_back(&P);
-  }
-  llvm::sort(PredList, deref<std::less<>>());
+  SmallVector<Record *, 4> PredicateRecs;
+  getPredicateRecords(PredicateRecs);
 
-  std::string Check;
-  for (unsigned i = 0, e = PredList.size(); i != e; ++i) {
-    if (i != 0)
-      Check += " && ";
-    Check += '(' + PredList[i]->getCondString() + ')';
+  SmallString<128> PredicateCheck;
+  for (Record *Pred : PredicateRecs) {
+    StringRef CondString = Pred->getValueAsString("CondString");
+    if (CondString.empty())
+      continue;
+    if (!PredicateCheck.empty())
+      PredicateCheck += " && ";
+    PredicateCheck += "(";
+    PredicateCheck += CondString;
+    PredicateCheck += ")";
   }
-  return Check;
+
+  if (!HwModeFeatures.empty()) {
+    if (!PredicateCheck.empty())
+      PredicateCheck += " && ";
+    PredicateCheck += HwModeFeatures;
+  }
+
+  return std::string(PredicateCheck);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3930,20 +3956,6 @@ static void FindNames(TreePatternNode *P,
   }
 }
 
-std::vector<Predicate> CodeGenDAGPatterns::makePredList(ListInit *L) {
-  std::vector<Predicate> Preds;
-  for (Init *I : L->getValues()) {
-    if (DefInit *Pred = dyn_cast<DefInit>(I))
-      Preds.push_back(Pred->getDef());
-    else
-      llvm_unreachable("Non-def on the list");
-  }
-
-  // Sort so that different orders get canonicalized to the same string.
-  llvm::sort(Preds);
-  return Preds;
-}
-
 void CodeGenDAGPatterns::AddPatternToMatch(TreePattern *Pattern,
                                            PatternToMatch &&PTM) {
   // Do some sanity checking on the pattern we're about to match.
@@ -4254,8 +4266,7 @@ void CodeGenDAGPatterns::ParseOnePattern(Record *TheDef,
     for (const auto &T : Pattern.getTrees())
       if (T->hasPossibleType())
         AddPatternToMatch(&Pattern,
-                          PatternToMatch(TheDef, makePredList(Preds),
-                                         T, Temp.getOnlyTree(),
+                          PatternToMatch(TheDef, Preds, T, Temp.getOnlyTree(),
                                          InstImpResults, Complexity,
                                          TheDef->getID()));
 }
@@ -4310,20 +4321,17 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
   PatternsToMatch.swap(Copy);
 
   auto AppendPattern = [this](PatternToMatch &P, unsigned Mode,
-                              ArrayRef<Predicate> Check) {
+                              StringRef Check) {
     TreePatternNodePtr NewSrc = P.getSrcPattern()->clone();
     TreePatternNodePtr NewDst = P.getDstPattern()->clone();
     if (!NewSrc->setDefaultMode(Mode) || !NewDst->setDefaultMode(Mode)) {
       return;
     }
 
-    std::vector<Predicate> Preds = P.getPredicates();
-    llvm::append_range(Preds, Check);
-    PatternsToMatch.emplace_back(P.getSrcRecord(), std::move(Preds),
+    PatternsToMatch.emplace_back(P.getSrcRecord(), P.getPredicates(),
                                  std::move(NewSrc), std::move(NewDst),
-                                 P.getDstRegs(),
-                                 P.getAddedComplexity(), Record::getNewUID(),
-                                 Mode);
+                                 P.getDstRegs(), P.getAddedComplexity(),
+                                 Record::getNewUID(), Mode, Check);
   };
 
   for (PatternToMatch &P : Copy) {
@@ -4354,7 +4362,7 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
     // duplicated patterns with different predicate checks, construct the
     // default check as a negation of all predicates that are actually present
     // in the source/destination patterns.
-    SmallVector<Predicate, 2> DefaultCheck;
+    SmallString<128> DefaultCheck;
 
     for (unsigned M : Modes) {
       if (M == DefaultMode)
@@ -4362,10 +4370,14 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
 
       // Fill the map entry for this mode.
       const HwMode &HM = CGH.getMode(M);
-      AppendPattern(P, M, Predicate(HM.Features, true));
+      AppendPattern(P, M, "(MF->getSubtarget().checkFeatures(\"" + HM.Features + "\"))");
 
       // Add negations of the HM's predicates to the default predicate.
-      DefaultCheck.push_back(Predicate(HM.Features, false));
+      if (!DefaultCheck.empty())
+        DefaultCheck += " && ";
+      DefaultCheck += "(!(MF->getSubtarget().checkFeatures(\"";
+      DefaultCheck += HM.Features;
+      DefaultCheck += "\")))";
     }
 
     bool HasDefault = Modes.count(DefaultMode);
@@ -4685,8 +4697,8 @@ void CodeGenDAGPatterns::GenerateVariants() {
     if (MatchedPatterns[i])
       continue;
 
-    const std::vector<Predicate> &Predicates =
-        PatternsToMatch[i].getPredicates();
+    ListInit *Predicates = PatternsToMatch[i].getPredicates();
+    StringRef HwModeFeatures = PatternsToMatch[i].getHwModeFeatures();
 
     BitVector &Matches = MatchedPredicates[i];
     MatchedPatterns.set(i);
@@ -4695,7 +4707,8 @@ void CodeGenDAGPatterns::GenerateVariants() {
     // Don't test patterns that have already been cached - it won't match.
     for (unsigned p = 0; p != NumOriginalPatterns; ++p)
       if (!MatchedPatterns[p])
-        Matches[p] = (Predicates == PatternsToMatch[p].getPredicates());
+        Matches[p] = (Predicates == PatternsToMatch[p].getPredicates()) &&
+                     (HwModeFeatures == PatternsToMatch[p].getHwModeFeatures());
 
     // Copy this to all the matching patterns.
     for (int p = Matches.find_first(); p != -1; p = Matches.find_next(p))
@@ -4739,7 +4752,9 @@ void CodeGenDAGPatterns::GenerateVariants() {
           PatternsToMatch[i].getSrcRecord(), PatternsToMatch[i].getPredicates(),
           Variant, PatternsToMatch[i].getDstPatternShared(),
           PatternsToMatch[i].getDstRegs(),
-          PatternsToMatch[i].getAddedComplexity(), Record::getNewUID());
+          PatternsToMatch[i].getAddedComplexity(), Record::getNewUID(),
+          PatternsToMatch[i].getForceMode(),
+          PatternsToMatch[i].getHwModeFeatures().str());
       MatchedPredicates.push_back(Matches);
 
       // Add a new match the same as this pattern.
