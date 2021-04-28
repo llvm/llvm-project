@@ -65,10 +65,6 @@ public:
     return LangOptions::SSPStrong;
   }
 
-  std::string getMultiarchTriple(const Driver &D,
-                                 const llvm::Triple &TargetTriple,
-                                 StringRef SysRoot) const override;
-
   std::string ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
                                           types::ID InputType) const override;
 

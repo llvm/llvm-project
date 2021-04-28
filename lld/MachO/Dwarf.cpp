@@ -26,11 +26,12 @@ std::unique_ptr<DwarfObject> DwarfObject::create(ObjFile *obj) {
   // emit in our STABS symbols, so we don't need to process & emit them
   // ourselves.
   for (const InputSection *isec : obj->debugSections) {
-    if (StringRef *s = StringSwitch<StringRef *>(isec->name)
-                           .Case("__debug_info", &dObj->infoSection.Data)
-                           .Case("__debug_abbrev", &dObj->abbrevSection)
-                           .Case("__debug_str", &dObj->strSection)
-                           .Default(nullptr)) {
+    if (StringRef *s =
+            StringSwitch<StringRef *>(isec->name)
+                .Case(section_names::debugInfo, &dObj->infoSection.Data)
+                .Case(section_names::debugAbbrev, &dObj->abbrevSection)
+                .Case(section_names::debugStr, &dObj->strSection)
+                .Default(nullptr)) {
       *s = toStringRef(isec->data);
       hasDwarfInfo = true;
     }

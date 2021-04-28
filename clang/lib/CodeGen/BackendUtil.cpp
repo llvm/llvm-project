@@ -1600,7 +1600,7 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
                               const CodeGenOptions &CGOpts,
                               const clang::TargetOptions &TOpts,
                               const LangOptions &LOpts,
-                              const llvm::DataLayout &TDesc, Module *M,
+                              StringRef TDesc, Module *M,
                               BackendAction Action,
                               std::unique_ptr<raw_pwrite_stream> OS) {
 
@@ -1654,11 +1654,11 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
   // DataLayout.
   if (AsmHelper.TM) {
     std::string DLDesc = M->getDataLayout().getStringRepresentation();
-    if (DLDesc != TDesc.getStringRepresentation()) {
+    if (DLDesc != TDesc) {
       unsigned DiagID = Diags.getCustomDiagID(
           DiagnosticsEngine::Error, "backend data layout '%0' does not match "
                                     "expected target description '%1'");
-      Diags.Report(DiagID) << DLDesc << TDesc.getStringRepresentation();
+      Diags.Report(DiagID) << DLDesc << TDesc;
     }
   }
 }

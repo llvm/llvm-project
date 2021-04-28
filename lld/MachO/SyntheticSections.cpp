@@ -420,7 +420,7 @@ void WeakBindingSection::writeTo(uint8_t *buf) const {
 }
 
 StubsSection::StubsSection()
-    : SyntheticSection(segment_names::text, "__stubs") {
+    : SyntheticSection(segment_names::text, section_names::stubs) {
   flags = S_SYMBOL_STUBS | S_ATTR_SOME_INSTRUCTIONS | S_ATTR_PURE_INSTRUCTIONS;
   // The stubs section comprises machine instructions, which are aligned to
   // 4 bytes on the archs we care about.
@@ -448,7 +448,7 @@ bool StubsSection::addEntry(Symbol *sym) {
 }
 
 StubHelperSection::StubHelperSection()
-    : SyntheticSection(segment_names::text, "__stub_helper") {
+    : SyntheticSection(segment_names::text, section_names::stubHelper) {
   flags = S_ATTR_SOME_INSTRUCTIONS | S_ATTR_PURE_INSTRUCTIONS;
   align = 4; // This section comprises machine instructions
 }
@@ -488,7 +488,7 @@ void StubHelperSection::setup() {
 
 ImageLoaderCacheSection::ImageLoaderCacheSection() {
   segname = segment_names::data;
-  name = "__data";
+  name = section_names::data;
   uint8_t *arr = bAlloc.Allocate<uint8_t>(target->wordSize);
   memset(arr, 0, target->wordSize);
   data = {arr, target->wordSize};
@@ -496,7 +496,7 @@ ImageLoaderCacheSection::ImageLoaderCacheSection() {
 }
 
 LazyPointerSection::LazyPointerSection()
-    : SyntheticSection(segment_names::data, "__la_symbol_ptr") {
+    : SyntheticSection(segment_names::data, section_names::lazySymbolPtr) {
   align = target->wordSize;
   flags = S_LAZY_SYMBOL_POINTERS;
 }

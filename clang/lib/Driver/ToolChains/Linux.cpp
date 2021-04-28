@@ -253,16 +253,12 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   if (IsAndroid || Distro.IsOpenSUSE())
     ExtraOpts.push_back("--enable-new-dtags");
 
-  addPathIfExists(D, getRuntimePath(), getLibraryPaths());
-
   // The selection of paths to try here is designed to match the patterns which
   // the GCC driver itself uses, as this is part of the GCC-compatible driver.
   // This was determined by running GCC in a fake filesystem, creating all
   // possible permutations of these directories, and seeing which ones it added
   // to the link paths.
   path_list &Paths = getFilePaths();
-
-  addPathIfExists(D, getStdlibPath(), Paths);
 
   const std::string OSLibDir = std::string(getOSLibDir(Triple, Args));
   const std::string MultiarchTriple = getMultiarchTriple(D, Triple, SysRoot);

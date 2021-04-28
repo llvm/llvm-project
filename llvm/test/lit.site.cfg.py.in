@@ -10,6 +10,7 @@ config.llvm_tools_dir = path(r"@LLVM_TOOLS_DIR@")
 config.llvm_lib_dir = path(r"@LLVM_LIBS_DIR@")
 config.llvm_shlib_dir = path(r"@SHLIBDIR@")
 config.llvm_shlib_ext = "@SHLIBEXT@"
+config.llvm_plugin_ext = "@LLVM_PLUGIN_EXT@"
 config.llvm_exe_ext = "@EXEEXT@"
 config.lit_tools_dir = path(r"@LLVM_LIT_TOOLS_DIR@")
 config.errc_messages = "@LLVM_LIT_ERRC_MESSAGES@"

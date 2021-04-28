@@ -1,6 +1,6 @@
 ; Test that bugpoint can reduce the set of functions by replacing them with null.
 ;
-; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -replace-funcs-with-null -bugpoint-crash-decl-funcs -silence-passes -safe-run-llc
+; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%pluginext %s -output-prefix %t -replace-funcs-with-null -bugpoint-crash-decl-funcs -silence-passes -safe-run-llc
 ; REQUIRES: plugins
 
 @foo2 = alias i32 (), i32 ()* @foo

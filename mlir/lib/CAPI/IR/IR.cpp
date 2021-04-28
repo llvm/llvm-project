@@ -351,6 +351,11 @@ MlirValue mlirOperationGetOperand(MlirOperation op, intptr_t pos) {
   return wrap(unwrap(op)->getOperand(static_cast<unsigned>(pos)));
 }
 
+void mlirOperationSetOperand(MlirOperation op, intptr_t pos,
+                             MlirValue newValue) {
+  unwrap(op)->setOperand(static_cast<unsigned>(pos), unwrap(newValue));
+}
+
 intptr_t mlirOperationGetNumResults(MlirOperation op) {
   return static_cast<intptr_t>(unwrap(op)->getNumResults());
 }

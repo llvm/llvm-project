@@ -8,6 +8,7 @@
 
 #include "ObjC.h"
 #include "InputFiles.h"
+#include "InputSection.h"
 #include "OutputSegment.h"
 #include "Target.h"
 
@@ -31,8 +32,10 @@ template <class LP> static bool hasObjCSection(MemoryBufferRef mb) {
       StringRef sectname(sec.sectname,
                          strnlen(sec.sectname, sizeof(sec.sectname)));
       StringRef segname(sec.segname, strnlen(sec.segname, sizeof(sec.segname)));
-      if ((segname == segment_names::data && sectname == "__objc_catlist") ||
-          (segname == segment_names::text && sectname == "__swift")) {
+      if ((segname == segment_names::data &&
+           sectname == section_names::objcCatList) ||
+          (segname == segment_names::text &&
+           sectname == section_names::swift)) {
         return true;
       }
     }

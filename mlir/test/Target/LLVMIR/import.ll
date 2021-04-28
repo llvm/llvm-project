@@ -62,6 +62,13 @@
 @unnamed_addr = private unnamed_addr constant i64 42
 
 ;
+; Section attribute
+;
+
+; CHECK: llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysection"}
+@sectionvar = internal constant [10 x i8] c"teststring", section ".mysection"
+
+;
 ; Sequential constants.
 ;
 
