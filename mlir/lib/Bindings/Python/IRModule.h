@@ -721,6 +721,13 @@ public:
 
   void checkValid() { return parentOperation->checkValid(); }
 
+  /// Gets a capsule wrapping the void* within the MlirValue.
+  pybind11::object getCapsule();
+
+  /// Creates a PyValue from the MlirValue wrapped by a capsule. Ownership of
+  /// the underlying MlirValue is still tied to the owning operation.
+  static PyValue createFromCapsule(pybind11::object capsule);
+
 private:
   PyOperationRef parentOperation;
   MlirValue value;
