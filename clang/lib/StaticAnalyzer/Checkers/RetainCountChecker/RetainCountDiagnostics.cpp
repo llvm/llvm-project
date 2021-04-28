@@ -337,11 +337,15 @@ public:
 
 class RefLeakReportVisitor : public RefCountReportVisitor {
 public:
-  RefLeakReportVisitor(SymbolRef sym) : RefCountReportVisitor(sym) {}
+  RefLeakReportVisitor(SymbolRef Sym, const MemRegion *FirstBinding)
+      : RefCountReportVisitor(Sym), FirstBinding(FirstBinding) {}
 
   PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
                                     const ExplodedNode *N,
                                     PathSensitiveBugReport &BR) override;
+
+private:
+  const MemRegion *FirstBinding;
 };
 
 } // end namespace retaincountchecker
@@ -729,14 +733,6 @@ RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
   // assigned to different variables, etc.
   BR.markInteresting(Sym);
 
-  // We are reporting a leak.  Walk up the graph to get to the first node where
-  // the symbol appeared, and also get the first VarDecl that tracked object
-  // is stored to.
-  AllocationInfo AllocI = GetAllocationSite(BRC.getStateManager(), EndN, Sym);
-
-  const MemRegion* FirstBinding = AllocI.R;
-  BR.markInteresting(AllocI.InterestingMethodContext);
-
   PathDiagnosticLocation L = cast<RefLeakReport>(BR).getEndOfPath();
 
   std::string sbuf;
@@ -902,15 +898,15 @@ void RefLeakReport::createDescription(CheckerContext &Ctx) {
 }
 
 RefLeakReport::RefLeakReport(const RefCountBug &D, const LangOptions &LOpts,
-                             ExplodedNode *n, SymbolRef sym,
+                             ExplodedNode *N, SymbolRef Sym,
                              CheckerContext &Ctx)
-    : RefCountReport(D, LOpts, n, sym, /*isLeak=*/true) {
+    : RefCountReport(D, LOpts, N, Sym, /*isLeak=*/true) {
 
-  deriveAllocLocation(Ctx, sym);
+  deriveAllocLocation(Ctx, Sym);
   if (!AllocBinding)
-    deriveParamLocation(Ctx, sym);
+    deriveParamLocation(Ctx, Sym);
 
   createDescription(Ctx);
 
-  addVisitor(std::make_unique<RefLeakReportVisitor>(sym));
+  addVisitor(std::make_unique<RefLeakReportVisitor>(Sym, AllocBinding));
 }
