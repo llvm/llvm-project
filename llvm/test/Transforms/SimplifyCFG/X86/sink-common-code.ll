@@ -1487,3 +1487,46 @@ declare void @direct_callee2()
 
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+
+define void @creating_too_many_phis(i1 %cond, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) {
+; CHECK-LABEL: @creating_too_many_phis(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       bb0:
+; CHECK-NEXT:    [[V0:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = add i32 [[V0]], [[C:%.*]]
+; CHECK-NEXT:    [[V2:%.*]] = add i32 [[D:%.*]], [[E:%.*]]
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[V4:%.*]] = add i32 [[A]], [[B]]
+; CHECK-NEXT:    [[V5:%.*]] = add i32 [[V4]], [[C]]
+; CHECK-NEXT:    [[V6:%.*]] = add i32 [[G:%.*]], [[H:%.*]]
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[V6_SINK:%.*]] = phi i32 [ [[V6]], [[BB1]] ], [ [[V2]], [[BB0]] ]
+; CHECK-NEXT:    [[V5_SINK:%.*]] = phi i32 [ [[V5]], [[BB1]] ], [ [[V1]], [[BB0]] ]
+; CHECK-NEXT:    [[R7:%.*]] = add i32 [[V5_SINK]], [[V6_SINK]]
+; CHECK-NEXT:    call void @use32(i32 [[R7]])
+; CHECK-NEXT:    ret void
+;
+  br i1 %cond, label %bb0, label %bb1
+
+bb0:
+  %v0 = add i32 %a, %b
+  %v1 = add i32 %v0, %c
+  %v2 = add i32 %d, %e
+  %r3 = add i32 %v1, %v2
+  call void @use32(i32 %r3)
+  br label %end
+
+bb1:
+  %v4 = add i32 %a, %b
+  %v5 = add i32 %v4, %c
+  %v6 = add i32 %g, %h
+  %r7 = add i32 %v5, %v6
+  call void @use32(i32 %r7)
+  br label %end
+
+end:
+  ret void
+}
+declare void @use32(i32)
