@@ -116,14 +116,12 @@ ARM_ARCH("armv8.6-a", ARMV8_6A, "8.6-A", "v8.6a",
          ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
          (ARM::AEK_SEC        | ARM::AEK_MP   | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
           ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP  | ARM::AEK_CRC  | ARM::AEK_RAS |
-          ARM::AEK_DOTPROD    | ARM::AEK_BF16 | ARM::AEK_SHA2 | ARM::AEK_AES |
-          ARM::AEK_I8MM))
+          ARM::AEK_DOTPROD    | ARM::AEK_BF16 | ARM::AEK_I8MM))
 ARM_ARCH("armv8.7-a", ARMV8_7A, "8.7-A", "v8.7a",
          ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
          (ARM::AEK_SEC        | ARM::AEK_MP   | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
           ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP  | ARM::AEK_CRC  | ARM::AEK_RAS |
-          ARM::AEK_DOTPROD    | ARM::AEK_BF16 | ARM::AEK_SHA2 | ARM::AEK_AES |
-          ARM::AEK_I8MM))
+          ARM::AEK_DOTPROD    | ARM::AEK_BF16 | ARM::AEK_I8MM))
 ARM_ARCH("armv8-r", ARMV8R, "8-R", "v8r", ARMBuildAttrs::CPUArch::v8_R,
           FK_NEON_FP_ARMV8,
           (ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
