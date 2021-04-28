@@ -258,7 +258,8 @@ func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
   %3 = "tosa.mul"(%arg0, %arg0) {shift = 2 : i32} : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
-  // CHECK: muli
+  // CHECK: [[ZERO:%.+]] = constant 0
+  // CHECK: subi [[ZERO]], %arg1
   %4 = "tosa.negate"(%arg0) : (tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
@@ -357,6 +358,35 @@ func @test_bool(%arg0: tensor<1xi1>, %arg1: tensor<1xi1>) -> () {
   // CHECK: constant true
   // CHECK: xor
   %3 = "tosa.logical_not"(%arg0) : (tensor<1xi1>) -> tensor<1xi1>
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_negate_quantized
+func @test_negate_quantized(%arg0: tensor<1xi8>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: [[ZERO:%.+]] = constant 0
+  // CHECK: [[EXT:%.+]] = sexti %arg1 : i8 to i16
+  // CHECK: [[SUB:%.+]] = subi [[ZERO]], [[EXT]]
+  // CHECK: [[MIN:%.+]] = constant -128
+  // CHECK: [[MAX:%.+]] = constant 127
+  // CHECK: [[PRED1:%.+]] = cmpi slt, [[SUB]], [[MIN]]
+  // CHECK: [[LBOUND:%.+]] = select [[PRED1]], [[MIN]], [[SUB]]
+  // CHECK: [[PRED2:%.+]] = cmpi slt, [[MAX]], [[SUB]]
+  // CHECK: [[UBOUND:%.+]] = select [[PRED2]], [[MAX]], [[LBOUND]]
+  // CHECK: [[TRUNC:%.+]] = trunci [[UBOUND]]
+  // CHECK: linalg.yield [[TRUNC]]
+  %0 = "tosa.negate"(%arg0) {quantization_info = { input_zp = 0 : i32, output_zp = 0 : i32}} : (tensor<1xi8>) -> tensor<1xi8>
+
+  // CHECK: linalg.generic
+  // CHECK: [[EXT:%.+]] = sexti %arg1 : i8 to i16
+  %1 = "tosa.negate"(%arg0) {quantization_info = { input_zp = 32639 : i32, output_zp = 0 : i32}} : (tensor<1xi8>) -> tensor<1xi8>
+
+  // CHECK: linalg.generic
+  // CHECK: [[EXT:%.+]] = sexti %arg1 : i8 to i32
+  %2 = "tosa.negate"(%arg0) {quantization_info = { input_zp = 32640 : i32, output_zp = 0 : i32}} : (tensor<1xi8>) -> tensor<1xi8>
 
   return
 }
