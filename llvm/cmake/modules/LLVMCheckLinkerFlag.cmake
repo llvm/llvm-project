@@ -6,6 +6,7 @@ if (COMMAND check_linker_flag)
   endmacro()
 else()
   include(CheckCXXCompilerFlag)
+  include(CMakePushCheckState)
 
   # cmake builtin compatible, except we assume lang is CXX
   function(llvm_check_linker_flag lang flag out_var)
