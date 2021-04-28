@@ -1381,5 +1381,31 @@ if.end:
   ret i32 1
 }
 
+define void @indirect_caller(i1 %c, i32 %v, void (i32)* %foo, void (i32)* %bar) {
+; CHECK-LABEL: @indirect_caller(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[CALL_FOO:%.*]], label [[CALL_BAR:%.*]]
+; CHECK:       call_foo:
+; CHECK-NEXT:    tail call void [[FOO:%.*]](i32 [[V:%.*]])
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       call_bar:
+; CHECK-NEXT:    tail call void [[BAR:%.*]](i32 [[V]])
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+  br i1 %c, label %call_foo, label %call_bar
+
+call_foo:
+  tail call void %foo(i32 %v)
+  br label %end
+
+call_bar:
+  tail call void %bar(i32 %v)
+  br label %end
+
+end:
+  ret void
+}
+
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
