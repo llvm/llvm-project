@@ -201,9 +201,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "livedebugvalues"
 
-STATISTIC(NumInserted, "Number of DBG_VALUE instructions inserted");
-STATISTIC(NumRemoved, "Number of DBG_VALUE instructions removed");
-
 // Act more like the VarLoc implementation, by propagating some locations too
 // far and ignoring some transfers.
 static cl::opt<bool> EmulateOldLDV("emulate-old-livedebugvalues", cl::Hidden,

@@ -63,8 +63,6 @@ STATISTIC(NumAttributesValidFixpoint,
           "Number of abstract attributes in a valid fixpoint state");
 STATISTIC(NumAttributesManifested,
           "Number of abstract attributes manifested in IR");
-STATISTIC(NumAttributesFixedDueToRequiredDependences,
-          "Number of abstract attributes fixed due to required dependences");
 
 // TODO: Determine a good default value.
 //
