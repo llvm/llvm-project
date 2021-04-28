@@ -113,11 +113,20 @@ write_lit_config("lit_site_cfg") {
   }
 
   if (host_os == "mac") {
-    extra_values += [ "SHLIBEXT=.dylib" ]
+    extra_values += [
+      "LLVM_PLUGIN_EXT=.dylib",
+      "SHLIBEXT=.dylib",
+    ]
   } else if (host_os == "win") {
-    extra_values += [ "SHLIBEXT=.dll" ]
+    extra_values += [
+      "LLVM_PLUGIN_EXT=.dll",
+      "SHLIBEXT=.dll",
+    ]
   } else {
-    extra_values += [ "SHLIBEXT=.so" ]
+    extra_values += [
+      "LLVM_PLUGIN_EXT=.so",
+      "SHLIBEXT=.so",
+    ]
   }
 
   if (host_os == "freebsd") {
