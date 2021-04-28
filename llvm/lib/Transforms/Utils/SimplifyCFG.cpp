@@ -2041,11 +2041,11 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
   };
 
   if (Cond) {
-    // Check if we would actually sink anything first! This mutates the CFG and
-    // adds an extra block. The goal in doing this is to allow instructions that
-    // couldn't be sunk before to be sunk - obviously, speculatable instructions
-    // (such as trunc, add) can be sunk and predicated already. So we check that
-    // we're going to sink at least one non-speculatable instruction.
+    // It is always legal to sink common instructions from unconditional
+    // predecessors. However, if not all predecessors are unconditional,
+    // this transformation might be pessimizing. So as a rule of thumb,
+    // don't do it unless we'd sink at least one non-speculatable instruction.
+    // See https://bugs.llvm.org/show_bug.cgi?id=30244
     LRI.reset();
     unsigned Idx = 0;
     bool Profitable = false;
