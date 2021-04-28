@@ -19,7 +19,7 @@
 ; Case 1: Annotated outer loop WITH vector width information must be collected.
 
 ; CHECK-LABEL: vector_width
-; CHECK: LV: Loop hints: force=enabled width=4 unroll=0
+; CHECK: LV: Loop hints: force=enabled width=4 interleave=0
 ; CHECK: LV: We can vectorize this outer loop!
 ; CHECK: LV: Using user VF 4 to build VPlans.
 ; CHECK-NOT: LV: Loop hints: force=?
@@ -71,7 +71,7 @@ for.end15:                                        ; preds = %outer.inc, %entry
 ; Case 2: Annotated outer loop WITHOUT vector width information must be collected.
 
 ; CHECK-LABEL: case2
-; CHECK: LV: Loop hints: force=enabled width=0 unroll=0
+; CHECK: LV: Loop hints: force=enabled width=0 interleave=0
 ; CHECK: LV: We can vectorize this outer loop!
 ; CHECK: LV: Using VF 1 to build VPlans.
 

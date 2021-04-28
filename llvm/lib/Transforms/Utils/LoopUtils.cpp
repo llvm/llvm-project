@@ -298,7 +298,7 @@ bool llvm::getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name) {
 }
 
 Optional<ElementCount>
-llvm::getOptionalElementCountLoopAttribute(Loop *TheLoop) {
+llvm::getOptionalElementCountLoopAttribute(const Loop *TheLoop) {
   Optional<int> Width =
       getOptionalIntLoopAttribute(TheLoop, "llvm.loop.vectorize.width");
 
@@ -311,7 +311,7 @@ llvm::getOptionalElementCountLoopAttribute(Loop *TheLoop) {
   return None;
 }
 
-llvm::Optional<int> llvm::getOptionalIntLoopAttribute(Loop *TheLoop,
+llvm::Optional<int> llvm::getOptionalIntLoopAttribute(const Loop *TheLoop,
                                                       StringRef Name) {
   const MDOperand *AttrMD =
       findStringMetadataForLoop(TheLoop, Name).getValueOr(nullptr);
@@ -418,7 +418,7 @@ bool llvm::hasMustProgress(const Loop *L) {
   return getBooleanLoopAttribute(L, LLVMLoopMustProgress);
 }
 
-TransformationMode llvm::hasUnrollTransformation(Loop *L) {
+TransformationMode llvm::hasUnrollTransformation(const Loop *L) {
   if (getBooleanLoopAttribute(L, "llvm.loop.unroll.disable"))
     return TM_SuppressedByUser;
 
@@ -439,7 +439,7 @@ TransformationMode llvm::hasUnrollTransformation(Loop *L) {
   return TM_Unspecified;
 }
 
-TransformationMode llvm::hasUnrollAndJamTransformation(Loop *L) {
+TransformationMode llvm::hasUnrollAndJamTransformation(const Loop *L) {
   if (getBooleanLoopAttribute(L, "llvm.loop.unroll_and_jam.disable"))
     return TM_SuppressedByUser;
 
@@ -457,7 +457,7 @@ TransformationMode llvm::hasUnrollAndJamTransformation(Loop *L) {
   return TM_Unspecified;
 }
 
-TransformationMode llvm::hasVectorizeTransformation(Loop *L) {
+TransformationMode llvm::hasVectorizeTransformation(const Loop *L) {
   Optional<bool> Enable =
       getOptionalBoolLoopAttribute(L, "llvm.loop.vectorize.enable");
 
@@ -493,7 +493,7 @@ TransformationMode llvm::hasVectorizeTransformation(Loop *L) {
   return TM_Unspecified;
 }
 
-TransformationMode llvm::hasDistributeTransformation(Loop *L) {
+TransformationMode llvm::hasDistributeTransformation(const Loop *L) {
   if (getBooleanLoopAttribute(L, "llvm.loop.distribute.enable"))
     return TM_ForcedByUser;
 
@@ -503,7 +503,7 @@ TransformationMode llvm::hasDistributeTransformation(Loop *L) {
   return TM_Unspecified;
 }
 
-TransformationMode llvm::hasLICMVersioningTransformation(Loop *L) {
+TransformationMode llvm::hasLICMVersioningTransformation(const Loop *L) {
   if (getBooleanLoopAttribute(L, "llvm.loop.licm_versioning.disable"))
     return TM_SuppressedByUser;
 
