@@ -1387,7 +1387,7 @@ def fwasm_exceptions : Flag<["-"], "fwasm-exceptions">, Group<f_Group>,
 def exception_model : Separate<["-"], "exception-model">,
   Flags<[CC1Option, NoDriverOption]>, HelpText<"The exception model: dwarf|sjlj|seh|wasm">,
   Values<"dwarf,sjlj,seh,wasm">,
-  NormalizedValuesScope<"llvm::ExceptionHandling">,
+  NormalizedValuesScope<"LangOptions::ExceptionHandlingKind">,
   NormalizedValues<["DwarfCFI", "SjLj", "WinEH", "Wasm"]>,
   MarshallingInfoEnum<LangOpts<"ExceptionHandling">, "None">;
 def exception_model_EQ : Joined<["-"], "exception-model=">,

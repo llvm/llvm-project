@@ -1147,21 +1147,6 @@ public:
             getTriple().getVendor() == llvm::Triple::SCEI);
   }
 
-  /// An optional hook that targets can implement to perform semantic
-  /// checking on attribute((section("foo"))) specifiers.
-  ///
-  /// In this case, "foo" is passed in to be checked.  If the section
-  /// specifier is invalid, the backend should return an Error that indicates
-  /// the problem.
-  ///
-  /// This hook is a simple quality of implementation feature to catch errors
-  /// and give good diagnostics in cases when the assembler or code generator
-  /// would otherwise reject the section specifier.
-  ///
-  virtual llvm::Error isValidSectionSpecifier(StringRef SR) const {
-    return llvm::Error::success();
-  }
-
   /// Set forced language options.
   ///
   /// Apply changes to the target information with respect to certain

@@ -25,6 +25,7 @@ static_library("Sema") {
     "//clang/lib/Edit",
     "//clang/lib/Lex",
     "//llvm/lib/Frontend/OpenMP",
+    "//llvm/lib/MC",
     "//llvm/lib/Support",
   ]
   sources = [
