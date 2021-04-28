@@ -5692,10 +5692,11 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
     // until the caller issue can be fixed.  PR49566 tracks the bug.
     return CR;
 
-  // TODO: Extend to other opcodes such as ashr, mul, and div
+  // TODO: Extend to other opcodes such as mul, and div
   switch (BO->getOpcode()) {
   default:
     return CR;
+  case Instruction::AShr:
   case Instruction::LShr:
   case Instruction::Shl:
     break;
@@ -5725,6 +5726,27 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   switch (BO->getOpcode()) {
   default:
     llvm_unreachable("filtered out above");
+  case Instruction::AShr: {
+    // For each ashr, three cases:
+    //   shift = 0 => unchanged value
+    //   saturation => 0 or -1
+    //   other => a value closer to zero (of the same sign)
+    // Thus, the end value is closer to zero than the start.
+    auto KnownEnd = KnownBits::ashr(KnownStart,
+                                    KnownBits::makeConstant(TotalShift));
+    if (KnownStart.isNonNegative()) {
+      // Analogous to lshr (simply not yet canonicalized)
+      auto R = ConstantRange::getNonEmpty(KnownEnd.getMinValue(),
+                                          KnownStart.getMaxValue() + 1);
+      CR = CR.intersectWith(R);
+    } else if (KnownStart.isNegative()) {
+      // End >=u Start && End <=s Start
+      auto R = ConstantRange::getNonEmpty(KnownStart.getMinValue(),
+                                          KnownEnd.getMaxValue() + 1);
+      CR = CR.intersectWith(R);
+    }
+    break;
+  }
   case Instruction::LShr: {
     // For each lshr, three cases:
     //   shift = 0 => unchanged value
