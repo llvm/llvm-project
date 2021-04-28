@@ -138,7 +138,7 @@ func @all_but_one_empty(%arg0 : !shape.shape) -> !shape.shape {
 // CHECK-LABEL: @partial_folding
 // CHECK-SAME:  (%[[ARG:.*]]: !shape.shape)
 func @partial_folding(%arg0 : !shape.shape) -> !shape.shape {
-  // CHECK: %[[CST_SHAPE:.*]] = constant dense<[1, 2, 3]> : tensor<3xindex>
+  // CHECK: %[[CST_SHAPE:.*]] = shape.const_shape [1, 2, 3] : tensor<3xindex>
   // CHECK: %[[RESULT:.*]] = shape.broadcast %[[ARG]], %[[CST_SHAPE]] : !shape.shape, tensor<3xindex> -> !shape.shape
   // CHECK: return %[[RESULT]]
   %0 = shape.const_shape [2, 1] : !shape.shape
@@ -188,7 +188,7 @@ func @f() -> !shape.shape {
 // Basic case.
 // CHECK-LABEL: func @f
 func @f() -> tensor<2xindex> {
-  // CHECK: constant dense<[0, 1]> : tensor<2xindex>
+  // CHECK: shape.const_shape [0, 1] : tensor<2xindex>
   %cs = shape.const_shape [0, 1] : !shape.shape
   %0 = shape.to_extent_tensor %cs : !shape.shape -> tensor<2xindex>
   return %0 : tensor<2xindex>
@@ -1146,7 +1146,7 @@ func @fold_assuming_all_single_element(%arg: tensor<?xindex>) {
 // Verify that tensor.cast folding uses the correct type
 // CHECK-LABEL: @fold_tensor.cast_of_const_shape_returned
 func @fold_tensor.cast_of_const_shape_returned(%arg: i1) -> tensor<1xindex> {
-  // CHECK: constant dense<2> : tensor<1xindex>
+  // CHECK: shape.const_shape [2] : tensor<1xindex>
   // CHECK-NOT: tensor.cast
   %0 = shape.const_shape [2] : tensor<?xindex>
   %1 = tensor.cast %0 : tensor<?xindex> to tensor<1xindex>
@@ -1325,14 +1325,13 @@ func @min_same_arg(%a: !shape.shape) -> !shape.shape {
   // CHECK: return %[[SHAPE]]
   return %1 : !shape.shape
 }
-
 // ----
 
 // CHECK-LABEL: @cstr_broadcastable_folding
 func @cstr_broadcastable_folding(%arg : tensor<?x4xf32>) {
   // CHECK: const_witness true
   %0 = shape.shape_of %arg : tensor<?x4xf32> -> tensor<2xindex>
-  %1 = constant dense<[4]> : tensor<1xindex>
+  %1 = shape.const_shape [4] : tensor<1xindex>
   %2 = shape.cstr_broadcastable %0, %1: tensor<2xindex>, tensor<1xindex>
   "use"(%2) : (!shape.witness) -> ()
 }

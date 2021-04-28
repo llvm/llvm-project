@@ -31,6 +31,9 @@ namespace shape {
 /// Alias type for extent tensors.
 RankedTensorType getExtentTensorType(MLIRContext *ctx);
 
+// Check if a type is an extent tensor, e.g., tensor<?xindex>.
+bool isExtentTensorType(Type);
+
 // Given an input shape Value, try to obtain the shape's values.
 LogicalResult getShapeVec(Value input, SmallVectorImpl<int64_t> &shapeValues);
 
