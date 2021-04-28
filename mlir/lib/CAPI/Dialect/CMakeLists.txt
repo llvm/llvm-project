@@ -2,6 +2,8 @@
 set(LLVM_OPTIONAL_SOURCES
   Async.cpp
   AsyncPasses.cpp
+  GPU.cpp
+  GPUPasses.cpp
   Linalg.cpp
   LinalgPasses.cpp
   SCF.cpp
@@ -21,6 +23,19 @@ add_mlir_public_c_api_library(MLIRCAPIAsync
   MLIRCAPIIR
   MLIRAsync
   MLIRAsyncTransforms
+  MLIRPass
+)
+
+add_mlir_public_c_api_library(MLIRCAPIGPU
+  GPU.cpp
+  GPUPasses.cpp
+
+  DEPENDS
+  MLIRGPUPassIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRGPU
   MLIRPass
 )
 
