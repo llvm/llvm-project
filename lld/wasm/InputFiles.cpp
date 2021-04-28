@@ -212,7 +212,7 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
     // so this will not produce a valid range conflicting with ranges of actual
     // code. In other sections we return reloc.Addend.
 
-    if ((isa<FunctionSymbol>(sym) || isa<DataSymbol>(sym)) && !sym->isLive())
+    if (!isa<SectionSymbol>(sym) && !sym->isLive())
       return tombstone ? tombstone : reloc.Addend;
   }
 
