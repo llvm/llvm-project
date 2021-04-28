@@ -1538,14 +1538,11 @@ define void @multiple_cond_preds(i1 %c0, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    br i1 [[C0:%.*]], label [[DISPATCH1:%.*]], label [[DISPATCH2:%.*]]
 ; CHECK:       dispatch1:
 ; CHECK-NEXT:    call void @direct_callee2()
-; CHECK-NEXT:    br i1 [[C1:%.*]], label [[UNCOND_PRED0:%.*]], label [[END:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[END_SINK_SPLIT:%.*]], label [[END:%.*]]
 ; CHECK:       dispatch2:
 ; CHECK-NEXT:    call void @direct_callee3()
-; CHECK-NEXT:    br i1 [[C2:%.*]], label [[UNCOND_PRED1:%.*]], label [[END]]
-; CHECK:       uncond_pred0:
-; CHECK-NEXT:    call void @direct_callee()
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       uncond_pred1:
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[END_SINK_SPLIT]], label [[END]]
+; CHECK:       end.sink.split:
 ; CHECK-NEXT:    call void @direct_callee()
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
