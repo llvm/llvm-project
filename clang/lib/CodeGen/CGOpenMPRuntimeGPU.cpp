@@ -29,6 +29,8 @@ using namespace clang;
 using namespace CodeGen;
 using namespace llvm::omp;
 
+const bool Use_51_Parallel = false;
+
 namespace {
 /// Pre(post)-action for different OpenMP constructs specialized for NVPTX.
 class NVPTXActionTy final : public PrePostActionTy {
@@ -2225,10 +2227,78 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
   if (!CGF.HaveInsertPoint())
     return;
 
+  if (Use_51_Parallel) {
+  auto &&ParallelGen = [this, Loc, OutlinedFn, CapturedVars,
+                        IfCond](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    CGBuilderTy &Bld = CGF.Builder;
+    llvm::Function *WFn = WrapperFunctionsMap[OutlinedFn];
+    llvm::Value *ID = llvm::ConstantPointerNull::get(CGM.Int8PtrTy);
+    if (WFn) {
+      ID = Bld.CreateBitOrPointerCast(WFn, CGM.Int8PtrTy);
+      // Remember for post-processing in worker loop.
+      Work.emplace_back(WFn);
+    }
+    llvm::Value *FnPtr = Bld.CreateBitOrPointerCast(OutlinedFn, CGM.Int8PtrTy);
+
+    // Create a private scope that will globalize the arguments
+    // passed from the outside of the target region.
+    // TODO: Is that needed?
+    CodeGenFunction::OMPPrivateScope PrivateArgScope(CGF);
+
+    Address CapturedVarsAddrs = CGF.CreateDefaultAlignTempAlloca(
+        llvm::ArrayType::get(CGM.VoidPtrTy, CapturedVars.size()),
+        "captured_vars_addrs");
+    // There's something to share.
+    if (!CapturedVars.empty()) {
+      // Prepare for parallel region. Indicate the outlined function.
+      ASTContext &Ctx = CGF.getContext();
+      unsigned Idx = 0;
+      for (llvm::Value *V : CapturedVars) {
+        Address Dst = Bld.CreateConstArrayGEP(CapturedVarsAddrs, Idx);
+        llvm::Value *PtrV;
+        if (V->getType()->isIntegerTy())
+          PtrV = Bld.CreateIntToPtr(V, CGF.VoidPtrTy);
+        else
+          PtrV = Bld.CreatePointerBitCastOrAddrSpaceCast(V, CGF.VoidPtrTy);
+        CGF.EmitStoreOfScalar(PtrV, Dst, /*Volatile=*/false,
+                              Ctx.getPointerType(Ctx.VoidPtrTy));
+        ++Idx;
+      }
+    }
+
+    llvm::Value *IfCondVal = nullptr;
+    if (IfCond)
+      IfCondVal = Bld.CreateIntCast(CGF.EvaluateExprAsBool(IfCond), CGF.Int32Ty,
+                                    /* isSigned */ false);
+    else
+      IfCondVal = llvm::ConstantInt::get(CGF.Int32Ty, 1);
+
+    assert(IfCondVal && "Expected a value");
+    llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
+    llvm::Value *Args[] = {
+        RTLoc,
+        getThreadID(CGF, Loc),
+        IfCondVal,
+        llvm::ConstantInt::get(CGF.Int32Ty, -1),
+        llvm::ConstantInt::get(CGF.Int32Ty, -1),
+        FnPtr,
+        ID,
+        Bld.CreateBitOrPointerCast(CapturedVarsAddrs.getPointer(),
+                                   CGF.VoidPtrPtrTy),
+        llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
+    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                            CGM.getModule(), OMPRTL___kmpc_parallel_51),
+                        Args);
+  };
+
+  RegionCodeGenTy RCG(ParallelGen);
+  RCG(CGF);
+  } else {
   if (getExecutionMode() == CGOpenMPRuntimeGPU::EM_SPMD)
     emitSPMDParallelCall(CGF, Loc, OutlinedFn, CapturedVars, IfCond);
   else
     emitNonSPMDParallelCall(CGF, Loc, OutlinedFn, CapturedVars, IfCond);
+  }
 }
 
 void CGOpenMPRuntimeGPU::emitNonSPMDParallelCall(
