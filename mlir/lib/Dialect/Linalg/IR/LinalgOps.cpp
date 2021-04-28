@@ -174,9 +174,9 @@ static LogicalResult foldMemRefCastInTiledLoopOp(TiledLoopOp op) {
     auto castOp = operand.get().getDefiningOp<memref::CastOp>();
     if (castOp && memref::CastOp::canFoldIntoConsumerOp(castOp)) {
       operand.set(castOp.getOperand());
-      auto newBbArg =
+      BlockArgument newBbArg =
           body->insertArgument(bbArgIndex, castOp.getOperand().getType());
-      auto oldBbArg = body->getArgument(newBbArg.getArgNumber() + 1);
+      BlockArgument oldBbArg = body->getArgument(newBbArg.getArgNumber() + 1);
 
       // Insert memref.cast back to the original type.
       oldBbArg.replaceAllUsesWith(
@@ -2120,7 +2120,6 @@ struct TiledLoopInputsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
       if (!in.getType().isa<RankedTensorType>() || !bbArg.use_empty()) {
         oldInputIdToNew[index] = newInputs.size();
         newInputs.push_back(in);
-        continue;
       }
     }
     if (newInputs.size() == tiledLoop.inputs().size())
