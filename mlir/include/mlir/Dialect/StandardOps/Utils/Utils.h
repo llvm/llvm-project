@@ -35,7 +35,7 @@ void getPositionsOfShapeOne(unsigned rank, ArrayRef<int64_t> shape,
                             llvm::SmallDenseSet<unsigned> &dimsToProject);
 
 /// Pattern to rewrite a subview op with constant arguments.
-template <typename OpType, typename CastOpFunc>
+template <typename OpType, typename ResultTypeFunc, typename CastOpFunc>
 class OpWithOffsetSizesAndStridesConstantArgumentFolder final
     : public OpRewritePattern<OpType> {
 public:
@@ -59,8 +59,12 @@ public:
     canonicalizeSubViewPart(mixedStrides, ShapedType::isDynamicStrideOrOffset);
 
     // Create the new op in canonical form.
-    auto newOp = rewriter.create<OpType>(op.getLoc(), op.source(), mixedOffsets,
-                                         mixedSizes, mixedStrides);
+    ResultTypeFunc resultTypeFunc;
+    auto resultType =
+        resultTypeFunc(op, mixedOffsets, mixedSizes, mixedStrides);
+    auto newOp =
+        rewriter.create<OpType>(op.getLoc(), resultType, op.source(),
+                                mixedOffsets, mixedSizes, mixedStrides);
     CastOpFunc func;
     func(rewriter, op, newOp);
 

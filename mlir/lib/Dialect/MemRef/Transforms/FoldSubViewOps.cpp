@@ -45,10 +45,13 @@ resolveSourceIndices(Location loc, PatternRewriter &rewriter,
   // the subview op with load even if the offsets have been canonicalized
   // away.
   SmallVector<Range, 4> opRanges = subViewOp.getOrCreateRanges(rewriter, loc);
+  if (opRanges.size() != indices.size()) {
+    // For the rank-reduced cases, we can only handle the folding when the
+    // offset is zero, size is 1 and stride is 1.
+    return failure();
+  }
   auto opOffsets = llvm::map_range(opRanges, [](Range r) { return r.offset; });
   auto opStrides = llvm::map_range(opRanges, [](Range r) { return r.stride; });
-  assert(opRanges.size() == indices.size() &&
-         "expected as many indices as rank of subview op result type");
 
   // New indices for the load are the current indices * subview_stride +
   // subview_offset.
