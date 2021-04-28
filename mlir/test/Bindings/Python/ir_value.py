@@ -25,3 +25,16 @@ def testCapsuleConversions():
 
 
 run(testCapsuleConversions)
+
+
+# CHECK-LABEL: TEST: testOpResultOwner
+def testOpResultOwner():
+  ctx = Context()
+  ctx.allow_unregistered_dialects = True
+  with Location.unknown(ctx):
+    i32 = IntegerType.get_signless(32)
+    op = Operation.create("custom.op1", results=[i32])
+    assert op.result.owner == op
+
+
+run(testOpResultOwner)
