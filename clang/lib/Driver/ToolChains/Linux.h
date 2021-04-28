@@ -23,6 +23,10 @@ public:
 
   bool HasNativeLLVMSupport() const override;
 
+  std::string getMultiarchTriple(const Driver &D,
+                                 const llvm::Triple &TargetTriple,
+                                 StringRef SysRoot) const override;
+
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
@@ -61,10 +65,6 @@ protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;
   Tool *buildStaticLibTool() const override;
-
-  std::string getMultiarchTriple(const Driver &D,
-                                 const llvm::Triple &TargetTriple,
-                                 StringRef SysRoot) const override;
 };
 
 } // end namespace toolchains

@@ -156,6 +156,12 @@ bool ShouldReport(ThreadState *thr, ReportType typ) {
     case ReportTypeSignalUnsafe:
       return flags()->report_signal_unsafe;
     case ReportTypeThreadLeak:
+#if !SANITIZER_GO
+      // It's impossible to join phantom threads
+      // in the child after fork.
+      if (ctx->after_multithreaded_fork)
+        return false;
+#endif
       return flags()->report_thread_leaks;
     case ReportTypeMutexDestroyLocked:
       return flags()->report_destroy_locked;

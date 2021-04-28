@@ -1,4 +1,3 @@
-; RUN: opt < %s -basic-aa -function-attrs -S | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes=function-attrs -S | FileCheck %s
 
 ; CHECK: define i32 @f() #0

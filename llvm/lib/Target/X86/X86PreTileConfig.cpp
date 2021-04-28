@@ -71,9 +71,13 @@ struct MIRef {
   }
   bool operator!=(const MIRef &RHS) const { return !(*this == RHS); }
   bool operator<(const MIRef &RHS) const {
+    // Comparison between different BBs happens when inserting a MIRef into set.
+    // So we compare MBB first to make the insertion happy.
     return MBB < RHS.MBB || (MBB == RHS.MBB && Pos < RHS.Pos);
   }
   bool operator>(const MIRef &RHS) const {
+    // Comparison between different BBs happens when inserting a MIRef into set.
+    // So we compare MBB first to make the insertion happy.
     return MBB > RHS.MBB || (MBB == RHS.MBB && Pos > RHS.Pos);
   }
 };
@@ -205,8 +209,9 @@ void X86PreTileConfig::collectShapeInfo(MachineInstr &MI) {
   while (!WorkList.empty()) {
     Register R = WorkList.pop_back_val();
     MachineInstr *DefMI = MRI->getVRegDef(R);
+    assert(DefMI && "R must has one define instruction");
     MachineBasicBlock *DefMBB = DefMI->getParent();
-    if (!DefMI || DefMI->isMoveImmediate() || !DefVisited.insert(DefMI).second)
+    if (DefMI->isMoveImmediate() || !DefVisited.insert(DefMI).second)
       continue;
     if (DefMI->isPHI()) {
       for (unsigned I = 1; I < DefMI->getNumOperands(); I += 2)

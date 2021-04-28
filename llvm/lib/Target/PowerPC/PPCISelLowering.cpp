@@ -1219,7 +1219,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
       // We need to handle f128 SELECT_CC with integer result type.
       setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
-      setOperationAction(ISD::SELECT_CC, MVT::i64, Custom);
+      setOperationAction(ISD::SELECT_CC, MVT::i64, isPPC64 ? Custom : Expand);
     }
 
     if (Subtarget.hasP9Altivec()) {

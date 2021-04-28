@@ -3608,8 +3608,7 @@ TEST(MemorySanitizer, getpwnam_r_positive) {
   strncpy(s, "abcd", 5);
   __msan_poison(s, 5);
   char buf[10000];
-  int res;
-  EXPECT_UMR(res = getpwnam_r(s, &pwd, buf, sizeof(buf), &pwdres));
+  EXPECT_UMR(getpwnam_r(s, &pwd, buf, sizeof(buf), &pwdres));
 }
 
 TEST(MemorySanitizer, getgrnam_r) {

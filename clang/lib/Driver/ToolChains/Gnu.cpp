@@ -2115,7 +2115,7 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       "i686-pc-linux-gnu",  "i386-redhat-linux6E",
       "i686-redhat-linux",  "i386-redhat-linux",
       "i586-suse-linux",    "i686-montavista-linux",
-      "i686-linux-android", "i386-gnu",
+      "i686-linux-android", "i686-gnu",
   };
 
   static const char *const M68kLibDirs[] = {"/lib"};
@@ -2961,12 +2961,10 @@ bool Generic_GCC::addLibStdCXXIncludePaths(Twine IncludeDir, StringRef Triple,
   return true;
 }
 
-bool
-Generic_GCC::addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                                         llvm::opt::ArgStringList &CC1Args) const {
-  // Use GCCInstallation to know where libstdc++ headers are installed.
-  if (!GCCInstallation.isValid())
-    return false;
+bool Generic_GCC::addGCCLibStdCxxIncludePaths(
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    StringRef DebianMultiarch) const {
+  assert(GCCInstallation.isValid());
 
   // By default, look for the C++ headers in an include directory adjacent to
   // the lib directory of the GCC installation. Note that this is expect to be
@@ -2982,11 +2980,8 @@ Generic_GCC::addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
           LibDir.str() + "/../" + TripleStr + "/include/c++/" + Version.Text,
           TripleStr, Multilib.includeSuffix(), DriverArgs, CC1Args))
     return true;
+
   // Detect Debian g++-multiarch-incdir.diff.
-  StringRef DebianMultiarch =
-      GCCInstallation.getTriple().getArch() == llvm::Triple::x86
-          ? "i386-linux-gnu"
-          : TripleStr;
   if (addLibStdCXXIncludePaths(LibDir.str() + "/../include/c++/" + Version.Text,
                                DebianMultiarch, Multilib.includeSuffix(),
                                DriverArgs, CC1Args, /*Debian=*/true))
@@ -3014,7 +3009,10 @@ Generic_GCC::addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
 void
 Generic_GCC::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                       llvm::opt::ArgStringList &CC1Args) const {
-  addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args);
+  if (GCCInstallation.isValid()) {
+    addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args,
+                                GCCInstallation.getTriple().str());
+  }
 }
 
 llvm::opt::DerivedArgList *

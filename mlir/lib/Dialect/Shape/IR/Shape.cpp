@@ -27,8 +27,13 @@ namespace {
 #include "ShapeCanonicalization.inc"
 }
 
-RankedTensorType shape::getExtentTensorType(MLIRContext *ctx) {
-  return RankedTensorType::get({ShapedType::kDynamicSize}, IndexType::get(ctx));
+RankedTensorType shape::getExtentTensorType(MLIRContext *ctx, int64_t rank) {
+  return RankedTensorType::get({rank}, IndexType::get(ctx));
+}
+
+bool shape::isExtentTensorType(Type type) {
+  auto ranked = type.dyn_cast<RankedTensorType>();
+  return ranked && ranked.getRank() == 1 && ranked.getElementType().isIndex();
 }
 
 LogicalResult shape::getShapeVec(Value input,
@@ -123,8 +128,7 @@ void ShapeDialect::initialize() {
 Operation *ShapeDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
                                              Location loc) {
-  if (type.isa<ShapeType>() ||
-      type == getExtentTensorType(builder.getContext()))
+  if (type.isa<ShapeType>() || isExtentTensorType(type))
     return builder.create<ConstShapeOp>(loc, type,
                                         value.cast<DenseIntElementsAttr>());
   if (type.isa<SizeType>())
@@ -624,12 +628,76 @@ struct BroadcastFoldConstantOperandsPattern
     return success();
   }
 };
+
+template <typename OpTy>
+struct CanonicalizeCastExtentTensorOperandsPattern
+    : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const override {
+    // Canonicalize operands.
+    bool anyChange = false;
+    auto canonicalizeOperand = [&](Value operand) {
+      if (auto castOp = operand.getDefiningOp<tensor::CastOp>()) {
+        // Only eliminate the cast if it holds no shape information.
+        bool isInformationLoosingCast =
+            castOp.getType().cast<RankedTensorType>().isDynamicDim(0);
+        if (isInformationLoosingCast) {
+          anyChange = true;
+          return castOp.source();
+        }
+      }
+      return operand;
+    };
+    auto newOperands = llvm::to_vector<8>(
+        llvm::map_range(op.getOperands(), canonicalizeOperand));
+
+    // Rewrite op if any change required.
+    if (!anyChange)
+      return failure();
+    rewriter.replaceOpWithNewOp<OpTy>(op, op->getResultTypes(), newOperands);
+    return success();
+  }
+};
+
+struct BroadcastConcretizeResultTypePattern
+    : public OpRewritePattern<BroadcastOp> {
+  using OpRewritePattern<BroadcastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(BroadcastOp op,
+                                PatternRewriter &rewriter) const override {
+    // Only concretize dynamic extent tensor result types.
+    auto resultTy = op.getType().dyn_cast<RankedTensorType>();
+    if (!resultTy || !resultTy.isDynamicDim(0))
+      return failure();
+
+    // Infer resulting shape rank if possible.
+    int64_t maxRank = 0;
+    for (Value shape : op.shapes()) {
+      if (auto extentTensorTy = shape.getType().dyn_cast<RankedTensorType>()) {
+        // Cannot infer resulting shape rank if any operand is dynamically
+        // ranked.
+        if (extentTensorTy.isDynamicDim(0))
+          return failure();
+        maxRank = std::max(maxRank, extentTensorTy.getDimSize(0));
+      }
+    }
+
+    auto newOp = rewriter.create<BroadcastOp>(
+        op.getLoc(), getExtentTensorType(getContext(), maxRank), op.shapes());
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
+    return success();
+  }
+};
 } // namespace
 
 void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                               MLIRContext *context) {
-  patterns.add<BroadcastFoldConstantOperandsPattern,
+  patterns.add<BroadcastConcretizeResultTypePattern,
+               BroadcastFoldConstantOperandsPattern,
                BroadcastForwardSingleOperandPattern,
+               CanonicalizeCastExtentTensorOperandsPattern<BroadcastOp>,
                RemoveDuplicateOperandsPattern<BroadcastOp>,
                RemoveEmptyShapeOperandsPattern<BroadcastOp>>(context);
 }
@@ -712,7 +780,8 @@ void CstrBroadcastableOp::getCanonicalizationPatterns(
   // Canonicalization patterns have overlap with the considerations during
   // folding in case additional shape information is inferred at some point that
   // does not result in folding.
-  patterns.add<CstrBroadcastableEqOps,
+  patterns.add<CanonicalizeCastExtentTensorOperandsPattern<CstrBroadcastableOp>,
+               CstrBroadcastableEqOps,
                RemoveDuplicateOperandsPattern<CstrBroadcastableOp>,
                RemoveEmptyShapeOperandsPattern<CstrBroadcastableOp>>(context);
 }
@@ -1148,10 +1217,15 @@ OpFoldResult ShapeOfOp::fold(ArrayRef<Attribute>) {
 }
 
 void ShapeOfOp::build(OpBuilder &builder, OperationState &result, Value arg) {
-  Type type = arg.getType().isa<ShapedType>()
-                  ? (Type)getExtentTensorType(builder.getContext())
-                  : (Type)builder.getType<ShapeType>();
-  return ShapeOfOp::build(builder, result, type, arg);
+  if (auto shapedTy = arg.getType().dyn_cast<ShapedType>()) {
+    int64_t rank =
+        shapedTy.hasRank() ? shapedTy.getRank() : ShapedType::kDynamicSize;
+    Type indexTy = builder.getIndexType();
+    Type extentTensorTy = RankedTensorType::get({rank}, indexTy);
+    return ShapeOfOp::build(builder, result, extentTensorTy, arg);
+  }
+  Type shapeTy = builder.getType<ShapeType>();
+  return ShapeOfOp::build(builder, result, shapeTy, arg);
 }
 
 namespace {
@@ -1179,7 +1253,7 @@ struct ShapeOfWithTensor : public OpRewritePattern<shape::ShapeOfOp> {
 // ```
 // %1 = shape.shape_of %arg : tensor<?x?x?xf32> -> tensor<?xindex>
 // ```
-struct ShapeOfCastedExtentTensor : public OpRewritePattern<tensor::CastOp> {
+struct ShapeOfCastExtentTensor : public OpRewritePattern<tensor::CastOp> {
   using OpRewritePattern<tensor::CastOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(tensor::CastOp op,
@@ -1205,7 +1279,7 @@ struct ShapeOfCastedExtentTensor : public OpRewritePattern<tensor::CastOp> {
 
 void ShapeOfOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                             MLIRContext *context) {
-  patterns.add<ShapeOfCastedExtentTensor, ShapeOfWithTensor>(context);
+  patterns.add<ShapeOfCastExtentTensor, ShapeOfWithTensor>(context);
 }
 
 //===----------------------------------------------------------------------===//

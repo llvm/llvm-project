@@ -258,7 +258,8 @@ func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
   %3 = "tosa.mul"(%arg0, %arg0) {shift = 2 : i32} : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
-  // CHECK: muli
+  // CHECK: [[ZERO:%.+]] = constant 0
+  // CHECK: subi [[ZERO]], %arg1
   %4 = "tosa.negate"(%arg0) : (tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
@@ -357,6 +358,35 @@ func @test_bool(%arg0: tensor<1xi1>, %arg1: tensor<1xi1>) -> () {
   // CHECK: constant true
   // CHECK: xor
   %3 = "tosa.logical_not"(%arg0) : (tensor<1xi1>) -> tensor<1xi1>
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_negate_quantized
+func @test_negate_quantized(%arg0: tensor<1xi8>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: [[ZERO:%.+]] = constant 0
+  // CHECK: [[EXT:%.+]] = sexti %arg1 : i8 to i16
+  // CHECK: [[SUB:%.+]] = subi [[ZERO]], [[EXT]]
+  // CHECK: [[MIN:%.+]] = constant -128
+  // CHECK: [[MAX:%.+]] = constant 127
+  // CHECK: [[PRED1:%.+]] = cmpi slt, [[SUB]], [[MIN]]
+  // CHECK: [[LBOUND:%.+]] = select [[PRED1]], [[MIN]], [[SUB]]
+  // CHECK: [[PRED2:%.+]] = cmpi slt, [[MAX]], [[SUB]]
+  // CHECK: [[UBOUND:%.+]] = select [[PRED2]], [[MAX]], [[LBOUND]]
+  // CHECK: [[TRUNC:%.+]] = trunci [[UBOUND]]
+  // CHECK: linalg.yield [[TRUNC]]
+  %0 = "tosa.negate"(%arg0) {quantization_info = { input_zp = 0 : i32, output_zp = 0 : i32}} : (tensor<1xi8>) -> tensor<1xi8>
+
+  // CHECK: linalg.generic
+  // CHECK: [[EXT:%.+]] = sexti %arg1 : i8 to i16
+  %1 = "tosa.negate"(%arg0) {quantization_info = { input_zp = 32639 : i32, output_zp = 0 : i32}} : (tensor<1xi8>) -> tensor<1xi8>
+
+  // CHECK: linalg.generic
+  // CHECK: [[EXT:%.+]] = sexti %arg1 : i8 to i32
+  %2 = "tosa.negate"(%arg0) {quantization_info = { input_zp = 32640 : i32, output_zp = 0 : i32}} : (tensor<1xi8>) -> tensor<1xi8>
 
   return
 }
@@ -726,17 +756,22 @@ func @matmul(%arg0: tensor<5x3xf32>, %arg1: tensor<3x6xf32>, %arg2: tensor<6xf32
 
 // -----
 
-// CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
-// CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (0, d1)>
+// CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d1)>
+// CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK: #[[$MAP2:.*]] = affine_map<(d0, d1) -> (d1, d0)>
 
 // CHECK-LABEL: @fully_connected
-func @fully_connected(%arg0: tensor<5x3xf32>, %arg1: tensor<3x6xf32>, %arg2: tensor<6xf32>) -> (tensor<5x6xf32>) {
-  // CHECK: [[RS:%.+]] = linalg.tensor_reshape %arg2 [#[[$MAP0]]]
-  // CHECK: [[INIT:%.+]] = linalg.init_tensor [5, 6]
-  // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP1]], #[[$MAP0]]], iterator_types = ["parallel", "parallel"]} ins([[RS]] : tensor<1x6xf32>) outs([[INIT]] : tensor<5x6xf32>) {
-  // CHECK: ^bb0([[IN:%.+]]: f32, [[MULTIPLIER:%.+]]: f32):
-  // CHECK: linalg.matmul ins(%arg0, %arg1 : tensor<5x3xf32>, tensor<3x6xf32>) outs([[GENERIC]] : tensor<5x6xf32>) -> tensor<5x6xf32>
-  %0 = "tosa.fully_connected"(%arg0, %arg1, %arg2) : (tensor<5x3xf32>, tensor<3x6xf32>, tensor<6xf32>)  -> (tensor<5x6xf32>)
+func @fully_connected(%arg0: tensor<5x3xf32>, %arg1: tensor<6x3xf32>, %arg2: tensor<6xf32>) -> (tensor<5x6xf32>) {
+  // CHECK: [[INITB:%.+]] = linalg.init_tensor [5, 6]
+  // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel"]} ins(%arg2 : tensor<6xf32>) outs([[INITB]] : tensor<5x6xf32>) {
+  // CHECK: ^bb0([[IN:%.+]]: f32, [[UNUSED:%.+]]: f32):
+  // CHECK:   linalg.yield [[IN]] : f32
+  // CHECK: [[INITT:%.+]] = linalg.init_tensor [3, 6]
+  // CHECK: [[TRANSPOSE:%.+]] = linalg.generic {indexing_maps = [#[[$MAP2]], #[[$MAP1]]], iterator_types = ["parallel", "parallel"]} ins(%arg1 : tensor<6x3xf32>) outs([[INITT]]
+  // CHECK: ^bb0([[IN:%.+]]: f32, [[UNUSED:%.+]]: f32):
+  // CHECK:   linalg.yield [[IN]] : f32
+  // CHECK: linalg.matmul ins(%arg0, [[TRANSPOSE]] : tensor<5x3xf32>, tensor<3x6xf32>) outs([[GENERIC]] : tensor<5x6xf32>) -> tensor<5x6xf32>
+  %0 = "tosa.fully_connected"(%arg0, %arg1, %arg2) : (tensor<5x3xf32>, tensor<6x3xf32>, tensor<6xf32>)  -> (tensor<5x6xf32>)
   return %0 : tensor<5x6xf32>
 }
 

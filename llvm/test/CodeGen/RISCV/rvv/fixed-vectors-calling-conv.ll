@@ -900,27 +900,27 @@ define <32 x i32> @ret_v32i32_call_v32i32_v32i32_v32i32_i32(<32 x i32> %x, <32 x
 ; LMULMAX1-NEXT:    vle32.v v31, (a1)
 ; LMULMAX1-NEXT:    addi a0, a0, 112
 ; LMULMAX1-NEXT:    vle32.v v24, (a0)
-; LMULMAX1-NEXT:    ld a1, 0(s0)
-; LMULMAX1-NEXT:    addi a0, sp, 240
-; LMULMAX1-NEXT:    vse32.v v15, (a0)
-; LMULMAX1-NEXT:    addi a0, sp, 224
-; LMULMAX1-NEXT:    vse32.v v14, (a0)
-; LMULMAX1-NEXT:    addi a0, sp, 208
-; LMULMAX1-NEXT:    vse32.v v13, (a0)
-; LMULMAX1-NEXT:    addi a0, sp, 192
-; LMULMAX1-NEXT:    vse32.v v12, (a0)
-; LMULMAX1-NEXT:    addi a0, sp, 176
-; LMULMAX1-NEXT:    vse32.v v11, (a0)
-; LMULMAX1-NEXT:    addi a0, sp, 160
-; LMULMAX1-NEXT:    vse32.v v10, (a0)
-; LMULMAX1-NEXT:    addi a0, sp, 144
-; LMULMAX1-NEXT:    vse32.v v9, (a0)
+; LMULMAX1-NEXT:    ld a0, 0(s0)
+; LMULMAX1-NEXT:    addi a1, sp, 240
+; LMULMAX1-NEXT:    vse32.v v15, (a1)
+; LMULMAX1-NEXT:    addi a1, sp, 224
+; LMULMAX1-NEXT:    vse32.v v14, (a1)
+; LMULMAX1-NEXT:    addi a1, sp, 208
+; LMULMAX1-NEXT:    vse32.v v13, (a1)
+; LMULMAX1-NEXT:    addi a1, sp, 192
+; LMULMAX1-NEXT:    vse32.v v12, (a1)
+; LMULMAX1-NEXT:    addi a1, sp, 176
+; LMULMAX1-NEXT:    vse32.v v11, (a1)
+; LMULMAX1-NEXT:    addi a1, sp, 160
+; LMULMAX1-NEXT:    vse32.v v10, (a1)
+; LMULMAX1-NEXT:    addi a1, sp, 144
+; LMULMAX1-NEXT:    vse32.v v9, (a1)
+; LMULMAX1-NEXT:    addi a1, zero, 42
+; LMULMAX1-NEXT:    sd a1, 8(sp)
+; LMULMAX1-NEXT:    sd a0, 0(sp)
 ; LMULMAX1-NEXT:    addi a0, sp, 128
-; LMULMAX1-NEXT:    vse32.v v8, (a0)
-; LMULMAX1-NEXT:    addi a0, zero, 42
-; LMULMAX1-NEXT:    sd a0, 8(sp)
-; LMULMAX1-NEXT:    addi a0, sp, 128
-; LMULMAX1-NEXT:    sd a1, 0(sp)
+; LMULMAX1-NEXT:    addi a1, sp, 128
+; LMULMAX1-NEXT:    vse32.v v8, (a1)
 ; LMULMAX1-NEXT:    vmv1r.v v8, v25
 ; LMULMAX1-NEXT:    vmv1r.v v9, v26
 ; LMULMAX1-NEXT:    vmv1r.v v10, v27

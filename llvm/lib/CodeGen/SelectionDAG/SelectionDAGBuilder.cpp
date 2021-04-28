@@ -6315,17 +6315,17 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                                          getValue(I.getArgOperand(0)))));
     return;
   case Intrinsic::fptosi_sat: {
-    EVT Type = TLI.getValueType(DAG.getDataLayout(), I.getType());
-    SDValue SatW = DAG.getConstant(Type.getScalarSizeInBits(), sdl, MVT::i32);
-    setValue(&I, DAG.getNode(ISD::FP_TO_SINT_SAT, sdl, Type,
-                             getValue(I.getArgOperand(0)), SatW));
+    EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getNode(ISD::FP_TO_SINT_SAT, sdl, VT,
+                             getValue(I.getArgOperand(0)),
+                             DAG.getValueType(VT.getScalarType())));
     return;
   }
   case Intrinsic::fptoui_sat: {
-    EVT Type = TLI.getValueType(DAG.getDataLayout(), I.getType());
-    SDValue SatW = DAG.getConstant(Type.getScalarSizeInBits(), sdl, MVT::i32);
-    setValue(&I, DAG.getNode(ISD::FP_TO_UINT_SAT, sdl, Type,
-                             getValue(I.getArgOperand(0)), SatW));
+    EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getNode(ISD::FP_TO_UINT_SAT, sdl, VT,
+                             getValue(I.getArgOperand(0)),
+                             DAG.getValueType(VT.getScalarType())));
     return;
   }
   case Intrinsic::set_rounding:

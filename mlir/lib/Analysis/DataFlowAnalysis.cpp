@@ -317,7 +317,7 @@ void ForwardDataFlowSolver::visitOperation(Operation *op) {
   for (Value operand : op->getOperands()) {
     AbstractLatticeElement *operandLattice =
         analysis.lookupLatticeElement(operand);
-    if (!operandLattice)
+    if (!operandLattice || operandLattice->isUninitialized())
       return;
     operandLattices.push_back(operandLattice);
   }

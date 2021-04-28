@@ -3584,6 +3584,8 @@ def print_target_triple : Flag<["-", "--"], "print-target-triple">,
   HelpText<"Print the normalized target triple">;
 def print_effective_triple : Flag<["-", "--"], "print-effective-triple">,
   HelpText<"Print the effective target triple">;
+def print_multiarch : Flag<["-", "--"], "print-multiarch">,
+  HelpText<"Print the multiarch target triple">;
 def print_prog_name_EQ : Joined<["-", "--"], "print-prog-name=">,
   HelpText<"Print the full program path of <name>">, MetaVarName<"<name>">;
 def print_resource_dir : Flag<["-", "--"], "print-resource-dir">,
@@ -5933,6 +5935,9 @@ def _SLASH_openmp_experimental : CLFlag<"openmp:experimental">,
 def _SLASH_tune : CLCompileJoined<"tune:">,
   HelpText<"Set CPU for optimization without affecting instruction set">,
   Alias<mtune_EQ>;
+def _SLASH_QIntel_jcc_erratum : CLFlag<"QIntel-jcc-erratum">,
+  HelpText<"Align branches within 32-byte boundaries to mitigate the performance impact of the Intel JCC erratum.">,
+  Alias<mbranches_within_32B_boundaries>;
 
 // Non-aliases:
 
@@ -6129,7 +6134,6 @@ def _SLASH_LN : CLFlag<"LN">;
 def _SLASH_MP : CLJoined<"MP">;
 def _SLASH_Qfast_transcendentals : CLFlag<"Qfast_transcendentals">;
 def _SLASH_QIfist : CLFlag<"QIfist">;
-def _SLASH_QIntel_jcc_erratum : CLFlag<"QIntel-jcc-erratum">;
 def _SLASH_Qimprecise_fwaits : CLFlag<"Qimprecise_fwaits">;
 def _SLASH_Qpar : CLFlag<"Qpar">;
 def _SLASH_Qpar_report : CLJoined<"Qpar-report">;

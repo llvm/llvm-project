@@ -14,55 +14,17 @@ define i32 @a(i32* readnone %b, i8* %c) {
 ; CHECK-NEXT:    it ls
 ; CHECK-NEXT:    popls {r4, pc}
 ; CHECK-NEXT:  .LBB0_1: @ %while.body.preheader
-; CHECK-NEXT:    subs r0, r0, r1
-; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w r2, r0, #15
-; CHECK-NEXT:    mov r12, r1
-; CHECK-NEXT:    bic r2, r2, #15
-; CHECK-NEXT:    subs r2, #16
-; CHECK-NEXT:    add.w r3, r3, r2, lsr #4
+; CHECK-NEXT:    subs r4, r0, r1
 ; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    dls lr, r3
+; CHECK-NEXT:    mov r3, r1
+; CHECK-NEXT:    dlstp.8 lr, r4
 ; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    adds r3, r1, r2
-; CHECK-NEXT:    vctp.8 r0
-; CHECK-NEXT:    vmov.8 q0[0], r3
-; CHECK-NEXT:    adds r4, r3, #1
-; CHECK-NEXT:    vmov.8 q0[1], r4
-; CHECK-NEXT:    adds r4, r3, #2
-; CHECK-NEXT:    vmov.8 q0[2], r4
-; CHECK-NEXT:    adds r4, r3, #3
-; CHECK-NEXT:    vmov.8 q0[3], r4
-; CHECK-NEXT:    adds r4, r3, #4
-; CHECK-NEXT:    vmov.8 q0[4], r4
-; CHECK-NEXT:    adds r4, r3, #5
-; CHECK-NEXT:    vmov.8 q0[5], r4
-; CHECK-NEXT:    adds r4, r3, #6
-; CHECK-NEXT:    vmov.8 q0[6], r4
-; CHECK-NEXT:    adds r4, r3, #7
-; CHECK-NEXT:    vmov.8 q0[7], r4
-; CHECK-NEXT:    add.w r4, r3, #8
-; CHECK-NEXT:    vmov.8 q0[8], r4
-; CHECK-NEXT:    add.w r4, r3, #9
-; CHECK-NEXT:    vmov.8 q0[9], r4
-; CHECK-NEXT:    add.w r4, r3, #10
-; CHECK-NEXT:    vmov.8 q0[10], r4
-; CHECK-NEXT:    add.w r4, r3, #11
-; CHECK-NEXT:    vmov.8 q0[11], r4
-; CHECK-NEXT:    add.w r4, r3, #12
-; CHECK-NEXT:    vmov.8 q0[12], r4
-; CHECK-NEXT:    add.w r4, r3, #13
-; CHECK-NEXT:    vmov.8 q0[13], r4
-; CHECK-NEXT:    add.w r4, r3, #14
+; CHECK-NEXT:    adds r0, r1, r2
 ; CHECK-NEXT:    adds r2, #16
-; CHECK-NEXT:    subs r0, #16
-; CHECK-NEXT:    vmov.8 q0[14], r4
-; CHECK-NEXT:    adds r3, #15
-; CHECK-NEXT:    vmov.8 q0[15], r3
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrbt.8 q0, [r12], #16
-; CHECK-NEXT:    le lr, .LBB0_2
+; CHECK-NEXT:    vidup.u8 q0, r0, #1
+; CHECK-NEXT:    vstrb.8 q0, [r3], #16
+; CHECK-NEXT:    letp lr, .LBB0_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r4, pc}
 entry:

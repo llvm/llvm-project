@@ -21534,7 +21534,8 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
   if (!isScalarFPTypeInSSEReg(SrcVT))
     return SDValue();
 
-  unsigned SatWidth = Node->getConstantOperandVal(1);
+  EVT SatVT = cast<VTSDNode>(Node->getOperand(1))->getVT();
+  unsigned SatWidth = SatVT.getScalarSizeInBits();
   unsigned DstWidth = DstVT.getScalarSizeInBits();
   unsigned TmpWidth = TmpVT.getScalarSizeInBits();
   assert(SatWidth <= DstWidth && SatWidth <= TmpWidth &&

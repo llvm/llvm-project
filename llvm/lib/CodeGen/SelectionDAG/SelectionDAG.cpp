@@ -5642,6 +5642,22 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     }
     break;
   }
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT: {
+    assert(VT.isInteger() && cast<VTSDNode>(N2)->getVT().isInteger() &&
+           N1.getValueType().isFloatingPoint() && "Invalid FP_TO_*INT_SAT");
+    assert(N1.getValueType().isVector() == VT.isVector() &&
+           "FP_TO_*INT_SAT type should be vector iff the operand type is "
+           "vector!");
+    assert((!VT.isVector() || VT.getVectorNumElements() ==
+                                  N1.getValueType().getVectorNumElements()) &&
+           "Vector element counts must match in FP_TO_*INT_SAT");
+    assert(!cast<VTSDNode>(N2)->getVT().isVector() &&
+           "Type to saturate to must be a scalar.");
+    assert(cast<VTSDNode>(N2)->getVT().bitsLE(VT.getScalarType()) &&
+           "Not extending!");
+    break;
+  }
   case ISD::EXTRACT_VECTOR_ELT:
     assert(VT.getSizeInBits() >= N1.getValueType().getScalarSizeInBits() &&
            "The result of EXTRACT_VECTOR_ELT must be at least as wide as the \

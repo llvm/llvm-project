@@ -332,7 +332,7 @@ namespace clang {
       EmbedBitcode(getModule(), CodeGenOpts, llvm::MemoryBufferRef());
 
       EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts,
-                        LangOpts, C.getTargetInfo().getDataLayout(),
+                        LangOpts, C.getTargetInfo().getDataLayoutString(),
                         getModule(), Action, std::move(AsmOutStream));
 
       Ctx.setDiagnosticHandler(std::move(OldDiagnosticHandler));
@@ -1105,7 +1105,7 @@ void CodeGenAction::ExecuteAction() {
 
   EmitBackendOutput(Diagnostics, CI.getHeaderSearchOpts(), CodeGenOpts,
                     TargetOpts, CI.getLangOpts(),
-                    CI.getTarget().getDataLayout(), TheModule.get(), BA,
+                    CI.getTarget().getDataLayoutString(), TheModule.get(), BA,
                     std::move(OS));
   if (OptRecordFile)
     OptRecordFile->keep();

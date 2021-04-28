@@ -1973,12 +1973,13 @@ SDValue WebAssemblyTargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
                                                       SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT ResT = Op.getValueType();
-  uint64_t Width = Op.getConstantOperandVal(1);
+  EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
 
-  if ((ResT == MVT::i32 || ResT == MVT::i64) && (Width == 32 || Width == 64))
+  if ((ResT == MVT::i32 || ResT == MVT::i64) &&
+      (SatVT == MVT::i32 || SatVT == MVT::i64))
     return Op;
 
-  if (ResT == MVT::v4i32 && Width == 32)
+  if (ResT == MVT::v4i32 && SatVT == MVT::i32)
     return Op;
 
   return SDValue();
@@ -2143,7 +2144,7 @@ performVectorTruncSatLowCombine(SDNode *N,
   auto FPToIntOp = FPToInt.getOpcode();
   if (FPToIntOp != ISD::FP_TO_SINT_SAT && FPToIntOp != ISD::FP_TO_UINT_SAT)
     return SDValue();
-  if (FPToInt.getConstantOperandVal(1) != 32)
+  if (cast<VTSDNode>(FPToInt.getOperand(1))->getVT() != MVT::i32)
     return SDValue();
 
   auto Source = FPToInt.getOperand(0);

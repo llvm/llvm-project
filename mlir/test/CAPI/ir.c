@@ -1511,6 +1511,71 @@ static int testBackreferences() {
   return 0;
 }
 
+/// Tests operand APIs.
+int testOperands() {
+  fprintf(stderr, "@testOperands\n");
+  // CHECK-LABEL: @testOperands
+
+  MlirContext ctx = mlirContextCreate();
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+  MlirType indexType = mlirIndexTypeGet(ctx);
+
+  // Create some constants to use as operands.
+  MlirAttribute indexZeroLiteral =
+      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("0 : index"));
+  MlirNamedAttribute indexZeroValueAttr = mlirNamedAttributeGet(
+      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
+      indexZeroLiteral);
+  MlirOperationState constZeroState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.constant"), loc);
+  mlirOperationStateAddResults(&constZeroState, 1, &indexType);
+  mlirOperationStateAddAttributes(&constZeroState, 1, &indexZeroValueAttr);
+  MlirOperation constZero = mlirOperationCreate(&constZeroState);
+  MlirValue constZeroValue = mlirOperationGetResult(constZero, 0);
+
+  MlirAttribute indexOneLiteral =
+      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("1 : index"));
+  MlirNamedAttribute indexOneValueAttr = mlirNamedAttributeGet(
+      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
+      indexOneLiteral);
+  MlirOperationState constOneState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("std.constant"), loc);
+  mlirOperationStateAddResults(&constOneState, 1, &indexType);
+  mlirOperationStateAddAttributes(&constOneState, 1, &indexOneValueAttr);
+  MlirOperation constOne = mlirOperationCreate(&constOneState);
+  MlirValue constOneValue = mlirOperationGetResult(constOne, 0);
+
+  // Create the operation under test.
+  MlirOperationState opState =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op"), loc);
+  MlirValue initialOperands[] = {constZeroValue};
+  mlirOperationStateAddOperands(&opState, 1, initialOperands);
+  MlirOperation op = mlirOperationCreate(&opState);
+
+  // Test operand APIs.
+  intptr_t numOperands = mlirOperationGetNumOperands(op);
+  fprintf(stderr, "Num Operands: %ld\n", numOperands);
+  // CHECK: Num Operands: 1
+
+  MlirValue opOperand = mlirOperationGetOperand(op, 0);
+  fprintf(stderr, "Original operand: ");
+  mlirValuePrint(opOperand, printToStderr, NULL);
+  // CHECK: Original operand: {{.+}} {value = 0 : index}
+
+  mlirOperationSetOperand(op, 0, constOneValue);
+  opOperand = mlirOperationGetOperand(op, 0);
+  fprintf(stderr, "Updated operand: ");
+  mlirValuePrint(opOperand, printToStderr, NULL);
+  // CHECK: Updated operand: {{.+}} {value = 1 : index}
+
+  mlirOperationDestroy(op);
+  mlirOperationDestroy(constZero);
+  mlirOperationDestroy(constOne);
+  mlirContextDestroy(ctx);
+
+  return 0;
+}
+
 // Wraps a diagnostic into additional text we can match against.
 MlirLogicalResult errorHandler(MlirDiagnostic diagnostic, void *userData) {
   fprintf(stderr, "processing diagnostic (userData: %ld) <<\n", (long)userData);
@@ -1588,6 +1653,8 @@ int main() {
     return 9;
   if (testBackreferences())
     return 10;
+  if (testOperands())
+    return 11;
 
   mlirContextDestroy(ctx);
 

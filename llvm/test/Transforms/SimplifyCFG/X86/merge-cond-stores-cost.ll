@@ -8,14 +8,14 @@ define void @test_costly(i32* %p, i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    br i1 [[X1]], label [[FALLTHROUGH:%.*]], label [[YES1:%.*]]
 ; CHECK:       yes1:
 ; CHECK-NEXT:    [[VAL0:%.*]] = sdiv i32 [[D:%.*]], [[C:%.*]]
-; CHECK-NEXT:    store i32 [[VAL0]], i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 [[VAL0]], i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[FALLTHROUGH]]
 ; CHECK:       fallthrough:
 ; CHECK-NEXT:    [[X2:%.*]] = icmp eq i32 [[B:%.*]], 0
 ; CHECK-NEXT:    br i1 [[X2]], label [[END:%.*]], label [[YES2:%.*]]
 ; CHECK:       yes2:
 ; CHECK-NEXT:    [[VAL1:%.*]] = sdiv i32 [[C]], [[D]]
-; CHECK-NEXT:    store i32 [[VAL1]], i32* [[P]]
+; CHECK-NEXT:    store i32 [[VAL1]], i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void

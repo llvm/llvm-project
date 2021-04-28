@@ -51,7 +51,7 @@ define i32 @bar(i32 %c) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], [4 x i32]* @switch.table.bar, i32 0, i32 [[SWITCH_TABLEIDX]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret i32 15

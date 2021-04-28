@@ -1,4 +1,4 @@
-// RUN: %clang_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clang_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
 // Regression test for
 // https://groups.google.com/g/thread-sanitizer/c/TQrr4-9PRYo/m/HFR4FMi6AQAJ
 #include "test.h"
@@ -12,7 +12,13 @@ long glob = 0;
 
 void *worker(void *main) {
   glob++;
+  // synchronize with main
   barrier_wait(&barrier);
+  // synchronize with atfork
+  barrier_wait(&barrier);
+  pthread_kill((pthread_t)main, SIGPROF);
+  barrier_wait(&barrier);
+  // synchronize with afterfork
   barrier_wait(&barrier);
   pthread_kill((pthread_t)main, SIGPROF);
   barrier_wait(&barrier);
@@ -25,6 +31,22 @@ void atfork() {
   write(2, "in atfork\n", strlen("in atfork\n"));
   static volatile long a;
   __atomic_fetch_add(&a, 1, __ATOMIC_RELEASE);
+}
+
+void afterfork() {
+  barrier_wait(&barrier);
+  barrier_wait(&barrier);
+  write(2, "in afterfork\n", strlen("in afterfork\n"));
+  static volatile long a;
+  __atomic_fetch_add(&a, 1, __ATOMIC_RELEASE);
+}
+
+void afterfork_child() {
+  // Can't synchronize with barriers because we are
+  // in the new process, but want consistent output.
+  sleep(1);
+  write(2, "in afterfork_child\n", strlen("in afterfork_child\n"));
+  glob++;
 }
 
 void handler(int sig) {
@@ -40,7 +62,7 @@ int main() {
     perror("sigaction");
     exit(1);
   }
-  pthread_atfork(atfork, NULL, NULL);
+  pthread_atfork(atfork, afterfork, afterfork_child);
   pthread_t t;
   pthread_create(&t, NULL, worker, (void*)pthread_self());
   barrier_wait(&barrier);
@@ -64,8 +86,13 @@ int main() {
 
 // CHECK: in atfork
 // CHECK: in handler
-// Note: There is a race, but we won't report it
-// to not deadlock.
-// CHECK-NOT: ThreadSanitizer: data race
+// CHECK: ThreadSanitizer: data race
+// CHECK:   Write of size 8
+// CHECK:     #0 handler
+// CHECK:   Previous write of size 8
+// CHECK:     #0 worker
+// CHECK: afterfork
+// CHECK: in handler
+// CHECK: afterfork_child
 // CHECK: CHILD
 // CHECK: PARENT

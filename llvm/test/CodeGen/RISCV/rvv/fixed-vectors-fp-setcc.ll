@@ -1528,10 +1528,10 @@ define void @fcmp_ord_fv_v4f16(<4 x half>* %x, half %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli a2, 4, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vfmv.v.f v26, fa0
-; CHECK-NEXT:    vmfeq.vv v27, v25, v25
-; CHECK-NEXT:    vmfeq.vf v25, v26, fa0
+; CHECK-NEXT:    vmfeq.vf v27, v26, fa0
+; CHECK-NEXT:    vmfeq.vv v26, v25, v25
 ; CHECK-NEXT:    vsetivli a0, 4, e8,m1,ta,mu
-; CHECK-NEXT:    vmand.mm v0, v25, v27
+; CHECK-NEXT:    vmand.mm v0, v27, v26
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
 ; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
@@ -1556,10 +1556,10 @@ define void @fcmp_uno_fv_v4f16(<2 x half>* %x, half %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli a2, 2, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vfmv.v.f v26, fa0
-; CHECK-NEXT:    vmfne.vv v27, v25, v25
-; CHECK-NEXT:    vmfne.vf v25, v26, fa0
+; CHECK-NEXT:    vmfne.vf v27, v26, fa0
+; CHECK-NEXT:    vmfne.vv v26, v25, v25
 ; CHECK-NEXT:    vsetivli a0, 2, e8,m1,ta,mu
-; CHECK-NEXT:    vmor.mm v0, v25, v27
+; CHECK-NEXT:    vmor.mm v0, v27, v26
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
 ; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu

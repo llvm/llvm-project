@@ -71,6 +71,13 @@ llvm.mlir.global private local_unnamed_addr constant @local_unnamed_addr(42 : i6
 llvm.mlir.global private unnamed_addr constant @unnamed_addr(42 : i64) : i64
 
 //
+// Section attribute.
+//
+
+// CHECK: @sectionvar = internal constant [10 x i8] c"teststring", section ".mysection"
+llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysection"}: !llvm.array<10 x i8>
+
+//
 // Declarations of the allocation functions to be linked against. These are
 // inserted before other functions in the module.
 //

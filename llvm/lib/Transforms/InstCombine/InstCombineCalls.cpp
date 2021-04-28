@@ -698,6 +698,47 @@ static Optional<bool> getKnownSign(Value *Op, Instruction *CxtI,
       ICmpInst::ICMP_SLT, Op, Constant::getNullValue(Op->getType()), CxtI, DL);
 }
 
+/// If we have a clamp pattern like max (min X, 42), 41 -- where the output
+/// can only be one of two possible constant values -- turn that into a select
+/// of constants.
+static Instruction *foldClampRangeOfTwo(IntrinsicInst *II,
+                                        InstCombiner::BuilderTy &Builder) {
+  Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
+  Value *X;
+  const APInt *C0, *C1;
+  if (!match(I1, m_APInt(C1)) || !I0->hasOneUse())
+    return nullptr;
+
+  CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::smax:
+    if (match(I0, m_SMin(m_Value(X), m_APInt(C0))) && *C0 == *C1 + 1)
+      Pred = ICmpInst::ICMP_SGT;
+    break;
+  case Intrinsic::smin:
+    if (match(I0, m_SMax(m_Value(X), m_APInt(C0))) && *C1 == *C0 + 1)
+      Pred = ICmpInst::ICMP_SLT;
+    break;
+  case Intrinsic::umax:
+    if (match(I0, m_UMin(m_Value(X), m_APInt(C0))) && *C0 == *C1 + 1)
+      Pred = ICmpInst::ICMP_UGT;
+    break;
+  case Intrinsic::umin:
+    if (match(I0, m_UMax(m_Value(X), m_APInt(C0))) && *C1 == *C0 + 1)
+      Pred = ICmpInst::ICMP_ULT;
+    break;
+  default:
+    llvm_unreachable("Expected min/max intrinsic");
+  }
+  if (Pred == CmpInst::BAD_ICMP_PREDICATE)
+    return nullptr;
+
+  // max (min X, 42), 41 --> X > 41 ? 42 : 41
+  // min (max X, 42), 43 --> X < 43 ? 42 : 43
+  Value *Cmp = Builder.CreateICmp(Pred, X, I1);
+  return SelectInst::Create(Cmp, ConstantInt::get(II->getType(), *C0), I1);
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -941,6 +982,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         Abs = Builder.CreateNeg(Abs, "nabs", /* NUW */ false, IntMinIsPoison);
       return replaceInstUsesWith(CI, Abs);
     }
+
+    if (Instruction *Sel = foldClampRangeOfTwo(II, Builder))
+      return Sel;
 
     break;
   }

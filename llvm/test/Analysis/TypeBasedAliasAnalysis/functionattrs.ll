@@ -1,4 +1,4 @@
-; RUN: opt < %s -tbaa -basic-aa -function-attrs -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=tbaa,basic-aa -passes=function-attrs -S | FileCheck %s
 
 ; FunctionAttrs should make use of TBAA.
 

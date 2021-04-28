@@ -30,9 +30,7 @@ define float @fadd_strict_unroll(float* noalias nocapture readonly %a, i64 %n) {
 ; CHECK-LABEL: @fadd_strict_unroll
 ; CHECK: vector.body:
 ; CHECK: %[[VEC_PHI1:.*]] = phi float [ 0.000000e+00, %vector.ph ], [ %[[RDX4:.*]], %vector.body ]
-; CHECK: %[[VEC_PHI2:.*]] = phi float [ -0.000000e+00, %vector.ph ], [ %[[RDX4]], %vector.body ]
-; CHECK: %[[VEC_PHI3:.*]] = phi float [ -0.000000e+00, %vector.ph ], [ %[[RDX4]], %vector.body ]
-; CHECK: %[[VEC_PHI4:.*]] = phi float [ -0.000000e+00, %vector.ph ], [ %[[RDX4]], %vector.body ]
+; CHECK-NOT: phi float [ 0.000000e+00, %vector.ph ], [ %[[RDX4]], %vector.body ]
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
 ; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*
 ; CHECK: %[[LOAD3:.*]] = load <vscale x 8 x float>, <vscale x 8 x float>*

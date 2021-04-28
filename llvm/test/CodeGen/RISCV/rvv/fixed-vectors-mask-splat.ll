@@ -94,19 +94,19 @@ define void @splat_zeros_v32i1(<32 x i1>* %x) {
 ;
 ; LMULMAX1-RV32-LABEL: splat_zeros_v32i1:
 ; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    addi a1, a0, 2
-; LMULMAX1-RV32-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vmclr.m v25
-; LMULMAX1-RV32-NEXT:    vse1.v v25, (a1)
+; LMULMAX1-RV32-NEXT:    vse1.v v25, (a0)
+; LMULMAX1-RV32-NEXT:    addi a0, a0, 2
 ; LMULMAX1-RV32-NEXT:    vse1.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    ret
 ;
 ; LMULMAX1-RV64-LABEL: splat_zeros_v32i1:
 ; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    addi a1, a0, 2
-; LMULMAX1-RV64-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vmclr.m v25
-; LMULMAX1-RV64-NEXT:    vse1.v v25, (a1)
+; LMULMAX1-RV64-NEXT:    vse1.v v25, (a0)
+; LMULMAX1-RV64-NEXT:    addi a0, a0, 2
 ; LMULMAX1-RV64-NEXT:    vse1.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
   store <32 x i1> zeroinitializer, <32 x i1>* %x
@@ -126,27 +126,27 @@ define void @splat_ones_v64i1(<64 x i1>* %x) {
 ;
 ; LMULMAX1-RV32-LABEL: splat_ones_v64i1:
 ; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    addi a1, a0, 6
-; LMULMAX1-RV32-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vmset.m v25
+; LMULMAX1-RV32-NEXT:    vse1.v v25, (a0)
+; LMULMAX1-RV32-NEXT:    addi a1, a0, 6
 ; LMULMAX1-RV32-NEXT:    vse1.v v25, (a1)
 ; LMULMAX1-RV32-NEXT:    addi a1, a0, 4
 ; LMULMAX1-RV32-NEXT:    vse1.v v25, (a1)
-; LMULMAX1-RV32-NEXT:    addi a1, a0, 2
-; LMULMAX1-RV32-NEXT:    vse1.v v25, (a1)
+; LMULMAX1-RV32-NEXT:    addi a0, a0, 2
 ; LMULMAX1-RV32-NEXT:    vse1.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    ret
 ;
 ; LMULMAX1-RV64-LABEL: splat_ones_v64i1:
 ; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    addi a1, a0, 6
-; LMULMAX1-RV64-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
+; LMULMAX1-RV64-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vmset.m v25
+; LMULMAX1-RV64-NEXT:    vse1.v v25, (a0)
+; LMULMAX1-RV64-NEXT:    addi a1, a0, 6
 ; LMULMAX1-RV64-NEXT:    vse1.v v25, (a1)
 ; LMULMAX1-RV64-NEXT:    addi a1, a0, 4
 ; LMULMAX1-RV64-NEXT:    vse1.v v25, (a1)
-; LMULMAX1-RV64-NEXT:    addi a1, a0, 2
-; LMULMAX1-RV64-NEXT:    vse1.v v25, (a1)
+; LMULMAX1-RV64-NEXT:    addi a0, a0, 2
 ; LMULMAX1-RV64-NEXT:    vse1.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
   store <64 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, <64 x i1>* %x
