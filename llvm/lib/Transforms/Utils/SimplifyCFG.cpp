@@ -2024,8 +2024,8 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
   if (ScanIdx == 0)
     return false;
 
-  bool Changed = false;
-
+  // Okay, we *could* sink last ScanIdx instructions. But how many can we
+  // actually sink before encountering instruction that is unprofitable to sink?
   auto ProfitableToSinkInstruction = [&](LockstepReverseIterator &LRI) {
     unsigned NumPHIdValues = 0;
     for (auto *I : *LRI)
@@ -2039,6 +2039,25 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
 
     return NumPHIInsts <= 1;
   };
+  LRI.reset();
+  unsigned Idx = 0;
+  while (Idx < ScanIdx) {
+    if (!ProfitableToSinkInstruction(LRI)) {
+      // Too many PHIs would be created.
+      LLVM_DEBUG(
+          dbgs() << "SINK: stopping here, too many PHIs would be created!\n");
+      break;
+    }
+    --LRI;
+    ++Idx;
+  }
+  ScanIdx = Idx;
+
+  // If no instructions can be sunk, early-return.
+  if (ScanIdx == 0)
+    return false;
+
+  bool Changed = false;
 
   if (Cond) {
     // It is always legal to sink common instructions from unconditional
@@ -2049,7 +2068,7 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
     LRI.reset();
     unsigned Idx = 0;
     bool Profitable = false;
-    while (ProfitableToSinkInstruction(LRI) && Idx < ScanIdx) {
+    while (Idx < ScanIdx) {
       if (!isSafeToSpeculativelyExecute((*LRI)[0])) {
         Profitable = true;
         break;
@@ -2090,12 +2109,6 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
     // Because we've sunk every instruction in turn, the current instruction to
     // sink is always at index 0.
     LRI.reset();
-    if (!ProfitableToSinkInstruction(LRI)) {
-      // Too many PHIs would be created.
-      LLVM_DEBUG(
-          dbgs() << "SINK: stopping here, too many PHIs would be created!\n");
-      break;
-    }
 
     if (!sinkLastInstruction(UnconditionalPreds)) {
       LLVM_DEBUG(
