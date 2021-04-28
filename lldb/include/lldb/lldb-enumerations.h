@@ -160,7 +160,7 @@ enum Format {
   eFormatBytes,
   eFormatBytesWithASCII,
   eFormatChar,
-  eFormatCharPrintable, ///< Only printable characters, space if not printable
+  eFormatCharPrintable, ///< Only printable characters, '.' if not printable
   eFormatComplex,       ///< Floating point complex type
   eFormatComplexFloat = eFormatComplex,
   eFormatCString, ///< NULL terminated C strings
