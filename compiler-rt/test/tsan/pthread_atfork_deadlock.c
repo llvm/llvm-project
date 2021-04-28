@@ -21,7 +21,7 @@ void atfork() {
 
 int main() {
   barrier_init(&barrier, 2);
-  pthread_atfork(atfork, atfork, atfork);
+  pthread_atfork(atfork, NULL, NULL);
   pthread_t t;
   pthread_create(&t, NULL, worker, NULL);
   glob++;

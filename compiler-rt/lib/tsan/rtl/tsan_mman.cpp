@@ -145,7 +145,7 @@ void AllocatorPrintStats() {
 
 static void SignalUnsafeCall(ThreadState *thr, uptr pc) {
   if (atomic_load_relaxed(&thr->in_signal_handler) == 0 ||
-      !ShouldReport(thr, ReportTypeSignalUnsafe))
+      !flags()->report_signal_unsafe)
     return;
   VarSizeStackTrace stack;
   ObtainCurrentStack(thr, pc, &stack);

@@ -51,8 +51,6 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
   // or false positives (e.g. unlock in a different thread).
   if (SANITIZER_GO)
     return;
-  if (!ShouldReport(thr, typ))
-    return;
   ThreadRegistryLock l(ctx->thread_registry);
   ScopedReport rep(typ);
   rep.AddMutex(mid);
@@ -109,7 +107,7 @@ void MutexDestroy(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   if (!unlock_locked)
     s->Reset(thr->proc());  // must not reset it before the report is printed
   s->mtx.Unlock();
-  if (unlock_locked && ShouldReport(thr, ReportTypeMutexDestroyLocked)) {
+  if (unlock_locked) {
     ThreadRegistryLock l(ctx->thread_registry);
     ScopedReport rep(ReportTypeMutexDestroyLocked);
     rep.AddMutex(mid);
@@ -536,7 +534,7 @@ void AcquireReleaseImpl(ThreadState *thr, uptr pc, SyncClock *c) {
 }
 
 void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {
-  if (r == 0 || !ShouldReport(thr, ReportTypeDeadlock))
+  if (r == 0)
     return;
   ThreadRegistryLock l(ctx->thread_registry);
   ScopedReport rep(ReportTypeDeadlock);
