@@ -1457,6 +1457,8 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
     AliasAnalysis &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
     AssumptionCache &AC =
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
