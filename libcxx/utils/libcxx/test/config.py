@@ -465,6 +465,9 @@ class Configuration(object):
             # libcxx CMakeLists.txt if building targeting msvc.
             self.cxx.link_flags += ['-l%s%s' % (lib, debug_suffix) for lib in
                                     ['vcruntime', 'ucrt', 'msvcrt', 'msvcprt']]
+            # The compiler normally links in oldnames.lib too, but we've
+            # specified -nostdlib above, so we need to specify it manually.
+            self.cxx.link_flags += ['-loldnames']
         elif cxx_abi == 'none' or cxx_abi == 'default':
             if self.target_info.is_windows():
                 debug_suffix = 'd' if self.debug_build else ''
