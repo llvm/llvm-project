@@ -1075,6 +1075,7 @@ llvm::json::Value toJSON(const FileStatus &FStatus) {
 constexpr unsigned SemanticTokenEncodingSize = 5;
 static llvm::json::Value encodeTokens(llvm::ArrayRef<SemanticToken> Toks) {
   llvm::json::Array Result;
+  Result.reserve(SemanticTokenEncodingSize * Toks.size());
   for (const auto &Tok : Toks) {
     Result.push_back(Tok.deltaLine);
     Result.push_back(Tok.deltaStart);
