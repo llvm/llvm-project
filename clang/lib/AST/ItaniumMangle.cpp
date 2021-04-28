@@ -1937,8 +1937,10 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
     // If this is involved in kernel mangling and we are in the
     // __builtin_unique_stable_name parts, this function returns 'true', so we
     // skip the 'number' apend.
-    if (CB(Context.getASTContext(), Lambda, Out))
+    if (CB(Context.getASTContext(), Lambda, Out)) {
+      Out << '_';
       return;
+    }
   } else {
     // Don't assert in the kernel __builtin_unique_stable_name part, since that
     // just needs to be internally consistent with itself. Having it be

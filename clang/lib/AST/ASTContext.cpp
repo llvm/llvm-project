@@ -11664,6 +11664,9 @@ unsigned ASTContext::GetSYCLKernelNamingIndex(const TagDecl *TD) const {
 
   // TODO: ERICH: Come up with some way to sort the collection and come up with
   // an 'order' for this number.  For now, just return 5 so we can look at it in
-  // the demangler.
+  // the demangler. It seems that a number is all we can do in the lambda
+  // mangling, but if someone else has a better mangling-model that always
+  // demangles, let me know.  We might think about counting these down from
+  // unsigned-max just to differentiate.
   return 5;
 }
