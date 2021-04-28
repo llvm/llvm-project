@@ -1484,6 +1484,7 @@ if.end.icp:
 }
 declare void @direct_callee()
 declare void @direct_callee2()
+declare void @direct_callee3()
 
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
@@ -1530,3 +1531,45 @@ end:
   ret void
 }
 declare void @use32(i32)
+
+define void @multiple_cond_preds(i1 %c0, i1 %c1, i1 %c2) {
+; CHECK-LABEL: @multiple_cond_preds(
+; CHECK-NEXT:  dispatch0:
+; CHECK-NEXT:    br i1 [[C0:%.*]], label [[DISPATCH1:%.*]], label [[DISPATCH2:%.*]]
+; CHECK:       dispatch1:
+; CHECK-NEXT:    call void @direct_callee2()
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[UNCOND_PRED0:%.*]], label [[END:%.*]]
+; CHECK:       dispatch2:
+; CHECK-NEXT:    call void @direct_callee3()
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[UNCOND_PRED1:%.*]], label [[END]]
+; CHECK:       uncond_pred0:
+; CHECK-NEXT:    call void @direct_callee()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       uncond_pred1:
+; CHECK-NEXT:    call void @direct_callee()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+dispatch0:
+  br i1 %c0, label %dispatch1, label %dispatch2
+
+dispatch1:
+  call void @direct_callee2()
+  br i1 %c1, label %uncond_pred0, label %end
+
+dispatch2:
+  call void @direct_callee3()
+  br i1 %c2, label %uncond_pred1, label %end
+
+uncond_pred0:
+  call void @direct_callee()
+  br label %end
+
+uncond_pred1:
+  call void @direct_callee()
+  br label %end
+
+end:
+  ret void
+}
