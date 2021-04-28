@@ -44,6 +44,9 @@ public:
   void setAllowDollarAtStartOfIdentifier(bool Value) {
     AllowDollarAtStartOfIdentifier = Value;
   }
+  void setAllowHashAtStartOfIdentifier(bool Value) {
+    AllowHashAtStartOfIdentifier = Value;
+  }
 };
 
 // Setup a testing class that the GTest framework can call.
@@ -567,6 +570,87 @@ TEST_F(SystemZAsmLexerTest, CheckAcceptDollarAtStartOfIdentifier) {
   // Lex initially to get the string.
   Parser->getLexer().Lex();
 
+  SmallVector<AsmToken::TokenKind> ExpectedTokens(
+      {AsmToken::Identifier, AsmToken::EndOfStatement, AsmToken::Eof});
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerTest, CheckAcceptHashAtStartOfIdentifier) {
+  StringRef AsmStr = "##a#b$c";
+
+  // Setup.
+  MUPMAI->setAllowHashAtStartOfIdentifier(true);
+  MUPMAI->setCommentString("*");
+  MUPMAI->setAllowAdditionalComments(false);
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().setAllowHashInIdentifier(true);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  SmallVector<AsmToken::TokenKind> ExpectedTokens(
+      {AsmToken::Identifier, AsmToken::EndOfStatement, AsmToken::Eof});
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerTest, CheckAcceptHashAtStartOfIdentifier2) {
+  StringRef AsmStr = "##a#b$c";
+
+  // Setup.
+  MUPMAI->setAllowHashAtStartOfIdentifier(true);
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().setAllowHashInIdentifier(true);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  // By default, the CommentString attribute is set to "#".
+  // Hence, "##a#b$c" is lexed as a line comment irrespective
+  // of whether the AllowHashAtStartOfIdentifier attribute is set to true.
+  SmallVector<AsmToken::TokenKind> ExpectedTokens(
+      {AsmToken::EndOfStatement, AsmToken::Eof});
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerTest, CheckAcceptHashAtStartOfIdentifier3) {
+  StringRef AsmStr = "##a#b$c";
+
+  // Setup.
+  MUPMAI->setAllowHashAtStartOfIdentifier(true);
+  MUPMAI->setCommentString("*");
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().setAllowHashInIdentifier(true);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  // By default, the AsmLexer treats strings that start with "#"
+  // as a line comment.
+  // Hence, "##a$b$c" is lexed as a line comment irrespective
+  // of whether the AllowHashAtStartOfIdentifier attribute is set to true.
+  SmallVector<AsmToken::TokenKind> ExpectedTokens(
+      {AsmToken::EndOfStatement, AsmToken::Eof});
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerTest, CheckAcceptHashAtStartOfIdentifier4) {
+  StringRef AsmStr = "##a#b$c";
+
+  // Setup.
+  MUPMAI->setAllowHashAtStartOfIdentifier(true);
+  MUPMAI->setCommentString("*");
+  MUPMAI->setAllowAdditionalComments(false);
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().setAllowHashInIdentifier(true);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  // Since, the AllowAdditionalComments attribute is set to false,
+  // only strings starting with the CommentString attribute are
+  // lexed as possible comments.
+  // Hence, "##a$b$c" is lexed as an Identifier because the
+  // AllowHashAtStartOfIdentifier attribute is set to true.
   SmallVector<AsmToken::TokenKind> ExpectedTokens(
       {AsmToken::Identifier, AsmToken::EndOfStatement, AsmToken::Eof});
   lexAndCheckTokens(AsmStr, ExpectedTokens);

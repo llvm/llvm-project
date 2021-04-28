@@ -183,24 +183,31 @@ protected:
 
   /// This is true if the assembler allows the "?" character at the start of
   /// of a string to be lexed as an AsmToken::Identifier.
-  /// If the CommentString is also set to "?", setting this option will have
-  /// no effect, and the string will be lexed as a comment.
-  /// Defaults to false.
+  /// If the AsmLexer determines that the string can be lexed as a possible
+  /// comment, setting this option will have no effect, and the string will
+  /// still be lexed as a comment.
   bool AllowQuestionAtStartOfIdentifier = false;
 
   /// This is true if the assembler allows the "$" character at the start of
   /// of a string to be lexed as an AsmToken::Identifier.
-  /// If the CommentString is also set to "$", setting this option will have
-  /// no effect, and the string will be lexed as a comment.
-  /// Defaults to false.
+  /// If the AsmLexer determines that the string can be lexed as a possible
+  /// comment, setting this option will have no effect, and the string will
+  /// still be lexed as a comment.
   bool AllowDollarAtStartOfIdentifier = false;
 
   /// This is true if the assembler allows the "@" character at the start of
   /// a string to be lexed as an AsmToken::Identifier.
-  /// If the CommentString is also set to "@", setting this option will have
-  /// no effect, and the string will be lexed as a comment.
-  /// Defaults to false.
+  /// If the AsmLexer determines that the string can be lexed as a possible
+  /// comment, setting this option will have no effect, and the string will
+  /// still be lexed as a comment.
   bool AllowAtAtStartOfIdentifier = false;
+
+  /// This is true if the assembler allows the "#" character at the start of
+  /// a string to be lexed as an AsmToken::Identifier.
+  /// If the AsmLexer determines that the string can be lexed as a possible
+  /// comment, setting this option will have no effect, and the string will
+  /// still be lexed as a comment.
+  bool AllowHashAtStartOfIdentifier = false;
 
   /// If this is true, symbol names with invalid characters will be printed in
   /// quotes.
@@ -629,6 +636,9 @@ public:
   }
   bool doesAllowDollarAtStartOfIdentifier() const {
     return AllowDollarAtStartOfIdentifier;
+  }
+  bool doesAllowHashAtStartOfIdentifier() const {
+    return AllowHashAtStartOfIdentifier;
   }
   bool supportsNameQuoting() const { return SupportsQuotedNames; }
 
