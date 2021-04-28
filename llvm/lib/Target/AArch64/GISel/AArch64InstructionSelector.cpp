@@ -3376,7 +3376,10 @@ bool AArch64InstructionSelector::selectTLSGlobalValue(
   MachineFunction &MF = *I.getParent()->getParent();
   MF.getFrameInfo().setAdjustsStack(true);
 
-  const GlobalValue &GV = *I.getOperand(1).getGlobal();
+  const auto &GlobalOp = I.getOperand(1);
+  assert(GlobalOp.getOffset() == 0 &&
+         "Shouldn't have an offset on TLS globals!");
+  const GlobalValue &GV = *GlobalOp.getGlobal();
   MachineIRBuilder MIB(I);
 
   auto LoadGOT =
