@@ -1143,6 +1143,13 @@ def iaddroff : ComplexPattern<iPTR, 1, "SelectAddrImmOffs", [], []>;
 // PC Relative Address
 def pcreladdr : ComplexPattern<iPTR, 1, "SelectAddrPCRel", [], []>;
 
+// Load and Store Instruction Selection addressing modes.
+def DForm  : ComplexPattern<iPTR, 2, "SelectDForm",    [], [SDNPWantParent]>;
+def DSForm : ComplexPattern<iPTR, 2, "SelectDSForm",   [], [SDNPWantParent]>;
+def DQForm : ComplexPattern<iPTR, 2, "SelectDQForm",   [], [SDNPWantParent]>;
+def XForm  : ComplexPattern<iPTR, 2, "SelectXForm",    [], [SDNPWantParent]>;
+def ForceXForm : ComplexPattern<iPTR, 2, "SelectForceXForm", [], [SDNPWantParent]>;
+
 //===----------------------------------------------------------------------===//
 // PowerPC Instruction Predicate Definitions.
 def In32BitMode  : Predicate<"!Subtarget->isPPC64()">;
@@ -2221,25 +2228,25 @@ def TD : XForm_1<31, 68, (outs), (ins u5imm:$to, g8rc:$rA, g8rc:$rB),
 let PPC970_Unit = 2 in {
 def LBZ : DForm_1<34, (outs gprc:$rD), (ins memri:$src),
                   "lbz $rD, $src", IIC_LdStLoad,
-                  [(set i32:$rD, (zextloadi8 iaddr:$src))]>;
+                  [(set i32:$rD, (zextloadi8 DForm:$src))]>;
 def LHA : DForm_1<42, (outs gprc:$rD), (ins memri:$src),
                   "lha $rD, $src", IIC_LdStLHA,
-                  [(set i32:$rD, (sextloadi16 iaddr:$src))]>,
+                  [(set i32:$rD, (sextloadi16 DForm:$src))]>,
                   PPC970_DGroup_Cracked;
 def LHZ : DForm_1<40, (outs gprc:$rD), (ins memri:$src),
                   "lhz $rD, $src", IIC_LdStLoad,
-                  [(set i32:$rD, (zextloadi16 iaddr:$src))]>;
+                  [(set i32:$rD, (zextloadi16 DForm:$src))]>;
 def LWZ : DForm_1<32, (outs gprc:$rD), (ins memri:$src),
                   "lwz $rD, $src", IIC_LdStLoad,
-                  [(set i32:$rD, (load iaddr:$src))]>;
+                  [(set i32:$rD, (load DForm:$src))]>;
 
 let Predicates = [HasFPU] in {
 def LFS : DForm_1<48, (outs f4rc:$rD), (ins memri:$src),
                   "lfs $rD, $src", IIC_LdStLFD,
-                  [(set f32:$rD, (load iaddr:$src))]>;
+                  [(set f32:$rD, (load DForm:$src))]>;
 def LFD : DForm_1<50, (outs f8rc:$rD), (ins memri:$src),
                   "lfd $rD, $src", IIC_LdStLFD,
-                  [(set f64:$rD, (load iaddr:$src))]>;
+                  [(set f64:$rD, (load DForm:$src))]>;
 }
 
 
@@ -2324,17 +2331,17 @@ def LFDUX : XForm_1_memOp<31, 631, (outs f8rc:$rD, ptr_rc_nor0:$ea_result),
 let PPC970_Unit = 2, mayLoad = 1, mayStore = 0 in {
 def LBZX : XForm_1_memOp<31,  87, (outs gprc:$rD), (ins memrr:$src),
                    "lbzx $rD, $src", IIC_LdStLoad,
-                   [(set i32:$rD, (zextloadi8 xaddr:$src))]>;
+                   [(set i32:$rD, (zextloadi8 XForm:$src))]>;
 def LHAX : XForm_1_memOp<31, 343, (outs gprc:$rD), (ins memrr:$src),
                    "lhax $rD, $src", IIC_LdStLHA,
-                   [(set i32:$rD, (sextloadi16 xaddr:$src))]>,
+                   [(set i32:$rD, (sextloadi16 XForm:$src))]>,
                    PPC970_DGroup_Cracked;
 def LHZX : XForm_1_memOp<31, 279, (outs gprc:$rD), (ins memrr:$src),
                    "lhzx $rD, $src", IIC_LdStLoad,
-                   [(set i32:$rD, (zextloadi16 xaddr:$src))]>;
+                   [(set i32:$rD, (zextloadi16 XForm:$src))]>;
 def LWZX : XForm_1_memOp<31,  23, (outs gprc:$rD), (ins memrr:$src),
                    "lwzx $rD, $src", IIC_LdStLoad,
-                   [(set i32:$rD, (load xaddr:$src))]>;
+                   [(set i32:$rD, (load XForm:$src))]>;
 def LHBRX : XForm_1_memOp<31, 790, (outs gprc:$rD), (ins memrr:$src),
                    "lhbrx $rD, $src", IIC_LdStLoad,
                    [(set i32:$rD, (PPClbrx xoaddr:$src, i16))]>;
@@ -2345,10 +2352,10 @@ def LWBRX : XForm_1_memOp<31,  534, (outs gprc:$rD), (ins memrr:$src),
 let Predicates = [HasFPU] in {
 def LFSX   : XForm_25_memOp<31, 535, (outs f4rc:$frD), (ins memrr:$src),
                       "lfsx $frD, $src", IIC_LdStLFD,
-                      [(set f32:$frD, (load xaddr:$src))]>;
+                      [(set f32:$frD, (load XForm:$src))]>;
 def LFDX   : XForm_25_memOp<31, 599, (outs f8rc:$frD), (ins memrr:$src),
                       "lfdx $frD, $src", IIC_LdStLFD,
-                      [(set f64:$frD, (load xaddr:$src))]>;
+                      [(set f64:$frD, (load XForm:$src))]>;
 
 def LFIWAX : XForm_25_memOp<31, 855, (outs f8rc:$frD), (ins memrr:$src),
                       "lfiwax $frD, $src", IIC_LdStLFD,
@@ -2372,20 +2379,20 @@ def LMW : DForm_1<46, (outs gprc:$rD), (ins memri:$src),
 let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
 def STB  : DForm_1<38, (outs), (ins gprc:$rS, memri:$dst),
                    "stb $rS, $dst", IIC_LdStStore,
-                   [(truncstorei8 i32:$rS, iaddr:$dst)]>;
+                   [(truncstorei8 i32:$rS, DForm:$dst)]>;
 def STH  : DForm_1<44, (outs), (ins gprc:$rS, memri:$dst),
                    "sth $rS, $dst", IIC_LdStStore,
-                   [(truncstorei16 i32:$rS, iaddr:$dst)]>;
+                   [(truncstorei16 i32:$rS, DForm:$dst)]>;
 def STW  : DForm_1<36, (outs), (ins gprc:$rS, memri:$dst),
                    "stw $rS, $dst", IIC_LdStStore,
-                   [(store i32:$rS, iaddr:$dst)]>;
+                   [(store i32:$rS, DForm:$dst)]>;
 let Predicates = [HasFPU] in {
 def STFS : DForm_1<52, (outs), (ins f4rc:$rS, memri:$dst),
                    "stfs $rS, $dst", IIC_LdStSTFD,
-                   [(store f32:$rS, iaddr:$dst)]>;
+                   [(store f32:$rS, DForm:$dst)]>;
 def STFD : DForm_1<54, (outs), (ins f8rc:$rS, memri:$dst),
                    "stfd $rS, $dst", IIC_LdStSTFD,
-                   [(store f64:$rS, iaddr:$dst)]>;
+                   [(store f64:$rS, DForm:$dst)]>;
 }
 }
 
@@ -2428,15 +2435,15 @@ def : Pat<(pre_store f64:$rS, iPTR:$ptrreg, iaddroff:$ptroff),
 let PPC970_Unit = 2 in {
 def STBX  : XForm_8_memOp<31, 215, (outs), (ins gprc:$rS, memrr:$dst),
                    "stbx $rS, $dst", IIC_LdStStore,
-                   [(truncstorei8 i32:$rS, xaddr:$dst)]>,
+                   [(truncstorei8 i32:$rS, XForm:$dst)]>,
                    PPC970_DGroup_Cracked;
 def STHX  : XForm_8_memOp<31, 407, (outs), (ins gprc:$rS, memrr:$dst),
                    "sthx $rS, $dst", IIC_LdStStore,
-                   [(truncstorei16 i32:$rS, xaddr:$dst)]>,
+                   [(truncstorei16 i32:$rS, XForm:$dst)]>,
                    PPC970_DGroup_Cracked;
 def STWX  : XForm_8_memOp<31, 151, (outs), (ins gprc:$rS, memrr:$dst),
                    "stwx $rS, $dst", IIC_LdStStore,
-                   [(store i32:$rS, xaddr:$dst)]>,
+                   [(store i32:$rS, XForm:$dst)]>,
                    PPC970_DGroup_Cracked;
 
 def STHBRX: XForm_8_memOp<31, 918, (outs), (ins gprc:$rS, memrr:$dst),
@@ -2455,10 +2462,10 @@ def STFIWX: XForm_28_memOp<31, 983, (outs), (ins f8rc:$frS, memrr:$dst),
 
 def STFSX : XForm_28_memOp<31, 663, (outs), (ins f4rc:$frS, memrr:$dst),
                      "stfsx $frS, $dst", IIC_LdStSTFD,
-                     [(store f32:$frS, xaddr:$dst)]>;
+                     [(store f32:$frS, XForm:$dst)]>;
 def STFDX : XForm_28_memOp<31, 727, (outs), (ins f8rc:$frS, memrr:$dst),
                      "stfdx $frS, $dst", IIC_LdStSTFD,
-                     [(store f64:$frS, xaddr:$dst)]>;
+                     [(store f64:$frS, XForm:$dst)]>;
 }
 }
 
@@ -3558,27 +3565,27 @@ def : Pat<(srl i32:$rS, i32:$rB),
 def : Pat<(shl i32:$rS, i32:$rB),
           (SLW $rS, $rB)>;
 
-def : Pat<(i32 (zextloadi1 iaddr:$src)),
-          (LBZ iaddr:$src)>;
-def : Pat<(i32 (zextloadi1 xaddr:$src)),
-          (LBZX xaddr:$src)>;
-def : Pat<(i32 (extloadi1 iaddr:$src)),
-          (LBZ iaddr:$src)>;
-def : Pat<(i32 (extloadi1 xaddr:$src)),
-          (LBZX xaddr:$src)>;
-def : Pat<(i32 (extloadi8 iaddr:$src)),
-          (LBZ iaddr:$src)>;
-def : Pat<(i32 (extloadi8 xaddr:$src)),
-          (LBZX xaddr:$src)>;
-def : Pat<(i32 (extloadi16 iaddr:$src)),
-          (LHZ iaddr:$src)>;
-def : Pat<(i32 (extloadi16 xaddr:$src)),
-          (LHZX xaddr:$src)>;
+def : Pat<(i32 (zextloadi1 DForm:$src)),
+          (LBZ DForm:$src)>;
+def : Pat<(i32 (zextloadi1 XForm:$src)),
+          (LBZX XForm:$src)>;
+def : Pat<(i32 (extloadi1 DForm:$src)),
+          (LBZ DForm:$src)>;
+def : Pat<(i32 (extloadi1 XForm:$src)),
+          (LBZX XForm:$src)>;
+def : Pat<(i32 (extloadi8 DForm:$src)),
+          (LBZ DForm:$src)>;
+def : Pat<(i32 (extloadi8 XForm:$src)),
+          (LBZX XForm:$src)>;
+def : Pat<(i32 (extloadi16 DForm:$src)),
+          (LHZ DForm:$src)>;
+def : Pat<(i32 (extloadi16 XForm:$src)),
+          (LHZX XForm:$src)>;
 let Predicates = [HasFPU] in {
-def : Pat<(f64 (extloadf32 iaddr:$src)),
-          (COPY_TO_REGCLASS (LFS iaddr:$src), F8RC)>;
-def : Pat<(f64 (extloadf32 xaddr:$src)),
-          (COPY_TO_REGCLASS (LFSX xaddr:$src), F8RC)>;
+def : Pat<(f64 (extloadf32 DForm:$src)),
+          (COPY_TO_REGCLASS (LFS DForm:$src), F8RC)>;
+def : Pat<(f64 (extloadf32 XForm:$src)),
+          (COPY_TO_REGCLASS (LFSX XForm:$src), F8RC)>;
 
 def : Pat<(f64 (any_fpextend f32:$src)),
           (COPY_TO_REGCLASS $src, F8RC)>;
