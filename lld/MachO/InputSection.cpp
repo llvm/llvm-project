@@ -101,7 +101,7 @@ bool macho::isCodeSection(InputSection *isec) {
 
   if (isec->segname == segment_names::text)
     return StringSwitch<bool>(isec->name)
-        .Cases("__textcoal_nt", "__StaticInit", true)
+        .Cases(section_names::textCoalNt, section_names::staticInit, true)
         .Default(false);
 
   return false;
