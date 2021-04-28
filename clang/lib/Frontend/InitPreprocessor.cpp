@@ -601,6 +601,29 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_coroutines", "201703L");
 }
 
+/// InitializeOpenCLFeatureTestMacros - Define OpenCL macros based on target
+/// settings and language version
+void InitializeOpenCLFeatureTestMacros(const TargetInfo &TI,
+                                       const LangOptions &Opts,
+                                       MacroBuilder &Builder) {
+  const llvm::StringMap<bool> &OpenCLFeaturesMap = TI.getSupportedOpenCLOpts();
+  // FIXME: OpenCL options which affect language semantics/syntax
+  // should be moved into LangOptions.
+  auto defineOpenCLExtMacro = [&](llvm::StringRef Name, auto... OptArgs) {
+    // Check if extension is supported by target and is available in this
+    // OpenCL version
+    if (TI.hasFeatureEnabled(OpenCLFeaturesMap, Name) &&
+        OpenCLOptions::isOpenCLOptionAvailableIn(Opts, OptArgs...))
+      Builder.defineMacro(Name);
+  };
+#define OPENCL_GENERIC_EXTENSION(Ext, ...)                                     \
+  defineOpenCLExtMacro(#Ext, __VA_ARGS__);
+#include "clang/Basic/OpenCLExtensions.def"
+
+  // Assume compiling for FULL profile
+  Builder.defineMacro("__opencl_c_int64");
+}
+
 static void InitializePredefinedMacros(const TargetInfo &TI,
                                        const LangOptions &LangOpts,
                                        const FrontendOptions &FEOpts,
@@ -1137,7 +1160,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
   // OpenCL definitions.
   if (LangOpts.OpenCL) {
-    TI.getOpenCLFeatureDefines(LangOpts, Builder);
+    InitializeOpenCLFeatureTestMacros(TI, LangOpts, Builder);
 
     if (TI.getTriple().isSPIR())
       Builder.defineMacro("__IMAGE_SUPPORT__");
