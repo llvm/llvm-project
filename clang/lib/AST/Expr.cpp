@@ -566,20 +566,23 @@ UniqueStableNameExpr *UniqueStableNameExpr::CreateEmpty(const ASTContext &Ctx,
 }
 
 std::string UniqueStableNameExpr::ComputeName(ASTContext &Context) {
-  auto Callback = [](ASTContext &Ctx, const TagDecl *TD, raw_ostream &OS) {
-    if (!Ctx.IsSYCLKernelNamingDecl(TD))
-      return false;
+  auto ShouldMangleCallback = [](ASTContext &Ctx, const TagDecl *TD) {
+    return Ctx.IsSYCLKernelNamingDecl(TD);
+  };
+  auto MangleCallback = [](ASTContext &Ctx, const TagDecl *TD,
+                           raw_ostream &OS) {
+    assert(Ctx.IsSYCLKernelNamingDecl(TD) && "Not a sycl kernel?");
 
-    // TODO: Can we put something here to make it clear this is a SYCL lambda?
-    // It seems the number in this location is about all I can find for us.
+    // TODO: Can we put something here to make it clear this is a SYCL
+    // lambda? It seems the number in this location is about all I can
+    // find for us.
     //
     // See: _ZTSZ3foovEUlvE5_
     // Demangles to: typeinfo name for foo()::'lambda5'()
-    OS <<  Ctx.GetSYCLKernelNamingIndex(TD);
-    return true;
+    OS << Ctx.GetSYCLKernelNamingIndex(TD);
   };
   std::unique_ptr<MangleContext> Ctx{ItaniumMangleContext::create(
-      Context, Context.getDiagnostics(), Callback)};
+      Context, Context.getDiagnostics(), ShouldMangleCallback, MangleCallback)};
 
   QualType Ty = getTypeSourceInfo()->getType();
   std::string Buffer;

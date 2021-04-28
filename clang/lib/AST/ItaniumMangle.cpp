@@ -124,16 +124,20 @@ class ItaniumMangleContextImpl : public ItaniumMangleContext {
   typedef std::pair<const DeclContext*, IdentifierInfo*> DiscriminatorKeyTy;
   llvm::DenseMap<DiscriminatorKeyTy, unsigned> Discriminator;
   llvm::DenseMap<const NamedDecl*, unsigned> Uniquifier;
+  const ShouldCallKernelCallbackTy ShouldCallKernelCallback = nullptr;
   const KernelMangleCallbackTy KernelMangleCallback = nullptr;
 
   bool IsDevCtx = false;
   bool NeedsUniqueInternalLinkageNames = false;
 
 public:
-  explicit ItaniumMangleContextImpl(ASTContext &Context,
-                                    DiagnosticsEngine &Diags,
-                                    KernelMangleCallbackTy Callback)
-      : ItaniumMangleContext(Context, Diags), KernelMangleCallback(Callback) {}
+  explicit ItaniumMangleContextImpl(
+      ASTContext &Context, DiagnosticsEngine &Diags,
+      ShouldCallKernelCallbackTy ShouldCallKernelCB,
+      KernelMangleCallbackTy KernelCB)
+      : ItaniumMangleContext(Context, Diags),
+        ShouldCallKernelCallback(ShouldCallKernelCB),
+        KernelMangleCallback(KernelCB) {}
 
   /// @name Mangler Entry Points
   /// @{
@@ -247,6 +251,9 @@ public:
     return Name;
   }
 
+  ShouldCallKernelCallbackTy getShouldCallKernelCallback() const override {
+    return ShouldCallKernelCallback;
+  }
   KernelMangleCallbackTy getKernelMangleCallback() const override {
     return KernelMangleCallback;
   }
@@ -1509,7 +1516,8 @@ void CXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
     //     # Parameter types or 'v' for 'void'.
     if (const CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(TD)) {
       if (Record->isLambda() && (Record->getLambdaManglingNumber() ||
-                                 Context.getKernelMangleCallback())) {
+                                 Context.getShouldCallKernelCallback()(
+                                     Context.getASTContext(), Record))) {
         assert(!AdditionalAbiTags &&
                "Lambda type cannot have additional abi tags");
         mangleLambda(Record);
@@ -1933,21 +1941,13 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
                         ? Lambda->getDeviceLambdaManglingNumber()
                         : Lambda->getLambdaManglingNumber();
 
-  if (const auto CB = Context.getKernelMangleCallback()) {
-    // If this is involved in kernel mangling and we are in the
-    // __builtin_unique_stable_name parts, this function returns 'true', so we
-    // skip the 'number' apend.
-    if (CB(Context.getASTContext(), Lambda, Out)) {
-      Out << '_';
-      return;
-    }
-  } else {
-    // Don't assert in the kernel __builtin_unique_stable_name part, since that
-    // just needs to be internally consistent with itself. Having it be
-    // 'mangled' as lambda with a number isn't a problem in that case.
-    assert(Number > 0 && "Lambda should be mangled as an unnamed class");
+  if (Context.getShouldCallKernelCallback()(Context.getASTContext(), Lambda)) {
+    Context.getKernelMangleCallback()(Context.getASTContext(), Lambda, Out);
+    Out << '_';
+    return;
   }
 
+  assert(Number > 0 && "Lambda should be mangled as an unnamed class");
   if (Number > 1)
     mangleNumber(Number - 2);
   Out << '_';
@@ -6308,10 +6308,15 @@ void ItaniumMangleContextImpl::mangleLambdaSig(const CXXRecordDecl *Lambda,
 
 ItaniumMangleContext *
 ItaniumMangleContext::create(ASTContext &Context, DiagnosticsEngine &Diags) {
-  return new ItaniumMangleContextImpl(Context, Diags, nullptr);
+  return new ItaniumMangleContextImpl(
+      Context, Diags, [](ASTContext &, const TagDecl *) { return false; },
+      [](ASTContext &, const TagDecl *, raw_ostream &) {});
 }
 
-ItaniumMangleContext *
-ItaniumMangleContext::create(ASTContext &Context, DiagnosticsEngine &Diags, KernelMangleCallbackTy Callback) {
-  return new ItaniumMangleContextImpl(Context, Diags, Callback);
+ItaniumMangleContext *ItaniumMangleContext::create(
+    ASTContext &Context, DiagnosticsEngine &Diags,
+    ShouldCallKernelCallbackTy ShouldCallKernelCallback,
+    KernelMangleCallbackTy MangleCallback) {
+  return new ItaniumMangleContextImpl(Context, Diags, ShouldCallKernelCallback,
+                                      MangleCallback);
 }

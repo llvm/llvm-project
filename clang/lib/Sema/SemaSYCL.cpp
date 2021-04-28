@@ -66,17 +66,18 @@ GetSYCLKernelObjectDecl(const FunctionDecl *KernelCaller) {
 }
 
 void Sema::AddSYCLKernelLambda(const FunctionDecl *FD) {
-  auto Callback = [](ASTContext &Ctx, const TagDecl *TD, raw_ostream &) {
+  auto ShouldMangleCallback = [](ASTContext &Ctx, const TagDecl *TD) {
+    // We ALWAYS want to descend into the lambda mangling for these.
+    return true;
+  };
+  auto MangleCallback = [](ASTContext &Ctx, const TagDecl *TD, raw_ostream &) {
     Ctx.AddSYCLKernelNamingDecl(TD);
-    return false;
   };
 
-  // TODO: ERICH: get the kernel object type here.
-  // getKernelObjectType
   const CXXRecordDecl *KernelObjectDecl = GetSYCLKernelObjectDecl(FD);
   QualType Ty{KernelObjectDecl->getTypeForDecl(), 0};
   std::unique_ptr<MangleContext> Ctx{ItaniumMangleContext::create(
-      Context, Context.getDiagnostics(), Callback)};
+      Context, Context.getDiagnostics(), ShouldMangleCallback, MangleCallback)};
   llvm::raw_null_ostream Out;
   Ctx->mangleTypeName(Ty, Out);
   (void)FD;
