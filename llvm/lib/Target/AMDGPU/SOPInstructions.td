@@ -1545,7 +1545,6 @@ defm S_GETPC_B64             : SOP1_Real_gfx11<0x047>;
 defm S_SETPC_B64             : SOP1_Real_gfx11<0x048>;
 defm S_SWAPPC_B64            : SOP1_Real_gfx11<0x049>;
 defm S_RFE_B64               : SOP1_Real_gfx11<0x04a>;
-//TODO-GFX11 changes to sendmsg messages
 defm S_SENDMSG_RTN_B32       : SOP1_Real_gfx11<0x04c>;
 defm S_SENDMSG_RTN_B64       : SOP1_Real_gfx11<0x04d>;
 
