@@ -46,7 +46,11 @@ using iter_rvalue_reference_t = decltype(ranges::iter_move(declval<T&>())); // s
 // [iterator.concepts], iterator concepts
 // [iterator.concept.readable], concept indirectly_readable
 template<class In>
-  concept indirectly_readable = see below;                // since C++20
+  concept indirectly_readable = see below;                      // since C++20
+
+template<indirectly_readable T>
+  using iter_common_reference_t =
+    common_reference_t<iter_reference_t<T>, iter_value_t<T>&>;  // since C++20
 
 // [iterator.concept.writable], concept indirectly_writable
 template<class Out, class T>
@@ -90,6 +94,36 @@ template<class I>
 // [iterator.concept.random.access], concept random_access_iterator
 template<class I>
   concept random_access_iterator = see below;              // since C++20
+
+// [indirectcallable]
+// [indirectcallable.indirectinvocable]
+template<class F, class I>
+  concept indirectly_unary_invocable = see below;          // since C++20
+
+template<class F, class I>
+  concept indirectly_regular_unary_invocable = see below;  // since C++20
+
+template<class F, class I>
+  concept indirect_unary_predicate = see below;            // since C++20
+
+template<class F, class I1, class I2>
+  concept indirect_binary_predicate = see below;           // since C++20
+
+template<class F, class I1, class I2 = I1>
+  concept indirect_equivalence_relation = see below;       // since C++20
+
+template<class F, class I1, class I2 = I1>
+  concept indirect_strict_weak_order = see below;          // since C++20
+
+template<class F, class... Is>
+  using indirect_result_t = see below;                     // since C++20
+
+// [projected], projected
+template<indirectly_readable I, indirectly_regular_unary_invocable<I> Proj>
+  struct projected;                                        // since C++20
+
+template<weakly_incrementable I, indirectly_regular_unary_invocable<I> Proj>
+  struct incrementable_traits<projected<I, Proj>>;         // since C++20
 
 template<class Category, class T, class Distance = ptrdiff_t,
          class Pointer = T*, class Reference = T&>
@@ -486,10 +520,12 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__iterator/advance.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
+#include <__iterator/indirect_concepts.h>
 #include <__iterator/iter_move.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
 #include <__iterator/prev.h>
+#include <__iterator/projected.h>
 #include <__iterator/readable_traits.h>
 #include <__memory/addressof.h>
 #include <__memory/pointer_traits.h>
