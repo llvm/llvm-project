@@ -3555,7 +3555,7 @@ define <2 x i16> @v_fshl_v2i16_4_8(<2 x i16> %lhs, <2 x i16> %rhs) {
 ; GFX10-NEXT:    v_cmp_le_u32_e32 vcc_lo, 16, v3
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX10-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc_lo
-; GFX10-NEXT:    v_and_or_b32 v2, v3, 0xffff, v2
+; GFX10-NEXT:    v_and_or_b32 v2, 0xffff, v3, v2
 ; GFX10-NEXT:    v_pk_sub_i16 v3, 16, v2 op_sel_hi:[0,1]
 ; GFX10-NEXT:    v_pk_lshlrev_b16 v0, v2, v0
 ; GFX10-NEXT:    v_pk_lshrrev_b16 v1, v3, v1

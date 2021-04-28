@@ -272,7 +272,7 @@ define <2 x half> @v_roundeven_v2f16(<2 x half> %x) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_rndne_f16_e32 v1, v0
 ; GFX10-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_and_or_b32 v0, v1, 0xffff, v0
+; GFX10-NEXT:    v_and_or_b32 v0, 0xffff, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %roundeven = call <2 x half> @llvm.roundeven.v2f16(<2 x half> %x)
   ret <2 x half> %roundeven
@@ -341,7 +341,7 @@ define <2 x half> @v_roundeven_v2f16_fneg(<2 x half> %x) {
 ; GFX10-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
 ; GFX10-NEXT:    v_rndne_f16_e32 v1, v0
 ; GFX10-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_and_or_b32 v0, v1, 0xffff, v0
+; GFX10-NEXT:    v_and_or_b32 v0, 0xffff, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %x.fneg = fneg <2 x half> %x
   %roundeven = call <2 x half> @llvm.roundeven.v2f16(<2 x half> %x.fneg)
