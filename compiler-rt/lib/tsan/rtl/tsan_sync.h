@@ -50,13 +50,11 @@ enum MutexFlags {
 struct SyncVar {
   SyncVar();
 
-  static const int kInvalidTid = -1;
-
   uptr addr;  // overwritten by DenseSlabAlloc freelist
   Mutex mtx;
   u64 uid;  // Globally unique id.
   u32 creation_stack_id;
-  int owner_tid;  // Set only by exclusive owners.
+  u32 owner_tid;  // Set only by exclusive owners.
   u64 last_lock;
   int recursion;
   atomic_uint32_t flags;
