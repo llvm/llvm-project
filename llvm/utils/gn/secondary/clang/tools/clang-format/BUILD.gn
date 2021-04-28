@@ -11,6 +11,7 @@ executable("clang-format") {
     "//clang/lib/AST/",
     "//clang/lib/Frontend/",
     "//clang/lib/Sema/",
+    "//llvm/lib/IR",
   ]
   sources = [ "ClangFormat.cpp" ]
 }

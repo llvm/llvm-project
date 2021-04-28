@@ -126,7 +126,7 @@ TEST(Decl, AsmLabelAttr) {
   auto AST =
       tooling::buildASTFromCodeWithArgs(Code, {"-target", "i386-apple-darwin"});
   ASTContext &Ctx = AST->getASTContext();
-  assert(Ctx.getTargetInfo().getDataLayout().getGlobalPrefix() &&
+  assert(Ctx.getTargetInfo().getUserLabelPrefix() == StringRef("_") &&
          "Expected target to have a global prefix");
   DiagnosticsEngine &Diags = AST->getDiagnostics();
 
@@ -169,7 +169,7 @@ TEST(Decl, MangleDependentSizedArray) {
   auto AST =
       tooling::buildASTFromCodeWithArgs(Code, {"-target", "i386-apple-darwin"});
   ASTContext &Ctx = AST->getASTContext();
-  assert(Ctx.getTargetInfo().getDataLayout().getGlobalPrefix() &&
+  assert(Ctx.getTargetInfo().getUserLabelPrefix() == StringRef("_") &&
          "Expected target to have a global prefix");
   DiagnosticsEngine &Diags = AST->getDiagnostics();
 
