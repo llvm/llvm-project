@@ -536,7 +536,7 @@ void check_dynamic_cast_null_check() {
 
 void check_dynamic_cast_alias() {
   OSObject *originalPtr = OSObject::generateObject(1);   // expected-note {{Call to method 'OSObject::generateObject' returns an OSObject}}
-  OSArray *newPtr = OSDynamicCast(OSArray, originalPtr); // expected-note {{'newPtr' initialized here}}
+  OSArray *newPtr = OSDynamicCast(OSArray, originalPtr); // expected-note {{'newPtr' initialized to the value of 'originalPtr'}}
   if (newPtr) {                                          // expected-note {{'newPtr' is non-null}}
                                                          // expected-note@-1 {{Taking true branch}}
     originalPtr = OSObject::generateObject(42);
@@ -549,7 +549,7 @@ void check_dynamic_cast_alias() {
 void check_dynamic_cast_alias_cond() {
   OSObject *originalPtr = OSObject::generateObject(1); // expected-note {{Call to method 'OSObject::generateObject' returns an OSObject}}
   OSArray *newPtr = 0;
-  if ((newPtr = OSDynamicCast(OSArray, originalPtr))) { // expected-note {{Value assigned to 'newPtr'}}
+  if ((newPtr = OSDynamicCast(OSArray, originalPtr))) { // expected-note {{The value of 'originalPtr' is assigned to 'newPtr'}}
                                                         // expected-note@-1 {{'newPtr' is non-null}}
                                                         // expected-note@-2 {{Taking true branch}}
     originalPtr = OSObject::generateObject(42);
@@ -563,12 +563,27 @@ void check_dynamic_cast_alias_intermediate() {
   OSObject *originalPtr = OSObject::generateObject(1); // expected-note {{Call to method 'OSObject::generateObject' returns an OSObject of type 'OSObject' with a +1 retain count}}
   OSObject *intermediate = originalPtr;                // TODO: add note here as well
   OSArray *newPtr = 0;
-  if ((newPtr = OSDynamicCast(OSArray, intermediate))) { // expected-note {{Value assigned to 'newPtr'}}
+  if ((newPtr = OSDynamicCast(OSArray, intermediate))) { // expected-note {{The value of 'intermediate' is assigned to 'newPtr'}}
                                                          // expected-note@-1 {{'newPtr' is non-null}}
                                                          // expected-note@-2 {{Taking true branch}}
     intermediate = OSObject::generateObject(42);
     (void)newPtr;
   }
+  intermediate->release(); // expected-warning {{Potential leak of an object stored into 'newPtr'}}
+                           // expected-note@-1 {{Object leaked: object allocated and stored into 'newPtr' is not referenced later in this execution path and has a retain count of +1}}
+}
+
+void check_dynamic_cast_alias_intermediate_2() {
+  OSObject *originalPtr = OSObject::generateObject(1); // expected-note {{Call to method 'OSObject::generateObject' returns an OSObject of type 'OSObject' with a +1 retain count}}
+  OSObject *intermediate = originalPtr;                // TODO: add note here as well
+  OSArray *newPtr = 0;
+  if ((newPtr = OSDynamicCast(OSArray, intermediate))) { // expected-note {{Value assigned to 'newPtr'}}
+                                                         // expected-note@-1 {{'newPtr' is non-null}}
+                                                         // expected-note@-2 {{Taking true branch}}
+    intermediate = OSObject::generateObject(42);
+    (void)originalPtr;
+  }
+  (void)newPtr;
   intermediate->release(); // expected-warning {{Potential leak of an object stored into 'newPtr'}}
                            // expected-note@-1 {{Object leaked: object allocated and stored into 'newPtr' is not referenced later in this execution path and has a retain count of +1}}
 }
