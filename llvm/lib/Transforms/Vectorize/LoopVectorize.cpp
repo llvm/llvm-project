@@ -7549,7 +7549,6 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
         Op2VK, TargetTransformInfo::OP_None, Op2VP, Operands, I);
   }
   case Instruction::FNeg: {
-    assert(!VF.isScalable() && "VF is assumed to be non scalable.");
     return TTI.getArithmeticInstrCost(
         I->getOpcode(), VectorTy, CostKind, TargetTransformInfo::OK_AnyValue,
         TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None,
