@@ -907,7 +907,11 @@ AsmToken AsmLexer::LexToken() {
   case '/':
     IsAtStartOfStatement = OldIsAtStartOfStatement;
     return LexSlash();
-  case '#': return AsmToken(AsmToken::Hash, StringRef(TokStart, 1));
+  case '#': {
+    if (MAI.doesAllowHashAtStartOfIdentifier())
+      return LexIdentifier();
+    return AsmToken(AsmToken::Hash, StringRef(TokStart, 1));
+  }
   case '\'': return LexSingleQuote();
   case '"': return LexQuote();
   case '0': case '1': case '2': case '3': case '4':
