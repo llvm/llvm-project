@@ -1733,6 +1733,32 @@ static bool canSinkInstructions(
       }))
     return false;
 
+  // For calls to be sinkable, they must all be indirect, or have same callee.
+  // I.e. if we have two direct calls to different callees, we don't want to
+  // turn that into an indirect call. Likewise, if we have an indirect call,
+  // and a direct call, we don't actually want to have a single indirect call.
+  if (isa<CallBase>(I0)) {
+    auto IsIndirectCall = [](const Instruction *I) {
+      return cast<CallBase>(I)->isIndirectCall();
+    };
+    bool HaveIndirectCalls = any_of(Insts, IsIndirectCall);
+    bool AllCallsAreIndirect = all_of(Insts, IsIndirectCall);
+    if (HaveIndirectCalls) {
+      if (!AllCallsAreIndirect)
+        return false;
+    } else {
+      // All callees must be identical.
+      Value *Callee = nullptr;
+      for (const Instruction *I : Insts) {
+        Value *CurrCallee = cast<CallBase>(I)->getCalledOperand();
+        if (!Callee)
+          Callee = CurrCallee;
+        else if (Callee != CurrCallee)
+          return false;
+      }
+    }
+  }
+
   for (unsigned OI = 0, OE = I0->getNumOperands(); OI != OE; ++OI) {
     Value *Op = I0->getOperand(OI);
     if (Op->getType()->isTokenTy())
@@ -1748,11 +1774,6 @@ static bool canSinkInstructions(
           !canReplaceOperandWithVariable(I0, OI))
         // We can't create a PHI from this GEP.
         return false;
-      // Don't create indirect calls! The called value is the final operand.
-      if (isa<CallBase>(I0) && OI == OE - 1) {
-        // FIXME: if the call was *already* indirect, we should do this.
-        return false;
-      }
       for (auto *I : Insts)
         PHIOperands[I].push_back(I->getOperand(OI));
     }
