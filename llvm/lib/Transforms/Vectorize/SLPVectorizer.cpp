@@ -4032,10 +4032,15 @@ bool BoUpSLP::isFullyVectorizableTinyTree() const {
   if (VectorizableTree.size() != 2)
     return false;
 
-  // Handle splat and all-constants stores.
+  // Handle splat and all-constants stores. Also try to vectorize tiny trees
+  // with the second gather nodes if they have less scalar operands rather than
+  // the initial tree element (may be profitable to shuffle the second gather).
   if (VectorizableTree[0]->State == TreeEntry::Vectorize &&
       (allConstant(VectorizableTree[1]->Scalars) ||
-       isSplat(VectorizableTree[1]->Scalars)))
+       isSplat(VectorizableTree[1]->Scalars) ||
+       (VectorizableTree[1]->State == TreeEntry::NeedToGather &&
+        VectorizableTree[1]->Scalars.size() <
+            VectorizableTree[0]->Scalars.size())))
     return true;
 
   // Gathering cost would be too much for tiny trees.
