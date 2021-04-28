@@ -324,7 +324,6 @@ define i8* @store_zero_after_calloc_inaccessiblememonly() {
 define i8* @zero_memset_after_calloc()  {
 ; CHECK-LABEL: @zero_memset_after_calloc(
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @calloc(i64 10000, i64 4)
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALL]], i8 0, i64 40000, i1 false)
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = tail call i8* @calloc(i64 10000, i64 4)
@@ -332,10 +331,20 @@ define i8* @zero_memset_after_calloc()  {
   ret i8* %call
 }
 
+define i8* @volatile_zero_memset_after_calloc()  {
+; CHECK-LABEL: @volatile_zero_memset_after_calloc(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @calloc(i64 10000, i64 4)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALL]], i8 0, i64 40000, i1 true)
+; CHECK-NEXT:    ret i8* [[CALL]]
+;
+  %call = tail call i8* @calloc(i64 10000, i64 4)
+  call void @llvm.memset.p0i8.i64(i8* %call, i8 0, i64 40000, i1 true)
+  ret i8* %call
+}
+
 define i8* @zero_memset_and_store_after_calloc(i8 %v)  {
 ; CHECK-LABEL: @zero_memset_and_store_after_calloc(
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @calloc(i64 10000, i64 4)
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALL]], i8 0, i64 40000, i1 false)
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = tail call i8* @calloc(i64 10000, i64 4)
@@ -347,7 +356,6 @@ define i8* @zero_memset_and_store_after_calloc(i8 %v)  {
 define i8* @partial_zero_memset_after_calloc() {
 ; CHECK-LABEL: @partial_zero_memset_after_calloc(
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @calloc(i64 10000, i64 4)
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALL]], i8 0, i64 20, i1 false)
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = tail call i8* @calloc(i64 10000, i64 4)
@@ -360,7 +368,6 @@ define i8* @partial_zero_memset_and_store_after_calloc(i8 %v)  {
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @calloc(i64 10000, i64 4)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 30
 ; CHECK-NEXT:    store i8 [[V:%.*]], i8* [[GEP]], align 1
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALL]], i8 0, i64 20, i1 false)
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = tail call i8* @calloc(i64 10000, i64 4)
@@ -373,7 +380,6 @@ define i8* @partial_zero_memset_and_store_after_calloc(i8 %v)  {
 define i8* @zero_memset_and_store_with_dyn_index_after_calloc(i8 %v, i64 %idx)  {
 ; CHECK-LABEL: @zero_memset_and_store_with_dyn_index_after_calloc(
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @calloc(i64 10000, i64 4)
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALL]], i8 0, i64 40000, i1 false)
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = tail call i8* @calloc(i64 10000, i64 4)
@@ -409,6 +415,16 @@ define i8* @zero_memset_after_calloc_inaccessiblememonly()  {
   ret i8* %call
 }
 
+define i8* @cst_nonzero_memset_after_calloc() {
+; CHECK-LABEL: @cst_nonzero_memset_after_calloc(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @calloc(i64 10000, i64 4)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALL]], i8 1, i64 40000, i1 false)
+; CHECK-NEXT:    ret i8* [[CALL]]
+;
+  %call = tail call i8* @calloc(i64 10000, i64 4)
+  call void @llvm.memset.p0i8.i64(i8* %call, i8 1, i64 40000, i1 false)
+  ret i8* %call
+}
 
 define i8* @nonzero_memset_after_calloc(i8 %v) {
 ; CHECK-LABEL: @nonzero_memset_after_calloc(
@@ -427,7 +443,6 @@ define i8* @nonzero_memset_after_calloc(i8 %v) {
 define i8* @memset_pattern16_after_calloc(i8* %pat) {
 ; CHECK-LABEL: @memset_pattern16_after_calloc(
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @calloc(i64 10000, i64 4)
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[CALL]], i8 0, i64 40000, i1 false)
 ; CHECK-NEXT:    call void @memset_pattern16(i8* [[CALL]], i8* [[PAT:%.*]], i64 40000)
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
