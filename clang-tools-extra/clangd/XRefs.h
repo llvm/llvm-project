@@ -16,6 +16,7 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "index/Index.h"
+#include "index/SymbolID.h"
 #include "index/SymbolLocation.h"
 #include "support/Path.h"
 #include "clang/AST/ASTTypeTraits.h"
@@ -47,6 +48,8 @@ struct LocatedSymbol {
   Location PreferredDeclaration;
   // Where the symbol is defined, if known. May equal PreferredDeclaration.
   llvm::Optional<Location> Definition;
+  // SymbolID of the located symbol if available.
+  SymbolID ID;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const LocatedSymbol &);
 /// Get definition of symbol at a specified \p Pos.
