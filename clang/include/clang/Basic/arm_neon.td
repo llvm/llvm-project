@@ -709,6 +709,11 @@ def SCALAR_HALF_GET_LANEQ : IOpInst<"vget_lane", "1.I", "Qh", OP_SCALAR_HALF_GET
 def SCALAR_HALF_SET_LANEQ : IOpInst<"vset_lane", ".1.I", "Qh", OP_SCALAR_HALF_SET_LNQ>;
 
 ////////////////////////////////////////////////////////////////////////////////
+// Non poly128_t vaddp for Arm and AArch64
+// TODO: poly128_t not implemented on arm32
+def VADDP   : WInst<"vadd", "...", "PcPsPlQPcQPsQPl">;
+
+////////////////////////////////////////////////////////////////////////////////
 // AArch64 Intrinsics
 
 let ArchGuard = "defined(__aarch64__)" in {
@@ -1171,7 +1176,9 @@ def SM4E : SInst<"vsm4e", "...", "QUi">;
 def SM4EKEY : SInst<"vsm4ekey", "...", "QUi">;
 }
 
-def VADDP   : WInst<"vadd", "...", "PcPsPlQPcQPsQPlQPk">;
+////////////////////////////////////////////////////////////////////////////////
+// poly128_t vadd for AArch64 only see VADDP for the rest
+def VADDP_Q   : WInst<"vadd", "...", "QPk">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Float -> Int conversions with explicit rounding mode
