@@ -258,7 +258,7 @@ define i8 @fshr_8bit(i8 %x, i8 %y, i3 %shift) {
   ret i8 %conv2
 }
 
-; The shifted value does not need to be a zexted value; here it is masked.
+; The right-shifted value does not need to be a zexted value; here it is masked.
 ; The shift mask could be less than the bitwidth, but this is still ok.
 
 define i8 @fshr_commute_8bit(i32 %x, i32 %y, i32 %shift) {
@@ -276,6 +276,31 @@ define i8 @fshr_commute_8bit(i32 %x, i32 %y, i32 %shift) {
   %sub = sub i32 8, %and
   %convy = and i32 %y, 255
   %shl = shl i32 %convy, %sub
+  %or = or i32 %shr, %shl
+  %conv2 = trunc i32 %or to i8
+  ret i8 %conv2
+}
+
+; TODO:
+; The left-shifted value does not need to be masked at all.
+
+define i8 @fshr_commute_8bit_unmasked_shl(i32 %x, i32 %y, i32 %shift) {
+; CHECK-LABEL: @fshr_commute_8bit_unmasked_shl(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHIFT:%.*]], 3
+; CHECK-NEXT:    [[CONVX:%.*]] = and i32 [[X:%.*]], 255
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[CONVX]], [[AND]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 8, [[AND]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[Y:%.*]], [[SUB]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    [[CONV2:%.*]] = trunc i32 [[OR]] to i8
+; CHECK-NEXT:    ret i8 [[CONV2]]
+;
+  %and = and i32 %shift, 3
+  %convx = and i32 %x, 255
+  %shr = lshr i32 %convx, %and
+  %sub = sub i32 8, %and
+  %convy = and i32 %y, 255
+  %shl = shl i32 %y, %sub
   %or = or i32 %shr, %shl
   %conv2 = trunc i32 %or to i8
   ret i8 %conv2
