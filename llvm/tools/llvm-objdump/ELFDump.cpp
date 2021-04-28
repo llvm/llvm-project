@@ -74,7 +74,10 @@ static Error getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
     const typename ELFT::Rela *ERela = Obj->getRela(Rel);
     Addend = ERela->r_addend;
     Undef = ERela->getSymbol(false) == 0;
-  } else if ((*SecOrErr)->sh_type != ELF::SHT_REL) {
+  } else if ((*SecOrErr)->sh_type == ELF::SHT_REL) {
+    const typename ELFT::Rel *ERel = Obj->getRel(Rel);
+    Undef = ERel->getSymbol(false) == 0;
+  } else {
     return make_error<BinaryError>();
   }
 

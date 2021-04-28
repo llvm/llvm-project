@@ -149,6 +149,7 @@ struct SetExclusiveOutputQuery : Query {
     QS.DiagOutput = false;
     QS.DetailedASTOutput = false;
     QS.PrintOutput = false;
+    QS.SrcLocOutput = false;
     QS.*Var = true;
     return true;
   }

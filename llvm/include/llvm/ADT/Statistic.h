@@ -55,7 +55,8 @@ public:
   std::atomic<unsigned> Value;
   std::atomic<bool> Initialized;
 
-  TrackingStatistic(const char *DebugType, const char *Name, const char *Desc)
+  constexpr TrackingStatistic(const char *DebugType, const char *Name,
+                              const char *Desc)
       : DebugType(DebugType), Name(Name), Desc(Desc), Value(0),
         Initialized(false) {}
 
