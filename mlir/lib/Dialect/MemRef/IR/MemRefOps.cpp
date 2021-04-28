@@ -1859,6 +1859,26 @@ SmallVector<Range, 8> mlir::getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
   return res;
 }
 
+/// Infer the canonical type of the result of a subview operation. Returns a
+/// type with rank `resultRank` that is either the rank of the rank-reduced
+/// type, or the non-rank-reduced type.
+static MemRefType
+getCanonicalSubViewResultType(unsigned resultRank, MemRefType sourceType,
+                              ArrayRef<OpFoldResult> mixedOffsets,
+                              ArrayRef<OpFoldResult> mixedSizes,
+                              ArrayRef<OpFoldResult> mixedStrides) {
+  auto resultType =
+      SubViewOp::inferRankReducedResultType(
+          resultRank, sourceType, mixedOffsets, mixedSizes, mixedStrides)
+          .cast<MemRefType>();
+  if (resultType.getRank() != resultRank) {
+    resultType = SubViewOp::inferResultType(sourceType, mixedOffsets,
+                                            mixedSizes, mixedStrides)
+                     .cast<MemRefType>();
+  }
+  return resultType;
+}
+
 namespace {
 /// Pattern to rewrite a subview op with MemRefCast arguments.
 /// This essentially pushes memref.cast past its consuming subview when
@@ -1898,7 +1918,7 @@ public:
     /// Deduce the resultType of the SubViewOp using `inferSubViewResultType` on
     /// the cast source operand type and the SubViewOp static information. This
     /// is the resulting type if the MemRefCastOp were folded.
-    auto resultType = SubViewOp::inferRankReducedResultType(
+    auto resultType = getCanonicalSubViewResultType(
         subViewOp.getType().getRank(),
         castOp.source().getType().cast<MemRefType>(),
         subViewOp.getMixedOffsets(), subViewOp.getMixedSizes(),
@@ -1914,6 +1934,17 @@ public:
 };
 } // namespace
 
+/// Return the canonical type of the result of a subview.
+struct SubViewReturnTypeCanonicalizer {
+  MemRefType operator()(SubViewOp op, ArrayRef<OpFoldResult> mixedOffsets,
+                        ArrayRef<OpFoldResult> mixedSizes,
+                        ArrayRef<OpFoldResult> mixedStrides) {
+    return getCanonicalSubViewResultType(op.getType().getRank(),
+                                         op.getSourceType(), mixedOffsets,
+                                         mixedSizes, mixedStrides);
+  }
+};
+
 /// A canonicalizer wrapper to replace SubViewOps.
 struct SubViewCanonicalizer {
   void operator()(PatternRewriter &rewriter, SubViewOp op, SubViewOp newOp) {
@@ -1923,9 +1954,10 @@ struct SubViewCanonicalizer {
 
 void SubViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<OpWithOffsetSizesAndStridesConstantArgumentFolder<
-                  SubViewOp, SubViewCanonicalizer>,
-              SubViewOpMemRefCastFolder>(context);
+  results
+      .add<OpWithOffsetSizesAndStridesConstantArgumentFolder<
+               SubViewOp, SubViewReturnTypeCanonicalizer, SubViewCanonicalizer>,
+           SubViewOpMemRefCastFolder>(context);
 }
 
 OpFoldResult SubViewOp::fold(ArrayRef<Attribute> operands) {
