@@ -7400,6 +7400,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
              return !Scalarized->second.count(UI);
            });
   };
+  (void) hasSingleCopyAfterVectorization;
 
   if (isScalarAfterVectorization(I, VF)) {
     // With the exception of GEPs and PHIs, after scalarization there should
