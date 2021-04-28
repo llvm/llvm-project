@@ -358,13 +358,31 @@ void Fuchsia::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
       DriverArgs.hasArg(options::OPT_nostdincxx))
     return;
 
+  const Driver &D = getDriver();
+  std::string Target = getTripleString();
+
+  auto AddCXXIncludePath = [&](StringRef Path) {
+    std::string Version = detectLibcxxVersion(Path);
+    if (Version.empty())
+      return;
+
+    // First add the per-target include path.
+    SmallString<128> TargetDir(Path);
+    llvm::sys::path::append(TargetDir, Target, "c++", Version);
+    if (getVFS().exists(TargetDir))
+      addSystemInclude(DriverArgs, CC1Args, TargetDir);
+
+    // Second add the generic one.
+    SmallString<128> Dir(Path);
+    llvm::sys::path::append(Dir, "c++", Version);
+    addSystemInclude(DriverArgs, CC1Args, Dir);
+  };
+
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
-    SmallString<128> P(getDriver().Dir);
+    SmallString<128> P(D.Dir);
     llvm::sys::path::append(P, "..", "include");
-    std::string Version = detectLibcxxVersion(P);
-    llvm::sys::path::append(P, "c++", Version);
-    addSystemInclude(DriverArgs, CC1Args, P.str());
+    AddCXXIncludePath(P);
     break;
   }
 
