@@ -33,6 +33,8 @@ subroutine s1()
   type derived(typeKind, typeLen)
     integer, kind :: typeKind
     integer, len :: typeLen
+    character(typeKind) :: kindValue
+    character(typeLen) :: lenValue
   end type derived
 
   type (derived(constVal, 3)) :: constDerivedKind
@@ -53,3 +55,12 @@ subroutine s1()
   type (derived( :, :)), pointer :: colonDerivedLen2
   type (derived(4, :)), pointer :: colonDerivedLen3
 end subroutine s1
+Program d5
+  Type string(maxlen)
+    Integer,Kind :: maxlen
+    Character(maxlen) :: value
+  End Type
+  Type(string(80)) line
+  line%value = 'ok'
+  Print *,Trim(line%value)
+End Program
