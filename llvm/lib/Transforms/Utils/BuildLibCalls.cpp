@@ -567,7 +567,6 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     return Changed;
   case LibFunc_calloc:
   case LibFunc_vec_calloc:
-    Changed |= setOnlyAccessesInaccessibleMemory(F);
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
