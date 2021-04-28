@@ -133,18 +133,20 @@ check-format)
     ! grep -q '^--- a' ${BUILD_DIR}/clang-format.patch
 ;;
 check-generated-output)
+    # `! foo` doesn't work properly with `set -e`, use `! foo || false` instead.
+    # https://stackoverflow.com/questions/57681955/set-e-does-not-respect-logical-not
     clean
     echo "+++ Checking the output of the generator scripts"
     mkdir -p ${BUILD_DIR}
-    # Reject patches that introduce non-ASCII characters or hard tabs.
-    ! grep -rn '[^ -~]' libcxx/include/
     # Reject patches that don't update the generated output correctly.
     python3 libcxx/utils/generate_feature_test_macro_components.py
     python3 libcxx/utils/generate_header_inclusion_tests.py
     python3 libcxx/utils/generate_header_tests.py
     git diff | tee ${BUILD_DIR}/generated_output.patch
     # Check if the diffs are empty, fail otherwise.
-    ! grep -q '^--- a' ${BUILD_DIR}/generated_output.patch
+    ! grep -q '^--- a' ${BUILD_DIR}/generated_output.patch || false
+    # Reject patches that introduce non-ASCII characters or hard tabs.
+    ! grep -rn '[^ -~]' libcxx/include/ || false
     # Check that no dependency cycles have been introduced.
     python3 libcxx/utils/graph_header_deps.py >/dev/null
 ;;
