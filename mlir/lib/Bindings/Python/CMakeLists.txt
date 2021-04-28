@@ -41,6 +41,11 @@ add_mlir_dialect_python_bindings(MLIRBindingsPythonBuiltinOps
   DIALECT_NAME builtin)
 add_dependencies(MLIRBindingsPythonSources MLIRBindingsPythonBuiltinOps)
 
+add_mlir_dialect_python_bindings(MLIRBindingsPythonGPUOps
+  TD_FILE GPUOps.td
+  DIALECT_NAME gpu)
+add_dependencies(MLIRBindingsPythonSources MLIRBindingsPythonGPUOps)
+
 add_mlir_dialect_python_bindings(MLIRBindingsPythonLinalgOps
   TD_FILE LinalgOps.td
   DIALECT_NAME linalg
@@ -132,6 +137,14 @@ add_mlir_python_extension(MLIRAsyncPassesBindingsPythonExtension _mlirAsyncPasse
     AsyncPasses.cpp
 )
 add_dependencies(MLIRBindingsPythonExtension MLIRAsyncPassesBindingsPythonExtension)
+
+add_mlir_python_extension(MLIRGPUPassesBindingsPythonExtension _mlirGPUPasses
+  INSTALL_DIR
+    python
+  SOURCES
+    GPUPasses.cpp
+)
+add_dependencies(MLIRBindingsPythonExtension MLIRGPUPassesBindingsPythonExtension)
 
 add_mlir_python_extension(MLIRLinalgPassesBindingsPythonExtension _mlirLinalgPasses
   INSTALL_DIR
