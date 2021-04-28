@@ -1,4 +1,4 @@
-mm# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
 # RUN: wasm-ld %t.o -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
