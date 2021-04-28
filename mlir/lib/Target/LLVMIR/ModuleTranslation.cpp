@@ -410,6 +410,9 @@ LogicalResult ModuleTranslation::convertGlobals() {
     if (op.unnamed_addr().hasValue())
       var->setUnnamedAddr(convertUnnamedAddrToLLVM(*op.unnamed_addr()));
 
+    if (op.section().hasValue())
+      var->setSection(*op.section());
+
     globalsMapping.try_emplace(op, var);
   }
 

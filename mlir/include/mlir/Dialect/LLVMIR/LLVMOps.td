@@ -908,7 +908,8 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     Linkage:$linkage,
     OptionalAttr<AnyAttr>:$value,
     DefaultValuedAttr<Confined<I32Attr, [IntNonNegative]>, "0">:$addr_space,
-    OptionalAttr<UnnamedAddr>:$unnamed_addr
+    OptionalAttr<UnnamedAddr>:$unnamed_addr,
+    OptionalAttr<StrAttr>:$section
   );
   let summary = "LLVM dialect global.";
   let description = [{
