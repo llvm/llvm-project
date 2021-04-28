@@ -1,11 +1,27 @@
 # TODO: Make the check source feature optional as an argument on *_add_library.
 set(LLVM_OPTIONAL_SOURCES
+  Async.cpp
+  AsyncPasses.cpp
   Linalg.cpp
   LinalgPasses.cpp
   SCF.cpp
   Shape.cpp
   Standard.cpp
   Tensor.cpp
+)
+
+add_mlir_public_c_api_library(MLIRCAPIAsync
+  Async.cpp
+  AsyncPasses.cpp
+
+  DEPENDS
+  MLIRAsyncPassIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRAsync
+  MLIRAsyncTransforms
+  MLIRPass
 )
 
 add_mlir_public_c_api_library(MLIRCAPILinalg
