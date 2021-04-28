@@ -18,6 +18,31 @@ func @memref_cast(%a: index, %b: index) -> memref<?x?xf32> {
 
 // -----
 
+#map = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+
+// CHECK-LABEL: func @memref_cast_into_tiled_loop(
+func @memref_cast_into_tiled_loop(%arg0: memref<192xf32>)  {
+  %0 = memref.cast %arg0
+    : memref<192xf32> to memref<192xf32, #map>
+  %cst = constant 0.000000e+00 : f32
+  %c24 = constant 24 : index
+  %c0 = constant 0 : index
+  %c192 = constant 192 : index
+  // CHECK: linalg.tiled_loop
+  // CHECK-SAME: outs (%{{.*}} = %{{.*}}: memref<192xf32>)
+  linalg.tiled_loop (%arg3) = (%c0) to (%c192) step (%c24)
+    outs (%out = %0: memref<192xf32, #map>) {
+    %14 = affine.min affine_map<(d0) -> (-d0 + 192, 24)>(%arg3)
+    %16 = memref.subview %out[%arg3] [%14] [1]
+      : memref<192xf32, #map> to memref<?xf32, #map>
+    linalg.fill(%16, %cst) : memref<?xf32, #map>, f32
+    linalg.yield
+  }
+  return
+}
+
+// -----
+
 func @collapsing_tensor_reshapes(%arg0 : tensor<?x?x?x?x?xf32>) -> tensor<?x?xf32>
 {
   %0 = linalg.tensor_reshape %arg0
@@ -886,6 +911,30 @@ func @fold_tiled_loop_results(%A: memref<192x192xf32>, %B: memref<192x192xf32>,
 // CHECK-SAME: outs (%[[C_:.*]] = %[[C]]: memref<192x192xf32>) {
 // CHECK-NEXT:   call @foo(%[[A_]], %[[B_]], %[[C_]])
 // CHECK-NEXT:   linalg.yield
+
+// -----
+
+#map0 = affine_map<(d0) -> (24, -d0 + 192)>
+#map1 = affine_map<(d0, d1)[s0] -> (d0 * 192 + s0 + d1)>
+#map2 = affine_map<(d0) -> (16, -d0 + 192)>
+
+func private @foo(%A: memref<192xf32>) -> ()
+
+func @fold_tiled_loop_inputs(%A: memref<192xf32>, %A_tensor: tensor<192xf32>) {
+  %c0 = constant 0 : index
+  %c24 = constant 24 : index
+  %c192 = constant 192 : index
+  linalg.tiled_loop (%i) = (%c0) to (%c192) step (%c24)
+      ins (%A_ = %A: memref<192xf32>, %AT_ = %A_tensor: tensor<192xf32>) {
+        call @foo(%A_) : (memref<192xf32>)-> ()
+    linalg.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func @fold_tiled_loop_inputs
+// CHECK: linalg.tiled_loop
+// CHECK-SAME: ins (%{{.*}} = %{{.*}}: memref<192xf32>)
 
 // -----
 
