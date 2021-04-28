@@ -2029,9 +2029,13 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
   auto ProfitableToSinkInstruction = [&](LockstepReverseIterator &LRI) {
     unsigned NumPHIdValues = 0;
     for (auto *I : *LRI)
-      for (auto *V : PHIOperands[I])
+      for (auto *V : PHIOperands[I]) {
         if (InstructionsToSink.count(V) == 0)
           ++NumPHIdValues;
+        // FIXME: this check is overly optimistic. We may end up not sinking
+        // said instruction, due to the very same profitability check.
+        // See @creating_too_many_phis in sink-common-code.ll.
+      }
     LLVM_DEBUG(dbgs() << "SINK: #phid values: " << NumPHIdValues << "\n");
     unsigned NumPHIInsts = NumPHIdValues / UnconditionalPreds.size();
     if ((NumPHIdValues % UnconditionalPreds.size()) != 0)
