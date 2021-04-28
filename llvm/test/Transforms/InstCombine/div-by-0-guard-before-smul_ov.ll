@@ -20,11 +20,10 @@ define i1 @t0_smul(i4 %size, i4 %nmemb) {
 
 define i1 @t1_commutative(i4 %size, i4 %nmemb) {
 ; CHECK-LABEL: @t1_commutative(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i4 [[SIZE:%.*]], 0
-; CHECK-NEXT:    [[SMUL:%.*]] = tail call { i4, i1 } @llvm.smul.with.overflow.i4(i4 [[SIZE]], i4 [[NMEMB:%.*]])
+; CHECK-NEXT:    [[NMEMB_FR:%.*]] = freeze i4 [[NMEMB:%.*]]
+; CHECK-NEXT:    [[SMUL:%.*]] = tail call { i4, i1 } @llvm.smul.with.overflow.i4(i4 [[SIZE:%.*]], i4 [[NMEMB_FR]])
 ; CHECK-NEXT:    [[SMUL_OV:%.*]] = extractvalue { i4, i1 } [[SMUL]], 1
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP]], i1 [[SMUL_OV]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[SMUL_OV]]
 ;
   %cmp = icmp ne i4 %size, 0
   %smul = tail call { i4, i1 } @llvm.smul.with.overflow.i4(i4 %size, i4 %nmemb)
