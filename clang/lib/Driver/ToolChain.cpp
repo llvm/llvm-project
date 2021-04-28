@@ -75,6 +75,14 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
                      const ArgList &Args)
     : D(D), Triple(T), Args(Args), CachedRTTIArg(GetRTTIArgument(Args)),
       CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)) {
+  std::string RuntimePath = getRuntimePath();
+  if (getVFS().exists(RuntimePath))
+    getLibraryPaths().push_back(RuntimePath);
+
+  std::string StdlibPath = getStdlibPath();
+  if (getVFS().exists(StdlibPath))
+    getFilePaths().push_back(StdlibPath);
+
   std::string CandidateLibPath = getArchSpecificLibPath();
   if (getVFS().exists(CandidateLibPath))
     getFilePaths().push_back(CandidateLibPath);
@@ -475,14 +483,13 @@ const char *ToolChain::getCompilerRTArgString(const llvm::opt::ArgList &Args,
 
 std::string ToolChain::getRuntimePath() const {
   SmallString<128> P(D.ResourceDir);
-  llvm::sys::path::append(P, "lib", getMultiarchTriple(D, Triple, D.SysRoot));
+  llvm::sys::path::append(P, "lib", getTripleString());
   return std::string(P.str());
 }
 
 std::string ToolChain::getStdlibPath() const {
   SmallString<128> P(D.Dir);
-  llvm::sys::path::append(P, "..", "lib",
-                          getMultiarchTriple(D, Triple, D.SysRoot));
+  llvm::sys::path::append(P, "..", "lib", getTripleString());
   return std::string(P.str());
 }
 
