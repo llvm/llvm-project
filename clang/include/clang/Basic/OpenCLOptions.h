@@ -59,6 +59,7 @@ static inline bool isOpenCLVersionContainedInMask(const LangOptions &LO,
   OpenCLVersionID Code = encodeOpenCLVersion(CLVer);
   return Mask & Code;
 }
+
 } // end anonymous namespace
 
 /// OpenCL supported extensions and optional core features
@@ -166,6 +167,17 @@ public:
   friend class ASTReader;
 
   using OpenCLOptionInfoMap = llvm::StringMap<OpenCLOptionInfo>;
+
+  template <typename... Args>
+  static bool isOpenCLOptionCoreIn(const LangOptions &LO, Args &&... args) {
+    return OpenCLOptionInfo(std::forward<Args>(args)...).isCoreIn(LO);
+  }
+
+  template <typename... Args>
+  static bool isOpenCLOptionAvailableIn(const LangOptions &LO,
+                                        Args &&... args) {
+    return OpenCLOptionInfo(std::forward<Args>(args)...).isAvailableIn(LO);
+  }
 
 private:
   // Option is enabled via pragma

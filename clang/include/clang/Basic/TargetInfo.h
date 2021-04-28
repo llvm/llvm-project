@@ -1234,6 +1234,12 @@ public:
     return false;
   }
 
+  /// Check if target has a given feature enabled
+  virtual bool hasFeatureEnabled(const llvm::StringMap<bool> &Features,
+                                 StringRef Name) const {
+    return Features.lookup(Name);
+  }
+
   /// Enable or disable a specific target feature;
   /// the feature name must be valid.
   virtual void setFeatureEnabled(llvm::StringMap<bool> &Features,
@@ -1481,7 +1487,8 @@ public:
   virtual void setSupportedOpenCLOpts() {}
 
   virtual void supportAllOpenCLOpts(bool V = true) {
-#define OPENCLEXTNAME(Ext) getTargetOpts().OpenCLFeaturesMap[#Ext] = V;
+#define OPENCLEXTNAME(Ext)                                                     \
+  setFeatureEnabled(getTargetOpts().OpenCLFeaturesMap, #Ext, V);
 #include "clang/Basic/OpenCLExtensions.def"
   }
 
@@ -1500,10 +1507,6 @@ public:
       getTargetOpts().OpenCLFeaturesMap[Name] = V;
     }
   }
-
-  /// Define OpenCL macros based on target settings and language version
-  void getOpenCLFeatureDefines(const LangOptions &Opts,
-                               MacroBuilder &Builder) const;
 
   /// Get supported OpenCL extensions and optional core features.
   llvm::StringMap<bool> &getSupportedOpenCLOpts() {
@@ -1543,6 +1546,11 @@ public:
   virtual bool validateTarget(DiagnosticsEngine &Diags) const {
     return true;
   }
+
+  /// Check that OpenCL target has valid options setting based on OpenCL
+  /// version.
+  virtual bool validateOpenCLTarget(const LangOptions &Opts,
+                                    DiagnosticsEngine &Diags) const;
 
   virtual void setAuxTarget(const TargetInfo *Aux) {}
 

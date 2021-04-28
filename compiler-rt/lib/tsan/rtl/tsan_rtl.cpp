@@ -519,27 +519,23 @@ int Finalize(ThreadState *thr) {
 void ForkBefore(ThreadState *thr, uptr pc) {
   ctx->thread_registry->Lock();
   ctx->report_mtx.Lock();
-  // Suppress all reports in the pthread_atfork callbacks.
-  // Reports will deadlock on the report_mtx.
-  // We could ignore sync operations as well,
+  // Ignore memory accesses in the pthread_atfork callbacks.
+  // If any of them triggers a data race we will deadlock
+  // on the report_mtx.
+  // We could ignore interceptors and sync operations as well,
   // but so far it's unclear if it will do more good or harm.
   // Unnecessarily ignoring things can lead to false positives later.
-  thr->suppress_reports++;
-  // On OS X, REAL(fork) can call intercepted functions (OSSpinLockLock), and
-  // we'll assert in CheckNoLocks() unless we ignore interceptors.
-  thr->ignore_interceptors++;
+  ThreadIgnoreBegin(thr, pc);
 }
 
 void ForkParentAfter(ThreadState *thr, uptr pc) {
-  thr->suppress_reports--;  // Enabled in ForkBefore.
-  thr->ignore_interceptors--;
+  ThreadIgnoreEnd(thr, pc);  // Begin is in ForkBefore.
   ctx->report_mtx.Unlock();
   ctx->thread_registry->Unlock();
 }
 
 void ForkChildAfter(ThreadState *thr, uptr pc) {
-  thr->suppress_reports--;  // Enabled in ForkBefore.
-  thr->ignore_interceptors--;
+  ThreadIgnoreEnd(thr, pc);  // Begin is in ForkBefore.
   ctx->report_mtx.Unlock();
   ctx->thread_registry->Unlock();
 
