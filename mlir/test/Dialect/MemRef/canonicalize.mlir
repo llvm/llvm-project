@@ -62,3 +62,70 @@ func @canonicalize_buffer_cast_of_tensor_load(%arg0: memref<?xf32, offset: 3, st
   %1 = memref.buffer_cast %0 : memref<?xf32, offset: ?, strides: [1]>
   return %1 : memref<?xf32, offset: ?, strides: [1]>
 }
+
+// -----
+
+// CHECK-LABEL: func @subview_of_memcast
+//  CHECK-SAME:   %[[ARG0:.[a-z0-9A-Z_]+]]: memref<4x6x16x32xi8>
+//       CHECK:   %[[S:.+]] = memref.subview %arg0[0, 1, 0] [1, 1, 16] [1, 1, 1] : memref<4x6x16x32xi8> to memref<16x32xi8, #{{.*}}>
+//       CHECK:   %[[M:.+]] = memref.cast %[[S]] : memref<16x32xi8, #{{.*}}> to memref<16x32xi8, #{{.*}}>
+//       CHECK:   return %[[M]] : memref<16x32xi8, #{{.*}}>
+func @subview_of_memcast(%arg : memref<4x6x16x32xi8>) ->
+  memref<16x32xi8, affine_map<(d0, d1)[s0] -> (d0 * 32 + d1 + s0)>>{
+  %0 = memref.cast %arg : memref<4x6x16x32xi8> to memref<?x?x16x32xi8>
+  %1 = memref.subview %0[0, 1, 0] [1, 1, 16] [1, 1, 1] :
+    memref<?x?x16x32xi8> to
+    memref<16x32xi8, affine_map<(d0, d1)[s0] -> (d0 * 32 + d1 + s0)>>
+  return %1 : memref<16x32xi8, affine_map<(d0, d1)[s0] -> (d0 * 32 + d1 + s0)>>
+}
+
+// -----
+
+// CHECK-LABEL: func @subview_of_static_full_size
+// CHECK-SAME: %[[ARG0:.+]]: memref<4x6x16x32xi8>
+// CHECK-NOT: memref.subview
+// CHECK: return %[[ARG0]] : memref<4x6x16x32xi8>
+func @subview_of_static_full_size(%arg0 : memref<4x6x16x32xi8>) -> memref<4x6x16x32xi8> {
+  %0 = memref.subview %arg0[0, 0, 0, 0] [4, 6, 16, 32] [1, 1, 1, 1] : memref<4x6x16x32xi8> to memref<4x6x16x32xi8>
+  return %0 : memref<4x6x16x32xi8>
+}
+
+// -----
+
+#map0 = affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3)>
+func @subview_canonicalize(%arg0 : memref<?x?x?xf32>, %arg1 : index,
+    %arg2 : index) -> memref<?x?x?xf32, #map0>
+{
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c4 = constant 4 : index
+  %0 = memref.subview %arg0[%c0, %arg1, %c1] [%c4, %c1, %arg2] [%c1, %c1, %c1] : memref<?x?x?xf32> to memref<?x?x?xf32, #map0>
+  return %0 : memref<?x?x?xf32, #map0>
+}
+// CHECK-LABEL: func @subview_canonicalize
+//  CHECK-SAME:   %[[ARG0:.+]]: memref<?x?x?xf32>
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG0]][0, %{{[a-zA-Z0-9_]+}}, 1]
+//  CHECK-SAME:      [4, 1, %{{[a-zA-Z0-9_]+}}] [1, 1, 1]
+//  CHECK-SAME:      : memref<?x?x?xf32> to memref<4x1x?xf32
+//       CHECK:   %[[RESULT:.+]] = memref.cast %[[SUBVIEW]]
+//       CHEKC:   return %[[RESULT]]
+
+// -----
+
+#map0 = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
+func @rank_reducing_subview_canonicalize(%arg0 : memref<?x?x?xf32>, %arg1 : index,
+    %arg2 : index) -> memref<?x?xf32, #map0>
+{
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c4 = constant 4 : index
+  %0 = memref.subview %arg0[%c0, %arg1, %c1] [%c4, 1, %arg2] [%c1, %c1, %c1] : memref<?x?x?xf32> to memref<?x?xf32, #map0>
+  return %0 : memref<?x?xf32, #map0>
+}
+// CHECK-LABEL: func @rank_reducing_subview_canonicalize
+//  CHECK-SAME:   %[[ARG0:.+]]: memref<?x?x?xf32>
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG0]][0, %{{[a-zA-Z0-9_]+}}, 1]
+//  CHECK-SAME:      [4, 1, %{{[a-zA-Z0-9_]+}}] [1, 1, 1]
+//  CHECK-SAME:      : memref<?x?x?xf32> to memref<4x?xf32
+//       CHECK:   %[[RESULT:.+]] = memref.cast %[[SUBVIEW]]
+//       CHEKC:   return %[[RESULT]]
