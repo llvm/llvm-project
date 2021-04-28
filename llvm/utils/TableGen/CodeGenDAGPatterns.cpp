@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenDAGPatterns.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -4664,17 +4663,7 @@ void CodeGenDAGPatterns::GenerateVariants() {
   // intentionally do not reconsider these.  Any variants of added patterns have
   // already been added.
   //
-  const unsigned NumOriginalPatterns = PatternsToMatch.size();
-  BitVector MatchedPatterns(NumOriginalPatterns);
-  std::vector<BitVector> MatchedPredicates(NumOriginalPatterns,
-                                           BitVector(NumOriginalPatterns));
-
-  typedef std::pair<MultipleUseVarSet, std::vector<TreePatternNodePtr>>
-      DepsAndVariants;
-  std::map<unsigned, DepsAndVariants> PatternsWithVariants;
-
-  // Collect patterns with more than one variant.
-  for (unsigned i = 0; i != NumOriginalPatterns; ++i) {
+  for (unsigned i = 0, e = PatternsToMatch.size(); i != e; ++i) {
     MultipleUseVarSet DepVars;
     std::vector<TreePatternNodePtr> Variants;
     FindDepVars(PatternsToMatch[i].getSrcPattern(), DepVars);
@@ -4684,6 +4673,9 @@ void CodeGenDAGPatterns::GenerateVariants() {
     GenerateVariantsOf(PatternsToMatch[i].getSrcPatternShared(), Variants,
                        *this, DepVars);
 
+    assert(PatternsToMatch[i].getHwModeFeatures().empty() &&
+           "HwModes should not have been expanded yet!");
+
     assert(!Variants.empty() && "Must create at least original variant!");
     if (Variants.size() == 1) // No additional variants for this pattern.
       continue;
@@ -4691,41 +4683,8 @@ void CodeGenDAGPatterns::GenerateVariants() {
     LLVM_DEBUG(errs() << "FOUND VARIANTS OF: ";
                PatternsToMatch[i].getSrcPattern()->dump(); errs() << "\n");
 
-    PatternsWithVariants[i] = std::make_pair(DepVars, Variants);
-
-    // Cache matching predicates.
-    if (MatchedPatterns[i])
-      continue;
-
-    ListInit *Predicates = PatternsToMatch[i].getPredicates();
-    StringRef HwModeFeatures = PatternsToMatch[i].getHwModeFeatures();
-
-    BitVector &Matches = MatchedPredicates[i];
-    MatchedPatterns.set(i);
-    Matches.set(i);
-
-    // Don't test patterns that have already been cached - it won't match.
-    for (unsigned p = 0; p != NumOriginalPatterns; ++p)
-      if (!MatchedPatterns[p])
-        Matches[p] = (Predicates == PatternsToMatch[p].getPredicates()) &&
-                     (HwModeFeatures == PatternsToMatch[p].getHwModeFeatures());
-
-    // Copy this to all the matching patterns.
-    for (int p = Matches.find_first(); p != -1; p = Matches.find_next(p))
-      if (p != (int)i) {
-        MatchedPatterns.set(p);
-        MatchedPredicates[p] = Matches;
-      }
-  }
-
-  for (const auto &it : PatternsWithVariants) {
-    unsigned i = it.first;
-    const MultipleUseVarSet &DepVars = it.second.first;
-    const std::vector<TreePatternNodePtr> &Variants = it.second.second;
-
     for (unsigned v = 0, e = Variants.size(); v != e; ++v) {
       TreePatternNodePtr Variant = Variants[v];
-      BitVector &Matches = MatchedPredicates[i];
 
       LLVM_DEBUG(errs() << "  VAR#" << v << ": "; Variant->dump();
                  errs() << "\n");
@@ -4734,7 +4693,8 @@ void CodeGenDAGPatterns::GenerateVariants() {
       bool AlreadyExists = false;
       for (unsigned p = 0, e = PatternsToMatch.size(); p != e; ++p) {
         // Skip if the top level predicates do not match.
-        if (!Matches[p])
+        if ((i != p) && (PatternsToMatch[i].getPredicates() !=
+                         PatternsToMatch[p].getPredicates()))
           continue;
         // Check to see if this variant already exists.
         if (Variant->isIsomorphicTo(PatternsToMatch[p].getSrcPattern(),
@@ -4754,12 +4714,7 @@ void CodeGenDAGPatterns::GenerateVariants() {
           PatternsToMatch[i].getDstRegs(),
           PatternsToMatch[i].getAddedComplexity(), Record::getNewUID(),
           PatternsToMatch[i].getForceMode(),
-          PatternsToMatch[i].getHwModeFeatures().str());
-      MatchedPredicates.push_back(Matches);
-
-      // Add a new match the same as this pattern.
-      for (auto &P : MatchedPredicates)
-        P.push_back(P[i]);
+          PatternsToMatch[i].getHwModeFeatures());
     }
 
     LLVM_DEBUG(errs() << "\n");
