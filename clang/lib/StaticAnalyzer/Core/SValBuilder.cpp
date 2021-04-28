@@ -748,8 +748,8 @@ SVal SValBuilder::evalCastSubKind(loc::MemRegionVal V, QualType CastTy,
       // pointers as well.
       // FIXME: We really need a single good function to perform casts for us
       // correctly every time we need it.
+      const MemRegion *R = V.getRegion();
       if (CastTy->isPointerType() && !CastTy->isVoidPointerType()) {
-        const MemRegion *R = V.getRegion();
         if (const auto *SR = dyn_cast<SymbolicRegion>(R)) {
           QualType SRTy = SR->getSymbol()->getType();
           if (!hasSameUnqualifiedPointeeType(SRTy, CastTy)) {
@@ -758,6 +758,13 @@ SVal SValBuilder::evalCastSubKind(loc::MemRegionVal V, QualType CastTy,
           }
         }
       }
+      // Next fixes pointer dereference using type different from its initial
+      // one. See PR37503 and PR49007 for details.
+      if (const auto *ER = dyn_cast<ElementRegion>(R)) {
+        R = StateMgr.getStoreManager().castRegion(ER, CastTy);
+        return loc::MemRegionVal(R);
+      }
+
       return V;
     }
 
