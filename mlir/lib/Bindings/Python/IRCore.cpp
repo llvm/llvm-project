@@ -1640,6 +1640,15 @@ public:
     return PyOpOperandList(operation, startIndex, length, step);
   }
 
+  void dunderSetItem(intptr_t index, PyValue value) {
+    index = wrapIndex(index);
+    mlirOperationSetOperand(operation->get(), index, value.get());
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def("__setitem__", &PyOpOperandList::dunderSetItem);
+  }
+
 private:
   PyOperationRef operation;
 };
