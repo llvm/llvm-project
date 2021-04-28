@@ -69,6 +69,9 @@ llvm.mlir.global private local_unnamed_addr constant @local(42 : i64) : i64
 // CHECK: llvm.mlir.global private unnamed_addr constant @foo(42 : i64) : i64
 llvm.mlir.global private unnamed_addr constant @foo(42 : i64) : i64
 
+// CHECK: llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysection"}
+llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysection"}: !llvm.array<10 x i8>
+
 // -----
 
 // expected-error @+1 {{requires string attribute 'sym_name'}}
