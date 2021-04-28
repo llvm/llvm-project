@@ -48,7 +48,7 @@ T2 = TV.T2
 def matmul(A=TensorDef(T1, S.M, S.K),
            B=TensorDef(T2, S.K, S.N),
            C=TensorDef(U, S.M, S.N, output=True)):
-  """Performs a matrix multiplacation of two 2D inputs.
+  """Performs a matrix multiplication of two 2D inputs.
 
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
