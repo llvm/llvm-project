@@ -1,4 +1,4 @@
-// RUN: %clang_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
+// RUN: %clang_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 // Regression test for
 // https://groups.google.com/d/msg/thread-sanitizer/e_zB9gYqFHM/DmAiTsrLAwAJ
 // pthread_atfork() callback triggers a data race and we deadlocked
@@ -22,7 +22,7 @@ void atfork() {
 
 int main() {
   barrier_init(&barrier, 2);
-  pthread_atfork(atfork, atfork, atfork);
+  pthread_atfork(atfork, NULL, NULL);
   pthread_t t;
   pthread_create(&t, NULL, worker, NULL);
   barrier_wait(&barrier);
@@ -44,10 +44,6 @@ int main() {
   return 0;
 }
 
-// CHECK: ThreadSanitizer: data race
-// CHECK:   Write of size 4
-// CHECK:     #0 atfork
-// CHECK:   Previous write of size 4
-// CHECK:     #0 worker
+// CHECK-NOT: ThreadSanitizer: data race
 // CHECK: CHILD
 // CHECK: PARENT
