@@ -25358,6 +25358,35 @@
      <string>Object autoreleased</string>
     </dict>
     <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>2286</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>2286</integer>
+         <key>col</key><integer>3</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>2286</integer>
+         <key>col</key><integer>18</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>0</integer>
+     <key>extended_message</key>
+     <string>&apos;second&apos; initialized here</string>
+     <key>message</key>
+     <string>&apos;second&apos; initialized here</string>
+    </dict>
+    <dict>
      <key>kind</key><string>control</string>
      <key>edges</key>
       <array>
@@ -25614,6 +25643,35 @@
      <string>Object autoreleased</string>
      <key>message</key>
      <string>Object autoreleased</string>
+    </dict>
+    <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>2306</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>2306</integer>
+         <key>col</key><integer>3</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>2306</integer>
+         <key>col</key><integer>18</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>0</integer>
+     <key>extended_message</key>
+     <string>&apos;alias&apos; initialized here</string>
+     <key>message</key>
+     <string>&apos;alias&apos; initialized here</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>

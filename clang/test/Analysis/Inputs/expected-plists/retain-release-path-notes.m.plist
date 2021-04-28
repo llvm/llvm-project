@@ -5156,6 +5156,35 @@
      <string>Method returns an instance of MyObj with a +1 retain count</string>
     </dict>
     <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>215</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>215</integer>
+         <key>col</key><integer>3</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>215</integer>
+         <key>col</key><integer>21</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>1</integer>
+     <key>extended_message</key>
+     <string>Value assigned to &apos;self&apos;</string>
+     <key>message</key>
+     <string>Value assigned to &apos;self&apos;</string>
+    </dict>
+    <dict>
      <key>kind</key><string>control</string>
      <key>edges</key>
       <array>
@@ -5188,6 +5217,35 @@
          </array>
        </dict>
       </array>
+    </dict>
+    <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>216</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>216</integer>
+         <key>col</key><integer>3</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>216</integer>
+         <key>col</key><integer>13</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>1</integer>
+     <key>extended_message</key>
+     <string>Returning pointer (loaded from &apos;self&apos;)</string>
+     <key>message</key>
+     <string>Returning pointer (loaded from &apos;self&apos;)</string>
     </dict>
     <dict>
      <key>kind</key><string>event</string>
@@ -5253,6 +5311,35 @@
       </array>
     </dict>
     <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>337</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>337</integer>
+         <key>col</key><integer>3</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>337</integer>
+         <key>col</key><integer>13</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>0</integer>
+     <key>extended_message</key>
+     <string>&apos;Original&apos; initialized here</string>
+     <key>message</key>
+     <string>&apos;Original&apos; initialized here</string>
+    </dict>
+    <dict>
      <key>kind</key><string>control</string>
      <key>edges</key>
       <array>
@@ -5279,7 +5366,7 @@
           </dict>
           <dict>
            <key>line</key><integer>342</integer>
-           <key>col</key><integer>3</integer>
+           <key>col</key><integer>4</integer>
            <key>file</key><integer>0</integer>
           </dict>
          </array>
@@ -5304,6 +5391,69 @@
         </dict>
         <dict>
          <key>line</key><integer>342</integer>
+         <key>col</key><integer>8</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>0</integer>
+     <key>extended_message</key>
+     <string>&apos;New&apos; initialized here</string>
+     <key>message</key>
+     <string>&apos;New&apos; initialized here</string>
+    </dict>
+    <dict>
+     <key>kind</key><string>control</string>
+     <key>edges</key>
+      <array>
+       <dict>
+        <key>start</key>
+         <array>
+          <dict>
+           <key>line</key><integer>342</integer>
+           <key>col</key><integer>3</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+          <dict>
+           <key>line</key><integer>342</integer>
+           <key>col</key><integer>4</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+         </array>
+        <key>end</key>
+         <array>
+          <dict>
+           <key>line</key><integer>345</integer>
+           <key>col</key><integer>3</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+          <dict>
+           <key>line</key><integer>345</integer>
+           <key>col</key><integer>3</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+         </array>
+       </dict>
+      </array>
+    </dict>
+    <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>345</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>345</integer>
+         <key>col</key><integer>3</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>345</integer>
          <key>col</key><integer>20</integer>
          <key>file</key><integer>0</integer>
         </dict>
@@ -5327,7 +5477,7 @@
   <key>issue_hash_function_offset</key><string>1</string>
   <key>location</key>
   <dict>
-   <key>line</key><integer>342</integer>
+   <key>line</key><integer>345</integer>
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
   </dict>
@@ -5343,10 +5493,10 @@
     <integer>221</integer>
     <integer>336</integer>
     <integer>337</integer>
-    <integer>339</integer>
-    <integer>340</integer>
-    <integer>341</integer>
     <integer>342</integer>
+    <integer>343</integer>
+    <integer>344</integer>
+    <integer>345</integer>
    </array>
   </dict>
   </dict>
@@ -5361,12 +5511,12 @@
         <key>start</key>
          <array>
           <dict>
-           <key>line</key><integer>347</integer>
+           <key>line</key><integer>350</integer>
            <key>col</key><integer>3</integer>
            <key>file</key><integer>0</integer>
           </dict>
           <dict>
-           <key>line</key><integer>347</integer>
+           <key>line</key><integer>350</integer>
            <key>col</key><integer>4</integer>
            <key>file</key><integer>0</integer>
           </dict>
@@ -5374,12 +5524,12 @@
         <key>end</key>
          <array>
           <dict>
-           <key>line</key><integer>347</integer>
+           <key>line</key><integer>350</integer>
            <key>col</key><integer>17</integer>
            <key>file</key><integer>0</integer>
           </dict>
           <dict>
-           <key>line</key><integer>347</integer>
+           <key>line</key><integer>350</integer>
            <key>col</key><integer>17</integer>
            <key>file</key><integer>0</integer>
           </dict>
@@ -5391,7 +5541,7 @@
      <key>kind</key><string>event</string>
      <key>location</key>
      <dict>
-      <key>line</key><integer>347</integer>
+      <key>line</key><integer>350</integer>
       <key>col</key><integer>17</integer>
       <key>file</key><integer>0</integer>
      </dict>
@@ -5399,12 +5549,12 @@
      <array>
        <array>
         <dict>
-         <key>line</key><integer>347</integer>
+         <key>line</key><integer>350</integer>
          <key>col</key><integer>17</integer>
          <key>file</key><integer>0</integer>
         </dict>
         <dict>
-         <key>line</key><integer>347</integer>
+         <key>line</key><integer>350</integer>
          <key>col</key><integer>37</integer>
          <key>file</key><integer>0</integer>
         </dict>
@@ -5494,6 +5644,35 @@
      <string>Method returns an instance of MyObj with a +1 retain count</string>
     </dict>
     <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>215</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>215</integer>
+         <key>col</key><integer>3</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>215</integer>
+         <key>col</key><integer>21</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>1</integer>
+     <key>extended_message</key>
+     <string>Value assigned to &apos;self&apos;</string>
+     <key>message</key>
+     <string>Value assigned to &apos;self&apos;</string>
+    </dict>
+    <dict>
      <key>kind</key><string>control</string>
      <key>edges</key>
       <array>
@@ -5531,7 +5710,36 @@
      <key>kind</key><string>event</string>
      <key>location</key>
      <dict>
-      <key>line</key><integer>347</integer>
+      <key>line</key><integer>216</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>216</integer>
+         <key>col</key><integer>3</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>216</integer>
+         <key>col</key><integer>13</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>1</integer>
+     <key>extended_message</key>
+     <string>Returning pointer (loaded from &apos;self&apos;)</string>
+     <key>message</key>
+     <string>Returning pointer (loaded from &apos;self&apos;)</string>
+    </dict>
+    <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>350</integer>
       <key>col</key><integer>17</integer>
       <key>file</key><integer>0</integer>
      </dict>
@@ -5539,12 +5747,12 @@
      <array>
        <array>
         <dict>
-         <key>line</key><integer>347</integer>
+         <key>line</key><integer>350</integer>
          <key>col</key><integer>17</integer>
          <key>file</key><integer>0</integer>
         </dict>
         <dict>
-         <key>line</key><integer>347</integer>
+         <key>line</key><integer>350</integer>
          <key>col</key><integer>37</integer>
          <key>file</key><integer>0</integer>
         </dict>
@@ -5564,12 +5772,12 @@
         <key>start</key>
          <array>
           <dict>
-           <key>line</key><integer>347</integer>
+           <key>line</key><integer>350</integer>
            <key>col</key><integer>17</integer>
            <key>file</key><integer>0</integer>
           </dict>
           <dict>
-           <key>line</key><integer>347</integer>
+           <key>line</key><integer>350</integer>
            <key>col</key><integer>17</integer>
            <key>file</key><integer>0</integer>
           </dict>
@@ -5577,18 +5785,47 @@
         <key>end</key>
          <array>
           <dict>
-           <key>line</key><integer>347</integer>
+           <key>line</key><integer>350</integer>
            <key>col</key><integer>3</integer>
            <key>file</key><integer>0</integer>
           </dict>
           <dict>
-           <key>line</key><integer>347</integer>
+           <key>line</key><integer>350</integer>
            <key>col</key><integer>4</integer>
            <key>file</key><integer>0</integer>
           </dict>
          </array>
        </dict>
       </array>
+    </dict>
+    <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>350</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>350</integer>
+         <key>col</key><integer>3</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>350</integer>
+         <key>col</key><integer>13</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>0</integer>
+     <key>extended_message</key>
+     <string>&apos;Original&apos; initialized here</string>
+     <key>message</key>
+     <string>&apos;Original&apos; initialized here</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -5598,12 +5835,12 @@
         <key>start</key>
          <array>
           <dict>
-           <key>line</key><integer>347</integer>
+           <key>line</key><integer>350</integer>
            <key>col</key><integer>3</integer>
            <key>file</key><integer>0</integer>
           </dict>
           <dict>
-           <key>line</key><integer>347</integer>
+           <key>line</key><integer>350</integer>
            <key>col</key><integer>4</integer>
            <key>file</key><integer>0</integer>
           </dict>
@@ -5611,12 +5848,138 @@
         <key>end</key>
          <array>
           <dict>
-           <key>line</key><integer>353</integer>
+           <key>line</key><integer>355</integer>
            <key>col</key><integer>3</integer>
            <key>file</key><integer>0</integer>
           </dict>
           <dict>
-           <key>line</key><integer>353</integer>
+           <key>line</key><integer>355</integer>
+           <key>col</key><integer>4</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+         </array>
+       </dict>
+      </array>
+    </dict>
+    <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>355</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>355</integer>
+         <key>col</key><integer>3</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>355</integer>
+         <key>col</key><integer>17</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>0</integer>
+     <key>extended_message</key>
+     <string>&apos;Intermediate&apos; initialized here</string>
+     <key>message</key>
+     <string>&apos;Intermediate&apos; initialized here</string>
+    </dict>
+    <dict>
+     <key>kind</key><string>control</string>
+     <key>edges</key>
+      <array>
+       <dict>
+        <key>start</key>
+         <array>
+          <dict>
+           <key>line</key><integer>355</integer>
+           <key>col</key><integer>3</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+          <dict>
+           <key>line</key><integer>355</integer>
+           <key>col</key><integer>4</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+         </array>
+        <key>end</key>
+         <array>
+          <dict>
+           <key>line</key><integer>356</integer>
+           <key>col</key><integer>3</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+          <dict>
+           <key>line</key><integer>356</integer>
+           <key>col</key><integer>4</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+         </array>
+       </dict>
+      </array>
+    </dict>
+    <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>356</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>356</integer>
+         <key>col</key><integer>3</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>356</integer>
+         <key>col</key><integer>8</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>0</integer>
+     <key>extended_message</key>
+     <string>&apos;New&apos; initialized here</string>
+     <key>message</key>
+     <string>&apos;New&apos; initialized here</string>
+    </dict>
+    <dict>
+     <key>kind</key><string>control</string>
+     <key>edges</key>
+      <array>
+       <dict>
+        <key>start</key>
+         <array>
+          <dict>
+           <key>line</key><integer>356</integer>
+           <key>col</key><integer>3</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+          <dict>
+           <key>line</key><integer>356</integer>
+           <key>col</key><integer>4</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+         </array>
+        <key>end</key>
+         <array>
+          <dict>
+           <key>line</key><integer>359</integer>
+           <key>col</key><integer>3</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+          <dict>
+           <key>line</key><integer>359</integer>
            <key>col</key><integer>3</integer>
            <key>file</key><integer>0</integer>
           </dict>
@@ -5628,7 +5991,7 @@
      <key>kind</key><string>event</string>
      <key>location</key>
      <dict>
-      <key>line</key><integer>353</integer>
+      <key>line</key><integer>359</integer>
       <key>col</key><integer>3</integer>
       <key>file</key><integer>0</integer>
      </dict>
@@ -5636,12 +5999,12 @@
      <array>
        <array>
         <dict>
-         <key>line</key><integer>353</integer>
+         <key>line</key><integer>359</integer>
          <key>col</key><integer>3</integer>
          <key>file</key><integer>0</integer>
         </dict>
         <dict>
-         <key>line</key><integer>353</integer>
+         <key>line</key><integer>359</integer>
          <key>col</key><integer>20</integer>
          <key>file</key><integer>0</integer>
         </dict>
@@ -5665,7 +6028,7 @@
   <key>issue_hash_function_offset</key><string>1</string>
   <key>location</key>
   <dict>
-   <key>line</key><integer>353</integer>
+   <key>line</key><integer>359</integer>
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
   </dict>
@@ -5679,13 +6042,13 @@
     <integer>219</integer>
     <integer>220</integer>
     <integer>221</integer>
-    <integer>346</integer>
-    <integer>347</integer>
     <integer>349</integer>
     <integer>350</integer>
-    <integer>351</integer>
-    <integer>352</integer>
-    <integer>353</integer>
+    <integer>355</integer>
+    <integer>356</integer>
+    <integer>357</integer>
+    <integer>358</integer>
+    <integer>359</integer>
    </array>
   </dict>
   </dict>
@@ -5700,12 +6063,12 @@
         <key>start</key>
          <array>
           <dict>
-           <key>line</key><integer>371</integer>
+           <key>line</key><integer>377</integer>
            <key>col</key><integer>3</integer>
            <key>file</key><integer>0</integer>
           </dict>
           <dict>
-           <key>line</key><integer>371</integer>
+           <key>line</key><integer>377</integer>
            <key>col</key><integer>4</integer>
            <key>file</key><integer>0</integer>
           </dict>
@@ -5713,12 +6076,12 @@
         <key>end</key>
          <array>
           <dict>
-           <key>line</key><integer>371</integer>
+           <key>line</key><integer>377</integer>
            <key>col</key><integer>17</integer>
            <key>file</key><integer>0</integer>
           </dict>
           <dict>
-           <key>line</key><integer>371</integer>
+           <key>line</key><integer>377</integer>
            <key>col</key><integer>17</integer>
            <key>file</key><integer>0</integer>
           </dict>
@@ -5730,7 +6093,7 @@
      <key>kind</key><string>event</string>
      <key>location</key>
      <dict>
-      <key>line</key><integer>371</integer>
+      <key>line</key><integer>377</integer>
       <key>col</key><integer>17</integer>
       <key>file</key><integer>0</integer>
      </dict>
@@ -5738,12 +6101,12 @@
      <array>
        <array>
         <dict>
-         <key>line</key><integer>371</integer>
+         <key>line</key><integer>377</integer>
          <key>col</key><integer>17</integer>
          <key>file</key><integer>0</integer>
         </dict>
         <dict>
-         <key>line</key><integer>371</integer>
+         <key>line</key><integer>377</integer>
          <key>col</key><integer>37</integer>
          <key>file</key><integer>0</integer>
         </dict>
@@ -5833,6 +6196,35 @@
      <string>Method returns an instance of MyObj with a +1 retain count</string>
     </dict>
     <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>215</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>215</integer>
+         <key>col</key><integer>3</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>215</integer>
+         <key>col</key><integer>21</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>1</integer>
+     <key>extended_message</key>
+     <string>Value assigned to &apos;self&apos;</string>
+     <key>message</key>
+     <string>Value assigned to &apos;self&apos;</string>
+    </dict>
+    <dict>
      <key>kind</key><string>control</string>
      <key>edges</key>
       <array>
@@ -5870,7 +6262,36 @@
      <key>kind</key><string>event</string>
      <key>location</key>
      <dict>
-      <key>line</key><integer>371</integer>
+      <key>line</key><integer>216</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>216</integer>
+         <key>col</key><integer>3</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>216</integer>
+         <key>col</key><integer>13</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>1</integer>
+     <key>extended_message</key>
+     <string>Returning pointer (loaded from &apos;self&apos;)</string>
+     <key>message</key>
+     <string>Returning pointer (loaded from &apos;self&apos;)</string>
+    </dict>
+    <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>377</integer>
       <key>col</key><integer>17</integer>
       <key>file</key><integer>0</integer>
      </dict>
@@ -5878,12 +6299,12 @@
      <array>
        <array>
         <dict>
-         <key>line</key><integer>371</integer>
+         <key>line</key><integer>377</integer>
          <key>col</key><integer>17</integer>
          <key>file</key><integer>0</integer>
         </dict>
         <dict>
-         <key>line</key><integer>371</integer>
+         <key>line</key><integer>377</integer>
          <key>col</key><integer>37</integer>
          <key>file</key><integer>0</integer>
         </dict>
@@ -5903,12 +6324,12 @@
         <key>start</key>
          <array>
           <dict>
-           <key>line</key><integer>371</integer>
+           <key>line</key><integer>377</integer>
            <key>col</key><integer>17</integer>
            <key>file</key><integer>0</integer>
           </dict>
           <dict>
-           <key>line</key><integer>371</integer>
+           <key>line</key><integer>377</integer>
            <key>col</key><integer>17</integer>
            <key>file</key><integer>0</integer>
           </dict>
@@ -5916,18 +6337,47 @@
         <key>end</key>
          <array>
           <dict>
-           <key>line</key><integer>371</integer>
+           <key>line</key><integer>377</integer>
            <key>col</key><integer>3</integer>
            <key>file</key><integer>0</integer>
           </dict>
           <dict>
-           <key>line</key><integer>371</integer>
+           <key>line</key><integer>377</integer>
            <key>col</key><integer>4</integer>
            <key>file</key><integer>0</integer>
           </dict>
          </array>
        </dict>
       </array>
+    </dict>
+    <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>377</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>377</integer>
+         <key>col</key><integer>3</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>377</integer>
+         <key>col</key><integer>13</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>0</integer>
+     <key>extended_message</key>
+     <string>&apos;Original&apos; initialized here</string>
+     <key>message</key>
+     <string>&apos;Original&apos; initialized here</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -5937,12 +6387,12 @@
         <key>start</key>
          <array>
           <dict>
-           <key>line</key><integer>371</integer>
+           <key>line</key><integer>377</integer>
            <key>col</key><integer>3</integer>
            <key>file</key><integer>0</integer>
           </dict>
           <dict>
-           <key>line</key><integer>371</integer>
+           <key>line</key><integer>377</integer>
            <key>col</key><integer>4</integer>
            <key>file</key><integer>0</integer>
           </dict>
@@ -5950,12 +6400,75 @@
         <key>end</key>
          <array>
           <dict>
-           <key>line</key><integer>376</integer>
+           <key>line</key><integer>383</integer>
            <key>col</key><integer>3</integer>
            <key>file</key><integer>0</integer>
           </dict>
           <dict>
-           <key>line</key><integer>376</integer>
+           <key>line</key><integer>383</integer>
+           <key>col</key><integer>5</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+         </array>
+       </dict>
+      </array>
+    </dict>
+    <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>383</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>383</integer>
+         <key>col</key><integer>3</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>383</integer>
+         <key>col</key><integer>16</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>0</integer>
+     <key>extended_message</key>
+     <string>Value assigned to &apos;New&apos;</string>
+     <key>message</key>
+     <string>Value assigned to &apos;New&apos;</string>
+    </dict>
+    <dict>
+     <key>kind</key><string>control</string>
+     <key>edges</key>
+      <array>
+       <dict>
+        <key>start</key>
+         <array>
+          <dict>
+           <key>line</key><integer>383</integer>
+           <key>col</key><integer>3</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+          <dict>
+           <key>line</key><integer>383</integer>
+           <key>col</key><integer>5</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+         </array>
+        <key>end</key>
+         <array>
+          <dict>
+           <key>line</key><integer>386</integer>
+           <key>col</key><integer>3</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+          <dict>
+           <key>line</key><integer>386</integer>
            <key>col</key><integer>3</integer>
            <key>file</key><integer>0</integer>
           </dict>
@@ -5967,7 +6480,7 @@
      <key>kind</key><string>event</string>
      <key>location</key>
      <dict>
-      <key>line</key><integer>376</integer>
+      <key>line</key><integer>386</integer>
       <key>col</key><integer>3</integer>
       <key>file</key><integer>0</integer>
      </dict>
@@ -5975,12 +6488,12 @@
      <array>
        <array>
         <dict>
-         <key>line</key><integer>376</integer>
+         <key>line</key><integer>386</integer>
          <key>col</key><integer>3</integer>
          <key>file</key><integer>0</integer>
         </dict>
         <dict>
-         <key>line</key><integer>376</integer>
+         <key>line</key><integer>386</integer>
          <key>col</key><integer>20</integer>
          <key>file</key><integer>0</integer>
         </dict>
@@ -6004,7 +6517,7 @@
   <key>issue_hash_function_offset</key><string>1</string>
   <key>location</key>
   <dict>
-   <key>line</key><integer>376</integer>
+   <key>line</key><integer>386</integer>
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
   </dict>
@@ -6018,21 +6531,22 @@
     <integer>219</integer>
     <integer>220</integer>
     <integer>221</integer>
-    <integer>357</integer>
-    <integer>358</integer>
-    <integer>359</integer>
-    <integer>360</integer>
     <integer>363</integer>
     <integer>364</integer>
     <integer>365</integer>
     <integer>366</integer>
-    <integer>367</integer>
+    <integer>369</integer>
     <integer>370</integer>
     <integer>371</integer>
+    <integer>372</integer>
     <integer>373</integer>
-    <integer>374</integer>
-    <integer>375</integer>
     <integer>376</integer>
+    <integer>377</integer>
+    <integer>382</integer>
+    <integer>383</integer>
+    <integer>384</integer>
+    <integer>385</integer>
+    <integer>386</integer>
    </array>
   </dict>
   </dict>
