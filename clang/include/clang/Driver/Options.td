@@ -1548,7 +1548,7 @@ def sanitize_address_destructor_kind_EQ
       Values<"none,global">,
       NormalizedValuesScope<"llvm::AsanDtorKind">,
       NormalizedValues<["None", "Global"]>,
-      MarshallingInfoEnum<CodeGenOpts<"SanitizeAddressDtorKind">, "Global">;
+      MarshallingInfoEnum<CodeGenOpts<"SanitizeAddressDtor">, "Global">;
 // Note: This flag was introduced when it was necessary to distinguish between
 //       ABI for correct codegen.  This is no longer needed, but the flag is
 //       not removed since targeting either ABI will behave the same.
