@@ -475,10 +475,6 @@ armv7-noexceptions)
 ;;
 generic-win)
     clean
-    # TODO: The CI runner doesn't have bash in the path currently, and it's
-    # needed for running tests. Once it's available out of the box, remove this.
-    export PATH="$PATH:/c/Program Files/Git/usr/bin"
-
     # TODO: Clang-cl in MSVC configurations don't have access to compiler_rt
     # builtins helpers for int128 division. See
     # https://reviews.llvm.org/D91139#2429595 for a comment about longterm

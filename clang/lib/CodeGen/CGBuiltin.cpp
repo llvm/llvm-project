@@ -5460,7 +5460,6 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP1(vabsq_v, arm_neon_vabs, 0),
   NEONMAP0(vadd_v),
   NEONMAP0(vaddhn_v),
-  NEONMAP0(vaddq_p128),
   NEONMAP0(vaddq_v),
   NEONMAP1(vaesdq_v, arm_neon_aesd, 0),
   NEONMAP1(vaeseq_v, arm_neon_aese, 0),

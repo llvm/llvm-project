@@ -1917,6 +1917,25 @@ static LogicalResult verify(SubTensorOp op) {
   return produceSubTensorErrorMsg(result, op, expectedType);
 }
 
+/// Infer the canonical type of the result of a subtensor operation. Returns a
+/// type with rank `resultRank` that is either the rank of the rank-reduced
+/// type, or the non-rank-reduced type.
+static RankedTensorType getCanonicalSubTensorResultType(
+    unsigned resultRank, RankedTensorType sourceType,
+    ArrayRef<OpFoldResult> mixedOffsets, ArrayRef<OpFoldResult> mixedSizes,
+    ArrayRef<OpFoldResult> mixedStrides) {
+  auto resultType =
+      SubTensorOp::inferRankReducedResultType(
+          resultRank, sourceType, mixedOffsets, mixedSizes, mixedStrides)
+          .cast<RankedTensorType>();
+  if (resultType.getRank() != resultRank) {
+    resultType = SubTensorOp::inferResultType(sourceType, mixedOffsets,
+                                              mixedSizes, mixedStrides)
+                     .cast<RankedTensorType>();
+  }
+  return resultType;
+}
+
 namespace {
 /// Pattern to rewrite a subtensor op with tensor::Cast arguments.
 /// This essentially pushes memref_cast past its consuming subtensor when
@@ -1951,13 +1970,9 @@ public:
     if (!canFoldIntoConsumerOp(castOp))
       return failure();
 
-    /// Deduce the resultType of SubTensorOp with `inferRankReducedResultType`
-    /// on the cast source operand type and the SubTensorOp static information.
-    /// This is the resulting type if the tensor::CastOp were folded and
-    /// rank-reduced to the desired result rank.
-    auto resultType = SubTensorOp::inferRankReducedResultType(
-        subTensorOp.getType().getRank(),
-        castOp.source().getType().cast<RankedTensorType>(),
+    /// Deduce the type of the result to use for the canonicalized operation.
+    RankedTensorType resultType = getCanonicalSubTensorResultType(
+        subTensorOp.getType().getRank(), subTensorOp.getSourceType(),
         subTensorOp.getMixedOffsets(), subTensorOp.getMixedSizes(),
         subTensorOp.getMixedStrides());
     Value newSubTensor = rewriter.create<SubTensorOp>(
@@ -1971,6 +1986,18 @@ public:
   }
 };
 } // namespace
+
+/// Return the canonical type of the result of a subtensor.
+struct SubTensorReturnTypeCanonicalizer {
+  RankedTensorType operator()(SubTensorOp op,
+                              ArrayRef<OpFoldResult> mixedOffsets,
+                              ArrayRef<OpFoldResult> mixedSizes,
+                              ArrayRef<OpFoldResult> mixedStrides) {
+    return getCanonicalSubTensorResultType(op.getType().getRank(),
+                                           op.getSourceType(), mixedOffsets,
+                                           mixedSizes, mixedStrides);
+  }
+};
 
 /// A canonicalizer wrapper to replace SubTensorOps.
 struct SubTensorCanonicalizer {
@@ -1987,7 +2014,8 @@ struct SubTensorCanonicalizer {
 void SubTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   results.add<OpWithOffsetSizesAndStridesConstantArgumentFolder<
-                  SubTensorOp, SubTensorCanonicalizer>,
+                  SubTensorOp, SubTensorReturnTypeCanonicalizer,
+                  SubTensorCanonicalizer>,
               SubTensorOpCastFolder>(context);
 }
 
@@ -2093,22 +2121,9 @@ public:
     canonicalizeSubViewPart(mixedStrides, ShapedType::isDynamicStrideOrOffset);
 
     // Create the new op in canonical form.
-    Value source = subTensorInsertOp.source();
-    RankedTensorType sourceType = source.getType().cast<RankedTensorType>();
-    SmallVector<int64_t, 4> shape = llvm::to_vector<4>(
-        llvm::map_range(mixedSizes, [](OpFoldResult valueOrAttr) -> int64_t {
-          if (auto attr = valueOrAttr.dyn_cast<Attribute>())
-            return attr.cast<IntegerAttr>().getInt();
-          return ShapedType::kDynamicSize;
-        }));
-    RankedTensorType newSourceType =
-        RankedTensorType::get(shape, sourceType.getElementType());
-    Location loc = subTensorInsertOp.getLoc();
-    if (sourceType != newSourceType)
-      source = rewriter.create<tensor::CastOp>(loc, newSourceType, source);
     rewriter.replaceOpWithNewOp<SubTensorInsertOp>(
-        subTensorInsertOp, source, subTensorInsertOp.dest(), mixedOffsets,
-        mixedSizes, mixedStrides);
+        subTensorInsertOp, subTensorInsertOp.source(), subTensorInsertOp.dest(),
+        mixedOffsets, mixedSizes, mixedStrides);
     return success();
   }
 };
@@ -2213,7 +2228,6 @@ parseSwitchOpCases(OpAsmParser &parser, Type &flagType,
                    SmallVectorImpl<OpAsmParser::OperandType> &caseOperands,
                    SmallVectorImpl<Type> &caseOperandTypes,
                    DenseIntElementsAttr &caseOperandOffsets) {
-
   if (failed(parser.parseKeyword("default")) || failed(parser.parseColon()) ||
       failed(parser.parseSuccessor(defaultDestination)))
     return failure();
@@ -2457,7 +2471,6 @@ static LogicalResult simplifyConstSwitchValue(SwitchOp op,
 /// ]
 static LogicalResult simplifyPassThroughSwitch(SwitchOp op,
                                                PatternRewriter &rewriter) {
-
   SmallVector<Block *> newCaseDests;
   SmallVector<ValueRange> newCaseOperands;
   SmallVector<SmallVector<Value>> argStorage;

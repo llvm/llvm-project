@@ -24,6 +24,10 @@ def verbose: F<"verbose">,
   HelpText<"Enable verbose mode.">,
   Group<grp_general>;
 
+def keep_func_for_static: F<"keep-function-for-static">,
+  HelpText<"Make a static variable keep the enclosing function even if it would have been omitted otherwise.">,
+  Group<grp_general>;
+
 def statistics: F<"statistics">,
   HelpText<"Print statistics about the contribution of each object file to "
            "the linked debug info. This prints a table after linking with the "

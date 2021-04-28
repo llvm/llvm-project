@@ -2832,13 +2832,6 @@ public:
   /// ParmVarDecl pointers.
   void DiagnoseUnusedParameters(ArrayRef<ParmVarDecl *> Parameters);
 
-  /// Diagnose any unused but set parameters in the given sequence of
-  /// ParmVarDecl pointers.
-  void DiagnoseUnusedButSetParameters(ArrayRef<ParmVarDecl *> Parameters);
-
-  /// Diagnose any unused but set variables declared in this CompoundStmt
-  void DiagnoseUnusedButSetVariables(CompoundStmt *CS);
-
   /// Diagnose whether the size of parameters or return value of a
   /// function or obj-c method definition is pass-by-value and larger than a
   /// specified threshold.
