@@ -138,17 +138,19 @@ end function
 !            Test returned derived types (no length parameters)
 ! -----------------------------------------------------------------------------
 
-! CHECK-LABEL: @_QMdPbar_return_derived
-! CHECK-SAME: (%[[arg0:.*]]: !fir.ref<!fir.type<_QMdTr{x:f32}>>) -> !fir.ref<!fir.type<_QMdTr{x:f32}>>
+! CHECK-LABEL: @_QMdPbar_return_derived() -> !fir.type<_QMdTr{x:f32}>
 function bar_return_derived()
+  ! CHECK: %[[res:.*]] = fir.alloca !fir.type<_QMdTr{x:f32}>
   type(r) :: bar_return_derived
-  ! CHECK: return %[[arg0]] : !fir.ref<!fir.type<_QMdTr{x:f32}>>
+  ! CHECK: %[[resLoad:.*]] = fir.load %[[res]] : !fir.ref<!fir.type<_QMdTr{x:f32}>>
+  ! CHECK: return %[[resLoad]] : !fir.type<_QMdTr{x:f32}>
 end function
 
 ! CHECK-LABEL: @_QMdPcall_bar_return_derived
 subroutine call_bar_return_derived()
   ! CHECK: %[[tmp:.*]] = fir.alloca !fir.type<_QMdTr{x:f32}>
-  ! CHECK: fir.call @_QMdPbar_return_derived(%[[tmp]]) : (!fir.ref<!fir.type<_QMdTr{x:f32}>>) -> !fir.ref<!fir.type<_QMdTr{x:f32}>>
+  ! CHECK: %[[call:.*]] = fir.call @_QMdPbar_return_derived() : () -> !fir.type<_QMdTr{x:f32}>
+  ! CHECK: fir.save_result %[[call]] to %[[tmp]] : !fir.type<_QMdTr{x:f32}>, !fir.ref<!fir.type<_QMdTr{x:f32}>>
   ! CHECK: fir.call @_QPr_bar(%[[tmp]]) : (!fir.ref<!fir.type<_QMdTr{x:f32}>>) -> ()
   call r_bar(bar_return_derived())
 end subroutine

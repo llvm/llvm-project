@@ -875,6 +875,7 @@ createMutableProperties(Fortran::lower::AbstractConverter &converter,
   // Pointers to non contiguous arrays need to be represented with a fir.box to
   // account for the discontiguity.
   if (var.isGlobal() || Fortran::semantics::IsDummy(sym) ||
+      Fortran::semantics::IsFunctionResult(sym) ||
       sym.attrs().test(Fortran::semantics::Attr::VOLATILE) ||
       isNonContiguousArrayPointer(sym) || useAllocateRuntime ||
       useDescForMutableBox)
@@ -1005,15 +1006,37 @@ Fortran::lower::genMutableBoxRead(Fortran::lower::FirOpBuilder &builder,
   return fir::AbstractBox{addr};
 }
 
-mlir::Value Fortran::lower::genIsAllocatedOrAssociatedTest(
-    Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
-    const fir::MutableBoxValue &box) {
-  auto addr = MutablePropertyReader(builder, loc, box).readBaseAddress();
+/// Generate a test that an address is not null.
+static mlir::Value genIsNonNull(Fortran::lower::FirOpBuilder &builder,
+                                mlir::Location loc, mlir::Value addr) {
   auto intPtrTy = builder.getIntPtrType();
   auto ptrToInt = builder.createConvert(loc, intPtrTy, addr);
   auto c0 = builder.createIntegerConstant(loc, intPtrTy, 0);
   return builder.create<mlir::CmpIOp>(loc, mlir::CmpIPredicate::ne, ptrToInt,
                                       c0);
+}
+
+mlir::Value Fortran::lower::genIsAllocatedOrAssociatedTest(
+    Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+    const fir::MutableBoxValue &box) {
+  auto addr = MutablePropertyReader(builder, loc, box).readBaseAddress();
+  return genIsNonNull(builder, loc, addr);
+}
+
+void Fortran::lower::genFinalization(Fortran::lower::FirOpBuilder &builder,
+                                     mlir::Location loc,
+                                     const fir::MutableBoxValue &box) {
+  auto addr = MutablePropertyReader(builder, loc, box).readBaseAddress();
+  auto isAllocated = genIsNonNull(builder, loc, addr);
+  auto ifOp = builder.create<fir::IfOp>(loc, isAllocated,
+                                        /*withElseRegion=*/false);
+  auto insPt = builder.saveInsertionPoint();
+  builder.setInsertionPointToStart(&ifOp.thenRegion().front());
+  // TODO: call finalizer if any.
+  auto cast = builder.createConvert(
+      loc, fir::HeapType::get(fir::dyn_cast_ptrEleTy(addr.getType())), addr);
+  builder.create<fir::FreeMemOp>(loc, cast);
+  builder.restoreInsertionPoint(insPt);
 }
 
 //===----------------------------------------------------------------------===//

@@ -126,4 +126,9 @@ mlir::Value genIsAllocatedOrAssociatedTest(Fortran::lower::FirOpBuilder &,
                                            mlir::Location,
                                            const fir::MutableBoxValue &);
 
+/// Finalize a mutable box if it is allocated or associated. This includes both
+/// calling the finalizer, if any, and deallocating the storage.
+void genFinalization(Fortran::lower::FirOpBuilder &, mlir::Location,
+                     const fir::MutableBoxValue &);
+
 } // namespace Fortran::lower

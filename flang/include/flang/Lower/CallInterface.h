@@ -36,10 +36,17 @@ namespace Fortran::semantics {
 class Symbol;
 }
 
+namespace mlir {
+class Location;
+}
+
 namespace Fortran::evaluate {
 class ProcedureRef;
 struct ProcedureDesignator;
 class ActualArgument;
+template <typename T>
+class Expr;
+struct SomeType;
 namespace characteristics {
 struct Procedure;
 }
@@ -188,6 +195,16 @@ public:
   void
   buildExplicitInterface(const Fortran::evaluate::characteristics::Procedure &);
 
+  /// Does the caller need to allocate storage for the result ?
+  bool callerAllocateResult() const {
+    return mustPassResult() || mustSaveResult();
+  }
+
+  /// Is the Fortran result passed as an extra MLIR argument ?
+  bool mustPassResult() const { return passedResult.has_value(); }
+  /// Must the MLIR result be saved with a fir.save_result ?
+  bool mustSaveResult() const { return saveResult; }
+
 protected:
   CallInterface(Fortran::lower::AbstractConverter &c) : converter{c} {}
   /// CRTP handle.
@@ -205,6 +222,7 @@ protected:
   mlir::FuncOp func;
   llvm::SmallVector<PassedEntity> passedArguments;
   std::optional<PassedEntity> passedResult;
+  bool saveResult = false;
 
   Fortran::lower::AbstractConverter &converter;
   /// Store characteristic once created, it is required for further information
@@ -229,6 +247,8 @@ public:
     mapPassedEntities();
     actualInputs.resize(getNumFIRArguments());
   }
+
+  using ExprVisitor = std::function<void(evaluate::Expr<evaluate::SomeType>)>;
 
   /// CRTP callbacks
   bool hasAlternateReturns() const;
@@ -265,9 +285,21 @@ public:
     return actualInputs;
   }
 
-  /// Return result length when the function returns a non-allocatable,
-  /// non-pointer character.
-  mlir::Value getResultLength();
+  /// Does the caller must map function interface symbols in order to evaluate
+  /// the result specification expressions (extents and lengths) ? If needed,
+  /// this mapping must be done after argument lowering, and before the call
+  /// itself.
+  bool mustMapInterfaceSymbols() const;
+
+  /// Walk the result non-deferred extent specification expressions.
+  void walkResultExtents(ExprVisitor) const;
+
+  /// Walk the result non-deferred length specification expressions.
+  void walkResultLengths(ExprVisitor) const;
+
+  /// If some storage needs to be allocated for the result,
+  /// returns the storage type.
+  mlir::Type getResultStorageType() const;
 
 private:
   /// Check that the input vector is complete.

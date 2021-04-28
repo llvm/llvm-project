@@ -134,23 +134,53 @@ mlir::Value Fortran::lower::FirOpBuilder::allocateLocal(
                                attrs);
 }
 
+static llvm::SmallVector<mlir::Value>
+elideExtentsAlreadyInType(mlir::Type type, mlir::ValueRange shape) {
+  auto arrTy = type.dyn_cast<fir::SequenceType>();
+  if (shape.empty() || !arrTy)
+    return {};
+  // elide the constant dimensions before construction
+  assert(shape.size() == arrTy.getDimension());
+  llvm::SmallVector<mlir::Value> dynamicShape;
+  auto typeShape = arrTy.getShape();
+  for (unsigned i = 0, end = arrTy.getDimension(); i < end; ++i)
+    if (typeShape[i] == fir::SequenceType::getUnknownExtent())
+      dynamicShape.push_back(shape[i]);
+  return dynamicShape;
+}
+
+static llvm::SmallVector<mlir::Value>
+elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams) {
+  if (lenParams.empty())
+    return {};
+  if (auto arrTy = type.dyn_cast<fir::SequenceType>())
+    type = arrTy.getEleTy();
+  if (fir::hasDynamicSize(type))
+    return lenParams;
+  return {};
+}
+
 /// Create a temporary variable on the stack. Anonymous temporaries have no
 /// `name` value.
 mlir::Value Fortran::lower::FirOpBuilder::createTemporary(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::ValueRange shape, mlir::ValueRange lenParams,
     llvm::ArrayRef<mlir::NamedAttribute> attrs, bool isPinned) {
+  llvm::SmallVector<mlir::Value> dynamicShape =
+      elideExtentsAlreadyInType(type, shape);
+  llvm::SmallVector<mlir::Value> dynamicLength =
+      elideLengthsAlreadyInType(type, lenParams);
   InsertPoint insPt;
-  if (!isPinned) {
+  const bool hoistAlloc =
+      !isPinned && dynamicShape.empty() && dynamicLength.empty();
+  if (hoistAlloc) {
     insPt = saveInsertionPoint();
-    if (shape.empty())
-      setInsertionPointToStart(getEntryBlock());
-    else
-      setInsertionPointAfter(shape.back().getDefiningOp());
+    setInsertionPointToStart(getEntryBlock());
   }
   assert(!type.isa<fir::ReferenceType>() && "cannot be a reference");
-  auto ae = create<fir::AllocaOp>(loc, type, name, lenParams, shape, attrs);
-  if (!isPinned)
+  auto ae = create<fir::AllocaOp>(loc, type, name, dynamicLength, dynamicShape,
+                                  attrs);
+  if (hoistAlloc)
     restoreInsertionPoint(insPt);
   return ae;
 }

@@ -1419,7 +1419,7 @@ public:
     auto resTy = genType(*func.GetType());
     auto retVal = genProcedureRef(func, {resTy});
     auto retValBase = fir::getBase(retVal);
-    if (fir::isa_ref_type(retValBase.getType()))
+    if (fir::conformsWithPassByRef(retValBase.getType()))
       return retVal;
     auto mem = builder.create<fir::AllocaOp>(getLoc(), retValBase.getType());
     builder.create<fir::StoreOp>(getLoc(), retValBase, mem);
@@ -1543,6 +1543,37 @@ public:
     return result;
   }
 
+  /// Helper to package a value and its properties into an ExtendedValue.
+  fir::ExtendedValue toExtendedValue(mlir::Value base,
+                                     llvm::ArrayRef<mlir::Value> extents,
+                                     llvm::ArrayRef<mlir::Value> lengths) {
+    auto type = base.getType();
+    if (type.isa<fir::BoxType>())
+      return fir::BoxValue(base, /*lbounds=*/{}, lengths, extents);
+    if (auto pointedType = fir::dyn_cast_ptrEleTy(type))
+      type = pointedType;
+    if (type.isa<fir::BoxType>())
+      return fir::MutableBoxValue(base, lengths, /*mutableProperties*/ {});
+    if (auto seqTy = type.dyn_cast<fir::SequenceType>()) {
+      if (seqTy.getDimension() != extents.size())
+        fir::emitFatalError(getLoc(), "incorrect number of extents for array");
+      if (seqTy.getEleTy().isa<fir::CharacterType>()) {
+        if (lengths.empty())
+          fir::emitFatalError(getLoc(), "missing length for character");
+        assert(lengths.size() == 1);
+        return fir::CharArrayBoxValue(base, lengths[0], extents);
+      }
+      return fir::ArrayBoxValue(base, extents);
+    }
+    if (type.isa<fir::CharacterType>()) {
+      if (lengths.empty())
+        fir::emitFatalError(getLoc(), "missing length for character");
+      assert(lengths.size() == 1);
+      return fir::CharBoxValue(base, lengths[0]);
+    }
+    return base;
+  }
+
   fir::ExtendedValue
   genProcedureRef(const Fortran::evaluate::ProcedureRef &procRef,
                   llvm::Optional<mlir::Type> resultType) {
@@ -1646,28 +1677,64 @@ public:
       }
     }
 
-    // Handle case where caller must pass result
-    auto resRef = [&]() -> llvm::Optional<fir::ExtendedValue> {
+    // Handle cases where caller must allocate the result or a fir.box for it.
+    if (caller.mustMapInterfaceSymbols())
+      TODO(loc, "function result that requires mapping interface symbols");
+    auto idxTy = builder.getIndexType();
+    auto lowerSpecExpr = [&](const auto &expr) -> mlir::Value {
+      return builder.createConvert(
+          loc, idxTy, fir::getBase(converter.genExprValue(expr, stmtCtx)));
+    };
+    llvm::SmallVector<mlir::Value> resultLengths;
+    auto allocatedResult = [&]() -> llvm::Optional<fir::ExtendedValue> {
+      llvm::SmallVector<mlir::Value> extents;
+      llvm::SmallVector<mlir::Value> lengths;
+      if (!caller.callerAllocateResult())
+        return {};
+      auto type = caller.getResultStorageType();
+      if (type.isa<fir::SequenceType>())
+        caller.walkResultExtents([&](const Fortran::lower::SomeExpr &e) {
+          extents.emplace_back(lowerSpecExpr(e));
+        });
+      caller.walkResultLengths([&](const Fortran::lower::SomeExpr &e) {
+        lengths.emplace_back(lowerSpecExpr(e));
+      });
+      /// Result lengths parameters should not be provided to box storage
+      /// allocation and save_results, but they are still useful information to
+      /// keep in the ExtentdedValue if non-deferred.
+      if (!type.isa<fir::BoxType>())
+        resultLengths = lengths;
+      auto temp =
+          builder.createTemporary(loc, type, ".result", extents, resultLengths);
+      return toExtendedValue(temp, extents, lengths);
+    }();
+
+    // Place allocated result or prepare the fir.save_result arguments.
+    mlir::Value arrayResultShape;
+    if (allocatedResult) {
       if (auto resultArg = caller.getPassedResult()) {
         if (resultArg->passBy == PassBy::AddressAndLength) {
-          // allocate and pass character result
-          auto len = caller.getResultLength();
-          Fortran::lower::CharacterExprHelper helper{builder, loc};
-          auto temp = helper.createCharacterTemp(resultType.getValue(), len);
-          caller.placeAddressAndLengthInput(*resultArg, temp.getBuffer(),
-                                            temp.getLen());
-          return fir::ExtendedValue(temp);
+          caller.placeAddressAndLengthInput(*resultArg,
+                                            fir::getBase(*allocatedResult),
+                                            fir::getLen(*allocatedResult));
+        } else if (resultArg->passBy == PassBy::BaseAddress) {
+          caller.placeInput(*resultArg, fir::getBase(*allocatedResult));
+        } else {
+          fir::emitFatalError(
+              loc, "only expect character scalar result to be passed by ref");
         }
-        if (resultArg->passBy == PassBy::BaseAddress) {
-          // allocate and pass derived type result (no length parameters).
-          auto temp = builder.createTemporary(loc, resultType.getValue());
-          caller.placeInput(*resultArg, temp);
-          return fir::ExtendedValue(temp);
-        }
-        TODO(loc, "passing hidden descriptor for result"); // Pass descriptor
+      } else {
+        assert(caller.mustSaveResult());
+        arrayResultShape = allocatedResult->match(
+            [&](const fir::CharArrayBoxValue &) {
+              return builder.createShape(loc, *allocatedResult);
+            },
+            [&](const fir::ArrayBoxValue &) {
+              return builder.createShape(loc, *allocatedResult);
+            },
+            [&](const auto &) { return mlir::Value{}; });
       }
-      return {};
-    }();
+    }
 
     // In older Fortran, procedure argument types are inferred. This may lead
     // different view of what the function signature is in different locations.
@@ -1729,13 +1796,34 @@ public:
 
     auto call = builder.create<fir::CallOp>(loc, funcType.getResults(),
                                             funcSymbolAttr, operands);
+
+    if (caller.mustSaveResult())
+      builder.create<fir::SaveResultOp>(
+          loc, call.getResult(0), fir::getBase(allocatedResult.getValue()),
+          arrayResultShape, resultLengths);
+
     // Sync pointers and allocatables that may have been modified during the
     // call.
     for (const auto &mutableBox : mutableModifiedByCall)
       Fortran::lower::syncMutableBoxFromIRBox(builder, loc, mutableBox);
     // Handle case where result was passed as argument
-    if (caller.getPassedResult())
-      return resRef.getValue();
+
+    if (allocatedResult) {
+      return allocatedResult->match(
+          [&](const fir::MutableBoxValue &box) {
+            if (box.isAllocatable()) {
+              // 9.7.3.2 point 4. Finalize allocatables.
+              auto *bldr = &converter.getFirOpBuilder();
+              stmtCtx.attachCleanup(
+                  [=]() { Fortran::lower::genFinalization(*bldr, loc, box); });
+            }
+            // Pointers and allocatable do not appear as allocatable/pointer
+            // variable on the caller side (see 8.5.3 note 1 for allocatables).
+            return Fortran::lower::genMutableBoxRead(builder, loc, box)
+                .toExtendedValue();
+          },
+          [&](const auto &) { return *allocatedResult; });
+    }
 
     if (!resultType.hasValue())
       return mlir::Value{}; // subroutine call
@@ -2542,7 +2630,9 @@ public:
                            .genIntrinsicRef(procRef, *intrinsic, retTy);
       return genarr(resultBox);
     }
-    TODO(loc, "non-elemental procedure ref");
+    auto resultBox = ScalarExprLowering{getLoc(), converter, symMap, stmtCtx}
+                         .genProcedureRef(procRef, retTy);
+    return genarr(resultBox);
   }
 
   CC genarr(const Fortran::evaluate::ProcedureDesignator &) {

@@ -518,10 +518,6 @@ private:
           // them to share the same storage.  Convert this to the actual type.
           if (resultRef.getType() != resultRefType)
             resultRef = builder->createConvert(loc, resultRefType, resultRef);
-          // Derived types are return by reference (they are passed by the
-          // caller)
-          if (resultType.isa<fir::RecordType>())
-            return resultRef;
           return builder->create<fir::LoadOp>(loc, resultRef);
         });
     builder->create<mlir::ReturnOp>(loc, resultVal);

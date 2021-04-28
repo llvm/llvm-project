@@ -1172,8 +1172,8 @@ void Fortran::lower::mapSymbolAttributes(
           for (auto i : x.shapes)
             shape.push_back(builder.createIntegerConstant(loc, idxTy, i));
           mlir::Value local =
-              replace ? addr : createNewLocal(converter, loc, var, preAlloc);
-          symMap.addSymbolWithShape(sym, local, shape, replace);
+              isDummy ? addr : createNewLocal(converter, loc, var, preAlloc);
+          symMap.addSymbolWithShape(sym, local, shape, isDummy);
           return;
         }
         // If object is an array process the lower bound and extent values by
@@ -1185,11 +1185,11 @@ void Fortran::lower::mapSymbolAttributes(
           extents.emplace_back(builder.createIntegerConstant(loc, idxTy, snd));
         }
         mlir::Value local =
-            replace ? addr
+            isDummy ? addr
                     : createNewLocal(converter, loc, var, preAlloc, extents);
-        assert(replace || Fortran::lower::isExplicitShape(sym) ||
+        assert(isDummy || Fortran::lower::isExplicitShape(sym) ||
                Fortran::semantics::IsAllocatableOrPointer(sym));
-        symMap.addSymbolWithBounds(sym, local, extents, lbounds, replace);
+        symMap.addSymbolWithBounds(sym, local, extents, lbounds, isDummy);
       },
 
       //===--------------------------------------------------------------===//
@@ -1212,7 +1212,7 @@ void Fortran::lower::mapSymbolAttributes(
           // if lower bounds are all ones, build simple shaped object
           llvm::SmallVector<mlir::Value> shapes;
           populateShape(shapes, x.bounds, argBox);
-          if (isDummy || isResult) {
+          if (isDummy) {
             symMap.addSymbolWithShape(sym, addr, shapes, true);
             return;
           }
@@ -1227,7 +1227,7 @@ void Fortran::lower::mapSymbolAttributes(
         llvm::SmallVector<mlir::Value> extents;
         llvm::SmallVector<mlir::Value> lbounds;
         populateLBoundsExtents(lbounds, extents, x.bounds, argBox);
-        if (isDummy || isResult) {
+        if (isDummy) {
           symMap.addSymbolWithBounds(sym, addr, extents, lbounds, true);
           return;
         }
@@ -1245,7 +1245,7 @@ void Fortran::lower::mapSymbolAttributes(
         auto charLen = x.charLen();
         mlir::Value addr;
         mlir::Value len;
-        if (isDummy || isResult) {
+        if (isDummy) {
           auto symBox = symMap.lookupSymbol(sym);
           auto unboxchar = charHelp.createUnboxChar(symBox.getAddr());
           addr = unboxchar.first;
@@ -1267,8 +1267,8 @@ void Fortran::lower::mapSymbolAttributes(
           for (auto i : x.shapes)
             shape.push_back(builder.createIntegerConstant(loc, idxTy, i));
           mlir::Value local =
-              replace ? addr : createNewLocal(converter, loc, var, preAlloc);
-          symMap.addCharSymbolWithShape(sym, local, len, shape, replace);
+              isDummy ? addr : createNewLocal(converter, loc, var, preAlloc);
+          symMap.addCharSymbolWithShape(sym, local, len, shape, isDummy);
           return;
         }
 
@@ -1281,7 +1281,7 @@ void Fortran::lower::mapSymbolAttributes(
           extents.emplace_back(builder.createIntegerConstant(loc, idxTy, snd));
         }
 
-        if (isDummy || isResult) {
+        if (isDummy) {
           symMap.addCharSymbolWithBounds(sym, addr, len, extents, lbounds,
                                          true);
           return;
@@ -1303,7 +1303,7 @@ void Fortran::lower::mapSymbolAttributes(
         bool mustBeDummy = false;
         auto charLen = x.charLen();
         // if element type is a CHARACTER, determine the LEN value
-        if (isDummy || isResult) {
+        if (isDummy) {
           auto symBox = symMap.lookupSymbol(sym);
           auto unboxchar = charHelp.createUnboxChar(symBox.getAddr());
           addr = unboxchar.first;
@@ -1334,7 +1334,7 @@ void Fortran::lower::mapSymbolAttributes(
           llvm::SmallVector<mlir::Value> shape;
           for (auto i : x.shapes)
             shape.push_back(builder.createIntegerConstant(loc, idxTy, i));
-          if (isDummy || isResult) {
+          if (isDummy) {
             symMap.addCharSymbolWithShape(sym, addr, len, shape, true);
             return;
           }
@@ -1354,7 +1354,7 @@ void Fortran::lower::mapSymbolAttributes(
           lbounds.emplace_back(builder.createIntegerConstant(loc, idxTy, fst));
           extents.emplace_back(builder.createIntegerConstant(loc, idxTy, snd));
         }
-        if (isDummy || isResult) {
+        if (isDummy) {
           symMap.addCharSymbolWithBounds(sym, addr, len, extents, lbounds,
                                          true);
           return;
@@ -1376,7 +1376,7 @@ void Fortran::lower::mapSymbolAttributes(
         mlir::Value argBox;
         auto charLen = x.charLen();
         // if element type is a CHARACTER, determine the LEN value
-        if (isDummy || isResult) {
+        if (isDummy) {
           auto actualArg = symMap.lookupSymbol(sym).getAddr();
           if (auto boxTy = actualArg.getType().dyn_cast<fir::BoxType>()) {
             argBox = actualArg;
@@ -1400,7 +1400,7 @@ void Fortran::lower::mapSymbolAttributes(
           // if lower bounds are all ones, build simple shaped object
           llvm::SmallVector<mlir::Value> shape;
           populateShape(shape, x.bounds, argBox);
-          if (isDummy || isResult) {
+          if (isDummy) {
             symMap.addCharSymbolWithShape(sym, addr, len, shape, true);
             return;
           }
@@ -1413,7 +1413,7 @@ void Fortran::lower::mapSymbolAttributes(
         llvm::SmallVector<mlir::Value> extents;
         llvm::SmallVector<mlir::Value> lbounds;
         populateLBoundsExtents(lbounds, extents, x.bounds, argBox);
-        if (isDummy || isResult) {
+        if (isDummy) {
           symMap.addCharSymbolWithBounds(sym, addr, len, extents, lbounds,
                                          true);
           return;
@@ -1433,7 +1433,7 @@ void Fortran::lower::mapSymbolAttributes(
         mlir::Value argBox;
         auto charLen = x.charLen();
         // if element type is a CHARACTER, determine the LEN value
-        if (isDummy || isResult) {
+        if (isDummy) {
           auto actualArg = symMap.lookupSymbol(sym).getAddr();
           if (auto boxTy = actualArg.getType().dyn_cast<fir::BoxType>()) {
             argBox = actualArg;
@@ -1473,7 +1473,7 @@ void Fortran::lower::mapSymbolAttributes(
           // if lower bounds are all ones, build simple shaped object
           llvm::SmallVector<mlir::Value> shape;
           populateShape(shape, x.bounds, argBox);
-          if (isDummy || isResult) {
+          if (isDummy) {
             symMap.addCharSymbolWithShape(sym, addr, len, shape, true);
             return;
           }
@@ -1487,7 +1487,7 @@ void Fortran::lower::mapSymbolAttributes(
         llvm::SmallVector<mlir::Value> extents;
         llvm::SmallVector<mlir::Value> lbounds;
         populateLBoundsExtents(lbounds, extents, x.bounds, argBox);
-        if (isDummy || isResult) {
+        if (isDummy) {
           symMap.addCharSymbolWithBounds(sym, addr, len, extents, lbounds,
                                          true);
           return;
