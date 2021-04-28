@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Check that everything still works when debuginfo is present, and that it is reasonably propagated.
 
-; CHECK: remark: <stdin>:6:1: Formed a call to llvm.memcpy.p0i8.p0i8.i64() intrinsic from load and store instruction in test6_dest_align function
+; CHECK: remark: <stdin>:6:1: Formed a call to llvm.memcpy.p0i8.p0i8.i64() function
 
 define void @test6_dest_align(i32* noalias align 1 %Base, i32* noalias align 4 %Dest, i64 %Size) nounwind ssp {
 ; CHECK-LABEL: @test6_dest_align(
