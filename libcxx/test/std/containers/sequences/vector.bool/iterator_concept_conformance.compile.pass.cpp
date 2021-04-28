@@ -21,7 +21,7 @@ using iterator = std::vector<bool>::iterator;
 using const_iterator = std::vector<bool>::const_iterator;
 using reverse_iterator = std::vector<bool>::reverse_iterator;
 using const_reverse_iterator = std::vector<bool>::const_reverse_iterator;
-using value_type = iterator::value_type;
+using value_type = bool;
 
 static_assert(std::indirectly_readable<iterator>);
 static_assert(!std::indirectly_writable<iterator, value_type>);

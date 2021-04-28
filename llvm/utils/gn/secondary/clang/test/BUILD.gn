@@ -167,6 +167,7 @@ group("test") {
     "//llvm/tools/llvm-objcopy:symlinks",
     "//llvm/tools/llvm-objdump:symlinks",
     "//llvm/tools/llvm-profdata",
+    "//llvm/tools/llvm-rc:symlinks",
     "//llvm/tools/llvm-readobj:symlinks",
     "//llvm/tools/llvm-symbolizer:symlinks",
     "//llvm/tools/opt",

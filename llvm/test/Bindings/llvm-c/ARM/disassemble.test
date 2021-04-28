@@ -1,12 +1,12 @@
 ; RUN: llvm-c-test --disassemble < %s | FileCheck %s
 
-armv8-linux-gnu     +crypto 02 00 81 e0 02 03 b0 f3
-;CHECK: triple: armv8-linux-gnu, features: +crypto
+armv8-linux-gnu     +aes 02 00 81 e0 02 03 b0 f3
+;CHECK: triple: armv8-linux-gnu, features: +aes
 ;CHECK: 02 00 81 e0                  add r0, r1, r2
 ;CHECK: 02 03 b0 f3                  aese.8 q0, q1
 
-armv8-linux-gnu     -crypto 02 00 81 e0 02 03 b0 f3
-;CHECK: triple: armv8-linux-gnu, features: -crypto
+armv8-linux-gnu     -aes 02 00 81 e0 02 03 b0 f3
+;CHECK: triple: armv8-linux-gnu, features: -aes
 ;CHECK: 02 00 81 e0                  add r0, r1, r2
 ;CHECK: 02                           ???
 ;CHECK: 03                           ???

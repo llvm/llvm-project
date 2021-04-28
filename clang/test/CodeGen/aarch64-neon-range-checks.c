@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon -target-feature +crypto -verify %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon -target-feature +sha3 -target-feature +sm4 -verify %s
 
 #include <arm_neon.h>
 

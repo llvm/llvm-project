@@ -287,8 +287,26 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasCRC)
     Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
 
-  if (HasCrypto)
+  // The __ARM_FEATURE_CRYPTO is deprecated in favor of finer grained feature
+  // macros for AES, SHA2, SHA3 and SM4
+  if (HasCrypto || (HasAES && HasSHA2))
     Builder.defineMacro("__ARM_FEATURE_CRYPTO", "1");
+
+  if (HasAES)
+    Builder.defineMacro("__ARM_FEATURE_AES", "1");
+
+  if (HasSHA2)
+    Builder.defineMacro("__ARM_FEATURE_SHA2", "1");
+
+  if (HasSHA3) {
+    Builder.defineMacro("__ARM_FEATURE_SHA3", "1");
+    Builder.defineMacro("__ARM_FEATURE_SHA512", "1");
+  }
+
+  if (HasSM4) {
+    Builder.defineMacro("__ARM_FEATURE_SM3", "1");
+    Builder.defineMacro("__ARM_FEATURE_SM4", "1");
+  }
 
   if (HasUnaligned)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
@@ -421,6 +439,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   FPU = FPUMode;
   HasCRC = false;
   HasCrypto = false;
+  HasAES = false;
+  HasSHA2 = false;
+  HasSHA3 = false;
+  HasSM4 = false;
   HasUnaligned = true;
   HasFullFP16 = false;
   HasDotProd = false;
@@ -490,6 +512,16 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasCRC = true;
     if (Feature == "+crypto")
       HasCrypto = true;
+    if (Feature == "+aes")
+      HasAES = true;
+    if (Feature == "+sha2")
+      HasSHA2 = true;
+    if (Feature == "+sha3") {
+      HasSHA2 = true;
+      HasSHA3 = true;
+    }
+    if (Feature == "+sm4")
+      HasSM4 = true;
     if (Feature == "+strict-align")
       HasUnaligned = false;
     if (Feature == "+v8.1a")

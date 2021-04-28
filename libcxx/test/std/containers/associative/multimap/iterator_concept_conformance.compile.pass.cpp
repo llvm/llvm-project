@@ -21,7 +21,7 @@ using iterator = std::multimap<int, int>::iterator;
 using const_iterator = std::multimap<int, int>::const_iterator;
 using reverse_iterator = std::multimap<int, int>::reverse_iterator;
 using const_reverse_iterator = std::multimap<int, int>::const_reverse_iterator;
-using value_type = iterator::value_type;
+using value_type = std::pair<const int, int>;
 
 static_assert(std::indirectly_readable<iterator>);
 static_assert(!std::indirectly_writable<iterator, value_type>);
