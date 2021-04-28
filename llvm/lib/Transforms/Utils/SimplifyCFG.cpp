@@ -1748,10 +1748,11 @@ static bool canSinkInstructions(
           !canReplaceOperandWithVariable(I0, OI))
         // We can't create a PHI from this GEP.
         return false;
-      // Don't *create* indirect calls! The called value is the final operand.
-      auto *CB = dyn_cast<CallBase>(I0);
-      if (CB && OI == OE - 1 && !CB->isIndirectCall())
+      // Don't create indirect calls! The called value is the final operand.
+      if (isa<CallBase>(I0) && OI == OE - 1) {
+        // FIXME: if the call was *already* indirect, we should do this.
         return false;
+      }
       for (auto *I : Insts)
         PHIOperands[I].push_back(I->getOperand(OI));
     }

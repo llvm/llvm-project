@@ -1383,9 +1383,14 @@ if.end:
 
 define void @indirect_caller(i1 %c, i32 %v, void (i32)* %foo, void (i32)* %bar) {
 ; CHECK-LABEL: @indirect_caller(
-; CHECK-NEXT:  end:
-; CHECK-NEXT:    [[BAR_SINK:%.*]] = select i1 [[C:%.*]], void (i32)* [[FOO:%.*]], void (i32)* [[BAR:%.*]]
-; CHECK-NEXT:    tail call void [[BAR_SINK]](i32 [[V:%.*]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[CALL_FOO:%.*]], label [[CALL_BAR:%.*]]
+; CHECK:       call_foo:
+; CHECK-NEXT:    tail call void [[FOO:%.*]](i32 [[V:%.*]])
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       call_bar:
+; CHECK-NEXT:    tail call void [[BAR:%.*]](i32 [[V]])
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
 ; CHECK-NEXT:    ret void
 ;
   br i1 %c, label %call_foo, label %call_bar
