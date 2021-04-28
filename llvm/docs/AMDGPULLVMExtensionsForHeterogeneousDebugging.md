@@ -23,6 +23,7 @@
     - [`DICompositeType`](#dicompositetype)
     - [`DILifetime`](#dilifetime)
     - [`DICompileUnit`](#dicompileunit)
+    - [`DISubprogram`](#disubprogram)
     - [`DIExpr`](#diexpr)
       - [`DIOpReferrer`](#diopreferrer)
       - [`DIOpArg`](#dioparg)
@@ -48,8 +49,8 @@
   - [Variable Located In An `alloca`](#variable-located-in-an-alloca)
   - [Variable Promoted To An SSA Register](#variable-promoted-to-an-ssa-register)
   - [Implicit Pointer Location Description](#implicit-pointer-location-description)
-  - [Variable Broken Into Two Scalars](#variable-broken-into-two-scalars)
-  - [Further Decomposition Of An Already SRoA'd Variable](#further-decomposition-of-an-already-sroad-variable)
+  - [Local Variable Broken Into Two Scalars](#local-variable-broken-into-two-scalars)
+  - [Further Decomposition Of An Already SRoA'd Local Variable](#further-decomposition-of-an-already-sroad-local-variable)
   - [Multiple Live Ranges For A Single Variable](#multiple-live-ranges-for-a-single-variable)
   - [Global Variable Broken Into Two Scalars](#global-variable-broken-into-two-scalars)
   - [Induction Variable](#induction-variable)
@@ -68,13 +69,13 @@
     - [Lds Variables](#lds-variables)
     - [Make Sure The Non-SSA MIR Form Works With def/kill Scheme](#make-sure-the-non-ssa-mir-form-works-with-defkill-scheme)
   - [Integer Fragment IDs](#integer-fragment-ids)
-    - [Variable Broken Into Two Scalars](#variable-broken-into-two-scalars-1)
-    - [Further Decomposition Of An Already SRoA'd Variable](#further-decomposition-of-an-already-sroad-variable-1)
+    - [Local Variable Broken Into Two Scalars](#local-variable-broken-into-two-scalars-1)
+    - [Further Decomposition Of An Already SRoA'd Local Variable](#further-decomposition-of-an-already-sroad-local-variable-1)
     - [Multiple Live Ranges For A Fragment](#multiple-live-ranges-for-a-fragment)
 
 # Introduction
 
-As described in the [DWARF Extensions For Heterogeneous Debugging][18] (the
+As described in the [DWARF Extensions For Heterogeneous Debugging][19] (the
 "DWARF extensions"), AMD has been working to support debugging of heterogeneous
 programs. This document describes changes to the LLVM representation of debug
 information (the "LLVM extensions") required to support the DWARF extensions.
@@ -145,7 +146,7 @@ only incremental changes to the existing approach.
 
 The original motivation for the LLVM extensions was to make the minimum required
 changes to the existing LLVM representation of debug information needed to
-support the [DWARF Extensions For Heterogeneous Debugging][18]. This involved an
+support the [DWARF Extensions For Heterogeneous Debugging][19]. This involved an
 evaluation of the existing debug information for machine locations in LLVM,
 which uncovered some hard-to-fix bugs rooted in the incidental complexity and
 inconsistency of LLVM's debug intrinsics and expressions.
@@ -228,7 +229,7 @@ usually trivial at the time the expression is created, but expensive to infer
 later. Factored expressions can result in more compact debug information by
 leveraging dynamic calling of DWARF procedures in DWARF 5, and we expect to be
 able to use factoring for other purposes, such as debug information for
-[divergent control flow][24]. It is possible to statically "flatten" this
+[divergent control flow][25]. It is possible to statically "flatten" this
 factored representation later, if required by the debug information format
 being emitted, or if the emitter determines it would be more profitable to do
 so.
@@ -290,7 +291,7 @@ Manual][10].
 
 The definitions of "location description", "single location description", and
 "location storage" are the ones from the section titled [DWARF Location
-Description][21] in the DWARF Extensions For Heterogeneous Debugging.
+Description][22] in the DWARF Extensions For Heterogeneous Debugging.
 
 A location description can consist of one or more single location descriptions.
 A single location description specifies a location storage and bit offset. A
@@ -304,7 +305,7 @@ description at the same instruction.
 ## LLVM Debug Information Expressions
 
 _[Note: LLVM expressions derive much of their semantics from the DWARF
-expressions described in the [AMDGPU Dwarf Expressions][19].]_
+expressions described in the [AMDGPU Dwarf Expressions][20].]_
 
 LLVM debug information expressions ("LLVM expressions") specify a typed
 location. _[Note: Unlike DWARF expressions, they cannot directly describe how to
@@ -325,7 +326,7 @@ well-formed or results in an evaluation error.
 ## LLVM Expression Evaluation Context
 
 An LLVM expression is evaluated in a context that includes the same context
-elements as described in [DWARF Expression Evaluation Context][22] with the
+elements as described in [DWARF Expression Evaluation Context][23] with the
 following exceptions.  The _current result kind_ is not applicable as all LLVM
 expressions are location descriptions.  The _current object_ and _initial stack_
 are not applicable as LLVM expressions have no implicit inputs.
@@ -386,45 +387,49 @@ kinds of program objects.
 #### `DIVariable`
 
 A `DIVariable` is a `DIObject`, which represents the identity of a source
-language program variable. If is also used for non-source language program
-variables that should be exposed to the debugger by including `DIFlagArtificial`
-in the `flags` field.
+language program variable or non-source language program variable.
+
+A non-source language program variable includes `DIFlagArtificial` in the
+`flags` field.
+
+_[Note: A non-source language program variable may be introduced by the
+compiler. These may be used in expressions needed for describing debugging
+information required by the debugger.]_
+
+_[Example: An implicit variable needed for calculating the size of a dynamically
+sized array.]_
 
 ##### `DIGlobalVariable`
 
 A `DIGlobalVariable` is a `DIVariable`, which represents the identity of a
-global source language program variable. See [DIGlobalVariable][16].
+global variable. See [DIGlobalVariable][16].
 
 ##### `DILocalVariable`
 
 A `DILocalVariable` is a `DIVariable`, which represents the identity of a local
-source language program variable. See [DILocalVariable][15].
+variable. See [DILocalVariable][15].
 
 #### `DIFragment`
 
-```llvm
-distinct !DIFragment()
-```
+A `DIFragment` is a `DIObject`, which represents the identity of a location
+description that can be used as the piece of another location description.
 
-A `DIFragment` is a `DIObject`, which represents the identity of a non-source
-language variable program object, or a piece of a source language or non-source
-language program variable. These are used in the definition of other `DIObject`s
-and are not exposed as named variables for the debugger.
+_[Note: Unlike a `DIVariable`, a `DIFragment` is not named and so is not
+directly exposed to the user of a debugger.]_
 
-_[Note: A non-source language program variable may be introduced by the
-compiler. These may be used in expressions needed for describing debugging
-information required by the debugger. They may be introduced to factor the
-definition of part of a location description shared by other location
-descriptions for convenience or to permit more compact debug information. They
-can also be introduced to allow the compiler to specify multiple lifetime
-segments for the single location description referenced for a default or type
-lifetime segment.]_
+_[Note: A `DIFragment` may be a piece of a `DIVariable` directly, or indirectly
+by virtue of being a piece of some other `DIFragment`.]
+
+_[Note: A `DIFragment` may be introduced to factor the definition of part of a
+location description shared by other location descriptions for convenience or to
+permit more compact debug information.]_
+
+_[Note: A `DIFragment` may be introduced to allow the compiler to specify
+multiple lifetime segments for the single location description referenced for a
+default or type lifetime segment.]_
 
 _[Note: In DWARF a `DIFragment` can be represented using a
 `DW_TAG_dwarf_procedure` DIE.]_
-
-_[Example: An implicit variable needed for calculating the size of a dynamically
-sized array.]_
 
 _[Example: The fragments into which SRoA splits a source language variable. The
 location description of the source language variable would then use an
@@ -436,8 +441,7 @@ compact debug information.]_
 
 _[Note: `DIFragment` replaces using `DW_OP_LLVM_fragment` in the current LLVM IR
 `DIExpression` operations. This simplifies updating expressions which now purely
-describe the location description. Using `DIFragment` has other benefits such as
-expression factoring.]_
+describe the location description.]_
 
 ### `DICompositeType`
 
@@ -538,15 +542,18 @@ The expression may refer to the lifetime segment's _referrer_ (see
 - A computed lifetime segment does not have a referrer and the expression is not
   well-formed if it uses the `DIOpReferrer` operation.
 
-The reachable lifetime graph is transitively defined as the graph formed by the
-edges:
+The reachable lifetime graph is the transitive closure of the graph formed by
+the edges:
 
 - from each `DIVariable` (termed root nodes and also termed reachable
   `DIObject`s) to the `DILifetime`s that reference them (termed reachable
   `DILifetime`s)
+- from each `DICompositeType` (termed root nodes) to the `DILifetime`s that are
+  referenced by the optional `dataLocation`, `associated`, and `rank` fields
+  (termed reachable `DILifetime`s)
 - from each reachable `DILifetime` to the `DIObject`s referenced by their
   `argObjects` fields (termed reachable `DIObject`s).
-- from each reachable `DIObject` to the  reachable `DILifetime`s that reference
+- from each reachable `DIObject` to the reachable `DILifetime`s that reference
   them (termed reachable `DILifetime`s)
 
 If the reachable lifetime graph has any cycles or if any `DILifetime` or
@@ -571,21 +578,58 @@ referencing the same lifetime as the intrinsic that started it.]_
 A `DICompileUnit` represents the identity of source program compile unit. See
 [DICompileUnit][17].
 
+All `DICompileUnit` compile units are required to be referenced by the
+`!llvm.dbg.cu` named metadata node of the LLVM module.
+
 All `DIGlobalVariable` global variables of the compile unit are required to be
 referenced by the `globals` field of the `DICompileUnit`.
 
-_[Note: This is different to the current debug information in which the
-`globals` field of `DICompileUnit` references `DIGlobalVariableExpression`.
-`DIGlobalVariableExpression` is no longer used and is replaced by using the
-`DILifetime` for both local and global variables.]_
+### `DISubprogram`
 
-> TODO: Should `DICompileUnit` have a `retainedNodes` field added to use to
-> retain computed lifetime segment `DILifetime` nodes that are in the active
-> lifetime graph but not reachable from a root node? If so, should active
-> computed lifetime segments be put on the `retainedNodes` field of the
-> `DICompileUnit` if reachable from a `DIGlobalVariable`, and the
-> `retainedNodes` field of the `DISubprogram`s corresponding to
-> `DILocalVariable`s from which it is reachable?
+A `DISubprogram` represents the identity of source language program or
+non-source language program function. See [DISubprogram][18].
+
+A non-source language program function includes `DIFlagArtificial` in the
+`flags` field.
+
+All `DILocalVariable` local variables and `DILabel` labels of the function are
+required to be referenced by the `retainedNodes` field of the `DISubprogram`.
+
+For all `DILifetime` computed lifetime segments that are part of the reachable
+lifetime graph:
+
+1. If only involve `DILocalVariable`s, `DICompositeType`s, and bounded lifetime
+   segments of the same function, then are required to be referenced by the
+   `retainedNodes` field of the corresponding `DISubprogram`.
+2. Otherwise, are required to be referenced by the `!llvm.dbg.retainedNodes`
+   named metadata node of the LLVM module.
+
+_[Note: At the time computed lifetime segments are created, it is always well
+defined if they are local to a function or are global._
+
+_For example, a computed lifetime segment created only to define the location of
+a local variable (or a piece of a local variable), would be retained by the
+function that defines the local variable. If the function was deleted there is
+no need for the computed lifetime segment any more._
+
+_Similarly, a computed lifetime segment that contributes a lifetime to the
+location description of a global variable (or fragment of a global variable)
+using only local variables (or fragments of local variables) or bounded lifetime
+segments of the same function, would be retained by the function that defines
+the local variables (or fragments of local variables) or owns the bounded
+lifetime segments. If the function was deleted there is no need for the computed
+lifetime segment any more as the local variable (or fragment of a local
+variable) references would need to be replaced with the undefined location
+description, and the the bounded lifetime segments would never be active._
+
+_Otherwise, the computed lifetime segment applies to a global variable (or
+fragment of a global variable) and either involves other global variables (or
+fragments of global variables) or local variables (or fragments of local
+variables) of multiple subprograms, and therefore needs to be retained by the
+LLVM module. Deleting a subprogram must not delete the computed lifetime
+segment, although any references to deleted local variables (or fragments of
+deleted local variables) would need to be updated to be the undefined location
+description.]_
 
 ### `DIExpr`
 
@@ -964,7 +1008,7 @@ The intrinsics define the program location range over which the location
 description specified by a bounded lifetime segment of a `DILifetime` is active.
 They support defining a single or multiple locations for a source program
 variable. Multiple locations can be active at the same program location as
-supported by [DWARF location lists][20].
+supported by [DWARF location lists][21].
 
 ### `llvm.dbg.def`
 
@@ -1190,7 +1234,7 @@ return i64 ...
 !4 = distinct !DILifetime(object: !3, location: !DIExpr(DIOpConstant(i64 ...), DIOpAddrOf(5)))
 ```
 
-## Variable Broken Into Two Scalars
+## Local Variable Broken Into Two Scalars
 
 When a transformation decomposes one location into multiple distinct ones, it
 needs to follow all `llvm.dbg.def` intrinsics to the `DILifetime`s referencing
@@ -1244,7 +1288,7 @@ call void @llvm.dbg.kill(metadata !4)
 !6 = distinct !DILifetime(object: !5, location: !DIExpr(DIOpReferrer(i32)))
 ```
 
-## Further Decomposition Of An Already SRoA'd Variable
+## Further Decomposition Of An Already SRoA'd Local Variable
 
 An example to demonstrate the "shallow update" property is to take the above
 IR:
@@ -1293,9 +1337,9 @@ call void @llvm.dbg.kill(metadata !4)
 !10 = distinct !DILifetime(object: !9, location: !DIExpr(DIOpReferrer(i16)))
 ```
 
-Note that the expression for the original source variable `x` did not need to
-be changed, as it is defined in terms of the `DIFragment`, the identity of
-which is not changed after it is created.
+Note that the expression for the original source variable `x` did not need to be
+changed, as it is defined in terms of the `DIFragment`, the identity of which
+is not changed after it is created.
 
 ## Multiple Live Ranges For A Single Variable
 
@@ -1351,6 +1395,8 @@ cases.
 ```llvm
 @g = i64 !dbg.default !2
 
+!llvm.dbg.cu = !{!0}
+!0 = !DICompileUnit(..., globals: !{!1})
 !1 = !DIGlobalVariable("g")
 !2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpReferrer(i64 addrspace(1)*), DIDeref()))
 ```
@@ -1361,6 +1407,9 @@ Becomes:
 @g.lo = i32 !dbg.default !4
 @g.hi = i32 !dbg.default !6
 
+!llvm.dbg.cu = !{!0}
+!llvm.dbg.retainedNodes = !{!2}
+!0 = !DICompileUnit(..., globals: !{!1})
 !1 = !DIGlobalVariable("g")
 !2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpArg(1, i32), DIOpArg(0, i32), DIOpComposite(2, i64)), argObjects: {!3, !5})
 !3 = distinct !DIFragment()
@@ -1696,13 +1745,14 @@ after the common load.
     5. [DILocalVariable][15]
     6. [DIGlobalVariable][16]
     7. [DICompileUnit][17]
-11. [LLVM DWARF Extensions For Heterogeneous Debugging][18]
-    1. [DWARF Expressions][19]
-    2. [DWARF Location List Expressions][20]
-    3. [DWARF Location Description][21]
-    4. [DWARF Expression Evaluation Context][22]
-12. [LLVM User Guide for AMDGPU Backend][23]
-    1. [DW_AT_LLVM_lane_pc][24]
+    8. [DISubprogram][18]
+11. [LLVM DWARF Extensions For Heterogeneous Debugging][19]
+    1. [DWARF Expressions][20]
+    2. [DWARF Location List Expressions][21]
+    3. [DWARF Location Description][22]
+    4. [DWARF Expression Evaluation Context][23]
+12. [LLVM User Guide for AMDGPU Backend][24]
+    1. [DW_AT_LLVM_lane_pc][25]
 
 [01]: https://lists.llvm.org/pipermail/llvm-dev/2014-November/078656.html
 [02]: https://lists.llvm.org/pipermail/llvm-dev/2014-November/078682.html
@@ -1721,13 +1771,14 @@ after the common load.
 [15]: https://llvm.org/docs/LangRef.html#dilocalvariable
 [16]: https://llvm.org/docs/LangRef.html#diglobalvariable
 [17]: https://llvm.org/docs/LangRef.html#dicompileunit
-[18]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html
-[19]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-expressions
-[20]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-location-list-expressions
-[21]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-location-description
-[22]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-expression-evaluation-context
-[23]: https://llvm.org/docs/AMDGPUUsage.html
-[24]: https://llvm.org/docs/AMDGPUUsage.html#dw-at-llvm-lane-pc
+[18]: https://llvm.org/docs/LangRef.html#disubprogram
+[19]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html
+[20]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-expressions
+[21]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-location-list-expressions
+[22]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-location-description
+[23]: https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#dwarf-expression-evaluation-context
+[24]: https://llvm.org/docs/AMDGPUUsage.html
+[25]: https://llvm.org/docs/AMDGPUUsage.html#dw-at-llvm-lane-pc
 
 # Other Ideas
 
@@ -1827,7 +1878,7 @@ call void @llvm.dbg.kill(metadata !1)
 > TODO: This was just a quick jotting-down of one idea for eliminating the need
 > for a distincit `DIFragment` to represent the identity of fragments.
 
-### Variable Broken Into Two Scalars
+### Local Variable Broken Into Two Scalars
 
 ```llvm
 %x.lo = i32 ...
@@ -1845,7 +1896,7 @@ call void @llvm.dbg.kill(metadata !6)
 !4 = distinct !DILifetime(object: 1, location: !DIExpr(referrer))
 ```
 
-### Further Decomposition Of An Already SRoA'd Variable
+### Further Decomposition Of An Already SRoA'd Local Variable
 
 ```llvm
 %x.lo = i32 ...
