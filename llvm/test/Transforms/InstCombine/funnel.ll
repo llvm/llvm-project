@@ -281,18 +281,15 @@ define i8 @fshr_commute_8bit(i32 %x, i32 %y, i32 %shift) {
   ret i8 %conv2
 }
 
-; TODO:
 ; The left-shifted value does not need to be masked at all.
 
 define i8 @fshr_commute_8bit_unmasked_shl(i32 %x, i32 %y, i32 %shift) {
 ; CHECK-LABEL: @fshr_commute_8bit_unmasked_shl(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHIFT:%.*]], 3
-; CHECK-NEXT:    [[CONVX:%.*]] = and i32 [[X:%.*]], 255
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[CONVX]], [[AND]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 8, [[AND]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[Y:%.*]], [[SUB]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[SHL]]
-; CHECK-NEXT:    [[CONV2:%.*]] = trunc i32 [[OR]] to i8
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHIFT:%.*]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[Y:%.*]] to i8
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[CONV2:%.*]] = call i8 @llvm.fshr.i8(i8 [[TMP3]], i8 [[TMP4]], i8 [[TMP2]])
 ; CHECK-NEXT:    ret i8 [[CONV2]]
 ;
   %and = and i32 %shift, 3
