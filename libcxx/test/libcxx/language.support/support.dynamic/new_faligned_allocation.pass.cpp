@@ -18,6 +18,10 @@
 // in a link error.
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}
 
+// Libcxx when built for z/OS doesn't contain the aligned allocation functions,
+// nor does the dynamic library shipped with z/OS.
+// UNSUPPORTED: target={{.+}}-zos{{.*}}
+
 // REQUIRES: -faligned-allocation
 // ADDITIONAL_COMPILE_FLAGS: -faligned-allocation
 

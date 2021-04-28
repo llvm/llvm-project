@@ -25,6 +25,10 @@
 // yet provide aligned new/delete definitions so this test fails to compile/link.
 // XFAIL: LIBCXX-WINDOWS-FIXME
 
+// Libcxx when built for z/OS doesn't contain the aligned allocation functions,
+// nor does the dynamic library shipped with z/OS.
+// UNSUPPORTED: target={{.+}}-zos{{.*}}
+
 #include <new>
 #include <cstddef>
 #include <cstdlib>
