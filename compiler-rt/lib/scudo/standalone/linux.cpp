@@ -122,6 +122,7 @@ void releasePagesToOS(uptr BaseAddress, uptr Offset, uptr Size,
   if (madviseNeedsMemsetCached()) {
     // Workaround for QEMU-user ignoring MADV_DONTNEED.
     // https://github.com/qemu/qemu/blob/b1cffefa1b163bce9aebc3416f562c1d3886eeaa/linux-user/syscall.c#L11941
+    // https://bugs.launchpad.net/qemu/+bug/1926521
     memset(Addr, 0, Size);
   }
   while (madvise(Addr, Size, MADV_DONTNEED) == -1 && errno == EAGAIN) {
