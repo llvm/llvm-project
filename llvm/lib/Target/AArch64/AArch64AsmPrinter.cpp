@@ -1320,7 +1320,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
           ExceptionHandlingType != ExceptionHandling::ARM)
         return;
 
-      if (needsCFIMoves() == CFI_M_None)
+      if (getFunctionCFISectionType(*MF) == CFISection::None)
         return;
 
       OutStreamer->emitCFIBKeyFrame();
