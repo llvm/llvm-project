@@ -1109,7 +1109,7 @@ void MipsGotSection::writeTo(uint8_t *buf) {
     // If TLS entry has a corresponding dynamic relocations, leave it
     // initialized by zero. Write down adjusted TLS symbol's values otherwise.
     // To calculate the adjustments use offsets for thread-local storage.
-    // https://www.linux-mips.org/wiki/NPTL
+    // http://web.archive.org/web/20190324223224/https://www.linux-mips.org/wiki/NPTL
     for (const std::pair<GotEntry, size_t> &p : g.local16)
       write(p.second, p.first.first, p.first.second);
     // Write VA to the primary GOT only. For secondary GOTs that
