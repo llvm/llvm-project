@@ -628,12 +628,45 @@ struct BroadcastFoldConstantOperandsPattern
     return success();
   }
 };
+
+template <typename OpTy>
+struct CanonicalizeCastExtentTensorOperandsPattern
+    : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const override {
+    // Canonicalize operands.
+    bool anyChange = false;
+    auto canonicalizeOperand = [&](Value operand) {
+      if (auto castOp = operand.getDefiningOp<tensor::CastOp>()) {
+        // Only eliminate the cast if it holds no shape information.
+        bool isInformationLoosingCast =
+            castOp.getType().cast<RankedTensorType>().isDynamicDim(0);
+        if (isInformationLoosingCast) {
+          anyChange = true;
+          return castOp.source();
+        }
+      }
+      return operand;
+    };
+    auto newOperands = llvm::to_vector<8>(
+        llvm::map_range(op.getOperands(), canonicalizeOperand));
+
+    // Rewrite op if any change required.
+    if (!anyChange)
+      return failure();
+    rewriter.replaceOpWithNewOp<OpTy>(op, op->getResultTypes(), newOperands);
+    return success();
+  }
+};
 } // namespace
 
 void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                               MLIRContext *context) {
   patterns.add<BroadcastFoldConstantOperandsPattern,
                BroadcastForwardSingleOperandPattern,
+               CanonicalizeCastExtentTensorOperandsPattern<BroadcastOp>,
                RemoveDuplicateOperandsPattern<BroadcastOp>,
                RemoveEmptyShapeOperandsPattern<BroadcastOp>>(context);
 }
@@ -716,7 +749,8 @@ void CstrBroadcastableOp::getCanonicalizationPatterns(
   // Canonicalization patterns have overlap with the considerations during
   // folding in case additional shape information is inferred at some point that
   // does not result in folding.
-  patterns.add<CstrBroadcastableEqOps,
+  patterns.add<CanonicalizeCastExtentTensorOperandsPattern<CstrBroadcastableOp>,
+               CstrBroadcastableEqOps,
                RemoveDuplicateOperandsPattern<CstrBroadcastableOp>,
                RemoveEmptyShapeOperandsPattern<CstrBroadcastableOp>>(context);
 }
@@ -1188,7 +1222,7 @@ struct ShapeOfWithTensor : public OpRewritePattern<shape::ShapeOfOp> {
 // ```
 // %1 = shape.shape_of %arg : tensor<?x?x?xf32> -> tensor<?xindex>
 // ```
-struct ShapeOfCastedExtentTensor : public OpRewritePattern<tensor::CastOp> {
+struct ShapeOfCastExtentTensor : public OpRewritePattern<tensor::CastOp> {
   using OpRewritePattern<tensor::CastOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(tensor::CastOp op,
@@ -1214,7 +1248,7 @@ struct ShapeOfCastedExtentTensor : public OpRewritePattern<tensor::CastOp> {
 
 void ShapeOfOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                             MLIRContext *context) {
-  patterns.add<ShapeOfCastedExtentTensor, ShapeOfWithTensor>(context);
+  patterns.add<ShapeOfCastExtentTensor, ShapeOfWithTensor>(context);
 }
 
 //===----------------------------------------------------------------------===//
