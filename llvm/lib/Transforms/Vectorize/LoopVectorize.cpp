@@ -4292,11 +4292,15 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi, VPTransformState &State) {
   Value *OrigLoopVal = Phi->getIncomingValueForBlock(OrigLatch);
   BasicBlock *VectorLoopLatch = LI->getLoopFor(LoopVectorBody)->getLoopLatch();
 
+  bool IsOrdered = State.VF.isVector() && IsInLoopReductionPhi &&
+                   useOrderedReductions(RdxDesc);
+
   for (unsigned Part = 0; Part < UF; ++Part) {
+    if (IsOrdered && Part > 0)
+      break;
     Value *VecRdxPhi = State.get(State.Plan->getVPValue(Phi), Part);
     Value *Val = State.get(State.Plan->getVPValue(OrigLoopVal), Part);
-    if (IsInLoopReductionPhi && useOrderedReductions(RdxDesc) &&
-        State.VF.isVector())
+    if (IsOrdered)
       Val = State.get(State.Plan->getVPValue(OrigLoopVal), UF - 1);
     cast<PHINode>(VecRdxPhi)->addIncoming(Val, VectorLoopLatch);
   }
@@ -4388,7 +4392,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi, VPTransformState &State) {
   // terminate on this line. This is the easiest way to ensure we don't
   // accidentally cause an extra step back into the loop while debugging.
   setDebugLocFromInst(Builder, LoopMiddleBlock->getTerminator());
-  if (IsInLoopReductionPhi && useOrderedReductions(RdxDesc))
+  if (IsOrdered)
     ReducedPartRdx = State.get(LoopExitInstDef, UF - 1);
   else {
     // Floating-point operations should have some FMF to enable the reduction.
@@ -4722,8 +4726,14 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
       }
     }
 
+    bool IsOrdered = State.VF.isVector() &&
+                     Cost->isInLoopReduction(cast<PHINode>(PN)) &&
+                     useOrderedReductions(*RdxDesc);
+
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       // This is phase one of vectorizing PHIs.
+      if (Part > 0 && IsOrdered)
+        return;
       Value *EntryPart = PHINode::Create(
           VecTy, 2, "vec.phi", &*LoopVectorBody->getFirstInsertionPt());
       State.set(PhiR, EntryPart, Part);
