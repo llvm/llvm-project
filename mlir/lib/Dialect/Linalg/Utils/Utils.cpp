@@ -178,6 +178,16 @@ IntegerAttr getSmallestBoundingIndex(Value size) {
                          .getResult(0)
                          .dyn_cast<AffineConstantExpr>())
       boundingConst = cExpr.getValue();
+  } else if (auto dimOp = size.getDefiningOp<memref::DimOp>()) {
+    auto shape = dimOp.memrefOrTensor().getType().dyn_cast<ShapedType>();
+    if (auto constOp = dimOp.index().getDefiningOp<ConstantOp>()) {
+      if (auto indexAttr = constOp.value().dyn_cast<IntegerAttr>()) {
+        auto dimIndex = indexAttr.getInt();
+        if (!shape.isDynamicDim(dimIndex)) {
+          boundingConst = shape.getShape()[dimIndex];
+        }
+      }
+    }
   }
   if (boundingConst && *boundingConst >= 0)
     return Builder(size.getContext()).getIndexAttr(*boundingConst);
