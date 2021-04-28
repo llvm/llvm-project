@@ -31,6 +31,11 @@ endforeach()
 # Generate dialect-specific bindings.
 ################################################################################
 
+add_mlir_dialect_python_bindings(MLIRBindingsPythonAsyncOps
+  TD_FILE AsyncOps.td
+  DIALECT_NAME async_dialect)
+add_dependencies(MLIRBindingsPythonSources MLIRBindingsPythonAsyncOps)
+
 add_mlir_dialect_python_bindings(MLIRBindingsPythonBuiltinOps
   TD_FILE BuiltinOps.td
   DIALECT_NAME builtin)
@@ -119,6 +124,14 @@ endif()
 
 add_subdirectory(Transforms)
 add_subdirectory(Conversions)
+
+add_mlir_python_extension(MLIRAsyncPassesBindingsPythonExtension _mlirAsyncPasses
+  INSTALL_DIR
+    python
+  SOURCES
+    AsyncPasses.cpp
+)
+add_dependencies(MLIRBindingsPythonExtension MLIRAsyncPassesBindingsPythonExtension)
 
 add_mlir_python_extension(MLIRLinalgPassesBindingsPythonExtension _mlirLinalgPasses
   INSTALL_DIR
