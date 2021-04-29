@@ -944,8 +944,8 @@ private:
   static const sptr MemTagAllocationTraceIndex = -2;
   static const sptr MemTagAllocationTidIndex = -1;
 
-  u32 Cookie = 0;
-  u32 QuarantineMaxChunkSize = 0;
+  u32 Cookie;
+  u32 QuarantineMaxChunkSize;
 
   GlobalStats Stats;
   PrimaryT Primary;
@@ -977,7 +977,7 @@ private:
 #endif
     Entry Entries[NumEntries];
   };
-  AllocationRingBuffer RingBuffer = {};
+  AllocationRingBuffer RingBuffer;
 
   // The following might get optimized out by the compiler.
   NOINLINE void performSanityChecks() {

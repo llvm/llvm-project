@@ -377,16 +377,16 @@ private:
   }
 
   HybridMutex Mutex;
-  u32 EntriesCount = 0;
-  u32 QuarantinePos = 0;
-  atomic_u32 MaxEntriesCount = {};
-  atomic_uptr MaxEntrySize = {};
-  u64 OldestTime = 0;
-  u32 IsFullEvents = 0;
-  atomic_s32 ReleaseToOsIntervalMs = {};
+  u32 EntriesCount;
+  u32 QuarantinePos;
+  atomic_u32 MaxEntriesCount;
+  atomic_uptr MaxEntrySize;
+  u64 OldestTime;
+  u32 IsFullEvents;
+  atomic_s32 ReleaseToOsIntervalMs;
 
-  CachedBlock Entries[Config::SecondaryCacheEntriesArraySize] = {};
-  CachedBlock Quarantine[Config::SecondaryCacheQuarantineSize] = {};
+  CachedBlock Entries[Config::SecondaryCacheEntriesArraySize];
+  CachedBlock Quarantine[Config::SecondaryCacheQuarantineSize];
 };
 
 template <typename Config> class MapAllocator {
@@ -451,11 +451,11 @@ private:
 
   HybridMutex Mutex;
   DoublyLinkedList<LargeBlock::Header> InUseBlocks;
-  uptr AllocatedBytes = 0;
-  uptr FreedBytes = 0;
-  uptr LargestSize = 0;
-  u32 NumberOfAllocs = 0;
-  u32 NumberOfFrees = 0;
+  uptr AllocatedBytes;
+  uptr FreedBytes;
+  uptr LargestSize;
+  u32 NumberOfAllocs;
+  u32 NumberOfFrees;
   LocalStats Stats;
 };
 

@@ -23,7 +23,6 @@
 #define SCUDO_ALLOCATOR Allocator
 
 extern "C" void SCUDO_PREFIX(malloc_postinit)();
-SCUDO_REQUIRE_CONSTANT_INITIALIZATION
 static scudo::Allocator<scudo::AndroidConfig, SCUDO_PREFIX(malloc_postinit)>
     SCUDO_ALLOCATOR;
 
@@ -37,7 +36,6 @@ static scudo::Allocator<scudo::AndroidConfig, SCUDO_PREFIX(malloc_postinit)>
 #define SCUDO_ALLOCATOR SvelteAllocator
 
 extern "C" void SCUDO_PREFIX(malloc_postinit)();
-SCUDO_REQUIRE_CONSTANT_INITIALIZATION
 static scudo::Allocator<scudo::AndroidSvelteConfig,
                         SCUDO_PREFIX(malloc_postinit)>
     SCUDO_ALLOCATOR;

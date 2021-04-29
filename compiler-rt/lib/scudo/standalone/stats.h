@@ -46,11 +46,11 @@ public:
 
   uptr get(StatType I) const { return atomic_load_relaxed(&StatsArray[I]); }
 
-  LocalStats *Next = nullptr;
-  LocalStats *Prev = nullptr;
+  LocalStats *Next;
+  LocalStats *Prev;
 
 private:
-  atomic_uptr StatsArray[StatCount] = {};
+  atomic_uptr StatsArray[StatCount];
 };
 
 // Global stats, used for aggregation and querying.
