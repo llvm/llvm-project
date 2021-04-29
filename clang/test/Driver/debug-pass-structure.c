@@ -30,6 +30,7 @@
 // NEWPM-NEXT: EliminateAvailableExternallyPass on [module]
 // NEWPM-NEXT: ReversePostOrderFunctionAttrsPass on [module]
 // NEWPM-NEXT: RequireAnalysisPass<{{.*}}> on [module]
+// NEWPM-NEXT: HotColdSplittingPass on [module]
 // NEWPM-NEXT: ModuleToFunctionPassAdaptor on [module]
 // NEWPM-NEXT: CGProfilePass on [module]
 // NEWPM-NEXT: GlobalDCEPass on [module]
