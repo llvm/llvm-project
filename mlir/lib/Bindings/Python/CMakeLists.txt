@@ -84,6 +84,7 @@ add_mlir_python_extension(MLIRCoreBindingsPythonExtension _mlir
     IRAffine.cpp
     IRAttributes.cpp
     IRCore.cpp
+    IRModule.cpp
     IRTypes.cpp
     PybindUtils.cpp
     Pass.cpp
