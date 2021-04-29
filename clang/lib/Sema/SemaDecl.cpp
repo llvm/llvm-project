@@ -24,7 +24,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -44,7 +43,6 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Triple.h"
 #include <algorithm>
@@ -13755,138 +13753,6 @@ void Sema::DiagnoseUnusedParameters(ArrayRef<ParmVarDecl *> Parameters) {
   }
 }
 
-using AllUsesSetsPtrSet = llvm::SmallPtrSet<const NamedDecl *, 16>;
-
-namespace {
-
-struct AllUsesAreSetsVisitor : RecursiveASTVisitor<AllUsesAreSetsVisitor> {
-  AllUsesSetsPtrSet &S;
-
-  AllUsesAreSetsVisitor(AllUsesSetsPtrSet &Set) : S(Set) {}
-
-  bool TraverseBinaryOperator(const BinaryOperator *BO) {
-    auto *LHS = BO->getLHS();
-    auto *DRE = dyn_cast<DeclRefExpr>(LHS);
-    if (!BO->isAssignmentOp() || !DRE || !S.count(DRE->getFoundDecl())) {
-      // This is not an assignment to one of our NamedDecls.
-      if (!TraverseStmt(LHS))
-        return false;
-    }
-    return TraverseStmt(BO->getRHS());
-  }
-
-  bool VisitDeclRefExpr(const DeclRefExpr *DRE) {
-    // If we remove all Decls, no need to keep searching.
-    return !S.erase(DRE->getFoundDecl()) || S.size();
-  }
-
-  bool OverloadedTraverse(Stmt *S) { return TraverseStmt(S); }
-
-  bool OverloadedTraverse(Decl *D) { return TraverseDecl(D); }
-};
-
-} // end anonymous namespace
-
-/// For any NamedDecl in Decls that is not used in any way other than the LHS of
-/// an assignment, diagnose with the given DiagId.
-template <typename R, typename T>
-static void DiagnoseUnusedButSetDecls(Sema *Se, T *Parent, R Decls,
-                                      unsigned DiagID) {
-  // Put the Decls in a set so we only have to traverse the body once for all of
-  // them.
-  AllUsesSetsPtrSet AllUsesAreSets;
-
-  for (const NamedDecl *ND : Decls) {
-    AllUsesAreSets.insert(ND);
-  }
-
-  if (!AllUsesAreSets.size())
-    return;
-
-  AllUsesAreSetsVisitor Visitor(AllUsesAreSets);
-  Visitor.OverloadedTraverse(Parent);
-
-  for (const NamedDecl *ND : AllUsesAreSets) {
-    Se->Diag(ND->getLocation(), DiagID) << ND->getDeclName();
-  }
-}
-
-void Sema::DiagnoseUnusedButSetParameters(ArrayRef<ParmVarDecl *> Parameters) {
-  // Don't diagnose unused-but-set-parameter errors in template instantiations;
-  // we will already have done so in the template itself.
-  if (inTemplateInstantiation())
-    return;
-
-  bool CPlusPlus = getLangOpts().CPlusPlus;
-
-  auto IsCandidate = [&](const ParmVarDecl *P) {
-    // Check for Ignored here, because if we have no candidates we can avoid
-    // walking the AST.
-    if (Diags.getDiagnosticLevel(diag::warn_unused_but_set_parameter,
-                                 P->getLocation()) ==
-        DiagnosticsEngine::Ignored)
-      return false;
-    if (!P->isReferenced() || !P->getDeclName() || P->hasAttr<UnusedAttr>())
-      return false;
-    // Mimic gcc's behavior regarding nonscalar types.
-    if (CPlusPlus && !P->getType()->isScalarType())
-      return false;
-    return true;
-  };
-
-  auto Candidates = llvm::make_filter_range(Parameters, IsCandidate);
-
-  if (Parameters.empty())
-    return;
-
-  // Traverse the Decl, not just the body; otherwise we'd miss things like
-  // CXXCtorInitializer.
-  if (Decl *D =
-          Decl::castFromDeclContext((*Parameters.begin())->getDeclContext()))
-    DiagnoseUnusedButSetDecls(this, D, Candidates,
-                              diag::warn_unused_but_set_parameter);
-}
-
-void Sema::DiagnoseUnusedButSetVariables(CompoundStmt *CS) {
-  bool CPlusPlus = getLangOpts().CPlusPlus;
-
-  auto IsCandidate = [&](const Stmt *S) {
-    const DeclStmt *SD = dyn_cast<DeclStmt>(S);
-    if (!SD || !SD->isSingleDecl())
-      return false;
-    const VarDecl *VD = dyn_cast<VarDecl>(SD->getSingleDecl());
-    // Check for Ignored here, because if we have no candidates we can avoid
-    // walking the AST.
-    if (!VD || Diags.getDiagnosticLevel(diag::warn_unused_but_set_variable,
-                                        VD->getLocation()) ==
-                   DiagnosticsEngine::Ignored)
-      return false;
-    if (!VD->isReferenced() || !VD->getDeclName() || VD->hasAttr<UnusedAttr>())
-      return false;
-    // Declarations which are const or constexpr can't be assigned to after
-    // initialization anyway, and avoiding these cases will prevent false
-    // positives when uses of a constexpr don't appear in the AST.
-    if (VD->isConstexpr() || VD->getType().isConstQualified())
-      return false;
-    // Mimic gcc's behavior regarding nonscalar types.
-    if (CPlusPlus && !VD->getType()->isScalarType())
-      return false;
-    return true;
-  };
-
-  auto Candidates = llvm::make_filter_range(CS->body(), IsCandidate);
-
-  auto ToNamedDecl = [](const Stmt *S) {
-    const DeclStmt *SD = dyn_cast<const DeclStmt>(S);
-    return dyn_cast<const NamedDecl>(SD->getSingleDecl());
-  };
-
-  auto CandidateDecls = llvm::map_range(Candidates, ToNamedDecl);
-
-  DiagnoseUnusedButSetDecls(this, CS, CandidateDecls,
-                            diag::warn_unused_but_set_variable);
-}
-
 void Sema::DiagnoseSizeOfParametersAndReturnValue(
     ArrayRef<ParmVarDecl *> Parameters, QualType ReturnTy, NamedDecl *D) {
   if (LangOpts.NumLargeByValueCopy == 0) // No check.
@@ -14589,10 +14455,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
 
     if (!FD->isInvalidDecl()) {
       // Don't diagnose unused parameters of defaulted or deleted functions.
-      if (!FD->isDeleted() && !FD->isDefaulted() && !FD->hasSkippedBody()) {
+      if (!FD->isDeleted() && !FD->isDefaulted() && !FD->hasSkippedBody())
         DiagnoseUnusedParameters(FD->parameters());
-        DiagnoseUnusedButSetParameters(FD->parameters());
-      }
       DiagnoseSizeOfParametersAndReturnValue(FD->parameters(),
                                              FD->getReturnType(), FD);
 

@@ -503,7 +503,7 @@ define void @test_ashr_tc_positive() {
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,5) S: [0,5) Exits: 4 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.ashr = phi i64 [ 1023, %entry ], [ %iv.ashr.next, %loop ]
-; CHECK-NEXT:    --> %iv.ashr U: [0,1024) S: [0,1024) Exits: 63 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv.ashr U: [63,1024) S: [63,1024) Exits: 63 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.ashr.next = ashr i64 %iv.ashr, 1
@@ -534,7 +534,7 @@ define void @test_ashr_tc_negative() {
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,5) S: [0,5) Exits: 4 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.ashr = phi i8 [ -128, %entry ], [ %iv.ashr.next, %loop ]
-; CHECK-NEXT:    --> %iv.ashr U: [-128,0) S: [-128,0) Exits: -8 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv.ashr U: [-128,-7) S: [-128,-7) Exits: -8 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.ashr.next = ashr i8 %iv.ashr, 1
@@ -599,11 +599,11 @@ define void @test_ashr_zero_shift() {
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,5) S: [0,5) Exits: 4 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.ashr = phi i64 [ 1023, %entry ], [ %iv.ashr.next, %loop ]
-; CHECK-NEXT:    --> %iv.ashr U: [0,1024) S: [0,1024) Exits: 1023 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv.ashr U: [1023,1024) S: [1023,1024) Exits: 1023 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.ashr.next = ashr i64 %iv.ashr, 0
-; CHECK-NEXT:    --> %iv.ashr U: [0,1024) S: [0,1024) Exits: 1023 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv.ashr U: [1023,1024) S: [1023,1024) Exits: 1023 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_ashr_zero_shift
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4

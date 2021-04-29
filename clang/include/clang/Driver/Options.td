@@ -1387,7 +1387,7 @@ def fwasm_exceptions : Flag<["-"], "fwasm-exceptions">, Group<f_Group>,
 def exception_model : Separate<["-"], "exception-model">,
   Flags<[CC1Option, NoDriverOption]>, HelpText<"The exception model: dwarf|sjlj|seh|wasm">,
   Values<"dwarf,sjlj,seh,wasm">,
-  NormalizedValuesScope<"llvm::ExceptionHandling">,
+  NormalizedValuesScope<"LangOptions::ExceptionHandlingKind">,
   NormalizedValues<["DwarfCFI", "SjLj", "WinEH", "Wasm"]>,
   MarshallingInfoEnum<LangOpts<"ExceptionHandling">, "None">;
 def exception_model_EQ : Joined<["-"], "exception-model=">,
@@ -1548,7 +1548,7 @@ def sanitize_address_destructor_kind_EQ
       Values<"none,global">,
       NormalizedValuesScope<"llvm::AsanDtorKind">,
       NormalizedValues<["None", "Global"]>,
-      MarshallingInfoEnum<CodeGenOpts<"SanitizeAddressDtorKind">, "Global">;
+      MarshallingInfoEnum<CodeGenOpts<"SanitizeAddressDtor">, "Global">;
 // Note: This flag was introduced when it was necessary to distinguish between
 //       ABI for correct codegen.  This is no longer needed, but the flag is
 //       not removed since targeting either ABI will behave the same.

@@ -257,6 +257,7 @@ locateMacroReferent(const syntax::Token &TouchedIdentifier, ParsedAST &AST,
       Macro.Name = std::string(M->Name);
       Macro.PreferredDeclaration = *Loc;
       Macro.Definition = Loc;
+      Macro.ID = getSymbolID(M->Name, M->Info, AST.getSourceManager());
       return Macro;
     }
   }
@@ -361,6 +362,7 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
     Result.emplace_back();
     Result.back().Name = printName(AST.getASTContext(), *D);
     Result.back().PreferredDeclaration = *Loc;
+    Result.back().ID = getSymbolID(D);
     if (const NamedDecl *Def = getDefinition(D))
       Result.back().Definition = makeLocation(
           AST.getASTContext(), nameLocation(*Def, SM), MainFilePath);
@@ -516,6 +518,7 @@ std::vector<LocatedSymbol> locateSymbolForType(const ParsedAST &AST,
     Results.emplace_back();
     Results.back().Name = printName(ASTContext, *D);
     Results.back().PreferredDeclaration = *Loc;
+    Results.back().ID = getSymbolID(D);
     if (const NamedDecl *Def = getDefinition(D))
       Results.back().Definition =
           makeLocation(ASTContext, nameLocation(*Def, SM), *MainFilePath);
@@ -605,6 +608,7 @@ locateSymbolTextually(const SpelledWord &Word, ParsedAST &AST,
     LocatedSymbol Located;
     Located.PreferredDeclaration = *MaybeDeclLoc;
     Located.Name = (Sym.Name + Sym.TemplateSpecializationArgs).str();
+    Located.ID = Sym.ID;
     if (Sym.Definition) {
       auto MaybeDefLoc = indexToLSPLocation(Sym.Definition, MainFilePath);
       if (!MaybeDefLoc) {

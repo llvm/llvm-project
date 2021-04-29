@@ -21,7 +21,7 @@ using iterator = std::unordered_map<int, int>::iterator;
 using const_iterator = std::unordered_map<int, int>::const_iterator;
 using local_iterator = std::unordered_map<int, int>::local_iterator;
 using const_local_iterator = std::unordered_map<int, int>::const_local_iterator;
-using value_type = iterator::value_type;
+using value_type = std::pair<const int, int>;
 
 static_assert(std::indirectly_readable<iterator>);
 static_assert(!std::indirectly_writable<iterator, value_type>);

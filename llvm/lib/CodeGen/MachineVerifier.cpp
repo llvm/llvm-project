@@ -1678,28 +1678,54 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
   case TargetOpcode::COPY: {
     const MachineOperand &DstOp = MI->getOperand(0);
     const MachineOperand &SrcOp = MI->getOperand(1);
-    LLT DstTy = MRI->getType(DstOp.getReg());
-    LLT SrcTy = MRI->getType(SrcOp.getReg());
+    const Register SrcReg = SrcOp.getReg();
+    const Register DstReg = DstOp.getReg();
+
+    LLT DstTy = MRI->getType(DstReg);
+    LLT SrcTy = MRI->getType(SrcReg);
     if (SrcTy.isValid() && DstTy.isValid()) {
       // If both types are valid, check that the types are the same.
       if (SrcTy != DstTy) {
         report("Copy Instruction is illegal with mismatching types", MI);
         errs() << "Def = " << DstTy << ", Src = " << SrcTy << "\n";
       }
+
+      break;
     }
-    if (SrcTy.isValid() || DstTy.isValid()) {
-      // If one of them have valid types, let's just check they have the same
-      // size.
-      unsigned SrcSize = TRI->getRegSizeInBits(SrcOp.getReg(), *MRI);
-      unsigned DstSize = TRI->getRegSizeInBits(DstOp.getReg(), *MRI);
-      assert(SrcSize && "Expecting size here");
-      assert(DstSize && "Expecting size here");
-      if (SrcSize != DstSize)
-        if (!DstOp.getSubReg() && !SrcOp.getSubReg()) {
-          report("Copy Instruction is illegal with mismatching sizes", MI);
-          errs() << "Def Size = " << DstSize << ", Src Size = " << SrcSize
-                 << "\n";
-        }
+
+    if (!SrcTy.isValid() && !DstTy.isValid())
+      break;
+
+    // If we have only one valid type, this is likely a copy between a virtual
+    // and physical register.
+    unsigned SrcSize = 0;
+    unsigned DstSize = 0;
+    if (SrcReg.isPhysical() && DstTy.isValid()) {
+      const TargetRegisterClass *SrcRC =
+          TRI->getMinimalPhysRegClassLLT(SrcReg, DstTy);
+      if (SrcRC)
+        SrcSize = TRI->getRegSizeInBits(*SrcRC);
+    }
+
+    if (SrcSize == 0)
+      SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
+
+    if (DstReg.isPhysical() && SrcTy.isValid()) {
+      const TargetRegisterClass *DstRC =
+          TRI->getMinimalPhysRegClassLLT(DstReg, SrcTy);
+      if (DstRC)
+        DstSize = TRI->getRegSizeInBits(*DstRC);
+    }
+
+    if (DstSize == 0)
+      DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
+
+    if (SrcSize != 0 && DstSize != 0 && SrcSize != DstSize) {
+      if (!DstOp.getSubReg() && !SrcOp.getSubReg()) {
+        report("Copy Instruction is illegal with mismatching sizes", MI);
+        errs() << "Def Size = " << DstSize << ", Src Size = " << SrcSize
+               << "\n";
+      }
     }
     break;
   }

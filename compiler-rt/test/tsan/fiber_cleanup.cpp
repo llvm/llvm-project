@@ -9,7 +9,7 @@
 long count_memory_mappings() {
   pid_t my_pid = getpid();
   char proc_file_name[128];
-  snprintf(proc_file_name, sizeof(proc_file_name), "/proc/%ld/maps", my_pid);
+  snprintf(proc_file_name, sizeof(proc_file_name), "/proc/%d/maps", my_pid);
 
   FILE *proc_file = fopen(proc_file_name, "r");
   long line_count = 0;

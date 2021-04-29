@@ -624,7 +624,6 @@ class ScopedReport : public ScopedReportBase {
   ScopedErrorReportLock lock_;
 };
 
-bool ShouldReport(ThreadState *thr, ReportType typ);
 ThreadContext *IsThreadStackOrTls(uptr addr, bool *is_stack);
 void RestoreStack(int tid, const u64 epoch, VarSizeStackTrace *stk,
                   MutexSet *mset, uptr *tag = nullptr);

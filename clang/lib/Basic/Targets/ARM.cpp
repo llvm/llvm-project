@@ -428,6 +428,8 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   MVE = 0;
   CRC = 0;
   Crypto = 0;
+  SHA2 = 0;
+  AES = 0;
   DSP = 0;
   Unaligned = 1;
   SoftFloat = false;
@@ -478,6 +480,10 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       CRC = 1;
     } else if (Feature == "+crypto") {
       Crypto = 1;
+    } else if (Feature == "+sha2") {
+      SHA2 = 1;
+    } else if (Feature == "+aes") {
+      AES = 1;
     } else if (Feature == "+dsp") {
       DSP = 1;
     } else if (Feature == "+fp64") {
@@ -641,8 +647,14 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (ArchVersion >= 8) {
     // ACLE 6.5.7 Crypto Extension
-    if (Crypto)
+    // The __ARM_FEATURE_CRYPTO is deprecated in favor of finer grained
+    // feature macros for AES and SHA2
+    if (Crypto || (SHA2 && AES))
       Builder.defineMacro("__ARM_FEATURE_CRYPTO", "1");
+    if (SHA2)
+      Builder.defineMacro("__ARM_FEATURE_SHA2", "1");
+    if (AES)
+      Builder.defineMacro("__ARM_FEATURE_AES", "1");
     // ACLE 6.5.8 CRC32 Extension
     if (CRC)
       Builder.defineMacro("__ARM_FEATURE_CRC32", "1");

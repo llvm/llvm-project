@@ -19,7 +19,7 @@
 
 using iterator = std::span<int>::iterator;
 using reverse_iterator = std::span<int>::reverse_iterator;
-using value_type = iterator::value_type;
+using value_type = int;
 
 static_assert(std::indirectly_readable<iterator>);
 static_assert(std::indirectly_writable<iterator, value_type>);

@@ -541,6 +541,14 @@ void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (!llvm::ARM::getFPUFeatures(FPUID, Features))
       D.Diag(clang::diag::err_drv_clang_unsupported)
           << std::string("-mfpu=") + AndroidFPU;
+  } else {
+    if (!ForAS) {
+      std::string CPU = arm::getARMTargetCPU(CPUName, ArchName, Triple);
+      llvm::ARM::ArchKind ArchKind =
+          arm::getLLVMArchKindForARM(CPU, ArchName, Triple);
+      FPUID = llvm::ARM::getDefaultFPU(CPU, ArchKind);
+      (void)llvm::ARM::getFPUFeatures(FPUID, Features);
+    }
   }
 
   // Now we've finished accumulating features from arch, cpu and fpu,
@@ -618,34 +626,69 @@ fp16_fml_fallthrough:
       Features.push_back("-crc");
   }
 
-  // For Arch >= ARMv8.0 && A profile:  crypto = sha2 + aes
+  // For Arch >= ARMv8.0 && A or R profile:  crypto = sha2 + aes
+  // Rather than replace within the feature vector, determine whether each
+  // algorithm is enabled and append this to the end of the vector.
+  // The algorithms can be controlled by their specific feature or the crypto
+  // feature, so their status can be determined by the last occurance of
+  // either in the vector. This allows one to supercede the other.
+  // e.g. +crypto+noaes in -march/-mcpu should enable sha2, but not aes
   // FIXME: this needs reimplementation after the TargetParser rewrite
-  auto CryptoIt = llvm::find_if(llvm::reverse(Features), [](const StringRef F) {
-    return F.contains("crypto");
-  });
-  if (CryptoIt != Features.rend()) {
-    if (CryptoIt->take_front() == "+") {
-      StringRef ArchSuffix = arm::getLLVMArchSuffixForARM(
-          arm::getARMTargetCPU(CPUName, ArchName, Triple), ArchName, Triple);
-      if (llvm::ARM::parseArchVersion(ArchSuffix) >= 8 &&
-          llvm::ARM::parseArchProfile(ArchSuffix) ==
-              llvm::ARM::ProfileKind::A) {
-        if (ArchName.find_lower("+nosha2") == StringRef::npos &&
-            CPUName.find_lower("+nosha2") == StringRef::npos)
-          Features.push_back("+sha2");
-        if (ArchName.find_lower("+noaes") == StringRef::npos &&
-            CPUName.find_lower("+noaes") == StringRef::npos)
-          Features.push_back("+aes");
-      } else {
+  bool HasSHA2 = false;
+  bool HasAES = false;
+  const auto ItSHA2 =
+      llvm::find_if(llvm::reverse(Features), [](const StringRef F) {
+        return F.contains("crypto") || F.contains("sha2");
+      });
+  const auto ItAES =
+      llvm::find_if(llvm::reverse(Features), [](const StringRef F) {
+        return F.contains("crypto") || F.contains("aes");
+      });
+  const bool FoundSHA2 = ItSHA2 != Features.rend();
+  const bool FoundAES = ItAES != Features.rend();
+  if (FoundSHA2)
+    HasSHA2 = ItSHA2->take_front() == "+";
+  if (FoundAES)
+    HasAES = ItAES->take_front() == "+";
+  if (FoundSHA2 || FoundAES) {
+    if (HasSHA2 && HasAES)
+      Features.push_back("+crypto");
+    else
+      Features.push_back("-crypto");
+    if (HasSHA2)
+      Features.push_back("+sha2");
+    else
+      Features.push_back("-sha2");
+    if (HasAES)
+      Features.push_back("+aes");
+    else
+      Features.push_back("-aes");
+  }
+
+  if (HasSHA2 || HasAES) {
+    StringRef ArchSuffix = arm::getLLVMArchSuffixForARM(
+        arm::getARMTargetCPU(CPUName, ArchName, Triple), ArchName, Triple);
+    llvm::ARM::ProfileKind ArchProfile =
+        llvm::ARM::parseArchProfile(ArchSuffix);
+    if (!((llvm::ARM::parseArchVersion(ArchSuffix) >= 8) &&
+          (ArchProfile == llvm::ARM::ProfileKind::A ||
+           ArchProfile == llvm::ARM::ProfileKind::R))) {
+      if (HasSHA2)
         D.Diag(clang::diag::warn_target_unsupported_extension)
-            << "crypto"
+            << "sha2"
             << llvm::ARM::getArchName(llvm::ARM::parseArch(ArchSuffix));
-        // With -fno-integrated-as -mfpu=crypto-neon-fp-armv8 some assemblers such as the GNU assembler
-        // will permit the use of crypto instructions as the fpu will override the architecture.
-        // We keep the crypto feature in this case to preserve compatibility.
-        // In all other cases we remove the crypto feature.
-        if (!Args.hasArg(options::OPT_fno_integrated_as))
-          Features.push_back("-crypto");
+      if (HasAES)
+        D.Diag(clang::diag::warn_target_unsupported_extension)
+            << "aes"
+            << llvm::ARM::getArchName(llvm::ARM::parseArch(ArchSuffix));
+      // With -fno-integrated-as -mfpu=crypto-neon-fp-armv8 some assemblers such
+      // as the GNU assembler will permit the use of crypto instructions as the
+      // fpu will override the architecture. We keep the crypto feature in this
+      // case to preserve compatibility. In all other cases we remove the crypto
+      // feature.
+      if (!Args.hasArg(options::OPT_fno_integrated_as)) {
+        Features.push_back("-sha2");
+        Features.push_back("-aes");
       }
     }
   }

@@ -1381,5 +1381,192 @@ if.end:
   ret i32 1
 }
 
+define void @direct_caller(i1 %c) {
+; CHECK-LABEL: @direct_caller(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[CALL_FOO:%.*]], label [[CALL_BAR:%.*]]
+; CHECK:       call_foo:
+; CHECK-NEXT:    call void @direct_callee()
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       call_bar:
+; CHECK-NEXT:    call void @direct_callee2()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+  br i1 %c, label %call_foo, label %call_bar
+
+call_foo:
+  call void @direct_callee()
+  br label %end
+
+call_bar:
+  call void @direct_callee2()
+  br label %end
+
+end:
+  ret void
+}
+
+define void @indirect_caller(i1 %c, i32 %v, void (i32)* %foo, void (i32)* %bar) {
+; CHECK-LABEL: @indirect_caller(
+; CHECK-NEXT:  end:
+; CHECK-NEXT:    [[BAR_SINK:%.*]] = select i1 [[C:%.*]], void (i32)* [[FOO:%.*]], void (i32)* [[BAR:%.*]]
+; CHECK-NEXT:    tail call void [[BAR_SINK]](i32 [[V:%.*]])
+; CHECK-NEXT:    ret void
+;
+  br i1 %c, label %call_foo, label %call_bar
+
+call_foo:
+  tail call void %foo(i32 %v)
+  br label %end
+
+call_bar:
+  tail call void %bar(i32 %v)
+  br label %end
+
+end:
+  ret void
+}
+
+define void @maybe_indirect_caller(void ()* %fun) {
+; CHECK-LABEL: @maybe_indirect_caller(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq void ()* [[FUN:%.*]], @direct_callee
+; CHECK-NEXT:    br i1 [[C]], label [[IF_TRUE_DIRECT_TARG:%.*]], label [[IF_FALSE_ORIG_INDIRECT:%.*]]
+; CHECK:       if.true.direct_targ:
+; CHECK-NEXT:    tail call void @direct_callee()
+; CHECK-NEXT:    br label [[IF_END_ICP:%.*]]
+; CHECK:       if.false.orig_indirect:
+; CHECK-NEXT:    tail call void [[FUN]]()
+; CHECK-NEXT:    br label [[IF_END_ICP]]
+; CHECK:       if.end.icp:
+; CHECK-NEXT:    ret void
+;
+  %c = icmp eq void ()* %fun, @direct_callee
+  br i1 %c, label %if.true.direct_targ, label %if.false.orig_indirect
+
+if.true.direct_targ:
+  tail call void @direct_callee()
+  br label %if.end.icp
+
+if.false.orig_indirect:
+  tail call void %fun()
+  br label %if.end.icp
+
+if.end.icp:
+  ret void
+}
+define void @maybe_indirect_caller2(void ()* %fun) {
+; CHECK-LABEL: @maybe_indirect_caller2(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq void ()* [[FUN:%.*]], @direct_callee
+; CHECK-NEXT:    br i1 [[C]], label [[IF_TRUE_DIRECT_TARG:%.*]], label [[IF_FALSE_ORIG_INDIRECT:%.*]]
+; CHECK:       if.false.orig_indirect:
+; CHECK-NEXT:    tail call void [[FUN]]()
+; CHECK-NEXT:    br label [[IF_END_ICP:%.*]]
+; CHECK:       if.true.direct_targ:
+; CHECK-NEXT:    tail call void @direct_callee()
+; CHECK-NEXT:    br label [[IF_END_ICP]]
+; CHECK:       if.end.icp:
+; CHECK-NEXT:    ret void
+;
+  %c = icmp eq void ()* %fun, @direct_callee
+  br i1 %c, label %if.true.direct_targ, label %if.false.orig_indirect
+
+if.false.orig_indirect:
+  tail call void %fun()
+  br label %if.end.icp
+
+if.true.direct_targ:
+  tail call void @direct_callee()
+  br label %if.end.icp
+
+if.end.icp:
+  ret void
+}
+declare void @direct_callee()
+declare void @direct_callee2()
+declare void @direct_callee3()
+
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+
+define void @creating_too_many_phis(i1 %cond, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) {
+; CHECK-LABEL: @creating_too_many_phis(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       bb0:
+; CHECK-NEXT:    [[V0:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = add i32 [[V0]], [[C:%.*]]
+; CHECK-NEXT:    [[V2:%.*]] = add i32 [[D:%.*]], [[E:%.*]]
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[V4:%.*]] = add i32 [[A]], [[B]]
+; CHECK-NEXT:    [[V5:%.*]] = add i32 [[V4]], [[C]]
+; CHECK-NEXT:    [[V6:%.*]] = add i32 [[G:%.*]], [[H:%.*]]
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[V6_SINK:%.*]] = phi i32 [ [[V6]], [[BB1]] ], [ [[V2]], [[BB0]] ]
+; CHECK-NEXT:    [[V5_SINK:%.*]] = phi i32 [ [[V5]], [[BB1]] ], [ [[V1]], [[BB0]] ]
+; CHECK-NEXT:    [[R7:%.*]] = add i32 [[V5_SINK]], [[V6_SINK]]
+; CHECK-NEXT:    call void @use32(i32 [[R7]])
+; CHECK-NEXT:    ret void
+;
+  br i1 %cond, label %bb0, label %bb1
+
+bb0:
+  %v0 = add i32 %a, %b
+  %v1 = add i32 %v0, %c
+  %v2 = add i32 %d, %e
+  %r3 = add i32 %v1, %v2
+  call void @use32(i32 %r3)
+  br label %end
+
+bb1:
+  %v4 = add i32 %a, %b
+  %v5 = add i32 %v4, %c
+  %v6 = add i32 %g, %h
+  %r7 = add i32 %v5, %v6
+  call void @use32(i32 %r7)
+  br label %end
+
+end:
+  ret void
+}
+declare void @use32(i32)
+
+define void @multiple_cond_preds(i1 %c0, i1 %c1, i1 %c2) {
+; CHECK-LABEL: @multiple_cond_preds(
+; CHECK-NEXT:  dispatch0:
+; CHECK-NEXT:    br i1 [[C0:%.*]], label [[DISPATCH1:%.*]], label [[DISPATCH2:%.*]]
+; CHECK:       dispatch1:
+; CHECK-NEXT:    call void @direct_callee2()
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[END_SINK_SPLIT:%.*]], label [[END:%.*]]
+; CHECK:       dispatch2:
+; CHECK-NEXT:    call void @direct_callee3()
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[END_SINK_SPLIT]], label [[END]]
+; CHECK:       end.sink.split:
+; CHECK-NEXT:    call void @direct_callee()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+dispatch0:
+  br i1 %c0, label %dispatch1, label %dispatch2
+
+dispatch1:
+  call void @direct_callee2()
+  br i1 %c1, label %uncond_pred0, label %end
+
+dispatch2:
+  call void @direct_callee3()
+  br i1 %c2, label %uncond_pred1, label %end
+
+uncond_pred0:
+  call void @direct_callee()
+  br label %end
+
+uncond_pred1:
+  call void @direct_callee()
+  br label %end
+
+end:
+  ret void
+}

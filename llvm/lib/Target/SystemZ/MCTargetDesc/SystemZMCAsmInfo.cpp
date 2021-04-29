@@ -24,6 +24,10 @@ SystemZMCAsmInfo::SystemZMCAsmInfo(const Triple &TT) {
   CommentString = AssemblerDialect == AD_HLASM ? "*" : "#";
   RestrictCommentStringToStartOfStatement = (AssemblerDialect == AD_HLASM);
   AllowAdditionalComments = (AssemblerDialect == AD_ATT);
+  AllowAtAtStartOfIdentifier = (AssemblerDialect == AD_HLASM);
+  AllowDollarAtStartOfIdentifier = (AssemblerDialect == AD_HLASM);
+  AllowHashAtStartOfIdentifier = (AssemblerDialect == AD_HLASM);
+
   ZeroDirective = "\t.space\t";
   Data64bitsDirective = "\t.quad\t";
   UsesELFSectionDirectiveForBSS = true;

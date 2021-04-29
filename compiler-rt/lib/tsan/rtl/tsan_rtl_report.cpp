@@ -142,34 +142,6 @@ static ReportStack *SymbolizeStack(StackTrace trace) {
   return stack;
 }
 
-bool ShouldReport(ThreadState *thr, ReportType typ) {
-  // We set thr->suppress_reports in the fork context.
-  // Taking any locking in the fork context can lead to deadlocks.
-  // If any locks are already taken, it's too late to do this check.
-  CheckNoLocks(thr);
-  // For the same reason check we didn't lock thread_registry yet.
-  if (SANITIZER_DEBUG)
-    ThreadRegistryLock l(ctx->thread_registry);
-  if (!flags()->report_bugs || thr->suppress_reports)
-    return false;
-  switch (typ) {
-    case ReportTypeSignalUnsafe:
-      return flags()->report_signal_unsafe;
-    case ReportTypeThreadLeak:
-#if !SANITIZER_GO
-      // It's impossible to join phantom threads
-      // in the child after fork.
-      if (ctx->after_multithreaded_fork)
-        return false;
-#endif
-      return flags()->report_thread_leaks;
-    case ReportTypeMutexDestroyLocked:
-      return flags()->report_destroy_locked;
-    default:
-      return true;
-  }
-}
-
 ScopedReportBase::ScopedReportBase(ReportType typ, uptr tag) {
   ctx->thread_registry->CheckLocked();
   void *mem = internal_alloc(MBlockReport, sizeof(ReportDesc));
@@ -525,10 +497,8 @@ static bool HandleRacyAddress(ThreadState *thr, uptr addr_min, uptr addr_max) {
 }
 
 bool OutputReport(ThreadState *thr, const ScopedReport &srep) {
-  // These should have been checked in ShouldReport.
-  // It's too late to check them here, we have already taken locks.
-  CHECK(flags()->report_bugs);
-  CHECK(!thr->suppress_reports);
+  if (!flags()->report_bugs || thr->suppress_reports)
+    return false;
   atomic_store_relaxed(&ctx->last_symbolize_time_ns, NanoTime());
   const ReportDesc *rep = srep.GetReport();
   CHECK_EQ(thr->current_report, nullptr);
@@ -619,7 +589,7 @@ void ReportRace(ThreadState *thr) {
   // at best it will cause deadlocks on internal mutexes.
   ScopedIgnoreInterceptors ignore;
 
-  if (!ShouldReport(thr, ReportTypeRace))
+  if (!flags()->report_bugs)
     return;
   if (!flags()->report_atomic_races && !RaceBetweenAtomicAndFree(thr))
     return;

@@ -4371,7 +4371,7 @@ let PostEncoderMethod = "NEONThumb2DataIPostEncoder",
                             v8i16, v8i8, int_arm_neon_vmullp, 1>;
   def  VMULLp64  : N3VLIntnp<0b00101, 0b10, 0b1110, 0, 0, NoItinerary,
                           "vmull", "p64", v2i64, v1i64, int_arm_neon_vmullp, 1>,
-                    Requires<[HasV8, HasCrypto]>;
+                    Requires<[HasV8, HasAES]>;
 }
 defm VMULLsls : N3VLSL_HS<0, 0b1010, IIC_VMULi16D, "vmull", "s", ARMvmulls>;
 defm VMULLslu : N3VLSL_HS<1, 0b1010, IIC_VMULi16D, "vmull", "u", ARMvmullu>;
@@ -7210,33 +7210,31 @@ let PostEncoderMethod = "NEONThumb2DataIPostEncoder",
     DecoderNamespace = "v8Crypto", hasSideEffects = 0 in {
   class AES<string op, bit op7, bit op6, SDPatternOperator Int>
     : N2VQIntXnp<0b00, 0b00, 0b011, op6, op7, NoItinerary,
-                 !strconcat("aes", op), "8", v16i8, v16i8, Int>,
-      Requires<[HasV8, HasCrypto]>;
+                 !strconcat("aes", op), "8", v16i8, v16i8, Int>;
   class AES2Op<string op, bit op7, bit op6, SDPatternOperator Int>
     : N2VQIntX2np<0b00, 0b00, 0b011, op6, op7, NoItinerary,
-                 !strconcat("aes", op), "8", v16i8, v16i8, Int>,
-      Requires<[HasV8, HasCrypto]>;
+                 !strconcat("aes", op), "8", v16i8, v16i8, Int>;
   class N2SHA<string op, bits<2> op17_16, bits<3> op10_8, bit op7, bit op6,
               SDPatternOperator Int>
     : N2VQIntXnp<0b10, op17_16, op10_8, op6, op7, NoItinerary,
-                 !strconcat("sha", op), "32", v4i32, v4i32, Int>,
-      Requires<[HasV8, HasCrypto]>;
+                 !strconcat("sha", op), "32", v4i32, v4i32, Int>;
   class N2SHA2Op<string op, bits<2> op17_16, bits<3> op10_8, bit op7, bit op6,
               SDPatternOperator Int>
     : N2VQIntX2np<0b10, op17_16, op10_8, op6, op7, NoItinerary,
-                 !strconcat("sha", op), "32", v4i32, v4i32, Int>,
-      Requires<[HasV8, HasCrypto]>;
+                 !strconcat("sha", op), "32", v4i32, v4i32, Int>;
   class N3SHA3Op<string op, bits<5> op27_23, bits<2> op21_20, SDPatternOperator Int>
     : N3VQInt3np<op27_23, op21_20, 0b1100, 1, 0, N3RegFrm, NoItinerary,
-                !strconcat("sha", op), "32", v4i32, v4i32, Int, 0>,
-      Requires<[HasV8, HasCrypto]>;
+                !strconcat("sha", op), "32", v4i32, v4i32, Int, 0>;
 }
 
+let Predicates = [HasV8, HasAES] in {
 def AESD : AES2Op<"d", 0, 1, int_arm_neon_aesd>;
 def AESE : AES2Op<"e", 0, 0, int_arm_neon_aese>;
 def AESIMC : AES<"imc", 1, 1, int_arm_neon_aesimc>;
 def AESMC : AES<"mc", 1, 0, int_arm_neon_aesmc>;
+}
 
+let Predicates = [HasV8, HasSHA2] in {
 def SHA1H : N2SHA<"1h", 0b01, 0b010, 1, 1, null_frag>;
 def SHA1SU1 : N2SHA2Op<"1su1", 0b10, 0b011, 1, 0, int_arm_neon_sha1su1>;
 def SHA256SU0 : N2SHA2Op<"256su0", 0b10, 0b011, 1, 1, int_arm_neon_sha256su0>;
@@ -7247,6 +7245,7 @@ def SHA1SU0 : N3SHA3Op<"1su0", 0b00100, 0b11, int_arm_neon_sha1su0>;
 def SHA256H : N3SHA3Op<"256h", 0b00110, 0b00, int_arm_neon_sha256h>;
 def SHA256H2 : N3SHA3Op<"256h2", 0b00110, 0b01, int_arm_neon_sha256h2>;
 def SHA256SU1 : N3SHA3Op<"256su1", 0b00110, 0b10, int_arm_neon_sha256su1>;
+}
 
 let Predicates = [HasNEON] in {
 def : Pat<(i32 (int_arm_neon_sha1h i32:$Rn)),

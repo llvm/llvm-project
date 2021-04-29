@@ -646,3 +646,25 @@ def testCapsuleConversions():
     assert m2 is m
 
 run(testCapsuleConversions)
+
+# CHECK-LABEL: TEST: testOperationErase
+def testOperationErase():
+  ctx = Context()
+  ctx.allow_unregistered_dialects = True
+  with Location.unknown(ctx):
+    m = Module.create()
+    with InsertionPoint(m.body):
+      op = Operation.create("custom.op1")
+
+      # CHECK: "custom.op1"
+      print(m)
+
+      op.operation.erase()
+
+      # CHECK-NOT: "custom.op1"
+      print(m)
+
+      # Ensure we can create another operation
+      Operation.create("custom.op2")
+
+run(testOperationErase)

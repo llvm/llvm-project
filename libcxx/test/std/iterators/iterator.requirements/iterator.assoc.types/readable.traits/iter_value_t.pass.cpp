@@ -39,8 +39,8 @@ template <class T, class Expected>
 static_assert(check_iter_value_t<int*, int>());
 static_assert(check_iter_value_t<int[], int>());
 static_assert(check_iter_value_t<int[10], int>());
-static_assert(check_iter_value_t<std::vector<int>::iterator, std::vector<int>::iterator::value_type>());
-static_assert(check_iter_value_t<std::shared_ptr<int>, std::shared_ptr<int>::element_type>());
+static_assert(check_iter_value_t<std::vector<int>::iterator, int>());
+static_assert(check_iter_value_t<std::shared_ptr<int>, int>());
 
 struct both_members {
   using value_type = double;

@@ -245,3 +245,8 @@ double no_crash_reinterpret_double_as_sym_ptr(double a, void * b) {
   return a * a;
 }
 
+void no_crash_reinterpret_char_as_uchar(char ***a, int *b) {
+  *(unsigned char **)a = (unsigned char *)b;
+  if (**a == 0) // no-crash
+    ;
+}

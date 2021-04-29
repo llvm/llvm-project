@@ -434,9 +434,7 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
       DiagnoseEmptyLoopBody(Elts[i], Elts[i + 1]);
   }
 
-  CompoundStmt *CS = CompoundStmt::Create(Context, Elts, L, R);
-  DiagnoseUnusedButSetVariables(CS);
-  return CS;
+  return CompoundStmt::Create(Context, Elts, L, R);
 }
 
 ExprResult

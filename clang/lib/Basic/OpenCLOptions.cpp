@@ -85,9 +85,8 @@ void OpenCLOptions::support(llvm::StringRef Ext, bool V) {
 }
 
 OpenCLOptions::OpenCLOptions() {
-#define OPENCL_GENERIC_EXTENSION(Ext, WithPragma, AvailVer, CoreVer, OptVer)   \
-  OptMap.insert_or_assign(                                                     \
-      #Ext, OpenCLOptionInfo{WithPragma, AvailVer, CoreVer, OptVer});
+#define OPENCL_GENERIC_EXTENSION(Ext, ...)                                     \
+  OptMap.insert_or_assign(#Ext, OpenCLOptionInfo{__VA_ARGS__});
 #include "clang/Basic/OpenCLExtensions.def"
 }
 

@@ -154,30 +154,41 @@ func @tensor_cast_to_memref(%arg0 : tensor<4x6x16x32xi8>) ->
 
 // -----
 
-// CHECK-LABEL: func @subview_of_memcast
-//  CHECK-SAME:   %[[ARG0:.[a-z0-9A-Z_]+]]: memref<4x6x16x32xi8>
-//       CHECK:   %[[S:.+]] = memref.subview %arg0[0, 1, 0] [1, 1, 16] [1, 1, 1] : memref<4x6x16x32xi8> to memref<16x32xi8, #{{.*}}>
-//       CHECK:   %[[M:.+]] = memref.cast %[[S]] : memref<16x32xi8, #{{.*}}> to memref<16x32xi8, #{{.*}}>
-//       CHECK:   return %[[M]] : memref<16x32xi8, #{{.*}}>
-func @subview_of_memcast(%arg : memref<4x6x16x32xi8>) ->
-  memref<16x32xi8, affine_map<(d0, d1)[s0] -> (d0 * 32 + d1 + s0)>>{
-  %0 = memref.cast %arg : memref<4x6x16x32xi8> to memref<?x?x16x32xi8>
-  %1 = memref.subview %0[0, 1, 0] [1, 1, 16] [1, 1, 1] :
-    memref<?x?x16x32xi8> to
-    memref<16x32xi8, affine_map<(d0, d1)[s0] -> (d0 * 32 + d1 + s0)>>
-  return %1 : memref<16x32xi8, affine_map<(d0, d1)[s0] -> (d0 * 32 + d1 + s0)>>
+func @subtensor_canonicalize(%arg0 : tensor<?x?x?xf32>, %arg1 : index,
+    %arg2 : index) -> tensor<?x?x?xf32>
+{
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c4 = constant 4 : index
+  %0 = subtensor %arg0[%c0, %arg1, %c1] [%c4, %c1, %arg2] [%c1, %c1, %c1] : tensor<?x?x?xf32> to tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
 }
+// CHECK-LABEL: func @subtensor_canonicalize
+//  CHECK-SAME:   %[[ARG0:.+]]: tensor<?x?x?xf32>
+//       CHECK:   %[[SUBTENSOR:.+]] = subtensor %[[ARG0]][0, %{{[a-zA-Z0-9_]+}}, 1]
+//  CHECK-SAME:      [4, 1, %{{[a-zA-Z0-9_]+}}] [1, 1, 1]
+//  CHECK-SAME:      : tensor<?x?x?xf32> to tensor<4x1x?xf32>
+//       CHECK:   %[[RESULT:.+]] = tensor.cast %[[SUBTENSOR]]
+//       CHEKC:   return %[[RESULT]]
 
 // -----
 
-// CHECK-LABEL: func @subview_of_static_full_size
-// CHECK-SAME: %[[ARG0:.+]]: memref<4x6x16x32xi8>
-// CHECK-NOT: memref.subview
-// CHECK: return %[[ARG0]] : memref<4x6x16x32xi8>
-func @subview_of_static_full_size(%arg0 : memref<4x6x16x32xi8>) -> memref<4x6x16x32xi8> {
-  %0 = memref.subview %arg0[0, 0, 0, 0] [4, 6, 16, 32] [1, 1, 1, 1] : memref<4x6x16x32xi8> to memref<4x6x16x32xi8>
-  return %0 : memref<4x6x16x32xi8>
+func @rank_reducing_subtensor_canonicalize(%arg0 : tensor<?x?x?xf32>, %arg1 : index,
+    %arg2 : index) -> tensor<?x?xf32>
+{
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c4 = constant 4 : index
+  %0 = subtensor %arg0[%c0, %arg1, %c1] [%c4, 1, %arg2] [%c1, %c1, %c1] : tensor<?x?x?xf32> to tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
 }
+// CHECK-LABEL: func @rank_reducing_subtensor_canonicalize
+//  CHECK-SAME:   %[[ARG0:.+]]: tensor<?x?x?xf32>
+//       CHECK:   %[[SUBTENSOR:.+]] = subtensor %[[ARG0]][0, %{{[a-zA-Z0-9_]+}}, 1]
+//  CHECK-SAME:      [4, 1, %{{[a-zA-Z0-9_]+}}] [1, 1, 1]
+//  CHECK-SAME:      : tensor<?x?x?xf32> to tensor<4x?xf32>
+//       CHECK:   %[[RESULT:.+]] = tensor.cast %[[SUBTENSOR]]
+//       CHEKC:   return %[[RESULT]]
 
 // -----
 
@@ -232,7 +243,89 @@ func @rank_reducing_subtensor_insert_of_cast(%a : tensor<16x32xi8>, %b : tensor<
 
 // -----
 
-func @subtensor_canonicalize(%arg0 : tensor<2x?xi32>, %arg1 : tensor<i32>,
+func @subtensor_insert_canonicalize(%arg0 : tensor<?x?x?xf32>, %arg1 : index,
+    %arg2 : index, %arg3 : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+{
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c4 = constant 4 : index
+  %0 = subtensor_insert %arg0 into %arg3[%c0, %arg1, %c1] [%c4, %c1, %arg2] [%c1, %c1, %c1] : tensor<?x?x?xf32> into tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+// CHECK-LABEL: func @subtensor_insert_canonicalize
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
+//       CHECK:   %[[RESULT:.+]] = subtensor_insert %[[ARG0]]
+//  CHECK-SAME:      [0, %{{.+}}, 1] [4, 1, %{{.+}}] [1, 1, 1]
+//  CHECK-SAME:      : tensor<?x?x?xf32> into tensor<?x?x?xf32>
+//       CHEKC:   return %[[RESULT]]
+
+// -----
+
+func @subtensor_to_subtensor_insert_canonicalize(%arg0 : tensor<?x?x?xf32>, %arg1 : index,
+    %arg2 : index, %arg3 : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+{
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c4 = constant 4 : index
+  %0 = subtensor %arg0[%c0, %arg1, %c1] [%c4, %c1, %arg2] [%c1, %c1, %c1] : tensor<?x?x?xf32> to tensor<?x?x?xf32>
+  %1 = subtensor_insert %0 into %arg3[%c0, %arg1, %c1] [%c4, %c1, %arg2] [%c1, %c1, %c1] : tensor<?x?x?xf32> into tensor<?x?x?xf32>
+  return %1 : tensor<?x?x?xf32>
+}
+// CHECK-LABEL: func @subtensor_to_subtensor_insert_canonicalize
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
+//  CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
+//       CHECK:   %[[SUBTENSOR:.+]] = subtensor %[[ARG0]]
+//  CHECK-SAME:      [0, %{{.+}}, 1] [4, 1, %{{.+}} [1, 1, 1]
+//  CHECK-SAME:      : tensor<?x?x?xf32> to tensor<4x1x?xf32>
+//       CHECK:   %[[RESULT:.+]] = subtensor_insert %[[SUBTENSOR]]
+//  CHECK-SAME:      [0, %{{.+}}, 1] [4, 1, %{{.+}}] [1, 1, 1]
+//  CHECK-SAME:      : tensor<4x1x?xf32> into tensor<?x?x?xf32>
+//       CHEKC:   return %[[RESULT]]
+
+// -----
+
+func @rank_reducing_subtensor_insert_canonicalize(%arg0 : tensor<?x?xf32>, %arg1 : index,
+    %arg2 : index, %arg3 : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+{
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c4 = constant 4 : index
+  %0 = subtensor_insert %arg0 into %arg3[%c0, %arg1, %c1] [%c4, 1, %arg2] [%c1, %c1, %c1] : tensor<?x?xf32> into tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+// CHECK-LABEL: func @rank_reducing_subtensor_insert_canonicalize
+//  CHECK-SAME:   %[[ARG0:.+]]: tensor<?x?xf32>
+//       CHECK:   %[[RESULT:.+]] = subtensor_insert %[[ARG0]]
+//  CHECK-SAME:      [0, %{{.+}}, 1] [4, 1, %{{.+}}] [1, 1, 1]
+//  CHECK-SAME:      : tensor<?x?xf32> into tensor<?x?x?xf32>
+//       CHEKC:   return %[[RESULT]]
+
+// -----
+
+func @rank_reducing_subtensor_to_subtensor_insert_canonicalize(%arg0 : tensor<?x?x?xf32>, %arg1 : index,
+    %arg2 : index, %arg3 : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+{
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c4 = constant 4 : index
+  %0 = subtensor %arg0[%c0, %arg1, %c1] [%c4, 1, %arg2] [%c1, %c1, %c1] : tensor<?x?x?xf32> to tensor<?x?xf32>
+  %1 = subtensor_insert %0 into %arg3[%c0, %arg1, %c1] [%c4, 1, %arg2] [%c1, %c1, %c1] : tensor<?x?xf32> into tensor<?x?x?xf32>
+  return %1 : tensor<?x?x?xf32>
+}
+// CHECK-LABEL: func @rank_reducing_subtensor_to_subtensor_insert_canonicalize
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
+//  CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
+//       CHECK:   %[[SUBTENSOR:.+]] = subtensor %[[ARG0]]
+//  CHECK-SAME:     [0, %{{.+}}, 1] [4, 1, %{{.+}}] [1, 1, 1]
+//  CHECK-SAME:     : tensor<?x?x?xf32> to tensor<4x?xf32>
+//       CHECK:   %[[RESULT:.+]] = subtensor_insert %[[SUBTENSOR]] into %[[ARG3]]
+//  CHECK-SAME:      [0, %{{.+}}, 1] [4, 1, %{{.+}}] [1, 1, 1]
+//  CHECK-SAME:      : tensor<4x?xf32> into tensor<?x?x?xf32>
+//       CHEKC:   return %[[RESULT]]
+
+// -----
+
+func @subtensor_insert_propagate_dest_cast(%arg0 : tensor<2x?xi32>, %arg1 : tensor<i32>,
     %arg2 : index, %arg3 : index) -> tensor<?x?xi32> {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
@@ -247,7 +340,7 @@ func @subtensor_canonicalize(%arg0 : tensor<2x?xi32>, %arg1 : tensor<i32>,
   %3 = subtensor_insert %arg0 into %2[%c0, %arg3] [%c2, %0] [%c1, %c1] : tensor<2x?xi32> into tensor<?x?xi32>
   return %3 : tensor<?x?xi32>
 }
-// CHECK-LABEL: func @subtensor_canonicalize
+// CHECK-LABEL: func @subtensor_insert_propagate_dest_cast
 //       CHECK:   %[[UPDATED:.+]] = subtensor_insert %{{.+}} into %{{.+}}[0, %{{.+}}] [2, %{{.+}}] [1, 1]
 //  CHECK-SAME:     tensor<2x?xi32> into tensor<?x8xi32>
 //       CHECK:   %[[CAST:.+]] = tensor.cast %[[UPDATED]]
