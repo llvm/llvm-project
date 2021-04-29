@@ -511,14 +511,13 @@ UniqueStableNameExpr::UniqueStableNameExpr(SourceLocation OpLoc,
     : Expr(UniqueStableNameExprClass, ResultTy, VK_RValue, OK_Ordinary),
       OpLoc(OpLoc), LParen(LParen), RParen(RParen), Kind(ParamKind::Type) {
   setTypeSourceInfo(TSI);
-  // Fixme: Do we have to do anything to make this work?
   setDependence(computeDependence(this));
 }
 
 UniqueStableNameExpr::UniqueStableNameExpr(EmptyShell Empty, QualType ResultTy,
                                            bool IsExpr)
     : Expr(UniqueStableNameExprClass, ResultTy, VK_RValue, OK_Ordinary) {
-  Kind = IsExpr ? ParamKind::Expr : ParamKind::Expr;
+  Kind = IsExpr ? ParamKind::Expr : ParamKind::Type;
 }
 
 UniqueStableNameExpr::UniqueStableNameExpr(SourceLocation OpLoc,
