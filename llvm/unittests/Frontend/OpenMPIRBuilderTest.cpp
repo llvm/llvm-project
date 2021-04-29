@@ -2233,7 +2233,7 @@ TEST_F(OpenMPIRBuilderTest, CreateSections) {
   EXPECT_EQ(F, OutlinedFn);
   EXPECT_FALSE(verifyModule(*M, &errs()));
   EXPECT_EQ(OutlinedFn->arg_size(), 1U);
-  EXPECT_EQ(OutlinedFn->getBasicBlockList().size(), 11);
+  EXPECT_EQ(OutlinedFn->getBasicBlockList().size(), size_t(11));
 
   BasicBlock *LoopPreheaderBB =
       OutlinedFn->getEntryBlock().getSingleSuccessor();
