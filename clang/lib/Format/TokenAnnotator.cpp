@@ -3409,11 +3409,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return Style.SpaceAfterCStyleCast ||
            Right.isOneOf(TT_BinaryOperator, TT_SelectorName);
 
-  auto ShouldAddSpacesInAngles = [&Style = this->Style,
-                                  &HasExistingWhitespace]() {
-    if (Style.SpacesInAngles == FormatStyle::SIAS_Always)
+  auto ShouldAddSpacesInAngles = [this, &HasExistingWhitespace]() {
+    if (this->Style.SpacesInAngles == FormatStyle::SIAS_Always)
       return true;
-    if (Style.SpacesInAngles == FormatStyle::SIAS_Leave)
+    if (this->Style.SpacesInAngles == FormatStyle::SIAS_Leave)
       return HasExistingWhitespace();
     return false;
   };
