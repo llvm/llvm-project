@@ -1264,7 +1264,7 @@ void SIRegisterInfo::buildSpillLoadStore(
   }
 
   if (UninitStackPtrOffset) {
-    BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), SOffset)
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), SOffset)
       .addImm(MF->getFrameInfo().getStackSize() * ST.getWavefrontSize());
   } else if (ScratchOffsetRegDelta != 0) {
     // Subtract the offset we added to the ScratchOffset register.
