@@ -528,6 +528,13 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
     return CallInst::Create(F, {X, IC.Builder.getFalse()});
   }
 
+  // Zext doesn't change the number of set bits, so narrow:
+  // ctpop (zext X) --> zext (ctpop X)
+  if (match(Op0, m_OneUse(m_ZExt(m_Value(X))))) {
+    Value *NarrowPop = IC.Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, X);
+    return CastInst::Create(Instruction::ZExt, NarrowPop, Ty);
+  }
+
   KnownBits Known(BitWidth);
   IC.computeKnownBits(Op0, Known, 0, &II);
 
