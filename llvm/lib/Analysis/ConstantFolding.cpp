@@ -1712,7 +1712,11 @@ Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
   if (isa<ConstantAggregateZero>(Op))
     return ConstantInt::get(VT->getElementType(), 0);
 
-  // TODO: Handle undef and poison.
+  // This is the same as the underlying binops - poison propagates.
+  if (isa<PoisonValue>(Op))
+    return PoisonValue::get(VT->getElementType());
+
+  // TODO: Handle undef.
   if (!isa<ConstantVector>(Op) && !isa<ConstantDataVector>(Op))
     return nullptr;
 
