@@ -319,14 +319,18 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::STRICT_FSUB, MVT::f32, Legal);
   setOperationAction(ISD::STRICT_FMUL, MVT::f32, Legal);
   setOperationAction(ISD::STRICT_FDIV, MVT::f32, Legal);
-  setOperationAction(ISD::STRICT_FMA, MVT::f32, Legal);
   setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
 
   setOperationAction(ISD::STRICT_FADD, MVT::f64, Legal);
   setOperationAction(ISD::STRICT_FSUB, MVT::f64, Legal);
   setOperationAction(ISD::STRICT_FMUL, MVT::f64, Legal);
   setOperationAction(ISD::STRICT_FDIV, MVT::f64, Legal);
-  setOperationAction(ISD::STRICT_FMA, MVT::f64, Legal);
+
+  if (!Subtarget.hasSPE()) {
+    setOperationAction(ISD::STRICT_FMA, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_FMA, MVT::f64, Legal);
+  }
+
   if (Subtarget.hasVSX()) {
     setOperationAction(ISD::STRICT_FRINT, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FRINT, MVT::f64, Legal);
@@ -472,6 +476,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FP_TO_SINT, MVT::i32, Legal);
     setOperationAction(ISD::SINT_TO_FP, MVT::i32, Legal);
     setOperationAction(ISD::UINT_TO_FP, MVT::i32, Legal);
+
+    // SPE supports signaling compare of f32/f64.
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Legal);
   } else {
     // PowerPC turns FP_TO_SINT into FCTIWZ and some load/stores.
     setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i32, Custom);
