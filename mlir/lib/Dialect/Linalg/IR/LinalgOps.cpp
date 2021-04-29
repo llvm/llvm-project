@@ -2384,9 +2384,6 @@ struct FoldTensorCastOp;
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
 
-#define GET_OP_CLASSES
-#include "mlir/Dialect/Linalg/IR/LinalgSparseOps.cpp.inc"
-
 /// Return the dims that are `iteratorTypeName` loops in the LinalgOp `op`.
 /// Assumes `op` is a LinalgOp.
 void mlir::linalg::getDimsOfType(Operation *op, StringRef iteratorTypeName,

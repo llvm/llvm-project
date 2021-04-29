@@ -1,49 +1,27 @@
-//===- LinalgSparseOps.td - Linalg dialect sparse ops ------*- tablegen -*-===//
+//===- SparseTensorOps.td - Sparse tensor dialect ops ------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// The following operations bootstrap working with sparse tensors solely
-// within the Linalg dialect. They provide temporary bridges between a
-// future SparseTensorType (now an opaque pointer), the actual TensorType,
-// and MemRef arrays underlying an actual sparse storage scheme in memory.
-//
-// Lacking a proper sparse tensor type, the 'sparse_tensor' operation
-// provides a bridge between an opaque pointer and a regular tensor type
-// just to simplify feeding the value into a Linalg op. The operation
-// simply disappears during lowering.
-//
-// The other operations form the bridge between the opaque pointer and
-// the actual storage of pointers, indices, and values. These operations
-// resemble 'buffer_cast' in the sense that they map tensors to
-// their bufferized memrefs, but they lower into actual calls since
-// sparse storage does not bufferize into a single memrefs, as dense
-// tensors do, but into a hierarchical storage scheme where pointers
-// access memrefs with indices and eventually into values.
-//
-// TODO: introduce SparseTensorType as first class citizen in MLIR
-//
-//===----------------------------------------------------------------------===//
 
-#ifndef LINALG_SPARSE_OPS
-#define LINALG_SPARSE_OPS
+#ifndef SPARSETENSOR_OPS
+#define SPARSETENSOR_OPS
 
-include "mlir/Dialect/Linalg/IR/LinalgBase.td"
+include "mlir/Dialect/SparseTensor/IR/SparseTensorBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // Base class.
-class Linalg_SparseOp<string mnemonic, list<OpTrait> traits = []>
-  : Op<Linalg_Dialect, mnemonic, traits> {
+class SparseTensor_Op<string mnemonic, list<OpTrait> traits = []>
+  : Op<SparseTensor_Dialect, mnemonic, traits> {
   let printer = [{ return ::print(p, *this); }];
   let verifier = ?;
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
-def Linalg_SparseTensorFromPointerOp :
-    Linalg_SparseOp<"sparse_tensor">,
+// TODO: remove me
+def SparseTensor_FromPointerOp : SparseTensor_Op<"fromPtr">,
     Arguments<(ins AnyType:$ptr)>,
     Results<(outs AnyTensor:$result)> {
   let summary = "Views an opaque sparse tensor pointer as a tensor";
@@ -60,14 +38,13 @@ def Linalg_SparseTensorFromPointerOp :
     ```mlir
      !SparseTensor = type !llvm.ptr<i8>
 
-     %0 = linalg.sparse_tensor %arg0 : !SparseTensor to tensor<64x64xf64>
+     %0 = sparse_tensor.fromPtr %arg0 : !SparseTensor to tensor<64x64xf64>
     ```
   }];
   let assemblyFormat = "$ptr attr-dict `:` type($ptr) `to` type($result)";
 }
 
-def Linalg_SparseTensorToPointersMemRefOp :
-    Linalg_SparseOp<"sparse_pointers", [NoSideEffect]>,
+def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
     Arguments<(ins AnyTensor:$tensor, Index:$dim)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extract pointers array at given dimension from a tensor";
@@ -83,15 +60,14 @@ def Linalg_SparseTensorToPointersMemRefOp :
      Example:
 
     ```mlir
-    %1 = linalg.sparse_pointers %0, %c1 : tensor<64x64xf64> to memref<?xindex>
+    %1 = sparse_tensor.pointers %0, %c1 : tensor<64x64xf64> to memref<?xindex>
     ```
   }];
   let assemblyFormat = "$tensor `,` $dim attr-dict `:` type($tensor)"
       " `to` type($result)";
 }
 
-def Linalg_SparseTensorToIndicesMemRefOp :
-    Linalg_SparseOp<"sparse_indices", [NoSideEffect]>,
+def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [NoSideEffect]>,
     Arguments<(ins AnyTensor:$tensor, Index:$dim)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extract indices array at given dimension from a tensor";
@@ -107,15 +83,14 @@ def Linalg_SparseTensorToIndicesMemRefOp :
      Example:
 
     ```mlir
-    %1 = linalg.sparse_indices %0, %c1 : tensor<64x64xf64> to memref<?xindex>
+    %1 = sparse_tensor.indices %0, %c1 : tensor<64x64xf64> to memref<?xindex>
     ```
   }];
   let assemblyFormat = "$tensor `,` $dim attr-dict `:` type($tensor)"
       " `to` type($result)";
 }
 
-def Linalg_SparseTensorToValuesMemRefOp :
-    Linalg_SparseOp<"sparse_values", [NoSideEffect]>,
+def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
     Arguments<(ins AnyTensor:$tensor)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extract numerical values array from a tensor";
@@ -131,10 +106,10 @@ def Linalg_SparseTensorToValuesMemRefOp :
      Example:
 
     ```mlir
-    %1 = linalg.sparse_values %0 : tensor<64x64xf64> to memref<?xf64>
+    %1 = sparse_tensor.values %0 : tensor<64x64xf64> to memref<?xf64>
     ```
   }];
   let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
 }
 
-#endif // LINALG_SPARSE_OPS
+#endif // SPARSETENSOR_OPS
