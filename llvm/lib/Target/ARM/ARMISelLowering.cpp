@@ -12766,7 +12766,7 @@ static SDValue PerformSubCSINCCombine(SDNode *N,
   if (N->getValueType(0) != MVT::i32 || !isNullConstant(N->getOperand(0)))
     return SDValue();
   SDValue CSINC = N->getOperand(1);
-  if (CSINC.getOpcode() != ARMISD::CSINC)
+  if (CSINC.getOpcode() != ARMISD::CSINC || !CSINC.hasOneUse())
     return SDValue();
 
   ConstantSDNode *X = dyn_cast<ConstantSDNode>(CSINC.getOperand(0));
