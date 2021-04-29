@@ -55,6 +55,7 @@ public:
   IntegerSet parseIntegerSetConstraints(unsigned numDims, unsigned numSymbols);
   ParseResult parseAffineMapOfSSAIds(AffineMap &map,
                                      OpAsmParser::Delimiter delimiter);
+  ParseResult parseAffineExprOfSSAIds(AffineExpr &expr);
   void getDimsAndSymbolSSAIds(SmallVectorImpl<StringRef> &dimAndSymbolSSAIds,
                               unsigned &numDims);
 
@@ -579,6 +580,12 @@ AffineParser::parseAffineMapOfSSAIds(AffineMap &map,
   return success();
 }
 
+/// Parse an AffineExpr where the dim and symbol identifiers are SSA ids.
+ParseResult AffineParser::parseAffineExprOfSSAIds(AffineExpr &expr) {
+  expr = parseAffineExpr();
+  return success(expr != nullptr);
+}
+
 /// Parse the range and sizes affine map definition inline.
 ///
 ///  affine-map ::= dim-and-symbol-id-lists `->` multi-dim-affine-expr
@@ -723,4 +730,13 @@ Parser::parseAffineMapOfSSAIds(AffineMap &map,
                                OpAsmParser::Delimiter delimiter) {
   return AffineParser(state, /*allowParsingSSAIds=*/true, parseElement)
       .parseAffineMapOfSSAIds(map, delimiter);
+}
+
+/// Parse an AffineExpr of SSA ids. The callback `parseElement` is used to parse
+/// SSA value uses encountered while parsing.
+ParseResult
+Parser::parseAffineExprOfSSAIds(AffineExpr &expr,
+                                function_ref<ParseResult(bool)> parseElement) {
+  return AffineParser(state, /*allowParsingSSAIds=*/true, parseElement)
+      .parseAffineExprOfSSAIds(expr);
 }

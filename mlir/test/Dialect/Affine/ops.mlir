@@ -169,6 +169,21 @@ func @parallel(%A : memref<100x100xf32>, %N : index) {
 
 // -----
 
+// CHECK-LABEL: @parallel_min_max
+// CHECK: %[[A:.*]]: index, %[[B:.*]]: index, %[[C:.*]]: index, %[[D:.*]]: index
+func @parallel_min_max(%a: index, %b: index, %c: index, %d: index) {
+  // CHECK: affine.parallel (%{{.*}}, %{{.*}}, %{{.*}}) =
+  // CHECK:                 (max(%[[A]], %[[B]])
+  // CHECK:              to (%[[C]], min(%[[C]], %[[D]]), %[[B]])
+  affine.parallel (%i, %j, %k) = (max(%a, %b), %b, max(%a, %c))
+                              to (%c, min(%c, %d), %b) {
+    affine.yield
+  }
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @affine_if
 func @affine_if() -> f32 {
   // CHECK: %[[ZERO:.*]] = constant {{.*}} : f32
