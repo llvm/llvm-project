@@ -118,6 +118,10 @@ protected:
   /// the current PC.  Defaults to false.
   bool DollarIsPC = false;
 
+  /// Allow '.' token, when not referencing an identifier or constant, to refer
+  /// to the current PC. Defaults to true.
+  bool DotIsPC = true;
+
   /// This string, if specified, is used to separate instructions from each
   /// other when on the same line.  Defaults to ';'
   const char *SeparatorString;
@@ -593,6 +597,7 @@ public:
 
   unsigned getMinInstAlignment() const { return MinInstAlignment; }
   bool getDollarIsPC() const { return DollarIsPC; }
+  bool getDotIsPC() const { return DotIsPC; }
   const char *getSeparatorString() const { return SeparatorString; }
 
   /// This indicates the column (zero-based) at which asm comments should be
