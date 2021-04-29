@@ -5,8 +5,6 @@
 
 ; TODO-GFX11 opsel + 1->3, 2->3 pending 16 bit reg support
 ; TODO-GFX11 opsel +  dpp pending 16 bit reg support
-; TODO-GFX11 VOPC 32bit dpp
-; TODO-GFX11 VOPC-> VOP3 DPP
 
 ; DPP8
 

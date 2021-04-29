@@ -1803,28 +1803,28 @@ class getInsDPP8 <RegisterOperand OldRC, RegisterClass Src0RC, RegisterClass Src
                  (ins dpp8:$dpp8, FI:$fi));
 }
 
-class getInsVOP3DPPBase<dag VOP3Base, RegisterOperand DstRC, int NumSrcArgs> {
-  dag dst = ( ins DstRC:$old );
+class getInsVOP3DPPBase<dag VOP3Base, RegisterOperand OldRC, int NumSrcArgs> {
+  dag old = ( ins OldRC:$old );
   dag base = VOP3Base;
   dag ret =  !con(
-                !if(!ne(NumSrcArgs, 0), dst, (ins)),
+                !if(!ne(NumSrcArgs, 0), old, (ins)),
                 base
               );
 }
 
-class getInsVOP3DPP<dag VOP3Base, RegisterOperand DstRC, int NumSrcArgs> {
-  dag ret = !con(getInsVOP3DPPBase<VOP3Base,DstRC,NumSrcArgs>.ret,
+class getInsVOP3DPP<dag VOP3Base, RegisterOperand OldRC, int NumSrcArgs> {
+  dag ret = !con(getInsVOP3DPPBase<VOP3Base,OldRC,NumSrcArgs>.ret,
                  (ins dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                      bank_mask:$bank_mask, bound_ctrl:$bound_ctrl));
 }
 
-class getInsVOP3DPP16<dag VOP3Base, RegisterOperand DstRC, int NumSrcArgs> {
-  dag ret = !con(getInsVOP3DPP<VOP3Base,DstRC,NumSrcArgs>.ret,
+class getInsVOP3DPP16<dag VOP3Base, RegisterOperand OldRC, int NumSrcArgs> {
+  dag ret = !con(getInsVOP3DPP<VOP3Base,OldRC,NumSrcArgs>.ret,
                  (ins FI:$fi));
 }
 
-class getInsVOP3DPP8<dag VOP3Base, RegisterOperand DstRC, int NumSrcArgs> {
-  dag ret = !con(getInsVOP3DPPBase<VOP3Base,DstRC,NumSrcArgs>.ret,
+class getInsVOP3DPP8<dag VOP3Base, RegisterOperand OldRC, int NumSrcArgs> {
+  dag ret = !con(getInsVOP3DPPBase<VOP3Base,OldRC,NumSrcArgs>.ret,
                  (ins dpp8:$dpp8, FI:$fi));
 }
 
