@@ -71,6 +71,13 @@ static OmpDirectiveSet simdSet{Directive::OMPD_distribute_parallel_do_simd,
     Directive::OMPD_taskloop_simd,
     Directive::OMPD_teams_distribute_parallel_do_simd,
     Directive::OMPD_teams_distribute_simd};
+static OmpDirectiveSet teamSet{Directive::OMPD_teams,
+    Directive::OMPD_teams_distribute,
+    Directive::OMPD_teams_distribute_parallel_do,
+    Directive::OMPD_teams_distribute_parallel_do_simd,
+    Directive::OMPD_teams_distribute_parallel_for,
+    Directive::OMPD_teams_distribute_parallel_for_simd,
+    Directive::OMPD_teams_distribute_simd};
 static OmpDirectiveSet taskGeneratingSet{
     OmpDirectiveSet{Directive::OMPD_task} | taskloopSet};
 static OmpDirectiveSet nestedOrderedErrSet{Directive::OMPD_critical,
@@ -167,6 +174,9 @@ private:
   bool HasInvalidWorksharingNesting(
       const parser::CharBlock &, const OmpDirectiveSet &);
   bool IsCloselyNestedRegion(const OmpDirectiveSet &set);
+  void HasInvalidTeamsNesting(
+      const llvm::omp::Directive &dir, const parser::CharBlock &source);
+  void HasInvalidDistributeNesting(const parser::OpenMPLoopConstruct &x);
   // specific clause related
   bool ScheduleModifierHasType(const parser::OmpScheduleClause &,
       const parser::OmpScheduleModifierType::ModType &);
