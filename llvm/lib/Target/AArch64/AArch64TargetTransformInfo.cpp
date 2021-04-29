@@ -281,6 +281,91 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
+/// The function will remove redundant reinterprets casting in the presence
+/// of the control flow
+static Optional<Instruction *> processPhiNode(InstCombiner &IC,
+                                              IntrinsicInst &II) {
+  SmallVector<Instruction *, 32> Worklist;
+  auto RequiredType = II.getType();
+
+  auto *PN = dyn_cast<PHINode>(II.getArgOperand(0));
+  assert(PN && "Expected Phi Node!");
+
+  // Don't create a new Phi unless we can remove the old one.
+  if (!PN->hasOneUse())
+    return None;
+
+  for (Value *IncValPhi : PN->incoming_values()) {
+    auto *Reinterpret = dyn_cast<IntrinsicInst>(IncValPhi);
+    if (!Reinterpret ||
+        Reinterpret->getIntrinsicID() !=
+            Intrinsic::aarch64_sve_convert_to_svbool ||
+        RequiredType != Reinterpret->getArgOperand(0)->getType())
+      return None;
+  }
+
+  // Create the new Phi
+  LLVMContext &Ctx = PN->getContext();
+  IRBuilder<> Builder(Ctx);
+  Builder.SetInsertPoint(PN);
+  PHINode *NPN = Builder.CreatePHI(RequiredType, PN->getNumIncomingValues());
+  Worklist.push_back(PN);
+
+  for (unsigned I = 0; I < PN->getNumIncomingValues(); I++) {
+    auto *Reinterpret = cast<Instruction>(PN->getIncomingValue(I));
+    NPN->addIncoming(Reinterpret->getOperand(0), PN->getIncomingBlock(I));
+    Worklist.push_back(Reinterpret);
+  }
+
+  // Cleanup Phi Node and reinterprets
+  return IC.replaceInstUsesWith(II, NPN);
+}
+
+static Optional<Instruction *> instCombineConvertFromSVBool(InstCombiner &IC,
+                                                            IntrinsicInst &II) {
+  // If the reinterpret instruction operand is a PHI Node
+  if (isa<PHINode>(II.getArgOperand(0)))
+    return processPhiNode(IC, II);
+
+  SmallVector<Instruction *, 32> CandidatesForRemoval;
+  Value *Cursor = II.getOperand(0), *EarliestReplacement = nullptr;
+
+  const auto *IVTy = cast<VectorType>(II.getType());
+
+  // Walk the chain of conversions.
+  while (Cursor) {
+    // If the type of the cursor has fewer lanes than the final result, zeroing
+    // must take place, which breaks the equivalence chain.
+    const auto *CursorVTy = cast<VectorType>(Cursor->getType());
+    if (CursorVTy->getElementCount().getKnownMinValue() <
+        IVTy->getElementCount().getKnownMinValue())
+      break;
+
+    // If the cursor has the same type as I, it is a viable replacement.
+    if (Cursor->getType() == IVTy)
+      EarliestReplacement = Cursor;
+
+    auto *IntrinsicCursor = dyn_cast<IntrinsicInst>(Cursor);
+
+    // If this is not an SVE conversion intrinsic, this is the end of the chain.
+    if (!IntrinsicCursor || !(IntrinsicCursor->getIntrinsicID() ==
+                                  Intrinsic::aarch64_sve_convert_to_svbool ||
+                              IntrinsicCursor->getIntrinsicID() ==
+                                  Intrinsic::aarch64_sve_convert_from_svbool))
+      break;
+
+    CandidatesForRemoval.insert(CandidatesForRemoval.begin(), IntrinsicCursor);
+    Cursor = IntrinsicCursor->getOperand(0);
+  }
+
+  // If no viable replacement in the conversion chain was found, there is
+  // nothing to do.
+  if (!EarliestReplacement)
+    return None;
+
+  return IC.replaceInstUsesWith(II, EarliestReplacement);
+}
+
 static Optional<Instruction *> instCombineSVELast(InstCombiner &IC,
                                                   IntrinsicInst &II) {
   Value *Pg = II.getArgOperand(0);
@@ -368,6 +453,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   switch (IID) {
   default:
     break;
+  case Intrinsic::aarch64_sve_convert_from_svbool:
+    return instCombineConvertFromSVBool(IC, II);
   case Intrinsic::aarch64_sve_lasta:
   case Intrinsic::aarch64_sve_lastb:
     return instCombineSVELast(IC, II);
