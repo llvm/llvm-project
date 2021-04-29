@@ -273,15 +273,15 @@ results and print informations about them:
 ```
 
 The illustrating code for this pass is available
-[here in the repo](https://github.com/llvm/llvm-project/blob/master/mlir/test/lib/IR/TestPrintDefUse.cpp)
+[here in the repo](https://github.com/llvm/llvm-project/blob/main/mlir/test/lib/IR/TestPrintDefUse.cpp)
 and can be exercised with `mlir-opt -test-print-defuse`.
 
 The chaining of `Value`s and their uses can be viewed as following:
 
-![Index Map Example](/includes/img/DefUseChains.svg)
+![Index Map Example](mlir/docs/includes/img/DefUseChains.svg)
 
 The uses of a `Value` (`OpOperand` or `BlockOperand`) are also chained in a
 doubly linked-list, which is particularly useful when replacing all uses of a
 `Value` with a new one ("RAUW"):
 
-![Index Map Example](/includes/img/Use-list.svg)
+![Index Map Example](/mlir/docs/includes/img/Use-list.svg)
