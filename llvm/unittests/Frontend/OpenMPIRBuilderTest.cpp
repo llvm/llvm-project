@@ -2165,4 +2165,126 @@ TEST_F(OpenMPIRBuilderTest, SingleDirective) {
   EXPECT_EQ(SingleEndCI->getArgOperand(1), SingleEntryCI->getArgOperand(1));
 }
 
+TEST_F(OpenMPIRBuilderTest, CreateSections) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  using BodyGenCallbackTy = llvm::OpenMPIRBuilder::StorableBodyGenCallbackTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  llvm::SmallVector<BodyGenCallbackTy, 4> SectionCBVector;
+  llvm::SmallVector<BasicBlock *, 4> CaseBBs;
+
+  BasicBlock *SwitchBB = nullptr;
+  BasicBlock *ForExitBB = nullptr;
+  BasicBlock *ForIncBB = nullptr;
+  AllocaInst *PrivAI = nullptr;
+  SwitchInst *Switch = nullptr;
+
+  unsigned NumBodiesGenerated = 0;
+  unsigned NumFiniCBCalls = 0;
+  PrivAI = Builder.CreateAlloca(F->arg_begin()->getType());
+
+  auto FiniCB = [&](InsertPointTy IP) {
+    ++NumFiniCBCalls;
+    BasicBlock *IPBB = IP.getBlock();
+    EXPECT_NE(IPBB->end(), IP.getPoint());
+  };
+
+  auto SectionCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                       BasicBlock &FiniBB) {
+    ++NumBodiesGenerated;
+    CaseBBs.push_back(CodeGenIP.getBlock());
+    SwitchBB = CodeGenIP.getBlock()->getSinglePredecessor();
+    Builder.restoreIP(CodeGenIP);
+    Builder.CreateStore(F->arg_begin(), PrivAI);
+    Value *PrivLoad =
+        Builder.CreateLoad(F->arg_begin()->getType(), PrivAI, "local.alloca");
+    Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
+    Builder.CreateBr(&FiniBB);
+    ForIncBB =
+        CodeGenIP.getBlock()->getSinglePredecessor()->getSingleSuccessor();
+  };
+  auto PrivCB = [](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                   llvm::Value &, llvm::Value &Val, llvm::Value *&ReplVal) {
+    // TODO: Privatization not implemented yet
+    return CodeGenIP;
+  };
+
+  SectionCBVector.push_back(SectionCB);
+  SectionCBVector.push_back(SectionCB);
+
+  IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
+                                    F->getEntryBlock().getFirstInsertionPt());
+  Builder.restoreIP(OMPBuilder.createSections(Loc, AllocaIP, SectionCBVector,
+                                              PrivCB, FiniCB, false, false));
+  Builder.CreateRetVoid(); // Required at the end of the function
+
+  // Switch BB's predecessor is loop condition BB, whose successor at index 1 is
+  // loop's exit BB
+  ForExitBB =
+      SwitchBB->getSinglePredecessor()->getTerminator()->getSuccessor(1);
+  EXPECT_NE(ForExitBB, nullptr);
+
+  EXPECT_NE(PrivAI, nullptr);
+  Function *OutlinedFn = PrivAI->getFunction();
+  EXPECT_EQ(F, OutlinedFn);
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+  EXPECT_EQ(OutlinedFn->arg_size(), 1U);
+  EXPECT_EQ(OutlinedFn->getBasicBlockList().size(), 11);
+
+  BasicBlock *LoopPreheaderBB =
+      OutlinedFn->getEntryBlock().getSingleSuccessor();
+  // loop variables are 5 - lower bound, upper bound, stride, islastiter, and
+  // iterator/counter
+  bool FoundForInit = false;
+  for (Instruction &Inst : *LoopPreheaderBB) {
+    if (isa<CallInst>(Inst)) {
+      if (cast<CallInst>(&Inst)->getCalledFunction()->getName() ==
+          "__kmpc_for_static_init_4u") {
+        FoundForInit = true;
+      }
+    }
+  }
+  EXPECT_EQ(FoundForInit, true);
+
+  bool FoundForExit = false;
+  bool FoundBarrier = false;
+  for (Instruction &Inst : *ForExitBB) {
+    if (isa<CallInst>(Inst)) {
+      if (cast<CallInst>(&Inst)->getCalledFunction()->getName() ==
+          "__kmpc_for_static_fini") {
+        FoundForExit = true;
+      }
+      if (cast<CallInst>(&Inst)->getCalledFunction()->getName() ==
+          "__kmpc_barrier") {
+        FoundBarrier = true;
+      }
+      if (FoundForExit && FoundBarrier)
+        break;
+    }
+  }
+  EXPECT_EQ(FoundForExit, true);
+  EXPECT_EQ(FoundBarrier, true);
+
+  EXPECT_NE(SwitchBB, nullptr);
+  EXPECT_NE(SwitchBB->getTerminator(), nullptr);
+  EXPECT_EQ(isa<SwitchInst>(SwitchBB->getTerminator()), true);
+  Switch = cast<SwitchInst>(SwitchBB->getTerminator());
+  EXPECT_EQ(Switch->getNumCases(), 2U);
+  EXPECT_NE(ForIncBB, nullptr);
+  EXPECT_EQ(Switch->getSuccessor(0), ForIncBB);
+
+  EXPECT_EQ(CaseBBs.size(), 2U);
+  for (auto *&CaseBB : CaseBBs) {
+    EXPECT_EQ(CaseBB->getParent(), OutlinedFn);
+    EXPECT_EQ(CaseBB->getSingleSuccessor(), ForExitBB);
+  }
+
+  ASSERT_EQ(NumBodiesGenerated, 2U);
+  ASSERT_EQ(NumFiniCBCalls, 1U);
+}
+
 } // namespace
