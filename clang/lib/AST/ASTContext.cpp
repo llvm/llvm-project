@@ -11639,16 +11639,29 @@ StringRef ASTContext::getCUIDHash() const {
   return CUIDHash;
 }
 
+// Get the closest named parent, so we can order the sycl naming decls somewhere
+// that mangling is meaningful.
+static const DeclContext *GetNamedParent(const TagDecl *TD) {
+  const DeclContext *DC = TD->getDeclContext();
+
+  while (!isa<NamedDecl, TranslationUnitDecl>(DC))
+    DC = DC->getParent();
+  return DC;
+}
+
 void ASTContext::AddSYCLKernelNamingDecl(const TagDecl *TD) {
   TD = TD->getCanonicalDecl();
-  const DeclContext *DC = TD->getDeclContext();
+  const DeclContext *DC = GetNamedParent(TD);
+
+  assert(TD->getLocation().isValid() &&
+         "Invalid location on kernel naming decl");
 
   (void)SYCLKernelNamingTypes[DC].insert(TD);
 }
 
 bool ASTContext::IsSYCLKernelNamingDecl(const TagDecl *TD) const {
   TD = TD->getCanonicalDecl();
-  const DeclContext *DC = TD->getDeclContext();
+  const DeclContext *DC = GetNamedParent(TD);
 
   auto Itr = SYCLKernelNamingTypes.find(DC);
 
@@ -11662,11 +11675,18 @@ unsigned ASTContext::GetSYCLKernelNamingIndex(const TagDecl *TD) const {
   assert(IsSYCLKernelNamingDecl(TD) &&
          "Lambda not involved in mangling asked for a naming index?");
 
-  // TODO: ERICH: Come up with some way to sort the collection and come up with
-  // an 'order' for this number.  For now, just return 5 so we can look at it in
-  // the demangler. It seems that a number is all we can do in the lambda
-  // mangling, but if someone else has a better mangling-model that always
-  // demangles, let me know.  We might think about counting these down from
-  // unsigned-max just to differentiate.
-  return 5;
+  TD = TD->getCanonicalDecl();
+  const DeclContext *DC = GetNamedParent(TD);
+
+  auto Itr = SYCLKernelNamingTypes.find(DC);
+  assert (Itr != SYCLKernelNamingTypes.end() && "Not a valid DeclContext?");
+
+  const llvm::SmallPtrSet<const TagDecl*, 4> &Set = Itr->getSecond();
+
+  llvm::SmallVector<const TagDecl *> TagDecls{Set.begin(), Set.end()};
+  llvm::sort(TagDecls, [](const TagDecl *LHS, const TagDecl *RHS) {
+             return LHS->getLocation() < RHS->getLocation();
+             });
+
+  return llvm::find(TagDecls, TD) - TagDecls.begin();
 }

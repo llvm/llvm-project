@@ -571,14 +571,14 @@ std::string UniqueStableNameExpr::ComputeName(ASTContext &Context) {
   auto MangleCallback = [](ASTContext &Ctx, const TagDecl *TD,
                            raw_ostream &OS) {
     assert(Ctx.IsSYCLKernelNamingDecl(TD) && "Not a sycl kernel?");
-
-    // TODO: Can we put something here to make it clear this is a SYCL
-    // lambda? It seems the number in this location is about all I can
-    // find for us.
-    //
-    // See: _ZTSZ3foovEUlvE5_
-    // Demangles to: typeinfo name for foo()::'lambda5'()
-    OS << Ctx.GetSYCLKernelNamingIndex(TD);
+    // This replaces the 'lambda number' in the mangling with a unique number
+    // based on its order in the declaration.  To provide some level of visual
+    // notability (actual uniqueness from normal lambdas isn't necessary, as
+    // these are used differently), we add 10,000 to the number.
+    // For example:
+    // _ZTSZ3foovEUlvE10005_
+    // Demangles to: typeinfo name for foo()::'lambda10005'()
+    OS << (10'000 + Ctx.GetSYCLKernelNamingIndex(TD));
   };
   std::unique_ptr<MangleContext> Ctx{ItaniumMangleContext::create(
       Context, Context.getDiagnostics(), ShouldMangleCallback, MangleCallback)};

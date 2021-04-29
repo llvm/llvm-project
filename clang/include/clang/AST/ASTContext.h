@@ -3161,9 +3161,6 @@ private:
   /// `pragma omp [begin] declare variant` directive.
   SmallVector<std::unique_ptr<OMPTraitInfo>, 4> OMPTraitInfoVector;
 
-  // TODO: ERICH: This is what John McCall suggested as a structure. We need to
-  // figure out whether this is sufficient/right, since we have to figure out
-  // how to determine the required ordering here.
   /// A list of the (right now just lambda decls) tag declarations required to
   /// name all the SYCL kernels in the translation unit, so that we can get the
   /// correct kernel name, as well as implement __builtin_unique_stable_name.
