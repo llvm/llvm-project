@@ -70,6 +70,22 @@ class TensorDefConfig(YAMLObject):
   def __repr__(self):
     return f"Def({self.tensor_def}, shape_map={self.shape_map}, indexing_map={self.indexing_map})"
 
+class CaptureDefConfig(YAMLObject):
+  """Wrapper around a CaptureDef."""
+  yaml_tag = "LinalgCaptureDef"
+
+  def __init__(self, capture_def: CaptureDef):
+    self.capture_def = capture_def
+
+  def to_yaml_custom_dict(self):
+    return dict(
+        name=self.capture_def.capture_name,
+        type_var=self.capture_def.type_var.name,
+    )
+
+  def __repr__(self):
+    return f"Def({self.capture_def})"
+
 
 class LinalgIndexingMapsConfig(YAMLObject):
   """Abstracts the style of indexing maps that the op exports.
@@ -109,10 +125,14 @@ class LinalgStructuredOpConfig(YAMLObject):
     self.affine_state = AffineBuildState()
     self.writes = list()  # type: List[Tuple[TensorUse, TensorExpression]]
     self.tensor_args = dict()  # type: Dict[TensorDef, TensorDefConfig]
+    self.capture_args = dict()  # type: Dict[CaptureDef, CaptureDefConfig]
     self.uses = dict()  # type: Dict[TensorUse, TensorUseConfig]
 
-    # Compute the ordered set of writes.
+    # Compute the ordered set of writes and collect the tensor, capture, and
+    # index uses.
     collected_uses = set()
+    collected_captures = set()
+    collected_indices = set()
     for write_use, read_use in zip(comprehension.definitions,
                                    comprehension.values):
       self.writes.append((write_use, read_use))
@@ -120,10 +140,14 @@ class LinalgStructuredOpConfig(YAMLObject):
     for write_use, read_use in self.writes:
       collected_uses.add(write_use)
       read_use.collect_uses(collected_uses)
+      read_use.collect_captures(collected_captures)
+      read_use.collect_indices(collected_indices)
 
     # Need to add all definitions before uses, so process twice.
     for use in collected_uses:
       self.add_tensor_arg(use.tensor_def)
+    for capture in collected_captures:
+      self.add_capture_arg(capture)
     for use in collected_uses:
       self.add_use(use)
 
@@ -170,6 +194,14 @@ class LinalgStructuredOpConfig(YAMLObject):
           f"dims. Got: {all_reduction_dims}")
     self.reduction_dims = next(iter(all_reduction_dims))
 
+    # Check the index dimension exists and resolve
+    for index in collected_indices:
+      if index.dim_def.dimname not in self.affine_state.all_dims:
+        raise ValueError(
+          f"The dimension {index.dim.dimname} is not part of the iteration "
+          f"domain {self.affine_state.all_dims}")
+      index.resolve_dimension_name(self.affine_state)
+
     # Generate the scalar assignments (used to build a body).
     self.assignments = [
         ScalarAssign(write_use.tensor_name, read_expr.to_scalar_expression())
@@ -185,6 +217,11 @@ class LinalgStructuredOpConfig(YAMLObject):
   def ordered_tensor_uses(self) -> Sequence[TensorUseConfig]:
     return sorted(self.uses.values(),
                   key=lambda tuc: tuc.tensor_use.tensor_def.registered_index)
+
+  @property
+  def ordered_capture_args(self) -> Sequence[CaptureDefConfig]:
+    return sorted(self.capture_args.values(),
+                  key=lambda cdc: cdc.capture_def.registered_index)
 
   @property
   def ordered_dims(self) -> Sequence[Tuple[str, int]]:
@@ -245,6 +282,12 @@ class LinalgStructuredOpConfig(YAMLObject):
       use_config = TensorUseConfig(tensor_use, indexing_map)
       self.uses[tensor_use] = use_config
 
+  def add_capture_arg(self, capture_def: CaptureDef):
+    if capture_def in self.capture_args:
+      return
+    def_config = CaptureDefConfig(capture_def)
+    self.capture_args[capture_def] = def_config
+
   def _normalize_affine_map(self,
                             affine_map: _ir.AffineMap,
                             with_dims: bool = True) -> _ir.AffineMap:
@@ -258,6 +301,7 @@ class LinalgStructuredOpConfig(YAMLObject):
   def to_yaml_custom_dict(self):
     self_dict = dict(
         args=self.ordered_tensor_args,
+        captures=self.ordered_capture_args,
         # TODO: Refactor the hierarchy internally when supporting more
         # than static (preserving this serialized form).
         indexing_maps=LinalgIndexingMapsConfig(
@@ -271,6 +315,9 @@ class LinalgStructuredOpConfig(YAMLObject):
     lines = [f"LinalgGenericOpConfig(reduction_dims={self.reduction_dims},"]
     lines.append("tensor_args=[")
     for def_config in self.ordered_tensor_args:
+      lines.append(f"  {repr(def_config)}")
+    lines.append("], capture_args=[")
+    for def_config in self.ordered_capture_args:
       lines.append(f"  {repr(def_config)}")
     lines.append("], indexing_maps=[")
     for m in self.indexing_maps:

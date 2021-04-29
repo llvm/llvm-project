@@ -446,6 +446,18 @@ struct ScalarEnumerationTraits<FormatStyle::SortJavaStaticImportOptions> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<FormatStyle::SpacesInAnglesStyle> {
+  static void enumeration(IO &IO, FormatStyle::SpacesInAnglesStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::SIAS_Never);
+    IO.enumCase(Value, "Always", FormatStyle::SIAS_Always);
+    IO.enumCase(Value, "Leave", FormatStyle::SIAS_Leave);
+
+    // For backward compatibility.
+    IO.enumCase(Value, "false", FormatStyle::SIAS_Never);
+    IO.enumCase(Value, "true", FormatStyle::SIAS_Always);
+  }
+};
+
 template <> struct MappingTraits<FormatStyle> {
   static void mapping(IO &IO, FormatStyle &Style) {
     // When reading, read the language first, we need it for getPredefinedStyle.
@@ -1046,7 +1058,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceBeforeCpp11BracedList = false;
   LLVMStyle.SpaceBeforeSquareBrackets = false;
   LLVMStyle.BitFieldColonSpacing = FormatStyle::BFCS_Both;
-  LLVMStyle.SpacesInAngles = false;
+  LLVMStyle.SpacesInAngles = FormatStyle::SIAS_Never;
   LLVMStyle.SpacesInConditionalStatement = false;
 
   LLVMStyle.PenaltyBreakAssignment = prec::Assignment;

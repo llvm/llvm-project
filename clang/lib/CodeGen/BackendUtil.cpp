@@ -866,6 +866,10 @@ static void setCommandLineOpts(const CodeGenOptions &CodeGenOpts) {
   if (!CodeGenOpts.DebugPass.empty()) {
     BackendArgs.push_back("-debug-pass");
     BackendArgs.push_back(CodeGenOpts.DebugPass.c_str());
+    // New PM supports structure dumping. Old PM is still used for codegen,
+    // so we need to pass both options.
+    if (!CodeGenOpts.LegacyPassManager && CodeGenOpts.DebugPass == "Structure")
+      BackendArgs.push_back("-debug-pass-structure");
   }
   if (!CodeGenOpts.LimitFloatPrecision.empty()) {
     BackendArgs.push_back("-limit-float-precision");

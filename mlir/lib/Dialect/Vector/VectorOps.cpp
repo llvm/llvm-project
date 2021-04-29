@@ -232,6 +232,45 @@ ArrayAttr vector::getVectorSubscriptAttr(Builder &builder,
 }
 
 //===----------------------------------------------------------------------===//
+// MultiDimReductionOp
+//===----------------------------------------------------------------------===//
+
+void vector::MultiDimReductionOp::build(OpBuilder &builder,
+                                        OperationState &result, Value source,
+                                        ArrayRef<bool> reductionMask,
+                                        CombiningKind kind) {
+  result.addOperands(source);
+  auto sourceVectorType = source.getType().cast<VectorType>();
+  auto targetShape = MultiDimReductionOp::inferDestShape(
+      sourceVectorType.getShape(), reductionMask);
+  auto targetVectorType =
+      VectorType::get(targetShape, sourceVectorType.getElementType());
+  result.addTypes(targetVectorType);
+
+  SmallVector<int64_t> reductionDims;
+  for (auto en : llvm::enumerate(reductionMask))
+    if (en.value())
+      reductionDims.push_back(en.index());
+  result.addAttribute(getReductionDimsAttrName(),
+                      builder.getI64ArrayAttr(reductionDims));
+  result.addAttribute(getKindAttrName(),
+                      CombiningKindAttr::get(kind, builder.getContext()));
+}
+
+static LogicalResult verify(MultiDimReductionOp op) {
+  auto reductionMask = op.getReductionMask();
+  auto targetShape = MultiDimReductionOp::inferDestShape(
+      op.getSourceVectorType().getShape(), reductionMask);
+  auto targetVectorType =
+      VectorType::get(targetShape, op.getSourceVectorType().getElementType());
+  if (targetVectorType != op.getDestVectorType())
+    return op.emitError("invalid output vector type: ")
+           << op.getDestVectorType() << " (expected: " << targetVectorType
+           << ")";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ReductionOp
 //===----------------------------------------------------------------------===//
 
@@ -2159,6 +2198,29 @@ void ExtractStridedSliceOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 // TransferReadOp
 //===----------------------------------------------------------------------===//
+
+AffineMap TransferReadOp::insertBroadcasts(AffineMap map, VectorType vt,
+                                           ArrayRef<int64_t> targetShape) {
+  unsigned targetRank = targetShape.size();
+  assert(vt.getShape().size() <= targetRank && "mismatching ranks");
+  if (vt.getShape().size() == targetRank)
+    return map;
+  MLIRContext *ctx = map.getContext();
+  SmallVector<AffineExpr> exprs;
+  exprs.reserve(targetRank);
+  for (unsigned idx = 0, vtidx = 0; idx < targetRank; ++idx) {
+    // If shapes match, just keep the existing indexing and advance ranks.
+    if (vtidx < vt.getShape().size() &&
+        vt.getShape()[vtidx] == targetShape[idx]) {
+      exprs.push_back(map.getResult(vtidx));
+      ++vtidx;
+      continue;
+    }
+    // Otherwise insert a broadcast.
+    exprs.push_back(getAffineConstantExpr(0, ctx));
+  }
+  return AffineMap::get(map.getNumDims(), /*numSymbols=*/0, exprs, ctx);
+}
 
 template <typename EmitFun>
 static LogicalResult verifyPermutationMap(AffineMap permutationMap,
