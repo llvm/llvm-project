@@ -120,9 +120,7 @@ func @non_affine_load() {
 // CHECK-LABEL: for_with_minmax
 func @for_with_minmax(%m: memref<?xf32>, %lb0: index, %lb1: index,
                       %ub0: index, %ub1: index) {
-  // CHECK: %[[lb:.*]] = affine.max
-  // CHECK: %[[ub:.*]] = affine.min
-  // CHECK: affine.parallel (%{{.*}}) = (%[[lb]]) to (%[[ub]])
+  // CHECK: affine.parallel (%{{.*}}) = (max(%{{.*}}, %{{.*}})) to (min(%{{.*}}, %{{.*}}))
   affine.for %i = max affine_map<(d0, d1) -> (d0, d1)>(%lb0, %lb1)
           to min affine_map<(d0, d1) -> (d0, d1)>(%ub0, %ub1) {
     affine.load %m[%i] : memref<?xf32>
@@ -133,12 +131,9 @@ func @for_with_minmax(%m: memref<?xf32>, %lb0: index, %lb1: index,
 // CHECK-LABEL: nested_for_with_minmax
 func @nested_for_with_minmax(%m: memref<?xf32>, %lb0: index,
                              %ub0: index, %ub1: index) {
-  // CHECK: affine.parallel
+  // CHECK: affine.parallel (%[[I:.*]]) =
   affine.for %j = 0 to 10 {
-    // Cannot parallelize the inner loop because we would need to compute
-    // affine.max for its lower bound inside the loop, and that is not (yet)
-    // considered as a valid affine dimension.
-    // CHECK: affine.for
+    // CHECK: affine.parallel (%{{.*}}) = (max(%{{.*}}, %[[I]])) to (min(%{{.*}}, %{{.*}}))
     affine.for %i = max affine_map<(d0, d1) -> (d0, d1)>(%lb0, %j)
             to min affine_map<(d0, d1) -> (d0, d1)>(%ub0, %ub1) {
       affine.load %m[%i] : memref<?xf32>
@@ -233,6 +228,23 @@ func @use_in_backward_slice() {
     %0 = "test.some_modification"(%it2) : (f32) -> f32
     %1 = addf %it1, %0 : f32
     affine.yield %1, %1 : f32, f32
+  }
+  return
+}
+
+// REDUCE-LABEL: @nested_min_max
+// CHECK-LABEL: @nested_min_max
+// CHECK: (%{{.*}}, %[[LB0:.*]]: index, %[[UB0:.*]]: index, %[[UB1:.*]]: index)
+func @nested_min_max(%m: memref<?xf32>, %lb0: index,
+                     %ub0: index, %ub1: index) {
+  // CHECK: affine.parallel (%[[J:.*]]) =
+  affine.for %j = 0 to 10 {
+    // CHECK: affine.parallel (%{{.*}}) = (max(%[[LB0]], %[[J]]))
+    // CHECK:                          to (min(%[[UB0]], %[[UB1]]))
+    affine.for %i = max affine_map<(d0, d1) -> (d0, d1)>(%lb0, %j)
+            to min affine_map<(d0, d1) -> (d0, d1)>(%ub0, %ub1) {
+      affine.load %m[%i] : memref<?xf32>
+    }
   }
   return
 }

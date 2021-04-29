@@ -145,38 +145,10 @@ mlir::affineParallelize(AffineForOp forOp,
 
   Location loc = forOp.getLoc();
   OpBuilder outsideBuilder(forOp);
-
-  // If a loop has a 'max' in the lower bound, emit it outside the parallel loop
-  // as it does not have implicit 'max' behavior.
   AffineMap lowerBoundMap = forOp.getLowerBoundMap();
   ValueRange lowerBoundOperands = forOp.getLowerBoundOperands();
   AffineMap upperBoundMap = forOp.getUpperBoundMap();
   ValueRange upperBoundOperands = forOp.getUpperBoundOperands();
-
-  bool needsMax = lowerBoundMap.getNumResults() > 1;
-  bool needsMin = upperBoundMap.getNumResults() > 1;
-  AffineMap identityMap;
-  if (needsMax || needsMin) {
-    if (forOp->getParentOp() &&
-        !forOp->getParentOp()->hasTrait<OpTrait::AffineScope>())
-      return failure();
-
-    identityMap = AffineMap::getMultiDimIdentityMap(1, loc->getContext());
-  }
-  if (needsMax) {
-    auto maxOp = outsideBuilder.create<AffineMaxOp>(loc, lowerBoundMap,
-                                                    lowerBoundOperands);
-    lowerBoundMap = identityMap;
-    lowerBoundOperands = maxOp->getResults();
-  }
-
-  // Same for the upper bound.
-  if (needsMin) {
-    auto minOp = outsideBuilder.create<AffineMinOp>(loc, upperBoundMap,
-                                                    upperBoundOperands);
-    upperBoundMap = identityMap;
-    upperBoundOperands = minOp->getResults();
-  }
 
   // Creating empty 1-D affine.parallel op.
   auto reducedValues = llvm::to_vector<4>(llvm::map_range(
@@ -184,8 +156,10 @@ mlir::affineParallelize(AffineForOp forOp,
   auto reductionKinds = llvm::to_vector<4>(llvm::map_range(
       parallelReductions, [](const LoopReduction &red) { return red.kind; }));
   AffineParallelOp newPloop = outsideBuilder.create<AffineParallelOp>(
-      loc, ValueRange(reducedValues).getTypes(), reductionKinds, lowerBoundMap,
-      lowerBoundOperands, upperBoundMap, upperBoundOperands);
+      loc, ValueRange(reducedValues).getTypes(), reductionKinds,
+      llvm::makeArrayRef(lowerBoundMap), lowerBoundOperands,
+      llvm::makeArrayRef(upperBoundMap), upperBoundOperands,
+      llvm::makeArrayRef(forOp.getStep()));
   // Steal the body of the old affine for op.
   newPloop.region().takeBody(forOp.region());
   Operation *yieldOp = &newPloop.getBody()->back();
