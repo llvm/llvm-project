@@ -151,6 +151,9 @@ def allow_undefined_file_s: Separate<["-"], "allow-undefined-file">,
 
 defm export: Eq<"export", "Force a symbol to be exported">;
 
+defm export_if_defined: Eq<"export-if-defined",
+     "Force a symbol to be exported, if it is defined in the input">;
+
 def export_all: F<"export-all">,
   HelpText<"Export all symbols (normally combined with --no-gc-sections)">;
 
