@@ -505,6 +505,11 @@ class DataFlowSanitizer {
 
   bool init(Module &M);
 
+  /// Advances \p OriginAddr to point to the next 32-bit origin and then loads
+  /// from it. Returns the origin's loaded value.
+  Value *loadNextOrigin(Instruction *Pos, Align OriginAlign,
+                        Value **OriginAddr);
+
   /// Returns whether fast8 or fast16 mode has been specified.
   bool hasFastLabelsEnabled();
 
@@ -2094,6 +2099,14 @@ bool DFSanFunction::useCallbackLoadLabelAndOrigin(uint64_t Size,
   return Alignment < MinOriginAlignment || !DFS.hasLoadSizeForFastPath(Size);
 }
 
+Value *DataFlowSanitizer::loadNextOrigin(Instruction *Pos, Align OriginAlign,
+                                         Value **OriginAddr) {
+  IRBuilder<> IRB(Pos);
+  *OriginAddr =
+      IRB.CreateGEP(OriginTy, *OriginAddr, ConstantInt::get(IntptrTy, 1));
+  return IRB.CreateAlignedLoad(OriginTy, *OriginAddr, OriginAlign);
+}
+
 std::pair<Value *, Value *> DFSanFunction::loadFast16ShadowFast(
     Value *ShadowAddr, Value *OriginAddr, uint64_t Size, Align ShadowAlign,
     Align OriginAlign, Value *FirstOrigin, Instruction *Pos) {
@@ -2125,19 +2138,39 @@ std::pair<Value *, Value *> DFSanFunction::loadFast16ShadowFast(
   Value *CombinedWideShadow =
       IRB.CreateAlignedLoad(WideShadowTy, WideAddr, ShadowAlign);
 
-  if (ShouldTrackOrigins) {
-    Shadows.push_back(CombinedWideShadow);
-    Origins.push_back(FirstOrigin);
-  }
+  unsigned WideShadowBitWidth = WideShadowTy->getIntegerBitWidth();
+  const uint64_t BytesPerWideShadow = WideShadowBitWidth / DFS.ShadowWidthBits;
+
+  auto AppendWideShadowAndOrigin = [&](Value *WideShadow, Value *Origin) {
+    if (BytesPerWideShadow > 4) {
+      assert(BytesPerWideShadow == 8);
+      // The wide shadow relates to two origin pointers: one for the first four
+      // application bytes, and one for the latest four. We use a left shift to
+      // get just the shadow bytes that correspond to the first origin pointer,
+      // and then the entire shadow for the second origin pointer (which will be
+      // chosen by combineOrigins() iff the least-significant half of the wide
+      // shadow was empty but the other half was not).
+      Value *WideShadowLo = IRB.CreateShl(
+          WideShadow, ConstantInt::get(WideShadowTy, WideShadowBitWidth / 2));
+      Shadows.push_back(WideShadow);
+      Origins.push_back(DFS.loadNextOrigin(Pos, OriginAlign, &OriginAddr));
+
+      Shadows.push_back(WideShadowLo);
+      Origins.push_back(Origin);
+    } else {
+      Shadows.push_back(WideShadow);
+      Origins.push_back(Origin);
+    }
+  };
+
+  if (ShouldTrackOrigins)
+    AppendWideShadowAndOrigin(CombinedWideShadow, FirstOrigin);
 
   // First OR all the WideShadows (i.e., 64bit or 32bit shadow chunks) linearly;
   // then OR individual shadows within the combined WideShadow by binary ORing.
   // This is fewer instructions than ORing shadows individually, since it
   // needs logN shift/or instructions (N being the bytes of the combined wide
   // shadow).
-  unsigned WideShadowBitWidth = WideShadowTy->getIntegerBitWidth();
-  const uint64_t BytesPerWideShadow = WideShadowBitWidth / DFS.ShadowWidthBits;
-
   for (uint64_t ByteOfs = BytesPerWideShadow; ByteOfs < Size;
        ByteOfs += BytesPerWideShadow) {
     WideAddr = IRB.CreateGEP(WideShadowTy, WideAddr,
@@ -2146,11 +2179,8 @@ std::pair<Value *, Value *> DFSanFunction::loadFast16ShadowFast(
         IRB.CreateAlignedLoad(WideShadowTy, WideAddr, ShadowAlign);
     CombinedWideShadow = IRB.CreateOr(CombinedWideShadow, NextWideShadow);
     if (ShouldTrackOrigins) {
-      Shadows.push_back(NextWideShadow);
-      OriginAddr = IRB.CreateGEP(DFS.OriginTy, OriginAddr,
-                                 ConstantInt::get(DFS.IntptrTy, 1));
-      Origins.push_back(
-          IRB.CreateAlignedLoad(DFS.OriginTy, OriginAddr, OriginAlign));
+      Value *NextOrigin = DFS.loadNextOrigin(Pos, OriginAlign, &OriginAddr);
+      AppendWideShadowAndOrigin(NextWideShadow, NextOrigin);
     }
   }
   for (unsigned Width = WideShadowBitWidth / 2; Width >= DFS.ShadowWidthBits;
