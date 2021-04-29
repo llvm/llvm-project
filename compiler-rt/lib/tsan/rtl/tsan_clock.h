@@ -17,7 +17,7 @@
 
 namespace __tsan {
 
-typedef DenseSlabAlloc<ClockBlock, 1<<16, 1<<10> ClockAlloc;
+typedef DenseSlabAlloc<ClockBlock, 1 << 22, 1 << 10> ClockAlloc;
 typedef DenseSlabAllocCache ClockCache;
 
 // The clock that lives in sync variables (mutexes, atomics, etc).
