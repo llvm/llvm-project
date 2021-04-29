@@ -1245,6 +1245,9 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     return false;
   }
   case AsmToken::Dot: {
+    if (!MAI.getDotIsPC())
+      return TokError("cannot use . as current PC");
+
     // This is a '.' reference, which references the current PC.  Emit a
     // temporary label to the streamer and refer to it.
     MCSymbol *Sym = Ctx.createTempSymbol();
