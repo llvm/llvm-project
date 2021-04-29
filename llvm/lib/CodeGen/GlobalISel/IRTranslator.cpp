@@ -2864,8 +2864,6 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
     EntryBuilder->setDebugLoc(DILocation::get(C.getContext(), 0, 0,
                                               CurrInstDL.getScope(),
                                               CurrInstDL.getInlinedAt()));
-  else
-    EntryBuilder->setDebugLoc(DebugLoc());
 
   if (auto CI = dyn_cast<ConstantInt>(&C))
     EntryBuilder->buildConstant(Reg, *CI);
