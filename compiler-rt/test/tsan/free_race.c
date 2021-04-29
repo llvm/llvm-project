@@ -15,7 +15,7 @@ void *Thread1(void *x) {
   return NULL;
 }
 
-void *Thread2(void *x) __attribute__((noinline)) {
+__attribute__((noinline)) void *Thread2(void *x) {
   barrier_wait(&barrier);
   pthread_mutex_lock(&mtx);
   mem[0] = 42;
