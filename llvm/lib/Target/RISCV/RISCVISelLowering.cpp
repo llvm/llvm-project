@@ -772,9 +772,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   // We can use any register for comparisons
   setHasMultipleConditionRegisters();
 
-  if (Subtarget.hasStdExtZbp()) {
-    setTargetDAGCombine(ISD::OR);
-  }
+  setTargetDAGCombine(ISD::AND);
+  setTargetDAGCombine(ISD::OR);
+  setTargetDAGCombine(ISD::XOR);
   if (Subtarget.hasStdExtV()) {
     setTargetDAGCombine(ISD::FCOPYSIGN);
     setTargetDAGCombine(ISD::MGATHER);
@@ -5213,6 +5213,99 @@ static SDValue combineGREVI_GORCI(SDNode *N, SelectionDAG &DAG) {
       DAG.getConstant(CombinedShAmt, DL, N->getOperand(1).getValueType()));
 }
 
+// Combine a constant select operand into its use:
+//
+// (and (select_cc lhs, rhs, cc, -1, c), x)
+//   -> (select_cc lhs, rhs, cc, x, (and, x, c))  [AllOnes=1]
+// (or  (select_cc lhs, rhs, cc, 0, c), x)
+//   -> (select_cc lhs, rhs, cc, x, (or, x, c))  [AllOnes=0]
+// (xor (select_cc lhs, rhs, cc, 0, c), x)
+//   -> (select_cc lhs, rhs, cc, x, (xor, x, c))  [AllOnes=0]
+static SDValue combineSelectCCAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
+                                     SelectionDAG &DAG, bool AllOnes) {
+  EVT VT = N->getValueType(0);
+
+  if (Slct.getOpcode() != RISCVISD::SELECT_CC || !Slct.hasOneUse())
+    return SDValue();
+
+  auto isZeroOrAllOnes = [](SDValue N, bool AllOnes) {
+    return AllOnes ? isAllOnesConstant(N) : isNullConstant(N);
+  };
+
+  bool SwapSelectOps;
+  SDValue TrueVal = Slct.getOperand(3);
+  SDValue FalseVal = Slct.getOperand(4);
+  SDValue NonConstantVal;
+  if (isZeroOrAllOnes(TrueVal, AllOnes)) {
+    SwapSelectOps = false;
+    NonConstantVal = FalseVal;
+  } else if (isZeroOrAllOnes(FalseVal, AllOnes)) {
+    SwapSelectOps = true;
+    NonConstantVal = TrueVal;
+  } else
+    return SDValue();
+
+  // Slct is now know to be the desired identity constant when CC is true.
+  TrueVal = OtherOp;
+  FalseVal = DAG.getNode(N->getOpcode(), SDLoc(N), VT, OtherOp, NonConstantVal);
+  // Unless SwapSelectOps says CC should be false.
+  if (SwapSelectOps)
+    std::swap(TrueVal, FalseVal);
+
+  return DAG.getNode(RISCVISD::SELECT_CC, SDLoc(N), VT,
+                     {Slct.getOperand(0), Slct.getOperand(1),
+                      Slct.getOperand(2), TrueVal, FalseVal});
+}
+
+// Attempt combineSelectAndUse on each operand of a commutative operator N.
+static SDValue combineSelectCCAndUseCommutative(SDNode *N, SelectionDAG &DAG,
+                                                bool AllOnes) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  if (SDValue Result = combineSelectCCAndUse(N, N0, N1, DAG, AllOnes))
+    return Result;
+  if (SDValue Result = combineSelectCCAndUse(N, N1, N0, DAG, AllOnes))
+    return Result;
+  return SDValue();
+}
+
+static SDValue performANDCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const RISCVSubtarget &Subtarget) {
+  SelectionDAG &DAG = DCI.DAG;
+
+  // fold (and (select_cc lhs, rhs, cc, -1, y), x) ->
+  //      (select lhs, rhs, cc, x, (and x, y))
+  return combineSelectCCAndUseCommutative(N, DAG, true);
+}
+
+static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                                const RISCVSubtarget &Subtarget) {
+  SelectionDAG &DAG = DCI.DAG;
+  if (Subtarget.hasStdExtZbp()) {
+    if (auto GREV = combineORToGREV(SDValue(N, 0), DAG, Subtarget))
+      return GREV;
+    if (auto GORC = combineORToGORC(SDValue(N, 0), DAG, Subtarget))
+      return GORC;
+    if (auto SHFL = combineORToSHFL(SDValue(N, 0), DAG, Subtarget))
+      return SHFL;
+  }
+
+  // fold (or (select_cc lhs, rhs, cc, 0, y), x) ->
+  //      (select lhs, rhs, cc, x, (or x, y))
+  return combineSelectCCAndUseCommutative(N, DAG, false);
+}
+
+static SDValue performXORCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const RISCVSubtarget &Subtarget) {
+  SelectionDAG &DAG = DCI.DAG;
+
+  // fold (xor (select_cc lhs, rhs, cc, 0, y), x) ->
+  //      (select lhs, rhs, cc, x, (xor x, y))
+  return combineSelectCCAndUseCommutative(N, DAG, false);
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -5431,14 +5524,12 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return DAG.getNode(ISD::AND, DL, MVT::i64, NewFMV,
                        DAG.getConstant(~SignBit, DL, MVT::i64));
   }
+  case ISD::AND:
+    return performANDCombine(N, DCI, Subtarget);
   case ISD::OR:
-    if (auto GREV = combineORToGREV(SDValue(N, 0), DCI.DAG, Subtarget))
-      return GREV;
-    if (auto GORC = combineORToGORC(SDValue(N, 0), DCI.DAG, Subtarget))
-      return GORC;
-    if (auto SHFL = combineORToSHFL(SDValue(N, 0), DCI.DAG, Subtarget))
-      return SHFL;
-    break;
+    return performORCombine(N, DCI, Subtarget);
+  case ISD::XOR:
+    return performXORCombine(N, DCI, Subtarget);
   case RISCVISD::SELECT_CC: {
     // Transform
     SDValue LHS = N->getOperand(0);
