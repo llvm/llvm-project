@@ -832,7 +832,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     }
 
     if (const auto *Arg =
-            Args.getLastArg(options::OPT_sanitize_address_destructor_kind_EQ)) {
+            Args.getLastArg(options::OPT_sanitize_address_destructor_EQ)) {
       auto parsedAsanDtorKind = AsanDtorKindFromString(Arg->getValue());
       if (parsedAsanDtorKind == llvm::AsanDtorKind::Invalid) {
         TC.getDriver().Diag(clang::diag::err_drv_unsupported_option_argument)
@@ -1098,7 +1098,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   // Only pass the option to the frontend if the user requested,
   // otherwise the frontend will just use the codegen default.
   if (AsanDtorKind != llvm::AsanDtorKind::Invalid) {
-    CmdArgs.push_back(Args.MakeArgString("-fsanitize-address-destructor-kind=" +
+    CmdArgs.push_back(Args.MakeArgString("-fsanitize-address-destructor=" +
                                          AsanDtorKindToString(AsanDtorKind)));
   }
 
