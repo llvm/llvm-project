@@ -2142,9 +2142,12 @@ public:
                              getTrailingObjects<Stmt *>() + isExpr());
   }
 
+  // Convenience function to generate the name of the currently stored type.
+  std::string ComputeName(ASTContext &Context);
+
   // Get the generated name of the type.  Note that this only works after all
   // kernels have been instantiated.
-  std::string ComputeName(ASTContext &Context);
+  static std::string Compute(ASTContext &Context, QualType Ty);
 };
 
 /// ParenExpr - This represents a parethesized expression, e.g. "(1)".  This

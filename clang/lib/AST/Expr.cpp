@@ -565,6 +565,12 @@ UniqueStableNameExpr *UniqueStableNameExpr::CreateEmpty(const ASTContext &Ctx,
 }
 
 std::string UniqueStableNameExpr::ComputeName(ASTContext &Context) {
+  return UniqueStableNameExpr::ComputeName(Context,
+                                           getTypeSourceInfo()->getType());
+}
+
+static std::string UniqueStableNameExpr::ComputeName(ASTContext &Context,
+                                                     QualType Ty) {
   auto ShouldMangleCallback = [](ASTContext &Ctx, const TagDecl *TD) {
     return Ctx.IsSYCLKernelNamingDecl(TD);
   };
@@ -583,7 +589,6 @@ std::string UniqueStableNameExpr::ComputeName(ASTContext &Context) {
   std::unique_ptr<MangleContext> Ctx{ItaniumMangleContext::create(
       Context, Context.getDiagnostics(), ShouldMangleCallback, MangleCallback)};
 
-  QualType Ty = getTypeSourceInfo()->getType();
   std::string Buffer;
   Buffer.reserve(128);
   llvm::raw_string_ostream Out(Buffer);
