@@ -114,17 +114,17 @@ static const u32 kThreadQuarantineSize = 64;
 #endif
 
 Context::Context()
-  : initialized()
-  , report_mtx(MutexTypeReport, StatMtxReport)
-  , nreported()
-  , nmissed_expected()
-  , thread_registry(new(thread_registry_placeholder) ThreadRegistry(
-      CreateThreadContext, kMaxTid, kThreadQuarantineSize, kMaxTidReuse))
-  , racy_mtx(MutexTypeRacy, StatMtxRacy)
-  , racy_stacks()
-  , racy_addresses()
-  , fired_suppressions_mtx(MutexTypeFired, StatMtxFired)
-  , clock_alloc("clock allocator") {
+    : initialized(),
+      report_mtx(MutexTypeReport, StatMtxReport),
+      nreported(),
+      nmissed_expected(),
+      thread_registry(new (thread_registry_placeholder) ThreadRegistry(
+          CreateThreadContext, kMaxTid, kThreadQuarantineSize, kMaxTidReuse)),
+      racy_mtx(MutexTypeRacy, StatMtxRacy),
+      racy_stacks(),
+      racy_addresses(),
+      fired_suppressions_mtx(MutexTypeFired, StatMtxFired),
+      clock_alloc(LINKER_INITIALIZED, "clock allocator") {
   fired_suppressions.reserve(8);
 }
 

@@ -2364,9 +2364,9 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
     GlobalValue::LinkageTypes Linkage = G->getLinkage();
     if (G->isConstant() && Linkage == GlobalValue::PrivateLinkage)
       Linkage = GlobalValue::InternalLinkage;
-    GlobalVariable *NewGlobal =
-        new GlobalVariable(M, NewTy, G->isConstant(), Linkage, NewInitializer,
-                           "", G, G->getThreadLocalMode());
+    GlobalVariable *NewGlobal = new GlobalVariable(
+        M, NewTy, G->isConstant(), Linkage, NewInitializer, "", G,
+        G->getThreadLocalMode(), G->getAddressSpace());
     NewGlobal->copyAttributesFrom(G);
     NewGlobal->setComdat(G->getComdat());
     NewGlobal->setAlignment(MaybeAlign(getMinRedzoneSizeForGlobal()));
