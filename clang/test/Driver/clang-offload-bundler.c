@@ -361,6 +361,21 @@
 // CKLST2-NOT: openmp-powerpc64le-ibm-linux-gnu
 // CKLST2-NOT: openmp-x86_64-pc-linux-gnu
 
+//
+// Check bundling without host target is allowed for HIP.
+//
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa-gfx900,hip-amdgcn-amd-amdhsa-gfx906 \
+// RUN:   -inputs=%t.tgt1,%t.tgt2 -outputs=%t.hip.bundle.bc
+// RUN: clang-offload-bundler -type=bc -list -inputs=%t.hip.bundle.bc | FileCheck -check-prefix=NOHOST %s
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa-gfx900,hip-amdgcn-amd-amdhsa-gfx906 \
+// RUN:   -outputs=%t.res.tgt1,%t.res.tgt2 -inputs=%t.hip.bundle.bc -unbundle
+// RUN: diff %t.tgt1 %t.res.tgt1
+// RUN: diff %t.tgt2 %t.res.tgt2
+//
+// NOHOST-NOT: host-
+// NOHOST-DAG: hip-amdgcn-amd-amdhsa-gfx900
+// NOHOST-DAG: hip-amdgcn-amd-amdhsa-gfx906
+
 // Some code so that we can create a binary out of this file.
 int A = 0;
 void test_func(void) {
