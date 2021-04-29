@@ -1,14 +1,25 @@
-//===- SparseLowering.cpp - Lowers sparse primitives to library calls.  ---===//
+//===- SparseTensorLowering.cpp - Sparse tensor primitives lowering -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Lower sparse tensor primitives to calls into a runtime support library.
+// Note that this is a current implementation choice to keep the lowering
+// simple. In principle, these primitives could also be lowered to actual
+// elaborate IR code that implements the primitives on the selected sparse
+// tensor storage schemes.
+//
+//===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
-#include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/Dialect/SparseTensor/Transforms/Transforms.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
 
@@ -32,11 +43,10 @@ static FlatSymbolRefAttr getFunc(Operation *op, StringRef name, Type result,
 
 /// Sparse conversion rule to remove opaque pointer cast.
 class TensorFromPointerConverter
-    : public OpConversionPattern<linalg::SparseTensorFromPointerOp> {
+    : public OpConversionPattern<sparse_tensor::FromPointerOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(linalg::SparseTensorFromPointerOp op,
-                  ArrayRef<Value> operands,
+  matchAndRewrite(sparse_tensor::FromPointerOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOp(op, operands[0]);
     return success();
@@ -62,12 +72,11 @@ public:
 
 /// Sparse conversion rule for pointer accesses.
 class TensorToPointersConverter
-    : public OpConversionPattern<linalg::SparseTensorToPointersMemRefOp> {
+    : public OpConversionPattern<sparse_tensor::ToPointersOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(linalg::SparseTensorToPointersMemRefOp op,
-                  ArrayRef<Value> operands,
+  matchAndRewrite(sparse_tensor::ToPointersOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     Type resType = op.getType();
     Type eltType = resType.cast<ShapedType>().getElementType();
@@ -90,12 +99,11 @@ public:
 
 /// Sparse conversion rule for index accesses.
 class TensorToIndicesConverter
-    : public OpConversionPattern<linalg::SparseTensorToIndicesMemRefOp> {
+    : public OpConversionPattern<sparse_tensor::ToIndicesOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(linalg::SparseTensorToIndicesMemRefOp op,
-                  ArrayRef<Value> operands,
+  matchAndRewrite(sparse_tensor::ToIndicesOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     Type resType = op.getType();
     Type eltType = resType.cast<ShapedType>().getElementType();
@@ -118,12 +126,11 @@ public:
 
 /// Sparse conversion rule for value accesses.
 class TensorToValuesConverter
-    : public OpConversionPattern<linalg::SparseTensorToValuesMemRefOp> {
+    : public OpConversionPattern<sparse_tensor::ToValuesOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(linalg::SparseTensorToValuesMemRefOp op,
-                  ArrayRef<Value> operands,
+  matchAndRewrite(sparse_tensor::ToValuesOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     Type resType = op.getType();
     Type eltType = resType.cast<ShapedType>().getElementType();
@@ -150,7 +157,7 @@ public:
 
 /// Populates the given patterns list with conversion rules required for
 /// the sparsification of linear algebra operations.
-void linalg::populateSparsificationConversionPatterns(
+void sparse_tensor::populateSparsificationConversionPatterns(
     RewritePatternSet &patterns) {
   patterns.add<TensorFromPointerConverter, TensorToDimSizeConverter,
                TensorToPointersConverter, TensorToIndicesConverter,

@@ -8,6 +8,8 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/Dialect/SparseTensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -51,7 +53,8 @@ struct TestSparsification
   /// Registers all dialects required by testing.
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect, scf::SCFDialect,
-                    vector::VectorDialect, LLVM::LLVMDialect>();
+                    sparse_tensor::SparseTensorDialect, vector::VectorDialect,
+                    LLVM::LLVMDialect>();
   }
 
   /// Returns parallelization strategy given on command line.
@@ -114,12 +117,12 @@ struct TestSparsification
     if (lower) {
       RewritePatternSet conversionPatterns(ctx);
       ConversionTarget target(*ctx);
-      target.addIllegalOp<linalg::SparseTensorFromPointerOp,
-                          linalg::SparseTensorToPointersMemRefOp,
-                          linalg::SparseTensorToIndicesMemRefOp,
-                          linalg::SparseTensorToValuesMemRefOp>();
+      target.addIllegalOp<
+          sparse_tensor::FromPointerOp, sparse_tensor::ToPointersOp,
+          sparse_tensor::ToIndicesOp, sparse_tensor::ToValuesOp>();
       target.addLegalOp<CallOp>();
-      linalg::populateSparsificationConversionPatterns(conversionPatterns);
+      sparse_tensor::populateSparsificationConversionPatterns(
+          conversionPatterns);
       if (failed(applyPartialConversion(getOperation(), target,
                                         std::move(conversionPatterns))))
         signalPassFailure();
