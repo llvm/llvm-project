@@ -3146,11 +3146,12 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   // all the GlobalTLSAddress nodes are lowered with this model.
   // We need to generate two TOC entries, one for the variable offset, one for
   // the region handle. The global address for the TOC entry of the region
-  // handle is created with the MO_TLSGD_FLAG flag so we can easily identify
-  // this entry and add the right relocation.
-  SDValue VariableOffsetTGA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, 0);
-  SDValue RegionHandleTGA =
+  // handle is created with the MO_TLSGDM_FLAG flag and the global address
+  // for the TOC entry of the variable offset is created with MO_TLSGD_FLAG.
+  SDValue VariableOffsetTGA =
       DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TLSGD_FLAG);
+  SDValue RegionHandleTGA =
+      DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TLSGDM_FLAG);
   SDValue VariableOffset = getTOCEntry(DAG, dl, VariableOffsetTGA);
   SDValue RegionHandle = getTOCEntry(DAG, dl, RegionHandleTGA);
   return DAG.getNode(PPCISD::TLSGD_AIX, dl, PtrVT, VariableOffset,
