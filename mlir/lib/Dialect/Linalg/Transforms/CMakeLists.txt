@@ -11,7 +11,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Interchange.cpp
   Loops.cpp
   Promotion.cpp
-  SparseLowering.cpp
   Sparsification.cpp
   Tiling.cpp
   Transforms.cpp
