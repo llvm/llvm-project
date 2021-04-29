@@ -166,6 +166,35 @@ inline QualType getUnderlyingType(const CXXBaseSpecifier &Node) {
   return Node.getType();
 }
 
+/// Unifies obtaining a `TypeSourceInfo` from different node types.
+template <typename T,
+          std::enable_if_t<TypeListContainsSuperOf<
+              TypeList<CXXBaseSpecifier, CXXCtorInitializer,
+                       CXXTemporaryObjectExpr, CXXUnresolvedConstructExpr,
+                       CompoundLiteralExpr, DeclaratorDecl, ObjCPropertyDecl,
+                       TemplateArgumentLoc, TypedefNameDecl>,
+              T>::value> * = nullptr>
+inline TypeSourceInfo *GetTypeSourceInfo(const T &Node) {
+  return Node.getTypeSourceInfo();
+}
+template <typename T,
+          std::enable_if_t<TypeListContainsSuperOf<
+              TypeList<CXXFunctionalCastExpr, ExplicitCastExpr>, T>::value> * =
+              nullptr>
+inline TypeSourceInfo *GetTypeSourceInfo(const T &Node) {
+  return Node.getTypeInfoAsWritten();
+}
+inline TypeSourceInfo *GetTypeSourceInfo(const BlockDecl &Node) {
+  return Node.getSignatureAsWritten();
+}
+inline TypeSourceInfo *GetTypeSourceInfo(const CXXNewExpr &Node) {
+  return Node.getAllocatedTypeSourceInfo();
+}
+inline TypeSourceInfo *
+GetTypeSourceInfo(const ClassTemplateSpecializationDecl &Node) {
+  return Node.getTypeAsWritten();
+}
+
 /// Unifies obtaining the FunctionProtoType pointer from both
 /// FunctionProtoType and FunctionDecl nodes..
 inline const FunctionProtoType *
