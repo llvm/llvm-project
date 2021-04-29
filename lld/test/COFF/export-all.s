@@ -7,10 +7,13 @@
 # RUN: llvm-readobj %t.lib | FileCheck -check-prefix=IMPLIB %s
 
 # CHECK: Name:
+# CHECK-NEXT: Name: comdatFunc
 # CHECK-NEXT: Name: dataSym
 # CHECK-NEXT: Name: foobar
 # CHECK-EMPTY:
 
+# IMPLIB: Symbol: __imp__comdatFunc
+# IMPLIB: Symbol: _comdatFunc
 # IMPLIB: Symbol: __imp__dataSym
 # IMPLIB-NOT: Symbol: _dataSym
 # IMPLIB: Symbol: __imp__foobar
@@ -22,12 +25,16 @@
 .global _unexported
 .global __imp__unexported
 .global .refptr._foobar
+.global _comdatFunc
 .text
 _DllMainCRTStartup@12:
   ret
 _foobar:
   ret
 _unexported:
+  ret
+.section .text@_comdatFunc,"xr",one_only,_comdatFunc
+_comdatFunc:
   ret
 .data
 _dataSym:
