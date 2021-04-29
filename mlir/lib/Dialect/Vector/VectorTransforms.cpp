@@ -1752,18 +1752,23 @@ namespace mlir {
 /// Progressively lower a `vector.contract %a, %b, %c` with row-major matmul
 /// semantics to:
 /// ```
-///    %flattened_a = vector.shape_cast %a
-///    %flattened_b = vector.shape_cast %b
+///    %mta = maybe_transpose
+///    %mtb = maybe_transpose
+///    %flattened_a = vector.shape_cast %mta
+///    %flattened_b = vector.shape_cast %mtb
 ///    %flattened_d = vector.matmul %flattened_a, %flattened_b
-///    %d = vector.shape_cast %%flattened_d
+///    %mtd = vector.shape_cast %flattened_d
+///    %d = maybe_untranspose %mtd
 ///    %e = add %c, %d
 /// ```
 /// `vector.matmul` later lowers to `llvm.matrix.multiply`.
 //
-/// This only kicks in when VectorTransformsOptions is set to OuterProduct and
-/// the vector.contract op is a row-major matrix multiply.
-LogicalResult ContractionOpToMatmulOpLowering::matchAndRewrite(
-    vector::ContractionOp op, PatternRewriter &rewriter) const {
+/// This only kicks in when VectorTransformsOptions is set to `Matmul`.
+/// vector.transpose operations are inserted if the vector.contract op is not a
+/// row-major matrix multiply.
+LogicalResult
+ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
+                                                 PatternRewriter &rew) const {
   // TODO: implement masks
   if (llvm::size(op.masks()) != 0)
     return failure();
@@ -1779,37 +1784,67 @@ LogicalResult ContractionOpToMatmulOpLowering::matchAndRewrite(
       !isReductionIterator(iteratorTypes[2]))
     return failure();
 
-  if (!isRowMajorMatmul(op.indexing_maps()))
-    return failure();
-
   Type elementType = op.getLhsType().getElementType();
   if (!elementType.isIntOrFloat())
     return failure();
 
-  VectorType lhsType = op.getLhsType();
-  VectorType rhsType = op.getRhsType();
+  // Perform lhs + rhs transpositions to conform to matmul row-major semantics.
+  // Bail out if the contraction cannot be put in this form.
+  MLIRContext *ctx = op.getContext();
+  Location loc = op.getLoc();
+  AffineExpr m, n, k;
+  bindDims(rew.getContext(), m, n, k);
+  // LHS must be A(m, k) or A(k, m).
+  Value lhs = op.lhs();
+  auto lhsMap = op.indexing_maps()[0].cast<AffineMapAttr>().getValue();
+  if (lhsMap == AffineMap::get(3, 0, {k, m}, ctx))
+    lhs = rew.create<vector::TransposeOp>(loc, lhs, ArrayRef<int64_t>{1, 0});
+  else if (lhsMap != AffineMap::get(3, 0, {m, k}, ctx))
+    return failure();
+
+  // RHS must be B(k, n) or B(n, k).
+  Value rhs = op.rhs();
+  auto rhsMap = op.indexing_maps()[1].cast<AffineMapAttr>().getValue();
+  if (rhsMap == AffineMap::get(3, 0, {n, k}, ctx))
+    rhs = rew.create<vector::TransposeOp>(loc, rhs, ArrayRef<int64_t>{1, 0});
+  else if (rhsMap != AffineMap::get(3, 0, {k, n}, ctx))
+    return failure();
+
+  // At this point lhs and rhs are in row-major.
+  VectorType lhsType = lhs.getType().cast<VectorType>();
+  VectorType rhsType = rhs.getType().cast<VectorType>();
   int64_t lhsRows = lhsType.getDimSize(0);
   int64_t lhsColumns = lhsType.getDimSize(1);
   int64_t rhsColumns = rhsType.getDimSize(1);
 
   Type flattenedLHSType =
       VectorType::get(lhsType.getNumElements(), lhsType.getElementType());
+  lhs = rew.create<vector::ShapeCastOp>(loc, flattenedLHSType, lhs);
+
   Type flattenedRHSType =
       VectorType::get(rhsType.getNumElements(), rhsType.getElementType());
-  auto lhs = rewriter.create<vector::ShapeCastOp>(op.getLoc(), flattenedLHSType,
-                                                  op.lhs());
-  auto rhs = rewriter.create<vector::ShapeCastOp>(op.getLoc(), flattenedRHSType,
-                                                  op.rhs());
+  rhs = rew.create<vector::ShapeCastOp>(loc, flattenedRHSType, rhs);
 
-  Value mul = rewriter.create<vector::MatmulOp>(op.getLoc(), lhs, rhs, lhsRows,
-                                                lhsColumns, rhsColumns);
-  mul = rewriter.create<vector::ShapeCastOp>(op.getLoc(), op.acc().getType(),
-                                             mul);
-  if (elementType.isa<IntegerType>())
-    rewriter.replaceOpWithNewOp<AddIOp>(op, op.acc(), mul);
-  else
-    rewriter.replaceOpWithNewOp<AddFOp>(op, op.acc(), mul);
+  Value mul = rew.create<vector::MatmulOp>(loc, lhs, rhs, lhsRows, lhsColumns,
+                                           rhsColumns);
+  mul = rew.create<vector::ShapeCastOp>(
+      loc,
+      VectorType::get({lhsRows, rhsColumns},
+                      getElementTypeOrSelf(op.acc().getType())),
+      mul);
 
+  // ACC must be C(m, n) or C(n, m).
+  auto accMap = op.indexing_maps()[2].cast<AffineMapAttr>().getValue();
+  if (accMap == AffineMap::get(3, 0, {n, m}, ctx))
+    mul = rew.create<vector::TransposeOp>(loc, mul, ArrayRef<int64_t>{1, 0});
+  else if (accMap != AffineMap::get(3, 0, {m, n}, ctx))
+    llvm_unreachable("invalid contraction semantics");
+
+  Value res = elementType.isa<IntegerType>()
+                  ? static_cast<Value>(rew.create<AddIOp>(loc, op.acc(), mul))
+                  : static_cast<Value>(rew.create<AddFOp>(loc, op.acc(), mul));
+
+  rew.replaceOp(op, res);
   return success();
 }
 
