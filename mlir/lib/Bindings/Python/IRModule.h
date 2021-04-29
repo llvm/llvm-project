@@ -473,6 +473,10 @@ public:
   /// Creates an OpView suitable for this operation.
   pybind11::object createOpView();
 
+  /// Erases the underlying MlirOperation, removes its pointer from the
+  /// parent context's live operations map, and sets the valid bit false.
+  void erase();
+
 private:
   PyOperation(PyMlirContextRef contextRef, MlirOperation operation);
   static PyOperationRef createInstance(PyMlirContextRef contextRef,
