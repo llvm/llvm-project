@@ -1107,19 +1107,19 @@ struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
   }
 };
 
-// Allow the true region of an if to assume the condition is true
-// and vice versa. For example:
-//
-//   scf.if %cmp {
-//      print(%cmp)
-//   }
-//
-//  becomes
-//
-//   scf.if %cmp {
-//      print(true)
-//   }
-//
+/// Allow the true region of an if to assume the condition is true
+/// and vice versa. For example:
+///
+///   scf.if %cmp {
+///      print(%cmp)
+///   }
+///
+///  becomes
+///
+///   scf.if %cmp {
+///      print(true)
+///   }
+///
 struct ConditionPropagation : public OpRewritePattern<IfOp> {
   using OpRewritePattern<IfOp>::OpRewritePattern;
 
@@ -1185,7 +1185,7 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
 ///    print(%cmp)
 ///
 /// Additionally if both branches yield the same value, replace all uses
-/// of the result with the yielded value
+/// of the result with the yielded value.
 ///
 ///    %res:2 = scf.if %cmp {
 ///       yield something(), %arg1
@@ -1200,7 +1200,8 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
 ///    } else {
 ///       yield something2()
 ///    }
-//    print(%arg1)
+///    print(%arg1)
+///
 struct ReplaceIfYieldWithConditionOrValue : public OpRewritePattern<IfOp> {
   using OpRewritePattern<IfOp>::OpRewritePattern;
 
