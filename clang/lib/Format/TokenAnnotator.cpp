@@ -3094,8 +3094,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
 bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
                                          const FormatToken &Right) {
   const FormatToken &Left = *Right.Previous;
-  auto HasExistingWhitespace = [&Whitespace = Right.WhitespaceRange]() {
-    return Whitespace.getBegin() != Whitespace.getEnd();
+  auto HasExistingWhitespace = [&Right]() {
+    return Right.WhitespaceRange.getBegin() != Right.WhitespaceRange.getEnd();
   };
   if (Right.Tok.getIdentifierInfo() && Left.Tok.getIdentifierInfo())
     return true; // Never ever merge two identifiers.
