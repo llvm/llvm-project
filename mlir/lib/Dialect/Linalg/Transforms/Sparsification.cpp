@@ -45,7 +45,6 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Matchers.h"
 
@@ -361,7 +360,7 @@ static void findSparseAnnotations(Merger &merger, linalg::GenericOp op) {
 /// Returns true if tensor was set up with sparse storage scheme.
 static bool linkedSparse(linalg::GenericOp op, unsigned tensor) {
   if (tensor < op.getNumInputs())
-    return isa_and_nonnull<sparse_tensor::FromPointerOp>(
+    return isa_and_nonnull<linalg::SparseTensorFromPointerOp>(
         op.getInput(tensor).getDefiningOp());
   return false;
 }
@@ -577,10 +576,12 @@ static void genBuffers(Merger &merger, CodeGen &codegen,
             dynShape, genIntType(rewriter, codegen.options.indType));
         Value dim = rewriter.create<ConstantIndexOp>(loc, d);
         // Generate sparse primitives to obtains pointer and indices.
-        codegen.pointers[t][i] = rewriter.create<sparse_tensor::ToPointersOp>(
-            loc, ptrTp, tensor, dim);
-        codegen.indices[t][i] = rewriter.create<sparse_tensor::ToIndicesOp>(
-            loc, indTp, tensor, dim);
+        codegen.pointers[t][i] =
+            rewriter.create<linalg::SparseTensorToPointersMemRefOp>(
+                loc, ptrTp, tensor, dim);
+        codegen.indices[t][i] =
+            rewriter.create<linalg::SparseTensorToIndicesMemRefOp>(loc, indTp,
+                                                                   tensor, dim);
       }
       // Find lower and upper bound in current dimension.
       Value up;
@@ -607,7 +608,8 @@ static void genBuffers(Merger &merger, CodeGen &codegen,
       auto dynShape = {ShapedType::kDynamicSize};
       auto sparseTp = MemRefType::get(dynShape, tensorType.getElementType());
       codegen.buffers[t] =
-          rewriter.create<sparse_tensor::ToValuesOp>(loc, sparseTp, tensor);
+          rewriter.create<linalg::SparseTensorToValuesMemRefOp>(loc, sparseTp,
+                                                                tensor);
     }
   }
 }

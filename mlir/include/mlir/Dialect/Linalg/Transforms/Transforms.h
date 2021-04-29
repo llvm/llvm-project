@@ -1129,6 +1129,9 @@ void populateSparsificationPatterns(
     RewritePatternSet &patterns,
     const SparsificationOptions &options = SparsificationOptions());
 
+/// Sets up sparsification conversion rules with the given options.
+void populateSparsificationConversionPatterns(RewritePatternSet &patterns);
+
 } // namespace linalg
 } // namespace mlir
 

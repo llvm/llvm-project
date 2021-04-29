@@ -228,8 +228,8 @@ func @mul_s(%arga: tensor<1024xf32>, %argb: tensor<1024xf32>, %argx: tensor<1024
 //
 !SparseTensor = type !llvm.ptr<i8>
 func @mul_s_alt(%argA: !SparseTensor, %argB: !SparseTensor, %argx: tensor<1024xf32>) -> tensor<1024xf32> {
-  %arga = sparse_tensor.fromPtr %argA : !SparseTensor to tensor<1024xf32>
-  %argb = sparse_tensor.fromPtr %argB : !SparseTensor to tensor<1024xf32>
+  %arga = linalg.sparse_tensor %argA : !SparseTensor to tensor<1024xf32>
+  %argb = linalg.sparse_tensor %argB : !SparseTensor to tensor<1024xf32>
   %0 = linalg.generic #trait_mul_s
     ins(%arga, %argb: tensor<1024xf32>, tensor<1024xf32>)
     outs(%argx: tensor<1024xf32>) {

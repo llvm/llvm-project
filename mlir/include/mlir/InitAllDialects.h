@@ -37,7 +37,6 @@
 #include "mlir/Dialect/SDBM/SDBMDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
-#include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
@@ -75,7 +74,6 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   ROCDL::ROCDLDialect,
                   SDBMDialect,
                   shape::ShapeDialect,
-                  sparse_tensor::SparseTensorDialect,
                   tensor::TensorDialect,
                   tosa::TosaDialect,
                   x86vector::X86VectorDialect>();
