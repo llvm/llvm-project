@@ -787,43 +787,11 @@ public:
     return OpCost;
   }
 
-  TTI::ShuffleKind improveShuffleKindFromMask(TTI::ShuffleKind Kind,
-                                              ArrayRef<int> Mask) const {
-    int Limit = Mask.size() * 2;
-    if (Mask.empty() ||
-        // Extra check required by isSingleSourceMaskImpl function (called by
-        // ShuffleVectorInst::isSingleSourceMask).
-        any_of(Mask, [Limit](int I) { return I >= Limit; }))
-      return Kind;
-    switch (Kind) {
-    case TTI::SK_PermuteSingleSrc:
-      if (ShuffleVectorInst::isReverseMask(Mask))
-        return TTI::SK_Reverse;
-      if (ShuffleVectorInst::isZeroEltSplatMask(Mask))
-        return TTI::SK_Broadcast;
-      break;
-    case TTI::SK_PermuteTwoSrc:
-      if (ShuffleVectorInst::isSelectMask(Mask))
-        return TTI::SK_Select;
-      if (ShuffleVectorInst::isTransposeMask(Mask))
-        return TTI::SK_Transpose;
-      break;
-    case TTI::SK_Select:
-    case TTI::SK_Reverse:
-    case TTI::SK_Broadcast:
-    case TTI::SK_Transpose:
-    case TTI::SK_InsertSubvector:
-    case TTI::SK_ExtractSubvector:
-      break;
-    }
-    return Kind;
-  }
-
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask, int Index,
                                  VectorType *SubTp) {
 
-    switch (improveShuffleKindFromMask(Kind, Mask)) {
+    switch (Kind) {
     case TTI::SK_Broadcast:
       return getBroadcastShuffleOverhead(cast<FixedVectorType>(Tp));
     case TTI::SK_Select:
