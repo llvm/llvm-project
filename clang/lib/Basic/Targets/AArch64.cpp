@@ -352,7 +352,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_FEATURE_SVE_MATMUL_INT8", "1");
 
   if ((FPU & NeonMode) && HasFP16FML)
-    Builder.defineMacro("__ARM_FEATURE_FP16FML", "1");
+    Builder.defineMacro("__ARM_FEATURE_FP16_FML", "1");
 
   if (Opts.hasSignReturnAddress()) {
     // Bitmask:
