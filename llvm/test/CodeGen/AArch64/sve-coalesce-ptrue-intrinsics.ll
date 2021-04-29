@@ -163,14 +163,13 @@ define <vscale x 4 x i32> @coalesce_test_same_size(i32* %addr) {
 define <vscale x 8 x i16> @coalesce_test_promoted_ptrue(i32* %addr1, i16* %addr2) {
 ; CHECK-LABEL: @coalesce_test_promoted_ptrue(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> [[TMP3]], i32* [[ADDR1:%.*]])
-; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1.nxv8i16(<vscale x 8 x i1> [[TMP5]], i16* [[ADDR2:%.*]])
-; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1.nxv8i16(<vscale x 8 x i1> [[TMP1]], i16* [[ADDR2]])
-; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP8]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[TMP3]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> [[TMP2]], i32* [[ADDR1:%.*]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1.nxv8i16(<vscale x 8 x i1> [[TMP4]], i16* [[ADDR2:%.*]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1.nxv8i16(<vscale x 8 x i1> [[TMP1]], i16* [[ADDR2]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP7]]
 ;
   %1 = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %2 = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %1)
