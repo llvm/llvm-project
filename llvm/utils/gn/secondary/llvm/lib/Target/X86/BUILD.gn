@@ -87,7 +87,6 @@ static_library("LLVMX86CodeGen") {
     "X86EvexToVex.cpp",
     "X86ExpandPseudo.cpp",
     "X86FastISel.cpp",
-    "X86FastTileConfig.cpp",
     "X86FixupBWInsts.cpp",
     "X86FixupLEAs.cpp",
     "X86FixupSetCC.cpp",
