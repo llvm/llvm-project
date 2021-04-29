@@ -48,7 +48,7 @@ body:             |
   ; CHECK: bb.2:
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   t2WhileLoopStart killed renamable $r0, %bb.1, implicit-def dead $cpsr
-  ; CHECK:   tB %bb.3, 14 /* CC::al */, $noreg
+  ; CHECK:   t2B %bb.3, 14 /* CC::al */, $noreg
   ; CHECK: bb.1:
   ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   ; CHECK: bb.3:
@@ -145,7 +145,7 @@ body:             |
   ; CHECK:   $lr = tMOVr $r0, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r0 = t2ADDrs killed renamable $r2, killed $r0, 18, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   t2WhileLoopStart killed renamable $lr, %bb.1, implicit-def dead $cpsr
-  ; CHECK:   tB %bb.3, 14 /* CC::al */, $noreg
+  ; CHECK:   t2B %bb.3, 14 /* CC::al */, $noreg
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.4(0x80000000)
   ; CHECK:   tCMPi8 renamable $r1, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
