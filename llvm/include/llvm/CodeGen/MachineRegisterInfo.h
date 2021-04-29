@@ -823,12 +823,13 @@ public:
 
   /// updateDbgUsersToReg - Update a collection of DBG_VALUE instructions
   /// to refer to the designated register.
-  void updateDbgUsersToReg(Register Reg,
-                           ArrayRef<MachineInstr*> Users) const {
+  void updateDbgUsersToReg(Register OldReg, Register NewReg,
+                           ArrayRef<MachineInstr *> Users) const {
     for (MachineInstr *MI : Users) {
-      assert(MI->isDebugInstr());
-      assert(MI->getOperand(0).isReg());
-      MI->getOperand(0).setReg(Reg);
+      assert(MI->isDebugValue());
+      assert(MI->hasDebugOperandForReg(OldReg));
+      for (auto &Op : MI->getDebugOperandsForReg(OldReg))
+        Op.setReg(NewReg);
     }
   }
 
