@@ -138,9 +138,9 @@ private:
     uptr ClassSize;
     CompactPtrT Chunks[2 * TransferBatch::MaxNumCached];
   };
-  PerClass PerClassArray[NumClasses];
+  PerClass PerClassArray[NumClasses] = {};
   LocalStats Stats;
-  SizeClassAllocator *Allocator;
+  SizeClassAllocator *Allocator = nullptr;
 
   ALWAYS_INLINE void initCacheMaybe(PerClass *C) {
     if (LIKELY(C->MaxCount))
