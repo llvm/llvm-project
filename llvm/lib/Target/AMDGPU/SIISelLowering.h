@@ -491,8 +491,8 @@ public:
                                       const SIRegisterInfo &TRI,
                                       SIMachineFunctionInfo &Info) const;
 
-  std::pair<int, MVT> getTypeLegalizationCost(const DataLayout &DL,
-                                              Type *Ty) const;
+  std::pair<InstructionCost, MVT> getTypeLegalizationCost(const DataLayout &DL,
+                                                          Type *Ty) const;
 };
 
 } // End namespace llvm
