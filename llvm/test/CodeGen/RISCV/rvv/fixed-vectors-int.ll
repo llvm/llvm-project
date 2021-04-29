@@ -5622,24 +5622,13 @@ define void @add_vi_v4i32(<4 x i32>* %x) {
 }
 
 define void @add_vi_v2i64(<2 x i64>* %x) {
-; RV32-LABEL: add_vi_v2i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
-; RV32-NEXT:    vle64.v v25, (a0)
-; RV32-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
-; RV32-NEXT:    vmv.v.i v26, -1
-; RV32-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
-; RV32-NEXT:    vadd.vv v25, v25, v26
-; RV32-NEXT:    vse64.v v25, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: add_vi_v2i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
-; RV64-NEXT:    vle64.v v25, (a0)
-; RV64-NEXT:    vadd.vi v25, v25, -1
-; RV64-NEXT:    vse64.v v25, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: add_vi_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
+; CHECK-NEXT:    vle64.v v25, (a0)
+; CHECK-NEXT:    vadd.vi v25, v25, -1
+; CHECK-NEXT:    vse64.v v25, (a0)
+; CHECK-NEXT:    ret
   %a = load <2 x i64>, <2 x i64>* %x
   %b = insertelement <2 x i64> undef, i64 -1, i32 0
   %c = shufflevector <2 x i64> %b, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -5860,25 +5849,14 @@ define void @sub_vi_v4i32(<4 x i32>* %x) {
 }
 
 define void @sub_vi_v2i64(<2 x i64>* %x) {
-; RV32-LABEL: sub_vi_v2i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
-; RV32-NEXT:    vle64.v v25, (a0)
-; RV32-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
-; RV32-NEXT:    vmv.v.i v26, -1
-; RV32-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
-; RV32-NEXT:    vsub.vv v25, v25, v26
-; RV32-NEXT:    vse64.v v25, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: sub_vi_v2i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
-; RV64-NEXT:    vle64.v v25, (a0)
-; RV64-NEXT:    addi a1, zero, -1
-; RV64-NEXT:    vsub.vx v25, v25, a1
-; RV64-NEXT:    vse64.v v25, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: sub_vi_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
+; CHECK-NEXT:    vle64.v v25, (a0)
+; CHECK-NEXT:    addi a1, zero, -1
+; CHECK-NEXT:    vsub.vx v25, v25, a1
+; CHECK-NEXT:    vse64.v v25, (a0)
+; CHECK-NEXT:    ret
   %a = load <2 x i64>, <2 x i64>* %x
   %b = insertelement <2 x i64> undef, i64 -1, i32 0
   %c = shufflevector <2 x i64> %b, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -6640,24 +6618,13 @@ define void @xor_vi_v4i32(<4 x i32>* %x) {
 }
 
 define void @xor_vi_v2i64(<2 x i64>* %x) {
-; RV32-LABEL: xor_vi_v2i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
-; RV32-NEXT:    vle64.v v25, (a0)
-; RV32-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
-; RV32-NEXT:    vmv.v.i v26, -1
-; RV32-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
-; RV32-NEXT:    vxor.vv v25, v25, v26
-; RV32-NEXT:    vse64.v v25, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: xor_vi_v2i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
-; RV64-NEXT:    vle64.v v25, (a0)
-; RV64-NEXT:    vxor.vi v25, v25, -1
-; RV64-NEXT:    vse64.v v25, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: xor_vi_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
+; CHECK-NEXT:    vle64.v v25, (a0)
+; CHECK-NEXT:    vxor.vi v25, v25, -1
+; CHECK-NEXT:    vse64.v v25, (a0)
+; CHECK-NEXT:    ret
   %a = load <2 x i64>, <2 x i64>* %x
   %b = insertelement <2 x i64> undef, i64 -1, i32 0
   %c = shufflevector <2 x i64> %b, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -7435,21 +7402,21 @@ define void @mulhu_vx_v4i32(<4 x i32>* %x) {
 define void @mulhu_vx_v2i64(<2 x i64>* %x) {
 ; RV32-LABEL: mulhu_vx_v2i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; RV32-NEXT:    vle64.v v25, (a0)
-; RV32-NEXT:    addi a1, zero, 5
-; RV32-NEXT:    vsetivli a2, 1, e8,m1,ta,mu
-; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    lui a1, 699051
 ; RV32-NEXT:    addi a2, a1, -1366
-; RV32-NEXT:    vsetivli a3, 4, e32,m1,ta,mu
-; RV32-NEXT:    vmv.v.x v26, a2
+; RV32-NEXT:    sw a2, 12(sp)
 ; RV32-NEXT:    addi a1, a1, -1365
-; RV32-NEXT:    vmerge.vxm v26, v26, a1, v0
-; RV32-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
+; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    addi a1, sp, 8
+; RV32-NEXT:    vlse64.v v26, (a1), zero
 ; RV32-NEXT:    vmulhu.vv v25, v25, v26
 ; RV32-NEXT:    vsrl.vi v25, v25, 1
 ; RV32-NEXT:    vse64.v v25, (a0)
+; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mulhu_vx_v2i64:
@@ -7557,23 +7524,23 @@ define void @mulhs_vx_v4i32(<4 x i32>* %x) {
 define void @mulhs_vx_v2i64(<2 x i64>* %x) {
 ; RV32-LABEL: mulhs_vx_v2i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; RV32-NEXT:    vle64.v v25, (a0)
-; RV32-NEXT:    addi a1, zero, 5
-; RV32-NEXT:    vsetivli a2, 1, e8,m1,ta,mu
-; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a2, a1, 1365
-; RV32-NEXT:    vsetivli a3, 4, e32,m1,ta,mu
-; RV32-NEXT:    vmv.v.x v26, a2
+; RV32-NEXT:    sw a2, 12(sp)
 ; RV32-NEXT:    addi a1, a1, 1366
-; RV32-NEXT:    vmerge.vxm v26, v26, a1, v0
-; RV32-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
+; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    addi a1, sp, 8
+; RV32-NEXT:    vlse64.v v26, (a1), zero
 ; RV32-NEXT:    vmulh.vv v25, v25, v26
 ; RV32-NEXT:    addi a1, zero, 63
 ; RV32-NEXT:    vsrl.vx v26, v25, a1
 ; RV32-NEXT:    vadd.vv v25, v25, v26
 ; RV32-NEXT:    vse64.v v25, (a0)
+; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mulhs_vx_v2i64:

@@ -636,6 +636,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           continue;
         }
 
+        // Use SPLAT_VECTOR to prevent type legalization from destroying the
+        // splats when type legalizing i64 scalar on RV32.
+        // FIXME: Use SPLAT_VECTOR for all types? DAGCombine probably needs
+        // improvements first.
+        if (!Subtarget.is64Bit() && VT.getVectorElementType() == MVT::i64) {
+          setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+          setOperationAction(ISD::SPLAT_VECTOR_PARTS, VT, Custom);
+        }
+
         setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
         setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
 
@@ -1265,6 +1274,23 @@ bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
   return false;
 }
 
+static SDValue lowerSPLAT_VECTOR(SDValue Op, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
+  MVT VT = Op.getSimpleValueType();
+  assert(VT.isFixedLengthVector() && "Unexpected vector!");
+
+  MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+
+  SDLoc DL(Op);
+  SDValue Mask, VL;
+  std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+
+  unsigned Opc =
+      VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL : RISCVISD::VMV_V_X_VL;
+  SDValue Splat = DAG.getNode(Opc, DL, ContainerVT, Op.getOperand(0), VL);
+  return convertFromScalableVector(VT, Splat, DAG, Subtarget);
+}
+
 static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
@@ -1515,8 +1541,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 // vector nxvXi64 VT.
 static SDValue splatPartsI64ThroughStack(const SDLoc &DL, MVT VT, SDValue Lo,
                                          SDValue Hi, SDValue VL,
-                                         SelectionDAG &DAG,
-                                         const RISCVSubtarget &Subtarget) {
+                                         SelectionDAG &DAG) {
   assert(VT.getVectorElementType() == MVT::i64 && VT.isScalableVector() &&
          Lo.getValueType() == MVT::i32 && Hi.getValueType() == MVT::i32 &&
          "Unexpected VTs!");
@@ -1540,29 +1565,41 @@ static SDValue splatPartsI64ThroughStack(const SDLoc &DL, MVT VT, SDValue Lo,
 
   Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo, Hi);
 
-  MVT XLenVT = Subtarget.getXLenVT();
   SDVTList VTs = DAG.getVTList({VT, MVT::Other});
-  SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vlse, DL, XLenVT);
-  SDValue Ops[] = {Chain, IntID, StackSlot, DAG.getRegister(RISCV::X0, XLenVT),
-                   VL};
+  SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vlse, DL, MVT::i64);
+  SDValue Ops[] = {Chain, IntID, StackSlot,
+                   DAG.getRegister(RISCV::X0, MVT::i64), VL};
 
   return DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, MVT::i64,
                                  MPI, Align(8), MachineMemOperand::MOLoad);
+}
+
+static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Lo,
+                                   SDValue Hi, SDValue VL, SelectionDAG &DAG) {
+  if (isa<ConstantSDNode>(Lo) && isa<ConstantSDNode>(Hi)) {
+    int32_t LoC = cast<ConstantSDNode>(Lo)->getSExtValue();
+    int32_t HiC = cast<ConstantSDNode>(Hi)->getSExtValue();
+    // If Hi constant is all the same sign bit as Lo, lower this as a custom
+    // node in order to try and match RVV vector/scalar instructions.
+    if ((LoC >> 31) == HiC)
+      return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Lo, VL);
+  }
+
+  // Fall back to a stack store and stride x0 vector load.
+  return splatPartsI64ThroughStack(DL, VT, Lo, Hi, VL, DAG);
 }
 
 // Called by type legalization to handle splat of i64 on RV32.
 // FIXME: We can optimize this when the type has sign or zero bits in one
 // of the halves.
 static SDValue splatSplitI64WithVL(const SDLoc &DL, MVT VT, SDValue Scalar,
-                                   SDValue VL, SelectionDAG &DAG,
-                                   const RISCVSubtarget &Subtarget) {
+                                   SDValue VL, SelectionDAG &DAG) {
+  assert(Scalar.getValueType() == MVT::i64 && "Unexpected VT!");
   SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
                            DAG.getConstant(0, DL, MVT::i32));
   SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
                            DAG.getConstant(1, DL, MVT::i32));
-
-  // Fall back to a stack store and stride x0 vector load.
-  return splatPartsI64ThroughStack(DL, VT, Lo, Hi, VL, DAG, Subtarget);
+  return splatPartsI64WithVL(DL, VT, Lo, Hi, VL, DAG);
 }
 
 // This function lowers a splat of a scalar operand Splat with the vector
@@ -1591,17 +1628,8 @@ static SDValue lowerScalarSplat(SDValue Scalar, SDValue VL, MVT VT, SDLoc DL,
   assert(XLenVT == MVT::i32 && Scalar.getValueType() == MVT::i64 &&
          "Unexpected scalar for splat lowering!");
 
-  // If this is a sign-extended 32-bit constant, we can truncate it and rely
-  // on the instruction to sign-extend since SEW>XLEN.
-  if (auto *CVal = dyn_cast<ConstantSDNode>(Scalar)) {
-    if (isInt<32>(CVal->getSExtValue()))
-      return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT,
-                         DAG.getConstant(CVal->getSExtValue(), DL, MVT::i32),
-                         VL);
-  }
-
   // Otherwise use the more complicated splatting algorithm.
-  return splatSplitI64WithVL(DL, VT, Scalar, VL, DAG, Subtarget);
+  return splatSplitI64WithVL(DL, VT, Scalar, VL, DAG);
 }
 
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
@@ -2209,6 +2237,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVECTOR_REVERSE(Op, DAG);
   case ISD::BUILD_VECTOR:
     return lowerBUILD_VECTOR(Op, DAG, Subtarget);
+  case ISD::SPLAT_VECTOR:
+    return lowerSPLAT_VECTOR(Op, DAG, Subtarget);
   case ISD::VECTOR_SHUFFLE:
     return lowerVECTOR_SHUFFLE(Op, DAG, Subtarget);
   case ISD::CONCAT_VECTORS: {
@@ -2781,6 +2811,17 @@ SDValue RISCVTargetLowering::lowerSPLAT_VECTOR_PARTS(SDValue Op,
   SDValue Lo = Op.getOperand(0);
   SDValue Hi = Op.getOperand(1);
 
+  if (VecVT.isFixedLengthVector()) {
+    MVT ContainerVT = getContainerForFixedLengthVector(VecVT);
+    SDLoc DL(Op);
+    SDValue Mask, VL;
+    std::tie(Mask, VL) =
+        getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
+
+    SDValue Res = splatPartsI64WithVL(DL, ContainerVT, Lo, Hi, VL, DAG);
+    return convertFromScalableVector(VecVT, Res, DAG, Subtarget);
+  }
+
   if (isa<ConstantSDNode>(Lo) && isa<ConstantSDNode>(Hi)) {
     int32_t LoC = cast<ConstantSDNode>(Lo)->getSExtValue();
     int32_t HiC = cast<ConstantSDNode>(Hi)->getSExtValue();
@@ -2797,8 +2838,8 @@ SDValue RISCVTargetLowering::lowerSPLAT_VECTOR_PARTS(SDValue Op,
     return DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, Lo);
 
   // Fall back to use a stack store and stride x0 vector load. Use X0 as VL.
-  return splatPartsI64ThroughStack(
-      DL, VecVT, Lo, Hi, DAG.getRegister(RISCV::X0, MVT::i64), DAG, Subtarget);
+  return splatPartsI64ThroughStack(DL, VecVT, Lo, Hi,
+                                   DAG.getRegister(RISCV::X0, MVT::i64), DAG);
 }
 
 // Custom-lower extensions from mask vectors by using a vselect either with 1
@@ -3136,7 +3177,7 @@ static SDValue lowerVectorIntrinsicSplats(SDValue Op, SelectionDAG &DAG,
   // VL should be the last operand.
   SDValue VL = Op.getOperand(Op.getNumOperands() - 1);
   assert(VL.getValueType() == XLenVT);
-  ScalarOp = splatSplitI64WithVL(DL, VT, ScalarOp, VL, DAG, Subtarget);
+  ScalarOp = splatSplitI64WithVL(DL, VT, ScalarOp, VL, DAG);
   return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(), Operands);
 }
 
@@ -3204,12 +3245,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     // FIXME: This is probably not the best way to do this, but it is
     // consistent with INSERT_VECTOR_ELT lowering so it is a good starting
     // point.
-    //   vmv.v.x vX, hi
-    //   vsll.vx vX, vX, /*32*/
-    //   vmv.v.x vY, lo
-    //   vsll.vx vY, vY, /*32*/
-    //   vsrl.vx vY, vY, /*32*/
-    //   vor.vv vX, vX, vY
+    //   sw lo, (a0)
+    //   sw hi, 4(a0)
+    //   vlse vX, (a0)
     //
     //   vid.v      vVid
     //   vmseq.vx   mMask, vVid, 0
@@ -3218,8 +3256,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue Vec = Op.getOperand(1);
     SDValue VL = Op.getOperand(3);
 
-    SDValue SplattedVal =
-        splatSplitI64WithVL(DL, VT, Scalar, VL, DAG, Subtarget);
+    SDValue SplattedVal = splatSplitI64WithVL(DL, VT, Scalar, VL, DAG);
     SDValue SplattedIdx = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT,
                                       DAG.getConstant(0, DL, MVT::i32), VL);
 
