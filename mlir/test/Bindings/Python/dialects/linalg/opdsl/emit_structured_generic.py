@@ -23,6 +23,18 @@ def matmul_poly(A=TensorDef(TV.T1, S.M, S.K),
                 C=TensorDef(U, S.M, S.N, output=True)):
   C[D.m, D.n] += cast(U, A[D.m, D.k]) * cast(U, B[D.k, D.n])
 
+@linalg_structured_op
+def fill_rng_2d(A=TensorDef(T, S.M, S.N, output=True),
+                min=CaptureDef(F64),
+                max=CaptureDef(F64),
+                seed=CaptureDef(I32)):
+  multiplier = const(I32, 1103515245)
+  increment = const(I32, 12345)
+  temp1 = (cast(I32, index(D.m)) + seed) * multiplier + increment
+  temp2 = (cast(I32, index(D.n)) + temp1) * multiplier + increment
+  inv_randmax = const(F64, 2.3283064e-10)
+  scaling = (max - min) * inv_randmax
+  A[D.m, D.n] = cast(T, cast(F64, temp2) * scaling + min)
 
 with Context() as ctx, Location.unknown():
   module = Module.create()
@@ -142,5 +154,27 @@ with Context() as ctx, Location.unknown():
     def test_f64f64f32_matmul(lhs, rhs, init_result):
       return matmul_poly(lhs, rhs, outs=[init_result])
 
+    # CHECK-LABEL: @test_fill_rng_2d
+    # CHECK-SAME:  %{{.*}} tensor<4x16xi32>, %[[MIN:.+]]: f64, %[[MAX:.+]]: f64, %[[SEED:.+]]: i32
+    # CHECK-DAG:    %[[IDX0:.+]] = linalg.index 0 : index
+    # CHECK-DAG:    %[[IDX1:.+]] = linalg.index 1 : index
+    # CHECK-DAG:    %[[IDX0_CAST:.+]] = index_cast %[[IDX0]] : index to i32
+    # CHECK-DAG:    %[[IDX1_CAST:.+]] = index_cast %[[IDX1]] : index to i32
+    # CHECK-DAG:    %[[RND0:.+]] = addi %[[IDX0_CAST]], %[[SEED]] : i32
+    # CHECK-DAG:    %[[CST0:.+]] = constant 1103515245 : i32
+    # CHECK-DAG:    %[[CST1:.+]] = constant 12345 : i32
+    # CHECK-DAG:    %[[RND1:.+]] = muli %[[RND0]], %[[CST0]] : i32
+    # CHECK-DAG:    %[[RND2:.+]] = addi %[[RND1]], %[[CST1]] : i32
+    # CHECK:        %[[RND3:.+]] = sitofp %{{.*}} : i32 to f64
+    # CHECK-DAG:    %[[DIFF:.+]] = subf %[[MAX]], %[[MIN]] : f64
+    # CHECK-DAG:    %[[CST2:.+]] = constant 2.3283063999999999E-10 : f64
+    # CHECK-DAG:    %[[FACT:.+]] = mulf %[[DIFF]], %[[CST2]] : f64
+    # CHECK-DAG:    %[[RND4:.+]] = mulf %[[RND3]], %[[FACT]] : f64
+    # CHECK-DAG:    %[[RND5:.+]] = addf %[[RND4]], %[[MIN]] : f64
+    # CHECK-DAG:    %{{.*}} = fptosi %[[RND5]] : f64 to i32
+    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), i32),
+                                 f64, f64, i32)
+    def test_fill_rng_2d(init_result, min, max, seed):
+      return fill_rng_2d(outs=[init_result], captures=[min, max, seed])
 
 print(module)
