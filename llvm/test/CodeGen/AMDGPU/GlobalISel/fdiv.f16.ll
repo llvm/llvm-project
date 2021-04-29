@@ -757,7 +757,7 @@ define <2 x half> @v_fdiv_v2f16(<2 x half> %a, <2 x half> %b) {
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v4, v1, v0
 ; GFX11-NEXT:    v_div_fixup_f16 v2, v3, v2, v5
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
-; GFX11-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX11-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv <2 x half> %a, %b
   ret <2 x half> %fdiv
@@ -830,7 +830,7 @@ define <2 x half> @v_fdiv_v2f16_afn(<2 x half> %a, <2 x half> %b) {
 ; GFX11-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-NEXT:    v_mul_f16_e32 v2, v3, v2
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
-; GFX11-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX11-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv afn <2 x half> %a, %b
   ret <2 x half> %fdiv
@@ -1005,7 +1005,7 @@ define <2 x half> @v_fdiv_v2f16_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v4, v1, v0
 ; GFX11-NEXT:    v_div_fixup_f16 v2, v3, v2, v5
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
-; GFX11-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX11-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv <2 x half> %a, %b, !fpmath !0
   ret <2 x half> %fdiv
@@ -1170,7 +1170,7 @@ define <2 x half> @v_rcp_v2f16(<2 x half> %x) {
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v3, v0, 1.0
 ; GFX11-NEXT:    v_div_fixup_f16 v1, v2, v1, 1.0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX11-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX11-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv <2 x half> <half 1.0, half 1.0>, %x
   ret <2 x half> %fdiv
@@ -1335,7 +1335,7 @@ define <2 x half> @v_rcp_v2f16_arcp(<2 x half> %x) {
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v3, v0, 1.0
 ; GFX11-NEXT:    v_div_fixup_f16 v1, v2, v1, 1.0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX11-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX11-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv arcp <2 x half> <half 1.0, half 1.0>, %x
   ret <2 x half> %fdiv
@@ -1397,7 +1397,7 @@ define <2 x half> @v_rcp_v2f16_arcp_afn(<2 x half> %x) {
 ; GFX11-NEXT:    v_rcp_f16_e32 v0, v0
 ; GFX11-NEXT:    v_rcp_f16_e32 v1, v1
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX11-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX11-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv arcp afn <2 x half> <half 1.0, half 1.0>, %x
   ret <2 x half> %fdiv
@@ -1521,7 +1521,7 @@ define <2 x half> @v_rcp_v2f16_ulp25(<2 x half> %x) {
 ; GFX11-NEXT:    v_rcp_f16_e32 v0, v0
 ; GFX11-NEXT:    v_rcp_f16_e32 v1, v1
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX11-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX11-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv <2 x half> <half 1.0, half 1.0>, %x, !fpmath !0
   ret <2 x half> %fdiv
@@ -1594,7 +1594,7 @@ define <2 x half> @v_fdiv_v2f16_afn_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX11-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-NEXT:    v_mul_f16_e32 v2, v3, v2
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
-; GFX11-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX11-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv afn <2 x half> %a, %b, !fpmath !0
   ret <2 x half> %fdiv
@@ -1769,7 +1769,7 @@ define <2 x half> @v_fdiv_v2f16_arcp_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v4, v1, v0
 ; GFX11-NEXT:    v_div_fixup_f16 v2, v3, v2, v5
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
-; GFX11-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX11-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv arcp <2 x half> %a, %b, !fpmath !0
   ret <2 x half> %fdiv
@@ -1842,7 +1842,7 @@ define <2 x half> @v_fdiv_v2f16_arcp_afn_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX11-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-NEXT:    v_mul_f16_e32 v2, v3, v2
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
-; GFX11-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
+; GFX11-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv afn arcp <2 x half> %a, %b, !fpmath !0
   ret <2 x half> %fdiv

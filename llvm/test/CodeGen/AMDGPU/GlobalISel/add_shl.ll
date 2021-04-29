@@ -139,7 +139,7 @@ define amdgpu_ps float @add_shl_vgpr_const_inline_const(i32 %a) {
 ;
 ; GFX11-LABEL: add_shl_vgpr_const_inline_const:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_lshl_u32 v0, v0, 0x3f4, 9
+; GFX11-NEXT:    v_add_lshl_u32 v0, 0x3f4, v0, 9
 ; GFX11-NEXT:    ; return to shader part epilog
   %x = add i32 %a, 1012
   %result = shl i32 %x, 9
