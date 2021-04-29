@@ -236,6 +236,9 @@ clang-format
   on the formatted new lines and not on the new lines in the file. (Fixes
   https://llvm.org/PR41870.)
 
+- Option ``SpacesInAngles`` has been improved, it now accepts ``Leave`` value
+  that allows to keep spaces where they are already present.
+
 libclang
 --------
 
