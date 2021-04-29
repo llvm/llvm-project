@@ -3894,6 +3894,37 @@ void CombinerHelper::applyFunnelShiftToRotate(MachineInstr &MI) {
   Observer.changedInstr(MI);
 }
 
+// Fold (rot x, c) -> (rot x, c % BitSize)
+bool CombinerHelper::matchRotateOutOfRange(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_ROTL ||
+         MI.getOpcode() == TargetOpcode::G_ROTR);
+  unsigned Bitsize =
+      MRI.getType(MI.getOperand(0).getReg()).getScalarSizeInBits();
+  Register AmtReg = MI.getOperand(2).getReg();
+  bool OutOfRange = false;
+  auto MatchOutOfRange = [Bitsize, &OutOfRange](const Constant *C) {
+    if (auto *CI = dyn_cast<ConstantInt>(C))
+      OutOfRange |= CI->getValue().uge(Bitsize);
+    return true;
+  };
+  return matchUnaryPredicate(MRI, AmtReg, MatchOutOfRange) && OutOfRange;
+}
+
+void CombinerHelper::applyRotateOutOfRange(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_ROTL ||
+         MI.getOpcode() == TargetOpcode::G_ROTR);
+  unsigned Bitsize =
+      MRI.getType(MI.getOperand(0).getReg()).getScalarSizeInBits();
+  Builder.setInstrAndDebugLoc(MI);
+  Register Amt = MI.getOperand(2).getReg();
+  LLT AmtTy = MRI.getType(Amt);
+  auto Bits = Builder.buildConstant(AmtTy, Bitsize);
+  Amt = Builder.buildURem(AmtTy, MI.getOperand(2).getReg(), Bits).getReg(0);
+  Observer.changingInstr(MI);
+  MI.getOperand(2).setReg(Amt);
+  Observer.changedInstr(MI);
+}
+
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))
     return true;
