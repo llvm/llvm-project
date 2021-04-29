@@ -569,7 +569,7 @@ std::string UniqueStableNameExpr::ComputeName(ASTContext &Context) {
                                            getTypeSourceInfo()->getType());
 }
 
-static std::string UniqueStableNameExpr::ComputeName(ASTContext &Context,
+std::string UniqueStableNameExpr::ComputeName(ASTContext &Context,
                                                      QualType Ty) {
   auto ShouldMangleCallback = [](ASTContext &Ctx, const TagDecl *TD) {
     return Ctx.IsSYCLKernelNamingDecl(TD);

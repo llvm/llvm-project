@@ -2147,7 +2147,7 @@ public:
 
   // Get the generated name of the type.  Note that this only works after all
   // kernels have been instantiated.
-  static std::string Compute(ASTContext &Context, QualType Ty);
+  static std::string ComputeName(ASTContext &Context, QualType Ty);
 };
 
 /// ParenExpr - This represents a parethesized expression, e.g. "(1)".  This
