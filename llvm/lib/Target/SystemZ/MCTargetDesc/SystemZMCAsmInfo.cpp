@@ -27,6 +27,7 @@ SystemZMCAsmInfo::SystemZMCAsmInfo(const Triple &TT) {
   AllowAtAtStartOfIdentifier = (AssemblerDialect == AD_HLASM);
   AllowDollarAtStartOfIdentifier = (AssemblerDialect == AD_HLASM);
   AllowHashAtStartOfIdentifier = (AssemblerDialect == AD_HLASM);
+  DotIsPC = (AssemblerDialect == AD_ATT);
 
   ZeroDirective = "\t.space\t";
   Data64bitsDirective = "\t.quad\t";
