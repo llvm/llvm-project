@@ -942,7 +942,7 @@ TEST(VPRecipeTest, CastVPWidenMemoryInstructionRecipeToVPUserAndVPDef) {
   EXPECT_TRUE(isa<VPUser>(BaseR));
   EXPECT_EQ(&Recipe, BaseR);
 
-  VPValue *VPV = Recipe.getVPValue();
+  VPValue *VPV = Recipe.getVPSingleValue();
   EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDef()));
   EXPECT_EQ(&Recipe, dyn_cast<VPRecipeBase>(VPV->getDef()));
 
