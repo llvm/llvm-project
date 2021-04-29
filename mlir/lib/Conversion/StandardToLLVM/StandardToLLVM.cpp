@@ -2396,7 +2396,7 @@ struct Log1pOpLowering : public ConvertOpToLLVMPattern<math::Log1pOp> {
           auto one =
               rewriter.create<LLVM::ConstantOp>(loc, llvm1DVectorTy, splatAttr);
           auto add = rewriter.create<LLVM::FAddOp>(loc, llvm1DVectorTy, one,
-                                                   transformed.operand());
+                                                   operands[0]);
           return rewriter.create<LLVM::LogOp>(loc, llvm1DVectorTy, add);
         },
         rewriter);
