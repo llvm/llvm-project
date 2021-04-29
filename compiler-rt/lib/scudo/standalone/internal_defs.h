@@ -48,6 +48,15 @@
 #define USED __attribute__((used))
 #define NOEXCEPT noexcept
 
+#if defined(__has_attribute)
+#if __has_attribute(require_constant_initialization)
+#define SCUDO_REQUIRE_CONSTANT_INITIALIZATION                                  \
+  __attribute__((__require_constant_initialization__))
+#else
+#define SCUDO_REQUIRE_CONSTANT_INITIALIZATION
+#endif
+#endif
+
 namespace scudo {
 
 typedef unsigned long uptr;
