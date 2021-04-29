@@ -1220,7 +1220,7 @@ lldb::SBStructuredData SBFrame::GetLanguageSpecificData() const {
       if (auto *data = runtime->GetLanguageSpecificData(*frame))
         return {data};
 
-  return nullptr;
+  return {};
 }
 
 // BEGIN SWIFT
