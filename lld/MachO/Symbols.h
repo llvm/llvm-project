@@ -85,12 +85,17 @@ public:
 
 protected:
   Symbol(Kind k, StringRefZ name, InputFile *file)
-      : symbolKind(k), nameData(name.data), nameSize(name.size), file(file) {}
+      : symbolKind(k), nameData(name.data), nameSize(name.size), file(file),
+        isUsedInRegularObj(!file || isa<ObjFile>(file)) {}
 
   Kind symbolKind;
   const char *nameData;
   mutable uint32_t nameSize;
   InputFile *file;
+
+public:
+  // True if this symbol was referenced by a regular (non-bitcode) object.
+  bool isUsedInRegularObj;
 };
 
 class Defined : public Symbol {
@@ -249,7 +254,10 @@ T *replaceSymbol(Symbol *s, ArgT &&...arg) {
   assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&
          "Not a Symbol");
 
-  return new (s) T(std::forward<ArgT>(arg)...);
+  bool isUsedInRegularObj = s->isUsedInRegularObj;
+  T *sym = new (s) T(std::forward<ArgT>(arg)...);
+  sym->isUsedInRegularObj |= isUsedInRegularObj;
+  return sym;
 }
 
 } // namespace macho

@@ -16,8 +16,8 @@
 # RUN: not %lld %t/main.o %t/lib.a -u _asdf -o /dev/null 2>&1 | \
 # RUN:     FileCheck %s --check-prefix=UNDEF
 
-# NOFOO-NOT: _foo forced load of lib.a(foo.o)
-# FOO: _foo forced load of lib.a(foo.o)
+# NOFOO-NOT: _foo forced load of {{.+}}lib.a(foo.o)
+# FOO: _foo forced load of {{.+}}lib.a(foo.o)
 # UNDEF: error: undefined symbol: _asdf
 
 #--- foo.s

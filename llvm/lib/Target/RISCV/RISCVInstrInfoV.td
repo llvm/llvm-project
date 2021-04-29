@@ -662,10 +662,10 @@ def PseudoVMSGEU_VX_M : Pseudo<(outs VRNoV0:$vd),
 def PseudoVMSGE_VX_M : Pseudo<(outs VRNoV0:$vd),
                               (ins VR:$vs2, GPR:$rs1, VMaskOp:$vm),
                               [], "vmsge.vx", "$vd, $vs2, $rs1$vm">;
-def PseudoVMSGEU_VX_M_T : Pseudo<(outs VMV0:$vd, VR:$scratch),
+def PseudoVMSGEU_VX_M_T : Pseudo<(outs VR:$vd, VR:$scratch),
                                  (ins VR:$vs2, GPR:$rs1, VMaskOp:$vm),
                                  [], "vmsgeu.vx", "$vd, $vs2, $rs1$vm, $scratch">;
-def PseudoVMSGE_VX_M_T : Pseudo<(outs VMV0:$vd, VR:$scratch),
+def PseudoVMSGE_VX_M_T : Pseudo<(outs VR:$vd, VR:$scratch),
                                 (ins VR:$vs2, GPR:$rs1, VMaskOp:$vm),
                                 [], "vmsge.vx", "$vd, $vs2, $rs1$vm, $scratch">;
 }

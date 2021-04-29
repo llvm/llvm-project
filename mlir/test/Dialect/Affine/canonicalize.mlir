@@ -884,3 +884,23 @@ func @dont_merge_affine_max_if_not_single_sym(%i0: index, %i1: index, %i2: index
   %1 = affine.max affine_map<()[s0, s1] -> (s0 + 4, 7 + s1)> ()[%0, %i2]
   return %1: index
 }
+
+// -----
+
+// Ensure bounding maps of affine.for are composed.
+
+// CHECK-DAG: #[[$MAP0]] = affine_map<()[s0] -> (s0 - 2)>
+// CHECK-DAG: #[[$MAP1]] = affine_map<()[s0] -> (s0 + 2)>
+
+// CHECK-LABEL: func @compose_affine_for_bounds
+// CHECK-SAME:   %[[N:.*]]: index)
+// CHECK: affine.for %{{.*}} = #[[$MAP0]]()[%[[N]]] to #[[$MAP1]]()[%[[N]]] {
+
+func @compose_affine_for_bounds(%N: index) {
+  %u = affine.apply affine_map<(d0) -> (d0 + 2)>(%N)
+  %l = affine.apply affine_map<(d0) -> (d0 - 2)>(%N)
+  affine.for %i = %l to %u {
+    "foo"() : () -> ()
+  }
+  return
+}

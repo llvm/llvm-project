@@ -132,6 +132,8 @@ public:
       }
       auto Diag = Diags.Report(Loc, Diags.getCustomDiagID(Level, "%0 [%1]"))
                   << Message.Message << Name;
+      for (const FileByteRange &FBR : Error.Message.Ranges)
+        Diag << getRange(FBR);
       // FIXME: explore options to support interactive fix selection.
       const llvm::StringMap<Replacements> *ChosenFix;
       if (ApplyFixes != FB_NoFix &&
@@ -257,17 +259,13 @@ private:
       for (const auto &Repl : FileAndReplacements.second) {
         if (!Repl.isApplicable())
           continue;
-        SmallString<128> FixAbsoluteFilePath = Repl.getFilePath();
-        Files.makeAbsolutePath(FixAbsoluteFilePath);
-        SourceLocation FixLoc =
-            getLocation(FixAbsoluteFilePath, Repl.getOffset());
-        SourceLocation FixEndLoc = FixLoc.getLocWithOffset(Repl.getLength());
-        // Retrieve the source range for applicable fixes. Macro definitions
-        // on the command line have locations in a virtual buffer and don't
-        // have valid file paths and are therefore not applicable.
-        CharSourceRange Range =
-            CharSourceRange::getCharRange(SourceRange(FixLoc, FixEndLoc));
-        Diag << FixItHint::CreateReplacement(Range, Repl.getReplacementText());
+        FileByteRange FBR;
+        FBR.FilePath = Repl.getFilePath().str();
+        FBR.FileOffset = Repl.getOffset();
+        FBR.Length = Repl.getLength();
+
+        Diag << FixItHint::CreateReplacement(getRange(FBR),
+                                             Repl.getReplacementText());
       }
     }
   }
@@ -277,7 +275,20 @@ private:
     auto Diag =
         Diags.Report(Loc, Diags.getCustomDiagID(DiagnosticsEngine::Note, "%0"))
         << Message.Message;
+    for (const FileByteRange &FBR : Message.Ranges)
+      Diag << getRange(FBR);
     reportFix(Diag, Message.Fix);
+  }
+
+  CharSourceRange getRange(const FileByteRange &Range) {
+    SmallString<128> AbsoluteFilePath{Range.FilePath};
+    Files.makeAbsolutePath(AbsoluteFilePath);
+    SourceLocation BeginLoc = getLocation(AbsoluteFilePath, Range.FileOffset);
+    SourceLocation EndLoc = BeginLoc.getLocWithOffset(Range.Length);
+    // Retrieve the source range for applicable highlights and fixes. Macro
+    // definition on the command line have locations in a virtual buffer and
+    // don't have valid file paths and are therefore not applicable.
+    return CharSourceRange::getCharRange(BeginLoc, EndLoc);
   }
 
   FileManager Files;

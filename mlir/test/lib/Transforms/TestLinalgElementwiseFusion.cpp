@@ -19,7 +19,7 @@
 
 namespace mlir {
 
-static void addOperands(Operation *op, llvm::SetVector<Value> &operandSet) {
+static void addOperands(Operation *op, SetVector<Value> &operandSet) {
   if (!op)
     return;
   TypeSwitch<Operation *, void>(op)
@@ -35,7 +35,7 @@ static void addOperands(Operation *op, llvm::SetVector<Value> &operandSet) {
 template <int limit = 3>
 static bool setFusedOpOperandLimit(const OpResult &producer,
                                    const OpOperand &consumer) {
-  llvm::SetVector<Value> fusedOpOperands;
+  SetVector<Value> fusedOpOperands;
   if (producer.getOwner()->getNumResults() != 1)
     return false;
   addOperands(consumer.getOwner(), fusedOpOperands);

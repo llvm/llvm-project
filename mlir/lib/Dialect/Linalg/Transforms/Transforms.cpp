@@ -206,7 +206,7 @@ static LogicalResult rewriteAsPaddedOp(PatternRewriter &rewriter,
   // This later folds away.
   SmallVector<Value> paddedSubviewResults;
   paddedSubviewResults.reserve(opToPad->getNumResults());
-  llvm::SetVector<Operation *> newUsersOfOpToPad;
+  SetVector<Operation *> newUsersOfOpToPad;
   for (auto it : llvm::zip(opToPad->getResults(), paddedOp->getResults())) {
     auto rank = std::get<0>(it).getType().cast<RankedTensorType>().getRank();
     SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
@@ -257,11 +257,8 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
     return failure();
 
   // Setup RAII guard to return properly.
-  bool succeeded = true;
   LinalgOp tiledOp = res->op;
   auto guard = llvm::make_scope_exit([&]() {
-    if (!succeeded)
-      return;
     // Return relevant information to derived pattern.
     result = *res;
     // Replace filter on both tiledOp and tiledAndPaddedOp, if necessary.
@@ -278,7 +275,6 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
   // Try to pad on the fly by rewriting res->op as a padded op.
   if (failed(rewriteAsPaddedOp(rewriter, *res, options))) {
     // Set so RAII guard does not propagate TiledLinalgOp to `result`.
-    succeeded = false;
     return failure();
   }
 
@@ -314,7 +310,8 @@ mlir::linalg::LinalgBaseTileAndFusePattern::LinalgBaseTileAndFusePattern(
 LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
   LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
-  if (!linalgOp)
+  // TODO: remove hasIndexSemantics check once index ops are supported.
+  if (!linalgOp || linalgOp.hasIndexSemantics())
     return failure();
   if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
@@ -407,7 +404,8 @@ mlir::linalg::LinalgBaseInterchangePattern::LinalgBaseInterchangePattern(
 LogicalResult mlir::linalg::LinalgBaseInterchangePattern::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
   LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
-  if (!linalgOp)
+  // TODO: remove hasIndexSemantics check once index ops are supported.
+  if (!linalgOp || linalgOp.hasIndexSemantics())
     return failure();
   if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
@@ -465,7 +463,8 @@ mlir::linalg::LinalgBaseVectorizationPattern::LinalgBaseVectorizationPattern(
 LogicalResult mlir::linalg::LinalgBaseVectorizationPattern::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
   LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
-  if (!linalgOp)
+  // TODO: remove hasIndexSemantics check once index ops are supported.
+  if (!linalgOp || linalgOp.hasIndexSemantics())
     return failure();
   if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();

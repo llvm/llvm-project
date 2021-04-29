@@ -3898,6 +3898,55 @@ void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
   emitMaster(*this, S);
 }
 
+static void emitMasked(CodeGenFunction &CGF, const OMPExecutableDirective &S) {
+  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    Action.Enter(CGF);
+    CGF.EmitStmt(S.getRawStmt());
+  };
+  Expr *Filter = nullptr;
+  if (const auto *FilterClause = S.getSingleClause<OMPFilterClause>())
+    Filter = FilterClause->getThreadID();
+  CGF.CGM.getOpenMPRuntime().emitMaskedRegion(CGF, CodeGen, S.getBeginLoc(),
+                                              Filter);
+}
+
+void CodeGenFunction::EmitOMPMaskedDirective(const OMPMaskedDirective &S) {
+  if (CGM.getLangOpts().OpenMPIRBuilder) {
+    llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+    using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+
+    const Stmt *MaskedRegionBodyStmt = S.getAssociatedStmt();
+    const Expr *Filter = nullptr;
+    if (const auto *FilterClause = S.getSingleClause<OMPFilterClause>())
+      Filter = FilterClause->getThreadID();
+    llvm::Value *FilterVal = Filter
+                                 ? EmitScalarExpr(Filter, CGM.Int32Ty)
+                                 : llvm::ConstantInt::get(CGM.Int32Ty, /*V=*/0);
+
+    auto FiniCB = [this](InsertPointTy IP) {
+      OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+    };
+
+    auto BodyGenCB = [MaskedRegionBodyStmt, this](InsertPointTy AllocaIP,
+                                                  InsertPointTy CodeGenIP,
+                                                  llvm::BasicBlock &FiniBB) {
+      OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP, FiniBB);
+      OMPBuilderCBHelpers::EmitOMPRegionBody(*this, MaskedRegionBodyStmt,
+                                             CodeGenIP, FiniBB);
+    };
+
+    LexicalScope Scope(*this, S.getSourceRange());
+    EmitStopPoint(&S);
+    Builder.restoreIP(
+        OMPBuilder.createMasked(Builder, BodyGenCB, FiniCB, FilterVal));
+
+    return;
+  }
+  LexicalScope Scope(*this, S.getSourceRange());
+  EmitStopPoint(&S);
+  emitMasked(*this, S);
+}
+
 void CodeGenFunction::EmitOMPCriticalDirective(const OMPCriticalDirective &S) {
   if (CGM.getLangOpts().OpenMPIRBuilder) {
     llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
@@ -5668,6 +5717,7 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_use:
   case OMPC_novariants:
   case OMPC_nocontext:
+  case OMPC_filter:
     llvm_unreachable("Clause is not allowed in 'omp atomic'.");
   }
 }
@@ -6983,7 +7033,8 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
   if (D.getDirectiveKind() == OMPD_atomic ||
       D.getDirectiveKind() == OMPD_critical ||
       D.getDirectiveKind() == OMPD_section ||
-      D.getDirectiveKind() == OMPD_master) {
+      D.getDirectiveKind() == OMPD_master ||
+      D.getDirectiveKind() == OMPD_masked) {
     EmitStmt(D.getAssociatedStmt());
   } else {
     auto LPCRegion =

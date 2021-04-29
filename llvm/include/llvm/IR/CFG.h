@@ -40,10 +40,15 @@ class Use;
 //===----------------------------------------------------------------------===//
 
 template <class Ptr, class USE_iterator> // Predecessor Iterator
-class PredIterator : public std::iterator<std::forward_iterator_tag,
-                                          Ptr, ptrdiff_t, Ptr*, Ptr*> {
-  using super =
-      std::iterator<std::forward_iterator_tag, Ptr, ptrdiff_t, Ptr*, Ptr*>;
+class PredIterator {
+public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = Ptr;
+  using difference_type = std::ptrdiff_t;
+  using pointer = Ptr *;
+  using reference = Ptr *;
+
+private:
   using Self = PredIterator<Ptr, USE_iterator>;
   USE_iterator It;
 
@@ -59,9 +64,6 @@ class PredIterator : public std::iterator<std::forward_iterator_tag,
   }
 
 public:
-  using pointer = typename super::pointer;
-  using reference = typename super::reference;
-
   PredIterator() = default;
   explicit inline PredIterator(Ptr *bb) : It(bb->user_begin()) {
     advancePastNonTerminators();

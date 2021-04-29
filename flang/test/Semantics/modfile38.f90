@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %f18
+! RUN: %S/test_modfile.sh %s %t %flang_fc1
 
 ! Ensure that an interface with the same name as a derived type
 ! does not cause that shadowed name to be emitted later than its

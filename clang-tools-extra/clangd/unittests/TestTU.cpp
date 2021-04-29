@@ -36,6 +36,7 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
   FS.Files[ImportThunk] = ThunkContents;
 
   ParseInputs Inputs;
+  Inputs.FeatureModules = FeatureModules;
   auto &Argv = Inputs.CompileCommand.CommandLine;
   Argv = {"clang"};
   // FIXME: this shouldn't need to be conditional, but it breaks a

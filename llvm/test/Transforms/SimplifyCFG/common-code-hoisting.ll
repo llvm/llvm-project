@@ -108,3 +108,45 @@ for.end:
 return:
   ret void
 }
+
+; A example where only the branch instructions from %if.then2 and %if.end3 need
+; to be hoisted, which effectively replaces the original branch in %if.end and
+; only requires selects for PHIs in the successor.
+define float @clamp_float_value(float %value, float %minimum_value, float %maximum_value) {
+; HOIST-LABEL: @clamp_float_value(
+; HOIST-NEXT:  entry:
+; HOIST-NEXT:    [[CMP:%.*]] = fcmp ogt float [[VALUE:%.*]], [[MAXIMUM_VALUE:%.*]]
+; HOIST-NEXT:    [[CMP1:%.*]] = fcmp olt float [[VALUE]], [[MINIMUM_VALUE:%.*]]
+; HOIST-NEXT:    [[MINIMUM_VALUE_VALUE:%.*]] = select i1 [[CMP1]], float [[MINIMUM_VALUE]], float [[VALUE]]
+; HOIST-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP]], float [[MAXIMUM_VALUE]], float [[MINIMUM_VALUE_VALUE]]
+; HOIST-NEXT:    ret float [[RETVAL_0]]
+;
+; NOHOIST-LABEL: @clamp_float_value(
+; NOHOIST-NEXT:  entry:
+; NOHOIST-NEXT:    [[CMP:%.*]] = fcmp ogt float [[VALUE:%.*]], [[MAXIMUM_VALUE:%.*]]
+; NOHOIST-NEXT:    [[CMP1:%.*]] = fcmp olt float [[VALUE]], [[MINIMUM_VALUE:%.*]]
+; NOHOIST-NEXT:    [[MINIMUM_VALUE_VALUE:%.*]] = select i1 [[CMP1]], float [[MINIMUM_VALUE]], float [[VALUE]]
+; NOHOIST-NEXT:    [[RETVAL_0:%.*]] = select i1 [[CMP]], float [[MAXIMUM_VALUE]], float [[MINIMUM_VALUE_VALUE]]
+; NOHOIST-NEXT:    ret float [[RETVAL_0]]
+;
+entry:
+  %cmp = fcmp ogt float %value, %maximum_value
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  br label %return
+
+if.end:                                           ; preds = %entry
+  %cmp1 = fcmp olt float %value, %minimum_value
+  br i1 %cmp1, label %if.then2, label %if.end3
+
+if.then2:                                         ; preds = %if.end
+  br label %return
+
+if.end3:                                          ; preds = %if.end
+  br label %return
+
+return:                                           ; preds = %if.end3, %if.then2, %if.then
+  %retval.0 = phi float [ %maximum_value, %if.then ], [ %minimum_value, %if.then2 ], [ %value, %if.end3 ]
+  ret float %retval.0
+}

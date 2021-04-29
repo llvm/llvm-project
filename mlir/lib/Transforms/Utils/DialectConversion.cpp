@@ -75,8 +75,7 @@ computeConversionSet(iterator_range<Region::iterator> region,
 
 /// A utility function to log a successful result for the given reason.
 template <typename... Args>
-static void logSuccess(llvm::ScopedPrinter &os, StringRef fmt,
-                       Args &&... args) {
+static void logSuccess(llvm::ScopedPrinter &os, StringRef fmt, Args &&...args) {
   LLVM_DEBUG({
     os.unindent();
     os.startLine() << "} -> SUCCESS";
@@ -89,8 +88,7 @@ static void logSuccess(llvm::ScopedPrinter &os, StringRef fmt,
 
 /// A utility function to log a failure result for the given reason.
 template <typename... Args>
-static void logFailure(llvm::ScopedPrinter &os, StringRef fmt,
-                       Args &&... args) {
+static void logFailure(llvm::ScopedPrinter &os, StringRef fmt, Args &&...args) {
   LLVM_DEBUG({
     os.unindent();
     os.startLine() << "} -> FAILURE : "
@@ -495,8 +493,17 @@ Block *ArgConverter::applySignatureConversion(
     // to pack the new values. For 1->1 mappings, if there is no materialization
     // provided, use the argument directly instead.
     auto replArgs = newArgs.slice(inputMap->inputNo, inputMap->size);
-    Value newArg = converter.materializeArgumentConversion(
-        rewriter, origArg.getLoc(), origArg.getType(), replArgs);
+    Value newArg;
+
+    // If this is a 1->1 mapping and the types of new and replacement arguments
+    // match (i.e. it's an identity map), then the argument is mapped to its
+    // original type.
+    if (replArgs.size() == 1 && replArgs[0].getType() == origArg.getType())
+      newArg = replArgs[0];
+    else
+      newArg = converter.materializeArgumentConversion(
+          rewriter, origArg.getLoc(), origArg.getType(), replArgs);
+
     if (!newArg) {
       assert(replArgs.size() == 1 &&
              "couldn't materialize the result of 1->N conversion");
@@ -754,8 +761,9 @@ struct ConversionPatternRewriterImpl {
                      TypeConverter::SignatureConversion *entryConversion);
 
   /// Convert the types of non-entry block arguments within the given region.
-  LogicalResult convertNonEntryRegionTypes(Region *region,
-                                           TypeConverter &converter);
+  LogicalResult convertNonEntryRegionTypes(
+      Region *region, TypeConverter &converter,
+      ArrayRef<TypeConverter::SignatureConversion> blockConversions = {});
 
   //===--------------------------------------------------------------------===//
   // Rewriter Notification Hooks
@@ -821,7 +829,7 @@ struct ConversionPatternRewriterImpl {
   /// define non-empty regions to the set, but not any of the others. This
   /// simplifies the amount of memory needed as we can query if the parent
   /// operation was ignored.
-  llvm::SetVector<Operation *> ignoredOps;
+  SetVector<Operation *> ignoredOps;
 
   /// A transaction state for each of operations that were updated in-place.
   SmallVector<OperationTransactionState, 4> rootUpdates;
@@ -1173,15 +1181,30 @@ FailureOr<Block *> ConversionPatternRewriterImpl::convertRegionTypes(
 }
 
 LogicalResult ConversionPatternRewriterImpl::convertNonEntryRegionTypes(
-    Region *region, TypeConverter &converter) {
+    Region *region, TypeConverter &converter,
+    ArrayRef<TypeConverter::SignatureConversion> blockConversions) {
   argConverter.setConverter(region, &converter);
   if (region->empty())
     return success();
 
   // Convert the arguments of each block within the region.
-  for (Block &block : llvm::make_early_inc_range(llvm::drop_begin(*region, 1)))
-    if (failed(convertBlockSignature(&block, converter)))
+  int blockIdx = 0;
+  assert((blockConversions.empty() ||
+          blockConversions.size() == region->getBlocks().size() - 1) &&
+         "expected either to provide no SignatureConversions at all or to "
+         "provide a SignatureConversion for each non-entry block");
+
+  for (Block &block :
+       llvm::make_early_inc_range(llvm::drop_begin(*region, 1))) {
+    TypeConverter::SignatureConversion *blockConversion =
+        blockConversions.empty()
+            ? nullptr
+            : const_cast<TypeConverter::SignatureConversion *>(
+                  &blockConversions[blockIdx++]);
+
+    if (failed(convertBlockSignature(&block, converter, blockConversion)))
       return failure();
+  }
   return success();
 }
 
@@ -1351,8 +1374,9 @@ FailureOr<Block *> ConversionPatternRewriter::convertRegionTypes(
 }
 
 LogicalResult ConversionPatternRewriter::convertNonEntryRegionTypes(
-    Region *region, TypeConverter &converter) {
-  return impl->convertNonEntryRegionTypes(region, converter);
+    Region *region, TypeConverter &converter,
+    ArrayRef<TypeConverter::SignatureConversion> blockConversions) {
+  return impl->convertNonEntryRegionTypes(region, converter, blockConversions);
 }
 
 void ConversionPatternRewriter::replaceUsesOfBlockArgument(BlockArgument from,
@@ -1933,7 +1957,7 @@ void OperationLegalizer::buildLegalizationGraph(
   // A mapping between an operation and any currently invalid patterns it has.
   DenseMap<OperationName, SmallPtrSet<const Pattern *, 2>> invalidPatterns;
   // A worklist of patterns to consider for legality.
-  llvm::SetVector<const Pattern *> patternWorklist;
+  SetVector<const Pattern *> patternWorklist;
 
   // Build the mapping from operations to the parent ops that may generate them.
   applicator.walkAllPatterns([&](const Pattern &pattern) {

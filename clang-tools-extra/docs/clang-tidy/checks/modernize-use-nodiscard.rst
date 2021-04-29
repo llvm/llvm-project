@@ -41,8 +41,8 @@ transforms to:
 
 .. code-block:: c++
 
-    [[nodiscard] bool empty() const;
-    [[nodiscard] bool empty(int i) const;
+    [[nodiscard]] bool empty() const;
+    [[nodiscard]] bool empty(int i) const;
 
 Options
 -------

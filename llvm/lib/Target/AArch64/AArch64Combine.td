@@ -127,7 +127,14 @@ def adjust_icmp_imm : GICombineRule <
   (apply [{ applyAdjustICmpImmAndPred(*${root}, ${matchinfo}, B, Observer); }])
 >;
 
-def icmp_lowering : GICombineGroup<[adjust_icmp_imm]>;
+def swap_icmp_operands : GICombineRule <
+  (defs root:$root),
+  (match (wip_match_opcode G_ICMP):$root,
+          [{ return trySwapICmpOperands(*${root}, MRI); }]),
+  (apply [{ applySwapICmpOperands(*${root}, Observer); }])
+>;
+
+def icmp_lowering : GICombineGroup<[adjust_icmp_imm, swap_icmp_operands]>;
 
 def extractvecelt_pairwise_add_matchdata : GIDefMatchData<"std::tuple<unsigned, LLT, Register>">;
 def extractvecelt_pairwise_add : GICombineRule<

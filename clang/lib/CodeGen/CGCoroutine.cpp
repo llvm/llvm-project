@@ -602,9 +602,20 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
 
   CurCoro.Data->CleanupJD = getJumpDestInCurrentScope(RetBB);
   {
+    CGDebugInfo *DI = getDebugInfo();
     ParamReferenceReplacerRAII ParamReplacer(LocalDeclMap);
     CodeGenFunction::RunCleanupsScope ResumeScope(*this);
     EHStack.pushCleanup<CallCoroDelete>(NormalAndEHCleanup, S.getDeallocate());
+
+    // Create mapping between parameters and copy-params for coroutine function.
+    auto ParamMoves = S.getParamMoves();
+    assert(
+        (ParamMoves.size() == 0 || (ParamMoves.size() == FnArgs.size())) &&
+        "ParamMoves and FnArgs should be the same size for coroutine function");
+    if (ParamMoves.size() == FnArgs.size() && DI)
+      for (const auto Pair : llvm::zip(FnArgs, ParamMoves))
+        DI->getCoroutineParameterMappings().insert(
+            {std::get<0>(Pair), std::get<1>(Pair)});
 
     // Create parameter copies. We do it before creating a promise, since an
     // evolution of coroutine TS may allow promise constructor to observe

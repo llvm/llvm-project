@@ -1,6 +1,7 @@
 // RUN: llvm-mc -triple aarch64-windows -filetype obj -o %t.obj %s
 // RUN: llvm-readobj -r %t.obj | FileCheck %s
 // RUN: llvm-objdump -d %t.obj | FileCheck %s --check-prefix=DISASM
+// RUN: llvm-objdump -s %t.obj | FileCheck %s --check-prefix=DATA
 
 // IMAGE_REL_ARM64_ADDR32
 .Linfo_foo:
@@ -61,6 +62,11 @@ bne target
 // IMAGE_REL_ARM64_BRANCH14
 tbz x0, #0, target
 
+.section .rdata, "dr"
+.Ltable:
+.word .Linfo_bar - .Ltable
+.word .Linfo_foo - .Ltable
+
 // CHECK: Format: COFF-ARM64
 // CHECK: Arch: aarch64
 // CHECK: AddressSize: 64bit
@@ -87,6 +93,10 @@ tbz x0, #0, target
 // CHECK: 0x50 IMAGE_REL_ARM64_BRANCH19 target
 // CHECK: 0x54 IMAGE_REL_ARM64_BRANCH14 target
 // CHECK:   }
+// CHECK:   Section (4) .rdata {
+// CHECK: 0x0 IMAGE_REL_ARM64_REL32 .text
+// CHECK: 0x4 IMAGE_REL_ARM64_REL32 .text
+// CHECK:   }
 // CHECK: ]
 
 // DISASM: 30:       20 1a 09 b0     adrp    x0, 0x12345000
@@ -97,3 +107,6 @@ tbz x0, #0, target
 // DISASM: 44:       00 00 40 91     add     x0, x0, #0, lsl #12
 // DISASM: 48:       00 00 40 f9     ldr     x0, [x0]
 // DISASM: 4c:       20 1a 09 30     adr     x0, #74565
+
+// DATA: Contents of section .rdata:
+// DATA-NEXT:  0000 2c000000 04000000

@@ -646,12 +646,18 @@ define i1 @or_cmp_ne_i32(i32 %x, i32 %y) {
 }
 
 define i1 @or_cmp_eq_i16(i16 zeroext %x, i16 zeroext %y) {
-; CHECK-LABEL: or_cmp_eq_i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    notl %edi
-; CHECK-NEXT:    testw %si, %di
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    retq
+; NOBMI-LABEL: or_cmp_eq_i16:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    notl %edi
+; NOBMI-NEXT:    testl %esi, %edi
+; NOBMI-NEXT:    sete %al
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: or_cmp_eq_i16:
+; BMI:       # %bb.0:
+; BMI-NEXT:    andnl %esi, %edi, %eax
+; BMI-NEXT:    sete %al
+; BMI-NEXT:    retq
   %o = or i16 %x, %y
   %c = icmp eq i16 %x, %o
   ret i1 %c

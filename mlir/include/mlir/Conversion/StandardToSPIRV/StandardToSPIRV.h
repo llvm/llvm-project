@@ -40,11 +40,6 @@ void populateTensorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                    int64_t byteCountThreshold,
                                    RewritePatternSet &patterns);
 
-/// Appends to a pattern list patterns to legalize ops that are not directly
-/// lowered to SPIR-V.
-void populateStdLegalizationPatternsForSPIRVLowering(
-    RewritePatternSet &patterns);
-
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_STANDARDTOSPIRV_STANDARDTOSPIRV_H

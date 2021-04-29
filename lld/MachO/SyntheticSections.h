@@ -32,6 +32,7 @@ class Defined;
 class DylibSymbol;
 class LoadCommand;
 class ObjFile;
+class UnwindInfoSection;
 
 class SyntheticSection : public OutputSection {
 public:
@@ -503,6 +504,7 @@ struct InStruct {
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;
   ImageLoaderCacheSection *imageLoaderCache = nullptr;
+  UnwindInfoSection *unwindInfo = nullptr;
 };
 
 extern InStruct in;

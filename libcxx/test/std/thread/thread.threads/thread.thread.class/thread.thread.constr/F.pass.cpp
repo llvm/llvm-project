@@ -23,6 +23,7 @@
 #include <atomic>
 #include <cstdlib>
 #include <cassert>
+#include <vector>
 
 #include "test_macros.h"
 
@@ -51,10 +52,12 @@ void  operator delete(void* p) TEST_NOEXCEPT
 
 bool f_run = false;
 
-void f()
-{
-    f_run = true;
-}
+struct F {
+    std::vector<int> v_;  // so f's copy-ctor calls operator new
+    explicit F() : v_(10) {}
+    void operator()() const { f_run = true; }
+};
+F f;
 
 class G
 {

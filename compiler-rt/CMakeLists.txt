@@ -173,7 +173,7 @@ endif()
 
 option(SANITIZER_ALLOW_CXXABI "Allow use of C++ ABI details in ubsan" ON)
 
-set(SANITIZE_CAN_USE_CXXABI OFF)
+set(SANITIZER_CAN_USE_CXXABI OFF)
 if (cxxabi_supported AND SANITIZER_ALLOW_CXXABI)
   set(SANITIZER_CAN_USE_CXXABI ON)
 endif()

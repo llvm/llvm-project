@@ -3,14 +3,14 @@
 !--------------------------
 ! FLANG DRIVER (flang-new)
 !--------------------------
-! RUN: %flang-new --help-hidden 2>&1 | FileCheck %s
-! RUN: not %flang-new  -help-hidden 2>&1 | FileCheck %s --check-prefix=ERROR-FLANG
+! RUN: %flang --help-hidden 2>&1 | FileCheck %s
+! RUN: not %flang  -help-hidden 2>&1 | FileCheck %s --check-prefix=ERROR-FLANG
 
 !----------------------------------------
 ! FLANG FRONTEND DRIVER (flang-new -fc1)
 !----------------------------------------
-! RUN: not %flang-new -fc1 --help-hidden 2>&1 | FileCheck %s --check-prefix=ERROR-FLANG-FC1
-! RUN: not %flang-new -fc1  -help-hidden 2>&1 | FileCheck %s --check-prefix=ERROR-FLANG-FC1
+! RUN: not %flang_fc1 --help-hidden 2>&1 | FileCheck %s --check-prefix=ERROR-FLANG-FC1
+! RUN: not %flang_fc1  -help-hidden 2>&1 | FileCheck %s --check-prefix=ERROR-FLANG-FC1
 
 !----------------------------------------------------
 ! EXPECTED OUTPUT FOR FLANG DRIVER (flang-new)

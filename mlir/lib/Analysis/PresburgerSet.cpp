@@ -170,6 +170,8 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
     return;
   }
   const FlatAffineConstraints &sI = s.getFlatAffineConstraints(i);
+  assert(sI.getNumLocalIds() == 0 &&
+         "Subtracting sets with divisions is not yet supported!");
   unsigned initialSnapshot = simplex.getSnapshot();
   unsigned offset = simplex.numConstraints();
   simplex.intersectFlatAffineConstraints(sI);
@@ -254,6 +256,8 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
 PresburgerSet PresburgerSet::getSetDifference(FlatAffineConstraints fac,
                                               const PresburgerSet &set) {
   assertDimensionsCompatible(fac, set);
+  assert(fac.getNumLocalIds() == 0 &&
+         "Subtracting sets with divisions is not yet supported!");
   if (fac.isEmptyByGCDTest())
     return PresburgerSet::getEmptySet(fac.getNumDimIds(),
                                       fac.getNumSymbolIds());
@@ -297,7 +301,6 @@ bool PresburgerSet::isEqual(const PresburgerSet &set) const {
 /// Return true if all the sets in the union are known to be integer empty,
 /// false otherwise.
 bool PresburgerSet::isIntegerEmpty() const {
-  assert(nSym == 0 && "isIntegerEmpty is intended for non-symbolic sets");
   // The set is empty iff all of the disjuncts are empty.
   for (const FlatAffineConstraints &fac : flatAffineConstraints) {
     if (!fac.isIntegerEmpty())
@@ -307,7 +310,6 @@ bool PresburgerSet::isIntegerEmpty() const {
 }
 
 bool PresburgerSet::findIntegerSample(SmallVectorImpl<int64_t> &sample) {
-  assert(nSym == 0 && "findIntegerSample is intended for non-symbolic sets");
   // A sample exists iff any of the disjuncts contains a sample.
   for (const FlatAffineConstraints &fac : flatAffineConstraints) {
     if (Optional<SmallVector<int64_t, 8>> opt = fac.findIntegerSample()) {

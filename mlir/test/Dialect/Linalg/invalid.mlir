@@ -24,6 +24,41 @@ func @yield_parent(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
 
 // -----
 
+func @index_parent() {
+  // expected-error @+1 {{op expected parent op with LinalgOp interface}}
+  linalg.index 0 : index
+}
+
+// -----
+
+func @index_dim_lower_than_number_of_loops(%arg0: memref<f32>) {
+  // expected-error @+6 {{op expected dim (2) to be lower than the number of loops (0) of the enclosing LinalgOp}}
+  linalg.generic {
+      indexing_maps =  [ affine_map<() -> ()> ],
+      iterator_types = []}
+      outs(%arg0 : memref<f32>) {
+    ^bb(%0: f32):
+      linalg.index 2 : index
+      linalg.yield %0 : f32
+  }
+}
+
+// -----
+
+func @index_dim_negative(%arg0: memref<f32>) {
+  // expected-error @+6 {{op attribute 'dim' failed to satisfy constraint: 64-bit signless integer attribute whose minimum value is 0}}
+  linalg.generic {
+      indexing_maps =  [ affine_map<() -> ()> ],
+      iterator_types = []}
+      outs(%arg0 : memref<f32>) {
+    ^bb(%0: f32):
+      linalg.index -1 : index
+      linalg.yield %0 : f32
+  }
+}
+
+// -----
+
 func @generic_no_region(%arg0: memref<f32>) {
   // expected-error @+5 {{expected '{' to begin a region}}
   linalg.generic {
@@ -721,5 +756,89 @@ func @invalid_static_2d_conv(%input : memref<1x3x4x2xf32>, %filter: memref<3x2x2
     { dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
     ins(%input, %filter : memref<1x3x4x2xf32>, memref<3x2x2x1xf32>)
     outs(%output : memref<1x2x3x1xf32>)
+  return
+}
+
+// -----
+
+#map0 = affine_map<(d0) -> (24, -d0 + 192)>
+#map1 = affine_map<(d0, d1)[s0] -> (d0 * 192 + s0 + d1)>
+#map2 = affine_map<(d0) -> (16, -d0 + 192)>
+
+func private @foo(%A: memref<192x192xf32>, %B: memref<192x192xf32>,
+                  %C: memref<192x192xf32>) -> ()
+
+func @tiled_loop_incorrent_num_yield_operands(%A: memref<192x192xf32>,
+    %B: memref<192x192xf32>, %C: memref<192x192xf32>,
+    %C_tensor: tensor<192x192xf32>) {
+  %c24 = constant 24 : index
+  %c0 = constant 0 : index
+  %c192 = constant 192 : index
+  %0 = linalg.tiled_loop (%i, %j) = (%c0, %c0) to (%c192, %c192)
+      step (%c24, %c24)
+      ins (%A, %B: memref<192x192xf32>, memref<192x192xf32>)
+      outs (%C_tensor, %C :tensor<192x192xf32>, memref<192x192xf32>) {
+        call @foo(%A, %B, %C)
+          : (memref<192x192xf32>, memref<192x192xf32>, memref<192x192xf32>)-> ()
+    // expected-error @+1 {{expected number of tensor output args = 1 to match the number of yield operands = 0}}
+    linalg.yield
+  }
+  return
+}
+
+// -----
+
+#map0 = affine_map<(d0) -> (24, -d0 + 192)>
+#map1 = affine_map<(d0, d1)[s0] -> (d0 * 192 + s0 + d1)>
+#map2 = affine_map<(d0) -> (16, -d0 + 192)>
+
+func private @foo(%A: memref<192x192xf32>, %B: memref<192x192xf32>,
+                  %C: memref<192x192xf32>) -> tensor<f32>
+
+func @tiled_loop_incorrent_yield_operand_type(%A: memref<192x192xf32>,
+    %B: memref<192x192xf32>, %C: memref<192x192xf32>,
+    %C_tensor: tensor<192x192xf32>) {
+  %c24 = constant 24 : index
+  %c0 = constant 0 : index
+  %c192 = constant 192 : index
+  %0 = linalg.tiled_loop (%i, %j) = (%c0, %c0) to (%c192, %c192)
+      step (%c24, %c24)
+      ins (%A, %B: memref<192x192xf32>, memref<192x192xf32>)
+      outs (%C_tensor, %C :tensor<192x192xf32>, memref<192x192xf32>) {
+        %1 = call @foo(%A, %B, %C)
+          : (memref<192x192xf32>, memref<192x192xf32>, memref<192x192xf32>)-> tensor<f32>
+    // expected-error @+1 {{expected yield operand 0 with type = 'tensor<f32>' to match output arg type = 'tensor<192x192xf32>}}
+    linalg.yield %1 : tensor<f32>
+  }
+  return
+}
+
+// -----
+
+#map0 = affine_map<(d0) -> (24, -d0 + 192)>
+#map1 = affine_map<(d0, d1)[s0] -> (d0 * 192 + s0 + d1)>
+#map2 = affine_map<(d0) -> (16, -d0 + 192)>
+
+func private @foo(%A: memref<192x192xf32>, %B: memref<192x192xf32>,
+                  %C: memref<192x192xf32>) -> ()
+
+func @tiled_loop_incorrent_iterator_types_count(%A: memref<192x192xf32>,
+    %B: memref<192x192xf32>, %C: memref<192x192xf32>,
+    %C_tensor: tensor<192x192xf32>) {
+  %c24 = constant 24 : index
+  %c0 = constant 0 : index
+  %c192 = constant 192 : index
+  // expected-error @+1 {{expected iterator types array attribute size = 1 to match the number of loops = 2}}
+  %0 = "linalg.tiled_loop"(%c0, %c0, %c192, %c192, %c24, %c24, %A, %B, %C_tensor, %C) ( {
+    ^bb0(%arg4: index, %arg5: index):  // no predecessors
+      call @foo(%A, %B, %C)
+          : (memref<192x192xf32>, memref<192x192xf32>, memref<192x192xf32>)-> ()
+      linalg.yield %C_tensor : tensor<192x192xf32>
+    }) {
+      iterator_types = ["parallel"],
+      operand_segment_sizes = dense<2> : vector<5xi32>
+    } : (index, index, index, index, index, index, memref<192x192xf32>,
+      memref<192x192xf32>, tensor<192x192xf32>, memref<192x192xf32>
+    ) -> tensor<192x192xf32>
   return
 }

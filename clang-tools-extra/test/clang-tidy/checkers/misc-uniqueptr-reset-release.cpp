@@ -1,5 +1,7 @@
 // RUN: %check_clang_tidy %s misc-uniqueptr-reset-release %t
 
+// CHECK-FIXES: #include <utility>
+
 namespace std {
 
 template <typename T>

@@ -36,3 +36,10 @@ entry:
   store <4 x bfloat> %b, <4 x bfloat>* %a, align 16
   ret void
 }
+
+define <8 x bfloat> @test_build_vector_const() {
+; CHECK-LABEL: test_build_vector_const:
+; CHECK: mov [[TMP:w[0-9]+]], #16256
+; CHECK: dup v0.8h, [[TMP]]
+  ret  <8 x bfloat> <bfloat 0xR3F80, bfloat 0xR3F80, bfloat 0xR3F80, bfloat 0xR3F80, bfloat 0xR3F80, bfloat 0xR3F80, bfloat 0xR3F80, bfloat 0xR3F80>
+}

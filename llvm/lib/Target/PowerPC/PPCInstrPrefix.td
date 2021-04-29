@@ -2633,13 +2633,13 @@ def : Pat<(f32 nzFPImmAsi64:$A),
           (COPY_TO_REGCLASS (XXSPLTI32DX (XXSPLTI32DX(IMPLICIT_DEF), 0,
                                         (getFPAs64BitIntHi $A)),
                                         1, (getFPAs64BitIntLo $A)),
-                            VSRC)>;
+                            VSSRC)>;
 
 def : Pat<(f64 nzFPImmAsi64:$A),
           (COPY_TO_REGCLASS (XXSPLTI32DX (XXSPLTI32DX (IMPLICIT_DEF), 0,
                                         (getFPAs64BitIntHi $A)),
                                         1, (getFPAs64BitIntLo $A)),
-                            VSRC)>;
+                            VSFRC)>;
 
   // Anonymous patterns for XXEVAL
   // AND

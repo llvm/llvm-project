@@ -13,10 +13,20 @@ set(files
   __hash_table
   __libcpp_version
   __locale
+  __memory/addressof.h
+  __memory/allocation_guard.h
+  __memory/allocator.h
   __memory/allocator_traits.h
-  __memory/base.h
+  __memory/auto_ptr.h
+  __memory/compressed_pair.h
+  __memory/construct_at.h
+  __memory/pointer_safety.h
   __memory/pointer_traits.h
-  __memory/utilities.h
+  __memory/raw_storage_iterator.h
+  __memory/shared_ptr.h
+  __memory/temporary_buffer.h
+  __memory/uninitialized_algorithms.h
+  __memory/unique_ptr.h
   __mutex_base
   __node_handle
   __nullptr

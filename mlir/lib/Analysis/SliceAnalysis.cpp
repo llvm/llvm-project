@@ -25,8 +25,6 @@
 
 using namespace mlir;
 
-using llvm::SetVector;
-
 static void getForwardSliceImpl(Operation *op,
                                 SetVector<Operation *> *forwardSlice,
                                 TransitiveFilter filter) {

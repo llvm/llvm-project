@@ -23,7 +23,7 @@
 ; (loop:)
 ; REMARK: remark: /tmp/kk.c:1:20: 2 spills 2 reloads generated in loop{{$}}
 ; (func:)
-; REMARK: remark: <unknown>:0:0: 3 spills 3 reloads generated in function{{$}}
+; REMARK: remark: /tmp/kk.c:1:1: 3 spills 3 reloads generated in function{{$}}
 
 ; (loop3:)
 ; HOTNESS: remark: /tmp/kk.c:3:20: 1 spills 1 reloads generated in loop (hotness: 300)
@@ -79,6 +79,7 @@
 ; YAML: --- !Missed
 ; YAML: Pass:            regalloc
 ; YAML: Name:            SpillReload
+; YAML: DebugLoc:        { File: '/tmp/kk.c', Line: 1, Column: 1 }
 ; YAML: Function:        fpr128
 ; YAML: Hotness:         3
 ; YAML: Args:
@@ -104,7 +105,7 @@
 ; THRESHOLD_YAML:   - String:          generated in loop
 ; THRESHOLD_YAML: ...
 
-define void @fpr128(<4 x float>* %p) nounwind ssp !prof !11 {
+define void @fpr128(<4 x float>* %p) nounwind ssp !prof !11 !dbg !6 {
 entry:
   br label %loop, !dbg !8
 

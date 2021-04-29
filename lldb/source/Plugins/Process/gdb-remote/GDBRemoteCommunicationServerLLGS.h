@@ -86,6 +86,8 @@ protected:
   const NativeProcessProtocol::Factory &m_process_factory;
   lldb::tid_t m_current_tid = LLDB_INVALID_THREAD_ID;
   lldb::tid_t m_continue_tid = LLDB_INVALID_THREAD_ID;
+  NativeProcessProtocol *m_current_process;
+  NativeProcessProtocol *m_continue_process;
   std::recursive_mutex m_debugged_process_mutex;
   std::unique_ptr<NativeProcessProtocol> m_debugged_process_up;
 
@@ -98,6 +100,8 @@ protected:
   std::unordered_map<uint32_t, lldb::DataBufferSP> m_saved_registers_map;
   uint32_t m_next_saved_registers_id = 1;
   bool m_handshake_completed = false;
+  bool m_thread_suffix_supported = false;
+  bool m_list_threads_in_stop_reply = false;
 
   PacketResult SendONotification(const char *buffer, uint32_t len);
 
@@ -118,6 +122,10 @@ protected:
   PacketResult Handle_QSetWorkingDir(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_qGetWorkingDir(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_QThreadSuffixSupported(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_QListThreadsInStopReply(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_C(StringExtractorGDBRemote &packet);
 
@@ -219,6 +227,9 @@ protected:
 
   static std::string XMLEncodeAttributeValue(llvm::StringRef value);
 
+  virtual std::vector<std::string> HandleFeatures(
+      const llvm::ArrayRef<llvm::StringRef> client_features) override;
+
 private:
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> BuildTargetXml();
 
@@ -251,7 +262,7 @@ private:
   // In any case, the function assumes that exactly one inferior is being
   // debugged and rejects pid values that do no match that inferior.
   llvm::Expected<lldb::tid_t> ReadTid(StringExtractorGDBRemote &packet,
-                                      bool allow_all = false);
+                                      bool allow_all, lldb::pid_t default_pid);
 
   // For GDBRemoteCommunicationServerLLGS only
   GDBRemoteCommunicationServerLLGS(const GDBRemoteCommunicationServerLLGS &) =

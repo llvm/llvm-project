@@ -279,6 +279,7 @@
 // RUN:     -fno-delete-null-pointer-checks -fdelete-null-pointer-checks      \
 // RUN:     -fno-inline-small-functions -finline-small-functions              \
 // RUN:     -fno-fat-lto-objects -ffat-lto-objects                            \
+// RUN:     -flto=auto -flto=jobserver                                        \
 // RUN:     -fno-merge-constants -fmerge-constants                            \
 // RUN:     -fno-caller-saves -fcaller-saves                                  \
 // RUN:     -fno-reorder-blocks -freorder-blocks                              \

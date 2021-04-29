@@ -24,25 +24,31 @@ class ObjectFile;
 class RelocationRef;
 } // namespace object
 
+namespace opt {
+class InputArgList;
+} // namespace opt
+
 namespace objdump {
+
+void parseMachOOptions(const llvm::opt::InputArgList &InputArgs);
 
 // MachO specific options
 extern cl::OptionCategory MachOCat;
-extern cl::opt<bool> Bind;
-extern cl::opt<bool> DataInCode;
-extern cl::opt<bool> DylibsUsed;
-extern cl::opt<bool> DylibId;
-extern cl::opt<bool> ExportsTrie;
-extern cl::opt<bool> FirstPrivateHeader;
-extern cl::opt<bool> FunctionStarts;
-extern cl::opt<bool> IndirectSymbols;
-extern cl::opt<bool> InfoPlist;
-extern cl::opt<bool> LazyBind;
-extern cl::opt<bool> LinkOptHints;
-extern cl::opt<bool> ObjcMetaData;
-extern cl::opt<bool> Rebase;
-extern cl::opt<bool> UniversalHeaders;
-extern cl::opt<bool> WeakBind;
+extern bool Bind;
+extern bool DataInCode;
+extern bool DylibsUsed;
+extern bool DylibId;
+extern bool ExportsTrie;
+extern bool FirstPrivateHeader;
+extern bool FunctionStarts;
+extern bool IndirectSymbols;
+extern bool InfoPlist;
+extern bool LazyBind;
+extern bool LinkOptHints;
+extern bool ObjcMetaData;
+extern bool Rebase;
+extern bool UniversalHeaders;
+extern bool WeakBind;
 
 Error getMachORelocationValueString(const object::MachOObjectFile *Obj,
                                     const object::RelocationRef &RelRef,

@@ -425,14 +425,14 @@ define i16 @udiv16_pow2(i16 %a) nounwind {
 ;
 ; RV64I-LABEL: udiv16_pow2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a0, a0, 16
-; RV64I-NEXT:    srliw a0, a0, 19
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 51
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: udiv16_pow2:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slliw a0, a0, 16
-; RV64IM-NEXT:    srliw a0, a0, 19
+; RV64IM-NEXT:    slli a0, a0, 48
+; RV64IM-NEXT:    srli a0, a0, 51
 ; RV64IM-NEXT:    ret
   %1 = udiv i16 %a, 8
   ret i16 %1

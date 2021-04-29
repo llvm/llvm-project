@@ -27,106 +27,112 @@
 
 namespace llvm {
 
-  template<typename ItTy = User::const_op_iterator>
-  class generic_gep_type_iterator
-    : public std::iterator<std::forward_iterator_tag, Type *, ptrdiff_t> {
-    using super = std::iterator<std::forward_iterator_tag, Type *, ptrdiff_t>;
+template <typename ItTy = User::const_op_iterator>
+class generic_gep_type_iterator {
 
-    ItTy OpIt;
-    PointerUnion<StructType *, Type *> CurTy;
-    enum : uint64_t { Unbounded = -1ull };
-    uint64_t NumElements = Unbounded;
+  ItTy OpIt;
+  PointerUnion<StructType *, Type *> CurTy;
+  enum : uint64_t { Unbounded = -1ull };
+  uint64_t NumElements = Unbounded;
 
-    generic_gep_type_iterator() = default;
+  generic_gep_type_iterator() = default;
 
-  public:
-    static generic_gep_type_iterator begin(Type *Ty, ItTy It) {
-      generic_gep_type_iterator I;
-      I.CurTy = Ty;
-      I.OpIt = It;
-      return I;
-    }
+public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = Type *;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type *;
+  using reference = value_type &;
 
-    static generic_gep_type_iterator end(ItTy It) {
-      generic_gep_type_iterator I;
-      I.OpIt = It;
-      return I;
-    }
+  static generic_gep_type_iterator begin(Type *Ty, ItTy It) {
+    generic_gep_type_iterator I;
+    I.CurTy = Ty;
+    I.OpIt = It;
+    return I;
+  }
 
-    bool operator==(const generic_gep_type_iterator& x) const {
-      return OpIt == x.OpIt;
-    }
+  static generic_gep_type_iterator end(ItTy It) {
+    generic_gep_type_iterator I;
+    I.OpIt = It;
+    return I;
+  }
 
-    bool operator!=(const generic_gep_type_iterator& x) const {
-      return !operator==(x);
-    }
+  bool operator==(const generic_gep_type_iterator &x) const {
+    return OpIt == x.OpIt;
+  }
 
-    // FIXME: Make this the iterator's operator*() after the 4.0 release.
-    // operator*() had a different meaning in earlier releases, so we're
-    // temporarily not giving this iterator an operator*() to avoid a subtle
-    // semantics break.
-    Type *getIndexedType() const {
-      if (auto *T = CurTy.dyn_cast<Type *>())
-        return T;
-      return CurTy.get<StructType *>()->getTypeAtIndex(getOperand());
-    }
+  bool operator!=(const generic_gep_type_iterator &x) const {
+    return !operator==(x);
+  }
 
-    Value *getOperand() const { return const_cast<Value *>(&**OpIt); }
+  // FIXME: Make this the iterator's operator*() after the 4.0 release.
+  // operator*() had a different meaning in earlier releases, so we're
+  // temporarily not giving this iterator an operator*() to avoid a subtle
+  // semantics break.
+  Type *getIndexedType() const {
+    if (auto *T = CurTy.dyn_cast<Type *>())
+      return T;
+    return CurTy.get<StructType *>()->getTypeAtIndex(getOperand());
+  }
 
-    generic_gep_type_iterator& operator++() {   // Preincrement
-      Type *Ty = getIndexedType();
-      if (auto *ATy = dyn_cast<ArrayType>(Ty)) {
-        CurTy = ATy->getElementType();
-        NumElements = ATy->getNumElements();
-      } else if (auto *VTy = dyn_cast<VectorType>(Ty)) {
-        CurTy = VTy->getElementType();
-        if (isa<ScalableVectorType>(VTy))
-          NumElements = Unbounded;
-        else
-          NumElements = cast<FixedVectorType>(VTy)->getNumElements();
-      } else
-        CurTy = dyn_cast<StructType>(Ty);
-      ++OpIt;
-      return *this;
-    }
+  Value *getOperand() const { return const_cast<Value *>(&**OpIt); }
 
-    generic_gep_type_iterator operator++(int) { // Postincrement
-      generic_gep_type_iterator tmp = *this; ++*this; return tmp;
-    }
+  generic_gep_type_iterator &operator++() { // Preincrement
+    Type *Ty = getIndexedType();
+    if (auto *ATy = dyn_cast<ArrayType>(Ty)) {
+      CurTy = ATy->getElementType();
+      NumElements = ATy->getNumElements();
+    } else if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+      CurTy = VTy->getElementType();
+      if (isa<ScalableVectorType>(VTy))
+        NumElements = Unbounded;
+      else
+        NumElements = cast<FixedVectorType>(VTy)->getNumElements();
+    } else
+      CurTy = dyn_cast<StructType>(Ty);
+    ++OpIt;
+    return *this;
+  }
 
-    // All of the below API is for querying properties of the "outer type", i.e.
-    // the type that contains the indexed type. Most of the time this is just
-    // the type that was visited immediately prior to the indexed type, but for
-    // the first element this is an unbounded array of the GEP's source element
-    // type, for which there is no clearly corresponding IR type (we've
-    // historically used a pointer type as the outer type in this case, but
-    // pointers will soon lose their element type).
-    //
-    // FIXME: Most current users of this class are just interested in byte
-    // offsets (a few need to know whether the outer type is a struct because
-    // they are trying to replace a constant with a variable, which is only
-    // legal for arrays, e.g. canReplaceOperandWithVariable in SimplifyCFG.cpp);
-    // we should provide a more minimal API here that exposes not much more than
-    // that.
+  generic_gep_type_iterator operator++(int) { // Postincrement
+    generic_gep_type_iterator tmp = *this;
+    ++*this;
+    return tmp;
+  }
 
-    bool isStruct() const { return CurTy.is<StructType *>(); }
-    bool isSequential() const { return CurTy.is<Type *>(); }
+  // All of the below API is for querying properties of the "outer type", i.e.
+  // the type that contains the indexed type. Most of the time this is just
+  // the type that was visited immediately prior to the indexed type, but for
+  // the first element this is an unbounded array of the GEP's source element
+  // type, for which there is no clearly corresponding IR type (we've
+  // historically used a pointer type as the outer type in this case, but
+  // pointers will soon lose their element type).
+  //
+  // FIXME: Most current users of this class are just interested in byte
+  // offsets (a few need to know whether the outer type is a struct because
+  // they are trying to replace a constant with a variable, which is only
+  // legal for arrays, e.g. canReplaceOperandWithVariable in SimplifyCFG.cpp);
+  // we should provide a more minimal API here that exposes not much more than
+  // that.
 
-    StructType *getStructType() const { return CurTy.get<StructType *>(); }
+  bool isStruct() const { return CurTy.is<StructType *>(); }
+  bool isSequential() const { return CurTy.is<Type *>(); }
 
-    StructType *getStructTypeOrNull() const {
-      return CurTy.dyn_cast<StructType *>();
-    }
+  StructType *getStructType() const { return CurTy.get<StructType *>(); }
 
-    bool isBoundedSequential() const {
-      return isSequential() && NumElements != Unbounded;
-    }
+  StructType *getStructTypeOrNull() const {
+    return CurTy.dyn_cast<StructType *>();
+  }
 
-    uint64_t getSequentialNumElements() const {
-      assert(isBoundedSequential());
-      return NumElements;
-    }
-  };
+  bool isBoundedSequential() const {
+    return isSequential() && NumElements != Unbounded;
+  }
+
+  uint64_t getSequentialNumElements() const {
+    assert(isBoundedSequential());
+    return NumElements;
+  }
+};
 
   using gep_type_iterator = generic_gep_type_iterator<>;
 

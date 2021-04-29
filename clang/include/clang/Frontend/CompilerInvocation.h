@@ -78,6 +78,9 @@ public:
   /// Options controlling the preprocessor (aside from \#include handling).
   std::shared_ptr<PreprocessorOptions> PreprocessorOpts;
 
+  /// Options controlling the static analyzer.
+  AnalyzerOptionsRef AnalyzerOpts;
+
   CompilerInvocationBase();
   CompilerInvocationBase(const CompilerInvocationBase &X);
   CompilerInvocationBase &operator=(const CompilerInvocationBase &) = delete;
@@ -110,6 +113,8 @@ public:
   const PreprocessorOptions &getPreprocessorOpts() const {
     return *PreprocessorOpts;
   }
+
+  AnalyzerOptionsRef getAnalyzerOpts() const { return AnalyzerOpts; }
 };
 
 /// Helper class for holding the data necessary to invoke the compiler.
@@ -118,9 +123,6 @@ public:
 /// compiler, including data such as the include paths, the code generation
 /// options, the warning flags, and so on.
 class CompilerInvocation : public CompilerInvocationBase {
-  /// Options controlling the static analyzer.
-  AnalyzerOptionsRef AnalyzerOpts;
-
   MigratorOptions MigratorOpts;
 
   /// Options controlling IRgen and the backend.
@@ -139,8 +141,6 @@ class CompilerInvocation : public CompilerInvocationBase {
   PreprocessorOutputOptions PreprocessorOutputOpts;
 
 public:
-  CompilerInvocation() : AnalyzerOpts(new AnalyzerOptions()) {}
-
   /// @name Utility Methods
   /// @{
 
@@ -202,8 +202,6 @@ public:
   /// @}
   /// @name Option Subgroups
   /// @{
-
-  AnalyzerOptionsRef getAnalyzerOpts() const { return AnalyzerOpts; }
 
   MigratorOptions &getMigratorOpts() { return MigratorOpts; }
   const MigratorOptions &getMigratorOpts() const { return MigratorOpts; }

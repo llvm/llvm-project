@@ -83,7 +83,7 @@
 
 ; RUN: not llvm-objdump --prefix %p --prefix-strip '-1' --source %t-missing-prefix.o 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-INVALID-PREFIX-STRIP -DOPTION='-1'
-; CHECK-INVALID-PREFIX-STRIP: llvm-objdump{{.*}}: for the --prefix-strip option: '[[OPTION]]' value invalid for uint argument!
+; CHECK-INVALID-PREFIX-STRIP: {{.*}}llvm-objdump{{.*}}: error: --prefix-strip: expected a non-negative integer, but got '[[OPTION]]'
 
 ;; Test text value --prefix-strip. Reports an error.
 

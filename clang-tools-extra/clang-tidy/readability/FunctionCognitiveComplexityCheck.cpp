@@ -213,6 +213,9 @@ class FunctionASTVisitor final
     : public RecursiveASTVisitor<FunctionASTVisitor> {
   using Base = RecursiveASTVisitor<FunctionASTVisitor>;
 
+  // If set to true, macros are ignored during analysis.
+  const bool IgnoreMacros;
+
   // The current nesting level (increased by Criteria::IncrementNesting).
   unsigned short CurrentNestingLevel = 0;
 
@@ -223,6 +226,9 @@ class FunctionASTVisitor final
   std::stack<OBO, SmallVector<OBO, 4>> BinaryOperatorsStack;
 
 public:
+  explicit FunctionASTVisitor(const bool IgnoreMacros)
+      : IgnoreMacros(IgnoreMacros) {}
+
   bool traverseStmtWithIncreasedNestingLevel(Stmt *Node) {
     ++CurrentNestingLevel;
     bool ShouldContinue = Base::TraverseStmt(Node);
@@ -364,6 +370,9 @@ public:
     if (!Node)
       return Base::TraverseStmt(Node);
 
+    if (IgnoreMacros && Node->getBeginLoc().isMacroID())
+      return true;
+
     // Three following switch()'es have huge duplication, but it is better to
     // keep them separate, to simplify comparing them with the Specification.
 
@@ -493,12 +502,14 @@ FunctionCognitiveComplexityCheck::FunctionCognitiveComplexityCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       Threshold(Options.get("Threshold", CognitiveComplexity::DefaultLimit)),
-      DescribeBasicIncrements(Options.get("DescribeBasicIncrements", true)) {}
+      DescribeBasicIncrements(Options.get("DescribeBasicIncrements", true)),
+      IgnoreMacros(Options.get("IgnoreMacros", false)) {}
 
 void FunctionCognitiveComplexityCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "Threshold", Threshold);
   Options.store(Opts, "DescribeBasicIncrements", DescribeBasicIncrements);
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
 void FunctionCognitiveComplexityCheck::registerMatchers(MatchFinder *Finder) {
@@ -513,7 +524,7 @@ void FunctionCognitiveComplexityCheck::registerMatchers(MatchFinder *Finder) {
 void FunctionCognitiveComplexityCheck::check(
     const MatchFinder::MatchResult &Result) {
 
-  FunctionASTVisitor Visitor;
+  FunctionASTVisitor Visitor(IgnoreMacros);
   SourceLocation Loc;
 
   const auto *TheDecl = Result.Nodes.getNodeAs<FunctionDecl>("func");

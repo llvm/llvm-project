@@ -87,6 +87,7 @@ with `-g` for full debug information. A full list of flags supported by
     * Indicate when a mapped address already exists in the device mapping table:
       ``0x02``
     * Dump the contents of the device pointer map at kernel exit: ``0x04``
+    * Indicate when an entry is changed in the device mapping table: ``0x08``
     * Print OpenMP kernel information from device plugins: ``0x10``
 
 Any combination of these flags can be used by setting the appropriate bits. For
@@ -140,6 +141,10 @@ provide the following output from the runtime library.
     Info: Entering OpenMP data region at zaxpy.cpp:14:1 with 2 arguments:
     Info: to(X[0:N])[16384] 
     Info: tofrom(Y[0:N])[16384] 
+    Info: Creating new map entry with HstPtrBegin=0x00007fff963f4000,
+          TgtPtrBegin=0x00007fff963f4000, Size=16384, Name=X[0:N]
+    Info: Creating new map entry with HstPtrBegin=0x00007fff963f8000,
+          TgtPtrBegin=0x00007fff963f00000, Size=16384, Name=Y[0:N]
     Info: OpenMP Host-Device pointer mappings after block at zaxpy.cpp:14:1:
     Info: Host Ptr           Target Ptr         Size (B) RefCount Declaration
     Info: 0x00007fff963f4000 0x00007fd225004000 16384    1        Y[0:N] at zaxpy.cpp:13:17
@@ -151,10 +156,14 @@ provide the following output from the runtime library.
     Info: use_address(X)[0] (implicit)
     Info: Mapping exists (implicit) with HstPtrBegin=0x00007ffe37d8be80, 
           TgtPtrBegin=0x00007f90ff004000, Size=0, updated RefCount=2, Name=Y
+    Info: Creating new map entry with HstPtrBegin=0x00007fff963f33ff0,
+          TgtPtrBegin=0x00007fd225003ff0, Size=16, Name=D
     Info: Mapping exists (implicit) with HstPtrBegin=0x00007ffe37d8fe80, 
           TgtPtrBegin=0x00007f90ff000000, Size=0, updated RefCount=2, Name=X
     Info: Launching kernel __omp_offloading_fd02_c2c4ac1a__Z5daxpyPNSt3__17complexIdEES2_S1_m_l6
           with 8 blocks and 128 threads in SPMD mode
+    Info: Removing map entry with HstPtrBegin=0x00007fff963f33ff0,
+          TgtPtrBegin=0x00007fd225003ff0, Size=16, Name=D
     Info: OpenMP Host-Device pointer mappings after block at zaxpy.cpp:6:1:
     Info: Host Ptr           Target Ptr         Size (B) RefCount Declaration
     Info: 0x00007fff963f4000 0x00007fd225004000 16384    1        Y[0:N] at zaxpy.cpp:13:17
@@ -162,6 +171,10 @@ provide the following output from the runtime library.
     Info: Exiting OpenMP data region at zaxpy.cpp:14:1 with 2 arguments:
     Info: to(X[0:N])[16384] 
     Info: tofrom(Y[0:N])[16384] 
+    Info: Removing map entry with HstPtrBegin=0x00007fff963f4000,
+          TgtPtrBegin=0x00007fff963f4000, Size=16384, Name=X[0:N]
+    Info: Removing map entry with HstPtrBegin=0x00007fff963f8000,
+          TgtPtrBegin=0x00007fff963f00000, Size=16384, Name=Y[0:N]
 
 From this information, we can see the OpenMP kernel being launched on the CUDA
 device with enough threads and blocks for all ``1024`` iterations of the loop in

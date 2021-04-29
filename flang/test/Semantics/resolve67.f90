@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 ! Test restrictions on what subprograms can be used for defined operators.
 ! See: 15.4.3.4.2
 

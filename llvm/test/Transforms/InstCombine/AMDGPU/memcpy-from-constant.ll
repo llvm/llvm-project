@@ -135,10 +135,12 @@ define amdgpu_kernel void @memcpy_constant_byref_arg_ptr_to_alloca_too_many_byte
 ; Simple memcpy to alloca from constant address space intrinsic call
 define amdgpu_kernel void @memcpy_constant_intrinsic_ptr_to_alloca(i8 addrspace(1)* %out, i32 %idx) {
 ; CHECK-LABEL: @memcpy_constant_intrinsic_ptr_to_alloca(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 4, addrspace(5)
+; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = getelementptr inbounds [32 x i8], [32 x i8] addrspace(5)* [[ALLOCA]], i32 0, i32 0
 ; CHECK-NEXT:    [[KERNARG_SEGMENT_PTR:%.*]] = call align 16 dereferenceable(32) i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, i8 addrspace(4)* [[KERNARG_SEGMENT_PTR]], i64 [[TMP1]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8 addrspace(4)* [[GEP]], align 1
+; CHECK-NEXT:    call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* noundef align 4 dereferenceable(32) [[ALLOCA_CAST]], i8 addrspace(4)* noundef align 16 dereferenceable(32) [[KERNARG_SEGMENT_PTR]], i64 32, i1 false)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [32 x i8], [32 x i8] addrspace(5)* [[ALLOCA]], i32 0, i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8 addrspace(5)* [[GEP]], align 1
 ; CHECK-NEXT:    store i8 [[LOAD]], i8 addrspace(1)* [[OUT:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;

@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Statepoint.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
@@ -47,6 +48,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -886,6 +888,23 @@ LiveIntervals::addSegmentToEndOfBlock(Register Reg, MachineInstr &startInst) {
 //===----------------------------------------------------------------------===//
 //                          Register mask functions
 //===----------------------------------------------------------------------===//
+/// Check whether use of reg in MI is live-through. Live-through means that
+/// the value is alive on exit from Machine instruction. The example of such
+/// use is a deopt value in statepoint instruction.
+static bool hasLiveThroughUse(const MachineInstr *MI, Register Reg) {
+  if (MI->getOpcode() != TargetOpcode::STATEPOINT)
+    return false;
+  StatepointOpers SO(MI);
+  if (SO.getFlags() & (uint64_t)StatepointFlags::DeoptLiveIn)
+    return false;
+  for (unsigned Idx = SO.getNumDeoptArgsIdx(), E = SO.getNumGCPtrIdx(); Idx < E;
+       ++Idx) {
+    const MachineOperand &MO = MI->getOperand(Idx);
+    if (MO.isReg() && MO.getReg() == Reg)
+      return true;
+  }
+  return false;
+}
 
 bool LiveIntervals::checkRegMaskInterference(LiveInterval &LI,
                                              BitVector &UsableRegs) {
@@ -914,11 +933,8 @@ bool LiveIntervals::checkRegMaskInterference(LiveInterval &LI,
     return false;
 
   bool Found = false;
-  while (true) {
-    assert(*SlotI >= LiveI->start);
-    // Loop over all slots overlapping this segment.
-    while (*SlotI < LiveI->end) {
-      // *SlotI overlaps LI. Collect mask bits.
+  // Utility to union regmasks.
+  auto unionBitMask = [&](unsigned Idx) {
       if (!Found) {
         // This is the first overlap. Initialize UsableRegs to all ones.
         UsableRegs.clear();
@@ -926,14 +942,28 @@ bool LiveIntervals::checkRegMaskInterference(LiveInterval &LI,
         Found = true;
       }
       // Remove usable registers clobbered by this mask.
-      UsableRegs.clearBitsNotInMask(Bits[SlotI-Slots.begin()]);
+      UsableRegs.clearBitsNotInMask(Bits[Idx]);
+  };
+  while (true) {
+    assert(*SlotI >= LiveI->start);
+    // Loop over all slots overlapping this segment.
+    while (*SlotI < LiveI->end) {
+      // *SlotI overlaps LI. Collect mask bits.
+      unionBitMask(SlotI - Slots.begin());
       if (++SlotI == SlotE)
         return Found;
     }
+    // If segment ends with live-through use we need to collect its regmask.
+    if (*SlotI == LiveI->end)
+      if (MachineInstr *MI = getInstructionFromIndex(*SlotI))
+        if (hasLiveThroughUse(MI, LI.reg()))
+          unionBitMask(SlotI++ - Slots.begin());
     // *SlotI is beyond the current LI segment.
-    LiveI = LI.advanceTo(LiveI, *SlotI);
-    if (LiveI == LiveE)
+    // Special advance implementation to not miss next LiveI->end.
+    if (++LiveI == LiveE || SlotI == SlotE || *SlotI > LI.endIndex())
       return Found;
+    while (LiveI->end < *SlotI)
+      ++LiveI;
     // Advance SlotI until it overlaps.
     while (*SlotI < LiveI->start)
       if (++SlotI == SlotE)

@@ -1884,6 +1884,11 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
     case Intrinsic::vastart:
       InitsVargArgs = true;
       return false;
+    case Intrinsic::launder_invariant_group:
+    case Intrinsic::strip_invariant_group:
+      if (auto *SROAArg = getSROAArgForValueOrNull(II->getOperand(0)))
+        SROAArgValues[II] = SROAArg;
+      return true;
     }
   }
 

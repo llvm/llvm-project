@@ -24,6 +24,13 @@ Options
    `if` statement, etc.) which contributes to that complexity. See also the
    examples below. Default is `true`.
 
+.. option:: IgnoreMacros
+
+   If set to `true`, the check will ignore code inside macros. Note, that also
+   any macro arguments are ignored, even if they should count to the complexity.
+   As this might change in the future, this option isn't guaranteed to be
+   forward-compatible. Default is `false`.
+
 Building blocks
 ---------------
 

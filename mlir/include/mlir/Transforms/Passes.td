@@ -725,7 +725,7 @@ def SymbolDCE : Pass<"symbol-dce"> {
   let constructor = "mlir::createSymbolDCEPass()";
 }
 
-def ViewOpGraphPass : Pass<"symbol-dce", "ModuleOp"> {
+def ViewOpGraphPass : Pass<"view-op-graph", "ModuleOp"> {
   let summary = "Print graphviz view of module";
   let description = [{
     This pass prints a graphviz per block of a module.

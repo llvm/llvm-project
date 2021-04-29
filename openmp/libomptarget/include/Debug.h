@@ -47,6 +47,8 @@ enum OpenMPInfoType : uint32_t {
   OMP_INFOTYPE_MAPPING_EXISTS = 0x0002,
   // Dump the contents of the device pointer map at kernel exit or failure.
   OMP_INFOTYPE_DUMP_TABLE = 0x0004,
+  // Indicate when an address is added to the device mapping table.
+  OMP_INFOTYPE_MAPPING_CHANGED = 0x0008,
   // Print kernel information from target device plugins.
   OMP_INFOTYPE_PLUGIN_KERNEL = 0x0010,
   // Enable every flag.

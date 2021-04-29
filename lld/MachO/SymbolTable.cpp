@@ -24,17 +24,22 @@ Symbol *SymbolTable::find(CachedHashStringRef cachedName) {
   return symVector[it->second];
 }
 
-std::pair<Symbol *, bool> SymbolTable::insert(StringRef name) {
+std::pair<Symbol *, bool> SymbolTable::insert(StringRef name,
+                                              const InputFile *file) {
   auto p = symMap.insert({CachedHashStringRef(name), (int)symVector.size()});
 
-  // Name already present in the symbol table.
-  if (!p.second)
-    return {symVector[p.first->second], false};
+  Symbol *sym;
+  if (!p.second) {
+    // Name already present in the symbol table.
+    sym = symVector[p.first->second];
+  } else {
+    // Name is a new symbol.
+    sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
+    symVector.push_back(sym);
+  }
 
-  // Name is a new symbol.
-  Symbol *sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
-  symVector.push_back(sym);
-  return {sym, true};
+  sym->isUsedInRegularObj |= !file || isa<ObjFile>(file);
+  return {sym, p.second};
 }
 
 Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
@@ -44,7 +49,7 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   Symbol *s;
   bool wasInserted;
   bool overridesWeakDef = false;
-  std::tie(s, wasInserted) = insert(name);
+  std::tie(s, wasInserted) = insert(name, file);
 
   if (!wasInserted) {
     if (auto *defined = dyn_cast<Defined>(s)) {
@@ -77,7 +82,7 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
                                   bool isWeakRef) {
   Symbol *s;
   bool wasInserted;
-  std::tie(s, wasInserted) = insert(name);
+  std::tie(s, wasInserted) = insert(name, file);
 
   RefState refState = isWeakRef ? RefState::Weak : RefState::Strong;
 
@@ -96,7 +101,7 @@ Symbol *SymbolTable::addCommon(StringRef name, InputFile *file, uint64_t size,
                                uint32_t align, bool isPrivateExtern) {
   Symbol *s;
   bool wasInserted;
-  std::tie(s, wasInserted) = insert(name);
+  std::tie(s, wasInserted) = insert(name, file);
 
   if (!wasInserted) {
     if (auto *common = dyn_cast<CommonSymbol>(s)) {
@@ -117,7 +122,7 @@ Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file, bool isWeakDef,
                               bool isTlv) {
   Symbol *s;
   bool wasInserted;
-  std::tie(s, wasInserted) = insert(name);
+  std::tie(s, wasInserted) = insert(name, file);
 
   RefState refState = RefState::Unreferenced;
   if (!wasInserted) {
@@ -149,7 +154,7 @@ Symbol *SymbolTable::addLazy(StringRef name, ArchiveFile *file,
                              const object::Archive::Symbol &sym) {
   Symbol *s;
   bool wasInserted;
-  std::tie(s, wasInserted) = insert(name);
+  std::tie(s, wasInserted) = insert(name, file);
 
   if (wasInserted)
     replaceSymbol<LazySymbol>(s, file, sym);

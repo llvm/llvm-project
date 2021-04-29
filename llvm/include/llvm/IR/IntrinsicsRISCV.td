@@ -548,15 +548,15 @@ let TargetPrefix = "riscv" in {
   // Output: (scalar type)
   // Input: (vector_in, vl)
   class RISCVMaskUnarySOutNoMask
-        : Intrinsic<[llvm_anyint_ty],
-                    [llvm_anyvector_ty, LLVMMatchType<0>],
+        : Intrinsic<[LLVMMatchType<1>],
+                    [llvm_anyvector_ty, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic;
   // For unary operations with scalar type output with mask
   // Output: (scalar type)
   // Input: (vector_in, mask, vl)
   class RISCVMaskUnarySOutMask
-        : Intrinsic<[llvm_anyint_ty],
-                    [llvm_anyvector_ty, LLVMMatchType<1>, LLVMMatchType<0>],
+        : Intrinsic<[LLVMMatchType<1>],
+                    [llvm_anyvector_ty, LLVMMatchType<0>, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic;
   // For destination vector type is NOT the same as source vector.
   // Input: (vector_in, vl)

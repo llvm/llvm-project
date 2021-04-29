@@ -27,10 +27,6 @@ class VOPC_SDWAe <bits<8> op, VOPProfile P> : VOP_SDWAe <P> {
   let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, 0);
   let Inst{24-17} = op;
   let Inst{31-25} = 0x3e; // encoding
-
-  // VOPC disallows dst_sel and dst_unused as they have no effect on destination
-  let Inst{42-40} = 0;
-  let Inst{44-43} = 0;
 }
 
 class VOPC_SDWA9e <bits<8> op, VOPProfile P> : VOP_SDWA9Be <P> {
@@ -56,6 +52,8 @@ class VOPC_Profile<list<SchedReadWrite> sched, ValueType vt0, ValueType vt1 = vt
   let Asm32 = "$src0, $src1";
   // The destination for 32-bit encoding is implicit.
   let HasDst32 = 0;
+  // VOPC disallows dst_sel and dst_unused as they have no effect on destination
+  let EmitDstSel = 0;
   let Outs64 = (outs VOPDstS64orS32:$sdst);
   list<SchedReadWrite> Schedule = sched;
 }

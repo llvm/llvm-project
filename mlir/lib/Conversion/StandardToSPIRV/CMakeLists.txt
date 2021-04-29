@@ -1,5 +1,4 @@
 add_mlir_conversion_library(MLIRStandardToSPIRV
-  LegalizeStandardForSPIRV.cpp
   StandardToSPIRV.cpp
   StandardToSPIRVPass.cpp
 

@@ -152,7 +152,7 @@ template <class _Integer>
   { return static_cast<byte>(static_cast<unsigned char>(static_cast<unsigned int>(__lhs) >> __shift)); }
 
 template <class _Integer, class = _EnableByteOverload<_Integer> >
-  constexpr _Integer
+  _LIBCPP_NODISCARD_EXT constexpr _Integer
   to_integer(byte __b) noexcept { return static_cast<_Integer>(__b); }
 }
 

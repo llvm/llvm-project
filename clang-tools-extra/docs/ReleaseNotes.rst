@@ -74,8 +74,20 @@ Improvements to clang-tidy
   attached to warnings. These are typically cases where we are less confident
   the fix will have the desired effect.
 
+- libToolingCore and Clang-Tidy was refactored and now checks can produce
+  highlights (`^~~~~` under fragments of the source code) in diagnostics.
+  Existing and new checks in the future can be expected to start implementing
+  this functionality.
+  This change only affects the visual rendering of diagnostics, and does not
+  alter the behavior of generated fixes.
+
 New checks
 ^^^^^^^^^^
+
+- New :doc:`bugprone-implicit-widening-of-multiplication-result
+  <clang-tidy/checks/bugprone-implicit-widening-of-multiplication-result>` check.
+
+  Diagnoses instances of an implicit widening of multiplication result.
 
 - New :doc:`concurrency-thread-canceltype-asynchronous
   <clang-tidy/checks/concurrency-thread-canceltype-asynchronous>` check.
@@ -94,6 +106,11 @@ New checks
 
   Finds member initializations in the constructor body which can be placed into
   the initialization list instead.
+
+- New :doc:`bugprone-unhandled-exception-at-new
+  <clang-tidy/checks/bugprone-unhandled-exception-at-new>` check.
+
+  Finds calls to ``new`` with missing exception handler for ``std::bad_alloc``.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^

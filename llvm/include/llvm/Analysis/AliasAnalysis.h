@@ -90,7 +90,7 @@ private:
   signed int Offset : OffsetBits;
 
 public:
-  enum Result : uint8_t {
+  enum Kind : uint8_t {
     /// The two locations do not alias at all.
     ///
     /// This value is arranged to convert to false, while all other values
@@ -109,10 +109,10 @@ public:
                 "Not enough bit field size for the enum!");
 
   explicit AliasResult() = delete;
-  constexpr AliasResult(const Result &Alias)
+  constexpr AliasResult(const Kind &Alias)
       : Alias(Alias), HasOffset(false), Offset(0) {}
 
-  operator Result() const { return static_cast<Result>(Alias); }
+  operator Kind() const { return static_cast<Kind>(Alias); }
 
   constexpr bool hasOffset() const { return HasOffset; }
   constexpr int32_t getOffset() const {
@@ -127,7 +127,7 @@ public:
   }
 
   /// Helper for processing AliasResult for swapped memory location pairs.
-  void swap(bool DoSwap) {
+  void swap(bool DoSwap = true) {
     if (DoSwap && hasOffset())
       setOffset(-getOffset());
   }

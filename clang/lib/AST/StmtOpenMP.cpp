@@ -1977,3 +1977,20 @@ OMPDispatchDirective *OMPDispatchDirective::CreateEmpty(const ASTContext &C,
                                                     /*HasAssociatedStmt=*/true,
                                                     /*NumChildren=*/0);
 }
+
+OMPMaskedDirective *OMPMaskedDirective::Create(const ASTContext &C,
+                                               SourceLocation StartLoc,
+                                               SourceLocation EndLoc,
+                                               ArrayRef<OMPClause *> Clauses,
+                                               Stmt *AssociatedStmt) {
+  return createDirective<OMPMaskedDirective>(C, Clauses, AssociatedStmt,
+                                             /*NumChildren=*/0, StartLoc,
+                                             EndLoc);
+}
+
+OMPMaskedDirective *OMPMaskedDirective::CreateEmpty(const ASTContext &C,
+                                                    unsigned NumClauses,
+                                                    EmptyShell) {
+  return createEmptyDirective<OMPMaskedDirective>(C, NumClauses,
+                                                  /*HasAssociatedStmt=*/true);
+}

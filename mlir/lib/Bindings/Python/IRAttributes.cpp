@@ -502,8 +502,9 @@ private:
            MlirType mlirElementType, py::buffer_info &arrayInfo) {
     SmallVector<int64_t, 4> shape(arrayInfo.shape.begin(),
                                   arrayInfo.shape.begin() + arrayInfo.ndim);
-    auto shapedType =
-        mlirRankedTensorTypeGet(shape.size(), shape.data(), mlirElementType);
+    MlirAttribute encodingAttr = mlirAttributeGetNull();
+    auto shapedType = mlirRankedTensorTypeGet(shape.size(), shape.data(),
+                                              mlirElementType, encodingAttr);
     intptr_t numElements = arrayInfo.size;
     const ElementTy *contents = static_cast<const ElementTy *>(arrayInfo.ptr);
     return ctor(shapedType, numElements, contents);

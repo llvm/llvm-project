@@ -901,8 +901,6 @@ bool NativeProcessLinux::MonitorClone(
       assert(!tgid_ret || tgid_ret.getValue() == GetID());
 
       NativeThreadLinux &child_thread = AddThread(child_pid, /*resume*/ true);
-      // Resume the newly created thread.
-      ResumeThread(child_thread, eStateRunning, LLDB_INVALID_SIGNAL_NUMBER);
       ThreadWasCreated(child_thread);
 
       // Resume the parent.
@@ -917,7 +915,7 @@ bool NativeProcessLinux::MonitorClone(
     MainLoop unused_loop;
     NativeProcessLinux child_process{static_cast<::pid_t>(child_pid),
                                      m_terminal_fd,
-                                     *m_delegates[0],
+                                     m_delegate,
                                      m_arch,
                                      unused_loop,
                                      {static_cast<::pid_t>(child_pid)}};

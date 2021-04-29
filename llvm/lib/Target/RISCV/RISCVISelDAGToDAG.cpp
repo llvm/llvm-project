@@ -420,7 +420,11 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::SRL: {
-    // Optimize (srl (and X, 0xffff), C) -> (srli (slli X, 16), 16 + C).
+    // We don't need this transform if zext.h is supported.
+    if (Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbp())
+      break;
+    // Optimize (srl (and X, 0xffff), C) ->
+    //          (srli (slli X, (XLen-16), (XLen-16) + C)
     // Taking into account that the 0xffff may have had lower bits unset by
     // SimplifyDemandedBits. This avoids materializing the 0xffff immediate.
     // This pattern occurs when type legalizing i16 right shifts.
@@ -434,14 +438,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         uint64_t Mask = N0.getConstantOperandVal(1);
         Mask |= maskTrailingOnes<uint64_t>(ShAmt);
         if (Mask == 0xffff) {
-          unsigned SLLOpc = Subtarget->is64Bit() ? RISCV::SLLIW : RISCV::SLLI;
-          unsigned SRLOpc = Subtarget->is64Bit() ? RISCV::SRLIW : RISCV::SRLI;
+          unsigned LShAmt = Subtarget->getXLen() - 16;
           SDNode *SLLI =
-              CurDAG->getMachineNode(SLLOpc, DL, VT, N0->getOperand(0),
-                                     CurDAG->getTargetConstant(16, DL, VT));
+              CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0->getOperand(0),
+                                     CurDAG->getTargetConstant(LShAmt, DL, VT));
           SDNode *SRLI = CurDAG->getMachineNode(
-              SRLOpc, DL, VT, SDValue(SLLI, 0),
-              CurDAG->getTargetConstant(16 + ShAmt, DL, VT));
+              RISCV::SRLI, DL, VT, SDValue(SLLI, 0),
+              CurDAG->getTargetConstant(LShAmt + ShAmt, DL, VT));
           ReplaceNode(Node, SRLI);
           return;
         }
@@ -1150,7 +1153,12 @@ bool RISCVDAGToDAGISel::selectVSplat(SDValue N, SDValue &SplatVal) {
   return true;
 }
 
-bool RISCVDAGToDAGISel::selectVSplatSimm5(SDValue N, SDValue &SplatVal) {
+using ValidateFn = bool (*)(int64_t);
+
+static bool selectVSplatSimmHelper(SDValue N, SDValue &SplatVal,
+                                   SelectionDAG &DAG,
+                                   const RISCVSubtarget &Subtarget,
+                                   ValidateFn ValidateImm) {
   if ((N.getOpcode() != ISD::SPLAT_VECTOR &&
        N.getOpcode() != RISCVISD::SPLAT_VECTOR_I64 &&
        N.getOpcode() != RISCVISD::VMV_V_X_VL) ||
@@ -1159,26 +1167,44 @@ bool RISCVDAGToDAGISel::selectVSplatSimm5(SDValue N, SDValue &SplatVal) {
 
   int64_t SplatImm = cast<ConstantSDNode>(N.getOperand(0))->getSExtValue();
 
-  // Both ISD::SPLAT_VECTOR and RISCVISD::SPLAT_VECTOR_I64 share semantics when
-  // the operand type is wider than the resulting vector element type: an
-  // implicit truncation first takes place. Therefore, perform a manual
-  // truncation/sign-extension in order to ignore any truncated bits and catch
-  // any zero-extended immediate.
+  // ISD::SPLAT_VECTOR, RISCVISD::SPLAT_VECTOR_I64 and RISCVISD::VMV_V_X_VL
+  // share semantics when the operand type is wider than the resulting vector
+  // element type: an implicit truncation first takes place. Therefore, perform
+  // a manual truncation/sign-extension in order to ignore any truncated bits
+  // and catch any zero-extended immediate.
   // For example, we wish to match (i8 -1) -> (XLenVT 255) as a simm5 by first
   // sign-extending to (XLenVT -1).
-  MVT XLenVT = Subtarget->getXLenVT();
+  MVT XLenVT = Subtarget.getXLenVT();
   assert(XLenVT == N.getOperand(0).getSimpleValueType() &&
          "Unexpected splat operand type");
   MVT EltVT = N.getSimpleValueType().getVectorElementType();
-  if (EltVT.bitsLT(XLenVT)) {
+  if (EltVT.bitsLT(XLenVT))
     SplatImm = SignExtend64(SplatImm, EltVT.getSizeInBits());
-  }
 
-  if (!isInt<5>(SplatImm))
+  if (!ValidateImm(SplatImm))
     return false;
 
-  SplatVal = CurDAG->getTargetConstant(SplatImm, SDLoc(N), XLenVT);
+  SplatVal = DAG.getTargetConstant(SplatImm, SDLoc(N), XLenVT);
   return true;
+}
+
+bool RISCVDAGToDAGISel::selectVSplatSimm5(SDValue N, SDValue &SplatVal) {
+  return selectVSplatSimmHelper(N, SplatVal, *CurDAG, *Subtarget,
+                                [](int64_t Imm) { return isInt<5>(Imm); });
+}
+
+bool RISCVDAGToDAGISel::selectVSplatSimm5Plus1(SDValue N, SDValue &SplatVal) {
+  return selectVSplatSimmHelper(
+      N, SplatVal, *CurDAG, *Subtarget,
+      [](int64_t Imm) { return (isInt<5>(Imm) && Imm != -16) || Imm == 16; });
+}
+
+bool RISCVDAGToDAGISel::selectVSplatSimm5Plus1NonZero(SDValue N,
+                                                      SDValue &SplatVal) {
+  return selectVSplatSimmHelper(
+      N, SplatVal, *CurDAG, *Subtarget, [](int64_t Imm) {
+        return Imm != 0 && ((isInt<5>(Imm) && Imm != -16) || Imm == 16);
+      });
 }
 
 bool RISCVDAGToDAGISel::selectVSplatUimm5(SDValue N, SDValue &SplatVal) {

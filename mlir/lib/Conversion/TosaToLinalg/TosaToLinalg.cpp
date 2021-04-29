@@ -740,6 +740,109 @@ public:
   }
 };
 
+class Conv2DConverter : public OpConversionPattern<tosa::Conv2DOp> {
+public:
+  using OpConversionPattern<tosa::Conv2DOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tosa::Conv2DOp op, ArrayRef<Value> args,
+                  ConversionPatternRewriter &rewriter) const final {
+    Location loc = op.getLoc();
+    Value input = op.input();
+    Value weight = op.weight();
+    Value bias = op.bias();
+
+    ShapedType inputTy = input.getType().cast<ShapedType>();
+    ShapedType weightTy = weight.getType().cast<ShapedType>();
+    ShapedType biasTy = bias.getType().cast<ShapedType>();
+    ShapedType resultTy = op.getType().cast<ShapedType>();
+
+    Type inputETy = inputTy.getElementType();
+    Type weightETy = weightTy.getElementType();
+    Type biasETy = biasTy.getElementType();
+    Type resultETy = resultTy.getElementType();
+
+    if (!inputTy.hasStaticShape() || !weightTy.hasStaticShape() ||
+        !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
+      return rewriter.notifyMatchFailure(op,
+                                         "tosa.conv2d requires static shapes");
+
+    auto inputShape = inputTy.getShape();
+    auto weightShape = weightTy.getShape();
+
+    // TODO(suderman): Support other types.
+    if (!inputETy.isF32() || !weightETy.isF32() || !biasETy.isF32() ||
+        !resultETy.isF32())
+      return failure();
+
+    // Broadcast the initial value to the output tensor before convolving.
+    SmallVector<AffineMap, 4> indexingMaps;
+    indexingMaps.push_back(AffineMap::get(/*dimCount=*/4, /*symbolCount=*/0,
+                                          {rewriter.getAffineDimExpr(3)},
+                                          rewriter.getContext()));
+    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
+
+    Value initTensor = rewriter.create<linalg::InitTensorOp>(
+        loc, resultTy.getShape(), resultTy.getElementType());
+    Value biasBroadcast =
+        rewriter
+            .create<linalg::GenericOp>(
+                loc, resultTy, bias, initTensor, indexingMaps,
+                getNParallelLoopsAttrs(resultTy.getRank()),
+                [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                    ValueRange args) {
+                  nestedBuilder.create<linalg::YieldOp>(nestedLoc, args[0]);
+                })
+            .getResult(0);
+
+    // Transpose weights tensor to be in dim order: spatial dims,
+    // input channels, and output channels.
+    SmallVector<int64_t> permutation{1, 2, 3, 0};
+    auto permutationAttr = DenseIntElementsAttr::get(
+        RankedTensorType::get({4}, rewriter.getI64Type()), permutation);
+    Value permutationValue = rewriter.create<ConstantOp>(loc, permutationAttr);
+
+    SmallVector<int64_t> newKernelShape{weightShape[1], weightShape[2],
+                                        weightShape[3], weightShape[0]};
+    Type newKernelTy = RankedTensorType::get(newKernelShape, biasETy);
+
+    Value transposedKernel = rewriter.create<tosa::TransposeOp>(
+        loc, newKernelTy, weight, permutationValue);
+
+    // Extract the attributes for convolution.
+    llvm::SmallVector<int64_t> stride, dilation, pad;
+    getValuesFromIntArrayAttribute(op.stride(), stride);
+    getValuesFromIntArrayAttribute(op.dilation(), dilation);
+    getValuesFromIntArrayAttribute(op.pad(), pad);
+
+    // Input should be padded if necessary.
+    if (llvm::any_of(pad, [](int64_t p) { return p; })) {
+      llvm::SmallVector<int64_t, 8> newPad{0,      0,      pad[0], pad[1],
+                                           pad[2], pad[3], 0,      0};
+      auto padAttr = DenseIntElementsAttr::get(
+          RankedTensorType::get({4, 2}, rewriter.getI64Type()), newPad);
+      Value padValue = rewriter.create<ConstantOp>(loc, padAttr);
+
+      SmallVector<int64_t, 4> paddedShape{
+          inputShape[0], inputShape[1] + pad[0] + pad[1],
+          inputShape[2] + pad[2] + pad[3], inputShape[3]};
+      Type paddedTy = RankedTensorType::get(paddedShape, inputETy);
+      input = rewriter.create<tosa::PadOp>(loc, paddedTy, input, padValue);
+    }
+
+    auto strideAttr = DenseIntElementsAttr::get(
+        RankedTensorType::get({2}, rewriter.getI64Type()), stride);
+    auto dilationAttr = DenseIntElementsAttr::get(
+        RankedTensorType::get({2}, rewriter.getI64Type()), dilation);
+
+    auto convOp = rewriter.create<linalg::ConvInputNHWCFilterHWCFOp>(
+        loc, resultTy, ValueRange{input, transposedKernel},
+        ValueRange{biasBroadcast}, dilationAttr, strideAttr);
+
+    rewriter.replaceOp(op, convOp.getResult(0));
+    return success();
+  }
+};
+
 class ReshapeConverter : public OpConversionPattern<tosa::ReshapeOp> {
 public:
   using OpConversionPattern<tosa::ReshapeOp>::OpConversionPattern;
@@ -1693,6 +1796,7 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       ReduceConverter<tosa::ReduceProdOp>,
       ArgMaxConverter,
       ConcatConverter,
+      Conv2DConverter,
       PadConverter,
       ReshapeConverter,
       RescaleConverter,

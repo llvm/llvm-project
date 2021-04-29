@@ -738,12 +738,15 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB,
   SmallVector<DominatorTree::UpdateType, 32> Updates;
 
   if (DTU) {
-    for (BasicBlock *PredPredBB : predecessors(PredBB)) {
+    SmallPtrSet<BasicBlock *, 2> PredsOfPredBB(pred_begin(PredBB),
+                                               pred_end(PredBB));
+    Updates.reserve(Updates.size() + 2 * PredsOfPredBB.size() + 1);
+    for (BasicBlock *PredOfPredBB : PredsOfPredBB)
       // This predecessor of PredBB may already have DestBB as a successor.
-      if (!llvm::is_contained(successors(PredPredBB), DestBB))
-        Updates.push_back({DominatorTree::Insert, PredPredBB, DestBB});
-      Updates.push_back({DominatorTree::Delete, PredPredBB, PredBB});
-    }
+      if (PredOfPredBB != PredBB)
+        Updates.push_back({DominatorTree::Insert, PredOfPredBB, DestBB});
+    for (BasicBlock *PredOfPredBB : PredsOfPredBB)
+      Updates.push_back({DominatorTree::Delete, PredOfPredBB, PredBB});
     Updates.push_back({DominatorTree::Delete, PredBB, DestBB});
   }
 
@@ -1072,14 +1075,15 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   SmallVector<DominatorTree::UpdateType, 32> Updates;
   if (DTU) {
     // All predecessors of BB will be moved to Succ.
-    SmallSetVector<BasicBlock *, 8> Predecessors(pred_begin(BB), pred_end(BB));
-    Updates.reserve(Updates.size() + 2 * Predecessors.size());
-    for (auto *Predecessor : Predecessors) {
+    SmallPtrSet<BasicBlock *, 8> PredsOfBB(pred_begin(BB), pred_end(BB));
+    SmallPtrSet<BasicBlock *, 8> PredsOfSucc(pred_begin(Succ), pred_end(Succ));
+    Updates.reserve(Updates.size() + 2 * PredsOfBB.size() + 1);
+    for (auto *PredOfBB : PredsOfBB)
       // This predecessor of BB may already have Succ as a successor.
-      if (!llvm::is_contained(successors(Predecessor), Succ))
-        Updates.push_back({DominatorTree::Insert, Predecessor, Succ});
-      Updates.push_back({DominatorTree::Delete, Predecessor, BB});
-    }
+      if (!PredsOfSucc.contains(PredOfBB))
+        Updates.push_back({DominatorTree::Insert, PredOfBB, Succ});
+    for (auto *PredOfBB : PredsOfBB)
+      Updates.push_back({DominatorTree::Delete, PredOfBB, BB});
     Updates.push_back({DominatorTree::Delete, BB, Succ});
   }
 
@@ -3387,4 +3391,34 @@ Value *llvm::invertCondition(Value *Condition) {
   else
     Inverted->insertBefore(&*Parent->getFirstInsertionPt());
   return Inverted;
+}
+
+bool llvm::inferAttributesFromOthers(Function &F) {
+  // Note: We explicitly check for attributes rather than using cover functions
+  // because some of the cover functions include the logic being implemented.
+
+  bool Changed = false;
+  // readnone + not convergent implies nosync
+  if (!F.hasFnAttribute(Attribute::NoSync) &&
+      F.doesNotAccessMemory() && !F.isConvergent()) {
+    F.setNoSync();
+    Changed = true;
+  }
+
+  // readonly implies nofree
+  if (!F.hasFnAttribute(Attribute::NoFree) && F.onlyReadsMemory()) {
+    F.setDoesNotFreeMemory();
+    Changed = true;
+  }
+
+  // willreturn implies mustprogress
+  if (!F.hasFnAttribute(Attribute::MustProgress) && F.willReturn()) {
+    F.setMustProgress();
+    Changed = true;
+  }
+
+  // TODO: There are a bunch of cases of restrictive memory effects we
+  // can infer by inspecting arguments of argmemonly-ish functions.
+
+  return Changed;
 }

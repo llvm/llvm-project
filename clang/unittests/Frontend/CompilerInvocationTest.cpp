@@ -97,6 +97,18 @@ TEST(ContainsN, Two) {
   ASSERT_THAT(Array, ContainsN(StrEq("x"), 2));
 }
 
+// Copy constructor performs a deep copy of reference-counted pointers.
+
+TEST(CompilerInvocationTest, DeepCopyConstructor) {
+  CompilerInvocation A;
+  A.getAnalyzerOpts()->Config["Key"] = "Old";
+
+  CompilerInvocation B(A);
+  B.getAnalyzerOpts()->Config["Key"] = "New";
+
+  ASSERT_EQ(A.getAnalyzerOpts()->Config["Key"], "Old");
+}
+
 // Boolean option with a keypath that defaults to true.
 // The only flag with a negative spelling can set the keypath to false.
 

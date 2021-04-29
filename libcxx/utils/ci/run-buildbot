@@ -132,6 +132,17 @@ check-format)
     # Check if the diff is empty, fail otherwise.
     ! grep -q '^--- a' ${BUILD_DIR}/clang-format.patch
 ;;
+check-generated-output)
+    clean
+    echo "+++ Checking the output of the generated scripts"
+    mkdir -p ${BUILD_DIR}
+    python3 libcxx/utils/generate_feature_test_macro_components.py
+    python3 libcxx/utils/generate_header_inclusion_tests.py
+    python3 libcxx/utils/generate_header_tests.py
+    git diff | tee ${BUILD_DIR}/generated_output.patch
+    # Check if the diffs are empty, fail otherwise.
+    ! grep -q '^--- a' ${BUILD_DIR}/generated_output.patch
+;;
 generic-cxx03)
     export CC=clang
     export CXX=clang++

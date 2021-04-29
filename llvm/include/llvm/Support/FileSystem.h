@@ -1253,25 +1253,57 @@ public:
 
 private:
   /// Platform-specific mapping state.
-  size_t Size;
-  void *Mapping;
+  size_t Size = 0;
+  void *Mapping = nullptr;
 #ifdef _WIN32
-  sys::fs::file_t FileHandle;
+  sys::fs::file_t FileHandle = nullptr;
 #endif
-  mapmode Mode;
+  mapmode Mode = readonly;
+
+  void copyFrom(const mapped_file_region &Copied) {
+    Size = Copied.Size;
+    Mapping = Copied.Mapping;
+#ifdef _WIN32
+    FileHandle = Copied.FileHandle;
+#endif
+    Mode = Copied.Mode;
+  }
+
+  void moveFromImpl(mapped_file_region &Moved) {
+    copyFrom(Moved);
+    Moved.copyFrom(mapped_file_region());
+  }
+
+  void unmapImpl();
 
   std::error_code init(sys::fs::file_t FD, uint64_t Offset, mapmode Mode);
 
 public:
-  mapped_file_region() = delete;
-  mapped_file_region(mapped_file_region&) = delete;
-  mapped_file_region &operator =(mapped_file_region&) = delete;
+  mapped_file_region() = default;
+  mapped_file_region(mapped_file_region &&Moved) { moveFromImpl(Moved); }
+  mapped_file_region &operator=(mapped_file_region &&Moved) {
+    unmap();
+    moveFromImpl(Moved);
+    return *this;
+  }
+
+  mapped_file_region(const mapped_file_region &) = delete;
+  mapped_file_region &operator=(const mapped_file_region &) = delete;
 
   /// \param fd An open file descriptor to map. Does not take ownership of fd.
   mapped_file_region(sys::fs::file_t fd, mapmode mode, size_t length, uint64_t offset,
                      std::error_code &ec);
 
-  ~mapped_file_region();
+  ~mapped_file_region() { unmapImpl(); }
+
+  /// Check if this is a valid mapping.
+  explicit operator bool() const { return Mapping; }
+
+  /// Unmap.
+  void unmap() {
+    unmapImpl();
+    copyFrom(mapped_file_region());
+  }
 
   size_t size() const;
   char *data() const;

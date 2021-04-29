@@ -70,7 +70,7 @@ class TestFrameGuessLanguage(TestBase):
         thread = threads[0]
 
         c_frame_language = lldb.eLanguageTypeC99
-        cxx_frame_language = lldb.eLanguageTypeC_plus_plus_11
+        cxx_frame_language = lldb.eLanguageTypeC_plus_plus
         # gcc emits DW_LANG_C89 even if -std=c99 was specified
         if "gcc" in self.getCompiler():
             c_frame_language = lldb.eLanguageTypeC89

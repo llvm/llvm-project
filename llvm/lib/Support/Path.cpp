@@ -1152,6 +1152,21 @@ ErrorOr<perms> getPermissions(const Twine &Path) {
   return Status.permissions();
 }
 
+size_t mapped_file_region::size() const {
+  assert(Mapping && "Mapping failed but used anyway!");
+  return Size;
+}
+
+char *mapped_file_region::data() const {
+  assert(Mapping && "Mapping failed but used anyway!");
+  return reinterpret_cast<char *>(Mapping);
+}
+
+const char *mapped_file_region::const_data() const {
+  assert(Mapping && "Mapping failed but used anyway!");
+  return reinterpret_cast<const char *>(Mapping);
+}
+
 } // end namespace fs
 } // end namespace sys
 } // end namespace llvm

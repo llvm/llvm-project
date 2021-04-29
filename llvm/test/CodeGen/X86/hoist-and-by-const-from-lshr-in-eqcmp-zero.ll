@@ -762,7 +762,7 @@ define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
 ; X86-BMI1-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-BMI1-NEXT:    movl $1, %eax
 ; X86-BMI1-NEXT:    shrl %cl, %eax
-; X86-BMI1-NEXT:    testb %al, %al
+; X86-BMI1-NEXT:    testl %eax, %eax
 ; X86-BMI1-NEXT:    sete %al
 ; X86-BMI1-NEXT:    retl
 ;
@@ -771,7 +771,7 @@ define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
 ; X86-BMI2-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-BMI2-NEXT:    movl $1, %ecx
 ; X86-BMI2-NEXT:    shrxl %eax, %ecx, %eax
-; X86-BMI2-NEXT:    testb %al, %al
+; X86-BMI2-NEXT:    testl %eax, %eax
 ; X86-BMI2-NEXT:    sete %al
 ; X86-BMI2-NEXT:    retl
 ;
@@ -781,7 +781,7 @@ define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
 ; X64-BMI1-NEXT:    movl $1, %eax
 ; X64-BMI1-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-BMI1-NEXT:    shrl %cl, %eax
-; X64-BMI1-NEXT:    testb %al, %al
+; X64-BMI1-NEXT:    testl %eax, %eax
 ; X64-BMI1-NEXT:    sete %al
 ; X64-BMI1-NEXT:    retq
 ;
@@ -789,7 +789,7 @@ define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
 ; X64-BMI2:       # %bb.0:
 ; X64-BMI2-NEXT:    movl $1, %eax
 ; X64-BMI2-NEXT:    shrxl %edi, %eax, %eax
-; X64-BMI2-NEXT:    testb %al, %al
+; X64-BMI2-NEXT:    testl %eax, %eax
 ; X64-BMI2-NEXT:    sete %al
 ; X64-BMI2-NEXT:    retq
   %t0 = lshr i32 1, %y

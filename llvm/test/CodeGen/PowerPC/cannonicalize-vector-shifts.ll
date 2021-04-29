@@ -2,6 +2,12 @@
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mcpu=pwr8 -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s
+
+; RUN: llc -mcpu=pwr8 -vec-extabi -mtriple=powerpc64-ibm-aix-xcoff \
+; RUN:   -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mcpu=pwr8 -vec-extabi -mtriple=powerpc-ibm-aix-xcoff \
+; RUN:   -verify-machineinstrs < %s | FileCheck %s
+
 define <4 x i32> @test1(<4 x i32> %a) {
 entry:
 ; CHECK-LABEL: test1

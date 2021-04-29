@@ -81,6 +81,8 @@ func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
   %3 = divf %lhs, %rhs: f32
   // CHECK: spv.FRem %{{.*}}, %{{.*}}: f32
   %4 = remf %lhs, %rhs: f32
+  // CHECK: spv.GLSL.Pow %{{.*}}: f32
+  %5 = math.powf %lhs, %rhs : f32
   return
 }
 
@@ -902,6 +904,19 @@ func @load_store_zero_rank_int(%arg0: memref<i32>, %arg1: memref<i32>) {
   // CHECK-SAME: ] :
   //      CHECK: spv.Store "StorageBuffer" %{{.*}} : i32
   memref.store %0, %arg1[] : memref<i32>
+  return
+}
+
+// CHECK-LABEL: func @load_store_unknown_dim
+// CHECK-SAME: %[[SRC:[a-z0-9]+]]: !spv.ptr<!spv.struct<(!spv.rtarray<i32, stride=4> [0])>, StorageBuffer>,
+// CHECK-SAME: %[[DST:[a-z0-9]+]]: !spv.ptr<!spv.struct<(!spv.rtarray<i32, stride=4> [0])>, StorageBuffer>)
+func @load_store_unknown_dim(%i: index, %source: memref<?xi32>, %dest: memref<?xi32>) {
+  // CHECK: %[[AC0:.+]] = spv.AccessChain %[[SRC]]
+  // CHECK: spv.Load "StorageBuffer" %[[AC0]]
+  %0 = memref.load %source[%i] : memref<?xi32>
+  // CHECK: %[[AC1:.+]] = spv.AccessChain %[[DST]]
+  // CHECK: spv.Store "StorageBuffer" %[[AC1]]
+  memref.store %0, %dest[%i]: memref<?xi32>
   return
 }
 

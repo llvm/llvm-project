@@ -16,6 +16,6 @@ static void f(b g) {
 }
 void h() { f(e); }
 
-// CHECK: Running pass: {{.*}}SanitizerPass on {{.*}}sanitizer-module-constructor.c
+// CHECK: Running pass: {{.*}}SanitizerPass
 // CHECK-NOT: Running pass: LoopSimplifyPass on {{.*}}san.module_ctor
 // CHECK: Running analysis: DominatorTreeAnalysis on {{.*}}san.module_ctor

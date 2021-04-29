@@ -164,11 +164,17 @@ struct ReturnedArgCallReturnHandler : public CallReturnHandler {
 struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
   OutgoingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                      MachineInstrBuilder MIB, CCAssignFn *AssignFn,
-                     CCAssignFn *AssignFnVarArg, bool IsTailCall = false,
-                     int FPDiff = 0)
+                     CCAssignFn *AssignFnVarArg, bool IsVarArg,
+                     bool IsTailCall = false, int FPDiff = 0)
       : OutgoingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
         AssignFnVarArg(AssignFnVarArg), IsTailCall(IsTailCall), FPDiff(FPDiff),
-        StackSize(0), SPReg(0) {}
+        StackSize(0), SPReg(0) {
+    MachineFunction &MF = MIRBuilder.getMF();
+    const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+    bool IsWin =
+        Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
+    UseVarArgsCCForFixed = IsVarArg && IsWin;
+  }
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO,
@@ -240,7 +246,7 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
                  ISD::ArgFlagsTy Flags,
                  CCState &State) override {
     bool Res;
-    if (Info.IsFixed)
+    if (Info.IsFixed && !UseVarArgsCCForFixed)
       Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
     else
       Res = AssignFnVarArg(ValNo, ValVT, LocVT, LocInfo, Flags, State);
@@ -252,6 +258,7 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
   MachineInstrBuilder MIB;
   CCAssignFn *AssignFnVarArg;
   bool IsTailCall;
+  bool UseVarArgsCCForFixed;
 
   /// For tail calls, the byte offset of the call's argument area from the
   /// callee's. Unused elsewhere.
@@ -376,7 +383,8 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
       splitToValueTypes(CurArgInfo, SplitArgs, DL, CC);
     }
 
-    OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFn, AssignFn);
+    OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFn, AssignFn,
+                               F.isVarArg());
     Success =
         handleAssignments(MIRBuilder, SplitArgs, Handler, CC, F.isVarArg());
   }
@@ -879,7 +887,7 @@ bool AArch64CallLowering::lowerTailCall(
 
   // Do the actual argument marshalling.
   OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFnFixed,
-                             AssignFnVarArg, true, FPDiff);
+                             AssignFnVarArg, Info.IsVarArg, true, FPDiff);
   if (!handleAssignments(MIRBuilder, OutArgs, Handler, CalleeCC, Info.IsVarArg))
     return false;
 
@@ -991,7 +999,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Do the actual argument marshalling.
   OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFnFixed,
-                             AssignFnVarArg, false);
+                             AssignFnVarArg, Info.IsVarArg, false);
   if (!handleAssignments(MIRBuilder, OutArgs, Handler, Info.CallConv,
                          Info.IsVarArg))
     return false;

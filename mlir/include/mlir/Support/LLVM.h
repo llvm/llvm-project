@@ -22,6 +22,7 @@
 // declared, and are effectively language features.
 #include "llvm/ADT/None.h"
 #include "llvm/Support/Casting.h"
+#include <vector>
 
 // Workaround for clang-5 (PR41549)
 #if defined(__clang_major__)
@@ -33,8 +34,7 @@
 // Forward declarations.
 namespace llvm {
 // String types
-template <unsigned N>
-class SmallString;
+template <unsigned N> class SmallString;
 class StringRef;
 class StringLiteral;
 class Twine;
@@ -46,41 +46,27 @@ template <typename KeyT, typename ValueT> struct DenseMapPair;
 } // namespace detail
 template <typename KeyT, typename ValueT, typename KeyInfoT, typename BucketT>
 class DenseMap;
-template <typename T>
-struct DenseMapInfo;
-template <typename ValueT, typename ValueInfoT>
-class DenseSet;
+template <typename T> struct DenseMapInfo;
+template <typename ValueT, typename ValueInfoT> class DenseSet;
 class MallocAllocator;
-template <typename T>
-class MutableArrayRef;
-template <typename T>
-class Optional;
-template <typename... PT>
-class PointerUnion;
-template <typename T, unsigned N>
-class SmallPtrSet;
-template <typename T>
-class SmallPtrSetImpl;
-template <typename T, unsigned N>
-class SmallVector;
-template <typename T>
-class SmallVectorImpl;
-template <typename AllocatorTy>
-class StringSet;
-template <typename T, typename R>
-class StringSwitch;
-template <typename T>
-class TinyPtrVector;
-template <typename T, typename ResultT>
-class TypeSwitch;
+template <typename T> class MutableArrayRef;
+template <typename T> class Optional;
+template <typename... PT> class PointerUnion;
+template <typename T, typename Vector, typename Set> class SetVector;
+template <typename T, unsigned N> class SmallPtrSet;
+template <typename T> class SmallPtrSetImpl;
+template <typename T, unsigned N> class SmallVector;
+template <typename T> class SmallVectorImpl;
+template <typename AllocatorTy> class StringSet;
+template <typename T, typename R> class StringSwitch;
+template <typename T> class TinyPtrVector;
+template <typename T, typename ResultT> class TypeSwitch;
 
 // Other common classes.
 class APInt;
 class APFloat;
-template <typename Fn>
-class function_ref;
-template <typename IteratorT>
-class iterator_range;
+template <typename Fn> class function_ref;
+template <typename IteratorT> class iterator_range;
 class raw_ostream;
 } // end namespace llvm
 
@@ -110,6 +96,9 @@ template <typename KeyT, typename ValueT,
 using DenseMap = llvm::DenseMap<KeyT, ValueT, KeyInfoT, BucketT>;
 template <typename ValueT, typename ValueInfoT = DenseMapInfo<ValueT>>
 using DenseSet = llvm::DenseSet<ValueT, ValueInfoT>;
+template <typename T, typename Vector = std::vector<T>,
+          typename Set = DenseSet<T>>
+using SetVector = llvm::SetVector<T, Vector, Set>;
 template <typename AllocatorTy = llvm::MallocAllocator>
 using StringSet = llvm::StringSet<AllocatorTy>;
 using llvm::MutableArrayRef;
@@ -129,8 +118,7 @@ using TypeSwitch = llvm::TypeSwitch<T, ResultT>;
 // Other common classes.
 using llvm::APFloat;
 using llvm::APInt;
-template <typename Fn>
-using function_ref = llvm::function_ref<Fn>;
+template <typename Fn> using function_ref = llvm::function_ref<Fn>;
 using llvm::iterator_range;
 using llvm::raw_ostream;
 } // namespace mlir

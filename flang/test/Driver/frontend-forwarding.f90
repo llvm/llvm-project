@@ -3,7 +3,7 @@
 
 ! REQUIRES: new-flang-driver
 
-! RUN: %flang-new -fsyntax-only -### %s -o %t 2>&1 \
+! RUN: %flang -fsyntax-only -### %s -o %t 2>&1 \
 ! RUN:     -finput-charset=utf-8 \
 ! RUN:     -fdefault-double-8 \
 ! RUN:     -fdefault-integer-8 \

@@ -109,19 +109,21 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
   }
 
   void drain() {
-    // Drain BatchClassId (0) the last as createBatch can refill it.
-    for (uptr I = NumClasses; I;) {
-      --I;
-      PerClass *C = &PerClassArray[I];
-      while (C->Count > 0)
-        drain(C, I);
+    // Drain BatchClassId last as createBatch can refill it.
+    for (uptr I = 0; I < NumClasses; ++I) {
+      if (I == BatchClassId)
+        continue;
+      while (PerClassArray[I].Count > 0)
+        drain(&PerClassArray[I], I);
     }
+    while (PerClassArray[BatchClassId].Count > 0)
+      drain(&PerClassArray[BatchClassId], BatchClassId);
     DCHECK(isEmpty());
   }
 
   TransferBatch *createBatch(uptr ClassId, void *B) {
-    if (ClassId != SizeClassMap::BatchClassId)
-      B = allocate(SizeClassMap::BatchClassId);
+    if (ClassId != BatchClassId)
+      B = allocate(BatchClassId);
     return reinterpret_cast<TransferBatch *>(B);
   }
 
@@ -129,6 +131,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
 
 private:
   static const uptr NumClasses = SizeClassMap::NumClasses;
+  static const uptr BatchClassId = SizeClassMap::BatchClassId;
   struct PerClass {
     u32 Count;
     u32 MaxCount;
@@ -156,8 +159,8 @@ private:
   }
 
   void destroyBatch(uptr ClassId, void *B) {
-    if (ClassId != SizeClassMap::BatchClassId)
-      deallocate(SizeClassMap::BatchClassId, B);
+    if (ClassId != BatchClassId)
+      deallocate(BatchClassId, B);
   }
 
   NOINLINE bool refill(PerClass *C, uptr ClassId) {
@@ -178,8 +181,7 @@ private:
     TransferBatch *B =
         createBatch(ClassId, Allocator->decompactPtr(ClassId, C->Chunks[0]));
     if (UNLIKELY(!B))
-      reportOutOfMemory(
-          SizeClassAllocator::getSizeByClassId(SizeClassMap::BatchClassId));
+      reportOutOfMemory(SizeClassAllocator::getSizeByClassId(BatchClassId));
     B->setFromArray(&C->Chunks[0], Count);
     C->Count -= Count;
     for (uptr I = 0; I < C->Count; I++)

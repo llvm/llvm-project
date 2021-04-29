@@ -1,4 +1,4 @@
-! RUN: %S/../test_symbols.sh %s %t %f18 -fopenacc
+! RUN: %S/../test_symbols.sh %s %t %flang_fc1 -fopenacc
 
 !DEF: /mm MainProgram
 program mm

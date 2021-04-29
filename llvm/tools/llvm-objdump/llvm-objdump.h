@@ -13,7 +13,6 @@
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/Object/Archive.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 
@@ -31,27 +30,27 @@ class RelocationRef;
 
 namespace objdump {
 
-extern cl::opt<bool> ArchiveHeaders;
-extern cl::opt<bool> Demangle;
-extern cl::opt<bool> Disassemble;
-extern cl::opt<bool> DisassembleAll;
-extern cl::opt<DIDumpType> DwarfDumpType;
-extern cl::list<std::string> FilterSections;
-extern cl::list<std::string> MAttrs;
-extern cl::opt<std::string> MCPU;
-extern cl::opt<bool> NoShowRawInsn;
-extern cl::opt<bool> NoLeadingAddr;
-extern cl::opt<std::string> Prefix;
-extern cl::opt<uint32_t> PrefixStrip;
-extern cl::opt<bool> PrintImmHex;
-extern cl::opt<bool> PrivateHeaders;
-extern cl::opt<bool> Relocations;
-extern cl::opt<bool> SectionHeaders;
-extern cl::opt<bool> SectionContents;
-extern cl::opt<bool> SymbolDescription;
-extern cl::opt<bool> SymbolTable;
-extern cl::opt<std::string> TripleName;
-extern cl::opt<bool> UnwindInfo;
+extern bool ArchiveHeaders;
+extern bool Demangle;
+extern bool Disassemble;
+extern bool DisassembleAll;
+extern DIDumpType DwarfDumpType;
+extern std::vector<std::string> FilterSections;
+extern std::vector<std::string> MAttrs;
+extern std::string MCPU;
+extern bool NoShowRawInsn;
+extern bool NoLeadingAddr;
+extern std::string Prefix;
+extern uint32_t PrefixStrip;
+extern bool PrintImmHex;
+extern bool PrivateHeaders;
+extern bool Relocations;
+extern bool SectionHeaders;
+extern bool SectionContents;
+extern bool SymbolDescription;
+extern bool SymbolTable;
+extern std::string TripleName;
+extern bool UnwindInfo;
 
 extern StringSet<> FoundSectionSet;
 

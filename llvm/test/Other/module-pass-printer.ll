@@ -8,9 +8,10 @@
 ; RUN: opt < %s 2>&1 -forceattrs -disable-output -print-after-all -filter-print-funcs=foo,bar | FileCheck %s -check-prefix=BOTH
 ; RUN: opt < %s 2>&1 -passes=forceattrs -disable-output -print-after-all -filter-print-funcs=foo,bar | FileCheck %s -check-prefix=BOTH
 
-; Check pass name is not printed if a module doesn't include any function specified in -filter-print-funcs.
+; Check pass name is not printed if a module/SCC doesn't include any function specified in -filter-print-funcs.
 ; RUN: opt < %s 2>&1 -forceattrs -disable-output -print-after-all -filter-print-funcs=baz | FileCheck %s -allow-empty -check-prefix=EMPTY
 ; RUN: opt < %s 2>&1 -passes=forceattrs -disable-output -print-after-all -filter-print-funcs=baz | FileCheck %s -allow-empty -check-prefix=EMPTY
+; RUN: opt < %s 2>&1 -passes=no-op-cgscc -disable-output -print-after-all -filter-print-funcs=baz | FileCheck %s -allow-empty -check-prefix=EMPTY
 
 ; Check whole module is printed with user-specified wildcast switch -filter-print-funcs=* or -print-module-scope
 ; RUN: opt < %s 2>&1 -forceattrs -disable-output -print-after-all | FileCheck %s -check-prefix=ALL
@@ -32,6 +33,7 @@
 ; BOTH-NOT: ModuleID =
 
 ; EMPTY-NOT: IR Dump After {{Force set function attributes|ForceFunctionAttrsPass}}
+; EMPTY-NOT: IR Dump After NoOp
 
 ; ALL:  IR Dump After {{Force set function attributes|ForceFunctionAttrsPass}}
 ; ALL:  ModuleID =

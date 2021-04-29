@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 ! Error tests for structure constructors: C1594 violations
 ! from assigning globally-visible data to POINTER components.
 ! This test is structconst03.f90 with the type parameters removed.

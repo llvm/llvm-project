@@ -16,15 +16,40 @@
 
 #include "mlir/Reducer/Tester.h"
 
+#include "llvm/Support/ToolOutputFile.h"
+
 using namespace mlir;
 
 Tester::Tester(StringRef scriptName, ArrayRef<std::string> scriptArgs)
     : testScript(scriptName), testScriptArgs(scriptArgs) {}
 
+std::pair<Tester::Interestingness, size_t>
+Tester::isInteresting(ModuleOp module) const {
+  SmallString<128> filepath;
+  int fd;
+
+  // Print module to temporary file.
+  std::error_code ec =
+      llvm::sys::fs::createTemporaryFile("mlir-reduce", "mlir", fd, filepath);
+
+  if (ec)
+    llvm::report_fatal_error("Error making unique filename: " + ec.message());
+
+  llvm::ToolOutputFile out(filepath, fd);
+  module.print(out.os());
+  out.os().close();
+
+  if (out.os().has_error())
+    llvm::report_fatal_error("Error emitting the IR to file '" + filepath);
+
+  size_t size = out.os().tell();
+  return std::make_pair(isInteresting(filepath), size);
+}
+
 /// Runs the interestingness testing script on a MLIR test case file. Returns
 /// true if the interesting behavior is present in the test case or false
 /// otherwise.
-bool Tester::isInteresting(StringRef testCase) const {
+Tester::Interestingness Tester::isInteresting(StringRef testCase) const {
 
   std::vector<StringRef> testerArgs;
   testerArgs.push_back(testCase);
@@ -44,7 +69,7 @@ bool Tester::isInteresting(StringRef testCase) const {
                              false);
 
   if (!result)
-    return false;
+    return Interestingness::False;
 
-  return true;
+  return Interestingness::True;
 }

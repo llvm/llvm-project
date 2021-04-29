@@ -22,8 +22,8 @@ define void @reductions(<vscale x 4 x i32> %v0, <vscale x 4 x i64> %v1, <vscale 
 ; CHECK-LABEL: 'reductions'
 ; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %add_nxv4i32 = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %v0)
 ; CHECK-NEXT: Cost Model: Found an estimated cost of 3 for instruction: %add_nxv4i64 = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> %v1)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 16 for instruction: %mul_nxv4i32 = call i32 @llvm.vector.reduce.mul.nxv4i32(<vscale x 4 x i32> %v0)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 16 for instruction: %mul_nxv4i64 = call i64 @llvm.vector.reduce.mul.nxv4i64(<vscale x 4 x i64> %v1)
+; CHECK-NEXT: Cost Model: Invalid cost for instruction: %mul_nxv4i32 = call i32 @llvm.vector.reduce.mul.nxv4i32(<vscale x 4 x i32> %v0)
+; CHECK-NEXT: Cost Model: Invalid cost for instruction: %mul_nxv4i64 = call i64 @llvm.vector.reduce.mul.nxv4i64(<vscale x 4 x i64> %v1)
 ; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %and_nxv4i32 = call i32 @llvm.vector.reduce.and.nxv4i32(<vscale x 4 x i32> %v0)
 ; CHECK-NEXT: Cost Model: Found an estimated cost of 3 for instruction: %and_nxv4i64 = call i64 @llvm.vector.reduce.and.nxv4i64(<vscale x 4 x i64> %v1)
 ; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %or_nxv4i32 = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> %v0)

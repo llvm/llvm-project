@@ -268,7 +268,7 @@ public:
   // Creates a Scope for the type and populates it with component
   // instantiations that have been specialized with actual type parameter
   // values, which are cooked &/or evaluated if necessary.
-  void Instantiate(Scope &, SemanticsContext &);
+  void Instantiate(Scope &containingScope);
 
   ParamValue *FindParameter(SourceName);
   const ParamValue *FindParameter(SourceName target) const {

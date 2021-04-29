@@ -49,7 +49,7 @@ static void *allocateVmar(uptr Size, MapPlatformData *Data, bool AllowNoMem) {
 
 void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
           MapPlatformData *Data) {
-  DCHECK_EQ(Size % PAGE_SIZE, 0);
+  DCHECK_EQ(Size % getPageSizeCached(), 0);
   const bool AllowNoMem = !!(Flags & MAP_ALLOWNOMEM);
 
   // For MAP_NOACCESS, just allocate a Vmar and return.
@@ -96,8 +96,10 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
   // No need to track the Vmo if we don't intend on resizing it. Close it.
   if (Flags & MAP_RESIZABLE) {
     DCHECK(Data);
-    DCHECK_EQ(Data->Vmo, ZX_HANDLE_INVALID);
-    Data->Vmo = Vmo;
+    if (Data->Vmo == ZX_HANDLE_INVALID)
+      Data->Vmo = Vmo;
+    else
+      DCHECK_EQ(Data->Vmo, Vmo);
   } else {
     CHECK_EQ(_zx_handle_close(Vmo), ZX_OK);
   }

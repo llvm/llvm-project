@@ -7,8 +7,8 @@ define <2 x double> @loadHasMultipleUses(<2 x double>* %p1, <2 x double>* %p2) {
 ; CHECK-LABEL: loadHasMultipleUses:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxv 0, 0(3)
+; CHECK-NEXT:    xxswapd 34, 0
 ; CHECK-NEXT:    stxv 0, 0(4)
-; CHECK-NEXT:    lxvd2x 34, 0, 3
 ; CHECK-NEXT:    blr
   %v1 = load <2 x double>, <2 x double>* %p1
   store <2 x double> %v1, <2 x double>* %p2, align 16
@@ -19,10 +19,8 @@ define <2 x double> @loadHasMultipleUses(<2 x double>* %p1, <2 x double>* %p2) {
 define <2 x double> @storeHasMultipleUses(<2 x double> %v, <2 x double>* %p) {
 ; CHECK-LABEL: storeHasMultipleUses:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xxswapd 0, 34
-; CHECK-NEXT:    addi 3, 5, 256
-; CHECK-NEXT:    stxvd2x 34, 0, 3
-; CHECK-NEXT:    xxlor 34, 0, 0
+; CHECK-NEXT:    xxswapd 34, 34
+; CHECK-NEXT:    stxv 34, 256(5)
 ; CHECK-NEXT:    blr
   %v1 = shufflevector <2 x double> %v, <2 x double> %v, <2 x i32> < i32 1, i32 0>
   %addr = getelementptr inbounds <2 x double>, <2 x double>* %p, i64 16

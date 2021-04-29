@@ -591,6 +591,31 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
       return getBody()->getArguments();
     }
 
+
+    void setLowerBounds(ValueRange lowerBounds) {
+      unsigned numLoops = getNumLoops();
+      assert(lowerBounds.size() == numLoops &&
+             "expected lower bounds for every loop dimension");
+      for (unsigned i = 0; i < numLoops; ++i)
+        setOperand(i, lowerBounds[i]);
+    }
+
+    void setUpperBounds(ValueRange upperBounds) {
+      unsigned numLoops = getNumLoops();
+      assert(upperBounds.size() == numLoops &&
+             "expected upper bounds for every loop dimension");
+      for (unsigned i = 0, pos = numLoops; i < numLoops; ++i, ++pos)
+        setOperand(pos, upperBounds[i]);
+    }
+
+    void setSteps(ValueRange steps) {
+      unsigned numLoops = getNumLoops();
+      assert(steps.size() == numLoops &&
+             "expected upper bounds for every loop dimension");
+      for (unsigned i = 0, pos = 2 * numLoops; i < numLoops; ++i, ++pos)
+        setOperand(pos, steps[i]);
+    }
+
    /// Result that corresponds to the `outputs` argument of tensor type.
    OpResult getTiedOpResult(OpOperand& opOperand) {
       // No result can correspond to a memref argument.
@@ -618,5 +643,51 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
   let hasFolder = 1;
 }
 
+def Linalg_IndexOp : Linalg_Op<"index", [NoSideEffect]>,
+    Arguments<(ins Confined<I64Attr, [IntMinValue<0>]>:$dim)>,
+    Results<(outs Index:$result)> {
+  let summary = "linalg index operation";
+  let description = [{
+    The `linalg.index` operation returns the iteration index of the immediately
+    enclosing linalg structured operation for the iteration dimension `dim`. The
+    `dim` attribute specifies the position of the accessed dimension in the
+    indexing map domain.
+
+    Example:
+
+    ```mlir
+    #map = affine_map<(i, j) -> (i, j)>
+    linalg.generic {indexing_maps = [#map, #map],
+                    iterator_types = ["parallel", "parallel"]}
+      outs(%I, %J : memref<?x?xindex>, memref<?x?xindex>) {
+      ^bb0(%arg0 : index, %arg1 : index):
+      // Access the outer iteration dimension i
+      %i = linalg.index 0 : index
+      // Access the inner iteration dimension j
+      %j = linalg.index 1 : index
+      linalg.yield %i, %j : index, index
+    }
+    ```
+
+    This may lower to IR resembling:
+
+    ```mlir
+    %0 = dim %I, %c0 : memref<?x?xindex>
+    %1 = dim %I, %c1 : memref<?x?xindex>
+    scf.for %i = %c0 to %0 step %c1 {
+      scf.for %j = %c0 to %1 step %c1 {
+        store %i, %I[%i, %j] : memref<?x?xindex>
+        store %j, %J[%i, %j] : memref<?x?xindex>
+      }
+    }
+    ```
+  }];
+  let builders = [
+    OpBuilder<(ins "int64_t":$dim),
+      [{ build($_builder, $_state, $_builder.getIndexType(), dim); }]>
+  ];
+
+  let assemblyFormat = [{ $dim attr-dict `:` type($result) }];
+}
 
 #endif // LINALG_OPS

@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -instcombine -mtriple aarch64-unknown-linux-gnu -enable-strict-reductions -S | FileCheck %s -check-prefix=CHECK
+; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -enable-strict-reductions -S | FileCheck %s -check-prefix=CHECK
 
 define float @fadd_strict(float* noalias nocapture readonly %a, i64 %n) {
 ; CHECK-LABEL: @fadd_strict
@@ -30,6 +30,9 @@ define float @fadd_strict_unroll(float* noalias nocapture readonly %a, i64 %n) {
 ; CHECK-LABEL: @fadd_strict_unroll
 ; CHECK: vector.body:
 ; CHECK: %[[VEC_PHI1:.*]] = phi float [ 0.000000e+00, %vector.ph ], [ %[[RDX4:.*]], %vector.body ]
+; CHECK: %[[VEC_PHI2:.*]] = phi float [ -0.000000e+00, %vector.ph ], [ %[[RDX4]], %vector.body ]
+; CHECK: %[[VEC_PHI3:.*]] = phi float [ -0.000000e+00, %vector.ph ], [ %[[RDX4]], %vector.body ]
+; CHECK: %[[VEC_PHI4:.*]] = phi float [ -0.000000e+00, %vector.ph ], [ %[[RDX4]], %vector.body ]
 ; CHECK: %[[LOAD1:.*]] = load <8 x float>, <8 x float>*
 ; CHECK: %[[LOAD2:.*]] = load <8 x float>, <8 x float>*
 ; CHECK: %[[LOAD3:.*]] = load <8 x float>, <8 x float>*
@@ -37,7 +40,7 @@ define float @fadd_strict_unroll(float* noalias nocapture readonly %a, i64 %n) {
 ; CHECK: %[[RDX1:.*]] = call float @llvm.vector.reduce.fadd.v8f32(float %[[VEC_PHI1]], <8 x float> %[[LOAD1]])
 ; CHECK: %[[RDX2:.*]] = call float @llvm.vector.reduce.fadd.v8f32(float %[[RDX1]], <8 x float> %[[LOAD2]])
 ; CHECK: %[[RDX3:.*]] = call float @llvm.vector.reduce.fadd.v8f32(float %[[RDX2]], <8 x float> %[[LOAD3]])
-; CHECK: %[[RDX4:.*]] = call float @llvm.vector.reduce.fadd.v8f32(float %[[RDX3]], <8 x float> %[[LOAD4]])
+; CHECK: %[[RDX4]] = call float @llvm.vector.reduce.fadd.v8f32(float %[[RDX3]], <8 x float> %[[LOAD4]])
 ; CHECK: for.end
 ; CHECK: %[[PHI:.*]] = phi float [ %[[SCALAR:.*]], %for.body ], [ %[[RDX4]], %middle.block ]
 ; CHECK: ret float %[[PHI]]
@@ -148,7 +151,8 @@ define float @fadd_conditional(float* noalias nocapture readonly %a, float* noal
 ; CHECK: br i1 %[[EXTRACT]], label %pred.load.if, label %pred.load.continue
 ; CHECK: pred.load.continue6
 ; CHECK: %[[PHI1:.*]] = phi <4 x float> [ %[[PHI0:.*]], %pred.load.continue4 ], [ %[[INS_ELT:.*]], %pred.load.if5 ]
-; CHECK: %[[PRED:.*]] = select <4 x i1> %[[FCMP1]], <4 x float> %[[PHI1]], <4 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
+; CHECK: %[[XOR:.*]] =  xor <4 x i1> %[[FCMP1]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK: %[[PRED:.*]] = select <4 x i1> %[[XOR]], <4 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>, <4 x float> %[[PHI1]]
 ; CHECK: %[[RDX]] = call float @llvm.vector.reduce.fadd.v4f32(float %[[PHI]], <4 x float> %[[PRED]])
 ; CHECK: for.body
 ; CHECK: %[[RES_PHI:.*]] = phi float [ %[[MERGE_RDX:.*]], %scalar.ph ], [ %[[FADD:.*]], %for.inc ]
@@ -196,7 +200,7 @@ for.end:
 define float @fadd_predicated(float* noalias nocapture %a, i64 %n) {
 ; CHECK-LABEL: @fadd_predicated
 ; CHECK: vector.ph
-; CHECK: %[[TRIP_MINUS_ONE:.*]] = add i64 %n, -1
+; CHECK: %[[TRIP_MINUS_ONE:.*]] = sub i64 %n, 1
 ; CHECK: %[[BROADCAST_INS:.*]] = insertelement <2 x i64> poison, i64 %[[TRIP_MINUS_ONE]], i32 0
 ; CHECK: %[[SPLAT:.*]] = shufflevector <2 x i64> %[[BROADCAST_INS]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK: vector.body
@@ -206,7 +210,7 @@ define float @fadd_predicated(float* noalias nocapture %a, i64 %n) {
 ; CHECK: %[[MASK:.*]] = select <2 x i1> %0, <2 x float> %[[PHI]], <2 x float> <float -0.000000e+00, float -0.000000e+00>
 ; CHECK: %[[RDX]] = call float @llvm.vector.reduce.fadd.v2f32(float %[[RDX_PHI]], <2 x float> %[[MASK]])
 ; CHECK: for.end:
-; CHECK: %[[RES_PHI:.*]] = phi float [ undef, %for.body ], [ %[[RDX]], %middle.block ]
+; CHECK: %[[RES_PHI:.*]] = phi float [ %[[FADD:.*]], %for.body ], [ %[[RDX]], %middle.block ]
 ; CHECK: ret float %[[RES_PHI]]
 entry:
   br label %for.body

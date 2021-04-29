@@ -523,8 +523,8 @@ E: bob.wilson@acm.org
 D: Advanced SIMD (NEON) support in the ARM backend.
 
 N: QingShan Zhang
-E: qshanz@cn.ibm.com
-D: PowerPC Backend Developer
+N: steven.zhang
+E: zhangqingshan.zll@bytedance.com
 
 N: Li Jia He
 E: hljhehlj@cn.ibm.com

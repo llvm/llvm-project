@@ -33,7 +33,7 @@ func @kernel(%arg0: memref<4x32xf32>) {
   return
 }
 
-func @entry() {
+func @entry() -> i32 {
   %f1  = constant 1.0: f32
   %c0  = constant 0: index
   %c1  = constant 1: index
@@ -77,5 +77,6 @@ func @entry() {
   // Release resources.
   memref.dealloc %a : memref<4x32xf32>
 
-  return
+  %i0 = constant 0 : i32
+  return %i0 : i32
 }

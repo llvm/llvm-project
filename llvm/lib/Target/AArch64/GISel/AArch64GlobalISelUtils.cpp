@@ -29,10 +29,31 @@ AArch64GISelUtils::getAArch64VectorSplat(const MachineInstr &MI,
   return RegOrConstant(Src);
 }
 
-Optional<int64_t> AArch64GISelUtils::getAArch64VectorSplatScalar(
-    const MachineInstr &MI, const MachineRegisterInfo &MRI) {
+Optional<int64_t>
+AArch64GISelUtils::getAArch64VectorSplatScalar(const MachineInstr &MI,
+                                               const MachineRegisterInfo &MRI) {
   auto Splat = getAArch64VectorSplat(MI, MRI);
   if (!Splat || Splat->isReg())
     return None;
   return Splat->getCst();
+}
+
+bool AArch64GISelUtils::isCMN(const MachineInstr *MaybeSub,
+                              const CmpInst::Predicate &Pred,
+                              const MachineRegisterInfo &MRI) {
+  // Match:
+  //
+  // %sub = G_SUB 0, %y
+  // %cmp = G_ICMP eq/ne, %sub, %z
+  //
+  // Or
+  //
+  // %sub = G_SUB 0, %y
+  // %cmp = G_ICMP eq/ne, %z, %sub
+  if (!MaybeSub || MaybeSub->getOpcode() != TargetOpcode::G_SUB ||
+      !CmpInst::isEquality(Pred))
+    return false;
+  auto MaybeZero =
+      getConstantVRegValWithLookThrough(MaybeSub->getOperand(1).getReg(), MRI);
+  return MaybeZero && MaybeZero->Value.getZExtValue() == 0;
 }

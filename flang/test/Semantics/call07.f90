@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 ! Test 15.5.2.7 constraints and restrictions for POINTER dummy arguments.
 
 module m

@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsycl-is-device -emit-llvm -disable-llvm-passes \
-// RUN:  -triple spir64-unknown-unknown-sycldevice -emit-llvm %s -o - | \
-// RUN:   FileCheck %s
+// RUN:  -triple spir64 -emit-llvm %s -o - | FileCheck %s
 
 // CHECK-DAG: Function Attrs:
 // CHECK-DAG-SAME: convergent

@@ -957,22 +957,8 @@ void NativeProcessFreeBSD::MonitorClone(::pid_t child_pid) {
 
   MainLoop unused_loop;
   NativeProcessFreeBSD child_process{static_cast<::pid_t>(child_pid),
-                                     m_terminal_fd, *m_delegates[0], m_arch,
+                                     m_terminal_fd, m_delegate, m_arch,
                                      unused_loop};
-  child_process.ReinitializeThreads();
-  auto *child_thread =
-      static_cast<NativeThreadFreeBSD *>(child_process.GetCurrentThread());
-  assert(child_thread);
-  // new processes inherit dbregs, so we need to clear them
-  llvm::Error error = child_thread->GetRegisterContext().ClearDBRegs();
-  if (error) {
-    LLDB_LOG_ERROR(log, std::move(error),
-                   "failed to clear dbregs in forked process {1}: {0}",
-                   child_pid);
-    SetState(StateType::eStateInvalid);
-    return;
-  }
-
   child_process.Detach();
   Status pt_error =
       PtraceWrapper(PT_CONTINUE, GetID(), reinterpret_cast<void *>(1), 0);

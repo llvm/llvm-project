@@ -176,7 +176,7 @@ public:
   /// MCExpr that can be used to refer to the constant pool location.
   const MCExpr *addConstantPoolEntry(const MCExpr *, SMLoc Loc);
 
-  /// Callback used to implemnt the .ltorg directive.
+  /// Callback used to implement the .ltorg directive.
   /// Emit contents of constant pool for the current section.
   void emitCurrentConstantPool();
 
@@ -186,7 +186,7 @@ private:
 
 /// Streaming machine code generation interface.
 ///
-/// This interface is intended to provide a programatic interface that is very
+/// This interface is intended to provide a programmatic interface that is very
 /// similar to the level that an assembler .s file provides.  It has callbacks
 /// to emit bytes, handle directives, etc.  The implementation of this interface
 /// retains state to know what the current section is etc.
@@ -230,7 +230,7 @@ class MCStreamer {
 
   /// Is the assembler allowed to insert padding automatically?  For
   /// correctness reasons, we sometimes need to ensure instructions aren't
-  /// seperated in unexpected ways.  At the moment, this feature is only
+  /// separated in unexpected ways.  At the moment, this feature is only
   /// useable from an integrated assembler, but assembly syntax is under
   /// discussion for future inclusion.
   bool AllowAutoPadding = false;
@@ -293,7 +293,7 @@ public:
   /// textual assembly, this should do nothing to avoid polluting our output.
   virtual MCSymbol *emitCFILabel();
 
-  /// Retreive the current frame info if one is available and it is not yet
+  /// Retrieve the current frame info if one is available and it is not yet
   /// closed. Otherwise, issue an error and return null.
   WinEH::FrameInfo *EnsureValidWinFrameInfo(SMLoc Loc);
 
@@ -582,7 +582,7 @@ public:
                                           MCSymbol *CsectSym,
                                           unsigned ByteAlignment);
 
-  /// Emit a symbol's linkage and visibilty with a linkage directive for XCOFF.
+  /// Emit a symbol's linkage and visibility with a linkage directive for XCOFF.
   ///
   /// \param Symbol - The symbol to emit.
   /// \param Linkage - The linkage of the symbol to emit.

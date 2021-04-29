@@ -10,6 +10,7 @@
 
 #include "PybindUtils.h"
 
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 
 namespace py = pybind11;
@@ -381,8 +382,9 @@ public:
         "get",
         [](std::vector<int64_t> shape, PyType &elementType,
            DefaultingPyLocation loc) {
+          MlirAttribute encodingAttr = mlirAttributeGetNull();
           MlirType t = mlirRankedTensorTypeGetChecked(
-              loc, shape.size(), shape.data(), elementType);
+              loc, shape.size(), shape.data(), elementType, encodingAttr);
           // TODO: Rework error reporting once diagnostic engine is exposed
           // in C API.
           if (mlirTypeIsNull(t)) {

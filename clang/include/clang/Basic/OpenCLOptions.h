@@ -51,10 +51,10 @@ static inline OpenCLVersionID encodeOpenCLVersion(unsigned OpenCLVersion) {
   }
 }
 
-// Simple helper to check if OpenCL C version is contained in a given encoded
-// OpenCL C version mask
-static inline bool isOpenCLVersionIsContainedInMask(const LangOptions &LO,
-                                                    unsigned Mask) {
+// Check if OpenCL C version is contained in a given encoded OpenCL C version
+// mask.
+static inline bool isOpenCLVersionContainedInMask(const LangOptions &LO,
+                                                  unsigned Mask) {
   auto CLVer = LO.OpenCLCPlusPlus ? 200 : LO.OpenCLVersion;
   OpenCLVersionID Code = encodeOpenCLVersion(CLVer);
   return Mask & Code;
@@ -101,12 +101,12 @@ public:
 
     // Is core option in OpenCL version \p LO.
     bool isCoreIn(const LangOptions &LO) const {
-      return isAvailableIn(LO) && isOpenCLVersionIsContainedInMask(LO, Core);
+      return isAvailableIn(LO) && isOpenCLVersionContainedInMask(LO, Core);
     }
 
     // Is optional core option in OpenCL version \p LO.
     bool isOptionalCoreIn(const LangOptions &LO) const {
-      return isAvailableIn(LO) && isOpenCLVersionIsContainedInMask(LO, Opt);
+      return isAvailableIn(LO) && isOpenCLVersionContainedInMask(LO, Opt);
     }
   };
 

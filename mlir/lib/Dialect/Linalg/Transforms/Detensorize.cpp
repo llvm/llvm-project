@@ -39,11 +39,19 @@ namespace {
 /// Defines the criteria a TensorType must follow in order to be considered
 /// "detensorable".
 ///
-/// NOTE: For now, only 0-D are supported.
+/// NOTE: For now, only 0-D tensors are supported.
 ///
 /// Returns true if tensorType can be detensored.
 bool canBeDetensored(TensorType tensorType) {
   return tensorType.hasRank() && tensorType.getRank() == 0;
+}
+
+bool shouldBeDetensored(Operation *op, TypeConverter typeConverter) {
+  GenericOp genericOp = dyn_cast_or_null<GenericOp>(op);
+  return genericOp && llvm::all_of(genericOp.getShapedOperandTypes(),
+                                   [&](ShapedType shapedType) {
+                                     return !typeConverter.isLegal(shapedType);
+                                   });
 }
 
 /// A conversion patttern for detensoring `linalg.generic` ops.
@@ -82,16 +90,35 @@ public:
 /// function.
 struct FunctionNonEntryBlockConversion : public ConversionPattern {
   FunctionNonEntryBlockConversion(StringRef functionLikeOpName,
-                                  MLIRContext *ctx, TypeConverter &converter)
-      : ConversionPattern(converter, functionLikeOpName, /*benefit=*/1, ctx) {}
+                                  MLIRContext *ctx, TypeConverter &converter,
+                                  DenseSet<BlockArgument> blockArgsToDetensor)
+      : ConversionPattern(converter, functionLikeOpName, /*benefit=*/1, ctx),
+        blockArgsToDetensor(blockArgsToDetensor) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.startRootUpdate(op);
+    Region &region = mlir::impl::getFunctionBody(op);
+    SmallVector<TypeConverter::SignatureConversion, 2> conversions;
 
-    if (failed(rewriter.convertNonEntryRegionTypes(
-            &mlir::impl::getFunctionBody(op), *typeConverter))) {
+    for (Block &block : llvm::drop_begin(region, 1)) {
+      conversions.emplace_back(block.getNumArguments());
+      TypeConverter::SignatureConversion &back = conversions.back();
+
+      for (BlockArgument blockArgument : block.getArguments()) {
+        int idx = blockArgument.getArgNumber();
+
+        if (blockArgsToDetensor.count(blockArgument))
+          back.addInputs(idx, {getTypeConverter()->convertType(
+                                  block.getArgumentTypes()[idx])});
+        else
+          back.addInputs(idx, {block.getArgumentTypes()[idx]});
+      }
+    }
+
+    if (failed(rewriter.convertNonEntryRegionTypes(&region, *typeConverter,
+                                                   conversions))) {
       rewriter.cancelRootUpdate(op);
       return failure();
     }
@@ -99,6 +126,9 @@ struct FunctionNonEntryBlockConversion : public ConversionPattern {
     rewriter.finalizeRootUpdate(op);
     return success();
   }
+
+private:
+  const DenseSet<BlockArgument> blockArgsToDetensor;
 };
 
 class DetensorizeTypeConverter : public TypeConverter {
@@ -160,46 +190,309 @@ struct ExtractFromReshapeFromElements
 
 /// @see LinalgDetensorize in Linalg/Passes.td for more details.
 struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
+  LinalgDetensorize() = default;
+  LinalgDetensorize(const LinalgDetensorize &pass) {}
+
+  class CostModel {
+  public:
+    virtual ~CostModel() = default;
+
+    /// A cost model algorithm computes the following outputs:
+    ///
+    /// - opsToDetensor: the list of linalg ops that should be
+    /// detensored.
+    ///
+    /// - blockArgsToDetensor: since the operands and results of detensored
+    /// linalg ops can cross the BB boundary (e.g. a linalg op's input can come
+    /// from a BB argument and a linalg op's output can be passed to successor
+    /// BBs), we need to maintain the sub-set of arguments that should be
+    /// detensored (i.e. converted by typeConverter) for each affected BB.
+    ///
+    /// Example:
+    ///
+    /// For the following snippet:
+    /// ...
+    /// ^bb1(%6: tensor<i32>, %9: tensor<i32>):
+    ///   %7 = linalg.init_tensor [] : tensor<i32>
+    ///   %8 = linalg.generic #attrs
+    ///     ins(%6, %6 : tensor<i32>, tensor<i32>)
+    ///     outs(%7 : tensor<i32>) {
+    ///     ^bb0(%arg0: i32, %arg1: i32, %arg2: i32):
+    ///       %9 = addi %arg0, %arg1 : i32
+    ///       linalg.yield %9 : i32
+    ///   } -> tensor<i32>
+    ///   %10 = "some.op"(%9)
+    ///   br ^bb2(%8 : tensor<i32>)
+    /// ...
+    ///
+    /// if the cost model decides that the linalg.generic op should be
+    /// detensored, then:
+    /// - opsToDetensor should be = {linalg.generic{add}}.
+    /// - blockArgsToDetensor should be = {bb1 -> {0}, bb2 -> {0}}.
+    virtual void compute(FuncOp func, DetensorizeTypeConverter typeConverter,
+                         DenseSet<Operation *> &opsToDetensor,
+                         DenseSet<BlockArgument> &blockArgsToDetensor) = 0;
+
+    /// From the blockArgsToDetensor set computed by a CostModel
+    /// implementation, this method computes the corresponding branch op
+    /// detensoring. The result is a map from a branch op to a subset of indices
+    /// of its operands. The indices specify which of the branch op's operands
+    /// should be detensored.
+    ///
+    /// For the previous example, this method would compute: {bb2 -> {0}}.
+    static DenseMap<Operation *, DenseSet<int>> computeBranchOpDetensoring(
+        const DenseSet<BlockArgument> &blockArgsToDetensor) {
+      DenseMap<Operation *, DenseSet<int>> detensorableBranchOps;
+
+      for (auto blockArgumentElem : blockArgsToDetensor) {
+        Block *block = blockArgumentElem.getOwner();
+
+        for (PredecessorIterator pred = block->pred_begin();
+             pred != block->pred_end(); ++pred) {
+          BranchOpInterface terminator =
+              dyn_cast<BranchOpInterface>((*pred)->getTerminator());
+          auto blockOperands =
+              terminator.getSuccessorOperands(pred.getSuccessorIndex());
+
+          if (!blockOperands || blockOperands->empty())
+            continue;
+
+          detensorableBranchOps[terminator].insert(
+              blockOperands->getBeginOperandIndex() +
+              blockArgumentElem.getArgNumber());
+        }
+      }
+
+      return detensorableBranchOps;
+    }
+  };
+
+  /// Detensorize linalg ops involved in control-flow within a function.
+  ///
+  /// This model starts from CondBranchOps within a function. For each cond_br,
+  /// the model then walks the use-def chain for the branch's condition
+  /// backwards in order to understand where the condition's value comes from.
+  /// If the condition value is (indirectly) computed by a linalg op that can be
+  /// detensored, the model then continues walking the use-def chain in order to
+  /// understand where the linalg op's operands come from. This leads to
+  /// discovering a "detensoring component". A detensoring component is the set
+  /// of operations + block arguments that are involved in control-flow AND can
+  /// be detensored.
+  ///
+  /// For examples where this model succeeds to discover a detensoring
+  /// component, see:
+  /// - test/Dialect/Linalg/detensorize_while.mlir
+  /// - test/Dialect/Linalg/detesorize_while_pure_cf.mlir.
+  ///
+  /// For an example where this model marks control-flow as "non-detensorable",
+  /// see:
+  /// - test/Dialect/Linalg/detensorize_while_failure.mlir
+  class PureControlFlowDetectionModel : public CostModel {
+  public:
+    void compute(FuncOp func, DetensorizeTypeConverter typeConverter,
+                 DenseSet<Operation *> &opsToDetensor,
+                 DenseSet<BlockArgument> &blockArgsToDetensor) override {
+      SmallVector<Value> workList;
+
+      func.walk(
+          [&](CondBranchOp condBr) { workList.push_back(condBr.condition()); });
+
+      DenseSet<Value> visitedValues;
+      DenseSet<Operation *> visitedOps;
+
+      while (!workList.empty()) {
+        Value currentItem = workList.pop_back_val();
+
+        if (!visitedValues.insert(currentItem).second)
+          continue;
+
+        // The current item is defined by a block argument.
+        if (auto bbarg = currentItem.dyn_cast<BlockArgument>()) {
+          BlockArgument currentItemBlockArgument =
+              currentItem.cast<BlockArgument>();
+          Block *ownerBlock = currentItemBlockArgument.getOwner();
+
+          // Function arguments are not detensored/converted.
+          if (&*ownerBlock->getParent()->begin() == ownerBlock)
+            continue;
+
+          // This inner-block argument is involved in control-flow, it should be
+          // detensored.
+          blockArgsToDetensor.insert(currentItemBlockArgument);
+
+          for (PredecessorIterator pred = ownerBlock->pred_begin();
+               pred != ownerBlock->pred_end(); ++pred) {
+            BranchOpInterface terminator =
+                dyn_cast<BranchOpInterface>((*pred)->getTerminator());
+
+            // TODO: For now, we give up if any of the control-flow components
+            // in a function is not detensorable. Fix that.
+            if (!terminator) {
+              opsToDetensor.clear();
+              blockArgsToDetensor.clear();
+              return;
+            }
+
+            auto ownerBlockOperands =
+                terminator.getSuccessorOperands(pred.getSuccessorIndex());
+
+            if (!ownerBlockOperands || ownerBlockOperands->empty())
+              continue;
+
+            // For each predecessor, add the value it passes to that argument to
+            // workList to find out how it's computed.
+            workList.push_back(
+                ownerBlockOperands
+                    .getValue()[currentItemBlockArgument.getArgNumber()]);
+          }
+
+          continue;
+        }
+
+        Operation *currentItemDefiningOp = currentItem.getDefiningOp();
+
+        if (!visitedOps.insert(currentItemDefiningOp).second)
+          continue;
+
+        // The current item is computed by a GenericOp.
+        if (auto genericOp = dyn_cast<GenericOp>(currentItemDefiningOp)) {
+          // The op was encountered already, no need to inspect it again.
+          if (opsToDetensor.count(genericOp))
+            continue;
+
+          // TODO: For now, we give up if any of the control-flow components
+          // in a function is not detensorable. Fix that.
+          if (!shouldBeDetensored(genericOp, typeConverter)) {
+            opsToDetensor.clear();
+            blockArgsToDetensor.clear();
+            return;
+          }
+
+          opsToDetensor.insert(genericOp);
+
+          for (Value genericOpOperand : genericOp.inputs())
+            workList.push_back(genericOpOperand);
+
+          continue;
+        }
+
+        // The current item is the result of a FromElemntsOp, it will be
+        // trivially detensored later as part of canonicalization patterns
+        // applied at the end of detensoring.
+        //
+        // Note: No need to check whether the result type of this op is
+        // detensorable since if it wasn't we wouldn't reach that point in the
+        // work list.
+        if (dyn_cast<tensor::FromElementsOp>(currentItemDefiningOp))
+          continue;
+
+        // The current item is the result of a scalar op, add all its operands
+        // to the work list.
+        if (llvm::all_of(
+                currentItemDefiningOp->getResultTypes(),
+                [&](Type resultType) { return resultType.isIntOrFloat(); }))
+          for (Value scalarOpOperand : currentItemDefiningOp->getOperands())
+            workList.push_back(scalarOpOperand);
+      }
+    }
+  };
+
+  /// Detensorize everything that can detensored.
+  class AggressiveDetensoringModel : public CostModel {
+  public:
+    void compute(FuncOp func, DetensorizeTypeConverter typeConverter,
+                 DenseSet<Operation *> &opsToDetensor,
+                 DenseSet<BlockArgument> &blockArgsToDetensor) override {
+      func.walk([&](GenericOp genericOp) {
+        if (shouldBeDetensored(genericOp, typeConverter))
+          opsToDetensor.insert(genericOp);
+      });
+
+      for (Block &block : llvm::drop_begin(func.getBody(), 1))
+        for (BlockArgument blockArgument : block.getArguments())
+          blockArgsToDetensor.insert(blockArgument);
+    }
+  };
+
   void runOnFunction() override {
-    auto *context = &getContext();
+    MLIRContext *context = &getContext();
     DetensorizeTypeConverter typeConverter;
     RewritePatternSet patterns(context);
     ConversionTarget target(*context);
+    DenseSet<Operation *> opsToDetensor;
+    DenseMap<Operation *, DenseSet<int>> detensorableBranchOps;
+    DenseSet<BlockArgument> blockArgsToDetensor;
 
-    target.addDynamicallyLegalOp<GenericOp>([&](GenericOp op) {
-      // If any of the operands or results cannot be detensored (i.e. they are
-      // all legal according the DetensorizeTypeConverter), the op is considered
-      // legal and won't be detensored.
-      return llvm::any_of(op.getShapedOperandTypes(),
-                          [&](ShapedType shapedType) {
-                            return typeConverter.isLegal(shapedType);
-                          });
-    });
+    if (aggressiveMode.getValue()) {
+      AggressiveDetensoringModel costModel;
+      costModel.compute(getFunction(), typeConverter, opsToDetensor,
+                        blockArgsToDetensor);
+
+    } else {
+      PureControlFlowDetectionModel costModel;
+      costModel.compute(getFunction(), typeConverter, opsToDetensor,
+                        blockArgsToDetensor);
+    }
+
+    detensorableBranchOps =
+        CostModel::computeBranchOpDetensoring(blockArgsToDetensor);
+
+    target.addDynamicallyLegalOp<GenericOp>(
+        [&](GenericOp op) { return !opsToDetensor.count(op); });
 
     target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
-      // A function is legal if all of its non-entry blocks are legal. We don't
-      // legalize the entry block (i.e. the function's signature) since
-      // detensoring can't happen along external calling convention boundaries,
-      // which we conservatively approximate as all function signatures.
+      // A function is legal if all of its non-entry blocks are legal. We
+      // don't legalize the entry block (i.e. the function's signature) since
+      // detensoring can't happen along external calling convention
+      // boundaries, which we conservatively approximate as all function
+      // signatures.
       return llvm::all_of(llvm::drop_begin(op.getBody(), 1), [&](Block &block) {
-        return typeConverter.isLegal(block.getArgumentTypes());
+        if (llvm::any_of(blockArgsToDetensor, [&](BlockArgument blockArgument) {
+              return blockArgument.getOwner() == &block &&
+                     !typeConverter.isLegal(blockArgument.getType());
+            })) {
+          return false;
+        }
+        return true;
       });
     });
 
     target.markUnknownOpDynamicallyLegal([&](Operation *op) {
-      return isNotBranchOpInterfaceOrReturnLikeOp(op) ||
-             isLegalForBranchOpInterfaceTypeConversionPattern(op,
-                                                              typeConverter) ||
-             isLegalForReturnOpTypeConversionPattern(
-                 op, typeConverter, /*returnOpAlwaysLegal*/ true);
+      if (isNotBranchOpInterfaceOrReturnLikeOp(op) ||
+          isLegalForReturnOpTypeConversionPattern(op, typeConverter,
+                                                  /*returnOpAlwaysLegal*/ true))
+        return true;
+
+      if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
+        if (!detensorableBranchOps.count(branchOp))
+          return true;
+
+        for (auto operandIdx : detensorableBranchOps[branchOp])
+          if (!typeConverter.isLegal(
+                  branchOp->getOperand(operandIdx).getType()))
+            return false;
+
+        return true;
+      }
+
+      return false;
     });
 
-    patterns.add<DetensorizeGenericOp>(typeConverter, context);
-    patterns.add<FunctionNonEntryBlockConversion>(FuncOp::getOperationName(),
-                                                  context, typeConverter);
-    // Since non-entry block arguments get detensorized, we also need to update
-    // the control flow inside the function to reflect the correct types.
-    populateBranchOpInterfaceTypeConversionPattern(patterns, typeConverter);
+    patterns.insert<DetensorizeGenericOp>(typeConverter, context);
+    patterns.insert<FunctionNonEntryBlockConversion>(FuncOp::getOperationName(),
+                                                     context, typeConverter,
+                                                     blockArgsToDetensor);
+    // Since non-entry block arguments get detensorized, we also need to
+    // update the control flow inside the function to reflect the correct
+    // types.
+    auto shouldConvertBranchOperand = [&](BranchOpInterface branchOp,
+                                          int operandIdx) -> bool {
+      return detensorableBranchOps.count(branchOp) &&
+             detensorableBranchOps[branchOp].count(operandIdx);
+    };
+
+    populateBranchOpInterfaceTypeConversionPattern(patterns, typeConverter,
+                                                   shouldConvertBranchOperand);
 
     if (failed(applyFullConversion(getFunction(), target, std::move(patterns))))
       signalPassFailure();
@@ -210,6 +503,11 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
                                             std::move(canonPatterns))))
       signalPassFailure();
   }
+
+  Option<bool> aggressiveMode{
+      *this, "aggressive-mode",
+      llvm::cl::desc("Detensorize all ops that qualify for detensoring along "
+                     "with branch operands and basic-block arguments.")};
 };
 } // namespace
 

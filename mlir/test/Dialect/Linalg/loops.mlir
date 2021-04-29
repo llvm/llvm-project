@@ -880,6 +880,61 @@ func @generic_region(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: 
   library_call = "some_external_function_name_2",
   doc = "B(i,j,k), C(i,k,j) = foo(A(i, j) * B(i,j,k), i * j * k + C(i,k,j))"
 }
+func @generic_index_region(
+        %arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+        %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
+        %arg2: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
+  linalg.generic #trait4
+      ins(%arg0 : memref<?x?xf32, offset: ?, strides: [?, 1]>)
+     outs(%arg1, %arg2 : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
+                         memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
+    ^bb0(%a: f32, %b: f32, %c: f32):
+      %i = linalg.index 0 : index
+      %j = linalg.index 1 : index
+      %k = linalg.index 2 : index
+      %result_1 = mulf %a, %b : f32
+
+      %ij = addi %i, %j : index
+      %ijk = addi %ij, %k : index
+      %ijk_int = index_cast %ijk : index to i32
+      %ijk_float = sitofp %ijk_int : i32 to f32
+
+      %result_2 = addf %c, %ijk_float : f32
+      linalg.yield %result_1, %result_2 : f32, f32
+  }
+  return
+}
+
+// CHECKLOOP-LABEL: @generic_index_region
+//       CHECKLOOP: scf.for %[[i:.*]] = {{.*}}
+//       CHECKLOOP:   scf.for %[[j:.*]] = {{.*}}
+//       CHECKLOOP:     scf.for %[[k:.*]] = {{.*}}
+//       CHECKLOOP:       %[[a:.*]] = memref.load %{{.*}}[%[[i]], %[[j]]]
+//       CHECKLOOP:       %[[b:.*]] = memref.load %{{.*}}[%[[i]], %[[j]], %[[k]]]
+//       CHECKLOOP:       %[[c:.*]] = memref.load %{{.*}}[%[[i]], %[[k]], %[[j]]]
+//       CHECKLOOP:       %[[result_1:.*]] = mulf %[[a]], %[[b]] : f32
+//       CHECKLOOP:       %[[ij:.*]] = addi %[[i]], %[[j]] : index
+//       CHECKLOOP:       %[[ijk:.*]] = addi %[[ij]], %[[k]] : index
+//       CHECKLOOP:       %[[ijk_int:.*]] = index_cast %[[ijk]] : index to i32
+//       CHECKLOOP:       %[[ijk_float:.*]] = sitofp %[[ijk_int]] : i32 to f32
+//       CHECKLOOP:       %[[result_2:.*]] = addf %[[c]], %[[ijk_float]] : f32
+//       CHECKLOOP:       store %[[result_1]], %{{.*}}[%[[i]], %[[j]], %[[k]]]
+//       CHECKLOOP:       store %[[result_2]], %{{.*}}[%[[i]], %[[k]], %[[j]]]
+
+// CHECKPARALLEL-LABEL: @generic_index_region
+//       CHECKPARALLEL: scf.parallel (%[[i:[a-zA-Z0-9_]*]], %[[j:[a-zA-Z0-9_]*]], %[[k:[a-zA-Z0-9_]*]])
+//       CHECKPARALLEL:   %[[a:.*]] = memref.load %{{.*}}[%[[i]], %[[j]]]
+//       CHECKPARALLEL:   %[[b:.*]] = memref.load %{{.*}}[%[[i]], %[[j]], %[[k]]]
+//       CHECKPARALLEL:   %[[c:.*]] = memref.load %{{.*}}[%[[i]], %[[k]], %[[j]]]
+//       CHECKPARALLEL:   %[[result_1:.*]] = mulf %[[a]], %[[b]] : f32
+//       CHECKPARALLEL:   %[[ij:.*]] = addi %[[i]], %[[j]] : index
+//       CHECKPARALLEL:   %[[ijk:.*]] = addi %[[ij]], %[[k]] : index
+//       CHECKPARALLEL:   %[[ijk_int:.*]] = index_cast %[[ijk]] : index to i32
+//       CHECKPARALLEL:   %[[ijk_float:.*]] = sitofp %[[ijk_int]] : i32 to f32
+//       CHECKPARALLEL:   %[[result_2:.*]] = addf %[[c]], %[[ijk_float]] : f32
+//       CHECKPARALLEL:   store %[[result_1]], %{{.*}}[%[[i]], %[[j]], %[[k]]]
+//       CHECKPARALLEL:   store %[[result_2]], %{{.*}}[%[[i]], %[[k]], %[[j]]]
+
 func @indexed_generic_region(
         %arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
         %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
@@ -973,6 +1028,43 @@ func @generic_op_zero_rank(%arg0: memref<f32>, %arg1: memref<3x4xf32>)
 //       CHECKPARALLEL:   %[[a:.*]] = memref.load %[[ARG0]][]
 //       CHECKPARALLEL:   store %[[a]], %[[ARG1]][%[[i]], %[[j]]]
 
+func @generic_index_op_zero_rank(%arg0: memref<i32>, %arg1: memref<3x4xi32>)
+{
+  linalg.generic #trait_broadcast
+      ins(%arg0 : memref<i32>)
+     outs(%arg1 : memref<3x4xi32>) {
+    ^bb(%a: i32, %b: i32) :
+      %i = linalg.index 0 : index
+      %j = linalg.index 1 : index
+      %ij = addi %i, %j : index
+      %ij_int = index_cast %ij : index to i32
+      %result = addi %a, %ij_int : i32
+      linalg.yield %result : i32
+  }
+  return
+}
+
+// CHECKLOOP-LABEL: @generic_index_op_zero_rank
+//  CHECKLOOP-SAME: %[[ARG0:[a-zA-Z0-9_]*]]: memref<i32>
+//  CHECKLOOP-SAME: %[[ARG1:[a-zA-Z0-9_]*]]: memref<3x4xi32>
+//       CHECKLOOP: scf.for %[[i:.*]] = {{.*}}
+//       CHECKLOOP:   scf.for %[[j:.*]] = {{.*}}
+//       CHECKLOOP:     %[[a:.*]] = memref.load %[[ARG0]][
+//       CHECKLOOP:     %[[ij:.*]] = addi %[[i]], %[[j]] : index
+//       CHECKLOOP:     %[[ij_int:.*]] = index_cast %[[ij]] : index to i32
+//       CHECKLOOP:     %[[result:.*]] = addi %[[a]], %[[ij_int]] : i32
+//       CHECKLOOP:     store %[[result]], %[[ARG1]][%[[i]], %[[j]]]
+
+// CHECKPARALLEL-LABEL: @generic_index_op_zero_rank
+//  CHECKPARALLEL-SAME: %[[ARG0:[a-zA-Z0-9_]*]]: memref<i32>
+//  CHECKPARALLEL-SAME: %[[ARG1:[a-zA-Z0-9_]*]]: memref<3x4xi32>
+//       CHECKPARALLEL: scf.parallel (%[[i:[a-zA-Z0-9_]*]], %[[j:[a-zA-Z0-9_]*]])
+//       CHECKPARALLEL:   %[[a:.*]] = memref.load %[[ARG0]][
+//       CHECKPARALLEL:   %[[ij:.*]] = addi %[[i]], %[[j]] : index
+//       CHECKPARALLEL:   %[[ij_int:.*]] = index_cast %[[ij]] : index to i32
+//       CHECKPARALLEL:   %[[result:.*]] = addi %[[a]], %[[ij_int]] : i32
+//       CHECKPARALLEL:   store %[[result]], %[[ARG1]][%[[i]], %[[j]]]
+
 func @indexed_generic_op_zero_rank(%arg0: memref<i32>, %arg1: memref<3x4xi32>)
 {
   linalg.indexed_generic #trait_broadcast
@@ -1064,6 +1156,47 @@ func @generic_op_1D_reduce(%arg0: memref<?xf32>, %arg1: memref<f32>)
   iterator_types = ["reduction"],
   library_call = "some_reduce_external_fn"
 }
+
+func @generic_index_op_1D_reduce(%arg0: memref<?xf32>,
+                                %arg1: memref<f32>,
+                                %arg2: memref<f32>)
+{
+  linalg.generic #trait_reduce_init_1D
+      ins(%arg0, %arg1 : memref<?xf32>, memref<f32>)
+     outs(%arg2 : memref<f32>) {
+    ^bb(%a: f32, %b: f32, %c: f32) :
+      %i = linalg.index 0 : index
+      %0 = constant 0 : index
+      %1 = cmpi eq, %0, %i : index
+      %2 = select %1, %b, %c : f32
+      %3 = addf %a, %2 : f32
+      linalg.yield %3 : f32
+  }
+  return
+}
+// CHECKLOOP-LABEL: @generic_index_op_1D_reduce
+//  CHECKLOOP-SAME: %[[ARG0:[a-zA-Z0-9_]*]]: memref<?xf32>
+//  CHECKLOOP-SAME: %[[ARG1:[a-zA-Z0-9_]*]]: memref<f32>
+//  CHECKLOOP-SAME: %[[ARG2:[a-zA-Z0-9_]*]]: memref<f32>
+//       CHECKLOOP: scf.for %[[i:.*]] = {{.*}}
+//       CHECKLOOP:   %[[a:.*]] = memref.load %[[ARG0]][%[[i]]]
+//       CHECKLOOP:   %[[b:.*]] = memref.load %[[ARG1]][]
+//       CHECKLOOP:   %[[c:.*]] = memref.load %[[ARG2]][]
+//       CHECKLOOP:   %[[d:.*]] = select %{{.*}}, %[[b]], %[[c]]
+//       CHECKLOOP:   %[[e:.*]] = addf %[[a]], %[[d]]
+//       CHECKLOOP:   store %[[e]], %[[ARG2]][]
+
+// CHECKPARALLEL-LABEL: @generic_index_op_1D_reduce
+//  CHECKPARALLEL-SAME: %[[ARG0:[a-zA-Z0-9_]*]]: memref<?xf32>
+//  CHECKPARALLEL-SAME: %[[ARG1:[a-zA-Z0-9_]*]]: memref<f32>
+//  CHECKPARALLEL-SAME: %[[ARG2:[a-zA-Z0-9_]*]]: memref<f32>
+//       CHECKPARALLEL: scf.for %[[i:.*]] = {{.*}}
+//       CHECKPARALLEL:   %[[a:.*]] = memref.load %[[ARG0]][%[[i]]]
+//       CHECKPARALLEL:   %[[b:.*]] = memref.load %[[ARG1]][]
+//       CHECKPARALLEL:   %[[c:.*]] = memref.load %[[ARG2]][]
+//       CHECKPARALLEL:   %[[d:.*]] = select %{{.*}}, %[[b]], %[[c]]
+//       CHECKPARALLEL:   %[[e:.*]] = addf %[[a]], %[[d]]
+//       CHECKPARALLEL:   store %[[e]], %[[ARG2]][]
 
 func @indexed_generic_op_1D_reduce(%arg0: memref<?xf32>,
                                    %arg1: memref<f32>,

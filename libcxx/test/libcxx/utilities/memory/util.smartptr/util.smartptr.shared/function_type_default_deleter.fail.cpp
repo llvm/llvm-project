@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: c++03
 
+// Clang doesn't support filename wildcards in verify tests until 05eedf1f5b44.
+// UNSUPPORTED: clang-10
+
 #include <memory>
 
 template <int> struct Tag {};
@@ -45,7 +48,7 @@ int main(int, char**) {
     SPtr<3> s3(nullptr, Deleter{}); // OK
   }
 
-  // expected-error-re@memory:* {{static_assert failed{{.*}} "default_delete cannot be instantiated for function types"}}
+  // expected-error-re@*:* {{static_assert failed{{.*}} "default_delete cannot be instantiated for function types"}}
   std::default_delete<FnType<5>> deleter{}; // expected-note {{requested here}}
 
   return 0;

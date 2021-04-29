@@ -542,7 +542,7 @@ namespace llvm {
     /// \param Scope          Scope in which this set is defined.
     /// \param Name           Set name.
     /// \param File           File where this set is defined.
-    /// \param LineNumber     Line number.
+    /// \param LineNo         Line number.
     /// \param SizeInBits     Set size.
     /// \param AlignInBits    Set alignment.
     /// \param Ty             Base type of the set.

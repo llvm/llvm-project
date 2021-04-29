@@ -1,5 +1,5 @@
 // UNSUPPORTED: system-windows
-// RUN: mlir-reduce %s -test %S/failure-test.sh -pass-test DCE | FileCheck %s
+// RUN: mlir-reduce %s -opt-reduction-pass='opt-pass=symbol-dce test=%S/failure-test.sh' | FileCheck %s
 // This input should be reduced by the pass pipeline so that only
 // the @simple1 function remains as the other functions should be
 // removed by the dead code elimination pass.

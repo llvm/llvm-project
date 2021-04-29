@@ -116,6 +116,7 @@ void verifycpustrings() {
   (void)__builtin_cpu_is("knl");
   (void)__builtin_cpu_is("knm");
   (void)__builtin_cpu_is("nehalem");
+  (void)__builtin_cpu_is("rocketlake");
   (void)__builtin_cpu_is("sandybridge");
   (void)__builtin_cpu_is("shanghai");
   (void)__builtin_cpu_is("silvermont");

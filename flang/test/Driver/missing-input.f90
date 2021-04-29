@@ -1,5 +1,3 @@
-! REQUIRES: new-flang-driver
-
 ! Test the behaviour of the driver when input is missing or is invalid. Note
 ! that with the compiler driver (flang-new), the input _has_ to be specified.
 ! Indeed, the driver decides what "job/command" to create based on the input
@@ -7,17 +5,19 @@
 ! (compile?  preprocess? link?). The frontend driver (flang-new -fc1) simply
 ! assumes that "no explicit input == read from stdin"
 
+! REQUIRES: new-flang-driver
+
 !--------------------------
 ! FLANG DRIVER (flang-new)
 !--------------------------
-! RUN: not %flang-new  2>&1 | FileCheck %s --check-prefix=FLANG-NO-FILE
-! RUN: not %flang-new %t 2>&1 | FileCheck %s --check-prefix=FLANG-NONEXISTENT-FILE
+! RUN: not %flang  2>&1 | FileCheck %s --check-prefix=FLANG-NO-FILE
+! RUN: not %flang %t 2>&1 | FileCheck %s --check-prefix=FLANG-NONEXISTENT-FILE
 
 !-----------------------------------------
 ! FLANG FRONTEND DRIVER (flang-new -fc1)
 !-----------------------------------------
-! RUN: not %flang-new -fc1 %t 2>&1  | FileCheck %s --check-prefix=FLANG-FC1-NONEXISTENT-FILE
-! RUN: not %flang-new -fc1 %S 2>&1  | FileCheck %s --check-prefix=FLANG-FC1-DIR
+! RUN: not %flang_fc1 %t 2>&1  | FileCheck %s --check-prefix=FLANG-FC1-NONEXISTENT-FILE
+! RUN: not %flang_fc1 %S 2>&1  | FileCheck %s --check-prefix=FLANG-FC1-DIR
 
 !-----------------------
 ! EXPECTED OUTPUT

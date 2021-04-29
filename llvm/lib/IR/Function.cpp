@@ -200,6 +200,10 @@ MaybeAlign Argument::getParamAlign() const {
   return getParent()->getParamAlign(getArgNo());
 }
 
+MaybeAlign Argument::getParamStackAlign() const {
+  return getParent()->getParamStackAlign(getArgNo());
+}
+
 Type *Argument::getParamByValType() const {
   assert(getType()->isPointerTy() && "Only pointers have byval types");
   return getParent()->getParamByValType(getArgNo());

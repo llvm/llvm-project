@@ -1,8 +1,9 @@
 // RUN:   mlir-opt %s                                                          \
 // RUN:               -linalg-tile-to-parallel-loops="linalg-tile-sizes=256"   \
 // RUN:               -async-parallel-for="num-concurrent-async-execute=4"     \
-// RUN:               -async-ref-counting                                      \
 // RUN:               -async-to-async-runtime                                  \
+// RUN:               -async-runtime-ref-counting                              \
+// RUN:               -async-runtime-ref-counting-opt                          \
 // RUN:               -convert-async-to-llvm                                   \
 // RUN:               -lower-affine                                            \
 // RUN:               -convert-linalg-to-loops                                 \

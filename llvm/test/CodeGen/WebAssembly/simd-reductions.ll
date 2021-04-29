@@ -14,7 +14,7 @@ declare i32 @llvm.wasm.alltrue.v16i8(<16 x i8>)
 
 ; CHECK-LABEL: any_v16i8_trunc:
 ; CHECK-NEXT: .functype any_v16i8_trunc (v128) -> (i32){{$}}
-; CHECK-NEXT: i8x16.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define i32 @any_v16i8_trunc(<16 x i8> %x) {
   %a = call i32 @llvm.wasm.anytrue.v16i8(<16 x i8> %x)
@@ -25,7 +25,7 @@ define i32 @any_v16i8_trunc(<16 x i8> %x) {
 
 ; CHECK-LABEL: any_v16i8_ne:
 ; CHECK-NEXT: .functype any_v16i8_ne (v128) -> (i32){{$}}
-; CHECK-NEXT: i8x16.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define i32 @any_v16i8_ne(<16 x i8> %x) {
   %a = call i32 @llvm.wasm.anytrue.v16i8(<16 x i8> %x)
@@ -36,7 +36,7 @@ define i32 @any_v16i8_ne(<16 x i8> %x) {
 
 ; CHECK-LABEL: any_v16i8_eq:
 ; CHECK-NEXT: .functype any_v16i8_eq (v128) -> (i32){{$}}
-; CHECK-NEXT: i8x16.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define i32 @any_v16i8_eq(<16 x i8> %x) {
   %a = call i32 @llvm.wasm.anytrue.v16i8(<16 x i8> %x)
@@ -86,7 +86,7 @@ declare i32 @llvm.wasm.alltrue.v8i16(<8 x i16>)
 
 ; CHECK-LABEL: any_v8i16_trunc:
 ; CHECK-NEXT: .functype any_v8i16_trunc (v128) -> (i32){{$}}
-; CHECK-NEXT: i16x8.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define i32 @any_v8i16_trunc(<8 x i16> %x) {
   %a = call i32 @llvm.wasm.anytrue.v8i16(<8 x i16> %x)
@@ -97,7 +97,7 @@ define i32 @any_v8i16_trunc(<8 x i16> %x) {
 
 ; CHECK-LABEL: any_v8i16_ne:
 ; CHECK-NEXT: .functype any_v8i16_ne (v128) -> (i32){{$}}
-; CHECK-NEXT: i16x8.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define i32 @any_v8i16_ne(<8 x i16> %x) {
   %a = call i32 @llvm.wasm.anytrue.v8i16(<8 x i16> %x)
@@ -108,7 +108,7 @@ define i32 @any_v8i16_ne(<8 x i16> %x) {
 
 ; CHECK-LABEL: any_v8i16_eq:
 ; CHECK-NEXT: .functype any_v8i16_eq (v128) -> (i32){{$}}
-; CHECK-NEXT: i16x8.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define i32 @any_v8i16_eq(<8 x i16> %x) {
   %a = call i32 @llvm.wasm.anytrue.v8i16(<8 x i16> %x)
@@ -158,7 +158,7 @@ declare i32 @llvm.wasm.alltrue.v4i32(<4 x i32>)
 
 ; CHECK-LABEL: any_v4i32_trunc:
 ; CHECK-NEXT: .functype any_v4i32_trunc (v128) -> (i32){{$}}
-; CHECK-NEXT: i32x4.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define i32 @any_v4i32_trunc(<4 x i32> %x) {
   %a = call i32 @llvm.wasm.anytrue.v4i32(<4 x i32> %x)
@@ -169,7 +169,7 @@ define i32 @any_v4i32_trunc(<4 x i32> %x) {
 
 ; CHECK-LABEL: any_v4i32_ne:
 ; CHECK-NEXT: .functype any_v4i32_ne (v128) -> (i32){{$}}
-; CHECK-NEXT: i32x4.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define i32 @any_v4i32_ne(<4 x i32> %x) {
   %a = call i32 @llvm.wasm.anytrue.v4i32(<4 x i32> %x)
@@ -180,7 +180,7 @@ define i32 @any_v4i32_ne(<4 x i32> %x) {
 
 ; CHECK-LABEL: any_v4i32_eq:
 ; CHECK-NEXT: .functype any_v4i32_eq (v128) -> (i32){{$}}
-; CHECK-NEXT: i32x4.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define i32 @any_v4i32_eq(<4 x i32> %x) {
   %a = call i32 @llvm.wasm.anytrue.v4i32(<4 x i32> %x)
@@ -230,7 +230,7 @@ declare i32 @llvm.wasm.alltrue.v2i64(<2 x i64>)
 
 ; CHECK-LABEL: any_v2i64_trunc:
 ; CHECK-NEXT: .functype any_v2i64_trunc (v128) -> (i32){{$}}
-; CHECK-NEXT: i64x2.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define i32 @any_v2i64_trunc(<2 x i64> %x) {
   %a = call i32 @llvm.wasm.anytrue.v2i64(<2 x i64> %x)
@@ -241,7 +241,7 @@ define i32 @any_v2i64_trunc(<2 x i64> %x) {
 
 ; CHECK-LABEL: any_v2i64_ne:
 ; CHECK-NEXT: .functype any_v2i64_ne (v128) -> (i32){{$}}
-; CHECK-NEXT: i64x2.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define i32 @any_v2i64_ne(<2 x i64> %x) {
   %a = call i32 @llvm.wasm.anytrue.v2i64(<2 x i64> %x)
@@ -252,7 +252,7 @@ define i32 @any_v2i64_ne(<2 x i64> %x) {
 
 ; CHECK-LABEL: any_v2i64_eq:
 ; CHECK-NEXT: .functype any_v2i64_eq (v128) -> (i32){{$}}
-; CHECK-NEXT: i64x2.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define i32 @any_v2i64_eq(<2 x i64> %x) {
   %a = call i32 @llvm.wasm.anytrue.v2i64(<2 x i64> %x)

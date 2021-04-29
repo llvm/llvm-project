@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %f18 -fopenmp
+! RUN: %S/test_symbols.sh %s %t %flang_fc1 -fopenmp
 ! OpenMP Version 4.5
 ! 2.7.1 Do Loop constructs.
 

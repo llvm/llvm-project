@@ -772,7 +772,7 @@ void LinkerScript::addOrphanSections() {
           add(depSec);
   };
 
-  // For futher --emit-reloc handling code we need target output section
+  // For further --emit-reloc handling code we need target output section
   // to be created before we create relocation output section, so we want
   // to create target sections first. We do not want priority handling
   // for synthetic sections because them are special.

@@ -147,6 +147,23 @@ horrible
   ASSERT_THAT(Results, IsEmpty());
 }
 
+TEST(ParseYAML, ExternalBlockNone) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+Index:
+  External: None
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_EQ(Results.size(), 1u);
+  ASSERT_TRUE(Results[0].Index.External);
+  EXPECT_FALSE(Results[0].Index.External.getValue()->File.hasValue());
+  EXPECT_FALSE(Results[0].Index.External.getValue()->MountPoint.hasValue());
+  EXPECT_FALSE(Results[0].Index.External.getValue()->Server.hasValue());
+  EXPECT_THAT(*Results[0].Index.External.getValue()->IsNone, testing::Eq(true));
+}
+
 TEST(ParseYAML, ExternalBlock) {
   CapturedDiags Diags;
   Annotations YAML(R"yaml(

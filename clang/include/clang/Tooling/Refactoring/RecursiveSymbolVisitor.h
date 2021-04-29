@@ -122,6 +122,17 @@ public:
     return BaseType::TraverseNestedNameSpecifierLoc(NNS);
   }
 
+  bool VisitDesignatedInitExpr(const DesignatedInitExpr *E) {
+    for (const DesignatedInitExpr::Designator &D : E->designators()) {
+      if (D.isFieldDesignator() && D.getField()) {
+        const FieldDecl *Decl = D.getField();
+        if (!visit(Decl, D.getFieldLoc(), D.getFieldLoc()))
+          return false;
+      }
+    }
+    return true;
+  }
+
 private:
   const SourceManager &SM;
   const LangOptions &LangOpts;

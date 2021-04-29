@@ -11,6 +11,7 @@
 
 #include "support/Function.h"
 #include "support/Threading.h"
+#include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -21,10 +22,12 @@
 
 namespace clang {
 namespace clangd {
+struct Diag;
 class LSPBinder;
 class SymbolIndex;
 class ThreadsafeFS;
 class TUScheduler;
+class Tweak;
 
 /// A FeatureModule contributes a vertical feature to clangd.
 ///
@@ -90,6 +93,26 @@ public:
   /// FeatureModules should go idle quickly if stop() has been called.
   /// Called by the server when shutting down, and also by tests.
   virtual bool blockUntilIdle(Deadline) { return true; }
+
+  /// Tweaks implemented by this module. Can be called asynchronously when
+  /// enumerating or applying code actions.
+  virtual void contributeTweaks(std::vector<std::unique_ptr<Tweak>> &Out) {}
+
+  /// Extension point that allows modules to observe and modify an AST build.
+  /// One instance is created each time clangd produces a ParsedAST or
+  /// PrecompiledPreamble. For a given instance, lifecycle methods are always
+  /// called on a single thread.
+  struct ASTListener {
+    /// Listeners are destroyed once the AST is built.
+    virtual ~ASTListener() = default;
+
+    /// Called everytime a diagnostic is encountered. Modules can use this
+    /// modify the final diagnostic, or store some information to surface code
+    /// actions later on.
+    virtual void sawDiagnostic(const clang::Diagnostic &, clangd::Diag &) {}
+  };
+  /// Can be called asynchronously before building an AST.
+  virtual std::unique_ptr<ASTListener> astListeners() { return nullptr; }
 
 protected:
   /// Accessors for modules to access shared server facilities they depend on.

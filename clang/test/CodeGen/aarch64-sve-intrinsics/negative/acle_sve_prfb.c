@@ -10,7 +10,7 @@ void test_svprfb(svbool_t pg, const void *base)
 
 void test_svprfb_1(svbool_t pg, const void *base)
 {
-  // expected-error@+1 {{argument value -1 is outside the valid range [0, 13]}}
+  // expected-error-re@+1 {{argument value {{.*}} is outside the valid range [0, 13]}}
   return svprfb(pg, base, -1);
 }
 
@@ -22,6 +22,12 @@ void test_svprfb_vnum(svbool_t pg, const void *base)
 
 void test_svprfb_vnum_1(svbool_t pg, const void *base)
 {
-  // expected-error@+1 {{argument value -1 is outside the valid range [0, 13]}}
+  // expected-error-re@+1 {{argument value {{.*}} is outside the valid range [0, 13]}}
   return svprfb_vnum(pg, base, 0, -1);
+}
+
+void test_svprfb_svpattern(svbool_t pg, const void *base)
+{
+  // expected-warning@+1 {{implicit conversion from enumeration type 'enum svpattern' to different enumeration type 'enum svprfop'}}
+  return svprfb(pg, base, SV_VL1);
 }

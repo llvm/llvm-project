@@ -28,6 +28,10 @@ using namespace mlir::linalg;
 /// Implementation of fusion of generic ops and indexed_generic ops.
 static bool areElementwiseOpsFusable(LinalgOp producer, LinalgOp consumer,
                                      unsigned consumerIdx) {
+  // TODO: remove once index ops are supported.
+  if (producer.hasIndexSemantics() || consumer.hasIndexSemantics())
+    return false;
+
   // Producer and consumer must have tensor semantics.
   if (!producer.hasTensorSemantics() || !consumer.hasTensorSemantics())
     return false;
@@ -1098,6 +1102,12 @@ public:
       SmallVector<AffineMap, 4> fusedIndexMaps = llvm::to_vector<4>(
           linalgOp.indexing_maps().getAsValueRange<AffineMapAttr>());
       fusedIndexMaps.erase(std::next(fusedIndexMaps.begin(), operand.index()));
+
+      // Check if the operation shapes to loops map is computable.
+      if (!inversePermutation(concatAffineMaps(fusedIndexMaps))) {
+        return rewriter.notifyMatchFailure(
+            linalgOp, "fused op loop bound computation failed");
+      }
 
       // The operands list is same as the linalgOp with the argument for
       // constant index dropped.

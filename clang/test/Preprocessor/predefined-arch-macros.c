@@ -1280,7 +1280,10 @@
 
 // RUN: %clang -march=icelake-client -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
-// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_ICL_M32
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ICL_M32,CHECK_ICL_M32S
+// RUN: %clang -march=rocketlake -m32 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ICL_M32,CHECK_RKL_M32S
 // CHECK_ICL_M32: #define __AES__ 1
 // CHECK_ICL_M32: #define __AVX2__ 1
 // CHECK_ICL_M32: #define __AVX512BITALG__ 1
@@ -1298,7 +1301,7 @@
 // CHECK_ICL_M32: #define __BMI2__ 1
 // CHECK_ICL_M32: #define __BMI__ 1
 // CHECK_ICL_M32: #define __CLFLUSHOPT__ 1
-// CHECK_ICL_M32: #define __CLWB__ 1
+// CHECK_ICL_M32-NOT: #define __CLWB__ 1
 // CHECK_ICL_M32: #define __F16C__ 1
 // CHECK_ICL_M32: #define __FMA__ 1
 // CHECK_ICL_M32: #define __GFNI__ 1
@@ -1313,7 +1316,8 @@
 // CHECK_ICL_M32: #define __RDPID__ 1
 // CHECK_ICL_M32: #define __RDRND__ 1
 // CHECK_ICL_M32: #define __RDSEED__ 1
-// CHECK_ICL_M32: #define __SGX__ 1
+// CHECK_ICL_M32S: #define __SGX__ 1
+// CHECK_RKL_M32S-NOT: #define __SGX__ 1
 // CHECK_ICL_M32: #define __SHA__ 1
 // CHECK_ICL_M32: #define __SSE2__ 1
 // CHECK_ICL_M32: #define __SSE3__ 1
@@ -1337,7 +1341,10 @@
 
 // RUN: %clang -march=icelake-client -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
-// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_ICL_M64
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ICL_M64,CHECK_ICL_M64S
+// RUN: %clang -march=rocketlake -m64 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ICL_M64,CHECK_RKL_M64S
 // CHECK_ICL_M64: #define __AES__ 1
 // CHECK_ICL_M64: #define __AVX2__ 1
 // CHECK_ICL_M64: #define __AVX512BITALG__ 1
@@ -1355,7 +1362,7 @@
 // CHECK_ICL_M64: #define __BMI2__ 1
 // CHECK_ICL_M64: #define __BMI__ 1
 // CHECK_ICL_M64: #define __CLFLUSHOPT__ 1
-// CHECK_ICL_M64: #define __CLWB__ 1
+// CHECK_ICL_M64-NOT: #define __CLWB__ 1
 // CHECK_ICL_M64: #define __F16C__ 1
 // CHECK_ICL_M64: #define __FMA__ 1
 // CHECK_ICL_M64: #define __GFNI__ 1
@@ -1370,7 +1377,8 @@
 // CHECK_ICL_M64: #define __RDPID__ 1
 // CHECK_ICL_M64: #define __RDRND__ 1
 // CHECK_ICL_M64: #define __RDSEED__ 1
-// CHECK_ICL_M64: #define __SGX__ 1
+// CHECK_ICL_M64S: #define __SGX__ 1
+// CHECK_RKL_M64S-NOT: #define __SGX__ 1
 // CHECK_ICL_M64: #define __SHA__ 1
 // CHECK_ICL_M64: #define __SSE2__ 1
 // CHECK_ICL_M64: #define __SSE3__ 1
