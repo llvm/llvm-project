@@ -1205,7 +1205,7 @@ namespace {
 // Builder if one is present.
 struct PushAndPopStackRAII {
   PushAndPopStackRAII(llvm::OpenMPIRBuilder *OMPBuilder, CodeGenFunction &CGF,
-                      bool HasCancel)
+                      bool HasCancel, llvm::omp::Directive Kind)
       : OMPBuilder(OMPBuilder) {
     if (!OMPBuilder)
       return;
@@ -1234,8 +1234,7 @@ struct PushAndPopStackRAII {
 
     // TODO: Remove this once we emit parallel regions through the
     //       OpenMPIRBuilder as it can do this setup internally.
-    llvm::OpenMPIRBuilder::FinalizationInfo FI(
-        {FiniCB, OMPD_parallel, HasCancel});
+    llvm::OpenMPIRBuilder::FinalizationInfo FI({FiniCB, Kind, HasCancel});
     OMPBuilder->pushFinalizationCB(std::move(FI));
   }
   ~PushAndPopStackRAII() {
@@ -1276,7 +1275,7 @@ static llvm::Function *emitParallelOrTeamsOutlinedFunction(
   // TODO: Temporarily inform the OpenMPIRBuilder, if any, about the new
   //       parallel region to make cancellation barriers work properly.
   llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
-  PushAndPopStackRAII PSR(&OMPBuilder, CGF, HasCancel);
+  PushAndPopStackRAII PSR(&OMPBuilder, CGF, HasCancel, InnermostKind);
   CGOpenMPOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen, InnermostKind,
                                     HasCancel, OutlinedHelperName);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
