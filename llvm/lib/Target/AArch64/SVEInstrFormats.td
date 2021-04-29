@@ -1292,8 +1292,8 @@ multiclass sve_int_perm_insrs<string asm, SDPatternOperator op> {
 }
 
 class sve_int_perm_insrv<bits<2> sz8_64, string asm, ZPRRegOp zprty,
-                         RegisterClass srcRegType>
-: I<(outs zprty:$Zdn), (ins zprty:$_Zdn, srcRegType:$Vm),
+                         FPRasZPROperand srcOpType>
+: I<(outs zprty:$Zdn), (ins zprty:$_Zdn, srcOpType:$Vm),
   asm, "\t$Zdn, $Vm",
   "",
   []>, Sched<[]> {
@@ -1310,16 +1310,31 @@ class sve_int_perm_insrv<bits<2> sz8_64, string asm, ZPRRegOp zprty,
 }
 
 multiclass sve_int_perm_insrv<string asm, SDPatternOperator op> {
-  def _B : sve_int_perm_insrv<0b00, asm, ZPR8, FPR8>;
-  def _H : sve_int_perm_insrv<0b01, asm, ZPR16, FPR16>;
-  def _S : sve_int_perm_insrv<0b10, asm, ZPR32, FPR32>;
-  def _D : sve_int_perm_insrv<0b11, asm, ZPR64, FPR64>;
+  def _B : sve_int_perm_insrv<0b00, asm, ZPR8, FPR8asZPR>;
+  def _H : sve_int_perm_insrv<0b01, asm, ZPR16, FPR16asZPR>;
+  def _S : sve_int_perm_insrv<0b10, asm, ZPR32, FPR32asZPR>;
+  def _D : sve_int_perm_insrv<0b11, asm, ZPR64, FPR64asZPR>;
 
-  def : SVE_2_Op_Pat<nxv8f16, op, nxv8f16, f16, !cast<Instruction>(NAME # _H)>;
-  def : SVE_2_Op_Pat<nxv4f32, op, nxv4f32, f32, !cast<Instruction>(NAME # _S)>;
-  def : SVE_2_Op_Pat<nxv2f64, op, nxv2f64, f64, !cast<Instruction>(NAME # _D)>;
+  def : Pat<(nxv8f16 (op nxv8f16:$Zn, f16:$Vm)),
+            (!cast<Instruction>(NAME # _H) $Zn, (INSERT_SUBREG (IMPLICIT_DEF), $Vm, hsub))>;
+  def : Pat<(nxv4f32 (op nxv4f32:$Zn, f32:$Vm)),
+            (!cast<Instruction>(NAME # _S) $Zn, (INSERT_SUBREG (IMPLICIT_DEF), $Vm, ssub))>;
+  def : Pat<(nxv2f64 (op nxv2f64:$Zn, f64:$Vm)),
+            (!cast<Instruction>(NAME # _D) $Zn, (INSERT_SUBREG (IMPLICIT_DEF), $Vm, dsub))>;
 
-  def : SVE_2_Op_Pat<nxv8bf16, op, nxv8bf16, bf16, !cast<Instruction>(NAME # _H)>;
+  def : Pat<(nxv8bf16 (op nxv8bf16:$Zn, bf16:$Vm)),
+            (!cast<Instruction>(NAME # _H) $Zn, (INSERT_SUBREG (IMPLICIT_DEF), $Vm, hsub))>;
+
+  // Keep integer insertions within the vector unit.
+  def : Pat<(nxv16i8 (op (nxv16i8 ZPR:$Zn), (i32 (vector_extract (nxv16i8 ZPR:$Vm), 0)))),
+            (!cast<Instruction>(NAME # _B) $Zn, ZPR:$Vm)>;
+  def : Pat<(nxv8i16 (op (nxv8i16 ZPR:$Zn), (i32 (vector_extract (nxv8i16 ZPR:$Vm), 0)))),
+            (!cast<Instruction>(NAME # _H) $Zn, ZPR:$Vm)>;
+  def : Pat<(nxv4i32 (op (nxv4i32 ZPR:$Zn), (i32 (vector_extract (nxv4i32 ZPR:$Vm), 0)))),
+            (!cast<Instruction>(NAME # _S) $Zn, ZPR: $Vm)>;
+  def : Pat<(nxv2i64 (op (nxv2i64 ZPR:$Zn), (i64 (vector_extract (nxv2i64 ZPR:$Vm), 0)))),
+            (!cast<Instruction>(NAME # _D) $Zn, ZPR:$Vm)>;
+
 }
 
 //===----------------------------------------------------------------------===//
