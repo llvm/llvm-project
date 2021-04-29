@@ -232,7 +232,6 @@ class DimDef(AffineExprDef):
 
   """
   ALL_DIMS = dict()  # type: Dict[str, "DimDef"]
-  dimname: str
 
   def __new__(cls, dimname: str):
     existing = cls.ALL_DIMS.get(dimname)
@@ -276,7 +275,6 @@ class SymbolDef(AffineExprDef):
     True
   """
   ALL_SYMBOLS = dict()  # type: Dict[str, "SymbolDef"]
-  symname: str
 
   def __new__(cls, symname: str):
     existing = cls.ALL_SYMBOLS.get(symname)

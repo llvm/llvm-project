@@ -105,11 +105,15 @@ def linalg_structured_op(dsl_func=None,
   sig = inspect.signature(dsl_func)
   for param_name, param in sig.parameters.items():
     param_default = param.default
-    if not isinstance(param_default, TensorDef):
+    if isinstance(param_default, TensorDef):
+      tc_model.add_tensor(param_name, param_default)
+    elif isinstance(param_default, CaptureDef):
+      tc_model.add_capture(param_name, param_default)
+    else:
       raise ValueError(f"@tc_def_op function parameters must be defaulted as "
-                       f"TensorDef(...): Found {param_name}: {param_default}")
+                       f"TensorDef(...) or CaptureDef(...): Found {param_name}"
+                       f": {param_default}")
     dsl_func_args.append(param_default)
-    tc_model.add_tensor(param_name, param_default)
 
   # Invoke the DSL func to finish populating the model.
   with bind_op_def(tc_model):

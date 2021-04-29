@@ -22,6 +22,12 @@ __all__ = [
     "TypeVar",
     "TV",
 
+    # Predefined types.
+    "I32",
+    "I64",
+    "F32",
+    "F64",
+
     # TypeVar aliases.
     "T",
     "U",
@@ -62,6 +68,12 @@ class TypeVar:
 
 # Expando access via TV.foo
 TV = TypeVar.create_expando()
+
+# Predefined types.
+I32 = TV.I32
+I64 = TV.I64
+F32 = TV.F32
+F64 = TV.F64
 
 # Some common type name aliases.
 T = TV.T
