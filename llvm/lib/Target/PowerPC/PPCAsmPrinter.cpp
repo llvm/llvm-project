@@ -522,12 +522,20 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::NOP));
 }
 
+/// This helper function creates the TlsGetAddr MCSymbol for AIX. We will
+/// create the csect and use the qual-name symbol instead of creating just the
+/// external symbol.
+static MCSymbol *createMCSymbolForTlsGetAddr(MCContext &Ctx) {
+  return Ctx
+      .getXCOFFSection(".__tls_get_addr", SectionKind::getText(),
+                       XCOFF::CsectProperties(XCOFF::XMC_PR, XCOFF::XTY_ER))
+      ->getQualNameSymbol();
+}
+
 /// EmitTlsCall -- Given a GETtls[ld]ADDR[32] instruction, print a
 /// call to __tls_get_addr to the current output stream.
 void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
                                 MCSymbolRefExpr::VariantKind VK) {
-  StringRef Name = Subtarget->isAIXABI() ? ".__tls_get_addr" : "__tls_get_addr";
-  MCSymbol *TlsGetAddr = OutContext.getOrCreateSymbol(Name);
   MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_None;
   unsigned Opcode = PPC::BL8_NOP_TLS;
 
@@ -558,12 +566,14 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
     assert(MI->getOperand(2).isReg() &&
            MI->getOperand(2).getReg() == VarOffsetReg &&
            "GETtls[ld]ADDR[32] must read GPR4");
-    MCSymbol *TlsGetAddrA = OutContext.getOrCreateSymbol(Name);
+    MCSymbol *TlsGetAddr = createMCSymbolForTlsGetAddr(OutContext);
     const MCExpr *TlsRef = MCSymbolRefExpr::create(
-        TlsGetAddrA, MCSymbolRefExpr::VK_None, OutContext);
+        TlsGetAddr, MCSymbolRefExpr::VK_None, OutContext);
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::BLA).addExpr(TlsRef));
     return;
   }
+
+  MCSymbol *TlsGetAddr = OutContext.getOrCreateSymbol("__tls_get_addr");
 
   if (Subtarget->is32BitELFABI() && isPositionIndependent())
     Kind = MCSymbolRefExpr::VK_PLT;
@@ -673,10 +683,12 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   };
   auto GetVKForMO = [&](const MachineOperand &MO) {
     // For GD TLS access on AIX, we have two TOC entries for the symbol (one for
-    // the offset and the other for the region handle). They are differentiated
-    // by the presence of the PPCII::MO_TLSGD_FLAG.
-    if (IsAIX && (MO.getTargetFlags() & PPCII::MO_TLSGD_FLAG))
-      return MCSymbolRefExpr::VariantKind::VK_PPC_TLSGD;
+    // the variable offset and the other for the region handle). They are
+    // differentiated by MO_TLSGD_FLAG and MO_TLSGDM_FLAG.
+    if (MO.getTargetFlags() & PPCII::MO_TLSGDM_FLAG)
+      return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM;
+    if (MO.getTargetFlags() & PPCII::MO_TLSGD_FLAG)
+      return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGD;
     return MCSymbolRefExpr::VariantKind::VK_None;
   };
 
@@ -2232,9 +2244,22 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
       static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
 
   for (auto &I : TOC) {
-    // Setup the csect for the current TC entry.
-    MCSectionXCOFF *TCEntry = cast<MCSectionXCOFF>(
-        getObjFileLowering().getSectionForTOCEntry(I.first.first, TM));
+    MCSectionXCOFF *TCEntry;
+    // Setup the csect for the current TC entry. If the variant kind is
+    // VK_PPC_AIX_TLSGDM the entry represents the region handle, we create a
+    // new symbol to prefix the name with a dot.
+    if (I.first.second == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM) {
+      SmallString<128> Name;
+      StringRef Prefix = ".";
+      Name += Prefix;
+      Name += I.first.first->getName();
+      MCSymbol *S = OutContext.getOrCreateSymbol(Name);
+      TCEntry = cast<MCSectionXCOFF>(
+          getObjFileLowering().getSectionForTOCEntry(S, TM));
+    } else {
+      TCEntry = cast<MCSectionXCOFF>(
+          getObjFileLowering().getSectionForTOCEntry(I.first.first, TM));
+    }
     OutStreamer->SwitchSection(TCEntry);
 
     OutStreamer->emitLabel(I.second);
@@ -2317,7 +2342,7 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::GETtlsADDR32AIX: {
     // The reference to .__tls_get_addr is unknown to the assembler
     // so we need to emit an external symbol reference.
-    MCSymbol *TlsGetAddr = OutContext.getOrCreateSymbol(".__tls_get_addr");
+    MCSymbol *TlsGetAddr = createMCSymbolForTlsGetAddr(OutContext);
     ExtSymSDNodeSymbols.insert(TlsGetAddr);
     break;
   }

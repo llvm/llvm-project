@@ -2893,6 +2893,7 @@ PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
       {MO_TLSGD_FLAG, "ppc-tlsgd"},
       {MO_TLSLD_FLAG, "ppc-tlsld"},
       {MO_TPREL_FLAG, "ppc-tprel"},
+      {MO_TLSGDM_FLAG, "ppc-tlsgdm"},
       {MO_GOT_TLSGD_PCREL_FLAG, "ppc-got-tlsgd-pcrel"},
       {MO_GOT_TLSLD_PCREL_FLAG, "ppc-got-tlsld-pcrel"},
       {MO_GOT_TPREL_PCREL_FLAG, "ppc-got-tprel-pcrel"}};
