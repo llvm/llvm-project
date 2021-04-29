@@ -18,7 +18,9 @@ subroutine omp_workshare(aa, bb, cc, dd, ee, ff, n)
   !$omp end parallel
 
   !ERROR: OpenMP constructs enclosed in WORKSHARE construct may consist of ATOMIC, CRITICAL or PARALLEL constructs only
+  !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
   !$omp parallel workshare
+  !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
   !$omp single
   ee = ff
   !$omp end single
