@@ -1647,8 +1647,10 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
       unsigned SubReg = Is64 ? AMDGPU::sub0_sub1 : AMDGPU::sub0;
 
       MIB.addDef(TmpReg);
-      BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), VDataOut)
-        .addReg(TmpReg, RegState::Kill, SubReg);
+      if (!MRI->use_empty(VDataOut)) {
+        BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), VDataOut)
+            .addReg(TmpReg, RegState::Kill, SubReg);
+      }
 
     } else {
       MIB.addDef(VDataOut); // vdata output
