@@ -64,8 +64,6 @@ add_mlir_library(MLIRTestTransforms
   MLIRSCF
   MLIRSCFTransforms
   MLIRStandardOpsTransforms
-  MLIRSparseTensor
-  MLIRSparseTensorTransforms
   MLIRTargetLLVMIRExport
   MLIRTestDialect
   MLIRTransformUtils

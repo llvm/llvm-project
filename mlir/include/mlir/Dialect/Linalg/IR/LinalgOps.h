@@ -127,4 +127,7 @@ class IndexedGenericOp;
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.h.inc"
 
+#define GET_OP_CLASSES
+#include "mlir/Dialect/Linalg/IR/LinalgSparseOps.h.inc"
+
 #endif // MLIR_DIALECT_LINALG_LINALGOPS_H_

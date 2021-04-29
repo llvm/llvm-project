@@ -95,9 +95,9 @@ func @mul_d(%arga: tensor<32xf32>, %argb: f32, %argx: tensor<32xf32>) -> tensor<
 // CHECK:           %[[VAL_4:.*]] = constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = constant true
 // CHECK:           %[[VAL_6:.*]] = constant 1 : index
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_4]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xf32> to memref<?xf32>
+// CHECK:           %[[VAL_7:.*]] = linalg.sparse_pointers %[[VAL_0]], %[[VAL_4]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_8:.*]] = linalg.sparse_indices %[[VAL_0]], %[[VAL_4]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_9:.*]] = linalg.sparse_values %[[VAL_0]] : tensor<32xf32> to memref<?xf32>
 // CHECK:           %[[VAL_10:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32xf32>
 // CHECK:           %[[VAL_11:.*]] = memref.alloc() : memref<32xf32>
 // CHECK:           linalg.copy(%[[VAL_10]], %[[VAL_11]]) : memref<32xf32>, memref<32xf32>
@@ -148,9 +148,9 @@ func @add_s(%arga: tensor<32xf32>, %argb: f32, %argx: tensor<32xf32>) -> tensor<
 // CHECK-SAME:                         %[[VAL_1:.*]]: tensor<32xf32>) -> tensor<32xf32> {
 // CHECK:           %[[VAL_2:.*]] = constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = constant 1 : index
-// CHECK:           %[[VAL_4:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_2]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_5:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_2]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xf32> to memref<?xf32>
+// CHECK:           %[[VAL_4:.*]] = linalg.sparse_pointers %[[VAL_0]], %[[VAL_2]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_5:.*]] = linalg.sparse_indices %[[VAL_0]], %[[VAL_2]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_6:.*]] = linalg.sparse_values %[[VAL_0]] : tensor<32xf32> to memref<?xf32>
 // CHECK:           %[[VAL_7:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32xf32>
 // CHECK:           %[[VAL_8:.*]] = memref.alloc() : memref<32xf32>
 // CHECK:           linalg.copy(%[[VAL_7]], %[[VAL_8]]) : memref<32xf32>, memref<32xf32>
@@ -189,9 +189,9 @@ func @repeated_add_s(%arga: tensor<32xf32>, %argx: tensor<32xf32>) -> tensor<32x
 // CHECK-SAME:                %[[VAL_2:.*]]: tensor<32xf32>) -> tensor<32xf32> {
 // CHECK:           %[[VAL_3:.*]] = constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = constant 1 : index
-// CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xf32> to memref<?xf32>
+// CHECK:           %[[VAL_5:.*]] = linalg.sparse_pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_6:.*]] = linalg.sparse_indices %[[VAL_0]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_7:.*]] = linalg.sparse_values %[[VAL_0]] : tensor<32xf32> to memref<?xf32>
 // CHECK:           %[[VAL_8:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32xf32>
 // CHECK:           %[[VAL_9:.*]] = memref.alloc() : memref<32xf32>
 // CHECK:           linalg.copy(%[[VAL_8]], %[[VAL_9]]) : memref<32xf32>, memref<32xf32>
@@ -320,9 +320,9 @@ func @mul_dd(%arga: tensor<32xf32>, %argb: tensor<32xf32>, %argx: tensor<32xf32>
 // CHECK:           %[[VAL_5:.*]] = constant true
 // CHECK:           %[[VAL_6:.*]] = constant 1 : index
 // CHECK:           %[[VAL_7:.*]] = memref.buffer_cast %[[VAL_0]] : memref<32xf32>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_4]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_4]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<32xf32> to memref<?xf32>
+// CHECK:           %[[VAL_8:.*]] = linalg.sparse_pointers %[[VAL_1]], %[[VAL_4]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_9:.*]] = linalg.sparse_indices %[[VAL_1]], %[[VAL_4]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = linalg.sparse_values %[[VAL_1]] : tensor<32xf32> to memref<?xf32>
 // CHECK:           %[[VAL_11:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32xf32>
 // CHECK:           %[[VAL_12:.*]] = memref.alloc() : memref<32xf32>
 // CHECK:           linalg.copy(%[[VAL_11]], %[[VAL_12]]) : memref<32xf32>, memref<32xf32>
@@ -378,9 +378,9 @@ func @add_ds(%arga: tensor<32xf32>, %argb: tensor<32xf32>, %argx: tensor<32xf32>
 // CHECK:           %[[VAL_3:.*]] = constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = memref.buffer_cast %[[VAL_0]] : memref<32xf32>
-// CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<32xf32> to memref<?xf32>
+// CHECK:           %[[VAL_6:.*]] = linalg.sparse_pointers %[[VAL_1]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_7:.*]] = linalg.sparse_indices %[[VAL_1]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_8:.*]] = linalg.sparse_values %[[VAL_1]] : tensor<32xf32> to memref<?xf32>
 // CHECK:           %[[VAL_9:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32xf32>
 // CHECK:           %[[VAL_10:.*]] = memref.alloc() : memref<32xf32>
 // CHECK:           linalg.copy(%[[VAL_9]], %[[VAL_10]]) : memref<32xf32>, memref<32xf32>
@@ -430,9 +430,9 @@ func @mul_ds(%arga: tensor<32xf32>, %argb: tensor<32xf32>, %argx: tensor<32xf32>
 // CHECK:           %[[VAL_4:.*]] = constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = constant true
 // CHECK:           %[[VAL_6:.*]] = constant 1 : index
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_4]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xf32> to memref<?xf32>
+// CHECK:           %[[VAL_7:.*]] = linalg.sparse_pointers %[[VAL_0]], %[[VAL_4]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_8:.*]] = linalg.sparse_indices %[[VAL_0]], %[[VAL_4]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_9:.*]] = linalg.sparse_values %[[VAL_0]] : tensor<32xf32> to memref<?xf32>
 // CHECK:           %[[VAL_10:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32xf32>
 // CHECK:           %[[VAL_11:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32xf32>
 // CHECK:           %[[VAL_12:.*]] = memref.alloc() : memref<32xf32>
@@ -488,9 +488,9 @@ func @add_sd(%arga: tensor<32xf32>, %argb: tensor<32xf32>, %argx: tensor<32xf32>
 // CHECK-SAME:                 %[[VAL_2:.*2]]: tensor<32xf32>) -> tensor<32xf32> {
 // CHECK:           %[[VAL_3:.*]] = constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = constant 1 : index
-// CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xf32> to memref<?xf32>
+// CHECK:           %[[VAL_5:.*]] = linalg.sparse_pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_6:.*]] = linalg.sparse_indices %[[VAL_0]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_7:.*]] = linalg.sparse_values %[[VAL_0]] : tensor<32xf32> to memref<?xf32>
 // CHECK:           %[[VAL_8:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32xf32>
 // CHECK:           %[[VAL_9:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32xf32>
 // CHECK:           %[[VAL_10:.*]] = memref.alloc() : memref<32xf32>
@@ -539,12 +539,12 @@ func @mul_sd(%arga: tensor<32xf32>, %argb: tensor<32xf32>, %argx: tensor<32xf32>
 // CHECK-SAME:                 %[[VAL_2:.*2]]: tensor<32xf32>) -> tensor<32xf32> {
 // CHECK:           %[[VAL_3:.*]] = constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = constant 1 : index
-// CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xf32> to memref<?xf32>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<32xf32> to memref<?xf32>
+// CHECK:           %[[VAL_5:.*]] = linalg.sparse_pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_6:.*]] = linalg.sparse_indices %[[VAL_0]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_7:.*]] = linalg.sparse_values %[[VAL_0]] : tensor<32xf32> to memref<?xf32>
+// CHECK:           %[[VAL_8:.*]] = linalg.sparse_pointers %[[VAL_1]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_9:.*]] = linalg.sparse_indices %[[VAL_1]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = linalg.sparse_values %[[VAL_1]] : tensor<32xf32> to memref<?xf32>
 // CHECK:           %[[VAL_11:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32xf32>
 // CHECK:           %[[VAL_12:.*]] = memref.alloc() : memref<32xf32>
 // CHECK:           linalg.copy(%[[VAL_11]], %[[VAL_12]]) : memref<32xf32>, memref<32xf32>
@@ -623,12 +623,12 @@ func @add_ss(%arga: tensor<32xf32>, %argb: tensor<32xf32>, %argx: tensor<32xf32>
 // CHECK-SAME:                 %[[VAL_2:.*2]]: tensor<32xf32>) -> tensor<32xf32> {
 // CHECK:           %[[VAL_3:.*]] = constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = constant 1 : index
-// CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xf32> to memref<?xf32>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
-// CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<32xf32> to memref<?xf32>
+// CHECK:           %[[VAL_5:.*]] = linalg.sparse_pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_6:.*]] = linalg.sparse_indices %[[VAL_0]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_7:.*]] = linalg.sparse_values %[[VAL_0]] : tensor<32xf32> to memref<?xf32>
+// CHECK:           %[[VAL_8:.*]] = linalg.sparse_pointers %[[VAL_1]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_9:.*]] = linalg.sparse_indices %[[VAL_1]], %[[VAL_3]] : tensor<32xf32> to memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = linalg.sparse_values %[[VAL_1]] : tensor<32xf32> to memref<?xf32>
 // CHECK:           %[[VAL_11:.*]] = memref.buffer_cast %[[VAL_2]] : memref<32xf32>
 // CHECK:           %[[VAL_12:.*]] = memref.alloc() : memref<32xf32>
 // CHECK:           linalg.copy(%[[VAL_11]], %[[VAL_12]]) : memref<32xf32>, memref<32xf32>
@@ -701,12 +701,12 @@ func @mul_ss(%arga: tensor<32xf32>, %argb: tensor<32xf32>, %argx: tensor<32xf32>
 // CHECK-SAME:                      %[[VAL_3:.*3]]: tensor<16xf32>) -> tensor<16xf32> {
 // CHECK:           %[[VAL_4:.*]] = constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = constant 1 : index
-// CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<16xf32> to memref<?xf32>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
-// CHECK:           %[[VAL_10:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
-// CHECK:           %[[VAL_11:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<16xf32> to memref<?xf32>
+// CHECK:           %[[VAL_6:.*]] = linalg.sparse_pointers %[[VAL_0]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
+// CHECK:           %[[VAL_7:.*]] = linalg.sparse_indices %[[VAL_0]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
+// CHECK:           %[[VAL_8:.*]] = linalg.sparse_values %[[VAL_0]] : tensor<16xf32> to memref<?xf32>
+// CHECK:           %[[VAL_9:.*]] = linalg.sparse_pointers %[[VAL_1]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = linalg.sparse_indices %[[VAL_1]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
+// CHECK:           %[[VAL_11:.*]] = linalg.sparse_values %[[VAL_1]] : tensor<16xf32> to memref<?xf32>
 // CHECK:           %[[VAL_12:.*]] = memref.buffer_cast %[[VAL_3]] : memref<16xf32>
 // CHECK:           %[[VAL_13:.*]] = memref.alloc() : memref<16xf32>
 // CHECK:           linalg.copy(%[[VAL_12]], %[[VAL_13]]) : memref<16xf32>, memref<16xf32>
@@ -794,12 +794,12 @@ func @two_way_inv(%arga: tensor<16xf32>, %argb: tensor<16xf32>, %argc: f32, %arg
 // CHECK-SAME:                          %[[VAL_3:.*3]]: tensor<16xf32>) -> tensor<16xf32> {
 // CHECK:           %[[VAL_4:.*]] = constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = constant 1 : index
-// CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<16xf32> to memref<?xf32>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
-// CHECK:           %[[VAL_10:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
-// CHECK:           %[[VAL_11:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<16xf32> to memref<?xf32>
+// CHECK:           %[[VAL_6:.*]] = linalg.sparse_pointers %[[VAL_0]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
+// CHECK:           %[[VAL_7:.*]] = linalg.sparse_indices %[[VAL_0]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
+// CHECK:           %[[VAL_8:.*]] = linalg.sparse_values %[[VAL_0]] : tensor<16xf32> to memref<?xf32>
+// CHECK:           %[[VAL_9:.*]] = linalg.sparse_pointers %[[VAL_1]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = linalg.sparse_indices %[[VAL_1]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
+// CHECK:           %[[VAL_11:.*]] = linalg.sparse_values %[[VAL_1]] : tensor<16xf32> to memref<?xf32>
 // CHECK:           %[[VAL_12:.*]] = memref.buffer_cast %[[VAL_3]] : memref<16xf32>
 // CHECK:           %[[VAL_13:.*]] = memref.alloc() : memref<16xf32>
 // CHECK:           linalg.copy(%[[VAL_12]], %[[VAL_13]]) : memref<16xf32>, memref<16xf32>
@@ -898,8 +898,8 @@ func @two_way_inv_alt(%arga: tensor<16xf32>,
 // CHECK-SAME:                        %[[VAL_1:.*]]: tensor<f32>) -> tensor<f32> {
 // CHECK:           %[[VAL_2:.*]] = constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = constant 1 : index
-// CHECK:           %[[VAL_4:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_2]] : tensor<?xf32> to memref<?xindex>
-// CHECK:           %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?xf32> to memref<?xf32>
+// CHECK:           %[[VAL_4:.*]] = linalg.sparse_pointers %[[VAL_0]], %[[VAL_2]] : tensor<?xf32> to memref<?xindex>
+// CHECK:           %[[VAL_5:.*]] = linalg.sparse_values %[[VAL_0]] : tensor<?xf32> to memref<?xf32>
 // CHECK:           %[[VAL_6:.*]] = memref.buffer_cast %[[VAL_1]] : memref<f32>
 // CHECK:           %[[VAL_7:.*]] = memref.alloc() : memref<f32>
 // CHECK:           linalg.copy(%[[VAL_6]], %[[VAL_7]]) : memref<f32>, memref<f32>
@@ -947,12 +947,12 @@ func @sum_reduction(%arga: tensor<?xf32>, %argx: tensor<f32>) -> tensor<f32> {
 // CHECK-SAME:                           %[[VAL_2:.*2]]: tensor<f32>) -> tensor<f32> {
 // CHECK:           %[[VAL_3:.*]] = constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = constant 1 : index
-// CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<16xf32> to memref<?xindex>
-// CHECK:           %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<16xf32> to memref<?xindex>
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<16xf32> to memref<?xf32>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_3]] : tensor<16xf32> to memref<?xindex>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_3]] : tensor<16xf32> to memref<?xindex>
-// CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<16xf32> to memref<?xf32>
+// CHECK:           %[[VAL_5:.*]] = linalg.sparse_pointers %[[VAL_0]], %[[VAL_3]] : tensor<16xf32> to memref<?xindex>
+// CHECK:           %[[VAL_6:.*]] = linalg.sparse_indices %[[VAL_0]], %[[VAL_3]] : tensor<16xf32> to memref<?xindex>
+// CHECK:           %[[VAL_7:.*]] = linalg.sparse_values %[[VAL_0]] : tensor<16xf32> to memref<?xf32>
+// CHECK:           %[[VAL_8:.*]] = linalg.sparse_pointers %[[VAL_1]], %[[VAL_3]] : tensor<16xf32> to memref<?xindex>
+// CHECK:           %[[VAL_9:.*]] = linalg.sparse_indices %[[VAL_1]], %[[VAL_3]] : tensor<16xf32> to memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = linalg.sparse_values %[[VAL_1]] : tensor<16xf32> to memref<?xf32>
 // CHECK:           %[[VAL_11:.*]] = memref.buffer_cast %[[VAL_2]] : memref<f32>
 // CHECK:           %[[VAL_12:.*]] = memref.alloc() : memref<f32>
 // CHECK:           linalg.copy(%[[VAL_11]], %[[VAL_12]]) : memref<f32>, memref<f32>
@@ -1062,13 +1062,13 @@ func @sum_reduction_ss(%arga: tensor<16xf32>,
 // CHECK-SAME:                            %[[VAL_3:.*3]]: tensor<f32>) -> tensor<f32> {
 // CHECK:           %[[VAL_4:.*]] = constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = constant 1 : index
-// CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<16xf32> to memref<?xf32>
+// CHECK:           %[[VAL_6:.*]] = linalg.sparse_pointers %[[VAL_0]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
+// CHECK:           %[[VAL_7:.*]] = linalg.sparse_indices %[[VAL_0]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
+// CHECK:           %[[VAL_8:.*]] = linalg.sparse_values %[[VAL_0]] : tensor<16xf32> to memref<?xf32>
 // CHECK:           %[[VAL_9:.*]] = memref.buffer_cast %[[VAL_1]] : memref<f32>
-// CHECK:           %[[VAL_10:.*]] = sparse_tensor.pointers %[[VAL_2]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
-// CHECK:           %[[VAL_11:.*]] = sparse_tensor.indices %[[VAL_2]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
-// CHECK:           %[[VAL_12:.*]] = sparse_tensor.values %[[VAL_2]] : tensor<16xf32> to memref<?xf32>
+// CHECK:           %[[VAL_10:.*]] = linalg.sparse_pointers %[[VAL_2]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
+// CHECK:           %[[VAL_11:.*]] = linalg.sparse_indices %[[VAL_2]], %[[VAL_4]] : tensor<16xf32> to memref<?xindex>
+// CHECK:           %[[VAL_12:.*]] = linalg.sparse_values %[[VAL_2]] : tensor<16xf32> to memref<?xf32>
 // CHECK:           %[[VAL_13:.*]] = memref.buffer_cast %[[VAL_3]] : memref<f32>
 // CHECK:           %[[VAL_14:.*]] = memref.alloc() : memref<f32>
 // CHECK:           linalg.copy(%[[VAL_13]], %[[VAL_14]]) : memref<f32>, memref<f32>
@@ -1189,13 +1189,13 @@ func @sum_reduction_inv(%arga: tensor<16xf32>,
 // CHECK:           %[[VAL_6:.*]] = constant true
 // CHECK:           %[[VAL_7:.*]] = constant 1 : index
 // CHECK:           %[[VAL_8:.*]] = memref.buffer_cast %[[VAL_0]] : memref<?xf64>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_5]] : tensor<?xf64> to memref<?xindex>
-// CHECK:           %[[VAL_10:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_5]] : tensor<?xf64> to memref<?xindex>
-// CHECK:           %[[VAL_11:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xf64> to memref<?xf64>
+// CHECK:           %[[VAL_9:.*]] = linalg.sparse_pointers %[[VAL_1]], %[[VAL_5]] : tensor<?xf64> to memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = linalg.sparse_indices %[[VAL_1]], %[[VAL_5]] : tensor<?xf64> to memref<?xindex>
+// CHECK:           %[[VAL_11:.*]] = linalg.sparse_values %[[VAL_1]] : tensor<?xf64> to memref<?xf64>
 // CHECK:           %[[VAL_12:.*]] = memref.buffer_cast %[[VAL_2]] : memref<?xf64>
-// CHECK:           %[[VAL_13:.*]] = sparse_tensor.pointers %[[VAL_3]], %[[VAL_5]] : tensor<?xf64> to memref<?xindex>
-// CHECK:           %[[VAL_14:.*]] = sparse_tensor.indices %[[VAL_3]], %[[VAL_5]] : tensor<?xf64> to memref<?xindex>
-// CHECK:           %[[VAL_15:.*]] = sparse_tensor.values %[[VAL_3]] : tensor<?xf64> to memref<?xf64>
+// CHECK:           %[[VAL_13:.*]] = linalg.sparse_pointers %[[VAL_3]], %[[VAL_5]] : tensor<?xf64> to memref<?xindex>
+// CHECK:           %[[VAL_14:.*]] = linalg.sparse_indices %[[VAL_3]], %[[VAL_5]] : tensor<?xf64> to memref<?xindex>
+// CHECK:           %[[VAL_15:.*]] = linalg.sparse_values %[[VAL_3]] : tensor<?xf64> to memref<?xf64>
 // CHECK:           %[[VAL_16:.*]] = memref.dim %[[VAL_4]], %[[VAL_5]] : tensor<?xf64>
 // CHECK:           %[[VAL_17:.*]] = memref.buffer_cast %[[VAL_4]] : memref<?xf64>
 // CHECK:           %[[VAL_18:.*]] = memref.alloc(%[[VAL_16]]) : memref<?xf64>
@@ -1371,15 +1371,15 @@ func @four_tensors_op(%arga: tensor<?xf64>,
 // CHECK-SAME:                %[[VAL_3:.*3]]: tensor<f64>) -> tensor<f64> {
 // CHECK:           %[[VAL_4:.*]] = constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = constant 1 : index
-// CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<?xf64> to memref<?xindex>
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_4]] : tensor<?xf64> to memref<?xindex>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?xf64> to memref<?xf64>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_4]] : tensor<?xf64> to memref<?xindex>
-// CHECK:           %[[VAL_10:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_4]] : tensor<?xf64> to memref<?xindex>
-// CHECK:           %[[VAL_11:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?xf64> to memref<?xf64>
-// CHECK:           %[[VAL_12:.*]] = sparse_tensor.pointers %[[VAL_2]], %[[VAL_4]] : tensor<?xf64> to memref<?xindex>
-// CHECK:           %[[VAL_13:.*]] = sparse_tensor.indices %[[VAL_2]], %[[VAL_4]] : tensor<?xf64> to memref<?xindex>
-// CHECK:           %[[VAL_14:.*]] = sparse_tensor.values %[[VAL_2]] : tensor<?xf64> to memref<?xf64>
+// CHECK:           %[[VAL_6:.*]] = linalg.sparse_pointers %[[VAL_0]], %[[VAL_4]] : tensor<?xf64> to memref<?xindex>
+// CHECK:           %[[VAL_7:.*]] = linalg.sparse_indices %[[VAL_0]], %[[VAL_4]] : tensor<?xf64> to memref<?xindex>
+// CHECK:           %[[VAL_8:.*]] = linalg.sparse_values %[[VAL_0]] : tensor<?xf64> to memref<?xf64>
+// CHECK:           %[[VAL_9:.*]] = linalg.sparse_pointers %[[VAL_1]], %[[VAL_4]] : tensor<?xf64> to memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = linalg.sparse_indices %[[VAL_1]], %[[VAL_4]] : tensor<?xf64> to memref<?xindex>
+// CHECK:           %[[VAL_11:.*]] = linalg.sparse_values %[[VAL_1]] : tensor<?xf64> to memref<?xf64>
+// CHECK:           %[[VAL_12:.*]] = linalg.sparse_pointers %[[VAL_2]], %[[VAL_4]] : tensor<?xf64> to memref<?xindex>
+// CHECK:           %[[VAL_13:.*]] = linalg.sparse_indices %[[VAL_2]], %[[VAL_4]] : tensor<?xf64> to memref<?xindex>
+// CHECK:           %[[VAL_14:.*]] = linalg.sparse_values %[[VAL_2]] : tensor<?xf64> to memref<?xf64>
 // CHECK:           %[[VAL_15:.*]] = memref.buffer_cast %[[VAL_3]] : memref<f64>
 // CHECK:           %[[VAL_16:.*]] = memref.alloc() : memref<f64>
 // CHECK:           linalg.copy(%[[VAL_15]], %[[VAL_16]]) : memref<f64>, memref<f64>

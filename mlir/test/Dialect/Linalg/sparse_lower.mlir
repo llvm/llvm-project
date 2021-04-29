@@ -41,10 +41,10 @@
 // CHECK-HIR:           %[[VAL_3:.*]] = constant 64 : index
 // CHECK-HIR:           %[[VAL_4:.*]] = constant 0 : index
 // CHECK-HIR:           %[[VAL_5:.*]] = constant 1 : index
-// CHECK-HIR:           %[[VAL_6:.*]] = sparse_tensor.fromPtr %[[VAL_0]] : !llvm.ptr<i8> to tensor<64x64xf64>
-// CHECK-HIR:           %[[VAL_7:.*]] = sparse_tensor.pointers %[[VAL_6]], %[[VAL_5]] : tensor<64x64xf64> to memref<?xindex>
-// CHECK-HIR:           %[[VAL_8:.*]] = sparse_tensor.indices %[[VAL_6]], %[[VAL_5]] : tensor<64x64xf64> to memref<?xindex>
-// CHECK-HIR:           %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_6]] : tensor<64x64xf64> to memref<?xf64>
+// CHECK-HIR:           %[[VAL_6:.*]] = linalg.sparse_tensor %[[VAL_0]] : !llvm.ptr<i8> to tensor<64x64xf64>
+// CHECK-HIR:           %[[VAL_7:.*]] = linalg.sparse_pointers %[[VAL_6]], %[[VAL_5]] : tensor<64x64xf64> to memref<?xindex>
+// CHECK-HIR:           %[[VAL_8:.*]] = linalg.sparse_indices %[[VAL_6]], %[[VAL_5]] : tensor<64x64xf64> to memref<?xindex>
+// CHECK-HIR:           %[[VAL_9:.*]] = linalg.sparse_values %[[VAL_6]] : tensor<64x64xf64> to memref<?xf64>
 // CHECK-HIR:           %[[VAL_10:.*]] = memref.buffer_cast %[[VAL_1]] : memref<64xf64>
 // CHECK-HIR:           %[[VAL_11:.*]] = memref.buffer_cast %[[VAL_2]] : memref<64xf64>
 // CHECK-HIR:           %[[VAL_12:.*]] = memref.alloc() : memref<64xf64>
@@ -168,7 +168,7 @@
 !SparseTensor = type !llvm.ptr<i8>
 
 func @matvec(%argA: !SparseTensor, %argb: tensor<64xf64>, %argx: tensor<64xf64>) -> tensor<64xf64> {
-  %arga = sparse_tensor.fromPtr %argA : !SparseTensor to tensor<64x64xf64>
+  %arga = linalg.sparse_tensor %argA : !SparseTensor to tensor<64x64xf64>
   %0 = linalg.generic #trait_matvec
       ins(%arga, %argb : tensor<64x64xf64>, tensor<64xf64>)
       outs(%argx: tensor<64xf64>) {
