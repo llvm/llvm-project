@@ -182,7 +182,8 @@ def CopyOp : LinalgStructured_Op<"copy", [CopyOpInterface]> {
 
 def FillOp : LinalgStructured_Op<"fill", []> {
   let arguments = (ins AnyShaped:$output,
-                   AnyTypeOf<[AnyFloat, AnySignlessInteger, AnyVector]>:$value);
+                   AnyTypeOf<[AnyComplex, AnyFloat, AnySignlessInteger,
+                              AnyVector]>:$value);
   let results = (outs Optional<AnyRankedTensor>:$result);
   let regions = (region AnyRegion:$region);
   let extraClassDeclaration = structuredOpsDecls # [{

@@ -215,9 +215,10 @@ void interchange(PatternRewriter &rewriter, LinalgOp op,
 /// smallest constant value for the size of the buffer needed for each
 /// dimension. If that is not possible, contains the dynamic size of the
 /// subview. The call back should return the buffer to use.
-using AllocBufferCallbackFn = std::function<Optional<Value>(
-    OpBuilder &b, memref::SubViewOp subView,
-    ArrayRef<Value> boundingSubViewSize, OperationFolder *folder)>;
+using AllocBufferCallbackFn =
+    std::function<Optional<Value>(OpBuilder &b, memref::SubViewOp subView,
+                                  ArrayRef<Value> boundingSubViewSize,
+                                  DataLayout &layout, OperationFolder *folder)>;
 
 /// Callback function type used to deallocate the buffers used to hold the
 /// promoted subview.
@@ -315,6 +316,7 @@ struct PromotionInfo {
 Optional<PromotionInfo>
 promoteSubviewAsNewBuffer(OpBuilder &b, Location loc, memref::SubViewOp subView,
                           AllocBufferCallbackFn allocationFn,
+                          DataLayout &layout,
                           OperationFolder *folder = nullptr);
 
 /// Promotes the `subViews` into a new buffer allocated at the insertion point
