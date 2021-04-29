@@ -1326,6 +1326,11 @@ template <class ELFT> void EhInputSection::split() {
 
 template <class ELFT, class RelTy>
 void EhInputSection::split(ArrayRef<RelTy> rels) {
+  // getReloc expects the relocations to be sorted by r_offset. See the comment
+  // in scanRelocs.
+  SmallVector<RelTy, 0> storage;
+  rels = sortRels(rels, storage);
+
   unsigned relI = 0;
   for (size_t off = 0, end = data().size(); off != end;) {
     size_t size = readEhRecordSize(this, off);
