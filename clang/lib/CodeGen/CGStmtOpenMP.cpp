@@ -3791,6 +3791,64 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
 }
 
 void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
+  if (CGM.getLangOpts().OpenMPIRBuilder) {
+    llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+    using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+    using BodyGenCallbackTy = llvm::OpenMPIRBuilder::StorableBodyGenCallbackTy;
+
+    auto FiniCB = [this](InsertPointTy IP) {
+      OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+    };
+
+    const CapturedStmt *ICS = S.getInnermostCapturedStmt();
+    const Stmt *CapturedStmt = S.getInnermostCapturedStmt()->getCapturedStmt();
+    const auto *CS = dyn_cast<CompoundStmt>(CapturedStmt);
+    llvm::SmallVector<BodyGenCallbackTy, 4> SectionCBVector;
+    if (CS) {
+      for (const Stmt *SubStmt : CS->children()) {
+        auto SectionCB = [this, SubStmt](InsertPointTy AllocaIP,
+                                         InsertPointTy CodeGenIP,
+                                         llvm::BasicBlock &FiniBB) {
+          OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP,
+                                                         FiniBB);
+          OMPBuilderCBHelpers::EmitOMPRegionBody(*this, SubStmt, CodeGenIP,
+                                                 FiniBB);
+        };
+        SectionCBVector.push_back(SectionCB);
+      }
+    } else {
+      auto SectionCB = [this, CapturedStmt](InsertPointTy AllocaIP,
+                                            InsertPointTy CodeGenIP,
+                                            llvm::BasicBlock &FiniBB) {
+        OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP, FiniBB);
+        OMPBuilderCBHelpers::EmitOMPRegionBody(*this, CapturedStmt, CodeGenIP,
+                                               FiniBB);
+      };
+      SectionCBVector.push_back(SectionCB);
+    }
+
+    // Privatization callback that performs appropriate action for
+    // shared/private/firstprivate/lastprivate/copyin/... variables.
+    //
+    // TODO: This defaults to shared right now.
+    auto PrivCB = [](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                     llvm::Value &, llvm::Value &Val, llvm::Value *&ReplVal) {
+      // The next line is appropriate only for variables (Val) with the
+      // data-sharing attribute "shared".
+      ReplVal = &Val;
+
+      return CodeGenIP;
+    };
+
+    CGCapturedStmtInfo CGSI(*ICS, CR_OpenMP);
+    CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(*this, &CGSI);
+    llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
+        AllocaInsertPt->getParent(), AllocaInsertPt->getIterator());
+    Builder.restoreIP(OMPBuilder.createSections(
+        Builder, AllocaIP, SectionCBVector, PrivCB, FiniCB, S.hasCancel(),
+        S.getSingleClause<OMPNowaitClause>()));
+    return;
+  }
   {
     auto LPCRegion =
         CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
@@ -3807,6 +3865,29 @@ void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
 }
 
 void CodeGenFunction::EmitOMPSectionDirective(const OMPSectionDirective &S) {
+  if (CGM.getLangOpts().OpenMPIRBuilder) {
+    llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+    using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+
+    const Stmt *SectionRegionBodyStmt = S.getAssociatedStmt();
+    auto FiniCB = [this](InsertPointTy IP) {
+      OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+    };
+
+    auto BodyGenCB = [SectionRegionBodyStmt, this](InsertPointTy AllocaIP,
+                                                   InsertPointTy CodeGenIP,
+                                                   llvm::BasicBlock &FiniBB) {
+      OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP, FiniBB);
+      OMPBuilderCBHelpers::EmitOMPRegionBody(*this, SectionRegionBodyStmt,
+                                             CodeGenIP, FiniBB);
+    };
+
+    LexicalScope Scope(*this, S.getSourceRange());
+    EmitStopPoint(&S);
+    Builder.restoreIP(OMPBuilder.createSection(Builder, BodyGenCB, FiniCB));
+
+    return;
+  }
   LexicalScope Scope(*this, S.getSourceRange());
   EmitStopPoint(&S);
   EmitStmt(S.getAssociatedStmt());
@@ -6312,7 +6393,9 @@ void CodeGenFunction::EmitOMPCancelDirective(const OMPCancelDirective &S) {
     llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
     // TODO: This check is necessary as we only generate `omp parallel` through
     // the OpenMPIRBuilder for now.
-    if (S.getCancelRegion() == OMPD_parallel) {
+    if (S.getCancelRegion() == OMPD_parallel ||
+        S.getCancelRegion() == OMPD_sections ||
+        S.getCancelRegion() == OMPD_section) {
       llvm::Value *IfCondition = nullptr;
       if (IfCond)
         IfCondition = EmitScalarExpr(IfCond,
