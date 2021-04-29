@@ -190,6 +190,7 @@ static void convertToParamAS(Value *OldUser, Value *Param) {
     }
     if (auto *ASC = dyn_cast<AddrSpaceCastInst>(I.OldInstruction)) {
       assert(ASC->getDestAddressSpace() == ADDRESS_SPACE_PARAM);
+      (void)ASC;
       // Just pass through the argument, the old ASC is no longer needed.
       return I.NewParam;
     }
