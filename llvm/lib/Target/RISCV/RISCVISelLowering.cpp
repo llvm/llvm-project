@@ -5784,6 +5784,22 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     // We assume VLENB is at least 16 bytes.
     Known.Zero.setLowBits(4);
     break;
+  case ISD::INTRINSIC_W_CHAIN: {
+    unsigned IntNo = Op.getConstantOperandVal(1);
+    switch (IntNo) {
+    default:
+      // We can't do anything for most intrinsics.
+      break;
+    case Intrinsic::riscv_vsetvli:
+    case Intrinsic::riscv_vsetvlimax:
+      // Assume that VL output is positive and would fit in an int32_t.
+      // TODO: VLEN might be capped at 16 bits in a future V spec update.
+      if (BitWidth >= 32)
+        Known.Zero.setBitsFrom(31);
+      break;
+    }
+    break;
+  }
   }
 }
 
