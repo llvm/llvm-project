@@ -13,7 +13,7 @@ op body. The class hierarchy is laid out to map well to a form of YAML that
 can be easily consumed from the C++ side, not necessarily for ergonomics.
 """
 
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence
 
 from .yaml_helper import *
 from .types import *
@@ -22,6 +22,9 @@ __all__ = [
     "ScalarAssign",
     "ScalarApplyFn",
     "ScalarArg",
+    "ScalarCapture",
+    "ScalarConst",
+    "ScalarIndex",
     "ScalarExpression",
     "ScalarSymbolicCast",
 ]
@@ -53,6 +56,42 @@ class ScalarArg:
   def __repr__(self):
     return f"(ScalarArg({self.arg})"
 
+class ScalarCapture:
+  """A type of ScalarExpression that references a named capture."""
+
+  def __init__(self, capture: str):
+    self.capture = capture
+
+  def expr(self) -> "ScalarExpression":
+    return ScalarExpression(scalar_capture=self)
+
+  def __repr__(self):
+    return f"(ScalarCapture({self.capture})"
+
+class ScalarConst:
+  """A type of ScalarExpression representing a constant."""
+
+  def __init__(self, type_var: TypeVar, value: Any):
+    self.type_var = type_var
+    self.value = value
+
+  def expr(self) -> "ScalarExpression":
+    return ScalarExpression(scalar_const=self)
+
+  def __repr__(self):
+    return f"(ScalarConst({self.type_var}, {self.value})"
+
+class ScalarIndex:
+  """A type of ScalarExpression accessing an iteration index."""
+
+  def __init__(self, dim : int):
+    self.dim = dim
+
+  def expr(self) -> "ScalarExpression":
+    return ScalarExpression(scalar_index=self)
+
+  def __repr__(self):
+    return f"(ScalarIndex({self.dim})"
 
 class ScalarSymbolicCast:
   """A type of ScalarExpression that symbolically casts an operand to a TypeVar.
@@ -75,6 +114,9 @@ class ScalarExpression(YAMLObject):
   Can be one of:
     - ScalarApplyFn
     - ScalarArg
+    - ScalarCapture
+    - ScalarConst
+    - ScalarIndex
     - ScalarSymbolicCast
   """
   yaml_tag = "!ScalarExpression"
@@ -82,13 +124,20 @@ class ScalarExpression(YAMLObject):
   def __init__(self,
                scalar_apply: Optional[ScalarApplyFn] = None,
                scalar_arg: Optional[ScalarArg] = None,
+               scalar_capture: Optional[ScalarCapture] = None,
+               scalar_const: Optional[ScalarConst] = None,
+               scalar_index: Optional[ScalarIndex] = None,
                symbolic_cast: Optional[ScalarSymbolicCast] = None):
-    if (bool(scalar_apply) + bool(scalar_arg) + bool(symbolic_cast)) != 1:
+    if (bool(scalar_apply) + bool(scalar_arg) + bool(scalar_capture) +
+        bool(scalar_const) + bool(scalar_index) + bool(symbolic_cast)) != 1:
       raise ValueError(
-          "One of 'scalar_apply', 'scalar_block_arg', 'symbolic_cast' must be "
-          "specified")
+          "One of 'scalar_apply', 'scalar_arg', 'scalar_capture', 'scalar_const', "
+          "'scalar_index', 'symbolic_cast' must be specified")
     self.scalar_apply = scalar_apply
     self.scalar_arg = scalar_arg
+    self.scalar_capture = scalar_capture
+    self.scalar_const = scalar_const
+    self.scalar_index = scalar_index
     self.symbolic_cast = symbolic_cast
 
   def to_yaml_custom_dict(self):
@@ -99,6 +148,13 @@ class ScalarExpression(YAMLObject):
       ))
     elif self.scalar_arg:
       return dict(scalar_arg=self.scalar_arg.arg)
+    elif self.scalar_capture:
+      return dict(scalar_capture=self.scalar_capture.capture)
+    elif self.scalar_const:
+      return dict(scalar_const=dict(type_var=self.scalar_const.type_var.name,
+                                    attributes=[self.scalar_const.value]))
+    elif self.scalar_index:
+      return dict(scalar_index=self.scalar_index.dim)
     elif self.symbolic_cast:
       # Note that even though operands must be arity 1, we write it the
       # same way as for apply because it allows handling code to be more
