@@ -1576,6 +1576,13 @@ static void scanRelocs(InputSectionBase &sec, ArrayRef<RelTy> rels) {
   if (config->emachine == EM_PPC64)
     checkPPC64TLSRelax<RelTy>(sec, rels);
 
+  // For EhInputSection, OffsetGetter expects the relocations to be sorted by
+  // r_offset. In rare cases (.eh_frame pieces are reordered by a linker
+  // script), the relocations may be unordered.
+  SmallVector<RelTy, 0> storage;
+  if (isa<EhInputSection>(sec))
+    rels = sortRels(rels, storage);
+
   for (auto i = rels.begin(), end = rels.end(); i != end;)
     scanReloc<ELFT>(sec, getOffset, i, rels.begin(), end);
 
