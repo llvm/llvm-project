@@ -147,11 +147,11 @@ def EFDABS         : EFXForm_2<740, (outs sperc:$RT), (ins sperc:$RA),
 
 def EFDADD         : EFXForm_1<736, (outs sperc:$RT), (ins sperc:$RA, sperc:$RB),
                                 "efdadd $RT, $RA, $RB", IIC_FPAddSub,
-                                [(set f64:$RT, (fadd f64:$RA, f64:$RB))]>;
+                                [(set f64:$RT, (any_fadd f64:$RA, f64:$RB))]>;
 
 def EFDCFS         : EFXForm_2a<751, (outs sperc:$RT), (ins spe4rc:$RB),
                                 "efdcfs $RT, $RB", IIC_FPDGeneral,
-                                [(set f64:$RT, (fpextend f32:$RB))]>;
+                                [(set f64:$RT, (any_fpextend f32:$RB))]>;
 
 def EFDCFSF        : EFXForm_2a<755, (outs sperc:$RT), (ins spe4rc:$RB),
                                 "efdcfsf $RT, $RB", IIC_FPDGeneral, []>;
@@ -216,11 +216,11 @@ def EFDCTUIZ       : EFXForm_2a<760, (outs gprc:$RT), (ins sperc:$RB),
 
 def EFDDIV         : EFXForm_1<745, (outs sperc:$RT), (ins sperc:$RA, sperc:$RB),
                                "efddiv $RT, $RA, $RB", IIC_FPDivD,
-                               [(set f64:$RT, (fdiv f64:$RA, f64:$RB))]>;
+                               [(set f64:$RT, (any_fdiv f64:$RA, f64:$RB))]>;
 
 def EFDMUL         : EFXForm_1<744, (outs sperc:$RT), (ins sperc:$RA, sperc:$RB),
                                "efdmul $RT, $RA, $RB", IIC_FPDGeneral,
-                               [(set f64:$RT, (fmul f64:$RA, f64:$RB))]>;
+                               [(set f64:$RT, (any_fmul f64:$RA, f64:$RB))]>;
 
 def EFDNABS        : EFXForm_2<741, (outs sperc:$RT), (ins sperc:$RA),
                                "efdnabs $RT, $RA", IIC_FPDGeneral,
@@ -232,7 +232,7 @@ def EFDNEG         : EFXForm_2<742, (outs sperc:$RT), (ins sperc:$RA),
 
 def EFDSUB         : EFXForm_1<737, (outs sperc:$RT), (ins sperc:$RA, sperc:$RB),
                                "efdsub $RT, $RA, $RB", IIC_FPDGeneral,
-                               [(set f64:$RT, (fsub f64:$RA, f64:$RB))]>;
+                               [(set f64:$RT, (any_fsub f64:$RA, f64:$RB))]>;
 
 let isCompare = 1 in {
 def EFDTSTEQ       : EFXForm_3<766, (outs crrc:$crD), (ins sperc:$RA, sperc:$RB),
@@ -250,11 +250,11 @@ def EFSABS         : EFXForm_2<708, (outs spe4rc:$RT), (ins spe4rc:$RA),
 
 def EFSADD         : EFXForm_1<704, (outs spe4rc:$RT), (ins spe4rc:$RA, spe4rc:$RB),
                                 "efsadd $RT, $RA, $RB", IIC_FPAddSub,
-                                [(set f32:$RT, (fadd f32:$RA, f32:$RB))]>;
+                                [(set f32:$RT, (any_fadd f32:$RA, f32:$RB))]>;
 
 def EFSCFD         : EFXForm_2a<719, (outs spe4rc:$RT), (ins sperc:$RB),
                                 "efscfd $RT, $RB", IIC_FPSGeneral,
-                                [(set f32:$RT, (fpround f64:$RB))]>;
+                                [(set f32:$RT, (any_fpround f64:$RB))]>;
 
 def EFSCFSF        : EFXForm_2a<723, (outs spe4rc:$RT), (ins spe4rc:$RB),
                                 "efscfsf $RT, $RB", IIC_FPSGeneral, []>;
@@ -303,11 +303,11 @@ def EFSCTUIZ       : EFXForm_2a<728, (outs gprc:$RT), (ins spe4rc:$RB),
 
 def EFSDIV         : EFXForm_1<713, (outs spe4rc:$RT), (ins spe4rc:$RA, spe4rc:$RB),
                                "efsdiv $RT, $RA, $RB", IIC_FPDivD,
-                               [(set f32:$RT, (fdiv f32:$RA, f32:$RB))]>;
+                               [(set f32:$RT, (any_fdiv f32:$RA, f32:$RB))]>;
 
 def EFSMUL         : EFXForm_1<712, (outs spe4rc:$RT), (ins spe4rc:$RA, spe4rc:$RB),
                                "efsmul $RT, $RA, $RB", IIC_FPGeneral,
-                               [(set f32:$RT, (fmul f32:$RA, f32:$RB))]>;
+                               [(set f32:$RT, (any_fmul f32:$RA, f32:$RB))]>;
 
 def EFSNABS        : EFXForm_2<709, (outs spe4rc:$RT), (ins spe4rc:$RA),
                                "efsnabs $RT, $RA", IIC_FPGeneral,
@@ -319,7 +319,7 @@ def EFSNEG         : EFXForm_2<710, (outs spe4rc:$RT), (ins spe4rc:$RA),
 
 def EFSSUB         : EFXForm_1<705, (outs spe4rc:$RT), (ins spe4rc:$RA, spe4rc:$RB),
                                "efssub $RT, $RA, $RB", IIC_FPSGeneral,
-                               [(set f32:$RT, (fsub f32:$RA, f32:$RB))]>;
+                               [(set f32:$RT, (any_fsub f32:$RA, f32:$RB))]>;
 
 let isCompare = 1 in {
 def EFSTSTEQ       : EFXForm_3<734, (outs crrc:$crD), (ins sperc:$RA, sperc:$RB),
