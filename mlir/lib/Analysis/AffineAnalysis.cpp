@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/AffineAnalysis.h"
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
@@ -21,6 +22,8 @@
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -29,6 +32,131 @@
 using namespace mlir;
 
 using llvm::dbgs;
+
+/// Returns true if `value` (transitively) depends on iteration arguments of the
+/// given `forOp`.
+static bool dependsOnIterArgs(Value value, AffineForOp forOp) {
+  // Compute the backward slice of the value.
+  SetVector<Operation *> slice;
+  getBackwardSlice(value, &slice,
+                   [&](Operation *op) { return !forOp->isAncestor(op); });
+
+  // Check that none of the operands of the operations in the backward slice are
+  // loop iteration arguments, and neither is the value itself.
+  auto argRange = forOp.getRegionIterArgs();
+  llvm::SmallPtrSet<Value, 8> iterArgs(argRange.begin(), argRange.end());
+  if (iterArgs.contains(value))
+    return true;
+
+  for (Operation *op : slice)
+    for (Value operand : op->getOperands())
+      if (iterArgs.contains(operand))
+        return true;
+
+  return false;
+}
+
+/// Get the value that is being reduced by `pos`-th reduction in the loop if
+/// such a reduction can be performed by affine parallel loops. This assumes
+/// floating-point operations are commutative. On success, `kind` will be the
+/// reduction kind suitable for use in affine parallel loop builder. If the
+/// reduction is not supported, returns null.
+static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
+                                   AtomicRMWKind &kind) {
+  auto yieldOp = cast<AffineYieldOp>(forOp.getBody()->back());
+  Value yielded = yieldOp.operands()[pos];
+  Operation *definition = yielded.getDefiningOp();
+  if (!definition)
+    return nullptr;
+  if (!forOp.getRegionIterArgs()[pos].hasOneUse())
+    return nullptr;
+
+  Optional<AtomicRMWKind> maybeKind =
+      TypeSwitch<Operation *, Optional<AtomicRMWKind>>(definition)
+          .Case<AddFOp>([](Operation *) { return AtomicRMWKind::addf; })
+          .Case<MulFOp>([](Operation *) { return AtomicRMWKind::mulf; })
+          .Case<AddIOp>([](Operation *) { return AtomicRMWKind::addi; })
+          .Case<MulIOp>([](Operation *) { return AtomicRMWKind::muli; })
+          .Default([](Operation *) -> Optional<AtomicRMWKind> {
+            // TODO: AtomicRMW supports other kinds of reductions this is
+            // currently not detecting, add those when the need arises.
+            return llvm::None;
+          });
+  if (!maybeKind)
+    return nullptr;
+
+  kind = *maybeKind;
+  if (definition->getOperand(0) == forOp.getRegionIterArgs()[pos] &&
+      !dependsOnIterArgs(definition->getOperand(1), forOp))
+    return definition->getOperand(1);
+  if (definition->getOperand(1) == forOp.getRegionIterArgs()[pos] &&
+      !dependsOnIterArgs(definition->getOperand(0), forOp))
+    return definition->getOperand(0);
+
+  return nullptr;
+}
+
+/// Returns true if `forOp' is a parallel loop. If `parallelReductions` is
+/// provided, populates it with descriptors of the parallelizable reductions and
+/// treats them as not preventing parallelization.
+bool mlir::isLoopParallel(AffineForOp forOp,
+                          SmallVectorImpl<LoopReduction> *parallelReductions) {
+  unsigned numIterArgs = forOp.getNumIterOperands();
+
+  // Loop is not parallel if it has SSA loop-carried dependences and reduction
+  // detection is not requested.
+  if (numIterArgs > 0 && !parallelReductions)
+    return false;
+
+  // Find supported reductions of requested.
+  if (parallelReductions) {
+    parallelReductions->reserve(forOp.getNumIterOperands());
+    for (unsigned i = 0; i < numIterArgs; ++i) {
+      AtomicRMWKind kind;
+      if (Value value = getSupportedReduction(forOp, i, kind))
+        parallelReductions->emplace_back(LoopReduction{kind, i, value});
+    }
+
+    // Return later to allow for identifying all parallel reductions even if the
+    // loop is not parallel.
+    if (parallelReductions->size() != numIterArgs)
+      return false;
+  }
+
+  // Collect all load and store ops in loop nest rooted at 'forOp'.
+  SmallVector<Operation *, 8> loadAndStoreOps;
+  auto walkResult = forOp.walk([&](Operation *op) -> WalkResult {
+    if (isa<AffineReadOpInterface, AffineWriteOpInterface>(op))
+      loadAndStoreOps.push_back(op);
+    else if (!isa<AffineForOp, AffineYieldOp, AffineIfOp>(op) &&
+             !MemoryEffectOpInterface::hasNoEffect(op))
+      return WalkResult::interrupt();
+
+    return WalkResult::advance();
+  });
+
+  // Stop early if the loop has unknown ops with side effects.
+  if (walkResult.wasInterrupted())
+    return false;
+
+  // Dep check depth would be number of enclosing loops + 1.
+  unsigned depth = getNestingDepth(forOp) + 1;
+
+  // Check dependences between all pairs of ops in 'loadAndStoreOps'.
+  for (auto *srcOp : loadAndStoreOps) {
+    MemRefAccess srcAccess(srcOp);
+    for (auto *dstOp : loadAndStoreOps) {
+      MemRefAccess dstAccess(dstOp);
+      FlatAffineConstraints dependenceConstraints;
+      DependenceResult result = checkMemrefAccessDependence(
+          srcAccess, dstAccess, depth, &dependenceConstraints,
+          /*dependenceComponents=*/nullptr);
+      if (result.value != DependenceResult::NoDependence)
+        return false;
+    }
+  }
+  return true;
+}
 
 /// Returns the sequence of AffineApplyOp Operations operation in
 /// 'affineApplyOps', which are reachable via a search starting from 'operands',

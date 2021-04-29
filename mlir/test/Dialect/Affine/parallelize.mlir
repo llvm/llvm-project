@@ -1,5 +1,6 @@
-// RUN: mlir-opt %s -allow-unregistered-dialect -affine-parallelize| FileCheck %s
+// RUN: mlir-opt %s -allow-unregistered-dialect -affine-parallelize | FileCheck %s
 // RUN: mlir-opt %s -allow-unregistered-dialect -affine-parallelize='max-nested=1' | FileCheck --check-prefix=MAX-NESTED %s
+// RUN: mlir-opt %s -allow-unregistered-dialect -affine-parallelize='parallel-reductions=1' | FileCheck --check-prefix=REDUCE %s
 
 // CHECK-LABEL:    func @reduce_window_max() {
 func @reduce_window_max() {
@@ -159,29 +160,79 @@ func @max_nested(%m: memref<?x?xf32>, %lb0: index, %lb1: index,
   return
 }
 
-// CHECK-LABEL: @unsupported_iter_args
-func @unsupported_iter_args(%in: memref<10xf32>) {
+// CHECK-LABEL: @iter_args
+// REDUCE-LABEL: @iter_args
+func @iter_args(%in: memref<10xf32>) {
+  // REDUCE: %[[init:.*]] = constant
   %cst = constant 0.000000e+00 : f32
   // CHECK-NOT: affine.parallel
+  // REDUCE: %[[reduced:.*]] = affine.parallel (%{{.*}}) = (0) to (10) reduce ("addf")
   %final_red = affine.for %i = 0 to 10 iter_args(%red_iter = %cst) -> (f32) {
+    // REDUCE: %[[red_value:.*]] = affine.load
     %ld = affine.load %in[%i] : memref<10xf32>
+    // REDUCE-NOT: addf
     %add = addf %red_iter, %ld : f32
+    // REDUCE: affine.yield %[[red_value]]
     affine.yield %add : f32
   }
+  // REDUCE: addf %[[init]], %[[reduced]]
   return
 }
 
-// CHECK-LABEL: @unsupported_nested_iter_args
-func @unsupported_nested_iter_args(%in: memref<20x10xf32>) {
+// CHECK-LABEL: @nested_iter_args
+// REDUCE-LABEL: @nested_iter_args
+func @nested_iter_args(%in: memref<20x10xf32>) {
   %cst = constant 0.000000e+00 : f32
   // CHECK: affine.parallel
   affine.for %i = 0 to 20 {
-    // CHECK: affine.for
+    // CHECK-NOT: affine.parallel
+    // REDUCE: affine.parallel
+    // REDUCE: reduce ("addf")
     %final_red = affine.for %j = 0 to 10 iter_args(%red_iter = %cst) -> (f32) {
       %ld = affine.load %in[%i, %j] : memref<20x10xf32>
       %add = addf %red_iter, %ld : f32
       affine.yield %add : f32
     }
+  }
+  return
+}
+
+// REDUCE-LABEL: @strange_butterfly
+func @strange_butterfly() {
+  %cst1 = constant 0.0 : f32
+  %cst2 = constant 1.0 : f32
+  // REDUCE-NOT: affine.parallel
+  affine.for %i = 0 to 10 iter_args(%it1 = %cst1, %it2 = %cst2) -> (f32, f32) {
+    %0 = addf %it1, %it2 : f32
+    affine.yield %0, %0 : f32, f32
+  }
+  return
+}
+
+// An iter arg is used more than once. This is not a simple reduction and
+// should not be parallelized.
+// REDUCE-LABEL: @repeated_use
+func @repeated_use() {
+  %cst1 = constant 0.0 : f32
+  // REDUCE-NOT: affine.parallel
+  affine.for %i = 0 to 10 iter_args(%it1 = %cst1) -> (f32) {
+    %0 = addf %it1, %it1 : f32
+    affine.yield %0 : f32
+  }
+  return
+}
+
+// An iter arg is used in the chain of operations defining the value being
+// reduced, this is not a simple reduction and should not be parallelized.
+// REDUCE-LABEL: @use_in_backward_slice
+func @use_in_backward_slice() {
+  %cst1 = constant 0.0 : f32
+  %cst2 = constant 1.0 : f32
+  // REDUCE-NOT: affine.parallel
+  affine.for %i = 0 to 10 iter_args(%it1 = %cst1, %it2 = %cst2) -> (f32, f32) {
+    %0 = "test.some_modification"(%it2) : (f32) -> f32
+    %1 = addf %it1, %0 : f32
+    affine.yield %1, %1 : f32, f32
   }
   return
 }
