@@ -286,6 +286,70 @@ def Vector_ReductionOp :
   }];
 }
 
+def Vector_MultiDimReductionOp :
+  Vector_Op<"multi_reduction", [NoSideEffect,
+     PredOpTrait<"source operand and result have same element type",
+                 TCresVTEtIsSameAsOpBase<0, 0>>]>,
+    Arguments<(ins Vector_CombiningKindAttr:$kind,
+                   AnyVector:$source,
+                   I64ArrayAttr:$reduction_dims)>,
+    Results<(outs AnyType:$dest)> {
+  let summary = "Multi-dimensional reduction operation";
+  let description = [{
+    Reduces an n-D vector into an (n-k)-D vector using the given operation
+    (add/mul/min/max for int/fp and and/or/xor for int only).
+
+    Example:
+
+    ```mlir
+    %1 = vector.multi_reduction "add", %0 [1, 3] :
+      vector<4x8x16x32xf32> into vector<4x16xf32>
+    ```
+  }];
+  let builders = [
+    OpBuilder<(ins "Value":$source, "ArrayRef<bool>":$reductionMask,
+                   "CombiningKind":$kind)>
+  ];
+  let extraClassDeclaration = [{
+    static StringRef getKindAttrName() { return "kind"; }
+    static StringRef getReductionDimsAttrName() { return "reduction_dims"; }
+
+    VectorType getSourceVectorType() {
+      return source().getType().cast<VectorType>();
+    }
+    VectorType getDestVectorType() {
+      return dest().getType().cast<VectorType>();
+    }
+
+    SmallVector<bool> getReductionMask() {
+      SmallVector<bool> res(getSourceVectorType().getRank(), false);
+      for (auto ia : reduction_dims().getAsRange<IntegerAttr>())
+        res[ia.getInt()] = true;
+      return res;
+    }
+    static SmallVector<bool> getReductionMask(
+        ArrayRef<int64_t> reductionDims, unsigned sourceRank) {
+      SmallVector<bool> res(sourceRank, false);
+      for (auto idx : reductionDims)
+        res[idx] = true;
+      return res;
+    }
+
+    static SmallVector<int64_t> inferDestShape(
+      ArrayRef<int64_t> shape, ArrayRef<bool> reducedDimsMask) {
+      assert(shape.size() == reducedDimsMask.size() && 
+             "shape and maks of different sizes");
+      SmallVector<int64_t> res;
+      for (auto it : llvm::zip(reducedDimsMask, shape))
+        if (!std::get<0>(it))
+          res.push_back(std::get<1>(it));
+      return res;
+    }
+  }];
+  let assemblyFormat =
+    "$kind `,` $source attr-dict $reduction_dims `:` type($source) `to` type($dest)";
+}
+
 def Vector_BroadcastOp :
   Vector_Op<"broadcast", [NoSideEffect,
      PredOpTrait<"source operand and result have same element type",
@@ -1316,6 +1380,18 @@ def Vector_TransferReadOp :
       "ValueRange":$indices, "AffineMap":$permutationMap, "Value":$padding,
       "ArrayAttr":$inBounds)>
   ];
+
+  let extraClassDeclaration = [{
+    /// Return a new `result` map with `0` inserted in the proper positions so 
+    /// that vector.transfer_read `result` produces a vector of same element 
+    /// type as `vt` and shape `targetShape.
+    /// Assume that `map` is a permutation map for a vector.transfer_read op, 
+    /// `vt` the vector type produced by the vector.transfer_read and 
+    /// `targetShape` is the desired `targetShape` for a broadcast version of 
+    /// `vt`.
+    static AffineMap insertBroadcasts(AffineMap map, VectorType vt,
+                                      ArrayRef<int64_t> targetShape);
+  }];
 
   let hasFolder = 1;
 }
