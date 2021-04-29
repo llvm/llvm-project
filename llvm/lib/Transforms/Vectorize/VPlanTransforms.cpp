@@ -33,7 +33,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
     // Introduce each ingredient into VPlan.
     for (auto I = VPBB->begin(), E = VPBB->end(); I != E;) {
       VPRecipeBase *Ingredient = &*I++;
-      VPValue *VPV = Ingredient->getVPValue();
+      VPValue *VPV = Ingredient->getVPSingleValue();
       Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
       if (DeadInstructions.count(Inst)) {
         VPValue DummyValue;
@@ -87,7 +87,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
 
       NewRecipe->insertBefore(Ingredient);
       if (NewRecipe->getNumDefinedValues() == 1)
-        VPV->replaceAllUsesWith(NewRecipe->getVPValue());
+        VPV->replaceAllUsesWith(NewRecipe->getVPSingleValue());
       else
         assert(NewRecipe->getNumDefinedValues() == 0 &&
                "Only recpies with zero or one defined values expected");
