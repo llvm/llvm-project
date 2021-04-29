@@ -41,7 +41,7 @@ module {
   //
   func @kernel_sum_reduce(%argA: !SparseTensor,
                           %argx: tensor<f64>) -> tensor<f64> {
-    %arga = sparse_tensor.fromPtr %argA : !SparseTensor to tensor<?x?xf64>
+    %arga = linalg.sparse_tensor %argA : !SparseTensor to tensor<?x?xf64>
     %0 = linalg.generic #trait_sum_reduce
       ins(%arga: tensor<?x?xf64>)
       outs(%argx: tensor<f64>) {

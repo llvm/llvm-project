@@ -99,6 +99,10 @@ void mlir::linalg::LinalgDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
       >();
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/Dialect/Linalg/IR/LinalgSparseOps.cpp.inc"
+      >();
 
   // Fill the Linalg-specific OpName to RegionBuilder map.
   addNamedOpBuilders<
