@@ -50,6 +50,22 @@ body:             |
     S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr2, implicit $vgpr1
 ...
 
+# FIXME: should not remove the def of $vgpr2 because $vgpr2_vgpr3 is live out
+# GCN-LABEL: name: swap_phys_liveout_superreg
+# GCN: bb.0:
+# GCN-NEXT: $vgpr0, $vgpr1 = V_SWAP_B32 $vgpr1, $vgpr0, implicit $exec
+# GCN-NEXT: S_SETPC_B64_return
+---
+name:            swap_phys_liveout_superreg
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+    $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
+    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr2_vgpr3, implicit $vgpr1
+...
+
 # GCN-LABEL: name: swap_phys_b64
 # GCN: bb.0:
 # GCN-NEXT: $vgpr0, $vgpr2 = V_SWAP_B32 $vgpr2, $vgpr0, implicit $exec
