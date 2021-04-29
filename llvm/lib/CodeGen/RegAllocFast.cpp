@@ -1002,7 +1002,7 @@ void RegAllocFast::setPhysReg(MachineInstr &MI, MachineOperand &MO,
 #ifndef NDEBUG
 
 void RegAllocFast::dumpState() const {
-  for (unsigned Unit = 0, UnitE = TRI->getNumRegUnits(); Unit != UnitE;
+  for (unsigned Unit = 1, UnitE = TRI->getNumRegUnits(); Unit != UnitE;
        ++Unit) {
     switch (unsigned VirtReg = RegUnitStates[Unit]) {
     case regFree:
@@ -1440,11 +1440,6 @@ void RegAllocFast::allocateBasicBlock(MachineBasicBlock &MBB) {
   assert(LiveVirtRegs.empty() && "Mapping not cleared from last block?");
 
   for (MachineBasicBlock *Succ : MBB.successors()) {
-    // EH-pads get their liveins from the runtime, not whatever happens in this
-    // block.
-    if (Succ->isEHPad())
-      continue;
-
     for (const MachineBasicBlock::RegisterMaskPair &LI : Succ->liveins())
       setPhysRegState(LI.PhysReg, regPreAssigned);
   }
