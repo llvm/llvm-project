@@ -12,6 +12,7 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Linalg/EDSC/FoldedIntrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
@@ -49,10 +50,10 @@ using folded_memref_view = FoldedValueBuilder<memref::ViewOp>;
 /// the size needed, otherwise try to allocate a static bounding box.
 static Value allocBuffer(const LinalgPromotionOptions &options,
                          Type elementType, Value size, bool dynamicBuffers,
-                         OperationFolder *folder,
+                         DataLayout &layout, OperationFolder *folder,
                          Optional<unsigned> alignment = None) {
   auto *ctx = size.getContext();
-  auto width = llvm::divideCeil(elementType.getIntOrFloatBitWidth(), 8);
+  auto width = layout.getTypeSize(elementType);
   IntegerAttr alignment_attr;
   if (alignment.hasValue())
     alignment_attr =
@@ -88,7 +89,7 @@ defaultAllocBufferCallBack(const LinalgPromotionOptions &options,
                            OpBuilder &builder, memref::SubViewOp subView,
                            ArrayRef<Value> boundingSubViewSize,
                            bool dynamicBuffers, Optional<unsigned> alignment,
-                           OperationFolder *folder) {
+                           DataLayout &layout, OperationFolder *folder) {
   ShapedType viewType = subView.getType();
   int64_t rank = viewType.getRank();
   (void)rank;
@@ -100,7 +101,7 @@ defaultAllocBufferCallBack(const LinalgPromotionOptions &options,
   for (auto size : llvm::enumerate(boundingSubViewSize))
     allocSize = folded_std_muli(folder, allocSize, size.value());
   Value buffer = allocBuffer(options, viewType.getElementType(), allocSize,
-                             dynamicBuffers, folder, alignment);
+                             dynamicBuffers, layout, folder, alignment);
   SmallVector<int64_t, 4> dynSizes(boundingSubViewSize.size(),
                                    ShapedType::kDynamicSize);
   Value view = folded_memref_view(
@@ -170,15 +171,16 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
     }
   }
 
-  allocationFn = (options.allocationFn
-                      ? *(options.allocationFn)
-                      : [&](OpBuilder &builder, memref::SubViewOp subViewOp,
-                            ArrayRef<Value> boundingSubViewSize,
-                            OperationFolder *folder) -> Optional<Value> {
-    return defaultAllocBufferCallBack(options, builder, subViewOp,
-                                      boundingSubViewSize, dynamicBuffers,
-                                      alignment, folder);
-  });
+  allocationFn =
+      (options.allocationFn
+           ? *(options.allocationFn)
+           : [&](OpBuilder &builder, memref::SubViewOp subViewOp,
+                 ArrayRef<Value> boundingSubViewSize, DataLayout &layout,
+                 OperationFolder *folder) -> Optional<Value> {
+        return defaultAllocBufferCallBack(options, builder, subViewOp,
+                                          boundingSubViewSize, dynamicBuffers,
+                                          alignment, layout, folder);
+      });
   deallocationFn =
       (options.deallocationFn
            ? *(options.deallocationFn)
@@ -213,7 +215,8 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
 // by a partial `copy` op.
 Optional<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
     OpBuilder &b, Location loc, memref::SubViewOp subView,
-    AllocBufferCallbackFn allocationFn, OperationFolder *folder) {
+    AllocBufferCallbackFn allocationFn, DataLayout &layout,
+    OperationFolder *folder) {
   ScopedContext scopedContext(b, loc);
   auto viewType = subView.getType();
   auto rank = viewType.getRank();
@@ -236,7 +239,8 @@ Optional<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
   SmallVector<int64_t, 4> dynSizes(fullSizes.size(), -1);
   // If a callback is not specified, then use the default implementation for
   // allocating the promoted buffer.
-  Optional<Value> fullLocalView = allocationFn(b, subView, fullSizes, folder);
+  Optional<Value> fullLocalView =
+      allocationFn(b, subView, fullSizes, layout, folder);
   if (!fullLocalView)
     return {};
   SmallVector<OpFoldResult, 4> zeros(fullSizes.size(), b.getIndexAttr(0));
@@ -248,7 +252,7 @@ Optional<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
 
 static Optional<MapVector<unsigned, PromotionInfo>>
 promoteSubViews(OpBuilder &b, Location loc,
-                LinalgOpInstancePromotionOptions options,
+                LinalgOpInstancePromotionOptions options, DataLayout &layout,
                 OperationFolder *folder) {
   if (options.subViews.empty())
     return {};
@@ -260,7 +264,7 @@ promoteSubViews(OpBuilder &b, Location loc,
     memref::SubViewOp subView =
         cast<memref::SubViewOp>(v.second.getDefiningOp());
     Optional<PromotionInfo> promotionInfo = promoteSubviewAsNewBuffer(
-        b, loc, subView, options.allocationFn, folder);
+        b, loc, subView, options.allocationFn, layout, folder);
     if (!promotionInfo)
       return {};
     promotionInfoMap[v.first] = *promotionInfo;
@@ -269,11 +273,21 @@ promoteSubViews(OpBuilder &b, Location loc,
     if (!options.useFullTileBuffers[v.second])
       continue;
     Value fillVal;
-    if (auto t = subView.getType().getElementType().dyn_cast<FloatType>())
+    if (auto t = subView.getType().getElementType().dyn_cast<FloatType>()) {
       fillVal = folded_std_constant(folder, FloatAttr::get(t, 0.0));
-    else if (auto t =
-                 subView.getType().getElementType().dyn_cast<IntegerType>())
+    } else if (auto t =
+                   subView.getType().getElementType().dyn_cast<IntegerType>()) {
       fillVal = folded_std_constant_int(folder, 0, t);
+    } else if (auto t =
+                   subView.getType().getElementType().dyn_cast<ComplexType>()) {
+      if (auto et = t.getElementType().dyn_cast<FloatType>())
+        fillVal = folded_std_constant(folder, FloatAttr::get(et, 0.0));
+      else if (auto et = t.getElementType().cast<IntegerType>())
+        fillVal = folded_std_constant_int(folder, 0, et);
+      fillVal = b.create<complex::CreateOp>(loc, t, fillVal, fillVal);
+    } else {
+      return {};
+    }
     linalg_fill(promotionInfo->fullLocalView, fillVal);
   }
 
@@ -292,7 +306,7 @@ promoteSubViews(OpBuilder &b, Location loc,
 
 static Optional<LinalgOp>
 promoteSubViews(OpBuilder &b, LinalgOp op,
-                LinalgOpInstancePromotionOptions options,
+                LinalgOpInstancePromotionOptions options, DataLayout &layout,
                 OperationFolder *folder) {
   assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
 
@@ -304,7 +318,8 @@ promoteSubViews(OpBuilder &b, LinalgOp op,
 
   // 1. Promote the specified views and use them in the new op.
   auto loc = op.getLoc();
-  auto promotedBuffersAndViews = promoteSubViews(b, loc, options, folder);
+  auto promotedBuffersAndViews =
+      promoteSubViews(b, loc, options, layout, folder);
   if (!promotedBuffersAndViews ||
       promotedBuffersAndViews->size() != options.subViews.size())
     return {};
@@ -376,8 +391,8 @@ Optional<LinalgOp> mlir::linalg::promoteSubViews(OpBuilder &b,
                                                  LinalgPromotionOptions options,
                                                  OperationFolder *folder) {
   LinalgOpInstancePromotionOptions linalgOptions(linalgOp, options);
-  return ::promoteSubViews(
-      b, linalgOp, LinalgOpInstancePromotionOptions(linalgOp, options), folder);
+  auto layout = DataLayout::closest(linalgOp);
+  return ::promoteSubViews(b, linalgOp, linalgOptions, layout, folder);
 }
 
 namespace {

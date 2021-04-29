@@ -2927,7 +2927,7 @@ tools as well as open source tools such as `SPIRV-LLVM Translator
 to produce SPIR-V binary. More details are provided in `the offline
 compilation from OpenCL kernel sources into SPIR-V using open source
 tools
-<https://www.khronos.org/blog/offline-compilation-of-opencl-kernels-into-spir-v-using-open-source-tooling>`_.
+<https://github.com/KhronosGroup/OpenCL-Guide/blob/main/chapters/os_tooling.md>`_.
 
 Clang currently supports OpenCL C language standards up to v2.0. Clang mainly
 supports full profile. There is only very limited support of the embedded

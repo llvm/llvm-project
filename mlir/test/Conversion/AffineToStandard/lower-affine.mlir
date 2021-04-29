@@ -740,8 +740,8 @@ func @affine_parallel_simple(%arg0: memref<3x3xf32>, %arg1: memref<3x3xf32>) -> 
 }
 // CHECK-LABEL: func @affine_parallel_simple
 // CHECK:         %[[LOWER_1:.*]] = constant 0 : index
-// CHECK-NEXT:    %[[LOWER_2:.*]] = constant 0 : index
 // CHECK-NEXT:    %[[UPPER_1:.*]] = constant 2 : index
+// CHECK-NEXT:    %[[LOWER_2:.*]] = constant 0 : index
 // CHECK-NEXT:    %[[UPPER_2:.*]] = constant 2 : index
 // CHECK-NEXT:    %[[STEP_1:.*]] = constant 1 : index
 // CHECK-NEXT:    %[[STEP_2:.*]] = constant 1 : index
@@ -800,8 +800,8 @@ func @affine_parallel_with_reductions(%arg0: memref<3x3xf32>, %arg1: memref<3x3x
 }
 // CHECK-LABEL: func @affine_parallel_with_reductions
 // CHECK:         %[[LOWER_1:.*]] = constant 0 : index
-// CHECK-NEXT:    %[[LOWER_2:.*]] = constant 0 : index
 // CHECK-NEXT:    %[[UPPER_1:.*]] = constant 2 : index
+// CHECK-NEXT:    %[[LOWER_2:.*]] = constant 0 : index
 // CHECK-NEXT:    %[[UPPER_2:.*]] = constant 2 : index
 // CHECK-NEXT:    %[[STEP_1:.*]] = constant 1 : index
 // CHECK-NEXT:    %[[STEP_2:.*]] = constant 1 : index
@@ -841,8 +841,8 @@ func @affine_parallel_with_reductions_f64(%arg0: memref<3x3xf64>, %arg1: memref<
 }
 // CHECK-LABEL: @affine_parallel_with_reductions_f64
 // CHECK:  %[[LOWER_1:.*]] = constant 0 : index
-// CHECK:  %[[LOWER_2:.*]] = constant 0 : index
 // CHECK:  %[[UPPER_1:.*]] = constant 2 : index
+// CHECK:  %[[LOWER_2:.*]] = constant 0 : index
 // CHECK:  %[[UPPER_2:.*]] = constant 2 : index
 // CHECK:  %[[STEP_1:.*]] = constant 1 : index
 // CHECK:  %[[STEP_2:.*]] = constant 1 : index
@@ -880,8 +880,8 @@ func @affine_parallel_with_reductions_i64(%arg0: memref<3x3xi64>, %arg1: memref<
 }
 // CHECK-LABEL: @affine_parallel_with_reductions_i64
 // CHECK:  %[[LOWER_1:.*]] = constant 0 : index
-// CHECK:  %[[LOWER_2:.*]] = constant 0 : index
 // CHECK:  %[[UPPER_1:.*]] = constant 2 : index
+// CHECK:  %[[LOWER_2:.*]] = constant 0 : index
 // CHECK:  %[[UPPER_2:.*]] = constant 2 : index
 // CHECK:  %[[STEP_1:.*]] = constant 1 : index
 // CHECK:  %[[STEP_2:.*]] = constant 1 : index

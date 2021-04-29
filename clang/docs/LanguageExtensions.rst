@@ -1813,6 +1813,23 @@ supporting the variadic arguments e.g. majority of CPU targets.
   #pragma OPENCL EXTENSION __cl_clang_variadic_functions : disable
   void bar(int a, ...); // error - variadic prototype is not allowed
 
+Legacy 1.x atomics with generic address space
+---------------------------------------------
+
+Clang allows use of atomic functions from the OpenCL 1.x standards
+with the generic address space pointer in C++ for OpenCL mode.
+
+This is a non-portable feature and might not be supported by all
+targets.
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  void foo(__generic volatile unsigned int* a) {
+    atomic_add(a, 1);
+  }
+
 Builtin Functions
 =================
 

@@ -494,6 +494,11 @@ AffineMap AffineMap::getSubMap(ArrayRef<unsigned> resultPos) const {
   return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
 }
 
+AffineMap AffineMap::getSliceMap(unsigned start, unsigned length) const {
+  return AffineMap::get(getNumDims(), getNumSymbols(),
+                        getResults().slice(start, length), getContext());
+}
+
 AffineMap AffineMap::getMajorSubMap(unsigned numResults) const {
   if (numResults == 0)
     return AffineMap();

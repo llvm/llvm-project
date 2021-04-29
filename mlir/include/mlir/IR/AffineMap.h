@@ -262,6 +262,9 @@ public:
   /// Returns the map consisting of the `resultPos` subset.
   AffineMap getSubMap(ArrayRef<unsigned> resultPos) const;
 
+  /// Returns the map consisting of `length` expressions starting from `start`.
+  AffineMap getSliceMap(unsigned start, unsigned length) const;
+
   /// Returns the map consisting of the most major `numResults` results.
   /// Returns the null AffineMap if `numResults` == 0.
   /// Returns `*this` if `numResults` >= `this->getNumResults()`.

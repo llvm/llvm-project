@@ -182,7 +182,62 @@ bool OmpStructureChecker::HasInvalidWorksharingNesting(
   return false;
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPConstruct &) {
+void OmpStructureChecker::HasInvalidDistributeNesting(
+    const parser::OpenMPLoopConstruct &x) {
+  bool violation{false};
+
+  OmpDirectiveSet distributeSet{llvm::omp::Directive::OMPD_distribute,
+      llvm::omp::Directive::OMPD_distribute_parallel_do,
+      llvm::omp::Directive::OMPD_distribute_parallel_do_simd,
+      llvm::omp::Directive::OMPD_distribute_parallel_for,
+      llvm::omp::Directive::OMPD_distribute_parallel_for_simd,
+      llvm::omp::Directive::OMPD_distribute_simd};
+
+  const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
+  const auto &beginDir{std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
+  if (distributeSet.test(beginDir.v)) {
+    // `distribute` region has to be nested
+    if (!CurrentDirectiveIsNested()) {
+      violation = true;
+    } else {
+      // `distribute` region has to be strictly nested inside `teams`
+      if (!llvm::omp::teamSet.test(GetContextParent().directive)) {
+        violation = true;
+      }
+    }
+  }
+  if (violation) {
+    context_.Say(beginDir.source,
+        "`DISTRIBUTE` region has to be strictly nested inside `TEAMS` region."_err_en_US);
+  }
+}
+
+void OmpStructureChecker::HasInvalidTeamsNesting(
+    const llvm::omp::Directive &dir, const parser::CharBlock &source) {
+  OmpDirectiveSet allowedSet{llvm::omp::Directive::OMPD_parallel,
+      llvm::omp::Directive::OMPD_parallel_do,
+      llvm::omp::Directive::OMPD_parallel_do_simd,
+      llvm::omp::Directive::OMPD_parallel_for,
+      llvm::omp::Directive::OMPD_parallel_for_simd,
+      llvm::omp::Directive::OMPD_parallel_master,
+      llvm::omp::Directive::OMPD_parallel_master_taskloop,
+      llvm::omp::Directive::OMPD_parallel_master_taskloop_simd,
+      llvm::omp::Directive::OMPD_parallel_sections,
+      llvm::omp::Directive::OMPD_parallel_workshare,
+      llvm::omp::Directive::OMPD_distribute,
+      llvm::omp::Directive::OMPD_distribute_parallel_do,
+      llvm::omp::Directive::OMPD_distribute_parallel_do_simd,
+      llvm::omp::Directive::OMPD_distribute_parallel_for,
+      llvm::omp::Directive::OMPD_distribute_parallel_for_simd,
+      llvm::omp::Directive::OMPD_distribute_simd};
+
+  if (!allowedSet.test(dir)) {
+    context_.Say(source,
+        "Only `DISTRIBUTE` or `PARALLEL` regions are allowed to be strictly nested inside `TEAMS` region."_err_en_US);
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
   // 2.8.1 TODO: Simd Construct with Ordered Construct Nesting check
 }
 
@@ -233,6 +288,11 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   CheckDoWhile(x);
   CheckLoopItrVariableIsInt(x);
   CheckCycleConstraints(x);
+  HasInvalidDistributeNesting(x);
+  if (CurrentDirectiveIsNested() &&
+      llvm::omp::teamSet.test(GetContextParent().directive)) {
+    HasInvalidTeamsNesting(beginDir.v, beginDir.source);
+  }
 }
 const parser::Name OmpStructureChecker::GetLoopIndex(
     const parser::DoConstruct *x) {
@@ -366,8 +426,12 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     HasInvalidWorksharingNesting(
         beginDir.source, {llvm::omp::Directive::OMPD_do});
   }
-  if (CurrentDirectiveIsNested())
+  if (CurrentDirectiveIsNested()) {
     CheckIfDoOrderedClause(beginDir);
+    if (llvm::omp::teamSet.test(GetContextParent().directive)) {
+      HasInvalidTeamsNesting(beginDir.v, beginDir.source);
+    }
+  }
 
   CheckNoBranching(block, beginDir.v, beginDir.source);
 

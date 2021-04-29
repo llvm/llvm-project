@@ -60,6 +60,7 @@ add_mlir_library(MLIRLoopAnalysis
 
   LINK_LIBS PUBLIC
   MLIRAffine
+  MLIRAnalysis
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRInferTypeOpInterface

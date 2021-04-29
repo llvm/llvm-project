@@ -24,12 +24,17 @@ class AffineForOp;
 class AffineIfOp;
 class AffineParallelOp;
 struct LogicalResult;
+struct LoopReduction;
 class Operation;
 
 /// Replaces parallel affine.for op with 1-d affine.parallel op.
-/// mlir::isLoopParallel detect the parallel affine.for ops.
+/// mlir::isLoopParallel detects the parallel affine.for ops.
+/// Parallelizes the specified reductions. Parallelization will fail in presence
+/// of loop iteration arguments that are not listed in `parallelReductions`.
 /// There is no cost model currently used to drive this parallelization.
-void affineParallelize(AffineForOp forOp);
+LogicalResult
+affineParallelize(AffineForOp forOp,
+                  ArrayRef<LoopReduction> parallelReductions = {});
 
 /// Hoists out affine.if/else to as high as possible, i.e., past all invariant
 /// affine.fors/parallel's. Returns success if any hoisting happened; folded` is
