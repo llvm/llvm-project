@@ -26,7 +26,7 @@ namespace scudo {
 template <class Allocator> struct alignas(SCUDO_CACHE_LINE_SIZE) TSD {
   typename Allocator::CacheT Cache;
   typename Allocator::QuarantineCacheT QuarantineCache;
-  u8 DestructorIterations = 0;
+  u8 DestructorIterations;
 
   void initLinkerInitialized(Allocator *Instance) {
     Instance->initCache(&Cache);
@@ -59,7 +59,7 @@ template <class Allocator> struct alignas(SCUDO_CACHE_LINE_SIZE) TSD {
 
 private:
   HybridMutex Mutex;
-  atomic_uptr Precedence = {};
+  atomic_uptr Precedence;
 };
 
 } // namespace scudo

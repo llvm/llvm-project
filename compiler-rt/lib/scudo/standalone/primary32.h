@@ -489,17 +489,17 @@ private:
     return TotalReleasedBytes;
   }
 
-  SizeClassInfo SizeClassInfoArray[NumClasses] = {};
+  SizeClassInfo SizeClassInfoArray[NumClasses];
 
   // Track the regions in use, 0 is unused, otherwise store ClassId + 1.
-  ByteMap PossibleRegions = {};
-  atomic_s32 ReleaseToOsIntervalMs = {};
+  ByteMap PossibleRegions;
+  atomic_s32 ReleaseToOsIntervalMs;
   // Unless several threads request regions simultaneously from different size
   // classes, the stash rarely contains more than 1 entry.
   static constexpr uptr MaxStashedRegions = 4;
   HybridMutex RegionsStashMutex;
-  uptr NumberOfStashedRegions = 0;
-  uptr RegionsStash[MaxStashedRegions] = {};
+  uptr NumberOfStashedRegions;
+  uptr RegionsStash[MaxStashedRegions];
 };
 
 } // namespace scudo

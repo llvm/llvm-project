@@ -161,7 +161,7 @@ public:
 
 private:
   SinglyLinkedList<QuarantineBatch> List;
-  atomic_uptr Size = {};
+  atomic_uptr Size;
 
   void addToSize(uptr add) { atomic_store_relaxed(&Size, getSize() + add); }
   void subFromSize(uptr sub) { atomic_store_relaxed(&Size, getSize() - sub); }
@@ -246,9 +246,9 @@ private:
   alignas(SCUDO_CACHE_LINE_SIZE) HybridMutex CacheMutex;
   CacheT Cache;
   alignas(SCUDO_CACHE_LINE_SIZE) HybridMutex RecycleMutex;
-  atomic_uptr MinSize = {};
-  atomic_uptr MaxSize = {};
-  alignas(SCUDO_CACHE_LINE_SIZE) atomic_uptr MaxCacheSize = {};
+  atomic_uptr MinSize;
+  atomic_uptr MaxSize;
+  alignas(SCUDO_CACHE_LINE_SIZE) atomic_uptr MaxCacheSize;
 
   void NOINLINE recycle(uptr MinSize, Callback Cb) {
     CacheT Tmp;

@@ -108,9 +108,9 @@ private:
     Instance->callPostInitCallback();
   }
 
-  pthread_key_t PThreadKey = {};
-  bool Initialized = false;
-  atomic_u8 Disabled = {};
+  pthread_key_t PThreadKey;
+  bool Initialized;
+  atomic_u8 Disabled;
   TSD<Allocator> FallbackTSD;
   HybridMutex Mutex;
   static thread_local ThreadState State;

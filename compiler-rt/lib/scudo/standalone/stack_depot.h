@@ -40,7 +40,7 @@ public:
 
 class StackDepot {
   HybridMutex RingEndMu;
-  u32 RingEnd = 0;
+  u32 RingEnd;
 
   // This data structure stores a stack trace for each allocation and
   // deallocation when stack trace recording is enabled, that may be looked up
@@ -70,7 +70,7 @@ class StackDepot {
 #endif
   static const uptr TabSize = 1 << TabBits;
   static const uptr TabMask = TabSize - 1;
-  atomic_u32 Tab[TabSize] = {};
+  atomic_u32 Tab[TabSize];
 
 #ifdef SCUDO_FUZZ
   static const uptr RingBits = 4;
@@ -79,7 +79,7 @@ class StackDepot {
 #endif
   static const uptr RingSize = 1 << RingBits;
   static const uptr RingMask = RingSize - 1;
-  atomic_u64 Ring[RingSize] = {};
+  atomic_u64 Ring[RingSize];
 
 public:
   // Insert hash of the stack trace [Begin, End) into the stack depot, and
