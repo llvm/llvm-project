@@ -67,7 +67,7 @@ Fortran::lower::genRawCharCompare(Fortran::lower::FirOpBuilder &builder,
   }
   auto fTy = beginFunc.getType();
   auto args = Fortran::lower::createArguments(builder, loc, fTy, lhsBuff,
-                                              lhsLen, rhsBuff, rhsLen);
+                                              rhsBuff, lhsLen, rhsLen);
   auto tri = builder.create<fir::CallOp>(loc, beginFunc, args).getResult(0);
   auto zero = builder.createIntegerConstant(loc, tri.getType(), 0);
   return builder.create<mlir::CmpIOp>(loc, cmp, tri, zero);
