@@ -856,10 +856,11 @@ Decl *TemplateDeclInstantiator::InstantiateTypedefNameDecl(TypedefNameDecl *D,
     SemaRef.MarkDeclarationsReferencedInType(D->getLocation(), DI->getType());
   }
 
-  // HACK: g++ has a bug where it gets the value kind of ?: wrong.
-  // libstdc++ relies upon this bug in its implementation of common_type.
-  // If we happen to be processing that implementation, fake up the g++ ?:
-  // semantics. See LWG issue 2141 for more information on the bug.
+  // HACK: 2012-10-23 g++ has a bug where it gets the value kind of ?: wrong.
+  // libstdc++ relies upon this bug in its implementation of common_type.  If we
+  // happen to be processing that implementation, fake up the g++ ?:
+  // semantics. See LWG issue 2141 for more information on the bug.  The bugs
+  // are fixed in g++ and libstdc++ 4.9.0 (2014-04-22).
   const DecltypeType *DT = DI->getType()->getAs<DecltypeType>();
   CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext());
   if (DT && RD && isa<ConditionalOperator>(DT->getUnderlyingExpr()) &&
