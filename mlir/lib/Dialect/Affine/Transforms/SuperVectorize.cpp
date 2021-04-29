@@ -12,16 +12,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Analysis/AffineAnalysis.h"
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Analysis/NestedMatcher.h"
-#include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
 #include "mlir/IR/BlockAndValueMapping.h"
-#include "llvm/Support/Debug.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/Support/Debug.h"
 
 using namespace mlir;
 using namespace vector;
