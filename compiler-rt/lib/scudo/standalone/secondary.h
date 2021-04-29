@@ -170,7 +170,7 @@ public:
       if (Config::SecondaryCacheQuarantineSize &&
           useMemoryTagging<Config>(Options)) {
         QuarantinePos =
-            (QuarantinePos + 1) % Config::SecondaryCacheQuarantineSize;
+            (QuarantinePos + 1) % Max(Config::SecondaryCacheQuarantineSize, 1u);
         if (!Quarantine[QuarantinePos].CommitBase) {
           Quarantine[QuarantinePos] = Entry;
           return;

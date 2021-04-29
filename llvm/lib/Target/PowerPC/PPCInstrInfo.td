@@ -4118,57 +4118,57 @@ defm : FSetCCPat<strict_fsetccs, f128, XSCMPOQP>;
 // after the inclusion of the instruction sets.
 let Predicates = [HasSPE] in {
 // SETCC for f32.
-def : Pat<(i1 (setcc f32:$s1, f32:$s2, SETOLT)),
+def : Pat<(i1 (any_fsetccs f32:$s1, f32:$s2, SETOLT)),
           (EXTRACT_SUBREG (EFSCMPLT $s1, $s2), sub_gt)>;
-def : Pat<(i1 (setcc f32:$s1, f32:$s2, SETLT)),
+def : Pat<(i1 (any_fsetccs f32:$s1, f32:$s2, SETLT)),
           (EXTRACT_SUBREG (EFSCMPLT $s1, $s2), sub_gt)>;
-def : Pat<(i1 (setcc f32:$s1, f32:$s2, SETOGT)),
+def : Pat<(i1 (any_fsetccs f32:$s1, f32:$s2, SETOGT)),
           (EXTRACT_SUBREG (EFSCMPGT $s1, $s2), sub_gt)>;
-def : Pat<(i1 (setcc f32:$s1, f32:$s2, SETGT)),
+def : Pat<(i1 (any_fsetccs f32:$s1, f32:$s2, SETGT)),
           (EXTRACT_SUBREG (EFSCMPGT $s1, $s2), sub_gt)>;
-def : Pat<(i1 (setcc f32:$s1, f32:$s2, SETOEQ)),
+def : Pat<(i1 (any_fsetccs f32:$s1, f32:$s2, SETOEQ)),
           (EXTRACT_SUBREG (EFSCMPEQ $s1, $s2), sub_gt)>;
-def : Pat<(i1 (setcc f32:$s1, f32:$s2, SETEQ)),
+def : Pat<(i1 (any_fsetccs f32:$s1, f32:$s2, SETEQ)),
           (EXTRACT_SUBREG (EFSCMPEQ $s1, $s2), sub_gt)>;
 
-defm : CRNotPat<(i1 (setcc f32:$s1, f32:$s2, SETUGE)),
+defm : CRNotPat<(i1 (any_fsetccs f32:$s1, f32:$s2, SETUGE)),
                 (EXTRACT_SUBREG (EFSCMPLT $s1, $s2), sub_gt)>;
-defm : CRNotPat<(i1 (setcc f32:$s1, f32:$s2, SETGE)),
+defm : CRNotPat<(i1 (any_fsetccs f32:$s1, f32:$s2, SETGE)),
                 (EXTRACT_SUBREG (EFSCMPLT $s1, $s2), sub_gt)>;
-defm : CRNotPat<(i1 (setcc f32:$s1, f32:$s2, SETULE)),
+defm : CRNotPat<(i1 (any_fsetccs f32:$s1, f32:$s2, SETULE)),
                 (EXTRACT_SUBREG (EFSCMPGT $s1, $s2), sub_gt)>;
-defm : CRNotPat<(i1 (setcc f32:$s1, f32:$s2, SETLE)),
+defm : CRNotPat<(i1 (any_fsetccs f32:$s1, f32:$s2, SETLE)),
                 (EXTRACT_SUBREG (EFSCMPGT $s1, $s2), sub_gt)>;
-defm : CRNotPat<(i1 (setcc f32:$s1, f32:$s2, SETUNE)),
+defm : CRNotPat<(i1 (any_fsetccs f32:$s1, f32:$s2, SETUNE)),
                 (EXTRACT_SUBREG (EFSCMPEQ $s1, $s2), sub_gt)>;
-defm : CRNotPat<(i1 (setcc f32:$s1, f32:$s2, SETNE)),
+defm : CRNotPat<(i1 (any_fsetccs f32:$s1, f32:$s2, SETNE)),
                 (EXTRACT_SUBREG (EFSCMPEQ $s1, $s2), sub_gt)>;
 
 // SETCC for f64.
-def : Pat<(i1 (setcc f64:$s1, f64:$s2, SETOLT)),
+def : Pat<(i1 (any_fsetccs f64:$s1, f64:$s2, SETOLT)),
           (EXTRACT_SUBREG (EFDCMPLT $s1, $s2), sub_gt)>;
-def : Pat<(i1 (setcc f64:$s1, f64:$s2, SETLT)),
+def : Pat<(i1 (any_fsetccs f64:$s1, f64:$s2, SETLT)),
           (EXTRACT_SUBREG (EFDCMPLT $s1, $s2), sub_gt)>;
-def : Pat<(i1 (setcc f64:$s1, f64:$s2, SETOGT)),
+def : Pat<(i1 (any_fsetccs f64:$s1, f64:$s2, SETOGT)),
           (EXTRACT_SUBREG (EFDCMPGT $s1, $s2), sub_gt)>;
-def : Pat<(i1 (setcc f64:$s1, f64:$s2, SETGT)),
+def : Pat<(i1 (any_fsetccs f64:$s1, f64:$s2, SETGT)),
           (EXTRACT_SUBREG (EFDCMPGT $s1, $s2), sub_gt)>;
-def : Pat<(i1 (setcc f64:$s1, f64:$s2, SETOEQ)),
+def : Pat<(i1 (any_fsetccs f64:$s1, f64:$s2, SETOEQ)),
           (EXTRACT_SUBREG (EFDCMPEQ $s1, $s2), sub_gt)>;
-def : Pat<(i1 (setcc f64:$s1, f64:$s2, SETEQ)),
+def : Pat<(i1 (any_fsetccs f64:$s1, f64:$s2, SETEQ)),
           (EXTRACT_SUBREG (EFDCMPEQ $s1, $s2), sub_gt)>;
 
-defm : CRNotPat<(i1 (setcc f64:$s1, f64:$s2, SETUGE)),
+defm : CRNotPat<(i1 (any_fsetccs f64:$s1, f64:$s2, SETUGE)),
                 (EXTRACT_SUBREG (EFDCMPLT $s1, $s2), sub_gt)>;
-defm : CRNotPat<(i1 (setcc f64:$s1, f64:$s2, SETGE)),
+defm : CRNotPat<(i1 (any_fsetccs f64:$s1, f64:$s2, SETGE)),
                 (EXTRACT_SUBREG (EFDCMPLT $s1, $s2), sub_gt)>;
-defm : CRNotPat<(i1 (setcc f64:$s1, f64:$s2, SETULE)),
+defm : CRNotPat<(i1 (any_fsetccs f64:$s1, f64:$s2, SETULE)),
                 (EXTRACT_SUBREG (EFDCMPGT $s1, $s2), sub_gt)>;
-defm : CRNotPat<(i1 (setcc f64:$s1, f64:$s2, SETLE)),
+defm : CRNotPat<(i1 (any_fsetccs f64:$s1, f64:$s2, SETLE)),
                 (EXTRACT_SUBREG (EFDCMPGT $s1, $s2), sub_gt)>;
-defm : CRNotPat<(i1 (setcc f64:$s1, f64:$s2, SETUNE)),
+defm : CRNotPat<(i1 (any_fsetccs f64:$s1, f64:$s2, SETUNE)),
                 (EXTRACT_SUBREG (EFDCMPEQ $s1, $s2), sub_gt)>;
-defm : CRNotPat<(i1 (setcc f64:$s1, f64:$s2, SETNE)),
+defm : CRNotPat<(i1 (any_fsetccs f64:$s1, f64:$s2, SETNE)),
                 (EXTRACT_SUBREG (EFDCMPEQ $s1, $s2), sub_gt)>;
 }
 // match select on i1 variables:

@@ -3094,8 +3094,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
 bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
                                          const FormatToken &Right) {
   const FormatToken &Left = *Right.Previous;
-  auto HasExistingWhitespace = [&Whitespace = Right.WhitespaceRange]() {
-    return Whitespace.getBegin() != Whitespace.getEnd();
+  auto HasExistingWhitespace = [&Right]() {
+    return Right.WhitespaceRange.getBegin() != Right.WhitespaceRange.getEnd();
   };
   if (Right.Tok.getIdentifierInfo() && Left.Tok.getIdentifierInfo())
     return true; // Never ever merge two identifiers.
@@ -3409,11 +3409,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return Style.SpaceAfterCStyleCast ||
            Right.isOneOf(TT_BinaryOperator, TT_SelectorName);
 
-  auto ShouldAddSpacesInAngles = [&Style = this->Style,
-                                  &HasExistingWhitespace]() {
-    if (Style.SpacesInAngles == FormatStyle::SIAS_Always)
+  auto ShouldAddSpacesInAngles = [this, &HasExistingWhitespace]() {
+    if (this->Style.SpacesInAngles == FormatStyle::SIAS_Always)
       return true;
-    if (Style.SpacesInAngles == FormatStyle::SIAS_Leave)
+    if (this->Style.SpacesInAngles == FormatStyle::SIAS_Leave)
       return HasExistingWhitespace();
     return false;
   };
