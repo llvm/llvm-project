@@ -262,7 +262,7 @@ static bool matchBitfieldExtractFromSExtInReg(
     return false;
   MatchInfo = [=](MachineIRBuilder &B) {
     auto Cst1 = B.buildConstant(Ty, ShiftImm);
-    auto Cst2 = B.buildConstant(Ty, ShiftImm + Width - 1);
+    auto Cst2 = B.buildConstant(Ty, Width);
     B.buildInstr(TargetOpcode::G_SBFX, {Dst}, {ShiftSrc, Cst1, Cst2});
   };
   return true;
