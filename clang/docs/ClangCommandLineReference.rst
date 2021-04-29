@@ -870,7 +870,7 @@ Enable use-after-scope detection in AddressSanitizer
 
 Enable ODR indicator globals to avoid false ODR violation reports in partially sanitized programs at the cost of an increase in binary size
 
-.. option:: -fsanitize-address-destructor-kind=<arg>
+.. option:: -fsanitize-address-destructor=<arg>
 
 Set the kind of module destructors emitted by AddressSanitizer instrumentation.
 These destructors are emitted to unregister instrumented global variables when
