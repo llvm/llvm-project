@@ -370,10 +370,10 @@ def dylib_current_version : Separate<["-"], "dylib_current_version">,
 def grp_main : OptionGroup<"main">, HelpText<"MAIN EXECUTABLE">;
 
 def pie : Flag<["-"], "pie">,
-    HelpText<"Build a position independent executable (default for macOS 10.7 and later)">,
+    HelpText<"Build a position independent executable (default)">,
     Group<grp_main>;
 def no_pie : Flag<["-"], "no_pie">,
-    HelpText<"Do not build a position independent executable (default for macOS 10.6 and earlier)">,
+    HelpText<"Do not build a position independent executable">,
     Group<grp_main>;
 def pagezero_size : Separate<["-"], "pagezero_size">,
     MetaVarName<"<size>">,

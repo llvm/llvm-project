@@ -697,29 +697,6 @@ static const char *getReproduceOption(InputArgList &args) {
   return getenv("LLD_REPRODUCE");
 }
 
-static bool isPie(InputArgList &args) {
-  if (config->outputType != MH_EXECUTE || args.hasArg(OPT_no_pie))
-    return false;
-  if (config->arch() == AK_arm64 || config->arch() == AK_arm64e ||
-      config->arch() == AK_arm64_32)
-    return true;
-
-  // TODO: add logic here as we support more archs. E.g. i386 should default
-  // to PIE from 10.7
-  assert(config->arch() == AK_x86_64 || config->arch() == AK_x86_64h ||
-         config->arch() == AK_arm64_32);
-
-  PlatformKind kind = config->platformInfo.target.Platform;
-  if (kind == PlatformKind::macOS &&
-      config->platformInfo.minimum >= VersionTuple(10, 6))
-    return true;
-
-  if (kind == PlatformKind::iOSSimulator || kind == PlatformKind::driverKit)
-    return true;
-
-  return args.hasArg(OPT_pie);
-}
-
 static void parseClangOption(StringRef opt, const Twine &msg) {
   std::string err;
   raw_string_ostream os(err);
@@ -1095,7 +1072,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     createFiles(args);
 
     config->isPic = config->outputType == MH_DYLIB ||
-                    config->outputType == MH_BUNDLE || isPie(args);
+                    config->outputType == MH_BUNDLE ||
+                    (config->outputType == MH_EXECUTE &&
+                     args.hasFlag(OPT_pie, OPT_no_pie, true));
 
     // Now that all dylibs have been loaded, search for those that should be
     // re-exported.
