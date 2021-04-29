@@ -9,6 +9,8 @@
 ; CHECK: irce: in function signed_var_imm_dec_sge: constrained Loop at depth 1 containing: %for.body<header>,%if.else,%for.inc<latch><exiting>
 ; CHECK: irce: in function signed_var_imm_dec_ne: constrained Loop at depth 1 containing: %for.body<header>,%if.else,%for.inc<latch><exiting>
 ; CHECK-NOT: irce: in function signed_var_imm_dec_eq: constrained Loop at depth 1 containing: %for.body<header>,%if.else,%for.inc<latch><exiting>
+; CHECK-NOT: irce: in function test_dec_bound_with_smaller_start_than_bound: constrained Loop at depth 1 containing: %for.body<header>,%if.else,%for.dec<latch><exiting>
+; CHECK-NOT: irce: in function test_inc_bound_with_bigger_start_than_bound: constrained Loop at depth 1 containing: %for.body<header>,%if.else,%for.dec<latch><exiting>
 
 ; CHECK-LABEL: test_inc_eq(
 ; CHECK: main.exit.selector:
@@ -351,4 +353,50 @@ for.inc:                                          ; preds = %for.body, %if.else
   %dec = add nsw i32 %iv, -1
   %cmp = icmp eq i32 %dec, %M
   br i1 %cmp, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: @test_dec_bound_with_smaller_start_than_bound(
+; CHECK-NOT:       preloop.exit.selector:
+define void @test_dec_bound_with_smaller_start_than_bound(i64 %0) {
+entry:
+  br label %for.body
+
+for.body:                                                ; preds = %for.dec, %entry
+  %iv = phi i64 [ %dec, %for.dec ], [ 0, %entry ]
+  %1 = icmp slt i64 %iv, %0
+  br i1 %1, label %if.else, label %for.dec
+
+if.else:                                                ; preds = %for.body
+  br label %for.dec
+
+for.dec:                                                ; preds = %if.else, %for.body
+  %dec = sub nuw nsw i64 %iv, 1
+  %2 = icmp slt i64 %dec, 1
+  br i1 %2, label %exit, label %for.body
+
+exit:                                               ; preds = %for.dec
+  ret void
+}
+
+; CHECK-LABEL: @test_inc_bound_with_bigger_start_than_bound(
+; CHECK-NOT:       main.exit.selector:
+define void @test_inc_bound_with_bigger_start_than_bound(i32 %0) {
+entry:
+  br label %for.body
+
+for.body:                                                ; preds = %for.inc, %entry
+  %iv = phi i32 [ %inc, %for.inc ], [ 200, %entry ]
+  %1 = icmp slt i32 %iv, %0
+  br i1 %1, label %if.else, label %for.inc
+
+if.else:                                                ; preds = %for.body
+  br label %for.inc
+
+for.inc:                                                ; preds = %if.else, %for.body
+  %inc = add nsw i32 %iv, 1
+  %2 = icmp sgt i32 %inc, 100
+  br i1 %2, label %exit, label %for.body
+
+exit:                                                ; preds = %for.inc
+  ret void
 }

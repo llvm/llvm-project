@@ -3054,7 +3054,7 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
 
           LLVM_DEBUG(llvm::dbgs() << "Applying child configurations\n");
 
-          for (const auto& MemBuf : llvm::reverse(ChildFormatTextToApply)){
+          for (const auto &MemBuf : llvm::reverse(ChildFormatTextToApply)) {
             auto Ec = parseConfiguration(*MemBuf, &Style, AllowUnknownOptions,
                                          dropDiagnosticHandler);
             // It was already correctly parsed.

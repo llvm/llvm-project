@@ -2403,7 +2403,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   }
 
   // Check for violations of "called once" parameter properties.
-  if (S.getLangOpts().ObjC &&
+  if (S.getLangOpts().ObjC && !S.getLangOpts().CPlusPlus &&
       shouldAnalyzeCalledOnceParameters(Diags, D->getBeginLoc())) {
     if (AC.getCFG()) {
       CalledOnceCheckReporter Reporter(S, IPData->CalledOnceData);

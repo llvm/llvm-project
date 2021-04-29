@@ -12,13 +12,10 @@
 
 // template <class... Types> class tuple;
 
-// template <class TupleLike>
-//   tuple(TupleLike&&);
-// template <class Alloc, class TupleLike>
-//   tuple(std::allocator_arg_t, Alloc const&, TupleLike&&);
-
 // Check that the tuple-like ctors are properly disabled when the UTypes...
-// constructor should be selected. See PR22806.
+// constructor should be selected.
+//
+// See https://llvm.org/PR22806.
 
 #include <tuple>
 #include <memory>

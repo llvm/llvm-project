@@ -367,6 +367,10 @@ MACH-O ONLY OPTIONS AND COMMANDS
 
   Display rebasing information.
 
+.. option:: --rpaths
+
+  Display runtime search paths for the binary.
+
 .. option:: --universal-headers
 
   Display universal headers.

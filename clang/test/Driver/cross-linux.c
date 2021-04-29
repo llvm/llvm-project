@@ -35,6 +35,7 @@
 // RUN: %clang -### -o %t %s 2>&1 -no-integrated-as -fuse-ld=ld \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_32bit_linux_tree/usr \
 // RUN:   --target=i386-unknown-linux \
+// RUN:   --rtlib=platform \
 // RUN:   --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-MULTI32-I386 %s
 // CHECK-MULTI32-I386: "-cc1" "-triple" "i386-unknown-linux"

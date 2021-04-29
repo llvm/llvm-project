@@ -197,6 +197,8 @@ attributes #0 = { nounwind uwtable "disable-tail-calls"="true" "frame-pointer"="
 !48 = !DILocation(line: 14, column: 10, scope: !35)
 !49 = !DILocation(line: 14, column: 12, scope: !35)
 !50 = !DILocation(line: 14, column: 10, scope: !51)
+;; A discriminator of 108527639 which is 0x6780017 in hexdecimal, stands for an indirect call probe
+;; with an index of 2 and probe factor of 0.79.
 !51 = !DILexicalBlockFile(scope: !35, file: !1, discriminator: 108527639)
 !52 = !DILocation(line: 14, column: 3, scope: !35)
 !53 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 17, type: !54, scopeLine: 18, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !56)
@@ -231,6 +233,8 @@ attributes #0 = { nounwind uwtable "disable-tail-calls"="true" "frame-pointer"="
 !82 = !DILocation(line: 32, column: 17, scope: !75)
 !83 = !DILocation(line: 32, column: 20, scope: !75)
 !84 = !DILocation(line: 32, column: 13, scope: !85)
+;; A discriminator of 116916311 which is 0x6f80057 in hexdecimal, stands for an indirect call probe
+;; with an index of 10 and probe factor of 0.95.
 !85 = !DILexicalBlockFile(scope: !75, file: !1, discriminator: 116916311)
 !86 = !DILocation(line: 32, column: 11, scope: !75)
 !87 = !DILocation(line: 33, column: 5, scope: !75)
@@ -244,9 +248,14 @@ attributes #0 = { nounwind uwtable "disable-tail-calls"="true" "frame-pointer"="
 !95 = !DILocation(line: 36, column: 1, scope: !53)
 !96 = !DILocation(line: 35, column: 5, scope: !53)
 
-; CHECK: %[[#]] = call i32 (i32, ...) %30(i32 %[[#]]) #[[#]], !dbg ![[#DBGID:]], !prof ![[#]]
+; CHECK: define dso_local i32 @main
+; CHECK: %[[#]] = call i32 (i32, ...) %[[#]](i32 %[[#]]) #[[#]], !dbg ![[#DBGID:]], !prof ![[#PROF:]]
 
-;; A discriminator of 69206039 which is 0x4200017 in hexdecimal, stands for an indirect call probe
-;; with an index of 2 and probe factor of 0.04.
+;; A discriminator of 106430487 which is 0x6580017 in hexdecimal, stands for an indirect call probe
+;; with an index of 2 and probe factor of 0.75, which is from 0.95 * 0.79.
 ; CHECK: ![[#DBGID]] = !DILocation(line: [[#]], column: [[#]], scope: ![[#SCOPE:]], inlinedAt: ![[#]])
-; CHECK: ![[#SCOPE]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 69206039)
+; CHECK: ![[#SCOPE]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 106430487)
+
+;; The remaining count of the second target (bar) should be from the original count multiplied by two callsite
+;; factors, i.e, roughly 11259 * 0.95 * 0.79 = 8444.
+; CHECK: ![[#PROF]] = !{!"VP", i32 0, i64 8444, i64 7546896869197086323, i64 -1, i64 -2012135647395072713, i64 8444}

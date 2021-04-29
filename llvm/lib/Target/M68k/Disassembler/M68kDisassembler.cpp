@@ -141,6 +141,8 @@ static unsigned RegisterDecode[] = {
     M68k::D4, M68k::D5, M68k::D6, M68k::D7,
 };
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void M68kInstructionBuffer::dump() const {
   for (auto Word : Buffer) {
     for (unsigned B = 0; B < 16; ++B) {
@@ -159,6 +161,7 @@ void M68kInstructionBuffer::dump() const {
 
   dbgs() << "\n";
 }
+#endif
 
 M68kInstructionBuffer M68kInstructionBuffer::fill(ArrayRef<uint8_t> Bytes) {
   SmallVector<uint16_t, MaxInstructionWords> Buffer;
@@ -218,6 +221,8 @@ bool M68kInstructionLookup::matches(const M68kInstructionBuffer &Test) const {
   return true;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void M68kInstructionLookup::dump() const {
   dbgs() << "M68kInstructionLookup " << OpCode << " ";
 
@@ -242,6 +247,7 @@ void M68kInstructionLookup::dump() const {
 
   dbgs() << "\n";
 }
+#endif
 
 bool M68kInstructionLookupBuilder::isValid() const {
   for (unsigned I = 0, E = numWords(); I < E; ++I)

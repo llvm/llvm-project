@@ -541,8 +541,8 @@ define i32 @HoistThenElseCodeToIf(i32 %n) {
 ; CHECK-LABEL: @HoistThenElseCodeToIf(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N:%.*]], 0
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[TOBOOL]], i32 1, i32 234, !prof !12
-; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[TOBOOL]], i32 1, i32 234, !prof !12
+; CHECK-NEXT:    ret i32 [[DOT]]
 ;
 entry:
   %tobool = icmp eq i32 %n, 0

@@ -521,11 +521,6 @@ auto AlignVectors::createAddressGroups() -> bool {
     return !llvm::any_of(
         G.second, [&](auto &I) { return HVC.HST.isTypeForHVX(I.ValTy); });
   });
-  // Remove groups where everything is properly aligned.
-  erase_if(AddrGroups, [&](auto &G) {
-    return llvm::all_of(G.second,
-                        [&](auto &I) { return I.HaveAlign >= I.NeedAlign; });
-  });
 
   return !AddrGroups.empty();
 }
@@ -1382,6 +1377,11 @@ auto HexagonVectorCombine::isSafeToMoveBeforeInBB(const Instruction &In,
     const Instruction &I = *It;
     if (llvm::is_contained(Ignore, &I))
       continue;
+    // assume intrinsic can be ignored
+    if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+      if (II->getIntrinsicID() == Intrinsic::assume)
+        continue;
+    }
     // Parts based on isSafeToMoveBefore from CoveMoverUtils.cpp.
     if (I.mayThrow())
       return false;
@@ -1457,6 +1457,8 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
     AliasAnalysis &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
     AssumptionCache &AC =
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);

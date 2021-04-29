@@ -269,8 +269,10 @@ void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
   AlignPackStack.Act(PragmaLoc, Action, StringRef(), Info);
 }
 
-void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc, PragmaClangSectionAction Action,
-                                   PragmaClangSectionKind SecKind, StringRef SecName) {
+void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc,
+                                   PragmaClangSectionAction Action,
+                                   PragmaClangSectionKind SecKind,
+                                   StringRef SecName) {
   PragmaClangSection *CSec;
   int SectionFlags = ASTContext::PSF_Read;
   switch (SecKind) {
@@ -301,8 +303,7 @@ void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc, PragmaClangSectionA
     return;
   }
 
-  if (llvm::Error E =
-          Context.getTargetInfo().isValidSectionSpecifier(SecName)) {
+  if (llvm::Error E = isValidSectionSpecifier(SecName)) {
     Diag(PragmaLoc, diag::err_pragma_section_invalid_for_target)
         << toString(std::move(E));
     CSec->Valid = false;

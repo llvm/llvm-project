@@ -632,29 +632,16 @@ __basic_string_common<__b>::__throw_out_of_range() const
 
 _LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __basic_string_common<true>)
 
-#ifdef _LIBCPP_NO_EXCEPTIONS
 template <class _Iter>
-struct __libcpp_string_gets_noexcept_iterator_impl : public true_type {};
-#elif defined(_LIBCPP_HAS_NO_NOEXCEPT)
-template <class _Iter>
-struct __libcpp_string_gets_noexcept_iterator_impl : public false_type {};
-#else
-template <class _Iter, bool = __is_cpp17_forward_iterator<_Iter>::value>
-struct __libcpp_string_gets_noexcept_iterator_impl : public _LIBCPP_BOOL_CONSTANT((
-    noexcept(++(declval<_Iter&>())) &&
-    is_nothrow_assignable<_Iter&, _Iter>::value &&
-    noexcept(declval<_Iter>() == declval<_Iter>()) &&
-    noexcept(*declval<_Iter>())
-)) {};
+struct __string_is_trivial_iterator : public false_type {};
+
+template <class _Tp>
+struct __string_is_trivial_iterator<_Tp*>
+    : public is_arithmetic<_Tp> {};
 
 template <class _Iter>
-struct __libcpp_string_gets_noexcept_iterator_impl<_Iter, false> : public false_type {};
-#endif
-
-
-template <class _Iter>
-struct __libcpp_string_gets_noexcept_iterator
-    : public _LIBCPP_BOOL_CONSTANT(__libcpp_is_trivial_iterator<_Iter>::value || __libcpp_string_gets_noexcept_iterator_impl<_Iter>::value) {};
+struct __string_is_trivial_iterator<__wrap_iter<_Iter> >
+    : public __string_is_trivial_iterator<_Iter> {};
 
 template <class _CharT, class _Traits, class _Tp>
 struct __can_be_converted_to_string_view : public _BoolConstant<
@@ -1048,20 +1035,16 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void __append_default_init(size_type __n);
 
-    template <class _ForwardIterator>
-    _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
-    basic_string& __append_forward_unsafe(_ForwardIterator, _ForwardIterator);
     template<class _InputIterator>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
     _EnableIf
         <
-            __is_exactly_cpp17_input_iterator<_InputIterator>::value
-                || !__libcpp_string_gets_noexcept_iterator<_InputIterator>::value,
+            __is_exactly_cpp17_input_iterator<_InputIterator>::value,
             basic_string&
         >
     _LIBCPP_INLINE_VISIBILITY
     append(_InputIterator __first, _InputIterator __last) {
-      const basic_string __temp (__first, __last, __alloc());
+      const basic_string __temp(__first, __last, __alloc());
       append(__temp.data(), __temp.size());
       return *this;
     }
@@ -1069,14 +1052,11 @@ public:
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
     _EnableIf
         <
-            __is_cpp17_forward_iterator<_ForwardIterator>::value
-                && __libcpp_string_gets_noexcept_iterator<_ForwardIterator>::value,
+            __is_cpp17_forward_iterator<_ForwardIterator>::value,
             basic_string&
         >
     _LIBCPP_INLINE_VISIBILITY
-    append(_ForwardIterator __first, _ForwardIterator __last) {
-      return __append_forward_unsafe(__first, __last);
-    }
+    append(_ForwardIterator __first, _ForwardIterator __last);
 
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
@@ -1124,8 +1104,7 @@ public:
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
     _EnableIf
         <
-           __is_exactly_cpp17_input_iterator<_InputIterator>::value
-                || !__libcpp_string_gets_noexcept_iterator<_InputIterator>::value,
+            __is_exactly_cpp17_input_iterator<_InputIterator>::value,
             basic_string&
         >
         assign(_InputIterator __first, _InputIterator __last);
@@ -1133,8 +1112,7 @@ public:
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
     _EnableIf
         <
-            __is_cpp17_forward_iterator<_ForwardIterator>::value
-                 && __libcpp_string_gets_noexcept_iterator<_ForwardIterator>::value,
+            __is_cpp17_forward_iterator<_ForwardIterator>::value,
             basic_string&
         >
         assign(_ForwardIterator __first, _ForwardIterator __last);
@@ -1175,8 +1153,7 @@ public:
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
     _EnableIf
         <
-           __is_exactly_cpp17_input_iterator<_InputIterator>::value
-                || !__libcpp_string_gets_noexcept_iterator<_InputIterator>::value,
+            __is_exactly_cpp17_input_iterator<_InputIterator>::value,
             iterator
         >
         insert(const_iterator __pos, _InputIterator __first, _InputIterator __last);
@@ -1184,8 +1161,7 @@ public:
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
     _EnableIf
         <
-            __is_cpp17_forward_iterator<_ForwardIterator>::value
-                 && __libcpp_string_gets_noexcept_iterator<_ForwardIterator>::value,
+            __is_cpp17_forward_iterator<_ForwardIterator>::value,
             iterator
         >
         insert(const_iterator __pos, _ForwardIterator __first, _ForwardIterator __last);
@@ -1721,6 +1697,13 @@ private:
     _LIBCPP_INLINE_VISIBILITY void __invalidate_all_iterators();
     _LIBCPP_INLINE_VISIBILITY void __invalidate_iterators_past(size_type);
 
+    template<class _Tp>
+    _LIBCPP_INLINE_VISIBILITY
+    bool __addr_in_range(_Tp&& __t) const {
+        const volatile void *__p = _VSTD::addressof(__t);
+        return data() <= __p && __p <= data() + size();
+    }
+
     friend basic_string operator+<>(const basic_string&, const basic_string&);
     friend basic_string operator+<>(const value_type*, const basic_string&);
     friend basic_string operator+<>(value_type, const basic_string&);
@@ -2175,9 +2158,23 @@ basic_string<_CharT, _Traits, _Allocator>::__init(_ForwardIterator __first, _For
         __set_long_cap(__cap+1);
         __set_long_size(__sz);
     }
+
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    try
+    {
+#endif  // _LIBCPP_NO_EXCEPTIONS
     for (; __first != __last; ++__first, (void) ++__p)
         traits_type::assign(*__p, *__first);
     traits_type::assign(*__p, value_type());
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    }
+    catch (...)
+    {
+        if (__is_long())
+            __alloc_traits::deallocate(__alloc(), __get_long_pointer(), __get_long_cap());
+        throw;
+    }
+#endif  // _LIBCPP_NO_EXCEPTIONS
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2470,8 +2467,7 @@ template <class _CharT, class _Traits, class _Allocator>
 template<class _InputIterator>
 _EnableIf
 <
-     __is_exactly_cpp17_input_iterator <_InputIterator>::value
-          || !__libcpp_string_gets_noexcept_iterator<_InputIterator>::value,
+     __is_exactly_cpp17_input_iterator<_InputIterator>::value,
     basic_string<_CharT, _Traits, _Allocator>&
 >
 basic_string<_CharT, _Traits, _Allocator>::assign(_InputIterator __first, _InputIterator __last)
@@ -2485,26 +2481,36 @@ template <class _CharT, class _Traits, class _Allocator>
 template<class _ForwardIterator>
 _EnableIf
 <
-    __is_cpp17_forward_iterator<_ForwardIterator>::value
-         && __libcpp_string_gets_noexcept_iterator<_ForwardIterator>::value,
+    __is_cpp17_forward_iterator<_ForwardIterator>::value,
     basic_string<_CharT, _Traits, _Allocator>&
 >
 basic_string<_CharT, _Traits, _Allocator>::assign(_ForwardIterator __first, _ForwardIterator __last)
 {
-    size_type __n = static_cast<size_type>(_VSTD::distance(__first, __last));
     size_type __cap = capacity();
-    if (__cap < __n)
+    size_type __n = __string_is_trivial_iterator<_ForwardIterator>::value ?
+        static_cast<size_type>(_VSTD::distance(__first, __last)) : 0;
+
+    if (__string_is_trivial_iterator<_ForwardIterator>::value &&
+        (__cap >= __n || !__addr_in_range(*__first)))
     {
-        size_type __sz = size();
-        __grow_by(__cap, __n - __cap, __sz, 0, __sz);
+        if (__cap < __n)
+        {
+            size_type __sz = size();
+            __grow_by(__cap, __n - __cap, __sz, 0, __sz);
+        }
+        else
+            __invalidate_iterators_past(__n);
+        pointer __p = __get_pointer();
+        for (; __first != __last; ++__first, ++__p)
+            traits_type::assign(*__p, *__first);
+        traits_type::assign(*__p, value_type());
+        __set_size(__n);
     }
     else
-        __invalidate_iterators_past(__n);
-    pointer __p = __get_pointer();
-    for (; __first != __last; ++__first, ++__p)
-        traits_type::assign(*__p, *__first);
-    traits_type::assign(*__p, value_type());
-    __set_size(__n);
+    {
+        const basic_string __temp(__first, __last, __alloc());
+        assign(__temp.data(), __temp.size());
+    }
     return *this;
 }
 
@@ -2651,39 +2657,23 @@ basic_string<_CharT, _Traits, _Allocator>::push_back(value_type __c)
     traits_type::assign(*++__p, value_type());
 }
 
-template <class _Tp>
-bool __ptr_in_range (const _Tp* __p, const _Tp* __first, const _Tp* __last)
-{
-    return __first <= __p && __p < __last;
-}
-
-template <class _Tp1, class _Tp2>
-bool __ptr_in_range (const _Tp1*, const _Tp2*, const _Tp2*)
-{
-    return false;
-}
-
 template <class _CharT, class _Traits, class _Allocator>
 template<class _ForwardIterator>
-basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::__append_forward_unsafe(
+_EnableIf
+<
+    __is_cpp17_forward_iterator<_ForwardIterator>::value,
+    basic_string<_CharT, _Traits, _Allocator>&
+>
+basic_string<_CharT, _Traits, _Allocator>::append(
     _ForwardIterator __first, _ForwardIterator __last)
 {
-    static_assert(__is_cpp17_forward_iterator<_ForwardIterator>::value,
-                  "function requires a ForwardIterator");
     size_type __sz = size();
     size_type __cap = capacity();
     size_type __n = static_cast<size_type>(_VSTD::distance(__first, __last));
     if (__n)
     {
-        typedef typename iterator_traits<_ForwardIterator>::reference _CharRef;
-        _CharRef __tmp_ref = *__first;
-        if (__ptr_in_range(_VSTD::addressof(__tmp_ref), data(), data() + size()))
-        {
-            const basic_string __temp (__first, __last, __alloc());
-            append(__temp.data(), __temp.size());
-        }
-        else
+        if (__string_is_trivial_iterator<_ForwardIterator>::value &&
+            !__addr_in_range(*__first))
         {
             if (__cap - __sz < __n)
                 __grow_by(__cap, __sz + __n - __cap, __sz, __sz, 0);
@@ -2692,6 +2682,11 @@ basic_string<_CharT, _Traits, _Allocator>::__append_forward_unsafe(
                 traits_type::assign(*__p, *__first);
             traits_type::assign(*__p, value_type());
             __set_size(__sz + __n);
+        }
+        else
+        {
+            const basic_string __temp(__first, __last, __alloc());
+            append(__temp.data(), __temp.size());
         }
     }
     return *this;
@@ -2808,8 +2803,7 @@ template <class _CharT, class _Traits, class _Allocator>
 template<class _InputIterator>
 _EnableIf
 <
-   __is_exactly_cpp17_input_iterator<_InputIterator>::value
-        || !__libcpp_string_gets_noexcept_iterator<_InputIterator>::value,
+   __is_exactly_cpp17_input_iterator<_InputIterator>::value,
    typename basic_string<_CharT, _Traits, _Allocator>::iterator
 >
 basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _InputIterator __first, _InputIterator __last)
@@ -2827,8 +2821,7 @@ template <class _CharT, class _Traits, class _Allocator>
 template<class _ForwardIterator>
 _EnableIf
 <
-    __is_cpp17_forward_iterator<_ForwardIterator>::value
-        && __libcpp_string_gets_noexcept_iterator<_ForwardIterator>::value,
+    __is_cpp17_forward_iterator<_ForwardIterator>::value,
     typename basic_string<_CharT, _Traits, _Allocator>::iterator
 >
 basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _ForwardIterator __first, _ForwardIterator __last)
@@ -2842,34 +2835,35 @@ basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _Forward
     size_type __n = static_cast<size_type>(_VSTD::distance(__first, __last));
     if (__n)
     {
-        typedef typename iterator_traits<_ForwardIterator>::reference _CharRef;
-        _CharRef __tmp_char = *__first;
-        if (__ptr_in_range(_VSTD::addressof(__tmp_char), data(), data() + size()))
+        if (__string_is_trivial_iterator<_ForwardIterator>::value &&
+            !__addr_in_range(*__first))
+        {
+            size_type __sz = size();
+            size_type __cap = capacity();
+            value_type* __p;
+            if (__cap - __sz >= __n)
+            {
+                __p = _VSTD::__to_address(__get_pointer());
+                size_type __n_move = __sz - __ip;
+                if (__n_move != 0)
+                    traits_type::move(__p + __ip + __n, __p + __ip, __n_move);
+            }
+            else
+            {
+                __grow_by(__cap, __sz + __n - __cap, __sz, __ip, 0, __n);
+                __p = _VSTD::__to_address(__get_long_pointer());
+            }
+            __sz += __n;
+            __set_size(__sz);
+            traits_type::assign(__p[__sz], value_type());
+            for (__p += __ip; __first != __last; ++__p, ++__first)
+                traits_type::assign(*__p, *__first);
+        }
+        else
         {
             const basic_string __temp(__first, __last, __alloc());
             return insert(__pos, __temp.data(), __temp.data() + __temp.size());
         }
-
-        size_type __sz = size();
-        size_type __cap = capacity();
-        value_type* __p;
-        if (__cap - __sz >= __n)
-        {
-            __p = _VSTD::__to_address(__get_pointer());
-            size_type __n_move = __sz - __ip;
-            if (__n_move != 0)
-                traits_type::move(__p + __ip + __n, __p + __ip, __n_move);
-        }
-        else
-        {
-            __grow_by(__cap, __sz + __n - __cap, __sz, __ip, 0, __n);
-            __p = _VSTD::__to_address(__get_long_pointer());
-        }
-        __sz += __n;
-        __set_size(__sz);
-        traits_type::assign(__p[__sz], value_type());
-        for (__p += __ip; __first != __last; ++__p, ++__first)
-            traits_type::assign(*__p, *__first);
     }
     return begin() + __ip;
 }

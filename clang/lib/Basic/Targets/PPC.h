@@ -468,7 +468,7 @@ public:
     BoolWidth = BoolAlign = 32; // XXX support -mone-byte-bool?
     PtrDiffType = SignedInt; // for http://llvm.org/bugs/show_bug.cgi?id=15726
     LongLongAlign = 32;
-    resetDataLayout("E-m:o-p:32:32-f64:32:64-n32");
+    resetDataLayout("E-m:o-p:32:32-f64:32:64-n32", "_");
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
@@ -482,7 +482,7 @@ public:
   DarwinPPC64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : DarwinTargetInfo<PPC64TargetInfo>(Triple, Opts) {
     HasAlignMac68kSupport = true;
-    resetDataLayout("E-m:o-i64:64-n32:64");
+    resetDataLayout("E-m:o-i64:64-n32:64", "_");
   }
 };
 

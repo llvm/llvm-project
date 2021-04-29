@@ -42,6 +42,19 @@ int main() {
   wasm_v32x4_shuffle(v, v, 0, 1, 2, 3);
   wasm_v64x2_shuffle(v, v, 0, 1);
 
+  uint8_t lane8 = 0;
+  uint16_t lane16 = 0;
+  uint32_t lane32 = 0;
+  uint64_t lane64 = 0;
+  v = wasm_v128_load8_lane(&lane8, v, 0);
+  v = wasm_v128_load16_lane(&lane16, v, 0);
+  v = wasm_v128_load32_lane(&lane32, v, 0);
+  v = wasm_v128_load64_lane(&lane64, v, 0);
+  wasm_v128_store8_lane(&lane8, v, 15);
+  wasm_v128_store16_lane(&lane16, v, 7);
+  wasm_v128_store32_lane(&lane32, v, 3);
+  wasm_v128_store64_lane(&lane64, v, 1);
+
   return 0;
 }
 

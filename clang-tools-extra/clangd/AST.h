@@ -171,6 +171,12 @@ std::string getQualification(ASTContext &Context,
 /// the cached value is incorrect. (clang catches this with an assertion).
 bool hasUnstableLinkage(const Decl *D);
 
+/// Checks whether \p D is more than \p MaxDepth away from translation unit
+/// scope.
+/// This is useful for limiting traversals to keep operation latencies
+/// reasonable.
+bool isDeeplyNested(const Decl *D, unsigned MaxDepth = 10);
+
 } // namespace clangd
 } // namespace clang
 

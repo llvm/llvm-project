@@ -542,7 +542,14 @@ IntelPTManager::GetBinaryData(const TraceGetBinaryDataRequest &request) const {
 
 void IntelPTManager::ClearProcessTracing() { m_process_trace = None; }
 
-bool IntelPTManager::IsSupported() { return (bool)GetOSEventType(); }
+bool IntelPTManager::IsSupported() {
+  Expected<uint32_t> intel_pt_type = GetOSEventType();
+  if (!intel_pt_type) {
+    llvm::consumeError(intel_pt_type.takeError());
+    return false;
+  }
+  return true;
+}
 
 bool IntelPTManager::IsProcessTracingEnabled() const {
   return (bool)m_process_trace;

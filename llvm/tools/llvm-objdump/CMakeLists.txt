@@ -24,6 +24,7 @@ add_public_tablegen_target(OtoolOptsTableGen)
 
 add_llvm_tool(llvm-objdump
   llvm-objdump.cpp
+  SourcePrinter.cpp
   COFFDump.cpp
   ELFDump.cpp
   MachODump.cpp

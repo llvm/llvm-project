@@ -2111,10 +2111,13 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
   case LangAS::Default:
     return "";
   case LangAS::opencl_global:
+  case LangAS::sycl_global:
     return "__global";
   case LangAS::opencl_local:
+  case LangAS::sycl_local:
     return "__local";
   case LangAS::opencl_private:
+  case LangAS::sycl_private:
     return "__private";
   case LangAS::opencl_constant:
     return "__constant";

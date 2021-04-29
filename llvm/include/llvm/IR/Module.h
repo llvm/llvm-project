@@ -890,6 +890,11 @@ public:
   bool getUwtable() const;
   void setUwtable();
 
+  /// Get/set whether synthesized functions should get the "frame-pointer"
+  /// attribute.
+  FramePointerKind getFramePointer() const;
+  void setFramePointer(FramePointerKind Kind);
+
   /// @name Utility functions for querying and setting the build SDK version
   /// @{
 

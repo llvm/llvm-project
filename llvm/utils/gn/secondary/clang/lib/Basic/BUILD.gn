@@ -49,8 +49,6 @@ static_library("Basic") {
     "//clang/include/clang/Sema:AttrParsedAttrKinds",
     "//clang/include/clang/Sema:AttrSpellingListIndex",
     "//llvm/include/llvm/Config:llvm-config",
-    "//llvm/lib/IR",
-    "//llvm/lib/MC",
     "//llvm/lib/Support",
   ]
   include_dirs = [ "." ]
@@ -93,6 +91,7 @@ static_library("Basic") {
     "Targets/BPF.cpp",
     "Targets/Hexagon.cpp",
     "Targets/Lanai.cpp",
+    "Targets/Le64.cpp",
     "Targets/M68k.cpp",
     "Targets/MSP430.cpp",
     "Targets/Mips.cpp",

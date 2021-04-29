@@ -252,6 +252,12 @@ def stop_reason_to_str(enum):
         return "watchpoint"
     elif enum == lldb.eStopReasonExec:
         return "exec"
+    elif enum == lldb.eStopReasonFork:
+        return "fork"
+    elif enum == lldb.eStopReasonVFork:
+        return "vfork"
+    elif enum == lldb.eStopReasonVForkDone:
+        return "vforkdone"
     elif enum == lldb.eStopReasonSignal:
         return "signal"
     elif enum == lldb.eStopReasonException:

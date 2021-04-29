@@ -90,7 +90,7 @@ define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ;
 ; GFX10-LABEL: sample_1d_tfe:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    s_mov_b32 s28, exec_lo
+; GFX10-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX10-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v0
@@ -103,7 +103,7 @@ define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v8
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v9
 ; GFX10-NEXT:    v_mov_b32_e32 v4, v10
-; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s28
+; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s14
 ; GFX10-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D tfe
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_dword v6, v4, s[12:13]
@@ -112,7 +112,7 @@ define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ;
 ; GFX11-LABEL: sample_1d_tfe:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    s_mov_b32 s28, exec_lo
+; GFX11-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX11-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX11-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
@@ -126,7 +126,7 @@ define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX11-NEXT:    v_mov_b32_e32 v2, v8
 ; GFX11-NEXT:    v_mov_b32_e32 v3, v9
 ; GFX11-NEXT:    v_mov_b32_e32 v4, v10
-; GFX11-NEXT:    s_and_b32 exec_lo, exec_lo, s28
+; GFX11-NEXT:    s_and_b32 exec_lo, exec_lo, s14
 ; GFX11-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D tfe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v6, v4, s[12:13]
@@ -629,7 +629,7 @@ define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ;
 ; GFX10-LABEL: sample_1d_lwe:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    s_mov_b32 s28, exec_lo
+; GFX10-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX10-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v0
@@ -642,7 +642,7 @@ define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v8
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v9
 ; GFX10-NEXT:    v_mov_b32_e32 v4, v10
-; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s28
+; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s14
 ; GFX10-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D lwe
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_dword v6, v4, s[12:13]
@@ -651,7 +651,7 @@ define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ;
 ; GFX11-LABEL: sample_1d_lwe:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    s_mov_b32 s28, exec_lo
+; GFX11-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX11-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX11-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
@@ -665,7 +665,7 @@ define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX11-NEXT:    v_mov_b32_e32 v2, v8
 ; GFX11-NEXT:    v_mov_b32_e32 v3, v9
 ; GFX11-NEXT:    v_mov_b32_e32 v4, v10
-; GFX11-NEXT:    s_and_b32 exec_lo, exec_lo, s28
+; GFX11-NEXT:    s_and_b32 exec_lo, exec_lo, s14
 ; GFX11-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D lwe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v6, v4, s[12:13]

@@ -19,6 +19,9 @@
 #include <thread>
 #include <time.h>
 #include <vector>
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
 
 static const char *const PRINT_PID_COMMAND = "print-pid";
 
@@ -216,7 +219,13 @@ int main(int argc, char **argv) {
 
   sig_result = signal(SIGSEGV, signal_handler);
   if (sig_result == SIG_ERR) {
-    fprintf(stderr, "failed to set SIGUSR1 handler: errno=%d\n", errno);
+    fprintf(stderr, "failed to set SIGSEGV handler: errno=%d\n", errno);
+    exit(1);
+  }
+
+  sig_result = signal(SIGCHLD, SIG_IGN);
+  if (sig_result == SIG_ERR) {
+    fprintf(stderr, "failed to set SIGCHLD handler: errno=%d\n", errno);
     exit(1);
   }
 #endif
@@ -293,6 +302,14 @@ int main(int argc, char **argv) {
       else if (arg == "swap_chars")
         func_p = swap_chars;
       func_p();
+#if !defined(_WIN32) && !defined(TARGET_OS_WATCH) && !defined(TARGET_OS_TV)
+    } else if (arg == "fork") {
+      if (fork() == 0)
+        _exit(0);
+    } else if (arg == "vfork") {
+      if (vfork() == 0)
+        _exit(0);
+#endif
     } else if (consume_front(arg, "thread:new")) {
         threads.push_back(std::thread(thread_func, nullptr));
     } else if (consume_front(arg, "thread:print-ids")) {

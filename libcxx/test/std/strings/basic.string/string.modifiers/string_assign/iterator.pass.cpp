@@ -28,18 +28,27 @@ test(S s, It first, It last, S expected)
 }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
+struct Widget { operator char() const { throw 42; } };
+
 template <class S, class It>
 void
 test_exceptions(S s, It first, It last)
 {
-    S aCopy = s;
+    S original = s;
+    typename S::iterator begin = s.begin();
+    typename S::iterator end = s.end();
+
     try {
         s.assign(first, last);
         assert(false);
-    }
-    catch (...) {}
+    } catch (...) {}
+
+    // Part of "no effects" is that iterators and pointers
+    // into the string must not have been invalidated.
     LIBCPP_ASSERT(s.__invariants());
-    assert(s == aCopy);
+    assert(s == original);
+    assert(s.begin() == begin);
+    assert(s.end() == end);
 }
 #endif
 
@@ -176,6 +185,9 @@ int main(int, char**)
     test_exceptions(S(), TIter(s, s+10, 4, TIter::TAIncrement), TIter());
     test_exceptions(S(), TIter(s, s+10, 5, TIter::TADereference), TIter());
     test_exceptions(S(), TIter(s, s+10, 6, TIter::TAComparison), TIter());
+
+    Widget w[100];
+    test_exceptions(S(), w, w+100);
     }
 #endif
 
@@ -205,5 +217,12 @@ int main(int, char**)
     assert(s == "ABCD");
     }
 
-  return 0;
+    { // regression-test assigning to self in sneaky ways
+    std::string sneaky = "hello";
+    sneaky.resize(sneaky.capacity(), 'x');
+    std::string expected = sneaky + std::string(1, '\0');
+    test(sneaky, sneaky.data(), sneaky.data() + sneaky.size() + 1, expected);
+    }
+
+    return 0;
 }

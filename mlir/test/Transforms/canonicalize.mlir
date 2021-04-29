@@ -410,6 +410,27 @@ func @dead_dealloc_fold_multi_use(%cond : i1) {
   return
 }
 
+// CHECK-LABEL: func @write_only_alloc_fold
+func @write_only_alloc_fold(%v: f32) {
+  // CHECK-NEXT: return
+  %c0 = constant 0 : index
+  %c4 = constant 4 : index
+  %a = memref.alloc(%c4) : memref<?xf32>
+  memref.store %v, %a[%c0] : memref<?xf32>
+  memref.dealloc %a: memref<?xf32>
+  return
+}
+
+// CHECK-LABEL: func @write_only_alloca_fold
+func @write_only_alloca_fold(%v: f32) {
+  // CHECK-NEXT: return
+  %c0 = constant 0 : index
+  %c4 = constant 4 : index
+  %a = memref.alloca(%c4) : memref<?xf32>
+  memref.store %v, %a[%c0] : memref<?xf32>
+  return
+}
+
 // CHECK-LABEL: func @dead_block_elim
 func @dead_block_elim() {
   // CHECK-NOT: ^bb
@@ -426,7 +447,7 @@ func @dead_block_elim() {
 }
 
 // CHECK-LABEL: func @dyn_shape_fold(%arg0: index, %arg1: index)
-func @dyn_shape_fold(%L : index, %M : index) -> (memref<? x ? x i32>, memref<? x ? x f32>, memref<4 x ? x 8 x ? x ? x f32>) {
+func @dyn_shape_fold(%L : index, %M : index) -> (memref<4 x ? x 8 x ? x ? x f32>, memref<? x ? x i32>, memref<? x ? x f32>, memref<4 x ? x 8 x ? x ? x f32>) {
   // CHECK: %c0 = constant 0 : index
   %zero = constant 0 : index
   // The constants below disappear after they propagate into shapes.
@@ -434,13 +455,13 @@ func @dyn_shape_fold(%L : index, %M : index) -> (memref<? x ? x i32>, memref<? x
   %N = constant 1024 : index
   %K = constant 512 : index
 
-  // CHECK-NEXT: memref.alloc(%arg0) : memref<?x1024xf32>
+  // CHECK: memref.alloc(%arg0) : memref<?x1024xf32>
   %a = memref.alloc(%L, %N) : memref<? x ? x f32>
 
-  // CHECK-NEXT: memref.alloc(%arg1) : memref<4x1024x8x512x?xf32>
+  // CHECK: memref.alloc(%arg1) : memref<4x1024x8x512x?xf32>
   %b = memref.alloc(%N, %K, %M) : memref<4 x ? x 8 x ? x ? x f32>
 
-  // CHECK-NEXT: memref.alloc() : memref<512x1024xi32>
+  // CHECK: memref.alloc() : memref<512x1024xi32>
   %c = memref.alloc(%K, %N) : memref<? x ? x i32>
 
   // CHECK: memref.alloc() : memref<9x9xf32>
@@ -460,7 +481,7 @@ func @dyn_shape_fold(%L : index, %M : index) -> (memref<? x ? x i32>, memref<? x
     }
   }
 
-  return %c, %d, %e : memref<? x ? x i32>, memref<? x ? x f32>, memref<4 x ? x 8 x ? x ? x f32>
+  return %b, %c, %d, %e : memref<4 x ? x 8 x ? x ? x f32>, memref<? x ? x i32>, memref<? x ? x f32>, memref<4 x ? x 8 x ? x ? x f32>
 }
 
 #map1 = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
@@ -1177,11 +1198,12 @@ func @clone_loop_alloc(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<2
 // -----
 
 // CHECK-LABEL: func @clone_nested_region
-func @clone_nested_region(%arg0: index, %arg1: index) -> memref<?x?xf32> {
+func @clone_nested_region(%arg0: index, %arg1: index, %arg2: index) -> memref<?x?xf32> {
+  %cmp = cmpi eq, %arg0, %arg1 : index
   %0 = cmpi eq, %arg0, %arg1 : index
   %1 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
   %2 = scf.if %0 -> (memref<?x?xf32>) {
-    %3 = scf.if %0 -> (memref<?x?xf32>) {
+    %3 = scf.if %cmp -> (memref<?x?xf32>) {
       %9 = memref.clone %1 : memref<?x?xf32> to memref<?x?xf32>
       scf.yield %9 : memref<?x?xf32>
     } else {

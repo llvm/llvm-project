@@ -1036,8 +1036,10 @@ PreservedAnalyses ModuleInlinerWrapperPass::run(Module &M,
   else
     MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
         createDevirtSCCRepeatedPass(std::move(PM), MaxDevirtIterations)));
-  auto Ret = MPM.run(M, MAM);
+  MPM.run(M, MAM);
 
   IAA.clear();
-  return Ret;
+
+  // The ModulePassManager has already taken care of invalidating analyses.
+  return PreservedAnalyses::all();
 }

@@ -849,14 +849,16 @@ let hasSideEffects = 0 in {
                       [(set v2f64:$XT, (int_ppc_vsx_xvcvspdp v4f32:$XB))]>;
   def XVCVSPSXDS : XX2Form<60, 408,
                       (outs vsrc:$XT), (ins vsrc:$XB),
-                      "xvcvspsxds $XT, $XB", IIC_VecFP, []>;
+                      "xvcvspsxds $XT, $XB", IIC_VecFP,
+                      [(set v2i64:$XT, (int_ppc_vsx_xvcvspsxds v4f32:$XB))]>;
   def XVCVSPSXWS : XX2Form<60, 152,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvspsxws $XT, $XB", IIC_VecFP,
                       [(set v4i32:$XT, (any_fp_to_sint v4f32:$XB))]>;
   def XVCVSPUXDS : XX2Form<60, 392,
                       (outs vsrc:$XT), (ins vsrc:$XB),
-                      "xvcvspuxds $XT, $XB", IIC_VecFP, []>;
+                      "xvcvspuxds $XT, $XB", IIC_VecFP,
+                      [(set v2i64:$XT, (int_ppc_vsx_xvcvspuxds v4f32:$XB))]>;
   def XVCVSPUXWS : XX2Form<60, 136,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvspuxws $XT, $XB", IIC_VecFP,
@@ -4065,10 +4067,7 @@ defm : ScalToVecWPermute<
   v8i16, ScalarLoads.Li16,
   (VSPLTHs 3, (LXSIHZX xoaddr:$src)),
   (SUBREG_TO_REG (i64 1), (LXSIHZX xoaddr:$src), sub_64)>;
-} // HasVSX, HasP9Vector, NoP10Vector
 
-// Big endian 64Bit Power9 subtarget.
-let Predicates = [HasVSX, HasP9Vector, IsBigEndian, IsPPC64] in {
 def : Pat<(f32 (PPCfcfidus (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 0)))))),
           (f32 (XSCVUXDSP (XXEXTRACTUW $A, 0)))>;
 def : Pat<(f32 (PPCfcfidus (f64 (PPCmtvsrz (i32 (extractelt v4i32:$A, 1)))))),
@@ -4153,7 +4152,10 @@ def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 6)), xoaddr:$dst),
           (STXSIHXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 6)), VSRC), xoaddr:$dst)>;
 def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$S, 7)), xoaddr:$dst),
           (STXSIHXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 8)), VSRC), xoaddr:$dst)>;
+} // HasVSX, HasP9Vector, IsBigEndian
 
+// Big endian 64Bit Power9 subtarget.
+let Predicates = [HasVSX, HasP9Vector, IsBigEndian, IsPPC64] in {
 def : Pat<(v2i64 (scalar_to_vector (i64 (load iaddrX4:$src)))),
           (v2i64 (SUBREG_TO_REG (i64 1), (DFLOADf64 iaddrX4:$src), sub_64))>;
 def : Pat<(v2i64 (scalar_to_vector (i64 (load xaddrX4:$src)))),

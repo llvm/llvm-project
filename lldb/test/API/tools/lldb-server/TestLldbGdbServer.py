@@ -17,7 +17,7 @@ from lldbsuite.support import seven
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbdwarf import *
-from lldbsuite.test import lldbutil
+from lldbsuite.test import lldbutil, lldbplatformutil
 
 
 class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcodeParser):
@@ -954,22 +954,76 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.breakpoint_set_and_remove_work(want_hardware=True)
 
-    def test_qSupported_returns_known_stub_features(self):
+    def get_qSupported_dict(self, features=[]):
         self.build()
         self.set_inferior_startup_launch()
 
         # Start up the stub and start/prep the inferior.
         procs = self.prep_debug_monitor_and_inferior()
-        self.add_qSupported_packets()
+        self.add_qSupported_packets(features)
 
         # Run the packet stream.
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
 
         # Retrieve the qSupported features.
-        supported_dict = self.parse_qSupported_response(context)
+        return self.parse_qSupported_response(context)
+
+    def test_qSupported_returns_known_stub_features(self):
+        supported_dict = self.get_qSupported_dict()
         self.assertIsNotNone(supported_dict)
         self.assertTrue(len(supported_dict) > 0)
+
+    def test_qSupported_auvx(self):
+        expected = ('+' if lldbplatformutil.getPlatform()
+                    in ["freebsd", "linux", "netbsd"] else '-')
+        supported_dict = self.get_qSupported_dict()
+        self.assertEqual(supported_dict.get('qXfer:auxv:read', '-'), expected)
+
+    def test_qSupported_libraries_svr4(self):
+        expected = ('+' if lldbplatformutil.getPlatform()
+                    in ["freebsd", "linux", "netbsd"] else '-')
+        supported_dict = self.get_qSupported_dict()
+        self.assertEqual(supported_dict.get('qXfer:libraries-svr4:read', '-'),
+                         expected)
+
+    def test_qSupported_QPassSignals(self):
+        expected = ('+' if lldbplatformutil.getPlatform()
+                    in ["freebsd", "linux", "netbsd"] else '-')
+        supported_dict = self.get_qSupported_dict()
+        self.assertEqual(supported_dict.get('QPassSignals', '-'), expected)
+
+    @add_test_categories(["fork"])
+    def test_qSupported_fork_events(self):
+        supported_dict = (
+            self.get_qSupported_dict(['multiprocess+', 'fork-events+']))
+        self.assertEqual(supported_dict.get('multiprocess', '-'), '+')
+        self.assertEqual(supported_dict.get('fork-events', '-'), '+')
+        self.assertEqual(supported_dict.get('vfork-events', '-'), '-')
+
+    @add_test_categories(["fork"])
+    def test_qSupported_fork_events_without_multiprocess(self):
+        supported_dict = (
+            self.get_qSupported_dict(['fork-events+']))
+        self.assertEqual(supported_dict.get('multiprocess', '-'), '-')
+        self.assertEqual(supported_dict.get('fork-events', '-'), '-')
+        self.assertEqual(supported_dict.get('vfork-events', '-'), '-')
+
+    @add_test_categories(["fork"])
+    def test_qSupported_vfork_events(self):
+        supported_dict = (
+            self.get_qSupported_dict(['multiprocess+', 'vfork-events+']))
+        self.assertEqual(supported_dict.get('multiprocess', '-'), '+')
+        self.assertEqual(supported_dict.get('fork-events', '-'), '-')
+        self.assertEqual(supported_dict.get('vfork-events', '-'), '+')
+
+    @add_test_categories(["fork"])
+    def test_qSupported_vfork_events_without_multiprocess(self):
+        supported_dict = (
+            self.get_qSupported_dict(['vfork-events+']))
+        self.assertEqual(supported_dict.get('multiprocess', '-'), '-')
+        self.assertEqual(supported_dict.get('fork-events', '-'), '-')
+        self.assertEqual(supported_dict.get('vfork-events', '-'), '-')
 
     @skipIfWindows # No pty support to test any inferior output
     def test_written_M_content_reads_back_correctly(self):

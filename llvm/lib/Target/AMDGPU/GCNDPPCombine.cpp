@@ -278,7 +278,8 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       DPPInst.addImm(0);
       ++NumOperands;
     }
-    if (auto *Src1 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src1)) {
+    auto *Src1 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src1);
+    if (Src1) {
       if (!TII->isOperandLegal(*DPPInst.getInstr(), NumOperands, Src1)) {
         LLVM_DEBUG(dbgs() << "  failed: src1 is illegal\n");
         Fail = true;
@@ -296,7 +297,8 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       DPPInst.addImm(Mod2->getImm());
       ++NumOperands;
     }
-    if (auto *Src2 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src2)) {
+    auto *Src2 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src2);
+    if (Src2) {
       if (!TII->getNamedOperand(*DPPInst.getInstr(), AMDGPU::OpName::src2) ||
           !TII->isOperandLegal(*DPPInst.getInstr(), NumOperands, Src2)) {
         LLVM_DEBUG(dbgs() << "  failed: src2 is illegal\n");
@@ -312,12 +314,53 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
           AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::clamp) != -1) {
         DPPInst.addImm(ClampOpr->getImm());
       }
+      auto *VdstInOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::vdst_in);
+      if (VdstInOpr &&
+          AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::vdst_in) != -1) {
+        DPPInst.add(*VdstInOpr);
+      }
       auto *OmodOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::omod);
       if (OmodOpr &&
           AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::omod) != -1) {
         DPPInst.addImm(OmodOpr->getImm());
       }
-      // TODO-GFX11 vop3p fields
+      // Validate OP_SEL has to be set to all 0 and OP_SEL_HI has to be set to
+      // all 1.
+      if (auto *OpSelOpr =
+              TII->getNamedOperand(OrigMI, AMDGPU::OpName::op_sel)) {
+        auto OpSel = OpSelOpr->getImm();
+        if (OpSel != 0) {
+          LLVM_DEBUG(dbgs() << "  failed: op_sel must be zero\n");
+          Fail = true;
+          break;
+        }
+        if (AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::op_sel) != -1)
+          DPPInst.addImm(OpSel);
+      }
+      if (auto *OpSelHiOpr =
+              TII->getNamedOperand(OrigMI, AMDGPU::OpName::op_sel_hi)) {
+        auto OpSelHi = OpSelHiOpr->getImm();
+        // Only vop3p has op_sel_hi, and all vop3p have 3 operands, so check
+        // the bitmask for 3 op_sel_hi bits set
+        assert(Src2 && "Expected vop3p with 3 operands");
+        if (OpSelHi != 7) {
+          LLVM_DEBUG(dbgs() << "  failed: op_sel_hi must be all set to one\n");
+          Fail = true;
+          break;
+        }
+        if (AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::op_sel_hi) != -1)
+          DPPInst.addImm(OpSelHi);
+      }
+      auto *NegOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::neg_lo);
+      if (NegOpr &&
+          AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::neg_lo) != -1) {
+        DPPInst.addImm(NegOpr->getImm());
+      }
+      auto *NegHiOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::neg_hi);
+      if (NegHiOpr &&
+          AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::neg_hi) != -1) {
+        DPPInst.addImm(NegHiOpr->getImm());
+      }
     }
     DPPInst.add(*TII->getNamedOperand(MovMI, AMDGPU::OpName::dpp_ctrl));
     DPPInst.add(*TII->getNamedOperand(MovMI, AMDGPU::OpName::row_mask));
@@ -574,9 +617,9 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
 
     bool IsShrinkable = isShrinkable(OrigMI);
     if (!(IsShrinkable ||
-          (TII->isVOP3(OrigOp) && ST->hasVOP3DPP()) ||
+          ((TII->isVOP3P(OrigOp) || TII->isVOP3(OrigOp)) && ST->hasVOP3DPP()) ||
           TII->isVOP1(OrigOp) || TII->isVOP2(OrigOp))) {
-      LLVM_DEBUG(dbgs() << "  failed: not VOP1/2/3\n");
+      LLVM_DEBUG(dbgs() << "  failed: not VOP1/2/3/3p\n");
       break;
     }
 
@@ -587,9 +630,12 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       break;
     }
 
+    auto *Src2 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src2);
     assert(Src0 && "Src1 without Src0?");
-    if (Src1 && Src1->isIdenticalTo(*Src0)) {
-      assert(Src1->isReg());
+    if ((Use == Src0 && ((Src1 && Src1->isIdenticalTo(*Src0)) ||
+                         (Src2 && Src2->isIdenticalTo(*Src0)))) ||
+        (Use == Src1 && (Src1->isIdenticalTo(*Src0) ||
+                         (Src2 && Src2->isIdenticalTo(*Src1))))) {
       LLVM_DEBUG(
           dbgs()
           << "  " << OrigMI

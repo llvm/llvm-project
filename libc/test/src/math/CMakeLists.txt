@@ -1134,3 +1134,4 @@ add_fp_unittest(
 
 add_subdirectory(generic)
 add_subdirectory(exhaustive)
+add_subdirectory(differential_testing)

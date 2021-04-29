@@ -3,7 +3,7 @@ metadata: !LinalgOpMetadata
   name: matmul
   cpp_op_name: MatmulOp
   doc: |-
-    Performs a matrix multiplacation of two 2D inputs.
+    Performs a matrix multiplication of two 2D inputs.
 
     Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output.
@@ -65,7 +65,7 @@ metadata: !LinalgOpMetadata
   name: batch_matmul
   cpp_op_name: BatchMatmulOp
   doc: |-
-    Performs a batched matrix multiplacation of two 3D inputs.
+    Performs a batched matrix multiplication of two 3D inputs.
 
     Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output.
@@ -189,7 +189,7 @@ metadata: !LinalgOpMetadata
   name: vecmat
   cpp_op_name: VecmatOp
   doc: |-
-    Performs a vector-matrix multiplacation.
+    Performs a vector-matrix multiplication.
 
     Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output.

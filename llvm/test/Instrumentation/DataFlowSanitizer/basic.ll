@@ -55,5 +55,6 @@ define void @store(i8* %p) {
 ; CHECK: declare void @__dfsan_nonzero_label()
 ; CHECK: declare void @__dfsan_vararg_wrapper(i8*)
 ; CHECK: declare zeroext i32 @__dfsan_chain_origin(i32 zeroext)
+; CHECK: declare zeroext i32 @__dfsan_chain_origin_if_tainted(i[[#SBITS]] zeroext, i32 zeroext)
 ; CHECK: declare void @__dfsan_mem_origin_transfer(i8*, i8*, i64)
 ; CHECK: declare void @__dfsan_maybe_store_origin(i[[#SBITS]] zeroext, i8*, i64, i32 zeroext)

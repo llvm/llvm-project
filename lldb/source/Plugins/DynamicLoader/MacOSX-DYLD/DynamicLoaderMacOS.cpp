@@ -343,29 +343,26 @@ void DynamicLoaderMacOS::PutToLog(Log *log) const {
 
 bool DynamicLoaderMacOS::SetNotificationBreakpoint() {
   if (m_break_id == LLDB_INVALID_BREAK_ID) {
-    ConstString g_symbol_name("_dyld_debugger_notification");
-    const Symbol *symbol = nullptr;
     ModuleSP dyld_sp(GetDYLDModule());
     if (dyld_sp) {
-      symbol = dyld_sp->FindFirstSymbolWithNameAndType(g_symbol_name,
-                                                       eSymbolTypeCode);
-    }
-    if (symbol &&
-        (symbol->ValueIsAddress() || symbol->GetAddressRef().IsValid())) {
-      addr_t symbol_address =
-          symbol->GetAddressRef().GetOpcodeLoadAddress(&m_process->GetTarget());
-      if (symbol_address != LLDB_INVALID_ADDRESS) {
-        bool internal = true;
-        bool hardware = false;
-        Breakpoint *breakpoint =
-            m_process->GetTarget()
-                .CreateBreakpoint(symbol_address, internal, hardware)
-                .get();
-        breakpoint->SetCallback(DynamicLoaderMacOS::NotifyBreakpointHit, this,
-                                true);
-        breakpoint->SetBreakpointKind("shared-library-event");
-        m_break_id = breakpoint->GetID();
-      }
+      bool internal = true;
+      bool hardware = false;
+      LazyBool skip_prologue = eLazyBoolNo;
+      FileSpecList *source_files = nullptr;
+      FileSpecList dyld_filelist;
+      dyld_filelist.Append(dyld_sp->GetObjectFile()->GetFileSpec());
+
+      Breakpoint *breakpoint =
+          m_process->GetTarget()
+              .CreateBreakpoint(&dyld_filelist, source_files,
+                                "_dyld_debugger_notification",
+                                eFunctionNameTypeFull, eLanguageTypeC, 0,
+                                skip_prologue, internal, hardware)
+              .get();
+      breakpoint->SetCallback(DynamicLoaderMacOS::NotifyBreakpointHit, this,
+                              true);
+      breakpoint->SetBreakpointKind("shared-library-event");
+      m_break_id = breakpoint->GetID();
     }
   }
   return m_break_id != LLDB_INVALID_BREAK_ID;

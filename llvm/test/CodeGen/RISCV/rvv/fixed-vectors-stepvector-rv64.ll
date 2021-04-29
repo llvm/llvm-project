@@ -199,9 +199,9 @@ declare <4 x i64> @llvm.experimental.stepvector.v4i64()
 define <4 x i64> @stepvector_v4i64() {
 ; LMULMAX1-LABEL: stepvector_v4i64:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    addi a0, zero, 2
-; LMULMAX1-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
+; LMULMAX1-NEXT:    vsetivli a0, 2, e64,m1,ta,mu
 ; LMULMAX1-NEXT:    vmv.v.i v9, 3
+; LMULMAX1-NEXT:    addi a0, zero, 2
 ; LMULMAX1-NEXT:    vmv.s.x v9, a0
 ; LMULMAX1-NEXT:    vid.v v8
 ; LMULMAX1-NEXT:    ret
@@ -220,16 +220,16 @@ declare <8 x i64> @llvm.experimental.stepvector.v8i64()
 define <8 x i64> @stepvector_v8i64() {
 ; LMULMAX1-LABEL: stepvector_v8i64:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    addi a0, zero, 2
-; LMULMAX1-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
-; LMULMAX1-NEXT:    vmv.v.i v10, 5
-; LMULMAX1-NEXT:    addi a1, zero, 4
-; LMULMAX1-NEXT:    vmv.s.x v10, a1
-; LMULMAX1-NEXT:    vmv.v.i v11, 7
-; LMULMAX1-NEXT:    addi a1, zero, 6
-; LMULMAX1-NEXT:    vmv.s.x v11, a1
+; LMULMAX1-NEXT:    vsetivli a0, 2, e64,m1,ta,mu
 ; LMULMAX1-NEXT:    vmv.v.i v9, 3
+; LMULMAX1-NEXT:    addi a0, zero, 2
 ; LMULMAX1-NEXT:    vmv.s.x v9, a0
+; LMULMAX1-NEXT:    vmv.v.i v10, 5
+; LMULMAX1-NEXT:    addi a0, zero, 4
+; LMULMAX1-NEXT:    vmv.s.x v10, a0
+; LMULMAX1-NEXT:    vmv.v.i v11, 7
+; LMULMAX1-NEXT:    addi a0, zero, 6
+; LMULMAX1-NEXT:    vmv.s.x v11, a0
 ; LMULMAX1-NEXT:    vid.v v8
 ; LMULMAX1-NEXT:    ret
 ;
@@ -250,28 +250,28 @@ declare <16 x i64> @llvm.experimental.stepvector.v16i64()
 define <16 x i64> @stepvector_v16i64() {
 ; LMULMAX1-LABEL: stepvector_v16i64:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    addi a0, zero, 2
-; LMULMAX1-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
-; LMULMAX1-NEXT:    vmv.v.i v10, 5
-; LMULMAX1-NEXT:    addi a1, zero, 4
-; LMULMAX1-NEXT:    vmv.s.x v10, a1
-; LMULMAX1-NEXT:    vmv.v.i v11, 7
-; LMULMAX1-NEXT:    addi a1, zero, 6
-; LMULMAX1-NEXT:    vmv.s.x v11, a1
-; LMULMAX1-NEXT:    vmv.v.i v12, 9
-; LMULMAX1-NEXT:    addi a1, zero, 8
-; LMULMAX1-NEXT:    vmv.s.x v12, a1
-; LMULMAX1-NEXT:    vmv.v.i v13, 11
-; LMULMAX1-NEXT:    addi a1, zero, 10
-; LMULMAX1-NEXT:    vmv.s.x v13, a1
-; LMULMAX1-NEXT:    vmv.v.i v14, 13
-; LMULMAX1-NEXT:    addi a1, zero, 12
-; LMULMAX1-NEXT:    vmv.s.x v14, a1
-; LMULMAX1-NEXT:    vmv.v.i v15, 15
-; LMULMAX1-NEXT:    addi a1, zero, 14
-; LMULMAX1-NEXT:    vmv.s.x v15, a1
+; LMULMAX1-NEXT:    vsetivli a0, 2, e64,m1,ta,mu
 ; LMULMAX1-NEXT:    vmv.v.i v9, 3
+; LMULMAX1-NEXT:    addi a0, zero, 2
 ; LMULMAX1-NEXT:    vmv.s.x v9, a0
+; LMULMAX1-NEXT:    vmv.v.i v10, 5
+; LMULMAX1-NEXT:    addi a0, zero, 4
+; LMULMAX1-NEXT:    vmv.s.x v10, a0
+; LMULMAX1-NEXT:    vmv.v.i v11, 7
+; LMULMAX1-NEXT:    addi a0, zero, 6
+; LMULMAX1-NEXT:    vmv.s.x v11, a0
+; LMULMAX1-NEXT:    vmv.v.i v12, 9
+; LMULMAX1-NEXT:    addi a0, zero, 8
+; LMULMAX1-NEXT:    vmv.s.x v12, a0
+; LMULMAX1-NEXT:    vmv.v.i v13, 11
+; LMULMAX1-NEXT:    addi a0, zero, 10
+; LMULMAX1-NEXT:    vmv.s.x v13, a0
+; LMULMAX1-NEXT:    vmv.v.i v14, 13
+; LMULMAX1-NEXT:    addi a0, zero, 12
+; LMULMAX1-NEXT:    vmv.s.x v14, a0
+; LMULMAX1-NEXT:    vmv.v.i v15, 15
+; LMULMAX1-NEXT:    addi a0, zero, 14
+; LMULMAX1-NEXT:    vmv.s.x v15, a0
 ; LMULMAX1-NEXT:    vid.v v8
 ; LMULMAX1-NEXT:    ret
 ;

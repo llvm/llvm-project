@@ -115,7 +115,7 @@ std::vector<const NamedDecl *> HeuristicResolver::resolveDeclRefExpr(
 }
 
 std::vector<const NamedDecl *>
-HeuristicResolver::resolveCallExpr(const CallExpr *CE) const {
+HeuristicResolver::resolveTypeOfCallExpr(const CallExpr *CE) const {
   const auto *CalleeType = resolveExprToType(CE->getCallee());
   if (!CalleeType)
     return {};
@@ -171,7 +171,7 @@ const Type *HeuristicResolver::resolveExprToType(const Expr *E) const {
     return resolveDeclsToType(resolveDeclRefExpr(RE));
   }
   if (const auto *CE = dyn_cast<CallExpr>(E)) {
-    return resolveDeclsToType(resolveCallExpr(CE));
+    return resolveDeclsToType(resolveTypeOfCallExpr(CE));
   }
   if (const auto *ME = dyn_cast<MemberExpr>(E))
     return resolveDeclsToType({ME->getMemberDecl()});

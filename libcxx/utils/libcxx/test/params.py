@@ -102,7 +102,7 @@ DEFAULT_PARAMETERS = [
 
   Parameter(name='debug_level', choices=['', '0', '1'], type=str, default='',
             help="The debugging level to enable in the test suite.",
-            actions=lambda debugLevel: [] if debugLevel is '' else [
+            actions=lambda debugLevel: [] if debugLevel == '' else [
               AddFeature('debug_level={}'.format(debugLevel)),
               AddCompileFlag('-D_LIBCPP_DEBUG={}'.format(debugLevel))
             ]),

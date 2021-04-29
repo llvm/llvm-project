@@ -4791,7 +4791,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_STEP_VECTOR(SDNode *N) {
   EVT NOutElemVT = TLI.getTypeToTransformTo(*DAG.getContext(),
                                             NOutVT.getVectorElementType());
   APInt StepVal = cast<ConstantSDNode>(N->getOperand(0))->getAPIntValue();
-  SDValue Step = DAG.getConstant(StepVal.getZExtValue(), dl, NOutElemVT);
+  SDValue Step = DAG.getConstant(StepVal.getSExtValue(), dl, NOutElemVT);
   return DAG.getStepVector(dl, NOutVT, Step);
 }
 

@@ -293,6 +293,8 @@ class pf2<SDNode Op> : PatFrag<(ops node:$a, node:$b), (Op node:$a, node:$b)>;
 
 class Not2<PatFrag P>
   : PatFrag<(ops node:$A, node:$B), (P node:$A, (not node:$B))>;
+class VNot2<PatFrag P, PatFrag Not>
+  : PatFrag<(ops node:$A, node:$B), (P node:$A, (Not node:$B))>;
 
 // If there is a constant operand that feeds the and/or instruction,
 // do not generate the compound instructions.
@@ -564,37 +566,50 @@ def: Pat<(pnot V4I1:$Ps),   (C2_not V4I1:$Ps)>;
 def: Pat<(pnot V8I1:$Ps),   (C2_not V8I1:$Ps)>;
 def: Pat<(add I1:$Ps, -1),  (C2_not I1:$Ps)>;
 
-multiclass BoolOpR_RR_pat<InstHexagon MI, PatFrag Op> {
-  def: OpR_RR_pat<MI, Op,   i1,   I1>;
-  def: OpR_RR_pat<MI, Op, v2i1, V2I1>;
-  def: OpR_RR_pat<MI, Op, v4i1, V4I1>;
-  def: OpR_RR_pat<MI, Op, v8i1, V8I1>;
+def: OpR_RR_pat<C2_and,         And, i1, I1>;
+def: OpR_RR_pat<C2_or,           Or, i1, I1>;
+def: OpR_RR_pat<C2_xor,         Xor, i1, I1>;
+def: OpR_RR_pat<C2_andn,  Not2<And>, i1, I1>;
+def: OpR_RR_pat<C2_orn,    Not2<Or>, i1, I1>;
+
+def: AccRRR_pat<C4_and_and,   And,       Su<And>, I1, I1, I1>;
+def: AccRRR_pat<C4_and_or,    And,       Su< Or>, I1, I1, I1>;
+def: AccRRR_pat<C4_or_and,     Or,       Su<And>, I1, I1, I1>;
+def: AccRRR_pat<C4_or_or,      Or,       Su< Or>, I1, I1, I1>;
+def: AccRRR_pat<C4_and_andn,  And, Su<Not2<And>>, I1, I1, I1>;
+def: AccRRR_pat<C4_and_orn,   And, Su<Not2< Or>>, I1, I1, I1>;
+def: AccRRR_pat<C4_or_andn,    Or, Su<Not2<And>>, I1, I1, I1>;
+def: AccRRR_pat<C4_or_orn,     Or, Su<Not2< Or>>, I1, I1, I1>;
+
+multiclass BoolvOpR_RR_pat<InstHexagon MI, PatFrag VOp> {
+  def: OpR_RR_pat<MI, VOp, v2i1, V2I1>;
+  def: OpR_RR_pat<MI, VOp, v4i1, V4I1>;
+  def: OpR_RR_pat<MI, VOp, v8i1, V8I1>;
 }
 
-multiclass BoolAccRRR_pat<InstHexagon MI, PatFrag AccOp, PatFrag Op> {
-  def: AccRRR_pat<MI, AccOp, Op,   I1,   I1,   I1>;
-  def: AccRRR_pat<MI, AccOp, Op, V2I1, V2I1, V2I1>;
-  def: AccRRR_pat<MI, AccOp, Op, V4I1, V4I1, V4I1>;
-  def: AccRRR_pat<MI, AccOp, Op, V8I1, V8I1, V8I1>;
+multiclass BoolvAccRRR_pat<InstHexagon MI, PatFrag AccOp, PatFrag VOp> {
+  def: AccRRR_pat<MI, AccOp, VOp, V2I1, V2I1, V2I1>;
+  def: AccRRR_pat<MI, AccOp, VOp, V4I1, V4I1, V4I1>;
+  def: AccRRR_pat<MI, AccOp, VOp, V8I1, V8I1, V8I1>;
 }
 
-defm: BoolOpR_RR_pat<C2_and,   And>;
-defm: BoolOpR_RR_pat<C2_or,    Or>;
-defm: BoolOpR_RR_pat<C2_xor,   Xor>;
-defm: BoolOpR_RR_pat<C2_andn,  Not2<And>>;
-defm: BoolOpR_RR_pat<C2_orn,   Not2<Or>>;
+defm: BoolvOpR_RR_pat<C2_and,                    And>;
+defm: BoolvOpR_RR_pat<C2_or,                      Or>;
+defm: BoolvOpR_RR_pat<C2_xor,                    Xor>;
+defm: BoolvOpR_RR_pat<C2_andn,      VNot2<And, pnot>>;
+defm: BoolvOpR_RR_pat<C2_orn,       VNot2< Or, pnot>>;
 
 // op(Ps, op(Pt, Pu))
-defm: BoolAccRRR_pat<C4_and_and,   And, Su<And>>;
-defm: BoolAccRRR_pat<C4_and_or,    And, Su<Or>>;
-defm: BoolAccRRR_pat<C4_or_and,    Or,  Su<And>>;
-defm: BoolAccRRR_pat<C4_or_or,     Or,  Su<Or>>;
+defm: BoolvAccRRR_pat<C4_and_and,   And, Su<And>>;
+defm: BoolvAccRRR_pat<C4_and_or,    And, Su<Or>>;
+defm: BoolvAccRRR_pat<C4_or_and,    Or,  Su<And>>;
+defm: BoolvAccRRR_pat<C4_or_or,     Or,  Su<Or>>;
 
-// op(Ps, op(Pt, ~Pu))
-defm: BoolAccRRR_pat<C4_and_andn,  And, Su<Not2<And>>>;
-defm: BoolAccRRR_pat<C4_and_orn,   And, Su<Not2<Or>>>;
-defm: BoolAccRRR_pat<C4_or_andn,   Or,  Su<Not2<And>>>;
-defm: BoolAccRRR_pat<C4_or_orn,    Or,  Su<Not2<Or>>>;
+// op(Ps, op(Pt, !Pu))
+defm: BoolvAccRRR_pat<C4_and_andn,  And, Su<VNot2<And, pnot>>>;
+defm: BoolvAccRRR_pat<C4_and_orn,   And, Su<VNot2< Or, pnot>>>;
+defm: BoolvAccRRR_pat<C4_or_andn,   Or,  Su<VNot2<And, pnot>>>;
+defm: BoolvAccRRR_pat<C4_or_orn,    Or,  Su<VNot2< Or, pnot>>>;
 
 
 // --(5) Compare ---------------------------------------------------------

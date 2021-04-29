@@ -103,22 +103,25 @@ func private @side_effect()
 func @one_unused(%cond: i1) -> (index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  %c3 = constant 3 : index
   %0, %1 = scf.if %cond -> (index, index) {
     call @side_effect() : () -> ()
     scf.yield %c0, %c1 : index, index
   } else {
-    scf.yield %c0, %c1 : index, index
+    scf.yield %c2, %c3 : index, index
   }
   return %1 : index
 }
 
 // CHECK-LABEL:   func @one_unused
 // CHECK:           [[C0:%.*]] = constant 1 : index
+// CHECK:           [[C3:%.*]] = constant 3 : index
 // CHECK:           [[V0:%.*]] = scf.if %{{.*}} -> (index) {
 // CHECK:             call @side_effect() : () -> ()
 // CHECK:             scf.yield [[C0]] : index
 // CHECK:           } else
-// CHECK:             scf.yield [[C0]] : index
+// CHECK:             scf.yield [[C3]] : index
 // CHECK:           }
 // CHECK:           return [[V0]] : index
 
@@ -128,12 +131,14 @@ func private @side_effect()
 func @nested_unused(%cond1: i1, %cond2: i1) -> (index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  %c3 = constant 3 : index
   %0, %1 = scf.if %cond1 -> (index, index) {
     %2, %3 = scf.if %cond2 -> (index, index) {
       call @side_effect() : () -> ()
       scf.yield %c0, %c1 : index, index
     } else {
-      scf.yield %c0, %c1 : index, index
+      scf.yield %c2, %c3 : index, index
     }
     scf.yield %2, %3 : index, index
   } else {
@@ -144,12 +149,13 @@ func @nested_unused(%cond1: i1, %cond2: i1) -> (index) {
 
 // CHECK-LABEL:   func @nested_unused
 // CHECK:           [[C0:%.*]] = constant 1 : index
+// CHECK:           [[C3:%.*]] = constant 3 : index
 // CHECK:           [[V0:%.*]] = scf.if {{.*}} -> (index) {
 // CHECK:             [[V1:%.*]] = scf.if {{.*}} -> (index) {
 // CHECK:               call @side_effect() : () -> ()
 // CHECK:               scf.yield [[C0]] : index
 // CHECK:             } else
-// CHECK:               scf.yield [[C0]] : index
+// CHECK:               scf.yield [[C3]] : index
 // CHECK:             }
 // CHECK:             scf.yield [[V1]] : index
 // CHECK:           } else
@@ -610,3 +616,111 @@ func @matmul_on_tensors(%t0: tensor<32x1024xf32>, %t1: tensor<1024x1024xf32>) ->
   %res = subtensor_insert %2 into %t1[0, 0] [32, 1024] [1, 1] : tensor<32x1024xf32> into tensor<1024x1024xf32>
   return %res : tensor<1024x1024xf32>
 }
+
+
+
+// CHECK-LABEL: @cond_prop
+func @cond_prop(%arg0 : i1) -> index {
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  %c3 = constant 3 : index
+  %c4 = constant 4 : index
+  %res = scf.if %arg0 -> index {
+    %res1 = scf.if %arg0 -> index {
+      %v1 = "test.get_some_value"() : () -> i32
+      scf.yield %c1 : index
+    } else {
+      %v2 = "test.get_some_value"() : () -> i32
+      scf.yield %c2 : index
+    } 
+    scf.yield %res1 : index
+  } else {
+    %res2 = scf.if %arg0 -> index {
+      %v3 = "test.get_some_value"() : () -> i32
+      scf.yield %c3 : index
+    } else {
+      %v4 = "test.get_some_value"() : () -> i32
+      scf.yield %c4 : index
+    } 
+    scf.yield %res2 : index
+  }
+  return %res : index
+}
+// CHECK-DAG:  %[[c1:.+]] = constant 1 : index
+// CHECK-DAG:  %[[c4:.+]] = constant 4 : index
+// CHECK-NEXT:  %[[if:.+]] = scf.if %arg0 -> (index) {
+// CHECK-NEXT:    %{{.+}} = "test.get_some_value"() : () -> i32
+// CHECK-NEXT:    scf.yield %[[c1]] : index
+// CHECK-NEXT:  } else {
+// CHECK-NEXT:    %{{.+}} = "test.get_some_value"() : () -> i32
+// CHECK-NEXT:    scf.yield %[[c4]] : index
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return %[[if]] : index
+// CHECK-NEXT:}
+
+// CHECK-LABEL: @replace_if_with_cond1
+func @replace_if_with_cond1(%arg0 : i1) -> (i32, i1) {
+  %true = constant true
+  %false = constant false
+  %res:2 = scf.if %arg0 -> (i32, i1) {
+    %v = "test.get_some_value"() : () -> i32
+    scf.yield %v, %true : i32, i1
+  } else {
+    %v2 = "test.get_some_value"() : () -> i32
+    scf.yield %v2, %false : i32, i1
+  }
+  return %res#0, %res#1 : i32, i1
+}
+// CHECK-NEXT:    %[[if:.+]] = scf.if %arg0 -> (i32) {
+// CHECK-NEXT:      %[[sv1:.+]] = "test.get_some_value"() : () -> i32
+// CHECK-NEXT:      scf.yield %[[sv1]] : i32
+// CHECK-NEXT:    } else {
+// CHECK-NEXT:      %[[sv2:.+]] = "test.get_some_value"() : () -> i32
+// CHECK-NEXT:      scf.yield %[[sv2]] : i32
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return %[[if]], %arg0 : i32, i1
+
+// CHECK-LABEL: @replace_if_with_cond2
+func @replace_if_with_cond2(%arg0 : i1) -> (i32, i1) {
+  %true = constant true
+  %false = constant false
+  %res:2 = scf.if %arg0 -> (i32, i1) {
+    %v = "test.get_some_value"() : () -> i32
+    scf.yield %v, %false : i32, i1
+  } else {
+    %v2 = "test.get_some_value"() : () -> i32
+    scf.yield %v2, %true : i32, i1
+  }
+  return %res#0, %res#1 : i32, i1
+}
+// CHECK-NEXT:     %true = constant true
+// CHECK-NEXT:     %[[toret:.+]] = xor %arg0, %true : i1
+// CHECK-NEXT:     %[[if:.+]] = scf.if %arg0 -> (i32) {
+// CHECK-NEXT:       %[[sv1:.+]] = "test.get_some_value"() : () -> i32
+// CHECK-NEXT:       scf.yield %[[sv1]] : i32
+// CHECK-NEXT:     } else {
+// CHECK-NEXT:       %[[sv2:.+]] = "test.get_some_value"() : () -> i32
+// CHECK-NEXT:       scf.yield %[[sv2]] : i32
+// CHECK-NEXT:     }
+// CHECK-NEXT:     return %[[if]], %[[toret]] : i32, i1
+
+
+// CHECK-LABEL: @replace_if_with_cond3
+func @replace_if_with_cond3(%arg0 : i1, %arg2: i64) -> (i32, i64) {
+  %res:2 = scf.if %arg0 -> (i32, i64) {
+    %v = "test.get_some_value"() : () -> i32
+    scf.yield %v, %arg2 : i32, i64
+  } else {
+    %v2 = "test.get_some_value"() : () -> i32
+    scf.yield %v2, %arg2 : i32, i64
+  }
+  return %res#0, %res#1 : i32, i64
+}
+// CHECK-NEXT:     %[[if:.+]] = scf.if %arg0 -> (i32) {
+// CHECK-NEXT:       %[[sv1:.+]] = "test.get_some_value"() : () -> i32
+// CHECK-NEXT:       scf.yield %[[sv1]] : i32
+// CHECK-NEXT:     } else {
+// CHECK-NEXT:       %[[sv2:.+]] = "test.get_some_value"() : () -> i32
+// CHECK-NEXT:       scf.yield %[[sv2]] : i32
+// CHECK-NEXT:     }
+// CHECK-NEXT:     return %[[if]], %arg1 : i32, i64

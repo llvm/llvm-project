@@ -10,7 +10,7 @@ Batch = S.Batch
 def matmul(A=TensorDef(T1, S.M, S.K),
            B=TensorDef(T2, S.K, S.N),
            C=TensorDef(U, S.M, S.N, output=True)):
-  """Performs a matrix multiplacation of two 2D inputs.
+  """Performs a matrix multiplication of two 2D inputs.
 
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
@@ -23,7 +23,7 @@ def matmul(A=TensorDef(T1, S.M, S.K),
 def batch_matmul(A=TensorDef(T1, Batch, S.M, S.K),
                  B=TensorDef(T2, Batch, S.K, S.N),
                  C=TensorDef(U, Batch, S.M, S.N, output=True)):
-  """Performs a batched matrix multiplacation of two 3D inputs.
+  """Performs a batched matrix multiplication of two 3D inputs.
 
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
@@ -49,7 +49,7 @@ def matvec(A=TensorDef(T1, S.M, S.N),
 def vecmat(y=TensorDef(T1, S.M),
            A=TensorDef(T2, S.M, S.N),
            x=TensorDef(U, S.N, output=True)):
-  """Performs a vector-matrix multiplacation.
+  """Performs a vector-matrix multiplication.
 
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.

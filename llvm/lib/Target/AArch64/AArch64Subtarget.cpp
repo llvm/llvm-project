@@ -59,6 +59,9 @@ static cl::opt<unsigned> SVEVectorBitsMin(
              "with zero meaning no minimum size is assumed."),
     cl::init(0), cl::Hidden);
 
+static cl::opt<bool> UseAA("aarch64-use-aa", cl::init(true),
+                           cl::desc("Enable the use of AA during codegen."));
+
 AArch64Subtarget &
 AArch64Subtarget::initializeSubtargetDependencies(StringRef FS,
                                                   StringRef CPUString) {
@@ -380,3 +383,5 @@ bool AArch64Subtarget::useSVEForFixedLengthVectors() const {
   // Prefer NEON unless larger SVE registers are available.
   return hasSVE() && getMinSVEVectorSizeInBits() >= 256;
 }
+
+bool AArch64Subtarget::useAA() const { return UseAA; }

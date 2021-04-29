@@ -2127,6 +2127,8 @@ void vfs::collectVFSFromYAML(std::unique_ptr<MemoryBuffer> Buffer,
   std::unique_ptr<RedirectingFileSystem> VFS = RedirectingFileSystem::create(
       std::move(Buffer), DiagHandler, YAMLFilePath, DiagContext,
       std::move(ExternalFS));
+  if (!VFS)
+    return;
   ErrorOr<RedirectingFileSystem::LookupResult> RootResult =
       VFS->lookupPath("/");
   if (!RootResult)

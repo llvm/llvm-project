@@ -76,12 +76,12 @@ namespace std {
 #include <__config>
 #include <__availability>
 #include <__errc>
+#include <__utility/to_underlying.h>
 #include <cmath> // for log2f
 #include <cstdint>
 #include <cstring>
 #include <limits>
 #include <type_traits>
-#include <utility>
 
 #include <__debug>
 

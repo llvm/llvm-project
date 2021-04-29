@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-pseudo"
@@ -315,8 +316,12 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     int64_t StackAdj = MBBI->getOperand(0).getImm();
     X86FL->emitSPUpdate(MBB, MBBI, DL, StackAdj, true);
     // Replace pseudo with machine iret
-    BuildMI(MBB, MBBI, DL,
-            TII->get(STI->is64Bit() ? X86::IRET64 : X86::IRET32));
+    unsigned RetOp = STI->is64Bit() ? X86::IRET64 : X86::IRET32;
+    // Use UIRET if UINTR is present (except for building kernel)
+    if (STI->is64Bit() && STI->hasUINTR() &&
+        MBB.getParent()->getTarget().getCodeModel() != CodeModel::Kernel)
+      RetOp = X86::UIRET;
+    BuildMI(MBB, MBBI, DL, TII->get(RetOp));
     MBB.erase(MBBI);
     return true;
   }

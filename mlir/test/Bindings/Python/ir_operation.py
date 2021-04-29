@@ -215,6 +215,38 @@ def testOperationOperandsSlice():
 run(testOperationOperandsSlice)
 
 
+# CHECK-LABEL: TEST: testOperationOperandsSet
+def testOperationOperandsSet():
+  with Context() as ctx, Location.unknown(ctx):
+    ctx.allow_unregistered_dialects = True
+    module = Module.parse(r"""
+      func @f1() {
+        %0 = "test.producer0"() : () -> i64
+        %1 = "test.producer1"() : () -> i64
+        %2 = "test.producer2"() : () -> i64
+        "test.consumer"(%0) : (i64) -> ()
+        return
+      }""")
+    func = module.body.operations[0]
+    entry_block = func.regions[0].blocks[0]
+    producer1 = entry_block.operations[1]
+    producer2 = entry_block.operations[2]
+    consumer = entry_block.operations[3]
+    assert len(consumer.operands) == 1
+    type = consumer.operands[0].type
+
+    # CHECK: test.producer1
+    consumer.operands[0] = producer1.result
+    print(consumer.operands[0])
+
+    # CHECK: test.producer2
+    consumer.operands[-1] = producer2.result
+    print(consumer.operands[0])
+
+
+run(testOperationOperandsSet)
+
+
 # CHECK-LABEL: TEST: testDetachedOperation
 def testDetachedOperation():
   ctx = Context()
@@ -614,3 +646,25 @@ def testCapsuleConversions():
     assert m2 is m
 
 run(testCapsuleConversions)
+
+# CHECK-LABEL: TEST: testOperationErase
+def testOperationErase():
+  ctx = Context()
+  ctx.allow_unregistered_dialects = True
+  with Location.unknown(ctx):
+    m = Module.create()
+    with InsertionPoint(m.body):
+      op = Operation.create("custom.op1")
+
+      # CHECK: "custom.op1"
+      print(m)
+
+      op.operation.erase()
+
+      # CHECK-NOT: "custom.op1"
+      print(m)
+
+      # Ensure we can create another operation
+      Operation.create("custom.op2")
+
+run(testOperationErase)

@@ -43,13 +43,15 @@ typedef uint64_t LLVMOrcJITTargetAddress;
  */
 typedef enum {
   LLVMJITSymbolGenericFlagsExported = 1U << 0,
-  LLVMJITSymbolGenericFlagsWeak = 1U << 1
+  LLVMJITSymbolGenericFlagsWeak = 1U << 1,
+  LLVMJITSymbolGenericFlagsCallable = 1U << 2,
+  LLVMJITSymbolGenericFlagsMaterializationSideEffectsOnly = 1U << 3
 } LLVMJITSymbolGenericFlags;
 
 /**
  * Represents target specific flags for a symbol definition.
  */
-typedef uint8_t LLVMJITTargetSymbolFlags;
+typedef uint8_t LLVMJITSymbolTargetFlags;
 
 /**
  * Represents the linkage flags for a symbol definition.
@@ -87,6 +89,20 @@ typedef struct LLVMOrcOpaqueSymbolStringPool *LLVMOrcSymbolStringPoolRef;
  */
 typedef struct LLVMOrcOpaqueSymbolStringPoolEntry
     *LLVMOrcSymbolStringPoolEntryRef;
+
+/**
+ * Represents a pair of a symbol name and LLVMJITSymbolFlags.
+ */
+typedef struct {
+  LLVMOrcSymbolStringPoolEntryRef Name;
+  LLVMJITSymbolFlags Flags;
+} LLVMOrcCSymbolFlagsMapPair;
+
+/**
+ * Represents a list of (SymbolStringPtr, JITSymbolFlags) pairs that can be used
+ * to construct a SymbolFlagsMap.
+ */
+typedef LLVMOrcCSymbolFlagsMapPair *LLVMOrcCSymbolFlagsMapPairs;
 
 /**
  * Represents a pair of a symbol name and an evaluated symbol.
@@ -155,14 +171,53 @@ typedef struct {
 typedef LLVMOrcCLookupSetElement *LLVMOrcCLookupSet;
 
 /**
- * A reference to an orc::MaterializationUnit.
+ * A reference to a uniquely owned orc::MaterializationUnit instance.
  */
 typedef struct LLVMOrcOpaqueMaterializationUnit *LLVMOrcMaterializationUnitRef;
+
+/**
+ * A reference to a uniquely owned orc::MaterializationResponsibility instance.
+ *
+ * Ownership must be passed to a lower-level layer in a JIT stack.
+ */
+typedef struct LLVMOrcOpaqueMaterializationResponsibility
+    *LLVMOrcMaterializationResponsibilityRef;
 
 /**
  * A reference to an orc::JITDylib instance.
  */
 typedef struct LLVMOrcOpaqueJITDylib *LLVMOrcJITDylibRef;
+
+/**
+ * A MaterializationUnit materialize callback.
+ *
+ * Ownership of the Ctx and MR arguments passes to the callback which must
+ * adhere to the LLVMOrcMaterializationResponsibilityRef contract (see comment
+ * for that type).
+ *
+ * If this callback is called then the LLVMOrcMaterializationUnitDestroy
+ * callback will NOT be called.
+ */
+typedef void (*LLVMOrcMaterializationUnitMaterializeFunction)(
+    void *Ctx, LLVMOrcMaterializationResponsibilityRef MR);
+
+/**
+ * A MaterializationUnit discard callback.
+ *
+ * Ownership of JD and Symbol remain with the caller: These arguments should
+ * not be disposed of or released.
+ */
+typedef void (*LLVMOrcMaterializationUnitDiscardFunction)(
+    void *Ctx, LLVMOrcJITDylibRef JD, LLVMOrcSymbolStringPoolEntryRef Symbol);
+
+/**
+ * A MaterializationUnit destruction callback.
+ *
+ * If a custom MaterializationUnit is destroyed before its Materialize
+ * function is called then this function will be called to provide an
+ * opportunity for the underlying program representation to be destroyed.
+ */
+typedef void (*LLVMOrcMaterializationUnitDestroyFunction)(void *Ctx);
 
 /**
  * A reference to an orc::ResourceTracker instance.
@@ -207,8 +262,8 @@ typedef struct LLVMOrcOpaqueLookupState *LLVMOrcLookupStateRef;
  * asynchronous definition process has been completed clients must call
  * LLVMOrcLookupStateContinueLookup to continue the lookup (this should be
  * done unconditionally, even if errors have occurred in the mean time, to
- * free the lookup state memory and notify the query object of the failures. If
- * LookupState is captured this function must return LLVMErrorSuccess.
+ * free the lookup state memory and notify the query object of the failures).
+ * If LookupState is captured this function must return LLVMErrorSuccess.
  *
  * The Kind argument can be inspected to determine the lookup kind (e.g.
  * as-if-during-static-link, or as-if-during-dlsym).
@@ -254,6 +309,11 @@ typedef struct LLVMOrcOpaqueJITTargetMachineBuilder
  * A reference to an orc::ObjectLayer instance.
  */
 typedef struct LLVMOrcOpaqueObjectLayer *LLVMOrcObjectLayerRef;
+
+/**
+ * A reference to an orc::ObjectLinkingLayer instance.
+ */
+typedef struct LLVMOrcOpaqueObjectLinkingLayer *LLVMOrcObjectLinkingLayerRef;
 
 /**
  * Attach a custom error reporter function to the ExecutionSession.
@@ -347,8 +407,65 @@ void LLVMOrcDisposeDefinitionGenerator(LLVMOrcDefinitionGeneratorRef DG);
 void LLVMOrcDisposeMaterializationUnit(LLVMOrcMaterializationUnitRef MU);
 
 /**
+ * Create a custom MaterializationUnit.
+ *
+ * Name is a name for this MaterializationUnit to be used for identification
+ * and logging purposes (e.g. if this MaterializationUnit produces an
+ * object buffer then the name of that buffer will be derived from this name).
+ *
+ * The Syms list contains the names and linkages of the symbols provided by this
+ * unit. This function takes ownership of the elements of the Syms array. The
+ * Name fields of the array elements are taken to have been retained for this
+ * function. The client should *not* release the elements of the array, but is
+ * still responsible for destroyingthe array itself.
+ *
+ * The InitSym argument indicates whether or not this MaterializationUnit
+ * contains static initializers. If three are no static initializers (the common
+ * case) then this argument should be null. If there are static initializers
+ * then InitSym should be set to a unique name that also appears in the Syms
+ * list with the LLVMJITSymbolGenericFlagsMaterializationSideEffectsOnly flag
+ * set. This function takes ownership of the InitSym, which should have been
+ * retained twice on behalf of this function: once for the Syms entry and once
+ * for InitSym. If clients wish to use the InitSym value after this function
+ * returns they must retain it once more for themselves.
+ *
+ * If any of the symbols in the Syms list is looked up then the Materialize
+ * function will be called.
+ *
+ * If any of the symbols in the Syms list is overridden then the Discard
+ * function will be called.
+ *
+ * The caller owns the underling MaterializationUnit and is responsible for
+ * either passing it to a JITDylib (via LLVMOrcJITDylibDefine) or disposing
+ * of it by calling LLVMOrcDisposeMaterializationUnit.
+ */
+LLVMOrcMaterializationUnitRef LLVMOrcCreateCustomMaterializationUnit(
+    const char *Name, void *Ctx, LLVMOrcCSymbolFlagsMapPairs Syms,
+    size_t NumSyms, LLVMOrcSymbolStringPoolEntryRef InitSym,
+    LLVMOrcMaterializationUnitMaterializeFunction Materialize,
+    LLVMOrcMaterializationUnitDiscardFunction Discard,
+    LLVMOrcMaterializationUnitDestroyFunction Destroy);
+
+/**
  * Create a MaterializationUnit to define the given symbols as pointing to
  * the corresponding raw addresses.
+ *
+ * This function takes ownership of the elements of the Syms array. The Name
+ * fields of the array elements are taken to have been retained for this
+ * function. This allows the following pattern...
+ *
+ *   size_t NumPairs;
+ *   LLVMOrcCSymbolMapPairs Sym;
+ *   -- Build Syms array --
+ *   LLVMOrcMaterializationUnitRef MU =
+ *       LLVMOrcAbsoluteSymbols(Syms, NumPairs);
+ *
+ * ... without requiring cleanup of the elements of the Sym array afterwards.
+ *
+ * The client is still responsible for deleting the Sym array itself.
+ *
+ * If a client wishes to reuse elements of the Sym array after this call they
+ * must explicitly retain each of the elements for themselves.
  */
 LLVMOrcMaterializationUnitRef
 LLVMOrcAbsoluteSymbols(LLVMOrcCSymbolMapPairs Syms, size_t NumPairs);
@@ -506,8 +623,9 @@ void LLVMOrcDisposeThreadSafeModule(LLVMOrcThreadSafeModuleRef TSM);
  * Create a JITTargetMachineBuilder by detecting the host.
  *
  * On success the client owns the resulting JITTargetMachineBuilder. It must be
- * passed to a consuming operation (e.g. LLVMOrcCreateLLJITBuilder) or disposed
- * of by calling LLVMOrcDisposeJITTargetMachineBuilder.
+ * passed to a consuming operation (e.g.
+ * LLVMOrcLLJITBuilderSetJITTargetMachineBuilder) or disposed of by calling
+ * LLVMOrcDisposeJITTargetMachineBuilder.
  */
 LLVMErrorRef LLVMOrcJITTargetMachineBuilderDetectHost(
     LLVMOrcJITTargetMachineBuilderRef *Result);
@@ -517,8 +635,9 @@ LLVMErrorRef LLVMOrcJITTargetMachineBuilderDetectHost(
  *
  * This operation takes ownership of the given TargetMachine and destroys it
  * before returing. The resulting JITTargetMachineBuilder is owned by the client
- * and must be passed to a consuming operation (e.g. LLVMOrcCreateLLJITBuilder)
- * or disposed of by calling LLVMOrcDisposeJITTargetMachineBuilder.
+ * and must be passed to a consuming operation (e.g.
+ * LLVMOrcLLJITBuilderSetJITTargetMachineBuilder) or disposed of by calling
+ * LLVMOrcDisposeJITTargetMachineBuilder.
  */
 LLVMOrcJITTargetMachineBuilderRef
 LLVMOrcJITTargetMachineBuilderCreateFromTargetMachine(LLVMTargetMachineRef TM);
@@ -528,6 +647,39 @@ LLVMOrcJITTargetMachineBuilderCreateFromTargetMachine(LLVMTargetMachineRef TM);
  */
 void LLVMOrcDisposeJITTargetMachineBuilder(
     LLVMOrcJITTargetMachineBuilderRef JTMB);
+
+/**
+ * Returns the target triple for the given JITTargetMachineBuilder as a string.
+ *
+ * The caller owns the resulting string as must dispose of it by calling
+ * LLVMOrcJITTargetMachineBuilderDisposeTargetTriple.
+ */
+char *LLVMOrcJITTargetMachineBuilderGetTargetTriple(
+    LLVMOrcJITTargetMachineBuilderRef JTMB);
+
+/**
+ * Sets the target triple for the given JITTargetMachineBuilder to the given
+ * string.
+ */
+void LLVMOrcJITTargetMachineBuilderSetTargetTriple(
+    LLVMOrcJITTargetMachineBuilderRef JTMB, const char *TargetTriple);
+
+/**
+ * Destroy a triple string returned by
+ * LLVMOrcJITTargetMachineBuilderGetTargetTriple.
+ */
+void LLVMOrcJITTargetMachineBuilderDisposeTargetTriple(
+    LLVMOrcJITTargetMachineBuilderRef JTMB, char *TargetTriple);
+
+/**
+ * Emit an object buffer to an ObjectLayer.
+ *
+ * Ownership of the responsibility object and object buffer pass to this
+ * function. The client is not responsible for cleanup.
+ */
+void LLVMOrcObjectLayerEmit(LLVMOrcObjectLayerRef ObjLayer,
+                            LLVMOrcMaterializationResponsibilityRef R,
+                            LLVMMemoryBufferRef ObjBuffer);
 
 /**
  * Dispose of an ObjectLayer.

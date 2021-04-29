@@ -30,7 +30,15 @@ class RelocationRef;
 
 namespace objdump {
 
+enum DebugVarsFormat {
+  DVDisabled,
+  DVUnicode,
+  DVASCII,
+};
+
 extern bool ArchiveHeaders;
+extern int DbgIndent;
+extern DebugVarsFormat DbgVariables;
 extern bool Demangle;
 extern bool Disassemble;
 extern bool DisassembleAll;
@@ -42,6 +50,8 @@ extern std::string MCPU;
 extern std::string Prefix;
 extern uint32_t PrefixStrip;
 extern bool PrintImmHex;
+extern bool PrintLines;
+extern bool PrintSource;
 extern bool PrivateHeaders;
 extern bool Relocations;
 extern bool SectionHeaders;

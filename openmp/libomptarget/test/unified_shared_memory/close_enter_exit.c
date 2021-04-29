@@ -1,9 +1,7 @@
-// RUN: %libomptarget-compile-run-and-check-aarch64-unknown-linux-gnu
-// RUN: %libomptarget-compile-run-and-check-powerpc64-ibm-linux-gnu
-// RUN: %libomptarget-compile-run-and-check-powerpc64le-ibm-linux-gnu
-// RUN: %libomptarget-compile-run-and-check-x86_64-pc-linux-gnu
+// RUN: %libomptarget-compile-run-and-check-generic
 
 // UNSUPPORTED: clang-6, clang-7, clang-8, clang-9
+// XFAIL: nvptx64-nvidia-cuda
 
 #include <omp.h>
 #include <stdio.h>

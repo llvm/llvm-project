@@ -76,11 +76,11 @@ define i64 @extractelt_v2i64(<2 x i64>* %x) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; RV32-NEXT:    vle64.v v25, (a0)
+; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    vsetivli a1, 1, e64,m1,ta,mu
+; RV32-NEXT:    vsrl.vx v26, v25, a0
+; RV32-NEXT:    vmv.x.s a1, v26
 ; RV32-NEXT:    vmv.x.s a0, v25
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
-; RV32-NEXT:    vsrl.vx v25, v25, a1
-; RV32-NEXT:    vmv.x.s a1, v25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: extractelt_v2i64:

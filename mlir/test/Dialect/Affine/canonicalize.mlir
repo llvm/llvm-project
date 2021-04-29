@@ -93,11 +93,8 @@ func @compose_affine_maps_1dto2d_with_symbols() {
 // CHECK-DAG: #[[$MAP8:.*]] = affine_map<(d0, d1) -> (d1 + (d0 ceildiv 4) * 4 - (d1 floordiv 4) * 4)>
 // CHECK-DAG: #[[$MAP8a:.*]] = affine_map<(d0, d1) -> (d1 + (d0 ceildiv 8) * 8 - (d1 floordiv 8) * 8)>
 
-// CHECK-LABEL: func @compose_affine_maps_2d_tile() {
-func @compose_affine_maps_2d_tile() {
-  %0 = memref.alloc() : memref<16x32xf32>
-  %1 = memref.alloc() : memref<16x32xf32>
-
+// CHECK-LABEL: func @compose_affine_maps_2d_tile
+func @compose_affine_maps_2d_tile(%0: memref<16x32xf32>, %1: memref<16x32xf32>) {
   %c4 = constant 4 : index
   %c8 = constant 8 : index
 
@@ -221,7 +218,7 @@ func @compose_affine_maps_multiple_symbols(%arg0: index, %arg1: index) -> index 
 // -----
 
 // CHECK-LABEL: func @arg_used_as_dim_and_symbol
-func @arg_used_as_dim_and_symbol(%arg0: memref<100x100xf32>, %arg1: index, %arg2: f32) {
+func @arg_used_as_dim_and_symbol(%arg0: memref<100x100xf32>, %arg1: index, %arg2: f32) -> (memref<100x100xf32, 1>, memref<1xi32>) {
   %c9 = constant 9 : index
   %1 = memref.alloc() : memref<100x100xf32, 1>
   %2 = memref.alloc() : memref<1xi32>
@@ -235,7 +232,7 @@ func @arg_used_as_dim_and_symbol(%arg0: memref<100x100xf32>, %arg1: index, %arg2
       memref.store %arg2, %1[%4, %arg1] : memref<100x100xf32, 1>
     }
   }
-  return
+  return %1, %2 : memref<100x100xf32, 1>, memref<1xi32>
 }
 
 // -----

@@ -761,7 +761,6 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let AsmVariantName       = ps.AsmVariantName;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
-  // TODO-GFX11 check if DecoderNamespace superfluous
   let DecoderNamespace     = ps.DecoderNamespace;
   let Constraints          = ps.Constraints;
   let DisableEncoding      = ps.DisableEncoding;
@@ -788,10 +787,8 @@ class VOP_DPP_Base <string OpName, VOPProfile P, bit IsDPP16,
   let AssemblerPredicate = !if(P.HasExt64BitDPP, Has64BitDPP, HasDPP);
   let AsmVariantName = !if(P.HasExtDPP, AMDGPUAsmVariants.DPP,
                                         AMDGPUAsmVariants.Disable);
-  // TODO-GFX11 check these 2 on VOP3 DPP
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
   let DisableEncoding = !if(P.NumSrcArgs, P.TieRegDPP, "");
-  // TODO-GFX11 check if this line is superfluous
   let DecoderNamespace = "DPP";
 }
 

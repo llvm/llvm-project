@@ -39,9 +39,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "tile-pre-config"
-#define ASSERT_VALID_COMPARE                                                   \
-  assert((!MBB || !RHS.MBB || MBB == RHS.MBB) &&                               \
-         "Cannot compare between different BBs");
 #define REPORT_CONFIG_FAIL                                                     \
   report_fatal_error(                                                          \
       MF.getName() +                                                           \
@@ -60,6 +57,9 @@ struct MIRef {
          ++I, ++Pos)
       MI = &*I;
   }
+  MIRef(MachineInstr *MI)
+      : MI(MI), MBB(MI->getParent()),
+        Pos(std::distance(MBB->instr_begin(), ++MI->getIterator())) {}
   MIRef(MachineInstr *MI, MachineBasicBlock *MBB)
       : MI(MI), MBB(MBB),
         Pos(std::distance(MBB->instr_begin(), ++MI->getIterator())) {}
@@ -69,20 +69,23 @@ struct MIRef {
   bool operator==(const MIRef &RHS) const {
     return MI == RHS.MI && MBB == RHS.MBB;
   }
+  bool operator!=(const MIRef &RHS) const { return !(*this == RHS); }
   bool operator<(const MIRef &RHS) const {
-    ASSERT_VALID_COMPARE;
-    return Pos < RHS.Pos;
+    // Comparison between different BBs happens when inserting a MIRef into set.
+    // So we compare MBB first to make the insertion happy.
+    return MBB < RHS.MBB || (MBB == RHS.MBB && Pos < RHS.Pos);
   }
   bool operator>(const MIRef &RHS) const {
-    ASSERT_VALID_COMPARE;
-    return Pos > RHS.Pos;
+    // Comparison between different BBs happens when inserting a MIRef into set.
+    // So we compare MBB first to make the insertion happy.
+    return MBB > RHS.MBB || (MBB == RHS.MBB && Pos > RHS.Pos);
   }
 };
 
 struct BBInfo {
   MIRef FirstAMX;
   MIRef LastCall;
-  MIRef LastShape;
+  bool HasAMXRegLiveIn = false;
   bool TileCfgForbidden = false;
   bool NeedTileCfgLiveIn = false;
 };
@@ -91,8 +94,8 @@ class X86PreTileConfig : public MachineFunctionPass {
   MachineRegisterInfo *MRI;
   const MachineLoopInfo *MLI;
   SmallSet<MachineInstr *, 8> DefVisited;
-  SmallSet<MachineBasicBlock *, 8> ShapeBBs;
   DenseMap<MachineBasicBlock *, BBInfo> BBVisitedInfo;
+  DenseMap<MachineBasicBlock *, SmallVector<MIRef, 8>> ShapeBBs;
 
   /// Check if the callee will clobber AMX registers.
   bool isDestructiveCall(MachineInstr &MI, BitVector UsableRegs) {
@@ -128,6 +131,32 @@ class X86PreTileConfig : public MachineFunctionPass {
 
   /// Collect the shape def information for later use.
   void collectShapeInfo(MachineInstr &MI);
+
+  /// Try to hoist shapes definded below AMX instructions.
+  bool hoistShapesInBB(MachineBasicBlock *MBB, SmallVectorImpl<MIRef> &Shapes) {
+    MIRef &FirstAMX = BBVisitedInfo[MBB].FirstAMX;
+    auto FirstShapeBelowAMX = llvm::lower_bound(Shapes, FirstAMX);
+    auto InsertPoint = FirstAMX.MI->getIterator();
+    for (auto I = FirstShapeBelowAMX, E = Shapes.end(); I != E; ++I) {
+      // Do not hoist instructions that access memory.
+      if (I->MI->mayLoadOrStore())
+        return false;
+      for (auto &MO : I->MI->operands()) {
+        if (MO.isDef())
+          continue;
+        // Do not hoist instructions if the sources' def under AMX instruction.
+        // TODO: We can handle isMoveImmediate MI here.
+        if (MO.isReg() && MIRef(MRI->getVRegDef(MO.getReg())) > FirstAMX)
+          return false;
+        // TODO: Maybe need more checks here.
+      }
+      MBB->insert(InsertPoint, I->MI->removeFromParent());
+    }
+    // We only need to mark the last shape in the BB now.
+    Shapes.clear();
+    Shapes.push_back(MIRef(&*--InsertPoint, MBB));
+    return true;
+  }
 
 public:
   X86PreTileConfig() : MachineFunctionPass(ID) {}
@@ -170,9 +199,9 @@ INITIALIZE_PASS_END(X86PreTileConfig, "tilepreconfig",
 void X86PreTileConfig::collectShapeInfo(MachineInstr &MI) {
   auto RecordShape = [&](MachineInstr *MI, MachineBasicBlock *MBB) {
     MIRef MIR(MI, MBB);
-    if (BBVisitedInfo[MBB].LastShape < MIR)
-      BBVisitedInfo[MBB].LastShape = MIR;
-    ShapeBBs.insert(MBB);
+    auto I = llvm::lower_bound(ShapeBBs[MBB], MIR);
+    if (I == ShapeBBs[MBB].end() || *I != MIR)
+      ShapeBBs[MBB].insert(I, MIR);
   };
 
   SmallVector<Register, 8> WorkList(
@@ -180,8 +209,9 @@ void X86PreTileConfig::collectShapeInfo(MachineInstr &MI) {
   while (!WorkList.empty()) {
     Register R = WorkList.pop_back_val();
     MachineInstr *DefMI = MRI->getVRegDef(R);
+    assert(DefMI && "R must has one define instruction");
     MachineBasicBlock *DefMBB = DefMI->getParent();
-    if (!DefMI || DefMI->isMoveImmediate() || !DefVisited.insert(DefMI).second)
+    if (DefMI->isMoveImmediate() || !DefVisited.insert(DefMI).second)
       continue;
     if (DefMI->isPHI()) {
       for (unsigned I = 1; I < DefMI->getNumOperands(); I += 2)
@@ -234,6 +264,10 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
       else
         CfgLiveInBBs.push_back(&MBB);
     }
+    if (BBVisitedInfo[&MBB].FirstAMX || BBVisitedInfo[&MBB].HasAMXRegLiveIn)
+      for (auto *Succ : MBB.successors())
+        if (!isLoopBackEdge(Succ, &MBB))
+          BBVisitedInfo[Succ].HasAMXRegLiveIn = true;
   }
 
   // Update NeedTileCfgLiveIn for predecessors.
@@ -257,8 +291,17 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   // Avoid to insert ldtilecfg before any shape defs.
-  SmallVector<MachineBasicBlock *, 8> WorkList(
-      make_range(ShapeBBs.begin(), ShapeBBs.end()));
+  SmallVector<MachineBasicBlock *, 8> WorkList;
+  for (auto &I : ShapeBBs) {
+    // TODO: We can hoist shapes across BBs here.
+    if (BBVisitedInfo[I.first].HasAMXRegLiveIn)
+      REPORT_CONFIG_FAIL
+    if (BBVisitedInfo[I.first].FirstAMX &&
+        BBVisitedInfo[I.first].FirstAMX < I.second.back() &&
+        !hoistShapesInBB(I.first, I.second))
+      REPORT_CONFIG_FAIL
+    WorkList.push_back(I.first);
+  }
   while (!WorkList.empty()) {
     MachineBasicBlock *MBB = WorkList.pop_back_val();
     for (auto *Pred : MBB->predecessors()) {
@@ -287,9 +330,6 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
         } else {
           // Avoid the BB to be multi visited.
           VisitedOrInserted.insert(I);
-          // We cannot sink it across any AMX instruction.
-          if (BBVisitedInfo[I.MBB].FirstAMX)
-            REPORT_CONFIG_FAIL;
           // Sink the inserting point along the chain with NeedTileCfgLiveIn =
           // true when MBB isn't all shapes reachable.
           for (auto *Succ : I.MBB->successors())
@@ -301,14 +341,9 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
 
     // A given point might be forked due to shape conditions are not met.
     for (MIRef I : InsertPoints) {
-      // Even MBB is all shapes reachable, we still need to check if there's
-      // AMX that intersects with shapes in the same MBB.
-      if (BBVisitedInfo[I.MBB].FirstAMX &&
-          BBVisitedInfo[I.MBB].FirstAMX < BBVisitedInfo[I.MBB].LastShape)
-        REPORT_CONFIG_FAIL;
       // Make sure we insert ldtilecfg after the last shape def in MBB.
-      if (I < BBVisitedInfo[I.MBB].LastShape)
-        I = BBVisitedInfo[I.MBB].LastShape;
+      if (ShapeBBs.count(I.MBB) && I < ShapeBBs[I.MBB].back())
+        I = ShapeBBs[I.MBB].back();
       // There're chances the MBB is sunk more than once. Record it to avoid
       // multi insert.
       if (VisitedOrInserted.insert(I).second) {

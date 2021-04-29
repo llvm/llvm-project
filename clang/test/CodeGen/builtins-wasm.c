@@ -400,6 +400,12 @@ i32x4 abs_i32x4(i32x4 v) {
   // WEBASSEMBLY-NEXT: ret
 }
 
+i64x2 abs_i64x2(i64x2 v) {
+  return __builtin_wasm_abs_i64x2(v);
+  // WEBASSEMBLY: call <2 x i64> @llvm.abs.v2i64(<2 x i64> %v, i1 false)
+  // WEBASSEMBLY-NEXT: ret
+}
+
 i8x16 min_s_i8x16(i8x16 x, i8x16 y) {
   return __builtin_wasm_min_s_i8x16(x, y);
   // WEBASSEMBLY: %0 = icmp slt <16 x i8> %x, %y
@@ -650,27 +656,9 @@ i8x16 popcnt(i8x16 x) {
   // WEBASSEMBLY-NEXT: ret
 }
 
-int any_true_i8x16(i8x16 x) {
-  return __builtin_wasm_any_true_i8x16(x);
+int any_true_v128(i8x16 x) {
+  return __builtin_wasm_any_true_v128(x);
   // WEBASSEMBLY: call i32 @llvm.wasm.anytrue.v16i8(<16 x i8> %x)
-  // WEBASSEMBLY: ret
-}
-
-int any_true_i16x8(i16x8 x) {
-  return __builtin_wasm_any_true_i16x8(x);
-  // WEBASSEMBLY: call i32 @llvm.wasm.anytrue.v8i16(<8 x i16> %x)
-  // WEBASSEMBLY: ret
-}
-
-int any_true_i32x4(i32x4 x) {
-  return __builtin_wasm_any_true_i32x4(x);
-  // WEBASSEMBLY: call i32 @llvm.wasm.anytrue.v4i32(<4 x i32> %x)
-  // WEBASSEMBLY: ret
-}
-
-int any_true_i64x2(i64x2 x) {
-  return __builtin_wasm_any_true_i64x2(x);
-  // WEBASSEMBLY: call i32 @llvm.wasm.anytrue.v2i64(<2 x i64> %x)
   // WEBASSEMBLY: ret
 }
 
@@ -928,13 +916,13 @@ i64x2 load64_zero(long long *p) {
   // WEBASSEMBLY: ret
 }
 
-i8x16 swizzle_v8x16(i8x16 x, i8x16 y) {
-  return __builtin_wasm_swizzle_v8x16(x, y);
+i8x16 swizzle_i8x16(i8x16 x, i8x16 y) {
+  return __builtin_wasm_swizzle_i8x16(x, y);
   // WEBASSEMBLY: call <16 x i8> @llvm.wasm.swizzle(<16 x i8> %x, <16 x i8> %y)
 }
 
 i8x16 shuffle(i8x16 x, i8x16 y) {
-  return __builtin_wasm_shuffle_v8x16(x, y, 0, 1, 2, 3, 4, 5, 6, 7,
+  return __builtin_wasm_shuffle_i8x16(x, y, 0, 1, 2, 3, 4, 5, 6, 7,
                                       8, 9, 10, 11, 12, 13, 14, 15);
   // WEBASSEMBLY: call <16 x i8> @llvm.wasm.shuffle(<16 x i8> %x, <16 x i8> %y,
   // WEBASSEMBLY-SAME: i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,

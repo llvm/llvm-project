@@ -366,8 +366,8 @@ define void @splat_zero_v32i8(<32 x i8>* %x) {
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
 ; LMULMAX1-NEXT:    vmv.v.i v25, 0
-; LMULMAX1-NEXT:    addi a1, a0, 16
-; LMULMAX1-NEXT:    vse8.v v25, (a1)
+; LMULMAX1-NEXT:    vse8.v v25, (a0)
+; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vse8.v v25, (a0)
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <32 x i8> undef, i8 0, i32 0
@@ -395,8 +395,8 @@ define void @splat_zero_v16i16(<16 x i16>* %x) {
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
 ; LMULMAX1-NEXT:    vmv.v.i v25, 0
-; LMULMAX1-NEXT:    addi a1, a0, 16
-; LMULMAX1-NEXT:    vse16.v v25, (a1)
+; LMULMAX1-NEXT:    vse16.v v25, (a0)
+; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vse16.v v25, (a0)
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <16 x i16> undef, i16 0, i32 0
@@ -424,8 +424,8 @@ define void @splat_zero_v8i32(<8 x i32>* %x) {
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; LMULMAX1-NEXT:    vmv.v.i v25, 0
-; LMULMAX1-NEXT:    addi a1, a0, 16
-; LMULMAX1-NEXT:    vse32.v v25, (a1)
+; LMULMAX1-NEXT:    vse32.v v25, (a0)
+; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vse32.v v25, (a0)
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <8 x i32> undef, i32 0, i32 0
@@ -453,8 +453,8 @@ define void @splat_zero_v4i64(<4 x i64>* %x) {
 ; LMULMAX1-RV32:       # %bb.0:
 ; LMULMAX1-RV32-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vmv.v.i v25, 0
-; LMULMAX1-RV32-NEXT:    addi a1, a0, 16
-; LMULMAX1-RV32-NEXT:    vse32.v v25, (a1)
+; LMULMAX1-RV32-NEXT:    vse32.v v25, (a0)
+; LMULMAX1-RV32-NEXT:    addi a0, a0, 16
 ; LMULMAX1-RV32-NEXT:    vse32.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    ret
 ;
@@ -476,8 +476,8 @@ define void @splat_zero_v4i64(<4 x i64>* %x) {
 ; LMULMAX1-RV64:       # %bb.0:
 ; LMULMAX1-RV64-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vmv.v.i v25, 0
-; LMULMAX1-RV64-NEXT:    addi a1, a0, 16
-; LMULMAX1-RV64-NEXT:    vse64.v v25, (a1)
+; LMULMAX1-RV64-NEXT:    vse64.v v25, (a0)
+; LMULMAX1-RV64-NEXT:    addi a0, a0, 16
 ; LMULMAX1-RV64-NEXT:    vse64.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
   %a = insertelement <4 x i64> undef, i64 0, i32 0
@@ -594,8 +594,8 @@ define void @splat_allones_v32i8(<32 x i8>* %x) {
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
 ; LMULMAX1-NEXT:    vmv.v.i v25, -1
-; LMULMAX1-NEXT:    addi a1, a0, 16
-; LMULMAX1-NEXT:    vse8.v v25, (a1)
+; LMULMAX1-NEXT:    vse8.v v25, (a0)
+; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vse8.v v25, (a0)
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <32 x i8> undef, i8 -1, i32 0
@@ -623,8 +623,8 @@ define void @splat_allones_v16i16(<16 x i16>* %x) {
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
 ; LMULMAX1-NEXT:    vmv.v.i v25, -1
-; LMULMAX1-NEXT:    addi a1, a0, 16
-; LMULMAX1-NEXT:    vse16.v v25, (a1)
+; LMULMAX1-NEXT:    vse16.v v25, (a0)
+; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vse16.v v25, (a0)
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <16 x i16> undef, i16 -1, i32 0
@@ -652,8 +652,8 @@ define void @splat_allones_v8i32(<8 x i32>* %x) {
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; LMULMAX1-NEXT:    vmv.v.i v25, -1
-; LMULMAX1-NEXT:    addi a1, a0, 16
-; LMULMAX1-NEXT:    vse32.v v25, (a1)
+; LMULMAX1-NEXT:    vse32.v v25, (a0)
+; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vse32.v v25, (a0)
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <8 x i32> undef, i32 -1, i32 0
@@ -681,8 +681,8 @@ define void @splat_allones_v4i64(<4 x i64>* %x) {
 ; LMULMAX1-RV32:       # %bb.0:
 ; LMULMAX1-RV32-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vmv.v.i v25, -1
-; LMULMAX1-RV32-NEXT:    addi a1, a0, 16
-; LMULMAX1-RV32-NEXT:    vse32.v v25, (a1)
+; LMULMAX1-RV32-NEXT:    vse32.v v25, (a0)
+; LMULMAX1-RV32-NEXT:    addi a0, a0, 16
 ; LMULMAX1-RV32-NEXT:    vse32.v v25, (a0)
 ; LMULMAX1-RV32-NEXT:    ret
 ;
@@ -704,8 +704,8 @@ define void @splat_allones_v4i64(<4 x i64>* %x) {
 ; LMULMAX1-RV64:       # %bb.0:
 ; LMULMAX1-RV64-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; LMULMAX1-RV64-NEXT:    vmv.v.i v25, -1
-; LMULMAX1-RV64-NEXT:    addi a1, a0, 16
-; LMULMAX1-RV64-NEXT:    vse64.v v25, (a1)
+; LMULMAX1-RV64-NEXT:    vse64.v v25, (a0)
+; LMULMAX1-RV64-NEXT:    addi a0, a0, 16
 ; LMULMAX1-RV64-NEXT:    vse64.v v25, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
   %a = insertelement <4 x i64> undef, i64 -1, i32 0
@@ -798,13 +798,14 @@ define void @vadd_vx_v16i64(<16 x i64>* %a, i64 %b, <16 x i64>* %c) {
 ; LMULMAX8-RV32:       # %bb.0:
 ; LMULMAX8-RV32-NEXT:    vsetivli a4, 16, e64,m8,ta,mu
 ; LMULMAX8-RV32-NEXT:    vle64.v v8, (a0)
-; LMULMAX8-RV32-NEXT:    lui a0, 349525
-; LMULMAX8-RV32-NEXT:    addi a0, a0, 1365
-; LMULMAX8-RV32-NEXT:    vsetivli a4, 1, e32,m1,ta,mu
-; LMULMAX8-RV32-NEXT:    vmv.s.x v0, a0
 ; LMULMAX8-RV32-NEXT:    addi a0, zero, 32
-; LMULMAX8-RV32-NEXT:    vsetvli a0, a0, e32,m8,ta,mu
+; LMULMAX8-RV32-NEXT:    vsetvli a4, a0, e32,m8,ta,mu
 ; LMULMAX8-RV32-NEXT:    vmv.v.x v16, a2
+; LMULMAX8-RV32-NEXT:    lui a2, 349525
+; LMULMAX8-RV32-NEXT:    addi a2, a2, 1365
+; LMULMAX8-RV32-NEXT:    vsetivli a4, 1, e32,m1,ta,mu
+; LMULMAX8-RV32-NEXT:    vmv.s.x v0, a2
+; LMULMAX8-RV32-NEXT:    vsetvli a0, a0, e32,m8,ta,mu
 ; LMULMAX8-RV32-NEXT:    vmerge.vxm v16, v16, a1, v0
 ; LMULMAX8-RV32-NEXT:    vsetivli a0, 16, e64,m8,ta,mu
 ; LMULMAX8-RV32-NEXT:    vadd.vv v8, v8, v16

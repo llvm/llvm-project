@@ -139,10 +139,6 @@ public:
 
     /// Assign the statistic to the given value.
     Statistic &operator=(unsigned value);
-
-  private:
-    /// Hide some of the details of llvm::Statistic that we don't use.
-    using llvm::Statistic::getDebugType;
   };
 
   /// Returns the main statistics for this pass instance.

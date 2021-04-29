@@ -1,5 +1,9 @@
 ; RUN: llvm-rc -no-preprocess /C 65001 /FO %t.utf8.res -- %p/Inputs/utf8.rc
 ; RUN: llvm-readobj %t.utf8.res | FileCheck %s --check-prefix=UTF8
+; RUN: llvm-windres --no-preprocess -c 65001 %p/Inputs/utf8.rc %t.utf8.res
+; RUN: llvm-readobj %t.utf8.res | FileCheck %s --check-prefix=UTF8
+; RUN: llvm-windres --no-preprocess --codepage 65001 %p/Inputs/utf8.rc %t.utf8.res
+; RUN: llvm-readobj %t.utf8.res | FileCheck %s --check-prefix=UTF8
 
 ; UTF8:      Resource type (int): STRINGTABLE (ID 6)
 ; UTF8-NEXT: Resource name (int): 1
@@ -23,6 +27,8 @@
 ; UTF8_ESCAPE-NEXT: Unable to interpret single byte (195) as UTF-8
 
 ; RUN: llvm-rc -no-preprocess /C 1252 /FO %t.cp1252.res -- %p/Inputs/cp1252.rc
+; RUN: llvm-readobj %t.cp1252.res | FileCheck %s --check-prefix=CP1252
+; RUN: llvm-windres --no-preprocess -c 1252 %p/Inputs/cp1252.rc %t.cp1252.res
 ; RUN: llvm-readobj %t.cp1252.res | FileCheck %s --check-prefix=CP1252
 
 ; CP1252:      Resource type (int): STRINGTABLE (ID 6)

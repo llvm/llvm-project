@@ -53,8 +53,8 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align4(i32 %n) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_lshl2_add_u32 s0, s0, 15
 ; GFX11-NEXT:    s_and_b32 s0, s0, -16
-; GFX11-NEXT:    s_lshl_b32 s14, s0, 5
-; GFX11-NEXT:    s_add_u32 s0, s32, s14
+; GFX11-NEXT:    s_lshl_b32 s0, s0, 5
+; GFX11-NEXT:    s_add_u32 s0, s32, s0
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX11-NEXT:    s_endpgm
   %alloca = alloca i32, i32 %n, align 4, addrspace(5)
@@ -132,8 +132,8 @@ define void @func_dynamic_stackalloc_sgpr_align4() {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_lshl2_add_u32 s0, s0, 15
 ; GFX11-NEXT:    s_and_b32 s0, s0, -16
-; GFX11-NEXT:    s_lshl_b32 s14, s0, 5
-; GFX11-NEXT:    s_add_u32 s0, s32, s14
+; GFX11-NEXT:    s_lshl_b32 s0, s0, 5
+; GFX11-NEXT:    s_add_u32 s0, s32, s0
 ; GFX11-NEXT:    s_sub_u32 s32, s32, 16
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -192,8 +192,8 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align16(i32 %n) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_lshl2_add_u32 s0, s0, 15
 ; GFX11-NEXT:    s_and_b32 s0, s0, -16
-; GFX11-NEXT:    s_lshl_b32 s14, s0, 5
-; GFX11-NEXT:    s_add_u32 s0, s32, s14
+; GFX11-NEXT:    s_lshl_b32 s0, s0, 5
+; GFX11-NEXT:    s_add_u32 s0, s32, s0
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX11-NEXT:    s_endpgm
   %alloca = alloca i32, i32 %n, align 16, addrspace(5)
@@ -271,8 +271,8 @@ define void @func_dynamic_stackalloc_sgpr_align16() {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_lshl2_add_u32 s0, s0, 15
 ; GFX11-NEXT:    s_and_b32 s0, s0, -16
-; GFX11-NEXT:    s_lshl_b32 s14, s0, 5
-; GFX11-NEXT:    s_add_u32 s0, s32, s14
+; GFX11-NEXT:    s_lshl_b32 s0, s0, 5
+; GFX11-NEXT:    s_add_u32 s0, s32, s0
 ; GFX11-NEXT:    s_sub_u32 s32, s32, 16
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -333,8 +333,8 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align32(i32 %n) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_lshl2_add_u32 s0, s0, 15
 ; GFX11-NEXT:    s_and_b32 s0, s0, -16
-; GFX11-NEXT:    s_lshl_b32 s14, s0, 5
-; GFX11-NEXT:    s_add_u32 s0, s32, s14
+; GFX11-NEXT:    s_lshl_b32 s0, s0, 5
+; GFX11-NEXT:    s_add_u32 s0, s32, s0
 ; GFX11-NEXT:    s_and_b32 s0, s0, 0xfffffc00
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX11-NEXT:    s_endpgm
@@ -418,8 +418,8 @@ define void @func_dynamic_stackalloc_sgpr_align32(i32 addrspace(1)* %out) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_lshl2_add_u32 s0, s0, 15
 ; GFX11-NEXT:    s_and_b32 s0, s0, -16
-; GFX11-NEXT:    s_lshl_b32 s14, s0, 5
-; GFX11-NEXT:    s_add_u32 s0, s32, s14
+; GFX11-NEXT:    s_lshl_b32 s0, s0, 5
+; GFX11-NEXT:    s_add_u32 s0, s32, s0
 ; GFX11-NEXT:    s_and_b32 s0, s0, 0xfffffc00
 ; GFX11-NEXT:    s_sub_u32 s32, s32, 64
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s0

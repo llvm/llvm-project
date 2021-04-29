@@ -10,7 +10,7 @@ declare noalias nonnull i8* @_Znam(i64) ; throwing version of 'new'
 declare noalias nonnull i8* @_Znwm(i64) ; throwing version of 'new'
 declare noalias i8* @strdup(i8*)
 declare noalias i8* @aligned_alloc(i64, i64)
-declare noalias i8* @memalign(i64, i64)
+declare noalias align 16 i8* @memalign(i64, i64)
 
 @.str = private unnamed_addr constant [6 x i8] c"hello\00", align 1
 

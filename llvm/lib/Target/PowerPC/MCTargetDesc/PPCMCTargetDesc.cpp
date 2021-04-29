@@ -15,6 +15,7 @@
 #include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "PPCELFStreamer.h"
 #include "PPCTargetStreamer.h"
+#include "PPCXCOFFStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
@@ -112,13 +113,21 @@ static MCAsmInfo *createPPCMCAsmInfo(const MCRegisterInfo &MRI,
   return MAI;
 }
 
-static MCStreamer *createPPCMCStreamer(const Triple &T, MCContext &Context,
-                                       std::unique_ptr<MCAsmBackend> &&MAB,
-                                       std::unique_ptr<MCObjectWriter> &&OW,
-                                       std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                       bool RelaxAll) {
+static MCStreamer *
+createPPCELFStreamer(const Triple &T, MCContext &Context,
+                     std::unique_ptr<MCAsmBackend> &&MAB,
+                     std::unique_ptr<MCObjectWriter> &&OW,
+                     std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll) {
   return createPPCELFStreamer(Context, std::move(MAB), std::move(OW),
                               std::move(Emitter));
+}
+
+static MCStreamer *createPPCXCOFFStreamer(
+    const Triple &T, MCContext &Context, std::unique_ptr<MCAsmBackend> &&MAB,
+    std::unique_ptr<MCObjectWriter> &&OW,
+    std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll) {
+  return createPPCXCOFFStreamer(Context, std::move(MAB), std::move(OW),
+                                std::move(Emitter));
 }
 
 namespace {
@@ -377,7 +386,10 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTargetMC() {
     TargetRegistry::RegisterMCAsmBackend(*T, createPPCAsmBackend);
 
     // Register the elf streamer.
-    TargetRegistry::RegisterELFStreamer(*T, createPPCMCStreamer);
+    TargetRegistry::RegisterELFStreamer(*T, createPPCELFStreamer);
+
+    // Register the XCOFF streamer.
+    TargetRegistry::RegisterXCOFFStreamer(*T, createPPCXCOFFStreamer);
 
     // Register the object target streamer.
     TargetRegistry::RegisterObjectTargetStreamer(*T,

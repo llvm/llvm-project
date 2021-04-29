@@ -91,6 +91,7 @@ struct DsymutilOptions {
   bool InputIsYAMLDebugMap = false;
   bool PaperTrailWarnings = false;
   bool Verify = false;
+  bool ForceKeepFunctionForStatic = false;
   std::string SymbolMap;
   std::string OutputFile;
   std::string Toolchain;
@@ -230,6 +231,8 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.LinkOpts.Update = Args.hasArg(OPT_update);
   Options.LinkOpts.Verbose = Args.hasArg(OPT_verbose);
   Options.LinkOpts.Statistics = Args.hasArg(OPT_statistics);
+  Options.LinkOpts.KeepFunctionForStatic =
+      Args.hasArg(OPT_keep_func_for_static);
 
   if (opt::Arg *ReproducerPath = Args.getLastArg(OPT_use_reproducer)) {
     Options.ReproMode = ReproducerMode::Use;

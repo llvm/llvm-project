@@ -23,9 +23,6 @@
 # CHECK-NEXT:  100001000 08100000 01000000
 # CHECK:       Contents of section __DATA,bar:
 # CHECK-NEXT:  100001008 011000f0 11211111 02000000
-# CHECK:       Rebase table:
-# CHECK-NEXT:  segment  section            address     type
-# CHECK-EMPTY:
 
 # PIE:      Rebase table:
 # PIE-NEXT: segment  section            address           type

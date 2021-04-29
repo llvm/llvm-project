@@ -442,10 +442,10 @@ public:
                                     FileType Type = ToolChain::FT_Static) const;
 
   // Returns target specific runtime path if it exists.
-  virtual Optional<std::string> getRuntimePath() const;
+  virtual std::string getRuntimePath() const;
 
   // Returns target specific standard library path if it exists.
-  virtual Optional<std::string> getStdlibPath() const;
+  virtual std::string getStdlibPath() const;
 
   // Returns <ResourceDir>/lib/<OSName>/<arch>.  This is used by runtimes (such
   // as OpenMP) to find arch-specific libraries.
@@ -541,6 +541,12 @@ public:
 
   /// isThreadModelSupported() - Does this target support a thread model?
   virtual bool isThreadModelSupported(const StringRef Model) const;
+
+  virtual std::string getMultiarchTriple(const Driver &D,
+                                         const llvm::Triple &TargetTriple,
+                                         StringRef SysRoot) const {
+    return TargetTriple.str();
+  }
 
   /// ComputeLLVMTriple - Return the LLVM target triple to use, after taking
   /// command line arguments into account.

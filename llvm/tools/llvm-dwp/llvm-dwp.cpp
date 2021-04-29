@@ -16,6 +16,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -64,10 +65,107 @@ static cl::opt<std::string> OutputFilename(cl::Required, "o",
                                            cl::value_desc("filename"),
                                            cl::cat(DwpCategory));
 
+// Returns the size of debug_str_offsets section headers in bytes.
+static uint64_t debugStrOffsetsHeaderSize(DataExtractor StrOffsetsData,
+                                          uint16_t DwarfVersion) {
+  if (DwarfVersion <= 4)
+    return 0; // There is no header before dwarf 5.
+  uint64_t Offset = 0;
+  uint64_t Length = StrOffsetsData.getU32(&Offset);
+  if (Length == llvm::dwarf::DW_LENGTH_DWARF64)
+    return 16; // unit length: 12 bytes, version: 2 bytes, padding: 2 bytes.
+  return 8;    // unit length: 4 bytes, version: 2 bytes, padding: 2 bytes.
+}
+
+// Holds data for Skeleton and Split Compilation Unit Headers as defined in
+// Dwarf 5 specification, 7.5.1.2 and Dwarf 4 specification 7.5.1.1.
+struct CompileUnitHeader {
+  // unit_length field. Note that the type is uint64_t even in 32-bit dwarf.
+  uint64_t Length = 0;
+
+  // version field.
+  uint16_t Version = 0;
+
+  // unit_type field. Initialized only if Version >= 5.
+  uint8_t UnitType = 0;
+
+  // address_size field.
+  uint8_t AddrSize = 0;
+
+  // debug_abbrev_offset field. Note that the type is uint64_t even in 32-bit
+  // dwarf. It is assumed to be 0.
+  uint64_t DebugAbbrevOffset = 0;
+
+  // dwo_id field. This resides in the header only if Version >= 5.
+  // In earlier versions, it is read from DW_AT_GNU_dwo_id.
+  Optional<uint64_t> Signature = None;
+
+  // Derived from the length of Length field.
+  dwarf::DwarfFormat Format = dwarf::DwarfFormat::DWARF32;
+
+  // The size of the Header in bytes. This is derived while parsing the header,
+  // and is stored as a convenience.
+  uint8_t HeaderSize = 0;
+};
+
+// Parse and return the header of the compile unit.
+static Expected<CompileUnitHeader> parseCompileUnitHeader(StringRef Info) {
+  CompileUnitHeader Header;
+  Error Err = Error::success();
+  uint64_t Offset = 0;
+  DWARFDataExtractor InfoData(Info, true, 0);
+  std::tie(Header.Length, Header.Format) =
+      InfoData.getInitialLength(&Offset, &Err);
+  if (Err)
+    return make_error<DWPError>("cannot parse compile unit length: " +
+                                llvm::toString(std::move(Err)));
+
+  if (!InfoData.isValidOffset(Offset + (Header.Length - 1))) {
+    return make_error<DWPError>(
+        "compile unit exceeds .debug_info section range: " +
+        utostr(Offset + Header.Length) + " >= " + utostr(InfoData.size()));
+  }
+
+  Header.Version = InfoData.getU16(&Offset, &Err);
+  if (Err)
+    return make_error<DWPError>("cannot parse compile unit version: " +
+                                llvm::toString(std::move(Err)));
+
+  uint64_t MinHeaderLength;
+  if (Header.Version >= 5) {
+    // Size: Version (2), UnitType (1), AddrSize (1), DebugAbbrevOffset (4),
+    // Signature (8)
+    MinHeaderLength = 16;
+  } else {
+    // Size: Version (2), DebugAbbrevOffset (4), AddrSize (1)
+    MinHeaderLength = 7;
+  }
+  if (Header.Length < MinHeaderLength) {
+    return make_error<DWPError>(
+        "compile unit length is too small: expected at least " +
+        utostr(MinHeaderLength) + " got " + utostr(Header.Length) + ".");
+  }
+  if (Header.Version >= 5) {
+    Header.UnitType = InfoData.getU8(&Offset);
+    Header.AddrSize = InfoData.getU8(&Offset);
+    Header.DebugAbbrevOffset = InfoData.getU32(&Offset);
+    Header.Signature = InfoData.getU64(&Offset);
+  } else {
+    // Note that, address_size and debug_abbrev_offset fields have switched
+    // places between dwarf version 4 and 5.
+    Header.DebugAbbrevOffset = InfoData.getU32(&Offset);
+    Header.AddrSize = InfoData.getU8(&Offset);
+  }
+
+  Header.HeaderSize = Offset;
+  return Header;
+}
+
 static void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
                                    MCSection *StrOffsetSection,
                                    StringRef CurStrSection,
-                                   StringRef CurStrOffsetSection) {
+                                   StringRef CurStrOffsetSection,
+                                   const CompileUnitHeader &Header) {
   // Could possibly produce an error or warning if one of these was non-null but
   // the other was null.
   if (CurStrSection.empty() || CurStrOffsetSection.empty())
@@ -88,8 +186,13 @@ static void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
 
   Out.SwitchSection(StrOffsetSection);
 
+  uint64_t HeaderSize = debugStrOffsetsHeaderSize(Data, Header.Version);
   uint64_t Offset = 0;
   uint64_t Size = CurStrOffsetSection.size();
+  // FIXME: This can be caused by bad input and should be handled as such.
+  assert(HeaderSize <= Size && "StrOffsetSection size is less than its header");
+  // Copy the header to the output.
+  Out.emitBytes(Data.getBytes(&Offset, HeaderSize));
   while (Offset < Size) {
     auto OldOffset = Data.getU32(&Offset);
     auto NewOffset = OffsetRemapping[OldOffset];
@@ -98,10 +201,9 @@ static void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
 }
 
 static uint64_t getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
-  uint64_t CurCode;
   uint64_t Offset = 0;
   DataExtractor AbbrevData(Abbrev, true, 0);
-  while ((CurCode = AbbrevData.getULEB128(&Offset)) != AbbrCode) {
+  while (AbbrevData.getULEB128(&Offset) != AbbrCode) {
     // Tag
     AbbrevData.getULEB128(&Offset);
     // DW_CHILDREN
@@ -120,16 +222,38 @@ struct CompileUnitIdentifiers {
 };
 
 static Expected<const char *>
-getIndexedString(dwarf::Form Form, DataExtractor InfoData,
-                 uint64_t &InfoOffset, StringRef StrOffsets, StringRef Str) {
+getIndexedString(dwarf::Form Form, DataExtractor InfoData, uint64_t &InfoOffset,
+                 StringRef StrOffsets, StringRef Str, uint16_t Version) {
   if (Form == dwarf::DW_FORM_string)
     return InfoData.getCStr(&InfoOffset);
-  if (Form != dwarf::DW_FORM_GNU_str_index)
+  uint64_t StrIndex;
+  switch (Form) {
+  case dwarf::DW_FORM_strx1:
+    StrIndex = InfoData.getU8(&InfoOffset);
+    break;
+  case dwarf::DW_FORM_strx2:
+    StrIndex = InfoData.getU16(&InfoOffset);
+    break;
+  case dwarf::DW_FORM_strx3:
+    StrIndex = InfoData.getU24(&InfoOffset);
+    break;
+  case dwarf::DW_FORM_strx4:
+    StrIndex = InfoData.getU32(&InfoOffset);
+    break;
+  case dwarf::DW_FORM_strx:
+  case dwarf::DW_FORM_GNU_str_index:
+    StrIndex = InfoData.getULEB128(&InfoOffset);
+    break;
+  default:
     return make_error<DWPError>(
-        "string field encoded without DW_FORM_string or DW_FORM_GNU_str_index");
-  auto StrIndex = InfoData.getULEB128(&InfoOffset);
+        "string field must be encoded with one of the following: "
+        "DW_FORM_string, DW_FORM_strx, DW_FORM_strx1, DW_FORM_strx2, "
+        "DW_FORM_strx3, DW_FORM_strx4, or DW_FORM_GNU_str_index.");
+  }
   DataExtractor StrOffsetsData(StrOffsets, true, 0);
   uint64_t StrOffsetsOffset = 4 * StrIndex;
+  StrOffsetsOffset += debugStrOffsetsHeaderSize(StrOffsetsData, Version);
+
   uint64_t StrOffset = StrOffsetsData.getU32(&StrOffsetsOffset);
   DataExtractor StrData(Str, true, 0);
   return StrData.getCStr(&StrOffset);
@@ -139,33 +263,21 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
                                                          StringRef Info,
                                                          StringRef StrOffsets,
                                                          StringRef Str) {
-  uint64_t Offset = 0;
+  Expected<CompileUnitHeader> HeaderOrError = parseCompileUnitHeader(Info);
+  if (!HeaderOrError)
+    return HeaderOrError.takeError();
+  CompileUnitHeader &Header = *HeaderOrError;
   DataExtractor InfoData(Info, true, 0);
-  dwarf::DwarfFormat Format = dwarf::DwarfFormat::DWARF32;
-  uint64_t Length = InfoData.getU32(&Offset);
-  CompileUnitIdentifiers ID;
-  Optional<uint64_t> Signature = None;
-  // If the length is 0xffffffff, then this indictes that this is a DWARF 64
-  // stream and the length is actually encoded into a 64 bit value that follows.
-  if (Length == 0xffffffffU) {
-    Format = dwarf::DwarfFormat::DWARF64;
-    Length = InfoData.getU64(&Offset);
-  }
-  uint16_t Version = InfoData.getU16(&Offset);
-  if (Version >= 5) {
-    auto UnitType = InfoData.getU8(&Offset);
-    if (UnitType != dwarf::DW_UT_split_compile)
-      return make_error<DWPError>(
-          std::string("unit type DW_UT_split_compile type not found in "
-                      "debug_info header. Unexpected unit type 0x" +
-                      utostr(UnitType) + " found"));
-  }
-  InfoData.getU32(&Offset); // Abbrev offset (should be zero)
-  uint8_t AddrSize = InfoData.getU8(&Offset);
-  if (Version >= 5)
-    Signature = InfoData.getU64(&Offset);
-  uint32_t AbbrCode = InfoData.getULEB128(&Offset);
+  uint64_t Offset = Header.HeaderSize;
+  if (Header.Version >= 5 && Header.UnitType != dwarf::DW_UT_split_compile)
+    return make_error<DWPError>(
+        std::string("unit type DW_UT_split_compile type not found in "
+                    "debug_info header. Unexpected unit type 0x" +
+                    utostr(Header.UnitType) + " found"));
 
+  CompileUnitIdentifiers ID;
+
+  uint32_t AbbrCode = InfoData.getULEB128(&Offset);
   DataExtractor AbbrevData(Abbrev, true, 0);
   uint64_t AbbrevOffset = getCUAbbrev(Abbrev, AbbrCode);
   auto Tag = static_cast<dwarf::Tag>(AbbrevData.getULEB128(&AbbrevOffset));
@@ -180,8 +292,8 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
          (Name != 0 || Form != 0)) {
     switch (Name) {
     case dwarf::DW_AT_name: {
-      Expected<const char *> EName =
-          getIndexedString(Form, InfoData, Offset, StrOffsets, Str);
+      Expected<const char *> EName = getIndexedString(
+          Form, InfoData, Offset, StrOffsets, Str, Header.Version);
       if (!EName)
         return EName.takeError();
       ID.Name = *EName;
@@ -189,24 +301,25 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
     }
     case dwarf::DW_AT_GNU_dwo_name:
     case dwarf::DW_AT_dwo_name: {
-      Expected<const char *> EName =
-          getIndexedString(Form, InfoData, Offset, StrOffsets, Str);
+      Expected<const char *> EName = getIndexedString(
+          Form, InfoData, Offset, StrOffsets, Str, Header.Version);
       if (!EName)
         return EName.takeError();
       ID.DWOName = *EName;
       break;
     }
     case dwarf::DW_AT_GNU_dwo_id:
-      Signature = InfoData.getU64(&Offset);
+      Header.Signature = InfoData.getU64(&Offset);
       break;
     default:
-      DWARFFormValue::skipValue(Form, InfoData, &Offset,
-                                dwarf::FormParams({Version, AddrSize, Format}));
+      DWARFFormValue::skipValue(
+          Form, InfoData, &Offset,
+          dwarf::FormParams({Header.Version, Header.AddrSize, Header.Format}));
     }
   }
-  if (!Signature)
+  if (!Header.Signature)
     return make_error<DWPError>("compile unit missing dwo_id");
-  ID.Signature = *Signature;
+  ID.Signature = *Header.Signature;
   return ID;
 }
 
@@ -596,8 +709,14 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
     if (InfoSection.empty())
       continue;
 
+    Expected<CompileUnitHeader> CompileUnitHeaderOrErr =
+        parseCompileUnitHeader(InfoSection);
+    if (!CompileUnitHeaderOrErr)
+      return CompileUnitHeaderOrErr.takeError();
+    CompileUnitHeader &CompileUnitHeader = *CompileUnitHeaderOrErr;
+
     writeStringsAndOffsets(Out, Strings, StrOffsetSection, CurStrSection,
-                           CurStrOffsetSection);
+                           CurStrOffsetSection, CompileUnitHeader);
 
     if (CurCUIndexSection.empty()) {
       Expected<CompileUnitIdentifiers> EID = getCUIdentifiers(

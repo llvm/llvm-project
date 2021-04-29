@@ -122,6 +122,17 @@ void test_atomic_fetch(volatile __generic atomic_int *a_int,
 }
 #endif
 
+// Test old atomic overloaded with generic address space in C++ for OpenCL.
+#if __OPENCL_C_VERSION__ >= 200
+void test_legacy_atomics_cpp(__generic volatile unsigned int *a) {
+  atomic_add(a, 1);
+#if !defined(__cplusplus)
+  // expected-error@-2{{no matching function for call to 'atomic_add'}}
+  // expected-note@-3 4 {{candidate function not viable}}
+#endif
+}
+#endif
+
 kernel void basic_conversion() {
   float f;
   char2 c2;

@@ -399,6 +399,13 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
       }
     }
 
+    // Calls that only access inaccessible memory do not block merging
+    // accessible stores.
+    if (auto *CB = dyn_cast<CallBase>(BI)) {
+      if (CB->onlyAccessesInaccessibleMemory())
+        continue;
+    }
+
     if (!isa<StoreInst>(BI) && !isa<MemSetInst>(BI)) {
       // If the instruction is readnone, ignore it, otherwise bail out.  We
       // don't even allow readonly here because we don't want something like:

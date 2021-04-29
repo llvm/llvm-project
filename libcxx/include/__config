@@ -848,7 +848,7 @@ typedef unsigned int   char32_t;
 #define _LIBCPP_HAS_NO_CONCEPTS
 #endif
 
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_HAS_NO_CONCEPTS) || defined(_MSC_VER)
 #define _LIBCPP_HAS_NO_RANGES
 #endif
 
@@ -1420,8 +1420,6 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #    endif
 #  endif // defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_BUILDING_LIBRARY)
 #endif // _LIBCPP_NO_AUTO_LINK
-
-#define _LIBCPP_UNUSED_VAR(x) ((void)(x))
 
 // Configures the fopen close-on-exec mode character, if any. This string will
 // be appended to any mode string used by fstream for fopen/fdopen.

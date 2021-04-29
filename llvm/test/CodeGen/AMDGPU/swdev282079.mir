@@ -100,3 +100,18 @@ body:             |
     S_ENDPGM 0
 
 ...
+
+# This would crash looking for a def in any mayLoad instruction
+---
+name: fold_inlineasm_def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+
+    ; CHECK-LABEL: name: fold_inlineasm_def
+    ; CHECK: INLINEASM &"s_waitcnt vmcnt($0)", 41 /* sideeffect mayload isconvergent attdialect */, 13 /* imm */, 0
+    ; CHECK: S_ENDPGM 0
+    INLINEASM &"s_waitcnt vmcnt($0)", 41 /* sideeffect mayload isconvergent attdialect */, 13 /* imm */, 0
+    S_ENDPGM 0
+
+...

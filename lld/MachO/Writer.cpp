@@ -337,7 +337,7 @@ private:
 
 class LCRPath : public LoadCommand {
 public:
-  LCRPath(StringRef path) : path(path) {}
+  explicit LCRPath(StringRef path) : path(path) {}
 
   uint32_t getSize() const override {
     return alignTo(sizeof(rpath_command) + path.size() + 1, target->wordSize);
@@ -473,8 +473,6 @@ public:
 
 template <class LP> class LCEncryptionInfo : public LoadCommand {
 public:
-  LCEncryptionInfo() {}
-
   uint32_t getSize() const override {
     return sizeof(typename LP::encryption_info_command);
   }
@@ -793,7 +791,7 @@ static int sectionOrder(OutputSection *osec) {
       return std::numeric_limits<int>::max();
     default:
       return StringSwitch<int>(osec->name)
-          .Case(section_names::laSymbolPtr, -2)
+          .Case(section_names::lazySymbolPtr, -2)
           .Case(section_names::data, -1)
           .Default(0);
     }

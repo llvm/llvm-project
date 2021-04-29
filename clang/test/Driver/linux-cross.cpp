@@ -2,7 +2,8 @@
 
 /// Test native x86-64 in the tree.
 // RUN: %clang -### %s --target=x86_64-linux-gnu --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   -resource-dir=%S/Inputs/resource_dir --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64
+// RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
+// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64
 // DEBIAN_X86_64:      "-resource-dir" "[[RESOURCE:[^"]+]]"
 // DEBIAN_X86_64:      "-internal-isystem"
 // DEBIAN_X86_64-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10"
@@ -11,6 +12,8 @@
 // DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
 // DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../x86_64-linux-gnu/include"
+/// We set explicit -ccc-install-dir ensure that Clang does not pick up extra
+/// library directories which may be present in the runtimes build.
 // DEBIAN_X86_64:      "-L
 // DEBIAN_X86_64-SAME: {{^}}[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10"
 /// Debian patches MULTILIB_OSDIRNAMES (../lib64 -> ../lib), so gcc uses 'lib' instead of 'lib64'.
@@ -28,7 +31,8 @@
 
 /// Test -m32.
 // RUN: %clang -### %s --target=x86_64-linux-gnu -m32 --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   -resource-dir=%S/Inputs/resource_dir --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64_M32
+// RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
+// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64_M32
 // DEBIAN_X86_64_M32:      "-resource-dir" "[[RESOURCE:[^"]+]]"
 // DEBIAN_X86_64_M32:      "-internal-isystem"
 // DEBIAN_X86_64_M32-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10"
@@ -51,7 +55,8 @@
 
 /// Test native GCC installation on Debian i386.
 // RUN: %clang -### %s --target=i686-linux-gnu --sysroot=%S/Inputs/debian_i386_tree \
-// RUN:   -resource-dir=%S/Inputs/resource_dir --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_I686
+// RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
+// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_I686
 // DEBIAN_I686:      "-resource-dir" "[[RESOURCE:[^"]+]]"
 // DEBIAN_I686:      "-internal-isystem"
 // DEBIAN_I686-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/c++/10"
@@ -75,7 +80,8 @@
 
 /// Test -m64 on Debian i386.
 // RUN: %clang -### %s --target=i686-linux-gnu --sysroot=%S/Inputs/debian_i386_tree -m64 \
-// RUN:   -resource-dir=%S/Inputs/resource_dir --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_I686_M64
+// RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
+// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_I686_M64
 // DEBIAN_I686_M64:      "-resource-dir" "[[RESOURCE:[^"]+]]"
 // DEBIAN_I686_M64:      "-internal-isystem"
 // DEBIAN_I686_M64-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/c++/10"
@@ -100,7 +106,8 @@
 
 /// Test a cross compiler.
 // RUN: %clang -### %s --target=aarch64-linux-gnu --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   -resource-dir=%S/Inputs/resource_dir --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_AARCH64
+// RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
+// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_AARCH64
 // DEBIAN_AARCH64:      "-resource-dir" "[[RESOURCE:[^"]+]]"
 // DEBIAN_AARCH64:      "-internal-isystem"
 // DEBIAN_AARCH64-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc-cross/aarch64-linux-gnu/10/../../../../aarch64-linux-gnu/include/c++/10"

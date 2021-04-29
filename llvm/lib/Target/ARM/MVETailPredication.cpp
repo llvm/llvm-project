@@ -205,6 +205,10 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
     EnableTailPredication == TailPredication::ForceEnabled;
 
   Value *ElemCount = ActiveLaneMask->getOperand(1);
+  bool Changed = false;
+  if (!L->makeLoopInvariant(ElemCount, Changed))
+    return false;
+
   auto *EC= SE->getSCEV(ElemCount);
   auto *TC = SE->getSCEV(TripCount);
   int VectorWidth =

@@ -11,15 +11,15 @@ define amdgpu_ps void @v_interp_f32(float inreg %i, float inreg %j, i32 inreg %m
 ; GCN-NEXT:    lds_param_load v1, attr1.x
 ; GCN-NEXT:    s_mov_b32 exec_lo, s3
 ; GCN-NEXT:    v_mov_b32_e32 v2, s0
-; GCN-NEXT:    v_mov_b32_e32 v6, s1
+; GCN-NEXT:    v_mov_b32_e32 v4, s1
 ; GCN-NEXT:    s_waitcnt expcnt(1)
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GCN-NEXT:    v_interp_p10_f32 v3, v0, v2, v0
 ; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    v_interp_p10_f32 v2, v1, v2, v1
-; GCN-NEXT:    v_interp_p2_f32 v5, v0, v6, v3
+; GCN-NEXT:    v_interp_p2_f32 v5, v0, v4, v3
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_interp_p2_f32 v4, v1, v6, v5
+; GCN-NEXT:    v_interp_p2_f32 v4, v1, v4, v5
 ; GCN-NEXT:    exp mrt0 v3, v2, v5, v4 done
 ; GCN-NEXT:    s_endpgm
 main_body:

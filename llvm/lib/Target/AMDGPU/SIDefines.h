@@ -320,7 +320,19 @@ enum Id { // Message ID, width(4) [3:0].
   ID_GAPS_FIRST_ = ID_INTERRUPT,
   ID_SHIFT_ = 0,
   ID_WIDTH_ = 4,
-  ID_MASK_ = (((1 << ID_WIDTH_) - 1) << ID_SHIFT_)
+  // Note that this mask includes IdRtn values enumerated below.
+  ID_MASK_ = 1 << 7 | ((1 << ID_WIDTH_) - 1) << ID_SHIFT_
+};
+
+enum IdRtn { // Message ID, width(4) [3:0] but with bit 7 set.
+  ID_RTN_GET_DOORBELL = 128,
+  ID_RTN_GET_DDID = 129,
+  ID_RTN_GET_TMA = 130,
+  ID_RTN_GET_REALTIME = 131,
+  ID_RTN_SAVEWAVE = 132,
+  ID_RTN_GET_TBA = 133,
+  ID_RTN_LAST_,
+  ID_RTN_FIRST_ = ID_RTN_GET_DOORBELL
 };
 
 enum Op { // Both GS and SYS operation IDs.

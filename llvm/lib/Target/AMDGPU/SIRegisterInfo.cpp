@@ -568,8 +568,8 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     assert(!isSubRegister(ScratchRSrcReg, BasePtrReg));
   }
 
-  for (MCRegister Reg : MFI->WWMReservedRegs) {
-    reserveRegisterTuples(Reserved, Reg);
+  for (auto Reg : MFI->WWMReservedRegs) {
+    reserveRegisterTuples(Reserved, Reg.first);
   }
 
   // FIXME: Stop using reserved registers for this.

@@ -146,14 +146,14 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 ; GFX11-NEXT:    global_load_b128 v[40:43], v64, s[0:1] offset:32
 ; GFX11-NEXT:    global_load_b128 v[44:47], v64, s[0:1] offset:48
 ; GFX11-NEXT:    global_load_b128 v[48:51], v64, s[0:1] offset:64
-; GFX11-NEXT:    v_add_co_u32_e64 v10, vcc_lo, v5, v64
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, 0, v6, vcc_lo
-; GFX11-NEXT:    v_add_co_u32_e64 v5, vcc_lo, v10, 64
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v6, vcc_lo, 0, v7, vcc_lo
-; GFX11-NEXT:    v_add_co_u32_e64 v0, vcc_lo, v10, v1
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v7, v2, vcc_lo
-; GFX11-NEXT:    v_add_co_u32_e64 v2, vcc_lo, v10, v3
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v7, v4, vcc_lo
+; GFX11-NEXT:    v_add_co_u32_e64 v7, vcc_lo, v5, v64
+; GFX11-NEXT:    v_add_co_ci_u32_e32 v8, vcc_lo, 0, v6, vcc_lo
+; GFX11-NEXT:    v_add_co_u32_e64 v5, vcc_lo, v7, 64
+; GFX11-NEXT:    v_add_co_ci_u32_e32 v6, vcc_lo, 0, v8, vcc_lo
+; GFX11-NEXT:    v_add_co_u32_e64 v0, vcc_lo, v7, v1
+; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v8, v2, vcc_lo
+; GFX11-NEXT:    v_add_co_u32_e64 v2, vcc_lo, v7, v3
+; GFX11-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v8, v4, vcc_lo
 ; GFX11-NEXT:    s_clause 0xa
 ; GFX11-NEXT:    global_load_b128 v[52:55], v[5:6], off offset:16
 ; GFX11-NEXT:    global_load_b128 v[56:59], v[5:6], off offset:32

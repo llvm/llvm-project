@@ -16,6 +16,8 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
+#include "Utils/WebAssemblyTypeUtilities.h"
+#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -345,45 +347,9 @@ public:
     return Name;
   }
 
-  Optional<wasm::ValType> parseType(const StringRef &Type) {
-    // FIXME: can't use StringSwitch because wasm::ValType doesn't have a
-    // "invalid" value.
-    if (Type == "i32")
-      return wasm::ValType::I32;
-    if (Type == "i64")
-      return wasm::ValType::I64;
-    if (Type == "f32")
-      return wasm::ValType::F32;
-    if (Type == "f64")
-      return wasm::ValType::F64;
-    if (Type == "v128" || Type == "i8x16" || Type == "i16x8" ||
-        Type == "i32x4" || Type == "i64x2" || Type == "f32x4" ||
-        Type == "f64x2")
-      return wasm::ValType::V128;
-    if (Type == "funcref")
-      return wasm::ValType::FUNCREF;
-    if (Type == "externref")
-      return wasm::ValType::EXTERNREF;
-    return Optional<wasm::ValType>();
-  }
-
-  WebAssembly::BlockType parseBlockType(StringRef ID) {
-    // Multivalue block types are handled separately in parseSignature
-    return StringSwitch<WebAssembly::BlockType>(ID)
-        .Case("i32", WebAssembly::BlockType::I32)
-        .Case("i64", WebAssembly::BlockType::I64)
-        .Case("f32", WebAssembly::BlockType::F32)
-        .Case("f64", WebAssembly::BlockType::F64)
-        .Case("v128", WebAssembly::BlockType::V128)
-        .Case("funcref", WebAssembly::BlockType::Funcref)
-        .Case("externref", WebAssembly::BlockType::Externref)
-        .Case("void", WebAssembly::BlockType::Void)
-        .Default(WebAssembly::BlockType::Invalid);
-  }
-
   bool parseRegTypeList(SmallVectorImpl<wasm::ValType> &Types) {
     while (Lexer.is(AsmToken::Identifier)) {
-      auto Type = parseType(Lexer.getTok().getString());
+      auto Type = WebAssembly::parseType(Lexer.getTok().getString());
       if (!Type)
         return error("unknown type: ", Lexer.getTok());
       Types.push_back(Type.getValue());
@@ -476,13 +442,6 @@ public:
       }
     }
     return false;
-  }
-
-  WebAssembly::HeapType parseHeapType(StringRef Id) {
-    return StringSwitch<WebAssembly::HeapType>(Id)
-        .Case("extern", WebAssembly::HeapType::Externref)
-        .Case("func", WebAssembly::HeapType::Funcref)
-        .Default(WebAssembly::HeapType::Invalid);
   }
 
   void addBlockTypeOperand(OperandVector &Operands, SMLoc NameLoc,
@@ -676,13 +635,13 @@ public:
         auto &Id = Lexer.getTok();
         if (ExpectBlockType) {
           // Assume this identifier is a block_type.
-          auto BT = parseBlockType(Id.getString());
+          auto BT = WebAssembly::parseBlockType(Id.getString());
           if (BT == WebAssembly::BlockType::Invalid)
             return error("Unknown block type: ", Id);
           addBlockTypeOperand(Operands, NameLoc, BT);
           Parser.Lex();
         } else if (ExpectHeapType) {
-          auto HeapType = parseHeapType(Id.getString());
+          auto HeapType = WebAssembly::parseHeapType(Id.getString());
           if (HeapType == WebAssembly::HeapType::Invalid) {
             return error("Expected a heap type: ", Id);
           }
@@ -819,7 +778,7 @@ public:
       auto TypeName = expectIdent();
       if (TypeName.empty())
         return true;
-      auto Type = parseType(TypeName);
+      auto Type = WebAssembly::parseType(TypeName);
       if (!Type)
         return error("Unknown type in .globaltype directive: ", TypeTok);
       // Optional mutable modifier. Default to mutable for historical reasons.
@@ -857,7 +816,7 @@ public:
       auto ElemTypeName = expectIdent();
       if (ElemTypeName.empty())
         return true;
-      Optional<wasm::ValType> ElemType = parseType(ElemTypeName);
+      Optional<wasm::ValType> ElemType = WebAssembly::parseType(ElemTypeName);
       if (!ElemType)
         return error("Unknown type in .tabletype directive: ", ElemTypeTok);
 

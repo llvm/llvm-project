@@ -44,9 +44,6 @@ class LLVM_LIBRARY_VISIBILITY DwarfCFIException : public DwarfCFIExceptionBase {
   /// Per-function flag to indicate if .cfi_lsda should be emitted.
   bool shouldEmitLSDA;
 
-  /// Per-function flag to indicate if frame moves info should be emitted.
-  bool shouldEmitMoves;
-
 public:
   //===--------------------------------------------------------------------===//
   // Main entry points.

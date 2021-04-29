@@ -219,7 +219,7 @@ CODEGENOPT(SanitizeAddressGlobalsDeadStripping, 1, 0) ///< Enable linker dead st
 CODEGENOPT(SanitizeAddressUseOdrIndicator, 1, 0) ///< Enable ODR indicator globals
 CODEGENOPT(SanitizeMemoryTrackOrigins, 2, 0) ///< Enable tracking origins in
                                              ///< MemorySanitizer
-ENUM_CODEGENOPT(SanitizeAddressDtorKind, llvm::AsanDtorKind, 2,
+ENUM_CODEGENOPT(SanitizeAddressDtor, llvm::AsanDtorKind, 2,
                 llvm::AsanDtorKind::Global)  ///< Set how ASan global
                                              ///< destructors are emitted.
 CODEGENOPT(SanitizeMemoryUseAfterDtor, 1, 0) ///< Enable use-after-delete detection
@@ -371,7 +371,7 @@ ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel)
 VALUE_CODEGENOPT(TLSSize, 8, 0)
 
 /// The default stack protector guard offset to use.
-VALUE_CODEGENOPT(StackProtectorGuardOffset, 32, (unsigned)-1)
+VALUE_CODEGENOPT(StackProtectorGuardOffset, 32, INT_MAX)
 
 /// Number of path components to strip when emitting checks. (0 == full
 /// filename)

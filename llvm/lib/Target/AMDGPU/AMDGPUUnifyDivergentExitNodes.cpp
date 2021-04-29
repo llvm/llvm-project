@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "GCNSubtarget.h"
 #include "SIDefines.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -29,6 +30,7 @@
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -43,6 +45,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -54,6 +57,10 @@ using namespace llvm;
 namespace {
 
 class AMDGPUUnifyDivergentExitNodes : public FunctionPass {
+private:
+  const TargetTransformInfo *TTI = nullptr;
+  const GCNSubtarget *ST = nullptr;
+
 public:
   static char ID; // Pass identification, replacement for typeid
 
@@ -63,6 +70,9 @@ public:
 
   // We can preserve non-critical-edgeness when we unify function exit nodes
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+  BasicBlock *unifyReturnBlockSet(Function &F, DomTreeUpdater &DTU,
+                                  ArrayRef<BasicBlock *> ReturningBlocks,
+                                  bool InsertExport, StringRef Name);
   bool runOnFunction(Function &F) override;
 };
 
@@ -104,6 +114,7 @@ void AMDGPUUnifyDivergentExitNodes::getAnalysisUsage(AnalysisUsage &AU) const{
   FunctionPass::getAnalysisUsage(AU);
 
   AU.addRequired<TargetTransformInfoWrapperPass>();
+  AU.addRequired<TargetPassConfig>();
 }
 
 /// \returns true if \p BB is reachable through only uniform branches.
@@ -143,11 +154,9 @@ static void removeDoneExport(Function &F) {
   }
 }
 
-static BasicBlock *unifyReturnBlockSet(Function &F, DomTreeUpdater &DTU,
-                                       ArrayRef<BasicBlock *> ReturningBlocks,
-                                       bool InsertExport,
-                                       const TargetTransformInfo &TTI,
-                                       StringRef Name) {
+BasicBlock *AMDGPUUnifyDivergentExitNodes::unifyReturnBlockSet(
+    Function &F, DomTreeUpdater &DTU, ArrayRef<BasicBlock *> ReturningBlocks,
+    bool InsertExport, StringRef Name) {
   // Otherwise, we need to insert a new basic block into the function, add a PHI
   // nodes (if the function returns values), and convert all of the return
   // instructions into unconditional branches.
@@ -161,14 +170,16 @@ static BasicBlock *unifyReturnBlockSet(Function &F, DomTreeUpdater &DTU,
     removeDoneExport(F);
 
     Value *Undef = UndefValue::get(B.getFloatTy());
-    B.CreateIntrinsic(Intrinsic::amdgcn_exp, { B.getFloatTy() },
-                      {
-                        B.getInt32(AMDGPU::Exp::ET_NULL),
-                        B.getInt32(0), // enabled channels
-                        Undef, Undef, Undef, Undef, // values
-                        B.getTrue(), // done
-                        B.getTrue(), // valid mask
-                      });
+    B.CreateIntrinsic(
+        Intrinsic::amdgcn_exp, {B.getFloatTy()},
+        {
+            B.getInt32(ST->hasNullExportTarget() ? AMDGPU::Exp::ET_NULL
+                                                 : AMDGPU::Exp::ET_MRT0),
+            B.getInt32(0),              // enabled channels
+            Undef, Undef, Undef, Undef, // values
+            B.getTrue(),                // done
+            B.getTrue(),                // valid mask
+        });
   }
 
   PHINode *PN = nullptr;
@@ -204,7 +215,7 @@ static BasicBlock *unifyReturnBlockSet(Function &F, DomTreeUpdater &DTU,
 
   for (BasicBlock *BB : ReturningBlocks) {
     // Cleanup possible branch to unconditional branch to the return.
-    simplifyCFG(BB, TTI, RequireAndPreserveDomTree ? &DTU : nullptr,
+    simplifyCFG(BB, *TTI, RequireAndPreserveDomTree ? &DTU : nullptr,
                 SimplifyCFGOptions().bonusInstThreshold(2));
   }
 
@@ -225,6 +236,11 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
     return false;
 
   LegacyDivergenceAnalysis &DA = getAnalysis<LegacyDivergenceAnalysis>();
+  TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+
+  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
+  const TargetMachine &TM = TPC.getTM<TargetMachine>();
+  ST = &TM.getSubtarget<GCNSubtarget>(F);
 
   // Loop over all of the blocks in a function, tracking all of the blocks that
   // return.
@@ -381,9 +397,6 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   if (ReturningBlocks.size() == 1 && !InsertExport)
     return Changed; // Already has a single return block
 
-  const TargetTransformInfo &TTI
-    = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-
   // Unify returning blocks. If we are going to insert the export it is also
   // necessary to include blocks that are uniformly reached, because in addition
   // to inserting the export the "done" bits on existing exports will be cleared
@@ -394,7 +407,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
     llvm::append_range(BlocksToUnify, UniformlyReachedRetBlocks);
   }
 
-  unifyReturnBlockSet(F, DTU, BlocksToUnify, InsertExport, TTI,
+  unifyReturnBlockSet(F, DTU, BlocksToUnify, InsertExport,
                       "UnifiedReturnBlock");
   return true;
 }

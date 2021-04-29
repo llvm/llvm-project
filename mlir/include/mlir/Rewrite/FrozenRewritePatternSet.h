@@ -84,10 +84,6 @@ private:
   std::shared_ptr<Impl> impl;
 };
 
-// TODO: FrozenRewritePatternList is soft-deprecated and will be removed in the
-// future.
-using FrozenRewritePatternList = FrozenRewritePatternSet;
-
 } // end namespace mlir
 
 #endif // MLIR_REWRITE_FROZENREWRITEPATTERNSET_H

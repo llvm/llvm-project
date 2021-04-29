@@ -2668,18 +2668,14 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
     auto &MemOp = **I.memoperands_begin();
     uint64_t MemSizeInBytes = MemOp.getSize();
-    if (MemOp.isAtomic()) {
-      // For now we just support s8 acquire loads to be able to compile stack
-      // protector code.
-      if (MemOp.getOrdering() == AtomicOrdering::Acquire &&
-          MemSizeInBytes == 1) {
-        I.setDesc(TII.get(AArch64::LDARB));
-        return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-      }
-      LLVM_DEBUG(dbgs() << "Atomic load/store not fully supported yet\n");
-      return false;
-    }
     unsigned MemSizeInBits = MemSizeInBytes * 8;
+    AtomicOrdering Order = MemOp.getOrdering();
+
+    // Need special instructions for atomics that affect ordering.
+    if (Order != AtomicOrdering::NotAtomic &&
+        Order != AtomicOrdering::Unordered &&
+        Order != AtomicOrdering::Monotonic)
+      return false;
 
 #ifndef NDEBUG
     const Register PtrReg = I.getOperand(1).getReg();
@@ -3380,7 +3376,10 @@ bool AArch64InstructionSelector::selectTLSGlobalValue(
   MachineFunction &MF = *I.getParent()->getParent();
   MF.getFrameInfo().setAdjustsStack(true);
 
-  const GlobalValue &GV = *I.getOperand(1).getGlobal();
+  const auto &GlobalOp = I.getOperand(1);
+  assert(GlobalOp.getOffset() == 0 &&
+         "Shouldn't have an offset on TLS globals!");
+  const GlobalValue &GV = *GlobalOp.getGlobal();
   MachineIRBuilder MIB(I);
 
   auto LoadGOT =

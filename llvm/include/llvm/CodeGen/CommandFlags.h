@@ -53,7 +53,7 @@ Optional<CodeGenFileType> getExplicitFileType();
 
 CodeGenFileType getFileType();
 
-llvm::FramePointer::FP getFramePointerUsage();
+FramePointerKind getFramePointerUsage();
 
 bool getEnableUnsafeFPMath();
 
@@ -107,7 +107,7 @@ bool getXCOFFTracebackTable();
 std::string getBBSections();
 
 std::string getStackProtectorGuard();
-unsigned getStackProtectorGuardOffset();
+int getStackProtectorGuardOffset();
 std::string getStackProtectorGuardReg();
 
 unsigned getTLSSize();

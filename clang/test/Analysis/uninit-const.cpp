@@ -63,7 +63,7 @@ int& f6_1_sub(int &p) {
 }
 
 void f6_1(void) {
-  int t; // expected-note{{'t' declared without an initial value}}
+  int t;               // expected-note{{'t' declared without an initial value}}
   int p = f6_1_sub(t); //expected-warning {{Assigned value is garbage or undefined}}
                        //expected-note@-1 {{Passing value via 1st parameter 'p'}}
                        //expected-note@-2 {{Calling 'f6_1_sub'}}
@@ -76,8 +76,8 @@ void f6_1(void) {
 void f6_2(void) {
   int t;       //expected-note {{'t' declared without an initial value}}
   int &p = t;  //expected-note {{'p' initialized here}}
-  int &s = p;  //expected-note {{'s' initialized here}}
-  int &q = s;  //expected-note {{'q' initialized here}}
+  int &s = p;  //expected-note {{'s' initialized to the value of 'p'}}
+  int &q = s;  //expected-note {{'q' initialized to the value of 's'}}
   doStuff6(q); //expected-warning {{1st function call argument is an uninitialized value}}
                //expected-note@-1 {{1st function call argument is an uninitialized value}}
 }

@@ -256,6 +256,15 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
     Fortran::semantics::Semantics semantics{semanticsContext, parseTree,
         parsing.cooked().AsCharBlock(), driver.debugModuleWriter};
     semantics.Perform();
+    Fortran::semantics::RuntimeDerivedTypeTables tables;
+    if (!semantics.AnyFatalError()) {
+      tables =
+          Fortran::semantics::BuildRuntimeDerivedTypeTables(semanticsContext);
+      if (!tables.schemata) {
+        llvm::errs() << driver.prefix
+                     << "could not find module file for __fortran_type_info\n";
+      }
+    }
     semantics.EmitMessages(llvm::errs());
     if (semantics.AnyFatalError()) {
       if (driver.dumpSymbols) {
@@ -267,12 +276,6 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
         Fortran::parser::DumpTree(llvm::outs(), parseTree, &asFortran);
       }
       return {};
-    }
-    auto tables{
-        Fortran::semantics::BuildRuntimeDerivedTypeTables(semanticsContext)};
-    if (!tables.schemata) {
-      llvm::errs() << driver.prefix
-                   << "could not find module file for __fortran_type_info\n";
     }
     if (driver.dumpSymbols) {
       semantics.DumpSymbols(llvm::outs());
@@ -514,11 +517,6 @@ int main(int argc, char *const argv[]) {
     } else if (arg.find("-W") != std::string::npos) {
       if (arg == "-Werror")
         driver.warningsAreErrors = true;
-      else {
-        // Only -Werror is supported currently
-        llvm::errs() << "Only `-Werror` is supported currently.\n";
-        return EXIT_FAILURE;
-      }
     } else if (arg == "-ed") {
       options.features.Enable(Fortran::common::LanguageFeature::OldDebugLines);
     } else if (arg == "-E") {

@@ -2115,7 +2115,7 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       "i686-pc-linux-gnu",  "i386-redhat-linux6E",
       "i686-redhat-linux",  "i386-redhat-linux",
       "i586-suse-linux",    "i686-montavista-linux",
-      "i686-linux-android", "i386-gnu",
+      "i686-linux-android", "i686-gnu",
   };
 
   static const char *const M68kLibDirs[] = {"/lib"};
@@ -2900,14 +2900,25 @@ void Generic_GCC::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
 void
 Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const {
+  const Driver &D = getDriver();
+  std::string SysRoot = computeSysRoot();
+  std::string Target = getTripleString();
+
   auto AddIncludePath = [&](std::string Path) {
     std::string Version = detectLibcxxVersion(Path);
-    std::string IncludePath = Path + "/c++/" + Version;
-    if (Version.empty() || !getVFS().exists(IncludePath))
+    if (Version.empty())
       return false;
-    addSystemInclude(DriverArgs, CC1Args, IncludePath);
+
+    // First add the per-target include path if it exists.
+    std::string TargetDir = Path + "/" + Target + "/c++/" + Version;
+    if (D.getVFS().exists(TargetDir))
+      addSystemInclude(DriverArgs, CC1Args, TargetDir);
+
+    // Second add the generic one.
+    addSystemInclude(DriverArgs, CC1Args, Path + "/c++/" + Version);
     return true;
   };
+
   // Android never uses the libc++ headers installed alongside the toolchain,
   // which are generally incompatible with the NDK libraries anyway.
   if (!getTriple().isAndroid())
@@ -2916,7 +2927,6 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   // If this is a development, non-installed, clang, libcxx will
   // not be found at ../include/c++ but it likely to be found at
   // one of the following two locations:
-  std::string SysRoot = computeSysRoot();
   if (AddIncludePath(SysRoot + "/usr/local/include"))
     return;
   if (AddIncludePath(SysRoot + "/usr/include"))
@@ -2961,12 +2971,10 @@ bool Generic_GCC::addLibStdCXXIncludePaths(Twine IncludeDir, StringRef Triple,
   return true;
 }
 
-bool
-Generic_GCC::addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                                         llvm::opt::ArgStringList &CC1Args) const {
-  // Use GCCInstallation to know where libstdc++ headers are installed.
-  if (!GCCInstallation.isValid())
-    return false;
+bool Generic_GCC::addGCCLibStdCxxIncludePaths(
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    StringRef DebianMultiarch) const {
+  assert(GCCInstallation.isValid());
 
   // By default, look for the C++ headers in an include directory adjacent to
   // the lib directory of the GCC installation. Note that this is expect to be
@@ -2982,11 +2990,8 @@ Generic_GCC::addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
           LibDir.str() + "/../" + TripleStr + "/include/c++/" + Version.Text,
           TripleStr, Multilib.includeSuffix(), DriverArgs, CC1Args))
     return true;
+
   // Detect Debian g++-multiarch-incdir.diff.
-  StringRef DebianMultiarch =
-      GCCInstallation.getTriple().getArch() == llvm::Triple::x86
-          ? "i386-linux-gnu"
-          : TripleStr;
   if (addLibStdCXXIncludePaths(LibDir.str() + "/../include/c++/" + Version.Text,
                                DebianMultiarch, Multilib.includeSuffix(),
                                DriverArgs, CC1Args, /*Debian=*/true))
@@ -3014,7 +3019,10 @@ Generic_GCC::addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
 void
 Generic_GCC::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                       llvm::opt::ArgStringList &CC1Args) const {
-  addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args);
+  if (GCCInstallation.isValid()) {
+    addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args,
+                                GCCInstallation.getTriple().str());
+  }
 }
 
 llvm::opt::DerivedArgList *

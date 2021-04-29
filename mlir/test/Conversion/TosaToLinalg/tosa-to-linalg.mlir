@@ -258,7 +258,8 @@ func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
   %3 = "tosa.mul"(%arg0, %arg0) {shift = 2 : i32} : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
-  // CHECK: muli
+  // CHECK: [[ZERO:%.+]] = constant 0
+  // CHECK: subi [[ZERO]], %arg1
   %4 = "tosa.negate"(%arg0) : (tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
@@ -357,6 +358,35 @@ func @test_bool(%arg0: tensor<1xi1>, %arg1: tensor<1xi1>) -> () {
   // CHECK: constant true
   // CHECK: xor
   %3 = "tosa.logical_not"(%arg0) : (tensor<1xi1>) -> tensor<1xi1>
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_negate_quantized
+func @test_negate_quantized(%arg0: tensor<1xi8>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: [[ZERO:%.+]] = constant 0
+  // CHECK: [[EXT:%.+]] = sexti %arg1 : i8 to i16
+  // CHECK: [[SUB:%.+]] = subi [[ZERO]], [[EXT]]
+  // CHECK: [[MIN:%.+]] = constant -128
+  // CHECK: [[MAX:%.+]] = constant 127
+  // CHECK: [[PRED1:%.+]] = cmpi slt, [[SUB]], [[MIN]]
+  // CHECK: [[LBOUND:%.+]] = select [[PRED1]], [[MIN]], [[SUB]]
+  // CHECK: [[PRED2:%.+]] = cmpi slt, [[MAX]], [[SUB]]
+  // CHECK: [[UBOUND:%.+]] = select [[PRED2]], [[MAX]], [[LBOUND]]
+  // CHECK: [[TRUNC:%.+]] = trunci [[UBOUND]]
+  // CHECK: linalg.yield [[TRUNC]]
+  %0 = "tosa.negate"(%arg0) {quantization_info = { input_zp = 0 : i32, output_zp = 0 : i32}} : (tensor<1xi8>) -> tensor<1xi8>
+
+  // CHECK: linalg.generic
+  // CHECK: [[EXT:%.+]] = sexti %arg1 : i8 to i16
+  %1 = "tosa.negate"(%arg0) {quantization_info = { input_zp = 32639 : i32, output_zp = 0 : i32}} : (tensor<1xi8>) -> tensor<1xi8>
+
+  // CHECK: linalg.generic
+  // CHECK: [[EXT:%.+]] = sexti %arg1 : i8 to i32
+  %2 = "tosa.negate"(%arg0) {quantization_info = { input_zp = 32640 : i32, output_zp = 0 : i32}} : (tensor<1xi8>) -> tensor<1xi8>
 
   return
 }
@@ -726,17 +756,22 @@ func @matmul(%arg0: tensor<5x3xf32>, %arg1: tensor<3x6xf32>, %arg2: tensor<6xf32
 
 // -----
 
-// CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
-// CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (0, d1)>
+// CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d1)>
+// CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK: #[[$MAP2:.*]] = affine_map<(d0, d1) -> (d1, d0)>
 
 // CHECK-LABEL: @fully_connected
-func @fully_connected(%arg0: tensor<5x3xf32>, %arg1: tensor<3x6xf32>, %arg2: tensor<6xf32>) -> (tensor<5x6xf32>) {
-  // CHECK: [[RS:%.+]] = linalg.tensor_reshape %arg2 [#[[$MAP0]]]
-  // CHECK: [[INIT:%.+]] = linalg.init_tensor [5, 6]
-  // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP1]], #[[$MAP0]]], iterator_types = ["parallel", "parallel"]} ins([[RS]] : tensor<1x6xf32>) outs([[INIT]] : tensor<5x6xf32>) {
-  // CHECK: ^bb0([[IN:%.+]]: f32, [[MULTIPLIER:%.+]]: f32):
-  // CHECK: linalg.matmul ins(%arg0, %arg1 : tensor<5x3xf32>, tensor<3x6xf32>) outs([[GENERIC]] : tensor<5x6xf32>) -> tensor<5x6xf32>
-  %0 = "tosa.fully_connected"(%arg0, %arg1, %arg2) : (tensor<5x3xf32>, tensor<3x6xf32>, tensor<6xf32>)  -> (tensor<5x6xf32>)
+func @fully_connected(%arg0: tensor<5x3xf32>, %arg1: tensor<6x3xf32>, %arg2: tensor<6xf32>) -> (tensor<5x6xf32>) {
+  // CHECK: [[INITB:%.+]] = linalg.init_tensor [5, 6]
+  // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel"]} ins(%arg2 : tensor<6xf32>) outs([[INITB]] : tensor<5x6xf32>) {
+  // CHECK: ^bb0([[IN:%.+]]: f32, [[UNUSED:%.+]]: f32):
+  // CHECK:   linalg.yield [[IN]] : f32
+  // CHECK: [[INITT:%.+]] = linalg.init_tensor [3, 6]
+  // CHECK: [[TRANSPOSE:%.+]] = linalg.generic {indexing_maps = [#[[$MAP2]], #[[$MAP1]]], iterator_types = ["parallel", "parallel"]} ins(%arg1 : tensor<6x3xf32>) outs([[INITT]]
+  // CHECK: ^bb0([[IN:%.+]]: f32, [[UNUSED:%.+]]: f32):
+  // CHECK:   linalg.yield [[IN]] : f32
+  // CHECK: linalg.matmul ins(%arg0, [[TRANSPOSE]] : tensor<5x3xf32>, tensor<3x6xf32>) outs([[GENERIC]] : tensor<5x6xf32>) -> tensor<5x6xf32>
+  %0 = "tosa.fully_connected"(%arg0, %arg1, %arg2) : (tensor<5x3xf32>, tensor<6x3xf32>, tensor<6xf32>)  -> (tensor<5x6xf32>)
   return %0 : tensor<5x6xf32>
 }
 
@@ -828,6 +863,32 @@ func @argmax(%arg0 : tensor<3x2xi32>, %arg1 : tensor<6xf32>) -> () {
   // CHECK: linalg.yield
   %2 = "tosa.argmax"(%arg1) { axis = 0 : i64} : (tensor<6xf32>)  -> (tensor<i32>)
 
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @gather_float
+func @gather_float(%arg0: tensor<2x3x2xf32>, %arg1: tensor<2x3xi32>) -> () {
+  // CHECK: %[[INIT:.+]] = linalg.init_tensor [2, 3, 2]
+  // CHECK: %[[GENERIC:.+]] = linalg.indexed_generic {indexing_maps = [#map0, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%arg1 : tensor<2x3xi32>) outs(%[[INIT]] : tensor<2x3x2xf32>)
+  // CHECK: ^bb0(%[[IDX0:.+]]: index, %[[IDX1:.+]]: index, %[[IDX2:.+]]: index, %[[ARG0:.+]]: i32, %[[ARG1:.+]]: f32)
+  // CHECK:   %[[CAST:.+]] = index_cast %[[ARG0]]
+  // CHECK:   %[[EXTRACT:.+]] = tensor.extract %arg0[%[[IDX0]], %[[CAST]], %[[IDX2]]] : tensor<2x3x2xf32>
+  // CHECK:   linalg.yield %[[EXTRACT]]
+  %0 = "tosa.gather"(%arg0, %arg1)  : (tensor<2x3x2xf32>, tensor<2x3xi32>)  -> (tensor<2x3x2xf32>)
+  return
+}
+
+// CHECK-LABEL: @gather_int
+func @gather_int(%arg0: tensor<2x3x2xi32>, %arg1: tensor<2x3xi32>) -> () {
+  // CHECK: %[[INIT:.+]] = linalg.init_tensor [2, 3, 2]
+  // CHECK: %[[GENERIC:.+]] = linalg.indexed_generic {indexing_maps = [#map0, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%arg1 : tensor<2x3xi32>) outs(%[[INIT]] : tensor<2x3x2xi32>)
+  // CHECK: ^bb0(%[[IDX0:.+]]: index, %[[IDX1:.+]]: index, %[[IDX2:.+]]: index, %[[ARG0:.+]]: i32, %[[ARG1:.+]]: i32)
+  // CHECK:   %[[CAST:.+]] = index_cast %[[ARG0]]
+  // CHECK:   %[[EXTRACT:.+]] = tensor.extract %arg0[%[[IDX0]], %[[CAST]], %[[IDX2]]] : tensor<2x3x2xi32>
+  // CHECK:   linalg.yield %[[EXTRACT]]
+  %0 = "tosa.gather"(%arg0, %arg1)  : (tensor<2x3x2xi32>, tensor<2x3xi32>)  -> (tensor<2x3x2xi32>)
   return
 }
 
@@ -961,5 +1022,294 @@ func @conv2d_padded_f32(%input: tensor<1x47x40x28xf32>, %weights: tensor<28x3x3x
   // CHECK: linalg.pad_tensor %arg0
   // CHECK: linalg.conv_2d_input_nhwc_filter_hwcf
   %0 = "tosa.conv2d"(%input, %weights, %bias) {pad = [1, 1, 1, 1], stride = [1, 1], dilation = [2, 1]} : (tensor<1x47x40x28xf32>, tensor<28x3x3x28xf32>, tensor<28xf32>)  -> (tensor<1x45x40x28xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @resize_nearest
+func @resize_nearest(%input: tensor<1x2x2x1xf32>) -> () {
+  // CHECK: %[[INIT:.+]] = linalg.init_tensor [1, 4, 4, 1]
+  // CHECK: %[[GENERIC:.+]] = linalg.indexed_generic
+  // CHECK-DAG: %[[XYMIN:.+]] = constant 0
+  // CHECK-DAG: %[[YMAX:.+]] = constant 1
+  // CHECK-DAG: %[[XMAX:.+]] = constant 1
+  // CHECK-DAG: %[[Y:.+]] = index_cast %arg2
+  // CHECK-DAG: %[[X:.+]] = index_cast %arg3
+  // CHECK-DAG: %[[STRIDEY:.+]] = constant 5.000000e-01
+  // CHECK-DAG: %[[STRIDEX:.+]] = constant 5.000000e-01
+  // CHECK-DAG: %[[OFFSETY:.+]] = constant 1.000000e-01
+  // CHECK-DAG: %[[OFFSETX:.+]] = constant 2.000000e-01
+  // CHECK-DAG: %[[VAL4:.+]] = uitofp %[[Y]]
+  // CHECK-DAG: %[[VAL5:.+]] = uitofp %[[X]]
+  // CHECK-DAG: %[[VAL6:.+]] = mulf %[[VAL4]], %[[STRIDEY]]
+  // CHECK-DAG: %[[VAL7:.+]] = mulf %[[VAL5]], %[[STRIDEX]]
+  // CHECK-DAG: %[[VAL8:.+]] = addf %[[VAL6]], %[[OFFSETY]]
+  // CHECK-DAG: %[[VAL9:.+]] = addf %[[VAL7]], %[[OFFSETX]]
+    
+  // Find the remainder and integer component of the target index.
+
+  // CHECK-DAG: %[[VAL10:.+]] = floorf %[[VAL8]]
+  // CHECK-DAG: %[[VAL11:.+]] = floorf %[[VAL9]]
+  // CHECK-DAG: %[[VAL12:.+]] = subf %[[VAL8]], %[[VAL10]]
+  // CHECK-DAG: %[[VAL13:.+]] = subf %[[VAL9]], %[[VAL11]]
+  // CHECK-DAG: %[[VAL14:.+]] = fptosi %[[VAL10]]
+  // CHECK-DAG: %[[VAL15:.+]] = fptosi %[[VAL11]]
+
+  // Round to the nearest index.
+
+  // CHECK-DAG: %[[ROUND:.+]] = constant 5.000000e-01
+  // CHECK-DAG: %[[VAL16:.+]] = cmpf oge, %[[VAL12]], %[[ROUND]]
+  // CHECK-DAG: %[[VAL17:.+]] = cmpf oge, %[[VAL13]], %[[ROUND]]
+  // CHECK-DAG: %[[ZERO:.+]] = constant 0
+  // CHECK-DAG: %[[ONE:.+]] = constant 1
+  // CHECK-DAG: %[[VAL18:.+]] = select %[[VAL16]], %[[ONE]], %[[ZERO]]
+  // CHECK-DAG: %[[VAL19:.+]] = select %[[VAL17]], %[[ONE]], %[[ZERO]]
+  // CHECK-DAG: %[[VAL20:.+]] = addi %[[VAL14]], %[[VAL18]]
+  // CHECK-DAG: %[[VAL21:.+]] = addi %[[VAL15]], %[[VAL19]]
+
+  // This section applies bound checking to be within the input image.
+
+  // CHECK-DAG: %[[VAL22:.+]] = cmpi slt, %[[VAL20]], %[[XYMIN]]
+  // CHECK-DAG: %[[VAL23:.+]] = select %[[VAL22]], %[[XYMIN]], %[[VAL20]]
+  // CHECK-DAG: %[[VAL24:.+]] = cmpi slt, %[[YMAX]], %[[VAL20]]
+  // CHECK-DAG: %[[VAL25:.+]] = select %[[VAL24]], %[[YMAX]], %[[VAL23]]
+  // CHECK-DAG: %[[VAL26:.+]] = cmpi slt, %[[VAL21]], %[[XYMIN]]
+  // CHECK-DAG: %[[VAL27:.+]] = select %[[VAL26]], %[[XYMIN]], %[[VAL21]]
+  // CHECK-DAG: %[[VAL28:.+]] = cmpi slt, %[[XMAX]], %[[VAL21]]
+  // CHECK-DAG: %[[VAL29:.+]] = select %[[VAL28]], %[[XMAX]], %[[VAL27]]
+
+  // Extract the nearest value using the computed indices.
+
+  // CHECK-DAG: %[[IDY:.+]] = index_cast %[[VAL25]]
+  // CHECK-DAG: %[[IDX:.+]] = index_cast %[[VAL29]]
+  // CHECK-DAG: %[[EXTRACT:.+]] = tensor.extract %arg0[%arg1, %[[IDY]], %[[IDX]], %arg4]
+  // CHECK: linalg.yield %[[EXTRACT]]
+  %output = "tosa.resize"(%input) { output_size = [4, 4], stride = [0, 0], offset = [0, 0], stride_fp = [0.5 : f32, 0.5 : f32], offset_fp = [0.1 : f32, 0.2 : f32], shift = 0 : i32, mode = "NEAREST_NEIGHBOR" } : (tensor<1x2x2x1xf32>)  -> (tensor<1x4x4x1xf32>)
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @resize_bilinear
+func @resize_bilinear(%input: tensor<1x2x2x1xf32>) -> () {
+  // CHECK: %[[INIT:.+]] = linalg.init_tensor [1, 4, 4, 1]
+  // CHECK: %[[GENERIC:.+]] = linalg.indexed_generic
+  // CHECK: %[[XYMIN:.+]] = constant 0
+  // CHECK: %[[YMAX:.+]] = constant 1
+  // CHECK: %[[XMAX:.+]] = constant 1
+
+  // CHECK: %[[VAL10:.+]] = floorf %[[VAL8:.+]]
+  // CHECK: %[[VAL11:.+]] = floorf %[[VAL9:.+]]
+
+  // CHECK: %[[DY:.+]] = subf %[[VAL8:.+]], %[[VAL10]] 
+  // CHECK: %[[DX:.+]] = subf %[[VAL9:.+]], %[[VAL11]] 
+
+  // CHECK: %[[Y0:.+]] = fptosi %[[VAL10]]
+  // CHECK: %[[X0:.+]] = fptosi %[[VAL11]]
+
+  // Compute the left, right, and top indices for the bilinear interpolation.
+
+  // CHECK: %[[ONE:.+]] = constant 1
+  // CHECK: %[[Y1:.+]] = addi %[[Y0]], %[[ONE]]
+  // CHECK: %[[X1:.+]] = addi %[[X0]], %[[ONE]]
+
+  // Bound check each dimension.
+
+  // CHECK: %[[PRED:.+]] = cmpi slt, %[[Y0]], %[[XYMIN]]
+  // CHECK: %[[BOUND:.+]] = select %[[PRED]], %[[XYMIN]], %[[Y0]]
+  // CHECK: %[[PRED:.+]] = cmpi slt, %[[YMAX]], %[[Y0]]
+  // CHECK: %[[YLO:.+]] = select %[[PRED]], %[[YMAX]], %[[BOUND]]
+
+  // CHECK: %[[PRED:.+]] = cmpi slt, %[[Y1]], %[[XYMIN]]
+  // CHECK: %[[BOUND:.+]] = select %[[PRED]], %[[XYMIN]], %[[Y1]]
+  // CHECK: %[[PRED:.+]] = cmpi slt, %[[YMAX]], %[[Y1]]
+  // CHECK: %[[YHI:.+]] = select %[[PRED]], %[[YMAX]], %[[BOUND]]
+
+  // CHECK: %[[PRED:.+]] = cmpi slt, %[[X0]], %[[XYMIN]]
+  // CHECK: %[[BOUND:.+]] = select %[[PRED]], %[[XYMIN]], %[[X0]]
+  // CHECK: %[[PRED:.+]] = cmpi slt, %[[XMAX]], %[[X0]]
+  // CHECK: %[[XLO:.+]] = select %[[PRED]], %[[XMAX]], %[[BOUND]]
+
+  // CHECK: %[[PRED:.+]] = cmpi slt, %[[X1]], %[[XYMIN]]
+  // CHECK: %[[BOUND:.+]] = select %[[PRED]], %[[XYMIN]], %[[X1]]
+  // CHECK: %[[PRED:.+]] = cmpi slt, %[[XMAX]], %[[X1]]
+  // CHECK: %[[XHI:.+]] = select %[[PRED]], %[[XMAX]], %[[BOUND]]
+
+  // Extract each corner of the bilinear interpolation.
+
+  // CHECK: %[[YLOI:.+]] = index_cast %[[YLO]]
+  // CHECK: %[[YHII:.+]] = index_cast %[[YHI]]
+  // CHECK: %[[XLOI:.+]] = index_cast %[[XLO]]
+  // CHECK: %[[XHII:.+]] = index_cast %[[XHI]]
+
+  // CHECK: %[[LOLO:.+]] = tensor.extract %arg0[%arg1, %[[YLOI]], %[[XLOI]], %arg4]
+  // CHECK: %[[LOHI:.+]] = tensor.extract %arg0[%arg1, %[[YLOI]], %[[XHII]], %arg4]
+  // CHECK: %[[HILO:.+]] = tensor.extract %arg0[%arg1, %[[YHII]], %[[XLOI]], %arg4]
+  // CHECK: %[[HIHI:.+]] = tensor.extract %arg0[%arg1, %[[YHII]], %[[XHII]], %arg4]
+    
+  // Compute the bilinear interpolation.
+
+  // CHECK: %[[ONE:.+]] = constant 1.000000e+00
+  // CHECK: %[[NDX:.+]] = subf %[[ONE]], %[[DX]]
+  // CHECK: %[[WLOLO:.+]] = mulf %[[LOLO]], %[[NDX]]
+  // CHECK: %[[WLOHI:.+]] = mulf %[[LOHI]], %[[DX]]
+  // CHECK: %[[LO:.+]] = addf %[[WLOLO]], %[[WLOHI]]
+  // CHECK: %[[WHILO:.+]] = mulf %[[HILO]], %[[NDX]]
+  // CHECK: %[[WHIHI:.+]] = mulf %[[HIHI]], %[[DX]]
+  // CHECK: %[[HI:.+]] = addf %[[WHILO]], %[[WHIHI]]
+  // CHECK: %[[NDY:.+]] = subf %[[ONE]], %[[DY]]
+  // CHECK: %[[WLO:.+]] = mulf %[[LO]], %[[NDY]]
+  // CHECK: %[[WHI:.+]] = mulf %[[HI]], %[[DY]]
+  // CHECK: %[[RESULT:.+]] = addf %[[WLO]], %[[WHI]]
+  // CHECK: linalg.yield %[[RESULT]]
+  %output = "tosa.resize"(%input) { output_size = [4, 4], stride = [0, 0], offset = [0, 0], stride_fp = [0.5 : f32, 0.5 : f32], offset_fp = [0.1 : f32, 0.2 : f32], shift = 0 : i32, mode = "BILINEAR" } : (tensor<1x2x2x1xf32>)  -> (tensor<1x4x4x1xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @resize_nearest_int
+func @resize_nearest_int(%input: tensor<1x2x2x1xi32>) -> () {
+  // CHECK: %[[INIT:.+]] = linalg.init_tensor [1, 4, 4, 1]
+  // CHECK: %[[GENERIC:.+]] = linalg.indexed_generic
+  // CHECK-DAG: %[[XYMIN:.+]] = constant 0
+  // CHECK-DAG: %[[YMAX:.+]] = constant 1
+  // CHECK-DAG: %[[XMAX:.+]] = constant 1
+  // CHECK-DAG: %[[Y:.+]] = index_cast %arg2
+  // CHECK-DAG: %[[X:.+]] = index_cast %arg3
+  // CHECK-DAG: %[[STRIDEY:.+]] = constant 128
+  // CHECK-DAG: %[[STRIDEX:.+]] = constant 128
+  // CHECK-DAG: %[[OFFSETY:.+]] = constant 1
+  // CHECK-DAG: %[[OFFSETX:.+]] = constant 2
+  // CHECK-DAG: %[[EIGHT:.+]] = constant 8
+  // CHECK-DAG: %[[VAL4:.+]] = muli %[[Y]], %[[STRIDEY]]
+  // CHECK-DAG: %[[VAL5:.+]] = muli %[[X]], %[[STRIDEX]]
+  // CHECK-DAG: %[[VAL6:.+]] = addi %[[VAL4]], %[[OFFSETY]]
+  // CHECK-DAG: %[[VAL7:.+]] = addi %[[VAL5]], %[[OFFSETX]]
+    
+  // Find the remainder and integer component of the target index.
+
+
+  // CHECK-DAG: %[[VAL8:.+]] = shift_right_signed %[[VAL6]], %[[EIGHT]]
+  // CHECK-DAG: %[[VAL9:.+]] = shift_right_signed %[[VAL7]], %[[EIGHT]]
+  // CHECK-DAG: %[[VAL10:.+]] = shift_left %[[VAL8]], %[[EIGHT]]
+  // CHECK-DAG: %[[VAL11:.+]] = shift_left %[[VAL9]], %[[EIGHT]]
+  // CHECK-DAG: %[[VAL12:.+]] = subi %[[VAL6]], %[[VAL10]]
+  // CHECK-DAG: %[[VAL13:.+]] = subi %[[VAL7]], %[[VAL11]]
+
+  // Round to the nearest index.
+
+  // CHECK-DAG: %[[ROUND:.+]] = constant 128
+  // CHECK-DAG: %[[VAL16:.+]] = cmpi sge, %[[VAL12]], %[[ROUND]]
+  // CHECK-DAG: %[[VAL17:.+]] = cmpi sge, %[[VAL13]], %[[ROUND]]
+  // CHECK-DAG: %[[ZERO:.+]] = constant 0
+  // CHECK-DAG: %[[ONE:.+]] = constant 1
+  // CHECK-DAG: %[[VAL18:.+]] = select %[[VAL16]], %[[ONE]], %[[ZERO]]
+  // CHECK-DAG: %[[VAL19:.+]] = select %[[VAL17]], %[[ONE]], %[[ZERO]]
+  // CHECK-DAG: %[[VAL20:.+]] = addi %[[VAL8]], %[[VAL18]]
+  // CHECK-DAG: %[[VAL21:.+]] = addi %[[VAL9]], %[[VAL19]]
+
+  // This section applies bound checking to be within the input image.
+
+  // CHECK-DAG: %[[VAL22:.+]] = cmpi slt, %[[VAL20]], %[[XYMIN]]
+  // CHECK-DAG: %[[VAL23:.+]] = select %[[VAL22]], %[[XYMIN]], %[[VAL20]]
+  // CHECK-DAG: %[[VAL24:.+]] = cmpi slt, %[[YMAX]], %[[VAL20]]
+  // CHECK-DAG: %[[VAL25:.+]] = select %[[VAL24]], %[[YMAX]], %[[VAL23]]
+  // CHECK-DAG: %[[VAL26:.+]] = cmpi slt, %[[VAL21]], %[[XYMIN]]
+  // CHECK-DAG: %[[VAL27:.+]] = select %[[VAL26]], %[[XYMIN]], %[[VAL21]]
+  // CHECK-DAG: %[[VAL28:.+]] = cmpi slt, %[[XMAX]], %[[VAL21]]
+  // CHECK-DAG: %[[VAL29:.+]] = select %[[VAL28]], %[[XMAX]], %[[VAL27]]
+
+  // Extract the nearest value using the computed indices.
+
+  // CHECK-DAG: %[[IDY:.+]] = index_cast %[[VAL25]]
+  // CHECK-DAG: %[[IDX:.+]] = index_cast %[[VAL29]]
+  // CHECK: %[[EXTRACT:.+]] = tensor.extract %arg0[%arg1, %[[IDY]], %[[IDX]], %arg4]
+  // CHECK: linalg.yield %[[EXTRACT]]
+  %output = "tosa.resize"(%input) { output_size = [4, 4], stride = [128, 128], offset = [1, 2], stride_fp = [0. : f32, 0. : f32], offset_fp = [0. : f32, 0. : f32], shift = 8 : i32, mode = "NEAREST_NEIGHBOR" } : (tensor<1x2x2x1xi32>)  -> (tensor<1x4x4x1xi32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @resize_bilinear_int
+func @resize_bilinear_int(%input: tensor<1x2x2x1xi8>) -> () {
+  // CHECK: %[[INIT:.+]] = linalg.init_tensor [1, 4, 4, 1]
+  // CHECK: %[[GENERIC:.+]] = linalg.indexed_generic
+
+  // CHECK: %[[XYMIN:.+]] = constant 0
+  // CHECK: %[[YMAX:.+]] = constant 1
+  // CHECK: %[[XMAX:.+]] = constant 1
+
+  // CHECK: %[[Y0:.+]] = shift_right_signed
+  // CHECK: %[[X0:.+]] = shift_right_signed
+  // CHECK: %[[ROUNDY:.+]] = shift_left %[[Y0]]
+  // CHECK: %[[ROUNDX:.+]] = shift_left %[[X0]]
+  // CHECK: %[[DY:.+]] = subi %6, %[[ROUNDY]]
+  // CHECK: %[[DX:.+]] = subi %7, %[[ROUNDX]]
+
+  // Compute the left, right, and top indices for the bilinear interpolation.
+
+  // CHECK: %[[ONE:.+]] = constant 1
+  // CHECK: %[[Y1:.+]] = addi %[[Y0]], %[[ONE]]
+  // CHECK: %[[X1:.+]] = addi %[[X0]], %[[ONE]]
+
+  // Bound check each dimension.
+
+  // CHECK: %[[PRED:.+]] = cmpi slt, %[[Y0]], %[[XYMIN]]
+  // CHECK: %[[BOUND:.+]] = select %[[PRED]], %[[XYMIN]], %[[Y0]]
+  // CHECK: %[[PRED:.+]] = cmpi slt, %[[YMAX]], %[[Y0]]
+  // CHECK: %[[YLO:.+]] = select %[[PRED]], %[[YMAX]], %[[BOUND]]
+
+  // CHECK: %[[PRED:.+]] = cmpi slt, %[[Y1]], %[[XYMIN]]
+  // CHECK: %[[BOUND:.+]] = select %[[PRED]], %[[XYMIN]], %[[Y1]]
+  // CHECK: %[[PRED:.+]] = cmpi slt, %[[YMAX]], %[[Y1]]
+  // CHECK: %[[YHI:.+]] = select %[[PRED]], %[[YMAX]], %[[BOUND]]
+
+  // CHECK: %[[PRED:.+]] = cmpi slt, %[[X0]], %[[XYMIN]]
+  // CHECK: %[[BOUND:.+]] = select %[[PRED]], %[[XYMIN]], %[[X0]]
+  // CHECK: %[[PRED:.+]] = cmpi slt, %[[XMAX]], %[[X0]]
+  // CHECK: %[[XLO:.+]] = select %[[PRED]], %[[XMAX]], %[[BOUND]]
+
+  // CHECK: %[[PRED:.+]] = cmpi slt, %[[X1]], %[[XYMIN]]
+  // CHECK: %[[BOUND:.+]] = select %[[PRED]], %[[XYMIN]], %[[X1]]
+  // CHECK: %[[PRED:.+]] = cmpi slt, %[[XMAX]], %[[X1]]
+  // CHECK: %[[XHI:.+]] = select %[[PRED]], %[[XMAX]], %[[BOUND]]
+
+  // Extract each corner of the bilinear interpolation.
+
+  // CHECK: %[[YLOI:.+]] = index_cast %[[YLO]]
+  // CHECK: %[[YHII:.+]] = index_cast %[[YHI]]
+  // CHECK: %[[XLOI:.+]] = index_cast %[[XLO]]
+  // CHECK: %[[XHII:.+]] = index_cast %[[XHI]]
+
+  // CHECK: %[[LOLO:.+]] = tensor.extract %arg0[%arg1, %[[YLOI]], %[[XLOI]], %arg4]
+  // CHECK: %[[LOHI:.+]] = tensor.extract %arg0[%arg1, %[[YLOI]], %[[XHII]], %arg4]
+  // CHECK: %[[HILO:.+]] = tensor.extract %arg0[%arg1, %[[YHII]], %[[XLOI]], %arg4]
+  // CHECK: %[[HIHI:.+]] = tensor.extract %arg0[%arg1, %[[YHII]], %[[XHII]], %arg4]
+
+  // CHECK: %[[XLOLO:.+]] = sexti %[[LOLO]]
+  // CHECK: %[[XLOHI:.+]] = sexti %[[LOHI]]
+  // CHECK: %[[XHILO:.+]] = sexti %[[HILO]]
+  // CHECK: %[[XHIHI:.+]] = sexti %[[HIHI]]
+    
+  // Compute the bilinear interpolation.
+
+  // CHECK: %[[SCALE:.+]] = constant 256
+  // CHECK: %[[NDX:.+]] = subi %[[SCALE]], %[[DX]]
+  // CHECK: %[[WLOLO:.+]] = muli %[[XLOLO]], %[[NDX]]
+  // CHECK: %[[WLOHI:.+]] = muli %[[XLOHI]], %[[DX]]
+  // CHECK: %[[LO:.+]] = addi %[[WLOLO]], %[[WLOHI]]
+  // CHECK: %[[WHILO:.+]] = muli %[[XHILO]], %[[NDX]]
+  // CHECK: %[[WHIHI:.+]] = muli %[[XHIHI]], %[[DX]]
+  // CHECK: %[[HI:.+]] = addi %[[WHILO]], %[[WHIHI]]
+  // CHECK: %[[NDY:.+]] = subi %[[SCALE]], %[[DY]]
+  // CHECK: %[[WLO:.+]] = muli %[[LO]], %[[NDY]]
+  // CHECK: %[[WHI:.+]] = muli %[[HI]], %[[DY]]
+  // CHECK: %[[RESULT:.+]] = addi %[[WLO]], %[[WHI]]
+  // CHECK: linalg.yield %[[RESULT]]
+  %output = "tosa.resize"(%input) { output_size = [4, 4], stride = [128, 128], offset = [1, 2], stride_fp = [0. : f32, 0. : f32], offset_fp = [0. : f32, 0. : f32], shift = 8 : i32, mode = "BILINEAR" } : (tensor<1x2x2x1xi8>)  -> (tensor<1x4x4x1xi32>)
   return
 }

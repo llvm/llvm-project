@@ -87,7 +87,7 @@ static void memcpy_x86(char *__restrict dst, const char *__restrict src,
   if (kHasAvx && count < 256)
     return CopyBlockOverlap<128>(dst, src, count);
   if (count <= kRepMovsBSize)
-    return CopyAlignedBlocks<kLoopCopyBlockSize>(dst, src, count);
+    return CopyDstAlignedBlocks<kLoopCopyBlockSize, 32>(dst, src, count);
   return CopyRepMovsb(dst, src, count);
 }
 

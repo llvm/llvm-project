@@ -280,8 +280,14 @@ endif()
 
 CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtimespec.tv_nsec
     "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC)
-CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtim.tv_nsec
-    "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC)
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+# The st_mtim.tv_nsec member of a `stat` structure is not reliable on some AIX
+# environments.
+  set(HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC 0)
+else()
+  CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtim.tv_nsec
+      "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC)
+endif()
 
 check_symbol_exists(__GLIBC__ stdio.h LLVM_USING_GLIBC)
 if( LLVM_USING_GLIBC )

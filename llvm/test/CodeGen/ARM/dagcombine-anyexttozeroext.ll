@@ -44,9 +44,14 @@ define <4 x i32> @h(<4 x i8> *%in) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.32 {d16[0]}, [r0:32]
 ; CHECK-NEXT:    vmovl.u8 q8, d16
-; CHECK-NEXT:    vmovl.u16 q8, d16
-; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    vmov.u16 r0, d16[0]
+; CHECK-NEXT:    vmov.u16 r1, d16[1]
+; CHECK-NEXT:    vmov.u16 r2, d16[2]
+; CHECK-NEXT:    vmov.u16 r3, d16[3]
+; CHECK-NEXT:    uxtb r0, r0
+; CHECK-NEXT:    uxtb r1, r1
+; CHECK-NEXT:    uxtb r2, r2
+; CHECK-NEXT:    uxtb r3, r3
 ; CHECK-NEXT:    bx lr
   %1 = load <4 x i8>, <4 x i8>* %in, align 4
   %2 = extractelement <4 x i8> %1, i32 0

@@ -354,6 +354,12 @@ class Configuration(object):
         self.cxx.compile_flags += ['-nostdinc++']
         if not os.path.isdir(cxx_headers):
             self.lit_config.fatal("cxx_headers='{}' is not a directory.".format(cxx_headers))
+        (path, version) = os.path.split(cxx_headers)
+        (path, cxx) = os.path.split(path)
+        cxx_target_headers = os.path.join(
+            path, self.get_lit_conf('target_triple', None), cxx, version)
+        if os.path.isdir(cxx_target_headers):
+            self.cxx.compile_flags += ['-I' + cxx_target_headers]
         self.cxx.compile_flags += ['-I' + cxx_headers]
         if self.libcxx_obj_root is not None:
             cxxabi_headers = os.path.join(self.libcxx_obj_root, 'include',
@@ -526,6 +532,8 @@ class Configuration(object):
                 self.config.available_features.add('sanitizer-new-delete')
             elif san == 'DataFlow':
                 self.cxx.flags += ['-fsanitize=dataflow']
+            elif san == 'Leaks':
+                self.cxx.link_flags += ['-fsanitize=leaks']
             else:
                 self.lit_config.fatal('unsupported value for '
                                       'use_sanitizer: {0}'.format(san))

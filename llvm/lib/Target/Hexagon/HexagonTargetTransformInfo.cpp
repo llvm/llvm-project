@@ -122,13 +122,12 @@ ElementCount HexagonTTIImpl::getMinimumVF(unsigned ElemWidth,
   return ElementCount::getFixed((8 * ST.getVectorLength()) / ElemWidth);
 }
 
-unsigned HexagonTTIImpl::getScalarizationOverhead(VectorType *Ty,
-                                                  const APInt &DemandedElts,
-                                                  bool Insert, bool Extract) {
+InstructionCost HexagonTTIImpl::getScalarizationOverhead(
+    VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract) {
   return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract);
 }
 
-unsigned
+InstructionCost
 HexagonTTIImpl::getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
                                                  ArrayRef<Type *> Tys) {
   return BaseT::getOperandsScalarizationOverhead(Args, Tys);
@@ -150,8 +149,9 @@ HexagonTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
-unsigned HexagonTTIImpl::getAddressComputationCost(Type *Tp,
-      ScalarEvolution *SE, const SCEV *S) {
+InstructionCost HexagonTTIImpl::getAddressComputationCost(Type *Tp,
+                                                          ScalarEvolution *SE,
+                                                          const SCEV *S) {
   return 0;
 }
 

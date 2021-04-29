@@ -159,7 +159,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarToNextPow2(0)
       .scalarize(0);
 
-  getActionDefinitionsBuilder({G_SREM, G_UREM})
+  getActionDefinitionsBuilder({G_SREM, G_UREM, G_SDIVREM, G_UDIVREM})
       .lowerFor({s1, s8, s16, s32, s64});
 
   getActionDefinitionsBuilder({G_SMULO, G_UMULO}).lowerFor({{s64, s1}});
@@ -496,20 +496,16 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampScalar(0, s8, s64)
       .widenScalarToNextPow2(0, /*Min*/ 8);
 
-  if (ST.hasLSE()) {
-    getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG_WITH_SUCCESS)
-        .lowerIf(all(
-            typeInSet(0, {s8, s16, s32, s64}), typeIs(1, s1), typeIs(2, p0),
-            atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Monotonic)));
+  getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG_WITH_SUCCESS)
+      .lowerIf(
+          all(typeInSet(0, {s8, s16, s32, s64}), typeIs(1, s1), typeIs(2, p0)));
 
-    getActionDefinitionsBuilder(
-        {G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
-         G_ATOMICRMW_OR, G_ATOMICRMW_XOR, G_ATOMICRMW_MIN, G_ATOMICRMW_MAX,
-         G_ATOMICRMW_UMIN, G_ATOMICRMW_UMAX, G_ATOMIC_CMPXCHG})
-        .legalIf(all(
-            typeInSet(0, {s8, s16, s32, s64}), typeIs(1, p0),
-            atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Monotonic)));
-  }
+  getActionDefinitionsBuilder(
+      {G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
+       G_ATOMICRMW_OR, G_ATOMICRMW_XOR, G_ATOMICRMW_MIN, G_ATOMICRMW_MAX,
+       G_ATOMICRMW_UMIN, G_ATOMICRMW_UMAX, G_ATOMIC_CMPXCHG})
+      .legalIf(all(
+          typeInSet(0, {s8, s16, s32, s64}), typeIs(1, p0)));
 
   getActionDefinitionsBuilder(G_BLOCK_ADDR).legalFor({p0});
 

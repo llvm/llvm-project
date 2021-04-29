@@ -160,7 +160,7 @@ enum Format {
   eFormatBytes,
   eFormatBytesWithASCII,
   eFormatChar,
-  eFormatCharPrintable, ///< Only printable characters, space if not printable
+  eFormatCharPrintable, ///< Only printable characters, '.' if not printable
   eFormatComplex,       ///< Floating point complex type
   eFormatComplexFloat = eFormatComplex,
   eFormatCString, ///< NULL terminated C strings
@@ -249,6 +249,9 @@ enum StopReason {
   eStopReasonThreadExiting,
   eStopReasonInstrumentation,
   eStopReasonProcessorTrace,
+  eStopReasonFork,
+  eStopReasonVFork,
+  eStopReasonVForkDone,
 };
 
 /// Command Return Status Types.
