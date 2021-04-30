@@ -1684,8 +1684,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_not_found)
         << ModuleName << SourceRange(ImportLoc, ModuleNameLoc);
     ModuleBuildFailed = true;
-    // FIXME: Why is this not cached?
-    return ModuleLoadResult::OtherUncachedFailure;
+    return nullptr;
   }
   if (ModuleFilename.empty()) {
     if (M && M->HasIncompatibleModuleFile) {
@@ -1697,8 +1696,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_build_disabled)
         << ModuleName;
     ModuleBuildFailed = true;
-    // FIXME: Why is this not cached?
-    return ModuleLoadResult::OtherUncachedFailure;
+    return nullptr;
   }
 
   // Create an ASTReader on demand.
@@ -1809,8 +1807,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_cycle)
         << ModuleName << CyclePath;
     // FIXME: Should this set ModuleBuildFailed = true?
-    // FIXME: Why is this not cached?
-    return ModuleLoadResult::OtherUncachedFailure;
+    return nullptr;
   }
 
   // Check whether we have already attempted to build this module (but
@@ -1820,8 +1817,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_not_built)
         << ModuleName << SourceRange(ImportLoc, ModuleNameLoc);
     ModuleBuildFailed = true;
-    // FIXME: Why is this not cached?
-    return ModuleLoadResult::OtherUncachedFailure;
+    return nullptr;
   }
 
   // Try to compile and then read the AST.
@@ -1832,8 +1828,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     if (getPreprocessorOpts().FailedModules)
       getPreprocessorOpts().FailedModules->addFailed(ModuleName);
     ModuleBuildFailed = true;
-    // FIXME: Why is this not cached?
-    return ModuleLoadResult::OtherUncachedFailure;
+    return nullptr;
   }
 
   // Okay, we've rebuilt and now loaded the module.
