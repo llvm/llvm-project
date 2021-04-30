@@ -202,9 +202,7 @@ TEST(DumpDataExtractorTest, Formats) {
   // Input not written in hex form because that requires C++17.
   TestDump<float>(10, lldb::Format::eFormatHexFloat, "0x1.4p3");
   TestDump<double>(10, lldb::Format::eFormatHexFloat, "0x1.4p3");
-  // Long double we don't support and format an error saying so.
-  // However sizeof(long double) is 8/12/16 depending on the host so not tested
-  // here.
+  // long double not supported, see ItemByteSizeErrors.
 
   // Can't disassemble without an execution context.
   TestDump<uint32_t>(0xcafef00d, lldb::Format::eFormatInstruction,
@@ -300,4 +298,47 @@ TEST(DumpDataExtractorTest, MultiLine) {
   testDumpMultiLine(chars.data(), chars.size(),
                     lldb::Format::eFormatBytesWithASCII, 3,
                     expected_chars_2_lines);
+}
+
+void TestDumpWithItemByteSize(size_t item_byte_size, lldb::Format format,
+                              llvm::StringRef expected) {
+  // We won't be reading this data so anything will do.
+  uint8_t dummy = 0;
+  TestDumpImpl(&dummy, 1, item_byte_size, 1, 1, LLDB_INVALID_ADDRESS, format,
+               expected);
+}
+
+TEST(DumpDataExtractorTest, ItemByteSizeErrors) {
+  TestDumpWithItemByteSize(
+      16, lldb::Format::eFormatBoolean,
+      "error: unsupported byte size (16) for boolean format");
+  TestDumpWithItemByteSize(21, lldb::Format::eFormatChar,
+                           "error: unsupported byte size (21) for char format");
+  TestDumpWithItemByteSize(
+      18, lldb::Format::eFormatComplexInteger,
+      "error: unsupported byte size (18) for complex integer format");
+
+  // The code uses sizeof(long double) for these checks. This changes by host
+  // but we know it won't be >16.
+  TestDumpWithItemByteSize(
+      34, lldb::Format::eFormatComplex,
+      "error: unsupported byte size (34) for complex float format");
+  TestDumpWithItemByteSize(
+      18, lldb::Format::eFormatFloat,
+      "error: unsupported byte size (18) for float format");
+
+  // We want sizes to exactly match one of float/double.
+  TestDumpWithItemByteSize(
+      14, lldb::Format::eFormatComplex,
+      "error: unsupported byte size (14) for complex float format");
+  TestDumpWithItemByteSize(3, lldb::Format::eFormatFloat,
+                           "error: unsupported byte size (3) for float format");
+
+  // We only allow float and double size.
+  TestDumpWithItemByteSize(
+      1, lldb::Format::eFormatHexFloat,
+      "error: unsupported byte size (1) for hex float format");
+  TestDumpWithItemByteSize(
+      17, lldb::Format::eFormatHexFloat,
+      "error: unsupported byte size (17) for hex float format");
 }
