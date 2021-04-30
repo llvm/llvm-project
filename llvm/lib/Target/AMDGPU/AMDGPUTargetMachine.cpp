@@ -1237,8 +1237,8 @@ yaml::MachineFunctionInfo *GCNTargetMachine::createDefaultFuncInfoYAML() const {
 yaml::MachineFunctionInfo *
 GCNTargetMachine::convertFuncInfoToYAML(const MachineFunction &MF) const {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  return new yaml::SIMachineFunctionInfo(*MFI,
-                                         *MF.getSubtarget().getRegisterInfo());
+  return new yaml::SIMachineFunctionInfo(
+      *MFI, *MF.getSubtarget().getRegisterInfo(), MF);
 }
 
 bool GCNTargetMachine::parseMachineFunctionInfo(
@@ -1249,7 +1249,8 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
   MachineFunction &MF = PFS.MF;
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
-  MFI->initializeBaseYamlFields(YamlMFI);
+  if (MFI->initializeBaseYamlFields(YamlMFI, MF, PFS, Error, SourceRange))
+    return true;
 
   if (MFI->Occupancy == 0) {
     // Fixup the subtarget dependent default value.
