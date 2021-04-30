@@ -250,3 +250,19 @@ void no_crash_reinterpret_char_as_uchar(char ***a, int *b) {
   if (**a == 0) // no-crash
     ;
 }
+
+// See PR50179.
+// Just don't crash.
+typedef struct taskS {
+  void *pJob;
+} taskS;
+
+typedef struct workS {
+  taskS *pTaskList;
+} workS;
+
+void *getTaskJob(unsigned jobId, workS *pWork, unsigned taskId) {
+  const taskS *pTask = pWork->pTaskList + taskId;
+  taskS task = *pTask;
+  return task.pJob;
+}
