@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Symbol/Declaration.h"
+#include "lldb/Core/Declaration.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb_private;
@@ -20,22 +20,15 @@ void Declaration::Dump(Stream *s, bool show_fullpaths) const {
       *s << m_file.GetFilename();
     if (m_line > 0)
       s->Printf(":%u", m_line);
-#ifdef LLDB_ENABLE_DECLARATION_COLUMNS
-    if (m_column > 0)
+    if (m_column != LLDB_INVALID_COLUMN_NUMBER)
       s->Printf(":%u", m_column);
-#endif
   } else {
     if (m_line > 0) {
       s->Printf(", line = %u", m_line);
-#ifdef LLDB_ENABLE_DECLARATION_COLUMNS
-      if (m_column > 0)
+      if (m_column != LLDB_INVALID_COLUMN_NUMBER)
         s->Printf(":%u", m_column);
-#endif
-    }
-#ifdef LLDB_ENABLE_DECLARATION_COLUMNS
-    else if (m_column > 0)
+    } else if (m_column != LLDB_INVALID_COLUMN_NUMBER)
       s->Printf(", column = %u", m_column);
-#endif
   }
 }
 
@@ -48,17 +41,13 @@ bool Declaration::DumpStopContext(Stream *s, bool show_fullpaths) const {
 
     if (m_line > 0)
       s->Printf(":%u", m_line);
-#ifdef LLDB_ENABLE_DECLARATION_COLUMNS
-    if (m_column > 0)
+    if (m_column != LLDB_INVALID_COLUMN_NUMBER)
       s->Printf(":%u", m_column);
-#endif
     return true;
   } else if (m_line > 0) {
     s->Printf(" line %u", m_line);
-#ifdef LLDB_ENABLE_DECLARATION_COLUMNS
-    if (m_column > 0)
+    if (m_column != LLDB_INVALID_COLUMN_NUMBER)
       s->Printf(":%u", m_column);
-#endif
     return true;
   }
   return false;
@@ -74,12 +63,10 @@ int Declaration::Compare(const Declaration &a, const Declaration &b) {
     return -1;
   else if (a.m_line > b.m_line)
     return 1;
-#ifdef LLDB_ENABLE_DECLARATION_COLUMNS
   if (a.m_column < b.m_column)
     return -1;
   else if (a.m_column > b.m_column)
     return 1;
-#endif
   return 0;
 }
 
@@ -89,10 +76,8 @@ bool Declaration::FileAndLineEqual(const Declaration &declaration) const {
 }
 
 bool lldb_private::operator==(const Declaration &lhs, const Declaration &rhs) {
-#ifdef LLDB_ENABLE_DECLARATION_COLUMNS
   if (lhs.GetColumn() != rhs.GetColumn())
     return false;
-#else
+
   return lhs.GetLine() == rhs.GetLine() && lhs.GetFile() == rhs.GetFile();
-#endif
 }
