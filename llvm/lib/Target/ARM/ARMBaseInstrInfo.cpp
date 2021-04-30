@@ -928,6 +928,25 @@ void ARMBaseInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Handle DPR to/from GPRPair
+  const auto *TRI = &getRegisterInfo();
+  if (ARM::DPRRegClass.contains(SrcReg) &&
+      ARM::GPRPairRegClass.contains(DestReg)) {
+    BuildMI(MBB, I, DL, get(ARM::VMOVRRD))
+        .addReg(TRI->getSubReg(DestReg, ARM::gsub_0), RegState::Define)
+        .addReg(TRI->getSubReg(DestReg, ARM::gsub_1), RegState::Define)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .add(predOps(ARMCC::AL));
+    return;
+  } else if (ARM::GPRPairRegClass.contains(SrcReg) &&
+             ARM::DPRRegClass.contains(DestReg)) {
+    BuildMI(MBB, I, DL, get(ARM::VMOVDRR), DestReg)
+        .addReg(TRI->getSubReg(SrcReg, ARM::gsub_0), getKillRegState(KillSrc))
+        .addReg(TRI->getSubReg(SrcReg, ARM::gsub_1), getKillRegState(KillSrc))
+        .add(predOps(ARMCC::AL));
+    return;
+  }
+
   // Handle register classes that require multiple instructions.
   unsigned BeginIdx = 0;
   unsigned SubRegs = 0;
@@ -1013,7 +1032,6 @@ void ARMBaseInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   assert(Opc && "Impossible reg-to-reg copy");
 
-  const TargetRegisterInfo *TRI = &getRegisterInfo();
   MachineInstrBuilder Mov;
 
   // Copy register tuples backward when the first Dest reg overlaps with SrcReg.
