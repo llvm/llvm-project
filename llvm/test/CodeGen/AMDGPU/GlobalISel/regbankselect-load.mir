@@ -170,6 +170,7 @@ body: |
     %1:_(<16 x s32>) = G_LOAD %0 :: (load 64 from %ir.global.not.uniform.v16i32)
 ...
 
+---
 name: load_global_v8i64_non_uniform
 legalized: true
 
