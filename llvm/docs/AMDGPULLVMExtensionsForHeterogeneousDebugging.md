@@ -31,9 +31,11 @@
       - [`DIOpConstant`](#diopconstant)
       - [`DIOpConvert`](#diopconvert)
       - [`DIOpReinterpret`](#diopreinterpret)
-      - [`DIOpOffset`](#diopoffset)
       - [`DIOpBitOffset`](#diopbitoffset)
+      - [`DIOpByteOffset`](#diopbyteoffset)
       - [`DIOpComposite`](#diopcomposite)
+      - [`DIOpExtend`](#diopextend)
+      - [`DIOpSelect`](#diopselect)
       - [`DIOpAddrOf`](#diopaddrof)
       - [`DIOpDeref`](#diopderef)
       - [`DIOpRead`](#diopread)
@@ -43,6 +45,7 @@
       - [`DIOpDiv`](#diopdiv)
       - [`DIOpShr`](#diopshr)
       - [`DIOpShl`](#diopshl)
+      - [`DIOpPushLane`](#dioppushlane)
   - [Intrinsics](#intrinsics)
     - [`llvm.dbg.def`](#llvmdbgdef)
     - [`llvm.dbg.kill`](#llvmdbgkill)
@@ -552,8 +555,9 @@ active at a given instruction, it describes the situation where an object exists
 simultaneously in more than one place. For example, a variable may exist in
 memory and then be promoted to a register where it is only read before being
 clobbered and reverting to using the memory location. While promoted to the
-register, a debugger must update both the register and memory if the value of
-the variable needs to be changed.]_
+register, a debugger may read from either the register or memory since they both
+have the same value, but must update both the register and memory if the value
+of the variable needs to be changed.]_
 
 _[Note: A `DIObject` with no `DILifetime`s has an undefined location
 description. If the `argObjects` field of a `DILifetime` references such a
@@ -674,17 +678,19 @@ description.]_
 !DIExpr(DIOp, ...)
 ```
 
-Represents an expression, which is a sequence of zero or more operations defined
+Represents an expression, which is a sequence of one or more operations defined
 in the following sections.
 
 The evaluation of an expression is done in the context of an associated
 `DILifetime` that has a `location` field that references it.
 
-The evaluation of the expression is performed on a stack where each stack
-element is a tuple of a type and a location description. If the stack does not
-have a single element after evaluation, then the expression is not well-formed.
-The evaluation is the typed location description of the single resulting stack
-element.
+The evaluation of the expression is performed on an initially empty stack where
+each stack element is a tuple of a type and a location description. The
+expression is evaluated by evaluating each of its operations sequentially.
+
+The result of the evaluation is the typed location description of the single
+resulting stack element. If the stack does not have a single element after
+evaluation, then the expression is not well-formed.
 
 > TODO: Maybe operators should specify their input type(s)? It do not match what
 > DWARF does currently. Such types cannot trivially be used to enforce type
@@ -699,77 +705,93 @@ BNF grammar, where `[]` denotes character classes, `*` denotes zero-or-more
 repetitions of a term, and `+` denotes one-or-more repetitions of a term.
 
 ```bnf
-         <specification> ::= <syntax> <stack-effects>
+<operation-specification> ::= <operation-syntax> <operation-stack-effects>
 
-                <syntax> ::= <operation-identifier> "(" <parameter-binding-list> ")"
-<parameter-binding-list> ::= ""
-                             | <parameter-binding>  ( "," <parameter-binding-list> )+
-     <parameter-binding> ::= <binding-identifer> ":" <parameter-binding-kind>
-<parameter-binding-kind> ::= "type" | "index" | "literal" | "addrspace"
+       <operation-syntax> ::= <operation-identifier> "(" <parameter-list> ")"
+         <parameter-list> ::= "" | <parameter-binding-list>
+ <parameter-binding-list> ::= <parameter-binding> ( ", " <parameter-binding> )+
+      <parameter-binding> ::= <binding-identifer> ":" <parameter-binding-kind>
+ <parameter-binding-kind> ::= "type" | "unsigned" | "literal" | "addrspace"
 
-         <stack-effects> ::= "{" <stack-binding-list> "->" <stack-binding-list> "}"
-    <stack-binding-list> ::= ""
-                             | <stack-binding> ( " " <stack-binding-list> )+
-         <stack-binding> ::= <binding-identifer> ":" <binding-identifer>
+<operation-stack-effects> ::= "{" <stack-list> "->" <stack-list> "}"
+             <stack-list> ::= "" | <stack-binding-list>
+     <stack-binding-list> ::= <stack-binding> ( " " <stack-binding> )+
+          <stack-binding> ::= "(" <binding-identifer> ":" <llvm-type> ")"
 
-   <operation-identifer> ::= [A-Za-z]+
-     <binding-identifer> ::= [A-Z][A-Z0-9]* "'"*
+    <operation-identifer> ::= [A-Za-z]+
+      <binding-identifer> ::= [A-Z] [A-Z0-9]* "'"*
 ```
 
-The `<syntax>` describes the LLVM IR concrete syntax of the operation in an
-expression.
+The `<operation-syntax>` describes the LLVM IR concrete syntax of the operation
+in an expression.
 
 The `<parameter-binding-list>` defines positional parameters to the operation.
 Each parameter in the list has a `<binding-identifer>` which binds to the
 argument passed via the parameter, and a `<parameter-binding-kind>` which
 defines the kind of arguments accepted by the parameter.
 
-The possible parameter kinds are:
+The `<parameter-binding-kind>` describes the kind of the parameter:
 
 - `type`: An LLVM type.
-- `index`: A non-negative literal integer.
+- `unsigned`: A non-negative literal integer.
 - `literal`: An LLVM literal value expression.
 - `addrspace`: An LLVM target-specific address space identifier.
 
-The `<stack-effects>` describe the effect of the operation on the stack. The
-first `<stack-binding-list>` describes the "inputs" to the operation, which are
-the entries it pops from the stack in the left-to-right order. The second
-`<stack-binding-list>` describes the "outputs" of the operation, which are the
-entries it pushes onto the stack in a right-to-left order. In both cases the top
-stack element comes first on the left.
+The `<operation-stack-effects>` describe the effect of the operation on the
+stack. The first `<stack-binding-list>` describes the "inputs" to the operation,
+which are the entries it pops from the stack in the left-to-right order. The
+second `<stack-binding-list>` describes the "outputs" of the operation, which
+are the entries it pushes onto the stack in a right-to-left order. In both cases
+the top stack element comes first on the left.
 
 If evaluation can result in a stack with fewer entries than required by an
 operation, then the expression is not well-formed.
 
-Each `<stack-binding>` is a pair of `<binding-identifier>`s. The first
-`<binding-identifier>` binds to the location description of the stack entry.
-The second `<binding-identifier>` binds to the type of the stack entry.
+Each `<stack-binding>` is a pair of `<binding-identifier>` and `<llvm-type>`.
+The `<binding-identifier>` binds to the location description of the stack entry.
+The `<llvm-type>` binds to the type of the stack entry and denotes an LLVM type
+as defined in the [LLVM Language Reference Manual][12].
 
-Each `<binding-identifier>` identifies a meta-syntactic variable. When reading
+Each `<binding-identifier>` identifies a meta-syntactic variable, and each
+`<llvm-type>` may identify one or more meta-syntactic variables. When reading
 the `specification` left-to-right, the first mention binds the meta-syntactic
-variable to an entity, subsequent mentions are an assertion that they are the
-identical bound entity. If evaluation can result in parameters and stack inputs
-that do not conform to the assertions, then the expression is not well-formed.
-The assertions for stack outputs define post-conditions of the operation output.
+variable to an entity, and subsequent mentions are an assertion that they are
+the identical bound entity. If evaluation can result in parameters and stack
+inputs that do not conform to the assertions, then the expression is not
+well-formed. The assertions for stack outputs define post-conditions of the
+operation output.
 
 The remaining body of the definition for an operation may reference the bound
-metasyntactic variable identifiers from the specification, and may define
-additional metasyntactic variables following the same left-to-right binding
+meta-syntactic variable identifiers from the specification, and may define
+additional meta-syntactic variables following the same left-to-right binding
 semantics.
 
-In the operation definitions, the operator `bitsizeof` computes the size in bits
-of the given LLVM type, rather than the size in bytes.
+In the operation definitions, the following functions are defined:
+
+- `bitsizeof(X)`: computes the size in bits of `X`.
+- `sizeof(X)`: computes `bitsizeof(X) * 8`.
+- `read(L, T)`: computes the value of type `T` obtained by retrieving
+  `bitsizeof(T)`: bits from location description `L`. If any bit of the value
+  retrieved is from the undefined location storage or the offset of any bit
+  exceeds the size of the location storage specified by any single location
+  description of `L`, then the expression is not well-formed.
+
+  > TODO: Consider defining reading undefined bits as producing an undefined
+  > location description. This would need DWARF to adopt this model which may be
+  > necessary as compilers support optimized code better. This would need all
+  > usage or `read` to be reworded to specify result if `read` detects undefined
+  > bits.
 
 #### `DIOpReferrer`
 
 ```llvm
 DIOpReferrer(T:type)
-{ -> L:T }
+{ -> (L:T) }
 ```
 
 `L` is the location description of the referrer `R` of the associated lifetime
 segment `LS`. If `LS` is not a bounded lifetime segment, then the expression is
-ill-formed.
+not well-formed.
 
 If `bitsizeof(T)` is not equal to `bitsizeof(R)`, then the expression is not
 well-formed.
@@ -777,29 +799,26 @@ well-formed.
 #### `DIOpArg`
 
 ```llvm
-DIOpArg(N:index, T:type)
-{ -> L:T }
+DIOpArg(N:unsigned, T:type)
+{ -> (L:T) }
 ```
 
-`L` is the location description of the `N`th element, `O`, of the `argObjects`
-field `F` of the associated lifetime segment `LS`.
+`L` is the location description of the `N`th zero-based input input `I` to the
+expression.
 
-If `F` is not a tuple of `DIObject`s with at least `N` elements, then the
-expression is not well-formed. If `bitsizeof(T)` is not equal to `bitsizeof(O)`,
-then the expression is not well-formed.
+If there are fewer than `N + 1` inputs to the expression, then the expression is
+not well-formed. If `bitsizeof(T)` is not equal to `bitsizeof(I)`, then the
+expression is not well-formed.
 
-_[Note: As with any location description, `L` may consist of multiple single
-location descriptions. For example, this will occur if `O` has more than one
-bounded lifetime segment active. By definition, these all describe the same
-object. This implies that when reading from them, any of the single location
-descriptions may be chosen, whereas when writing to them the write needs to be
-performed into each single location description.]_
+_[Note: The inputs for an expression are specified by the `argObjects` field of
+the `DILifetime` being evaluated which has a `location` field that references
+the expression.]_
 
 #### `DIOpTypeObject`
 
 ```llvm
 DIOpTypeObject(T:type)
-{ -> L:T }
+{ -> (L:T) }
 ```
 
 `LS` is the lifetime segment associated with the expression containing
@@ -809,11 +828,11 @@ DIOpTypeObject(T:type)
 for which the type property `TP` is being evaluated. See
 [`DICompositeType`](#dicompositetype).
 
-If `LS` can be evaluated other than to obtain the location description of a type
-property fragment, then the expression is ill-formed. _[Note: This implies that
-a type property fragment cannot be referenced by the `argObjects` field of a
-`DILifetime`.]_ If `bitsizeof(T)` is not equal to `bitsizeof(LT)`, then the
-expression is not well-formed.
+If `LS` can be evaluated other than to obtain the location description of a
+type property fragment, then the expression is not well-formed. _[Note: This
+implies that a type property fragment cannot be referenced by the `argObjects`
+field of a `DILifetime`.]_ If `bitsizeof(T)` is not equal to `bitsizeof(LT)`,
+then the expression is not well-formed.
 
 > TODO: Should a distinguished `DIFragment` be used for this like for LLVM
 > global variables? There could be a uniqued type object fragment referenced by
@@ -823,12 +842,13 @@ expression is not well-formed.
 
 ```llvm
 DIOpConstant(T:type V:literal)
-{ -> L:T }
+{ -> (L:T) }
 ```
 
-`V` is a literal value of type `T` or `undef`.
+`V` is a literal value of type `T` or the `undef` value.
 
-If `V` is `undef`, then `L` comprises one undefined location description `IL`.
+If `V` is the `undef` value, then `L` comprises one undefined location
+description `IL`.
 
 Otherwise, `L` comprises one implicit location description `IL`. `IL` specifies
 implicit location storage `ILS` and offset 0. `ILS` has value `V` and size
@@ -844,69 +864,58 @@ implicit location storage `ILS` and offset 0. `ILS` has value `V` and size
 
 ```llvm
 DIOpConvert(T':type)
-{ L:T -> L':T' }
+{ (L:T) -> (L':T') }
 ```
 
-Creates a value `V'` of type `T'` by
-
-Reads `bitsizeof(T)` bits from `L` as value `V` of type `T` and converts it to
-value `V'` of type `T'`.
-
-The expression is not well-formed if `T` or `T'` are not equivalent to
-`DIBasicType` types. The conversions match those performed by DWARF the
-`DW_OP_convert` operation.
-
-`L'` comprises one implicit location description `IL'`. `IL'` specifies implicit
-location storage `ILS'` and offset 0. `ILS'` has value `V'` and size
+`L'` comprises one implicit location description `IL`. `IL` specifies implicit
+location storage `ILS` and offset 0. `ILS` has value `V` and size
 `bitsizeof(T')`.
+
+`V` is the value `read(L, T)` converted to type `T'`.
+
+_[Note: The conversions used should be limited to those supported by the target
+debug format. For example, when the target debug format is DWARF, the
+conversions used should be limited to those supported by the `DW_OP_convert`
+operation.]_
 
 #### `DIOpReinterpret`
 
 ```llvm
 DIOpReinterpret(T':type)
-{ L:T -> L:T' }
+{ (L:T) -> (L:T') }
 ```
 
-Reads `bitsizeof(T)` bits from `L` and treats the bits as value `V'` of type
-`T'`.
-
-If `bitsizeof(T)` is not equal to `bitsizeof(T')`, then the expression is not well-formed.
-
-`L'` comprises one implicit location description `IL'`. `IL'` specifies implicit
-location storage `ILS'` and offset 0. `ILS'` has value `V'` and size
-`bitsizeof(T')`.
-
-#### `DIOpOffset`
-
-```llvm
-DIOpOffset()
-{ B:I L:T -> L':T }
-```
-
-`L'` is `L`, but updated by adding `VB` * 8 to its bit offset. `VB` is the value
-obtained by reading `bitsizeof(U)` bits from `B` as an integral type `I`. `I`
-may be a signed or unsigned integral type.
-
-If `I` is not an integral type, then the expression is not well-defined.
+If `bitsizeof(T)` is not equal to `bitsizeof(T')`, then the expression is not
+well-formed.
 
 #### `DIOpBitOffset`
 
 ```llvm
-DIOpBitOffset()
-{ B:I L:T -> L':T }
+DIOpBitOffset(T':type)
+{ (B:I) (L:T) -> (L':T') }
 ```
 
-`L'` is `L`, but updated by adding `VB` to its bit offset. `VB` is the value
-obtained by reading `bitsizeof(U)` bits from `B` as an integral type `I`. `I`
-may be a signed or unsigned integral type.
+`L'` is `L`, but updated by adding `read(B, I)` to its bit offset.
 
 If `I` is not an integral type, then the expression is not well-defined.
+
+_[Note: `I` may be a signed or unsigned integral type.]_
+
+#### `DIOpByteOffset`
+
+```llvm
+DIOpByteOffset(T':type)
+{ (B:I) (L:T) -> (L':T') }
+```
+
+`(L':T')` is as if `DIOpBitOffset(T')` was evaluated with a stack containing
+`(B * 8:I) (L:T)`.
 
 #### `DIOpComposite`
 
 ```llvm
-DIOpComposite(N:index, T:type)
-{ L1:T1 L2:T2 ... LN:TN -> L:T }
+DIOpComposite(N:unsigned, T:type)
+{ (L1:T1) (L2:T2) ... (LN:TN) -> (L:T) }
 ```
 
 `L` comprises one complete composite location description `CL` with offset 0.
@@ -930,21 +939,54 @@ storage can only hold a single value at a time. An implicit location description
 does not permit assignment, and so the same bits of its value can be present in
 multiple parts of a composite location description.]_
 
+#### `DIOpExtend`
+
+```llvm
+DIOpExtend(N:unsigned)
+{ (L:T) -> (L':<N x T>) }
+```
+
+`(L':<N x T>)'` is as if `DIOpComposite(N, <N x T>)` was applied to a stack
+containing `N` copies of `(L:T)`.
+
+If `T` is not an integral type, floating point type, or pointer type, then the
+expression is not well-formed.
+
+#### `DIOpSelect`
+
+```llvm
+DIOpSelect()
+{ (LM:TM) (L1:<N x T>) (L0:<N x T>) -> (L:<N x T>) }
+```
+
+`M` is a bit mask with the value `read(LM, TM)`. If `bitsizeof(TM)` is less
+than `N`, then the expression is not well-formed.
+
+`(L:<N x T>)` is as if `DIOpComposite(N, <N x T>)` was applied to a stack
+containing `N` entries `(LI:T)` ordered in descending `I` from `N - 1` to 0
+inclusive. Each `LI` is as if `DIOpBitOffset(T)` was applied to a stack
+containing `(I * bitsizeof(T):TI) (PLI:T)`. `PLI` is the same as `L0` if the
+`I`th least significant bit of `M` is zero, otherwise it is the same as `L1`.
+`TI` is some integral type that can represent the range 0 to `(N - 1) *
+bitsizeof(T)`.
+
+If `T` is not an integral type, floating point type, or pointer type, then the
+expression is not well-formed.
+
 #### `DIOpAddrOf`
 
 ```llvm
 DIOpAddrOf(N:addrspace)
-{ L:T -> L':T' }
+{ (L:T) -> (L':T addrspace(N)*) }
 ```
 
-`L'` comprises one implicit address location description `IAL`. `T'` is a
-pointer to `T` in address space `N`. `IAL` specifies implicit address location
-storage `IALS` and offset 0.
+`L'` comprises one implicit address location description `IAL`. `IAL` specifies
+implicit address location storage `IALS` and offset 0.
 
-`IALS` is `bitsizeof(T')` bits and conceptually holds a reference to the storage
-that `L` denotes. If `DIOpDeref` is applied to the resulting `L':T'`, then it
-will result in `L:T`. If any other operation is applied, then the expression is
-not well-formed.
+`IALS` is `bitsizeof(T addrspace(N)*)` bits and conceptually holds a reference
+to the storage that `L` denotes. If `DIOpDeref` is applied to the resulting
+`(L':T addrspace(N)*)`, then it will result in `(L:T)`. If any other operation
+is applied, then the expression is not well-formed.
 
 _[Note: `DIOpAddrOf` can be used for any location description kind of 'L', not
 just memory location descriptions.]_
@@ -963,105 +1005,83 @@ additional DWARF extensions.]_
 
 ```llvm
 DIOpDeref()
-{ L:T -> L':T' }
+{ (L:T addrspace(N)*) -> (L':T) }
 ```
 
-`T` is a pointer to `T'` in address space `N`.
-
-If `T` is not a pointer type, then the expression is not well-formed.
-
-If `L:T` was produced by a `DIOpAddrOf` operation, then see
+If `(L:T addrspace(N)*)` was produced by a `DIOpAddrOf` operation, then see
 [`DIOpAddrOf`](#DIOpAddrOf).
 
-Otherwise, `L'` comprises one memory location description `MLD`. `MLD` specifies
-bit offset `A` and the memory location storage corresponding to address space
-`N`. `A` is the value obtained by reading `bitsizeof(T)` bits from `L` and
-multiplying by 8.
+Otherwise, `L'` comprises one memory location description `MLD`. `MLD`
+specifies bit offset `read(L, T addrspace(N)*) * 8` and the memory location
+storage corresponding to address space `N`.
 
 #### `DIOpRead`
 
 ```llvm
 DIOpRead()
-{ L:T -> L':T }
+{ (L:T) -> (L':T) }
 ```
 
 `L'` comprises one implicit location description `IL`. `IL` specifies implicit
-location storage `ILS` and offset 0. `ILS` has value `V` and size
+location storage `ILS` and offset 0. `ILS` has value `read(L, T)` and size
 `bitsizeof(T)`.
-
-`V` is the value of type `T` obtained by reading `bitsizeof(T)` bits from `L`.
 
 #### `DIOpAdd`
 
 ```llvm
 DIOpAdd()
-{ L1:T L2:T -> L:T }
+{ (L1:T) (L2:T) -> (L:T) }
 ```
 
-`V1` is the value of type `T` obtained by reading `bitsizeof(T)` bits from `L1`.
-`V2` is the value of type `T` obtained by reading `bitsizeof(T)` bits from `L2`.
-
 `L` comprises one implicit location description `IL`. `IL` specifies implicit
-location storage `ILS` and offset 0. `ILS` has value `V2 + V1` and size
-`bitsizeof(T)`.
+location storage `ILS` and offset 0. `ILS` has value `read(L1, T) + read(L2, T)`
+and size `bitsizeof(T)`.
 
 #### `DIOpSub`
 
 ```llvm
 DIOpSub()
-{ L1:T L2:T -> L:T }
+{ (L1:T) (L2:T) -> (L:T) }
 ```
 
-`V1` is the value of type `T` obtained by reading `bitsizeof(T)` bits from `L1`.
-`V2` is the value of type `T` obtained by reading `bitsizeof(T)` bits from `L2`.
-
 `L` comprises one implicit location description `IL`. `IL` specifies implicit
-location storage `ILS` and offset 0. `ILS` has value `V2 - V1` and size
-`bitsizeof(T)`.
+location storage `ILS` and offset 0. `ILS` has value `read(V2, T) - read(V1, T)`
+and size `bitsizeof(T)`.
 
 #### `DIOpMul`
 
 ```llvm
 DIOpMul()
-{ L1:T L2:T -> L:T }
+{ (L1:T) (L2:T) -> (L:T) }
 ```
 
-`V1` is the value of type `T` obtained by reading `bitsizeof(T)` bits from `L1`.
-`V2` is the value of type `T` obtained by reading `bitsizeof(T)` bits from `L2`.
-
 `L` comprises one implicit location description `IL`. `IL` specifies implicit
-location storage `ILS` and offset 0. `ILS` has value `V2 * V1` and size
-`bitsizeof(T)`.
+location storage `ILS` and offset 0. `ILS` has value `read(V2, T) * read(V1, T)`
+and size `bitsizeof(T)`.
 
 #### `DIOpDiv`
 
 ```llvm
 DIOpDiv()
-{ L1:T L2:T -> L:T }
+{ (L1:T) (L2:T) -> (L:T) }
 ```
 
-`V1` is the value of type `T` obtained by reading `bitsizeof(T)` bits from `L1`.
-`V2` is the value of type `T` obtained by reading `bitsizeof(T)` bits from `L2`.
-
 `L` comprises one implicit location description `IL`. `IL` specifies implicit
-location storage `ILS` and offset 0. `ILS` has value `V2 / V1` and size
-`bitsizeof(T)`.
+location storage `ILS` and offset 0. `ILS` has value `read(V2, T) / read(V1, T)`
+and size `bitsizeof(T)`.
 
 #### `DIOpShr`
 
 ```llvm
 DIOpShr()
-{ L1:T L2:T -> L:T }
+{ (L1:T) (L2:T) -> (L:T) }
 ```
 
-`V1` is the value of type `T` obtained by reading `bitsizeof(T)` bits from `L1`.
-`V2` is the value of type `T` obtained by reading `bitsizeof(T)` bits from `L2`.
-
 `L` comprises one implicit location description `IL`. `IL` specifies implicit
-location storage `ILS` and offset 0. `ILS` has value `V2 >> V1` and size
-`bitsizeof(T)`. If `T` is an unsigned integral type, then the result is filled
-with 0 bits. If `T` is a signed integral type, then the result is filled with the
-sign bit of `V1`.
+location storage `ILS` and offset 0. `ILS` has value `read(V2, T) >> read(V1,
+t)` and size `bitsizeof(T)`. If `T` is an unsigned integral type, then the
+result is filled with 0 bits. If `T` is a signed integral type, then the result
+is filled with the sign bit of `V1`.
 
 If `T` is not an integral type, then the expression is not well-formed.
 
@@ -1069,17 +1089,29 @@ If `T` is not an integral type, then the expression is not well-formed.
 
 ```llvm
 DIOpShl()
-{ L1:T L2:T -> L:T }
+{ (L1:T) (L2:T) -> (L:T) }
 ```
 
-`V1` is the value of type `T` obtained by reading `bitsizeof(T)` bits from `L1`.
-`V2` is the value of type `T` obtained by reading `bitsizeof(T)` bits from `L2`.
-
 `L` comprises one implicit location description `IL`. `IL` specifies implicit
-location storage `ILS` and offset 0. `ILS` has value `V2 << V1` and size
-`bitsizeof(T)`. The result is filled with 0 bits.
+location storage `ILS` and offset 0. `ILS` has value `read(V2, T) << read(V1,
+T)` and size `bitsizeof(T)`. The result is filled with 0 bits.
 
 If `T` is not an integral type, then the expression is not well-formed.
+
+#### `DIOpPushLane`
+
+```llvm
+DIOpPushLane(T:type)
+{ -> (L:T) }
+```
+
+`L` comprises one implicit location description `IL`. `IL` specifies implicit
+location storage `ILS` and offset 0. `ILS` has the value of the target
+architecture lane identifier of the current source language thread of execution
+if the source language is implemented using a SIMD or SIMT execution model.
+
+If `T` is not an integral type or the source language is not implemented using a
+SIMD or SIMT execution model, then the expression is not well-formed.
 
 ## Intrinsics
 
