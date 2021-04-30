@@ -981,8 +981,7 @@ TEST_F(TargetDeclTest, ObjC) {
       id value = [[Foo]].sharedInstance;
     }
   )cpp";
-  // FIXME: We currently can't identify the interface here.
-  EXPECT_DECLS("ObjCPropertyRefExpr", "+ (id)sharedInstance");
+  EXPECT_DECLS("ObjCInterfaceTypeLoc", "@interface Foo");
 
   Code = R"cpp(
     @interface Foo
