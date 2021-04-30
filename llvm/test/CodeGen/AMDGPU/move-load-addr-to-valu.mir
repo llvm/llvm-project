@@ -350,8 +350,7 @@ body:             |
   ; GCN: bb.1:
   ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GCN:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, %6, %bb.1
-  ; GCN:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]], implicit $exec
-  ; GCN:   [[SCRATCH_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR [[V_READFIRSTLANE_B32_]], 0, 0, implicit $exec, implicit $flat_scr
+  ; GCN:   [[SCRATCH_LOAD_DWORD:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD [[PHI]], 0, 0, implicit $exec, implicit $flat_scr
   ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[PHI]], 1, implicit $exec
   ; GCN:   V_CMP_NE_U32_e32 0, [[V_AND_B32_e64_]], implicit-def $vcc, implicit $exec
   ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_AND_B32_e64_]], implicit $exec
@@ -387,8 +386,7 @@ body:             |
   ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GCN:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, %6, %bb.1
   ; GCN:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PHI]], implicit $exec
-  ; GCN:   SCRATCH_STORE_DWORD_SADDR [[DEF]], [[V_READFIRSTLANE_B32_]], 0, 0, implicit $exec, implicit $flat_scr
+  ; GCN:   SCRATCH_STORE_DWORD [[DEF]], [[PHI]], 0, 0, implicit $exec, implicit $flat_scr
   ; GCN:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[PHI]], 1, implicit $exec
   ; GCN:   V_CMP_NE_U32_e32 0, [[V_AND_B32_e64_]], implicit-def $vcc, implicit $exec
   ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_AND_B32_e64_]], implicit $exec

@@ -5022,6 +5022,8 @@ bool SIInstrInfo::moveFlatAddrToVGPR(MachineInstr &Inst) const {
 
   int NewOpc = AMDGPU::getGlobalVaddrOp(Opc);
   if (NewOpc < 0)
+    NewOpc = AMDGPU::getFlatScratchInstSVfromSS(Opc);
+  if (NewOpc < 0)
     return false;
 
   MachineRegisterInfo &MRI = Inst.getMF()->getRegInfo();
@@ -5034,14 +5036,17 @@ bool SIInstrInfo::moveFlatAddrToVGPR(MachineInstr &Inst) const {
     return false;
 
   int OldVAddrIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr);
-  assert(OldVAddrIdx >= 0);
 
-  // Check vaddr, it shall be zero
-  MachineOperand &VAddr = Inst.getOperand(OldVAddrIdx);
-  MachineInstr *VAddrDef = MRI.getUniqueVRegDef(VAddr.getReg());
-  if (!VAddrDef || VAddrDef->getOpcode() != AMDGPU::V_MOV_B32_e32 ||
-      !VAddrDef->getOperand(1).isImm() || VAddrDef->getOperand(1).getImm() != 0)
-    return false;
+  // Check vaddr, it shall be zero or absent.
+  MachineInstr *VAddrDef = nullptr;
+  if (OldVAddrIdx >= 0) {
+    MachineOperand &VAddr = Inst.getOperand(OldVAddrIdx);
+    VAddrDef = MRI.getUniqueVRegDef(VAddr.getReg());
+    if (!VAddrDef || VAddrDef->getOpcode() != AMDGPU::V_MOV_B32_e32 ||
+        !VAddrDef->getOperand(1).isImm() ||
+        VAddrDef->getOperand(1).getImm() != 0)
+      return false;
+  }
 
   const MCInstrDesc &NewDesc = get(NewOpc);
   Inst.setDesc(NewDesc);
@@ -5060,10 +5065,12 @@ bool SIInstrInfo::moveFlatAddrToVGPR(MachineInstr &Inst) const {
     MRI.addRegOperandToUseList(&NewVAddr);
   } else {
     assert(OldSAddrIdx == NewVAddrIdx);
-    Inst.RemoveOperand(OldVAddrIdx);
+
+    if (OldVAddrIdx >= 0)
+      Inst.RemoveOperand(OldVAddrIdx);
   }
 
-  if (MRI.use_nodbg_empty(VAddrDef->getOperand(0).getReg()))
+  if (VAddrDef && MRI.use_nodbg_empty(VAddrDef->getOperand(0).getReg()))
     VAddrDef->eraseFromParent();
 
   return true;
