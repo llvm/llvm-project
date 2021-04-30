@@ -48,6 +48,7 @@ add_lldb_library(lldbCore
   RichManglingContext.cpp
   SearchFilter.cpp
   Section.cpp
+  SourceLocationSpec.cpp
   SourceManager.cpp
   StreamAsynchronousIO.cpp
   StreamFile.cpp
