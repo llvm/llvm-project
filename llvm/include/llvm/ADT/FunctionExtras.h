@@ -34,6 +34,7 @@
 
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/MemAlloc.h"
 #include "llvm/Support/type_traits.h"
 #include <memory>
@@ -60,8 +61,8 @@ using EnableIfTrivial =
     std::enable_if_t<llvm::is_trivially_move_constructible<T>::value &&
                      std::is_trivially_destructible<T>::value>;
 template <typename CallableT, typename ThisT>
-using EnableUnlessSameType = std::enable_if_t<!std::is_same<
-    std::remove_cv_t<std::remove_reference_t<CallableT>>, ThisT>::value>;
+using EnableUnlessSameType =
+    std::enable_if_t<!std::is_same<remove_cvref_t<CallableT>, ThisT>::value>;
 template <typename CallableT, typename Ret, typename... Params>
 using EnableIfCallable =
     std::enable_if_t<std::is_void<Ret>::value ||
