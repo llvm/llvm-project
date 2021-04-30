@@ -585,6 +585,11 @@ template <typename MaxMinT> static SCEVTypes convertToSCEVype(MaxMinT &MM) {
   return scUnknown;
 }
 
+// Parameters:
+//  I - instruction matched by MaxMinMatch matcher
+//  MaxMinMatch - min/max idiom matcher
+//  LHS - first operand of I
+//  RHS - second operand of I
 template <typename MaxMinT>
 Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
                                                    MaxMinT MaxMinMatch,
@@ -612,9 +617,10 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
 
         // The optimization is profitable only if LHS can be removed in the end.
         // In other words LHS should be used (directly or indirectly) by I only.
-        for (User *U : LHS->users())
-          if (U != I || !(U->hasOneUser() && *U->users().begin() == I))
-            continue;
+        if (llvm::any_of(LHS->users(), [&](auto *U) {
+              return U != I && !(U->hasOneUser() && *U->users().begin() == I);
+            }))
+          continue;
 
         SCEVExpander Expander(*SE, *DL, "nary-reassociate");
         SmallVector<const SCEV *, 2> Ops1{ BExpr, AExpr };
