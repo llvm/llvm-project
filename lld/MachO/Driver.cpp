@@ -553,7 +553,8 @@ static void replaceCommonSymbols() {
     replaceSymbol<Defined>(sym, sym->getName(), isec->file, isec, /*value=*/0,
                            /*size=*/0,
                            /*isWeakDef=*/false,
-                           /*isExternal=*/true, common->privateExtern);
+                           /*isExternal=*/true, common->privateExtern,
+                           /*isThumb=*/false);
   }
 }
 
