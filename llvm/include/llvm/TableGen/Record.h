@@ -1529,7 +1529,7 @@ public:
   // original record. All other fields can be copied normally.
   Record(const Record &O)
     : Name(O.Name), Locs(O.Locs), TemplateArgs(O.TemplateArgs),
-      Values(O.Values), SuperClasses(O.SuperClasses),
+      Values(O.Values), Assertions(O.Assertions), SuperClasses(O.SuperClasses),
       TrackedRecords(O.TrackedRecords), ID(LastID++),
       IsAnonymous(O.IsAnonymous), IsClass(O.IsClass) { }
 
