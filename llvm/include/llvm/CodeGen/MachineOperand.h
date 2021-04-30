@@ -99,8 +99,11 @@ private:
   unsigned IsImp : 1;
 
   /// IsDeadOrKill
-  /// For uses: IsKill - True if this instruction is the last use of the
-  /// register on this path through the function.
+  /// For uses: IsKill - Conservatively indicates the last use of a register
+  /// on this path through the function. A register operand with true value of
+  /// this flag must be the last use of the register, a register operand with
+  /// false value may or may not be the last use of the register. After regalloc
+  /// we can use recomputeLivenessFlags to get precise kill flags.
   /// For defs: IsDead - True if this register is never used by a subsequent
   /// instruction.
   /// This is only valid on register operands.
