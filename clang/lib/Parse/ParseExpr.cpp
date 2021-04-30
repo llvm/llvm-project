@@ -2366,7 +2366,6 @@ ExprResult Parser::ParseUniqueStableNameExpression() {
                                            T.getCloseLocation(), Result.get());
 }
 
-
 /// Parse a sizeof or alignof expression.
 ///
 /// \verbatim

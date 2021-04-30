@@ -11679,14 +11679,14 @@ unsigned ASTContext::GetSYCLKernelNamingIndex(const TagDecl *TD) const {
   const DeclContext *DC = GetNamedParent(TD);
 
   auto Itr = SYCLKernelNamingTypes.find(DC);
-  assert (Itr != SYCLKernelNamingTypes.end() && "Not a valid DeclContext?");
+  assert(Itr != SYCLKernelNamingTypes.end() && "Not a valid DeclContext?");
 
-  const llvm::SmallPtrSet<const TagDecl*, 4> &Set = Itr->getSecond();
+  const llvm::SmallPtrSet<const TagDecl *, 4> &Set = Itr->getSecond();
 
   llvm::SmallVector<const TagDecl *> TagDecls{Set.begin(), Set.end()};
   llvm::sort(TagDecls, [](const TagDecl *LHS, const TagDecl *RHS) {
-             return LHS->getLocation() < RHS->getLocation();
-             });
+    return LHS->getLocation() < RHS->getLocation();
+  });
 
   return llvm::find(TagDecls, TD) - TagDecls.begin();
 }

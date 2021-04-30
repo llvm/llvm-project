@@ -6305,9 +6305,8 @@ void ItaniumMangleContextImpl::mangleLambdaSig(const CXXRecordDecl *Lambda,
   Mangler.mangleLambdaSig(Lambda);
 }
 
-
-ItaniumMangleContext *
-ItaniumMangleContext::create(ASTContext &Context, DiagnosticsEngine &Diags) {
+ItaniumMangleContext *ItaniumMangleContext::create(ASTContext &Context,
+                                                   DiagnosticsEngine &Diags) {
   return new ItaniumMangleContextImpl(
       Context, Diags, [](ASTContext &, const TagDecl *) { return false; },
       [](ASTContext &, const TagDecl *, raw_ostream &) {});
