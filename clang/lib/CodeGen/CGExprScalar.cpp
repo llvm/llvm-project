@@ -1589,10 +1589,7 @@ Value *ScalarExprEmitter::VisitExpr(Expr *E) {
 
 Value *ScalarExprEmitter::VisitUniqueStableNameExpr(UniqueStableNameExpr *E) {
   ASTContext &Context = CGF.getContext();
-  llvm::Constant *Str = Builder.CreateGlobalStringPtr(
-      E->ComputeName(Context), "usn_str");
-  Address GVAddr = Address(Str, Context.getTypeAlignInChars(E->getType()));
-  return Builder.CreateLoad(GVAddr, llvm::Twine{"usn_str_load"});
+  return Builder.CreateGlobalStringPtr(E->ComputeName(Context), "usn_str");
 }
 
 Value *ScalarExprEmitter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
