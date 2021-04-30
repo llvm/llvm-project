@@ -17,14 +17,26 @@
 #include <iterator>             // see [iterator.synopsis]
 
 namespace std::ranges {
+  inline namespace unspecified {
+    // [range.access], range access
+    inline constexpr unspecified begin = unspecified;
+    inline constexpr unspecified end = unspecified;
+    inline constexpr unspecified cbegin = unspecified;
+    inline constexpr unspecified cend = unspecified;
+  }
+
   // [range.range], ranges
   template<class T>
     inline constexpr bool enable_borrowed_range = false;
+
+  template<class T>
+    using iterator_t = decltype(ranges::begin(declval<T&>()));
 }
 
 */
 
 #include <__config>
+#include <__ranges/access.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <compare>          // Required by the standard.
 #include <initializer_list> // Required by the standard.

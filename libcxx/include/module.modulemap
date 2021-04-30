@@ -411,6 +411,9 @@ module std [system] {
   }
   module ranges {
     header "ranges"
+    export compare
+    export initializer_list
+    export iterator
     export *
   }
   module ratio {
