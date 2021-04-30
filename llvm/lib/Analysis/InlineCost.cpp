@@ -1759,8 +1759,8 @@ bool CallAnalyzer::visitExtractValue(ExtractValueInst &I) {
       }))
     return true;
 
-  // SROA can look through these but give them a cost.
-  return false;
+  // SROA can't look through these, but they may be free.
+  return Base::visitExtractValue(I);
 }
 
 bool CallAnalyzer::visitInsertValue(InsertValueInst &I) {
@@ -1772,8 +1772,8 @@ bool CallAnalyzer::visitInsertValue(InsertValueInst &I) {
       }))
     return true;
 
-  // SROA can look through these but give them a cost.
-  return false;
+  // SROA can't look through these, but they may be free.
+  return Base::visitInsertValue(I);
 }
 
 /// Try to simplify a call site.
