@@ -14,6 +14,8 @@ def help_hidden : Flag<["--"], "help-hidden">,
 def version : Flag<["--"], "version">,
   HelpText<"Display the version of this program">,
   Group<grp_generic>;
+def : Flag<["-"], "v">, Alias<version>, HelpText<"Alias for --version">,
+  Group<grp_generic>;
 
 
 
