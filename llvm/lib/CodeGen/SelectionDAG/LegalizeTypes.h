@@ -671,6 +671,7 @@ private:
   SDValue PromoteFloatRes_FMAD(SDNode *N);
   SDValue PromoteFloatRes_FPOWI(SDNode *N);
   SDValue PromoteFloatRes_FP_ROUND(SDNode *N);
+  SDValue PromoteFloatRes_ATOMIC_LOAD_FXXX(SDNode *N);
   SDValue PromoteFloatRes_LOAD(SDNode *N);
   SDValue PromoteFloatRes_SELECT(SDNode *N);
   SDValue PromoteFloatRes_SELECT_CC(SDNode *N);
