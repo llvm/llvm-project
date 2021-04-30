@@ -119,33 +119,17 @@ public:
             DIExpression::replaceArg(Expression, OpIdx, DuplicatingIdx);
       }
     }
-    // FIXME: Debug values referencing 64+ unique machine locations are rare and
-    // currently unsupported for performance reasons. If we can verify that
-    // performance is acceptable for such debug values, we can increase the
-    // bit-width of LocNoCount to 14 to enable up to 16384 unique machine
-    // locations. We will also need to verify that this does not cause issues
-    // with LiveDebugVariables' use of IntervalMap.
-    if (LocNoVec.size() < 64) {
-      LocNoCount = LocNoVec.size();
-      if (LocNoCount > 0) {
-        LocNos = std::make_unique<unsigned[]>(LocNoCount);
-        std::copy(LocNoVec.begin(), LocNoVec.end(), loc_nos_begin());
-      }
-    } else {
-      LLVM_DEBUG(dbgs() << "Found debug value with 64+ unique machine "
-                           "locations, dropping...\n");
-      LocNoCount = 1;
-      // Turn this into an undef debug value list; right now, the simplest form
-      // of this is an expression with one arg, and an undef debug operand.
-      Expression =
-          DIExpression::get(Expr.getContext(), {dwarf::DW_OP_LLVM_arg, 0,
-                                                dwarf::DW_OP_stack_value});
-      if (auto FragmentInfoOpt = Expr.getFragmentInfo())
-        Expression = *DIExpression::createFragmentExpression(
-            Expression, FragmentInfoOpt->OffsetInBits,
-            FragmentInfoOpt->SizeInBits);
-      LocNos = std::make_unique<unsigned[]>(LocNoCount);
-      LocNos[0] = UndefLocNo;
+    // A debug value referencing 64+ unique machine locations is very likely
+    // to be the result of a bug earlier in the pipeline. If by some means this
+    // limit is validly reached, then we can add a byte to the size of
+    // LocNoCount.
+    assert(LocNoVec.size() < 64 &&
+           "debug value containing 64+ unique machine locations is not "
+           "supported by Live Debug Variables");
+    LocNoCount = LocNoVec.size();
+    if (LocNoCount > 0) {
+      LocNos.reset(new unsigned[LocNoCount]());
+      std::copy(LocNoVec.begin(), LocNoVec.end(), loc_nos_begin());
     }
   }
 
