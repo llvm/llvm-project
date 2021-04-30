@@ -1589,7 +1589,20 @@ Value *ScalarExprEmitter::VisitExpr(Expr *E) {
 
 Value *ScalarExprEmitter::VisitUniqueStableNameExpr(UniqueStableNameExpr *E) {
   ASTContext &Context = CGF.getContext();
-  return Builder.CreateGlobalStringPtr(E->ComputeName(Context), "usn_str");
+  llvm::Optional<LangAS> GlobalAS =
+      Context.getTargetInfo().getConstantAddressSpace();
+  llvm::Constant *GlobalConstStr = Builder.CreateGlobalStringPtr(
+      E->ComputeName(Context), "usn_str",
+      static_cast<unsigned>(GlobalAS.getValueOr(LangAS::Default)));
+
+  unsigned ExprAS = Context.getTargetAddressSpace(E->getType());
+
+  if (GlobalConstStr->getType()->getPointerAddressSpace() == ExprAS)
+    return GlobalConstStr;
+
+  llvm::Type *EltTy = GlobalConstStr->getType()->getPointerElementType();
+  llvm::PointerType *NewPtrTy = llvm::PointerType::get(EltTy, ExprAS);
+  return Builder.CreateAddrSpaceCast(GlobalConstStr, NewPtrTy, "usn_addr_cast");
 }
 
 Value *ScalarExprEmitter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
