@@ -223,14 +223,12 @@ namespace {
 /// The padding value for a given Op depends on the semantics of the Op.
 /// The identity value for ConvOp and PoolingSumOp is 0, for PoolingMaxOp is
 /// -inf or minInt and for PoolingMinOp is inf or maxInt.
-template <typename OpType>
-Attribute getPadValueAttr(Type type) {
+template <typename OpType> Attribute getPadValueAttr(Type type) {
   llvm_unreachable("Unexpected op type for getPadValueAttr");
   return {};
 }
 
-template <>
-Attribute getPadValueAttr<PoolingMaxOp>(Type type) {
+template <> Attribute getPadValueAttr<PoolingMaxOp>(Type type) {
   auto &b = ScopedContext::getBuilderRef();
   if (auto floatType = type.dyn_cast<FloatType>()) {
     return b.getFloatAttr(
@@ -248,8 +246,7 @@ Attribute getPadValueAttr<PoolingMaxOp>(Type type) {
   return {};
 }
 
-template <>
-Attribute getPadValueAttr<PoolingMinOp>(Type type) {
+template <> Attribute getPadValueAttr<PoolingMinOp>(Type type) {
   auto &b = ScopedContext::getBuilderRef();
   if (auto floatType = type.dyn_cast<FloatType>()) {
     return b.getFloatAttr(floatType,
@@ -266,14 +263,12 @@ Attribute getPadValueAttr<PoolingMinOp>(Type type) {
   return {};
 }
 
-template <>
-Attribute getPadValueAttr<PoolingSumOp>(Type type) {
+template <> Attribute getPadValueAttr<PoolingSumOp>(Type type) {
   auto &b = ScopedContext::getBuilderRef();
   return b.getZeroAttr(type);
 }
 
-template <>
-Attribute getPadValueAttr<ConvOp>(Type type) {
+template <> Attribute getPadValueAttr<ConvOp>(Type type) {
   auto &b = ScopedContext::getBuilderRef();
   return b.getZeroAttr(type);
 }
@@ -324,8 +319,7 @@ static void emitScalarImplementation(ArrayRef<Value> allIvs, ConvOp convOp) {
   }
 }
 
-template <typename PoolingOp>
-static bool hasPadding(PoolingOp poolingOp) {
+template <typename PoolingOp> static bool hasPadding(PoolingOp poolingOp) {
   for (unsigned i = 0, e = poolingOp.getNumWindowLoops(); i < e; ++i) {
     if (poolingOp.getLowPad(i) > 0 || poolingOp.getHighPad(i) > 0)
       return true;
@@ -501,7 +495,7 @@ linalgOpToLoopsImpl(Operation *op, OpBuilder &builder,
       });
   // Number of loop ops might be different from the number of ivs since some
   // loops like affine.parallel and scf.parallel have multiple ivs.
-  llvm::SetVector<Operation *> loopSet;
+  SetVector<Operation *> loopSet;
   for (Value iv : allIvs) {
     if (!iv)
       return {};
@@ -516,6 +510,47 @@ linalgOpToLoopsImpl(Operation *op, OpBuilder &builder,
   return loops;
 }
 
+/// Replace the index operations in the body of the loop nest by the matching
+/// induction variables. If available use the interchange vector to map the
+/// interchanged induction variables to the dimension of the index operation.
+static void replaceIndexOpsByInductionVariables(
+    LinalgOp linalgOp, PatternRewriter &rewriter, ArrayRef<Operation *> loopOps,
+    ArrayRef<unsigned> interchangeVector) {
+  // Extract the induction variables of the loop nest from outer to inner.
+  SmallVector<Value> allIvs;
+  for (Operation *loopOp : loopOps) {
+    llvm::TypeSwitch<Operation *>(loopOp)
+        .Case([&](scf::ParallelOp parallelOp) {
+          allIvs.append(parallelOp.getInductionVars().begin(),
+                        parallelOp.getInductionVars().end());
+        })
+        .Case([&](scf::ForOp forOp) {
+          allIvs.push_back(forOp.getInductionVar());
+        })
+        .Case([&](AffineForOp affineForOp) {
+          allIvs.push_back(affineForOp.getInductionVar());
+        })
+        .Default([&](Operation *op) { assert(false && "unexpected op"); });
+  }
+  assert(linalgOp.getNumLoops() == allIvs.size() &&
+         "expected the number of loops and induction variables to match");
+  // Replace the index operations in the body of the innermost loop op.
+  if (!loopOps.empty()) {
+    LoopLikeOpInterface loopOp = loopOps.back();
+    for (IndexOp indexOp :
+         llvm::make_early_inc_range(loopOp.getLoopBody().getOps<IndexOp>())) {
+      // Search the indexing dimension in the interchange vector if available.
+      assert(interchangeVector.empty() ||
+             interchangeVector.size() == linalgOp.getNumLoops());
+      const auto *it = llvm::find(interchangeVector, indexOp.dim());
+      uint64_t dim = it != interchangeVector.end()
+                         ? std::distance(interchangeVector.begin(), it)
+                         : indexOp.dim();
+      rewriter.replaceOp(indexOp, allIvs[dim]);
+    }
+  }
+}
+
 namespace {
 template <typename LoopType>
 class LinalgRewritePattern : public RewritePattern {
@@ -527,10 +562,15 @@ public:
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
+    auto linalgOp = dyn_cast<LinalgOp>(op);
     if (!isa<LinalgOp>(op))
       return failure();
-    if (!linalgOpToLoopsImpl<LoopType>(op, rewriter, interchangeVector))
+    Optional<LinalgLoops> loopOps =
+        linalgOpToLoopsImpl<LoopType>(op, rewriter, interchangeVector);
+    if (!loopOps.hasValue())
       return failure();
+    replaceIndexOpsByInductionVariables(linalgOp, rewriter, loopOps.getValue(),
+                                        interchangeVector);
     rewriter.eraseOp(op);
     return success();
   }

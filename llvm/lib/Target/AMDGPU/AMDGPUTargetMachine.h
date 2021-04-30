@@ -35,6 +35,7 @@ public:
   static bool EnableLateStructurizeCFG;
   static bool EnableFunctionCalls;
   static bool EnableFixedFunctionABI;
+  static bool EnableLowerModuleLDS;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, TargetOptions Options,

@@ -50,6 +50,8 @@ class RVVType {
     Void,
     Size_t,
     Ptrdiff_t,
+    UnsignedLong,
+    SignedLong,
     Boolean,
     SignedInteger,
     UnsignedInteger,
@@ -369,9 +371,17 @@ void RVVType::initBuiltinStr() {
     BuiltinStr = "z";
     if (IsImmediate)
       BuiltinStr = "I" + BuiltinStr;
+    if (IsPointer)
+      BuiltinStr += "*";
     return;
   case ScalarTypeKind::Ptrdiff_t:
     BuiltinStr = "Y";
+    return;
+  case ScalarTypeKind::UnsignedLong:
+    BuiltinStr = "ULi";
+    return;
+  case ScalarTypeKind::SignedLong:
+    BuiltinStr = "Li";
     return;
   case ScalarTypeKind::Boolean:
     assert(ElementBitwidth == 1);
@@ -473,9 +483,17 @@ void RVVType::initTypeStr() {
     return;
   case ScalarTypeKind::Size_t:
     Str = "size_t";
+    if (IsPointer)
+      Str += " *";
     return;
   case ScalarTypeKind::Ptrdiff_t:
     Str = "ptrdiff_t";
+    return;
+  case ScalarTypeKind::UnsignedLong:
+    Str = "unsigned long";
+    return;
+  case ScalarTypeKind::SignedLong:
+    Str = "long";
     return;
   case ScalarTypeKind::Boolean:
     if (isScalar())
@@ -510,23 +528,25 @@ void RVVType::initTypeStr() {
 }
 
 void RVVType::initShortStr() {
-  assert(isVector() && "only handle vector type");
   switch (ScalarType) {
   case ScalarTypeKind::Boolean:
+    assert(isVector());
     ShortStr = "b" + utostr(64 / Scale.getValue());
-    break;
+    return;
   case ScalarTypeKind::Float:
-    ShortStr = "f" + utostr(ElementBitwidth) + LMUL.str();
+    ShortStr = "f" + utostr(ElementBitwidth);
     break;
   case ScalarTypeKind::SignedInteger:
-    ShortStr = "i" + utostr(ElementBitwidth) + LMUL.str();
+    ShortStr = "i" + utostr(ElementBitwidth);
     break;
   case ScalarTypeKind::UnsignedInteger:
-    ShortStr = "u" + utostr(ElementBitwidth) + LMUL.str();
+    ShortStr = "u" + utostr(ElementBitwidth);
     break;
   default:
-    llvm_unreachable("Unhandled case!");
+    PrintFatalError("Unhandled case!");
   }
+  if (isVector())
+    ShortStr += LMUL.str();
 }
 
 void RVVType::applyBasicType() {
@@ -606,10 +626,11 @@ void RVVType::applyModifier(StringRef Transformer) {
   case 't':
     ScalarType = ScalarTypeKind::Ptrdiff_t;
     break;
-  case 'c': // uint8_t
-    ScalarType = ScalarTypeKind::UnsignedInteger;
-    ElementBitwidth = 8;
-    Scale = 0;
+  case 'u':
+    ScalarType = ScalarTypeKind::UnsignedLong;
+    break;
+  case 'l':
+    ScalarType = ScalarTypeKind::SignedLong;
     break;
   default:
     PrintFatalError("Illegal primitive type transformers!");
@@ -1009,7 +1030,7 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
 
 void RVVEmitter::parsePrototypes(StringRef Prototypes,
                                  std::function<void(StringRef)> Handler) {
-  const StringRef Primaries("evwqom0ztc");
+  const StringRef Primaries("evwqom0ztul");
   while (!Prototypes.empty()) {
     size_t Idx = 0;
     // Skip over complex prototype because it could contain primitive type
@@ -1173,7 +1194,7 @@ bool RVVEmitter::emitExtDefStr(uint8_t Extents, raw_ostream &OS) {
   if (Extents == RISCVExtension::Basic)
     return false;
   OS << "#if ";
-  ListSeparator LS(" || ");
+  ListSeparator LS(" && ");
   if (Extents & RISCVExtension::F)
     OS << LS << "defined(__riscv_f)";
   if (Extents & RISCVExtension::D)

@@ -128,7 +128,7 @@ struct BlockInfoBuilder {
 /// Builds the internal liveness block mapping.
 static void buildBlockMapping(Operation *operation,
                               DenseMap<Block *, BlockInfoBuilder> &builders) {
-  llvm::SetVector<Block *> toProcess;
+  SetVector<Block *> toProcess;
 
   operation->walk<WalkOrder::PreOrder>([&](Block *block) {
     BlockInfoBuilder &builder =

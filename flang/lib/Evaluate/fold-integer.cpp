@@ -579,7 +579,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     if (auto p{GetInt64Arg(args[0])}) {
       return Expr<T>{SelectedIntKind(*p)};
     }
-  } else if (name == "selected_real_kind") {
+  } else if (name == "selected_real_kind" ||
+      name == "__builtin_ieee_selected_real_kind") {
     if (auto p{GetInt64ArgOr(args[0], 0)}) {
       if (auto r{GetInt64ArgOr(args[1], 0)}) {
         if (auto radix{GetInt64ArgOr(args[2], 2)}) {

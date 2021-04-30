@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %f18
+! RUN: %S/test_modfile.sh %s %t %flang_fc1
 module m
   character(2), parameter :: prefix = 'c_'
   integer, bind(c, name='c_a') :: a

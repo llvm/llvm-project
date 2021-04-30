@@ -83,7 +83,7 @@ ArrayRef<spirv::Extension> spirv::getImpliedExtensions(spirv::Version version) {
 SmallVector<spirv::Capability, 0>
 spirv::getRecursiveImpliedCapabilities(spirv::Capability cap) {
   ArrayRef<spirv::Capability> directCaps = getDirectImpliedCapabilities(cap);
-  llvm::SetVector<spirv::Capability, SmallVector<spirv::Capability, 0>> allCaps(
+  SetVector<spirv::Capability, SmallVector<spirv::Capability, 0>> allCaps(
       directCaps.begin(), directCaps.end());
 
   // TODO: This is insufficient; find a better way to handle this

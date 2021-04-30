@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_asm.h"
+#include "builtins/assembly.h"
 
 #if HWASAN_WITH_INTERCEPTORS && defined(__aarch64__)
 #include "sanitizer_common/sanitizer_platform.h"
@@ -34,6 +35,7 @@
 ASM_TYPE_FUNCTION(__interceptor_setjmp)
 __interceptor_setjmp:
   CFI_STARTPROC
+  BTI_C
   mov	x1, #0
   b	__interceptor_sigsetjmp
   CFI_ENDPROC
@@ -46,6 +48,7 @@ ASM_SIZE(__interceptor_setjmp)
 ASM_TYPE_FUNCTION(__interceptor_setjmp_bionic)
 __interceptor_setjmp_bionic:
   CFI_STARTPROC
+  BTI_C
   mov	x1, #1
   b	__interceptor_sigsetjmp
   CFI_ENDPROC
@@ -56,6 +59,7 @@ ASM_SIZE(__interceptor_setjmp_bionic)
 ASM_TYPE_FUNCTION(__interceptor_sigsetjmp)
 __interceptor_sigsetjmp:
   CFI_STARTPROC
+  BTI_C
   stp	x19, x20, [x0, #0<<3]
   stp	x21, x22, [x0, #2<<3]
   stp	x23, x24, [x0, #4<<3]
@@ -98,3 +102,5 @@ ALIAS __interceptor_setjmp, _setjmp
 
 // We do not need executable stack.
 NO_EXEC_STACK_DIRECTIVE
+
+GNU_PROPERTY_BTI_PAC

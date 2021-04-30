@@ -1,5 +1,5 @@
 add_mlir_dialect(AMX amx)
-add_mlir_doc(AMX -gen-dialect-doc AMX Dialects/)
+add_mlir_doc(AMX AMX Dialects/ -gen-dialect-doc)
 
 set(LLVM_TARGET_DEFINITIONS AMX.td)
 mlir_tablegen(AMXConversions.inc -gen-llvmir-conversions)

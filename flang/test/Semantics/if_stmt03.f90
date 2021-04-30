@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 ! Check that non-logical expressions are not allowed.
 ! Check that non-scalar expressions are not allowed.
 ! TODO: Insure all non-logicals are prohibited.

@@ -30,6 +30,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
@@ -1980,5 +1981,6 @@ llvm::DenseSet<const Decl *> getNonLocalDeclRefs(ParsedAST &AST,
       AST.getHeuristicResolver());
   return DeclRefs;
 }
+
 } // namespace clangd
 } // namespace clang

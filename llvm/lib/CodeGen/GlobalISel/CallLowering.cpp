@@ -154,6 +154,7 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
   const AttributeList &Attrs = FuncInfo.getAttributes();
   addArgFlagsFromAttributes(Flags, Attrs, OpIdx);
 
+  Align MemAlign;
   if (Flags.isByVal() || Flags.isInAlloca() || Flags.isPreallocated()) {
     Type *ElementTy = cast<PointerType>(Arg.Ty)->getElementType();
 
@@ -162,13 +163,18 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
 
     // For ByVal, alignment should be passed from FE.  BE will guess if
     // this info is not there but there are cases it cannot get right.
-    Align FrameAlign;
-    if (auto ParamAlign = FuncInfo.getParamAlign(OpIdx - 1))
-      FrameAlign = *ParamAlign;
+    if (auto ParamAlign = FuncInfo.getParamStackAlign(OpIdx - 1))
+      MemAlign = *ParamAlign;
+    else if ((ParamAlign = FuncInfo.getParamAlign(OpIdx - 1)))
+      MemAlign = *ParamAlign;
     else
-      FrameAlign = Align(getTLI()->getByValTypeAlignment(ElementTy, DL));
-    Flags.setByValAlign(FrameAlign);
+      MemAlign = Align(getTLI()->getByValTypeAlignment(ElementTy, DL));
+  } else if (auto ParamAlign = FuncInfo.getParamStackAlign(OpIdx - 1)) {
+    MemAlign = *ParamAlign;
+  } else {
+    MemAlign = Align(DL.getABITypeAlign(Arg.Ty));
   }
+  Flags.setMemAlign(MemAlign);
   Flags.setOrigAlign(DL.getABITypeAlign(Arg.Ty));
 
   // Don't try to use the returned attribute if the argument is marked as

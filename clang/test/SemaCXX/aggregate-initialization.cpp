@@ -172,11 +172,20 @@ namespace IdiomaticStdArrayInitDoesNotWarn {
   };
   ArrayAndBaseClass<int, 3> z = {1, 2, 3}; // expected-warning {{suggest braces}}
 
-  // It's not clear whether we should be warning in this case. If this
-  // pattern becomes idiomatic, it would be reasonable to suppress the
-  // warning here too.
+  // This pattern is used for tagged aggregates and must not warn
   template<typename T, int N> struct JustABaseClass : StdArray<T, N> {};
-  JustABaseClass<int, 3> w = {1, 2, 3}; // expected-warning {{suggest braces}}
+  JustABaseClass<int, 3> w = {1, 2, 3};
+  // but this should be also ok
+  JustABaseClass<int, 3> v = {{1, 2, 3}};
+
+  template <typename T, int N> struct OnionBaseClass : JustABaseClass<T, N> {};
+  OnionBaseClass<int, 3> u = {1, 2, 3};
+  OnionBaseClass<int, 3> t = {{{1, 2, 3}}};
+
+  struct EmptyBase {};
+
+  template <typename T, int N> struct AggregateAndEmpty : StdArray<T, N>, EmptyBase {};
+  AggregateAndEmpty<int, 3> p = {1, 2, 3}; // expected-warning {{suggest braces}}
 #endif
 
 #pragma clang diagnostic pop

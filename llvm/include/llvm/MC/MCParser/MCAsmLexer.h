@@ -56,6 +56,7 @@ protected: // Can only create subclasses.
   bool LexMotorolaIntegers = false;
   bool UseMasmDefaultRadix = false;
   unsigned DefaultRadix = 10;
+  bool LexHLASMIntegers = false;
   AsmCommentConsumer *CommentConsumer = nullptr;
 
   MCAsmLexer();
@@ -176,6 +177,9 @@ public:
   /// Set whether to lex Motorola-style integer literals, such as $deadbeef or
   /// %01010110.
   void setLexMotorolaIntegers(bool V) { LexMotorolaIntegers = V; }
+
+  /// Set whether to lex HLASM-flavour integers. For now this is only [0-9]*
+  void setLexHLASMIntegers(bool V) { LexHLASMIntegers = V; }
 };
 
 } // end namespace llvm

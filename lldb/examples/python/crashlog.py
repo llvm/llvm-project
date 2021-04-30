@@ -383,6 +383,10 @@ class CrashLogFormatException(Exception):
     pass
 
 
+class CrashLogParseException(Exception):
+   pass
+
+
 class CrashLogParser:
     def parse(self, debugger, path, verbose):
         try:
@@ -409,12 +413,16 @@ class JSONCrashLogParser:
         except ValueError:
             raise CrashLogFormatException()
 
-        self.parse_process_info(self.data)
-        self.parse_images(self.data['usedImages'])
-        self.parse_threads(self.data['threads'])
-
-        thread = self.crashlog.threads[self.crashlog.crashed_thread_idx]
-        thread.reason = self.parse_crash_reason(self.data['exception'])
+        try:
+            self.parse_process_info(self.data)
+            self.parse_images(self.data['usedImages'])
+            self.parse_threads(self.data['threads'])
+            thread = self.crashlog.threads[self.crashlog.crashed_thread_idx]
+            thread.reason = self.parse_crash_reason(self.data['exception'])
+        except (KeyError, ValueError, TypeError) as e:
+           raise CrashLogParseException(
+               'Failed to parse JSON crashlog: {}: {}'.format(
+                   type(e).__name__, e))
 
         return self.crashlog
 

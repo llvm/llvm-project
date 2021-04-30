@@ -321,13 +321,13 @@ LogicalResult Serializer::processType(Location loc, Type type,
                                       uint32_t &typeID) {
   // Maintains a set of names for nested identified struct types. This is used
   // to properly serialize recursive references.
-  llvm::SetVector<StringRef> serializationCtx;
+  SetVector<StringRef> serializationCtx;
   return processTypeImpl(loc, type, typeID, serializationCtx);
 }
 
 LogicalResult
 Serializer::processTypeImpl(Location loc, Type type, uint32_t &typeID,
-                            llvm::SetVector<StringRef> &serializationCtx) {
+                            SetVector<StringRef> &serializationCtx) {
   typeID = getTypeID(type);
   if (typeID) {
     return success();
@@ -380,7 +380,7 @@ Serializer::processTypeImpl(Location loc, Type type, uint32_t &typeID,
 LogicalResult Serializer::prepareBasicType(
     Location loc, Type type, uint32_t resultID, spirv::Opcode &typeEnum,
     SmallVectorImpl<uint32_t> &operands, bool &deferSerialization,
-    llvm::SetVector<StringRef> &serializationCtx) {
+    SetVector<StringRef> &serializationCtx) {
   deferSerialization = false;
 
   if (isVoidType(type)) {

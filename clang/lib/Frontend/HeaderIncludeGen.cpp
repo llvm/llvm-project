@@ -45,6 +45,9 @@ public:
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
                    FileID PrevFID) override;
+
+  void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
+                   SrcMgr::CharacteristicKind FileType) override;
 };
 }
 
@@ -180,4 +183,17 @@ void HeaderIncludesCallback::FileChanged(SourceLocation Loc,
     PrintHeaderInfo(OutputFile, UserLoc.getFilename(), ShowDepth, IncludeDepth,
                     MSStyle);
   }
+}
+
+void HeaderIncludesCallback::FileSkipped(const FileEntryRef &SkippedFile, const
+                                         Token &FilenameTok,
+                                         SrcMgr::CharacteristicKind FileType) {
+  if (!DepOpts.ShowSkippedHeaderIncludes)
+    return;
+
+  if (!DepOpts.IncludeSystemHeaders && isSystem(FileType))
+    return;
+
+  PrintHeaderInfo(OutputFile, SkippedFile.getName(), ShowDepth,
+                  CurrentIncludeDepth + 1, MSStyle);
 }

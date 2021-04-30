@@ -300,12 +300,12 @@ addReferencesFromStmtUnionSet(isl::union_set USet,
     addReferencesFromStmtSet(Set, &References);
 }
 
-__isl_give isl_union_map *
-IslNodeBuilder::getScheduleForAstNode(__isl_keep isl_ast_node *For) {
-  return IslAstInfo::getSchedule(For);
+isl::union_map
+IslNodeBuilder::getScheduleForAstNode(const isl::ast_node &Node) {
+  return IslAstInfo::getSchedule(Node);
 }
 
-void IslNodeBuilder::getReferencesInSubtree(__isl_keep isl_ast_node *For,
+void IslNodeBuilder::getReferencesInSubtree(const isl::ast_node &For,
                                             SetVector<Value *> &Values,
                                             SetVector<const Loop *> &Loops) {
   SetVector<const SCEV *> SCEVs;
@@ -319,8 +319,7 @@ void IslNodeBuilder::getReferencesInSubtree(__isl_keep isl_ast_node *For,
   for (const auto &I : OutsideLoopIterations)
     Values.insert(cast<SCEVUnknown>(I.second)->getValue());
 
-  isl::union_set Schedule =
-      isl::manage(isl_union_map_domain(getScheduleForAstNode(For)));
+  isl::union_set Schedule = getScheduleForAstNode(For).domain();
   addReferencesFromStmtUnionSet(Schedule, References);
 
   for (const SCEV *Expr : SCEVs) {
@@ -476,22 +475,22 @@ void IslNodeBuilder::createForVector(__isl_take isl_ast_node *For,
   for (int i = 1; i < VectorWidth; i++)
     IVS[i] = Builder.CreateAdd(IVS[i - 1], ValueInc, "p_vector_iv");
 
-  isl_union_map *Schedule = getScheduleForAstNode(For);
-  assert(Schedule && "For statement annotation does not contain its schedule");
+  isl::union_map Schedule = getScheduleForAstNode(isl::manage_copy(For));
+  assert(!Schedule.is_null() &&
+         "For statement annotation does not contain its schedule");
 
   IDToValue[IteratorID] = ValueLB;
 
   switch (isl_ast_node_get_type(Body)) {
   case isl_ast_node_user:
-    createUserVector(Body, IVS, isl_id_copy(IteratorID),
-                     isl_union_map_copy(Schedule));
+    createUserVector(Body, IVS, isl_id_copy(IteratorID), Schedule.copy());
     break;
   case isl_ast_node_block: {
     isl_ast_node_list *List = isl_ast_node_block_get_children(Body);
 
     for (int i = 0; i < isl_ast_node_list_n_ast_node(List); ++i)
       createUserVector(isl_ast_node_list_get_ast_node(List, i), IVS,
-                       isl_id_copy(IteratorID), isl_union_map_copy(Schedule));
+                       isl_id_copy(IteratorID), Schedule.copy());
 
     isl_ast_node_free(Body);
     isl_ast_node_list_free(List);
@@ -504,7 +503,6 @@ void IslNodeBuilder::createForVector(__isl_take isl_ast_node *For,
 
   IDToValue.erase(IDToValue.find(IteratorID));
   isl_id_free(IteratorID);
-  isl_union_map_free(Schedule);
 
   isl_ast_node_free(For);
   isl_ast_expr_free(Iterator);
@@ -685,7 +683,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   SetVector<Value *> SubtreeValues;
   SetVector<const Loop *> Loops;
 
-  getReferencesInSubtree(For, SubtreeValues, Loops);
+  getReferencesInSubtree(isl::manage_copy(For), SubtreeValues, Loops);
 
   // Create for all loops we depend on values that contain the current loop
   // iteration. These values are necessary to generate code for SCEVs that
@@ -783,7 +781,7 @@ void IslNodeBuilder::createFor(__isl_take isl_ast_node *For) {
   bool Vector = PollyVectorizerChoice == VECTORIZER_POLLY;
 
   if (Vector && IslAstInfo::isInnermostParallel(isl::manage_copy(For)) &&
-      !IslAstInfo::isReductionParallel(For)) {
+      !IslAstInfo::isReductionParallel(isl::manage_copy(For))) {
     int VectorWidth = getNumberOfIterations(isl::manage_copy(For));
     if (1 < VectorWidth && VectorWidth <= 16 && !hasPartialAccesses(For)) {
       createForVector(For, VectorWidth);
@@ -791,12 +789,12 @@ void IslNodeBuilder::createFor(__isl_take isl_ast_node *For) {
     }
   }
 
-  if (IslAstInfo::isExecutedInParallel(For)) {
+  if (IslAstInfo::isExecutedInParallel(isl::manage_copy(For))) {
     createForParallel(For);
     return;
   }
-  bool Parallel =
-      (IslAstInfo::isParallel(For) && !IslAstInfo::isReductionParallel(For));
+  bool Parallel = (IslAstInfo::isParallel(isl::manage_copy(For)) &&
+                   !IslAstInfo::isReductionParallel(isl::manage_copy(For)));
   createForSequential(isl::manage(For), Parallel);
 }
 

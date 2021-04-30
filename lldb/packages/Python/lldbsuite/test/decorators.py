@@ -823,6 +823,39 @@ def skipIfAsan(func):
     """Skip this test if the environment is set up to run LLDB *itself* under ASAN."""
     return skipTestIfFn(is_running_under_asan)(func)
 
+def skipUnlessAArch64MTELinuxCompiler(func):
+    """Decorate the item to skip test unless MTE is supported by the test compiler."""
+
+    def is_toolchain_with_mte(self):
+        compiler_path = self.getCompiler()
+        compiler = os.path.basename(compiler_path)
+        f = tempfile.NamedTemporaryFile()
+        if lldbplatformutil.getPlatform() == 'windows':
+            return "MTE tests are not compatible with 'windows'"
+
+        cmd = "echo 'int main() {}' | %s -x c -o %s -" % (compiler_path, f.name)
+        if os.popen(cmd).close() is not None:
+            # Cannot compile at all, don't skip the test
+            # so that we report the broken compiler normally.
+            return None
+
+        # We need the Linux headers and ACLE MTE intrinsics
+        test_src = """
+            #include <asm/hwcap.h>
+            #include <arm_acle.h>
+            #ifndef HWCAP2_MTE
+            #error
+            #endif
+            int main() {
+                void* ptr = __arm_mte_create_random_tag((void*)(0), 0);
+            }"""
+        cmd = "echo '%s' | %s -march=armv8.5-a+memtag -x c -o %s -" % (test_src, compiler_path, f.name)
+        if os.popen(cmd).close() is not None:
+            return "Toolchain does not support MTE"
+        return None
+
+    return skipTestIfFn(is_toolchain_with_mte)(func)
+
 def _get_bool_config(key, fail_value = True):
     """
     Returns the current LLDB's build config value.

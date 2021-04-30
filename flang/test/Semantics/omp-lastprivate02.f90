@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
 ! OpenMP Version 4.5
 ! 2.15.3.5 lastprivate Clause
 ! A list item that is private within a parallel region, or that appears in

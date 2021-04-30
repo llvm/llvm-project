@@ -287,15 +287,15 @@ applications of ``[[nodiscard]]`` takes two forms:
 1. Backporting ``[[nodiscard]]`` to entities declared as such by the
    standard in newer dialects, but not in the present one.
 
-2. Extended applications of ``[[nodiscard]]``, at the libraries discretion,
+2. Extended applications of ``[[nodiscard]]``, at the library's discretion,
    applied to entities never declared as such by the standard.
 
 Users may also opt-out of additional applications ``[[nodiscard]]`` using
 additional macros.
 
 Applications of the first form, which backport ``[[nodiscard]]`` from a newer
-dialect may be disabled using macros specific to the dialect it was added. For
-example ``_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17``.
+dialect, may be disabled using macros specific to the dialect in which it was
+added. For example, ``_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17``.
 
 Applications of the second form, which are pure extensions, may be disabled
 by defining ``_LIBCPP_DISABLE_NODISCARD_EXT``.
@@ -346,3 +346,10 @@ which no dialect declares as such (See the second form described above).
 * ``unique``
 * ``upper_bound``
 * ``lock_guard``'s constructors
+* ``as_const``
+* ``forward``
+* ``move``
+* ``move_if_noexcept``
+* ``identity::operator()``
+* ``to_integer``
+* ``to_underlying``

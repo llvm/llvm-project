@@ -141,7 +141,7 @@ Optional<unsigned> RISCVTTIImpl::getMaxVScale() const {
   return BaseT::getMaxVScale();
 }
 
-unsigned RISCVTTIImpl::getGatherScatterOpCost(
+InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
   if (CostKind != TTI::TCK_RecipThroughput)
@@ -162,7 +162,7 @@ unsigned RISCVTTIImpl::getGatherScatterOpCost(
 
   auto *VTy = cast<FixedVectorType>(DataTy);
   unsigned NumLoads = VTy->getNumElements();
-  unsigned MemOpCost =
+  InstructionCost MemOpCost =
       getMemoryOpCost(Opcode, VTy->getElementType(), Alignment, 0, CostKind, I);
   return NumLoads * MemOpCost;
 }

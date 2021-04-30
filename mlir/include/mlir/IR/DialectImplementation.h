@@ -361,6 +361,11 @@ public:
   ///   static-dimension-list ::= (integer `x`)*
   virtual ParseResult parseDimensionList(SmallVectorImpl<int64_t> &dimensions,
                                          bool allowDynamic = true) = 0;
+
+  /// Parse an 'x' token in a dimension list, handling the case where the x is
+  /// juxtaposed with an element type, as in "xf32", leaving the "f32" as the
+  /// next token.
+  virtual ParseResult parseXInDimensionList() = 0;
 };
 
 } // end namespace mlir

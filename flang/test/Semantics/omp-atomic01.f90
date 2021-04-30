@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
 ! Semantic checks for OpenMP 5.0 standard 2.17.7 atomic Construct.
 
 use omp_lib

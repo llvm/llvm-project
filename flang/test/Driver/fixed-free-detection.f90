@@ -2,21 +2,19 @@
 ! This test exploits the fact that the preprocessor treats white-spaces differently for free
 ! and fixed form input files.
 
-! REQUIRES: new-flang-driver
-
 !--------------------------
-! FLANG DRIVER (flang-new)
+! FLANG DRIVER (flang)
 !--------------------------
-! RUN: %flang-new -E %S/Inputs/free-form-test.f90  2>&1 | FileCheck %s --check-prefix=FREEFORM
-! RUN: %flang-new -E %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=FIXEDFORM
-! RUN: %flang-new -E %S/Inputs/free-form-test.f90 %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=MULTIPLEFORMS
+! RUN: %flang -E %S/Inputs/free-form-test.f90  2>&1 | FileCheck %s --check-prefix=FREEFORM
+! RUN: %flang -E %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=FIXEDFORM
+! RUN: %flang -E %S/Inputs/free-form-test.f90 %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=MULTIPLEFORMS
 
 !-----------------------------------------
-! FRONTEND FLANG DRIVER (flang-new -fc1)
+! FRONTEND FLANG DRIVER (flang_fc1)
 !-----------------------------------------
-! RUN: %flang-new -fc1 -E %S/Inputs/free-form-test.f90  2>&1 | FileCheck %s --check-prefix=FREEFORM
-! RUN: %flang-new -fc1 -E %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=FIXEDFORM
-! RUN: %flang-new -fc1 -E %S/Inputs/free-form-test.f90 %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=MULTIPLEFORMS
+! RUN: %flang_fc1 -E %S/Inputs/free-form-test.f90  2>&1 | FileCheck %s --check-prefix=FREEFORM
+! RUN: %flang_fc1 -E %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=FIXEDFORM
+! RUN: %flang_fc1 -E %S/Inputs/free-form-test.f90 %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=MULTIPLEFORMS
 
 !-------------------------------------
 ! EXPECTED OUTPUT FOR A FREE FORM FILE

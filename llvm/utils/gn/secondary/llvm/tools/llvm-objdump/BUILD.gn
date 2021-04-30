@@ -1,5 +1,11 @@
 import("//llvm/tools/binutils_symlinks.gni")
+import("//llvm/utils/TableGen/tablegen.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
+
+tablegen("ObjdumpOpts") {
+  visibility = [ ":llvm-objdump" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
 
 if (llvm_install_binutils_symlinks) {
   symlink_or_copy("objdump") {
@@ -19,6 +25,7 @@ group("symlinks") {
 
 executable("llvm-objdump") {
   deps = [
+    ":ObjdumpOpts",
     "//llvm/include/llvm/Config:config",
     "//llvm/lib/CodeGen",
     "//llvm/lib/DebugInfo/DWARF",
@@ -28,6 +35,7 @@ executable("llvm-objdump") {
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Object",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target:AllTargetsDescs",
     "//llvm/lib/Target:AllTargetsDisassemblers",

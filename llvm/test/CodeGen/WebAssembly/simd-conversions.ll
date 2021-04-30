@@ -81,3 +81,25 @@ define <2 x i64> @trunc_sat_u_v2i64(<2 x double> %x) {
   %a = fptoui <2 x double> %x to <2 x i64>
   ret <2 x i64> %a
 }
+
+; CHECK-LABEL: convert_low_s_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-NEXT: .functype convert_low_s_v2f64 (v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.convert_low_i32x4_s $push[[R:[0-9]+]]=, $0
+; SIMD128-NEXT: return $pop[[R]]
+define <2 x double> @convert_low_s_v2f64(<4 x i32> %x) {
+  %v = shufflevector <4 x i32> %x, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+  %a = sitofp <2 x i32> %v to <2 x double>
+  ret <2 x double> %a
+}
+
+; CHECK-LABEL: convert_low_u_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-NEXT: .functype convert_low_u_v2f64 (v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.convert_low_i32x4_u $push[[R:[0-9]+]]=, $0
+; SIMD128-NEXT: return $pop[[R]]
+define <2 x double> @convert_low_u_v2f64(<4 x i32> %x) {
+  %v = shufflevector <4 x i32> %x, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+  %a = uitofp <2 x i32> %v to <2 x double>
+  ret <2 x double> %a
+}

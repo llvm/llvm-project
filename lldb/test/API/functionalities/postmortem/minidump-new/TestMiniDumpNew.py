@@ -124,6 +124,7 @@ class MiniDumpNewTestCase(TestBase):
         stop_description = thread.GetStopDescription(256)
         self.assertIn("SIGSEGV", stop_description)
 
+    @skipIfLLVMTargetMissing("X86")
     def test_stack_info_in_minidump(self):
         """Test that we can see a trivial stack in a breakpad-generated Minidump."""
         # target create linux-x86_64 -c linux-x86_64.dmp
@@ -362,6 +363,7 @@ class MiniDumpNewTestCase(TestBase):
             newpid += "\n"
             f.write(newpid.encode('utf-8'))
 
+    @skipIfLLVMTargetMissing("X86")
     def test_deeper_stack_in_minidump_with_same_pid_running(self):
         """Test that we read the information from the core correctly even if we
         have a running process with the same PID"""
@@ -373,6 +375,7 @@ class MiniDumpNewTestCase(TestBase):
                                        str(os.getpid()))
         self.do_test_deeper_stack("linux-x86_64_not_crashed", new_core, os.getpid())
 
+    @skipIfLLVMTargetMissing("X86")
     def test_two_cores_same_pid(self):
         """Test that we handle the situation if we have two core files with the same PID """
         new_core = self.getBuildArtifact("linux-x86_64_not_crashed-pid.dmp")
@@ -385,6 +388,7 @@ class MiniDumpNewTestCase(TestBase):
                                   new_core, self._linux_x86_64_pid)
         self.test_stack_info_in_minidump()
 
+    @skipIfLLVMTargetMissing("X86")
     def test_local_variables_in_minidump(self):
         """Test that we can examine local variables in a Minidump."""
         # Launch with the Minidump, and inspect a local variable.

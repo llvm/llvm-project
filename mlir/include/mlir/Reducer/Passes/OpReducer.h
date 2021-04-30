@@ -15,65 +15,52 @@
 #ifndef MLIR_REDUCER_PASSES_OPREDUCER_H
 #define MLIR_REDUCER_PASSES_OPREDUCER_H
 
-#include "mlir/IR/Region.h"
+#include <limits>
+
 #include "mlir/Reducer/ReductionNode.h"
-#include "mlir/Reducer/ReductionTreeUtils.h"
 #include "mlir/Reducer/Tester.h"
 
 namespace mlir {
 
-class OpReducerImpl {
-public:
-  OpReducerImpl(
-      llvm::function_ref<std::vector<Operation *>(ModuleOp)> getSpecificOps);
-
-  /// Return the name of this reducer class.
-  StringRef getName();
-
-  /// Return the initial transformSpace containing the transformable indices.
-  std::vector<bool> initTransformSpace(ModuleOp module);
-
-  /// Generate variants by removing OpType operations from the module in the
-  /// parent and link the variants as childs in the Reduction Tree Pass.
-  void generateVariants(ReductionNode *parent, const Tester &test,
-                        int numVariants);
-
-  /// Generate variants by removing OpType operations from the module in the
-  /// parent and link the variants as childs in the Reduction Tree Pass. The
-  /// transform argument defines the function used to remove the OpTpye
-  /// operations in range of indexed OpType operations.
-  void generateVariants(ReductionNode *parent, const Tester &test,
-                        int numVariants,
-                        llvm::function_ref<void(ModuleOp, int, int)> transform);
-
-private:
-  llvm::function_ref<std::vector<Operation *>(ModuleOp)> getSpecificOps;
-};
-
-/// The OpReducer class defines a variant generator method that produces
-/// multiple variants by eliminating different OpType operations from the
-/// parent module.
-template <typename OpType>
 class OpReducer {
 public:
-  OpReducer() : impl(new OpReducerImpl(getSpecificOps)) {}
+  virtual ~OpReducer() = default;
+  /// According to rangeToKeep, try to reduce the given module. We implicitly
+  /// number each interesting operation and rangeToKeep indicates that if an
+  /// operation's number falls into certain range, then we will not try to
+  /// reduce that operation.
+  virtual void reduce(ModuleOp module,
+                      ArrayRef<ReductionNode::Range> rangeToKeep) = 0;
+  /// Return the number of certain kind of operations that we would like to
+  /// reduce. This can be used to build a range map to exclude uninterested
+  /// operations.
+  virtual int getNumTargetOps(ModuleOp module) const = 0;
+};
 
-  /// Returns the vector of pointer to the OpType operations in the module.
-  static std::vector<Operation *> getSpecificOps(ModuleOp module) {
-    std::vector<Operation *> ops;
-    for (auto op : module.getOps<OpType>()) {
-      ops.push_back(op);
-    }
-    return ops;
+/// Reducer is a helper class to remove potential uninteresting operations from
+/// module.
+template <typename OpType>
+class Reducer : public OpReducer {
+public:
+  ~Reducer() override = default;
+
+  int getNumTargetOps(ModuleOp module) const override {
+    return std::distance(module.getOps<OpType>().begin(),
+                         module.getOps<OpType>().end());
   }
 
-  /// Deletes the OpType operations in the module in the specified index.
-  static void deleteOps(ModuleOp module, int start, int end) {
+  void reduce(ModuleOp module,
+              ArrayRef<ReductionNode::Range> rangeToKeep) override {
     std::vector<Operation *> opsToRemove;
+    size_t keepIndex = 0;
 
-    for (auto op : enumerate(getSpecificOps(module))) {
+    for (auto op : enumerate(module.getOps<OpType>())) {
       int index = op.index();
-      if (index >= start && index < end)
+      if (keepIndex < rangeToKeep.size() &&
+          index == rangeToKeep[keepIndex].second)
+        ++keepIndex;
+      if (keepIndex == rangeToKeep.size() ||
+          index < rangeToKeep[keepIndex].first)
         opsToRemove.push_back(op.value());
     }
 
@@ -82,24 +69,6 @@ public:
       o->erase();
     }
   }
-
-  /// Return the name of this reducer class.
-  StringRef getName() { return impl->getName(); }
-
-  /// Return the initial transformSpace containing the transformable indices.
-  std::vector<bool> initTransformSpace(ModuleOp module) {
-    return impl->initTransformSpace(module);
-  }
-
-  /// Generate variants by removing OpType operations from the module in the
-  /// parent and link the variants as childs in the Reduction Tree Pass.
-  void generateVariants(ReductionNode *parent, const Tester &test,
-                        int numVariants) {
-    impl->generateVariants(parent, test, numVariants, deleteOps);
-  }
-
-private:
-  std::unique_ptr<OpReducerImpl> impl;
 };
 
 } // end namespace mlir

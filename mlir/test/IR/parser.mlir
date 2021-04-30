@@ -77,6 +77,9 @@ func private @vectors(vector<1 x f32>, vector<2x4xf32>)
 func private @tensors(tensor<* x f32>, tensor<* x vector<2x4xf32>>,
                  tensor<1x?x4x?x?xi32>, tensor<i8>)
 
+// CHECK: func private @tensor_encoding(tensor<16x32xf64, "sparse">)
+func private @tensor_encoding(tensor<16x32xf64, "sparse">)
+
 // CHECK: func private @memrefs(memref<1x?x4x?x?xi32, #map{{[0-9]+}}>, memref<8xi8>)
 func private @memrefs(memref<1x?x4x?x?xi32, #map0>, memref<8xi8, #map1, #map1>)
 

@@ -735,6 +735,113 @@ static bool applyBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
+/// \returns how many instructions would be saved by folding a G_ICMP's shift
+/// and/or extension operations.
+static unsigned getCmpOperandFoldingProfit(Register CmpOp,
+                                           const MachineRegisterInfo &MRI) {
+  // No instructions to save if there's more than one use or no uses.
+  if (!MRI.hasOneNonDBGUse(CmpOp))
+    return 0;
+
+  // FIXME: This is duplicated with the selector. (See: selectShiftedRegister)
+  auto IsSupportedExtend = [&](const MachineInstr &MI) {
+    if (MI.getOpcode() == TargetOpcode::G_SEXT_INREG)
+      return true;
+    if (MI.getOpcode() != TargetOpcode::G_AND)
+      return false;
+    auto ValAndVReg =
+        getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+    if (!ValAndVReg)
+      return false;
+    uint64_t Mask = ValAndVReg->Value.getZExtValue();
+    return (Mask == 0xFF || Mask == 0xFFFF || Mask == 0xFFFFFFFF);
+  };
+
+  MachineInstr *Def = getDefIgnoringCopies(CmpOp, MRI);
+  if (IsSupportedExtend(*Def))
+    return 1;
+
+  unsigned Opc = Def->getOpcode();
+  if (Opc != TargetOpcode::G_SHL && Opc != TargetOpcode::G_ASHR &&
+      Opc != TargetOpcode::G_LSHR)
+    return 0;
+
+  auto MaybeShiftAmt =
+      getConstantVRegValWithLookThrough(Def->getOperand(2).getReg(), MRI);
+  if (!MaybeShiftAmt)
+    return 0;
+  uint64_t ShiftAmt = MaybeShiftAmt->Value.getZExtValue();
+  MachineInstr *ShiftLHS =
+      getDefIgnoringCopies(Def->getOperand(1).getReg(), MRI);
+
+  // Check if we can fold an extend and a shift.
+  // FIXME: This is duplicated with the selector. (See:
+  // selectArithExtendedRegister)
+  if (IsSupportedExtend(*ShiftLHS))
+    return (ShiftAmt <= 4) ? 2 : 1;
+
+  LLT Ty = MRI.getType(Def->getOperand(0).getReg());
+  if (Ty.isVector())
+    return 0;
+  unsigned ShiftSize = Ty.getSizeInBits();
+  if ((ShiftSize == 32 && ShiftAmt <= 31) ||
+      (ShiftSize == 64 && ShiftAmt <= 63))
+    return 1;
+  return 0;
+}
+
+/// \returns true if it would be profitable to swap the LHS and RHS of a G_ICMP
+/// instruction \p MI.
+static bool trySwapICmpOperands(MachineInstr &MI,
+                                 const MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_ICMP);
+  // Swap the operands if it would introduce a profitable folding opportunity.
+  // (e.g. a shift + extend).
+  //
+  //  For example:
+  //    lsl     w13, w11, #1
+  //    cmp     w13, w12
+  // can be turned into:
+  //    cmp     w12, w11, lsl #1
+
+  // Don't swap if there's a constant on the RHS, because we know we can fold
+  // that.
+  Register RHS = MI.getOperand(3).getReg();
+  auto RHSCst = getConstantVRegValWithLookThrough(RHS, MRI);
+  if (RHSCst && isLegalArithImmed(RHSCst->Value.getSExtValue()))
+    return false;
+
+  Register LHS = MI.getOperand(2).getReg();
+  auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+  auto GetRegForProfit = [&](Register Reg) {
+    MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
+    return isCMN(Def, Pred, MRI) ? Def->getOperand(2).getReg() : Reg;
+  };
+
+  // Don't have a constant on the RHS. If we swap the LHS and RHS of the
+  // compare, would we be able to fold more instructions?
+  Register TheLHS = GetRegForProfit(LHS);
+  Register TheRHS = GetRegForProfit(RHS);
+
+  // If the LHS is more likely to give us a folding opportunity, then swap the
+  // LHS and RHS.
+  return (getCmpOperandFoldingProfit(TheLHS, MRI) >
+          getCmpOperandFoldingProfit(TheRHS, MRI));
+}
+
+static bool applySwapICmpOperands(MachineInstr &MI,
+                                   GISelChangeObserver &Observer) {
+  auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+  Register LHS = MI.getOperand(2).getReg();
+  Register RHS = MI.getOperand(3).getReg();
+  Observer.changedInstr(MI);
+  MI.getOperand(1).setPredicate(CmpInst::getSwappedPredicate(Pred));
+  MI.getOperand(2).setReg(RHS);
+  MI.getOperand(3).setReg(LHS);
+  Observer.changedInstr(MI);
+  return true;
+}
+
 #define AARCH64POSTLEGALIZERLOWERINGHELPER_GENCOMBINERHELPER_DEPS
 #include "AArch64GenPostLegalizeGILowering.inc"
 #undef AARCH64POSTLEGALIZERLOWERINGHELPER_GENCOMBINERHELPER_DEPS

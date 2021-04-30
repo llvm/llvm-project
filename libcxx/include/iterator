@@ -13,8 +13,12 @@
 /*
     iterator synopsis
 
+#include <concepts>
+
 namespace std
 {
+template<class> struct incrementable_traits;       // since C++20
+template<class> struct indirectly_readable_traits; // since C++20
 
 template<class Iterator>
 struct iterator_traits
@@ -35,6 +39,9 @@ struct iterator_traits<T*>
     typedef T& reference;
     typedef random_access_iterator_tag iterator_category;
 };
+
+template<dereferenceable T>
+  using iter_reference_t = decltype(*declval<T&>());
 
 template<class Category, class T, class Distance = ptrdiff_t,
          class Pointer = T*, class Reference = T&>
@@ -422,7 +429,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <concepts>
 #include <cstddef>
 #include <initializer_list>
-#include <__memory/base.h>
+#include <__memory/addressof.h>
 #include <__memory/pointer_traits.h>
 #include <version>
 
@@ -433,6 +440,107 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+#if !defined(_LIBCPP_HAS_NO_RANGES)
+
+template<class _Tp>
+using __with_reference = _Tp&;
+
+template<class _Tp>
+concept __referenceable = requires {
+  typename __with_reference<_Tp>;
+};
+
+template<class _Tp>
+concept __dereferenceable = requires(_Tp& __t) {
+  { *__t } -> __referenceable; // not required to be equality-preserving
+};
+
+// [incrementable.traits]
+template<class> struct incrementable_traits {};
+
+template<class _Tp>
+requires is_object_v<_Tp>
+struct incrementable_traits<_Tp*> {
+  using difference_type = ptrdiff_t;
+};
+
+template<class _Ip>
+struct incrementable_traits<const _Ip> : incrementable_traits<_Ip> {};
+
+template<class _Tp>
+concept __has_member_difference_type = requires { typename _Tp::difference_type; };
+
+template<__has_member_difference_type _Tp>
+struct incrementable_traits<_Tp> {
+  using difference_type = typename _Tp::difference_type;
+};
+
+template<class _Tp>
+concept __has_integral_minus =
+  requires(const _Tp& __x, const _Tp& __y) {
+    { __x - __y } -> integral;
+  };
+
+template<__has_integral_minus _Tp>
+requires (!__has_member_difference_type<_Tp>)
+struct incrementable_traits<_Tp> {
+  using difference_type = make_signed_t<decltype(declval<_Tp>() - declval<_Tp>())>;
+};
+
+// TODO(cjdb): add iter_difference_t once iterator_traits is cleaned up.
+
+// [readable.traits]
+template<class> struct __cond_value_type {};
+
+template<class _Tp>
+requires is_object_v<_Tp>
+struct __cond_value_type<_Tp> { using value_type = remove_cv_t<_Tp>; };
+
+template<class _Tp>
+concept __has_member_value_type = requires { typename _Tp::value_type; };
+
+template<class _Tp>
+concept __has_member_element_type = requires { typename _Tp::element_type; };
+
+template<class> struct indirectly_readable_traits {};
+
+template<class _Ip>
+requires is_array_v<_Ip>
+struct indirectly_readable_traits<_Ip> {
+  using value_type = remove_cv_t<remove_extent_t<_Ip>>;
+};
+
+template<class _Ip>
+struct indirectly_readable_traits<const _Ip> : indirectly_readable_traits<_Ip> {};
+
+template<class _Tp>
+struct indirectly_readable_traits<_Tp*> : __cond_value_type<_Tp> {};
+
+template<__has_member_value_type _Tp>
+struct indirectly_readable_traits<_Tp>
+  : __cond_value_type<typename _Tp::value_type> {};
+
+template<__has_member_element_type _Tp>
+struct indirectly_readable_traits<_Tp>
+  : __cond_value_type<typename _Tp::element_type> {};
+
+// Pre-emptively applies LWG3541
+template<__has_member_value_type _Tp>
+requires __has_member_element_type<_Tp>
+struct indirectly_readable_traits<_Tp> {};
+template<__has_member_value_type _Tp>
+requires __has_member_element_type<_Tp> &&
+         same_as<remove_cv_t<typename _Tp::element_type>,
+                 remove_cv_t<typename _Tp::value_type>>
+struct indirectly_readable_traits<_Tp>
+  : __cond_value_type<typename _Tp::value_type> {};
+
+// [iterator.traits]
+template<__dereferenceable _Tp>
+using iter_reference_t = decltype(*declval<_Tp&>());
+#endif // !defined(_LIBCPP_HAS_NO_RANGES)
+
 template <class _Iter>
 struct _LIBCPP_TEMPLATE_VIS iterator_traits;
 
@@ -540,6 +648,71 @@ struct __iterator_traits_impl<_Iter, true>
     typedef typename _Iter::reference         reference;
     typedef typename _Iter::iterator_category iterator_category;
 };
+
+#if !defined(_LIBCPP_HAS_NO_RANGES)
+
+// The `cpp17-*-iterator` exposition-only concepts are easily confused with the Cpp17*Iterator tables,
+// so they've been banished to a namespace that makes it obvious they have a niche use-case.
+namespace __iterator_traits_detail {
+template<class _Ip>
+concept __cpp17_iterator =
+  requires(_Ip __i) {
+    {   *__i } -> __referenceable;
+    {  ++__i } -> same_as<_Ip&>;
+    { *__i++ } -> __referenceable;
+  } &&
+  copyable<_Ip>;
+
+template<class _Ip>
+concept __cpp17_input_iterator =
+  __cpp17_iterator<_Ip> &&
+  equality_comparable<_Ip> &&
+  requires(_Ip __i) {
+    typename incrementable_traits<_Ip>::difference_type;
+    typename indirectly_readable_traits<_Ip>::value_type;
+    typename common_reference_t<iter_reference_t<_Ip>&&,
+                                typename indirectly_readable_traits<_Ip>::value_type&>;
+    typename common_reference_t<decltype(*__i++)&&,
+                                typename indirectly_readable_traits<_Ip>::value_type&>;
+    requires signed_integral<typename incrementable_traits<_Ip>::difference_type>;
+  };
+
+template<class _Ip>
+concept __cpp17_forward_iterator =
+  __cpp17_input_iterator<_Ip> &&
+  constructible_from<_Ip> &&
+  is_lvalue_reference_v<iter_reference_t<_Ip>> &&
+  same_as<remove_cvref_t<iter_reference_t<_Ip>>,
+          typename indirectly_readable_traits<_Ip>::value_type> &&
+  requires(_Ip __i) {
+    {  __i++ } -> convertible_to<_Ip const&>;
+    { *__i++ } -> same_as<iter_reference_t<_Ip>>;
+  };
+
+template<class _Ip>
+concept __cpp17_bidirectional_iterator =
+  __cpp17_forward_iterator<_Ip> &&
+  requires(_Ip __i) {
+    {  --__i } -> same_as<_Ip&>;
+    {  __i-- } -> convertible_to<_Ip const&>;
+    { *__i-- } -> same_as<iter_reference_t<_Ip>>;
+  };
+
+template<class _Ip>
+concept __cpp17_random_access_iterator =
+  __cpp17_bidirectional_iterator<_Ip> and
+  totally_ordered<_Ip> and
+  requires(_Ip __i, typename incrementable_traits<_Ip>::difference_type __n) {
+    { __i += __n } -> same_as<_Ip&>;
+    { __i -= __n } -> same_as<_Ip&>;
+    { __i +  __n } -> same_as<_Ip>;
+    { __n +  __i } -> same_as<_Ip>;
+    { __i -  __n } -> same_as<_Ip>;
+    { __i -  __i } -> same_as<decltype(__n)>;
+    {  __i[__n]  } -> convertible_to<iter_reference_t<_Ip>>;
+  };
+} // namespace __iterator_traits_detail
+#endif // !defined(_LIBCPP_HAS_NO_RANGES)
 
 template <class _Iter, bool> struct __iterator_traits {};
 

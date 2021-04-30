@@ -857,7 +857,7 @@ define i32 @multiple_bb(i32 %x, i32 %y, i32* %divdst, i1 zeroext %store_srem, i3
 ; X64-NEXT:    cltd
 ; X64-NEXT:    idivl %esi
 ; X64-NEXT:    movl %eax, (%r9)
-; X64-NEXT:    testb %cl, %cl
+; X64-NEXT:    testl %ecx, %ecx
 ; X64-NEXT:    je .LBB10_2
 ; X64-NEXT:  # %bb.1: # %do_srem
 ; X64-NEXT:    movl %eax, %ecx

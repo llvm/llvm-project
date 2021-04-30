@@ -14,10 +14,12 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANTRANSFORMS_H
 
 #include "VPlan.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 
 namespace llvm {
+
+class Instruction;
+class ScalarEvolution;
 
 struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding

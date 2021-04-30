@@ -160,7 +160,9 @@ public:
     *CurrentNativeSize += Change;
   }
   void resetNativeSize(Function *F) {
-    FAM.invalidate<InlineSizeEstimatorAnalysis>(*F);
+    PreservedAnalyses PA = PreservedAnalyses::all();
+    PA.abandon<InlineSizeEstimatorAnalysis>();
+    FAM.invalidate(*F, PA);
   }
 
   std::unique_ptr<MLInlineAdvice>

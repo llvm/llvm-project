@@ -45,7 +45,7 @@ COMMENT_EXPORT("??_V@YAXPAX@Z")                   // operator delete[]
 #endif
 #undef COMMENT_EXPORT
 #else
-#define CXX_OPERATOR_ATTRIBUTE INTERCEPTOR_ATTRIBUTE
+#define CXX_OPERATOR_ATTRIBUTE INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 #endif
 
 using namespace __asan;

@@ -460,6 +460,12 @@ private:
   // A digit in HLASM is a number from 0 to 9.
   inline bool isHLASMAlnum(char C) { return isHLASMAlpha(C) || isDigit(C); }
 
+  // Are we parsing using the AD_HLASM dialect?
+  inline bool isParsingHLASM() { return getMAIAssemblerDialect() == AD_HLASM; }
+
+  // Are we parsing using the AD_ATT dialect?
+  inline bool isParsingATT() { return getMAIAssemblerDialect() == AD_ATT; }
+
 public:
   SystemZAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
                    const MCInstrInfo &MII,
@@ -1606,7 +1612,7 @@ SystemZAsmParser::parsePCRel(OperandVector &Operands, int64_t MinVal,
 }
 
 bool SystemZAsmParser::isLabel(AsmToken &Token) {
-  if (getMAIAssemblerDialect() == AD_ATT)
+  if (isParsingATT())
     return true;
 
   // HLASM labels are ordinary symbols.

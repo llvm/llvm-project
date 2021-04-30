@@ -20,7 +20,7 @@
 # CHECK-DAG: input-file: {{.*}}{{[/\]}}main.o
 # CHECK-DAG: input-file: {{.*}}bar.o
 
-# CHECK-NEXT: not-found: {{.*}}{{[/\]}}libdyld.{{.*}}
+# CHECK: not-found: {{.*}}{{[/\]}}libdyld.{{.*}}
 ## There could be more not-found here but we are not checking those because it's brittle.
 
 # CHECK: output-file: {{.*}}{{[/\]}}test.out

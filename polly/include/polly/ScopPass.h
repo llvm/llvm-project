@@ -229,8 +229,10 @@ public:
       // therefore all analyses are preserved. However, we must still free the
       // Scop analysis results which may hold AssertingVH that cause an error
       // if its value is destroyed.
-      AM.invalidate<ScopInfoAnalysis>(F);
-      AM.invalidate<ScopAnalysis>(F);
+      PreservedAnalyses PA = PreservedAnalyses::all();
+      PA.abandon<ScopInfoAnalysis>();
+      PA.abandon<ScopAnalysis>();
+      AM.invalidate(F, PA);
       return PreservedAnalyses::all();
     }
 

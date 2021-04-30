@@ -31,6 +31,7 @@
 ; CHECK-O: Running analysis: OptimizationRemarkEmitterAnalysis on main
 ; CHECK-O: Running pass: InferFunctionAttrsPass
 ; CHECK-O: Starting {{.*}}Function pass manager run.
+; CHECK-O: Running pass: LowerExpectIntrinsicPass on main
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O: Running analysis: TargetIRAnalysis on main
 ; CHECK-O: Running analysis: AssumptionAnalysis on main
@@ -38,7 +39,6 @@
 ; CHECK-O: Running analysis: DominatorTreeAnalysis on main
 ; CHECK-O: Running pass: EarlyCSEPass on main
 ; CHECK-O: Running analysis: TargetLibraryAnalysis on main
-; CHECK-O: Running pass: LowerExpectIntrinsicPass on main
 ; CHECK-O3: Running pass: CallSiteSplittingPass on main
 ; CHECK-O: Finished {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: LowerTypeTestsPass

@@ -216,13 +216,13 @@ define amdgpu_gfx void @test_gfx_call_external_i1_func_void() #0 {
   ; GCN:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_gfx_i1_func_void
   ; GCN:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GCN:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY1]](<4 x s32>)
-  ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_gfx_i1_func_void, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3
-  ; GCN:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; GCN:   [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 1 from %fixed-stack.0, align 16, addrspace 5)
+  ; GCN:   $sgpr30_sgpr31 = SI_CALL [[GV]](p0), @external_gfx_i1_func_void, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0
+  ; GCN:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GCN:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY2]](s32)
   ; GCN:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-  ; GCN:   G_STORE [[LOAD]](s1), [[DEF]](p1) :: (volatile store 1 into `i1 addrspace(1)* undef`, addrspace 1)
-  ; GCN:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
-  ; GCN:   S_SETPC_B64_return [[COPY2]]
+  ; GCN:   G_STORE [[TRUNC]](s1), [[DEF]](p1) :: (volatile store 1 into `i1 addrspace(1)* undef`, addrspace 1)
+  ; GCN:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
+  ; GCN:   S_SETPC_B64_return [[COPY3]]
   %val = call amdgpu_gfx i1 @external_gfx_i1_func_void()
   store volatile i1 %val, i1 addrspace(1)* undef
   ret void

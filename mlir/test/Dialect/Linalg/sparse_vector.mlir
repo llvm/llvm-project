@@ -4,6 +4,8 @@
 // RUN:   FileCheck %s --check-prefix=CHECK-VEC1
 // RUN: mlir-opt %s -test-sparsification="vectorization-strategy=2 ptr-type=2 ind-type=2 vl=16" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-VEC2
+// RUN: mlir-opt %s -test-sparsification="vectorization-strategy=2 ptr-type=0 ind-type=0 vl=16" | \
+// RUN:   FileCheck %s --check-prefix=CHECK-VEC3
 
 #trait_scale_d = {
   indexing_maps = [
@@ -53,6 +55,18 @@
 // CHECK-VEC2:         vector.store %[[m]], %{{.*}}[%[[i]]] : memref<1024xf32>, vector<16xf32>
 // CHECK-VEC2:       }
 // CHECK-VEC2:       return
+//
+// CHECK-VEC3-LABEL: func @scale_d
+// CHECK-VEC3-DAG:   %[[c0:.*]] = constant 0 : index
+// CHECK-VEC3-DAG:   %[[c16:.*]] = constant 16 : index
+// CHECK-VEC3-DAG:   %[[c1024:.*]] = constant 1024 : index
+// CHECK-VEC3:       scf.for %[[i:.*]] = %[[c0]] to %[[c1024]] step %[[c16]] {
+// CHECK-VEC3:         %[[r:.*]] = vector.load %{{.*}}[%[[i]]] : memref<1024xf32>, vector<16xf32>
+// CHECK-VEC3:         %[[b:.*]] = vector.broadcast %{{.*}} : f32 to vector<16xf32>
+// CHECK-VEC3:         %[[m:.*]] = mulf %[[r]], %[[b]] : vector<16xf32>
+// CHECK-VEC3:         vector.store %[[m]], %{{.*}}[%[[i]]] : memref<1024xf32>, vector<16xf32>
+// CHECK-VEC3:       }
+// CHECK-VEC3:       return
 //
 func @scale_d(%arga: tensor<1024xf32>, %scale: f32, %argx: tensor<1024xf32>) -> tensor<1024xf32> {
   %0 = linalg.generic #trait_scale_d
@@ -143,6 +157,23 @@ func @scale_d(%arga: tensor<1024xf32>, %scale: f32, %argx: tensor<1024xf32>) -> 
 // CHECK-VEC2:       }
 // CHECK-VEC2:       return
 //
+// CHECK-VEC3-LABEL: func @mul_s
+// CHECK-VEC3-DAG:   %[[c0:.*]] = constant 0 : index
+// CHECK-VEC3-DAG:   %[[c1:.*]] = constant 1 : index
+// CHECK-VEC3-DAG:   %[[c16:.*]] = constant 16 : index
+// CHECK-VEC3:       %[[p:.*]] = memref.load %{{.*}}[%[[c0]]] : memref<?xindex>
+// CHECK-VEC3:       %[[r:.*]] = memref.load %{{.*}}[%[[c1]]] : memref<?xindex>
+// CHECK-VEC3:       scf.for %[[i:.*]] = %[[p]] to %[[r]] step %[[c16]] {
+// CHECK-VEC3:         %[[sub:.*]] = subi %[[r]], %[[i]] : index
+// CHECK-VEC3:         %[[mask:.*]] = vector.create_mask %[[sub]] : vector<16xi1>
+// CHECK-VEC3:         %[[li:.*]] = vector.maskedload %{{.*}}[%[[i]]], %[[mask]], %{{.*}} : memref<?xindex>, vector<16xi1>, vector<16xindex> into vector<16xindex>
+// CHECK-VEC3:         %[[la:.*]] = vector.maskedload %{{.*}}[%[[i]]], %[[mask]], %{{.*}} : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+// CHECK-VEC3:         %[[lb:.*]] = vector.gather %{{.*}}[%[[c0]]] [%[[li]]], %[[mask]], %{{.*}} : memref<1024xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+// CHECK-VEC3:         %[[m:.*]] = mulf %[[la]], %[[lb]] : vector<16xf32>
+// CHECK-VEC3:         vector.scatter %{{.*}}[%[[c0]]] [%[[li]]], %[[mask]], %[[m]] : memref<1024xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32>
+// CHECK-VEC3:       }
+// CHECK-VEC3:       return
+//
 func @mul_s(%arga: tensor<1024xf32>, %argb: tensor<1024xf32>, %argx: tensor<1024xf32>) -> tensor<1024xf32> {
   %0 = linalg.generic #trait_mul_s
     ins(%arga, %argb: tensor<1024xf32>, tensor<1024xf32>)
@@ -176,6 +207,24 @@ func @mul_s(%arga: tensor<1024xf32>, %argb: tensor<1024xf32>, %argx: tensor<1024
 // CHECK-VEC2:         vector.scatter %{{.*}}[%[[c0]]] [%[[zi]]], %[[mask]], %[[m]] : memref<1024xf32>, vector<16xi64>, vector<16xi1>, vector<16xf32>
 // CHECK-VEC2:       }
 // CHECK-VEC2:       return
+//
+// CHECK-VEC3-LABEL: func @mul_s_alt
+// CHECK-VEC3-DAG:   %[[c0:.*]] = constant 0 : index
+// CHECK-VEC3-DAG:   %[[c1:.*]] = constant 1 : index
+// CHECK-VEC3-DAG:   %[[c16:.*]] = constant 16 : index
+// CHECK-VEC3:       %[[p:.*]] = memref.load %{{.*}}[%[[c0]]] : memref<?xindex>
+// CHECK-VEC3:       %[[r:.*]] = memref.load %{{.*}}[%[[c1]]] : memref<?xindex>
+// CHECK-VEC3:       scf.for %[[i:.*]] = %[[p]] to %[[r]] step %[[c16]] {
+// CHECK-VEC3:         %[[sub:.*]] = subi %[[r]], %[[i]] : index
+// CHECK-VEC3:         %[[mask:.*]] = vector.create_mask %[[sub]] : vector<16xi1>
+// CHECK-VEC3:         %[[li:.*]] = vector.maskedload %{{.*}}[%[[i]]], %[[mask]], %{{.*}} : memref<?xindex>, vector<16xi1>, vector<16xindex> into vector<16xindex>
+// CHECK-VEC3:         %[[la:.*]] = vector.maskedload %{{.*}}[%[[i]]], %[[mask]], %{{.*}} : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+// CHECK-VEC3:         %[[lb:.*]] = vector.gather %{{.*}}[%[[c0]]] [%[[li]]], %[[mask]], %{{.*}} : memref<?xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+// CHECK-VEC3:         %[[m:.*]] = mulf %[[la]], %[[lb]] : vector<16xf32>
+// CHECK-VEC3:         vector.scatter %{{.*}}[%[[c0]]] [%[[li]]], %[[mask]], %[[m]] : memref<1024xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32>
+// CHECK-VEC3:       }
+// CHECK-VEC3:       return
+//
 //
 !SparseTensor = type !llvm.ptr<i8>
 func @mul_s_alt(%argA: !SparseTensor, %argB: !SparseTensor, %argx: tensor<1024xf32>) -> tensor<1024xf32> {
@@ -249,6 +298,21 @@ func @mul_s_alt(%argA: !SparseTensor, %argB: !SparseTensor, %argx: tensor<1024xf
 // CHECK-VEC2:       }
 // CHECK-VEC2:       %{{.*}} = vector.reduction "add", %[[red]], %{{.*}} : vector<16xf32> into f32
 // CHECK-VEC2:       return
+//
+// CHECK-VEC3-LABEL: func @reduction_d
+// CHECK-VEC3-DAG:   %[[c0:.*]] = constant 0 : index
+// CHECK-VEC3-DAG:   %[[c16:.*]] = constant 16 : index
+// CHECK-VEC3-DAG:   %[[c1024:.*]] = constant 1024 : index
+// CHECK-VEC3-DAG:   %[[v0:.*]] = constant dense<0.000000e+00> : vector<16xf32>
+// CHECK-VEC3:       %[[red:.*]] = scf.for %[[i:.*]] = %[[c0]] to %[[c1024]] step %[[c16]] iter_args(%[[red_in:.*]] = %[[v0]]) -> (vector<16xf32>) {
+// CHECK-VEC3:         %[[la:.*]] = vector.load %{{.*}}[%[[i]]] : memref<1024xf32>, vector<16xf32>
+// CHECK-VEC3:         %[[lb:.*]] = vector.load %{{.*}}[%[[i]]] : memref<1024xf32>, vector<16xf32>
+// CHECK-VEC3:         %[[m:.*]] = mulf %[[la]], %[[lb]] : vector<16xf32>
+// CHECK-VEC3:         %[[a:.*]] = addf %[[red_in]], %[[m]] : vector<16xf32>
+// CHECK-VEC3:         scf.yield %[[a]] : vector<16xf32>
+// CHECK-VEC3:       }
+// CHECK-VEC3:       %{{.*}} = vector.reduction "add", %[[red]], %{{.*}} : vector<16xf32> into f32
+// CHECK-VEC3:       return
 //
 func @reduction_d(%arga: tensor<1024xf32>, %argb: tensor<1024xf32>, %argx: tensor<f32>) -> tensor<f32> {
   %0 = linalg.generic #trait_reduction_d
@@ -382,6 +446,27 @@ func @reduction_17(%arga: tensor<17xf32>, %argb: tensor<17xf32>, %argx: tensor<f
 // CHECK-VEC2:         }
 // CHECK-VEC2:       }
 // CHECK-VEC2:       return
+//
+// CHECK-VEC3-LABEL: func @mul_ds
+// CHECK-VEC3-DAG:   %[[c0:.*]] = constant 0 : index
+// CHECK-VEC3-DAG:   %[[c1:.*]] = constant 1 : index
+// CHECK-VEC3-DAG:   %[[c16:.*]] = constant 16 : index
+// CHECK-VEC3-DAG:   %[[c512:.*]] = constant 512 : index
+// CHECK-VEC3:       scf.for %[[i:.*]] = %[[c0]] to %[[c512]] step %[[c1]] {
+// CHECK-VEC3:         %[[p:.*]] = memref.load %{{.*}}[%[[i]]] : memref<?xindex>
+// CHECK-VEC3:         %[[a:.*]] = addi %[[i]], %[[c1]] : index
+// CHECK-VEC3:         %[[r:.*]] = memref.load %{{.*}}[%[[a]]] : memref<?xindex>
+// CHECK-VEC3:         scf.for %[[j:.*]] = %[[p]] to %[[r]] step %[[c16]] {
+// CHECK-VEC3:           %[[sub:.*]] = subi %[[r]], %[[j]] : index
+// CHECK-VEC3:           %[[mask:.*]] = vector.create_mask %[[sub]] : vector<16xi1>
+// CHECK-VEC3:           %[[lj:.*]] = vector.maskedload %{{.*}}[%[[j]]], %[[mask]], %{{.*}} : memref<?xindex>, vector<16xi1>, vector<16xindex> into vector<16xindex>
+// CHECK-VEC3:           %[[la:.*]] = vector.maskedload %{{.*}}[%[[j]]], %[[mask]], %{{.*}} : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+// CHECK-VEC3:           %[[lb:.*]] = vector.gather %{{.*}}[%[[i]], %[[c0]]] [%[[lj]]], %[[mask]], %{{.*}} : memref<512x1024xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+// CHECK-VEC3:           %[[m:.*]] = mulf %[[la]], %[[lb]] : vector<16xf32>
+// CHECK-VEC3:           vector.scatter %{{.*}}[%[[i]], %[[c0]]] [%[[lj]]], %[[mask]], %[[m]] : memref<512x1024xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32>
+// CHECK-VEC3:         }
+// CHECK-VEC3:       }
+// CHECK-VEC3:       return
 //
 func @mul_ds(%arga: tensor<512x1024xf32>, %argb: tensor<512x1024xf32>, %argx: tensor<512x1024xf32>) -> tensor<512x1024xf32> {
   %0 = linalg.generic #trait_mul_ds

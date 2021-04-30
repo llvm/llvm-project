@@ -188,8 +188,8 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
   }
 
   // Check if we created an isl_ast root node, otherwise exit.
-  isl_ast_node *AstRoot = Ast.getAst();
-  if (!AstRoot)
+  isl::ast_node AstRoot = Ast.getAst();
+  if (AstRoot.is_null())
     return false;
 
   // Collect statistics. Do it before we modify the IR to avoid having it any
@@ -266,11 +266,9 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
     assert(ExitingBB);
     DT.changeImmediateDominator(MergeBlock, ExitingBB);
     DT.eraseNode(ExitingBlock);
-
-    isl_ast_node_free(AstRoot);
   } else {
     NodeBuilder.addParameters(S.getContext().release());
-    Value *RTC = NodeBuilder.createRTC(AI.getRunCondition());
+    Value *RTC = NodeBuilder.createRTC(AI.getRunCondition().release());
 
     Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
 
@@ -282,7 +280,7 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
     // between polly.start and polly.exiting (at this point).
     Builder.SetInsertPoint(StartBlock->getTerminator());
 
-    NodeBuilder.create(AstRoot);
+    NodeBuilder.create(AstRoot.release());
     NodeBuilder.finalize();
     fixRegionInfo(*EnteringBB->getParent(), *R->getParent(), RI);
 

@@ -487,7 +487,7 @@ static bool HasSameVirtualSignature(const CXXMethodDecl *LHS,
 bool VCallOffsetMap::MethodsCanShareVCallOffset(const CXXMethodDecl *LHS,
                                                 const CXXMethodDecl *RHS) {
   assert(VTableContextBase::hasVtableSlot(LHS) && "LHS must be virtual!");
-  assert(VTableContextBase::hasVtableSlot(RHS) && "LHS must be virtual!");
+  assert(VTableContextBase::hasVtableSlot(RHS) && "RHS must be virtual!");
 
   // A destructor can share a vcall offset with another destructor.
   if (isa<CXXDestructorDecl>(LHS))

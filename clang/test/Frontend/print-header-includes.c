@@ -6,6 +6,16 @@
 // CHECK-NOT: . {{.*noline.h}}
 // CHECK: . {{.*test.h}}
 // CHECK: .. {{.*test2.h}}
+// CHECK-NOT: .. {{.*test2.h}}
+
+// RUN: %clang_cc1 -I%S -isystem %S/Inputs/SystemHeaderPrefix \
+// RUN:     -E -H -show-skipped-includes -o /dev/null %s 2> %t.stderr
+// RUN: FileCheck --check-prefix=SKIPPED < %t.stderr %s
+
+// SKIPPED-NOT: . {{.*noline.h}}
+// SKIPPED: . {{.*test.h}}
+// SKIPPED: .. {{.*test2.h}}
+// SKIPPED: .. {{.*test2.h}}
 
 // RUN: %clang_cc1 -I%S -include Inputs/test3.h -isystem %S/Inputs/SystemHeaderPrefix \
 // RUN:     -E -H -sys-header-deps -o /dev/null %s 2> %t.stderr

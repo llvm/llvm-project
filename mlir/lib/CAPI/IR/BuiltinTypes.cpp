@@ -191,18 +191,19 @@ bool mlirTypeIsAUnrankedTensor(MlirType type) {
 }
 
 MlirType mlirRankedTensorTypeGet(intptr_t rank, const int64_t *shape,
-                                 MlirType elementType) {
+                                 MlirType elementType, MlirAttribute encoding) {
   return wrap(RankedTensorType::get(
-      llvm::makeArrayRef(shape, static_cast<size_t>(rank)),
-      unwrap(elementType)));
+      llvm::makeArrayRef(shape, static_cast<size_t>(rank)), unwrap(elementType),
+      unwrap(encoding)));
 }
 
 MlirType mlirRankedTensorTypeGetChecked(MlirLocation loc, intptr_t rank,
                                         const int64_t *shape,
-                                        MlirType elementType) {
+                                        MlirType elementType,
+                                        MlirAttribute encoding) {
   return wrap(RankedTensorType::getChecked(
       unwrap(loc), llvm::makeArrayRef(shape, static_cast<size_t>(rank)),
-      unwrap(elementType)));
+      unwrap(elementType), unwrap(encoding)));
 }
 
 MlirType mlirUnrankedTensorTypeGet(MlirType elementType) {

@@ -23,6 +23,7 @@ struct OtherStruct {
 // Class loading declarations.
 
 struct ClassMember { int i; };
+struct StaticClassMember { int i; };
 struct UnusedClassMember { int i; };
 struct UnusedClassMemberPtr { int i; };
 
@@ -34,12 +35,14 @@ class ClassWeEnter {
 public:
   int dummy; // Prevent bug where LLDB always completes first member.
   ClassMember member;
+  static StaticClassMember static_member;
   UnusedClassMember unused_member;
   UnusedClassMemberPtr *unused_member_ptr;
   int enteredFunction() {
     return member.i; // Location: class function
   }
 };
+StaticClassMember ClassWeEnter::static_member;
 };
 
 //----------------------------------------------------------------------------//

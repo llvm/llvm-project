@@ -308,6 +308,10 @@ public:
     return parser.parseDimensionListRanked(dimensions, allowDynamic);
   }
 
+  ParseResult parseXInDimensionList() override {
+    return parser.parseXInDimensionList();
+  }
+
   OptionalParseResult parseOptionalType(Type &result) override {
     return parser.parseOptionalType(result);
   }

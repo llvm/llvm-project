@@ -2503,6 +2503,31 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
     return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), VS);
   }
 
+  // Fold (add step_vector(c1), step_vector(c2)  to step_vector(c1+c2))
+  if (N0.getOpcode() == ISD::STEP_VECTOR &&
+      N1.getOpcode() == ISD::STEP_VECTOR) {
+    const APInt &C0 = N0->getConstantOperandAPInt(0);
+    const APInt &C1 = N1->getConstantOperandAPInt(0);
+    EVT SVT = N0.getOperand(0).getValueType();
+    SDValue NewStep = DAG.getConstant(C0 + C1, DL, SVT);
+    return DAG.getStepVector(DL, VT, NewStep);
+  }
+
+  // Fold a + step_vector(c1) + step_vector(c2) to a + step_vector(c1+c2)
+  if ((N0.getOpcode() == ISD::ADD) &&
+      (N0.getOperand(1).getOpcode() == ISD::STEP_VECTOR) &&
+      (N1.getOpcode() == ISD::STEP_VECTOR)) {
+    const APInt &SV0 = N0.getOperand(1)->getConstantOperandAPInt(0);
+    const APInt &SV1 = N1->getConstantOperandAPInt(0);
+    EVT SVT = N1.getOperand(0).getValueType();
+    assert(N1.getOperand(0).getValueType() ==
+               N0.getOperand(1)->getOperand(0).getValueType() &&
+           "Different operand types of STEP_VECTOR.");
+    SDValue NewStep = DAG.getConstant(SV0 + SV1, DL, SVT);
+    SDValue SV = DAG.getStepVector(DL, VT, NewStep);
+    return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), SV);
+  }
+
   return SDValue();
 }
 
@@ -3891,6 +3916,17 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
       const APInt &C0 = N0.getConstantOperandAPInt(0);
       const APInt &C1 = NC1->getAPIntValue();
       return DAG.getVScale(SDLoc(N), VT, C0 * C1);
+    }
+
+  // Fold (mul step_vector(C0), C1) to (step_vector(C0 * C1)).
+  APInt MulVal;
+  if (N0.getOpcode() == ISD::STEP_VECTOR)
+    if (ISD::isConstantSplatVector(N1.getNode(), MulVal)) {
+      const APInt &C0 = N0.getConstantOperandAPInt(0);
+      EVT SVT = N0.getOperand(0).getValueType();
+      SDValue NewStep = DAG.getConstant(
+          C0 * MulVal.sextOrTrunc(SVT.getSizeInBits()), SDLoc(N), SVT);
+      return DAG.getStepVector(SDLoc(N), VT, NewStep);
     }
 
   // Fold ((mul x, 0/undef) -> 0,
@@ -8379,6 +8415,17 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
       const APInt &C0 = N0.getConstantOperandAPInt(0);
       const APInt &C1 = NC1->getAPIntValue();
       return DAG.getVScale(SDLoc(N), VT, C0 << C1);
+    }
+
+  // Fold (shl step_vector(C0), C1) to (step_vector(C0 << C1)).
+  APInt ShlVal;
+  if (N0.getOpcode() == ISD::STEP_VECTOR)
+    if (ISD::isConstantSplatVector(N1.getNode(), ShlVal)) {
+      const APInt &C0 = N0.getConstantOperandAPInt(0);
+      EVT SVT = N0.getOperand(0).getValueType();
+      SDValue NewStep = DAG.getConstant(
+          C0 << ShlVal.sextOrTrunc(SVT.getSizeInBits()), SDLoc(N), SVT);
+      return DAG.getStepVector(SDLoc(N), VT, NewStep);
     }
 
   return SDValue();

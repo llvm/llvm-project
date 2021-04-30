@@ -12,8 +12,7 @@
 
 // class multimap
 
-//       iterator find(const key_type& k);
-// const_iterator find(const key_type& k) const;
+// size_type count(const key_type& k) const;
 //
 //   The member function templates find, count, lower_bound, upper_bound, and
 // equal_range shall not participate in overload resolution unless the

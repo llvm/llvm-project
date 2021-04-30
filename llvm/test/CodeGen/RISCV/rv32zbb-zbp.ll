@@ -744,3 +744,115 @@ define i64 @rori_i64_fshr(i64 %a) nounwind {
   %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 63)
   ret i64 %1
 }
+
+define i8 @srli_i8(i8 %a) nounwind {
+; RV32I-LABEL: srli_i8:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 192
+; RV32I-NEXT:    srli a0, a0, 6
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: srli_i8:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    andi a0, a0, 192
+; RV32IB-NEXT:    srli a0, a0, 6
+; RV32IB-NEXT:    ret
+;
+; RV32IBB-LABEL: srli_i8:
+; RV32IBB:       # %bb.0:
+; RV32IBB-NEXT:    andi a0, a0, 192
+; RV32IBB-NEXT:    srli a0, a0, 6
+; RV32IBB-NEXT:    ret
+;
+; RV32IBP-LABEL: srli_i8:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    andi a0, a0, 192
+; RV32IBP-NEXT:    srli a0, a0, 6
+; RV32IBP-NEXT:    ret
+  %1 = lshr i8 %a, 6
+  ret i8 %1
+}
+
+define i8 @srai_i8(i8 %a) nounwind {
+; RV32I-LABEL: srai_i8:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    srai a0, a0, 29
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: srai_i8:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    sext.b a0, a0
+; RV32IB-NEXT:    srai a0, a0, 5
+; RV32IB-NEXT:    ret
+;
+; RV32IBB-LABEL: srai_i8:
+; RV32IBB:       # %bb.0:
+; RV32IBB-NEXT:    sext.b a0, a0
+; RV32IBB-NEXT:    srai a0, a0, 5
+; RV32IBB-NEXT:    ret
+;
+; RV32IBP-LABEL: srai_i8:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    slli a0, a0, 24
+; RV32IBP-NEXT:    srai a0, a0, 29
+; RV32IBP-NEXT:    ret
+  %1 = ashr i8 %a, 5
+  ret i8 %1
+}
+
+define i16 @srli_i16(i16 %a) nounwind {
+; RV32I-LABEL: srli_i16:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 22
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: srli_i16:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    zext.h a0, a0
+; RV32IB-NEXT:    srli a0, a0, 6
+; RV32IB-NEXT:    ret
+;
+; RV32IBB-LABEL: srli_i16:
+; RV32IBB:       # %bb.0:
+; RV32IBB-NEXT:    zext.h a0, a0
+; RV32IBB-NEXT:    srli a0, a0, 6
+; RV32IBB-NEXT:    ret
+;
+; RV32IBP-LABEL: srli_i16:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    zext.h a0, a0
+; RV32IBP-NEXT:    srli a0, a0, 6
+; RV32IBP-NEXT:    ret
+  %1 = lshr i16 %a, 6
+  ret i16 %1
+}
+
+define i16 @srai_i16(i16 %a) nounwind {
+; RV32I-LABEL: srai_i16:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srai a0, a0, 25
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: srai_i16:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    sext.h a0, a0
+; RV32IB-NEXT:    srai a0, a0, 9
+; RV32IB-NEXT:    ret
+;
+; RV32IBB-LABEL: srai_i16:
+; RV32IBB:       # %bb.0:
+; RV32IBB-NEXT:    sext.h a0, a0
+; RV32IBB-NEXT:    srai a0, a0, 9
+; RV32IBB-NEXT:    ret
+;
+; RV32IBP-LABEL: srai_i16:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    slli a0, a0, 16
+; RV32IBP-NEXT:    srai a0, a0, 25
+; RV32IBP-NEXT:    ret
+  %1 = ashr i16 %a, 9
+  ret i16 %1
+}

@@ -41,24 +41,13 @@ struct FieldInfo {
 } // namespace test
 } // namespace mlir
 
+#include "TestTypeInterfaces.h.inc"
+
 #define GET_TYPEDEF_CLASSES
 #include "TestTypeDefs.h.inc"
 
 namespace mlir {
 namespace test {
-
-#include "TestTypeInterfaces.h.inc"
-
-/// This class is a simple test type that uses a generated interface.
-struct TestType : public Type::TypeBase<TestType, Type, TypeStorage,
-                                        TestTypeInterface::Trait> {
-  using Base::Base;
-
-  /// Provide a definition for the necessary interface methods.
-  void printTypeC(Location loc) const {
-    emitRemark(loc) << *this << " - TestC";
-  }
-};
 
 /// Storage for simple named recursive types, where the type is identified by
 /// its name and can "contain" another type, including itself.
@@ -106,62 +95,6 @@ public:
 
   /// Name/key getter.
   StringRef getName() { return getImpl()->name; }
-};
-
-struct TestTypeWithLayoutStorage : public TypeStorage {
-  using KeyTy = unsigned;
-
-  explicit TestTypeWithLayoutStorage(unsigned key) : key(key) {}
-  bool operator==(const KeyTy &other) const { return other == key; }
-
-  static TestTypeWithLayoutStorage *construct(TypeStorageAllocator &allocator,
-                                              const KeyTy &key) {
-    return new (allocator.allocate<TestTypeWithLayoutStorage>())
-        TestTypeWithLayoutStorage(key);
-  }
-
-  unsigned key;
-};
-
-class TestTypeWithLayout
-    : public Type::TypeBase<TestTypeWithLayout, Type, TestTypeWithLayoutStorage,
-                            DataLayoutTypeInterface::Trait> {
-public:
-  using Base::Base;
-
-  static TestTypeWithLayout get(MLIRContext *ctx, unsigned key) {
-    return Base::get(ctx, key);
-  }
-
-  unsigned getKey() { return getImpl()->key; }
-
-  unsigned getTypeSizeInBits(const DataLayout &dataLayout,
-                             DataLayoutEntryListRef params) const {
-    return extractKind(params, "size");
-  }
-
-  unsigned getABIAlignment(const DataLayout &dataLayout,
-                           DataLayoutEntryListRef params) const {
-    return extractKind(params, "alignment");
-  }
-
-  unsigned getPreferredAlignment(const DataLayout &dataLayout,
-                                 DataLayoutEntryListRef params) const {
-    return extractKind(params, "preferred");
-  }
-
-  bool areCompatible(DataLayoutEntryListRef oldLayout,
-                     DataLayoutEntryListRef newLayout) const {
-    unsigned old = extractKind(oldLayout, "alignment");
-    return old == 1 || extractKind(newLayout, "alignment") <= old;
-  }
-
-  LogicalResult verifyEntries(DataLayoutEntryListRef params,
-                              Location loc) const;
-
-private:
-  unsigned extractKind(DataLayoutEntryListRef params,
-                       StringRef expectedKind) const;
 };
 
 } // namespace test

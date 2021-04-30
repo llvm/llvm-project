@@ -44,17 +44,17 @@ LLVM_LIBC_FUNCTION(float, fmaf, (float x, float y, float z)) {
     // bit of sum, so that the sticky bits used when rounding sum to float are
     // correct (when it matters).
     fputil::FPBits<double> t(
-        (bit_prod.exponent >= bitz.exponent)
-            ? ((static_cast<double>(bit_sum) - bit_prod) - bitz)
-            : ((static_cast<double>(bit_sum) - bitz) - bit_prod));
+        (bit_prod.encoding.exponent >= bitz.encoding.exponent)
+            ? ((double(bit_sum) - double(bit_prod)) - double(bitz))
+            : ((double(bit_sum) - double(bitz)) - double(bit_prod)));
 
     // Update sticky bits if t != 0.0 and the least (52 - 23 - 1 = 28) bits are
     // zero.
-    if (!t.isZero() && ((bit_sum.mantissa & 0xfff'ffffULL) == 0)) {
-      if (bit_sum.sign != t.sign) {
-        ++bit_sum.mantissa;
-      } else if (bit_sum.mantissa) {
-        --bit_sum.mantissa;
+    if (!t.isZero() && ((bit_sum.encoding.mantissa & 0xfff'ffffULL) == 0)) {
+      if (bit_sum.encoding.sign != t.encoding.sign) {
+        ++bit_sum.encoding.mantissa;
+      } else if (bit_sum.encoding.mantissa) {
+        --bit_sum.encoding.mantissa;
       }
     }
   }

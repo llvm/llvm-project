@@ -142,8 +142,8 @@ usual include guards and #includes [2]_, we get to the definition of our class:
           CompileLayer(ES, ObjectLayer, ConcurrentIRCompiler(std::move(JTMB))),
           DL(std::move(DL)), Mangle(ES, this->DL),
           Ctx(std::make_unique<LLVMContext>()) {
-      ES.getMainJITDylib().setGenerator(
-          cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(DL)));
+      ES.getMainJITDylib().addGenerator(
+          cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(DL.getGlobalPrefix())));
     }
 
 Our class begins with six member variables: An ExecutionSession member, ``ES``,

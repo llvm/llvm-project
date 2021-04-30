@@ -71,7 +71,7 @@ public:
   IoErrorHandler &GetIoErrorHandler() const;
   ExternalFileUnit *GetExternalFileUnit() const; // null if internal unit
   MutableModes &mutableModes();
-  void BeginReadingRecord();
+  bool BeginReadingRecord();
   void FinishReadingRecord();
   bool Inquire(InquiryKeywordHash, char *, std::size_t);
   bool Inquire(InquiryKeywordHash, bool &);
@@ -139,7 +139,7 @@ struct IoStatementBase : public DefaultFormatControlCallbacks {
   int EndIoStatement();
   std::optional<DataEdit> GetNextDataEdit(IoStatementState &, int = 1);
   ExternalFileUnit *GetExternalFileUnit() const { return nullptr; }
-  void BeginReadingRecord() {}
+  bool BeginReadingRecord() { return true; }
   void FinishReadingRecord() {}
   bool Inquire(InquiryKeywordHash, char *, std::size_t);
   bool Inquire(InquiryKeywordHash, bool &);
@@ -282,7 +282,7 @@ public:
   void BackspaceRecord();
   void HandleRelativePosition(std::int64_t);
   void HandleAbsolutePosition(std::int64_t);
-  void BeginReadingRecord();
+  bool BeginReadingRecord();
   void FinishReadingRecord();
 };
 

@@ -287,7 +287,7 @@ static DecodeStatus decodeMemRIHashOperands(MCInst &Inst, uint64_t Imm,
   // and covers the range -8 to -512. The immediate is always negative and 2s
   // complement which is why we sign extend a 7 bit value.
   const uint64_t Base = Imm >> 6;
-  const uint64_t Disp = SignExtend64<7>((Imm & 0x3F) + 64) << 3;
+  const int64_t Disp = SignExtend64<7>((Imm & 0x3F) + 64) * 8;
 
   assert(Base < 32 && "Invalid base register");
 

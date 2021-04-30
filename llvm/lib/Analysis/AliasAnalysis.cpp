@@ -460,6 +460,8 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, AliasResult AR) {
     break;
   case AliasResult::PartialAlias:
     OS << "PartialAlias";
+    if (AR.hasOffset())
+      OS << " (off " << AR.getOffset() << ")";
     break;
   }
   return OS;

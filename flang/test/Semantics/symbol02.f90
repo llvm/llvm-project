@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %f18
+! RUN: %S/test_symbols.sh %s %t %flang_fc1
 ! Test host association in module subroutine and internal subroutine.
 
 !DEF: /m Module

@@ -76,17 +76,9 @@ template <typename Config> struct TestAllocator : scudo::Allocator<Config> {
   ~TestAllocator() { this->unmapTestOnly(); }
 };
 
-SCUDO_DEFINE_GTEST_TYPE_NAME(scudo::AndroidSvelteConfig)
-#if SCUDO_FUCHSIA
-SCUDO_DEFINE_GTEST_TYPE_NAME(scudo::FuchsiaConfig)
-#else
-SCUDO_DEFINE_GTEST_TYPE_NAME(scudo::DefaultConfig)
-SCUDO_DEFINE_GTEST_TYPE_NAME(scudo::AndroidConfig)
-#endif
-
-template <class Config> struct ScudoCombinedTest : public ::testing::Test {
+template <class TypeParam> struct ScudoCombinedTest : public Test {
   ScudoCombinedTest() {
-    UseQuarantine = std::is_same<Config, scudo::AndroidConfig>::value;
+    UseQuarantine = std::is_same<TypeParam, scudo::AndroidConfig>::value;
     Allocator = std::make_unique<AllocatorT>();
   }
   ~ScudoCombinedTest() {
@@ -94,23 +86,38 @@ template <class Config> struct ScudoCombinedTest : public ::testing::Test {
     UseQuarantine = true;
   }
 
+  void RunTest();
+
   void BasicTest(scudo::uptr SizeLogMin, scudo::uptr SizeLogMax);
 
-  using AllocatorT = TestAllocator<Config>;
+  using AllocatorT = TestAllocator<TypeParam>;
   std::unique_ptr<AllocatorT> Allocator;
 };
 
-using ScudoCombinedTestTypes = testing::Types<scudo::AndroidSvelteConfig,
 #if SCUDO_FUCHSIA
-                                              scudo::FuchsiaConfig,
+#define SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                              \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, AndroidSvelteConfig)                    \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, FuchsiaConfig)
 #else
-                                              scudo::DefaultConfig,
-                                              scudo::AndroidConfig
+#define SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                              \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, AndroidSvelteConfig)                    \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, DefaultConfig)                          \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, AndroidConfig)
 #endif
-                                              >;
-TYPED_TEST_CASE(ScudoCombinedTest, ScudoCombinedTestTypes);
 
-TYPED_TEST(ScudoCombinedTest, IsOwned) {
+#define SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TYPE)                             \
+  using FIXTURE##NAME##_##TYPE = FIXTURE##NAME<scudo::TYPE>;                   \
+  TEST_F(FIXTURE##NAME##_##TYPE, NAME) { Run(); }
+
+#define SCUDO_TYPED_TEST(FIXTURE, NAME)                                        \
+  template <class TypeParam>                                                   \
+  struct FIXTURE##NAME : public FIXTURE<TypeParam> {                           \
+    void Run();                                                                \
+  };                                                                           \
+  SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                                    \
+  template <class TypeParam> void FIXTURE##NAME<TypeParam>::Run()
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, IsOwned) {
   auto *Allocator = this->Allocator.get();
   static scudo::u8 StaticBuffer[scudo::Chunk::getHeaderSize() + 1];
   EXPECT_FALSE(
@@ -152,12 +159,12 @@ void ScudoCombinedTest<Config>::BasicTest(scudo::uptr SizeLogMin,
   }
 }
 
-TYPED_TEST(ScudoCombinedTest, BasicCombined0) { this->BasicTest(0, 16); }
-TYPED_TEST(ScudoCombinedTest, BasicCombined1) { this->BasicTest(17, 18); }
-TYPED_TEST(ScudoCombinedTest, BasicCombined2) { this->BasicTest(19, 19); }
-TYPED_TEST(ScudoCombinedTest, BasicCombined3) { this->BasicTest(20, 20); }
+SCUDO_TYPED_TEST(ScudoCombinedTest, BasicCombined0) { this->BasicTest(0, 16); }
+SCUDO_TYPED_TEST(ScudoCombinedTest, BasicCombined1) { this->BasicTest(17, 18); }
+SCUDO_TYPED_TEST(ScudoCombinedTest, BasicCombined2) { this->BasicTest(19, 19); }
+SCUDO_TYPED_TEST(ScudoCombinedTest, BasicCombined3) { this->BasicTest(20, 20); }
 
-TYPED_TEST(ScudoCombinedTest, ZeroContents) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, ZeroContents) {
   auto *Allocator = this->Allocator.get();
 
   // Ensure that specifying ZeroContents returns a zero'd out block.
@@ -174,7 +181,7 @@ TYPED_TEST(ScudoCombinedTest, ZeroContents) {
   }
 }
 
-TYPED_TEST(ScudoCombinedTest, ZeroFill) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, ZeroFill) {
   auto *Allocator = this->Allocator.get();
 
   // Ensure that specifying ZeroContents returns a zero'd out block.
@@ -192,7 +199,7 @@ TYPED_TEST(ScudoCombinedTest, ZeroFill) {
   }
 }
 
-TYPED_TEST(ScudoCombinedTest, PatternOrZeroFill) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, PatternOrZeroFill) {
   auto *Allocator = this->Allocator.get();
 
   // Ensure that specifying PatternOrZeroFill returns a pattern or zero filled
@@ -219,7 +226,7 @@ TYPED_TEST(ScudoCombinedTest, PatternOrZeroFill) {
   }
 }
 
-TYPED_TEST(ScudoCombinedTest, BlockReuse) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, BlockReuse) {
   auto *Allocator = this->Allocator.get();
 
   // Verify that a chunk will end up being reused, at some point.
@@ -237,7 +244,7 @@ TYPED_TEST(ScudoCombinedTest, BlockReuse) {
   EXPECT_TRUE(Found);
 }
 
-TYPED_TEST(ScudoCombinedTest, ReallocateLarge) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateLarge) {
   auto *Allocator = this->Allocator.get();
 
   // Reallocate a large chunk all the way down to a byte, verifying that we
@@ -258,7 +265,7 @@ TYPED_TEST(ScudoCombinedTest, ReallocateLarge) {
   Allocator->deallocate(P, Origin);
 }
 
-TYPED_TEST(ScudoCombinedTest, ReallocateSame) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateSame) {
   auto *Allocator = this->Allocator.get();
 
   // Check that reallocating a chunk to a slightly smaller or larger size
@@ -281,7 +288,7 @@ TYPED_TEST(ScudoCombinedTest, ReallocateSame) {
   Allocator->deallocate(P, Origin);
 }
 
-TYPED_TEST(ScudoCombinedTest, IterateOverChunks) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, IterateOverChunks) {
   auto *Allocator = this->Allocator.get();
   // Allocates a bunch of chunks, then iterate over all the chunks, ensuring
   // they are the ones we allocated. This requires the allocator to not have any
@@ -309,7 +316,7 @@ TYPED_TEST(ScudoCombinedTest, IterateOverChunks) {
   }
 }
 
-TYPED_TEST(ScudoCombinedTest, UseAfterFree) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, UseAfterFree) {
   auto *Allocator = this->Allocator.get();
 
   // Check that use-after-free is detected.
@@ -336,7 +343,7 @@ TYPED_TEST(ScudoCombinedTest, UseAfterFree) {
   }
 }
 
-TYPED_TEST(ScudoCombinedTest, DisableMemoryTagging) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, DisableMemoryTagging) {
   auto *Allocator = this->Allocator.get();
 
   if (Allocator->useMemoryTaggingTestOnly()) {
@@ -361,7 +368,7 @@ TYPED_TEST(ScudoCombinedTest, DisableMemoryTagging) {
   }
 }
 
-TYPED_TEST(ScudoCombinedTest, Stats) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, Stats) {
   auto *Allocator = this->Allocator.get();
 
   scudo::uptr BufferSize = 8192;
@@ -380,7 +387,7 @@ TYPED_TEST(ScudoCombinedTest, Stats) {
   EXPECT_NE(Stats.find("Stats: Quarantine"), std::string::npos);
 }
 
-TYPED_TEST(ScudoCombinedTest, CacheDrain) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, CacheDrain) {
   auto *Allocator = this->Allocator.get();
 
   std::vector<void *> V;
@@ -399,7 +406,7 @@ TYPED_TEST(ScudoCombinedTest, CacheDrain) {
     TSD->unlock();
 }
 
-TYPED_TEST(ScudoCombinedTest, ThreadedCombined) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, ThreadedCombined) {
   std::mutex Mutex;
   std::condition_variable Cv;
   bool Ready = false;

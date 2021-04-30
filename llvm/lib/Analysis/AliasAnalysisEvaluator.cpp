@@ -51,8 +51,11 @@ static void PrintResults(AliasResult AR, bool P, const Value *V1,
       V2->printAsOperand(os2, true, M);
     }
 
-    if (o2 < o1)
+    if (o2 < o1) {
       std::swap(o1, o2);
+      // Change offset sign for the local AR, for printing only.
+      AR.swap();
+    }
     errs() << "  " << AR << ":\t" << o1 << ", " << o2 << "\n";
   }
 }

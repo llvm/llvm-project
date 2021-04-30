@@ -211,7 +211,7 @@ std::list<SourceName> OrderParameterNames(const Symbol &);
 
 // Return an existing or new derived type instance
 const DeclTypeSpec &FindOrInstantiateDerivedType(Scope &, DerivedTypeSpec &&,
-    SemanticsContext &, DeclTypeSpec::Category = DeclTypeSpec::TypeDerived);
+    DeclTypeSpec::Category = DeclTypeSpec::TypeDerived);
 
 // When a subprogram defined in a submodule defines a separate module
 // procedure whose interface is defined in an ancestor (sub)module,

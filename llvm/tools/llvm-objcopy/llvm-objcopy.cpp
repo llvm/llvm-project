@@ -259,6 +259,12 @@ static Error restoreStatOnFile(StringRef Filename,
   if (std::error_code EC = sys::fs::status(FD, OStat))
     return createFileError(Filename, EC);
   if (OStat.type() == sys::fs::file_type::regular_file) {
+#ifndef _WIN32
+    // Keep ownership if llvm-objcopy is called under root.
+    if (Config.InputFilename == Config.OutputFilename && OStat.getUser() == 0)
+      sys::fs::changeFileOwnership(FD, Stat.getUser(), Stat.getGroup());
+#endif
+
     sys::fs::perms Perm = Stat.permissions();
     if (Config.InputFilename != Config.OutputFilename)
       Perm = static_cast<sys::fs::perms>(Perm & ~sys::fs::getUmask() & ~06000);
@@ -268,12 +274,6 @@ static Error restoreStatOnFile(StringRef Filename,
     if (auto EC = sys::fs::setPermissions(FD, Perm))
 #endif
       return createFileError(Filename, EC);
-
-#ifndef _WIN32
-    // Keep ownership if llvm-objcopy is called under root.
-    if (Config.InputFilename == Config.OutputFilename && OStat.getUser() == 0)
-      sys::fs::changeFileOwnership(FD, Stat.getUser(), Stat.getGroup());
-#endif
   }
 
   if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD))

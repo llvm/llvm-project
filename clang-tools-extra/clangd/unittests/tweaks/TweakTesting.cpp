@@ -75,7 +75,7 @@ applyTweak(ParsedAST &AST, const Annotations &Input, StringRef TweakID,
                             Range.second, [&](SelectionTree ST) {
                               Tweak::Selection S(Index, AST, Range.first,
                                                  Range.second, std::move(ST));
-                              if (auto T = prepareTweak(TweakID, S)) {
+                              if (auto T = prepareTweak(TweakID, S, nullptr)) {
                                 Result = (*T)->apply(S);
                                 return true;
                               } else {

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
 use omp_lib
 !2.11.4 Allocate Clause
 !For any list item that is specified in the allocate

@@ -110,6 +110,58 @@ define <4 x i32> @extend_high_i16x8_u(<8 x i16> %v) {
   ret <4 x i32> %extended
 }
 
+define <2 x i64> @extend_low_i32x4_s(<4 x i32> %v) {
+; CHECK-LABEL: extend_low_i32x4_s:
+; CHECK:         .functype extend_low_i32x4_s (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i64x2.extend_low_i32x4_s
+; CHECK-NEXT:    # fallthrough-return
+  %low = shufflevector <4 x i32> %v, <4 x i32> undef,
+           <2 x i32> <i32 0, i32 1>
+  %extended = sext <2 x i32> %low to <2 x i64>
+  ret <2 x i64> %extended
+}
+
+define <2 x i64> @extend_low_i32x4_u(<4 x i32> %v) {
+; CHECK-LABEL: extend_low_i32x4_u:
+; CHECK:         .functype extend_low_i32x4_u (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i64x2.extend_low_i32x4_u
+; CHECK-NEXT:    # fallthrough-return
+  %low = shufflevector <4 x i32> %v, <4 x i32> undef,
+           <2 x i32> <i32 0, i32 1>
+  %extended = zext <2 x i32> %low to <2 x i64>
+  ret <2 x i64> %extended
+}
+
+define <2 x i64> @extend_high_i32x4_s(<4 x i32> %v) {
+; CHECK-LABEL: extend_high_i32x4_s:
+; CHECK:         .functype extend_high_i32x4_s (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i64x2.extend_high_i32x4_s
+; CHECK-NEXT:    # fallthrough-return
+  %low = shufflevector <4 x i32> %v, <4 x i32> undef,
+           <2 x i32> <i32 2, i32 3>
+  %extended = sext <2 x i32> %low to <2 x i64>
+  ret <2 x i64> %extended
+}
+
+define <2 x i64> @extend_high_i32x4_u(<4 x i32> %v) {
+; CHECK-LABEL: extend_high_i32x4_u:
+; CHECK:         .functype extend_high_i32x4_u (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i64x2.extend_high_i32x4_u
+; CHECK-NEXT:    # fallthrough-return
+  %low = shufflevector <4 x i32> %v, <4 x i32> undef,
+           <2 x i32> <i32 2, i32 3>
+  %extended = zext <2 x i32> %low to <2 x i64>
+  ret <2 x i64> %extended
+}
+
 ;; Also test that similar patterns with offsets not corresponding to
 ;; the low or high half are correctly expanded.
 

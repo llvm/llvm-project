@@ -59,7 +59,7 @@ static void printStructType(DialectAsmPrinter &printer, LLVMStructType type) {
   // dispatch. We maintain the invariant of this storage being modified
   // exclusively in this function, and at most one name being added per call.
   // TODO: consider having such functionality inside DialectAsmPrinter.
-  thread_local llvm::SetVector<StringRef> knownStructNames;
+  thread_local SetVector<StringRef> knownStructNames;
   unsigned stackSize = knownStructNames.size();
   (void)stackSize;
   auto guard = llvm::make_scope_exit([&]() {
@@ -323,7 +323,7 @@ static LLVMStructType parseStructType(DialectAsmParser &parser) {
   // dispatch. We maintain the invariant of this storage being modified
   // exclusively in this function, and at most one name being added per call.
   // TODO: consider having such functionality inside DialectAsmParser.
-  thread_local llvm::SetVector<StringRef> knownStructNames;
+  thread_local SetVector<StringRef> knownStructNames;
   unsigned stackSize = knownStructNames.size();
   (void)stackSize;
   auto guard = llvm::make_scope_exit([&]() {

@@ -11,7 +11,7 @@ func @tilezero(%arg0: memref<?x?xi32>, %i: index, %j: index) {
   return
 }
 
-func @entry() {
+func @entry() -> i32 {
   %i0 = constant 0: i32
   %i1 = constant 1: i32
   %c0 = constant 0: index
@@ -92,5 +92,5 @@ func @entry() {
   // Release resources.
   memref.dealloc %a : memref<?x?xi32>
 
-  return
+  return %i0 : i32
 }

@@ -23,7 +23,7 @@ ValuesEqual(T x1, T x2) {
     return bits2.isNaN() && bits2.isNaN();
 
   // For all other values, we want the values to be bitwise equal.
-  return bits1.bitsAsUInt() == bits2.bitsAsUInt();
+  return bits1.uintval() == bits2.uintval();
 }
 
 template <typename T>

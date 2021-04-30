@@ -3,7 +3,6 @@ add_subdirectory(ArmNeon)
 add_subdirectory(ArmSVE)
 add_subdirectory(Async)
 add_subdirectory(AMX)
-add_subdirectory(AVX512)
 add_subdirectory(Complex)
 add_subdirectory(DLTI)
 add_subdirectory(GPU)
@@ -25,6 +24,7 @@ add_subdirectory(Tensor)
 add_subdirectory(Tosa)
 add_subdirectory(Utils)
 add_subdirectory(Vector)
+add_subdirectory(X86Vector)
 
 set(LLVM_OPTIONAL_SOURCES
   Traits.cpp

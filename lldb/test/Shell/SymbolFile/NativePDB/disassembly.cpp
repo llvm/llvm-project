@@ -1,5 +1,5 @@
 // clang-format off
-// REQUIRES: lld
+// REQUIRES: lld, x86
 
 // Test that we can show disassembly and source.
 // RUN: %clang_cl --target=x86_64-windows-msvc -Od -Z7 -c /Fo%t.obj -- %s

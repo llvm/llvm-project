@@ -6,4 +6,4 @@ mlir_tablegen(OpsEnums.h.inc -gen-enum-decls)
 mlir_tablegen(OpsEnums.cpp.inc -gen-enum-defs)
 add_public_tablegen_target(MLIRStandardOpsIncGen)
 
-add_mlir_doc(Ops -gen-op-doc StandardOps Dialects/)
+add_mlir_doc(Ops StandardOps Dialects/ -gen-op-doc)

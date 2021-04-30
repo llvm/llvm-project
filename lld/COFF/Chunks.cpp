@@ -454,11 +454,21 @@ void SectionChunk::writeAndRelocateSubsection(ArrayRef<uint8_t> sec,
 }
 
 void SectionChunk::addAssociative(SectionChunk *child) {
-  // Insert this child at the head of the list.
+  // Insert the child section into the list of associated children. Keep the
+  // list ordered by section name so that ICF does not depend on section order.
   assert(child->assocChildren == nullptr &&
          "associated sections cannot have their own associated children");
-  child->assocChildren = assocChildren;
-  assocChildren = child;
+  SectionChunk *prev = this;
+  SectionChunk *next = assocChildren;
+  for (; next != nullptr; prev = next, next = next->assocChildren) {
+    if (next->getSectionName() <= child->getSectionName())
+      break;
+  }
+
+  // Insert child between prev and next.
+  assert(prev->assocChildren == next);
+  prev->assocChildren = child;
+  child->assocChildren = next;
 }
 
 static uint8_t getBaserelType(const coff_relocation &rel) {
@@ -798,6 +808,26 @@ void RVATableChunk::writeTo(uint8_t *buf) const {
     begin[cnt++] = co.inputChunk->getRVA() + co.offset;
   std::sort(begin, begin + cnt);
   assert(std::unique(begin, begin + cnt) == begin + cnt &&
+         "RVA tables should be de-duplicated");
+}
+
+void RVAFlagTableChunk::writeTo(uint8_t *buf) const {
+  struct RVAFlag {
+    ulittle32_t rva;
+    uint8_t flag;
+  };
+  RVAFlag *begin = reinterpret_cast<RVAFlag *>(buf);
+  size_t cnt = 0;
+  for (const ChunkAndOffset &co : syms) {
+    begin[cnt].rva = co.inputChunk->getRVA() + co.offset;
+    begin[cnt].flag = 0;
+    ++cnt;
+  }
+  auto lt = [](RVAFlag &a, RVAFlag &b) { return a.rva < b.rva; };
+  auto eq = [](RVAFlag &a, RVAFlag &b) { return a.rva == b.rva; };
+  (void)eq;
+  std::sort(begin, begin + cnt, lt);
+  assert(std::unique(begin, begin + cnt, eq) == begin + cnt &&
          "RVA tables should be de-duplicated");
 }
 

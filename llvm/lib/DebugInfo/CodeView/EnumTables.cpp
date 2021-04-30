@@ -189,7 +189,6 @@ static const EnumEntry<unsigned> CPUTypeNames[] = {
     CV_ENUM_CLASS_ENT(CPUType, ARM_XMAC),
     CV_ENUM_CLASS_ENT(CPUType, ARM_WMMX),
     CV_ENUM_CLASS_ENT(CPUType, ARM7),
-    CV_ENUM_CLASS_ENT(CPUType, ARM64),
     CV_ENUM_CLASS_ENT(CPUType, Omni),
     CV_ENUM_CLASS_ENT(CPUType, Ia64),
     CV_ENUM_CLASS_ENT(CPUType, Ia64_2),
@@ -201,6 +200,7 @@ static const EnumEntry<unsigned> CPUTypeNames[] = {
     CV_ENUM_CLASS_ENT(CPUType, EBC),
     CV_ENUM_CLASS_ENT(CPUType, Thumb),
     CV_ENUM_CLASS_ENT(CPUType, ARMNT),
+    CV_ENUM_CLASS_ENT(CPUType, ARM64),
     CV_ENUM_CLASS_ENT(CPUType, D3D11_Shader),
 };
 

@@ -25,17 +25,18 @@ it easier to structure domain specific information.
 The TableGen front end parses a file, instantiates the declarations, and
 hands the result off to a domain-specific `backend`_ for processing.  See
 the :doc:`TableGen Programmer's Reference <./ProgRef>` for an in-depth
-description of TableGen. See :doc:`xxx-tblgen - Target Description to C++
-Code <../CommandGuide/tblgen>` for details on the various
-``xxx-tblgen`` commands that invoke TableGen.
+description of TableGen. See :doc:`tblgen - Description to C++ Code
+<../CommandGuide/tblgen>` for details on the ``*-tblgen`` commands
+that run the various flavors of TableGen.
 
 The current major users of TableGen are :doc:`The LLVM Target-Independent
 Code Generator <../CodeGenerator>` and the `Clang diagnostics and attributes
 <https://clang.llvm.org/docs/UsersManual.html#controlling-errors-and-warnings>`_.
 
-Note that if you work on TableGen much, and use emacs or vim, that you can find
-an emacs "TableGen mode" and a vim language file in the ``llvm/utils/emacs`` and
-``llvm/utils/vim`` directories of your LLVM distribution, respectively.
+Note that if you work with TableGen frequently and use emacs or vim,
+you can find an emacs "TableGen mode" and a vim language file in the
+``llvm/utils/emacs`` and ``llvm/utils/vim`` directories of your LLVM
+distribution, respectively.
 
 .. _intro:
 
@@ -263,7 +264,7 @@ TableGen backends
 =================
 
 TableGen files have no real meaning without a backend. The default operation
-when running ``xxx-tblgen`` is to print the information in a textual format, but
+when running ``*-tblgen`` is to print the information in a textual format, but
 that's only useful for debugging the TableGen files themselves. The power
 in TableGen is, however, to interpret the source files into an internal 
 representation that can be generated into anything you want.

@@ -10,7 +10,7 @@ void test_svprfd(svbool_t pg, const void *base)
 
 void test_svprfd_1(svbool_t pg, const void *base)
 {
-  // expected-error@+1 {{argument value -1 is outside the valid range [0, 13]}}
+  // expected-error-re@+1 {{argument value {{.*}} is outside the valid range [0, 13]}}
   return svprfd(pg, base, -1);
 }
 
@@ -22,6 +22,6 @@ void test_svprfd_vnum(svbool_t pg, const void *base)
 
 void test_svprfd_vnum_1(svbool_t pg, const void *base)
 {
-  // expected-error@+1 {{argument value -1 is outside the valid range [0, 13]}}
+  // expected-error-re@+1 {{argument value {{.*}} is outside the valid range [0, 13]}}
   return svprfd_vnum(pg, base, 0, -1);
 }

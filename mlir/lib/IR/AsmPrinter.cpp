@@ -461,8 +461,9 @@ private:
     printOptionalAttrDict(attrs, elidedAttrs);
   }
 
-  /// Return 'nulls' as the output stream, this will ignore any data fed to it.
-  raw_ostream &getStream() const override { return llvm::nulls(); }
+  /// Return a null stream as the output stream, this will ignore any data fed
+  /// to it.
+  raw_ostream &getStream() const override { return os; }
 
   /// The following are hooks of `OpAsmPrinter` that are not necessary for
   /// determining potential aliases.
@@ -485,6 +486,9 @@ private:
 
   /// The initializer to use when identifying aliases.
   AliasInitializer &initializer;
+
+  /// A dummy output stream.
+  mutable llvm::raw_null_ostream os;
 };
 } // end anonymous namespace
 
@@ -1866,7 +1870,13 @@ void ModulePrinter::printType(Type type) {
             os << dim;
           os << 'x';
         }
-        os << tensorTy.getElementType() << '>';
+        os << tensorTy.getElementType();
+        // Only print the encoding attribute value if set.
+        if (tensorTy.getEncoding()) {
+          os << ", ";
+          printAttribute(tensorTy.getEncoding());
+        }
+        os << '>';
       })
       .Case<UnrankedTensorType>([&](UnrankedTensorType tensorTy) {
         os << "tensor<*x";

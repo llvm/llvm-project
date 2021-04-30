@@ -132,9 +132,12 @@ static bool checkForPropOpts(const ToolChain &TC, const Driver &D,
                      Args.MakeArgString("-vector-library=LIBMVEC-X86"));
           break;
         }
+        // fveclib supported prior to amd-opt, if its AMDLIBM then
+        // we want to trigger closed compiler, otherwise not.
+        if (Name == "AMDLIBM")
+          ClosedToolChainNeeded = true;
       }
     }
-    // fveclib supported prior to amd-opt, so not a trigger for closed.
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_fstruct_layout_EQ)) {

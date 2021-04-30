@@ -2270,7 +2270,8 @@ public:
 
   // For a pack expansion, returns the location of the ellipsis.
   SourceLocation getEllipsisLoc() const {
-    assert(isPackExpansion() && "Initializer is not a pack expansion");
+    if (!isPackExpansion())
+      return {};
     return MemberOrEllipsisLocation;
   }
 

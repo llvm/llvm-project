@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 ! C703 (R702) The derived-type-spec shall not specify an abstract type (7.5.7).
 ! This constraint refers to the derived-type-spec in a type-spec.  A type-spec
 ! can appear in an ALLOCATE statement, an ac-spec for an array constructor, and

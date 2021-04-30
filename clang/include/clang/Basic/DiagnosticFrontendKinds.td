@@ -158,6 +158,8 @@ def err_verify_invalid_no_diags : Error<
     "%select{'expected-no-diagnostics' directive|other expected directives}0">;
 def err_verify_no_directives : Error<
     "no expected directives found: consider use of 'expected-no-diagnostics'">;
+def err_verify_nonconst_addrspace : Error<
+  "qualifier 'const' is needed for variables in address space '%0'">;
 
 def note_fixit_applied : Note<"FIX-IT applied suggested code changes">;
 def note_fixit_in_macro : Note<

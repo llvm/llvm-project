@@ -131,7 +131,7 @@ private:
 
   /// The set of operation values whose whose location will be used for newly
   /// generated operations.
-  llvm::SetVector<Value> locOps;
+  SetVector<Value> locOps;
 };
 } // end anonymous namespace
 

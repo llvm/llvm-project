@@ -38,6 +38,40 @@ def testInitTensor():
 
   print(module)
 
+# CHECK-LABEL: TEST: testFill
+@run
+def testFill():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
+    f32 = F32Type.get()
+    with InsertionPoint(module.body):
+      # CHECK-LABEL: func @fill_tensor
+      #  CHECK-SAME:   %[[OUT:[0-9a-z]+]]: tensor<12x?xf32>
+      #  CHECK-NEXT: %[[CST:.*]] = constant 0.0{{.*}} : f32
+      #  CHECK-NEXT: %[[RES:.*]] = linalg.fill(%[[OUT]], %[[CST]]) : tensor<12x?xf32>, f32 -> tensor<12x?xf32>
+      #  CHECK-NEXT: return %[[RES]] : tensor<12x?xf32>
+      @builtin.FuncOp.from_py_func(
+          RankedTensorType.get((12, -1), f32))
+      def fill_tensor(out):
+        zero = std.ConstantOp(value=FloatAttr.get(f32, 0.), result=f32).result
+        # TODO: FillOp.result is None. When len(results) == 1 we expect it to
+        # be results[0] as per _linalg_ops_gen.py. This seems like an
+        # orthogonal bug in the generator of _linalg_ops_gen.py.
+        return linalg.FillOp(output=out, value=zero).results[0]
+
+      # CHECK-LABEL: func @fill_buffer
+      #  CHECK-SAME:   %[[OUT:[0-9a-z]+]]: memref<12x?xf32>
+      #  CHECK-NEXT: %[[CST:.*]] = constant 0.0{{.*}} : f32
+      #  CHECK-NEXT: linalg.fill(%[[OUT]], %[[CST]]) : memref<12x?xf32>, f32
+      #  CHECK-NEXT: return
+      @builtin.FuncOp.from_py_func(
+          MemRefType.get((12, -1), f32))
+      def fill_buffer(out):
+        zero = std.ConstantOp(value=FloatAttr.get(f32, 0.), result=f32).result
+        linalg.FillOp(output=out, value=zero)
+
+  print(module)
+
 
 # CHECK-LABEL: TEST: testStructuredOpOnTensors
 @run

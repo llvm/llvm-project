@@ -32,8 +32,6 @@ public:
   virtual llvm::Error
   CopyHardwareWatchpointsFrom(NativeRegisterContextFreeBSD &source) = 0;
 
-  virtual llvm::Error ClearDBRegs() { return llvm::Error::success(); }
-
 protected:
   virtual NativeProcessFreeBSD &GetProcess();
   virtual ::pid_t GetProcessPid();

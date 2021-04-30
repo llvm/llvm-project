@@ -37,7 +37,15 @@
   // CHECK-NEXT: add x0, x0, :dtprel_lo12:symbol
   // CHECK-NEXT: ^
 
+label:
   movz x0, #:abs_g0:symbol
   // CHECK: error: relocation type :abs_g0: unsupported on COFF targets
   // CHECK-NEXT: movz x0, #:abs_g0:symbol
+  // CHECK-NEXT: ^
+
+  .section .rdata, "dr"
+table:
+  .short label - table
+  // CHECK: error: Cannot represent this expression
+  // CHECK-NEXT: .short label - table
   // CHECK-NEXT: ^

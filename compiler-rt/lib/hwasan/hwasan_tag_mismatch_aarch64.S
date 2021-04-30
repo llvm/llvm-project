@@ -1,4 +1,5 @@
 #include "sanitizer_common/sanitizer_asm.h"
+#include "builtins/assembly.h"
 
 // The content of this file is AArch64-only:
 #if defined(__aarch64__)
@@ -74,6 +75,8 @@
 .global __hwasan_tag_mismatch
 .type __hwasan_tag_mismatch, %function
 __hwasan_tag_mismatch:
+  BTI_J
+
   // Compute the granule position one past the end of the access.
   mov x16, #1
   and x17, x1, #0xf
@@ -106,6 +109,7 @@ __hwasan_tag_mismatch:
 .type __hwasan_tag_mismatch_v2, %function
 __hwasan_tag_mismatch_v2:
   CFI_STARTPROC
+  BTI_J
 
   // Set the CFA to be the return address for caller of __hwasan_check_*. Note
   // that we do not emit CFI predicates to describe the contents of this stack
@@ -150,3 +154,5 @@ __hwasan_tag_mismatch_v2:
 
 // We do not need executable stack.
 NO_EXEC_STACK_DIRECTIVE
+
+GNU_PROPERTY_BTI_PAC

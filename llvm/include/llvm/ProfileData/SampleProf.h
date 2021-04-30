@@ -462,9 +462,7 @@ public:
   bool isBaseContext() const { return CallingContext.empty(); }
   StringRef getNameWithoutContext() const { return Name; }
   StringRef getCallingContext() const { return CallingContext; }
-  StringRef getNameWithContext(bool WithBracket = false) const {
-    return WithBracket ? InputContext : FullContext;
-  }
+  StringRef getNameWithContext() const { return FullContext; }
 
 private:
   // Give a context string, decode and populate internal states like
@@ -472,7 +470,6 @@ private:
   // `ContextStr`: `[main:3 @ _Z5funcAi:1 @ _Z8funcLeafi]`
   void setContext(StringRef ContextStr, ContextStateMask CState) {
     assert(!ContextStr.empty());
-    InputContext = ContextStr;
     // Note that `[]` wrapped input indicates a full context string, otherwise
     // it's treated as context-less function name only.
     bool HasContext = ContextStr.startswith("[");
@@ -504,9 +501,6 @@ private:
     }
   }
 
-  // Input context string including bracketed calling context and leaf function
-  // name
-  StringRef InputContext;
   // Full context string including calling context and leaf function name
   StringRef FullContext;
   // Function name for the associated sample profile
@@ -711,7 +705,7 @@ public:
     Name = Other.getName();
     if (!GUIDToFuncNameMap)
       GUIDToFuncNameMap = Other.GUIDToFuncNameMap;
-    if (Context.getNameWithContext(true).empty())
+    if (Context.getNameWithContext().empty())
       Context = Other.getContext();
     if (FunctionHash == 0) {
       // Set the function hash code for the target profile.
@@ -780,10 +774,8 @@ public:
   StringRef getName() const { return Name; }
 
   /// Return function name with context.
-  StringRef getNameWithContext(bool WithBracket = false) const {
-    return FunctionSamples::ProfileIsCS
-               ? Context.getNameWithContext(WithBracket)
-               : Name;
+  StringRef getNameWithContext() const {
+    return FunctionSamples::ProfileIsCS ? Context.getNameWithContext() : Name;
   }
 
   /// Return the original function name.
@@ -984,6 +976,24 @@ public:
 
 private:
   SamplesWithLocList V;
+};
+
+/// SampleContextTrimmer impelements helper functions to trim, merge cold
+/// context profiles. It also supports context profile canonicalization to make
+/// sure ProfileMap's key is consistent with FunctionSample's name/context.
+class SampleContextTrimmer {
+public:
+  SampleContextTrimmer(StringMap<FunctionSamples> &Profiles)
+      : ProfileMap(Profiles){};
+  // Trim and merge cold context profile when requested.
+  void trimAndMergeColdContextProfiles(uint64_t ColdCountThreshold,
+                                       bool TrimColdContext = true,
+                                       bool MergeColdContext = true);
+  // Canonicalize context profile name and attributes.
+  void canonicalizeContextProfiles();
+
+private:
+  StringMap<FunctionSamples> &ProfileMap;
 };
 
 /// ProfileSymbolList records the list of function symbols shown up

@@ -23,13 +23,9 @@ makeTUDiagnostics(const std::string &MainSourceFile, StringRef DiagnosticName,
                   const StringMap<Replacements> &Replacements,
                   StringRef BuildDirectory) {
   TUDiagnostics TUs;
-  TUs.push_back({MainSourceFile,
-                 {{DiagnosticName,
-                   Message,
-                   {},
-                   Diagnostic::Warning,
-                   BuildDirectory,
-                   {}}}});
+  TUs.push_back(
+      {MainSourceFile,
+       {{DiagnosticName, Message, {}, Diagnostic::Warning, BuildDirectory}}});
   return TUs;
 }
 

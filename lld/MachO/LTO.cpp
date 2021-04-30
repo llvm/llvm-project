@@ -25,6 +25,7 @@
 using namespace lld;
 using namespace lld::macho;
 using namespace llvm;
+using namespace llvm::MachO;
 using namespace llvm::sys;
 
 static lto::Config createConfig() {
@@ -39,6 +40,9 @@ static lto::Config createConfig() {
   };
   c.TimeTraceEnabled = config->timeTraceEnabled;
   c.TimeTraceGranularity = config->timeTraceGranularity;
+  if (config->saveTemps)
+    checkError(c.addSaveTemps(config->outputFile.str() + ".",
+                              /*UseInputModulePath=*/true));
   return c;
 }
 
@@ -67,6 +71,12 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // be removed.
     r.Prevailing = !objSym.isUndefined() && sym->getFile() == &f;
 
+    // FIXME: What about other output types? And we can probably be less
+    // restrictive with -flat_namespace, but it's an infrequent use case.
+    r.VisibleToRegularObj = config->outputType != MH_EXECUTE ||
+                            config->namespaceKind == NamespaceKind::flat ||
+                            sym->isUsedInRegularObj;
+
     // Un-define the symbol so that we don't get duplicate symbol errors when we
     // load the ObjFile emitted by LTO compilation.
     if (r.Prevailing)
@@ -74,7 +84,6 @@ void BitcodeCompiler::add(BitcodeFile &f) {
                                RefState::Strong);
 
     // TODO: set the other resolution configs properly
-    r.VisibleToRegularObj = true;
   }
   checkError(ltoObj->add(std::move(f.obj), resols));
 }

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %S/test_errors.sh %s %t %flang_fc1
 
 ! Test that intrinsic functions used as subroutines and vice versa are caught.
 

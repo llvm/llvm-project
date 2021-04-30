@@ -38,6 +38,9 @@ def CC_SI_Gfx : CallingConv<[
 ]>;
 
 def RetCC_SI_Gfx : CallingConv<[
+  CCIfType<[i1], CCPromoteToType<i32>>,
+  CCIfType<[i1, i16], CCIfExtend<CCPromoteToType<i32>>>,
+
   // 0-3 are reserved for the stack buffer descriptor
   // 32 is reserved for the stack pointer
   CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16] , CCAssignToReg<[
@@ -68,8 +71,6 @@ def RetCC_SI_Gfx : CallingConv<[
     VGPR120, VGPR121, VGPR122, VGPR123, VGPR124, VGPR125, VGPR126, VGPR127,
     VGPR128, VGPR129, VGPR130, VGPR131, VGPR132, VGPR133, VGPR134, VGPR135
   ]>>>,
-
-  CCIfType<[i32, f32, v2i16, v2f16, i16, f16, i1], CCAssignToStack<4, 4>>
 ]>;
 
 def CC_SI_SHADER : CallingConv<[

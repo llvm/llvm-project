@@ -543,6 +543,10 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
         state = handleLVectorSplat(state, LCtx, CastE, Bldr, Pred);
         continue;
       }
+      case CK_MatrixCast: {
+        // TODO: Handle MatrixCast here.
+        continue;
+      }
     }
   }
 }

@@ -69,6 +69,10 @@ static char RandCh(Random &Rand) {
 
 size_t MutationDispatcher::Mutate_Custom(uint8_t *Data, size_t Size,
                                          size_t MaxSize) {
+  if (EF->__msan_unpoison)
+    EF->__msan_unpoison(Data, Size);
+  if (EF->__msan_unpoison_param)
+    EF->__msan_unpoison_param(4);
   return EF->LLVMFuzzerCustomMutator(Data, Size, MaxSize,
                                      Rand.Rand<unsigned int>());
 }
@@ -83,9 +87,18 @@ size_t MutationDispatcher::Mutate_CustomCrossOver(uint8_t *Data, size_t Size,
     return 0;
   CustomCrossOverInPlaceHere.resize(MaxSize);
   auto &U = CustomCrossOverInPlaceHere;
+
+  if (EF->__msan_unpoison) {
+    EF->__msan_unpoison(Data, Size);
+    EF->__msan_unpoison(Other.data(), Other.size());
+    EF->__msan_unpoison(U.data(), U.size());
+  }
+  if (EF->__msan_unpoison_param)
+    EF->__msan_unpoison_param(7);
   size_t NewSize = EF->LLVMFuzzerCustomCrossOver(
       Data, Size, Other.data(), Other.size(), U.data(), U.size(),
       Rand.Rand<unsigned int>());
+
   if (!NewSize)
     return 0;
   assert(NewSize <= MaxSize && "CustomCrossOver returned overisized unit");

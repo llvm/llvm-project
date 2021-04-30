@@ -13,6 +13,7 @@ int __attribute__((target("arch=cooperlake"))) foo(void) {return 8;}
 int __attribute__((target("arch=tigerlake"))) foo(void) {return 9;}
 int __attribute__((target("arch=sapphirerapids"))) foo(void) {return 10;}
 int __attribute__((target("arch=alderlake"))) foo(void) {return 11;}
+int __attribute__((target("arch=rocketlake"))) foo(void) {return 12;}
 int __attribute__((target("default"))) foo(void) { return 2; }
 
 int bar() {
@@ -97,6 +98,8 @@ __attribute__((target("avx,sse4.2"), used)) inline void foo_used2(int i, double 
 // LINUX: ret i32 10
 // LINUX: define{{.*}} i32 @foo.arch_alderlake()
 // LINUX: ret i32 11
+// LINUX: define{{.*}} i32 @foo.arch_rocketlake()
+// LINUX: ret i32 12
 // LINUX: define{{.*}} i32 @foo()
 // LINUX: ret i32 2
 // LINUX: define{{.*}} i32 @bar()

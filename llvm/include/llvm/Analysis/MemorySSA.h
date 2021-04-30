@@ -1100,7 +1100,7 @@ public:
     return MP->getIncomingBlock(ArgNo);
   }
 
-  typename BaseT::iterator::pointer operator*() const {
+  typename std::iterator_traits<BaseT>::pointer operator*() const {
     assert(Access && "Tried to access past the end of our iterator");
     // Go to the first argument for phis, and the defining access for everything
     // else.
@@ -1196,7 +1196,7 @@ public:
     return DefIterator == Other.DefIterator;
   }
 
-  BaseT::iterator::reference operator*() const {
+  typename std::iterator_traits<BaseT>::reference operator*() const {
     assert(DefIterator != OriginalAccess->defs_end() &&
            "Tried to access past the end of our iterator");
     return CurrentPair;

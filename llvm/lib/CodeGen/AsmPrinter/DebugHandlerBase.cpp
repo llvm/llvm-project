@@ -174,6 +174,12 @@ uint64_t DebugHandlerBase::getBaseTypeSize(const DIType *Ty) {
 }
 
 bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
+  // SROA may generate dbg value intrinsics to assign an unsigned value to a
+  // Fortran CHARACTER(1) type variables. Make them as unsigned.
+  if (isa<DIStringType>(Ty)) {
+    assert((Ty->getSizeInBits()) == 8 && "Not a valid unsigned type!");
+    return true;
+  }
   if (auto *CTy = dyn_cast<DICompositeType>(Ty)) {
     // FIXME: Enums without a fixed underlying type have unknown signedness
     // here, leading to incorrectly emitted constants.

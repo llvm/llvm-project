@@ -45,6 +45,15 @@ public:
 unsigned AArch64WinCOFFObjectWriter::getRelocType(
     MCContext &Ctx, const MCValue &Target, const MCFixup &Fixup,
     bool IsCrossSection, const MCAsmBackend &MAB) const {
+  unsigned FixupKind = Fixup.getKind();
+  if (IsCrossSection) {
+    if (FixupKind != FK_Data_4) {
+      Ctx.reportError(Fixup.getLoc(), "Cannot represent this expression");
+      return COFF::IMAGE_REL_ARM64_ADDR32;
+    }
+    FixupKind = FK_PCRel_4;
+  }
+
   auto Modifier = Target.isAbsolute() ? MCSymbolRefExpr::VK_None
                                       : Target.getSymA()->getKind();
   const MCExpr *Expr = Fixup.getValue();
@@ -64,7 +73,7 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
     }
   }
 
-  switch (static_cast<unsigned>(Fixup.getKind())) {
+  switch (FixupKind) {
   default: {
     if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(Expr)) {
       Ctx.reportError(Fixup.getLoc(), "relocation type " +
@@ -77,6 +86,9 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
     }
     return COFF::IMAGE_REL_ARM64_ABSOLUTE; // Dummy return value
   }
+
+  case FK_PCRel_4:
+    return COFF::IMAGE_REL_ARM64_REL32;
 
   case FK_Data_4:
     switch (Modifier) {

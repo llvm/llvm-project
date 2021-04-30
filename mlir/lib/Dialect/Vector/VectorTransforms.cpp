@@ -2556,11 +2556,11 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
          "Expected splitFullAndPartialTransferPrecondition to hold");
   auto xferReadOp = dyn_cast<vector::TransferReadOp>(xferOp.getOperation());
 
-  if (xferReadOp.mask())
-    return failure();
-
   // TODO: add support for write case.
   if (!xferReadOp)
+    return failure();
+
+  if (xferReadOp.mask())
     return failure();
 
   OpBuilder::InsertionGuard guard(b);

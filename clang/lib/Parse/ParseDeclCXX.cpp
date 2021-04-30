@@ -4213,10 +4213,21 @@ void Parser::ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
 
   llvm::SmallDenseMap<IdentifierInfo*, SourceLocation, 4> SeenAttrs;
 
-  while (Tok.isNot(tok::r_square)) {
-    // attribute not present
-    if (TryConsumeToken(tok::comma))
-      continue;
+  bool AttrParsed = false;
+  while (!Tok.isOneOf(tok::r_square, tok::semi)) {
+    if (AttrParsed) {
+      // If we parsed an attribute, a comma is required before parsing any
+      // additional attributes.
+      if (ExpectAndConsume(tok::comma)) {
+        SkipUntil(tok::r_square, StopAtSemi | StopBeforeMatch);
+        continue;
+      }
+      AttrParsed = false;
+    }
+
+    // Eat all remaining superfluous commas before parsing the next attribute.
+    while (TryConsumeToken(tok::comma))
+      ;
 
     SourceLocation ScopeLoc, AttrLoc;
     IdentifierInfo *ScopeName = nullptr, *AttrName = nullptr;
@@ -4249,29 +4260,30 @@ void Parser::ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
       }
     }
 
-    bool StandardAttr = IsBuiltInOrStandardCXX11Attribute(AttrName, ScopeName);
-    bool AttrParsed = false;
-
-    if (StandardAttr &&
-        !SeenAttrs.insert(std::make_pair(AttrName, AttrLoc)).second)
-      Diag(AttrLoc, diag::err_cxx11_attribute_repeated)
-          << AttrName << SourceRange(SeenAttrs[AttrName]);
-
     // Parse attribute arguments
     if (Tok.is(tok::l_paren))
       AttrParsed = ParseCXX11AttributeArgs(AttrName, AttrLoc, attrs, endLoc,
                                            ScopeName, ScopeLoc);
 
-    if (!AttrParsed)
+    if (!AttrParsed) {
       attrs.addNew(
           AttrName,
           SourceRange(ScopeLoc.isValid() ? ScopeLoc : AttrLoc, AttrLoc),
           ScopeName, ScopeLoc, nullptr, 0,
           getLangOpts().CPlusPlus ? ParsedAttr::AS_CXX11 : ParsedAttr::AS_C2x);
+      AttrParsed = true;
+    }
 
     if (TryConsumeToken(tok::ellipsis))
       Diag(Tok, diag::err_cxx11_attribute_forbids_ellipsis)
         << AttrName;
+  }
+
+  // If we hit an error and recovered by parsing up to a semicolon, eat the
+  // semicolon and don't issue further diagnostics about missing brackets.
+  if (Tok.is(tok::semi)) {
+    ConsumeToken();
+    return;
   }
 
   SourceLocation CloseLoc = Tok.getLocation();

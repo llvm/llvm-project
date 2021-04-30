@@ -145,6 +145,7 @@ private:
   void onCallHierarchyOutgoingCalls(
       const CallHierarchyOutgoingCallsParams &,
       Callback<std::vector<CallHierarchyOutgoingCall>>);
+  void onInlayHints(const InlayHintsParams &, Callback<std::vector<InlayHint>>);
   void onChangeConfiguration(const DidChangeConfigurationParams &);
   void onSymbolInfo(const TextDocumentPositionParams &,
                     Callback<std::vector<SymbolDetails>>);

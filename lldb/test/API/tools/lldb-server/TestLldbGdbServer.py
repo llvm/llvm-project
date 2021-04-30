@@ -28,7 +28,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
 
-        self.add_no_ack_remote_stream()
+        self.do_handshake()
         self.test_sequence.add_log_lines(
             ["lldb-server <  26> read packet: $QThreadSuffixSupported#e4",
              "lldb-server <   6> send packet: $OK#9a"],
@@ -41,7 +41,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
 
-        self.add_no_ack_remote_stream()
+        self.do_handshake()
         self.test_sequence.add_log_lines(
             ["lldb-server <  27> read packet: $QListThreadsInStopReply#21",
              "lldb-server <   6> send packet: $OK#9a"],
@@ -78,13 +78,14 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.test_sequence.add_log_lines(["read packet: $qC#00",
                                           {"direction": "send",
                                            "regex": r"^\$QC([0-9a-fA-F]+)#",
-                                           "capture": {1: "thread_id"}},
+                                           "capture": {1: "thread_id_QC"}},
                                           "read packet: $?#00",
                                           {"direction": "send",
                                               "regex": r"^\$T[0-9a-fA-F]{2}thread:([0-9a-fA-F]+)",
-                                              "expect_captures": {1: "thread_id"}}],
+                                              "capture": {1: "thread_id_?"}}],
                                          True)
-        self.expect_gdbremote_sequence()
+        context = self.expect_gdbremote_sequence()
+        self.assertEqual(context.get("thread_id_QC"), context.get("thread_id_?"))
 
     def test_attach_commandline_continue_app_exits(self):
         self.build()

@@ -72,9 +72,6 @@ protected:
   /// The width of the scalar type used for array indices.
   const unsigned ArrayIndexWidth;
 
-  virtual SVal evalCastFromNonLoc(NonLoc val, QualType castTy) = 0;
-  virtual SVal evalCastFromLoc(Loc val, QualType castTy) = 0;
-
   SVal evalCastKind(UndefinedVal V, QualType CastTy, QualType OriginalTy);
   SVal evalCastKind(UnknownVal V, QualType CastTy, QualType OriginalTy);
   SVal evalCastKind(Loc V, QualType CastTy, QualType OriginalTy);
@@ -96,11 +93,6 @@ protected:
                        QualType OriginalTy);
   SVal evalCastSubKind(nonloc::PointerToMember V, QualType CastTy,
                        QualType OriginalTy);
-
-public:
-  // FIXME: Make these protected again once RegionStoreManager correctly
-  // handles loads from different bound value types.
-  virtual SVal dispatchCast(SVal val, QualType castTy) = 0;
 
 public:
   SValBuilder(llvm::BumpPtrAllocator &alloc, ASTContext &context,

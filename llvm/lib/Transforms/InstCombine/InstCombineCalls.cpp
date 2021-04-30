@@ -2158,9 +2158,14 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
       return &Call;
     }
 
-    // If the call and callee calling conventions don't match, this call must
-    // be unreachable, as the call is undefined.
-    if (CalleeF->getCallingConv() != Call.getCallingConv() &&
+    // If the call and callee calling conventions don't match, and neither one
+    // of the calling conventions is compatible with C calling convention
+    // this call must be unreachable, as the call is undefined.
+    if ((CalleeF->getCallingConv() != Call.getCallingConv() &&
+         !(CalleeF->getCallingConv() == llvm::CallingConv::C &&
+           TargetLibraryInfoImpl::isCallingConvCCompatible(&Call)) &&
+         !(Call.getCallingConv() == llvm::CallingConv::C &&
+           TargetLibraryInfoImpl::isCallingConvCCompatible(CalleeF))) &&
         // Only do this for calls to a function with a body.  A prototype may
         // not actually end up matching the implementation's calling conv for a
         // variety of reasons (e.g. it may be written in assembly).

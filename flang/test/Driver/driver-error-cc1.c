@@ -1,7 +1,14 @@
-// RUN: not %flang-new %s 2>&1 | FileCheck %s
+// C files are currently not supported (i.e. `flang -cc1`). Make sure that the
+// driver reports this as expected.
 
 // REQUIRES: new-flang-driver
 
-// C files are currently not supported (i.e. `flang -cc1`)
+//-----------
+// RUN LINES
+//-----------
+// RUN: not %flang %s 2>&1 | FileCheck %s
 
+//-----------------------
+// EXPECTED OUTPUT
+//-----------------------
 // CHECK: error: unknown integrated tool '-cc1'. Valid tools include '-fc1'.

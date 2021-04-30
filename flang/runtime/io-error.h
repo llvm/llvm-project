@@ -27,14 +27,13 @@ class IoErrorHandler : public Terminator {
 public:
   using Terminator::Terminator;
   explicit IoErrorHandler(const Terminator &that) : Terminator{that} {}
-  void Begin(const char *sourceFileName, int sourceLine);
   void HasIoStat() { flags_ |= hasIoStat; }
   void HasErrLabel() { flags_ |= hasErr; }
   void HasEndLabel() { flags_ |= hasEnd; }
   void HasEorLabel() { flags_ |= hasEor; }
   void HasIoMsg() { flags_ |= hasIoMsg; }
 
-  bool InError() const { return ioStat_ != 0; }
+  bool InError() const { return ioStat_ != IostatOk; }
 
   void SignalError(int iostatOrErrno, const char *msg, ...);
   void SignalError(int iostatOrErrno);
@@ -58,7 +57,7 @@ private:
     hasIoMsg = 16, // IOMSG=
   };
   std::uint8_t flags_{0};
-  int ioStat_{0};
+  int ioStat_{IostatOk};
   OwningPtr<char> ioMsg_;
 };
 

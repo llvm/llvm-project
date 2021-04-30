@@ -1,22 +1,20 @@
 ! Ensure argument -I works as expected with an included header.
 
-! REQUIRES: new-flang-driver
-
 !--------------------------
-! FLANG DRIVER (flang-new)
+! FLANG DRIVER (flang)
 !--------------------------
-! RUN: not %flang-new -E %s  2>&1 | FileCheck %s --check-prefix=UNINCLUDED
-! RUN: %flang-new -E -I %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=SINGLEINCLUDE
-! RUN: %flang-new -E -I %S/Inputs -I %S/Inputs/header-dir %s  2>&1 | FileCheck %s --check-prefix=MAINDIRECTORY
-! RUN: %flang-new -E -I %S/Inputs/header-dir -I %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=SUBDIRECTORY
+! RUN: not %flang -E %s  2>&1 | FileCheck %s --check-prefix=UNINCLUDED
+! RUN: %flang -E -I %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=SINGLEINCLUDE
+! RUN: %flang -E -I %S/Inputs -I %S/Inputs/header-dir %s  2>&1 | FileCheck %s --check-prefix=MAINDIRECTORY
+! RUN: %flang -E -I %S/Inputs/header-dir -I %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=SUBDIRECTORY
 
 !----------------------------------------
-! FRONTEND FLANG DRIVER (flang-new -fc1)
+! FRONTEND FLANG DRIVER (flang_fc1)
 !----------------------------------------
-! RUN: not %flang-new -fc1 -E %s  2>&1 | FileCheck %s --check-prefix=UNINCLUDED
-! RUN: %flang-new -fc1 -E -I %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=SINGLEINCLUDE
-! RUN: %flang-new -fc1 -E -I %S/Inputs -I %S/Inputs/header-dir %s  2>&1 | FileCheck %s --check-prefix=MAINDIRECTORY
-! RUN: %flang-new -fc1 -E -I %S/Inputs/header-dir -I %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=SUBDIRECTORY
+! RUN: not %flang_fc1 -E %s  2>&1 | FileCheck %s --check-prefix=UNINCLUDED
+! RUN: %flang_fc1 -E -I %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=SINGLEINCLUDE
+! RUN: %flang_fc1 -E -I %S/Inputs -I %S/Inputs/header-dir %s  2>&1 | FileCheck %s --check-prefix=MAINDIRECTORY
+! RUN: %flang_fc1 -E -I %S/Inputs/header-dir -I %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=SUBDIRECTORY
 
 !--------------------------------------------
 ! EXPECTED OUTPUT FOR MISSING INCLUDED FILE
