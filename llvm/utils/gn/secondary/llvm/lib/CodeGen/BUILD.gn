@@ -47,6 +47,7 @@ static_library("CodeGen") {
     "ExpandMemCmp.cpp",
     "ExpandPostRAPseudos.cpp",
     "ExpandReductions.cpp",
+    "ExpandVectorPredication.cpp",
     "FEntryInserter.cpp",
     "FaultMaps.cpp",
     "FinalizeISel.cpp",
