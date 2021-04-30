@@ -1106,5 +1106,3 @@ body:             |
     renamable $agpr4_agpr5_agpr6_agpr7 = COPY renamable killed $agpr0_agpr1_agpr2_agpr3, implicit $exec
     S_ENDPGM 0, implicit $agpr4_agpr5_agpr6_agpr7
 ...
-
----
