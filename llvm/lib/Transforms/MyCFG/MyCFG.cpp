@@ -92,8 +92,7 @@ void traverse(Function &F) {
   outs() << "\n\n";
 }
 
-PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
-  outs() << "Function '" << F.getName() << "'\n";
+void traverseBB(Function &F, bool nested) {
   bool isThreadStartCheckpoint = true;
   for (auto &bb : F) {
     outs() << "Basic Block '" << &bb << "' Instructions: '" << bb << "'\n";
@@ -109,21 +108,29 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
       }
       // Check if instruction is calling a function
       if (isa<CallInst>(i)) {
+        auto *call = &cast<CallBase>(i);
+        outs() << "Traversing nested function " << call->getCalledFunction()->getName() << " Instruction '" << i << "'\n";
+        traverseBB(*call->getCalledFunction(), true);
+        outs() << "Finished traversing nested function " << call->getCalledFunction()->getName() << "\n";
         isExitPointCheckpoint |= true;
       }
     }
-    if (isThreadStartCheckpoint) {
+    if (isThreadStartCheckpoint and !nested) {
       outs() << "This basic block is thread start checkpoint\n";
       isThreadStartCheckpoint = false;
     }
     if (isExitPointCheckpoint) {
       outs() << "This basic block is an exit-point checkpoint\n";
     }
-    if (isThreadEndCheckpoint) {
+    if (isThreadEndCheckpoint and !nested) {
       outs() << "This basic block is thread end checkpoint\n";
     }
     outs() << "\n\n";
   }
+}
 
+PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
+  outs() << "Function '" << F.getName() << "'\n";
+  traverseBB(F, false);
   return PreservedAnalyses::all();
 }
