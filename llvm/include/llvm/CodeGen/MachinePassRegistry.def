@@ -103,6 +103,7 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis, (
 #define DUMMY_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
 DUMMY_FUNCTION_PASS("expandmemcmp", ExpandMemCmpPass, ())
+DUMMY_FUNCTION_PASS("expandvp", ExpandVectorPredicationPass, ())
 DUMMY_FUNCTION_PASS("gc-lowering", GCLoweringPass, ())
 DUMMY_FUNCTION_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass, ())
 DUMMY_FUNCTION_PASS("sjljehprepare", SjLjEHPreparePass, ())

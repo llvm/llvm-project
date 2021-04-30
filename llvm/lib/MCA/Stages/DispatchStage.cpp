@@ -156,6 +156,10 @@ Error DispatchStage::cycleStart() {
 }
 
 bool DispatchStage::isAvailable(const InstRef &IR) const {
+  // Conservatively bail out if there are no available dispatch entries.
+  if (!AvailableEntries)
+    return false;
+
   const Instruction &Inst = *IR.getInstruction();
   unsigned NumMicroOps = Inst.getNumMicroOps();
   const InstrDesc &Desc = Inst.getDesc();

@@ -9,9 +9,9 @@ target triple = "x86_64-unknown-unknown"
 
 ; CHECK: Analyzing call of callee... (caller:caller_range)
 ; CHECK-NEXT: define i32 @callee({ i32, i32 } %arg) {
-; CHECK-NEXT: ; cost before = -35, cost after = -30, threshold before = 0, threshold after = 0, cost delta = 5
+; CHECK-NEXT: ; cost before = -35, cost after = -35, threshold before = 0, threshold after = 0, cost delta = 0
 ; CHECK-NEXT:   %r = extractvalue { i32, i32 } %arg, 0
-; CHECK-NEXT: ; cost before = -30, cost after = -30, threshold before = 0, threshold after = 0, cost delta = 0
+; CHECK-NEXT: ; cost before = -35, cost after = -35, threshold before = 0, threshold after = 0, cost delta = 0
 ; CHECK-NEXT:   ret i32 %r
 ; CHECK-NEXT: }
 

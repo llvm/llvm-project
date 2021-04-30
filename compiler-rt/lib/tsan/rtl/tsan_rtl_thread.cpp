@@ -51,7 +51,7 @@ struct OnCreatedArgs {
 
 void ThreadContext::OnCreated(void *arg) {
   thr = 0;
-  if (tid == 0)
+  if (tid == kMainTid)
     return;
   OnCreatedArgs *args = static_cast<OnCreatedArgs *>(arg);
   if (!args->thr)  // GCD workers don't have a parent thread.
@@ -179,7 +179,7 @@ static void MaybeReportThreadLeak(ThreadContextBase *tctx_base, void *arg) {
 
 #if !SANITIZER_GO
 static void ReportIgnoresEnabled(ThreadContext *tctx, IgnoreSet *set) {
-  if (tctx->tid == 0) {
+  if (tctx->tid == kMainTid) {
     Printf("ThreadSanitizer: main thread finished with ignores enabled\n");
   } else {
     Printf("ThreadSanitizer: thread T%d %s finished with ignores enabled,"
@@ -210,7 +210,7 @@ static void ThreadCheckIgnore(ThreadState *thr) {}
 void ThreadFinalize(ThreadState *thr) {
   ThreadCheckIgnore(thr);
 #if !SANITIZER_GO
-  if (!flags()->report_thread_leaks)
+  if (!ShouldReport(thr, ReportTypeThreadLeak))
     return;
   ThreadRegistryLock l(ctx->thread_registry);
   Vector<ThreadLeak> leaks;
@@ -250,9 +250,10 @@ void ThreadStart(ThreadState *thr, int tid, tid_t os_id,
   uptr tls_size = 0;
 #if !SANITIZER_GO
   if (thread_type != ThreadType::Fiber)
-    GetThreadStackAndTls(tid == 0, &stk_addr, &stk_size, &tls_addr, &tls_size);
+    GetThreadStackAndTls(tid == kMainTid, &stk_addr, &stk_size, &tls_addr,
+                         &tls_size);
 
-  if (tid) {
+  if (tid != kMainTid) {
     if (stk_addr && stk_size)
       MemoryRangeImitateWrite(thr, /*pc=*/ 1, stk_addr, stk_size);
 
@@ -313,7 +314,7 @@ static bool ConsumeThreadByUid(ThreadContextBase *tctx, void *arg) {
 int ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid) {
   ConsumeThreadContext findCtx = {uid, nullptr};
   ctx->thread_registry->FindThread(ConsumeThreadByUid, &findCtx);
-  int tid = findCtx.tctx ? findCtx.tctx->tid : ThreadRegistry::kUnknownTid;
+  int tid = findCtx.tctx ? findCtx.tctx->tid : kInvalidTid;
   DPrintf("#%d: ThreadTid uid=%zu tid=%d\n", thr->tid, uid, tid);
   return tid;
 }

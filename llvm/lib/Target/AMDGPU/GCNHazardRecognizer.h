@@ -32,7 +32,7 @@ class GCNSubtarget;
 
 class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
 public:
-  typedef function_ref<bool(MachineInstr *)> IsHazardFn;
+  typedef function_ref<bool(const MachineInstr &)> IsHazardFn;
 
 private:
   // Distinguish if we are called from scheduler or hazard recognizer

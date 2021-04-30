@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX90A %s
+; RUN: llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX908 %s
 
 ; GCN-LABEL: {{^}}func_empty:
 ; GCN-NOT: buffer_
@@ -33,11 +34,13 @@ define void @func_areg_32() #0 {
 }
 
 ; GCN-LABEL: {{^}}func_areg_33:
-; GFX908-NOT: buffer_
-; GCN-NOT:    v_accvgpr
+; GCN-NOT: a32
+; GFX90A: buffer_store_dword a32, off, s[0:3], s32 ; 4-byte Folded Spill
+; GCN-NOT: a32
 ; GCN:        use agpr32
-; GFX908-NOT: buffer_
-; GCN-NOT:    v_accvgpr
+; GCN-NOT: a32
+; GFX90A: buffer_load_dword a32, off, s[0:3], s32 ; 4-byte Folded Reload
+; GCN-NOT: a32
 ; GCN:        s_setpc_b64
 define void @func_areg_33() #0 {
   call void asm sideeffect "; use agpr32", "~{a32}" ()

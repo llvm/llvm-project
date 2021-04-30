@@ -16,6 +16,13 @@ void noescapeFunc3(__attribute__((noescape)) id);
 void noescapeFunc4(__attribute__((noescape)) int &);
 void noescapeFunc2(int *); // expected-error {{conflicting types for 'noescapeFunc2'}}
 
+template <class T>
+void noescapeFunc5(__attribute__((noescape)) T); // expected-warning {{'noescape' attribute only applies to pointer arguments}}
+template <class T>
+void noescapeFunc6(__attribute__((noescape)) const T &);
+template <class T>
+void noescapeFunc7(__attribute__((noescape)) T &&);
+
 void invalidFunc0(int __attribute__((noescape))); // expected-warning {{'noescape' attribute only applies to pointer arguments}}
 void invalidFunc1(int __attribute__((noescape(0)))); // expected-error {{'noescape' attribute takes no arguments}}
 void invalidFunc2(int0 *__attribute__((noescape))); // expected-error {{use of undeclared identifier 'int0'; did you mean 'int'?}}
@@ -38,10 +45,16 @@ struct S3 : S1 {
 __attribute__((objc_root_class))
 @interface C0
 -(void) m0:(int*)__attribute__((noescape)) p; // expected-note {{parameter of overridden method is annotated with __attribute__((noescape))}}
+- (void)noescapeLValRefParam:(const BlockTy &)__attribute__((noescape))p;
+- (void)noescapeRValRefParam:(BlockTy &&)__attribute__((noescape))p;
 @end
 
 @implementation C0
 -(void) m0:(int*)__attribute__((noescape)) p {}
+- (void)noescapeLValRefParam:(const BlockTy &)__attribute__((noescape))p {
+}
+- (void)noescapeRValRefParam:(BlockTy &&)__attribute__((noescape))p {
+}
 @end
 
 @interface C1 : C0
@@ -131,11 +144,11 @@ __attribute__((objc_root_class))
 
 struct S6 {
   S6();
-  S6(const S6 &) = delete; // expected-note 3 {{'S6' has been explicitly marked deleted here}}
+  S6(const S6 &) = delete; // expected-note 12 {{'S6' has been explicitly marked deleted here}}
   int f;
 };
 
-void test1() {
+void test1(C0 *c0) {
   id a;
   // __block variables that are not captured by escaping blocks don't
   // necessitate having accessible copy constructors.
@@ -143,6 +156,17 @@ void test1() {
   __block S6 b1; // expected-error {{call to deleted constructor of 'S6'}}
   __block S6 b2; // expected-error {{call to deleted constructor of 'S6'}}
   __block S6 b3; // expected-error {{call to deleted constructor of 'S6'}}
+  __block S6 b4; // expected-error {{call to deleted constructor of 'S6'}}
+  __block S6 b5; // expected-error {{call to deleted constructor of 'S6'}}
+  __block S6 b6; // expected-error {{call to deleted constructor of 'S6'}}
+  __block S6 b7; // expected-error {{call to deleted constructor of 'S6'}}
+  __block S6 b8; // expected-error {{call to deleted constructor of 'S6'}}
+  __block S6 b9; // expected-error {{call to deleted constructor of 'S6'}}
+  __block S6 b10; // expected-error {{call to deleted constructor of 'S6'}}
+  __block S6 b11; // expected-error {{call to deleted constructor of 'S6'}}
+  __block S6 b12;
+  __block S6 b13;
+  __block S6 b14; // expected-error {{call to deleted constructor of 'S6'}}
 
   noescapeFunc0(a, ^{ (void)b0; });
   escapingFunc0(^{ (void)b1; });
@@ -151,4 +175,62 @@ void test1() {
   }
   noescapeFunc0(a, ^{ escapingFunc0(^{ (void)b2; }); });
   escapingFunc0(^{ noescapeFunc0(a, ^{ (void)b3; }); });
+
+  [c0 noescapeLValRefParam:^{
+    (void)b4;
+  }];
+
+  [c0 noescapeRValRefParam:^{
+    (void)b5;
+  }];
+
+  void noescape_id(__attribute__((noescape)) id);
+  noescape_id(^{
+    (void)b6;
+  });
+
+  void noescapeLValRefParam(__attribute__((noescape)) const BlockTy &);
+  noescapeLValRefParam(^{
+    (void)b7;
+  });
+
+  void noescapeRValRefParam(__attribute__((noescape)) BlockTy &&);
+  noescapeRValRefParam(^{
+    (void)b8;
+  });
+
+  // FIXME: clang shouldn't reject this.
+  noescapeFunc5(^{
+    (void)b9;
+  });
+
+  noescapeFunc6(^{
+    (void)b10;
+  });
+
+  noescapeFunc7(^{
+    (void)b11;
+  });
+
+  struct NoescapeCtor {
+    NoescapeCtor(__attribute__((noescape)) void (^)());
+  };
+  struct EscapeCtor {
+    EscapeCtor(void (^)());
+  };
+
+  void helper1(NoescapeCtor a);
+  helper1(^{
+    (void)b12;
+  });
+
+  void helper2(NoescapeCtor && a);
+  helper2(^{
+    (void)b13;
+  });
+
+  void helper3(__attribute__((noescape)) EscapeCtor && a);
+  helper3(^{
+    (void)b14;
+  });
 }

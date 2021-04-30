@@ -13,7 +13,7 @@ body:             |
     ; CHECK-LABEL: name: ubfx_s32
     ; CHECK: liveins: $w0
     ; CHECK: %copy:gpr32 = COPY $w0
-    ; CHECK: %ubfx:gpr32 = UBFMWri %copy, 0, 10
+    ; CHECK: %ubfx:gpr32 = UBFMWri %copy, 0, 9
     ; CHECK: $w0 = COPY %ubfx
     ; CHECK: RET_ReallyLR implicit $w0
     %copy:gpr(s32) = COPY $w0
@@ -35,7 +35,7 @@ body:             |
     ; CHECK-LABEL: name: ubfx_s64
     ; CHECK: liveins: $x0
     ; CHECK: %copy:gpr64 = COPY $x0
-    ; CHECK: %ubfx:gpr64 = UBFMXri %copy, 0, 10
+    ; CHECK: %ubfx:gpr64 = UBFMXri %copy, 0, 9
     ; CHECK: $x0 = COPY %ubfx
     ; CHECK: RET_ReallyLR implicit $x0
     %copy:gpr(s64) = COPY $x0
@@ -47,7 +47,7 @@ body:             |
 
 ...
 ---
-name:            ubfx_s32_31_31
+name:            ubfx_s32_31_1
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -57,7 +57,7 @@ body:             |
 
     ; This is just a lsr, so it's okay.
 
-    ; CHECK-LABEL: name: ubfx_s32_31_31
+    ; CHECK-LABEL: name: ubfx_s32_31_1
     ; CHECK: liveins: $w0
     ; CHECK: %copy:gpr32 = COPY $w0
     ; CHECK: %ubfx:gpr32 = UBFMWri %copy, 31, 31
@@ -65,7 +65,49 @@ body:             |
     ; CHECK: RET_ReallyLR implicit $w0
     %copy:gpr(s32) = COPY $w0
     %cst1:gpr(s32) = G_CONSTANT i32 31
-    %cst2:gpr(s32) = G_CONSTANT i32 31
+    %cst2:gpr(s32) = G_CONSTANT i32 1
     %ubfx:gpr(s32) = G_UBFX %copy, %cst1, %cst2
     $w0 = COPY %ubfx
     RET_ReallyLR implicit $w0
+---
+name:            ubfx_s32_10_5
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: name: ubfx_s32_10_5
+    ; CHECK: liveins: $w0
+    ; CHECK: %copy:gpr32 = COPY $w0
+    ; CHECK: %ubfx:gpr32 = UBFMWri %copy, 10, 14
+    ; CHECK: $w0 = COPY %ubfx
+    ; CHECK: RET_ReallyLR implicit $w0
+    %copy:gpr(s32) = COPY $w0
+    %cst1:gpr(s32) = G_CONSTANT i32 10
+    %cst2:gpr(s32) = G_CONSTANT i32 5
+    %ubfx:gpr(s32) = G_UBFX %copy, %cst1, %cst2
+    $w0 = COPY %ubfx
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            ubfx_s64_10_5
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: ubfx_s64_10_5
+    ; CHECK: liveins: $x0
+    ; CHECK: %copy:gpr64 = COPY $x0
+    ; CHECK: %ubfx:gpr64 = UBFMXri %copy, 10, 14
+    ; CHECK: $x0 = COPY %ubfx
+    ; CHECK: RET_ReallyLR implicit $x0
+    %copy:gpr(s64) = COPY $x0
+    %cst1:gpr(s64) = G_CONSTANT i64 10
+    %cst2:gpr(s64) = G_CONSTANT i64 5
+    %ubfx:gpr(s64) = G_UBFX %copy, %cst1, %cst2
+    $x0 = COPY %ubfx
+    RET_ReallyLR implicit $x0

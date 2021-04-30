@@ -42,10 +42,10 @@ static OmpDirectiveSet parallelSet{Directive::OMPD_distribute_parallel_do,
     Directive::OMPD_teams_distribute_parallel_do,
     Directive::OMPD_teams_distribute_parallel_do_simd};
 static OmpDirectiveSet doSet{Directive::OMPD_distribute_parallel_do,
-    Directive::OMPD_distribute_parallel_do_simd, Directive::OMPD_parallel,
-    Directive::OMPD_parallel_do, Directive::OMPD_parallel_do_simd,
-    Directive::OMPD_do, Directive::OMPD_do_simd,
-    Directive::OMPD_target_parallel_do, Directive::OMPD_target_parallel_do_simd,
+    Directive::OMPD_distribute_parallel_do_simd, Directive::OMPD_parallel_do,
+    Directive::OMPD_parallel_do_simd, Directive::OMPD_do,
+    Directive::OMPD_do_simd, Directive::OMPD_target_parallel_do,
+    Directive::OMPD_target_parallel_do_simd,
     Directive::OMPD_target_teams_distribute_parallel_do,
     Directive::OMPD_target_teams_distribute_parallel_do_simd,
     Directive::OMPD_teams_distribute_parallel_do,
@@ -55,6 +55,11 @@ static OmpDirectiveSet doSimdSet{Directive::OMPD_distribute_parallel_do_simd,
     Directive::OMPD_target_parallel_do_simd,
     Directive::OMPD_target_teams_distribute_parallel_do_simd,
     Directive::OMPD_teams_distribute_parallel_do_simd};
+static OmpDirectiveSet workShareSet{
+    OmpDirectiveSet{Directive::OMPD_workshare,
+        Directive::OMPD_parallel_workshare, Directive::OMPD_parallel_sections,
+        Directive::OMPD_sections, Directive::OMPD_single} |
+    doSet};
 static OmpDirectiveSet taskloopSet{
     Directive::OMPD_taskloop, Directive::OMPD_taskloop_simd};
 static OmpDirectiveSet targetSet{Directive::OMPD_target,
@@ -83,6 +88,11 @@ static OmpDirectiveSet taskGeneratingSet{
 static OmpDirectiveSet nestedOrderedErrSet{Directive::OMPD_critical,
     Directive::OMPD_ordered, Directive::OMPD_atomic, Directive::OMPD_task,
     Directive::OMPD_taskloop};
+static OmpDirectiveSet nestedWorkshareErrSet{
+    OmpDirectiveSet{Directive::OMPD_task, Directive::OMPD_taskloop,
+        Directive::OMPD_critical, Directive::OMPD_ordered,
+        Directive::OMPD_atomic, Directive::OMPD_master} |
+    workShareSet};
 static OmpClauseSet privateSet{
     Clause::OMPC_private, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate};
 static OmpClauseSet privateReductionSet{

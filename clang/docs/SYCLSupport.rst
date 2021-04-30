@@ -99,7 +99,7 @@ space attributes for pointers:
      - private_space
 
 
-.. code-block::
+.. code-block:: C++
 
-   TODO: add support for `__attribute__((opencl_global_host))` and
-   `__attribute__((opencl_global_device))`.
+    //TODO: add support for __attribute__((opencl_global_host)) and __attribute__((opencl_global_device)).
+

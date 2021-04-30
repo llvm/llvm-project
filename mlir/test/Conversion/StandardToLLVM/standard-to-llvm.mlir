@@ -24,6 +24,19 @@ func @log1p(%arg0 : f32) {
 
 // -----
 
+// CHECK-LABEL: func @log1p_2dvector(
+func @log1p_2dvector(%arg0 : vector<4x3xf32>) {
+  // CHECK: %[[EXTRACT:.*]] = llvm.extractvalue %arg0[0] : !llvm.array<4 x vector<3xf32>>
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<3xf32>) : vector<3xf32>
+  // CHECK: %[[ADD:.*]] = llvm.fadd %[[ONE]], %[[EXTRACT]] : vector<3xf32>
+  // CHECK: %[[LOG:.*]] = "llvm.intr.log"(%[[ADD]]) : (vector<3xf32>) -> vector<3xf32>
+  // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[LOG]], %0[0] : !llvm.array<4 x vector<3xf32>>
+  %0 = math.log1p %arg0 : vector<4x3xf32>
+  std.return
+}
+
+// -----
+
 // CHECK-LABEL: func @rsqrt(
 // CHECK-SAME: f32
 func @rsqrt(%arg0 : f32) {

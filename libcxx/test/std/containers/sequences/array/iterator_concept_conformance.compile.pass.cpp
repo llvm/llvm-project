@@ -30,6 +30,10 @@ static_assert(std::sentinel_for<iterator, iterator>);
 static_assert(std::sentinel_for<iterator, const_iterator>);
 static_assert(!std::sentinel_for<iterator, reverse_iterator>);
 static_assert(!std::sentinel_for<iterator, const_reverse_iterator>);
+static_assert(std::sized_sentinel_for<iterator, iterator>);
+static_assert(std::sized_sentinel_for<iterator, const_iterator>);
+static_assert(!std::sized_sentinel_for<iterator, reverse_iterator>);
+static_assert(!std::sized_sentinel_for<iterator, const_reverse_iterator>);
 
 static_assert(std::indirectly_readable<const_iterator>);
 static_assert(!std::indirectly_writable<const_iterator, int>);
@@ -39,12 +43,6 @@ static_assert(std::sentinel_for<const_iterator, iterator>);
 static_assert(std::sentinel_for<const_iterator, const_iterator>);
 static_assert(!std::sentinel_for<const_iterator, reverse_iterator>);
 static_assert(!std::sentinel_for<const_iterator, const_reverse_iterator>);
-
-static_assert(std::sized_sentinel_for<iterator, iterator>);
-static_assert(std::sized_sentinel_for<iterator, const_iterator>);
-static_assert(!std::sized_sentinel_for<iterator, reverse_iterator>);
-static_assert(!std::sized_sentinel_for<iterator, const_reverse_iterator>);
-
 static_assert(std::sized_sentinel_for<const_iterator, iterator>);
 static_assert(std::sized_sentinel_for<const_iterator, const_iterator>);
 static_assert(!std::sized_sentinel_for<const_iterator, reverse_iterator>);

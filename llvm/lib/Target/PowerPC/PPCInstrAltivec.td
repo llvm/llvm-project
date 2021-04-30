@@ -411,46 +411,46 @@ let hasSideEffects = 1 in {
 let PPC970_Unit = 2, mayLoad = 1, mayStore = 0 in {  // Loads.
 def LVEBX: XForm_1_memOp<31,   7, (outs vrrc:$vD), (ins memrr:$src),
                    "lvebx $vD, $src", IIC_LdStLoad,
-                   [(set v16i8:$vD, (int_ppc_altivec_lvebx xoaddr:$src))]>;
+                   [(set v16i8:$vD, (int_ppc_altivec_lvebx ForceXForm:$src))]>;
 def LVEHX: XForm_1_memOp<31,  39, (outs vrrc:$vD), (ins memrr:$src),
                    "lvehx $vD, $src", IIC_LdStLoad,
-                   [(set v8i16:$vD, (int_ppc_altivec_lvehx xoaddr:$src))]>;
+                   [(set v8i16:$vD, (int_ppc_altivec_lvehx ForceXForm:$src))]>;
 def LVEWX: XForm_1_memOp<31,  71, (outs vrrc:$vD), (ins memrr:$src),
                    "lvewx $vD, $src", IIC_LdStLoad,
-                   [(set v4i32:$vD, (int_ppc_altivec_lvewx xoaddr:$src))]>;
+                   [(set v4i32:$vD, (int_ppc_altivec_lvewx ForceXForm:$src))]>;
 def LVX  : XForm_1_memOp<31, 103, (outs vrrc:$vD), (ins memrr:$src),
                    "lvx $vD, $src", IIC_LdStLoad,
-                   [(set v4i32:$vD, (int_ppc_altivec_lvx xoaddr:$src))]>;
+                   [(set v4i32:$vD, (int_ppc_altivec_lvx ForceXForm:$src))]>;
 def LVXL : XForm_1_memOp<31, 359, (outs vrrc:$vD), (ins memrr:$src),
                    "lvxl $vD, $src", IIC_LdStLoad,
-                   [(set v4i32:$vD, (int_ppc_altivec_lvxl xoaddr:$src))]>;
+                   [(set v4i32:$vD, (int_ppc_altivec_lvxl ForceXForm:$src))]>;
 }
 
 def LVSL : XForm_1_memOp<31,   6, (outs vrrc:$vD), (ins memrr:$src),
                    "lvsl $vD, $src", IIC_LdStLoad,
-                   [(set v16i8:$vD, (int_ppc_altivec_lvsl xoaddr:$src))]>,
+                   [(set v16i8:$vD, (int_ppc_altivec_lvsl ForceXForm:$src))]>,
                    PPC970_Unit_LSU;
 def LVSR : XForm_1_memOp<31,  38, (outs vrrc:$vD), (ins memrr:$src),
                    "lvsr $vD, $src", IIC_LdStLoad,
-                   [(set v16i8:$vD, (int_ppc_altivec_lvsr xoaddr:$src))]>,
+                   [(set v16i8:$vD, (int_ppc_altivec_lvsr ForceXForm:$src))]>,
                    PPC970_Unit_LSU;
 
 let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {   // Stores.
 def STVEBX: XForm_8_memOp<31, 135, (outs), (ins vrrc:$rS, memrr:$dst),
                    "stvebx $rS, $dst", IIC_LdStStore,
-                   [(int_ppc_altivec_stvebx v16i8:$rS, xoaddr:$dst)]>;
+                   [(int_ppc_altivec_stvebx v16i8:$rS, ForceXForm:$dst)]>;
 def STVEHX: XForm_8_memOp<31, 167, (outs), (ins vrrc:$rS, memrr:$dst),
                    "stvehx $rS, $dst", IIC_LdStStore,
-                   [(int_ppc_altivec_stvehx v8i16:$rS, xoaddr:$dst)]>;
+                   [(int_ppc_altivec_stvehx v8i16:$rS, ForceXForm:$dst)]>;
 def STVEWX: XForm_8_memOp<31, 199, (outs), (ins vrrc:$rS, memrr:$dst),
                    "stvewx $rS, $dst", IIC_LdStStore,
-                   [(int_ppc_altivec_stvewx v4i32:$rS, xoaddr:$dst)]>;
+                   [(int_ppc_altivec_stvewx v4i32:$rS, ForceXForm:$dst)]>;
 def STVX  : XForm_8_memOp<31, 231, (outs), (ins vrrc:$rS, memrr:$dst),
                    "stvx $rS, $dst", IIC_LdStStore,
-                   [(int_ppc_altivec_stvx v4i32:$rS, xoaddr:$dst)]>;
+                   [(int_ppc_altivec_stvx v4i32:$rS, ForceXForm:$dst)]>;
 def STVXL : XForm_8_memOp<31, 487, (outs), (ins vrrc:$rS, memrr:$dst),
                    "stvxl $rS, $dst", IIC_LdStStore,
-                   [(int_ppc_altivec_stvxl v4i32:$rS, xoaddr:$dst)]>;
+                   [(int_ppc_altivec_stvxl v4i32:$rS, ForceXForm:$dst)]>;
 }
 
 let PPC970_Unit = 5 in {  // VALU Operations.
@@ -894,11 +894,11 @@ def : Pat<(v4i32 (ssubsat v4i32:$vA, v4i32:$vB)), (v4i32 (VSUBSWS $vA, $vB))>;
 def : Pat<(v4i32 (usubsat v4i32:$vA, v4i32:$vB)), (v4i32 (VSUBUWS $vA, $vB))>;
 
 // Loads.
-def : Pat<(v4i32 (load xoaddr:$src)), (LVX xoaddr:$src)>;
+def : Pat<(v4i32 (load ForceXForm:$src)), (LVX ForceXForm:$src)>;
 
 // Stores.
-def : Pat<(store v4i32:$rS, xoaddr:$dst),
-          (STVX $rS, xoaddr:$dst)>;
+def : Pat<(store v4i32:$rS, ForceXForm:$dst),
+          (STVX $rS, ForceXForm:$dst)>;
 
 // Bit conversions.
 def : Pat<(v16i8 (bitconvert (v8i16 VRRC:$src))), (v16i8 VRRC:$src)>;

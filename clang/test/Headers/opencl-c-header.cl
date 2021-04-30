@@ -89,18 +89,16 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 
 // Check that extension macros are defined correctly.
 
-// FIXME: this should not be defined for all targets
-// Verify that non-builtin cl_intel_planar_yuv extension is defined from
-// OpenCL 1.2 onwards.
+// For SPIR all extensions are supported.
+#if defined(__SPIR__)
+
+// Verify that cl_intel_planar_yuv extension is defined from OpenCL 1.2 onwards.
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
 // expected-no-diagnostics
 #else //__OPENCL_C_VERSION__
 // expected-warning@+2{{unknown OpenCL extension 'cl_intel_planar_yuv' - ignoring}}
 #endif //__OPENCL_C_VERSION__
 #pragma OPENCL EXTENSION cl_intel_planar_yuv : enable
-
-// For SPIR all extensions are supported.
-#if defined(__SPIR__)
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
 

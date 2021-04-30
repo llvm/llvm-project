@@ -19,6 +19,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Format/Format.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -69,6 +70,7 @@ struct JsImportedSymbol {
 // This struct represents both exports and imports to build up the information
 // required for sorting module references.
 struct JsModuleReference {
+  bool FormattingOff = false;
   bool IsExport = false;
   // Module references are sorted into these categories, in order.
   enum ReferenceCategory {
@@ -146,38 +148,30 @@ public:
     if (References.empty())
       return {Result, 0};
 
-    SmallVector<unsigned, 16> Indices;
-    for (unsigned i = 0, e = References.size(); i != e; ++i)
-      Indices.push_back(i);
-    llvm::stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
-      return References[LHSI] < References[RHSI];
-    });
-    bool ReferencesInOrder = llvm::is_sorted(Indices);
+    // The text range of all parsed imports, to be replaced later.
+    SourceRange InsertionPoint = References[0].Range;
+    InsertionPoint.setEnd(References[References.size() - 1].Range.getEnd());
 
-    mergeModuleReferences(References, Indices);
+    References = sortModuleReferences(References);
 
     std::string ReferencesText;
-    bool SymbolsInOrder = true;
-    for (unsigned i = 0, e = Indices.size(); i != e; ++i) {
-      JsModuleReference Reference = References[Indices[i]];
-      if (appendReference(ReferencesText, Reference))
-        SymbolsInOrder = false;
-      if (i + 1 < e) {
+    for (unsigned I = 0, E = References.size(); I != E; ++I) {
+      JsModuleReference Reference = References[I];
+      appendReference(ReferencesText, Reference);
+      if (I + 1 < E) {
         // Insert breaks between imports and exports.
         ReferencesText += "\n";
         // Separate imports groups with two line breaks, but keep all exports
         // in a single group.
         if (!Reference.IsExport &&
-            (Reference.IsExport != References[Indices[i + 1]].IsExport ||
-             Reference.Category != References[Indices[i + 1]].Category))
+            (Reference.IsExport != References[I + 1].IsExport ||
+             Reference.Category != References[I + 1].Category))
           ReferencesText += "\n";
       }
     }
-    if (ReferencesInOrder && SymbolsInOrder)
+    llvm::StringRef PreviousText = getSourceText(InsertionPoint);
+    if (ReferencesText == PreviousText)
       return {Result, 0};
-
-    SourceRange InsertionPoint = References[0].Range;
-    InsertionPoint.setEnd(References[References.size() - 1].Range.getEnd());
 
     // The loop above might collapse previously existing line breaks between
     // import blocks, and thus shrink the file. SortIncludes must not shrink
@@ -186,17 +180,19 @@ public:
     // This loop just backfills trailing spaces after the imports, which are
     // harmless and will be stripped by the subsequent formatting pass.
     // FIXME: A better long term fix is to re-calculate Ranges after sorting.
-    unsigned PreviousSize = getSourceText(InsertionPoint).size();
+    unsigned PreviousSize = PreviousText.size();
     while (ReferencesText.size() < PreviousSize) {
       ReferencesText += " ";
     }
 
     // Separate references from the main code body of the file.
-    if (FirstNonImportLine && FirstNonImportLine->First->NewlinesBefore < 2)
+    if (FirstNonImportLine && FirstNonImportLine->First->NewlinesBefore < 2 &&
+        !(FirstNonImportLine->First->is(tok::comment) &&
+          FirstNonImportLine->First->TokenText.trim() == "// clang-format on"))
       ReferencesText += "\n";
 
     LLVM_DEBUG(llvm::dbgs() << "Replacing imports:\n"
-                            << getSourceText(InsertionPoint) << "\nwith:\n"
+                            << PreviousText << "\nwith:\n"
                             << ReferencesText << "\n");
     auto Err = Result.add(tooling::Replacement(
         Env.getSourceManager(), CharSourceRange::getCharRange(InsertionPoint),
@@ -248,6 +244,38 @@ private:
                                SM.getFileOffset(End) - SM.getFileOffset(Begin));
   }
 
+  // Sorts the given module references.
+  // Imports can have formatting disabled (FormattingOff), so the code below
+  // skips runs of "no-formatting" module references, and sorts/merges the
+  // references that have formatting enabled in individual chunks.
+  SmallVector<JsModuleReference, 16>
+  sortModuleReferences(const SmallVector<JsModuleReference, 16> &References) {
+    // Sort module references.
+    // Imports can have formatting disabled (FormattingOff), so the code below
+    // skips runs of "no-formatting" module references, and sorts other
+    // references per group.
+    const auto *Start = References.begin();
+    SmallVector<JsModuleReference, 16> ReferencesSorted;
+    while (Start != References.end()) {
+      while (Start != References.end() && Start->FormattingOff) {
+        // Skip over all imports w/ disabled formatting.
+        ReferencesSorted.push_back(*Start);
+        Start++;
+      }
+      SmallVector<JsModuleReference, 16> SortChunk;
+      while (Start != References.end() && !Start->FormattingOff) {
+        // Skip over all imports w/ disabled formatting.
+        SortChunk.push_back(*Start);
+        Start++;
+      }
+      llvm::stable_sort(SortChunk);
+      mergeModuleReferences(SortChunk);
+      ReferencesSorted.insert(ReferencesSorted.end(), SortChunk.begin(),
+                              SortChunk.end());
+    }
+    return ReferencesSorted;
+  }
+
   // Merge module references.
   // After sorting, find all references that import named symbols from the
   // same URL and merge their names. E.g.
@@ -255,16 +283,14 @@ private:
   //   import {Y} from 'a';
   // should be rewritten to:
   //   import {X, Y} from 'a';
-  // Note: this modifies the passed in ``Indices`` vector (by removing no longer
-  // needed references), but not ``References``.
-  // ``JsModuleReference``s that get merged have the ``SymbolsMerged`` flag
-  // flipped to true.
-  void mergeModuleReferences(SmallVector<JsModuleReference, 16> &References,
-                             SmallVector<unsigned, 16> &Indices) {
-    JsModuleReference *PreviousReference = &References[Indices[0]];
-    auto *It = std::next(Indices.begin());
-    while (It != std::end(Indices)) {
-      JsModuleReference *Reference = &References[*It];
+  // Note: this modifies the passed in ``References`` vector (by removing no
+  // longer needed references).
+  void mergeModuleReferences(SmallVector<JsModuleReference, 16> &References) {
+    if (References.empty())
+      return;
+    JsModuleReference *PreviousReference = References.begin();
+    auto *Reference = std::next(References.begin());
+    while (Reference != References.end()) {
       // Skip:
       //   import 'foo';
       //   import * as foo from 'foo'; on either previous or this.
@@ -278,20 +304,19 @@ private:
           !Reference->DefaultImport.empty() || Reference->Symbols.empty() ||
           PreviousReference->URL != Reference->URL) {
         PreviousReference = Reference;
-        ++It;
+        ++Reference;
         continue;
       }
       // Merge symbols from identical imports.
       PreviousReference->Symbols.append(Reference->Symbols);
       PreviousReference->SymbolsMerged = true;
       // Remove the merged import.
-      It = Indices.erase(It);
+      Reference = References.erase(Reference);
     }
   }
 
-  // Appends ``Reference`` to ``Buffer``, returning true if text within the
-  // ``Reference`` changed (e.g. symbol order).
-  bool appendReference(std::string &Buffer, JsModuleReference &Reference) {
+  // Appends ``Reference`` to ``Buffer``.
+  void appendReference(std::string &Buffer, JsModuleReference &Reference) {
     // Sort the individual symbols within the import.
     // E.g. `import {b, a} from 'x';` -> `import {a, b} from 'x';`
     SmallVector<JsImportedSymbol, 1> Symbols = Reference.Symbols;
@@ -303,7 +328,7 @@ private:
       // Symbols didn't change, just emit the entire module reference.
       StringRef ReferenceStmt = getSourceText(Reference.Range);
       Buffer += ReferenceStmt;
-      return false;
+      return;
     }
     // Stitch together the module reference start...
     Buffer += getSourceText(Reference.Range.getBegin(), Reference.SymbolsStart);
@@ -315,7 +340,6 @@ private:
     }
     // ... followed by the module reference end.
     Buffer += getSourceText(Reference.SymbolsEnd, Reference.Range.getEnd());
-    return true;
   }
 
   // Parses module references in the given lines. Returns the module references,
@@ -328,9 +352,30 @@ private:
     SourceLocation Start;
     AnnotatedLine *FirstNonImportLine = nullptr;
     bool AnyImportAffected = false;
+    bool FormattingOff = false;
     for (auto *Line : AnnotatedLines) {
       Current = Line->First;
       LineEnd = Line->Last;
+      // clang-format comments toggle formatting on/off.
+      // This is tracked in FormattingOff here and on JsModuleReference.
+      while (Current && Current->is(tok::comment)) {
+        StringRef CommentText = Current->TokenText.trim();
+        if (CommentText == "// clang-format off") {
+          FormattingOff = true;
+        } else if (CommentText == "// clang-format on") {
+          FormattingOff = false;
+          // Special case: consider a trailing "clang-format on" line to be part
+          // of the module reference, so that it gets moved around together with
+          // it (as opposed to the next module reference, which might get sorted
+          // around).
+          if (!References.empty()) {
+            References.back().Range.setEnd(Current->Tok.getEndLoc());
+            Start = Current->Tok.getEndLoc().getLocWithOffset(1);
+          }
+        }
+        // Handle all clang-format comments on a line, e.g. for an empty block.
+        Current = Current->Next;
+      }
       skipComments();
       if (Start.isInvalid() || References.empty())
         // After the first file level comment, consider line comments to be part
@@ -343,6 +388,7 @@ private:
         continue;
       }
       JsModuleReference Reference;
+      Reference.FormattingOff = FormattingOff;
       Reference.Range.setBegin(Start);
       if (!parseModuleReference(Keywords, Reference)) {
         if (!FirstNonImportLine)
@@ -354,13 +400,14 @@ private:
       Reference.Range.setEnd(LineEnd->Tok.getEndLoc());
       LLVM_DEBUG({
         llvm::dbgs() << "JsModuleReference: {"
-                     << "is_export: " << Reference.IsExport
+                     << "formatting_off: " << Reference.FormattingOff
+                     << ", is_export: " << Reference.IsExport
                      << ", cat: " << Reference.Category
                      << ", url: " << Reference.URL
                      << ", prefix: " << Reference.Prefix;
-        for (size_t i = 0; i < Reference.Symbols.size(); ++i)
-          llvm::dbgs() << ", " << Reference.Symbols[i].Symbol << " as "
-                       << Reference.Symbols[i].Alias;
+        for (size_t I = 0; I < Reference.Symbols.size(); ++I)
+          llvm::dbgs() << ", " << Reference.Symbols[I].Symbol << " as "
+                       << Reference.Symbols[I].Alias;
         llvm::dbgs() << ", text: " << getSourceText(Reference.Range);
         llvm::dbgs() << "}\n";
       });

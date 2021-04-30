@@ -567,7 +567,6 @@ int printf(__constant const char* st, ...) __attribute__((format(printf, 1, 2)))
 #endif
 
 #ifdef cl_intel_device_side_avc_motion_estimation
-#pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : begin
 
 #define CLK_AVC_ME_MAJOR_16x16_INTEL 0x0
 #define CLK_AVC_ME_MAJOR_16x8_INTEL 0x1
@@ -701,7 +700,6 @@ int printf(__constant const char* st, ...) __attribute__((format(printf, 1, 2)))
 #define CLK_AVC_IME_RESULT_DUAL_REFERENCE_STREAMOUT_INITIALIZE_INTEL 0x0
 #define CLK_AVC_IME_RESULT_DUAL_REFERENCE_STREAMIN_INITIALIZE_INTEL 0x0
 
-#pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : end
 #endif // cl_intel_device_side_avc_motion_estimation
 
 // Disable any extensions we may have enabled previously.

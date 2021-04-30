@@ -605,6 +605,13 @@ def funnel_shift_to_rotate : GICombineRule<
   (apply [{ Helper.applyFunnelShiftToRotate(*${root}); }])
 >;
 
+def rotate_out_of_range : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_ROTR, G_ROTL):$root,
+    [{ return Helper.matchRotateOutOfRange(*${root}); }]),
+  (apply [{ Helper.applyRotateOutOfRange(*${root}); }])
+>;
+
 def funnel_shift_combines : GICombineGroup<[funnel_shift_to_rotate]>;
 
 // FIXME: These should use the custom predicate feature once it lands.

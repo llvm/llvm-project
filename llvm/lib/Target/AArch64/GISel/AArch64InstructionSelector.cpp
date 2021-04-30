@@ -2326,7 +2326,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     auto BitfieldInst =
         MIB.buildInstr(Opc, {I.getOperand(0)}, {I.getOperand(1)})
             .addImm(LSB)
-            .addImm(Width);
+            .addImm(LSB + Width - 1);
     I.eraseFromParent();
     return constrainSelectedInstRegOperands(*BitfieldInst, TII, TRI, RBI);
   }
