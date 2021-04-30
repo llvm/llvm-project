@@ -1370,8 +1370,8 @@ let Predicates = [HasSVE] in {
   defm INCP_ZP     : sve_int_count_v<0b10000, "incp">;
   defm DECP_ZP     : sve_int_count_v<0b10100, "decp">;
 
-  defm INDEX_RR : sve_int_index_rr<"index", index_vector, index_vector_oneuse>;
-  defm INDEX_IR : sve_int_index_ir<"index", index_vector, index_vector_oneuse>;
+  defm INDEX_RR : sve_int_index_rr<"index", index_vector, index_vector_oneuse, AArch64mul_p_oneuse>;
+  defm INDEX_IR : sve_int_index_ir<"index", index_vector, index_vector_oneuse, AArch64mul_p, AArch64mul_p_oneuse>;
   defm INDEX_RI : sve_int_index_ri<"index", index_vector, index_vector_oneuse>;
   defm INDEX_II : sve_int_index_ii<"index", index_vector, index_vector_oneuse>;
 
