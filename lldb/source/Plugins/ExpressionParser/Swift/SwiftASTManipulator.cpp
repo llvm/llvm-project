@@ -203,7 +203,7 @@ extension %s$__lldb_context {
     %s
   }
 }
-%s
+@LLDBDebuggerFunction %s
 func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {
   do {
     $__lldb_injected_self.$__lldb_wrapped_expr_%u(
@@ -255,63 +255,51 @@ void SwiftASTManipulatorBase::DoInitialization() {
   if (m_repl)
     return;
 
-  static llvm::StringRef s_func_prefix_str("$__lldb_expr");
+  // First pass: find whether we're dealing with a wrapped function or not.
 
-  // First pass: find whether we're dealing with a wrapped function or not
-
-  class FuncAndExtensionFinder : public swift::ASTWalker {
-  public:
-    swift::FuncDecl *m_function_decl = nullptr; // This is the function in which
-                                                // the expression code is
-                                                // inserted.
-    // It is always marked with the DebuggerFunction attribute.
-    swift::ExtensionDecl *m_extension_decl =
-        nullptr; // This is an optional extension holding the function
-    swift::FuncDecl *m_wrapper_decl = nullptr; // This is an optional wrapper
-                                               // function that calls
-                                               // m_function_decl.
-    llvm::StringRef m_wrapper_func_prefix; // This is the prefix name for the
-                                           // wrapper function.  One tricky bit
-    // is that in the case where there is no wrapper, the m_function_decl
-    // has this name.  That's why we check first for the debugger attribute.
-
-    FuncAndExtensionFinder(llvm::StringRef &wrapped_func_prefix)
-        : m_wrapper_func_prefix(wrapped_func_prefix) {}
+  struct FuncAndExtensionFinder : public swift::ASTWalker {
+    /// This is the toplevel entry function for the expression. It may
+    /// call into \c ext_method_decl or hold the entire expression.
+    swift::FuncDecl *toplevel_decl = nullptr;
+    /// This is optional.
+    swift::FuncDecl *ext_method_decl = nullptr;
+    /// This is an optional extension holding the above function.
+    swift::ExtensionDecl *extension_decl = nullptr;
 
     bool walkToDeclPre(swift::Decl *D) override {
       auto *FD = llvm::dyn_cast<swift::FuncDecl>(D);
+      // Traverse into any non-function-decls.
       if (!FD)
         return true;
 
-      if (FD->getAttrs().hasAttribute<swift::LLDBDebuggerFunctionAttr>()) {
-        m_function_decl = FD;
+      if (!FD->getAttrs().hasAttribute<swift::LLDBDebuggerFunctionAttr>())
+        return false;
 
-        // Now walk back up the containing DeclContexts, and if we find an
-        // extension Decl, that's our extension:
-        for (swift::DeclContext *DC = m_function_decl->getDeclContext(); DC;
-             DC = DC->getParent()) {
-          if (auto *extension_decl = llvm::dyn_cast<swift::ExtensionDecl>(DC)) {
-            m_extension_decl = extension_decl;
-            break;
-          }
+      // Walk up the DeclContext chain, searching for an extension.
+      for (auto *DC = FD->getDeclContext(); DC; DC = DC->getParent()) {
+        if (auto *extension = llvm::dyn_cast<swift::ExtensionDecl>(DC)) {
+          extension_decl = extension;
+          ext_method_decl = FD;
+          return false;
         }
-      } else if (FD->hasName() && FD->getBaseIdentifier().str().startswith(
-                                      m_wrapper_func_prefix)) {
-        m_wrapper_decl = FD;
       }
-
-      // There's nothing buried in a function that we need to find in this
-      // search.
+      // Not in an extenstion,
+      toplevel_decl = FD;
       return false;
     }
   };
 
-  FuncAndExtensionFinder func_finder(s_func_prefix_str);
+  FuncAndExtensionFinder func_finder;
   m_source_file.walk(func_finder);
 
-  m_function_decl = func_finder.m_function_decl;
-  m_wrapper_decl = func_finder.m_wrapper_decl;
-  m_extension_decl = func_finder.m_extension_decl;
+  m_extension_decl = func_finder.extension_decl;
+  if (m_extension_decl) {
+    m_function_decl = func_finder.ext_method_decl;
+    m_wrapper_decl = func_finder.toplevel_decl;
+  } else {
+    m_function_decl = func_finder.toplevel_decl;
+    m_wrapper_decl = nullptr;
+  }
 
   assert(m_function_decl);
 
