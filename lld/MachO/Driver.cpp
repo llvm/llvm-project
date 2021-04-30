@@ -619,13 +619,19 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
   config->platformInfo.target =
       MachO::Target(getArchitectureFromName(archName), platform);
 
-  switch (getCPUTypeFromArchitecture(config->arch()).first) {
+  uint32_t cpuType;
+  uint32_t cpuSubtype;
+  std::tie(cpuType, cpuSubtype) = getCPUTypeFromArchitecture(config->arch());
+
+  switch (cpuType) {
   case CPU_TYPE_X86_64:
     return createX86_64TargetInfo();
   case CPU_TYPE_ARM64:
     return createARM64TargetInfo();
   case CPU_TYPE_ARM64_32:
     return createARM64_32TargetInfo();
+  case CPU_TYPE_ARM:
+    return createARMTargetInfo(cpuSubtype);
   default:
     fatal("missing or unsupported -arch " + archName);
   }
