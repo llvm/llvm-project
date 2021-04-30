@@ -1721,7 +1721,7 @@ TEST_P(OpenMPIRBuilderTestWithParams, DynamicWorkShareLoop) {
 
   omp::OMPScheduleType SchedType = GetParam();
   uint32_t ChunkSize = 1;
-  switch (SchedType) {
+  switch (SchedType & ~omp::OMPScheduleType::ModifierMask) {
   case omp::OMPScheduleType::DynamicChunked:
   case omp::OMPScheduleType::GuidedChunked:
     ChunkSize = 7;
@@ -1794,8 +1794,9 @@ TEST_P(OpenMPIRBuilderTestWithParams, DynamicWorkShareLoop) {
   EXPECT_EQ(InitCall->getCalledFunction()->getName(),
             "__kmpc_dispatch_init_4u");
   EXPECT_EQ(InitCall->getNumArgOperands(), 7U);
-  EXPECT_EQ(InitCall->getArgOperand(6),
-            ConstantInt::get(Type::getInt32Ty(Ctx), ChunkSize));
+  EXPECT_EQ(InitCall->getArgOperand(6), ConstantInt::get(LCTy, ChunkSize));
+  ConstantInt *SchedVal = cast<ConstantInt>(InitCall->getArgOperand(2));
+  EXPECT_EQ(SchedVal->getValue(), static_cast<uint64_t>(SchedType));
 
   ConstantInt *OrigLowerBound =
       dyn_cast<ConstantInt>(LowerBoundStore->getValueOperand());
@@ -1827,12 +1828,23 @@ TEST_P(OpenMPIRBuilderTestWithParams, DynamicWorkShareLoop) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
-INSTANTIATE_TEST_SUITE_P(OpenMPWSLoopSchedulingTypes,
-                        OpenMPIRBuilderTestWithParams,
-                        ::testing::Values(omp::OMPScheduleType::DynamicChunked,
-                                          omp::OMPScheduleType::GuidedChunked,
-                                          omp::OMPScheduleType::Auto,
-                                          omp::OMPScheduleType::Runtime));
+INSTANTIATE_TEST_CASE_P(
+    OpenMPWSLoopSchedulingTypes, OpenMPIRBuilderTestWithParams,
+    ::testing::Values(omp::OMPScheduleType::DynamicChunked,
+                      omp::OMPScheduleType::GuidedChunked,
+                      omp::OMPScheduleType::Auto, omp::OMPScheduleType::Runtime,
+                      omp::OMPScheduleType::DynamicChunked |
+                          omp::OMPScheduleType::ModifierMonotonic,
+                      omp::OMPScheduleType::DynamicChunked |
+                          omp::OMPScheduleType::ModifierNonmonotonic,
+                      omp::OMPScheduleType::GuidedChunked |
+                          omp::OMPScheduleType::ModifierMonotonic,
+                      omp::OMPScheduleType::GuidedChunked |
+                          omp::OMPScheduleType::ModifierNonmonotonic,
+                      omp::OMPScheduleType::Auto |
+                          omp::OMPScheduleType::ModifierMonotonic,
+                      omp::OMPScheduleType::Runtime |
+                          omp::OMPScheduleType::ModifierMonotonic));
 
 TEST_F(OpenMPIRBuilderTest, MasterDirective) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
