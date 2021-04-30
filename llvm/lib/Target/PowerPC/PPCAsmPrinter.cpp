@@ -200,6 +200,10 @@ private:
 
   void emitTracebackTable();
 
+  SmallVector<const GlobalVariable *, 8> TOCDataGlobalVars;
+
+  void emitGlobalVariableHelper(const GlobalVariable *);
+
 public:
   PPCAIXAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
       : PPCAsmPrinter(TM, std::move(Streamer)) {
@@ -852,6 +856,30 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         OutContext.getOrCreateSymbol(Twine(".LTOC")), OutContext);
     Exp = MCBinaryExpr::createSub(Exp, PB, OutContext);
     TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
+    EmitToStreamer(*OutStreamer, TmpInst);
+    return;
+  }
+  case PPC::ADDItoc: {
+    assert(IsAIX && TM.getCodeModel() == CodeModel::Small &&
+           "Operand only valid in AIX 32 bit mode");
+
+    // Transform %rN = ADDItoc @op1, %r2.
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
+
+    // Change the opcode to load address.
+    TmpInst.setOpcode(PPC::LA);
+
+    const MachineOperand &MO = MI->getOperand(1);
+    assert(MO.isGlobal() && "Invalid operand for ADDItoc.");
+
+    // Map the operand to its corresponding MCSymbol.
+    const MCSymbol *const MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
+
+    const MCExpr *Exp =
+        MCSymbolRefExpr::create(MOSymbol, MCSymbolRefExpr::VK_None, OutContext);
+
+    TmpInst.getOperand(1) = TmpInst.getOperand(2);
+    TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }
@@ -2125,6 +2153,17 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (isSpecialLLVMGlobalArrayToSkip(GV) || isSpecialLLVMGlobalArrayForStaticInit(GV))
     return;
 
+  // If the Global Variable has the toc-data attribute, it needs to be emitted
+  // when we emit the .toc section.
+  if (GV->hasAttribute("toc-data")) {
+    TOCDataGlobalVars.push_back(GV);
+    return;
+  }
+
+  emitGlobalVariableHelper(GV);
+}
+
+void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   assert(!GV->getName().startswith("llvm.") &&
          "Unhandled intrinsic global variable.");
 
@@ -2232,9 +2271,9 @@ void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
 }
 
 void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
-  // If there are no functions in this module, we will never need to reference
-  // the TOC base.
-  if (M.empty())
+  // If there are no functions and there are no toc-data definitions in this
+  // module, we will never need to reference the TOC base.
+  if (M.empty() && TOCDataGlobalVars.empty())
     return;
 
   // Switch to section to emit TOC base.
@@ -2266,6 +2305,9 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
     if (TS != nullptr)
       TS->emitTCEntry(*I.first.first, I.first.second);
   }
+
+  for (const auto *GV : TOCDataGlobalVars)
+    emitGlobalVariableHelper(GV);
 }
 
 bool PPCAIXAsmPrinter::doInitialization(Module &M) {
