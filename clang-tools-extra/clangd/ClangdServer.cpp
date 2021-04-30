@@ -575,8 +575,7 @@ void ClangdServer::enumerateTweaks(
   // Tracks number of times a tweak has been offered.
   static constexpr trace::Metric TweakAvailable(
       "tweak_available", trace::Metric::Counter, "tweak_id");
-  auto Action = [File = File.str(), Sel, CB = std::move(CB),
-                 Filter = std::move(Filter),
+  auto Action = [Sel, CB = std::move(CB), Filter = std::move(Filter),
                  FeatureModules(this->FeatureModules)](
                     Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
@@ -756,8 +755,7 @@ void ClangdServer::incomingCalls(
 
 void ClangdServer::inlayHints(PathRef File,
                               Callback<std::vector<InlayHint>> CB) {
-  auto Action = [File = File.str(),
-                 CB = std::move(CB)](Expected<InputsAndAST> InpAST) mutable {
+  auto Action = [CB = std::move(CB)](Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
     CB(clangd::inlayHints(InpAST->AST));
