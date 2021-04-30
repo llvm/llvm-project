@@ -2283,3 +2283,21 @@ void test_builtin_xvcpsgndp(vector double a, vector double b) {
 // CHECK-NEXT: call <2 x double> @llvm.copysign.v2f64(<2 x double> [[RA]], <2 x double> [[RB]])
   __builtin_vsx_xvcpsgndp(a, b);
 }
+
+vector double test_recipdivd(vector double a, vector double b) {
+  // CHECK-LABEL: test_recipdivd
+  // CHECK: fdiv fast <2 x double>
+  // CHECK-LE-LABEL: test_recipdivd
+  // CHECK-LE: fdiv fast <2 x double>
+  return vec_recipdiv(a, b);
+}
+
+vector double test_rsqrtd(vector double a, vector double b) {
+  // CHECK-LABEL: test_rsqrtd
+  // CHECK: call fast <2 x double> @llvm.sqrt.v2f64
+  // CHECK: fdiv fast <2 x double> <double 1.000000e+00, double 1.000000e+00>
+  // CHECK-LE-LABEL: test_rsqrtd
+  // CHECK-LE: call fast <2 x double> @llvm.sqrt.v2f64
+  // CHECK-LE: fdiv fast <2 x double> <double 1.000000e+00, double 1.000000e+00>
+  return vec_rsqrt(a);
+}
