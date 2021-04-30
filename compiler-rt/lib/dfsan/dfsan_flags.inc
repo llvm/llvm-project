@@ -40,3 +40,7 @@ DFSAN_FLAG(int, store_context_size, 20,
            "The depth limit of origin tracking stack traces.")
 DFSAN_FLAG(bool, check_origin_invariant, false,
            "Whether to check if the origin invariant holds.")
+DFSAN_FLAG(bool, zero_in_malloc, true,
+           "Whether to zero shadow space of new allocated memory.")
+DFSAN_FLAG(bool, zero_in_free, true,
+           "Whether to zero shadow space of deallocated memory.")
