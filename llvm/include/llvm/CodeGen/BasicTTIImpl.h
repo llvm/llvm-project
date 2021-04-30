@@ -357,7 +357,10 @@ public:
   }
 
   unsigned getRegUsageForType(Type *Ty) {
-    return getTLI()->getTypeLegalizationCost(DL, Ty).first;
+    InstructionCost::CostType Val =
+        *getTLI()->getTypeLegalizationCost(DL, Ty).first.getValue();
+    assert(Val >= 0 && "Negative cost!");
+    return Val;
   }
 
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
@@ -750,7 +753,7 @@ public:
                                            Opd1PropInfo, Opd2PropInfo,
                                            Args, CxtI);
 
-    std::pair<unsigned, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+    std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
     bool IsFloat = Ty->isFPOrFPVectorTy();
     // Assume that floating point arithmetic operations cost twice as much as
@@ -852,8 +855,10 @@ public:
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Invalid opcode");
-    std::pair<unsigned, MVT> SrcLT = TLI->getTypeLegalizationCost(DL, Src);
-    std::pair<unsigned, MVT> DstLT = TLI->getTypeLegalizationCost(DL, Dst);
+    std::pair<InstructionCost, MVT> SrcLT =
+        TLI->getTypeLegalizationCost(DL, Src);
+    std::pair<InstructionCost, MVT> DstLT =
+        TLI->getTypeLegalizationCost(DL, Dst);
 
     TypeSize SrcSize = SrcLT.second.getSizeInBits();
     TypeSize DstSize = DstLT.second.getSizeInBits();
@@ -1025,7 +1030,8 @@ public:
       if (CondTy->isVectorTy())
         ISD = ISD::VSELECT;
     }
-    std::pair<unsigned, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
+    std::pair<InstructionCost, MVT> LT =
+        TLI->getTypeLegalizationCost(DL, ValTy);
 
     if (!(ValTy->isVectorTy() && !LT.second.isVector()) &&
         !TLI->isOperationExpand(ISD, LT.second)) {
@@ -1055,7 +1061,7 @@ public:
 
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      unsigned Index) {
-    std::pair<unsigned, MVT> LT =
+    std::pair<InstructionCost, MVT> LT =
         getTLI()->getTypeLegalizationCost(DL, Val->getScalarType());
 
     return LT.first;
@@ -1069,7 +1075,8 @@ public:
     // Assume types, such as structs, are expensive.
     if (getTLI()->getValueType(DL, Src,  true) == MVT::Other)
       return 4;
-    std::pair<unsigned, MVT> LT = getTLI()->getTypeLegalizationCost(DL, Src);
+    std::pair<InstructionCost, MVT> LT =
+        getTLI()->getTypeLegalizationCost(DL, Src);
 
     // Assuming that all loads of legal types cost 1.
     InstructionCost Cost = LT.first;
@@ -1836,10 +1843,11 @@ public:
     }
 
     const TargetLoweringBase *TLI = getTLI();
-    std::pair<unsigned, MVT> LT = TLI->getTypeLegalizationCost(DL, RetTy);
+    std::pair<InstructionCost, MVT> LT =
+        TLI->getTypeLegalizationCost(DL, RetTy);
 
-    SmallVector<unsigned, 2> LegalCost;
-    SmallVector<unsigned, 2> CustomCost;
+    SmallVector<InstructionCost, 2> LegalCost;
+    SmallVector<InstructionCost, 2> CustomCost;
     for (unsigned ISD : ISDs) {
       if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
         if (IID == Intrinsic::fabs && LT.second.isFloatingPoint() &&
@@ -1945,8 +1953,9 @@ public:
   }
 
   unsigned getNumberOfParts(Type *Tp) {
-    std::pair<unsigned, MVT> LT = getTLI()->getTypeLegalizationCost(DL, Tp);
-    return LT.first;
+    std::pair<InstructionCost, MVT> LT =
+        getTLI()->getTypeLegalizationCost(DL, Tp);
+    return *LT.first.getValue();
   }
 
   InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *,
@@ -2013,7 +2022,7 @@ public:
     unsigned NumReduxLevels = Log2_32(NumVecElts);
     InstructionCost ArithCost = 0;
     InstructionCost ShuffleCost = 0;
-    std::pair<unsigned, MVT> LT =
+    std::pair<InstructionCost, MVT> LT =
         thisT()->getTLI()->getTypeLegalizationCost(DL, Ty);
     unsigned LongVectorCount = 0;
     unsigned MVTLen =
@@ -2069,7 +2078,7 @@ public:
     }
     InstructionCost MinMaxCost = 0;
     InstructionCost ShuffleCost = 0;
-    std::pair<unsigned, MVT> LT =
+    std::pair<InstructionCost, MVT> LT =
         thisT()->getTLI()->getTypeLegalizationCost(DL, Ty);
     unsigned LongVectorCount = 0;
     unsigned MVTLen =
