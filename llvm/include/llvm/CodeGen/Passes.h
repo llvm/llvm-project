@@ -150,6 +150,7 @@ namespace llvm {
   /// VirtRegRewriter pass. Rewrite virtual registers to physical registers as
   /// assigned in VirtRegMap.
   extern char &VirtRegRewriterID;
+  FunctionPass *createVirtRegRewriter(bool ClearVirtRegs = true);
 
   /// UnreachableMachineBlockElimination - This pass removes unreachable
   /// machine basic blocks.
