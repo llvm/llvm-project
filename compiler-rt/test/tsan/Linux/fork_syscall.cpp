@@ -16,7 +16,11 @@ static void *incrementer(void *p) {
 
 int myfork() {
   __sanitizer_syscall_pre_fork();
+#ifdef SYS_fork
   int res = syscall(SYS_fork);
+#else
+  int res = syscall(SYS_clone, SIGCHLD, 0);
+#endif
   __sanitizer_syscall_post_fork(res);
   return res;
 }
