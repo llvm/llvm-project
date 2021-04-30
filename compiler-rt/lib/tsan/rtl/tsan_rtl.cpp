@@ -129,27 +129,30 @@ Context::Context()
 }
 
 // The objects are allocated in TLS, so one may rely on zero-initialization.
-ThreadState::ThreadState(Context *ctx, int tid, int unique_id, u64 epoch,
-                         unsigned reuse_count,
-                         uptr stk_addr, uptr stk_size,
+ThreadState::ThreadState(Context *ctx, u32 tid, int unique_id, u64 epoch,
+                         unsigned reuse_count, uptr stk_addr, uptr stk_size,
                          uptr tls_addr, uptr tls_size)
-  : fast_state(tid, epoch)
-  // Do not touch these, rely on zero initialization,
-  // they may be accessed before the ctor.
-  // , ignore_reads_and_writes()
-  // , ignore_interceptors()
-  , clock(tid, reuse_count)
+    : fast_state(tid, epoch)
+      // Do not touch these, rely on zero initialization,
+      // they may be accessed before the ctor.
+      // , ignore_reads_and_writes()
+      // , ignore_interceptors()
+      ,
+      clock(tid, reuse_count)
 #if !SANITIZER_GO
-  , jmp_bufs()
+      ,
+      jmp_bufs()
 #endif
-  , tid(tid)
-  , unique_id(unique_id)
-  , stk_addr(stk_addr)
-  , stk_size(stk_size)
-  , tls_addr(tls_addr)
-  , tls_size(tls_size)
+      ,
+      tid(tid),
+      unique_id(unique_id),
+      stk_addr(stk_addr),
+      stk_size(stk_size),
+      tls_addr(tls_addr),
+      tls_size(tls_size)
 #if !SANITIZER_GO
-  , last_sleep_clock(tid)
+      ,
+      last_sleep_clock(tid)
 #endif
 {
 }

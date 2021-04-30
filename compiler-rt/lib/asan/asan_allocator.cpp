@@ -476,7 +476,7 @@ struct Allocator {
       return false;
     if (m->Beg() != addr) return false;
     AsanThread *t = GetCurrentThread();
-    m->SetAllocContext(t ? t->tid() : 0, StackDepotPut(*stack));
+    m->SetAllocContext(t ? t->tid() : kMainTid, StackDepotPut(*stack));
     return true;
   }
 
@@ -570,7 +570,7 @@ struct Allocator {
     m->SetUsedSize(size);
     m->user_requested_alignment_log = user_requested_alignment_log;
 
-    m->SetAllocContext(t ? t->tid() : 0, StackDepotPut(*stack));
+    m->SetAllocContext(t ? t->tid() : kMainTid, StackDepotPut(*stack));
 
     uptr size_rounded_down_to_granularity =
         RoundDownTo(size, SHADOW_GRANULARITY);

@@ -460,7 +460,7 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr,
   if (res == 0) {
     int tid = ThreadCreate(GetCurrentThread(), *(uptr *)th,
                            IsStateDetached(detached));
-    CHECK_NE(tid, 0);
+    CHECK_NE(tid, kMainTid);
     atomic_store(&p.tid, tid, memory_order_release);
     while (atomic_load(&p.tid, memory_order_acquire) != 0)
       internal_sched_yield();
