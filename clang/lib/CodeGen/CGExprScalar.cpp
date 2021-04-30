@@ -3216,8 +3216,10 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
     llvm::Value *Val;
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Ops.FPFeatures);
     Val = Builder.CreateFDiv(Ops.LHS, Ops.RHS, "div");
-    if (CGF.getLangOpts().OpenCL &&
-        !CGF.CGM.getCodeGenOpts().CorrectlyRoundedDivSqrt) {
+    if ((CGF.getLangOpts().OpenCL &&
+         !CGF.CGM.getCodeGenOpts().OpenCLCorrectlyRoundedDivSqrt) ||
+        (CGF.getLangOpts().HIP && CGF.getLangOpts().CUDAIsDevice &&
+         !CGF.CGM.getCodeGenOpts().HIPCorrectlyRoundedDivSqrt)) {
       // OpenCL v1.1 s7.4: minimum accuracy of single precision / is 2.5ulp
       // OpenCL v1.2 s5.6.4.2: The -cl-fp32-correctly-rounded-divide-sqrt
       // build option allows an application to specify that single precision
