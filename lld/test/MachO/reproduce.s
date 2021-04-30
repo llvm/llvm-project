@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: x86, shell
 
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir/build1
