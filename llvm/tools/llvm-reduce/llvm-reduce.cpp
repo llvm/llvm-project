@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DeltaManager.h"
+#include "TestRunner.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Verifier.h"
@@ -34,6 +35,11 @@ static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden,
                           cl::cat(Options));
 static cl::opt<bool> Version("v", cl::desc("Alias for -version"), cl::Hidden,
                              cl::cat(Options));
+
+static cl::opt<bool>
+    PrintDeltaPasses("print-delta-passes",
+                     cl::desc("Print list of delta passes, passable to "
+                              "--delta-passes as a comma separated list"));
 
 static cl::opt<std::string> InputFilename(cl::Positional, cl::Required,
                                           cl::desc("<input llvm ll/bc file>"),
@@ -100,6 +106,11 @@ int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
 
   cl::ParseCommandLineOptions(Argc, Argv, "LLVM automatic testcase reducer.\n");
+
+  if (PrintDeltaPasses) {
+    printDeltaPasses(errs());
+    return 0;
+  }
 
   LLVMContext Context;
   std::unique_ptr<Module> OriginalProgram =
