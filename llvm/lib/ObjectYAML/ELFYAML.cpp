@@ -155,9 +155,6 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_FREEBSD_PROCSTAT_PSSTRINGS);
   ECase(NT_FREEBSD_PROCSTAT_AUXV);
   // AMD specific notes. (Code Object V2)
-  ECase(NT_AMD_HSA_CODE_OBJECT_VERSION);
-  ECase(NT_AMD_HSA_HSAIL);
-  ECase(NT_AMD_HSA_ISA_VERSION);
   ECase(NT_AMD_HSA_METADATA);
   ECase(NT_AMD_HSA_ISA_NAME);
   ECase(NT_AMD_PAL_METADATA);

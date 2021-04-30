@@ -1425,7 +1425,11 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   MPM.addPass(GlobalDCEPass());
   MPM.addPass(ConstantMergePass());
 
-  MPM.addPass(RelLookupTableConverterPass());
+  // TODO: Relative look table converter pass caused an issue when full lto is
+  // enabled. See https://reviews.llvm.org/D94355 for more details.
+  // Until the issue fixed, disable this pass during pre-linking phase.
+  if (!LTOPreLink)
+    MPM.addPass(RelLookupTableConverterPass());
 
   return MPM;
 }

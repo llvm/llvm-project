@@ -63,13 +63,21 @@ class SyncClock {
   friend class ThreadClock;
   friend class Iter;
   static const uptr kDirtyTids = 2;
-  // Full kInvalidTid won't fit into Dirty::tid.
-  static const u64 kInvalidTid = (1ull << (64 - kClkBits)) - 1;
 
   struct Dirty {
-    u64 epoch  : kClkBits;
-    u64 tid : 64 - kClkBits;  // kInvalidId if not active
+    u32 tid() const { return tid_ == kShortInvalidTid ? kInvalidTid : tid_; }
+    void set_tid(u32 tid) {
+      tid_ = tid == kInvalidTid ? kShortInvalidTid : tid;
+    }
+    u64 epoch : kClkBits;
+
+   private:
+    // Full kInvalidTid won't fit into Dirty::tid.
+    static const u64 kShortInvalidTid = (1ull << (64 - kClkBits)) - 1;
+    u64 tid_ : 64 - kClkBits;  // kInvalidId if not active
   };
+
+  static_assert(sizeof(Dirty) == 8, "Dirty is not 64bit");
 
   unsigned release_store_tid_;
   unsigned release_store_reused_;
@@ -148,7 +156,6 @@ class ThreadClock {
 
  private:
   static const uptr kDirtyTids = SyncClock::kDirtyTids;
-  static const u64 kInvalidTid = SyncClock::kInvalidTid;
   // Index of the thread associated with he clock ("current thread").
   const unsigned tid_;
   const unsigned reused_;  // tid_ reuse count.

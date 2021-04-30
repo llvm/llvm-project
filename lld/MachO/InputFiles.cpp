@@ -467,14 +467,16 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
       isPrivateExtern = true;
 
     return symtab->addDefined(name, isec->file, isec, value, size,
-                              sym.n_desc & N_WEAK_DEF, isPrivateExtern);
+                              sym.n_desc & N_WEAK_DEF, isPrivateExtern,
+                              sym.n_desc & N_ARM_THUMB_DEF);
   }
 
   assert(!isWeakDefCanBeHidden &&
          "weak_def_can_be_hidden on already-hidden symbol?");
   return make<Defined>(name, isec->file, isec, value, size,
                        sym.n_desc & N_WEAK_DEF,
-                       /*isExternal=*/false, /*isPrivateExtern=*/false);
+                       /*isExternal=*/false, /*isPrivateExtern=*/false,
+                       sym.n_desc & N_ARM_THUMB_DEF);
 }
 
 // Absolute symbols are defined symbols that do not have an associated
@@ -485,11 +487,13 @@ static macho::Symbol *createAbsolute(const NList &sym, InputFile *file,
   if (sym.n_type & (N_EXT | N_PEXT)) {
     assert((sym.n_type & N_EXT) && "invalid input");
     return symtab->addDefined(name, file, nullptr, sym.n_value, /*size=*/0,
-                              /*isWeakDef=*/false, sym.n_type & N_PEXT);
+                              /*isWeakDef=*/false, sym.n_type & N_PEXT,
+                              sym.n_desc & N_ARM_THUMB_DEF);
   }
   return make<Defined>(name, file, nullptr, sym.n_value, /*size=*/0,
                        /*isWeakDef=*/false,
-                       /*isExternal=*/false, /*isPrivateExtern=*/false);
+                       /*isExternal=*/false, /*isPrivateExtern=*/false,
+                       sym.n_desc & N_ARM_THUMB_DEF);
 }
 
 template <class NList>
@@ -988,7 +992,8 @@ static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
   }
 
   return symtab->addDefined(name, &file, /*isec=*/nullptr, /*value=*/0,
-                            /*size=*/0, objSym.isWeak(), isPrivateExtern);
+                            /*size=*/0, objSym.isWeak(), isPrivateExtern,
+                            /*isThumb=*/false);
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mbref)

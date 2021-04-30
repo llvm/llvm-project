@@ -483,7 +483,8 @@ void StubHelperSection::setup() {
   dyldPrivate =
       make<Defined>("__dyld_private", nullptr, in.imageLoaderCache, 0, 0,
                     /*isWeakDef=*/false,
-                    /*isExternal=*/false, /*isPrivateExtern=*/false);
+                    /*isExternal=*/false, /*isPrivateExtern=*/false,
+                    /*isThumb=*/false);
 }
 
 ImageLoaderCacheSection::ImageLoaderCacheSection() {
@@ -865,6 +866,7 @@ template <class LP> void SymtabSectionImpl<LP>::writeTo(uint8_t *buf) const {
         // For the N_SECT symbol type, n_value is the address of the symbol
         nList->n_value = defined->getVA();
       }
+      nList->n_desc |= defined->thumb ? N_ARM_THUMB_DEF : 0;
       nList->n_desc |= defined->isExternalWeakDef() ? N_WEAK_DEF : 0;
     } else if (auto *dysym = dyn_cast<DylibSymbol>(entry.sym)) {
       uint16_t n_desc = nList->n_desc;

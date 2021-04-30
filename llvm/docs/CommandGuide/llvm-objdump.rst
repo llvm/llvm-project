@@ -93,7 +93,7 @@ combined with other commands:
 
   Display the unwind info of the input(s).
 
-.. option:: --version
+.. option:: -v, --version
 
   Display the version of the :program:`llvm-objdump` executable. Does not stack
   with other commands.

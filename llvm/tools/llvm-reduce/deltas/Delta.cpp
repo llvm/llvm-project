@@ -15,12 +15,17 @@
 #include "Delta.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <fstream>
 #include <set>
 
 using namespace llvm;
+
+static cl::opt<bool> AbortOnInvalidReduction(
+    "abort-on-invalid-reduction",
+    cl::desc("Abort if any reduction results in invalid IR"));
 
 void writeOutput(llvm::Module *M, llvm::StringRef Message);
 
@@ -141,6 +146,10 @@ void llvm::runDeltaPass(
 
       // Some reductions may result in invalid IR. Skip such reductions.
       if (verifyModule(*Clone.get(), &errs())) {
+        if (AbortOnInvalidReduction) {
+          errs() << "Invalid reduction\n";
+          exit(1);
+        }
         errs() << " **** WARNING | reduction resulted in invalid module, "
                   "skipping\n";
         continue;

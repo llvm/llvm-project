@@ -27,7 +27,7 @@ steps:
     artifact_paths:
       - "**/clang-format.patch"
     agents:
-      queue: "service"
+      queue: "libcxx-builders"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -40,7 +40,7 @@ steps:
     artifact_paths:
       - "**/generated_output.patch"
     agents:
-      queue: "service"
+      queue: "libcxx-builders"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -115,6 +115,18 @@ steps:
 
   - label: "C++2b"
     command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Debug iterators"
+    command: "libcxx/utils/ci/run-buildbot generic-debug-iterators"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"

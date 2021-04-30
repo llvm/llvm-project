@@ -475,7 +475,6 @@ body:             |
   }
 ...
 
-# FIXME: remove S_SET_GPR_IDX_* despite the branch at the end of the block
 ---
 name:            simple_cbranch_vccz
 body:             |
@@ -484,8 +483,6 @@ body:             |
   ; GCN:   successors: %bb.1(0x80000000)
   ; GCN:   S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $mode, implicit-def $m0, implicit $mode, implicit undef $m0
   ; GCN:   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  ; GCN:   S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
-  ; GCN:   S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $mode, implicit-def $m0, implicit $mode, implicit undef $m0
   ; GCN:   $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
   ; GCN:   S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
   ; GCN:   S_CBRANCH_VCCZ %bb.1, implicit $vcc
@@ -501,7 +498,6 @@ body:             |
   bb.1:
 ...
 
-# FIXME: remove S_SET_GPR_IDX_* despite the branch at the end of the block
 ---
 name:            simple_cbranch_execz
 body:             |
@@ -510,8 +506,6 @@ body:             |
   ; GCN:   successors:
   ; GCN:   S_SET_GPR_IDX_ON $sgpr2, 1, implicit-def $mode, implicit-def $m0, implicit $mode, implicit undef $m0
   ; GCN:   $vgpr16 = V_MOV_B32_e32 undef $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
-  ; GCN:   S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
-  ; GCN:   S_SET_GPR_IDX_ON killed $sgpr2, 1, implicit-def $mode, implicit-def $m0, implicit $mode, implicit undef $m0
   ; GCN:   $vgpr15 = V_MOV_B32_e32 undef $vgpr0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $m0
   ; GCN:   S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
   ; GCN: bb.1:
