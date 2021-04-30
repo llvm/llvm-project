@@ -274,7 +274,7 @@ bool CallGraphDOTPrinter::runOnModule(Module &M) {
   errs() << "Writing '" << Filename << "'...";
 
   std::error_code EC;
-  raw_fd_ostream File(Filename, EC, sys::fs::F_Text);
+  raw_fd_ostream File(Filename, EC, sys::fs::OF_Text);
 
   CallGraph CG(M);
   CallGraphDOTInfo CFGInfo(&M, &CG, LookupBFI);
