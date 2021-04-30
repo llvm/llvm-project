@@ -56,7 +56,7 @@ module {
   func @kernel_matvec(%argA: !SparseTensor,
                       %argb: tensor<?xi32>,
                       %argx: tensor<?xi32>) -> tensor<?xi32> {
-    %arga = linalg.sparse_tensor %argA : !SparseTensor to tensor<?x?xi32>
+    %arga = sparse_tensor.fromPtr %argA : !SparseTensor to tensor<?x?xi32>
     %0 = linalg.generic #matvec
       ins(%arga, %argb: tensor<?x?xi32>, tensor<?xi32>)
       outs(%argx: tensor<?xi32>) {
