@@ -229,6 +229,45 @@ namespace {
       return false;
     }
 
+    /// SelectDSForm - Returns true if address N can be represented by the
+    /// addressing mode of DSForm instructions (a base register, plus a signed
+    /// 16-bit displacement that is a multiple of 4.
+    bool SelectDSForm(SDNode *Parent, SDValue N, SDValue &Disp, SDValue &Base) {
+      return PPCLowering->SelectOptimalAddrMode(Parent, N, Disp, Base, *CurDAG,
+                                                Align(4)) == PPC::AM_DSForm;
+    }
+
+    /// SelectDQForm - Returns true if address N can be represented by the
+    /// addressing mode of DQForm instructions (a base register, plus a signed
+    /// 16-bit displacement that is a multiple of 16.
+    bool SelectDQForm(SDNode *Parent, SDValue N, SDValue &Disp, SDValue &Base) {
+      return PPCLowering->SelectOptimalAddrMode(Parent, N, Disp, Base, *CurDAG,
+                                                Align(16)) == PPC::AM_DQForm;
+    }
+
+    /// SelectDForm - Returns true if address N can be represented by
+    /// the addressing mode of DForm instructions (a base register, plus a
+    /// signed 16-bit immediate.
+    bool SelectDForm(SDNode *Parent, SDValue N, SDValue &Disp, SDValue &Base) {
+      return PPCLowering->SelectOptimalAddrMode(Parent, N, Disp, Base, *CurDAG,
+                                                None) == PPC::AM_DForm;
+    }
+
+    /// SelectXForm - Returns true if address N can be represented by the
+    /// addressing mode of XForm instructions (an indexed [r+r] operation).
+    bool SelectXForm(SDNode *Parent, SDValue N, SDValue &Disp, SDValue &Base) {
+      return PPCLowering->SelectOptimalAddrMode(Parent, N, Disp, Base, *CurDAG,
+                                                None) == PPC::AM_XForm;
+    }
+
+    /// SelectForceXForm - Given the specified address, force it to be
+    /// represented as an indexed [r+r] operation (an XForm instruction).
+    bool SelectForceXForm(SDNode *Parent, SDValue N, SDValue &Disp,
+                          SDValue &Base) {
+      return PPCLowering->SelectForceXFormMode(N, Disp, Base, *CurDAG) ==
+             PPC::AM_XForm;
+    }
+
     /// SelectAddrIdx - Given the specified address, check to see if it can be
     /// represented as an indexed [r+r] operation.
     /// This is for xform instructions whose associated displacement form is D.
