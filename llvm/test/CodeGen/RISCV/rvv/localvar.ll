@@ -294,7 +294,10 @@ define i64 @fixed_object(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6,
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 3
 ; RV64IV-NEXT:    sub sp, sp, a0
-; RV64IV-NEXT:    ld a0, 32(sp)
+; RV64IV-NEXT:    csrr a0, vlenb
+; RV64IV-NEXT:    slli a0, a0, 3
+; RV64IV-NEXT:    add a0, sp, a0
+; RV64IV-NEXT:    ld a0, 32(a0)
 ; RV64IV-NEXT:    csrr a1, vlenb
 ; RV64IV-NEXT:    slli a1, a1, 3
 ; RV64IV-NEXT:    add sp, sp, a1
