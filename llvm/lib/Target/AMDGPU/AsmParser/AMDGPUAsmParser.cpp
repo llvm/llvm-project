@@ -1329,6 +1329,8 @@ public:
     return AMDGPU::hasGFX10A16(getSTI());
   }
 
+  bool hasG16() const { return AMDGPU::hasG16(getSTI()); }
+
   bool isSI() const {
     return AMDGPU::isSI(getSTI());
   }
@@ -3415,6 +3417,7 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
   int VAddr0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr0);
   int SrsrcIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::srsrc);
   int DimIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dim);
+  int A16Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::a16);
 
   assert(VAddr0Idx != -1);
   assert(SrsrcIdx != -1);
@@ -3429,11 +3432,11 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
   unsigned VAddrSize =
       IsNSA ? SrsrcIdx - VAddr0Idx
             : AMDGPU::getRegOperandSize(getMRI(), Desc, VAddr0Idx) / 4;
+  bool IsA16 = (A16Idx != -1 && Inst.getOperand(A16Idx).getImm());
 
-  unsigned AddrSize = BaseOpcode->NumExtraArgs +
-                      (BaseOpcode->Gradients ? DimInfo->NumGradients : 0) +
-                      (BaseOpcode->Coordinates ? DimInfo->NumCoords : 0) +
-                      (BaseOpcode->LodOrClampOrMip ? 1 : 0);
+  unsigned AddrSize =
+      AMDGPU::getAddrSizeMIMGOp(BaseOpcode, DimInfo, IsA16, hasG16());
+
   if (!IsNSA) {
     if (AddrSize > 8)
       AddrSize = 16;
