@@ -122,7 +122,7 @@ void WriteJSON(StringRef JsonPath, llvm::json::Object &&ClassInheritance,
   }
 
   std::error_code EC;
-  llvm::raw_fd_ostream JsonOut(JsonPath, EC, llvm::sys::fs::F_Text);
+  llvm::raw_fd_ostream JsonOut(JsonPath, EC, llvm::sys::fs::OF_Text);
   if (EC)
     return;
 

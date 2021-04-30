@@ -96,7 +96,7 @@ static Triple GetTriple(StringRef ProgName, opt::InputArgList &Args) {
 
 static std::unique_ptr<ToolOutputFile> GetOutputStream(StringRef Path) {
   std::error_code EC;
-  auto Out = std::make_unique<ToolOutputFile>(Path, EC, sys::fs::F_None);
+  auto Out = std::make_unique<ToolOutputFile>(Path, EC, sys::fs::OF_None);
   if (EC) {
     WithColor::error() << EC.message() << '\n';
     return nullptr;
