@@ -406,7 +406,7 @@ struct ThreadState {
 #if TSAN_COLLECT_STATS
   u64 stat[StatCnt];
 #endif
-  const int tid;
+  const u32 tid;
   const int unique_id;
   bool in_symbolizer;
   bool in_ignored_lib;
@@ -447,9 +447,8 @@ struct ThreadState {
 
   const ReportDesc *current_report;
 
-  explicit ThreadState(Context *ctx, int tid, int unique_id, u64 epoch,
-                       unsigned reuse_count,
-                       uptr stk_addr, uptr stk_size,
+  explicit ThreadState(Context *ctx, u32 tid, int unique_id, u64 epoch,
+                       unsigned reuse_count, uptr stk_addr, uptr stk_size,
                        uptr tls_addr, uptr tls_size);
 };
 

@@ -44,7 +44,7 @@ void DescribeThread(MemprofThreadContext *context) {
   CHECK(context);
   memprofThreadRegistry().CheckLocked();
   // No need to announce the main thread.
-  if (context->tid == 0 || context->announced) {
+  if (context->tid == kMainTid || context->announced) {
     return;
   }
   context->announced = true;
