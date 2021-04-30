@@ -27,7 +27,7 @@ steps:
     artifact_paths:
       - "**/clang-format.patch"
     agents:
-      queue: "service"
+      queue: "libcxx-builders"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -40,7 +40,7 @@ steps:
     artifact_paths:
       - "**/generated_output.patch"
     agents:
-      queue: "service"
+      queue: "libcxx-builders"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost

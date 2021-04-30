@@ -9,9 +9,6 @@
 
 set -ex
 set -o pipefail
-unset LANG
-unset LC_ALL
-unset LC_COLLATE
 
 PROGNAME="$(basename "${0}")"
 
@@ -149,7 +146,6 @@ check-generated-output)
     # Check if the diffs are empty, fail otherwise.
     ! grep -q '^--- a' ${BUILD_DIR}/generated_output.patch || false
     # Reject patches that introduce non-ASCII characters or hard tabs.
-    # Depends on LC_COLLATE set at the top of this script.
     ! grep -rn '[^ -~]' libcxx/include/ || false
     # Check that no dependency cycles have been introduced.
     python3 libcxx/utils/graph_header_deps.py >/dev/null
