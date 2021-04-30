@@ -399,6 +399,10 @@ llvm::json::Value CreateThread(lldb::SBThread &thread);
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateThreadStopped(lldb::SBThread &thread, uint32_t stop_id);
 
+/// \return
+///     The variable name of \a value or a default placeholder.
+const char *GetNonNullVariableName(lldb::SBValue value);
+
 /// VSCode can't display two variables with the same name, so we need to
 /// distinguish them by using a suffix.
 ///
