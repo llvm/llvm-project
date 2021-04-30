@@ -116,28 +116,26 @@ static bool checkForPropOpts(const ToolChain &TC, const Driver &D,
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_fveclib)) {
-    if (isLLD) {
-      StringRef Name = A->getValue();
-      if ((Name == "Accelerate") || (Name == "none") ||
-         (Name == "MASSV") || (Name == "SVML") ||
-          (Name == "AMDLIBM"))
+    StringRef Name = A->getValue();
+    if ((Name == "Accelerate") || (Name == "none") ||
+       (Name == "MASSV") || (Name == "SVML") ||
+        (Name == "AMDLIBM"))
+      addCmdArgs(Args, CmdArgs, isLLD, checkOnly,
+                 Args.MakeArgString("-vector-library=" + Name));
+    else if (( Name == "libmvec")) {
+      switch(TC.getTriple().getArch()) {
+      default:
+        break;
+      case llvm::Triple::x86_64:
         addCmdArgs(Args, CmdArgs, isLLD, checkOnly,
-                   Args.MakeArgString("-vector-library=" + Name));
-      else if (( Name == "libmvec")) {
-        switch(TC.getTriple().getArch()) {
-        default:
-          break;
-        case llvm::Triple::x86_64:
-          addCmdArgs(Args, CmdArgs, isLLD, checkOnly,
-                     Args.MakeArgString("-vector-library=LIBMVEC-X86"));
-          break;
-        }
-        // fveclib supported prior to amd-opt, if its AMDLIBM then
-        // we want to trigger closed compiler, otherwise not.
-        if (Name == "AMDLIBM")
-          ClosedToolChainNeeded = true;
+                   Args.MakeArgString("-vector-library=LIBMVEC-X86"));
+        break;
       }
     }
+    // fveclib supported prior to amd-opt, if its AMDLIBM then
+    // we want to trigger closed compiler, otherwise not.
+    if (Name == "AMDLIBM")
+      ClosedToolChainNeeded = true;
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_fstruct_layout_EQ)) {
