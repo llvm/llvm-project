@@ -414,8 +414,7 @@ static int getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
       return std::numeric_limits<int>::max();
   }
 
-  int MinWaitStates = WaitStates;
-  bool Found = false;
+  int MinWaitStates = std::numeric_limits<int>::max();
   for (MachineBasicBlock *Pred : MBB->predecessors()) {
     if (!Visited.insert(Pred).second)
       continue;
@@ -423,17 +422,10 @@ static int getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
     int W = getWaitStatesSince(IsHazard, Pred, Pred->instr_rbegin(),
                                WaitStates, IsExpired, Visited);
 
-    if (W == std::numeric_limits<int>::max())
-      continue;
-
-    MinWaitStates = Found ? std::min(MinWaitStates, W) : W;
-    Found = true;
+    MinWaitStates = std::min(MinWaitStates, W);
   }
 
-  if (Found)
-    return MinWaitStates;
-
-  return std::numeric_limits<int>::max();
+  return MinWaitStates;
 }
 
 static int getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
