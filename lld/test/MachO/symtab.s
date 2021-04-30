@@ -73,6 +73,7 @@
 # CHECK-NEXT:     Section:  (0x0)
 # CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
 # CHECK-NEXT:     Flags [ (0x100)
+# CHECK-NEXT:       SymbolResolver (0x100)
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Value: 0x0
 # CHECK-NEXT:   }
