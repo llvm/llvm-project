@@ -3575,6 +3575,198 @@ private:
   const bool enableIndexOptimizations;
 };
 
+// Converts vector.multi_reduction into inner-most reduction form by inserting
+// vector.transpose
+struct InnerDimReductionConversion
+    : public OpRewritePattern<vector::MultiDimReductionOp> {
+  using OpRewritePattern<vector::MultiDimReductionOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
+                                PatternRewriter &rewriter) const override {
+    auto src = multiReductionOp.source();
+    auto loc = multiReductionOp.getLoc();
+    auto srcRank = multiReductionOp.getSourceVectorType().getRank();
+
+    auto reductionDims = llvm::to_vector<4>(
+        llvm::map_range(multiReductionOp.reduction_dims().cast<ArrayAttr>(),
+                        [](Attribute attr) -> int64_t {
+                          return attr.cast<IntegerAttr>().getInt();
+                        }));
+    llvm::sort(reductionDims);
+
+    int64_t reductionSize = multiReductionOp.reduction_dims().size();
+
+    // Fails if already inner most reduction.
+    bool innerMostReduction = true;
+    for (int i = 0; i < reductionSize; ++i) {
+      if (reductionDims[reductionSize - i - 1] != srcRank - i - 1) {
+        innerMostReduction = false;
+      }
+    }
+    if (innerMostReduction)
+      return failure();
+
+    // Permutes the indices so reduction dims are inner most dims.
+    SmallVector<int64_t> indices;
+    for (int i = 0; i < srcRank; ++i) {
+      indices.push_back(i);
+    }
+    int ir = reductionSize - 1;
+    int id = srcRank - 1;
+    while (ir >= 0) {
+      std::swap(indices[reductionDims[ir--]], indices[id--]);
+    }
+
+    // Sets inner most dims as reduction.
+    SmallVector<bool> reductionMask(srcRank, false);
+    for (int i = 0; i < reductionSize; ++i) {
+      reductionMask[srcRank - i - 1] = true;
+    }
+    auto transposeOp = rewriter.create<vector::TransposeOp>(loc, src, indices);
+    rewriter.replaceOpWithNewOp<vector::MultiDimReductionOp>(
+        multiReductionOp, transposeOp.result(), reductionMask,
+        multiReductionOp.kind());
+    return success();
+  }
+};
+
+// Reduces the rank of vector.mult_reduction nd -> 2d given all reduction
+// dimensions are inner most.
+struct ReduceMultiDimReductionRank
+    : public OpRewritePattern<vector::MultiDimReductionOp> {
+  using OpRewritePattern<vector::MultiDimReductionOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
+                                PatternRewriter &rewriter) const override {
+    auto srcRank = multiReductionOp.getSourceVectorType().getRank();
+    auto srcShape = multiReductionOp.getSourceVectorType().getShape();
+    if (srcRank == 2)
+      return failure();
+
+    auto loc = multiReductionOp.getLoc();
+    auto reductionDims = llvm::to_vector<4>(
+        llvm::map_range(multiReductionOp.reduction_dims().cast<ArrayAttr>(),
+                        [](Attribute attr) -> int64_t {
+                          return attr.cast<IntegerAttr>().getInt();
+                        }));
+    llvm::sort(reductionDims);
+
+    // Fails if not inner most reduction.
+    int64_t reductionSize = reductionDims.size();
+    bool innerMostReduction = true;
+    for (int i = 0; i < reductionSize; ++i) {
+      if (reductionDims[reductionSize - i - 1] != srcRank - i - 1) {
+        innerMostReduction = false;
+      }
+    }
+    if (!innerMostReduction)
+      return failure();
+
+    // Extracts 2d rank reduction shape.
+    int innerDims = 1;
+    int outterDims = 1;
+    SmallVector<int64_t> innerDimsShape;
+    for (int i = 0; i < srcRank; ++i) {
+      if (i < (srcRank - reductionSize)) {
+        innerDims *= srcShape[i];
+        innerDimsShape.push_back(srcShape[i]);
+      } else {
+        outterDims *= srcShape[i];
+      }
+    }
+
+    // Creates shape cast for the inputs n_d -> 2d
+    auto castedType = VectorType::get(
+        {innerDims, outterDims},
+        multiReductionOp.getSourceVectorType().getElementType());
+    auto castedOp = rewriter.create<vector::ShapeCastOp>(
+        loc, castedType, multiReductionOp.source());
+
+    // Creates the canonical form of 2d vector.multi_reduction with inner most
+    // dim as reduction.
+    auto newOp = rewriter.create<vector::MultiDimReductionOp>(
+        loc, castedOp.result(), ArrayRef<bool>{false, true},
+        multiReductionOp.kind());
+
+    // Creates shape cast for the output 2d -> nd
+    auto outputCastedType = VectorType::get(
+        innerDimsShape,
+        multiReductionOp.getSourceVectorType().getElementType());
+    Value castedOutputOp = rewriter.create<vector::ShapeCastOp>(
+        loc, outputCastedType, newOp.dest());
+
+    rewriter.replaceOp(multiReductionOp, castedOutputOp);
+    return success();
+  }
+};
+
+// Converts 2d vector.multi_reduction with inner most reduction dimension into a
+// sequence of vector.reduction ops.
+struct TwoDimMultiReductionToReduction
+    : public OpRewritePattern<vector::MultiDimReductionOp> {
+  using OpRewritePattern<vector::MultiDimReductionOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
+                                PatternRewriter &rewriter) const override {
+    auto srcRank = multiReductionOp.getSourceVectorType().getRank();
+    if (srcRank != 2)
+      return failure();
+
+    if (multiReductionOp.getReductionMask()[0] ||
+        !multiReductionOp.getReductionMask()[1])
+      return failure();
+
+    auto loc = multiReductionOp.getLoc();
+
+    Value result =
+        multiReductionOp.getDestVectorType().getElementType().isIntOrIndex()
+            ? rewriter.create<ConstantOp>(
+                  loc, multiReductionOp.getDestVectorType(),
+                  DenseElementsAttr::get(multiReductionOp.getDestVectorType(),
+                                         0))
+            : rewriter.create<ConstantOp>(
+                  loc, multiReductionOp.getDestVectorType(),
+                  DenseElementsAttr::get(multiReductionOp.getDestVectorType(),
+                                         0.0f));
+
+    int outerDim = multiReductionOp.getSourceVectorType().getShape()[0];
+
+    // TODO: Add vector::CombiningKind attribute instead of string to
+    // vector.reduction.
+    auto getKindStr = [](vector::CombiningKind kind) {
+      switch (kind) {
+      case vector::CombiningKind::ADD:
+        return "add";
+      case vector::CombiningKind::MUL:
+        return "mul";
+      case vector::CombiningKind::MIN:
+        return "min";
+      case vector::CombiningKind::MAX:
+        return "max";
+      case vector::CombiningKind::AND:
+        return "and";
+      case vector::CombiningKind::OR:
+        return "or";
+      case vector::CombiningKind::XOR:
+        return "xor";
+      }
+    };
+
+    for (int i = 0; i < outerDim; ++i) {
+      auto v = rewriter.create<vector::ExtractOp>(
+          loc, multiReductionOp.source(), ArrayRef<int64_t>{i});
+      auto reducedValue = rewriter.create<vector::ReductionOp>(
+          loc, multiReductionOp.getDestVectorType().getElementType(),
+          rewriter.getStringAttr(getKindStr(multiReductionOp.kind())), v,
+          ValueRange{});
+      result = rewriter.create<vector::InsertElementOp>(loc, reducedValue,
+                                                        result, i);
+    }
+    rewriter.replaceOp(multiReductionOp, result);
+    return success();
+  }
+};
+
 void mlir::vector::populateVectorMaskMaterializationPatterns(
     RewritePatternSet &patterns, bool enableIndexOptimizations) {
   patterns.add<VectorCreateMaskOpConversion,
@@ -3644,4 +3836,10 @@ void mlir::vector::populateVectorTransferLoweringPatterns(
       .add<TransferReadToVectorLoadLowering, TransferWriteToVectorStoreLowering,
            TransferReadPermutationLowering, TransferOpReduceRank>(
           patterns.getContext());
+}
+
+void mlir::vector::populateVectorMultiReductionLoweringPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<InnerDimReductionConversion, ReduceMultiDimReductionRank,
+               TwoDimMultiReductionToReduction>(patterns.getContext());
 }
