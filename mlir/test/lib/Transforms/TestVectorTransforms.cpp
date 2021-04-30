@@ -376,6 +376,19 @@ struct TestVectorTransferLoweringPatterns
   }
 };
 
+struct TestVectorMultiReductionLoweringPatterns
+    : public PassWrapper<TestVectorMultiReductionLoweringPatterns,
+                         FunctionPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<memref::MemRefDialect>();
+  }
+  void runOnFunction() override {
+    RewritePatternSet patterns(&getContext());
+    populateVectorMultiReductionLoweringPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+  }
+};
+
 struct TestProgressiveVectorToSCFLoweringPatterns
     : public PassWrapper<TestProgressiveVectorToSCFLoweringPatterns,
                          FunctionPass> {
@@ -439,6 +452,12 @@ void registerTestVectorConversions() {
   PassRegistration<TestProgressiveVectorToSCFLoweringPatterns> transferOpToSCF(
       "test-progressive-convert-vector-to-scf",
       "Test conversion patterns to progressively lower transfer ops to SCF");
+
+  PassRegistration<TestVectorMultiReductionLoweringPatterns>
+      multiDimReductionOpLoweringPass(
+          "test-vector-multi-reduction-lowering-patterns",
+          "Test conversion patterns to lower vector.multi_reduction to other "
+          "vector ops");
 }
 } // namespace test
 } // namespace mlir
