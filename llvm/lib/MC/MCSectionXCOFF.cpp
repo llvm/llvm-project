@@ -53,6 +53,7 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     switch (getMappingClass()) {
     case XCOFF::XMC_RW:
     case XCOFF::XMC_DS:
+    case XCOFF::XMC_TD:
       printCsectDirective(OS);
       break;
     case XCOFF::XMC_TC:
@@ -68,6 +69,12 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     return;
   }
 
+  if (isCsect() && getMappingClass() == XCOFF::XMC_TD) {
+    assert((getKind().isBSSExtern() || getKind().isBSSLocal()) &&
+           "Unexepected section kind for toc-data");
+    printCsectDirective(OS);
+    return;
+  }
   // Common csect type (uninitialized storage) does not have to print csect
   // directive for section switching.
   if (isCsect() && getCSectType() == XCOFF::XTY_CM) {

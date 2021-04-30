@@ -2171,6 +2171,12 @@ TargetLoweringObjectFileXCOFF::getTargetSymbol(const GlobalValue *GV,
   // function entry point. We choose to always return a function descriptor
   // here.
   if (const GlobalObject *GO = dyn_cast<GlobalObject>(GV)) {
+    if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV))
+      if (GVar->hasAttribute("toc-data"))
+        return cast<MCSectionXCOFF>(
+                   SectionForGlobal(GVar, SectionKind::getData(), TM))
+            ->getQualNameSymbol();
+
     if (GO->isDeclarationForLinker())
       return cast<MCSectionXCOFF>(getSectionForExternalReference(GO, TM))
           ->getQualNameSymbol();
@@ -2196,6 +2202,15 @@ MCSection *TargetLoweringObjectFileXCOFF::getExplicitSectionGlobal(
     report_fatal_error("#pragma clang section is not yet supported");
 
   StringRef SectionName = GO->getSection();
+
+  // Handle the XCOFF::TD case first, then deal with the rest.
+  if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GO))
+    if (GVar->hasAttribute("toc-data"))
+      return getContext().getXCOFFSection(
+          SectionName, Kind,
+          XCOFF::CsectProperties(/*MappingClass*/ XCOFF::XMC_TD, XCOFF::XTY_SD),
+          /* MultiSymbolsAllowed*/ true);
+
   XCOFF::StorageMappingClass MappingClass;
   if (Kind.isText())
     MappingClass = XCOFF::XMC_PR;
@@ -2232,6 +2247,16 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForExternalReference(
 
 MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  // Handle the XCOFF::TD case first, then deal with the rest.
+  if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GO))
+    if (GVar->hasAttribute("toc-data")) {
+      SmallString<128> Name;
+      getNameWithPrefix(Name, GO, TM);
+      return getContext().getXCOFFSection(
+          Name, Kind, XCOFF::CsectProperties(XCOFF::XMC_TD, XCOFF::XTY_SD),
+          /* MultiSymbolsAllowed*/ true);
+    }
+
   // Common symbols go into a csect with matching name which will get mapped
   // into the .bss section.
   // Zero-initialized local TLS symbols go into a csect with matching name which

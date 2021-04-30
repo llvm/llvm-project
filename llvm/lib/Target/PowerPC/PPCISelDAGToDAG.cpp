@@ -433,6 +433,64 @@ SDNode *PPCDAGToDAGISel::getGlobalBaseReg() {
       .getNode();
 }
 
+// Check if a SDValue has the toc-data attribute.
+static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
+  GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Val);
+  if (!GA)
+    return false;
+
+  const GlobalVariable *GV = dyn_cast_or_null<GlobalVariable>(GA->getGlobal());
+  if (!GV)
+    return false;
+
+  if (!GV->hasAttribute("toc-data"))
+    return false;
+
+  // TODO: These asserts should be updated as more support for the toc data
+  // transformation is added (64 bit, struct support, etc.).
+
+  assert(PointerSize == 4 && "Only 32 Bit Codegen is currently supported by "
+                             "the toc data transformation.");
+
+  assert(PointerSize >= GV->getAlign().valueOrOne().value() &&
+         "GlobalVariables with an alignment requirement stricter then 4-bytes "
+         "not supported by the toc data transformation.");
+
+  Type *PtrType = GV->getType();
+  assert(PtrType->isPointerTy() &&
+         "GlobalVariables always have pointer type!.");
+
+  Type *GVType = dyn_cast<PointerType>(PtrType)->getElementType();
+
+  assert(GVType->isSized() && "A GlobalVariable's size must be known to be "
+                              "supported by the toc data transformation.");
+
+  if (GVType->isVectorTy())
+    report_fatal_error("A GlobalVariable of Vector type is not currently "
+                       "supported by the toc data transformation.");
+
+  if (GVType->isArrayTy())
+    report_fatal_error("A GlobalVariable of Array type is not currently "
+                       "supported by the toc data transformation.");
+
+  if (GVType->isStructTy())
+    report_fatal_error("A GlobalVariable of Struct type is not currently "
+                       "supported by the toc data transformation.");
+
+  assert(GVType->getPrimitiveSizeInBits() <= PointerSize * 8 &&
+         "A GlobalVariable with size larger than 32 bits is not currently "
+         "supported by the toc data transformation.");
+
+  if (GV->hasLocalLinkage() || GV->hasPrivateLinkage())
+    report_fatal_error("A GlobalVariable with private or local linkage is not "
+                       "currently supported by the toc data transformation.");
+
+  assert(!GV->hasCommonLinkage() &&
+         "Tentative definitions cannot have the mapping class XMC_TD.");
+
+  return true;
+}
+
 /// isInt32Immediate - This method tests to see if the node is a 32-bit constant
 /// operand. If so Imm will receive the 32-bit value.
 static bool isInt32Immediate(SDNode *N, unsigned &Imm) {
@@ -5546,12 +5604,12 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
     // Handle 32-bit small code model.
     if (!isPPC64) {
-      // Transforms the ISD::TOC_ENTRY node to a PPCISD::LWZtoc.
-      auto replaceWithLWZtoc = [this, &dl](SDNode *TocEntry) {
+      // Transforms the ISD::TOC_ENTRY node to passed in Opcode, either
+      // PPC::ADDItoc, or PPC::LWZtoc
+      auto replaceWith = [this, &dl](unsigned OpCode, SDNode *TocEntry) {
         SDValue GA = TocEntry->getOperand(0);
         SDValue TocBase = TocEntry->getOperand(1);
-        SDNode *MN = CurDAG->getMachineNode(PPC::LWZtoc, dl, MVT::i32, GA,
-                                            TocBase);
+        SDNode *MN = CurDAG->getMachineNode(OpCode, dl, MVT::i32, GA, TocBase);
         transferMemOperands(TocEntry, MN);
         ReplaceNode(TocEntry, MN);
       };
@@ -5561,12 +5619,17 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
                "32-bit ELF can only have TOC entries in position independent"
                " code.");
         // 32-bit ELF always uses a small code model toc access.
-        replaceWithLWZtoc(N);
+        replaceWith(PPC::LWZtoc, N);
         return;
       }
 
       if (isAIXABI && CModel == CodeModel::Small) {
-        replaceWithLWZtoc(N);
+        if (hasTocDataAttr(N->getOperand(0),
+                           CurDAG->getDataLayout().getPointerSize()))
+          replaceWith(PPC::ADDItoc, N);
+        else
+          replaceWith(PPC::LWZtoc, N);
+
         return;
       }
     }
