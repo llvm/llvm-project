@@ -5055,10 +5055,9 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
     raw_string_ostream StrOS(HSAILPropetiesString);
     StrOS << "[HSAIL Major: " << Properties->HSAILMajorVersion
           << ", HSAIL Minor: " << Properties->HSAILMinorVersion
-          << ", Profile: " << uint32_t(Properties->Profile)
-          << ", Machine Model: " << uint32_t(Properties->MachineModel)
-          << ", Default Float Round: "
-          << uint32_t(Properties->DefaultFloatRound) << "]";
+          << ", Profile: " << Properties->Profile
+          << ", Machine Model: " << Properties->MachineModel
+          << ", Default Float Round: " << Properties->DefaultFloatRound << "]";
     return {"AMD HSA HSAIL Properties", HSAILPropetiesString};
   }
   case ELF::NT_AMD_HSA_ISA_VERSION: {
@@ -5106,12 +5105,10 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
       uint32_t Key;
       uint32_t Value;
     };
-    if (Desc.size() % sizeof(PALMetadata) != 0)
-      return {"AMD PAL Metadata", "Invalid AMD PAL Metadata"};
     auto Isa = reinterpret_cast<const PALMetadata *>(Desc.data());
     std::string MetadataString;
     raw_string_ostream StrOS(MetadataString);
-    for (size_t I = 0, E = Desc.size() / sizeof(PALMetadata); I < E; ++I) {
+    for (size_t I = 0, E = Desc.size() / sizeof(PALMetadata); I < E; ++E) {
       StrOS << "[" << Isa[I].Key << ": " << Isa[I].Value << "]";
     }
     return {"AMD PAL Metadata", MetadataString};
