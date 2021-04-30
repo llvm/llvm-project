@@ -79,10 +79,10 @@ public:
   /// Return true if the given load or store is a strided memory access.
   static bool isStridedAccess(const MachineInstr &MI);
 
-  /// Return true if this is an unscaled load/store.
-  static bool isUnscaledLdSt(unsigned Opc);
-  static bool isUnscaledLdSt(MachineInstr &MI) {
-    return isUnscaledLdSt(MI.getOpcode());
+  /// Return true if it has an unscaled load/store offset.
+  static bool hasUnscaledLdStOffset(unsigned Opc);
+  static bool hasUnscaledLdStOffset(MachineInstr &MI) {
+    return hasUnscaledLdStOffset(MI.getOpcode());
   }
 
   /// Returns the unscaled load/store for the scaled load/store opcode,
@@ -95,6 +95,14 @@ public:
     return getMemScale(MI.getOpcode());
   }
 
+  /// Returns whether the instruction is a pre-indexed load.
+  static bool isPreLd(const MachineInstr &MI);
+
+  /// Returns whether the instruction is a pre-indexed store.
+  static bool isPreSt(const MachineInstr &MI);
+
+  /// Returns whether the instruction is a pre-indexed load/store.
+  static bool isPreLdSt(const MachineInstr &MI);
 
   /// Returns the index for the immediate for a given instruction.
   static unsigned getLoadStoreImmIdx(unsigned Opc);
