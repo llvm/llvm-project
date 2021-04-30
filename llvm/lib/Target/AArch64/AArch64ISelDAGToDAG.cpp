@@ -186,9 +186,9 @@ public:
     return SelectSVEAddSubImm(N, VT, Imm, Shift);
   }
 
-  template<MVT::SimpleValueType VT>
+  template <MVT::SimpleValueType VT, bool Invert = false>
   bool SelectSVELogicalImm(SDValue N, SDValue &Imm) {
-    return SelectSVELogicalImm(N, VT, Imm);
+    return SelectSVELogicalImm(N, VT, Imm, Invert);
   }
 
   template <MVT::SimpleValueType VT>
@@ -326,7 +326,7 @@ private:
 
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift);
 
-  bool SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm);
+  bool SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm, bool Invert);
 
   bool SelectSVESignedArithImm(SDValue N, SDValue &Imm);
   bool SelectSVEShiftImm(SDValue N, uint64_t Low, uint64_t High,
@@ -3184,32 +3184,36 @@ bool AArch64DAGToDAGISel::SelectSVEArithImm(SDValue N, MVT VT, SDValue &Imm) {
   return false;
 }
 
-bool AArch64DAGToDAGISel::SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm) {
+bool AArch64DAGToDAGISel::SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm,
+                                              bool Invert) {
   if (auto CNode = dyn_cast<ConstantSDNode>(N)) {
     uint64_t ImmVal = CNode->getZExtValue();
     SDLoc DL(N);
 
+    if (Invert)
+      ImmVal = ~ImmVal;
+
     // Shift mask depending on type size.
     switch (VT.SimpleTy) {
-      case MVT::i8:
-        ImmVal &= 0xFF;
-        ImmVal |= ImmVal << 8;
-        ImmVal |= ImmVal << 16;
-        ImmVal |= ImmVal << 32;
-        break;
-      case MVT::i16:
-        ImmVal &= 0xFFFF;
-        ImmVal |= ImmVal << 16;
-        ImmVal |= ImmVal << 32;
-        break;
-      case MVT::i32:
-        ImmVal &= 0xFFFFFFFF;
-        ImmVal |= ImmVal << 32;
-        break;
-      case MVT::i64:
-        break;
-      default:
-        llvm_unreachable("Unexpected type");
+    case MVT::i8:
+      ImmVal &= 0xFF;
+      ImmVal |= ImmVal << 8;
+      ImmVal |= ImmVal << 16;
+      ImmVal |= ImmVal << 32;
+      break;
+    case MVT::i16:
+      ImmVal &= 0xFFFF;
+      ImmVal |= ImmVal << 16;
+      ImmVal |= ImmVal << 32;
+      break;
+    case MVT::i32:
+      ImmVal &= 0xFFFFFFFF;
+      ImmVal |= ImmVal << 32;
+      break;
+    case MVT::i64:
+      break;
+    default:
+      llvm_unreachable("Unexpected type");
     }
 
     uint64_t encoding;

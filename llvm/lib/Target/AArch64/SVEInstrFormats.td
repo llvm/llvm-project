@@ -204,6 +204,11 @@ def SVELogicalImm16Pat : ComplexPattern<i64, 1, "SelectSVELogicalImm<MVT::i16>",
 def SVELogicalImm32Pat : ComplexPattern<i64, 1, "SelectSVELogicalImm<MVT::i32>", []>;
 def SVELogicalImm64Pat : ComplexPattern<i64, 1, "SelectSVELogicalImm<MVT::i64>", []>;
 
+def SVELogicalImm8NotPat  : ComplexPattern<i64, 1, "SelectSVELogicalImm<MVT::i8, true>", []>;
+def SVELogicalImm16NotPat : ComplexPattern<i64, 1, "SelectSVELogicalImm<MVT::i16, true>", []>;
+def SVELogicalImm32NotPat : ComplexPattern<i64, 1, "SelectSVELogicalImm<MVT::i32, true>", []>;
+def SVELogicalImm64NotPat : ComplexPattern<i64, 1, "SelectSVELogicalImm<MVT::i64, true>", []>;
+
 def SVE8BitLslImm : ComplexPattern<i32, 2, "SelectSVE8BitLslImm", [imm]>;
 
 def SVEArithUImm8Pat  : ComplexPattern<i32, 1, "SelectSVEArithImm<MVT::i8>", []>;
@@ -1534,6 +1539,13 @@ multiclass sve_int_log_imm<bits<2> opc, string asm, string alias, SDPatternOpera
                   (!cast<Instruction>(NAME) ZPR32:$Zdn, sve_logical_imm32_not:$imm), 0>;
   def : InstAlias<alias # "\t$Zdn, $Zdn, $imm",
                   (!cast<Instruction>(NAME) ZPR64:$Zdn, logical_imm64_not:$imm), 0>;
+}
+
+multiclass sve_int_log_imm_bic<SDPatternOperator op> {
+  def : SVE_1_Op_Imm_Log_Pat<nxv16i8, op, ZPR8,  i32, SVELogicalImm8NotPat,  !cast<Instruction>("AND_ZI")>;
+  def : SVE_1_Op_Imm_Log_Pat<nxv8i16, op, ZPR16, i32, SVELogicalImm16NotPat, !cast<Instruction>("AND_ZI")>;
+  def : SVE_1_Op_Imm_Log_Pat<nxv4i32, op, ZPR32, i32, SVELogicalImm32NotPat, !cast<Instruction>("AND_ZI")>;
+  def : SVE_1_Op_Imm_Log_Pat<nxv2i64, op, ZPR64, i64, SVELogicalImm64NotPat, !cast<Instruction>("AND_ZI")>;
 }
 
 class sve_int_dup_mask_imm<string asm>
