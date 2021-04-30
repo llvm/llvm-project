@@ -47,7 +47,7 @@ module {
                             %arga: tensor<?x?xf32>,
                             %argb: tensor<?x?xf32>,
                             %argx: tensor<?x?xf32>) -> tensor<?x?xf32> {
-    %args = linalg.sparse_tensor %argS : !SparseTensor to tensor<?x?xf32>
+    %args = sparse_tensor.fromPtr %argS : !SparseTensor to tensor<?x?xf32>
     %0 = linalg.generic #trait_sampled_dense_dense
       ins(%args, %arga, %argb: tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%argx: tensor<?x?xf32>) {
