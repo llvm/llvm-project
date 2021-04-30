@@ -428,9 +428,6 @@ static int getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
       continue;
 
     MinWaitStates = Found ? std::min(MinWaitStates, W) : W;
-    if (IsExpired(nullptr, MinWaitStates))
-      return MinWaitStates;
-
     Found = true;
   }
 
