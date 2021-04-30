@@ -65,3 +65,4 @@ pythonenv*
 /clang/utils/analyzer/projects/*/RefScanBuildResults
 
 cmake-build-debug
+cmake-build-release
