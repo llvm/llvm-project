@@ -140,6 +140,11 @@ enum {
   /// - InsnID - Instruction ID
   /// - The predicate to test
   GIM_CheckAPFloatImmPredicate,
+  /// Check an immediate predicate on the specified instruction
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - The predicate to test
+  GIM_CheckImmOperandPredicate,
   /// Check a memory operation has the specified atomic ordering.
   /// - InsnID - Instruction ID
   /// - Ordering - The AtomicOrdering value

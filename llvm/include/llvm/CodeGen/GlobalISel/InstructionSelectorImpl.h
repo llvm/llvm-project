@@ -263,22 +263,27 @@ bool InstructionSelector::executeMatchTable(
       }
       break;
     }
-    case GIM_CheckI64ImmPredicate: {
+    case GIM_CheckI64ImmPredicate:
+    case GIM_CheckImmOperandPredicate: {
       int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t OpIdx = MatcherOpcode == GIM_CheckImmOperandPredicate
+                          ? MatchTable[CurrentIdx++]
+                          : 1;
       int64_t Predicate = MatchTable[CurrentIdx++];
       DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
-                      dbgs()
-                          << CurrentIdx << ": GIM_CheckI64ImmPredicate(MIs["
-                          << InsnID << "], Predicate=" << Predicate << ")\n");
+                      dbgs() << CurrentIdx << ": GIM_CheckImmPredicate(MIs["
+                             << InsnID << "]->getOperand(" << OpIdx
+                             << "), Predicate=" << Predicate << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
-      assert(State.MIs[InsnID]->getOpcode() == TargetOpcode::G_CONSTANT &&
-             "Expected G_CONSTANT");
+      assert((State.MIs[InsnID]->getOperand(OpIdx).isImm() ||
+              State.MIs[InsnID]->getOperand(OpIdx).isCImm()) &&
+             "Expected immediate operand");
       assert(Predicate > GIPFP_I64_Invalid && "Expected a valid predicate");
       int64_t Value = 0;
-      if (State.MIs[InsnID]->getOperand(1).isCImm())
-        Value = State.MIs[InsnID]->getOperand(1).getCImm()->getSExtValue();
-      else if (State.MIs[InsnID]->getOperand(1).isImm())
-        Value = State.MIs[InsnID]->getOperand(1).getImm();
+      if (State.MIs[InsnID]->getOperand(OpIdx).isCImm())
+        Value = State.MIs[InsnID]->getOperand(OpIdx).getCImm()->getSExtValue();
+      else if (State.MIs[InsnID]->getOperand(OpIdx).isImm())
+        Value = State.MIs[InsnID]->getOperand(OpIdx).getImm();
       else
         llvm_unreachable("Expected Imm or CImm operand");
 
