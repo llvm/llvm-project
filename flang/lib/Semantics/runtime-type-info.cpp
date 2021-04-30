@@ -100,7 +100,8 @@ private:
         }
       }
       context_.Say(location_,
-          "Specification expression '%s' is neither constant nor a length type parameter"_err_en_US,
+          "Specification expression '%s' is neither constant nor a length "
+          "type parameter"_err_en_US,
           expr->AsFortran());
     }
     return PackageIntValue(deferredEnum_);
@@ -439,12 +440,12 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
               },
               [&](const ObjectEntityDetails &object) {
                 dataComponents.emplace_back(DescribeComponent(
-                    symbol, object, scope, distinctName, parameters));
+                    symbol, object, dtScope, distinctName, parameters));
               },
               [&](const ProcEntityDetails &proc) {
                 if (IsProcedurePointer(symbol)) {
                   procPtrComponents.emplace_back(
-                      DescribeComponent(symbol, proc, scope));
+                      DescribeComponent(symbol, proc, dtScope));
                 }
               },
               [&](const ProcBindingDetails &) { // handled in a later pass
@@ -607,8 +608,9 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     const Symbol &symbol, const ObjectEntityDetails &object, Scope &scope,
     const std::string &distinctName, const SymbolVector *parameters) {
   evaluate::StructureConstructorValues values;
+  auto &foldingContext{context_.foldingContext()};
   auto typeAndShape{evaluate::characteristics::TypeAndShape::Characterize(
-      symbol, context_.foldingContext())};
+      symbol, foldingContext)};
   CHECK(typeAndShape.has_value());
   auto dyType{typeAndShape->type()};
   const auto &shape{typeAndShape->shape()};
@@ -624,7 +626,11 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   }
   AddValue(values, componentSchema_, "offset"s, IntExpr<8>(symbol.offset()));
   // CHARACTER length
-  const auto &len{typeAndShape->LEN()};
+  auto len{typeAndShape->LEN()};
+  if (const semantics::DerivedTypeSpec * pdtInstance{scope.derivedTypeSpec()}) {
+    auto restorer{foldingContext.WithPDTInstance(*pdtInstance)};
+    len = Fold(foldingContext, std::move(len));
+  }
   if (dyType.category() == TypeCategory::Character && len) {
     AddValue(values, componentSchema_, "characterlen"s,
         evaluate::AsGenericExpr(GetValue(len, parameters)));
@@ -682,7 +688,6 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   if (rank > 0 && !IsAllocatable(symbol) && !IsPointer(symbol)) {
     std::vector<evaluate::StructureConstructor> bounds;
     evaluate::NamedEntity entity{symbol};
-    auto &foldingContext{context_.foldingContext()};
     for (int j{0}; j < rank; ++j) {
       bounds.emplace_back(GetValue(std::make_optional(evaluate::GetLowerBound(
                                        foldingContext, entity, j)),

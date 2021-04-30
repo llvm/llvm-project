@@ -292,6 +292,9 @@ bool TGParser::AddSubClass(RecordsEntry &Entry, SubClassReference &SubClass) {
   if (Entry.Rec)
     return AddSubClass(Entry.Rec.get(), SubClass);
 
+  if (Entry.Assertion)
+    return false;
+
   for (auto &E : Entry.Loop->Entries) {
     if (AddSubClass(E, SubClass))
       return true;

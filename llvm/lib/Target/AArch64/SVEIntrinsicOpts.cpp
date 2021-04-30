@@ -55,8 +55,6 @@ struct SVEIntrinsicOpts : public ModulePass {
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
-  static IntrinsicInst *isReinterpretToSVBool(Value *V);
-
   bool coalescePTrueIntrinsicCalls(BasicBlock &BB,
                                    SmallSetVector<IntrinsicInst *, 4> &PTrues);
   bool optimizePTrueIntrinsicCalls(SmallSetVector<Function *, 4> &Functions);
@@ -90,19 +88,6 @@ INITIALIZE_PASS_END(SVEIntrinsicOpts, DEBUG_TYPE, name, false, false)
 namespace llvm {
 ModulePass *createSVEIntrinsicOptsPass() { return new SVEIntrinsicOpts(); }
 } // namespace llvm
-
-/// Returns V if it's a cast from <n x 16 x i1> (aka svbool_t), nullptr
-/// otherwise.
-IntrinsicInst *SVEIntrinsicOpts::isReinterpretToSVBool(Value *V) {
-  IntrinsicInst *I = dyn_cast<IntrinsicInst>(V);
-  if (!I)
-    return nullptr;
-
-  if (I->getIntrinsicID() != Intrinsic::aarch64_sve_convert_to_svbool)
-    return nullptr;
-
-  return I;
-}
 
 /// Checks if a ptrue intrinsic call is promoted. The act of promoting a
 /// ptrue will introduce zeroing. For example:

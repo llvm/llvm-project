@@ -35,6 +35,8 @@ set(files
   __mutex_base
   __node_handle
   __nullptr
+  __ranges/access.h
+  __ranges/concepts.h
   __ranges/enable_borrowed_range.h
   __split_buffer
   __sso_allocator
@@ -150,6 +152,7 @@ set(files
   random
   ranges
   ratio
+  ranges
   regex
   scoped_allocator
   semaphore

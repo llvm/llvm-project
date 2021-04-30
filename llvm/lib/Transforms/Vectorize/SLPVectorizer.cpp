@@ -3589,13 +3589,27 @@ InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
     for (const auto &Data : ExtractVectorsTys) {
       auto *EEVTy = cast<FixedVectorType>(Data.first->getType());
       unsigned NumElts = VecTy->getNumElements();
-      if (TTIRef.getNumberOfParts(EEVTy) > TTIRef.getNumberOfParts(VecTy))
-        Cost += TTIRef.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
-                                      EEVTy, None,
-                                      (Data.second / NumElts) * NumElts, VecTy);
-      else
+      if (TTIRef.getNumberOfParts(EEVTy) > TTIRef.getNumberOfParts(VecTy)) {
+        unsigned Idx = (Data.second / NumElts) * NumElts;
+        unsigned EENumElts = EEVTy->getNumElements();
+        if (Idx + NumElts <= EENumElts) {
+          Cost +=
+              TTIRef.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                                    EEVTy, None, Idx, VecTy);
+        } else {
+          // Need to round up the subvector type vectorization factor to avoid a
+          // crash in cost model functions. Make SubVT so that Idx + VF of SubVT
+          // <= EENumElts.
+          auto *SubVT =
+              FixedVectorType::get(VecTy->getElementType(), EENumElts - Idx);
+          Cost +=
+              TTIRef.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                                    EEVTy, None, Idx, SubVT);
+        }
+      } else {
         Cost += TTIRef.getShuffleCost(TargetTransformInfo::SK_InsertSubvector,
                                       VecTy, None, 0, EEVTy);
+      }
     }
   };
   if (E->State == TreeEntry::NeedToGather) {
