@@ -42,4 +42,37 @@ TEST(STLForwardCompatTest, DisjunctionTest) {
                                  std::true_type>::value));
 }
 
+template <typename T>
+class STLForwardCompatRemoveCVRefTest : public ::testing::Test {};
+
+using STLForwardCompatRemoveCVRefTestTypes = ::testing::Types<
+    // clang-format off
+    std::pair<int, int>,
+    std::pair<int &, int>,
+    std::pair<const int, int>,
+    std::pair<volatile int, int>,
+    std::pair<const volatile int &, int>,
+    std::pair<int *, int *>,
+    std::pair<int *const, int *>,
+    std::pair<const int *, const int *>,
+    std::pair<int *&, int *>
+    // clang-format on
+    >;
+
+TYPED_TEST_CASE(STLForwardCompatRemoveCVRefTest,
+                STLForwardCompatRemoveCVRefTestTypes);
+
+TYPED_TEST(STLForwardCompatRemoveCVRefTest, RemoveCVRef) {
+  using From = typename TypeParam::first_type;
+  using To = typename TypeParam::second_type;
+  EXPECT_TRUE(
+      (std::is_same<typename llvm::remove_cvref<From>::type, To>::value));
+}
+
+TYPED_TEST(STLForwardCompatRemoveCVRefTest, RemoveCVRefT) {
+  using From = typename TypeParam::first_type;
+  EXPECT_TRUE((std::is_same<typename llvm::remove_cvref<From>::type,
+                            llvm::remove_cvref_t<From>>::value));
+}
+
 } // namespace

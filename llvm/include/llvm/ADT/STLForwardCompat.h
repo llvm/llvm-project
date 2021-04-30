@@ -44,6 +44,20 @@ template <typename B1, typename... Bn>
 struct disjunction<B1, Bn...>
     : std::conditional<bool(B1::value), B1, disjunction<Bn...>>::type {};
 
+//===----------------------------------------------------------------------===//
+//     Features from C++20
+//===----------------------------------------------------------------------===//
+
+template <typename T>
+struct remove_cvref // NOLINT(readability-identifier-naming)
+{
+  using type = std::remove_cv_t<std::remove_reference_t<T>>;
+};
+
+template <typename T>
+using remove_cvref_t // NOLINT(readability-identifier-naming)
+    = typename llvm::remove_cvref<T>::type;
+
 } // namespace llvm
 
 #endif // LLVM_ADT_STLFORWARDCOMPAT_H
