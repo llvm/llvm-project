@@ -279,12 +279,12 @@ let Predicates = [HasSVE] in {
   def  SETFFR     : sve_int_setffr<"setffr", int_aarch64_sve_setffr>;
   def  WRFFR      : sve_int_wrffr<"wrffr", int_aarch64_sve_wrffr>;
 
-  defm ADD_ZZZ   : sve_int_bin_cons_arit_0<0b000, "add", add, null_frag>;
-  defm SUB_ZZZ   : sve_int_bin_cons_arit_0<0b001, "sub", sub, null_frag>;
-  defm SQADD_ZZZ : sve_int_bin_cons_arit_0<0b100, "sqadd", saddsat, int_aarch64_sve_sqadd_x>;
-  defm UQADD_ZZZ : sve_int_bin_cons_arit_0<0b101, "uqadd", uaddsat, int_aarch64_sve_uqadd_x>;
-  defm SQSUB_ZZZ : sve_int_bin_cons_arit_0<0b110, "sqsub", ssubsat, int_aarch64_sve_sqsub_x>;
-  defm UQSUB_ZZZ : sve_int_bin_cons_arit_0<0b111, "uqsub", usubsat, int_aarch64_sve_uqsub_x>;
+  defm ADD_ZZZ   : sve_int_bin_cons_arit_0<0b000, "add", add>;
+  defm SUB_ZZZ   : sve_int_bin_cons_arit_0<0b001, "sub", sub>;
+  defm SQADD_ZZZ : sve_int_bin_cons_arit_0<0b100, "sqadd", saddsat>;
+  defm UQADD_ZZZ : sve_int_bin_cons_arit_0<0b101, "uqadd", uaddsat>;
+  defm SQSUB_ZZZ : sve_int_bin_cons_arit_0<0b110, "sqsub", ssubsat>;
+  defm UQSUB_ZZZ : sve_int_bin_cons_arit_0<0b111, "uqsub", usubsat>;
 
   defm AND_ZZZ : sve_int_bin_cons_log<0b00, "and", and>;
   defm ORR_ZZZ : sve_int_bin_cons_log<0b01, "orr", or>;
@@ -309,13 +309,13 @@ let Predicates = [HasSVE] in {
   defm AND_ZPmZ : sve_int_bin_pred_log<0b010, "and", int_aarch64_sve_and>;
   defm BIC_ZPmZ : sve_int_bin_pred_log<0b011, "bic", int_aarch64_sve_bic>;
 
-  defm ADD_ZI   : sve_int_arith_imm0<0b000, "add", add, null_frag>;
-  defm SUB_ZI   : sve_int_arith_imm0<0b001, "sub", sub, null_frag>;
+  defm ADD_ZI   : sve_int_arith_imm0<0b000, "add", add>;
+  defm SUB_ZI   : sve_int_arith_imm0<0b001, "sub", sub>;
   defm SUBR_ZI  : sve_int_arith_imm0_subr<0b011, "subr", sub>;
-  defm SQADD_ZI : sve_int_arith_imm0<0b100, "sqadd", saddsat, int_aarch64_sve_sqadd_x>;
-  defm UQADD_ZI : sve_int_arith_imm0<0b101, "uqadd", uaddsat, int_aarch64_sve_uqadd_x>;
-  defm SQSUB_ZI : sve_int_arith_imm0<0b110, "sqsub", ssubsat, int_aarch64_sve_sqsub_x>;
-  defm UQSUB_ZI : sve_int_arith_imm0<0b111, "uqsub", usubsat, int_aarch64_sve_uqsub_x>;
+  defm SQADD_ZI : sve_int_arith_imm0<0b100, "sqadd", saddsat>;
+  defm UQADD_ZI : sve_int_arith_imm0<0b101, "uqadd", uaddsat>;
+  defm SQSUB_ZI : sve_int_arith_imm0<0b110, "sqsub", ssubsat>;
+  defm UQSUB_ZI : sve_int_arith_imm0<0b111, "uqsub", usubsat>;
 
   defm MAD_ZPmZZ : sve_int_mladdsub_vvv_pred<0b0, "mad", int_aarch64_sve_mad>;
   defm MSB_ZPmZZ : sve_int_mladdsub_vvv_pred<0b1, "msb", int_aarch64_sve_msb>;

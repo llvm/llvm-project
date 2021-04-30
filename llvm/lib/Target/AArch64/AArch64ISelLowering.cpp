@@ -13779,16 +13779,22 @@ static bool isAllActivePredicate(SDValue N) {
 // If a merged operation has no inactive lanes we can relax it to a predicated
 // or unpredicated operation, which potentially allows better isel (perhaps
 // using immediate forms) or relaxing register reuse requirements.
-static SDValue convertMergedOpToPredOp(SDNode *N, unsigned PredOpc,
-                                       SelectionDAG &DAG) {
+static SDValue convertMergedOpToPredOp(SDNode *N, unsigned Opc,
+                                       SelectionDAG &DAG,
+                                       bool UnpredOp = false) {
   assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN && "Expected intrinsic!");
   assert(N->getNumOperands() == 4 && "Expected 3 operand intrinsic!");
   SDValue Pg = N->getOperand(1);
 
   // ISD way to specify an all active predicate.
-  if (isAllActivePredicate(Pg))
-    return DAG.getNode(PredOpc, SDLoc(N), N->getValueType(0), Pg,
-                       N->getOperand(2), N->getOperand(3));
+  if (isAllActivePredicate(Pg)) {
+    if (UnpredOp)
+      return DAG.getNode(Opc, SDLoc(N), N->getValueType(0), N->getOperand(2),
+                         N->getOperand(3));
+    else
+      return DAG.getNode(Opc, SDLoc(N), N->getValueType(0), Pg,
+                         N->getOperand(2), N->getOperand(3));
+  }
 
   // FUTURE: SplatVector(true)
   return SDValue();
@@ -13905,6 +13911,36 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return convertMergedOpToPredOp(N, AArch64ISD::FSUB_PRED, DAG);
   case Intrinsic::aarch64_sve_fmul:
     return convertMergedOpToPredOp(N, AArch64ISD::FMUL_PRED, DAG);
+  case Intrinsic::aarch64_sve_add:
+    return convertMergedOpToPredOp(N, ISD::ADD, DAG, true);
+  case Intrinsic::aarch64_sve_sub:
+    return convertMergedOpToPredOp(N, ISD::SUB, DAG, true);
+  case Intrinsic::aarch64_sve_and:
+    return convertMergedOpToPredOp(N, ISD::AND, DAG, true);
+  case Intrinsic::aarch64_sve_eor:
+    return convertMergedOpToPredOp(N, ISD::XOR, DAG, true);
+  case Intrinsic::aarch64_sve_orr:
+    return convertMergedOpToPredOp(N, ISD::OR, DAG, true);
+  case Intrinsic::aarch64_sve_sqadd:
+    return convertMergedOpToPredOp(N, ISD::SADDSAT, DAG, true);
+  case Intrinsic::aarch64_sve_sqsub:
+    return convertMergedOpToPredOp(N, ISD::SSUBSAT, DAG, true);
+  case Intrinsic::aarch64_sve_uqadd:
+    return convertMergedOpToPredOp(N, ISD::UADDSAT, DAG, true);
+  case Intrinsic::aarch64_sve_uqsub:
+    return convertMergedOpToPredOp(N, ISD::USUBSAT, DAG, true);
+  case Intrinsic::aarch64_sve_sqadd_x:
+    return DAG.getNode(ISD::SADDSAT, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2));
+  case Intrinsic::aarch64_sve_sqsub_x:
+    return DAG.getNode(ISD::SSUBSAT, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2));
+  case Intrinsic::aarch64_sve_uqadd_x:
+    return DAG.getNode(ISD::UADDSAT, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2));
+  case Intrinsic::aarch64_sve_uqsub_x:
+    return DAG.getNode(ISD::USUBSAT, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2));
   case Intrinsic::aarch64_sve_cmphs:
     if (!N->getOperand(2).getValueType().isFloatingPoint())
       return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
