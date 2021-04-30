@@ -49,6 +49,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -111,6 +112,7 @@ using InstrListMap = MapVector<ChainID, InstrList>;
 class Vectorizer {
   Function &F;
   AliasAnalysis &AA;
+  AssumptionCache &AC;
   DominatorTree &DT;
   ScalarEvolution &SE;
   TargetTransformInfo &TTI;
@@ -118,9 +120,9 @@ class Vectorizer {
   IRBuilder<> Builder;
 
 public:
-  Vectorizer(Function &F, AliasAnalysis &AA, DominatorTree &DT,
-             ScalarEvolution &SE, TargetTransformInfo &TTI)
-      : F(F), AA(AA), DT(DT), SE(SE), TTI(TTI),
+  Vectorizer(Function &F, AliasAnalysis &AA, AssumptionCache &AC,
+             DominatorTree &DT, ScalarEvolution &SE, TargetTransformInfo &TTI)
+      : F(F), AA(AA), AC(AC), DT(DT), SE(SE), TTI(TTI),
         DL(F.getParent()->getDataLayout()), Builder(SE.getContext()) {}
 
   bool run();
@@ -205,6 +207,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<ScalarEvolutionWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
@@ -219,6 +222,7 @@ char LoadStoreVectorizerLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LoadStoreVectorizerLegacyPass, DEBUG_TYPE,
                       "Vectorize load and Store instructions", false, false)
 INITIALIZE_PASS_DEPENDENCY(SCEVAAWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker);
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
@@ -241,7 +245,10 @@ bool LoadStoreVectorizerLegacyPass::runOnFunction(Function &F) {
   TargetTransformInfo &TTI =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
-  Vectorizer V(F, AA, DT, SE, TTI);
+  AssumptionCache &AC =
+      getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+
+  Vectorizer V(F, AA, AC, DT, SE, TTI);
   return V.run();
 }
 
@@ -254,8 +261,9 @@ PreservedAnalyses LoadStoreVectorizerPass::run(Function &F, FunctionAnalysisMana
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   ScalarEvolution &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
+  AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
 
-  Vectorizer V(F, AA, DT, SE, TTI);
+  Vectorizer V(F, AA, AC, DT, SE, TTI);
   bool Changed = V.run();
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
@@ -510,7 +518,7 @@ bool Vectorizer::lookThroughComplexAddresses(Value *PtrA, Value *PtrB,
     if (!OpA)
       return false;
     KnownBits Known(BitWidth);
-    computeKnownBits(OpA, Known, DL, 0, nullptr, OpA, &DT);
+    computeKnownBits(OpA, Known, DL, 0, &AC, OpA, &DT);
     APInt BitsAllowedToBeSet = Known.Zero.zext(IdxDiff.getBitWidth());
     if (Signed)
       BitsAllowedToBeSet.clearBit(BitWidth - 1);
