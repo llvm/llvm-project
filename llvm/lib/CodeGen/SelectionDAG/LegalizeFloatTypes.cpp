@@ -2255,11 +2255,6 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FREM:
     case ISD::FSUB:       R = PromoteFloatRes_BinOp(N); break;
 
-    case ISD::ATOMIC_LOAD_FADD:
-    case ISD::ATOMIC_LOAD_FSUB:
-      R = PromoteFloatRes_ATOMIC_LOAD_FXXX(N);
-      break;
-
     case ISD::FMA:        // FMA is same as FMAD
     case ISD::FMAD:       R = PromoteFloatRes_FMAD(N); break;
 
@@ -2456,21 +2451,6 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_FP_ROUND(SDNode *N) {
   SDValue Round = DAG.getNode(GetPromotionOpcode(OpVT, VT), DL, IVT, Op);
   // Promote it back to the legal output type
   return DAG.getNode(GetPromotionOpcode(VT, NVT), DL, NVT, Round);
-}
-
-SDValue DAGTypeLegalizer::PromoteFloatRes_ATOMIC_LOAD_FXXX(SDNode *N) {
-  AtomicSDNode *A = cast<AtomicSDNode>(N);
-  EVT VT = N->getValueType(0);
-
-  // Load the value as an integer value with the same number of bits.
-  EVT IVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
-  SDValue PromotedVal = GetPromotedFloat(A->getVal());
-  SDValue NewA =
-      DAG.getAtomic(A->getOpcode(), SDLoc(N), IVT, A->getChain(),
-                    A->getBasePtr(), PromotedVal, A->getMemOperand());
-  ReplaceValueWith(SDValue(A, 1), NewA.getValue(1));
-
-  return NewA;
 }
 
 SDValue DAGTypeLegalizer::PromoteFloatRes_LOAD(SDNode *N) {

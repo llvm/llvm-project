@@ -6428,37 +6428,6 @@ def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPR:$temp),
                              NoItinerary, []>, Sched<[]>;
 }
 
-let Constraints = "@earlyclobber $Rd,@earlyclobber $temp",
-    mayLoad = 1, mayStore = 1 in
-multiclass AtomicRMW {
-  def _8 : PseudoInst<(outs GPR:$Rd, GPR:$temp), (ins GPR:$addr, GPR:$new), NoItinerary, []>, Sched<[]>;
-  def _16 : PseudoInst<(outs GPR:$Rd, GPR:$temp), (ins GPR:$addr, GPR:$new), NoItinerary, []>, Sched<[]>;
-  def _32 : PseudoInst<(outs GPR:$Rd, GPR:$temp), (ins GPR:$addr, GPR:$new), NoItinerary, []>, Sched<[]>;
-  def _64 : PseudoInst<(outs GPRPair:$Rd, GPR:$temp), (ins GPR:$addr, GPRPair:$new), NoItinerary, []>, Sched<[]>;
-}
-defm ATOMIC_SWAP : AtomicRMW;
-defm ATOMIC_LOAD_ADD : AtomicRMW;
-defm ATOMIC_LOAD_SUB : AtomicRMW;
-defm ATOMIC_LOAD_AND : AtomicRMW;
-defm ATOMIC_LOAD_CLR : AtomicRMW;
-defm ATOMIC_LOAD_OR : AtomicRMW;
-defm ATOMIC_LOAD_XOR : AtomicRMW;
-defm ATOMIC_LOAD_NAND : AtomicRMW;
-defm ATOMIC_LOAD_MIN : AtomicRMW;
-defm ATOMIC_LOAD_MAX : AtomicRMW;
-defm ATOMIC_LOAD_UMIN : AtomicRMW;
-defm ATOMIC_LOAD_UMAX : AtomicRMW;
-// FADD and FSUB have GPRPair temporary for ldrexd/strexd and the return value of strexd, but DPR for result.
-let Constraints = "@earlyclobber $Rd,@earlyclobber $temp",
-    mayLoad = 1, mayStore = 1 in
-multiclass AtomicRMWFloat {
-  def _16 : PseudoInst<(outs SPR:$Rd, GPR:$temp), (ins GPR:$addr, SPR:$new), NoItinerary, []>, Sched<[]>;
-  def _32 : PseudoInst<(outs SPR:$Rd, GPR:$temp), (ins GPR:$addr, SPR:$new), NoItinerary, []>, Sched<[]>;
-  def _64 : PseudoInst<(outs DPR:$Rd, GPRPair:$temp), (ins GPR:$addr, DPR:$new), NoItinerary, []>, Sched<[]>;
-}
-defm ATOMIC_LOAD_FADD : AtomicRMWFloat;
-defm ATOMIC_LOAD_FSUB : AtomicRMWFloat;
-
 def CompilerBarrier : PseudoInst<(outs), (ins i32imm:$ordering), NoItinerary,
                                  [(atomic_fence timm:$ordering, 0)]> {
   let hasSideEffects = 1;
