@@ -2144,8 +2144,9 @@ bool TargetLoweringObjectFileXCOFF::ShouldEmitEHBlock(
   if (!F.hasPersonalityFn() || !F.needsUnwindTableEntry())
     return false;
 
-  const Function *Per =
-      dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
+  const GlobalValue *Per =
+      dyn_cast<GlobalValue>(F.getPersonalityFn()->stripPointerCasts());
+  assert(Per && "Personality routine is not a GlobalValue type.");
   if (isNoOpWithoutInvoke(classifyEHPersonality(Per)))
     return false;
 
