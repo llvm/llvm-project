@@ -725,8 +725,8 @@ void ClangdLSPServer::onCommandApplyEdit(const WorkspaceEdit &WE,
 
 void ClangdLSPServer::onCommandApplyTweak(const TweakArgs &Args,
                                           Callback<llvm::json::Value> Reply) {
-  auto Action = [this, Reply = std::move(Reply),
-                 File = Args.file](llvm::Expected<Tweak::Effect> R) mutable {
+  auto Action = [this, Reply = std::move(Reply)](
+                    llvm::Expected<Tweak::Effect> R) mutable {
     if (!R)
       return Reply(R.takeError());
 
