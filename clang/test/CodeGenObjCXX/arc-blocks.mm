@@ -204,10 +204,10 @@ void foo1() {
 
 // Test that calls to @llvm.objc.retainBlock aren't emitted in some cases.
 
-namespace test_block_retain {
-  typedef void (^BlockTy)();
+typedef void (^BlockTy)();
+void foo1(id);
 
-  void foo1(id);
+namespace test_block_retain {
 
 // CHECK-LABEL: define{{.*}} void @_ZN17test_block_retain14initializationEP11objc_object(
 // CHECK-NOT: @llvm.objc.retainBlock(
@@ -319,5 +319,26 @@ namespace test_block_retain {
     id b1;
     b1 = b0;
     ((BlockTy)b1)();
+  }
+}
+
+// Check that the block capture is released after the full expression.
+
+// CHECK-LABEL: define void @_ZN13test_rval_ref4testEP11objc_object(
+// CHECK: %[[BLOCK:.*]] = alloca <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, align 8
+// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %[[BLOCK]], i32 0, i32 5
+// CHECK: %[[V1:.*]] = call i8* @llvm.objc.retain(
+// CHECK: store i8* %[[V1]], i8** %[[BLOCK_CAPTURED]], align 8
+// CHECK: invoke void @_ZN13test_rval_ref17callTemplateBlockEOU15__autoreleasingU13block_pointerFvvE(
+
+// CHECK: call void @llvm.objc.storeStrong(i8** %[[BLOCK_CAPTURED]], i8* null)
+
+namespace test_rval_ref {
+  void callTemplateBlock(BlockTy &&func);
+
+  void test(id str) {
+    return callTemplateBlock(^void() {
+      foo1(str);
+    });
   }
 }
