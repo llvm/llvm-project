@@ -17,7 +17,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static void testDumpWithAddress(uint64_t base_addr, size_t item_count,
+static void TestDumpWithAddress(uint64_t base_addr, size_t item_count,
                                 llvm::StringRef expected) {
   std::vector<uint8_t> data{0x11, 0x22};
   StreamString result;
@@ -32,13 +32,13 @@ static void testDumpWithAddress(uint64_t base_addr, size_t item_count,
 }
 
 TEST(DumpDataExtractorTest, BaseAddress) {
-  testDumpWithAddress(0x12341234, 1, "0x12341234: 0x11");
-  testDumpWithAddress(LLDB_INVALID_ADDRESS, 1, "0x11");
-  testDumpWithAddress(0x12341234, 2, "0x12341234: 0x11\n0x12341235: 0x22");
-  testDumpWithAddress(LLDB_INVALID_ADDRESS, 2, "0x11\n0x22");
+  TestDumpWithAddress(0x12341234, 1, "0x12341234: 0x11");
+  TestDumpWithAddress(LLDB_INVALID_ADDRESS, 1, "0x11");
+  TestDumpWithAddress(0x12341234, 2, "0x12341234: 0x11\n0x12341235: 0x22");
+  TestDumpWithAddress(LLDB_INVALID_ADDRESS, 2, "0x11\n0x22");
 }
 
-static void testDumpWithOffset(offset_t start_offset,
+static void TestDumpWithOffset(offset_t start_offset,
                                llvm::StringRef expected) {
   std::vector<uint8_t> data{0x11, 0x22, 0x33};
   StreamString result;
@@ -53,12 +53,12 @@ static void testDumpWithOffset(offset_t start_offset,
 }
 
 TEST(DumpDataExtractorTest, StartOffset) {
-  testDumpWithOffset(0, "0x00000000: 0x11 0x22 0x33");
+  TestDumpWithOffset(0, "0x00000000: 0x11 0x22 0x33");
   // The offset applies to the DataExtractor, not the address used when
   // formatting.
-  testDumpWithOffset(1, "0x00000000: 0x22 0x33");
+  TestDumpWithOffset(1, "0x00000000: 0x22 0x33");
   // If the offset is outside the DataExtractor's range we do nothing.
-  testDumpWithOffset(3, "");
+  TestDumpWithOffset(3, "");
 }
 
 TEST(DumpDataExtractorTest, NullStream) {
@@ -239,7 +239,7 @@ TEST(DumpDataExtractorTest, FormatCharArray) {
 }
 
 template <typename T>
-void testDumpMultiLine(std::vector<T> data, lldb::Format format,
+void TestDumpMultiLine(std::vector<T> data, lldb::Format format,
                        size_t num_per_line, llvm::StringRef expected) {
   size_t sz_bytes = data.size() * sizeof(T);
   TestDumpImpl(&data[0], sz_bytes, data.size(), sz_bytes, num_per_line,
@@ -247,7 +247,7 @@ void testDumpMultiLine(std::vector<T> data, lldb::Format format,
 }
 
 template <typename T>
-void testDumpMultiLine(const T *data, size_t num_items, lldb::Format format,
+void TestDumpMultiLine(const T *data, size_t num_items, lldb::Format format,
                        size_t num_per_line, llvm::StringRef expected) {
   TestDumpImpl(data, sizeof(T) * num_items, sizeof(T), num_items, num_per_line,
                0x80000000, format, expected);
@@ -255,17 +255,17 @@ void testDumpMultiLine(const T *data, size_t num_items, lldb::Format format,
 
 TEST(DumpDataExtractorTest, MultiLine) {
   // A vector counts as 1 item regardless of size.
-  testDumpMultiLine(std::vector<uint8_t>{0x11},
+  TestDumpMultiLine(std::vector<uint8_t>{0x11},
                     lldb::Format::eFormatVectorOfUInt8, 1,
                     "0x80000000: {0x11}");
-  testDumpMultiLine(std::vector<uint8_t>{0x11, 0x22},
+  TestDumpMultiLine(std::vector<uint8_t>{0x11, 0x22},
                     lldb::Format::eFormatVectorOfUInt8, 1,
                     "0x80000000: {0x11 0x22}");
 
   // If you have multiple vectors then that's multiple items.
   // Here we say that these 2 bytes are actually 2 1 byte vectors.
   const std::vector<uint8_t> vector_data{0x11, 0x22};
-  testDumpMultiLine(vector_data.data(), 2, lldb::Format::eFormatVectorOfUInt8,
+  TestDumpMultiLine(vector_data.data(), 2, lldb::Format::eFormatVectorOfUInt8,
                     1, "0x80000000: {0x11}\n0x80000001: {0x22}");
 
   // Single value formats can span multiple lines.
@@ -273,29 +273,29 @@ TEST(DumpDataExtractorTest, MultiLine) {
   const char *expected_bytes_3_line = "0x80000000: 0x11\n"
                                       "0x80000001: 0x22\n"
                                       "0x80000002: 0x33";
-  testDumpMultiLine(bytes.data(), bytes.size(), lldb::Format::eFormatHex, 1,
+  TestDumpMultiLine(bytes.data(), bytes.size(), lldb::Format::eFormatHex, 1,
                     expected_bytes_3_line);
 
   // Lines may not have the full number of items.
-  testDumpMultiLine(bytes.data(), bytes.size(), lldb::Format::eFormatHex, 4,
+  TestDumpMultiLine(bytes.data(), bytes.size(), lldb::Format::eFormatHex, 4,
                     "0x80000000: 0x11 0x22 0x33");
   const char *expected_bytes_2_line = "0x80000000: 0x11 0x22\n"
                                       "0x80000002: 0x33";
-  testDumpMultiLine(bytes.data(), bytes.size(), lldb::Format::eFormatHex, 2,
+  TestDumpMultiLine(bytes.data(), bytes.size(), lldb::Format::eFormatHex, 2,
                     expected_bytes_2_line);
 
   // The line address accounts for item sizes other than 1 byte.
   const std::vector<uint16_t> shorts{0x1111, 0x2222, 0x3333};
   const char *expected_shorts_2_line = "0x80000000: 0x1111 0x2222\n"
                                        "0x80000004: 0x3333";
-  testDumpMultiLine(shorts.data(), shorts.size(), lldb::Format::eFormatHex, 2,
+  TestDumpMultiLine(shorts.data(), shorts.size(), lldb::Format::eFormatHex, 2,
                     expected_shorts_2_line);
 
   // The ascii column is positioned using the maximum line length.
   const std::vector<char> chars{'L', 'L', 'D', 'B'};
   const char *expected_chars_2_lines = "0x80000000: 4c 4c 44  LLD\n"
                                        "0x80000003: 42        B";
-  testDumpMultiLine(chars.data(), chars.size(),
+  TestDumpMultiLine(chars.data(), chars.size(),
                     lldb::Format::eFormatBytesWithASCII, 3,
                     expected_chars_2_lines);
 }
