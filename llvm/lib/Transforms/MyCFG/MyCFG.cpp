@@ -92,10 +92,14 @@ void traverse(Function &F) {
   outs() << "\n\n";
 }
 
-void traverseBB(Function &F, bool nested) {
+void traverseBasicBlock(Function &F, int nestedLevel) {
+  std::string prefix = "";
+  for (int i = 0; i < nestedLevel; i++) {
+    prefix.append(">>");
+  }
   bool isThreadStartCheckpoint = true;
   for (auto &bb : F) {
-    outs() << "Basic Block '" << &bb << "' Instructions: '" << bb << "'\n";
+    outs() << prefix << "Basic Block '" << &bb << "' Instructions: '" << bb << "'\n";
     bool isThreadEndCheckpoint = false;
     bool isExitPointCheckpoint = false;
     for (auto &i : bb) {
@@ -109,28 +113,35 @@ void traverseBB(Function &F, bool nested) {
       // Check if instruction is calling a function
       if (isa<CallInst>(i)) {
         auto *call = &cast<CallBase>(i);
-        outs() << "Traversing nested function " << call->getCalledFunction()->getName() << " Instruction '" << i << "'\n";
-        traverseBB(*call->getCalledFunction(), true);
-        outs() << "Finished traversing nested function " << call->getCalledFunction()->getName() << "\n";
+        outs() << prefix << "Traversing nestedLevel function " << call->getCalledFunction()->getName() << " Instruction '" << i << "'\n";
+        outs() << prefix << "Check is external? empty " << call->getCalledFunction()->empty() << "\n";
+        outs() << prefix << "Check is external? size " << call->getCalledFunction()->size() << "\n";
+        traverseBasicBlock(*call->getCalledFunction(), nestedLevel + 1);
+        outs() << prefix << "Finished traversing nestedLevel function " << call->getCalledFunction()->getName() << "\n";
         isExitPointCheckpoint |= true;
       }
     }
-    if (isThreadStartCheckpoint and !nested) {
-      outs() << "This basic block is thread start checkpoint\n";
+    if (isThreadStartCheckpoint and !nestedLevel) {
+      outs() << prefix << "This basic block is thread start checkpoint\n";
       isThreadStartCheckpoint = false;
     }
-    if (isExitPointCheckpoint) {
-      outs() << "This basic block is an exit-point checkpoint\n";
+    if (isExitPointCheckpoint and !nestedLevel) {
+      outs() << prefix << "This basic block is an exit-point checkpoint (this is still not correctly implemented)\n";
     }
-    if (isThreadEndCheckpoint and !nested) {
-      outs() << "This basic block is thread end checkpoint\n";
+    if (isThreadEndCheckpoint and !nestedLevel) {
+      outs() << prefix << "This basic block is thread end checkpoint\n";
     }
-    outs() << "\n\n";
+    if (!nestedLevel) {
+      outs() << "\n\n";
+    }
   }
 }
 
 PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
+  if (F.getName() == "main") {
+    outs() << "==================================================\n";
+  }
   outs() << "Function '" << F.getName() << "'\n";
-  traverseBB(F, false);
+  traverseBasicBlock(F, 0);
   return PreservedAnalyses::all();
 }
