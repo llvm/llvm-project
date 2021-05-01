@@ -27,9 +27,10 @@ template class llvm::DomTreeNodeBase<Block>;
 /// Return true if the region with the given index inside the operation
 /// has SSA dominance.
 static bool hasSSADominance(Operation *op, unsigned index) {
+  if (!op->isRegistered()) return false;
+
   auto kindInterface = dyn_cast<RegionKindInterface>(op);
-  return op->isRegistered() &&
-         (!kindInterface || kindInterface.hasSSADominance(index));
+  return !kindInterface || kindInterface.hasSSADominance(index);
 }
 
 //===----------------------------------------------------------------------===//
