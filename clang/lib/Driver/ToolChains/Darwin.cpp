@@ -2671,8 +2671,16 @@ void Darwin::addPlatformVersionArgs(const llvm::opt::ArgList &Args,
     VersionTuple SDKVersion = SDKInfo->getVersion().withoutBuild();
     CmdArgs.push_back(Args.MakeArgString(SDKVersion.getAsString()));
   } else {
-    // Use a blank SDK version if it's not present.
-    CmdArgs.push_back("0.0.0");
+    // Use an SDK version that's matching the deployment target if the SDK
+    // version is missing. This is preferred over an empty SDK version (0.0.0)
+    // as the system's runtime might expect the linked binary to contain a
+    // valid SDK version in order for the binary to work correctly. It's
+    // reasonable to use the deployment target version as a proxy for the
+    // SDK version because older SDKs don't guarantee support for deployment
+    // targets newer than the SDK versions, so that rules out using some
+    // predetermined older SDK version, which leaves the deployment target
+    // version as the only reasonable choice.
+    CmdArgs.push_back(Args.MakeArgString(TargetVersion.getAsString()));
   }
 }
 
