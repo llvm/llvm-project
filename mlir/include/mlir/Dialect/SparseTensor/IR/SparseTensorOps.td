@@ -9,6 +9,7 @@
 #ifndef SPARSETENSOR_OPS
 #define SPARSETENSOR_OPS
 
+include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
