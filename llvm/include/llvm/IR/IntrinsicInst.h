@@ -400,11 +400,9 @@ public:
 
   /// \return the mask parameter or nullptr.
   Value *getMaskParam() const;
-  void setMaskParam(Value *);
 
   /// \return the vector length parameter or nullptr.
   Value *getVectorLengthParam() const;
-  void setVectorLengthParam(Value *);
 
   /// \return whether the vector length param can be ignored.
   bool canIgnoreVectorLengthParam() const;

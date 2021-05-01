@@ -15113,6 +15113,25 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, X);
   }
 
+  // Fastmath by default
+  case PPC::BI__builtin_ppc_recipdivf:
+  case PPC::BI__builtin_ppc_recipdivd:
+  case PPC::BI__builtin_ppc_rsqrtf:
+  case PPC::BI__builtin_ppc_rsqrtd: {
+    Builder.getFastMathFlags().setFast();
+    llvm::Type *ResultType = ConvertType(E->getType());
+    Value *X = EmitScalarExpr(E->getArg(0));
+
+    if (BuiltinID == PPC::BI__builtin_ppc_recipdivf ||
+        BuiltinID == PPC::BI__builtin_ppc_recipdivd) {
+      Value *Y = EmitScalarExpr(E->getArg(1));
+      return Builder.CreateFDiv(X, Y, "recipdiv");
+    }
+    auto *One = ConstantFP::get(ResultType, 1.0);
+    llvm::Function *F = CGM.getIntrinsic(Intrinsic::sqrt, ResultType);
+    return Builder.CreateFDiv(One, Builder.CreateCall(F, X), "rsqrt");
+  }
+
   // FMA variations
   case PPC::BI__builtin_vsx_xvmaddadp:
   case PPC::BI__builtin_vsx_xvmaddasp:
