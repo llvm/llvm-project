@@ -57,18 +57,20 @@ CudaVersion CudaStringToVersion(const llvm::Twine &S) {
       .Default(CudaVersion::UNKNOWN);
 }
 
+namespace {
 struct CudaArchToStringMap {
   CudaArch arch;
   const char *arch_name;
   const char *virtual_arch_name;
 };
+} // namespace
 
 #define SM2(sm, ca)                                                            \
   { CudaArch::SM_##sm, "sm_" #sm, ca }
 #define SM(sm) SM2(sm, "compute_" #sm)
 #define GFX(gpu)                                                               \
   { CudaArch::GFX##gpu, "gfx" #gpu, "compute_amdgcn" }
-CudaArchToStringMap arch_names[] = {
+static const CudaArchToStringMap arch_names[] = {
     // clang-format off
     {CudaArch::UNUSED, "", ""},
     SM2(20, "compute_20"), SM2(21, "compute_20"), // Fermi
