@@ -382,6 +382,14 @@ inline void DoNotOptimize(Tp const& value) {
 #define TEST_NOT_WIN32(...) __VA_ARGS__
 #endif
 
+#if defined(_WIN32) && !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
+#define TEST_NOT_WIN32_DLL(...) ((void)0)
+#define TEST_ONLY_WIN32_DLL(...) __VA_ARGS__
+#else
+#define TEST_NOT_WIN32_DLL(...) __VA_ARGS__
+#define TEST_ONLY_WIN32_DLL(...) ((void)0)
+#endif
+
 #ifdef _WIN32
 #define TEST_WIN_NO_FILESYSTEM_PERMS_NONE
 #endif
