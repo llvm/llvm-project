@@ -3177,6 +3177,14 @@ def mexec_model_EQ : Joined<["-"], "mexec-model=">, Group<m_wasm_Features_Driver
                      Values<"command,reactor">,
                      HelpText<"Execution model (WebAssembly only)">;
 
+defm amdgpu_ieee : BoolOption<"m", "amdgpu-ieee",
+  CodeGenOpts<"EmitIEEENaNCompliantInsts">, DefaultTrue,
+  PosFlag<SetTrue, [], "Sets the IEEE bit in the expected default floating point "
+  " mode register. Floating point opcodes that support exception flag "
+  "gathering quiet and propagate signaling NaN inputs per IEEE 754-2008. "
+  "This option changes the ABI. (AMDGPU only)">,
+  NegFlag<SetFalse, [CC1Option]>>, Group<m_Group>;
+
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
   HelpText<"Specify code object ABI version. Defaults to 3. (AMDGPU only)">,
   MetaVarName<"<version>">, Values<"2,3,4">;
