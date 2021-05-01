@@ -16335,25 +16335,36 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
   if (Size > 128) return AtomicExpansionKind::None;
-  // Nand not supported in LSE.
-  if (AI->getOperation() == AtomicRMWInst::Nand) return AtomicExpansionKind::LLSC;
-  // Leave 128 bits to LLSC.
-  if (Subtarget->hasLSE() && Size < 128)
-    return AtomicExpansionKind::None;
-  if (Subtarget->outlineAtomics() && Size < 128) {
-    // [U]Min/[U]Max RWM atomics are used in __sync_fetch_ libcalls so far.
-    // Don't outline them unless
-    // (1) high level <atomic> support approved:
-    //   http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p0493r1.pdf
-    // (2) low level libgcc and compiler-rt support implemented by:
-    //   min/max outline atomics helpers
-    if (AI->getOperation() != AtomicRMWInst::Min &&
-        AI->getOperation() != AtomicRMWInst::Max &&
-        AI->getOperation() != AtomicRMWInst::UMin &&
-        AI->getOperation() != AtomicRMWInst::UMax) {
+
+  // Nand is not supported in LSE.
+  // Leave 128 bits to LLSC or CmpXChg.
+  if (AI->getOperation() != AtomicRMWInst::Nand && Size < 128) {
+    if (Subtarget->hasLSE())
       return AtomicExpansionKind::None;
+    if (Subtarget->outlineAtomics()) {
+      // [U]Min/[U]Max RWM atomics are used in __sync_fetch_ libcalls so far.
+      // Don't outline them unless
+      // (1) high level <atomic> support approved:
+      //   http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p0493r1.pdf
+      // (2) low level libgcc and compiler-rt support implemented by:
+      //   min/max outline atomics helpers
+      if (AI->getOperation() != AtomicRMWInst::Min &&
+          AI->getOperation() != AtomicRMWInst::Max &&
+          AI->getOperation() != AtomicRMWInst::UMin &&
+          AI->getOperation() != AtomicRMWInst::UMax) {
+        return AtomicExpansionKind::None;
+      }
     }
   }
+
+  // At -O0, fast-regalloc cannot cope with the live vregs necessary to
+  // implement atomicrmw without spilling. If the target address is also on the
+  // stack and close enough to the spill slot, this can lead to a situation
+  // where the monitor always gets cleared and the atomic operation can never
+  // succeed. So at -O0 lower this operation to a CAS loop.
+  if (getTargetMachine().getOptLevel() == CodeGenOpt::None)
+    return AtomicExpansionKind::CmpXChg;
+
   return AtomicExpansionKind::LLSC;
 }
 
