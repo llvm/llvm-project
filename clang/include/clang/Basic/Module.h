@@ -517,6 +517,16 @@ public:
   /// Is this a module partition.
   bool isModulePartition() const { return Name.find(':') != std::string::npos; }
 
+  /// Get the primary module interface name from a partition.
+  StringRef getPrimaryModuleInterfaceName() const {
+    if (Kind == ModulePartitionInterface ||
+        Kind == ModulePartitionImplementation) {
+      auto pos = Name.find(':');
+      return StringRef(Name.data(), pos);
+    }
+    return Name;
+  }
+
   /// Retrieve the full name of this module, including the path from
   /// its top-level module.
   /// \param AllowStringLiterals If \c true, components that might not be
