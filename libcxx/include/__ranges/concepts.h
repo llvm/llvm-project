@@ -33,7 +33,7 @@ namespace ranges {
     ranges::end(__t);
   };
 
-  // `iterator_t` defined in <__ranges/begin.h>
+  // `iterator_t` defined in <__ranges/access.h>
 
   template <range _Rp>
   using sentinel_t = decltype(ranges::end(declval<_Rp&>()));
