@@ -33,12 +33,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // [iterator.concept.readable]
 template<class _In>
 concept __indirectly_readable_impl =
-  requires(const _In __in) {
+  requires(const _In __i) {
     typename iter_value_t<_In>;
     typename iter_reference_t<_In>;
     typename iter_rvalue_reference_t<_In>;
-    { *__in } -> same_as<iter_reference_t<_In> >;
-    { ranges::iter_move(__in) } -> same_as<iter_rvalue_reference_t<_In> >;
+    { *__i } -> same_as<iter_reference_t<_In> >;
+    { ranges::iter_move(__i) } -> same_as<iter_rvalue_reference_t<_In> >;
   } &&
   common_reference_with<iter_reference_t<_In>&&, iter_value_t<_In>&> &&
   common_reference_with<iter_reference_t<_In>&&, iter_rvalue_reference_t<_In>&&> &&
