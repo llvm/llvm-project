@@ -1,9 +1,22 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -o - -run-pass=machine-cse %s | FileCheck %s
 
-# Check that we don't CSE non-local convergent instrs. Otherwise, reusing defs
-# of convergent instrs from different control flow scopes can cause illegal
-# codegen. Previously, the swizzle in bb2 would be CSE-ed in favor of using the
-# swizzle in bb1 despite bb2 being a different control flow scope.
+# LLVM's current definition of `isConvergent` does not necessarily prove that
+# non-local CSE is illegal. The following test extends the definition of
+# `isConvergent` to assume a convergent instruction is dependent not only on
+# additional conditions, but also on fewer conditions. LLVM does not have a
+# MachineInstr attribute which expresses this extended definition, so it's
+# necessary to use `isConvergent` to prevent illegally CSE-ing the subset of
+# `isConvergent` instructions which do fall into this extended definition.
+
+# This is a coverage test for the MachineCSE change. It does not reproduce an
+# actual bug in the AMDGPU backend. The current open source GPU backends as is
+# do not appear to allow a reasonably simple test case that provably and
+# undeniably functionally breaks without the associated MachineCSE changes.
+
+# The test checks that we don't CSE non-local convergent instrs. Otherwise,
+# reusing defs of convergent instrs from different control flow scopes can
+# cause illegal codegen. Previously, the swizzle in bb2 would be CSE-ed in
+# favor of using the swizzle in bb1 despite bb2 being a different BBs.
 
 # CHECK-LABEL: name: no_cse
 # CHECK: bb.1.if.then
