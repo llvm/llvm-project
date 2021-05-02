@@ -5020,7 +5020,8 @@ static bool directlyImpliesPoison(const Value *ValAssumedPoison,
     // V0's elements are all poison or not. (e.g., add_with_overflow)
     const WithOverflowInst *II;
     if (match(I, m_ExtractValue(m_WithOverflowInst(II))) &&
-        match(ValAssumedPoison, m_ExtractValue(m_Specific(II))))
+        (match(ValAssumedPoison, m_ExtractValue(m_Specific(II))) ||
+         llvm::is_contained(II->arg_operands(), ValAssumedPoison)))
       return true;
   }
   return false;
