@@ -479,6 +479,12 @@ bool M68kAsmParser::parseRegisterName(unsigned &RegNo, SMLoc Loc,
                                       StringRef RegisterName) {
   auto RegisterNameLower = RegisterName.lower();
 
+  // CCR register
+  if (RegisterNameLower == "ccr") {
+    RegNo = M68k::CCR;
+    return true;
+  }
+
   // Parse simple general-purpose registers.
   if (RegisterNameLower.size() == 2) {
     static unsigned RegistersByIndex[] = {
@@ -500,13 +506,6 @@ bool M68kAsmParser::parseRegisterName(unsigned &RegNo, SMLoc Loc,
       }
       break;
     }
-
-    case 'c':
-      if (RegisterNameLower[1] == 'c' && RegisterNameLower[2] == 'r') {
-        RegNo = M68k::CCR;
-        return true;
-      }
-      break;
 
     case 's':
       if (RegisterNameLower[1] == 'p') {
