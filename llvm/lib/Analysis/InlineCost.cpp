@@ -2444,7 +2444,7 @@ int llvm::getCallsiteCost(CallBase &Call, const DataLayout &DL) {
       // We approximate the number of loads and stores needed by dividing the
       // size of the byval type by the target's pointer size.
       PointerType *PTy = cast<PointerType>(Call.getArgOperand(I)->getType());
-      unsigned TypeSize = DL.getTypeSizeInBits(PTy->getElementType());
+      unsigned TypeSize = DL.getTypeSizeInBits(Call.getParamByValType(I));
       unsigned AS = PTy->getAddressSpace();
       unsigned PointerSize = DL.getPointerSizeInBits(AS);
       // Ceiling division.
