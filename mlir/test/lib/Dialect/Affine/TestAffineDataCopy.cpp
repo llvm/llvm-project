@@ -76,6 +76,8 @@ void TestAffineDataCopy::runOnFunction() {
       }
     }
   }
+  if (!load)
+    return;
 
   AffineCopyOptions copyOptions = {/*generateDma=*/false,
                                    /*slowMemorySpace=*/0,
@@ -95,7 +97,7 @@ void TestAffineDataCopy::runOnFunction() {
   // Promote any single iteration loops in the copy nests and simplify
   // load/stores.
   SmallVector<Operation *, 4> copyOps;
-  for (auto nest : copyNests)
+  for (Operation *nest : copyNests) {
     // With a post order walk, the erasure of loops does not affect
     // continuation of the walk or the collection of load/store ops.
     nest->walk([&](Operation *op) {
@@ -106,12 +108,13 @@ void TestAffineDataCopy::runOnFunction() {
       else if (auto storeOp = dyn_cast<AffineStoreOp>(op))
         copyOps.push_back(storeOp);
     });
+  }
 
   // Promoting single iteration loops could lead to simplification of
   // generated load's/store's, and the latter could anyway also be
   // canonicalized.
   RewritePatternSet patterns(&getContext());
-  for (auto op : copyOps) {
+  for (Operation *op : copyOps) {
     patterns.clear();
     if (isa<AffineLoadOp>(op)) {
       AffineLoadOp::getCanonicalizationPatterns(patterns, &getContext());
