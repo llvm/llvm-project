@@ -967,6 +967,8 @@ def AffineVectorLoadOp : AffineLoadOpBase<"vector_load"> {
       return result().getType().cast<VectorType>();
     }
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
@@ -1029,6 +1031,8 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
       return value().getType().cast<VectorType>();
     }
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 #endif // AFFINE_OPS

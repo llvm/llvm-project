@@ -18,6 +18,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/OverflowInstAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -2697,6 +2698,18 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     if (Value *S = SimplifyWithOpReplaced(FalseVal, CondVal, Zero, SQ,
                                           /* AllowRefinement */ true))
       return replaceOperand(SI, 2, S);
+
+    if (match(FalseVal, m_Zero()) || match(TrueVal, m_One())) {
+      Use *Y = nullptr;
+      bool IsAnd = match(FalseVal, m_Zero()) ? true : false;
+      Value *Op1 = IsAnd ? TrueVal : FalseVal;
+      if (isCheckForZeroAndMulWithOverflow(CondVal, Op1, IsAnd, Y)) {
+        auto *FI = new FreezeInst(*Y, (*Y)->getName() + ".fr");
+        InsertNewInstBefore(FI, *cast<Instruction>(Y->getUser()));
+        replaceUse(*Y, FI);
+        return replaceInstUsesWith(SI, Op1);
+      }
+    }
   }
 
   // Selecting between two integer or vector splat integer constants?
