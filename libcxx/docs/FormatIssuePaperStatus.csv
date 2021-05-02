@@ -4,7 +4,7 @@ Number,Name,Assignee,Patch,Status,First released version
 `P1892 <https://wg21.link/P1892>`_,"Extended locale-specific presentation specifiers for std::format",,,,
 `P1862 <https://wg21.link/P1862>`_,"width: clarifying units of width and precision in std::format (Implements the unicode support.)",,,,
 `LWG-3218 <https://wg21.link/LWG3218>`_,"Modifier for %d parse flag does not match POSIX and format specification",,,,
-`LWG-3242 <https://wg21.link/LWG3242>`_,"std::format: missing rules for arg-id in width and precision",,,,
+`LWG-3242 <https://wg21.link/LWG3242>`_,"std::format: missing rules for arg-id in width and precision",Mark de Wever,,In progress,
 `LWG-3243 <https://wg21.link/LWG3243>`_,"std::format and negative zeroes",,,,
 `LWG-3246 <https://wg21.link/LWG3246>`_,"What are the constraints on the template parameter of basic_format_arg?",,,,
 `LWG-3248 <https://wg21.link/LWG3248>`_,"std::format #b, #B, #o, #x , and #X presentation types misformat negative numbers",,,,
