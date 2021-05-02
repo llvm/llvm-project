@@ -698,15 +698,13 @@ func @fptrunc_vector(%arg0 : vector<2xf32>, %arg1 : vector<2xf64>) {
 
 // Check sign and zero extension and truncation of integers.
 // CHECK-LABEL: @integer_extension_and_truncation
-func @integer_extension_and_truncation() {
-// CHECK-NEXT:  %0 = llvm.mlir.constant(-3 : i3) : i3
-  %0 = constant 5 : i3
-// CHECK-NEXT: = llvm.sext %0 : i3 to i6
-  %1 = sexti %0 : i3 to i6
-// CHECK-NEXT: = llvm.zext %0 : i3 to i6
-  %2 = zexti %0 : i3 to i6
-// CHECK-NEXT: = llvm.trunc %0 : i3 to i2
-   %3 = trunci %0 : i3 to i2
+func @integer_extension_and_truncation(%arg0 : i3) {
+// CHECK-NEXT: = llvm.sext %arg0 : i3 to i6
+  %0 = sexti %arg0 : i3 to i6
+// CHECK-NEXT: = llvm.zext %arg0 : i3 to i6
+  %1 = zexti %arg0 : i3 to i6
+// CHECK-NEXT: = llvm.trunc %arg0 : i3 to i2
+   %2 = trunci %arg0 : i3 to i2
   return
 }
 
