@@ -22,7 +22,7 @@ struct sentinel {
 };
 
 // clang-format off
-template <template <class...> class I = input_iterator>
+template <template <class...> class I>
 requires std::input_or_output_iterator<I<int*> >
 struct test_range {
   I<int*> begin();
@@ -31,14 +31,14 @@ struct test_range {
   sentinel end() const;
 };
 
-template <template <class...> class I = input_iterator>
+template <template <class...> class I>
 requires std::input_or_output_iterator<I<int*> >
 struct test_non_const_range {
   I<int*> begin();
   sentinel end();
 };
 
-template <template <class...> class I = input_iterator>
+template <template <class...> class I>
 requires std::input_or_output_iterator<I<int*> >
 struct test_common_range {
   I<int*> begin();
@@ -47,7 +47,7 @@ struct test_common_range {
   I<int const*> end() const;
 };
 
-template <template <class...> class I = input_iterator>
+template <template <class...> class I>
 requires std::input_or_output_iterator<I<int*> >
 struct test_non_const_common_range {
   I<int*> begin();

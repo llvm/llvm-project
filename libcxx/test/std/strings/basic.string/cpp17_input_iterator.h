@@ -12,7 +12,7 @@
 #include <iterator>
 
 template <class It>
-class input_iterator
+class cpp17_input_iterator
 {
     It it_;
 public:
@@ -22,18 +22,18 @@ public:
     typedef It                                                 pointer;
     typedef typename std::iterator_traits<It>::reference       reference;
 
-    input_iterator() : it_() {}
-    explicit input_iterator(It it) : it_(it) {}
+    cpp17_input_iterator() : it_() {}
+    explicit cpp17_input_iterator(It it) : it_(it) {}
 
     reference operator*() const {return *it_;}
     pointer operator->() const {return it_;}
 
-    input_iterator& operator++() {++it_; return *this;}
-    input_iterator operator++(int) {input_iterator tmp(*this); ++(*this); return tmp;}
+    cpp17_input_iterator& operator++() {++it_; return *this;}
+    cpp17_input_iterator operator++(int) {cpp17_input_iterator tmp(*this); ++(*this); return tmp;}
 
-    friend bool operator==(const input_iterator& x, const input_iterator& y)
+    friend bool operator==(const cpp17_input_iterator& x, const cpp17_input_iterator& y)
         {return x.it_ == y.it_;}
-    friend bool operator!=(const input_iterator& x, const input_iterator& y)
+    friend bool operator!=(const cpp17_input_iterator& x, const cpp17_input_iterator& y)
         {return !(x == y);}
 };
 

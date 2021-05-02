@@ -38,7 +38,8 @@ bool llvm::isCheckForZeroAndMulWithOverflow(Value *Op0, Value *Op1, bool IsAnd,
       return false;
 
     II = dyn_cast<IntrinsicInst>(Extract->getAggregateOperand());
-    if (!match(II, m_CombineOr(m_Intrinsic<Intrinsic::umul_with_overflow>(),
+    if (!II ||
+        !match(II, m_CombineOr(m_Intrinsic<Intrinsic::umul_with_overflow>(),
                                m_Intrinsic<Intrinsic::smul_with_overflow>())))
       return false;
 

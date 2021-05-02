@@ -17,7 +17,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-typedef std::time_get<char, input_iterator<const char*> > F;
+typedef std::time_get<char, cpp17_input_iterator<const char*> > F;
 
 class my_facet
     : public F

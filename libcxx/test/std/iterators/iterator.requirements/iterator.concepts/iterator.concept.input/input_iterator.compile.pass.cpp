@@ -17,7 +17,7 @@
 
 #include "test_iterators.h"
 
-static_assert(std::input_iterator<input_iterator<int*> >);
+static_assert(std::input_iterator<cpp17_input_iterator<int*> >);
 static_assert(std::input_iterator<cpp20_input_iterator<int*> >);
 
 struct no_explicit_iter_concept {

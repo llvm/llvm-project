@@ -55,7 +55,7 @@ void basic_test()
 {
     int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
     int* an = ab + sizeof(ab)/sizeof(ab[0]);
-    test(input_iterator<const int*>(ab), input_iterator<const int*>(an));
+    test(cpp17_input_iterator<const int*>(ab), cpp17_input_iterator<const int*>(an));
     test(forward_iterator<const int*>(ab), forward_iterator<const int*>(an));
     test(bidirectional_iterator<const int*>(ab), bidirectional_iterator<const int*>(an));
     test(random_access_iterator<const int*>(ab), random_access_iterator<const int*>(an));
@@ -86,7 +86,7 @@ void test_emplacable_concept() {
   }
   {
     using T = EmplaceConstructibleAndMoveable<int>;
-    using It = input_iterator<int*>;
+    using It = cpp17_input_iterator<int*>;
     {
       std::deque<T> v(It(arr1), It(std::end(arr1)));
       assert(v[0].copied == 0);

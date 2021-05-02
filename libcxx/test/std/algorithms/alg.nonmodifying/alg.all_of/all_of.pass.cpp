@@ -41,18 +41,18 @@ int main(int, char**)
     {
         int ia[] = {2, 4, 6, 8};
         const unsigned sa = sizeof(ia)/sizeof(ia[0]);
-        assert(std::all_of(input_iterator<const int*>(ia),
-                           input_iterator<const int*>(ia + sa), test1()) == true);
-        assert(std::all_of(input_iterator<const int*>(ia),
-                           input_iterator<const int*>(ia), test1()) == true);
+        assert(std::all_of(cpp17_input_iterator<const int*>(ia),
+                           cpp17_input_iterator<const int*>(ia + sa), test1()) == true);
+        assert(std::all_of(cpp17_input_iterator<const int*>(ia),
+                           cpp17_input_iterator<const int*>(ia), test1()) == true);
     }
     {
         const int ia[] = {2, 4, 5, 8};
         const unsigned sa = sizeof(ia)/sizeof(ia[0]);
-        assert(std::all_of(input_iterator<const int*>(ia),
-                           input_iterator<const int*>(ia + sa), test1()) == false);
-        assert(std::all_of(input_iterator<const int*>(ia),
-                           input_iterator<const int*>(ia), test1()) == true);
+        assert(std::all_of(cpp17_input_iterator<const int*>(ia),
+                           cpp17_input_iterator<const int*>(ia + sa), test1()) == false);
+        assert(std::all_of(cpp17_input_iterator<const int*>(ia),
+                           cpp17_input_iterator<const int*>(ia), test1()) == true);
     }
 
 #if TEST_STD_VER > 17

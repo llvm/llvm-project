@@ -35,7 +35,7 @@ void check_distance(It first, It last, typename std::iterator_traits<It>::differ
 TEST_CONSTEXPR_CXX17 bool tests()
 {
     const char* s = "1234567890";
-    check_distance(input_iterator<const char*>(s), input_iterator<const char*>(s+10), 10);
+    check_distance(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10), 10);
     check_distance(forward_iterator<const char*>(s), forward_iterator<const char*>(s+10), 10);
     check_distance(bidirectional_iterator<const char*>(s), bidirectional_iterator<const char*>(s+10), 10);
     check_distance(random_access_iterator<const char*>(s), random_access_iterator<const char*>(s+10), 10);

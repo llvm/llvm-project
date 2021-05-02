@@ -1240,8 +1240,8 @@ define i32 @PR46712_logical(i1 %x, i1 %y, i1 %b, i64 %z) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[TRUE:%.*]], label [[END:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[BOOL5_NOT:%.*]] = icmp eq i64 [[Z:%.*]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = zext i1 [[BOOL5_NOT]] to i32
+; CHECK-NEXT:    [[BOOL5:%.*]] = icmp eq i64 [[Z:%.*]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = zext i1 [[BOOL5]] to i32
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[T5:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SEL]], [[TRUE]] ]

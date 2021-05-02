@@ -21,7 +21,7 @@
 
 namespace stdr = std::ranges;
 
-static_assert(stdr::range<test_range<> >);
+static_assert(stdr::range<test_range<cpp20_input_iterator> >);
 
 struct incompatible_iterators {
   int* begin();
