@@ -598,7 +598,7 @@ int test_not_local_ptr(local char* p) {
 // CHECK-LABEL: test_and_ptr
 // CHECK: %[[tobool:.*]] = icmp ne i8 addrspace(5)* %p1, addrspacecast (i8* null to i8 addrspace(5)*)
 // CHECK: %[[tobool1:.*]] = icmp ne i8 addrspace(3)* %p2, addrspacecast (i8* null to i8 addrspace(3)*)
-// CHECK: %[[res:.*]] = and i1 %[[tobool]], %[[tobool1]]
+// CHECK: %[[res:.*]] = select i1 %[[tobool]], i1 %[[tobool1]], i1 false
 // CHECK: %[[land_ext:.*]] = zext i1 %[[res]] to i32
 // CHECK: ret i32 %[[land_ext]]
 int test_and_ptr(private char* p1, local char* p2) {

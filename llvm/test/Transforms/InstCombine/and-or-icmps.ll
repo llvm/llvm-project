@@ -61,9 +61,10 @@ define i1 @PR2330(i32 %a, i32 %b) {
 
 define i1 @PR2330_logical(i32 %a, i32 %b) {
 ; CHECK-LABEL: @PR2330_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 8
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[A:%.*]], 8
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[B:%.*]], 8
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP2]], i1 [[CMP1]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %cmp1 = icmp ult i32 %a, 8
   %cmp2 = icmp ult i32 %b, 8
@@ -665,9 +666,9 @@ define i1 @substitute_constant_and_eq_eq(i8 %x, i8 %y) {
 define i1 @substitute_constant_and_eq_eq_logical(i8 %x, i8 %y) {
 ; CHECK-LABEL: @substitute_constant_and_eq_eq_logical(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X:%.*]], 42
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[C1]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[Y:%.*]], 42
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c1 = icmp eq i8 %x, 42
   %c2 = icmp eq i8 %x, %y
@@ -904,9 +905,9 @@ define i1 @substitute_constant_or_ne_swap_sle(i8 %x, i8 %y) {
 define i1 @substitute_constant_or_ne_swap_sle_logical(i8 %x, i8 %y) {
 ; CHECK-LABEL: @substitute_constant_or_ne_swap_sle_logical(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[X:%.*]], 42
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[Y:%.*]], 43
-; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[C1]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i8 [[Y:%.*]], 43
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C1]], i1 true, i1 [[C2]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c1 = icmp ne i8 %x, 42
   %c2 = icmp sle i8 %y, %x
@@ -972,7 +973,7 @@ define i1 @substitute_constant_or_eq_swap_ne_logical(i8 %x, i8 %y) {
 ; CHECK-LABEL: @substitute_constant_or_eq_swap_ne_logical(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X:%.*]], 42
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 [[Y:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[C1]], [[C2]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C1]], i1 true, i1 [[C2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c1 = icmp eq i8 %x, 42

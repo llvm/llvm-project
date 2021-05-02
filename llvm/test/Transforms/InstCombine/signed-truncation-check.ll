@@ -155,9 +155,9 @@ define i1 @positive_with_extra_and(i32 %arg, i1 %z) {
 
 define i1 @positive_with_extra_and_logical(i32 %arg, i1 %z) {
 ; CHECK-LABEL: @positive_with_extra_and_logical(
-; CHECK-NEXT:    [[T5_SIMPLIFIED:%.*]] = icmp ult i32 [[ARG:%.*]], 128
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[T5_SIMPLIFIED]], [[Z:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[DOTSIMPLIFIED:%.*]] = icmp ult i32 [[ARG:%.*]], 128
+; CHECK-NEXT:    [[T5:%.*]] = select i1 [[DOTSIMPLIFIED]], i1 [[Z:%.*]], i1 false
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = icmp sgt i32 %arg, -1
   %t2 = add i32 %arg, 128
@@ -449,7 +449,7 @@ define i1 @positive_different_trunc_both_logical(i32 %arg) {
 ; CHECK-NEXT:    [[T3:%.*]] = trunc i32 [[ARG]] to i16
 ; CHECK-NEXT:    [[T4:%.*]] = add i16 [[T3]], 128
 ; CHECK-NEXT:    [[T5:%.*]] = icmp ult i16 [[T4]], 256
-; CHECK-NEXT:    [[T6:%.*]] = and i1 [[T2]], [[T5]]
+; CHECK-NEXT:    [[T6:%.*]] = select i1 [[T2]], i1 [[T5]], i1 false
 ; CHECK-NEXT:    ret i1 [[T6]]
 ;
   %t1 = trunc i32 %arg to i15
@@ -664,7 +664,7 @@ define zeroext i1 @oneuse_trunc_sext_logical(i32 %arg) {
 ; CHECK-NEXT:    call void @use32(i32 [[T4]])
 ; CHECK-NEXT:    [[T5:%.*]] = icmp eq i32 [[T4]], [[ARG]]
 ; CHECK-NEXT:    call void @use1(i1 [[T5]])
-; CHECK-NEXT:    [[T6:%.*]] = and i1 [[T2]], [[T5]]
+; CHECK-NEXT:    [[T6:%.*]] = select i1 [[T2]], i1 [[T5]], i1 false
 ; CHECK-NEXT:    ret i1 [[T6]]
 ;
   %t1 = trunc i32 %arg to i8
@@ -705,7 +705,7 @@ define i1 @negative_not_arg_logical(i32 %arg, i32 %arg2) {
 ; CHECK-NEXT:    [[T1:%.*]] = icmp sgt i32 [[ARG:%.*]], -1
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[ARG2:%.*]], 128
 ; CHECK-NEXT:    [[T3:%.*]] = icmp ult i32 [[T2]], 256
-; CHECK-NEXT:    [[T4:%.*]] = and i1 [[T1]], [[T3]]
+; CHECK-NEXT:    [[T4:%.*]] = select i1 [[T1]], i1 [[T3]], i1 false
 ; CHECK-NEXT:    ret i1 [[T4]]
 ;
   %t1 = icmp sgt i32 %arg, -1
@@ -738,7 +738,7 @@ define i1 @negative_trunc_not_arg_logical(i32 %arg, i32 %arg2) {
 ; CHECK-NEXT:    [[T2:%.*]] = icmp sgt i8 [[T1]], -1
 ; CHECK-NEXT:    [[T3:%.*]] = add i32 [[ARG2:%.*]], 128
 ; CHECK-NEXT:    [[T4:%.*]] = icmp ult i32 [[T3]], 256
-; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T2]], [[T4]]
+; CHECK-NEXT:    [[T5:%.*]] = select i1 [[T2]], i1 [[T4]], i1 false
 ; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = trunc i32 %arg to i8
@@ -772,7 +772,7 @@ define i1 @positive_with_mask_not_arg_logical(i32 %arg, i32 %arg2) {
 ; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
 ; CHECK-NEXT:    [[T3:%.*]] = add i32 [[ARG2:%.*]], 128
 ; CHECK-NEXT:    [[T4:%.*]] = icmp ult i32 [[T3]], 256
-; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T2]], [[T4]]
+; CHECK-NEXT:    [[T5:%.*]] = select i1 [[T2]], i1 [[T4]], i1 false
 ; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %arg, 1140850688
@@ -1025,7 +1025,7 @@ define i1 @bad_trunc_stc_logical(i32 %arg) {
 ; CHECK-NEXT:    [[T2:%.*]] = trunc i32 [[ARG]] to i16
 ; CHECK-NEXT:    [[T3:%.*]] = add i16 [[T2]], 128
 ; CHECK-NEXT:    [[T4:%.*]] = icmp ult i16 [[T3]], 256
-; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T1]], [[T4]]
+; CHECK-NEXT:    [[T5:%.*]] = select i1 [[T1]], i1 [[T4]], i1 false
 ; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = icmp sgt i32 %arg, -1 ; checks a bit outside of the i16
