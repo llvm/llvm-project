@@ -3011,6 +3011,80 @@ OpFoldResult XOrOp::fold(ArrayRef<Attribute> operands) {
                                         [](APInt a, APInt b) { return a ^ b; });
 }
 
+namespace {
+/// Replace a not of a comparison operation, for example: not(cmp eq A, B) =>
+/// cmp ne A, B. Note that a logical not is implemented as xor 1, val
+struct NotICmp : public OpRewritePattern<XOrOp> {
+  using OpRewritePattern<XOrOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(XOrOp op,
+                                PatternRewriter &rewriter) const override {
+
+    APInt constValue;
+    if (!matchPattern(op.getOperand(1), m_ConstantInt(&constValue)))
+      return failure();
+
+    if (constValue != 1)
+      return failure();
+
+    auto prev = op.getOperand(0).getDefiningOp<CmpIOp>();
+    if (!prev)
+      return failure();
+
+    switch (prev.predicate()) {
+    case CmpIPredicate::eq:
+      rewriter.replaceOpWithNewOp<CmpIOp>(op, CmpIPredicate::ne, prev.lhs(),
+                                          prev.rhs());
+      return success();
+    case CmpIPredicate::ne:
+      rewriter.replaceOpWithNewOp<CmpIOp>(op, CmpIPredicate::eq, prev.lhs(),
+                                          prev.rhs());
+      return success();
+
+    case CmpIPredicate::slt:
+      rewriter.replaceOpWithNewOp<CmpIOp>(op, CmpIPredicate::sge, prev.lhs(),
+                                          prev.rhs());
+      return success();
+    case CmpIPredicate::sle:
+      rewriter.replaceOpWithNewOp<CmpIOp>(op, CmpIPredicate::sgt, prev.lhs(),
+                                          prev.rhs());
+      return success();
+    case CmpIPredicate::sgt:
+      rewriter.replaceOpWithNewOp<CmpIOp>(op, CmpIPredicate::sle, prev.lhs(),
+                                          prev.rhs());
+      return success();
+    case CmpIPredicate::sge:
+      rewriter.replaceOpWithNewOp<CmpIOp>(op, CmpIPredicate::slt, prev.lhs(),
+                                          prev.rhs());
+      return success();
+
+    case CmpIPredicate::ult:
+      rewriter.replaceOpWithNewOp<CmpIOp>(op, CmpIPredicate::uge, prev.lhs(),
+                                          prev.rhs());
+      return success();
+    case CmpIPredicate::ule:
+      rewriter.replaceOpWithNewOp<CmpIOp>(op, CmpIPredicate::ugt, prev.lhs(),
+                                          prev.rhs());
+      return success();
+    case CmpIPredicate::ugt:
+      rewriter.replaceOpWithNewOp<CmpIOp>(op, CmpIPredicate::ule, prev.lhs(),
+                                          prev.rhs());
+      return success();
+    case CmpIPredicate::uge:
+      rewriter.replaceOpWithNewOp<CmpIOp>(op, CmpIPredicate::ult, prev.lhs(),
+                                          prev.rhs());
+      return success();
+    }
+    return failure();
+  }
+};
+} // namespace
+
+void XOrOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                        MLIRContext *context) {
+  results.insert<NotICmp>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // ZeroExtendIOp
 //===----------------------------------------------------------------------===//
