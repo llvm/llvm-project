@@ -443,6 +443,21 @@ class LinuxCoreTestCase(TestBase):
 
         self.expect("register read --all")
 
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_aarch64_pac_regs(self):
+        # Test AArch64/Linux Pointer Authenication register read
+        target = self.dbg.CreateTarget(None)
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LoadCore("linux-aarch64-pac.core")
+
+        values = {"data_mask": "0x007f00000000000", "code_mask": "0x007f00000000000"}
+
+        for regname, value in values.items():
+            self.expect("register read {}".format(regname),
+                        substrs=["{} = {}".format(regname, value)])
+
+        self.expect("register read --all")
+
     @skipIfLLVMTargetMissing("ARM")
     def test_arm_core(self):
         # check 32 bit ARM core file
