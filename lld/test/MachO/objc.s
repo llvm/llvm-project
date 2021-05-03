@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: x86, arm
 # RUN: rm -rf %t; split-file %s %t
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/has-objc-symbol.s -o %t/has-objc-symbol.o
