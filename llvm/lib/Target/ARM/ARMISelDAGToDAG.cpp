@@ -2549,6 +2549,7 @@ void ARMDAGToDAGISel::SelectMVE_WB(SDNode *N, const uint16_t *Opcodes,
   ReplaceUses(SDValue(N, 0), SDValue(New, 1));
   ReplaceUses(SDValue(N, 1), SDValue(New, 0));
   ReplaceUses(SDValue(N, 2), SDValue(New, 2));
+  transferMemOperands(N, New);
   CurDAG->RemoveDeadNode(N);
 }
 
