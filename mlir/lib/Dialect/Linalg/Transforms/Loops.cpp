@@ -555,7 +555,7 @@ public:
   }
 };
 
-struct TiledLoopPattern : public OpRewritePattern<TiledLoopOp> {
+struct TiledLoopToSCFPattern : public OpRewritePattern<TiledLoopOp> {
   using OpRewritePattern<TiledLoopOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(TiledLoopOp tiledLoop,
@@ -590,22 +590,6 @@ struct TiledLoopPattern : public OpRewritePattern<TiledLoopOp> {
   }
 };
 
-struct FoldAffineOp;
-} // namespace
-
-template <typename LoopType>
-static void lowerLinalgToLoopsImpl(FuncOp funcOp) {
-  MLIRContext *context = funcOp.getContext();
-  RewritePatternSet patterns(context);
-  patterns.add<LinalgRewritePattern<LoopType>, TiledLoopPattern>(context);
-  memref::DimOp::getCanonicalizationPatterns(patterns, context);
-  AffineApplyOp::getCanonicalizationPatterns(patterns, context);
-  patterns.add<FoldAffineOp>(context);
-  // Just apply the patterns greedily.
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
-}
-
-namespace {
 /// Local folding pattern for AffineApplyOp that we can apply greedily.
 /// This replaces AffineApplyOp by the proper value in cases where the
 /// associated map is trivial.
@@ -643,6 +627,18 @@ struct FoldAffineOp : public RewritePattern {
   }
 };
 
+template <typename LoopType>
+static void lowerLinalgToLoopsImpl(FuncOp funcOp) {
+  MLIRContext *context = funcOp.getContext();
+  RewritePatternSet patterns(context);
+  patterns.add<LinalgRewritePattern<LoopType>>(context);
+  memref::DimOp::getCanonicalizationPatterns(patterns, context);
+  AffineApplyOp::getCanonicalizationPatterns(patterns, context);
+  patterns.add<FoldAffineOp>(context);
+  // Just apply the patterns greedily.
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+}
+
 struct LowerToAffineLoops
     : public LinalgLowerToAffineLoopsBase<LowerToAffineLoops> {
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -668,7 +664,22 @@ struct LowerToParallelLoops
     lowerLinalgToLoopsImpl<scf::ParallelOp>(getFunction());
   }
 };
+
+struct LowerTiledLoopsToSCF
+    : public LinalgLowerTiledLoopsToSCFBase<LowerTiledLoopsToSCF> {
+  void runOnFunction() override {
+    MLIRContext *context = &getContext();
+    RewritePatternSet patterns(context);
+    patterns.add<TiledLoopToSCFPattern>(context);
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+  }
+};
 } // namespace
+
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createConvertLinalgTiledLoopsToSCFPass() {
+  return std::make_unique<LowerTiledLoopsToSCF>();
+}
 
 std::unique_ptr<OperationPass<FuncOp>> mlir::createConvertLinalgToLoopsPass() {
   return std::make_unique<LowerToLoops>();
