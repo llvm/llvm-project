@@ -159,10 +159,16 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (MF->getFunction().getCallingConv() == CallingConv::AnyReg) {
     if (!TM.isPPC64() && Subtarget.isAIXABI())
       report_fatal_error("AnyReg unimplemented on 32-bit AIX.");
-    if (Subtarget.hasVSX())
+    if (Subtarget.hasVSX()) {
+      if (Subtarget.isAIXABI() && !TM.getAIXExtendedAltivecABI())
+        return CSR_64_AllRegs_AIX_Dflt_VSX_SaveList;
       return CSR_64_AllRegs_VSX_SaveList;
-    if (Subtarget.hasAltivec())
+    }
+    if (Subtarget.hasAltivec()) {
+      if (Subtarget.isAIXABI() && !TM.getAIXExtendedAltivecABI())
+        return CSR_64_AllRegs_AIX_Dflt_Altivec_SaveList;
       return CSR_64_AllRegs_Altivec_SaveList;
+    }
     return CSR_64_AllRegs_SaveList;
   }
 
@@ -222,10 +228,16 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                       CallingConv::ID CC) const {
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
   if (CC == CallingConv::AnyReg) {
-    if (Subtarget.hasVSX())
+    if (Subtarget.hasVSX()) {
+      if (Subtarget.isAIXABI() && !TM.getAIXExtendedAltivecABI())
+        return CSR_64_AllRegs_AIX_Dflt_VSX_RegMask;
       return CSR_64_AllRegs_VSX_RegMask;
-    if (Subtarget.hasAltivec())
+    }
+    if (Subtarget.hasAltivec()) {
+      if (Subtarget.isAIXABI() && !TM.getAIXExtendedAltivecABI())
+        return CSR_64_AllRegs_AIX_Dflt_Altivec_RegMask;
       return CSR_64_AllRegs_Altivec_RegMask;
+    }
     return CSR_64_AllRegs_RegMask;
   }
 
@@ -345,6 +357,9 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       if (Reg == 0)
         break;
       markSuperRegs(Reserved, Reg);
+      for (MCRegAliasIterator AS(Reg, this, true); AS.isValid(); ++AS) {
+        Reserved.set(*AS);
+      }
     }
   }
 

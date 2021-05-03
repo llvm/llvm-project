@@ -173,11 +173,15 @@ struct VectorTransformsOptions {
 ///   ShapeCastOp2DDownCastRewritePattern,
 ///   ShapeCastOp2DUpCastRewritePattern
 ///   BroadcastOpLowering,
-///   TransposeOpLowering
 ///   OuterproductOpLowering
 /// These transformation express higher level vector ops in terms of more
 /// elementary extraction, insertion, reduction, product, and broadcast ops.
 void populateVectorContractLoweringPatterns(
+    RewritePatternSet &patterns,
+    VectorTransformsOptions vectorTransformOptions = VectorTransformsOptions());
+
+/// Insert TransposeLowering patterns into extraction/insertion.
+void populateVectorTransposeLoweringPatterns(
     RewritePatternSet &patterns,
     VectorTransformsOptions vectorTransformOptions = VectorTransformsOptions());
 

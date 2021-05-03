@@ -8,9 +8,11 @@ def run(f):
   f()
   gc.collect()
   assert Context._get_live_count() == 0
+  return f
 
 
 # CHECK-LABEL: TEST: testParsePrint
+@run
 def testParsePrint():
   ctx = Context()
   t = Type.parse("i32", ctx)
@@ -22,12 +24,11 @@ def testParsePrint():
   # CHECK: Type(i32)
   print(repr(t))
 
-run(testParsePrint)
-
 
 # CHECK-LABEL: TEST: testParseError
 # TODO: Hook the diagnostic manager to capture a more meaningful error
 # message.
+@run
 def testParseError():
   ctx = Context()
   try:
@@ -38,10 +39,9 @@ def testParseError():
   else:
     print("Exception not produced")
 
-run(testParseError)
-
 
 # CHECK-LABEL: TEST: testTypeEq
+@run
 def testTypeEq():
   ctx = Context()
   t1 = Type.parse("i32", ctx)
@@ -56,10 +56,19 @@ def testTypeEq():
   # CHECK: t1 == None: False
   print("t1 == None:", t1 == None)
 
-run(testTypeEq)
+
+# CHECK-LABEL: TEST: testTypeCast
+@run
+def testTypeCast():
+  ctx = Context()
+  t1 = Type.parse("i32", ctx)
+  t2 = Type(t1)
+  # CHECK: t1 == t2: True
+  print("t1 == t2:", t1 == t2)
 
 
 # CHECK-LABEL: TEST: testTypeIsInstance
+@run
 def testTypeIsInstance():
   ctx = Context()
   t1 = Type.parse("i32", ctx)
@@ -71,10 +80,9 @@ def testTypeIsInstance():
   # CHECK: True
   print(F32Type.isinstance(t2))
 
-run(testTypeIsInstance)
-
 
 # CHECK-LABEL: TEST: testTypeEqDoesNotRaise
+@run
 def testTypeEqDoesNotRaise():
   ctx = Context()
   t1 = Type.parse("i32", ctx)
@@ -86,10 +94,9 @@ def testTypeEqDoesNotRaise():
   # CHECK: True
   print(t1 != None)
 
-run(testTypeEqDoesNotRaise)
-
 
 # CHECK-LABEL: TEST: testTypeCapsule
+@run
 def testTypeCapsule():
   with Context() as ctx:
     t1 = Type.parse("i32", ctx)
@@ -100,10 +107,9 @@ def testTypeCapsule():
   assert t2 == t1
   assert t2.context is ctx
 
-run(testTypeCapsule)
-
 
 # CHECK-LABEL: TEST: testStandardTypeCasts
+@run
 def testStandardTypeCasts():
   ctx = Context()
   t1 = Type.parse("i32", ctx)
@@ -119,10 +125,9 @@ def testStandardTypeCasts():
   else:
     print("Exception not produced")
 
-run(testStandardTypeCasts)
-
 
 # CHECK-LABEL: TEST: testIntegerType
+@run
 def testIntegerType():
   with Context() as ctx:
     i32 = IntegerType(Type.parse("i32"))
@@ -158,17 +163,16 @@ def testIntegerType():
     # CHECK: unsigned: ui64
     print("unsigned:", IntegerType.get_unsigned(64))
 
-run(testIntegerType)
-
 # CHECK-LABEL: TEST: testIndexType
+@run
 def testIndexType():
   with Context() as ctx:
     # CHECK: index type: index
     print("index type:", IndexType.get())
 
-run(testIndexType)
 
 # CHECK-LABEL: TEST: testFloatType
+@run
 def testFloatType():
   with Context():
     # CHECK: float: bf16
@@ -180,17 +184,17 @@ def testFloatType():
     # CHECK: float: f64
     print("float:", F64Type.get())
 
-run(testFloatType)
 
 # CHECK-LABEL: TEST: testNoneType
+@run
 def testNoneType():
   with Context():
     # CHECK: none type: none
     print("none type:", NoneType.get())
 
-run(testNoneType)
 
 # CHECK-LABEL: TEST: testComplexType
+@run
 def testComplexType():
   with Context() as ctx:
     complex_i32 = ComplexType(Type.parse("complex<i32>"))
@@ -210,13 +214,12 @@ def testComplexType():
     else:
       print("Exception not produced")
 
-run(testComplexType)
-
 
 # CHECK-LABEL: TEST: testConcreteShapedType
 # Shaped type is not a kind of builtin types, it is the base class for vectors,
 # memrefs and tensors, so this test case uses an instance of vector to test the
 # shaped type. The class hierarchy is preserved on the python side.
+@run
 def testConcreteShapedType():
   with Context() as ctx:
     vector = VectorType(Type.parse("vector<2x3xf32>"))
@@ -239,20 +242,20 @@ def testConcreteShapedType():
     # CHECK: isinstance(ShapedType): True
     print("isinstance(ShapedType):", isinstance(vector, ShapedType))
 
-run(testConcreteShapedType)
 
 # CHECK-LABEL: TEST: testAbstractShapedType
 # Tests that ShapedType operates as an abstract base class of a concrete
 # shaped type (using vector as an example).
+@run
 def testAbstractShapedType():
   ctx = Context()
   vector = ShapedType(Type.parse("vector<2x3xf32>", ctx))
   # CHECK: element type: f32
   print("element type:", vector.element_type)
 
-run(testAbstractShapedType)
 
 # CHECK-LABEL: TEST: testVectorType
+@run
 def testVectorType():
   with Context(), Location.unknown():
     f32 = F32Type.get()
@@ -269,9 +272,9 @@ def testVectorType():
     else:
       print("Exception not produced")
 
-run(testVectorType)
 
 # CHECK-LABEL: TEST: testRankedTensorType
+@run
 def testRankedTensorType():
   with Context(), Location.unknown():
     f32 = F32Type.get()
@@ -291,9 +294,9 @@ def testRankedTensorType():
     else:
       print("Exception not produced")
 
-run(testRankedTensorType)
 
 # CHECK-LABEL: TEST: testUnrankedTensorType
+@run
 def testUnrankedTensorType():
   with Context(), Location.unknown():
     f32 = F32Type.get()
@@ -333,9 +336,9 @@ def testUnrankedTensorType():
     else:
       print("Exception not produced")
 
-run(testUnrankedTensorType)
 
 # CHECK-LABEL: TEST: testMemRefType
+@run
 def testMemRefType():
   with Context(), Location.unknown():
     f32 = F32Type.get()
@@ -369,9 +372,9 @@ def testMemRefType():
     else:
       print("Exception not produced")
 
-run(testMemRefType)
 
 # CHECK-LABEL: TEST: testUnrankedMemRefType
+@run
 def testUnrankedMemRefType():
   with Context(), Location.unknown():
     f32 = F32Type.get()
@@ -411,9 +414,9 @@ def testUnrankedMemRefType():
     else:
       print("Exception not produced")
 
-run(testUnrankedMemRefType)
 
 # CHECK-LABEL: TEST: testTupleType
+@run
 def testTupleType():
   with Context() as ctx:
     i32 = IntegerType(Type.parse("i32"))
@@ -428,10 +431,9 @@ def testTupleType():
     # CHECK: pos-th type in the tuple type: f32
     print("pos-th type in the tuple type:", tuple_type.get_type(1))
 
-run(testTupleType)
-
 
 # CHECK-LABEL: TEST: testFunctionType
+@run
 def testFunctionType():
   with Context() as ctx:
     input_types = [IntegerType.get_signless(32),
@@ -442,6 +444,3 @@ def testFunctionType():
     print("INPUTS:", func.inputs)
     # CHECK: RESULTS: [Type(index)]
     print("RESULTS:", func.results)
-
-
-run(testFunctionType)

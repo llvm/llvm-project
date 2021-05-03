@@ -946,6 +946,10 @@ public:
   MachineBasicBlock *
   legalizeOperands(MachineInstr &MI, MachineDominatorTree *MDT = nullptr) const;
 
+  /// Change SADDR form of a FLAT \p Inst to its VADDR form if saddr operand
+  /// was moved to VGPR. \returns true if succeeded.
+  bool moveFlatAddrToVGPR(MachineInstr &Inst) const;
+
   /// Replace this instruction's opcode with the equivalent VALU
   /// opcode.  This function will also move the users of \p MI to the
   /// VALU if necessary. If present, \p MDT is updated.
@@ -1198,17 +1202,33 @@ namespace AMDGPU {
   LLVM_READONLY
   int getSOPKOp(uint16_t Opcode);
 
+  /// \returns SADDR form of a FLAT Global instruction given an \p Opcode
+  /// of a VADDR form.
   LLVM_READONLY
   int getGlobalSaddrOp(uint16_t Opcode);
+
+  /// \returns VADDR form of a FLAT Global instruction given an \p Opcode
+  /// of a SADDR form.
+  LLVM_READONLY
+  int getGlobalVaddrOp(uint16_t Opcode);
 
   LLVM_READONLY
   int getVCMPXNoSDstOp(uint16_t Opcode);
 
+  /// \returns ST form with only immediate offset of a FLAT Scratch instruction
+  /// given an \p Opcode of an SS (SADDR) form.
   LLVM_READONLY
   int getFlatScratchInstSTfromSS(uint16_t Opcode);
 
+  /// \returns SS (SADDR) form of a FLAT Scratch instruction given an \p Opcode
+  /// of an SV (VADDR) form.
   LLVM_READONLY
   int getFlatScratchInstSSfromSV(uint16_t Opcode);
+
+  /// \returns SV (VADDR) form of a FLAT Scratch instruction given an \p Opcode
+  /// of an SS (SADDR) form.
+  LLVM_READONLY
+  int getFlatScratchInstSVfromSS(uint16_t Opcode);
 
   const uint64_t RSRC_DATA_FORMAT = 0xf00000000000LL;
   const uint64_t RSRC_ELEMENT_SIZE_SHIFT = (32 + 19);
