@@ -102,6 +102,15 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   if (isa<tosa::AbsOp>(op) && elementTy.isa<FloatType>())
     return rewriter.create<mlir::AbsFOp>(loc, resultTypes, args);
 
+  if (isa<tosa::AbsOp>(op) && elementTy.isa<IntegerType>()) {
+    auto zero =
+        rewriter.create<mlir::ConstantOp>(loc, rewriter.getZeroAttr(elementTy));
+    auto cmp =
+        rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sgt, args[0], zero);
+    auto neg = rewriter.create<mlir::SubIOp>(loc, zero, args[0]);
+    return rewriter.create<mlir::SelectOp>(loc, cmp, args[0], neg);
+  }
+
   // tosa::AddOp
   if (isa<tosa::AddOp>(op) && elementTy.isa<FloatType>())
     return rewriter.create<mlir::AddFOp>(loc, resultTypes, args);

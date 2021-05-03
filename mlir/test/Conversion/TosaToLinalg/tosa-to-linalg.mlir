@@ -400,6 +400,13 @@ func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
   // CHECK: sitofp
   %24 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xf32>
 
+  // CHECK: linalg.generic
+  // CHECK: constant 0
+  // CHECK: cmpi sgt
+  // CHECK: subi
+  // CHECK: select
+  %25 = "tosa.abs"(%arg0) : (tensor<1xi32>) -> tensor<1xi32>
+
   return
 }
 
