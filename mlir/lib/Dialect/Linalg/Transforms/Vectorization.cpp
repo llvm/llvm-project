@@ -493,15 +493,18 @@ LogicalResult vectorizeAsLinalgGeneric(
       bvm.map(shapedArg, loaded);
       continue;
     }
-    AffineMap map = inversePermutation(
-        reindexIndexingMap(linalgOp.getIndexingMap(bbarg.getArgNumber())));
-    VectorType vectorType = VectorType::get(map.compose(shapedType.getShape()),
-                                            shapedType.getElementType());
+    AffineMap map;
+    VectorType vectorType;
     if (broadcastToMaximalCommonShape) {
-      map = vector::TransferReadOp::insertBroadcasts(map, vectorType,
-                                                     commonVectorShape);
+      map = inverseAndBroadcastProjectedPermuation(
+          linalgOp.getIndexingMap(bbarg.getArgNumber()));
       vectorType =
-          VectorType::get(commonVectorShape, vectorType.getElementType());
+          VectorType::get(commonVectorShape, shapedType.getElementType());
+    } else {
+      map = inversePermutation(
+          reindexIndexingMap(linalgOp.getIndexingMap(bbarg.getArgNumber())));
+      vectorType = VectorType::get(map.compose(shapedType.getShape()),
+                                   shapedType.getElementType());
     }
     Value vectorRead = buildVectorRead(builder, shapedArg, vectorType, map);
     LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: new vectorized bbarg("

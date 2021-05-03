@@ -664,6 +664,19 @@ AffineMap mlir::inversePermutation(AffineMap map) {
   return AffineMap::get(map.getNumResults(), 0, seenExprs, map.getContext());
 }
 
+AffineMap mlir::inverseAndBroadcastProjectedPermuation(AffineMap map) {
+  assert(map.isProjectedPermutation());
+  MLIRContext *context = map.getContext();
+  AffineExpr zero = mlir::getAffineConstantExpr(0, context);
+  // Start with all the results as 0.
+  SmallVector<AffineExpr, 4> exprs(map.getNumInputs(), zero);
+  for (unsigned i : llvm::seq(unsigned(0), map.getNumResults())) {
+    // Reverse each dimension existing in the oringal map result.
+    exprs[map.getDimPosition(i)] = getAffineDimExpr(i, context);
+  }
+  return AffineMap::get(map.getNumResults(), /*symbolCount=*/0, exprs, context);
+}
+
 AffineMap mlir::concatAffineMaps(ArrayRef<AffineMap> maps) {
   unsigned numResults = 0, numDims = 0, numSymbols = 0;
   for (auto m : maps)
