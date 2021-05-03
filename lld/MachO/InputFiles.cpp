@@ -102,13 +102,11 @@ static VersionTuple decodeVersion(uint32_t version) {
   return VersionTuple(major, minor, subMinor);
 }
 
-template <class LP>
 static Optional<PlatformInfo> getPlatformInfo(const InputFile *input) {
   if (!isa<ObjFile>(input) && !isa<DylibFile>(input))
     return None;
 
-  using Header = typename LP::mach_header;
-  auto *hdr = reinterpret_cast<const Header *>(input->mb.getBufferStart());
+  const char *hdr = input->mb.getBufferStart();
 
   PlatformInfo platformInfo;
   if (const auto *cmd =
@@ -141,8 +139,8 @@ static Optional<PlatformInfo> getPlatformInfo(const InputFile *input) {
   return None;
 }
 
-template <class LP> static bool checkCompatibility(const InputFile *input) {
-  Optional<PlatformInfo> platformInfo = getPlatformInfo<LP>(input);
+static bool checkCompatibility(const InputFile *input) {
+  Optional<PlatformInfo> platformInfo = getPlatformInfo(input);
   if (!platformInfo)
     return true;
   // TODO: Correctly detect simulator platforms or relax this check.
@@ -639,7 +637,7 @@ template <class LP> void ObjFile::parse() {
     return;
   }
 
-  if (!checkCompatibility<LP>(this))
+  if (!checkCompatibility(this))
     return;
 
   if (const load_command *cmd = findCommand(hdr, LC_LINKER_OPTION)) {
@@ -782,16 +780,8 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
   if (umbrella == nullptr)
     umbrella = this;
 
-  if (target->wordSize == 8)
-    parse<LP64>(umbrella);
-  else
-    parse<ILP32>(umbrella);
-}
-
-template <class LP> void DylibFile::parse(DylibFile *umbrella) {
-  using Header = typename LP::mach_header;
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
-  auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
+  auto *hdr = reinterpret_cast<const mach_header *>(mb.getBufferStart());
 
   // Initialize dylibName.
   if (const load_command *cmd = findCommand(hdr, LC_ID_DYLIB)) {
@@ -806,7 +796,7 @@ template <class LP> void DylibFile::parse(DylibFile *umbrella) {
     return;
   }
 
-  if (!checkCompatibility<LP>(this))
+  if (!checkCompatibility(this))
     return;
 
   // Initialize symbols.
@@ -825,7 +815,8 @@ template <class LP> void DylibFile::parse(DylibFile *umbrella) {
     return;
   }
 
-  const uint8_t *p = reinterpret_cast<const uint8_t *>(hdr) + sizeof(Header);
+  const uint8_t *p =
+      reinterpret_cast<const uint8_t *>(hdr) + target->headerSize;
   for (uint32_t i = 0, n = hdr->ncmds; i < n; ++i) {
     auto *cmd = reinterpret_cast<const load_command *>(p);
     p += cmd->cmdsize;
@@ -1008,4 +999,3 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mbref)
 }
 
 template void ObjFile::parse<LP64>();
-template void DylibFile::parse<LP64>(DylibFile *umbrella);

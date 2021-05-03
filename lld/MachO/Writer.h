@@ -27,7 +27,7 @@ public:
 
 template <class LP> void writeResult();
 
-template <class LP> void createSyntheticSections();
+void createSyntheticSections();
 
 // Add bindings for symbols that need weak or non-lazy bindings.
 void addNonLazyBindingEntries(const Symbol *, const InputSection *,

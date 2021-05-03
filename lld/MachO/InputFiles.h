@@ -10,6 +10,7 @@
 #define LLD_MACHO_INPUT_FILES_H
 
 #include "MachOStructs.h"
+#include "Target.h"
 
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
@@ -158,9 +159,6 @@ public:
   // implemented in the bundle. When used like this, it is very similar
   // to a Dylib, so we re-used the same class to represent it.
   bool isBundleLoader;
-
-private:
-  template <class LP> void parse(DylibFile *umbrella);
 };
 
 // .a file
@@ -189,12 +187,13 @@ extern llvm::SetVector<InputFile *> inputFiles;
 
 llvm::Optional<MemoryBufferRef> readFile(StringRef path);
 
-template <class CommandType = llvm::MachO::load_command, class Header,
-          class... Types>
-const CommandType *findCommand(const Header *hdr, Types... types) {
+// anyHdr should be a pointer to either mach_header or mach_header_64
+template <class CommandType = llvm::MachO::load_command, class... Types>
+const CommandType *findCommand(const void *anyHdr, Types... types) {
   std::initializer_list<uint32_t> typesList{types...};
-  const uint8_t *p = reinterpret_cast<const uint8_t *>(hdr) + sizeof(Header);
-
+  const auto *hdr = reinterpret_cast<const llvm::MachO::mach_header *>(anyHdr);
+  const uint8_t *p =
+      reinterpret_cast<const uint8_t *>(hdr) + target->headerSize;
   for (uint32_t i = 0, n = hdr->ncmds; i < n; ++i) {
     auto *cmd = reinterpret_cast<const CommandType *>(p);
     if (llvm::is_contained(typesList, cmd->cmd))
