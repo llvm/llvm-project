@@ -3921,9 +3921,31 @@ InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
                                          CostKind, VL0);
       } else {
         assert(E->State == TreeEntry::ScatterVectorize && "Unknown EntryState");
-        VecLdCost = TTI->getGatherScatterOpCost(
-            Instruction::Load, VecTy, cast<LoadInst>(VL0)->getPointerOperand(),
-            /*VariableMask=*/false, alignment, CostKind, VL0);
+        if (TTI->isLegalMaskedGather(VecTy, alignment)) {
+          VecLdCost = TTI->getGatherScatterOpCost(
+              Instruction::Load, VecTy,
+              cast<LoadInst>(VL0)->getPointerOperand(),
+              /*VariableMask=*/false, alignment, CostKind, VL0);
+        } else {
+          // Lower just to a gather if masked gather is not legal. Also,
+          // compensate the cost of next entry for pointers.
+          VecLdCost =
+              getGatherCost(VL);
+          // Tru to compensate the cost of the next entry for pointers iff all
+          // users are ScatterVectorize nodes.
+          const auto *It = find_if(
+              VectorizableTree, [E](const std::unique_ptr<TreeEntry> &TE) {
+                return !TE->UserTreeIndices.empty() &&
+                       all_of(TE->UserTreeIndices,
+                              [](const EdgeInfo &EI) {
+                                return EI.UserTE->State ==
+                                       TreeEntry::ScatterVectorize;
+                              }) &&
+                       TE->UserTreeIndices.front().UserTE == E;
+              });
+          if (It != VectorizableTree.end())
+            VecLdCost -= getEntryCost(It->get());
+        }
       }
       if (!NeedToShuffleReuses && !E->ReorderIndices.empty()) {
         SmallVector<int> NewMask;
