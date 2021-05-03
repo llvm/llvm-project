@@ -27,10 +27,6 @@ PreservedAnalyses
 PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
             LPMUpdater &>::run(Loop &L, LoopAnalysisManager &AM,
                                LoopStandardAnalysisResults &AR, LPMUpdater &U) {
-
-  if (DebugLogging)
-    dbgs() << "Starting Loop pass manager run.\n";
-
   // Runs loop-nest passes only when the current loop is a top-level one.
   PreservedAnalyses PA = (L.isOutermost() && !LoopNestPasses.empty())
                              ? runWithLoopNestPasses(L, AM, AR, U)
@@ -44,9 +40,6 @@ PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
   // FIXME: This isn't correct! This loop and all nested loops' analyses should
   // be preserved, but unrolling should invalidate the parent loop's analyses.
   PA.preserveSet<AllAnalysesOn<Loop>>();
-
-  if (DebugLogging)
-    dbgs() << "Finished Loop pass manager run.\n";
 
   return PA;
 }

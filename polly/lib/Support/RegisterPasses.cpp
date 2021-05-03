@@ -734,16 +734,15 @@ static bool isScopPassName(StringRef Name) {
 
 static bool
 parseTopLevelPipeline(ModulePassManager &MPM, PassInstrumentationCallbacks *PIC,
-                      ArrayRef<PassBuilder::PipelineElement> Pipeline,
-                      bool DebugLogging) {
+                      ArrayRef<PassBuilder::PipelineElement> Pipeline) {
   std::vector<PassBuilder::PipelineElement> FullPipeline;
   StringRef FirstName = Pipeline.front().Name;
 
   if (!isScopPassName(FirstName))
     return false;
 
-  FunctionPassManager FPM(DebugLogging);
-  ScopPassManager SPM(DebugLogging);
+  FunctionPassManager FPM;
+  ScopPassManager SPM;
 
   for (auto &Element : Pipeline) {
     auto &Name = Element.Name;
@@ -773,9 +772,8 @@ void registerPollyPasses(PassBuilder &PB) {
       });
   PB.registerParseTopLevelPipelineCallback(
       [PIC](ModulePassManager &MPM,
-            ArrayRef<PassBuilder::PipelineElement> Pipeline,
-            bool DebugLogging) -> bool {
-        return parseTopLevelPipeline(MPM, PIC, Pipeline, DebugLogging);
+            ArrayRef<PassBuilder::PipelineElement> Pipeline) -> bool {
+        return parseTopLevelPipeline(MPM, PIC, Pipeline);
       });
 
   if (PassPosition != POSITION_BEFORE_VECTORIZER)
