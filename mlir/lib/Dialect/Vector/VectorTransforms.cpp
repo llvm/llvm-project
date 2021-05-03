@@ -3823,11 +3823,17 @@ void mlir::vector::populateVectorContractLoweringPatterns(
                   ShapeCastOp2DDownCastRewritePattern,
                   ShapeCastOp2DUpCastRewritePattern,
                   ShapeCastOpRewritePattern>(patterns.getContext());
-  patterns.add<TransposeOpLowering,
-                  ContractionOpLowering,
+  patterns.add<ContractionOpLowering,
                   ContractionOpToMatmulOpLowering,
                   ContractionOpToOuterProductOpLowering>(parameters, patterns.getContext());
   // clang-format on
+}
+
+void mlir::vector::populateVectorTransposeLoweringPatterns(
+    RewritePatternSet &patterns,
+    VectorTransformsOptions vectorTransformOptions) {
+  patterns.add<TransposeOpLowering>(vectorTransformOptions,
+                                    patterns.getContext());
 }
 
 void mlir::vector::populateVectorTransferLoweringPatterns(
