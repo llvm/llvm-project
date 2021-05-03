@@ -317,104 +317,6 @@ func @broadcast_scalar(%arg0 : tensor<1x1xf32>, %shape : tensor<?x?xf32>) -> ten
 
 // -----
 
-//       CHECK: #[[MAP0:.+]] = affine_map<(d0, d1) -> (d0, d1)>
-//       CHECK: func @fold_reshape
-//       CHECK: linalg.tensor_reshape %{{.*}} [#[[MAP0]]]
-//  CHECK-SAME:   tensor<2048xf32> into tensor<4x512xf32>
-func @fold_reshape(%arg0 : tensor<2048xf32>) -> tensor<4x512xf32>
-{
-  %0 = linalg.tensor_reshape %arg0
-    [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>]
-    : tensor<2048xf32> into tensor<1x4x1x512xf32>
-  %1 = linalg.tensor_reshape %0
-    [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>,
-     affine_map<(d0, d1, d2, d3) -> (d3)>]
-    : tensor<1x4x1x512xf32> into tensor<4x512xf32>
-  return %1 : tensor<4x512xf32>
-}
-
-// -----
-
-//       CHECK: #[[MAP0:.+]] = affine_map<(d0, d1) -> (d0, d1)>
-//       CHECK: func @fold_reshape
-//       CHECK: linalg.tensor_reshape %{{.*}} [#[[MAP0]]]
-//  CHECK-SAME:   tensor<4x512xf32> into tensor<2048xf32>
-func @fold_reshape(%arg0 : tensor<4x512xf32>) -> tensor<2048xf32>
-{
-  %0 = linalg.tensor_reshape %arg0
-    [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>,
-     affine_map<(d0, d1, d2, d3) -> (d3)>]
-    : tensor<4x512xf32> into tensor<1x4x1x512xf32>
-  %1 = linalg.tensor_reshape %0
-    [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>]
-    : tensor<1x4x1x512xf32> into tensor<2048xf32>
-  return %1 : tensor<2048xf32>
-}
-
-// -----
-
-//   CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
-//   CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2) -> (d2)>
-//       CHECK: func @fold_reshape
-//       CHECK: linalg.tensor_reshape %{{.*}} [#[[MAP0]], #[[MAP1]]]
-//  CHECK-SAME:   tensor<2048x1xf32> into tensor<4x512x1xf32>
-func @fold_reshape(%arg0 : tensor<2048x1xf32>) -> tensor<4x512x1xf32>
-{
-  %0 = linalg.tensor_reshape %arg0
-    [affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d4)>]
-    : tensor<2048x1xf32> into tensor<1x4x1x512x1xf32>
-  %1 = linalg.tensor_reshape %0
-    [affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d3)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d4)>]
-    : tensor<1x4x1x512x1xf32> into tensor<4x512x1xf32>
-  return %1 : tensor<4x512x1xf32>
-}
-
-// -----
-
-//   CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1)>
-//   CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d2)>
-//   CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d3, d4)>
-//       CHECK: func @fold_reshape
-//       CHECK: linalg.tensor_reshape %{{.*}} [#[[MAP0]], #[[MAP1]], #[[MAP2]]]
-//  CHECK-SAME:   tensor<2048x1x2048xf32> into tensor<4x512x1x512x4xf32>
-func @fold_reshape(%arg0 : tensor<2048x1x2048xf32>) -> tensor<4x512x1x512x4xf32>
-{
-  %0 = linalg.tensor_reshape %arg0
-    [affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1, d2, d3, d4)>,
-     affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d5)>,
-     affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d6, d7, d8)>]
-    : tensor<2048x1x2048xf32> into tensor<1x4x1x512x1x1x512x1x4xf32>
-  %1 = linalg.tensor_reshape %0
-    [affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1, d2)>,
-     affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d3, d4)>,
-     affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d5)>,
-     affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d6, d7)>,
-     affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d8)>]
-    : tensor<1x4x1x512x1x1x512x1x4xf32> into tensor<4x512x1x512x4xf32>
-  return %1 : tensor<4x512x1x512x4xf32>
-}
-
-// -----
-
-//   CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1) -> (d0, d1)>
-//       CHECK: func @fold_reshape
-//       CHECK: linalg.tensor_reshape %{{.*}} [#[[MAP0]]
-//  CHECK-SAME:   tensor<2xf32> into tensor<2x1xf32>
-func @fold_reshape(%arg0: tensor<2xf32>) -> tensor<2x1xf32>
-{
-  %0 = linalg.tensor_reshape %arg0 [affine_map<(d0, d1, d2) -> (d0, d1, d2)>] : tensor<2xf32> into tensor<2x1x1xf32>
-  %1 = linalg.tensor_reshape %0
-  [affine_map<(d0, d1, d2) -> (d0)>,
-   affine_map<(d0, d1, d2) -> (d1, d2)>
-  ] : tensor<2x1x1xf32> into tensor<2x1xf32>
-  return %1 : tensor<2x1xf32>
-}
-
-// -----
-
 #map0 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 #map1 = affine_map<(d0, d1, d2) -> (d2)>
 #map3 = affine_map<(d0, d1, d2) -> (d0, d1)>
@@ -476,67 +378,32 @@ func @fold_unit_dim_for_init_tensor(%input: tensor<1x1000xf32>) -> tensor<1xf32>
 // -----
 
 func @fold_subtensor(
-    %arg0 : tensor<1x?x?x1x?x1x1xf32>, %arg1 : index, %arg2 : index,
-    %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index)
-    -> tensor<1x?x?x1x?x1x1xf32> {
-  %0 = subtensor %arg0[0, %arg1, %arg2, 0, %arg3, 0, 0]
-                      [1, %arg4, %arg5, 1, %arg6, 1, 1] [1, 1, 1, 1, 1, 1, 1] :
+    %arg0 : tensor<1x?x?x1x?x1x1xf32>, %arg1 : tensor<1x?x?x?x?x1x1xf32>,
+    %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index,
+    %arg6 : index, %arg7 : index) -> (tensor<1x?x?x1x?x1x1xf32>, tensor<1x?x?x1x?x1x1xf32>) {
+  %0 = subtensor %arg0[0, %arg2, %arg3, 0, %arg4, 0, 0]
+                      [1, %arg5, %arg6, 1, %arg7, 1, 1] [1, 1, 1, 1, 1, 1, 1] :
       tensor<1x?x?x1x?x1x1xf32> to tensor<1x?x?x1x?x1x1xf32>
-  return %0 : tensor<1x?x?x1x?x1x1xf32>
+  %1 = subtensor %arg1[%arg2, 0, %arg3, 0, 0, %arg4, 0]
+                      [1, %arg5, %arg6, 1, %arg7, 1, 1] [1, 1, 1, 1, 1, 1, 1] :
+      tensor<1x?x?x?x?x1x1xf32> to tensor<1x?x?x1x?x1x1xf32>
+  return %0, %1 : tensor<1x?x?x1x?x1x1xf32>, tensor<1x?x?x1x?x1x1xf32>
 }
 //  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1)>
 //  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d2)>
 //  CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d3, d4, d5, d6)>
 //      CHECK: func @fold_subtensor
 // CHECK-SAME:   %[[ARG0:.+]]: tensor<1x?x?x1x?x1x1xf32>
-// CHECK-SAME:   %[[ARG1:[a-z0-9]+]]: index
-// CHECK-SAME:   %[[ARG2:[a-z0-9]+]]: index
-// CHECK-SAME:   %[[ARG3:[a-z0-9]+]]: index
-// CHECK-SAME:   %[[ARG4:[a-z0-9]+]]: index
-// CHECK-SAME:   %[[ARG5:[a-z0-9]+]]: index
-// CHECK-SAME:   %[[ARG6:[a-z0-9]+]]: index
-//      CHECK:   %[[SRC_RESHAPE:.+]] = linalg.tensor_reshape %[[ARG0]]
+// CHECK-SAME:   %[[ARG1:.+]]: tensor<1x?x?x?x?x1x1xf32>
+//      CHECK:   %[[SUBTENSOR1:.+]] = subtensor %[[ARG0]]
+// CHECK-SAME:       to tensor<?x?x?xf32>
+//      CHECK:   %[[RESULT1:.+]] = linalg.tensor_reshape %[[SUBTENSOR1]]
 // CHECK-SAME:       [#[[MAP0]], #[[MAP1]], #[[MAP2]]]
-//      CHECK:   %[[SUBTENSOR:.+]] = subtensor %[[SRC_RESHAPE]]
-// CHECK-SAME:       [%[[ARG1]], %[[ARG2]], %[[ARG3]]]
-// CHECK-SAME:       [%[[ARG4]], %[[ARG5]], %[[ARG6]]]
-//      CHECK:   %[[RESULT_RESHAPE:.+]] = linalg.tensor_reshape %[[SUBTENSOR]]
+//      CHECK:   %[[SUBTENSOR2:.+]] = subtensor %[[ARG1]]
+// CHECK-SAME:       to tensor<?x?x?xf32>
+//      CHECK:   %[[RESULT2:.+]] = linalg.tensor_reshape %[[SUBTENSOR2]]
 // CHECK-SAME:       [#[[MAP0]], #[[MAP1]], #[[MAP2]]]
-//      CHECK:   return %[[RESULT_RESHAPE]]
-
-// -----
-
-func @no_fold_subtensor(
-    %arg0 : tensor<1x?x?x?x?x1x1xf32>, %arg1 : index, %arg2 : index,
-    %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index)
-    -> tensor<1x?x?x1x?x1x1xf32> {
-  %0 = subtensor %arg0[%arg1, 0, %arg2, 0, 0, %arg3, 0]
-                      [1, %arg4, %arg5, 1, %arg6, 1, 1] [1, 1, 1, 1, 1, 1, 1] :
-      tensor<1x?x?x?x?x1x1xf32> to tensor<1x?x?x1x?x1x1xf32>
-  return %0 : tensor<1x?x?x1x?x1x1xf32>
-}
-//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0)>
-//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d1)>
-//  CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d2)>
-//  CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d3)>
-//  CHECK-DAG: #[[MAP4:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4)>
-//  CHECK-DAG: #[[MAP5:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d5, d6)>
-//      CHECK: func @no_fold_subtensor
-// CHECK-SAME:   %[[ARG0:.+]]: tensor<1x?x?x?x?x1x1xf32>
-// CHECK-SAME:   %[[ARG1:[a-z0-9]+]]: index
-// CHECK-SAME:   %[[ARG2:[a-z0-9]+]]: index
-// CHECK-SAME:   %[[ARG3:[a-z0-9]+]]: index
-// CHECK-SAME:   %[[ARG4:[a-z0-9]+]]: index
-// CHECK-SAME:   %[[ARG5:[a-z0-9]+]]: index
-// CHECK-SAME:   %[[ARG6:[a-z0-9]+]]: index
-//      CHECK:   %[[SRC_RESHAPE:.+]] = linalg.tensor_reshape %[[ARG0]]
-// CHECK-SAME:       [#[[MAP0]], #[[MAP1]], #[[MAP2]], #[[MAP3]], #[[MAP4]], #[[MAP5]]]
-//      CHECK:   %[[SUBTENSOR:.+]] = subtensor %[[SRC_RESHAPE]]
-// CHECK-SAME:       [%[[ARG1]], 0, %[[ARG2]], 0, 0, %[[ARG3]]]
-// CHECK-SAME:       [1, %[[ARG4]], %[[ARG5]], 1, %[[ARG6]], 1]
-//      CHECK:   %[[RESULT_RESHAPE:.+]] = linalg.tensor_reshape %[[SUBTENSOR]]
-// CHECK-SAME:       [#[[MAP0]], #[[MAP1]], #[[MAP2]], #[[MAP3]], #[[MAP4]], #[[MAP5]]]
-//      CHECK:   return %[[RESULT_RESHAPE]]
+//      CHECK:   return %[[RESULT1]], %[[RESULT2]]
 
 // -----
 
@@ -647,21 +514,3 @@ func @unit_dim_for_reduction_inner(%arg0: tensor<?x1x?x1xf32>) -> tensor<?x1xf32
 // CHECK-SAME:     outs(%[[FILL]] : tensor<?xf32>)
 //      CHECK:   %[[RESULT_RESHAPE:.+]] = linalg.tensor_reshape %[[RESULT]] [#[[MAP2]]]
 //      CHECK:   return %[[RESULT_RESHAPE]]
-
-// -----
-
-func @no_fold_reshape_empty_expr(%arg0: tensor<3x2x2xf32>) -> tensor<12x1xf32> {
-  %0 = linalg.tensor_reshape %arg0 [affine_map<(d0, d1, d2, d3) -> (d0)>, affine_map<(d0, d1, d2, d3) -> (d1)>, affine_map<(d0, d1, d2, d3) -> (d2, d3)>] : tensor<3x2x2xf32> into tensor<3x2x2x1xf32>
-  %1 = linalg.tensor_reshape %0 [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>, affine_map<(d0, d1, d2, d3) -> (d3)>] : tensor<3x2x2x1xf32> into tensor<12x1xf32>
-  return %1 : tensor<12x1xf32>
-}
-//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3) -> (d0)>
-//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (d1)>
-//  CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3) -> (d2, d3)>
-//  CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-//  CHECK-DAG: #[[MAP4:.+]] = affine_map<(d0, d1, d2, d3) -> (d3)>
-//      CHECK: func @no_fold_reshape_empty_expr
-// CHECK-SAME:    %[[ARG0:.+]]: tensor<3x2x2xf32>
-//      CHECK:    %[[RARG0:.+]] = linalg.tensor_reshape %[[ARG0:.+]] [#[[MAP0]], #[[MAP1]], #[[MAP2]]
-//      CHECK:    %[[RES:.+]] = linalg.tensor_reshape %[[RARG0:.+]] [#[[MAP3]], #[[MAP4]]]
-//      CHECK:    return %[[RES:.+]] : tensor<12x1xf32>
