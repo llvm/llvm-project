@@ -571,7 +571,6 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
       {"referencesProvider", true},
       {"astProvider", true}, // clangd extension
       {"typeHierarchyProvider", true},
-      {"clangdInlayHintsProvider", true},
       {"memoryUsageProvider", true}, // clangd extension
       {"compilationDatabase",        // clangd extension
        llvm::json::Object{{"automaticReload", true}}},
@@ -607,6 +606,9 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
 
   if (Opts.FoldingRanges)
     ServerCaps["foldingRangeProvider"] = true;
+
+  if (Opts.InlayHints)
+    ServerCaps["clangdInlayHintsProvider"] = true;
 
   std::vector<llvm::StringRef> Commands;
   for (llvm::StringRef Command : Handlers.CommandHandlers.keys())

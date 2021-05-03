@@ -6027,8 +6027,8 @@ def SDTARMVST2    : SDTypeProfile<1, 5, [SDTCisPtrTy<0>, SDTCisPtrTy<1>, SDTCisV
 def SDTARMVST4    : SDTypeProfile<1, 7, [SDTCisPtrTy<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>, SDTCisVec<3>,
                                          SDTCisSameAs<3, 4>, SDTCisSameAs<3, 5>,
                                          SDTCisSameAs<3, 6>, SDTCisVT<7, i32>]>;
-def MVEVST2UPD       : SDNode<"ARMISD::VST2_UPD", SDTARMVST2, [SDNPHasChain]>;
-def MVEVST4UPD       : SDNode<"ARMISD::VST4_UPD", SDTARMVST4, [SDNPHasChain]>;
+def MVEVST2UPD       : SDNode<"ARMISD::VST2_UPD", SDTARMVST2, [SDNPHasChain, SDNPMemOperand]>;
+def MVEVST4UPD       : SDNode<"ARMISD::VST4_UPD", SDTARMVST4, [SDNPHasChain, SDNPMemOperand]>;
 
 multiclass MVE_vst24_patterns<int lanesize, ValueType VT> {
   foreach stage = [0,1] in

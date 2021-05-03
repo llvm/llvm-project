@@ -668,16 +668,16 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     int64_t Val = cast<EmitIntegerMatcher>(N)->getValue();
     OS << "OPC_EmitInteger, "
        << getEnumName(cast<EmitIntegerMatcher>(N)->getVT()) << ", ";
-    unsigned Bytes = 2+EmitVBRValue(Val, OS);
+    unsigned Bytes = 2 + EmitSignedVBRValue(Val, OS);
     OS << '\n';
     return Bytes;
   }
   case Matcher::EmitStringInteger: {
     const std::string &Val = cast<EmitStringIntegerMatcher>(N)->getValue();
     // These should always fit into 7 bits.
-    OS << "OPC_EmitInteger, "
-      << getEnumName(cast<EmitStringIntegerMatcher>(N)->getVT()) << ", "
-      << Val << ",\n";
+    OS << "OPC_EmitStringInteger, "
+       << getEnumName(cast<EmitStringIntegerMatcher>(N)->getVT()) << ", " << Val
+       << ",\n";
     return 3;
   }
 

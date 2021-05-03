@@ -83,7 +83,7 @@ def MulIRRPat : Pat<(mul i32:$x, i32:$y), (MulIRR Reg:$x, Reg:$y)>;
 // ADDINT-NEXT: OPC_CheckChild0Integer
 // ADDINT-NEXT: OPC_RecordChild1
 // ADDINT-NEXT: OPC_RecordChild2
-// ADDINT-NEXT: OPC_EmitInteger, MVT::i32, 1
+// ADDINT-NEXT: OPC_EmitInteger, MVT::i32, 2
 // ADDINT-NEXT: OPC_MorphNodeTo1, TARGET_VAL(::AddRRI)
 
 // SUB: SwitchOpcode{{.*}}TARGET_VAL(ISD::SUB)

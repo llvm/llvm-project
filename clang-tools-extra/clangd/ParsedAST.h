@@ -24,7 +24,6 @@
 #include "Compiler.h"
 #include "Diagnostics.h"
 #include "Headers.h"
-#include "HeuristicResolver.h"
 #include "Preamble.h"
 #include "index/CanonicalIncludes.h"
 #include "support/Path.h"
@@ -43,6 +42,7 @@
 
 namespace clang {
 namespace clangd {
+class HeuristicResolver;
 class SymbolIndex;
 
 /// Stores and provides access to parsed AST.

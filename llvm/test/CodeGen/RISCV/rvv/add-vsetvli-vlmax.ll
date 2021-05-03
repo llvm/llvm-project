@@ -22,11 +22,11 @@ define void @vadd_vint64m1(
 
 ; PRE-INSERTER: %3:vr = VL1RE64_V %1 :: (load unknown-size from %ir.pa, align 8)
 ; PRE-INSERTER: %4:vr = VL1RE64_V %2 :: (load unknown-size from %ir.pb, align 8)
-; PRE-INSERTER: %5:vr = PseudoVADD_VV_M1 killed %3, killed %4, $x0, 64, implicit $vl, implicit $vtype
+; PRE-INSERTER: %5:vr = PseudoVADD_VV_M1 killed %3, killed %4, $x0, 6, implicit $vl, implicit $vtype
 ; PRE-INSERTER:  VS1R_V killed %5, %0 :: (store unknown-size into %ir.pc, align 8)
 
 ; POST-INSERTER: %3:vr = VL1RE64_V %1 :: (load unknown-size from %ir.pa, align 8)
 ; POST-INSERTER: %4:vr = VL1RE64_V %2 :: (load unknown-size from %ir.pb, align 8)
 ; POST-INSERTER: dead %6:gpr = PseudoVSETVLI $x0, 88, implicit-def $vl, implicit-def $vtype
-; POST-INSERTER: %5:vr = PseudoVADD_VV_M1 killed %3, killed %4, $noreg, 64, implicit $vl, implicit $vtype
+; POST-INSERTER: %5:vr = PseudoVADD_VV_M1 killed %3, killed %4, $noreg, 6, implicit $vl, implicit $vtype
 ; POST-INSERTER: VS1R_V killed %5, %0 :: (store unknown-size into %ir.pc, align 8)

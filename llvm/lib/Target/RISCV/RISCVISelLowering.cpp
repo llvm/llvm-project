@@ -6288,9 +6288,9 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
   DebugLoc DL = MI.getDebugLoc();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
-  unsigned SEW = MI.getOperand(SEWIndex).getImm();
-  assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
-  RISCVVSEW ElementWidth = static_cast<RISCVVSEW>(Log2_32(SEW / 8));
+  unsigned Log2SEW = MI.getOperand(SEWIndex).getImm();
+  assert(RISCVVType::isValidSEW(1 << Log2SEW) && "Unexpected SEW");
+  RISCVVSEW ElementWidth = static_cast<RISCVVSEW>(Log2SEW - 3);
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
