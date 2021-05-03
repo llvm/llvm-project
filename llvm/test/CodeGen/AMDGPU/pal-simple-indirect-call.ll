@@ -17,6 +17,7 @@ define amdgpu_cs void @test_simple_indirect_call() {
 ; GFX9-NEXT:    s_load_dwordx4 s[36:39], s[36:37], 0x10
 ; GFX9-NEXT:    s_mov_b32 s32, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_bitset0_b32 s39, 21
 ; GFX9-NEXT:    s_add_u32 s36, s36, s0
 ; GFX9-NEXT:    s_addc_u32 s37, s37, 0
 ; GFX9-NEXT:    s_mov_b64 s[0:1], s[36:37]
