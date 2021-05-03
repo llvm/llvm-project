@@ -8,6 +8,7 @@
 
 #include "SemanticHighlighting.h"
 #include "FindTarget.h"
+#include "HeuristicResolver.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
