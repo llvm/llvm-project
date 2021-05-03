@@ -2608,7 +2608,8 @@ static Optional<unsigned> getInvertibleOperand(const Operator *Op1,
                                                   cast<Operator>(BO2));
     if (!Idx || *Idx != 0)
       break;
-    assert(BO1->getOperand(*Idx) == PN1 && BO2->getOperand(*Idx) == PN2);
+    if (BO1->getOperand(*Idx) != PN1 || BO2->getOperand(*Idx) != PN2)
+      break;
 
     // Phi operands might not be in the same order.  TODO: generalize
     // interface to return pair of operands.
