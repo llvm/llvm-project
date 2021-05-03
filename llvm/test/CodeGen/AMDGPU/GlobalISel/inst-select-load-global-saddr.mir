@@ -350,9 +350,9 @@ body: |
     ; GFX9: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY1]], [[COPY2]], implicit-def $scc
     ; GFX9: [[S_ADDC_U32_:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[COPY3]], [[COPY4]], implicit-def $scc, implicit $scc
     ; GFX9: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[S_ADD_U32_]], %subreg.sub0, [[S_ADDC_U32_]], %subreg.sub1
-    ; GFX9: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
-    ; GFX9: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY5]], 0, 0, implicit $exec :: (load 4, addrspace 1)
-    ; GFX9: $vgpr0 = COPY [[GLOBAL_LOAD_DWORD]]
+    ; GFX9: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX9: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[REG_SEQUENCE1]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (load 4, addrspace 1)
+    ; GFX9: $vgpr0 = COPY [[GLOBAL_LOAD_DWORD_SADDR]]
     ; GFX10-LABEL: name: load_global_s32_from_sgpr_base_offset_neg4097
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
@@ -553,9 +553,9 @@ body: |
     ; GFX9: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY1]], [[COPY2]], implicit-def $scc
     ; GFX9: [[S_ADDC_U32_:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[COPY3]], [[COPY4]], implicit-def $scc, implicit $scc
     ; GFX9: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[S_ADD_U32_]], %subreg.sub0, [[S_ADDC_U32_]], %subreg.sub1
-    ; GFX9: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
-    ; GFX9: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY5]], 0, 0, implicit $exec :: (load 4, addrspace 1)
-    ; GFX9: $vgpr0 = COPY [[GLOBAL_LOAD_DWORD]]
+    ; GFX9: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX9: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[REG_SEQUENCE1]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (load 4, addrspace 1)
+    ; GFX9: $vgpr0 = COPY [[GLOBAL_LOAD_DWORD_SADDR]]
     ; GFX10-LABEL: name: load_global_s32_from_sgpr_base_offset_4294971390
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
