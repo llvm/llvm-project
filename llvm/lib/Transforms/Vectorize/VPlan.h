@@ -1051,6 +1051,8 @@ public:
 
   /// Returns the \p I th incoming VPBasicBlock.
   VPBasicBlock *getIncomingBlock(unsigned I) { return IncomingBlocks[I]; }
+
+  RecurrenceDescriptor *getRecurrenceDescriptor() { return RdxDesc; }
 };
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
