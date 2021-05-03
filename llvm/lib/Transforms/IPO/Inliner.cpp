@@ -951,6 +951,10 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       UR.InlinedInternalEdges.insert({&N, OldC});
     }
     InlinedCallees.clear();
+
+    // Invalidate analyses for this function now so that we don't have to
+    // invalidate analyses for all functions in this SCC later.
+    FAM.invalidate(F, PreservedAnalyses::none());
   }
 
   // Now that we've finished inlining all of the calls across this SCC, delete
@@ -990,10 +994,12 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   if (!Changed)
     return PreservedAnalyses::all();
 
+  PreservedAnalyses PA;
   // Even if we change the IR, we update the core CGSCC data structures and so
   // can preserve the proxy to the function analysis manager.
-  PreservedAnalyses PA;
   PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
+  // We have already invalidated all analyses on modified functions.
+  PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }
 
