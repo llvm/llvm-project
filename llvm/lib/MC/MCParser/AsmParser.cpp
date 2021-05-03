@@ -1110,25 +1110,33 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     Res = MCUnaryExpr::createLNot(Res, getContext(), FirstTokenLoc);
     return false;
   case AsmToken::Dollar:
+  case AsmToken::Star:
   case AsmToken::At:
   case AsmToken::String:
   case AsmToken::Identifier: {
     StringRef Identifier;
     if (parseIdentifier(Identifier)) {
-      // We may have failed but $ may be a valid token.
-      if (getTok().is(AsmToken::Dollar)) {
-        if (Lexer.getMAI().getDollarIsPC()) {
-          Lex();
-          // This is a '$' reference, which references the current PC.  Emit a
-          // temporary label to the streamer and refer to it.
-          MCSymbol *Sym = Ctx.createTempSymbol();
-          Out.emitLabel(Sym);
-          Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
-                                        getContext());
-          EndLoc = FirstTokenLoc;
-          return false;
-        }
-        return Error(FirstTokenLoc, "invalid token in expression");
+      // We may have failed but '$'|'*' may be a valid token in context of
+      // the current PC.
+      if (getTok().is(AsmToken::Dollar) || getTok().is(AsmToken::Star)) {
+        bool ShouldGenerateTempSymbol = false;
+        if ((getTok().is(AsmToken::Dollar) && MAI.getDollarIsPC()) ||
+            (getTok().is(AsmToken::Star) && MAI.getStarIsPC()))
+          ShouldGenerateTempSymbol = true;
+
+        if (!ShouldGenerateTempSymbol)
+          return Error(FirstTokenLoc, "invalid token in expression");
+
+        // Eat the '$'|'*' token.
+        Lex();
+        // This is either a '$'|'*' reference, which references the current PC.
+        // Emit a temporary label to the streamer and refer to it.
+        MCSymbol *Sym = Ctx.createTempSymbol();
+        Out.emitLabel(Sym);
+        Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
+                                      getContext());
+        EndLoc = FirstTokenLoc;
+        return false;
       }
     }
     // Parse symbol variant

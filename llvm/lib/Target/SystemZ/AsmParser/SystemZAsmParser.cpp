@@ -1542,6 +1542,10 @@ SystemZAsmParser::parsePCRel(OperandVector &Operands, int64_t MinVal,
   // For consistency with the GNU assembler, treat immediates as offsets
   // from ".".
   if (auto *CE = dyn_cast<MCConstantExpr>(Expr)) {
+    if (isParsingHLASM()) {
+      Error(StartLoc, "Expected PC-relative expression");
+      return MatchOperand_ParseFail;
+    }
     if (isOutOfRangeConstant(CE)) {
       Error(StartLoc, "offset out of range");
       return MatchOperand_ParseFail;

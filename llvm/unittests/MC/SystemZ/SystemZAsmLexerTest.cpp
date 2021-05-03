@@ -685,4 +685,19 @@ TEST_F(SystemZAsmLexerTest, CheckRejectDotAsCurrentPC) {
   EXPECT_EQ(ParsePrimaryExpr, true);
   EXPECT_EQ(Parser->hasPendingError(), true);
 }
+
+TEST_F(SystemZAsmLexerTest, CheckRejectStarAsCurrentPC) {
+  StringRef AsmStr = "*-4";
+
+  // Setup.
+  setupCallToAsmParser(AsmStr);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  const MCExpr *Expr;
+  bool ParsePrimaryExpr = Parser->parseExpression(Expr);
+  EXPECT_EQ(ParsePrimaryExpr, true);
+  EXPECT_EQ(Parser->hasPendingError(), true);
+}
 } // end anonymous namespace
