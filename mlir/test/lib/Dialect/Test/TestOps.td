@@ -1879,8 +1879,8 @@ def CopyOp : TEST_Op<"copy", [CopyOpInterface]> {
   let description = [{
     Represents a copy operation.
   }];
-  let arguments = (ins Res<AnyMemRef, "", [MemRead]>:$source,
-                   Res<AnyMemRef, "", [MemWrite]>:$target);
+  let arguments = (ins Res<AnyRankedOrUnrankedMemRef, "", [MemRead]>:$source,
+                   Res<AnyRankedOrUnrankedMemRef, "", [MemWrite]>:$target);
   let assemblyFormat = [{
     `(` $source `,` $target `)` `:` `(` type($source) `,` type($target) `)`
      attr-dict
@@ -1915,7 +1915,8 @@ class BufferBasedOpBase<string mnemonic, list<OpTrait> traits>
   let description = [{
     A buffer based operation, that uses memRefs as input and output.
   }];
-  let arguments = (ins AnyMemRef:$input, AnyMemRef:$output);
+  let arguments = (ins AnyRankedOrUnrankedMemRef:$input,
+                       AnyRankedOrUnrankedMemRef:$output);
 }
 
 def BufferBasedOp : BufferBasedOpBase<"buffer_based", []>{
