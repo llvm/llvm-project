@@ -311,6 +311,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_EM>::enumeration(
   ECase(EM_STM8);
   ECase(EM_TILE64);
   ECase(EM_TILEPRO);
+  ECase(EM_MICROBLAZE);
   ECase(EM_CUDA);
   ECase(EM_TILEGX);
   ECase(EM_CLOUDSHIELD);
