@@ -122,11 +122,11 @@ void TraceIntelPT::TraverseInstructions(
       break;
 }
 
-size_t TraceIntelPT::GetInstructionCount(Thread &thread) {
+Optional<size_t> TraceIntelPT::GetInstructionCount(Thread &thread) {
   if (const DecodedThread *decoded_thread = Decode(thread))
     return decoded_thread->GetInstructions().size();
   else
-    return 0;
+    return None;
 }
 
 Expected<pt_cpu> TraceIntelPT::GetCPUInfoForLiveProcess() {
