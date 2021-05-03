@@ -3065,11 +3065,32 @@ struct CmpIOpLowering : public ConvertOpToLLVMPattern<CmpIOp> {
   matchAndRewrite(CmpIOp cmpiOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     CmpIOpAdaptor transformed(operands);
+    auto operandType = transformed.lhs().getType();
+    auto resultType = cmpiOp.getResult().getType();
 
-    rewriter.replaceOpWithNewOp<LLVM::ICmpOp>(
-        cmpiOp, typeConverter->convertType(cmpiOp.getResult().getType()),
-        convertCmpPredicate<LLVM::ICmpPredicate>(cmpiOp.getPredicate()),
-        transformed.lhs(), transformed.rhs());
+    // Handle the scalar and 1D vector cases.
+    if (!operandType.isa<LLVM::LLVMArrayType>()) {
+      rewriter.replaceOpWithNewOp<LLVM::ICmpOp>(
+          cmpiOp, typeConverter->convertType(resultType),
+          convertCmpPredicate<LLVM::ICmpPredicate>(cmpiOp.getPredicate()),
+          transformed.lhs(), transformed.rhs());
+      return success();
+    }
+
+    auto vectorType = resultType.dyn_cast<VectorType>();
+    if (!vectorType)
+      return rewriter.notifyMatchFailure(cmpiOp, "expected vector result type");
+
+    return handleMultidimensionalVectors(
+        cmpiOp.getOperation(), operands, *getTypeConverter(),
+        [&](Type llvm1DVectorTy, ValueRange operands) {
+          CmpIOpAdaptor transformed(operands);
+          return rewriter.create<LLVM::ICmpOp>(
+              cmpiOp.getLoc(), llvm1DVectorTy,
+              convertCmpPredicate<LLVM::ICmpPredicate>(cmpiOp.getPredicate()),
+              transformed.lhs(), transformed.rhs());
+        },
+        rewriter);
 
     return success();
   }
@@ -3082,13 +3103,32 @@ struct CmpFOpLowering : public ConvertOpToLLVMPattern<CmpFOp> {
   matchAndRewrite(CmpFOp cmpfOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     CmpFOpAdaptor transformed(operands);
+    auto operandType = transformed.lhs().getType();
+    auto resultType = cmpfOp.getResult().getType();
 
-    rewriter.replaceOpWithNewOp<LLVM::FCmpOp>(
-        cmpfOp, typeConverter->convertType(cmpfOp.getResult().getType()),
-        convertCmpPredicate<LLVM::FCmpPredicate>(cmpfOp.getPredicate()),
-        transformed.lhs(), transformed.rhs());
+    // Handle the scalar and 1D vector cases.
+    if (!operandType.isa<LLVM::LLVMArrayType>()) {
+      rewriter.replaceOpWithNewOp<LLVM::FCmpOp>(
+          cmpfOp, typeConverter->convertType(resultType),
+          convertCmpPredicate<LLVM::FCmpPredicate>(cmpfOp.getPredicate()),
+          transformed.lhs(), transformed.rhs());
+      return success();
+    }
 
-    return success();
+    auto vectorType = resultType.dyn_cast<VectorType>();
+    if (!vectorType)
+      return rewriter.notifyMatchFailure(cmpfOp, "expected vector result type");
+
+    return handleMultidimensionalVectors(
+        cmpfOp.getOperation(), operands, *getTypeConverter(),
+        [&](Type llvm1DVectorTy, ValueRange operands) {
+          CmpFOpAdaptor transformed(operands);
+          return rewriter.create<LLVM::FCmpOp>(
+              cmpfOp.getLoc(), llvm1DVectorTy,
+              convertCmpPredicate<LLVM::FCmpPredicate>(cmpfOp.getPredicate()),
+              transformed.lhs(), transformed.rhs());
+        },
+        rewriter);
   }
 };
 

@@ -118,12 +118,13 @@ define void @tiny_tree_not_fully_vectorizable(double* noalias nocapture %dst, do
 ; CHECK-NEXT:    [[I_015:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[DST_ADDR_014:%.*]] = phi double* [ [[ADD_PTR4:%.*]], [[FOR_BODY]] ], [ [[DST:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[SRC_ADDR_013:%.*]] = phi double* [ [[ADD_PTR:%.*]], [[FOR_BODY]] ], [ [[SRC:%.*]], [[ENTRY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load double, double* [[SRC_ADDR_013]], align 8
-; CHECK-NEXT:    store double [[TMP0]], double* [[DST_ADDR_014]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, double* [[SRC_ADDR_013]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load double, double* [[ARRAYIDX2]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double*> poison, double* [[SRC_ADDR_013]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double*> [[TMP0]], double* [[ARRAYIDX2]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*> [[TMP1]], i32 8, <2 x i1> <i1 true, i1 true>, <2 x double> undef)
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[DST_ADDR_014]], i64 1
-; CHECK-NEXT:    store double [[TMP1]], double* [[ARRAYIDX3]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double* [[DST_ADDR_014]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP2]], <2 x double>* [[TMP3]], align 8
 ; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds double, double* [[SRC_ADDR_013]], i64 [[I_015]]
 ; CHECK-NEXT:    [[ADD_PTR4]] = getelementptr inbounds double, double* [[DST_ADDR_014]], i64 [[I_015]]
 ; CHECK-NEXT:    [[INC]] = add i64 [[I_015]], 1
@@ -165,20 +166,19 @@ define void @tiny_tree_not_fully_vectorizable2(float* noalias nocapture %dst, fl
 ; CHECK-NEXT:    [[I_023:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[DST_ADDR_022:%.*]] = phi float* [ [[ADD_PTR8:%.*]], [[FOR_BODY]] ], [ [[DST:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[SRC_ADDR_021:%.*]] = phi float* [ [[ADD_PTR:%.*]], [[FOR_BODY]] ], [ [[SRC:%.*]], [[ENTRY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[SRC_ADDR_021]], align 4
-; CHECK-NEXT:    store float [[TMP0]], float* [[DST_ADDR_022]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[SRC_ADDR_021]], i64 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 1
-; CHECK-NEXT:    store float [[TMP1]], float* [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[SRC_ADDR_021]], i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 2
-; CHECK-NEXT:    store float [[TMP2]], float* [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, float* [[SRC_ADDR_021]], i64 3
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[ARRAYIDX6]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float*> poison, float* [[SRC_ADDR_021]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float*> [[TMP0]], float* [[ARRAYIDX2]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float*> [[TMP1]], float* [[ARRAYIDX4]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float*> [[TMP2]], float* [[ARRAYIDX6]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> [[TMP3]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> undef)
 ; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 3
-; CHECK-NEXT:    store float [[TMP3]], float* [[ARRAYIDX7]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast float* [[DST_ADDR_022]] to <4 x float>*
+; CHECK-NEXT:    store <4 x float> [[TMP4]], <4 x float>* [[TMP5]], align 4
 ; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds float, float* [[SRC_ADDR_021]], i64 [[I_023]]
 ; CHECK-NEXT:    [[ADD_PTR8]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 [[I_023]]
 ; CHECK-NEXT:    [[INC]] = add i64 [[I_023]], 1
