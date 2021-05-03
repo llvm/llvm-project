@@ -310,7 +310,6 @@ private:
   void SelectCMPZ(SDNode *N, bool &SwitchEQNEToPLMI);
 
   void SelectCMP_SWAP(SDNode *N);
-  void SelectAtomicOp(SDNode *N);
 
   /// SelectInlineAsmMemoryOperand - Implement addressing mode selection for
   /// inline asm expressions.
@@ -3322,142 +3321,6 @@ void ARMDAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
   CurDAG->RemoveDeadNode(N);
 }
 
-/// Expand atomic operations to size- and type-specific pseudo-instructions
-void ARMDAGToDAGISel::SelectAtomicOp(SDNode *N) {
-  EVT MemTy = cast<MemSDNode>(N)->getMemoryVT();
-  const unsigned Opcode = [&]() {
-    switch (N->getOpcode()) {
-    case ISD::ATOMIC_SWAP:
-      if (MemTy == MVT::i8)
-        return ARM::ATOMIC_SWAP_8;
-      if (MemTy == MVT::i16)
-        return ARM::ATOMIC_SWAP_16;
-      if (MemTy == MVT::i32)
-        return ARM::ATOMIC_SWAP_32;
-      break;
-    case ISD::ATOMIC_LOAD_ADD:
-      if (MemTy == MVT::i8)
-        return ARM::ATOMIC_LOAD_ADD_8;
-      if (MemTy == MVT::i16)
-        return ARM::ATOMIC_LOAD_ADD_16;
-      if (MemTy == MVT::i32)
-        return ARM::ATOMIC_LOAD_ADD_32;
-      break;
-    case ISD::ATOMIC_LOAD_SUB:
-      if (MemTy == MVT::i8)
-        return ARM::ATOMIC_LOAD_SUB_8;
-      if (MemTy == MVT::i16)
-        return ARM::ATOMIC_LOAD_SUB_16;
-      if (MemTy == MVT::i32)
-        return ARM::ATOMIC_LOAD_SUB_32;
-      break;
-    case ISD::ATOMIC_LOAD_AND:
-      if (MemTy == MVT::i8)
-        return ARM::ATOMIC_LOAD_AND_8;
-      if (MemTy == MVT::i16)
-        return ARM::ATOMIC_LOAD_AND_16;
-      if (MemTy == MVT::i32)
-        return ARM::ATOMIC_LOAD_AND_32;
-      break;
-    case ISD::ATOMIC_LOAD_CLR:
-      llvm_unreachable("ATOMIC_LOAD_CLR in SelectAtomicOp");
-      break;
-    case ISD::ATOMIC_LOAD_OR:
-      if (MemTy == MVT::i8)
-        return ARM::ATOMIC_LOAD_OR_8;
-      if (MemTy == MVT::i16)
-        return ARM::ATOMIC_LOAD_OR_16;
-      if (MemTy == MVT::i32)
-        return ARM::ATOMIC_LOAD_OR_32;
-      break;
-    case ISD::ATOMIC_LOAD_XOR:
-      if (MemTy == MVT::i8)
-        return ARM::ATOMIC_LOAD_XOR_8;
-      if (MemTy == MVT::i16)
-        return ARM::ATOMIC_LOAD_XOR_16;
-      if (MemTy == MVT::i32)
-        return ARM::ATOMIC_LOAD_XOR_32;
-      break;
-    case ISD::ATOMIC_LOAD_NAND:
-      if (MemTy == MVT::i8)
-        return ARM::ATOMIC_LOAD_NAND_8;
-      if (MemTy == MVT::i16)
-        return ARM::ATOMIC_LOAD_NAND_16;
-      if (MemTy == MVT::i32)
-        return ARM::ATOMIC_LOAD_NAND_32;
-      break;
-    case ISD::ATOMIC_LOAD_MIN:
-      if (MemTy == MVT::i8)
-        return ARM::ATOMIC_LOAD_MIN_8;
-      if (MemTy == MVT::i16)
-        return ARM::ATOMIC_LOAD_MIN_16;
-      if (MemTy == MVT::i32)
-        return ARM::ATOMIC_LOAD_MIN_32;
-      break;
-    case ISD::ATOMIC_LOAD_MAX:
-      if (MemTy == MVT::i8)
-        return ARM::ATOMIC_LOAD_MAX_8;
-      if (MemTy == MVT::i16)
-        return ARM::ATOMIC_LOAD_MAX_16;
-      if (MemTy == MVT::i32)
-        return ARM::ATOMIC_LOAD_MAX_32;
-      break;
-    case ISD::ATOMIC_LOAD_UMIN:
-      if (MemTy == MVT::i8)
-        return ARM::ATOMIC_LOAD_UMIN_8;
-      if (MemTy == MVT::i16)
-        return ARM::ATOMIC_LOAD_UMIN_16;
-      if (MemTy == MVT::i32)
-        return ARM::ATOMIC_LOAD_UMIN_32;
-      break;
-    case ISD::ATOMIC_LOAD_UMAX:
-      if (MemTy == MVT::i8)
-        return ARM::ATOMIC_LOAD_UMAX_8;
-      if (MemTy == MVT::i16)
-        return ARM::ATOMIC_LOAD_UMAX_16;
-      if (MemTy == MVT::i32)
-        return ARM::ATOMIC_LOAD_UMAX_32;
-      break;
-    case ISD::ATOMIC_LOAD_FADD:
-      if (MemTy == MVT::i16)
-        return ARM::ATOMIC_LOAD_FADD_16; // f16 promoted to f32
-      if (MemTy == MVT::f16)
-        return ARM::ATOMIC_LOAD_FADD_16;
-      if (MemTy == MVT::f32)
-        return ARM::ATOMIC_LOAD_FADD_32;
-      if (MemTy == MVT::f64)
-        return ARM::ATOMIC_LOAD_FADD_64;
-      break;
-    case ISD::ATOMIC_LOAD_FSUB:
-      if (MemTy == MVT::i16)
-        return ARM::ATOMIC_LOAD_FSUB_16; // f16 promoted to f32
-      if (MemTy == MVT::f16)
-        return ARM::ATOMIC_LOAD_FSUB_16;
-      if (MemTy == MVT::f32)
-        return ARM::ATOMIC_LOAD_FSUB_32;
-      if (MemTy == MVT::f64)
-        return ARM::ATOMIC_LOAD_FSUB_64;
-      break;
-    }
-    llvm_unreachable("Unknown AtomicOp type");
-    return ARM::INSTRUCTION_LIST_END;
-  }();
-
-  SDValue Chain = N->getOperand(0);
-  SDValue Addr = N->getOperand(1);
-  SDValue Value = N->getOperand(2);
-  SDNode *Swap = CurDAG->getMachineNode(
-      Opcode, SDLoc(N), CurDAG->getVTList(Value.getValueType(), MVT::Other),
-      {Chain, Addr, Value});
-
-  MachineMemOperand *MemOp = cast<MemSDNode>(N)->getMemOperand();
-  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Swap), {MemOp});
-
-  ReplaceUses(SDValue(N, 0), SDValue(Swap, 0)); // Result
-  ReplaceUses(SDValue(N, 1), SDValue(Swap, 1)); // Chain
-  CurDAG->RemoveDeadNode(N);
-}
-
 static Optional<std::pair<unsigned, unsigned>>
 getContiguousRangeOfSetBits(const APInt &A) {
   unsigned FirstOne = A.getBitWidth() - A.countLeadingZeros() - 1;
@@ -5167,23 +5030,6 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
 
   case ISD::ATOMIC_CMP_SWAP:
     SelectCMP_SWAP(N);
-    return;
-
-  case ISD::ATOMIC_LOAD_ADD:
-  case ISD::ATOMIC_LOAD_SUB:
-  case ISD::ATOMIC_LOAD_AND:
-  case ISD::ATOMIC_LOAD_CLR:
-  case ISD::ATOMIC_LOAD_OR:
-  case ISD::ATOMIC_LOAD_XOR:
-  case ISD::ATOMIC_LOAD_NAND:
-  case ISD::ATOMIC_LOAD_MIN:
-  case ISD::ATOMIC_LOAD_MAX:
-  case ISD::ATOMIC_LOAD_UMIN:
-  case ISD::ATOMIC_LOAD_UMAX:
-  case ISD::ATOMIC_LOAD_FADD:
-  case ISD::ATOMIC_LOAD_FSUB:
-  case ISD::ATOMIC_SWAP:
-    SelectAtomicOp(N);
     return;
   }
 
