@@ -421,7 +421,8 @@ private:
       }
       return MergedLines;
     }
-    auto IsElseLine = [&First = TheLine->First]() -> bool {
+    auto IsElseLine = [&TheLine]() -> bool {
+      const FormatToken *First = TheLine->First;
       if (First->is(tok::kw_else))
         return true;
 
