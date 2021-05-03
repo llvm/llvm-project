@@ -427,123 +427,6 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOpTy> {
     return success();
   }
 };
-
-/// Pattern to fold pair of reshape ops where the intermediate has unit-dims for
-/// example:
-///
-///  %0 = linalg.tensor_reshape %arg0
-///    [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>]
-///    : tensor<2048xf32> into tensor<1x4x1x512xf32>
-///  %1 = linalg.tensor_reshape %0
-///    [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>,
-///     affine_map<(d0, d1, d2, d3) -> (d3)>]
-///    : tensor<1x4x1x512xf32> into tensor<4x512xf32>
-///
-/// can be replaced with
-///
-///  %0 = linalg.tensor_reshape %arg0 [affine_map<(d0, d1) -> (d0, d1)>]
-///    : tensor<2048xf32> into tensor<4x512xf32>
-///
-/// Similarly,
-///
-///  %0 = linalg.tensor_reshape %arg0
-///    [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>,
-///     affine_map<(d0, d1, d2, d3) -> (d3)>]
-///    : tensor<4x512xf32> into tensor<1x4x1x512xf32>
-///  %1 = linalg.tensor_reshape %0
-///   [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>]
-///    : tensor<1x4x1x512xf32> into tensor<2048xf32>
-///
-/// can be replaced with
-///
-///  %0 = linalg.tensor_reshape %arg0 [affine_map<(d0, d1) -> (d0, d1)>]
-///    : tensor<4x512xf32> into tensor<2048xf32>
-struct FoldReshapeOpWithUnitExtent : OpRewritePattern<TensorReshapeOp> {
-  using OpRewritePattern<TensorReshapeOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(TensorReshapeOp reshapeOp,
-                                PatternRewriter &rewriter) const override {
-    // Check that the source operand is created from a reshape as well.
-    TensorReshapeOp parentReshapeOp =
-        reshapeOp.src().getDefiningOp<TensorReshapeOp>();
-    if (!parentReshapeOp)
-      return failure();
-
-    RankedTensorType srcType = reshapeOp.getSrcType(),
-                     dstType = reshapeOp.getResultType(),
-                     parentSrcType = parentReshapeOp.getSrcType();
-    if (!srcType.hasStaticShape() || !dstType.hasStaticShape() ||
-        !parentSrcType.hasStaticShape() ||
-        srcType.getRank() < dstType.getRank() ||
-        parentSrcType.getRank() == dstType.getRank())
-      return failure();
-
-    // Check if the result tensor_reshape is folding or expanding after folding
-    // the reshapeOp and parentReshapeOp are combined.  If the final
-    // tensor_reshape is folding, the parentReshapeOp is introducing unit-dims,
-    // and the reshapeOp does an actual reshape.  If the final tensor_reshape op
-    // is expanding, the reshapeOp is introducing unit-dims, and the
-    // parentReshapeOp does an actual reshape.
-    bool isFoldingPattern = parentSrcType.getRank() > dstType.getRank();
-    ArrayRef<int64_t> expandedShape =
-        isFoldingPattern ? parentSrcType.getShape() : dstType.getShape();
-    ArrayRef<int64_t> foldedShape =
-        isFoldingPattern ? dstType.getShape() : parentSrcType.getShape();
-
-    unsigned expandedDim = 0, foldedDim = 0;
-    SmallVector<SmallVector<AffineExpr, 4>, 4> reassociationExprs(
-        foldedShape.size());
-    while (expandedDim < expandedShape.size() &&
-           foldedDim < foldedShape.size()) {
-      int64_t dstSize = foldedShape[foldedDim];
-      int64_t srcSize = expandedShape[expandedDim];
-      while (srcSize < dstSize && expandedDim < expandedShape.size()) {
-        reassociationExprs[foldedDim].push_back(
-            rewriter.getAffineDimExpr(expandedDim++));
-        srcSize *= expandedShape[expandedDim];
-      }
-      if (srcSize == dstSize) {
-        reassociationExprs[foldedDim].push_back(
-            rewriter.getAffineDimExpr(expandedDim++));
-        // If the next dim in foldedShape is not 1, treat subsequent dims in
-        // expandedShape which are 1 to be collapsed.
-        if (foldedDim == foldedShape.size() - 1 ||
-            foldedShape[foldedDim + 1] != 1) {
-          while (expandedDim < expandedShape.size() &&
-                 expandedShape[expandedDim] == 1) {
-            reassociationExprs[foldedDim].push_back(
-                rewriter.getAffineDimExpr(expandedDim++));
-          }
-        }
-      } else {
-        return failure();
-      }
-
-      foldedDim++;
-      // If inner most dims are folded there shouldn't be any leading 1 dims.
-      // otherwise these dims are not mapped and will lead into an illegal
-      // reshape.
-      if (expandedDim == expandedShape.size()) {
-        if (foldedDim < foldedShape.size() && foldedShape[foldedDim] == 1) {
-          return failure();
-        }
-      }
-    }
-    if (expandedDim != expandedShape.size())
-      return failure();
-
-    SmallVector<AffineMap, 4> reassociationMaps =
-        llvm::to_vector<4>(llvm::map_range(
-            reassociationExprs, [&](ArrayRef<AffineExpr> exprs) -> AffineMap {
-              return AffineMap::get(expandedShape.size(), 0, exprs,
-                                    rewriter.getContext());
-            }));
-    rewriter.replaceOpWithNewOp<TensorReshapeOp>(
-        reshapeOp, dstType, parentReshapeOp.src(),
-        rewriter.getAffineMapArrayAttr(reassociationMaps));
-    return success();
-  }
-};
 } // namespace
 
 /// Get the reassociation maps to fold the result of a subtensor (or source of a
@@ -638,7 +521,6 @@ void mlir::linalg::populateFoldUnitExtentDimsPatterns(
                UseRankReducedSubTensorOp, UseRankReducedSubTensorInsertOp>(
       context);
   TensorReshapeOp::getCanonicalizationPatterns(patterns, context);
-  patterns.add<FoldReshapeOpWithUnitExtent>(context);
 }
 
 namespace {
