@@ -42,7 +42,12 @@ else()
                   --print-resource-dir not supported by host compiler")
 endif()
 
+option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" OFF)
+
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
+if(LLVM_LIBC_ENABLE_LINTING AND (NOT LLVM_LIBC_FULL_BUILD))
+  message(FATAL_ERROR "Cannot enable linting when full libc build is not enabled.")
+endif()
 if(LLVM_LIBC_ENABLE_LINTING)
   if("clang-tools-extra" IN_LIST LLVM_ENABLE_PROJECTS
              AND "clang" IN_LIST LLVM_ENABLE_PROJECTS)
@@ -56,15 +61,13 @@ if(LLVM_LIBC_ENABLE_LINTING)
       To disable linting set LLVM_LIBC_ENABLE_LINTING to OFF
       (pass -DLLVM_LIBC_ENABLE_LINTING=OFF to cmake).")
   endif()
-else()
+elseif(LLVM_LIBC_FULL_BUILD)
   message(WARNING "
     Linting for libc is currently disabled.
 
     This is not recommended, to enable set LLVM_LIBC_ENABLE_LINTING to ON
     (pass -DLLVM_LIBC_ENABLE_LINTING=ON to cmake).")
 endif()
-
-option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" OFF)
 
 include(CMakeParseArguments)
 include(LLVMLibCRules)
