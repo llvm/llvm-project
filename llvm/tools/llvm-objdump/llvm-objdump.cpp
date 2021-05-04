@@ -1015,7 +1015,7 @@ static void addSymbolizer(
                     LabelAddrs.begin());
   // Add the labels.
   for (unsigned LabelNum = 0; LabelNum != LabelAddrs.size(); ++LabelNum) {
-    std::unique_ptr<std::string> Name(new std::string);
+    auto Name = std::make_unique<std::string>();
     *Name = (Twine("L") + Twine(LabelNum)).str();
     SynthesizedLabelNames.push_back(std::move(Name));
     Symbols.push_back(SymbolInfoTy(
