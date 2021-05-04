@@ -504,16 +504,18 @@ func @fold_extract_broadcast_negative(%a : f32) -> vector<4xf32> {
 //       CHECK:   %[[R0:.*]] = vector.extract %[[A0]][1, 0, 1, 1] : vector<5x1x3x2xf32>
 //       CHECK:   %[[R1:.*]] = vector.extract %[[A0]][1, 0, 2] : vector<5x1x3x2xf32>
 //       CHECK:   %[[R2:.*]] = vector.extract %[[A1]][7] : vector<8x4x2xf32>
-//       CHECK:   return %[[R0]], %[[R1]], %[[R2]] : f32, vector<2xf32>, vector<4x2xf32>
+//       CHECK:   return %[[R0]], %[[R1]], %[[R2]], %[[A1]] : f32, vector<2xf32>, vector<4x2xf32>, vector<8x4x2xf32>
 func @fold_extract_shapecast(%arg0 : vector<5x1x3x2xf32>,
                              %arg1 : vector<8x4x2xf32>)
-  -> (f32, vector<2xf32>, vector<4x2xf32>) {
+  -> (f32, vector<2xf32>, vector<4x2xf32>, vector<8x4x2xf32>) {
   %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<15x2xf32>
   %1 = vector.shape_cast %arg1 : vector<8x4x2xf32> to vector<4x2x4x2xf32>
+  %2 = vector.shape_cast %arg1 : vector<8x4x2xf32> to vector<1x8x4x2xf32>
   %r1 = vector.extract %0[4, 1] : vector<15x2xf32>
   %r2 = vector.extract %0[5] : vector<15x2xf32>
   %r3 = vector.extract %1[3, 1] : vector<4x2x4x2xf32>
-  return %r1, %r2, %r3 : f32, vector<2xf32>, vector<4x2xf32>
+  %r4 = vector.extract %2[0] : vector<1x8x4x2xf32>
+  return %r1, %r2, %r3, %r4 : f32, vector<2xf32>, vector<4x2xf32>, vector<8x4x2xf32>
 }
 
 // -----
@@ -931,4 +933,18 @@ func @dead_store_tensor_negative(%arg0 : tensor<4x4xf32>,
   %w2 = vector.transfer_write %x, %w0[%c1, %c0] {in_bounds = [true, true]} :
     vector<1x4xf32>, tensor<4x4xf32>
   return %w2 : tensor<4x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @insert_extract_to_shapecast
+//  CHECK-SAME: (%[[ARG0:.*]]: vector<1x1x4xf32>, %[[ARG1:.*]]: vector<4xf32>)
+//       CHECK:   %[[V0:.*]] = vector.shape_cast %[[ARG0]] : vector<1x1x4xf32> to vector<4xf32>
+//       CHECK:   %[[V1:.*]] = vector.shape_cast %[[ARG1]] : vector<4xf32> to vector<1x1x4xf32>
+//       CHECK:   return %[[V0]], %[[V1]] : vector<4xf32>, vector<1x1x4xf32>
+func @insert_extract_to_shapecast(%arg0 : vector<1x1x4xf32>,
+  %arg1 : vector<4xf32>) -> (vector<4xf32>, vector<1x1x4xf32>) {
+  %0 = vector.extract %arg0[0, 0] : vector<1x1x4xf32>
+  %1 = vector.insert %arg1, %arg0 [0, 0] : vector<4xf32> into vector<1x1x4xf32>
+  return %0, %1 : vector<4xf32>, vector<1x1x4xf32>
 }
