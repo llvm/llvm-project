@@ -142,7 +142,8 @@ TYPED_TEST(CharacterComparisonTests, CompareCharacters) {
 
 // Test MIN() and MAX()
 struct ExtremumTestCase {
-  const char *x, *y, *expect;
+  std::vector<SubscriptValue> shape; // Empty = scalar, non-empty = array.
+  std::vector<const char *> x, y, expect;
 };
 
 template <typename CHAR>
@@ -152,38 +153,55 @@ void RunExtremumTests(const char *which,
     const std::vector<ExtremumTestCase> &testCases) {
 
   // Helper for creating, allocating and filling up a descriptor with data from
-  // a raw character literal, converted to the CHAR type used by the test.
-  auto CreateDescriptor = [](const char *raw) -> OwningPtr<Descriptor> {
-    std::size_t length{std::strlen(raw)};
-    std::basic_string<CHAR> converted{raw, raw + length};
+  // raw character literals, converted to the CHAR type used by the test.
+  auto CreateDescriptor = [](const std::vector<SubscriptValue> &shape,
+                              const std::vector<const char *> &raw_strings)
+      -> OwningPtr<Descriptor> {
+    std::size_t length{std::strlen(raw_strings[0])};
 
-    OwningPtr<Descriptor> descriptor{Descriptor::Create(
-        sizeof(CHAR), length, nullptr, 0, nullptr, CFI_attribute_allocatable)};
-    if (descriptor->Allocate() != 0) {
+    OwningPtr<Descriptor> descriptor{Descriptor::Create(sizeof(CHAR), length,
+        nullptr, shape.size(), nullptr, CFI_attribute_allocatable)};
+    if ((shape.empty()
+                ? descriptor->Allocate()
+                : descriptor->Allocate(
+                      std::vector<SubscriptValue>(shape.size(), 1).data(),
+                      shape.data())) != 0) {
       return nullptr;
     }
 
-    std::copy(
-        converted.begin(), converted.end(), descriptor->OffsetElement<CHAR>());
+    std::size_t offset = 0;
+    for (const char *raw : raw_strings) {
+      std::basic_string<CHAR> converted{raw, raw + length};
+      std::copy(converted.begin(), converted.end(),
+          descriptor->OffsetElement<CHAR>(offset * length * sizeof(CHAR)));
+      ++offset;
+    }
 
     return descriptor;
   };
 
+  std::stringstream traceMessage;
+  traceMessage << which << " for CHARACTER(kind=" << sizeof(CHAR) << ")";
+  SCOPED_TRACE(traceMessage.str());
+
   for (const auto &t : testCases) {
-    OwningPtr<Descriptor> x = CreateDescriptor(t.x);
-    OwningPtr<Descriptor> y = CreateDescriptor(t.y);
+    OwningPtr<Descriptor> x = CreateDescriptor(t.shape, t.x);
+    OwningPtr<Descriptor> y = CreateDescriptor(t.shape, t.y);
 
     ASSERT_NE(x, nullptr);
     ASSERT_TRUE(x->IsAllocated());
     ASSERT_NE(y, nullptr);
     ASSERT_TRUE(y->IsAllocated());
-    function(*x, *y, nullptr, 0);
+    function(*x, *y, /* sourceFile = */ nullptr, /* sourceLine = */ 0);
 
-    std::basic_string<CHAR> got{
-        x->OffsetElement<CHAR>(), x->ElementBytes() / sizeof(CHAR)};
-    std::basic_string<CHAR> expect{t.expect, t.expect + std::strlen(t.expect)};
-    EXPECT_EQ(expect, got) << which << "('" << t.x << "','" << t.y
-                           << "') for CHARACTER(kind=" << sizeof(CHAR) << ")";
+    std::size_t length = x->ElementBytes() / sizeof(CHAR);
+    for (std::size_t i = 0; i < t.x.size(); ++i) {
+      std::basic_string<CHAR> got{
+          x->OffsetElement<CHAR>(i * x->ElementBytes()), length};
+      std::basic_string<CHAR> expect{
+          t.expect[i], t.expect[i] + std::strlen(t.expect[i])};
+      EXPECT_EQ(expect, got) << "inputs: '" << t.x[i] << "','" << t.y[i] << "'";
+    }
   }
 }
 
@@ -192,18 +210,24 @@ TYPED_TEST_CASE(ExtremumTests, CharacterTypes);
 
 TYPED_TEST(ExtremumTests, MinTests) {
   static std::vector<ExtremumTestCase> tests{
-      {"a", "z", "a"},
-      {"zaaa", "aa", "aa  "},
-      {"aaz", "aaaaa", "aaaaa"},
+      {{}, {"a"}, {"z"}, {"a"}},
+      {{1}, {"zaaa"}, {"aa"}, {"aa  "}},
+      {{1, 1}, {"aaz"}, {"aaaaa"}, {"aaaaa"}},
+      {
+        { 2, 3 },
+        { "a",  "b",  "c",  "d",  "E",  "f" },
+        { "xa", "ya", "az", "dd", "Sz", "cc"},
+        { "a ", "b ", "az", "d ", "E ", "cc"}
+      }
   };
   RunExtremumTests<TypeParam>("MIN", RTNAME(CharacterMin), tests);
 }
 
 TYPED_TEST(ExtremumTests, MaxTests) {
   static std::vector<ExtremumTestCase> tests{
-      {"a", "z", "z"},
-      {"zaa", "aaaaa", "zaa  "},
-      {"aaaaa", "aazaa", "aazaa"},
+      {{}, {"a"}, {"z"}, {"z"}},
+      {{1}, {"zaa"}, {"aaaaa"}, {"zaa  "}},
+      {{1, 1, 1}, {"aaaaa"}, {"aazaa"}, {"aazaa"}},
   };
   RunExtremumTests<TypeParam>("MAX", RTNAME(CharacterMax), tests);
 }
