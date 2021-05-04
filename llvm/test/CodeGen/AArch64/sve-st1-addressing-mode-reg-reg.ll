@@ -15,6 +15,42 @@ define void @st1_nxv16i8(i8* %addr, i64 %off, <vscale x 16 x i8> %val) {
   ret void
 }
 
+define void @st1_nxv16i8_bitcast_from_i16(i8* %addr, i64 %off, <vscale x 8 x i16> %val) {
+; CHECK-LABEL: st1_nxv16i8_bitcast_from_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    st1b { z0.b }, p0, [x0, x1]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr inbounds i8, i8* %addr, i64 %off
+  %ptrcast = bitcast i8* %ptr to <vscale x 8 x i16>*
+  store <vscale x 8 x i16> %val, <vscale x 8 x i16>* %ptrcast
+  ret void
+}
+
+define void @st1_nxv16i8_bitcast_from_i32(i8* %addr, i64 %off, <vscale x 4 x i32> %val) {
+; CHECK-LABEL: st1_nxv16i8_bitcast_from_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    st1b { z0.b }, p0, [x0, x1]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr inbounds i8, i8* %addr, i64 %off
+  %ptrcast = bitcast i8* %ptr to <vscale x 4 x i32>*
+  store <vscale x 4 x i32> %val, <vscale x 4 x i32>* %ptrcast
+  ret void
+}
+
+define void @st1_nxv16i8_bitcast_from_i64(i8* %addr, i64 %off, <vscale x 2 x i64> %val) {
+; CHECK-LABEL: st1_nxv16i8_bitcast_from_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    st1b { z0.b }, p0, [x0, x1]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr inbounds i8, i8* %addr, i64 %off
+  %ptrcast = bitcast i8* %ptr to <vscale x 2 x i64>*
+  store <vscale x 2 x i64> %val, <vscale x 2 x i64>* %ptrcast
+  ret void
+}
+
 define void @st1_nxv8i16_trunc8(i8* %addr, i64 %off, <vscale x 8 x i16> %val) {
 ; CHECK-LABEL: st1_nxv8i16_trunc8:
 ; CHECK:       // %bb.0:
