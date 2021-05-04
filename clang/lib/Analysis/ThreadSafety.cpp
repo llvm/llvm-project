@@ -2467,11 +2467,10 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
                        PrevBlock, CurrBlock);
 
         // Do not update EntrySet.
-        intersectAndWarn(CurrBlockInfo->EntrySet, PrevLockset,
-                         PrevBlockInfo->ExitLoc,
-                         IsLoop ? LEK_LockedSomeLoopIterations
-                                : LEK_LockedSomePredecessors,
-                         false);
+        intersectAndWarn(
+            CurrBlockInfo->EntrySet, PrevLockset, PrevBlockInfo->ExitLoc,
+            IsLoop ? LEK_LockedSomeLoopIterations : LEK_LockedSomePredecessors,
+            !IsLoop);
       }
     }
 
