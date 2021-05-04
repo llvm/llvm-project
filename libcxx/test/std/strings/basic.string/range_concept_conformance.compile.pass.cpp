@@ -21,8 +21,8 @@ namespace stdr = std::ranges;
 
 static_assert(std::same_as<stdr::iterator_t<std::string>, std::string::iterator>);
 static_assert(stdr::common_range<std::string>);
-static_assert(stdr::input_range<std::string>);
+static_assert(stdr::forward_range<std::string>);
 
 static_assert(std::same_as<stdr::iterator_t<std::string const>, std::string::const_iterator>);
 static_assert(stdr::common_range<std::string const>);
-static_assert(stdr::input_range<std::string const>);
+static_assert(stdr::forward_range<std::string const>);
