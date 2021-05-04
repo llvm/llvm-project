@@ -29,33 +29,8 @@ for.body:                                         ; preds = %for.body, %entry
 ; PR40058
 define i64 @bitreverse_i64(i64 %0) {
 ; CHECK-LABEL: @bitreverse_i64(
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], 6148914691236517205
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], -6148914691236517206
-; CHECK-NEXT:    [[TMP6:%.*]] = or i64 [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = lshr i64 [[TMP6]], 2
-; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP7]], 3689348814741910323
-; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP6]], 2
-; CHECK-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], -3689348814741910324
-; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP8]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP11]], 4
-; CHECK-NEXT:    [[TMP13:%.*]] = and i64 [[TMP12]], 1085102592571150095
-; CHECK-NEXT:    [[TMP14:%.*]] = shl i64 [[TMP11]], 4
-; CHECK-NEXT:    [[TMP15:%.*]] = and i64 [[TMP14]], -1085102592571150096
-; CHECK-NEXT:    [[TMP16:%.*]] = or i64 [[TMP13]], [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = lshr i64 [[TMP16]], 8
-; CHECK-NEXT:    [[TMP18:%.*]] = and i64 [[TMP17]], 71777214294589695
-; CHECK-NEXT:    [[TMP19:%.*]] = shl i64 [[TMP16]], 8
-; CHECK-NEXT:    [[TMP20:%.*]] = and i64 [[TMP19]], -71777214294589696
-; CHECK-NEXT:    [[TMP21:%.*]] = or i64 [[TMP18]], [[TMP20]]
-; CHECK-NEXT:    [[TMP22:%.*]] = lshr i64 [[TMP21]], 16
-; CHECK-NEXT:    [[TMP23:%.*]] = and i64 [[TMP22]], 281470681808895
-; CHECK-NEXT:    [[TMP24:%.*]] = shl i64 [[TMP21]], 16
-; CHECK-NEXT:    [[TMP25:%.*]] = and i64 [[TMP24]], -281470681808896
-; CHECK-NEXT:    [[TMP26:%.*]] = or i64 [[TMP23]], [[TMP25]]
-; CHECK-NEXT:    [[TMP27:%.*]] = tail call i64 @llvm.fshl.i64(i64 [[TMP26]], i64 [[TMP26]], i64 32)
-; CHECK-NEXT:    ret i64 [[TMP27]]
+; CHECK-NEXT:    [[REV:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[TMP0:%.*]])
+; CHECK-NEXT:    ret i64 [[REV]]
 ;
   %2 = lshr i64 %0, 1
   %3 = and i64 %2, 6148914691236517205
