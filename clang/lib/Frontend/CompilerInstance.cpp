@@ -1925,8 +1925,6 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       return Result;
     Module = Result;
     MM.cacheModuleLoad(*Path[0].first, Module);
-    if (!Module)
-      return Module;
   }
 
   // If we never found the module, fail.  Otherwise, verify the module and link
