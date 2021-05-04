@@ -304,7 +304,7 @@ bool LineTable::ConvertEntryAtIndexToLineEntry(uint32_t idx,
 
 uint32_t LineTable::FindLineEntryIndexByFileIndex(
     uint32_t start_idx, const std::vector<uint32_t> &file_indexes,
-    uint32_t line, bool exact, LineEntry *line_entry_ptr) {
+    const SourceLocationSpec &src_location_spec, LineEntry *line_entry_ptr) {
 
   const size_t count = m_entries.size();
   size_t best_match = UINT32_MAX;
@@ -324,13 +324,15 @@ uint32_t LineTable::FindLineEntryIndexByFileIndex(
     // after and
     // if they're not in the same function, don't return a match.
 
+    uint32_t line = src_location_spec.GetLine().getValueOr(0);
+
     if (m_entries[idx].line < line) {
       continue;
     } else if (m_entries[idx].line == line) {
       if (line_entry_ptr)
         ConvertEntryAtIndexToLineEntry(idx, *line_entry_ptr);
       return idx;
-    } else if (!exact) {
+    } else if (!src_location_spec.GetExactMatch()) {
       if (best_match == UINT32_MAX)
         best_match = idx;
       else if (m_entries[idx].line < m_entries[best_match].line)
@@ -346,10 +348,9 @@ uint32_t LineTable::FindLineEntryIndexByFileIndex(
   return UINT32_MAX;
 }
 
-uint32_t LineTable::FindLineEntryIndexByFileIndex(uint32_t start_idx,
-                                                  uint32_t file_idx,
-                                                  uint32_t line, bool exact,
-                                                  LineEntry *line_entry_ptr) {
+uint32_t LineTable::FindLineEntryIndexByFileIndex(
+    uint32_t start_idx, uint32_t file_idx,
+    const SourceLocationSpec &src_location_spec, LineEntry *line_entry_ptr) {
   const size_t count = m_entries.size();
   size_t best_match = UINT32_MAX;
 
@@ -368,13 +369,15 @@ uint32_t LineTable::FindLineEntryIndexByFileIndex(uint32_t start_idx,
     // after and
     // if they're not in the same function, don't return a match.
 
+    uint32_t line = src_location_spec.GetLine().getValueOr(0);
+
     if (m_entries[idx].line < line) {
       continue;
     } else if (m_entries[idx].line == line) {
       if (line_entry_ptr)
         ConvertEntryAtIndexToLineEntry(idx, *line_entry_ptr);
       return idx;
-    } else if (!exact) {
+    } else if (!src_location_spec.GetExactMatch()) {
       if (best_match == UINT32_MAX)
         best_match = idx;
       else if (m_entries[idx].line < m_entries[best_match].line)

@@ -784,10 +784,12 @@ SymbolFilePDB::ResolveSymbolContext(const lldb_private::Address &so_addr,
 }
 
 uint32_t SymbolFilePDB::ResolveSymbolContext(
-    const lldb_private::FileSpec &file_spec, uint32_t line, bool check_inlines,
+    const lldb_private::SourceLocationSpec &src_location_spec,
     SymbolContextItem resolve_scope, lldb_private::SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   const size_t old_size = sc_list.GetSize();
+  const FileSpec &file_spec = src_location_spec.GetFileSpec();
+  const uint32_t line = src_location_spec.GetLine().getValueOr(0);
   if (resolve_scope & lldb::eSymbolContextCompUnit) {
     // Locate all compilation units with line numbers referencing the specified
     // file.  For example, if `file_spec` is <vector>, then this should return
@@ -806,7 +808,7 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
       // this file unless the FileSpec matches. For inline functions, we don't
       // have to match the FileSpec since they could be defined in headers
       // other than file specified in FileSpec.
-      if (!check_inlines) {
+      if (!src_location_spec.GetCheckInlines()) {
         std::string source_file = compiland->getSourceFileFullPath();
         if (source_file.empty())
           continue;
