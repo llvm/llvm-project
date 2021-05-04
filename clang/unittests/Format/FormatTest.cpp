@@ -8007,6 +8007,8 @@ TEST_F(FormatTest, UnderstandsTemplateParameters) {
   verifyFormat("a<int> = 1;", Style);
   verifyFormat("a<int> >>= 1;", Style);
 
+  verifyFormat("test < a | b >> c;");
+  verifyFormat("test<test<a | b>> c;");
   verifyFormat("test >> a >> b;");
   verifyFormat("test << a >> b;");
 
