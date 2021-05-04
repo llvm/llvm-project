@@ -253,8 +253,8 @@ public:
   public:
     UntiedTaskLocalDeclsRAII(
         CodeGenFunction &CGF,
-        const llvm::DenseMap<CanonicalDeclPtr<const VarDecl>,
-                             std::pair<Address, Address>> &LocalVars);
+        const llvm::MapVector<CanonicalDeclPtr<const VarDecl>,
+                              std::pair<Address, Address>> &LocalVars);
     ~UntiedTaskLocalDeclsRAII();
   };
 
@@ -723,8 +723,8 @@ private:
   llvm::SmallVector<NontemporalDeclsSet, 4> NontemporalDeclsStack;
 
   using UntiedLocalVarsAddressesMap =
-      llvm::DenseMap<CanonicalDeclPtr<const VarDecl>,
-                     std::pair<Address, Address>>;
+      llvm::MapVector<CanonicalDeclPtr<const VarDecl>,
+                      std::pair<Address, Address>>;
   llvm::SmallVector<UntiedLocalVarsAddressesMap, 4> UntiedLocalVarsStack;
 
   /// Stack for list of addresses of declarations in current context marked as
