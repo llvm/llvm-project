@@ -23,3 +23,4 @@ static_assert(std::incrementable<std::cregex_iterator>);
 static_assert(std::input_or_output_iterator<std::cregex_iterator>);
 static_assert(std::sentinel_for<std::cregex_iterator, std::cregex_iterator>);
 static_assert(!std::sized_sentinel_for<std::cregex_iterator, std::cregex_iterator>);
+static_assert(std::input_iterator<std::cregex_iterator>);

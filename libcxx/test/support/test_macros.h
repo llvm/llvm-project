@@ -312,6 +312,10 @@
 #define LIBCPP_ONLY(...) ((void)0)
 #endif
 
+#if !defined(_LIBCPP_HAS_NO_RANGES)
+#define TEST_SUPPORTS_RANGES
+#endif
+
 #define TEST_IGNORE_NODISCARD (void)
 
 namespace test_macros_detail {
