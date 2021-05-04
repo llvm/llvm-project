@@ -40,7 +40,7 @@ bidirectional_iterator: `D100278 <https://llvm.org/D100278>`_",
 [ranges.primitives],"size, empty, data, and cdata",[iterator.concepts],Zoe Carver,,
 [range.range],,[range.access],,,
 [range.sized],,"[range.primitives], [range.range]",,,
-[range.view],View and enable_view,[range.range],,,
+[range.view],View and enable_view,[range.range],Louis Dionne,https://reviews.llvm.org/D101547,✅
 [range.refinements],"OutputRange, InputRange, ForwardRange, BidirectionalRange, RandomAccessRange, ContiguousRange, CommonRange, ViewableRange","[ranges.syn]: pt. 2, [range.range]",Christopher Di Bella,"input_range: `D100271 <https://llvm.org/D100271>`_
 forward_range: `D100275 <https://llvm.org/D100275>`_
 bidirectional_range: `D100278 <https://llvm.org/D100278>`_",
