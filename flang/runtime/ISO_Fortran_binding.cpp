@@ -234,11 +234,13 @@ int CFI_establish(CFI_cdesc_t *descriptor, void *base_addr,
   if (!descriptor) {
     return CFI_INVALID_DESCRIPTOR;
   }
-  std::size_t minElemLen{MinElemLen(type)};
-  if (minElemLen > 0) {
-    elem_len = minElemLen;
-  } else if (elem_len <= 0) {
-    return CFI_INVALID_ELEM_LEN;
+  if (type == CFI_type_struct || type == CFI_type_other ||
+      IsCharacterType(type)) {
+    if (elem_len <= 0)
+      return CFI_INVALID_ELEM_LEN;
+  } else {
+    elem_len = MinElemLen(type);
+    assert(elem_len > 0 && "Unknown element length for type");
   }
   descriptor->base_addr = base_addr;
   descriptor->elem_len = elem_len;
