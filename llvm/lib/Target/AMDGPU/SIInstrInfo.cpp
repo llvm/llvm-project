@@ -5012,6 +5012,63 @@ void SIInstrInfo::legalizeOperandsSMRD(MachineRegisterInfo &MRI,
   }
 }
 
+bool SIInstrInfo::moveFlatAddrToVGPR(MachineInstr &Inst) const {
+  unsigned Opc = Inst.getOpcode();
+  int OldSAddrIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::saddr);
+  if (OldSAddrIdx < 0)
+    return false;
+
+  assert(isSegmentSpecificFLAT(Inst));
+
+  int NewOpc = AMDGPU::getGlobalVaddrOp(Opc);
+  if (NewOpc < 0)
+    return false;
+
+  MachineRegisterInfo &MRI = Inst.getMF()->getRegInfo();
+  MachineOperand &SAddr = Inst.getOperand(OldSAddrIdx);
+  if (RI.isSGPRReg(MRI, SAddr.getReg()))
+    return false;
+
+  int NewVAddrIdx = AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::vaddr);
+  if (NewVAddrIdx < 0)
+    return false;
+
+  int OldVAddrIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr);
+  assert(OldVAddrIdx >= 0);
+
+  // Check vaddr, it shall be zero
+  MachineOperand &VAddr = Inst.getOperand(OldVAddrIdx);
+  MachineInstr *VAddrDef = MRI.getUniqueVRegDef(VAddr.getReg());
+  if (!VAddrDef || VAddrDef->getOpcode() != AMDGPU::V_MOV_B32_e32 ||
+      !VAddrDef->getOperand(1).isImm() || VAddrDef->getOperand(1).getImm() != 0)
+    return false;
+
+  const MCInstrDesc &NewDesc = get(NewOpc);
+  Inst.setDesc(NewDesc);
+
+  // Callers expect interator to be valid after this call, so modify the
+  // instruction in place.
+  if (OldVAddrIdx == NewVAddrIdx) {
+    MachineOperand &NewVAddr = Inst.getOperand(NewVAddrIdx);
+    // Clear use list from the old vaddr holding a zero register.
+    MRI.removeRegOperandFromUseList(&NewVAddr);
+    MRI.moveOperands(&NewVAddr, &SAddr, 1);
+    Inst.RemoveOperand(OldSAddrIdx);
+    // Update the use list with the pointer we have just moved from vaddr to
+    // saddr poisition. Otherwise new vaddr will be missing from the use list.
+    MRI.removeRegOperandFromUseList(&NewVAddr);
+    MRI.addRegOperandToUseList(&NewVAddr);
+  } else {
+    assert(OldSAddrIdx == NewVAddrIdx);
+    Inst.RemoveOperand(OldVAddrIdx);
+  }
+
+  if (MRI.use_nodbg_empty(VAddrDef->getOperand(0).getReg()))
+    VAddrDef->eraseFromParent();
+
+  return true;
+}
+
 // FIXME: Remove this when SelectionDAG is obsoleted.
 void SIInstrInfo::legalizeOperandsFLAT(MachineRegisterInfo &MRI,
                                        MachineInstr &MI) const {
@@ -5022,6 +5079,9 @@ void SIInstrInfo::legalizeOperandsFLAT(MachineRegisterInfo &MRI,
   // thinks they are uniform, so a readfirstlane should be valid.
   MachineOperand *SAddr = getNamedOperand(MI, AMDGPU::OpName::saddr);
   if (!SAddr || RI.isSGPRClass(MRI.getRegClass(SAddr->getReg())))
+    return;
+
+  if (moveFlatAddrToVGPR(MI))
     return;
 
   Register ToSGPR = readlaneVGPRToSGPR(SAddr->getReg(), MI, MRI);
