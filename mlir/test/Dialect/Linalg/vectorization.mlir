@@ -381,6 +381,43 @@ func @generic_vectorize_tensor(%arg0: tensor<4x256xf32>,
 
 // -----
 
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, 0, 0, d1)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0) -> (d0, 0, 0, 0)>
+// CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0) -> (0, 0, d0, 0)>
+// CHECK-DAG: #[[$MAP3:.*]] = affine_map<(d0, d1) -> (d1, 0, d0, 0)>
+//     CHECK: func @generic_vectorize_broadcast_transpose
+// CHECK-DAG:   %[[C0:.*]] = constant 0 : index
+// CHECK-DAG:   %[[CF:.*]] = constant 0.000000e+00 : f32
+//     CHECK:   %[[V0:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]]], %[[CF]] {permutation_map = #[[$MAP0]]} : memref<4x4xf32>, vector<4x4x4x4xf32>
+//     CHECK:   %[[V1:.*]] = vector.transfer_read %{{.*}}[%[[C0]]], %[[CF]] {permutation_map = #[[$MAP1]]} : memref<4xf32>, vector<4x4x4x4xf32>
+//     CHECK:   %[[V2:.*]] = vector.transfer_read %{{.*}}[%[[C0]]], %[[CF]] {permutation_map = #[[$MAP2]]} : memref<4xf32>, vector<4x4x4x4xf32>
+//     CHECK:   %[[V3:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]]], %[[CF]] {permutation_map = #[[$MAP3]]} : memref<4x4xf32>, vector<4x4x4x4xf32>
+//     CHECK:   %[[SUB:.*]] = subf %[[V0]], %[[V1]] : vector<4x4x4x4xf32>
+//     CHECK:   %[[ADD0:.*]] = addf %[[V2]], %[[SUB]] : vector<4x4x4x4xf32>
+//     CHECK:   %[[ADD1:.*]] = addf %[[V3]], %[[ADD0]] : vector<4x4x4x4xf32>
+//     CHECK: vector.transfer_write %[[ADD1]], {{.*}} : vector<4x4x4x4xf32>, memref<4x4x4x4xf32>
+func @generic_vectorize_broadcast_transpose(
+  %A: memref<4xf32>, %B: memref<4x4xf32>, %C: memref<4x4x4x4xf32>) {
+  linalg.generic {
+  indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d3)>,
+                   affine_map<(d0, d1, d2, d3) -> (d0)>,
+                   affine_map<(d0, d1, d2, d3) -> (d2)>,
+                   affine_map<(d0, d1, d2, d3) -> (d2, d0)>,
+                   affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>],
+  iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
+  ins(%B, %A, %A, %B: memref<4x4xf32>, memref<4xf32>, memref<4xf32>, memref<4x4xf32>)
+  outs(%C : memref<4x4x4x4xf32>) {
+  ^bb0(%arg0: f32, %arg1: f32, %arg2: f32, %arg3: f32, %arg4: f32):  // no predecessors
+    %s = subf %arg0, %arg1 : f32
+    %a = addf %arg2, %s : f32
+    %b = addf %arg3, %a : f32
+    linalg.yield %b : f32
+  }
+  return
+}
+
+// -----
+
 // Test different input maps.
 #matmul_trait = {
   indexing_maps = [
