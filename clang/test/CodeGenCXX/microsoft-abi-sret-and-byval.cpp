@@ -87,7 +87,7 @@ Small small_return() { return Small(); }
 // LINUX-LABEL: define{{.*}} void @_Z12small_returnv(%struct.Small* noalias sret(%struct.Small) align 4 %agg.result)
 // WIN32: define dso_local i32 @"?small_return@@YA?AUSmall@@XZ"()
 // WIN64: define dso_local i32 @"?small_return@@YA?AUSmall@@XZ"()
-// WOA64: define dso_local i64 @"?small_return@@YA?AUSmall@@XZ"()
+// WOA64: define dso_local i32 @"?small_return@@YA?AUSmall@@XZ"()
 
 Medium medium_return() { return Medium(); }
 // LINUX-LABEL: define{{.*}} void @_Z13medium_returnv(%struct.Medium* noalias sret(%struct.Medium) align 4 %agg.result)
