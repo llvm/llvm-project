@@ -9,6 +9,7 @@
 #include "src/time/mktime.h"
 #include "src/time/time_utils.h"
 #include "test/ErrnoSetterMatcher.h"
+#include "test/src/time/TmHelper.h"
 #include "test/src/time/TmMatcher.h"
 #include "utils/UnitTest/Test.h"
 
@@ -20,33 +21,18 @@ using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
 using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
 using __llvm_libc::time_utils::TimeConstants;
 
-// A helper function to initialize tm data structure.
-static inline void initialize_tm_data(struct tm *tm_data, int year, int month,
-                                      int mday, int hour, int min, int sec,
-                                      int wday, int yday) {
-  struct tm temp = {.tm_sec = sec,
-                    .tm_min = min,
-                    .tm_hour = hour,
-                    .tm_mday = mday,
-                    .tm_mon = month - 1, // tm_mon starts with 0 for Jan
-                    // years since 1900
-                    .tm_year = year - TimeConstants::TimeYearBase,
-                    .tm_wday = wday,
-                    .tm_yday = yday};
-  *tm_data = temp;
-}
-
 static inline time_t call_mktime(struct tm *tm_data, int year, int month,
                                  int mday, int hour, int min, int sec, int wday,
                                  int yday) {
-  initialize_tm_data(tm_data, year, month, mday, hour, min, sec, wday, yday);
+  __llvm_libc::tmhelper::testing::InitializeTmData(tm_data, year, month, mday,
+                                                   hour, min, sec, wday, yday);
   return __llvm_libc::mktime(tm_data);
 }
 
 TEST(LlvmLibcMkTime, FailureSetsErrno) {
   struct tm tm_data;
-  initialize_tm_data(&tm_data, INT_MAX, INT_MAX, INT_MAX, INT_MAX, INT_MAX, -1,
-                     0, 0);
+  __llvm_libc::tmhelper::testing::InitializeTmData(
+      &tm_data, INT_MAX, INT_MAX, INT_MAX, INT_MAX, INT_MAX, -1, 0, 0);
   EXPECT_THAT(__llvm_libc::mktime(&tm_data), Fails(EOVERFLOW));
 }
 
