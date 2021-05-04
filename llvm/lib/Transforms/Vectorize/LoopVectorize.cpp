@@ -4321,8 +4321,6 @@ void InnerLoopVectorizer::fixReduction(VPWidenPHIRecipe *PhiR,
 
   // Reductions do not have to start at zero. They can start with
   // any loop invariant values.
-  BasicBlock *OrigLatch = OrigLoop->getLoopLatch();
-  Value *OrigLoopVal = OrigPhi->getIncomingValueForBlock(OrigLatch);
   BasicBlock *VectorLoopLatch = LI->getLoopFor(LoopVectorBody)->getLoopLatch();
 
   bool IsOrdered = State.VF.isVector() && IsInLoopReductionPhi &&
@@ -4332,9 +4330,10 @@ void InnerLoopVectorizer::fixReduction(VPWidenPHIRecipe *PhiR,
     if (IsOrdered && Part > 0)
       break;
     Value *VecRdxPhi = State.get(PhiR->getVPSingleValue(), Part);
-    Value *Val = State.get(State.Plan->getVPValue(OrigLoopVal), Part);
+    Value *Val = State.get(PhiR->getBackedgeValue(), Part);
     if (IsOrdered)
-      Val = State.get(State.Plan->getVPValue(OrigLoopVal), UF - 1);
+      Val = State.get(PhiR->getBackedgeValue(), UF - 1);
+
     cast<PHINode>(VecRdxPhi)->addIncoming(Val, VectorLoopLatch);
   }
 
@@ -8766,6 +8765,16 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
   return new VPWidenRecipe(*I, make_range(Operands.begin(), Operands.end()));
 }
 
+void VPRecipeBuilder::fixHeaderPhis() {
+  BasicBlock *OrigLatch = OrigLoop->getLoopLatch();
+  for (VPWidenPHIRecipe *R : PhisToFix) {
+    auto *PN = cast<PHINode>(R->getUnderlyingValue());
+    VPRecipeBase *IncR =
+        getRecipe(cast<Instruction>(PN->getIncomingValueForBlock(OrigLatch)));
+    R->addOperand(IncR->getVPSingleValue());
+  }
+}
+
 VPBasicBlock *VPRecipeBuilder::handleReplication(
     Instruction *I, VFRange &Range, VPBasicBlock *VPBB,
     VPlanPtr &Plan) {
@@ -8869,7 +8878,15 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
       assert(RdxDesc.getRecurrenceStartValue() ==
              Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
       VPValue *StartV = Operands[0];
-      return toVPRecipeResult(new VPWidenPHIRecipe(Phi, RdxDesc, *StartV));
+
+      // Record the PHI and the incoming value from the backedge, so we can add
+      // the incoming value from the backedge after all recipes have been
+      // created.
+      auto *PhiRecipe = new VPWidenPHIRecipe(Phi, RdxDesc, *StartV);
+      PhisToFix.push_back(PhiRecipe);
+      recordRecipeOf(cast<Instruction>(
+          Phi->getIncomingValueForBlock(OrigLoop->getLoopLatch())));
+      return toVPRecipeResult(PhiRecipe);
     }
 
     return toVPRecipeResult(new VPWidenPHIRecipe(Phi));
@@ -9056,6 +9073,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
       }
     }
   }
+
+  RecipeBuilder.fixHeaderPhis();
 
   // Discard empty dummy pre-entry VPBasicBlock. Note that other VPBasicBlocks
   // may also be empty, such as the last one VPBB, reflecting original
