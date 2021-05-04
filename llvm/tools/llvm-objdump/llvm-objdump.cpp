@@ -2496,8 +2496,6 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
     LLVMArgs.push_back("--mv67");
   if (InputArgs.hasArg(OBJDUMP_mv67t))
     LLVMArgs.push_back("--mv67t");
-  if (InputArgs.hasArg(OBJDUMP_riscv_no_aliases))
-    LLVMArgs.push_back("--riscv-no-aliases");
   LLVMArgs.push_back(nullptr);
   llvm::cl::ParseCommandLineOptions(LLVMArgs.size() - 1, LLVMArgs.data());
 
