@@ -513,7 +513,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "safe-stack",           "cost-model",
       "codegenprepare",       "interleaved-load-combine",
       "unreachableblockelim", "verify-safepoint-ir",
-      "atomic-expand",        "expandvp",
+      "atomic-expand",
       "hardware-loops",       "type-promotion",
       "mve-tail-predication", "interleaved-access",
       "global-merge",         "pre-isel-intrinsic-lowering",
@@ -591,7 +591,6 @@ int main(int argc, char **argv) {
   initializePostInlineEntryExitInstrumenterPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
   initializeExpandReductionsPass(Registry);
-  initializeExpandVectorPredicationPass(Registry);
   initializeWasmEHPreparePass(Registry);
   initializeWriteBitcodePassPass(Registry);
   initializeHardwareLoopsPass(Registry);
