@@ -87,8 +87,8 @@ public:
     if (!ProfiledFunctions.count(Name)) {
       // Link to synthetic root to make sure every node is reachable
       // from root. This does not affect SCC order.
-      Root.Callees.insert(&ProfiledFunctions[Name]);
       ProfiledFunctions[Name] = ProfiledCallGraphNode(Name);
+      Root.Callees.insert(&ProfiledFunctions[Name]);
     }
   }
 
