@@ -386,10 +386,9 @@ define i32 @zext_ctpop_extra_use(i16 %x, i32* %q) {
 
 define i32 @parity_xor(i32 %arg, i32 %arg1) {
 ; CHECK-LABEL: @parity_xor(
-; CHECK-NEXT:    [[I:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[ARG:%.*]]), !range [[RNG1]]
-; CHECK-NEXT:    [[I2:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[ARG1:%.*]]), !range [[RNG1]]
-; CHECK-NEXT:    [[I3:%.*]] = xor i32 [[I2]], [[I]]
-; CHECK-NEXT:    [[I4:%.*]] = and i32 [[I3]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP1]]), !range [[RNG1]]
+; CHECK-NEXT:    [[I4:%.*]] = and i32 [[TMP2]], 1
 ; CHECK-NEXT:    ret i32 [[I4]]
 ;
   %i = tail call i32 @llvm.ctpop.i32(i32 %arg)
@@ -401,10 +400,9 @@ define i32 @parity_xor(i32 %arg, i32 %arg1) {
 
 define i32 @parity_xor_trunc(i64 %arg, i64 %arg1) {
 ; CHECK-LABEL: @parity_xor_trunc(
-; CHECK-NEXT:    [[I:%.*]] = tail call i64 @llvm.ctpop.i64(i64 [[ARG:%.*]]), !range [[RNG5:![0-9]+]]
-; CHECK-NEXT:    [[I2:%.*]] = tail call i64 @llvm.ctpop.i64(i64 [[ARG1:%.*]]), !range [[RNG5]]
-; CHECK-NEXT:    [[I3:%.*]] = xor i64 [[I2]], [[I]]
-; CHECK-NEXT:    [[I4:%.*]] = trunc i64 [[I3]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP1]]), !range [[RNG5:![0-9]+]]
+; CHECK-NEXT:    [[I4:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[I5:%.*]] = and i32 [[I4]], 1
 ; CHECK-NEXT:    ret i32 [[I5]]
 ;
@@ -418,10 +416,9 @@ define i32 @parity_xor_trunc(i64 %arg, i64 %arg1) {
 
 define <2 x i32> @parity_xor_vec(<2 x i32> %arg, <2 x i32> %arg1) {
 ; CHECK-LABEL: @parity_xor_vec(
-; CHECK-NEXT:    [[I:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[ARG:%.*]])
-; CHECK-NEXT:    [[I2:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[ARG1:%.*]])
-; CHECK-NEXT:    [[I3:%.*]] = xor <2 x i32> [[I2]], [[I]]
-; CHECK-NEXT:    [[I4:%.*]] = and <2 x i32> [[I3]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[TMP1]])
+; CHECK-NEXT:    [[I4:%.*]] = and <2 x i32> [[TMP2]], <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[I4]]
 ;
   %i = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %arg)
