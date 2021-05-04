@@ -1,9 +1,9 @@
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure %s 2>&1 | FileCheck -check-prefix=GCN-O0 %s
-; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure %s 2>&1 | FileCheck -check-prefix=GCN-O1 %s
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 | FileCheck -check-prefix=GCN-O0 %s
+; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 | FileCheck -check-prefix=GCN-O1 %s
 ; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -amdgpu-scalar-ir-passes -amdgpu-sdwa-peephole \
-; RUN:   -amdgpu-load-store-vectorizer -debug-pass=Structure %s 2>&1 | FileCheck -check-prefix=GCN-O1-OPTS %s
-; RUN: llc -O2 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure %s 2>&1 | FileCheck -check-prefix=GCN-O2 %s
-; RUN: llc -O3 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure %s 2>&1 | FileCheck -check-prefix=GCN-O3 %s
+; RUN:   -amdgpu-load-store-vectorizer -debug-pass=Structure < %s 2>&1 | FileCheck -check-prefix=GCN-O1-OPTS %s
+; RUN: llc -O2 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 | FileCheck -check-prefix=GCN-O2 %s
+; RUN: llc -O3 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 | FileCheck -check-prefix=GCN-O3 %s
 
 ; REQUIRES: asserts
 
