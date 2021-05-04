@@ -5277,6 +5277,8 @@ bool llvm::propagatesPoison(const Operator *I) {
         // two output vectors (calculated results, overflow bits)'
         // corresponding lanes are poison.
         return true;
+      case Intrinsic::ctpop:
+        return true;
       }
     }
     return false;
