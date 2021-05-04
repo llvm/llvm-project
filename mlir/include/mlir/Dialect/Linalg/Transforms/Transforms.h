@@ -337,18 +337,21 @@ Optional<LinalgOp> promoteSubViews(OpBuilder &b, LinalgOp op,
 LogicalResult vectorizeLinalgOp(OpBuilder &builder, Operation *op,
                                 SmallVectorImpl<Value> &newResults);
 
-/// Emits a loop nest of `LoopTy` with the proper body for `op`.
+/// Emits a loop nest of `LoopTy` with the proper body for `linalgOp`.
 template <typename LoopTy>
-Optional<LinalgLoops> linalgLowerOpToLoops(OpBuilder &builder, Operation *op);
+Optional<LinalgLoops> linalgLowerOpToLoops(PatternRewriter &rewriter,
+                                           LinalgOp linalgOp);
 
-/// Emits a loop nest of `scf.for` with the proper body for `op`.
-LogicalResult linalgOpToLoops(OpBuilder &builder, Operation *op);
+/// Emits a loop nest of `scf.for` with the proper body for `linalgOp`.
+LogicalResult linalgOpToLoops(PatternRewriter &rewriter, LinalgOp linalgOp);
 
-/// Emits a loop nest of `scf.parallel` with the proper body for `op`.
-LogicalResult linalgOpToParallelLoops(OpBuilder &builder, Operation *op);
+/// Emits a loop nest of `scf.parallel` with the proper body for `linalgOp`.
+LogicalResult linalgOpToParallelLoops(PatternRewriter &rewriter,
+                                      LinalgOp linalgOp);
 
-/// Emits a loop nest of `affine.for` with the proper body for `op`.
-LogicalResult linalgOpToAffineLoops(OpBuilder &builder, Operation *op);
+/// Emits a loop nest of `affine.for` with the proper body for `linalgOp`.
+LogicalResult linalgOpToAffineLoops(PatternRewriter &rewriter,
+                                    LinalgOp linalgOp);
 
 //===----------------------------------------------------------------------===//
 // Preconditions that ensure the corresponding transformation succeeds and can
