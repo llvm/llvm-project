@@ -200,7 +200,11 @@ public:
     using const_pointer          = const _Tp *;
     using reference              = _Tp &;
     using const_reference        = const _Tp &;
-    using iterator               =  __wrap_iter<pointer>;
+#if (_LIBCPP_DEBUG_LEVEL == 2) || defined(_LIBCPP_ABI_SPAN_POINTER_ITERATORS)
+    using iterator               = pointer;
+#else
+    using iterator               = __wrap_iter<pointer>;
+#endif
     using reverse_iterator       = _VSTD::reverse_iterator<iterator>;
 
     static constexpr size_type extent = _Extent;
@@ -375,7 +379,11 @@ public:
     using const_pointer          = const _Tp *;
     using reference              = _Tp &;
     using const_reference        = const _Tp &;
-    using iterator               =  __wrap_iter<pointer>;
+#if (_LIBCPP_DEBUG_LEVEL == 2) || defined(_LIBCPP_ABI_SPAN_POINTER_ITERATORS)
+    using iterator               = pointer;
+#else
+    using iterator               = __wrap_iter<pointer>;
+#endif
     using reverse_iterator       = _VSTD::reverse_iterator<iterator>;
 
     static constexpr size_type extent = dynamic_extent;
