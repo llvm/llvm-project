@@ -2710,6 +2710,34 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         return replaceInstUsesWith(SI, Op1);
       }
     }
+
+    // select (select a, true, b), c, false -> select a, c, false
+    // select c, (select a, true, b), false -> select c, a, false
+    //   if c implies that b is false.
+    if (match(CondVal, m_Select(m_Value(A), m_One(), m_Value(B))) &&
+        match(FalseVal, m_Zero())) {
+      Optional<bool> Res = isImpliedCondition(TrueVal, B, DL);
+      if (Res && *Res == false)
+        return replaceOperand(SI, 0, A);
+    }
+    if (match(TrueVal, m_Select(m_Value(A), m_One(), m_Value(B))) &&
+        match(FalseVal, m_Zero())) {
+      Optional<bool> Res = isImpliedCondition(CondVal, B, DL);
+      if (Res && *Res == false)
+        return replaceOperand(SI, 1, A);
+    }
+
+    // sel (sel c, a, false), true, (sel !c, b, false) -> sel c, a, b
+    // sel (sel !c, a, false), true, (sel c, b, false) -> sel c, b, a
+    Value *C1, *C2;
+    if (match(CondVal, m_Select(m_Value(C1), m_Value(A), m_Zero())) &&
+        match(TrueVal, m_One()) &&
+        match(FalseVal, m_Select(m_Value(C2), m_Value(B), m_Zero()))) {
+      if (match(C2, m_Not(m_Specific(C1)))) // first case
+        return SelectInst::Create(C1, A, B);
+      else if (match(C1, m_Not(m_Specific(C2)))) // second case
+        return SelectInst::Create(C2, B, A);
+    }
   }
 
   // Selecting between two integer or vector splat integer constants?
