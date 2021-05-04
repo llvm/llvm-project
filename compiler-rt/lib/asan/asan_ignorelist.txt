@@ -1,6 +1,6 @@
-# Blacklist for AddressSanitizer. Turns off instrumentation of particular
-# functions or sources. Use with care. You may set location of blacklist
-# at compile-time using -fsanitize-blacklist=<path> flag.
+# Ignorelist for AddressSanitizer. Turns off instrumentation of particular
+# functions or sources. Use with care. You may set location of ignorelist
+# at compile-time using -fsanitize-ignorelist=<path> flag.
 
 # Example usage:
 # fun:*bad_function_name*

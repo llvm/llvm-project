@@ -1,7 +1,7 @@
-// Verify ubsan vptr does not check down-casts on blacklisted types.
-// RUN: echo "type:_ZTI3Foo" > %t-type.blacklist
+// Verify ubsan vptr does not check down-casts on ignorelisted types.
+// RUN: echo "type:_ZTI3Foo" > %t-type.ignorelist
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=vptr -fsanitize-recover=vptr -emit-llvm %s -o - | FileCheck %s --check-prefix=DEFAULT
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=vptr -fsanitize-recover=vptr -fsanitize-blacklist=%t-type.blacklist -emit-llvm %s -o - | FileCheck %s --check-prefix=TYPE
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=vptr -fsanitize-recover=vptr -fsanitize-ignorelist=%t-type.ignorelist -emit-llvm %s -o - | FileCheck %s --check-prefix=TYPE
 
 class Bar {
 public:
