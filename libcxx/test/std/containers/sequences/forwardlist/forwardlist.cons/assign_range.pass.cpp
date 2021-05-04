@@ -27,7 +27,7 @@ int main(int, char**)
         const T t0[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
         const T t1[] = {10, 11, 12, 13};
         C c(std::begin(t1), std::end(t1));
-        typedef input_iterator<const T*> I;
+        typedef cpp17_input_iterator<const T*> I;
         c.assign(I(std::begin(t0)), I(std::end(t0)));
         int n = 0;
         for (C::const_iterator i = c.cbegin(); i != c.cend(); ++i, ++n)
@@ -40,7 +40,7 @@ int main(int, char**)
         const T t0[] = {10, 11, 12, 13};
         const T t1[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
         C c(std::begin(t1), std::end(t1));
-        typedef input_iterator<const T*> I;
+        typedef cpp17_input_iterator<const T*> I;
         c.assign(I(std::begin(t0)), I(std::end(t0)));
         int n = 0;
         for (C::const_iterator i = c.cbegin(); i != c.cend(); ++i, ++n)
@@ -54,7 +54,7 @@ int main(int, char**)
         const T t0[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
         const T t1[] = {10, 11, 12, 13};
         C c(std::begin(t1), std::end(t1));
-        typedef input_iterator<const T*> I;
+        typedef cpp17_input_iterator<const T*> I;
         c.assign(I(std::begin(t0)), I(std::end(t0)));
         int n = 0;
         for (C::const_iterator i = c.cbegin(); i != c.cend(); ++i, ++n)
@@ -67,7 +67,7 @@ int main(int, char**)
         const T t0[] = {10, 11, 12, 13};
         const T t1[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
         C c(std::begin(t1), std::end(t1));
-        typedef input_iterator<const T*> I;
+        typedef cpp17_input_iterator<const T*> I;
         c.assign(I(std::begin(t0)), I(std::end(t0)));
         int n = 0;
         for (C::const_iterator i = c.cbegin(); i != c.cend(); ++i, (void) ++n)

@@ -611,7 +611,7 @@ static_assert(!has_iterator_concept_v<LegacyRandomAccessSpecializedTraits>);
 
 // Other test iterators.
 
-using InputTestItereatorTraits = std::iterator_traits<input_iterator<int*> >;
+using InputTestItereatorTraits = std::iterator_traits<cpp17_input_iterator<int*> >;
 static_assert(std::same_as<InputTestItereatorTraits::iterator_category,
                            std::input_iterator_tag>);
 static_assert(std::same_as<InputTestItereatorTraits::value_type, int>);

@@ -19,17 +19,17 @@
 
 namespace stdr = std::ranges;
 
-static_assert(!stdr::common_range<test_range<input_iterator> >);
-static_assert(!stdr::common_range<test_range<input_iterator> const>);
+static_assert(!stdr::common_range<test_range<cpp17_input_iterator> >);
+static_assert(!stdr::common_range<test_range<cpp17_input_iterator> const>);
 
-static_assert(!stdr::common_range<test_non_const_range<input_iterator> >);
-static_assert(!stdr::common_range<test_non_const_range<input_iterator> const>);
+static_assert(!stdr::common_range<test_non_const_range<cpp17_input_iterator> >);
+static_assert(!stdr::common_range<test_non_const_range<cpp17_input_iterator> const>);
 
-static_assert(stdr::common_range<test_common_range<input_iterator> >);
-static_assert(stdr::common_range<test_common_range<input_iterator> const>);
+static_assert(stdr::common_range<test_common_range<cpp17_input_iterator> >);
+static_assert(stdr::common_range<test_common_range<cpp17_input_iterator> const>);
 
-static_assert(stdr::common_range<test_non_const_common_range<input_iterator> >);
-static_assert(!stdr::common_range<test_non_const_common_range<input_iterator> const>);
+static_assert(stdr::common_range<test_non_const_common_range<cpp17_input_iterator> >);
+static_assert(!stdr::common_range<test_non_const_common_range<cpp17_input_iterator> const>);
 
 struct subtly_not_common {
   int* begin() const;
