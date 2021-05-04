@@ -12,6 +12,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/SourceLocationSpec.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
@@ -137,12 +138,8 @@ public:
   ///     CompileUnit::GetSupportFiles()
   ///     FileSpecList::FindFileIndex (uint32_t, const FileSpec &) const
   ///
-  /// \param[in] line
-  ///     The source line to match.
-  ///
-  /// \param[in] exact
-  ///     If true, match only if you find a line entry exactly matching \a line.
-  ///     If false, return the closest line entry greater than \a line.
+  /// \param[in] src_location_spec
+  ///     The source location specifier to match.
   ///
   /// \param[out] line_entry_ptr
   ///     A pointer to a line entry object that will get a copy of
@@ -155,13 +152,14 @@ public:
   ///
   /// \see CompileUnit::GetSupportFiles()
   /// \see FileSpecList::FindFileIndex (uint32_t, const FileSpec &) const
-  uint32_t FindLineEntryIndexByFileIndex(uint32_t start_idx, uint32_t file_idx,
-                                         uint32_t line, bool exact,
-                                         LineEntry *line_entry_ptr);
+  uint32_t
+  FindLineEntryIndexByFileIndex(uint32_t start_idx, uint32_t file_idx,
+                                const SourceLocationSpec &src_location_spec,
+                                LineEntry *line_entry_ptr);
 
   uint32_t FindLineEntryIndexByFileIndex(
       uint32_t start_idx, const std::vector<uint32_t> &file_indexes,
-      uint32_t line, bool exact, LineEntry *line_entry_ptr);
+      const SourceLocationSpec &src_location_spec, LineEntry *line_entry_ptr);
 
   size_t FineLineEntriesForFileIndex(uint32_t file_idx, bool append,
                                      SymbolContextList &sc_list);

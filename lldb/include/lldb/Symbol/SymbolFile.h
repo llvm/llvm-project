@@ -10,6 +10,7 @@
 #define LLDB_SYMBOL_SYMBOLFILE_H
 
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Core/SourceLocationSpec.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -209,10 +210,10 @@ public:
   virtual uint32_t ResolveSymbolContext(const Address &so_addr,
                                         lldb::SymbolContextItem resolve_scope,
                                         SymbolContext &sc) = 0;
-  virtual uint32_t ResolveSymbolContext(const FileSpec &file_spec,
-                                        uint32_t line, bool check_inlines,
-                                        lldb::SymbolContextItem resolve_scope,
-                                        SymbolContextList &sc_list);
+  virtual uint32_t
+  ResolveSymbolContext(const SourceLocationSpec &src_location_spec,
+                       lldb::SymbolContextItem resolve_scope,
+                       SymbolContextList &sc_list);
 
   virtual void DumpClangAST(Stream &s) {}
   virtual void FindGlobalVariables(ConstString name,
