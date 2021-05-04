@@ -478,8 +478,10 @@ void ForwardDataFlowSolver::visitRegionSuccessors(
       // aren't part of the control flow.
       if (succArgs.size() != results.size()) {
         opWorklist.push_back(parentOp);
-        if (succArgs.empty())
-          return markAllPessimisticFixpoint(results);
+        if (succArgs.empty()) {
+          markAllPessimisticFixpoint(results);
+          continue;
+        }
 
         unsigned firstResIdx = succArgs[0].cast<OpResult>().getResultNumber();
         markAllPessimisticFixpoint(results.take_front(firstResIdx));
@@ -492,7 +494,7 @@ void ForwardDataFlowSolver::visitRegionSuccessors(
       for (auto it : llvm::zip(succArgs, operands))
         join(parentOp, analysis.getLatticeElement(std::get<0>(it)),
              analysis.getLatticeElement(std::get<1>(it)));
-      return;
+      continue;
     }
     assert(!region->empty() && "expected region to be non-empty");
     Block *entryBlock = &region->front();
@@ -563,8 +565,16 @@ void ForwardDataFlowSolver::visitTerminatorOperation(
     // If this terminator is not "region-like", conservatively mark all of the
     // successor values as having reached the pessimistic fixpoint.
     if (!op->hasTrait<OpTrait::ReturnLike>()) {
-      for (auto &it : regionSuccessors)
-        markAllPessimisticFixpointAndVisitUsers(it.getSuccessorInputs());
+      for (auto &it : regionSuccessors) {
+        // If the successor is a region, mark the entry block as executable so
+        // that we visit operations defined within. If the successor is the
+        // parent operation, we simply mark the control flow results as having
+        // reached the pessimistic state.
+        if (Region *region = it.getSuccessor())
+          markEntryBlockExecutable(region, /*markPessimisticFixpoint=*/true);
+        else
+          markAllPessimisticFixpointAndVisitUsers(it.getSuccessorInputs());
+      }
       return;
     }
 
