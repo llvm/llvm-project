@@ -730,23 +730,6 @@ void SILowerControlFlow::lowerInitExec(MachineBasicBlock *MBB,
 }
 
 bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
-  auto GetFallThroughSucc = [=](MachineBasicBlock *B) -> MachineBasicBlock * {
-    auto *S = B->getNextNode();
-    if (!S)
-      return nullptr;
-    if (B->isSuccessor(S)) {
-      // The only fallthrough candidate
-      MachineBasicBlock::iterator I(B->getFirstInstrTerminator());
-      MachineBasicBlock::iterator E = B->end();
-      for (; I != E; I++) {
-        if (I->isBranch() && TII->getBranchDestBlock(*I) == S)
-          // We have unoptimized branch to layout successor
-          return nullptr;
-      }
-    }
-    return S;
-  };
-
   for (auto &I : MBB.instrs()) {
     if (!I.isDebugInstr() && !I.isUnconditionalBranch())
       return false;
@@ -759,7 +742,7 @@ bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
 
   while (!MBB.predecessors().empty()) {
     MachineBasicBlock *P = *MBB.pred_begin();
-    if (GetFallThroughSucc(P) == &MBB)
+    if (P->getFallThrough() == &MBB)
       FallThrough = P;
     P->ReplaceUsesOfBlockWith(&MBB, Succ);
   }
@@ -780,7 +763,7 @@ bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
   MBB.clear();
   MBB.eraseFromParent();
   if (FallThrough && !FallThrough->isLayoutSuccessor(Succ)) {
-    if (!GetFallThroughSucc(Succ)) {
+    if (!Succ->canFallThrough()) {
       MachineFunction *MF = FallThrough->getParent();
       MachineFunction::iterator FallThroughPos(FallThrough);
       MF->splice(std::next(FallThroughPos), Succ);
