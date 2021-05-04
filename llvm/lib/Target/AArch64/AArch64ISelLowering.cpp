@@ -1814,7 +1814,6 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::RET_FLAG)
     MAKE_CASE(AArch64ISD::BRCOND)
     MAKE_CASE(AArch64ISD::CSEL)
-    MAKE_CASE(AArch64ISD::FCSEL)
     MAKE_CASE(AArch64ISD::CSINV)
     MAKE_CASE(AArch64ISD::CSNEG)
     MAKE_CASE(AArch64ISD::CSINC)
@@ -15357,6 +15356,17 @@ static SDValue performBRCONDCombine(SDNode *N,
   return SDValue();
 }
 
+// Optimize CSEL instructions
+static SDValue performCSELCombine(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  SelectionDAG &DAG) {
+  // CSEL x, x, cc -> x
+  if (N->getOperand(0) == N->getOperand(1))
+    return N->getOperand(0);
+
+  return performCONDCombine(N, DCI, DAG, 2, 3);
+}
+
 // Optimize some simple tbz/tbnz cases.  Returns the new operand and bit to test
 // as well as whether the test should be inverted.  This code is required to
 // catch these cases (as opposed to standard dag combines) because
@@ -16150,7 +16160,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::TBZ:
     return performTBZCombine(N, DCI, DAG);
   case AArch64ISD::CSEL:
-    return performCONDCombine(N, DCI, DAG, 2, 3);
+    return performCSELCombine(N, DCI, DAG);
   case AArch64ISD::DUP:
     return performPostLD1Combine(N, DCI, false);
   case AArch64ISD::NVCAST:
