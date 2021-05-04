@@ -9,9 +9,12 @@
 #ifndef SCUDO_SECONDARY_H_
 #define SCUDO_SECONDARY_H_
 
+#include "chunk.h"
 #include "common.h"
 #include "list.h"
+#include "memtag.h"
 #include "mutex.h"
+#include "options.h"
 #include "stats.h"
 #include "string_utils.h"
 
@@ -279,13 +282,15 @@ public:
               Config::SecondaryCacheMinReleaseToOsIntervalMs);
       atomic_store_relaxed(&ReleaseToOsIntervalMs, Interval);
       return true;
-    } else if (O == Option::MaxCacheEntriesCount) {
+    }
+    if (O == Option::MaxCacheEntriesCount) {
       const u32 MaxCount = static_cast<u32>(Value);
       if (MaxCount > Config::SecondaryCacheEntriesArraySize)
         return false;
       atomic_store_relaxed(&MaxEntriesCount, MaxCount);
       return true;
-    } else if (O == Option::MaxCacheEntrySize) {
+    }
+    if (O == Option::MaxCacheEntrySize) {
       atomic_store_relaxed(&MaxEntrySize, static_cast<uptr>(Value));
       return true;
     }
