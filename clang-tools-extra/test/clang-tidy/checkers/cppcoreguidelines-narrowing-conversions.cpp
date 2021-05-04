@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-narrowing-conversions %t \
 // RUN: -config="{CheckOptions: [ \
-// RUN:   {key: "cppcoreguidelines-narrowing-conversions.WarnOnFloatingPointNarrowingConversion", value: 0}, \
+// RUN:   {key: "cppcoreguidelines-narrowing-conversions.WarnOnFloatingPointNarrowingConversion", value: false}, \
 // RUN: ]}" \
 // RUN: -- -target x86_64-unknown-linux -fsigned-char
 
