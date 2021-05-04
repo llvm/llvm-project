@@ -37,6 +37,18 @@ func @log1p_2dvector(%arg0 : vector<4x3xf32>) {
 
 // -----
 
+// CHECK-LABEL: func @expm1(
+// CHECK-SAME: f32
+func @expm1(%arg0 : f32) {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
+  // CHECK: %[[EXP:.*]] = "llvm.intr.exp"(%arg0) : (f32) -> f32
+  // CHECK: %[[SUB:.*]] = llvm.fsub %[[EXP]], %[[ONE]] : f32
+  %0 = math.expm1 %arg0 : f32
+  std.return
+}
+
+// -----
+
 // CHECK-LABEL: func @rsqrt(
 // CHECK-SAME: f32
 func @rsqrt(%arg0 : f32) {
