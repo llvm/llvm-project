@@ -13,7 +13,7 @@ Section,Description,Dependencies,Assignee,Patch,Complete
 [iterator.cust.move],Implement iter_move.,,Christopher Di Bella,`D99873 <https://llvm.org/D99873>`_,
 [iterator.cust.swap],Implement iter_swap.,"[concepts], [readable.traits]: iter_value_t",,,
 [iterator.concepts],"indirectly_readable, indirectly_writable, weakly_incrementable, incrementable, input_or_output_iterator, sentinel_for, sized_sentinel_for, input_iterator, output_iterator, forward_iterator, bidirectional_iterator, random_access_iterator, and contiguous_iterator.","[concepts], [readable.traits]: iter_value_t, [iterator.traits]",Christopher Di Bella,"indirectly_readable: `D100073 <https://llvm.org/D100073>`_
-indirectly_wriatable: `D100078 <https://llvm.org/D100078>`_ weakly_incrementable, incrementable: `D100080 <https://llvm.org/D100080>`_ input_or_output_iterator, sentinel_for: `D100160 <https://llvm.org/D100160>`_
+indirectly_writable: `D100078 <https://llvm.org/D100078>`_ weakly_incrementable, incrementable: `D100080 <https://llvm.org/D100080>`_ input_or_output_iterator, sentinel_for: `D100160 <https://llvm.org/D100160>`_
 input_iterator: `D100271 <https://llvm.org/D100271>`_
 forward_iterator: `D100275 <https://llvm.org/D100275>`_
 bidirectional_iterator: `D100278 <https://llvm.org/D100278>`_",
