@@ -424,6 +424,7 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
          "Expected cttz or ctlz intrinsic");
   bool IsTZ = II.getIntrinsicID() == Intrinsic::cttz;
   Value *Op0 = II.getArgOperand(0);
+  Value *Op1 = II.getArgOperand(1);
   Value *X;
   // ctlz(bitreverse(x)) -> cttz(x)
   // cttz(bitreverse(x)) -> ctlz(x)
@@ -437,6 +438,15 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     // cttz(-x) -> cttz(x)
     if (match(Op0, m_Neg(m_Value(X))))
       return IC.replaceOperand(II, 0, X);
+
+    // Zext doesn't change the number of trailing zeros, so narrow:
+    // cttz(zext(x)) -> zext(cttz(x)) if the 'ZeroIsUndef' parameter is 'true'.
+    if (match(Op0, m_OneUse(m_ZExt(m_Value(X)))) && match(Op1, m_One())) {
+      auto *Cttz = IC.Builder.CreateBinaryIntrinsic(Intrinsic::cttz, X,
+                                                    IC.Builder.getTrue());
+      auto *ZextCttz = IC.Builder.CreateZExt(Cttz, II.getType());
+      return IC.replaceInstUsesWith(II, ZextCttz);
+    }
 
     // cttz(abs(x)) -> cttz(x)
     // cttz(nabs(x)) -> cttz(x)
