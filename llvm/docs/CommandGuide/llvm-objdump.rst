@@ -281,11 +281,6 @@ MACH-O ONLY OPTIONS AND COMMANDS
 
   Display binding info
 
-.. option:: --cfg
-
-  Create a CFG for every symbol in the object file and write it to a graphviz
-  file.
-
 .. option:: --data-in-code
 
   Display the data in code table.
