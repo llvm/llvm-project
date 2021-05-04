@@ -22,10 +22,10 @@ static_assert(std::input_or_output_iterator<int const*>);
 static_assert(std::input_or_output_iterator<int volatile*>);
 static_assert(std::input_or_output_iterator<int const volatile*>);
 
-static_assert(std::input_or_output_iterator<input_iterator<int*> >);
-static_assert(std::input_or_output_iterator<input_iterator<int const*> >);
-static_assert(std::input_or_output_iterator<input_iterator<int volatile*> >);
-static_assert(std::input_or_output_iterator<input_iterator<int const volatile*> >);
+static_assert(std::input_or_output_iterator<cpp17_input_iterator<int*> >);
+static_assert(std::input_or_output_iterator<cpp17_input_iterator<int const*> >);
+static_assert(std::input_or_output_iterator<cpp17_input_iterator<int volatile*> >);
+static_assert(std::input_or_output_iterator<cpp17_input_iterator<int const volatile*> >);
 
 static_assert(std::input_or_output_iterator<forward_iterator<int*> >);
 static_assert(std::input_or_output_iterator<forward_iterator<int const*> >);

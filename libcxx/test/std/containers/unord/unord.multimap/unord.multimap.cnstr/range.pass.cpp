@@ -50,7 +50,7 @@ int main(int, char**)
             P(1, "four"),
             P(2, "four"),
         };
-        C c(input_iterator<P*>(a), input_iterator<P*>(a + sizeof(a)/sizeof(a[0])));
+        C c(cpp17_input_iterator<P*>(a), cpp17_input_iterator<P*>(a + sizeof(a)/sizeof(a[0])));
         assert(c.bucket_count() >= 7);
         assert(c.size() == 6);
         typedef std::pair<C::const_iterator, C::const_iterator> Eq;
@@ -101,7 +101,7 @@ int main(int, char**)
             P(1, "four"),
             P(2, "four"),
         };
-        C c(input_iterator<P*>(a), input_iterator<P*>(a + sizeof(a)/sizeof(a[0])));
+        C c(cpp17_input_iterator<P*>(a), cpp17_input_iterator<P*>(a + sizeof(a)/sizeof(a[0])));
         assert(c.bucket_count() >= 7);
         assert(c.size() == 6);
         typedef std::pair<C::const_iterator, C::const_iterator> Eq;
@@ -153,7 +153,7 @@ int main(int, char**)
             P(2, "four"),
         };
          A a(42);
-       C c(input_iterator<P*>(arr), input_iterator<P*>(arr + sizeof(arr)/sizeof(arr[0])), 14, a);
+       C c(cpp17_input_iterator<P*>(arr), cpp17_input_iterator<P*>(arr + sizeof(arr)/sizeof(arr[0])), 14, a);
         assert(c.bucket_count() >= 14);
         assert(c.size() == 6);
         typedef std::pair<C::const_iterator, C::const_iterator> Eq;
@@ -206,7 +206,7 @@ int main(int, char**)
         };
         A a(42);
         HF hf (43);
-        C c(input_iterator<P*>(arr), input_iterator<P*>(arr + sizeof(arr)/sizeof(arr[0])), 12, hf, a );
+        C c(cpp17_input_iterator<P*>(arr), cpp17_input_iterator<P*>(arr + sizeof(arr)/sizeof(arr[0])), 12, hf, a );
         assert(c.bucket_count() >= 12);
         assert(c.size() == 6);
         typedef std::pair<C::const_iterator, C::const_iterator> Eq;

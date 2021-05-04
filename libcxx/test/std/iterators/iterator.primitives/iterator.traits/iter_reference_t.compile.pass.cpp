@@ -18,7 +18,7 @@
 
 #include "test_iterators.h"
 
-static_assert(std::same_as<std::iter_reference_t<input_iterator<int*> >, int&>);
+static_assert(std::same_as<std::iter_reference_t<cpp17_input_iterator<int*> >, int&>);
 static_assert(std::same_as<std::iter_reference_t<forward_iterator<int*> >, int&>);
 static_assert(std::same_as<std::iter_reference_t<bidirectional_iterator<int*> >, int&>);
 static_assert(std::same_as<std::iter_reference_t<random_access_iterator<int*> >, int&>);
