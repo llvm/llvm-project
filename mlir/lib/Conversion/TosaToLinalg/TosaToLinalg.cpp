@@ -1591,8 +1591,13 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
     }
     sizes[axis] = resultDimSize;
 
-    Value result = rewriter.create<linalg::InitTensorOp>(
+    Value init = rewriter.create<linalg::InitTensorOp>(
         loc, resultType.getShape(), resultType.getElementType());
+
+    Value zeroVal = rewriter.create<ConstantOp>(
+        loc, rewriter.getZeroAttr(resultType.getElementType()));
+    Value result =
+        rewriter.create<linalg::FillOp>(loc, init, zeroVal).getResult(0);
 
     for (auto arg : args) {
       sizes[axis] = rewriter.create<memref::DimOp>(loc, arg, axisValue);
