@@ -399,3 +399,32 @@ func @select_cmp_ne_select(%arg0: i64, %arg1: i64) -> i64 {
   %1 = select %0, %arg0, %arg1 : i64
   return %1 : i64
 }
+
+// -----
+
+// CHECK-LABEL: @indexCastOfSignExtend
+//       CHECK:   %[[res:.+]] = index_cast %arg0 : i8 to index
+//       CHECK:   return %[[res]]
+func @indexCastOfSignExtend(%arg0: i8) -> index {
+  %ext = sexti %arg0 : i8 to i16
+  %idx = index_cast %ext : i16 to index
+  return %idx : index
+}
+
+// CHECK-LABEL: @signExtendConstant
+//       CHECK:   %[[cres:.+]] = constant -2 : i16
+//       CHECK:   return %[[cres]]
+func @signExtendConstant() -> i16 {
+  %c-2 = constant -2 : i8
+  %ext = sexti %c-2 : i8 to i16
+  return %ext : i16
+}
+
+// CHECK-LABEL: @truncConstant
+//       CHECK:   %[[cres:.+]] = constant -2 : i16
+//       CHECK:   return %[[cres]]
+func @truncConstant(%arg0: i8) -> i16 {
+  %c-2 = constant -2 : i32
+  %tr = trunci %c-2 : i32 to i16
+  return %tr : i16
+}
