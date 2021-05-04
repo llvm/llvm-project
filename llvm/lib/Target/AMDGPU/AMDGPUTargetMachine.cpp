@@ -900,8 +900,9 @@ void AMDGPUPassConfig::addIRPasses() {
 
     if (EnableSROA)
       addPass(createSROAPass());
-
-    if (EnableScalarIRPasses)
+    if (EnableScalarIRPasses.getNumOccurrences()
+            ? EnableScalarIRPasses
+            : TM.getOptLevel() > CodeGenOpt::Less)
       addStraightLineScalarOptimizationPasses();
 
     if (EnableAMDGPUAliasAnalysis) {
@@ -933,7 +934,9 @@ void AMDGPUPassConfig::addIRPasses() {
   //   %1 = shl %a, 2
   //
   // but EarlyCSE can do neither of them.
-  if (getOptLevel() != CodeGenOpt::None && EnableScalarIRPasses)
+  if (EnableScalarIRPasses.getNumOccurrences()
+          ? EnableScalarIRPasses
+          : TM.getOptLevel() > CodeGenOpt::Less)
     addEarlyCSEOrGVNPass();
 }
 
@@ -949,7 +952,9 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
 
   TargetPassConfig::addCodeGenPrepare();
 
-  if (EnableLoadStoreVectorizer)
+  if (EnableLoadStoreVectorizer.getNumOccurrences()
+          ? EnableLoadStoreVectorizer
+          : TM->getOptLevel() > CodeGenOpt::Less)
     addPass(createLoadStoreVectorizerPass());
 
   // LowerSwitch pass may introduce unreachable blocks that can
@@ -1072,7 +1077,9 @@ void GCNPassConfig::addMachineSSAOptimization() {
   if (EnableDPPCombine)
     addPass(&GCNDPPCombineID);
   addPass(&SILoadStoreOptimizerID);
-  if (EnableSDWAPeephole) {
+  if (EnableSDWAPeephole.getNumOccurrences()
+          ? EnableSDWAPeephole
+          : TM->getOptLevel() > CodeGenOpt::Less) {
     addPass(&SIPeepholeSDWAID);
     addPass(&EarlyMachineLICMID);
     addPass(&MachineCSEID);
