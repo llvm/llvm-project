@@ -294,6 +294,7 @@ PipelineTuningOptions::PipelineTuningOptions() {
 namespace llvm {
 extern cl::opt<unsigned> MaxDevirtIterations;
 extern cl::opt<bool> EnableConstraintElimination;
+extern cl::opt<bool> EnableFunctionSpecialization;
 extern cl::opt<bool> EnableGVNHoist;
 extern cl::opt<bool> EnableGVNSink;
 extern cl::opt<bool> EnableHotColdSplit;
@@ -1131,6 +1132,10 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   for (auto &C : PipelineEarlySimplificationEPCallbacks)
     C(MPM, Level);
 
+  // Specialize functions with IPSCCP.
+  if (EnableFunctionSpecialization)
+    MPM.addPass(FunctionSpecializationPass());
+
   // Interprocedural constant propagation now that basic cleanup has occurred
   // and prior to optimizing globals.
   // FIXME: This position in the pipeline hasn't been carefully considered in
@@ -1698,6 +1703,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // produce the same result as if we only do promotion here.
     MPM.addPass(PGOIndirectCallPromotion(
         true /* InLTO */, PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
+
+    if (EnableFunctionSpecialization)
+      MPM.addPass(FunctionSpecializationPass());
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function
     // pointers passed as arguments to direct uses of functions.
