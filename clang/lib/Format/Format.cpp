@@ -146,10 +146,12 @@ template <> struct ScalarEnumerationTraits<FormatStyle::AlignConsecutiveStyle> {
 template <> struct ScalarEnumerationTraits<FormatStyle::ShortIfStyle> {
   static void enumeration(IO &IO, FormatStyle::ShortIfStyle &Value) {
     IO.enumCase(Value, "Never", FormatStyle::SIS_Never);
-    IO.enumCase(Value, "Always", FormatStyle::SIS_Always);
     IO.enumCase(Value, "WithoutElse", FormatStyle::SIS_WithoutElse);
+    IO.enumCase(Value, "OnlyFirstIf", FormatStyle::SIS_OnlyFirstIf);
+    IO.enumCase(Value, "AllIfsAndElse", FormatStyle::SIS_AllIfsAndElse);
 
     // For backward compatibility.
+    IO.enumCase(Value, "Always", FormatStyle::SIS_OnlyFirstIf);
     IO.enumCase(Value, "false", FormatStyle::SIS_Never);
     IO.enumCase(Value, "true", FormatStyle::SIS_WithoutElse);
   }

@@ -620,37 +620,74 @@ struct FormatStyle {
   /// single line.
   ShortFunctionStyle AllowShortFunctionsOnASingleLine;
 
-  /// Different styles for handling short if lines
+  /// Different styles for handling short if statements.
   enum ShortIfStyle : unsigned char {
     /// Never put short ifs on the same line.
     /// \code
     ///   if (a)
-    ///     return ;
+    ///     return;
+    ///
+    ///   if (b)
+    ///     return;
+    ///   else
+    ///     return;
+    ///
+    ///   if (c)
+    ///     return;
     ///   else {
     ///     return;
     ///   }
     /// \endcode
     SIS_Never,
-    /// Without else put short ifs on the same line only if
-    /// the else is not a compound statement.
+    /// Put short ifs on the same line only if there is no else statement.
     /// \code
     ///   if (a) return;
+    ///
+    ///   if (b)
+    ///     return;
     ///   else
     ///     return;
-    /// \endcode
-    SIS_WithoutElse,
-    /// Always put short ifs on the same line if
-    /// the else is not a compound statement or not.
-    /// \code
-    ///   if (a) return;
+    ///
+    ///   if (c)
+    ///     return;
     ///   else {
     ///     return;
     ///   }
     /// \endcode
-    SIS_Always,
+    SIS_WithoutElse,
+    /// Put short ifs, but not else ifs nor else statements, on the same line.
+    /// \code
+    ///   if (a) return;
+    ///
+    ///   if (b) return;
+    ///   else if (b)
+    ///     return;
+    ///   else
+    ///     return;
+    ///
+    ///   if (c) return;
+    ///   else {
+    ///     return;
+    ///   }
+    /// \endcode
+    SIS_OnlyFirstIf,
+    /// Always put short ifs, else ifs and else statements on the same
+    /// line.
+    /// \code
+    ///   if (a) return;
+    ///
+    ///   if (b) return;
+    ///   else return;
+    ///
+    ///   if (c) return;
+    ///   else {
+    ///     return;
+    ///   }
+    /// \endcode
+    SIS_AllIfsAndElse,
   };
 
-  /// If ``true``, ``if (a) return;`` can be put on a single line.
+  /// Dependent on the value, ``if (a) return;`` can be put on a single line.
   ShortIfStyle AllowShortIfStatementsOnASingleLine;
 
   /// Different styles for merging short lambdas containing at most one
