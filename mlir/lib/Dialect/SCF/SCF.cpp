@@ -1694,6 +1694,14 @@ OperandRange WhileOp::getSuccessorEntryOperands(unsigned index) {
   return inits();
 }
 
+ConditionOp WhileOp::getConditionOp() {
+  return cast<ConditionOp>(before().front().getTerminator());
+}
+
+Block::BlockArgListType WhileOp::getAfterArguments() {
+  return after().front().getArguments();
+}
+
 void WhileOp::getSuccessorRegions(Optional<unsigned> index,
                                   ArrayRef<Attribute> operands,
                                   SmallVectorImpl<RegionSuccessor> &regions) {
@@ -1833,6 +1841,62 @@ static LogicalResult verify(scf::WhileOp op) {
       op, op.after(),
       "expects the 'after' region to terminate with 'scf.yield'");
   return success(afterTerminator != nullptr);
+}
+
+namespace {
+/// Replace uses of the condition within the do block with true, since otherwise
+/// the block would not be evaluated.
+///
+/// scf.while (..) : (i1, ...) -> ... {
+///  %condition = call @evaluate_condition() : () -> i1
+///  scf.condition(%condition) %condition : i1, ...
+/// } do {
+/// ^bb0(%arg0: i1, ...):
+///    use(%arg0)
+///    ...
+///
+/// becomes
+/// scf.while (..) : (i1, ...) -> ... {
+///  %condition = call @evaluate_condition() : () -> i1
+///  scf.condition(%condition) %condition : i1, ...
+/// } do {
+/// ^bb0(%arg0: i1, ...):
+///    use(%true)
+///    ...
+struct WhileConditionTruth : public OpRewritePattern<WhileOp> {
+  using OpRewritePattern<WhileOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WhileOp op,
+                                PatternRewriter &rewriter) const override {
+    auto term = op.getConditionOp();
+
+    // These variables serve to prevent creating duplicate constants
+    // and hold constant true or false values.
+    Value constantTrue = nullptr;
+
+    bool replaced = false;
+    for (auto yieldedAndBlockArgs :
+         llvm::zip(term.args(), op.getAfterArguments())) {
+      if (std::get<0>(yieldedAndBlockArgs) == term.condition()) {
+        if (!std::get<1>(yieldedAndBlockArgs).use_empty()) {
+          if (!constantTrue)
+            constantTrue = rewriter.create<mlir::ConstantOp>(
+                op.getLoc(), term.condition().getType(),
+                rewriter.getBoolAttr(true));
+
+          std::get<1>(yieldedAndBlockArgs).replaceAllUsesWith(constantTrue);
+          replaced = true;
+        }
+      }
+    }
+    return success(replaced);
+  }
+};
+} // namespace
+
+void WhileOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                          MLIRContext *context) {
+  results.insert<WhileConditionTruth>(context);
 }
 
 //===----------------------------------------------------------------------===//
