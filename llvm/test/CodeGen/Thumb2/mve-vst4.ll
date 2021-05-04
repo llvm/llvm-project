@@ -175,10 +175,10 @@ define void @vst4_v16i32(<16 x i32> *%src, <64 x i32> *%dst) {
 ; CHECK-NEXT:    vst40.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst41.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst42.32 {q4, q5, q6, q7}, [r1]
-; CHECK-NEXT:    vst43.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst40.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst41.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst42.32 {q0, q1, q2, q3}, [r0]
+; CHECK-NEXT:    vst43.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    add sp, #216
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
@@ -945,10 +945,10 @@ define void @vst4_v16f32(<16 x float> *%src, <64 x float> *%dst) {
 ; CHECK-NEXT:    vst40.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst41.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst42.32 {q4, q5, q6, q7}, [r1]
-; CHECK-NEXT:    vst43.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst40.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst41.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst42.32 {q0, q1, q2, q3}, [r0]
+; CHECK-NEXT:    vst43.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    add sp, #216
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
