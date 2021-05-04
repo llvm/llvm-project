@@ -147,13 +147,13 @@ LLVM provides many analyses that passes can use, such as a dominator tree.
 Calculating these can be expensive, so the new pass manager has
 infrastructure to cache analyses and reuse them when possible.
 
-When a pass runs on some IR, it also receives an analysis manager which it
-can query for analyses. Querying for an analysis will cause the manager to
-check if it has already computed the result for the requested IR. If it does
-and the result is still valid, it will return that. Otherwise it will
-construct a new result by calling the analysis's ``run()`` method, cache it,
-and return it. You can also ask the analysis manager to only return an
-analysis if it's already cached.
+When a pass runs on some IR, it also receives an analysis manager which it can
+query for analyses. Querying for an analysis will cause the manager to check if
+it has already computed the result for the requested IR. If it already has and
+the result is still valid, it will return that. Otherwise it will construct a
+new result by calling the analysis's ``run()`` method, cache it, and return it.
+You can also ask the analysis manager to only return an analysis if it's
+already cached.
 
 The analysis manager only provides analysis results for the same IR type as
 what the pass runs on. For example, a function pass receives an analysis
