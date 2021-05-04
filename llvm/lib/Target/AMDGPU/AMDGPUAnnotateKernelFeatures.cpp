@@ -403,9 +403,11 @@ bool AMDGPUAnnotateKernelFeatures::runOnSCC(CallGraphSCC &SCC) {
     }
 
     Function *F = I->getFunction();
-    // Add feature attributes
-    if (!F || F->isDeclaration())
+    // Ignore functions with graphics calling conventions, these are currently
+    // not allowed to have kernel arguments.
+    if (!F || F->isDeclaration() || AMDGPU::isGraphics(F->getCallingConv()))
       continue;
+    // Add feature attributes
     Changed |= addFeatureAttributes(*F);
   }
 
