@@ -1,21 +1,11 @@
+// REQUIRES: x86-registered-target
+
 // These should succeed.
-// RUN: %clang -c -fc++-abi=itanium %s
-// RUN: %clang -c -fc++-abi=arm -target arm64 %s
-// RUN: %clang -c -fc++-abi=ios -target arm64-apple-ios %s
-// RUN: %clang -c -fc++-abi=aarch64 -target arm64 %s
-// RUN: %clang -c -fc++-abi=mips -target mips %s
-// RUN: %clang -c -fc++-abi=webassembly -target wasm64 %s
+// RUN: %clang -c -fc++-abi=itanium -target x86_64-unknown-linux-gnu %s
 // RUN: %clang -c -fc++-abi=fuchsia -target x86_64-unknown-fuchsia %s
-// RUN: %clang -S -fc++-abi=xl -target powerpc-unknown-aix %s -o /dev/null
 // RUN: %clang -c -fc++-abi=microsoft -target x86_64-windows-msvc %s
-// RUN: %clang_cc1 -fc++-abi=itanium %s
-// RUN: %clang_cc1 -fc++-abi=arm -triple arm64 %s
-// RUN: %clang_cc1 -fc++-abi=ios -triple arm64-apple-ios %s
-// RUN: %clang_cc1 -fc++-abi=aarch64 -triple arm64 %s
-// RUN: %clang_cc1 -fc++-abi=mips -triple mips %s
-// RUN: %clang_cc1 -fc++-abi=webassembly -triple wasm64 %s
+// RUN: %clang_cc1 -fc++-abi=itanium -triple x86_64-unknown-linux-gnu %s
 // RUN: %clang_cc1 -fc++-abi=fuchsia -triple x86_64-unknown-fuchsia %s
-// RUN: %clang_cc1 -S -fc++-abi=xl -triple powerpc-unknown-aix %s -o /dev/null
 // RUN: %clang_cc1 -fc++-abi=microsoft -triple x86_64-windows-msvc %s
 
 // RUN: not %clang -c -fc++-abi=InvalidABI %s 2>&1 | FileCheck %s -check-prefix=INVALID
