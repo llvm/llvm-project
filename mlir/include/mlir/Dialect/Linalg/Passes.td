@@ -58,6 +58,17 @@ def LinalgFoldReshapeOpsByLinearization :
   let dependentDialects = ["AffineDialect", "memref::MemRefDialect"];
 }
 
+def LinalgLowerTiledLoopsToSCF
+    : FunctionPass<"convert-linalg-tiled-loops-to-scf"> {
+  let summary = "Lower linalg tiled loops to SCF loops and parallel loops";
+  let constructor = "mlir::createConvertLinalgTiledLoopsToSCFPass()";
+  let dependentDialects = [
+    "linalg::LinalgDialect",
+    "scf::SCFDialect",
+    "AffineDialect"
+  ];
+}
+
 def LinalgLowerToAffineLoops : FunctionPass<"convert-linalg-to-affine-loops"> {
   let summary = "Lower the operations from the linalg dialect into affine "
                 "loops";
@@ -76,16 +87,6 @@ def LinalgLowerToLoops : FunctionPass<"convert-linalg-to-loops"> {
   ];
 }
 
-def LinalgBufferize : Pass<"linalg-bufferize", "FuncOp"> {
-  let summary = "Bufferize the linalg dialect";
-  let constructor = "mlir::createLinalgBufferizePass()";
-  let dependentDialects = [
-    "linalg::LinalgDialect",
-    "AffineDialect",
-    "memref::MemRefDialect"
-  ];
-}
-
 def LinalgLowerToParallelLoops
     : FunctionPass<"convert-linalg-to-parallel-loops"> {
   let summary = "Lower the operations from the linalg dialect into parallel "
@@ -96,6 +97,16 @@ def LinalgLowerToParallelLoops
     "linalg::LinalgDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect"
+  ];
+}
+
+def LinalgBufferize : Pass<"linalg-bufferize", "FuncOp"> {
+  let summary = "Bufferize the linalg dialect";
+  let constructor = "mlir::createLinalgBufferizePass()";
+  let dependentDialects = [
+    "linalg::LinalgDialect",
+    "AffineDialect",
+    "memref::MemRefDialect"
   ];
 }
 
