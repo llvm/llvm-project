@@ -109,6 +109,8 @@ void TestConvVectorization::runOnOperation() {
   RewritePatternSet vectorContractLoweringPatterns(context);
   populateVectorContractLoweringPatterns(vectorContractLoweringPatterns,
                                          vectorTransformsOptions);
+  populateVectorTransposeLoweringPatterns(vectorContractLoweringPatterns,
+                                          vectorTransformsOptions);
   (void)applyPatternsAndFoldGreedily(module,
                                      std::move(vectorContractLoweringPatterns));
 
