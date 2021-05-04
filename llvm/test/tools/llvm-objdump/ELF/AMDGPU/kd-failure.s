@@ -6,7 +6,7 @@
 
 ; RUN: printf ".type  my_kernel.kd, @object \nmy_kernel.kd:\n.size my_kernel.kd, 64\n" > %t1.sym_info
 ; RUN: llvm-objdump --disassemble-symbols=my_kernel.kd %t.o \
-; RUN: | tail -n +9 > %t1.sym_content
+; RUN: | tail -n +8 > %t1.sym_content
 ; RUN: cat %t1.sym_info %t1.sym_content > %t1.s
 
 ; RUN: llvm-mc %t1.s --triple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=obj -o %t-re-assemble.o

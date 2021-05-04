@@ -28,6 +28,7 @@
 # DYLIB-NEXT:  adrp x8, [[#]] ; 0x[[#GOT]]
 # DYLIB-NEXT:  ldr  w8, [x8]
 # DYLIB-NEXT:  ret
+# DYLIB-EMPTY:
 # DYLIB-NEXT:  Sections:
 # DYLIB-NEXT:  Idx   Name   Size      VMA            Type
 # DYLIB:       [[#]] __got  00000008  [[#%.8x,GOT]]  DATA
