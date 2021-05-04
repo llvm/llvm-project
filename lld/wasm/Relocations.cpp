@@ -150,10 +150,9 @@ void scanRelocations(InputChunk *chunk) {
           addGOTEntry(sym);
         break;
       }
-    } else {
+    } else if (sym->isUndefined() && !config->relocatable && !sym->isWeak()) {
       // Report undefined symbols
-      if (sym->isUndefined() && !config->relocatable && !sym->isWeak())
-        reportUndefined(sym);
+      reportUndefined(sym);
     }
   }
 }
