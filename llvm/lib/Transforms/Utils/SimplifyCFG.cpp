@@ -2959,6 +2959,19 @@ bool SimplifyCFGOpt::SimplifyCondBranchToTwoReturns(BranchInst *BI,
   return true;
 }
 
+static Value *createLogicalOp(IRBuilderBase &Builder,
+                              Instruction::BinaryOps Opc, Value *LHS,
+                              Value *RHS, const Twine &Name = "") {
+  // Try to relax logical op to binary op.
+  if (impliesPoison(RHS, LHS))
+    return Builder.CreateBinOp(Opc, LHS, RHS, Name);
+  if (Opc == Instruction::And)
+    return Builder.CreateLogicalAnd(LHS, RHS, Name);
+  if (Opc == Instruction::Or)
+    return Builder.CreateLogicalOr(LHS, RHS, Name);
+  llvm_unreachable("Invalid logical opcode");
+}
+
 /// Return true if either PBI or BI has branch weight available, and store
 /// the weights in {Pred|Succ}{True|False}Weight. If one of PBI and BI does
 /// not have branch weight, use 1:1 as its weight.
@@ -3126,17 +3139,9 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
 
   // Now that the Cond was cloned into the predecessor basic block,
   // or/and the two conditions together.
-  Value *NewCond = nullptr;
   Value *BICond = VMap[BI->getCondition()];
-
-  if (impliesPoison(BICond, PBI->getCondition()))
-    NewCond = Builder.CreateBinOp(Opc, PBI->getCondition(), BICond, "or.cond");
-  else
-    NewCond =
-        Opc == Instruction::And
-            ? Builder.CreateLogicalAnd(PBI->getCondition(), BICond, "or.cond")
-            : Builder.CreateLogicalOr(PBI->getCondition(), BICond, "or.cond");
-  PBI->setCondition(NewCond);
+  PBI->setCondition(
+      createLogicalOp(Builder, Opc, PBI->getCondition(), BICond, "or.cond"));
 
   // Copy any debug value intrinsics into the end of PredBlock.
   for (Instruction &I : *BB) {
