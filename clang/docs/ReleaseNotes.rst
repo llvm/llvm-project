@@ -1,4 +1,4 @@
-========================================
+q========================================
 Clang 13.0.0 (In-Progress) Release Notes
 ========================================
 
@@ -238,6 +238,10 @@ clang-format
 
 - Option ``SpacesInAngles`` has been improved, it now accepts ``Leave`` value
   that allows to keep spaces where they are already present.
+
+- Option ``AllowShortIfStatementsOnASingleLine`` has been improved, it now
+  accepts ``AllIfsAndElse`` value that allows to put "else if" and "else" short
+  statements on a single line. (Fixes https://llvm.org/PR50019.)
 
 libclang
 --------
