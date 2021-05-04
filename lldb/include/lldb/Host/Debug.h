@@ -144,6 +144,12 @@ struct ThreadStopInfo {
       uint32_t data_count;
       lldb::addr_t data[8];
     } exception;
+
+    // eStopReasonFork / eStopReasonVFork
+    struct {
+      lldb::pid_t child_pid;
+      lldb::tid_t child_tid;
+    } fork;
   } details;
 };
 }

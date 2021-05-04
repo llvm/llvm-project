@@ -60,5 +60,7 @@ entry:
   ret void
 }
 
-; ELF-LABEL: define internal void @sancov.module_ctor_trace_pc_guard() comdat {
-; MACHO-LABEL: define internal void @sancov.module_ctor_trace_pc_guard() {
+; ELF-LABEL: define internal void @sancov.module_ctor_trace_pc_guard() #2 comdat {
+; MACHO-LABEL: define internal void @sancov.module_ctor_trace_pc_guard() #2 {
+
+; CHECK: attributes #2 = { nounwind }

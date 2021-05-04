@@ -89,9 +89,9 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
             [&fptr](const Scalar<LargestInt> &i, const Scalar<LargestInt> &j) {
               return Scalar<T>{std::invoke(fptr, i, j)};
             }));
-  } else if (name == "isnan") {
+  } else if (name == "isnan" || name == "__builtin_ieee_is_nan") {
     // A warning about an invalid argument is discarded from converting
-    // the argument of isnan().
+    // the argument of isnan() / IEEE_IS_NAN().
     auto restorer{context.messages().DiscardMessages()};
     using DefaultReal = Type<TypeCategory::Real, 4>;
     return FoldElementalIntrinsic<T, DefaultReal>(context, std::move(funcRef),

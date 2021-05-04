@@ -443,6 +443,47 @@ void GenerateOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 //===----------------------------------------------------------------------===//
+// ReshapeOp
+//===----------------------------------------------------------------------===//
+
+static int64_t GetNumElements(ShapedType type) {
+  int64_t numElements = 1;
+  for (auto dim : type.getShape())
+    numElements *= dim;
+  return numElements;
+}
+
+static LogicalResult verify(ReshapeOp op) {
+  TensorType operandType = op.source().getType().cast<TensorType>();
+  TensorType resultType = op.result().getType().cast<TensorType>();
+
+  if (operandType.getElementType() != resultType.getElementType())
+    return op.emitOpError("element types of source and destination tensor "
+                          "types should be the same");
+
+  int64_t shapeSize =
+      op.shape().getType().cast<RankedTensorType>().getDimSize(0);
+  auto resultRankedType = resultType.dyn_cast<RankedTensorType>();
+  auto operandRankedType = operandType.dyn_cast<RankedTensorType>();
+
+  if (resultRankedType) {
+    if (operandRankedType && resultRankedType.hasStaticShape() &&
+        operandRankedType.hasStaticShape()) {
+      if (GetNumElements(operandRankedType) != GetNumElements(resultRankedType))
+        return op.emitOpError("source and destination tensor should have the "
+                              "same number of elements");
+    }
+    if (shapeSize == TensorType::kDynamicSize)
+      return op.emitOpError("cannot use shape operand with dynamic length to "
+                            "reshape to statically-ranked tensor type");
+    if (shapeSize != resultRankedType.getRank())
+      return op.emitOpError(
+          "length of shape operand differs from the result's tensor rank");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 

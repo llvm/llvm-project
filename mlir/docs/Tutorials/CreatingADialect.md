@@ -39,7 +39,7 @@ is declared using add_mlir_dialect().
 
 ```cmake
 add_mlir_dialect(FooOps foo)
-add_mlir_doc(FooOps -gen-dialect-doc FooDialect Dialects/)
+add_mlir_doc(FooOps FooDialect Dialects/ -gen-dialect-doc)
 ```
 
 This generates the correct rules to run mlir-tblgen, along with a

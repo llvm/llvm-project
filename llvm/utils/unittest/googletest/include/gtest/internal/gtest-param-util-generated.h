@@ -54,6 +54,11 @@
 
 #if GTEST_HAS_PARAM_TEST
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-copy"
+#endif
+
 namespace testing {
 
 // Forward declarations of ValuesIn(), which is implemented in
@@ -5140,6 +5145,10 @@ CartesianProductHolder10(const Generator1& g1, const Generator2& g2,
 
 }  // namespace internal
 }  // namespace testing
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 #endif  //  GTEST_HAS_PARAM_TEST
 

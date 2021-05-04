@@ -53,7 +53,7 @@ Optional<CodeGenFileType> getExplicitFileType();
 
 CodeGenFileType getFileType();
 
-llvm::FramePointer::FP getFramePointerUsage();
+FramePointerKind getFramePointerUsage();
 
 bool getEnableUnsafeFPMath();
 

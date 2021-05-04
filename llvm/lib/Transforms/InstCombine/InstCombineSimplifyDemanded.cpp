@@ -739,6 +739,19 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
           return II->getArgOperand(0);
         break;
       }
+      case Intrinsic::ctpop: {
+        // Checking if the number of clear bits is odd (parity)? If the type has
+        // an even number of bits, that's the same as checking if the number of
+        // set bits is odd, so we can eliminate the 'not' op.
+        Value *X;
+        if (DemandedMask == 1 && VTy->getScalarSizeInBits() % 2 == 0 &&
+            match(II->getArgOperand(0), m_Not(m_Value(X)))) {
+          Function *Ctpop = Intrinsic::getDeclaration(
+              II->getModule(), Intrinsic::ctpop, II->getType());
+          return InsertNewInstWith(CallInst::Create(Ctpop, {X}), *I);
+        }
+        break;
+      }
       case Intrinsic::bswap: {
         // If the only bits demanded come from one byte of the bswap result,
         // just shift the input byte into position to eliminate the bswap.
@@ -1056,7 +1069,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   APInt EltMask(APInt::getAllOnesValue(VWidth));
   assert((DemandedElts & ~EltMask) == 0 && "Invalid DemandedElts!");
 
-  if (isa<UndefValue>(V)) {
+  if (match(V, m_Undef())) {
     // If the entire vector is undef or poison, just return this info.
     UndefElts = EltMask;
     return nullptr;
@@ -1157,7 +1170,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     // merge the undef bits here since gepping with either an undef base or
     // index results in undef.
     for (unsigned i = 0; i < I->getNumOperands(); i++) {
-      if (isa<UndefValue>(I->getOperand(i))) {
+      if (match(I->getOperand(i), m_Undef())) {
         // If the entire vector is undefined, just return this info.
         UndefElts = EltMask;
         return nullptr;
@@ -1226,7 +1239,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     // operand.
     if (all_of(Shuffle->getShuffleMask(), [](int Elt) { return Elt == 0; }) &&
         DemandedElts.isAllOnesValue()) {
-      if (!isa<UndefValue>(I->getOperand(1))) {
+      if (!match(I->getOperand(1), m_Undef())) {
         I->setOperand(1, UndefValue::get(I->getOperand(1)->getType()));
         MadeChange = true;
       }

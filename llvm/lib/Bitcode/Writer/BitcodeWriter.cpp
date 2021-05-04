@@ -1876,7 +1876,7 @@ void ModuleBitcodeWriter::writeDIArgList(const DIArgList *N,
                                          unsigned Abbrev) {
   Record.reserve(N->getArgs().size());
   for (ValueAsMetadata *MD : N->getArgs())
-    Record.push_back(VE.getMetadataOrNullID(MD));
+    Record.push_back(VE.getMetadataID(MD));
 
   Stream.EmitRecord(bitc::METADATA_ARG_LIST, Record, Abbrev);
   Record.clear();

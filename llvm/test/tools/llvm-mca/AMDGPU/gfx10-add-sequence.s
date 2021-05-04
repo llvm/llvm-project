@@ -34,18 +34,19 @@ v_add_f32 v2, v1, v0
 # CHECK-NEXT: [2]   - HWLGKM
 # CHECK-NEXT: [3]   - HWRC
 # CHECK-NEXT: [4]   - HWSALU
-# CHECK-NEXT: [5]   - HWVALU
-# CHECK-NEXT: [6]   - HWVMEM
+# CHECK-NEXT: [5]   - HWTransVALU
+# CHECK-NEXT: [6]   - HWVALU
+# CHECK-NEXT: [7]   - HWVMEM
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]
-# CHECK-NEXT:  -      -      -     3.00    -     3.00    -
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
+# CHECK-NEXT:  -      -      -     3.00    -      -     3.00    -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_add_f32_e32 v0, v0, v0
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_add_f32_e32 v1, v1, v1
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_add_f32_e32 v2, v1, v0
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_add_f32_e32 v0, v0, v0
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_add_f32_e32 v1, v1, v1
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_add_f32_e32 v2, v1, v0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01

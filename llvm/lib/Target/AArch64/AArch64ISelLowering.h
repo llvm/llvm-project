@@ -89,6 +89,8 @@ enum NodeType : unsigned {
   FMUL_PRED,
   FSUB_PRED,
   MUL_PRED,
+  MULHS_PRED,
+  MULHU_PRED,
   SDIV_PRED,
   SHL_PRED,
   SMAX_PRED,
@@ -609,8 +611,8 @@ public:
   /// of the specified type.
   /// If the AM is supported, the return value must be >= 0.
   /// If the AM is not supported, it returns a negative value.
-  int getScalingFactorCost(const DataLayout &DL, const AddrMode &AM, Type *Ty,
-                           unsigned AS) const override;
+  InstructionCost getScalingFactorCost(const DataLayout &DL, const AddrMode &AM,
+                                       Type *Ty, unsigned AS) const override;
 
   /// Return true if an FMA operation is faster than a pair of fmul and fadd
   /// instructions. fmuladd intrinsics will be expanded to FMAs when this method
@@ -1027,8 +1029,6 @@ private:
   unsigned getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
     if (ConstraintCode == "Q")
       return InlineAsm::Constraint_Q;
-    if (ConstraintCode == "o")
-      return InlineAsm::Constraint_o;
     // FIXME: clang has code for 'Ump', 'Utf', 'Usa', and 'Ush' but these are
     //        followed by llvm_unreachable so we'll leave them unimplemented in
     //        the backend for now.

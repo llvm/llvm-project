@@ -351,7 +351,7 @@ public:
         return *this;
     }
 
-#endif  // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_DEBUG_LEVEL == 2
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const
@@ -479,7 +479,7 @@ public:
         return *this;
     }
 
-#endif  // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_DEBUG_LEVEL == 2
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const
     {
@@ -920,7 +920,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void assign(initializer_list<value_type> __il)
         {assign(__il.begin(), __il.end());}
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
     template <class _InpIter>
         void assign(_InpIter __f, _InpIter __l,
@@ -1023,7 +1023,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(const_iterator __p, initializer_list<value_type> __il)
         {return insert(__p, __il.begin(), __il.end());}
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
     void push_front(const value_type& __x);
     void push_back(const value_type& __x);
@@ -1124,7 +1124,7 @@ public:
     bool __addable(const const_iterator* __i, ptrdiff_t __n) const;
     bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const;
 
-#endif  // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_DEBUG_LEVEL == 2
 
 private:
     _LIBCPP_INLINE_VISIBILITY
@@ -1386,7 +1386,7 @@ list<_Tp, _Alloc>::__move_assign(list& __c, true_type)
     splice(end(), __c);
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Alloc>
 inline
@@ -1495,7 +1495,7 @@ list<_Tp, _Alloc>::insert(const_iterator __p, size_type __n, const value_type& _
 #ifndef _LIBCPP_NO_EXCEPTIONS
         try
         {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
             for (--__n; __n != 0; --__n, ++__e, ++__ds)
             {
                 __hold.reset(__node_alloc_traits::allocate(__na, 1));
@@ -1523,7 +1523,7 @@ list<_Tp, _Alloc>::insert(const_iterator __p, size_type __n, const value_type& _
             }
             throw;
         }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         __link_nodes(__p.__ptr_, __r.__ptr_, __e.__ptr_);
         base::__sz() += __ds;
     }
@@ -1561,7 +1561,7 @@ list<_Tp, _Alloc>::insert(const_iterator __p, _InpIter __f, _InpIter __l,
 #ifndef _LIBCPP_NO_EXCEPTIONS
         try
         {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
             for (++__f; __f != __l; ++__f, (void) ++__e, (void) ++__ds)
             {
                 __hold.reset(__node_alloc_traits::allocate(__na, 1));
@@ -1589,7 +1589,7 @@ list<_Tp, _Alloc>::insert(const_iterator __p, _InpIter __f, _InpIter __l,
             }
             throw;
         }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         __link_nodes(__p.__ptr_, __r.__ptr_, __e.__ptr_);
         base::__sz() += __ds;
     }
@@ -1737,7 +1737,7 @@ list<_Tp, _Alloc>::insert(const_iterator __p, value_type&& __x)
 #endif
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Alloc>
 void
@@ -1909,7 +1909,7 @@ list<_Tp, _Alloc>::resize(size_type __n)
 #ifndef _LIBCPP_NO_EXCEPTIONS
         try
         {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
             for (--__n; __n != 0; --__n, ++__e, ++__ds)
             {
                 __hold.reset(__node_alloc_traits::allocate(__na, 1));
@@ -1937,7 +1937,7 @@ list<_Tp, _Alloc>::resize(size_type __n)
             }
             throw;
         }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         __link_nodes_at_back(__r.__ptr_, __e.__ptr_);
         base::__sz() += __ds;
     }
@@ -1967,7 +1967,7 @@ list<_Tp, _Alloc>::resize(size_type __n, const value_type& __x)
 #ifndef _LIBCPP_NO_EXCEPTIONS
         try
         {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
             for (--__n; __n != 0; --__n, ++__e, ++__ds)
             {
                 __hold.reset(__node_alloc_traits::allocate(__na, 1));
@@ -1995,7 +1995,7 @@ list<_Tp, _Alloc>::resize(size_type __n, const value_type& __x)
             }
             throw;
         }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         __link_nodes(base::__end_as_link(), __r.__ptr_, __e.__ptr_);
         base::__sz() += __ds;
     }
@@ -2098,6 +2098,9 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __f, con
         " referring to this list");
     _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__f) == &__c,
         "list::splice(iterator, list, iterator, iterator) called with second iterator not"
+        " referring to list argument");
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__l) == &__c,
+        "list::splice(iterator, list, iterator, iterator) called with third iterator not"
         " referring to list argument");
     if (this == &__c)
     {
@@ -2412,7 +2415,7 @@ list<_Tp, _Alloc>::__subscriptable(const const_iterator*, ptrdiff_t) const
     return false;
 }
 
-#endif  // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_DEBUG_LEVEL == 2
 
 template <class _Tp, class _Alloc>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -2489,4 +2492,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif  // _LIBCPP_LIST
+#endif // _LIBCPP_LIST

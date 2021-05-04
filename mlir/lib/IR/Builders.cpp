@@ -120,6 +120,12 @@ DenseIntElementsAttr Builder::getI64VectorAttr(ArrayRef<int64_t> values) {
       values);
 }
 
+DenseIntElementsAttr Builder::getIndexVectorAttr(ArrayRef<int64_t> values) {
+  return DenseIntElementsAttr::get(
+      VectorType::get(static_cast<int64_t>(values.size()), getIndexType()),
+      values);
+}
+
 DenseIntElementsAttr Builder::getI32TensorAttr(ArrayRef<int32_t> values) {
   return DenseIntElementsAttr::get(
       RankedTensorType::get(static_cast<int64_t>(values.size()),

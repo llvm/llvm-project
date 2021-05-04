@@ -10,6 +10,7 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 #include <functional>

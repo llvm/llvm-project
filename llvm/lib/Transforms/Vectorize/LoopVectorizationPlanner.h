@@ -181,7 +181,10 @@ struct VectorizationFactor {
   // Vector width with best cost
   ElementCount Width;
   // Cost of the loop with that width
-  unsigned Cost;
+  InstructionCost Cost;
+
+  VectorizationFactor(ElementCount Width, InstructionCost Cost)
+      : Width(Width), Cost(Cost) {}
 
   // Width 1 means no vectorization, cost 0 means uncomputed cost.
   static VectorizationFactor Disabled() {

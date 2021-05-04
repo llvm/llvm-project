@@ -134,14 +134,19 @@ check-format)
 ;;
 check-generated-output)
     clean
-    echo "+++ Checking the output of the generated scripts"
+    echo "+++ Checking the output of the generator scripts"
     mkdir -p ${BUILD_DIR}
+    # Reject patches that introduce non-ASCII characters or hard tabs.
+    ! grep -rn '[^ -~]' libcxx/include/
+    # Reject patches that don't update the generated output correctly.
     python3 libcxx/utils/generate_feature_test_macro_components.py
     python3 libcxx/utils/generate_header_inclusion_tests.py
     python3 libcxx/utils/generate_header_tests.py
     git diff | tee ${BUILD_DIR}/generated_output.patch
     # Check if the diffs are empty, fail otherwise.
     ! grep -q '^--- a' ${BUILD_DIR}/generated_output.patch
+    # Check that no dependency cycles have been introduced.
+    python3 libcxx/utils/graph_header_deps.py >/dev/null
 ;;
 generic-cxx03)
     export CC=clang

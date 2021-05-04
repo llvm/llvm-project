@@ -443,4 +443,4 @@ inline bool operator!=(limited_allocator<T, N> const& LHS,
 }
 
 
-#endif  // TEST_ALLOCATOR_H
+#endif // TEST_ALLOCATOR_H

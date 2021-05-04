@@ -74,19 +74,18 @@ define arm_aapcs_vfpcc <4 x float> @cos_float32_t(<4 x float> %src) {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    vmov r0, r4, d9
 ; CHECK-NEXT:    bl cosf
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl cosf
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    vmov r5, s16
+; CHECK-NEXT:    vmov r4, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
-; CHECK-NEXT:    vmov s18, r4
+; CHECK-NEXT:    vmov s18, r5
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    vmov s17, r0
-; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    vmov s16, r0
 ; CHECK-NEXT:    vmov q0, q4
@@ -186,19 +185,18 @@ define arm_aapcs_vfpcc <4 x float> @sin_float32_t(<4 x float> %src) {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    vmov r0, r4, d9
 ; CHECK-NEXT:    bl sinf
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl sinf
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    vmov r5, s16
+; CHECK-NEXT:    vmov r4, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
-; CHECK-NEXT:    vmov s18, r4
+; CHECK-NEXT:    vmov s18, r5
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    vmov s17, r0
-; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    vmov s16, r0
 ; CHECK-NEXT:    vmov q0, q4
@@ -298,19 +296,18 @@ define arm_aapcs_vfpcc <4 x float> @exp_float32_t(<4 x float> %src) {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    vmov r0, r4, d9
 ; CHECK-NEXT:    bl expf
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl expf
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    vmov r5, s16
+; CHECK-NEXT:    vmov r4, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
-; CHECK-NEXT:    vmov s18, r4
+; CHECK-NEXT:    vmov s18, r5
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl expf
 ; CHECK-NEXT:    vmov s17, r0
-; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl expf
 ; CHECK-NEXT:    vmov s16, r0
 ; CHECK-NEXT:    vmov q0, q4
@@ -410,19 +407,18 @@ define arm_aapcs_vfpcc <4 x float> @exp2_float32_t(<4 x float> %src) {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    vmov r0, r4, d9
 ; CHECK-NEXT:    bl exp2f
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl exp2f
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    vmov r5, s16
+; CHECK-NEXT:    vmov r4, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
-; CHECK-NEXT:    vmov s18, r4
+; CHECK-NEXT:    vmov s18, r5
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl exp2f
 ; CHECK-NEXT:    vmov s17, r0
-; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl exp2f
 ; CHECK-NEXT:    vmov s16, r0
 ; CHECK-NEXT:    vmov q0, q4
@@ -522,19 +518,18 @@ define arm_aapcs_vfpcc <4 x float> @log_float32_t(<4 x float> %src) {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    vmov r0, r4, d9
 ; CHECK-NEXT:    bl logf
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl logf
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    vmov r5, s16
+; CHECK-NEXT:    vmov r4, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
-; CHECK-NEXT:    vmov s18, r4
+; CHECK-NEXT:    vmov s18, r5
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl logf
 ; CHECK-NEXT:    vmov s17, r0
-; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl logf
 ; CHECK-NEXT:    vmov s16, r0
 ; CHECK-NEXT:    vmov q0, q4
@@ -634,19 +629,18 @@ define arm_aapcs_vfpcc <4 x float> @log2_float32_t(<4 x float> %src) {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    vmov r0, r4, d9
 ; CHECK-NEXT:    bl log2f
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl log2f
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    vmov r5, s16
+; CHECK-NEXT:    vmov r4, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
-; CHECK-NEXT:    vmov s18, r4
+; CHECK-NEXT:    vmov s18, r5
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl log2f
 ; CHECK-NEXT:    vmov s17, r0
-; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl log2f
 ; CHECK-NEXT:    vmov s16, r0
 ; CHECK-NEXT:    vmov q0, q4
@@ -746,19 +740,18 @@ define arm_aapcs_vfpcc <4 x float> @log10_float32_t(<4 x float> %src) {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    vmov r0, r4, d9
 ; CHECK-NEXT:    bl log10f
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl log10f
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    vmov r5, s16
+; CHECK-NEXT:    vmov r4, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
-; CHECK-NEXT:    vmov s18, r4
+; CHECK-NEXT:    vmov s18, r5
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl log10f
 ; CHECK-NEXT:    vmov s17, r0
-; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl log10f
 ; CHECK-NEXT:    vmov s16, r0
 ; CHECK-NEXT:    vmov q0, q4
@@ -859,24 +852,22 @@ define arm_aapcs_vfpcc <4 x float> @pow_float32_t(<4 x float> %src1, <4 x float>
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vmov q4, q1
 ; CHECK-NEXT:    vmov q5, q0
-; CHECK-NEXT:    vmov r0, s22
-; CHECK-NEXT:    vmov r1, s18
+; CHECK-NEXT:    vmov r0, r4, d11
+; CHECK-NEXT:    vmov r1, r5, d9
 ; CHECK-NEXT:    bl powf
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r0, s23
-; CHECK-NEXT:    vmov r1, s19
+; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    mov r0, r4
+; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl powf
-; CHECK-NEXT:    vmov r2, s21
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    vmov r6, s16
+; CHECK-NEXT:    vmov r4, r2, d10
+; CHECK-NEXT:    vmov r5, r1, d8
 ; CHECK-NEXT:    vmov s19, r0
-; CHECK-NEXT:    vmov r5, s20
-; CHECK-NEXT:    vmov s18, r4
+; CHECK-NEXT:    vmov s18, r6
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s17, r0
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    mov r1, r6
+; CHECK-NEXT:    mov r0, r4
+; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s16, r0
 ; CHECK-NEXT:    vmov q0, q4
@@ -993,26 +984,22 @@ define arm_aapcs_vfpcc <4 x float> @copysign_float32_t(<4 x float> %src1, <4 x f
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    vmov lr, s6
-; CHECK-NEXT:    vmov r12, s7
-; CHECK-NEXT:    vmov r3, s1
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    vmov r1, s3
-; CHECK-NEXT:    vmov r4, s4
-; CHECK-NEXT:    vmov r5, s0
-; CHECK-NEXT:    lsrs r0, r0, #31
-; CHECK-NEXT:    bfi r3, r0, #31, #1
-; CHECK-NEXT:    lsr.w r0, lr, #31
-; CHECK-NEXT:    bfi r2, r0, #31, #1
-; CHECK-NEXT:    lsr.w r0, r12, #31
-; CHECK-NEXT:    bfi r1, r0, #31, #1
-; CHECK-NEXT:    vmov s3, r1
-; CHECK-NEXT:    lsrs r0, r4, #31
-; CHECK-NEXT:    vmov s2, r2
-; CHECK-NEXT:    bfi r5, r0, #31, #1
-; CHECK-NEXT:    vmov s1, r3
-; CHECK-NEXT:    vmov s0, r5
+; CHECK-NEXT:    vmov r12, r1, d2
+; CHECK-NEXT:    vmov r2, lr, d3
+; CHECK-NEXT:    vmov r3, r0, d0
+; CHECK-NEXT:    vmov r4, r5, d1
+; CHECK-NEXT:    lsrs r1, r1, #31
+; CHECK-NEXT:    bfi r0, r1, #31, #1
+; CHECK-NEXT:    lsrs r1, r2, #31
+; CHECK-NEXT:    bfi r4, r1, #31, #1
+; CHECK-NEXT:    lsr.w r1, lr, #31
+; CHECK-NEXT:    bfi r5, r1, #31, #1
+; CHECK-NEXT:    lsr.w r1, r12, #31
+; CHECK-NEXT:    bfi r3, r1, #31, #1
+; CHECK-NEXT:    vmov s3, r5
+; CHECK-NEXT:    vmov s2, r4
+; CHECK-NEXT:    vmov s1, r0
+; CHECK-NEXT:    vmov s0, r3
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %0 = call fast <4 x float> @llvm.copysign.v4f32(<4 x float> %src1, <4 x float> %src2)

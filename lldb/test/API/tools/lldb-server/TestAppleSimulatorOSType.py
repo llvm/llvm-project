@@ -51,6 +51,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
         exe_name = 'test_simulator_platform_{}'.format(platform_name)
         sdkroot = lldbutil.get_xcode_sdk_root(sdk)
         vers = lldbutil.get_xcode_sdk_version(sdk)
+        clang = lldbutil.get_xcode_clang(sdk)
 
         # Older versions of watchOS (<7.0) only support i386
         if platform_name == 'watchos':
@@ -63,6 +64,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.build(
             dictionary={
                 'EXE': exe_name,
+                'CC': clang,
                 'SDKROOT': sdkroot.strip(),
                 'ARCH': arch,
                 'ARCH_CFLAGS': '-target {} {}'.format(triple, version_min),

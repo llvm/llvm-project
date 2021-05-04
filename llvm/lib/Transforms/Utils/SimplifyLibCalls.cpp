@@ -575,8 +575,10 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
   }
 
   if (SrcLen == 0) {
-    // strncpy(x, "", y) -> memset(align 1 x, '\0', y)
-    CallInst *NewCI = B.CreateMemSet(Dst, B.getInt8('\0'), Size, Align(1));
+    // strncpy(x, "", y) -> memset(x, '\0', y)
+    Align MemSetAlign =
+        CI->getAttributes().getParamAttributes(0).getAlignment().valueOrOne();
+    CallInst *NewCI = B.CreateMemSet(Dst, B.getInt8('\0'), Size, MemSetAlign);
     AttrBuilder ArgAttrs(CI->getAttributes().getParamAttributes(0));
     NewCI->setAttributes(NewCI->getAttributes().addParamAttributes(
         CI->getContext(), 0, ArgAttrs));
@@ -2386,7 +2388,7 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
   }
 
   // printf("foo\n") --> puts("foo")
-  if (FormatStr[FormatStr.size() - 1] == '\n' &&
+  if (FormatStr.back() == '\n' &&
       FormatStr.find('%') == StringRef::npos) { // No format characters.
     // Create a string literal with no \n on it.  We expect the constant merge
     // pass to be run after this pass, to merge duplicate strings.

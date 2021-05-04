@@ -81,7 +81,7 @@
 
 // SPACK: ROCm installation search path (Spack 4.0.0): [[DIR:.*]]
 // SPACK: ROCm installation search path: [[CLANG:.*]]
-// SPACK: ROCm installation search path: [[CLANG]]/{{(llvm/)?}}lib/clang/{{[0-9.]+}}
+// SPACK: ROCm installation search path: [[CLANG]]/{{(llvm/)?}}lib{{[0-9]*}}/clang/{{[0-9.]+}}
 // SPACK: ROCm installation search path: /opt/rocm
 // SPACK: InstalledDir: [[DIR]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin
 // SPACK: Found HIP installation: [[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5, version 4.0.20214-a2917cd

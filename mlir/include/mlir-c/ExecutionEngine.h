@@ -67,6 +67,11 @@ MLIR_CAPI_EXPORTED void
 mlirExecutionEngineRegisterSymbol(MlirExecutionEngine jit, MlirStringRef name,
                                   void *sym);
 
+/// Dump as an object in `fileName`.
+MLIR_CAPI_EXPORTED void
+mlirExecutionEngineDumpToObjectFile(MlirExecutionEngine jit,
+                                    MlirStringRef fileName);
+
 #ifdef __cplusplus
 }
 #endif

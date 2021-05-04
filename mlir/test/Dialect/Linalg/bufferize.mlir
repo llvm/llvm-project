@@ -45,8 +45,8 @@ func @basic(%arg0: tensor<4xf32>) -> tensor<4xf32> {
 // CHECK: #map = affine_map<(d0) -> (d0)>
 // CHECK-LABEL: func @init_tensor(
 // CHECK-SAME:      %[[IN:.*]]: tensor<?xf32>, %[[SIZE:.*]]: index)
-// CHECK:         %[[OUT_BUF:.*]] = memref.alloc(%[[SIZE]]) : memref<?xf32>
 // CHECK:         %[[MEMREF:.*]] = memref.buffer_cast %[[IN]] : memref<?xf32>
+// CHECK:         %[[OUT_BUF:.*]] = memref.alloc(%[[SIZE]]) : memref<?xf32>
 // CHECK:         linalg.generic
 // CHECK-SAME:    ins(%[[MEMREF]] : memref<?xf32>)
 // CHECK-SAME:    outs(%[[OUT_BUF]] : memref<?xf32>) {

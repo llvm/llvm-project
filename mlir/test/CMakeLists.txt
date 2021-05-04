@@ -61,6 +61,7 @@ set(MLIR_TEST_DEPENDS
   mlir-cpu-runner
   mlir-edsc-builder-api-test
   mlir-linalg-ods-gen
+  mlir-lsp-server
   mlir-opt
   mlir-reduce
   mlir-sdbm-api-test

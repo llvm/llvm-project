@@ -497,11 +497,17 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
   Type *Ty = II.getType();
   unsigned BitWidth = Ty->getScalarSizeInBits();
   Value *Op0 = II.getArgOperand(0);
-  Value *X;
+  Value *X, *Y;
 
   // ctpop(bitreverse(x)) -> ctpop(x)
   // ctpop(bswap(x)) -> ctpop(x)
   if (match(Op0, m_BitReverse(m_Value(X))) || match(Op0, m_BSwap(m_Value(X))))
+    return IC.replaceOperand(II, 0, X);
+
+  // ctpop(rot(x)) -> ctpop(x)
+  if ((match(Op0, m_FShl(m_Value(X), m_Value(Y), m_Value())) ||
+       match(Op0, m_FShr(m_Value(X), m_Value(Y), m_Value()))) &&
+      X == Y)
     return IC.replaceOperand(II, 0, X);
 
   // ctpop(x | -x) -> bitwidth - cttz(x, false)
@@ -2049,7 +2055,7 @@ static IntrinsicInst *findInitTrampoline(Value *Callee) {
   return nullptr;
 }
 
-static void annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
+void InstCombinerImpl::annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
   unsigned NumArgs = Call.getNumArgOperands();
   ConstantInt *Op0C = dyn_cast<ConstantInt>(Call.getOperand(0));
   ConstantInt *Op1C =
@@ -2068,17 +2074,21 @@ static void annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
       Call.addAttribute(AttributeList::ReturnIndex,
                         Attribute::getWithDereferenceableOrNullBytes(
                             Call.getContext(), Op0C->getZExtValue()));
-  } else if (isAlignedAllocLikeFn(&Call, TLI) && Op1C) {
-    Call.addAttribute(AttributeList::ReturnIndex,
-                      Attribute::getWithDereferenceableOrNullBytes(
-                          Call.getContext(), Op1C->getZExtValue()));
+  } else if (isAlignedAllocLikeFn(&Call, TLI)) {
+    if (Op1C)
+      Call.addAttribute(AttributeList::ReturnIndex,
+                        Attribute::getWithDereferenceableOrNullBytes(
+                            Call.getContext(), Op1C->getZExtValue()));
     // Add alignment attribute if alignment is a power of two constant.
-    if (Op0C && Op0C->getValue().ult(llvm::Value::MaximumAlignment)) {
+    if (Op0C && Op0C->getValue().ult(llvm::Value::MaximumAlignment) &&
+        isKnownNonZero(Call.getOperand(1), DL, 0, &AC, &Call, &DT)) {
       uint64_t AlignmentVal = Op0C->getZExtValue();
-      if (llvm::isPowerOf2_64(AlignmentVal))
+      if (llvm::isPowerOf2_64(AlignmentVal)) {
+        Call.removeAttribute(AttributeList::ReturnIndex, Attribute::Alignment);
         Call.addAttribute(AttributeList::ReturnIndex,
                           Attribute::getWithAlignment(Call.getContext(),
                                                       Align(AlignmentVal)));
+      }
     }
   } else if (isReallocLikeFn(&Call, TLI) && Op1C) {
     Call.addAttribute(AttributeList::ReturnIndex,

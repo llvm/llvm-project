@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: remark: {{.*}}: unrolled loop by a factor of 2 with run-time trip count
 ; CHECK: @widget
 ; CHECK: ret void
-define void @widget(double* %arg, double* %arg1, double* %p, i64* %q1, i64* %q2) local_unnamed_addr {
+define void @widget(double* %arg, double* %arg1, double* %p, i64* %q1, i64* %q2, i1 %c) local_unnamed_addr {
 entry:
   br label %header.outer
 
@@ -19,10 +19,10 @@ header.outer:                                     ; preds = %latch.outer, %entry
 header.inner:                                     ; preds = %latch.inner, %header.outer
   %tmp5 = load i64, i64* %q1, align 8
   %tmp6 = icmp eq double* %p, %arg
-  br i1 undef, label %exiting.inner, label %latch.outer
+  br i1 %c, label %exiting.inner, label %latch.outer
 
 exiting.inner:                                     ; preds = %latch.inner, %header.outer
-  br i1 undef, label %latch.inner, label %latch.outer
+  br i1 %c, label %latch.inner, label %latch.outer
 
 latch.inner:                                      ; preds = %header.inner
   store i64 %tmp5, i64* %q2, align 8

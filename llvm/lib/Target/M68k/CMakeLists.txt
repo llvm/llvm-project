@@ -48,3 +48,4 @@ add_llvm_target(M68kCodeGen
 add_subdirectory(TargetInfo)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(AsmParser)
+add_subdirectory(Disassembler)

@@ -2589,5 +2589,20 @@ TEST_F(FormatTestJS, DeclaredFields) {
                "}\n");
 }
 
+TEST_F(FormatTestJS, NoBreakAfterAsserts) {
+  verifyFormat(
+      "interface Assertable<State extends {}> {\n"
+      "  assert<ExportedState extends {}, DependencyState extends State = "
+      "State>(\n"
+      "      callback: Callback<ExportedState, DependencyState>):\n"
+      "      asserts this is ExtendedState<DependencyState&ExportedState>;\n"
+      "}\n",
+      "interface Assertable<State extends {}> {\n"
+      "  assert<ExportedState extends {}, DependencyState extends State = "
+      "State>(callback: Callback<ExportedState, DependencyState>): asserts "
+      "this is ExtendedState<DependencyState&ExportedState>;\n"
+      "}\n");
+}
+
 } // namespace format
 } // end namespace clang

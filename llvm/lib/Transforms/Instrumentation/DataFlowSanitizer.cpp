@@ -256,7 +256,8 @@ static cl::opt<int> ClInstrumentWithCallThreshold(
 // Controls how to track origins.
 // * 0: do not track origins.
 // * 1: track origins at memory store operations.
-// * 2: TODO: track origins at memory store operations and callsites.
+// * 2: track origins at memory load and store operations.
+//      TODO: track callsites.
 static cl::opt<int> ClTrackOrigins("dfsan-track-origins",
                                    cl::desc("Track origins of labels"),
                                    cl::Hidden, cl::init(0));
@@ -453,6 +454,7 @@ class DataFlowSanitizer {
   FunctionType *DFSanLoadStoreCallbackFnTy;
   FunctionType *DFSanMemTransferCallbackFnTy;
   FunctionType *DFSanChainOriginFnTy;
+  FunctionType *DFSanChainOriginIfTaintedFnTy;
   FunctionType *DFSanMemOriginTransferFnTy;
   FunctionType *DFSanMaybeStoreOriginFnTy;
   FunctionCallee DFSanUnionFn;
@@ -469,6 +471,7 @@ class DataFlowSanitizer {
   FunctionCallee DFSanMemTransferCallbackFn;
   FunctionCallee DFSanCmpCallbackFn;
   FunctionCallee DFSanChainOriginFn;
+  FunctionCallee DFSanChainOriginIfTaintedFn;
   FunctionCallee DFSanMemOriginTransferFn;
   FunctionCallee DFSanMaybeStoreOriginFn;
   SmallPtrSet<Value *, 16> DFSanRuntimeFunctions;
@@ -504,6 +507,10 @@ class DataFlowSanitizer {
 
   /// Returns whether fast8 or fast16 mode has been specified.
   bool hasFastLabelsEnabled();
+
+  /// Returns whether the given load byte size is amenable to inlined
+  /// optimization patterns.
+  bool hasLoadSizeForFastPath(uint64_t Size);
 
   /// Returns whether the pass tracks origins. Support only fast16 mode in TLS
   /// ABI mode.
@@ -633,9 +640,18 @@ struct DFSanFunction {
   Value *combineShadowsThenConvert(Type *T, Value *V1, Value *V2,
                                    Instruction *Pos);
   Value *combineOperandShadows(Instruction *Inst);
-  std::pair<Value *, Value *> loadShadowOrigin(Value *ShadowAddr, uint64_t Size,
+
+  /// Generates IR to load shadow and origin corresponding to bytes [\p
+  /// Addr, \p Addr + \p Size), where addr has alignment \p
+  /// InstAlignment, and take the union of each of those shadows. The returned
+  /// shadow always has primitive type.
+  ///
+  /// When tracking loads is enabled, the returned origin is a chain at the
+  /// current stack if the returned shadow is tainted.
+  std::pair<Value *, Value *> loadShadowOrigin(Value *Addr, uint64_t Size,
                                                Align InstAlignment,
                                                Instruction *Pos);
+
   void storePrimitiveShadowOrigin(Value *Addr, uint64_t Size,
                                   Align InstAlignment, Value *PrimitiveShadow,
                                   Value *Origin, Instruction *Pos);
@@ -691,10 +707,17 @@ private:
   /// additional call with many instructions. To ensure common cases are fast,
   /// checks if it is possible to load labels and origins without using the
   /// callback function.
+  ///
+  /// When enabling tracking load instructions, we always use
+  /// __dfsan_load_label_and_origin to reduce code size.
   bool useCallbackLoadLabelAndOrigin(uint64_t Size, Align InstAlignment);
 
   /// Returns a chain at the current stack with previous origin V.
   Value *updateOrigin(Value *V, IRBuilder<> &IRB);
+
+  /// Returns a chain at the current stack with previous origin V if Shadow is
+  /// tainted.
+  Value *updateOriginIfTainted(Value *Shadow, Value *Origin, IRBuilder<> &IRB);
 
   /// Creates an Intptr = Origin | Origin << 32 if Intptr's size is 64. Returns
   /// Origin otherwise.
@@ -718,6 +741,13 @@ private:
 
   bool shouldInstrumentWithCall();
 
+  /// Generates IR to load shadow and origin corresponding to bytes [\p
+  /// Addr, \p Addr + \p Size), where addr has alignment \p
+  /// InstAlignment, and take the union of each of those shadows. The returned
+  /// shadow always has primitive type.
+  std::pair<Value *, Value *>
+  loadShadowOriginSansLoadTracking(Value *Addr, uint64_t Size,
+                                   Align InstAlignment, Instruction *Pos);
   int NumOriginStores = 0;
 };
 
@@ -883,10 +913,15 @@ bool DataFlowSanitizer::hasFastLabelsEnabled() {
   return HasFastLabelsEnabled;
 }
 
+bool DataFlowSanitizer::hasLoadSizeForFastPath(uint64_t Size) {
+  uint64_t ShadowSize = Size * ShadowWidthBytes;
+  return ShadowSize % 8 == 0 || ShadowSize == 4;
+}
+
 bool DataFlowSanitizer::shouldTrackOrigins() {
   static const bool ShouldTrackOrigins =
       ClTrackOrigins && getInstrumentedABI() == DataFlowSanitizer::IA_TLS &&
-      ClFast16Labels;
+      hasFastLabelsEnabled();
   return ShouldTrackOrigins;
 }
 
@@ -1101,6 +1136,9 @@ bool DataFlowSanitizer::init(Module &M) {
                         /*isVarArg=*/false);
   DFSanChainOriginFnTy =
       FunctionType::get(OriginTy, OriginTy, /*isVarArg=*/false);
+  Type *DFSanChainOriginIfTaintedArgs[2] = {PrimitiveShadowTy, OriginTy};
+  DFSanChainOriginIfTaintedFnTy = FunctionType::get(
+      OriginTy, DFSanChainOriginIfTaintedArgs, /*isVarArg=*/false);
   Type *DFSanMaybeStoreOriginArgs[4] = {IntegerType::get(*Ctx, ShadowWidthBits),
                                         Int8Ptr, IntptrTy, OriginTy};
   DFSanMaybeStoreOriginFnTy = FunctionType::get(
@@ -1334,6 +1372,15 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
     DFSanChainOriginFn = Mod->getOrInsertFunction("__dfsan_chain_origin",
                                                   DFSanChainOriginFnTy, AL);
   }
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    AL = AL.addParamAttribute(M.getContext(), 1, Attribute::ZExt);
+    AL = AL.addAttribute(M.getContext(), AttributeList::ReturnIndex,
+                         Attribute::ZExt);
+    DFSanChainOriginIfTaintedFn = Mod->getOrInsertFunction(
+        "__dfsan_chain_origin_if_tainted", DFSanChainOriginIfTaintedFnTy, AL);
+  }
   DFSanMemOriginTransferFn = Mod->getOrInsertFunction(
       "__dfsan_mem_origin_transfer", DFSanMemOriginTransferFnTy);
 
@@ -1372,6 +1419,8 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
       DFSanCmpCallbackFn.getCallee()->stripPointerCasts());
   DFSanRuntimeFunctions.insert(
       DFSanChainOriginFn.getCallee()->stripPointerCasts());
+  DFSanRuntimeFunctions.insert(
+      DFSanChainOriginIfTaintedFn.getCallee()->stripPointerCasts());
   DFSanRuntimeFunctions.insert(
       DFSanMemOriginTransferFn.getCallee()->stripPointerCasts());
   DFSanRuntimeFunctions.insert(
@@ -2024,6 +2073,11 @@ Align DFSanFunction::getOriginAlign(Align InstAlignment) {
 
 bool DFSanFunction::useCallbackLoadLabelAndOrigin(uint64_t Size,
                                                   Align InstAlignment) {
+  // When enabling tracking load instructions, we always use
+  // __dfsan_load_label_and_origin to reduce code size.
+  if (ClTrackOrigins == 2)
+    return true;
+
   assert(Size != 0);
   // * if Size == 1, it is sufficient to load its origin aligned at 4.
   // * if Size == 2, we assume most cases Addr % 2 == 0, so it is sufficient to
@@ -2037,11 +2091,7 @@ bool DFSanFunction::useCallbackLoadLabelAndOrigin(uint64_t Size,
     return false;
 
   const Align Alignment = llvm::assumeAligned(InstAlignment.value());
-  if (Alignment >= MinOriginAlignment &&
-      Size % (64 / DFS.ShadowWidthBits) == 0)
-    return false;
-
-  return true;
+  return Alignment < MinOriginAlignment || !DFS.hasLoadSizeForFastPath(Size);
 }
 
 std::pair<Value *, Value *> DFSanFunction::loadFast16ShadowFast(
@@ -2193,13 +2243,8 @@ Value *DFSanFunction::loadLegacyShadowFast(Value *ShadowAddr, uint64_t Size,
   return Shadow;
 }
 
-// Generates IR to load shadow corresponding to bytes [Addr, Addr+Size), where
-// Addr has alignment Align, and take the union of each of those shadows. The
-// returned shadow always has primitive type.
-std::pair<Value *, Value *> DFSanFunction::loadShadowOrigin(Value *Addr,
-                                                            uint64_t Size,
-                                                            Align InstAlignment,
-                                                            Instruction *Pos) {
+std::pair<Value *, Value *> DFSanFunction::loadShadowOriginSansLoadTracking(
+    Value *Addr, uint64_t Size, Align InstAlignment, Instruction *Pos) {
   const bool ShouldTrackOrigins = DFS.shouldTrackOrigins();
 
   // Non-escaped loads.
@@ -2284,8 +2329,7 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowOrigin(Value *Addr,
     return {combineShadows(Load, Load1, Pos), Origin};
   }
   }
-  uint64_t ShadowSize = Size * DFS.ShadowWidthBytes;
-  bool HasSizeForFastPath = ShadowSize % 8 == 0 || ShadowSize == 4;
+  bool HasSizeForFastPath = DFS.hasLoadSizeForFastPath(Size);
   bool HasFastLabelsEnabled = DFS.hasFastLabelsEnabled();
 
   if (HasFastLabelsEnabled && HasSizeForFastPath)
@@ -2303,6 +2347,24 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowOrigin(Value *Addr,
       UnionLoadFn, {ShadowAddr, ConstantInt::get(DFS.IntptrTy, Size)});
   FallbackCall->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
   return {FallbackCall, Origin};
+}
+
+std::pair<Value *, Value *> DFSanFunction::loadShadowOrigin(Value *Addr,
+                                                            uint64_t Size,
+                                                            Align InstAlignment,
+                                                            Instruction *Pos) {
+  Value *PrimitiveShadow, *Origin;
+  std::tie(PrimitiveShadow, Origin) =
+      loadShadowOriginSansLoadTracking(Addr, Size, InstAlignment, Pos);
+  if (DFS.shouldTrackOrigins()) {
+    if (ClTrackOrigins == 2) {
+      IRBuilder<> IRB(Pos);
+      auto *ConstantShadow = dyn_cast<Constant>(PrimitiveShadow);
+      if (!ConstantShadow || !ConstantShadow->isZeroValue())
+        Origin = updateOriginIfTainted(PrimitiveShadow, Origin, IRB);
+    }
+  }
+  return {PrimitiveShadow, Origin};
 }
 
 static AtomicOrdering addAcquireOrdering(AtomicOrdering AO) {
@@ -2374,6 +2436,12 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
     Value *Addr8 = IRB.CreateBitCast(LI.getPointerOperand(), DFSF.DFS.Int8Ptr);
     IRB.CreateCall(DFSF.DFS.DFSanLoadCallbackFn, {PrimitiveShadow, Addr8});
   }
+}
+
+Value *DFSanFunction::updateOriginIfTainted(Value *Shadow, Value *Origin,
+                                            IRBuilder<> &IRB) {
+  assert(DFS.shouldTrackOrigins());
+  return IRB.CreateCall(DFS.DFSanChainOriginIfTaintedFn, {Shadow, Origin});
 }
 
 Value *DFSanFunction::updateOrigin(Value *V, IRBuilder<> &IRB) {
@@ -2847,7 +2915,8 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   }
   if (ClEventCallbacks) {
     IRB.CreateCall(DFSF.DFS.DFSanMemTransferCallbackFn,
-                   {RawDestShadow, I.getLength()});
+                   {RawDestShadow,
+                    IRB.CreateZExtOrTrunc(I.getLength(), DFSF.DFS.IntptrTy)});
   }
 }
 

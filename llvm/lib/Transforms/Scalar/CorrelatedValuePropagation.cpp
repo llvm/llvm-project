@@ -448,7 +448,7 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI);
 // See if @llvm.abs argument is alays positive/negative, and simplify.
 // Notably, INT_MIN can belong to either range, regardless of the NSW,
 // because it is negation-invariant.
-static void processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
+static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
   Value *X = II->getArgOperand(0);
   bool IsIntMinPoison = cast<ConstantInt>(II->getArgOperand(1))->isOne();
 
@@ -464,7 +464,7 @@ static void processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
     ++NumAbs;
     II->replaceAllUsesWith(X);
     II->eraseFromParent();
-    return;
+    return true;
   }
 
   // Is X in [IntMin, 0]?  NOTE: INT_MIN is fine!
@@ -475,6 +475,7 @@ static void processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
 
   if (Result == LazyValueInfo::Unknown) {
     // Argument's range crosses zero.
+    bool Changed = false;
     if (!IsIntMinPoison) {
       // Can we at least tell that the argument is never INT_MIN?
       Result = LVI->getPredicateAt(CmpInst::Predicate::ICMP_NE, X, IntMin, II,
@@ -483,9 +484,10 @@ static void processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
         ++NumNSW;
         ++NumSubNSW;
         II->setArgOperand(1, ConstantInt::getTrue(II->getContext()));
+        Changed = true;
       }
     }
-    return;
+    return Changed;
   }
 
   IRBuilder<> B(II);
@@ -498,23 +500,26 @@ static void processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
   // See if we can infer some no-wrap flags.
   if (auto *BO = dyn_cast<BinaryOperator>(NegX))
     processBinOp(BO, LVI);
+
+  return true;
 }
 
 // See if this min/max intrinsic always picks it's one specific operand.
-static void processMinMaxIntrinsic(MinMaxIntrinsic *MM, LazyValueInfo *LVI) {
+static bool processMinMaxIntrinsic(MinMaxIntrinsic *MM, LazyValueInfo *LVI) {
   CmpInst::Predicate Pred = CmpInst::getNonStrictPredicate(MM->getPredicate());
   LazyValueInfo::Tristate Result = LVI->getPredicateAt(
       Pred, MM->getLHS(), MM->getRHS(), MM, /*UseBlockValue=*/true);
   if (Result == LazyValueInfo::Unknown)
-    return;
+    return false;
 
   ++NumMinMax;
   MM->replaceAllUsesWith(MM->getOperand(!Result));
   MM->eraseFromParent();
+  return true;
 }
 
 // Rewrite this with.overflow intrinsic as non-overflowing.
-static void processOverflowIntrinsic(WithOverflowInst *WO, LazyValueInfo *LVI) {
+static bool processOverflowIntrinsic(WithOverflowInst *WO, LazyValueInfo *LVI) {
   IRBuilder<> B(WO);
   Instruction::BinaryOps Opcode = WO->getBinaryOp();
   bool NSW = WO->isSigned();
@@ -536,9 +541,11 @@ static void processOverflowIntrinsic(WithOverflowInst *WO, LazyValueInfo *LVI) {
   // See if we can infer the other no-wrap too.
   if (auto *BO = dyn_cast<BinaryOperator>(NewOp))
     processBinOp(BO, LVI);
+
+  return true;
 }
 
-static void processSaturatingInst(SaturatingInst *SI, LazyValueInfo *LVI) {
+static bool processSaturatingInst(SaturatingInst *SI, LazyValueInfo *LVI) {
   Instruction::BinaryOps Opcode = SI->getBinaryOp();
   bool NSW = SI->isSigned();
   bool NUW = !SI->isSigned();
@@ -554,32 +561,30 @@ static void processSaturatingInst(SaturatingInst *SI, LazyValueInfo *LVI) {
   // See if we can infer the other no-wrap too.
   if (auto *BO = dyn_cast<BinaryOperator>(BinOp))
     processBinOp(BO, LVI);
+
+  return true;
 }
 
 /// Infer nonnull attributes for the arguments at the specified callsite.
 static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
 
   if (CB.getIntrinsicID() == Intrinsic::abs) {
-    processAbsIntrinsic(&cast<IntrinsicInst>(CB), LVI);
-    return true;
+    return processAbsIntrinsic(&cast<IntrinsicInst>(CB), LVI);
   }
 
   if (auto *MM = dyn_cast<MinMaxIntrinsic>(&CB)) {
-    processMinMaxIntrinsic(MM, LVI);
-    return true;
+    return processMinMaxIntrinsic(MM, LVI);
   }
 
   if (auto *WO = dyn_cast<WithOverflowInst>(&CB)) {
     if (WO->getLHS()->getType()->isIntegerTy() && willNotOverflow(WO, LVI)) {
-      processOverflowIntrinsic(WO, LVI);
-      return true;
+      return processOverflowIntrinsic(WO, LVI);
     }
   }
 
   if (auto *SI = dyn_cast<SaturatingInst>(&CB)) {
     if (SI->getType()->isIntegerTy() && willNotOverflow(SI, LVI)) {
-      processSaturatingInst(SI, LVI);
-      return true;
+      return processSaturatingInst(SI, LVI);
     }
   }
 

@@ -538,3 +538,8 @@ foreach m = LMULList.m in {
                                     !mul(nf, m)>;
   }
 }
+
+// Special registers
+def FFLAGS : RISCVReg<0, "fflags">;
+def FRM    : RISCVReg<0, "frm">;
+def FCSR   : RISCVReg<0, "fcsr">;

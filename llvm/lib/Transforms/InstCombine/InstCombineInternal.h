@@ -187,6 +187,7 @@ public:
                                  const Twine &Suffix = "");
 
 private:
+  void annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI);
   bool shouldChangeType(unsigned FromBitWidth, unsigned ToBitWidth) const;
   bool shouldChangeType(Type *From, Type *To) const;
   Value *dyn_castNegVal(Value *V) const;

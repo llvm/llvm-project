@@ -815,6 +815,11 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
+lldb::addr_t ABIMacOSX_arm64::FixAddress(addr_t pc, addr_t mask) {
+  lldb::addr_t pac_sign_extension = 0x0080000000000000ULL;
+  return (pc & pac_sign_extension) ? pc | mask : pc & (~mask);
+}
+
 void ABIMacOSX_arm64::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(), pluginDesc,
                                 CreateInstance);

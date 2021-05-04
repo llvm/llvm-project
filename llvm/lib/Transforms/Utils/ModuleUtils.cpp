@@ -122,9 +122,10 @@ llvm::declareSanitizerInitFunction(Module &M, StringRef InitName,
 }
 
 Function *llvm::createSanitizerCtor(Module &M, StringRef CtorName) {
-  Function *Ctor = Function::Create(
+  Function *Ctor = Function::createWithDefaultAttr(
       FunctionType::get(Type::getVoidTy(M.getContext()), false),
-      GlobalValue::InternalLinkage, CtorName, &M);
+      GlobalValue::InternalLinkage, 0, CtorName, &M);
+  Ctor->addAttribute(AttributeList::FunctionIndex, Attribute::NoUnwind);
   BasicBlock *CtorBB = BasicBlock::Create(M.getContext(), "", Ctor);
   ReturnInst::Create(M.getContext(), CtorBB);
   return Ctor;

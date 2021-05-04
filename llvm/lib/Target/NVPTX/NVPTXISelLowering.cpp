@@ -4304,14 +4304,7 @@ bool NVPTXTargetLowering::allowUnsafeFPMath(MachineFunction &MF) const {
 
   // Allow unsafe math if unsafe-fp-math attribute explicitly says so.
   const Function &F = MF.getFunction();
-  if (F.hasFnAttribute("unsafe-fp-math")) {
-    Attribute Attr = F.getFnAttribute("unsafe-fp-math");
-    StringRef Val = Attr.getValueAsString();
-    if (Val == "true")
-      return true;
-  }
-
-  return false;
+  return F.getFnAttribute("unsafe-fp-math").getValueAsBool();
 }
 
 /// PerformADDCombineWithOperands - Try DAG combinations for an ADD with

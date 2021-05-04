@@ -2596,7 +2596,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // don't simplify it so loop unswitch can know the equality comparison
   // may have an undef operand. This is a workaround for PR31652 caused by
   // descrepancy about branch on undef between LoopUnswitch and GVN.
-  if (isa<UndefValue>(TrueVal) || isa<UndefValue>(FalseVal)) {
+  if (match(TrueVal, m_Undef()) || match(FalseVal, m_Undef())) {
     if (llvm::any_of(SI.users(), [&](User *U) {
           ICmpInst *CI = dyn_cast<ICmpInst>(U);
           if (CI && CI->isEquality())

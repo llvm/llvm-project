@@ -1013,7 +1013,7 @@ define i8* @MismatchingCallMustTailCall(i32 %a) sanitize_memory {
 ; CHECK-NEXT: ret i8*
 
 
-; CHECK-LABEL: define internal void @msan.module_ctor() {
+; CHECK-LABEL: define internal void @msan.module_ctor() #[[#ATTR:]] {
 ; CHECK: call void @__msan_init()
 
 ; CHECK-CALLS: declare void @__msan_maybe_warning_1(i8 zeroext, i32 zeroext)
@@ -1024,3 +1024,5 @@ define i8* @MismatchingCallMustTailCall(i32 %a) sanitize_memory {
 ; CHECK-CALLS: declare void @__msan_maybe_store_origin_4(i32 zeroext, i8*, i32 zeroext)
 ; CHECK-CALLS: declare void @__msan_maybe_warning_8(i64 zeroext, i32 zeroext)
 ; CHECK-CALLS: declare void @__msan_maybe_store_origin_8(i64 zeroext, i8*, i32 zeroext)
+
+; CHECK:       attributes #[[#ATTR]] = { nounwind }

@@ -3,8 +3,10 @@
 action("node_introspection_inc") {
   script = "DumpTool/generate_cxx_src_locs.py"
   outputs = [ "$target_gen_dir/clang/Tooling/NodeIntrospection.inc" ]
+  sources = [ "EmptyNodeIntrospection.inc.in" ]
   args = [
-    "--empty-implementation=1",
+    "--use-empty-implementation=1",
+    "--empty-implementation=" + rebase_path(sources[0], root_build_dir),
     "--output-file=" + rebase_path(outputs[0], root_build_dir),
   ]
 }

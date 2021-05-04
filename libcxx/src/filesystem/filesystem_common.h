@@ -90,14 +90,14 @@ format_string(const char* msg, ...) {
   va_start(ap, msg);
 #ifndef _LIBCPP_NO_EXCEPTIONS
   try {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     ret = format_string_impl(msg, ap);
 #ifndef _LIBCPP_NO_EXCEPTIONS
   } catch (...) {
     va_end(ap);
     throw;
   }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
   va_end(ap);
   return ret;
 }
@@ -196,14 +196,14 @@ struct ErrorHandler {
     va_start(ap, msg);
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
       report_impl(ec, msg, ap);
 #ifndef _LIBCPP_NO_EXCEPTIONS
     } catch (...) {
       va_end(ap);
       throw;
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     va_end(ap);
     return error_value<T>();
   }
@@ -218,14 +218,14 @@ struct ErrorHandler {
     va_start(ap, msg);
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
       report_impl(make_error_code(err), msg, ap);
 #ifndef _LIBCPP_NO_EXCEPTIONS
     } catch (...) {
       va_end(ap);
       throw;
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     va_end(ap);
     return error_value<T>();
   }

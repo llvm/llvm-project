@@ -13,7 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: {{.*}} = phi i32 [ %d.0, %h3.1 ]
 ; CHECK: br label %exit
 
-define void @main() local_unnamed_addr #0 {
+define void @main(i1 %c) local_unnamed_addr #0 {
 ph1:
   br label %h1
 
@@ -29,7 +29,7 @@ h2:
   br label %h3
 
 h3:
-  br i1 undef, label %latch3, label %exit
+  br i1 %c, label %latch3, label %exit
 
 latch3:
   br i1 false, label %exit3, label %h3
@@ -43,7 +43,7 @@ latch2:
   br i1 %cmp, label %h2, label %exit2
 
 exit2:
-  br i1 undef, label %latch1, label %ph2
+  br i1 %c, label %latch1, label %ph2
 
 latch1:                 ; preds = %exit2
   %1 = load i32, i32* @b, align 4

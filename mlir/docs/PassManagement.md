@@ -159,7 +159,10 @@ not passes but free-standing classes that are computed lazily on-demand and
 cached to avoid unnecessary recomputation. An analysis in MLIR must adhere to
 the following:
 
-*   Provide a valid constructor taking an `Operation*`.
+*   Provide a valid constructor taking either an `Operation*` or `Operation*`
+    and `AnalysisManager &`.
+    *   The provided `AnalysisManager &` should be used to query any necessary
+        analysis dependencies.
 *   Must not modify the given operation.
 
 An analysis may provide additional hooks to control various behavior:
@@ -169,7 +172,9 @@ An analysis may provide additional hooks to control various behavior:
 Given a preserved analysis set, the analysis returns true if it should truly be
 invalidated. This allows for more fine-tuned invalidation in cases where an
 analysis wasn't explicitly marked preserved, but may be preserved (or
-invalidated) based upon other properties such as analyses sets.
+invalidated) based upon other properties such as analyses sets. If the analysis
+uses any other analysis as a dependency, it must also check if the dependency
+was invalidated.
 
 ### Querying Analyses
 
@@ -198,6 +203,20 @@ Using the example passes defined above, let's see some examples:
 struct MyOperationAnalysis {
   // Compute this analysis with the provided operation.
   MyOperationAnalysis(Operation *op);
+};
+
+struct MyOperationAnalysisWithDependency {
+  MyOperationAnalysisWithDependency(Operation *op, AnalysisManager &am) {
+    // Request other analysis as dependency
+    MyOperationAnalysis &otherAnalysis = am.getAnalysis<MyOperationAnalysis>();
+    ...
+  }
+
+  bool isInvalidated(const AnalysisManager::PreservedAnalyses &pa) {
+    // Check if analysis or its dependency were invalidated
+    return !pa.isPreserved<MyOperationAnalysisWithDependency>() ||
+           !pa.isPreserved<MyOperationAnalysis>();
+  }
 };
 
 void MyOperationPass::runOnOperation() {
@@ -899,6 +918,10 @@ the PassManager that observe various events:
         executed, `runAfterPass` will *not* be.
 *   `runBeforeAnalysis`
     *   This callback is run just before an analysis is computed.
+    *   If the analysis requested another analysis as a dependency, the
+        `runBeforeAnalysis`/`runAfterAnalysis` pair for the dependency can be
+        called from inside of the current `runBeforeAnalysis`/`runAfterAnalysis`
+        pair.
 *   `runAfterAnalysis`
     *   This callback is run right after an analysis is computed.
 

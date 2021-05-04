@@ -330,6 +330,29 @@ Function *Function::Create(FunctionType *Ty, LinkageTypes Linkage,
   return Create(Ty, Linkage, M.getDataLayout().getProgramAddressSpace(), N, &M);
 }
 
+Function *Function::createWithDefaultAttr(FunctionType *Ty,
+                                          LinkageTypes Linkage,
+                                          unsigned AddrSpace, const Twine &N,
+                                          Module *M) {
+  auto *F = new Function(Ty, Linkage, AddrSpace, N, M);
+  AttrBuilder B;
+  if (M->getUwtable())
+    B.addAttribute(Attribute::UWTable);
+  switch (M->getFramePointer()) {
+  case FramePointerKind::None:
+    // 0 ("none") is the default.
+    break;
+  case FramePointerKind::NonLeaf:
+    B.addAttribute("frame-pointer", "non-leaf");
+    break;
+  case FramePointerKind::All:
+    B.addAttribute("frame-pointer", "all");
+    break;
+  }
+  F->addAttributes(AttributeList::FunctionIndex, B);
+  return F;
+}
+
 void Function::removeFromParent() {
   getParent()->getFunctionList().remove(getIterator());
 }

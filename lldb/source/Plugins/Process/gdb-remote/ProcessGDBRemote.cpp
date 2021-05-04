@@ -1042,6 +1042,12 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
              process_arch.GetTriple().getTriple());
   }
 
+  if (int addresssable_bits = m_gdb_comm.GetAddressingBits()) {
+    lldb::addr_t address_mask = ~((1ULL << addresssable_bits) - 1);
+    SetCodeAddressMask(address_mask);
+    SetDataAddressMask(address_mask);
+  }
+
   if (process_arch.IsValid()) {
     const ArchSpec &target_arch = GetTarget().GetArchitecture();
     if (target_arch.IsValid()) {

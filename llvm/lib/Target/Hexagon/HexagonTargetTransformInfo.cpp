@@ -150,8 +150,9 @@ HexagonTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
-unsigned HexagonTTIImpl::getAddressComputationCost(Type *Tp,
-      ScalarEvolution *SE, const SCEV *S) {
+InstructionCost HexagonTTIImpl::getAddressComputationCost(Type *Tp,
+                                                          ScalarEvolution *SE,
+                                                          const SCEV *S) {
   return 0;
 }
 

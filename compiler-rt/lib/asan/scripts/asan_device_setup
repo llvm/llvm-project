@@ -94,7 +94,7 @@ function get_device_arch { # OUT OUT64
     local _ARCH=
     local _ARCH64=
     if [[ $_ABI == x86* ]]; then
-        _ARCH=i386
+        _ARCH=i686
     elif [[ $_ABI == armeabi* ]]; then
         _ARCH=arm
     elif [[ $_ABI == arm64-v8a* ]]; then

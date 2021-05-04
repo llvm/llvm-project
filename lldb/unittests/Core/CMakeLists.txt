@@ -1,5 +1,6 @@
 add_lldb_unittest(LLDBCoreTests
   CommunicationTest.cpp
+  FormatEntityTest.cpp
   MangledTest.cpp
   ModuleSpecTest.cpp
   RichManglingContextTest.cpp

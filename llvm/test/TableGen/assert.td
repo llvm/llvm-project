@@ -39,6 +39,15 @@ class Cube<int n> {
 
 assert !eq(Cube<9>.result, 81), "cube of 9 should be 729";
 
+// CHECK: assertion failed
+// CHECK: note: foreach i cannot be 2
+// CHECK-NOT: note: foreach i cannot be 2
+
+foreach i = 1...3 in {
+  assert !ne(i, 2), "foreach i cannot be 2";
+  def bar_ # i;
+}
+
 // Test the assert statement in a record definition.
 
 // CHECK: assertion failed
@@ -136,3 +145,47 @@ def Rec32 {
 
 // Test the assert statement in a multiclass.
 
+// CHECK: assertion failed
+// CHECK: note: MC1 id string is too long
+// CHECK: assertion failed
+// CHECK: note: MC1 seq is too high
+
+multiclass MC1<string id, int seq> {
+  assert !le(!size(id), 5), "MC1 id string is too long";
+  assert !le(seq, 999999), "MC1 seq is too high";
+
+  def _mc1 {
+    string ID = id;
+    int Seq = seq;
+  }
+}
+
+defm Rec40 : MC1<"ILISP", 999>;
+defm Rec41 : MC1<"ILISPX", 999>;
+defm Rec42 : MC1<"ILISP", 999999999>;
+
+// CHECK: assertion failed
+// CHECK: note: MC2 phrase must be secret: secrex code
+
+multiclass MC2<string phr> {
+  assert !eq(!substr(phr, 0, 6), "secret"), "MC2 phrase must be secret: " # phr;
+
+  def _mc2 {
+    string phrase = phr;
+  }
+}
+
+multiclass MC3<string phr> {
+  defm _mc3 : MC2<phr>;
+}
+
+defm Rec43 : MC3<"secrex code">;
+
+// CHECK: assertion failed
+// CHECK: note: MC2 phrase must be secret: xecret code
+
+multiclass MC4<string phr> : MC2<phr> {
+  def _def;
+}
+
+defm Rec44 : MC4<"xecret code">;

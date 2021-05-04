@@ -64,3 +64,10 @@ define i32 @caller6() naked {
 define i32 @alreadynoreturn() noreturn {
   unreachable
 }
+
+; CHECK: Function Attrs: {{.*}}noreturn
+; CHECK-NEXT: @callsite_noreturn()
+define void @callsite_noreturn() {
+  call i32 @f() noreturn
+  ret void
+}

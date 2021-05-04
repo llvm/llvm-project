@@ -21,6 +21,7 @@
 #include "mlir/IR/Visitors.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace mlir;
 

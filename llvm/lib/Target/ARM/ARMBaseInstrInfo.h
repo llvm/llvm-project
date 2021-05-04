@@ -366,7 +366,8 @@ public:
 
   bool isUnspillableTerminatorImpl(const MachineInstr *MI) const override {
     return MI->getOpcode() == ARM::t2LoopEndDec ||
-           MI->getOpcode() == ARM::t2DoLoopStartTP;
+           MI->getOpcode() == ARM::t2DoLoopStartTP ||
+           MI->getOpcode() == ARM::t2WhileLoopStartLR;
   }
 
 private:

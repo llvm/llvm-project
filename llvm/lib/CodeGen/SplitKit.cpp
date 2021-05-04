@@ -819,7 +819,7 @@ void SplitEditor::removeBackCopies(SmallVectorImpl<VNInfo*> &Copies) {
     MachineBasicBlock::iterator MBBI(MI);
     bool AtBegin;
     do AtBegin = MBBI == MBB->begin();
-    while (!AtBegin && (--MBBI)->isDebugInstr());
+    while (!AtBegin && (--MBBI)->isDebugOrPseudoInstr());
 
     LLVM_DEBUG(dbgs() << "Removing " << Def << '\t' << *MI);
     LIS.removeVRegDefAt(*LI, Def);

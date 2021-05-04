@@ -159,9 +159,8 @@ const char *M68kTargetInfo::getClobbers() const {
   return "";
 }
 
-M68kTargetInfo::BuiltinVaListKind M68kTargetInfo::getBuiltinVaListKind() const {
-  // FIXME: implement
-  llvm_unreachable("Not implemented yet");
+TargetInfo::BuiltinVaListKind M68kTargetInfo::getBuiltinVaListKind() const {
+  return TargetInfo::VoidPtrBuiltinVaList;
 }
 
 } // namespace targets

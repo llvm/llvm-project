@@ -1,3 +1,4 @@
+add_subdirectory(__support)
 add_subdirectory(ctype)
 add_subdirectory(errno)
 add_subdirectory(fenv)

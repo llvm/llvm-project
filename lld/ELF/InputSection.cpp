@@ -839,7 +839,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_TLSGD_GOT:
     return in.got->getGlobalDynOffset(sym) + a;
   case R_TLSGD_GOTPLT:
-    return in.got->getVA() + in.got->getGlobalDynOffset(sym) + a - in.gotPlt->getVA();
+    return in.got->getGlobalDynAddr(sym) + a - in.gotPlt->getVA();
   case R_TLSGD_PC:
     return in.got->getGlobalDynAddr(sym) + a - p;
   case R_TLSLD_GOTPLT:

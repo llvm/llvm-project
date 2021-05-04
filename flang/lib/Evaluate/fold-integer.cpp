@@ -656,7 +656,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   return Expr<T>{std::move(funcRef)};
 }
 
-// Substitute a bare type parameter reference with its value if it has one now
+// Substitutes a bare type parameter reference with its value if it has one now
+// in an instantiation.  Bare LEN type parameters are substituted only when
+// the known value is constant.
 Expr<TypeParamInquiry::Result> FoldOperation(
     FoldingContext &context, TypeParamInquiry &&inquiry) {
   std::optional<NamedEntity> base{inquiry.base()};
@@ -678,16 +680,20 @@ Expr<TypeParamInquiry::Result> FoldOperation(
       }
     }
   } else {
-    // A "bare" type parameter: replace with its value, if that's now known.
+    // A "bare" type parameter: replace with its value, if that's now known
+    // in a current derived type instantiation, for KIND type parameters.
     if (const auto *pdt{context.pdtInstance()}) {
+      bool isLen{false};
       if (const semantics::Scope * scope{context.pdtInstance()->scope()}) {
         auto iter{scope->find(parameterName)};
         if (iter != scope->end()) {
           const Symbol &symbol{*iter->second};
           const auto *details{symbol.detailsIf<semantics::TypeParamDetails>()};
           if (details) {
+            isLen = details->attr() == common::TypeParamAttr::Len;
             const semantics::MaybeIntExpr &initExpr{details->init()};
-            if (initExpr && IsConstantExpr(*initExpr)) {
+            if (initExpr && IsConstantExpr(*initExpr) &&
+                (!isLen || ToInt64(*initExpr))) {
               Expr<SomeInteger> expr{*initExpr};
               return Fold(context,
                   ConvertToType<TypeParamInquiry::Result>(std::move(expr)));
@@ -697,9 +703,12 @@ Expr<TypeParamInquiry::Result> FoldOperation(
       }
       if (const auto *value{pdt->FindParameter(parameterName)}) {
         if (value->isExplicit()) {
-          return Fold(context,
+          auto folded{Fold(context,
               AsExpr(ConvertToType<TypeParamInquiry::Result>(
-                  Expr<SomeInteger>{value->GetExplicit().value()})));
+                  Expr<SomeInteger>{value->GetExplicit().value()})))};
+          if (!isLen || ToInt64(folded)) {
+            return folded;
+          }
         }
       }
     }

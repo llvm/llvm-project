@@ -8,7 +8,7 @@
 ## Test that in a dylib, we can link against __mh_dylib_header
 ## (but not in other types of files)
 
-# RUN: llvm-mc %t/dylib.s -triple=x86_64-apple-macos11.0 -filetype=obj -o %t/dylib.o
+# RUN: llvm-mc %t/dylib.s -triple=x86_64-apple-macos10.15 -filetype=obj -o %t/dylib.o
 # RUN: %lld -pie -dylib %t/dylib.o -o %t/dylib.out
 # RUN: llvm-objdump -m --syms %t/dylib.out | FileCheck %s --check-prefix DYLIB
 
@@ -20,7 +20,7 @@
 # ERR-DYLIB: error: undefined symbol: __mh_dylib_header
 
 ## Test that in an executable, we can link against __mh_execute_header
-# RUN: llvm-mc %t/main.s -triple=x86_64-apple-macos11.0 -filetype=obj -o %t/exec.o
+# RUN: llvm-mc %t/main.s -triple=x86_64-apple-macos10.15 -filetype=obj -o %t/exec.o
 # RUN: %lld -pie %t/exec.o -o %t/exec.out
 
 ## But it would be an error trying to reference __mh_execute_header in a dylib

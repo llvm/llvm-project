@@ -84,6 +84,18 @@ const Scope *FindPureProcedureContaining(const Scope &start) {
   return IsPureProcedure(scope) ? &scope : nullptr;
 }
 
+static bool MightHaveCompatibleDerivedtypes(
+    const std::optional<evaluate::DynamicType> &lhsType,
+    const std::optional<evaluate::DynamicType> &rhsType) {
+  const DerivedTypeSpec *lhsDerived{evaluate::GetDerivedTypeSpec(lhsType)};
+  const DerivedTypeSpec *rhsDerived{evaluate::GetDerivedTypeSpec(rhsType)};
+  if (!lhsDerived || !rhsDerived) {
+    return false;
+  }
+  return *lhsDerived == *rhsDerived ||
+      lhsDerived->MightBeAssignmentCompatibleWith(*rhsDerived);
+}
+
 Tristate IsDefinedAssignment(
     const std::optional<evaluate::DynamicType> &lhsType, int lhsRank,
     const std::optional<evaluate::DynamicType> &rhsType, int rhsRank) {
@@ -97,15 +109,10 @@ Tristate IsDefinedAssignment(
   } else if (lhsCat != TypeCategory::Derived) {
     return ToTristate(lhsCat != rhsCat &&
         (!IsNumericTypeCategory(lhsCat) || !IsNumericTypeCategory(rhsCat)));
+  } else if (MightHaveCompatibleDerivedtypes(lhsType, rhsType)) {
+    return Tristate::Maybe; // TYPE(t) = TYPE(t) can be defined or intrinsic
   } else {
-    const auto *lhsDerived{evaluate::GetDerivedTypeSpec(lhsType)};
-    const auto *rhsDerived{evaluate::GetDerivedTypeSpec(rhsType)};
-    if (lhsDerived && rhsDerived && *lhsDerived == *rhsDerived) {
-      return Tristate::Maybe; // TYPE(t) = TYPE(t) can be defined or
-                              // intrinsic
-    } else {
-      return Tristate::Yes;
-    }
+    return Tristate::Yes;
   }
 }
 

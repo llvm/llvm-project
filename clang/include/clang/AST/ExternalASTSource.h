@@ -462,10 +462,10 @@ public:
 
 } // namespace clang
 
-/// Specialize PointerLikeTypeTraits to allow LazyGenerationalUpdatePtr to be
-/// placed into a PointerUnion.
 namespace llvm {
 
+/// Specialize PointerLikeTypeTraits to allow LazyGenerationalUpdatePtr to be
+/// placed into a PointerUnion.
 template<typename Owner, typename T,
          void (clang::ExternalASTSource::*Update)(Owner)>
 struct PointerLikeTypeTraits<

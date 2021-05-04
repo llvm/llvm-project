@@ -124,7 +124,7 @@ int main(int, char**)
     static_assert(test<const int*, random_access_iterator<int*> >());
     static_assert(test<const int*, contiguous_iterator<int*> >());
     static_assert(test<const int*, int*>());
-#endif  // TEST_STD_VER > 17
+#endif // TEST_STD_VER > 17
 
   return 0;
 }

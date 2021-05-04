@@ -174,7 +174,7 @@ void CodeGenFunction::CGFPOptionsRAII::ConstructorHelper(FPOptions FPFeatures) {
 
   auto mergeFnAttrValue = [&](StringRef Name, bool Value) {
     auto OldValue =
-        CGF.CurFn->getFnAttribute(Name).getValueAsString() == "true";
+        CGF.CurFn->getFnAttribute(Name).getValueAsBool();
     auto NewValue = OldValue & Value;
     if (OldValue != NewValue)
       CGF.CurFn->addFnAttr(Name, llvm::toStringRef(NewValue));

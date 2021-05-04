@@ -226,4 +226,4 @@ void is_about(long double x, long double y)
     assert(std::abs((x-y)/(x+y)) < 1.e-14);
 }
 
-#endif  // CASES_H
+#endif // CASES_H

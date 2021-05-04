@@ -29,7 +29,7 @@ public:
     m_ipd_buf[0] = '\0';
   }
 
-  ~RichManglingContext() { std::free(m_ipd_buf); }
+  ~RichManglingContext();
 
   /// Use the ItaniumPartialDemangler to obtain rich mangling information from
   /// the given mangled name.
@@ -77,6 +77,9 @@ private:
 
   /// Members for ItaniumPartialDemangler
   llvm::ItaniumPartialDemangler m_ipd;
+  /// Note: m_ipd_buf is a raw pointer due to being resized by realloc via
+  /// ItaniumPartialDemangler. It should be managed with malloc/free, not
+  /// new/delete.
   char *m_ipd_buf;
   size_t m_ipd_buf_size;
 
@@ -85,6 +88,9 @@ private:
   /// respective header is in Plugins and including it from here causes cyclic
   /// dependency. Instead keep a llvm::Any and cast it on-access in the cpp.
   llvm::Any m_cxx_method_parser;
+
+  /// Clean up memory when using PluginCxxLanguage
+  void ResetCxxMethodParser();
 
   /// Clean up memory and set a new info provider for this instance.
   void ResetProvider(InfoProvider new_provider);

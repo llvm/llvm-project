@@ -1490,7 +1490,7 @@ def OMP_TargetTeamsDistributeSimd :
   ];
 }
 def OMP_Allocate : Directive<"allocate"> {
-  let allowedClauses = [
+  let allowedOnceClauses = [
     VersionedClause<OMPC_Allocator>
   ];
 }

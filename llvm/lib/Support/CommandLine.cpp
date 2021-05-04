@@ -1138,8 +1138,9 @@ static llvm::Error ExpandResponseFile(
 /// StringSaver and tokenization strategy.
 bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
                              SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
-                             bool RelativeNames, llvm::vfs::FileSystem &FS,
-                             llvm::Optional<llvm::StringRef> CurrentDir) {
+                             bool RelativeNames,
+                             llvm::Optional<llvm::StringRef> CurrentDir,
+                             llvm::vfs::FileSystem &FS) {
   bool AllExpanded = true;
   struct ResponseFileRecord {
     std::string File;
@@ -1247,6 +1248,15 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
   return AllExpanded;
 }
 
+bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
+                             SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
+                             bool RelativeNames,
+                             llvm::Optional<StringRef> CurrentDir) {
+  return ExpandResponseFiles(Saver, std::move(Tokenizer), Argv, MarkEOLs,
+                             RelativeNames, std::move(CurrentDir),
+                             *vfs::getRealFileSystem());
+}
+
 bool cl::expandResponseFiles(int Argc, const char *const *Argv,
                              const char *EnvVar, StringSaver &Saver,
                              SmallVectorImpl<const char *> &NewArgv) {
@@ -1273,14 +1283,14 @@ bool cl::readConfigFile(StringRef CfgFile, StringSaver &Saver,
   }
   if (llvm::Error Err =
           ExpandResponseFile(CfgFile, Saver, cl::tokenizeConfigFile, Argv,
-                             /*MarkEOLs*/ false, /*RelativeNames*/ true,
+                             /*MarkEOLs=*/false, /*RelativeNames=*/true,
                              *llvm::vfs::getRealFileSystem())) {
     // TODO: The error should be propagated up the stack.
     llvm::consumeError(std::move(Err));
     return false;
   }
   return ExpandResponseFiles(Saver, cl::tokenizeConfigFile, Argv,
-                             /*MarkEOLs*/ false, /*RelativeNames*/ true);
+                             /*MarkEOLs=*/false, /*RelativeNames=*/true);
 }
 
 bool cl::ParseCommandLineOptions(int argc, const char *const *argv,

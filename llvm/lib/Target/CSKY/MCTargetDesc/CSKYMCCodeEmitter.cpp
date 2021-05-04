@@ -62,6 +62,17 @@ CSKYMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
   return 0;
 }
 
+MCFixupKind CSKYMCCodeEmitter::getTargetFixup(const MCExpr *Expr) const {
+  const CSKYMCExpr *CSKYExpr = cast<CSKYMCExpr>(Expr);
+
+  switch (CSKYExpr->getKind()) {
+  default:
+    llvm_unreachable("Unhandled fixup kind!");
+  case CSKYMCExpr::VK_CSKY_ADDR:
+    return MCFixupKind(CSKY::fixup_csky_addr32);
+  }
+}
+
 MCCodeEmitter *llvm::createCSKYMCCodeEmitter(const MCInstrInfo &MCII,
                                              const MCRegisterInfo &MRI,
                                              MCContext &Ctx) {

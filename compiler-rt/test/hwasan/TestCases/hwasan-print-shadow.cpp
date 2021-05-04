@@ -8,7 +8,10 @@
 #include <sanitizer/hwasan_interface.h>
 
 int main() {
-  char *p = (char *)malloc(4096);
+  void *alloc = malloc(4096);
+
+  // __hwasan_tag_memory expects untagged pointers.
+  char *p = (char *)__hwasan_tag_pointer(alloc, 0);
   assert(p);
 
   __hwasan_tag_memory(p, 1, 32);
@@ -26,5 +29,5 @@ int main() {
   // CHECK-NEXT:   {{.*}}0: 0
   // CHECK-NEXT:   {{.*}}0: 4
 
-  free(p);
+  free(alloc);
 }

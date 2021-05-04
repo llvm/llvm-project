@@ -143,7 +143,7 @@ TEST(LlvmLibcFrexpfTest, InFloatRange) {
   constexpr UIntType count = 1000001;
   constexpr UIntType step = UIntType(-1) / count;
   for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
-    float x = FPBits(v);
+    float x = float(FPBits(v));
     if (isnan(x) || isinf(x) || x == 0.0)
       continue;
 

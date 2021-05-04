@@ -1294,11 +1294,11 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
 
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
-  const bool prefer_file_cache = false;
+  const bool force_live_memory = true;
 
   DisassemblerSP disassembler_sp =
       Disassembler::DisassembleRange(target_arch, plugin_name, flavor,
-                                     *target_sp, pc_range, prefer_file_cache);
+                                     *target_sp, pc_range, force_live_memory);
 
   if (!disassembler_sp || !disassembler_sp->GetInstructionList().GetSize()) {
     return ValueObjectSP();
@@ -1674,10 +1674,10 @@ lldb::ValueObjectSP StackFrame::GuessValueForRegisterAndOffset(ConstString reg,
 
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
-  const bool prefer_file_cache = false;
+  const bool force_live_memory = true;
   DisassemblerSP disassembler_sp =
       Disassembler::DisassembleRange(target_arch, plugin_name, flavor,
-                                     *target_sp, pc_range, prefer_file_cache);
+                                     *target_sp, pc_range, force_live_memory);
 
   if (!disassembler_sp || !disassembler_sp->GetInstructionList().GetSize()) {
     return ValueObjectSP();

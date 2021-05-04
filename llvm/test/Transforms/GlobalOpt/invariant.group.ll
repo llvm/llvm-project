@@ -32,9 +32,10 @@ enter:
 
   %0 = bitcast i32* %valptr to i8*
   %barr = call i8* @llvm.launder.invariant.group(i8* %0)
-  %1 = bitcast i8* %barr to i32*
+  %1 = getelementptr i8, i8* %barr, i32 0
+  %2 = bitcast i8* %1 to i32*
 
-  %val2 = load i32, i32* %1
+  %val2 = load i32, i32* %2
   store i32 %val2, i32* @tmp2
   ret void
 }

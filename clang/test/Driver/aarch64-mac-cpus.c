@@ -8,13 +8,17 @@
 
 // RUN: %clang -target arm64-apple-macos -arch arm64 -### -c %s 2>&1 | FileCheck %s
 
+// RUN: %clang -target arm64e-apple-macos            -### -c %s 2>&1 | FileCheck %s
+
 // RUN: %clang -target arm64-apple-macos -mcpu=apple-a11 -### -c %s 2>&1 | FileCheck --check-prefix=EXPLICIT-A11 %s
 // RUN: %clang -target arm64-apple-macos -mcpu=apple-a7  -### -c %s 2>&1 | FileCheck --check-prefix=EXPLICIT-A7 %s
-// RUN: %clang -target arm64-apple-macos -mcpu=apple-a13 -### -c %s 2>&1 | FileCheck --check-prefix=EXPLICIT-A13 %s
+// RUN: %clang -target arm64-apple-macos -mcpu=apple-a14 -### -c %s 2>&1 | FileCheck --check-prefix=EXPLICIT-A14 %s
+// RUN: %clang -target arm64-apple-macos -mcpu=apple-m1 -### -c %s 2>&1 | FileCheck --check-prefix=EXPLICIT-M1 %s
 
-// CHECK: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a13"
-// CHECK-SAME: "-target-feature" "+v8.4a"
+// CHECK: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-m1"
+// CHECK-SAME: "-target-feature" "+v8.5a"
 
 // EXPLICIT-A11: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a11"
 // EXPLICIT-A7: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a7"
-// EXPLICIT-A13: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a13"
+// EXPLICIT-A14: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a14"
+// EXPLICIT-M1: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-m1"

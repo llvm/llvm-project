@@ -1039,7 +1039,7 @@ static void TerminateLineSequence(LineTable &table,
   table.AppendLineEntryToSequence(seq.get(), base_addr + block.CodeSize,
                                   last_line, 0, file_number, false, false,
                                   false, false, true);
-  table.InsertSequence(seq.release());
+  table.InsertSequence(seq.get());
 }
 
 bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {

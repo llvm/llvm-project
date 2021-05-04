@@ -27,7 +27,7 @@ entry:
 }
 
 ; This function should have had 'readnone' deduced for its SCC.
-; CHECK: Function Attrs: noinline nosync nounwind readnone
+; CHECK: Function Attrs: nofree noinline nosync nounwind readnone
 ; CHECK-NEXT: define void @test1_g()
 define void @test1_g() noinline {
 entry:
@@ -36,7 +36,7 @@ entry:
 }
 
 ; This function should have had 'readnone' deduced for its SCC.
-; CHECK: Function Attrs: noinline nosync nounwind readnone
+; CHECK: Function Attrs: nofree noinline nosync nounwind readnone
 ; CHECK-NEXT: define void @test1_h()
 define void @test1_h() noinline {
 entry:
@@ -59,7 +59,7 @@ entry:
 }
 
 ; This function should have had 'readnone' deduced for its SCC.
-; CHECK: Function Attrs: noinline nosync nounwind readnone
+; CHECK: Function Attrs: nofree noinline nosync nounwind readnone
 ; CHECK-NEXT: define void @test2_g()
 define void @test2_g() noinline {
 entry:
@@ -69,7 +69,7 @@ entry:
 }
 
 ; This function should have had 'readnone' deduced for its SCC.
-; CHECK: Function Attrs: noinline nosync nounwind readnone
+; CHECK: Function Attrs: nofree noinline nosync nounwind readnone
 ; CHECK-NEXT: define void @test2_h()
 define void @test2_h() noinline {
 entry:
@@ -152,7 +152,7 @@ exit:
 ; form a new SCC and should use that can deduce precise function attrs.
 
 ; This function should have had 'readnone' deduced for its SCC.
-; CHECK: Function Attrs: noinline nosync nounwind readnone
+; CHECK: Function Attrs: nofree noinline nosync nounwind readnone
 ; CHECK-NEXT: define void @test4_f1()
 define void @test4_f1() noinline {
 entry:
@@ -175,7 +175,7 @@ entry:
 }
 
 ; This function should have had 'readnone' deduced for its SCC.
-; CHECK: Function Attrs: noinline nosync nounwind readnone
+; CHECK: Function Attrs: nofree noinline nosync nounwind readnone
 ; CHECK-NEXT: define void @test4_h()
 define void @test4_h() noinline {
 entry:

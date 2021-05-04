@@ -6,9 +6,8 @@
 // Parsing error until clang11:
 // UNSUPPORTED: clang-10, clang-9, clang-8, clang-7
 
-// Missing GOMP_taskgroup_reduction_(un)register in LLVM/OpenMP
-// Should be removed once the functions are implemented
-// XFAIL: gcc-9, gcc-10
+// No icc compiler support yet
+// XFAIL: icc
 
 #include <stdio.h>
 #include <omp.h>

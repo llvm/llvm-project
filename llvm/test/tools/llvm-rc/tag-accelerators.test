@@ -1,4 +1,4 @@
-; RUN: llvm-rc /FO %t -- %p/Inputs/tag-accelerators.rc
+; RUN: llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators.rc
 ; RUN: llvm-readobj %t | FileCheck %s --check-prefix=ACCELERATORS
 
 ; ACCELERATORS: Resource type (int): ACCELERATOR (ID 9)
@@ -79,79 +79,79 @@
 ; ACCELERATORS-NEXT: )
 
 
-; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-accelerators-bad-id.rc 2>&1 | FileCheck %s --check-prefix BADID
+; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators-bad-id.rc 2>&1 | FileCheck %s --check-prefix BADID
 
 ; BADID: llvm-rc: Error in ACCELERATORS statement (ID 1):
 ; BADID-NEXT: ACCELERATORS entry ID (1234567) does not fit in 16 bits.
 
 
-; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-accelerators-ascii-virtkey.rc 2>&1 | FileCheck %s --check-prefix ASCII1
+; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators-ascii-virtkey.rc 2>&1 | FileCheck %s --check-prefix ASCII1
 
 ; ASCII1: llvm-rc: Error in ACCELERATORS statement (ID 2):
 ; ASCII1-NEXT: Accelerator ID 15: Accelerator can't be both ASCII and VIRTKEY
 
 
-; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-accelerators-ascii-control.rc 2>&1 | FileCheck %s --check-prefix ASCII2
+; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators-ascii-control.rc 2>&1 | FileCheck %s --check-prefix ASCII2
 
 ; ASCII2: llvm-rc: Error in ACCELERATORS statement (ID 2):
 ; ASCII2-NEXT: Accelerator ID 15: Can only apply ALT, SHIFT or CONTROL to VIRTKEY accelerators
 
 
-; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-accelerators-ascii-shift.rc 2>&1 | FileCheck %s --check-prefix ASCII3
+; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators-ascii-shift.rc 2>&1 | FileCheck %s --check-prefix ASCII3
 
 ; ASCII3: llvm-rc: Error in ACCELERATORS statement (ID 2):
 ; ASCII3-NEXT: Accelerator ID 15: Can only apply ALT, SHIFT or CONTROL to VIRTKEY accelerators
 
 
-; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-accelerators-ascii-alt.rc 2>&1 | FileCheck %s --check-prefix ASCII4
+; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators-ascii-alt.rc 2>&1 | FileCheck %s --check-prefix ASCII4
 
 ; ASCII4: llvm-rc: Error in ACCELERATORS statement (ID 2):
 ; ASCII4-NEXT: Accelerator ID 15: Can only apply ALT, SHIFT or CONTROL to VIRTKEY accelerators
 
 
-; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-accelerators-bad-key-id.rc 2>&1 | FileCheck %s --check-prefix BADKEYID
+; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators-bad-key-id.rc 2>&1 | FileCheck %s --check-prefix BADKEYID
 
 ; BADKEYID: llvm-rc: Error in ACCELERATORS statement (ID 9):
 ; BADKEYID-NEXT: Numeric event key ID (1234567) does not fit in 16 bits.
 
 
-; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-accelerators-too-short.rc 2>&1 | FileCheck %s --check-prefix LENGTH1
+; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators-too-short.rc 2>&1 | FileCheck %s --check-prefix LENGTH1
 
 ; LENGTH1: llvm-rc: Error in ACCELERATORS statement (ID 10):
 ; LENGTH1-NEXT: Accelerator ID 12: Accelerator string events should have length 1 or 2
 
 
-; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-accelerators-too-long.rc 2>&1 | FileCheck %s --check-prefix LENGTH2
+; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators-too-long.rc 2>&1 | FileCheck %s --check-prefix LENGTH2
 
 ; LENGTH2: llvm-rc: Error in ACCELERATORS statement (ID 12):
 ; LENGTH2-NEXT: Accelerator ID 5: Accelerator string events should have length 1 or 2
 
 
-; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-accelerators-only-caret.rc 2>&1 | FileCheck %s --check-prefix CARET1
+; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators-only-caret.rc 2>&1 | FileCheck %s --check-prefix CARET1
 
 ; CARET1: llvm-rc: Error in ACCELERATORS statement (ID 555):
 ; CARET1-NEXT: Accelerator ID 100: No character following '^' in accelerator event
 
 
-; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-accelerators-no-caret.rc 2>&1 | FileCheck %s --check-prefix CARET2
+; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators-no-caret.rc 2>&1 | FileCheck %s --check-prefix CARET2
 
 ; CARET2: llvm-rc: Error in ACCELERATORS statement (ID 50):
 ; CARET2-NEXT: Accelerator ID 1: Event string should be one-character, possibly preceded by '^'
 
 
-; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-accelerators-long-virtkey.rc 2>&1 | FileCheck %s --check-prefix CARET3
+; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators-long-virtkey.rc 2>&1 | FileCheck %s --check-prefix CARET3
 
 ; CARET3: llvm-rc: Error in ACCELERATORS statement (ID 100):
 ; CARET3-NEXT: Accelerator ID 10: VIRTKEY accelerator events can't be preceded by '^'
 
 
-; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-accelerators-control-nonalpha.rc 2>&1 | FileCheck %s --check-prefix NONALPHA1
+; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators-control-nonalpha.rc 2>&1 | FileCheck %s --check-prefix NONALPHA1
 
 ; NONALPHA1: llvm-rc: Error in ACCELERATORS statement (ID 100):
 ; NONALPHA1-NEXT: Accelerator ID 1: Control character accelerator event should be alphabetic
 
 
-; RUN: not llvm-rc /FO %t -- %p/Inputs/tag-accelerators-virtual-nonalpha.rc 2>&1 | FileCheck %s --check-prefix NONALPHA2
+; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators-virtual-nonalpha.rc 2>&1 | FileCheck %s --check-prefix NONALPHA2
 
 ; NONALPHA2: llvm-rc: Error in ACCELERATORS statement (ID 42):
 ; NONALPHA2-NEXT: Accelerator ID 1: Non-alphanumeric characters cannot describe virtual keys

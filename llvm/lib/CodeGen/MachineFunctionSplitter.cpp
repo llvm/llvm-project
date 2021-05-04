@@ -101,7 +101,8 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
   // since the split part may not be placed in a contiguous region. It may also
   // be more beneficial to augment the linker to ensure contiguous layout of
   // split functions within the same section as specified by the attribute.
-  if (!MF.getFunction().getSection().empty())
+  if (MF.getFunction().hasSection() ||
+      MF.getFunction().hasFnAttribute("implicit-section-name"))
     return false;
 
   // We don't want to proceed further for cold functions

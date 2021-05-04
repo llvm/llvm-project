@@ -62,6 +62,6 @@ struct hash<MoveOnly>
 
 }
 
-#endif  // TEST_STD_VER >= 11
+#endif // TEST_STD_VER >= 11
 
-#endif  // MOVEONLY_H
+#endif // MOVEONLY_H

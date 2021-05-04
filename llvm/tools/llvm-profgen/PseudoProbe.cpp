@@ -198,7 +198,6 @@ void PseudoProbeDecoder::buildAddress2ProbeMap(const uint8_t *Start,
   //         A list of NUM_INLINED_FUNCTIONS entries describing each of the
   //         inlined callees.  Each record contains:
   //           INLINE SITE
-  //             GUID of the inlinee (uint64)
   //             Index of the callsite probe (ULEB128)
   //           FUNCTION BODY
   //             A FUNCTION BODY entry describing the inlined function.
@@ -214,8 +213,11 @@ void PseudoProbeDecoder::buildAddress2ProbeMap(const uint8_t *Start,
   uint32_t Index = 0;
   // A DFS-based decoding
   while (Data < End) {
-    // Read inline site for inlinees
-    if (Root != Cur) {
+    if (Root == Cur) {
+      // Use a sequential id for top level inliner.
+      Index = Root->getChildren().size();
+    } else {
+      // Read inline site for inlinees
       Index = readUnsignedNumber<uint32_t>();
     }
     // Switch/add to a new tree node(inlinee)
@@ -243,10 +245,10 @@ void PseudoProbeDecoder::buildAddress2ProbeMap(const uint8_t *Start,
         Addr = readUnencodedNumber<int64_t>();
       }
       // Populate Address2ProbesMap
-      std::vector<PseudoProbe> &ProbeVec = Address2ProbesMap[Addr];
-      ProbeVec.emplace_back(Addr, Cur->GUID, Index, PseudoProbeType(Kind), Attr,
-                            Cur);
-      Cur->addProbes(&ProbeVec.back());
+      auto &Probes = Address2ProbesMap[Addr];
+      Probes.emplace_back(Addr, Cur->GUID, Index, PseudoProbeType(Kind), Attr,
+                          Cur);
+      Cur->addProbes(&Probes.back());
       LastAddr = Addr;
     }
 
@@ -298,7 +300,7 @@ PseudoProbeDecoder::getCallProbeForAddr(uint64_t Address) const {
   auto It = Address2ProbesMap.find(Address);
   if (It == Address2ProbesMap.end())
     return nullptr;
-  const std::vector<PseudoProbe> &Probes = It->second;
+  const auto &Probes = It->second;
 
   const PseudoProbe *CallProbe = nullptr;
   for (const auto &Probe : Probes) {

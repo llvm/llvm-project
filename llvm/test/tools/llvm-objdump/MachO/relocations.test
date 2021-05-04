@@ -1,9 +1,24 @@
-RUN: llvm-objdump --macho -r %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
+RUN: llvm-objdump --macho -r %p/Inputs/hello.obj.macho-x86_64 | \
+RUN:     FileCheck --check-prefix=VERBOSE %s
+RUN: llvm-otool -rv %p/Inputs/hello.obj.macho-x86_64 | \
+RUN:     FileCheck --check-prefix=VERBOSE %s
+RUN: llvm-objdump --macho -r --non-verbose %p/Inputs/hello.obj.macho-x86_64 | \
+RUN:     FileCheck --check-prefix=NONVERBOSE %s
+RUN: llvm-otool -r %p/Inputs/hello.obj.macho-x86_64 | \
+RUN:     FileCheck --check-prefix=NONVERBOSE %s
 
-CHECK: Relocation information (__TEXT,__text) 2 entries
-CHECK: address  pcrel length extern type    scattered symbolnum/value
-CHECK: 00000027 True  long   True   BRANCH  False     _printf
-CHECK: 0000000b True  long   True   SIGNED  False     L_.str
-CHECK: Relocation information (__LD,__compact_unwind) 1 entries
-CHECK: address  pcrel length extern type    scattered symbolnum/value
-CHECK: 00000000 False quad   False  UNSIGND False     1 (__TEXT,__text)
+VERBOSE:      Relocation information (__TEXT,__text) 2 entries
+VERBOSE-NEXT: address  pcrel length extern type    scattered symbolnum/value
+VERBOSE-NEXT: 00000027 True  long   True   BRANCH  False     _printf
+VERBOSE-NEXT: 0000000b True  long   True   SIGNED  False     L_.str
+VERBOSE-NEXT: Relocation information (__LD,__compact_unwind) 1 entries
+VERBOSE-NEXT: address  pcrel length extern type    scattered symbolnum/value
+VERBOSE-NEXT: 00000000 False quad   False  UNSIGND False     1 (__TEXT,__text)
+
+NONVERBOSE:      Relocation information (__TEXT,__text) 2 entries
+NONVERBOSE-NEXT: address  pcrel length extern type    scattered symbolnum/value
+NONVERBOSE-NEXT: 00000027 1     2      1      2       0         4
+NONVERBOSE-NEXT: 0000000b 1     2      1      1       0         0
+NONVERBOSE-NEXT: Relocation information (__LD,__compact_unwind) 1 entries
+NONVERBOSE-NEXT: address  pcrel length extern type    scattered symbolnum/value
+NONVERBOSE-NEXT: 00000000 0     3      0      0       0         1

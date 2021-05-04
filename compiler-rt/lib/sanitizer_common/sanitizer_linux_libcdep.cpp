@@ -194,9 +194,7 @@ __attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
 // musl before 1.2.3 and FreeBSD as of 12.2 incorrectly set dlpi_tls_data to
 // the TLS initialization image
 // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=254774
-#if !SANITIZER_GO
-static int g_use_dlpi_tls_data;
-#endif
+__attribute__((unused)) static int g_use_dlpi_tls_data;
 
 #if SANITIZER_GLIBC && !SANITIZER_GO
 __attribute__((unused)) static uptr g_tls_size;
@@ -205,7 +203,7 @@ void InitTlsSize() {
   g_use_dlpi_tls_data =
       GetLibcVersion(&major, &minor, &patch) && major == 2 && minor >= 25;
 
-#ifdef __x86_64__
+#if defined(__x86_64__) || defined(__powerpc64__)
   void *get_tls_static_info = dlsym(RTLD_NEXT, "_dl_get_tls_static_info");
   size_t tls_align;
   ((void (*)(size_t *, size_t *))get_tls_static_info)(&g_tls_size, &tls_align);
@@ -218,10 +216,7 @@ void InitTlsSize() { }
 // On glibc x86_64, ThreadDescriptorSize() needs to be precise due to the usage
 // of g_tls_size. On other targets, ThreadDescriptorSize() is only used by lsan
 // to get the pointer to thread-specific data keys in the thread control block.
-#if (defined(__x86_64__) || defined(__i386__) || defined(__mips__) ||       \
-     defined(__aarch64__) || defined(__powerpc64__) || defined(__s390__) || \
-     defined(__arm__) || SANITIZER_RISCV64) &&                              \
-    (SANITIZER_FREEBSD || SANITIZER_LINUX) && !SANITIZER_ANDROID
+#if (SANITIZER_FREEBSD || SANITIZER_LINUX) && !SANITIZER_ANDROID
 // sizeof(struct pthread) from glibc.
 static atomic_uintptr_t thread_descriptor_size;
 
@@ -259,6 +254,13 @@ uptr ThreadDescriptorSize() {
     else  // minor == 32
       val = FIRST_32_SECOND_64(1344, 2496);
   }
+#elif defined(__s390__) || defined(__sparc__)
+  // The size of a prefix of TCB including pthread::{specific_1stblock,specific}
+  // suffices. Just return offsetof(struct pthread, specific_used), which hasn't
+  // changed since 2007-05. Technically this applies to i386/x86_64 as well but
+  // we call _dl_get_tls_static_info and need the precise size of struct
+  // pthread.
+  return FIRST_32_SECOND_64(524, 1552);
 #elif defined(__mips__)
   // TODO(sagarthakur): add more values as per different glibc versions.
   val = FIRST_32_SECOND_64(1152, 1776);
@@ -282,8 +284,6 @@ uptr ThreadDescriptorSize() {
   val = 1776;
 #elif defined(__powerpc64__)
   val = 1776; // from glibc.ppc64le 2.20-8.fc21
-#elif defined(__s390__)
-  val = FIRST_32_SECOND_64(1152, 1776); // valid for glibc 2.22
 #endif
   if (val)
     atomic_store_relaxed(&thread_descriptor_size, val);
@@ -324,12 +324,14 @@ static int CollectStaticTlsBlocks(struct dl_phdr_info *info, size_t size,
   if (!info->dlpi_tls_modid)
     return 0;
   uptr begin = (uptr)info->dlpi_tls_data;
+#ifndef __s390__
   if (!g_use_dlpi_tls_data) {
     // Call __tls_get_addr as a fallback. This forces TLS allocation on glibc
     // and FreeBSD.
     size_t mod_and_off[2] = {info->dlpi_tls_modid, 0};
     begin = (uptr)__tls_get_addr(mod_and_off);
   }
+#endif
   for (unsigned i = 0; i != info->dlpi_phnum; ++i)
     if (info->dlpi_phdr[i].p_type == PT_TLS) {
       static_cast<InternalMmapVector<TlsBlock> *>(data)->push_back(
@@ -431,15 +433,23 @@ static void GetTls(uptr *addr, uptr *size) {
   *size = g_tls_size;
   *addr -= *size;
   *addr += ThreadDescriptorSize();
+#elif SANITIZER_GLIBC && defined(__powerpc64__)
+  // Workaround for glibc<2.25(?). 2.27 is known to not need this.
+  uptr tp;
+  asm("addi %0,13,-0x7000" : "=r"(tp));
+  const uptr pre_tcb_size = TlsPreTcbSize();
+  *addr = tp - pre_tcb_size;
+  *size = g_tls_size + pre_tcb_size;
 #elif SANITIZER_FREEBSD || SANITIZER_LINUX
   uptr align;
   GetStaticTlsBoundary(addr, size, &align);
-#if defined(__x86_64__) || defined(__i386__) || defined(__s390__)
+#if defined(__x86_64__) || defined(__i386__) || defined(__s390__) || \
+    defined(__sparc__)
   if (SANITIZER_GLIBC) {
-#if defined(__s390__)
-    align = Max<uptr>(align, 16);
-#else
+#if defined(__x86_64__) || defined(__i386__)
     align = Max<uptr>(align, 64);
+#else
+    align = Max<uptr>(align, 16);
 #endif
   }
   const uptr tp = RoundUpTo(*addr + *size, align);

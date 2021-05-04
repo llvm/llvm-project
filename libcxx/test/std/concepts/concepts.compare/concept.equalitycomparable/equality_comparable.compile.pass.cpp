@@ -27,7 +27,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "../types.h"
+#include "compare_types.h"
 
 namespace fundamentals {
 static_assert(std::equality_comparable<int>);

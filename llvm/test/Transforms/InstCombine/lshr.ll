@@ -325,3 +325,66 @@ define i32 @mul_splat_fold_no_nuw(i32 %x) {
   %t = lshr i32 %m, 16
   ret i32 %t
 }
+
+define i32 @negative_and_odd(i32 %x) {
+; CHECK-LABEL: @negative_and_odd(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = srem i32 %x, 2
+  %r = lshr i32 %s, 31
+  ret i32 %r
+}
+
+define <2 x i7> @negative_and_odd_vec(<2 x i7> %x) {
+; CHECK-LABEL: @negative_and_odd_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i7> [[X:%.*]], <i7 6, i7 6>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i7> [[TMP1]], [[X]]
+; CHECK-NEXT:    ret <2 x i7> [[R]]
+;
+  %s = srem <2 x i7> %x, <i7 2, i7 2>
+  %r = lshr <2 x i7> %s, <i7 6, i7 6>
+  ret <2 x i7> %r
+}
+
+; Negative test - this is still worth trying to avoid srem?
+
+define i32 @negative_and_odd_uses(i32 %x, i32* %p) {
+; CHECK-LABEL: @negative_and_odd_uses(
+; CHECK-NEXT:    [[S:%.*]] = srem i32 [[X:%.*]], 2
+; CHECK-NEXT:    store i32 [[S]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[S]], 31
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = srem i32 %x, 2
+  store i32 %s, i32* %p
+  %r = lshr i32 %s, 31
+  ret i32 %r
+}
+
+; Negative test - wrong divisor
+
+define i32 @srem3(i32 %x) {
+; CHECK-LABEL: @srem3(
+; CHECK-NEXT:    [[S:%.*]] = srem i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[S]], 31
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = srem i32 %x, 3
+  %r = lshr i32 %s, 31
+  ret i32 %r
+}
+
+; Negative test - wrong shift amount
+
+define i32 @srem2_lshr30(i32 %x) {
+; CHECK-LABEL: @srem2_lshr30(
+; CHECK-NEXT:    [[S:%.*]] = srem i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[S]], 30
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = srem i32 %x, 2
+  %r = lshr i32 %s, 30
+  ret i32 %r
+}

@@ -192,12 +192,14 @@ void M68kInstPrinter::printARIIMem(const MCInst *MI, unsigned opNum,
 void M68kInstPrinter::printAbsMem(const MCInst *MI, unsigned opNum,
                                   raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(opNum);
-  if (MO.isImm()) {
-    // ??? Print it in hex?
-    O << (unsigned int)MO.getImm();
-  } else {
-    printOperand(MI, opNum, O);
+
+  if (MO.isExpr()) {
+    MO.getExpr()->print(O, &MAI);
+    return;
   }
+
+  assert(MO.isImm() && "absolute memory addressing needs an immediate");
+  O << format("$%0" PRIx64, (uint64_t)MO.getImm());
 }
 
 void M68kInstPrinter::printPCDMem(const MCInst *MI, uint64_t Address,

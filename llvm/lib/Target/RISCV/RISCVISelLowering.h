@@ -96,6 +96,9 @@ enum NodeType : unsigned {
   GORC,
   GORCW,
   SHFL,
+  SHFLW,
+  UNSHFL,
+  UNSHFLW,
   // Vector Extension
   // VMV_V_X_VL matches the semantics of vmv.v.x but includes an extra operand
   // for the VL value to be used for the operation.
@@ -191,6 +194,8 @@ enum NodeType : unsigned {
   SMAX_VL,
   UMIN_VL,
   UMAX_VL,
+  FMINNUM_VL,
+  FMAXNUM_VL,
   MULHS_VL,
   MULHU_VL,
   FP_TO_SINT_VL,
@@ -465,10 +470,6 @@ public:
                                            unsigned InsertExtractIdx,
                                            const RISCVRegisterInfo *TRI);
   MVT getContainerForFixedLengthVector(MVT VT) const;
-  static MVT getContainerForFixedLengthVector(const TargetLowering &TLI, MVT VT,
-                                              const RISCVSubtarget &Subtarget);
-  static MVT getContainerForFixedLengthVector(SelectionDAG &DAG, MVT VT,
-                                              const RISCVSubtarget &Subtarget);
 
   bool shouldRemoveExtendFromGSIndex(EVT VT) const override;
 
@@ -533,6 +534,8 @@ private:
                             bool HasMask = true) const;
   SDValue lowerFixedLengthVectorExtendToRVV(SDValue Op, SelectionDAG &DAG,
                                             unsigned ExtendOpc) const;
+  SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
 
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,

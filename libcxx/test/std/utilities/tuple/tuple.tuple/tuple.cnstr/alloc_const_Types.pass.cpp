@@ -95,6 +95,14 @@ int main(int, char**)
         assert(!alloc_last::allocator_constructed);
         assert(std::get<2>(t) == alloc_last(3));
     }
+    {
+        // Test that we can use a tag derived from allocator_arg_t
+        struct DerivedFromAllocatorArgT : std::allocator_arg_t { };
+        DerivedFromAllocatorArgT derived;
+        std::tuple<> t1(derived, A1<int>());
+        std::tuple<int> t2(derived, A1<int>(), 1);
+        std::tuple<int, int> t3(derived, A1<int>(), 1, 2);
+    }
 
-  return 0;
+    return 0;
 }

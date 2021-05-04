@@ -9,6 +9,8 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "gtest/gtest.h"
+#include "TestGraph.h"
+
 using namespace llvm;
 
 namespace {
@@ -32,5 +34,41 @@ TEST(PostOrderIteratorTest, Compiles) {
   PI.insertEdge(Optional<BasicBlock *>(), NullBB);
   auto PIExt = po_ext_end(NullBB, Ext);
   PIExt.insertEdge(Optional<BasicBlock *>(), NullBB);
+}
+
+// Test post-order and reverse post-order traversals for simple graph type.
+TEST(PostOrderIteratorTest, PostOrderAndReversePostOrderTraverrsal) {
+  Graph<6> G;
+  G.AddEdge(0, 1);
+  G.AddEdge(0, 2);
+  G.AddEdge(0, 3);
+  G.AddEdge(1, 4);
+  G.AddEdge(2, 5);
+  G.AddEdge(5, 2);
+  G.AddEdge(2, 4);
+  G.AddEdge(1, 4);
+
+  SmallVector<int> FromIterator;
+  for (auto N : post_order(G))
+    FromIterator.push_back(N->first);
+  EXPECT_EQ(6u, FromIterator.size());
+  EXPECT_EQ(4, FromIterator[0]);
+  EXPECT_EQ(1, FromIterator[1]);
+  EXPECT_EQ(5, FromIterator[2]);
+  EXPECT_EQ(2, FromIterator[3]);
+  EXPECT_EQ(3, FromIterator[4]);
+  EXPECT_EQ(0, FromIterator[5]);
+  FromIterator.clear();
+
+  ReversePostOrderTraversal<Graph<6>> RPOT(G);
+  for (auto N : RPOT)
+    FromIterator.push_back(N->first);
+  EXPECT_EQ(6u, FromIterator.size());
+  EXPECT_EQ(0, FromIterator[0]);
+  EXPECT_EQ(3, FromIterator[1]);
+  EXPECT_EQ(2, FromIterator[2]);
+  EXPECT_EQ(5, FromIterator[3]);
+  EXPECT_EQ(1, FromIterator[4]);
+  EXPECT_EQ(4, FromIterator[5]);
 }
 }

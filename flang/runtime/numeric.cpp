@@ -508,6 +508,38 @@ CppTypeFor<TypeCategory::Real, 16> RTNAME(Fraction16)(
 }
 #endif
 
+bool RTNAME(IsFinite4)(CppTypeFor<TypeCategory::Real, 4> x) {
+  return std::isfinite(x);
+}
+bool RTNAME(IsFinite8)(CppTypeFor<TypeCategory::Real, 8> x) {
+  return std::isfinite(x);
+}
+#if LONG_DOUBLE == 80
+bool RTNAME(IsFinite10)(CppTypeFor<TypeCategory::Real, 10> x) {
+  return std::isfinite(x);
+}
+#elif LONG_DOUBLE == 128
+bool RTNAME(IsFinite16)(CppTypeFor<TypeCategory::Real, 16> x) {
+  return std::isfinite(x);
+}
+#endif
+
+bool RTNAME(IsNaN4)(CppTypeFor<TypeCategory::Real, 4> x) {
+  return std::isnan(x);
+}
+bool RTNAME(IsNaN8)(CppTypeFor<TypeCategory::Real, 8> x) {
+  return std::isnan(x);
+}
+#if LONG_DOUBLE == 80
+bool RTNAME(IsNaN10)(CppTypeFor<TypeCategory::Real, 10> x) {
+  return std::isnan(x);
+}
+#elif LONG_DOUBLE == 128
+bool RTNAME(IsNaN16)(CppTypeFor<TypeCategory::Real, 16> x) {
+  return std::isnan(x);
+}
+#endif
+
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(ModInteger1)(
     CppTypeFor<TypeCategory::Integer, 1> x,
     CppTypeFor<TypeCategory::Integer, 1> p) {

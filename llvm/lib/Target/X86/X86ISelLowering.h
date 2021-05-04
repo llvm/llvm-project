@@ -1118,12 +1118,8 @@ namespace llvm {
 
     unsigned
     getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
-      if (ConstraintCode == "o")
-        return InlineAsm::Constraint_o;
-      else if (ConstraintCode == "v")
+      if (ConstraintCode == "v")
         return InlineAsm::Constraint_v;
-      else if (ConstraintCode == "X")
-        return InlineAsm::Constraint_X;
       return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
     }
 
@@ -1166,8 +1162,9 @@ namespace llvm {
     /// of the specified type.
     /// If the AM is supported, the return value must be >= 0.
     /// If the AM is not supported, it returns a negative value.
-    int getScalingFactorCost(const DataLayout &DL, const AddrMode &AM, Type *Ty,
-                             unsigned AS) const override;
+    InstructionCost getScalingFactorCost(const DataLayout &DL,
+                                         const AddrMode &AM, Type *Ty,
+                                         unsigned AS) const override;
 
     /// This is used to enable splatted operand transforms for vector shifts
     /// and vector funnel shifts.

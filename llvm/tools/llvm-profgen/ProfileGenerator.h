@@ -12,7 +12,6 @@
 #include "ErrorHandling.h"
 #include "PerfReader.h"
 #include "ProfiledBinary.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include <memory>
 #include <unordered_set>
@@ -187,8 +186,9 @@ protected:
   void write(std::unique_ptr<SampleProfileWriter> Writer,
              StringMap<FunctionSamples> &ProfileMap) override;
 
-  // Profile summary to answer isHotCount and isColdCount queries.
-  std::unique_ptr<ProfileSummaryInfo> PSI;
+  // Thresholds from profile summary to answer isHotCount/isColdCount queries.
+  uint64_t HotCountThreshold;
+  uint64_t ColdCountThreshold;
 
   // String table owning context strings created from profile generation.
   std::unordered_set<std::string> ContextStrings;

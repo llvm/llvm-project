@@ -10,7 +10,6 @@
 #define LLVM_ADT_ITERATOR_H
 
 #include "llvm/ADT/iterator_range.h"
-#include <algorithm>
 #include <cstddef>
 #include <iterator>
 #include <type_traits>

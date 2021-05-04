@@ -297,6 +297,9 @@ def : Pat<(fma (fneg FPR16:$rs1), FPR16:$rs2, FPR16:$rs3),
 def : Pat<(fma (fneg FPR16:$rs1), FPR16:$rs2, (fneg FPR16:$rs3)),
           (FNMADD_H FPR16:$rs1, FPR16:$rs2, FPR16:$rs3, 0b111)>;
 
+// The ratified 20191213 ISA spec defines fmin and fmax in a way that matches
+// LLVM's fminnum and fmaxnum
+// <https://github.com/riscv/riscv-isa-manual/commit/cd20cee7efd9bac7c5aa127ec3b451749d2b3cce>.
 def : PatFpr16Fpr16<fminnum, FMIN_H>;
 def : PatFpr16Fpr16<fmaxnum, FMAX_H>;
 

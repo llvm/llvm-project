@@ -71,13 +71,16 @@ public:
   /// @{
 
   using BaseT::getIntImmCost;
-  int getIntImmCost(int64_t Val);
-  int getIntImmCost(const APInt &Imm, Type *Ty, TTI::TargetCostKind CostKind);
-  int getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Imm,
-                        Type *Ty, TTI::TargetCostKind CostKind,
-                        Instruction *Inst = nullptr);
-  int getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
-                          Type *Ty, TTI::TargetCostKind CostKind);
+  InstructionCost getIntImmCost(int64_t Val);
+  InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
+                                TTI::TargetCostKind CostKind);
+  InstructionCost getIntImmCostInst(unsigned Opcode, unsigned Idx,
+                                    const APInt &Imm, Type *Ty,
+                                    TTI::TargetCostKind CostKind,
+                                    Instruction *Inst = nullptr);
+  InstructionCost getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
+                                      const APInt &Imm, Type *Ty,
+                                      TTI::TargetCostKind CostKind);
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
 
   /// @}
@@ -99,6 +102,9 @@ public:
 
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
+
+  Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
+                                               IntrinsicInst &II) const;
 
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
     switch (K) {
@@ -166,7 +172,8 @@ public:
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr);
 
-  int getAddressComputationCost(Type *Ty, ScalarEvolution *SE, const SCEV *Ptr);
+  InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
+                                            const SCEV *Ptr);
 
   InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                                      CmpInst::Predicate VecPred,

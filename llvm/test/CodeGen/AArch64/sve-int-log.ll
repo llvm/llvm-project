@@ -37,6 +37,15 @@ define <vscale x 16 x i8> @and_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
   ret <vscale x 16 x i8> %res
 }
 
+define <vscale x 16 x i8> @and_b_zero(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: and_b_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.b, #0 // =0x0
+; CHECK-NEXT:    ret
+  %res = and <vscale x 16 x i8> %a, zeroinitializer
+  ret <vscale x 16 x i8> %res
+}
+
 define <vscale x 2 x i1> @and_pred_d(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b) {
 ; CHECK-LABEL: and_pred_d:
 ; CHECK:       // %bb.0:
@@ -113,6 +122,14 @@ define <vscale x 16 x i8> @or_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
   ret <vscale x 16 x i8> %res
 }
 
+define <vscale x 16 x i8> @or_b_zero(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: or_b_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %res = or <vscale x 16 x i8> %a, zeroinitializer
+  ret <vscale x 16 x i8> %res
+}
+
 define <vscale x 2 x i1> @or_pred_d(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b) {
 ; CHECK-LABEL: or_pred_d:
 ; CHECK:       // %bb.0:
@@ -186,6 +203,14 @@ define <vscale x 16 x i8> @xor_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = xor <vscale x 16 x i8> %a, %b
+  ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 16 x i8> @xor_b_zero(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: xor_b_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %res = xor <vscale x 16 x i8> %a, zeroinitializer
   ret <vscale x 16 x i8> %res
 }
 

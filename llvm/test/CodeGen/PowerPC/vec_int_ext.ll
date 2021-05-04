@@ -345,37 +345,32 @@ define <8 x i16> @testInvalidExtend(<16 x i8> %a) {
 ; CHECK-BE-NEXT:    li 6, 6
 ; CHECK-BE-NEXT:    extsb 9, 9
 ; CHECK-BE-NEXT:    extsb 10, 10
-; CHECK-BE-NEXT:    extsb 7, 7
-; CHECK-BE-NEXT:    extsb 8, 8
 ; CHECK-BE-NEXT:    vextublx 3, 3, 2
 ; CHECK-BE-NEXT:    vextublx 4, 4, 2
+; CHECK-BE-NEXT:    vextublx 5, 5, 2
+; CHECK-BE-NEXT:    extsb 7, 7
+; CHECK-BE-NEXT:    extsb 8, 8
+; CHECK-BE-NEXT:    extsb 5, 5
 ; CHECK-BE-NEXT:    extsb 3, 3
 ; CHECK-BE-NEXT:    extsb 4, 4
-; CHECK-BE-NEXT:    sldi 10, 10, 48
-; CHECK-BE-NEXT:    sldi 9, 9, 48
-; CHECK-BE-NEXT:    vextublx 5, 5, 2
+; CHECK-BE-NEXT:    mtvsrwz 35, 9
+; CHECK-BE-NEXT:    addis 9, 2, .LCPI11_0@toc@ha
 ; CHECK-BE-NEXT:    vextublx 6, 6, 2
-; CHECK-BE-NEXT:    sldi 8, 8, 48
-; CHECK-BE-NEXT:    sldi 7, 7, 48
-; CHECK-BE-NEXT:    extsb 5, 5
+; CHECK-BE-NEXT:    mtvsrwz 34, 10
+; CHECK-BE-NEXT:    mtvsrwz 37, 7
 ; CHECK-BE-NEXT:    extsb 6, 6
-; CHECK-BE-NEXT:    sldi 6, 6, 48
-; CHECK-BE-NEXT:    sldi 5, 5, 48
-; CHECK-BE-NEXT:    sldi 4, 4, 48
-; CHECK-BE-NEXT:    sldi 3, 3, 48
-; CHECK-BE-NEXT:    mtvsrd 34, 10
-; CHECK-BE-NEXT:    mtvsrd 35, 9
-; CHECK-BE-NEXT:    mtvsrd 36, 7
-; CHECK-BE-NEXT:    mtvsrd 37, 3
-; CHECK-BE-NEXT:    vmrghh 2, 3, 2
-; CHECK-BE-NEXT:    mtvsrd 35, 8
-; CHECK-BE-NEXT:    vmrghh 3, 4, 3
-; CHECK-BE-NEXT:    mtvsrd 36, 5
+; CHECK-BE-NEXT:    mtvsrwz 32, 3
+; CHECK-BE-NEXT:    addi 9, 9, .LCPI11_0@toc@l
+; CHECK-BE-NEXT:    lxvx 36, 0, 9
+; CHECK-BE-NEXT:    vperm 2, 3, 2, 4
+; CHECK-BE-NEXT:    mtvsrwz 35, 8
+; CHECK-BE-NEXT:    vperm 3, 5, 3, 4
+; CHECK-BE-NEXT:    mtvsrwz 37, 5
 ; CHECK-BE-NEXT:    vmrghw 2, 3, 2
-; CHECK-BE-NEXT:    mtvsrd 35, 6
-; CHECK-BE-NEXT:    vmrghh 3, 4, 3
-; CHECK-BE-NEXT:    mtvsrd 36, 4
-; CHECK-BE-NEXT:    vmrghh 4, 5, 4
+; CHECK-BE-NEXT:    mtvsrwz 35, 6
+; CHECK-BE-NEXT:    vperm 3, 5, 3, 4
+; CHECK-BE-NEXT:    mtvsrwz 37, 4
+; CHECK-BE-NEXT:    vperm 4, 0, 5, 4
 ; CHECK-BE-NEXT:    vmrghw 3, 4, 3
 ; CHECK-BE-NEXT:    xxmrghd 34, 35, 34
 ; CHECK-BE-NEXT:    blr

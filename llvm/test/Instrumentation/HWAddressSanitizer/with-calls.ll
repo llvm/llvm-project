@@ -197,7 +197,7 @@ entry:
 
 ; CHECK: declare void @__hwasan_init()
 
-; CHECK:      define internal void @hwasan.module_ctor() comdat {
+; CHECK:      define internal void @hwasan.module_ctor() #[[#]] comdat {
 ; CHECK-NEXT:   call void @__hwasan_init()
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }

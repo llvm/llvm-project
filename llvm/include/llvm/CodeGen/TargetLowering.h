@@ -49,6 +49,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/MachineValueType.h"
 #include <algorithm>
 #include <cassert>
@@ -781,7 +782,7 @@ public:
     return false;
   }
 
-  /// Return true if target always beneficiates from combining into FMA for a
+  /// Return true if target always benefits from combining into FMA for a
   /// given value type. This must typically return false on targets where FMA
   /// takes more cycles to execute than FADD.
   virtual bool enableAggressiveFMAFusion(EVT VT) const {
@@ -1144,7 +1145,7 @@ public:
 
   /// Return true if lowering to a jump table is allowed.
   virtual bool areJTsAllowed(const Function *Fn) const {
-    if (Fn->getFnAttribute("no-jump-tables").getValueAsString() == "true")
+    if (Fn->getFnAttribute("no-jump-tables").getValueAsBool())
       return false;
 
     return isOperationLegalOrCustom(ISD::BR_JT, MVT::Other) ||
@@ -2347,8 +2348,9 @@ public:
   /// If the AM is not supported, it returns a negative value.
   /// TODO: Handle pre/postinc as well.
   /// TODO: Remove default argument
-  virtual int getScalingFactorCost(const DataLayout &DL, const AddrMode &AM,
-                                   Type *Ty, unsigned AS = 0) const {
+  virtual InstructionCost getScalingFactorCost(const DataLayout &DL,
+                                               const AddrMode &AM, Type *Ty,
+                                               unsigned AS = 0) const {
     // Default: assume that any scaling factor used in a legal AM is free.
     if (isLegalAddressingMode(DL, AM, Ty, AS))
       return 0;
@@ -4202,6 +4204,10 @@ public:
   virtual unsigned getInlineAsmMemConstraint(StringRef ConstraintCode) const {
     if (ConstraintCode == "m")
       return InlineAsm::Constraint_m;
+    if (ConstraintCode == "o")
+      return InlineAsm::Constraint_o;
+    if (ConstraintCode == "X")
+      return InlineAsm::Constraint_X;
     return InlineAsm::Constraint_Unknown;
   }
 

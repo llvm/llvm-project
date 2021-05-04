@@ -574,9 +574,15 @@ static Value computeLoopIndependentUpperBound(OpBuilder &b, scf::ForOp outer,
       continue;
     }
     auto sliceMinOp = cast<AffineMinOp>(op);
+    GetMinMaxExprFn getSCFMinMax = [&](Value value,
+                                       SmallVectorImpl<Value> &dims,
+                                       SmallVectorImpl<Value> &symbols) {
+      return getSCFMinMaxExpr(value, dims, symbols, [&](Operation *op) {
+        return outer->isAncestor(op);
+      });
+    };
     // Perform the substitution of the operands of AffineMinOp.
-    auto mapAndOperands = substituteMin(
-        sliceMinOp, [&](Operation *op) { return outer->isAncestor(op); });
+    auto mapAndOperands = substituteMin(sliceMinOp, getSCFMinMax);
     SmallVector<Value> resultOperands = mapAndOperands.dims;
     llvm::append_range(resultOperands, mapAndOperands.symbols);
     AffineMap map = mapAndOperands.map;

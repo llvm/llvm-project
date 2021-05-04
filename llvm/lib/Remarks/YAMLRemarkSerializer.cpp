@@ -13,6 +13,7 @@
 
 #include "llvm/Remarks/YAMLRemarkSerializer.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 
 using namespace llvm;
 using namespace llvm::remarks;

@@ -116,6 +116,10 @@ class DebugPreFIRTreeAction : public PrescanAndSemaAction {
   void ExecuteAction() override;
 };
 
+class GetDefinitionAction : public PrescanAndSemaAction {
+  void ExecuteAction() override;
+};
+
 class GetSymbolsSourcesAction : public PrescanAndSemaAction {
   void ExecuteAction() override;
 };

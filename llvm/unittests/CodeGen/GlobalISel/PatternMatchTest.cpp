@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "GISelMITest.h"
-#include "llvm/CodeGen/GlobalISel/ConstantFoldingMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"

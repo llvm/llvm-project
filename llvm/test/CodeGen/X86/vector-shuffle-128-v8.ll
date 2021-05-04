@@ -1651,8 +1651,9 @@ define <8 x i16> @shuffle_v8i16_XX4X8acX(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; SSSE3-LABEL: shuffle_v8i16_XX4X8acX:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[u,u,u,u,u,u,u,u,0,1,4,5,8,9,u,u]
-; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[2,3]
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[u,u,u,u,8,9,u,u],zero,zero,zero,zero,zero,zero,xmm0[u,u]
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[u,u,u,u],zero,zero,xmm1[u,u,0,1,4,5,8,9,u,u]
+; SSSE3-NEXT:    por %xmm1, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: shuffle_v8i16_XX4X8acX:

@@ -554,10 +554,16 @@ private:
     unsigned ZeroCostFoldedReloads = 0;
     unsigned Spills = 0;
     unsigned FoldedSpills = 0;
+    unsigned Copies = 0;
+    float ReloadsCost = 0.0f;
+    float FoldedReloadsCost = 0.0f;
+    float SpillsCost = 0.0f;
+    float FoldedSpillsCost = 0.0f;
+    float CopiesCost = 0.0f;
 
     bool isEmpty() {
       return !(Reloads || FoldedReloads || Spills || FoldedSpills ||
-               ZeroCostFoldedReloads);
+               ZeroCostFoldedReloads || Copies);
     }
 
     void add(RAGreedyStats other) {
@@ -566,19 +572,25 @@ private:
       ZeroCostFoldedReloads += other.ZeroCostFoldedReloads;
       Spills += other.Spills;
       FoldedSpills += other.FoldedSpills;
+      Copies += other.Copies;
+      ReloadsCost += other.ReloadsCost;
+      FoldedReloadsCost += other.FoldedReloadsCost;
+      SpillsCost += other.SpillsCost;
+      FoldedSpillsCost += other.FoldedSpillsCost;
+      CopiesCost += other.CopiesCost;
     }
 
     void report(MachineOptimizationRemarkMissed &R);
   };
 
-  /// Compute the number of spills and reloads for a basic block.
-  RAGreedyStats computeNumberOfSplillsReloads(MachineBasicBlock &MBB);
+  /// Compute statistic for a basic block.
+  RAGreedyStats computeStats(MachineBasicBlock &MBB);
 
-  /// Compute and report the number of spills through a remark.
-  RAGreedyStats reportNumberOfSplillsReloads(MachineLoop *L);
+  /// Compute and report statistic through a remark.
+  RAGreedyStats reportStats(MachineLoop *L);
 
-  /// Report the number of spills and reloads for each loop.
-  void reportNumberOfSplillsReloads();
+  /// Report the statistic for each loop.
+  void reportStats();
 };
 
 } // end anonymous namespace
@@ -1313,8 +1325,9 @@ bool RAGreedy::addThroughConstraints(InterferenceCache::Cursor Intf,
     // Abort if the spill cannot be inserted at the MBB' start
     MachineBasicBlock *MBB = MF->getBlockNumbered(Number);
     if (!MBB->empty() &&
-        SlotIndex::isEarlierInstr(LIS->getInstructionIndex(MBB->instr_front()),
-                                  SA->getFirstSplitPoint(Number)))
+        SlotIndex::isEarlierInstr(
+            LIS->getInstructionIndex(*MBB->getFirstNonDebugInstr()),
+            SA->getFirstSplitPoint(Number)))
       return false;
     // Interference for the live-in value.
     if (Intf.first() <= Indexes->getMBBStartIdx(Number))
@@ -3134,21 +3147,34 @@ MCRegister RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
 
 void RAGreedy::RAGreedyStats::report(MachineOptimizationRemarkMissed &R) {
   using namespace ore;
-  if (Spills)
+  if (Spills) {
     R << NV("NumSpills", Spills) << " spills ";
-  if (FoldedSpills)
+    R << NV("TotalSpillsCost", SpillsCost) << " total spills cost ";
+  }
+  if (FoldedSpills) {
     R << NV("NumFoldedSpills", FoldedSpills) << " folded spills ";
-  if (Reloads)
+    R << NV("TotalFoldedSpillsCost", FoldedSpillsCost)
+      << " total folded spills cost ";
+  }
+  if (Reloads) {
     R << NV("NumReloads", Reloads) << " reloads ";
-  if (FoldedReloads)
+    R << NV("TotalReloadsCost", ReloadsCost) << " total reloads cost ";
+  }
+  if (FoldedReloads) {
     R << NV("NumFoldedReloads", FoldedReloads) << " folded reloads ";
+    R << NV("TotalFoldedReloadsCost", FoldedReloadsCost)
+      << " total folded reloads cost ";
+  }
   if (ZeroCostFoldedReloads)
     R << NV("NumZeroCostFoldedReloads", ZeroCostFoldedReloads)
       << " zero cost folded reloads ";
+  if (Copies) {
+    R << NV("NumVRCopies", Copies) << " virtual registers copies ";
+    R << NV("TotalCopiesCost", CopiesCost) << " total copies cost ";
+  }
 }
 
-RAGreedy::RAGreedyStats
-RAGreedy::computeNumberOfSplillsReloads(MachineBasicBlock &MBB) {
+RAGreedy::RAGreedyStats RAGreedy::computeStats(MachineBasicBlock &MBB) {
   RAGreedyStats Stats;
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   int FI;
@@ -3163,8 +3189,16 @@ RAGreedy::computeNumberOfSplillsReloads(MachineBasicBlock &MBB) {
            MI.getOpcode() == TargetOpcode::STATEPOINT;
   };
   for (MachineInstr &MI : MBB) {
-    SmallVector<const MachineMemOperand *, 2> Accesses;
+    if (MI.isCopy()) {
+      MachineOperand &Dest = MI.getOperand(0);
+      MachineOperand &Src = MI.getOperand(1);
+      if (Dest.isReg() && Src.isReg() && Dest.getReg().isVirtual() &&
+          Src.getReg().isVirtual())
+        ++Stats.Copies;
+      continue;
+    }
 
+    SmallVector<const MachineMemOperand *, 2> Accesses;
     if (TII->isLoadFromStackSlot(MI, FI) && MFI.isSpillSlotObjectIndex(FI)) {
       ++Stats.Reloads;
       continue;
@@ -3206,26 +3240,34 @@ RAGreedy::computeNumberOfSplillsReloads(MachineBasicBlock &MBB) {
       Stats.FoldedSpills += Accesses.size();
     }
   }
+  // Set cost of collected statistic by multiplication to relative frequency of
+  // this basic block.
+  float RelFreq = MBFI->getBlockFreqRelativeToEntryBlock(&MBB);
+  Stats.ReloadsCost = RelFreq * Stats.Reloads;
+  Stats.FoldedReloadsCost = RelFreq * Stats.FoldedReloads;
+  Stats.SpillsCost = RelFreq * Stats.Spills;
+  Stats.FoldedSpillsCost = RelFreq * Stats.FoldedSpills;
+  Stats.CopiesCost = RelFreq * Stats.Copies;
   return Stats;
 }
 
-RAGreedy::RAGreedyStats RAGreedy::reportNumberOfSplillsReloads(MachineLoop *L) {
+RAGreedy::RAGreedyStats RAGreedy::reportStats(MachineLoop *L) {
   RAGreedyStats Stats;
 
   // Sum up the spill and reloads in subloops.
   for (MachineLoop *SubLoop : *L)
-    Stats.add(reportNumberOfSplillsReloads(SubLoop));
+    Stats.add(reportStats(SubLoop));
 
   for (MachineBasicBlock *MBB : L->getBlocks())
     // Handle blocks that were not included in subloops.
     if (Loops->getLoopFor(MBB) == L)
-      Stats.add(computeNumberOfSplillsReloads(*MBB));
+      Stats.add(computeStats(*MBB));
 
   if (!Stats.isEmpty()) {
     using namespace ore;
 
     ORE->emit([&]() {
-      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "LoopSpillReload",
+      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "LoopSpillReloadCopies",
                                         L->getStartLoc(), L->getHeader());
       Stats.report(R);
       R << "generated in loop";
@@ -3235,16 +3277,16 @@ RAGreedy::RAGreedyStats RAGreedy::reportNumberOfSplillsReloads(MachineLoop *L) {
   return Stats;
 }
 
-void RAGreedy::reportNumberOfSplillsReloads() {
+void RAGreedy::reportStats() {
   if (!ORE->allowExtraAnalysis(DEBUG_TYPE))
     return;
   RAGreedyStats Stats;
   for (MachineLoop *L : *Loops)
-    Stats.add(reportNumberOfSplillsReloads(L));
+    Stats.add(reportStats(L));
   // Process non-loop blocks.
   for (MachineBasicBlock &MBB : *MF)
     if (!Loops->getLoopFor(&MBB))
-      Stats.add(computeNumberOfSplillsReloads(MBB));
+      Stats.add(computeStats(MBB));
   if (!Stats.isEmpty()) {
     using namespace ore;
 
@@ -3252,7 +3294,7 @@ void RAGreedy::reportNumberOfSplillsReloads() {
       DebugLoc Loc;
       if (auto *SP = MF->getFunction().getSubprogram())
         Loc = DILocation::get(SP->getContext(), SP->getLine(), 1, SP);
-      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "SpillReload", Loc,
+      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "SpillReloadCopies", Loc,
                                         &MF->front());
       Stats.report(R);
       R << "generated in function";
@@ -3322,7 +3364,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   if (VerifyEnabled)
     MF->verify(this, "Before post optimization");
   postOptimization();
-  reportNumberOfSplillsReloads();
+  reportStats();
 
   releaseMemory();
   return true;

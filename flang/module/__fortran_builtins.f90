@@ -35,6 +35,7 @@ module __Fortran_builtins
 
   procedure(type(__builtin_c_ptr)) :: __builtin_c_loc
 
+  intrinsic :: __builtin_ieee_is_nan
   intrinsic :: __builtin_ieee_selected_real_kind
   intrinsic :: __builtin_ieee_support_datatype, &
     __builtin_ieee_support_denormal, __builtin_ieee_support_divide, &

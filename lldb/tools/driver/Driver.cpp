@@ -784,8 +784,8 @@ EXAMPLES:
   llvm::outs() << examples << '\n';
 }
 
-llvm::Optional<int> InitializeReproducer(llvm::StringRef argv0,
-                                         opt::InputArgList &input_args) {
+static llvm::Optional<int> InitializeReproducer(llvm::StringRef argv0,
+                                                opt::InputArgList &input_args) {
   if (auto *finalize_path = input_args.getLastArg(OPT_reproducer_finalize)) {
     if (const char *error = SBReproducer::Finalize(finalize_path->getValue())) {
       WithColor::error() << "reproducer finalization failed: " << error << '\n';
@@ -853,8 +853,7 @@ llvm::Optional<int> InitializeReproducer(llvm::StringRef argv0,
     // Register the reproducer signal handler.
     if (!input_args.hasArg(OPT_no_generate_on_signal)) {
       if (const char *reproducer_path = SBReproducer::GetPath()) {
-        // Leaking the string on purpose.
-        std::string *finalize_cmd = new std::string(argv0);
+        static std::string *finalize_cmd = new std::string(argv0);
         finalize_cmd->append(" --reproducer-finalize '");
         finalize_cmd->append(reproducer_path);
         finalize_cmd->append("'");

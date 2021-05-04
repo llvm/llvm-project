@@ -887,9 +887,10 @@ void JSONNodeDumper::VisitTemplateTemplateParmDecl(
 
   if (D->hasDefaultArgument())
     JOS.attributeObject("defaultArg", [=] {
+      const auto *InheritedFrom = D->getDefaultArgStorage().getInheritedFrom();
       Visit(D->getDefaultArgument().getArgument(),
-            D->getDefaultArgStorage().getInheritedFrom()->getSourceRange(),
-            D->getDefaultArgStorage().getInheritedFrom(),
+            InheritedFrom ? InheritedFrom->getSourceRange() : SourceLocation{},
+            InheritedFrom,
             D->defaultArgumentWasInherited() ? "inherited from" : "previous");
     });
 }

@@ -1,4 +1,4 @@
-// RUN: %clang_hwasan -g %s -o %t
+// RUN: %clang_hwasan -mllvm -hwasan-globals=0  -g %s -o %t
 // RUN: %env_hwasan_opts=decorate_proc_maps=1 %run %t 2>&1 | FileCheck %s --check-prefix=A
 // RUN: %env_hwasan_opts=decorate_proc_maps=1 %run %t 2>&1 | FileCheck %s --check-prefix=B
 
@@ -16,21 +16,18 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <pthread.h>
-#include <stdlib.h>
-
-#include "utils.h"
 
 void CopyFdToFd(int in_fd, int out_fd) {
   const size_t kBufSize = 0x10000;
   static char buf[kBufSize];
   while (1) {
-    ssize_t got = read(in_fd, UNTAG(buf), kBufSize);
+    ssize_t got = read(in_fd, buf, kBufSize);
     if (got > 0) {
-      write(out_fd, UNTAG(buf), got);
+      write(out_fd, buf, got);
     } else if (got == 0) {
       break;
     } else if (errno != EAGAIN || errno != EWOULDBLOCK || errno != EINTR) {
@@ -42,7 +39,7 @@ void CopyFdToFd(int in_fd, int out_fd) {
 
 void *ThreadFn(void *arg) {
   (void)arg;
-  int fd = open(UNTAG("/proc/self/maps"), O_RDONLY);
+  int fd = open("/proc/self/maps", O_RDONLY);
   CopyFdToFd(fd, 2);
   close(fd);
   return NULL;

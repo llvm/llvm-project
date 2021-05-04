@@ -19,6 +19,8 @@ def CortexM7Model : SchedMachineModel {
   let CompleteModel = 0;
 }
 
+let SchedModel = CortexM7Model in {
+
 //===--------------------------------------------------------------------===//
 // The Cortex-M7 has two ALU, two LOAD, a STORE, a MAC, a BRANCH and a VFP
 // pipe. The stages relevant to scheduling are as follows:
@@ -33,7 +35,9 @@ def CortexM7Model : SchedMachineModel {
 // for scheduling, so simple ALU operations executing in EX2 will have
 // ReadAdvance<0> (the default) for their source operands and Latency = 1.
 
-def M7UnitLoad   : ProcResource<2> { let BufferSize = 0; }
+def M7UnitLoadL  : ProcResource<1> { let BufferSize = 0; }
+def M7UnitLoadH  : ProcResource<1> { let BufferSize = 0; }
+def M7UnitLoad   : ProcResGroup<[M7UnitLoadL,M7UnitLoadH]> { let BufferSize = 0; }
 def M7UnitStore  : ProcResource<1> { let BufferSize = 0; }
 def M7UnitALU    : ProcResource<2>;
 def M7UnitShift1 : ProcResource<1> { let BufferSize = 0; }
@@ -41,13 +45,13 @@ def M7UnitShift2 : ProcResource<1> { let BufferSize = 0; }
 def M7UnitMAC    : ProcResource<1> { let BufferSize = 0; }
 def M7UnitBranch : ProcResource<1> { let BufferSize = 0; }
 def M7UnitVFP    : ProcResource<1> { let BufferSize = 0; }
-def M7UnitVPort  : ProcResource<2> { let BufferSize = 0; }
+def M7UnitVPortL : ProcResource<1> { let BufferSize = 0; }
+def M7UnitVPortH : ProcResource<1> { let BufferSize = 0; }
+def M7UnitVPort  : ProcResGroup<[M7UnitVPortL,M7UnitVPortH]> { let BufferSize = 0; }
 def M7UnitSIMD   : ProcResource<1> { let BufferSize = 0; }
 
 //===---------------------------------------------------------------------===//
 // Subtarget-specific SchedWrite types with map ProcResources and set latency.
-
-let SchedModel = CortexM7Model in {
 
 def : WriteRes<WriteALU, [M7UnitALU]> { let Latency = 1; }
 
@@ -105,39 +109,42 @@ def : WriteRes<WriteNoop, []> { let Latency = 0; }
 // Floating point conversions.
 def : WriteRes<WriteFPCVT, [M7UnitVFP, M7UnitVPort]> { let Latency = 3; }
 def : WriteRes<WriteFPMOV, [M7UnitVPort]>            { let Latency = 3; }
+def M7WriteFPMOV64 : SchedWriteRes<[M7UnitVPortL, M7UnitVPortH]> {
+  let Latency = 3;
+}
 
 // The FP pipeline has a latency of 3 cycles.
 // ALU operations (32/64-bit).  These go down the FP pipeline.
 def : WriteRes<WriteFPALU32, [M7UnitVFP, M7UnitVPort]>  { let Latency = 3; }
-def : WriteRes<WriteFPALU64, [M7UnitVFP, M7UnitVPort, M7UnitVPort]> {
+def : WriteRes<WriteFPALU64, [M7UnitVFP, M7UnitVPortL, M7UnitVPortH]> {
   let Latency = 4;
   let BeginGroup = 1;
 }
 
 // Multiplication
 def : WriteRes<WriteFPMUL32, [M7UnitVFP, M7UnitVPort]> { let Latency = 3; }
-def : WriteRes<WriteFPMUL64, [M7UnitVFP, M7UnitVPort, M7UnitVPort]> {
+def : WriteRes<WriteFPMUL64, [M7UnitVFP, M7UnitVPortL, M7UnitVPortH]> {
   let Latency = 7;
   let BeginGroup = 1;
 }
 
 // Multiply-accumulate.  FPMAC goes down the FP Pipeline.
 def : WriteRes<WriteFPMAC32, [M7UnitVFP, M7UnitVPort]> { let Latency = 6; }
-def : WriteRes<WriteFPMAC64, [M7UnitVFP, M7UnitVPort, M7UnitVPort]> {
+def : WriteRes<WriteFPMAC64, [M7UnitVFP, M7UnitVPortL, M7UnitVPortH]> {
   let Latency = 11;
   let BeginGroup = 1;
 }
 
 // Division.   Effective scheduling latency is 3, though real latency is larger
 def : WriteRes<WriteFPDIV32, [M7UnitVFP, M7UnitVPort]>  { let Latency = 16; }
-def : WriteRes<WriteFPDIV64, [M7UnitVFP, M7UnitVPort, M7UnitVPort]> {
+def : WriteRes<WriteFPDIV64, [M7UnitVFP, M7UnitVPortL, M7UnitVPortH]> {
   let Latency = 30;
   let BeginGroup = 1;
 }
 
 // Square-root.  Effective scheduling latency is 3; real latency is larger
 def : WriteRes<WriteFPSQRT32, [M7UnitVFP, M7UnitVPort]> { let Latency = 16; }
-def : WriteRes<WriteFPSQRT64, [M7UnitVFP, M7UnitVPort, M7UnitVPort]> {
+def : WriteRes<WriteFPSQRT64, [M7UnitVFP, M7UnitVPortL, M7UnitVPortH]> {
   let Latency = 30;
   let BeginGroup = 1;
 }
@@ -283,12 +290,12 @@ def : InstRW<[M7TableLoad, M7Read_ISS, M7Read_ISS], (instregex "t2TB")>;
 // VFP loads and stores
 
 def M7LoadSP  : SchedWriteRes<[M7UnitLoad, M7UnitVPort]> { let Latency = 1; }
-def M7LoadDP  : SchedWriteRes<[M7UnitLoad, M7UnitVPort, M7UnitVPort]> {
+def M7LoadDP  : SchedWriteRes<[M7UnitLoadL, M7UnitLoadH, M7UnitVPortL, M7UnitVPortH]> {
   let Latency = 2;
   let SingleIssue = 1;
 }
 def M7StoreSP : SchedWriteRes<[M7UnitStore, M7UnitVPort]>;
-def M7StoreDP : SchedWriteRes<[M7UnitStore, M7UnitVPort, M7UnitVPort]> {
+def M7StoreDP : SchedWriteRes<[M7UnitStore, M7UnitVPortL, M7UnitVPortH]> {
   let SingleIssue = 1;
 }
 

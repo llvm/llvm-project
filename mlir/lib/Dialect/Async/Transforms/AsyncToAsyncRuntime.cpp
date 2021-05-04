@@ -21,6 +21,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/Debug.h"
 
 using namespace mlir;
 using namespace mlir::async;

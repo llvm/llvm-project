@@ -102,31 +102,31 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @vector_add_f32(<4 x float> %lhs, <4 x float> %rhs) {
 ; CHECK-NOFP-LABEL: vector_add_f32:
 ; CHECK-NOFP:       @ %bb.0: @ %entry
-; CHECK-NOFP-NEXT:    .save {r7, lr}
-; CHECK-NOFP-NEXT:    push {r7, lr}
+; CHECK-NOFP-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-NOFP-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NOFP-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
 ; CHECK-NOFP-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
-; CHECK-NOFP-NEXT:    vmov q4, q1
+; CHECK-NOFP-NEXT:    vmov q5, q1
 ; CHECK-NOFP-NEXT:    vmov q6, q0
-; CHECK-NOFP-NEXT:    vmov r0, s27
-; CHECK-NOFP-NEXT:    vmov r1, s19
+; CHECK-NOFP-NEXT:    vmov r4, r0, d13
+; CHECK-NOFP-NEXT:    vmov r5, r1, d11
 ; CHECK-NOFP-NEXT:    bl __aeabi_fadd
-; CHECK-NOFP-NEXT:    vmov s23, r0
-; CHECK-NOFP-NEXT:    vmov r0, s26
-; CHECK-NOFP-NEXT:    vmov r1, s18
+; CHECK-NOFP-NEXT:    vmov s19, r0
+; CHECK-NOFP-NEXT:    mov r0, r4
+; CHECK-NOFP-NEXT:    mov r1, r5
 ; CHECK-NOFP-NEXT:    bl __aeabi_fadd
-; CHECK-NOFP-NEXT:    vmov s22, r0
-; CHECK-NOFP-NEXT:    vmov r0, s25
-; CHECK-NOFP-NEXT:    vmov r1, s17
+; CHECK-NOFP-NEXT:    vmov s18, r0
+; CHECK-NOFP-NEXT:    vmov r4, r0, d12
+; CHECK-NOFP-NEXT:    vmov r5, r1, d10
 ; CHECK-NOFP-NEXT:    bl __aeabi_fadd
-; CHECK-NOFP-NEXT:    vmov s21, r0
-; CHECK-NOFP-NEXT:    vmov r0, s24
-; CHECK-NOFP-NEXT:    vmov r1, s16
+; CHECK-NOFP-NEXT:    vmov s17, r0
+; CHECK-NOFP-NEXT:    mov r0, r4
+; CHECK-NOFP-NEXT:    mov r1, r5
 ; CHECK-NOFP-NEXT:    bl __aeabi_fadd
-; CHECK-NOFP-NEXT:    vmov s20, r0
-; CHECK-NOFP-NEXT:    vmov q0, q5
+; CHECK-NOFP-NEXT:    vmov s16, r0
+; CHECK-NOFP-NEXT:    vmov q0, q4
 ; CHECK-NOFP-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
-; CHECK-NOFP-NEXT:    pop {r7, pc}
+; CHECK-NOFP-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; CHECK-FP-LABEL: vector_add_f32:
 ; CHECK-FP:       @ %bb.0: @ %entry

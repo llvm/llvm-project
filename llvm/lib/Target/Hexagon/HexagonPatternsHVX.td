@@ -566,32 +566,32 @@ let Predicates = [UseHVX] in {
   def: Pat<(qnot HQ16:$Qs), (V6_pred_not HvxQR:$Qs)>;
   def: Pat<(qnot HQ32:$Qs), (V6_pred_not HvxQR:$Qs)>;
 
-  def: OpR_RR_pat<V6_pred_and,         And,  VecQ8,   HQ8>;
-  def: OpR_RR_pat<V6_pred_and,         And, VecQ16,  HQ16>;
-  def: OpR_RR_pat<V6_pred_and,         And, VecQ32,  HQ32>;
-  def: OpR_RR_pat<V6_pred_or,           Or,  VecQ8,   HQ8>;
-  def: OpR_RR_pat<V6_pred_or,           Or, VecQ16,  HQ16>;
-  def: OpR_RR_pat<V6_pred_or,           Or, VecQ32,  HQ32>;
-  def: OpR_RR_pat<V6_pred_xor,         Xor,  VecQ8,   HQ8>;
-  def: OpR_RR_pat<V6_pred_xor,         Xor, VecQ16,  HQ16>;
-  def: OpR_RR_pat<V6_pred_xor,         Xor, VecQ32,  HQ32>;
+  def: OpR_RR_pat<V6_pred_and,  And,  VecQ8,   HQ8>;
+  def: OpR_RR_pat<V6_pred_and,  And, VecQ16,  HQ16>;
+  def: OpR_RR_pat<V6_pred_and,  And, VecQ32,  HQ32>;
+  def: OpR_RR_pat<V6_pred_or,    Or,  VecQ8,   HQ8>;
+  def: OpR_RR_pat<V6_pred_or,    Or, VecQ16,  HQ16>;
+  def: OpR_RR_pat<V6_pred_or,    Or, VecQ32,  HQ32>;
+  def: OpR_RR_pat<V6_pred_xor,  Xor,  VecQ8,   HQ8>;
+  def: OpR_RR_pat<V6_pred_xor,  Xor, VecQ16,  HQ16>;
+  def: OpR_RR_pat<V6_pred_xor,  Xor, VecQ32,  HQ32>;
 
-  def: OpR_RR_pat<V6_pred_and_n, Not2<And>,  VecQ8,   HQ8>;
-  def: OpR_RR_pat<V6_pred_and_n, Not2<And>, VecQ16,  HQ16>;
-  def: OpR_RR_pat<V6_pred_and_n, Not2<And>, VecQ32,  HQ32>;
-  def: OpR_RR_pat<V6_pred_or_n,   Not2<Or>,  VecQ8,   HQ8>;
-  def: OpR_RR_pat<V6_pred_or_n,   Not2<Or>, VecQ16,  HQ16>;
-  def: OpR_RR_pat<V6_pred_or_n,   Not2<Or>, VecQ32,  HQ32>;
+  def: OpR_RR_pat<V6_pred_and_n,  VNot2<And, qnot>,  VecQ8,   HQ8>;
+  def: OpR_RR_pat<V6_pred_and_n,  VNot2<And, qnot>, VecQ16,  HQ16>;
+  def: OpR_RR_pat<V6_pred_and_n,  VNot2<And, qnot>, VecQ32,  HQ32>;
+  def: OpR_RR_pat<V6_pred_or_n,    VNot2<Or, qnot>,  VecQ8,   HQ8>;
+  def: OpR_RR_pat<V6_pred_or_n,    VNot2<Or, qnot>, VecQ16,  HQ16>;
+  def: OpR_RR_pat<V6_pred_or_n,    VNot2<Or, qnot>, VecQ32,  HQ32>;
 
-  def: OpR_RR_pat<V6_veqb,              seteq,  VecQ8,  HVI8>;
-  def: OpR_RR_pat<V6_veqh,              seteq, VecQ16, HVI16>;
-  def: OpR_RR_pat<V6_veqw,              seteq, VecQ32, HVI32>;
-  def: OpR_RR_pat<V6_vgtb,              setgt,  VecQ8,  HVI8>;
-  def: OpR_RR_pat<V6_vgth,              setgt, VecQ16, HVI16>;
-  def: OpR_RR_pat<V6_vgtw,              setgt, VecQ32, HVI32>;
-  def: OpR_RR_pat<V6_vgtub,            setugt,  VecQ8,  HVI8>;
-  def: OpR_RR_pat<V6_vgtuh,            setugt, VecQ16, HVI16>;
-  def: OpR_RR_pat<V6_vgtuw,            setugt, VecQ32, HVI32>;
+  def: OpR_RR_pat<V6_veqb,      seteq,  VecQ8,  HVI8>;
+  def: OpR_RR_pat<V6_veqh,      seteq, VecQ16, HVI16>;
+  def: OpR_RR_pat<V6_veqw,      seteq, VecQ32, HVI32>;
+  def: OpR_RR_pat<V6_vgtb,      setgt,  VecQ8,  HVI8>;
+  def: OpR_RR_pat<V6_vgth,      setgt, VecQ16, HVI16>;
+  def: OpR_RR_pat<V6_vgtw,      setgt, VecQ32, HVI32>;
+  def: OpR_RR_pat<V6_vgtub,    setugt,  VecQ8,  HVI8>;
+  def: OpR_RR_pat<V6_vgtuh,    setugt, VecQ16, HVI16>;
+  def: OpR_RR_pat<V6_vgtuw,    setugt, VecQ32, HVI32>;
 
   def: AccRRR_pat<V6_veqb_and,    And,  seteq,    HQ8,  HVI8,  HVI8>;
   def: AccRRR_pat<V6_veqb_or,      Or,  seteq,    HQ8,  HVI8,  HVI8>;

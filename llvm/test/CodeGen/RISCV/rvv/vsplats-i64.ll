@@ -264,3 +264,45 @@ define <vscale x 8 x i64> @vadd_vx_nxv8i64_12(<vscale x 8 x i64> %v, i64 %a) {
   %vret = add <vscale x 8 x i64> %v, %splat
   ret <vscale x 8 x i64> %vret
 }
+
+define <vscale x 8 x i64> @vsplat_nxv8i64_13(i32 %a) {
+; RV32V-LABEL: vsplat_nxv8i64_13:
+; RV32V:       # %bb.0:
+; RV32V-NEXT:    vsetvli a1, zero, e64,m8,ta,mu
+; RV32V-NEXT:    vmv.v.x v8, a0
+; RV32V-NEXT:    ret
+;
+; RV64V-LABEL: vsplat_nxv8i64_13:
+; RV64V:       # %bb.0:
+; RV64V-NEXT:    sext.w a0, a0
+; RV64V-NEXT:    vsetvli a1, zero, e64,m8,ta,mu
+; RV64V-NEXT:    vmv.v.x v8, a0
+; RV64V-NEXT:    ret
+  %b = sext i32 %a to i64
+  %head = insertelement <vscale x 8 x i64> undef, i64 %b, i32 0
+  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> undef, <vscale x 8 x i32> zeroinitializer
+  ret <vscale x 8 x i64> %splat
+}
+
+define <vscale x 8 x i64> @vsplat_nxv8i64_14(i32 %a) {
+; RV32V-LABEL: vsplat_nxv8i64_14:
+; RV32V:       # %bb.0:
+; RV32V-NEXT:    vsetvli a1, zero, e64,m8,ta,mu
+; RV32V-NEXT:    vmv.v.x v8, a0
+; RV32V-NEXT:    addi a0, zero, 32
+; RV32V-NEXT:    vsll.vx v8, v8, a0
+; RV32V-NEXT:    vsrl.vx v8, v8, a0
+; RV32V-NEXT:    ret
+;
+; RV64V-LABEL: vsplat_nxv8i64_14:
+; RV64V:       # %bb.0:
+; RV64V-NEXT:    slli a0, a0, 32
+; RV64V-NEXT:    srli a0, a0, 32
+; RV64V-NEXT:    vsetvli a1, zero, e64,m8,ta,mu
+; RV64V-NEXT:    vmv.v.x v8, a0
+; RV64V-NEXT:    ret
+  %b = zext i32 %a to i64
+  %head = insertelement <vscale x 8 x i64> undef, i64 %b, i32 0
+  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> undef, <vscale x 8 x i32> zeroinitializer
+  ret <vscale x 8 x i64> %splat
+}

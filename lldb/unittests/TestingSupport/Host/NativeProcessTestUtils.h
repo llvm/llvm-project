@@ -25,6 +25,15 @@ public:
   MOCK_METHOD2(ProcessStateChanged,
                void(NativeProcessProtocol *Process, StateType State));
   MOCK_METHOD1(DidExec, void(NativeProcessProtocol *Process));
+  MOCK_METHOD2(NewSubprocessImpl,
+               void(NativeProcessProtocol *parent_process,
+                    std::unique_ptr<NativeProcessProtocol> &child_process));
+  // This is a hack to avoid MOCK_METHOD2 incompatibility with std::unique_ptr
+  // passed as value.
+  void NewSubprocess(NativeProcessProtocol *parent_process,
+                     std::unique_ptr<NativeProcessProtocol> child_process) {
+    NewSubprocessImpl(parent_process, child_process);
+  }
 };
 
 // NB: This class doesn't use the override keyword to avoid

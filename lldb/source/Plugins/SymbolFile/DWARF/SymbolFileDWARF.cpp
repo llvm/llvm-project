@@ -1651,6 +1651,13 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
       return nullptr;
 
     dwo_file.SetFile(comp_dir, FileSpec::Style::native);
+    if (dwo_file.IsRelative()) {
+      // if DW_AT_comp_dir is relative, it should be relative to the location
+      // of the executable, not to the location from which the debugger was
+      // launched.
+      dwo_file.PrependPathComponent(
+          m_objfile_sp->GetFileSpec().GetDirectory().GetStringRef());
+    }
     FileSystem::Instance().Resolve(dwo_file);
     dwo_file.AppendPathComponent(dwo_name);
   }

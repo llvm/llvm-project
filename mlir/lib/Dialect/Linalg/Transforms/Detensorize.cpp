@@ -300,14 +300,56 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
       DenseSet<Value> visitedValues;
       DenseSet<Operation *> visitedOps;
 
+      // For a (to-be-detesored) value, check if it "escapes" the block by being
+      // passed to terminator. If it does, then workList is updated with the
+      // corresponding argument to the successor block.
+      auto updateWorkListWithSuccessorArguments =
+          [&](Value value, BranchOpInterface terminator) {
+            if (!terminator)
+              return;
+
+            for (auto operandIdx :
+                 llvm::seq<unsigned>(0, terminator->getOperands().size())) {
+              Value operand = terminator->getOperand(operandIdx);
+
+              if (operand == value) {
+                auto succBlockArg =
+                    terminator.getSuccessorBlockArgument(operandIdx);
+
+                if (succBlockArg && !blockArgsToDetensor.count(*succBlockArg))
+                  workList.push_back(*succBlockArg);
+              }
+            }
+          };
+
       while (!workList.empty()) {
         Value currentItem = workList.pop_back_val();
 
         if (!visitedValues.insert(currentItem).second)
           continue;
 
-        // The current item is defined by a block argument.
-        if (auto bbarg = currentItem.dyn_cast<BlockArgument>()) {
+        // 1   - Look forward:
+        // 1.1 - If currentItem escapes to one or more successors, add
+        // the corresponding successor arguments to workList.
+        updateWorkListWithSuccessorArguments(
+            currentItem, dyn_cast<BranchOpInterface>(
+                             currentItem.getParentBlock()->getTerminator()));
+
+        // 1.2 - For each user of currentItem, add the defined values to
+        // workList. This way, the user ops can be inspected later if they are
+        // detensorable and if so, their operands will be added to workList to
+        // potentially discover other parts of the detensorable component.
+        for (auto *user : currentItem.getUsers())
+          for (Value result : user->getResults())
+            workList.push_back(result);
+
+        // 2   - Look backward:
+        // 2.1 - The current item is defined by a block argument. If the owner
+        // block is a non-entry one, then:
+        //       * Add the argument to blockArgsToDetensor.
+        //       * Walk the use-def chain backwards to add each predecessor's
+        //       terminator-operands corresponding to currentItem to workList.
+        if (currentItem.dyn_cast<BlockArgument>()) {
           BlockArgument currentItemBlockArgument =
               currentItem.cast<BlockArgument>();
           Block *ownerBlock = currentItemBlockArgument.getOwner();
@@ -354,7 +396,11 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
         if (!visitedOps.insert(currentItemDefiningOp).second)
           continue;
 
-        // The current item is computed by a GenericOp.
+        // 2.2 - The current item is computed by a GenericOp. If the op should
+        // be detensored, then:
+        //       * Add it to opsToDetensor.
+        //       * Add its operands to workList to discover other parts of the
+        //       potentially detensorable component.
         if (auto genericOp = dyn_cast<GenericOp>(currentItemDefiningOp)) {
           // The op was encountered already, no need to inspect it again.
           if (opsToDetensor.count(genericOp))
@@ -376,7 +422,7 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
           continue;
         }
 
-        // The current item is the result of a FromElemntsOp, it will be
+        // 2.3 - The current item is the result of a FromElementsOp, it will be
         // trivially detensored later as part of canonicalization patterns
         // applied at the end of detensoring.
         //
@@ -386,8 +432,8 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
         if (dyn_cast<tensor::FromElementsOp>(currentItemDefiningOp))
           continue;
 
-        // The current item is the result of a scalar op, add all its operands
-        // to the work list.
+        // 2.4 - The current item is the result of a scalar op, add all its
+        // operands to the work list.
         if (llvm::all_of(
                 currentItemDefiningOp->getResultTypes(),
                 [&](Type resultType) { return resultType.isIntOrFloat(); }))
@@ -442,8 +488,8 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
 
     target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
       // A function is legal if all of its non-entry blocks are legal. We
-      // don't legalize the entry block (i.e. the function's signature) since
-      // detensoring can't happen along external calling convention
+      // don't legalize the entry block (i.e. the function's signature)
+      // since detensoring can't happen along external calling convention
       // boundaries, which we conservatively approximate as all function
       // signatures.
       return llvm::all_of(llvm::drop_begin(op.getBody(), 1), [&](Block &block) {

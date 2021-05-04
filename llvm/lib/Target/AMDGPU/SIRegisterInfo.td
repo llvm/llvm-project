@@ -36,12 +36,12 @@ foreach Index = 1...31 in {
 
 foreach Size = {2...6,8,16} in {
   foreach Index = Indexes<!sub(33, Size)>.slice in {
-    def !foldl("", Indexes<Size>.slice, acc, cur,
-               !strconcat(acc#!if(!eq(acc,""),"","_"), "sub"#!add(cur, Index))) :
+    def !interleave(!foreach(cur, Indexes<Size>.slice, "sub"#!add(cur, Index)),
+                    "_") :
       SubRegIndex<!mul(Size, 32), !shl(Index, 5)> {
       let CoveringSubRegIndices =
-        !foldl([]<SubRegIndex>, Indexes<Size>.slice, acc, cur,
-               !listconcat(acc, [!cast<SubRegIndex>(sub#!add(cur, Index))]));
+        !foreach(cur, Indexes<Size>.slice,
+                 !cast<SubRegIndex>(sub#!add(cur, Index)));
     }
   }
 }
@@ -955,13 +955,13 @@ multiclass SIRegOperand64 <string rc, string MatchName, string opType,
       let ParserMatchClass = RegImmMatcher<MatchName#"F64">;
     }
 
-    foreach _ = BoolToList<Vectors>.ret in
+    if Vectors then
     def _v2f32 : RegisterOperand<!cast<RegisterClass>(rc#rc_suffix)> {
       let OperandType = opType#"_V2FP32";
       let ParserMatchClass = RegImmMatcher<MatchName#"V2FP32">;
       let DecoderMethod = "decodeOperand_VSrcV232";
     }
-    foreach _ = BoolToList<Vectors>.ret in
+    if Vectors then
     def _v2b32 : RegisterOperand<!cast<RegisterClass>(rc#rc_suffix)> {
       let OperandType = opType#"_V2INT32";
       let ParserMatchClass = RegImmMatcher<MatchName#"V2INT32">;
@@ -1026,7 +1026,7 @@ def VSrc_128 : RegisterOperand<VReg_128> {
 }
 
 //===----------------------------------------------------------------------===//
-//  VSrc_* Operands with an VGPR
+//  VRegSrc_* Operands with a VGPR
 //===----------------------------------------------------------------------===//
 
 // This is for operands with the enum(9), VSrc encoding restriction,

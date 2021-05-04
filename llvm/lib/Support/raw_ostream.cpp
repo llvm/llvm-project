@@ -574,10 +574,8 @@ static int getFD(StringRef Filename, std::error_code &EC,
   // the owner of stdout and may set the "binary" flag globally based on Flags.
   if (Filename == "-") {
     EC = std::error_code();
-    // If user requested binary then put stdout into binary mode if
-    // possible.
-    if (!(Flags & sys::fs::OF_Text))
-      sys::ChangeStdoutToBinary();
+    // Change stdout's text/binary mode based on the Flags.
+    sys::ChangeStdoutMode(Flags);
     return STDOUT_FILENO;
   }
 

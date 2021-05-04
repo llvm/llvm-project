@@ -150,6 +150,6 @@ inline _LIBCPP_INLINE_VISIBILITY lldiv_t div(long long __x,
 #endif // _LIBCPP_HAS_NO_LONG_LONG
 #endif // _LIBCPP_MSVCRT / __sun__
 } // extern "C++"
-#endif  // __cplusplus
+#endif // __cplusplus
 
-#endif  // _LIBCPP_STDLIB_H
+#endif // _LIBCPP_STDLIB_H

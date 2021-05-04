@@ -5028,7 +5028,7 @@ struct VarArgSystemZHelper : public VarArgHelper {
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
     bool IsSoftFloatABI = CB.getCalledFunction()
                               ->getFnAttribute("use-soft-float")
-                              .getValueAsString() == "true";
+                              .getValueAsBool();
     unsigned GpOffset = SystemZGpOffset;
     unsigned FpOffset = SystemZFpOffset;
     unsigned VrIndex = 0;

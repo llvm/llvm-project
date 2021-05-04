@@ -10874,26 +10874,6 @@ static void DiagnoseNamespaceInlineMismatch(Sema &S, SourceLocation KeywordLoc,
                                             NamespaceDecl *PrevNS) {
   assert(*IsInline != PrevNS->isInline());
 
-  // HACK: Work around a bug in libstdc++4.6's <atomic>, where
-  // std::__atomic[0,1,2] are defined as non-inline namespaces, then reopened as
-  // inline namespaces, with the intention of bringing names into namespace std.
-  //
-  // We support this just well enough to get that case working; this is not
-  // sufficient to support reopening namespaces as inline in general.
-  if (*IsInline && II && II->getName().startswith("__atomic") &&
-      S.getSourceManager().isInSystemHeader(Loc)) {
-    // Mark all prior declarations of the namespace as inline.
-    for (NamespaceDecl *NS = PrevNS->getMostRecentDecl(); NS;
-         NS = NS->getPreviousDecl())
-      NS->setInline(*IsInline);
-    // Patch up the lookup table for the containing namespace. This isn't really
-    // correct, but it's good enough for this particular case.
-    for (auto *I : PrevNS->decls())
-      if (auto *ND = dyn_cast<NamedDecl>(I))
-        PrevNS->getParent()->makeDeclVisibleInContext(ND);
-    return;
-  }
-
   if (PrevNS->isInline())
     // The user probably just forgot the 'inline', so suggest that it
     // be added back.
@@ -12134,10 +12114,9 @@ NamedDecl *Sema::BuildUsingDeclaration(
   // invalid).
   if (R.empty() &&
       NameInfo.getName().getNameKind() != DeclarationName::CXXConstructorName) {
-    // HACK: Work around a bug in libstdc++'s detection of ::gets. Sometimes
-    // it will believe that glibc provides a ::gets in cases where it does not,
-    // and will try to pull it into namespace std with a using-declaration.
-    // Just ignore the using-declaration in that case.
+    // HACK 2017-01-08: Work around an issue with libstdc++'s detection of
+    // ::gets. Sometimes it believes that glibc provides a ::gets in cases where
+    // it does not. The issue was fixed in libstdc++ 6.3 (2016-12-21) and later.
     auto *II = NameInfo.getName().getAsIdentifierInfo();
     if (getLangOpts().CPlusPlus14 && II && II->isStr("gets") &&
         CurContext->isStdNamespace() &&

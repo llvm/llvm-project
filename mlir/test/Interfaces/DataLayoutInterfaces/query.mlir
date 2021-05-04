@@ -12,7 +12,18 @@ func @no_layout_builtin() {
   // CHECK: preferred = 8
   // CHECK: size = 8
   "test.data_layout_query"() : () -> f64
+  // CHECK: alignment = 4
+  // CHECK: bitsize = 64
+  // CHECK: preferred = 4
+  // CHECK: size = 8
+  "test.data_layout_query"() : () -> complex<f32>
+  // CHECK: alignment = 1
+  // CHECK: bitsize = 14
+  // CHECK: preferred = 1
+  // CHECK: size = 2
+  "test.data_layout_query"() : () -> complex<i6>
   return
+
 }
 
 // CHECK-LABEL: @no_layout_custom

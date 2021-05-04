@@ -1303,6 +1303,8 @@ static void __kmp_atfork_child(void) {
   if (__kmp_nested_proc_bind.bind_types != NULL) {
     __kmp_nested_proc_bind.bind_types[0] = proc_bind_false;
   }
+  __kmp_affinity_masks = NULL;
+  __kmp_affinity_num_masks = 0;
 #endif // KMP_AFFINITY_SUPPORTED
 
 #if KMP_USE_MONITOR

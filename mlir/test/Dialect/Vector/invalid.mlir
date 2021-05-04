@@ -461,6 +461,17 @@ func @test_vector.transfer_write(%arg0: memref<?x?x?xf32>) {
 
 // -----
 
+func @test_vector.transfer_write(%arg0: memref<?xf32>, %arg1: vector<7xf32>) {
+  %c3 = constant 3 : index
+  %cst = constant 3.0 : f32
+  // expected-error@+1 {{should not have broadcast dimensions}}
+  vector.transfer_write %arg1, %arg0[%c3]
+      {permutation_map = affine_map<(d0) -> (0)>}
+      : vector<7xf32>, memref<?xf32>
+}
+
+// -----
+
 func @insert_strided_slice(%a: vector<4x4xf32>, %b: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected offsets of same size as destination vector rank}}
   %1 = vector.insert_strided_slice %a, %b {offsets = [100], strides = [1, 1]} : vector<4x4xf32> into vector<4x8x16xf32>

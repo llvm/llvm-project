@@ -41,7 +41,7 @@ using namespace llvm;
 static Expected<std::unique_ptr<MemoryBuffer>>
 setupMemoryBuffer(const Twine &Path) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-      MemoryBuffer::getFileOrSTDIN(Path);
+      MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/true);
   if (std::error_code EC = BufferOrErr.getError())
     return errorCodeToError(EC);
   return std::move(BufferOrErr.get());

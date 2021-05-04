@@ -19,6 +19,9 @@ namespace std {
     template<class charT, class traits = char_traits<charT>>
         class basic_string_view;
 
+    template<class charT, class traits>
+    inline constexpr bool ranges::enable_borrowed_range<basic_string_view<charT, traits>> = true;  // C++20
+
     // 7.9, basic_string_view non-member comparison functions
     template<class charT, class traits>
     constexpr bool operator==(basic_string_view<charT, traits> x,
@@ -179,6 +182,7 @@ namespace std {
 */
 
 #include <__config>
+#include <__ranges/enable_borrowed_range.h>
 #include <__string>
 #include <iosfwd>
 #include <algorithm>
@@ -203,7 +207,7 @@ template<class _CharT, class _Traits = char_traits<_CharT> >
     class _LIBCPP_TEMPLATE_VIS basic_string_view;
 
 typedef basic_string_view<char>     string_view;
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
 typedef basic_string_view<char8_t>  u8string_view;
 #endif
 typedef basic_string_view<char16_t> u16string_view;
@@ -213,7 +217,7 @@ typedef basic_string_view<wchar_t>  wstring_view;
 template<class _CharT, class _Traits>
 class
     _LIBCPP_PREFERRED_NAME(string_view)
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
     _LIBCPP_PREFERRED_NAME(u8string_view)
 #endif
     _LIBCPP_PREFERRED_NAME(u16string_view)
@@ -649,6 +653,10 @@ private:
     size_type           __size;
 };
 
+#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_RANGES)
+template <class _CharT, class _Traits>
+inline constexpr bool ranges::enable_borrowed_range<basic_string_view<_CharT, _Traits> > = true;
+#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_RANGES)
 
 // [string.view.comparison]
 // operator ==
@@ -846,7 +854,7 @@ inline namespace literals
         return basic_string_view<wchar_t> (__str, __len);
     }
 
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
     inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     basic_string_view<char8_t> operator "" sv(const char8_t *__str, size_t __len) _NOEXCEPT
     {

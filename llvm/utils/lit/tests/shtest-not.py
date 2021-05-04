@@ -10,7 +10,7 @@
 
 # Make sure not and env commands are included in printed commands.
 
-# CHECK: -- Testing: 16 tests{{.*}}
+# CHECK: -- Testing: 17 tests{{.*}}
 
 # CHECK: FAIL: shtest-not :: exclamation-args-nested-none.txt {{.*}}
 # CHECK: $ "!" "!" "!"
@@ -121,6 +121,13 @@
 # CHECK: $ "not" "not" "--crash" "env" "-u" "BAR" "not" "env" "-u" "FOO" "BAR=1" "{{[^"]*}}" "pass.py"
 
 
+# CHECK: FAIL: shtest-not :: not-calls-fail2.txt {{.*}}
+# CHECK-NEXT: {{.*}} TEST 'shtest-not :: not-calls-fail2.txt' FAILED {{.*}}
+# CHECK-NEXT: Script:
+# CHECK-NEXT: --
+# CHECK:      --
+# CHECK-NEXT: Exit Code: 1
+
 # CHECK: FAIL: shtest-not :: not-calls-mkdir.txt {{.*}}
 # CHECK: $ "not" "mkdir" {{.*}}
 # CHECK: $ "not" "--crash" "mkdir" "foobar"
@@ -134,5 +141,5 @@
 # CHECK: error: command failed with exit status: {{.*}}
 
 # CHECK: Passed:  1
-# CHECK: Failed: 15
+# CHECK: Failed: 16
 # CHECK-NOT: {{.}}

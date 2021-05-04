@@ -383,9 +383,7 @@ int targetDataMapper(ident_t *loc, DeviceTy &Device, void *arg_base, void *arg,
   std::vector<void *> MapperArgNames(MapperComponents.Components.size());
 
   for (unsigned I = 0, E = MapperComponents.Components.size(); I < E; ++I) {
-    auto &C =
-        MapperComponents
-            .Components[target_data_function == targetDataEnd ? E - I - 1 : I];
+    auto &C = MapperComponents.Components[I];
     MapperArgsBase[I] = C.Base;
     MapperArgs[I] = C.Begin;
     MapperArgSizes[I] = C.Size;
@@ -472,7 +470,8 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
     // then no argument is marked as TARGET_PARAM ("omp target data map" is not
     // associated with a target region, so there are no target parameters). This
     // may be considered a hack, we could revise the scheme in the future.
-    bool UpdateRef = !(arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF);
+    bool UpdateRef =
+        !(arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) && !(FromMapper && i == 0);
     if (arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ) {
       DP("Has a pointer entry: \n");
       // Base is address of pointer.
@@ -615,6 +614,7 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
                   void **ArgMappers, AsyncInfoTy &AsyncInfo, bool FromMapper) {
   int Ret;
   std::vector<DeallocTgtPtrInfo> DeallocTgtPtrs;
+  void *FromMapperBase = nullptr;
   // process each input.
   for (int32_t I = ArgNum - 1; I >= 0; --I) {
     // Ignore private variables and arrays - there is no mapping for them.
@@ -664,9 +664,9 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
 
     bool IsLast, IsHostPtr;
     bool IsImplicit = ArgTypes[I] & OMP_TGT_MAPTYPE_IMPLICIT;
-    bool UpdateRef = !(ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) ||
-                     (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ &&
-                      (!FromMapper || I != ArgNum - 1));
+    bool UpdateRef = (!(ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) ||
+                      (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) &&
+                     !(FromMapper && I == 0);
     bool ForceDelete = ArgTypes[I] & OMP_TGT_MAPTYPE_DELETE;
     bool HasCloseModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_CLOSE;
     bool HasPresentModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_PRESENT;
@@ -717,10 +717,8 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
     // If the last element from the mapper (for end transfer args comes in
     // reverse order), do not remove the partial entry, the parent struct still
     // exists.
-    if (((ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
-         !(ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) ||
-        (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ && FromMapper &&
-         I == ArgNum - 1)) {
+    if ((ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
+        !(ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
       DelEntry = false; // protect parent struct from being deallocated
     }
 
@@ -754,6 +752,10 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
             return OFFLOAD_FAIL;
           }
         }
+      }
+      if (DelEntry && FromMapper && I == 0) {
+        DelEntry = false;
+        FromMapperBase = HstPtrBegin;
       }
 
       // If we copied back to the host a struct/array containing pointers, we
@@ -810,6 +812,8 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
 
   // Deallocate target pointer
   for (DeallocTgtPtrInfo &Info : DeallocTgtPtrs) {
+    if (FromMapperBase && FromMapperBase == Info.HstPtrBegin)
+      continue;
     Ret = Device.deallocTgtPtr(Info.HstPtrBegin, Info.DataSize,
                                Info.ForceDelete, Info.HasCloseModifier);
     if (Ret != OFFLOAD_SUCCESS) {

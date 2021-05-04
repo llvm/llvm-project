@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyMCInstLower.h"
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
+#include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyAsmPrinter.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRuntimeLibcallSignatures.h"

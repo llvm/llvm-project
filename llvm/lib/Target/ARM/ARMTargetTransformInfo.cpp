@@ -248,8 +248,8 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   return None;
 }
 
-int ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
-                              TTI::TargetCostKind CostKind) {
+InstructionCost ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
+                                          TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy());
 
  unsigned Bits = Ty->getPrimitiveSizeInBits();
@@ -324,10 +324,10 @@ static bool isSSATMinMaxPattern(Instruction *Inst, const APInt &Imm) {
   return false;
 }
 
-int ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
-                                  const APInt &Imm, Type *Ty,
-                                  TTI::TargetCostKind CostKind,
-                                  Instruction *Inst) {
+InstructionCost ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
+                                              const APInt &Imm, Type *Ty,
+                                              TTI::TargetCostKind CostKind,
+                                              Instruction *Inst) {
   // Division by a constant can be turned into multiplication, but only if we
   // know it's constant. So it's not so much that the immediate is cheap (it's
   // not), but that the alternative is worse.
@@ -977,8 +977,9 @@ InstructionCost ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
          BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
 }
 
-int ARMTTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
-                                          const SCEV *Ptr) {
+InstructionCost ARMTTIImpl::getAddressComputationCost(Type *Ty,
+                                                      ScalarEvolution *SE,
+                                                      const SCEV *Ptr) {
   // Address computations in vectorized code with non-consecutive addresses will
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting
@@ -1125,7 +1126,7 @@ int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
   return -1;
 }
 
-int ARMTTIImpl::getMemcpyCost(const Instruction *I) {
+InstructionCost ARMTTIImpl::getMemcpyCost(const Instruction *I) {
   int NumOps = getNumMemOps(cast<IntrinsicInst>(I));
 
   // To model the cost of a library call, we assume 1 for the call, and

@@ -16,10 +16,8 @@ define i64 @test2elt(<2 x i64> %a) local_unnamed_addr #0 {
 ; CHECK-P8-NEXT:    xxlor vs1, v2, v2
 ; CHECK-P8-NEXT:    xscvuxdsp f1, f1
 ; CHECK-P8-NEXT:    xscvuxdsp f0, f0
-; CHECK-P8-NEXT:    xscvdpspn vs1, f1
-; CHECK-P8-NEXT:    xscvdpspn vs0, f0
-; CHECK-P8-NEXT:    xxsldwi v3, vs1, vs1, 3
-; CHECK-P8-NEXT:    xxsldwi v2, vs0, vs0, 3
+; CHECK-P8-NEXT:    xscvdpspn v3, f1
+; CHECK-P8-NEXT:    xscvdpspn v2, f0
 ; CHECK-P8-NEXT:    vmrghw v2, v3, v2
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    mffprd r3, f0
@@ -29,12 +27,10 @@ define i64 @test2elt(<2 x i64> %a) local_unnamed_addr #0 {
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    xxswapd vs0, v2
 ; CHECK-P9-NEXT:    xscvuxdsp f0, f0
-; CHECK-P9-NEXT:    xscvdpspn vs0, f0
-; CHECK-P9-NEXT:    xxsldwi v3, vs0, vs0, 3
+; CHECK-P9-NEXT:    xscvdpspn v3, f0
 ; CHECK-P9-NEXT:    xxlor vs0, v2, v2
 ; CHECK-P9-NEXT:    xscvuxdsp f0, f0
-; CHECK-P9-NEXT:    xscvdpspn vs0, f0
-; CHECK-P9-NEXT:    xxsldwi v2, vs0, vs0, 3
+; CHECK-P9-NEXT:    xscvdpspn v2, f0
 ; CHECK-P9-NEXT:    vmrghw v2, v2, v3
 ; CHECK-P9-NEXT:    mfvsrld r3, v2
 ; CHECK-P9-NEXT:    blr
@@ -47,7 +43,7 @@ define i64 @test2elt(<2 x i64> %a) local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    xscvuxdsp f0, f0
 ; CHECK-BE-NEXT:    xscvdpspn v2, f1
 ; CHECK-BE-NEXT:    xscvdpspn v3, f0
-; CHECK-BE-NEXT:    vmrghw v2, v2, v3
+; CHECK-BE-NEXT:    vmrgow v2, v2, v3
 ; CHECK-BE-NEXT:    mfvsrd r3, v2
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -309,10 +305,8 @@ define i64 @test2elt_signed(<2 x i64> %a) local_unnamed_addr #0 {
 ; CHECK-P8-NEXT:    xxlor vs1, v2, v2
 ; CHECK-P8-NEXT:    xscvsxdsp f1, f1
 ; CHECK-P8-NEXT:    xscvsxdsp f0, f0
-; CHECK-P8-NEXT:    xscvdpspn vs1, f1
-; CHECK-P8-NEXT:    xscvdpspn vs0, f0
-; CHECK-P8-NEXT:    xxsldwi v3, vs1, vs1, 3
-; CHECK-P8-NEXT:    xxsldwi v2, vs0, vs0, 3
+; CHECK-P8-NEXT:    xscvdpspn v3, f1
+; CHECK-P8-NEXT:    xscvdpspn v2, f0
 ; CHECK-P8-NEXT:    vmrghw v2, v3, v2
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    mffprd r3, f0
@@ -322,12 +316,10 @@ define i64 @test2elt_signed(<2 x i64> %a) local_unnamed_addr #0 {
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    xxswapd vs0, v2
 ; CHECK-P9-NEXT:    xscvsxdsp f0, f0
-; CHECK-P9-NEXT:    xscvdpspn vs0, f0
-; CHECK-P9-NEXT:    xxsldwi v3, vs0, vs0, 3
+; CHECK-P9-NEXT:    xscvdpspn v3, f0
 ; CHECK-P9-NEXT:    xxlor vs0, v2, v2
 ; CHECK-P9-NEXT:    xscvsxdsp f0, f0
-; CHECK-P9-NEXT:    xscvdpspn vs0, f0
-; CHECK-P9-NEXT:    xxsldwi v2, vs0, vs0, 3
+; CHECK-P9-NEXT:    xscvdpspn v2, f0
 ; CHECK-P9-NEXT:    vmrghw v2, v2, v3
 ; CHECK-P9-NEXT:    mfvsrld r3, v2
 ; CHECK-P9-NEXT:    blr
@@ -340,7 +332,7 @@ define i64 @test2elt_signed(<2 x i64> %a) local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    xscvsxdsp f0, f0
 ; CHECK-BE-NEXT:    xscvdpspn v2, f1
 ; CHECK-BE-NEXT:    xscvdpspn v3, f0
-; CHECK-BE-NEXT:    vmrghw v2, v2, v3
+; CHECK-BE-NEXT:    vmrgow v2, v2, v3
 ; CHECK-BE-NEXT:    mfvsrd r3, v2
 ; CHECK-BE-NEXT:    blr
 entry:

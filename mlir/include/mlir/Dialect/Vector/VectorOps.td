@@ -1421,6 +1421,7 @@ def Vector_TransferWriteOp :
   ];
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Vector_LoadOp : Vector_Op<"load"> {

@@ -264,10 +264,9 @@ InstructionList *ThreadPlanStepRange::GetInstructionsForAddress(
         // Disassemble the address range given:
         const char *plugin_name = nullptr;
         const char *flavor = nullptr;
-        const bool prefer_file_cache = true;
         m_instruction_ranges[i] = Disassembler::DisassembleRange(
             GetTarget().GetArchitecture(), plugin_name, flavor, GetTarget(),
-            m_address_ranges[i], prefer_file_cache);
+            m_address_ranges[i]);
       }
       if (!m_instruction_ranges[i])
         return nullptr;

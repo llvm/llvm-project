@@ -37,6 +37,14 @@ define <vscale x 16 x i8> @add_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) 
   ret <vscale x 16 x i8> %res
 }
 
+define <vscale x 16 x i8> @add_i8_zero(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: add_i8_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %res = add <vscale x 16 x i8> %a, zeroinitializer
+  ret <vscale x 16 x i8> %res
+}
+
 define <vscale x 2 x i64> @sub_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: sub_i64:
 ; CHECK:       // %bb.0:
@@ -70,6 +78,14 @@ define <vscale x 16 x i8> @sub_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) 
 ; CHECK-NEXT:    sub z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %res = sub <vscale x 16 x i8> %a, %b
+  ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 16 x i8> @sub_i8_zero(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: sub_i8_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %res = sub <vscale x 16 x i8> %a, zeroinitializer
   ret <vscale x 16 x i8> %res
 }
 
@@ -166,6 +182,14 @@ define <vscale x 4 x i32> @sqadd_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
   ret <vscale x 4 x i32> %res
 }
 
+define <vscale x 4 x i32> @sqadd_i32_zero(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: sqadd_i32_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i32> @llvm.sadd.sat.nxv4i32(<vscale x 4 x i32>  %a, <vscale x 4 x i32> zeroinitializer)
+  ret <vscale x 4 x i32> %res
+}
+
 define <vscale x 8 x i16> @sqadd_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: sqadd_i16:
 ; CHECK:       // %bb.0:
@@ -191,6 +215,14 @@ define <vscale x 2 x i64> @sqsub_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
 ; CHECK-NEXT:    sqsub z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x i64> @llvm.ssub.sat.nxv2i64(<vscale x 2 x i64>  %a, <vscale x 2 x i64> %b)
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 2 x i64> @sqsub_i64_zero(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: sqsub_i64_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i64> @llvm.ssub.sat.nxv2i64(<vscale x 2 x i64>  %a, <vscale x 2 x i64> zeroinitializer)
   ret <vscale x 2 x i64> %res
 }
 

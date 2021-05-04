@@ -344,7 +344,8 @@ public:
                           Callback<std::vector<HighlightingToken>>);
 
   /// Describe the AST subtree for a piece of code.
-  void getAST(PathRef File, Range R, Callback<llvm::Optional<ASTNode>> CB);
+  void getAST(PathRef File, llvm::Optional<Range> R,
+              Callback<llvm::Optional<ASTNode>> CB);
 
   /// Runs an arbitrary action that has access to the AST of the specified file.
   /// The action will execute on one of ClangdServer's internal threads.

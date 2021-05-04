@@ -1079,3 +1079,15 @@ define <vscale x 8 x i64> @vor_vx_nxv8i64_2(<vscale x 8 x i64> %va) {
   ret <vscale x 8 x i64> %vc
 }
 
+
+define <vscale x 8 x i64> @vor_vx_nxv8i64_3(<vscale x 8 x i64> %va) {
+; CHECK-LABEL: vor_vx_nxv8i64_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vmv.v.i v8, -1
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 8 x i64> undef, i64 -1, i32 0
+  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> undef, <vscale x 8 x i32> zeroinitializer
+  %vc = or <vscale x 8 x i64> %va, %splat
+  ret <vscale x 8 x i64> %vc
+}

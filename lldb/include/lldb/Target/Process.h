@@ -77,6 +77,8 @@ public:
   Args GetExtraStartupCommands() const;
   void SetExtraStartupCommands(const Args &args);
   FileSpec GetPythonOSPluginPath() const;
+  uint32_t GetVirtualAddressableBits() const;
+  void SetVirtualAddressableBits(uint32_t bits);
   void SetPythonOSPluginPath(const FileSpec &file);
   bool GetIgnoreBreakpointsInExpressions() const;
   void SetIgnoreBreakpointsInExpressions(bool ignore);
@@ -1329,6 +1331,17 @@ public:
   const char *GetExitDescription();
 
   virtual void DidExit() {}
+
+  lldb::addr_t GetCodeAddressMask();
+  lldb::addr_t GetDataAddressMask();
+
+  void SetCodeAddressMask(lldb::addr_t code_address_mask) {
+    m_code_address_mask = code_address_mask;
+  }
+
+  void SetDataAddressMask(lldb::addr_t data_address_mask) {
+    m_data_address_mask = data_address_mask;
+  }
 
   /// Get the Modification ID of the process.
   ///
@@ -2877,6 +2890,13 @@ protected:
   /// This is set at the beginning of Process::Finalize() to stop functions
   /// from looking up or creating things during or after a finalize call.
   std::atomic<bool> m_finalizing;
+
+  /// Mask for code an data addresses. The default value (0) means no mask is
+  /// set.
+  /// @{
+  lldb::addr_t m_code_address_mask = 0;
+  lldb::addr_t m_data_address_mask = 0;
+  /// @}
 
   bool m_clear_thread_plans_on_stop;
   bool m_force_next_event_delivery;

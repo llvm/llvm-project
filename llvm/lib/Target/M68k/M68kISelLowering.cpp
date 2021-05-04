@@ -487,7 +487,7 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     report_fatal_error("M68k interrupts may not be called directly");
 
   auto Attr = MF.getFunction().getFnAttribute("disable-tail-calls");
-  if (Attr.getValueAsString() == "true")
+  if (Attr.getValueAsBool())
     IsTailCall = false;
 
   // FIXME Add tailcalls support

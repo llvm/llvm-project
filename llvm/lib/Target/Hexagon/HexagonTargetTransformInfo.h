@@ -85,7 +85,7 @@ public:
   unsigned getMinVectorRegisterBitWidth() const;
   ElementCount getMinimumVF(unsigned ElemWidth, bool IsScalable) const;
 
-  bool shouldMaximizeVectorBandwidth(bool OptSize) const {
+  bool shouldMaximizeVectorBandwidth() const {
     return true;
   }
   bool supportsEfficientVectorElementLoadStore() {
@@ -113,8 +113,8 @@ public:
                                    TTI::TargetCostKind CostKind);
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
-  unsigned getAddressComputationCost(Type *Tp, ScalarEvolution *SE,
-            const SCEV *S);
+  InstructionCost getAddressComputationCost(Type *Tp, ScalarEvolution *SE,
+                                            const SCEV *S);
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
                                   MaybeAlign Alignment, unsigned AddressSpace,
                                   TTI::TargetCostKind CostKind,

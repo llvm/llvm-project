@@ -542,7 +542,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::overflow(int_type __c)
 #ifndef _LIBCPP_NO_EXCEPTIONS
             try
             {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
                 ptrdiff_t __nout = this->pptr()  - this->pbase();
                 ptrdiff_t __hm = __hm_ - this->pbase();
                 __str_.push_back(char_type());
@@ -557,7 +557,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::overflow(int_type __c)
             {
                 return traits_type::eof();
             }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         }
         __hm_ = _VSTD::max(this->pptr() + 1, __hm_);
         if (__mode_ & ios_base::in)
@@ -892,4 +892,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif  // _LIBCPP_SSTREAM
+#endif // _LIBCPP_SSTREAM

@@ -28,12 +28,10 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF)
   const Function &F = MF.getFunction();
 
   Attribute MemBoundAttr = F.getFnAttribute("amdgpu-memory-bound");
-  MemoryBound = MemBoundAttr.isStringAttribute() &&
-                MemBoundAttr.getValueAsString() == "true";
+  MemoryBound = MemBoundAttr.getValueAsBool();
 
   Attribute WaveLimitAttr = F.getFnAttribute("amdgpu-wave-limiter");
-  WaveLimiter = WaveLimitAttr.isStringAttribute() &&
-                WaveLimitAttr.getValueAsString() == "true";
+  WaveLimiter = WaveLimitAttr.getValueAsBool();
 
   CallingConv::ID CC = F.getCallingConv();
   if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL)

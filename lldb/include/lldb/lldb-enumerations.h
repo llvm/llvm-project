@@ -249,6 +249,9 @@ enum StopReason {
   eStopReasonThreadExiting,
   eStopReasonInstrumentation,
   eStopReasonProcessorTrace,
+  eStopReasonFork,
+  eStopReasonVFork,
+  eStopReasonVForkDone,
 };
 
 /// Command Return Status Types.

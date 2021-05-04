@@ -317,7 +317,7 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
       if op.HAS_BASE then {
         def _V1 : MIMG_NoSampler_Helper <op, asm, dst_rc, VGPR_32,
                                          !if(enableDisasm, "AMDGPU", "")>;
-        foreach _ = BoolToList<!eq(ExtendedImageInst, 0)>.ret in
+        if !not(ExtendedImageInst) then
         def _V1_gfx90a : MIMG_NoSampler_Helper_gfx90a <op, asm, dst_rc, VGPR_32,
                                        !if(enableDisasm, "GFX90A", "")>;
         def _V1_gfx10 : MIMG_NoSampler_gfx10<op, asm, dst_rc, VGPR_32,
@@ -328,7 +328,7 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
     let VAddrDwords = 2 in {
       if op.HAS_BASE then {
         def _V2 : MIMG_NoSampler_Helper <op, asm, dst_rc, VReg_64>;
-        foreach _ = BoolToList<!eq(ExtendedImageInst, 0)>.ret in
+        if !not(ExtendedImageInst) then
         def _V2_gfx90a : MIMG_NoSampler_Helper_gfx90a <op, asm, dst_rc, VReg_64>;
         def _V2_gfx10 : MIMG_NoSampler_gfx10<op, asm, dst_rc, VReg_64>;
         def _V2_nsa_gfx10 : MIMG_NoSampler_nsa_gfx10<op, asm, dst_rc, 2>;
@@ -338,7 +338,7 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
     let VAddrDwords = 3 in {
       if op.HAS_BASE then {
         def _V3 : MIMG_NoSampler_Helper <op, asm, dst_rc, VReg_96>;
-        foreach _ = BoolToList<!eq(ExtendedImageInst, 0)>.ret in
+        if !not(ExtendedImageInst) then
         def _V3_gfx90a : MIMG_NoSampler_Helper_gfx90a <op, asm, dst_rc, VReg_96>;
         def _V3_gfx10 : MIMG_NoSampler_gfx10<op, asm, dst_rc, VReg_96>;
         def _V3_nsa_gfx10 : MIMG_NoSampler_nsa_gfx10<op, asm, dst_rc, 3>;
@@ -348,7 +348,7 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
     let VAddrDwords = 4 in {
       if op.HAS_BASE then {
         def _V4 : MIMG_NoSampler_Helper <op, asm, dst_rc, VReg_128>;
-        foreach _ = BoolToList<!eq(ExtendedImageInst, 0)>.ret in
+        if !not(ExtendedImageInst) then
         def _V4_gfx90a : MIMG_NoSampler_Helper_gfx90a <op, asm, dst_rc, VReg_128>;
         def _V4_gfx10 : MIMG_NoSampler_gfx10<op, asm, dst_rc, VReg_128>;
         def _V4_nsa_gfx10 : MIMG_NoSampler_nsa_gfx10<op, asm, dst_rc, 4,
@@ -786,7 +786,7 @@ multiclass MIMG_Sampler_Src_Helper <mimgopc op, string asm,
         def _V # addr.NumWords
           : MIMG_Sampler_Helper <op, asm, dst_rc, addr.RegClass,
                                  !if(!and(enableDisasm, addr.Disassemble), "AMDGPU", "")>;
-        foreach _ = BoolToList<!eq(ExtendedImageInst, 0)>.ret in
+        if !not(ExtendedImageInst) then
         def _V # addr.NumWords # _gfx90a
           : MIMG_Sampler_gfx90a <op, asm, dst_rc, addr.RegClass,
                                  !if(!and(enableDisasm, addr.Disassemble), "GFX90A", "")>;

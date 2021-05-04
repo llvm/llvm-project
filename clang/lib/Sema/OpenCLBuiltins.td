@@ -50,6 +50,18 @@ class AbstractExtension<string _Ext> {
 // Extension associated to a builtin function.
 class FunctionExtension<string _Ext> : AbstractExtension<_Ext>;
 
+// Extension associated to a type.  This enables implicit conditionalization of
+// builtin function overloads containing a type that depends on an extension.
+// During overload resolution, when a builtin function overload contains a type
+// with a TypeExtension, those overloads are skipped when the extension is
+// disabled.
+class TypeExtension<string _Ext> : AbstractExtension<_Ext>;
+
+// TypeExtension definitions.
+def NoTypeExt   : TypeExtension<"">;
+def Fp16TypeExt : TypeExtension<"cl_khr_fp16">;
+def Fp64TypeExt : TypeExtension<"cl_khr_fp64">;
+
 // FunctionExtension definitions.
 def FuncExtNone                          : FunctionExtension<"">;
 def FuncExtKhrSubgroups                  : FunctionExtension<"cl_khr_subgroups">;
@@ -69,6 +81,9 @@ def FuncExtKhrInt64ExtendedAtomics       : FunctionExtension<"cl_khr_int64_exten
 def FuncExtKhrMipmapImage                : FunctionExtension<"cl_khr_mipmap_image">;
 def FuncExtKhrMipmapImageWrites          : FunctionExtension<"cl_khr_mipmap_image_writes">;
 def FuncExtKhrGlMsaaSharing              : FunctionExtension<"cl_khr_gl_msaa_sharing">;
+
+// Not a real extension, but a workaround to add C++ for OpenCL specific builtins.
+def FuncExtOpenCLCxx                     : FunctionExtension<"__cplusplus">;
 
 // Multiple extensions
 def FuncExtKhrMipmapWritesAndWrite3d     : FunctionExtension<"cl_khr_mipmap_image_writes cl_khr_3d_image_writes">;
@@ -119,6 +134,8 @@ class Type<string _Name, QualType _QTExpr> {
   string AccessQualifier = "";
   // Address space.
   string AddrSpace = DefaultAS.Name;
+  // Extension that needs to be enabled to expose a builtin that uses this type.
+  TypeExtension Extension = NoTypeExt;
 }
 
 // OpenCL vector types (e.g. int2, int3, int16, float8, ...).
@@ -130,6 +147,7 @@ class VectorType<Type _Ty, int _VecWidth> : Type<_Ty.Name, _Ty.QTExpr> {
   let IsConst = _Ty.IsConst;
   let IsVolatile = _Ty.IsVolatile;
   let AddrSpace = _Ty.AddrSpace;
+  let Extension = _Ty.Extension;
 }
 
 // OpenCL pointer types (e.g. int*, float*, ...).
@@ -142,6 +160,7 @@ class PointerType<Type _Ty, AddressSpace _AS = DefaultAS> :
   let IsConst = _Ty.IsConst;
   let IsVolatile = _Ty.IsVolatile;
   let AccessQualifier = _Ty.AccessQualifier;
+  let Extension = _Ty.Extension;
 }
 
 // OpenCL const types (e.g. const int).
@@ -153,6 +172,7 @@ class ConstType<Type _Ty> : Type<_Ty.Name, _Ty.QTExpr> {
   let IsVolatile = _Ty.IsVolatile;
   let AccessQualifier = _Ty.AccessQualifier;
   let AddrSpace = _Ty.AddrSpace;
+  let Extension = _Ty.Extension;
 }
 
 // OpenCL volatile types (e.g. volatile int).
@@ -164,6 +184,7 @@ class VolatileType<Type _Ty> : Type<_Ty.Name, _Ty.QTExpr> {
   let IsConst = _Ty.IsConst;
   let AccessQualifier = _Ty.AccessQualifier;
   let AddrSpace = _Ty.AddrSpace;
+  let Extension = _Ty.Extension;
 }
 
 // OpenCL image types (e.g. image2d).
@@ -176,6 +197,7 @@ class ImageType<Type _Ty, string _AccessQualifier> :
   let IsConst = _Ty.IsConst;
   let IsVolatile = _Ty.IsVolatile;
   let AddrSpace = _Ty.AddrSpace;
+  let Extension = _Ty.Extension;
 }
 
 // OpenCL enum type (e.g. memory_scope).
@@ -277,8 +299,12 @@ def UInt      : Type<"uint",      QualType<"Context.UnsignedIntTy">>;
 def Long      : Type<"long",      QualType<"Context.LongTy">>;
 def ULong     : Type<"ulong",     QualType<"Context.UnsignedLongTy">>;
 def Float     : Type<"float",     QualType<"Context.FloatTy">>;
-def Double    : Type<"double",    QualType<"Context.DoubleTy">>;
-def Half      : Type<"half",      QualType<"Context.HalfTy">>;
+let Extension = Fp64TypeExt in {
+  def Double    : Type<"double",    QualType<"Context.DoubleTy">>;
+}
+let Extension = Fp16TypeExt in {
+  def Half      : Type<"half",      QualType<"Context.HalfTy">>;
+}
 def Size      : Type<"size_t",    QualType<"Context.getSizeType()">>;
 def PtrDiff   : Type<"ptrdiff_t", QualType<"Context.getPointerDiffType()">>;
 def IntPtr    : Type<"intptr_t",  QualType<"Context.getIntPtrType()">>;
@@ -343,15 +369,10 @@ def MemoryScope           : EnumType<"memory_scope">;
 def VecAndScalar: IntList<"VecAndScalar", [1, 2, 3, 4, 8, 16]>;
 def VecNoScalar : IntList<"VecNoScalar", [2, 3, 4, 8, 16]>;
 def Vec1        : IntList<"Vec1", [1]>;
-def Vec2        : IntList<"Vec2", [2]>;
-def Vec4        : IntList<"Vec4", [4]>;
-def Vec8        : IntList<"Vec8", [8]>;
-def Vec16       : IntList<"Vec16", [16]>;
 def Vec1234     : IntList<"Vec1234", [1, 2, 3, 4]>;
 
 // Type lists.
 def TLAll           : TypeList<[Char,  UChar, Short,  UShort, Int,  UInt, Long,  ULong, Float, Double, Half]>;
-def TLAllUnsigned   : TypeList<[UChar, UChar, UShort, UShort, UInt, UInt, ULong, ULong, UInt,  ULong,  UShort]>;
 def TLFloat         : TypeList<[Float, Double, Half]>;
 def TLSignedInts    : TypeList<[Char, Short, Int, Long]>;
 def TLUnsignedInts  : TypeList<[UChar, UShort, UInt, ULong]>;
@@ -1059,6 +1080,17 @@ foreach AS = [GlobalAS, LocalAS] in {
     }
   }
 }
+
+let Extension = FuncExtOpenCLCxx in {
+  foreach Type = [Int, UInt] in {
+    foreach name = ["atomic_add", "atomic_sub", "atomic_xchg",
+                    "atomic_min", "atomic_max", "atomic_and",
+                    "atomic_or", "atomic_xor"] in {
+      def : Builtin<name, [Type, PointerType<VolatileType<Type>, GenericAS>, Type]>;
+    }
+  }
+}
+
 // OpenCL v2.0 s6.13.11 - Atomic Functions.
 let MinVersion = CL20 in {
   def : Builtin<"atomic_work_item_fence", [Void, MemFenceFlags, MemoryOrder, MemoryScope]>;
@@ -1141,21 +1173,33 @@ let MinVersion = CL20 in {
 //--------------------------------------------------------------------
 // OpenCL v1.1 s6.11.12, v1.2 s6.12.12, v2.0 s6.13.12 - Miscellaneous Vector Functions
 // --- Table 19 ---
-foreach VSize1 = [Vec2, Vec4, Vec8, Vec16] in {
-  foreach VSize2 = [Vec2, Vec4, Vec8, Vec16] in {
-    def : Builtin<"shuffle", [GenericType<"TLAll" # VSize1.Name, TLAll, VSize1>,
-                              GenericType<"TLAll" # VSize2.Name, TLAll, VSize2>,
-                              GenericType<"TLAllUnsigned" # VSize1.Name, TLAllUnsigned, VSize1>],
-                  Attr.Const>;
+foreach VSize1 = [2, 4, 8, 16] in {
+  foreach VSize2 = [2, 4, 8, 16] in {
+    foreach VecAndMaskType = [[Char, UChar], [UChar, UChar],
+                              [Short, UShort], [UShort, UShort],
+                              [Int, UInt], [UInt, UInt],
+                              [Long, ULong], [ULong, ULong],
+                              [Float, UInt], [Double, ULong], [Half, UShort]] in {
+      def : Builtin<"shuffle", [VectorType<VecAndMaskType[0], VSize1>,
+                                VectorType<VecAndMaskType[0], VSize2>,
+                                VectorType<VecAndMaskType[1], VSize1>],
+                               Attr.Const>;
+    }
   }
 }
-foreach VSize1 = [Vec2, Vec4, Vec8, Vec16] in {
-  foreach VSize2 = [Vec2, Vec4, Vec8, Vec16] in {
-    def : Builtin<"shuffle2", [GenericType<"TLAll" # VSize1.Name, TLAll, VSize1>,
-                               GenericType<"TLAll" # VSize2.Name, TLAll, VSize2>,
-                               GenericType<"TLAll" # VSize2.Name, TLAll, VSize2>,
-                               GenericType<"TLAllUnsigned" # VSize1.Name, TLAllUnsigned, VSize1>],
-                  Attr.Const>;
+foreach VSize1 = [2, 4, 8, 16] in {
+  foreach VSize2 = [2, 4, 8, 16] in {
+    foreach VecAndMaskType = [[Char, UChar], [UChar, UChar],
+                              [Short, UShort], [UShort, UShort],
+                              [Int, UInt], [UInt, UInt],
+                              [Long, ULong], [ULong, ULong],
+                              [Float, UInt], [Double, ULong], [Half, UShort]] in {
+      def : Builtin<"shuffle2", [VectorType<VecAndMaskType[0], VSize1>,
+                                 VectorType<VecAndMaskType[0], VSize2>,
+                                 VectorType<VecAndMaskType[0], VSize2>,
+                                 VectorType<VecAndMaskType[1], VSize1>],
+                                Attr.Const>;
+    }
   }
 }
 

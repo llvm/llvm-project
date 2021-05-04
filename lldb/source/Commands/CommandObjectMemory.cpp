@@ -669,8 +669,8 @@ protected:
       }
 
       Address address(addr, nullptr);
-      bytes_read = target->ReadMemory(address, false, data_sp->GetBytes(),
-                                      data_sp->GetByteSize(), error);
+      bytes_read = target->ReadMemory(address, data_sp->GetBytes(),
+                                      data_sp->GetByteSize(), error, true);
       if (bytes_read == 0) {
         const char *error_cstr = error.AsCString();
         if (error_cstr && error_cstr[0]) {

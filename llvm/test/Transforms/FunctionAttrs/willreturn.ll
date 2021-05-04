@@ -153,5 +153,12 @@ bb2:
   br label %bb1
 }
 
+define linkonce i32 @square(i32) {
+; CHECK-NOT: Function Attrs: {{.*}}willreturn
+; CHECK: define linkonce i32 @square(
+    %2 = mul nsw i32 %0, %0
+    ret i32 %2
+}
+
 declare i64 @fn_noread() readnone
 declare void @fn_willreturn() willreturn

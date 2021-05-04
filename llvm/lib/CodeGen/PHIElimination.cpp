@@ -475,9 +475,10 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
           if (DefMI->isImplicitDef())
             ImpDefs.insert(DefMI);
       } else {
-        NewSrcInstr =
-            TII->createPHISourceCopy(opBlock, InsertPos, MPhi->getDebugLoc(),
-                                     SrcReg, SrcSubReg, IncomingReg);
+        // Delete the debug location, since the copy is inserted into a
+        // different basic block.
+        NewSrcInstr = TII->createPHISourceCopy(opBlock, InsertPos, nullptr,
+                                               SrcReg, SrcSubReg, IncomingReg);
       }
     }
 

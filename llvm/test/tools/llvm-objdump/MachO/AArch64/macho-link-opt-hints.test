@@ -1,4 +1,5 @@
 RUN: llvm-objdump -m --link-opt-hints %p/Inputs/link-opt-hints.macho-aarch64 | FileCheck %s
+RUN: llvm-otool -C %p/Inputs/link-opt-hints.macho-aarch64 | FileCheck %s
 
 CHECK: Linker optimiztion hints (8 total bytes)
 CHECK:     identifier 8 AdrpLdrGot

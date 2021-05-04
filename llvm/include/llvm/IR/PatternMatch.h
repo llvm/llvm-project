@@ -88,8 +88,52 @@ inline class_match<BinaryOperator> m_BinOp() {
 /// Matches any compare instruction and ignore it.
 inline class_match<CmpInst> m_Cmp() { return class_match<CmpInst>(); }
 
-/// Match an arbitrary undef constant.
-inline class_match<UndefValue> m_Undef() { return class_match<UndefValue>(); }
+struct undef_match {
+  static bool check(const Value *V) {
+    if (isa<UndefValue>(V))
+      return true;
+
+    const auto *CA = dyn_cast<ConstantAggregate>(V);
+    if (!CA)
+      return false;
+
+    SmallPtrSet<const ConstantAggregate *, 8> Seen;
+    SmallVector<const ConstantAggregate *, 8> Worklist;
+
+    // Either UndefValue, PoisonValue, or an aggregate that only contains
+    // these is accepted by matcher.
+    // CheckValue returns false if CA cannot satisfy this constraint.
+    auto CheckValue = [&](const ConstantAggregate *CA) {
+      for (const Value *Op : CA->operand_values()) {
+        if (isa<UndefValue>(Op))
+          continue;
+
+        const auto *CA = dyn_cast<ConstantAggregate>(Op);
+        if (!CA)
+          return false;
+        if (Seen.insert(CA).second)
+          Worklist.emplace_back(CA);
+      }
+
+      return true;
+    };
+
+    if (!CheckValue(CA))
+      return false;
+
+    while (!Worklist.empty()) {
+      if (!CheckValue(Worklist.pop_back_val()))
+        return false;
+    }
+    return true;
+  }
+  template <typename ITy> bool match(ITy *V) { return check(V); }
+};
+
+/// Match an arbitrary undef constant. This matches poison as well.
+/// If this is an aggregate and contains a non-aggregate element that is
+/// neither undef nor poison, the aggregate is not matched.
+inline auto m_Undef() { return undef_match(); }
 
 /// Match an arbitrary poison constant.
 inline class_match<PoisonValue> m_Poison() { return class_match<PoisonValue>(); }

@@ -10,6 +10,7 @@
 import argparse
 import os
 import re
+import sys
 
 
 def is_config_header(h):
@@ -60,7 +61,7 @@ def build_file_entry(fname, options):
     local_includes = []
     system_includes = []
     linecount = 0
-    with open(fname, 'r') as f:
+    with open(fname, 'r', encoding='utf-8') as f:
         for line in f.readlines():
             linecount += 1
             m = re.match(r'\s*#\s*include\s+"([^"]*)"', line)
@@ -116,13 +117,14 @@ def build_graph(roots, options):
     return graph
 
 
-def get_graphviz(graph, options):
+def get_friendly_id(fname):
+    i = fname.index('include/')
+    assert(i >= 0)
+    result = fname[i+8:]
+    return result
 
-    def get_friendly_id(fname):
-        i = fname.index('include/')
-        assert(i >= 0)
-        result = fname[i+8:]
-        return result
+
+def get_graphviz(graph, options):
 
     def get_decorators(fname, entry):
         result = ''
@@ -204,7 +206,9 @@ if __name__ == '__main__':
     for fname, entry in graph.items():
         for h in entry.includes:
             if transitively_includes(graph, h, fname):
-                print('Cycle detected between %s and %s' % (fname, h))
+                sys.stderr.write('Cycle detected between %s and %s\n' % (
+                    get_friendly_id(fname), get_friendly_id(h)
+                ))
                 no_cycles_detected = False
     assert no_cycles_detected
 

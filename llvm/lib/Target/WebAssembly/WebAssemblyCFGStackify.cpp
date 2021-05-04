@@ -21,12 +21,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "Utils/WebAssemblyTypeUtilities.h"
+#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyExceptionInfo.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySortRegion.h"
 #include "WebAssemblySubtarget.h"
-#include "WebAssemblyUtilities.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -1523,6 +1524,7 @@ void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
       }
       case WebAssembly::END_BLOCK:
       case WebAssembly::END_LOOP:
+      case WebAssembly::DELEGATE:
         EndToBegin[&MI]->getOperand(0).setImm(int32_t(RetType));
         continue;
       default:

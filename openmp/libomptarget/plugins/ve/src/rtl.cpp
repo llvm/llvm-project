@@ -453,3 +453,6 @@ int32_t __tgt_rtl_run_target_region(int32_t ID, void *Entry, void **Args,
 }
 
 int32_t __tgt_rtl_supports_empty_images() { return 1; }
+
+// VEC plugin's internal InfoLevel.
+std::atomic<uint32_t> InfoLevel;

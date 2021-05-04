@@ -40,6 +40,8 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; LV-LABEL: f1
 ; LV-LABEL: for.body.lver.check
 
+; LV-NEXT: [[A0:%[^ ]*]] = ptrtoint i16* %a to i64
+
 ; LV:      [[BETrunc:%[^ ]*]] = trunc i64 [[BE:%[^ ]*]] to i32
 ; LV-NEXT: [[OFMul:%[^ ]*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[BETrunc]])
 ; LV-NEXT: [[OFMulResult:%[^ ]*]] = extractvalue { i32, i1 } [[OFMul]], 0
@@ -54,6 +56,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; LV-NEXT: [[PredCheck0:%[^ ]*]] = or i1 [[CheckOr0]], [[OFMulOverflow]]
 
 ; LV-NEXT: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
+
 
 ; LV-NEXT: [[OFMul1:%[^ ]*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[BE]])
 ; LV-NEXT: [[OFMulResult1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 0

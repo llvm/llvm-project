@@ -1,4 +1,6 @@
-@ RUN: llvm-mc < %s -triple thumbv7-apple-darwin -mcpu=cortex-a7 -filetype=obj | llvm-objdump --triple thumbv7-apple-darwin10 -m -d --mcpu=cortex-a7 - | FileCheck %s
+@ RUN: llvm-mc %s -triple thumbv7-apple-darwin -mcpu=cortex-a7 -filetype=obj -o %t.o
+@ RUN: llvm-objdump --triple thumbv7-apple-darwin10 -m -d --mcpu=cortex-a7 %t.o | FileCheck %s
+@ RUN: llvm-otool -tv -mcpu=cortex-a7 %t.o | FileCheck %s
 
 .thumb
 .thumb_func _t

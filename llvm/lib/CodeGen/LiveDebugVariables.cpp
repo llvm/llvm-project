@@ -870,7 +870,7 @@ bool LDVImpl::collectDebugValues(MachineFunction &mf) {
          MBBI != MBBE;) {
       // Use the first debug instruction in the sequence to get a SlotIndex
       // for following consecutive debug instructions.
-      if (!MBBI->isDebugInstr()) {
+      if (!MBBI->isDebugOrPseudoInstr()) {
         ++MBBI;
         continue;
       }
@@ -891,7 +891,7 @@ bool LDVImpl::collectDebugValues(MachineFunction &mf) {
           Changed = true;
         } else
           ++MBBI;
-      } while (MBBI != MBBE && MBBI->isDebugInstr());
+      } while (MBBI != MBBE && MBBI->isDebugOrPseudoInstr());
     }
   }
   return Changed;

@@ -64,42 +64,37 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; BE-NEXT:    xxswapd 0, 35
 ; BE-NEXT:    mfvsrwz 3, 35
 ; BE-NEXT:    xxsldwi 1, 35, 35, 1
-; BE-NEXT:    sldi 3, 3, 48
-; BE-NEXT:    mffprwz 4, 0
-; BE-NEXT:    xxsldwi 0, 35, 35, 3
-; BE-NEXT:    mtvsrd 36, 3
-; BE-NEXT:    mffprwz 3, 1
-; BE-NEXT:    sldi 4, 4, 48
-; BE-NEXT:    xxswapd 1, 34
-; BE-NEXT:    mtvsrd 35, 4
 ; BE-NEXT:    mfvsrwz 4, 34
-; BE-NEXT:    sldi 3, 3, 48
-; BE-NEXT:    mtvsrd 37, 3
+; BE-NEXT:    mtvsrwz 36, 3
+; BE-NEXT:    xxsldwi 2, 35, 35, 3
 ; BE-NEXT:    mffprwz 3, 0
-; BE-NEXT:    sldi 4, 4, 48
-; BE-NEXT:    xxsldwi 0, 34, 34, 1
-; BE-NEXT:    vmrghh 3, 5, 3
-; BE-NEXT:    mtvsrd 37, 4
-; BE-NEXT:    sldi 3, 3, 48
+; BE-NEXT:    xxswapd 0, 34
+; BE-NEXT:    mtvsrwz 35, 4
 ; BE-NEXT:    mffprwz 4, 1
-; BE-NEXT:    xxsldwi 1, 34, 34, 3
-; BE-NEXT:    mtvsrd 34, 3
-; BE-NEXT:    mffprwz 3, 0
-; BE-NEXT:    sldi 4, 4, 48
-; BE-NEXT:    mtvsrd 32, 4
-; BE-NEXT:    mffprwz 4, 1
-; BE-NEXT:    sldi 3, 3, 48
-; BE-NEXT:    mtvsrd 33, 3
-; BE-NEXT:    sldi 3, 4, 48
-; BE-NEXT:    vmrghh 2, 2, 4
-; BE-NEXT:    mtvsrd 36, 3
+; BE-NEXT:    xxsldwi 1, 34, 34, 1
+; BE-NEXT:    mtvsrwz 37, 3
 ; BE-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
-; BE-NEXT:    vmrghh 0, 1, 0
 ; BE-NEXT:    addi 3, 3, .LCPI0_1@toc@l
-; BE-NEXT:    vmrghh 4, 4, 5
+; BE-NEXT:    mtvsrwz 32, 4
+; BE-NEXT:    mffprwz 4, 0
+; BE-NEXT:    lxvw4x 33, 0, 3
+; BE-NEXT:    xxsldwi 0, 34, 34, 3
+; BE-NEXT:    mffprwz 3, 1
+; BE-NEXT:    mffprwz 5, 2
+; BE-NEXT:    vperm 2, 0, 5, 1
+; BE-NEXT:    mtvsrwz 37, 3
+; BE-NEXT:    mffprwz 3, 0
+; BE-NEXT:    mtvsrwz 38, 5
+; BE-NEXT:    mtvsrwz 39, 4
+; BE-NEXT:    mtvsrwz 32, 3
+; BE-NEXT:    addis 3, 2, .LCPI0_2@toc@ha
+; BE-NEXT:    vperm 4, 6, 4, 1
+; BE-NEXT:    addi 3, 3, .LCPI0_2@toc@l
+; BE-NEXT:    vperm 5, 5, 7, 1
 ; BE-NEXT:    lxvw4x 0, 0, 3
-; BE-NEXT:    vmrghw 2, 2, 3
-; BE-NEXT:    vmrghw 3, 4, 0
+; BE-NEXT:    vperm 3, 0, 3, 1
+; BE-NEXT:    vmrghw 2, 4, 2
+; BE-NEXT:    vmrghw 3, 3, 5
 ; BE-NEXT:    xxmrghd 34, 35, 34
 ; BE-NEXT:    vspltish 3, 15
 ; BE-NEXT:    xxlor 34, 34, 0

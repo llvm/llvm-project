@@ -31,4 +31,4 @@ public:
 
 int DefaultOnly::count = 0;
 
-#endif  // DEFAULTONLY_H
+#endif // DEFAULTONLY_H

@@ -40,6 +40,7 @@
   {
     "triggered": true,
     "id": 6152004,
+    "name": "Crashing Thread Name",
     "threadState": {
       "r13": {
         "value": 0

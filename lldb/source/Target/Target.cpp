@@ -1717,8 +1717,8 @@ size_t Target::ReadMemoryFromFileCache(const Address &addr, void *dst,
   return 0;
 }
 
-size_t Target::ReadMemory(const Address &addr, bool prefer_file_cache,
-                          void *dst, size_t dst_len, Status &error,
+size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
+                          Status &error, bool force_live_memory,
                           lldb::addr_t *load_addr_ptr) {
   error.Clear();
 
@@ -1753,10 +1753,20 @@ size_t Target::ReadMemory(const Address &addr, bool prefer_file_cache,
   if (!resolved_addr.IsValid())
     resolved_addr = addr;
 
-  if (prefer_file_cache) {
-    bytes_read = ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
-    if (bytes_read > 0)
-      return bytes_read;
+  bool is_readonly = false;
+  // Read from file cache if read-only section.
+  if (!force_live_memory && resolved_addr.IsSectionOffset()) {
+    SectionSP section_sp(resolved_addr.GetSection());
+    if (section_sp) {
+      auto permissions = Flags(section_sp->GetPermissions());
+      is_readonly = !permissions.Test(ePermissionsWritable) &&
+                    permissions.Test(ePermissionsReadable);
+    }
+    if (is_readonly) {
+      bytes_read = ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
+      if (bytes_read > 0)
+        return bytes_read;
+    }
   }
 
   if (ProcessIsValid()) {
@@ -1791,17 +1801,10 @@ size_t Target::ReadMemory(const Address &addr, bool prefer_file_cache,
           *load_addr_ptr = load_addr;
         return bytes_read;
       }
-      // If the address is not section offset we have an address that doesn't
-      // resolve to any address in any currently loaded shared libraries and we
-      // failed to read memory so there isn't anything more we can do. If it is
-      // section offset, we might be able to read cached memory from the object
-      // file.
-      if (!resolved_addr.IsSectionOffset())
-        return 0;
     }
   }
 
-  if (!prefer_file_cache && resolved_addr.IsSectionOffset()) {
+  if (!is_readonly && resolved_addr.IsSectionOffset()) {
     // If we didn't already try and read from the object file cache, then try
     // it after failing to read from the process.
     return ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
@@ -1856,7 +1859,7 @@ size_t Target::ReadCStringFromMemory(const Address &addr, char *dst,
       addr_t bytes_to_read =
           std::min<addr_t>(bytes_left, cache_line_bytes_left);
       size_t bytes_read =
-          ReadMemory(address, false, curr_dst, bytes_to_read, error);
+          ReadMemory(address, curr_dst, bytes_to_read, error, true);
 
       if (bytes_read == 0) {
         result_error = error;
@@ -1884,15 +1887,15 @@ size_t Target::ReadCStringFromMemory(const Address &addr, char *dst,
   return total_cstr_len;
 }
 
-size_t Target::ReadScalarIntegerFromMemory(const Address &addr,
-                                           bool prefer_file_cache,
-                                           uint32_t byte_size, bool is_signed,
-                                           Scalar &scalar, Status &error) {
+size_t Target::ReadScalarIntegerFromMemory(const Address &addr, uint32_t byte_size,
+                                           bool is_signed, Scalar &scalar,
+                                           Status &error,
+                                           bool force_live_memory) {
   uint64_t uval;
 
   if (byte_size <= sizeof(uval)) {
     size_t bytes_read =
-        ReadMemory(addr, prefer_file_cache, &uval, byte_size, error);
+        ReadMemory(addr, &uval, byte_size, error, force_live_memory);
     if (bytes_read == byte_size) {
       DataExtractor data(&uval, sizeof(uval), m_arch.GetSpec().GetByteOrder(),
                          m_arch.GetSpec().GetAddressByteSize());
@@ -1914,23 +1917,22 @@ size_t Target::ReadScalarIntegerFromMemory(const Address &addr,
 }
 
 uint64_t Target::ReadUnsignedIntegerFromMemory(const Address &addr,
-                                               bool prefer_file_cache,
                                                size_t integer_byte_size,
-                                               uint64_t fail_value,
-                                               Status &error) {
+                                               uint64_t fail_value, Status &error,
+                                               bool force_live_memory) {
   Scalar scalar;
-  if (ReadScalarIntegerFromMemory(addr, prefer_file_cache, integer_byte_size,
-                                  false, scalar, error))
+  if (ReadScalarIntegerFromMemory(addr, integer_byte_size, false, scalar, error,
+                                  force_live_memory))
     return scalar.ULongLong(fail_value);
   return fail_value;
 }
 
-bool Target::ReadPointerFromMemory(const Address &addr, bool prefer_file_cache,
-                                   Status &error, Address &pointer_addr) {
+bool Target::ReadPointerFromMemory(const Address &addr, Status &error,
+                                   Address &pointer_addr,
+                                   bool force_live_memory) {
   Scalar scalar;
-  if (ReadScalarIntegerFromMemory(addr, prefer_file_cache,
-                                  m_arch.GetSpec().GetAddressByteSize(), false,
-                                  scalar, error)) {
+  if (ReadScalarIntegerFromMemory(addr, m_arch.GetSpec().GetAddressByteSize(),
+                                  false, scalar, error, force_live_memory)) {
     addr_t pointer_vm_addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
     if (pointer_vm_addr != LLDB_INVALID_ADDRESS) {
       SectionLoadList &section_load_list = GetSectionLoadList();

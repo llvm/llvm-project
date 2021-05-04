@@ -46,6 +46,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -7660,9 +7661,8 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
   for (GetElementPtrInst *UGEPI : UGEPIs) {
     ConstantInt *UGEPIIdx = cast<ConstantInt>(UGEPI->getOperand(1));
     APInt NewIdx = UGEPIIdx->getValue() - GEPIIdx->getValue();
-    unsigned ImmCost =
-      TTI->getIntImmCost(NewIdx, GEPIIdx->getType(),
-                         TargetTransformInfo::TCK_SizeAndLatency);
+    InstructionCost ImmCost = TTI->getIntImmCost(
+        NewIdx, GEPIIdx->getType(), TargetTransformInfo::TCK_SizeAndLatency);
     if (ImmCost > TargetTransformInfo::TCC_Basic)
       return false;
   }

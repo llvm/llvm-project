@@ -120,7 +120,7 @@ struct _LIBCPP_TEMPLATE_VIS pointer_traits
 #else
     template <class _Up> struct rebind
         {typedef typename __pointer_traits_rebind<pointer, _Up>::type other;};
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 private:
     struct __nat {};
@@ -230,4 +230,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif  // _LIBCPP___MEMORY_POINTER_TRAITS_H
+#endif // _LIBCPP___MEMORY_POINTER_TRAITS_H

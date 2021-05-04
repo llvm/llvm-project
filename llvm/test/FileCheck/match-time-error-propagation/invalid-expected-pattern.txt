@@ -9,8 +9,8 @@ RUN: echo > %t.in '10000000000000000'
       ERR:{{.*}}: error: unable to substitute variable or numeric expression: overflow error
  ERR-NEXT:CHECK: {{.*}}
  ERR-NEXT:{{ *}}^
- ERR-NEXT:<stdin>:1:1: note: uses undefined variable(s): "UNDEFVAR"
- ERR-NEXT:10000000000000000
+ ERR-NEXT:{{.*}}: error: undefined variable: UNDEFVAR
+ ERR-NEXT:{{CHECK: \[\[#0x8000000000000000\+0x8000000000000000\]\] \[\[UNDEFVAR\]\]}}
  ERR-NEXT:^
   ERR-NOT:{{error|note|remark}}:
 
@@ -18,7 +18,7 @@ RUN: echo > %t.in '10000000000000000'
 DUMP-NEXT:           1: 10000000000000000 
 DUMP-NEXT:check:1'0     X~~~~~~~~~~~~~~~~~ error: match failed for invalid pattern
 DUMP-NEXT:check:1'1                        unable to substitute variable or numeric expression: overflow error
-DUMP-NEXT:check:1'2                        uses undefined variable(s): "UNDEFVAR"
+DUMP-NEXT:check:1'2                        undefined variable: UNDEFVAR
 DUMP-NEXT:>>>>>>
 
 ;--------------------------------------------------

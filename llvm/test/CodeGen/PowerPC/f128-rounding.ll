@@ -2,7 +2,7 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown -verify-machineinstrs \
 ; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s | FileCheck %s
 ; RUN: llc -mcpu=pwr8 -mtriple=powerpc64le-unknown-unknown -verify-machineinstrs \
-; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s -enable-soft-fp128 | FileCheck %s \
+; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s | FileCheck %s \
 ; RUN:   -check-prefix=CHECK-P8
 
 define void @qp_trunc(fp128* nocapture readonly %a, fp128* nocapture %res) {

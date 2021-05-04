@@ -1,0 +1,24 @@
+! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
+! OpenMP Version 5.0
+! 2.11.3 allocate Directive
+! A variable that is part of another variable (as an array or
+! structure element) cannot appear in an allocate directive.
+subroutine allocate()
+use omp_lib
+
+  type my_type
+    integer :: array(10)
+  end type my_type
+  type(my_type) :: my_var
+  real, dimension (:,:), allocatable :: darray
+  integer :: a, b
+
+  !!ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in an ALLOCATE directive
+  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a PRIVATE or SHARED clause or on the ALLOCATE directive.
+  !$omp allocate(my_var%array)
+
+  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a PRIVATE or SHARED clause or on the ALLOCATE directive.
+  !$omp allocate(darray, my_var%array) allocator(omp_default_mem_alloc)
+    allocate ( darray(a, b) )
+
+end subroutine allocate

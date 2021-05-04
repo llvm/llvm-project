@@ -65,6 +65,14 @@ mlirPassManagerGetAsOpPassManager(MlirPassManager passManager);
 MLIR_CAPI_EXPORTED MlirLogicalResult
 mlirPassManagerRun(MlirPassManager passManager, MlirModule module);
 
+/// Enable print-ir-after-all.
+MLIR_CAPI_EXPORTED void
+mlirPassManagerEnableIRPrinting(MlirPassManager passManager);
+
+/// Enable / disable verify-each.
+MLIR_CAPI_EXPORTED void
+mlirPassManagerEnableVerifier(MlirPassManager passManager, bool enable);
+
 /// Nest an OpPassManager under the top-level PassManager, the nested
 /// passmanager will only run on operations matching the provided name.
 /// The returned OpPassManager will be destroyed when the parent is destroyed.

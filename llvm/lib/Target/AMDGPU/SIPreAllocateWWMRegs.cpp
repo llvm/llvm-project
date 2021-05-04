@@ -142,13 +142,26 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
   }
 
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  MachineFrameInfo &FrameInfo = MF.getFrameInfo();
 
   for (unsigned Reg : RegsToRewrite) {
     LIS->removeInterval(Reg);
 
     const Register PhysReg = VRM->getPhys(Reg);
     assert(PhysReg != 0);
-    MFI->ReserveWWMRegister(PhysReg);
+
+    // Check if PhysReg is already reserved
+    if (!MFI->WWMReservedRegs.count(PhysReg)) {
+      Optional<int> FI;
+      if (!MFI->isEntryFunction()) {
+        // Create a stack object for a possible spill in the function prologue.
+        // Note: Non-CSR VGPR also need this as we may overwrite inactive lanes.
+        const TargetRegisterClass *RC = TRI->getPhysRegClass(PhysReg);
+        FI = FrameInfo.CreateSpillStackObject(TRI->getSpillSize(*RC),
+                                              TRI->getSpillAlign(*RC));
+      }
+      MFI->reserveWWMRegister(PhysReg, FI);
+    }
   }
 
   RegsToRewrite.clear();

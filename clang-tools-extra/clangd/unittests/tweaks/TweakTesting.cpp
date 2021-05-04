@@ -68,13 +68,14 @@ std::pair<unsigned, unsigned> rangeOrPoint(const Annotations &A) {
 // Returns None if and only if prepare() failed.
 llvm::Optional<llvm::Expected<Tweak::Effect>>
 applyTweak(ParsedAST &AST, const Annotations &Input, StringRef TweakID,
-           const SymbolIndex *Index) {
+           const SymbolIndex *Index, llvm::vfs::FileSystem *FS) {
   auto Range = rangeOrPoint(Input);
   llvm::Optional<llvm::Expected<Tweak::Effect>> Result;
   SelectionTree::createEach(AST.getASTContext(), AST.getTokens(), Range.first,
                             Range.second, [&](SelectionTree ST) {
                               Tweak::Selection S(Index, AST, Range.first,
-                                                 Range.second, std::move(ST));
+                                                 Range.second, std::move(ST),
+                                                 FS);
                               if (auto T = prepareTweak(TweakID, S, nullptr)) {
                                 Result = (*T)->apply(S);
                                 return true;
@@ -98,7 +99,9 @@ MATCHER_P7(TweakIsAvailable, TweakID, Ctx, Header, ExtraArgs, ExtraFiles, Index,
   TU.ExtraArgs = ExtraArgs;
   TU.AdditionalFiles = std::move(ExtraFiles);
   ParsedAST AST = TU.build();
-  auto Result = applyTweak(AST, Input, TweakID, Index);
+  auto Result = applyTweak(
+      AST, Input, TweakID, Index,
+      &AST.getSourceManager().getFileManager().getVirtualFileSystem());
   // We only care if prepare() succeeded, but must handle Errors.
   if (Result && !*Result)
     consumeError(Result->takeError());
@@ -119,7 +122,9 @@ std::string TweakTest::apply(llvm::StringRef MarkedCode,
   TU.ExtraArgs = ExtraArgs;
   ParsedAST AST = TU.build();
 
-  auto Result = applyTweak(AST, Input, TweakID, Index.get());
+  auto Result = applyTweak(
+      AST, Input, TweakID, Index.get(),
+      &AST.getSourceManager().getFileManager().getVirtualFileSystem());
   if (!Result)
     return "unavailable";
   if (!*Result)

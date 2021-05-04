@@ -1009,9 +1009,9 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  const LSRUse &LU, const Formula &F);
 
 // Get the cost of the scaling factor used in F for LU.
-static unsigned getScalingFactorCost(const TargetTransformInfo &TTI,
-                                     const LSRUse &LU, const Formula &F,
-                                     const Loop &L);
+static InstructionCost getScalingFactorCost(const TargetTransformInfo &TTI,
+                                            const LSRUse &LU, const Formula &F,
+                                            const Loop &L);
 
 namespace {
 
@@ -1360,7 +1360,7 @@ void Cost::RateFormula(const Formula &F,
   C.NumBaseAdds += (F.UnfoldedOffset != 0);
 
   // Accumulate non-free scaling amounts.
-  C.ScaleCost += getScalingFactorCost(*TTI, LU, F, *L);
+  C.ScaleCost += *getScalingFactorCost(*TTI, LU, F, *L).getValue();
 
   // Tally up the non-zero immediates.
   for (const LSRFixup &Fixup : LU.Fixups) {
@@ -1757,9 +1757,9 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                               F.Scale);
 }
 
-static unsigned getScalingFactorCost(const TargetTransformInfo &TTI,
-                                     const LSRUse &LU, const Formula &F,
-                                     const Loop &L) {
+static InstructionCost getScalingFactorCost(const TargetTransformInfo &TTI,
+                                            const LSRUse &LU, const Formula &F,
+                                            const Loop &L) {
   if (!F.Scale)
     return 0;
 
@@ -1772,14 +1772,14 @@ static unsigned getScalingFactorCost(const TargetTransformInfo &TTI,
   switch (LU.Kind) {
   case LSRUse::Address: {
     // Check the scaling factor cost with both the min and max offsets.
-    int ScaleCostMinOffset = TTI.getScalingFactorCost(
+    InstructionCost ScaleCostMinOffset = TTI.getScalingFactorCost(
         LU.AccessTy.MemTy, F.BaseGV, F.BaseOffset + LU.MinOffset, F.HasBaseReg,
         F.Scale, LU.AccessTy.AddrSpace);
-    int ScaleCostMaxOffset = TTI.getScalingFactorCost(
+    InstructionCost ScaleCostMaxOffset = TTI.getScalingFactorCost(
         LU.AccessTy.MemTy, F.BaseGV, F.BaseOffset + LU.MaxOffset, F.HasBaseReg,
         F.Scale, LU.AccessTy.AddrSpace);
 
-    assert(ScaleCostMinOffset >= 0 && ScaleCostMaxOffset >= 0 &&
+    assert(ScaleCostMinOffset.isValid() && ScaleCostMaxOffset.isValid() &&
            "Legal addressing mode has an illegal cost!");
     return std::max(ScaleCostMinOffset, ScaleCostMaxOffset);
   }

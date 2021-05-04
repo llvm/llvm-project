@@ -1041,6 +1041,11 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         IsFuncCall = true;
         if (CalleeAAR) {
           FunctionModRefBehavior MRB = CalleeAAR->getModRefBehavior(Call);
+
+          // We'll retain this knowledge without additional metadata.
+          if (AAResults::onlyAccessesInaccessibleMem(MRB))
+            continue;
+
           if (AAResults::onlyAccessesArgPointees(MRB))
             IsArgMemOnlyCall = true;
         }

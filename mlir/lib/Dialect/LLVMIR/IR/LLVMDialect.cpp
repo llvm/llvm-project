@@ -1244,6 +1244,10 @@ static LogicalResult verify(AddressOfOp op) {
 /// the name of the attribute in ODS.
 static StringRef getLinkageAttrName() { return "linkage"; }
 
+/// Returns the name used for the unnamed_addr attribute. This *must* correspond
+/// to the name of the attribute in ODS.
+static StringRef getUnnamedAddrAttrName() { return "unnamed_addr"; }
+
 void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
                      bool isConstant, Linkage linkage, StringRef name,
                      Attribute value, unsigned addrSpace,
@@ -1265,6 +1269,8 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
 
 static void printGlobalOp(OpAsmPrinter &p, GlobalOp op) {
   p << op.getOperationName() << ' ' << stringifyLinkage(op.linkage()) << ' ';
+  if (op.unnamed_addr())
+    p << stringifyUnnamedAddr(*op.unnamed_addr()) << ' ';
   if (op.constant())
     p << "constant ";
   p.printSymbolName(op.sym_name());
@@ -1274,7 +1280,8 @@ static void printGlobalOp(OpAsmPrinter &p, GlobalOp op) {
   p << ')';
   p.printOptionalAttrDict(op->getAttrs(),
                           {SymbolTable::getSymbolAttrName(), "type", "constant",
-                           "value", getLinkageAttrName()});
+                           "value", getLinkageAttrName(),
+                           getUnnamedAddrAttrName()});
 
   // Print the trailing type unless it's a string global.
   if (op.getValueOrNull().dyn_cast_or_null<StringAttr>())
@@ -1495,6 +1502,7 @@ template <typename Ty> struct EnumTraits {};
   }
 
 REGISTER_ENUM_TYPE(Linkage);
+REGISTER_ENUM_TYPE(UnnamedAddr);
 } // end namespace
 
 template <typename EnumTy>
@@ -1523,6 +1531,12 @@ static ParseResult parseGlobalOp(OpAsmParser &parser, OperationState &result) {
     result.addAttribute(getLinkageAttrName(),
                         parser.getBuilder().getI64IntegerAttr(
                             static_cast<int64_t>(LLVM::Linkage::External)));
+
+  if (failed(parseOptionalLLVMKeyword<UnnamedAddr>(parser, result,
+                                                   getUnnamedAddrAttrName())))
+    result.addAttribute(getUnnamedAddrAttrName(),
+                        parser.getBuilder().getI64IntegerAttr(
+                            static_cast<int64_t>(LLVM::UnnamedAddr::None)));
 
   if (succeeded(parser.parseOptionalKeyword("constant")))
     result.addAttribute("constant", parser.getBuilder().getUnitAttr());

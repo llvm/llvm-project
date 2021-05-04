@@ -196,6 +196,7 @@ void MMIAddrLabelMapCallbackPtr::allUsesReplacedWith(Value *V2) {
 void MachineModuleInfo::initialize() {
   ObjFileMMI = nullptr;
   CurCallSite = 0;
+  NextFnNum = 0;
   UsesMSVCFloatingPoint = UsesMorestackAddr = false;
   HasSplitStack = HasNosplitStack = false;
   AddrLabelSymbols = nullptr;

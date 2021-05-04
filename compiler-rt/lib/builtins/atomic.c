@@ -52,7 +52,7 @@ static const long SPINLOCK_MASK = SPINLOCK_COUNT - 1;
 // defined.  Each platform should define the Lock type, and corresponding
 // lock() and unlock() functions.
 ////////////////////////////////////////////////////////////////////////////////
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__DragonFly__)
 #include <errno.h>
 // clang-format off
 #include <sys/types.h>

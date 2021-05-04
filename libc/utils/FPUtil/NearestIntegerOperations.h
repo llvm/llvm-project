@@ -51,7 +51,7 @@ static inline T trunc(T x) {
 
   int trimSize = MantissaWidth<T>::value - exponent;
   bits.encoding.mantissa = (bits.encoding.mantissa >> trimSize) << trimSize;
-  return bits;
+  return T(bits);
 }
 
 template <typename T,

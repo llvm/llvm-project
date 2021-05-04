@@ -676,8 +676,8 @@ operator!=(const scoped_allocator_adaptor<_OuterA1, _InnerAllocs...>& __a,
     return !(__a == __b);
 }
 
-#endif  // !defined(_LIBCPP_CXX03_LANG)
+#endif // !defined(_LIBCPP_CXX03_LANG)
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_SCOPED_ALLOCATOR
+#endif // _LIBCPP_SCOPED_ALLOCATOR

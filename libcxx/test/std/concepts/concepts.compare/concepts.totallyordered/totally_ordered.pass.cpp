@@ -26,7 +26,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "../types.h"
+#include "compare_types.h"
 #include "test_macros.h"
 
 // `models_totally_ordered` checks that `std::totally_ordered` subsumes

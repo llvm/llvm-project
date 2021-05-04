@@ -931,6 +931,14 @@ static void maybeSetDSOLocal(bool DSOLocal, GlobalValue &GV) {
     GV.setDSOLocal(true);
 }
 
+static std::string typeComparisonErrorMessage(StringRef Message, Type *Ty1,
+                                              Type *Ty2) {
+  std::string ErrString;
+  raw_string_ostream ErrOS(ErrString);
+  ErrOS << Message << " (" << *Ty1 << " vs " << *Ty2 << ")";
+  return ErrOS.str();
+}
+
 /// parseIndirectSymbol:
 ///   ::= GlobalVar '=' OptionalLinkage OptionalPreemptionSpecifier
 ///                     OptionalVisibility OptionalDLLStorageClass
@@ -998,13 +1006,18 @@ bool LLParser::parseIndirectSymbol(const std::string &Name, LocTy NameLoc,
     return error(AliaseeLoc, "An alias or ifunc must have pointer type");
   unsigned AddrSpace = PTy->getAddressSpace();
 
-  if (IsAlias && Ty != PTy->getElementType())
-    return error(ExplicitTypeLoc,
-                 "explicit pointee type doesn't match operand's pointee type");
+  if (IsAlias && Ty != PTy->getElementType()) {
+    return error(
+        ExplicitTypeLoc,
+        typeComparisonErrorMessage(
+            "explicit pointee type doesn't match operand's pointee type", Ty,
+            PTy->getElementType()));
+  }
 
-  if (!IsAlias && !PTy->getElementType()->isFunctionTy())
+  if (!IsAlias && !PTy->getElementType()->isFunctionTy()) {
     return error(ExplicitTypeLoc,
                  "explicit pointee type should be a function type");
+  }
 
   GlobalValue *GVal = nullptr;
 
@@ -3844,10 +3857,13 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS) {
 
       Type *BaseType = Elts[0]->getType();
       auto *BasePointerType = cast<PointerType>(BaseType->getScalarType());
-      if (Ty != BasePointerType->getElementType())
+      if (Ty != BasePointerType->getElementType()) {
         return error(
             ExplicitTypeLoc,
-            "explicit pointee type doesn't match operand's pointee type");
+            typeComparisonErrorMessage(
+                "explicit pointee type doesn't match operand's pointee type",
+                Ty, BasePointerType->getElementType()));
+      }
 
       unsigned GEPWidth =
           BaseType->isVectorTy()
@@ -7454,9 +7470,13 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
       Ordering == AtomicOrdering::AcquireRelease)
     return error(Loc, "atomic load cannot use Release ordering");
 
-  if (Ty != cast<PointerType>(Val->getType())->getElementType())
-    return error(ExplicitTypeLoc,
-                 "explicit pointee type doesn't match operand's pointee type");
+  if (Ty != cast<PointerType>(Val->getType())->getElementType()) {
+    return error(
+        ExplicitTypeLoc,
+        typeComparisonErrorMessage(
+            "explicit pointee type doesn't match operand's pointee type", Ty,
+            cast<PointerType>(Val->getType())->getElementType()));
+  }
   SmallPtrSet<Type *, 4> Visited;
   if (!Alignment && !Ty->isSized(&Visited))
     return error(ExplicitTypeLoc, "loading unsized types is not allowed");
@@ -7710,9 +7730,13 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
   if (!BasePointerType)
     return error(Loc, "base of getelementptr must be a pointer");
 
-  if (Ty != BasePointerType->getElementType())
-    return error(ExplicitTypeLoc,
-                 "explicit pointee type doesn't match operand's pointee type");
+  if (Ty != BasePointerType->getElementType()) {
+    return error(
+        ExplicitTypeLoc,
+        typeComparisonErrorMessage(
+            "explicit pointee type doesn't match operand's pointee type", Ty,
+            BasePointerType->getElementType()));
+  }
 
   SmallVector<Value*, 16> Indices;
   bool AteExtraComma = false;

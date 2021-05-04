@@ -1577,13 +1577,16 @@ func @gather_op(%arg0: memref<?xf32>, %arg1: vector<3xi32>, %arg2: vector<3xi1>,
 
 // -----
 
-func @gather_op_index(%arg0: memref<?xindex>, %arg1: vector<3xi32>, %arg2: vector<3xi1>, %arg3: vector<3xindex>) -> vector<3xindex> {
+func @gather_op_index(%arg0: memref<?xindex>, %arg1: vector<3xindex>, %arg2: vector<3xi1>, %arg3: vector<3xindex>) -> vector<3xindex> {
   %0 = constant 0: index
-  %1 = vector.gather %arg0[%0][%arg1], %arg2, %arg3 : memref<?xindex>, vector<3xi32>, vector<3xi1>, vector<3xindex> into vector<3xindex>
+  %1 = vector.gather %arg0[%0][%arg1], %arg2, %arg3 : memref<?xindex>, vector<3xindex>, vector<3xi1>, vector<3xindex> into vector<3xindex>
   return %1 : vector<3xindex>
 }
+
 // CHECK-LABEL: func @gather_op_index
-// CHECK: %{{.*}} = llvm.intr.masked.gather %{{.*}}, %{{.*}}, %{{.*}} {alignment = 8 : i32} : (!llvm.vec<3 x ptr<i64>>, vector<3xi1>, vector<3xi64>) -> vector<3xi64>
+// CHECK: %[[P:.*]] = llvm.getelementptr %{{.*}}[%{{.*}}] : (!llvm.ptr<i64>, vector<3xi64>) -> !llvm.vec<3 x ptr<i64>>
+// CHECK: %[[G:.*]] = llvm.intr.masked.gather %{{.*}}, %{{.*}}, %{{.*}} {alignment = 8 : i32} : (!llvm.vec<3 x ptr<i64>>, vector<3xi1>, vector<3xi64>) -> vector<3xi64>
+// CHECK: %{{.*}} = llvm.mlir.cast %[[G]] : vector<3xi64> to vector<3xindex>
 
 // -----
 
@@ -1613,13 +1616,15 @@ func @scatter_op(%arg0: memref<?xf32>, %arg1: vector<3xi32>, %arg2: vector<3xi1>
 
 // -----
 
-func @scatter_op_index(%arg0: memref<?xindex>, %arg1: vector<3xi32>, %arg2: vector<3xi1>, %arg3: vector<3xindex>) {
+func @scatter_op_index(%arg0: memref<?xindex>, %arg1: vector<3xindex>, %arg2: vector<3xi1>, %arg3: vector<3xindex>) {
   %0 = constant 0: index
-  vector.scatter %arg0[%0][%arg1], %arg2, %arg3 : memref<?xindex>, vector<3xi32>, vector<3xi1>, vector<3xindex>
+  vector.scatter %arg0[%0][%arg1], %arg2, %arg3 : memref<?xindex>, vector<3xindex>, vector<3xi1>, vector<3xindex>
   return
 }
+
 // CHECK-LABEL: func @scatter_op_index
-// CHECK: llvm.intr.masked.scatter %{{.*}}, %{{.*}}, %{{.*}} {alignment = 8 : i32} : vector<3xi64>, vector<3xi1> into !llvm.vec<3 x ptr<i64>>
+// CHECK: %[[P:.*]] = llvm.getelementptr %{{.*}}[%{{.*}}] : (!llvm.ptr<i64>, vector<3xi64>) -> !llvm.vec<3 x ptr<i64>>
+// CHECK: llvm.intr.masked.scatter %{{.*}}, %[[P]], %{{.*}} {alignment = 8 : i32} : vector<3xi64>, vector<3xi1> into !llvm.vec<3 x ptr<i64>>
 
 // -----
 
