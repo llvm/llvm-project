@@ -227,6 +227,45 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   if (isa<tosa::LogicalRightShiftOp>(op) && elementTy.isa<IntegerType>())
     return rewriter.create<mlir::UnsignedShiftRightOp>(loc, resultTypes, args);
 
+  // tosa::ArithmeticRightShiftOp
+  if (isa<tosa::ArithmeticRightShiftOp>(op) && elementTy.isa<IntegerType>()) {
+    auto result =
+        rewriter.create<mlir::SignedShiftRightOp>(loc, resultTypes, args);
+    auto round = op->getAttr("round").cast<BoolAttr>().getValue();
+    if (!round) {
+      return result;
+    }
+
+    Type i1Ty = IntegerType::get(rewriter.getContext(), /*width=*/1);
+    auto one =
+        rewriter.create<mlir::ConstantOp>(loc, IntegerAttr::get(elementTy, 1));
+    auto zero =
+        rewriter.create<mlir::ConstantOp>(loc, IntegerAttr::get(elementTy, 0));
+    auto i1one =
+        rewriter.create<mlir::ConstantOp>(loc, IntegerAttr::get(i1Ty, 1));
+
+    // Checking that input2 != 0
+    auto shiftValueGreaterThanZero =
+        rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sgt, args[1], zero);
+
+    // Checking for the last bit of input1 to be 1
+    auto subtract =
+        rewriter.create<mlir::SubIOp>(loc, resultTypes, args[1], one);
+    auto shifted = rewriter
+                       .create<mlir::SignedShiftRightOp>(loc, resultTypes,
+                                                         args[0], subtract)
+                       ->getResults();
+    auto truncated =
+        rewriter.create<mlir::TruncateIOp>(loc, i1Ty, shifted, mlir::None);
+    auto isInputOdd = rewriter.create<mlir::AndOp>(loc, i1Ty, truncated, i1one);
+
+    auto shouldRound = rewriter.create<mlir::AndOp>(
+        loc, i1Ty, shiftValueGreaterThanZero, isInputOdd);
+    auto extended =
+        rewriter.create<ZeroExtendIOp>(loc, resultTypes, shouldRound);
+    return rewriter.create<mlir::AddIOp>(loc, resultTypes, result, extended);
+  }
+
   // tosa::LogicalAnd
   if (isa<tosa::LogicalAndOp>(op) && elementTy.isInteger(1))
     return rewriter.create<mlir::AndOp>(loc, resultTypes, args);
@@ -282,6 +321,15 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
 
   if (isa<tosa::GreaterEqualOp>(op) && elementTy.isSignlessInteger())
     return rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::sge, args[0],
+                                         args[1]);
+
+  // tosa::EqualOp
+  if (isa<tosa::EqualOp>(op) && elementTy.isa<FloatType>())
+    return rewriter.create<mlir::CmpFOp>(loc, CmpFPredicate::OEQ, args[0],
+                                         args[1]);
+
+  if (isa<tosa::EqualOp>(op) && elementTy.isSignlessInteger())
+    return rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::eq, args[0],
                                          args[1]);
 
   // tosa::SelectOp
@@ -2202,9 +2250,11 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       PointwiseConverter<tosa::CastOp>,
       PointwiseConverter<tosa::LogicalLeftShiftOp>,
       PointwiseConverter<tosa::LogicalRightShiftOp>,
+      PointwiseConverter<tosa::ArithmeticRightShiftOp>,
       PointwiseConverter<tosa::SelectOp>,
       PointwiseConverter<tosa::GreaterOp>,
       PointwiseConverter<tosa::GreaterEqualOp>,
+      PointwiseConverter<tosa::EqualOp>,
       PointwiseConverter<tosa::MaximumOp>,
       PointwiseConverter<tosa::MinimumOp>,
       PointwiseConverter<tosa::CeilOp>,
