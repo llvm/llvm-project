@@ -1565,9 +1565,6 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   if (!LoopPredication)
     return false;
 
-  if (!SE->hasLoopInvariantBackedgeTakenCount(L))
-    return false;
-
   // Note: ExactBTC is the exact backedge taken count *iff* the loop exits
   // through *explicit* control flow.  We have to eliminate the possibility of
   // implicit exits (see below) before we know it's truly exact.
