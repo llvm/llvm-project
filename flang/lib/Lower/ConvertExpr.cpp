@@ -3385,16 +3385,17 @@ public:
   }
 
   template <typename A>
-  ExtValue genInitializer(const Fortran::evaluate::ImpliedDo<A> &implDo) {
+  ExtValue genArrayCtorInitializer(const Fortran::evaluate::ImpliedDo<A> &x) {
     TODO(getLoc(), "impled do");
   }
 
   template <typename A>
-  ExtValue genInitializer(const Fortran::evaluate::Expr<A> &x) {
-    auto loc = getLoc();
-    if (isArray(x))
-      // return lowerArrayExpression(converter, symMap, stmtCtx, ,, x)
-      TODO(loc, "initializer has rank");
+  ExtValue genArrayCtorInitializer(const Fortran::evaluate::Expr<A> &x) {
+    if (isArray(x)) {
+      auto e = toEvExpr(x);
+      auto sh = Fortran::evaluate::GetShape(converter.getFoldingContext(), e);
+      return lowerSomeNewArrayExpression(converter, symMap, stmtCtx, sh, e);
+    }
     return asScalar(x);
   }
 
@@ -3437,8 +3438,8 @@ public:
     int offset = 0;
     auto eleTy = fir::unwrapSequenceType(resTy);
     for (const auto &expr : x) {
-      auto exv =
-          std::visit([&](const auto &e) { return genInitializer(e); }, expr.u);
+      auto exv = std::visit(
+          [&](const auto &e) { return genArrayCtorInitializer(e); }, expr.u);
       auto off = builder.create<mlir::ConstantIndexOp>(loc, offset);
       auto buffi = builder.create<fir::CoordinateOp>(
           loc, builder.getRefType(eleTy), mem, mlir::ValueRange{off});
