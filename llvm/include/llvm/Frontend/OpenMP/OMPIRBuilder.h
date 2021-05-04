@@ -623,6 +623,15 @@ public:
   /// variables.
   StringMap<AssertingVH<Constant>, BumpPtrAllocator> InternalVars;
 
+  /// Create the global variable holding the offload mappings information.
+  GlobalVariable *createOffloadMaptypes(SmallVectorImpl<uint64_t> &Mappings,
+                                        std::string VarName);
+
+  /// Create the global variable holding the offload names information.
+  GlobalVariable *
+  createOffloadMapnames(SmallVectorImpl<llvm::Constant *> &Names,
+                        std::string VarName);
+
 public:
   /// Generator for __kmpc_copyprivate
   ///

@@ -9378,15 +9378,10 @@ static void emitOffloadingArrays(
     // fill arrays. Instead, we create an array constant.
     SmallVector<uint64_t, 4> Mapping(CombinedInfo.Types.size(), 0);
     llvm::copy(CombinedInfo.Types, Mapping.begin());
-    llvm::Constant *MapTypesArrayInit =
-        llvm::ConstantDataArray::get(CGF.Builder.getContext(), Mapping);
     std::string MaptypesName =
         CGM.getOpenMPRuntime().getName({"offload_maptypes"});
-    auto *MapTypesArrayGbl = new llvm::GlobalVariable(
-        CGM.getModule(), MapTypesArrayInit->getType(),
-        /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
-        MapTypesArrayInit, MaptypesName);
-    MapTypesArrayGbl->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+    auto *MapTypesArrayGbl =
+        OMPBuilder.createOffloadMaptypes(Mapping, MaptypesName);
     Info.MapTypesArray = MapTypesArrayGbl;
 
     // The information types are only built if there is debug information
@@ -9400,17 +9395,10 @@ static void emitOffloadingArrays(
       };
       SmallVector<llvm::Constant *, 4> InfoMap(CombinedInfo.Exprs.size());
       llvm::transform(CombinedInfo.Exprs, InfoMap.begin(), fillInfoMap);
-
-      llvm::Constant *MapNamesArrayInit = llvm::ConstantArray::get(
-          llvm::ArrayType::get(
-              llvm::Type::getInt8Ty(CGF.Builder.getContext())->getPointerTo(),
-              CombinedInfo.Exprs.size()),
-          InfoMap);
-      auto *MapNamesArrayGbl = new llvm::GlobalVariable(
-          CGM.getModule(), MapNamesArrayInit->getType(),
-          /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
-          MapNamesArrayInit,
-          CGM.getOpenMPRuntime().getName({"offload_mapnames"}));
+      std::string MapnamesName =
+          CGM.getOpenMPRuntime().getName({"offload_mapnames"});
+      auto *MapNamesArrayGbl =
+          OMPBuilder.createOffloadMapnames(InfoMap, MapnamesName);
       Info.MapNamesArray = MapNamesArrayGbl;
     }
 
@@ -9425,15 +9413,8 @@ static void emitOffloadingArrays(
         }
       }
       if (EndMapTypesDiffer) {
-        MapTypesArrayInit =
-            llvm::ConstantDataArray::get(CGF.Builder.getContext(), Mapping);
-        MaptypesName = CGM.getOpenMPRuntime().getName({"offload_maptypes"});
-        MapTypesArrayGbl = new llvm::GlobalVariable(
-            CGM.getModule(), MapTypesArrayInit->getType(),
-            /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
-            MapTypesArrayInit, MaptypesName);
-        MapTypesArrayGbl->setUnnamedAddr(
-            llvm::GlobalValue::UnnamedAddr::Global);
+        MapTypesArrayGbl =
+            OMPBuilder.createOffloadMaptypes(Mapping, MaptypesName);
         Info.MapTypesArrayEnd = MapTypesArrayGbl;
       }
     }

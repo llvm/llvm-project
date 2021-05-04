@@ -2287,4 +2287,68 @@ TEST_F(OpenMPIRBuilderTest, CreateSections) {
   ASSERT_EQ(NumFiniCBCalls, 1U);
 }
 
+TEST_F(OpenMPIRBuilderTest, CreateOffloadMaptypes) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+
+  IRBuilder<> Builder(BB);
+
+  SmallVector<uint64_t> Mappings = {0, 1};
+  GlobalVariable *OffloadMaptypesGlobal =
+      OMPBuilder.createOffloadMaptypes(Mappings, "offload_maptypes");
+  EXPECT_FALSE(M->global_empty());
+  EXPECT_EQ(OffloadMaptypesGlobal->getName(), "offload_maptypes");
+  EXPECT_TRUE(OffloadMaptypesGlobal->isConstant());
+  EXPECT_TRUE(OffloadMaptypesGlobal->hasGlobalUnnamedAddr());
+  EXPECT_TRUE(OffloadMaptypesGlobal->hasPrivateLinkage());
+  EXPECT_TRUE(OffloadMaptypesGlobal->hasInitializer());
+  Constant *Initializer = OffloadMaptypesGlobal->getInitializer();
+  EXPECT_TRUE(isa<ConstantDataArray>(Initializer));
+  ConstantDataArray *MappingInit = dyn_cast<ConstantDataArray>(Initializer);
+  EXPECT_EQ(MappingInit->getNumElements(), Mappings.size());
+  EXPECT_TRUE(MappingInit->getType()->getElementType()->isIntegerTy(64));
+  Constant *CA = ConstantDataArray::get(Builder.getContext(), Mappings);
+  EXPECT_EQ(MappingInit, CA);
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateOffloadMapnames) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+
+  IRBuilder<> Builder(BB);
+
+  Constant *Cst1 = OMPBuilder.getOrCreateSrcLocStr("array1", "file1", 2, 5);
+  Constant *Cst2 = OMPBuilder.getOrCreateSrcLocStr("array2", "file1", 3, 5);
+  SmallVector<llvm::Constant *> Names = {Cst1, Cst2};
+
+  GlobalVariable *OffloadMaptypesGlobal =
+      OMPBuilder.createOffloadMapnames(Names, "offload_mapnames");
+  EXPECT_FALSE(M->global_empty());
+  EXPECT_EQ(OffloadMaptypesGlobal->getName(), "offload_mapnames");
+  EXPECT_TRUE(OffloadMaptypesGlobal->isConstant());
+  EXPECT_FALSE(OffloadMaptypesGlobal->hasGlobalUnnamedAddr());
+  EXPECT_TRUE(OffloadMaptypesGlobal->hasPrivateLinkage());
+  EXPECT_TRUE(OffloadMaptypesGlobal->hasInitializer());
+  Constant *Initializer = OffloadMaptypesGlobal->getInitializer();
+  EXPECT_TRUE(isa<Constant>(Initializer->getOperand(0)->stripPointerCasts()));
+  EXPECT_TRUE(isa<Constant>(Initializer->getOperand(1)->stripPointerCasts()));
+
+  GlobalVariable *Name1Gbl =
+      cast<GlobalVariable>(Initializer->getOperand(0)->stripPointerCasts());
+  EXPECT_TRUE(isa<ConstantDataArray>(Name1Gbl->getInitializer()));
+  ConstantDataArray *Name1GblCA =
+      dyn_cast<ConstantDataArray>(Name1Gbl->getInitializer());
+  EXPECT_EQ(Name1GblCA->getAsCString(), ";file1;array1;2;5;;");
+
+  GlobalVariable *Name2Gbl =
+      cast<GlobalVariable>(Initializer->getOperand(1)->stripPointerCasts());
+  EXPECT_TRUE(isa<ConstantDataArray>(Name2Gbl->getInitializer()));
+  ConstantDataArray *Name2GblCA =
+      dyn_cast<ConstantDataArray>(Name2Gbl->getInitializer());
+  EXPECT_EQ(Name2GblCA->getAsCString(), ";file1;array2;3;5;;");
+
+  EXPECT_TRUE(Initializer->getType()->getArrayElementType()->isPointerTy());
+  EXPECT_EQ(Initializer->getType()->getArrayNumElements(), Names.size());
+}
+
 } // namespace
