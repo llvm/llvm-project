@@ -696,18 +696,17 @@ ResultBuilder::ShadowMapEntry::end() const {
 // Filter out names reserved for the implementation if they come from a
 // system header.
 static bool shouldIgnoreDueToReservedName(const NamedDecl *ND, Sema &SemaRef) {
-  const IdentifierInfo *Id = ND->getIdentifier();
-  if (!Id)
-    return false;
-
+  ReservedIdentifierStatus Status = ND->isReserved(SemaRef.getLangOpts());
   // Ignore reserved names for compiler provided decls.
-  if (Id->isReservedName() && ND->getLocation().isInvalid())
+  if ((Status != ReservedIdentifierStatus::NotReserved) &&
+      (Status != ReservedIdentifierStatus::StartsWithUnderscoreAtGlobalScope) &&
+      ND->getLocation().isInvalid())
     return true;
 
   // For system headers ignore only double-underscore names.
   // This allows for system headers providing private symbols with a single
   // underscore.
-  if (Id->isReservedName(/*doubleUnderscoreOnly=*/true) &&
+  if (Status == ReservedIdentifierStatus::StartsWithDoubleUnderscore &&
       SemaRef.SourceMgr.isInSystemHeader(
           SemaRef.SourceMgr.getSpellingLoc(ND->getLocation())))
     return true;

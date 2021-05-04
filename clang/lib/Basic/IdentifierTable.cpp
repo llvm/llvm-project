@@ -273,6 +273,39 @@ bool IdentifierInfo::isCPlusPlusKeyword(const LangOptions &LangOpts) const {
   return !isKeyword(LangOptsNoCPP);
 }
 
+ReservedIdentifierStatus
+IdentifierInfo::isReserved(const LangOptions &LangOpts) const {
+  StringRef Name = getName();
+
+  // '_' is a reserved identifier, but its use is so common (e.g. to store
+  // ignored values) that we don't warn on it.
+  if (Name.size() <= 1)
+    return ReservedIdentifierStatus::NotReserved;
+
+  // [lex.name] p3
+  if (Name[0] == '_') {
+
+    // Each name that begins with an underscore followed by an uppercase letter
+    // or another underscore is reserved.
+    if (Name[1] == '_')
+      return ReservedIdentifierStatus::StartsWithDoubleUnderscore;
+
+    if ('A' <= Name[1] && Name[1] <= 'Z')
+      return ReservedIdentifierStatus::
+          StartsWithUnderscoreFollowedByCapitalLetter;
+
+    // This is a bit misleading: it actually means it's only reserved if we're
+    // at global scope because it starts with an underscore.
+    return ReservedIdentifierStatus::StartsWithUnderscoreAtGlobalScope;
+  }
+
+  // Each name that contains a double underscore (__) is reserved.
+  if (LangOpts.CPlusPlus && Name.contains("__"))
+    return ReservedIdentifierStatus::ContainsDoubleUnderscore;
+
+  return ReservedIdentifierStatus::NotReserved;
+}
+
 tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   // We use a perfect hash function here involving the length of the keyword,
   // the first and third character.  For preprocessor ID's there are no
