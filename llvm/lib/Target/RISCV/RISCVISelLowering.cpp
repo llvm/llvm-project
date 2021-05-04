@@ -550,6 +550,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
       setOperationAction(ISD::FCOPYSIGN, VT, Legal);
 
       setOperationAction(ISD::MLOAD, VT, Custom);
@@ -746,6 +748,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
         setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
+        setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
+        setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
       }
 
       // Custom-legalize bitcasts from fixed-length vectors to scalar types.
@@ -2226,6 +2230,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVECREDUCE(Op, DAG);
   case ISD::VECREDUCE_FADD:
   case ISD::VECREDUCE_SEQ_FADD:
+  case ISD::VECREDUCE_FMIN:
+  case ISD::VECREDUCE_FMAX:
     return lowerFPVECREDUCE(Op, DAG);
   case ISD::INSERT_SUBVECTOR:
     return lowerINSERT_SUBVECTOR(Op, DAG);
@@ -3476,7 +3482,10 @@ SDValue RISCVTargetLowering::lowerVECREDUCE(SDValue Op,
 static std::tuple<unsigned, SDValue, SDValue>
 getRVVFPReductionOpAndOperands(SDValue Op, SelectionDAG &DAG, EVT EltVT) {
   SDLoc DL(Op);
-  switch (Op.getOpcode()) {
+  auto Flags = Op->getFlags();
+  unsigned Opcode = Op.getOpcode();
+  unsigned BaseOpcode = ISD::getVecReduceBaseOpcode(Opcode);
+  switch (Opcode) {
   default:
     llvm_unreachable("Unhandled reduction");
   case ISD::VECREDUCE_FADD:
@@ -3485,6 +3494,12 @@ getRVVFPReductionOpAndOperands(SDValue Op, SelectionDAG &DAG, EVT EltVT) {
   case ISD::VECREDUCE_SEQ_FADD:
     return std::make_tuple(RISCVISD::VECREDUCE_SEQ_FADD_VL, Op.getOperand(1),
                            Op.getOperand(0));
+  case ISD::VECREDUCE_FMIN:
+    return std::make_tuple(RISCVISD::VECREDUCE_FMIN_VL, Op.getOperand(0),
+                           DAG.getNeutralElement(BaseOpcode, DL, EltVT, Flags));
+  case ISD::VECREDUCE_FMAX:
+    return std::make_tuple(RISCVISD::VECREDUCE_FMAX_VL, Op.getOperand(0),
+                           DAG.getNeutralElement(BaseOpcode, DL, EltVT, Flags));
   }
 }
 
@@ -7762,6 +7777,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VECREDUCE_XOR_VL)
   NODE_NAME_CASE(VECREDUCE_FADD_VL)
   NODE_NAME_CASE(VECREDUCE_SEQ_FADD_VL)
+  NODE_NAME_CASE(VECREDUCE_FMIN_VL)
+  NODE_NAME_CASE(VECREDUCE_FMAX_VL)
   NODE_NAME_CASE(ADD_VL)
   NODE_NAME_CASE(AND_VL)
   NODE_NAME_CASE(MUL_VL)
