@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-assert-side-effect %t -- -config="{CheckOptions: [{key: bugprone-assert-side-effect.CheckFunctionCalls, value: 1}, {key: bugprone-assert-side-effect.AssertMacros, value: 'assert,assert2,my_assert,convoluted_assert,msvc_assert'}]}" -- -fexceptions
+// RUN: %check_clang_tidy %s bugprone-assert-side-effect %t -- -config="{CheckOptions: [{key: bugprone-assert-side-effect.CheckFunctionCalls, value: true}, {key: bugprone-assert-side-effect.AssertMacros, value: 'assert,assert2,my_assert,convoluted_assert,msvc_assert'}]}" -- -fexceptions
 
 //===--- assert definition block ------------------------------------------===//
 int abort() { return 0; }

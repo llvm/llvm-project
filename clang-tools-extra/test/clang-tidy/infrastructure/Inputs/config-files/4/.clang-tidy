@@ -5,4 +5,4 @@ CheckOptions:
   - key:             modernize-loop-convert.MinConfidence
     value:           reasonable
   - key:             modernize-use-using.IgnoreMacros
-    value:           1
+    value:           true
