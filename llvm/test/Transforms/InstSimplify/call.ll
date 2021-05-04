@@ -1291,7 +1291,7 @@ declare float @fmaxf(float, float)
 
 define float @nobuiltin_fmax() {
 ; CHECK-LABEL: @nobuiltin_fmax(
-; CHECK-NEXT:    [[M:%.*]] = call float @fmaxf(float 0.000000e+00, float 1.000000e+00) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[M:%.*]] = call float @fmaxf(float 0.000000e+00, float 1.000000e+00) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fabs.f32(float [[M]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -1304,7 +1304,6 @@ define float @nobuiltin_fmax() {
 declare i32 @llvm.ctpop.i32(i32)
 declare <3 x i33> @llvm.ctpop.v3i33(<3 x i33>)
 declare i1 @llvm.ctpop.i1(i1)
-declare void @llvm.assume(i1)
 
 define i32 @ctpop_lowbit(i32 %x) {
 ; CHECK-LABEL: @ctpop_lowbit(
@@ -1463,80 +1462,6 @@ define <3 x i33> @ctlz_ashr_sign_bit_vec(<3 x i33> %x) {
   %s = ashr <3 x i33> <i33 4294967296, i33 undef, i33 4294967296>, %x
   %r = call <3 x i33> @llvm.ctlz.v3i33(<3 x i33> %s, i1 true)
   ret <3 x i33> %r
-}
-
-define i32 @ctlz_sext_negative_zero_undef(i16 %x) {
-; CHECK-LABEL: @ctlz_sext_negative_zero_undef(
-; CHECK-NEXT:    [[ASSUME:%.*]] = icmp slt i16 [[X:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME]])
-; CHECK-NEXT:    [[S:%.*]] = sext i16 [[X]] to i32
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.ctlz.i32(i32 [[S]], i1 true)
-; CHECK-NEXT:    ret i32 [[C]]
-;
-  %assume = icmp slt i16 %x, 0
-  call void @llvm.assume(i1 %assume)
-  %s = sext i16 %x to i32
-  %c = call i32 @llvm.ctlz.i32(i32 %s, i1 true)
-  ret i32 %c
-}
-
-define i32 @ctlz_negative_zero_undef(i32 %x) {
-; CHECK-LABEL: @ctlz_negative_zero_undef(
-; CHECK-NEXT:    [[ASSUME:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME]])
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
-; CHECK-NEXT:    ret i32 [[C]]
-;
-  %assume = icmp slt i32 %x, 0
-  call void @llvm.assume(i1 %assume)
-  %c = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
-  ret i32 %c
-}
-
-define i32 @ctlz_negative_zero_def(i32 %x) {
-; CHECK-LABEL: @ctlz_negative_zero_def(
-; CHECK-NEXT:    [[ASSUME:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME]])
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X]], i1 false)
-; CHECK-NEXT:    ret i32 [[C]]
-;
-  %assume = icmp slt i32 %x, 0
-  call void @llvm.assume(i1 %assume)
-  %c = call i32 @llvm.ctlz.i32(i32 %x, i1 false)
-  ret i32 %c
-}
-
-define i32 @ctlz_sext_negative_zero_def(i16 %x) {
-; CHECK-LABEL: @ctlz_sext_negative_zero_def(
-; CHECK-NEXT:    [[ASSUME:%.*]] = icmp slt i16 [[X:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME]])
-; CHECK-NEXT:    [[S:%.*]] = sext i16 [[X]] to i32
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.ctlz.i32(i32 [[S]], i1 false)
-; CHECK-NEXT:    ret i32 [[C]]
-;
-  %assume = icmp slt i16 %x, 0
-  call void @llvm.assume(i1 %assume)
-  %s = sext i16 %x to i32
-  %c = call i32 @llvm.ctlz.i32(i32 %s, i1 false)
-  ret i32 %c
-}
-
-declare void @use(i32)
-define i32 @ctlz_sext_negative_zero_undef_extra_use(i16 %x) {
-; CHECK-LABEL: @ctlz_sext_negative_zero_undef_extra_use(
-; CHECK-NEXT:    [[ASSUME:%.*]] = icmp slt i16 [[X:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME]])
-; CHECK-NEXT:    [[S:%.*]] = sext i16 [[X]] to i32
-; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.ctlz.i32(i32 [[S]], i1 true)
-; CHECK-NEXT:    ret i32 [[C]]
-;
-  %assume = icmp slt i16 %x, 0
-  call void @llvm.assume(i1 %assume)
-  %s = sext i16 %x to i32
-  call void @use(i32 %s)
-  %c = call i32 @llvm.ctlz.i32(i32 %s, i1 true)
-  ret i32 %c
 }
 
 attributes #0 = { nobuiltin readnone }
