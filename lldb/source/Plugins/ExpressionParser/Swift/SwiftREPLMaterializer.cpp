@@ -13,12 +13,12 @@
 #include "SwiftREPLMaterializer.h"
 #include "SwiftASTManipulator.h"
 
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Utility/Log.h"
 
 #include "swift/Demangling/Demangle.h"

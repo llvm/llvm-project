@@ -12,8 +12,8 @@
 
 #include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
 
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 #include <lldb/lldb-enumerations.h>
 #include <llvm/ADT/StringRef.h>
 

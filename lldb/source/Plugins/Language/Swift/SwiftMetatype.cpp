@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "SwiftMetatype.h"
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 
 #include "swift/AST/Type.h"
 #include "swift/AST/Types.h"

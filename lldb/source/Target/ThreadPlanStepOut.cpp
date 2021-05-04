@@ -28,7 +28,7 @@
 #include <memory>
 
 #ifdef LLDB_ENABLE_SWIFT
-#include "lldb/Target/SwiftLanguageRuntime.h"
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #endif // LLDB_ENABLE_SWIFT
 
 using namespace lldb;

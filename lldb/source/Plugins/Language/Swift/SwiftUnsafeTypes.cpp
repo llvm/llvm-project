@@ -1,9 +1,9 @@
 #include "SwiftUnsafeTypes.h"
 #include "SwiftBasicTypes.h"
 
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
 

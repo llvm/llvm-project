@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SwiftLanguageRuntimeImpl.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
+#include "SwiftLanguageRuntime.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Symbol/Block.h"

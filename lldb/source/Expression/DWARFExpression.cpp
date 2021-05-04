@@ -37,7 +37,7 @@
 #include "lldb/Target/Thread.h"
 
 #ifdef LLDB_ENABLE_SWIFT
-#include "lldb/Target/SwiftLanguageRuntime.h"
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #endif
 
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"

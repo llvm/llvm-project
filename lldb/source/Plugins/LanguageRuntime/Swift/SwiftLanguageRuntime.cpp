@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/SwiftLanguageRuntime.h"
+#include "SwiftLanguageRuntime.h"
 #include "SwiftLanguageRuntimeImpl.h"
 
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
@@ -53,6 +53,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE(SwiftLanguageRuntime)
 
 namespace lldb_private {
 char SwiftLanguageRuntime::ID = 0;
