@@ -5,12 +5,11 @@ declare { i4, i1 } @llvm.smul.with.overflow.i4(i4, i4) #1
 
 define i1 @t0_umul(i4 %size, i4 %nmemb) {
 ; CHECK-LABEL: @t0_umul(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i4 [[SIZE:%.*]], 0
-; CHECK-NEXT:    [[SMUL:%.*]] = tail call { i4, i1 } @llvm.smul.with.overflow.i4(i4 [[SIZE]], i4 [[NMEMB:%.*]])
+; CHECK-NEXT:    [[NMEMB_FR:%.*]] = freeze i4 [[NMEMB:%.*]]
+; CHECK-NEXT:    [[SMUL:%.*]] = tail call { i4, i1 } @llvm.smul.with.overflow.i4(i4 [[SIZE:%.*]], i4 [[NMEMB_FR]])
 ; CHECK-NEXT:    [[SMUL_OV:%.*]] = extractvalue { i4, i1 } [[SMUL]], 1
 ; CHECK-NEXT:    [[PHITMP:%.*]] = xor i1 [[SMUL_OV]], true
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP]], i1 true, i1 [[PHITMP]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    ret i1 [[PHITMP]]
 ;
   %cmp = icmp eq i4 %size, 0
   %smul = tail call { i4, i1 } @llvm.smul.with.overflow.i4(i4 %size, i4 %nmemb)
