@@ -164,11 +164,12 @@ struct __rebind_pointer {
 
 // to_address
 
-template <bool _UsePointerTraits> struct __to_address_helper;
-
-template <> struct __to_address_helper<true> {
+template <bool _UsePointerTraits>
+struct __to_address_helper {
     template <class _Pointer>
-    using __return_type = decltype(pointer_traits<_Pointer>::to_address(_VSTD::declval<const _Pointer&>()));
+    using __return_type = typename decay<
+        decltype(pointer_traits<_Pointer>::to_address(declval<const _Pointer&>()))
+    >::type;
 
     template <class _Pointer>
     _LIBCPP_CONSTEXPR
@@ -198,14 +199,15 @@ __to_address(const _Pointer& __p) _NOEXCEPT
 
 template <> struct __to_address_helper<false> {
     template <class _Pointer>
-    using __return_type = typename pointer_traits<_Pointer>::element_type*;
+    using __return_type = typename decay<
+        decltype(_VSTD::__to_address(declval<const _Pointer&>().operator->()))
+    >::type;
 
     template <class _Pointer>
     _LIBCPP_CONSTEXPR
     static __return_type<_Pointer>
     __do_it(const _Pointer &__p) _NOEXCEPT { return _VSTD::__to_address(__p.operator->()); }
 };
-
 
 #if _LIBCPP_STD_VER > 17
 template <class _Tp>
