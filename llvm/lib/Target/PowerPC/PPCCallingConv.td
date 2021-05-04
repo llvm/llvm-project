@@ -355,6 +355,11 @@ def CSR_64_AllRegs: CalleeSavedRegs<(add X0, (sequence "X%u", 3, 10),
 def CSR_64_AllRegs_Altivec : CalleeSavedRegs<(add CSR_64_AllRegs,
                                              (sequence "V%u", 0, 31))>;
 
+def CSR_64_AllRegs_AIX_Dflt_Altivec : CalleeSavedRegs<(add CSR_64_AllRegs,
+                                             (sequence "V%u", 0, 19))>;
+
 def CSR_64_AllRegs_VSX : CalleeSavedRegs<(add CSR_64_AllRegs_Altivec,
                                          (sequence "VSL%u", 0, 31))>;
 
+def CSR_64_AllRegs_AIX_Dflt_VSX : CalleeSavedRegs<(add CSR_64_AllRegs_Altivec,
+                                         (sequence "VSL%u", 0, 19))>;
