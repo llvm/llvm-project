@@ -99,7 +99,6 @@ def should_keep_header(p, exclusions=None):
         relpath = os.path.relpath(p, include_path)
         relpath = posixpath.join(*os.path.split(relpath))
         if relpath in exclusions:
-            print('Excluded file:', relpath)
             return False
 
     return os.path.splitext(p)[1] in allowed_extensions
