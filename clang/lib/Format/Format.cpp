@@ -2605,7 +2605,7 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
                                    ArrayRef<tooling::Range> Ranges,
                                    StringRef FileName, unsigned *Cursor) {
   tooling::Replacements Replaces;
-  if (!Style.SortIncludes)
+  if (!Style.SortIncludes || Style.DisableFormat)
     return Replaces;
   if (isLikelyXml(Code))
     return Replaces;
