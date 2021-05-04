@@ -228,7 +228,7 @@ FakeStack *AsanThread::AsyncSignalSafeLazyInitFakeStack() {
 }
 
 void AsanThread::Init(const InitOptions *options) {
-  DCHECK_NE(tid(), ThreadRegistry::kUnknownTid);
+  DCHECK_NE(tid(), kInvalidTid);
   next_stack_top_ = next_stack_bottom_ = 0;
   atomic_store(&stack_switching_, false, memory_order_release);
   CHECK_EQ(this->stack_size(), 0U);
@@ -291,7 +291,7 @@ thread_return_t AsanThread::ThreadStart(tid_t os_id) {
 
 AsanThread *CreateMainThread() {
   AsanThread *main_thread = AsanThread::Create(
-      /* start_routine */ nullptr, /* arg */ nullptr, /* parent_tid */ 0,
+      /* start_routine */ nullptr, /* arg */ nullptr, /* parent_tid */ kMainTid,
       /* stack */ nullptr, /* detached */ true);
   SetCurrentThread(main_thread);
   main_thread->ThreadStart(internal_getpid());
@@ -305,8 +305,8 @@ void AsanThread::SetThreadStackAndTls(const InitOptions *options) {
   DCHECK_EQ(options, nullptr);
   uptr tls_size = 0;
   uptr stack_size = 0;
-  GetThreadStackAndTls(tid() == 0, &stack_bottom_, &stack_size, &tls_begin_,
-                       &tls_size);
+  GetThreadStackAndTls(tid() == kMainTid, &stack_bottom_, &stack_size,
+                       &tls_begin_, &tls_size);
   stack_top_ = RoundDownTo(stack_bottom_ + stack_size, SHADOW_GRANULARITY);
   tls_end_ = tls_begin_ + tls_size;
   dtls_ = DTLS_Get();
@@ -431,7 +431,7 @@ AsanThread *GetCurrentThread() {
       // address. We are not entirely sure that we have correct main thread
       // limits, so only do this magic on Android, and only if the found thread
       // is the main thread.
-      AsanThreadContext *tctx = GetThreadContextByTidLocked(0);
+      AsanThreadContext *tctx = GetThreadContextByTidLocked(kMainTid);
       if (tctx && ThreadStackContainsAddress(tctx, &context)) {
         SetCurrentThread(tctx->thread);
         return tctx->thread;
@@ -468,7 +468,7 @@ AsanThread *FindThreadByStackAddress(uptr addr) {
 void EnsureMainThreadIDIsCorrect() {
   AsanThreadContext *context =
       reinterpret_cast<AsanThreadContext *>(AsanTSDGet());
-  if (context && (context->tid == 0))
+  if (context && (context->tid == kMainTid))
     context->os_id = GetTid();
 }
 

@@ -1895,13 +1895,13 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
   if (AttributeListsVisited.insert(Attrs.getRawPointer()).second) {
     Assert(Attrs.hasParentContext(Context),
-           "Attribute list does not match Module context!", &Attrs);
+           "Attribute list does not match Module context!", &Attrs, V);
     for (const auto &AttrSet : Attrs) {
       Assert(!AttrSet.hasAttributes() || AttrSet.hasParentContext(Context),
-             "Attribute set does not match Module context!", &AttrSet);
+             "Attribute set does not match Module context!", &AttrSet, V);
       for (const auto &A : AttrSet) {
         Assert(A.hasParentContext(Context),
-               "Attribute does not match Module context!", &A);
+               "Attribute does not match Module context!", &A, V);
       }
     }
   }

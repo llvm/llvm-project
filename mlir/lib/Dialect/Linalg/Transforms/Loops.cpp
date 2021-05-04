@@ -555,22 +555,41 @@ public:
   }
 };
 
-struct FoldAffineOp;
-} // namespace
+struct TiledLoopToSCFPattern : public OpRewritePattern<TiledLoopOp> {
+  using OpRewritePattern<TiledLoopOp>::OpRewritePattern;
 
-template <typename LoopType>
-static void lowerLinalgToLoopsImpl(FuncOp funcOp) {
-  MLIRContext *context = funcOp.getContext();
-  RewritePatternSet patterns(context);
-  patterns.add<LinalgRewritePattern<LoopType>>(context);
-  memref::DimOp::getCanonicalizationPatterns(patterns, context);
-  AffineApplyOp::getCanonicalizationPatterns(patterns, context);
-  patterns.add<FoldAffineOp>(context);
-  // Just apply the patterns greedily.
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
-}
+  LogicalResult matchAndRewrite(TiledLoopOp tiledLoop,
+                                PatternRewriter &rewriter) const override {
+    Location loc = tiledLoop.getLoc();
 
-namespace {
+    // Fail conversion if the `tiled_loop` has not been bufferized.
+    if (!llvm::all_of(tiledLoop.outputs(), [&](Value arg) {
+          return arg.getType().isa<MemRefType>();
+        }))
+      return failure();
+
+    // TODO: Build loop nest with `scf.for` and `scf.parallel` depending on the
+    // iterator type.
+    scf::buildLoopNest(rewriter, loc, tiledLoop.lowerBound(),
+                       tiledLoop.upperBound(), tiledLoop.step(),
+                       [&](OpBuilder &builder, Location loc, ValueRange ivs) {
+                         // Move body without its terminator.
+                         SmallVector<Value, 16> newBlockArgs;
+                         newBlockArgs.append(ivs.begin(), ivs.end());
+                         newBlockArgs.append(tiledLoop.inputs().begin(),
+                                             tiledLoop.inputs().end());
+                         newBlockArgs.append(tiledLoop.outputs().begin(),
+                                             tiledLoop.outputs().end());
+                         Block *newBody = rewriter.getInsertionBlock();
+                         rewriter.mergeBlocks(tiledLoop.getBody(), newBody,
+                                              newBlockArgs);
+                         rewriter.eraseOp(newBody->getTerminator());
+                       });
+    rewriter.eraseOp(tiledLoop);
+    return success();
+  }
+};
+
 /// Local folding pattern for AffineApplyOp that we can apply greedily.
 /// This replaces AffineApplyOp by the proper value in cases where the
 /// associated map is trivial.
@@ -608,6 +627,18 @@ struct FoldAffineOp : public RewritePattern {
   }
 };
 
+template <typename LoopType>
+static void lowerLinalgToLoopsImpl(FuncOp funcOp) {
+  MLIRContext *context = funcOp.getContext();
+  RewritePatternSet patterns(context);
+  patterns.add<LinalgRewritePattern<LoopType>>(context);
+  memref::DimOp::getCanonicalizationPatterns(patterns, context);
+  AffineApplyOp::getCanonicalizationPatterns(patterns, context);
+  patterns.add<FoldAffineOp>(context);
+  // Just apply the patterns greedily.
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+}
+
 struct LowerToAffineLoops
     : public LinalgLowerToAffineLoopsBase<LowerToAffineLoops> {
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -633,7 +664,22 @@ struct LowerToParallelLoops
     lowerLinalgToLoopsImpl<scf::ParallelOp>(getFunction());
   }
 };
+
+struct LowerTiledLoopsToSCF
+    : public LinalgLowerTiledLoopsToSCFBase<LowerTiledLoopsToSCF> {
+  void runOnFunction() override {
+    MLIRContext *context = &getContext();
+    RewritePatternSet patterns(context);
+    patterns.add<TiledLoopToSCFPattern>(context);
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+  }
+};
 } // namespace
+
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createConvertLinalgTiledLoopsToSCFPass() {
+  return std::make_unique<LowerTiledLoopsToSCF>();
+}
 
 std::unique_ptr<OperationPass<FuncOp>> mlir::createConvertLinalgToLoopsPass() {
   return std::make_unique<LowerToLoops>();

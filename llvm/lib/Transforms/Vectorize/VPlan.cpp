@@ -249,10 +249,7 @@ void VPBlockBase::deleteCFG(VPBlockBase *Entry) {
 
 VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
   iterator It = begin();
-  while (It != end() && (isa<VPWidenPHIRecipe>(&*It) ||
-                         isa<VPWidenIntOrFpInductionRecipe>(&*It) ||
-                         isa<VPPredInstPHIRecipe>(&*It) ||
-                         isa<VPWidenCanonicalIVRecipe>(&*It)))
+  while (It != end() && It->isPhi())
     It++;
   return It;
 }
@@ -1144,7 +1141,7 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
         VF.isScalar() ? Indices.back() : ConstantVector::get(Indices);
     // Add the consecutive indices to the vector value.
     Value *CanonicalVectorIV = Builder.CreateAdd(VStart, VStep, "vec.iv");
-    State.set(getVPValue(), CanonicalVectorIV, Part);
+    State.set(getVPSingleValue(), CanonicalVectorIV, Part);
   }
 }
 

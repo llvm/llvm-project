@@ -1496,17 +1496,17 @@ define void @creating_too_many_phis(i1 %cond, i32 %a, i32 %b, i32 %c, i32 %d, i3
 ; CHECK-NEXT:    [[V0:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[V1:%.*]] = add i32 [[V0]], [[C:%.*]]
 ; CHECK-NEXT:    [[V2:%.*]] = add i32 [[D:%.*]], [[E:%.*]]
+; CHECK-NEXT:    [[R3:%.*]] = add i32 [[V1]], [[V2]]
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[V4:%.*]] = add i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[V5:%.*]] = add i32 [[V4]], [[C]]
 ; CHECK-NEXT:    [[V6:%.*]] = add i32 [[G:%.*]], [[H:%.*]]
+; CHECK-NEXT:    [[R7:%.*]] = add i32 [[V5]], [[V6]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[V6_SINK:%.*]] = phi i32 [ [[V6]], [[BB1]] ], [ [[V2]], [[BB0]] ]
-; CHECK-NEXT:    [[V5_SINK:%.*]] = phi i32 [ [[V5]], [[BB1]] ], [ [[V1]], [[BB0]] ]
-; CHECK-NEXT:    [[R7:%.*]] = add i32 [[V5_SINK]], [[V6_SINK]]
-; CHECK-NEXT:    call void @use32(i32 [[R7]])
+; CHECK-NEXT:    [[R7_SINK:%.*]] = phi i32 [ [[R7]], [[BB1]] ], [ [[R3]], [[BB0]] ]
+; CHECK-NEXT:    call void @use32(i32 [[R7_SINK]])
 ; CHECK-NEXT:    ret void
 ;
   br i1 %cond, label %bb0, label %bb1

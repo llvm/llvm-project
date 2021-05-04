@@ -349,7 +349,8 @@ public:
   // When lowering spill pseudos, the RegScavenger should be set.
   // For creating spill instructions during frame lowering, where no scavenger
   // is available, LiveRegs can be used.
-  void buildSpillLoadStore(MachineBasicBlock::iterator MI, unsigned LoadStoreOp,
+  void buildSpillLoadStore(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MI, unsigned LoadStoreOp,
                            int Index, Register ValueReg, bool ValueIsKill,
                            MCRegister ScratchOffsetReg, int64_t InstrOffset,
                            MachineMemOperand *MMO, RegScavenger *RS,

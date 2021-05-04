@@ -143,7 +143,8 @@ InstructionCost
 HexagonTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                       TTI::TargetCostKind CostKind) {
   if (ICA.getID() == Intrinsic::bswap) {
-    std::pair<int, MVT> LT = TLI.getTypeLegalizationCost(DL, ICA.getReturnType());
+    std::pair<InstructionCost, MVT> LT =
+        TLI.getTypeLegalizationCost(DL, ICA.getReturnType());
     return LT.first + 2;
   }
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
@@ -251,7 +252,7 @@ InstructionCost HexagonTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                                                    TTI::TargetCostKind CostKind,
                                                    const Instruction *I) {
   if (ValTy->isVectorTy() && CostKind == TTI::TCK_RecipThroughput) {
-    std::pair<int, MVT> LT = TLI.getTypeLegalizationCost(DL, ValTy);
+    std::pair<InstructionCost, MVT> LT = TLI.getTypeLegalizationCost(DL, ValTy);
     if (Opcode == Instruction::FCmp)
       return LT.first + FloatFactor * getTypeNumElements(ValTy);
   }
@@ -271,7 +272,7 @@ InstructionCost HexagonTTIImpl::getArithmeticInstrCost(
                                          Opd2PropInfo, Args, CxtI);
 
   if (Ty->isVectorTy()) {
-    std::pair<int, MVT> LT = TLI.getTypeLegalizationCost(DL, Ty);
+    std::pair<InstructionCost, MVT> LT = TLI.getTypeLegalizationCost(DL, Ty);
     if (LT.second.isFloatingPoint())
       return LT.first + FloatFactor * getTypeNumElements(Ty);
   }
@@ -288,9 +289,12 @@ InstructionCost HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,
     unsigned SrcN = SrcTy->isFPOrFPVectorTy() ? getTypeNumElements(SrcTy) : 0;
     unsigned DstN = DstTy->isFPOrFPVectorTy() ? getTypeNumElements(DstTy) : 0;
 
-    std::pair<int, MVT> SrcLT = TLI.getTypeLegalizationCost(DL, SrcTy);
-    std::pair<int, MVT> DstLT = TLI.getTypeLegalizationCost(DL, DstTy);
-    unsigned Cost = std::max(SrcLT.first, DstLT.first) + FloatFactor * (SrcN + DstN);
+    std::pair<InstructionCost, MVT> SrcLT =
+        TLI.getTypeLegalizationCost(DL, SrcTy);
+    std::pair<InstructionCost, MVT> DstLT =
+        TLI.getTypeLegalizationCost(DL, DstTy);
+    InstructionCost Cost =
+        std::max(SrcLT.first, DstLT.first) + FloatFactor * (SrcN + DstN);
     // TODO: Allow non-throughput costs that aren't binary.
     if (CostKind != TTI::TCK_RecipThroughput)
       return Cost == 0 ? 0 : 1;

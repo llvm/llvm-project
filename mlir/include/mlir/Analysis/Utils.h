@@ -354,9 +354,6 @@ unsigned getNumCommonSurroundingLoops(Operation &A, Operation &B);
 Optional<int64_t> getMemoryFootprintBytes(AffineForOp forOp,
                                           int memorySpace = -1);
 
-/// Returns true if `forOp' is a parallel loop.
-bool isLoopParallel(AffineForOp forOp);
-
 /// Simplify the integer set by simplifying the underlying affine expressions by
 /// flattening and some simple inference. Also, drop any duplicate constraints.
 /// Returns the simplified integer set. This method runs in time linear in the

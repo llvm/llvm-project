@@ -262,6 +262,9 @@ public:
   /// Returns the map consisting of the `resultPos` subset.
   AffineMap getSubMap(ArrayRef<unsigned> resultPos) const;
 
+  /// Returns the map consisting of `length` expressions starting from `start`.
+  AffineMap getSliceMap(unsigned start, unsigned length) const;
+
   /// Returns the map consisting of the most major `numResults` results.
   /// Returns the null AffineMap if `numResults` == 0.
   /// Returns `*this` if `numResults` >= `this->getNumResults()`.
@@ -400,6 +403,48 @@ AffineMap removeDuplicateExprs(AffineMap map);
 ///    (d0, d1, d2, d3, d4, d5, d6, d7) -> (d2, d0, d3)
 /// ```
 AffineMap inversePermutation(AffineMap map);
+
+/// Return the reverse map of a projected permutation where the projected
+/// dimensions are transformed into 0s.
+///
+/// Prerequisites: `map` must be a projected permuation.
+///
+/// Example 1:
+///
+/// ```mlir
+///    affine_map<(d0, d1, d2, d3) -> (d2, d0)>
+/// ```
+///
+/// returns:
+///
+/// ```mlir
+///    affine_map<(d0, d1) -> (d1, 0, d0, 0)>
+/// ```
+///
+/// Example 2:
+///
+/// ```mlir
+///    affine_map<(d0, d1, d2, d3) -> (d0, d3)>
+/// ```
+///
+/// returns:
+///
+/// ```mlir
+///    affine_map<(d0, d1) -> (d0, 0, 0, d1)>
+/// ```
+///
+/// Example 3:
+///
+/// ```mlir
+///    affine_map<(d0, d1, d2, d3) -> (d2)>
+/// ```
+///
+/// returns:
+///
+/// ```mlir
+///    affine_map<(d0) -> (0, 0, d0, 0)>
+/// ```
+AffineMap inverseAndBroadcastProjectedPermuation(AffineMap map);
 
 /// Concatenates a list of `maps` into a single AffineMap, stepping over
 /// potentially empty maps. Assumes each of the underlying map has 0 symbols.

@@ -17,6 +17,7 @@
 #define LLVM_ADT_STLEXTRAS_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/abi-breaking.h"
@@ -59,15 +60,6 @@ using ValueOfRange = typename std::remove_reference<decltype(
 //===----------------------------------------------------------------------===//
 //     Extra additions to <type_traits>
 //===----------------------------------------------------------------------===//
-
-template <typename T>
-struct negation : std::integral_constant<bool, !bool(T::value)> {};
-
-template <typename...> struct conjunction : std::true_type {};
-template <typename B1> struct conjunction<B1> : B1 {};
-template <typename B1, typename... Bn>
-struct conjunction<B1, Bn...>
-    : std::conditional<bool(B1::value), conjunction<Bn...>, B1>::type {};
 
 template <typename T> struct make_const_ptr {
   using type =
@@ -194,9 +186,8 @@ public:
   function_ref(
       Callable &&callable,
       // This is not the copy-constructor.
-      std::enable_if_t<
-          !std::is_same<std::remove_cv_t<std::remove_reference_t<Callable>>,
-                        function_ref>::value> * = nullptr,
+      std::enable_if_t<!std::is_same<remove_cvref_t<Callable>,
+                                     function_ref>::value> * = nullptr,
       // Functor must be callable and return a suitable type.
       std::enable_if_t<std::is_void<Ret>::value ||
                        std::is_convertible<decltype(std::declval<Callable>()(
@@ -1300,27 +1291,13 @@ template <> struct rank<0> {};
 
 /// traits class for checking whether type T is one of any of the given
 /// types in the variadic list.
-template <typename T, typename... Ts> struct is_one_of {
-  static const bool value = false;
-};
-
-template <typename T, typename U, typename... Ts>
-struct is_one_of<T, U, Ts...> {
-  static const bool value =
-      std::is_same<T, U>::value || is_one_of<T, Ts...>::value;
-};
+template <typename T, typename... Ts>
+using is_one_of = disjunction<std::is_same<T, Ts>...>;
 
 /// traits class for checking whether type T is a base class for all
 ///  the given types in the variadic list.
-template <typename T, typename... Ts> struct are_base_of {
-  static const bool value = true;
-};
-
-template <typename T, typename U, typename... Ts>
-struct are_base_of<T, U, Ts...> {
-  static const bool value =
-      std::is_base_of<T, U>::value && are_base_of<T, Ts...>::value;
-};
+template <typename T, typename... Ts>
+using are_base_of = conjunction<std::is_base_of<T, Ts>...>;
 
 //===----------------------------------------------------------------------===//
 //     Extra additions for arrays

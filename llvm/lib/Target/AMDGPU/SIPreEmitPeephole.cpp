@@ -349,8 +349,7 @@ bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
   MF.RenumberBlocks();
 
   for (MachineBasicBlock &MBB : MF) {
-    MachineBasicBlock::iterator MBBE = MBB.getFirstTerminator();
-    MachineBasicBlock::iterator TermI = MBBE;
+    MachineBasicBlock::iterator TermI = MBB.getFirstTerminator();
     // Check first terminator for branches to optimize
     if (TermI != MBB.end()) {
       MachineInstr &MI = *TermI;
@@ -358,11 +357,9 @@ bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
       case AMDGPU::S_CBRANCH_VCCZ:
       case AMDGPU::S_CBRANCH_VCCNZ:
         Changed |= optimizeVccBranch(MI);
-        continue;
+        break;
       case AMDGPU::S_CBRANCH_EXECZ:
         Changed |= removeExeczBranch(MI, MBB);
-        continue;
-      default:
         break;
       }
     }
@@ -378,11 +375,8 @@ bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
     // and limit the distance to 20 instructions for compile time purposes.
     // Note: this needs to work on bundles as S_SET_GPR_IDX* instructions
     // may be bundled with the instructions they modify.
-    for (MachineBasicBlock::instr_iterator MBBI = MBB.instr_begin();
-         MBBI != MBBE;) {
-      MachineInstr &MI = *MBBI;
-      ++MBBI;
-
+    for (auto &MI :
+         make_early_inc_range(make_range(MBB.instr_begin(), MBB.instr_end()))) {
       if (Count == Threshold)
         SetGPRMI = nullptr;
       else

@@ -125,9 +125,8 @@ static SDValue createTuple(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
 }
 
 void RISCVDAGToDAGISel::addVectorLoadStoreOperands(
-    SDNode *Node, unsigned SEWImm, const SDLoc &DL, unsigned CurOp,
-    bool IsMasked, bool IsStridedOrIndexed, SmallVectorImpl<SDValue> &Operands,
-    MVT *IndexVT) {
+    SDNode *Node, unsigned SEW, const SDLoc &DL, unsigned CurOp, bool IsMasked,
+    bool IsStridedOrIndexed, SmallVectorImpl<SDValue> &Operands, MVT *IndexVT) {
   SDValue Chain = Node->getOperand(0);
   SDValue Glue;
 
@@ -153,8 +152,8 @@ void RISCVDAGToDAGISel::addVectorLoadStoreOperands(
   Operands.push_back(VL);
 
   MVT XLenVT = Subtarget->getXLenVT();
-  SDValue SEW = CurDAG->getTargetConstant(SEWImm, DL, XLenVT);
-  Operands.push_back(SEW);
+  SDValue SEWOp = CurDAG->getTargetConstant(Log2_32(SEW), DL, XLenVT);
+  Operands.push_back(SEWOp);
 
   Operands.push_back(Chain); // Chain.
   if (Glue)
@@ -492,8 +491,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         VMNANDOpcode = RISCV::PseudoVMNAND_MM_M8;
         break;
       }
-      SDValue SEW =
-          CurDAG->getTargetConstant(Src1VT.getScalarSizeInBits(), DL, XLenVT);
+      SDValue SEW = CurDAG->getTargetConstant(
+          Log2_32(Src1VT.getScalarSizeInBits()), DL, XLenVT);
       SDValue VL;
       selectVLOp(Node->getOperand(3), VL);
 
@@ -582,8 +581,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_M8;
         break;
       }
-      SDValue SEW =
-          CurDAG->getTargetConstant(Src1VT.getScalarSizeInBits(), DL, XLenVT);
+      SDValue SEW = CurDAG->getTargetConstant(
+          Log2_32(Src1VT.getScalarSizeInBits()), DL, XLenVT);
       SDValue VL;
       selectVLOp(Node->getOperand(5), VL);
       SDValue MaskedOff = Node->getOperand(1);
@@ -814,14 +813,14 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       MVT VT = Node->getSimpleValueType(0);
       unsigned ScalarSize = VT.getScalarSizeInBits();
       // VLE1 uses an SEW of 8.
-      unsigned SEWImm = (IntNo == Intrinsic::riscv_vle1) ? 8 : ScalarSize;
+      unsigned SEW = (IntNo == Intrinsic::riscv_vle1) ? 8 : ScalarSize;
 
       unsigned CurOp = 2;
       SmallVector<SDValue, 8> Operands;
       if (IsMasked)
         Operands.push_back(Node->getOperand(CurOp++));
 
-      addVectorLoadStoreOperands(Node, SEWImm, DL, CurOp, IsMasked, IsStrided,
+      addVectorLoadStoreOperands(Node, SEW, DL, CurOp, IsMasked, IsStrided,
                                  Operands);
 
       RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
@@ -1005,13 +1004,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       MVT VT = Node->getOperand(2)->getSimpleValueType(0);
       unsigned ScalarSize = VT.getScalarSizeInBits();
       // VSE1 uses an SEW of 8.
-      unsigned SEWImm = (IntNo == Intrinsic::riscv_vse1) ? 8 : ScalarSize;
+      unsigned SEW = (IntNo == Intrinsic::riscv_vse1) ? 8 : ScalarSize;
 
       unsigned CurOp = 2;
       SmallVector<SDValue, 8> Operands;
       Operands.push_back(Node->getOperand(CurOp++)); // Store value.
 
-      addVectorLoadStoreOperands(Node, SEWImm, DL, CurOp, IsMasked, IsStrided,
+      addVectorLoadStoreOperands(Node, SEW, DL, CurOp, IsMasked, IsStrided,
                                  Operands);
 
       RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
@@ -1157,7 +1156,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     selectVLOp(Node->getOperand(1), VL);
 
     unsigned ScalarSize = VT.getScalarSizeInBits();
-    SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
+    SDValue SEW = CurDAG->getTargetConstant(Log2_32(ScalarSize), DL, XLenVT);
 
     SDValue Operands[] = {Ld->getBasePtr(),
                           CurDAG->getRegister(RISCV::X0, XLenVT), VL, SEW,

@@ -652,8 +652,10 @@ public:
 };
 }
 
-MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
-    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+static MCSection *selectExplicitSectionGlobal(
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM,
+    MCContext &Ctx, Mangler &Mang, unsigned &NextUniqueID,
+    bool Retain, bool ForceUnique) {
   StringRef SectionName = GO->getSection();
 
   // Check if '#pragma clang section' name is applicable.
@@ -696,23 +698,22 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
   unsigned UniqueID = MCContext::GenericSectionID;
   const MCSymbolELF *LinkedToSym = getLinkedToSymbol(GO, TM);
   const bool Associated = GO->getMetadata(LLVMContext::MD_associated);
-  const bool Retain = Used.count(GO);
   if (Associated || Retain) {
     UniqueID = NextUniqueID++;
     if (Associated)
       Flags |= ELF::SHF_LINK_ORDER;
-    if (Retain && (getContext().getAsmInfo()->useIntegratedAssembler() ||
-                   getContext().getAsmInfo()->binutilsIsAtLeast(2, 36)))
+    if (Retain && (Ctx.getAsmInfo()->useIntegratedAssembler() ||
+                   Ctx.getAsmInfo()->binutilsIsAtLeast(2, 36)))
       Flags |= ELF::SHF_GNU_RETAIN;
   } else {
-    if (getContext().getAsmInfo()->useIntegratedAssembler() ||
-        getContext().getAsmInfo()->binutilsIsAtLeast(2, 35)) {
+    if (Ctx.getAsmInfo()->useIntegratedAssembler() ||
+        Ctx.getAsmInfo()->binutilsIsAtLeast(2, 35)) {
       // Symbols must be placed into sections with compatible entry
       // sizes. Generate unique sections for symbols that have not
       // been assigned to compatible sections.
       if (Flags & ELF::SHF_MERGE) {
-        auto maybeID = getContext().getELFUniqueIDForEntsize(SectionName, Flags,
-                                                             EntrySize);
+        auto maybeID = Ctx.getELFUniqueIDForEntsize(SectionName, Flags,
+                                                    EntrySize);
         if (maybeID)
           UniqueID = *maybeID;
         else {
@@ -721,9 +722,8 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
           // to unique the section as the entry size for this symbol will be
           // compatible with implicitly created sections.
           SmallString<128> ImplicitSectionNameStem = getELFSectionNameForGlobal(
-              GO, Kind, getMangler(), TM, EntrySize, false);
-          if (!(getContext().isELFImplicitMergeableSectionNamePrefix(
-                    SectionName) &&
+              GO, Kind, Mang, TM, EntrySize, false);
+          if (!(Ctx.isELFImplicitMergeableSectionNamePrefix(SectionName) &&
                 SectionName.startswith(ImplicitSectionNameStem)))
             UniqueID = NextUniqueID++;
         }
@@ -731,8 +731,8 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
         // We need to unique the section if the user has explicity
         // assigned a non-mergeable symbol to a section name for
         // a generic mergeable section.
-        if (getContext().isELFGenericMergeableSection(SectionName)) {
-          auto maybeID = getContext().getELFUniqueIDForEntsize(
+        if (Ctx.isELFGenericMergeableSection(SectionName)) {
+          auto maybeID = Ctx.getELFUniqueIDForEntsize(
               SectionName, Flags, EntrySize);
           UniqueID = maybeID ? *maybeID : NextUniqueID++;
         }
@@ -749,7 +749,13 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
     }
   }
 
-  MCSectionELF *Section = getContext().getELFSection(
+  // Increment uniqueID if we are forced to emit a unique section.
+  // This works perfectly fine with section attribute or pragma section as the
+  // sections with the same name are grouped together by the assembler.
+  if (ForceUnique && UniqueID == MCContext::GenericSectionID)
+    UniqueID = NextUniqueID++;
+
+  MCSectionELF *Section = Ctx.getELFSection(
       SectionName, getELFSectionType(SectionName, Kind), Flags, EntrySize,
       Group, IsComdat, UniqueID, LinkedToSym);
   // Make sure that we did not get some other section with incompatible sh_link.
@@ -757,8 +763,8 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
   assert(Section->getLinkedToSymbol() == LinkedToSym &&
          "Associated symbol mismatch between sections");
 
-  if (!(getContext().getAsmInfo()->useIntegratedAssembler() ||
-        getContext().getAsmInfo()->binutilsIsAtLeast(2, 35))) {
+  if (!(Ctx.getAsmInfo()->useIntegratedAssembler() ||
+        Ctx.getAsmInfo()->binutilsIsAtLeast(2, 35))) {
     // If we are using GNU as before 2.35, then this symbol might have
     // been placed in an incompatible mergeable section. Emit an error if this
     // is the case to avoid creating broken output.
@@ -775,6 +781,13 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
   }
 
   return Section;
+}
+
+MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  return selectExplicitSectionGlobal(GO, Kind, TM, getContext(), getMangler(),
+                                     NextUniqueID, Used.count(GO),
+                                     /* ForceUnique = */false);
 }
 
 static MCSectionELF *selectELFSectionForGlobal(
@@ -859,9 +872,16 @@ MCSection *TargetLoweringObjectFileELF::getUniqueSectionForFunction(
     const Function &F, const TargetMachine &TM) const {
   SectionKind Kind = SectionKind::getText();
   unsigned Flags = getELFSectionFlags(Kind);
-  return selectELFSectionForGlobal(
-      getContext(), &F, Kind, getMangler(), TM, Used.count(&F),
-      /*EmitUniqueSection=*/true, Flags, &NextUniqueID);
+  // If the function's section names is pre-determined via pragma or a
+  // section attribute, call selectExplicitSectionGlobal.
+  if (F.hasSection() || F.hasFnAttribute("implicit-section-name"))
+    return selectExplicitSectionGlobal(
+        &F, Kind, TM, getContext(), getMangler(), NextUniqueID,
+        Used.count(&F), /* ForceUnique = */true);
+  else
+    return selectELFSectionForGlobal(
+        getContext(), &F, Kind, getMangler(), TM, Used.count(&F),
+        /*EmitUniqueSection=*/true, Flags, &NextUniqueID);
 }
 
 MCSection *TargetLoweringObjectFileELF::getSectionForJumpTable(
@@ -2124,8 +2144,9 @@ bool TargetLoweringObjectFileXCOFF::ShouldEmitEHBlock(
   if (!F.hasPersonalityFn() || !F.needsUnwindTableEntry())
     return false;
 
-  const Function *Per =
-      dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
+  const GlobalValue *Per =
+      dyn_cast<GlobalValue>(F.getPersonalityFn()->stripPointerCasts());
+  assert(Per && "Personality routine is not a GlobalValue type.");
   if (isNoOpWithoutInvoke(classifyEHPersonality(Per)))
     return false;
 
@@ -2150,6 +2171,12 @@ TargetLoweringObjectFileXCOFF::getTargetSymbol(const GlobalValue *GV,
   // function entry point. We choose to always return a function descriptor
   // here.
   if (const GlobalObject *GO = dyn_cast<GlobalObject>(GV)) {
+    if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV))
+      if (GVar->hasAttribute("toc-data"))
+        return cast<MCSectionXCOFF>(
+                   SectionForGlobal(GVar, SectionKind::getData(), TM))
+            ->getQualNameSymbol();
+
     if (GO->isDeclarationForLinker())
       return cast<MCSectionXCOFF>(getSectionForExternalReference(GO, TM))
           ->getQualNameSymbol();
@@ -2175,6 +2202,15 @@ MCSection *TargetLoweringObjectFileXCOFF::getExplicitSectionGlobal(
     report_fatal_error("#pragma clang section is not yet supported");
 
   StringRef SectionName = GO->getSection();
+
+  // Handle the XCOFF::TD case first, then deal with the rest.
+  if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GO))
+    if (GVar->hasAttribute("toc-data"))
+      return getContext().getXCOFFSection(
+          SectionName, Kind,
+          XCOFF::CsectProperties(/*MappingClass*/ XCOFF::XMC_TD, XCOFF::XTY_SD),
+          /* MultiSymbolsAllowed*/ true);
+
   XCOFF::StorageMappingClass MappingClass;
   if (Kind.isText())
     MappingClass = XCOFF::XMC_PR;
@@ -2211,6 +2247,16 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForExternalReference(
 
 MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  // Handle the XCOFF::TD case first, then deal with the rest.
+  if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GO))
+    if (GVar->hasAttribute("toc-data")) {
+      SmallString<128> Name;
+      getNameWithPrefix(Name, GO, TM);
+      return getContext().getXCOFFSection(
+          Name, Kind, XCOFF::CsectProperties(XCOFF::XMC_TD, XCOFF::XTY_SD),
+          /* MultiSymbolsAllowed*/ true);
+    }
+
   // Common symbols go into a csect with matching name which will get mapped
   // into the .bss section.
   // Zero-initialized local TLS symbols go into a csect with matching name which

@@ -865,8 +865,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   for (auto *arg : args.filtered(OPT_trace_symbol))
     symtab->trace(arg->getValue());
 
-  for (auto *arg : args.filtered(OPT_export))
+  for (auto *arg : args.filtered(OPT_export_if_defined))
     config->exportedSymbols.insert(arg->getValue());
+
+  for (auto *arg : args.filtered(OPT_export)) {
+    config->exportedSymbols.insert(arg->getValue());
+    config->requiredExports.push_back(arg->getValue());
+  }
 
   createSyntheticSymbols();
 
@@ -883,8 +888,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle the `--export <sym>` options
   // This works like --undefined but also exports the symbol if its found
-  for (auto *arg : args.filtered(OPT_export))
-    handleUndefined(arg->getValue());
+  for (auto &iter : config->exportedSymbols)
+    handleUndefined(iter.first());
 
   Symbol *entrySym = nullptr;
   if (!config->relocatable && !config->entry.empty()) {
@@ -958,8 +963,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (!wrapped.empty())
     wrapSymbols(wrapped);
 
-  for (auto *arg : args.filtered(OPT_export)) {
-    Symbol *sym = symtab->find(arg->getValue());
+  for (auto &iter : config->exportedSymbols) {
+    Symbol *sym = symtab->find(iter.first());
     if (sym && sym->isDefined())
       sym->forceExport = true;
   }

@@ -18,6 +18,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/OverflowInstAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -2585,6 +2586,48 @@ static Value *foldSelectWithFrozenICmp(SelectInst &Sel, InstCombiner::BuilderTy 
   return nullptr;
 }
 
+Instruction *InstCombinerImpl::foldAndOrOfSelectUsingImpliedCond(Value *Op,
+                                                                 SelectInst &SI,
+                                                                 bool IsAnd) {
+  Value *CondVal = SI.getCondition();
+  Value *A = SI.getTrueValue();
+  Value *B = SI.getFalseValue();
+
+  assert(Op->getType()->isIntOrIntVectorTy(1) &&
+         "Op must be either i1 or vector of i1.");
+
+  Optional<bool> Res = isImpliedCondition(Op, CondVal, DL, IsAnd);
+  if (!Res)
+    return nullptr;
+
+  Value *Zero = Constant::getNullValue(A->getType());
+  Value *One = Constant::getAllOnesValue(A->getType());
+
+  if (*Res == true) {
+    if (IsAnd)
+      // select op, (select cond, A, B), false => select op, A, false
+      // and    op, (select cond, A, B)        => select op, A, false
+      //   if op = true implies condval = true.
+      return SelectInst::Create(Op, A, Zero);
+    else
+      // select op, true, (select cond, A, B) => select op, true, A
+      // or     op, (select cond, A, B)       => select op, true, A
+      //   if op = false implies condval = true.
+      return SelectInst::Create(Op, One, A);
+  } else {
+    if (IsAnd)
+      // select op, (select cond, A, B), false => select op, B, false
+      // and    op, (select cond, A, B)        => select op, B, false
+      //   if op = true implies condval = false.
+      return SelectInst::Create(Op, B, Zero);
+    else
+      // select op, true, (select cond, A, B) => select op, true, B
+      // or     op, (select cond, A, B)       => select op, true, B
+      //   if op = false implies condval = false.
+      return SelectInst::Create(Op, One, B);
+  }
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -2697,6 +2740,51 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     if (Value *S = SimplifyWithOpReplaced(FalseVal, CondVal, Zero, SQ,
                                           /* AllowRefinement */ true))
       return replaceOperand(SI, 2, S);
+
+    if (match(FalseVal, m_Zero()) || match(TrueVal, m_One())) {
+      Use *Y = nullptr;
+      bool IsAnd = match(FalseVal, m_Zero()) ? true : false;
+      Value *Op1 = IsAnd ? TrueVal : FalseVal;
+      if (isCheckForZeroAndMulWithOverflow(CondVal, Op1, IsAnd, Y)) {
+        auto *FI = new FreezeInst(*Y, (*Y)->getName() + ".fr");
+        InsertNewInstBefore(FI, *cast<Instruction>(Y->getUser()));
+        replaceUse(*Y, FI);
+        return replaceInstUsesWith(SI, Op1);
+      }
+
+      if (auto *Op1SI = dyn_cast<SelectInst>(Op1))
+        if (auto *I = foldAndOrOfSelectUsingImpliedCond(CondVal, *Op1SI,
+                                                        /* IsAnd */ IsAnd))
+          return I;
+    }
+
+    // select (select a, true, b), c, false -> select a, c, false
+    // select c, (select a, true, b), false -> select c, a, false
+    //   if c implies that b is false.
+    if (match(CondVal, m_Select(m_Value(A), m_One(), m_Value(B))) &&
+        match(FalseVal, m_Zero())) {
+      Optional<bool> Res = isImpliedCondition(TrueVal, B, DL);
+      if (Res && *Res == false)
+        return replaceOperand(SI, 0, A);
+    }
+    if (match(TrueVal, m_Select(m_Value(A), m_One(), m_Value(B))) &&
+        match(FalseVal, m_Zero())) {
+      Optional<bool> Res = isImpliedCondition(CondVal, B, DL);
+      if (Res && *Res == false)
+        return replaceOperand(SI, 1, A);
+    }
+
+    // sel (sel c, a, false), true, (sel !c, b, false) -> sel c, a, b
+    // sel (sel !c, a, false), true, (sel c, b, false) -> sel c, b, a
+    Value *C1, *C2;
+    if (match(CondVal, m_Select(m_Value(C1), m_Value(A), m_Zero())) &&
+        match(TrueVal, m_One()) &&
+        match(FalseVal, m_Select(m_Value(C2), m_Value(B), m_Zero()))) {
+      if (match(C2, m_Not(m_Specific(C1)))) // first case
+        return SelectInst::Create(C1, A, B);
+      else if (match(C1, m_Not(m_Specific(C2)))) // second case
+        return SelectInst::Create(C2, B, A);
+    }
   }
 
   // Selecting between two integer or vector splat integer constants?

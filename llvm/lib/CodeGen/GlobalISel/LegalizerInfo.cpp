@@ -485,7 +485,7 @@ LegalizerInfo::getAction(const LegalityQuery &Query) const {
 LegalizeActionStep
 LegalizerInfo::getAction(const MachineInstr &MI,
                          const MachineRegisterInfo &MRI) const {
-  SmallVector<LLT, 2> Types;
+  SmallVector<LLT, 8> Types;
   SmallBitVector SeenTypes(8);
   const MCOperandInfo *OpInfo = MI.getDesc().OpInfo;
   // FIXME: probably we'll need to cache the results here somehow?

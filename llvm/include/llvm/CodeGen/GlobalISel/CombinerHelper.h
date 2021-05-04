@@ -510,6 +510,8 @@ public:
                     std::function<void(MachineIRBuilder &)> &MatchInfo);
   bool matchFunnelShiftToRotate(MachineInstr &MI);
   void applyFunnelShiftToRotate(MachineInstr &MI);
+  bool matchRotateOutOfRange(MachineInstr &MI);
+  void applyRotateOutOfRange(MachineInstr &MI);
 
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.

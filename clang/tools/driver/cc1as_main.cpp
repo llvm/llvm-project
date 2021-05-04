@@ -333,8 +333,8 @@ getOutputStream(StringRef Path, DiagnosticsEngine &Diags, bool Binary) {
   return Out;
 }
 
-static bool ExecuteAssembler(AssemblerInvocation &Opts,
-                             DiagnosticsEngine &Diags) {
+static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
+                                 DiagnosticsEngine &Diags) {
   // Get the target specific parser.
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(Opts.Triple, Error);
@@ -531,12 +531,12 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
     Failed = Parser->Run(Opts.NoInitialTextSection);
   }
 
-  // Parser has a reference to the output stream (Str), so close Parser first.
-  Parser.reset();
-  Str.reset();
-  // Close the output stream early.
-  BOS.reset();
-  FDOS.reset();
+  return Failed;
+}
+
+static bool ExecuteAssembler(AssemblerInvocation &Opts,
+                             DiagnosticsEngine &Diags) {
+  bool Failed = ExecuteAssemblerImpl(Opts, Diags);
 
   // Delete output file if there were errors.
   if (Failed) {

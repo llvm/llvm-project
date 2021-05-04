@@ -334,16 +334,8 @@ to view the full bug list.
 Missing features or with limited support
 ----------------------------------------
 
-- Use of ObjC blocks is disabled and therefore the ``enqueue_kernel`` builtin
-  function is not supported currently. It is expected that if support for this
-  feature is added in the future, it will utilize C++ lambdas instead of ObjC
-  blocks.
-
 - IR generation for global destructors is incomplete (See:
   `PR48047 <https://llvm.org/PR48047>`_).
-
-- There is no distinct file extension for sources that are to be compiled
-  in C++ for OpenCL mode (See: `PR48097 <https://llvm.org/PR48097>`_)
 
 .. _opencl_300:
 

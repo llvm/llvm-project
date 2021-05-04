@@ -77,6 +77,7 @@ private:
   void calculateCustomSections();
   void calculateTypes();
   void createOutputSegments();
+  OutputSegment *createOutputSegment(StringRef name);
   void combineOutputSegments();
   void layoutMemory();
   void createHeader();
@@ -559,7 +560,7 @@ static bool shouldImport(Symbol *sym) {
   if (isa<DataSymbol>(sym))
     return false;
 
-  if (config->relocatable ||
+  if ((config->isPic || config->relocatable) ||
       config->unresolvedSymbols == UnresolvedPolicy::ImportFuncs)
     return true;
   if (config->allowUndefinedSymbols.count(sym->getName()) != 0)
@@ -830,26 +831,37 @@ static StringRef getOutputDataSegmentName(StringRef name) {
   return name;
 }
 
+OutputSegment *Writer::createOutputSegment(StringRef name) {
+  LLVM_DEBUG(dbgs() << "new segment: " << name << "\n");
+  OutputSegment *s = make<OutputSegment>(name);
+  if (config->sharedMemory)
+    s->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
+  // Exported memories are guaranteed to be zero-initialized, so no need
+  // to emit data segments for bss sections.
+  // TODO: consider initializing bss sections with memory.fill
+  // instructions when memory is imported and bulk-memory is available.
+  if (!config->importMemory && !config->relocatable && name.startswith(".bss"))
+    s->isBss = true;
+  segments.push_back(s);
+  return s;
+}
+
 void Writer::createOutputSegments() {
   for (ObjFile *file : symtab->objectFiles) {
     for (InputSegment *segment : file->segments) {
       if (!segment->live)
         continue;
       StringRef name = getOutputDataSegmentName(segment->getName());
-      OutputSegment *&s = segmentMap[name];
-      if (s == nullptr) {
-        LLVM_DEBUG(dbgs() << "new segment: " << name << "\n");
-        s = make<OutputSegment>(name);
-        if (config->sharedMemory)
-          s->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
-        // Exported memories are guaranteed to be zero-initialized, so no need
-        // to emit data segments for bss sections.
-        // TODO: consider initializing bss sections with memory.fill
-        // instructions when memory is imported and bulk-memory is available.
-        if (!config->importMemory && !config->relocatable &&
-            name.startswith(".bss"))
-          s->isBss = true;
-        segments.push_back(s);
+      OutputSegment *s = nullptr;
+      // When running in relocatable mode we can't merge segments that are part
+      // of comdat groups since the ultimate linker needs to be able exclude or
+      // include them individually.
+      if (config->relocatable && !segment->getComdatName().empty()) {
+        s = createOutputSegment(name);
+      } else {
+        if (segmentMap.count(name) == 0)
+          segmentMap[name] = createOutputSegment(name);
+        s = segmentMap[name];
       }
       s->addInputSegment(segment);
       LLVM_DEBUG(dbgs() << "added data: " << name << ": " << s->size << "\n");
@@ -1397,17 +1409,22 @@ void Writer::run() {
     }
   }
 
-  // Delay reporting error about explict exports until after addStartStopSymbols
-  // which can create optional symbols.
-  for (auto &entry : config->exportedSymbols) {
-    StringRef name = entry.first();
-    Symbol *sym = symtab->find(name);
+  for (auto &pair : config->exportedSymbols) {
+    Symbol *sym = symtab->find(pair.first());
     if (sym && sym->isDefined())
       sym->forceExport = true;
-    else if (config->unresolvedSymbols == UnresolvedPolicy::ReportError)
-      error(Twine("symbol exported via --export not found: ") + name);
-    else if (config->unresolvedSymbols == UnresolvedPolicy::Warn)
-      warn(Twine("symbol exported via --export not found: ") + name);
+  }
+
+  // Delay reporting error about explict exports until after addStartStopSymbols
+  // which can create optional symbols.
+  for (auto &name : config->requiredExports) {
+    Symbol *sym = symtab->find(name);
+    if (!sym || !sym->isDefined()) {
+      if (config->unresolvedSymbols == UnresolvedPolicy::ReportError)
+        error(Twine("symbol exported via --export not found: ") + name);
+      if (config->unresolvedSymbols == UnresolvedPolicy::Warn)
+        warn(Twine("symbol exported via --export not found: ") + name);
+    }
   }
 
   if (config->isPic) {

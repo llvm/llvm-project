@@ -4737,7 +4737,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
-  case ISD::BRIND: {
+  case ISD::BRIND:
+  case X86ISD::NT_BRIND: {
     if (Subtarget->isTargetNaCl())
       // NaCl has its own pass where jmp %r32 are converted to jmp %r64. We
       // leave the instruction alone.
@@ -4749,7 +4750,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       SDValue Target = Node->getOperand(1);
       assert(Target.getValueType() == MVT::i32 && "Unexpected VT!");
       SDValue ZextTarget = CurDAG->getZExtOrTrunc(Target, dl, MVT::i64);
-      SDValue Brind = CurDAG->getNode(ISD::BRIND, dl, MVT::Other,
+      SDValue Brind = CurDAG->getNode(Opcode, dl, MVT::Other,
                                       Node->getOperand(0), ZextTarget);
       ReplaceNode(Node, Brind.getNode());
       SelectCode(ZextTarget.getNode());

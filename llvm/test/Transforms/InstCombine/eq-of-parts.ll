@@ -4,6 +4,10 @@
 ; Combine equality comparisons of adjacent extracted integers parts into
 ; a comparison of a larger part. Start with some examples...
 
+declare void @use.i32(i32)
+declare void @use.i8(i8)
+declare void @use.i1(i1)
+
 define i1 @eq_10(i32 %x, i32 %y) {
 ; CHECK-LABEL: @eq_10(
 ; CHECK-NEXT:    [[X_0:%.*]] = trunc i32 [[X:%.*]] to i8
@@ -297,10 +301,6 @@ define i1 @eq_irregular_bit_widths(i31 %x, i31 %y) {
 }
 
 ; Test variants with extra uses.
-
-declare void @use.i32(i32)
-declare void @use.i8(i8)
-declare void @use.i1(i1)
 
 define i1 @eq_21_extra_use_lshr(i32 %x, i32 %y) {
 ; CHECK-LABEL: @eq_21_extra_use_lshr(
@@ -657,5 +657,777 @@ define i1 @eq_shift_in_zeros(i32 %x, i32 %y) {
   %c.1 = icmp eq i8 %x.1, %y.1
   %c.2 = icmp eq i24 %x.2, %y.2
   %c.210 = and i1 %c.2, %c.1
+  ret i1 %c.210
+}
+
+define i1 @eq_21_wrong_pred1(i32 %x, i32 %y) {
+; CHECK-LABEL: @eq_21_wrong_pred1(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = and i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp eq i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.210 = and i1 %c.2, %c.1
+  ret i1 %c.210
+}
+
+define i1 @eq_21_wrong_pred2(i32 %x, i32 %y) {
+; CHECK-LABEL: @eq_21_wrong_pred2(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = and i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.210 = and i1 %c.2, %c.1
+  ret i1 %c.210
+}
+
+;
+; Now the same thing again, but for or ne instead of and eq.
+;
+
+define i1 @ne_10(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_10(
+; CHECK-NEXT:    [[X_0:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[Y_0:%.*]] = trunc i32 [[Y:%.*]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[C_0:%.*]] = icmp ne i8 [[X_0]], [[Y_0]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_10:%.*]] = or i1 [[C_0]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[C_10]]
+;
+  %x.0 = trunc i32 %x to i8
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %y.0 = trunc i32 %y to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %c.0 = icmp ne i8 %x.0, %y.0
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.10 = or i1 %c.0, %c.1
+  ret i1 %c.10
+}
+
+define i1 @ne_210(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_210(
+; CHECK-NEXT:    [[X_0:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_0:%.*]] = trunc i32 [[Y:%.*]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_0:%.*]] = icmp ne i8 [[X_0]], [[Y_0]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_10:%.*]] = or i1 [[C_0]], [[C_1]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_10]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.0 = trunc i32 %x to i8
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.0 = trunc i32 %y to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.0 = icmp ne i8 %x.0, %y.0
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.10 = or i1 %c.0, %c.1
+  %c.210 = or i1 %c.2, %c.10
+  ret i1 %c.210
+}
+
+define i1 @ne_3210(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_3210(
+; CHECK-NEXT:    [[X_0:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[X_3_EXT:%.*]] = lshr i32 [[X]], 24
+; CHECK-NEXT:    [[X_3:%.*]] = trunc i32 [[X_3_EXT]] to i8
+; CHECK-NEXT:    [[Y_0:%.*]] = trunc i32 [[Y:%.*]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[Y_3_EXT:%.*]] = lshr i32 [[Y]], 24
+; CHECK-NEXT:    [[Y_3:%.*]] = trunc i32 [[Y_3_EXT]] to i8
+; CHECK-NEXT:    [[C_0:%.*]] = icmp ne i8 [[X_0]], [[Y_0]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ne i8 [[X_3]], [[Y_3]]
+; CHECK-NEXT:    [[C_10:%.*]] = or i1 [[C_0]], [[C_1]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_10]]
+; CHECK-NEXT:    [[C_3210:%.*]] = or i1 [[C_3]], [[C_210]]
+; CHECK-NEXT:    ret i1 [[C_3210]]
+;
+  %x.0 = trunc i32 %x to i8
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %x.3.ext = lshr i32 %x, 24
+  %x.3 = trunc i32 %x.3.ext to i8
+  %y.0 = trunc i32 %y to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %y.3.ext = lshr i32 %y, 24
+  %y.3 = trunc i32 %y.3.ext to i8
+  %c.0 = icmp ne i8 %x.0, %y.0
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.3 = icmp ne i8 %x.3, %y.3
+  %c.10 = or i1 %c.0, %c.1
+  %c.210 = or i1 %c.2, %c.10
+  %c.3210 = or i1 %c.3, %c.210
+  ret i1 %c.3210
+}
+
+define i1 @ne_21(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_21(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.210 = or i1 %c.2, %c.1
+  ret i1 %c.210
+}
+
+; Test commuted variants of ne_21.
+
+define i1 @ne_21_comm_or(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_21_comm_or(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.210 = or i1 %c.1, %c.2
+  ret i1 %c.210
+}
+
+define i1 @ne_21_comm_ne(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_21_comm_ne(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[Y_2]], [[X_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %y.2, %x.2
+  %c.210 = or i1 %c.2, %c.1
+  ret i1 %c.210
+}
+
+define i1 @ne_21_comm_ne2(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_21_comm_ne2(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[Y_1]], [[X_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %y.1, %x.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.210 = or i1 %c.2, %c.1
+  ret i1 %c.210
+}
+
+; Test vector variant.
+
+define <2x i1> @ne_21_vector(<2x i32> %x, <2x i32> %y) {
+; CHECK-LABEL: @ne_21_vector(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 8, i32 8>
+; CHECK-NEXT:    [[X_1:%.*]] = trunc <2 x i32> [[X_321]] to <2 x i8>
+; CHECK-NEXT:    [[X_32:%.*]] = lshr <2 x i32> [[X]], <i32 16, i32 16>
+; CHECK-NEXT:    [[X_2:%.*]] = trunc <2 x i32> [[X_32]] to <2 x i8>
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr <2 x i32> [[Y:%.*]], <i32 8, i32 8>
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc <2 x i32> [[Y_321]] to <2 x i8>
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr <2 x i32> [[Y]], <i32 16, i32 16>
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc <2 x i32> [[Y_32]] to <2 x i8>
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne <2 x i8> [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne <2 x i8> [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or <2 x i1> [[C_2]], [[C_1]]
+; CHECK-NEXT:    ret <2 x i1> [[C_210]]
+;
+  %x.321 = lshr <2x i32> %x, <i32 8, i32 8>
+  %x.1 = trunc <2x i32> %x.321 to <2x i8>
+  %x.32 = lshr <2x i32> %x, <i32 16, i32 16>
+  %x.2 = trunc <2x i32> %x.32 to <2x i8>
+  %y.321 = lshr <2x i32> %y, <i32 8, i32 8>
+  %y.1 = trunc <2x i32> %y.321 to <2x i8>
+  %y.32 = lshr <2x i32> %y, <i32 16, i32 16>
+  %y.2 = trunc <2x i32> %y.32 to <2x i8>
+  %c.1 = icmp ne <2x i8> %x.1, %y.1
+  %c.2 = icmp ne <2x i8> %x.2, %y.2
+  %c.210 = or <2x i1> %c.2, %c.1
+  ret <2 x i1> %c.210
+}
+
+; Test irregular bit widths. This also tests the case where
+; all the involved bit widths or offsets are different.
+
+define i1 @ne_irregular_bit_widths(i31 %x, i31 %y) {
+; CHECK-LABEL: @ne_irregular_bit_widths(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i31 [[X:%.*]], 7
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i31 [[X_321]] to i6
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i31 [[X]], 13
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i31 [[X_32]] to i5
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i31 [[Y:%.*]], 7
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i31 [[Y_321]] to i6
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i31 [[Y]], 13
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i31 [[Y_32]] to i5
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i6 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i5 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i31 %x, 7
+  %x.1 = trunc i31 %x.321 to i6
+  %x.32 = lshr i31 %x, 13
+  %x.2 = trunc i31 %x.32 to i5
+  %y.321 = lshr i31 %y, 7
+  %y.1 = trunc i31 %y.321 to i6
+  %y.32 = lshr i31 %y, 13
+  %y.2 = trunc i31 %y.32 to i5
+  %c.1 = icmp ne i6 %x.1, %y.1
+  %c.2 = icmp ne i5 %x.2, %y.2
+  %c.210 = or i1 %c.2, %c.1
+  ret i1 %c.210
+}
+
+; Test variants with extra uses.
+
+define i1 @ne_21_extra_use_lshr(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_21_extra_use_lshr(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    call void @use.i32(i32 [[X_321]])
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  call void @use.i32(i32 %x.321)
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.210 = or i1 %c.1, %c.2
+  ret i1 %c.210
+}
+
+define i1 @ne_21_extra_use_trunc(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_21_extra_use_trunc(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    call void @use.i8(i8 [[X_1]])
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  call void @use.i8(i8 %x.1)
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.210 = or i1 %c.1, %c.2
+  ret i1 %c.210
+}
+
+define i1 @ne_21_extra_use_ne1(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_21_extra_use_ne1(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    call void @use.i1(i1 [[C_1]])
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %x.1, %y.1
+  call void @use.i1(i1 %c.1)
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.210 = or i1 %c.1, %c.2
+  ret i1 %c.210
+}
+
+define i1 @ne_21_extra_use_ne2(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_21_extra_use_ne2(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    call void @use.i1(i1 [[C_2]])
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  call void @use.i1(i1 %c.2)
+  %c.210 = or i1 %c.1, %c.2
+  ret i1 %c.210
+}
+
+; Negative tests.
+
+define i1 @ne_21_wrong_op1(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @ne_21_wrong_op1(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[Z:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X:%.*]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %z, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.210 = or i1 %c.2, %c.1
+  ret i1 %c.210
+}
+
+define i1 @ne_21_wrong_op2(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @ne_21_wrong_op2(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[Z:%.*]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %z, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.210 = or i1 %c.2, %c.1
+  ret i1 %c.210
+}
+
+define i1 @ne_21_wrong_op3(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @ne_21_wrong_op3(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Z:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y:%.*]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %z, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.210 = or i1 %c.2, %c.1
+  ret i1 %c.210
+}
+
+define i1 @ne_21_wrong_op4(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @ne_21_wrong_op4(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Z:%.*]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %z, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.210 = or i1 %c.2, %c.1
+  ret i1 %c.210
+}
+
+define i1 @ne_21_wrong_shift1(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_21_wrong_shift1(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 7
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 7
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.210 = or i1 %c.2, %c.1
+  ret i1 %c.210
+}
+
+define i1 @ne_21_wrong_shift2(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_21_wrong_shift2(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 15
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 15
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.210 = or i1 %c.2, %c.1
+  ret i1 %c.210
+}
+
+define i1 @ne_21_not_adjacent(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_21_not_adjacent(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 17
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 17
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 17
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 17
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i8 %x.2, %y.2
+  %c.210 = or i1 %c.2, %c.1
+  ret i1 %c.210
+}
+
+define i1 @ne_shift_in_zeros(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_shift_in_zeros(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i24
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i24
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i24 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i24
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i24
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp ne i24 %x.2, %y.2
+  %c.210 = or i1 %c.2, %c.1
+  ret i1 %c.210
+}
+
+define i1 @ne_21_wrong_pred1(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_21_wrong_pred1(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp ne i8 %x.1, %y.1
+  %c.2 = icmp eq i8 %x.2, %y.2
+  %c.210 = or i1 %c.2, %c.1
+  ret i1 %c.210
+}
+
+define i1 @ne_21_wrong_pred2(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_21_wrong_pred2(
+; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
+; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i8
+; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
+; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
+; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i8
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i8 [[X_2]], [[Y_2]]
+; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[C_210]]
+;
+  %x.321 = lshr i32 %x, 8
+  %x.1 = trunc i32 %x.321 to i8
+  %x.32 = lshr i32 %x, 16
+  %x.2 = trunc i32 %x.32 to i8
+  %y.321 = lshr i32 %y, 8
+  %y.1 = trunc i32 %y.321 to i8
+  %y.32 = lshr i32 %y, 16
+  %y.2 = trunc i32 %y.32 to i8
+  %c.1 = icmp eq i8 %x.1, %y.1
+  %c.2 = icmp eq i8 %x.2, %y.2
+  %c.210 = or i1 %c.2, %c.1
   ret i1 %c.210
 }

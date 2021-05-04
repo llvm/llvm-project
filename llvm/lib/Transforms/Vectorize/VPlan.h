@@ -671,10 +671,10 @@ public:
   /// Returns the underlying instruction, if the recipe is a VPValue or nullptr
   /// otherwise.
   Instruction *getUnderlyingInstr() {
-    return cast<Instruction>(getVPValue()->getUnderlyingValue());
+    return cast<Instruction>(getVPSingleValue()->getUnderlyingValue());
   }
   const Instruction *getUnderlyingInstr() const {
-    return cast<Instruction>(getVPValue()->getUnderlyingValue());
+    return cast<Instruction>(getVPSingleValue()->getUnderlyingValue());
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
@@ -685,6 +685,12 @@ public:
 
   /// Returns true if the recipe may have side-effects.
   bool mayHaveSideEffects() const;
+
+  /// Returns true for PHI-like recipes.
+  bool isPhi() const {
+    return getVPDefID() == VPWidenIntOrFpInductionSC || getVPDefID() == VPWidenPHISC ||
+      getVPDefID() == VPPredInstPHISC || getVPDefID() == VPWidenCanonicalIVSC;
+  }
 };
 
 inline bool VPUser::classof(const VPDef *Def) {
@@ -738,7 +744,7 @@ public:
       : VPRecipeBase(VPRecipeBase::VPInstructionSC, {}),
         VPValue(VPValue::VPVInstructionSC, nullptr, this), Opcode(Opcode) {
     for (auto *I : Operands)
-      addOperand(I->getVPValue());
+      addOperand(I->getVPSingleValue());
   }
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands)
@@ -1045,6 +1051,8 @@ public:
 
   /// Returns the \p I th incoming VPBasicBlock.
   VPBasicBlock *getIncomingBlock(unsigned I) { return IncomingBlocks[I]; }
+
+  RecurrenceDescriptor *getRecurrenceDescriptor() { return RdxDesc; }
 };
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
@@ -1430,7 +1438,7 @@ public:
 
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
 /// holds a sequence of zero or more VPRecipe's each representing a sequence of
-/// output IR instructions.
+/// output IR instructions. All PHI-like recipes must come before any non-PHI recipes.
 class VPBasicBlock : public VPBlockBase {
 public:
   using RecipeListTy = iplist<VPRecipeBase>;
@@ -1507,6 +1515,11 @@ public:
 
   /// Return the position of the first non-phi node recipe in the block.
   iterator getFirstNonPhi();
+
+  /// Returns an iterator range over the PHI-like recipes in the block.
+  iterator_range<iterator> phis() {
+    return make_range(begin(), getFirstNonPhi());
+  }
 
   void dropAllReferences(VPValue *NewValue) override;
 

@@ -190,8 +190,8 @@ def ICmpPredicate : I64EnumAttr<
 // Other integer operations.
 def LLVM_ICmpOp : LLVM_Op<"icmp", [NoSideEffect]> {
   let arguments = (ins ICmpPredicate:$predicate,
-                   LLVM_ScalarOrVectorOf<LLVM_AnyInteger>:$lhs,
-                   LLVM_ScalarOrVectorOf<LLVM_AnyInteger>:$rhs);
+                   AnyTypeOf<[LLVM_ScalarOrVectorOf<LLVM_AnyInteger>, LLVM_ScalarOrVectorOf<LLVM_AnyPointer>]>:$lhs,
+                   AnyTypeOf<[LLVM_ScalarOrVectorOf<LLVM_AnyInteger>, LLVM_ScalarOrVectorOf<LLVM_AnyPointer>]>:$rhs);
   let results = (outs LLVM_ScalarOrVectorOf<I1>:$res);
   let llvmBuilder = [{
     $res = builder.CreateICmp(getLLVMCmpPredicate($predicate), $lhs, $rhs);

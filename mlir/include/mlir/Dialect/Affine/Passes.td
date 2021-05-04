@@ -123,6 +123,9 @@ def AffineParallelize : FunctionPass<"affine-parallelize"> {
     Option<"maxNested", "max-nested", "unsigned", /*default=*/"-1u",
            "Maximum number of nested parallel loops to produce. "
            "Defaults to unlimited (UINT_MAX).">,
+    Option<"parallelReductions", "parallel-reductions", "bool",
+           /*default=*/"false",
+           "Whether to parallelize reduction loops. Defaults to false.">
   ];
 }
 

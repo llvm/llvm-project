@@ -8,7 +8,7 @@ Current status: Under development and not enabled by default
 
 * A relatively recent Python3 installation
 * Installation of python dependencies as specified in
-  `mlir/lib/Bindings/Python/requirements.txt`
+  `mlir/python/requirements.txt`
 
 ### CMake variables
 
@@ -55,7 +55,7 @@ python -m pip install --upgrade pip
 
 # Now the `python` command will resolve to your virtual environment and
 # packages will be installed there.
-python -m pip install -r mlir/lib/Bindings/Python/requirements.txt
+python -m pip install -r mlir/python/requirements.txt
 
 # Now run `cmake`, `ninja`, et al.
 ```

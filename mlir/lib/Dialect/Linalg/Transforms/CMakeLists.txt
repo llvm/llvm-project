@@ -11,7 +11,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Interchange.cpp
   Loops.cpp
   Promotion.cpp
-  SparseLowering.cpp
   Sparsification.cpp
   Tiling.cpp
   Transforms.cpp
@@ -27,6 +26,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRAffine
   MLIRAffineUtils
   MLIRAnalysis
+  MLIRComplex
   MLIREDSC
   MLIRIR
   MLIRMemRef
@@ -37,6 +37,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRSCF
   MLIRSCFTransforms
   MLIRPass
+  MLIRSparseTensor
   MLIRStandard
   MLIRStandardOpsTransforms
   MLIRStandardToLLVM

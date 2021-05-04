@@ -11,8 +11,6 @@
 // These tests require locale for non-char paths
 // UNSUPPORTED: libcpp-has-no-localization
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // <filesystem>
 
 // class path
@@ -92,7 +90,7 @@ void doConcatSourceAllocTest(ConcatOperatorTestcase const& TC)
   using Ptr = CharT const*;
   using Str = std::basic_string<CharT>;
   using StrView = std::basic_string_view<CharT>;
-  using InputIter = input_iterator<Ptr>;
+  using InputIter = cpp17_input_iterator<Ptr>;
 
   const Ptr L = TC.lhs;
   const Ptr R = TC.rhs;
@@ -142,6 +140,10 @@ void doConcatSourceAllocTest(ConcatOperatorTestcase const& TC)
   // code_cvt conversions.
   // For the path native type, no allocations will be performed because no
   // conversion is required.
+
+  // In DLL builds on Windows, the overridden operator new won't pick up
+  // allocations done within the DLL, so the RequireAllocationGuard below
+  // won't necessarily see allocations in the cases where they're expected.
   bool DisableAllocations = std::is_same<CharT, path::value_type>::value;
   {
     path LHS(L); PathReserve(LHS, ReserveSize);
@@ -149,6 +151,7 @@ void doConcatSourceAllocTest(ConcatOperatorTestcase const& TC)
     {
       RequireAllocationGuard  g; // requires 1 or more allocations occur by default
       if (DisableAllocations) g.requireExactly(0);
+      else TEST_ONLY_WIN32_DLL(g.requireAtLeast(0));
       LHS += RHS;
     }
     assert(LHS == E);
@@ -160,6 +163,7 @@ void doConcatSourceAllocTest(ConcatOperatorTestcase const& TC)
     {
       RequireAllocationGuard g;
       if (DisableAllocations) g.requireExactly(0);
+      else TEST_ONLY_WIN32_DLL(g.requireAtLeast(0));
       LHS.concat(RHS, REnd);
     }
     assert(LHS == E);
@@ -173,7 +177,7 @@ void doConcatSourceTest(ConcatOperatorTestcase const& TC)
   using Ptr = CharT const*;
   using Str = std::basic_string<CharT>;
   using StrView = std::basic_string_view<CharT>;
-  using InputIter = input_iterator<Ptr>;
+  using InputIter = cpp17_input_iterator<Ptr>;
   const Ptr L = TC.lhs;
   const Ptr R = TC.rhs;
   const Ptr E = TC.expect;
@@ -303,7 +307,7 @@ void test_sfinae() {
     static_assert(has_concat<It>(), "");
   }
   {
-    using It = input_iterator<const char*>;
+    using It = cpp17_input_iterator<const char*>;
     static_assert(has_concat<It>(), "");
   }
   {
@@ -314,7 +318,7 @@ void test_sfinae() {
       using reference = const char&;
       using difference_type = std::ptrdiff_t;
     };
-    using It = input_iterator<const char*, Traits>;
+    using It = cpp17_input_iterator<const char*, Traits>;
     static_assert(has_concat<It>(), "");
   }
   {

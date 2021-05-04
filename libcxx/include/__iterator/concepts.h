@@ -33,12 +33,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // [iterator.concept.readable]
 template<class _In>
 concept __indirectly_readable_impl =
-  requires(const _In __in) {
+  requires(const _In __i) {
     typename iter_value_t<_In>;
     typename iter_reference_t<_In>;
     typename iter_rvalue_reference_t<_In>;
-    { *__in } -> same_as<iter_reference_t<_In> >;
-    { ranges::iter_move(__in) } -> same_as<iter_rvalue_reference_t<_In> >;
+    { *__i } -> same_as<iter_reference_t<_In> >;
+    { ranges::iter_move(__i) } -> same_as<iter_rvalue_reference_t<_In> >;
   } &&
   common_reference_with<iter_reference_t<_In>&&, iter_value_t<_In>&> &&
   common_reference_with<iter_reference_t<_In>&&, iter_rvalue_reference_t<_In>&&> &&
@@ -111,7 +111,33 @@ concept sized_sentinel_for =
     { __i - __s } -> same_as<iter_difference_t<_Ip> >;
   };
 
-// clang-format on
+// [iterator.concept.input]
+template<class _Ip>
+concept input_iterator =
+  input_or_output_iterator<_Ip> &&
+  indirectly_readable<_Ip> &&
+  requires { typename _ITER_CONCEPT<_Ip>; } &&
+  derived_from<_ITER_CONCEPT<_Ip>, input_iterator_tag>;
+
+// [iterator.concept.forward]
+template<class _Ip>
+concept forward_iterator =
+  input_iterator<_Ip> &&
+  derived_from<_ITER_CONCEPT<_Ip>, forward_iterator_tag> &&
+  incrementable<_Ip> &&
+  sentinel_for<_Ip, _Ip>;
+
+// [iterator.concept.bidir]
+template<class _Ip>
+concept bidirectional_iterator =
+  forward_iterator<_Ip> &&
+  derived_from<_ITER_CONCEPT<_Ip>, bidirectional_iterator_tag> &&
+  requires(_Ip __i) {
+    { --__i } -> same_as<_Ip&>;
+    { __i-- } -> same_as<_Ip>;
+  };
+
+  // clang-format on
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 

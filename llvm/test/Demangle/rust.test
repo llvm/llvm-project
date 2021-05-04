@@ -1,0 +1,43 @@
+RUN: llvm-cxxfilt -n  < %s | FileCheck --match-full-lines %s
+
+CHECK: a::main
+       _RNvC1a4main
+
+CHECK: hello::rust
+       _RNvCshGpAVYOtgW1_5hello4rust
+
+CHECK: a::b::c
+       _RNvNvC1a1b1c
+
+; Invalid mangled characters
+
+CHECK: _RNvC2a.1c
+       _RNvC2a.1c
+
+CHECK: _RNvC2a$1c
+       _RNvC2a$1c
+
+; Invalid identifier length (UINT64_MAX + 3, which happens to be ok after a wraparound).
+
+CHECK: _RNvC2ab18446744073709551618xy
+       _RNvC2ab18446744073709551618xy
+
+; Mangling scheme includes an optional encoding version. When present it would
+; indicate an encoding we don't support yet. Check that it is rejected:
+
+CHECK: _R0NvC1a4main
+       _R0NvC1a4main
+
+; Early EOF
+
+CHECK: _RNv
+       _RNv
+
+CHECK: _RNvC
+       _RNvC
+
+CHECK: _RNvC1a5main
+       _RNvC1a5main
+
+CHECK: _RNvC1a20abc
+       _RNvC1a20abc

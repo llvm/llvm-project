@@ -232,6 +232,45 @@ ArrayAttr vector::getVectorSubscriptAttr(Builder &builder,
 }
 
 //===----------------------------------------------------------------------===//
+// MultiDimReductionOp
+//===----------------------------------------------------------------------===//
+
+void vector::MultiDimReductionOp::build(OpBuilder &builder,
+                                        OperationState &result, Value source,
+                                        ArrayRef<bool> reductionMask,
+                                        CombiningKind kind) {
+  result.addOperands(source);
+  auto sourceVectorType = source.getType().cast<VectorType>();
+  auto targetShape = MultiDimReductionOp::inferDestShape(
+      sourceVectorType.getShape(), reductionMask);
+  auto targetVectorType =
+      VectorType::get(targetShape, sourceVectorType.getElementType());
+  result.addTypes(targetVectorType);
+
+  SmallVector<int64_t> reductionDims;
+  for (auto en : llvm::enumerate(reductionMask))
+    if (en.value())
+      reductionDims.push_back(en.index());
+  result.addAttribute(getReductionDimsAttrName(),
+                      builder.getI64ArrayAttr(reductionDims));
+  result.addAttribute(getKindAttrName(),
+                      CombiningKindAttr::get(kind, builder.getContext()));
+}
+
+static LogicalResult verify(MultiDimReductionOp op) {
+  auto reductionMask = op.getReductionMask();
+  auto targetShape = MultiDimReductionOp::inferDestShape(
+      op.getSourceVectorType().getShape(), reductionMask);
+  auto targetVectorType =
+      VectorType::get(targetShape, op.getSourceVectorType().getElementType());
+  if (targetVectorType != op.getDestVectorType())
+    return op.emitError("invalid output vector type: ")
+           << op.getDestVectorType() << " (expected: " << targetVectorType
+           << ")";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ReductionOp
 //===----------------------------------------------------------------------===//
 
@@ -1103,6 +1142,33 @@ OpFoldResult ExtractOp::fold(ArrayRef<Attribute>) {
   return OpFoldResult();
 }
 
+namespace {
+
+// If extractOp is only removing unit dimensions it can be transformed to a
+// shapecast.
+class ExtractToShapeCast final : public OpRewritePattern<ExtractOp> {
+public:
+  using OpRewritePattern<ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    auto dstVecType = extractOp.getResult().getType().dyn_cast<VectorType>();
+    if (!dstVecType || extractOp.getVectorType().getNumElements() !=
+                           dstVecType.getNumElements())
+      return failure();
+    rewriter.replaceOpWithNewOp<ShapeCastOp>(extractOp, dstVecType,
+                                             extractOp.vector());
+    return success();
+  }
+};
+
+} // namespace
+
+void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                            MLIRContext *context) {
+  results.add<ExtractToShapeCast>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // ExtractSlicesOp
 //===----------------------------------------------------------------------===//
@@ -1495,6 +1561,33 @@ static LogicalResult verify(InsertOp op) {
                 "dest vector dimension";
   }
   return success();
+}
+
+namespace {
+
+// If insertOp is only inserting unit dimensions it can be transformed to a
+// shapecast.
+class InsertToShapeCast final : public OpRewritePattern<InsertOp> {
+public:
+  using OpRewritePattern<InsertOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(InsertOp insertOp,
+                                PatternRewriter &rewriter) const override {
+    auto srcVecType = insertOp.getSourceType().dyn_cast<VectorType>();
+    if (!srcVecType || insertOp.getDestVectorType().getNumElements() !=
+                           srcVecType.getNumElements())
+      return failure();
+    rewriter.replaceOpWithNewOp<ShapeCastOp>(
+        insertOp, insertOp.getDestVectorType(), insertOp.source());
+    return success();
+  }
+};
+
+} // namespace
+
+void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                           MLIRContext *context) {
+  results.add<InsertToShapeCast>(context);
 }
 
 //===----------------------------------------------------------------------===//

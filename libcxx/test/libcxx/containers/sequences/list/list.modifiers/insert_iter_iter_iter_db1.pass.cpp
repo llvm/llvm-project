@@ -30,8 +30,8 @@ int main(int, char**)
         int a[] = {1, 2, 3, 4, 5};
         const int N = sizeof(a)/sizeof(a[0]);
         std::list<int>::iterator i = v.insert(next(v2.cbegin(), 10),
-                                        input_iterator<const int*>(a),
-                                       input_iterator<const int*>(a+N));
+                                        cpp17_input_iterator<const int*>(a),
+                                       cpp17_input_iterator<const int*>(a+N));
         assert(false);
     }
 

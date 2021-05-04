@@ -92,8 +92,9 @@ L_.str:
 @ CHECK:     Extern
 @ CHECK:     Type: Section (0xE)
 @ CHECK:     Section: __text (0x1)
-@ CHECK:     RefType: 0x8
-@ CHECK:     Flags [ (0x0)
+@ CHECK:     RefType: UndefinedNonLazy (0x0)
+@ CHECK:     Flags [ (0x8)
+@ CHECK:       ThumbDef (0x8)
 @ CHECK:     ]
 @ CHECK:     Value: 0x0
 @ CHECK:   }

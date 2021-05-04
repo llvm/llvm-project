@@ -1876,6 +1876,19 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   if (Instruction *Z = narrowMaskedBinOp(I))
     return Z;
 
+  if (I.getType()->isIntOrIntVectorTy(1)) {
+    if (auto *SI0 = dyn_cast<SelectInst>(Op0)) {
+      if (auto *I =
+              foldAndOrOfSelectUsingImpliedCond(Op1, *SI0, /* IsAnd */ true))
+        return I;
+    }
+    if (auto *SI1 = dyn_cast<SelectInst>(Op1)) {
+      if (auto *I =
+              foldAndOrOfSelectUsingImpliedCond(Op0, *SI1, /* IsAnd */ true))
+        return I;
+    }
+  }
+
   if (Instruction *FoldedLogic = foldBinOpIntoSelectOrPhi(I))
     return FoldedLogic;
 
@@ -2553,6 +2566,20 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Value *V = SimplifyBSwap(I, Builder))
     return replaceInstUsesWith(I, V);
 
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  if (I.getType()->isIntOrIntVectorTy(1)) {
+    if (auto *SI0 = dyn_cast<SelectInst>(Op0)) {
+      if (auto *I =
+              foldAndOrOfSelectUsingImpliedCond(Op1, *SI0, /* IsAnd */ false))
+        return I;
+    }
+    if (auto *SI1 = dyn_cast<SelectInst>(Op1)) {
+      if (auto *I =
+              foldAndOrOfSelectUsingImpliedCond(Op0, *SI1, /* IsAnd */ false))
+        return I;
+    }
+  }
+
   if (Instruction *FoldedLogic = foldBinOpIntoSelectOrPhi(I))
     return FoldedLogic;
 
@@ -2577,7 +2604,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   }
 
   // (A & C)|(B & D)
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Value *A, *B, *C, *D;
   if (match(Op0, m_And(m_Value(A), m_Value(C))) &&
       match(Op1, m_And(m_Value(B), m_Value(D)))) {

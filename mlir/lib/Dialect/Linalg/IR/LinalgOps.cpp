@@ -1088,6 +1088,78 @@ LogicalResult PadTensorOp::reifyReturnTypeShapesPerResultDim(
 // ReshapeOp
 //===----------------------------------------------------------------------===//
 
+Optional<SmallVector<ReassociationIndices>>
+mlir::linalg::getReassociationIndicesForReshape(ShapedType sourceType,
+                                                ShapedType targetType) {
+  // Make the sourceType greater rank than the targetType. If they are same
+  // rank, then its an unsupported reshape op.
+  if (sourceType.getRank() == targetType.getRank())
+    return llvm::None;
+  if (sourceType.getRank() < targetType.getRank())
+    std::swap(sourceType, targetType);
+
+  ArrayRef<int64_t> sourceShape = sourceType.getShape();
+  ArrayRef<int64_t> targetShape = targetType.getShape();
+  unsigned sourceDim = 0;
+  SmallVector<ReassociationIndices> reassociationMap;
+  reassociationMap.reserve(targetType.getRank());
+
+  ReassociationIndices currIndices;
+  int64_t prodOfCollapsedDims = 1;
+  while (sourceDim < sourceShape.size()) {
+    unsigned targetDim = reassociationMap.size();
+
+    // If all the dimensions of the targetShape are exhausted, then the
+    // remaining dims in the source shape must be all 1s. So for such cases, set
+    // 1 as the target shape. The actual reassociation indices will be handled
+    // later.
+    int64_t currTargetShape =
+        (targetDim < targetType.getRank() ? targetShape[targetDim] : 1);
+    while (sourceShape[sourceDim] != ShapedType::kDynamicSize &&
+           prodOfCollapsedDims * sourceShape[sourceDim] < currTargetShape &&
+           sourceDim < sourceShape.size()) {
+      prodOfCollapsedDims *= sourceShape[sourceDim];
+      currIndices.push_back(sourceDim++);
+    }
+
+    // If the current expanded dimension is dynamic, then the collapsed
+    // dimensions should also be dynamic and product of all previous unprocessed
+    // dimensions of the expanded shape should be 1.
+    if (sourceShape[sourceDim] == ShapedType::kDynamicSize &&
+        (currTargetShape != ShapedType::kDynamicSize ||
+         prodOfCollapsedDims != 1))
+      return llvm::None;
+
+    // If the collapsed dim is dynamic, the current expanded dim should also
+    // be dynamic.
+    if (currTargetShape == ShapedType::kDynamicSize &&
+        sourceShape[sourceDim] != ShapedType::kDynamicSize)
+      return llvm::None;
+
+    // For static shapes, if the product of dimensions of the expanded shape
+    // should match the collapsed dimension shape.
+    if (prodOfCollapsedDims * sourceShape[sourceDim] != currTargetShape)
+      return llvm::None;
+
+    currIndices.push_back(sourceDim++);
+    // If there are no dimensions in the target to match, then append the
+    // `currIndices` to the last element of the reassociationMap.
+    if (targetDim == targetShape.size()) {
+      reassociationMap.back().append(currIndices.begin(), currIndices.end());
+      // Break out of the loops. We should be done here.
+      break;
+    }
+    reassociationMap.emplace_back(ReassociationIndices{});
+    std::swap(reassociationMap.back(), currIndices);
+    prodOfCollapsedDims = 1;
+  }
+  // All the dimensions in the two shapes must have been processed.
+  if (reassociationMap.size() != targetShape.size() ||
+      sourceDim != sourceShape.size())
+    return llvm::None;
+  return reassociationMap;
+}
+
 /// Collapse reassociation maps that are used in pair of reshape ops where one
 /// is a producer and other is the consumer. Only valid to use this method when
 /// both the producer and consumer are collapsing dimensions or both are
@@ -1104,34 +1176,39 @@ LogicalResult PadTensorOp::reifyReturnTypeShapesPerResultDim(
 ///
 ///   result = [affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>,
 ///             affine_map<(d0, d1, d2, d3, d4) -> (d3, d4)>]
-static ArrayAttr collapseReassociationMaps(ArrayRef<AffineMap> mapsProducer,
-                                           ArrayRef<AffineMap> mapsConsumer,
-                                           MLIRContext *context) {
+static Optional<SmallVector<ReassociationIndices>>
+collapseReassociationIndices(ArrayRef<AffineMap> mapsProducer,
+                             ArrayRef<AffineMap> mapsConsumer,
+                             MLIRContext *context) {
+  // Make the producer the larger sized vector. If they are of same size, the
+  // resulting reshape is not a supported reshape op.
+  if (mapsProducer.size() == mapsConsumer.size())
+    return llvm::None;
+  if (mapsProducer.size() < mapsConsumer.size())
+    std::swap(mapsProducer, mapsConsumer);
+
   // Handle the corner case of the result being a rank 0 shaped type. Return an
-  // emtpy ArrayAttr.
-  if (mapsConsumer.empty() && !mapsProducer.empty())
-    return ArrayAttr::get(context, ArrayRef<Attribute>());
-  if (mapsProducer.empty() || mapsConsumer.empty() ||
-      mapsProducer[0].getNumDims() < mapsConsumer[0].getNumDims() ||
-      mapsProducer.size() != mapsConsumer[0].getNumDims())
-    return nullptr;
-  unsigned numLhsDims = mapsProducer[0].getNumDims();
+  // empty reassociation.
+  if (mapsConsumer.empty())
+    return SmallVector<ReassociationIndices>{};
+  if (mapsProducer.size() != mapsConsumer[0].getNumDims())
+    return llvm::None;
+
   unsigned currDim = 0;
-  SmallVector<AffineExpr, 4> reassociations;
-  SmallVector<Attribute, 4> reassociationMaps;
+  ReassociationIndices reassociations;
+  SmallVector<ReassociationIndices> reassociationMaps;
   for (AffineMap rhs : mapsConsumer) {
     for (AffineExpr rhsExpr : rhs.getResults()) {
       AffineDimExpr dimExpr = rhsExpr.cast<AffineDimExpr>();
       for (int i = 0, e = mapsProducer[dimExpr.getPosition()].getNumResults();
            i < e; ++i) {
-        reassociations.push_back(getAffineDimExpr(currDim++, context));
+        reassociations.push_back(currDim++);
       }
     }
-    reassociationMaps.push_back(AffineMapAttr::get(AffineMap::get(
-        numLhsDims, /*numSymbols =*/0, reassociations, context)));
-    reassociations.clear();
+    reassociationMaps.emplace_back(ReassociationIndices{});
+    std::swap(reassociationMaps.back(), reassociations);
   }
-  return ArrayAttr::get(context, reassociationMaps);
+  return reassociationMaps;
 }
 
 namespace {
@@ -1146,33 +1223,44 @@ struct CollapseReshapeOps : public OpRewritePattern<ReshapeOpTy> {
     if (!srcReshapeOp)
       return failure();
 
+    ShapedType srcReshapeSrcType = srcReshapeOp.getSrcType();
+    ShapedType intermediateType = reshapeOp.getSrcType();
+    ShapedType resultType = reshapeOp.getResultType();
+
     auto areReshapeOpsFoldable = [](ShapedType largerType,
                                     ShapedType intermediateType,
                                     ShapedType smallerType) -> bool {
       return largerType.getRank() > intermediateType.getRank() &&
              intermediateType.getRank() > smallerType.getRank();
     };
-    // Check if producer and consumer are both expanding dims.
-    if (areReshapeOpsFoldable(reshapeOp.getResultType(), reshapeOp.getSrcType(),
-                              srcReshapeOp.getSrcType())) {
-      rewriter.replaceOpWithNewOp<ReshapeOpTy>(
-          reshapeOp, reshapeOp.getResultType(), srcReshapeOp.src(),
-          collapseReassociationMaps(reshapeOp.getReassociationMaps(),
-                                    srcReshapeOp.getReassociationMaps(),
-                                    rewriter.getContext()));
-      return success();
+    Optional<SmallVector<ReassociationIndices>> reassociationIndices =
+        llvm::None;
+    // Check if producer and consumer are both expanding dims or both collapsing
+    // dims. In this case, try to compose the affine maps. This works for
+    // dynamic shapes too.
+    if (areReshapeOpsFoldable(resultType, intermediateType,
+                              srcReshapeSrcType) ||
+        areReshapeOpsFoldable(srcReshapeSrcType, intermediateType,
+                              resultType)) {
+      reassociationIndices = collapseReassociationIndices(
+          srcReshapeOp.getReassociationMaps(), reshapeOp.getReassociationMaps(),
+          rewriter.getContext());
     }
-    // Check if producer and consumer are both collapsing dims.
-    if (areReshapeOpsFoldable(srcReshapeOp.getSrcType(), reshapeOp.getSrcType(),
-                              reshapeOp.getResultType())) {
-      rewriter.replaceOpWithNewOp<ReshapeOpTy>(
-          reshapeOp, reshapeOp.getResultType(), srcReshapeOp.src(),
-          collapseReassociationMaps(srcReshapeOp.getReassociationMaps(),
-                                    reshapeOp.getReassociationMaps(),
-                                    rewriter.getContext()));
-      return success();
+    if (!reassociationIndices) {
+      // If the source reshape can be collapsed/expanded into the target reshape
+      // they can still be folded. This can only be reasoned about statically
+      // for cases where
+      // - either all shapes are static, or
+      // - The number of dynamic dimensions matches in the source of source and
+      //   result with all other dimensions being 1.
+      reassociationIndices =
+          getReassociationIndicesForReshape(srcReshapeSrcType, resultType);
     }
-    return failure();
+    if (!reassociationIndices)
+      return failure();
+    rewriter.replaceOpWithNewOp<ReshapeOpTy>(
+        reshapeOp, resultType, srcReshapeOp.src(), *reassociationIndices);
+    return success();
   }
 };
 } // namespace
@@ -2383,9 +2471,6 @@ struct FoldTensorCastOp;
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-
-#define GET_OP_CLASSES
-#include "mlir/Dialect/Linalg/IR/LinalgSparseOps.cpp.inc"
 
 /// Return the dims that are `iteratorTypeName` loops in the LinalgOp `op`.
 /// Assumes `op` is a LinalgOp.

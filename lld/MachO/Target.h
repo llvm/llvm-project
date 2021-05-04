@@ -32,7 +32,9 @@ public:
   template <class LP> TargetInfo(LP) {
     // Having these values available in TargetInfo allows us to access them
     // without having to resort to templates.
+    magic = LP::magic;
     pageZeroSize = LP::pageZeroSize;
+    headerSize = sizeof(typename LP::mach_header);
     wordSize = LP::wordSize;
   }
 
@@ -67,10 +69,12 @@ public:
     return getRelocAttrs(type).hasAttr(bit);
   }
 
+  uint32_t magic;
   uint32_t cpuType;
   uint32_t cpuSubtype;
 
   uint64_t pageZeroSize;
+  size_t headerSize;
   size_t stubSize;
   size_t stubHelperHeaderSize;
   size_t stubHelperEntrySize;
@@ -80,6 +84,7 @@ public:
 TargetInfo *createX86_64TargetInfo();
 TargetInfo *createARM64TargetInfo();
 TargetInfo *createARM64_32TargetInfo();
+TargetInfo *createARMTargetInfo(uint32_t cpuSubtype);
 
 struct LP64 {
   using mach_header = llvm::MachO::mach_header_64;

@@ -1205,7 +1205,7 @@ namespace {
 // Builder if one is present.
 struct PushAndPopStackRAII {
   PushAndPopStackRAII(llvm::OpenMPIRBuilder *OMPBuilder, CodeGenFunction &CGF,
-                      bool HasCancel)
+                      bool HasCancel, llvm::omp::Directive Kind)
       : OMPBuilder(OMPBuilder) {
     if (!OMPBuilder)
       return;
@@ -1234,8 +1234,7 @@ struct PushAndPopStackRAII {
 
     // TODO: Remove this once we emit parallel regions through the
     //       OpenMPIRBuilder as it can do this setup internally.
-    llvm::OpenMPIRBuilder::FinalizationInfo FI(
-        {FiniCB, OMPD_parallel, HasCancel});
+    llvm::OpenMPIRBuilder::FinalizationInfo FI({FiniCB, Kind, HasCancel});
     OMPBuilder->pushFinalizationCB(std::move(FI));
   }
   ~PushAndPopStackRAII() {
@@ -1276,7 +1275,7 @@ static llvm::Function *emitParallelOrTeamsOutlinedFunction(
   // TODO: Temporarily inform the OpenMPIRBuilder, if any, about the new
   //       parallel region to make cancellation barriers work properly.
   llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
-  PushAndPopStackRAII PSR(&OMPBuilder, CGF, HasCancel);
+  PushAndPopStackRAII PSR(&OMPBuilder, CGF, HasCancel, InnermostKind);
   CGOpenMPOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen, InnermostKind,
                                     HasCancel, OutlinedHelperName);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
@@ -7764,6 +7763,8 @@ private:
       const ValueDecl *MapDecl = (I->getAssociatedDeclaration())
                                      ? I->getAssociatedDeclaration()
                                      : BaseDecl;
+      MapExpr = (I->getAssociatedExpression()) ? I->getAssociatedExpression()
+                                               : MapExpr;
 
       // Get information on whether the element is a pointer. Have to do a
       // special treatment for array sections given that they are built-in
@@ -9377,15 +9378,10 @@ static void emitOffloadingArrays(
     // fill arrays. Instead, we create an array constant.
     SmallVector<uint64_t, 4> Mapping(CombinedInfo.Types.size(), 0);
     llvm::copy(CombinedInfo.Types, Mapping.begin());
-    llvm::Constant *MapTypesArrayInit =
-        llvm::ConstantDataArray::get(CGF.Builder.getContext(), Mapping);
     std::string MaptypesName =
         CGM.getOpenMPRuntime().getName({"offload_maptypes"});
-    auto *MapTypesArrayGbl = new llvm::GlobalVariable(
-        CGM.getModule(), MapTypesArrayInit->getType(),
-        /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
-        MapTypesArrayInit, MaptypesName);
-    MapTypesArrayGbl->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+    auto *MapTypesArrayGbl =
+        OMPBuilder.createOffloadMaptypes(Mapping, MaptypesName);
     Info.MapTypesArray = MapTypesArrayGbl;
 
     // The information types are only built if there is debug information
@@ -9399,17 +9395,10 @@ static void emitOffloadingArrays(
       };
       SmallVector<llvm::Constant *, 4> InfoMap(CombinedInfo.Exprs.size());
       llvm::transform(CombinedInfo.Exprs, InfoMap.begin(), fillInfoMap);
-
-      llvm::Constant *MapNamesArrayInit = llvm::ConstantArray::get(
-          llvm::ArrayType::get(
-              llvm::Type::getInt8Ty(CGF.Builder.getContext())->getPointerTo(),
-              CombinedInfo.Exprs.size()),
-          InfoMap);
-      auto *MapNamesArrayGbl = new llvm::GlobalVariable(
-          CGM.getModule(), MapNamesArrayInit->getType(),
-          /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
-          MapNamesArrayInit,
-          CGM.getOpenMPRuntime().getName({"offload_mapnames"}));
+      std::string MapnamesName =
+          CGM.getOpenMPRuntime().getName({"offload_mapnames"});
+      auto *MapNamesArrayGbl =
+          OMPBuilder.createOffloadMapnames(InfoMap, MapnamesName);
       Info.MapNamesArray = MapNamesArrayGbl;
     }
 
@@ -9424,15 +9413,8 @@ static void emitOffloadingArrays(
         }
       }
       if (EndMapTypesDiffer) {
-        MapTypesArrayInit =
-            llvm::ConstantDataArray::get(CGF.Builder.getContext(), Mapping);
-        MaptypesName = CGM.getOpenMPRuntime().getName({"offload_maptypes"});
-        MapTypesArrayGbl = new llvm::GlobalVariable(
-            CGM.getModule(), MapTypesArrayInit->getType(),
-            /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
-            MapTypesArrayInit, MaptypesName);
-        MapTypesArrayGbl->setUnnamedAddr(
-            llvm::GlobalValue::UnnamedAddr::Global);
+        MapTypesArrayGbl =
+            OMPBuilder.createOffloadMaptypes(Mapping, MaptypesName);
         Info.MapTypesArrayEnd = MapTypesArrayGbl;
       }
     }
@@ -12106,8 +12088,8 @@ CGOpenMPRuntime::NontemporalDeclsRAII::~NontemporalDeclsRAII() {
 
 CGOpenMPRuntime::UntiedTaskLocalDeclsRAII::UntiedTaskLocalDeclsRAII(
     CodeGenFunction &CGF,
-    const llvm::DenseMap<CanonicalDeclPtr<const VarDecl>,
-                         std::pair<Address, Address>> &LocalVars)
+    const llvm::MapVector<CanonicalDeclPtr<const VarDecl>,
+                          std::pair<Address, Address>> &LocalVars)
     : CGM(CGF.CGM), NeedToPush(!LocalVars.empty()) {
   if (!NeedToPush)
     return;

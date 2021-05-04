@@ -414,6 +414,53 @@ struct Log2Approximation : public LogApproximationBase<math::Log2Op> {
 } // namespace
 
 //----------------------------------------------------------------------------//
+// Log1p approximation.
+//----------------------------------------------------------------------------//
+
+namespace {
+struct Log1pApproximation : public OpRewritePattern<math::Log1pOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(math::Log1pOp op,
+                                PatternRewriter &rewriter) const final;
+};
+} // namespace
+
+// Approximate log(1+x).
+LogicalResult
+Log1pApproximation::matchAndRewrite(math::Log1pOp op,
+                                    PatternRewriter &rewriter) const {
+  auto width = vectorWidth(op.operand().getType(), isF32);
+  if (!width.hasValue())
+    return rewriter.notifyMatchFailure(op, "unsupported operand type");
+
+  ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
+  auto bcast = [&](Value value) -> Value {
+    return broadcast(builder, value, *width);
+  };
+
+  // Approximate log(1+x) using the following, due to W. Kahan:
+  //   u = x + 1.0;
+  //   if (u == 1.0 || u == inf) return x;
+  //   return x * log(u) / (u - 1.0);
+  //          ^^^^^^^^^^^^^^^^^^^^^^
+  //             "logLarge" below.
+  Value cstOne = bcast(f32Cst(builder, 1.0f));
+  Value x = op.operand();
+  Value u = builder.create<AddFOp>(x, cstOne);
+  Value uSmall = builder.create<CmpFOp>(CmpFPredicate::OEQ, u, cstOne);
+  Value logU = builder.create<math::LogOp>(u);
+  Value uInf = builder.create<CmpFOp>(CmpFPredicate::OEQ, u, logU);
+  Value logLarge = builder.create<MulFOp>(
+      x, builder.create<DivFOp>(logU, builder.create<SubFOp>(u, cstOne)));
+  Value approximation = builder.create<SelectOp>(
+      builder.create<LLVM::OrOp>(uSmall, uInf), x, logLarge);
+  rewriter.replaceOp(op, approximation);
+  return success();
+}
+
+//----------------------------------------------------------------------------//
 // Exp approximation.
 //----------------------------------------------------------------------------//
 
@@ -534,5 +581,5 @@ ExpApproximation::matchAndRewrite(math::ExpOp op,
 void mlir::populateMathPolynomialApproximationPatterns(
     RewritePatternSet &patterns) {
   patterns.add<TanhApproximation, LogApproximation, Log2Approximation,
-               ExpApproximation>(patterns.getContext());
+               Log1pApproximation, ExpApproximation>(patterns.getContext());
 }

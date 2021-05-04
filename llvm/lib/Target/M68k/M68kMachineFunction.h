@@ -68,7 +68,6 @@ class M68kMachineFunctionInfo : public MachineFunctionInfo {
   unsigned ArgumentStackSize = 0;
 
 public:
-  M68kMachineFunctionInfo() = default;
   explicit M68kMachineFunctionInfo(MachineFunction &MF) : MF(MF) {}
 
   bool getRestoreBasePointer() const { return RestoreBasePointerOffset != 0; }

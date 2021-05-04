@@ -28,25 +28,65 @@
 #include "deltas/ReduceModuleInlineAsm.h"
 #include "deltas/ReduceOperandBundles.h"
 #include "deltas/ReduceSpecialGlobals.h"
+#include "llvm/Support/CommandLine.h"
 
-namespace llvm {
+using namespace llvm;
 
-// TODO: Add CLI option to run only specified Passes (for unit tests)
-void runDeltaPasses(TestRunner &Tester) {
-  reduceSpecialGlobalsDeltaPass(Tester);
-  reduceAliasesDeltaPass(Tester);
-  reduceFunctionBodiesDeltaPass(Tester);
-  reduceFunctionsDeltaPass(Tester);
-  reduceBasicBlocksDeltaPass(Tester);
-  reduceGlobalValuesDeltaPass(Tester);
-  reduceGlobalsInitializersDeltaPass(Tester);
-  reduceGlobalsDeltaPass(Tester);
-  reduceMetadataDeltaPass(Tester);
-  reduceArgumentsDeltaPass(Tester);
-  reduceInstructionsDeltaPass(Tester);
-  reduceOperandBundesDeltaPass(Tester);
-  reduceAttributesDeltaPass(Tester);
-  reduceModuleInlineAsmDeltaPass(Tester);
-  // TODO: Implement the remaining Delta Passes
+static cl::opt<std::string>
+    DeltaPasses("delta-passes",
+                cl::desc("Delta passes to run, separated by commas. By "
+                         "default, run all delta passes."));
+
+#define DELTA_PASSES                                                           \
+  DELTA_PASS("special-globals", reduceSpecialGlobalsDeltaPass)                 \
+  DELTA_PASS("aliases", reduceAliasesDeltaPass)                                \
+  DELTA_PASS("function-bodies", reduceFunctionBodiesDeltaPass)                 \
+  DELTA_PASS("functions", reduceFunctionsDeltaPass)                            \
+  DELTA_PASS("basic-blocks", reduceBasicBlocksDeltaPass)                       \
+  DELTA_PASS("global-values", reduceGlobalValuesDeltaPass)                     \
+  DELTA_PASS("global-initializers", reduceGlobalsInitializersDeltaPass)        \
+  DELTA_PASS("global-variables", reduceGlobalsDeltaPass)                       \
+  DELTA_PASS("metadata", reduceMetadataDeltaPass)                              \
+  DELTA_PASS("arguments", reduceArgumentsDeltaPass)                            \
+  DELTA_PASS("instructions", reduceInstructionsDeltaPass)                      \
+  DELTA_PASS("operand-bundles", reduceOperandBundesDeltaPass)                  \
+  DELTA_PASS("attributes", reduceAttributesDeltaPass)                          \
+  DELTA_PASS("module-inline-asm", reduceModuleInlineAsmDeltaPass)
+
+static void runAllDeltaPasses(TestRunner &Tester) {
+#define DELTA_PASS(NAME, FUNC) FUNC(Tester);
+  DELTA_PASSES
+#undef DELTA_PASS
 }
-} // namespace llvm
+
+static void runDeltaPassName(TestRunner &Tester, StringRef PassName) {
+#define DELTA_PASS(NAME, FUNC)                                                 \
+  if (PassName == NAME) {                                                      \
+    FUNC(Tester);                                                              \
+    return;                                                                    \
+  }
+  DELTA_PASSES
+#undef DELTA_PASS
+  errs() << "unknown pass \"" << PassName << "\"";
+  exit(1);
+}
+
+void llvm::printDeltaPasses(raw_ostream &OS) {
+  OS << "Delta passes (pass to `--delta-passes=` as a comma separated list):\n";
+#define DELTA_PASS(NAME, FUNC) OS << "  " << NAME << "\n";
+  DELTA_PASSES
+#undef DELTA_PASS
+}
+
+void llvm::runDeltaPasses(TestRunner &Tester) {
+  if (DeltaPasses.empty()) {
+    runAllDeltaPasses(Tester);
+  } else {
+    StringRef Passes = DeltaPasses;
+    while (!Passes.empty()) {
+      auto Split = Passes.split(",");
+      runDeltaPassName(Tester, Split.first);
+      Passes = Split.second;
+    }
+  }
+}

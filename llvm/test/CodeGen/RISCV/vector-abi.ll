@@ -1,15 +1,12 @@
 ; RUN: llc -mtriple=riscv32 -stop-after finalize-isel < %s | FileCheck %s -check-prefix=RV32
 ; RUN: llc -mtriple=riscv64 -stop-after finalize-isel < %s | FileCheck %s -check-prefix=RV64
 
-; FIXME: The stack location used to pass the parameter to the function has the
-; incorrect size and alignment for how we use it, and we clobber the stack.
-
 declare void @callee(<4 x i8> %v)
 
 define void @caller() {
   ; RV32-LABEL: name: caller
   ; RV32: stack:
-  ; RV32:     - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
+  ; RV32:     - { id: 0, name: '', type: default, offset: 0, size: 16, alignment: 4,
   ; RV32-NEXT:    stack-id: default, callee-saved-register: '', callee-saved-restored: true,
   ; RV32-NEXT:    debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   ; RV32: bb.0 (%ir-block.0):
@@ -29,7 +26,7 @@ define void @caller() {
   ; RV32:   PseudoRET
   ; RV64-LABEL: name: caller
   ; RV64: stack:
-  ; RV64:     - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
+  ; RV64:     - { id: 0, name: '', type: default, offset: 0, size: 32, alignment: 8,
   ; RV64-NEXT:    stack-id: default, callee-saved-register: '', callee-saved-restored: true,
   ; RV64-NEXT:    debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   ; RV64: bb.0 (%ir-block.0):

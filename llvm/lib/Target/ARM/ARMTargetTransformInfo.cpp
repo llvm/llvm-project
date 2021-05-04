@@ -559,7 +559,7 @@ InstructionCost ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         {ISD::FP_EXTEND, MVT::v2f32, 2},
         {ISD::FP_EXTEND, MVT::v4f32, 4}};
 
-    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
+    std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
     if (const auto *Entry = CostTableLookup(NEONFltDblTbl, ISD, LT.second))
       return AdjustCost(LT.first * Entry->Cost);
   }
@@ -825,7 +825,7 @@ InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     // Integer cross-lane moves are more expensive than float, which can
     // sometimes just be vmovs. Integer involve being passes to GPR registers,
     // causing more of a delay.
-    std::pair<unsigned, MVT> LT =
+    std::pair<InstructionCost, MVT> LT =
         getTLI()->getTypeLegalizationCost(DL, ValTy->getScalarType());
     return LT.first * (ValTy->getScalarType()->isIntegerTy() ? 4 : 1);
   }
@@ -851,7 +851,7 @@ InstructionCost ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     // - may require one or more conditional mov (including an IT),
     // - can't operate directly on immediates,
     // - require live flags, which we can't copy around easily.
-    int Cost = TLI->getTypeLegalizationCost(DL, ValTy).first;
+    InstructionCost Cost = TLI->getTypeLegalizationCost(DL, ValTy).first;
 
     // Possible IT instruction for Thumb2, or more for Thumb1.
     ++Cost;
@@ -928,7 +928,8 @@ InstructionCost ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
         return Entry->Cost;
     }
 
-    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
+    std::pair<InstructionCost, MVT> LT =
+        TLI->getTypeLegalizationCost(DL, ValTy);
     return LT.first;
   }
 
@@ -952,7 +953,8 @@ InstructionCost ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                                     I);
     }
 
-    std::pair<unsigned, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
+    std::pair<InstructionCost, MVT> LT =
+        TLI->getTypeLegalizationCost(DL, ValTy);
     int BaseCost = ST->getMVEVectorCostFactor(CostKind);
     // There are two types - the input that specifies the type of the compare
     // and the output vXi1 type. Because we don't know how the output will be
@@ -1139,6 +1141,7 @@ InstructionCost ARMTTIImpl::getMemcpyCost(const Instruction *I) {
 InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *Tp, ArrayRef<int> Mask,
                                            int Index, VectorType *SubTp) {
+  Kind = improveShuffleKindFromMask(Kind, Mask);
   if (ST->hasNEON()) {
     if (Kind == TTI::SK_Broadcast) {
       static const CostTblEntry NEONDupTbl[] = {
@@ -1155,8 +1158,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
           {ISD::VECTOR_SHUFFLE, MVT::v8i16, 1},
           {ISD::VECTOR_SHUFFLE, MVT::v16i8, 1}};
 
-      std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
-
+      std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
       if (const auto *Entry =
               CostTableLookup(NEONDupTbl, ISD::VECTOR_SHUFFLE, LT.second))
         return LT.first * Entry->Cost;
@@ -1177,8 +1179,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
           {ISD::VECTOR_SHUFFLE, MVT::v8i16, 2},
           {ISD::VECTOR_SHUFFLE, MVT::v16i8, 2}};
 
-      std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
-
+      std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
       if (const auto *Entry =
               CostTableLookup(NEONShuffleTbl, ISD::VECTOR_SHUFFLE, LT.second))
         return LT.first * Entry->Cost;
@@ -1202,7 +1203,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
           {ISD::VECTOR_SHUFFLE, MVT::v16i8, 32}};
 
-      std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+      std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
       if (const auto *Entry = CostTableLookup(NEONSelShuffleTbl,
                                               ISD::VECTOR_SHUFFLE, LT.second))
         return LT.first * Entry->Cost;
@@ -1218,8 +1219,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
           {ISD::VECTOR_SHUFFLE, MVT::v4f32, 1},
           {ISD::VECTOR_SHUFFLE, MVT::v8f16, 1}};
 
-      std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
-
+      std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
       if (const auto *Entry = CostTableLookup(MVEDupTbl, ISD::VECTOR_SHUFFLE,
                                               LT.second))
         return LT.first * Entry->Cost *
@@ -1227,7 +1227,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
 
     if (!Mask.empty()) {
-      std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+      std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
       if (Mask.size() <= LT.second.getVectorNumElements() &&
           (isVREVMask(Mask, LT.second, 16) || isVREVMask(Mask, LT.second, 32) ||
            isVREVMask(Mask, LT.second, 64)))
@@ -1263,7 +1263,7 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
     }
   }
 
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
   if (ST->hasNEON()) {
     const unsigned FunctionCallDivCost = 20;
@@ -1402,7 +1402,7 @@ InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       cast<VectorType>(Src)->getElementType()->isDoubleTy()) {
     // Unaligned loads/stores are extremely inefficient.
     // We need 4 uops for vst.1/vld.1 vs 1uop for vldr/vstr.
-    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
+    std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
     return LT.first * 4;
   }
 
@@ -1503,14 +1503,14 @@ InstructionCost ARMTTIImpl::getGatherScatterOpCost(
 
   unsigned NumElems = VTy->getNumElements();
   unsigned EltSize = VTy->getScalarSizeInBits();
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, DataTy);
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, DataTy);
 
   // For now, it is assumed that for the MVE gather instructions the loads are
   // all effectively serialised. This means the cost is the scalar cost
   // multiplied by the number of elements being loaded. This is possibly very
   // conservative, but even so we still end up vectorising loops because the
   // cost per iteration for many loops is lower than for scalar loops.
-  unsigned VectorCost =
+  InstructionCost VectorCost =
       NumElems * LT.first * ST->getMVEVectorCostFactor(CostKind);
   // The scalarization cost should be a lot higher. We use the number of vector
   // elements plus the scalarization overhead.
@@ -1597,7 +1597,7 @@ ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwiseForm,
                                              CostKind);
 
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
 
   static const CostTblEntry CostTblAdd[]{
       {ISD::ADD, MVT::v16i8, 1},
@@ -1618,7 +1618,8 @@ ARMTTIImpl::getExtendedAddReductionCost(bool IsMLA, bool IsUnsigned,
   EVT ValVT = TLI->getValueType(DL, ValTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
   if (ST->hasMVEIntegerOps() && ValVT.isSimple() && ResVT.isSimple()) {
-    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
+    std::pair<InstructionCost, MVT> LT =
+        TLI->getTypeLegalizationCost(DL, ValTy);
     if ((LT.second == MVT::v16i8 && ResVT.getSizeInBits() <= 32) ||
         (LT.second == MVT::v8i16 &&
          ResVT.getSizeInBits() <= (IsMLA ? 64 : 32)) ||
@@ -1653,8 +1654,7 @@ ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       break;
     Type *VT = ICA.getReturnType();
 
-    std::pair<int, MVT> LT =
-        TLI->getTypeLegalizationCost(DL, VT);
+    std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, VT);
     if (LT.second == MVT::v4i32 || LT.second == MVT::v8i16 ||
         LT.second == MVT::v16i8) {
       // This is a base cost of 1 for the vqadd, plus 3 extract shifts if we
@@ -1674,7 +1674,7 @@ ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       break;
     Type *VT = ICA.getReturnType();
 
-    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, VT);
+    std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, VT);
     if (LT.second == MVT::v4i32 || LT.second == MVT::v8i16 ||
         LT.second == MVT::v16i8)
       return LT.first * ST->getMVEVectorCostFactor(CostKind);
@@ -1685,7 +1685,7 @@ ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (!ST->hasMVEFloatOps())
       break;
     Type *VT = ICA.getReturnType();
-    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, VT);
+    std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, VT);
     if (LT.second == MVT::v4f32 || LT.second == MVT::v8f16)
       return LT.first * ST->getMVEVectorCostFactor(CostKind);
     break;

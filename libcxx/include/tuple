@@ -466,7 +466,7 @@ public:
             _IsImpDefault<_Tp>... // explicit check
         >::value
     , int> = 0>
-    _LIBCPP_INLINE_VISIBILITY constexpr
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     tuple()
         _NOEXCEPT_(_And<is_nothrow_default_constructible<_Tp>...>::value)
     { }
@@ -896,7 +896,7 @@ public:
             _EnableImplicitMoveFromPair<_Up1, _Up2, _Tp...>
         >::value
     , int> = 0>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     tuple(pair<_Up1, _Up2>&& __p)
         _NOEXCEPT_((_And<
             is_nothrow_constructible<_FirstType<_Tp...>, _Up1>,
@@ -911,7 +911,7 @@ public:
             _EnableExplicitMoveFromPair<_Up1, _Up2, _Tp...>
         >::value
     , int> = 0>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     explicit tuple(pair<_Up1, _Up2>&& __p)
         _NOEXCEPT_((_And<
             is_nothrow_constructible<_FirstType<_Tp...>, _Up1>,

@@ -1,6 +1,6 @@
 Section,Description,Dependencies,Assignee,Patch,Status,First released version
-[charconv.to.chars],"Fix integral conformance",,Mark de Wever,`D97705 <https://llvm.org/D97705>`__,In progress,
-[charconv.to.chars],"Add floating-point conversion",`D97705 <https://llvm.org/D97705>`__,"Mark de Wever (Code provided by Stephan T. Lavavej of Microsoft)",`D70631 <https://llvm.org/D70631>`__,In progress,
+[charconv.to.chars],"Fix integral conformance",,Mark de Wever,`D100722 <https://llvm.org/D100722>`__,|Complete|,Clang 13
+[charconv.to.chars],"Add floating-point conversion",`D100722 <https://llvm.org/D100722>`__,"Mark de Wever (Code provided by Stephan T. Lavavej of Microsoft)",`D70631 <https://llvm.org/D70631>`__,In progress,
 [format.error],"Class format_error",,Mark de Wever,`D92214 <https://llvm.org/D92214>`__,|Complete|,Clang 13
 [format.parse.ctx],"Class template basic_format_parse_context",,Mark de Wever,`D93166 <https://llvm.org/D93166>`__,|Complete|,Clang 13
 [format.context],"Class template basic_format_context",,Mark de Wever,`D93593 <https://llvm.org/D93593>`__,Review,
@@ -16,9 +16,9 @@ Section,Description,Dependencies,Assignee,Patch,Status,First released version
 [format.formatter.spec],"Formatter specializations - floating-point types",`D70631 <https://llvm.org/D70631>`__,Mark de Wever,`D96664 <https://llvm.org/D96664>`__,Review,
 [format.formatter.spec],"Formatter specializations - pointer types",,,,,,
 [format.string.std],"Standard format specifiers - character types",,Mark de Wever,,,,
-[format.string.std],"Standard format specifiers - string types",,Mark de Wever,,,,
+[format.string.std],"Standard format specifiers - string types",,Mark de Wever,,In progress,,
 [format.string.std],"Standard format specifiers - boolean type",,Mark de Wever,,,,
-[format.string.std],"Standard format specifiers - integral types",,Mark de Wever,,,,
+[format.string.std],"Standard format specifiers - integral types",,Mark de Wever,,In progress,,
 [format.string.std],"Standard format specifiers - floating-point types",,Mark de Wever,,,,
 [format.string.std],"Standard format specifiers - pointer types",,Mark de Wever,,,,
 [format.functions],"Format functions - format(string_view fmt, const Args&... args);",,Mark de Wever,`D96664 <https://llvm.org/D96664>`__,Review,

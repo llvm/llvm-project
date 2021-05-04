@@ -299,7 +299,7 @@ std::vector<LocatedSymbol> findImplementors(llvm::DenseSet<SymbolID> IDs,
                                             RelationKind Predicate,
                                             const SymbolIndex *Index,
                                             llvm::StringRef MainFilePath) {
-  if (IDs.empty())
+  if (IDs.empty() || !Index)
     return {};
   static constexpr trace::Metric FindImplementorsMetric(
       "find_implementors", trace::Metric::Counter, "case");

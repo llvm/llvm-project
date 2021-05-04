@@ -15,6 +15,7 @@
 #ifndef MLIR_ANALYSIS_AFFINE_ANALYSIS_H
 #define MLIR_ANALYSIS_AFFINE_ANALYSIS_H
 
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
@@ -26,6 +27,25 @@ class AffineForOp;
 class AffineValueMap;
 class FlatAffineConstraints;
 class Operation;
+
+/// A description of a (parallelizable) reduction in an affine loop.
+struct LoopReduction {
+  /// Reduction kind.
+  AtomicRMWKind kind;
+
+  /// Position of the iteration argument that acts as accumulator.
+  unsigned iterArgPosition;
+
+  /// The value being reduced.
+  Value value;
+};
+
+/// Returns true if `forOp' is a parallel loop. If `parallelReductions` is
+/// provided, populates it with descriptors of the parallelizable reductions and
+/// treats them as not preventing parallelization.
+bool isLoopParallel(
+    AffineForOp forOp,
+    SmallVectorImpl<LoopReduction> *parallelReductions = nullptr);
 
 /// Returns in `affineApplyOps`, the sequence of those AffineApplyOp
 /// Operations that are reachable via a search starting from `operands` and

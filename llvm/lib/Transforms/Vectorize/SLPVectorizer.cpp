@@ -3589,13 +3589,27 @@ InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
     for (const auto &Data : ExtractVectorsTys) {
       auto *EEVTy = cast<FixedVectorType>(Data.first->getType());
       unsigned NumElts = VecTy->getNumElements();
-      if (TTIRef.getNumberOfParts(EEVTy) > TTIRef.getNumberOfParts(VecTy))
-        Cost += TTIRef.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
-                                      EEVTy, None,
-                                      (Data.second / NumElts) * NumElts, VecTy);
-      else
+      if (TTIRef.getNumberOfParts(EEVTy) > TTIRef.getNumberOfParts(VecTy)) {
+        unsigned Idx = (Data.second / NumElts) * NumElts;
+        unsigned EENumElts = EEVTy->getNumElements();
+        if (Idx + NumElts <= EENumElts) {
+          Cost +=
+              TTIRef.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                                    EEVTy, None, Idx, VecTy);
+        } else {
+          // Need to round up the subvector type vectorization factor to avoid a
+          // crash in cost model functions. Make SubVT so that Idx + VF of SubVT
+          // <= EENumElts.
+          auto *SubVT =
+              FixedVectorType::get(VecTy->getElementType(), EENumElts - Idx);
+          Cost +=
+              TTIRef.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                                    EEVTy, None, Idx, SubVT);
+        }
+      } else {
         Cost += TTIRef.getShuffleCost(TargetTransformInfo::SK_InsertSubvector,
                                       VecTy, None, 0, EEVTy);
+      }
     }
   };
   if (E->State == TreeEntry::NeedToGather) {
@@ -3907,9 +3921,31 @@ InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
                                          CostKind, VL0);
       } else {
         assert(E->State == TreeEntry::ScatterVectorize && "Unknown EntryState");
-        VecLdCost = TTI->getGatherScatterOpCost(
-            Instruction::Load, VecTy, cast<LoadInst>(VL0)->getPointerOperand(),
-            /*VariableMask=*/false, alignment, CostKind, VL0);
+        if (TTI->isLegalMaskedGather(VecTy, alignment)) {
+          VecLdCost = TTI->getGatherScatterOpCost(
+              Instruction::Load, VecTy,
+              cast<LoadInst>(VL0)->getPointerOperand(),
+              /*VariableMask=*/false, alignment, CostKind, VL0);
+        } else {
+          // Lower just to a gather if masked gather is not legal. Also,
+          // compensate the cost of next entry for pointers.
+          VecLdCost =
+              getGatherCost(VL);
+          // Tru to compensate the cost of the next entry for pointers iff all
+          // users are ScatterVectorize nodes.
+          const auto *It = find_if(
+              VectorizableTree, [E](const std::unique_ptr<TreeEntry> &TE) {
+                return !TE->UserTreeIndices.empty() &&
+                       all_of(TE->UserTreeIndices,
+                              [](const EdgeInfo &EI) {
+                                return EI.UserTE->State ==
+                                       TreeEntry::ScatterVectorize;
+                              }) &&
+                       TE->UserTreeIndices.front().UserTE == E;
+              });
+          if (It != VectorizableTree.end())
+            VecLdCost -= getEntryCost(It->get());
+        }
       }
       if (!NeedToShuffleReuses && !E->ReorderIndices.empty()) {
         SmallVector<int> NewMask;
@@ -4357,17 +4393,13 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, SmallVectorImpl<int> &Mask,
     if (Mask[I] >= 2 * E)
       return None;
   }
-  if (Entries.size() == 1) {
-    if (ShuffleVectorInst::isReverseMask(Mask))
-      return TargetTransformInfo::SK_Reverse;
+  switch (Entries.size()) {
+  case 1:
     return TargetTransformInfo::SK_PermuteSingleSrc;
-  }
-  if (Entries.size() == 2) {
-    if (ShuffleVectorInst::isSelectMask(Mask))
-      return TargetTransformInfo::SK_Select;
-    if (ShuffleVectorInst::isTransposeMask(Mask))
-      return TargetTransformInfo::SK_Transpose;
+  case 2:
     return TargetTransformInfo::SK_PermuteTwoSrc;
+  default:
+    break;
   }
   return None;
 }

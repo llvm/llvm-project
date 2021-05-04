@@ -7,7 +7,6 @@
 # CHECK-NEXT:    "capabilities": {
 # CHECK-NEXT:      "astProvider": true,
 # CHECK-NEXT:      "callHierarchyProvider": true,
-# CHECK-NEXT:      "clangdInlayHintsProvider": true,
 # CHECK-NEXT:      "codeActionProvider": true,
 # CHECK-NEXT:      "compilationDatabase": {
 # CHECK-NEXT:        "automaticReload": true
