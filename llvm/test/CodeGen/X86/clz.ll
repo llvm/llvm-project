@@ -56,12 +56,14 @@ define i16 @cttz_i16(i16 %x)  {
 ;
 ; X86-CLZ-LABEL: cttz_i16:
 ; X86-CLZ:       # %bb.0:
-; X86-CLZ-NEXT:    tzcntw {{[0-9]+}}(%esp), %ax
+; X86-CLZ-NEXT:    tzcntl {{[0-9]+}}(%esp), %eax
+; X86-CLZ-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-CLZ-NEXT:    retl
 ;
 ; X64-CLZ-LABEL: cttz_i16:
 ; X64-CLZ:       # %bb.0:
-; X64-CLZ-NEXT:    tzcntw %di, %ax
+; X64-CLZ-NEXT:    tzcntl %edi, %eax
+; X64-CLZ-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-CLZ-NEXT:    retq
   %tmp = call i16 @llvm.cttz.i16( i16 %x, i1 true )
   ret i16 %tmp
