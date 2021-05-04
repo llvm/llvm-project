@@ -590,22 +590,6 @@ struct TiledLoopToSCFPattern : public OpRewritePattern<TiledLoopOp> {
   }
 };
 
-struct FoldAffineOp;
-} // namespace
-
-template <typename LoopType>
-static void lowerLinalgToLoopsImpl(FuncOp funcOp) {
-  MLIRContext *context = funcOp.getContext();
-  RewritePatternSet patterns(context);
-  patterns.add<LinalgRewritePattern<LoopType>>(context);
-  memref::DimOp::getCanonicalizationPatterns(patterns, context);
-  AffineApplyOp::getCanonicalizationPatterns(patterns, context);
-  patterns.add<FoldAffineOp>(context);
-  // Just apply the patterns greedily.
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
-}
-
-namespace {
 /// Local folding pattern for AffineApplyOp that we can apply greedily.
 /// This replaces AffineApplyOp by the proper value in cases where the
 /// associated map is trivial.
@@ -642,6 +626,18 @@ struct FoldAffineOp : public RewritePattern {
     return failure();
   }
 };
+
+template <typename LoopType>
+static void lowerLinalgToLoopsImpl(FuncOp funcOp) {
+  MLIRContext *context = funcOp.getContext();
+  RewritePatternSet patterns(context);
+  patterns.add<LinalgRewritePattern<LoopType>>(context);
+  memref::DimOp::getCanonicalizationPatterns(patterns, context);
+  AffineApplyOp::getCanonicalizationPatterns(patterns, context);
+  patterns.add<FoldAffineOp>(context);
+  // Just apply the patterns greedily.
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+}
 
 struct LowerToAffineLoops
     : public LinalgLowerToAffineLoopsBase<LowerToAffineLoops> {
