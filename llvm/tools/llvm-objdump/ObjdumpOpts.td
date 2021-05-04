@@ -218,9 +218,6 @@ def mv67 : Flag<["--"], "mv67">, HelpText<"Build for Hexagon V67">;
 
 def mv67t : Flag<["--"], "mv67t">, HelpText<"Build for Hexagon V67T">;
 
-def riscv_no_aliases : Flag<["--"], "riscv-no-aliases">,
-  HelpText<"Disable the emission of assembler pseudo instructions">;
-
 
 def grp_mach_o : OptionGroup<"kind">, HelpText<"llvm-objdump MachO Specific Options">;
 
