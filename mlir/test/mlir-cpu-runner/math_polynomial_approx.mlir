@@ -110,6 +110,45 @@ func @log2() {
   return
 }
 
+func @log1p() {
+  // CHECK: 0.00995033
+  %0 = constant 0.01 : f32
+  %1 = math.log1p %0 : f32
+  vector.print %1 : f32
+
+  // CHECK: -4.60517, -0.693147, 0, 1.38629
+  %2 = constant dense<[-0.99, -0.5, 0.0, 3.0]> : vector<4xf32>
+  %3 = math.log1p %2 : vector<4xf32>
+  vector.print %3 : vector<4xf32>
+
+  // CHECK: 0.0953102, 0.182322, 0.262364, 0.336472, 0.405465, 0.470004, 0.530628, 0.587787
+  %4 = constant dense<[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]> : vector<8xf32>
+  %5 = math.log1p %4 : vector<8xf32>
+  vector.print %5 : vector<8xf32>
+
+  // CHECK: -inf
+  %neg_one = constant -1.0 : f32
+  %log_neg_one = math.log1p %neg_one : f32
+  vector.print %log_neg_one : f32
+
+  // CHECK: nan
+  %neg_two = constant -2.0 : f32
+  %log_neg_two = math.log1p %neg_two : f32
+  vector.print %log_neg_two : f32
+
+  // CHECK: inf
+  %inf = constant 0x7f800000 : f32
+  %log_inf = math.log1p %inf : f32
+  vector.print %log_inf : f32
+
+  // CHECK: -inf, nan, inf, 9.99995e-06
+  %special_vec = constant dense<[-1.0, -1.1, 0x7f800000, 0.00001]> : vector<4xf32>
+  %log_special_vec = math.log1p %special_vec : vector<4xf32>
+  vector.print %log_special_vec : vector<4xf32>
+
+  return
+}
+
 // -------------------------------------------------------------------------- //
 // Exp.
 // -------------------------------------------------------------------------- //
@@ -151,6 +190,7 @@ func @main() {
   call @tanh(): () -> ()
   call @log(): () -> ()
   call @log2(): () -> ()
+  call @log1p(): () -> ()
   call @exp(): () -> ()
   return
 }
