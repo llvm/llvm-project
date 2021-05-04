@@ -84,7 +84,7 @@ E<void> e = 1;
 
 }
 
-namespace trailling_object {
+namespace trailing_object {
 
 template<bool b>
 struct B {
