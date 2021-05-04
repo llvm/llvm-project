@@ -901,3 +901,27 @@ func @compose_affine_for_bounds(%N: index) {
   }
   return
 }
+
+// -----
+
+// Compose maps into affine.vector_load / affine.vector_store
+
+// CHECK-LABEL: func @compose_into_affine_vector_load_vector_store
+// CHECK: affine.for %[[IV:.*]] = 0 to 1024
+// CHECK-NEXT: affine.vector_load %{{.*}}[%[[IV]] + 1]
+// CHECK-NEXT: affine.vector_store %{{.*}}, %{{.*}}[%[[IV]] + 1]
+// CHECK-NEXT: affine.vector_load %{{.*}}[%[[IV]]]
+func @compose_into_affine_vector_load_vector_store(%A : memref<1024xf32>, %u : index) {
+  affine.for %i = 0 to 1024 {
+    // Make sure the unused operand (%u below) gets dropped as well.
+    %idx = affine.apply affine_map<(d0, d1) -> (d0 + 1)> (%i, %u)
+    %0 = affine.vector_load %A[%idx] : memref<1024xf32>, vector<8xf32>
+    affine.vector_store %0, %A[%idx] : memref<1024xf32>, vector<8xf32>
+
+    // Map remains the same, but operand changes on composition.
+    %copy = affine.apply affine_map<(d0) -> (d0)> (%i)
+    %1 = affine.vector_load %A[%copy] : memref<1024xf32>, vector<8xf32>
+    "prevent.dce"(%1) : (vector<8xf32>) -> ()
+  }
+  return
+}
