@@ -108,11 +108,11 @@
 
 // RUN: %clang_cc1 -triple wasm32-unknown-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=WEBASSEMBLY32
-// WEBASSEMBLY32: target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
+// WEBASSEMBLY32: target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128-ni:1"
 
 // RUN: %clang_cc1 -triple wasm64-unknown-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=WEBASSEMBLY64
-// WEBASSEMBLY64: target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"
+// WEBASSEMBLY64: target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128-ni:1"
 
 // RUN: %clang_cc1 -triple lanai-unknown-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=LANAI
