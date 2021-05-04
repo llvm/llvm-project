@@ -576,11 +576,11 @@ Compiler Invocation
 -------------------
 
 One of the classes provided by the Frontend library is ``CompilerInvocation``,
-which holds information that describe current invocation of the Clang frontend.
-The information typically comes from the command line constructed by the Clang
-driver or from clients performing custom initialization. The data structure is
-split into logical units used by different parts of the compiler, for example
-``PreprocessorOptions``, ``LanguageOptions`` or ``CodeGenOptions``.
+which holds information that describe current invocation of the Clang ``-cc1``
+frontend. The information typically comes from the command line constructed by
+the Clang driver or from clients performing custom initialization. The data
+structure is split into logical units used by different parts of the compiler,
+for example ``PreprocessorOptions``, ``LanguageOptions`` or ``CodeGenOptions``.
 
 Command Line Interface
 ----------------------
@@ -758,12 +758,16 @@ desired.
 Option Marshalling Infrastructure
 ---------------------------------
 
-The option marshalling infrastructure automates the parsing of command line
-arguments into ``CompilerInvocation`` and their generation from
-``CompilerInvocation``. The system replaces lots of repetitive C++ code with
-simple, declarative tablegen annotations and it's being used for the majority of
-the ``-cc1`` command line interface. This section provides an overview of the
-system.
+The option marshalling infrastructure automates the parsing of the Clang
+``-cc1`` frontend command line arguments into ``CompilerInvocation`` and their
+generation from ``CompilerInvocation``. The system replaces lots of repetitive
+C++ code with simple, declarative tablegen annotations and it's being used for
+the majority of the ``-cc1`` command line interface. This section provides an
+overview of the system.
+
+**Note:** The marshalling infrastructure is not intended for driver-only
+options. Only options of the ``-cc1`` frontend need to be marshalled to/from
+``CompilerInvocation`` instance.
 
 To read and modify contents of ``CompilerInvocation``, the marshalling system
 uses key paths, which are declared in two steps. First, a tablegen definition
@@ -855,6 +859,10 @@ How does the tablegen backend know what to put in place of ``[...]`` in the
 generated ``Options.inc``? This is specified by the ``Marshalling`` utilities
 described below. All of them take a key path argument and possibly other
 information required for parsing or generating the command line argument.
+
+**Note:** The marshalling infrastructure is not intended for driver-only
+options. Only options of the ``-cc1`` frontend need to be marshalled to/from
+``CompilerInvocation`` instance.
 
 **Positive Flag**
 
