@@ -11,20 +11,25 @@
 // UNSUPPORTED: gcc-10
 // XFAIL: msvc && clang
 
-// unordered_multiset
+// template<class T>
+// concept input_iterator;
 
-#include <unordered_set>
+#include <iterator>
 
 #include <concepts>
-#include <ranges>
 
-using range = std::unordered_multiset<int>;
-namespace stdr = std::ranges;
+// clang-format off
+template<std::input_or_output_iterator I>
+requires std::indirectly_readable<I> &&
+         std::derived_from<std::_ITER_CONCEPT<I>, std::input_iterator_tag>
+[[nodiscard]] constexpr bool check_subsumption() {
+  return false;
+}
 
-static_assert(std::same_as<stdr::iterator_t<range>, range::iterator>);
-static_assert(stdr::common_range<range>);
-static_assert(stdr::input_range<range>);
+template<std::input_iterator>
+[[nodiscard]] constexpr bool check_subsumption() {
+  return true;
+}
+// clang-format on
 
-static_assert(std::same_as<stdr::iterator_t<range const>, range::const_iterator>);
-static_assert(stdr::common_range<range const>);
-static_assert(stdr::input_range<range const>);
+static_assert(check_subsumption<int*>());

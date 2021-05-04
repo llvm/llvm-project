@@ -18,7 +18,7 @@
 #endif
 
 struct sentinel {
-  bool operator==(std::input_or_output_iterator auto) const;
+  bool operator==(std::input_or_output_iterator auto const&) const;
 };
 
 // clang-format off

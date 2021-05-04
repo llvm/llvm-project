@@ -48,6 +48,9 @@ namespace std::ranges {
     using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<R>>;
 
   // [range.refinements], other range refinements
+  template<class T>
+    concept input_range = see below;
+
   template <class _Tp>
     concept common_range = see below;
 }
