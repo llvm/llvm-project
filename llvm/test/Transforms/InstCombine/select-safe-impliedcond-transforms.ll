@@ -4,9 +4,7 @@
 define i1 @a_true_implies_b_true(i8 %z, i1 %X, i1 %Y) {
 ; CHECK-LABEL: @a_true_implies_b_true(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 [[Z:%.*]], 20
-; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 [[Z]], 10
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B]], i1 [[X:%.*]], i1 [[Y:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 [[SEL]], i1 false
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 [[X:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = icmp ugt i8 %z, 20
@@ -39,9 +37,7 @@ define <2 x i1> @a_true_implies_b_true_vec(i8 %z0, <2 x i1> %X, <2 x i1> %Y) {
 define i1 @a_true_implies_b_true2(i8 %z, i1 %X, i1 %Y) {
 ; CHECK-LABEL: @a_true_implies_b_true2(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 [[Z:%.*]], 20
-; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 [[Z]], 10
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B]], i1 [[X:%.*]], i1 [[Y:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[A]], [[SEL]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 [[X:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = icmp ugt i8 %z, 20
@@ -54,9 +50,7 @@ define i1 @a_true_implies_b_true2(i8 %z, i1 %X, i1 %Y) {
 define i1 @a_true_implies_b_true2_comm(i8 %z, i1 %X, i1 %Y) {
 ; CHECK-LABEL: @a_true_implies_b_true2_comm(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 [[Z:%.*]], 20
-; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 [[Z]], 10
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B]], i1 [[X:%.*]], i1 [[Y:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[SEL]], [[A]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 [[X:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = icmp ugt i8 %z, 20
@@ -69,9 +63,7 @@ define i1 @a_true_implies_b_true2_comm(i8 %z, i1 %X, i1 %Y) {
 define i1 @a_true_implies_b_false(i8 %z, i1 %X, i1 %Y) {
 ; CHECK-LABEL: @a_true_implies_b_false(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 [[Z:%.*]], 20
-; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 [[Z]], 10
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B]], i1 [[X:%.*]], i1 [[Y:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 [[SEL]], i1 false
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 [[Y:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = icmp ugt i8 %z, 20
@@ -84,9 +76,7 @@ define i1 @a_true_implies_b_false(i8 %z, i1 %X, i1 %Y) {
 define i1 @a_true_implies_b_false2(i8 %z, i1 %X, i1 %Y) {
 ; CHECK-LABEL: @a_true_implies_b_false2(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 [[Z:%.*]], 20
-; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 [[Z]], 10
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B]], i1 [[X:%.*]], i1 [[Y:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[A]], [[SEL]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 [[Y:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = icmp ugt i8 %z, 20
@@ -99,9 +89,7 @@ define i1 @a_true_implies_b_false2(i8 %z, i1 %X, i1 %Y) {
 define i1 @a_true_implies_b_false2_comm(i8 %z, i1 %X, i1 %Y) {
 ; CHECK-LABEL: @a_true_implies_b_false2_comm(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 [[Z:%.*]], 20
-; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 [[Z]], 10
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B]], i1 [[X:%.*]], i1 [[Y:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[SEL]], [[A]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 [[Y:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = icmp ugt i8 %z, 20
@@ -114,9 +102,7 @@ define i1 @a_true_implies_b_false2_comm(i8 %z, i1 %X, i1 %Y) {
 define i1 @a_false_implies_b_true(i8 %z, i1 %X, i1 %Y) {
 ; CHECK-LABEL: @a_false_implies_b_true(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 [[Z:%.*]], 10
-; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 [[Z]], 20
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B]], i1 [[X:%.*]], i1 [[Y:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 true, i1 [[SEL]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 true, i1 [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = icmp ugt i8 %z, 10
@@ -129,9 +115,7 @@ define i1 @a_false_implies_b_true(i8 %z, i1 %X, i1 %Y) {
 define i1 @a_false_implies_b_true2(i8 %z, i1 %X, i1 %Y) {
 ; CHECK-LABEL: @a_false_implies_b_true2(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 [[Z:%.*]], 10
-; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 [[Z]], 20
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B]], i1 [[X:%.*]], i1 [[Y:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[A]], [[SEL]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 true, i1 [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = icmp ugt i8 %z, 10
@@ -144,9 +128,7 @@ define i1 @a_false_implies_b_true2(i8 %z, i1 %X, i1 %Y) {
 define i1 @a_false_implies_b_true2_comm(i8 %z, i1 %X, i1 %Y) {
 ; CHECK-LABEL: @a_false_implies_b_true2_comm(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 [[Z:%.*]], 10
-; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 [[Z]], 20
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B]], i1 [[X:%.*]], i1 [[Y:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[SEL]], [[A]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 true, i1 [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = icmp ugt i8 %z, 10
@@ -159,9 +141,7 @@ define i1 @a_false_implies_b_true2_comm(i8 %z, i1 %X, i1 %Y) {
 define i1 @a_false_implies_b_false(i8 %z, i1 %X, i1 %Y) {
 ; CHECK-LABEL: @a_false_implies_b_false(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 [[Z:%.*]], 10
-; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 [[Z]], 20
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B]], i1 [[X:%.*]], i1 [[Y:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 true, i1 [[SEL]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 true, i1 [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = icmp ugt i8 %z, 10
@@ -174,9 +154,7 @@ define i1 @a_false_implies_b_false(i8 %z, i1 %X, i1 %Y) {
 define i1 @a_false_implies_b_false2(i8 %z, i1 %X, i1 %Y) {
 ; CHECK-LABEL: @a_false_implies_b_false2(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 [[Z:%.*]], 10
-; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 [[Z]], 20
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B]], i1 [[X:%.*]], i1 [[Y:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[A]], [[SEL]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 true, i1 [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = icmp ugt i8 %z, 10
@@ -189,9 +167,7 @@ define i1 @a_false_implies_b_false2(i8 %z, i1 %X, i1 %Y) {
 define i1 @a_false_implies_b_false2_comm(i8 %z, i1 %X, i1 %Y) {
 ; CHECK-LABEL: @a_false_implies_b_false2_comm(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ugt i8 [[Z:%.*]], 10
-; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 [[Z]], 20
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B]], i1 [[X:%.*]], i1 [[Y:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[SEL]], [[A]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A]], i1 true, i1 [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = icmp ugt i8 %z, 10
