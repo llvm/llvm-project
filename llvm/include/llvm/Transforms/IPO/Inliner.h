@@ -131,9 +131,9 @@ public:
   /// before run is called, as part of pass pipeline building.
   CGSCCPassManager &getPM() { return PM; }
 
-  /// Allow adding module-level analyses benefiting the contained CGSCC passes.
-  template <class T> void addRequiredModuleAnalysis() {
-    MPM.addPass(RequireAnalysisPass<T, Module>());
+  /// Allow adding module-level passes benefiting the contained CGSCC passes.
+  template <class T> void addModulePass(T Pass) {
+    MPM.addPass(std::move(Pass));
   }
 
 private:

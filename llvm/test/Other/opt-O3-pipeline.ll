@@ -380,6 +380,8 @@
 ; NEWPM-NEXT:   RequireAnalysisPass<{{.*}}> on [module]
 ; NEWPM-NEXT:     GlobalsAA analysis on [module]
 ; NEWPM-NEXT:       CallGraphAnalysis analysis on [module]
+; NEWPM-NEXT:   ModuleToFunctionPassAdaptor on [module]
+; NEWPM-NEXT:   InvalidateAnalysisPass<{{.*}}> on f
 ; NEWPM-NEXT:   RequireAnalysisPass<{{.*}}> on [module]
 ; NEWPM-NEXT:     ProfileSummaryAnalysis analysis on [module]
 ; NEWPM-NEXT:   ModuleToPostOrderCGSCCPassAdaptor on [module]
@@ -392,6 +394,7 @@
 ; NEWPM-NEXT:         InlinerPass on (f)
 ; NEWPM-NEXT:         InlinerPass on (f)
 ; NEWPM-NEXT:         PostOrderFunctionAttrsPass on (f)
+; NEWPM-NEXT:           AAManager analysis on f
 ; NEWPM-NEXT:         ArgumentPromotionPass on (f)
 ; NEWPM-NEXT:         OpenMPOptCGSCCPass on (f)
 ; NEWPM-NEXT:         CGSCCToFunctionPassAdaptor on (f)
