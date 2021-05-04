@@ -724,3 +724,26 @@ func @replace_if_with_cond3(%arg0 : i1, %arg2: i64) -> (i32, i64) {
 // CHECK-NEXT:       scf.yield %[[sv2]] : i32
 // CHECK-NEXT:     }
 // CHECK-NEXT:     return %[[if]], %arg1 : i32, i64
+
+
+// CHECK-LABEL: @while_cond_true
+func @while_cond_true() {
+  %0 = scf.while () : () -> i1 {
+    %condition = "test.condition"() : () -> i1
+    scf.condition(%condition) %condition : i1
+  } do {
+  ^bb0(%arg0: i1):
+    "test.use"(%arg0) : (i1) -> ()
+    scf.yield
+  }
+  return
+}
+// CHECK-NEXT:         %[[true:.+]] = constant true
+// CHECK-NEXT:         %{{.+}} = scf.while : () -> i1 {
+// CHECK-NEXT:           %[[cmp:.+]] = "test.condition"() : () -> i1
+// CHECK-NEXT:           scf.condition(%[[cmp]]) %[[cmp]] : i1
+// CHECK-NEXT:         } do {
+// CHECK-NEXT:         ^bb0(%arg0: i1):  // no predecessors
+// CHECK-NEXT:           "test.use"(%[[true]]) : (i1) -> ()
+// CHECK-NEXT:           scf.yield
+// CHECK-NEXT:         }
