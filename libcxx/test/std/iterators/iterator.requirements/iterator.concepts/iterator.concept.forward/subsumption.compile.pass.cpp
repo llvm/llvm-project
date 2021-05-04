@@ -10,22 +10,19 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
 
-// template<class T>
-// concept input_iterator;
+// std::forward_iterator;
 
 #include <iterator>
 
 #include <concepts>
 
 // clang-format off
-template<std::input_or_output_iterator I>
-requires std::indirectly_readable<I> &&
-         std::derived_from<std::_ITER_CONCEPT<I>, std::input_iterator_tag>
+template<std::input_iterator>
 [[nodiscard]] constexpr bool check_subsumption() {
   return false;
 }
 
-template<std::input_iterator>
+template<std::forward_iterator>
 [[nodiscard]] constexpr bool check_subsumption() {
   return true;
 }
