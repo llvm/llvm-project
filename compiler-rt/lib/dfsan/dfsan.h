@@ -16,7 +16,6 @@
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
-#include "dfsan_flags.h"
 #include "dfsan_platform.h"
 
 using __sanitizer::u16;
