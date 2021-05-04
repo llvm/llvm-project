@@ -439,6 +439,14 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     if (match(Op0, m_Neg(m_Value(X))))
       return IC.replaceOperand(II, 0, X);
 
+    // cttz(sext(x)) -> cttz(zext(x))
+    if (match(Op0, m_OneUse(m_SExt(m_Value(X))))) {
+      auto *Zext = IC.Builder.CreateZExt(X, II.getType());
+      auto *CttzZext =
+          IC.Builder.CreateBinaryIntrinsic(Intrinsic::cttz, Zext, Op1);
+      return IC.replaceInstUsesWith(II, CttzZext);
+    }
+
     // Zext doesn't change the number of trailing zeros, so narrow:
     // cttz(zext(x)) -> zext(cttz(x)) if the 'ZeroIsUndef' parameter is 'true'.
     if (match(Op0, m_OneUse(m_ZExt(m_Value(X)))) && match(Op1, m_One())) {
