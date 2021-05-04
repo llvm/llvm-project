@@ -2229,6 +2229,33 @@ Value *OpenMPIRBuilder::getOMPCriticalRegionLock(StringRef CriticalName) {
   return getOrCreateOMPInternalVariable(KmpCriticalNameTy, Name);
 }
 
+GlobalVariable *
+OpenMPIRBuilder::createOffloadMaptypes(SmallVectorImpl<uint64_t> &Mappings,
+                                       std::string VarName) {
+  llvm::Constant *MaptypesArrayInit =
+      llvm::ConstantDataArray::get(M.getContext(), Mappings);
+  auto *MaptypesArrayGlobal = new llvm::GlobalVariable(
+      M, MaptypesArrayInit->getType(),
+      /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage, MaptypesArrayInit,
+      VarName);
+  MaptypesArrayGlobal->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  return MaptypesArrayGlobal;
+}
+
+GlobalVariable *
+OpenMPIRBuilder::createOffloadMapnames(SmallVectorImpl<llvm::Constant *> &Names,
+                                       std::string VarName) {
+  llvm::Constant *MapNamesArrayInit = llvm::ConstantArray::get(
+      llvm::ArrayType::get(
+          llvm::Type::getInt8Ty(M.getContext())->getPointerTo(), Names.size()),
+      Names);
+  auto *MapNamesArrayGlobal = new llvm::GlobalVariable(
+      M, MapNamesArrayInit->getType(),
+      /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage, MapNamesArrayInit,
+      VarName);
+  return MapNamesArrayGlobal;
+}
+
 // Create all simple and struct types exposed by the runtime and remember
 // the llvm::PointerTypes of them for easy access later.
 void OpenMPIRBuilder::initializeTypes(Module &M) {
