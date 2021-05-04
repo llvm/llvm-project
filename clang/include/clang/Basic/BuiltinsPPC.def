@@ -600,6 +600,12 @@ BUILTIN(__builtin_truncf128_round_to_odd, "dLLd", "")
 BUILTIN(__builtin_vsx_scalar_extract_expq, "ULLiLLd", "")
 BUILTIN(__builtin_vsx_scalar_insert_exp_qp, "LLdLLdULLi", "")
 
+// Fastmath by default builtins
+BUILTIN(__builtin_ppc_rsqrtf, "V4fV4f", "")
+BUILTIN(__builtin_ppc_rsqrtd, "V2dV2d", "")
+BUILTIN(__builtin_ppc_recipdivf, "V4fV4fV4f", "")
+BUILTIN(__builtin_ppc_recipdivd, "V2dV2dV2d", "")
+
 // HTM builtins
 BUILTIN(__builtin_tbegin, "UiUIi", "")
 BUILTIN(__builtin_tend, "UiUIi", "")

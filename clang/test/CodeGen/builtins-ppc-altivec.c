@@ -9577,3 +9577,21 @@ void test12() {
   // CHECK: store <4 x float> %{{[0-9]+}}, <4 x float>* %{{[0-9]+}}, align 1
   // CHECK-LE: call void @llvm.ppc.vsx.stxvw4x.be(<4 x i32> %{{[0-9]+}}, i8* %{{[0-9]+}})
 }
+
+vector float test_rsqrtf(vector float a, vector float b) {
+  // CHECK-LABEL: test_rsqrtf
+  // CHECK: call fast <4 x float> @llvm.sqrt.v4f32
+  // CHECK: fdiv fast <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+  // CHECK-LE-LABEL: test_rsqrtf
+  // CHECK-LE: call fast <4 x float> @llvm.sqrt.v4f32
+  // CHECK-LE: fdiv fast <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+  return vec_rsqrt(a);
+}
+
+vector float test_recipdivf(vector float a, vector float b) {
+  // CHECK-LABEL: test_recipdivf
+  // CHECK: fdiv fast <4 x float>
+  // CHECK-LE-LABEL: test_recipdivf
+  // CHECK-LE: fdiv fast <4 x float>
+  return vec_recipdiv(a, b);
+}
