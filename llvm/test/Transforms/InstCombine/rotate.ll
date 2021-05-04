@@ -443,7 +443,8 @@ define i8 @rotate_right_commute_8bit_unmasked_shl(i32 %v, i32 %shift) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHIFT:%.*]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[V:%.*]] to i8
-; CHECK-NEXT:    [[CONV2:%.*]] = call i8 @llvm.fshr.i8(i8 [[TMP3]], i8 [[TMP3]], i8 [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[V]] to i8
+; CHECK-NEXT:    [[CONV2:%.*]] = call i8 @llvm.fshr.i8(i8 [[TMP3]], i8 [[TMP4]], i8 [[TMP2]])
 ; CHECK-NEXT:    ret i8 [[CONV2]]
 ;
   %and = and i32 %shift, 3
