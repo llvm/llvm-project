@@ -519,6 +519,7 @@ def Vector_ExtractOp :
       return vector().getType().cast<VectorType>();
     }
   }];
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 
@@ -763,6 +764,7 @@ def Vector_InsertOp :
       return dest().getType().cast<VectorType>();
     }
   }];
+  let hasCanonicalizer = 1;
 }
 
 def Vector_InsertSlicesOp :
