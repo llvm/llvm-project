@@ -2658,6 +2658,13 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
       return;
   }
 
+  if (DestType->getAs<MatrixType>() ||
+      SrcExpr.get()->getType()->getAs<MatrixType>()) {
+    if (Self.CheckMatrixCast(OpRange, DestType, SrcExpr.get()->getType(), Kind))
+      SrcExpr = ExprError();
+    return;
+  }
+
   // AltiVec vector initialization with a single literal.
   if (const VectorType *vecTy = DestType->getAs<VectorType>())
     if (vecTy->getVectorKind() == VectorType::AltiVecVector
