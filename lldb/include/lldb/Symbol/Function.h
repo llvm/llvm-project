@@ -10,10 +10,10 @@
 #define LLDB_SYMBOL_FUNCTION_H
 
 #include "lldb/Core/AddressRange.h"
+#include "lldb/Core/Declaration.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/Block.h"
-#include "lldb/Symbol/Declaration.h"
 #include "lldb/Utility/UserID.h"
 #include "llvm/ADT/ArrayRef.h"
 

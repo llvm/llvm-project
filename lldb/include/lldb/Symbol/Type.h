@@ -9,9 +9,9 @@
 #ifndef LLDB_SYMBOL_TYPE_H
 #define LLDB_SYMBOL_TYPE_H
 
+#include "lldb/Core/Declaration.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Symbol/Declaration.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"

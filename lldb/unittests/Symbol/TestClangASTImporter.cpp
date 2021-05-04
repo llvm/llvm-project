@@ -14,9 +14,9 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/Symbol/ClangTestUtils.h"
+#include "lldb/Core/Declaration.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/Declaration.h"
 #include "clang/AST/DeclCXX.h"
 
 using namespace clang;

@@ -26,6 +26,7 @@ add_lldb_library(lldbCore
   AddressResolverFileLine.cpp
   Communication.cpp
   Debugger.cpp
+  Declaration.cpp
   Disassembler.cpp
   DumpDataExtractor.cpp
   DumpRegisterValue.cpp

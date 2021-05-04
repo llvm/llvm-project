@@ -10,10 +10,10 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressRange.h"
+#include "lldb/Core/Declaration.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/DWARFExpression.h"
-#include "lldb/Symbol/Declaration.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
