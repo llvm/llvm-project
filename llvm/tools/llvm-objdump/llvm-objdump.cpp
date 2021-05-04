@@ -2482,20 +2482,6 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
       break;
     }
   }
-  if (InputArgs.hasArg(OBJDUMP_mhvx))
-    LLVMArgs.push_back("--mhvx");
-  if (InputArgs.hasArg(OBJDUMP_mhvx_v66))
-    LLVMArgs.push_back("--mhvx=v66");
-  if (InputArgs.hasArg(OBJDUMP_mv60))
-    LLVMArgs.push_back("--mv60");
-  if (InputArgs.hasArg(OBJDUMP_mv65))
-    LLVMArgs.push_back("--mv65");
-  if (InputArgs.hasArg(OBJDUMP_mv66))
-    LLVMArgs.push_back("--mv66");
-  if (InputArgs.hasArg(OBJDUMP_mv67))
-    LLVMArgs.push_back("--mv67");
-  if (InputArgs.hasArg(OBJDUMP_mv67t))
-    LLVMArgs.push_back("--mv67t");
   LLVMArgs.push_back(nullptr);
   llvm::cl::ParseCommandLineOptions(LLVMArgs.size() - 1, LLVMArgs.data());
 
