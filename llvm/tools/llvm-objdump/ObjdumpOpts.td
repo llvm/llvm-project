@@ -25,7 +25,7 @@ def arch_name_EQ : Joined<["--"], "arch-name=">,
 def archive_headers : Flag<["--"], "archive-headers">,
   HelpText<"Display archive header information">;
 
-def : Flag<["-"], "a">, Alias<all_headers>,
+def : Flag<["-"], "a">, Alias<archive_headers>,
   HelpText<"Alias for --archive-headers">;
 
 def demangle : Flag<["--"], "demangle">, HelpText<"Demangle symbol names">;
