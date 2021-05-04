@@ -8,7 +8,7 @@ define i32 @lex(i1 %c0, i1 %c1, i32 %r0, i32 %r1, i32 %v) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0_NOT:%.*]] = xor i1 [[C0:%.*]], true
 ; CHECK-NEXT:    [[C1_NOT:%.*]] = xor i1 [[C1:%.*]], true
-; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[C0_NOT]], [[C1_NOT]]
+; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[C0_NOT]], i1 true, i1 [[C1_NOT]]
 ; CHECK-NEXT:    [[R0_MUX:%.*]] = select i1 [[C0_NOT]], i32 [[R0:%.*]], i32 [[R1:%.*]]
 ; CHECK-NEXT:    br i1 [[BRMERGE]], label [[IF_THEN:%.*]], label [[DO_BODY:%.*]]
 ; CHECK:       if.then:
