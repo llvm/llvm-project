@@ -24,6 +24,9 @@ template <class LP> static bool hasObjCSection(MemoryBufferRef mb) {
 
   auto *hdr =
       reinterpret_cast<const typename LP::mach_header *>(mb.getBufferStart());
+  if (hdr->magic != LP::magic)
+    return false;
+
   if (const auto *c =
           findCommand<typename LP::segment_command>(hdr, LP::segmentLCType)) {
     auto sectionHeaders =
