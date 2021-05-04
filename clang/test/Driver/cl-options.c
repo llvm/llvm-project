@@ -56,6 +56,9 @@
 // fpstrict-NOT: -menable-unsafe-fp-math
 // fpstrict-NOT: -ffast-math
 
+// RUN: %clang_cl /fsanitize=address -### -- %s 2>&1 | FileCheck -check-prefix=fsanitize_address %s
+// fsanitize_address: -fsanitize=address
+
 // RUN: %clang_cl -### /FA -fprofile-instr-generate -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-INSTR-GENERATE %s
 // RUN: %clang_cl -### /FA -fprofile-instr-generate=/tmp/somefile.profraw -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-INSTR-GENERATE-FILE %s
 // CHECK-PROFILE-INSTR-GENERATE: "-fprofile-instrument=clang" "--dependent-lib=clang_rt.profile{{[^"]*}}.lib"
@@ -425,6 +428,10 @@
 // RUN:     /clr:pure \
 // RUN:     /d2FH4 \
 // RUN:     /docname \
+// RUN:     /experimental:module \
+// RUN:     /experimental:preprocessor \
+// RUN:     /exportHeader /headerName:foo \
+// RUN:     /headerUnit foo.h=foo.ifc /headerUnit:quote foo.h=foo.ifc /headerUnit:angle foo.h=foo.ifc \
 // RUN:     /EHsc \
 // RUN:     /F 42 \
 // RUN:     /FA \
@@ -433,6 +440,8 @@
 // RUN:     /FAs \
 // RUN:     /FAu \
 // RUN:     /favor:blend \
+// RUN:     /fsanitize-address-use-after-return \
+// RUN:     /fno-sanitize-address-vcasan-lib \
 // RUN:     /Fifoo \
 // RUN:     /Fmfoo \
 // RUN:     /FpDebug\main.pch \
@@ -479,6 +488,10 @@
 // RUN:     /Qspectre-load \
 // RUN:     /Qspectre-load-cf \
 // RUN:     /Qvec-report:2 \
+// RUN:     /reference foo=foo.ifc /reference foo.ifc \
+// RUN:     /sourceDependencies foo.json \
+// RUN:     /sourceDependencies:directives foo.json \
+// RUN:     /translateInclude \
 // RUN:     /u \
 // RUN:     /V \
 // RUN:     /volatile:ms \
