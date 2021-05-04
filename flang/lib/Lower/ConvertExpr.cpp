@@ -1046,8 +1046,8 @@ public:
 
   template <typename A>
   fir::ExtendedValue genval(const Fortran::evaluate::ArrayConstructor<A> &) {
-    llvm::report_fatal_error(
-        "array constructor: lowering should not reach here");
+    fir::emitFatalError(getLoc(),
+                        "array constructor: lowering should not reach here");
   }
 
   fir::ExtendedValue gen(const Fortran::evaluate::ComplexPart &x) {
@@ -3410,7 +3410,7 @@ public:
     // Allocate the initial buffer and variables to track the current size and
     // index into the vector.
     auto initBuffSz =
-        builder.createIntegerConstant(loc, idxty, initialBufferSize);
+        builder.createIntegerConstant(loc, idxTy, initialBufferSize);
     mlir::Value mem = builder.create<fir::AllocMemOp>(loc, eleTy, initBuffSz);
     auto buffSize = builder.createTemporary(loc, idxTy, ".buff.size");
     builder.create<fir::StoreOp>(loc, initBuffSz, buffSize);
