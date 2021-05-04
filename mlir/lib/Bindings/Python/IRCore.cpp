@@ -2255,6 +2255,10 @@ void mlir::python::populateIRCore(py::module &m) {
   // Mapping of PyAttribute.
   //----------------------------------------------------------------------------
   py::class_<PyAttribute>(m, "Attribute")
+      // Delegate to the PyAttribute copy constructor, which will also lifetime
+      // extend the backing context which owns the MlirAttribute.
+      .def(py::init<PyAttribute &>(), py::arg("cast_from_type"),
+           "Casts the passed attribute to the generic Attribute")
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
                              &PyAttribute::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyAttribute::createFromCapsule)
@@ -2358,6 +2362,10 @@ void mlir::python::populateIRCore(py::module &m) {
   // Mapping of PyType.
   //----------------------------------------------------------------------------
   py::class_<PyType>(m, "Type")
+      // Delegate to the PyType copy constructor, which will also lifetime
+      // extend the backing context which owns the MlirType.
+      .def(py::init<PyType &>(), py::arg("cast_from_type"),
+           "Casts the passed type to the generic Type")
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR, &PyType::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyType::createFromCapsule)
       .def_static(

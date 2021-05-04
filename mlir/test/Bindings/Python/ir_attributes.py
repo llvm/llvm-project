@@ -8,9 +8,11 @@ def run(f):
   f()
   gc.collect()
   assert Context._get_live_count() == 0
+  return f
 
 
 # CHECK-LABEL: TEST: testParsePrint
+@run
 def testParsePrint():
   with Context() as ctx:
     t = Attribute.parse('"hello"')
@@ -22,12 +24,11 @@ def testParsePrint():
   # CHECK: Attribute("hello")
   print(repr(t))
 
-run(testParsePrint)
-
 
 # CHECK-LABEL: TEST: testParseError
 # TODO: Hook the diagnostic manager to capture a more meaningful error
 # message.
+@run
 def testParseError():
   with Context():
     try:
@@ -38,10 +39,9 @@ def testParseError():
     else:
       print("Exception not produced")
 
-run(testParseError)
-
 
 # CHECK-LABEL: TEST: testAttrEq
+@run
 def testAttrEq():
   with Context():
     a1 = Attribute.parse('"attr1"')
@@ -56,10 +56,19 @@ def testAttrEq():
     # CHECK: a1 == None: False
     print("a1 == None:", a1 == None)
 
-run(testAttrEq)
+
+# CHECK-LABEL: TEST: testAttrCast
+@run
+def testAttrCast():
+  with Context():
+    a1 = Attribute.parse('"attr1"')
+    a2 = Attribute(a1)
+    # CHECK: a1 == a2: True
+    print("a1 == a2:", a1 == a2)
 
 
 # CHECK-LABEL: TEST: testAttrEqDoesNotRaise
+@run
 def testAttrEqDoesNotRaise():
   with Context():
     a1 = Attribute.parse('"attr1"')
@@ -71,10 +80,9 @@ def testAttrEqDoesNotRaise():
     # CHECK: True
     print(a1 != None)
 
-run(testAttrEqDoesNotRaise)
-
 
 # CHECK-LABEL: TEST: testAttrCapsule
+@run
 def testAttrCapsule():
   with Context() as ctx:
     a1 = Attribute.parse('"attr1"')
@@ -85,10 +93,9 @@ def testAttrCapsule():
   assert a2 == a1
   assert a2.context is ctx
 
-run(testAttrCapsule)
-
 
 # CHECK-LABEL: TEST: testStandardAttrCasts
+@run
 def testStandardAttrCasts():
   with Context():
     a1 = Attribute.parse('"attr1"')
@@ -104,10 +111,9 @@ def testStandardAttrCasts():
     else:
       print("Exception not produced")
 
-run(testStandardAttrCasts)
-
 
 # CHECK-LABEL: TEST: testAffineMapAttr
+@run
 def testAffineMapAttr():
   with Context() as ctx:
     d0 = AffineDimExpr.get(0)
@@ -122,10 +128,9 @@ def testAffineMapAttr():
     attr_parsed = Attribute.parse(str(attr_built))
     assert attr_built == attr_parsed
 
-run(testAffineMapAttr)
-
 
 # CHECK-LABEL: TEST: testFloatAttr
+@run
 def testFloatAttr():
   with Context(), Location.unknown():
     fattr = FloatAttr(Attribute.parse("42.0 : f32"))
@@ -149,10 +154,9 @@ def testFloatAttr():
     else:
       print("Exception not produced")
 
-run(testFloatAttr)
-
 
 # CHECK-LABEL: TEST: testIntegerAttr
+@run
 def testIntegerAttr():
   with Context() as ctx:
     iattr = IntegerAttr(Attribute.parse("42"))
@@ -166,10 +170,9 @@ def testIntegerAttr():
     print("default_get:", IntegerAttr.get(
         IntegerType.get_signless(32), 42))
 
-run(testIntegerAttr)
-
 
 # CHECK-LABEL: TEST: testBoolAttr
+@run
 def testBoolAttr():
   with Context() as ctx:
     battr = BoolAttr(Attribute.parse("true"))
@@ -180,10 +183,9 @@ def testBoolAttr():
     # CHECK: default_get: true
     print("default_get:", BoolAttr.get(True))
 
-run(testBoolAttr)
-
 
 # CHECK-LABEL: TEST: testFlatSymbolRefAttr
+@run
 def testFlatSymbolRefAttr():
   with Context() as ctx:
     sattr = FlatSymbolRefAttr(Attribute.parse('@symbol'))
@@ -194,10 +196,9 @@ def testFlatSymbolRefAttr():
     # CHECK: default_get: @foobar
     print("default_get:", FlatSymbolRefAttr.get("foobar"))
 
-run(testFlatSymbolRefAttr)
-
 
 # CHECK-LABEL: TEST: testStringAttr
+@run
 def testStringAttr():
   with Context() as ctx:
     sattr = StringAttr(Attribute.parse('"stringattr"'))
@@ -211,10 +212,9 @@ def testStringAttr():
     print("typed_get:", StringAttr.get_typed(
         IntegerType.get_signless(32), "12345"))
 
-run(testStringAttr)
-
 
 # CHECK-LABEL: TEST: testNamedAttr
+@run
 def testNamedAttr():
   with Context():
     a = Attribute.parse('"stringattr"')
@@ -226,10 +226,9 @@ def testNamedAttr():
     # CHECK: named: NamedAttribute(foobar="stringattr")
     print("named:", named)
 
-run(testNamedAttr)
-
 
 # CHECK-LABEL: TEST: testDenseIntAttr
+@run
 def testDenseIntAttr():
   with Context():
     raw = Attribute.parse("dense<[[0,1,2],[3,4,5]]> : vector<2x3xi32>")
@@ -263,10 +262,8 @@ def testDenseIntAttr():
     print(ShapedType(a.type).element_type)
 
 
-run(testDenseIntAttr)
-
-
 # CHECK-LABEL: TEST: testDenseFPAttr
+@run
 def testDenseFPAttr():
   with Context():
     raw = Attribute.parse("dense<[0.0, 1.0, 2.0, 3.0]> : vector<4xf32>")
@@ -286,10 +283,8 @@ def testDenseFPAttr():
     print(ShapedType(a.type).element_type)
 
 
-run(testDenseFPAttr)
-
-
 # CHECK-LABEL: TEST: testDictAttr
+@run
 def testDictAttr():
   with Context():
     dict_attr = {
@@ -327,10 +322,8 @@ def testDictAttr():
       assert False, "expected IndexError on accessing an out-of-bounds attribute"
 
 
-
-run(testDictAttr)
-
 # CHECK-LABEL: TEST: testTypeAttr
+@run
 def testTypeAttr():
   with Context():
     raw = Attribute.parse("vector<4xf32>")
@@ -341,10 +334,8 @@ def testTypeAttr():
     print(ShapedType(type_attr.value).element_type)
 
 
-run(testTypeAttr)
-
-
 # CHECK-LABEL: TEST: testArrayAttr
+@run
 def testArrayAttr():
   with Context():
     raw = Attribute.parse("[42, true, vector<4xf32>]")
@@ -391,5 +382,4 @@ def testArrayAttr():
     except RuntimeError as e:
       # CHECK: Error: Invalid attribute when attempting to create an ArrayAttribute
       print("Error: ", e)
-run(testArrayAttr)
 
