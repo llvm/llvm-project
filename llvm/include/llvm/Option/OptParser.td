@@ -152,8 +152,6 @@ class KeyPathAndMacro<string key_path_prefix, string key_path_base,
   code MacroPrefix = macro_prefix;
 }
 
-def EmptyKPM : KeyPathAndMacro<"", "">;
-
 class ImpliedByAnyOf<list<string> key_paths, code value = "true"> {
   code ImpliedCheck = !foldl("false", key_paths, accumulator, key_path,
                              !strconcat(accumulator, " || ", key_path));
