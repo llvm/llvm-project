@@ -1,5 +1,8 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 
+// amdgcn does not have printf definition
+// XFAIL: amdgcn-amd-amdhsa
+
 #include <stdio.h>
 
 typedef struct {
