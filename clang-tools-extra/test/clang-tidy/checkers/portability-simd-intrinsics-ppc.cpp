@@ -1,10 +1,10 @@
 // RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s portability-simd-intrinsics %t -- \
 // RUN:  -config='{CheckOptions: [ \
-// RUN:    {key: portability-simd-intrinsics.Suggest, value: 1} \
+// RUN:    {key: portability-simd-intrinsics.Suggest, value: true} \
 // RUN:  ]}' -- -target ppc64le -maltivec
 // RUN: %check_clang_tidy -std=c++20-or-later %s portability-simd-intrinsics -check-suffix=CXX20 %t -- \
 // RUN:  -config='{CheckOptions: [ \
-// RUN:    {key: portability-simd-intrinsics.Suggest, value: 1} \
+// RUN:    {key: portability-simd-intrinsics.Suggest, value: true} \
 // RUN:  ]}' -- -target ppc64le -maltivec
 
 vector int vec_add(vector int, vector int);

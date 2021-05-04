@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s bugprone-argument-comment %t -- \
-// RUN:   -config="{CheckOptions: [{key: StrictMode, value: 1}]}" --
+// RUN:   -config="{CheckOptions: [{key: StrictMode, value: true}]}" --
 
 void f(int _with_underscores_);
 void g(int x_);

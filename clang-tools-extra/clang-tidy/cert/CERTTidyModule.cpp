@@ -125,8 +125,8 @@ public:
     ClangTidyOptions Options;
     ClangTidyOptions::OptionMap &Opts = Options.CheckOptions;
     Opts["cert-dcl16-c.NewSuffixes"] = "L;LL;LU;LLU";
-    Opts["cert-oop54-cpp.WarnOnlyIfThisHasSuspiciousField"] = "0";
-    Opts["cert-str34-c.DiagnoseSignedUnsignedCharComparisons"] = "0";
+    Opts["cert-oop54-cpp.WarnOnlyIfThisHasSuspiciousField"] = "false";
+    Opts["cert-str34-c.DiagnoseSignedUnsignedCharComparisons"] = "false";
     return Options;
   }
 };
