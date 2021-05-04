@@ -229,42 +229,42 @@ def : Pat<(PPCcall_nop (i64 mcsym:$dst)),
 let Defs = [CR0] in {
   def ATOMIC_LOAD_ADD_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_ADD_I64",
-    [(set i64:$dst, (atomic_load_add_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_add_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_SUB_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_SUB_I64",
-    [(set i64:$dst, (atomic_load_sub_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_sub_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_OR_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_OR_I64",
-    [(set i64:$dst, (atomic_load_or_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_or_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_XOR_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_XOR_I64",
-    [(set i64:$dst, (atomic_load_xor_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_xor_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_AND_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_AND_i64",
-    [(set i64:$dst, (atomic_load_and_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_and_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_NAND_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_NAND_I64",
-    [(set i64:$dst, (atomic_load_nand_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_nand_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_MIN_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_MIN_I64",
-    [(set i64:$dst, (atomic_load_min_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_min_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_MAX_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_MAX_I64",
-    [(set i64:$dst, (atomic_load_max_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_max_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_UMIN_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_UMIN_I64",
-    [(set i64:$dst, (atomic_load_umin_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_umin_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_UMAX_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_UMAX_I64",
-    [(set i64:$dst, (atomic_load_umax_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_umax_64 ForceXForm:$ptr, i64:$incr))]>;
 
   def ATOMIC_CMP_SWAP_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$old, g8rc:$new), "#ATOMIC_CMP_SWAP_I64",
-    [(set i64:$dst, (atomic_cmp_swap_64 xoaddr:$ptr, i64:$old, i64:$new))]>;
+    [(set i64:$dst, (atomic_cmp_swap_64 ForceXForm:$ptr, i64:$old, i64:$new))]>;
 
   def ATOMIC_SWAP_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$new), "#ATOMIC_SWAP_I64",
-    [(set i64:$dst, (atomic_swap_64 xoaddr:$ptr, i64:$new))]>;
+    [(set i64:$dst, (atomic_swap_64 ForceXForm:$ptr, i64:$new))]>;
 }
 
 // Instructions to support atomic operations
@@ -1641,11 +1641,11 @@ def : Pat<(i64 (PPCtoc_entry tglobaltlsaddr:$disp, i64:$reg)),
           (i64 (LDtoc tglobaltlsaddr:$disp, i64:$reg))>;
 
 // 64-bits atomic loads and stores
-def : Pat<(atomic_load_64 iaddrX4:$src), (LD  memrix:$src)>;
-def : Pat<(atomic_load_64 xaddrX4:$src),  (LDX memrr:$src)>;
+def : Pat<(atomic_load_64 DSForm:$src), (LD  memrix:$src)>;
+def : Pat<(atomic_load_64 XForm:$src),  (LDX memrr:$src)>;
 
-def : Pat<(atomic_store_64 iaddrX4:$ptr, i64:$val), (STD  g8rc:$val, memrix:$ptr)>;
-def : Pat<(atomic_store_64 xaddrX4:$ptr,  i64:$val), (STDX g8rc:$val, memrr:$ptr)>;
+def : Pat<(atomic_store_64 DSForm:$ptr, i64:$val), (STD  g8rc:$val, memrix:$ptr)>;
+def : Pat<(atomic_store_64 XForm:$ptr,  i64:$val), (STDX g8rc:$val, memrr:$ptr)>;
 
 let Predicates = [IsISA3_0] in {
 // DARN (deliver random number)

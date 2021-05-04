@@ -17061,8 +17061,6 @@ unsigned PPCTargetLowering::computeMOFlags(const SDNode *Parent, SDValue N,
   if (const LSBaseSDNode *LSB = dyn_cast<LSBaseSDNode>(Parent))
     if (LSB->isIndexed())
       return PPC::MOF_None;
-  if (isa<AtomicSDNode>(Parent))
-    return PPC::MOF_None;
 
   // Compute in-memory type flags. This is based on if there are scalars,
   // floats or vectors.
