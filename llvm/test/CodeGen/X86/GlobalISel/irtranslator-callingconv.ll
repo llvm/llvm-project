@@ -219,18 +219,14 @@ define float @test_float_args(float %arg1, float %arg2) {
   ; X86:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.1, align 16)
   ; X86:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X86:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.0)
-  ; X86:   [[ANYEXT:%[0-9]+]]:_(s80) = G_ANYEXT [[LOAD1]](s32)
-  ; X86:   $fp0 = COPY [[ANYEXT]](s80)
+  ; X86:   $fp0 = COPY [[LOAD1]](s32)
   ; X86:   RET 0, implicit $fp0
   ; X64-LABEL: name: test_float_args
   ; X64: bb.1 (%ir-block.0):
   ; X64:   liveins: $xmm0, $xmm1
-  ; X64:   [[COPY:%[0-9]+]]:_(s128) = COPY $xmm0
-  ; X64:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s128)
-  ; X64:   [[COPY1:%[0-9]+]]:_(s128) = COPY $xmm1
-  ; X64:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s128)
-  ; X64:   [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[TRUNC1]](s32)
-  ; X64:   $xmm0 = COPY [[ANYEXT]](s128)
+  ; X64:   [[COPY:%[0-9]+]]:_(s32) = COPY $xmm0
+  ; X64:   [[COPY1:%[0-9]+]]:_(s32) = COPY $xmm1
+  ; X64:   $xmm0 = COPY [[COPY1]](s32)
   ; X64:   RET 0, implicit $xmm0
   ret float %arg2
 }
@@ -242,18 +238,14 @@ define double @test_double_args(double %arg1, double %arg2) {
   ; X86:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.1, align 16)
   ; X86:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X86:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 8 from %fixed-stack.0)
-  ; X86:   [[ANYEXT:%[0-9]+]]:_(s80) = G_ANYEXT [[LOAD1]](s64)
-  ; X86:   $fp0 = COPY [[ANYEXT]](s80)
+  ; X86:   $fp0 = COPY [[LOAD1]](s64)
   ; X86:   RET 0, implicit $fp0
   ; X64-LABEL: name: test_double_args
   ; X64: bb.1 (%ir-block.0):
   ; X64:   liveins: $xmm0, $xmm1
-  ; X64:   [[COPY:%[0-9]+]]:_(s128) = COPY $xmm0
-  ; X64:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[COPY]](s128)
-  ; X64:   [[COPY1:%[0-9]+]]:_(s128) = COPY $xmm1
-  ; X64:   [[TRUNC1:%[0-9]+]]:_(s64) = G_TRUNC [[COPY1]](s128)
-  ; X64:   [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[TRUNC1]](s64)
-  ; X64:   $xmm0 = COPY [[ANYEXT]](s128)
+  ; X64:   [[COPY:%[0-9]+]]:_(s64) = COPY $xmm0
+  ; X64:   [[COPY1:%[0-9]+]]:_(s64) = COPY $xmm1
+  ; X64:   $xmm0 = COPY [[COPY1]](s64)
   ; X64:   RET 0, implicit $xmm0
   ret double %arg2
 }
@@ -686,8 +678,7 @@ define void @test_variadic_call_2(i8** %addr_ptr, double* %val_ptr) {
   ; X64:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[COPY1]](p0) :: (load 8 from %ir.val_ptr)
   ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   $rdi = COPY [[LOAD]](p0)
-  ; X64:   [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[LOAD1]](s64)
-  ; X64:   $xmm0 = COPY [[ANYEXT]](s128)
+  ; X64:   $xmm0 = COPY [[LOAD1]](s64)
   ; X64:   $al = MOV8ri 1
   ; X64:   CALL64pcrel32 @variadic_callee, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $xmm0, implicit $al
   ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
