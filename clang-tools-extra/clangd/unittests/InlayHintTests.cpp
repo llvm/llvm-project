@@ -244,19 +244,35 @@ TEST(ParameterHints, LeadingUnderscore) {
                        ExpectedHint{"p3: ", "p3"});
 }
 
-TEST(ParameterHints, DependentCall) {
-  // FIXME: This doesn't currently produce a hint but should.
+TEST(ParameterHints, DependentCalls) {
   assertParameterHints(R"cpp(
     template <typename T>
-    void foo(T param);
+    void nonmember(T par1);
+
+    template <typename T>
+    struct A {
+      void member(T par2);
+      static void static_member(T par3);
+    };
+
+    void overload(int anInt);
+    void overload(double aDouble);
 
     template <typename T>
     struct S {
-      void bar(T par) {
-        foo($param[[par]]);
+      void bar(A<T> a, T t) {
+        nonmember($par1[[t]]);
+        a.member($par2[[t]]);
+        // FIXME: This one does not work yet.
+        A<T>::static_member($par3[[t]]);
+        // We don't want to arbitrarily pick between
+        // "anInt" or "aDouble", so just show no hint.
+        overload(T{});
       }
     };
-  )cpp");
+  )cpp",
+                       ExpectedHint{"par1: ", "par1"},
+                       ExpectedHint{"par2: ", "par2"});
 }
 
 TEST(ParameterHints, VariadicFunction) {
