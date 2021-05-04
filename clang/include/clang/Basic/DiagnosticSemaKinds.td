@@ -536,6 +536,10 @@ def err_using_dependent_value_is_type : Error<
   "dependent using declaration resolved to type without 'typename'">;
 def err_using_decl_nested_name_specifier_is_not_class : Error<
   "using declaration in class refers into '%0', which is not a class">;
+def warn_cxx17_compat_using_decl_non_member_enumerator : Warning<
+  "member using declaration naming non-class '%0' enumerator is "
+  "incompatible with C++ standards before C++20">, InGroup<CXXPre20Compat>,
+  DefaultIgnore;
 def err_using_decl_nested_name_specifier_is_current_class : Error<
   "using declaration refers to its own class">;
 def err_using_decl_nested_name_specifier_is_not_base_class : Error<
@@ -544,6 +548,16 @@ def err_using_decl_constructor_not_in_direct_base : Error<
   "%0 is not a direct base of %1, cannot inherit constructors">;
 def err_using_decl_can_not_refer_to_class_member : Error<
   "using declaration cannot refer to class member">;
+def warn_cxx17_compat_using_decl_class_member_enumerator : Warning<
+  "member using declaration naming a non-member enumerator is incompatible "
+  "with C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
+def ext_using_decl_class_member_enumerator : ExtWarn<
+  "member using declaration naming a non-member enumerator is "
+  "a C++20 extension">, InGroup<CXX20>;
+def err_using_enum_lacks_definition : Error<
+  "enum named by using-enum declaration lacks a definition">;
+def err_using_enum_is_dependent : Error<
+  "using-enum cannot name a dependent type">;
 def err_ambiguous_inherited_constructor : Error<
   "constructor of %0 inherited from multiple base class subobjects">;
 def note_ambiguous_inherited_constructor_using : Note<
@@ -553,8 +567,12 @@ def note_using_decl_class_member_workaround : Note<
   "a const variable|a constexpr variable}0 instead">;
 def err_using_decl_can_not_refer_to_namespace : Error<
   "using declaration cannot refer to a namespace">;
-def err_using_decl_can_not_refer_to_scoped_enum : Error<
-  "using declaration cannot refer to a scoped enumerator">;
+def warn_cxx17_compat_using_decl_scoped_enumerator: Warning<
+  "using declaration naming a scoped enumerator is incompatible with "
+  "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
+def ext_using_decl_scoped_enumerator : ExtWarn<
+  "using declaration naming a scoped enumerator is a C++20 extension">,
+  InGroup<CXX20>;
 def err_using_decl_constructor : Error<
   "using declaration cannot refer to a constructor">;
 def warn_cxx98_compat_using_decl_constructor : Warning<

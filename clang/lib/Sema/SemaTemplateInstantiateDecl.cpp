@@ -3067,10 +3067,9 @@ Decl *TemplateDeclInstantiator::VisitUsingDecl(UsingDecl *D) {
   }
 
   if (!NewUD->isInvalidDecl() &&
-      SemaRef.CheckUsingDeclQualifier(D->getUsingLoc(), D->hasTypename(),
-                                      SS, NameInfo, D->getLocation()))
+      SemaRef.CheckUsingDeclQualifier(D->getUsingLoc(), D->hasTypename(), SS,
+                                      NameInfo, D->getLocation(), nullptr, D))
     NewUD->setInvalidDecl();
-
   SemaRef.Context.setInstantiatedFromUsingDecl(NewUD, D);
   NewUD->setAccess(D->getAccess());
   Owner->addDecl(NewUD);
@@ -3079,6 +3078,8 @@ Decl *TemplateDeclInstantiator::VisitUsingDecl(UsingDecl *D) {
   if (NewUD->isInvalidDecl())
     return NewUD;
 
+  // If the using scope was dependent, or we had dependent bases, we need to
+  // recheck the inheritance
   if (NameInfo.getName().getNameKind() == DeclarationName::CXXConstructorName)
     SemaRef.CheckInheritingConstructorUsingDecl(NewUD);
 
