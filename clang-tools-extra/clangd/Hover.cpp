@@ -505,7 +505,7 @@ llvm::Optional<StringRef> setterVariableName(const CXXMethodDecl *CMD) {
   if (auto *CE = llvm::dyn_cast<CallExpr>(RHS->IgnoreCasts())) {
     if (CE->getNumArgs() != 1)
       return llvm::None;
-    auto *ND = llvm::dyn_cast<NamedDecl>(CE->getCalleeDecl());
+    auto *ND = llvm::dyn_cast_or_null<NamedDecl>(CE->getCalleeDecl());
     if (!ND || !ND->getIdentifier() || ND->getName() != "move" ||
         !ND->isInStdNamespace())
       return llvm::None;
