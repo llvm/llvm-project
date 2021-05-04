@@ -49,7 +49,7 @@ TEST6:
 # ERR: :[[#@LINE+1]]:6: warning: '.dcb' directive with negative repeat count has no effect
 .dcb -1, 2
 
-# ERR: :[[#@LINE+1]]:8: error: unexpected token in '.dcb' directive
+# ERR: :[[#@LINE+1]]:8: error: expected comma
 .dcb 1 2
 
 # ERR: :[[#@LINE+1]]:11: error: expected newline
