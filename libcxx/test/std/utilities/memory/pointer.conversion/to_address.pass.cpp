@@ -17,81 +17,110 @@
 #include <cassert>
 #include "test_macros.h"
 
-struct Irrelevant {};
+class P1
+{
+public:
+    using element_type = int;
 
-struct P1 {
-    using element_type = Irrelevant;
-    constexpr explicit P1(int *p) : p_(p) { }
-    constexpr int *operator->() const { return p_; }
-    int *p_;
+    constexpr explicit P1(int* p)
+    : p_(p) { }
+
+    constexpr int* operator->() const noexcept
+    { return p_; }
+
+private:
+    int* p_;
 };
 
-struct P2 {
-    using element_type = Irrelevant;
-    constexpr explicit P2(int *p) : p_(p) { }
-    constexpr P1 operator->() const { return p_; }
+class P2
+{
+public:
+    using element_type = int;
+
+    constexpr explicit P2(int* p)
+    : p_(p) { }
+
+    constexpr P1 operator->() const noexcept
+    { return p_; }
+
+private:
     P1 p_;
 };
 
-struct P3 {
-    constexpr explicit P3(int *p) : p_(p) { }
-    int *p_;
+class P3
+{
+public:
+    constexpr explicit P3(int* p)
+    : p_(p) { }
+
+    constexpr int* get() const noexcept
+    { return p_; }
+
+private:
+    int* p_;
 };
 
+namespace std
+{
 template<>
-struct std::pointer_traits<P3> {
-    static constexpr int *to_address(const P3& p) { return p.p_; }
+struct pointer_traits<::P3>
+{
+    static constexpr int* to_address(const ::P3& p) noexcept
+    { return p.get(); }
+};
+}
+
+class P4
+{
+public:
+    constexpr explicit P4(int* p)
+    : p_(p) { }
+
+    constexpr int* operator->() const noexcept
+    { return nullptr; }
+
+    constexpr int* get() const noexcept
+    { return p_; }
+
+private:
+    int* p_;
 };
 
-struct P4 {
-    constexpr explicit P4(int *p) : p_(p) { }
-    int *operator->() const;  // should never be called
-    int *p_;
-};
-
+namespace std
+{
 template<>
-struct std::pointer_traits<P4> {
-    static constexpr int *to_address(const P4& p) { return p.p_; }
+struct pointer_traits<::P4>
+{
+    constexpr static int* to_address(const ::P4& p) noexcept
+    { return p.get(); }
 };
+}
 
-struct P5 {
-    using element_type = Irrelevant;
-    int const* const& operator->() const;
-};
-
-struct P6 {};
-
-template<>
-struct std::pointer_traits<P6> {
-    static int const* const& to_address(const P6&);
-};
+int n = 0;
+static_assert(std::to_address(&n) == &n);
 
 constexpr bool test() {
-    int i = 0;
-    ASSERT_NOEXCEPT(std::to_address(&i));
-    assert(std::to_address(&i) == &i);
-    P1 p1(&i);
-    ASSERT_NOEXCEPT(std::to_address(p1));
-    assert(std::to_address(p1) == &i);
-    P2 p2(&i);
-    ASSERT_NOEXCEPT(std::to_address(p2));
-    assert(std::to_address(p2) == &i);
-    P3 p3(&i);
-    ASSERT_NOEXCEPT(std::to_address(p3));
-    assert(std::to_address(p3) == &i);
-    P4 p4(&i);
-    ASSERT_NOEXCEPT(std::to_address(p4));
-    assert(std::to_address(p4) == &i);
+  int i = 0;
+  ASSERT_NOEXCEPT(std::to_address(&i));
+  assert(std::to_address(&i) == &i);
+  P1 p1(&i);
+  ASSERT_NOEXCEPT(std::to_address(p1));
+  assert(std::to_address(p1) == &i);
+  P2 p2(&i);
+  ASSERT_NOEXCEPT(std::to_address(p2));
+  assert(std::to_address(p2) == &i);
+  P3 p3(&i);
+  ASSERT_NOEXCEPT(std::to_address(p3));
+  assert(std::to_address(p3) == &i);
+  P4 p4(&i);
+  ASSERT_NOEXCEPT(std::to_address(p4));
+  assert(std::to_address(p4) == &i);
 
-    ASSERT_SAME_TYPE(decltype(std::to_address(std::declval<int const*>())), int const*);
-    ASSERT_SAME_TYPE(decltype(std::to_address(std::declval<P5>())), int const*);
-    ASSERT_SAME_TYPE(decltype(std::to_address(std::declval<P6>())), int const*);
-
-    return true;
+  return true;
 }
 
 int main(int, char**) {
-    test();
-    static_assert(test());
-    return 0;
+  test();
+  static_assert(test());
+  return 0;
 }
