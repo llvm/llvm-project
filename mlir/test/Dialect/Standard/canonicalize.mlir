@@ -428,3 +428,113 @@ func @truncConstant(%arg0: i8) -> i16 {
   %tr = trunci %c-2 : i32 to i16
   return %tr : i16
 }
+
+// -----
+
+// CHECK-LABEL: @tripleAddAdd
+//       CHECK:   %[[cres:.+]] = constant 59 : index 
+//       CHECK:   %[[add:.+]] = addi %arg0, %[[cres]] : index 
+//       CHECK:   return %[[add]]
+func @tripleAddAdd(%arg0: index) -> index {
+  %c17 = constant 17 : index
+  %c42 = constant 42 : index
+  %add1 = addi %c17, %arg0 : index
+  %add2 = addi %c42, %add1 : index
+  return %add2 : index
+}
+
+// CHECK-LABEL: @tripleAddSub0
+//       CHECK:   %[[cres:.+]] = constant 59 : index 
+//       CHECK:   %[[add:.+]] = subi %[[cres]], %arg0 : index 
+//       CHECK:   return %[[add]]
+func @tripleAddSub0(%arg0: index) -> index {
+  %c17 = constant 17 : index
+  %c42 = constant 42 : index
+  %add1 = subi %c17, %arg0 : index
+  %add2 = addi %c42, %add1 : index
+  return %add2 : index
+}
+
+// CHECK-LABEL: @tripleAddSub1
+//       CHECK:   %[[cres:.+]] = constant 25 : index 
+//       CHECK:   %[[add:.+]] = addi %arg0, %[[cres]] : index 
+//       CHECK:   return %[[add]]
+func @tripleAddSub1(%arg0: index) -> index {
+  %c17 = constant 17 : index
+  %c42 = constant 42 : index
+  %add1 = subi %arg0, %c17 : index
+  %add2 = addi %c42, %add1 : index
+  return %add2 : index
+}
+
+// CHECK-LABEL: @tripleSubAdd0
+//       CHECK:   %[[cres:.+]] = constant 25 : index 
+//       CHECK:   %[[add:.+]] = subi %[[cres]], %arg0 : index 
+//       CHECK:   return %[[add]]
+func @tripleSubAdd0(%arg0: index) -> index {
+  %c17 = constant 17 : index
+  %c42 = constant 42 : index
+  %add1 = addi %c17, %arg0 : index
+  %add2 = subi %c42, %add1 : index
+  return %add2 : index
+}
+
+// CHECK-LABEL: @tripleSubAdd1
+//       CHECK:   %[[cres:.+]] = constant -25 : index 
+//       CHECK:   %[[add:.+]] = addi %arg0, %[[cres]] : index 
+//       CHECK:   return %[[add]]
+func @tripleSubAdd1(%arg0: index) -> index {
+  %c17 = constant 17 : index
+  %c42 = constant 42 : index
+  %add1 = addi %c17, %arg0 : index
+  %add2 = subi %add1, %c42 : index
+  return %add2 : index
+}
+
+// CHECK-LABEL: @tripleSubSub0
+//       CHECK:   %[[cres:.+]] = constant 25 : index 
+//       CHECK:   %[[add:.+]] = addi %arg0, %[[cres]] : index 
+//       CHECK:   return %[[add]]
+func @tripleSubSub0(%arg0: index) -> index {
+  %c17 = constant 17 : index
+  %c42 = constant 42 : index
+  %add1 = subi %c17, %arg0 : index
+  %add2 = subi %c42, %add1 : index
+  return %add2 : index
+}
+
+// CHECK-LABEL: @tripleSubSub1
+//       CHECK:   %[[cres:.+]] = constant -25 : index 
+//       CHECK:   %[[add:.+]] = subi %[[cres]], %arg0 : index 
+//       CHECK:   return %[[add]]
+func @tripleSubSub1(%arg0: index) -> index {
+  %c17 = constant 17 : index
+  %c42 = constant 42 : index
+  %add1 = subi %c17, %arg0 : index
+  %add2 = subi %add1, %c42 : index
+  return %add2 : index
+}
+
+// CHECK-LABEL: @tripleSubSub2
+//       CHECK:   %[[cres:.+]] = constant 59 : index 
+//       CHECK:   %[[add:.+]] = subi %[[cres]], %arg0 : index 
+//       CHECK:   return %[[add]]
+func @tripleSubSub2(%arg0: index) -> index {
+  %c17 = constant 17 : index
+  %c42 = constant 42 : index
+  %add1 = subi %arg0, %c17 : index
+  %add2 = subi %c42, %add1 : index
+  return %add2 : index
+}
+
+// CHECK-LABEL: @tripleSubSub3
+//       CHECK:   %[[cres:.+]] = constant 59 : index 
+//       CHECK:   %[[add:.+]] = subi %arg0, %[[cres]] : index 
+//       CHECK:   return %[[add]]
+func @tripleSubSub3(%arg0: index) -> index {
+  %c17 = constant 17 : index
+  %c42 = constant 42 : index
+  %add1 = subi %arg0, %c17 : index
+  %add2 = subi %add1, %c42 : index
+  return %add2 : index
+}

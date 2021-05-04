@@ -283,6 +283,62 @@ static SmallVector<int64_t, 4> extractFromI64ArrayAttr(Attribute attr) {
       }));
 }
 
+/// Canonicalize a sum of a constant and (constant - something) to simply be
+/// a sum of constants minus something. This transformation does similar
+/// transformations for additions of a constant with a subtract/add of
+/// a constant. This may result in some operations being reordered (but should
+/// remain equivalent).
+struct AddConstantReorder : public OpRewritePattern<AddIOp> {
+  using OpRewritePattern<AddIOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AddIOp addop,
+                                PatternRewriter &rewriter) const override {
+    for (int i = 0; i < 2; i++) {
+      APInt origConst;
+      APInt midConst;
+      if (matchPattern(addop.getOperand(i), m_ConstantInt(&origConst))) {
+        if (auto midAddOp = addop.getOperand(1 - i).getDefiningOp<AddIOp>()) {
+          for (int j = 0; j < 2; j++) {
+            if (matchPattern(midAddOp.getOperand(j),
+                             m_ConstantInt(&midConst))) {
+              auto nextConstant = rewriter.create<ConstantOp>(
+                  addop.getLoc(), rewriter.getIntegerAttr(
+                                      addop.getType(), origConst + midConst));
+              rewriter.replaceOpWithNewOp<AddIOp>(addop, nextConstant,
+                                                  midAddOp.getOperand(1 - j));
+              return success();
+            }
+          }
+        }
+        if (auto midSubOp = addop.getOperand(1 - i).getDefiningOp<SubIOp>()) {
+          if (matchPattern(midSubOp.getOperand(0), m_ConstantInt(&midConst))) {
+            auto nextConstant = rewriter.create<ConstantOp>(
+                addop.getLoc(),
+                rewriter.getIntegerAttr(addop.getType(), origConst + midConst));
+            rewriter.replaceOpWithNewOp<SubIOp>(addop, nextConstant,
+                                                midSubOp.getOperand(1));
+            return success();
+          }
+          if (matchPattern(midSubOp.getOperand(1), m_ConstantInt(&midConst))) {
+            auto nextConstant = rewriter.create<ConstantOp>(
+                addop.getLoc(),
+                rewriter.getIntegerAttr(addop.getType(), origConst - midConst));
+            rewriter.replaceOpWithNewOp<AddIOp>(addop, nextConstant,
+                                                midSubOp.getOperand(0));
+            return success();
+          }
+        }
+      }
+    }
+    return failure();
+  }
+};
+
+void AddIOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                         MLIRContext *context) {
+  results.insert<AddConstantReorder>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // AndOp
 //===----------------------------------------------------------------------===//
@@ -1704,6 +1760,153 @@ OpFoldResult SubIOp::fold(ArrayRef<Attribute> operands) {
 
   return constFoldBinaryOp<IntegerAttr>(operands,
                                         [](APInt a, APInt b) { return a - b; });
+}
+
+/// Canonicalize a sub of a constant and (constant +/- something) to simply be
+/// a single operation that merges the two constants.
+struct SubConstantReorder : public OpRewritePattern<SubIOp> {
+  using OpRewritePattern<SubIOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SubIOp subOp,
+                                PatternRewriter &rewriter) const override {
+    APInt origConst;
+    APInt midConst;
+
+    if (matchPattern(subOp.getOperand(0), m_ConstantInt(&origConst))) {
+      if (auto midAddOp = subOp.getOperand(1).getDefiningOp<AddIOp>()) {
+        // origConst - (midConst + something) == (origConst - midConst) -
+        // something
+        for (int j = 0; j < 2; j++) {
+          if (matchPattern(midAddOp.getOperand(j), m_ConstantInt(&midConst))) {
+            auto nextConstant = rewriter.create<ConstantOp>(
+                subOp.getLoc(),
+                rewriter.getIntegerAttr(subOp.getType(), origConst - midConst));
+            rewriter.replaceOpWithNewOp<SubIOp>(subOp, nextConstant,
+                                                midAddOp.getOperand(1 - j));
+            return success();
+          }
+        }
+      }
+
+      if (auto midSubOp = subOp.getOperand(0).getDefiningOp<SubIOp>()) {
+        if (matchPattern(midSubOp.getOperand(0), m_ConstantInt(&midConst))) {
+          // (midConst - something) - origConst == (midConst - origConst) -
+          // something
+          auto nextConstant = rewriter.create<ConstantOp>(
+              subOp.getLoc(),
+              rewriter.getIntegerAttr(subOp.getType(), midConst - origConst));
+          rewriter.replaceOpWithNewOp<SubIOp>(subOp, nextConstant,
+                                              midSubOp.getOperand(1));
+          return success();
+        }
+
+        if (matchPattern(midSubOp.getOperand(1), m_ConstantInt(&midConst))) {
+          // (something - midConst) - origConst == something - (origConst +
+          // midConst)
+          auto nextConstant = rewriter.create<ConstantOp>(
+              subOp.getLoc(),
+              rewriter.getIntegerAttr(subOp.getType(), origConst + midConst));
+          rewriter.replaceOpWithNewOp<SubIOp>(subOp, midSubOp.getOperand(0),
+                                              nextConstant);
+          return success();
+        }
+      }
+
+      if (auto midSubOp = subOp.getOperand(1).getDefiningOp<SubIOp>()) {
+        if (matchPattern(midSubOp.getOperand(0), m_ConstantInt(&midConst))) {
+          // origConst - (midConst - something) == (origConst - midConst) +
+          // something
+          auto nextConstant = rewriter.create<ConstantOp>(
+              subOp.getLoc(),
+              rewriter.getIntegerAttr(subOp.getType(), origConst - midConst));
+          rewriter.replaceOpWithNewOp<AddIOp>(subOp, nextConstant,
+                                              midSubOp.getOperand(1));
+          return success();
+        }
+
+        if (matchPattern(midSubOp.getOperand(1), m_ConstantInt(&midConst))) {
+          // origConst - (something - midConst) == (origConst + midConst) -
+          // something
+          auto nextConstant = rewriter.create<ConstantOp>(
+              subOp.getLoc(),
+              rewriter.getIntegerAttr(subOp.getType(), origConst + midConst));
+          rewriter.replaceOpWithNewOp<SubIOp>(subOp, nextConstant,
+                                              midSubOp.getOperand(0));
+          return success();
+        }
+      }
+    }
+
+    if (matchPattern(subOp.getOperand(1), m_ConstantInt(&origConst))) {
+      if (auto midAddOp = subOp.getOperand(0).getDefiningOp<AddIOp>()) {
+        // (midConst + something) - origConst == (midConst - origConst) +
+        // something
+        for (int j = 0; j < 2; j++) {
+          if (matchPattern(midAddOp.getOperand(j), m_ConstantInt(&midConst))) {
+            auto nextConstant = rewriter.create<ConstantOp>(
+                subOp.getLoc(),
+                rewriter.getIntegerAttr(subOp.getType(), midConst - origConst));
+            rewriter.replaceOpWithNewOp<AddIOp>(subOp, nextConstant,
+                                                midAddOp.getOperand(1 - j));
+            return success();
+          }
+        }
+      }
+
+      if (auto midSubOp = subOp.getOperand(0).getDefiningOp<SubIOp>()) {
+        if (matchPattern(midSubOp.getOperand(0), m_ConstantInt(&midConst))) {
+          // (midConst - something) - origConst == (midConst - origConst) -
+          // something
+          auto nextConstant = rewriter.create<ConstantOp>(
+              subOp.getLoc(),
+              rewriter.getIntegerAttr(subOp.getType(), midConst - origConst));
+          rewriter.replaceOpWithNewOp<SubIOp>(subOp, nextConstant,
+                                              midSubOp.getOperand(1));
+          return success();
+        }
+
+        if (matchPattern(midSubOp.getOperand(1), m_ConstantInt(&midConst))) {
+          // (something - midConst) - origConst == something - (midConst +
+          // origConst)
+          auto nextConstant = rewriter.create<ConstantOp>(
+              subOp.getLoc(),
+              rewriter.getIntegerAttr(subOp.getType(), midConst + origConst));
+          rewriter.replaceOpWithNewOp<SubIOp>(subOp, midSubOp.getOperand(0),
+                                              nextConstant);
+          return success();
+        }
+      }
+
+      if (auto midSubOp = subOp.getOperand(1).getDefiningOp<SubIOp>()) {
+        if (matchPattern(midSubOp.getOperand(0), m_ConstantInt(&midConst))) {
+          // origConst - (midConst - something) == (origConst - midConst) +
+          // something
+          auto nextConstant = rewriter.create<ConstantOp>(
+              subOp.getLoc(),
+              rewriter.getIntegerAttr(subOp.getType(), origConst - midConst));
+          rewriter.replaceOpWithNewOp<AddIOp>(subOp, nextConstant,
+                                              midSubOp.getOperand(1));
+          return success();
+        }
+        if (matchPattern(midSubOp.getOperand(1), m_ConstantInt(&midConst))) {
+          // origConst - (something - midConst) == (origConst - midConst) -
+          // something
+          auto nextConstant = rewriter.create<ConstantOp>(
+              subOp.getLoc(),
+              rewriter.getIntegerAttr(subOp.getType(), origConst - midConst));
+          rewriter.replaceOpWithNewOp<SubIOp>(subOp, nextConstant,
+                                              midSubOp.getOperand(0));
+          return success();
+        }
+      }
+    }
+    return failure();
+  }
+};
+
+void SubIOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                         MLIRContext *context) {
+  results.insert<SubConstantReorder>(context);
 }
 
 //===----------------------------------------------------------------------===//
