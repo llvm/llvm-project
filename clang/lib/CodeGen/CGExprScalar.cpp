@@ -1205,10 +1205,6 @@ Value *ScalarExprEmitter::EmitScalarCast(Value *Src, QualType SrcType,
   QualType SrcElementType;
   QualType DstElementType;
   if (SrcType->isMatrixType() && DstType->isMatrixType()) {
-    // Allow bitcast between matrixes of the same size.
-    if (SrcTy->getPrimitiveSizeInBits() == DstTy->getPrimitiveSizeInBits())
-      return Builder.CreateBitCast(Src, DstTy, "conv");
-
     SrcElementTy = cast<llvm::VectorType>(SrcTy)->getElementType();
     DstElementTy = cast<llvm::VectorType>(DstTy)->getElementType();
     SrcElementType = SrcType->castAs<MatrixType>()->getElementType();
