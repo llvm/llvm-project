@@ -64,9 +64,7 @@ def parseScript(test, preamble):
 
     # Get the default substitutions
     tmpDir, tmpBase = _getTempPaths(test)
-    useExternalSh = True
-    substitutions = lit.TestRunner.getDefaultSubstitutions(test, tmpDir, tmpBase,
-                                                           normalize_slashes=useExternalSh)
+    substitutions = lit.TestRunner.getDefaultSubstitutions(test, tmpDir, tmpBase)
 
     # Check base substitutions and add the %{build} and %{run} convenience substitutions
     _checkBaseSubstitutions(substitutions)
@@ -305,5 +303,5 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
             return lit.Test.Result(lit.Test.XFAIL if test.isExpectedToFail() else lit.Test.PASS)
         else:
             _, tmpBase = _getTempPaths(test)
-            useExternalSh = True
+            useExternalSh = False
             return lit.TestRunner._runShTest(test, litConfig, useExternalSh, script, tmpBase)
