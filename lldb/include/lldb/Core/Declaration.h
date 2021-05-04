@@ -14,7 +14,7 @@
 
 namespace lldb_private {
 
-/// \class Declaration Declaration.h "lldb/Symbol/Declaration.h"
+/// \class Declaration Declaration.h "lldb/Core/Declaration.h"
 /// A class that describes the declaration location of a
 ///        lldb object.
 ///
@@ -24,14 +24,7 @@ namespace lldb_private {
 class Declaration {
 public:
   /// Default constructor.
-  Declaration()
-      : m_file(), m_line(0)
-#ifdef LLDB_ENABLE_DECLARATION_COLUMNS
-        ,
-        m_column(0)
-#endif
-  {
-  }
+  Declaration() : m_file(), m_line(0), m_column(LLDB_INVALID_COLUMN_NUMBER) {}
 
   /// Construct with file specification, and optional line and column.
   ///
@@ -46,23 +39,13 @@ public:
   /// \param[in] column
   ///     The column number that describes where this was declared.
   ///     Set to zero if there is no column number information.
-  Declaration(const FileSpec &file_spec, uint32_t line = 0, uint32_t column = 0)
-      : m_file(file_spec), m_line(line)
-#ifdef LLDB_ENABLE_DECLARATION_COLUMNS
-        ,
-        m_column(column)
-#endif
-  {
-  }
+  Declaration(const FileSpec &file_spec, uint32_t line = 0,
+              uint16_t column = LLDB_INVALID_COLUMN_NUMBER)
+      : m_file(file_spec), m_line(line), m_column(column) {}
 
   /// Construct with a pointer to another Declaration object.
   Declaration(const Declaration *decl_ptr)
-      : m_file(), m_line(0)
-#ifdef LLDB_ENABLE_DECLARATION_COLUMNS
-        ,
-        m_column(0)
-#endif
-  {
+      : m_file(), m_line(0), m_column(LLDB_INVALID_COLUMN_NUMBER) {
     if (decl_ptr)
       *this = *decl_ptr;
   }
@@ -74,9 +57,7 @@ public:
   void Clear() {
     m_file.Clear();
     m_line = 0;
-#ifdef LLDB_ENABLE_DECLARATION_COLUMNS
     m_column = 0;
-#endif
   }
 
   /// Compare two declaration objects.
@@ -118,18 +99,6 @@ public:
   void Dump(Stream *s, bool show_fullpaths) const;
 
   bool DumpStopContext(Stream *s, bool show_fullpaths) const;
-  /// Get accessor for the declaration column number.
-  ///
-  /// \return
-  ///     Non-zero indicates a valid column number, zero indicates no
-  ///     column information is available.
-  uint32_t GetColumn() const {
-#ifdef LLDB_ENABLE_DECLARATION_COLUMNS
-    return m_column;
-#else
-    return 0;
-#endif
-  }
 
   /// Get accessor for file specification.
   ///
@@ -150,7 +119,32 @@ public:
   ///     line information is available.
   uint32_t GetLine() const { return m_line; }
 
-  bool IsValid() const { return m_file && m_line != 0; }
+  /// Get accessor for the declaration column number.
+  ///
+  /// \return
+  ///     Non-zero indicates a valid column number, zero indicates no
+  ///     column information is available.
+  uint16_t GetColumn() const { return m_column; }
+
+  /// Convert to boolean operator.
+  ///
+  /// This allows code to check a Declaration object to see if it
+  /// contains anything valid using code such as:
+  ///
+  /// \code
+  /// Declaration decl(...);
+  /// if (decl)
+  /// { ...
+  /// \endcode
+  ///
+  /// \return
+  ///     A \b true if both the file_spec and the line are valid,
+  ///     \b false otherwise.
+  explicit operator bool() const { return IsValid(); }
+
+  bool IsValid() const {
+    return m_file && m_line != 0 && m_line != LLDB_INVALID_LINE_NUMBER;
+  }
 
   /// Get the memory cost of this object.
   ///
@@ -161,17 +155,6 @@ public:
   ///
   /// \see ConstString::StaticMemorySize ()
   size_t MemorySize() const;
-
-  /// Set accessor for the declaration column number.
-  ///
-  /// \param[in] column
-  ///     Non-zero indicates a valid column number, zero indicates no
-  ///     column information is available.
-  void SetColumn(uint32_t column) {
-#ifdef LLDB_ENABLE_DECLARATION_COLUMNS
-    m_column = col;
-#endif
-  }
 
   /// Set accessor for the declaration file specification.
   ///
@@ -186,16 +169,23 @@ public:
   ///     line information is available.
   void SetLine(uint32_t line) { m_line = line; }
 
+  /// Set accessor for the declaration column number.
+  ///
+  /// \param[in] column
+  ///     Non-zero indicates a valid column number, zero indicates no
+  ///     column information is available.
+  void SetColumn(uint16_t column) { m_column = column; }
+
 protected:
-  /// Member variables.
-  FileSpec m_file; ///< The file specification that points to the
-                   ///< source file where the declaration occurred.
-  uint32_t m_line; ///< Non-zero values indicates a valid line number,
-                   ///< zero indicates no line number information is available.
-#ifdef LLDB_ENABLE_DECLARATION_COLUMNS
-  uint32_t m_column; ///< Non-zero values indicates a valid column number,
-                     ///< zero indicates no column information is available.
-#endif
+  /// The file specification that points to the source file where the
+  /// declaration occurred.
+  FileSpec m_file;
+  /// Non-zero values indicates a valid line number, zero indicates no line
+  /// number information is available.
+  uint32_t m_line;
+  /// Non-zero values indicates a valid column number, zero indicates no column
+  /// information is available.
+  uint16_t m_column;
 };
 
 bool operator==(const Declaration &lhs, const Declaration &rhs);
