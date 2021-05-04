@@ -146,6 +146,11 @@ endif()
 # Generally things after this point may depend on MLIR_ALL_LIBS or libMLIR.so.
 add_subdirectory(tools)
 
+if(MLIR_BINDINGS_PYTHON_ENABLED)
+  # Python sources: built extensions come in via lib/Bindings/Python
+  add_subdirectory(python)
+endif()
+
 if( LLVM_INCLUDE_EXAMPLES )
   add_subdirectory(examples)
 endif()
