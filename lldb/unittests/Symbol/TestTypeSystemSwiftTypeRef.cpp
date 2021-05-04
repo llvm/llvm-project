@@ -639,3 +639,32 @@ TEST_F(TestTypeSystemSwiftTypeRef, GetNumTemplateArguments) {
     ASSERT_EQ(t.GetNumTemplateArguments(), 1);
   }
 }
+
+TEST_F(TestTypeSystemSwiftTypeRef, GetInstanceType) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  {
+    NodePointer n = b.GlobalType(
+            b.Node(Node::Kind::Metatype,
+              b.Node(Node::Kind::MetatypeRepresentation, "@thin"),
+              b.Node(Node::Kind::Type,
+                b.Node(Node::Kind::Structure,
+                  b.Node(Node::Kind::Module, "Swift"),
+                  b.Node(Node::Kind::Identifier, "String")))));
+
+    CompilerType t = GetCompilerType(b.Mangle(n));
+    CompilerType instance_type = m_swift_ts.GetInstanceType(t.GetOpaqueQualType());
+    ASSERT_EQ(instance_type.GetMangledTypeName(), "$sSSD");
+  };
+  {
+    NodePointer n = b.GlobalType(
+        b.Node(Node::Kind::Structure,
+          b.Node(Node::Kind::Module, "Swift"),
+          b.Node(Node::Kind::Identifier, "String")));
+
+    CompilerType t = GetCompilerType(b.Mangle(n));
+    CompilerType instance_type = m_swift_ts.GetInstanceType(t.GetOpaqueQualType());
+    ASSERT_EQ(instance_type.GetMangledTypeName(), "$sSSD");
+  };
+};
