@@ -13,16 +13,14 @@ define float @test_return_f1(float %f.coerce) {
   ; ALL-LABEL: name: test_return_f1
   ; ALL: bb.1.entry:
   ; ALL:   liveins: $xmm0
-  ; ALL:   [[COPY:%[0-9]+]]:_(s128) = COPY $xmm0
-  ; ALL:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s128)
+  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY $xmm0
   ; ALL:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; ALL:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; ALL:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.f
-  ; ALL:   G_STORE [[TRUNC]](s32), [[FRAME_INDEX1]](p0) :: (store 4 into %ir.coerce.dive2)
+  ; ALL:   G_STORE [[COPY]](s32), [[FRAME_INDEX1]](p0) :: (store 4 into %ir.coerce.dive2)
   ; ALL:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
   ; ALL:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load 4 from %ir.coerce.dive13)
-  ; ALL:   [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[LOAD]](s32)
-  ; ALL:   $xmm0 = COPY [[ANYEXT]](s128)
+  ; ALL:   $xmm0 = COPY [[LOAD]](s32)
   ; ALL:   RET 0, implicit $xmm0
 entry:
   %retval = alloca %struct.f1, align 4
@@ -43,16 +41,14 @@ define double @test_return_d1(double %d.coerce) {
   ; ALL-LABEL: name: test_return_d1
   ; ALL: bb.1.entry:
   ; ALL:   liveins: $xmm0
-  ; ALL:   [[COPY:%[0-9]+]]:_(s128) = COPY $xmm0
-  ; ALL:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[COPY]](s128)
+  ; ALL:   [[COPY:%[0-9]+]]:_(s64) = COPY $xmm0
   ; ALL:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; ALL:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; ALL:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.d
-  ; ALL:   G_STORE [[TRUNC]](s64), [[FRAME_INDEX1]](p0) :: (store 8 into %ir.coerce.dive2)
+  ; ALL:   G_STORE [[COPY]](s64), [[FRAME_INDEX1]](p0) :: (store 8 into %ir.coerce.dive2)
   ; ALL:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store 1 into %ir.0, align 8), (load 1 from %ir.1, align 8)
   ; ALL:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load 8 from %ir.coerce.dive13)
-  ; ALL:   [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[LOAD]](s64)
-  ; ALL:   $xmm0 = COPY [[ANYEXT]](s128)
+  ; ALL:   $xmm0 = COPY [[LOAD]](s64)
   ; ALL:   RET 0, implicit $xmm0
 entry:
   %retval = alloca %struct.d1, align 8
@@ -71,25 +67,21 @@ define { double, double } @test_return_d2(double %d.coerce0, double %d.coerce1) 
   ; ALL-LABEL: name: test_return_d2
   ; ALL: bb.1.entry:
   ; ALL:   liveins: $xmm0, $xmm1
-  ; ALL:   [[COPY:%[0-9]+]]:_(s128) = COPY $xmm0
-  ; ALL:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[COPY]](s128)
-  ; ALL:   [[COPY1:%[0-9]+]]:_(s128) = COPY $xmm1
-  ; ALL:   [[TRUNC1:%[0-9]+]]:_(s64) = G_TRUNC [[COPY1]](s128)
+  ; ALL:   [[COPY:%[0-9]+]]:_(s64) = COPY $xmm0
+  ; ALL:   [[COPY1:%[0-9]+]]:_(s64) = COPY $xmm1
   ; ALL:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; ALL:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; ALL:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.d
-  ; ALL:   G_STORE [[TRUNC]](s64), [[FRAME_INDEX1]](p0) :: (store 8 into %ir.1)
+  ; ALL:   G_STORE [[COPY]](s64), [[FRAME_INDEX1]](p0) :: (store 8 into %ir.1)
   ; ALL:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; ALL:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C1]](s64)
-  ; ALL:   G_STORE [[TRUNC1]](s64), [[PTR_ADD]](p0) :: (store 8 into %ir.2)
+  ; ALL:   G_STORE [[COPY1]](s64), [[PTR_ADD]](p0) :: (store 8 into %ir.2)
   ; ALL:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store 1 into %ir.3, align 8), (load 1 from %ir.4, align 8)
   ; ALL:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load 8 from %ir.5)
   ; ALL:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C1]](s64)
   ; ALL:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (dereferenceable load 8 from %ir.5 + 8)
-  ; ALL:   [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[LOAD]](s64)
-  ; ALL:   $xmm0 = COPY [[ANYEXT]](s128)
-  ; ALL:   [[ANYEXT1:%[0-9]+]]:_(s128) = G_ANYEXT [[LOAD1]](s64)
-  ; ALL:   $xmm1 = COPY [[ANYEXT1]](s128)
+  ; ALL:   $xmm0 = COPY [[LOAD]](s64)
+  ; ALL:   $xmm1 = COPY [[LOAD1]](s64)
   ; ALL:   RET 0, implicit $xmm0, implicit $xmm1
 entry:
   %retval = alloca %struct.d2, align 8
