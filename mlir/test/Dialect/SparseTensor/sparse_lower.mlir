@@ -1,15 +1,18 @@
-// RUN: mlir-opt %s -test-sparsification | \
+// RUN: mlir-opt %s -sparsification | \
 // RUN:   FileCheck %s --check-prefix=CHECK-HIR
 //
-// RUN: mlir-opt %s -test-sparsification="lower" --convert-linalg-to-loops | \
+// RUN: mlir-opt %s -sparsification \
+// RUN:   --sparse-tensor-conversion --convert-linalg-to-loops | \
 // RUN:   FileCheck %s --check-prefix=CHECK-MIR
 //
-// RUN: mlir-opt %s -test-sparsification="lower" --convert-linalg-to-loops \
+// RUN: mlir-opt %s -sparsification \
+// RUN:   --sparse-tensor-conversion --convert-linalg-to-loops \
 // RUN:   --func-bufferize --tensor-constant-bufferize \
 // RUN:   --tensor-bufferize --finalizing-bufferize  | \
 // RUN:   FileCheck %s --check-prefix=CHECK-LIR
 //
-// RUN: mlir-opt %s -test-sparsification="lower fast-output" --convert-linalg-to-loops \
+// RUN: mlir-opt %s -sparsification="fast-output" \
+// RUN:   --sparse-tensor-conversion --convert-linalg-to-loops \
 // RUN:   --func-bufferize --tensor-constant-bufferize \
 // RUN:   --tensor-bufferize --finalizing-bufferize  | \
 // RUN:   FileCheck %s --check-prefix=CHECK-FAST

@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:   --test-sparsification="lower ptr-type=2 ind-type=2 fast-output" \
+// RUN:   --sparsification="ptr-type=2 ind-type=2 fast-output" --sparse-tensor-conversion \
 // RUN:   --convert-linalg-to-loops --convert-vector-to-scf --convert-scf-to-std \
 // RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
 // RUN:   --std-bufferize --finalizing-bufferize  \

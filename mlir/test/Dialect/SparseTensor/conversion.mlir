@@ -1,4 +1,4 @@
-// RUN: mlir-opt --test-sparsification="lower" %s | FileCheck %s
+// RUN: mlir-opt --sparse-tensor-conversion %s | FileCheck %s
 
 !SparseTensor = type !llvm.ptr<i8>
 

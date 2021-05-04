@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:   --test-sparsification="lower ptr-type=4 ind-type=4" \
+// RUN:   --sparsification="ptr-type=4 ind-type=4" --sparse-tensor-conversion \
 // RUN:   --convert-linalg-to-loops --convert-vector-to-scf --convert-scf-to-std \
 // RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
 // RUN:   --std-bufferize --finalizing-bufferize  \
@@ -11,7 +11,7 @@
 // RUN: FileCheck %s
 //
 // RUN: mlir-opt %s \
-// RUN:   --test-sparsification="lower vectorization-strategy=2 ptr-type=4 ind-type=4 vl=16" \
+// RUN:   --sparsification="vectorization-strategy=2 ptr-type=4 ind-type=4 vl=16" --sparse-tensor-conversion \
 // RUN:   --convert-linalg-to-loops --convert-vector-to-scf --convert-scf-to-std \
 // RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
 // RUN:   --std-bufferize --finalizing-bufferize  \
