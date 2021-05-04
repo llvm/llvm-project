@@ -1063,8 +1063,8 @@ template <class LP> void Writer::run() {
 
 template <class LP> void macho::writeResult() { Writer().run<LP>(); }
 
-template <class LP> void macho::createSyntheticSections() {
-  in.header = makeMachHeaderSection<LP>();
+void macho::createSyntheticSections() {
+  in.header = make<MachHeaderSection>();
   in.rebase = make<RebaseSection>();
   in.binding = make<BindingSection>();
   in.weakBinding = make<WeakBindingSection>();
@@ -1083,5 +1083,3 @@ OutputSection *macho::firstTLVDataSection = nullptr;
 
 template void macho::writeResult<LP64>();
 template void macho::writeResult<ILP32>();
-template void macho::createSyntheticSections<LP64>();
-template void macho::createSyntheticSections<ILP32>();

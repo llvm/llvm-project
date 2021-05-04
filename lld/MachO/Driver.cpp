@@ -1142,11 +1142,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
             "\n>>> referenced from option -exported_symbol(s_list)");
     }
 
-    if (target->wordSize == 8)
-      createSyntheticSections<LP64>();
-    else
-      createSyntheticSections<ILP32>();
-
+    createSyntheticSections();
     createSyntheticSymbols();
 
     for (const Arg *arg : args.filtered(OPT_sectcreate)) {
