@@ -204,20 +204,6 @@ def x86_asm_syntax_att : Flag<["--"], "x86-asm-syntax=att">,
 def x86_asm_syntax_intel : Flag<["--"], "x86-asm-syntax=intel">,
   HelpText<"Emit Intel-style disassembly">;
 
-def mhvx : Flag<["--"], "mhvx">, HelpText<"Enable Hexagon Vector eXtensions">;
-
-def mhvx_v66 : Flag<["--"], "mhvx=v66">;
-
-def mv60 : Flag<["--"], "mv60">, HelpText<"Build for Hexagon V60">;
-
-def mv65 : Flag<["--"], "mv65">, HelpText<"Build for Hexagon V65">;
-
-def mv66 : Flag<["--"], "mv66">, HelpText<"Build for Hexagon V66">;
-
-def mv67 : Flag<["--"], "mv67">, HelpText<"Build for Hexagon V67">;
-
-def mv67t : Flag<["--"], "mv67t">, HelpText<"Build for Hexagon V67T">;
-
 
 def grp_mach_o : OptionGroup<"kind">, HelpText<"llvm-objdump MachO Specific Options">;
 
