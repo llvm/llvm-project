@@ -140,6 +140,7 @@ struct TestVectorContractionConversion
       transposeLowering = VectorTransposeLowering::Flat;
     VectorTransformsOptions options{contractLowering, transposeLowering};
     populateVectorContractLoweringPatterns(patterns, options);
+    populateVectorTransposeLoweringPatterns(patterns, options);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
