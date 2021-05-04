@@ -64,7 +64,6 @@
 #define __opt NASTY_MACRO
 #define __out NASTY_MACRO
 #define __part NASTY_MACRO
-#define __z NASTY_MACRO
 #endif
 
 #define __output NASTY_MACRO
