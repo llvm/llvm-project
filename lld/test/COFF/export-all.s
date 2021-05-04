@@ -4,6 +4,7 @@
 
 # RUN: lld-link -lldmingw -dll -out:%t.dll -entry:DllMainCRTStartup@12 %t.obj -implib:%t.lib
 # RUN: llvm-readobj --coff-exports %t.dll | grep Name: | FileCheck %s
+# RUN: llvm-readobj --coff-exports %t.dll | FileCheck %s --check-prefix=CHECK-RVA
 # RUN: llvm-readobj %t.lib | FileCheck -check-prefix=IMPLIB %s
 
 # CHECK: Name:
@@ -11,6 +12,13 @@
 # CHECK-NEXT: Name: dataSym
 # CHECK-NEXT: Name: foobar
 # CHECK-EMPTY:
+
+# CHECK-RVA: Name: comdatFunc
+# CHECK-RVA-NEXT: RVA: 0x1003
+# CHECK-RVA: Name: dataSym
+# CHECK-RVA-NEXT: RVA: 0x3000
+# CHECK-RVA: Name: foobar
+# CHECK-RVA-NEXT: RVA: 0x1001
 
 # IMPLIB: Symbol: __imp__comdatFunc
 # IMPLIB: Symbol: _comdatFunc
@@ -33,7 +41,7 @@ _foobar:
   ret
 _unexported:
   ret
-.section .text@_comdatFunc,"xr",one_only,_comdatFunc
+.section .text$_comdatFunc,"xr",one_only,_comdatFunc
 _comdatFunc:
   ret
 .data
