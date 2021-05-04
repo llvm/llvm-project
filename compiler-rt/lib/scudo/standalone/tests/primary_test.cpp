@@ -14,6 +14,7 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <stdlib.h>
 #include <thread>
 #include <vector>
 
@@ -63,6 +64,14 @@ struct SizeClassAllocator<TestConfig1, SizeClassMapT>
 template <typename BaseConfig, typename SizeClassMapT>
 struct TestAllocator : public SizeClassAllocator<BaseConfig, SizeClassMapT> {
   ~TestAllocator() { this->unmapTestOnly(); }
+
+  void *operator new(size_t size) {
+    void *p = nullptr;
+    EXPECT_EQ(0, posix_memalign(&p, alignof(TestAllocator), size));
+    return p;
+  }
+
+  void operator delete(void *ptr) { free(ptr); }
 };
 
 template <class BaseConfig> struct ScudoPrimaryTest : public Test {};

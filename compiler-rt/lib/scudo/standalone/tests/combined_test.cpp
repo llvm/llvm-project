@@ -15,6 +15,7 @@
 #include <memory>
 #include <mutex>
 #include <set>
+#include <stdlib.h>
 #include <thread>
 #include <vector>
 
@@ -74,6 +75,14 @@ template <typename Config> struct TestAllocator : scudo::Allocator<Config> {
       this->disableMemoryTagging();
   }
   ~TestAllocator() { this->unmapTestOnly(); }
+
+  void *operator new(size_t size) {
+    void *p = nullptr;
+    EXPECT_EQ(0, posix_memalign(&p, alignof(TestAllocator), size));
+    return p;
+  }
+
+  void operator delete(void *ptr) { free(ptr); }
 };
 
 template <class TypeParam> struct ScudoCombinedTest : public Test {
