@@ -1,3 +1,5 @@
+; fixme: the following line is added to cleanup bots, will be removed in weeks.
+; RUN: rm -f %S/llc-pipeline.s
 ; RUN: llc -O0 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 | FileCheck -check-prefix=GCN-O0 %s
 ; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 | FileCheck -check-prefix=GCN-O1 %s
 ; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -amdgpu-scalar-ir-passes -amdgpu-sdwa-peephole \
