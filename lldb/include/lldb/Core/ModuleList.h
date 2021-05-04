@@ -55,15 +55,19 @@ class ModuleListProperties : public Properties {
 public:
   ModuleListProperties();
 
+  // BEGIN SWIFT
   bool GetUseSwiftClangImporter() const;
   bool GetUseSwiftDWARFImporter() const;
   bool SetUseSwiftDWARFImporter(bool new_value);
   bool GetUseSwiftTypeRefTypeSystem() const;
   bool SetUseSwiftTypeRefTypeSystem(bool new_value);
-  FileSpec GetClangModulesCachePath() const;
-  bool SetClangModulesCachePath(const FileSpec &path);
+  bool GetSwiftValidateTypeSystem() const;
   SwiftModuleLoadingMode GetSwiftModuleLoadingMode() const;
   bool SetSwiftModuleLoadingMode(SwiftModuleLoadingMode);
+  // END SWIFT
+
+  FileSpec GetClangModulesCachePath() const;
+  bool SetClangModulesCachePath(const FileSpec &path);
   bool GetEnableExternalLookup() const;
   bool SetEnableExternalLookup(bool new_value);
 
