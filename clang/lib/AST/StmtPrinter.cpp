@@ -1077,6 +1077,16 @@ void StmtPrinter::VisitObjCSubscriptRefExpr(ObjCSubscriptRefExpr *Node) {
   OS << "]";
 }
 
+void StmtPrinter::VisitUniqueStableNameExpr(UniqueStableNameExpr *Node) {
+  // FIXME: Is this the correct thing?
+  OS << "__builtin_unique_stable_name(";
+  if (Node->isExpr())
+    PrintExpr(Node->getExpr());
+  else
+    Node->getTypeSourceInfo()->getType().print(OS, Policy);
+  OS << ")";
+}
+
 void StmtPrinter::VisitPredefinedExpr(PredefinedExpr *Node) {
   OS << PredefinedExpr::getIdentKindName(Node->getIdentKind());
 }

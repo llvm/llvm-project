@@ -3158,10 +3158,20 @@ public:
 
   StringRef getCUIDHash() const;
 
+  void AddSYCLKernelNamingDecl(const TagDecl *TD);
+  bool IsSYCLKernelNamingDecl(const TagDecl *TD) const;
+  unsigned GetSYCLKernelNamingIndex(const TagDecl *TD) const;
+
 private:
   /// All OMPTraitInfo objects live in this collection, one per
   /// `pragma omp [begin] declare variant` directive.
   SmallVector<std::unique_ptr<OMPTraitInfo>, 4> OMPTraitInfoVector;
+
+  /// A list of the (right now just lambda decls) tag declarations required to
+  /// name all the SYCL kernels in the translation unit, so that we can get the
+  /// correct kernel name, as well as implement __builtin_unique_stable_name.
+  llvm::DenseMap<const DeclContext *, llvm::SmallPtrSet<const TagDecl *, 4>>
+      SYCLKernelNamingTypes;
 };
 
 /// Insertion operator for diagnostics.

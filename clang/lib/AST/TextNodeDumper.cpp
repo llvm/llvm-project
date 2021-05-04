@@ -1016,6 +1016,12 @@ void TextNodeDumper::VisitObjCIvarRefExpr(const ObjCIvarRefExpr *Node) {
     OS << " isFreeIvar";
 }
 
+void TextNodeDumper::VisitUniqueStableNameExpr(
+    const UniqueStableNameExpr *Node) {
+  if (Node->isTypeSourceInfo())
+    dumpType(Node->getTypeSourceInfo()->getType());
+}
+
 void TextNodeDumper::VisitPredefinedExpr(const PredefinedExpr *Node) {
   OS << " " << PredefinedExpr::getIdentKindName(Node->getIdentKind());
 }

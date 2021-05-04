@@ -1960,6 +1960,9 @@ enum StmtCode {
 
   // FixedPointLiteral
   EXPR_FIXEDPOINT_LITERAL,
+
+  // UniqueStableNameExpr
+  EXPR_UNIQUESTABLENAME,
 };
 
 /// The kinds of designators that can occur in a

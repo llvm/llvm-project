@@ -2399,6 +2399,19 @@ public:
     return SEHFinallyStmt::Create(getSema().getASTContext(), Loc, Block);
   }
 
+  ExprResult RebuildUniqueStableNameExpr(SourceLocation OpLoc,
+                                         SourceLocation LParen,
+                                         SourceLocation RParen, Expr *E) {
+    return getSema().BuildUniqueStableNameExpr(OpLoc, LParen, RParen, E);
+  }
+
+  ExprResult RebuildUniqueStableNameExpr(SourceLocation OpLoc,
+                                         SourceLocation LParen,
+                                         SourceLocation RParen,
+                                         TypeSourceInfo *TSI) {
+    return getSema().BuildUniqueStableNameExpr(OpLoc, LParen, RParen, TSI);
+  }
+
   /// Build a new predefined expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
@@ -10175,6 +10188,43 @@ template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformConstantExpr(ConstantExpr *E) {
   return TransformExpr(E->getSubExpr());
+}
+
+template <typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformUniqueStableNameExpr(UniqueStableNameExpr *E) {
+  if (!E->isTypeDependent())
+    return E;
+
+  if (E->isExpr()) {
+    ExprResult ER = getDerived().TransformExpr(E->getExpr());
+
+    if (ER.isInvalid())
+      return ExprError();
+
+    ER = getSema().CheckPlaceholderExpr(ER.get());
+
+    if (ER.isInvalid())
+      return ExprError();
+
+    if (!getDerived().AlwaysRebuild() && E->getExpr() == ER.get())
+      return E;
+
+    return getDerived().RebuildUniqueStableNameExpr(
+        E->getLocation(), E->getLParenLocation(), E->getRParenLocation(),
+        ER.get());
+  }
+
+  TypeSourceInfo *NewT = getDerived().TransformType(E->getTypeSourceInfo());
+
+  if (!NewT)
+    return ExprError();
+
+  if (!getDerived().AlwaysRebuild() && E->getTypeSourceInfo() == NewT)
+    return E;
+
+  return getDerived().RebuildUniqueStableNameExpr(
+      E->getLocation(), E->getLParenLocation(), E->getRParenLocation(), NewT);
 }
 
 template<typename Derived>

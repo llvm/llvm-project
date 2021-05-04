@@ -1190,6 +1190,15 @@ void StmtProfiler::VisitDeclRefExpr(const DeclRefExpr *S) {
   }
 }
 
+void StmtProfiler::VisitUniqueStableNameExpr(const UniqueStableNameExpr *S) {
+  VisitExpr(S);
+  ID.AddBoolean(S->isExpr());
+  if (S->isExpr())
+    VisitStmt(S->getExpr());
+  else
+    VisitType(S->getTypeSourceInfo()->getType());
+}
+
 void StmtProfiler::VisitPredefinedExpr(const PredefinedExpr *S) {
   VisitExpr(S);
   ID.AddInteger(S->getIdentKind());

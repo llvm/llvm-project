@@ -579,6 +579,22 @@ void ASTStmtWriter::VisitConstantExpr(ConstantExpr *E) {
   Code = serialization::EXPR_CONSTANT;
 }
 
+void ASTStmtWriter::VisitUniqueStableNameExpr(UniqueStableNameExpr *E) {
+  VisitExpr(E);
+
+  Record.writeBool(E->isExpr());
+  Record.AddSourceLocation(E->getLocation());
+  Record.AddSourceLocation(E->getLParenLocation());
+  Record.AddSourceLocation(E->getRParenLocation());
+
+  if (E->isExpr())
+    Record.AddStmt(E->getExpr());
+  else
+    Record.AddTypeSourceInfo(E->getTypeSourceInfo());
+
+  Code = serialization::EXPR_UNIQUESTABLENAME;
+}
+
 void ASTStmtWriter::VisitPredefinedExpr(PredefinedExpr *E) {
   VisitExpr(E);
 

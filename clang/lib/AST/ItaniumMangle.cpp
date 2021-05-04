@@ -124,14 +124,20 @@ class ItaniumMangleContextImpl : public ItaniumMangleContext {
   typedef std::pair<const DeclContext*, IdentifierInfo*> DiscriminatorKeyTy;
   llvm::DenseMap<DiscriminatorKeyTy, unsigned> Discriminator;
   llvm::DenseMap<const NamedDecl*, unsigned> Uniquifier;
+  const ShouldCallKernelCallbackTy ShouldCallKernelCallback = nullptr;
+  const KernelMangleCallbackTy KernelMangleCallback = nullptr;
 
   bool IsDevCtx = false;
   bool NeedsUniqueInternalLinkageNames = false;
 
 public:
-  explicit ItaniumMangleContextImpl(ASTContext &Context,
-                                    DiagnosticsEngine &Diags)
-      : ItaniumMangleContext(Context, Diags) {}
+  explicit ItaniumMangleContextImpl(
+      ASTContext &Context, DiagnosticsEngine &Diags,
+      ShouldCallKernelCallbackTy ShouldCallKernelCB,
+      KernelMangleCallbackTy KernelCB)
+      : ItaniumMangleContext(Context, Diags),
+        ShouldCallKernelCallback(ShouldCallKernelCB),
+        KernelMangleCallback(KernelCB) {}
 
   /// @name Mangler Entry Points
   /// @{
@@ -243,6 +249,13 @@ public:
     Name += llvm::utostr(LambdaId);
     Name += '>';
     return Name;
+  }
+
+  ShouldCallKernelCallbackTy getShouldCallKernelCallback() const override {
+    return ShouldCallKernelCallback;
+  }
+  KernelMangleCallbackTy getKernelMangleCallback() const override {
+    return KernelMangleCallback;
   }
 
   /// @}
@@ -1502,7 +1515,9 @@ void CXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
     // <lambda-sig> ::= <template-param-decl>* <parameter-type>+
     //     # Parameter types or 'v' for 'void'.
     if (const CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(TD)) {
-      if (Record->isLambda() && Record->getLambdaManglingNumber()) {
+      if (Record->isLambda() && (Record->getLambdaManglingNumber() ||
+                                 Context.getShouldCallKernelCallback()(
+                                     Context.getASTContext(), Record))) {
         assert(!AdditionalAbiTags &&
                "Lambda type cannot have additional abi tags");
         mangleLambda(Record);
@@ -1921,9 +1936,17 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   // if the host-side CXX ABI has different numbering for lambda. In such case,
   // if the mangle context is that device-side one, use the device-side lambda
   // mangling number for this lambda.
+
   unsigned Number = Context.isDeviceMangleContext()
                         ? Lambda->getDeviceLambdaManglingNumber()
                         : Lambda->getLambdaManglingNumber();
+
+  if (Context.getShouldCallKernelCallback()(Context.getASTContext(), Lambda)) {
+    Context.getKernelMangleCallback()(Context.getASTContext(), Lambda, Out);
+    Out << '_';
+    return;
+  }
+
   assert(Number > 0 && "Lambda should be mangled as an unnamed class");
   if (Number > 1)
     mangleNumber(Number - 2);
@@ -4081,6 +4104,8 @@ recurse:
   case Expr::OMPIteratorExprClass:
   case Expr::CXXInheritedCtorInitExprClass:
     llvm_unreachable("unexpected statement kind");
+  case Expr::UniqueStableNameExprClass:
+    llvm_unreachable("unique-stable-name mangling not implemented yet");
 
   case Expr::ConstantExprClass:
     E = cast<ConstantExpr>(E)->getSubExpr();
@@ -6291,7 +6316,17 @@ void ItaniumMangleContextImpl::mangleLambdaSig(const CXXRecordDecl *Lambda,
   Mangler.mangleLambdaSig(Lambda);
 }
 
-ItaniumMangleContext *
-ItaniumMangleContext::create(ASTContext &Context, DiagnosticsEngine &Diags) {
-  return new ItaniumMangleContextImpl(Context, Diags);
+ItaniumMangleContext *ItaniumMangleContext::create(ASTContext &Context,
+                                                   DiagnosticsEngine &Diags) {
+  return new ItaniumMangleContextImpl(
+      Context, Diags, [](ASTContext &, const TagDecl *) { return false; },
+      [](ASTContext &, const TagDecl *, raw_ostream &) {});
+}
+
+ItaniumMangleContext *ItaniumMangleContext::create(
+    ASTContext &Context, DiagnosticsEngine &Diags,
+    ShouldCallKernelCallbackTy ShouldCallKernelCallback,
+    KernelMangleCallbackTy MangleCallback) {
+  return new ItaniumMangleContextImpl(Context, Diags, ShouldCallKernelCallback,
+                                      MangleCallback);
 }

@@ -173,6 +173,9 @@ public:
 
 class ItaniumMangleContext : public MangleContext {
 public:
+  using ShouldCallKernelCallbackTy = bool (*)(ASTContext &, const TagDecl *);
+  using KernelMangleCallbackTy = void (*)(ASTContext &, const TagDecl *,
+                                          raw_ostream &);
   explicit ItaniumMangleContext(ASTContext &C, DiagnosticsEngine &D)
       : MangleContext(C, D, MK_Itanium) {}
 
@@ -195,12 +198,21 @@ public:
 
   virtual void mangleDynamicStermFinalizer(const VarDecl *D, raw_ostream &) = 0;
 
+  // These have to live here, otherwise the CXXNameMangler won't have access to
+  // them.
+  virtual ShouldCallKernelCallbackTy getShouldCallKernelCallback() const = 0;
+  virtual KernelMangleCallbackTy getKernelMangleCallback() const = 0;
+
   static bool classof(const MangleContext *C) {
     return C->getKind() == MK_Itanium;
   }
 
   static ItaniumMangleContext *create(ASTContext &Context,
                                       DiagnosticsEngine &Diags);
+  static ItaniumMangleContext *
+  create(ASTContext &Context, DiagnosticsEngine &Diags,
+         ShouldCallKernelCallbackTy ShouldKernelMangleCB,
+         KernelMangleCallbackTy KernelMangleCB);
 };
 
 class MicrosoftMangleContext : public MangleContext {

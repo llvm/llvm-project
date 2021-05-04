@@ -2456,7 +2456,7 @@ unsigned ASTContext::getPreferredTypeAlign(const Type *T) const {
   // The preferred alignment of member pointers is that of a pointer.
   if (T->isMemberPointerType())
     return getPreferredTypeAlign(getPointerDiffType().getTypePtr());
- 
+
   if (!Target->allowsLargerPreferedTypeAlignment())
     return ABIAlign;
 
@@ -11645,4 +11645,56 @@ StringRef ASTContext::getCUIDHash() const {
     return StringRef();
   CUIDHash = llvm::utohexstr(llvm::MD5Hash(LangOpts.CUID), /*LowerCase=*/true);
   return CUIDHash;
+}
+
+// Get the closest named parent, so we can order the sycl naming decls somewhere
+// that mangling is meaningful.
+static const DeclContext *GetNamedParent(const TagDecl *TD) {
+  const DeclContext *DC = TD->getDeclContext();
+
+  while (!isa<NamedDecl, TranslationUnitDecl>(DC))
+    DC = DC->getParent();
+  return DC;
+}
+
+void ASTContext::AddSYCLKernelNamingDecl(const TagDecl *TD) {
+  TD = TD->getCanonicalDecl();
+  const DeclContext *DC = GetNamedParent(TD);
+
+  assert(TD->getLocation().isValid() &&
+         "Invalid location on kernel naming decl");
+
+  (void)SYCLKernelNamingTypes[DC].insert(TD);
+}
+
+bool ASTContext::IsSYCLKernelNamingDecl(const TagDecl *TD) const {
+  TD = TD->getCanonicalDecl();
+  const DeclContext *DC = GetNamedParent(TD);
+
+  auto Itr = SYCLKernelNamingTypes.find(DC);
+
+  if (Itr == SYCLKernelNamingTypes.end())
+    return false;
+
+  return Itr->getSecond().count(TD);
+}
+
+unsigned ASTContext::GetSYCLKernelNamingIndex(const TagDecl *TD) const {
+  assert(IsSYCLKernelNamingDecl(TD) &&
+         "Lambda not involved in mangling asked for a naming index?");
+
+  TD = TD->getCanonicalDecl();
+  const DeclContext *DC = GetNamedParent(TD);
+
+  auto Itr = SYCLKernelNamingTypes.find(DC);
+  assert(Itr != SYCLKernelNamingTypes.end() && "Not a valid DeclContext?");
+
+  const llvm::SmallPtrSet<const TagDecl *, 4> &Set = Itr->getSecond();
+
+  llvm::SmallVector<const TagDecl *> TagDecls{Set.begin(), Set.end()};
+  llvm::sort(TagDecls, [](const TagDecl *LHS, const TagDecl *RHS) {
+    return LHS->getLocation() < RHS->getLocation();
+  });
+
+  return llvm::find(TagDecls, TD) - TagDecls.begin();
 }

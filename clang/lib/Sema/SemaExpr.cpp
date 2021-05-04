@@ -3493,6 +3493,51 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
   return PredefinedExpr::Create(Context, Loc, ResTy, IK, SL);
 }
 
+ExprResult Sema::BuildUniqueStableNameExpr(SourceLocation OpLoc,
+                                           SourceLocation LParen,
+                                           SourceLocation RParen,
+                                           TypeSourceInfo *TSI) {
+  if (RequireCompleteSizedType(
+          OpLoc, TSI->getType(),
+          diag::err_sizeof_alignof_incomplete_or_sizeless_type,
+          "__builtin_unique_stable_name", SourceRange{LParen, RParen}))
+    return ExprError();
+  return UniqueStableNameExpr::Create(Context, OpLoc, LParen, RParen, TSI);
+}
+ExprResult Sema::BuildUniqueStableNameExpr(SourceLocation OpLoc,
+                                           SourceLocation LParen,
+                                           SourceLocation RParen, Expr *E) {
+  // If this isn't dependent anymore, we know the type, so convert to a Type
+  // based version of the UniqueStableNameExpr.
+  if (E->isInstantiationDependent())
+    return UniqueStableNameExpr::Create(Context, OpLoc, LParen, RParen, E);
+
+  return BuildUniqueStableNameExpr(
+      OpLoc, LParen, RParen, Context.getTrivialTypeSourceInfo(E->getType()));
+}
+
+ExprResult Sema::ActOnUniqueStableNameExpr(SourceLocation OpLoc,
+                                           SourceLocation LParen,
+                                           SourceLocation RParen,
+                                           ParsedType ParsedTy) {
+  TypeSourceInfo *TSI = nullptr;
+  QualType Ty = GetTypeFromParser(ParsedTy, &TSI);
+
+  if (Ty.isNull())
+    return ExprError();
+  if (!TSI)
+    TSI = Context.getTrivialTypeSourceInfo(Ty, LParen);
+
+  return BuildUniqueStableNameExpr(OpLoc, LParen, RParen, TSI);
+}
+
+ExprResult Sema::ActOnUniqueStableNameExpr(SourceLocation OpLoc,
+                                           SourceLocation LParen,
+                                           SourceLocation RParen,
+                                           Expr *Operand) {
+  return BuildUniqueStableNameExpr(OpLoc, LParen, RParen, Operand);
+}
+
 ExprResult Sema::ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind) {
   PredefinedExpr::IdentKind IK;
 

@@ -911,6 +911,10 @@ public:
     OpaqueParser = P;
   }
 
+  // Does the work necessary to deal with a SYCL kernel lambda. At the moment,
+  // this just marks the list of lambdas required to name the kernel.
+  void AddSYCLKernelLambda(const FunctionDecl *FD);
+
   class DelayedDiagnostics;
 
   class DelayedDiagnosticsState {
@@ -5182,6 +5186,21 @@ public:
                                  PredefinedExpr::IdentKind IK);
   ExprResult ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind);
   ExprResult ActOnIntegerConstant(SourceLocation Loc, uint64_t Val);
+
+  ExprResult BuildUniqueStableNameExpr(SourceLocation OpLoc,
+                                       SourceLocation LParen,
+                                       SourceLocation RParen,
+                                       TypeSourceInfo *TSI);
+  ExprResult BuildUniqueStableNameExpr(SourceLocation OpLoc,
+                                       SourceLocation LParen,
+                                       SourceLocation RParen, Expr *E);
+  ExprResult ActOnUniqueStableNameExpr(SourceLocation OpLoc,
+                                       SourceLocation LParen,
+                                       SourceLocation RParen,
+                                       ParsedType ParsedTy);
+  ExprResult ActOnUniqueStableNameExpr(SourceLocation OpLoc,
+                                       SourceLocation LParen,
+                                       SourceLocation RParen, Expr *Operand);
 
   bool CheckLoopHintExpr(Expr *E, SourceLocation Loc);
 

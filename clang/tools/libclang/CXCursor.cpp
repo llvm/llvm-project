@@ -336,6 +336,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::ObjCBoxedExprClass:
   case Stmt::ObjCSubscriptRefExprClass:
   case Stmt::RecoveryExprClass:
+  case Stmt::UniqueStableNameExprClass:
     K = CXCursor_UnexposedExpr;
     break;
 
