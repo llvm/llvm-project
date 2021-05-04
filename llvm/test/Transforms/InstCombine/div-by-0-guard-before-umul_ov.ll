@@ -5,11 +5,9 @@ declare { i4, i1 } @llvm.umul.with.overflow.i4(i4, i4) #1
 
 define i1 @t0_umul(i4 %size, i4 %nmemb) {
 ; CHECK-LABEL: @t0_umul(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i4 [[SIZE:%.*]], 0
-; CHECK-NEXT:    [[UMUL:%.*]] = tail call { i4, i1 } @llvm.umul.with.overflow.i4(i4 [[SIZE]], i4 [[NMEMB:%.*]])
+; CHECK-NEXT:    [[UMUL:%.*]] = tail call { i4, i1 } @llvm.umul.with.overflow.i4(i4 [[SIZE:%.*]], i4 [[NMEMB:%.*]])
 ; CHECK-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i4, i1 } [[UMUL]], 1
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[UMUL_OV]], i1 [[CMP]], i1 false
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[UMUL_OV]]
 ;
   %cmp = icmp ne i4 %size, 0
   %umul = tail call { i4, i1 } @llvm.umul.with.overflow.i4(i4 %size, i4 %nmemb)
@@ -52,7 +50,7 @@ define i1 @n3_wrong_pred(i4 %size, i4 %nmemb) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i4 [[SIZE:%.*]], 0
 ; CHECK-NEXT:    [[UMUL:%.*]] = tail call { i4, i1 } @llvm.umul.with.overflow.i4(i4 [[SIZE]], i4 [[NMEMB:%.*]])
 ; CHECK-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i4, i1 } [[UMUL]], 1
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[UMUL_OV]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[UMUL_OV]], [[CMP]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %cmp = icmp eq i4 %size, 0 ; not 'ne'
@@ -67,7 +65,7 @@ define i1 @n4_not_and(i4 %size, i4 %nmemb) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i4 [[SIZE:%.*]], 0
 ; CHECK-NEXT:    [[UMUL:%.*]] = tail call { i4, i1 } @llvm.umul.with.overflow.i4(i4 [[SIZE]], i4 [[NMEMB:%.*]])
 ; CHECK-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i4, i1 } [[UMUL]], 1
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[UMUL_OV]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    [[AND:%.*]] = or i1 [[UMUL_OV]], [[CMP]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %cmp = icmp ne i4 %size, 0
@@ -82,7 +80,7 @@ define i1 @n5_not_zero(i4 %size, i4 %nmemb) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i4 [[SIZE:%.*]], 1
 ; CHECK-NEXT:    [[UMUL:%.*]] = tail call { i4, i1 } @llvm.umul.with.overflow.i4(i4 [[SIZE]], i4 [[NMEMB:%.*]])
 ; CHECK-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i4, i1 } [[UMUL]], 1
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[UMUL_OV]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[UMUL_OV]], [[CMP]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %cmp = icmp ne i4 %size, 1 ; should be '0'
