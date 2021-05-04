@@ -2970,6 +2970,9 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
       return failure();
     SmallVector<int64_t> newShape = llvm::to_vector<4>(
         originalVecType.getShape().take_back(reducedShapeRank));
+    // Vector rank cannot be zero. Handled by TransferReadToVectorLoadLowering.
+    if (newShape.empty())
+      return failure();
     VectorType newReadType =
         VectorType::get(newShape, originalVecType.getElementType());
     ArrayAttr newInBounds =
