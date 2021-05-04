@@ -84,19 +84,19 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   // positives if sizeof is applied on template argument.
 
   const auto IntegerExpr = ignoringParenImpCasts(integerLiteral());
-  const auto ConstantExpr = expr(ignoringParenImpCasts(
+  const auto ConstantExpr = ignoringParenImpCasts(
       anyOf(integerLiteral(), unaryOperator(hasUnaryOperand(IntegerExpr)),
-            binaryOperator(hasLHS(IntegerExpr), hasRHS(IntegerExpr)))));
-  const auto IntegerCallExpr = expr(ignoringParenImpCasts(
+            binaryOperator(hasLHS(IntegerExpr), hasRHS(IntegerExpr))));
+  const auto IntegerCallExpr = ignoringParenImpCasts(
       callExpr(anyOf(hasType(isInteger()), hasType(enumType())),
-               unless(isInTemplateInstantiation()))));
+               unless(isInTemplateInstantiation())));
   const auto SizeOfExpr = expr(anyOf(
       sizeOfExpr(
           has(hasUnqualifiedDesugaredType(type().bind("sizeof-arg-type")))),
       sizeOfExpr(has(expr(hasType(
           hasUnqualifiedDesugaredType(type().bind("sizeof-arg-type"))))))));
-  const auto SizeOfZero = expr(
-      sizeOfExpr(has(ignoringParenImpCasts(expr(integerLiteral(equals(0)))))));
+  const auto SizeOfZero =
+      sizeOfExpr(has(ignoringParenImpCasts(integerLiteral(equals(0)))));
 
   // Detect expression like: sizeof(ARRAYLEN);
   // Note: The expression 'sizeof(sizeof(0))' is a portable trick used to know
@@ -111,74 +111,69 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   // Detect sizeof(f())
   if (WarnOnSizeOfIntegerExpression) {
-    Finder->addMatcher(
-        expr(sizeOfExpr(ignoringParenImpCasts(has(IntegerCallExpr))))
-            .bind("sizeof-integer-call"),
-        this);
+    Finder->addMatcher(sizeOfExpr(ignoringParenImpCasts(has(IntegerCallExpr)))
+                           .bind("sizeof-integer-call"),
+                       this);
   }
 
   // Detect expression like: sizeof(this);
   if (WarnOnSizeOfThis) {
-    Finder->addMatcher(
-        expr(sizeOfExpr(has(ignoringParenImpCasts(expr(cxxThisExpr())))))
-            .bind("sizeof-this"),
-        this);
+    Finder->addMatcher(sizeOfExpr(has(ignoringParenImpCasts(cxxThisExpr())))
+                           .bind("sizeof-this"),
+                       this);
   }
 
   // Detect sizeof(kPtr) where kPtr is 'const char* kPtr = "abc"';
   const auto CharPtrType = pointerType(pointee(isAnyCharacter()));
   const auto ConstStrLiteralDecl =
-      varDecl(isDefinition(), hasType(qualType(hasCanonicalType(CharPtrType))),
+      varDecl(isDefinition(), hasType(hasCanonicalType(CharPtrType)),
               hasInitializer(ignoringParenImpCasts(stringLiteral())));
-  Finder->addMatcher(expr(sizeOfExpr(has(ignoringParenImpCasts(expr(
-                              hasType(qualType(hasCanonicalType(CharPtrType))),
-                              ignoringParenImpCasts(declRefExpr(
-                                  hasDeclaration(ConstStrLiteralDecl))))))))
-                         .bind("sizeof-charp"),
-                     this);
+  Finder->addMatcher(
+      sizeOfExpr(has(ignoringParenImpCasts(
+                     expr(hasType(hasCanonicalType(CharPtrType)),
+                          ignoringParenImpCasts(declRefExpr(
+                              hasDeclaration(ConstStrLiteralDecl)))))))
+          .bind("sizeof-charp"),
+      this);
 
   // Detect sizeof(ptr) where ptr points to an aggregate (i.e. sizeof(&S)).
   // Do not find it if RHS of a 'sizeof(arr) / sizeof(arr[0])' expression.
-  const auto ArrayExpr = expr(ignoringParenImpCasts(
-      expr(hasType(qualType(hasCanonicalType(arrayType()))))));
+  const auto ArrayExpr =
+      ignoringParenImpCasts(hasType(hasCanonicalType(arrayType())));
   const auto ArrayCastExpr = expr(anyOf(
       unaryOperator(hasUnaryOperand(ArrayExpr), unless(hasOperatorName("*"))),
       binaryOperator(hasEitherOperand(ArrayExpr)),
       castExpr(hasSourceExpression(ArrayExpr))));
-  const auto PointerToArrayExpr = expr(ignoringParenImpCasts(expr(
-      hasType(qualType(hasCanonicalType(pointerType(pointee(arrayType()))))))));
+  const auto PointerToArrayExpr = ignoringParenImpCasts(
+      hasType(hasCanonicalType(pointerType(pointee(arrayType())))));
 
-  const auto StructAddrOfExpr =
-      unaryOperator(hasOperatorName("&"),
-                    hasUnaryOperand(ignoringParenImpCasts(expr(
-                        hasType(qualType(hasCanonicalType(recordType())))))));
-  const auto PointerToStructType = type(hasUnqualifiedDesugaredType(
-      pointerType(pointee(recordType()))));
-  const auto PointerToStructExpr = expr(ignoringParenImpCasts(expr(
-      hasType(qualType(hasCanonicalType(PointerToStructType))),
-      unless(cxxThisExpr()))));
+  const auto StructAddrOfExpr = unaryOperator(
+      hasOperatorName("&"), hasUnaryOperand(ignoringParenImpCasts(
+                                hasType(hasCanonicalType(recordType())))));
+  const auto PointerToStructType =
+      hasUnqualifiedDesugaredType(pointerType(pointee(recordType())));
+  const auto PointerToStructExpr = ignoringParenImpCasts(expr(
+      hasType(hasCanonicalType(PointerToStructType)), unless(cxxThisExpr())));
 
-  const auto ArrayOfPointersExpr = expr(ignoringParenImpCasts(expr(hasType(
-      qualType(hasCanonicalType(arrayType(hasElementType(pointerType()))
-                                    .bind("type-of-array-of-pointers")))))));
+  const auto ArrayOfPointersExpr = ignoringParenImpCasts(
+      hasType(hasCanonicalType(arrayType(hasElementType(pointerType()))
+                                   .bind("type-of-array-of-pointers"))));
   const auto ArrayOfSamePointersExpr =
-      expr(ignoringParenImpCasts(expr(hasType(qualType(hasCanonicalType(
-          arrayType(equalsBoundNode("type-of-array-of-pointers"))))))));
-  const auto ZeroLiteral =
-      expr(ignoringParenImpCasts(integerLiteral(equals(0))));
+      ignoringParenImpCasts(hasType(hasCanonicalType(
+          arrayType(equalsBoundNode("type-of-array-of-pointers")))));
+  const auto ZeroLiteral = ignoringParenImpCasts(integerLiteral(equals(0)));
   const auto ArrayOfSamePointersZeroSubscriptExpr =
-      expr(ignoringParenImpCasts(arraySubscriptExpr(
-          hasBase(ArrayOfSamePointersExpr), hasIndex(ZeroLiteral))));
+      ignoringParenImpCasts(arraySubscriptExpr(hasBase(ArrayOfSamePointersExpr),
+                                               hasIndex(ZeroLiteral)));
   const auto ArrayLengthExprDenom =
-      expr(hasParent(expr(ignoringParenImpCasts(
-               binaryOperator(hasOperatorName("/"),
-                              hasLHS(expr(ignoringParenImpCasts(expr(
-                                  sizeOfExpr(has(ArrayOfPointersExpr)))))))))),
+      expr(hasParent(expr(ignoringParenImpCasts(binaryOperator(
+               hasOperatorName("/"), hasLHS(ignoringParenImpCasts(sizeOfExpr(
+                                         has(ArrayOfPointersExpr)))))))),
            sizeOfExpr(has(ArrayOfSamePointersZeroSubscriptExpr)));
 
-  Finder->addMatcher(expr(anyOf(sizeOfExpr(has(expr(ignoringParenImpCasts(anyOf(
+  Finder->addMatcher(expr(anyOf(sizeOfExpr(has(ignoringParenImpCasts(anyOf(
                                     ArrayCastExpr, PointerToArrayExpr,
-                                    StructAddrOfExpr, PointerToStructExpr))))),
+                                    StructAddrOfExpr, PointerToStructExpr)))),
                                 sizeOfExpr(has(PointerToStructType))),
                           unless(ArrayLengthExprDenom))
                          .bind("sizeof-pointer-to-aggregate"),
@@ -197,8 +192,8 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   }
 
   // Detect expression like: sizeof(expr, expr); most likely an error.
-  Finder->addMatcher(expr(sizeOfExpr(has(expr(ignoringParenImpCasts(
-                              binaryOperator(hasOperatorName(",")))))))
+  Finder->addMatcher(sizeOfExpr(has(ignoringParenImpCasts(
+                                    binaryOperator(hasOperatorName(",")))))
                          .bind("sizeof-comma-expr"),
                      this);
 
@@ -212,9 +207,9 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   const auto ElemType =
       arrayType(hasElementType(recordType().bind("elem-type")));
   const auto ElemPtrType = pointerType(pointee(type().bind("elem-ptr-type")));
-  const auto NumType = qualType(hasCanonicalType(
-      type(anyOf(ElemType, ElemPtrType, type())).bind("num-type")));
-  const auto DenomType = qualType(hasCanonicalType(type().bind("denom-type")));
+  const auto NumType = hasCanonicalType(
+      type(anyOf(ElemType, ElemPtrType, type())).bind("num-type"));
+  const auto DenomType = hasCanonicalType(type().bind("denom-type"));
 
   Finder->addMatcher(
       binaryOperator(hasOperatorName("/"),
@@ -246,30 +241,29 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   // Detect strange double-sizeof expression like: sizeof(sizeof(...));
   // Note: The expression 'sizeof(sizeof(0))' is accepted.
-  Finder->addMatcher(
-      expr(sizeOfExpr(has(ignoringParenImpCasts(expr(
-               hasSizeOfDescendant(8, expr(SizeOfExpr, unless(SizeOfZero))))))))
-          .bind("sizeof-sizeof-expr"),
-      this);
+  Finder->addMatcher(sizeOfExpr(has(ignoringParenImpCasts(hasSizeOfDescendant(
+                                    8, allOf(SizeOfExpr, unless(SizeOfZero))))))
+                         .bind("sizeof-sizeof-expr"),
+                     this);
 
   // Detect sizeof in pointer arithmetic like: N * sizeof(S) == P1 - P2 or
   // (P1 - P2) / sizeof(S) where P1 and P2 are pointers to type S.
   const auto PtrDiffExpr = binaryOperator(
       hasOperatorName("-"),
-      hasLHS(expr(hasType(hasUnqualifiedDesugaredType(pointerType(pointee(
-          hasUnqualifiedDesugaredType(type().bind("left-ptr-type")))))))),
-      hasRHS(expr(hasType(hasUnqualifiedDesugaredType(pointerType(pointee(
-          hasUnqualifiedDesugaredType(type().bind("right-ptr-type")))))))));
+      hasLHS(hasType(hasUnqualifiedDesugaredType(pointerType(pointee(
+          hasUnqualifiedDesugaredType(type().bind("left-ptr-type"))))))),
+      hasRHS(hasType(hasUnqualifiedDesugaredType(pointerType(pointee(
+          hasUnqualifiedDesugaredType(type().bind("right-ptr-type"))))))));
 
   Finder->addMatcher(
       binaryOperator(
           hasAnyOperatorName("==", "!=", "<", "<=", ">", ">=", "+", "-"),
-          hasOperands(expr(anyOf(ignoringParenImpCasts(SizeOfExpr),
-                                 ignoringParenImpCasts(binaryOperator(
-                                     hasOperatorName("*"),
-                                     hasEitherOperand(
-                                         ignoringParenImpCasts(SizeOfExpr)))))),
-                      ignoringParenImpCasts(PtrDiffExpr)))
+          hasOperands(
+              anyOf(ignoringParenImpCasts(SizeOfExpr),
+                    ignoringParenImpCasts(binaryOperator(
+                        hasOperatorName("*"),
+                        hasEitherOperand(ignoringParenImpCasts(SizeOfExpr))))),
+              ignoringParenImpCasts(PtrDiffExpr)))
           .bind("sizeof-in-ptr-arithmetic-mul"),
       this);
 
