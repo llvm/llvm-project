@@ -1397,6 +1397,17 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
       if (TargetObjectWriter->getEMachine() == ELF::EM_386 &&
           Type == ELF::R_386_GOTOFF)
         return true;
+
+      // ld.lld handles R_MIPS_HI16/R_MIPS_LO16 separately, not as a whole, so
+      // it doesn't know that an R_MIPS_HI16 with implicit addend 1 and an
+      // R_MIPS_LO16 with implicit addend -32768 represents 32768, which is in
+      // range of a MergeInputSection. We could introduce a new RelExpr member
+      // (like R_RISCV_PC_INDIRECT for R_RISCV_PCREL_HI20 / R_RISCV_PCREL_LO12)
+      // but the complexity is unnecessary given that GNU as keeps the original
+      // symbol for this case as well.
+      if (TargetObjectWriter->getEMachine() == ELF::EM_MIPS &&
+          !hasRelocationAddend())
+        return true;
     }
 
     // Most TLS relocations use a got, so they need the symbol. Even those that
