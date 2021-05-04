@@ -58,8 +58,10 @@ namespace ranges {
   concept forward_range = input_range<_Tp> && forward_iterator<iterator_t<_Tp> >;
 
   template <class _Tp>
-  concept common_range = range<_Tp> && same_as<iterator_t<_Tp>, sentinel_t<_Tp> >;
+  concept bidirectional_range = forward_range<_Tp> && bidirectional_iterator<iterator_t<_Tp> >;
 
+  template <class _Tp>
+  concept common_range = range<_Tp> && same_as<iterator_t<_Tp>, sentinel_t<_Tp> >;
 } // namespace ranges
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)

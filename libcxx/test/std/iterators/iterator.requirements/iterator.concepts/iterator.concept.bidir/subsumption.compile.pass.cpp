@@ -10,20 +10,21 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
 
-// array
+// template<class T>
+// concept bidirectional_iterator;
 
-#include <array>
+#include <iterator>
 
 #include <concepts>
-#include <ranges>
 
-using range = std::array<int, 10>;
-namespace stdr = std::ranges;
+template<std::forward_iterator I>
+[[nodiscard]] constexpr bool check_subsumption() {
+  return false;
+}
 
-static_assert(std::same_as<stdr::iterator_t<range>, range::iterator>);
-static_assert(stdr::common_range<range>);
-static_assert(stdr::bidirectional_range<range>);
+template<std::bidirectional_iterator>
+[[nodiscard]] constexpr bool check_subsumption() {
+  return true;
+}
 
-static_assert(std::same_as<stdr::iterator_t<range const>, range::const_iterator>);
-static_assert(stdr::common_range<range const>);
-static_assert(stdr::bidirectional_range<range const>);
+static_assert(check_subsumption<int*>());
