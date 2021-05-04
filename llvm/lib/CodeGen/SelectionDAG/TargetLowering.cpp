@@ -102,28 +102,31 @@ bool TargetLowering::parametersInCSRMatch(const MachineRegisterInfo &MRI,
   return true;
 }
 
-/// Set CallLoweringInfo attribute flags based on a call instruction
-/// and called function attributes.
+/// Set CallLoweringInfo attribute flags based on the call instruction's
+/// argument attributes.
 void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
                                                      unsigned ArgIdx) {
-  IsSExt = Call->paramHasAttr(ArgIdx, Attribute::SExt);
-  IsZExt = Call->paramHasAttr(ArgIdx, Attribute::ZExt);
-  IsInReg = Call->paramHasAttr(ArgIdx, Attribute::InReg);
-  IsSRet = Call->paramHasAttr(ArgIdx, Attribute::StructRet);
-  IsNest = Call->paramHasAttr(ArgIdx, Attribute::Nest);
-  IsByVal = Call->paramHasAttr(ArgIdx, Attribute::ByVal);
-  IsPreallocated = Call->paramHasAttr(ArgIdx, Attribute::Preallocated);
-  IsInAlloca = Call->paramHasAttr(ArgIdx, Attribute::InAlloca);
-  IsReturned = Call->paramHasAttr(ArgIdx, Attribute::Returned);
-  IsSwiftSelf = Call->paramHasAttr(ArgIdx, Attribute::SwiftSelf);
-  IsSwiftError = Call->paramHasAttr(ArgIdx, Attribute::SwiftError);
-  Alignment = Call->getParamStackAlign(ArgIdx);
+  auto Attrs = Call->getAttributes();
+
+  IsSExt = Attrs.hasParamAttribute(ArgIdx, Attribute::SExt);
+  IsZExt = Attrs.hasParamAttribute(ArgIdx, Attribute::ZExt);
+  IsInReg = Attrs.hasParamAttribute(ArgIdx, Attribute::InReg);
+  IsSRet = Attrs.hasParamAttribute(ArgIdx, Attribute::StructRet);
+  IsNest = Attrs.hasParamAttribute(ArgIdx, Attribute::Nest);
+  IsReturned = Attrs.hasParamAttribute(ArgIdx, Attribute::Returned);
+  IsSwiftSelf = Attrs.hasParamAttribute(ArgIdx, Attribute::SwiftSelf);
+  IsSwiftError = Attrs.hasParamAttribute(ArgIdx, Attribute::SwiftError);
+  Alignment = Attrs.getParamStackAlignment(ArgIdx);
+
+  IsByVal = Attrs.hasParamAttribute(ArgIdx, Attribute::ByVal);
   ByValType = nullptr;
   if (IsByVal) {
     ByValType = Call->getParamByValType(ArgIdx);
     if (!Alignment)
       Alignment = Call->getParamAlign(ArgIdx);
   }
+  IsInAlloca = Attrs.hasParamAttribute(ArgIdx, Attribute::InAlloca);
+  IsPreallocated = Attrs.hasParamAttribute(ArgIdx, Attribute::Preallocated);
   PreallocatedType = nullptr;
   if (IsPreallocated)
     PreallocatedType = Call->getParamPreallocatedType(ArgIdx);

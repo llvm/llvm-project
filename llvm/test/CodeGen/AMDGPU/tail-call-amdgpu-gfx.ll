@@ -23,6 +23,6 @@ define amdgpu_gfx float @caller(float %arg0) {
 ; GCN-NEXT:    s_addc_u32 s7, s7, callee@rel32@hi+12
 ; GCN-NEXT:    s_setpc_b64 s[6:7]
   %add = fadd float %arg0, 1.0
-  %call = tail call amdgpu_gfx float @callee(float %add, float 2.0)
+  %call = tail call amdgpu_gfx float @callee(float %add, float inreg 2.0)
   ret float %call
 }
