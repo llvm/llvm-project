@@ -62,6 +62,9 @@ public:
     std::function<bool(const Tweak &)> TweakFilter = [](const Tweak &T) {
       return !T.hidden(); // only enable non-hidden tweaks.
     };
+
+    /// Enable preview of InlayHints feature.
+    bool InlayHints = false;
   };
 
   ClangdLSPServer(Transport &Transp, const ThreadsafeFS &TFS,
