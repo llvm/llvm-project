@@ -1,5 +1,4 @@
 # RUN: llvm-mc -arch=hexagon -mcpu=hexagonv67t -filetype=obj %s | llvm-objdump -d - | FileCheck %s
-# RUN: llvm-mc -arch=hexagon -mcpu=hexagonv67t -filetype=obj %s | llvm-objdump --mv67t -d - | FileCheck %s
 # RUN: llvm-mc -arch=hexagon -mcpu=hexagonv67t -filetype=obj %s | llvm-objdump --mcpu=hexagonv67t -d - | FileCheck %s
 
     .text
