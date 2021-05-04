@@ -75,6 +75,26 @@ define <vscale x 2 x i64> @add_i64_high(<vscale x 2 x i64> %a) {
   ret <vscale x 2 x i64> %res
 }
 
+define <vscale x 16 x i8> @add_i8_signedness(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: add_i8_signedness
+; CHECK: add  z0.b, z0.b, #255
+; CHECK-NEXT: ret
+  %elt = insertelement <vscale x 16 x i8> undef, i8 255, i32 0
+  %splat = shufflevector <vscale x 16 x i8> %elt, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %res =  add <vscale x 16 x i8> %a, %splat
+  ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 8 x i16> @add_i16_signedness(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: add_i16_signedness
+; CHECK: add  z0.h, z0.h, #65280
+; CHECK-NEXT: ret
+  %elt = insertelement <vscale x 8 x i16> undef, i16 65280, i32 0
+  %splat = shufflevector <vscale x 8 x i16> %elt, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %res =  add <vscale x 8 x i16> %a, %splat
+  ret <vscale x 8 x i16> %res
+}
+
 ; SUBR
 define <vscale x 16 x i8> @subr_i8_low(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: subr_i8_low

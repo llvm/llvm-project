@@ -3100,20 +3100,32 @@ bool AArch64DAGToDAGISel::SelectSVE8BitLslImm(SDValue N, SDValue &Base,
 
 bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift) {
   if (auto CNode = dyn_cast<ConstantSDNode>(N)) {
-    const int64_t ImmVal = CNode->getZExtValue();
+    const int64_t ImmVal = CNode->getSExtValue();
     SDLoc DL(N);
 
     switch (VT.SimpleTy) {
     case MVT::i8:
+      // Can always select i8s, no shift, mask the immediate value to
+      // deal with sign-extended value from lowering.
+      Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
+      Imm = CurDAG->getTargetConstant(ImmVal & 0xFF, DL, MVT::i32);
+      return true;
+    case MVT::i16:
+      // i16 values get sign-extended to 32-bits during lowering.
       if ((ImmVal & 0xFF) == ImmVal) {
         Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
         Imm = CurDAG->getTargetConstant(ImmVal, DL, MVT::i32);
         return true;
+      } else if ((ImmVal & 0xFF) == 0) {
+        assert((ImmVal >= -32768) && (ImmVal <= 32512));
+        Shift = CurDAG->getTargetConstant(8, DL, MVT::i32);
+        Imm = CurDAG->getTargetConstant((ImmVal >> 8) & 0xFF, DL, MVT::i32);
+        return true;
       }
       break;
-    case MVT::i16:
     case MVT::i32:
     case MVT::i64:
+      // Range of immediate won't trigger signedness problems for 32/64b.
       if ((ImmVal & 0xFF) == ImmVal) {
         Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
         Imm = CurDAG->getTargetConstant(ImmVal, DL, MVT::i32);
