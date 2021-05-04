@@ -20,7 +20,7 @@
 # CHECK-NEXT:  [[#%x, CSTRING_ADDR + 22 - LSTR_OFF]]
 
 # RUN: llvm-objdump --section=__const --full-contents %t | FileCheck %s --check-prefix=NONPCREL
-# NONPCREL:      Contents of section __DATA,__const:
+# NONPCREL:      Contents of section __DATA_CONST,__const:
 # NONPCREL-NEXT: 100001000 18040000 01000000 18040000 01000000
 
 .section __TEXT,__text

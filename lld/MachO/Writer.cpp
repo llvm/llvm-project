@@ -774,7 +774,8 @@ static int sectionOrder(OutputSection *osec) {
         .Case(section_names::unwindInfo, std::numeric_limits<int>::max() - 1)
         .Case(section_names::ehFrame, std::numeric_limits<int>::max())
         .Default(0);
-  } else if (segname == segment_names::data) {
+  } else if (segname == segment_names::data ||
+             segname == segment_names::dataConst) {
     // For each thread spawned, dyld will initialize its TLVs by copying the
     // address range from the start of the first thread-local data section to
     // the end of the last one. We therefore arrange these sections contiguously
