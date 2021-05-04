@@ -308,6 +308,9 @@ opt<bool> FoldingRanges{
     Hidden,
 };
 
+opt<bool> InlayHints{"inlay-hints", cat(Features),
+                     desc("Enable preview of InlayHints feature"), init(false)};
+
 opt<unsigned> WorkerThreadsCount{
     "j",
     cat(Misc),
@@ -829,6 +832,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   Opts.AsyncThreadsCount = WorkerThreadsCount;
   Opts.FoldingRanges = FoldingRanges;
+  Opts.InlayHints = InlayHints;
   Opts.MemoryCleanup = getMemoryCleanupFunction();
 
   Opts.CodeComplete.IncludeIneligibleResults = IncludeIneligibleResults;
