@@ -53,3 +53,12 @@ func @foo4(%a : !fir.ptr<!fir.array<5x15x25xi32>>, %i : i32, %j : i64, %k : inde
   %4 = fir.load %3 : !fir.ref<i32>
   return %4 : i32
 }
+
+// CHECK-LABEL: @foo5
+func @foo5(%box : !fir.box<!fir.ptr<!fir.array<?xi32>>>, %i : index) -> i32 {
+  // similar to foo3 test. Just check that the ptr type is not disturbing codegen.
+  %1 = fir.coordinate_of %box, %i : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
+  // CHECK: load i32, i32* %{{.*}}
+  %rv = fir.load %1 : !fir.ref<i32>
+  return %rv : i32
+}

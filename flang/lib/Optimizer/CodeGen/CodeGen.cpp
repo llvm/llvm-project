@@ -1857,7 +1857,8 @@ struct CoordinateOpConversion
     auto c0 = genConstantIndex(loc, lowerTy().indexType(), rewriter, 0);
     mlir::Value base = operands[0];
     auto firTy = coor.getBaseType();
-    mlir::Type cpnTy = getReferenceEleTy(firTy);
+    mlir::Type cpnTy = fir::dyn_cast_ptrOrBoxEleTy(firTy);
+    assert(cpnTy && "not a reference type");
     bool columnIsDeferred = false;
     bool hasSubdimension = hasSubDimensions(cpnTy);
 
@@ -2071,19 +2072,6 @@ struct CoordinateOpConversion
     if (ptrEle)
       return (!subEle) && (sz == 1);
     return subEle && (i >= sz);
-  }
-
-  /// Returns the element type of the reference `refTy`.
-  static mlir::Type getReferenceEleTy(mlir::Type refTy) {
-    if (auto boxTy = refTy.dyn_cast<fir::BoxType>())
-      return boxTy.getEleTy();
-    if (auto ptrTy = refTy.dyn_cast<fir::ReferenceType>())
-      return ptrTy.getEleTy();
-    if (auto ptrTy = refTy.dyn_cast<fir::PointerType>())
-      return ptrTy.getEleTy();
-    if (auto ptrTy = refTy.dyn_cast<fir::HeapType>())
-      return ptrTy.getEleTy();
-    llvm_unreachable("not a reference type");
   }
 
   /// return true if all `Value`s in `operands` are not `FieldIndexOp`s
