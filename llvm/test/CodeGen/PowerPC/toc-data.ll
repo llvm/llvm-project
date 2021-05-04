@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s \
 ; RUN:     -stop-before=ppc-ctr-loops-verify | FileCheck %s
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST
