@@ -1531,6 +1531,11 @@ public:
 
   void dropAllReferences(VPValue *NewValue) override;
 
+  /// Split current block at \p SplitAt by inserting a new block between the
+  /// current block and its successors and moving all recipes starting at
+  /// SplitAt to the new block. Returns the new block.
+  VPBasicBlock *splitAt(iterator SplitAt);
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPBsicBlock to \p O, prefixing all lines with \p Indent. \p
   /// SlotTracker is used to print unnamed VPValue's using consequtive numbers.

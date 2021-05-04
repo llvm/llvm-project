@@ -9094,6 +9094,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   for (auto &Entry : SinkAfter) {
     VPRecipeBase *Sink = RecipeBuilder.getRecipe(Entry.first);
     VPRecipeBase *Target = RecipeBuilder.getRecipe(Entry.second);
+
     // If the target is in a replication region, make sure to move Sink to the
     // block after it, not into the replication region itself.
     if (auto *Region =
@@ -9106,7 +9107,37 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
         continue;
       }
     }
-    Sink->moveAfter(Target);
+
+    auto *SinkRegion =
+        dyn_cast_or_null<VPRegionBlock>(Sink->getParent()->getParent());
+    // Unless the sink source is in a replicate region, sink the recipe
+    // directly.
+    if (!SinkRegion || !SinkRegion->isReplicator()) {
+      Sink->moveAfter(Target);
+      continue;
+    }
+
+    // If the sink source is in a replicate region, we need to move the whole
+    // replicate region, which should only contain a single recipe in the main
+    // block.
+    assert(Sink->getParent()->size() == 1 &&
+           "parent must be a replicator with a single recipe");
+    auto *SplitBlock =
+        Target->getParent()->splitAt(std::next(Target->getIterator()));
+
+    auto *Pred = SinkRegion->getSinglePredecessor();
+    auto *Succ = SinkRegion->getSingleSuccessor();
+    VPBlockUtils::disconnectBlocks(Pred, SinkRegion);
+    VPBlockUtils::disconnectBlocks(SinkRegion, Succ);
+    VPBlockUtils::connectBlocks(Pred, Succ);
+
+    auto *SplitPred = SplitBlock->getSinglePredecessor();
+
+    VPBlockUtils::disconnectBlocks(SplitPred, SplitBlock);
+    VPBlockUtils::connectBlocks(SplitPred, SinkRegion);
+    VPBlockUtils::connectBlocks(SinkRegion, SplitBlock);
+    if (VPBB == SplitPred)
+      VPBB = SplitBlock;
   }
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
