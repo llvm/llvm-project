@@ -1090,8 +1090,7 @@ define void @test_icmp_mask_ne(i32 %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[A]], 2
-; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
+; CHECK-NEXT:    call void @check1(i1 true)
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ugt i32 [[A]], 2
 ; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp ult i32 [[A]], -1
