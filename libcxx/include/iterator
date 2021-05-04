@@ -83,6 +83,10 @@ template<class I>
 template<class I>
   concept forward_iterator = see below;                    // since C++20
 
+// [iterator.concept.bidir], concept bidirectional_iterator
+template<class I>
+  concept bidirectional_iterator = see below;              // since C++20
+
 template<class Category, class T, class Distance = ptrdiff_t,
          class Pointer = T*, class Reference = T&>
 struct iterator

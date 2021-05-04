@@ -55,3 +55,19 @@ requires true
 // clang-format on
 
 static_assert(check_forward_range_subsumption<range>());
+
+// clang-format off
+template<std::ranges::forward_range R>
+requires std::bidirectional_iterator<std::ranges::iterator_t<R> >
+[[nodiscard]] constexpr bool check_bidirectional_range_subsumption() {
+  return false;
+}
+
+template<std::ranges::bidirectional_range>
+requires true
+[[nodiscard]] constexpr bool check_bidirectional_range_subsumption() {
+  return true;
+}
+// clang-format on
+
+static_assert(check_bidirectional_range_subsumption<range>());
