@@ -107,10 +107,6 @@ namespace {
                         MachineBasicBlock::iterator MBBI, unsigned LdrexOp,
                         unsigned StrexOp, unsigned UxtOp,
                         MachineBasicBlock::iterator &NextMBBI);
-    bool ExpandAtomicOp(MachineBasicBlock &MBB,
-                        MachineBasicBlock::iterator MBBI, const int Size,
-                        unsigned PseudoOp,
-                        MachineBasicBlock::iterator &NextMBBI);
 
     bool ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI,
@@ -1661,271 +1657,16 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
 /// ARM's ldrexd/strexd take a consecutive register pair (represented as a
 /// single GPRPair register), Thumb's take two separate registers so we need to
 /// extract the subregs from the pair.
-static void addExclusiveRegPair(MachineInstrBuilder &MIB, Register Reg,
+static void addExclusiveRegPair(MachineInstrBuilder &MIB, MachineOperand &Reg,
                                 unsigned Flags, bool IsThumb,
                                 const TargetRegisterInfo *TRI) {
   if (IsThumb) {
-    Register RegLo = TRI->getSubReg(Reg, ARM::gsub_0);
-    Register RegHi = TRI->getSubReg(Reg, ARM::gsub_1);
+    Register RegLo = TRI->getSubReg(Reg.getReg(), ARM::gsub_0);
+    Register RegHi = TRI->getSubReg(Reg.getReg(), ARM::gsub_1);
     MIB.addReg(RegLo, Flags);
     MIB.addReg(RegHi, Flags);
   } else
-    MIB.addReg(Reg, Flags);
-}
-
-static void
-makeAtomicUpdateInstrs(const unsigned PseudoOp, MachineBasicBlock *LoadStoreBB,
-                       const DebugLoc &DL, const ARMBaseInstrInfo *TII,
-                       const Register DestReg, const Register ValReg) {
-
-  auto BasicOp = [&](unsigned Opcode) {
-    auto MIB = BuildMI(LoadStoreBB, DL, TII->get(Opcode), DestReg)
-                   .addReg(DestReg, RegState::Kill)
-                   .addReg(ValReg)
-                   .add(predOps(ARMCC::AL));
-    if (Opcode != ARM::VADDS && Opcode != ARM::VSUBS && Opcode != ARM::VADDD &&
-        Opcode != ARM::VSUBD)
-      // Floating point operations don't have this.
-      // Add 's' bit operand (always reg0 for this)
-      MIB.addReg(0);
-  };
-  auto MinMax = [&](ARMCC::CondCodes Condition) {
-    BuildMI(LoadStoreBB, DL, TII->get(ARM::CMPrr))
-        .addReg(DestReg)
-        .addReg(ValReg)
-        .add(predOps(ARMCC::AL));
-    BuildMI(LoadStoreBB, DL, TII->get(ARM::MOVr), DestReg)
-        .addReg(ValReg)
-        .add(predOps(Condition))
-        .add(condCodeOp()); // 's' bit
-  };
-
-  switch (PseudoOp) {
-  // No operations (swaps)
-  case ARM::ATOMIC_SWAP_8:
-  case ARM::ATOMIC_SWAP_16:
-  case ARM::ATOMIC_SWAP_32:
-  case ARM::ATOMIC_SWAP_64:
-    llvm_unreachable("Swap should be handled at call site.");
-    return;
-
-  // Basic binary operation
-  case ARM::ATOMIC_LOAD_ADD_8:
-  case ARM::ATOMIC_LOAD_ADD_16:
-  case ARM::ATOMIC_LOAD_ADD_32:
-  case ARM::ATOMIC_LOAD_ADD_64:
-    return BasicOp(ARM::ADDrr);
-  case ARM::ATOMIC_LOAD_SUB_8:
-  case ARM::ATOMIC_LOAD_SUB_16:
-  case ARM::ATOMIC_LOAD_SUB_32:
-  case ARM::ATOMIC_LOAD_SUB_64:
-    return BasicOp(ARM::SUBrr);
-  case ARM::ATOMIC_LOAD_AND_8:
-  case ARM::ATOMIC_LOAD_AND_16:
-  case ARM::ATOMIC_LOAD_AND_32:
-  case ARM::ATOMIC_LOAD_AND_64:
-    return BasicOp(ARM::ANDrr);
-  case ARM::ATOMIC_LOAD_OR_8:
-  case ARM::ATOMIC_LOAD_OR_16:
-  case ARM::ATOMIC_LOAD_OR_32:
-  case ARM::ATOMIC_LOAD_OR_64:
-    return BasicOp(ARM::ORRrr);
-  case ARM::ATOMIC_LOAD_XOR_8:
-  case ARM::ATOMIC_LOAD_XOR_16:
-  case ARM::ATOMIC_LOAD_XOR_32:
-  case ARM::ATOMIC_LOAD_XOR_64:
-    return BasicOp(ARM::EORrr);
-  case ARM::ATOMIC_LOAD_FADD_16:
-  case ARM::ATOMIC_LOAD_FADD_32:
-    return BasicOp(ARM::VADDS);
-  case ARM::ATOMIC_LOAD_FADD_64:
-    return BasicOp(ARM::VADDD);
-  case ARM::ATOMIC_LOAD_FSUB_16:
-  case ARM::ATOMIC_LOAD_FSUB_32:
-    return BasicOp(ARM::VSUBS);
-  case ARM::ATOMIC_LOAD_FSUB_64:
-    return BasicOp(ARM::VSUBD);
-
-  // Minimum or maximum operations
-  case ARM::ATOMIC_LOAD_MAX_8:
-  case ARM::ATOMIC_LOAD_MAX_16:
-  case ARM::ATOMIC_LOAD_MAX_32:
-  case ARM::ATOMIC_LOAD_MAX_64:
-  case ARM::ATOMIC_LOAD_UMAX_8:
-  case ARM::ATOMIC_LOAD_UMAX_16:
-  case ARM::ATOMIC_LOAD_UMAX_32:
-  case ARM::ATOMIC_LOAD_UMAX_64:
-    return MinMax(ARMCC::LE);
-  case ARM::ATOMIC_LOAD_MIN_8:
-  case ARM::ATOMIC_LOAD_MIN_16:
-  case ARM::ATOMIC_LOAD_MIN_32:
-  case ARM::ATOMIC_LOAD_MIN_64:
-  case ARM::ATOMIC_LOAD_UMIN_8:
-  case ARM::ATOMIC_LOAD_UMIN_16:
-  case ARM::ATOMIC_LOAD_UMIN_32:
-  case ARM::ATOMIC_LOAD_UMIN_64:
-    return MinMax(ARMCC::GE);
-
-  // NAND
-  case ARM::ATOMIC_LOAD_NAND_8:
-  case ARM::ATOMIC_LOAD_NAND_16:
-  case ARM::ATOMIC_LOAD_NAND_32:
-  case ARM::ATOMIC_LOAD_NAND_64:
-    BuildMI(LoadStoreBB, DL, TII->get(ARM::ANDrr), DestReg)
-        .addReg(DestReg, RegState::Kill)
-        .addReg(ValReg)
-        .add(predOps(ARMCC::AL))
-        .addReg(0); // 's' bit
-    BuildMI(LoadStoreBB, DL, TII->get(ARM::MVNr), DestReg)
-        .addReg(DestReg, RegState::Kill)
-        .add(predOps(ARMCC::AL))
-        .addReg(0); // 's' bit
-    return;
-  }
-
-  llvm_unreachable("unexpected opcode");
-}
-
-bool ARMExpandPseudo::ExpandAtomicOp(MachineBasicBlock &MBB,
-                                     MachineBasicBlock::iterator MBBI,
-                                     const int Size, const unsigned PseudoOp,
-                                     MachineBasicBlock::iterator &NextMBBI) {
-  assert(!STI->isThumb() && "atomic pseudo-instructions are ARM only");
-
-  unsigned LdrexOp;
-  unsigned StrexOp;
-  switch (Size) {
-  case 8:
-    LdrexOp = ARM::LDREXB;
-    StrexOp = ARM::STREXB;
-    break;
-  case 16:
-    LdrexOp = ARM::LDREXH;
-    StrexOp = ARM::STREXH;
-    break;
-  case 32:
-    LdrexOp = ARM::LDREX;
-    StrexOp = ARM::STREX;
-    break;
-  case 64:
-    LdrexOp = ARM::LDREXD;
-    StrexOp = ARM::STREXD;
-    break;
-  default:
-    llvm_unreachable("Invalid Size");
-  }
-
-  MachineInstr &MI = *MBBI;
-  DebugLoc DL = MI.getDebugLoc();
-  MachineOperand &Dest = MI.getOperand(0);
-  MachineOperand &Temp = MI.getOperand(1);
-  // If Temp is a GPRPair, MiniTempReg is the first of the pair
-  Register MiniTempReg =
-      ARM::GPRPairRegClass.contains(Temp.getReg())
-          ? (Register)TRI->getSubReg(Temp.getReg(), ARM::gsub_0)
-          : Temp.getReg();
-  assert(ARM::GPRRegClass.contains(MiniTempReg));
-  Register AddrReg = MI.getOperand(2).getReg();
-  Register ValReg = MI.getOperand(3).getReg();
-
-  // TempReg is GPR and is used for load/store operations.
-  // DestReg is either GPR or DPR and is used for arithmetic operations.
-
-  // LoadStoreBB:
-  //   TempReg = LoadExclusive [AddrReg]
-  //   DestReg = mov TempReg
-  //   if xchg:
-  //      TempReg = mov ValReg
-  //   else:
-  //      DestReg = Operation DestReg, ValReg
-  //      TempReg = mov DestReg
-  //   MiniTempReg = StoreExclusive TempReg, [AddrReg]
-  //   cmp MiniTempReg, #0
-  //   bne LoadStoreBB
-  //   b DoneBB
-  // DoneBB:
-  //   bx lr
-
-  MachineFunction *MF = MBB.getParent();
-  auto *LoadStoreBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
-  auto *DoneBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
-
-  MF->insert(++MBB.getIterator(), LoadStoreBB);
-  MF->insert(++LoadStoreBB->getIterator(), DoneBB);
-
-  MachineInstrBuilder MIB;
-  // LoadExclusive into temporary general purpose register (pair)
-  MIB = BuildMI(LoadStoreBB, DL, TII->get(LdrexOp));
-  addExclusiveRegPair(MIB, Temp.getReg(), RegState::Define, STI->isThumb(),
-                      TRI);
-  MIB.addReg(AddrReg);
-  MIB.add(predOps(ARMCC::AL));
-
-  // Copy Temp into Dest. For floating point operations this is GPR -> DPR.
-  TII->copyPhysReg(*LoadStoreBB, LoadStoreBB->end(), DL, Dest.getReg(),
-                   Temp.getReg(), true /* KillSrc */);
-
-  const bool IsXchg =
-      PseudoOp == ARM::ATOMIC_SWAP_8 || PseudoOp == ARM::ATOMIC_SWAP_16 ||
-      PseudoOp == ARM::ATOMIC_SWAP_32 || PseudoOp == ARM::ATOMIC_SWAP_64;
-
-  if (IsXchg) {
-    // Copy ValReg into Temp. For floating point operations this is DPR -> GPR.
-    TII->copyPhysReg(*LoadStoreBB, LoadStoreBB->end(), DL, Temp.getReg(),
-                     ValReg, false /* KillSrc */);
-  } else {
-    // Update the value in Dest with the results of the operation
-    makeAtomicUpdateInstrs(PseudoOp, LoadStoreBB, DL, TII, Dest.getReg(),
-                           ValReg);
-
-    // Copy Dest into Temp. For floating point operations this is DPR -> GPR.
-    TII->copyPhysReg(*LoadStoreBB, LoadStoreBB->end(), DL, Temp.getReg(),
-                     Dest.getReg(), false /* KillSrc */);
-  }
-
-  // StoreExclusive Temp to Addr, store success in Temp (or MiniTempReg)
-  MIB = BuildMI(LoadStoreBB, DL, TII->get(StrexOp));
-  addExclusiveRegPair(MIB, MiniTempReg, RegState::Define, STI->isThumb(), TRI);
-  MIB.addReg(Temp.getReg(), RegState::Kill);
-  MIB.addReg(AddrReg);
-  MIB.add(predOps(ARMCC::AL));
-
-  // Compare to zero
-  BuildMI(LoadStoreBB, DL, TII->get(ARM::CMPri))
-      .addReg(MiniTempReg, RegState::Kill)
-      .addImm(0)
-      .add(predOps(ARMCC::AL));
-
-  // Branch to LoadStoreBB if failed
-  BuildMI(LoadStoreBB, DL, TII->get(ARM::Bcc))
-      .addMBB(LoadStoreBB)
-      .addImm(ARMCC::NE)
-      .addReg(ARM::CPSR, RegState::Kill);
-
-  // Branch to DoneBB if success
-  BuildMI(LoadStoreBB, DL, TII->get(ARM::B)).addMBB(DoneBB);
-
-  LoadStoreBB->addSuccessor(LoadStoreBB);
-  LoadStoreBB->addSuccessor(DoneBB);
-
-  // Copy remaining instructions in MBB into DoneBB
-  DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
-  DoneBB->transferSuccessors(&MBB);
-
-  MBB.addSuccessor(LoadStoreBB);
-
-  NextMBBI = MBB.end();
-  MI.eraseFromParent();
-
-  // Recompute livein lists.
-  LivePhysRegs LiveRegs;
-  computeAndAddLiveIns(LiveRegs, *DoneBB);
-  computeAndAddLiveIns(LiveRegs, *LoadStoreBB);
-  // Do an extra pass around the loop to get loop carried registers right.
-  LoadStoreBB->clearLiveIns();
-  computeAndAddLiveIns(LiveRegs, *LoadStoreBB);
-
-  return true;
+    MIB.addReg(Reg.getReg(), Flags);
 }
 
 /// Expand a 64-bit CMP_SWAP to an ldrexd/strexd loop.
@@ -1967,7 +1708,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   unsigned LDREXD = IsThumb ? ARM::t2LDREXD : ARM::LDREXD;
   MachineInstrBuilder MIB;
   MIB = BuildMI(LoadCmpBB, DL, TII->get(LDREXD));
-  addExclusiveRegPair(MIB, Dest.getReg(), RegState::Define, IsThumb, TRI);
+  addExclusiveRegPair(MIB, Dest, RegState::Define, IsThumb, TRI);
   MIB.addReg(AddrReg).add(predOps(ARMCC::AL));
 
   unsigned CMPrr = IsThumb ? ARM::tCMPhir : ARM::CMPrr;
@@ -1996,7 +1737,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   unsigned STREXD = IsThumb ? ARM::t2STREXD : ARM::STREXD;
   MIB = BuildMI(StoreBB, DL, TII->get(STREXD), TempReg);
   unsigned Flags = getKillRegState(New.isDead());
-  addExclusiveRegPair(MIB, New.getReg(), Flags, IsThumb, TRI);
+  addExclusiveRegPair(MIB, New, Flags, IsThumb, TRI);
   MIB.addReg(AddrReg).add(predOps(ARMCC::AL));
 
   unsigned CMPri = IsThumb ? ARM::t2CMPri : ARM::CMPri;
@@ -3061,64 +2802,6 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
     case ARM::CMP_SWAP_64:
       return ExpandCMP_SWAP_64(MBB, MBBI, NextMBBI);
-
-    case ARM::ATOMIC_LOAD_ADD_8:
-    case ARM::ATOMIC_LOAD_AND_8:
-    case ARM::ATOMIC_LOAD_MAX_8:
-    case ARM::ATOMIC_LOAD_MIN_8:
-    case ARM::ATOMIC_LOAD_NAND_8:
-    case ARM::ATOMIC_LOAD_OR_8:
-    case ARM::ATOMIC_LOAD_SUB_8:
-    case ARM::ATOMIC_LOAD_UMAX_8:
-    case ARM::ATOMIC_LOAD_UMIN_8:
-    case ARM::ATOMIC_LOAD_XOR_8:
-    case ARM::ATOMIC_SWAP_8:
-      return ExpandAtomicOp(MBB, MBBI, 8, Opcode, NextMBBI);
-
-    case ARM::ATOMIC_LOAD_ADD_16:
-    case ARM::ATOMIC_LOAD_AND_16:
-    case ARM::ATOMIC_LOAD_FADD_16:
-    case ARM::ATOMIC_LOAD_FSUB_16:
-    case ARM::ATOMIC_LOAD_MAX_16:
-    case ARM::ATOMIC_LOAD_MIN_16:
-    case ARM::ATOMIC_LOAD_NAND_16:
-    case ARM::ATOMIC_LOAD_OR_16:
-    case ARM::ATOMIC_LOAD_SUB_16:
-    case ARM::ATOMIC_LOAD_UMAX_16:
-    case ARM::ATOMIC_LOAD_UMIN_16:
-    case ARM::ATOMIC_LOAD_XOR_16:
-    case ARM::ATOMIC_SWAP_16:
-      return ExpandAtomicOp(MBB, MBBI, 16, Opcode, NextMBBI);
-
-    case ARM::ATOMIC_LOAD_ADD_32:
-    case ARM::ATOMIC_LOAD_AND_32:
-    case ARM::ATOMIC_LOAD_FADD_32:
-    case ARM::ATOMIC_LOAD_FSUB_32:
-    case ARM::ATOMIC_LOAD_MAX_32:
-    case ARM::ATOMIC_LOAD_MIN_32:
-    case ARM::ATOMIC_LOAD_NAND_32:
-    case ARM::ATOMIC_LOAD_OR_32:
-    case ARM::ATOMIC_LOAD_SUB_32:
-    case ARM::ATOMIC_LOAD_UMAX_32:
-    case ARM::ATOMIC_LOAD_UMIN_32:
-    case ARM::ATOMIC_LOAD_XOR_32:
-    case ARM::ATOMIC_SWAP_32:
-      return ExpandAtomicOp(MBB, MBBI, 32, Opcode, NextMBBI);
-
-    case ARM::ATOMIC_LOAD_ADD_64:
-    case ARM::ATOMIC_LOAD_AND_64:
-    case ARM::ATOMIC_LOAD_FADD_64:
-    case ARM::ATOMIC_LOAD_FSUB_64:
-    case ARM::ATOMIC_LOAD_MAX_64:
-    case ARM::ATOMIC_LOAD_MIN_64:
-    case ARM::ATOMIC_LOAD_NAND_64:
-    case ARM::ATOMIC_LOAD_OR_64:
-    case ARM::ATOMIC_LOAD_SUB_64:
-    case ARM::ATOMIC_LOAD_UMAX_64:
-    case ARM::ATOMIC_LOAD_UMIN_64:
-    case ARM::ATOMIC_LOAD_XOR_64:
-    case ARM::ATOMIC_SWAP_64:
-      return ExpandAtomicOp(MBB, MBBI, 64, Opcode, NextMBBI);
 
     case ARM::tBL_PUSHLR:
     case ARM::BL_PUSHLR: {
