@@ -394,6 +394,8 @@ class MarshalledFlagRec<FlagDefExpanded flag, FlagDefExpanded other,
 // key path via the marshalling infrastructure.
 // Names of the records consist of the specified prefix, "no_" for the negative
 // flag, and NAME.
+// Used for -cc1 frontend options. Driver-only options do not map to
+// CompilerInvocation.
 multiclass BoolOption<string prefix = "", string spelling_base,
                       KeyPathAndMacro kpm, Default default,
                       FlagDef flag1_base, FlagDef flag2_base,
@@ -416,6 +418,8 @@ multiclass BoolOption<string prefix = "", string spelling_base,
 
 /// Creates a BoolOption where both of the flags are prefixed with "f", are in
 /// the Group<f_Group>.
+/// Used for -cc1 frontend options. Driver-only options do not map to
+/// CompilerInvocation.
 multiclass BoolFOption<string flag_base, KeyPathAndMacro kpm,
                        Default default, FlagDef flag1, FlagDef flag2,
                        BothFlags both = BothFlags<[], "">> {
@@ -425,6 +429,8 @@ multiclass BoolFOption<string flag_base, KeyPathAndMacro kpm,
 
 // Creates a BoolOption where both of the flags are prefixed with "g" and have
 // the Group<g_Group>.
+// Used for -cc1 frontend options. Driver-only options do not map to
+// CompilerInvocation.
 multiclass BoolGOption<string flag_base, KeyPathAndMacro kpm,
                        Default default, FlagDef flag1, FlagDef flag2,
                        BothFlags both = BothFlags<[], "">> {
