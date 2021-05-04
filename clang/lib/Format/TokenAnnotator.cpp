@@ -116,10 +116,17 @@ private:
     while (CurrentToken) {
       if (CurrentToken->is(tok::greater)) {
         // Try to do a better job at looking for ">>" within the condition of
-        // a statement.
+        // a statement. Conservatively insert spaces between consecutive ">"
+        // tokens to prevent splitting right bitshift operators and potentially
+        // altering program semantics. This check is overly conservative and
+        // will prevent spaces from being inserted in select nested template
+        // parameter cases, but should not alter program semantics.
         if (CurrentToken->Next && CurrentToken->Next->is(tok::greater) &&
             Left->ParentBracket != tok::less &&
-            isKeywordWithCondition(*Line.First))
+            (isKeywordWithCondition(*Line.First) ||
+             CurrentToken->getStartOfNonWhitespace() ==
+                 CurrentToken->Next->getStartOfNonWhitespace().getLocWithOffset(
+                     -1)))
           return false;
         Left->MatchingParen = CurrentToken;
         CurrentToken->MatchingParen = Left;
