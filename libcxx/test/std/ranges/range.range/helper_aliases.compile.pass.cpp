@@ -9,7 +9,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
-// XFAIL: msvc && clang
 
 // template<range R>
 // using range_difference_t = iter_difference_t<iterator_t<R>>;
