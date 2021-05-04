@@ -763,7 +763,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
 
     // Build a map of local defined symbols.
     for (const Symbol *s : sym.file->getSymbols())
-      if (s->isLocal() && s->isDefined())
+      if (s->isLocal() && s->isDefined() && !s->getName().empty())
         map.try_emplace(s->getName(), s);
   }
 
