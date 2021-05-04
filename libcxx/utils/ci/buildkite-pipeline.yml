@@ -125,6 +125,18 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
+  - label: "Debug iterators"
+    command: "libcxx/utils/ci/run-buildbot generic-debug-iterators"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
   - label: "GCC/C++20"
     command: "libcxx/utils/ci/run-buildbot generic-gcc"
     artifact_paths:

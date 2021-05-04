@@ -75,6 +75,10 @@ template<class S, class I>
 template<class S, class I>
   concept sized_sentinel_for = see below;
 
+// [iterator.concept.input], concept input_iterator
+template<class I>
+  concept input_iterator = see below;                      // since C++20
+
 template<class Category, class T, class Distance = ptrdiff_t,
          class Pointer = T*, class Reference = T&>
 struct iterator

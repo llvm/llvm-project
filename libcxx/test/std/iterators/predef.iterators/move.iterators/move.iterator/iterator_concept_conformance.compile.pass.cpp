@@ -22,3 +22,4 @@ static_assert(std::incrementable<iterator>);
 static_assert(std::input_or_output_iterator<iterator>);
 static_assert(std::sentinel_for<iterator, iterator>);
 static_assert(std::sized_sentinel_for<iterator, iterator>);
+static_assert(std::input_iterator<iterator>);

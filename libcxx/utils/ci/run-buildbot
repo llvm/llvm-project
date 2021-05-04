@@ -202,6 +202,14 @@ generic-cxx2b)
     check-cxx-cxxabi
     check-abi-list
 ;;
+generic-debug-iterators)
+    export CC=clang-tot
+    export CXX=clang++-tot
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-debug-iterators.cmake"
+    check-cxx-cxxabi
+    check-abi-list
+;;
 generic-noexceptions)
     export CC=clang
     export CXX=clang++
