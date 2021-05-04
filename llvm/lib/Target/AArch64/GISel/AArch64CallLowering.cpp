@@ -138,7 +138,8 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
                  const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
                  CCState &State) override {
     applyStackPassedSmallTypeDAGHack(OrigVT, ValVT, LocVT);
-    return AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
+    return getAssignFn(State.isVarArg())(ValNo, ValVT, LocVT, LocInfo, Flags,
+                                         State);
   }
 
   /// How the physical register gets marked varies between formal
@@ -187,9 +188,9 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
                      MachineInstrBuilder MIB, CCAssignFn *AssignFn,
                      CCAssignFn *AssignFnVarArg, bool IsReturn,
                      bool IsTailCall = false, int FPDiff = 0)
-      : OutgoingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
-        AssignFnVarArg(AssignFnVarArg), IsReturn(IsReturn),
-        IsTailCall(IsTailCall), FPDiff(FPDiff), StackSize(0), SPReg(0),
+      : OutgoingValueHandler(MIRBuilder, MRI, AssignFn, AssignFnVarArg),
+        MIB(MIB), IsReturn(IsReturn), IsTailCall(IsTailCall), FPDiff(FPDiff),
+        StackSize(0), SPReg(0),
         Subtarget(MIRBuilder.getMF().getSubtarget<AArch64Subtarget>()) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
@@ -296,7 +297,6 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
   }
 
   MachineInstrBuilder MIB;
-  CCAssignFn *AssignFnVarArg;
 
   /// Track if this is used for a return instead of function argument
   /// passing. We apply a hack to i1/i8/i16 stack passed values, but do not use
