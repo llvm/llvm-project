@@ -8,6 +8,7 @@
 
 // XFAIL: gcc-10
 //     GCC's __builtin_strlen isn't constexpr yet
+// UNSUPPORTED: LIBCXX-DEBUG-FIXME
 
 // <string_view>
 

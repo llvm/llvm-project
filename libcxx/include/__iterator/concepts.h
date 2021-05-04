@@ -111,6 +111,14 @@ concept sized_sentinel_for =
     { __i - __s } -> same_as<iter_difference_t<_Ip> >;
   };
 
+// [iterator.concept.input]
+template<class _Ip>
+concept input_iterator =
+  input_or_output_iterator<_Ip> &&
+  indirectly_readable<_Ip> &&
+  requires { typename _ITER_CONCEPT<_Ip>; } &&
+  derived_from<_ITER_CONCEPT<_Ip>, input_iterator_tag>;
+
 // clang-format on
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)

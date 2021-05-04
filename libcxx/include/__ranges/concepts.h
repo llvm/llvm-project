@@ -33,7 +33,7 @@ namespace ranges {
     ranges::end(__t);
   };
 
-  // `iterator_t` defined in <__ranges/begin.h>
+  // `iterator_t` defined in <__ranges/access.h>
 
   template <range _Rp>
   using sentinel_t = decltype(ranges::end(declval<_Rp&>()));
@@ -51,6 +51,9 @@ namespace ranges {
   using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<_Rp> >;
 
   // [range.refinements], other range refinements
+  template <class _Tp>
+  concept input_range = range<_Tp> && input_iterator<iterator_t<_Tp> >;
+
   template <class _Tp>
   concept common_range = range<_Tp> && same_as<iterator_t<_Tp>, sentinel_t<_Tp> >;
 } // namespace ranges

@@ -48,3 +48,4 @@ static_assert(std::sized_sentinel_for<const_iterator, iterator>);
 static_assert(std::sized_sentinel_for<const_iterator, const_iterator>);
 static_assert(!std::sized_sentinel_for<const_iterator, reverse_iterator>);
 static_assert(!std::sized_sentinel_for<const_iterator, const_reverse_iterator>);
+static_assert(std::input_iterator<const_iterator>);
