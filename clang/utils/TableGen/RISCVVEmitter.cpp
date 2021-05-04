@@ -161,11 +161,6 @@ private:
   // The types we use to obtain the specific LLVM intrinsic. They are index of
   // InputTypes. -1 means the return type.
   std::vector<int64_t> IntrinsicTypes;
-  // C/C++ intrinsic operand order is different to builtin operand order. Record
-  // the mapping of InputTypes index.
-  SmallVector<unsigned> CTypeOrder;
-  // Operands are reordered in the header.
-  bool IsOperandReordered = false;
   uint8_t RISCVExtensions = 0;
 
 public:
@@ -174,7 +169,6 @@ public:
                bool HasMaskedOffOperand, bool HasVL, bool HasNoMaskedOverloaded,
                bool HasAutoDef, StringRef ManualCodegen, const RVVTypes &Types,
                const std::vector<int64_t> &IntrinsicTypes,
-               const std::vector<int64_t> &PermuteOperands,
                StringRef RequiredExtension);
   ~RVVIntrinsic() = default;
 
@@ -187,8 +181,6 @@ public:
   bool hasManualCodegen() const { return !ManualCodegen.empty(); }
   bool hasAutoDef() const { return HasAutoDef; }
   bool isMask() const { return IsMask; }
-  bool isOperandReordered() const { return IsOperandReordered; }
-  size_t getNumOperand() const { return InputTypes.size(); }
   StringRef getIRName() const { return IRName; }
   StringRef getManualCodegen() const { return ManualCodegen; }
   uint8_t getRISCVExtensions() const { return RISCVExtensions; }
@@ -754,7 +746,6 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
                            bool HasNoMaskedOverloaded, bool HasAutoDef,
                            StringRef ManualCodegen, const RVVTypes &OutInTypes,
                            const std::vector<int64_t> &NewIntrinsicTypes,
-                           const std::vector<int64_t> &PermuteOperands,
                            StringRef RequiredExtension)
     : IRName(IRName), HasSideEffects(HasSideEffects), IsMask(IsMask),
       HasMaskedOffOperand(HasMaskedOffOperand), HasVL(HasVL),
@@ -787,43 +778,6 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
   // Init OutputType and InputTypes
   OutputType = OutInTypes[0];
   InputTypes.assign(OutInTypes.begin() + 1, OutInTypes.end());
-  CTypeOrder.resize(InputTypes.size());
-  std::iota(CTypeOrder.begin(), CTypeOrder.end(), 0);
-  // Update default order if we need permutate.
-  if (!PermuteOperands.empty()) {
-    IsOperandReordered = true;
-    // PermuteOperands is nonmasked version index. Update index when there is
-    // maskedoff operand which is always in first operand.
-
-    unsigned Skew = HasMaskedOffOperand ? 1 : 0;
-    for (unsigned i = 0; i < PermuteOperands.size(); ++i) {
-      if (i != PermuteOperands[i])
-        CTypeOrder[i] = PermuteOperands[i] + Skew;
-    }
-    // Verify the result of CTypeOrder has legal value.
-    if (*std::max_element(CTypeOrder.begin(), CTypeOrder.end()) >=
-        CTypeOrder.size())
-      PrintFatalError(
-          "The index of PermuteOperand is bigger than the operand number");
-    SmallSet<unsigned, 8> Seen;
-    for (auto Idx : CTypeOrder) {
-      if (!Seen.insert(Idx).second)
-        PrintFatalError(
-            "The different element in PermuteOperand could not be equal");
-    }
-  }
-
-  if (IsMask) {
-    if (HasVL)
-      // Builtin type order: op0, op1, ..., mask, vl
-      // C type order: mask, op0, op1, ..., vl
-      std::rotate(CTypeOrder.begin(), CTypeOrder.end() - 2,
-                  CTypeOrder.end() - 1);
-    else
-      // Builtin type order: op0, op1, ..., mask
-      // C type order: mask, op0, op1, ...,
-      std::rotate(CTypeOrder.begin(), CTypeOrder.end() - 1, CTypeOrder.end());
-  }
 
   // IntrinsicTypes is nonmasked version index. Need to update it
   // if there is maskedoff operand (It is always in first operand).
@@ -853,6 +807,15 @@ void RVVIntrinsic::emitCodeGenSwitchBody(raw_ostream &OS) const {
     OS << "break;\n";
     return;
   }
+
+  if (isMask()) {
+    if (hasVL()) {
+      OS << "  std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);\n";
+    } else {
+      OS << "  std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end());\n";
+    }
+  }
+
   OS << "  IntrinsicTypes = {";
   ListSeparator LS;
   for (const auto &Idx : IntrinsicTypes) {
@@ -865,55 +828,39 @@ void RVVIntrinsic::emitCodeGenSwitchBody(raw_ostream &OS) const {
   // VL could be i64 or i32, need to encode it in IntrinsicTypes. VL is
   // always last operand.
   if (hasVL())
-    OS << ", Ops[" << getNumOperand() - 1 << "]->getType()";
+    OS << ", Ops.back()->getType()";
   OS << "};\n";
   OS << "  break;\n";
 }
 
 void RVVIntrinsic::emitIntrinsicMacro(raw_ostream &OS) const {
   OS << "#define " << getName() << "(";
-  if (getNumOperand() > 0) {
+  if (!InputTypes.empty()) {
     ListSeparator LS;
-    for (const auto &I : CTypeOrder)
-      OS << LS << "op" << I;
+    for (unsigned i = 0, e = InputTypes.size(); i != e; ++i)
+      OS << LS << "op" << i;
   }
   OS << ") \\\n";
   OS << "__builtin_rvv_" << getName() << "(";
-  if (getNumOperand() > 0) {
+  if (!InputTypes.empty()) {
     ListSeparator LS;
-    for (unsigned i = 0; i < InputTypes.size(); ++i)
+    for (unsigned i = 0, e = InputTypes.size(); i != e; ++i)
       OS << LS << "(" << InputTypes[i]->getTypeStr() << ")(op" << i << ")";
   }
   OS << ")\n";
 }
 
 void RVVIntrinsic::emitMangledFuncDef(raw_ostream &OS) const {
-  bool UseAliasAttr = !isMask() && !isOperandReordered();
-  if (UseAliasAttr) {
-    OS << "__attribute__((clang_builtin_alias(";
-    OS << "__builtin_rvv_" << getName() << ")))\n";
-  }
+  OS << "__attribute__((clang_builtin_alias(";
+  OS << "__builtin_rvv_" << getName() << ")))\n";
   OS << OutputType->getTypeStr() << " " << getMangledName() << "(";
   // Emit function arguments
-  if (getNumOperand() > 0) {
+  if (!InputTypes.empty()) {
     ListSeparator LS;
-    for (unsigned i = 0; i < CTypeOrder.size(); ++i)
-      OS << LS << InputTypes[CTypeOrder[i]]->getTypeStr() << " op" << i;
+    for (unsigned i = 0; i < InputTypes.size(); ++i)
+      OS << LS << InputTypes[i]->getTypeStr() << " op" << i;
   }
-  if (UseAliasAttr) {
-    OS << ");\n\n";
-  } else {
-    OS << "){\n";
-    OS << "  return " << getName() << "(";
-    // Emit parameter variables
-    if (getNumOperand() > 0) {
-      ListSeparator LS;
-      for (unsigned i = 0; i < CTypeOrder.size(); ++i)
-        OS << LS << "op" << i;
-    }
-    OS << ");\n";
-    OS << "}\n\n";
-  }
+  OS << ");\n\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1123,8 +1070,6 @@ void RVVEmitter::createRVVIntrinsics(
     StringRef ManualCodegenMask = R->getValueAsString("ManualCodegenMask");
     std::vector<int64_t> IntrinsicTypes =
         R->getValueAsListOfInts("IntrinsicTypes");
-    std::vector<int64_t> PermuteOperands =
-        R->getValueAsListOfInts("PermuteOperands");
     StringRef RequiredExtension = R->getValueAsString("RequiredExtension");
     StringRef IRName = R->getValueAsString("IRName");
     StringRef IRNameMask = R->getValueAsString("IRNameMask");
@@ -1144,11 +1089,11 @@ void RVVEmitter::createRVVIntrinsics(
     // Compute Builtin types
     SmallVector<std::string> ProtoMaskSeq = ProtoSeq;
     if (HasMask) {
-      // If HasMask, append 'm' to last operand.
-      ProtoMaskSeq.push_back("m");
       // If HasMaskedOffOperand, insert result type as first input operand.
       if (HasMaskedOffOperand)
         ProtoMaskSeq.insert(ProtoMaskSeq.begin() + 1, ProtoSeq[0]);
+      // If HasMask, insert 'm' as first input operand.
+      ProtoMaskSeq.insert(ProtoMaskSeq.begin() + 1, "m");
     }
     // If HasVL, append 'z' to last operand
     if (HasVL) {
@@ -1170,7 +1115,7 @@ void RVVEmitter::createRVVIntrinsics(
             Name, SuffixStr, MangledName, IRName, HasSideEffects,
             /*IsMask=*/false, /*HasMaskedOffOperand=*/false, HasVL,
             HasNoMaskedOverloaded, HasAutoDef, ManualCodegen, Types.getValue(),
-            IntrinsicTypes, PermuteOperands, RequiredExtension));
+            IntrinsicTypes, RequiredExtension));
         if (HasMask) {
           // Create a mask intrinsic
           Optional<RVVTypes> MaskTypes =
@@ -1179,8 +1124,7 @@ void RVVEmitter::createRVVIntrinsics(
               Name, SuffixStr, MangledName, IRNameMask, HasSideEffects,
               /*IsMask=*/true, HasMaskedOffOperand, HasVL,
               HasNoMaskedOverloaded, HasAutoDef, ManualCodegenMask,
-              MaskTypes.getValue(), IntrinsicTypes, PermuteOperands,
-              RequiredExtension));
+              MaskTypes.getValue(), IntrinsicTypes, RequiredExtension));
         }
       } // end for Log2LMULList
     }   // end for TypeRange
