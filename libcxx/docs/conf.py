@@ -41,7 +41,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'libc++'
-copyright = u'2011-2021, LLVM Project' % date.today().year
+copyright = u'2011-%d, LLVM Project' % date.today().year
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
