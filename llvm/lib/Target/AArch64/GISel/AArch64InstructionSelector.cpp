@@ -5072,12 +5072,11 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     return true;
   }
   case Intrinsic::swift_async_context_addr:
-    auto MIB = MIRBuilder
-                   .buildInstr(AArch64::SUBXri, {I.getOperand(0).getReg()},
-                               {Register(AArch64::FP)})
+    auto Sub = MIB.buildInstr(AArch64::SUBXri, {I.getOperand(0).getReg()},
+                              {Register(AArch64::FP)})
                    .addImm(8)
                    .addImm(0);
-    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*Sub, TII, TRI, RBI);
 
     MF->getFrameInfo().setFrameAddressIsTaken(true);
     MF->getInfo<AArch64FunctionInfo>()->setHasSwiftAsyncContext(true);
