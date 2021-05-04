@@ -12107,8 +12107,8 @@ CGOpenMPRuntime::NontemporalDeclsRAII::~NontemporalDeclsRAII() {
 
 CGOpenMPRuntime::UntiedTaskLocalDeclsRAII::UntiedTaskLocalDeclsRAII(
     CodeGenFunction &CGF,
-    const llvm::DenseMap<CanonicalDeclPtr<const VarDecl>,
-                         std::pair<Address, Address>> &LocalVars)
+    const llvm::MapVector<CanonicalDeclPtr<const VarDecl>,
+                          std::pair<Address, Address>> &LocalVars)
     : CGM(CGF.CGM), NeedToPush(!LocalVars.empty()) {
   if (!NeedToPush)
     return;
