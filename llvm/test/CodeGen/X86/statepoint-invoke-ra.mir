@@ -1,84 +1,65 @@
-# RUN: not --crash llc -x mir -o /dev/null %s -run-pass=twoaddressinstruction,simple-register-coalescing,greedy -verify-regalloc 2>&1 | FileCheck %s
+# RUN: llc -x mir -o - %s -run-pass=twoaddressinstruction,simple-register-coalescing,greedy -verify-regalloc 2>&1 | FileCheck %s
 
-# The test checks the verification catch the case when RA splits live interval in the
-# way the def is located after invoke statepoint while use is in landing pad.
+# The test checks no verification errors happen in the case of
+# statepoint invoke instruction with tied-defs.
 
-# CHECK: # Machine code for function wombat: NoPHIs, TracksLiveness, TiedOpsRewritten
-# CHECK: Frame Objects:
-# CHECK:   fi#0: size=4, align=4, at location [SP+8]
-# CHECK:   fi#1: size=4, align=4, at location [SP+8]
-# CHECK:   fi#2: size=4, align=4, at location [SP+8]
-# CHECK:   fi#3: size=4, align=4, at location [SP+8]
-# CHECK:   fi#4: size=4, align=4, at location [SP+8]
-# CHECK:   fi#5: size=4, align=4, at location [SP+8]
-# CHECK:   fi#6: size=4, align=4, at location [SP+8]
-# CHECK:   fi#7: size=4, align=4, at location [SP+8]
-# CHECK: Function Live Ins: $rdi in %6, $esi in %7, $rdx in %8
-# CHECK: 0B      bb.0.bb:
-# CHECK:           successors: %bb.1(0x80000000), %bb.2(0x00000000); %bb.1(100.00%), %bb.2(0.00%)
-# CHECK:           liveins: $rdi, $esi, $rdx
-# CHECK: 16B       %8:gr64 = COPY $rdx
-# CHECK: 32B       %7:gr32 = COPY $esi
-# CHECK: 48B       %6:gr64 = COPY $rdi
-# CHECK: 64B       %30:gr64 = MOV64rm $noreg, 1, $noreg, 0, $noreg :: (load 8 from `i8 addrspace(1)* addrspace(1)* null`, addrspace 1)
-# CHECK: 80B       undef %33.sub_32bit:gr64_nosp = MOV32rm $noreg, 1, $noreg, 0, $noreg :: (load 4 from `i32 addrspace(1)* null`, addrspace 1)
-# CHECK: 112B      %35:gr32 = MOV32rm %8:gr64, 1, $noreg, 96, $noreg :: (load 4 from %ir.tmp4, addrspace 1)
-# CHECK: 128B      %2:gr32 = MOV32rm %8:gr64, 1, $noreg, 160, $noreg :: (load 4 from %ir.tmp6, addrspace 1)
-# CHECK: 144B      %41:gr64 = MOV64rm undef %15:gr64, 1, $noreg, 0, $noreg :: (load 8 from `i8 addrspace(1)* addrspace(1)* undef`, addrspace 1)
-# CHECK: 160B      %38:gr32 = MOV32rm %8:gr64, 1, $noreg, 352, $noreg :: (load 4 from %ir.tmp10, addrspace 1)
-# CHECK: 176B      %31:gr64 = MOV64rm %6:gr64, 1, $noreg, 96, $noreg :: (load 8 from %ir.tmp13, addrspace 1)
-# CHECK: 192B      %32:gr64 = MOV64rm %6:gr64, 1, $noreg, 104, $noreg :: (load 8 from %ir.tmp16, addrspace 1)
-# CHECK: 224B      %5:gr32 = LEA64_32r %33:gr64_nosp, 1, $noreg, -1, $noreg
-# CHECK: 240B      MOV32mr %stack.1, 1, $noreg, 0, $noreg, %7:gr32 :: (store 4 into %stack.1)
-# CHECK: 256B      MOV32mr %stack.0, 1, $noreg, 0, $noreg, %5:gr32 :: (store 4 into %stack.0)
-# CHECK: 272B      MOV32mr %stack.2, 1, $noreg, 0, $noreg, %33.sub_32bit:gr64_nosp :: (store 4 into %stack.2)
-# CHECK: 280B      MOV32mr %stack.6, 1, $noreg, 0, $noreg, %35:gr32 :: (store 4 into %stack.6)
-# CHECK: 288B      MOV32mr %stack.3, 1, $noreg, 0, $noreg, %35:gr32 :: (store 4 into %stack.3)
-# CHECK: 304B      MOV32mr %stack.4, 1, $noreg, 0, $noreg, %2:gr32 :: (store 4 into %stack.4)
-# CHECK: 312B      MOV32mr %stack.7, 1, $noreg, 0, $noreg, %38:gr32 :: (store 4 into %stack.7)
-# CHECK: 320B      MOV32mr %stack.5, 1, $noreg, 0, $noreg, %38:gr32 :: (store 4 into %stack.5)
-# CHECK: 336B      EH_LABEL <mcsymbol .Ltmp0>
-# CHECK: 352B      ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-# CHECK: 400B      $edi = MOV32r0 implicit-def dead $eflags
-# CHECK: 416B      dead $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
-# CHECK: 432B      $ecx = COPY %7:gr32
-# CHECK: 448B      $r8d = MOV32r0 implicit-def dead $eflags
-# CHECK: 528B      %32:gr64, %31:gr64, %30:gr64, %41:gr64 = STATEPOINT 1, 16, 5, undef %23:gr64, $edi, $rsi, undef $edx, $ecx, $r8d, 2, 0, 2, 0, 2, 11, 1, 4, %stack.0, 0, %30:gr64, 1, 4, %stack.1, 0, 1, 4, %stack.2, 0, 1, 4, %stack.3, 0, 1, 4, %stack.4, 0, 1, 4, %stack.2, 0, %41:gr64, 1, 4, %stack.5, 0, %31:gr64, %32:gr64, 2, 4, %32:gr64(tied-def 0), %31:gr64(tied-def 1), %30:gr64(tied-def 2), %41:gr64(tied-def 3), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, <regmask $bh $bl $bp $bph $bpl $bx $ebp $ebx $hbp $hbx $rbp $rbx $r12 $r13 $r14 $r15 $r12b $r13b $r14b $r15b $r12bh $r13bh $r14bh $r15bh $r12d $r13d $r14d $r15d $r12w $r13w $r14w $r15w $r12wh and 3 more...>, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax :: (volatile load store 4 on %stack.0), (volatile load store 4 on %stack.1), (volatile load store 4 on %stack.2), (volatile load store 4 on %stack.3), (volatile load store 4 on %stack.4), (volatile load store 4 on %stack.5)
-# CHECK: 536B      %40:gr64 = COPY %41:gr64
-# CHECK: 544B      ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-# CHECK: 560B      EH_LABEL <mcsymbol .Ltmp1>
-# CHECK: 576B      JMP_1 %bb.1
-# CHECK: 592B    bb.1.bb21:
-# CHECK:         ; predecessors: %bb.0
-# CHECK: 608B      ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-# CHECK: 640B      $edi = MOV32ri 10
-# CHECK: 704B      dead %30:gr64, dead %31:gr64, dead %32:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @quux, $edi, 2, 0, 2, 2, 2, 10, %5:gr32, %30:gr64, %7:gr32, %33.sub_32bit:gr64_nosp, 1, 4, %stack.6, 0, %2:gr32, %33.sub_32bit:gr64_nosp, 1, 4, %stack.7, 0, %31:gr64, %32:gr64, 2, 3, %30:gr64(tied-def 0), %31:gr64(tied-def 1), %32:gr64(tied-def 2), 2, 0, 2, 3, 0, 0, 1, 1, 2, 2, <regmask $bh $bl $bp $bph $bpl $bx $ebp $ebx $hbp $hbx $rbp $rbx $r12 $r13 $r14 $r15 $r12b $r13b $r14b $r15b $r12bh $r13bh $r14bh $r15bh $r12d $r13d $r14d $r15d $r12w $r13w $r14w $r15w $r12wh and 3 more...>, implicit-def $rsp, implicit-def $ssp :: (load 4 from %stack.6), (load 4 from %stack.7)
-# CHECK: 720B      ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-# CHECK: 736B      RET 0
-# CHECK: 752B    bb.2.bb26 (landing-pad):
-# CHECK:         ; predecessors: %bb.0
-# CHECK:           liveins: $rax, $rdx
-# CHECK: 768B      EH_LABEL <mcsymbol .Ltmp2>
-# CHECK: 784B      MOV32mr %stack.1, 1, $noreg, 0, $noreg, %33.sub_32bit:gr64_nosp :: (store 4 into %stack.1)
-# CHECK: 800B      MOV32mr %stack.0, 1, $noreg, 0, $noreg, %7:gr32 :: (store 4 into %stack.0)
-# CHECK: 808B      %36:gr32 = MOV32rm %stack.6, 1, $noreg, 0, $noreg :: (load 4 from %stack.6)
-# CHECK: 816B      MOV32mr %stack.2, 1, $noreg, 0, $noreg, %36:gr32 :: (store 4 into %stack.2)
-# CHECK: 832B      MOV32mr %stack.3, 1, $noreg, 0, $noreg, %33.sub_32bit:gr64_nosp :: (store 4 into %stack.3)
-# CHECK: 840B      %39:gr32 = MOV32rm %stack.7, 1, $noreg, 0, $noreg :: (load 4 from %stack.7)
-# CHECK: 848B      MOV32mr %stack.4, 1, $noreg, 0, $noreg, %39:gr32 :: (store 4 into %stack.4)
-# CHECK: 864B      ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-# CHECK: 896B      $edi = MOV32ri -271
-# CHECK: 928B      dead %40:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @quux, $edi, 2, 0, 2, 0, 2, 6, 1, 4, %stack.0, 0, 1, 4, %stack.1, 0, 1, 4, %stack.2, 0, 1, 4, %stack.3, 0, %40:gr64, 1, 4, %stack.4, 0, 2, 1, %40:gr64(tied-def 0), 2, 0, 2, 1, 0, 0, <regmask $bh $bl $bp $bph $bpl $bx $ebp $ebx $hbp $hbx $rbp $rbx $r12 $r13 $r14 $r15 $r12b $r13b $r14b $r15b $r12bh $r13bh $r14bh $r15bh $r12d $r13d $r14d $r15d $r12w $r13w $r14w $r15w $r12wh and 3 more...>, implicit-def $rsp, implicit-def $ssp :: (volatile load store 4 on %stack.0), (volatile load store 4 on %stack.1), (volatile load store 4 on %stack.2), (volatile load store 4 on %stack.3), (volatile load store 4 on %stack.4)
-# CHECK: 944B      ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-# CHECK: # End machine code for function wombat.
-# CHECK: *** Bad machine code: Register not marked live out of predecessor ***
-# CHECK: - function:    wombat
-# CHECK: - basic block: %bb.0 bb
-# CHECK: - liverange:   [536r,592B:0)[752B,928r:0)[928r,928d:1)  0@536r 1@928r
-# CHECK: - v. register: %40
-# CHECK: - ValNo:       0 (def 536r)
-# CHECK:  live into %bb.2@752B, not live before 528d
-# CHECK: LLVM ERROR: Found 1 machine code errors.
+# CHECK:   bb.0.bb:
+# CHECK:     successors: %bb.1(0x80000000), %bb.2(0x00000000)
+# CHECK:     liveins: $rdi, $esi, $rdx
+# CHECK:     %8:gr64 = COPY $rdx
+# CHECK:     %7:gr32 = COPY $esi
+# CHECK:     %6:gr64 = COPY $rdi
+# CHECK:     %30:gr64 = MOV64rm $noreg, 1, $noreg, 0, $noreg :: (load 8 from `i8 addrspace(1)* addrspace(1)* null`, addrspace 1)
+# CHECK:     undef %33.sub_32bit:gr64_nosp = MOV32rm $noreg, 1, $noreg, 0, $noreg :: (load 4 from `i32 addrspace(1)* null`, addrspace 1)
+# CHECK:     %35:gr32 = MOV32rm %8, 1, $noreg, 96, $noreg :: (load 4 from %ir.tmp4, addrspace 1)
+# CHECK:     %43:gr32 = MOV32rm %8, 1, $noreg, 160, $noreg :: (load 4 from %ir.tmp6, addrspace 1)
+# CHECK:     %41:gr64 = MOV64rm undef %15:gr64, 1, $noreg, 0, $noreg :: (load 8 from `i8 addrspace(1)* addrspace(1)* undef`, addrspace 1)
+# CHECK:     %38:gr32 = MOV32rm %8, 1, $noreg, 352, $noreg :: (load 4 from %ir.tmp10, addrspace 1)
+# CHECK:     %31:gr64 = MOV64rm %6, 1, $noreg, 96, $noreg :: (load 8 from %ir.tmp13, addrspace 1)
+# CHECK:     %32:gr64 = MOV64rm %6, 1, $noreg, 104, $noreg :: (load 8 from %ir.tmp16, addrspace 1)
+# CHECK:     %45:gr32 = LEA64_32r %33, 1, $noreg, -1, $noreg
+# CHECK:     MOV32mr %stack.1, 1, $noreg, 0, $noreg, %7 :: (store 4 into %stack.1)
+# CHECK:     MOV32mr %stack.9, 1, $noreg, 0, $noreg, %45 :: (store 4 into %stack.9)
+# CHECK:     MOV32mr %stack.0, 1, $noreg, 0, $noreg, %45 :: (store 4 into %stack.0)
+# CHECK:     MOV32mr %stack.2, 1, $noreg, 0, $noreg, %33.sub_32bit :: (store 4 into %stack.2)
+# CHECK:     MOV32mr %stack.6, 1, $noreg, 0, $noreg, %35 :: (store 4 into %stack.6)
+# CHECK:     MOV32mr %stack.3, 1, $noreg, 0, $noreg, %35 :: (store 4 into %stack.3)
+# CHECK:     MOV32mr %stack.8, 1, $noreg, 0, $noreg, %43 :: (store 4 into %stack.8)
+# CHECK:     MOV32mr %stack.4, 1, $noreg, 0, $noreg, %43 :: (store 4 into %stack.4)
+# CHECK:     MOV32mr %stack.7, 1, $noreg, 0, $noreg, %38 :: (store 4 into %stack.7)
+# CHECK:     MOV32mr %stack.5, 1, $noreg, 0, $noreg, %38 :: (store 4 into %stack.5)
+# CHECK:     EH_LABEL <mcsymbol .Ltmp0>
+# CHECK:     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+# CHECK:     $edi = MOV32r0 implicit-def dead $eflags
+# CHECK:     dead $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
+# CHECK:     $ecx = COPY %7
+# CHECK:     $r8d = MOV32r0 implicit-def dead $eflags
+# CHECK:     %40:gr64 = COPY %41
+# CHECK:     %32:gr64, %31:gr64, %30:gr64, %40:gr64 = STATEPOINT 1, 16, 5, undef %23:gr64, $edi, $rsi, undef $edx, $ecx, $r8d, 2, 0, 2, 0, 2, 11, 1, 4, %stack.0, 0, %30, 1, 4, %stack.1, 0, 1, 4, %stack.2, 0, 1, 4, %stack.3, 0, 1, 4, %stack.4, 0, 1, 4, %stack.2, 0, %40, 1, 4, %stack.5, 0, %31, %32, 2, 4, %32(tied-def 0), %31(tied-def 1), %30(tied-def 2), %40(tied-def 3), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax :: (volatile load store 4 on %stack.0), (volatile load store 4 on %stack.1), (volatile load store 4 on %stack.2), (volatile load store 4 on %stack.3), (volatile load store 4 on %stack.4), (volatile load store 4 on %stack.5)
+# CHECK:     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+# CHECK:     EH_LABEL <mcsymbol .Ltmp1>
+# CHECK:     JMP_1 %bb.1
+# CHECK:   bb.1.bb21:
+# CHECK:     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+# CHECK:     $edi = MOV32ri 10
+# CHECK:     dead %30:gr64, dead %31:gr64, dead %32:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @quux, $edi, 2, 0, 2, 2, 2, 10, 1, 4, %stack.9, 0, %30, %7, %33.sub_32bit, 1, 4, %stack.6, 0, 1, 4, %stack.8, 0, %33.sub_32bit, 1, 4, %stack.7, 0, %31, %32, 2, 3, %30(tied-def 0), %31(tied-def 1), %32(tied-def 2), 2, 0, 2, 3, 0, 0, 1, 1, 2, 2, csr_64, implicit-def $rsp, implicit-def $ssp :: (load 4 from %stack.6), (load 4 from %stack.7), (load 4 from %stack.8), (load 4 from %stack.9)
+# CHECK:     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+# CHECK:     RET 0
+# CHECK:   bb.2.bb26 (landing-pad):
+# CHECK:     liveins: $rax, $rdx
+# CHECK:     EH_LABEL <mcsymbol .Ltmp2>
+# CHECK:     MOV32mr %stack.1, 1, $noreg, 0, $noreg, %33.sub_32bit :: (store 4 into %stack.1)
+# CHECK:     MOV32mr %stack.0, 1, $noreg, 0, $noreg, %7 :: (store 4 into %stack.0)
+# CHECK:     %36:gr32 = MOV32rm %stack.6, 1, $noreg, 0, $noreg :: (load 4 from %stack.6)
+# CHECK:     MOV32mr %stack.2, 1, $noreg, 0, $noreg, %36 :: (store 4 into %stack.2)
+# CHECK:     MOV32mr %stack.3, 1, $noreg, 0, $noreg, %33.sub_32bit :: (store 4 into %stack.3)
+# CHECK:     %39:gr32 = MOV32rm %stack.7, 1, $noreg, 0, $noreg :: (load 4 from %stack.7)
+# CHECK:     MOV32mr %stack.4, 1, $noreg, 0, $noreg, %39 :: (store 4 into %stack.4)
+# CHECK:     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+# CHECK:     $edi = MOV32ri -271
+# CHECK:     dead %40:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @quux, $edi, 2, 0, 2, 0, 2, 6, 1, 4, %stack.0, 0, 1, 4, %stack.1, 0, 1, 4, %stack.2, 0, 1, 4, %stack.3, 0, %40, 1, 4, %stack.4, 0, 2, 1, %40(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 4 on %stack.0), (volatile load store 4 on %stack.1), (volatile load store 4 on %stack.2), (volatile load store 4 on %stack.3), (volatile load store 4 on %stack.4)
+# CHECK:     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
 --- |
   ; ModuleID = './statepoint-invoke-ra1.ll'
   source_filename = "./statepoint-invoke-ra1.ll"
@@ -209,23 +190,23 @@ frameInfo:
   restorePoint:    ''
 fixedStack:      []
 stack:
-  - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 1, name: '', type: default, offset: 0, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 1, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 2, name: '', type: default, offset: 0, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 2, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 3, name: '', type: default, offset: 0, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 3, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 4, name: '', type: default, offset: 0, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 4, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 5, name: '', type: default, offset: 0, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 5, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 callSites:       []
 debugValueSubstitutions: []
@@ -235,7 +216,7 @@ body:             |
   bb.0.bb:
     successors: %bb.1(0x80000000), %bb.2(0x00000000)
     liveins: $rdi, $esi, $rdx
-  
+
     %8:gr64 = COPY killed $rdx
     %7:gr32 = COPY killed $esi
     %6:gr64 = COPY killed $rdi
@@ -267,7 +248,7 @@ body:             |
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     EH_LABEL <mcsymbol .Ltmp1>
     JMP_1 %bb.1
-  
+
   bb.1.bb21:
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     %29:gr32 = MOV32ri 10
@@ -275,10 +256,10 @@ body:             |
     dead %30:gr64, dead %31:gr64, dead %32:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @quux, killed $edi, 2, 0, 2, 2, 2, 10, killed %5, killed %11, killed %7, killed %0, killed %1, killed %2, killed %3, killed %4, killed %10, killed %9, 2, 3, %11(tied-def 0), %10(tied-def 1), %9(tied-def 2), 2, 0, 2, 3, 0, 0, 1, 1, 2, 2, csr_64, implicit-def $rsp, implicit-def $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     RET 0
-  
+
   bb.2.bb26 (landing-pad):
     liveins: $rax, $rdx
-  
+
     EH_LABEL <mcsymbol .Ltmp2>
     MOV32mr %stack.1, 1, $noreg, 0, $noreg, killed %0 :: (store 4 into %stack.1)
     MOV32mr %stack.0, 1, $noreg, 0, $noreg, killed %7 :: (store 4 into %stack.0)
