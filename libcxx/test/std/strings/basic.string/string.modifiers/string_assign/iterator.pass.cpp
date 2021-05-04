@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-DEBUG-FIXME
+
 // <string>
 
 // template<class InputIterator>

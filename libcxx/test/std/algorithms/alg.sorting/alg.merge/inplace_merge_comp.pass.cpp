@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-DEBUG-FIXME
+
 // <algorithm>
 
 // template<BidirectionalIterator Iter, StrictWeakOrder<auto, Iter::value_type> Compare>
