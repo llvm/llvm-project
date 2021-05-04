@@ -480,7 +480,7 @@ void MutationDispatcher::RecordSuccessfulMutationSequence() {
     assert(DE->GetW().size());
     // Linear search is fine here as this happens seldom.
     if (!PersistentAutoDictionary.ContainsWord(DE->GetW()))
-      PersistentAutoDictionary.push_back({DE->GetW(), 1});
+      PersistentAutoDictionary.push_back(*DE);
   }
 }
 
