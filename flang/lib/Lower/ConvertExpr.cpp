@@ -557,7 +557,7 @@ public:
     case Fortran::evaluate::DescriptorInquiry::Field::Rank:
       TODO(loc, "rank inquiry on assumed rank");
     case Fortran::evaluate::DescriptorInquiry::Field::Stride:
-      // So far the front-end does not generate this inquiry.
+      // So far the front end does not generate this inquiry.
       TODO(loc, "Stride inquiry");
     }
     llvm_unreachable("unknown descriptor inquiry");
@@ -1046,7 +1046,8 @@ public:
 
   template <typename A>
   fir::ExtendedValue genval(const Fortran::evaluate::ArrayConstructor<A> &) {
-    fir::emitFatalError(getLoc(), "array constructor has no rank");
+    llvm::report_fatal_error(
+        "array constructor: lowering should not reach here");
   }
 
   fir::ExtendedValue gen(const Fortran::evaluate::ComplexPart &x) {
@@ -1762,10 +1763,10 @@ public:
         funcPointer =
             builder.create<fir::AddrOfOp>(loc, funcOpType, symbolAttr);
       } else if (callSiteType.getResults() != funcOpType.getResults()) {
-        // Implicit interface result type mismatch are not standard Fortran,
-        // but some compilers are not complaining about it.
-        // The front-end is not protecting lowering from this currently. Support
-        // this with a discouraging warning.
+        // Implicit interface result type mismatch are not standard Fortran, but
+        // some compilers are not complaining about it.  The front end is not
+        // protecting lowering from this currently. Support this with a
+        // discouraging warning.
         mlir::emitWarning(loc,
                           "return type mismatches were never standard"
                           " compliant and may lead to undefined behavior.");
@@ -3382,13 +3383,94 @@ public:
           &x) {
     return genProcRef(x, {converter.genType(TC, KIND)});
   }
+
+  template <typename A>
+  ExtValue genInitializer(const Fortran::evaluate::ImpliedDo<A> &implDo) {
+    TODO(getLoc(), "impled do");
+  }
+
+  template <typename A>
+  ExtValue genInitializer(const Fortran::evaluate::Expr<A> &x) {
+    auto loc = getLoc();
+    if (isArray(x))
+      // return lowerArrayExpression(converter, symMap, stmtCtx, ,, x)
+      TODO(loc, "initializer has rank");
+    return asScalar(x);
+  }
+
+  /// An array constructor with a extent (size) that is computed at runtime.
+  template <typename A>
+  CC genDynamicExtentArrayCtor(const Fortran::evaluate::ArrayConstructor<A> &x,
+                               mlir::Type resTy) {
+    const int initialBufferSize = 32; // FIXME: command line option?
+    auto loc = getLoc();
+    auto eleTy = fir::unwrapSequenceType(resTy);
+    auto idxTy = builder.getIndexType();
+
+    // Allocate the initial buffer and variables to track the current size and
+    // index into the vector.
+    auto initBuffSz =
+        builder.createIntegerConstant(loc, idxty, initialBufferSize);
+    mlir::Value mem = builder.create<fir::AllocMemOp>(loc, eleTy, initBuffSz);
+    auto buffSize = builder.createTemporary(loc, idxTy, ".buff.size");
+    builder.create<fir::StoreOp>(loc, initBuffSz, buffSize);
+    auto zero = builder.createIntegerConstant(loc, idxTy, 0);
+    auto buffPos = builder.createTemporary(loc, idxTy, ".buff.pos");
+    builder.create<fir::StoreOp>(loc, zero, buffPos);
+    TODO(loc, "array constructor has dynamic extent");
+  }
+
   template <typename A>
   CC genarr(const Fortran::evaluate::ArrayConstructor<A> &x) {
-    TODO(getLoc(), "array ctor");
-    return [](IterSpace iters) -> ExtValue {
-      return mlir::Value{}; /* FIXME */
-    };
+    auto loc = getLoc();
+    auto evExpr = toEvExpr(x);
+    auto resTy = translateSomeExprToFIRType(converter, evExpr);
+    auto *bldr = &converter.getFirOpBuilder();
+
+    if (fir::hasDynamicSize(resTy))
+      return genDynamicExtentArrayCtor(x, resTy);
+
+    // Allocate space for the array to be constructed.
+    mlir::Value mem = builder.create<fir::AllocMemOp>(loc, resTy);
+
+    // Populate the allocated buffer with the values.
+    int offset = 0;
+    auto eleTy = fir::unwrapSequenceType(resTy);
+    for (const auto &expr : x) {
+      auto exv =
+          std::visit([&](const auto &e) { return genInitializer(e); }, expr.u);
+      auto off = builder.create<mlir::ConstantIndexOp>(loc, offset);
+      auto buffi = builder.create<fir::CoordinateOp>(
+          loc, builder.getRefType(eleTy), mem, mlir::ValueRange{off});
+      exv.match(
+          [&](const mlir::Value &v) {
+            builder.create<fir::StoreOp>(loc, v, buffi);
+            ++offset;
+          },
+          [&](const auto &) {
+            TODO(loc, "unhandled array constructor expression");
+          });
+    }
+
+    // Cleanup the temporary.
+    stmtCtx.attachCleanup(
+        [bldr, loc, mem]() { bldr->create<fir::FreeMemOp>(loc, mem); });
+
+    // Convert to extended value.
+    llvm::SmallVector<mlir::Value> extents;
+    auto idxTy = builder.getIndexType();
+    auto seqTy = resTy.template cast<fir::SequenceType>();
+    for (auto extent : seqTy.getShape())
+      extents.push_back(builder.createIntegerConstant(loc, idxTy, extent));
+    if (auto charTy =
+            seqTy.getEleTy().template dyn_cast<fir::CharacterType>()) {
+      auto len = builder.createIntegerConstant(loc, builder.getI64Type(),
+                                               charTy.getLen());
+      return genarr(fir::CharArrayBoxValue{mem, len, extents});
+    }
+    return genarr(fir::ArrayBoxValue{mem, extents});
   }
+
   CC genarr(const Fortran::evaluate::ImpliedDoIndex &x) {
     TODO(getLoc(), "array expr implied do index");
     return [](IterSpace iters) -> ExtValue { return mlir::Value{}; };
