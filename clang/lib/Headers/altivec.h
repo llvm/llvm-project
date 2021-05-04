@@ -9091,6 +9091,11 @@ static __inline__ vector unsigned int __ATTRS_o_ai vec_sldw(
   return vec_sld(__a, __b, ((__c << 2) & 0x0F));
 }
 
+static __inline__ vector float __ATTRS_o_ai vec_sldw(
+    vector float __a, vector float __b, unsigned const int __c) {
+  return vec_sld(__a, __b, ((__c << 2) & 0x0F));
+}
+
 #ifdef __VSX__
 static __inline__ vector signed long long __ATTRS_o_ai
 vec_sldw(vector signed long long __a, vector signed long long __b,
@@ -9101,6 +9106,11 @@ vec_sldw(vector signed long long __a, vector signed long long __b,
 static __inline__ vector unsigned long long __ATTRS_o_ai
 vec_sldw(vector unsigned long long __a, vector unsigned long long __b,
          unsigned const int __c) {
+  return vec_sld(__a, __b, ((__c << 2) & 0x0F));
+}
+
+static __inline__ vector double __ATTRS_o_ai vec_sldw(
+    vector double __a, vector double __b, unsigned const int __c) {
   return vec_sld(__a, __b, ((__c << 2) & 0x0F));
 }
 #endif
