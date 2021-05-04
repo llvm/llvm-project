@@ -117,10 +117,10 @@ SymbolFile::GetASTData(lldb::LanguageType language) {
   return std::vector<lldb::DataBufferSP>();
 }
 
-uint32_t SymbolFile::ResolveSymbolContext(const FileSpec &file_spec,
-                                          uint32_t line, bool check_inlines,
-                                          lldb::SymbolContextItem resolve_scope,
-                                          SymbolContextList &sc_list) {
+uint32_t
+SymbolFile::ResolveSymbolContext(const SourceLocationSpec &src_location_spec,
+                                 lldb::SymbolContextItem resolve_scope,
+                                 SymbolContextList &sc_list) {
   return 0;
 }
 
