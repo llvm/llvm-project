@@ -5,6 +5,7 @@ add_lldb_unittest(LLDBCoreTests
   MangledTest.cpp
   ModuleSpecTest.cpp
   RichManglingContextTest.cpp
+  SourceLocationSpecTest.cpp
   SourceManagerTest.cpp
   StreamCallbackTest.cpp
   UniqueCStringMapTest.cpp
