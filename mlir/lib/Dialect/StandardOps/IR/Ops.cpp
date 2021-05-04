@@ -3013,12 +3013,14 @@ OpFoldResult XOrOp::fold(ArrayRef<Attribute> operands) {
 
 namespace {
 /// Replace a not of a comparison operation, for example: not(cmp eq A, B) =>
-/// cmp ne A, B. Note that a logical not is implemented as xor 1, val
+/// cmp ne A, B. Note that a logical not is implemented as xor 1, val.
 struct NotICmp : public OpRewritePattern<XOrOp> {
   using OpRewritePattern<XOrOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(XOrOp op,
                                 PatternRewriter &rewriter) const override {
+    // Commutative ops (such as xor) have the constant appear second, which
+    // we assume here.
 
     APInt constValue;
     if (!matchPattern(op.getOperand(1), m_ConstantInt(&constValue)))
