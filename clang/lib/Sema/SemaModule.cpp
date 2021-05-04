@@ -762,6 +762,7 @@ enum class UnnamedDeclKind {
   StaticAssert,
   Asm,
   UsingDirective,
+  Namespace,
   Context
 };
 }
@@ -791,6 +792,10 @@ unsigned getUnnamedDeclDiag(UnnamedDeclKind UDK, bool InBlock) {
     // Allow exporting using-directives as an extension.
     return diag::ext_export_using_directive;
 
+  case UnnamedDeclKind::Namespace:
+    // Anonymous namespace with no content.
+    return diag::introduces_no_names;
+
   case UnnamedDeclKind::Context:
     // Allow exporting DeclContexts that transitively contain no declarations
     // as an extension.
@@ -818,10 +823,12 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
     diagExportedUnnamedDecl(S, *UDK, D, BlockStart);
 
   //   [...] shall not declare a name with internal linkage.
+  bool HasName = false;
   if (auto *ND = dyn_cast<NamedDecl>(D)) {
     // Don't diagnose anonymous union objects; we'll diagnose their members
     // instead.
-    if (ND->getDeclName() && ND->getFormalLinkage() == InternalLinkage) {
+    HasName = (bool)ND->getDeclName();
+    if (HasName && ND->getFormalLinkage() == InternalLinkage) {
       S.Diag(ND->getLocation(), diag::err_export_internal) << ND;
       if (BlockStart.isValid())
         S.Diag(BlockStart, diag::note_export);
@@ -833,8 +840,10 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
   //   shall have been introduced with a name having external linkage
   if (auto *USD = dyn_cast<UsingShadowDecl>(D)) {
     NamedDecl *Target = USD->getUnderlyingDecl();
-    if (Target->getFormalLinkage() == InternalLinkage) {
-      S.Diag(USD->getLocation(), diag::err_export_using_internal) << Target;
+    Linkage Lk = Target->getFormalLinkage();
+    if (Lk == InternalLinkage || Lk == ModuleLinkage) {
+      S.Diag(USD->getLocation(), diag::err_export_using_internal)
+          << (Lk == InternalLinkage ? 0 : 1) << Target;
       S.Diag(Target->getLocation(), diag::note_using_decl_target);
       if (BlockStart.isValid())
         S.Diag(BlockStart, diag::note_export);
@@ -842,10 +851,18 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
   }
 
   // Recurse into namespace-scope DeclContexts. (Only namespace-scope
-  // declarations are exported.)
-  if (auto *DC = dyn_cast<DeclContext>(D))
-    if (DC->getRedeclContext()->isFileContext() && !isa<EnumDecl>(D))
+  // declarations are exported.).
+  if (auto *DC = dyn_cast<DeclContext>(D)) {
+    if (isa<NamespaceDecl>(D) && DC->decls().empty()) {
+      if (!HasName)
+        // We don't allow an empty anonymous namespace (we don't allow decls
+        // in them either, but that's handled in the recursion).
+        diagExportedUnnamedDecl(S, UnnamedDeclKind::Namespace, D, BlockStart);
+      else
+        ; // We allow an empty named namespace decl.
+    } else if (DC->getRedeclContext()->isFileContext() && !isa<EnumDecl>(D))
       return checkExportedDeclContext(S, DC, BlockStart);
+  }
   return false;
 }
 
