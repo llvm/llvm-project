@@ -156,6 +156,7 @@ function(add_mlir_dialect_python_bindings tblgen_target)
   add_custom_command(
     TARGET ${tblgen_target} POST_BUILD
     COMMENT "Copying generated python source \"dialects/${dialect_filename}\""
+    BYPRODUCTS "${PROJECT_BINARY_DIR}/python/mlir/dialects/${dialect_filename}"
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
       "${CMAKE_CURRENT_BINARY_DIR}/${dialect_filename}"
       "${PROJECT_BINARY_DIR}/python/mlir/dialects/${dialect_filename}")
