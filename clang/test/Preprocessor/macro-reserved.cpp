@@ -47,8 +47,7 @@
 #define volatile   // expected-warning {{keyword is hidden by macro definition}}
 #undef  volatile
 
-
-#pragma clang diagnostic warning "-Wreserved-id-macro"
+#pragma clang diagnostic warning "-Wreserved-macro-identifier"
 
 #define switch if  // expected-warning {{keyword is hidden by macro definition}}
 #define final 1
