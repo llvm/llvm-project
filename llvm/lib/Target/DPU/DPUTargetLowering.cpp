@@ -2199,7 +2199,6 @@ EmitMramSubStoreWithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB,
       .addReg(WramCacheAddrReg)
       .addReg(MramAddrMSBReg);
 
-
   BuildMI(*BB, MI, dl, TII.get(Store))
       .addReg(ExactWramCacheAddrReg)
       .addImm(0)
@@ -2775,9 +2774,15 @@ EmitRot64RegisterWithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB,
                                     unsigned int lsNx) {
   /*
       What we want to generate (N = l/r, ie left/right) (with dc.h != rb in that
-     example): lsNx    __R0, da.l, rb lsNx    __R1, da.h, rb lsN     dc.h, da.h,
-     rb lsN     __R2, da.l, rb  , ?sh32 @+3 or      dc.h, dc.h, __R0 or dc.l,
-     __R2, __R1, ?true @+3 or      dc.l, dc.h, __R0 or      dc.h, __R2, __R1
+     example):
+        lsNx    __R0, da.l, rb
+        lsNx    __R1, da.h, rb
+        lsN     dc.h, da.h, rb
+        lsN     __R2, da.l, rb  , ?sh32 @+3
+        or      dc.h, dc.h, __R0
+        or      dc.l, __R2, __R1, ?true @+3
+        or      dc.l, dc.h, __R0
+        or      dc.h, __R2, __R1
    */
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
   DebugLoc dl = MI.getDebugLoc();
@@ -2842,7 +2847,7 @@ EmitRot64RegisterWithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB,
       .addReg(Op1Msb)
       .addReg(ShiftReg);
   BuildMI(*BB, MI, dl, TII.get(lsNJump), Op1LsbShift)
-      .addReg(Op1Msb)
+      .addReg(Op1Lsb)
       .addReg(ShiftReg)
       .addImm(DPUAsmCondition::Condition::Shift32)
       .addMBB(bigShiftMBB);
