@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=GCN,FUNC,SI
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=GCN,FUNC,VI
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=GCN,FUNC
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=GCN,FUNC
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=EG -check-prefix=FUNC
 
 declare float @llvm.fabs.f32(float) #1
@@ -240,11 +240,7 @@ define amdgpu_kernel void @fp_to_uint_fabs_f32_to_i1(i1 addrspace(1)* %out, floa
 }
 
 ; FUNC-LABEL: {{^}}fp_to_uint_f32_to_i16:
-; The reason different instructions are used on SI and VI is because for
-; SI fp_to_uint is legalized by the type legalizer and for VI it is
-; legalized by the dag legalizer and they legalize fp_to_uint differently.
-; SI: v_cvt_u32_f32_e32 [[VAL:v[0-9]+]], s{{[0-9]+}}
-; VI: v_cvt_i32_f32_e32 [[VAL:v[0-9]+]], s{{[0-9]+}}
+; GCN: v_cvt_u32_f32_e32 [[VAL:v[0-9]+]], s{{[0-9]+}}
 ; GCN: buffer_store_short [[VAL]]
 define amdgpu_kernel void @fp_to_uint_f32_to_i16(i16 addrspace(1)* %out, float %in) #0 {
   %uint = fptoui float %in to i16
