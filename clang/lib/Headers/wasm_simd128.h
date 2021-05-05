@@ -169,18 +169,19 @@ wasm_v128_load64_zero(const void *__mem) {
 }
 
 #define wasm_v128_load8_lane(__ptr, __vec, __i)                                \
-  ((v128_t)__builtin_wasm_load8_lane((signed char *)(__ptr), (__i8x16)(__vec), \
-                                     (__i)))
+  ((v128_t)__builtin_wasm_load8_lane((const signed char *)(__ptr),             \
+                                     (__i8x16)(__vec), (__i)))
 
 #define wasm_v128_load16_lane(__ptr, __vec, __i)                               \
-  ((v128_t)__builtin_wasm_load16_lane((short *)(__ptr), (__i16x8)(__vec),      \
-                                      (__i)))
+  ((v128_t)__builtin_wasm_load16_lane((const short *)(__ptr),                  \
+                                      (__i16x8)(__vec), (__i)))
 
 #define wasm_v128_load32_lane(__ptr, __vec, __i)                               \
-  ((v128_t)__builtin_wasm_load32_lane((int *)(__ptr), (__i32x4)(__vec), (__i)))
+  ((v128_t)__builtin_wasm_load32_lane((const int *)(__ptr), (__i32x4)(__vec),  \
+                                      (__i)))
 
 #define wasm_v128_load64_lane(__ptr, __vec, __i)                               \
-  ((v128_t)__builtin_wasm_load64_lane((long long int *)(__ptr),                \
+  ((v128_t)__builtin_wasm_load64_lane((const long long int *)(__ptr),          \
                                       (__i64x2)(__vec), (__i)))
 
 static __inline__ void __DEFAULT_FN_ATTRS wasm_v128_store(void *__mem,
