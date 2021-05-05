@@ -26,12 +26,14 @@
 // CHECK-PHASES: 6: preprocessor, {5}, cpp-output, (device-openmp)
 // CHECK-PHASES: 7: compiler, {6}, ir, (device-openmp)
 // CHECK-PHASES: 8: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (amdgcn-amd-amdhsa)" {7}, ir
-// CHECK-PHASES: 9: linker, {8}, image, (device-openmp)
-// CHECK-PHASES: 10: offload, "device-openmp (amdgcn-amd-amdhsa)" {9}, image
-// CHECK-PHASES: 11: clang-offload-wrapper, {10}, ir, (host-openmp)
-// CHECK-PHASES: 12: backend, {11}, assembler, (host-openmp)
-// CHECK-PHASES: 13: assembler, {12}, object, (host-openmp)
-// CHECK-PHASES: 14: linker, {4, 13}, image, (host-openmp)
+// CHECK-PHASES: 9: backend, {8}, assembler, (device-openmp)
+// CHECK-PHASES: 10: assembler, {9}, object, (device-openmp)
+// CHECK-PHASES: 11: linker, {10}, image, (device-openmp)
+// CHECK-PHASES: 12: offload, "device-openmp (amdgcn-amd-amdhsa)" {11}, image
+// CHECK-PHASES: 13: clang-offload-wrapper, {12}, ir, (host-openmp)
+// CHECK-PHASES: 14: backend, {13}, assembler, (host-openmp)
+// CHECK-PHASES: 15: assembler, {14}, object, (host-openmp)
+// CHECK-PHASES: 16: linker, {4, 15}, image, (host-openmp)
 
 // handling of --libomptarget-amdgcn-bc-path
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 --libomptarget-amdgcn-bc-path=%S/Inputs/hip_dev_lib/libomptarget-amdgcn-gfx803.bc %s 2>&1 | FileCheck %s --check-prefix=CHECK-LIBOMPTARGET
@@ -58,3 +60,14 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-SAVE-ASM
 // CHECK-SAVE-ASM: llc{{.*}}amdgpu-openmp-toolchain-{{.*}}-gfx906-linked.bc" "-mtriple=amdgcn-amd-amdhsa" "-mcpu=gfx906" "-filetype=asm" "-o"{{.*}}amdgpu-openmp-toolchain-{{.*}}-gfx906.s"
 // CHECK-SAVE-ASM: llc{{.*}}amdgpu-openmp-toolchain-{{.*}}-gfx906-linked.bc" "-mtriple=amdgcn-amd-amdhsa" "-mcpu=gfx906" "-filetype=obj" "-o"{{.*}}amdgpu-openmp-toolchain-{{.*}}-gfx906.o"
+
+// check the handling of -c
+// RUN:   env LIBRARY_PATH=%S/Inputs/hip_dev_lib %clang -ccc-print-bindings -c --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 -save-temps %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-C
+// CHECK-C: "x86_64-unknown-linux-gnu" - "clang",
+// CHECK-C: "x86_64-unknown-linux-gnu" - "clang",{{.*}}output: "[[HOST_BC:.*]]"
+// CHECK-C: "amdgcn-amd-amdhsa" - "clang",{{.*}}output: "[[DEVICE_I:.*]]"
+// CHECK-C: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[DEVICE_I]]", "[[HOST_BC]]"]
+// CHECK-C: "x86_64-unknown-linux-gnu" - "clang"
+// CHECK-C: "x86_64-unknown-linux-gnu" - "clang::as"
+// CHECK-C: "x86_64-unknown-linux-gnu" - "offload bundler"
