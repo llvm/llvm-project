@@ -857,7 +857,7 @@ i8x16 narrow_s_i8x16_i16x8(i16x8 low, i16x8 high) {
   // WEBASSEMBLY: ret
 }
 
-u8x16 narrow_u_i8x16_i16x8(u16x8 low, u16x8 high) {
+u8x16 narrow_u_i8x16_i16x8(i16x8 low, i16x8 high) {
   return __builtin_wasm_narrow_u_i8x16_i16x8(low, high);
   // WEBASSEMBLY: call <16 x i8> @llvm.wasm.narrow.unsigned.v16i8.v8i16(
   // WEBASSEMBLY-SAME: <8 x i16> %low, <8 x i16> %high)
@@ -871,7 +871,7 @@ i16x8 narrow_s_i16x8_i32x4(i32x4 low, i32x4 high) {
   // WEBASSEMBLY: ret
 }
 
-u16x8 narrow_u_i16x8_i32x4(u32x4 low, u32x4 high) {
+u16x8 narrow_u_i16x8_i32x4(i32x4 low, i32x4 high) {
   return __builtin_wasm_narrow_u_i16x8_i32x4(low, high);
   // WEBASSEMBLY: call <8 x i16> @llvm.wasm.narrow.unsigned.v8i16.v4i32(
   // WEBASSEMBLY-SAME: <4 x i32> %low, <4 x i32> %high)
