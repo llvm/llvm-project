@@ -3412,7 +3412,8 @@ public:
     // index into the vector.
     auto initBuffSz =
         builder.createIntegerConstant(loc, idxTy, initialBufferSize);
-    mlir::Value mem = builder.create<fir::AllocMemOp>(loc, eleTy, initBuffSz);
+    [[maybe_unused]] mlir::Value mem =
+        builder.create<fir::AllocMemOp>(loc, eleTy, initBuffSz);
     auto buffSize = builder.createTemporary(loc, idxTy, ".buff.size");
     builder.create<fir::StoreOp>(loc, initBuffSz, buffSize);
     auto zero = builder.createIntegerConstant(loc, idxTy, 0);
