@@ -169,7 +169,7 @@ struct ARMOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     return 1;
   }
 
-  bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
+  bool assignArg(unsigned ValNo, EVT OrigVT, MVT ValVT, MVT LocVT,
                  CCValAssign::LocInfo LocInfo,
                  const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
                  CCState &State) override {

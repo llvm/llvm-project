@@ -9,8 +9,9 @@ define float @fadd_seq(float %start, <4 x float> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $q1, $s0
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $s0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-  ; CHECK:   [[VECREDUCE_SEQ_FADD:%[0-9]+]]:_(s32) = G_VECREDUCE_SEQ_FADD [[COPY]](s32), [[COPY1]](<4 x s32>)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+  ; CHECK:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY1]](<2 x s64>)
+  ; CHECK:   [[VECREDUCE_SEQ_FADD:%[0-9]+]]:_(s32) = G_VECREDUCE_SEQ_FADD [[COPY]](s32), [[BITCAST]](<4 x s32>)
   ; CHECK:   $s0 = COPY [[VECREDUCE_SEQ_FADD]](s32)
   ; CHECK:   RET_ReallyLR implicit $s0
   %res = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %vec)
@@ -22,8 +23,9 @@ define float @fadd_fast(float %start, <4 x float> %vec) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $q1, $s0
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $s0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-  ; CHECK:   [[VECREDUCE_FADD:%[0-9]+]]:_(s32) = reassoc G_VECREDUCE_FADD [[COPY1]](<4 x s32>)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+  ; CHECK:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY1]](<2 x s64>)
+  ; CHECK:   [[VECREDUCE_FADD:%[0-9]+]]:_(s32) = reassoc G_VECREDUCE_FADD [[BITCAST]](<4 x s32>)
   ; CHECK:   [[FADD:%[0-9]+]]:_(s32) = reassoc G_FADD [[COPY]], [[VECREDUCE_FADD]]
   ; CHECK:   $s0 = COPY [[FADD]](s32)
   ; CHECK:   RET_ReallyLR implicit $s0
@@ -69,8 +71,9 @@ define float @fmax(<4 x float> %vec) {
   ; CHECK-LABEL: name: fmax
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $q0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-  ; CHECK:   [[VECREDUCE_FMAX:%[0-9]+]]:_(s32) = G_VECREDUCE_FMAX [[COPY]](<4 x s32>)
+  ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+  ; CHECK:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
+  ; CHECK:   [[VECREDUCE_FMAX:%[0-9]+]]:_(s32) = G_VECREDUCE_FMAX [[BITCAST]](<4 x s32>)
   ; CHECK:   $s0 = COPY [[VECREDUCE_FMAX]](s32)
   ; CHECK:   RET_ReallyLR implicit $s0
   %res = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %vec)
@@ -81,8 +84,9 @@ define float @fmin(<4 x float> %vec) {
   ; CHECK-LABEL: name: fmin
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $q0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-  ; CHECK:   [[VECREDUCE_FMIN:%[0-9]+]]:_(s32) = G_VECREDUCE_FMIN [[COPY]](<4 x s32>)
+  ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+  ; CHECK:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
+  ; CHECK:   [[VECREDUCE_FMIN:%[0-9]+]]:_(s32) = G_VECREDUCE_FMIN [[BITCAST]](<4 x s32>)
   ; CHECK:   $s0 = COPY [[VECREDUCE_FMIN]](s32)
   ; CHECK:   RET_ReallyLR implicit $s0
   %res = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %vec)
@@ -93,8 +97,9 @@ define float @fmin_nnan(<4 x float> %vec) {
   ; CHECK-LABEL: name: fmin_nnan
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $q0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-  ; CHECK:   [[VECREDUCE_FMIN:%[0-9]+]]:_(s32) = nnan G_VECREDUCE_FMIN [[COPY]](<4 x s32>)
+  ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+  ; CHECK:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
+  ; CHECK:   [[VECREDUCE_FMIN:%[0-9]+]]:_(s32) = nnan G_VECREDUCE_FMIN [[BITCAST]](<4 x s32>)
   ; CHECK:   $s0 = COPY [[VECREDUCE_FMIN]](s32)
   ; CHECK:   RET_ReallyLR implicit $s0
   %res = call nnan float @llvm.vector.reduce.fmin.v4f32(<4 x float> %vec)
