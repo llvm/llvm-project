@@ -6729,6 +6729,46 @@ def : Ld1Lane128Pat<load,       VectorIndexD, v2f64, f64, LD1i64>;
 def : Ld1Lane128Pat<load,       VectorIndexH, v8f16, f16, LD1i16>;
 def : Ld1Lane128Pat<load,       VectorIndexH, v8bf16, bf16, LD1i16>;
 
+// Generate LD1 for extload if memory type does not match the
+// destination type, for example:
+//
+//   (v4i32 (insert_vector_elt (load anyext from i8) idx))
+//
+// In this case, the index must be adjusted to match LD1 type.
+//
+class Ld1Lane128IdxOpPat<SDPatternOperator scalar_load, Operand
+                    VecIndex, ValueType VTy, ValueType STy,
+                    Instruction LD1, SDNodeXForm IdxOp>
+  : Pat<(vector_insert (VTy VecListOne128:$Rd),
+                       (STy (scalar_load GPR64sp:$Rn)), VecIndex:$idx),
+        (LD1 VecListOne128:$Rd, (IdxOp VecIndex:$idx), GPR64sp:$Rn)>;
+
+def VectorIndexStoH : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() * 2, SDLoc(N), MVT::i64);
+}]>;
+def VectorIndexStoB : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() * 4, SDLoc(N), MVT::i64);
+}]>;
+def VectorIndexHtoB : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() * 2, SDLoc(N), MVT::i64);
+}]>;
+
+def : Ld1Lane128IdxOpPat<extloadi16, VectorIndexS, v4i32, i32, LD1i16, VectorIndexStoH>;
+def : Ld1Lane128IdxOpPat<extloadi8, VectorIndexS, v4i32, i32, LD1i8, VectorIndexStoB>;
+def : Ld1Lane128IdxOpPat<extloadi8, VectorIndexH, v8i16, i32, LD1i8, VectorIndexHtoB>;
+
+// Same as above, but the first element is populated using
+// scalar_to_vector + insert_subvector instead of insert_vector_elt.
+class Ld1Lane128FirstElm<ValueType ResultTy, ValueType VecTy,
+                        SDPatternOperator ExtLoad, Instruction LD1>
+  : Pat<(ResultTy (scalar_to_vector (i32 (ExtLoad GPR64sp:$Rn)))),
+          (ResultTy (EXTRACT_SUBREG
+            (LD1 (VecTy (IMPLICIT_DEF)), 0, GPR64sp:$Rn), dsub))>;
+
+def : Ld1Lane128FirstElm<v2i32, v8i16, extloadi16, LD1i16>;
+def : Ld1Lane128FirstElm<v2i32, v16i8, extloadi8, LD1i8>;
+def : Ld1Lane128FirstElm<v4i16, v16i8, extloadi8, LD1i8>;
+
 class Ld1Lane64Pat<SDPatternOperator scalar_load, Operand VecIndex,
                    ValueType VTy, ValueType STy, Instruction LD1>
   : Pat<(vector_insert (VTy VecListOne64:$Rd),
