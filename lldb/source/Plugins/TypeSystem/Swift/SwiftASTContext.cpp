@@ -5870,10 +5870,6 @@ SwiftASTContext::GetMemberFunctionAtIndex(opaque_compiler_type_t type,
 
 CompilerType
 SwiftASTContext::GetLValueReferenceType(opaque_compiler_type_t type) {
-  VALID_OR_RETURN(CompilerType());
-
-  if (type)
-    return ToCompilerType({swift::LValueType::get(GetSwiftType(type))});
   return {};
 }
 

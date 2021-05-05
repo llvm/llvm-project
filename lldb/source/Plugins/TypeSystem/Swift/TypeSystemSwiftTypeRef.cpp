@@ -3129,11 +3129,17 @@ TypeSystemSwiftTypeRef::GetNonReferenceType(opaque_compiler_type_t type) {
 }
 CompilerType
 TypeSystemSwiftTypeRef::GetLValueReferenceType(opaque_compiler_type_t type) {
-  return m_swift_ast_context->GetLValueReferenceType(ReconstructType(type));
+    auto impl = []() { return CompilerType(); };
+
+  VALIDATE_AND_RETURN(impl, GetLValueReferenceType, type,
+                      (ReconstructType(type)), (ReconstructType(type)));
 }
 CompilerType
 TypeSystemSwiftTypeRef::GetRValueReferenceType(opaque_compiler_type_t type) {
-  return m_swift_ast_context->GetRValueReferenceType(ReconstructType(type));
+  auto impl = []() { return CompilerType(); };
+
+  VALIDATE_AND_RETURN(impl, GetRValueReferenceType, type,
+                      (ReconstructType(type)), (ReconstructType(type)));
 }
 uint32_t
 TypeSystemSwiftTypeRef::GetNumDirectBaseClasses(opaque_compiler_type_t type) {
