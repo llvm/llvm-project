@@ -31,13 +31,22 @@ if (WIN32)
 endif()
 
 if (LLDB_ENABLE_PYTHON)
-  execute_process(
-    COMMAND ${Python3_EXECUTABLE}
-        -c "import distutils.sysconfig; print(distutils.sysconfig.get_python_lib(True, False, ''))"
-    OUTPUT_VARIABLE LLDB_PYTHON_DEFAULT_RELATIVE_PATH
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if (NOT CMAKE_CROSSCOMPILING)
+    execute_process(
+      COMMAND ${Python3_EXECUTABLE}
+          -c "import distutils.sysconfig; print(distutils.sysconfig.get_python_lib(True, False, ''))"
+      OUTPUT_VARIABLE LLDB_PYTHON_DEFAULT_RELATIVE_PATH
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-  file(TO_CMAKE_PATH ${LLDB_PYTHON_DEFAULT_RELATIVE_PATH} LLDB_PYTHON_DEFAULT_RELATIVE_PATH)
+    file(TO_CMAKE_PATH ${LLDB_PYTHON_DEFAULT_RELATIVE_PATH} LLDB_PYTHON_DEFAULT_RELATIVE_PATH)
+  else ()
+    if ("${LLDB_PYTHON_RELATIVE_PATH}" STREQUAL "")
+      message(FATAL_ERROR
+        "Crosscompiling LLDB with Python requires manually setting
+        LLDB_PYTHON_RELATIVE_PATH.")
+    endif ()
+  endif ()
+
   set(LLDB_PYTHON_RELATIVE_PATH ${LLDB_PYTHON_DEFAULT_RELATIVE_PATH}
     CACHE STRING "Path where Python modules are installed, relative to install prefix")
 endif ()
