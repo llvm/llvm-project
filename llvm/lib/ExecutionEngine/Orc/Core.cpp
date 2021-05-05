@@ -800,76 +800,79 @@ JITDylib::getRequestedSymbols(const SymbolFlagsMap &SymbolFlags) const {
 
 void JITDylib::addDependencies(const SymbolStringPtr &Name,
                                const SymbolDependenceMap &Dependencies) {
-  assert(Symbols.count(Name) && "Name not in symbol table");
-  assert(Symbols[Name].getState() < SymbolState::Emitted &&
-         "Can not add dependencies for a symbol that is not materializing");
+  ES.runSessionLocked([&]() {
+    assert(Symbols.count(Name) && "Name not in symbol table");
+    assert(Symbols[Name].getState() < SymbolState::Emitted &&
+           "Can not add dependencies for a symbol that is not materializing");
 
-  LLVM_DEBUG({
-      dbgs() << "In " << getName() << " adding dependencies for "
-             << *Name << ": " << Dependencies << "\n";
+    LLVM_DEBUG({
+      dbgs() << "In " << getName() << " adding dependencies for " << *Name
+             << ": " << Dependencies << "\n";
     });
 
-  // If Name is already in an error state then just bail out.
-  if (Symbols[Name].getFlags().hasError())
-    return;
+    // If Name is already in an error state then just bail out.
+    if (Symbols[Name].getFlags().hasError())
+      return;
 
-  auto &MI = MaterializingInfos[Name];
-  assert(Symbols[Name].getState() != SymbolState::Emitted &&
-         "Can not add dependencies to an emitted symbol");
+    auto &MI = MaterializingInfos[Name];
+    assert(Symbols[Name].getState() != SymbolState::Emitted &&
+           "Can not add dependencies to an emitted symbol");
 
-  bool DependsOnSymbolInErrorState = false;
+    bool DependsOnSymbolInErrorState = false;
 
-  // Register dependencies, record whether any depenendency is in the error
-  // state.
-  for (auto &KV : Dependencies) {
-    assert(KV.first && "Null JITDylib in dependency?");
-    auto &OtherJITDylib = *KV.first;
-    auto &DepsOnOtherJITDylib = MI.UnemittedDependencies[&OtherJITDylib];
+    // Register dependencies, record whether any depenendency is in the error
+    // state.
+    for (auto &KV : Dependencies) {
+      assert(KV.first && "Null JITDylib in dependency?");
+      auto &OtherJITDylib = *KV.first;
+      auto &DepsOnOtherJITDylib = MI.UnemittedDependencies[&OtherJITDylib];
 
-    for (auto &OtherSymbol : KV.second) {
+      for (auto &OtherSymbol : KV.second) {
 
-      // Check the sym entry for the dependency.
-      auto OtherSymI = OtherJITDylib.Symbols.find(OtherSymbol);
+        // Check the sym entry for the dependency.
+        auto OtherSymI = OtherJITDylib.Symbols.find(OtherSymbol);
 
-      // Assert that this symbol exists and has not reached the ready state
-      // already.
-      assert(OtherSymI != OtherJITDylib.Symbols.end() &&
-             "Dependency on unknown symbol");
+        // Assert that this symbol exists and has not reached the ready state
+        // already.
+        assert(OtherSymI != OtherJITDylib.Symbols.end() &&
+               "Dependency on unknown symbol");
 
-      auto &OtherSymEntry = OtherSymI->second;
+        auto &OtherSymEntry = OtherSymI->second;
 
-      // If the other symbol is already in the Ready state then there's no
-      // dependency to add.
-      if (OtherSymEntry.getState() == SymbolState::Ready)
-        continue;
+        // If the other symbol is already in the Ready state then there's no
+        // dependency to add.
+        if (OtherSymEntry.getState() == SymbolState::Ready)
+          continue;
 
-      // If the dependency is in an error state then note this and continue,
-      // we will move this symbol to the error state below.
-      if (OtherSymEntry.getFlags().hasError()) {
-        DependsOnSymbolInErrorState = true;
-        continue;
+        // If the dependency is in an error state then note this and continue,
+        // we will move this symbol to the error state below.
+        if (OtherSymEntry.getFlags().hasError()) {
+          DependsOnSymbolInErrorState = true;
+          continue;
+        }
+
+        // If the dependency was not in the error state then add it to
+        // our list of dependencies.
+        auto &OtherMI = OtherJITDylib.MaterializingInfos[OtherSymbol];
+
+        if (OtherSymEntry.getState() == SymbolState::Emitted)
+          transferEmittedNodeDependencies(MI, Name, OtherMI);
+        else if (&OtherJITDylib != this || OtherSymbol != Name) {
+          OtherMI.Dependants[this].insert(Name);
+          DepsOnOtherJITDylib.insert(OtherSymbol);
+        }
       }
 
-      // If the dependency was not in the error state then add it to
-      // our list of dependencies.
-      auto &OtherMI = OtherJITDylib.MaterializingInfos[OtherSymbol];
-
-      if (OtherSymEntry.getState() == SymbolState::Emitted)
-        transferEmittedNodeDependencies(MI, Name, OtherMI);
-      else if (&OtherJITDylib != this || OtherSymbol != Name) {
-        OtherMI.Dependants[this].insert(Name);
-        DepsOnOtherJITDylib.insert(OtherSymbol);
-      }
+      if (DepsOnOtherJITDylib.empty())
+        MI.UnemittedDependencies.erase(&OtherJITDylib);
     }
 
-    if (DepsOnOtherJITDylib.empty())
-      MI.UnemittedDependencies.erase(&OtherJITDylib);
-  }
-
-  // If this symbol dependended on any symbols in the error state then move
-  // this symbol to the error state too.
-  if (DependsOnSymbolInErrorState)
-    Symbols[Name].setFlags(Symbols[Name].getFlags() | JITSymbolFlags::HasError);
+    // If this symbol dependended on any symbols in the error state then move
+    // this symbol to the error state too.
+    if (DependsOnSymbolInErrorState)
+      Symbols[Name].setFlags(Symbols[Name].getFlags() |
+                             JITSymbolFlags::HasError);
+  });
 }
 
 Error JITDylib::resolve(MaterializationResponsibility &MR,

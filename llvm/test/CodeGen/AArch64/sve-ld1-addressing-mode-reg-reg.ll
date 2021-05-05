@@ -15,6 +15,42 @@ define <vscale x 16 x i8> @ld1_nxv16i8(i8* %addr, i64 %off) {
   ret <vscale x 16 x i8> %val
 }
 
+define <vscale x 8 x i16> @ld1_nxv16i8_bitcast_to_i16(i8* %addr, i64 %off) {
+; CHECK-LABEL: ld1_nxv16i8_bitcast_to_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0, x1]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr inbounds i8, i8* %addr, i64 %off
+  %ptrcast = bitcast i8* %ptr to <vscale x 8 x i16>*
+  %val = load volatile <vscale x 8 x i16>, <vscale x 8 x i16>* %ptrcast
+  ret <vscale x 8 x i16> %val
+}
+
+define <vscale x 4 x i32> @ld1_nxv16i8_bitcast_to_i32(i8* %addr, i64 %off) {
+; CHECK-LABEL: ld1_nxv16i8_bitcast_to_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0, x1]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr inbounds i8, i8* %addr, i64 %off
+  %ptrcast = bitcast i8* %ptr to <vscale x 4 x i32>*
+  %val = load volatile <vscale x 4 x i32>, <vscale x 4 x i32>* %ptrcast
+  ret <vscale x 4 x i32> %val
+}
+
+define <vscale x 2 x i64> @ld1_nxv16i8_bitcast_to_i64(i8* %addr, i64 %off) {
+; CHECK-LABEL: ld1_nxv16i8_bitcast_to_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0, x1]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr inbounds i8, i8* %addr, i64 %off
+  %ptrcast = bitcast i8* %ptr to <vscale x 2 x i64>*
+  %val = load volatile <vscale x 2 x i64>, <vscale x 2 x i64>* %ptrcast
+  ret <vscale x 2 x i64> %val
+}
+
 define <vscale x 8 x i16> @ld1_nxv8i16_zext8(i8* %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv8i16_zext8:
 ; CHECK:       // %bb.0:

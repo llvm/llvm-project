@@ -69,8 +69,8 @@ void AIXException::endFunction(const MachineFunction *MF) {
   const Function &F = MF->getFunction();
   assert(F.hasPersonalityFn() &&
          "Landingpads are presented, but no personality routine is found.");
-  const Function *Per =
-      dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
+  const GlobalValue *Per =
+      dyn_cast<GlobalValue>(F.getPersonalityFn()->stripPointerCasts());
   const MCSymbol *PerSym = Asm->TM.getSymbol(Per);
 
   emitExceptionInfoTable(LSDALabel, PerSym);

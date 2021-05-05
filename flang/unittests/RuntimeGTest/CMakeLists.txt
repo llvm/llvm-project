@@ -1,6 +1,7 @@
 add_flang_unittest(FlangRuntimeTests
   CharacterTest.cpp
   CrashHandlerFixture.cpp
+  Format.cpp
   MiscIntrinsic.cpp
   Numeric.cpp
   NumericalFormatTest.cpp

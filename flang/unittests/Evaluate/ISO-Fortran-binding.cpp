@@ -114,6 +114,7 @@ static void check_CFI_establish(CFI_cdesc_t *dv, void *base_addr,
       }
     }
     if (type == CFI_type_struct || type == CFI_type_char ||
+        type == CFI_type_char16_t || type == CFI_type_char32_t ||
         type == CFI_type_other) {
       MATCH(elem_len, res->ElementBytes());
     }
@@ -130,12 +131,13 @@ static void check_CFI_establish(CFI_cdesc_t *dv, void *base_addr,
     ++numErr;
     expectedRetCode = CFI_INVALID_RANK;
   }
-  if (type < 0 || type > CFI_type_struct) {
+  if (type < 0 || type > CFI_TYPE_LAST) {
     ++numErr;
     expectedRetCode = CFI_INVALID_TYPE;
   }
 
   if ((type == CFI_type_struct || type == CFI_type_char ||
+          type == CFI_type_char16_t || type == CFI_type_char32_t ||
           type == CFI_type_other) &&
       elem_len <= 0) {
     ++numErr;
@@ -166,7 +168,8 @@ static void run_CFI_establish_tests() {
   CFI_attribute_t attrCases[]{
       CFI_attribute_pointer, CFI_attribute_allocatable, CFI_attribute_other};
   CFI_type_t typeCases[]{CFI_type_int, CFI_type_struct, CFI_type_double,
-      CFI_type_char, CFI_type_other, CFI_type_struct + 1};
+      CFI_type_char, CFI_type_char16_t, CFI_type_char32_t, CFI_type_other,
+      CFI_TYPE_LAST + 1};
   CFI_index_t *extentCases[]{extents, nullptr};
   void *baseAddrCases[]{dummyAddr, nullptr};
   CFI_rank_t rankCases[]{0, 1, CFI_MAX_RANK, CFI_MAX_RANK + 1};
@@ -330,7 +333,7 @@ static void check_CFI_allocate(CFI_cdesc_t *dv,
     ++numErr;
     expectedRetCode = CFI_INVALID_RANK;
   }
-  if (type < 0 || type > CFI_type_struct) {
+  if (type < 0 || type > CFI_TYPE_LAST) {
     ++numErr;
     expectedRetCode = CFI_INVALID_TYPE;
   }
@@ -375,7 +378,7 @@ static void run_CFI_allocate_tests() {
   CFI_attribute_t attrCases[]{
       CFI_attribute_pointer, CFI_attribute_allocatable, CFI_attribute_other};
   CFI_type_t typeCases[]{CFI_type_int, CFI_type_struct, CFI_type_double,
-      CFI_type_char, CFI_type_other, CFI_type_struct + 1};
+      CFI_type_char, CFI_type_other, CFI_TYPE_LAST + 1};
   void *baseAddrCases[]{dummyAddr, nullptr};
   CFI_rank_t rankCases[]{0, 1, CFI_MAX_RANK, CFI_MAX_RANK + 1};
   std::size_t lenCases[]{0, 42};

@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
-// XFAIL: msvc && clang
 
 // template<class T>
 // using iter_reference_t = decltype(*declval<T&>());
@@ -19,7 +18,7 @@
 
 #include "test_iterators.h"
 
-static_assert(std::same_as<std::iter_reference_t<input_iterator<int*> >, int&>);
+static_assert(std::same_as<std::iter_reference_t<cpp17_input_iterator<int*> >, int&>);
 static_assert(std::same_as<std::iter_reference_t<forward_iterator<int*> >, int&>);
 static_assert(std::same_as<std::iter_reference_t<bidirectional_iterator<int*> >, int&>);
 static_assert(std::same_as<std::iter_reference_t<random_access_iterator<int*> >, int&>);

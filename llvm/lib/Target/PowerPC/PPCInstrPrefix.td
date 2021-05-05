@@ -2539,14 +2539,14 @@ let Predicates = [IsISA3_1] in {
   def : Pat<(i32 (int_ppc_vsx_xvtlsbb v16i8:$XB, 0)),
             (EXTRACT_SUBREG (XVTLSBB (COPY_TO_REGCLASS $XB, VSRC)), sub_eq)>;
 
-  def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 8)),
-             (v1i128 (COPY_TO_REGCLASS (LXVRBX xoaddr:$src), VRRC))>;
-  def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 16)),
-             (v1i128 (COPY_TO_REGCLASS (LXVRHX xoaddr:$src), VRRC))>;
-  def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 32)),
-             (v1i128 (COPY_TO_REGCLASS (LXVRWX xoaddr:$src), VRRC))>;
-  def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 64)),
-             (v1i128 (COPY_TO_REGCLASS (LXVRDX xoaddr:$src), VRRC))>;
+  def : Pat <(v1i128 (PPClxvrzx ForceXForm:$src, 8)),
+             (v1i128 (COPY_TO_REGCLASS (LXVRBX ForceXForm:$src), VRRC))>;
+  def : Pat <(v1i128 (PPClxvrzx ForceXForm:$src, 16)),
+             (v1i128 (COPY_TO_REGCLASS (LXVRHX ForceXForm:$src), VRRC))>;
+  def : Pat <(v1i128 (PPClxvrzx ForceXForm:$src, 32)),
+             (v1i128 (COPY_TO_REGCLASS (LXVRWX ForceXForm:$src), VRRC))>;
+  def : Pat <(v1i128 (PPClxvrzx ForceXForm:$src, 64)),
+             (v1i128 (COPY_TO_REGCLASS (LXVRDX ForceXForm:$src), VRRC))>;
 
   def : Pat<(v1i128 (rotl v1i128:$vA, v1i128:$vB)),
             (v1i128 (VRLQ v1i128:$vA, v1i128:$vB))>;
@@ -2564,23 +2564,23 @@ let Predicates = [IsISA3_1, HasVSX] in {
 
 let AddedComplexity = 400, Predicates = [IsISA3_1, IsLittleEndian] in {
   // Store element 0 of a VSX register to memory
-  def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$src, 0)), xoaddr:$dst),
-            (STXVRBX (COPY_TO_REGCLASS v16i8:$src, VSRC), xoaddr:$dst)>;
-  def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$src, 0)), xoaddr:$dst),
-            (STXVRHX (COPY_TO_REGCLASS v8i16:$src, VSRC), xoaddr:$dst)>;
-  def : Pat<(store (i32 (extractelt v4i32:$src, 0)), xoaddr:$dst),
-            (STXVRWX $src, xoaddr:$dst)>;
-  def : Pat<(store (f32 (extractelt v4f32:$src, 0)), xoaddr:$dst),
-            (STXVRWX $src, xoaddr:$dst)>;
-  def : Pat<(store (i64 (extractelt v2i64:$src, 0)), xoaddr:$dst),
-            (STXVRDX $src, xoaddr:$dst)>;
-  def : Pat<(store (f64 (extractelt v2f64:$src, 0)), xoaddr:$dst),
-            (STXVRDX $src, xoaddr:$dst)>;
+  def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$src, 0)), ForceXForm:$dst),
+            (STXVRBX (COPY_TO_REGCLASS v16i8:$src, VSRC), ForceXForm:$dst)>;
+  def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$src, 0)), ForceXForm:$dst),
+            (STXVRHX (COPY_TO_REGCLASS v8i16:$src, VSRC), ForceXForm:$dst)>;
+  def : Pat<(store (i32 (extractelt v4i32:$src, 0)), ForceXForm:$dst),
+            (STXVRWX $src, ForceXForm:$dst)>;
+  def : Pat<(store (f32 (extractelt v4f32:$src, 0)), ForceXForm:$dst),
+            (STXVRWX $src, ForceXForm:$dst)>;
+  def : Pat<(store (i64 (extractelt v2i64:$src, 0)), ForceXForm:$dst),
+            (STXVRDX $src, ForceXForm:$dst)>;
+  def : Pat<(store (f64 (extractelt v2f64:$src, 0)), ForceXForm:$dst),
+            (STXVRDX $src, ForceXForm:$dst)>;
   // Load element 0 of a VSX register to memory
-  def : Pat<(v8i16 (scalar_to_vector (i32 (extloadi16 xoaddr:$src)))),
-            (v8i16 (COPY_TO_REGCLASS (LXVRHX xoaddr:$src), VSRC))>;
-  def : Pat<(v16i8 (scalar_to_vector (i32 (extloadi8 xoaddr:$src)))),
-            (v16i8 (COPY_TO_REGCLASS (LXVRBX xoaddr:$src), VSRC))>;
+  def : Pat<(v8i16 (scalar_to_vector (i32 (extloadi16 ForceXForm:$src)))),
+            (v8i16 (COPY_TO_REGCLASS (LXVRHX ForceXForm:$src), VSRC))>;
+  def : Pat<(v16i8 (scalar_to_vector (i32 (extloadi8 ForceXForm:$src)))),
+            (v16i8 (COPY_TO_REGCLASS (LXVRBX ForceXForm:$src), VSRC))>;
  }
 
 // FIXME: The swap is overkill when the shift amount is a constant.

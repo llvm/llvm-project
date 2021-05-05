@@ -2732,11 +2732,11 @@ define amdgpu_kernel void @udot2_acc16(<2 x i16> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    global_load_dword v3, v0, s[6:7]
 ; GFX10-DL-NEXT:    global_load_ushort v4, v1, s[2:3]
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(2)
-; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v7, 16, v2
+; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v0, 16, v2
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v5, 16, v3
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DL-NEXT:    v_mad_u16 v0, v7, v5, v4
+; GFX10-DL-NEXT:    v_mad_u16 v0, v0, v5, v4
 ; GFX10-DL-NEXT:    v_mad_u16 v0, v2, v3, v0
 ; GFX10-DL-NEXT:    global_store_short v1, v0, s[2:3]
 ; GFX10-DL-NEXT:    s_endpgm

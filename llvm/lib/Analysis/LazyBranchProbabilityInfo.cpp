@@ -46,9 +46,9 @@ void LazyBranchProbabilityInfoPass::getAnalysisUsage(AnalysisUsage &AU) const {
   // We require DT so it's available when LI is available. The LI updating code
   // asserts that DT is also present so if we don't make sure that we have DT
   // here, that assert will trigger.
-  AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequired<LoopInfoWrapperPass>();
-  AU.addRequired<TargetLibraryInfoWrapperPass>();
+  AU.addRequiredTransitive<DominatorTreeWrapperPass>();
+  AU.addRequiredTransitive<LoopInfoWrapperPass>();
+  AU.addRequiredTransitive<TargetLibraryInfoWrapperPass>();
   AU.setPreservesAll();
 }
 
@@ -63,9 +63,9 @@ bool LazyBranchProbabilityInfoPass::runOnFunction(Function &F) {
 }
 
 void LazyBranchProbabilityInfoPass::getLazyBPIAnalysisUsage(AnalysisUsage &AU) {
-  AU.addRequired<LazyBranchProbabilityInfoPass>();
-  AU.addRequired<LoopInfoWrapperPass>();
-  AU.addRequired<TargetLibraryInfoWrapperPass>();
+  AU.addRequiredTransitive<LazyBranchProbabilityInfoPass>();
+  AU.addRequiredTransitive<LoopInfoWrapperPass>();
+  AU.addRequiredTransitive<TargetLibraryInfoWrapperPass>();
 }
 
 void llvm::initializeLazyBPIPassPass(PassRegistry &Registry) {

@@ -8359,6 +8359,16 @@ static __inline__ vector double __ATTRS_o_ai vec_rsqrte(vector double __a) {
 }
 #endif
 
+static vector float __ATTRS_o_ai vec_rsqrt(vector float __a) {
+  return __builtin_ppc_rsqrtf(__a);
+}
+
+#ifdef __VSX__
+static vector double __ATTRS_o_ai vec_rsqrt(vector double __a) {
+  return __builtin_ppc_rsqrtd(__a);
+}
+#endif
+
 /* vec_vrsqrtefp */
 
 static __inline__ __vector float __attribute__((__always_inline__))
@@ -9081,6 +9091,11 @@ static __inline__ vector unsigned int __ATTRS_o_ai vec_sldw(
   return vec_sld(__a, __b, ((__c << 2) & 0x0F));
 }
 
+static __inline__ vector float __ATTRS_o_ai vec_sldw(
+    vector float __a, vector float __b, unsigned const int __c) {
+  return vec_sld(__a, __b, ((__c << 2) & 0x0F));
+}
+
 #ifdef __VSX__
 static __inline__ vector signed long long __ATTRS_o_ai
 vec_sldw(vector signed long long __a, vector signed long long __b,
@@ -9091,6 +9106,11 @@ vec_sldw(vector signed long long __a, vector signed long long __b,
 static __inline__ vector unsigned long long __ATTRS_o_ai
 vec_sldw(vector unsigned long long __a, vector unsigned long long __b,
          unsigned const int __c) {
+  return vec_sld(__a, __b, ((__c << 2) & 0x0F));
+}
+
+static __inline__ vector double __ATTRS_o_ai vec_sldw(
+    vector double __a, vector double __b, unsigned const int __c) {
   return vec_sld(__a, __b, ((__c << 2) & 0x0F));
 }
 #endif
@@ -17896,6 +17916,18 @@ static vector signed short __ATTRS_o_ai vec_nabs(vector signed short __a) {
 static vector signed char __ATTRS_o_ai vec_nabs(vector signed char __a) {
   return __builtin_altivec_vminsb(__a, -__a);
 }
+
+static vector float __ATTRS_o_ai vec_recipdiv(vector float __a,
+                                              vector float __b) {
+  return __builtin_ppc_recipdivf(__a, __b);
+}
+
+#ifdef __VSX__
+static vector double __ATTRS_o_ai vec_recipdiv(vector double __a,
+                                               vector double __b) {
+  return __builtin_ppc_recipdivd(__a, __b);
+}
+#endif
 
 #ifdef __POWER10_VECTOR__
 

@@ -12,7 +12,7 @@
 # RUN:   -o %t/libgoodbye.dylib
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/dylink-lazy.o
-# RUN: %lld -no_pie -o %t/dylink-lazy-no-pie \
+# RUN: %lld -no_pie -data_const -o %t/dylink-lazy-no-pie \
 # RUN:   -L%t -lhello -lgoodbye %t/dylink-lazy.o -lSystem
 
 ## When looking at the __stubs section alone, we are unable to easily tell which

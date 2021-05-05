@@ -34,7 +34,7 @@ int main(int, char**)
 {
     {
     char s[] = "1234567890";
-    test(input_iterator<char*>(s+5));
+    test(cpp17_input_iterator<char*>(s+5));
     test(forward_iterator<char*>(s+5));
     test(bidirectional_iterator<char*>(s+5));
     test(random_access_iterator<char*>(s+5));

@@ -16,7 +16,7 @@ entry:
 
 ; CHECK-LABEL: exact0
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [>]!
+; CHECK: da analyze - flow [<=|<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -130,7 +130,7 @@ entry:
 
 ; CHECK-LABEL: exact3
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [<]!
+; CHECK: da analyze - flow [>]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -167,7 +167,7 @@ entry:
 
 ; CHECK-LABEL: exact4
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [<]!
+; CHECK: da analyze - flow [>]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -204,7 +204,7 @@ entry:
 
 ; CHECK-LABEL: exact5
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [<]!
+; CHECK: da analyze - flow [=>|<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -241,7 +241,7 @@ entry:
 
 ; CHECK-LABEL: exact6
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [<]!
+; CHECK: da analyze - flow [=>|<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -278,7 +278,7 @@ entry:
 
 ; CHECK-LABEL: exact7
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [<]!
+; CHECK: da analyze - flow [*|<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -352,7 +352,7 @@ entry:
 
 ; CHECK-LABEL: exact9
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [<]!
+; CHECK: da analyze - flow [>]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -389,7 +389,7 @@ entry:
 
 ; CHECK-LABEL: exact10
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [<]!
+; CHECK: da analyze - flow [>]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -426,7 +426,7 @@ entry:
 
 ; CHECK-LABEL: exact11
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [<]!
+; CHECK: da analyze - flow [=>|<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -463,7 +463,7 @@ entry:
 
 ; CHECK-LABEL: exact12
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [<]!
+; CHECK: da analyze - flow [=>|<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
@@ -500,7 +500,7 @@ entry:
 
 ; CHECK-LABEL: exact13
 ; CHECK: da analyze - none!
-; CHECK: da analyze - flow [<]!
+; CHECK: da analyze - flow [*|<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!

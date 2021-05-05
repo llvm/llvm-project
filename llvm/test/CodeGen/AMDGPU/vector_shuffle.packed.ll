@@ -746,11 +746,11 @@ define <4 x half> @shuffle_v4f16_3456(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off offset:4
 ; GFX10-NEXT:    global_load_dwordx2 v[4:5], v[2:3], off
-; GFX10-NEXT:    v_mov_b32_e32 v3, 0xffff
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_and_b32_sdwa v1, v3, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_and_b32_sdwa v1, v0, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_and_b32_sdwa v2, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_and_b32_sdwa v2, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v4, 16, v1
 ; GFX10-NEXT:    v_lshl_or_b32 v1, v5, 16, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -778,15 +778,15 @@ define <4 x half> @shuffle_v4f16_5634(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    global_load_dwordx2 v[9:10], v[2:3], off
+; GFX10-NEXT:    global_load_dwordx2 v[4:5], v[2:3], off
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off offset:4
-; GFX10-NEXT:    v_mov_b32_e32 v3, 0xffff
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_and_b32_sdwa v1, v3, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_and_b32_sdwa v1, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_and_b32_sdwa v2, v3, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_lshl_or_b32 v0, v10, 16, v1
-; GFX10-NEXT:    v_lshl_or_b32 v1, v9, 16, v2
+; GFX10-NEXT:    v_and_b32_sdwa v2, v0, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_lshl_or_b32 v0, v5, 16, v1
+; GFX10-NEXT:    v_lshl_or_b32 v1, v4, 16, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -816,12 +816,12 @@ define <4 x half> @shuffle_v4f16_5734(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[4:5], v[2:3], off
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off offset:4
-; GFX10-NEXT:    v_mov_b32_e32 v3, 0xffff
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_and_b32_sdwa v2, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v1, 16, v5
+; GFX10-NEXT:    v_and_b32_sdwa v2, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_and_b32_sdwa v3, v3, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_and_b32_sdwa v3, v0, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v1, 16, v2
 ; GFX10-NEXT:    v_lshl_or_b32 v1, v4, 16, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -1319,14 +1319,14 @@ define amdgpu_kernel void @fma_shuffle(<4 x half> addrspace(1)* nocapture readon
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v6, 3, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0x2
-; GFX10-NEXT:    global_load_dwordx2 v[7:8], v6, s[0:1]
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v6, s[0:1]
 ; GFX10-NEXT:    global_load_dwordx2 v[2:3], v6, s[2:3]
 ; GFX10-NEXT:    global_load_dwordx2 v[4:5], v6, s[8:9]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_pk_fma_f16 v4, v7, v2, v4 op_sel_hi:[0,1,1]
-; GFX10-NEXT:    v_pk_fma_f16 v2, v8, v2, v5 op_sel_hi:[0,1,1]
-; GFX10-NEXT:    v_pk_fma_f16 v0, v7, v3, v4 op_sel:[1,0,0]
-; GFX10-NEXT:    v_pk_fma_f16 v1, v8, v3, v2 op_sel:[1,0,0]
+; GFX10-NEXT:    v_pk_fma_f16 v4, v0, v2, v4 op_sel_hi:[0,1,1]
+; GFX10-NEXT:    v_pk_fma_f16 v2, v1, v2, v5 op_sel_hi:[0,1,1]
+; GFX10-NEXT:    v_pk_fma_f16 v0, v0, v3, v4 op_sel:[1,0,0]
+; GFX10-NEXT:    v_pk_fma_f16 v1, v1, v3, v2 op_sel:[1,0,0]
 ; GFX10-NEXT:    global_store_dwordx2 v6, v[0:1], s[8:9]
 ; GFX10-NEXT:    s_endpgm
 entry:
@@ -1380,14 +1380,16 @@ define <4 x half> @shuffle_v4f16_0456(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
-; GFX10-NEXT:    global_load_dwordx2 v[6:7], v[2:3], off
-; GFX10-NEXT:    v_mov_b32_e32 v3, 0xffff
-; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_and_b32_e32 v1, v3, v4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_and_b32_sdwa v2, v3, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_lshl_or_b32 v0, v6, 16, v1
-; GFX10-NEXT:    v_lshl_or_b32 v1, v7, 16, v2
+; GFX10-NEXT:    global_load_dwordx2 v[5:6], v[2:3], off
+; GFX10-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffff
+; GFX10-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
+; GFX10-NEXT:    v_and_b32_e32 v1, v0, v4
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_and_b32_sdwa v2, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_lshl_or_b32 v0, v5, 16, v1
+; GFX10-NEXT:    v_lshl_or_b32 v1, v6, 16, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1

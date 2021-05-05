@@ -125,6 +125,7 @@ private:
                    function_ref<BranchProbabilityInfo *(Function &F)> GetBPI,
                    function_ref<const TargetLibraryInfo &(Function &F)> GetTLI);
 
+  Function *createInternalFunction(FunctionType *FTy, StringRef Name);
   void emitGlobalConstructor(
       SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP);
 
@@ -1023,22 +1024,28 @@ bool GCOVProfiler::emitProfileNotes(
   return true;
 }
 
+Function *GCOVProfiler::createInternalFunction(FunctionType *FTy,
+                                               StringRef Name) {
+  Function *F = Function::createWithDefaultAttr(
+      FTy, GlobalValue::InternalLinkage, 0, Name, M);
+  F->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+  F->addFnAttr(Attribute::NoUnwind);
+  if (Options.NoRedZone)
+    F->addFnAttr(Attribute::NoRedZone);
+  return F;
+}
+
 void GCOVProfiler::emitGlobalConstructor(
     SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP) {
   Function *WriteoutF = insertCounterWriteout(CountersBySP);
   Function *ResetF = insertReset(CountersBySP);
 
   // Create a small bit of code that registers the "__llvm_gcov_writeout" to
-  // be executed at exit and the "__llvm_gcov_flush" function to be executed
+  // be executed at exit and the "__llvm_gcov_reset" function to be executed
   // when "__gcov_flush" is called.
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
-  Function *F = Function::Create(FTy, GlobalValue::InternalLinkage,
-                                 "__llvm_gcov_init", M);
-  F->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  F->setLinkage(GlobalValue::InternalLinkage);
+  Function *F = createInternalFunction(FTy, "__llvm_gcov_init");
   F->addFnAttr(Attribute::NoInline);
-  if (Options.NoRedZone)
-    F->addFnAttr(Attribute::NoRedZone);
 
   BasicBlock *BB = BasicBlock::Create(*Ctx, "entry", F);
   IRBuilder<> Builder(BB);
@@ -1113,12 +1120,8 @@ Function *GCOVProfiler::insertCounterWriteout(
   FunctionType *WriteoutFTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
   Function *WriteoutF = M->getFunction("__llvm_gcov_writeout");
   if (!WriteoutF)
-    WriteoutF = Function::Create(WriteoutFTy, GlobalValue::InternalLinkage,
-                                 "__llvm_gcov_writeout", M);
-  WriteoutF->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+    WriteoutF = createInternalFunction(WriteoutFTy, "__llvm_gcov_writeout");
   WriteoutF->addFnAttr(Attribute::NoInline);
-  if (Options.NoRedZone)
-    WriteoutF->addFnAttr(Attribute::NoRedZone);
 
   BasicBlock *BB = BasicBlock::Create(*Ctx, "entry", WriteoutF);
   IRBuilder<> Builder(BB);
@@ -1363,12 +1366,8 @@ Function *GCOVProfiler::insertReset(
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
   Function *ResetF = M->getFunction("__llvm_gcov_reset");
   if (!ResetF)
-    ResetF = Function::Create(FTy, GlobalValue::InternalLinkage,
-                              "__llvm_gcov_reset", M);
-  ResetF->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+    ResetF = createInternalFunction(FTy, "__llvm_gcov_reset");
   ResetF->addFnAttr(Attribute::NoInline);
-  if (Options.NoRedZone)
-    ResetF->addFnAttr(Attribute::NoRedZone);
 
   BasicBlock *Entry = BasicBlock::Create(*Ctx, "entry", ResetF);
   IRBuilder<> Builder(Entry);

@@ -9,7 +9,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
-// XFAIL: msvc && clang
 
 // template<class In>
 // concept input_or_output_iterator;
@@ -23,10 +22,10 @@ static_assert(std::input_or_output_iterator<int const*>);
 static_assert(std::input_or_output_iterator<int volatile*>);
 static_assert(std::input_or_output_iterator<int const volatile*>);
 
-static_assert(std::input_or_output_iterator<input_iterator<int*> >);
-static_assert(std::input_or_output_iterator<input_iterator<int const*> >);
-static_assert(std::input_or_output_iterator<input_iterator<int volatile*> >);
-static_assert(std::input_or_output_iterator<input_iterator<int const volatile*> >);
+static_assert(std::input_or_output_iterator<cpp17_input_iterator<int*> >);
+static_assert(std::input_or_output_iterator<cpp17_input_iterator<int const*> >);
+static_assert(std::input_or_output_iterator<cpp17_input_iterator<int volatile*> >);
+static_assert(std::input_or_output_iterator<cpp17_input_iterator<int const volatile*> >);
 
 static_assert(std::input_or_output_iterator<forward_iterator<int*> >);
 static_assert(std::input_or_output_iterator<forward_iterator<int const*> >);

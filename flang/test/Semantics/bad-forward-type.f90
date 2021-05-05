@@ -79,3 +79,14 @@ subroutine s8
     real :: c
   end type
 end subroutine
+
+subroutine s9
+  type con
+    Type(t(3)), pointer :: y
+  end type
+  !ERROR: Cannot construct value for derived type 't' before it is defined
+  Integer :: nn = Size(Transfer(t(3)(666),[0]))
+  type :: t(n)
+    integer, kind :: n = 3
+  end type
+end subroutine s9

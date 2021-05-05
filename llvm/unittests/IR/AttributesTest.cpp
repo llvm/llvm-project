@@ -217,4 +217,39 @@ TEST(Attributes, HasParentContext) {
   }
 }
 
+TEST(Attributes, AttributeListPrinting) {
+  LLVMContext C;
+
+  {
+    std::string S;
+    raw_string_ostream OS(S);
+    AttributeList AL;
+    AL.addAttribute(C, AttributeList::FunctionIndex, Attribute::AlwaysInline)
+        .print(OS);
+    EXPECT_EQ(S, "AttributeList[\n"
+                 "  { function => alwaysinline }\n"
+                 "]\n");
+  }
+
+  {
+    std::string S;
+    raw_string_ostream OS(S);
+    AttributeList AL;
+    AL.addAttribute(C, AttributeList::ReturnIndex, Attribute::SExt).print(OS);
+    EXPECT_EQ(S, "AttributeList[\n"
+                 "  { return => signext }\n"
+                 "]\n");
+  }
+
+  {
+    std::string S;
+    raw_string_ostream OS(S);
+    AttributeList AL;
+    AL.addParamAttribute(C, 5, Attribute::ZExt).print(OS);
+    EXPECT_EQ(S, "AttributeList[\n"
+                 "  { arg(5) => zeroext }\n"
+                 "]\n");
+  }
+}
+
 } // end anonymous namespace

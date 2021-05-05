@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s readability-inconsistent-declaration-parameter-name %t -- \
-// RUN:   -config="{CheckOptions: [{key: readability-inconsistent-declaration-parameter-name.IgnoreMacros, value: 0}]}"
+// RUN:   -config="{CheckOptions: [{key: readability-inconsistent-declaration-parameter-name.IgnoreMacros, value: false}]}"
 
 #define MACRO() \
   void f(int x)

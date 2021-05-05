@@ -82,12 +82,25 @@ public:
 
 // Debug logging for transformation and analysis passes.
 class PrintPassInstrumentation {
+  void printWithIdent(bool Expand, const Twine &Msg);
+
 public:
   PrintPassInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
 private:
   bool DebugLogging;
+  int Ident = 0;
+};
+
+// Pass structure dumper
+class PassStructurePrinter {
+  int Ident = 0;
+  void printWithIdent(bool Expand, const Twine &Msg);
+
+public:
+  PassStructurePrinter() {}
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
 };
 
 class PreservedCFGCheckerInstrumentation {
@@ -401,6 +414,7 @@ public:
 class StandardInstrumentations {
   PrintIRInstrumentation PrintIR;
   PrintPassInstrumentation PrintPass;
+  PassStructurePrinter StructurePrinter;
   TimePassesHandler TimePasses;
   OptNoneInstrumentation OptNone;
   OptBisectInstrumentation OptBisect;

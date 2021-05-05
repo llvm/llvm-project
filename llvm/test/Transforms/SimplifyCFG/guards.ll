@@ -64,15 +64,15 @@ merge_block:
 define i32 @f_3(i1* %c, i32* %buf) {
 ; CHECK-LABEL: @f_3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C0:%.*]] = load volatile i1, i1* [[C:%.*]]
+; CHECK-NEXT:    [[C0:%.*]] = load volatile i1, i1* [[C:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[C0]], label [[GUARD_BLOCK:%.*]], label [[MERGE_BLOCK:%.*]]
 ; CHECK:       guard_block:
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 false) [ "deopt"() ]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       merge_block:
-; CHECK-NEXT:    [[C1:%.*]] = load volatile i1, i1* [[C]]
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[C1]], i32 50, i32 100
-; CHECK-NEXT:    ret i32 [[DOT]]
+; CHECK-NEXT:    [[C1:%.*]] = load volatile i1, i1* [[C]], align 1
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C1]], i32 50, i32 100
+; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
 ;
 entry:
   %c0 = load volatile i1, i1* %c

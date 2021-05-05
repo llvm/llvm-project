@@ -30,9 +30,7 @@ define float @fadd_strict_unroll(float* noalias nocapture readonly %a, i64 %n) {
 ; CHECK-LABEL: @fadd_strict_unroll
 ; CHECK: vector.body:
 ; CHECK: %[[VEC_PHI1:.*]] = phi float [ 0.000000e+00, %vector.ph ], [ %[[RDX4:.*]], %vector.body ]
-; CHECK: %[[VEC_PHI2:.*]] = phi float [ -0.000000e+00, %vector.ph ], [ %[[RDX4]], %vector.body ]
-; CHECK: %[[VEC_PHI3:.*]] = phi float [ -0.000000e+00, %vector.ph ], [ %[[RDX4]], %vector.body ]
-; CHECK: %[[VEC_PHI4:.*]] = phi float [ -0.000000e+00, %vector.ph ], [ %[[RDX4]], %vector.body ]
+; CHECK-NOT: phi float [ 0.000000e+00, %vector.ph ], [ %[[RDX4]], %vector.body ]
 ; CHECK: %[[LOAD1:.*]] = load <8 x float>, <8 x float>*
 ; CHECK: %[[LOAD2:.*]] = load <8 x float>, <8 x float>*
 ; CHECK: %[[LOAD3:.*]] = load <8 x float>, <8 x float>*
@@ -59,6 +57,63 @@ for.body:
 
 for.end:
   ret float %add
+}
+
+; An additional test for unrolling where we need the last value of the reduction, i.e:
+; float sum = 0, sum2;
+; for(int i=0; i<N; ++i) {
+;   sum += ptr[i];
+;   *ptr2 = sum + 42;
+; }
+; return sum;
+
+define float @fadd_strict_unroll_last_val(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) {
+; CHECK-LABEL: @fadd_strict_unroll_last_val
+; CHECK: vector.body
+; CHECK: %[[VEC_PHI1:.*]] = phi float [ 0.000000e+00, %vector.ph ], [ %[[RDX4:.*]], %vector.body ]
+; CHECK-NOT: phi float [ 0.000000e+00, %vector.ph ], [ %[[RDX4]], %vector.body ]
+; CHECK: %[[LOAD1:.*]] = load <8 x float>, <8 x float>*
+; CHECK: %[[LOAD2:.*]] = load <8 x float>, <8 x float>*
+; CHECK: %[[LOAD3:.*]] = load <8 x float>, <8 x float>*
+; CHECK: %[[LOAD4:.*]] = load <8 x float>, <8 x float>*
+; CHECK: %[[RDX1:.*]] = call float @llvm.vector.reduce.fadd.v8f32(float %[[VEC_PHI1]], <8 x float> %[[LOAD1]])
+; CHECK: %[[RDX2:.*]] = call float @llvm.vector.reduce.fadd.v8f32(float %[[RDX1]], <8 x float> %[[LOAD2]])
+; CHECK: %[[RDX3:.*]] = call float @llvm.vector.reduce.fadd.v8f32(float %[[RDX2]], <8 x float> %[[LOAD3]])
+; CHECK: %[[RDX4]] = call float @llvm.vector.reduce.fadd.v8f32(float %[[RDX3]], <8 x float> %[[LOAD4]])
+; CHECK: for.body
+; CHECK: %[[SUM_PHI:.*]] = phi float [ %[[FADD:.*]], %for.body ], [ {{.*}}, %scalar.ph ]
+; CHECK: %[[LOAD5:.*]] = load float, float*
+; CHECK: %[[FADD]] =  fadd float %[[SUM_PHI]], %[[LOAD5]]
+; CHECK: for.cond.cleanup
+; CHECK: %[[FADD_LCSSA:.*]] = phi float [ %[[FADD]], %for.body ], [ %[[RDX4]], %middle.block ]
+; CHECK: %[[FADD_42:.*]] = fadd float %[[FADD_LCSSA]], 4.200000e+01
+; CHECK: store float %[[FADD_42]], float* %b
+; CHECK: for.end
+; CHECK: %[[SUM_LCSSA:.*]] = phi float [ %[[FADD_LCSSA]], %for.cond.cleanup ], [ 0.000000e+00, %entry ]
+; CHECK: ret float %[[SUM_LCSSA]]
+entry:
+  %cmp = icmp sgt i64 %n, 0
+  br i1 %cmp, label %for.body, label %for.end
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum = phi float [ 0.000000e+00, %entry ], [ %fadd, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %a, i64 %iv
+  %0 = load float, float* %arrayidx, align 4
+  %fadd = fadd float %sum, %0
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !1
+
+for.cond.cleanup:
+  %fadd.lcssa = phi float [ %fadd, %for.body ]
+  %fadd2 = fadd float %fadd.lcssa, 4.200000e+01
+  store float %fadd2, float* %b, align 4
+  br label %for.end
+
+for.end:
+  %sum.lcssa = phi float [ %fadd.lcssa, %for.cond.cleanup ], [ 0.000000e+00, %entry ]
+  ret float %sum.lcssa
 }
 
 define void @fadd_strict_interleave(float* noalias nocapture readonly %a, float* noalias nocapture readonly %b, i64 %n) {

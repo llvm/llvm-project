@@ -13,8 +13,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/GSYM/Range.h"
 #include <stdint.h>
-#include <string>
-
 
 namespace llvm {
 namespace gsym {

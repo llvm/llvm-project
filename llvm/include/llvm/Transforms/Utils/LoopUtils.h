@@ -219,14 +219,15 @@ Optional<const MDOperand *> findStringMetadataForLoop(const Loop *TheLoop,
                                                       StringRef Name);
 
 /// Find named metadata for a loop with an integer value.
-llvm::Optional<int> getOptionalIntLoopAttribute(Loop *TheLoop, StringRef Name);
+llvm::Optional<int> getOptionalIntLoopAttribute(const Loop *TheLoop,
+                                                StringRef Name);
 
 /// Find a combination of metadata ("llvm.loop.vectorize.width" and
 /// "llvm.loop.vectorize.scalable.enable") for a loop and use it to construct a
 /// ElementCount. If the metadata "llvm.loop.vectorize.width" cannot be found
 /// then None is returned.
 Optional<ElementCount>
-getOptionalElementCountLoopAttribute(Loop *TheLoop);
+getOptionalElementCountLoopAttribute(const Loop *TheLoop);
 
 /// Create a new loop identifier for a loop created from a loop transformation.
 ///
@@ -295,11 +296,11 @@ enum TransformationMode {
 
 /// @{
 /// Get the mode for LLVM's supported loop transformations.
-TransformationMode hasUnrollTransformation(Loop *L);
-TransformationMode hasUnrollAndJamTransformation(Loop *L);
-TransformationMode hasVectorizeTransformation(Loop *L);
-TransformationMode hasDistributeTransformation(Loop *L);
-TransformationMode hasLICMVersioningTransformation(Loop *L);
+TransformationMode hasUnrollTransformation(const Loop *L);
+TransformationMode hasUnrollAndJamTransformation(const Loop *L);
+TransformationMode hasVectorizeTransformation(const Loop *L);
+TransformationMode hasDistributeTransformation(const Loop *L);
+TransformationMode hasLICMVersioningTransformation(const Loop *L);
 /// @}
 
 /// Set input string into loop metadata by keeping other values intact.

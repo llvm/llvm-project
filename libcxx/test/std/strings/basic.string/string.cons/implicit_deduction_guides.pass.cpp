@@ -175,7 +175,7 @@ int main(int, char**)
     assert(w == L"abcdef");
   }
   { // (8) w/o allocator
-    using It = input_iterator<const char*>;
+    using It = cpp17_input_iterator<const char*>;
     const char* input = "abcdef";
     std::basic_string s(It(input), It(input + 3), std::allocator<char>{});
     ASSERT_SAME_TYPE(decltype(s), std::string);
@@ -183,7 +183,7 @@ int main(int, char**)
   }
   { // (8) w/ allocator
     using ExpectW = std::basic_string<wchar_t, std::char_traits<wchar_t>, test_allocator<wchar_t>>;
-    using It = input_iterator<const wchar_t*>;
+    using It = cpp17_input_iterator<const wchar_t*>;
     const wchar_t* input = L"abcdef";
     std::basic_string s(It(input), It(input + 3), test_allocator<wchar_t>{});
     ASSERT_SAME_TYPE(decltype(s), ExpectW);

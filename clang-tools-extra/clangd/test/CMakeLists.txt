@@ -22,7 +22,7 @@ if(CLANGD_BUILD_XPC)
 endif()
 
 if(CLANGD_ENABLE_REMOTE)
-  list(APPEND CLANGD_TEST_DEPS clangd-index-server)
+  list(APPEND CLANGD_TEST_DEPS clangd-index-server clangd-index-server-monitor)
 endif()
 
 foreach(dep FileCheck count not llvm-config)

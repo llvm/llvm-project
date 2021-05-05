@@ -33,7 +33,7 @@
 // ARM64E-DARWIN: "-cc1"{{.*}} "-triple" "arm64e{{.*}}" "-target-cpu" "apple-a12"
 
 // RUN: %clang -target arm64-apple-darwin -arch arm64_32 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64_32-DARWIN %s
-// ARM64_32-DARWIN: "-cc1"{{.*}} "-triple" "aarch64_32{{.*}}" "-target-cpu" "apple-s4"
+// ARM64_32-DARWIN: "-cc1"{{.*}} "-triple" "arm64_32{{.*}}" "-target-cpu" "apple-s4"
 
 // RUN: %clang -target aarch64 -mcpu=cortex-a35 -### -c %s 2>&1 | FileCheck -check-prefix=CA35 %s
 // RUN: %clang -target aarch64 -mlittle-endian -mcpu=cortex-a35 -### -c %s 2>&1 | FileCheck -check-prefix=CA35 %s
@@ -482,12 +482,6 @@
 // MCPU-MTUNE-A73: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a73"
 // MCPU-MTUNE-THUNDERX2T99: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "thunderx2t99"
 // MCPU-MTUNE-THUNDERX3T110: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "thunderx3t110"
-
-// RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a78c -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A78C %s
-// RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a78c -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A78C-MFPU %s
-// CHECK-CORTEX-A78C: "-cc1"{{.*}} "-triple" "armv8.2a-{{.*}} "-target-cpu" "cortex-a78c"
-// CHECK-CORTEX-A78C-MFPU: "-cc1"{{.*}} "-target-feature" "+fp-armv8"
-// CHECK-CORTEX-A78C-MFPU: "-target-feature" "+crypto"
 
 // RUN: %clang -target aarch64 -march=armv8.1a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV81A %s
 // RUN: %clang -target aarch64 -march=armv8.1-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV81A %s

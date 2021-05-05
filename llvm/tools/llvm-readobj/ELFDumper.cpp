@@ -1140,7 +1140,7 @@ static const EnumEntry<unsigned> ElfMachineType[] = {
   ENUM_ENT(EM_METAG,         "Imagination Technologies Meta processor architecture"),
   ENUM_ENT(EM_MCST_ELBRUS,   "MCST Elbrus general purpose hardware architecture"),
   ENUM_ENT(EM_ECOG16,        "Cyan Technology eCOG16 family"),
-  ENUM_ENT(EM_CR16,          "Xilinx MicroBlaze"),
+  ENUM_ENT(EM_CR16,          "National Semiconductor CompactRISC 16-bit processor"),
   ENUM_ENT(EM_ETPU,          "Freescale Extended Time Processing Unit"),
   ENUM_ENT(EM_SLE9X,         "Infineon Technologies SLE9X core"),
   ENUM_ENT(EM_L10M,          "EM_L10M"),
@@ -1150,6 +1150,7 @@ static const EnumEntry<unsigned> ElfMachineType[] = {
   ENUM_ENT(EM_STM8,          "STMicroeletronics STM8 8-bit microcontroller"),
   ENUM_ENT(EM_TILE64,        "Tilera TILE64 multicore architecture family"),
   ENUM_ENT(EM_TILEPRO,       "Tilera TILEPro multicore architecture family"),
+  ENUM_ENT(EM_MICROBLAZE,    "Xilinx MicroBlaze 32-bit RISC soft processor core"),
   ENUM_ENT(EM_CUDA,          "NVIDIA CUDA architecture"),
   ENUM_ENT(EM_TILEGX,        "Tilera TILE-Gx multicore architecture family"),
   ENUM_ENT(EM_CLOUDSHIELD,   "EM_CLOUDSHIELD"),
@@ -5055,9 +5056,10 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
     raw_string_ostream StrOS(HSAILPropetiesString);
     StrOS << "[HSAIL Major: " << Properties->HSAILMajorVersion
           << ", HSAIL Minor: " << Properties->HSAILMinorVersion
-          << ", Profile: " << Properties->Profile
-          << ", Machine Model: " << Properties->MachineModel
-          << ", Default Float Round: " << Properties->DefaultFloatRound << "]";
+          << ", Profile: " << uint32_t(Properties->Profile)
+          << ", Machine Model: " << uint32_t(Properties->MachineModel)
+          << ", Default Float Round: "
+          << uint32_t(Properties->DefaultFloatRound) << "]";
     return {"AMD HSA HSAIL Properties", HSAILPropetiesString};
   }
   case ELF::NT_AMD_HSA_ISA_VERSION: {
@@ -5105,10 +5107,12 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
       uint32_t Key;
       uint32_t Value;
     };
+    if (Desc.size() % sizeof(PALMetadata) != 0)
+      return {"AMD PAL Metadata", "Invalid AMD PAL Metadata"};
     auto Isa = reinterpret_cast<const PALMetadata *>(Desc.data());
     std::string MetadataString;
     raw_string_ostream StrOS(MetadataString);
-    for (size_t I = 0, E = Desc.size() / sizeof(PALMetadata); I < E; ++E) {
+    for (size_t I = 0, E = Desc.size() / sizeof(PALMetadata); I < E; ++I) {
       StrOS << "[" << Isa[I].Key << ": " << Isa[I].Value << "]";
     }
     return {"AMD PAL Metadata", MetadataString};

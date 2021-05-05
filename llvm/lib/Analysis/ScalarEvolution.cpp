@@ -5654,7 +5654,7 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   const DataLayout &DL = getDataLayout();
 
   unsigned BitWidth = getTypeSizeInBits(U->getType());
-  ConstantRange CR(BitWidth, /*isFullSet=*/true);
+  const ConstantRange FullSet(BitWidth, /*isFullSet=*/true);
 
   // Match a simple recurrence of the form: <start, ShiftOp, Step>, and then
   // use information about the trip count to improve our available range.  Note
@@ -5666,19 +5666,19 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   // below intentionally handles the case where step is not loop invariant.
   auto *P = dyn_cast<PHINode>(U->getValue());
   if (!P)
-    return CR;
+    return FullSet;
 
   // Make sure that no Phi input comes from an unreachable block. Otherwise,
   // even the values that are not available in these blocks may come from them,
   // and this leads to false-positive recurrence test.
   for (auto *Pred : predecessors(P->getParent()))
     if (!DT.isReachableFromEntry(Pred))
-      return CR;
+      return FullSet;
 
   BinaryOperator *BO;
   Value *Start, *Step;
   if (!matchSimpleRecurrence(P, BO, Start, Step))
-    return CR;
+    return FullSet;
 
   // If we found a recurrence in reachable code, we must be in a loop. Note
   // that BO might be in some subloop of L, and that's completely okay.
@@ -5690,12 +5690,13 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
     // with malformed loop information during the midst of the transform.
     // There doesn't appear to be an obvious fix, so for the moment bailout
     // until the caller issue can be fixed.  PR49566 tracks the bug.
-    return CR;
+    return FullSet;
 
-  // TODO: Extend to other opcodes such as ashr, mul, and div
+  // TODO: Extend to other opcodes such as mul, and div
   switch (BO->getOpcode()) {
   default:
-    return CR;
+    return FullSet;
+  case Instruction::AShr:
   case Instruction::LShr:
   case Instruction::Shl:
     break;
@@ -5703,11 +5704,11 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
 
   if (BO->getOperand(0) != P)
     // TODO: Handle the power function forms some day.
-    return CR;
+    return FullSet;
 
   unsigned TC = getSmallConstantMaxTripCount(L);
   if (!TC || TC >= BitWidth)
-    return CR;
+    return FullSet;
 
   auto KnownStart = computeKnownBits(Start, DL, 0, &AC, nullptr, &DT);
   auto KnownStep = computeKnownBits(Step, DL, 0, &AC, nullptr, &DT);
@@ -5720,11 +5721,29 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   bool Overflow = false;
   auto TotalShift = MaxShiftAmt.umul_ov(TCAP, Overflow);
   if (Overflow)
-    return CR;
+    return FullSet;
 
   switch (BO->getOpcode()) {
   default:
     llvm_unreachable("filtered out above");
+  case Instruction::AShr: {
+    // For each ashr, three cases:
+    //   shift = 0 => unchanged value
+    //   saturation => 0 or -1
+    //   other => a value closer to zero (of the same sign)
+    // Thus, the end value is closer to zero than the start.
+    auto KnownEnd = KnownBits::ashr(KnownStart,
+                                    KnownBits::makeConstant(TotalShift));
+    if (KnownStart.isNonNegative())
+      // Analogous to lshr (simply not yet canonicalized)
+      return ConstantRange::getNonEmpty(KnownEnd.getMinValue(),
+                                        KnownStart.getMaxValue() + 1);
+    if (KnownStart.isNegative())
+      // End >=u Start && End <=s Start
+      return ConstantRange::getNonEmpty(KnownStart.getMinValue(),
+                                        KnownEnd.getMaxValue() + 1);
+    break;
+  }
   case Instruction::LShr: {
     // For each lshr, three cases:
     //   shift = 0 => unchanged value
@@ -5733,25 +5752,21 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
     // Thus, the low end of the unsigned range is the last value produced.
     auto KnownEnd = KnownBits::lshr(KnownStart,
                                     KnownBits::makeConstant(TotalShift));
-    auto R = ConstantRange::getNonEmpty(KnownEnd.getMinValue(),
-                                        KnownStart.getMaxValue() + 1);
-    CR = CR.intersectWith(R);
-    break;
+    return ConstantRange::getNonEmpty(KnownEnd.getMinValue(),
+                                      KnownStart.getMaxValue() + 1);
   }
   case Instruction::Shl: {
     // Iff no bits are shifted out, value increases on every shift.
     auto KnownEnd = KnownBits::shl(KnownStart,
                                    KnownBits::makeConstant(TotalShift));
     if (TotalShift.ult(KnownStart.countMinLeadingZeros()))
-      CR = CR.intersectWith(ConstantRange(KnownStart.getMinValue(),
-                                          KnownEnd.getMaxValue() + 1));
+      return ConstantRange(KnownStart.getMinValue(),
+                           KnownEnd.getMaxValue() + 1);
     break;
   }
   };
-  return CR;
+  return FullSet;
 }
-
-
 
 /// Determine the range for a particular SCEV.  If SignHint is
 /// HINT_RANGE_UNSIGNED (resp. HINT_RANGE_SIGNED) then getRange prefers ranges
@@ -7192,16 +7207,6 @@ void ScalarEvolution::forgetAllLoops() {
 }
 
 void ScalarEvolution::forgetLoop(const Loop *L) {
-  // Drop any stored trip count value.
-  auto RemoveLoopFromBackedgeMap =
-      [](DenseMap<const Loop *, BackedgeTakenInfo> &Map, const Loop *L) {
-        auto BTCPos = Map.find(L);
-        if (BTCPos != Map.end()) {
-          BTCPos->second.clear();
-          Map.erase(BTCPos);
-        }
-      };
-
   SmallVector<const Loop *, 16> LoopWorklist(1, L);
   SmallVector<Instruction *, 32> Worklist;
   SmallPtrSet<Instruction *, 16> Visited;
@@ -7210,8 +7215,9 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
   while (!LoopWorklist.empty()) {
     auto *CurrL = LoopWorklist.pop_back_val();
 
-    RemoveLoopFromBackedgeMap(BackedgeTakenCounts, CurrL);
-    RemoveLoopFromBackedgeMap(PredicatedBackedgeTakenCounts, CurrL);
+    // Drop any stored trip count value.
+    BackedgeTakenCounts.erase(CurrL);
+    PredicatedBackedgeTakenCounts.erase(CurrL);
 
     // Drop information about predicated SCEV rewrites for this loop.
     for (auto I = PredicatedSCEVRewrites.begin();
@@ -7467,11 +7473,6 @@ ScalarEvolution::BackedgeTakenInfo::BackedgeTakenInfo(
   assert((isa<SCEVCouldNotCompute>(ConstantMax) ||
           isa<SCEVConstant>(ConstantMax)) &&
          "No point in having a non-constant max backedge taken count!");
-}
-
-/// Invalidate this result and free the ExitNotTakenInfo array.
-void ScalarEvolution::BackedgeTakenInfo::clear() {
-  ExitNotTaken.clear();
 }
 
 /// Compute the number of times the backedge of the specified loop will execute.
@@ -12212,13 +12213,8 @@ ScalarEvolution::~ScalarEvolution() {
   ExprValueMap.clear();
   ValueExprMap.clear();
   HasRecMap.clear();
-
-  // Free any extra memory created for ExitNotTakenInfo in the unlikely event
-  // that a loop had multiple computable exits.
-  for (auto &BTCI : BackedgeTakenCounts)
-    BTCI.second.clear();
-  for (auto &BTCI : PredicatedBackedgeTakenCounts)
-    BTCI.second.clear();
+  BackedgeTakenCounts.clear();
+  PredicatedBackedgeTakenCounts.clear();
 
   assert(PendingLoopPredicates.empty() && "isImpliedCond garbage");
   assert(PendingPhiRanges.empty() && "getRangeRef garbage");
@@ -12633,10 +12629,9 @@ ScalarEvolution::forgetMemoizedResults(const SCEV *S) {
       [S, this](DenseMap<const Loop *, BackedgeTakenInfo> &Map) {
         for (auto I = Map.begin(), E = Map.end(); I != E;) {
           BackedgeTakenInfo &BEInfo = I->second;
-          if (BEInfo.hasOperand(S, this)) {
-            BEInfo.clear();
+          if (BEInfo.hasOperand(S, this))
             Map.erase(I++);
-          } else
+          else
             ++I;
         }
       };
@@ -13433,30 +13428,31 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
     if (!LHSUnknown)
       return;
 
+    // Check whether LHS has already been rewritten. In that case we want to
+    // chain further rewrites onto the already rewritten value.
+    auto I = RewriteMap.find(LHSUnknown->getValue());
+    const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : LHS;
+
     // TODO: use information from more predicates.
     switch (Predicate) {
-    case CmpInst::ICMP_ULT: {
-      if (!containsAddRecurrence(RHS)) {
-        const SCEV *Base = LHS;
-        auto I = RewriteMap.find(LHSUnknown->getValue());
-        if (I != RewriteMap.end())
-          Base = I->second;
-
+    case CmpInst::ICMP_ULT:
+      if (!containsAddRecurrence(RHS))
+        RewriteMap[LHSUnknown->getValue()] = getUMinExpr(
+            RewrittenLHS, getMinusSCEV(RHS, getOne(RHS->getType())));
+      break;
+    case CmpInst::ICMP_ULE:
+      if (!containsAddRecurrence(RHS))
+        RewriteMap[LHSUnknown->getValue()] = getUMinExpr(RewrittenLHS, RHS);
+      break;
+    case CmpInst::ICMP_UGT:
+      if (!containsAddRecurrence(RHS))
         RewriteMap[LHSUnknown->getValue()] =
-            getUMinExpr(Base, getMinusSCEV(RHS, getOne(RHS->getType())));
-      }
+            getUMaxExpr(RewrittenLHS, getAddExpr(RHS, getOne(RHS->getType())));
       break;
-    }
-    case CmpInst::ICMP_ULE: {
-      if (!containsAddRecurrence(RHS)) {
-        const SCEV *Base = LHS;
-        auto I = RewriteMap.find(LHSUnknown->getValue());
-        if (I != RewriteMap.end())
-          Base = I->second;
-        RewriteMap[LHSUnknown->getValue()] = getUMinExpr(Base, RHS);
-      }
+    case CmpInst::ICMP_UGE:
+      if (!containsAddRecurrence(RHS))
+        RewriteMap[LHSUnknown->getValue()] = getUMaxExpr(RewrittenLHS, RHS);
       break;
-    }
     case CmpInst::ICMP_EQ:
       if (isa<SCEVConstant>(RHS))
         RewriteMap[LHSUnknown->getValue()] = RHS;
@@ -13465,7 +13461,7 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       if (isa<SCEVConstant>(RHS) &&
           cast<SCEVConstant>(RHS)->getValue()->isNullValue())
         RewriteMap[LHSUnknown->getValue()] =
-            getUMaxExpr(LHS, getOne(RHS->getType()));
+            getUMaxExpr(RewrittenLHS, getOne(RHS->getType()));
       break;
     default:
       break;

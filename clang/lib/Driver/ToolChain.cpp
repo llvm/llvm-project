@@ -76,11 +76,13 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
                      const ArgList &Args)
     : D(D), Triple(T), Args(Args), CachedRTTIArg(GetRTTIArgument(Args)),
       CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)) {
-  if (auto StdlibPath = getStdlibPath())
-    getFilePaths().push_back(*StdlibPath);
+  std::string RuntimePath = getRuntimePath();
+  if (getVFS().exists(RuntimePath))
+    getLibraryPaths().push_back(RuntimePath);
 
-  if (auto RuntimePath = getRuntimePath())
-    getLibraryPaths().push_back(*RuntimePath);
+  std::string StdlibPath = getStdlibPath();
+  if (getVFS().exists(StdlibPath))
+    getFilePaths().push_back(StdlibPath);
 
   std::string CandidateLibPath = getArchSpecificLibPath();
   if (getVFS().exists(CandidateLibPath))
@@ -389,6 +391,9 @@ static StringRef getArchNameForCompilerRTLib(const ToolChain &TC,
 }
 
 StringRef ToolChain::getOSLibName() const {
+  if (Triple.isOSDarwin())
+    return "darwin";
+
   switch (Triple.getOS()) {
   case llvm::Triple::FreeBSD:
     return "freebsd";
@@ -483,41 +488,16 @@ const char *ToolChain::getCompilerRTArgString(const llvm::opt::ArgList &Args,
   return Args.MakeArgString(getCompilerRT(Args, Component, Type));
 }
 
-
-Optional<std::string> ToolChain::getRuntimePath() const {
-  SmallString<128> P;
-
-  // First try the triple passed to driver as --target=<triple>.
-  P.assign(D.ResourceDir);
-  llvm::sys::path::append(P, "lib", D.getTargetTriple());
-  if (getVFS().exists(P))
-    return llvm::Optional<std::string>(std::string(P.str()));
-
-  // Second try the normalized triple.
-  P.assign(D.ResourceDir);
-  llvm::sys::path::append(P, "lib", Triple.str());
-  if (getVFS().exists(P))
-    return llvm::Optional<std::string>(std::string(P.str()));
-
-  return None;
+std::string ToolChain::getRuntimePath() const {
+  SmallString<128> P(D.ResourceDir);
+  llvm::sys::path::append(P, "lib", getTripleString());
+  return std::string(P.str());
 }
 
-Optional<std::string> ToolChain::getStdlibPath() const {
-  SmallString<128> P;
-
-  // First try the triple passed to driver as --target=<triple>.
-  P.assign(D.Dir);
-  llvm::sys::path::append(P, "..", "lib", D.getTargetTriple());
-  if (getVFS().exists(P))
-    return llvm::Optional<std::string>(std::string(P.str()));
-
-  // Second try the normalized triple.
-  P.assign(D.Dir);
-  llvm::sys::path::append(P, "..", "lib", Triple.str());
-  if (getVFS().exists(P))
-    return llvm::Optional<std::string>(std::string(P.str()));
-
-  return None;
+std::string ToolChain::getStdlibPath() const {
+  SmallString<128> P(D.Dir);
+  llvm::sys::path::append(P, "..", "lib", getTripleString());
+  return std::string(P.str());
 }
 
 std::string ToolChain::getArchSpecificLibPath() const {

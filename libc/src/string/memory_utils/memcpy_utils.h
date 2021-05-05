@@ -98,8 +98,8 @@ static void CopyBlockOverlap(char *__restrict dst, const char *__restrict src,
 //               `count > 2 * kBlockSize` for efficiency.
 //               `count >= kAlignment` for correctness.
 template <size_t kBlockSize, size_t kAlignment = kBlockSize>
-static void CopyAlignedBlocks(char *__restrict dst, const char *__restrict src,
-                              size_t count) {
+static void CopySrcAlignedBlocks(char *__restrict dst,
+                                 const char *__restrict src, size_t count) {
   static_assert(is_power2(kAlignment), "kAlignment must be a power of two");
   static_assert(is_power2(kBlockSize), "kBlockSize must be a power of two");
   static_assert(kAlignment <= kBlockSize,
@@ -112,6 +112,25 @@ static void CopyAlignedBlocks(char *__restrict dst, const char *__restrict src,
   for (size_t offset = kAlignment; offset < limit; offset += kBlockSize)
     CopyBlock<kBlockSize>(dst - ofla + offset,
                           assume_aligned<kAlignment>(src - ofla + offset));
+
+  CopyLastBlock<kBlockSize>(dst, src, count); // Copy last block
+}
+
+template <size_t kBlockSize, size_t kAlignment = kBlockSize>
+static void CopyDstAlignedBlocks(char *__restrict dst,
+                                 const char *__restrict src, size_t count) {
+  static_assert(is_power2(kAlignment), "kAlignment must be a power of two");
+  static_assert(is_power2(kBlockSize), "kBlockSize must be a power of two");
+  static_assert(kAlignment <= kBlockSize,
+                "kAlignment must be less or equal to block size");
+  CopyBlock<kAlignment>(dst, src); // Copy first block
+
+  // Copy aligned blocks
+  const size_t ofla = offset_from_last_aligned<kAlignment>(dst);
+  const size_t limit = count + ofla - kBlockSize;
+  for (size_t offset = kAlignment; offset < limit; offset += kBlockSize)
+    CopyBlock<kBlockSize>(assume_aligned<kAlignment>(dst - ofla + offset),
+                          src - ofla + offset);
 
   CopyLastBlock<kBlockSize>(dst, src, count); // Copy last block
 }

@@ -153,6 +153,28 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
   return E;
 }
 
+static const MemRegion *
+getLocationRegionIfReference(const Expr *E, const ExplodedNode *N,
+                             bool LookingForReference = true) {
+  if (const auto *DR = dyn_cast<DeclRefExpr>(E)) {
+    if (const auto *VD = dyn_cast<VarDecl>(DR->getDecl())) {
+      if (LookingForReference && !VD->getType()->isReferenceType())
+        return nullptr;
+      return N->getState()
+          ->getLValue(VD, N->getLocationContext())
+          .getAsRegion();
+    }
+  }
+
+  // FIXME: This does not handle other kinds of null references,
+  // for example, references from FieldRegions:
+  //   struct Wrapper { int &ref; };
+  //   Wrapper w = { *(int *)0 };
+  //   w.ref = 1;
+
+  return nullptr;
+}
+
 /// Comparing internal representations of symbolic values (via
 /// SVal::operator==()) is a valid way to check if the value was updated,
 /// unless it's a LazyCompoundVal that may have a different internal
@@ -1241,16 +1263,17 @@ static bool isInitializationOfVar(const ExplodedNode *N, const VarRegion *VR) {
 
 /// Show diagnostics for initializing or declaring a region \p R with a bad value.
 static void showBRDiagnostics(const char *action, llvm::raw_svector_ostream &os,
-                              const MemRegion *R, SVal V, const DeclStmt *DS) {
-  if (R->canPrintPretty()) {
-    R->printPretty(os);
+                              const MemRegion *NewR, SVal V,
+                              const MemRegion *OldR, const DeclStmt *DS) {
+  if (NewR->canPrintPretty()) {
+    NewR->printPretty(os);
     os << " ";
   }
 
   if (V.getAs<loc::ConcreteInt>()) {
     bool b = false;
-    if (R->isBoundable()) {
-      if (const auto *TR = dyn_cast<TypedValueRegion>(R)) {
+    if (NewR->isBoundable()) {
+      if (const auto *TR = dyn_cast<TypedValueRegion>(NewR)) {
         if (TR->getValueType()->isObjCObjectPointerType()) {
           os << action << "nil";
           b = true;
@@ -1262,29 +1285,31 @@ static void showBRDiagnostics(const char *action, llvm::raw_svector_ostream &os,
 
   } else if (auto CVal = V.getAs<nonloc::ConcreteInt>()) {
     os << action << CVal->getValue();
+  } else if (OldR && OldR->canPrintPretty()) {
+    os << action << "the value of ";
+    OldR->printPretty(os);
   } else if (DS) {
     if (V.isUndef()) {
-      if (isa<VarRegion>(R)) {
+      if (isa<VarRegion>(NewR)) {
         const auto *VD = cast<VarDecl>(DS->getSingleDecl());
         if (VD->getInit()) {
-          os << (R->canPrintPretty() ? "initialized" : "Initializing")
-            << " to a garbage value";
+          os << (NewR->canPrintPretty() ? "initialized" : "Initializing")
+             << " to a garbage value";
         } else {
-          os << (R->canPrintPretty() ? "declared" : "Declaring")
-            << " without an initial value";
+          os << (NewR->canPrintPretty() ? "declared" : "Declaring")
+             << " without an initial value";
         }
       }
     } else {
-      os << (R->canPrintPretty() ? "initialized" : "Initialized")
-        << " here";
+      os << (NewR->canPrintPretty() ? "initialized" : "Initialized") << " here";
     }
   }
 }
 
 /// Display diagnostics for passing bad region as a parameter.
-static void showBRParamDiagnostics(llvm::raw_svector_ostream& os,
-    const VarRegion *VR,
-    SVal V) {
+static void showBRParamDiagnostics(llvm::raw_svector_ostream &os,
+                                   const VarRegion *VR, SVal V,
+                                   const MemRegion *ValueR) {
   const auto *Param = cast<ParmVarDecl>(VR->getDecl());
 
   os << "Passing ";
@@ -1298,6 +1323,8 @@ static void showBRParamDiagnostics(llvm::raw_svector_ostream& os,
     os << "uninitialized value";
   } else if (auto CI = V.getAs<nonloc::ConcreteInt>()) {
     os << "the value " << CI->getValue();
+  } else if (ValueR && ValueR->canPrintPretty()) {
+    ValueR->printPretty(os);
   } else {
     os << "value";
   }
@@ -1313,11 +1340,12 @@ static void showBRParamDiagnostics(llvm::raw_svector_ostream& os,
 
 /// Show default diagnostics for storing bad region.
 static void showBRDefaultDiagnostics(llvm::raw_svector_ostream &os,
-                                     const MemRegion *R, SVal V) {
+                                     const MemRegion *NewR, SVal V,
+                                     const MemRegion *OldR) {
   if (V.getAs<loc::ConcreteInt>()) {
     bool b = false;
-    if (R->isBoundable()) {
-      if (const auto *TR = dyn_cast<TypedValueRegion>(R)) {
+    if (NewR->isBoundable()) {
+      if (const auto *TR = dyn_cast<TypedValueRegion>(NewR)) {
         if (TR->getValueType()->isObjCObjectPointerType()) {
           os << "nil object reference stored";
           b = true;
@@ -1325,34 +1353,44 @@ static void showBRDefaultDiagnostics(llvm::raw_svector_ostream &os,
       }
     }
     if (!b) {
-      if (R->canPrintPretty())
+      if (NewR->canPrintPretty())
         os << "Null pointer value stored";
       else
         os << "Storing null pointer value";
     }
 
   } else if (V.isUndef()) {
-    if (R->canPrintPretty())
+    if (NewR->canPrintPretty())
       os << "Uninitialized value stored";
     else
       os << "Storing uninitialized value";
 
   } else if (auto CV = V.getAs<nonloc::ConcreteInt>()) {
-    if (R->canPrintPretty())
+    if (NewR->canPrintPretty())
       os << "The value " << CV->getValue() << " is assigned";
     else
       os << "Assigning " << CV->getValue();
 
+  } else if (OldR && OldR->canPrintPretty()) {
+    if (NewR->canPrintPretty()) {
+      os << "The value of ";
+      OldR->printPretty(os);
+      os << " is assigned";
+    } else {
+      os << "Assigning the value of ";
+      OldR->printPretty(os);
+    }
+
   } else {
-    if (R->canPrintPretty())
+    if (NewR->canPrintPretty())
       os << "Value assigned";
     else
       os << "Assigning value";
   }
 
-  if (R->canPrintPretty()) {
+  if (NewR->canPrintPretty()) {
     os << " to ";
-    R->printPretty(os);
+    NewR->printPretty(os);
   }
 }
 
@@ -1451,8 +1489,76 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
     if (!IsParam)
       InitE = InitE->IgnoreParenCasts();
 
-    bugreporter::trackExpressionValue(
-        StoreSite, InitE, BR, TKind, EnableNullFPSuppression);
+    bugreporter::trackExpressionValue(StoreSite, InitE, BR, TKind,
+                                      EnableNullFPSuppression);
+  }
+
+  // Let's try to find the region where the value came from.
+  const MemRegion *OldRegion = nullptr;
+
+  // If we have init expression, it might be simply a reference
+  // to a variable, so we can use it.
+  if (InitE) {
+    // That region might still be not exactly what we are looking for.
+    // In situations like `int &ref = val;`, we can't say that
+    // `ref` is initialized with `val`, rather refers to `val`.
+    //
+    // In order, to mitigate situations like this, we check if the last
+    // stored value in that region is the value that we track.
+    //
+    // TODO: support other situations better.
+    if (const MemRegion *Candidate =
+            getLocationRegionIfReference(InitE, Succ, false)) {
+      const StoreManager &SM = BRC.getStateManager().getStoreManager();
+
+      // Here we traverse the graph up to find the last node where the
+      // candidate region is still in the store.
+      for (const ExplodedNode *N = StoreSite; N; N = N->getFirstPred()) {
+        if (SM.includedInBindings(N->getState()->getStore(), Candidate)) {
+          // And if it was bound to the target value, we can use it.
+          if (N->getState()->getSVal(Candidate) == V) {
+            OldRegion = Candidate;
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  // Otherwise, if the current region does indeed contain the value
+  // we are looking for, we can look for a region where this value
+  // was before.
+  //
+  // It can be useful for situations like:
+  //     new = identity(old)
+  // where the analyzer knows that 'identity' returns the value of its
+  // first argument.
+  //
+  // NOTE: If the region R is not a simple var region, it can contain
+  //       V in one of its subregions.
+  if (!OldRegion && StoreSite->getState()->getSVal(R) == V) {
+    // Let's go up the graph to find the node where the region is
+    // bound to V.
+    const ExplodedNode *NodeWithoutBinding = StoreSite->getFirstPred();
+    for (;
+         NodeWithoutBinding && NodeWithoutBinding->getState()->getSVal(R) == V;
+         NodeWithoutBinding = NodeWithoutBinding->getFirstPred()) {
+    }
+
+    if (NodeWithoutBinding) {
+      // Let's try to find a unique binding for the value in that node.
+      // We want to use this to find unique bindings because of the following
+      // situations:
+      //     b = a;
+      //     c = identity(b);
+      //
+      // Telling the user that the value of 'a' is assigned to 'c', while
+      // correct, can be confusing.
+      StoreManager::FindUniqueBinding FB(V.getAsLocSymbol());
+      BRC.getStateManager().iterBindings(NodeWithoutBinding->getState(), FB);
+      if (FB)
+        OldRegion = FB.getRegion();
+    }
   }
 
   if (TKind == TrackingKind::Condition &&
@@ -1490,15 +1596,15 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
       }
     }
     if (action)
-      showBRDiagnostics(action, os, R, V, DS);
+      showBRDiagnostics(action, os, R, V, OldRegion, DS);
 
   } else if (StoreSite->getLocation().getAs<CallEnter>()) {
     if (const auto *VR = dyn_cast<VarRegion>(R))
-      showBRParamDiagnostics(os, VR, V);
+      showBRParamDiagnostics(os, VR, V, OldRegion);
   }
 
   if (os.str().empty())
-    showBRDefaultDiagnostics(os, R, V);
+    showBRDefaultDiagnostics(os, R, V, OldRegion);
 
   if (TKind == bugreporter::TrackingKind::Condition)
     os << WillBeUsedForACondition;
@@ -1824,27 +1930,6 @@ TrackControlDependencyCondBRVisitor::VisitNode(const ExplodedNode *N,
 //===----------------------------------------------------------------------===//
 // Implementation of trackExpressionValue.
 //===----------------------------------------------------------------------===//
-
-static const MemRegion *getLocationRegionIfReference(const Expr *E,
-                                                     const ExplodedNode *N) {
-  if (const auto *DR = dyn_cast<DeclRefExpr>(E)) {
-    if (const auto *VD = dyn_cast<VarDecl>(DR->getDecl())) {
-      if (!VD->getType()->isReferenceType())
-        return nullptr;
-      ProgramStateManager &StateMgr = N->getState()->getStateManager();
-      MemRegionManager &MRMgr = StateMgr.getRegionManager();
-      return MRMgr.getVarRegion(VD, N->getLocationContext());
-    }
-  }
-
-  // FIXME: This does not handle other kinds of null references,
-  // for example, references from FieldRegions:
-  //   struct Wrapper { int &ref; };
-  //   Wrapper w = { *(int *)0 };
-  //   w.ref = 1;
-
-  return nullptr;
-}
 
 /// \return A subexpression of @c Ex which represents the
 /// expression-of-interest.

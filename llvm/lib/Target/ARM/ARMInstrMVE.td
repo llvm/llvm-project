@@ -5705,11 +5705,12 @@ defm MVE_VQDMLASH_qr  : MVE_VQDMLAH_qr_types<"vqdmlash",  0b1, 0b1>;
 defm MVE_VQRDMLASH_qr : MVE_VQDMLAH_qr_types<"vqrdmlash", 0b0, 0b1>;
 
 class MVE_VxDUP<string iname, string suffix, bits<2> size, bit bit_12,
-              list<dag> pattern=[]>
+                ValueType VT, SDPatternOperator vxdup>
   : MVE_p<(outs MQPR:$Qd, tGPREven:$Rn),
           (ins tGPREven:$Rn_src, MVE_VIDUP_imm:$imm), NoItinerary,
           iname, suffix, "$Qd, $Rn, $imm", vpred_r, "$Rn = $Rn_src",
-          pattern> {
+          [(set (VT MQPR:$Qd), (i32 tGPREven:$Rn),
+              (vxdup (i32 tGPREven:$Rn_src), (i32 imm:$imm)))]> {
   bits<4> Qd;
   bits<4> Rn;
   bits<2> imm;
@@ -5730,13 +5731,13 @@ class MVE_VxDUP<string iname, string suffix, bits<2> size, bit bit_12,
   let hasSideEffects = 0;
 }
 
-def MVE_VIDUPu8  : MVE_VxDUP<"vidup", "u8",  0b00, 0b0>;
-def MVE_VIDUPu16 : MVE_VxDUP<"vidup", "u16", 0b01, 0b0>;
-def MVE_VIDUPu32 : MVE_VxDUP<"vidup", "u32", 0b10, 0b0>;
+def MVE_VIDUPu8  : MVE_VxDUP<"vidup", "u8",  0b00, 0b0, v16i8, ARMvidup>;
+def MVE_VIDUPu16 : MVE_VxDUP<"vidup", "u16", 0b01, 0b0, v8i16, ARMvidup>;
+def MVE_VIDUPu32 : MVE_VxDUP<"vidup", "u32", 0b10, 0b0, v4i32, ARMvidup>;
 
-def MVE_VDDUPu8  : MVE_VxDUP<"vddup", "u8",  0b00, 0b1>;
-def MVE_VDDUPu16 : MVE_VxDUP<"vddup", "u16", 0b01, 0b1>;
-def MVE_VDDUPu32 : MVE_VxDUP<"vddup", "u32", 0b10, 0b1>;
+def MVE_VDDUPu8  : MVE_VxDUP<"vddup", "u8",  0b00, 0b1, v16i8, null_frag>;
+def MVE_VDDUPu16 : MVE_VxDUP<"vddup", "u16", 0b01, 0b1, v8i16, null_frag>;
+def MVE_VDDUPu32 : MVE_VxDUP<"vddup", "u32", 0b10, 0b1, v4i32, null_frag>;
 
 class MVE_VxWDUP<string iname, string suffix, bits<2> size, bit bit_12,
                  list<dag> pattern=[]>
@@ -6026,8 +6027,8 @@ def SDTARMVST2    : SDTypeProfile<1, 5, [SDTCisPtrTy<0>, SDTCisPtrTy<1>, SDTCisV
 def SDTARMVST4    : SDTypeProfile<1, 7, [SDTCisPtrTy<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>, SDTCisVec<3>,
                                          SDTCisSameAs<3, 4>, SDTCisSameAs<3, 5>,
                                          SDTCisSameAs<3, 6>, SDTCisVT<7, i32>]>;
-def MVEVST2UPD       : SDNode<"ARMISD::VST2_UPD", SDTARMVST2, [SDNPHasChain]>;
-def MVEVST4UPD       : SDNode<"ARMISD::VST4_UPD", SDTARMVST4, [SDNPHasChain]>;
+def MVEVST2UPD       : SDNode<"ARMISD::VST2_UPD", SDTARMVST2, [SDNPHasChain, SDNPMemOperand]>;
+def MVEVST4UPD       : SDNode<"ARMISD::VST4_UPD", SDTARMVST4, [SDNPHasChain, SDNPMemOperand]>;
 
 multiclass MVE_vst24_patterns<int lanesize, ValueType VT> {
   foreach stage = [0,1] in

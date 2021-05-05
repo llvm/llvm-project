@@ -59,8 +59,10 @@
 #endif
 
 #ifdef __clang__
+#if __has_warning("-Wdeprecated-copy")
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-copy"
+#endif
 #endif
 
 namespace testing {
@@ -4422,7 +4424,9 @@ inline InnerMatcher AllArgs(const InnerMatcher& matcher) { return matcher; }
 }  // namespace testing
 
 #ifdef __clang__
+#if __has_warning("-Wdeprecated-copy")
 #pragma clang diagnostic pop
+#endif
 #endif
 
 // Include any custom callback matchers added by the local installation.

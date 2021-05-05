@@ -1,4 +1,5 @@
 // RUN: %libomptarget-compile-nvptx64-nvidia-cuda -gline-tables-only && env LIBOMPTARGET_INFO=31 %libomptarget-run-nvptx64-nvidia-cuda 2>&1 | %fcheck-nvptx64-nvidia-cuda -allow-empty -check-prefix=INFO
+// REQUIRES: nvptx64-nvidia-cuda
 
 #include <stdio.h>
 #include <omp.h>

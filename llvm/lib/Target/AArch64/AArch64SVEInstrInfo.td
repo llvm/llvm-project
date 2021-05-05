@@ -1370,8 +1370,8 @@ let Predicates = [HasSVE] in {
   defm INCP_ZP     : sve_int_count_v<0b10000, "incp">;
   defm DECP_ZP     : sve_int_count_v<0b10100, "decp">;
 
-  defm INDEX_RR : sve_int_index_rr<"index", index_vector, index_vector_oneuse>;
-  defm INDEX_IR : sve_int_index_ir<"index", index_vector, index_vector_oneuse>;
+  defm INDEX_RR : sve_int_index_rr<"index", index_vector, index_vector_oneuse, AArch64mul_p_oneuse>;
+  defm INDEX_IR : sve_int_index_ir<"index", index_vector, index_vector_oneuse, AArch64mul_p, AArch64mul_p_oneuse>;
   defm INDEX_RI : sve_int_index_ri<"index", index_vector, index_vector_oneuse>;
   defm INDEX_II : sve_int_index_ii<"index", index_vector, index_vector_oneuse>;
 
@@ -1975,6 +1975,25 @@ let Predicates = [HasSVE] in {
   defm : unpred_load<        load, nxv2f32,  LD1W_D,  LD1W_D_IMM, PTRUE_D, am_sve_regreg_lsl2>;
   defm : unpred_load<        load, nxv2f64,    LD1D,    LD1D_IMM, PTRUE_D, am_sve_regreg_lsl3>;
 
+  // Allow using the reg+reg form of ld1b/st1b for memory accesses with the
+  // same width as nxv16i8.  This saves an add in cases where we would
+  // otherwise compute the address separately.
+  multiclass unpred_loadstore_bitcast<ValueType Ty> {
+    let Predicates = [IsLE] in {
+      def : Pat<(Ty (load (am_sve_regreg_lsl0 GPR64sp:$base, GPR64:$offset))),
+                (LD1B (PTRUE_B 31), GPR64sp:$base, GPR64:$offset)>;
+      def : Pat<(store (Ty ZPR:$val), (am_sve_regreg_lsl0 GPR64sp:$base, GPR64:$offset)),
+                (ST1B ZPR:$val, (PTRUE_B 31), GPR64sp:$base, GPR64:$offset)>;
+    }
+  }
+  defm : unpred_loadstore_bitcast<nxv8i16>;
+  defm : unpred_loadstore_bitcast<nxv8f16>;
+  defm : unpred_loadstore_bitcast<nxv8bf16>;
+  defm : unpred_loadstore_bitcast<nxv4f32>;
+  defm : unpred_loadstore_bitcast<nxv4i32>;
+  defm : unpred_loadstore_bitcast<nxv2i64>;
+  defm : unpred_loadstore_bitcast<nxv2f64>;
+
   multiclass unpred_store_predicate<ValueType Ty, Instruction Store> {
     def _fi : Pat<(store (Ty PPR:$val), (am_sve_fi GPR64sp:$base, simm9:$offset)),
                   (Store PPR:$val, GPR64sp:$base, simm9:$offset)>;
@@ -2532,11 +2551,11 @@ let Predicates = [HasSVE2] in {
   }
 
   // SVE2 predicated shifts
-  defm SQSHL_ZPmI  : sve_int_bin_pred_shift_imm_left< 0b0110, "sqshl",  "SQSHL_ZPZI">;
-  defm UQSHL_ZPmI  : sve_int_bin_pred_shift_imm_left< 0b0111, "uqshl",  "UQSHL_ZPZI">;
-  defm SRSHR_ZPmI  : sve_int_bin_pred_shift_imm_right<0b1100, "srshr",  "SRSHR_ZPZI",  int_aarch64_sve_srshr>;
-  defm URSHR_ZPmI  : sve_int_bin_pred_shift_imm_right<0b1101, "urshr",  "URSHR_ZPZI",  int_aarch64_sve_urshr>;
-  defm SQSHLU_ZPmI : sve_int_bin_pred_shift_imm_left< 0b1111, "sqshlu", "SQSHLU_ZPZI", int_aarch64_sve_sqshlu>;
+  defm SQSHL_ZPmI  : sve_int_bin_pred_shift_imm_left_dup<0b0110, "sqshl",  "SQSHL_ZPZI",  int_aarch64_sve_sqshl>;
+  defm UQSHL_ZPmI  : sve_int_bin_pred_shift_imm_left_dup<0b0111, "uqshl",  "UQSHL_ZPZI",  int_aarch64_sve_uqshl>;
+  defm SRSHR_ZPmI  : sve_int_bin_pred_shift_imm_right<   0b1100, "srshr",  "SRSHR_ZPZI",  int_aarch64_sve_srshr>;
+  defm URSHR_ZPmI  : sve_int_bin_pred_shift_imm_right<   0b1101, "urshr",  "URSHR_ZPZI",  int_aarch64_sve_urshr>;
+  defm SQSHLU_ZPmI : sve_int_bin_pred_shift_imm_left<    0b1111, "sqshlu", "SQSHLU_ZPZI", int_aarch64_sve_sqshlu>;
 
   // SVE2 integer add/subtract long
   defm SADDLB_ZZZ : sve2_wide_int_arith_long<0b00000, "saddlb", int_aarch64_sve_saddlb>;

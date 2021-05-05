@@ -408,7 +408,7 @@
 // CHECK-V82A-FP16-NOFP16FML: "-target-feature" "+fullfp16" "-target-feature" "-fp16fml"
 
 // RUN: %clang -target armv8a-linux-eabi -march=armv8.2-a+nofp16fml+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V82A-NOFP16FML-FP16 %s
-// CHECK-V82A-NOFP16FML-FP16: "-target-feature" "-fp16fml" "-target-feature" "+fullfp16"
+// CHECK-V82A-NOFP16FML-FP16: "-target-feature" "+fullfp16" "-target-feature" "-fp16fml"
 
 // RUN: %clang -target armv8a-linux-eabi -march=armv8.2-a+fp16fml+nofp16 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V82A-FP16FML-NOFP16 %s
 // CHECK-V82A-FP16FML-NOFP16: "-target-feature" "-fullfp16" "-target-feature" "-fp16fml"
@@ -433,7 +433,7 @@
 // CHECK-V83A-FP16-NOFP16FML: "-target-feature" "+fullfp16" "-target-feature" "-fp16fml"
 
 // RUN: %clang -target armv8a-linux-eabi -march=armv8.3-a+nofp16fml+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V83A-NOFP16FML-FP16 %s
-// CHECK-V83A-NOFP16FML-FP16: "-target-feature" "-fp16fml" "-target-feature" "+fullfp16"
+// CHECK-V83A-NOFP16FML-FP16: "-target-feature" "+fullfp16" "-target-feature" "-fp16fml"
 
 // RUN: %clang -target armv8a-linux-eabi -march=armv8.3-a+fp16fml+nofp16 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V83A-FP16FML-NOFP16 %s
 // CHECK-V83A-FP16FML-NOFP16: "-target-feature" "-fullfp16" "-target-feature" "-fp16fml"
@@ -826,7 +826,8 @@
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a73 -mfloat-abi=soft -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A73-SOFT %s
 // CHECK-CORTEX-A73: "-cc1"{{.*}} "-triple" "armv8-{{.*}} "-target-cpu" "cortex-a73"
 // CHECK-CORTEX-A73-MFPU: "-cc1"{{.*}} "-target-feature" "+fp-armv8"
-// CHECK-CORTEX-A73-MFPU: "-target-feature" "+crypto"
+// CHECK-CORTEX-A73-MFPU: "-target-feature" "+sha2"
+// CHECK-CORTEX-A73-MFPU: "-target-feature" "+aes"
 // CHECK-CORTEX-A73-SOFT: "-target-feature" "+soft-float"
 // CHECK-CORTEX-A73-SOFT: "-target-feature" "+soft-float-abi"
 
@@ -835,7 +836,8 @@
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a75 -mfloat-abi=soft -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A75-SOFT %s
 // CHECK-CORTEX-A75: "-cc1"{{.*}} "-triple" "armv8.2a-{{.*}} "-target-cpu" "cortex-a75"
 // CHECK-CORTEX-A75-MFPU: "-cc1"{{.*}} "-target-feature" "+fp-armv8"
-// CHECK-CORTEX-A75-MFPU: "-target-feature" "+crypto"
+// CHECK-CORTEX-A75-MFPU: "-target-feature" "+sha2"
+// CHECK-CORTEX-A75-MFPU: "-target-feature" "+aes"
 // CHECK-CORTEX-A75-SOFT: "-target-feature" "+soft-float"
 // CHECK-CORTEX-A75-SOFT: "-target-feature" "+soft-float-abi"
 
@@ -844,7 +846,8 @@
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a76 -mfloat-abi=soft -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A76-SOFT %s
 // CHECK-CORTEX-A76: "-cc1"{{.*}} "-triple" "armv8.2a-{{.*}} "-target-cpu" "cortex-a76"
 // CHECK-CORTEX-A76-MFPU: "-cc1"{{.*}} "-target-feature" "+fp-armv8"
-// CHECK-CORTEX-A76-MFPU: "-target-feature" "+crypto"
+// CHECK-CORTEX-A76-MFPU: "-target-feature" "+sha2"
+// CHECK-CORTEX-A76-MFPU: -target-feature" "+aes"
 // CHECK-CORTEX-A76-SOFT: "-target-feature" "+soft-float"
 // CHECK-CORTEX-A76-SOFT: "-target-feature" "+soft-float-abi"
 
@@ -853,7 +856,8 @@
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a76ae -mfloat-abi=soft -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A76AE-SOFT %s
 // CHECK-CORTEX-A76AE: "-cc1"{{.*}} "-triple" "armv8.2a-{{.*}} "-target-cpu" "cortex-a76ae"
 // CHECK-CORTEX-A76AE-MFPU: "-cc1"{{.*}} "-target-feature" "+fp-armv8"
-// CHECK-CORTEX-A76AE-MFPU: "-target-feature" "+crypto"
+// CHECK-CORTEX-A76AE-MFPU: "-target-feature" "+sha2"
+// CHECK-CORTEX-A76AE-MFPU: -target-feature" "+aes"
 // CHECK-CORTEX-A76AE-SOFT: "-target-feature" "+soft-float"
 // CHECK-CORTEX-A76AE-SOFT: "-target-feature" "+soft-float-abi"
 
@@ -877,13 +881,22 @@
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-x1 -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-X1-MFPU %s
 // CHECK-CORTEX-X1: "-cc1"{{.*}} "-triple" "armv8.2a-{{.*}} "-target-cpu" "cortex-x1"
 // CHECK-CORTEX-X1-MFPU: "-cc1"{{.*}} "-target-feature" "+fp-armv8"
-// CHECK-CORTEX-X1-MFPU: "-target-feature" "+crypto"
+// CHECK-CORTEX-X1-MFPU: "-target-feature" "+sha2"
+// CHECK-CORTEX-X1-MFPU: "-target-feature" "+aes"
 
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a78 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A78 %s
 // RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a78 -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A78-MFPU %s
 // CHECK-CORTEX-A78: "-cc1"{{.*}} "-triple" "armv8.2a-{{.*}} "-target-cpu" "cortex-a78"
 // CHECK-CORTEX-A78-MFPU: "-cc1"{{.*}} "-target-feature" "+fp-armv8"
-// CHECK-CORTEX-A78-MFPU: "-target-feature" "+crypto"
+// CHECK-CORTEX-A78-MFPU: "-target-feature" "+sha2"
+// CHECK-CORTEX-A78-MFPU: "-target-feature" "+aes"
+
+// RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a78c -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A78C %s
+// RUN: %clang -target armv8a-arm-none-eabi -mcpu=cortex-a78c -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A78C-MFPU %s
+// CHECK-CORTEX-A78C: "-cc1"{{.*}} "-triple" "armv8.2a-{{.*}} "-target-cpu" "cortex-a78c"
+// CHECK-CORTEX-A78C-MFPU: "-cc1"{{.*}} "-target-feature" "+fp-armv8"
+// CHECK-CORTEX-A78C-MFPU: "-target-feature" "+sha2"
+// CHECK-CORTEX-A78C-MFPU: "-target-feature" "+aes"
 
 // RUN: %clang -target arm -mcpu=cortex-m23 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV8MBASE %s
 // CHECK-CPUV8MBASE:  "-cc1"{{.*}} "-triple" "thumbv8m.base-

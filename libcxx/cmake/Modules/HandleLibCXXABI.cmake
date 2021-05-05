@@ -54,7 +54,7 @@ macro(setup_abi_lib abidefines abishared abistatic abifiles abidirs)
 
         # TODO: libc++ shouldn't be responsible for copying the libc++abi
         # headers into the right location.
-        set(dst "${LIBCXX_GENERATED_INCLUDE_DIR}/include/c++/v1/${dstdir}/${fpath}")
+        set(dst "${LIBCXX_GENERATED_INCLUDE_DIR}/${dstdir}/${fpath}")
         add_custom_command(OUTPUT ${dst}
             DEPENDS ${src}
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}

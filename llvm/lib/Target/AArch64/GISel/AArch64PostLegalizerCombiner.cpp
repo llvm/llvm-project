@@ -262,7 +262,7 @@ static bool matchBitfieldExtractFromSExtInReg(
     return false;
   MatchInfo = [=](MachineIRBuilder &B) {
     auto Cst1 = B.buildConstant(Ty, ShiftImm);
-    auto Cst2 = B.buildConstant(Ty, ShiftImm + Width - 1);
+    auto Cst2 = B.buildConstant(Ty, Width);
     B.buildInstr(TargetOpcode::G_SBFX, {Dst}, {ShiftSrc, Cst1, Cst2});
   };
   return true;
@@ -339,6 +339,8 @@ void AArch64PostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   if (!IsOptNone) {
     AU.addRequired<MachineDominatorTree>();
     AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<GISelCSEAnalysisWrapperPass>();
+    AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   }
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -364,8 +366,11 @@ bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
       IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
   AArch64PostLegalizerCombinerInfo PCInfo(EnableOpt, F.hasOptSize(),
                                           F.hasMinSize(), KB, MDT);
+  GISelCSEAnalysisWrapper &Wrapper =
+      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+  auto *CSEInfo = &Wrapper.get(TPC->getCSEConfig());
   Combiner C(PCInfo, TPC);
-  return C.combineMachineInstrs(MF, /*CSEInfo*/ nullptr);
+  return C.combineMachineInstrs(MF, CSEInfo);
 }
 
 char AArch64PostLegalizerCombiner::ID = 0;

@@ -59,3 +59,8 @@ ProgramHeaders:
 # RUN:   FileCheck %s --check-prefix=ERR -DFILE=%t -DSECTION=.missing
 
 # ERR: error: '[[FILE]]': section '[[SECTION]]' not found
+
+# RUN: not llvm-objcopy --dump-section .text %t /dev/null 2>&1 | FileCheck %s --check-prefix=ERR2
+# RUN: not llvm-objcopy --dump-section .text= %t /dev/null 2>&1 | FileCheck %s --check-prefix=ERR2
+
+# ERR2: error: bad format for --dump-section, expected section=file

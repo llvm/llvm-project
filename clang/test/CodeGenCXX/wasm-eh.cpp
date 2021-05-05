@@ -405,8 +405,7 @@ void test10() throw() {
 // Here we only check if the command enables wasm exception handling in the
 // backend so that exception handling instructions can be generated in .s file.
 
-// TODO Reenable these lines after updating the backend to the new spec
-// R UN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -S -o - -std=c++11 | FileCheck %s --check-prefix=ASSEMBLY
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -S -o - -std=c++11 | FileCheck %s --check-prefix=ASSEMBLY
 
 // ASSEMBLY: try
 // ASSEMBLY: catch

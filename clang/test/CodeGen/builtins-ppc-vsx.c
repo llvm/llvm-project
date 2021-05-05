@@ -1890,6 +1890,18 @@ void test1() {
 // CHECK-LE: sub nsw i32 31
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
+  res_vd = vec_sldw(vd, vd, 0);
+// CHECK: add nsw i32 {{[0-9a-zA-Z%.]+}}, 1
+// CHECK: add nsw i32 {{[0-9a-zA-Z%.]+}}, 2
+// CHECK: add nsw i32 {{[0-9a-zA-Z%.]+}}, 3
+// CHECK: add nsw i32 {{[0-9a-zA-Z%.]+}}, 15
+// CHECK: @llvm.ppc.altivec.vperm
+// CHECK-LE: sub nsw i32 16
+// CHECK-LE: sub nsw i32 17
+// CHECK-LE: sub nsw i32 18
+// CHECK-LE: sub nsw i32 31
+// CHECK-LE: @llvm.ppc.altivec.vperm
+
   res_vsll = vec_sll(vsll, vuc);
 // CHECK: @llvm.ppc.altivec.vsl
 // CHECK-LE: @llvm.ppc.altivec.vsl
@@ -2282,4 +2294,22 @@ void test_builtin_xvcpsgndp(vector double a, vector double b) {
 // CHECK-DAG: [[RB:%[0-9]+]] = load <2 x double>, <2 x double>* %b.addr
 // CHECK-NEXT: call <2 x double> @llvm.copysign.v2f64(<2 x double> [[RA]], <2 x double> [[RB]])
   __builtin_vsx_xvcpsgndp(a, b);
+}
+
+vector double test_recipdivd(vector double a, vector double b) {
+  // CHECK-LABEL: test_recipdivd
+  // CHECK: fdiv fast <2 x double>
+  // CHECK-LE-LABEL: test_recipdivd
+  // CHECK-LE: fdiv fast <2 x double>
+  return vec_recipdiv(a, b);
+}
+
+vector double test_rsqrtd(vector double a, vector double b) {
+  // CHECK-LABEL: test_rsqrtd
+  // CHECK: call fast <2 x double> @llvm.sqrt.v2f64
+  // CHECK: fdiv fast <2 x double> <double 1.000000e+00, double 1.000000e+00>
+  // CHECK-LE-LABEL: test_rsqrtd
+  // CHECK-LE: call fast <2 x double> @llvm.sqrt.v2f64
+  // CHECK-LE: fdiv fast <2 x double> <double 1.000000e+00, double 1.000000e+00>
+  return vec_rsqrt(a);
 }

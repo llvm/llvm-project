@@ -189,3 +189,18 @@ multiclass MC4<string phr> : MC2<phr> {
 }
 
 defm Rec44 : MC4<"xecret code">;
+
+// Test a defm in a multiclass that inherits from a class with asserts.
+
+// CHECK: assertion failed
+// CHECK: note: MC5 name must include a space: Ada_Lovelace
+// CHECK: assertion failed
+// CHECK: note: person age is invalid: 666
+
+multiclass MC5<string phr, string name, int age> {
+  assert !ne(!find(name, " "), -1), "MC5 name must include a space: " # name;
+
+  defm _mc5 : MC2<phr>, Person<name, age>;
+}
+
+defm Rec45 : MC5<"secret password", "Ada_Lovelace", 666>;

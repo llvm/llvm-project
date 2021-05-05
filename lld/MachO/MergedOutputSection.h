@@ -44,7 +44,7 @@ public:
   }
 
 private:
-  void mergeFlags(uint32_t inputFlags);
+  void mergeFlags(InputSection *input);
 
   size_t size = 0;
   uint64_t fileSize = 0;

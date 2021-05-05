@@ -539,15 +539,15 @@ define amdgpu_kernel void @v_lshr_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> 
 ; GFX10-LABEL: v_lshr_v4i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GFX10-NEXT:    v_lshlrev_b32_e32 v7, 3, v0
+; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    global_load_dwordx2 v[0:1], v7, s[2:3]
-; GFX10-NEXT:    global_load_dwordx2 v[2:3], v7, s[2:3] offset:8
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v4, s[2:3]
+; GFX10-NEXT:    global_load_dwordx2 v[2:3], v4, s[2:3] offset:8
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_pk_lshrrev_b16 v1, v3, v1
 ; GFX10-NEXT:    v_pk_lshrrev_b16 v0, v2, v0
-; GFX10-NEXT:    global_store_dwordx2 v7, v[0:1], s[0:1]
+; GFX10-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
 ; GFX10-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64

@@ -9,6 +9,7 @@
 #include "FormatTestUtils.h"
 #include "clang/Format/Format.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "gtest/gtest.h"
 
@@ -1032,6 +1033,16 @@ TEST_F(SortIncludesTest, MergeLines) {
                          "#include \"c.h\"\r\n";
 
   EXPECT_EQ(Expected, sort(Code, "a.cpp", 1));
+}
+
+TEST_F(SortIncludesTest, DisableFormatDisablesIncludeSorting) {
+  StringRef Sorted = "#include <a.h>\n"
+                     "#include <b.h>\n";
+  StringRef Unsorted = "#include <b.h>\n"
+                       "#include <a.h>\n";
+  EXPECT_EQ(Sorted, sort(Unsorted));
+  FmtStyle.DisableFormat = true;
+  EXPECT_EQ(Unsorted, sort(Unsorted, "input.cpp", 0));
 }
 
 } // end namespace

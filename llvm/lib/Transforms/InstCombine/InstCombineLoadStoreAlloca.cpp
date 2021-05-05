@@ -1396,7 +1396,7 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
     --BBI;
     // Don't count debug info directives, lest they affect codegen,
     // and we skip pointer-to-pointer bitcasts, which are NOPs.
-    if (isa<DbgInfoIntrinsic>(BBI) ||
+    if (BBI->isDebugOrPseudoInst() ||
         (isa<BitCastInst>(BBI) && BBI->getType()->isPointerTy())) {
       ScanInsts++;
       continue;

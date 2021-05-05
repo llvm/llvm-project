@@ -28,7 +28,6 @@ struct DTLS;
 
 namespace __asan {
 
-const u32 kInvalidTid = 0xffffff;  // Must fit into 24 bits.
 const u32 kMaxNumberOfThreads = (1 << 22);  // 4M
 
 class AsanThread;

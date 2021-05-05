@@ -434,13 +434,15 @@ unsigned DWARFLinker::shouldKeepVariableDIE(AddressesMap &RelocMgr,
     return Flags | TF_Keep;
   }
 
-  // See if there is a relocation to a valid debug map entry inside
-  // this variable's location. The order is important here. We want to
-  // always check if the variable has a valid relocation, so that the
-  // DIEInfo is filled. However, we don't want a static variable in a
-  // function to force us to keep the enclosing function.
-  if (!RelocMgr.hasLiveMemoryLocation(DIE, MyInfo) ||
-      (Flags & TF_InFunctionScope))
+  // See if there is a relocation to a valid debug map entry inside this
+  // variable's location. The order is important here. We want to always check
+  // if the variable has a valid relocation, so that the DIEInfo is filled.
+  // However, we don't want a static variable in a function to force us to keep
+  // the enclosing function, unless requested explicitly.
+  const bool HasLiveMemoryLocation =
+      RelocMgr.hasLiveMemoryLocation(DIE, MyInfo);
+  if (!HasLiveMemoryLocation || ((Flags & TF_InFunctionScope) &&
+                                 !LLVM_UNLIKELY(Options.KeepFunctionForStatic)))
     return Flags;
 
   if (Options.Verbose) {

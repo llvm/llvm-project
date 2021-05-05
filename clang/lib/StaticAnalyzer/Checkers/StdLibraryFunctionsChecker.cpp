@@ -134,6 +134,12 @@ class StdLibraryFunctionsChecker
     }
     ArgNo getArgNo() const { return ArgN; }
 
+    // Return those arguments that should be tracked when we report a bug. By
+    // default it is the argument that is constrained, however, in some special
+    // cases we need to track other arguments as well. E.g. a buffer size might
+    // be encoded in another argument.
+    virtual std::vector<ArgNo> getArgsToTrack() const { return {ArgN}; }
+
     virtual StringRef getName() const = 0;
 
     // Give a description that explains the constraint to the user. Used when
@@ -308,6 +314,15 @@ class StdLibraryFunctionsChecker
     BufferSizeConstraint(ArgNo Buffer, ArgNo BufSize, ArgNo BufSizeMultiplier)
         : ValueConstraint(Buffer), SizeArgN(BufSize),
           SizeMultiplierArgN(BufSizeMultiplier) {}
+
+    std::vector<ArgNo> getArgsToTrack() const override {
+      std::vector<ArgNo> Result{ArgN};
+      if (SizeArgN)
+        Result.push_back(*SizeArgN);
+      if (SizeMultiplierArgN)
+        Result.push_back(*SizeMultiplierArgN);
+      return Result;
+    }
 
     std::string describe(ProgramStateRef State,
                          const Summary &Summary) const override;
@@ -576,7 +591,9 @@ private:
           CheckNames[CK_StdCLibraryFunctionArgsChecker],
           "Unsatisfied argument constraints", categories::LogicError);
     auto R = std::make_unique<PathSensitiveBugReport>(*BT_InvalidArg, Msg, N);
-    bugreporter::trackExpressionValue(N, Call.getArgExpr(VC->getArgNo()), *R);
+
+    for (ArgNo ArgN : VC->getArgsToTrack())
+      bugreporter::trackExpressionValue(N, Call.getArgExpr(ArgN), *R);
 
     // Highlight the range of the argument that was violated.
     R->addRange(Call.getArgSourceRange(VC->getArgNo()));

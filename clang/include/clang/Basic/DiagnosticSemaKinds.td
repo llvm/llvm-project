@@ -379,6 +379,15 @@ def warn_unused_lambda_capture: Warning<"lambda capture %0 is not "
   "%select{used|required to be captured for this use}1">,
   InGroup<UnusedLambdaCapture>, DefaultIgnore;
 
+def warn_reserved_extern_symbol: Warning<
+  "identifier %0 is reserved because %select{"
+  "<ERROR>|" // ReservedIdentifierStatus::NotReserved
+  "it starts with '_' at global scope|"
+  "it starts with '__'|"
+  "it starts with '_' followed by a capital letter|"
+  "it contains '__'}1">,
+  InGroup<ReservedIdentifier>, DefaultIgnore;
+
 def warn_parameter_size: Warning<
   "%0 is a large (%1 bytes) pass-by-value argument; "
   "pass it by reference instead ?">, InGroup<LargeByValueCopy>;
@@ -4017,6 +4026,8 @@ def note_protocol_decl_undefined : Note<
 def err_attribute_preferred_name_arg_invalid : Error<
   "argument %0 to 'preferred_name' attribute is not a typedef for "
   "a specialization of %1">;
+def err_attribute_builtin_alias : Error<
+  "%0 attribute can only be applied to a ARM or RISC-V builtin">;
 
 // called-once attribute diagnostics.
 def err_called_once_attribute_wrong_type : Error<

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t -- -config="{CheckOptions: [{key: bugprone-sizeof-expression.WarnOnSizeOfIntegerExpression, value: 1}]}" --
+// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t -- -config="{CheckOptions: [{key: bugprone-sizeof-expression.WarnOnSizeOfIntegerExpression, value: true}]}" --
 
 class C {
   int size() { return sizeof(this); }

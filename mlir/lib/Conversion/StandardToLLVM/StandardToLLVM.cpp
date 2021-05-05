@@ -1643,16 +1643,18 @@ static LogicalResult handleMultidimensionalVectors(
     Operation *op, ValueRange operands, LLVMTypeConverter &typeConverter,
     std::function<Value(Type, ValueRange)> createOperand,
     ConversionPatternRewriter &rewriter) {
-  auto operandNDVectorType = op->getOperand(0).getType().dyn_cast<VectorType>();
-  auto resultNDVectorType = op->getResult(0).getType().dyn_cast<VectorType>();
-  assert(operandNDVectorType && resultNDVectorType && "expected vector types");
+  auto resultNDVectorType = op->getResult(0).getType().cast<VectorType>();
 
+  SmallVector<Type> operand1DVectorTypes;
+  for (Value operand : op->getOperands()) {
+    auto operandNDVectorType = operand.getType().cast<VectorType>();
+    auto operandTypeInfo =
+        extractNDVectorTypeInfo(operandNDVectorType, typeConverter);
+    operand1DVectorTypes.push_back(operandTypeInfo.llvm1DVectorTy);
+  }
   auto resultTypeInfo =
       extractNDVectorTypeInfo(resultNDVectorType, typeConverter);
-  auto operandTypeInfo =
-      extractNDVectorTypeInfo(operandNDVectorType, typeConverter);
   auto result1DVectorTy = resultTypeInfo.llvm1DVectorTy;
-  auto operand1DVectorTy = operandTypeInfo.llvm1DVectorTy;
   auto resultNDVectoryTy = resultTypeInfo.llvmNDVectorTy;
   auto loc = op->getLoc();
   Value desc = rewriter.create<LLVM::UndefOp>(loc, resultNDVectoryTy);
@@ -1660,9 +1662,11 @@ static LogicalResult handleMultidimensionalVectors(
     // For this unrolled `position` corresponding to the `linearIndex`^th
     // element, extract operand vectors
     SmallVector<Value, 4> extractedOperands;
-    for (auto operand : operands)
+    for (auto operand : llvm::enumerate(operands)) {
       extractedOperands.push_back(rewriter.create<LLVM::ExtractValueOp>(
-          loc, operand1DVectorTy, operand, position));
+          loc, operand1DVectorTypes[operand.index()], operand.value(),
+          position));
+    }
     Value newVal = createOperand(result1DVectorTy, extractedOperands);
     desc = rewriter.create<LLVM::InsertValueOp>(loc, resultNDVectoryTy, desc,
                                                 newVal, position);
@@ -1723,7 +1727,7 @@ using NegFOpLowering = VectorConvertToLLVMPattern<NegFOp, LLVM::FNegOp>;
 using OrOpLowering = VectorConvertToLLVMPattern<OrOp, LLVM::OrOp>;
 using PowFOpLowering = VectorConvertToLLVMPattern<math::PowFOp, LLVM::PowOp>;
 using RemFOpLowering = VectorConvertToLLVMPattern<RemFOp, LLVM::FRemOp>;
-using SelectOpLowering = OneToOneConvertToLLVMPattern<SelectOp, LLVM::SelectOp>;
+using SelectOpLowering = VectorConvertToLLVMPattern<SelectOp, LLVM::SelectOp>;
 using SignExtendIOpLowering =
     VectorConvertToLLVMPattern<SignExtendIOp, LLVM::SExtOp>;
 using ShiftLeftOpLowering =
@@ -2348,6 +2352,60 @@ struct GetGlobalMemrefOpLowering : public AllocLikeOpLowering {
   }
 };
 
+// A `expm1` is converted into `exp - 1`.
+struct ExpM1OpLowering : public ConvertOpToLLVMPattern<math::ExpM1Op> {
+  using ConvertOpToLLVMPattern<math::ExpM1Op>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(math::ExpM1Op op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    math::ExpM1Op::Adaptor transformed(operands);
+    auto operandType = transformed.operand().getType();
+
+    if (!operandType || !LLVM::isCompatibleType(operandType))
+      return failure();
+
+    auto loc = op.getLoc();
+    auto resultType = op.getResult().getType();
+    auto floatType = getElementTypeOrSelf(resultType).cast<FloatType>();
+    auto floatOne = rewriter.getFloatAttr(floatType, 1.0);
+
+    if (!operandType.isa<LLVM::LLVMArrayType>()) {
+      LLVM::ConstantOp one;
+      if (LLVM::isCompatibleVectorType(operandType)) {
+        one = rewriter.create<LLVM::ConstantOp>(
+            loc, operandType,
+            SplatElementsAttr::get(resultType.cast<ShapedType>(), floatOne));
+      } else {
+        one = rewriter.create<LLVM::ConstantOp>(loc, operandType, floatOne);
+      }
+      auto exp = rewriter.create<LLVM::ExpOp>(loc, transformed.operand());
+      rewriter.replaceOpWithNewOp<LLVM::FSubOp>(op, operandType, exp, one);
+      return success();
+    }
+
+    auto vectorType = resultType.dyn_cast<VectorType>();
+    if (!vectorType)
+      return rewriter.notifyMatchFailure(op, "expected vector result type");
+
+    return handleMultidimensionalVectors(
+        op.getOperation(), operands, *getTypeConverter(),
+        [&](Type llvm1DVectorTy, ValueRange operands) {
+          auto splatAttr = SplatElementsAttr::get(
+              mlir::VectorType::get(
+                  {LLVM::getVectorNumElements(llvm1DVectorTy).getFixedValue()},
+                  floatType),
+              floatOne);
+          auto one =
+              rewriter.create<LLVM::ConstantOp>(loc, llvm1DVectorTy, splatAttr);
+          auto exp =
+              rewriter.create<LLVM::ExpOp>(loc, llvm1DVectorTy, operands[0]);
+          return rewriter.create<LLVM::FSubOp>(loc, llvm1DVectorTy, exp, one);
+        },
+        rewriter);
+  }
+};
+
 // A `log1p` is converted into `log(1 + ...)`.
 struct Log1pOpLowering : public ConvertOpToLLVMPattern<math::Log1pOp> {
   using ConvertOpToLLVMPattern<math::Log1pOp>::ConvertOpToLLVMPattern;
@@ -2396,7 +2454,7 @@ struct Log1pOpLowering : public ConvertOpToLLVMPattern<math::Log1pOp> {
           auto one =
               rewriter.create<LLVM::ConstantOp>(loc, llvm1DVectorTy, splatAttr);
           auto add = rewriter.create<LLVM::FAddOp>(loc, llvm1DVectorTy, one,
-                                                   transformed.operand());
+                                                   operands[0]);
           return rewriter.create<LLVM::LogOp>(loc, llvm1DVectorTy, add);
         },
         rewriter);
@@ -3065,11 +3123,32 @@ struct CmpIOpLowering : public ConvertOpToLLVMPattern<CmpIOp> {
   matchAndRewrite(CmpIOp cmpiOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     CmpIOpAdaptor transformed(operands);
+    auto operandType = transformed.lhs().getType();
+    auto resultType = cmpiOp.getResult().getType();
 
-    rewriter.replaceOpWithNewOp<LLVM::ICmpOp>(
-        cmpiOp, typeConverter->convertType(cmpiOp.getResult().getType()),
-        convertCmpPredicate<LLVM::ICmpPredicate>(cmpiOp.getPredicate()),
-        transformed.lhs(), transformed.rhs());
+    // Handle the scalar and 1D vector cases.
+    if (!operandType.isa<LLVM::LLVMArrayType>()) {
+      rewriter.replaceOpWithNewOp<LLVM::ICmpOp>(
+          cmpiOp, typeConverter->convertType(resultType),
+          convertCmpPredicate<LLVM::ICmpPredicate>(cmpiOp.getPredicate()),
+          transformed.lhs(), transformed.rhs());
+      return success();
+    }
+
+    auto vectorType = resultType.dyn_cast<VectorType>();
+    if (!vectorType)
+      return rewriter.notifyMatchFailure(cmpiOp, "expected vector result type");
+
+    return handleMultidimensionalVectors(
+        cmpiOp.getOperation(), operands, *getTypeConverter(),
+        [&](Type llvm1DVectorTy, ValueRange operands) {
+          CmpIOpAdaptor transformed(operands);
+          return rewriter.create<LLVM::ICmpOp>(
+              cmpiOp.getLoc(), llvm1DVectorTy,
+              convertCmpPredicate<LLVM::ICmpPredicate>(cmpiOp.getPredicate()),
+              transformed.lhs(), transformed.rhs());
+        },
+        rewriter);
 
     return success();
   }
@@ -3082,13 +3161,32 @@ struct CmpFOpLowering : public ConvertOpToLLVMPattern<CmpFOp> {
   matchAndRewrite(CmpFOp cmpfOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     CmpFOpAdaptor transformed(operands);
+    auto operandType = transformed.lhs().getType();
+    auto resultType = cmpfOp.getResult().getType();
 
-    rewriter.replaceOpWithNewOp<LLVM::FCmpOp>(
-        cmpfOp, typeConverter->convertType(cmpfOp.getResult().getType()),
-        convertCmpPredicate<LLVM::FCmpPredicate>(cmpfOp.getPredicate()),
-        transformed.lhs(), transformed.rhs());
+    // Handle the scalar and 1D vector cases.
+    if (!operandType.isa<LLVM::LLVMArrayType>()) {
+      rewriter.replaceOpWithNewOp<LLVM::FCmpOp>(
+          cmpfOp, typeConverter->convertType(resultType),
+          convertCmpPredicate<LLVM::FCmpPredicate>(cmpfOp.getPredicate()),
+          transformed.lhs(), transformed.rhs());
+      return success();
+    }
 
-    return success();
+    auto vectorType = resultType.dyn_cast<VectorType>();
+    if (!vectorType)
+      return rewriter.notifyMatchFailure(cmpfOp, "expected vector result type");
+
+    return handleMultidimensionalVectors(
+        cmpfOp.getOperation(), operands, *getTypeConverter(),
+        [&](Type llvm1DVectorTy, ValueRange operands) {
+          CmpFOpAdaptor transformed(operands);
+          return rewriter.create<LLVM::FCmpOp>(
+              cmpfOp.getLoc(), llvm1DVectorTy,
+              convertCmpPredicate<LLVM::FCmpPredicate>(cmpfOp.getPredicate()),
+              transformed.lhs(), transformed.rhs());
+        },
+        rewriter);
   }
 };
 
@@ -3880,6 +3978,7 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       DivFOpLowering,
       ExpOpLowering,
       Exp2OpLowering,
+      ExpM1OpLowering,
       FloorFOpLowering,
       FmaFOpLowering,
       GenericAtomicRMWOpLowering,

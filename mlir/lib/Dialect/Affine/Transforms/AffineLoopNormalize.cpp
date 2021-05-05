@@ -21,6 +21,10 @@
 using namespace mlir;
 
 void mlir::normalizeAffineParallel(AffineParallelOp op) {
+  // Loops with min/max in bounds are not normalized at the moment.
+  if (op.hasMinMaxBounds())
+    return;
+
   AffineMap lbMap = op.lowerBoundsMap();
   SmallVector<int64_t, 8> steps = op.getSteps();
   // No need to do any work if the parallel op is already normalized.
@@ -34,7 +38,9 @@ void mlir::normalizeAffineParallel(AffineParallelOp op) {
   if (isAlreadyNormalized)
     return;
 
-  AffineValueMap ranges = op.getRangesValueMap();
+  AffineValueMap ranges;
+  AffineValueMap::difference(op.getUpperBoundsValueMap(),
+                             op.getLowerBoundsValueMap(), &ranges);
   auto builder = OpBuilder::atBlockBegin(op.getBody());
   auto zeroExpr = builder.getAffineConstantExpr(0);
   SmallVector<AffineExpr, 8> lbExprs;

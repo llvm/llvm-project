@@ -1361,7 +1361,7 @@ TypeSP DWARFASTParserClang::ParsePointerToMemberType(
       dwarf->ResolveTypeUID(attrs.containing_type.Reference(), true);
 
   CompilerType pointee_clang_type = pointee_type->GetForwardCompilerType();
-  CompilerType class_clang_type = class_type->GetLayoutCompilerType();
+  CompilerType class_clang_type = class_type->GetForwardCompilerType();
 
   CompilerType clang_type = TypeSystemClang::CreateMemberPointerType(
       class_clang_type, pointee_clang_type);

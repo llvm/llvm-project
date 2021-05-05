@@ -22,6 +22,7 @@
 // CHECK-NEXT: scf
 // CHECK-NEXT: sdbm
 // CHECK-NEXT: shape
+// CHECK-NEXT: sparse_tensor
 // CHECK-NEXT: spv
 // CHECK-NEXT: std
 // CHECK-NEXT: tensor

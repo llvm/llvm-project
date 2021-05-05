@@ -1828,10 +1828,10 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(i64* %out, i64*
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v8, s3
-; GFX10-NEXT:    v_mov_b32_e32 v7, s2
-; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v7, v4
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v8, vcc_lo
+; GFX10-NEXT:    v_mov_b32_e32 v0, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s3
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
+; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 40
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    flat_atomic_inc_x2 v[0:1], v[0:1], v[2:3] glc

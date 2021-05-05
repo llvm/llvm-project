@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-default-member-init %t -- \
-// RUN:   -config="{CheckOptions: [{key: modernize-use-default-member-init.IgnoreMacros, value: 0}]}"
+// RUN:   -config="{CheckOptions: [{key: modernize-use-default-member-init.IgnoreMacros, value: false}]}"
 
 #define MACRO() \
   struct S { \

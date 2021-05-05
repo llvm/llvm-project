@@ -19,7 +19,8 @@ set(LIBC_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} CACHE PATH "Define libc destinat
 set(LIBC_TARGET_OS ${CMAKE_SYSTEM_NAME})
 string(TOLOWER ${LIBC_TARGET_OS} LIBC_TARGET_OS)
 
-set(LIBC_TARGET_MACHINE ${CMAKE_SYSTEM_PROCESSOR})
+# Defines LIBC_TARGET_ARCHITECTURE and associated macros.
+include(LLVMLibCArchitectures)
 
 # Check --print-resource-dir to find the compiler resource dir if this flag
 # is supported by the compiler.
@@ -42,7 +43,12 @@ else()
                   --print-resource-dir not supported by host compiler")
 endif()
 
+option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" OFF)
+
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
+if(LLVM_LIBC_ENABLE_LINTING AND (NOT LLVM_LIBC_FULL_BUILD))
+  message(FATAL_ERROR "Cannot enable linting when full libc build is not enabled.")
+endif()
 if(LLVM_LIBC_ENABLE_LINTING)
   if("clang-tools-extra" IN_LIST LLVM_ENABLE_PROJECTS
              AND "clang" IN_LIST LLVM_ENABLE_PROJECTS)
@@ -56,7 +62,7 @@ if(LLVM_LIBC_ENABLE_LINTING)
       To disable linting set LLVM_LIBC_ENABLE_LINTING to OFF
       (pass -DLLVM_LIBC_ENABLE_LINTING=OFF to cmake).")
   endif()
-else()
+elseif(LLVM_LIBC_FULL_BUILD)
   message(WARNING "
     Linting for libc is currently disabled.
 
@@ -64,14 +70,12 @@ else()
     (pass -DLLVM_LIBC_ENABLE_LINTING=ON to cmake).")
 endif()
 
-option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" OFF)
-
 include(CMakeParseArguments)
 include(LLVMLibCRules)
 include(LLVMLibCCheckCpuFeatures)
 
-include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_MACHINE}/entrypoints.txt")
-include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_MACHINE}/headers.txt")
+include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/entrypoints.txt")
+include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/headers.txt")
 
 set(TARGET_ENTRYPOINT_NAME_LIST "")
 foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)

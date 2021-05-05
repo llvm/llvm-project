@@ -95,6 +95,8 @@ isUnmergeableGlobal(GlobalVariable *GV,
   // Only process constants with initializers in the default address space.
   return !GV->isConstant() || !GV->hasDefinitiveInitializer() ||
          GV->getType()->getAddressSpace() != 0 || GV->hasSection() ||
+         // Don't touch thread-local variables.
+         GV->isThreadLocal() ||
          // Don't touch values marked with attribute(used).
          UsedGlobals.count(GV);
 }

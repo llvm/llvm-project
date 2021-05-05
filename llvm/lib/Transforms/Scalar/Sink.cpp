@@ -202,7 +202,7 @@ static bool ProcessBlock(BasicBlock &BB, DominatorTree &DT, LoopInfo &LI,
     if (!ProcessedBegin)
       --I;
 
-    if (isa<DbgInfoIntrinsic>(Inst))
+    if (Inst->isDebugOrPseudoInst())
       continue;
 
     if (SinkInstruction(Inst, Stores, DT, LI, AA)) {

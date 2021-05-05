@@ -546,7 +546,7 @@ private:
 }
 
 CodeGen::CGCXXABI *CodeGen::CreateItaniumCXXABI(CodeGenModule &CGM) {
-  switch (CGM.getTarget().getCXXABI().getKind()) {
+  switch (CGM.getContext().getCXXABIKind()) {
   // For IR-generation purposes, there's no significant difference
   // between the ARM and iOS ABIs.
   case TargetCXXABI::GenericARM:

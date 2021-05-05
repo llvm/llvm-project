@@ -613,7 +613,13 @@ def AffineParallelOp : Affine_Op<"parallel",
     The lower and upper bounds of a parallel operation are represented as an
     application of an affine mapping to a list of SSA values passed to the map.
     The same restrictions hold for these SSA values as for all bindings of SSA
-    values to dimensions and symbols.
+    values to dimensions and symbols. The list of expressions in each map is
+    interpreted according to the respective bounds group attribute. If a single
+    expression belongs to the group, then the result of this expression is taken
+    as a lower(upper) bound of the corresponding loop induction variable. If
+    multiple expressions belong to the group, then the lower(upper) bound is the
+    max(min) of these values obtained from these expressions. The loop band has
+    as many loops as elements in the group bounds attributes.
 
     Each value yielded by affine.yield will be accumulated/reduced via one of
     the reduction methods defined in the AtomicRMWKind enum.  The order of
@@ -644,12 +650,25 @@ def AffineParallelOp : Affine_Op<"parallel",
       return %O
     }
     ```
+
+    Example (tiling by potentially imperfectly dividing sizes):
+
+    ```mlir
+    affine.parallel (%ii, %jj) = (0, 0) to (%N, %M) step (32, 32) {
+      affine.parallel (%i, %j) = (%ii, %jj)
+                              to (min(%ii + 32, %N), min(%jj + 32, %M)) {
+        call @f(%i, %j) : (index, index) -> ()
+      }
+    }
+    ```
   }];
 
   let arguments = (ins
      TypedArrayAttrBase<AtomicRMWKindAttr, "Reduction ops">:$reductions,
      AffineMapAttr:$lowerBoundsMap,
+     I32ElementsAttr:$lowerBoundsGroups,
      AffineMapAttr:$upperBoundsMap,
+     I32ElementsAttr:$upperBoundsGroups,
      I64ArrayAttr:$steps,
      Variadic<Index>:$mapOperands);
   let results = (outs Variadic<AnyType>:$results);
@@ -659,19 +678,14 @@ def AffineParallelOp : Affine_Op<"parallel",
     OpBuilder<(ins "TypeRange":$resultTypes,
       "ArrayRef<AtomicRMWKind>":$reductions, "ArrayRef<int64_t>":$ranges)>,
     OpBuilder<(ins "TypeRange":$resultTypes,
-      "ArrayRef<AtomicRMWKind>":$reductions, "AffineMap":$lbMap,
-      "ValueRange":$lbArgs, "AffineMap":$ubMap, "ValueRange":$ubArgs)>,
-    OpBuilder<(ins "TypeRange":$resultTypes,
-      "ArrayRef<AtomicRMWKind>":$reductions, "AffineMap":$lbMap,
-      "ValueRange":$lbArgs, "AffineMap":$ubMap, "ValueRange":$ubArgs,
+      "ArrayRef<AtomicRMWKind>":$reductions, "ArrayRef<AffineMap>":$lbMaps,
+      "ValueRange":$lbArgs, "ArrayRef<AffineMap>":$ubMaps, "ValueRange":$ubArgs,
       "ArrayRef<int64_t>":$steps)>
   ];
 
   let extraClassDeclaration = [{
     /// Get the number of dimensions.
     unsigned getNumDims();
-
-    AffineValueMap getRangesValueMap();
 
     /// Get ranges as constants, may fail in dynamic case.
     Optional<SmallVector<int64_t, 8>> getConstantRanges();
@@ -682,23 +696,45 @@ def AffineParallelOp : Affine_Op<"parallel",
       return getBody()->getArguments();
     }
 
+    /// Returns elements of the loop lower bound.
+    AffineMap getLowerBoundMap(unsigned pos);
     operand_range getLowerBoundsOperands();
     AffineValueMap getLowerBoundsValueMap();
+
+    /// Sets elements of the loop lower bound.
     void setLowerBounds(ValueRange operands, AffineMap map);
     void setLowerBoundsMap(AffineMap map);
 
+    /// Returns elements of the loop upper bound.
+    AffineMap getUpperBoundMap(unsigned pos);
     operand_range getUpperBoundsOperands();
     AffineValueMap getUpperBoundsValueMap();
+
+    /// Sets elements fo the loop upper bound.
     void setUpperBounds(ValueRange operands, AffineMap map);
     void setUpperBoundsMap(AffineMap map);
 
     SmallVector<int64_t, 8> getSteps();
     void setSteps(ArrayRef<int64_t> newSteps);
 
+    /// Returns attribute names to use in op construction. Not expected to be
+    /// used directly.
     static StringRef getReductionsAttrName() { return "reductions"; }
     static StringRef getLowerBoundsMapAttrName() { return "lowerBoundsMap"; }
+    static StringRef getLowerBoundsGroupsAttrName() {
+      return "lowerBoundsGroups";
+    }
     static StringRef getUpperBoundsMapAttrName() { return "upperBoundsMap"; }
+    static StringRef getUpperBoundsGroupsAttrName() {
+      return "upperBoundsGroups";
+    }
     static StringRef getStepsAttrName() { return "steps"; }
+
+    /// Returns `true` if the loop bounds have min/max expressions.
+    bool hasMinMaxBounds() {
+      return lowerBoundsMap().getNumResults() != getNumDims() ||
+             upperBoundsMap().getNumResults() != getNumDims();
+    }
   }];
 
   let hasFolder = 1;
@@ -931,6 +967,8 @@ def AffineVectorLoadOp : AffineLoadOpBase<"vector_load"> {
       return result().getType().cast<VectorType>();
     }
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
@@ -993,6 +1031,8 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
       return value().getType().cast<VectorType>();
     }
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 #endif // AFFINE_OPS

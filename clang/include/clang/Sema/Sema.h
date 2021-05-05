@@ -353,9 +353,6 @@ class Sema final {
   Sema(const Sema &) = delete;
   void operator=(const Sema &) = delete;
 
-  /// A key method to reduce duplicate debug info from Sema.
-  virtual void anchor();
-
   ///Source of additional semantic information.
   ExternalSemaSource *ExternalSource;
 
@@ -1527,6 +1524,13 @@ public:
   /// initialized but before it parses anything.
   void Initialize();
 
+  /// This virtual key function only exists to limit the emission of debug info
+  /// describing the Sema class. GCC and Clang only emit debug info for a class
+  /// with a vtable when the vtable is emitted. Sema is final and not
+  /// polymorphic, but the debug info size savings are so significant that it is
+  /// worth adding a vtable just to take advantage of this optimization.
+  virtual void anchor();
+
   const LangOptions &getLangOpts() const { return LangOpts; }
   OpenCLOptions &getOpenCLOptions() { return OpenCLFeatures; }
   FPOptions     &getCurFPFeatures() { return CurFPFeatures; }
@@ -2585,6 +2589,8 @@ public:
   void diagnoseExprIntendedAsTemplateName(Scope *S, ExprResult TemplateName,
                                           SourceLocation Less,
                                           SourceLocation Greater);
+
+  void warnOnReservedIdentifier(const NamedDecl *D);
 
   Decl *ActOnDeclarator(Scope *S, Declarator &D);
 
@@ -4277,6 +4283,7 @@ public:
   bool checkStringLiteralArgumentAttr(const ParsedAttr &Attr, unsigned ArgNum,
                                       StringRef &Str,
                                       SourceLocation *ArgLocation = nullptr);
+  llvm::Error isValidSectionSpecifier(StringRef Str);
   bool checkSectionName(SourceLocation LiteralLoc, StringRef Str);
   bool checkTargetAttr(SourceLocation LiteralLoc, StringRef Str);
   bool checkMSInheritanceAttrOnDefinition(

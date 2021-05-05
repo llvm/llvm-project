@@ -130,3 +130,23 @@ func @loop_inner_control_flow(%arg0 : index, %arg1 : index, %arg2 : index) -> i3
   }
   return %result : i32
 }
+
+/// Test that we can properly visit region successors when the terminator is not
+/// return-like.
+
+// CHECK-LABEL: func @overdefined_non_returnlike(
+func @overdefined_non_returnlike(%arg1 : i32) {
+  // CHECK: scf.while (%[[ARG:.*]] = %[[INPUT:.*]])
+  // CHECK-NEXT: %[[COND:.*]] = cmpi slt, %[[ARG]], %{{.*}} : i32
+  // CHECK-NEXT: scf.condition(%[[COND]]) %[[ARG]] : i32
+
+  %c2_i32 = constant 2 : i32
+   %0 = scf.while (%arg2 = %c2_i32) : (i32) -> (i32) {
+    %1 = cmpi slt, %arg2, %arg1 : i32
+    scf.condition(%1) %arg2 : i32
+  } do {
+  ^bb0(%arg2: i32):
+    scf.yield %arg2 : i32
+  }
+  return
+}

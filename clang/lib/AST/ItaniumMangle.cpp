@@ -2462,7 +2462,8 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
     if (Context.getASTContext().addressSpaceMapManglingFor(AS)) {
       //  <target-addrspace> ::= "AS" <address-space-number>
       unsigned TargetAS = Context.getASTContext().getTargetAddressSpace(AS);
-      if (TargetAS != 0)
+      if (TargetAS != 0 ||
+          Context.getASTContext().getTargetAddressSpace(LangAS::Default) != 0)
         ASString = "AS" + llvm::utostr(TargetAS);
     } else {
       switch (AS) {
@@ -2490,6 +2491,16 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
         break;
       case LangAS::opencl_generic:
         ASString = "CLgeneric";
+        break;
+      //  <SYCL-addrspace> ::= "SY" [ "global" | "local" | "private" ]
+      case LangAS::sycl_global:
+        ASString = "SYglobal";
+        break;
+      case LangAS::sycl_local:
+        ASString = "SYlocal";
+        break;
+      case LangAS::sycl_private:
+        ASString = "SYprivate";
         break;
       //  <CUDA-addrspace> ::= "CU" [ "device" | "constant" | "shared" ]
       case LangAS::cuda_device:

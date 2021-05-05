@@ -6,7 +6,7 @@ include(CheckLibraryExists)
 include(CheckSymbolExists)
 include(TestBigEndian)
 
-function(check_linker_flag flag out_var)
+function(compiler_rt_check_linker_flag flag out_var)
   cmake_push_check_state()
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} ${flag}")
   check_cxx_compiler_flag("" ${out_var})
@@ -156,11 +156,11 @@ check_library_exists(c++ __cxa_throw "" COMPILER_RT_HAS_LIBCXX)
 check_library_exists(stdc++ __cxa_throw "" COMPILER_RT_HAS_LIBSTDCXX)
 
 # Linker flags.
-check_linker_flag("-Wl,-z,text" COMPILER_RT_HAS_Z_TEXT)
-check_linker_flag("-fuse-ld=lld" COMPILER_RT_HAS_FUSE_LD_LLD_FLAG)
+compiler_rt_check_linker_flag("-Wl,-z,text" COMPILER_RT_HAS_Z_TEXT)
+compiler_rt_check_linker_flag("-fuse-ld=lld" COMPILER_RT_HAS_FUSE_LD_LLD_FLAG)
 
 set(VERS_COMPAT_OPTION "-Wl,-z,gnu-version-script-compat")
-check_linker_flag("${VERS_COMPAT_OPTION}" COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
+compiler_rt_check_linker_flag("${VERS_COMPAT_OPTION}" COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
 
 set(DUMMY_VERS ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/dummy.vers)
 file(WRITE ${DUMMY_VERS} "{};")
@@ -170,10 +170,10 @@ if(COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
   # -z gnu-version-script-compat. 
   string(APPEND VERS_OPTION " ${VERS_COMPAT_OPTION}")
 endif()
-check_linker_flag("${VERS_OPTION}" COMPILER_RT_HAS_VERSION_SCRIPT)
+compiler_rt_check_linker_flag("${VERS_OPTION}" COMPILER_RT_HAS_VERSION_SCRIPT)
 
 if(ANDROID)
-  check_linker_flag("-Wl,-z,global" COMPILER_RT_HAS_Z_GLOBAL)
+  compiler_rt_check_linker_flag("-Wl,-z,global" COMPILER_RT_HAS_Z_GLOBAL)
   check_library_exists(log __android_log_write "" COMPILER_RT_HAS_LIBLOG)
 endif()
 
@@ -335,13 +335,17 @@ set(ALL_UBSAN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64} ${RISCV64}
 set(ALL_SAFESTACK_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM64} ${MIPS32} ${MIPS64})
 set(ALL_CFI_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64} ${MIPS64})
 set(ALL_SCUDO_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64} ${MIPS32} ${MIPS64} ${PPC64})
-set(ALL_SCUDO_STANDALONE_SUPPORTED_ARCH ${X86} ${X86_64})
+set(ALL_SCUDO_STANDALONE_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64})
 if(APPLE)
 set(ALL_XRAY_SUPPORTED_ARCH ${X86_64})
 else()
 set(ALL_XRAY_SUPPORTED_ARCH ${X86_64} ${ARM32} ${ARM64} ${MIPS32} ${MIPS64} powerpc64le)
 endif()
 set(ALL_SHADOWCALLSTACK_SUPPORTED_ARCH ${ARM64})
+
+if (APPLE)
+set(ALL_ORC_SUPPORTED_ARCH ${X86_64})
+endif()
 
 if(APPLE)
   include(CompilerRTDarwinUtils)
@@ -399,6 +403,7 @@ if(APPLE)
   set(TSAN_SUPPORTED_OS osx)
   set(XRAY_SUPPORTED_OS osx)
   set(FUZZER_SUPPORTED_OS osx)
+  set(ORC_SUPPORTED_OS osx)
 
   # Note: In order to target x86_64h on OS X the minimum deployment target must
   # be 10.8 or higher.
@@ -432,7 +437,7 @@ if(APPLE)
     -lc++
     -lc++abi)
 
-  check_linker_flag("-fapplication-extension" COMPILER_RT_HAS_APP_EXTENSION)
+  compiler_rt_check_linker_flag("-fapplication-extension" COMPILER_RT_HAS_APP_EXTENSION)
   if(COMPILER_RT_HAS_APP_EXTENSION)
     list(APPEND DARWIN_COMMON_LINK_FLAGS "-fapplication-extension")
   endif()
@@ -587,6 +592,9 @@ if(APPLE)
   list_intersect(SHADOWCALLSTACK_SUPPORTED_ARCH
     ALL_SHADOWCALLSTACK_SUPPORTED_ARCH
     SANITIZER_COMMON_SUPPORTED_ARCH)
+  list_intersect(ORC_SUPPORTED_ARCH
+    ALL_ORC_SUPPORTED_ARCH
+    SANITIZER_COMMON_SUPPORTED_ARCH)
 
 else()
   filter_available_targets(CRT_SUPPORTED_ARCH ${ALL_CRT_SUPPORTED_ARCH})
@@ -618,6 +626,7 @@ else()
   filter_available_targets(SHADOWCALLSTACK_SUPPORTED_ARCH
     ${ALL_SHADOWCALLSTACK_SUPPORTED_ARCH})
   filter_available_targets(GWP_ASAN_SUPPORTED_ARCH ${ALL_GWP_ASAN_SUPPORTED_ARCH})
+  filter_available_targets(ORC_SUPPORTED_ARCH ${ALL_ORC_SUPPORTED_ARCH})
 endif()
 
 if (MSVC)
@@ -776,6 +785,12 @@ if (COMPILER_RT_HAS_SANITIZER_COMMON AND XRAY_SUPPORTED_ARCH AND
   set(COMPILER_RT_HAS_XRAY TRUE)
 else()
   set(COMPILER_RT_HAS_XRAY FALSE)
+endif()
+
+if (ORC_SUPPORTED_ARCH)
+  set(COMPILER_RT_HAS_ORC TRUE)
+else()
+  set(COMPILER_RT_HAS_ORC FALSE)
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND FUZZER_SUPPORTED_ARCH AND

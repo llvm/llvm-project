@@ -511,7 +511,8 @@ public:
   SlotIndex leaveIntvAtTop(MachineBasicBlock &MBB);
 
   /// overlapIntv - Indicate that all instructions in range should use the open
-  /// interval, but also let the complement interval be live.
+  /// interval if End does not have tied-def usage of the register and in this
+  /// case compliment interval is used. Let the complement interval be live.
   ///
   /// This doubles the register pressure, but is sometimes required to deal with
   /// register uses after the last valid split point.

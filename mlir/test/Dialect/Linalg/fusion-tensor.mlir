@@ -462,8 +462,7 @@ func @indexed_generic_op_generic_op_fusion(%arg0: tensor<?x?xi32>,
 // -----
 
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
-func @indexed_producer_consumer_fusion(%arg0: tensor<?x?xi32>,
-                                       %arg1: tensor<?x?xi32>) -> tensor<?x?xi32> {
+func @indexed_producer_consumer_fusion(%arg0: tensor<?x?xi32>) -> tensor<?x?xi32> {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %0 = memref.dim %arg0, %c0 : tensor<?x?xi32>
@@ -486,7 +485,7 @@ func @indexed_producer_consumer_fusion(%arg0: tensor<?x?xi32>,
   %4 = linalg.generic {
     indexing_maps = [#map0, #map0, #map0],
     iterator_types = ["parallel", "parallel"] }
-    ins(%3, %arg1 : tensor<?x?xi32>, tensor<?x?xi32>)
+    ins(%3, %arg0 : tensor<?x?xi32>, tensor<?x?xi32>)
     outs(%2 : tensor<?x?xi32>) {
     ^bb0(%arg2: i32, %arg3: i32, %arg4: i32):       // no predecessors
       %10 = addi %arg2, %arg3 : i32
@@ -497,7 +496,7 @@ func @indexed_producer_consumer_fusion(%arg0: tensor<?x?xi32>,
 //   CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-LABEL: func @indexed_producer_consumer_fusion
 //       CHECK: linalg.generic
-// CHECK-SAME:    indexing_maps = [#[[$MAP0]], #[[$MAP0]], #[[$MAP0]]]
+// CHECK-SAME:    indexing_maps = [#[[$MAP0]], #[[$MAP0]]]
 //      CHECK: ^{{[a-zA-Z0-9_]*}}
 // CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]*]]: i32
 // CHECK-SAME: %[[ARG1:[a-zA-Z0-9_]*]]: i32
@@ -507,7 +506,7 @@ func @indexed_producer_consumer_fusion(%arg0: tensor<?x?xi32>,
 //      CHECK:   %[[SUB_OPERAND:.+]] = index_cast %[[IDX1]] : index to i32
 //      CHECK:   %[[VAL1:.+]] = addi %[[ARG0]], %[[ADD_OPERAND]] : i32
 //      CHECK:   %[[VAL2:.+]] = subi %[[VAL1]], %[[SUB_OPERAND]] : i32
-//      CHECK:   %[[VAL3:.+]] = addi %[[VAL2]], %[[ARG1]] : i32
+//      CHECK:   %[[VAL3:.+]] = addi %[[VAL2]], %[[ARG0]] : i32
 //      CHECK:   linalg.yield %[[VAL3]] : i32
 //   CHECK-NOT: linalg.generic
 

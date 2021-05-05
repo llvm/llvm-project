@@ -2931,24 +2931,23 @@ void request_variables(const llvm::json::Object &request) {
     const int64_t end_idx = start_idx + ((count == 0) ? num_children : count);
 
     // We first find out which variable names are duplicated
-    llvm::DenseMap<const char *, int> variable_name_counts;
+    std::map<std::string, int> variable_name_counts;
     for (auto i = start_idx; i < end_idx; ++i) {
       lldb::SBValue variable = g_vsc.variables.GetValueAtIndex(i);
       if (!variable.IsValid())
         break;
-      variable_name_counts[variable.GetName()]++;
+      variable_name_counts[GetNonNullVariableName(variable)]++;
     }
 
     // Now we construct the result with unique display variable names
     for (auto i = start_idx; i < end_idx; ++i) {
       lldb::SBValue variable = g_vsc.variables.GetValueAtIndex(i);
-      const char *name = variable.GetName();
 
       if (!variable.IsValid())
         break;
       variables.emplace_back(CreateVariable(variable, VARIDX_TO_VARREF(i), i,
                                             hex,
-                                            variable_name_counts[name] > 1));
+          variable_name_counts[GetNonNullVariableName(variable)] > 1));
     }
   } else {
     // We are expanding a variable that has children, so we will return its

@@ -492,7 +492,7 @@ MachineInstrBuilder MachineIRBuilder::buildZExtInReg(const DstOp &Res,
   LLT ResTy = Res.getLLTTy(*getMRI());
   auto Mask = buildConstant(
       ResTy, APInt::getLowBitsSet(ResTy.getScalarSizeInBits(), ImmOp));
-  return buildAnd(ResTy, Op, Mask);
+  return buildAnd(Res, Op, Mask);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildCast(const DstOp &Dst,

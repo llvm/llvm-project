@@ -92,6 +92,7 @@ struct Configuration {
   bool emitBitcodeBundle = false;
   bool emitEncryptionInfo = false;
   bool timeTraceEnabled = false;
+  bool dataConst = false;
   uint32_t headerPad;
   uint32_t dylibCompatibilityVersion = 0;
   uint32_t dylibCurrentVersion = 0;

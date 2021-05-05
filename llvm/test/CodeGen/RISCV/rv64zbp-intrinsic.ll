@@ -20,6 +20,24 @@ define signext i32 @grev32(i32 signext %a, i32 signext %b) nounwind {
  ret i32 %tmp
 }
 
+define signext i32 @grev32_demandedbits(i32 signext %a, i32 signext %b, i32 signext %c) nounwind {
+; RV64IB-LABEL: grev32_demandedbits:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    add a0, a0, a1
+; RV64IB-NEXT:    grevw a0, a0, a2
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: grev32_demandedbits:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    add a0, a0, a1
+; RV64IBP-NEXT:    grevw a0, a0, a2
+; RV64IBP-NEXT:    ret
+  %d = add i32 %a, %b
+  %e = and i32 %c, 31
+  %tmp = call i32 @llvm.riscv.grev.i32(i32 %d, i32 %e)
+  ret i32 %tmp
+}
+
 declare i32 @llvm.riscv.grevi.i32(i32 %a)
 
 define signext i32 @grevi32(i32 signext %a) nounwind {
@@ -52,7 +70,23 @@ define signext i32 @gorc32(i32 signext %a, i32 signext %b) nounwind {
  ret i32 %tmp
 }
 
-declare i32 @llvm.riscv.gorci.i32(i32 %a)
+define signext i32 @gorc32_demandedbits(i32 signext %a, i32 signext %b, i32 signext %c) nounwind {
+; RV64IB-LABEL: gorc32_demandedbits:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    add a0, a0, a1
+; RV64IB-NEXT:    gorcw a0, a0, a2
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: gorc32_demandedbits:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    add a0, a0, a1
+; RV64IBP-NEXT:    gorcw a0, a0, a2
+; RV64IBP-NEXT:    ret
+  %d = add i32 %a, %b
+  %e = and i32 %c, 31
+  %tmp = call i32 @llvm.riscv.gorc.i32(i32 %d, i32 %e)
+  ret i32 %tmp
+}
 
 define signext i32 @gorci32(i32 signext %a) nounwind {
 ; RV64IB-LABEL: gorci32:
@@ -84,7 +118,23 @@ define signext i32 @shfl32(i32 signext %a, i32 signext %b) nounwind {
  ret i32 %tmp
 }
 
-declare i32 @llvm.riscv.shfli.i32(i32 %a)
+define signext i32 @shfl32_demandedbits(i32 signext %a, i32 signext %b, i32 signext %c) nounwind {
+; RV64IB-LABEL: shfl32_demandedbits:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    add a0, a0, a1
+; RV64IB-NEXT:    shflw a0, a0, a2
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: shfl32_demandedbits:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    add a0, a0, a1
+; RV64IBP-NEXT:    shflw a0, a0, a2
+; RV64IBP-NEXT:    ret
+  %d = add i32 %a, %b
+  %e = and i32 %c, 15
+  %tmp = call i32 @llvm.riscv.shfl.i32(i32 %d, i32 %e)
+  ret i32 %tmp
+}
 
 define signext i32 @shfli32(i32 signext %a) nounwind {
 ; RV64IB-LABEL: shfli32:
@@ -116,7 +166,23 @@ define signext i32 @unshfl32(i32 signext %a, i32 signext %b) nounwind {
  ret i32 %tmp
 }
 
-declare i32 @llvm.riscv.unshfli.i32(i32 %a)
+define signext i32 @unshfl32_demandedbits(i32 signext %a, i32 signext %b, i32 signext %c) nounwind {
+; RV64IB-LABEL: unshfl32_demandedbits:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    add a0, a0, a1
+; RV64IB-NEXT:    unshflw a0, a0, a2
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: unshfl32_demandedbits:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    add a0, a0, a1
+; RV64IBP-NEXT:    unshflw a0, a0, a2
+; RV64IBP-NEXT:    ret
+  %d = add i32 %a, %b
+  %e = and i32 %c, 15
+  %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %d, i32 %e)
+  ret i32 %tmp
+}
 
 define signext i32 @unshfli32(i32 signext %a) nounwind {
 ; RV64IB-LABEL: unshfli32:
@@ -148,7 +214,20 @@ define i64 @grev64(i64 %a, i64 %b) nounwind {
  ret i64 %tmp
 }
 
-declare i64 @llvm.riscv.grevi.i64(i64 %a)
+define i64 @grev64_demandedbits(i64 %a, i64 %b) nounwind {
+; RV64IB-LABEL: grev64_demandedbits:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    grev a0, a0, a1
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: grev64_demandedbits:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    grev a0, a0, a1
+; RV64IBP-NEXT:    ret
+  %c = and i64 %b, 63
+  %tmp = call i64 @llvm.riscv.grev.i64(i64 %a, i64 %c)
+  ret i64 %tmp
+}
 
 define i64 @grevi64(i64 %a) nounwind {
 ; RV64IB-LABEL: grevi64:
@@ -178,6 +257,21 @@ define i64 @gorc64(i64 %a, i64 %b) nounwind {
 ; RV64IBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 %b)
  ret i64 %tmp
+}
+
+define i64 @gorc64_demandedbits(i64 %a, i64 %b) nounwind {
+; RV64IB-LABEL: gorc64_demandedbits:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    gorc a0, a0, a1
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: gorc64_demandedbits:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    gorc a0, a0, a1
+; RV64IBP-NEXT:    ret
+  %c = and i64 %b, 63
+  %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 %c)
+  ret i64 %tmp
 }
 
 declare i64 @llvm.riscv.gorci.i64(i64 %a)
@@ -212,7 +306,20 @@ define i64 @shfl64(i64 %a, i64 %b) nounwind {
  ret i64 %tmp
 }
 
-declare i64 @llvm.riscv.shfli.i64(i64 %a)
+define i64 @shfl64_demandedbits(i64 %a, i64 %b) nounwind {
+; RV64IB-LABEL: shfl64_demandedbits:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    shfl a0, a0, a1
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: shfl64_demandedbits:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    shfl a0, a0, a1
+; RV64IBP-NEXT:    ret
+  %c = and i64 %b, 31
+  %tmp = call i64 @llvm.riscv.shfl.i64(i64 %a, i64 %c)
+  ret i64 %tmp
+}
 
 define i64 @shfli64(i64 %a) nounwind {
 ; RV64IB-LABEL: shfli64:
@@ -244,7 +351,20 @@ define i64 @unshfl64(i64 %a, i64 %b) nounwind {
  ret i64 %tmp
 }
 
-declare i64 @llvm.riscv.unshfli.i64(i64 %a)
+define i64 @unshfl64_demandedbits(i64 %a, i64 %b) nounwind {
+; RV64IB-LABEL: unshfl64_demandedbits:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    unshfl a0, a0, a1
+; RV64IB-NEXT:    ret
+;
+; RV64IBP-LABEL: unshfl64_demandedbits:
+; RV64IBP:       # %bb.0:
+; RV64IBP-NEXT:    unshfl a0, a0, a1
+; RV64IBP-NEXT:    ret
+  %c = and i64 %b, 31
+  %tmp = call i64 @llvm.riscv.unshfl.i64(i64 %a, i64 %c)
+  ret i64 %tmp
+}
 
 define i64 @unshfli64(i64 %a) nounwind {
 ; RV64IB-LABEL: unshfli64:

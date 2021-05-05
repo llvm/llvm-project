@@ -52,14 +52,16 @@ public:
     void operator,(T const &) DELETE_FUNCTION;
 };
 
+// This is the Cpp17InputIterator requirement as described in Table 87 ([input.iterators]),
+// formerly known as InputIterator prior to C++20.
 template <class It,
     class ItTraits = It>
-class input_iterator
+class cpp17_input_iterator
 {
     typedef std::iterator_traits<ItTraits> Traits;
     It it_;
 
-    template <class U, class T> friend class input_iterator;
+    template <class U, class T> friend class cpp17_input_iterator;
 public:
     typedef          std::input_iterator_tag                   iterator_category;
     typedef typename Traits::value_type                        value_type;
@@ -69,21 +71,21 @@ public:
 
     TEST_CONSTEXPR_CXX14 It base() const {return it_;}
 
-    TEST_CONSTEXPR_CXX14 input_iterator() : it_() {}
-    explicit TEST_CONSTEXPR_CXX14 input_iterator(It it) : it_(it) {}
+    TEST_CONSTEXPR_CXX14 cpp17_input_iterator() : it_() {}
+    explicit TEST_CONSTEXPR_CXX14 cpp17_input_iterator(It it) : it_(it) {}
     template <class U, class T>
-        TEST_CONSTEXPR_CXX14 input_iterator(const input_iterator<U, T>& u) :it_(u.it_) {}
+        TEST_CONSTEXPR_CXX14 cpp17_input_iterator(const cpp17_input_iterator<U, T>& u) :it_(u.it_) {}
 
     TEST_CONSTEXPR_CXX14 reference operator*() const {return *it_;}
     TEST_CONSTEXPR_CXX14 pointer operator->() const {return it_;}
 
-    TEST_CONSTEXPR_CXX14 input_iterator& operator++() {++it_; return *this;}
-    TEST_CONSTEXPR_CXX14 input_iterator operator++(int)
-        {input_iterator tmp(*this); ++(*this); return tmp;}
+    TEST_CONSTEXPR_CXX14 cpp17_input_iterator& operator++() {++it_; return *this;}
+    TEST_CONSTEXPR_CXX14 cpp17_input_iterator operator++(int)
+        {cpp17_input_iterator tmp(*this); ++(*this); return tmp;}
 
-    friend TEST_CONSTEXPR_CXX14 bool operator==(const input_iterator& x, const input_iterator& y)
+    friend TEST_CONSTEXPR_CXX14 bool operator==(const cpp17_input_iterator& x, const cpp17_input_iterator& y)
         {return x.it_ == y.it_;}
-    friend TEST_CONSTEXPR_CXX14 bool operator!=(const input_iterator& x, const input_iterator& y)
+    friend TEST_CONSTEXPR_CXX14 bool operator!=(const cpp17_input_iterator& x, const cpp17_input_iterator& y)
         {return !(x == y);}
 
     template <class T>
@@ -93,7 +95,7 @@ public:
 template <class T, class TV, class U, class UV>
 inline
 bool
-operator==(const input_iterator<T, TV>& x, const input_iterator<U, UV>& y)
+operator==(const cpp17_input_iterator<T, TV>& x, const cpp17_input_iterator<U, UV>& y)
 {
     return x.base() == y.base();
 }
@@ -101,7 +103,7 @@ operator==(const input_iterator<T, TV>& x, const input_iterator<U, UV>& y)
 template <class T, class TV, class U, class UV>
 inline
 bool
-operator!=(const input_iterator<T, TV>& x, const input_iterator<U, UV>& y)
+operator!=(const cpp17_input_iterator<T, TV>& x, const cpp17_input_iterator<U, UV>& y)
 {
     return !(x == y);
 }
@@ -396,7 +398,7 @@ template <class Iter>
 inline TEST_CONSTEXPR_CXX14 Iter base(output_iterator<Iter> i) { return i.base(); }
 
 template <class Iter>
-inline TEST_CONSTEXPR_CXX14 Iter base(input_iterator<Iter> i) { return i.base(); }
+inline TEST_CONSTEXPR_CXX14 Iter base(cpp17_input_iterator<Iter> i) { return i.base(); }
 
 template <class Iter>
 inline TEST_CONSTEXPR_CXX14 Iter base(forward_iterator<Iter> i) { return i.base(); }
@@ -631,6 +633,43 @@ bool operator== (const NonThrowingIterator<T>& a, const NonThrowingIterator<T>& 
 template <typename T>
 bool operator!= (const NonThrowingIterator<T>& a, const NonThrowingIterator<T>& b) TEST_NOEXCEPT
 {   return !a.operator==(b); }
+
+#ifdef TEST_SUPPORTS_RANGES
+
+template <class I>
+struct cpp20_input_iterator {
+  using value_type = std::iter_value_t<I>;
+  using difference_type = std::iter_difference_t<I>;
+  using iterator_concept = std::input_iterator_tag;
+
+  cpp20_input_iterator() = default;
+
+  cpp20_input_iterator(cpp20_input_iterator&&) = default;
+  cpp20_input_iterator& operator=(cpp20_input_iterator&&) = default;
+
+  cpp20_input_iterator(cpp20_input_iterator const&) = delete;
+  cpp20_input_iterator& operator=(cpp20_input_iterator const&) = delete;
+
+  explicit constexpr cpp20_input_iterator(I base) : base_(std::move(base)) {}
+
+  constexpr decltype(auto) operator*() const { return *base_; }
+
+  cpp20_input_iterator& operator++() {
+    ++base_;
+    return *this;
+  }
+
+  void operator++(int) { ++base_; }
+
+  [[nodiscard]] I const& base() const& { return base_; }
+
+  [[nodiscard]] I base() && { return std::move(base_); }
+
+private:
+  I base_ = I();
+};
+
+#endif // TEST_STD_VER > 17 && defined(__cpp_lib_concepts)
 
 #undef DELETE_FUNCTION
 

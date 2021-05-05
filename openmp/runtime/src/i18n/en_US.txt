@@ -124,6 +124,9 @@ ProcGroup                    "processor group"
 ProcGroups                   "processor groups"
 Unknown                      "unknown"
 NoLeaf31Support              "cpuid leaf 31 not supported"
+HwlocFailed                  "Hwloc api failure"
+LLCache                      "LL cache"
+LLCaches                     "LL caches"
 
 
 
@@ -355,6 +358,7 @@ OmptOutdatedWorkshare        "OMPT: Cannot determine workshare type; using the d
                              "This issue is fixed in an up-to-date compiler."
 OmpNoAllocator               "Allocator %1$s is not available, will use default allocator."
 TopologyGeneric              "%1$s: %2$s (%3$d total cores)"
+AffGranularityBad            "%1$s: granularity setting: %2$s does not exist in topology.  Using granularity=%3$s instead."
 
 # --- OpenMP errors detected at runtime ---
 #
@@ -458,6 +462,11 @@ AffNotUsingHwloc             "%1$s: Affinity not capable, using hwloc."
 UserDirectedError            "%1$s: Encountered user-directed error: %2$s."
 UserDirectedWarning          "%1$s: Encountered user-directed warning: %2$s."
 FailedToCreateTeam           "Failed to create teams between lower bound (%1$d) and upper bound (%2$d)."
+AffHWSubsetManyGeneric       "KMP_HW_SUBSET ignored: %1$s: too many requested."
+AffHWSubsetNotExistGeneric   "KMP_HW_SUBSET ignored: %1$s: level not detected in machine topology."
+AffHWSubsetEqvLayers         "KMP_HW_SUBSET ignored: %1$s, %2$s: layers are equivalent, please only specify one."
+AffHWSubsetOutOfOrder        "KMP_HW_SUBSET ignored: %1$s layer should come after %2$s."
+AffEqualTopologyTypes        "%1$s: topology layer \"%2$s\" is equivalent to \"%3$s\"."
 
 # --------------------------------------------------------------------------------------------------
 -*- HINTS -*-

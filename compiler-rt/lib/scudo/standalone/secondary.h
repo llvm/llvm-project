@@ -9,9 +9,12 @@
 #ifndef SCUDO_SECONDARY_H_
 #define SCUDO_SECONDARY_H_
 
+#include "chunk.h"
 #include "common.h"
 #include "list.h"
+#include "memtag.h"
 #include "mutex.h"
+#include "options.h"
 #include "stats.h"
 #include "string_utils.h"
 
@@ -170,7 +173,7 @@ public:
       if (Config::SecondaryCacheQuarantineSize &&
           useMemoryTagging<Config>(Options)) {
         QuarantinePos =
-            (QuarantinePos + 1) % Config::SecondaryCacheQuarantineSize;
+            (QuarantinePos + 1) % Max(Config::SecondaryCacheQuarantineSize, 1u);
         if (!Quarantine[QuarantinePos].CommitBase) {
           Quarantine[QuarantinePos] = Entry;
           return;
@@ -279,13 +282,15 @@ public:
               Config::SecondaryCacheMinReleaseToOsIntervalMs);
       atomic_store_relaxed(&ReleaseToOsIntervalMs, Interval);
       return true;
-    } else if (O == Option::MaxCacheEntriesCount) {
+    }
+    if (O == Option::MaxCacheEntriesCount) {
       const u32 MaxCount = static_cast<u32>(Value);
       if (MaxCount > Config::SecondaryCacheEntriesArraySize)
         return false;
       atomic_store_relaxed(&MaxEntriesCount, MaxCount);
       return true;
-    } else if (O == Option::MaxCacheEntrySize) {
+    }
+    if (O == Option::MaxCacheEntrySize) {
       atomic_store_relaxed(&MaxEntrySize, static_cast<uptr>(Value));
       return true;
     }
@@ -377,16 +382,16 @@ private:
   }
 
   HybridMutex Mutex;
-  u32 EntriesCount;
-  u32 QuarantinePos;
-  atomic_u32 MaxEntriesCount;
-  atomic_uptr MaxEntrySize;
-  u64 OldestTime;
-  u32 IsFullEvents;
-  atomic_s32 ReleaseToOsIntervalMs;
+  u32 EntriesCount = 0;
+  u32 QuarantinePos = 0;
+  atomic_u32 MaxEntriesCount = {};
+  atomic_uptr MaxEntrySize = {};
+  u64 OldestTime = 0;
+  u32 IsFullEvents = 0;
+  atomic_s32 ReleaseToOsIntervalMs = {};
 
-  CachedBlock Entries[Config::SecondaryCacheEntriesArraySize];
-  CachedBlock Quarantine[Config::SecondaryCacheQuarantineSize];
+  CachedBlock Entries[Config::SecondaryCacheEntriesArraySize] = {};
+  CachedBlock Quarantine[Config::SecondaryCacheQuarantineSize] = {};
 };
 
 template <typename Config> class MapAllocator {
@@ -451,11 +456,11 @@ private:
 
   HybridMutex Mutex;
   DoublyLinkedList<LargeBlock::Header> InUseBlocks;
-  uptr AllocatedBytes;
-  uptr FreedBytes;
-  uptr LargestSize;
-  u32 NumberOfAllocs;
-  u32 NumberOfFrees;
+  uptr AllocatedBytes = 0;
+  uptr FreedBytes = 0;
+  uptr LargestSize = 0;
+  u32 NumberOfAllocs = 0;
+  u32 NumberOfFrees = 0;
   LocalStats Stats;
 };
 

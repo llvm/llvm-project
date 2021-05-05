@@ -105,7 +105,7 @@ define void @test5(i32 %a) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @foo() [[ATTR0:#.*]]
+; CHECK-NEXT:    tail call void @foo() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -131,7 +131,7 @@ define void @test5_logical(i32 %a) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @foo() [[ATTR0]]
+; CHECK-NEXT:    tail call void @foo() #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -157,7 +157,7 @@ define void @test6(i32 %a) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @foo() [[ATTR0]]
+; CHECK-NEXT:    tail call void @foo() #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -183,7 +183,7 @@ define void @test6_logical(i32 %a) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @foo() [[ATTR0]]
+; CHECK-NEXT:    tail call void @foo() #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -209,7 +209,7 @@ define void @test7(i32 %a) {
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[DOTNOT]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @foo() [[ATTR0]]
+; CHECK-NEXT:    tail call void @foo() #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -235,7 +235,7 @@ define void @test7_logical(i32 %a) {
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[DOTNOT]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @foo() [[ATTR0]]
+; CHECK-NEXT:    tail call void @foo() #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void

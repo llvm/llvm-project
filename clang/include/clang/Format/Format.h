@@ -620,37 +620,74 @@ struct FormatStyle {
   /// single line.
   ShortFunctionStyle AllowShortFunctionsOnASingleLine;
 
-  /// Different styles for handling short if lines
+  /// Different styles for handling short if statements.
   enum ShortIfStyle : unsigned char {
     /// Never put short ifs on the same line.
     /// \code
     ///   if (a)
-    ///     return ;
+    ///     return;
+    ///
+    ///   if (b)
+    ///     return;
+    ///   else
+    ///     return;
+    ///
+    ///   if (c)
+    ///     return;
     ///   else {
     ///     return;
     ///   }
     /// \endcode
     SIS_Never,
-    /// Without else put short ifs on the same line only if
-    /// the else is not a compound statement.
+    /// Put short ifs on the same line only if there is no else statement.
     /// \code
     ///   if (a) return;
+    ///
+    ///   if (b)
+    ///     return;
     ///   else
     ///     return;
-    /// \endcode
-    SIS_WithoutElse,
-    /// Always put short ifs on the same line if
-    /// the else is not a compound statement or not.
-    /// \code
-    ///   if (a) return;
+    ///
+    ///   if (c)
+    ///     return;
     ///   else {
     ///     return;
     ///   }
     /// \endcode
-    SIS_Always,
+    SIS_WithoutElse,
+    /// Put short ifs, but not else ifs nor else statements, on the same line.
+    /// \code
+    ///   if (a) return;
+    ///
+    ///   if (b) return;
+    ///   else if (b)
+    ///     return;
+    ///   else
+    ///     return;
+    ///
+    ///   if (c) return;
+    ///   else {
+    ///     return;
+    ///   }
+    /// \endcode
+    SIS_OnlyFirstIf,
+    /// Always put short ifs, else ifs and else statements on the same
+    /// line.
+    /// \code
+    ///   if (a) return;
+    ///
+    ///   if (b) return;
+    ///   else return;
+    ///
+    ///   if (c) return;
+    ///   else {
+    ///     return;
+    ///   }
+    /// \endcode
+    SIS_AllIfsAndElse,
   };
 
-  /// If ``true``, ``if (a) return;`` can be put on a single line.
+  /// Dependent on the value, ``if (a) return;`` can be put on a single line.
   ShortIfStyle AllowShortIfStatementsOnASingleLine;
 
   /// Different styles for merging short lambdas containing at most one
@@ -2994,14 +3031,27 @@ struct FormatStyle {
   /// \endcode
   unsigned SpacesBeforeTrailingComments;
 
-  /// If ``true``, spaces will be inserted after ``<`` and before ``>``
-  /// in template argument lists.
-  /// \code
-  ///    true:                                  false:
-  ///    static_cast< int >(arg);       vs.     static_cast<int>(arg);
-  ///    std::function< void(int) > fct;        std::function<void(int)> fct;
-  /// \endcode
-  bool SpacesInAngles;
+  /// Styles for adding spacing after ``<`` and before ``>`
+  ///  in template argument lists.
+  enum SpacesInAnglesStyle : unsigned char {
+    /// Remove spaces after ``<`` and before ``>``.
+    /// \code
+    ///    static_cast<int>(arg);
+    ///    std::function<void(int)> fct;
+    /// \endcode
+    SIAS_Never,
+    /// Add spaces after ``<`` and before ``>``.
+    /// \code
+    ///    static_cast< int >(arg);
+    ///    std::function< void(int) > fct;
+    /// \endcode
+    SIAS_Always,
+    /// Keep a single space after ``<`` and before ``>`` if any spaces were
+    /// present. Option ``Standard: Cpp03`` takes precedence.
+    SIAS_Leave
+  };
+  /// The SpacesInAnglesStyle to use for template argument lists.
+  SpacesInAnglesStyle SpacesInAngles;
 
   /// If ``true``, spaces will be inserted around if/for/switch/while
   /// conditions.

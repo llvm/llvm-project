@@ -112,7 +112,7 @@ def err_fe_action_not_available : Error<
 def err_fe_invalid_alignment : Error<
     "invalid value '%1' in '%0'; alignment must be a power of 2">;
 def err_fe_invalid_exception_model
-   : Error<"invalid exception model '%select{none|dwarf|sjlj|arm|seh|wasm|aix}0' for target '%1'">;
+   : Error<"invalid exception model '%select{none|sjlj|seh|dwarf|wasm}0' for target '%1'">;
 def warn_fe_concepts_ts_flag : Warning<
   "-fconcepts-ts is deprecated - use '-std=c++20' for Concepts support">,
   InGroup<Deprecated>;

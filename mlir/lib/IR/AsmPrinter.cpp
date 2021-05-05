@@ -469,6 +469,7 @@ private:
   /// The following are hooks of `OpAsmPrinter` that are not necessary for
   /// determining potential aliases.
   void printAffineMapOfSSAIds(AffineMapAttr, ValueRange) override {}
+  void printAffineExprOfSSAIds(AffineExpr, ValueRange, ValueRange) override {}
   void printNewline() override {}
   void printOperand(Value) override {}
   void printOperand(Value, raw_ostream &os) override {
@@ -2351,6 +2352,11 @@ public:
   void printAffineMapOfSSAIds(AffineMapAttr mapAttr,
                               ValueRange operands) override;
 
+  /// Print the given affine expression with the symbol and dimension operands
+  /// printed inline with the expression.
+  void printAffineExprOfSSAIds(AffineExpr expr, ValueRange dimOperands,
+                               ValueRange symOperands) override;
+
   /// Print the given string as a symbol reference.
   void printSymbolName(StringRef symbolRef) override {
     ::printSymbolReference(symbolRef, os);
@@ -2588,6 +2594,19 @@ void OperationPrinter::printAffineMapOfSSAIds(AffineMapAttr mapAttr,
   interleaveComma(map.getResults(), [&](AffineExpr expr) {
     printAffineExpr(expr, printValueName);
   });
+}
+
+void OperationPrinter::printAffineExprOfSSAIds(AffineExpr expr,
+                                               ValueRange dimOperands,
+                                               ValueRange symOperands) {
+  auto printValueName = [&](unsigned pos, bool isSymbol) {
+    if (!isSymbol)
+      return printValueID(dimOperands[pos]);
+    os << "symbol(";
+    printValueID(symOperands[pos]);
+    os << ')';
+  };
+  printAffineExpr(expr, printValueName);
 }
 
 //===----------------------------------------------------------------------===//

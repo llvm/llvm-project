@@ -20,7 +20,20 @@ define i32 @grev32(i32 %a, i32 %b) nounwind {
  ret i32 %tmp
 }
 
-declare i32 @llvm.riscv.grevi.i32(i32 %a)
+define i32 @grev32_demandedbits(i32 %a, i32 %b) nounwind {
+; RV32IB-LABEL: grev32_demandedbits:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    grev a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: grev32_demandedbits:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    grev a0, a0, a1
+; RV32IBP-NEXT:    ret
+  %c = and i32 %b, 31
+  %tmp = call i32 @llvm.riscv.grev.i32(i32 %a, i32 %b)
+  ret i32 %tmp
+}
 
 define i32 @grevi32(i32 %a) nounwind {
 ; RV32IB-LABEL: grevi32:
@@ -52,7 +65,20 @@ define i32 @gorc32(i32 %a, i32 %b) nounwind {
  ret i32 %tmp
 }
 
-declare i32 @llvm.riscv.gorci.i32(i32 %a)
+define i32 @gorc32_demandedbits(i32 %a, i32 %b) nounwind {
+; RV32IB-LABEL: gorc32_demandedbits:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    gorc a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: gorc32_demandedbits:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    gorc a0, a0, a1
+; RV32IBP-NEXT:    ret
+  %c = and i32 %b, 31
+  %tmp = call i32 @llvm.riscv.gorc.i32(i32 %a, i32 %b)
+  ret i32 %tmp
+}
 
 define i32 @gorci32(i32 %a) nounwind {
 ; RV32IB-LABEL: gorci32:
@@ -84,7 +110,20 @@ define i32 @shfl32(i32 %a, i32 %b) nounwind {
  ret i32 %tmp
 }
 
-declare i32 @llvm.riscv.shfli.i32(i32 %a)
+define i32 @shfl32_demandedbits(i32 %a, i32 %b) nounwind {
+; RV32IB-LABEL: shfl32_demandedbits:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    shfl a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: shfl32_demandedbits:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    shfl a0, a0, a1
+; RV32IBP-NEXT:    ret
+  %c = and i32 %b, 15
+  %tmp = call i32 @llvm.riscv.shfl.i32(i32 %a, i32 %c)
+  ret i32 %tmp
+}
 
 define i32 @shfli32(i32 %a) nounwind {
 ; RV32IB-LABEL: shfli32:
@@ -116,7 +155,20 @@ define i32 @unshfl32(i32 %a, i32 %b) nounwind {
  ret i32 %tmp
 }
 
-declare i32 @llvm.riscv.unshfli.i32(i32 %a)
+define i32 @unshfl32_demandedbits(i32 %a, i32 %b) nounwind {
+; RV32IB-LABEL: unshfl32_demandedbits:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    unshfl a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBP-LABEL: unshfl32_demandedbits:
+; RV32IBP:       # %bb.0:
+; RV32IBP-NEXT:    unshfl a0, a0, a1
+; RV32IBP-NEXT:    ret
+  %c = and i32 %b, 15
+  %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %a, i32 %c)
+  ret i32 %tmp
+}
 
 define i32 @unshfli32(i32 %a) nounwind {
 ; RV32IB-LABEL: unshfli32:

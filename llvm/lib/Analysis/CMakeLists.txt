@@ -101,6 +101,7 @@ add_llvm_component_library(LLVMAnalysis
   ObjCARCAnalysisUtils.cpp
   ObjCARCInstKind.cpp
   OptimizationRemarkEmitter.cpp
+  OverflowInstAnalysis.cpp
   PHITransAddr.cpp
   PhiValues.cpp
   PostDominators.cpp

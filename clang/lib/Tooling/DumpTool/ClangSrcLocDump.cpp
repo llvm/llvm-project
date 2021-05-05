@@ -71,7 +71,7 @@ int main(int argc, const char **argv) {
 
   if (SkipProcessing) {
     std::error_code EC;
-    llvm::raw_fd_ostream JsonOut(JsonOutputPath, EC, llvm::sys::fs::F_Text);
+    llvm::raw_fd_ostream JsonOut(JsonOutputPath, EC, llvm::sys::fs::OF_Text);
     if (EC)
       return 1;
     JsonOut << formatv("{0:2}", llvm::json::Value(llvm::json::Object()));

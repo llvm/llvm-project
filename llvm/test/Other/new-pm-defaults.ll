@@ -114,6 +114,8 @@
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
 ; CHECK-O-NEXT: Running analysis: GlobalsAA
 ; CHECK-O-NEXT: Running analysis: CallGraphAnalysis
+; CHECK-O-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}AAManager
+; CHECK-O-NEXT: Invalidating analysis: AAManager
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
 ; CHECK-O-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
@@ -125,6 +127,7 @@
 ; CHECK-O-NEXT: Running pass: InlinerPass
 ; CHECK-O-NEXT: Running pass: InlinerPass
 ; CHECK-O-NEXT: Running pass: PostOrderFunctionAttrsPass
+; CHECK-O-NEXT: Running analysis: AAManager
 ; CHECK-O3-NEXT: Running pass: ArgumentPromotionPass
 ; CHECK-O2-NEXT: Running pass: OpenMPOptCGSCCPass on (foo)
 ; CHECK-O3-NEXT: Running pass: OpenMPOptCGSCCPass on (foo)
@@ -260,8 +263,10 @@
 ; CHECK-O-NEXT: Running pass: CGProfilePass
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: ConstantMergePass
-; CHECK-O-NEXT: Running pass: RelLookupTableConverterPass
-; CHECK-O-NEXT: Running analysis: TargetIRAnalysis
+; CHECK-DEFAULT-NEXT: Running pass: RelLookupTableConverterPass
+; CHECK-LTO-NOT: Running pass: RelLookupTableConverterPass
+; CHECK-DEFAULT-NEXT: Running analysis: TargetIRAnalysis
+; CHECK-LTO-NOT: Running analysis: TargetIRAnalysis
 ; CHECK-O-NEXT: Running pass: AnnotationRemarksPass on foo
 ; CHECK-LTO-NEXT: Running pass: CanonicalizeAliasesPass
 ; CHECK-LTO-NEXT: Running pass: NameAnonGlobalPass

@@ -864,7 +864,7 @@ incorporateNewSCCRange(const SCCRangeT &NewSCCRange, LazyCallGraph &G,
   // split-off SCCs.
   // We know however that this will preserve any FAM proxy so go ahead and mark
   // that.
-  PreservedAnalyses PA;
+  auto PA = PreservedAnalyses::allInSet<AllAnalysesOn<Function>>();
   PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
   AM.invalidate(*OldC, PA);
 

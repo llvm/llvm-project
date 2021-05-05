@@ -382,6 +382,7 @@ private:
   template <typename T> T Fold(T &&expr) {
     return evaluate::Fold(foldingContext_, std::move(expr));
   }
+  bool CheckIsValidForwardReference(const semantics::DerivedTypeSpec &);
 
   semantics::SemanticsContext &context_;
   FoldingContext &foldingContext_{context_.foldingContext()};

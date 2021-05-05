@@ -337,7 +337,8 @@ void sls_fun_bad_12() {
     }
     sls_mu.Lock();
   }
-  sls_mu.Unlock();
+  sls_mu.Unlock(); // \
+    // expected-warning{{releasing mutex 'sls_mu' that was not held}}
 }
 
 //-----------------------------------------//
@@ -2582,6 +2583,7 @@ class Foo {
   void test3();
   void test4();
   void test5();
+  void test6();
 };
 
 
@@ -2618,6 +2620,18 @@ void Foo::test5() {
   }
   // No warning on join point because the lock will be released by the scope object anyway.
   rlock.Release();  // expected-warning {{releasing mutex 'mu_' that was not held}}
+}
+
+void Foo::test6() {
+  ReleasableMutexLock rlock(&mu_);
+  do {
+    if (c) {
+      rlock.Release();
+      break;
+    }
+  } while (c);
+  // No warning on join point because the lock will be released by the scope object anyway
+  a = 1; // expected-warning {{writing variable 'a' requires holding mutex 'mu_' exclusively}}
 }
 
 

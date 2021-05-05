@@ -1330,8 +1330,8 @@ static unsigned setBufferOffsets(MachineIRBuilder &B,
       AMDGPU::getBaseWithConstantOffset(*MRI, CombinedOffset);
 
   uint32_t SOffset, ImmOffset;
-  if (Offset > 0 && AMDGPU::splitMUBUFOffset(Offset, SOffset, ImmOffset,
-                                             &RBI.Subtarget, Alignment)) {
+  if ((int)Offset > 0 && AMDGPU::splitMUBUFOffset(Offset, SOffset, ImmOffset,
+                                                  &RBI.Subtarget, Alignment)) {
     if (RBI.getRegBank(Base, *MRI, *RBI.TRI) == &AMDGPU::VGPRRegBank) {
       VOffsetReg = Base;
       SOffsetReg = B.buildConstant(S32, SOffset).getReg(0);
@@ -1351,7 +1351,8 @@ static unsigned setBufferOffsets(MachineIRBuilder &B,
   }
 
   // Handle the variable sgpr + vgpr case.
-  if (MachineInstr *Add = getOpcodeDef(AMDGPU::G_ADD, CombinedOffset, *MRI)) {
+  MachineInstr *Add = getOpcodeDef(AMDGPU::G_ADD, CombinedOffset, *MRI);
+  if (Add && (int)Offset >= 0) {
     Register Src0 = getSrcRegIgnoringCopies(*MRI, Add->getOperand(1).getReg());
     Register Src1 = getSrcRegIgnoringCopies(*MRI, Add->getOperand(2).getReg());
 
@@ -3507,7 +3508,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_AMDGPU_CVT_F32_UBYTE2:
   case AMDGPU::G_AMDGPU_CVT_F32_UBYTE3:
   case AMDGPU::G_AMDGPU_CVT_PK_I16_I32:
-  case AMDGPU::G_AMDGPU_MED3:
+  case AMDGPU::G_AMDGPU_SMED3:
     return getDefaultMappingVOP(MI);
   case AMDGPU::G_UMULH:
   case AMDGPU::G_SMULH: {

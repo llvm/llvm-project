@@ -269,10 +269,7 @@ define i32 @test_srem_int_min(i32 %X) nounwind {
 define i32 @test_srem_allones(i32 %X) nounwind {
 ; CHECK-LABEL: test_srem_allones:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0 // =0
-; CHECK-NEXT:    csel w8, w0, w0, lt
-; CHECK-NEXT:    cmp w0, w8
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    mov w0, #1
 ; CHECK-NEXT:    ret
   %srem = srem i32 %X, 4294967295
   %cmp = icmp eq i32 %srem, 0

@@ -2181,11 +2181,10 @@ define <32 x i8> @mgather_baseidx_v32i8(i8* %base, <32 x i8> %idxs, <32 x i1> %m
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vmv1r.v v25, v0
 ; RV64-NEXT:    vsetivli a1, 16, e8,m2,ta,mu
-; RV64-NEXT:    vslidedown.vi v26, v8, 16
-; RV64-NEXT:    vsetivli a1, 16, e64,m8,ta,mu
-; RV64-NEXT:    vsext.vf8 v16, v26
-; RV64-NEXT:    vsetivli a1, 16, e8,m2,ta,mu
 ; RV64-NEXT:    vslidedown.vi v26, v10, 16
+; RV64-NEXT:    vslidedown.vi v28, v8, 16
+; RV64-NEXT:    vsetivli a1, 16, e64,m8,ta,mu
+; RV64-NEXT:    vsext.vf8 v16, v28
 ; RV64-NEXT:    vsetivli a1, 2, e8,m1,ta,mu
 ; RV64-NEXT:    vslidedown.vi v0, v0, 2
 ; RV64-NEXT:    vsetivli a1, 16, e8,m1,tu,mu

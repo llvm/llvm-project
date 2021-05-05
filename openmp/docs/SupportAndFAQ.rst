@@ -135,3 +135,10 @@ an error like this.
 
 Currently, the only solution is to change how the application is built and avoid
 the use of static libraries.
+
+Q: Can I use dynamically linked libraries with OpenMP offloading
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Dynamically linked libraries can be only used if there is no device code split
+between the library and application. Anything declared on the device inside the
+shared library will not be visible to the application when it's linked.

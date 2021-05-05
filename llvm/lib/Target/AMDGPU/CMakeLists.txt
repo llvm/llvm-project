@@ -140,7 +140,6 @@ add_llvm_target(AMDGPUCodeGen
   SIShrinkInstructions.cpp
   SIWholeQuadMode.cpp
   GCNILPSched.cpp
-  GCNRegBankReassign.cpp
   GCNNSAReassign.cpp
   GCNDPPCombine.cpp
   SIModeRegister.cpp

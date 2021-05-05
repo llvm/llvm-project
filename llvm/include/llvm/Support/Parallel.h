@@ -129,9 +129,20 @@ enum { MaxTasksPerGroup = 1024 };
 
 template <class IterTy, class FuncTy>
 void parallel_for_each(IterTy Begin, IterTy End, FuncTy Fn) {
+  // If we have zero or one items, then do not incur the overhead of spinning up
+  // a task group.  They are surprisingly expensive, and because they do not
+  // support nested parallelism, a single entry task group can block parallel
+  // execution underneath them.
+  auto NumItems = std::distance(Begin, End);
+  if (NumItems <= 1) {
+    if (NumItems)
+      Fn(*Begin);
+    return;
+  }
+
   // Limit the number of tasks to MaxTasksPerGroup to limit job scheduling
   // overhead on large inputs.
-  ptrdiff_t TaskSize = std::distance(Begin, End) / MaxTasksPerGroup;
+  ptrdiff_t TaskSize = NumItems / MaxTasksPerGroup;
   if (TaskSize == 0)
     TaskSize = 1;
 
@@ -145,9 +156,20 @@ void parallel_for_each(IterTy Begin, IterTy End, FuncTy Fn) {
 
 template <class IndexTy, class FuncTy>
 void parallel_for_each_n(IndexTy Begin, IndexTy End, FuncTy Fn) {
+  // If we have zero or one items, then do not incur the overhead of spinning up
+  // a task group.  They are surprisingly expensive, and because they do not
+  // support nested parallelism, a single entry task group can block parallel
+  // execution underneath them.
+  auto NumItems = End - Begin;
+  if (NumItems <= 1) {
+    if (NumItems)
+      Fn(Begin);
+    return;
+  }
+
   // Limit the number of tasks to MaxTasksPerGroup to limit job scheduling
   // overhead on large inputs.
-  ptrdiff_t TaskSize = (End - Begin) / MaxTasksPerGroup;
+  ptrdiff_t TaskSize = NumItems / MaxTasksPerGroup;
   if (TaskSize == 0)
     TaskSize = 1;
 

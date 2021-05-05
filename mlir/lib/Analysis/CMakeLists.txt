@@ -4,6 +4,7 @@ set(LLVM_OPTIONAL_SOURCES
   AffineStructures.cpp
   BufferAliasAnalysis.cpp
   CallGraph.cpp
+  DataFlowAnalysis.cpp
   LinearTransform.cpp
   Liveness.cpp
   LoopAnalysis.cpp
@@ -20,6 +21,7 @@ add_mlir_library(MLIRAnalysis
   AliasAnalysis.cpp
   BufferAliasAnalysis.cpp
   CallGraph.cpp
+  DataFlowAnalysis.cpp
   Liveness.cpp
   NumberOfExecutions.cpp
   SliceAnalysis.cpp
@@ -58,6 +60,7 @@ add_mlir_library(MLIRLoopAnalysis
 
   LINK_LIBS PUBLIC
   MLIRAffine
+  MLIRAnalysis
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRInferTypeOpInterface

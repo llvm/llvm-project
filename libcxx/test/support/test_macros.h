@@ -312,6 +312,10 @@
 #define LIBCPP_ONLY(...) ((void)0)
 #endif
 
+#if !defined(_LIBCPP_HAS_NO_RANGES)
+#define TEST_SUPPORTS_RANGES
+#endif
+
 #define TEST_IGNORE_NODISCARD (void)
 
 namespace test_macros_detail {
@@ -376,6 +380,14 @@ inline void DoNotOptimize(Tp const& value) {
 #define TEST_NOT_WIN32(...) ((void)0)
 #else
 #define TEST_NOT_WIN32(...) __VA_ARGS__
+#endif
+
+#if defined(_WIN32) && !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
+#define TEST_NOT_WIN32_DLL(...) ((void)0)
+#define TEST_ONLY_WIN32_DLL(...) __VA_ARGS__
+#else
+#define TEST_NOT_WIN32_DLL(...) __VA_ARGS__
+#define TEST_ONLY_WIN32_DLL(...) ((void)0)
 #endif
 
 #ifdef _WIN32

@@ -301,13 +301,14 @@ public:
 
   bool useColdCCForColdCall(Function &F) const { return false; }
 
-  unsigned getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
-                                    bool Insert, bool Extract) const {
+  InstructionCost getScalarizationOverhead(VectorType *Ty,
+                                           const APInt &DemandedElts,
+                                           bool Insert, bool Extract) const {
     return 0;
   }
 
-  unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                            ArrayRef<Type *> Tys) const {
+  InstructionCost getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
+                                                   ArrayRef<Type *> Tys) const {
     return 0;
   }
 
@@ -748,6 +749,13 @@ public:
   bool supportsScalableVectors() const { return false; }
 
   bool hasActiveVectorLength() const { return false; }
+
+  TargetTransformInfo::VPLegalization
+  getVPLegalizationStrategy(const VPIntrinsic &PI) const {
+    return TargetTransformInfo::VPLegalization(
+        /* EVLParamStrategy */ TargetTransformInfo::VPLegalization::Discard,
+        /* OperatorStrategy */ TargetTransformInfo::VPLegalization::Convert);
+  }
 
 protected:
   // Obtain the minimum required size to hold the value (without the sign)

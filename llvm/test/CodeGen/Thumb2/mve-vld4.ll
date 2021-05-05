@@ -128,19 +128,19 @@ define void @vld4_v16i32(<64 x i32> *%src, <16 x i32> *%dst) {
 ; CHECK-NEXT:    vadd.i32 q4, q2, q3
 ; CHECK-NEXT:    vadd.i32 q0, q0, q1
 ; CHECK-NEXT:    vstrw.32 q4, [sp, #112] @ 16-byte Spill
-; CHECK-NEXT:    vstrw.32 q0, [sp, #96] @ 16-byte Spill
 ; CHECK-NEXT:    vld40.32 {q1, q2, q3, q4}, [r3]
-; CHECK-NEXT:    vld41.32 {q1, q2, q3, q4}, [r3]
-; CHECK-NEXT:    vld42.32 {q1, q2, q3, q4}, [r3]
-; CHECK-NEXT:    vld43.32 {q1, q2, q3, q4}, [r3]
+; CHECK-NEXT:    vstrw.32 q0, [sp, #96] @ 16-byte Spill
 ; CHECK-NEXT:    vldrw.u32 q6, [sp, #112] @ 16-byte Reload
+; CHECK-NEXT:    vld41.32 {q1, q2, q3, q4}, [r3]
 ; CHECK-NEXT:    vldrw.u32 q5, [sp, #96] @ 16-byte Reload
+; CHECK-NEXT:    vld42.32 {q1, q2, q3, q4}, [r3]
+; CHECK-NEXT:    vadd.i32 q6, q5, q6
+; CHECK-NEXT:    vstrw.32 q6, [sp, #112] @ 16-byte Spill
+; CHECK-NEXT:    vld43.32 {q1, q2, q3, q4}, [r3]
 ; CHECK-NEXT:    vstrw.32 q4, [sp, #80] @ 16-byte Spill
 ; CHECK-NEXT:    vmov q0, q1
-; CHECK-NEXT:    vadd.i32 q6, q5, q6
 ; CHECK-NEXT:    vldrw.u32 q5, [sp, #80] @ 16-byte Reload
 ; CHECK-NEXT:    vadd.i32 q0, q0, q2
-; CHECK-NEXT:    vstrw.32 q6, [sp, #112] @ 16-byte Spill
 ; CHECK-NEXT:    vadd.i32 q1, q3, q5
 ; CHECK-NEXT:    vadd.i32 q0, q0, q1
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #96] @ 16-byte Spill
@@ -927,19 +927,19 @@ define void @vld4_v16f32(<64 x float> *%src, <16 x float> *%dst) {
 ; CHECK-NEXT:    vadd.f32 q4, q2, q3
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
 ; CHECK-NEXT:    vstrw.32 q4, [sp, #112] @ 16-byte Spill
-; CHECK-NEXT:    vstrw.32 q0, [sp, #96] @ 16-byte Spill
 ; CHECK-NEXT:    vld40.32 {q1, q2, q3, q4}, [r3]
-; CHECK-NEXT:    vld41.32 {q1, q2, q3, q4}, [r3]
-; CHECK-NEXT:    vld42.32 {q1, q2, q3, q4}, [r3]
-; CHECK-NEXT:    vld43.32 {q1, q2, q3, q4}, [r3]
+; CHECK-NEXT:    vstrw.32 q0, [sp, #96] @ 16-byte Spill
 ; CHECK-NEXT:    vldrw.u32 q6, [sp, #112] @ 16-byte Reload
+; CHECK-NEXT:    vld41.32 {q1, q2, q3, q4}, [r3]
 ; CHECK-NEXT:    vldrw.u32 q5, [sp, #96] @ 16-byte Reload
+; CHECK-NEXT:    vld42.32 {q1, q2, q3, q4}, [r3]
+; CHECK-NEXT:    vadd.f32 q6, q5, q6
+; CHECK-NEXT:    vstrw.32 q6, [sp, #112] @ 16-byte Spill
+; CHECK-NEXT:    vld43.32 {q1, q2, q3, q4}, [r3]
 ; CHECK-NEXT:    vstrw.32 q4, [sp, #80] @ 16-byte Spill
 ; CHECK-NEXT:    vmov q0, q1
-; CHECK-NEXT:    vadd.f32 q6, q5, q6
 ; CHECK-NEXT:    vldrw.u32 q5, [sp, #80] @ 16-byte Reload
 ; CHECK-NEXT:    vadd.f32 q0, q0, q2
-; CHECK-NEXT:    vstrw.32 q6, [sp, #112] @ 16-byte Spill
 ; CHECK-NEXT:    vadd.f32 q1, q3, q5
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #96] @ 16-byte Spill
@@ -1153,8 +1153,8 @@ define void @vld4_v16f16(<64 x half> *%src, <16 x half> *%dst) {
 ; CHECK-NEXT:    vld41.16 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld42.16 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld43.16 {q0, q1, q2, q3}, [r0]!
-; CHECK-NEXT:    vstmia sp, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Spill
 ; CHECK-NEXT:    vld40.16 {q4, q5, q6, q7}, [r0]
+; CHECK-NEXT:    vstmia sp, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Spill
 ; CHECK-NEXT:    vld41.16 {q4, q5, q6, q7}, [r0]
 ; CHECK-NEXT:    vld42.16 {q4, q5, q6, q7}, [r0]
 ; CHECK-NEXT:    vld43.16 {q4, q5, q6, q7}, [r0]
