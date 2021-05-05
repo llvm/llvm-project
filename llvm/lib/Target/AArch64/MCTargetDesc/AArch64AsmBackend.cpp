@@ -95,10 +95,6 @@ public:
                         const MCSubtargetInfo &STI) const override;
   bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 
-  void HandleAssemblerFlag(MCAssemblerFlag Flag) {}
-
-  unsigned getPointerSize() const { return 8; }
-
   unsigned getFixupKindContainereSizeInBytes(unsigned Kind) const;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
