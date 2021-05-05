@@ -8,9 +8,23 @@
 ; with the fragment expressions.
 define hidden void @ptr_arg_split_subregs(%struct.A* %arg1) #0 !dbg !9 {
 ; CHECK-LABEL: ptr_arg_split_subregs:
-; CHECK:  ; %bb.0:
-; CHECK:    ;DEBUG_VALUE: ptr_arg_split_subregs:a <- [DW_OP_LLVM_fragment 32 32] [$vgpr1+0]
-; CHECK:    ;DEBUG_VALUE: ptr_arg_split_subregs:a <- [DW_OP_LLVM_fragment 0 32] [$vgpr0+0]
+; CHECK:       .Lfunc_begin0:
+; CHECK:       .loc 1 5 0 ; example.cpp:5:0
+; CHECK-NEXT:    .cfi_sections .debug_frame
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  ; %bb.0:
+; CHECK-NEXT:    ;DEBUG_VALUE: ptr_arg_split_subregs:a <- [DW_OP_LLVM_fragment 32 32] [$vgpr1+0]
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v2, 1
+; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:    ;DEBUG_VALUE: ptr_arg_split_subregs:a <- [DW_OP_LLVM_fragment 0 32] [$vgpr0+0]
+; CHECK-NEXT:    .loc 1 7 13 prologue_end ; example.cpp:7:13
+; CHECK-NEXT:    flat_store_dword v[0:1], v2 offset:396
+; CHECK-NEXT:    .loc 1 8 5 ; example.cpp:8:5
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-NEXT:  .Ltmp1:
+; CHECK:         .cfi_endproc
   call void @llvm.dbg.declare(metadata %struct.A* %arg1, metadata !20, metadata !DIExpression()), !dbg !21
   %gep1 = getelementptr inbounds %struct.A, %struct.A* %arg1, i32 0, i32 0, i32 99, !dbg !22
   store i32 1, i32* %gep1, align 4, !dbg !23
@@ -27,6 +41,7 @@ define hidden void @ptr_arg_split_reg_mem(<31 x i32>, %struct.A* %arg2) #0 !dbg 
 ; CHECK-LABEL: ptr_arg_split_reg_mem:
 ; CHECK:       .Lfunc_begin1:
 ; CHECK-NEXT:    .loc 1 10 0 ; example.cpp:10:0
+; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    ;DEBUG_VALUE: ptr_arg_split_reg_mem:b <- [$vgpr31+0]
 ; CHECK-NEXT:    ;DEBUG_VALUE: ptr_arg_split_reg_mem:b <- [$vgpr31+0]
@@ -41,6 +56,7 @@ define hidden void @ptr_arg_split_reg_mem(<31 x i32>, %struct.A* %arg2) #0 !dbg 
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ; CHECK-NEXT:  .Ltmp3:
+; CHECK:         .cfi_endproc
   call void @llvm.dbg.declare(metadata %struct.A* %arg2, metadata !26, metadata !DIExpression()), !dbg !27
   %gep2 = getelementptr inbounds %struct.A, %struct.A* %arg2, i32 0, i32 0, i32 99, !dbg !28
   store i32 1, i32* %gep2, align 4, !dbg !29
@@ -53,6 +69,7 @@ define hidden void @ptr_arg_in_memory(<32 x i32>, %struct.A* %arg3) #0 !dbg !31 
 ; CHECK-LABEL: ptr_arg_in_memory:
 ; CHECK:       .Lfunc_begin2:
 ; CHECK-NEXT:    .loc 1 15 0 ; example.cpp:15:0
+; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
@@ -66,6 +83,7 @@ define hidden void @ptr_arg_in_memory(<32 x i32>, %struct.A* %arg3) #0 !dbg !31 
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ; CHECK-NEXT:  .Ltmp5:
+; CHECK:         .cfi_endproc
   call void @llvm.dbg.declare(metadata %struct.A* %arg3, metadata !32, metadata !DIExpression()), !dbg !33
   %gep3 = getelementptr inbounds %struct.A, %struct.A* %arg3, i32 0, i32 0, i32 99, !dbg !34
   store i32 1, i32* %gep3, align 4, !dbg !35
