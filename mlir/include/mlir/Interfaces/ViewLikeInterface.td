@@ -445,7 +445,8 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
   }];
 
   let verify = [{
-    return ::mlir::verify(::mlir::cast<::mlir::OffsetSizeAndStrideOpInterface>($_op));
+    return ::mlir::detail::verifyOffsetSizeAndStrideOp(
+        ::mlir::cast<::mlir::OffsetSizeAndStrideOpInterface>($_op));
   }];
 }
 
