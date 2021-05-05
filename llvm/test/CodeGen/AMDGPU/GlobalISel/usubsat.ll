@@ -1662,20 +1662,16 @@ define <2 x i16> @v_usubsat_v2i16(<2 x i16> %lhs, <2 x i16> %rhs) {
 ; GFX6-LABEL: v_usubsat_v2i16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX6-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX6-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX6-NEXT:    v_min_u32_e32 v2, v0, v2
+; GFX6-NEXT:    v_sub_i32_e32 v0, vcc, v0, v2
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX6-NEXT:    v_min_u32_e32 v1, v0, v1
-; GFX6-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
-; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
 ; GFX6-NEXT:    v_min_u32_e32 v2, v1, v2
 ; GFX6-NEXT:    v_sub_i32_e32 v1, vcc, v1, v2
-; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_usubsat_v2i16:
@@ -1707,13 +1703,11 @@ define <2 x i16> @v_usubsat_v2i16(<2 x i16> %lhs, <2 x i16> %rhs) {
 define amdgpu_ps i32 @s_usubsat_v2i16(<2 x i16> inreg %lhs, <2 x i16> inreg %rhs) {
 ; GFX6-LABEL: s_usubsat_v2i16:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_lshr_b32 s2, s0, 16
-; GFX6-NEXT:    s_lshr_b32 s3, s1, 16
 ; GFX6-NEXT:    s_lshl_b32 s0, s0, 16
+; GFX6-NEXT:    s_lshl_b32 s2, s2, 16
+; GFX6-NEXT:    s_min_u32 s2, s0, s2
+; GFX6-NEXT:    s_sub_i32 s0, s0, s2
 ; GFX6-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX6-NEXT:    s_min_u32 s1, s0, s1
-; GFX6-NEXT:    s_sub_i32 s0, s0, s1
-; GFX6-NEXT:    s_lshl_b32 s1, s2, 16
 ; GFX6-NEXT:    s_lshl_b32 s2, s3, 16
 ; GFX6-NEXT:    s_min_u32 s2, s1, s2
 ; GFX6-NEXT:    s_sub_i32 s1, s1, s2
@@ -1757,8 +1751,6 @@ define amdgpu_ps i32 @s_usubsat_v2i16(<2 x i16> inreg %lhs, <2 x i16> inreg %rhs
 define amdgpu_ps float @usubsat_v2i16_sv(<2 x i16> inreg %lhs, <2 x i16> %rhs) {
 ; GFX6-LABEL: usubsat_v2i16_sv:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX6-NEXT:    s_lshr_b32 s1, s0, 16
 ; GFX6-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX6-NEXT:    v_min_u32_e32 v0, s0, v0
@@ -1801,8 +1793,6 @@ define amdgpu_ps float @usubsat_v2i16_sv(<2 x i16> inreg %lhs, <2 x i16> %rhs) {
 define amdgpu_ps float @usubsat_v2i16_vs(<2 x i16> %lhs, <2 x i16> inreg %rhs) {
 ; GFX6-LABEL: usubsat_v2i16_vs:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX6-NEXT:    s_lshr_b32 s1, s0, 16
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX6-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX6-NEXT:    v_min_u32_e32 v2, s0, v0

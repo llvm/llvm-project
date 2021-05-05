@@ -73,35 +73,36 @@ define arm_aapcscc signext i16 @test_call_ext_params(i8 %a, i16 %b, i1 %c) {
 ; CHECK: $r2 = COPY [[SEXTB]]
 ; CHECK: [[ZEXTB:%[0-9]+]]:_(s32) = G_ZEXT [[BVREG]](s16)
 ; CHECK: $r3 = COPY [[ZEXTB]]
+; CHECK: [[SEXTA2:%[0-9]+]]:_(s32) = G_SEXT [[AVREG]]
 ; CHECK: [[SP1:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
 ; CHECK: [[FI1:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP1]], [[OFF1]](s32)
-; CHECK: [[SEXTA2:%[0-9]+]]:_(s32) = G_SEXT [[AVREG]]
 ; CHECK: G_STORE [[SEXTA2]](s32), [[FI1]](p0){{.*}}store 4
+; CHECK: [[ZEXTA2:%[0-9]+]]:_(s32) = G_ZEXT [[AVREG]]
 ; CHECK: [[SP2:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
 ; CHECK: [[FI2:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP2]], [[OFF2]](s32)
-; CHECK: [[ZEXTA2:%[0-9]+]]:_(s32) = G_ZEXT [[AVREG]]
 ; CHECK: G_STORE [[ZEXTA2]](s32), [[FI2]](p0){{.*}}store 4
+; CHECK: [[SEXTB2:%[0-9]+]]:_(s32) = G_SEXT [[BVREG]]
 ; CHECK: [[SP3:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
 ; CHECK: [[FI3:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP3]], [[OFF3]](s32)
-; CHECK: [[SEXTB2:%[0-9]+]]:_(s32) = G_SEXT [[BVREG]]
 ; CHECK: G_STORE [[SEXTB2]](s32), [[FI3]](p0){{.*}}store 4
+; CHECK: [[ZEXTB2:%[0-9]+]]:_(s32) = G_ZEXT [[BVREG]]
 ; CHECK: [[SP4:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF4:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
 ; CHECK: [[FI4:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP4]], [[OFF4]](s32)
-; CHECK: [[ZEXTB2:%[0-9]+]]:_(s32) = G_ZEXT [[BVREG]]
 ; CHECK: G_STORE [[ZEXTB2]](s32), [[FI4]](p0){{.*}}store 4
+; CHECK: [[ZEXTC:%[0-9]+]]:_(s32) = G_ZEXT [[CVREG]]
 ; CHECK: [[SP5:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF5:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
 ; CHECK: [[FI5:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP5]], [[OFF5]](s32)
-; CHECK: [[ZEXTC:%[0-9]+]]:_(s32) = G_ZEXT [[CVREG]]
 ; CHECK: G_STORE [[ZEXTC]](s32), [[FI5]](p0){{.*}}store 4
 ; ARM: BL @ext_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
 ; THUMB: tBL 14 /* CC::al */, $noreg, @ext_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
 ; CHECK: [[R0VREG:%[0-9]+]]:_(s32) = COPY $r0
-; CHECK: [[RVREG:%[0-9]+]]:_(s16) = G_TRUNC [[R0VREG]]
+; CHECK: [[R0VREG_ASSERT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[R0VREG]], 16
+; CHECK: [[RVREG:%[0-9]+]]:_(s16) = G_TRUNC [[R0VREG_ASSERT]]
 ; CHECK: ADJCALLSTACKUP 20, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: [[RExtVREG:%[0-9]+]]:_(s32) = G_SEXT [[RVREG]]
 ; CHECK: $r0 = COPY [[RExtVREG]]

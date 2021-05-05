@@ -32,7 +32,8 @@ define i64 @test_ret_i64() {
 define i8 @test_arg_i8(i8 %a) {
 ; X32-LABEL: test_arg_i8:
 ; X32:       # %bb.0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    # kill: def $al killed $al killed $eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_arg_i8:
@@ -46,7 +47,8 @@ define i8 @test_arg_i8(i8 %a) {
 define i16 @test_arg_i16(i16 %a) {
 ; X32-LABEL: test_arg_i16:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_arg_i16:

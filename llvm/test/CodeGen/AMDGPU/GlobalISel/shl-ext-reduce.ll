@@ -611,9 +611,13 @@ define i32 @v_shl_i32_zext_i16(i16 %x) {
 define amdgpu_ps <2 x i32> @s_shl_v2i32_zext_v2i16(<2 x i16> inreg %x) {
 ; GFX7-LABEL: s_shl_v2i32_zext_v2i16:
 ; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_mov_b32 s2, 0xffff
+; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
+; GFX7-NEXT:    s_and_b32 s0, s0, s2
+; GFX7-NEXT:    s_or_b32 s0, s1, s0
 ; GFX7-NEXT:    s_and_b32 s0, s0, 0x3fff3fff
 ; GFX7-NEXT:    s_lshr_b32 s1, s0, 16
-; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX7-NEXT:    s_and_b32 s0, s0, s2
 ; GFX7-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX7-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX7-NEXT:    ; return to shader part epilog
@@ -661,9 +665,13 @@ define <2 x i32> @v_shl_v2i32_zext_v2i16(<2 x i16> %x) {
 ; GFX7-LABEL: v_shl_v2i32_zext_v2i16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_mov_b32_e32 v2, 0xffff
+; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX7-NEXT:    v_and_b32_e32 v0, v0, v2
+; GFX7-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX7-NEXT:    v_and_b32_e32 v0, 0x3fff3fff, v0
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX7-NEXT:    v_and_b32_e32 v0, v0, v2
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]

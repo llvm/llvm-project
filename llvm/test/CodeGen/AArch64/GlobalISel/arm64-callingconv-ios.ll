@@ -20,19 +20,21 @@ define void @test_varargs() {
   ; CHECK:   $w0 = COPY [[C]](s32)
   ; CHECK:   $d0 = COPY [[C1]](s64)
   ; CHECK:   $x1 = COPY [[C2]](s64)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C3]](s8)
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
   ; CHECK:   [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C8]](s64)
-  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C3]](s8)
-  ; CHECK:   G_STORE [[ANYEXT]](s64), [[PTR_ADD]](p0) :: (store 8 into stack, align 1)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[ANYEXT]](s32)
+  ; CHECK:   G_STORE [[ANYEXT1]](s64), [[PTR_ADD]](p0) :: (store 8 into stack, align 1)
+  ; CHECK:   [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[C4]](s16)
   ; CHECK:   [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C9]](s64)
-  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C4]](s16)
-  ; CHECK:   G_STORE [[ANYEXT1]](s64), [[PTR_ADD1]](p0) :: (store 8 into stack + 8, align 1)
+  ; CHECK:   [[ANYEXT3:%[0-9]+]]:_(s64) = G_ANYEXT [[ANYEXT2]](s32)
+  ; CHECK:   G_STORE [[ANYEXT3]](s64), [[PTR_ADD1]](p0) :: (store 8 into stack + 8, align 1)
   ; CHECK:   [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s64)
-  ; CHECK:   [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[C5]](s32)
-  ; CHECK:   G_STORE [[ANYEXT2]](s64), [[PTR_ADD2]](p0) :: (store 8 into stack + 16, align 1)
+  ; CHECK:   [[ANYEXT4:%[0-9]+]]:_(s64) = G_ANYEXT [[C5]](s32)
+  ; CHECK:   G_STORE [[ANYEXT4]](s64), [[PTR_ADD2]](p0) :: (store 8 into stack + 16, align 1)
   ; CHECK:   [[C11:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C11]](s64)
   ; CHECK:   G_STORE [[C6]](s32), [[PTR_ADD3]](p0) :: (store 4 into stack + 24, align 1)
