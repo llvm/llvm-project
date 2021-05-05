@@ -9,7 +9,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
-// XFAIL: msvc && clang
 
 // std::ranges::size
 
@@ -51,9 +50,13 @@ bool constexpr testArrayType() {
   SizeFunction d[4];
 
   assert(std::ranges::size(a) == 4);
+  ASSERT_SAME_TYPE(decltype(std::ranges::size(a)), size_t);
   assert(std::ranges::size(b) == 1);
+  ASSERT_SAME_TYPE(decltype(std::ranges::size(b)), size_t);
   assert(std::ranges::size(c) == 4);
+  ASSERT_SAME_TYPE(decltype(std::ranges::size(c)), size_t);
   assert(std::ranges::size(d) == 4);
+  ASSERT_SAME_TYPE(decltype(std::ranges::size(d)), size_t);
 
   return true;
 }
@@ -68,6 +71,7 @@ struct SizeMemberSigned {
 
 bool constexpr testHasSizeMember() {
   assert(std::ranges::size(SizeMember()) == 42);
+  ASSERT_SAME_TYPE(decltype(std::ranges::size(SizeMember())), size_t);
 
   const SizeMemberConst sizeMemberConst;
   assert(std::ranges::size(sizeMemberConst) == 42);
@@ -112,6 +116,7 @@ struct SizeFunctionSigned {
 
 bool constexpr testHasSizeFunction() {
   assert(std::ranges::size(SizeFunction()) == 42);
+  ASSERT_SAME_TYPE(decltype(std::ranges::size(SizeFunction())), size_t);
   assert(std::ranges::size(MoveOnlySizeFunction()) == 42);
   assert(std::ranges::size(EnumSizeFunction()) == 42);
   assert(std::ranges::size(SizeFunctionConst()) == 42);

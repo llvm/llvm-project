@@ -98,6 +98,26 @@ namespace __size {
 inline namespace __cpo {
   inline constexpr auto size = __size::__fn{};
 } // namespace __cpo
+
+namespace __ssize {
+  struct __fn {
+    template<class _Tp>
+      requires requires (_Tp&& __t) { ranges::size(__t); }
+    [[nodiscard]] constexpr integral auto operator()(_Tp&& __t) const
+        noexcept(noexcept(ranges::size(__t))) {
+      using _Signed = make_signed_t<decltype(ranges::size(__t))>;
+      if constexpr (sizeof(ptrdiff_t) > sizeof(_Signed))
+        return static_cast<ptrdiff_t>(ranges::size(__t));
+      else
+        return static_cast<_Signed>(ranges::size(__t));
+    }
+  };
+}
+
+inline namespace __cpo {
+  inline constexpr const auto ssize = __ssize::__fn{};
+} // namespace __cpo
+
 } // namespace ranges
 
 // clang-format off

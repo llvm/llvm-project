@@ -25,6 +25,7 @@ namespace std::ranges {
     inline constexpr unspecified cend = unspecified;
 
     inline constexpr unspecified size = unspecified;
+    inline constexpr unspecified ssize = unspecified;
   }
 
   // [range.range], ranges
