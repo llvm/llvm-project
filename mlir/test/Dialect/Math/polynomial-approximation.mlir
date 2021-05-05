@@ -11,7 +11,10 @@ func @scalar(%arg0: f32) -> f32 {
   %1 = math.log %0 : f32
   %2 = math.log2 %1 : f32
   %3 = math.log1p %2 : f32
-  return %3 : f32
+  // CHECK-NOT: exp
+  %4 = math.exp %3 : f32
+  %5 = math.expm1 %4 : f32
+  return %5 : f32
 }
 
 // CHECK-LABEL: @vector
@@ -22,18 +25,8 @@ func @vector(%arg0: vector<8xf32>) -> vector<8xf32> {
   %1 = math.log %0 : vector<8xf32>
   %2 = math.log2 %1 : vector<8xf32>
   %3 = math.log1p %2 : vector<8xf32>
-  return %3 : vector<8xf32>
-}
-
-// CHECK-LABEL: @exp_scalar
-func @exp_scalar(%arg0: f32) -> f32 {
-  %0 = math.exp %arg0 : f32
-  return %0 : f32
-}
-
-// CHECK-LABEL: @exp_vector
-func @exp_vector(%arg0: vector<8xf32>) -> vector<8xf32> {
-  // CHECK-NOT: math.exp
-  %0 = math.exp %arg0 : vector<8xf32>
-  return %0 : vector<8xf32>
+  // CHECK-NOT: exp
+  %4 = math.exp %3 : vector<8xf32>
+  %5 = math.expm1 %4 : vector<8xf32>
+  return %5 : vector<8xf32>
 }

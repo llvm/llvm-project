@@ -577,9 +577,64 @@ ExpApproximation::matchAndRewrite(math::ExpOp op,
 }
 
 //----------------------------------------------------------------------------//
+// ExpM1 approximation.
+//----------------------------------------------------------------------------//
+
+namespace {
+
+struct ExpM1Approximation : public OpRewritePattern<math::ExpM1Op> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(math::ExpM1Op op,
+                                PatternRewriter &rewriter) const final;
+};
+} // namespace
+
+LogicalResult
+ExpM1Approximation::matchAndRewrite(math::ExpM1Op op,
+                                    PatternRewriter &rewriter) const {
+  auto width = vectorWidth(op.operand().getType(), isF32);
+  if (!width.hasValue())
+    return rewriter.notifyMatchFailure(op, "unsupported operand type");
+
+  ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
+  auto bcast = [&](Value value) -> Value {
+    return broadcast(builder, value, *width);
+  };
+
+  // expm1(x) = exp(x) - 1 = u - 1.
+  // We have to handle it carefully when x is near 0, i.e. u ~= 1,
+  // and when the input is ~= -inf, i.e. u - 1 ~= -1.
+  Value cstOne = bcast(f32Cst(builder, 1.0f));
+  Value cstNegOne = bcast(f32Cst(builder, -1.0f));
+  Value x = op.operand();
+  Value u = builder.create<math::ExpOp>(x);
+  Value uEqOne = builder.create<CmpFOp>(CmpFPredicate::OEQ, u, cstOne);
+  Value uMinusOne = builder.create<SubFOp>(u, cstOne);
+  Value uMinusOneEqNegOne =
+      builder.create<CmpFOp>(CmpFPredicate::OEQ, uMinusOne, cstNegOne);
+  // logU = log(u) ~= x
+  Value logU = builder.create<math::LogOp>(u);
+
+  // Detect exp(x) = +inf; written this way to avoid having to form +inf.
+  Value isInf = builder.create<CmpFOp>(CmpFPredicate::OEQ, logU, u);
+
+  // (u - 1) * (x / ~x)
+  Value expm1 =
+      builder.create<MulFOp>(uMinusOne, builder.create<DivFOp>(x, logU));
+  expm1 = builder.create<SelectOp>(isInf, u, expm1);
+  Value approximation = builder.create<SelectOp>(
+      uEqOne, x, builder.create<SelectOp>(uMinusOneEqNegOne, cstNegOne, expm1));
+  rewriter.replaceOp(op, approximation);
+  return success();
+}
+
+//----------------------------------------------------------------------------//
 
 void mlir::populateMathPolynomialApproximationPatterns(
     RewritePatternSet &patterns) {
   patterns.add<TanhApproximation, LogApproximation, Log2Approximation,
-               Log1pApproximation, ExpApproximation>(patterns.getContext());
+               Log1pApproximation, ExpApproximation, ExpM1Approximation>(
+      patterns.getContext());
 }
