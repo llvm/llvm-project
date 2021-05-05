@@ -311,6 +311,10 @@ def IfOp : SCF_Op<"if",
       return results().empty() ? OpBuilder::atBlockTerminator(body, listener)
                                : OpBuilder::atBlockEnd(body, listener);
     }
+    Block* thenBlock();
+    YieldOp thenYield();
+    Block* elseBlock();
+    YieldOp elseYield();
   }];
 
   let hasCanonicalizer = 1;
