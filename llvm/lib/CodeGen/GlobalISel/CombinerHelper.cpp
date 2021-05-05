@@ -482,10 +482,13 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
     if (UseMI.getOpcode() == TargetOpcode::G_SEXT ||
         UseMI.getOpcode() == TargetOpcode::G_ZEXT ||
         (UseMI.getOpcode() == TargetOpcode::G_ANYEXT)) {
+      const auto &MMO = **MI.memoperands_begin();
+      // For atomics, only form anyextending loads.
+      if (MMO.isAtomic() && UseMI.getOpcode() != TargetOpcode::G_ANYEXT)
+        continue;
       // Check for legality.
       if (LI) {
         LegalityQuery::MemDesc MMDesc;
-        const auto &MMO = **MI.memoperands_begin();
         MMDesc.SizeInBits = MMO.getSizeInBits();
         MMDesc.AlignInBits = MMO.getAlign().value() * 8;
         MMDesc.Ordering = MMO.getOrdering();
