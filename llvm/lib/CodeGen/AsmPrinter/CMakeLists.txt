@@ -26,7 +26,6 @@ add_llvm_component_library(LLVMAsmPrinter
   WinException.cpp
   CodeViewDebug.cpp
   WasmException.cpp
-  UnwindStreamer.cpp
 
   DEPENDS
   intrinsics_gen
