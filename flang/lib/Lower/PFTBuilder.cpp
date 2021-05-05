@@ -1297,8 +1297,6 @@ struct SymbolDependenceDepth {
     LLVM_DEBUG(llvm::dbgs() << "analyze symbol: " << sym << '\n');
     if (!done.second)
       return 0;
-    if (sym.attrs().test(Fortran::semantics::Attr::PARAMETER))
-      return 0; // References to PARAMETERs appear as values, not symbols.
     if (semantics::IsProcedure(sym)) {
       // TODO: add declaration?
       return 0;
