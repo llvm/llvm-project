@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:   --test-sparsification="lower" \
+// RUN:   --sparsification --sparse-tensor-conversion \
 // RUN:   --convert-linalg-to-loops --convert-vector-to-scf --convert-scf-to-std \
 // RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
 // RUN:   --std-bufferize --finalizing-bufferize  \
