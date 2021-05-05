@@ -229,16 +229,16 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i32x4_make(int32_t __c0,
   return (v128_t)(__i32x4){__c0, __c1, __c2, __c3};
 }
 
+static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i64x2_make(int64_t __c0,
+                                                            int64_t __c1) {
+  return (v128_t)(__i64x2){__c0, __c1};
+}
+
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f32x4_make(float __c0,
                                                             float __c1,
                                                             float __c2,
                                                             float __c3) {
   return (v128_t)(__f32x4){__c0, __c1, __c2, __c3};
-}
-
-static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i64x2_make(int64_t __c0,
-                                                            int64_t __c1) {
-  return (v128_t)(__i64x2){__c0, __c1};
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_make(double __c0,
@@ -291,6 +291,13 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_make(double __c0,
     (v128_t)(__i32x4){__c0, __c1, __c2, __c3};                                 \
   })
 
+#define wasm_i64x2_const(__c0, __c1)                                           \
+  __extension__({                                                              \
+    __REQUIRE_CONSTANT(__c0);                                                  \
+    __REQUIRE_CONSTANT(__c1);                                                  \
+    (v128_t)(__i64x2){__c0, __c1};                                             \
+  })
+
 #define wasm_f32x4_const(__c0, __c1, __c2, __c3)                               \
   __extension__({                                                              \
     __REQUIRE_CONSTANT(__c0);                                                  \
@@ -300,19 +307,27 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_make(double __c0,
     (v128_t)(__f32x4){__c0, __c1, __c2, __c3};                                 \
   })
 
-#define wasm_i64x2_const(__c0, __c1)                                           \
-  __extension__({                                                              \
-    __REQUIRE_CONSTANT(__c0);                                                  \
-    __REQUIRE_CONSTANT(__c1);                                                  \
-    (v128_t)(__i64x2){__c0, __c1};                                             \
-  })
-
 #define wasm_f64x2_const(__c0, __c1)                                           \
   __extension__({                                                              \
     __REQUIRE_CONSTANT(__c0);                                                  \
     __REQUIRE_CONSTANT(__c1);                                                  \
     (v128_t)(__f64x2){__c0, __c1};                                             \
   })
+
+#define wasm_i8x16_const_splat(__c)                                            \
+  wasm_i8x16_const(__c, __c, __c, __c, __c, __c, __c, __c, __c, __c, __c, __c, \
+                   __c, __c, __c, __c)
+
+#define wasm_i16x8_const_splat(__c)                                            \
+  wasm_i16x8_const(__c, __c, __c, __c, __c, __c, __c, __c)
+
+#define wasm_i32x4_const_splat(__c) wasm_i32x4_const(__c, __c, __c, __c)
+
+#define wasm_i64x2_const_splat(__c) wasm_i64x2_const(__c, __c)
+
+#define wasm_f32x4_const_splat(__c) wasm_i32x4_const(__c, __c, __c, __c)
+
+#define wasm_f64x2_const_splat(__c) wasm_i64x2_const(__c, __c)
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_splat(int8_t __a) {
   return (v128_t)(__i8x16){__a, __a, __a, __a, __a, __a, __a, __a,

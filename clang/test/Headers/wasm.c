@@ -386,6 +386,54 @@ v128_t test_f64x2_const() {
   return wasm_f64x2_const(0, 1);
 }
 
+// CHECK-LABEL: @test_i8x16_const_splat(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret <4 x i32> <i32 707406378, i32 707406378, i32 707406378, i32 707406378>
+//
+v128_t test_i8x16_const_splat() {
+  return wasm_i8x16_const_splat(42);
+}
+
+// CHECK-LABEL: @test_i16x8_const_splat(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret <4 x i32> <i32 2752554, i32 2752554, i32 2752554, i32 2752554>
+//
+v128_t test_i16x8_const_splat() {
+  return wasm_i16x8_const_splat(42);
+}
+
+// CHECK-LABEL: @test_i32x4_const_splat(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret <4 x i32> <i32 42, i32 42, i32 42, i32 42>
+//
+v128_t test_i32x4_const_splat() {
+  return wasm_i32x4_const_splat(42);
+}
+
+// CHECK-LABEL: @test_i64x2_const_splat(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret <4 x i32> <i32 42, i32 0, i32 42, i32 0>
+//
+v128_t test_i64x2_const_splat() {
+  return wasm_i64x2_const_splat(42);
+}
+
+// CHECK-LABEL: @test_f32x4_const_splat(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret <4 x i32> <i32 42, i32 42, i32 42, i32 42>
+//
+v128_t test_f32x4_const_splat() {
+  return wasm_f32x4_const_splat(42);
+}
+
+// CHECK-LABEL: @test_f64x2_const_splat(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret <4 x i32> <i32 42, i32 0, i32 42, i32 0>
+//
+v128_t test_f64x2_const_splat() {
+  return wasm_f64x2_const_splat(42);
+}
+
 // CHECK-LABEL: @test_i8x16_splat(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i8> undef, i8 [[A:%.*]], i32 0
