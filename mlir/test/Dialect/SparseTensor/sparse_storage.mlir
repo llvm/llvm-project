@@ -1,14 +1,14 @@
-// RUN: mlir-opt %s -test-sparsification="ptr-type=1 ind-type=1" | \
+// RUN: mlir-opt %s -sparsification="ptr-type=1 ind-type=1" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-TYPE0
-// RUN: mlir-opt %s -test-sparsification="ptr-type=1 ind-type=2" | \
+// RUN: mlir-opt %s -sparsification="ptr-type=1 ind-type=2" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-TYPE1
-// RUN: mlir-opt %s -test-sparsification="ptr-type=2 ind-type=1" | \
+// RUN: mlir-opt %s -sparsification="ptr-type=2 ind-type=1" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-TYPE2
-// RUN: mlir-opt %s -test-sparsification="ptr-type=2 ind-type=2" | \
+// RUN: mlir-opt %s -sparsification="ptr-type=2 ind-type=2" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-TYPE3
-// RUN: mlir-opt %s -test-sparsification="ptr-type=3 ind-type=3" | \
+// RUN: mlir-opt %s -sparsification="ptr-type=3 ind-type=3" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-TYPE4
-// RUN: mlir-opt %s -test-sparsification="ptr-type=4 ind-type=4" | \
+// RUN: mlir-opt %s -sparsification="ptr-type=4 ind-type=4" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-TYPE5
 
 #trait_mul_1d = {

@@ -42,12 +42,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
-#include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/Matchers.h"
+#include "llvm/ADT/SmallBitVector.h"
 
 using namespace mlir;
 
@@ -294,8 +296,7 @@ private:
 
 // Code generation.
 struct CodeGen {
-  CodeGen(linalg::SparsificationOptions o, unsigned numTensors,
-          unsigned numLoops)
+  CodeGen(mlir::SparsificationOptions o, unsigned numTensors, unsigned numLoops)
       : options(o), loops(numLoops), sizes(numLoops), buffers(numTensors),
         pointers(numTensors, std::vector<Value>(numLoops)),
         indices(numTensors, std::vector<Value>(numLoops)),
@@ -304,7 +305,7 @@ struct CodeGen {
         idxs(numTensors, std::vector<Value>(numLoops)), redExp(-1u), redVal(),
         curVecLength(1), curVecMask() {}
   /// Sparsification options.
-  linalg::SparsificationOptions options;
+  mlir::SparsificationOptions options;
   /// Universal dense indices and upper bounds (by index). The loops array
   /// is updated with the value of the universal dense index in the current
   /// loop. The sizes array is set once with the inferred dimension sizes.
@@ -506,17 +507,17 @@ static unsigned buildLattices(Merger &merger, linalg::GenericOp op,
 }
 
 /// Maps sparse integer option to actual integral storage type.
-static Type genIntType(PatternRewriter &rewriter, linalg::SparseIntType tp) {
+static Type genIntType(PatternRewriter &rewriter, SparseIntType tp) {
   switch (tp) {
-  case linalg::SparseIntType::kNative:
+  case SparseIntType::kNative:
     return rewriter.getIndexType();
-  case linalg::SparseIntType::kI64:
+  case SparseIntType::kI64:
     return rewriter.getIntegerType(64);
-  case linalg::SparseIntType::kI32:
+  case SparseIntType::kI32:
     return rewriter.getIntegerType(32);
-  case linalg::SparseIntType::kI16:
+  case SparseIntType::kI16:
     return rewriter.getIntegerType(16);
-  case linalg::SparseIntType::kI8:
+  case SparseIntType::kI8:
     return rewriter.getIntegerType(8);
   }
   llvm_unreachable("unexpected SparseIntType");
@@ -960,11 +961,11 @@ static bool genInit(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
 /// depends on the requested strategy.
 static bool isVectorFor(CodeGen &codegen, bool isInner, bool isSparse) {
   switch (codegen.options.vectorizationStrategy) {
-  case linalg::SparseVectorizationStrategy::kNone:
+  case SparseVectorizationStrategy::kNone:
     return false;
-  case linalg::SparseVectorizationStrategy::kDenseInnerLoop:
+  case SparseVectorizationStrategy::kDenseInnerLoop:
     return isInner && !isSparse;
-  case linalg::SparseVectorizationStrategy::kAnyStorageInnerLoop:
+  case SparseVectorizationStrategy::kAnyStorageInnerLoop:
     return isInner;
   }
   llvm_unreachable("unexpected vectorization strategy");
@@ -976,15 +977,15 @@ static bool isVectorFor(CodeGen &codegen, bool isInner, bool isSparse) {
 static bool isParallelFor(CodeGen &codegen, bool isOuter, bool isReduction,
                           bool isSparse, bool isVector) {
   switch (codegen.options.parallelizationStrategy) {
-  case linalg::SparseParallelizationStrategy::kNone:
+  case SparseParallelizationStrategy::kNone:
     return false;
-  case linalg::SparseParallelizationStrategy::kDenseOuterLoop:
+  case SparseParallelizationStrategy::kDenseOuterLoop:
     return isOuter && !isSparse && !isReduction && !isVector;
-  case linalg::SparseParallelizationStrategy::kAnyStorageOuterLoop:
+  case SparseParallelizationStrategy::kAnyStorageOuterLoop:
     return isOuter && !isReduction && !isVector;
-  case linalg::SparseParallelizationStrategy::kDenseAnyLoop:
+  case SparseParallelizationStrategy::kDenseAnyLoop:
     return !isSparse && !isReduction && !isVector;
-  case linalg::SparseParallelizationStrategy::kAnyStorageAnyLoop:
+  case SparseParallelizationStrategy::kAnyStorageAnyLoop:
     return !isReduction && !isVector;
   }
   llvm_unreachable("unexpected parallelization strategy");
@@ -1355,7 +1356,7 @@ namespace {
 /// Sparse rewriting rule for generic Lingalg operation.
 struct GenericOpSparsifier : public OpRewritePattern<linalg::GenericOp> {
 public:
-  GenericOpSparsifier(MLIRContext *context, linalg::SparsificationOptions o)
+  GenericOpSparsifier(MLIRContext *context, SparsificationOptions o)
       : OpRewritePattern<linalg::GenericOp>(context), options(o) {}
 
   LogicalResult matchAndRewrite(linalg::GenericOp op,
@@ -1398,14 +1399,14 @@ public:
 
 private:
   /// Options to control sparse code generation.
-  linalg::SparsificationOptions options;
+  SparsificationOptions options;
 };
 
 } // namespace
 
 /// Populates the given patterns list with rewriting rules required for
 /// the sparsification of linear algebra operations.
-void linalg::populateSparsificationPatterns(
+void mlir::populateSparsificationPatterns(
     RewritePatternSet &patterns, const SparsificationOptions &options) {
   patterns.add<GenericOpSparsifier>(patterns.getContext(), options);
 }

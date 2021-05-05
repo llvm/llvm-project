@@ -17,7 +17,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
-#include "mlir/Dialect/SparseTensor/Transforms/Transforms.h"
+#include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -42,7 +42,7 @@ static FlatSymbolRefAttr getFunc(Operation *op, StringRef name, Type result,
 }
 
 /// Sparse conversion rule to remove opaque pointer cast.
-class TensorFromPointerConverter
+class SparseTensorFromPointerConverter
     : public OpConversionPattern<sparse_tensor::FromPointerOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -54,7 +54,8 @@ class TensorFromPointerConverter
 };
 
 /// Sparse conversion rule for dimension accesses.
-class TensorToDimSizeConverter : public OpConversionPattern<memref::DimOp> {
+class SparseTensorToDimSizeConverter
+    : public OpConversionPattern<memref::DimOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -71,7 +72,7 @@ public:
 };
 
 /// Sparse conversion rule for pointer accesses.
-class TensorToPointersConverter
+class SparseTensorToPointersConverter
     : public OpConversionPattern<sparse_tensor::ToPointersOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -98,7 +99,7 @@ public:
 };
 
 /// Sparse conversion rule for index accesses.
-class TensorToIndicesConverter
+class SparseTensorToIndicesConverter
     : public OpConversionPattern<sparse_tensor::ToIndicesOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -125,7 +126,7 @@ public:
 };
 
 /// Sparse conversion rule for value accesses.
-class TensorToValuesConverter
+class SparseTensorToValuesConverter
     : public OpConversionPattern<sparse_tensor::ToValuesOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -157,9 +158,8 @@ public:
 
 /// Populates the given patterns list with conversion rules required for
 /// the sparsification of linear algebra operations.
-void sparse_tensor::populateSparsificationConversionPatterns(
-    RewritePatternSet &patterns) {
-  patterns.add<TensorFromPointerConverter, TensorToDimSizeConverter,
-               TensorToPointersConverter, TensorToIndicesConverter,
-               TensorToValuesConverter>(patterns.getContext());
+void mlir::populateSparseTensorConversionPatterns(RewritePatternSet &patterns) {
+  patterns.add<SparseTensorFromPointerConverter, SparseTensorToDimSizeConverter,
+               SparseTensorToPointersConverter, SparseTensorToIndicesConverter,
+               SparseTensorToValuesConverter>(patterns.getContext());
 }

@@ -1,10 +1,10 @@
-// RUN: mlir-opt %s -test-sparsification="vectorization-strategy=0 ptr-type=2 ind-type=2 vl=16" | \
+// RUN: mlir-opt %s -sparsification="vectorization-strategy=0 ptr-type=2 ind-type=2 vl=16" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-VEC0
-// RUN: mlir-opt %s -test-sparsification="vectorization-strategy=1 ptr-type=2 ind-type=2 vl=16" | \
+// RUN: mlir-opt %s -sparsification="vectorization-strategy=1 ptr-type=2 ind-type=2 vl=16" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-VEC1
-// RUN: mlir-opt %s -test-sparsification="vectorization-strategy=2 ptr-type=2 ind-type=2 vl=16" | \
+// RUN: mlir-opt %s -sparsification="vectorization-strategy=2 ptr-type=2 ind-type=2 vl=16" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-VEC2
-// RUN: mlir-opt %s -test-sparsification="vectorization-strategy=2 ptr-type=0 ind-type=0 vl=16" | \
+// RUN: mlir-opt %s -sparsification="vectorization-strategy=2 ptr-type=0 ind-type=0 vl=16" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-VEC3
 
 #trait_scale_d = {
