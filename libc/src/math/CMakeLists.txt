@@ -1,19 +1,19 @@
 add_subdirectory(generic)
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_MACHINE})
-  add_subdirectory(${LIBC_TARGET_MACHINE})
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
+  add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
 endif()
 
 function(add_math_entrypoint_object name)
   # We prefer machine specific implementation if available. Hence we check
   # that first and retrun early if we are able to add an alias target for the
   # machine specific implementation.
-  get_fq_target_name("${LIBC_TARGET_MACHINE}.${name}" fq_machine_specific_target_name)
+  get_fq_target_name("${LIBC_TARGET_ARCHITECTURE}.${name}" fq_machine_specific_target_name)
   if(TARGET ${fq_machine_specific_target_name})
     add_entrypoint_object(
       ${name}
       ALIAS
       DEPENDS
-        .${LIBC_TARGET_MACHINE}.${name}
+        .${LIBC_TARGET_ARCHITECTURE}.${name}
     )
     return()
   endif()
