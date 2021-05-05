@@ -181,7 +181,7 @@ struct ARMOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     return false;
   }
 
-  MachineInstrBuilder &MIB;
+  MachineInstrBuilder MIB;
   uint64_t StackSize = 0;
 };
 
