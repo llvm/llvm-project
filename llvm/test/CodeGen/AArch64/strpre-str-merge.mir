@@ -424,3 +424,30 @@ body:             |
     STRSui killed renamable $s1, renamable $x0, 1 :: (store 4)
     RET undef $lr, implicit $x0
 ...
+
+---
+name:            16-strxpre-strxui-same-reg-no-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: 16-strxpre-strxui-same-reg-no-merge
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: early-clobber renamable $x0 = STRXpre renamable $x1, renamable $x0, 24, implicit $w0 :: (store 8)
+    ; CHECK: STRXui renamable $x0, renamable $x0, 1 :: (store 8)
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRXpre killed renamable $x1, killed renamable $x0, 24 :: (store 8)
+    STRXui renamable $x0, renamable $x0, 1 :: (store 8)
+    RET undef $lr, implicit $x0
+
+...
