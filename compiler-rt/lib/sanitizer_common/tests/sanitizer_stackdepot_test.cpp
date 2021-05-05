@@ -111,38 +111,4 @@ TEST(SanitizerCommon, StackDepotReverseMap) {
   }
 }
 
-TEST(SanitizerCommon, StackDepotFree) {
-  uptr array[] = {1, 2, 3, 4, 5};
-  StackTrace s1(array, ARRAY_SIZE(array));
-  u32 i1 = StackDepotPut(s1);
-  StackTrace stack = StackDepotGet(i1);
-  EXPECT_NE(stack.trace, (uptr*)0);
-  EXPECT_EQ(ARRAY_SIZE(array), stack.size);
-  EXPECT_EQ(0, internal_memcmp(stack.trace, array, sizeof(array)));
-
-  StackDepotStats *stats_before_free = StackDepotGetStats();
-  EXPECT_EQ(1U, stats_before_free->n_uniq_ids);
-  EXPECT_NE(0U, stats_before_free->allocated);
-
-  StackDepotFree();
-
-  StackDepotStats *stats_after_free = StackDepotGetStats();
-  EXPECT_EQ(0U, stats_after_free->n_uniq_ids);
-  EXPECT_EQ(stats_before_free->allocated, stats_after_free->allocated);
-
-  stack = StackDepotGet(i1);
-  EXPECT_EQ((uptr*)0, stack.trace);
-
-  EXPECT_EQ(i1, StackDepotPut(s1));
-  StackDepotStats *stats_after_2nd_put = StackDepotGetStats();
-  EXPECT_EQ(1U, stats_after_2nd_put->n_uniq_ids);
-  EXPECT_EQ(stats_after_2nd_put->allocated, stats_after_free->allocated);
-
-  stack = StackDepotGet(i1);
-  EXPECT_NE(stack.trace, (uptr*)0);
-  EXPECT_EQ(ARRAY_SIZE(array), stack.size);
-  EXPECT_EQ(0, internal_memcmp(stack.trace, array, sizeof(array)));
-}
-
-
 }  // namespace __sanitizer
