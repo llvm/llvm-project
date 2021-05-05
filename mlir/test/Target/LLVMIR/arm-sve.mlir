@@ -48,6 +48,30 @@ llvm.func @arm_sve_ummla(%arg0: !llvm.vec<?x16 x i8>,
   llvm.return %0 : !llvm.vec<?x4 x i32>
 }
 
+// CHECK-LABEL: define <vscale x 4 x i32> @arm_sve_arithi
+llvm.func @arm_sve_arithi(%arg0: !llvm.vec<? x 4 x i32>,
+                          %arg1: !llvm.vec<? x 4 x i32>,
+                          %arg2: !llvm.vec<? x 4 x i32>)
+                          -> !llvm.vec<? x 4 x i32> {
+  // CHECK: mul <vscale x 4 x i32>
+  %0 = llvm.mul %arg0, %arg1 : !llvm.vec<? x 4 x i32>
+  // CHECK: add <vscale x 4 x i32>
+  %1 = llvm.add %0, %arg2 : !llvm.vec<? x 4 x i32>
+  llvm.return %1 : !llvm.vec<? x 4 x i32>
+}
+
+// CHECK-LABEL: define <vscale x 4 x float> @arm_sve_arithf
+llvm.func @arm_sve_arithf(%arg0: !llvm.vec<? x 4 x f32>,
+                          %arg1: !llvm.vec<? x 4 x f32>,
+                          %arg2: !llvm.vec<? x 4 x f32>)
+                          -> !llvm.vec<? x 4 x f32> {
+  // CHECK: fmul <vscale x 4 x float>
+  %0 = llvm.fmul %arg0, %arg1 : !llvm.vec<? x 4 x f32>
+  // CHECK: fadd <vscale x 4 x float>
+  %1 = llvm.fadd %0, %arg2 : !llvm.vec<? x 4 x f32>
+  llvm.return %1 : !llvm.vec<? x 4 x f32>
+}
+
 // CHECK-LABEL: define i64 @get_vector_scale()
 llvm.func @get_vector_scale() -> i64 {
   // CHECK: call i64 @llvm.vscale.i64()
