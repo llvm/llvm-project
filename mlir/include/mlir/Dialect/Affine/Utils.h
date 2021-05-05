@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_AFFINE_UTILS_H
 #define MLIR_DIALECT_AFFINE_UTILS_H
 
+#include "mlir/Analysis/AffineAnalysis.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
@@ -26,6 +27,8 @@ class AffineParallelOp;
 struct LogicalResult;
 struct LoopReduction;
 class Operation;
+
+using ReductionLoopMap = DenseMap<Operation *, SmallVector<LoopReduction, 2>>;
 
 /// Replaces parallel affine.for op with 1-d affine.parallel op.
 /// mlir::isLoopParallel detects the parallel affine.for ops.
@@ -81,16 +84,23 @@ struct VectorizationStrategy {
   // The candidate will be vectorized using the vectorization factor in
   // 'vectorSizes' for that dimension.
   DenseMap<Operation *, unsigned> loopToVectorDim;
+  // Maps loops that implement vectorizable reductions to the corresponding
+  // reduction descriptors.
+  ReductionLoopMap reductionLoops;
 };
 
 /// Vectorizes affine loops in 'loops' using the n-D vectorization factors in
 /// 'vectorSizes'. By default, each vectorization factor is applied
 /// inner-to-outer to the loops of each loop nest. 'fastestVaryingPattern' can
 /// be optionally used to provide a different loop vectorization order.
+/// If `reductionLoops` is not empty, the given reduction loops may be
+/// vectorized along the reduction dimension.
+/// TODO: Vectorizing reductions is supported only for 1-D vectorization.
 void vectorizeAffineLoops(
     Operation *parentOp,
     llvm::DenseSet<Operation *, DenseMapInfo<Operation *>> &loops,
-    ArrayRef<int64_t> vectorSizes, ArrayRef<int64_t> fastestVaryingPattern);
+    ArrayRef<int64_t> vectorSizes, ArrayRef<int64_t> fastestVaryingPattern,
+    const ReductionLoopMap &reductionLoops = ReductionLoopMap());
 
 /// External utility to vectorize affine loops from a single loop nest using an
 /// n-D vectorization strategy (see doc in VectorizationStrategy definition).
