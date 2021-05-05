@@ -1645,7 +1645,7 @@ MCSection *TargetLoweringObjectFileCOFF::SelectSectionForGlobal(
       // Append "$symbol" to the section name *before* IR-level mangling is
       // applied when targetting mingw. This is what GCC does, and the ld.bfd
       // COFF linker will not properly handle comdats otherwise.
-      if (getTargetTriple().isWindowsGNUEnvironment())
+      if (getContext().getTargetTriple().isWindowsGNUEnvironment())
         raw_svector_ostream(Name) << '$' << ComdatGV->getName();
 
       return getContext().getCOFFSection(Name, Characteristics, Kind,
@@ -1762,7 +1762,8 @@ void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
   std::string Flags;
   for (const GlobalValue &GV : M.global_values()) {
     raw_string_ostream OS(Flags);
-    emitLinkerFlagsForGlobalCOFF(OS, &GV, getTargetTriple(), getMangler());
+    emitLinkerFlagsForGlobalCOFF(OS, &GV, getContext().getTargetTriple(),
+                                 getMangler());
     OS.flush();
     if (!Flags.empty()) {
       Streamer.SwitchSection(getDrectveSection());
@@ -1786,7 +1787,8 @@ void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
           continue;
 
         raw_string_ostream OS(Flags);
-        emitLinkerFlagsForUsedCOFF(OS, GV, getTargetTriple(), getMangler());
+        emitLinkerFlagsForUsedCOFF(OS, GV, getContext().getTargetTriple(),
+                                   getMangler());
         OS.flush();
 
         if (!Flags.empty()) {
@@ -1865,16 +1867,16 @@ static MCSectionCOFF *getCOFFStaticStructorSection(MCContext &Ctx,
 
 MCSection *TargetLoweringObjectFileCOFF::getStaticCtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
-  return getCOFFStaticStructorSection(getContext(), getTargetTriple(), true,
-                                      Priority, KeySym,
-                                      cast<MCSectionCOFF>(StaticCtorSection));
+  return getCOFFStaticStructorSection(
+      getContext(), getContext().getTargetTriple(), true, Priority, KeySym,
+      cast<MCSectionCOFF>(StaticCtorSection));
 }
 
 MCSection *TargetLoweringObjectFileCOFF::getStaticDtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
-  return getCOFFStaticStructorSection(getContext(), getTargetTriple(), false,
-                                      Priority, KeySym,
-                                      cast<MCSectionCOFF>(StaticDtorSection));
+  return getCOFFStaticStructorSection(
+      getContext(), getContext().getTargetTriple(), false, Priority, KeySym,
+      cast<MCSectionCOFF>(StaticDtorSection));
 }
 
 const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
