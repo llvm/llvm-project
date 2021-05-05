@@ -700,4 +700,36 @@ TEST_F(SystemZAsmLexerTest, CheckRejectStarAsCurrentPC) {
   EXPECT_EQ(ParsePrimaryExpr, true);
   EXPECT_EQ(Parser->hasPendingError(), true);
 }
+
+TEST_F(SystemZAsmLexerTest, CheckRejectCharLiterals) {
+  StringRef AsmStr = "abc 'd'";
+
+  // Setup.
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().setLexHLASMStrings(true);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  SmallVector<AsmToken::TokenKind> ExpectedTokens(
+      {AsmToken::Identifier, AsmToken::Error, AsmToken::Error,
+       AsmToken::EndOfStatement, AsmToken::Eof});
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerTest, CheckRejectStringLiterals) {
+  StringRef AsmStr = "abc \"ef\"";
+
+  // Setup.
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().setLexHLASMStrings(true);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  SmallVector<AsmToken::TokenKind> ExpectedTokens(
+      {AsmToken::Identifier, AsmToken::Error, AsmToken::Identifier,
+       AsmToken::Error, AsmToken::EndOfStatement, AsmToken::Eof});
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
 } // end anonymous namespace
