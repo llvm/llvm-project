@@ -210,8 +210,9 @@ public:
   ///     The thread whose trace will be inspected.
   ///
   /// \return
-  ///     The total number of instructions in the trace.
-  virtual size_t GetInstructionCount(Thread &thread) = 0;
+  ///     The total number of instructions in the trace, or \a llvm::None if the
+  ///     thread is not being traced.
+  virtual llvm::Optional<size_t> GetInstructionCount(Thread &thread) = 0;
 
   /// Check if a thread is currently traced by this object.
   ///

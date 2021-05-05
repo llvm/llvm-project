@@ -94,8 +94,7 @@ public:
   /// \return
   ///     Returns \b true if \a so_addr is contained in this range,
   ///     \b false otherwise.
-  //    bool
-  //    Contains (const Address &so_addr) const;
+  bool Contains(const Address &so_addr) const;
 
   /// Check if a section offset address is contained in this range.
   ///
