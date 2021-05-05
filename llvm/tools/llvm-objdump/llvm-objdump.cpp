@@ -1577,9 +1577,9 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
     reportError(Obj->getFileName(),
                 "no instruction info for target " + TripleName);
   MCObjectFileInfo MOFI;
-  MCContext Ctx(AsmInfo.get(), MRI.get(), &MOFI);
+  MCContext Ctx(Triple(TripleName), AsmInfo.get(), MRI.get(), &MOFI, STI.get());
   // FIXME: for now initialize MCObjectFileInfo with default values
-  MOFI.InitMCObjectFileInfo(Triple(TripleName), false, Ctx);
+  MOFI.initMCObjectFileInfo(Ctx, /*PIC=*/false);
 
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, Ctx));

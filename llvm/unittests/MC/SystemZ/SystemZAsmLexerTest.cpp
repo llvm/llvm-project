@@ -112,9 +112,9 @@ protected:
     SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
     EXPECT_EQ(Buffer, nullptr);
 
-    Ctx.reset(
-        new MCContext(MUPMAI.get(), MRI.get(), &MOFI, &SrcMgr, &MCOptions));
-    MOFI.InitMCObjectFileInfo(Triple, false, *Ctx, false);
+    Ctx.reset(new MCContext(Triple, MUPMAI.get(), MRI.get(), &MOFI, STI.get(),
+                            &SrcMgr, &MCOptions));
+    MOFI.initMCObjectFileInfo(*Ctx, /*PIC=*/false, /*LargeCodeModel=*/false);
 
     Str.reset(TheTarget->createNullStreamer(*Ctx));
 

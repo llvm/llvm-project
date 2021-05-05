@@ -1029,8 +1029,8 @@ MasmParser::MasmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
   EndStatementAtEOFStack.push_back(true);
 
   // Initialize the platform / file format parser.
-  switch (Ctx.getObjectFileInfo()->getObjectFileType()) {
-  case MCObjectFileInfo::IsCOFF:
+  switch (Ctx.getObjectFileType()) {
+  case MCContext::IsCOFF:
     PlatformParser.reset(createCOFFMasmParser());
     break;
   default:
