@@ -37,14 +37,11 @@ class StackDepotBase {
   void LockAll();
   void UnlockAll();
   void PrintAll();
-  void Free();
 
  private:
   static Node *find(Node *s, args_type args, u32 hash);
   static Node *lock(atomic_uintptr_t *p);
   static void unlock(atomic_uintptr_t *p, Node *s);
-
-  Node *alloc(uptr part, uptr memsz);
 
   static const int kTabSize = 1 << kTabSizeLog;  // Hash table size.
   static const int kPartBits = 8;
@@ -56,7 +53,6 @@ class StackDepotBase {
 
   atomic_uintptr_t tab[kTabSize];   // Hash table of Node's.
   atomic_uint32_t seq[kPartCount];  // Unique id generators.
-  atomic_uintptr_t freeNodes[kPartCount];
 
   StackDepotStats stats;
 
@@ -100,57 +96,6 @@ void StackDepotBase<Node, kReservedBits, kTabSizeLog>::unlock(
 }
 
 template <class Node, int kReservedBits, int kTabSizeLog>
-void StackDepotBase<Node, kReservedBits, kTabSizeLog>::Free() {
-  LockAll();
-  for (int i = 0; i < kPartCount; ++i) {
-    lock(&freeNodes[i]);
-  }
-
-  for (int i = 0; i < kTabSize; ++i) {
-    atomic_uintptr_t *p_tab = &tab[i];
-    Node *s = (Node *)(atomic_load(p_tab, memory_order_relaxed) & ~1UL);
-    while (s) {
-      uptr part = s->id >> kPartShift;
-      atomic_uintptr_t *p_free_nodes = &freeNodes[part];
-      Node *free_nodes_head =
-          (Node *)(atomic_load(p_free_nodes, memory_order_relaxed) & ~1UL);
-      Node *next = s->link;
-      s->link = free_nodes_head;
-      atomic_store(p_free_nodes, (uptr)s, memory_order_release);
-      s = next;
-    }
-    atomic_store(p_tab, (uptr)nullptr, memory_order_release);
-  }
-
-  stats.n_uniq_ids = 0;
-
-  for (int i = 0; i < kPartCount; ++i)
-    (void)atomic_exchange(&seq[i], 0, memory_order_relaxed);
-
-  for (int i = kPartCount - 1; i >= 0; --i) {
-    atomic_uintptr_t *p = &freeNodes[i];
-    uptr s = atomic_load(p, memory_order_relaxed);
-    unlock(p, (Node *)(s & ~1UL));
-  }
-  UnlockAll();
-}
-
-template <class Node, int kReservedBits, int kTabSizeLog>
-Node *StackDepotBase<Node, kReservedBits, kTabSizeLog>::alloc(uptr part,
-                                                              uptr memsz) {
-  atomic_uintptr_t *p = &freeNodes[part];
-  Node *head = lock(p);
-  if (head) {
-    unlock(p, head->link);
-    return head;
-  }
-  unlock(p, head);
-  Node *s = (Node *)PersistentAlloc(memsz);
-  stats.allocated += memsz;
-  return s;
-}
-
-template <class Node, int kReservedBits, int kTabSizeLog>
 typename StackDepotBase<Node, kReservedBits, kTabSizeLog>::handle_type
 StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
                                                       bool *inserted) {
@@ -180,7 +125,8 @@ StackDepotBase<Node, kReservedBits, kTabSizeLog>::Put(args_type args,
   CHECK_NE(id, 0);
   CHECK_EQ(id & (((u32)-1) >> kReservedBits), id);
   uptr memsz = Node::storage_size(args);
-  s = alloc(part, memsz);
+  s = (Node *)PersistentAlloc(memsz);
+  stats.allocated += memsz;
   s->id = id;
   s->store(args, h);
   s->link = s2;
@@ -222,7 +168,7 @@ void StackDepotBase<Node, kReservedBits, kTabSizeLog>::LockAll() {
 
 template <class Node, int kReservedBits, int kTabSizeLog>
 void StackDepotBase<Node, kReservedBits, kTabSizeLog>::UnlockAll() {
-  for (int i = kTabSize - 1; i >= 0; --i) {
+  for (int i = 0; i < kTabSize; ++i) {
     atomic_uintptr_t *p = &tab[i];
     uptr s = atomic_load(p, memory_order_relaxed);
     unlock(p, (Node *)(s & ~1UL));
