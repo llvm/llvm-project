@@ -340,7 +340,7 @@ TEST_F(SymbolFilePDBTests, TestLineTablesMatchSpecific) {
   // Then test with line 9, and verify that only line 9 entries are added.
   location_spec = SourceLocationSpec(
       source_file, /*line=*/9, /*column=*/llvm::None, /*check_inlines=*/true);
-  count = symfile->ResolveSymbolContext(source_file, 9, true, scope, sc_list);
+  count = symfile->ResolveSymbolContext(location_spec, scope, sc_list);
   EXPECT_EQ(1u, count);
   EXPECT_TRUE(sc_list.GetContextAtIndex(0, sc));
 
