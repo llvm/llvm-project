@@ -428,7 +428,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
 
     for (MVT VT : BoolVecVTs) {
-      setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
+      setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
 
       // Mask VTs are custom-expanded into a series of standard nodes
       setOperationAction(ISD::TRUNCATE, VT, Custom);
@@ -1388,6 +1388,19 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       return Vec;
     }
 
+    // A splat can be lowered as a SETCC. For each fixed-length mask vector
+    // type, we have a legal equivalently-sized i8 type, so we can use that.
+    if (SDValue Splat = cast<BuildVectorSDNode>(Op)->getSplatValue()) {
+      assert(Splat.getValueType() == XLenVT &&
+             "Unexpected type for i1 splat value");
+      MVT InterVT = VT.changeVectorElementType(MVT::i8);
+      Splat = DAG.getNode(ISD::AND, DL, XLenVT, Splat,
+                          DAG.getConstant(1, DL, XLenVT));
+      Splat = DAG.getSplatBuildVector(InterVT, DL, Splat);
+      SDValue Zero = DAG.getConstant(0, DL, InterVT);
+      return DAG.getSetCC(DL, VT, Splat, Zero, ISD::SETNE);
+    }
+
     return SDValue();
   }
 
@@ -2244,6 +2257,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::BUILD_VECTOR:
     return lowerBUILD_VECTOR(Op, DAG, Subtarget);
   case ISD::SPLAT_VECTOR:
+    if (Op.getValueType().getVectorElementType() == MVT::i1)
+      return lowerVectorMaskSplat(Op, DAG);
     return lowerSPLAT_VECTOR(Op, DAG, Subtarget);
   case ISD::VECTOR_SHUFFLE:
     return lowerVECTOR_SHUFFLE(Op, DAG, Subtarget);
@@ -2800,6 +2815,27 @@ SDValue RISCVTargetLowering::lowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
 
   SDValue Parts[2] = {Lo, Hi};
   return DAG.getMergeValues(Parts, DL);
+}
+
+// Lower splats of i1 types to SETCC. For each mask vector type, we have a
+// legal equivalently-sized i8 type, so we can use that as a go-between.
+SDValue RISCVTargetLowering::lowerVectorMaskSplat(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  SDValue SplatVal = Op.getOperand(0);
+  // All-zeros or all-ones splats are handled specially.
+  if (isa<ConstantSDNode>(SplatVal))
+    return Op;
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  MVT XLenVT = Subtarget.getXLenVT();
+  assert(SplatVal.getValueType() == XLenVT &&
+         "Unexpected type for i1 splat value");
+  MVT InterVT = VT.changeVectorElementType(MVT::i8);
+  SplatVal = DAG.getNode(ISD::AND, DL, XLenVT, SplatVal,
+                         DAG.getConstant(1, DL, XLenVT));
+  SDValue LHS = DAG.getSplatVector(InterVT, DL, SplatVal);
+  SDValue Zero = DAG.getConstant(0, DL, InterVT);
+  return DAG.getSetCC(DL, VT, LHS, Zero, ISD::SETNE);
 }
 
 // Custom-lower a SPLAT_VECTOR_PARTS where XLEN<SEW, as the SEW element type is

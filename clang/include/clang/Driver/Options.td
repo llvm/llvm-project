@@ -394,6 +394,8 @@ class MarshalledFlagRec<FlagDefExpanded flag, FlagDefExpanded other,
 // key path via the marshalling infrastructure.
 // Names of the records consist of the specified prefix, "no_" for the negative
 // flag, and NAME.
+// Used for -cc1 frontend options. Driver-only options do not map to
+// CompilerInvocation.
 multiclass BoolOption<string prefix = "", string spelling_base,
                       KeyPathAndMacro kpm, Default default,
                       FlagDef flag1_base, FlagDef flag2_base,
@@ -416,6 +418,8 @@ multiclass BoolOption<string prefix = "", string spelling_base,
 
 /// Creates a BoolOption where both of the flags are prefixed with "f", are in
 /// the Group<f_Group>.
+/// Used for -cc1 frontend options. Driver-only options do not map to
+/// CompilerInvocation.
 multiclass BoolFOption<string flag_base, KeyPathAndMacro kpm,
                        Default default, FlagDef flag1, FlagDef flag2,
                        BothFlags both = BothFlags<[], "">> {
@@ -425,6 +429,8 @@ multiclass BoolFOption<string flag_base, KeyPathAndMacro kpm,
 
 // Creates a BoolOption where both of the flags are prefixed with "g" and have
 // the Group<g_Group>.
+// Used for -cc1 frontend options. Driver-only options do not map to
+// CompilerInvocation.
 multiclass BoolGOption<string flag_base, KeyPathAndMacro kpm,
                        Default default, FlagDef flag1, FlagDef flag2,
                        BothFlags both = BothFlags<[], "">> {
@@ -971,9 +977,9 @@ def fgpu_inline_threshold_EQ : Joined<["-"], "fgpu-inline-threshold=">,
 def gpu_instrument_lib_EQ : Joined<["--"], "gpu-instrument-lib=">,
   HelpText<"Instrument device library for HIP, which is a LLVM bitcode containing "
   "__cyg_profile_func_enter and __cyg_profile_func_exit">;
-defm gpu_sanitize : BoolFOption<"gpu-sanitize", EmptyKPM, DefaultFalse,
-  PosFlag<SetTrue, [], "Enable sanitizer for AMDGPU target">,
-  NegFlag<SetFalse>>;
+def fgpu_sanitize : Flag<["-"], "fgpu-sanitize">, Group<f_Group>,
+  HelpText<"Enable sanitizer for AMDGPU target">;
+def fno_gpu_sanitize : Flag<["-"], "fno-gpu-sanitize">, Group<f_Group>;
 def cuid_EQ : Joined<["-"], "cuid=">, Flags<[CC1Option]>,
   HelpText<"An ID for compilation unit, which should be the same for the same "
            "compilation unit but different for different compilation units. "

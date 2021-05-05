@@ -3930,6 +3930,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         // OpenCL 2.0 and later define this keyword. OpenCL 1.2 and earlier
         // should support the "pipe" word as identifier.
         Tok.getIdentifierInfo()->revertTokenIDToIdentifier();
+        Tok.setKind(tok::identifier);
         goto DoneWithDeclSpec;
       }
       isInvalid = DS.SetTypePipe(true, Loc, PrevSpec, DiagID, Policy);

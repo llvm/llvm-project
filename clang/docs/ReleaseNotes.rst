@@ -67,7 +67,8 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
-- ...
+- ``-Wreserved-identifier`` emits warning when user code uses reserved
+  identifiers.
 
 Deprecated Compiler Flags
 -------------------------

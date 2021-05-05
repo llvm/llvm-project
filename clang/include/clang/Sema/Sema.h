@@ -2590,6 +2590,8 @@ public:
                                           SourceLocation Less,
                                           SourceLocation Greater);
 
+  void warnOnReservedIdentifier(const NamedDecl *D);
+
   Decl *ActOnDeclarator(Scope *S, Declarator &D);
 
   NamedDecl *HandleDeclarator(Scope *S, Declarator &D,

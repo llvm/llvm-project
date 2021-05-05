@@ -1,4 +1,5 @@
 ; RUN: opt -passes=openmp-opt-cgscc -debug-only=openmp-opt -disable-output < %s 2>&1 | FileCheck %s
+; REQUIRES: asserts
 ; ModuleID = 'single_threaded_exeuction.c'
 
 %struct.ident_t = type { i32, i32, i32, i32, i8* }
