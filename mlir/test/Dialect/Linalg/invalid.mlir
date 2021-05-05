@@ -348,29 +348,21 @@ func @generic(%arg0: memref<?x?xi4>) {
 
 func @reshape(%arg0: memref<f32>) {
   // expected-error @+1 {{expected non-zero memref ranks}}
-  %0 = linalg.reshape %arg0 [affine_map<()->(0)>] : memref<f32> into memref<f32>
+  %0 = linalg.reshape %arg0 [[0]] : memref<f32> into memref<f32>
 }
 
 // -----
 
 func @reshape(%arg0: memref<?xf32>) {
   // expected-error @+1 {{expected to collapse or expand dims}}
-  %0 = linalg.reshape %arg0 [affine_map<(i)->(i)>] : memref<?xf32> into memref<?xf32>
+  %0 = linalg.reshape %arg0 [[0]] : memref<?xf32> into memref<?xf32>
 }
 
 // -----
 
 func @reshape(%arg0: memref<?x?x?xf32>) {
   // expected-error @+1 {{expected rank of the collapsed type(2) to be the number of reassociation maps(1)}}
-  %0 = linalg.reshape %arg0 [affine_map<(i, j, k) -> (i, j)>] :
-    memref<?x?x?xf32> into memref<?x?xf32, offset: 0, strides: [?, 1]>
-}
-
-// -----
-
-func @reshape(%arg0: memref<?x?x?xf32>) {
-  // expected-error @+1 {{expected reassociation map #0 of same rank as expanded memref(3), but got 1}}
-  %0 = linalg.reshape %arg0 [affine_map<(i) -> (i)>, affine_map<(i, j, k) -> (k)>] :
+  %0 = linalg.reshape %arg0 [[0, 1]] :
     memref<?x?x?xf32> into memref<?x?xf32, offset: 0, strides: [?, 1]>
 }
 
@@ -378,7 +370,7 @@ func @reshape(%arg0: memref<?x?x?xf32>) {
 
 func @reshape(%arg0: memref<?x?x?xf32>) {
   // expected-error @+1 {{expected reassociation map #1 to be valid and contiguous}}
-  %0 = linalg.reshape %arg0 [affine_map<(i, j, k) -> (i, j)>, affine_map<(i, j, k) -> (k, j)>] :
+  %0 = linalg.reshape %arg0 [[0, 1], [1, 2]] :
     memref<?x?x?xf32> into memref<?x?xf32, offset: 0, strides: [?, 1]>
 }
 
@@ -386,7 +378,7 @@ func @reshape(%arg0: memref<?x?x?xf32>) {
 
 func @reshape(%arg0: memref<?x?x?xf32>) {
   // expected-error @+1 {{expected collapsed type to be 'memref<?x?xf32>', but got 'memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * s0 + d1)>>'}}
-  %0 = linalg.reshape %arg0 [affine_map<(i, j, k) -> (i, j)>, affine_map<(i, j, k) -> (k)>] :
+  %0 = linalg.reshape %arg0 [[0, 1], [2]] :
     memref<?x?x?xf32> into memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * s0 + d1)>>
 }
 
@@ -463,11 +455,8 @@ func @illegal_expanding_reshape_dynamic_tensor
   (%arg0: tensor<?x?x?xf32>) -> tensor<?x?x?x4x?xf32>
 {
   // expected-error @+1 {{invalid to have a single dimension (2) expanded into multiple dynamic dims (2,4)}}
-  %0 = linalg.tensor_reshape %arg0
-    [affine_map<(d0, d1, d2, d3, d4) -> (d0)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d1)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d4)>] :
-    tensor<?x?x?xf32> into tensor<?x?x?x4x?xf32>
+  %0 = linalg.tensor_reshape %arg0 [[0], [1], [2, 3, 4]]
+      : tensor<?x?x?xf32> into tensor<?x?x?x4x?xf32>
   return %0 : tensor<?x?x?x4x?xf32>
 }
 
@@ -477,11 +466,8 @@ func @illegal_expanding_reshape_dynamic_memref
   (%arg0: memref<?x?x?xf32>) -> memref<?x?x?x4x?xf32>
 {
   // expected-error @+1 {{invalid to have a single dimension (2) expanded into multiple dynamic dims (2,4)}}
-  %0 = linalg.reshape %arg0
-    [affine_map<(d0, d1, d2, d3, d4) -> (d0)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d1)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d4)>] :
-    memref<?x?x?xf32> into memref<?x?x?x4x?xf32>
+  %0 = linalg.reshape %arg0 [[0], [1], [2, 3, 4]]
+      : memref<?x?x?xf32> into memref<?x?x?x4x?xf32>
   return %0 : memref<?x?x?x4x?xf32>
 }
 
@@ -491,11 +477,8 @@ func @illegal_expanding_reshape_static_tensor
   (%arg0: tensor<2x3x20xf32>) -> tensor<2x3x2x4x5xf32>
 {
   // expected-error @+1 {{expected dimension 2 of collapsed type to be static value of 40}}
-  %0 = linalg.tensor_reshape %arg0
-    [affine_map<(d0, d1, d2, d3, d4) -> (d0)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d1)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d4)>] :
-    tensor<2x3x20xf32> into tensor<2x3x2x4x5xf32>
+  %0 = linalg.tensor_reshape %arg0 [[0], [1], [2, 3, 4]]
+      : tensor<2x3x20xf32> into tensor<2x3x2x4x5xf32>
   return %0 : tensor<2x3x2x4x5xf32>
 }
 
@@ -505,11 +488,8 @@ func @illegal_collapsing_reshape_static_tensor
   (%arg0: tensor<2x3x2x4x5xf32>) -> tensor<2x3x20xf32>
 {
   // expected-error @+1 {{expected dimension 2 of collapsed type to be static value of 40}}
-  %0 = linalg.tensor_reshape %arg0
-    [affine_map<(d0, d1, d2, d3, d4) -> (d0)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d1)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d4)>] :
-    tensor<2x3x2x4x5xf32> into tensor<2x3x20xf32>
+  %0 = linalg.tensor_reshape %arg0 [[0], [1], [2, 3, 4]]
+      : tensor<2x3x2x4x5xf32> into tensor<2x3x20xf32>
   return %0 : tensor<2x3x20xf32>
 }
 
@@ -519,11 +499,8 @@ func @illegal_expanding_reshape_static_memref
   (%arg0: memref<2x3x20xf32>) -> memref<2x3x2x4x5xf32>
 {
   // expected-error @+1 {{expected dimension 2 of collapsed type to be static value of 40}}
-  %0 = linalg.reshape %arg0
-    [affine_map<(d0, d1, d2, d3, d4) -> (d0)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d1)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d4)>] :
-    memref<2x3x20xf32> into memref<2x3x2x4x5xf32>
+  %0 = linalg.reshape %arg0 [[0], [1], [2, 3, 4]]
+      : memref<2x3x20xf32> into memref<2x3x2x4x5xf32>
   return %0 : memref<2x3x2x4x5xf32>
 }
 
@@ -533,11 +510,8 @@ func @illegal_collapsing_reshape_static_memref
   (%arg0: memref<2x3x2x4x5xf32>) -> memref<2x3x20xf32>
 {
   // expected-error @+1 {{expected dimension 2 of collapsed type to be static value of 40}}
-  %0 = linalg.reshape %arg0
-    [affine_map<(d0, d1, d2, d3, d4) -> (d0)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d1)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d4)>] :
-    memref<2x3x2x4x5xf32> into memref<2x3x20xf32>
+  %0 = linalg.reshape %arg0 [[0], [1], [2, 3, 4]]
+      : memref<2x3x2x4x5xf32> into memref<2x3x20xf32>
   return %0 : memref<2x3x20xf32>
 }
 
@@ -546,10 +520,8 @@ func @illegal_collapsing_reshape_static_memref
 func @illegal_collapsing_reshape_mixed_tensor(%arg0 : tensor<?x?xf32>) -> tensor<?x4x5xf32>
 {
   // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 5}}
-  %0 = linalg.tensor_reshape %arg0
-         [affine_map<(d0, d1, d2) -> (d0, d1)>,
-          affine_map<(d0, d1, d2) -> (d2)>] :
-       tensor<?x?xf32> into tensor<?x4x5xf32>
+  %0 = linalg.tensor_reshape %arg0 [[0, 1], [2]]
+      : tensor<?x?xf32> into tensor<?x4x5xf32>
   return %0 : tensor<?x4x5xf32>
 }
 
@@ -558,10 +530,8 @@ func @illegal_collapsing_reshape_mixed_tensor(%arg0 : tensor<?x?xf32>) -> tensor
 func @illegal_collapsing_reshape_mixed_tensor_2(%arg0 : tensor<?x?xf32>) -> tensor<?x4x5xf32>
 {
   // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 20}}
-  %0 = linalg.tensor_reshape %arg0
-         [affine_map<(d0, d1, d2) -> (d0)>,
-          affine_map<(d0, d1, d2) -> (d1, d2)>] :
-       tensor<?x?xf32> into tensor<?x4x5xf32>
+  %0 = linalg.tensor_reshape %arg0 [[0], [1, 2]]
+      : tensor<?x?xf32> into tensor<?x4x5xf32>
   return %0 : tensor<?x4x5xf32>
 }
 
@@ -570,10 +540,8 @@ func @illegal_collapsing_reshape_mixed_tensor_2(%arg0 : tensor<?x?xf32>) -> tens
 func @illegal_expanding_reshape_mixed_tensor(%arg0 : tensor<?x4x5xf32>) -> tensor<?x?xf32>
 {
   // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 5}}
-  %0 = linalg.tensor_reshape %arg0
-         [affine_map<(d0, d1, d2) -> (d0, d1)>,
-          affine_map<(d0, d1, d2) -> (d2)>] :
-       tensor<?x4x5xf32> into tensor<?x?xf32>
+  %0 = linalg.tensor_reshape %arg0 [[0, 1], [2]]
+      : tensor<?x4x5xf32> into tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
 
@@ -582,10 +550,8 @@ func @illegal_expanding_reshape_mixed_tensor(%arg0 : tensor<?x4x5xf32>) -> tenso
 func @illegal_expanding_reshape_mixed_tensor_2(%arg0 : tensor<?x4x5xf32>) -> tensor<?x?xf32>
 {
   // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 20}}
-  %0 = linalg.tensor_reshape %arg0
-         [affine_map<(d0, d1, d2) -> (d0)>,
-          affine_map<(d0, d1, d2) -> (d1, d2)>] :
-       tensor<?x4x5xf32> into tensor<?x?xf32>
+  %0 = linalg.tensor_reshape %arg0 [[0], [1, 2]]
+      : tensor<?x4x5xf32> into tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
 
@@ -594,10 +560,8 @@ func @illegal_expanding_reshape_mixed_tensor_2(%arg0 : tensor<?x4x5xf32>) -> ten
 func @illegal_collapsing_reshape_mixed_memref(%arg0 : memref<?x?xf32>) -> memref<?x4x5xf32>
 {
   // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 5}}
-  %0 = linalg.reshape %arg0
-         [affine_map<(d0, d1, d2) -> (d0, d1)>,
-          affine_map<(d0, d1, d2) -> (d2)>] :
-       memref<?x?xf32> into memref<?x4x5xf32>
+  %0 = linalg.reshape %arg0 [[0, 1], [2]]
+      : memref<?x?xf32> into memref<?x4x5xf32>
   return %0 : memref<?x4x5xf32>
 }
 
@@ -606,10 +570,8 @@ func @illegal_collapsing_reshape_mixed_memref(%arg0 : memref<?x?xf32>) -> memref
 func @illegal_collapsing_reshape_mixed_memref_2(%arg0 : memref<?x?xf32>) -> memref<?x4x5xf32>
 {
   // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 20}}
-  %0 = linalg.reshape %arg0
-         [affine_map<(d0, d1, d2) -> (d0)>,
-          affine_map<(d0, d1, d2) -> (d1, d2)>] :
-       memref<?x?xf32> into memref<?x4x5xf32>
+  %0 = linalg.reshape %arg0 [[0], [1, 2]]
+      : memref<?x?xf32> into memref<?x4x5xf32>
   return %0 : memref<?x4x5xf32>
 }
 
@@ -618,10 +580,8 @@ func @illegal_collapsing_reshape_mixed_memref_2(%arg0 : memref<?x?xf32>) -> memr
 func @illegal_expanding_reshape_mixed_memref(%arg0 : memref<?x4x5xf32>) -> memref<?x?xf32>
 {
   // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 5}}
-  %0 = linalg.reshape %arg0
-         [affine_map<(d0, d1, d2) -> (d0, d1)>,
-          affine_map<(d0, d1, d2) -> (d2)>] :
-       memref<?x4x5xf32> into memref<?x?xf32>
+  %0 = linalg.reshape %arg0 [[0, 1], [2]]
+      : memref<?x4x5xf32> into memref<?x?xf32>
   return %0 : memref<?x?xf32>
 }
 
@@ -630,10 +590,8 @@ func @illegal_expanding_reshape_mixed_memref(%arg0 : memref<?x4x5xf32>) -> memre
 func @illegal_expanding_reshape_mixed_memref_2(%arg0 : memref<?x4x5xf32>) -> memref<?x?xf32>
 {
   // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 20}}
-  %0 = linalg.reshape %arg0
-         [affine_map<(d0, d1, d2) -> (d0)>,
-          affine_map<(d0, d1, d2) -> (d1, d2)>] :
-       memref<?x4x5xf32> into memref<?x?xf32>
+  %0 = linalg.reshape %arg0 [[0], [1, 2]]
+      : memref<?x4x5xf32> into memref<?x?xf32>
   return %0 : memref<?x?xf32>
 }
 
