@@ -57,6 +57,12 @@ using FuncTypeBuilderFunc = mlir::FunctionType (*)(mlir::MLIRContext *);
 template <typename T>
 static constexpr TypeBuilderFunc getModel();
 template <>
+constexpr TypeBuilderFunc getModel<short int>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(context, 8 * sizeof(short int));
+  };
+}
+template <>
 constexpr TypeBuilderFunc getModel<int>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(context, 8 * sizeof(int));
@@ -96,6 +102,12 @@ template <>
 constexpr TypeBuilderFunc getModel<const char32_t *>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return fir::ReferenceType::get(mlir::IntegerType::get(context, 32));
+  };
+}
+template <>
+constexpr TypeBuilderFunc getModel<signed char>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(context, 8 * sizeof(signed char));
   };
 }
 template <>
