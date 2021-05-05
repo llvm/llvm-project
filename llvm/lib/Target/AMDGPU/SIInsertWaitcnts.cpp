@@ -1192,6 +1192,19 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     ScoreBrackets.applyWaitcnt(Wait);
   }
 
+  // ExpCnt can be merged into VINTERP.
+  if (Wait.ExpCnt != ~0u && SIInstrInfo::isVINTERP(MI)) {
+    MachineOperand *WaitExp = TII->getNamedOperand(MI, AMDGPU::OpName::waitexp);
+    if (Wait.ExpCnt < WaitExp->getImm()) {
+      WaitExp->setImm(Wait.ExpCnt);
+      Modified = true;
+    }
+    Wait.ExpCnt = ~0u;
+
+    LLVM_DEBUG(dbgs() << "generateWaitcntInstBefore\n"
+                      << "Update Instr: " << MI);
+  }
+
   // Build new waitcnt instructions unless no wait is needed or the old waitcnt
   // instruction was modified to handle the required wait.
   if (Wait.hasWaitExceptVsCnt()) {
@@ -1357,6 +1370,9 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     }
   } else if (SIInstrInfo::isLDSDIR(Inst)) {
     ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_LDS_ACCESS, Inst);
+  } else if (TII->isVINTERP(Inst)) {
+    int64_t Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::waitexp)->getImm();
+    ScoreBrackets->applyWaitcnt(EXP_CNT, Imm);
   } else if (SIInstrInfo::isEXP(Inst)) {
     unsigned Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
     if (Imm >= AMDGPU::Exp::ET_PARAM0 && Imm <= AMDGPU::Exp::ET_PARAM31)

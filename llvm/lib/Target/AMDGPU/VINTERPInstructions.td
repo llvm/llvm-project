@@ -120,7 +120,7 @@ class VInterpF32Pat <SDPatternOperator op, Instruction inst> : GCNPat <
           $src1_modifiers, $src1,
           $src2_modifiers, $src2,
           0, /* clamp */
-          0) /* wait_exp */
+          7) /* wait_exp */
 >;
 
 def VINTERP_OPSEL {
@@ -141,7 +141,7 @@ class VInterpF16Pat <SDPatternOperator op, Instruction inst,
           $src2_modifiers, $src2,
           0, /* clamp */
           /* op_sel = 0 */
-          0) /* wait_exp */
+          7) /* wait_exp */
 >;
 
 multiclass VInterpF16Pat <SDPatternOperator op, Instruction inst,
