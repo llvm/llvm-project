@@ -69,6 +69,12 @@ public:
   /// Get the mlir instance of a symbol.
   virtual mlir::Value getSymbolAddress(SymbolRef sym) = 0;
 
+  /// Get the binding of an implied do variable by name.
+  virtual mlir::Value impliedDoBinding(llvm::StringRef name) = 0;
+
+  /// Copy the binding of src to target symbol.
+  virtual void copySymbolBinding(SymbolRef src, SymbolRef target) = 0;
+
   /// Binds the symbol to an mlir value and returns true if the symbol has no
   /// existing binding. If there is an existing binding this function does
   /// nothing and returns false.

@@ -207,6 +207,14 @@ Fortran::lower::SymMap::lookupSymbol(Fortran::semantics::SymbolRef sym) {
   return SymbolBox::None{};
 }
 
+mlir::Value
+Fortran::lower::SymMap::lookupImpliedDo(Fortran::lower::SymMap::AcDoVar var) {
+  for (auto [marker, binding] : llvm::reverse(impliedDoStack))
+    if (var == marker)
+      return binding;
+  return {};
+}
+
 llvm::raw_ostream &
 Fortran::lower::operator<<(llvm::raw_ostream &os,
                            const Fortran::lower::SymbolBox &symBox) {

@@ -12,6 +12,7 @@
 
 #include "flang/Lower/ConvertExpr.h"
 #include "MaskExpr.h"
+#include "RTBuilder.h"
 #include "StatementContext.h"
 #include "flang/Common/default-kinds.h"
 #include "flang/Common/unwrap.h"
@@ -62,6 +63,16 @@ static llvm::cl::opt<bool> generateArrayCoordinate(
     "gen-array-coor",
     llvm::cl::desc("in lowering create ArrayCoorOp instead of CoordinateOp"),
     llvm::cl::init(false));
+
+// The default attempts to balance a modest allocation size with expected user
+// input to minimize bounds checks and reallocations during dynamic array
+// construction. Some user codes may have very large array constructors for
+// which the default can be increased.
+static llvm::cl::opt<unsigned> clInitialBufferSize(
+    "array-constructor-initial-buffer-size",
+    llvm::cl::desc(
+        "set the incremental array construction buffer size (default=32)"),
+    llvm::cl::init(32u));
 
 /// The various semantics of a program constituent (or a part thereof) as it may
 /// appear in an expression.
@@ -530,8 +541,9 @@ public:
     return inInitializer ? res : builder.create<fir::LoadOp>(loc, res);
   }
 
-  fir::ExtendedValue genval(const Fortran::evaluate::ImpliedDoIndex &) {
-    TODO(getLoc(), "implied do index");
+  /// Lowering of an <i>ac-do-variable</i>, which is not a Symbol.
+  fir::ExtendedValue genval(const Fortran::evaluate::ImpliedDoIndex &var) {
+    return converter.impliedDoBinding(toStringRef(var.name));
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::DescriptorInquiry &desc) {
@@ -3384,13 +3396,16 @@ public:
     return genProcRef(x, {converter.genType(TC, KIND)});
   }
 
-  template <typename A>
-  ExtValue genArrayCtorInitializer(const Fortran::evaluate::ImpliedDo<A> &x) {
-    TODO(getLoc(), "impled do");
-  }
+  //===--------------------------------------------------------------------===//
+  // Array construction
+  //===--------------------------------------------------------------------===//
 
+  // Lower the expr cases in an ac-value-list.
   template <typename A>
-  ExtValue genArrayCtorInitializer(const Fortran::evaluate::Expr<A> &x) {
+  ExtValue genArrayCtorInitializer(const Fortran::evaluate::Expr<A> &x,
+                                   mlir::Type, mlir::Value, mlir::Value,
+                                   mlir::Value,
+                                   Fortran::lower::StatementContext &stmtCtx) {
     if (isArray(x)) {
       auto e = toEvExpr(x);
       auto sh = Fortran::evaluate::GetShape(converter.getFoldingContext(), e);
@@ -3399,71 +3414,274 @@ public:
     return asScalar(x);
   }
 
-  /// An array constructor with a extent (size) that is computed at runtime.
-  template <typename A>
-  CC genDynamicExtentArrayCtor(const Fortran::evaluate::ArrayConstructor<A> &x,
-                               mlir::Type resTy) {
-    const int initialBufferSize = 32; // FIXME: command line option?
+  // Target agnostic computation of the size of an element in the array.
+  mlir::Value computeElementSize(mlir::Type eleTy, mlir::Type eleRefTy,
+                                 mlir::Type resRefTy, mlir::Value mem) {
     auto loc = getLoc();
-    auto eleTy = fir::unwrapSequenceType(resTy);
-    auto idxTy = builder.getIndexType();
-
-    // Allocate the initial buffer and variables to track the current size and
-    // index into the vector.
-    auto initBuffSz =
-        builder.createIntegerConstant(loc, idxTy, initialBufferSize);
-    [[maybe_unused]] mlir::Value mem =
-        builder.create<fir::AllocMemOp>(loc, eleTy, initBuffSz);
-    auto buffSize = builder.createTemporary(loc, idxTy, ".buff.size");
-    builder.create<fir::StoreOp>(loc, initBuffSz, buffSize);
-    auto zero = builder.createIntegerConstant(loc, idxTy, 0);
-    auto buffPos = builder.createTemporary(loc, idxTy, ".buff.pos");
-    builder.create<fir::StoreOp>(loc, zero, buffPos);
-    TODO(loc, "array constructor has dynamic extent");
+    auto intptrTy = builder.getIntPtrType();
+    auto castMem = builder.createConvert(loc, resRefTy, mem);
+    auto zero = builder.createIntegerConstant(loc, intptrTy, 0);
+    auto one = builder.createIntegerConstant(loc, intptrTy, 1);
+    auto b0 = builder.create<fir::CoordinateOp>(loc, eleRefTy, castMem,
+                                                mlir::ValueRange{zero});
+    auto buff0 = builder.createConvert(loc, intptrTy, b0);
+    auto b1 = builder.create<fir::CoordinateOp>(loc, eleRefTy, castMem,
+                                                mlir::ValueRange{one});
+    auto buff1 = builder.createConvert(loc, intptrTy, b1);
+    auto diff = builder.create<mlir::SubIOp>(loc, buff1, buff0);
+    return builder.createConvert(loc, builder.getIndexType(), diff);
   }
 
+  /// Get the function signature of the LLVM memcpy intrinsic.
+  mlir::FunctionType memcpyType() {
+    return Fortran::lower::getLlvmMemcpy(builder).getType();
+  }
+
+  /// Create a call to the LLVM memcpy intrinsic.
+  void createCallMemcpy(llvm::ArrayRef<mlir::Value> args) {
+    auto loc = getLoc();
+    auto memcpyFunc = Fortran::lower::getLlvmMemcpy(builder);
+    auto funcSymAttr = builder.getSymbolRefAttr(memcpyFunc.getName());
+    auto funcTy = memcpyFunc.getType();
+    builder.create<fir::CallOp>(loc, funcTy.getResults(), funcSymAttr, args);
+  }
+
+  // Construct code to check for a buffer overrun and realloc the buffer when
+  // space is depleted. This is done between each item in the ac-value-list.
+  mlir::Value growBuffer(mlir::Value mem, mlir::Value needed,
+                         mlir::Value bufferSize, mlir::Value buffSize,
+                         mlir::Value eleSz) {
+    auto loc = getLoc();
+    auto reallocFunc = Fortran::lower::getRealloc(builder);
+    auto cond = builder.create<mlir::CmpIOp>(loc, mlir::CmpIPredicate::sge,
+                                             needed, bufferSize);
+    auto ifOp = builder.create<fir::IfOp>(loc, mem.getType(), cond,
+                                          /*withElseRegion=*/true);
+    auto insPt = builder.saveInsertionPoint();
+    builder.setInsertionPointToStart(&ifOp.thenRegion().front());
+    // Not enough space, resize the buffer.
+    auto idxTy = builder.getIndexType();
+    auto two = builder.createIntegerConstant(loc, idxTy, 2);
+    auto newSz = builder.create<mlir::MulIOp>(loc, needed, two);
+    builder.create<fir::StoreOp>(loc, newSz, buffSize);
+    mlir::Value byteSz = builder.create<mlir::MulIOp>(loc, newSz, eleSz);
+    auto funcSymAttr = builder.getSymbolRefAttr(reallocFunc.getName());
+    auto funcTy = reallocFunc.getType();
+    auto newMem = builder.create<fir::CallOp>(
+        loc, funcTy.getResults(), funcSymAttr,
+        llvm::ArrayRef<mlir::Value>{
+            builder.createConvert(loc, funcTy.getInputs()[0], mem),
+            builder.createConvert(loc, funcTy.getInputs()[1], byteSz)});
+    auto castNewMem =
+        builder.createConvert(loc, mem.getType(), newMem.getResult(0));
+    builder.create<fir::ResultOp>(loc, castNewMem);
+    builder.setInsertionPointToStart(&ifOp.elseRegion().front());
+    // Otherwise, just forward the buffer.
+    builder.create<fir::ResultOp>(loc, mem);
+    builder.restoreInsertionPoint(insPt);
+    return ifOp.getResult(0);
+  }
+
+  // Copy the next value (or vector of values) into the array being constructed.
+  mlir::Value copyNextArrayCtorSection(const ExtValue &exv, mlir::Value buffPos,
+                                       mlir::Value buffSize, mlir::Value mem,
+                                       mlir::Value eleSz, mlir::Type eleTy,
+                                       mlir::Type eleRefTy, mlir::Type resTy) {
+    auto loc = getLoc();
+    auto off = builder.create<fir::LoadOp>(loc, buffPos);
+    auto limit = builder.create<fir::LoadOp>(loc, buffSize);
+    auto idxTy = builder.getIndexType();
+    auto one = builder.createIntegerConstant(loc, idxTy, 1);
+
+    // Lambda to lower a constant abstract array box value.
+    auto doAbstractArray = [&](const auto &v) {
+      // Compute the array size.
+      auto arrSz = one;
+      for (auto ext : v.getExtents())
+        arrSz = builder.create<mlir::MulIOp>(loc, arrSz, ext);
+
+      // Grow the buffer as needed.
+      auto endOff = builder.create<mlir::AddIOp>(loc, off, arrSz);
+      mem = growBuffer(mem, endOff, limit, buffSize, eleSz);
+
+      // Copy the elements to the buffer.
+      mlir::Value byteSz = builder.create<mlir::MulIOp>(loc, arrSz, eleSz);
+      auto buff = builder.createConvert(loc, fir::HeapType::get(resTy), mem);
+      auto buffi = builder.create<fir::CoordinateOp>(loc, eleRefTy, buff,
+                                                     mlir::ValueRange{off});
+      auto args = Fortran::lower::createArguments(
+          builder, loc, memcpyType(), buffi, v.getAddr(), byteSz,
+          /*volatile=*/builder.createBool(loc, false));
+      createCallMemcpy(args);
+
+      // Save the incremented buffer position.
+      builder.create<fir::StoreOp>(loc, endOff, buffPos);
+    };
+
+    // Copy the value.
+    exv.match(
+        [&](const mlir::Value &v) {
+          // Grow the buffer as needed.
+          mem = growBuffer(mem, off, limit, buffSize, eleSz);
+
+          // Store the element in the buffer.
+          auto buff =
+              builder.createConvert(loc, fir::HeapType::get(resTy), mem);
+          auto buffi = builder.create<fir::CoordinateOp>(loc, eleRefTy, buff,
+                                                         mlir::ValueRange{off});
+          auto val = builder.createConvert(loc, eleTy, v);
+          builder.create<fir::StoreOp>(loc, val, buffi);
+
+          // Increment the buffer position.
+          auto plusOne = builder.create<mlir::AddIOp>(loc, off, one);
+          builder.create<fir::StoreOp>(loc, plusOne, buffPos);
+        },
+        [&](const fir::CharBoxValue &v) {
+          // Grow the buffer as needed.
+          mem = growBuffer(mem, off, limit, buffSize, eleSz);
+
+          // Store the element in the buffer.
+          auto buff =
+              builder.createConvert(loc, fir::HeapType::get(resTy), mem);
+          auto buffi = builder.create<fir::CoordinateOp>(loc, eleRefTy, buff,
+                                                         mlir::ValueRange{off});
+          auto castedStr = builder.createConvert(loc, eleRefTy, v.getAddr());
+          auto load = builder.create<fir::LoadOp>(loc, castedStr);
+          builder.create<fir::StoreOp>(loc, load, buffi);
+
+          // Increment the buffer position.
+          auto plusOne = builder.create<mlir::AddIOp>(loc, off, one);
+          builder.create<fir::StoreOp>(loc, plusOne, buffPos);
+        },
+        [&](const fir::ArrayBoxValue &v) { doAbstractArray(v); },
+        [&](const fir::CharArrayBoxValue &v) { doAbstractArray(v); },
+        [&](const auto &) {
+          TODO(loc, "unhandled array constructor expression");
+        });
+    return mem;
+  }
+
+  // Lower an ac-implied-do in an ac-value-list.
+  template <typename A>
+  ExtValue genArrayCtorInitializer(const Fortran::evaluate::ImpliedDo<A> &x,
+                                   mlir::Type resTy, mlir::Value mem,
+                                   mlir::Value buffPos, mlir::Value buffSize,
+                                   Fortran::lower::StatementContext &) {
+    auto loc = getLoc();
+    auto idxTy = builder.getIndexType();
+    auto lo =
+        builder.createConvert(loc, idxTy, fir::getBase(asScalar(x.lower())));
+    auto up =
+        builder.createConvert(loc, idxTy, fir::getBase(asScalar(x.upper())));
+    auto step =
+        builder.createConvert(loc, idxTy, fir::getBase(asScalar(x.stride())));
+    auto seqTy = resTy.template cast<fir::SequenceType>();
+    auto eleTy = fir::unwrapSequenceType(seqTy);
+    auto loop =
+        builder.create<fir::DoLoopOp>(loc, lo, up, step, /*unordered=*/false,
+                                      /*finalCount=*/false, mem);
+    // create a new binding for x.name(), to ac-do-variable, to the iteration
+    // value.
+    symMap.pushImpliedDoBinding(toStringRef(x.name()), loop.getInductionVar());
+    auto insPt = builder.saveInsertionPoint();
+    builder.setInsertionPointToStart(loop.getBody());
+
+    auto eleRefTy = builder.getRefType(eleTy);
+    auto eleSz =
+        computeElementSize(eleTy, eleRefTy, builder.getRefType(resTy), mem);
+
+    // Cleanups for temps in loop body. Any temps created in the loop body need
+    // to be freed before the end of the loop.
+    Fortran::lower::StatementContext loopCtx;
+    for (const Fortran::evaluate::ArrayConstructorValue<A> &acv : x.values()) {
+      auto exv = std::visit(
+          [&](const auto &v) {
+            return genArrayCtorInitializer(v, resTy, mem, buffPos, buffSize,
+                                           loopCtx);
+          },
+          acv.u);
+      mem = copyNextArrayCtorSection(exv, buffPos, buffSize, mem, eleSz, eleTy,
+                                     eleRefTy, resTy);
+    }
+    loopCtx.finalize();
+
+    builder.create<fir::ResultOp>(loc, mem);
+    builder.restoreInsertionPoint(insPt);
+    mem = loop.getResult(0);
+    symMap.popImpliedDoBinding();
+    llvm::SmallVector<mlir::Value> extents = {
+        builder.create<fir::LoadOp>(loc, buffPos).getResult()};
+
+    // Convert to extended value.
+    if (auto charTy =
+            seqTy.getEleTy().template dyn_cast<fir::CharacterType>()) {
+      auto len = builder.createIntegerConstant(loc, builder.getI64Type(),
+                                               charTy.getLen());
+      return fir::CharArrayBoxValue{mem, len, extents};
+    }
+    return fir::ArrayBoxValue{mem, extents};
+  }
+
+  // To simplify the handling and interaction between the various cases, array
+  // constructors are always lowered to the incremental construction code
+  // pattern, even if the extent of the array value is constant. After the
+  // MemToReg pass and constant folding, the optimizer should be able to
+  // determine that all the buffer overrun tests are false when the incremental
+  // construction wasn't actually required.
   template <typename A>
   CC genarr(const Fortran::evaluate::ArrayConstructor<A> &x) {
     auto loc = getLoc();
     auto evExpr = toEvExpr(x);
     auto resTy = translateSomeExprToFIRType(converter, evExpr);
-    auto *bldr = &converter.getFirOpBuilder();
-
-    if (fir::hasDynamicSize(resTy))
-      return genDynamicExtentArrayCtor(x, resTy);
-
-    // Allocate space for the array to be constructed.
-    mlir::Value mem = builder.create<fir::AllocMemOp>(loc, resTy);
-
-    // Populate the allocated buffer with the values.
-    int offset = 0;
+    auto idxTy = builder.getIndexType();
+    auto seqTy = resTy.template cast<fir::SequenceType>();
     auto eleTy = fir::unwrapSequenceType(resTy);
+    auto buffSize = builder.createTemporary(loc, idxTy, ".buff.size");
+    auto zero = builder.createIntegerConstant(loc, idxTy, 0);
+    auto buffPos = builder.createTemporary(loc, idxTy, ".buff.pos");
+    builder.create<fir::StoreOp>(loc, zero, buffPos);
+    // Allocate space for the array to be constructed.
+    mlir::Value mem;
+    if (fir::hasDynamicSize(resTy)) {
+      auto initBuffSz =
+          builder.createIntegerConstant(loc, idxTy, clInitialBufferSize);
+      mem = builder.create<fir::AllocMemOp>(
+          loc, eleTy, /*typeparams=*/llvm::None, initBuffSz);
+      builder.create<fir::StoreOp>(loc, initBuffSz, buffSize);
+    } else {
+      mem = builder.create<fir::AllocMemOp>(loc, resTy);
+      int64_t buffSz = 1;
+      for (auto extent : seqTy.getShape())
+        buffSz *= extent;
+      auto initBuffSz = builder.createIntegerConstant(loc, idxTy, buffSz);
+      builder.create<fir::StoreOp>(loc, initBuffSz, buffSize);
+    }
+    // Compute size of element
+    auto eleRefTy = builder.getRefType(eleTy);
+    auto eleSz =
+        computeElementSize(eleTy, eleRefTy, builder.getRefType(resTy), mem);
+
+    // Populate the buffer with the elements, growing as necessary.
     for (const auto &expr : x) {
       auto exv = std::visit(
-          [&](const auto &e) { return genArrayCtorInitializer(e); }, expr.u);
-      auto off = builder.create<mlir::ConstantIndexOp>(loc, offset);
-      auto buffi = builder.create<fir::CoordinateOp>(
-          loc, builder.getRefType(eleTy), mem, mlir::ValueRange{off});
-      exv.match(
-          [&](const mlir::Value &v) {
-            builder.create<fir::StoreOp>(loc, v, buffi);
-            ++offset;
+          [&](const auto &e) {
+            return genArrayCtorInitializer(e, resTy, mem, buffPos, buffSize,
+                                           stmtCtx);
           },
-          [&](const auto &) {
-            TODO(loc, "unhandled array constructor expression");
-          });
+          expr.u);
+      mem = copyNextArrayCtorSection(exv, buffPos, buffSize, mem, eleSz, eleTy,
+                                     eleRefTy, resTy);
     }
+    mem = builder.createConvert(loc, fir::HeapType::get(resTy), mem);
+    llvm::SmallVector<mlir::Value> extents = {
+        builder.create<fir::LoadOp>(loc, buffPos)};
 
     // Cleanup the temporary.
+    auto *bldr = &converter.getFirOpBuilder();
     stmtCtx.attachCleanup(
         [bldr, loc, mem]() { bldr->create<fir::FreeMemOp>(loc, mem); });
 
-    // Convert to extended value.
-    llvm::SmallVector<mlir::Value> extents;
-    auto idxTy = builder.getIndexType();
-    auto seqTy = resTy.template cast<fir::SequenceType>();
-    for (auto extent : seqTy.getShape())
-      extents.push_back(builder.createIntegerConstant(loc, idxTy, extent));
+    // Return the continuation.
     if (auto charTy =
             seqTy.getEleTy().template dyn_cast<fir::CharacterType>()) {
       auto len = builder.createIntegerConstant(loc, builder.getI64Type(),
@@ -3473,9 +3691,8 @@ public:
     return genarr(fir::ArrayBoxValue{mem, extents});
   }
 
-  CC genarr(const Fortran::evaluate::ImpliedDoIndex &x) {
-    TODO(getLoc(), "array expr implied do index");
-    return [](IterSpace iters) -> ExtValue { return mlir::Value{}; };
+  CC genarr(const Fortran::evaluate::ImpliedDoIndex &) {
+    fir::emitFatalError(getLoc(), "implied do index cannot have rank > 0");
   }
   CC genarr(const Fortran::evaluate::TypeParamInquiry &x) {
     TODO(getLoc(), "array expr type parameter inquiry");

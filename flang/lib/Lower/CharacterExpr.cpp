@@ -289,8 +289,21 @@ mlir::Value Fortran::lower::CharacterExprHelper::getCharBoxBuffer(
   return buff;
 }
 
+/// Get the LLVM intrinsic for `memcpy`. Use the 64 bit version.
+mlir::FuncOp
+Fortran::lower::getLlvmMemcpy(Fortran::lower::FirOpBuilder &builder) {
+  auto ptrTy = builder.getRefType(builder.getIntegerType(8));
+  llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type(),
+                                        builder.getI1Type()};
+  auto memcpyTy =
+      mlir::FunctionType::get(builder.getContext(), args, llvm::None);
+  return builder.addNamedFunction(builder.getUnknownLoc(),
+                                  "llvm.memcpy.p0i8.p0i8.i64", memcpyTy);
+}
+
 /// Get the LLVM intrinsic for `memmove`. Use the 64 bit version.
-static mlir::FuncOp getLlvmMemmove(Fortran::lower::FirOpBuilder &builder) {
+mlir::FuncOp
+Fortran::lower::getLlvmMemmove(Fortran::lower::FirOpBuilder &builder) {
   auto ptrTy = builder.getRefType(builder.getIntegerType(8));
   llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type(),
                                         builder.getI1Type()};
@@ -298,6 +311,28 @@ static mlir::FuncOp getLlvmMemmove(Fortran::lower::FirOpBuilder &builder) {
       mlir::FunctionType::get(builder.getContext(), args, llvm::None);
   return builder.addNamedFunction(builder.getUnknownLoc(),
                                   "llvm.memmove.p0i8.p0i8.i64", memmoveTy);
+}
+
+/// Get the LLVM intrinsic for `memset`. Use the 64 bit version.
+mlir::FuncOp
+Fortran::lower::getLlvmMemset(Fortran::lower::FirOpBuilder &builder) {
+  auto ptrTy = builder.getRefType(builder.getIntegerType(8));
+  llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type(),
+                                        builder.getI1Type()};
+  auto memsetTy =
+      mlir::FunctionType::get(builder.getContext(), args, llvm::None);
+  return builder.addNamedFunction(builder.getUnknownLoc(),
+                                  "llvm.memset.p0i8.p0i8.i64", memsetTy);
+}
+
+/// Get the standard `realloc` function.
+mlir::FuncOp
+Fortran::lower::getRealloc(Fortran::lower::FirOpBuilder &builder) {
+  auto ptrTy = builder.getRefType(builder.getIntegerType(8));
+  llvm::SmallVector<mlir::Type> args = {ptrTy, builder.getI64Type()};
+  auto reallocTy = mlir::FunctionType::get(builder.getContext(), args, {ptrTy});
+  return builder.addNamedFunction(builder.getUnknownLoc(), "realloc",
+                                  reallocTy);
 }
 
 /// Create a loop to copy `count` characters from `src` to `dest`. Note that the

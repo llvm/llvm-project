@@ -171,6 +171,12 @@ private:
   mlir::Location loc;
 };
 
+// FIXME: Move these to Optimizer
+mlir::FuncOp getLlvmMemcpy(FirOpBuilder &builder);
+mlir::FuncOp getLlvmMemmove(FirOpBuilder &builder);
+mlir::FuncOp getLlvmMemset(FirOpBuilder &builder);
+mlir::FuncOp getRealloc(FirOpBuilder &builder);
+
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_CHARACTEREXPR_H

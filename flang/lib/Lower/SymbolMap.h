@@ -195,6 +195,8 @@ private:
 /// etc.
 class SymMap {
 public:
+  using AcDoVar = llvm::StringRef;
+
   SymMap() { pushScope(); }
   SymMap(const SymMap &) = delete;
 
@@ -300,11 +302,27 @@ public:
     return lookupSymbol(*sym);
   }
 
+  /// Add a new binding from the ac-do-variable `var` to `value`.
+  void pushImpliedDoBinding(AcDoVar var, mlir::Value value) {
+    impliedDoStack.emplace_back(var, value);
+  }
+
+  /// Pop the most recent implied do binding off the stack.
+  void popImpliedDoBinding() {
+    assert(!impliedDoStack.empty());
+    impliedDoStack.pop_back();
+  }
+
+  /// Lookup the ac-do-variable and return the Value it is bound to.
+  /// If the variable is not found, returns a null Value.
+  mlir::Value lookupImpliedDo(AcDoVar var);
+
   /// Remove all symbols from the map.
   void clear() {
     symbolMapStack.clear();
     symbolMapStack.emplace_back();
     assert(symbolMapStack.size() == 1);
+    impliedDoStack.clear();
   }
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
@@ -325,6 +343,10 @@ private:
 
   llvm::SmallVector<llvm::DenseMap<const semantics::Symbol *, SymbolBox>>
       symbolMapStack;
+
+  // Implied DO induction variables are not represented as Se::Symbol in
+  // Ev::Expr. Keep the variable markers in their own stack.
+  llvm::SmallVector<std::pair<AcDoVar, mlir::Value>> impliedDoStack;
 };
 
 } // namespace Fortran::lower
