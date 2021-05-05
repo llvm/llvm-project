@@ -6824,9 +6824,8 @@ int LoopVectorizationCostModel::computePredInstDiscount(
     // the instruction as if it wasn't if-converted and instead remained in the
     // predicated block. We will scale this cost by block probability after
     // computing the scalarization overhead.
-    assert(!VF.isScalable() && "scalable vectors not yet supported.");
     InstructionCost ScalarCost =
-        VF.getKnownMinValue() *
+        VF.getFixedValue() *
         getInstructionCost(I, ElementCount::getFixed(1)).first;
 
     // Compute the scalarization overhead of needed insertelement instructions
@@ -6834,10 +6833,9 @@ int LoopVectorizationCostModel::computePredInstDiscount(
     if (isScalarWithPredication(I) && !I->getType()->isVoidTy()) {
       ScalarCost += TTI.getScalarizationOverhead(
           cast<VectorType>(ToVectorTy(I->getType(), VF)),
-          APInt::getAllOnesValue(VF.getKnownMinValue()), true, false);
-      assert(!VF.isScalable() && "scalable vectors not yet supported.");
+          APInt::getAllOnesValue(VF.getFixedValue()), true, false);
       ScalarCost +=
-          VF.getKnownMinValue() *
+          VF.getFixedValue() *
           TTI.getCFInstrCost(Instruction::PHI, TTI::TCK_RecipThroughput);
     }
 
@@ -6852,10 +6850,9 @@ int LoopVectorizationCostModel::computePredInstDiscount(
         if (canBeScalarized(J))
           Worklist.push_back(J);
         else if (needsExtract(J, VF)) {
-          assert(!VF.isScalable() && "scalable vectors not yet supported.");
           ScalarCost += TTI.getScalarizationOverhead(
               cast<VectorType>(ToVectorTy(J->getType(), VF)),
-              APInt::getAllOnesValue(VF.getKnownMinValue()), false, true);
+              APInt::getAllOnesValue(VF.getFixedValue()), false, true);
         }
       }
 
@@ -7550,14 +7547,13 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
 
     if (ScalarPredicatedBB) {
       // Return cost for branches around scalarized and predicated blocks.
-      assert(!VF.isScalable() && "scalable vectors not yet supported.");
       auto *Vec_i1Ty =
           VectorType::get(IntegerType::getInt1Ty(RetTy->getContext()), VF);
-      return (TTI.getScalarizationOverhead(
-                  Vec_i1Ty, APInt::getAllOnesValue(VF.getKnownMinValue()),
-                  false, true) +
-              (TTI.getCFInstrCost(Instruction::Br, CostKind) *
-               VF.getKnownMinValue()));
+      return (
+          TTI.getScalarizationOverhead(
+              Vec_i1Ty, APInt::getAllOnesValue(VF.getFixedValue()), false,
+              true) +
+          (TTI.getCFInstrCost(Instruction::Br, CostKind) * VF.getFixedValue()));
     } else if (I->getParent() == TheLoop->getLoopLatch() || VF.isScalar())
       // The back-edge branch will remain, as will all scalar branches.
       return TTI.getCFInstrCost(Instruction::Br, CostKind);
