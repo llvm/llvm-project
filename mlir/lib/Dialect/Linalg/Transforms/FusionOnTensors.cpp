@@ -1129,9 +1129,12 @@ struct PushExpandingReshape : public OpRewritePattern<GenericOpTy> {
     SmallVector<Value> newOutputs;
     SmallVector<Type> newOutputTypes;
     for (auto output : op.outputs()) {
+      auto newOutputType = RankedTensorType::get(
+          reshapeFound.getSrcType().getShape(),
+          output.getType().template cast<RankedTensorType>().getElementType());
       Value newOutput = rewriter.create<TensorReshapeOp>(
-          op->getLoc(), reshapeFound.getSrcType(), output, reassociation);
-      newOutputTypes.push_back(newOutput.getType());
+          op->getLoc(), newOutputType, output, reassociation);
+      newOutputTypes.push_back(newOutputType);
       newOutputs.push_back(newOutput);
     }
     // 5. Create a new generic op with lowerer rank.
