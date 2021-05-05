@@ -57,6 +57,7 @@ protected: // Can only create subclasses.
   bool UseMasmDefaultRadix = false;
   unsigned DefaultRadix = 10;
   bool LexHLASMIntegers = false;
+  bool LexHLASMStrings = false;
   AsmCommentConsumer *CommentConsumer = nullptr;
 
   MCAsmLexer();
@@ -180,6 +181,11 @@ public:
 
   /// Set whether to lex HLASM-flavour integers. For now this is only [0-9]*
   void setLexHLASMIntegers(bool V) { LexHLASMIntegers = V; }
+
+  /// Set whether to "lex" HLASM-flavour character and string literals. For now,
+  /// setting this option to true, will disable lexing for character and string
+  /// literals.
+  void setLexHLASMStrings(bool V) { LexHLASMStrings = V; }
 };
 
 } // end namespace llvm
