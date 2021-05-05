@@ -23,7 +23,9 @@ std::error_code llvm::disableAutoConversion(int FD) {
       0,                // pccsid
       (short)FT_BINARY, // fccsid
   };
-  return fcntl(FD, F_CONTROL_CVT, &Convert);
+  if (fcntl(FD, F_CONTROL_CVT, &Convert) == -1)
+    return std::error_code(errno, std::generic_category());
+  return std::error_code();
 }
 
 std::error_code llvm::enableAutoConversion(int FD) {
@@ -34,7 +36,7 @@ std::error_code llvm::enableAutoConversion(int FD) {
   };
 
   if (fcntl(FD, F_CONTROL_CVT, &Query) == -1)
-    return -1;
+    return std::error_code(errno, std::generic_category());
 
   Query.cvtcmd = SETCVTALL;
   Query.pccsid =
@@ -43,7 +45,9 @@ std::error_code llvm::enableAutoConversion(int FD) {
           : CCSID_UTF_8;
   // Assume untagged files to be IBM-1047 encoded.
   Query.fccsid = (Query.fccsid == FT_UNTAGGED) ? CCSID_IBM_1047 : Query.fccsid;
-  return fcntl(FD, F_CONTROL_CVT, &Query);
+  if (fcntl(FD, F_CONTROL_CVT, &Query) == -1)
+    return std::error_code(errno, std::generic_category());
+  return std::error_code();
 }
 
 std::error_code llvm::setFileTag(int FD, int CCSID, bool Text) {
@@ -55,7 +59,9 @@ std::error_code llvm::setFileTag(int FD, int CCSID, bool Text) {
   Tag.ft_deferred = 0;
   Tag.ft_rsvflags = 0;
 
-  return fcntl(FD, F_SETTAG, &Tag);
+  if (fcntl(FD, F_SETTAG, &Tag) == -1)
+    return std::error_code(errno, std::generic_category());
+  return std::error_code();
 }
 
 #endif // __MVS__
