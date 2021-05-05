@@ -352,6 +352,9 @@ bool AsmPrinter::doInitialization(Module &M) {
   }
 
   switch (MAI->getExceptionHandlingType()) {
+  case ExceptionHandling::None:
+    // We may want to emit CFI for debug.
+    LLVM_FALLTHROUGH;
   case ExceptionHandling::SjLj:
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:
@@ -373,7 +376,9 @@ bool AsmPrinter::doInitialization(Module &M) {
   EHStreamer *ES = nullptr;
   switch (MAI->getExceptionHandlingType()) {
   case ExceptionHandling::None:
-    break;
+    if (!needsCFIForDebug())
+      break;
+    LLVM_FALLTHROUGH;
   case ExceptionHandling::SjLj:
   case ExceptionHandling::DwarfCFI:
     ES = new DwarfCFIException(this);
@@ -1063,9 +1068,15 @@ bool AsmPrinter::needsSEHMoves() {
   return MAI->usesWindowsCFI() && MF->getFunction().needsUnwindTableEntry();
 }
 
+bool AsmPrinter::needsCFIForDebug() const {
+  return MAI->getExceptionHandlingType() == ExceptionHandling::None &&
+         MAI->doesUseCFIForDebug() && ModuleCFISection == CFISection::Debug;
+}
+
 void AsmPrinter::emitCFIInstruction(const MachineInstr &MI) {
   ExceptionHandling ExceptionHandlingType = MAI->getExceptionHandlingType();
-  if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
+  if (!needsCFIForDebug() &&
+      ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
       ExceptionHandlingType != ExceptionHandling::ARM)
     return;
 
