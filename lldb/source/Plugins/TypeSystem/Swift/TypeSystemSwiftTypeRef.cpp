@@ -1579,6 +1579,9 @@ bool Equivalent(llvm::Optional<T> l, T r) {
   do {                                                                         \
     FALLBACK(REFERENCE, ());                                                   \
     auto result = IMPL();                                                      \
+    if (!ModuleList::GetGlobalModuleListProperties()                           \
+             .GetSwiftValidateTypeSystem())                                    \
+      return result;                                                           \
     if (!m_swift_ast_context)                                                  \
       return result;                                                           \
     assert((result == m_swift_ast_context->REFERENCE()) &&                     \
@@ -1590,6 +1593,9 @@ bool Equivalent(llvm::Optional<T> l, T r) {
   do {                                                                         \
     FALLBACK(REFERENCE, FALLBACK_ARGS);                                        \
     auto result = IMPL();                                                      \
+    if (!ModuleList::GetGlobalModuleListProperties()                           \
+             .GetSwiftValidateTypeSystem())                                    \
+      return result;                                                           \
     if (!m_swift_ast_context)                                                  \
       return result;                                                           \
     if ((TYPE) && !ReconstructType(TYPE))                                      \
@@ -2513,6 +2519,9 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   bool ast_child_is_deref_of_parent;
   uint64_t ast_language_flags;
   auto defer = llvm::make_scope_exit([&] {
+    if (!ModuleList::GetGlobalModuleListProperties()
+             .GetSwiftValidateTypeSystem())
+      return;
     llvm::StringRef suffix(ast_child_name);
     if (suffix.consume_front("__ObjC."))
       ast_child_name = suffix.str();

@@ -19,6 +19,9 @@ let Definition = "modulelist" in {
   def UseSwiftTypeRefTypeSystem: Property<"use-swift-typeref-typesystem", "Boolean">,
     DefaultTrue,
     Desc<"Prefer Swift Remote Mirrors over Remote AST">;
+  def SwiftValidateTypeSystem: Property<"swift-validate-typesystem", "Boolean">,
+    DefaultFalse,
+    Desc<"Validate all Swift typesystem queries. Used for testing an asserts-enabled LLDB only.">;
   def SwiftModuleLoadingMode: Property<"swift-module-loading-mode", "Enum">,
     DefaultEnumValue<"eSwiftModuleLoadingModePreferSerialized">,
     EnumValues<"OptionEnumValues(g_swift_module_loading_mode_enums)">,

@@ -797,6 +797,10 @@ class Base(unittest2.TestCase):
 
             'settings set symbols.clang-modules-cache-path "{}"'.format(
                 configuration.lldb_module_cache_dir),
+
+            # Enable expensive validations in TypeSystemSwiftTypeRef.
+            'settings set symbols.swift-validate-typesystem true',
+
             "settings set use-color false",
         ]
 
