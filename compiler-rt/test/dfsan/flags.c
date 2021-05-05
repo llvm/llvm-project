@@ -1,6 +1,8 @@
 // RUN: %clang_dfsan %s -fsanitize-ignorelist=%S/Inputs/flags_abilist.txt -mllvm -dfsan-debug-nonzero-labels -o %t && %run %t 2>&1 | FileCheck %s
 // RUN: %clang_dfsan %s -fsanitize-ignorelist=%S/Inputs/flags_abilist.txt -mllvm -dfsan-debug-nonzero-labels -o %t && DFSAN_OPTIONS=warn_unimplemented=0 %run %t 2>&1 | count 0
 // RUN: %clang_dfsan %s -fsanitize-ignorelist=%S/Inputs/flags_abilist.txt -mllvm -dfsan-debug-nonzero-labels -o %t && DFSAN_OPTIONS=warn_nonzero_labels=1 %run %t 2>&1 | FileCheck --check-prefix=CHECK-NONZERO %s
+//
+// REQUIRES: x86_64-target-arch
 
 // Tests that flags work correctly.
 
