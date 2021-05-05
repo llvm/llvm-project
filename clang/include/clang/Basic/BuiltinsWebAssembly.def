@@ -185,9 +185,9 @@ TARGET_BUILTIN(__builtin_wasm_trunc_saturate_s_i32x4_f32x4, "V4iV4f", "nc", "sim
 TARGET_BUILTIN(__builtin_wasm_trunc_saturate_u_i32x4_f32x4, "V4iV4f", "nc", "simd128")
 
 TARGET_BUILTIN(__builtin_wasm_narrow_s_i8x16_i16x8, "V16ScV8sV8s", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_narrow_u_i8x16_i16x8, "V16UcV8UsV8Us", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_narrow_u_i8x16_i16x8, "V16UcV8sV8s", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_narrow_s_i16x8_i32x4, "V8sV4iV4i", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_narrow_u_i16x8_i32x4, "V8UsV4UiV4Ui", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_narrow_u_i16x8_i32x4, "V8UsV4iV4i", "nc", "simd128")
 
 TARGET_BUILTIN(__builtin_wasm_trunc_sat_zero_s_f64x2_i32x4, "V4iV2d", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_trunc_sat_zero_u_f64x2_i32x4, "V4UiV2d", "nc", "simd128")
