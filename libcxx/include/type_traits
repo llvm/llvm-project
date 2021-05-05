@@ -2309,6 +2309,11 @@ struct _LIBCPP_TEMPLATE_VIS make_unsigned
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using make_unsigned_t = typename make_unsigned<_Tp>::type;
+
+template<class _From>
+[[nodiscard]] constexpr auto __to_unsigned_like(_From __x) noexcept {
+  return static_cast<make_unsigned_t<_From>>(__x);
+}
 #endif
 
 #if _LIBCPP_STD_VER > 14

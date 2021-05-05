@@ -141,6 +141,10 @@ Changes to the LLVM tools
 * Support for in-order processors has been added to ``llvm-mca``.
   (`D94928 <https://reviews.llvm.org/D94928>`_)
 
+* llvm-objdump supports ``-M {att,intel}`` now.
+  ``--x86-asm-syntax`` is a deprecated internal option which will be removed in LLVM 14.0.0.
+  (`D101695 <https://reviews.llvm.org/D101695>`_)
+
 Changes to LLDB
 ---------------------------------
 

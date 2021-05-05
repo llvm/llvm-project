@@ -107,10 +107,11 @@ Searcher::CallbackReturn BreakpointResolverFileRegex::SearchCallback(
   uint32_t num_matches = line_matches.size();
   for (uint32_t i = 0; i < num_matches; i++) {
     SymbolContextList sc_list;
-    const bool search_inlines = false;
-
-    cu->ResolveSymbolContext(cu_file_spec, line_matches[i], search_inlines,
-                             m_exact_match, eSymbolContextEverything, sc_list);
+    // TODO: Handle SourceLocationSpec column information
+    SourceLocationSpec location_spec(cu_file_spec, line_matches[i],
+                                     /*column=*/llvm::None,
+                                     /*search_inlines=*/false, m_exact_match);
+    cu->ResolveSymbolContext(location_spec, eSymbolContextEverything, sc_list);
     // Find all the function names:
     if (!m_function_names.empty()) {
       std::vector<size_t> sc_to_remove;

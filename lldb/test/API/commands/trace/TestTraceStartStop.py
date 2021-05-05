@@ -100,7 +100,6 @@ class TestTraceStartStop(TestBase):
   a.out`main \+ 11 at main.cpp:4
     \[1\] {ADDRESS_REGEX}    movl .*
     \[2\] {ADDRESS_REGEX}    jmp  .* ; <\+28> at main.cpp:4
-  a.out`main \+ 28 at main.cpp:4
     \[3\] {ADDRESS_REGEX}    cmpl .*
     \[4\] {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5'''])
 

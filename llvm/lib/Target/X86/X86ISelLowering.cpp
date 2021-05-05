@@ -9957,9 +9957,13 @@ static SDValue createVariablePermute(MVT VT, SDValue SrcVec, SDValue IndicesVec,
   // Adjust IndicesVec to match VT size.
   assert(IndicesVec.getValueType().getVectorNumElements() >= NumElts &&
          "Illegal variable permute mask size");
-  if (IndicesVec.getValueType().getVectorNumElements() > NumElts)
-    IndicesVec = extractSubVector(IndicesVec, 0, DAG, SDLoc(IndicesVec),
-                                  NumElts * VT.getScalarSizeInBits());
+  if (IndicesVec.getValueType().getVectorNumElements() > NumElts) {
+    if (IndicesVec.getValueSizeInBits() == SizeInBits)
+      IndicesVec = DAG.getBitcast(IndicesVT, IndicesVec);
+    else
+      IndicesVec = extractSubVector(IndicesVec, 0, DAG, SDLoc(IndicesVec),
+                                    NumElts * VT.getScalarSizeInBits());
+  }
   IndicesVec = DAG.getZExtOrTrunc(IndicesVec, SDLoc(IndicesVec), IndicesVT);
 
   // Handle SrcVec that don't match VT type.

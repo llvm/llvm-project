@@ -7,6 +7,8 @@
 // RUN: %clang_dfsan -mllvm -dfsan-args-abi -c %s -o %t.o && \
 // RUN: %clang_dfsan -mllvm -dfsan-args-abi %t.o %t.lib.o -o %t.bin && \
 // RUN: %run %t.bin
+//
+// REQUIRES: x86_64-target-arch
 
 #include <sanitizer/dfsan_interface.h>
 #include <assert.h>

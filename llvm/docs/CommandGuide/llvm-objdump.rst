@@ -146,8 +146,14 @@ OPTIONS
 
 .. option:: -M, --disassembler-options=<opt1[,opt2,...]>
 
-  Pass target-specific disassembler options. Currently supported for ARM targets
-  only. Available options are ``reg-names-std`` and ``reg-names-raw``.
+  Pass target-specific disassembler options. Available options:
+
+  * ``reg-names-std``: ARM only (default). Print in ARM 's instruction set documentation, with r13/r14/r15 replaced by sp/lr/pc.
+  * ``reg-names-raw``: ARM only. Use r followed by the register number.
+  * ``no-aliases``: RISC-V only. Print raw instruction mnemonic instead of pesudo instruction mnemonic.
+  * ``numeric``: RISC-V only. Print raw register names instead of ABI mnemonic. (e.g. print x1 instead of ra)
+  * ``att``: x86 only (default). Print in the AT&T syntax.
+  * ``intel``: x86 only. Print in the intel syntax.
 
 .. option:: --mcpu=<cpu-name>
 
@@ -242,6 +248,7 @@ OPTIONS
 
 .. option:: --x86-asm-syntax=<style>
 
+  Deprecated.
   When used with :option:`--disassemble`, choose style of code to emit from
   X86 backend. Supported values are:
 

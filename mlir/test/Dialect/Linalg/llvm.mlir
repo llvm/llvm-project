@@ -16,10 +16,8 @@ func @range(%arg0: index) {
 
 func @reshape_static_expand(%arg0: memref<3x4x5xf32>) -> memref<1x3x4x1x5xf32> {
   // Reshapes that expand a contiguous tensor with some 1's.
-  %0 = linalg.reshape %arg0 [affine_map<(i, j, k, l, m) -> (i, j)>,
-                             affine_map<(i, j, k, l, m) -> (k)>,
-                             affine_map<(i, j, k, l, m) -> (l, m)>] :
-    memref<3x4x5xf32> into memref<1x3x4x1x5xf32>
+  %0 = linalg.reshape %arg0 [[0, 1], [2], [3, 4]]
+      : memref<3x4x5xf32> into memref<1x3x4x1x5xf32>
   return %0 : memref<1x3x4x1x5xf32>
 }
 // CHECK-LABEL: func @reshape_static_expand
@@ -52,9 +50,7 @@ func @reshape_static_expand(%arg0: memref<3x4x5xf32>) -> memref<1x3x4x1x5xf32> {
 //       CHECK:    llvm.insertvalue %{{.*}}, %{{.*}}[4, 4] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<5 x i64>, array<5 x i64>)>
 
 func @reshape_static_collapse(%arg0: memref<1x3x4x1x5xf32>) -> memref<3x4x5xf32> {
-  %0 = linalg.reshape %arg0 [affine_map<(i, j, k, l, m) -> (i, j)>,
-                             affine_map<(i, j, k, l, m) -> (k)>,
-                             affine_map<(i, j, k, l, m) -> (l, m)>] :
+  %0 = linalg.reshape %arg0 [[0, 1], [2], [3, 4]] :
     memref<1x3x4x1x5xf32> into memref<3x4x5xf32>
   return %0 : memref<3x4x5xf32>
 }

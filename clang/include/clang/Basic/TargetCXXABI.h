@@ -111,6 +111,7 @@ public:
     case Microsoft:
       return T.isKnownWindowsMSVCEnvironment();
     }
+    llvm_unreachable("invalid CXXABI kind");
   };
 
   /// Does this ABI generally fall into the Itanium family of ABIs?

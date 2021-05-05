@@ -3,6 +3,7 @@
 #include <pthread.h>
 
 #include "dfsan.h"
+#include "sanitizer_common/sanitizer_tls_get_addr.h"
 
 namespace __dfsan {
 
@@ -24,16 +25,30 @@ DFsanThread *DFsanThread::Create(void *start_routine_trampoline,
 void DFsanThread::SetThreadStackAndTls() {
   uptr tls_size = 0;
   uptr stack_size = 0;
-  uptr tls_begin;
-  GetThreadStackAndTls(IsMainThread(), &stack_.bottom, &stack_size, &tls_begin,
+  GetThreadStackAndTls(IsMainThread(), &stack_.bottom, &stack_size, &tls_begin_,
                        &tls_size);
   stack_.top = stack_.bottom + stack_size;
+  tls_end_ = tls_begin_ + tls_size;
 
   int local;
   CHECK(AddrIsInStack((uptr)&local));
 }
 
-void DFsanThread::Init() { SetThreadStackAndTls(); }
+void DFsanThread::ClearShadowForThreadStackAndTLS() {
+  dfsan_set_label(0, (void *)stack_.bottom, stack_.top - stack_.bottom);
+  if (tls_begin_ != tls_end_)
+    dfsan_set_label(0, (void *)tls_begin_, tls_end_ - tls_begin_);
+  DTLS *dtls = DTLS_Get();
+  CHECK_NE(dtls, 0);
+  ForEachDVT(dtls, [](const DTLS::DTV &dtv, int id) {
+    dfsan_set_label(0, (void *)(dtv.beg), dtv.size);
+  });
+}
+
+void DFsanThread::Init() {
+  SetThreadStackAndTls();
+  ClearShadowForThreadStackAndTLS();
+}
 
 void DFsanThread::TSDDtor(void *tsd) {
   DFsanThread *t = (DFsanThread *)tsd;
@@ -41,8 +56,14 @@ void DFsanThread::TSDDtor(void *tsd) {
 }
 
 void DFsanThread::Destroy() {
+  malloc_storage().CommitBack();
+  // We also clear the shadow on thread destruction because
+  // some code may still be executing in later TSD destructors
+  // and we don't want it to have any poisoned stack.
+  ClearShadowForThreadStackAndTLS();
   uptr size = RoundUpTo(sizeof(DFsanThread), GetPageSizeCached());
   UnmapOrDie(this, size);
+  DTLS_Destroy();
 }
 
 thread_return_t DFsanThread::ThreadStart() {

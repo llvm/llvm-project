@@ -16,7 +16,6 @@
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
-#include "dfsan_flags.h"
 #include "dfsan_platform.h"
 
 using __sanitizer::u16;
@@ -63,6 +62,9 @@ void dfsan_set_label(dfsan_label label, T &data) {  // NOLINT
 
 namespace __dfsan {
 
+extern bool dfsan_inited;
+extern bool dfsan_init_is_running;
+
 void InitializeInterceptors();
 
 inline dfsan_label *shadow_for(void *ptr) {
@@ -95,6 +97,23 @@ inline bool has_valid_shadow_addr(const void *ptr) {
   const dfsan_label *ptr_s = shadow_for(ptr);
   return is_shadow_addr_valid((uptr)ptr_s);
 }
+
+void dfsan_copy_memory(void *dst, const void *src, uptr size);
+
+void dfsan_allocator_init();
+void dfsan_deallocate(void *ptr);
+
+void *dfsan_malloc(uptr size);
+void *dfsan_calloc(uptr nmemb, uptr size);
+void *dfsan_realloc(void *ptr, uptr size);
+void *dfsan_reallocarray(void *ptr, uptr nmemb, uptr size);
+void *dfsan_valloc(uptr size);
+void *dfsan_pvalloc(uptr size);
+void *dfsan_aligned_alloc(uptr alignment, uptr size);
+void *dfsan_memalign(uptr alignment, uptr size);
+int dfsan_posix_memalign(void **memptr, uptr alignment, uptr size);
+
+void dfsan_init();
 
 }  // namespace __dfsan
 

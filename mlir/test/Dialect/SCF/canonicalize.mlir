@@ -747,3 +747,104 @@ func @while_cond_true() {
 // CHECK-NEXT:           "test.use"(%[[true]]) : (i1) -> ()
 // CHECK-NEXT:           scf.yield
 // CHECK-NEXT:         }
+
+// -----
+
+// CHECK-LABEL: @combineIfs
+func @combineIfs(%arg0 : i1, %arg2: i64) -> (i32, i32) {
+  %res = scf.if %arg0 -> i32 {
+    %v = "test.firstCodeTrue"() : () -> i32
+    scf.yield %v : i32
+  } else {
+    %v2 = "test.firstCodeFalse"() : () -> i32
+    scf.yield %v2 : i32
+  }
+  %res2 = scf.if %arg0 -> i32 {
+    %v = "test.secondCodeTrue"() : () -> i32
+    scf.yield %v : i32
+  } else {
+    %v2 = "test.secondCodeFalse"() : () -> i32
+    scf.yield %v2 : i32
+  }
+  return %res, %res2 : i32, i32
+}
+// CHECK-NEXT:     %[[res:.+]]:2 = scf.if %arg0 -> (i32, i32) {
+// CHECK-NEXT:       %[[tval0:.+]] = "test.firstCodeTrue"() : () -> i32
+// CHECK-NEXT:       %[[tval:.+]] = "test.secondCodeTrue"() : () -> i32
+// CHECK-NEXT:       scf.yield %[[tval0]], %[[tval]] : i32, i32
+// CHECK-NEXT:     } else {
+// CHECK-NEXT:       %[[fval0:.+]] = "test.firstCodeFalse"() : () -> i32
+// CHECK-NEXT:       %[[fval:.+]] = "test.secondCodeFalse"() : () -> i32
+// CHECK-NEXT:       scf.yield %[[fval0]], %[[fval]] : i32, i32
+// CHECK-NEXT:     }
+// CHECK-NEXT:     return %[[res]]#0, %[[res]]#1 : i32, i32
+
+
+// CHECK-LABEL: @combineIfs2
+func @combineIfs2(%arg0 : i1, %arg2: i64) -> i32 {
+  scf.if %arg0 {
+    "test.firstCodeTrue"() : () -> ()
+    scf.yield
+  }
+  %res = scf.if %arg0 -> i32 {
+    %v = "test.secondCodeTrue"() : () -> i32
+    scf.yield %v : i32
+  } else {
+    %v2 = "test.secondCodeFalse"() : () -> i32
+    scf.yield %v2 : i32
+  }
+  return %res : i32
+}
+// CHECK-NEXT:     %[[res:.+]] = scf.if %arg0 -> (i32) {
+// CHECK-NEXT:       "test.firstCodeTrue"() : () -> ()
+// CHECK-NEXT:       %[[tval:.+]] = "test.secondCodeTrue"() : () -> i32
+// CHECK-NEXT:       scf.yield %[[tval]] : i32
+// CHECK-NEXT:     } else {
+// CHECK-NEXT:       %[[fval:.+]] = "test.secondCodeFalse"() : () -> i32
+// CHECK-NEXT:       scf.yield %[[fval]] : i32
+// CHECK-NEXT:     }
+// CHECK-NEXT:     return %[[res]] : i32
+
+
+// CHECK-LABEL: @combineIfs3
+func @combineIfs3(%arg0 : i1, %arg2: i64) -> i32 {
+  %res = scf.if %arg0 -> i32 {
+    %v = "test.firstCodeTrue"() : () -> i32
+    scf.yield %v : i32
+  } else {
+    %v2 = "test.firstCodeFalse"() : () -> i32
+    scf.yield %v2 : i32
+  }
+  scf.if %arg0 {
+    "test.secondCodeTrue"() : () -> ()
+    scf.yield
+  }
+  return %res : i32
+}
+// CHECK-NEXT:     %[[res:.+]] = scf.if %arg0 -> (i32) {
+// CHECK-NEXT:       %[[tval:.+]] = "test.firstCodeTrue"() : () -> i32
+// CHECK-NEXT:       "test.secondCodeTrue"() : () -> ()
+// CHECK-NEXT:       scf.yield %[[tval]] : i32
+// CHECK-NEXT:     } else {
+// CHECK-NEXT:       %[[fval:.+]] = "test.firstCodeFalse"() : () -> i32
+// CHECK-NEXT:       scf.yield %[[fval]] : i32
+// CHECK-NEXT:     }
+// CHECK-NEXT:     return %[[res]] : i32
+
+// CHECK-LABEL: @combineIfs4
+func @combineIfs4(%arg0 : i1, %arg2: i64) {
+  scf.if %arg0 {
+    "test.firstCodeTrue"() : () -> ()
+    scf.yield
+  }
+  scf.if %arg0 {
+    "test.secondCodeTrue"() : () -> ()
+    scf.yield
+  }
+  return
+}
+
+// CHECK-NEXT:     scf.if %arg0 {
+// CHECK-NEXT:       "test.firstCodeTrue"() : () -> ()
+// CHECK-NEXT:       "test.secondCodeTrue"() : () -> ()
+// CHECK-NEXT:     }
