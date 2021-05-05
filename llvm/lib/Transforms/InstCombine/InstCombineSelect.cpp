@@ -2834,9 +2834,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     }
   }
 
-  // See if we are selecting two values based on a comparison of the two values.
-  if (FCmpInst *FCI = dyn_cast<FCmpInst>(CondVal)) {
-    Value *Cmp0 = FCI->getOperand(0), *Cmp1 = FCI->getOperand(1);
+  if (auto *FCmp = dyn_cast<FCmpInst>(CondVal)) {
+    Value *Cmp0 = FCmp->getOperand(0), *Cmp1 = FCmp->getOperand(1);
+    // Are we selecting a value based on a comparison of the two values?
     if ((Cmp0 == TrueVal && Cmp1 == FalseVal) ||
         (Cmp0 == FalseVal && Cmp1 == TrueVal)) {
       // Canonicalize to use ordered comparisons by swapping the select
@@ -2844,13 +2844,13 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       //
       // e.g.
       // (X ugt Y) ? X : Y -> (X ole Y) ? Y : X
-      if (FCI->hasOneUse() && FCmpInst::isUnordered(FCI->getPredicate())) {
-        FCmpInst::Predicate InvPred = FCI->getInversePredicate();
+      if (FCmp->hasOneUse() && FCmpInst::isUnordered(FCmp->getPredicate())) {
+        FCmpInst::Predicate InvPred = FCmp->getInversePredicate();
         IRBuilder<>::FastMathFlagGuard FMFG(Builder);
         // FIXME: The FMF should propagate from the select, not the fcmp.
-        Builder.setFastMathFlags(FCI->getFastMathFlags());
+        Builder.setFastMathFlags(FCmp->getFastMathFlags());
         Value *NewCond = Builder.CreateFCmp(InvPred, Cmp0, Cmp1,
-                                            FCI->getName() + ".inv");
+                                            FCmp->getName() + ".inv");
         Value *NewSel = Builder.CreateSelect(NewCond, FalseVal, TrueVal);
         return replaceInstUsesWith(SI, NewSel);
       }
