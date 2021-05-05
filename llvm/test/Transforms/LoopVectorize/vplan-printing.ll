@@ -79,7 +79,7 @@ define float @print_reduction(i64 %n, float* noalias %y) {
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: for.body:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi %iv.next, 0
-; CHECK-NEXT:   WIDEN-PHI %red = phi %red.next, 0.000000e+00
+; CHECK-NEXT:   WIDEN-PHI ir<%red> = phi ir<0.000000e+00>, ir<%red.next>
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr ir<%y>, ir<%iv>
 ; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%arrayidx>
 ; CHECK-NEXT:   REDUCE ir<%red.next> = ir<%red> + reduce.fadd (ir<%lv>)

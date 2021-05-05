@@ -15901,6 +15901,75 @@ static SDValue combineSVEPrefetchVecBaseImmOff(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(N->getOpcode(), DL, DAG.getVTList(MVT::Other), Ops);
 }
 
+// Return true if the vector operation can guarantee only the first lane of its
+// result contains data, with all bits in other lanes set to zero.
+static bool isLanes1toNKnownZero(SDValue Op) {
+  switch (Op.getOpcode()) {
+  default:
+    return false;
+  case AArch64ISD::ANDV_PRED:
+  case AArch64ISD::EORV_PRED:
+  case AArch64ISD::FADDA_PRED:
+  case AArch64ISD::FADDV_PRED:
+  case AArch64ISD::FMAXNMV_PRED:
+  case AArch64ISD::FMAXV_PRED:
+  case AArch64ISD::FMINNMV_PRED:
+  case AArch64ISD::FMINV_PRED:
+  case AArch64ISD::ORV_PRED:
+  case AArch64ISD::SADDV_PRED:
+  case AArch64ISD::SMAXV_PRED:
+  case AArch64ISD::SMINV_PRED:
+  case AArch64ISD::UADDV_PRED:
+  case AArch64ISD::UMAXV_PRED:
+  case AArch64ISD::UMINV_PRED:
+    return true;
+  }
+}
+
+static SDValue removeRedundantInsertVectorElt(SDNode *N) {
+  assert(N->getOpcode() == ISD::INSERT_VECTOR_ELT && "Unexpected node!");
+  SDValue InsertVec = N->getOperand(0);
+  SDValue InsertElt = N->getOperand(1);
+  SDValue InsertIdx = N->getOperand(2);
+
+  // We only care about inserts into the first element...
+  if (!isNullConstant(InsertIdx))
+    return SDValue();
+  // ...of a zero'd vector...
+  if (!ISD::isConstantSplatVectorAllZeros(InsertVec.getNode()))
+    return SDValue();
+  // ...where the inserted data was previously extracted...
+  if (InsertElt.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+    return SDValue();
+
+  SDValue ExtractVec = InsertElt.getOperand(0);
+  SDValue ExtractIdx = InsertElt.getOperand(1);
+
+  // ...from the first element of a vector.
+  if (!isNullConstant(ExtractIdx))
+    return SDValue();
+
+  // If we get here we are effectively trying to zero lanes 1-N of a vector.
+
+  // Ensure there's no type conversion going on.
+  if (N->getValueType(0) != ExtractVec.getValueType())
+    return SDValue();
+
+  if (!isLanes1toNKnownZero(ExtractVec))
+    return SDValue();
+
+  // The explicit zeroing is redundant.
+  return ExtractVec;
+}
+
+static SDValue
+performInsertVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  if (SDValue Res = removeRedundantInsertVectorElt(N))
+    return Res;
+
+  return performPostLD1Combine(N, DCI, true);
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -15982,7 +16051,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::GLD1S_IMM_MERGE_ZERO:
     return performGLD1Combine(N, DAG);
   case ISD::INSERT_VECTOR_ELT:
-    return performPostLD1Combine(N, DCI, true);
+    return performInsertVectorEltCombine(N, DCI);
   case ISD::EXTRACT_VECTOR_ELT:
     return performExtractVectorEltCombine(N, DAG);
   case ISD::VECREDUCE_ADD:

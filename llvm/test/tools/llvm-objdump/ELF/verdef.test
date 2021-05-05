@@ -1,7 +1,9 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objdump -p %t | FileCheck --strict-whitespace %s
 
-# CHECK:      Version definitions:
+# CHECK:      Dynamic Section:
+# CHECK-EMPTY:
+# CHECK-NEXT: Version definitions:
 # CHECK-NEXT: 1 0x01 0x075bcd15 foo
 # CHECK-NEXT: 2 0x02 0x3ade68b1 VERSION_1
 # CHECK-NEXT: 	                VERSION_2 

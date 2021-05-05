@@ -1205,6 +1205,11 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
     if (!exporter.shouldExport(def))
       return;
 
+    if (!def->isGCRoot) {
+      def->isGCRoot = true;
+      config->gcroot.push_back(def);
+    }
+
     Export e;
     e.name = def->getName();
     e.sym = def;

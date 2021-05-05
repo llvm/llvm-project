@@ -70,7 +70,7 @@ public:
       std::function<bool(size_t index, llvm::Expected<lldb::addr_t> load_addr)>
           callback) override;
 
-  size_t GetInstructionCount(Thread &thread) override;
+  llvm::Optional<size_t> GetInstructionCount(Thread &thread) override;
 
   size_t GetCursorPosition(Thread &thread) override;
 

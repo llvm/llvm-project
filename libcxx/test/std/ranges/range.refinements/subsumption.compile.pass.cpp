@@ -71,3 +71,17 @@ requires true
 // clang-format on
 
 static_assert(check_bidirectional_range_subsumption<range>());
+
+template<std::ranges::bidirectional_range R>
+requires std::random_access_iterator<std::ranges::iterator_t<R> >
+constexpr bool check_random_access_range_subsumption() {
+  return false;
+}
+
+template<std::ranges::random_access_range>
+requires true
+constexpr bool check_random_access_range_subsumption() {
+  return true;
+}
+
+static_assert(check_random_access_range_subsumption<range>());

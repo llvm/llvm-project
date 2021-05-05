@@ -1046,8 +1046,8 @@ TEST_FUNC(linalg_generic_dilated_conv_nhwc) {
 
 // clang-format off
 // CHECK-LABEL: func @linalg_metadata_ops
-//       CHECK: linalg.reshape {{.*}} [affine_map<(d0, d1, d2) -> (d0, d1)>, affine_map<(d0, d1, d2) -> (d2)>] : memref<4x8x16xf32> into memref<32x16xf32>
-//       CHECK: linalg.reshape {{.*}} [affine_map<(d0, d1, d2) -> (d0, d1)>, affine_map<(d0, d1, d2) -> (d2)>] : memref<32x16xf32> into memref<4x8x16xf32>
+//       CHECK: linalg.reshape {{.*}} {{\[}}[0, 1], [2]] : memref<4x8x16xf32> into memref<32x16xf32>
+//       CHECK: linalg.reshape {{.*}} {{\[}}[0, 1], [2]] : memref<32x16xf32> into memref<4x8x16xf32>
 // clang-format on
 TEST_FUNC(linalg_metadata_ops) {
   using linalg::ReassociationExprs;

@@ -29,7 +29,10 @@ struct Range {
 };
 
 class OffsetSizeAndStrideOpInterface;
-LogicalResult verify(OffsetSizeAndStrideOpInterface op);
+
+namespace detail {
+LogicalResult verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op);
+} // namespace detail
 } // namespace mlir
 
 /// Include the generated interface declarations.

@@ -18,12 +18,12 @@
 #include <concepts>
 
 template<std::forward_iterator I>
-[[nodiscard]] constexpr bool check_subsumption() {
+constexpr bool check_subsumption() {
   return false;
 }
 
 template<std::bidirectional_iterator>
-[[nodiscard]] constexpr bool check_subsumption() {
+constexpr bool check_subsumption() {
   return true;
 }
 

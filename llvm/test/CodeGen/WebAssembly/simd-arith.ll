@@ -968,6 +968,18 @@ define <2 x i64> @mul_v2i64(<2 x i64> %x, <2 x i64> %y) {
   ret <2 x i64> %a
 }
 
+; CHECK-LABEL: abs_v2i64:
+; NO-SIMD128-NOT: i64x2:
+; SIMD128-NEXT: .functype abs_v2i64 (v128) -> (v128){{$}}
+; SIMD128-NEXT: i64x2.abs $push[[R:[0-9]+]]=, $0{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @abs_v2i64(<2 x i64> %x) {
+  %a = sub <2 x i64> zeroinitializer, %x
+  %b = icmp slt <2 x i64> %x, zeroinitializer
+  %c = select <2 x i1> %b, <2 x i64> %a, <2 x i64> %x
+  ret <2 x i64> %c
+}
+
 ; CHECK-LABEL: neg_v2i64:
 ; NO-SIMD128-NOT: i64x2
 ; SIMD128-NEXT: .functype neg_v2i64 (v128) -> (v128){{$}}

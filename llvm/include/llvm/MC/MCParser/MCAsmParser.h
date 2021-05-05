@@ -260,6 +260,7 @@ public:
   /// success.
   bool parseOptionalToken(AsmToken::TokenKind T);
 
+  bool parseComma() { return parseToken(AsmToken::Comma, "expected comma"); }
   bool parseEOL();
   bool parseEOL(const Twine &ErrMsg);
 

@@ -34,7 +34,8 @@ LogicalResult mlir::verifyListOfOperandsOrIntegers(
   return success();
 }
 
-LogicalResult mlir::verify(OffsetSizeAndStrideOpInterface op) {
+LogicalResult
+mlir::detail::verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op) {
   std::array<unsigned, 3> maxRanks = op.getArrayAttrMaxRanks();
   // Offsets can come in 2 flavors:
   //   1. Either single entry (when maxRanks == 1).

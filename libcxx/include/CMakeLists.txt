@@ -38,6 +38,8 @@ set(files
   __ranges/access.h
   __ranges/concepts.h
   __ranges/enable_borrowed_range.h
+  __ranges/view.h
+  __ranges/size.h
   __split_buffer
   __sso_allocator
   __std_stream

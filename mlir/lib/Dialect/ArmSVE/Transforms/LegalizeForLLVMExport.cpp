@@ -84,6 +84,38 @@ using UmmlaOpLowering = OneToOneConvertToLLVMPattern<UmmlaOp, UmmlaIntrOp>;
 using VectorScaleOpLowering =
     OneToOneConvertToLLVMPattern<VectorScaleOp, VectorScaleIntrOp>;
 
+static void
+populateBasicSVEArithmeticExportPatterns(LLVMTypeConverter &converter,
+                                         OwningRewritePatternList &patterns) {
+  // clang-format off
+  patterns.add<OneToOneConvertToLLVMPattern<ScalableAddIOp, LLVM::AddOp>,
+               OneToOneConvertToLLVMPattern<ScalableAddFOp, LLVM::FAddOp>,
+               OneToOneConvertToLLVMPattern<ScalableSubIOp, LLVM::SubOp>,
+               OneToOneConvertToLLVMPattern<ScalableSubFOp, LLVM::FSubOp>,
+               OneToOneConvertToLLVMPattern<ScalableMulIOp, LLVM::MulOp>,
+               OneToOneConvertToLLVMPattern<ScalableMulFOp, LLVM::FMulOp>,
+               OneToOneConvertToLLVMPattern<ScalableSDivIOp, LLVM::SDivOp>,
+               OneToOneConvertToLLVMPattern<ScalableUDivIOp, LLVM::UDivOp>,
+               OneToOneConvertToLLVMPattern<ScalableDivFOp, LLVM::FDivOp>
+              >(converter);
+  // clang-format on
+}
+
+static void
+configureBasicSVEArithmeticLegalizations(LLVMConversionTarget &target) {
+  // clang-format off
+  target.addIllegalOp<ScalableAddIOp,
+                      ScalableAddFOp,
+                      ScalableSubIOp,
+                      ScalableSubFOp,
+                      ScalableMulIOp,
+                      ScalableMulFOp,
+                      ScalableSDivIOp,
+                      ScalableUDivIOp,
+                      ScalableDivFOp>();
+  // clang-format on
+}
+
 /// Populate the given list with patterns that convert from ArmSVE to LLVM.
 void mlir::populateArmSVELegalizeForLLVMExportPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
@@ -106,20 +138,14 @@ void mlir::populateArmSVELegalizeForLLVMExportPatterns(
                UmmlaOpLowering,
                VectorScaleOpLowering>(converter);
   // clang-format on
+  populateBasicSVEArithmeticExportPatterns(converter, patterns);
 }
 
 void mlir::configureArmSVELegalizeForExportTarget(
     LLVMConversionTarget &target) {
-  target.addLegalOp<SdotIntrOp>();
-  target.addIllegalOp<SdotOp>();
-  target.addLegalOp<SmmlaIntrOp>();
-  target.addIllegalOp<SmmlaOp>();
-  target.addLegalOp<UdotIntrOp>();
-  target.addIllegalOp<UdotOp>();
-  target.addLegalOp<UmmlaIntrOp>();
-  target.addIllegalOp<UmmlaOp>();
-  target.addLegalOp<VectorScaleIntrOp>();
-  target.addIllegalOp<VectorScaleOp>();
+  target.addLegalOp<SdotIntrOp, SmmlaIntrOp, UdotIntrOp, UmmlaIntrOp,
+                    VectorScaleIntrOp>();
+  target.addIllegalOp<SdotOp, SmmlaOp, UdotOp, UmmlaOp, VectorScaleOp>();
   auto hasScalableVectorType = [](TypeRange types) {
     for (Type type : types)
       if (type.isa<arm_sve::ScalableVectorType>())
@@ -135,4 +161,5 @@ void mlir::configureArmSVELegalizeForExportTarget(
         return !hasScalableVectorType(op->getOperandTypes()) &&
                !hasScalableVectorType(op->getResultTypes());
       });
+  configureBasicSVEArithmeticLegalizations(target);
 }

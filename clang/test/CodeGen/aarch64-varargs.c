@@ -473,7 +473,8 @@ typedef struct __attribute__((packed,aligned(2))) {
   int val;
 } underaligned_int_struct;
 underaligned_int_struct underaligned_int_struct_test() {
-// CHECK-LABEL: define{{.*}} i64 @underaligned_int_struct_test()
+// CHECK-LE-LABEL: define{{.*}} i32 @underaligned_int_struct_test()
+// CHECK-BE-LABEL: define{{.*}} i64 @underaligned_int_struct_test()
   return va_arg(the_list, underaligned_int_struct);
 // CHECK: [[GR_OFFS:%[a-z_0-9]+]] = load i32, i32* getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 3)
 // CHECK: [[EARLY_ONSTACK:%[a-z_0-9]+]] = icmp sge i32 [[GR_OFFS]], 0
@@ -675,7 +676,8 @@ typedef struct {
   int val __attribute__((packed,aligned(2)));
 } underaligned_int_struct_member;
 underaligned_int_struct_member underaligned_int_struct_member_test() {
-// CHECK-LABEL: define{{.*}} i64 @underaligned_int_struct_member_test()
+// CHECK-LE-LABEL: define{{.*}} i32 @underaligned_int_struct_member_test()
+// CHECK-BE-LABEL: define{{.*}} i64 @underaligned_int_struct_member_test()
   return va_arg(the_list, underaligned_int_struct_member);
 // CHECK: [[GR_OFFS:%[a-z_0-9]+]] = load i32, i32* getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 3)
 // CHECK: [[EARLY_ONSTACK:%[a-z_0-9]+]] = icmp sge i32 [[GR_OFFS]], 0

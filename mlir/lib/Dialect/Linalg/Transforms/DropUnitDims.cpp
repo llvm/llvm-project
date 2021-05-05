@@ -327,7 +327,7 @@ static UnitExtentReplacementInfo replaceUnitExtents(AffineMap indexMap,
       reassociations.push_back(getAffineDimExpr(dim, context));
     }
     reassociationMaps.push_back(AffineMapAttr::get(AffineMap::get(
-        origRank, /*numSymbols = */ 0, reassociations, context)));
+        origRank, /*symbolCount = */ 0, reassociations, context)));
     reassociations.clear();
     ++dim;
   }
@@ -340,6 +340,15 @@ static UnitExtentReplacementInfo replaceUnitExtents(AffineMap indexMap,
 }
 
 namespace {
+
+SmallVector<ReassociationExprs, 2>
+convertAffineMapArrayToExprs(ArrayAttr affineMapArrayAttr) {
+  SmallVector<ReassociationExprs, 2> reassociationExprs;
+  for (auto attr : affineMapArrayAttr)
+    reassociationExprs.push_back(
+        llvm::to_vector<4>(attr.cast<AffineMapAttr>().getValue().getResults()));
+  return reassociationExprs;
+}
 
 /// Pattern to replace tensors operands/results that are unit extents.
 template <typename GenericOpTy>
@@ -387,7 +396,7 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOpTy> {
         else
           res.push_back(rewriter.create<linalg::TensorReshapeOp>(
               loc, newInputOutputTypes[flattenedIdx], operand.value(),
-              reassociationMaps[flattenedIdx]));
+              convertAffineMapArrayToExprs(reassociationMaps[flattenedIdx])));
         ++flattenedIdx;
       }
       return res;
@@ -419,7 +428,8 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOpTy> {
                                             .template cast<RankedTensorType>();
       if (origResultType != result.value().getType())
         resultReplacements.push_back(rewriter.create<linalg::TensorReshapeOp>(
-            loc, origResultType, result.value(), reassociationMaps[index]));
+            loc, origResultType, result.value(),
+            convertAffineMapArrayToExprs(reassociationMaps[index])));
       else
         resultReplacements.push_back(result.value());
     }

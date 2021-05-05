@@ -62,6 +62,10 @@ namespace ranges {
 
   template <class _Tp>
   concept common_range = range<_Tp> && same_as<iterator_t<_Tp>, sentinel_t<_Tp> >;
+
+  template <class _Tp>
+  concept random_access_range =
+      bidirectional_range<_Tp> && random_access_iterator<iterator_t<_Tp> >;
 } // namespace ranges
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)

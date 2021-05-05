@@ -1,10 +1,10 @@
 // Test that -print-file-name finds the correct file.
 
-// RUN: %clang -print-file-name=share/asan_blacklist.txt 2>&1 \
+// RUN: %clang -print-file-name=share/asan_ignorelist.txt 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:   | FileCheck --check-prefix=CHECK-RESOURCE-DIR %s
-// CHECK-RESOURCE-DIR: resource_dir{{/|\\}}share{{/|\\}}asan_blacklist.txt
+// CHECK-RESOURCE-DIR: resource_dir{{/|\\}}share{{/|\\}}asan_ignorelist.txt
 
 // RUN: %clang -print-file-name=libclang_rt.builtins.a 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \

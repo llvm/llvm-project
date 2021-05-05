@@ -1,5 +1,5 @@
 #RUN: llvm-mc -triple=hexagon -mcpu=hexagonv60 -filetype=obj -mhvx %s | \
-#RUN: llvm-objdump --triple=hexagon --mcpu=hexagonv60 --mhvx -d - | \
+#RUN: llvm-objdump --triple=hexagon --mcpu=hexagonv60 --mattr=+hvx -d - | \
 #RUN: FileCheck %s
 
 #CHECK: 198fd829 { v9.uw = vlsr(v24.uw,{{ *}}r15) }

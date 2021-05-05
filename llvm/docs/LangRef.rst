@@ -3341,7 +3341,7 @@ vector length is unknown at compile time. Vector types are considered
 :Memory Layout:
 
 In general vector elements are laid out in memory in the same way as
-:ref:`array types <t_array>`. Such an anology works fine as long as the vector
+:ref:`array types <t_array>`. Such an analogy works fine as long as the vector
 elements are byte sized. However, when the elements of the vector aren't byte
 sized it gets a bit more complicated. One way to describe the layout is by
 describing what happens when a vector such as <N x iM> is bitcasted to an
