@@ -2773,6 +2773,21 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       if (Res && *Res == false)
         return replaceOperand(SI, 1, A);
     }
+    // select c, true, (select a, b, false)  -> select c, true, a
+    // select (select a, b, false), true, c  -> select a, true, c
+    //   if c = false implies that b = true
+    if (match(TrueVal, m_One()) &&
+        match(FalseVal, m_Select(m_Value(A), m_Value(B), m_Zero()))) {
+      Optional<bool> Res = isImpliedCondition(CondVal, B, DL, false);
+      if (Res && *Res == true)
+        return replaceOperand(SI, 2, A);
+    }
+    if (match(CondVal, m_Select(m_Value(A), m_Value(B), m_Zero())) &&
+        match(TrueVal, m_One())) {
+      Optional<bool> Res = isImpliedCondition(FalseVal, B, DL, false);
+      if (Res && *Res == true)
+        return replaceOperand(SI, 0, A);
+    }
 
     // sel (sel c, a, false), true, (sel !c, b, false) -> sel c, a, b
     // sel (sel !c, a, false), true, (sel c, b, false) -> sel c, b, a

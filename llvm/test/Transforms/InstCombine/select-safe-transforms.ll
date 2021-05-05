@@ -181,10 +181,8 @@ define i1 @bools2_logical(i1 %a, i1 %b, i1 %c) {
 
 define i1 @orn_and_cmp_1_logical(i37 %a, i37 %b, i1 %y) {
 ; CHECK-LABEL: @orn_and_cmp_1_logical(
-; CHECK-NEXT:    [[X:%.*]] = icmp sgt i37 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[X_INV:%.*]] = icmp sle i37 [[A]], [[B]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[Y:%.*]], i1 [[X]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[X_INV]], i1 true, i1 [[AND]]
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp sle i37 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[X_INV]], i1 true, i1 [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %x = icmp sgt i37 %a, %b
@@ -196,10 +194,8 @@ define i1 @orn_and_cmp_1_logical(i37 %a, i37 %b, i1 %y) {
 
 define i1 @orn_and_cmp_2_logical(i16 %a, i16 %b, i1 %y) {
 ; CHECK-LABEL: @orn_and_cmp_2_logical(
-; CHECK-NEXT:    [[X:%.*]] = icmp sge i16 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt i16 [[A]], [[B]]
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[Y:%.*]], i1 [[X]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[AND]], i1 true, i1 [[X_INV]]
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt i16 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[Y:%.*]], i1 true, i1 [[X_INV]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %x = icmp sge i16 %a, %b
