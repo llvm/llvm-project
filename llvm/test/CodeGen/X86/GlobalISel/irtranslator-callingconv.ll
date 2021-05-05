@@ -148,41 +148,41 @@ define i64 @test_i64_args_8(i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %arg
   ; X86:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 4 from %fixed-stack.15, align 16)
   ; X86:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.14
   ; X86:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 4 from %fixed-stack.14)
+  ; X86:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD]](s32), [[LOAD1]](s32)
   ; X86:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.13
   ; X86:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p0) :: (invariant load 4 from %fixed-stack.13, align 8)
   ; X86:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.12
   ; X86:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p0) :: (invariant load 4 from %fixed-stack.12)
+  ; X86:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD2]](s32), [[LOAD3]](s32)
   ; X86:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.11
   ; X86:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p0) :: (invariant load 4 from %fixed-stack.11, align 16)
   ; X86:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.10
   ; X86:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p0) :: (invariant load 4 from %fixed-stack.10)
+  ; X86:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD4]](s32), [[LOAD5]](s32)
   ; X86:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.9
   ; X86:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p0) :: (invariant load 4 from %fixed-stack.9, align 8)
   ; X86:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.8
   ; X86:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p0) :: (invariant load 4 from %fixed-stack.8)
+  ; X86:   [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD6]](s32), [[LOAD7]](s32)
   ; X86:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.7
   ; X86:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX8]](p0) :: (invariant load 4 from %fixed-stack.7, align 16)
   ; X86:   [[FRAME_INDEX9:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
   ; X86:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX9]](p0) :: (invariant load 4 from %fixed-stack.6)
+  ; X86:   [[MV4:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD8]](s32), [[LOAD9]](s32)
   ; X86:   [[FRAME_INDEX10:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
   ; X86:   [[LOAD10:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX10]](p0) :: (invariant load 4 from %fixed-stack.5, align 8)
   ; X86:   [[FRAME_INDEX11:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
   ; X86:   [[LOAD11:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX11]](p0) :: (invariant load 4 from %fixed-stack.4)
+  ; X86:   [[MV5:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD10]](s32), [[LOAD11]](s32)
   ; X86:   [[FRAME_INDEX12:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
   ; X86:   [[LOAD12:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX12]](p0) :: (invariant load 4 from %fixed-stack.3, align 16)
   ; X86:   [[FRAME_INDEX13:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
   ; X86:   [[LOAD13:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX13]](p0) :: (invariant load 4 from %fixed-stack.2)
+  ; X86:   [[MV6:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD12]](s32), [[LOAD13]](s32)
   ; X86:   [[FRAME_INDEX14:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
   ; X86:   [[LOAD14:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX14]](p0) :: (invariant load 4 from %fixed-stack.1, align 8)
   ; X86:   [[FRAME_INDEX15:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X86:   [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX15]](p0) :: (invariant load 4 from %fixed-stack.0)
-  ; X86:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD]](s32), [[LOAD1]](s32)
-  ; X86:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD2]](s32), [[LOAD3]](s32)
-  ; X86:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD4]](s32), [[LOAD5]](s32)
-  ; X86:   [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD6]](s32), [[LOAD7]](s32)
-  ; X86:   [[MV4:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD8]](s32), [[LOAD9]](s32)
-  ; X86:   [[MV5:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD10]](s32), [[LOAD11]](s32)
-  ; X86:   [[MV6:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD12]](s32), [[LOAD13]](s32)
   ; X86:   [[MV7:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD14]](s32), [[LOAD15]](s32)
   ; X86:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a1_64bit
   ; X86:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a7_64bit
@@ -489,10 +489,10 @@ define <8 x i32> @test_split_return_callee(<8 x i32> %arg1, <8 x i32> %arg2) {
   ; X86:   liveins: $xmm0, $xmm1, $xmm2
   ; X86:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
   ; X86:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
+  ; X86:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
   ; X86:   [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $xmm2
   ; X86:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X86:   [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 16 from %fixed-stack.0)
-  ; X86:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
   ; X86:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY2]](<4 x s32>), [[LOAD]](<4 x s32>)
   ; X86:   ADJCALLSTACKDOWN32 0, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X86:   [[UV:%[0-9]+]]:_(<4 x s32>), [[UV1:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS1]](<8 x s32>)
@@ -513,9 +513,9 @@ define <8 x i32> @test_split_return_callee(<8 x i32> %arg1, <8 x i32> %arg2) {
   ; X64:   liveins: $xmm0, $xmm1, $xmm2, $xmm3
   ; X64:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
   ; X64:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
+  ; X64:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
   ; X64:   [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $xmm2
   ; X64:   [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $xmm3
-  ; X64:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
   ; X64:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY2]](<4 x s32>), [[COPY3]](<4 x s32>)
   ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   [[UV:%[0-9]+]]:_(<4 x s32>), [[UV1:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS1]](<8 x s32>)
