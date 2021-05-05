@@ -186,11 +186,46 @@ func @exp() {
   return
 }
 
+func @expm1() {
+  // CHECK: 1e-10
+  %0 = constant 1.0e-10 : f32
+  %1 = math.expm1 %0 : f32
+  vector.print %1 : f32
+
+  // CHECK: -0.00995016, 0.0100502, 0.648721, 6.38905
+  %2 = constant dense<[-0.01, 0.01, 0.5, 2.0]> : vector<4xf32>
+  %3 = math.expm1 %2 : vector<4xf32>
+  vector.print %3 : vector<4xf32>
+
+  // CHECK: -0.181269, 0, 0.221403, 0.491825, 0.822119, 1.22554, 1.71828, 2.32012
+  %4 = constant dense<[-0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]> : vector<8xf32>
+  %5 = math.expm1 %4 : vector<8xf32>
+  vector.print %5 : vector<8xf32>
+
+  // CHECK: -1
+  %neg_inf = constant 0xff800000 : f32
+  %expm1_neg_inf = math.expm1 %neg_inf : f32
+  vector.print %expm1_neg_inf : f32
+
+  // CHECK: inf
+  %inf = constant 0x7f800000 : f32
+  %expm1_inf = math.expm1 %inf : f32
+  vector.print %expm1_inf : f32
+
+  // CHECK: -1, inf, 1e-10
+  %special_vec = constant dense<[0xff800000, 0x7f800000, 1.0e-10]> : vector<3xf32>
+  %log_special_vec = math.expm1 %special_vec : vector<3xf32>
+  vector.print %log_special_vec : vector<3xf32>
+
+  return
+}
+
 func @main() {
   call @tanh(): () -> ()
   call @log(): () -> ()
   call @log2(): () -> ()
   call @log1p(): () -> ()
   call @exp(): () -> ()
+  call @expm1(): () -> ()
   return
 }
