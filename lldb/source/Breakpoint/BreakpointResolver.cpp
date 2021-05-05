@@ -228,13 +228,13 @@ void BreakpointResolver::SetSCMatchesByLine(
 
     if (column) {
       // If a column was requested, do a more precise match and only
-      // return the first location that comes after or at the
+      // return the first location that comes before or at the
       // requested location.
       SourceLoc requested(line, *column);
       // First, filter out all entries left of the requested column.
       worklist_end = std::remove_if(
           worklist_begin, worklist_end,
-          [&](const SymbolContext &sc) { return SourceLoc(sc) < requested; });
+          [&](const SymbolContext &sc) { return requested < SourceLoc(sc); });
       // Sort the remaining entries by (line, column).
       llvm::sort(worklist_begin, worklist_end,
                  [](const SymbolContext &a, const SymbolContext &b) {
