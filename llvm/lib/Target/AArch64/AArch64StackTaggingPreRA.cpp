@@ -203,6 +203,7 @@ void AArch64StackTaggingPreRA::uncheckLoadsAndStores() {
   }
 }
 
+namespace {
 struct SlotWithTag {
   int FI;
   int Tag;
@@ -213,6 +214,7 @@ struct SlotWithTag {
     return FI == Other.FI && Tag == Other.Tag;
   }
 };
+} // namespace
 
 namespace llvm {
 template <> struct DenseMapInfo<SlotWithTag> {
