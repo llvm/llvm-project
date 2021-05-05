@@ -408,6 +408,53 @@ static LogicalResult verify(AtomicRMWOp op) {
   return success();
 }
 
+/// Returns the identity value attribute associated with an AtomicRMWKind op.
+Attribute mlir::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
+                                     OpBuilder &builder, Location loc) {
+  switch (kind) {
+  case AtomicRMWKind::addf:
+  case AtomicRMWKind::addi:
+    return builder.getZeroAttr(resultType);
+  case AtomicRMWKind::muli:
+    return builder.getIntegerAttr(resultType, 1);
+  case AtomicRMWKind::mulf:
+    return builder.getFloatAttr(resultType, 1);
+  // TODO: Add remaining reduction operations.
+  default:
+    (void)emitOptionalError(loc, "Reduction operation type not supported");
+    break;
+  }
+  return nullptr;
+}
+
+/// Returns the identity value associated with an AtomicRMWKind op.
+Value mlir::getIdentityValue(AtomicRMWKind op, Type resultType,
+                             OpBuilder &builder, Location loc) {
+  Attribute attr = getIdentityValueAttr(op, resultType, builder, loc);
+  return builder.create<ConstantOp>(loc, attr);
+}
+
+/// Return the value obtained by applying the reduction operation kind
+/// associated with a binary AtomicRMWKind op to `lhs` and `rhs`.
+Value mlir::getReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
+                           Value lhs, Value rhs) {
+  switch (op) {
+  case AtomicRMWKind::addf:
+    return builder.create<AddFOp>(loc, lhs, rhs);
+  case AtomicRMWKind::addi:
+    return builder.create<AddIOp>(loc, lhs, rhs);
+  case AtomicRMWKind::mulf:
+    return builder.create<MulFOp>(loc, lhs, rhs);
+  case AtomicRMWKind::muli:
+    return builder.create<MulIOp>(loc, lhs, rhs);
+  // TODO: Add remaining reduction operations.
+  default:
+    (void)emitOptionalError(loc, "Reduction operation type not supported");
+    break;
+  }
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // GenericAtomicRMWOp
 //===----------------------------------------------------------------------===//
