@@ -2419,8 +2419,6 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   DisassembleSymbols =
       commaSeparatedValues(InputArgs, OBJDUMP_disassemble_symbols_EQ);
   DisassembleZeroes = InputArgs.hasArg(OBJDUMP_disassemble_zeroes);
-  DisassemblerOptions =
-      commaSeparatedValues(InputArgs, OBJDUMP_disassembler_options_EQ);
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_dwarf_EQ)) {
     DwarfDumpType =
         StringSwitch<DIDumpType>(A->getValue()).Case("frames", DIDT_DebugFrame);
@@ -2466,24 +2464,40 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
 
   parseMachOOptions(InputArgs);
 
-  // Handle options that get forwarded to cl::opt<>s in libraries.
-  // FIXME: Depending on https://reviews.llvm.org/D84191#inline-946075 ,
-  // hopefully remove this again.
-  std::vector<const char *> LLVMArgs;
-  LLVMArgs.push_back("llvm-objdump (LLVM option parsing)");
-  if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_x86_asm_syntax_att,
-                                               OBJDUMP_x86_asm_syntax_intel)) {
+  // Parse -M (--disassembler-options) and deprecated
+  // --x86-asm-syntax={att,intel}.
+  //
+  // Note, for x86, the asm dialect (AssemblerDialect) is initialized when the
+  // MCAsmInfo is constructed. MCInstPrinter::applyTargetSpecificCLOption is
+  // called too late. For now we have to use the internal cl::opt option.
+  const char *AsmSyntax = nullptr;
+  for (const auto *A : InputArgs.filtered(OBJDUMP_disassembler_options_EQ,
+                                          OBJDUMP_x86_asm_syntax_att,
+                                          OBJDUMP_x86_asm_syntax_intel)) {
     switch (A->getOption().getID()) {
     case OBJDUMP_x86_asm_syntax_att:
-      LLVMArgs.push_back("--x86-asm-syntax=att");
-      break;
+      AsmSyntax = "--x86-asm-syntax=att";
+      continue;
     case OBJDUMP_x86_asm_syntax_intel:
-      LLVMArgs.push_back("--x86-asm-syntax=intel");
-      break;
+      AsmSyntax = "--x86-asm-syntax=intel";
+      continue;
+    }
+
+    SmallVector<StringRef, 2> Values;
+    llvm::SplitString(A->getValue(), Values, ",");
+    for (StringRef V : Values) {
+      if (V == "att")
+        AsmSyntax = "--x86-asm-syntax=att";
+      else if (V == "intel")
+        AsmSyntax = "--x86-asm-syntax=intel";
+      else
+        DisassemblerOptions.push_back(V.str());
     }
   }
-  LLVMArgs.push_back(nullptr);
-  llvm::cl::ParseCommandLineOptions(LLVMArgs.size() - 1, LLVMArgs.data());
+  if (AsmSyntax) {
+    const char *Argv[] = {"llvm-objdump", AsmSyntax};
+    llvm::cl::ParseCommandLineOptions(2, Argv);
+  }
 
   // objdump defaults to a.out if no filenames specified.
   if (InputFilenames.empty())
