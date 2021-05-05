@@ -305,7 +305,7 @@ entry:
 declare hidden void @void_fastcc_multi_byval(i32 %a, [3 x i32] addrspace(5)* byval([3 x i32]) align 16, [2 x i64] addrspace(5)* byval([2 x i64]))
 
 ; GCN-LABEL: {{^}}sibling_call_fastcc_multi_byval:
-; GCN-DAG: s_getpc_b64 [[TARGET_ADDR:s\[[0-9]+[0-9]+]]
+; GCN-DAG: s_getpc_b64 [[TARGET_ADDR:s\[[0-9]+:[0-9]+\]]]
 ; GCN-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
 ; GCN-DAG: v_mov_b32_e32 [[NINE:v[0-9]+]], 9
 
@@ -349,16 +349,12 @@ declare hidden void @void_fastcc_byval_and_stack_passed([3 x i32] addrspace(5)* 
 ; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s32{{$}}
 ; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:4{{$}}
 ; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:8{{$}}
-
-; GCN: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
-
-; GCN: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:12
-; GCN: buffer_store_dword v0, off, s[0:3], s32 offset:16
+; GCN-DAG: buffer_store_dword v0, off, s[0:3], s32 offset:12
 
 ; GCN: v_mov_b32_e32 v0, 0
 ; GCN: v_mov_b32_e32 v30, 0
 
-; GCN: s_getpc_b64 [[TARGET_ADDR:s\[[0-9]+[0-9]+]]
+; GCN: s_getpc_b64 [[TARGET_ADDR:s\[[0-9]+:[0-9]+\]]]
 ; GCN-NEXT: s_add_u32
 ; GCN-NEXT: s_addc_u32
 ; GCN-NEXT: s_setpc_b64 [[TARGET_ADDR]]
