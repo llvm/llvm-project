@@ -465,7 +465,7 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
                                    inconvertibleErrorCode());
 
   TLOF = TM->getObjFileLowering();
-  MC.reset(new MCContext(MAI.get(), MRI.get(), TLOF));
+  MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), TLOF, MSTI.get()));
   TLOF->Initialize(*MC, *TM);
 
   MCE = TheTarget->createMCCodeEmitter(*MII, *MRI, *MC);

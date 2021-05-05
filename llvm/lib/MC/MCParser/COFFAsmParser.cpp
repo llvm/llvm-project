@@ -403,7 +403,7 @@ bool COFFAsmParser::ParseDirectiveSection(StringRef, SMLoc) {
 
   SectionKind Kind = computeSectionKind(Flags);
   if (Kind.isText()) {
-    const Triple &T = getContext().getObjectFileInfo()->getTargetTriple();
+    const Triple &T = getContext().getTargetTriple();
     if (T.getArch() == Triple::arm || T.getArch() == Triple::thumb)
       Flags |= COFF::IMAGE_SCN_MEM_16BIT;
   }
