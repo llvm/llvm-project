@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SSO_ALLOCATOR
-#define _LIBCPP___SSO_ALLOCATOR
+#ifndef _LIBCPP_SSO_ALLOCATOR_H
+#define _LIBCPP_SSO_ALLOCATOR_H
 
 #include <__config>
 #include <memory>
@@ -67,11 +67,11 @@ public:
     _LIBCPP_INLINE_VISIBILITY size_type max_size() const throw() {return size_type(~0) / sizeof(_Tp);}
 
     _LIBCPP_INLINE_VISIBILITY
-    bool operator==(__sso_allocator& __a) const {return &buf_ == &__a.buf_;}
+    bool operator==(const __sso_allocator& __a) const {return &buf_ == &__a.buf_;}
     _LIBCPP_INLINE_VISIBILITY
-    bool operator!=(__sso_allocator& __a) const {return &buf_ != &__a.buf_;}
+    bool operator!=(const __sso_allocator& __a) const {return &buf_ != &__a.buf_;}
 };
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___SSO_ALLOCATOR
+#endif // _LIBCPP_SSO_ALLOCATOR_H
