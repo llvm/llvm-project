@@ -78,8 +78,6 @@ private:
     if (asyncOp.getAsyncToken())
       // TODO: Support ops that are already async.
       return op->emitOpError("is already async");
-    if (op->getNumRegions() > 0)
-      return op->emitOpError("regions are not supported");
 
     auto tokenType = builder.getType<gpu::AsyncTokenType>();
 
@@ -96,7 +94,12 @@ private:
     resultTypes.push_back(tokenType);
     auto *newOp = Operation::create(op->getLoc(), op->getName(), resultTypes,
                                     op->getOperands(), op->getAttrDictionary(),
-                                    op->getSuccessors());
+                                    op->getSuccessors(), op->getNumRegions());
+
+    // Clone regions into new op.
+    BlockAndValueMapping mapping;
+    for (auto pair : llvm::zip_first(op->getRegions(), newOp->getRegions()))
+      std::get<0>(pair).cloneInto(&std::get<1>(pair), mapping);
 
     // Replace the op with the async clone.
     auto results = newOp->getResults();
