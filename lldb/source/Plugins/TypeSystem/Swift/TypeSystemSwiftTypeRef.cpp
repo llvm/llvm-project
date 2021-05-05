@@ -2615,8 +2615,37 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
 
 size_t
 TypeSystemSwiftTypeRef::GetNumTemplateArguments(opaque_compiler_type_t type) {
-  return m_swift_ast_context->GetNumTemplateArguments(ReconstructType(type));
+  auto impl = [&]() -> size_t {
+    using namespace swift::Demangle;
+    Demangler dem;
+    NodePointer node = DemangleCanonicalType(dem, type);
+
+    if (!node)
+      return 0;
+
+    switch (node->getKind()) {
+    case Node::Kind::BoundGenericClass:
+    case Node::Kind::BoundGenericEnum:
+    case Node::Kind::BoundGenericStructure:
+    case Node::Kind::BoundGenericProtocol:
+    case Node::Kind::BoundGenericOtherNominalType:
+    case Node::Kind::BoundGenericTypeAlias:
+    case Node::Kind::BoundGenericFunction: {
+      if (node->getNumChildren() > 1) {
+        NodePointer child = node->getChild(1);
+        if (child && child->getKind() == Node::Kind::TypeList)
+          return child->getNumChildren();
+      }
+    } break;
+    default:
+      break;
+    }
+    return 0;
+  };
+  VALIDATE_AND_RETURN(impl, GetNumTemplateArguments, type,
+                      (ReconstructType(type)), (ReconstructType(type)));
 }
+
 CompilerType
 TypeSystemSwiftTypeRef::GetTypeForFormatters(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetTypeForFormatters(ReconstructType(type));
