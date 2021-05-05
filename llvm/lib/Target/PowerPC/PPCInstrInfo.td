@@ -2041,120 +2041,120 @@ def : Pat<(int_ppc_dcbtst_with_hint xoaddr:$dst, i32:$TH),
 let Defs = [CR0] in {
   def ATOMIC_LOAD_ADD_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_ADD_I8",
-    [(set i32:$dst, (atomic_load_add_8 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_add_8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_SUB_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_SUB_I8",
-    [(set i32:$dst, (atomic_load_sub_8 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_sub_8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_AND_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_AND_I8",
-    [(set i32:$dst, (atomic_load_and_8 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_and_8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_OR_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_OR_I8",
-    [(set i32:$dst, (atomic_load_or_8 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_or_8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_XOR_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "ATOMIC_LOAD_XOR_I8",
-    [(set i32:$dst, (atomic_load_xor_8 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_xor_8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_NAND_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_NAND_I8",
-    [(set i32:$dst, (atomic_load_nand_8 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_nand_8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_MIN_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_MIN_I8",
-    [(set i32:$dst, (atomic_load_min_8 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_min_8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_MAX_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_MAX_I8",
-    [(set i32:$dst, (atomic_load_max_8 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_max_8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_UMIN_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_UMIN_I8",
-    [(set i32:$dst, (atomic_load_umin_8 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_umin_8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_UMAX_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_UMAX_I8",
-    [(set i32:$dst, (atomic_load_umax_8 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_umax_8 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_ADD_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_ADD_I16",
-    [(set i32:$dst, (atomic_load_add_16 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_add_16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_SUB_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_SUB_I16",
-    [(set i32:$dst, (atomic_load_sub_16 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_sub_16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_AND_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_AND_I16",
-    [(set i32:$dst, (atomic_load_and_16 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_and_16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_OR_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_OR_I16",
-    [(set i32:$dst, (atomic_load_or_16 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_or_16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_XOR_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_XOR_I16",
-    [(set i32:$dst, (atomic_load_xor_16 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_xor_16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_NAND_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_NAND_I16",
-    [(set i32:$dst, (atomic_load_nand_16 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_nand_16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_MIN_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_MIN_I16",
-    [(set i32:$dst, (atomic_load_min_16 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_min_16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_MAX_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_MAX_I16",
-    [(set i32:$dst, (atomic_load_max_16 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_max_16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_UMIN_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_UMIN_I16",
-    [(set i32:$dst, (atomic_load_umin_16 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_umin_16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_UMAX_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_UMAX_I16",
-    [(set i32:$dst, (atomic_load_umax_16 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_umax_16 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_ADD_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_ADD_I32",
-    [(set i32:$dst, (atomic_load_add_32 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_add_32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_SUB_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_SUB_I32",
-    [(set i32:$dst, (atomic_load_sub_32 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_sub_32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_AND_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_AND_I32",
-    [(set i32:$dst, (atomic_load_and_32 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_and_32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_OR_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_OR_I32",
-    [(set i32:$dst, (atomic_load_or_32 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_or_32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_XOR_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_XOR_I32",
-    [(set i32:$dst, (atomic_load_xor_32 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_xor_32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_NAND_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_NAND_I32",
-    [(set i32:$dst, (atomic_load_nand_32 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_nand_32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_MIN_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_MIN_I32",
-    [(set i32:$dst, (atomic_load_min_32 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_min_32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_MAX_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_MAX_I32",
-    [(set i32:$dst, (atomic_load_max_32 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_max_32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_UMIN_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_UMIN_I32",
-    [(set i32:$dst, (atomic_load_umin_32 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_umin_32 ForceXForm:$ptr, i32:$incr))]>;
   def ATOMIC_LOAD_UMAX_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$incr), "#ATOMIC_LOAD_UMAX_I32",
-    [(set i32:$dst, (atomic_load_umax_32 xoaddr:$ptr, i32:$incr))]>;
+    [(set i32:$dst, (atomic_load_umax_32 ForceXForm:$ptr, i32:$incr))]>;
 
   def ATOMIC_CMP_SWAP_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$old, gprc:$new), "#ATOMIC_CMP_SWAP_I8",
-    [(set i32:$dst, (atomic_cmp_swap_8 xoaddr:$ptr, i32:$old, i32:$new))]>;
+    [(set i32:$dst, (atomic_cmp_swap_8 ForceXForm:$ptr, i32:$old, i32:$new))]>;
   def ATOMIC_CMP_SWAP_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$old, gprc:$new), "#ATOMIC_CMP_SWAP_I16 $dst $ptr $old $new",
-    [(set i32:$dst, (atomic_cmp_swap_16 xoaddr:$ptr, i32:$old, i32:$new))]>;
+    [(set i32:$dst, (atomic_cmp_swap_16 ForceXForm:$ptr, i32:$old, i32:$new))]>;
   def ATOMIC_CMP_SWAP_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$old, gprc:$new), "#ATOMIC_CMP_SWAP_I32 $dst $ptr $old $new",
-    [(set i32:$dst, (atomic_cmp_swap_32 xoaddr:$ptr, i32:$old, i32:$new))]>;
+    [(set i32:$dst, (atomic_cmp_swap_32 ForceXForm:$ptr, i32:$old, i32:$new))]>;
 
   def ATOMIC_SWAP_I8 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$new), "#ATOMIC_SWAP_i8",
-    [(set i32:$dst, (atomic_swap_8 xoaddr:$ptr, i32:$new))]>;
+    [(set i32:$dst, (atomic_swap_8 ForceXForm:$ptr, i32:$new))]>;
   def ATOMIC_SWAP_I16 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$new), "#ATOMIC_SWAP_I16",
-    [(set i32:$dst, (atomic_swap_16 xoaddr:$ptr, i32:$new))]>;
+    [(set i32:$dst, (atomic_swap_16 ForceXForm:$ptr, i32:$new))]>;
   def ATOMIC_SWAP_I32 : PPCCustomInserterPseudo<
     (outs gprc:$dst), (ins memrr:$ptr, gprc:$new), "#ATOMIC_SWAP_I32",
-    [(set i32:$dst, (atomic_swap_32 xoaddr:$ptr, i32:$new))]>;
+    [(set i32:$dst, (atomic_swap_32 ForceXForm:$ptr, i32:$new))]>;
 }
 
-def : Pat<(PPCatomicCmpSwap_8 xoaddr:$ptr, i32:$old, i32:$new),
-        (ATOMIC_CMP_SWAP_I8 xoaddr:$ptr, i32:$old, i32:$new)>;
-def : Pat<(PPCatomicCmpSwap_16 xoaddr:$ptr, i32:$old, i32:$new),
-        (ATOMIC_CMP_SWAP_I16 xoaddr:$ptr, i32:$old, i32:$new)>;
+def : Pat<(PPCatomicCmpSwap_8 ForceXForm:$ptr, i32:$old, i32:$new),
+        (ATOMIC_CMP_SWAP_I8 ForceXForm:$ptr, i32:$old, i32:$new)>;
+def : Pat<(PPCatomicCmpSwap_16 ForceXForm:$ptr, i32:$old, i32:$new),
+        (ATOMIC_CMP_SWAP_I16 ForceXForm:$ptr, i32:$old, i32:$new)>;
 
 // Instructions to support atomic operations
 let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
@@ -2344,10 +2344,10 @@ def LWZX : XForm_1_memOp<31,  23, (outs gprc:$rD), (ins memrr:$src),
                    [(set i32:$rD, (load XForm:$src))]>;
 def LHBRX : XForm_1_memOp<31, 790, (outs gprc:$rD), (ins memrr:$src),
                    "lhbrx $rD, $src", IIC_LdStLoad,
-                   [(set i32:$rD, (PPClbrx xoaddr:$src, i16))]>;
+                   [(set i32:$rD, (PPClbrx ForceXForm:$src, i16))]>;
 def LWBRX : XForm_1_memOp<31,  534, (outs gprc:$rD), (ins memrr:$src),
                    "lwbrx $rD, $src", IIC_LdStLoad,
-                   [(set i32:$rD, (PPClbrx xoaddr:$src, i32))]>;
+                   [(set i32:$rD, (PPClbrx ForceXForm:$src, i32))]>;
 
 let Predicates = [HasFPU] in {
 def LFSX   : XForm_25_memOp<31, 535, (outs f4rc:$frD), (ins memrr:$src),
@@ -2359,10 +2359,10 @@ def LFDX   : XForm_25_memOp<31, 599, (outs f8rc:$frD), (ins memrr:$src),
 
 def LFIWAX : XForm_25_memOp<31, 855, (outs f8rc:$frD), (ins memrr:$src),
                       "lfiwax $frD, $src", IIC_LdStLFD,
-                      [(set f64:$frD, (PPClfiwax xoaddr:$src))]>;
+                      [(set f64:$frD, (PPClfiwax ForceXForm:$src))]>;
 def LFIWZX : XForm_25_memOp<31, 887, (outs f8rc:$frD), (ins memrr:$src),
                       "lfiwzx $frD, $src", IIC_LdStLFD,
-                      [(set f64:$frD, (PPClfiwzx xoaddr:$src))]>;
+                      [(set f64:$frD, (PPClfiwzx ForceXForm:$src))]>;
 }
 }
 
@@ -2448,17 +2448,17 @@ def STWX  : XForm_8_memOp<31, 151, (outs), (ins gprc:$rS, memrr:$dst),
 
 def STHBRX: XForm_8_memOp<31, 918, (outs), (ins gprc:$rS, memrr:$dst),
                    "sthbrx $rS, $dst", IIC_LdStStore,
-                   [(PPCstbrx i32:$rS, xoaddr:$dst, i16)]>,
+                   [(PPCstbrx i32:$rS, ForceXForm:$dst, i16)]>,
                    PPC970_DGroup_Cracked;
 def STWBRX: XForm_8_memOp<31, 662, (outs), (ins gprc:$rS, memrr:$dst),
                    "stwbrx $rS, $dst", IIC_LdStStore,
-                   [(PPCstbrx i32:$rS, xoaddr:$dst, i32)]>,
+                   [(PPCstbrx i32:$rS, ForceXForm:$dst, i32)]>,
                    PPC970_DGroup_Cracked;
 
 let Predicates = [HasFPU] in {
 def STFIWX: XForm_28_memOp<31, 983, (outs), (ins f8rc:$frS, memrr:$dst),
                      "stfiwx $frS, $dst", IIC_LdStSTFD,
-                     [(PPCstfiwx f64:$frS, xoaddr:$dst)]>;
+                     [(PPCstfiwx f64:$frS, ForceXForm:$dst)]>;
 
 def STFSX : XForm_28_memOp<31, 663, (outs), (ins f4rc:$frS, memrr:$dst),
                      "stfsx $frS, $dst", IIC_LdStSTFD,
@@ -5202,20 +5202,20 @@ defm : TrapExtendedMnemonic<"lng", 6>;
 defm : TrapExtendedMnemonic<"u", 31>;
 
 // Atomic loads
-def : Pat<(atomic_load_8  iaddr:$src), (LBZ  memri:$src)>;
-def : Pat<(atomic_load_16 iaddr:$src), (LHZ  memri:$src)>;
-def : Pat<(atomic_load_32 iaddr:$src), (LWZ  memri:$src)>;
-def : Pat<(atomic_load_8  xaddr:$src), (LBZX memrr:$src)>;
-def : Pat<(atomic_load_16 xaddr:$src), (LHZX memrr:$src)>;
-def : Pat<(atomic_load_32 xaddr:$src), (LWZX memrr:$src)>;
+def : Pat<(atomic_load_8  DForm:$src), (LBZ  memri:$src)>;
+def : Pat<(atomic_load_16 DForm:$src), (LHZ  memri:$src)>;
+def : Pat<(atomic_load_32 DForm:$src), (LWZ  memri:$src)>;
+def : Pat<(atomic_load_8  XForm:$src), (LBZX memrr:$src)>;
+def : Pat<(atomic_load_16 XForm:$src), (LHZX memrr:$src)>;
+def : Pat<(atomic_load_32 XForm:$src), (LWZX memrr:$src)>;
 
 // Atomic stores
-def : Pat<(atomic_store_8  iaddr:$ptr, i32:$val), (STB  gprc:$val, memri:$ptr)>;
-def : Pat<(atomic_store_16 iaddr:$ptr, i32:$val), (STH  gprc:$val, memri:$ptr)>;
-def : Pat<(atomic_store_32 iaddr:$ptr, i32:$val), (STW  gprc:$val, memri:$ptr)>;
-def : Pat<(atomic_store_8  xaddr:$ptr, i32:$val), (STBX gprc:$val, memrr:$ptr)>;
-def : Pat<(atomic_store_16 xaddr:$ptr, i32:$val), (STHX gprc:$val, memrr:$ptr)>;
-def : Pat<(atomic_store_32 xaddr:$ptr, i32:$val), (STWX gprc:$val, memrr:$ptr)>;
+def : Pat<(atomic_store_8  DForm:$ptr, i32:$val), (STB  gprc:$val, memri:$ptr)>;
+def : Pat<(atomic_store_16 DForm:$ptr, i32:$val), (STH  gprc:$val, memri:$ptr)>;
+def : Pat<(atomic_store_32 DForm:$ptr, i32:$val), (STW  gprc:$val, memri:$ptr)>;
+def : Pat<(atomic_store_8  XForm:$ptr, i32:$val), (STBX gprc:$val, memrr:$ptr)>;
+def : Pat<(atomic_store_16 XForm:$ptr, i32:$val), (STHX gprc:$val, memrr:$ptr)>;
+def : Pat<(atomic_store_32 XForm:$ptr, i32:$val), (STWX gprc:$val, memrr:$ptr)>;
 
 let Predicates = [IsISA3_0] in {
 

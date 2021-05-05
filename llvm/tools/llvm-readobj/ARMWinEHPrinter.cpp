@@ -238,6 +238,28 @@ ErrorOr<SymbolRef> Decoder::getRelocatedSymbol(const COFFObjectFile &,
   return inconvertibleErrorCode();
 }
 
+SymbolRef Decoder::getPreferredSymbol(const COFFObjectFile &COFF,
+                                      SymbolRef Sym) {
+  // The symbol resolved by getRelocatedSymbol can be any internal
+  // nondescriptive symbol; try to resolve a more descriptive one.
+  COFFSymbolRef CoffSym = COFF.getCOFFSymbol(Sym);
+  if (CoffSym.getStorageClass() != COFF::IMAGE_SYM_CLASS_LABEL)
+    return Sym;
+  for (const auto &S : COFF.symbols()) {
+    COFFSymbolRef CS = COFF.getCOFFSymbol(S);
+    if (CS.getSectionNumber() == CoffSym.getSectionNumber() &&
+        CS.getValue() == CoffSym.getValue()) {
+      if (CS.isExternal())
+        return S;
+      if (CS.getStorageClass() != COFF::IMAGE_SYM_CLASS_LABEL) {
+        Sym = S;
+        CoffSym = CS;
+      }
+    }
+  }
+  return Sym;
+}
+
 ErrorOr<SymbolRef> Decoder::getSymbolForLocation(
     const COFFObjectFile &COFF, const SectionRef &Section,
     uint64_t OffsetInSection, uint64_t ImmediateOffset, uint64_t &SymbolAddress,
@@ -270,6 +292,8 @@ ErrorOr<SymbolRef> Decoder::getSymbolForLocation(
     SymbolOffset = 0;
     SymOrErr = getSymbol(COFF, SymbolAddress, FunctionOnly);
   }
+  if (SymOrErr && FunctionOnly) // Resolve label symbols into function names
+    SymOrErr = getPreferredSymbol(COFF, *SymOrErr);
   return SymOrErr;
 }
 

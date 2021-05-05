@@ -1656,7 +1656,7 @@ void objdump::printRelocations(const ObjectFile *Obj) {
 
   for (std::pair<SectionRef, std::vector<SectionRef>> &P : SecToRelSec) {
     StringRef SecName = unwrapOrError(P.first.getName(), Obj->getFileName());
-    outs() << "RELOCATION RECORDS FOR [" << SecName << "]:\n";
+    outs() << "\nRELOCATION RECORDS FOR [" << SecName << "]:\n";
     uint32_t OffsetPadding = (Obj->getBytesInAddress() > 4 ? 16 : 8);
     uint32_t TypePadding = 24;
     outs() << left_justify("OFFSET", OffsetPadding) << " "
@@ -1679,7 +1679,6 @@ void objdump::printRelocations(const ObjectFile *Obj) {
                << "\n";
       }
     }
-    outs() << "\n";
   }
 }
 
@@ -1739,16 +1738,13 @@ void objdump::printSectionHeaders(const ObjectFile *Obj) {
   size_t NameWidth = getMaxSectionNameWidth(Obj);
   size_t AddressWidth = 2 * Obj->getBytesInAddress();
   bool HasLMAColumn = shouldDisplayLMA(Obj);
+  outs() << "\nSections:\n";
   if (HasLMAColumn)
-    outs() << "Sections:\n"
-              "Idx "
-           << left_justify("Name", NameWidth) << " Size     "
+    outs() << "Idx " << left_justify("Name", NameWidth) << " Size     "
            << left_justify("VMA", AddressWidth) << " "
            << left_justify("LMA", AddressWidth) << " Type\n";
   else
-    outs() << "Sections:\n"
-              "Idx "
-           << left_justify("Name", NameWidth) << " Size     "
+    outs() << "Idx " << left_justify("Name", NameWidth) << " Size     "
            << left_justify("VMA", AddressWidth) << " Type\n";
 
   uint64_t Idx;
@@ -1777,7 +1773,6 @@ void objdump::printSectionHeaders(const ObjectFile *Obj) {
                        Name.str().c_str(), Size)
              << format_hex_no_prefix(VMA, AddressWidth) << " " << Type << "\n";
   }
-  outs() << "\n";
 }
 
 void objdump::printSectionContents(const ObjectFile *Obj) {
@@ -1833,7 +1828,7 @@ void objdump::printSectionContents(const ObjectFile *Obj) {
 void objdump::printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
                                StringRef ArchitectureName, bool DumpDynamic) {
   if (O->isCOFF() && !DumpDynamic) {
-    outs() << "SYMBOL TABLE:\n";
+    outs() << "\nSYMBOL TABLE:\n";
     printCOFFSymbolTable(cast<const COFFObjectFile>(O));
     return;
   }
@@ -1841,13 +1836,13 @@ void objdump::printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
   const StringRef FileName = O->getFileName();
 
   if (!DumpDynamic) {
-    outs() << "SYMBOL TABLE:\n";
+    outs() << "\nSYMBOL TABLE:\n";
     for (auto I = O->symbol_begin(); I != O->symbol_end(); ++I)
       printSymbol(O, *I, FileName, ArchiveName, ArchitectureName, DumpDynamic);
     return;
   }
 
-  outs() << "DYNAMIC SYMBOL TABLE:\n";
+  outs() << "\nDYNAMIC SYMBOL TABLE:\n";
   if (!O->isELF()) {
     reportWarning(
         "this operation is not currently supported for this file format",
@@ -2119,7 +2114,7 @@ static void printFileHeaders(const ObjectFile *O) {
 
   StringRef Fmt = O->getBytesInAddress() > 4 ? "%016" PRIx64 : "%08" PRIx64;
   outs() << "start address: "
-         << "0x" << format(Fmt.data(), Address) << "\n\n";
+         << "0x" << format(Fmt.data(), Address) << "\n";
 }
 
 static void printArchiveChild(StringRef Filename, const Archive::Child &C) {
@@ -2216,7 +2211,7 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
       outs() << A->getFileName() << "(" << O->getFileName() << ")";
     else
       outs() << O->getFileName();
-    outs() << ":\tfile format " << O->getFileFormatName().lower() << "\n\n";
+    outs() << ":\tfile format " << O->getFileFormatName().lower() << "\n";
   }
 
   if (HasStartAddressFlag || HasStopAddressFlag)
@@ -2487,22 +2482,6 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
       break;
     }
   }
-  if (InputArgs.hasArg(OBJDUMP_mhvx))
-    LLVMArgs.push_back("--mhvx");
-  if (InputArgs.hasArg(OBJDUMP_mhvx_v66))
-    LLVMArgs.push_back("--mhvx=v66");
-  if (InputArgs.hasArg(OBJDUMP_mv60))
-    LLVMArgs.push_back("--mv60");
-  if (InputArgs.hasArg(OBJDUMP_mv65))
-    LLVMArgs.push_back("--mv65");
-  if (InputArgs.hasArg(OBJDUMP_mv66))
-    LLVMArgs.push_back("--mv66");
-  if (InputArgs.hasArg(OBJDUMP_mv67))
-    LLVMArgs.push_back("--mv67");
-  if (InputArgs.hasArg(OBJDUMP_mv67t))
-    LLVMArgs.push_back("--mv67t");
-  if (InputArgs.hasArg(OBJDUMP_riscv_no_aliases))
-    LLVMArgs.push_back("--riscv-no-aliases");
   LLVMArgs.push_back(nullptr);
   llvm::cl::ParseCommandLineOptions(LLVMArgs.size() - 1, LLVMArgs.data());
 

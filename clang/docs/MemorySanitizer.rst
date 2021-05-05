@@ -85,8 +85,8 @@ particular function.  MemorySanitizer may still instrument such functions to
 avoid false positives.  This attribute may not be supported by other compilers,
 so we suggest to use it together with ``__has_feature(memory_sanitizer)``.
 
-Blacklist
----------
+Ignorelist
+----------
 
 MemorySanitizer supports ``src`` and ``fun`` entity types in
 :doc:`SanitizerSpecialCaseList`, that can be used to relax MemorySanitizer

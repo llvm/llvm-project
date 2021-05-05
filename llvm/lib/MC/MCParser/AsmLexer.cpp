@@ -80,7 +80,7 @@ AsmToken AsmLexer::LexFloatLiteral() {
     ++CurPtr;
 
   if (*CurPtr == '-' || *CurPtr == '+')
-    return ReturnError(CurPtr, "Invalid sign in float literal");
+    return ReturnError(CurPtr, "invalid sign in float literal");
 
   // Check for exponent
   if ((*CurPtr == 'e' || *CurPtr == 'E')) {

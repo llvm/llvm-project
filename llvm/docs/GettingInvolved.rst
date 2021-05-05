@@ -201,7 +201,11 @@ writing, the following sync-ups are organized:
      - Every month on Mondays
      - `ics <https://calendar.google.com/calendar/ical/fr1qtmrmt2s9odufjvurkb6j70%40group.calendar.google.com/public/basic.ics>`__
      - `Minutes/docs <https://docs.google.com/document/d/14IDnh3YY9m6Ej_PaRKOz8tTTZlObgtLl8mYeRbytAec/edit?usp=sharing>`__
-
+   * - MemorySSA in LLVM
+     - Monthly, first Monday of the month; 10:30amPT, 1:30pmET, 5:30pmUTC
+     - `ics <https://calendar.google.com/calendar/ical/c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/embed?src=c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com>`__
+     - `Minutes/docs <https://docs.google.com/document/d/1-uEEZfmRdPThZlctOq9eXlmUaSSAAi8oKxhrPY_lpjk/edit#>`__
 
 IRC
 ---

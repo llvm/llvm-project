@@ -138,7 +138,7 @@ target(tsan_target_type, "tsan") {
   # FIXME: dep on libcxx-headers?
   # FIXME: add_sanitizer_rt_version_list (cf hwasan)
   # FIXME: need libclang_rt.tsan*.a.syms?
-  # FIXME: tsan_blacklist.txt
+  # FIXME: tsan_ignorelist.txt
 
   if (target_os == "mac") {
     # The -U flags below correspond to the add_weak_symbols() calls in CMake.

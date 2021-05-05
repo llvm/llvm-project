@@ -993,9 +993,10 @@ public:
 
 /// A recipe for handling all phi nodes except for integer and FP inductions.
 /// For reduction PHIs, RdxDesc must point to the corresponding recurrence
-/// descriptor and the start value is the first operand of the recipe.
-/// In the VPlan native path, all incoming VPValues & VPBasicBlock pairs are
-/// managed in the recipe directly.
+/// descriptor, the start value is the first operand of the recipe and the
+/// incoming value from the backedge is the second operand. In the VPlan native
+/// path, all incoming VPValues & VPBasicBlock pairs are managed in the recipe
+/// directly.
 class VPWidenPHIRecipe : public VPRecipeBase, public VPValue {
   /// Descriptor for a reduction PHI.
   RecurrenceDescriptor *RdxDesc = nullptr;
@@ -1038,6 +1039,13 @@ public:
   /// Returns the start value of the phi, if it is a reduction.
   VPValue *getStartValue() {
     return getNumOperands() == 0 ? nullptr : getOperand(0);
+  }
+
+  /// Returns the incoming value from the loop backedge, if it is a reduction.
+  VPValue *getBackedgeValue() {
+    assert(RdxDesc && "second incoming value is only guaranteed to be backedge "
+                      "value for reductions");
+    return getOperand(1);
   }
 
   /// Adds a pair (\p IncomingV, \p IncomingBlock) to the phi.
@@ -1522,6 +1530,11 @@ public:
   }
 
   void dropAllReferences(VPValue *NewValue) override;
+
+  /// Split current block at \p SplitAt by inserting a new block between the
+  /// current block and its successors and moving all recipes starting at
+  /// SplitAt to the new block. Returns the new block.
+  VPBasicBlock *splitAt(iterator SplitAt);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPBsicBlock to \p O, prefixing all lines with \p Indent. \p

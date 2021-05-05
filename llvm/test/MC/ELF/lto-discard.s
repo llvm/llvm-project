@@ -25,6 +25,6 @@ bar:
 
 .ifdef ERR
 .text
-# ERR: {{.*}}.s:[[#@LINE+1]]:14: error: expected identifier in directive
+# ERR: {{.*}}.s:[[#@LINE+1]]:14: error: expected identifier
 .lto_discard 1
 .endif

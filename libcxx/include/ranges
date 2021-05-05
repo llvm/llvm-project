@@ -47,6 +47,15 @@ namespace std::ranges {
   template<range R>
     using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<R>>;
 
+  // [range.view], views
+  template<class T>
+    inline constexpr bool enable_view = ...;
+
+  struct view_base { };
+
+  template<class T>
+    concept view = ...;
+
   // [range.refinements], other range refinements
   template<class T>
     concept input_range = see below;
@@ -67,6 +76,7 @@ namespace std::ranges {
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/enable_borrowed_range.h>
+#include <__ranges/view.h>
 #include <compare>          // Required by the standard.
 #include <initializer_list> // Required by the standard.
 #include <iterator>         // Required by the standard.

@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-pro-type-member-init,hicpp-member-init,modernize-use-emplace,hicpp-use-emplace %t -- \
 //// RUN:     -config='{CheckOptions: [ \
-//// RUN:         {key: cppcoreguidelines-pro-type-member-init.UseAssignment, value: 1}, \
+//// RUN:         {key: cppcoreguidelines-pro-type-member-init.UseAssignment, value: true}, \
 //// RUN:     ]}'
 
 class Foo {

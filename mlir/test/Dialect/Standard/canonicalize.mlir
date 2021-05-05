@@ -538,3 +538,113 @@ func @tripleSubSub3(%arg0: index) -> index {
   %add2 = subi %add1, %c42 : index
   return %add2 : index
 }
+
+// CHECK-LABEL: @notCmpEQ
+//       CHECK:   %[[cres:.+]] = cmpi ne, %arg0, %arg1 : i8
+//       CHECK:   return %[[cres]]
+func @notCmpEQ(%arg0: i8, %arg1: i8) -> i1 {
+  %true = constant true
+  %cmp = cmpi "eq", %arg0, %arg1 : i8
+  %ncmp = xor %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpEQ2
+//       CHECK:   %[[cres:.+]] = cmpi ne, %arg0, %arg1 : i8
+//       CHECK:   return %[[cres]]
+func @notCmpEQ2(%arg0: i8, %arg1: i8) -> i1 {
+  %true = constant true
+  %cmp = cmpi "eq", %arg0, %arg1 : i8
+  %ncmp = xor %true, %cmp : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpNE
+//       CHECK:   %[[cres:.+]] = cmpi eq, %arg0, %arg1 : i8
+//       CHECK:   return %[[cres]]
+func @notCmpNE(%arg0: i8, %arg1: i8) -> i1 {
+  %true = constant true
+  %cmp = cmpi "ne", %arg0, %arg1 : i8
+  %ncmp = xor %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpSLT
+//       CHECK:   %[[cres:.+]] = cmpi sge, %arg0, %arg1 : i8
+//       CHECK:   return %[[cres]]
+func @notCmpSLT(%arg0: i8, %arg1: i8) -> i1 {
+  %true = constant true
+  %cmp = cmpi "slt", %arg0, %arg1 : i8
+  %ncmp = xor %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpSLE
+//       CHECK:   %[[cres:.+]] = cmpi sgt, %arg0, %arg1 : i8
+//       CHECK:   return %[[cres]]
+func @notCmpSLE(%arg0: i8, %arg1: i8) -> i1 {
+  %true = constant true
+  %cmp = cmpi "sle", %arg0, %arg1 : i8
+  %ncmp = xor %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpSGT
+//       CHECK:   %[[cres:.+]] = cmpi sle, %arg0, %arg1 : i8
+//       CHECK:   return %[[cres]]
+func @notCmpSGT(%arg0: i8, %arg1: i8) -> i1 {
+  %true = constant true
+  %cmp = cmpi "sgt", %arg0, %arg1 : i8
+  %ncmp = xor %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpSGE
+//       CHECK:   %[[cres:.+]] = cmpi slt, %arg0, %arg1 : i8
+//       CHECK:   return %[[cres]]
+func @notCmpSGE(%arg0: i8, %arg1: i8) -> i1 {
+  %true = constant true
+  %cmp = cmpi "sge", %arg0, %arg1 : i8
+  %ncmp = xor %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpULT
+//       CHECK:   %[[cres:.+]] = cmpi uge, %arg0, %arg1 : i8
+//       CHECK:   return %[[cres]]
+func @notCmpULT(%arg0: i8, %arg1: i8) -> i1 {
+  %true = constant true
+  %cmp = cmpi "ult", %arg0, %arg1 : i8
+  %ncmp = xor %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpULE
+//       CHECK:   %[[cres:.+]] = cmpi ugt, %arg0, %arg1 : i8
+//       CHECK:   return %[[cres]]
+func @notCmpULE(%arg0: i8, %arg1: i8) -> i1 {
+  %true = constant true
+  %cmp = cmpi "ule", %arg0, %arg1 : i8
+  %ncmp = xor %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpUGT
+//       CHECK:   %[[cres:.+]] = cmpi ule, %arg0, %arg1 : i8
+//       CHECK:   return %[[cres]]
+func @notCmpUGT(%arg0: i8, %arg1: i8) -> i1 {
+  %true = constant true
+  %cmp = cmpi "ugt", %arg0, %arg1 : i8
+  %ncmp = xor %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpUGE
+//       CHECK:   %[[cres:.+]] = cmpi ult, %arg0, %arg1 : i8
+//       CHECK:   return %[[cres]]
+func @notCmpUGE(%arg0: i8, %arg1: i8) -> i1 {
+  %true = constant true
+  %cmp = cmpi "uge", %arg0, %arg1 : i8
+  %ncmp = xor %cmp, %true : i1
+  return %ncmp : i1
+}

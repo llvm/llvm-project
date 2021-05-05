@@ -4,7 +4,9 @@
 # RUN: llvm-objdump -t %t | cmp - %t.txt
 # RUN: FileCheck %s --input-file=%t.txt --match-full-lines --strict-whitespace
 
-#      CHECK:SYMBOL TABLE:
+#      CHECK:{{.*}}file format elf64-x86-64
+#CHECK-EMPTY:
+# CHECK-NEXT:SYMBOL TABLE:
 # CHECK-NEXT:0000000000000000 l    df *ABS*	0000000000000000 a.c
 # CHECK-NEXT:0000000000000000 l    d  .text	0000000000000000 .text
 # CHECK-NEXT:0000000000002000 l     O .data	0000000000000000 local_object

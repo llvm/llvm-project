@@ -1,33 +1,41 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -target-abi darwinpcs -ffreestanding -emit-llvm -w -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -target-abi darwinpcs -ffreestanding -emit-llvm -w -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-LE
+// RUN: %clang_cc1 -triple aarch64_be-none-linux-gnu -target-feature +neon -target-abi darwinpcs -ffreestanding -emit-llvm -w -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 
 // CHECK: define{{.*}} signext i8 @f0()
 char f0(void) {
   return 0;
 }
 
-// Struct as return type. Aggregates <= 16 bytes are passed directly and round
-// up to multiple of 8 bytes.
-// CHECK: define{{.*}} i64 @f1()
+// Struct as return type. Aggregates <= 16 bytes are passed directly. For BE,
+// return values are round up to 64 bits.
+//
+// CHECK-LE: define{{.*}} i8 @f1()
+// CHECK-BE: define{{.*}} i64 @f1()
 struct s1 { char f0; };
 struct s1 f1(void) {}
 
-// CHECK: define{{.*}} i64 @f2()
+// CHECK-LE: define{{.*}} i16 @f2()
+// CHECK-BE: define{{.*}} i64 @f2()
 struct s2 { short f0; };
 struct s2 f2(void) {}
 
-// CHECK: define{{.*}} i64 @f3()
+// CHECK-LE: define{{.*}} i32 @f3()
+// CHECK-BE: define{{.*}} i64 @f3()
 struct s3 { int f0; };
 struct s3 f3(void) {}
 
-// CHECK: define{{.*}} i64 @f4()
+// CHECK-LE: define{{.*}} i32 @f4()
+// CHECK-BE: define{{.*}} i64 @f4()
 struct s4 { struct s4_0 { int f0; } f0; };
 struct s4 f4(void) {}
 
-// CHECK: define{{.*}} i64 @f5()
+// CHECK-LE: define{{.*}} i32 @f5()
+// CHECK-BE: define{{.*}} i64 @f5()
 struct s5 { struct { } f0; int f1; };
 struct s5 f5(void) {}
 
-// CHECK: define{{.*}} i64 @f6()
+// CHECK-LE: define{{.*}} i32 @f6()
+// CHECK-BE: define{{.*}} i64 @f6()
 struct s6 { int f0[1]; };
 struct s6 f6(void) {}
 
@@ -39,19 +47,33 @@ struct s7 f7(void) {}
 struct s8 { struct { int : 0; } f0[1]; };
 struct s8 f8(void) {}
 
-// CHECK: define{{.*}} i64 @f9()
+// CHECK-LE: define{{.*}} i32 @f9()
+// CHECK-BE: define{{.*}} i64 @f9()
 struct s9 { int f0; int : 0; };
 struct s9 f9(void) {}
 
-// CHECK: define{{.*}} i64 @f10()
+// CHECK-LE: define{{.*}} i32 @f10()
+// CHECK-BE: define{{.*}} i64 @f10()
 struct s10 { int f0; int : 0; int : 0; };
 struct s10 f10(void) {}
 
-// CHECK: define{{.*}} i64 @f11()
+// CHECK-LE: define{{.*}} i32 @f11()
+// CHECK-BE: define{{.*}} i64 @f11()
 struct s11 { int : 0; int f0; };
 struct s11 f11(void) {}
 
-// CHECK: define{{.*}} i64 @f12()
+// CHECK-LE: define{{.*}} i24 @f11_packed()
+// CHECK-BE: define{{.*}} i64 @f11_packed()
+struct s11_packed { char c; short s } __attribute__((packed));
+struct s11_packed f11_packed(void) { }
+
+// CHECK-LE: define{{.*}} i32 @f11_not_packed()
+// CHECK-BE: define{{.*}} i64 @f11_not_packed()
+struct s11_not_packed { char c; short s; };
+struct s11_not_packed f11_not_packed(void) { }
+
+// CHECK-LE: define{{.*}} i32 @f12()
+// CHECK-BE: define{{.*}} i64 @f12()
 union u12 { char f0; short f1; int f2; };
 union u12 f12(void) {}
 
@@ -69,28 +91,35 @@ void f15(struct s7 a0) {}
 // CHECK: define{{.*}} void @f16()
 void f16(struct s8 a0) {}
 
-// CHECK: define{{.*}} i64 @f17()
+// CHECK-LE: define{{.*}} i32 @f17()
+// CHECK-BE: define{{.*}} i64 @f17()
 struct s17 { short f0 : 13; char f1 : 4; };
 struct s17 f17(void) {}
 
-// CHECK: define{{.*}} i64 @f18()
+// CHECK-LE: define{{.*}} i32 @f18()
+// CHECK-BE: define{{.*}} i64 @f18()
 struct s18 { short f0; char f1 : 4; };
 struct s18 f18(void) {}
 
-// CHECK: define{{.*}} i64 @f19()
+// CHECK-LE: define{{.*}} i32 @f19()
+// CHECK-BE: define{{.*}} i64 @f19()
 struct s19 { int f0; struct s8 f1; };
 struct s19 f19(void) {}
 
-// CHECK: define{{.*}} i64 @f20()
+// CHECK-LE: define{{.*}} i32 @f20()
+// CHECK-BE: define{{.*}} i64 @f20()
 struct s20 { struct s8 f1; int f0; };
 struct s20 f20(void) {}
 
-// CHECK: define{{.*}} i64 @f21()
+// CHECK-LE: define{{.*}} i32 @f21()
+// CHECK-BE: define{{.*}} i64 @f21()
 struct s21 { struct {} f1; int f0 : 4; };
 struct s21 f21(void) {}
 
-// CHECK: define{{.*}} i64 @f22()
-// CHECK: define{{.*}} i64 @f23()
+// CHECK-LE: define{{.*}} i16 @f22()
+// CHECK-LE: define{{.*}} i32 @f23()
+// CHECK-BE: define{{.*}} i64 @f22()
+// CHECK-BE: define{{.*}} i64 @f23()
 // CHECK: define{{.*}} i64 @f24()
 // CHECK: define{{.*}} [2 x i64] @f25()
 // CHECK: define{{.*}} { float, float } @f26()
@@ -102,11 +131,13 @@ _Complex long long  f25(void) {}
 _Complex float      f26(void) {}
 _Complex double     f27(void) {}
 
-// CHECK: define{{.*}} i64 @f28()
+// CHECK-LE: define{{.*}} i16 @f28()
+// CHECK-BE: define{{.*}} i64 @f28()
 struct s28 { _Complex char f0; };
 struct s28 f28() {}
 
-// CHECK: define{{.*}} i64 @f29()
+// CHECK-LE: define{{.*}} i32 @f29()
+// CHECK-BE: define{{.*}} i64 @f29()
 struct s29 { _Complex short f0; };
 struct s29 f29() {}
 
@@ -118,7 +149,9 @@ struct s31 { char x; };
 void f31(struct s31 s) { }
 // CHECK: define{{.*}} void @f31(i64 %s.coerce)
 // CHECK: %s = alloca %struct.s31, align 1
-// CHECK: trunc i64 %s.coerce to i8
+// CHECK-BE: %coerce.highbits = lshr i64 %s.coerce, 56
+// CHECK-BE: trunc i64 %coerce.highbits to i8
+// CHECK-LE: trunc i64 %s.coerce to i8
 // CHECK: store i8 %{{.*}},
 
 struct s32 { double x; };
@@ -624,15 +657,15 @@ struct HFA {
 };
 
 float test_hfa(int n, ...) {
-// CHECK-LABEL: define{{.*}} float @test_hfa(i32 %n, ...)
-// CHECK: [[THELIST:%.*]] = alloca i8*
-// CHECK: [[CURLIST:%.*]] = load i8*, i8** [[THELIST]]
+// CHECK-LE-LABEL: define{{.*}} float @test_hfa(i32 %n, ...)
+// CHECK-LE: [[THELIST:%.*]] = alloca i8*
+// CHECK-LE: [[CURLIST:%.*]] = load i8*, i8** [[THELIST]]
 
   // HFA is not indirect, so occupies its full 16 bytes on the stack.
-// CHECK: [[NEXTLIST:%.*]] = getelementptr inbounds i8, i8* [[CURLIST]], i64 16
-// CHECK: store i8* [[NEXTLIST]], i8** [[THELIST]]
+// CHECK-LE: [[NEXTLIST:%.*]] = getelementptr inbounds i8, i8* [[CURLIST]], i64 16
+// CHECK-LE: store i8* [[NEXTLIST]], i8** [[THELIST]]
 
-// CHECK: bitcast i8* [[CURLIST]] to %struct.HFA*
+// CHECK-LE: bitcast i8* [[CURLIST]] to %struct.HFA*
   __builtin_va_list thelist;
   __builtin_va_start(thelist, n);
   struct HFA h = __builtin_va_arg(thelist, struct HFA);
@@ -650,17 +683,17 @@ struct TooBigHFA {
 };
 
 float test_toobig_hfa(int n, ...) {
-// CHECK-LABEL: define{{.*}} float @test_toobig_hfa(i32 %n, ...)
-// CHECK: [[THELIST:%.*]] = alloca i8*
-// CHECK: [[CURLIST:%.*]] = load i8*, i8** [[THELIST]]
+// CHECK-LE-LABEL: define{{.*}} float @test_toobig_hfa(i32 %n, ...)
+// CHECK-LE: [[THELIST:%.*]] = alloca i8*
+// CHECK-LE: [[CURLIST:%.*]] = load i8*, i8** [[THELIST]]
 
   // TooBigHFA is not actually an HFA, so gets passed indirectly. Only 8 bytes
   // of stack consumed.
-// CHECK: [[NEXTLIST:%.*]] = getelementptr inbounds i8, i8* [[CURLIST]], i64 8
-// CHECK: store i8* [[NEXTLIST]], i8** [[THELIST]]
+// CHECK-LE: [[NEXTLIST:%.*]] = getelementptr inbounds i8, i8* [[CURLIST]], i64 8
+// CHECK-LE: store i8* [[NEXTLIST]], i8** [[THELIST]]
 
-// CHECK: [[HFAPTRPTR:%.*]] = bitcast i8* [[CURLIST]] to %struct.TooBigHFA**
-// CHECK: [[HFAPTR:%.*]] = load %struct.TooBigHFA*, %struct.TooBigHFA** [[HFAPTRPTR]]
+// CHECK-LE: [[HFAPTRPTR:%.*]] = bitcast i8* [[CURLIST]] to %struct.TooBigHFA**
+// CHECK-LE: [[HFAPTR:%.*]] = load %struct.TooBigHFA*, %struct.TooBigHFA** [[HFAPTRPTR]]
   __builtin_va_list thelist;
   __builtin_va_start(thelist, n);
   struct TooBigHFA h = __builtin_va_arg(thelist, struct TooBigHFA);
@@ -672,21 +705,21 @@ struct HVA {
 };
 
 int32x4_t test_hva(int n, ...) {
-// CHECK-LABEL: define{{.*}} <4 x i32> @test_hva(i32 %n, ...)
-// CHECK: [[THELIST:%.*]] = alloca i8*
-// CHECK: [[CURLIST:%.*]] = load i8*, i8** [[THELIST]]
+// CHECK-LE-LABEL: define{{.*}} <4 x i32> @test_hva(i32 %n, ...)
+// CHECK-LE: [[THELIST:%.*]] = alloca i8*
+// CHECK-LE: [[CURLIST:%.*]] = load i8*, i8** [[THELIST]]
 
   // HVA is not indirect, so occupies its full 16 bytes on the stack. but it
   // must be properly aligned.
-// CHECK: [[ALIGN0:%.*]] = ptrtoint i8* [[CURLIST]] to i64
-// CHECK: [[ALIGN1:%.*]] = add i64 [[ALIGN0]], 15
-// CHECK: [[ALIGN2:%.*]] = and i64 [[ALIGN1]], -16
-// CHECK: [[ALIGNED_LIST:%.*]] = inttoptr i64 [[ALIGN2]] to i8*
+// CHECK-LE: [[ALIGN0:%.*]] = ptrtoint i8* [[CURLIST]] to i64
+// CHECK-LE: [[ALIGN1:%.*]] = add i64 [[ALIGN0]], 15
+// CHECK-LE: [[ALIGN2:%.*]] = and i64 [[ALIGN1]], -16
+// CHECK-LE: [[ALIGNED_LIST:%.*]] = inttoptr i64 [[ALIGN2]] to i8*
 
-// CHECK: [[NEXTLIST:%.*]] = getelementptr inbounds i8, i8* [[ALIGNED_LIST]], i64 32
-// CHECK: store i8* [[NEXTLIST]], i8** [[THELIST]]
+// CHECK-LE: [[NEXTLIST:%.*]] = getelementptr inbounds i8, i8* [[ALIGNED_LIST]], i64 32
+// CHECK-LE: store i8* [[NEXTLIST]], i8** [[THELIST]]
 
-// CHECK: bitcast i8* [[ALIGNED_LIST]] to %struct.HVA*
+// CHECK-LE: bitcast i8* [[ALIGNED_LIST]] to %struct.HVA*
   __builtin_va_list thelist;
   __builtin_va_start(thelist, n);
   struct HVA h = __builtin_va_arg(thelist, struct HVA);
@@ -698,17 +731,17 @@ struct TooBigHVA {
 };
 
 int32x4_t test_toobig_hva(int n, ...) {
-// CHECK-LABEL: define{{.*}} <4 x i32> @test_toobig_hva(i32 %n, ...)
-// CHECK: [[THELIST:%.*]] = alloca i8*
-// CHECK: [[CURLIST:%.*]] = load i8*, i8** [[THELIST]]
+// CHECK-LE-LABEL: define{{.*}} <4 x i32> @test_toobig_hva(i32 %n, ...)
+// CHECK-LE: [[THELIST:%.*]] = alloca i8*
+// CHECK-LE: [[CURLIST:%.*]] = load i8*, i8** [[THELIST]]
 
   // TooBigHVA is not actually an HVA, so gets passed indirectly. Only 8 bytes
   // of stack consumed.
-// CHECK: [[NEXTLIST:%.*]] = getelementptr inbounds i8, i8* [[CURLIST]], i64 8
-// CHECK: store i8* [[NEXTLIST]], i8** [[THELIST]]
+// CHECK-LE: [[NEXTLIST:%.*]] = getelementptr inbounds i8, i8* [[CURLIST]], i64 8
+// CHECK-LE: store i8* [[NEXTLIST]], i8** [[THELIST]]
 
-// CHECK: [[HVAPTRPTR:%.*]] = bitcast i8* [[CURLIST]] to %struct.TooBigHVA**
-// CHECK: [[HVAPTR:%.*]] = load %struct.TooBigHVA*, %struct.TooBigHVA** [[HVAPTRPTR]]
+// CHECK-LE: [[HVAPTRPTR:%.*]] = bitcast i8* [[CURLIST]] to %struct.TooBigHVA**
+// CHECK-LE: [[HVAPTR:%.*]] = load %struct.TooBigHVA*, %struct.TooBigHVA** [[HVAPTRPTR]]
   __builtin_va_list thelist;
   __builtin_va_start(thelist, n);
   struct TooBigHVA h = __builtin_va_arg(thelist, struct TooBigHVA);
@@ -719,21 +752,21 @@ typedef __attribute__((__ext_vector_type__(3))) float float32x3_t;
 typedef struct { float32x3_t arr[4]; } HFAv3;
 
 float32x3_t test_hva_v3(int n, ...) {
-// CHECK-LABEL: define{{.*}} <3 x float> @test_hva_v3(i32 %n, ...)
-// CHECK: [[THELIST:%.*]] = alloca i8*
-// CHECK: [[CURLIST:%.*]] = load i8*, i8** [[THELIST]]
+// CHECK-LE-LABEL: define{{.*}} <3 x float> @test_hva_v3(i32 %n, ...)
+// CHECK-LE: [[THELIST:%.*]] = alloca i8*
+// CHECK-LE: [[CURLIST:%.*]] = load i8*, i8** [[THELIST]]
 
   // HVA is not indirect, so occupies its full 16 bytes on the stack. but it
   // must be properly aligned.
-// CHECK: [[ALIGN0:%.*]] = ptrtoint i8* [[CURLIST]] to i64
-// CHECK: [[ALIGN1:%.*]] = add i64 [[ALIGN0]], 15
-// CHECK: [[ALIGN2:%.*]] = and i64 [[ALIGN1]], -16
-// CHECK: [[ALIGNED_LIST:%.*]] = inttoptr i64 [[ALIGN2]] to i8*
+// CHECK-LE: [[ALIGN0:%.*]] = ptrtoint i8* [[CURLIST]] to i64
+// CHECK-LE: [[ALIGN1:%.*]] = add i64 [[ALIGN0]], 15
+// CHECK-LE: [[ALIGN2:%.*]] = and i64 [[ALIGN1]], -16
+// CHECK-LE: [[ALIGNED_LIST:%.*]] = inttoptr i64 [[ALIGN2]] to i8*
 
-// CHECK: [[NEXTLIST:%.*]] = getelementptr inbounds i8, i8* [[ALIGNED_LIST]], i64 64
-// CHECK: store i8* [[NEXTLIST]], i8** [[THELIST]]
+// CHECK-LE: [[NEXTLIST:%.*]] = getelementptr inbounds i8, i8* [[ALIGNED_LIST]], i64 64
+// CHECK-LE: store i8* [[NEXTLIST]], i8** [[THELIST]]
 
-// CHECK: bitcast i8* [[ALIGNED_LIST]] to %struct.HFAv3*
+// CHECK-LE: bitcast i8* [[ALIGNED_LIST]] to %struct.HFAv3*
   __builtin_va_list l;
   __builtin_va_start(l, n);
   HFAv3 r = __builtin_va_arg(l, HFAv3);

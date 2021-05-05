@@ -135,7 +135,9 @@ public:
       bool UseMaskForCond = false, bool UseMaskForGaps = false);
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
-
+  bool areFunctionArgsABICompatible(const Function *Caller,
+                                    const Function *Callee,
+                                    SmallPtrSetImpl<Argument *> &Args) const;
   /// @}
 };
 

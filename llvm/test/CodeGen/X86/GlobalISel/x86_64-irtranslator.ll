@@ -189,11 +189,9 @@ define float @test_fptrunc(double %in) {
   ; CHECK-LABEL: name: test_fptrunc
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $xmm0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s128) = COPY $xmm0
-  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[COPY]](s128)
-  ; CHECK:   [[FPTRUNC:%[0-9]+]]:_(s32) = G_FPTRUNC [[TRUNC]](s64)
-  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[FPTRUNC]](s32)
-  ; CHECK:   $xmm0 = COPY [[ANYEXT]](s128)
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s64) = COPY $xmm0
+  ; CHECK:   [[FPTRUNC:%[0-9]+]]:_(s32) = G_FPTRUNC [[COPY]](s64)
+  ; CHECK:   $xmm0 = COPY [[FPTRUNC]](s32)
   ; CHECK:   RET 0, implicit $xmm0
   %res = fptrunc double %in to float
   ret float %res
