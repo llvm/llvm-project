@@ -139,12 +139,26 @@ static Optional<PlatformInfo> getPlatformInfo(const InputFile *input) {
   return None;
 }
 
+static PlatformKind removeSimulator(PlatformKind platform) {
+  // Mapping of platform to simulator and vice-versa.
+  static const std::map<PlatformKind, PlatformKind> platformMap = {
+      {PlatformKind::iOSSimulator, PlatformKind::iOS},
+      {PlatformKind::tvOSSimulator, PlatformKind::tvOS},
+      {PlatformKind::watchOSSimulator, PlatformKind::watchOS}};
+
+  auto iter = platformMap.find(platform);
+  if (iter == platformMap.end())
+    return platform;
+  return iter->second;
+}
+
 static bool checkCompatibility(const InputFile *input) {
   Optional<PlatformInfo> platformInfo = getPlatformInfo(input);
   if (!platformInfo)
     return true;
-  // TODO: Correctly detect simulator platforms or relax this check.
-  if (config->platform() != platformInfo->target.Platform) {
+
+  if (removeSimulator(config->platform()) !=
+      removeSimulator(platformInfo->target.Platform)) {
     error(toString(input) + " has platform " +
           getPlatformName(platformInfo->target.Platform) +
           Twine(", which is different from target platform ") +
