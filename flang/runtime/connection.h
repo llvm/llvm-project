@@ -26,7 +26,7 @@ inline bool IsRecordFile(Access a) { return a != Access::Stream; }
 // established in an OPEN statement.
 struct ConnectionAttributes {
   Access access{Access::Sequential}; // ACCESS='SEQUENTIAL', 'DIRECT', 'STREAM'
-  bool isUnformatted{false}; // FORM='UNFORMATTED'
+  std::optional<bool> isUnformatted; // FORM='UNFORMATTED' if true
   bool isUTF8{false}; // ENCODING='UTF-8'
   bool isFixedRecordLength{false}; // RECL= on OPEN
   std::optional<std::int64_t> recordLength; // RECL= or current record
