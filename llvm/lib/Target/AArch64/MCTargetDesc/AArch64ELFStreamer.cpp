@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64ELFStreamer.h"
+#include "AArch64MCTargetDesc.h"
 #include "AArch64TargetStreamer.h"
 #include "AArch64WinCOFFStreamer.h"
 #include "llvm/ADT/DenseMap.h"
@@ -243,8 +245,6 @@ private:
 
 } // end anonymous namespace
 
-namespace llvm {
-
 AArch64ELFStreamer &AArch64TargetELFStreamer::getStreamer() {
   return static_cast<AArch64ELFStreamer &>(Streamer);
 }
@@ -257,23 +257,20 @@ void AArch64TargetELFStreamer::emitDirectiveVariantPCS(MCSymbol *Symbol) {
   cast<MCSymbolELF>(Symbol)->setOther(ELF::STO_AARCH64_VARIANT_PCS);
 }
 
-MCTargetStreamer *createAArch64AsmTargetStreamer(MCStreamer &S,
-                                                 formatted_raw_ostream &OS,
-                                                 MCInstPrinter *InstPrint,
-                                                 bool isVerboseAsm) {
+MCTargetStreamer *
+llvm::createAArch64AsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
+                                     MCInstPrinter *InstPrint,
+                                     bool isVerboseAsm) {
   return new AArch64TargetAsmStreamer(S, OS);
 }
 
-MCELFStreamer *createAArch64ELFStreamer(MCContext &Context,
-                                        std::unique_ptr<MCAsmBackend> TAB,
-                                        std::unique_ptr<MCObjectWriter> OW,
-                                        std::unique_ptr<MCCodeEmitter> Emitter,
-                                        bool RelaxAll) {
+MCELFStreamer *llvm::createAArch64ELFStreamer(
+    MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
+    std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter,
+    bool RelaxAll) {
   AArch64ELFStreamer *S = new AArch64ELFStreamer(
       Context, std::move(TAB), std::move(OW), std::move(Emitter));
   if (RelaxAll)
     S->getAssembler().setRelaxAll(true);
   return S;
 }
-
-} // end namespace llvm
