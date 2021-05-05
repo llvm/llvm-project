@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertExpr.h"
+#include "ConvertVariable.h"
 #include "MaskExpr.h"
 #include "RTBuilder.h"
 #include "StatementContext.h"
@@ -1691,8 +1692,12 @@ public:
     }
 
     // Handle cases where caller must allocate the result or a fir.box for it.
-    if (caller.mustMapInterfaceSymbols())
-      TODO(loc, "function result that requires mapping interface symbols");
+    bool mustPopSymMap = false;
+    if (caller.mustMapInterfaceSymbols()) {
+      symMap.pushScope();
+      mustPopSymMap = true;
+      Fortran::lower::mapCallInterfaceSymbols(converter, caller, symMap);
+    }
     auto idxTy = builder.getIndexType();
     auto lowerSpecExpr = [&](const auto &expr) -> mlir::Value {
       return builder.createConvert(
@@ -1721,6 +1726,9 @@ public:
           builder.createTemporary(loc, type, ".result", extents, resultLengths);
       return toExtendedValue(temp, extents, lengths);
     }();
+
+    if (mustPopSymMap)
+      symMap.popScope();
 
     // Place allocated result or prepare the fir.save_result arguments.
     mlir::Value arrayResultShape;

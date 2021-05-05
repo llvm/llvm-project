@@ -16,6 +16,7 @@
 #include "SymbolMap.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Allocatable.h"
+#include "flang/Lower/CallInterface.h"
 #include "flang/Lower/CharacterExpr.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/FIRBuilder.h"
@@ -1559,5 +1560,23 @@ void Fortran::lower::instantiateVariable(AbstractConverter &converter,
     instantiateGlobal(converter, var, symMap);
   } else {
     instantiateLocal(converter, var, symMap);
+  }
+}
+
+void Fortran::lower::mapCallInterfaceSymbols(
+    AbstractConverter &converter, const Fortran::lower::CallerInterface &caller,
+    SymMap &symMap) {
+  Fortran::lower::AggregateStoreMap storeMap;
+  const auto &result = caller.getResultSymbol();
+  for (auto var : Fortran::lower::pft::buildFuncResultDependencyList(result)) {
+    if (var.isAggregateStore()) {
+      instantiateVariable(converter, var, symMap, storeMap);
+    } else {
+      const Fortran::semantics::Symbol &sym = var.getSymbol();
+      // Get the argument for the dummy argument symbols of the current call.
+      if (Fortran::semantics::IsDummy(sym) && sym.owner() == result.owner())
+        symMap.addSymbol(sym, caller.getArgumentValue(sym));
+      instantiateVariable(converter, var, symMap, storeMap);
+    }
   }
 }

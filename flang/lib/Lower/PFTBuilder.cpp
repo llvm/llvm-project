@@ -1197,6 +1197,16 @@ struct SymbolDependenceDepth {
       : vars{vars}, reentrant{reentrant} {}
 
   void analyzeAliasesInCurrentScope(const semantics::Scope &scope) {
+    /// If this is a function nested in a module no host associated
+    /// symbol are added to the function scope for module symbols used in this
+    /// scope. As a result, alias analysis in parent module scopes must be
+    /// preformed here.
+    const auto *parentScope = &scope;
+    while (!parentScope->IsGlobal()) {
+      parentScope = &parentScope->parent();
+      if (parentScope->IsModule())
+        analyzeAliases(*parentScope, /*isDeclaration=*/true);
+    }
     for (const auto &iter : scope) {
       const auto &ultimate = iter.second.get().GetUltimate();
       if (skipSymbol(ultimate))
@@ -1595,4 +1605,22 @@ void Fortran::lower::pft::ModuleLikeUnit::dump() const {
 /// The BlockDataUnit dump is just the associated symbol table.
 void Fortran::lower::pft::BlockDataUnit::dump() const {
   llvm::errs() << "block data {\n" << symTab << "\n}\n";
+}
+
+std::vector<Fortran::lower::pft::Variable>
+Fortran::lower::pft::buildFuncResultDependencyList(
+    const Fortran::semantics::Symbol &symbol) {
+  std::vector<std::vector<pft::Variable>> variableList;
+  // reentrant does not matter, no locals involved for results ().
+  SymbolDependenceDepth sdd(variableList, /*reentrant=*/true);
+  sdd.analyzeAliasesInCurrentScope(symbol.owner());
+  sdd.analyze(symbol);
+  sdd.finalize();
+  // Remove the pft::variable for the result itself, only its dependencies
+  // should be returned in the list.
+  assert(!variableList[0].empty() && "must at least contain the result");
+  assert(&variableList[0].back().getSymbol() == &symbol &&
+         "result sym should be last");
+  variableList[0].pop_back();
+  return variableList[0];
 }

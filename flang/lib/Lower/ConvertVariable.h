@@ -31,6 +31,7 @@ class Scope;
 }
 namespace lower {
 class AbstractConverter;
+class CallerInterface;
 class StatementContext;
 class SymMap;
 namespace pft {
@@ -63,6 +64,13 @@ void defineModuleVariable(AbstractConverter &, const pft::Variable &var);
 /// instantiateVariable cannot be called.
 void mapSymbolAttributes(AbstractConverter &, const pft::Variable &, SymMap &,
                          StatementContext &, mlir::Value preAlloc = {});
+
+/// Instantiate the variables that appear in the specification expressions
+/// of the result of a function call. The instantiated variables are added
+/// to \p symMap.
+void mapCallInterfaceSymbols(AbstractConverter &,
+                             const Fortran::lower::CallerInterface &caller,
+                             SymMap &symMap);
 
 } // namespace lower
 } // namespace Fortran

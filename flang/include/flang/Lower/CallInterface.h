@@ -297,6 +297,16 @@ public:
   /// Walk the result non-deferred length specification expressions.
   void walkResultLengths(ExprVisitor) const;
 
+  /// Get the mlir::Value that is passed as argument \p sym of the function
+  /// being called. The arguments must have been placed before calling this
+  /// function.
+  mlir::Value getArgumentValue(const semantics::Symbol &sym) const;
+
+  /// Returns the symbol for the result in the explicit interface. If this is
+  /// called on an intrinsic or function without explicit interface, this will
+  /// crash.
+  const Fortran::semantics::Symbol &getResultSymbol() const;
+
   /// If some storage needs to be allocated for the result,
   /// returns the storage type.
   mlir::Type getResultStorageType() const;

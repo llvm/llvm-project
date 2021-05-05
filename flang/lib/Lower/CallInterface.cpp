@@ -188,9 +188,10 @@ void Fortran::lower::CallerInterface::walkResultLengths(
   const auto *typeAndShape = result.GetTypeAndShape();
   assert(typeAndShape && "no result type");
   auto dynamicType = typeAndShape->type();
+  // Visit result length specification expressions that are explicit.
   if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
-    if (!dynamicType.charLength()->isDeferred())
-      visitor(AsGenericExpr(typeAndShape->LEN().value()));
+    if (auto length = dynamicType.GetCharLength())
+      visitor(AsGenericExpr(*length));
   } else if (dynamicType.category() == common::TypeCategory::Derived) {
     const auto &derivedTypeSpec = dynamicType.GetDerivedTypeSpec();
     if (Fortran::semantics::CountLenParameters(derivedTypeSpec) > 0)
@@ -226,11 +227,37 @@ bool Fortran::lower::CallerInterface::mustMapInterfaceSymbols() const {
   return !allResultSpecExprConstant;
 }
 
+mlir::Value Fortran::lower::CallerInterface::getArgumentValue(
+    const semantics::Symbol &sym) const {
+  auto loc = converter.genLocation();
+  const auto *iface = procRef.proc().GetInterfaceSymbol();
+
+  if (!iface)
+    fir::emitFatalError(
+        loc, "mapping actual and dummy arguments requires an interface");
+  const auto &dummies = iface->get<semantics::SubprogramDetails>().dummyArgs();
+  auto it = std::find(dummies.begin(), dummies.end(), &sym);
+  if (it == dummies.end())
+    fir::emitFatalError(loc, "symbol is not a dummy in this call");
+  auto mlirArgIndex = passedArguments[it - dummies.begin()].firArgument;
+  return actualInputs[mlirArgIndex];
+}
+
 mlir::Type Fortran::lower::CallerInterface::getResultStorageType() const {
   if (passedResult)
     return fir::dyn_cast_ptrEleTy(inputs[passedResult->firArgument].type);
   assert(saveResult && !outputs.empty());
   return outputs[0].type;
+}
+
+const Fortran::semantics::Symbol &
+Fortran::lower::CallerInterface::getResultSymbol() const {
+  auto loc = converter.genLocation();
+  const auto *iface = procRef.proc().GetInterfaceSymbol();
+  if (!iface)
+    fir::emitFatalError(
+        loc, "mapping actual and dummy arguments requires an interface");
+  return iface->get<semantics::SubprogramDetails>().result();
 }
 
 //===----------------------------------------------------------------------===//
@@ -724,6 +751,17 @@ private:
       mlirType = fir::BoxType::get(fir::HeapType::get(mlirType));
     if (result.attrs.test(Attr::Pointer))
       mlirType = fir::BoxType::get(fir::PointerType::get(mlirType));
+
+    if (fir::isa_char(mlirType)) {
+      // Character scalar results must be passed as arguments in lowering so
+      // that an assumed length character function callee can access the result
+      // length. A function with a result requiring an explicit interface does
+      // not have to be compatible with assumed length function, but most
+      // compilers supports it.
+      handleImplicitCharacterResult(typeAndShape->type());
+      return;
+    }
+
     addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
                  Property::Value);
     // Explicit results require the caller to allocate the storage and save the

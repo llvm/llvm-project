@@ -715,6 +715,11 @@ private:
   std::list<Units> units;
 };
 
+/// Return the list of variables that appears in the specification expressions
+/// of a function result.
+std::vector<pft::Variable>
+buildFuncResultDependencyList(const Fortran::semantics::Symbol &);
+
 } // namespace Fortran::lower::pft
 
 namespace Fortran::lower {
@@ -732,7 +737,6 @@ createPFT(const parser::Program &root,
 
 /// Dumper for displaying a PFT.
 void dumpPFT(llvm::raw_ostream &outputStream, const pft::Program &pft);
-
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_PFTBUILDER_H
