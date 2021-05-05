@@ -427,6 +427,20 @@ bool IoStatementState::EmitField(
   }
 }
 
+std::optional<char32_t> IoStatementState::PrepareInput(
+    const DataEdit &edit, std::optional<int> &remaining) {
+  remaining.reset();
+  if (edit.descriptor == DataEdit::ListDirected) {
+    GetNextNonBlank();
+  } else {
+    if (edit.width.value_or(0) > 0) {
+      remaining = *edit.width;
+    }
+    SkipSpaces(remaining);
+  }
+  return NextInField(remaining);
+}
+
 std::optional<char32_t> IoStatementState::SkipSpaces(
     std::optional<int> &remaining) {
   while (!remaining || *remaining > 0) {
@@ -447,7 +461,7 @@ std::optional<char32_t> IoStatementState::SkipSpaces(
 
 std::optional<char32_t> IoStatementState::NextInField(
     std::optional<int> &remaining) {
-  if (!remaining) { // list-directed or namelist: check for separators
+  if (!remaining) { // list-directed or NAMELIST: check for separators
     if (auto next{GetCurrentChar()}) {
       switch (*next) {
       case ' ':
@@ -494,8 +508,9 @@ std::optional<char32_t> IoStatementState::NextInField(
 
 std::optional<char32_t> IoStatementState::GetNextNonBlank() {
   auto ch{GetCurrentChar()};
-  while (!ch || *ch == ' ' || *ch == '\t') {
-    if (ch) {
+  bool inNamelist{GetConnectionState().modes.inNamelist};
+  while (!ch || *ch == ' ' || *ch == '\t' || (inNamelist && *ch == '!')) {
+    if (ch && (*ch == ' ' || *ch == '\t')) {
       HandleRelativePosition(1);
     } else if (!AdvanceRecord()) {
       return std::nullopt;
@@ -503,12 +518,6 @@ std::optional<char32_t> IoStatementState::GetNextNonBlank() {
     ch = GetCurrentChar();
   }
   return ch;
-}
-
-bool ListDirectedStatementState<Direction::Output>::NeedAdvance(
-    const ConnectionState &connection, std::size_t width) const {
-  return connection.positionInRecord > 0 &&
-      width > connection.RemainingSpaceInRecord();
 }
 
 bool IoStatementState::Inquire(
@@ -538,9 +547,9 @@ bool ListDirectedStatementState<Direction::Output>::EmitLeadingSpaceOrAdvance(
   }
   const ConnectionState &connection{io.GetConnectionState()};
   int space{connection.positionInRecord == 0 ||
-      !(isCharacter && lastWasUndelimitedCharacter)};
-  lastWasUndelimitedCharacter = false;
-  if (NeedAdvance(connection, space + length)) {
+      !(isCharacter && lastWasUndelimitedCharacter())};
+  set_lastWasUndelimitedCharacter(false);
+  if (connection.NeedAdvance(space + length)) {
     return io.AdvanceRecord();
   }
   if (space) {
@@ -596,10 +605,6 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   auto ch{io.GetNextNonBlank()};
   if (imaginaryPart_) {
     imaginaryPart_ = false;
-    if (ch && *ch == ')') {
-      io.HandleRelativePosition(1);
-      ch = io.GetNextNonBlank();
-    }
   } else if (realPart_) {
     realPart_ = false;
     imaginaryPart_ = true;
@@ -621,6 +626,8 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
       return edit;
     }
     // Consume comma & whitespace after previous item.
+    // This includes the comma between real and imaginary components
+    // in list-directed/NAMELIST complex input.
     io.HandleRelativePosition(1);
     ch = io.GetNextNonBlank();
     if (!ch) {
