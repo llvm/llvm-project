@@ -2281,12 +2281,12 @@ bool LoopAccessLegacyAnalysis::runOnFunction(Function &F) {
 }
 
 void LoopAccessLegacyAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
+  AU.addRequiredTransitive<ScalarEvolutionWrapperPass>();
+  AU.addRequiredTransitive<AAResultsWrapperPass>();
+  AU.addRequiredTransitive<DominatorTreeWrapperPass>();
+  AU.addRequiredTransitive<LoopInfoWrapperPass>();
 
-    AU.setPreservesAll();
+  AU.setPreservesAll();
 }
 
 char LoopAccessLegacyAnalysis::ID = 0;
