@@ -47,6 +47,7 @@ class BreakpointByLineAndColumnTestCase(TestBase):
             in_condition |= b_loc.GetColumn() < 30
         self.assertTrue(in_condition)
 
+    @skipIfWindows
     ## Skip gcc version less 7.1 since it doesn't support -gcolumn-info
     @skipIf(compiler="gcc", compiler_version=['<', '7.1'])
     def testBreakpointByLineAndColumnNearestCode(self):
