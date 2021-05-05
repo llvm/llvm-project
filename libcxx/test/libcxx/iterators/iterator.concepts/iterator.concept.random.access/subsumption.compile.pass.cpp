@@ -11,18 +11,19 @@
 // UNSUPPORTED: gcc-10
 
 // template<class T>
-// concept bidirectional_iterator;
+// concept random_access_iterator;
 
 #include <iterator>
 
 #include <concepts>
 
-template<std::forward_iterator I>
+template<std::bidirectional_iterator I>
+requires std::derived_from<std::_ITER_CONCEPT<I>, std::random_access_iterator_tag>
 constexpr bool check_subsumption() {
   return false;
 }
 
-template<std::bidirectional_iterator>
+template<std::random_access_iterator>
 constexpr bool check_subsumption() {
   return true;
 }
