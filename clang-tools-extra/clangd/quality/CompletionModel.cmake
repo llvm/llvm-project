@@ -4,8 +4,9 @@
 # ${CMAKE_CURRENT_BINARY_DIR}. The generated header
 # will define a C++ class called ${cpp_class} - which may be a
 # namespace-qualified class name.
+set(CLANGD_COMPLETION_MODEL_COMPILER ${CMAKE_CURRENT_LIST_DIR}/CompletionModelCodegen.py)
 function(gen_decision_forest model filename cpp_class)
-  set(model_compiler ${LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR}/clangd/quality/CompletionModelCodegen.py)
+  set(model_compiler ${CLANGD_COMPLETION_MODEL_COMPILER})
 
   set(output_dir ${CMAKE_CURRENT_BINARY_DIR})
   set(header_file ${output_dir}/${filename}.h)
