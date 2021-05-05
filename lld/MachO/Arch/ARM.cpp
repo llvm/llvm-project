@@ -107,7 +107,7 @@ void ARM::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
   case ARM_RELOC_BR24: {
     uint32_t base = read32le(loc);
     bool isBlx = Bitfield::get<Cond>(base) == 0xf;
-    const Symbol *sym = r.referent.get<const Symbol *>();
+    const Symbol *sym = r.referent.get<Symbol *>();
     int32_t offset = value - (pc + 8);
 
     if (auto *defined = dyn_cast<Defined>(sym)) {
