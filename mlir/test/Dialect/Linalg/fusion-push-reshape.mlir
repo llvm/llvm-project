@@ -96,8 +96,7 @@ func @type_correctness(%arg0 : tensor<6x5xi32>, %arg1 : tensor<5xf32>,
   %cst_6 = constant 1.000000e+00 : f32
   %cst_7 = constant 7.000000e+00 : f32
   %cst_8 = constant 1.1920929E-7 : f32
-  %25 = linalg.tensor_reshape %arg0
-      [affine_map<(d0, d1, d2) -> (d0, d1)>, affine_map<(d0, d1, d2) -> (d2)>]
+  %25 = linalg.tensor_reshape %arg0 [[0, 1], [2]]
       : tensor<6x5xi32> into tensor<2x3x5xi32>
   %26 = linalg.init_tensor [2, 3, 5] : tensor<2x3x5xf32>
   %28 = linalg.generic {
