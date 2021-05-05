@@ -1266,14 +1266,124 @@ struct ReplaceIfYieldWithConditionOrValue : public OpRewritePattern<IfOp> {
   }
 };
 
+/// Merge any consecutive scf.if's with the same condition.
+///
+///    scf.if %cond {
+///       firstCodeTrue();...
+///    } else {
+///       firstCodeFalse();...
+///    }
+///    %res = scf.if %cond {
+///       secondCodeTrue();...
+///    } else {
+///       secondCodeFalse();...
+///    }
+///
+///  becomes
+///    %res = scf.if %cmp {
+///       firstCodeTrue();...
+///       secondCodeTrue();...
+///    } else {
+///       firstCodeFalse();...
+///       secondCodeFalse();...
+///    }
+struct CombineIfs : public OpRewritePattern<IfOp> {
+  using OpRewritePattern<IfOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IfOp nextIf,
+                                PatternRewriter &rewriter) const override {
+    Block *parent = nextIf->getBlock();
+    if (nextIf == &parent->front())
+      return failure();
+
+    auto prevIf = dyn_cast<IfOp>(nextIf->getPrevNode());
+    if (!prevIf)
+      return failure();
+
+    if (nextIf.condition() != prevIf.condition())
+      return failure();
+
+    // Don't permit merging if a result of the first if is used
+    // within the second.
+    if (llvm::any_of(prevIf->getUsers(),
+                     [&](Operation *user) { return nextIf->isAncestor(user); }))
+      return failure();
+
+    SmallVector<Type> mergedTypes(prevIf.getResultTypes());
+    llvm::append_range(mergedTypes, nextIf.getResultTypes());
+
+    IfOp combinedIf = rewriter.create<IfOp>(
+        nextIf.getLoc(), mergedTypes, nextIf.condition(), /*hasElse=*/false);
+    rewriter.eraseBlock(&combinedIf.thenRegion().back());
+
+    YieldOp thenYield = prevIf.thenYield();
+    YieldOp thenYield2 = nextIf.thenYield();
+
+    combinedIf.thenRegion().getBlocks().splice(
+        combinedIf.thenRegion().getBlocks().begin(),
+        prevIf.thenRegion().getBlocks());
+
+    rewriter.mergeBlocks(nextIf.thenBlock(), combinedIf.thenBlock());
+    rewriter.setInsertionPointToEnd(combinedIf.thenBlock());
+
+    SmallVector<Value> mergedYields(thenYield.getOperands());
+    llvm::append_range(mergedYields, thenYield2.getOperands());
+    rewriter.create<YieldOp>(thenYield2.getLoc(), mergedYields);
+    rewriter.eraseOp(thenYield);
+    rewriter.eraseOp(thenYield2);
+
+    combinedIf.elseRegion().getBlocks().splice(
+        combinedIf.elseRegion().getBlocks().begin(),
+        prevIf.elseRegion().getBlocks());
+
+    if (!nextIf.elseRegion().empty()) {
+      if (combinedIf.elseRegion().empty()) {
+        combinedIf.elseRegion().getBlocks().splice(
+            combinedIf.elseRegion().getBlocks().begin(),
+            nextIf.elseRegion().getBlocks());
+      } else {
+        YieldOp elseYield = combinedIf.elseYield();
+        YieldOp elseYield2 = nextIf.elseYield();
+        rewriter.mergeBlocks(nextIf.elseBlock(), combinedIf.elseBlock());
+
+        rewriter.setInsertionPointToEnd(combinedIf.elseBlock());
+
+        SmallVector<Value> mergedElseYields(elseYield.getOperands());
+        llvm::append_range(mergedElseYields, elseYield2.getOperands());
+
+        rewriter.create<YieldOp>(elseYield2.getLoc(), mergedElseYields);
+        rewriter.eraseOp(elseYield);
+        rewriter.eraseOp(elseYield2);
+      }
+    }
+
+    SmallVector<Value> prevValues;
+    SmallVector<Value> nextValues;
+    for (auto pair : llvm::enumerate(combinedIf.getResults())) {
+      if (pair.index() < prevIf.getNumResults())
+        prevValues.push_back(pair.value());
+      else
+        nextValues.push_back(pair.value());
+    }
+    rewriter.replaceOp(prevIf, prevValues);
+    rewriter.replaceOp(nextIf, nextValues);
+    return success();
+  }
+};
+
 } // namespace
 
 void IfOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                        MLIRContext *context) {
-  results
-      .add<RemoveUnusedResults, RemoveStaticCondition, ConvertTrivialIfToSelect,
-           ConditionPropagation, ReplaceIfYieldWithConditionOrValue>(context);
+  results.add<RemoveUnusedResults, RemoveStaticCondition,
+              ConvertTrivialIfToSelect, ConditionPropagation,
+              ReplaceIfYieldWithConditionOrValue, CombineIfs>(context);
 }
+
+Block *IfOp::thenBlock() { return &thenRegion().back(); }
+YieldOp IfOp::thenYield() { return cast<YieldOp>(&thenBlock()->back()); }
+Block *IfOp::elseBlock() { return &elseRegion().back(); }
+YieldOp IfOp::elseYield() { return cast<YieldOp>(&elseBlock()->back()); }
 
 //===----------------------------------------------------------------------===//
 // ParallelOp
