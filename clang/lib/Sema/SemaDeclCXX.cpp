@@ -1835,9 +1835,11 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
     case Decl::UsingDirective:
     case Decl::UnresolvedUsingTypename:
     case Decl::UnresolvedUsingValue:
+    case Decl::UsingEnum:
       //   - static_assert-declarations
       //   - using-declarations,
       //   - using-directives,
+      //   - using-enum-declaration
       continue;
 
     case Decl::Typedef:
@@ -11604,11 +11606,44 @@ Decl *Sema::ActOnUsingDeclaration(Scope *S, AccessSpecifier AS,
     }
   }
 
-  NamedDecl *UD = BuildUsingDeclaration(
-      S, AS, UsingLoc, TypenameLoc.isValid(), TypenameLoc, SS, TargetNameInfo,
-      EllipsisLoc, AttrList,
-      /*IsInstantiation=*/false,
-      AttrList.hasAttribute(ParsedAttr::AT_UsingIfExists));
+  NamedDecl *UD =
+      BuildUsingDeclaration(S, AS, UsingLoc, TypenameLoc.isValid(), TypenameLoc,
+                            SS, TargetNameInfo, EllipsisLoc, AttrList,
+                            /*IsInstantiation*/ false,
+                            AttrList.hasAttribute(ParsedAttr::AT_UsingIfExists));
+  if (UD)
+    PushOnScopeChains(UD, S, /*AddToContext*/ false);
+
+  return UD;
+}
+
+Decl *Sema::ActOnUsingEnumDeclaration(Scope *S, AccessSpecifier AS,
+                                      SourceLocation UsingLoc,
+                                      SourceLocation EnumLoc,
+                                      const DeclSpec &DS) {
+  switch (DS.getTypeSpecType()) {
+  case DeclSpec::TST_error:
+    // This will already have been diagnosed
+    return nullptr;
+
+  case DeclSpec::TST_enum:
+    break;
+
+  case DeclSpec::TST_typename:
+    Diag(DS.getTypeSpecTypeLoc(), diag::err_using_enum_is_dependent);
+    return nullptr;
+
+  default:
+    llvm_unreachable("unexpected DeclSpec type");
+  }
+
+  // As with enum-decls, we ignore attributes for now.
+  auto *Enum = cast<EnumDecl>(DS.getRepAsDecl());
+  if (auto *Def = Enum->getDefinition())
+    Enum = Def;
+
+  auto *UD = BuildUsingEnumDeclaration(S, AS, UsingLoc, EnumLoc,
+                                       DS.getTypeSpecTypeNameLoc(), Enum);
   if (UD)
     PushOnScopeChains(UD, S, /*AddToContext*/ false);
 
@@ -11712,7 +11747,7 @@ bool Sema::CheckUsingShadowDecl(BaseUsingDecl *BUD, NamedDecl *Orig,
     // We can have UsingDecls in our Previous results because we use the same
     // LookupResult for checking whether the UsingDecl itself is a valid
     // redeclaration.
-    if (isa<UsingDecl>(D) || isa<UsingPackDecl>(D))
+    if (isa<UsingDecl>(D) || isa<UsingPackDecl>(D) || isa<UsingEnumDecl>(D))
       continue;
 
     if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
@@ -12014,6 +12049,29 @@ private:
 };
 } // end anonymous namespace
 
+/// Remove decls we can't actually see from a lookup being used to declare
+/// shadow using decls.
+///
+/// \param S - The scope of the potential shadow decl
+/// \param Previous - The lookup of a potential shadow decl's name.
+void Sema::FilterUsingLookup(Scope *S, LookupResult &Previous) {
+  // It is really dumb that we have to do this.
+  LookupResult::Filter F = Previous.makeFilter();
+  while (F.hasNext()) {
+    NamedDecl *D = F.next();
+    if (!isDeclInScope(D, CurContext, S))
+      F.erase();
+    // If we found a local extern declaration that's not ordinarily visible,
+    // and this declaration is being added to a non-block scope, ignore it.
+    // We're only checking for scope conflicts here, not also for violations
+    // of the linkage rules.
+    else if (!CurContext->isFunctionOrMethod() && D->isLocalExternDecl() &&
+             !(D->getIdentifierNamespace() & Decl::IDNS_Ordinary))
+      F.erase();
+  }
+  F.done();
+}
+
 /// Builds a using declaration.
 ///
 /// \param IsInstantiation - Whether this call arises from an
@@ -12047,21 +12105,7 @@ NamedDecl *Sema::BuildUsingDeclaration(
   if (S) {
     LookupName(Previous, S);
 
-    // It is really dumb that we have to do this.
-    LookupResult::Filter F = Previous.makeFilter();
-    while (F.hasNext()) {
-      NamedDecl *D = F.next();
-      if (!isDeclInScope(D, CurContext, S))
-        F.erase();
-      // If we found a local extern declaration that's not ordinarily visible,
-      // and this declaration is being added to a non-block scope, ignore it.
-      // We're only checking for scope conflicts here, not also for violations
-      // of the linkage rules.
-      else if (!CurContext->isFunctionOrMethod() && D->isLocalExternDecl() &&
-               !(D->getIdentifierNamespace() & Decl::IDNS_Ordinary))
-        F.erase();
-    }
-    F.done();
+    FilterUsingLookup(S, Previous);
   } else {
     assert(IsInstantiation && "no scope in non-instantiation");
     if (CurContext->isRecord())
@@ -12282,6 +12326,61 @@ NamedDecl *Sema::BuildUsingDeclaration(
     UsingShadowDecl *PrevDecl = nullptr;
     if (!CheckUsingShadowDecl(UD, *I, Previous, PrevDecl))
       BuildUsingShadowDecl(S, UD, *I, PrevDecl);
+  }
+
+  return UD;
+}
+
+NamedDecl *Sema::BuildUsingEnumDeclaration(Scope *S, AccessSpecifier AS,
+                                           SourceLocation UsingLoc,
+                                           SourceLocation EnumLoc,
+                                           SourceLocation NameLoc,
+                                           EnumDecl *ED) {
+  bool Invalid = false;
+
+  if (CurContext->getRedeclContext()->isRecord()) {
+    /// In class scope, check if this is a duplicate, for better a diagnostic.
+    DeclarationNameInfo UsingEnumName(ED->getDeclName(), NameLoc);
+    LookupResult Previous(*this, UsingEnumName, LookupUsingDeclName,
+                          ForVisibleRedeclaration);
+
+    LookupName(Previous, S);
+
+    for (NamedDecl *D : Previous)
+      if (UsingEnumDecl *UED = dyn_cast<UsingEnumDecl>(D))
+        if (UED->getEnumDecl() == ED) {
+          Diag(UsingLoc, diag::err_using_enum_decl_redeclaration)
+              << SourceRange(EnumLoc, NameLoc);
+          Diag(D->getLocation(), diag::note_using_enum_decl) << 1;
+          Invalid = true;
+          break;
+        }
+  }
+
+  if (RequireCompleteEnumDecl(ED, NameLoc))
+    Invalid = true;
+
+  UsingEnumDecl *UD = UsingEnumDecl::Create(Context, CurContext, UsingLoc,
+                                            EnumLoc, NameLoc, ED);
+  UD->setAccess(AS);
+  CurContext->addDecl(UD);
+
+  if (Invalid) {
+    UD->setInvalidDecl();
+    return UD;
+  }
+
+  // Create the shadow decls for each enumerator
+  for (EnumConstantDecl *EC : ED->enumerators()) {
+    UsingShadowDecl *PrevDecl = nullptr;
+    DeclarationNameInfo DNI(EC->getDeclName(), EC->getLocation());
+    LookupResult Previous(*this, DNI, LookupOrdinaryName,
+                          ForVisibleRedeclaration);
+    LookupName(Previous, S);
+    FilterUsingLookup(S, Previous);
+
+    if (!CheckUsingShadowDecl(UD, EC, Previous, PrevDecl))
+      BuildUsingShadowDecl(S, UD, EC, PrevDecl);
   }
 
   return UD;

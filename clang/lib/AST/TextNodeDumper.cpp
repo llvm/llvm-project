@@ -2058,6 +2058,11 @@ void TextNodeDumper::VisitUsingDecl(const UsingDecl *D) {
   OS << D->getDeclName();
 }
 
+void TextNodeDumper::VisitUsingEnumDecl(const UsingEnumDecl *D) {
+  OS << ' ';
+  dumpBareDeclRef(D->getEnumDecl());
+}
+
 void TextNodeDumper::VisitUnresolvedUsingTypenameDecl(
     const UnresolvedUsingTypenameDecl *D) {
   OS << ' ';

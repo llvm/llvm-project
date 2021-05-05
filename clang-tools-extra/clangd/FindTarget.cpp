@@ -181,6 +181,9 @@ public:
       for (const UsingShadowDecl *S : UD->shadows())
         add(S->getUnderlyingDecl(), Flags);
       Flags |= Rel::Alias; // continue with the alias.
+    } else if (const UsingEnumDecl *UED = dyn_cast<UsingEnumDecl>(D)) {
+      add(UED->getEnumDecl(), Flags);
+      Flags |= Rel::Alias; // continue with the alias.
     } else if (const auto *NAD = dyn_cast<NamespaceAliasDecl>(D)) {
       add(NAD->getUnderlyingDecl(), Flags | Rel::Underlying);
       Flags |= Rel::Alias; // continue with the alias

@@ -390,6 +390,7 @@ namespace clang {
     void VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D);
     void VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D);
     void VisitUsingDecl(UsingDecl *D);
+    void VisitUsingEnumDecl(UsingEnumDecl *D);
     void VisitUsingPackDecl(UsingPackDecl *D);
     void VisitUsingShadowDecl(UsingShadowDecl *D);
     void VisitConstructorUsingShadowDecl(ConstructorUsingShadowDecl *D);
@@ -1649,6 +1650,17 @@ void ASTDeclReader::VisitUsingDecl(UsingDecl *D) {
   D->setTypename(Record.readInt());
   if (auto *Pattern = readDeclAs<NamedDecl>())
     Reader.getContext().setInstantiatedFromUsingDecl(D, Pattern);
+  mergeMergeable(D);
+}
+
+void ASTDeclReader::VisitUsingEnumDecl(UsingEnumDecl *D) {
+  VisitNamedDecl(D);
+  D->setUsingLoc(readSourceLocation());
+  D->setEnumLoc(readSourceLocation());
+  D->Enum = readDeclAs<EnumDecl>();
+  D->FirstUsingShadow.setPointer(readDeclAs<UsingShadowDecl>());
+  if (auto *Pattern = readDeclAs<UsingEnumDecl>())
+    Reader.getContext().setInstantiatedFromUsingEnumDecl(D, Pattern);
   mergeMergeable(D);
 }
 
@@ -3843,6 +3855,9 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     break;
   case DECL_USING_SHADOW:
     D = UsingShadowDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_USING_ENUM:
+    D = UsingEnumDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_CONSTRUCTOR_USING_SHADOW:
     D = ConstructorUsingShadowDecl::CreateDeserialized(Context, ID);

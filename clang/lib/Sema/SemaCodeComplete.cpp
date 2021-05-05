@@ -3915,6 +3915,9 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
   case Decl::UnresolvedUsingTypename:
     return CXCursor_UsingDeclaration;
 
+  case Decl::UsingEnum:
+    return CXCursor_EnumDecl;
+
   case Decl::ObjCPropertyImpl:
     switch (cast<ObjCPropertyImplDecl>(D)->getPropertyImplementation()) {
     case ObjCPropertyImplDecl::Dynamic:
