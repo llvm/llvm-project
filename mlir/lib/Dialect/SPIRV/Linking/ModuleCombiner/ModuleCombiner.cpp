@@ -119,7 +119,7 @@ namespace spirv {
 
 // TODO Properly test symbol rename listener mechanism.
 
-OwningSPIRVModuleRef
+OwningOpRef<spirv::ModuleOp>
 combine(llvm::MutableArrayRef<spirv::ModuleOp> modules,
         OpBuilder &combinedModuleBuilder,
         llvm::function_ref<void(ModuleOp, StringRef, StringRef)>

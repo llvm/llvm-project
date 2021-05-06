@@ -10,9 +10,10 @@
 
 #include "Deserializer.h"
 
-namespace mlir {
-spirv::OwningSPIRVModuleRef spirv::deserialize(ArrayRef<uint32_t> binary,
-                                               MLIRContext *context) {
+using namespace mlir;
+
+OwningOpRef<spirv::ModuleOp> spirv::deserialize(ArrayRef<uint32_t> binary,
+                                                MLIRContext *context) {
   Deserializer deserializer(binary, context);
 
   if (failed(deserializer.deserialize()))
@@ -20,4 +21,3 @@ spirv::OwningSPIRVModuleRef spirv::deserialize(ArrayRef<uint32_t> binary,
 
   return deserializer.collect();
 }
-} // namespace mlir
