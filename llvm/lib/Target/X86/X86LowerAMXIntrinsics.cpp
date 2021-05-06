@@ -34,7 +34,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -52,10 +51,6 @@ static bool isV256I32Ty(Type *Ty) {
   return false;
 }
 #endif
-
-static cl::opt<bool>
-    X86ScalarizeAMX("enable-x86-scalar-amx", cl::init(false), cl::Hidden,
-                    cl::desc("X86: enable AMX scalarizition."));
 
 namespace {
 class X86LowerAMXIntrinsics {
@@ -98,7 +93,6 @@ private:
   lowerTileDP(Instruction *TileDP);
   bool lowerTileZero(Instruction *TileZero);
 };
-} // anonymous namespace
 
 BasicBlock *X86LowerAMXIntrinsics::createLoop(BasicBlock *Preheader,
                                               BasicBlock *Exit, Value *Bound,
@@ -630,6 +624,9 @@ bool X86LowerAMXIntrinsics::visit() {
 
   return C;
 }
+} // anonymous namespace
+
+namespace {
 
 class X86LowerAMXIntrinsicsLegacyPass : public FunctionPass {
 public:
@@ -641,8 +638,6 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
-    if (!X86ScalarizeAMX)
-      return false;
     TargetMachine *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
     if (!F.hasFnAttribute(Attribute::OptimizeNone) &&
         TM->getOptLevel() != CodeGenOpt::None)
@@ -665,6 +660,8 @@ public:
     AU.addRequired<TargetPassConfig>();
   }
 };
+
+} // anonymous namespace
 
 static const char PassName[] = "Lower AMX intrinsics";
 char X86LowerAMXIntrinsicsLegacyPass::ID = 0;

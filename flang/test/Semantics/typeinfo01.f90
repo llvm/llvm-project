@@ -7,8 +7,8 @@ module m01
   end type
 !CHECK: .c.t1, SAVE, TARGET: ObjectEntity type: TYPE(component) shape: 0_8:0_8 init:[component::component(name=.n.n,genre=1_1,category=0_1,kind=4_1,rank=0_1,offset=0_8,characterlen=value(genre=1_1,value=0_8),derived=NULL(),lenvalue=NULL(),bounds=NULL(),initialization=NULL())]
 !CHECK: .dt.t1, SAVE, TARGET: ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=NULL(),name=.n.t1,sizeinbytes=4_8,parent=NULL(),uninstantiated=NULL(),kindparameter=NULL(),lenparameterkind=NULL(),component=.c.t1,procptr=NULL(),special=NULL())
-!CHECK: .n.n, SAVE, TARGET: ObjectEntity type: CHARACTER(2_8,1) init:"n"
 !CHECK: .n.t1, SAVE, TARGET: ObjectEntity type: CHARACTER(2_8,1) init:"t1"
+!CHECK: .n.n, SAVE, TARGET: ObjectEntity type: CHARACTER(1_8,1) init:"n"
 end module
 
 module m02
@@ -229,10 +229,10 @@ module m11
 !CHECK: .lpk.t, SAVE, TARGET: ObjectEntity type: INTEGER(1) shape: 0_8:0_8 init:[INTEGER(1)::8_1]
  contains
   subroutine s1(x)
-!CHECK: .b.t.1.automatic, SAVE, TARGET: ObjectEntity type: TYPE(value) shape: 0_8:1_8,0_8:0_8 init:reshape([value::value(genre=2_1,value=1_8),value(genre=3_1,value=0_8)],shape=[2,1])
 !CHECK: .c.t.1, SAVE, TARGET: ObjectEntity type: TYPE(component) shape: 0_8:3_8 init:[component::component(name=.n.allocatable,genre=3_1,category=1_1,kind=4_1,rank=1_1,offset=0_8,characterlen=value(genre=1_1,value=0_8),derived=NULL(),lenvalue=NULL(),bounds=NULL(),initialization=NULL()),component(name=.n.automatic,genre=4_1,category=1_1,kind=4_1,rank=1_1,offset=96_8,characterlen=value(genre=1_1,value=0_8),derived=NULL(),lenvalue=NULL(),bounds=.b.t.1.automatic,initialization=NULL()),component(name=.n.chauto,genre=4_1,category=3_1,kind=1_1,rank=0_1,offset=72_8,characterlen=value(genre=3_1,value=0_8),derived=NULL(),lenvalue=NULL(),bounds=NULL(),initialization=NULL()),component(name=.n.pointer,genre=2_1,category=1_1,kind=4_1,rank=0_1,offset=48_8,characterlen=value(genre=1_1,value=0_8),derived=NULL(),lenvalue=NULL(),bounds=NULL(),initialization=target)]
 !CHECK: .dt.t.1, SAVE, TARGET: ObjectEntity type: TYPE(derivedtype) init:derivedtype(binding=NULL(),name=.n.t,sizeinbytes=144_8,parent=NULL(),uninstantiated=.dt.t,kindparameter=NULL(),lenparameterkind=.lpk.t.1,component=.c.t.1,procptr=NULL(),special=NULL())
 !CHECK: .lpk.t.1, SAVE, TARGET: ObjectEntity type: INTEGER(1) shape: 0_8:0_8 init:[INTEGER(1)::8_1]
+!CHECK: .b.t.1.automatic, SAVE, TARGET: ObjectEntity type: TYPE(value) shape: 0_8:1_8,0_8:0_8 init:reshape([value::value(genre=2_1,value=1_8),value(genre=3_1,value=0_8)],shape=[2,1])
     type(t(*)), intent(in) :: x
   end subroutine
 end module

@@ -334,3 +334,17 @@ void test41(__weak id &&x) {
 // CHECK:      [[T0:%.*]] = load i8**, i8*** [[X]]
 // CHECK-NEXT: call void @llvm.objc.moveWeak(i8** [[Y]], i8** [[T0]])
 // CHECK-NEXT: call void @llvm.objc.destroyWeak(i8** [[Y]])
+
+void test42() {
+  __attribute__((ns_returns_retained)) id test42_0();
+  id test42_1(id);
+  void test42_2(id &&);
+  test42_2(test42_1(test42_0()));
+}
+
+// Check that the pointer returned by test42_0 is released after the full expression.
+
+// CHECK-LABEL: define void @_Z6test42v()
+// CHECK: %[[CALL:.*]] = call i8* @_Z8test42_0v()
+// CHECK: call void @_Z8test42_2OU15__autoreleasingP11objc_object(
+// CHECK: call void @llvm.objc.release(i8* %[[CALL]])

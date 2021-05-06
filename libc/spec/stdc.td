@@ -600,6 +600,19 @@ def StdC : StandardSpec<"stdc"> {
       [], // Enumerations
       [
           FunctionSpec<
+              "asctime",
+              RetValSpec<CharPtr>,
+              [ArgSpec<StructTmPtr>]
+          >,
+          FunctionSpec<
+              "asctime_r",
+              RetValSpec<CharPtr>,
+              [
+                  ArgSpec<StructTmPtr>,
+                  ArgSpec<CharPtr>,
+              ]
+          >,
+          FunctionSpec<
               "gmtime",
               RetValSpec<StructTmPtr>,
               [ArgSpec<TimeTTypePtr>]

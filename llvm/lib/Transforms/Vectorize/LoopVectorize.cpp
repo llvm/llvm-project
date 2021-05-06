@@ -599,7 +599,7 @@ protected:
 
   /// Fix a reduction cross-iteration phi. This is the second phase of
   /// vectorizing this phi node.
-  void fixReduction(PHINode *Phi, VPTransformState &State);
+  void fixReduction(VPWidenPHIRecipe *Phi, VPTransformState &State);
 
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   void clearReductionWrapFlags(RecurrenceDescriptor &RdxDesc,
@@ -1636,10 +1636,15 @@ private:
   /// \return the maximized element count based on the targets vector
   /// registers and the loop trip-count, but limited to a maximum safe VF.
   /// This is a helper function of computeFeasibleMaxVF.
+  /// FIXME: MaxSafeVF is currently passed by reference to avoid some obscure
+  /// issue that occurred on one of the buildbots which cannot be reproduced
+  /// without having access to the properietary compiler (see comments on
+  /// D98509). The issue is currently under investigation and this workaround
+  /// will be removed as soon as possible.
   ElementCount getMaximizedVFForTarget(unsigned ConstTripCount,
                                        unsigned SmallestType,
                                        unsigned WidestType,
-                                       ElementCount MaxSafeVF);
+                                       const ElementCount &MaxSafeVF);
 
   /// \return the maximum legal scalable VF, based on the safe max number
   /// of elements.
@@ -4087,12 +4092,16 @@ void InnerLoopVectorizer::fixCrossIterationPHIs(VPTransformState &State) {
   // the currently empty PHI nodes. At this point every instruction in the
   // original loop is widened to a vector form so we can use them to construct
   // the incoming edges.
-  for (PHINode &Phi : OrigLoop->getHeader()->phis()) {
-    // Handle first-order recurrences and reductions that need to be fixed.
-    if (Legal->isFirstOrderRecurrence(&Phi))
-      fixFirstOrderRecurrence(&Phi, State);
-    else if (Legal->isReductionVariable(&Phi))
-      fixReduction(&Phi, State);
+  VPBasicBlock *Header = State.Plan->getEntry()->getEntryBasicBlock();
+  for (VPRecipeBase &R : Header->phis()) {
+    auto *PhiR = dyn_cast<VPWidenPHIRecipe>(&R);
+    if (!PhiR)
+      continue;
+    auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
+    if (PhiR->getRecurrenceDescriptor()) {
+      fixReduction(PhiR, State);
+    } else if (Legal->isFirstOrderRecurrence(OrigPhi))
+      fixFirstOrderRecurrence(OrigPhi, State);
   }
 }
 
@@ -4287,17 +4296,19 @@ static bool useOrderedReductions(RecurrenceDescriptor &RdxDesc) {
   return EnableStrictReductions && RdxDesc.isOrdered();
 }
 
-void InnerLoopVectorizer::fixReduction(PHINode *Phi, VPTransformState &State) {
+void InnerLoopVectorizer::fixReduction(VPWidenPHIRecipe *PhiR,
+                                       VPTransformState &State) {
+  PHINode *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
   // Get it's reduction variable descriptor.
-  assert(Legal->isReductionVariable(Phi) &&
+  assert(Legal->isReductionVariable(OrigPhi) &&
          "Unable to find the reduction variable");
-  RecurrenceDescriptor RdxDesc = Legal->getReductionVars()[Phi];
+  RecurrenceDescriptor RdxDesc = *PhiR->getRecurrenceDescriptor();
 
   RecurKind RK = RdxDesc.getRecurrenceKind();
   TrackingVH<Value> ReductionStartValue = RdxDesc.getRecurrenceStartValue();
   Instruction *LoopExitInst = RdxDesc.getLoopExitInstr();
   setDebugLocFromInst(Builder, ReductionStartValue);
-  bool IsInLoopReductionPhi = Cost->isInLoopReduction(Phi);
+  bool IsInLoopReductionPhi = Cost->isInLoopReduction(OrigPhi);
 
   VPValue *LoopExitInstDef = State.Plan->getVPValue(LoopExitInst);
   // This is the vector-clone of the value that leaves the loop.
@@ -4310,8 +4321,6 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi, VPTransformState &State) {
 
   // Reductions do not have to start at zero. They can start with
   // any loop invariant values.
-  BasicBlock *OrigLatch = OrigLoop->getLoopLatch();
-  Value *OrigLoopVal = Phi->getIncomingValueForBlock(OrigLatch);
   BasicBlock *VectorLoopLatch = LI->getLoopFor(LoopVectorBody)->getLoopLatch();
 
   bool IsOrdered = State.VF.isVector() && IsInLoopReductionPhi &&
@@ -4320,10 +4329,11 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi, VPTransformState &State) {
   for (unsigned Part = 0; Part < UF; ++Part) {
     if (IsOrdered && Part > 0)
       break;
-    Value *VecRdxPhi = State.get(State.Plan->getVPValue(Phi), Part);
-    Value *Val = State.get(State.Plan->getVPValue(OrigLoopVal), Part);
+    Value *VecRdxPhi = State.get(PhiR->getVPSingleValue(), Part);
+    Value *Val = State.get(PhiR->getBackedgeValue(), Part);
     if (IsOrdered)
-      Val = State.get(State.Plan->getVPValue(OrigLoopVal), UF - 1);
+      Val = State.get(PhiR->getBackedgeValue(), UF - 1);
+
     cast<PHINode>(VecRdxPhi)->addIncoming(Val, VectorLoopLatch);
   }
 
@@ -4335,7 +4345,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi, VPTransformState &State) {
 
   setDebugLocFromInst(Builder, LoopExitInst);
 
-  Type *PhiTy = Phi->getType();
+  Type *PhiTy = OrigPhi->getType();
   // If tail is folded by masking, the vector value to leave the loop should be
   // a Select choosing between the vectorized LoopExitInst and vectorized Phi,
   // instead of the former. For an inloop reduction the reduction will already
@@ -4364,7 +4374,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi, VPTransformState &State) {
               RdxDesc.getOpcode(), PhiTy,
               TargetTransformInfo::ReductionFlags())) {
         auto *VecRdxPhi =
-            cast<PHINode>(State.get(State.Plan->getVPValue(Phi), Part));
+            cast<PHINode>(State.get(PhiR->getVPSingleValue(), Part));
         VecRdxPhi->setIncomingValueForBlock(
             LI->getLoopFor(LoopVectorBody)->getLoopLatch(), Sel);
       }
@@ -4466,12 +4476,12 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi, VPTransformState &State) {
   // Fix the scalar loop reduction variable with the incoming reduction sum
   // from the vector body and from the backedge value.
   int IncomingEdgeBlockIdx =
-    Phi->getBasicBlockIndex(OrigLoop->getLoopLatch());
+      OrigPhi->getBasicBlockIndex(OrigLoop->getLoopLatch());
   assert(IncomingEdgeBlockIdx >= 0 && "Invalid block index");
   // Pick the other block.
   int SelfEdgeBlockIdx = (IncomingEdgeBlockIdx ? 0 : 1);
-  Phi->setIncomingValue(SelfEdgeBlockIdx, BCBlockPhi);
-  Phi->setIncomingValue(IncomingEdgeBlockIdx, LoopExitInst);
+  OrigPhi->setIncomingValue(SelfEdgeBlockIdx, BCBlockPhi);
+  OrigPhi->setIncomingValue(IncomingEdgeBlockIdx, LoopExitInst);
 }
 
 void InnerLoopVectorizer::clearReductionWrapFlags(RecurrenceDescriptor &RdxDesc,
@@ -5608,7 +5618,8 @@ LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
     return ElementCount::getScalable(0);
   }
 
-  auto MaxScalableVF = ElementCount::getScalable(1u << 16);
+  auto MaxScalableVF = ElementCount::getScalable(
+      std::numeric_limits<ElementCount::ScalarTy>::max());
 
   // Disable scalable vectorization if the loop contains unsupported reductions.
   // Test that the loop-vectorizer can legalize all operations for this MaxVF.
@@ -5863,7 +5874,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
 ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     unsigned ConstTripCount, unsigned SmallestType, unsigned WidestType,
-    ElementCount MaxSafeVF) {
+    const ElementCount &MaxSafeVF) {
   bool ComputeScalableMaxVF = MaxSafeVF.isScalable();
   TypeSize WidestRegister = TTI.getRegisterBitWidth(
       ComputeScalableMaxVF ? TargetTransformInfo::RGK_ScalableVector
@@ -8498,7 +8509,7 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
     else {
       auto IVRecipe = new VPWidenCanonicalIVRecipe();
       Builder.getInsertBlock()->insert(IVRecipe, NewInsertionPoint);
-      IV = IVRecipe->getVPValue();
+      IV = IVRecipe->getVPSingleValue();
     }
     VPValue *BTC = Plan->getOrCreateBackedgeTakenCount();
     bool TailFolded = !CM.isScalarEpilogueAllowed();
@@ -8754,6 +8765,16 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
   return new VPWidenRecipe(*I, make_range(Operands.begin(), Operands.end()));
 }
 
+void VPRecipeBuilder::fixHeaderPhis() {
+  BasicBlock *OrigLatch = OrigLoop->getLoopLatch();
+  for (VPWidenPHIRecipe *R : PhisToFix) {
+    auto *PN = cast<PHINode>(R->getUnderlyingValue());
+    VPRecipeBase *IncR =
+        getRecipe(cast<Instruction>(PN->getIncomingValueForBlock(OrigLatch)));
+    R->addOperand(IncR->getVPSingleValue());
+  }
+}
+
 VPBasicBlock *VPRecipeBuilder::handleReplication(
     Instruction *I, VFRange &Range, VPBasicBlock *VPBB,
     VPlanPtr &Plan) {
@@ -8857,7 +8878,15 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
       assert(RdxDesc.getRecurrenceStartValue() ==
              Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
       VPValue *StartV = Operands[0];
-      return toVPRecipeResult(new VPWidenPHIRecipe(Phi, RdxDesc, *StartV));
+
+      // Record the PHI and the incoming value from the backedge, so we can add
+      // the incoming value from the backedge after all recipes have been
+      // created.
+      auto *PhiRecipe = new VPWidenPHIRecipe(Phi, RdxDesc, *StartV);
+      PhisToFix.push_back(PhiRecipe);
+      recordRecipeOf(cast<Instruction>(
+          Phi->getIncomingValueForBlock(OrigLoop->getLoopLatch())));
+      return toVPRecipeResult(PhiRecipe);
     }
 
     return toVPRecipeResult(new VPWidenPHIRecipe(Phi));
@@ -9045,6 +9074,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     }
   }
 
+  RecipeBuilder.fixHeaderPhis();
+
   // Discard empty dummy pre-entry VPBasicBlock. Note that other VPBasicBlocks
   // may also be empty, such as the last one VPBB, reflecting original
   // basic-blocks with no recipes.
@@ -9063,6 +9094,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   for (auto &Entry : SinkAfter) {
     VPRecipeBase *Sink = RecipeBuilder.getRecipe(Entry.first);
     VPRecipeBase *Target = RecipeBuilder.getRecipe(Entry.second);
+
     // If the target is in a replication region, make sure to move Sink to the
     // block after it, not into the replication region itself.
     if (auto *Region =
@@ -9075,7 +9107,37 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
         continue;
       }
     }
-    Sink->moveAfter(Target);
+
+    auto *SinkRegion =
+        dyn_cast_or_null<VPRegionBlock>(Sink->getParent()->getParent());
+    // Unless the sink source is in a replicate region, sink the recipe
+    // directly.
+    if (!SinkRegion || !SinkRegion->isReplicator()) {
+      Sink->moveAfter(Target);
+      continue;
+    }
+
+    // If the sink source is in a replicate region, we need to move the whole
+    // replicate region, which should only contain a single recipe in the main
+    // block.
+    assert(Sink->getParent()->size() == 1 &&
+           "parent must be a replicator with a single recipe");
+    auto *SplitBlock =
+        Target->getParent()->splitAt(std::next(Target->getIterator()));
+
+    auto *Pred = SinkRegion->getSinglePredecessor();
+    auto *Succ = SinkRegion->getSingleSuccessor();
+    VPBlockUtils::disconnectBlocks(Pred, SinkRegion);
+    VPBlockUtils::disconnectBlocks(SinkRegion, Succ);
+    VPBlockUtils::connectBlocks(Pred, Succ);
+
+    auto *SplitPred = SplitBlock->getSinglePredecessor();
+
+    VPBlockUtils::disconnectBlocks(SplitPred, SplitBlock);
+    VPBlockUtils::connectBlocks(SplitPred, SinkRegion);
+    VPBlockUtils::connectBlocks(SinkRegion, SplitBlock);
+    if (VPBB == SplitPred)
+      VPBB = SplitBlock;
   }
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
@@ -9215,11 +9277,11 @@ void LoopVectorizationPlanner::adjustRecipesForInLoopReductions(
                          : nullptr;
       VPReductionRecipe *RedRecipe = new VPReductionRecipe(
           &RdxDesc, R, ChainOp, VecOp, CondOp, TTI);
-      WidenRecipe->getVPValue()->replaceAllUsesWith(RedRecipe);
+      WidenRecipe->getVPSingleValue()->replaceAllUsesWith(RedRecipe);
       Plan->removeVPValueFor(R);
       Plan->addVPValue(R, RedRecipe);
       WidenRecipe->getParent()->insert(RedRecipe, WidenRecipe->getIterator());
-      WidenRecipe->getVPValue()->replaceAllUsesWith(RedRecipe);
+      WidenRecipe->getVPSingleValue()->replaceAllUsesWith(RedRecipe);
       WidenRecipe->eraseFromParent();
 
       if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
@@ -9479,9 +9541,9 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
 
 void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
   VPValue *StoredValue = isStore() ? getStoredValue() : nullptr;
-  State.ILV->vectorizeMemoryInstruction(&Ingredient, State,
-                                        StoredValue ? nullptr : getVPValue(),
-                                        getAddr(), StoredValue, getMask());
+  State.ILV->vectorizeMemoryInstruction(
+      &Ingredient, State, StoredValue ? nullptr : getVPSingleValue(), getAddr(),
+      StoredValue, getMask());
 }
 
 // Determine how to lower the scalar epilogue, which depends on 1) optimising

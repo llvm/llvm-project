@@ -671,10 +671,10 @@ public:
   /// Returns the underlying instruction, if the recipe is a VPValue or nullptr
   /// otherwise.
   Instruction *getUnderlyingInstr() {
-    return cast<Instruction>(getVPValue()->getUnderlyingValue());
+    return cast<Instruction>(getVPSingleValue()->getUnderlyingValue());
   }
   const Instruction *getUnderlyingInstr() const {
-    return cast<Instruction>(getVPValue()->getUnderlyingValue());
+    return cast<Instruction>(getVPSingleValue()->getUnderlyingValue());
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
@@ -685,6 +685,12 @@ public:
 
   /// Returns true if the recipe may have side-effects.
   bool mayHaveSideEffects() const;
+
+  /// Returns true for PHI-like recipes.
+  bool isPhi() const {
+    return getVPDefID() == VPWidenIntOrFpInductionSC || getVPDefID() == VPWidenPHISC ||
+      getVPDefID() == VPPredInstPHISC || getVPDefID() == VPWidenCanonicalIVSC;
+  }
 };
 
 inline bool VPUser::classof(const VPDef *Def) {
@@ -738,7 +744,7 @@ public:
       : VPRecipeBase(VPRecipeBase::VPInstructionSC, {}),
         VPValue(VPValue::VPVInstructionSC, nullptr, this), Opcode(Opcode) {
     for (auto *I : Operands)
-      addOperand(I->getVPValue());
+      addOperand(I->getVPSingleValue());
   }
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands)
@@ -987,9 +993,10 @@ public:
 
 /// A recipe for handling all phi nodes except for integer and FP inductions.
 /// For reduction PHIs, RdxDesc must point to the corresponding recurrence
-/// descriptor and the start value is the first operand of the recipe.
-/// In the VPlan native path, all incoming VPValues & VPBasicBlock pairs are
-/// managed in the recipe directly.
+/// descriptor, the start value is the first operand of the recipe and the
+/// incoming value from the backedge is the second operand. In the VPlan native
+/// path, all incoming VPValues & VPBasicBlock pairs are managed in the recipe
+/// directly.
 class VPWidenPHIRecipe : public VPRecipeBase, public VPValue {
   /// Descriptor for a reduction PHI.
   RecurrenceDescriptor *RdxDesc = nullptr;
@@ -1034,6 +1041,13 @@ public:
     return getNumOperands() == 0 ? nullptr : getOperand(0);
   }
 
+  /// Returns the incoming value from the loop backedge, if it is a reduction.
+  VPValue *getBackedgeValue() {
+    assert(RdxDesc && "second incoming value is only guaranteed to be backedge "
+                      "value for reductions");
+    return getOperand(1);
+  }
+
   /// Adds a pair (\p IncomingV, \p IncomingBlock) to the phi.
   void addIncoming(VPValue *IncomingV, VPBasicBlock *IncomingBlock) {
     addOperand(IncomingV);
@@ -1045,6 +1059,8 @@ public:
 
   /// Returns the \p I th incoming VPBasicBlock.
   VPBasicBlock *getIncomingBlock(unsigned I) { return IncomingBlocks[I]; }
+
+  RecurrenceDescriptor *getRecurrenceDescriptor() { return RdxDesc; }
 };
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
@@ -1430,7 +1446,7 @@ public:
 
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
 /// holds a sequence of zero or more VPRecipe's each representing a sequence of
-/// output IR instructions.
+/// output IR instructions. All PHI-like recipes must come before any non-PHI recipes.
 class VPBasicBlock : public VPBlockBase {
 public:
   using RecipeListTy = iplist<VPRecipeBase>;
@@ -1508,7 +1524,17 @@ public:
   /// Return the position of the first non-phi node recipe in the block.
   iterator getFirstNonPhi();
 
+  /// Returns an iterator range over the PHI-like recipes in the block.
+  iterator_range<iterator> phis() {
+    return make_range(begin(), getFirstNonPhi());
+  }
+
   void dropAllReferences(VPValue *NewValue) override;
+
+  /// Split current block at \p SplitAt by inserting a new block between the
+  /// current block and its successors and moving all recipes starting at
+  /// SplitAt to the new block. Returns the new block.
+  VPBasicBlock *splitAt(iterator SplitAt);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPBsicBlock to \p O, prefixing all lines with \p Indent. \p

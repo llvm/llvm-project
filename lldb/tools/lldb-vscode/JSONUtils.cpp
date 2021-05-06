@@ -914,21 +914,24 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
   return llvm::json::Value(std::move(event));
 }
 
+const char *GetNonNullVariableName(lldb::SBValue v) {
+  const char *name = v.GetName();
+  return name ? name : "<null>";
+}
+
 std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
                                                bool is_name_duplicated) {
   lldb::SBStream name_builder;
-  const char *name = v.GetName();
-  name_builder.Print(name ? name : "<null>");
+  name_builder.Print(GetNonNullVariableName(v));
   if (is_name_duplicated) {
-    name_builder.Print(" @ ");
     lldb::SBDeclaration declaration = v.GetDeclaration();
-    std::string file_name(declaration.GetFileSpec().GetFilename());
+    const char *file_name = declaration.GetFileSpec().GetFilename();
     const uint32_t line = declaration.GetLine();
 
-    if (!file_name.empty() && line > 0)
-      name_builder.Printf("%s:%u", file_name.c_str(), line);
-    else
-      name_builder.Print(v.GetLocation());
+    if (file_name != nullptr && line > 0)
+      name_builder.Printf(" @ %s:%u", file_name, line);
+    else if (const char *location = v.GetLocation())
+      name_builder.Printf(" @ %s", location);
   }
   return name_builder.GetData();
 }

@@ -54,26 +54,14 @@ define void @masked_store_v1i32(<1 x i32>* %val_ptr, <1 x i32>* %a, <1 x i32>* %
 declare void @llvm.masked.store.v1i32.p0v1i32(<1 x i32>, <1 x i32>*, i32, <1 x i1>)
 
 define void @masked_store_v1i64(<1 x i64>* %val_ptr, <1 x i64>* %a, <1 x i64>* %m_ptr) nounwind {
-; RV32-LABEL: masked_store_v1i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a3, 1, e64,m1,ta,mu
-; RV32-NEXT:    vle64.v v25, (a2)
-; RV32-NEXT:    vsetivli a2, 2, e32,m1,ta,mu
-; RV32-NEXT:    vmv.v.i v26, 0
-; RV32-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
-; RV32-NEXT:    vle64.v v27, (a0)
-; RV32-NEXT:    vmseq.vv v0, v25, v26
-; RV32-NEXT:    vse64.v v27, (a1), v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: masked_store_v1i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli a3, 1, e64,m1,ta,mu
-; RV64-NEXT:    vle64.v v25, (a2)
-; RV64-NEXT:    vle64.v v26, (a0)
-; RV64-NEXT:    vmseq.vi v0, v25, 0
-; RV64-NEXT:    vse64.v v26, (a1), v0.t
-; RV64-NEXT:    ret
+; CHECK-LABEL: masked_store_v1i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a3, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vle64.v v25, (a2)
+; CHECK-NEXT:    vle64.v v26, (a0)
+; CHECK-NEXT:    vmseq.vi v0, v25, 0
+; CHECK-NEXT:    vse64.v v26, (a1), v0.t
+; CHECK-NEXT:    ret
   %m = load <1 x i64>, <1 x i64>* %m_ptr
   %mask = icmp eq <1 x i64> %m, zeroinitializer
   %val = load <1 x i64>, <1 x i64>* %val_ptr
@@ -134,26 +122,14 @@ define void @masked_store_v2i32(<2 x i32>* %val_ptr, <2 x i32>* %a, <2 x i32>* %
 declare void @llvm.masked.store.v2i32.p0v2i32(<2 x i32>, <2 x i32>*, i32, <2 x i1>)
 
 define void @masked_store_v2i64(<2 x i64>* %val_ptr, <2 x i64>* %a, <2 x i64>* %m_ptr) nounwind {
-; RV32-LABEL: masked_store_v2i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a3, 2, e64,m1,ta,mu
-; RV32-NEXT:    vle64.v v25, (a2)
-; RV32-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
-; RV32-NEXT:    vmv.v.i v26, 0
-; RV32-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
-; RV32-NEXT:    vle64.v v27, (a0)
-; RV32-NEXT:    vmseq.vv v0, v25, v26
-; RV32-NEXT:    vse64.v v27, (a1), v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: masked_store_v2i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli a3, 2, e64,m1,ta,mu
-; RV64-NEXT:    vle64.v v25, (a2)
-; RV64-NEXT:    vle64.v v26, (a0)
-; RV64-NEXT:    vmseq.vi v0, v25, 0
-; RV64-NEXT:    vse64.v v26, (a1), v0.t
-; RV64-NEXT:    ret
+; CHECK-LABEL: masked_store_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a3, 2, e64,m1,ta,mu
+; CHECK-NEXT:    vle64.v v25, (a2)
+; CHECK-NEXT:    vle64.v v26, (a0)
+; CHECK-NEXT:    vmseq.vi v0, v25, 0
+; CHECK-NEXT:    vse64.v v26, (a1), v0.t
+; CHECK-NEXT:    ret
   %m = load <2 x i64>, <2 x i64>* %m_ptr
   %mask = icmp eq <2 x i64> %m, zeroinitializer
   %val = load <2 x i64>, <2 x i64>* %val_ptr
@@ -214,26 +190,14 @@ define void @masked_store_v4i32(<4 x i32>* %val_ptr, <4 x i32>* %a, <4 x i32>* %
 declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i1>)
 
 define void @masked_store_v4i64(<4 x i64>* %val_ptr, <4 x i64>* %a, <4 x i64>* %m_ptr) nounwind {
-; RV32-LABEL: masked_store_v4i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a3, 4, e64,m2,ta,mu
-; RV32-NEXT:    vle64.v v26, (a2)
-; RV32-NEXT:    vsetivli a2, 8, e32,m2,ta,mu
-; RV32-NEXT:    vmv.v.i v28, 0
-; RV32-NEXT:    vsetivli a2, 4, e64,m2,ta,mu
-; RV32-NEXT:    vle64.v v30, (a0)
-; RV32-NEXT:    vmseq.vv v0, v26, v28
-; RV32-NEXT:    vse64.v v30, (a1), v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: masked_store_v4i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli a3, 4, e64,m2,ta,mu
-; RV64-NEXT:    vle64.v v26, (a2)
-; RV64-NEXT:    vle64.v v28, (a0)
-; RV64-NEXT:    vmseq.vi v0, v26, 0
-; RV64-NEXT:    vse64.v v28, (a1), v0.t
-; RV64-NEXT:    ret
+; CHECK-LABEL: masked_store_v4i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a3, 4, e64,m2,ta,mu
+; CHECK-NEXT:    vle64.v v26, (a2)
+; CHECK-NEXT:    vle64.v v28, (a0)
+; CHECK-NEXT:    vmseq.vi v0, v26, 0
+; CHECK-NEXT:    vse64.v v28, (a1), v0.t
+; CHECK-NEXT:    ret
   %m = load <4 x i64>, <4 x i64>* %m_ptr
   %mask = icmp eq <4 x i64> %m, zeroinitializer
   %val = load <4 x i64>, <4 x i64>* %val_ptr
@@ -294,26 +258,14 @@ define void @masked_store_v8i32(<8 x i32>* %val_ptr, <8 x i32>* %a, <8 x i32>* %
 declare void @llvm.masked.store.v8i32.p0v8i32(<8 x i32>, <8 x i32>*, i32, <8 x i1>)
 
 define void @masked_store_v8i64(<8 x i64>* %val_ptr, <8 x i64>* %a, <8 x i64>* %m_ptr) nounwind {
-; RV32-LABEL: masked_store_v8i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a3, 8, e64,m4,ta,mu
-; RV32-NEXT:    vle64.v v28, (a2)
-; RV32-NEXT:    vsetivli a2, 16, e32,m4,ta,mu
-; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vsetivli a2, 8, e64,m4,ta,mu
-; RV32-NEXT:    vle64.v v12, (a0)
-; RV32-NEXT:    vmseq.vv v0, v28, v8
-; RV32-NEXT:    vse64.v v12, (a1), v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: masked_store_v8i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli a3, 8, e64,m4,ta,mu
-; RV64-NEXT:    vle64.v v28, (a2)
-; RV64-NEXT:    vle64.v v8, (a0)
-; RV64-NEXT:    vmseq.vi v0, v28, 0
-; RV64-NEXT:    vse64.v v8, (a1), v0.t
-; RV64-NEXT:    ret
+; CHECK-LABEL: masked_store_v8i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a3, 8, e64,m4,ta,mu
+; CHECK-NEXT:    vle64.v v28, (a2)
+; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    vmseq.vi v0, v28, 0
+; CHECK-NEXT:    vse64.v v8, (a1), v0.t
+; CHECK-NEXT:    ret
   %m = load <8 x i64>, <8 x i64>* %m_ptr
   %mask = icmp eq <8 x i64> %m, zeroinitializer
   %val = load <8 x i64>, <8 x i64>* %val_ptr
@@ -374,27 +326,14 @@ define void @masked_store_v16i32(<16 x i32>* %val_ptr, <16 x i32>* %a, <16 x i32
 declare void @llvm.masked.store.v16i32.p0v16i32(<16 x i32>, <16 x i32>*, i32, <16 x i1>)
 
 define void @masked_store_v16i64(<16 x i64>* %val_ptr, <16 x i64>* %a, <16 x i64>* %m_ptr) nounwind {
-; RV32-LABEL: masked_store_v16i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a3, 16, e64,m8,ta,mu
-; RV32-NEXT:    vle64.v v8, (a2)
-; RV32-NEXT:    addi a2, zero, 32
-; RV32-NEXT:    vsetvli a2, a2, e32,m8,ta,mu
-; RV32-NEXT:    vmv.v.i v16, 0
-; RV32-NEXT:    vsetivli a2, 16, e64,m8,ta,mu
-; RV32-NEXT:    vle64.v v24, (a0)
-; RV32-NEXT:    vmseq.vv v0, v8, v16
-; RV32-NEXT:    vse64.v v24, (a1), v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: masked_store_v16i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli a3, 16, e64,m8,ta,mu
-; RV64-NEXT:    vle64.v v8, (a2)
-; RV64-NEXT:    vle64.v v16, (a0)
-; RV64-NEXT:    vmseq.vi v0, v8, 0
-; RV64-NEXT:    vse64.v v16, (a1), v0.t
-; RV64-NEXT:    ret
+; CHECK-LABEL: masked_store_v16i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a3, 16, e64,m8,ta,mu
+; CHECK-NEXT:    vle64.v v8, (a2)
+; CHECK-NEXT:    vle64.v v16, (a0)
+; CHECK-NEXT:    vmseq.vi v0, v8, 0
+; CHECK-NEXT:    vse64.v v16, (a1), v0.t
+; CHECK-NEXT:    ret
   %m = load <16 x i64>, <16 x i64>* %m_ptr
   %mask = icmp eq <16 x i64> %m, zeroinitializer
   %val = load <16 x i64>, <16 x i64>* %val_ptr

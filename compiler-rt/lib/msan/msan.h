@@ -296,7 +296,6 @@ char *GetProcSelfMaps();
 void InitializeInterceptors();
 
 void MsanAllocatorInit();
-void MsanAllocatorThreadFinish();
 void MsanDeallocate(StackTrace *stack, void *ptr);
 
 void *msan_malloc(uptr size, StackTrace *stack);

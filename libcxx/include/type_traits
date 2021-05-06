@@ -476,8 +476,6 @@ struct _MetaBase<true> {
   using _EnableIfImpl _LIBCPP_NODEBUG_TYPE = _Tp;
   template <class _Result, class _First, class ..._Rest>
   using _OrImpl _LIBCPP_NODEBUG_TYPE = typename _MetaBase<_First::value != true && sizeof...(_Rest) != 0>::template _OrImpl<_First, _Rest...>;
-  template <class _Result, class _First, class ..._Rest>
-  using _AndImpl _LIBCPP_NODEBUG_TYPE = typename _MetaBase<_First::value == true && sizeof...(_Rest) != 0>::template _AndImpl<_First, _Rest...>;
 };
 
 template <>
@@ -488,8 +486,6 @@ struct _MetaBase<false> {
   using _SelectApplyImpl _LIBCPP_NODEBUG_TYPE = _SecondFn<_Args...>;
   template <class _Result, class ...>
   using _OrImpl _LIBCPP_NODEBUG_TYPE = _Result;
-  template <class _Result, class ...>
-  using _AndImpl _LIBCPP_NODEBUG_TYPE = _Result;
 };
 template <bool _Cond, class _Ret = void>
 using _EnableIf _LIBCPP_NODEBUG_TYPE = typename _MetaBase<_Cond>::template _EnableIfImpl<_Ret>;
@@ -497,14 +493,20 @@ template <bool _Cond, class _IfRes, class _ElseRes>
 using _If _LIBCPP_NODEBUG_TYPE = typename _MetaBase<_Cond>::template _SelectImpl<_IfRes, _ElseRes>;
 template <class ..._Rest>
 using _Or _LIBCPP_NODEBUG_TYPE = typename _MetaBase< sizeof...(_Rest) != 0 >::template _OrImpl<false_type, _Rest...>;
-template <class ..._Rest>
-using _And _LIBCPP_NODEBUG_TYPE = typename _MetaBase< sizeof...(_Rest) != 0 >::template _AndImpl<true_type, _Rest...>;
 template <class _Pred>
 struct _Not : _BoolConstant<!_Pred::value> {};
 template <class ..._Args>
 using _FirstType _LIBCPP_NODEBUG_TYPE = typename _MetaBase<(sizeof...(_Args) >= 1)>::template _FirstImpl<_Args...>;
 template <class ..._Args>
 using _SecondType _LIBCPP_NODEBUG_TYPE = typename _MetaBase<(sizeof...(_Args) >= 2)>::template _SecondImpl<_Args...>;
+
+template <class ...> using __expand_to_true = true_type;
+template <class ..._Pred>
+__expand_to_true<_EnableIf<_Pred::value>...> __and_helper(int);
+template <class ...>
+false_type __and_helper(...);
+template <class ..._Pred>
+using _And _LIBCPP_NODEBUG_TYPE = decltype(__and_helper<_Pred...>(0));
 
 template <template <class...> class _Func, class ..._Args>
 struct _Lazy : _Func<_Args...> {};
@@ -2307,6 +2309,11 @@ struct _LIBCPP_TEMPLATE_VIS make_unsigned
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using make_unsigned_t = typename make_unsigned<_Tp>::type;
+
+template<class _From>
+[[nodiscard]] constexpr auto __to_unsigned_like(_From __x) noexcept {
+  return static_cast<make_unsigned_t<_From>>(__x);
+}
 #endif
 
 #if _LIBCPP_STD_VER > 14
@@ -2814,6 +2821,9 @@ template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 typename decay<_Tp>::type
 __decay_copy(_Tp&& __t)
+#if _LIBCPP_STD_VER > 17
+noexcept(is_nothrow_convertible_v<_Tp, remove_reference_t<_Tp>>)
+#endif
 {
     return _VSTD::forward<_Tp>(__t);
 }

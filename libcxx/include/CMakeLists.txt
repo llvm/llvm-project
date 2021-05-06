@@ -35,7 +35,11 @@ set(files
   __mutex_base
   __node_handle
   __nullptr
+  __ranges/access.h
+  __ranges/concepts.h
   __ranges/enable_borrowed_range.h
+  __ranges/view.h
+  __ranges/size.h
   __split_buffer
   __sso_allocator
   __std_stream
@@ -150,6 +154,7 @@ set(files
   random
   ranges
   ratio
+  ranges
   regex
   scoped_allocator
   semaphore
@@ -228,8 +233,8 @@ add_library(cxx-headers INTERFACE)
 add_dependencies(cxx-headers generate-cxx-headers ${LIBCXX_CXX_ABI_HEADER_TARGET})
 # TODO: Use target_include_directories once we figure out why that breaks the runtimes build
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-  target_compile_options(cxx-headers INTERFACE /I "${LIBCXX_GENERATED_INCLUDE_DIR}"
-                                     INTERFACE /I "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}")
+  target_compile_options(cxx-headers INTERFACE /I${LIBCXX_GENERATED_INCLUDE_DIR}
+                                     INTERFACE /I${LIBCXX_GENERATED_INCLUDE_TARGET_DIR})
 else()
   target_compile_options(cxx-headers INTERFACE -I${LIBCXX_GENERATED_INCLUDE_DIR}
                                      INTERFACE -I${LIBCXX_GENERATED_INCLUDE_TARGET_DIR})

@@ -334,4 +334,4 @@ attributes #3 = { nounwind }
 ; HSA: attributes #17 = { nounwind "uniform-work-group-size"="false" }
 ; HSA: attributes #18 = { nounwind }
 ; HSA: attributes #19 = { nounwind "amdgpu-calls" "uniform-work-group-size"="false" }
-; HSA: attributes #20 = { nounwind "amdgpu-dispatch-ptr" "target-cpu"="fiji" }
+; HSA: attributes #20 = { nounwind "amdgpu-dispatch-id" "amdgpu-dispatch-ptr" "amdgpu-implicitarg-ptr" "amdgpu-queue-ptr" "amdgpu-work-group-id-x" "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-x" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "target-cpu"="fiji" }

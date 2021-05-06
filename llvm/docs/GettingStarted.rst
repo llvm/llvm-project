@@ -896,6 +896,14 @@ share code among the `tools`_.
   Source code that corresponding to the header files in ``llvm/include/ADT/``
   and ``llvm/include/Support/``.
 
+``llvm/bindings``
+----------------------
+
+Contains bindings for the LLVM compiler infrastructure to allow
+programs written in languages other than C or C++ to take advantage of the LLVM
+infrastructure.
+LLVM project provides language bindings for Go, OCaml and Python.
+
 ``llvm/projects``
 -----------------
 

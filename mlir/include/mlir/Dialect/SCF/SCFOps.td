@@ -311,6 +311,10 @@ def IfOp : SCF_Op<"if",
       return results().empty() ? OpBuilder::atBlockTerminator(body, listener)
                                : OpBuilder::atBlockEnd(body, listener);
     }
+    Block* thenBlock();
+    YieldOp thenYield();
+    Block* elseBlock();
+    YieldOp elseYield();
   }];
 
   let hasCanonicalizer = 1;
@@ -586,7 +590,11 @@ def WhileOp : SCF_Op<"while",
 
   let extraClassDeclaration = [{
     OperandRange getSuccessorEntryOperands(unsigned index);
+    ConditionOp getConditionOp();
+    Block::BlockArgListType getAfterArguments();
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 def YieldOp : SCF_Op<"yield", [NoSideEffect, ReturnLike, Terminator,

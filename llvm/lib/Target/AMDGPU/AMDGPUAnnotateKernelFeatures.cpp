@@ -25,6 +25,13 @@
 using namespace llvm;
 
 namespace {
+static constexpr StringLiteral ImplicitAttrNames[] = {
+    // X ids unnecessarily propagated to kernels.
+    "amdgpu-work-item-id-x",  "amdgpu-work-item-id-y",
+    "amdgpu-work-item-id-z",  "amdgpu-work-group-id-x",
+    "amdgpu-work-group-id-y", "amdgpu-work-group-id-z",
+    "amdgpu-dispatch-ptr",    "amdgpu-dispatch-id",
+    "amdgpu-queue-ptr",       "amdgpu-implicitarg-ptr"};
 
 class AMDGPUAnnotateKernelFeatures : public CallGraphSCCPass {
 private:
@@ -194,18 +201,10 @@ static bool handleAttr(Function &Parent, const Function &Callee,
 
 static void copyFeaturesToFunction(Function &Parent, const Function &Callee,
                                    bool &NeedQueuePtr) {
-  // X ids unnecessarily propagated to kernels.
-  static constexpr StringLiteral AttrNames[] = {
-      "amdgpu-work-item-id-x",      "amdgpu-work-item-id-y",
-      "amdgpu-work-item-id-z",      "amdgpu-work-group-id-x",
-      "amdgpu-work-group-id-y",     "amdgpu-work-group-id-z",
-      "amdgpu-dispatch-ptr",        "amdgpu-dispatch-id",
-      "amdgpu-implicitarg-ptr"};
-
   if (handleAttr(Parent, Callee, "amdgpu-queue-ptr"))
     NeedQueuePtr = true;
 
-  for (StringRef AttrName : AttrNames)
+  for (StringRef AttrName : ImplicitAttrNames)
     handleAttr(Parent, Callee, AttrName);
 }
 
@@ -268,7 +267,20 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
   bool Changed = false;
   bool NeedQueuePtr = false;
   bool HaveCall = false;
+  bool HasIndirectCall = false;
   bool IsFunc = !AMDGPU::isEntryFunctionCC(F.getCallingConv());
+  CallingConv::ID CC = F.getCallingConv();
+  bool CallingConvSupportsAllImplicits = (CC != CallingConv::AMDGPU_Gfx);
+
+  // If this function hasAddressTaken() = true
+  // then add all attributes corresponding to the implicit args.
+  if (CallingConvSupportsAllImplicits &&
+      F.hasAddressTaken(nullptr, true, true, true)) {
+    for (StringRef AttrName : ImplicitAttrNames) {
+      F.addFnAttr(AttrName);
+    }
+    Changed = true;
+  }
 
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
@@ -281,10 +293,12 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
         const Function *Callee =
             dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
 
-        // TODO: Do something with indirect calls.
+        // Note the occurence of indirect call.
         if (!Callee) {
-          if (!CB->isInlineAsm())
+          if (!CB->isInlineAsm()) {
+            HasIndirectCall = true;
             HaveCall = true;
+          }
           continue;
         }
 
@@ -351,6 +365,28 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
     Changed = true;
   }
 
+  // This pass cannot copy attributes from callees to callers
+  // if there is an indirect call and in thus such cases,
+  // hasAddressTaken() would be false for kernels and functions
+  // making an indirect call (if they are themselves not indirectly called).
+  // We must tag all such kernels/functions with all implicits attributes
+  // for correctness.
+  // e.g.
+  // 1. Kernel K1 makes an indirect call to function F1.
+  //    Without detecting an indirect call in K1, this pass will not
+  //    add all implicit args to K1 (which is incorrect).
+  // 2. Kernel K1 makes direct call to F1 which makes indirect call to function
+  // F2.
+  //    Without detecting an indirect call in F1 (whose hasAddressTaken() is
+  //    false), the pass will not add all implicit args to F1 (which is
+  //    essential for correctness).
+  if (CallingConvSupportsAllImplicits && HasIndirectCall) {
+    for (StringRef AttrName : ImplicitAttrNames) {
+      F.addFnAttr(AttrName);
+    }
+    Changed = true;
+  }
+
   return Changed;
 }
 
@@ -367,9 +403,11 @@ bool AMDGPUAnnotateKernelFeatures::runOnSCC(CallGraphSCC &SCC) {
     }
 
     Function *F = I->getFunction();
-    // Add feature attributes
-    if (!F || F->isDeclaration())
+    // Ignore functions with graphics calling conventions, these are currently
+    // not allowed to have kernel arguments.
+    if (!F || F->isDeclaration() || AMDGPU::isGraphics(F->getCallingConv()))
       continue;
+    // Add feature attributes
     Changed |= addFeatureAttributes(*F);
   }
 

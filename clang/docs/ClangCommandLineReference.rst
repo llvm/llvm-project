@@ -246,9 +246,9 @@ Specify comma-separated list of triples OpenMP offloading targets to be supporte
 
 Add -rpath with architecture-specific resource directory to the linker flags
 
-.. option:: -fsanitize-system-blacklist=<arg>
+.. option:: -fsanitize-system-ignorelist=<arg>
 
-Path to system blacklist file for sanitizers
+Path to system ignorelist file for sanitizers
 
 .. option:: -fsystem-module
 
@@ -842,9 +842,9 @@ Inline functions which are (explicitly or implicitly) marked inline
 
 Disable auto-generation of preprocessed source files and a script for reproduction during a clang crash
 
-.. option:: -fno-sanitize-blacklist
+.. option:: -fno-sanitize-ignorelist
 
-Don't use blacklist file for sanitizers
+Don't use ignorelist file for sanitizers
 
 .. option:: -fparse-all-comments
 
@@ -870,7 +870,7 @@ Enable use-after-scope detection in AddressSanitizer
 
 Enable ODR indicator globals to avoid false ODR violation reports in partially sanitized programs at the cost of an increase in binary size
 
-.. option:: -fsanitize-address-destructor-kind=<arg>
+.. option:: -fsanitize-address-destructor=<arg>
 
 Set the kind of module destructors emitted by AddressSanitizer instrumentation.
 These destructors are emitted to unregister instrumented global variables when
@@ -881,9 +881,9 @@ Valid options are:
 * ``global`` - Emit module destructors that are called via a platform specific array (see `llvm.global_dtors`).
 * ``none`` - Do not emit module destructors.
 
-.. option:: -fsanitize-blacklist=<arg>
+.. option:: -fsanitize-ignorelist=<arg>
 
-Path to blacklist file for sanitizers
+Path to ignorelist file for sanitizers
 
 .. option:: -fsanitize-cfi-canonical-jump-tables, -fno-sanitize-cfi-canonical-jump-tables
 
@@ -897,11 +897,12 @@ Enable control flow integrity (CFI) checks for cross-DSO calls.
 
 Generalize pointers in CFI indirect call type signature checks
 
-.. option:: -fsanitize-coverage-allowlist=<arg>, -fsanitize-coverage-whitelist=<arg>
+.. option:: -fsanitize-coverage-allowlist=<arg>
 
-Restrict sanitizer coverage instrumentation exclusively to modules and functions that match the provided special case list, except the blocked ones
+Restrict sanitizer coverage instrumentation exclusively to modules and
+functions that match the provided special case list, except the blocked ones
 
-.. option:: -fsanitize-coverage-blocklist=<arg>, -fsanitize-coverage-blacklist=<arg>
+.. option:: -fsanitize-coverage-ignorelist=<arg>
 
 Disable sanitizer coverage instrumentation for modules and functions that match the provided special case list, even the allowed ones
 

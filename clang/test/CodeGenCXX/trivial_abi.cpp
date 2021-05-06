@@ -198,12 +198,11 @@ void testIgnoredLarge() {
   testReturnLarge();
 }
 
-// CHECK: define{{.*}} i64 @_Z20testReturnHasTrivialv()
+// CHECK: define{{.*}} i32 @_Z20testReturnHasTrivialv()
 // CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_TRIVIAL:.*]], align 4
 // CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_TRIVIAL]], %[[STRUCT_TRIVIAL]]* %[[RETVAL]], i32 0, i32 0
 // CHECK: %[[V0:.*]] = load i32, i32* %[[COERCE_DIVE]], align 4
-// CHECK: %[[COERCE_VAL_II:.*]] = zext i32 %[[V0]] to i64
-// CHECK: ret i64 %[[COERCE_VAL_II]]
+// CHECK: ret i32 %[[V0]]
 // CHECK: }
 
 Trivial testReturnHasTrivial() {

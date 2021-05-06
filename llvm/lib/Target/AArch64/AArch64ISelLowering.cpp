@@ -902,6 +902,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::INSERT_VECTOR_ELT);
   setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
   setTargetDAGCombine(ISD::VECREDUCE_ADD);
+  setTargetDAGCombine(ISD::STEP_VECTOR);
 
   setTargetDAGCombine(ISD::GlobalAddress);
 
@@ -1151,11 +1152,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
-      setOperationAction(ISD::STEP_VECTOR, VT, Custom);
 
       setOperationAction(ISD::UMUL_LOHI, VT, Expand);
       setOperationAction(ISD::SMUL_LOHI, VT, Expand);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
+      setOperationAction(ISD::ROTL, VT, Expand);
+      setOperationAction(ISD::ROTR, VT, Expand);
     }
 
     // Illegal unpacked integer vector types.
@@ -1804,7 +1806,6 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::RET_FLAG)
     MAKE_CASE(AArch64ISD::BRCOND)
     MAKE_CASE(AArch64ISD::CSEL)
-    MAKE_CASE(AArch64ISD::FCSEL)
     MAKE_CASE(AArch64ISD::CSINV)
     MAKE_CASE(AArch64ISD::CSNEG)
     MAKE_CASE(AArch64ISD::CSINC)
@@ -4476,8 +4477,6 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::SPLAT_VECTOR:
     return LowerSPLAT_VECTOR(Op, DAG);
-  case ISD::STEP_VECTOR:
-    return LowerSTEP_VECTOR(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR:
     return LowerEXTRACT_SUBVECTOR(Op, DAG);
   case ISD::INSERT_SUBVECTOR:
@@ -9162,20 +9161,6 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   return GenerateTBL(Op, ShuffleMask, DAG);
 }
 
-SDValue AArch64TargetLowering::LowerSTEP_VECTOR(SDValue Op,
-                                                SelectionDAG &DAG) const {
-  SDLoc dl(Op);
-  EVT VT = Op.getValueType();
-  assert(VT.isScalableVector() &&
-         "Only expect scalable vectors for STEP_VECTOR");
-  assert(VT.getScalarType() != MVT::i1 &&
-         "Vectors of i1 types not supported for STEP_VECTOR");
-
-  SDValue StepVal = Op.getOperand(0);
-  SDValue Zero = DAG.getConstant(0, dl, StepVal.getValueType());
-  return DAG.getNode(AArch64ISD::INDEX_VECTOR, dl, VT, Zero, StepVal);
-}
-
 SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -9261,9 +9246,7 @@ SDValue AArch64TargetLowering::LowerDUPQLane(SDValue Op,
   SDValue SplatOne = DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::nxv2i64, One);
 
   // create the vector 0,1,0,1,...
-  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-  SDValue SV = DAG.getNode(AArch64ISD::INDEX_VECTOR,
-                           DL, MVT::nxv2i64, Zero, One);
+  SDValue SV = DAG.getNode(ISD::STEP_VECTOR, DL, MVT::nxv2i64, One);
   SV = DAG.getNode(ISD::AND, DL, MVT::nxv2i64, SV, SplatOne);
 
   // create the vector idx64,idx64+1,idx64,idx64+1,...
@@ -13665,15 +13648,18 @@ static SDValue LowerSVEIntrinsicIndex(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   SDValue Op1 = N->getOperand(1);
   SDValue Op2 = N->getOperand(2);
-  EVT ScalarTy = Op1.getValueType();
+  EVT ScalarTy = Op2.getValueType();
+  if ((ScalarTy == MVT::i8) || (ScalarTy == MVT::i16))
+    ScalarTy = MVT::i32;
 
-  if ((ScalarTy == MVT::i8) || (ScalarTy == MVT::i16)) {
-    Op1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op1);
-    Op2 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op2);
-  }
-
-  return DAG.getNode(AArch64ISD::INDEX_VECTOR, DL, N->getValueType(0),
-                     Op1, Op2);
+  // Lower index_vector(base, step) to mul(step step_vector(1)) + splat(base).
+  SDValue One = DAG.getConstant(1, DL, ScalarTy);
+  SDValue StepVector =
+      DAG.getNode(ISD::STEP_VECTOR, DL, N->getValueType(0), One);
+  SDValue Step = DAG.getNode(ISD::SPLAT_VECTOR, DL, N->getValueType(0), Op2);
+  SDValue Mul = DAG.getNode(ISD::MUL, DL, N->getValueType(0), StepVector, Step);
+  SDValue Base = DAG.getNode(ISD::SPLAT_VECTOR, DL, N->getValueType(0), Op1);
+  return DAG.getNode(ISD::ADD, DL, N->getValueType(0), Mul, Base);
 }
 
 static SDValue LowerSVEIntrinsicDUP(SDNode *N, SelectionDAG &DAG) {
@@ -15169,6 +15155,17 @@ static SDValue performBRCONDCombine(SDNode *N,
   return SDValue();
 }
 
+// Optimize CSEL instructions
+static SDValue performCSELCombine(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  SelectionDAG &DAG) {
+  // CSEL x, x, cc -> x
+  if (N->getOperand(0) == N->getOperand(1))
+    return N->getOperand(0);
+
+  return performCONDCombine(N, DCI, DAG, 2, 3);
+}
+
 // Optimize some simple tbz/tbnz cases.  Returns the new operand and bit to test
 // as well as whether the test should be inverted.  This code is required to
 // catch these cases (as opposed to standard dag combines) because
@@ -15461,6 +15458,19 @@ static SDValue performGlobalAddressCombine(SDNode *N, SelectionDAG &DAG,
   SDValue Result = DAG.getGlobalAddress(GV, DL, MVT::i64, Offset);
   return DAG.getNode(ISD::SUB, DL, MVT::i64, Result,
                      DAG.getConstant(MinOffset, DL, MVT::i64));
+}
+
+static SDValue performStepVectorCombine(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        SelectionDAG &DAG) {
+  if (!DCI.isAfterLegalizeDAG())
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue StepVal = N->getOperand(0);
+  SDValue Zero = DAG.getConstant(0, DL, StepVal.getValueType());
+  return DAG.getNode(AArch64ISD::INDEX_VECTOR, DL, VT, Zero, StepVal);
 }
 
 // Turns the vector of indices into a vector of byte offstes by scaling Offset
@@ -15891,6 +15901,75 @@ static SDValue combineSVEPrefetchVecBaseImmOff(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(N->getOpcode(), DL, DAG.getVTList(MVT::Other), Ops);
 }
 
+// Return true if the vector operation can guarantee only the first lane of its
+// result contains data, with all bits in other lanes set to zero.
+static bool isLanes1toNKnownZero(SDValue Op) {
+  switch (Op.getOpcode()) {
+  default:
+    return false;
+  case AArch64ISD::ANDV_PRED:
+  case AArch64ISD::EORV_PRED:
+  case AArch64ISD::FADDA_PRED:
+  case AArch64ISD::FADDV_PRED:
+  case AArch64ISD::FMAXNMV_PRED:
+  case AArch64ISD::FMAXV_PRED:
+  case AArch64ISD::FMINNMV_PRED:
+  case AArch64ISD::FMINV_PRED:
+  case AArch64ISD::ORV_PRED:
+  case AArch64ISD::SADDV_PRED:
+  case AArch64ISD::SMAXV_PRED:
+  case AArch64ISD::SMINV_PRED:
+  case AArch64ISD::UADDV_PRED:
+  case AArch64ISD::UMAXV_PRED:
+  case AArch64ISD::UMINV_PRED:
+    return true;
+  }
+}
+
+static SDValue removeRedundantInsertVectorElt(SDNode *N) {
+  assert(N->getOpcode() == ISD::INSERT_VECTOR_ELT && "Unexpected node!");
+  SDValue InsertVec = N->getOperand(0);
+  SDValue InsertElt = N->getOperand(1);
+  SDValue InsertIdx = N->getOperand(2);
+
+  // We only care about inserts into the first element...
+  if (!isNullConstant(InsertIdx))
+    return SDValue();
+  // ...of a zero'd vector...
+  if (!ISD::isConstantSplatVectorAllZeros(InsertVec.getNode()))
+    return SDValue();
+  // ...where the inserted data was previously extracted...
+  if (InsertElt.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+    return SDValue();
+
+  SDValue ExtractVec = InsertElt.getOperand(0);
+  SDValue ExtractIdx = InsertElt.getOperand(1);
+
+  // ...from the first element of a vector.
+  if (!isNullConstant(ExtractIdx))
+    return SDValue();
+
+  // If we get here we are effectively trying to zero lanes 1-N of a vector.
+
+  // Ensure there's no type conversion going on.
+  if (N->getValueType(0) != ExtractVec.getValueType())
+    return SDValue();
+
+  if (!isLanes1toNKnownZero(ExtractVec))
+    return SDValue();
+
+  // The explicit zeroing is redundant.
+  return ExtractVec;
+}
+
+static SDValue
+performInsertVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  if (SDValue Res = removeRedundantInsertVectorElt(N))
+    return Res;
+
+  return performPostLD1Combine(N, DCI, true);
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -15949,7 +16028,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::TBZ:
     return performTBZCombine(N, DCI, DAG);
   case AArch64ISD::CSEL:
-    return performCONDCombine(N, DCI, DAG, 2, 3);
+    return performCSELCombine(N, DCI, DAG);
   case AArch64ISD::DUP:
     return performPostLD1Combine(N, DCI, false);
   case AArch64ISD::NVCAST:
@@ -15972,11 +16051,13 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::GLD1S_IMM_MERGE_ZERO:
     return performGLD1Combine(N, DAG);
   case ISD::INSERT_VECTOR_ELT:
-    return performPostLD1Combine(N, DCI, true);
+    return performInsertVectorEltCombine(N, DCI);
   case ISD::EXTRACT_VECTOR_ELT:
     return performExtractVectorEltCombine(N, DAG);
   case ISD::VECREDUCE_ADD:
     return performVecReduceAddCombine(N, DCI.DAG, Subtarget);
+  case ISD::STEP_VECTOR:
+    return performStepVectorCombine(N, DCI, DAG);
   case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN:
     switch (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue()) {
@@ -16667,25 +16748,36 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
   if (Size > 128) return AtomicExpansionKind::None;
-  // Nand not supported in LSE.
-  if (AI->getOperation() == AtomicRMWInst::Nand) return AtomicExpansionKind::LLSC;
-  // Leave 128 bits to LLSC.
-  if (Subtarget->hasLSE() && Size < 128)
-    return AtomicExpansionKind::None;
-  if (Subtarget->outlineAtomics() && Size < 128) {
-    // [U]Min/[U]Max RWM atomics are used in __sync_fetch_ libcalls so far.
-    // Don't outline them unless
-    // (1) high level <atomic> support approved:
-    //   http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p0493r1.pdf
-    // (2) low level libgcc and compiler-rt support implemented by:
-    //   min/max outline atomics helpers
-    if (AI->getOperation() != AtomicRMWInst::Min &&
-        AI->getOperation() != AtomicRMWInst::Max &&
-        AI->getOperation() != AtomicRMWInst::UMin &&
-        AI->getOperation() != AtomicRMWInst::UMax) {
+
+  // Nand is not supported in LSE.
+  // Leave 128 bits to LLSC or CmpXChg.
+  if (AI->getOperation() != AtomicRMWInst::Nand && Size < 128) {
+    if (Subtarget->hasLSE())
       return AtomicExpansionKind::None;
+    if (Subtarget->outlineAtomics()) {
+      // [U]Min/[U]Max RWM atomics are used in __sync_fetch_ libcalls so far.
+      // Don't outline them unless
+      // (1) high level <atomic> support approved:
+      //   http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p0493r1.pdf
+      // (2) low level libgcc and compiler-rt support implemented by:
+      //   min/max outline atomics helpers
+      if (AI->getOperation() != AtomicRMWInst::Min &&
+          AI->getOperation() != AtomicRMWInst::Max &&
+          AI->getOperation() != AtomicRMWInst::UMin &&
+          AI->getOperation() != AtomicRMWInst::UMax) {
+        return AtomicExpansionKind::None;
+      }
     }
   }
+
+  // At -O0, fast-regalloc cannot cope with the live vregs necessary to
+  // implement atomicrmw without spilling. If the target address is also on the
+  // stack and close enough to the spill slot, this can lead to a situation
+  // where the monitor always gets cleared and the atomic operation can never
+  // succeed. So at -O0 lower this operation to a CAS loop.
+  if (getTargetMachine().getOptLevel() == CodeGenOpt::None)
+    return AtomicExpansionKind::CmpXChg;
+
   return AtomicExpansionKind::LLSC;
 }
 

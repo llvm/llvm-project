@@ -80,7 +80,7 @@ AsmToken AsmLexer::LexFloatLiteral() {
     ++CurPtr;
 
   if (*CurPtr == '-' || *CurPtr == '+')
-    return ReturnError(CurPtr, "Invalid sign in float literal");
+    return ReturnError(CurPtr, "invalid sign in float literal");
 
   // Check for exponent
   if ((*CurPtr == 'e' || *CurPtr == 'E')) {
@@ -567,6 +567,9 @@ AsmToken AsmLexer::LexDigit() {
 AsmToken AsmLexer::LexSingleQuote() {
   int CurChar = getNextChar();
 
+  if (LexHLASMStrings)
+    return ReturnError(TokStart, "invalid usage of character literals");
+
   if (LexMasmStrings) {
     while (CurChar != EOF) {
       if (CurChar != '\'') {
@@ -621,6 +624,9 @@ AsmToken AsmLexer::LexSingleQuote() {
 /// LexQuote: String: "..."
 AsmToken AsmLexer::LexQuote() {
   int CurChar = getNextChar();
+  if (LexHLASMStrings)
+    return ReturnError(TokStart, "invalid usage of string literals");
+
   if (LexMasmStrings) {
     while (CurChar != EOF) {
       if (CurChar != '"') {

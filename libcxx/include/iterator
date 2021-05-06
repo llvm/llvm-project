@@ -75,6 +75,22 @@ template<class S, class I>
 template<class S, class I>
   concept sized_sentinel_for = see below;
 
+// [iterator.concept.input], concept input_iterator
+template<class I>
+  concept input_iterator = see below;                      // since C++20
+
+// [iterator.concept.forward], concept forward_iterator
+template<class I>
+  concept forward_iterator = see below;                    // since C++20
+
+// [iterator.concept.bidir], concept bidirectional_iterator
+template<class I>
+  concept bidirectional_iterator = see below;              // since C++20
+
+// [iterator.concept.random.access], concept random_access_iterator
+template<class I>
+  concept random_access_iterator = see below;              // since C++20
+
 template<class Category, class T, class Distance = ptrdiff_t,
          class Pointer = T*, class Reference = T&>
 struct iterator
@@ -454,24 +470,22 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 */
 
 #include <__config>
-#include <iosfwd> // for forward declarations of vector and string.
+#include <__debug>
 #include <__functional_base>
-#include <type_traits>
-#include <compare>
-#include <concepts> // Mandated by the Standard.
-#include <cstddef>
-#include <initializer_list>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/readable_traits.h>
-#include <__iterator/concepts.h>
 #include <__memory/addressof.h>
 #include <__memory/pointer_traits.h>
+#include <compare>
+#include <concepts> // Mandated by the Standard.
+#include <cstddef>
+#include <initializer_list>
+#include <iosfwd> // for forward declarations of vector and string
+#include <type_traits>
 #include <version>
-
-#include <__debug>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -1455,11 +1469,6 @@ private:
     _LIBCPP_CONSTEXPR_IF_NODEBUG friend
     __wrap_iter<_Iter1>
     operator+(typename __wrap_iter<_Iter1>::difference_type, __wrap_iter<_Iter1>) _NOEXCEPT;
-
-    template <class _Ip, class _Op> friend _LIBCPP_CONSTEXPR_AFTER_CXX17 _Op copy(_Ip, _Ip, _Op);
-    template <class _B1, class _B2> friend _LIBCPP_CONSTEXPR_AFTER_CXX17 _B2 copy_backward(_B1, _B1, _B2);
-    template <class _Ip, class _Op> friend _LIBCPP_CONSTEXPR_AFTER_CXX17 _Op move(_Ip, _Ip, _Op);
-    template <class _B1, class _B2> friend _LIBCPP_CONSTEXPR_AFTER_CXX17 _B2 move_backward(_B1, _B1, _B2);
 };
 
 #if _LIBCPP_STD_VER <= 17

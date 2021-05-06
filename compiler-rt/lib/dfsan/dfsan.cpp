@@ -540,10 +540,17 @@ static void SetOrigin(const void *dst, uptr size, u32 origin) {
       *(u32 *)(end - kOriginAlign) = origin;
 }
 
-static void WriteShadowIfDifferent(dfsan_label label, uptr shadow_addr,
-                                   uptr size) {
-  dfsan_label *labelp = (dfsan_label *)shadow_addr;
-  for (; size != 0; --size, ++labelp) {
+static void WriteShadowInRange(dfsan_label label, uptr beg_shadow_addr,
+                               uptr end_shadow_addr) {
+  // TODO: After changing dfsan_label to 8bit, use internal_memset when label
+  // is not 0.
+  dfsan_label *labelp = (dfsan_label *)beg_shadow_addr;
+  if (label) {
+    for (; (uptr)labelp < end_shadow_addr; ++labelp) *labelp = label;
+    return;
+  }
+
+  for (; (uptr)labelp < end_shadow_addr; ++labelp) {
     // Don't write the label if it is already the value we need it to be.
     // In a program where most addresses are not labeled, it is common that
     // a page of shadow memory is entirely zeroed.  The Linux copy-on-write
@@ -552,11 +559,16 @@ static void WriteShadowIfDifferent(dfsan_label label, uptr shadow_addr,
     // the value written does not change the value in memory.  Avoiding the
     // write when both |label| and |*labelp| are zero dramatically reduces
     // the amount of real memory used by large programs.
-    if (label == *labelp)
+    if (!*labelp)
       continue;
 
-    *labelp = label;
+    *labelp = 0;
   }
+}
+
+static void WriteShadowWithSize(dfsan_label label, uptr shadow_addr,
+                                uptr size) {
+  WriteShadowInRange(label, shadow_addr, shadow_addr + size * sizeof(label));
 }
 
 #define RET_CHAIN_ORIGIN(id)           \
@@ -597,6 +609,21 @@ SANITIZER_INTERFACE_ATTRIBUTE void dfsan_mem_origin_transfer(const void *dst,
   __dfsan_mem_origin_transfer(dst, src, len);
 }
 
+namespace __dfsan {
+
+bool dfsan_inited = false;
+bool dfsan_init_is_running = false;
+
+void dfsan_copy_memory(void *dst, const void *src, uptr size) {
+  internal_memcpy(dst, src, size);
+  internal_memcpy((void *)shadow_for(dst), (const void *)shadow_for(src),
+                  size * sizeof(dfsan_label));
+  if (__dfsan_get_track_origins())
+    dfsan_mem_origin_transfer(dst, src, size);
+}
+
+}  // namespace __dfsan
+
 // If the label s is tainted, set the size bytes from the address p to be a new
 // origin chain with the previous ID o and the current stack trace. This is
 // used by instrumentation to reduce code size when too much code is inserted.
@@ -610,63 +637,64 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_maybe_store_origin(
   }
 }
 
-// Releases the pages within the origin address range, and sets the origin
-// addresses not on the pages to be 0.
-static void ReleaseOrClearOrigins(void *addr, uptr size) {
+// Releases the pages within the origin address range.
+static void ReleaseOrigins(void *addr, uptr size) {
   const uptr beg_origin_addr = (uptr)__dfsan::origin_for(addr);
   const void *end_addr = (void *)((uptr)addr + size);
   const uptr end_origin_addr = (uptr)__dfsan::origin_for(end_addr);
+
+  if (end_origin_addr - beg_origin_addr <
+      common_flags()->clear_shadow_mmap_threshold)
+    return;
+
   const uptr page_size = GetPageSizeCached();
   const uptr beg_aligned = RoundUpTo(beg_origin_addr, page_size);
   const uptr end_aligned = RoundDownTo(end_origin_addr, page_size);
 
-  // dfsan_set_label can be called from the following cases
-  // 1) mapped ranges by new/delete and malloc/free. This case has origin memory
-  // size > 50k, and happens less frequently.
-  // 2) zero-filling internal data structures by utility libraries. This case
-  // has origin memory size < 16k, and happens more often.
-  // Set kNumPagesThreshold to be 4 to avoid releasing small pages.
-  const int kNumPagesThreshold = 4;
-  if (beg_aligned + kNumPagesThreshold * page_size >= end_aligned)
-    return;
+  if (!MmapFixedSuperNoReserve(beg_aligned, end_aligned - beg_aligned))
+    Die();
+}
 
-  ReleaseMemoryPagesToOS(beg_aligned, end_aligned);
+// Releases the pages within the shadow address range, and sets
+// the shadow addresses not on the pages to be 0.
+static void ReleaseOrClearShadows(void *addr, uptr size) {
+  const uptr beg_shadow_addr = (uptr)__dfsan::shadow_for(addr);
+  const void *end_addr = (void *)((uptr)addr + size);
+  const uptr end_shadow_addr = (uptr)__dfsan::shadow_for(end_addr);
+
+  if (end_shadow_addr - beg_shadow_addr <
+      common_flags()->clear_shadow_mmap_threshold)
+    return WriteShadowWithSize(0, beg_shadow_addr, size);
+
+  const uptr page_size = GetPageSizeCached();
+  const uptr beg_aligned = RoundUpTo(beg_shadow_addr, page_size);
+  const uptr end_aligned = RoundDownTo(end_shadow_addr, page_size);
+
+  if (beg_aligned >= end_aligned) {
+    WriteShadowWithSize(0, beg_shadow_addr, size);
+  } else {
+    if (beg_aligned != beg_shadow_addr)
+      WriteShadowInRange(0, beg_shadow_addr, beg_aligned);
+    if (end_aligned != end_shadow_addr)
+      WriteShadowInRange(0, end_aligned, end_shadow_addr);
+    if (!MmapFixedSuperNoReserve(beg_aligned, end_aligned - beg_aligned))
+      Die();
+  }
 }
 
 void SetShadow(dfsan_label label, void *addr, uptr size, dfsan_origin origin) {
-  const uptr beg_shadow_addr = (uptr)__dfsan::shadow_for(addr);
-
   if (0 != label) {
-    WriteShadowIfDifferent(label, beg_shadow_addr, size);
+    const uptr beg_shadow_addr = (uptr)__dfsan::shadow_for(addr);
+    WriteShadowWithSize(label, beg_shadow_addr, size);
     if (__dfsan_get_track_origins())
       SetOrigin(addr, size, origin);
     return;
   }
 
   if (__dfsan_get_track_origins())
-    ReleaseOrClearOrigins(addr, size);
+    ReleaseOrigins(addr, size);
 
-  // If label is 0, releases the pages within the shadow address range, and sets
-  // the shadow addresses not on the pages to be 0.
-  const void *end_addr = (void *)((uptr)addr + size);
-  const uptr end_shadow_addr = (uptr)__dfsan::shadow_for(end_addr);
-  const uptr page_size = GetPageSizeCached();
-  const uptr beg_aligned = RoundUpTo(beg_shadow_addr, page_size);
-  const uptr end_aligned = RoundDownTo(end_shadow_addr, page_size);
-
-  // dfsan_set_label can be called from the following cases
-  // 1) mapped ranges by new/delete and malloc/free. This case has shadow memory
-  // size > 100k, and happens less frequently.
-  // 2) zero-filling internal data structures by utility libraries. This case
-  // has shadow memory size < 32k, and happens more often.
-  // Set kNumPagesThreshold to be 8 to avoid releasing small pages.
-  const int kNumPagesThreshold = 8;
-  if (beg_aligned + kNumPagesThreshold * page_size >= end_aligned)
-    return WriteShadowIfDifferent(label, beg_shadow_addr, size);
-
-  WriteShadowIfDifferent(label, beg_shadow_addr, beg_aligned - beg_shadow_addr);
-  ReleaseMemoryPagesToOS(beg_aligned, end_aligned);
-  WriteShadowIfDifferent(label, end_aligned, end_shadow_addr - end_aligned);
+  ReleaseOrClearShadows(addr, size);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_set_label(
@@ -916,6 +944,12 @@ static void RegisterDfsanFlags(FlagParser *parser, Flags *f) {
 
 static void InitializeFlags() {
   SetCommonFlagsDefaults();
+  {
+    CommonFlags cf;
+    cf.CopyFrom(*common_flags());
+    cf.intercept_tls_get_addr = true;
+    OverrideCommonFlags(cf);
+  }
   flags().SetDefaults();
 
   FlagParser parser;
@@ -981,7 +1015,13 @@ extern "C" void dfsan_flush() {
     Die();
 }
 
-static void dfsan_init(int argc, char **argv, char **envp) {
+static void DFsanInit(int argc, char **argv, char **envp) {
+  CHECK(!dfsan_init_is_running);
+  if (dfsan_inited)
+    return;
+  dfsan_init_is_running = true;
+  SanitizerToolName = "DataflowSanitizer";
+
   InitializeFlags();
 
   ::InitializePlatformEarly();
@@ -995,7 +1035,7 @@ static void dfsan_init(int argc, char **argv, char **envp) {
   // will load our executable in the middle of our unused region. This mostly
   // works so long as the program doesn't use too much memory. We support this
   // case by disabling memory protection when ASLR is disabled.
-  uptr init_addr = (uptr)&dfsan_init;
+  uptr init_addr = (uptr)&DFsanInit;
   if (!(init_addr >= UnusedAddr() && init_addr < AppAddr()))
     MmapFixedNoAccess(UnusedAddr(), AppAddr() - UnusedAddr());
 
@@ -1008,14 +1048,27 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 
   // Set up threads
   DFsanTSDInit(DFsanTSDDtor);
+
+  dfsan_allocator_init();
+
   DFsanThread *main_thread = DFsanThread::Create(nullptr, nullptr, nullptr);
   SetCurrentThread(main_thread);
   main_thread->ThreadStart();
 
   __dfsan_label_info[kInitializingLabel].desc = "<init label>";
+
+  dfsan_init_is_running = false;
+  dfsan_inited = true;
 }
 
+namespace __dfsan {
+
+void dfsan_init() { DFsanInit(0, nullptr, nullptr); }
+
+}  // namespace __dfsan
+
 #if SANITIZER_CAN_USE_PREINIT_ARRAY
-__attribute__((section(".preinit_array"), used))
-static void (*dfsan_init_ptr)(int, char **, char **) = dfsan_init;
+__attribute__((section(".preinit_array"),
+               used)) static void (*dfsan_init_ptr)(int, char **,
+                                                    char **) = DFsanInit;
 #endif

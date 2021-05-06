@@ -19517,13 +19517,6 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
     }
   }
 
-  // A splat of a single element is a SPLAT_VECTOR if supported on the target.
-  if (TLI.getOperationAction(ISD::SPLAT_VECTOR, VT) != TargetLowering::Expand)
-    if (SDValue V = cast<BuildVectorSDNode>(N)->getSplatValue()) {
-      assert(!V.isUndef() && "Splat of undef should have been handled earlier");
-      return DAG.getNode(ISD::SPLAT_VECTOR, SDLoc(N), VT, V);
-    }
-
   // Check if we can express BUILD VECTOR via subvector extract.
   if (!LegalTypes && (N->getNumOperands() > 1)) {
     SDValue Op0 = N->getOperand(0);
@@ -19564,6 +19557,14 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
 
   if (SDValue V = reduceBuildVecToShuffle(N))
     return V;
+
+  // A splat of a single element is a SPLAT_VECTOR if supported on the target.
+  // Do this late as some of the above may replace the splat.
+  if (TLI.getOperationAction(ISD::SPLAT_VECTOR, VT) != TargetLowering::Expand)
+    if (SDValue V = cast<BuildVectorSDNode>(N)->getSplatValue()) {
+      assert(!V.isUndef() && "Splat of undef should have been handled earlier");
+      return DAG.getNode(ISD::SPLAT_VECTOR, SDLoc(N), VT, V);
+    }
 
   return SDValue();
 }

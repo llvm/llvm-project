@@ -559,6 +559,7 @@ InstructionCost SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                                VectorType *Tp,
                                                ArrayRef<int> Mask, int Index,
                                                VectorType *SubTp) {
+  Kind = improveShuffleKindFromMask(Kind, Mask);
   if (ST->hasVector()) {
     unsigned NumVectors = getNumVectorRegs(Tp);
 
@@ -1144,9 +1145,6 @@ InstructionCost SystemZTTIImpl::getInterleavedMemoryOpCost(
   assert(isa<VectorType>(VecTy) &&
          "Expect a vector type for interleaved memory op");
 
-  // Return the ceiling of dividing A by B.
-  auto ceil = [](unsigned A, unsigned B) { return (A + B - 1) / B; };
-
   unsigned NumElts = cast<FixedVectorType>(VecTy)->getNumElements();
   assert(Factor > 1 && NumElts % Factor == 0 && "Invalid interleave factor");
   unsigned VF = NumElts / Factor;
@@ -1173,7 +1171,7 @@ InstructionCost SystemZTTIImpl::getInterleavedMemoryOpCost(
       // requires one operation, except that vperm can handle two input
       // registers first time for each dst vector.
       unsigned NumSrcVecs = ValueVecs[Index].count();
-      unsigned NumDstVecs = ceil(VF * getScalarSizeInBits(VecTy), 128U);
+      unsigned NumDstVecs = divideCeil(VF * getScalarSizeInBits(VecTy), 128U);
       assert (NumSrcVecs >= NumDstVecs && "Expected at least as many sources");
       NumPermutes += std::max(1U, NumSrcVecs - NumDstVecs);
     }

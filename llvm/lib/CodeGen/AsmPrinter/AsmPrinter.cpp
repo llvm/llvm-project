@@ -710,9 +710,9 @@ void AsmPrinter::emitFunctionHeader() {
   emitConstantPool();
 
   // Print the 'header' of function.
-  // If basic block sections is desired and function sections is off,
-  // explicitly request a unique section for this function.
-  if (MF->front().isBeginSection() && !TM.getFunctionSections())
+  // If basic block sections are desired, explicitly request a unique section
+  // for this function's entry block.
+  if (MF->front().isBeginSection())
     MF->setSection(getObjFileLowering().getUniqueSectionForFunction(F, TM));
   else
     MF->setSection(getObjFileLowering().SectionForGlobal(&F, TM));
@@ -1847,11 +1847,12 @@ bool AsmPrinter::doFinalization(Module &M) {
   if (TM.Options.EmitAddrsig) {
     // Emit address-significance attributes for all globals.
     OutStreamer->emitAddrsig();
-    for (const GlobalValue &GV : M.global_values())
-      if (!GV.use_empty() && !GV.isThreadLocal() &&
-          !GV.hasDLLImportStorageClass() && !GV.getName().startswith("llvm.") &&
-          !GV.hasAtLeastLocalUnnamedAddr())
+    for (const GlobalValue &GV : M.global_values()) {
+      if (!GV.use_empty() && !GV.isTransitiveUsedByMetadataOnly() &&
+          !GV.isThreadLocal() && !GV.hasDLLImportStorageClass() &&
+          !GV.getName().startswith("llvm.") && !GV.hasAtLeastLocalUnnamedAddr())
         OutStreamer->emitAddrsigSym(getSymbol(&GV));
+    }
   }
 
   // Emit symbol partition specifications (ELF only).

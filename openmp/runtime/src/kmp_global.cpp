@@ -247,8 +247,6 @@ KMPAffinity *__kmp_affinity_dispatch = NULL;
 #if KMP_USE_HWLOC
 int __kmp_hwloc_error = FALSE;
 hwloc_topology_t __kmp_hwloc_topology = NULL;
-int __kmp_numa_detected = FALSE;
-int __kmp_tile_depth = 0;
 #endif
 
 #if KMP_OS_WINDOWS
@@ -263,7 +261,7 @@ kmp_SetThreadGroupAffinity_t __kmp_SetThreadGroupAffinity = NULL;
 
 size_t __kmp_affin_mask_size = 0;
 enum affinity_type __kmp_affinity_type = affinity_default;
-enum affinity_gran __kmp_affinity_gran = affinity_gran_default;
+kmp_hw_t __kmp_affinity_gran = KMP_HW_UNKNOWN;
 int __kmp_affinity_gran_levels = -1;
 int __kmp_affinity_dups = TRUE;
 enum affinity_top_method __kmp_affinity_top_method =
@@ -285,15 +283,6 @@ kmp_nested_proc_bind_t __kmp_nested_proc_bind = {NULL, 0, 0};
 int __kmp_affinity_num_places = 0;
 int __kmp_display_affinity = FALSE;
 char *__kmp_affinity_format = NULL;
-
-kmp_hws_item_t __kmp_hws_socket = {0, 0};
-kmp_hws_item_t __kmp_hws_die = {0, 0};
-kmp_hws_item_t __kmp_hws_node = {0, 0};
-kmp_hws_item_t __kmp_hws_tile = {0, 0};
-kmp_hws_item_t __kmp_hws_core = {0, 0};
-kmp_hws_item_t __kmp_hws_proc = {0, 0};
-int __kmp_hws_requested = 0;
-int __kmp_hws_abs_flag = 0; // absolute or per-item number requested
 
 kmp_int32 __kmp_default_device = 0;
 

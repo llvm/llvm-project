@@ -1423,7 +1423,7 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
 /// case this DebugLoc leaks into any adjacent instructions.
 static DebugLoc getDebugValueLoc(DbgVariableIntrinsic *DII, Instruction *Src) {
   // Original dbg.declare must have a location.
-  DebugLoc DeclareLoc = DII->getDebugLoc();
+  const DebugLoc &DeclareLoc = DII->getDebugLoc();
   MDNode *Scope = DeclareLoc.getScope();
   DILocation *InlinedAt = DeclareLoc.getInlinedAt();
   // Produce an unknown location with the correct scope / inlinedAt fields.
@@ -1672,7 +1672,7 @@ bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
                              int Offset) {
   auto DbgAddrs = FindDbgAddrUses(Address);
   for (DbgVariableIntrinsic *DII : DbgAddrs) {
-    DebugLoc Loc = DII->getDebugLoc();
+    const DebugLoc &Loc = DII->getDebugLoc();
     auto *DIVar = DII->getVariable();
     auto *DIExpr = DII->getExpression();
     assert(DIVar && "Missing variable");
@@ -1687,7 +1687,7 @@ bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
 
 static void replaceOneDbgValueForAlloca(DbgValueInst *DVI, Value *NewAddress,
                                         DIBuilder &Builder, int Offset) {
-  DebugLoc Loc = DVI->getDebugLoc();
+  const DebugLoc &Loc = DVI->getDebugLoc();
   auto *DIVar = DVI->getVariable();
   auto *DIExpr = DVI->getExpression();
   assert(DIVar && "Missing variable");
@@ -1739,26 +1739,17 @@ void llvm::salvageDebugInfoForDbgValues(
         is_contained(DIILocation, &I) &&
         "DbgVariableIntrinsic must use salvaged instruction as its location");
     unsigned LocNo = std::distance(DIILocation.begin(), find(DIILocation, &I));
-    SmallVector<Value *, 4> AdditionalValues;
-    DIExpression *SalvagedExpr = salvageDebugInfoImpl(
-        I, DII->getExpression(), StackValue, LocNo, AdditionalValues);
+
+    DIExpression *DIExpr =
+        salvageDebugInfoImpl(I, DII->getExpression(), StackValue, LocNo);
 
     // salvageDebugInfoImpl should fail on examining the first element of
     // DbgUsers, or none of them.
-    if (!SalvagedExpr)
+    if (!DIExpr)
       break;
 
     DII->replaceVariableLocationOp(&I, I.getOperand(0));
-    if (AdditionalValues.empty()) {
-      DII->setExpression(SalvagedExpr);
-    } else if (isa<DbgValueInst>(DII)) {
-      DII->addVariableLocationOps(AdditionalValues, SalvagedExpr);
-    } else {
-      // Do not salvage using DIArgList for dbg.addr/dbg.declare, as it is
-      // currently only valid for stack value expressions.
-      Value *Undef = UndefValue::get(I.getOperand(0)->getType());
-      DII->replaceVariableLocationOp(I.getOperand(0), Undef);
-    }
+    DII->setExpression(DIExpr);
     LLVM_DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
     Salvaged = true;
   }
@@ -1773,27 +1764,12 @@ void llvm::salvageDebugInfoForDbgValues(
 }
 
 bool getSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,
-                         uint64_t CurrentLocOps,
-                         SmallVectorImpl<uint64_t> &Opcodes,
-                         SmallVectorImpl<Value *> &AdditionalValues) {
+                         SmallVectorImpl<uint64_t> &Opcodes) {
   unsigned BitWidth = DL.getIndexSizeInBits(GEP->getPointerAddressSpace());
-  // Rewrite a GEP into a DIExpression.
-  SmallDenseMap<Value *, APInt, 8> VariableOffsets;
+  // Rewrite a constant GEP into a DIExpression.
   APInt ConstantOffset(BitWidth, 0);
-  if (!GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset))
+  if (!GEP->accumulateConstantOffset(DL, ConstantOffset))
     return false;
-  if (!VariableOffsets.empty() && !CurrentLocOps) {
-    Opcodes.insert(Opcodes.begin(), {dwarf::DW_OP_LLVM_arg, 0});
-    CurrentLocOps = 1;
-  }
-  for (auto Offset : VariableOffsets) {
-    AdditionalValues.push_back(Offset.first);
-    assert(Offset.second.isStrictlyPositive() &&
-           "Expected strictly positive multiplier for offset.");
-    Opcodes.append({dwarf::DW_OP_LLVM_arg, CurrentLocOps++, dwarf::DW_OP_constu,
-                    Offset.second.getZExtValue(), dwarf::DW_OP_mul,
-                    dwarf::DW_OP_plus});
-  }
   DIExpression::appendOffset(Opcodes, ConstantOffset.getSExtValue());
   return true;
 }
@@ -1828,35 +1804,23 @@ uint64_t getDwarfOpForBinOp(Instruction::BinaryOps Opcode) {
   }
 }
 
-bool getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
-                           SmallVectorImpl<uint64_t> &Opcodes,
-                           SmallVectorImpl<Value *> &AdditionalValues) {
-  // Handle binary operations with constant integer operands as a special case.
+bool getSalvageOpsForBinOp(BinaryOperator *BI,
+                           SmallVectorImpl<uint64_t> &Opcodes) {
+  // Rewrite binary operations with constant integer operands.
   auto *ConstInt = dyn_cast<ConstantInt>(BI->getOperand(1));
-  // Values wider than 64 bits cannot be represented within a DIExpression.
-  if (ConstInt && ConstInt->getBitWidth() > 64)
+  if (!ConstInt || ConstInt->getBitWidth() > 64)
     return false;
-
+  uint64_t Val = ConstInt->getSExtValue();
   Instruction::BinaryOps BinOpcode = BI->getOpcode();
-  // Push any Constant Int operand onto the expression stack.
-  if (ConstInt) {
-    uint64_t Val = ConstInt->getSExtValue();
-    // Add or Sub Instructions with a constant operand can potentially be
-    // simplified.
-    if (BinOpcode == Instruction::Add || BinOpcode == Instruction::Sub) {
-      uint64_t Offset = BinOpcode == Instruction::Add ? Val : -int64_t(Val);
-      DIExpression::appendOffset(Opcodes, Offset);
-      return true;
-    }
-    Opcodes.append({dwarf::DW_OP_constu, Val});
-  } else {
-    if (!CurrentLocOps) {
-      Opcodes.append({dwarf::DW_OP_LLVM_arg, 0});
-      CurrentLocOps = 1;
-    }
-    Opcodes.append({dwarf::DW_OP_LLVM_arg, CurrentLocOps});
-    AdditionalValues.push_back(BI->getOperand(1));
+  // Add or Sub Instructions with a constant operand can potentially be
+  // simplified.
+  if (BinOpcode == Instruction::Add || BinOpcode == Instruction::Sub) {
+    uint64_t Offset = BinOpcode == Instruction::Add ? Val : -int64_t(Val);
+    DIExpression::appendOffset(Opcodes, Offset);
+    return true;
   }
+  // Add constant int operand to expression stack.
+  Opcodes.append({dwarf::DW_OP_constu, Val});
 
   // Add salvaged binary operator to expression stack, if it has a valid
   // representation in a DIExpression.
@@ -1868,11 +1832,9 @@ bool getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
   return true;
 }
 
-DIExpression *
-llvm::salvageDebugInfoImpl(Instruction &I, DIExpression *SrcDIExpr,
-                           bool WithStackValue, unsigned LocNo,
-                           SmallVectorImpl<Value *> &AdditionalValues) {
-  uint64_t CurrentLocOps = SrcDIExpr->getNumLocationOperands();
+DIExpression *llvm::salvageDebugInfoImpl(Instruction &I,
+                                         DIExpression *SrcDIExpr,
+                                         bool WithStackValue, unsigned LocNo) {
   auto &M = *I.getModule();
   auto &DL = M.getDataLayout();
 
@@ -1886,7 +1848,7 @@ llvm::salvageDebugInfoImpl(Instruction &I, DIExpression *SrcDIExpr,
   };
 
   // initializer-list helper for applying operators to the source DIExpression.
-  auto applyOps = [&](ArrayRef<uint64_t> Opcodes) {
+  auto applyOps = [&](ArrayRef<uint64_t> Opcodes) -> DIExpression * {
     SmallVector<uint64_t, 8> Ops(Opcodes.begin(), Opcodes.end());
     return doSalvage(Ops);
   };
@@ -1912,15 +1874,15 @@ llvm::salvageDebugInfoImpl(Instruction &I, DIExpression *SrcDIExpr,
 
   SmallVector<uint64_t, 8> Ops;
   if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-    if (getSalvageOpsForGEP(GEP, DL, CurrentLocOps, Ops, AdditionalValues))
+    if (getSalvageOpsForGEP(GEP, DL, Ops))
       return doSalvage(Ops);
   } else if (auto *BI = dyn_cast<BinaryOperator>(&I)) {
-    if (getSalvageOpsForBinOp(BI, CurrentLocOps, Ops, AdditionalValues))
+    if (getSalvageOpsForBinOp(BI, Ops))
       return doSalvage(Ops);
   }
-  // *Not* to do: we should not attempt to salvage load instructions,
-  // because the validity and lifetime of a dbg.value containing
-  // DW_OP_deref becomes difficult to analyze. See PR40628 for examples.
+    // *Not* to do: we should not attempt to salvage load instructions,
+    // because the validity and lifetime of a dbg.value containing
+    // DW_OP_deref becomes difficult to analyze. See PR40628 for examples.
   return nullptr;
 }
 
@@ -3139,7 +3101,9 @@ static bool bitTransformIsCorrectForBitReverse(unsigned From, unsigned To,
 bool llvm::recognizeBSwapOrBitReverseIdiom(
     Instruction *I, bool MatchBSwaps, bool MatchBitReversals,
     SmallVectorImpl<Instruction *> &InsertedInsts) {
-  if (Operator::getOpcode(I) != Instruction::Or)
+  if (!match(I, m_Or(m_Value(), m_Value())) &&
+      !match(I, m_FShl(m_Value(), m_Value(), m_Value())) &&
+      !match(I, m_FShr(m_Value(), m_Value(), m_Value())))
     return false;
   if (!MatchBSwaps && !MatchBitReversals)
     return false;

@@ -85,7 +85,7 @@ void ThreadContextBase::SetCreated(uptr _user_id, u64 _unique_id,
   unique_id = _unique_id;
   detached = _detached;
   // Parent tid makes no sense for the main thread.
-  if (tid != 0)
+  if (tid != kMainTid)
     parent_tid = _parent_tid;
   OnCreated(arg);
 }
@@ -98,8 +98,6 @@ void ThreadContextBase::Reset() {
 }
 
 // ThreadRegistry implementation.
-
-const u32 ThreadRegistry::kUnknownTid = ~0U;
 
 ThreadRegistry::ThreadRegistry(ThreadContextFactory factory, u32 max_threads,
                                u32 thread_quarantine_size, u32 max_reuse)
@@ -135,7 +133,7 @@ uptr ThreadRegistry::GetMaxAliveThreads() {
 u32 ThreadRegistry::CreateThread(uptr user_id, bool detached, u32 parent_tid,
                                  void *arg) {
   BlockingMutexLock l(&mtx_);
-  u32 tid = kUnknownTid;
+  u32 tid = kInvalidTid;
   ThreadContextBase *tctx = QuarantinePop();
   if (tctx) {
     tid = tctx->tid;
@@ -155,7 +153,7 @@ u32 ThreadRegistry::CreateThread(uptr user_id, bool detached, u32 parent_tid,
     Die();
   }
   CHECK_NE(tctx, 0);
-  CHECK_NE(tid, kUnknownTid);
+  CHECK_NE(tid, kInvalidTid);
   CHECK_LT(tid, max_threads_);
   CHECK_EQ(tctx->status, ThreadStatusInvalid);
   alive_threads_++;
@@ -186,7 +184,7 @@ u32 ThreadRegistry::FindThread(FindThreadCallback cb, void *arg) {
     if (tctx != 0 && cb(tctx, arg))
       return tctx->tid;
   }
-  return kUnknownTid;
+  return kInvalidTid;
 }
 
 ThreadContextBase *

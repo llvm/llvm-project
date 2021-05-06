@@ -173,7 +173,7 @@ foreach(arch ${HWASAN_SUPPORTED_ARCH})
   endif()
 endforeach()
 
-add_compiler_rt_resource_file(hwasan_blacklist hwasan_blacklist.txt hwasan)
+add_compiler_rt_resource_file(hwasan_ignorelist hwasan_ignorelist.txt hwasan)
 
 add_subdirectory("scripts")
 

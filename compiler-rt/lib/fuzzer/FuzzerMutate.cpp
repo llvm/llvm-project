@@ -195,7 +195,8 @@ size_t MutationDispatcher::ApplyDictionaryEntry(uint8_t *Data, size_t Size,
     Size += W.size();
   } else {  // Overwrite some bytes with W.
     if (W.size() > Size) return 0;
-    size_t Idx = UsePositionHint ? DE.GetPositionHint() : Rand(Size - W.size());
+    size_t Idx =
+        UsePositionHint ? DE.GetPositionHint() : Rand(Size + 1 - W.size());
     memcpy(Data + Idx, W.data(), W.size());
   }
   return Size;
@@ -479,7 +480,7 @@ void MutationDispatcher::RecordSuccessfulMutationSequence() {
     assert(DE->GetW().size());
     // Linear search is fine here as this happens seldom.
     if (!PersistentAutoDictionary.ContainsWord(DE->GetW()))
-      PersistentAutoDictionary.push_back({DE->GetW(), 1});
+      PersistentAutoDictionary.push_back(*DE);
   }
 }
 

@@ -63,7 +63,7 @@ long test_vfirst_m_b64(vbool64_t op1, size_t vl) { return vfirst(op1, vl); }
 //
 // CHECK-RV64-LABEL: @test_vfirst_m_b1_m(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vfirst.mask.nxv64i1.i64(<vscale x 64 x i1> [[OP1:%.*]], <vscale x 64 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR8:[0-9]+]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vfirst.mask.nxv64i1.i64(<vscale x 64 x i1> [[OP1:%.*]], <vscale x 64 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 long test_vfirst_m_b1_m(vbool1_t mask, vbool1_t op1, size_t vl) {
@@ -73,7 +73,7 @@ long test_vfirst_m_b1_m(vbool1_t mask, vbool1_t op1, size_t vl) {
 //
 // CHECK-RV64-LABEL: @test_vfirst_m_b2_m(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vfirst.mask.nxv32i1.i64(<vscale x 32 x i1> [[OP1:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vfirst.mask.nxv32i1.i64(<vscale x 32 x i1> [[OP1:%.*]], <vscale x 32 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 long test_vfirst_m_b2_m(vbool2_t mask, vbool2_t op1, size_t vl) {
@@ -83,7 +83,7 @@ long test_vfirst_m_b2_m(vbool2_t mask, vbool2_t op1, size_t vl) {
 //
 // CHECK-RV64-LABEL: @test_vfirst_m_b4_m(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vfirst.mask.nxv16i1.i64(<vscale x 16 x i1> [[OP1:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vfirst.mask.nxv16i1.i64(<vscale x 16 x i1> [[OP1:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 long test_vfirst_m_b4_m(vbool4_t mask, vbool4_t op1, size_t vl) {
@@ -93,7 +93,7 @@ long test_vfirst_m_b4_m(vbool4_t mask, vbool4_t op1, size_t vl) {
 //
 // CHECK-RV64-LABEL: @test_vfirst_m_b8_m(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vfirst.mask.nxv8i1.i64(<vscale x 8 x i1> [[OP1:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vfirst.mask.nxv8i1.i64(<vscale x 8 x i1> [[OP1:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 long test_vfirst_m_b8_m(vbool8_t mask, vbool8_t op1, size_t vl) {
@@ -103,7 +103,7 @@ long test_vfirst_m_b8_m(vbool8_t mask, vbool8_t op1, size_t vl) {
 //
 // CHECK-RV64-LABEL: @test_vfirst_m_b16_m(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vfirst.mask.nxv4i1.i64(<vscale x 4 x i1> [[OP1:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vfirst.mask.nxv4i1.i64(<vscale x 4 x i1> [[OP1:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 long test_vfirst_m_b16_m(vbool16_t mask, vbool16_t op1, size_t vl) {
@@ -113,7 +113,7 @@ long test_vfirst_m_b16_m(vbool16_t mask, vbool16_t op1, size_t vl) {
 //
 // CHECK-RV64-LABEL: @test_vfirst_m_b32_m(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vfirst.mask.nxv2i1.i64(<vscale x 2 x i1> [[OP1:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vfirst.mask.nxv2i1.i64(<vscale x 2 x i1> [[OP1:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 long test_vfirst_m_b32_m(vbool32_t mask, vbool32_t op1, size_t vl) {
@@ -123,7 +123,7 @@ long test_vfirst_m_b32_m(vbool32_t mask, vbool32_t op1, size_t vl) {
 //
 // CHECK-RV64-LABEL: @test_vfirst_m_b64_m(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vfirst.mask.nxv1i1.i64(<vscale x 1 x i1> [[OP1:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]]) #[[ATTR8]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vfirst.mask.nxv1i1.i64(<vscale x 1 x i1> [[OP1:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 long test_vfirst_m_b64_m(vbool64_t mask, vbool64_t op1, size_t vl) {

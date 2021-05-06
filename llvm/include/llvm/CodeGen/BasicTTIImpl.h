@@ -357,7 +357,10 @@ public:
   }
 
   unsigned getRegUsageForType(Type *Ty) {
-    return getTLI()->getTypeLegalizationCost(DL, Ty).first;
+    InstructionCost::CostType Val =
+        *getTLI()->getTypeLegalizationCost(DL, Ty).first.getValue();
+    assert(Val >= 0 && "Negative cost!");
+    return Val;
   }
 
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
@@ -445,6 +448,11 @@ public:
 
     Triple TargetTriple = TM.getTargetTriple();
     if (!TargetTriple.isArch64Bit())
+      return false;
+
+    // TODO: Triggers an issue in aarch64, so temporarily disable it.
+    // See https://reviews.llvm.org/D99572 for more information.
+    if (TargetTriple.getArch() == Triple::aarch64)
       return false;
 
     return true;
@@ -750,7 +758,7 @@ public:
                                            Opd1PropInfo, Opd2PropInfo,
                                            Args, CxtI);
 
-    std::pair<unsigned, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+    std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
     bool IsFloat = Ty->isFPOrFPVectorTy();
     // Assume that floating point arithmetic operations cost twice as much as
@@ -787,11 +795,43 @@ public:
     return OpCost;
   }
 
+  TTI::ShuffleKind improveShuffleKindFromMask(TTI::ShuffleKind Kind,
+                                              ArrayRef<int> Mask) const {
+    int Limit = Mask.size() * 2;
+    if (Mask.empty() ||
+        // Extra check required by isSingleSourceMaskImpl function (called by
+        // ShuffleVectorInst::isSingleSourceMask).
+        any_of(Mask, [Limit](int I) { return I >= Limit; }))
+      return Kind;
+    switch (Kind) {
+    case TTI::SK_PermuteSingleSrc:
+      if (ShuffleVectorInst::isReverseMask(Mask))
+        return TTI::SK_Reverse;
+      if (ShuffleVectorInst::isZeroEltSplatMask(Mask))
+        return TTI::SK_Broadcast;
+      break;
+    case TTI::SK_PermuteTwoSrc:
+      if (ShuffleVectorInst::isSelectMask(Mask))
+        return TTI::SK_Select;
+      if (ShuffleVectorInst::isTransposeMask(Mask))
+        return TTI::SK_Transpose;
+      break;
+    case TTI::SK_Select:
+    case TTI::SK_Reverse:
+    case TTI::SK_Broadcast:
+    case TTI::SK_Transpose:
+    case TTI::SK_InsertSubvector:
+    case TTI::SK_ExtractSubvector:
+      break;
+    }
+    return Kind;
+  }
+
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask, int Index,
                                  VectorType *SubTp) {
 
-    switch (Kind) {
+    switch (improveShuffleKindFromMask(Kind, Mask)) {
     case TTI::SK_Broadcast:
       return getBroadcastShuffleOverhead(cast<FixedVectorType>(Tp));
     case TTI::SK_Select:
@@ -820,8 +860,10 @@ public:
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Invalid opcode");
-    std::pair<unsigned, MVT> SrcLT = TLI->getTypeLegalizationCost(DL, Src);
-    std::pair<unsigned, MVT> DstLT = TLI->getTypeLegalizationCost(DL, Dst);
+    std::pair<InstructionCost, MVT> SrcLT =
+        TLI->getTypeLegalizationCost(DL, Src);
+    std::pair<InstructionCost, MVT> DstLT =
+        TLI->getTypeLegalizationCost(DL, Dst);
 
     TypeSize SrcSize = SrcLT.second.getSizeInBits();
     TypeSize DstSize = DstLT.second.getSizeInBits();
@@ -993,7 +1035,8 @@ public:
       if (CondTy->isVectorTy())
         ISD = ISD::VSELECT;
     }
-    std::pair<unsigned, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
+    std::pair<InstructionCost, MVT> LT =
+        TLI->getTypeLegalizationCost(DL, ValTy);
 
     if (!(ValTy->isVectorTy() && !LT.second.isVector()) &&
         !TLI->isOperationExpand(ISD, LT.second)) {
@@ -1023,7 +1066,7 @@ public:
 
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      unsigned Index) {
-    std::pair<unsigned, MVT> LT =
+    std::pair<InstructionCost, MVT> LT =
         getTLI()->getTypeLegalizationCost(DL, Val->getScalarType());
 
     return LT.first;
@@ -1037,7 +1080,8 @@ public:
     // Assume types, such as structs, are expensive.
     if (getTLI()->getValueType(DL, Src,  true) == MVT::Other)
       return 4;
-    std::pair<unsigned, MVT> LT = getTLI()->getTypeLegalizationCost(DL, Src);
+    std::pair<InstructionCost, MVT> LT =
+        getTLI()->getTypeLegalizationCost(DL, Src);
 
     // Assuming that all loads of legal types cost 1.
     InstructionCost Cost = LT.first;
@@ -1115,9 +1159,6 @@ public:
     unsigned VecTySize = thisT()->getDataLayout().getTypeStoreSize(VecTy);
     unsigned VecTyLTSize = VecTyLT.getStoreSize();
 
-    // Return the ceiling of dividing A by B.
-    auto ceil = [](unsigned A, unsigned B) { return (A + B - 1) / B; };
-
     // Scale the cost of the memory operation by the fraction of legalized
     // instructions that will actually be used. We shouldn't account for the
     // cost of dead instructions since they will be removed.
@@ -1135,11 +1176,11 @@ public:
     if (Opcode == Instruction::Load && VecTySize > VecTyLTSize) {
       // The number of loads of a legal type it will take to represent a load
       // of the unlegalized vector type.
-      unsigned NumLegalInsts = ceil(VecTySize, VecTyLTSize);
+      unsigned NumLegalInsts = divideCeil(VecTySize, VecTyLTSize);
 
       // The number of elements of the unlegalized type that correspond to a
       // single legal instruction.
-      unsigned NumEltsPerLegalInst = ceil(NumElts, NumLegalInsts);
+      unsigned NumEltsPerLegalInst = divideCeil(NumElts, NumLegalInsts);
 
       // Determine which legal instructions will be used.
       BitVector UsedInsts(NumLegalInsts, false);
@@ -1804,10 +1845,11 @@ public:
     }
 
     const TargetLoweringBase *TLI = getTLI();
-    std::pair<unsigned, MVT> LT = TLI->getTypeLegalizationCost(DL, RetTy);
+    std::pair<InstructionCost, MVT> LT =
+        TLI->getTypeLegalizationCost(DL, RetTy);
 
-    SmallVector<unsigned, 2> LegalCost;
-    SmallVector<unsigned, 2> CustomCost;
+    SmallVector<InstructionCost, 2> LegalCost;
+    SmallVector<InstructionCost, 2> CustomCost;
     for (unsigned ISD : ISDs) {
       if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
         if (IID == Intrinsic::fabs && LT.second.isFloatingPoint() &&
@@ -1913,8 +1955,9 @@ public:
   }
 
   unsigned getNumberOfParts(Type *Tp) {
-    std::pair<unsigned, MVT> LT = getTLI()->getTypeLegalizationCost(DL, Tp);
-    return LT.first;
+    std::pair<InstructionCost, MVT> LT =
+        getTLI()->getTypeLegalizationCost(DL, Tp);
+    return *LT.first.getValue();
   }
 
   InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *,
@@ -1981,7 +2024,7 @@ public:
     unsigned NumReduxLevels = Log2_32(NumVecElts);
     InstructionCost ArithCost = 0;
     InstructionCost ShuffleCost = 0;
-    std::pair<unsigned, MVT> LT =
+    std::pair<InstructionCost, MVT> LT =
         thisT()->getTLI()->getTypeLegalizationCost(DL, Ty);
     unsigned LongVectorCount = 0;
     unsigned MVTLen =
@@ -2037,7 +2080,7 @@ public:
     }
     InstructionCost MinMaxCost = 0;
     InstructionCost ShuffleCost = 0;
-    std::pair<unsigned, MVT> LT =
+    std::pair<InstructionCost, MVT> LT =
         thisT()->getTLI()->getTypeLegalizationCost(DL, Ty);
     unsigned LongVectorCount = 0;
     unsigned MVTLen =

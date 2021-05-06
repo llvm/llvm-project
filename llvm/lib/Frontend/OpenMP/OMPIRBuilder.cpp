@@ -877,6 +877,138 @@ void OpenMPIRBuilder::createTaskyield(const LocationDescription &Loc) {
   emitTaskyieldImpl(Loc);
 }
 
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
+    const LocationDescription &Loc, InsertPointTy AllocaIP,
+    ArrayRef<StorableBodyGenCallbackTy> SectionCBs, PrivatizeCallbackTy PrivCB,
+    FinalizeCallbackTy FiniCB, bool IsCancellable, bool IsNowait) {
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  auto FiniCBWrapper = [&](InsertPointTy IP) {
+    if (IP.getBlock()->end() != IP.getPoint())
+      return FiniCB(IP);
+    // This must be done otherwise any nested constructs using FinalizeOMPRegion
+    // will fail because that function requires the Finalization Basic Block to
+    // have a terminator, which is already removed by EmitOMPRegionBody.
+    // IP is currently at cancelation block.
+    // We need to backtrack to the condition block to fetch
+    // the exit block and create a branch from cancelation
+    // to exit block.
+    IRBuilder<>::InsertPointGuard IPG(Builder);
+    Builder.restoreIP(IP);
+    auto *CaseBB = IP.getBlock()->getSinglePredecessor();
+    auto *CondBB = CaseBB->getSinglePredecessor()->getSinglePredecessor();
+    auto *ExitBB = CondBB->getTerminator()->getSuccessor(1);
+    Instruction *I = Builder.CreateBr(ExitBB);
+    IP = InsertPointTy(I->getParent(), I->getIterator());
+    return FiniCB(IP);
+  };
+
+  FinalizationStack.push_back({FiniCBWrapper, OMPD_sections, IsCancellable});
+
+  // Each section is emitted as a switch case
+  // Each finalization callback is handled from clang.EmitOMPSectionDirective()
+  // -> OMP.createSection() which generates the IR for each section
+  // Iterate through all sections and emit a switch construct:
+  // switch (IV) {
+  //   case 0:
+  //     <SectionStmt[0]>;
+  //     break;
+  // ...
+  //   case <NumSection> - 1:
+  //     <SectionStmt[<NumSection> - 1]>;
+  //     break;
+  // }
+  // ...
+  // section_loop.after:
+  // <FiniCB>;
+  auto LoopBodyGenCB = [&](InsertPointTy CodeGenIP, Value *IndVar) {
+    auto *CurFn = CodeGenIP.getBlock()->getParent();
+    auto *ForIncBB = CodeGenIP.getBlock()->getSingleSuccessor();
+    auto *ForExitBB = CodeGenIP.getBlock()
+                          ->getSinglePredecessor()
+                          ->getTerminator()
+                          ->getSuccessor(1);
+    SwitchInst *SwitchStmt = Builder.CreateSwitch(IndVar, ForIncBB);
+    Builder.restoreIP(CodeGenIP);
+    unsigned CaseNumber = 0;
+    for (auto SectionCB : SectionCBs) {
+      auto *CaseBB = BasicBlock::Create(M.getContext(),
+                                        "omp_section_loop.body.case", CurFn);
+      SwitchStmt->addCase(Builder.getInt32(CaseNumber), CaseBB);
+      Builder.SetInsertPoint(CaseBB);
+      SectionCB(InsertPointTy(), Builder.saveIP(), *ForExitBB);
+      CaseNumber++;
+    }
+    // remove the existing terminator from body BB since there can be no
+    // terminators after switch/case
+    CodeGenIP.getBlock()->getTerminator()->eraseFromParent();
+  };
+  // Loop body ends here
+  // LowerBound, UpperBound, and STride for createCanonicalLoop
+  Type *I32Ty = Type::getInt32Ty(M.getContext());
+  Value *LB = ConstantInt::get(I32Ty, 0);
+  Value *UB = ConstantInt::get(I32Ty, SectionCBs.size());
+  Value *ST = ConstantInt::get(I32Ty, 1);
+  llvm::CanonicalLoopInfo *LoopInfo = createCanonicalLoop(
+      Loc, LoopBodyGenCB, LB, UB, ST, true, false, AllocaIP, "section_loop");
+  LoopInfo = createStaticWorkshareLoop(Loc, LoopInfo, AllocaIP, true);
+  BasicBlock *LoopAfterBB = LoopInfo->getAfter();
+  Instruction *SplitPos = LoopAfterBB->getTerminator();
+  if (!isa_and_nonnull<BranchInst>(SplitPos))
+    SplitPos = new UnreachableInst(Builder.getContext(), LoopAfterBB);
+  // ExitBB after LoopAfterBB because LoopAfterBB is used for FinalizationCB,
+  // which requires a BB with branch
+  BasicBlock *ExitBB =
+      LoopAfterBB->splitBasicBlock(SplitPos, "omp_sections.end");
+  SplitPos->eraseFromParent();
+
+  // Apply the finalization callback in LoopAfterBB
+  auto FiniInfo = FinalizationStack.pop_back_val();
+  assert(FiniInfo.DK == OMPD_sections &&
+         "Unexpected finalization stack state!");
+  Builder.SetInsertPoint(LoopAfterBB->getTerminator());
+  FiniInfo.FiniCB(Builder.saveIP());
+  Builder.SetInsertPoint(ExitBB);
+
+  return Builder.saveIP();
+}
+
+OpenMPIRBuilder::InsertPointTy
+OpenMPIRBuilder::createSection(const LocationDescription &Loc,
+                               BodyGenCallbackTy BodyGenCB,
+                               FinalizeCallbackTy FiniCB) {
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  auto FiniCBWrapper = [&](InsertPointTy IP) {
+    if (IP.getBlock()->end() != IP.getPoint())
+      return FiniCB(IP);
+    // This must be done otherwise any nested constructs using FinalizeOMPRegion
+    // will fail because that function requires the Finalization Basic Block to
+    // have a terminator, which is already removed by EmitOMPRegionBody.
+    // IP is currently at cancelation block.
+    // We need to backtrack to the condition block to fetch
+    // the exit block and create a branch from cancelation
+    // to exit block.
+    IRBuilder<>::InsertPointGuard IPG(Builder);
+    Builder.restoreIP(IP);
+    auto *CaseBB = Loc.IP.getBlock();
+    auto *CondBB = CaseBB->getSinglePredecessor()->getSinglePredecessor();
+    auto *ExitBB = CondBB->getTerminator()->getSuccessor(1);
+    Instruction *I = Builder.CreateBr(ExitBB);
+    IP = InsertPointTy(I->getParent(), I->getIterator());
+    return FiniCB(IP);
+  };
+
+  Directive OMPD = Directive::OMPD_sections;
+  // Since we are using Finalization Callback here, HasFinalize
+  // and IsCancellable have to be true
+  return EmitOMPInlinedRegion(OMPD, nullptr, nullptr, BodyGenCB, FiniCBWrapper,
+                              /*Conditional*/ false, /*hasFinalize*/ true,
+                              /*IsCancellable*/ true);
+}
+
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createMaster(const LocationDescription &Loc,
                               BodyGenCallbackTy BodyGenCB,
@@ -1819,10 +1951,10 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createCritical(
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
     Directive OMPD, Instruction *EntryCall, Instruction *ExitCall,
     BodyGenCallbackTy BodyGenCB, FinalizeCallbackTy FiniCB, bool Conditional,
-    bool HasFinalize) {
+    bool HasFinalize, bool IsCancellable) {
 
   if (HasFinalize)
-    FinalizationStack.push_back({FiniCB, OMPD, /*IsCancellable*/ false});
+    FinalizationStack.push_back({FiniCB, OMPD, IsCancellable});
 
   // Create inlined region's entry and body blocks, in preparation
   // for conditional creation
@@ -1887,9 +2019,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitCommonDirectiveEntry(
     Directive OMPD, Value *EntryCall, BasicBlock *ExitBB, bool Conditional) {
-
   // if nothing to do, Return current insertion point.
-  if (!Conditional)
+  if (!Conditional || !EntryCall)
     return Builder.saveIP();
 
   BasicBlock *EntryBB = Builder.GetInsertBlock();
@@ -1938,6 +2069,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitCommonDirectiveExit(
     // set Builder IP for call creation
     Builder.SetInsertPoint(FiniBBTI);
   }
+
+  if (!ExitCall)
+    return Builder.saveIP();
 
   // place the Exitcall as last instruction before Finalization block terminator
   ExitCall->removeFromParent();
@@ -2093,6 +2227,33 @@ Value *OpenMPIRBuilder::getOMPCriticalRegionLock(StringRef CriticalName) {
   std::string Prefix = Twine("gomp_critical_user_", CriticalName).str();
   std::string Name = getNameWithSeparators({Prefix, "var"}, ".", ".");
   return getOrCreateOMPInternalVariable(KmpCriticalNameTy, Name);
+}
+
+GlobalVariable *
+OpenMPIRBuilder::createOffloadMaptypes(SmallVectorImpl<uint64_t> &Mappings,
+                                       std::string VarName) {
+  llvm::Constant *MaptypesArrayInit =
+      llvm::ConstantDataArray::get(M.getContext(), Mappings);
+  auto *MaptypesArrayGlobal = new llvm::GlobalVariable(
+      M, MaptypesArrayInit->getType(),
+      /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage, MaptypesArrayInit,
+      VarName);
+  MaptypesArrayGlobal->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  return MaptypesArrayGlobal;
+}
+
+GlobalVariable *
+OpenMPIRBuilder::createOffloadMapnames(SmallVectorImpl<llvm::Constant *> &Names,
+                                       std::string VarName) {
+  llvm::Constant *MapNamesArrayInit = llvm::ConstantArray::get(
+      llvm::ArrayType::get(
+          llvm::Type::getInt8Ty(M.getContext())->getPointerTo(), Names.size()),
+      Names);
+  auto *MapNamesArrayGlobal = new llvm::GlobalVariable(
+      M, MapNamesArrayInit->getType(),
+      /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage, MapNamesArrayInit,
+      VarName);
+  return MapNamesArrayGlobal;
 }
 
 // Create all simple and struct types exposed by the runtime and remember

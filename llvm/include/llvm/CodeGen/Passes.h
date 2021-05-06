@@ -150,6 +150,7 @@ namespace llvm {
   /// VirtRegRewriter pass. Rewrite virtual registers to physical registers as
   /// assigned in VirtRegMap.
   extern char &VirtRegRewriterID;
+  FunctionPass *createVirtRegRewriter(bool ClearVirtRegs = true);
 
   /// UnreachableMachineBlockElimination - This pass removes unreachable
   /// machine basic blocks.
@@ -452,6 +453,11 @@ namespace llvm {
   // the corresponding function in a vector library (e.g., SVML, libmvec).
   FunctionPass *createReplaceWithVeclibLegacyPass();
 
+  /// This pass expands the vector predication intrinsics into unpredicated
+  /// instructions with selects or just the explicit vector length into the
+  /// predicate mask.
+  FunctionPass *createExpandVectorPredicationPass();
+
   // This pass expands memcmp() to load/stores.
   FunctionPass *createExpandMemCmpPass();
 
@@ -500,9 +506,6 @@ namespace llvm {
   /// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
   /// or split the data to two <128 x i32>.
   FunctionPass *createX86LowerAMXTypePass();
-
-  /// The pass insert tile config intrinsics for AMX fast register allocation.
-  FunctionPass *createX86PreAMXConfigPass();
 
   /// The pass transforms amx intrinsics to scalar operation if the function has
   /// optnone attribute or it is O0.

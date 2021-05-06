@@ -244,7 +244,7 @@ static void addSanitizerCoveragePass(const PassManagerBuilder &Builder,
   auto Opts = getSancovOptsFromCGOpts(CGOpts);
   PM.add(createModuleSanitizerCoverageLegacyPassPass(
       Opts, CGOpts.SanitizeCoverageAllowlistFiles,
-      CGOpts.SanitizeCoverageBlocklistFiles));
+      CGOpts.SanitizeCoverageIgnorelistFiles));
 }
 
 // Check if ASan should use GC-friendly instrumentation for globals.
@@ -866,6 +866,10 @@ static void setCommandLineOpts(const CodeGenOptions &CodeGenOpts) {
   if (!CodeGenOpts.DebugPass.empty()) {
     BackendArgs.push_back("-debug-pass");
     BackendArgs.push_back(CodeGenOpts.DebugPass.c_str());
+    // New PM supports structure dumping. Old PM is still used for codegen,
+    // so we need to pass both options.
+    if (!CodeGenOpts.LegacyPassManager && CodeGenOpts.DebugPass == "Structure")
+      BackendArgs.push_back("-debug-pass-structure");
   }
   if (!CodeGenOpts.LimitFloatPrecision.empty()) {
     BackendArgs.push_back("-limit-float-precision");
@@ -1107,7 +1111,7 @@ static void addSanitizers(const Triple &TargetTriple,
       auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
       MPM.addPass(ModuleSanitizerCoveragePass(
           SancovOpts, CodeGenOpts.SanitizeCoverageAllowlistFiles,
-          CodeGenOpts.SanitizeCoverageBlocklistFiles));
+          CodeGenOpts.SanitizeCoverageIgnorelistFiles));
     }
 
     auto MSanPass = [&](SanitizerMask Mask, bool CompileKernel) {

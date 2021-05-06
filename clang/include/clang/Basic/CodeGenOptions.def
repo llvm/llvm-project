@@ -172,7 +172,8 @@ CODEGENOPT(NoInlineLineTables, 1, 0) ///< Whether debug info should contain
 CODEGENOPT(StackClashProtector, 1, 0) ///< Set when -fstack-clash-protection is enabled.
 CODEGENOPT(NoImplicitFloat   , 1, 0) ///< Set when -mno-implicit-float is enabled.
 CODEGENOPT(NullPointerIsValid , 1, 0) ///< Assume Null pointer deference is defined.
-CODEGENOPT(CorrectlyRoundedDivSqrt, 1, 0) ///< -cl-fp32-correctly-rounded-divide-sqrt
+CODEGENOPT(OpenCLCorrectlyRoundedDivSqrt, 1, 0) ///< -cl-fp32-correctly-rounded-divide-sqrt
+CODEGENOPT(HIPCorrectlyRoundedDivSqrt, 1, 1) ///< -fno-hip-fp32-correctly-rounded-divide-sqrt
 CODEGENOPT(UniqueInternalLinkageNames, 1, 0) ///< Internal Linkage symbols get unique names.
 CODEGENOPT(SplitMachineFunctions, 1, 0) ///< Split machine functions using profile information.
 
@@ -425,6 +426,11 @@ CODEGENOPT(PassByValueIsNoAlias, 1, 0)
 /// Whether to not follow the AAPCS that enforces volatile bit-field access width to be
 /// according to the field declaring type width.
 CODEGENOPT(AAPCSBitfieldWidth, 1, 1)
+
+/// Sets the IEEE bit in the expected default floating point mode register.
+/// Floating point opcodes that support exception flag gathering quiet and
+/// propagate signaling NaN inputs per IEEE 754-2008 (AMDGPU Only)
+CODEGENOPT(EmitIEEENaNCompliantInsts, 1, 1)
 
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT

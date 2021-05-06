@@ -189,12 +189,6 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // parameter of the unmasked version. k can't be the mask operand's position.
   list<int> IntrinsicTypes = [];
 
-  // When the order of the parameters of clang builtin do not match the order of
-  // C/C++ api, we use permutation index to mapping the operand from clang
-  // builtin to C/C++. It is parameter of the unmasked version without VL
-  // operand. If empty, the default permutation is [0, 1, 2, ...].
-  list<int> PermuteOperands = [];
-
   // If these names are not empty, this is the ID of the LLVM intrinsic
   // we want to lower to.
   string IRName = NAME;
@@ -562,6 +556,8 @@ let HasNoMaskedOverloaded = false,
       Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
     }],
     ManualCodegenMask= [{
+      // Move mask to right before vl.
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
       IntrinsicTypes = {ResultType, Ops[3]->getType()};
       Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
     }] in {
@@ -608,6 +604,8 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
       }],
       ManualCodegenMask = [{
       {
+        // Move mask to right before vl.
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
         IntrinsicTypes = {ResultType, Ops[4]->getType()};
         Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
         Value *NewVL = Ops[2];
@@ -643,6 +641,8 @@ multiclass RVVVLSEBuiltin<list<string> types> {
         Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
       }],
       ManualCodegenMask= [{
+        // Move mask to right before vl.
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
         IntrinsicTypes = {ResultType, Ops[4]->getType()};
         Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
       }] in {
@@ -661,6 +661,8 @@ multiclass RVVIndexedLoad<string op> {
         Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
       }],
       ManualCodegenMask = [{
+        // Move mask to right before vl.
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
         IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops[4]->getType()};
         Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
       }] in {
@@ -680,16 +682,19 @@ multiclass RVVIndexedLoad<string op> {
 }
 
 let HasMaskedOffOperand = false,
-    PermuteOperands = [1, 0], // C/C++ Operand: (ptr, value, vl). Builtin: (value, ptr, vl)
     ManualCodegen = [{
+      // Builtin: (ptr, value, vl). Intrinsic: (value, ptr, vl)
+      std::swap(Ops[0], Ops[1]);
       Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
       IntrinsicTypes = {Ops[0]->getType(), Ops[2]->getType()};
     }],
     ManualCodegenMask= [{
+      // Builtin: (mask, ptr, value, vl). Intrinsic: (value, ptr, mask, vl)
+      std::swap(Ops[0], Ops[2]);
       Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
       IntrinsicTypes = {Ops[0]->getType(), Ops[3]->getType()};
     }] in {
-  class RVVVSEMaskBuiltin : RVVBuiltin<"m", "0mPUe", "c"> {
+  class RVVVSEMaskBuiltin : RVVBuiltin<"m", "0PUem", "c"> {
     let Name = "vse1_v";
     let IRName = "vse1";
     let HasMask = false;
@@ -699,9 +704,9 @@ let HasMaskedOffOperand = false,
         IRName = "vse",
         IRNameMask = "vse_mask" in {
       foreach type = types in {
-        def : RVVBuiltin<"v", "0vPe", type>;
+        def : RVVBuiltin<"v", "0Pev", type>;
         if !not(IsFloat<type>.val) then {
-          def : RVVBuiltin<"Uv", "0UvPUe", type>;
+          def : RVVBuiltin<"Uv", "0PUeUv", type>;
         }
       }
     }
@@ -713,19 +718,22 @@ multiclass RVVVSSEBuiltin<list<string> types> {
       IRName = "vsse",
       IRNameMask = "vsse_mask",
       HasMaskedOffOperand = false,
-      PermuteOperands = [1, 2, 0], // C/C++ Operand: (ptr, stride, value, vl). Builtin: (value, ptr, stride, vl)
       ManualCodegen = [{
+        // Builtin: (ptr, stride, value, vl). Intrinsic: (value, ptr, stride, vl)
+        std::rotate(Ops.begin(), Ops.begin() + 2, Ops.begin() + 3);
         Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
         IntrinsicTypes = {Ops[0]->getType(), Ops[3]->getType()};
       }],
       ManualCodegenMask= [{
+        // Builtin: (mask, ptr, stride, value, vl). Intrinsic: (value, ptr, stride, mask, vl)
+        std::swap(Ops[0], Ops[3]);
         Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
         IntrinsicTypes = {Ops[0]->getType(), Ops[4]->getType()};
       }] in {
     foreach type = types in {
-      def : RVVBuiltin<"v", "0vPet", type>;
+      def : RVVBuiltin<"v", "0Petv", type>;
       if !not(IsFloat<type>.val) then {
-        def : RVVBuiltin<"Uv", "0UvPUet", type>;
+        def : RVVBuiltin<"Uv", "0PUetUv", type>;
       }
     }
   }
@@ -733,12 +741,15 @@ multiclass RVVVSSEBuiltin<list<string> types> {
 
 multiclass RVVIndexedStore<string op> {
   let HasMaskedOffOperand = false,
-      PermuteOperands = [1, 2, 0], // C/C++ Operand: (ptr, index, value, vl). Builtin: (value, ptr, index, vl)
       ManualCodegen = [{
+        // Builtin: (ptr, index, value, vl). Intrinsic: (value, ptr, index, vl)
+        std::rotate(Ops.begin(), Ops.begin() + 2, Ops.begin() + 3);
         Ops[1] = Builder.CreateBitCast(Ops[1],Ops[0]->getType()->getPointerTo());
         IntrinsicTypes = {Ops[0]->getType(), Ops[2]->getType(), Ops[3]->getType()};
       }],
       ManualCodegenMask= [{
+        // Builtin: (mask, ptr, index, value, vl). Intrinsic: (value, ptr, index, mask, vl)
+        std::swap(Ops[0], Ops[3]);
         Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
         IntrinsicTypes = {Ops[0]->getType(), Ops[2]->getType(), Ops[4]->getType()};
       }] in {
@@ -747,9 +758,9 @@ multiclass RVVIndexedStore<string op> {
           defvar eew = eew_list[0];
           defvar eew_type = eew_list[1];
           let Name = op # eew  # "_v", IRName = op, IRNameMask = op # "_mask" in  {
-            def : RVVBuiltin<"v", "0vPe" # eew_type # "Uv", type>;
+            def : RVVBuiltin<"v", "0Pe" # eew_type # "Uvv", type>;
             if !not(IsFloat<type>.val) then {
-              def : RVVBuiltin<"Uv", "0UvPUe" # eew_type # "Uv", type>;
+              def : RVVBuiltin<"Uv", "0PUe" # eew_type # "UvUv", type>;
             }
           }
         }
@@ -774,6 +785,7 @@ multiclass RVVAMOBuiltinSet<bit has_signed = false, bit has_unsigned = false,
             Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
           }],
           ManualCodegenMask = [{
+            std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
             IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[4]->getType()};
             Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
           }] in {
@@ -801,6 +813,7 @@ multiclass RVVPseudoUnaryBuiltin<string IR, string type_range> {
       }],
       ManualCodegenMask = [{
       {
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
         // maskedoff, op1, mask, vl
         IntrinsicTypes = {ResultType,
                           cast<llvm::VectorType>(ResultType)->getElementType(),
@@ -830,6 +843,7 @@ multiclass RVVPseudoVNotBuiltin<string IR, string type_range> {
       }],
       ManualCodegenMask = [{
       {
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
         // maskedoff, op1, mask, vl
         IntrinsicTypes = {ResultType,
                           cast<llvm::VectorType>(ResultType)->getElementType(),
@@ -876,6 +890,7 @@ multiclass RVVPseudoVFUnaryBuiltin<string IR, string type_range> {
       }],
       ManualCodegenMask = [{
       {
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
         // maskedoff, op1, mask, vl
         IntrinsicTypes = {ResultType,
                           Ops[1]->getType(),
@@ -907,6 +922,7 @@ multiclass RVVPseudoVWCVTBuiltin<string IR, string MName, string type_range,
       }],
       ManualCodegenMask = [{
       {
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
         // maskedoff, op1, mask, vl
         IntrinsicTypes = {ResultType,
                           Ops[1]->getType(),
@@ -941,6 +957,7 @@ multiclass RVVPseudoVNCVTBuiltin<string IR, string MName, string type_range,
       }],
       ManualCodegenMask = [{
       {
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
         // maskedoff, op1, mask, vl
         IntrinsicTypes = {ResultType,
                           Ops[1]->getType(),
@@ -1216,9 +1233,17 @@ defm vwmaccus : RVVOutOp1Op2BuiltinSet<"vwmaccus", "csi",
 }
 
 // 12.15. Vector Integer Merge Instructions
-// C/C++ Operand: (mask, op1, op2, vl), Builtin: (op1, op2, mask, vl)
-let HasMask = false, PermuteOperands = [2, 0, 1] in {
-  defm vmerge : RVVCarryinBuiltinSet;
+// C/C++ Operand: (mask, op1, op2, vl), Intrinsic: (op1, op2, mask, vl)
+let HasMask = false,
+    ManualCodegen = [{
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
+      IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[3]->getType()};
+    }] in {
+  defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "csil",
+                                    [["vvm", "v", "vmvv"],
+                                     ["vxm", "v", "vmve"],
+                                     ["vvm", "Uv", "UvmUvUv"],
+                                     ["vxm", "Uv", "UvmUvUe"]]>;
 }
 
 // 12.16. Vector Integer Move Instructions
@@ -1335,11 +1360,15 @@ let Name = "vfclass_v" in
 
 // 14.15. Vector Floating-Point Merge Instructio
 // C/C++ Operand: (mask, op1, op2, vl), Builtin: (op1, op2, mask, vl)
-let HasMask = false, PermuteOperands = [2, 0, 1] in {
+let HasMask = false,
+    ManualCodegen = [{
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
+      IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[3]->getType()};
+    }] in {
   defm vmerge : RVVOutOp1BuiltinSet<"vfmerge", "fd",
-                                    [["vvm", "v", "vvvm"]]>;
+                                    [["vvm", "v", "vmvv"]]>;
   defm vfmerge : RVVOutOp1BuiltinSet<"vfmerge", "fd",
-                                    [["vfm", "v", "vvem"]]>;
+                                    [["vfm", "v", "vmve"]]>;
 }
 
 // 14.16. Vector Floating-Point Move Instruction
@@ -1503,13 +1532,18 @@ defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csil",
                                      [["vv", "Uv", "UvUv(Log2EEW:4)Uv"]]>;
 
 // 17.5. Vector Compress Instruction
-let HasMask = false, PermuteOperands = [2, 0, 1] in {
+let HasMask = false,
+    ManualCodegen = [{
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
+      ID = Intrinsic::riscv_vcompress;
+       IntrinsicTypes = {ResultType, Ops[3]->getType()};
+    }] in {
   // signed and floating type
   defm vcompress : RVVOutBuiltinSet<"vcompress", "csilfd",
-                                    [["vm", "v", "vvvm"]]>;
+                                    [["vm", "v", "vmvv"]]>;
   // unsigned type
   defm vcompress : RVVOutBuiltinSet<"vcompress", "csil",
-                                    [["vm", "Uv", "UvUvUvm"]]>;
+                                    [["vm", "Uv", "UvmUvUv"]]>;
 }
 
 // Miscellaneous

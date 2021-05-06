@@ -1933,6 +1933,20 @@ namespace {
       }
     }
 
+    void operator++() {
+      if (Fail)
+        return;
+      for (auto *&Inst : Insts) {
+        for (Inst = Inst->getNextNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
+          Inst = Inst->getNextNode();
+        // Already at end of block.
+        if (!Inst) {
+          Fail = true;
+          return;
+        }
+      }
+    }
+
     ArrayRef<Instruction*> operator * () const {
       return Insts;
     }
@@ -2005,7 +2019,7 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
   // carry on. If we can sink an instruction but need to PHI-merge some operands
   // (because they're not identical in each instruction) we add these to
   // PHIOperands.
-  unsigned ScanIdx = 0;
+  int ScanIdx = 0;
   SmallPtrSet<Value*,4> InstructionsToSink;
   DenseMap<Instruction*, SmallVector<Value*,4>> PHIOperands;
   LockstepReverseIterator LRI(UnconditionalPreds);
@@ -2041,8 +2055,24 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
 
     return NumPHIInsts <= 1;
   };
+
+  // If no instructions can be sunk, early-return.
+  if (ScanIdx == 0)
+    return false;
+
+  // We've determined that we are going to sink last ScanIdx instructions,
+  // and recorded them in InstructionsToSink. Now, some instructions may be
+  // unprofitable to sink. But that determination depends on the instructions
+  // that we are going to sink.
+
+  // First, forward scan: find the first instruction unprofitable to sink,
+  // recording all the ones that are profitable to sink.
+  // FIXME: would it be better, after we detect that not all are profitable.
+  // to either record the profitable ones, or erase the unprofitable ones?
+  // Maybe we need to choose (at runtime) the one that will touch least instrs?
   LRI.reset();
-  unsigned Idx = 0;
+  int Idx = 0;
+  SmallPtrSet<Value *, 4> InstructionsProfitableToSink;
   while (Idx < ScanIdx) {
     if (!ProfitableToSinkInstruction(LRI)) {
       // Too many PHIs would be created.
@@ -2050,10 +2080,43 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
           dbgs() << "SINK: stopping here, too many PHIs would be created!\n");
       break;
     }
+    InstructionsProfitableToSink.insert((*LRI).begin(), (*LRI).end());
     --LRI;
     ++Idx;
   }
-  ScanIdx = Idx;
+
+  // If no instructions can be sunk, early-return.
+  if (Idx == 0)
+    return false;
+
+  // Did we determine that (only) some instructions are unprofitable to sink?
+  if (Idx < ScanIdx) {
+    // Okay, some instructions are unprofitable.
+    ScanIdx = Idx;
+    InstructionsToSink = InstructionsProfitableToSink;
+
+    // But, that may make other instructions unprofitable, too.
+    // So, do a backward scan, do any earlier instructions become unprofitable?
+    assert(!ProfitableToSinkInstruction(LRI) &&
+           "We already know that the last instruction is unprofitable to sink");
+    ++LRI;
+    --Idx;
+    while (Idx >= 0) {
+      // If we detect that an instruction becomes unprofitable to sink,
+      // all earlier instructions won't be sunk either,
+      // so preemptively keep InstructionsProfitableToSink in sync.
+      // FIXME: is this the most performant approach?
+      for (auto *I : *LRI)
+        InstructionsProfitableToSink.erase(I);
+      if (!ProfitableToSinkInstruction(LRI)) {
+        // Everything starting with this instruction won't be sunk.
+        ScanIdx = Idx;
+        InstructionsToSink = InstructionsProfitableToSink;
+      }
+      ++LRI;
+      --Idx;
+    }
+  }
 
   // If no instructions can be sunk, early-return.
   if (ScanIdx == 0)
@@ -2068,7 +2131,7 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
     // don't do it unless we'd sink at least one non-speculatable instruction.
     // See https://bugs.llvm.org/show_bug.cgi?id=30244
     LRI.reset();
-    unsigned Idx = 0;
+    int Idx = 0;
     bool Profitable = false;
     while (Idx < ScanIdx) {
       if (!isSafeToSpeculativelyExecute((*LRI)[0])) {
@@ -2102,7 +2165,7 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
   // sink presuming a later value will also be sunk, but stop half way through
   // and never actually sink it which means we produce more PHIs than intended.
   // This is unlikely in practice though.
-  unsigned SinkIdx = 0;
+  int SinkIdx = 0;
   for (; SinkIdx != ScanIdx; ++SinkIdx) {
     LLVM_DEBUG(dbgs() << "SINK: Sink: "
                       << *UnconditionalPreds[0]->getTerminator()->getPrevNode()
@@ -2896,6 +2959,19 @@ bool SimplifyCFGOpt::SimplifyCondBranchToTwoReturns(BranchInst *BI,
   return true;
 }
 
+static Value *createLogicalOp(IRBuilderBase &Builder,
+                              Instruction::BinaryOps Opc, Value *LHS,
+                              Value *RHS, const Twine &Name = "") {
+  // Try to relax logical op to binary op.
+  if (impliesPoison(RHS, LHS))
+    return Builder.CreateBinOp(Opc, LHS, RHS, Name);
+  if (Opc == Instruction::And)
+    return Builder.CreateLogicalAnd(LHS, RHS, Name);
+  if (Opc == Instruction::Or)
+    return Builder.CreateLogicalOr(LHS, RHS, Name);
+  llvm_unreachable("Invalid logical opcode");
+}
+
 /// Return true if either PBI or BI has branch weight available, and store
 /// the weights in {Pred|Succ}{True|False}Weight. If one of PBI and BI does
 /// not have branch weight, use 1:1 as its weight.
@@ -3063,17 +3139,9 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
 
   // Now that the Cond was cloned into the predecessor basic block,
   // or/and the two conditions together.
-  Value *NewCond = nullptr;
   Value *BICond = VMap[BI->getCondition()];
-
-  if (impliesPoison(BICond, PBI->getCondition()))
-    NewCond = Builder.CreateBinOp(Opc, PBI->getCondition(), BICond, "or.cond");
-  else
-    NewCond =
-        Opc == Instruction::And
-            ? Builder.CreateLogicalAnd(PBI->getCondition(), BICond, "or.cond")
-            : Builder.CreateLogicalOr(PBI->getCondition(), BICond, "or.cond");
-  PBI->setCondition(NewCond);
+  PBI->setCondition(
+      createLogicalOp(Builder, Opc, PBI->getCondition(), BICond, "or.cond"));
 
   // Copy any debug value intrinsics into the end of PredBlock.
   for (Instruction &I : *BB) {
@@ -3750,7 +3818,8 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
     BICond = Builder.CreateNot(BICond, BICond->getName() + ".not");
 
   // Merge the conditions.
-  Value *Cond = Builder.CreateOr(PBICond, BICond, "brmerge");
+  Value *Cond =
+      createLogicalOp(Builder, Instruction::Or, PBICond, BICond, "brmerge");
 
   // Modify PBI to branch on the new condition to the new dests.
   PBI->setCondition(Cond);
@@ -6564,9 +6633,12 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     for (BasicBlock::iterator
              i = ++BasicBlock::iterator(I),
              UI = BasicBlock::iterator(dyn_cast<Instruction>(Use));
-         i != UI; ++i)
-      if (i == I->getParent()->end() || i->mayHaveSideEffects())
+         i != UI; ++i) {
+      if (i == I->getParent()->end())
         return false;
+      if (!isGuaranteedToTransferExecutionToSuccessor(&*i))
+        return false;
+    }
 
     // Look through GEPs. A load from a GEP derived from NULL is still undefined
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Use))

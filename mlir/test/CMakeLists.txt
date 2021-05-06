@@ -1,8 +1,11 @@
-add_subdirectory(Bindings)
 add_subdirectory(CAPI)
 add_subdirectory(EDSC)
 add_subdirectory(SDBM)
 add_subdirectory(lib)
+
+if(MLIR_BINDINGS_PYTHON_ENABLED)
+  add_subdirectory(python)
+endif()
 
 llvm_canonicalize_cmake_booleans(
   MLIR_BINDINGS_PYTHON_ENABLED
@@ -111,6 +114,7 @@ endif()
 if(MLIR_BINDINGS_PYTHON_ENABLED)
   list(APPEND MLIR_TEST_DEPENDS
     MLIRBindingsPythonExtension
+    MLIRBindingsPythonSources
     MLIRBindingsPythonTestOps
     MLIRTransformsBindingsPythonExtension
     MLIRConversionsBindingsPythonExtension

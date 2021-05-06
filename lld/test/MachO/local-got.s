@@ -8,7 +8,7 @@
 
 # RUN: %lld -lSystem -o %t/test %t/test.o -L%t -lhello
 # RUN: llvm-objdump --macho --full-contents --rebase --bind %t/test | FileCheck %s --check-prefixes=CHECK,PIE --match-full-lines
-# RUN: %lld -no_pie -lSystem -o %t/test %t/test.o -L%t -lhello
+# RUN: %lld -no_pie -data_const -lSystem -o %t/test %t/test.o -L%t -lhello
 # RUN: llvm-objdump --macho --full-contents --rebase --bind %t/test | FileCheck %s --check-prefixes=CHECK,NO-PIE --match-full-lines
 
 ## Check that the GOT references the cstrings. --full-contents displays the

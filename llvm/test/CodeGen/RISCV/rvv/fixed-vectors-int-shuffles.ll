@@ -271,9 +271,8 @@ define <8 x i64> @vrgather_shuffle_xv_v8i64(<8 x i64> %x) {
 ; RV32-NEXT:    addi a0, a0, %lo(.LCPI12_0)
 ; RV32-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
 ; RV32-NEXT:    vle16.v v25, (a0)
-; RV32-NEXT:    vsetivli a0, 16, e32,m4,ta,mu
-; RV32-NEXT:    vmv.v.i v12, -1
 ; RV32-NEXT:    vsetivli a0, 8, e64,m4,ta,mu
+; RV32-NEXT:    vmv.v.i v12, -1
 ; RV32-NEXT:    vrgatherei16.vv v28, v12, v25
 ; RV32-NEXT:    addi a0, zero, 113
 ; RV32-NEXT:    vsetivli a1, 1, e8,m1,ta,mu

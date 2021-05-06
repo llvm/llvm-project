@@ -100,10 +100,6 @@ namespace llvm {
   /// o if the feature is useful (or not) on a particular platform, regardless
   ///   of the debugger, that's a target decision.
   /// It's not impossible to see both factors in some specific case.
-  ///
-  /// The "tuning" should be used to set defaults for individual feature flags
-  /// in DwarfDebug; if a given feature has a more specific command-line option,
-  /// that option should take precedence over the tuning.
   enum class DebuggerKind {
     Default, ///< No specific tuning requested.
     GDB,     ///< Tune debug info for gdb.

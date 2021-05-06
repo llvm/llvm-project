@@ -13,7 +13,6 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/TensorEncoding.h"
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -23,13 +22,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Tensor/IR/TensorOpsDialect.h.inc"
-
-//===----------------------------------------------------------------------===//
-// Tensor Dialect Attributes
-//===----------------------------------------------------------------------===//
-
-#define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/Tensor/IR/TensorAttrDefs.h.inc"
 
 //===----------------------------------------------------------------------===//
 // Tensor Dialect Operations

@@ -1645,4 +1645,173 @@ exit:
   ret i1 %res
 }
 
+define i1 @PR50191_A(i32 %x) {
+; CHECK-LABEL: @PR50191_A(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[P1:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY]] ], [ [[SUB1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[P2:%.*]] = phi i32 [ [[X]], [[ENTRY]] ], [ [[SUB2:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[SUB1]] = sub i32 [[P1]], [[P2]]
+; CHECK-NEXT:    [[SUB2]] = sub i32 42, [[P2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV_NEXT]], 10
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[P1]], [[P2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %loop]
+  %p1 = phi i32 [%x, %entry ], [ %sub1, %loop ]
+  %p2 = phi i32 [%x, %entry ], [ %sub2, %loop ]
+  %iv.next = add i64 %iv, 1
+  %sub1 = sub i32 %p1, %p2
+  %sub2 = sub i32 42, %p2
+  %cmp = icmp ne i64 %iv.next, 10
+  br i1 %cmp, label %loop, label %exit
+exit:
+  %res = icmp eq i32 %p1, %p2
+  ret i1 %res
+}
+
+define i1 @PR50191_B(i32 %x) {
+; CHECK-LABEL: @PR50191_B(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[P1:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY]] ], [ [[SUB1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[P2:%.*]] = phi i32 [ [[X]], [[ENTRY]] ], [ [[SUB2:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[SUB1]] = sub i32 [[P2]], [[P1]]
+; CHECK-NEXT:    [[SUB2]] = sub i32 [[P2]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV_NEXT]], 10
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[P1]], [[P2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %loop]
+  %p1 = phi i32 [%x, %entry ], [ %sub1, %loop ]
+  %p2 = phi i32 [%x, %entry ], [ %sub2, %loop ]
+  %iv.next = add i64 %iv, 1
+  %sub1 = sub i32 %p2, %p1
+  %sub2 = sub i32 %p2, 42
+  %cmp = icmp ne i64 %iv.next, 10
+  br i1 %cmp, label %loop, label %exit
+exit:
+  %res = icmp eq i32 %p1, %p2
+  ret i1 %res
+}
+
+
+define i1 @mutual_recurrence_neq(i8 %A) {
+; CHECK-LABEL: @mutual_recurrence_neq(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[A:%.*]], 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[A_IV:%.*]] = phi i8 [ [[A]], [[ENTRY]] ], [ [[A_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B_IV:%.*]] = phi i8 [ [[B]], [[ENTRY]] ], [ [[A_IV_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[A_IV_NEXT]] = sub i8 [[A_IV]], [[B_IV]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV_NEXT]], 10
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[A_IV]], [[B_IV]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %B = add i8 %A, 1
+  br label %loop
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %loop]
+  %A.iv = phi i8 [%A, %entry], [%A.iv.next, %loop]
+  %B.iv = phi i8 [%B, %entry], [%A.iv.next, %loop]
+  %iv.next = add i64 %iv, 1
+  %A.iv.next = sub i8 %A.iv, %B.iv
+  %cmp = icmp ne i64 %iv.next, 10
+  br i1 %cmp, label %loop, label %exit
+exit:
+  %res = icmp eq i8 %A.iv, %B.iv
+  ret i1 %res
+}
+
+define i1 @mutual_recurrence_eq(i8 %A) {
+; CHECK-LABEL: @mutual_recurrence_eq(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[A_IV:%.*]] = phi i8 [ [[A:%.*]], [[ENTRY]] ], [ [[A_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B_IV:%.*]] = phi i8 [ [[A]], [[ENTRY]] ], [ [[A_IV_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[A_IV_NEXT]] = sub i8 [[A_IV]], [[B_IV]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV_NEXT]], 10
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[A_IV]], [[B_IV]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %loop]
+  %A.iv = phi i8 [%A, %entry], [%A.iv.next, %loop]
+  %B.iv = phi i8 [%A, %entry], [%A.iv.next, %loop]
+  %iv.next = add i64 %iv, 1
+  %A.iv.next = sub i8 %A.iv, %B.iv
+  %cmp = icmp ne i64 %iv.next, 10
+  br i1 %cmp, label %loop, label %exit
+exit:
+  %res = icmp eq i8 %A.iv, %B.iv
+  ret i1 %res
+}
+
+; Illustrate a case where A_IV_i == B_IV_i for all i > 0, but A_IV_0 != B_IV_0.
+; (E.g. This pair of mutually defined recurrences are not invertible.)
+define i1 @recurrence_collapse(i8 %A) {
+; CHECK-LABEL: @recurrence_collapse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[A:%.*]], 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[A_IV:%.*]] = phi i8 [ [[A]], [[ENTRY]] ], [ [[A_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B_IV:%.*]] = phi i8 [ [[B]], [[ENTRY]] ], [ [[B_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[A_IV_NEXT]] = sub i8 [[A_IV]], [[B_IV]]
+; CHECK-NEXT:    [[B_IV_NEXT]] = sub i8 [[A_IV]], [[B_IV]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV_NEXT]], 10
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[A_IV]], [[B_IV]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %B = add i8 %A, 1
+  br label %loop
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %loop]
+  %A.iv = phi i8 [%A, %entry], [%A.iv.next, %loop]
+  %B.iv = phi i8 [%B, %entry], [%B.iv.next, %loop]
+  %iv.next = add i64 %iv, 1
+  %A.iv.next = sub i8 %A.iv, %B.iv
+  %B.iv.next = sub i8 %A.iv, %B.iv
+  %cmp = icmp ne i64 %iv.next, 10
+  br i1 %cmp, label %loop, label %exit
+exit:
+  %res = icmp eq i8 %A.iv, %B.iv
+  ret i1 %res
+}
+
+
 !0 = !{ i8 1, i8 5 }

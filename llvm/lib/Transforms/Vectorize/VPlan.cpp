@@ -249,10 +249,7 @@ void VPBlockBase::deleteCFG(VPBlockBase *Entry) {
 
 VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
   iterator It = begin();
-  while (It != end() && (isa<VPWidenPHIRecipe>(&*It) ||
-                         isa<VPWidenIntOrFpInductionRecipe>(&*It) ||
-                         isa<VPPredInstPHIRecipe>(&*It) ||
-                         isa<VPWidenCanonicalIVRecipe>(&*It)))
+  while (It != end() && It->isPhi())
     It++;
   return It;
 }
@@ -401,6 +398,32 @@ void VPBasicBlock::dropAllReferences(VPValue *NewValue) {
     for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
       R.setOperand(I, NewValue);
   }
+}
+
+VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
+  assert(SplitAt->getParent() == this &&
+         "can only split at a position in the same block");
+
+  SmallVector<VPBlockBase *, 2> Succs(getSuccessors().begin(),
+                                      getSuccessors().end());
+  // First, disconnect the current block from its successors.
+  for (VPBlockBase *Succ : Succs)
+    VPBlockUtils::disconnectBlocks(this, Succ);
+
+  // Create new empty block after the block to split.
+  auto *SplitBlock = new VPBasicBlock(getName() + ".split");
+  VPBlockUtils::insertBlockAfter(SplitBlock, this);
+
+  // Add successors for block to split to new block.
+  for (VPBlockBase *Succ : Succs)
+    VPBlockUtils::connectBlocks(SplitBlock, Succ);
+
+  // Finally, move the recipes starting at SplitAt to new block.
+  for (VPRecipeBase &ToMove :
+       make_early_inc_range(make_range(SplitAt, this->end())))
+    ToMove.moveBefore(*SplitBlock, SplitBlock->end());
+
+  return SplitBlock;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1144,7 +1167,7 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
         VF.isScalar() ? Indices.back() : ConstantVector::get(Indices);
     // Add the consecutive indices to the vector value.
     Value *CanonicalVectorIV = Builder.CreateAdd(VStart, VStep, "vec.iv");
-    State.set(getVPValue(), CanonicalVectorIV, Part);
+    State.set(getVPSingleValue(), CanonicalVectorIV, Part);
   }
 }
 

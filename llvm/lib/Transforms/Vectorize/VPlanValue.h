@@ -328,8 +328,21 @@ public:
     }
   }
 
+  /// Returns the only VPValue defined by the VPDef. Can only be called for
+  /// VPDefs with a single defined value.
+  VPValue *getVPSingleValue() {
+    assert(DefinedValues.size() == 1 && "must have exactly one defined value");
+    assert(DefinedValues[0] && "defined value must be non-null");
+    return DefinedValues[0];
+  }
+  const VPValue *getVPSingleValue() const {
+    assert(DefinedValues.size() == 1 && "must have exactly one defined value");
+    assert(DefinedValues[0] && "defined value must be non-null");
+    return DefinedValues[0];
+  }
+
   /// Returns the VPValue with index \p I defined by the VPDef.
-  VPValue *getVPValue(unsigned I = 0) {
+  VPValue *getVPValue(unsigned I) {
     assert(DefinedValues[I] && "defined value must be non-null");
     return DefinedValues[I];
   }

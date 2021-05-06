@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -25,6 +26,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <type_traits>
@@ -40,7 +42,8 @@ using llvm::dbgs;
 
 /// Return the unique instance of OpType in `block` if it is indeed unique.
 /// Return null if none or more than 1 instances exist.
-template <typename OpType> static OpType getSingleOpOfType(Block &block) {
+template <typename OpType>
+static OpType getSingleOpOfType(Block &block) {
   OpType res;
   block.walk([&](OpType op) {
     if (res) {
@@ -50,6 +53,31 @@ template <typename OpType> static OpType getSingleOpOfType(Block &block) {
     res = op;
     return WalkResult::advance();
   });
+  return res;
+}
+
+/// Given an indexing `map` coming from a LinalgOp indexing, restricted to a
+/// projectedPermutation, compress the unused dimensions to serve as a
+/// permutation_map for a vector transfer operation.
+/// For example, given a linalg op such as:
+///
+/// ```
+///   %0 = linalg.generic {
+///        indexing_maps = affine_map<(d0, d1, d2, d3, d4) -> (d4, d0, d2)>,
+///        indexing_maps = affine_map<(d0, d1, d2, d3, d4) -> (d1, d3)>
+///      }
+///     ins(%0 : tensor<2x3x4xf32>)
+///    outs(%1 : tensor<5x6xf32>)
+/// ```
+///
+/// the iteration domain size of the linalg op is 3x5x4x6x2. The first affine
+/// map is reindexed to `affine_map<(d0, d1, d2) -> (d2, d0, d1)>`, the second
+/// affine map is reindexed to `affine_map<(d0, d1) -> (d0, d1)>`.
+static AffineMap reindexIndexingMap(AffineMap map) {
+  assert(map.isProjectedPermutation() && "expected projected permutation");
+  auto res = compressUnusedDims(map);
+  assert(res.getNumDims() == res.getNumResults() &&
+         "expected reindexed map with same number of dims and results");
   return res;
 }
 
@@ -83,6 +111,116 @@ static VectorType extractVectorTypeFromShapedValue(Value v) {
   return VectorType::get(st.getShape(), st.getElementType());
 }
 
+/// Given an `outputOperand` of a LinalgOp, compute the intersection of the
+/// forward slice starting from `outputOperand` and the backward slice
+/// starting from the corresponding linalg.yield operand.
+/// This intersection is assumed to have a single binary operation that is
+/// the reduction operation. Multiple reduction operations would impose an
+/// ordering between reduction dimensions and is currently unsupported in
+/// Linalg. This limitation is motivated by the fact that e.g.
+/// min(max(X)) != max(min(X))
+// TODO: use in LinalgOp verification, there is a circular dependency atm.
+static Operation *getSingleBinaryOpAssumedReduction(OpOperand &outputOperand) {
+  auto linalgOp = cast<LinalgOp>(outputOperand.getOwner());
+  auto yieldOp = cast<YieldOp>(linalgOp->getRegion(0).front().getTerminator());
+  unsigned yieldNum =
+      outputOperand.getOperandNumber() - linalgOp.getNumInputs();
+  llvm::SetVector<Operation *> backwardSlice, forwardSlice;
+  BlockArgument bbArg = linalgOp->getRegion(0).front().getArgument(
+      outputOperand.getOperandNumber());
+  Value yieldVal = yieldOp->getOperand(yieldNum);
+  getBackwardSlice(yieldVal, &backwardSlice, [&](Operation *op) {
+    return op->getParentOp() == linalgOp;
+  });
+  backwardSlice.insert(yieldVal.getDefiningOp());
+  getForwardSlice(bbArg, &forwardSlice,
+                  [&](Operation *op) { return op->getParentOp() == linalgOp; });
+  // Search for the (assumed unique) elementwiseMappable op at the intersection
+  // of forward and backward slices.
+  Operation *reductionOp = nullptr;
+  for (Operation *op : llvm::reverse(backwardSlice)) {
+    if (!forwardSlice.contains(op))
+      continue;
+    if (OpTrait::hasElementwiseMappableTraits(op)) {
+      if (reductionOp) {
+        // Reduction detection fails: found more than 1 elementwise-mappable op.
+        return nullptr;
+      }
+      reductionOp = op;
+    }
+  }
+  // TODO: also assert no other subsequent ops break the reduction.
+  return reductionOp;
+}
+
+/// If `value` of assumed VectorType has a shape different than `shape`, try to
+/// build and return a new vector.broadcast to `shape`.
+/// Otherwise, just return `value`.
+// TODO: this is best effort atm and there is currently no guarantee of
+// correctness for the broadcast semantics.
+static Value broadcastIfNeeded(OpBuilder &builder, Value value,
+                               ArrayRef<int64_t> shape) {
+  unsigned numDimsGtOne = std::count_if(shape.begin(), shape.end(),
+                                        [](int64_t val) { return val > 1; });
+  auto vecType = value.getType().dyn_cast<VectorType>();
+  if (shape.empty() ||
+      (vecType != nullptr &&
+       (vecType.getShape() == shape || vecType.getRank() > numDimsGtOne)))
+    return value;
+  auto newVecType = VectorType::get(shape, vecType ? vecType.getElementType()
+                                                   : value.getType());
+  return builder.create<vector::BroadcastOp>(
+      builder.getInsertionPoint()->getLoc(), newVecType, value);
+}
+
+static llvm::Optional<vector::CombiningKind>
+getKindForOp(Operation *reductionOp) {
+  if (!reductionOp)
+    return llvm::None;
+  return llvm::TypeSwitch<Operation *, llvm::Optional<vector::CombiningKind>>(
+             reductionOp)
+      .Case<AddIOp, AddFOp>([&](auto op) {
+        return llvm::Optional<vector::CombiningKind>{
+            vector::CombiningKind::ADD};
+      })
+      .Default([&](auto op) { return llvm::None; });
+}
+
+/// If value of assumed VectorType has a shape different than `shape`, build and
+/// return a new vector.broadcast to `shape`.
+/// Otherwise, just return value.
+static Value reduceIfNeeded(OpBuilder &builder, VectorType targetVectorType,
+                            Value value, OpOperand &outputOperand) {
+  assert(targetVectorType.getShape() ==
+         outputOperand.get().getType().cast<ShapedType>().getShape());
+  auto vecType = value.getType().dyn_cast<VectorType>();
+  if (!vecType || vecType.getShape() == targetVectorType.getShape())
+    return value;
+  // At this point, we know we need to reduce. Detect the reduction operator.
+  // TODO: Use the generic reduction detection util.
+  Operation *reductionOp = getSingleBinaryOpAssumedReduction(outputOperand);
+  auto linalgOp = cast<LinalgOp>(outputOperand.getOwner());
+  unsigned pos = 0;
+  MLIRContext *ctx = builder.getContext();
+  SmallVector<AffineExpr> exprs;
+  for (auto s : linalgOp.iterator_types())
+    if (isParallelIterator(s))
+      exprs.push_back(getAffineDimExpr(pos++, ctx));
+  auto loc = value.getLoc();
+  // TODO: reuse common CombiningKing logic and support more than add.
+  auto maybeKind = getKindForOp(reductionOp);
+  assert(maybeKind && "Failed precondition: could not get reduction kind");
+  unsigned idx = 0;
+  SmallVector<bool> reductionMask(linalgOp.iterator_types().size(), false);
+  for (auto attr : linalgOp.iterator_types()) {
+    if (isReductionIteratorType(attr))
+      reductionMask[idx] = true;
+    ++idx;
+  }
+  return builder.create<vector::MultiDimReductionOp>(loc, value, reductionMask,
+                                                     *maybeKind);
+}
+
 /// Build a vector.transfer_read from `source` at indices set to all `0`.
 /// If source has rank zero, build an memref.load.
 /// Return the produced value.
@@ -90,48 +228,35 @@ static Value buildVectorRead(OpBuilder &builder, Value source,
                              VectorType vectorType, AffineMap map) {
   edsc::ScopedContext scope(builder);
   auto shapedType = source.getType().cast<ShapedType>();
-  if (vectorType) {
-    SmallVector<Value> indices(shapedType.getRank(), std_constant_index(0));
-    if (map)
-      return vector_transfer_read(vectorType, source, indices, map);
-    return vector_transfer_read(vectorType, source, indices);
-  }
-  return memref_load(source);
+  SmallVector<Value> indices(shapedType.getRank(), std_constant_index(0));
+  return vector_transfer_read(vectorType, source, indices, map);
 }
 
-/// Build a vector.transfer_write of `value` into `dest` at indices set to all
-/// `0`. If `dest` has null rank, build an memref.store.
+/// Build a vector.transfer_write of `value` into `outputOperand` at indices set
+/// to all `0`; where `outputOperand` is an output operand of the LinalgOp
+/// currently being vectorized. If `dest` has null rank, build an memref.store.
 /// Return the produced value or null if no value is produced.
-static Value buildVectorWrite(OpBuilder &builder, Value value, Value dest) {
+static Value buildVectorWrite(OpBuilder &builder, Value value,
+                              OpOperand &outputOperand) {
   edsc::ScopedContext scope(builder);
   Operation *write;
-  auto shapedType = dest.getType().cast<ShapedType>();
-  if (VectorType vectorType = extractVectorTypeFromShapedValue(dest)) {
+  auto shapedType = outputOperand.get().getType().cast<ShapedType>();
+  if (VectorType vectorType =
+          extractVectorTypeFromShapedValue(outputOperand.get())) {
+    auto linalgOp = cast<LinalgOp>(outputOperand.getOwner());
+    AffineMap map = reindexIndexingMap(
+        linalgOp.getIndexingMap(outputOperand.getOperandNumber()));
     SmallVector<Value> indices(shapedType.getRank(), std_constant_index(0));
-    if (vectorType != value.getType())
-      value = vector_broadcast(vectorType, value);
-    write = vector_transfer_write(value, dest, indices);
+    value = broadcastIfNeeded(builder, value, vectorType.getShape());
+    value = reduceIfNeeded(builder, vectorType, value, outputOperand);
+    write = vector_transfer_write(value, outputOperand.get(), indices, map);
   } else {
-    write = memref_store(value, dest);
+    write = memref_store(value, outputOperand.get());
   }
   LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: vectorized op: " << *write);
   if (!write->getResults().empty())
     return write->getResult(0);
   return Value();
-}
-
-/// If value of assumed VectorType has a shape different than `shape`, buil and
-/// return a new vector.broadcast to `shape`.
-/// Otherwise, just return value.
-static Value broadcastIfNeeded(OpBuilder &builder, Value value,
-                               ArrayRef<int64_t> shape) {
-  auto vecType = value.getType().dyn_cast<VectorType>();
-  if (shape.empty() || (vecType != nullptr && vecType.getShape() == shape))
-    return value;
-  auto newVecType = VectorType::get(shape, vecType ? vecType.getElementType()
-                                                   : value.getType());
-  return builder.create<vector::BroadcastOp>(
-      builder.getInsertionPoint()->getLoc(), newVecType, value);
 }
 
 // Custom vectorization function type. Produce a vector form of Operation*
@@ -158,8 +283,8 @@ vectorizeLinalgYield(OpBuilder &builder, Operation *op,
     // TODO: Scan for an opportunity for reuse.
     // TODO: use a map.
     Value vectorValue = bvm.lookup(outputs.value());
-    Value newResult = buildVectorWrite(builder, vectorValue,
-                                       linalgOp.getOutput(outputs.index()));
+    Value newResult = buildVectorWrite(
+        builder, vectorValue, linalgOp.getOutputOpOperands()[outputs.index()]);
     if (newResult)
       newResults.push_back(newResult);
   }
@@ -307,20 +432,6 @@ static bool isElementwise(Operation *op) {
   return hasOnlyScalarElementwiseOp(linalgOp->getRegion(0));
 }
 
-// Calculate the map to apply to transfer_read to convert the input shape into
-// the output shape.
-static AffineMap getTransferReadMap(LinalgOp linalgOp, unsigned argIndex) {
-  AffineMap linalgMap = linalgOp.getIndexingMap(argIndex);
-  MLIRContext *context = linalgMap.getContext();
-  AffineExpr zero = mlir::getAffineConstantExpr(0, context);
-  SmallVector<AffineExpr, 4> exprs(linalgMap.getNumInputs(), zero);
-  for (unsigned i : llvm::seq(unsigned(0), linalgMap.getNumResults())) {
-    exprs[linalgMap.getDimPosition(i)] = getAffineDimExpr(i, context);
-  }
-  return AffineMap::get(linalgMap.getNumResults(), /*symbolCount=*/0, exprs,
-                        context);
-}
-
 /// Generic vectorization function that rewrites the body of a `linalgOp` into
 /// vector form. Generic vectorization proceeds as follows:
 ///   1. Verify the `linalgOp` has one non-empty region.
@@ -333,42 +444,73 @@ static AffineMap getTransferReadMap(LinalgOp linalgOp, unsigned argIndex) {
 ///   4b. Register CustomVectorizationHook for IndexOp to access the iteration
 ///   indices.
 ///   5. Iteratively call vectorizeOneOp on the region operations.
+///
+/// When `broadcastToMaximalCommonShape` is set to true, eager broadcasting is
+/// performed to the maximal common vector size implied by the `linalgOp`
+/// iteration space. This eager broadcasting is introduced in the
+/// permutation_map of the vector.transfer_read operations. The eager
+/// broadcasting makes it trivial to detrmine where broadcast, transposes and
+/// reductions should occur, without any bookkeeping. The tradeoff is that, in
+/// the absence of good canonicalizations, the amount of work increases.
+/// This is not deemed a problem as we expect canonicalizations and foldings to
+/// aggressively clean up the useless work.
 LogicalResult vectorizeAsLinalgGeneric(
     OpBuilder &builder, LinalgOp linalgOp, SmallVectorImpl<Value> &newResults,
+    bool broadcastToMaximalCommonShape = false,
     ArrayRef<CustomVectorizationHook> customVectorizationHooks = {}) {
   // 1. Fail to vectorize if the operation does not have one non-empty region.
   if (linalgOp->getNumRegions() != 1 || linalgOp->getRegion(0).empty())
     return failure();
   auto &block = linalgOp->getRegion(0).front();
 
-  BlockAndValueMapping bvm;
   // 2. Values defined above the region can only be broadcast for now. Make them
   // map to themselves.
+  BlockAndValueMapping bvm;
   SetVector<Value> valuesSet;
   mlir::getUsedValuesDefinedAbove(linalgOp->getRegion(0), valuesSet);
   bvm.map(valuesSet.getArrayRef(), valuesSet.getArrayRef());
 
+  if (linalgOp.getNumOutputs() == 0)
+    return failure();
+
+  // TODO: the common vector shape is equal to the static loop sizes only when
+  // all indexing maps are projected permutations. For convs and stencils the
+  // logic will need to evolve.
+  SmallVector<int64_t> commonVectorShape = linalgOp.computeStaticLoopSizes();
+
   // 3. Turn all BBArgs into vector.transfer_read / load.
   SmallVector<AffineMap> indexings;
   for (auto bbarg : block.getArguments()) {
-    Value vectorArg = linalgOp.getShapedOperand(bbarg.getArgNumber());
-    AffineMap map;
-    VectorType vectorType = extractVectorTypeFromShapedValue(vectorArg);
-    if (isElementwise(linalgOp) &&
-        !linalgOp.getIndexingMap(bbarg.getArgNumber()).isMinorIdentity()) {
-      // Currently assume we don't support output permutations.
-      assert(linalgOp.getNumOutputs() > 0 &&
-             linalgOp.getOutputIndexingMap(0).isIdentity());
-      ArrayRef<int64_t> outputShape =
-          linalgOp.getOutputShapedType(0).getShape();
-      vectorType = VectorType::get(outputShape, vectorType.getElementType());
-      map = getTransferReadMap(linalgOp, bbarg.getArgNumber());
+    Value shapedArg = linalgOp.getShapedOperand(bbarg.getArgNumber());
+    ShapedType shapedType = shapedArg.getType().cast<ShapedType>();
+    // TODO: 0-d vectors.
+    if (shapedType.getShape().empty()) {
+      Value loaded =
+          builder.create<memref::LoadOp>(linalgOp.getLoc(), shapedArg);
+      LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: new vectorized bbarg("
+                        << bbarg.getArgNumber() << "): " << loaded);
+      bvm.map(bbarg, loaded);
+      bvm.map(shapedArg, loaded);
+      continue;
     }
-    Value vectorRead = buildVectorRead(builder, vectorArg, vectorType, map);
+    AffineMap map;
+    VectorType vectorType;
+    if (broadcastToMaximalCommonShape) {
+      map = inverseAndBroadcastProjectedPermuation(
+          linalgOp.getIndexingMap(bbarg.getArgNumber()));
+      vectorType =
+          VectorType::get(commonVectorShape, shapedType.getElementType());
+    } else {
+      map = inversePermutation(
+          reindexIndexingMap(linalgOp.getIndexingMap(bbarg.getArgNumber())));
+      vectorType = VectorType::get(map.compose(shapedType.getShape()),
+                                   shapedType.getElementType());
+    }
+    Value vectorRead = buildVectorRead(builder, shapedArg, vectorType, map);
     LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: new vectorized bbarg("
                       << bbarg.getArgNumber() << "): " << vectorRead);
     bvm.map(bbarg, vectorRead);
-    bvm.map(vectorArg, vectorRead);
+    bvm.map(shapedArg, vectorRead);
   }
 
   auto hooks = llvm::to_vector<4>(customVectorizationHooks);
@@ -428,13 +570,46 @@ static LogicalResult vectorizeContraction(OpBuilder &builder, LinalgOp linalgOp,
                      : VectorType::get(outShape, op->getResult(0).getType());
     auto zero =
         builder.create<ConstantOp>(loc, vType, builder.getZeroAttr(vType));
+    // Indexing maps at the time of vector.transfer_read are adjusted to order
+    // vector dimensions in the same order as the canonical linalg op iteration
+    // space order.
+    // The indexings for the contraction therefore need to be adjusted.
+    // TODO: consider dropping contraction special casing altogether, this will
+    // require more advanced canonicalizations involving vector.multi_reduction
+    // that are not yet available.
+    SmallVector<AffineMap> indexingMaps{
+        inversePermutation(reindexIndexingMap(linalgOp.getIndexingMap(0)))
+            .compose(linalgOp.getIndexingMap(0)),
+        inversePermutation(reindexIndexingMap(linalgOp.getIndexingMap(1)))
+            .compose(linalgOp.getIndexingMap(1)),
+        inversePermutation(reindexIndexingMap(linalgOp.getIndexingMap(2)))
+            .compose(linalgOp.getIndexingMap(2))};
     Operation *contract = builder.create<vector::ContractionOp>(
         loc, bvm.lookup(op->getOperand(0)), bvm.lookup(op->getOperand(1)), zero,
-        linalgOp.indexing_maps(), linalgOp.iterator_types());
+        builder.getAffineMapArrayAttr(indexingMaps), linalgOp.iterator_types());
     return VectorizationResult{VectorizationStatus::NewOp, contract};
   };
   return vectorizeAsLinalgGeneric(builder, linalgOp, newResults,
+                                  /*broadcastToMaximalCommonShape=*/false,
                                   {vectorizeContraction});
+}
+
+static bool allIndexingsAreProjectedPermutation(LinalgOp op) {
+  return llvm::all_of(op.getIndexingMaps(),
+                      [](AffineMap m) { return m.isProjectedPermutation(); });
+}
+
+// TODO: probably need some extra checks for reduction followed by consumer
+// ops that may not commute (e.g. linear reduction + non-linear instructions).
+static LogicalResult reductionPreconditions(LinalgOp op) {
+  if (llvm::none_of(op.iterator_types(), isReductionIteratorType))
+    return failure();
+  for (auto &operand : op.getOutputOpOperands()) {
+    Operation *reductionOp = getSingleBinaryOpAssumedReduction(operand);
+    if (!getKindForOp(reductionOp))
+      return failure();
+  }
+  return success();
 }
 
 LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
@@ -448,7 +623,15 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
       return failure();
   if (isElementwise(op))
     return success();
-  return success(isaContractionOpInterface(linalgOp));
+  if (isaContractionOpInterface(linalgOp))
+    return success();
+  // TODO: the common vector shape is equal to the static loop sizes only when
+  // all indexing maps are projected permutations. For convs and stencils the
+  // logic will need to evolve.
+  if (allIndexingsAreProjectedPermutation(linalgOp) &&
+      succeeded(reductionPreconditions(linalgOp)))
+    return success();
+  return failure();
 }
 
 LogicalResult
@@ -458,13 +641,17 @@ mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op,
     return failure();
 
   edsc::ScopedContext scope(builder, op->getLoc());
-  if (isElementwise(op)) {
-    LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
-                      << "Vectorize linalg op as a generic: " << *op);
-    return vectorizeAsLinalgGeneric(builder, cast<LinalgOp>(op), newResults);
-  }
+  auto linalgOp = cast<LinalgOp>(op);
 
-  return vectorizeContraction(builder, cast<LinalgOp>(op), newResults);
+  if (isaContractionOpInterface(linalgOp))
+    return vectorizeContraction(builder, linalgOp, newResults);
+
+  LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
+                    << "Vectorize linalg op as a generic by broadcasting to "
+                       "maximal common shape: "
+                    << *op);
+  return vectorizeAsLinalgGeneric(builder, linalgOp, newResults,
+                                  /*broadcastToMaximalCommonShape=*/true);
 }
 
 //----------------------------------------------------------------------------//

@@ -16,6 +16,7 @@
 #include "Diagnostics.h"
 #include "FeatureModule.h"
 #include "Headers.h"
+#include "HeuristicResolver.h"
 #include "IncludeFixer.h"
 #include "Preamble.h"
 #include "SourceCode.h"

@@ -1110,25 +1110,33 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     Res = MCUnaryExpr::createLNot(Res, getContext(), FirstTokenLoc);
     return false;
   case AsmToken::Dollar:
+  case AsmToken::Star:
   case AsmToken::At:
   case AsmToken::String:
   case AsmToken::Identifier: {
     StringRef Identifier;
     if (parseIdentifier(Identifier)) {
-      // We may have failed but $ may be a valid token.
-      if (getTok().is(AsmToken::Dollar)) {
-        if (Lexer.getMAI().getDollarIsPC()) {
-          Lex();
-          // This is a '$' reference, which references the current PC.  Emit a
-          // temporary label to the streamer and refer to it.
-          MCSymbol *Sym = Ctx.createTempSymbol();
-          Out.emitLabel(Sym);
-          Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
-                                        getContext());
-          EndLoc = FirstTokenLoc;
-          return false;
-        }
-        return Error(FirstTokenLoc, "invalid token in expression");
+      // We may have failed but '$'|'*' may be a valid token in context of
+      // the current PC.
+      if (getTok().is(AsmToken::Dollar) || getTok().is(AsmToken::Star)) {
+        bool ShouldGenerateTempSymbol = false;
+        if ((getTok().is(AsmToken::Dollar) && MAI.getDollarIsPC()) ||
+            (getTok().is(AsmToken::Star) && MAI.getStarIsPC()))
+          ShouldGenerateTempSymbol = true;
+
+        if (!ShouldGenerateTempSymbol)
+          return Error(FirstTokenLoc, "invalid token in expression");
+
+        // Eat the '$'|'*' token.
+        Lex();
+        // This is either a '$'|'*' reference, which references the current PC.
+        // Emit a temporary label to the streamer and refer to it.
+        MCSymbol *Sym = Ctx.createTempSymbol();
+        Out.emitLabel(Sym);
+        Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
+                                      getContext());
+        EndLoc = FirstTokenLoc;
+        return false;
       }
     }
     // Parse symbol variant
@@ -1245,6 +1253,9 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     return false;
   }
   case AsmToken::Dot: {
+    if (!MAI.getDotIsPC())
+      return TokError("cannot use . as current PC");
+
     // This is a '.' reference, which references the current PC.  Emit a
     // temporary label to the streamer and refer to it.
     MCSymbol *Sym = Ctx.createTempSymbol();
@@ -2931,9 +2942,9 @@ bool AsmParser::parseIdentifier(StringRef &Res) {
 ///   ::= .set identifier ',' expression
 bool AsmParser::parseDirectiveSet(StringRef IDVal, bool allow_redef) {
   StringRef Name;
-  if (check(parseIdentifier(Name), "expected identifier") ||
-      parseToken(AsmToken::Comma) || parseAssignment(Name, allow_redef, true))
-    return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
+  if (check(parseIdentifier(Name), "expected identifier") || parseComma() ||
+      parseAssignment(Name, allow_redef, true))
+    return true;
   return false;
 }
 
@@ -3048,9 +3059,7 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
     return false;
   };
 
-  if (parseMany(parseOp))
-    return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
-  return false;
+  return parseMany(parseOp);
 }
 
 /// parseDirectiveReloc
@@ -3062,7 +3071,7 @@ bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
 
   if (parseExpression(Offset))
     return true;
-  if (parseToken(AsmToken::Comma, "expected comma") ||
+  if (parseComma() ||
       check(getTok().isNot(AsmToken::Identifier), "expected relocation name"))
     return true;
 
@@ -3114,9 +3123,7 @@ bool AsmParser::parseDirectiveValue(StringRef IDVal, unsigned Size) {
     return false;
   };
 
-  if (parseMany(parseOp))
-    return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
-  return false;
+  return parseMany(parseOp);
 }
 
 static bool parseHexOcta(AsmParser &Asm, uint64_t &hi, uint64_t &lo) {
@@ -3158,9 +3165,7 @@ bool AsmParser::parseDirectiveOctaValue(StringRef IDVal) {
     return false;
   };
 
-  if (parseMany(parseOp))
-    return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
-  return false;
+  return parseMany(parseOp);
 }
 
 bool AsmParser::parseRealValue(const fltSemantics &Semantics, APInt &Res) {
@@ -3217,9 +3222,7 @@ bool AsmParser::parseDirectiveRealValue(StringRef IDVal,
     return false;
   };
 
-  if (parseMany(parseOp))
-    return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
-  return false;
+  return parseMany(parseOp);
 }
 
 /// parseDirectiveZero
@@ -3299,9 +3302,9 @@ bool AsmParser::parseDirectiveOrg() {
   int64_t FillExpr = 0;
   if (parseOptionalToken(AsmToken::Comma))
     if (parseAbsoluteExpression(FillExpr))
-      return addErrorSuffix(" in '.org' directive");
+      return true;
   if (parseEOL())
-    return addErrorSuffix(" in '.org' directive");
+    return true;
 
   getStreamer().emitValueToOffset(Offset, FillExpr, OffsetLoc);
   return false;
@@ -3338,14 +3341,14 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
   };
 
   if (checkForValidSection())
-    return addErrorSuffix(" in directive");
+    return true;
   // Ignore empty '.p2align' directives for GNU-as compatibility
   if (IsPow2 && (ValueSize == 1) && getTok().is(AsmToken::EndOfStatement)) {
     Warning(AlignmentLoc, "p2align directive with no operand(s) is ignored");
     return parseEOL();
   }
   if (parseAlign())
-    return addErrorSuffix(" in directive");
+    return true;
 
   // Always emit an alignment here even if we thrown an error.
   bool ReturnVal = false;
@@ -3422,9 +3425,7 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
 
   // Usually the directory and filename together, otherwise just the directory.
   // Allow the strings to have escaped octal character sequence.
-  if (check(getTok().isNot(AsmToken::String),
-            "unexpected token in '.file' directive") ||
-      parseEscapedString(Path))
+  if (parseEscapedString(Path))
     return true;
 
   StringRef Directory;
@@ -3856,15 +3857,13 @@ bool AsmParser::parseDirectiveCVLinetable() {
   int64_t FunctionId;
   StringRef FnStartName, FnEndName;
   SMLoc Loc = getTok().getLoc();
-  if (parseCVFunctionId(FunctionId, ".cv_linetable") ||
-      parseToken(AsmToken::Comma,
-                 "unexpected token in '.cv_linetable' directive") ||
-      parseTokenLoc(Loc) || check(parseIdentifier(FnStartName), Loc,
-                                  "expected identifier in directive") ||
-      parseToken(AsmToken::Comma,
-                 "unexpected token in '.cv_linetable' directive") ||
-      parseTokenLoc(Loc) || check(parseIdentifier(FnEndName), Loc,
-                                  "expected identifier in directive"))
+  if (parseCVFunctionId(FunctionId, ".cv_linetable") || parseComma() ||
+      parseTokenLoc(Loc) ||
+      check(parseIdentifier(FnStartName), Loc,
+            "expected identifier in directive") ||
+      parseComma() || parseTokenLoc(Loc) ||
+      check(parseIdentifier(FnEndName), Loc,
+            "expected identifier in directive"))
     return true;
 
   MCSymbol *FnStartSym = getContext().getOrCreateSymbol(FnStartName);
@@ -4031,7 +4030,7 @@ bool AsmParser::parseDirectiveCVDefRange() {
 bool AsmParser::parseDirectiveCVString() {
   std::string Data;
   if (checkForValidSection() || parseEscapedString(Data))
-    return addErrorSuffix(" in '.cv_string' directive");
+    return true;
 
   // Put the string in the table and emit the offset.
   std::pair<StringRef, unsigned> Insertion =
@@ -4073,8 +4072,8 @@ bool AsmParser::parseDirectiveCVFPOData() {
   StringRef ProcName;
   if (parseIdentifier(ProcName))
     return TokError("expected symbol name");
-  if (parseEOL("unexpected tokens"))
-    return addErrorSuffix(" in '.cv_fpo_data' directive");
+  if (parseEOL())
+    return true;
   MCSymbol *ProcSym = getContext().getOrCreateSymbol(ProcName);
   getStreamer().EmitCVFPOData(ProcSym, DirLoc);
   return false;
@@ -4097,7 +4096,7 @@ bool AsmParser::parseDirectiveCFISections() {
         Debug = true;
       if (parseOptionalToken(AsmToken::EndOfStatement))
         break;
-      if (parseToken(AsmToken::Comma))
+      if (parseComma())
         return true;
     }
   }
@@ -4113,7 +4112,7 @@ bool AsmParser::parseDirectiveCFIStartProc() {
     if (check(parseIdentifier(Simple) || Simple != "simple",
               "unexpected token") ||
         parseEOL())
-      return addErrorSuffix(" in '.cfi_startproc' directive");
+      return true;
   }
 
   // TODO(kristina): Deal with a corner case of incorrect diagnostic context
@@ -4129,7 +4128,7 @@ bool AsmParser::parseDirectiveCFIStartProc() {
 /// ::= .cfi_endproc
 bool AsmParser::parseDirectiveCFIEndProc() {
   if (parseEOL())
-    return addErrorSuffix(" in '.cfi_endproc' directive");
+    return true;
   getStreamer().emitCFIEndProc();
   return false;
 }
@@ -4153,8 +4152,7 @@ bool AsmParser::parseRegisterOrRegisterNumber(int64_t &Register,
 /// ::= .cfi_def_cfa register,  offset
 bool AsmParser::parseDirectiveCFIDefCfa(SMLoc DirectiveLoc) {
   int64_t Register = 0, Offset = 0;
-  if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) ||
-      parseToken(AsmToken::Comma, "unexpected token in directive") ||
+  if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) || parseComma() ||
       parseAbsoluteExpression(Offset) || parseEOL())
     return true;
 
@@ -4177,8 +4175,7 @@ bool AsmParser::parseDirectiveCFIDefCfaOffset() {
 /// ::= .cfi_register register, register
 bool AsmParser::parseDirectiveCFIRegister(SMLoc DirectiveLoc) {
   int64_t Register1 = 0, Register2 = 0;
-  if (parseRegisterOrRegisterNumber(Register1, DirectiveLoc) ||
-      parseToken(AsmToken::Comma, "unexpected token in directive") ||
+  if (parseRegisterOrRegisterNumber(Register1, DirectiveLoc) || parseComma() ||
       parseRegisterOrRegisterNumber(Register2, DirectiveLoc) || parseEOL())
     return true;
 
@@ -4223,8 +4220,7 @@ bool AsmParser::parseDirectiveCFIOffset(SMLoc DirectiveLoc) {
   int64_t Register = 0;
   int64_t Offset = 0;
 
-  if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) ||
-      parseToken(AsmToken::Comma, "unexpected token in directive") ||
+  if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) || parseComma() ||
       parseAbsoluteExpression(Offset) || parseEOL())
     return true;
 
@@ -4237,8 +4233,7 @@ bool AsmParser::parseDirectiveCFIOffset(SMLoc DirectiveLoc) {
 bool AsmParser::parseDirectiveCFIRelOffset(SMLoc DirectiveLoc) {
   int64_t Register = 0, Offset = 0;
 
-  if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) ||
-      parseToken(AsmToken::Comma, "unexpected token in directive") ||
+  if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) || parseComma() ||
       parseAbsoluteExpression(Offset) || parseEOL())
     return true;
 
@@ -4281,7 +4276,7 @@ bool AsmParser::parseDirectiveCFIPersonalityOrLsda(bool IsPersonality) {
 
   StringRef Name;
   if (check(!isValidEncoding(Encoding), "unsupported encoding.") ||
-      parseToken(AsmToken::Comma, "unexpected token in directive") ||
+      parseComma() ||
       check(parseIdentifier(Name), "expected identifier in directive") ||
       parseEOL())
     return true;
@@ -4765,9 +4760,9 @@ bool AsmParser::parseDirectiveSpace(StringRef IDVal) {
   int64_t FillExpr = 0;
   if (parseOptionalToken(AsmToken::Comma))
     if (parseAbsoluteExpression(FillExpr))
-      return addErrorSuffix("in '" + Twine(IDVal) + "' directive");
+      return true;
   if (parseEOL())
-    return addErrorSuffix("in '" + Twine(IDVal) + "' directive");
+    return true;
 
   // FIXME: Sometimes the fill expr is 'nop' if it isn't supplied, instead of 0.
   getStreamer().emitFill(*NumBytes, FillExpr, NumBytesLoc);
@@ -4788,8 +4783,7 @@ bool AsmParser::parseDirectiveDCB(StringRef IDVal, unsigned Size) {
     return false;
   }
 
-  if (parseToken(AsmToken::Comma,
-                 "unexpected token in '" + Twine(IDVal) + "' directive"))
+  if (parseComma())
     return true;
 
   const MCExpr *Value;
@@ -4826,8 +4820,7 @@ bool AsmParser::parseDirectiveRealDCB(StringRef IDVal, const fltSemantics &Seman
     return false;
   }
 
-  if (parseToken(AsmToken::Comma,
-                 "unexpected token in '" + Twine(IDVal) + "' directive"))
+  if (parseComma())
     return true;
 
   APInt AsInt;
@@ -4878,10 +4871,7 @@ bool AsmParser::parseDirectiveLEB128(bool Signed) {
     return false;
   };
 
-  if (parseMany(parseOp))
-    return addErrorSuffix(" in directive");
-
-  return false;
+  return parseMany(parseOp);
 }
 
 /// parseDirectiveSymbolAttribute
@@ -4907,9 +4897,7 @@ bool AsmParser::parseDirectiveSymbolAttribute(MCSymbolAttr Attr) {
     return false;
   };
 
-  if (parseMany(parseOp))
-    return addErrorSuffix(" in directive");
-  return false;
+  return parseMany(parseOp);
 }
 
 /// parseDirectiveComm
@@ -4926,9 +4914,8 @@ bool AsmParser::parseDirectiveComm(bool IsLocal) {
   // Handle the identifier as the key symbol.
   MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
-  if (getLexer().isNot(AsmToken::Comma))
-    return TokError("unexpected token in directive");
-  Lex();
+  if (parseComma())
+    return true;
 
   int64_t Size;
   SMLoc SizeLoc = getLexer().getLoc();
@@ -5141,7 +5128,7 @@ bool AsmParser::parseDirectiveIfc(SMLoc DirectiveLoc, bool ExpectEqual) {
   } else {
     StringRef Str1 = parseStringToComma();
 
-    if (parseToken(AsmToken::Comma, "unexpected token in '.ifc' directive"))
+    if (parseComma())
       return true;
 
     StringRef Str2 = parseStringToEndOfStatement();
@@ -5630,8 +5617,7 @@ bool AsmParser::parseDirectiveIrp(SMLoc DirectiveLoc) {
   MCAsmMacroArguments A;
   if (check(parseIdentifier(Parameter.Name),
             "expected identifier in '.irp' directive") ||
-      parseToken(AsmToken::Comma, "expected comma in '.irp' directive") ||
-      parseMacroArguments(nullptr, A) || parseEOL())
+      parseComma() || parseMacroArguments(nullptr, A) || parseEOL())
     return true;
 
   // Lex the irp definition.
@@ -5664,8 +5650,7 @@ bool AsmParser::parseDirectiveIrpc(SMLoc DirectiveLoc) {
 
   if (check(parseIdentifier(Parameter.Name),
             "expected identifier in '.irpc' directive") ||
-      parseToken(AsmToken::Comma, "expected comma in '.irpc' directive") ||
-      parseMacroArguments(nullptr, A))
+      parseComma() || parseMacroArguments(nullptr, A))
     return true;
 
   if (A.size() != 1 || A.front().size() != 1)
@@ -5849,9 +5834,7 @@ bool AsmParser::parseDirectiveLTODiscard() {
   };
 
   LTODiscardSymbols.clear();
-  if (parseMany(ParseOp))
-    return addErrorSuffix(" in directive");
-  return false;
+  return parseMany(ParseOp);
 }
 
 // We are comparing pointers, but the pointers are relative to a single string.

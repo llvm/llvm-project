@@ -137,21 +137,17 @@ LogicalResult OperationVerifier::verifyBlock(Block &block) {
     return emitError(block, "empty block: expect at least a terminator");
   }
 
-  // Verify the non-terminator operations separately so that we can verify
-  // they have no successors.
-  for (auto &op : llvm::make_range(block.begin(), std::prev(block.end()))) {
-    if (op.getNumSuccessors() != 0)
+  // Check each operation, and make sure there are no branches out of the
+  // middle of this block.
+  for (auto &op : llvm::make_range(block.begin(), block.end())) {
+    // Only the last instructions is allowed to have successors.
+    if (op.getNumSuccessors() != 0 && &op != &block.back())
       return op.emitError(
           "operation with block successors must terminate its parent block");
 
     if (failed(verifyOperation(op)))
       return failure();
   }
-
-  // Verify the terminator.
-  Operation &terminator = block.back();
-  if (failed(verifyOperation(terminator)))
-    return failure();
 
   // Verify that this block is not branching to a block of a different
   // region.
@@ -164,6 +160,7 @@ LogicalResult OperationVerifier::verifyBlock(Block &block) {
   if (mayBeValidWithoutTerminator(&block))
     return success();
 
+  Operation &terminator = block.back();
   if (!terminator.mightHaveTrait<OpTrait::IsTerminator>())
     return block.back().emitError("block with no terminator, has ")
            << terminator;
@@ -244,6 +241,10 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
 
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// Dominance Checking
+//===----------------------------------------------------------------------===//
 
 /// Emit an error when the specified operand of the specified operation is an
 /// invalid use because of dominance properties.

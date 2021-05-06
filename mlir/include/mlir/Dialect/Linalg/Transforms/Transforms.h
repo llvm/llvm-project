@@ -215,9 +215,10 @@ void interchange(PatternRewriter &rewriter, LinalgOp op,
 /// smallest constant value for the size of the buffer needed for each
 /// dimension. If that is not possible, contains the dynamic size of the
 /// subview. The call back should return the buffer to use.
-using AllocBufferCallbackFn = std::function<Optional<Value>(
-    OpBuilder &b, memref::SubViewOp subView,
-    ArrayRef<Value> boundingSubViewSize, OperationFolder *folder)>;
+using AllocBufferCallbackFn =
+    std::function<Optional<Value>(OpBuilder &b, memref::SubViewOp subView,
+                                  ArrayRef<Value> boundingSubViewSize,
+                                  DataLayout &layout, OperationFolder *folder)>;
 
 /// Callback function type used to deallocate the buffers used to hold the
 /// promoted subview.
@@ -315,6 +316,7 @@ struct PromotionInfo {
 Optional<PromotionInfo>
 promoteSubviewAsNewBuffer(OpBuilder &b, Location loc, memref::SubViewOp subView,
                           AllocBufferCallbackFn allocationFn,
+                          DataLayout &layout,
                           OperationFolder *folder = nullptr);
 
 /// Promotes the `subViews` into a new buffer allocated at the insertion point
@@ -335,18 +337,21 @@ Optional<LinalgOp> promoteSubViews(OpBuilder &b, LinalgOp op,
 LogicalResult vectorizeLinalgOp(OpBuilder &builder, Operation *op,
                                 SmallVectorImpl<Value> &newResults);
 
-/// Emits a loop nest of `LoopTy` with the proper body for `op`.
+/// Emits a loop nest of `LoopTy` with the proper body for `linalgOp`.
 template <typename LoopTy>
-Optional<LinalgLoops> linalgLowerOpToLoops(OpBuilder &builder, Operation *op);
+Optional<LinalgLoops> linalgLowerOpToLoops(PatternRewriter &rewriter,
+                                           LinalgOp linalgOp);
 
-/// Emits a loop nest of `scf.for` with the proper body for `op`.
-LogicalResult linalgOpToLoops(OpBuilder &builder, Operation *op);
+/// Emits a loop nest of `scf.for` with the proper body for `linalgOp`.
+LogicalResult linalgOpToLoops(PatternRewriter &rewriter, LinalgOp linalgOp);
 
-/// Emits a loop nest of `scf.parallel` with the proper body for `op`.
-LogicalResult linalgOpToParallelLoops(OpBuilder &builder, Operation *op);
+/// Emits a loop nest of `scf.parallel` with the proper body for `linalgOp`.
+LogicalResult linalgOpToParallelLoops(PatternRewriter &rewriter,
+                                      LinalgOp linalgOp);
 
-/// Emits a loop nest of `affine.for` with the proper body for `op`.
-LogicalResult linalgOpToAffineLoops(OpBuilder &builder, Operation *op);
+/// Emits a loop nest of `affine.for` with the proper body for `linalgOp`.
+LogicalResult linalgOpToAffineLoops(PatternRewriter &rewriter,
+                                    LinalgOp linalgOp);
 
 //===----------------------------------------------------------------------===//
 // Preconditions that ensure the corresponding transformation succeeds and can
@@ -1052,83 +1057,6 @@ LogicalResult applyStagedPatterns(
     Operation *op, ArrayRef<FrozenRewritePatternSet> stage1Patterns,
     const FrozenRewritePatternSet &stage2Patterns,
     function_ref<LogicalResult(Operation *)> stage3Lambda = nullptr);
-
-//===----------------------------------------------------------------------===//
-// Support for sparse tensor code generation.
-//
-// The sparse compiler part of MLIR lowers a tensor expression formulated as a
-// Linalg operation into a sequence of loops depending on what dimensions of the
-// tensors are marked dense or sparse. The generated code distinguishes between:
-// (1) for-loops that iterate over a single dense dimension,
-// (2) for-loops that iterate over a single sparse dimension,
-// (3) while-loops that co-iterate over several sparse dimensions.
-// The for-loops may be subsequently optimized for parallel or vector execution.
-//
-// For more details, the Dialect/Linalg/Transforms/Sparsification.cpp file.
-//===----------------------------------------------------------------------===//
-
-/// Defines a parallelization strategy. Any implicit loop in the Linalg
-/// operation that is marked "parallel" (thus not "reduction") is a candidate
-/// for parallelization. The loop is made parallel if (1) allowed by the
-/// strategy (e.g., AnyStorageOuterLoop considers either a dense or sparse
-/// outermost loop only), and (2) the generated code is an actual for-loop
-/// (and not a co-iterating while-loop).
-enum class SparseParallelizationStrategy {
-  kNone,
-  kDenseOuterLoop,
-  kAnyStorageOuterLoop,
-  kDenseAnyLoop,
-  kAnyStorageAnyLoop
-  // TODO: support reduction parallelization too?
-};
-
-/// Defines a vectorization strategy. Any implicit inner loop in the Linalg
-/// operation is a candidate (full SIMD for "parallel" loops and horizontal
-/// SIMD for "reduction" loops). A loop is actually vectorized if (1) allowed
-/// by the strategy, and (2) the emitted code is an actual for-loop (and not
-/// a co-iterating while-loop).
-enum class SparseVectorizationStrategy {
-  kNone,
-  kDenseInnerLoop,
-  kAnyStorageInnerLoop
-};
-
-/// Defines a type for "pointer" and "index" storage in the sparse storage
-/// scheme, with a choice between the native platform-dependent index width
-/// or any of 64-/32-/16-/8-bit integers. A narrow width obviously reduces
-/// the memory footprint of the sparse storage scheme, but the width should
-/// suffice to define the total required range (viz. the maximum number of
-/// stored entries per indirection level for the "pointers" and the maximum
-/// value of each tensor index over all dimensions for the "indices").
-enum class SparseIntType { kNative, kI64, kI32, kI16, kI8 };
-
-/// Sparsification options.
-struct SparsificationOptions {
-  SparsificationOptions(SparseParallelizationStrategy p,
-                        SparseVectorizationStrategy v, unsigned vl,
-                        SparseIntType pt, SparseIntType it, bool fo)
-      : parallelizationStrategy(p), vectorizationStrategy(v), vectorLength(vl),
-        ptrType(pt), indType(it), fastOutput(fo) {}
-  SparsificationOptions()
-      : SparsificationOptions(SparseParallelizationStrategy::kNone,
-                              SparseVectorizationStrategy::kNone, 1u,
-                              SparseIntType::kNative, SparseIntType::kNative,
-                              false) {}
-  SparseParallelizationStrategy parallelizationStrategy;
-  SparseVectorizationStrategy vectorizationStrategy;
-  unsigned vectorLength;
-  SparseIntType ptrType;
-  SparseIntType indType;
-  bool fastOutput; // experimental: fast output buffers
-};
-
-/// Sets up sparsification rewriting rules with the given options.
-void populateSparsificationPatterns(
-    RewritePatternSet &patterns,
-    const SparsificationOptions &options = SparsificationOptions());
-
-/// Sets up sparsification conversion rules with the given options.
-void populateSparsificationConversionPatterns(RewritePatternSet &patterns);
 
 } // namespace linalg
 } // namespace mlir

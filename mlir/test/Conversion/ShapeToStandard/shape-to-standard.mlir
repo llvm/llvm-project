@@ -593,6 +593,17 @@ func @broadcast_3_shapes_different_extents(%a : tensor<2xindex>,
   return
 }
 
+// ----
+
+// CHECK-LABEL: @broadcast_to_known_rank
+func @broadcast_to_known_rank(%a : tensor<1xindex>, %b : tensor<3xindex>)
+    -> tensor<3xindex> {
+  // CHECK: %[[RES:.*]] = tensor.cast %{{.*}} : tensor<?xindex> to tensor<3xindex>
+  // CHECK: return %[[RES]] : tensor<3xindex>
+  %0 = shape.broadcast %a, %b : tensor<1xindex>, tensor<3xindex> -> tensor<3xindex>
+  return %0 : tensor<3xindex>
+}
+
 // -----
 
 // Lower `split_at`

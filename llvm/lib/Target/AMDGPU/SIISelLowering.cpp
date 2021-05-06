@@ -531,8 +531,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_TO_FP16, MVT::i16, Promote);
     AddPromotedToType(ISD::FP_TO_FP16, MVT::i16, MVT::i32);
 
-    setOperationAction(ISD::FP_TO_SINT, MVT::i16, Promote);
-    setOperationAction(ISD::FP_TO_UINT, MVT::i16, Promote);
+    setOperationAction(ISD::FP_TO_SINT, MVT::i16, Custom);
+    setOperationAction(ISD::FP_TO_UINT, MVT::i16, Custom);
 
     // F16 - Constant Actions.
     setOperationAction(ISD::ConstantFP, MVT::f16, Legal);
@@ -2964,12 +2964,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (!CLI.CB)
     report_fatal_error("unsupported libcall legalization");
 
-  if (!AMDGPUTargetMachine::EnableFixedFunctionABI &&
-      !CLI.CB->getCalledFunction() && CallConv != CallingConv::AMDGPU_Gfx) {
-    return lowerUnhandledCall(CLI, InVals,
-                              "unsupported indirect call to function ");
-  }
-
   if (IsTailCall && MF.getTarget().Options.GuaranteedTailCallOpt) {
     return lowerUnhandledCall(CLI, InVals,
                               "unsupported required tail call to function ");
@@ -4546,6 +4540,9 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerFMINNUM_FMAXNUM(Op, DAG);
   case ISD::FMA:
     return splitTernaryVectorOp(Op, DAG);
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+    return LowerFP_TO_INT(Op, DAG);
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:
@@ -12321,10 +12318,11 @@ bool SITargetLowering::requiresUniformRegister(MachineFunction &MF,
   return hasCFUser(V, Visited, Subtarget->getWavefrontSize());
 }
 
-std::pair<int, MVT>
+std::pair<InstructionCost, MVT>
 SITargetLowering::getTypeLegalizationCost(const DataLayout &DL,
                                           Type *Ty) const {
-  auto Cost = TargetLoweringBase::getTypeLegalizationCost(DL, Ty);
+  std::pair<InstructionCost, MVT> Cost =
+      TargetLoweringBase::getTypeLegalizationCost(DL, Ty);
   auto Size = DL.getTypeSizeInBits(Ty);
   // Maximum load or store can handle 8 dwords for scalar and 4 for
   // vector ALU. Let's assume anything above 8 dwords is expensive

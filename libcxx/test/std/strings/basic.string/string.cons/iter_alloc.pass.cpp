@@ -20,7 +20,7 @@
 
 #include "test_macros.h"
 #include "test_allocator.h"
-#include "../input_iterator.h"
+#include "../cpp17_input_iterator.h"
 #include "min_allocator.h"
 
 template <class It>
@@ -74,17 +74,17 @@ int main(int, char**)
     test(s, s+50);
     test(s, s+50, A(2));
 
-    test(input_iterator<const char*>(s), input_iterator<const char*>(s));
-    test(input_iterator<const char*>(s), input_iterator<const char*>(s), A(2));
+    test(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s));
+    test(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s), A(2));
 
-    test(input_iterator<const char*>(s), input_iterator<const char*>(s+1));
-    test(input_iterator<const char*>(s), input_iterator<const char*>(s+1), A(2));
+    test(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+1));
+    test(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+1), A(2));
 
-    test(input_iterator<const char*>(s), input_iterator<const char*>(s+10));
-    test(input_iterator<const char*>(s), input_iterator<const char*>(s+10), A(2));
+    test(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10));
+    test(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10), A(2));
 
-    test(input_iterator<const char*>(s), input_iterator<const char*>(s+50));
-    test(input_iterator<const char*>(s), input_iterator<const char*>(s+50), A(2));
+    test(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+50));
+    test(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+50), A(2));
     }
 #if TEST_STD_VER >= 11
     {
@@ -103,17 +103,17 @@ int main(int, char**)
     test(s, s+50);
     test(s, s+50, A());
 
-    test(input_iterator<const char*>(s), input_iterator<const char*>(s));
-    test(input_iterator<const char*>(s), input_iterator<const char*>(s), A());
+    test(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s));
+    test(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s), A());
 
-    test(input_iterator<const char*>(s), input_iterator<const char*>(s+1));
-    test(input_iterator<const char*>(s), input_iterator<const char*>(s+1), A());
+    test(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+1));
+    test(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+1), A());
 
-    test(input_iterator<const char*>(s), input_iterator<const char*>(s+10));
-    test(input_iterator<const char*>(s), input_iterator<const char*>(s+10), A());
+    test(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10));
+    test(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10), A());
 
-    test(input_iterator<const char*>(s), input_iterator<const char*>(s+50));
-    test(input_iterator<const char*>(s), input_iterator<const char*>(s+50), A());
+    test(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+50));
+    test(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+50), A());
     }
 #endif
     {

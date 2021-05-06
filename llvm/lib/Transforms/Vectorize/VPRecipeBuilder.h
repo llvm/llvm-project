@@ -56,6 +56,10 @@ class VPRecipeBuilder {
   // marked by having a nullptr entry in this map.
   DenseMap<Instruction *, VPRecipeBase *> Ingredient2Recipe;
 
+  /// Cross-iteration reduction phis for which we need to add the incoming value
+  /// from the backedge after all recipes have been created.
+  SmallVector<VPWidenPHIRecipe *, 4> PhisToFix;
+
   /// Check if \p I can be widened at the start of \p Range and possibly
   /// decrease the range such that the returned value holds for the entire \p
   /// Range. The function should not be called for memory instructions or calls.
@@ -165,6 +169,10 @@ public:
   VPBasicBlock *handleReplication(
       Instruction *I, VFRange &Range, VPBasicBlock *VPBB,
       VPlanPtr &Plan);
+
+  /// Add the incoming values from the backedge to reduction cross-iteration
+  /// phis.
+  void fixHeaderPhis();
 };
 } // end namespace llvm
 

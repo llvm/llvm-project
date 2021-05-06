@@ -497,7 +497,7 @@ ThreadState *cur_thread() {
         dead_thread_state->fast_state.SetIgnoreBit();
         dead_thread_state->ignore_interceptors = 1;
         dead_thread_state->is_dead = true;
-        *const_cast<int*>(&dead_thread_state->tid) = -1;
+        *const_cast<u32*>(&dead_thread_state->tid) = -1;
         CHECK_EQ(0, internal_mprotect(dead_thread_state, sizeof(ThreadState),
                                       PROT_READ));
       }

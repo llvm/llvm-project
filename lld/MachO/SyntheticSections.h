@@ -80,16 +80,17 @@ public:
 // The header of the Mach-O file, which must have a file offset of zero.
 class MachHeaderSection : public SyntheticSection {
 public:
-  void addLoadCommand(LoadCommand *);
+  MachHeaderSection();
   bool isHidden() const override { return true; }
+  uint64_t getSize() const override;
+  void writeTo(uint8_t *buf) const override;
+
+  void addLoadCommand(LoadCommand *);
 
 protected:
-  MachHeaderSection();
   std::vector<LoadCommand *> loadCommands;
   uint32_t sizeOfCmds = 0;
 };
-
-template <class LP> MachHeaderSection *makeMachHeaderSection();
 
 // A hidden section that exists solely for the purpose of creating the
 // __PAGEZERO segment, which is used to catch null pointer dereferences.

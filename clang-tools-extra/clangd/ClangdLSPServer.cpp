@@ -571,7 +571,6 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
       {"referencesProvider", true},
       {"astProvider", true}, // clangd extension
       {"typeHierarchyProvider", true},
-      {"clangdInlayHintsProvider", true},
       {"memoryUsageProvider", true}, // clangd extension
       {"compilationDatabase",        // clangd extension
        llvm::json::Object{{"automaticReload", true}}},
@@ -607,6 +606,9 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
 
   if (Opts.FoldingRanges)
     ServerCaps["foldingRangeProvider"] = true;
+
+  if (Opts.InlayHints)
+    ServerCaps["clangdInlayHintsProvider"] = true;
 
   std::vector<llvm::StringRef> Commands;
   for (llvm::StringRef Command : Handlers.CommandHandlers.keys())
@@ -725,8 +727,8 @@ void ClangdLSPServer::onCommandApplyEdit(const WorkspaceEdit &WE,
 
 void ClangdLSPServer::onCommandApplyTweak(const TweakArgs &Args,
                                           Callback<llvm::json::Value> Reply) {
-  auto Action = [this, Reply = std::move(Reply),
-                 File = Args.file](llvm::Expected<Tweak::Effect> R) mutable {
+  auto Action = [this, Reply = std::move(Reply)](
+                    llvm::Expected<Tweak::Effect> R) mutable {
     if (!R)
       return Reply(R.takeError());
 

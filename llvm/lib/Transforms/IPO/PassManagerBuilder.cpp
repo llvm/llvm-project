@@ -509,7 +509,9 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   if (RerollLoops)
     MPM.add(createLoopRerollPass());
 
-  MPM.add(createCFGSimplificationPass()); // Merge & remove BBs
+  // Merge & remove BBs and sink & hoist common instructions.
+  MPM.add(createCFGSimplificationPass(
+      SimplifyCFGOptions().hoistCommonInsts(true).sinkCommonInsts(true)));
   // Clean up after everything.
   MPM.add(createInstructionCombiningPass());
   addExtensionsToPM(EP_Peephole, MPM);
@@ -823,8 +825,6 @@ void PassManagerBuilder::populateModulePassManager(
   // convert to more optimized IR using more aggressive simplify CFG options.
   // The extra sinking transform can create larger basic blocks, so do this
   // before SLP vectorization.
-  // FIXME: study whether hoisting and/or sinking of common instructions should
-  //        be delayed until after SLP vectorizer.
   MPM.add(createCFGSimplificationPass(SimplifyCFGOptions()
                                           .forwardSwitchCondToPhi(true)
                                           .convertSwitchToLookupTable(true)

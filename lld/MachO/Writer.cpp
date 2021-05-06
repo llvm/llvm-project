@@ -774,7 +774,8 @@ static int sectionOrder(OutputSection *osec) {
         .Case(section_names::unwindInfo, std::numeric_limits<int>::max() - 1)
         .Case(section_names::ehFrame, std::numeric_limits<int>::max())
         .Default(0);
-  } else if (segname == segment_names::data) {
+  } else if (segname == segment_names::data ||
+             segname == segment_names::dataConst) {
     // For each thread spawned, dyld will initialize its TLVs by copying the
     // address range from the start of the first thread-local data section to
     // the end of the last one. We therefore arrange these sections contiguously
@@ -1063,8 +1064,8 @@ template <class LP> void Writer::run() {
 
 template <class LP> void macho::writeResult() { Writer().run<LP>(); }
 
-template <class LP> void macho::createSyntheticSections() {
-  in.header = makeMachHeaderSection<LP>();
+void macho::createSyntheticSections() {
+  in.header = make<MachHeaderSection>();
   in.rebase = make<RebaseSection>();
   in.binding = make<BindingSection>();
   in.weakBinding = make<WeakBindingSection>();
@@ -1083,5 +1084,3 @@ OutputSection *macho::firstTLVDataSection = nullptr;
 
 template void macho::writeResult<LP64>();
 template void macho::writeResult<ILP32>();
-template void macho::createSyntheticSections<LP64>();
-template void macho::createSyntheticSections<ILP32>();

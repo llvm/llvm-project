@@ -761,8 +761,8 @@ SVal SValBuilder::evalCastSubKind(loc::MemRegionVal V, QualType CastTy,
       // Next fixes pointer dereference using type different from its initial
       // one. See PR37503 and PR49007 for details.
       if (const auto *ER = dyn_cast<ElementRegion>(R)) {
-        R = StateMgr.getStoreManager().castRegion(ER, CastTy);
-        return loc::MemRegionVal(R);
+        if ((R = StateMgr.getStoreManager().castRegion(ER, CastTy)))
+          return loc::MemRegionVal(R);
       }
 
       return V;

@@ -423,20 +423,28 @@ public:
     SmallVector<Value, 8> upperBoundTuple;
     SmallVector<Value, 8> lowerBoundTuple;
     SmallVector<Value, 8> identityVals;
-    // Finding lower and upper bound by expanding the map expression.
-    // Checking if expandAffineMap is not giving NULL.
-    Optional<SmallVector<Value, 8>> lowerBound = expandAffineMap(
-        rewriter, loc, op.lowerBoundsMap(), op.getLowerBoundsOperands());
-    Optional<SmallVector<Value, 8>> upperBound = expandAffineMap(
-        rewriter, loc, op.upperBoundsMap(), op.getUpperBoundsOperands());
-    if (!lowerBound || !upperBound)
-      return failure();
-    upperBoundTuple = *upperBound;
-    lowerBoundTuple = *lowerBound;
+    // Emit IR computing the lower and upper bound by expanding the map
+    // expression.
+    lowerBoundTuple.reserve(op.getNumDims());
+    upperBoundTuple.reserve(op.getNumDims());
+    for (unsigned i = 0, e = op.getNumDims(); i < e; ++i) {
+      Value lower = lowerAffineMapMax(rewriter, loc, op.getLowerBoundMap(i),
+                                      op.getLowerBoundsOperands());
+      if (!lower)
+        return rewriter.notifyMatchFailure(op, "couldn't convert lower bounds");
+      lowerBoundTuple.push_back(lower);
+
+      Value upper = lowerAffineMapMin(rewriter, loc, op.getUpperBoundMap(i),
+                                      op.getUpperBoundsOperands());
+      if (!upper)
+        return rewriter.notifyMatchFailure(op, "couldn't convert upper bounds");
+      upperBoundTuple.push_back(upper);
+    }
     steps.reserve(op.steps().size());
     for (Attribute step : op.steps())
       steps.push_back(rewriter.create<ConstantIndexOp>(
           loc, step.cast<IntegerAttr>().getInt()));
+
     // Get the terminator op.
     Operation *affineParOpTerminator = op.getBody()->getTerminator();
     scf::ParallelOp parOp;

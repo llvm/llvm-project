@@ -281,6 +281,115 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
+/// The function will remove redundant reinterprets casting in the presence
+/// of the control flow
+static Optional<Instruction *> processPhiNode(InstCombiner &IC,
+                                              IntrinsicInst &II) {
+  SmallVector<Instruction *, 32> Worklist;
+  auto RequiredType = II.getType();
+
+  auto *PN = dyn_cast<PHINode>(II.getArgOperand(0));
+  assert(PN && "Expected Phi Node!");
+
+  // Don't create a new Phi unless we can remove the old one.
+  if (!PN->hasOneUse())
+    return None;
+
+  for (Value *IncValPhi : PN->incoming_values()) {
+    auto *Reinterpret = dyn_cast<IntrinsicInst>(IncValPhi);
+    if (!Reinterpret ||
+        Reinterpret->getIntrinsicID() !=
+            Intrinsic::aarch64_sve_convert_to_svbool ||
+        RequiredType != Reinterpret->getArgOperand(0)->getType())
+      return None;
+  }
+
+  // Create the new Phi
+  LLVMContext &Ctx = PN->getContext();
+  IRBuilder<> Builder(Ctx);
+  Builder.SetInsertPoint(PN);
+  PHINode *NPN = Builder.CreatePHI(RequiredType, PN->getNumIncomingValues());
+  Worklist.push_back(PN);
+
+  for (unsigned I = 0; I < PN->getNumIncomingValues(); I++) {
+    auto *Reinterpret = cast<Instruction>(PN->getIncomingValue(I));
+    NPN->addIncoming(Reinterpret->getOperand(0), PN->getIncomingBlock(I));
+    Worklist.push_back(Reinterpret);
+  }
+
+  // Cleanup Phi Node and reinterprets
+  return IC.replaceInstUsesWith(II, NPN);
+}
+
+static Optional<Instruction *> instCombineConvertFromSVBool(InstCombiner &IC,
+                                                            IntrinsicInst &II) {
+  // If the reinterpret instruction operand is a PHI Node
+  if (isa<PHINode>(II.getArgOperand(0)))
+    return processPhiNode(IC, II);
+
+  SmallVector<Instruction *, 32> CandidatesForRemoval;
+  Value *Cursor = II.getOperand(0), *EarliestReplacement = nullptr;
+
+  const auto *IVTy = cast<VectorType>(II.getType());
+
+  // Walk the chain of conversions.
+  while (Cursor) {
+    // If the type of the cursor has fewer lanes than the final result, zeroing
+    // must take place, which breaks the equivalence chain.
+    const auto *CursorVTy = cast<VectorType>(Cursor->getType());
+    if (CursorVTy->getElementCount().getKnownMinValue() <
+        IVTy->getElementCount().getKnownMinValue())
+      break;
+
+    // If the cursor has the same type as I, it is a viable replacement.
+    if (Cursor->getType() == IVTy)
+      EarliestReplacement = Cursor;
+
+    auto *IntrinsicCursor = dyn_cast<IntrinsicInst>(Cursor);
+
+    // If this is not an SVE conversion intrinsic, this is the end of the chain.
+    if (!IntrinsicCursor || !(IntrinsicCursor->getIntrinsicID() ==
+                                  Intrinsic::aarch64_sve_convert_to_svbool ||
+                              IntrinsicCursor->getIntrinsicID() ==
+                                  Intrinsic::aarch64_sve_convert_from_svbool))
+      break;
+
+    CandidatesForRemoval.insert(CandidatesForRemoval.begin(), IntrinsicCursor);
+    Cursor = IntrinsicCursor->getOperand(0);
+  }
+
+  // If no viable replacement in the conversion chain was found, there is
+  // nothing to do.
+  if (!EarliestReplacement)
+    return None;
+
+  return IC.replaceInstUsesWith(II, EarliestReplacement);
+}
+
+static Optional<Instruction *> instCombineSVEDup(InstCombiner &IC,
+                                                 IntrinsicInst &II) {
+  IntrinsicInst *Pg = dyn_cast<IntrinsicInst>(II.getArgOperand(1));
+  if (!Pg)
+    return None;
+
+  if (Pg->getIntrinsicID() != Intrinsic::aarch64_sve_ptrue)
+    return None;
+
+  const auto PTruePattern =
+      cast<ConstantInt>(Pg->getOperand(0))->getZExtValue();
+  if (PTruePattern != AArch64SVEPredPattern::vl1)
+    return None;
+
+  // The intrinsic is inserting into lane zero so use an insert instead.
+  auto *IdxTy = Type::getInt64Ty(II.getContext());
+  auto *Insert = InsertElementInst::Create(
+      II.getArgOperand(0), II.getArgOperand(2), ConstantInt::get(IdxTy, 0));
+  Insert->insertBefore(&II);
+  Insert->takeName(&II);
+
+  return IC.replaceInstUsesWith(II, Insert);
+}
+
 static Optional<Instruction *> instCombineSVELast(InstCombiner &IC,
                                                   IntrinsicInst &II) {
   Value *Pg = II.getArgOperand(0);
@@ -368,6 +477,10 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   switch (IID) {
   default:
     break;
+  case Intrinsic::aarch64_sve_convert_from_svbool:
+    return instCombineConvertFromSVBool(IC, II);
+  case Intrinsic::aarch64_sve_dup:
+    return instCombineSVEDup(IC, II);
   case Intrinsic::aarch64_sve_lasta:
   case Intrinsic::aarch64_sve_lastb:
     return instCombineSVELast(IC, II);
@@ -432,8 +545,10 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
     return false;
 
   // Get the total number of vector elements in the legalized types.
-  unsigned NumDstEls = DstTyL.first * DstTyL.second.getVectorMinNumElements();
-  unsigned NumSrcEls = SrcTyL.first * SrcTyL.second.getVectorMinNumElements();
+  InstructionCost NumDstEls =
+      DstTyL.first * DstTyL.second.getVectorMinNumElements();
+  InstructionCost NumSrcEls =
+      SrcTyL.first * SrcTyL.second.getVectorMinNumElements();
 
   // Return true if the legalized types have the same number of vector elements
   // and the destination element type size is twice that of the source type.
@@ -793,7 +908,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 
   if (Index != -1U) {
     // Legalize the type.
-    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Val);
+    std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Val);
 
     // This type is legalized to a scalar type.
     if (!LT.second.isVector())
@@ -825,7 +940,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
                                          Opd2PropInfo, Args, CxtI);
 
   // Legalize the type.
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
   // If the instruction is a widening instruction (e.g., uaddl, saddw, etc.),
   // add in the widening overhead specified by the sub-target. Since the
@@ -1423,7 +1538,7 @@ AArch64TTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
   assert((isa<ScalableVectorType>(Ty) && isa<ScalableVectorType>(CondTy)) &&
          "Both vector needs to be scalable");
 
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
   InstructionCost LegalizationCost = 0;
   if (LT.first > 1) {
     Type *LegalVTy = EVT(LT.second).getTypeForEVT(Ty->getContext());
@@ -1445,7 +1560,7 @@ InstructionCost AArch64TTIImpl::getArithmeticReductionCostSVE(
     TTI::TargetCostKind CostKind) {
   assert(!IsPairwise && "Cannot be pair wise to continue");
 
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
   InstructionCost LegalizationCost = 0;
   if (LT.first > 1) {
     Type *LegalVTy = EVT(LT.second).getTypeForEVT(ValTy->getContext());
@@ -1480,7 +1595,7 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwiseForm,
                                              CostKind);
 
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
   MVT MTy = LT.second;
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
@@ -1507,6 +1622,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                                VectorType *Tp,
                                                ArrayRef<int> Mask, int Index,
                                                VectorType *SubTp) {
+  Kind = improveShuffleKindFromMask(Kind, Mask);
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
       Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc ||
       Kind == TTI::SK_Reverse) {
@@ -1580,7 +1696,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       { TTI::SK_Reverse, MVT::nxv4i1,   1 },
       { TTI::SK_Reverse, MVT::nxv2i1,   1 },
     };
-    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+    std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
     if (const auto *Entry = CostTableLookup(ShuffleTbl, Kind, LT.second))
       return LT.first * Entry->Cost;
   }

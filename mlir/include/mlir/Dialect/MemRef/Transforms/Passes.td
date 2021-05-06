@@ -18,7 +18,9 @@ def FoldSubViewOps : Pass<"fold-memref-subview-ops"> {
     from/to the original memref.
   }];
   let constructor = "mlir::memref::createFoldSubViewOpsPass()";
-  let dependentDialects = ["memref::MemRefDialect", "vector::VectorDialect"];
+  let dependentDialects = [
+      "AffineDialect", "memref::MemRefDialect", "vector::VectorDialect"
+  ];
 }
 
 

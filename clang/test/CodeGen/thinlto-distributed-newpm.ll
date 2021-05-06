@@ -70,19 +70,11 @@
 ; CHECK-O: Starting CGSCC pass manager run.
 ; CHECK-O: Running pass: InlinerPass on (main)
 ; CHECK-O: Running pass: PostOrderFunctionAttrsPass on (main)
-; CHECK-O: Invalidating analysis: DominatorTreeAnalysis on main
-; CHECK-O: Invalidating analysis: BasicAA on main
-; CHECK-O: Invalidating analysis: AAManager on main
 ; CHECK-O3: Running pass: ArgumentPromotionPass on (main)
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: SROA on main
-; These next two can appear in any order since they are accessed as parameters
-; on the same call to SROA::runImpl
-; CHECK-O-DAG: Running analysis: DominatorTreeAnalysis on main
 ; CHECK-O: Running pass: EarlyCSEPass on main
 ; CHECK-O: Running analysis: MemorySSAAnalysis on main
-; CHECK-O: Running analysis: AAManager on main
-; CHECK-O: Running analysis: BasicAA on main
 ; CHECK-O: Running pass: SpeculativeExecutionPass on main
 ; CHECK-O: Running pass: JumpThreadingPass on main
 ; CHECK-O: Running analysis: LazyValueAnalysis on main
@@ -128,16 +120,6 @@
 ; CHECK-O: Running pass: InstCombinePass on main
 ; CHECK-O: Finished {{.*}}Function pass manager run.
 ; CHECK-O: Finished CGSCC pass manager run.
-; CHECK-O: Invalidating analysis: DominatorTreeAnalysis on main
-; CHECK-O: Invalidating analysis: BasicAA on main
-; CHECK-O: Invalidating analysis: AAManager on main
-; CHECK-O: Invalidating analysis: MemorySSAAnalysis on main
-; CHECK-O: Invalidating analysis: LoopAnalysis on main
-; CHECK-O: Invalidating analysis: PhiValuesAnalysis on main
-; CHECK-O: Invalidating analysis: MemoryDependenceAnalysis on main
-; CHECK-O: Invalidating analysis: DemandedBitsAnalysis on main
-; CHECK-O: Invalidating analysis: PostDominatorTreeAnalysis on main
-; CHECK-O: Invalidating analysis: CallGraphAnalysis
 ; CHECK-O: Running pass: GlobalOptPass
 ; CHECK-O: Running pass: GlobalDCEPass
 ; CHECK-O: Running pass: EliminateAvailableExternallyPass
@@ -149,22 +131,14 @@
 ; CHECK-O: Running pass: LowerConstantIntrinsicsPass on main
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: LoopSimplifyPass on main
-; CHECK-O: Running analysis: LoopAnalysis on main
 ; CHECK-O: Running pass: LCSSAPass on main
 ; CHECK-O: Finished {{.*}}Function pass manager run.
-; CHECK-O: Running analysis: MemorySSAAnalysis on main
-; CHECK-O: Running analysis: AAManager on main
-; CHECK-O: Running analysis: BasicAA on main
-; CHECK-O: Running analysis: ScalarEvolutionAnalysis on main
-; CHECK-O: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running pass: LoopRotatePass on Loop at depth 1 containing: %b
 ; CHECK-O: Running pass: LoopDistributePass on main
 ; CHECK-O: Running pass: InjectTLIMappings on main
 ; CHECK-O: Running pass: LoopVectorizePass on main
 ; CHECK-O: Running analysis: BlockFrequencyAnalysis on main
 ; CHECK-O: Running analysis: BranchProbabilityAnalysis on main
-; CHECK-O: Running analysis: PostDominatorTreeAnalysis on main
-; CHECK-O: Running analysis: DemandedBitsAnalysis on main
 ; CHECK-O: Running pass: LoopLoadEliminationPass on main
 ; CHECK-O: Running pass: InstCombinePass on main
 ; CHECK-O: Running pass: SimplifyCFGPass on main

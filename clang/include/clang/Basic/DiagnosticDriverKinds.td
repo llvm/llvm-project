@@ -129,6 +129,8 @@ def err_drv_invalid_Xopenmp_target_with_args : Error<
   "invalid -Xopenmp-target argument: '%0', options requiring arguments are unsupported">;
 def err_drv_argument_only_allowed_with : Error<
   "invalid argument '%0' only allowed with '%1'">;
+def err_drv_amdgpu_ieee_without_no_honor_nans : Error<
+  "invalid argument '-mno-amdgpu-ieee' only allowed with relaxed NaN handling">;
 def err_drv_argument_not_allowed_with : Error<
   "invalid argument '%0' not allowed with '%1'">;
 def err_drv_invalid_version_number : Error<
@@ -165,12 +167,12 @@ def err_drv_invalid_libcxx_deployment : Error<
   "invalid deployment target for -stdlib=libc++ (requires %0 or later)">;
 def err_drv_invalid_argument_to_option : Error<
   "invalid argument '%0' to -%1">;
-def err_drv_malformed_sanitizer_blacklist : Error<
-  "malformed sanitizer blacklist: '%0'">;
+def err_drv_malformed_sanitizer_ignorelist : Error<
+  "malformed sanitizer ignorelist: '%0'">;
 def err_drv_malformed_sanitizer_coverage_whitelist : Error<
   "malformed sanitizer coverage whitelist: '%0'">;
-def err_drv_malformed_sanitizer_coverage_blacklist : Error<
-  "malformed sanitizer coverage blacklist: '%0'">;
+def err_drv_malformed_sanitizer_coverage_ignorelist : Error<
+  "malformed sanitizer coverage ignorelist: '%0'">;
 def err_drv_duplicate_config : Error<
   "no more than one option '--config' is allowed">;
 def err_drv_config_file_not_exist : Error<
@@ -537,6 +539,9 @@ def err_drv_invalid_object_mode : Error<"OBJECT_MODE setting %0 is not recognize
 
 def err_aix_default_altivec_abi : Error<
   "The default Altivec ABI on AIX is not yet supported, use '-mabi=vec-extabi' for the extended Altivec ABI">;
+
+def err_invalid_cxx_abi : Error<"Invalid C++ ABI name '%0'">;
+def err_unsupported_cxx_abi : Error<"C++ ABI '%0' is not supported on target triple '%1'">;
 
 def note_cc1_round_trip_original : Note<"Original arguments in round-trip: %0">;
 def note_cc1_round_trip_generated : Note<"Generated arguments #%0 in round-trip: %1">;

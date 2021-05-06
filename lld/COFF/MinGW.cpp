@@ -123,7 +123,7 @@ void AutoExporter::addWholeArchive(StringRef path) {
 }
 
 bool AutoExporter::shouldExport(Defined *sym) const {
-  if (!sym || !sym->isLive() || !sym->getChunk())
+  if (!sym || !sym->getChunk())
     return false;
 
   // Only allow the symbol kinds that make sense to export; in particular,

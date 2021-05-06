@@ -3280,12 +3280,15 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
 
       continue;
     }
-    case OPC_EmitInteger: {
+    case OPC_EmitInteger:
+    case OPC_EmitStringInteger: {
       MVT::SimpleValueType VT =
         (MVT::SimpleValueType)MatcherTable[MatcherIndex++];
       int64_t Val = MatcherTable[MatcherIndex++];
       if (Val & 128)
         Val = GetVBR(Val, MatcherTable, MatcherIndex);
+      if (Opcode == OPC_EmitInteger)
+        Val = decodeSignRotatedValue(Val);
       RecordedNodes.push_back(std::pair<SDValue, SDNode*>(
                               CurDAG->getTargetConstant(Val, SDLoc(NodeToMatch),
                                                         VT), nullptr));

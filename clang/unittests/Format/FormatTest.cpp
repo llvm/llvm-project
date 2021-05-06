@@ -461,6 +461,69 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatement) {
                "  }\n"
                "g();");
 
+  verifyFormat("if (a)\n"
+               "  g();");
+  verifyFormat("if (a) {\n"
+               "  g()\n"
+               "};");
+  verifyFormat("if (a)\n"
+               "  g();\n"
+               "else\n"
+               "  g();");
+  verifyFormat("if (a) {\n"
+               "  g();\n"
+               "} else\n"
+               "  g();");
+  verifyFormat("if (a)\n"
+               "  g();\n"
+               "else {\n"
+               "  g();\n"
+               "}");
+  verifyFormat("if (a) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}");
+  verifyFormat("if (a)\n"
+               "  g();\n"
+               "else if (b)\n"
+               "  g();\n"
+               "else\n"
+               "  g();");
+  verifyFormat("if (a) {\n"
+               "  g();\n"
+               "} else if (b)\n"
+               "  g();\n"
+               "else\n"
+               "  g();");
+  verifyFormat("if (a)\n"
+               "  g();\n"
+               "else if (b) {\n"
+               "  g();\n"
+               "} else\n"
+               "  g();");
+  verifyFormat("if (a)\n"
+               "  g();\n"
+               "else if (b)\n"
+               "  g();\n"
+               "else {\n"
+               "  g();\n"
+               "}");
+  verifyFormat("if (a)\n"
+               "  g();\n"
+               "else if (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}");
+  verifyFormat("if (a) {\n"
+               "  g();\n"
+               "} else if (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}");
+
   FormatStyle AllowsMergedIf = getLLVMStyle();
   AllowsMergedIf.AlignEscapedNewlines = FormatStyle::ENAS_Left;
   AllowsMergedIf.AllowShortIfStatementsOnASingleLine =
@@ -510,6 +573,59 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatement) {
 
   AllowsMergedIf.ColumnLimit = 13;
   verifyFormat("if (a)\n  return;", AllowsMergedIf);
+
+  FormatStyle AllowsMergedIfElse = getLLVMStyle();
+  AllowsMergedIfElse.AllowShortIfStatementsOnASingleLine =
+      FormatStyle::SIS_AllIfsAndElse;
+  verifyFormat("if (a)\n"
+               "  // comment\n"
+               "  f();\n"
+               "else\n"
+               "  // comment\n"
+               "  f();",
+               AllowsMergedIfElse);
+  verifyFormat("{\n"
+               "  if (a)\n"
+               "  label:\n"
+               "    f();\n"
+               "  else\n"
+               "  label:\n"
+               "    f();\n"
+               "}",
+               AllowsMergedIfElse);
+  verifyFormat("if (a)\n"
+               "  ;\n"
+               "else\n"
+               "  ;",
+               AllowsMergedIfElse);
+  verifyFormat("if (a) {\n"
+               "} else {\n"
+               "}",
+               AllowsMergedIfElse);
+  verifyFormat("if (a) return;\n"
+               "else if (b) return;\n"
+               "else return;",
+               AllowsMergedIfElse);
+  verifyFormat("if (a) {\n"
+               "} else return;",
+               AllowsMergedIfElse);
+  verifyFormat("if (a) {\n"
+               "} else if (b) return;\n"
+               "else return;",
+               AllowsMergedIfElse);
+  verifyFormat("if (a) return;\n"
+               "else if (b) {\n"
+               "} else return;",
+               AllowsMergedIfElse);
+  verifyFormat("if (a)\n"
+               "  if (b) return;\n"
+               "  else return;",
+               AllowsMergedIfElse);
+  verifyFormat("if constexpr (a)\n"
+               "  if constexpr (b) return;\n"
+               "  else if constexpr (c) return;\n"
+               "  else return;",
+               AllowsMergedIfElse);
 }
 
 TEST_F(FormatTest, FormatIfWithoutCompoundStatementButElseWith) {
@@ -529,7 +645,81 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatementButElseWith) {
                "  g();\n",
                AllowsMergedIf);
 
-  AllowsMergedIf.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Always;
+  verifyFormat("if (a) g();", AllowsMergedIf);
+  verifyFormat("if (a) {\n"
+               "  g()\n"
+               "};",
+               AllowsMergedIf);
+  verifyFormat("if (a)\n"
+               "  g();\n"
+               "else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("if (a) {\n"
+               "  g();\n"
+               "} else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("if (a)\n"
+               "  g();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("if (a) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("if (a)\n"
+               "  g();\n"
+               "else if (b)\n"
+               "  g();\n"
+               "else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("if (a) {\n"
+               "  g();\n"
+               "} else if (b)\n"
+               "  g();\n"
+               "else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("if (a)\n"
+               "  g();\n"
+               "else if (b) {\n"
+               "  g();\n"
+               "} else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("if (a)\n"
+               "  g();\n"
+               "else if (b)\n"
+               "  g();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("if (a)\n"
+               "  g();\n"
+               "else if (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("if (a) {\n"
+               "  g();\n"
+               "} else if (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+
+  AllowsMergedIf.AllowShortIfStatementsOnASingleLine =
+      FormatStyle::SIS_OnlyFirstIf;
 
   verifyFormat("if (a) f();\n"
                "else {\n"
@@ -542,6 +732,150 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatementButElseWith) {
                "  else {\n"
                "    g();\n"
                "  }\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+
+  verifyFormat("if (a) g();", AllowsMergedIf);
+  verifyFormat("if (a) {\n"
+               "  g()\n"
+               "};",
+               AllowsMergedIf);
+  verifyFormat("if (a) g();\n"
+               "else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("if (a) {\n"
+               "  g();\n"
+               "} else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("if (a) g();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("if (a) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("if (a) g();\n"
+               "else if (b)\n"
+               "  g();\n"
+               "else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("if (a) {\n"
+               "  g();\n"
+               "} else if (b)\n"
+               "  g();\n"
+               "else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("if (a) g();\n"
+               "else if (b) {\n"
+               "  g();\n"
+               "} else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("if (a) g();\n"
+               "else if (b)\n"
+               "  g();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("if (a) g();\n"
+               "else if (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("if (a) {\n"
+               "  g();\n"
+               "} else if (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+
+  AllowsMergedIf.AllowShortIfStatementsOnASingleLine =
+      FormatStyle::SIS_AllIfsAndElse;
+
+  verifyFormat("if (a) f();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("if (a) f();\n"
+               "else {\n"
+               "  if (a) f();\n"
+               "  else {\n"
+               "    g();\n"
+               "  }\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+
+  verifyFormat("if (a) g();", AllowsMergedIf);
+  verifyFormat("if (a) {\n"
+               "  g()\n"
+               "};",
+               AllowsMergedIf);
+  verifyFormat("if (a) g();\n"
+               "else g();",
+               AllowsMergedIf);
+  verifyFormat("if (a) {\n"
+               "  g();\n"
+               "} else g();",
+               AllowsMergedIf);
+  verifyFormat("if (a) g();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("if (a) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("if (a) g();\n"
+               "else if (b) g();\n"
+               "else g();",
+               AllowsMergedIf);
+  verifyFormat("if (a) {\n"
+               "  g();\n"
+               "} else if (b) g();\n"
+               "else g();",
+               AllowsMergedIf);
+  verifyFormat("if (a) g();\n"
+               "else if (b) {\n"
+               "  g();\n"
+               "} else g();",
+               AllowsMergedIf);
+  verifyFormat("if (a) g();\n"
+               "else if (b) g();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("if (a) g();\n"
+               "else if (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("if (a) {\n"
+               "  g();\n"
+               "} else if (b) {\n"
+               "  g();\n"
+               "} else {\n"
                "  g();\n"
                "}",
                AllowsMergedIf);
@@ -7673,6 +8007,8 @@ TEST_F(FormatTest, UnderstandsTemplateParameters) {
   verifyFormat("a<int> = 1;", Style);
   verifyFormat("a<int> >>= 1;", Style);
 
+  verifyFormat("test < a | b >> c;");
+  verifyFormat("test<test<a | b>> c;");
   verifyFormat("test >> a >> b;");
   verifyFormat("test << a >> b;");
 
@@ -10286,7 +10622,7 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
   verifyFormat("f({}, {{}, {}}, MyMap[{k, v}]);", SpaceBeforeBrace);
 
   FormatStyle SpaceBetweenBraces = getLLVMStyle();
-  SpaceBetweenBraces.SpacesInAngles = true;
+  SpaceBetweenBraces.SpacesInAngles = FormatStyle::SIAS_Always;
   SpaceBetweenBraces.SpacesInParentheses = true;
   SpaceBetweenBraces.SpacesInSquareBrackets = true;
   verifyFormat("vector< int > x{ 1, 2, 3, 4 };", SpaceBetweenBraces);
@@ -15814,7 +16150,7 @@ TEST_F(FormatTest, WhitesmithsBraceBreaking) {
 
   FormatStyle BreakBeforeBraceShortIfs = WhitesmithsBraceStyle;
   BreakBeforeBraceShortIfs.AllowShortIfStatementsOnASingleLine =
-      FormatStyle::SIS_Always;
+      FormatStyle::SIS_OnlyFirstIf;
   BreakBeforeBraceShortIfs.AllowShortLoopsOnASingleLine = true;
   verifyFormat("void f(bool b)\n"
                "  {\n"
@@ -16308,7 +16644,6 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(SortUsingDeclarations);
   CHECK_PARSE_BOOL(SpacesInParentheses);
   CHECK_PARSE_BOOL(SpacesInSquareBrackets);
-  CHECK_PARSE_BOOL(SpacesInAngles);
   CHECK_PARSE_BOOL(SpacesInConditionalStatement);
   CHECK_PARSE_BOOL(SpaceInEmptyBlock);
   CHECK_PARSE_BOOL(SpaceInEmptyParentheses);
@@ -16695,14 +17030,21 @@ TEST_F(FormatTest, ParsesConfiguration) {
   CHECK_PARSE("NamespaceIndentation: All", NamespaceIndentation,
               FormatStyle::NI_All);
 
-  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Always;
+  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_OnlyFirstIf;
   CHECK_PARSE("AllowShortIfStatementsOnASingleLine: Never",
               AllowShortIfStatementsOnASingleLine, FormatStyle::SIS_Never);
   CHECK_PARSE("AllowShortIfStatementsOnASingleLine: WithoutElse",
               AllowShortIfStatementsOnASingleLine,
               FormatStyle::SIS_WithoutElse);
+  CHECK_PARSE("AllowShortIfStatementsOnASingleLine: OnlyFirstIf",
+              AllowShortIfStatementsOnASingleLine,
+              FormatStyle::SIS_OnlyFirstIf);
+  CHECK_PARSE("AllowShortIfStatementsOnASingleLine: AllIfsAndElse",
+              AllowShortIfStatementsOnASingleLine,
+              FormatStyle::SIS_AllIfsAndElse);
   CHECK_PARSE("AllowShortIfStatementsOnASingleLine: Always",
-              AllowShortIfStatementsOnASingleLine, FormatStyle::SIS_Always);
+              AllowShortIfStatementsOnASingleLine,
+              FormatStyle::SIS_OnlyFirstIf);
   CHECK_PARSE("AllowShortIfStatementsOnASingleLine: false",
               AllowShortIfStatementsOnASingleLine, FormatStyle::SIS_Never);
   CHECK_PARSE("AllowShortIfStatementsOnASingleLine: true",
@@ -16865,6 +17207,15 @@ TEST_F(FormatTest, ParsesConfiguration) {
               "  Maximum: 1",
               SpacesInLineCommentPrefix.Maximum, 1u);
   EXPECT_EQ(Style.SpacesInLineCommentPrefix.Minimum, 1u);
+
+  Style.SpacesInAngles = FormatStyle::SIAS_Always;
+  CHECK_PARSE("SpacesInAngles: Never", SpacesInAngles, FormatStyle::SIAS_Never);
+  CHECK_PARSE("SpacesInAngles: Always", SpacesInAngles,
+              FormatStyle::SIAS_Always);
+  CHECK_PARSE("SpacesInAngles: Leave", SpacesInAngles, FormatStyle::SIAS_Leave);
+  // For backward compatibility:
+  CHECK_PARSE("SpacesInAngles: false", SpacesInAngles, FormatStyle::SIAS_Never);
+  CHECK_PARSE("SpacesInAngles: true", SpacesInAngles, FormatStyle::SIAS_Always);
 }
 
 TEST_F(FormatTest, ParsesConfigurationWithLanguages) {
@@ -18442,7 +18793,7 @@ TEST_F(FormatTest, WrappedClosingParenthesisIndent) {
 
 TEST_F(FormatTest, SpacesInAngles) {
   FormatStyle Spaces = getLLVMStyle();
-  Spaces.SpacesInAngles = true;
+  Spaces.SpacesInAngles = FormatStyle::SIAS_Always;
 
   verifyFormat("vector< ::std::string > x1;", Spaces);
   verifyFormat("Foo< int, Bar > x2;", Spaces);
@@ -18458,23 +18809,48 @@ TEST_F(FormatTest, SpacesInAngles) {
                Spaces);
 
   Spaces.Standard = FormatStyle::LS_Cpp03;
-  Spaces.SpacesInAngles = true;
+  Spaces.SpacesInAngles = FormatStyle::SIAS_Always;
   verifyFormat("A< A< int > >();", Spaces);
 
-  Spaces.SpacesInAngles = false;
+  Spaces.SpacesInAngles = FormatStyle::SIAS_Never;
   verifyFormat("A<A<int> >();", Spaces);
 
-  Spaces.Standard = FormatStyle::LS_Cpp11;
-  Spaces.SpacesInAngles = true;
+  Spaces.SpacesInAngles = FormatStyle::SIAS_Leave;
+  verifyFormat("vector< ::std::string> x4;", "vector<::std::string> x4;",
+               Spaces);
+  verifyFormat("vector< ::std::string > x4;", "vector<::std::string > x4;",
+               Spaces);
+
+  verifyFormat("A<A<int> >();", Spaces);
+  verifyFormat("A<A<int> >();", "A<A<int>>();", Spaces);
   verifyFormat("A< A< int > >();", Spaces);
 
-  Spaces.SpacesInAngles = false;
+  Spaces.Standard = FormatStyle::LS_Cpp11;
+  Spaces.SpacesInAngles = FormatStyle::SIAS_Always;
+  verifyFormat("A< A< int > >();", Spaces);
+
+  Spaces.SpacesInAngles = FormatStyle::SIAS_Never;
   verifyFormat("vector<::std::string> x4;", Spaces);
   verifyFormat("vector<int> x5;", Spaces);
   verifyFormat("Foo<int, Bar> x6;", Spaces);
   verifyFormat("Foo<::int, ::Bar> x7;", Spaces);
 
   verifyFormat("A<A<int>>();", Spaces);
+
+  Spaces.SpacesInAngles = FormatStyle::SIAS_Leave;
+  verifyFormat("vector<::std::string> x4;", Spaces);
+  verifyFormat("vector< ::std::string > x4;", Spaces);
+  verifyFormat("vector<int> x5;", Spaces);
+  verifyFormat("vector< int > x5;", Spaces);
+  verifyFormat("Foo<int, Bar> x6;", Spaces);
+  verifyFormat("Foo< int, Bar > x6;", Spaces);
+  verifyFormat("Foo<::int, ::Bar> x7;", Spaces);
+  verifyFormat("Foo< ::int, ::Bar > x7;", Spaces);
+
+  verifyFormat("A<A<int>>();", Spaces);
+  verifyFormat("A< A< int > >();", Spaces);
+  verifyFormat("A<A<int > >();", Spaces);
+  verifyFormat("A< A< int>>();", Spaces);
 }
 
 TEST_F(FormatTest, SpaceAfterTemplateKeyword) {

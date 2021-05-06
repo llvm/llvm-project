@@ -2181,7 +2181,7 @@ inline const APInt &smax(const APInt &A, const APInt &B) {
   return A.sgt(B) ? A : B;
 }
 
-/// Determine the smaller of two APInts considered to be signed.
+/// Determine the smaller of two APInts considered to be unsigned.
 inline const APInt &umin(const APInt &A, const APInt &B) {
   return A.ult(B) ? A : B;
 }

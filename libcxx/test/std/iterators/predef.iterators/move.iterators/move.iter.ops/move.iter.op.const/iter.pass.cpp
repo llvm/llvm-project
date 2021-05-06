@@ -31,7 +31,7 @@ test(It i)
 int main(int, char**)
 {
     char s[] = "123";
-    test(input_iterator<char*>(s));
+    test(cpp17_input_iterator<char*>(s));
     test(forward_iterator<char*>(s));
     test(bidirectional_iterator<char*>(s));
     test(random_access_iterator<char*>(s));

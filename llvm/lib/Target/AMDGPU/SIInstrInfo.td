@@ -2689,6 +2689,15 @@ def getGlobalSaddrOp : InstrMapping {
   let ValueCols = [["1"]];
 }
 
+// Maps a GLOBAL SADDR to its VADDR form.
+def getGlobalVaddrOp : InstrMapping {
+  let FilterClass = "GlobalSaddrTable";
+  let RowFields = ["SaddrOp"];
+  let ColFields = ["IsSaddr"];
+  let KeyCol = ["1"];
+  let ValueCols = [["0"]];
+}
+
 // Maps a v_cmpx opcode with sdst to opcode without sdst.
 def getVCMPXNoSDstOp : InstrMapping {
   let FilterClass = "VCMPXNoSDstTable";
@@ -2722,6 +2731,14 @@ def getFlatScratchInstSSfromSV : InstrMapping {
   let ColFields = ["Mode"];
   let KeyCol = ["SV"];
   let ValueCols = [["SS"]];
+}
+
+def getFlatScratchInstSVfromSS : InstrMapping {
+  let FilterClass = "FlatScratchInst";
+  let RowFields = ["SVOp"];
+  let ColFields = ["Mode"];
+  let KeyCol = ["SS"];
+  let ValueCols = [["SV"]];
 }
 
 def getFlatScratchInstSVfromSVS : InstrMapping {

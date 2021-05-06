@@ -144,6 +144,7 @@ program main
   !$omp target exit data map(to:a)
 
   !$omp target
+  !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
   !$omp distribute
   do i = 1, N
      a = 3.14
@@ -152,6 +153,17 @@ program main
   !$omp end target
 
   !$omp target
+  !$omp teams
+  !$omp distribute
+  do i = 1, N
+     a = 3.14
+  enddo
+  !$omp end distribute
+  !$omp end teams
+  !$omp end target
+
+  !$omp target
+  !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
   !ERROR: At most one COLLAPSE clause can appear on the DISTRIBUTE directive
   !$omp distribute collapse(2) collapse(3)
   do i = 1, N
@@ -165,6 +177,22 @@ program main
   !$omp end target
 
   !$omp target
+  !$omp teams
+  !ERROR: At most one COLLAPSE clause can appear on the DISTRIBUTE directive
+  !$omp distribute collapse(2) collapse(3)
+  do i = 1, N
+     do j = 1, N
+        do k = 1, N
+           a = 3.14
+        enddo
+     enddo
+  enddo
+  !$omp end distribute
+  !$omp end teams
+  !$omp end target
+
+  !$omp target
+  !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
   !$omp distribute dist_schedule(static, 2)
   do i = 1, N
      a = 3.14
@@ -173,12 +201,34 @@ program main
   !$omp end target
 
   !$omp target
+  !$omp teams
+  !$omp distribute dist_schedule(static, 2)
+  do i = 1, N
+     a = 3.14
+  enddo
+  !$omp end distribute
+  !$omp end teams
+  !$omp end target
+
+  !$omp target
+  !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
   !ERROR: At most one DIST_SCHEDULE clause can appear on the DISTRIBUTE directive
   !$omp distribute dist_schedule(static, 2) dist_schedule(static, 3)
   do i = 1, N
      a = 3.14
   enddo
   !$omp end distribute
+  !$omp end target
+
+  !$omp target
+  !$omp teams
+  !ERROR: At most one DIST_SCHEDULE clause can appear on the DISTRIBUTE directive
+  !$omp distribute dist_schedule(static, 2) dist_schedule(static, 3)
+  do i = 1, N
+     a = 3.14
+  enddo
+  !$omp end distribute
+  !$omp end teams
   !$omp end target
 
 end program main
