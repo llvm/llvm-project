@@ -300,6 +300,10 @@ class VectorType;
     // instructions.
     MEMCPY,
 
+    // Pseudo-instruction representing a memory copy using a tail predicated
+    // loop
+    MEMCPYLOOP,
+
     // V8.1MMainline condition select
     CSINV, // Conditional select invert.
     CSNEG, // Conditional select negate.
