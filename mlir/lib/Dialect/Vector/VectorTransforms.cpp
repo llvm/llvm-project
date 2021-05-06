@@ -3175,6 +3175,31 @@ struct CastAwayTransferWriteLeadingOneDim
   }
 };
 
+struct CastAwayBrodcastLeadingOneDim
+    : public OpRewritePattern<vector::BroadcastOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::BroadcastOp broadcastOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType newDstType = trimLeadingOneDims(broadcastOp.getVectorType());
+    if (newDstType == broadcastOp.getVectorType())
+      return failure();
+    Location loc = broadcastOp.getLoc();
+    VectorType srcVecType = broadcastOp.getSourceType().dyn_cast<VectorType>();
+    if (srcVecType)
+      srcVecType = trimLeadingOneDims(srcVecType);
+    Value source = broadcastOp.source();
+    if (srcVecType && srcVecType != broadcastOp.getSourceType()) {
+      source = rewriter.create<vector::ShapeCastOp>(loc, srcVecType, source);
+    }
+    Value newBroadcastOp =
+        rewriter.create<vector::BroadcastOp>(loc, newDstType, source);
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
+        broadcastOp, broadcastOp.getVectorType(), newBroadcastOp);
+    return success();
+  }
+};
+
 // Returns the values in `arrayAttr` as an integer vector.
 static SmallVector<int64_t, 4> getIntValueVector(ArrayAttr arrayAttr) {
   return llvm::to_vector<4>(
@@ -3771,7 +3796,8 @@ void mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(
   patterns.add<CastAwayExtractStridedSliceLeadingOneDim,
                CastAwayInsertStridedSliceLeadingOneDim,
                CastAwayTransferReadLeadingOneDim,
-               CastAwayTransferWriteLeadingOneDim, ShapeCastOpFolder>(
+               CastAwayTransferWriteLeadingOneDim,
+               CastAwayBrodcastLeadingOneDim, ShapeCastOpFolder>(
       patterns.getContext());
 }
 
