@@ -4173,14 +4173,18 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi,
   auto *ScalarInit = Phi->getIncomingValueForBlock(Preheader);
   auto *Previous = Phi->getIncomingValueForBlock(Latch);
 
+  auto *IdxTy = Builder.getInt32Ty();
+  auto *One = ConstantInt::get(IdxTy, 1);
+
   // Create a vector from the initial value.
   auto *VectorInit = ScalarInit;
   if (VF.isVector()) {
     Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
-    assert(!VF.isScalable() && "VF is assumed to be non scalable.");
+    auto *RuntimeVF = getRuntimeVF(Builder, IdxTy, VF);
+    auto *LastIdx = Builder.CreateSub(RuntimeVF, One);
     VectorInit = Builder.CreateInsertElement(
-        PoisonValue::get(VectorType::get(VectorInit->getType(), VF)), VectorInit,
-        Builder.getInt32(VF.getKnownMinValue() - 1), "vector.recur.init");
+        PoisonValue::get(VectorType::get(VectorInit->getType(), VF)),
+        VectorInit, LastIdx, "vector.recur.init");
   }
 
   VPValue *PhiDef = State.Plan->getVPValue(Phi);
@@ -4220,14 +4224,6 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi,
   }
   Builder.SetInsertPoint(&*InsertPt);
 
-  // We will construct a vector for the recurrence by combining the values for
-  // the current and previous iterations. This is the required shuffle mask.
-  assert(!VF.isScalable());
-  SmallVector<int, 8> ShuffleMask(VF.getKnownMinValue());
-  ShuffleMask[0] = VF.getKnownMinValue() - 1;
-  for (unsigned I = 1; I < VF.getKnownMinValue(); ++I)
-    ShuffleMask[I] = I + VF.getKnownMinValue() - 1;
-
   // The vector from which to take the initial value for the current iteration
   // (actual or unrolled). Initially, this is the vector phi node.
   Value *Incoming = VecPhi;
@@ -4236,10 +4232,9 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi,
   for (unsigned Part = 0; Part < UF; ++Part) {
     Value *PreviousPart = State.get(PreviousDef, Part);
     Value *PhiPart = State.get(PhiDef, Part);
-    auto *Shuffle =
-        VF.isVector()
-            ? Builder.CreateShuffleVector(Incoming, PreviousPart, ShuffleMask)
-            : Incoming;
+    auto *Shuffle = VF.isVector()
+                        ? Builder.CreateVectorSplice(Incoming, PreviousPart, -1)
+                        : Incoming;
     PhiPart->replaceAllUsesWith(Shuffle);
     cast<Instruction>(PhiPart)->eraseFromParent();
     State.reset(PhiDef, Shuffle, Part);
@@ -4254,9 +4249,10 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi,
   auto *ExtractForScalar = Incoming;
   if (VF.isVector()) {
     Builder.SetInsertPoint(LoopMiddleBlock->getTerminator());
-    ExtractForScalar = Builder.CreateExtractElement(
-        ExtractForScalar, Builder.getInt32(VF.getKnownMinValue() - 1),
-        "vector.recur.extract");
+    auto *RuntimeVF = getRuntimeVF(Builder, IdxTy, VF);
+    auto *LastIdx = Builder.CreateSub(RuntimeVF, One);
+    ExtractForScalar = Builder.CreateExtractElement(ExtractForScalar, LastIdx,
+                                                    "vector.recur.extract");
   }
   // Extract the second last element in the middle block if the
   // Phi is used outside the loop. We need to extract the phi itself
@@ -4264,15 +4260,16 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi,
   // will be the value when jumping to the exit block from the LoopMiddleBlock,
   // when the scalar loop is not run at all.
   Value *ExtractForPhiUsedOutsideLoop = nullptr;
-  if (VF.isVector())
+  if (VF.isVector()) {
+    auto *RuntimeVF = getRuntimeVF(Builder, IdxTy, VF);
+    auto *Idx = Builder.CreateSub(RuntimeVF, ConstantInt::get(IdxTy, 2));
     ExtractForPhiUsedOutsideLoop = Builder.CreateExtractElement(
-        Incoming, Builder.getInt32(VF.getKnownMinValue() - 2),
-        "vector.recur.extract.for.phi");
-  // When loop is unrolled without vectorizing, initialize
-  // ExtractForPhiUsedOutsideLoop with the value just prior to unrolled value of
-  // `Incoming`. This is analogous to the vectorized case above: extracting the
-  // second last element when VF > 1.
-  else if (UF > 1)
+        Incoming, Idx, "vector.recur.extract.for.phi");
+  } else if (UF > 1)
+    // When loop is unrolled without vectorizing, initialize
+    // ExtractForPhiUsedOutsideLoop with the value just prior to unrolled value
+    // of `Incoming`. This is analogous to the vectorized case above: extracting
+    // the second last element when VF > 1.
     ExtractForPhiUsedOutsideLoop = State.get(PreviousDef, UF - 2);
 
   // Fix the initial value of the original recurrence in the scalar loop.
