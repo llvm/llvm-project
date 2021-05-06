@@ -99,15 +99,14 @@ void FormatTokenLexer::tryMergePreviousTokens() {
                                                              tok::period};
     static const tok::TokenKind FatArrow[] = {tok::equal, tok::greater};
 
-    if (tryMergeTokens(FatArrow, TT_JsFatArrow))
+    if (tryMergeTokens(FatArrow, TT_FatArrow))
       return;
-    if (tryMergeTokens(NullishCoalescingOperator,
-                       TT_JsNullishCoalescingOperator)) {
+    if (tryMergeTokens(NullishCoalescingOperator, TT_NullCoalescingOperator)) {
       // Treat like the "||" operator (as opposed to the ternary ?).
       Tokens.back()->Tok.setKind(tok::pipepipe);
       return;
     }
-    if (tryMergeTokens(NullPropagatingOperator, TT_JsNullPropagatingOperator)) {
+    if (tryMergeTokens(NullPropagatingOperator, TT_NullPropagatingOperator)) {
       // Treat like a regular "." access.
       Tokens.back()->Tok.setKind(tok::period);
       return;
@@ -321,7 +320,7 @@ bool FormatTokenLexer::tryMergeNullishCoalescingEqual() {
     return false;
   auto &NullishCoalescing = *(Tokens.end() - 2);
   auto &Equal = *(Tokens.end() - 1);
-  if (NullishCoalescing->getType() != TT_JsNullishCoalescingOperator ||
+  if (NullishCoalescing->getType() != TT_NullCoalescingOperator ||
       !Equal->is(tok::equal))
     return false;
   NullishCoalescing->Tok.setKind(tok::equal); // no '??=' in clang tokens.
@@ -329,7 +328,7 @@ bool FormatTokenLexer::tryMergeNullishCoalescingEqual() {
       StringRef(NullishCoalescing->TokenText.begin(),
                 Equal->TokenText.end() - NullishCoalescing->TokenText.begin());
   NullishCoalescing->ColumnWidth += Equal->ColumnWidth;
-  NullishCoalescing->setType(TT_JsNullishCoalescingEqual);
+  NullishCoalescing->setType(TT_NullCoalescingEqual);
   Tokens.erase(Tokens.end() - 1);
   return true;
 }
