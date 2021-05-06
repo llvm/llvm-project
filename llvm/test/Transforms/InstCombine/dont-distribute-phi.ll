@@ -55,7 +55,7 @@ define zeroext i1 @foo_logical(i32 %arg) {
 ; CHECK:       bb_exit:
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i1 [ [[CMP2]], [[BB_ELSE]] ], [ undef, [[BB_THEN]] ]
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i1 [[CMP1]], true
-; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[PHI1]], [[XOR1]]
+; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[PHI1]], i1 [[XOR1]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND1]]
 ;
 

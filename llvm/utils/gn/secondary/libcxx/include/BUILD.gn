@@ -101,7 +101,6 @@ if (current_toolchain == default_toolchain) {
       "__ranges/size.h",
       "__ranges/view.h",
       "__split_buffer",
-      "__sso_allocator",
       "__std_stream",
       "__string",
       "__support/android/locale_bionic.h",

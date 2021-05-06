@@ -49,20 +49,16 @@ All patches go through the regular `LLVM review process
 
 .. _build_offload_capable_compiler:
 
-Q: How to build an OpenMP offload capable compiler?
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
+Q: How to build an OpenMP GPU offload capable compiler?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 To build an *effective* OpenMP offload capable compiler, only one extra CMake
 option, `LLVM_ENABLE_RUNTIMES="openmp"`, is needed when building LLVM (Generic
 information about building LLVM is available `here <https://llvm.org/docs/GettingStarted.html>`__.).
 Make sure all backends that are targeted by OpenMP to be enabled. By default,
 Clang will be built with all backends enabled.
 
-If your build machine is not the target machine or automatic detection of the
-available GPUs failed, you should also set:
-
-- `CLANG_OPENMP_NVPTX_DEFAULT_ARCH=sm_XX` where `XX` is the architecture of your GPU, e.g, 80.
-- `LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES=YY` where `YY` is the numeric compute capacity of your GPU, e.g., 75.
+For Nvidia offload, please see :ref:`_build_nvidia_offload_capable_compiler`.
+For AMDGPU offload, please see :ref:`_build_amdgpu_offload_capable_compiler`.
 
 .. note::
   The compiler that generates the offload code should be the same (version) as
@@ -71,7 +67,75 @@ available GPUs failed, you should also set:
 
 .. _advanced_builds: https://llvm.org//docs/AdvancedBuilds.html
 
+.. _build_nvidia_offload_capable_compiler:
 
+Q: How to build an OpenMP NVidia offload capable compiler?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The Cuda SDK is required on the machine that will execute the openmp application.
+
+If your build machine is not the target machine or automatic detection of the
+available GPUs failed, you should also set:
+
+- `CLANG_OPENMP_NVPTX_DEFAULT_ARCH=sm_XX` where `XX` is the architecture of your GPU, e.g, 80.
+- `LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES=YY` where `YY` is the numeric compute capacity of your GPU, e.g., 75.
+
+
+.. _build_amdgpu_offload_capable_compiler:
+
+Q: How to build an OpenMP AMDGPU offload capable compiler?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+A subset of the `ROCm <https://github.com/radeonopencompute>` toolchain is
+required to build the LLVM toolchain and to execute the openmp application.
+Either install ROCm somewhere that cmake's find_package can locate it, or
+build the required subcomponents ROCt and ROCr from source.
+
+The two components used are ROCT-Thunk-Interface, roct, and ROCR-Runtime,
+rocr. Roct is the userspace part of the linux driver. It calls into the
+driver which ships with the linux kernel. It is an implementation detail of
+Rocr from OpenMP's perspective. Rocr is an implementation of `HSA <http://www.hsafoundation.com>`.
+
+    SOURCE_DIR=same-as-llvm-source # e.g. the checkout of llvm-project, next to openmp
+    BUILD_DIR=somewhere
+    INSTALL_PREFIX=same-as-llvm-install
+    
+    cd $SOURCE_DIR
+    git clone git@github.com:RadeonOpenCompute/ROCT-Thunk-Interface.git -b roc-4.1.x --single-branch
+    git clone git@github.com:RadeonOpenCompute/ROCR-Runtime.git -b rocm-4.1.x --single-branch
+    
+    cd $BUILD_DIR && mkdir roct && cd roct
+    cmake $SOURCE_DIR/ROCT-Thunk-Interface/ -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
+    make && make install
+
+    cd $BUILD_DIR && mkdir rocr && cd rocr
+    cmake $SOURCE_DIR/ROCR-Runtime/src -DIMAGE_SUPPORT=OFF -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
+    make && make install
+
+IMAGE_SUPPORT requires building rocr with clang and is not used by openmp.
+    
+Provided cmake's find_package can find the ROCR-Runtime package, LLVM will
+build a tool `bin/amdgpu-arch` which will print a string like 'gfx906' when
+run if it recognises a GPU on the local system. LLVM will also build a shared
+library, libomptarget.rtl.amdgpu.so, which is linked against rocr.
+
+With those libraries installed, then LLVM build and installed, try:
+
+    clang -O2 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa example.c -o example && ./example
+
+Q: What are the known limitations of OpenMP AMDGPU offload?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+LD_LIBRARY_PATH is presently required to find the openmp libraries.
+
+There is no libc. That is, malloc and printf do not exist. Also no libm, so
+functions like cos(double) will not work from target regions.
+
+Cards from the gfx10 line, 'navi', that use wave32 are not yet implemented.
+
+Some versions of the driver for the radeon vii (gfx906) will error unless the
+environment variable 'export HSA_IGNORE_SRAMECC_MISREPORT=1' is set.
+
+It is a recent addition to LLVM and the implementation differs from that which
+has been shipping in ROCm and AOMP for some time. Early adopters will encounter
+bugs.
 
 Q: Does OpenMP offloading support work in pre-packaged LLVM releases?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

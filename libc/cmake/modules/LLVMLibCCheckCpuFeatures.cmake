@@ -2,7 +2,7 @@
 # Cpu features definition and flags
 # ------------------------------------------------------------------------------
 
-if(${LIBC_TARGET_MACHINE} MATCHES "x86|x86_64")
+if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
   set(ALL_CPU_FEATURES SSE SSE2 AVX AVX2 AVX512F)
   list(SORT ALL_CPU_FEATURES)
 endif()

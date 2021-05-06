@@ -724,7 +724,7 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = Intrinsic == Intrinsic::wasm_load32_zero ? MVT::i32 : MVT::i64;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.align = Info.memVT == MVT::i32 ? Align(4) : Align(8);
+    Info.align = Align(1);
     Info.flags = MachineMemOperand::MOLoad;
     return true;
   case Intrinsic::wasm_load8_lane:
@@ -736,27 +736,22 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::wasm_store32_lane:
   case Intrinsic::wasm_store64_lane: {
     MVT MemVT;
-    Align MemAlign;
     switch (Intrinsic) {
     case Intrinsic::wasm_load8_lane:
     case Intrinsic::wasm_store8_lane:
       MemVT = MVT::i8;
-      MemAlign = Align(1);
       break;
     case Intrinsic::wasm_load16_lane:
     case Intrinsic::wasm_store16_lane:
       MemVT = MVT::i16;
-      MemAlign = Align(2);
       break;
     case Intrinsic::wasm_load32_lane:
     case Intrinsic::wasm_store32_lane:
       MemVT = MVT::i32;
-      MemAlign = Align(4);
       break;
     case Intrinsic::wasm_load64_lane:
     case Intrinsic::wasm_store64_lane:
       MemVT = MVT::i64;
-      MemAlign = Align(8);
       break;
     default:
       llvm_unreachable("unexpected intrinsic");
@@ -774,7 +769,7 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(0);
     Info.memVT = MemVT;
     Info.offset = 0;
-    Info.align = MemAlign;
+    Info.align = Align(1);
     return true;
   }
   default:

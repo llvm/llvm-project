@@ -72,7 +72,6 @@ define i32 @atomic_nand_i32_flat(i32* %ptr) nounwind {
 ; GCN-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1_vol
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; GCN-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; GCN-NEXT:    s_andn2_b64 exec, exec, s[4:5]

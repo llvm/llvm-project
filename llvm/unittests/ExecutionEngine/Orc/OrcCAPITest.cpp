@@ -13,9 +13,18 @@
 #include "gtest/gtest.h"
 
 #include "llvm/ADT/Triple.h"
+#include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/SourceMgr.h"
 #include <string>
 
 using namespace llvm;
+using namespace llvm::orc;
+
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeModule, LLVMOrcThreadSafeModuleRef)
 
 // OrcCAPITestBase contains several helper methods and pointers for unit tests
 // written for the LLVM-C API. It provides the following helpers:
@@ -109,6 +118,7 @@ protected:
   }
 
   static void materializationUnitFn() {}
+
   // Stub definition generator, where all Names are materialized from the
   // materializationUnitFn() test function and defined into the JIT Dylib
   static LLVMErrorRef
@@ -132,29 +142,47 @@ protected:
     }
     return LLVMErrorSuccess;
   }
-  // create a test LLVM IR module containing a function named "sum" which has
-  // returns the sum of its two parameters
-  static LLVMOrcThreadSafeModuleRef createTestModule() {
-    LLVMOrcThreadSafeContextRef TSC = LLVMOrcCreateNewThreadSafeContext();
-    LLVMContextRef Ctx = LLVMOrcThreadSafeContextGetContext(TSC);
-    LLVMModuleRef Mod = LLVMModuleCreateWithNameInContext("test", Ctx);
+
+  static Error createSMDiagnosticError(llvm::SMDiagnostic &Diag) {
+    std::string Msg;
     {
-      LLVMTypeRef Int32Ty = LLVMInt32TypeInContext(Ctx);
-      LLVMTypeRef ParamTys[] = {Int32Ty, Int32Ty};
-      LLVMTypeRef TestFnTy = LLVMFunctionType(Int32Ty, ParamTys, 2, 0);
-      LLVMValueRef TestFn = LLVMAddFunction(Mod, "sum", TestFnTy);
-      LLVMBuilderRef IRBuilder = LLVMCreateBuilderInContext(Ctx);
-      LLVMBasicBlockRef EntryBB = LLVMAppendBasicBlock(TestFn, "entry");
-      LLVMPositionBuilderAtEnd(IRBuilder, EntryBB);
-      LLVMValueRef Arg1 = LLVMGetParam(TestFn, 0);
-      LLVMValueRef Arg2 = LLVMGetParam(TestFn, 1);
-      LLVMValueRef Sum = LLVMBuildAdd(IRBuilder, Arg1, Arg2, "");
-      LLVMBuildRet(IRBuilder, Sum);
-      LLVMDisposeBuilder(IRBuilder);
+      raw_string_ostream OS(Msg);
+      Diag.print("", OS);
     }
-    LLVMOrcThreadSafeModuleRef TSM = LLVMOrcCreateNewThreadSafeModule(Mod, TSC);
-    LLVMOrcDisposeThreadSafeContext(TSC);
-    return TSM;
+    return make_error<StringError>(std::move(Msg), inconvertibleErrorCode());
+  }
+
+  // Create an LLVM IR module from the given StringRef.
+  static Expected<std::unique_ptr<Module>>
+  parseTestModule(LLVMContext &Ctx, StringRef Source, StringRef Name) {
+    assert(TargetSupported &&
+           "Attempted to create module for unsupported target");
+    SMDiagnostic Err;
+    if (auto M = parseIR(MemoryBufferRef(Source, Name), Err, Ctx))
+      return std::move(M);
+    return createSMDiagnosticError(Err);
+  }
+
+  // returns the sum of its two parameters
+  static LLVMOrcThreadSafeModuleRef createTestModule(StringRef Source,
+                                                     StringRef Name) {
+    auto Ctx = std::make_unique<LLVMContext>();
+    auto M = cantFail(parseTestModule(*Ctx, Source, Name));
+    return wrap(new ThreadSafeModule(std::move(M), std::move(Ctx)));
+  }
+
+  static LLVMMemoryBufferRef createTestObject(StringRef Source,
+                                              StringRef Name) {
+    auto Ctx = std::make_unique<LLVMContext>();
+    auto M = cantFail(parseTestModule(*Ctx, Source, Name));
+
+    auto JTMB = cantFail(JITTargetMachineBuilder::detectHost());
+    M->setDataLayout(cantFail(JTMB.getDefaultDataLayoutForTarget()));
+    auto TM = cantFail(JTMB.createTargetMachine());
+
+    SimpleCompiler SC(*TM);
+    auto ObjBuffer = cantFail(SC(*M));
+    return wrap(ObjBuffer.release());
   }
 
   static std::string TargetTriple;
@@ -163,6 +191,19 @@ protected:
 
 std::string OrcCAPITestBase::TargetTriple;
 bool OrcCAPITestBase::TargetSupported = false;
+
+namespace {
+
+constexpr StringRef SumExample =
+    R"(
+    define i32 @sum(i32 %x, i32 %y) {
+    entry:
+      %r = add nsw i32 %x, %y
+      ret i32 %r
+    }
+  )";
+
+} // end anonymous namespace.
 
 // Consumes the given error ref and returns the string error message.
 static std::string toString(LLVMErrorRef E) {
@@ -261,7 +302,7 @@ TEST_F(OrcCAPITestBase, ResourceTrackerDefinitionLifetime) {
   // removed.
   LLVMOrcResourceTrackerRef RT =
       LLVMOrcJITDylibCreateResourceTracker(MainDylib);
-  LLVMOrcThreadSafeModuleRef TSM = createTestModule();
+  LLVMOrcThreadSafeModuleRef TSM = createTestModule(SumExample, "sum.ll");
   if (LLVMErrorRef E = LLVMOrcLLJITAddLLVMIRModuleWithRT(Jit, RT, TSM))
     FAIL() << "Failed to add LLVM IR module to LLJIT (triple = " << TargetTriple
            << "): " << toString(E);
@@ -290,7 +331,7 @@ TEST_F(OrcCAPITestBase, ResourceTrackerTransfer) {
       LLVMOrcJITDylibGetDefaultResourceTracker(MainDylib);
   LLVMOrcResourceTrackerRef RT2 =
       LLVMOrcJITDylibCreateResourceTracker(MainDylib);
-  LLVMOrcThreadSafeModuleRef TSM = createTestModule();
+  LLVMOrcThreadSafeModuleRef TSM = createTestModule(SumExample, "sum.ll");
   if (LLVMErrorRef E = LLVMOrcLLJITAddLLVMIRModuleWithRT(Jit, DefaultRT, TSM))
     FAIL() << "Failed to add LLVM IR module to LLJIT (triple = " << TargetTriple
            << "): " << toString(E);
@@ -304,6 +345,27 @@ TEST_F(OrcCAPITestBase, ResourceTrackerTransfer) {
   LLVMOrcReleaseResourceTracker(RT2);
 }
 
+TEST_F(OrcCAPITestBase, AddObjectBuffer) {
+  if (!Jit) {
+    // TODO: Use GTEST_SKIP() when GTest is updated to version 1.10.0
+    return;
+  }
+
+  LLVMOrcObjectLayerRef ObjLinkingLayer = LLVMOrcLLJITGetObjLinkingLayer(Jit);
+  LLVMMemoryBufferRef ObjBuffer = createTestObject(SumExample, "sum.ll");
+
+  if (LLVMErrorRef E = LLVMOrcObjectLayerAddObjectFile(ObjLinkingLayer,
+                                                       MainDylib, ObjBuffer))
+    FAIL() << "Failed to add object file to ObjLinkingLayer (triple = "
+           << TargetTriple << "): " << toString(E);
+
+  LLVMOrcJITTargetAddress SumAddr;
+  if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &SumAddr, "sum"))
+    FAIL() << "Symbol \"sum\" was not added into JIT (triple = " << TargetTriple
+           << "): " << toString(E);
+  ASSERT_TRUE(!!SumAddr);
+}
+
 TEST_F(OrcCAPITestBase, ExecutionTest) {
   if (!Jit) {
     // TODO: Use GTEST_SKIP() when GTest is updated to version 1.10.0
@@ -314,7 +376,7 @@ TEST_F(OrcCAPITestBase, ExecutionTest) {
 
   // This test performs OrcJIT compilation of a simple sum module
   LLVMInitializeNativeAsmPrinter();
-  LLVMOrcThreadSafeModuleRef TSM = createTestModule();
+  LLVMOrcThreadSafeModuleRef TSM = createTestModule(SumExample, "sum.ll");
   if (LLVMErrorRef E = LLVMOrcLLJITAddLLVMIRModule(Jit, MainDylib, TSM))
     FAIL() << "Failed to add LLVM IR module to LLJIT (triple = " << TargetTriple
            << ")" << toString(E);

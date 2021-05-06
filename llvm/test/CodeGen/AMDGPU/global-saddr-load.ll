@@ -101,11 +101,10 @@ define amdgpu_ps float @global_load_saddr_i8_offset_neg4096(i8 addrspace(1)* inr
 define amdgpu_ps float @global_load_saddr_i8_offset_neg4097(i8 addrspace(1)* inreg %sbase) {
 ; GFX9-LABEL: global_load_saddr_i8_offset_neg4097:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff000, v0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:-1
+; GFX9-NEXT:    s_add_u32 s0, s2, 0xffffefff
+; GFX9-NEXT:    s_addc_u32 s1, s3, -1
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[0:1]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
@@ -127,11 +126,10 @@ define amdgpu_ps float @global_load_saddr_i8_offset_neg4097(i8 addrspace(1)* inr
 define amdgpu_ps float @global_load_saddr_i8_offset_neg4098(i8 addrspace(1)* inreg %sbase) {
 ; GFX9-LABEL: global_load_saddr_i8_offset_neg4098:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff000, v0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:-2
+; GFX9-NEXT:    s_add_u32 s0, s2, 0xffffeffe
+; GFX9-NEXT:    s_addc_u32 s1, s3, -1
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[0:1]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
@@ -348,10 +346,10 @@ define amdgpu_ps float @global_load_saddr_i8_offset_4294967297(i8 addrspace(1)* 
 define amdgpu_ps float @global_load_saddr_i8_offset_4294971391(i8 addrspace(1)* inreg %sbase) {
 ; GFX9-LABEL: global_load_saddr_i8_offset_4294971391:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    v_add_co_u32_e64 v0, vcc, 0, s2
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 1, v1, vcc
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:4095
+; GFX9-NEXT:    s_add_u32 s0, s2, 0xfff
+; GFX9-NEXT:    s_addc_u32 s1, s3, 1
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[0:1]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
@@ -372,11 +370,10 @@ define amdgpu_ps float @global_load_saddr_i8_offset_4294971391(i8 addrspace(1)* 
 define amdgpu_ps float @global_load_saddr_i8_offset_4294971392(i8 addrspace(1)* inreg %sbase) {
 ; GFX9-LABEL: global_load_saddr_i8_offset_4294971392:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x1000, v0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 1, v1, vcc
-; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX9-NEXT:    s_add_u32 s0, s2, 0x1000
+; GFX9-NEXT:    s_addc_u32 s1, s3, 1
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ubyte v0, v0, s[0:1]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
@@ -2381,6 +2378,122 @@ define amdgpu_ps float @global_load_saddr_i8_offset_or_i64_imm_offset_4160(i8 ad
   %zext = zext i8 %load to i32
   %to.vgpr = bitcast i32 %zext to float
   ret float %to.vgpr
+}
+
+; --------------------------------------------------------------------------------
+; Full 64-bit scalar add.
+; --------------------------------------------------------------------------------
+
+define amdgpu_ps void @global_addr_64bit_lsr_iv(float addrspace(1)* inreg %arg) {
+; GFX9-LABEL: global_addr_64bit_lsr_iv:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_mov_b64 s[0:1], 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:  BB128_1: ; %bb3
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_add_u32 s4, s2, s0
+; GFX9-NEXT:    s_addc_u32 s5, s3, s1
+; GFX9-NEXT:    global_load_dword v1, v0, s[4:5] glc
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_add_u32 s0, s0, 4
+; GFX9-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-NEXT:    s_cmpk_eq_i32 s0, 0x400
+; GFX9-NEXT:    s_cbranch_scc0 BB128_1
+; GFX9-NEXT:  ; %bb.2: ; %bb2
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: global_addr_64bit_lsr_iv:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_mov_b64 s[0:1], 0
+; GFX10-NEXT:  BB128_1: ; %bb3
+; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_add_u32 s4, s2, s0
+; GFX10-NEXT:    s_addc_u32 s5, s3, s1
+; GFX10-NEXT:    s_add_u32 s0, s0, 4
+; GFX10-NEXT:    global_load_dword v1, v0, s[4:5] glc dlc
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_addc_u32 s1, s1, 0
+; GFX10-NEXT:    s_cmpk_eq_i32 s0, 0x400
+; GFX10-NEXT:    s_cbranch_scc0 BB128_1
+; GFX10-NEXT:  ; %bb.2: ; %bb2
+; GFX10-NEXT:    s_endpgm
+bb:
+  br label %bb3
+
+bb2:                                              ; preds = %bb3
+  ret void
+
+bb3:                                              ; preds = %bb3, %bb
+  %i = phi i32 [ 0, %bb ], [ %i8, %bb3 ]
+  %i4 = zext i32 %i to i64
+  %i5 = getelementptr inbounds float, float addrspace(1)* %arg, i64 %i4
+  %i6 = load volatile float, float addrspace(1)* %i5, align 4
+  %i8 = add nuw nsw i32 %i, 1
+  %i9 = icmp eq i32 %i8, 256
+  br i1 %i9, label %bb2, label %bb3
+}
+
+; Make sure we only have a single zero vaddr initialization.
+
+define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(float addrspace(1)* inreg %arg, float addrspace(1)* inreg %arg.1) {
+; GFX9-LABEL: global_addr_64bit_lsr_iv_multiload:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_mov_b64 s[0:1], 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:  BB129_1: ; %bb3
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NEXT:    s_add_u32 s4, s2, s0
+; GFX9-NEXT:    s_addc_u32 s5, s3, s1
+; GFX9-NEXT:    global_load_dword v1, v0, s[4:5] glc
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_load_dword v1, v0, s[4:5] glc
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_add_u32 s0, s0, 4
+; GFX9-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-NEXT:    s_cmpk_eq_i32 s0, 0x400
+; GFX9-NEXT:    ; kill: killed $sgpr4 killed $sgpr5
+; GFX9-NEXT:    s_cbranch_scc0 BB129_1
+; GFX9-NEXT:  ; %bb.2: ; %bb2
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: global_addr_64bit_lsr_iv_multiload:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_mov_b64 s[0:1], 0
+; GFX10-NEXT:  BB129_1: ; %bb3
+; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_add_u32 s4, s2, s0
+; GFX10-NEXT:    s_addc_u32 s5, s3, s1
+; GFX10-NEXT:    s_add_u32 s0, s0, 4
+; GFX10-NEXT:    global_load_dword v1, v0, s[4:5] glc dlc
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_load_dword v1, v0, s[4:5] glc dlc
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_addc_u32 s1, s1, 0
+; GFX10-NEXT:    s_cmpk_eq_i32 s0, 0x400
+; GFX10-NEXT:    ; kill: killed $sgpr4 killed $sgpr5
+; GFX10-NEXT:    s_cbranch_scc0 BB129_1
+; GFX10-NEXT:  ; %bb.2: ; %bb2
+; GFX10-NEXT:    s_endpgm
+bb:
+  br label %bb3
+
+bb2:                                              ; preds = %bb3
+  ret void
+
+bb3:                                              ; preds = %bb3, %bb
+  %i = phi i32 [ 0, %bb ], [ %i8, %bb3 ]
+  %i4 = zext i32 %i to i64
+  %i5 = getelementptr inbounds float, float addrspace(1)* %arg, i64 %i4
+  %i6 = load volatile float, float addrspace(1)* %i5, align 4
+  %i5.1 = getelementptr inbounds float, float addrspace(1)* %arg.1, i64 %i4
+  %i6.1 = load volatile float, float addrspace(1)* %i5, align 4
+  %i8 = add nuw nsw i32 %i, 1
+  %i9 = icmp eq i32 %i8, 256
+  br i1 %i9, label %bb2, label %bb3
 }
 
 !0 = !{i32 0, i32 1073741824} ; (1 << 30)

@@ -1,5 +1,5 @@
 // Test that we print pass structure with new and legacy PM.
-// RUN: %clang -fexperimental-new-pass-manager -fdebug-pass-structure -O3 -S -emit-llvm %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=NEWPM
+// RUN: %clang -fexperimental-new-pass-manager -fdebug-pass-structure -fintegrated-as -O3 -S -emit-llvm %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=NEWPM
 // RUN: %clang -flegacy-pass-manager -fdebug-pass-structure -O0 -S -emit-llvm %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LEGACYPM
 // REQUIRES: asserts
 
@@ -32,6 +32,7 @@
 // NEWPM-NEXT: ReversePostOrderFunctionAttrsPass on [module]
 // NEWPM-NEXT: RequireAnalysisPass<{{.*}}> on [module]
 // NEWPM-NEXT: ModuleToFunctionPassAdaptor on [module]
+// CGProfilePass is disabled with non-integrated assemblers
 // NEWPM-NEXT: CGProfilePass on [module]
 // NEWPM-NEXT: GlobalDCEPass on [module]
 // NEWPM-NEXT: ConstantMergePass on [module]

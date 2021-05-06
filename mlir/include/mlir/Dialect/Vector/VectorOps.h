@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_VECTOR_VECTOROPS_H
 #define MLIR_DIALECT_VECTOR_VECTOROPS_H
 
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -191,6 +192,11 @@ IntegerType getVectorSubscriptType(Builder &builder);
 /// Returns an integer array attribute containing the given values using
 /// the integer type required for subscripts in the vector dialect.
 ArrayAttr getVectorSubscriptAttr(Builder &b, ArrayRef<int64_t> values);
+
+/// Returns the value obtained by reducing the vector into a scalar using the
+/// operation kind associated with a binary AtomicRMWKind op.
+Value getVectorReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
+                           Value vector);
 
 namespace impl {
 /// Build the default minor identity map suitable for a vector transfer. This

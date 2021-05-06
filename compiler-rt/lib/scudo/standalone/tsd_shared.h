@@ -197,11 +197,11 @@ private:
     return CurrentTSD;
   }
 
-  atomic_u32 CurrentIndex;
-  u32 NumberOfTSDs;
-  u32 NumberOfCoPrimes;
-  u32 CoPrimes[TSDsArraySize];
-  bool Initialized;
+  atomic_u32 CurrentIndex = {};
+  u32 NumberOfTSDs = 0;
+  u32 NumberOfCoPrimes = 0;
+  u32 CoPrimes[TSDsArraySize] = {};
+  bool Initialized = false;
   HybridMutex Mutex;
   HybridMutex MutexTSDs;
   TSD<Allocator> TSDs[TSDsArraySize];

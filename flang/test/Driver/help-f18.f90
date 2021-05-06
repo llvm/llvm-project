@@ -1,7 +1,9 @@
-! RUN: %f18 -h 2>&1 | FileCheck %s
-! RUN: %f18 -help 2>&1 | FileCheck %s
-! RUN: %f18 --help 2>&1 | FileCheck %s
-! RUN: %f18 -? 2>&1 | FileCheck %s
+! REQUIRES: old-flang-driver
+
+! RUN: %flang -h 2>&1 | FileCheck %s
+! RUN: %flang -help 2>&1 | FileCheck %s
+! RUN: %flang --help 2>&1 | FileCheck %s
+! RUN: %flang -? 2>&1 | FileCheck %s
 
 ! CHECK: f18: LLVM Fortran compiler
 

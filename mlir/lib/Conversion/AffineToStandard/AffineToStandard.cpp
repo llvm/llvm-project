@@ -367,49 +367,6 @@ public:
   }
 };
 
-/// Returns the identity value associated with an AtomicRMWKind op.
-static Value getIdentityValue(AtomicRMWKind op, Type resultType,
-                              OpBuilder &builder, Location loc) {
-  switch (op) {
-  case AtomicRMWKind::addf:
-    return builder.create<ConstantOp>(loc, builder.getFloatAttr(resultType, 0));
-  case AtomicRMWKind::addi:
-    return builder.create<ConstantOp>(loc,
-                                      builder.getIntegerAttr(resultType, 0));
-  case AtomicRMWKind::mulf:
-    return builder.create<ConstantOp>(loc, builder.getFloatAttr(resultType, 1));
-  case AtomicRMWKind::muli:
-    return builder.create<ConstantOp>(loc,
-                                      builder.getIntegerAttr(resultType, 1));
-  // TODO: Add remaining reduction operations.
-  default:
-    (void)emitOptionalError(loc, "Reduction operation type not supported");
-    break;
-  }
-  return nullptr;
-}
-
-/// Return the value obtained by applying the reduction operation kind
-/// associated with a binary AtomicRMWKind op to `lhs` and `rhs`.
-static Value getReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
-                            Value lhs, Value rhs) {
-  switch (op) {
-  case AtomicRMWKind::addf:
-    return builder.create<AddFOp>(loc, lhs, rhs);
-  case AtomicRMWKind::addi:
-    return builder.create<AddIOp>(loc, lhs, rhs);
-  case AtomicRMWKind::mulf:
-    return builder.create<MulFOp>(loc, lhs, rhs);
-  case AtomicRMWKind::muli:
-    return builder.create<MulIOp>(loc, lhs, rhs);
-  // TODO: Add remaining reduction operations.
-  default:
-    (void)emitOptionalError(loc, "Reduction operation type not supported");
-    break;
-  }
-  return nullptr;
-}
-
 /// Convert an `affine.parallel` (loop nest) operation into a `scf.parallel`
 /// operation.
 class AffineParallelLowering : public OpRewritePattern<AffineParallelOp> {
