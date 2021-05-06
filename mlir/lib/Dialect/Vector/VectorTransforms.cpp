@@ -3749,6 +3749,8 @@ struct TwoDimMultiReductionToReduction
         return "or";
       case vector::CombiningKind::XOR:
         return "xor";
+      default:
+        llvm_unreachable("unknwon combining kind");
       }
     };
 
