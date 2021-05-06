@@ -23,9 +23,13 @@
 
 int main(int, char**) {
     typedef std::unordered_multimap<int, std::string> C;
-    C c(1);
-    C::local_iterator i = c.begin(0);
+    C c;
+    c.insert(std::make_pair(42, std::string()));
+    C::size_type b = c.bucket(42);
+    C::local_iterator i = c.begin(b);
+    assert(i != c.end(b));
     ++i;
+    assert(i == c.end(b));
     ++i;
     assert(false);
 

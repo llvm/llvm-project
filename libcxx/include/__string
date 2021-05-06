@@ -538,7 +538,7 @@ char_traits<wchar_t>::find(const char_type* __s, size_t __n, const char_type& __
 }
 
 
-#ifndef _LIBCPP_NO_HAS_CHAR8_T
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
@@ -645,7 +645,7 @@ char_traits<char8_t>::find(const char_type* __s, size_t __n, const char_type& __
     return nullptr;
 }
 
-#endif // #_LIBCPP_NO_HAS_CHAR8_T
+#endif // #_LIBCPP_HAS_NO_CHAR8_T
 
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 
@@ -889,7 +889,7 @@ char_traits<char32_t>::assign(char_type* __s, size_t __n, char_type __a) _NOEXCE
     return __r;
 }
 
-#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
 
 // helper fns for basic_string and string_view
 
@@ -1134,4 +1134,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif  // _LIBCPP___STRING
+#endif // _LIBCPP___STRING

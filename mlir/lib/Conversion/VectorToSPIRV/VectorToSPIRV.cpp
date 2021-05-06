@@ -89,6 +89,11 @@ struct VectorExtractOpConvert final
       return failure();
 
     vector::ExtractOp::Adaptor adaptor(operands);
+    if (adaptor.vector().getType().isa<spirv::ScalarType>()) {
+      rewriter.replaceOp(extractOp, adaptor.vector());
+      return success();
+    }
+
     int32_t id = getFirstIntValue(extractOp.position());
     rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
         extractOp, adaptor.vector(), id);

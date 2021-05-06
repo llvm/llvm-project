@@ -139,6 +139,9 @@ int32_t __tgt_rtl_run_target_team_region_async(
 // error code.
 int32_t __tgt_rtl_synchronize(int32_t ID, __tgt_async_info *AsyncInfo);
 
+// Set plugin's internal information flag externally.
+void __tgt_rtl_set_info_flag(uint32_t);
+
 #ifdef __cplusplus
 }
 #endif

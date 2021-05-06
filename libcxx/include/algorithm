@@ -1674,7 +1674,7 @@ struct __unwrap_iter_impl<_Iter, true> {
     }
 };
 
-#endif  // _LIBCPP_DEBUG_LEVEL < 2
+#endif // _LIBCPP_DEBUG_LEVEL < 2
 
 template<class _Iter, class _Impl = __unwrap_iter_impl<_Iter> >
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
@@ -2620,7 +2620,7 @@ min(initializer_list<_Tp> __t)
     return *_VSTD::min_element(__t.begin(), __t.end(), __less<_Tp>());
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 // max_element
 
@@ -2693,7 +2693,7 @@ max(initializer_list<_Tp> __t)
     return *_VSTD::max_element(__t.begin(), __t.end(), __less<_Tp>());
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 14
 // clamp
@@ -2850,7 +2850,7 @@ minmax(initializer_list<_Tp> __t)
     return _VSTD::minmax(__t, __less<_Tp>());
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 // random_shuffle
 
@@ -5859,4 +5859,4 @@ _LIBCPP_POP_MACROS
 #   include <__pstl_algorithm>
 #endif
 
-#endif  // _LIBCPP_ALGORITHM
+#endif // _LIBCPP_ALGORITHM

@@ -3550,7 +3550,7 @@ public:
             if (m_disassembly_scope != m_sc.function) {
               m_disassembly_scope = m_sc.function;
               m_disassembly_sp = m_sc.function->GetInstructions(
-                  exe_ctx, nullptr, prefer_file_cache);
+                  exe_ctx, nullptr, !prefer_file_cache);
               if (m_disassembly_sp) {
                 set_selected_line_to_pc = true;
                 m_disassembly_range = m_sc.function->GetAddressRange();

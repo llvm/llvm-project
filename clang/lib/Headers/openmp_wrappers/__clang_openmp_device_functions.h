@@ -59,7 +59,6 @@ extern "C" {
 #include <stdint.h>
 #endif
 
-#define __HIP__
 #define __OPENMP_AMDGCN__
 
 #define __host__ __attribute__((host))
@@ -78,6 +77,7 @@ extern "C" {
 
 #pragma omp end declare variant
 
+#undef __OPENMP_AMDGCN__
 #endif // __AMDGCN__
 
 #endif // __CLANG_OPENMP_DEVICE_FUNCTIONS_H__

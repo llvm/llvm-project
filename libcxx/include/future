@@ -467,7 +467,7 @@ operator^=(launch& __x, launch __y)
     __x = __x ^ __y; return __x;
 }
 
-#endif  // !_LIBCPP_HAS_NO_STRONG_ENUMS
+#endif // !_LIBCPP_HAS_NO_STRONG_ENUMS
 
 //enum class future_status
 _LIBCPP_DECLARE_STRONG_ENUM(future_status)
@@ -860,7 +860,7 @@ __deferred_assoc_state<_Rp, _Fp>::__execute()
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         this->set_value(__func_());
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }
@@ -868,7 +868,7 @@ __deferred_assoc_state<_Rp, _Fp>::__execute()
     {
         this->set_exception(current_exception());
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
 }
 
 template <class _Fp>
@@ -901,7 +901,7 @@ __deferred_assoc_state<void, _Fp>::__execute()
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         __func_();
         this->set_value();
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -910,7 +910,7 @@ __deferred_assoc_state<void, _Fp>::__execute()
     {
         this->set_exception(current_exception());
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
 }
 
 template <class _Rp, class _Fp>
@@ -943,7 +943,7 @@ __async_assoc_state<_Rp, _Fp>::__execute()
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         this->set_value(__func_());
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }
@@ -951,7 +951,7 @@ __async_assoc_state<_Rp, _Fp>::__execute()
     {
         this->set_exception(current_exception());
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
 }
 
 template <class _Rp, class _Fp>
@@ -992,7 +992,7 @@ __async_assoc_state<void, _Fp>::__execute()
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         __func_();
         this->set_value();
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -1001,7 +1001,7 @@ __async_assoc_state<void, _Fp>::__execute()
     {
         this->set_exception(current_exception());
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
 }
 
 template <class _Fp>
@@ -1951,7 +1951,7 @@ packaged_task<_Rp(_ArgTypes...)>::operator()(_ArgTypes... __args)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         __p_.set_value(__f_(_VSTD::forward<_ArgTypes>(__args)...));
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }
@@ -1959,7 +1959,7 @@ packaged_task<_Rp(_ArgTypes...)>::operator()(_ArgTypes... __args)
     {
         __p_.set_exception(current_exception());
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
 }
 
 template<class _Rp, class ..._ArgTypes>
@@ -1973,7 +1973,7 @@ packaged_task<_Rp(_ArgTypes...)>::make_ready_at_thread_exit(_ArgTypes... __args)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         __p_.set_value_at_thread_exit(__f_(_VSTD::forward<_ArgTypes>(__args)...));
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }
@@ -1981,7 +1981,7 @@ packaged_task<_Rp(_ArgTypes...)>::make_ready_at_thread_exit(_ArgTypes... __args)
     {
         __p_.set_exception_at_thread_exit(current_exception());
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
 }
 
 template<class _Rp, class ..._ArgTypes>
@@ -2080,7 +2080,7 @@ packaged_task<void(_ArgTypes...)>::operator()(_ArgTypes... __args)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         __f_(_VSTD::forward<_ArgTypes>(__args)...);
         __p_.set_value();
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -2089,7 +2089,7 @@ packaged_task<void(_ArgTypes...)>::operator()(_ArgTypes... __args)
     {
         __p_.set_exception(current_exception());
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
 }
 
 template<class ..._ArgTypes>
@@ -2103,7 +2103,7 @@ packaged_task<void(_ArgTypes...)>::make_ready_at_thread_exit(_ArgTypes... __args
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         __f_(_VSTD::forward<_ArgTypes>(__args)...);
         __p_.set_value_at_thread_exit();
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -2112,7 +2112,7 @@ packaged_task<void(_ArgTypes...)>::make_ready_at_thread_exit(_ArgTypes... __args
     {
         __p_.set_exception_at_thread_exit(current_exception());
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
 }
 
 template<class ..._ArgTypes>
@@ -2454,4 +2454,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // !_LIBCPP_HAS_NO_THREADS
 
-#endif  // _LIBCPP_FUTURE
+#endif // _LIBCPP_FUTURE

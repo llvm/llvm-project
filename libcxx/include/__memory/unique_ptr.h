@@ -738,7 +738,7 @@ template<class _Tp, class... _Args>
     typename __unique_if<_Tp>::__unique_array_known_bound
     make_unique(_Args&&...) = delete;
 
-#endif  // _LIBCPP_STD_VER > 11
+#endif // _LIBCPP_STD_VER > 11
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS hash;
 
@@ -764,4 +764,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif  // _LIBCPP___MEMORY_UNIQUE_PTR_H
+#endif // _LIBCPP___MEMORY_UNIQUE_PTR_H

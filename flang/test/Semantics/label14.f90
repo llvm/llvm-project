@@ -2,7 +2,7 @@
 ! 11.1.4 - 4 It is permissible to branch to and end-block-stmt only withinh its
 !            Block Construct
 
-! RUN: not %f18 %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s
 ! CHECK: Label '20' is not in scope
 
 subroutine s1

@@ -59,9 +59,6 @@ private:
 
 public:
   ProfileSummaryInfo(const Module &M) : M(&M) { refresh(); }
-  ProfileSummaryInfo(std::unique_ptr<ProfileSummary> PSI)
-      : M(nullptr), Summary(std::move(PSI)) {}
-
   ProfileSummaryInfo(ProfileSummaryInfo &&Arg) = default;
 
   /// If no summary is present, attempt to refresh.

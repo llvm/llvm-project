@@ -189,6 +189,24 @@ shows that ``D`` will be copied back from the device once the OpenMP device
 kernel region ends even though it isn't written to. Finally, at the end of the
 OpenMP data region the entries for ``X`` and ``Y`` are removed from the table.
 
+The information level can be controlled at runtime using an internal
+libomptarget library call ``__tgt_set_info_flag``. This allows for different
+levels of information to be enabled or disabled for certain regions of code.
+Using this requires declaring the function signature as an external function so
+it can be linked with the runtime library.
+
+.. code-block:: c++
+
+    extern "C" void __tgt_set_info_flag(uint32_t);
+
+    extern foo();
+
+    int main() {
+      __tgt_set_info_flag(0x10);
+    #pragma omp target
+      foo();
+    }
+
 .. _libopenmptarget_errors:
 
 Errors:

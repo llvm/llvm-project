@@ -14,6 +14,7 @@
 #include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
+#include "mlir-c/Debug.h"
 #include "mlir-c/Registration.h"
 #include "llvm/ADT/SmallVector.h"
 #include <pybind11/stl.h>
@@ -129,7 +130,7 @@ equivalent to printing the operation that produced it.
 // Utilities.
 //------------------------------------------------------------------------------
 
-// Helper for creating an @classmethod.
+/// Helper for creating an @classmethod.
 template <class Func, typename... Args>
 py::object classmethod(Func f, Args... args) {
   py::object cf = py::cpp_function(f, args...);
@@ -152,6 +153,20 @@ createCustomDialectWrapper(const std::string &dialectNamespace,
 static MlirStringRef toMlirStringRef(const std::string &s) {
   return mlirStringRefCreate(s.data(), s.size());
 }
+
+/// Wrapper for the global LLVM debugging flag.
+struct PyGlobalDebugFlag {
+  static void set(py::object &o, bool enable) { mlirEnableGlobalDebug(enable); }
+
+  static bool get(py::object) { return mlirIsGlobalDebugEnabled(); }
+
+  static void bind(py::module &m) {
+    // Debug flags.
+    py::class_<PyGlobalDebugFlag>(m, "_GlobalDebug")
+        .def_property_static("flag", &PyGlobalDebugFlag::get,
+                             &PyGlobalDebugFlag::set, "LLVM-wide debug flag");
+  }
+};
 
 //------------------------------------------------------------------------------
 // Collections.
@@ -1713,7 +1728,7 @@ private:
 
 void mlir::python::populateIRCore(py::module &m) {
   //----------------------------------------------------------------------------
-  // Mapping of MlirContext
+  // Mapping of MlirContext.
   //----------------------------------------------------------------------------
   py::class_<PyMlirContext>(m, "Context")
       .def(py::init<>(&PyMlirContext::createNewContextForInit))
@@ -1766,6 +1781,10 @@ void mlir::python::populateIRCore(py::module &m) {
           [](PyMlirContext &self, bool value) {
             mlirContextSetAllowUnregisteredDialects(self.get(), value);
           })
+      .def("enable_multithreading",
+           [](PyMlirContext &self, bool enable) {
+             mlirContextEnableMultithreading(self.get(), enable);
+           })
       .def("is_registered_operation",
            [](PyMlirContext &self, std::string &name) {
              return mlirContextIsRegisteredOperation(
@@ -2375,4 +2394,7 @@ void mlir::python::populateIRCore(py::module &m) {
   PyOpResultList::bind(m);
   PyRegionIterator::bind(m);
   PyRegionList::bind(m);
+
+  // Debug bindings.
+  PyGlobalDebugFlag::bind(m);
 }

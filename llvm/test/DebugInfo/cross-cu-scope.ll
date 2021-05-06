@@ -1,6 +1,6 @@
 ; RUN: %llc_dwarf %s -filetype=obj -o %t
 ; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
-; REQUIRES: default_triple
+; REQUIRES: default_triple, object-emission
 
 ; Reduced test case from PR35212. Two DISubprogram belong to a different CU but
 ; share a scope. Both are declarations and end up in the scope's CU. We want to

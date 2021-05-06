@@ -10,6 +10,7 @@
 #include "check-declarations.h"
 #include "compute-offsets.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/characters.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
@@ -189,6 +190,17 @@ ParamValue *DerivedTypeSpec::FindParameter(SourceName target) {
       const_cast<const DerivedTypeSpec *>(this)->FindParameter(target));
 }
 
+// Objects of derived types might be assignment compatible if they are equal
+// with respect to everything other than their instantiated type parameters
+// and their constant instantiated type parameters have the same values.
+bool DerivedTypeSpec::MightBeAssignmentCompatibleWith(
+    const DerivedTypeSpec &that) const {
+  if (!RawEquals(that)) {
+    return false;
+  }
+  return AreTypeParamCompatible(*this, that);
+}
+
 class InstantiateHelper {
 public:
   InstantiateHelper(Scope &scope) : scope_{scope} {}
@@ -200,7 +212,7 @@ private:
   evaluate::FoldingContext &foldingContext() {
     return context().foldingContext();
   }
-  template <typename T> T Fold(T &&expr) {
+  template <typename A> A Fold(A &&expr) {
     return evaluate::Fold(foldingContext(), std::move(expr));
   }
   void InstantiateComponent(const Symbol &);
@@ -365,7 +377,7 @@ void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
       // in PARAMETER structure constructors.
       auto restorer{foldingContext().messages().SetLocation(newSymbol.name())};
       init = IsPointer(newSymbol)
-          ? evaluate::Fold(foldingContext(), std::move(*init))
+          ? Fold(std::move(*init))
           : evaluate::NonPointerInitializationExpr(
                 newSymbol, std::move(*init), foldingContext());
     }

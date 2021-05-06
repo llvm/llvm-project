@@ -29,7 +29,6 @@ class GPUModuleOp;
 } // end namespace gpu
 
 namespace LLVM {
-class LLVMArmSVEDialect;
 class LLVMDialect;
 } // end namespace LLVM
 

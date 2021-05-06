@@ -138,8 +138,8 @@ TEST(Reductions, Character) {
   std::vector<int> shape{2, 3};
   auto array{MakeArray<TypeCategory::Character, 1>(shape,
       std::vector<std::string>{"abc", "def", "ghi", "jkl", "mno", "abc"}, 3)};
-  StaticDescriptor<1> statDesc;
-  Descriptor &res{statDesc.descriptor()};
+  StaticDescriptor<1> statDesc[2];
+  Descriptor &res{statDesc[0].descriptor()};
   RTNAME(MaxvalCharacter)(res, *array, __FILE__, __LINE__);
   EXPECT_EQ(res.rank(), 0);
   EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Character, 1}.raw()));
@@ -202,6 +202,30 @@ TEST(Reductions, Character) {
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(0), 2);
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(1), 3);
   res.Destroy();
+  static const char targetChar[]{"abc"};
+  Descriptor &target{statDesc[1].descriptor()};
+  target.Establish(1, std::strlen(targetChar),
+      const_cast<void *>(static_cast<const void *>(&targetChar)), 0, nullptr,
+      CFI_attribute_pointer);
+  RTNAME(Findloc)
+  (res, *array, target, /*KIND=*/4, __FILE__, __LINE__, nullptr,
+      /*BACK=*/false);
+  EXPECT_EQ(res.rank(), 1);
+  EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Integer, 4}.raw()));
+  EXPECT_EQ(res.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(res.GetDimension(0).Extent(), 2);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(0), 1);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(1), 1);
+  res.Destroy();
+  RTNAME(Findloc)
+  (res, *array, target, /*KIND=*/4, __FILE__, __LINE__, nullptr, /*BACK=*/true);
+  EXPECT_EQ(res.rank(), 1);
+  EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Integer, 4}.raw()));
+  EXPECT_EQ(res.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(res.GetDimension(0).Extent(), 2);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(0), 2);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(1), 3);
+  res.Destroy();
 }
 
 TEST(Reductions, Logical) {
@@ -211,9 +235,10 @@ TEST(Reductions, Logical) {
   ASSERT_EQ(array->ElementBytes(), std::size_t{4});
   EXPECT_EQ(RTNAME(All)(*array, __FILE__, __LINE__), false);
   EXPECT_EQ(RTNAME(Any)(*array, __FILE__, __LINE__), true);
+  EXPECT_EQ(RTNAME(Parity)(*array, __FILE__, __LINE__), false);
   EXPECT_EQ(RTNAME(Count)(*array, __FILE__, __LINE__), 2);
-  StaticDescriptor<2> statDesc;
-  Descriptor &res{statDesc.descriptor()};
+  StaticDescriptor<2> statDesc[2];
+  Descriptor &res{statDesc[0].descriptor()};
   RTNAME(AllDim)(res, *array, /*DIM=*/1, __FILE__, __LINE__);
   EXPECT_EQ(res.rank(), 1);
   EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Logical, 4}.raw()));
@@ -246,6 +271,22 @@ TEST(Reductions, Logical) {
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(0), 1);
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(1), 1);
   res.Destroy();
+  RTNAME(ParityDim)(res, *array, /*DIM=*/1, __FILE__, __LINE__);
+  EXPECT_EQ(res.rank(), 1);
+  EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Logical, 4}.raw()));
+  EXPECT_EQ(res.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(res.GetDimension(0).Extent(), 2);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(0), 0);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(1), 0);
+  res.Destroy();
+  RTNAME(ParityDim)(res, *array, /*DIM=*/2, __FILE__, __LINE__);
+  EXPECT_EQ(res.rank(), 1);
+  EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Logical, 4}.raw()));
+  EXPECT_EQ(res.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(res.GetDimension(0).Extent(), 2);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(0), 1);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(1), 1);
+  res.Destroy();
   RTNAME(CountDim)(res, *array, /*DIM=*/1, /*KIND=*/4, __FILE__, __LINE__);
   EXPECT_EQ(res.rank(), 1);
   EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Integer, 4}.raw()));
@@ -261,5 +302,124 @@ TEST(Reductions, Logical) {
   EXPECT_EQ(res.GetDimension(0).Extent(), 2);
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int64_t>(0), 1);
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int64_t>(1), 1);
+  res.Destroy();
+  bool boolValue{false};
+  Descriptor &target{statDesc[1].descriptor()};
+  target.Establish(TypeCategory::Logical, 1, static_cast<void *>(&boolValue), 0,
+      nullptr, CFI_attribute_pointer);
+  RTNAME(Findloc)
+  (res, *array, target, /*KIND=*/4, __FILE__, __LINE__, nullptr,
+      /*BACK=*/false);
+  EXPECT_EQ(res.rank(), 1);
+  EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Integer, 4}.raw()));
+  EXPECT_EQ(res.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(res.GetDimension(0).Extent(), 2);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(0), 1);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(1), 1);
+  res.Destroy();
+  boolValue = true;
+  RTNAME(Findloc)
+  (res, *array, target, /*KIND=*/4, __FILE__, __LINE__, nullptr, /*BACK=*/true);
+  EXPECT_EQ(res.rank(), 1);
+  EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Integer, 4}.raw()));
+  EXPECT_EQ(res.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(res.GetDimension(0).Extent(), 2);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(0), 2);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(1), 2);
+  res.Destroy();
+}
+
+TEST(Reductions, FindlocNumeric) {
+  std::vector<int> shape{2, 3};
+  auto realArray{MakeArray<TypeCategory::Real, 8>(shape,
+      std::vector<double>{0.0, -0.0, 1.0, 3.14,
+          std::numeric_limits<double>::quiet_NaN(),
+          std::numeric_limits<double>::infinity()})};
+  ASSERT_EQ(realArray->ElementBytes(), sizeof(double));
+  StaticDescriptor<2> statDesc[2];
+  Descriptor &res{statDesc[0].descriptor()};
+  // Find the first zero
+  Descriptor &target{statDesc[1].descriptor()};
+  double value{0.0};
+  target.Establish(TypeCategory::Real, 8, static_cast<void *>(&value), 0,
+      nullptr, CFI_attribute_pointer);
+  RTNAME(Findloc)
+  (res, *realArray, target, 8, __FILE__, __LINE__, nullptr, /*BACK=*/false);
+  EXPECT_EQ(res.rank(), 1);
+  EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Integer, 8}.raw()));
+  EXPECT_EQ(res.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(res.GetDimension(0).UpperBound(), 2);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(0), 1);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(1), 1);
+  res.Destroy();
+  // Find last zero (even though it's negative)
+  RTNAME(Findloc)
+  (res, *realArray, target, 8, __FILE__, __LINE__, nullptr, /*BACK=*/true);
+  EXPECT_EQ(res.rank(), 1);
+  EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Integer, 8}.raw()));
+  EXPECT_EQ(res.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(res.GetDimension(0).UpperBound(), 2);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(0), 2);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(1), 1);
+  res.Destroy();
+  // Find the +Inf
+  value = std::numeric_limits<double>::infinity();
+  RTNAME(Findloc)
+  (res, *realArray, target, 8, __FILE__, __LINE__, nullptr, /*BACK=*/false);
+  EXPECT_EQ(res.rank(), 1);
+  EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Integer, 8}.raw()));
+  EXPECT_EQ(res.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(res.GetDimension(0).UpperBound(), 2);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(0), 2);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(1), 3);
+  res.Destroy();
+  // Ensure that we can't find a NaN
+  value = std::numeric_limits<double>::quiet_NaN();
+  RTNAME(Findloc)
+  (res, *realArray, target, 8, __FILE__, __LINE__, nullptr, /*BACK=*/false);
+  EXPECT_EQ(res.rank(), 1);
+  EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Integer, 8}.raw()));
+  EXPECT_EQ(res.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(res.GetDimension(0).UpperBound(), 2);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(0), 0);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(1), 0);
+  res.Destroy();
+  // Find a value of a distinct type
+  int intValue{1};
+  target.Establish(TypeCategory::Integer, 4, static_cast<void *>(&intValue), 0,
+      nullptr, CFI_attribute_pointer);
+  RTNAME(Findloc)
+  (res, *realArray, target, 8, __FILE__, __LINE__, nullptr, /*BACK=*/false);
+  EXPECT_EQ(res.rank(), 1);
+  EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Integer, 8}.raw()));
+  EXPECT_EQ(res.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(res.GetDimension(0).UpperBound(), 2);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(0), 1);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(1), 2);
+  res.Destroy();
+  // Partial reductions
+  value = 1.0;
+  target.Establish(TypeCategory::Real, 8, static_cast<void *>(&value), 0,
+      nullptr, CFI_attribute_pointer);
+  RTNAME(FindlocDim)
+  (res, *realArray, target, 8, /*DIM=*/1, __FILE__, __LINE__, nullptr,
+      /*BACK=*/false);
+  EXPECT_EQ(res.rank(), 1);
+  EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Integer, 8}.raw()));
+  EXPECT_EQ(res.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(res.GetDimension(0).UpperBound(), 3);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(0), 0);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(1), 1);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(2), 0);
+  res.Destroy();
+  RTNAME(FindlocDim)
+  (res, *realArray, target, 8, /*DIM=*/2, __FILE__, __LINE__, nullptr,
+      /*BACK=*/true);
+  EXPECT_EQ(res.rank(), 1);
+  EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Integer, 8}.raw()));
+  EXPECT_EQ(res.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(res.GetDimension(0).UpperBound(), 2);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(0), 2);
+  EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(1), 0);
   res.Destroy();
 }

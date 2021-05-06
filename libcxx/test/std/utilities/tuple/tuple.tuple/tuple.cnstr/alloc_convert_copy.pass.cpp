@@ -87,6 +87,13 @@ int main(int, char**)
         std::tuple<Implicit> t2 = {std::allocator_arg, std::allocator<int>{}, t1};
         assert(std::get<0>(t2).value == 42);
     }
+    {
+        // Test that we can use a tag derived from allocator_arg_t
+        struct DerivedFromAllocatorArgT : std::allocator_arg_t { };
+        DerivedFromAllocatorArgT derived;
+        std::tuple<long> from(3l);
+        std::tuple<long long> t0(derived, A1<int>(), from);
+    }
 
-  return 0;
+    return 0;
 }

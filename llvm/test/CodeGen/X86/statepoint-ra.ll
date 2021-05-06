@@ -7,15 +7,23 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ;YAML: --- !Missed
 ;YAML: Pass:            regalloc
-;YAML: Name:            SpillReload
+;YAML: Name:            SpillReloadCopies
 ;YAML: Function:        barney
 ;YAML: Args:
 ;YAML:   - NumSpills:       '10'
 ;YAML:   - String:          ' spills '
+;YAML:   - TotalSpillsCost: '7.000000e+00'
+;YAML:   - String:          ' total spills cost '
 ;YAML:   - NumReloads:      '7'
 ;YAML:   - String:          ' reloads '
+;YAML:   - TotalReloadsCost: '3.109004e-15'
+;YAML:   - String:          ' total reloads cost '
 ;YAML:   - NumZeroCostFoldedReloads: '20'
 ;YAML:   - String:          ' zero cost folded reloads '
+;YAML:   - NumVRCopies:     '2'
+;YAML:   - String:          ' virtual registers copies '
+;YAML:   - TotalCopiesCost: '8.882868e-16'
+;YAML:   - String:          ' total copies cost '
 ;YAML:   - String:          generated in function
 
 define void @barney(i8 addrspace(1)* %arg, double %arg1, double %arg2, double %arg3, double %arg4, double %arg5, double %arg6, double %arg7, double %arg8, double %arg9, double %arg10, double %arg11, double %arg12) gc "statepoint-example" personality i32* ()* @widget {

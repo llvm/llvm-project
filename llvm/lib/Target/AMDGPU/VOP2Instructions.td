@@ -931,8 +931,6 @@ class VOP2_DPP8<bits<6> op, VOP2_Pseudo ps,
   let Inst{30-25} = op;
   let Inst{31}    = 0x0;
 
-  let AssemblerPredicate = HasDPP8;
-  let SubtargetPredicate = HasDPP8;
   let OtherPredicates = ps.OtherPredicates;
 }
 

@@ -579,8 +579,9 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
     OpBuilder<(ins "ValueRange":$lowerBounds, "ValueRange":$upperBounds,
       "ValueRange":$steps, "ValueRange":$inputs, "ValueRange":$outputs,
       "ArrayAttr":$iteratorTypes,
-      CArg<"function_ref<void (OpBuilder &, Location, ValueRange)>",
-           "nullptr">:$bodyBuilderFn)>,
+      CArg<"function_ref<void (OpBuilder &, Location, /*ivs=*/ValueRange,"
+        "/*inputs=*/ValueRange, /*outputs=*/ValueRange)>",
+        "nullptr">:$bodyBuilderFn)>,
   ];
 
   let extraClassDeclaration = [{
@@ -588,7 +589,13 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
     unsigned getNumControlOperands() { return 3 * getNumLoops(); }
 
     ValueRange getInductionVars() {
-      return getBody()->getArguments();
+      return getBody()->getArguments().take_front(getNumLoops());
+    }
+    ValueRange getRegionInputArgs() {
+      return getBody()->getArguments().slice(getNumLoops(), inputs().size());
+    }
+    ValueRange getRegionOutputArgs() {
+      return getBody()->getArguments().take_back(outputs().size());
     }
 
 

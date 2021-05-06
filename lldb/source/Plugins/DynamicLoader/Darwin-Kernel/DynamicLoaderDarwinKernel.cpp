@@ -1093,16 +1093,16 @@ bool DynamicLoaderDarwinKernel::ReadKextSummaryHeader() {
     uint8_t buf[24];
     DataExtractor data(buf, sizeof(buf), byte_order, addr_size);
     const size_t count = 4 * sizeof(uint32_t) + addr_size;
-    const bool prefer_file_cache = false;
+    const bool force_live_memory = true;
     if (m_process->GetTarget().ReadPointerFromMemory(
-            m_kext_summary_header_ptr_addr, prefer_file_cache, error,
-            m_kext_summary_header_addr)) {
+            m_kext_summary_header_ptr_addr, error,
+            m_kext_summary_header_addr, force_live_memory)) {
       // We got a valid address for our kext summary header and make sure it
       // isn't NULL
       if (m_kext_summary_header_addr.IsValid() &&
           m_kext_summary_header_addr.GetFileAddress() != 0) {
         const size_t bytes_read = m_process->GetTarget().ReadMemory(
-            m_kext_summary_header_addr, prefer_file_cache, buf, count, error);
+            m_kext_summary_header_addr, buf, count, error, force_live_memory);
         if (bytes_read == count) {
           lldb::offset_t offset = 0;
           m_kext_summary_header.version = data.GetU32(&offset);
@@ -1373,10 +1373,9 @@ uint32_t DynamicLoaderDarwinKernel::ReadKextSummaries(
   DataBufferHeap data(count, 0);
   Status error;
 
-  const bool prefer_file_cache = false;
+  const bool force_live_memory = true;
   const size_t bytes_read = m_process->GetTarget().ReadMemory(
-      kext_summary_addr, prefer_file_cache, data.GetBytes(), data.GetByteSize(),
-      error);
+      kext_summary_addr, data.GetBytes(), data.GetByteSize(), error, force_live_memory);
   if (bytes_read == count) {
 
     DataExtractor extractor(data.GetBytes(), data.GetByteSize(), endian,

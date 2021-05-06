@@ -8,6 +8,7 @@
 
 #include "mlir/Support/DebugCounter.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
 

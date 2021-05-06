@@ -281,11 +281,8 @@ def : Pat<(fma (fneg FPR64:$rs1), FPR64:$rs2, FPR64:$rs3),
 def : Pat<(fma (fneg FPR64:$rs1), FPR64:$rs2, (fneg FPR64:$rs3)),
           (FNMADD_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
 
-// The RISC-V 2.2 user-level ISA spec defines fmin and fmax as returning the
-// canonical NaN when giving a signaling NaN. This doesn't match the LLVM
-// behaviour (see https://bugs.llvm.org/show_bug.cgi?id=27363). However, the
-// draft 2.3 ISA spec changes the definition of fmin and fmax in a way that
-// matches LLVM's fminnum and fmaxnum
+// The ratified 20191213 ISA spec defines fmin and fmax in a way that matches
+// LLVM's fminnum and fmaxnum.
 // <https://github.com/riscv/riscv-isa-manual/commit/cd20cee7efd9bac7c5aa127ec3b451749d2b3cce>.
 def : PatFpr64Fpr64<fminnum, FMIN_D>;
 def : PatFpr64Fpr64<fmaxnum, FMAX_D>;

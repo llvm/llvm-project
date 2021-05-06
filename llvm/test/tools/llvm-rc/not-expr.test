@@ -1,4 +1,4 @@
-; RUN: llvm-rc /FO %t -- %p/Inputs/not-expr.rc
+; RUN: llvm-rc -no-preprocess /FO %t -- %p/Inputs/not-expr.rc
 ; RUN: llvm-readobj %t | FileCheck %s --check-prefix=NOTEXPR
 
 ; NOTEXPR: Resource type (int): DIALOG (ID 5)

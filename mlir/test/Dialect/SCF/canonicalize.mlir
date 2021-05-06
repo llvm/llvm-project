@@ -580,3 +580,33 @@ func @fold_away_iter_and_result_with_no_use(%arg0 : i32,
   // CHECK: return %[[FOR_RES]] : i32
   return %0#0 : i32
 }
+
+// -----
+
+func private @do(%arg0: tensor<?x?xf32>) -> tensor<?x?xf32>
+
+// CHECK-LABEL: matmul_on_tensors
+//  CHECK-SAME:   %[[T0:[0-9a-z]*]]: tensor<32x1024xf32>
+//  CHECK-SAME:   %[[T1:[0-9a-z]*]]: tensor<1024x1024xf32>
+func @matmul_on_tensors(%t0: tensor<32x1024xf32>, %t1: tensor<1024x1024xf32>) -> tensor<1024x1024xf32> {
+  %c0 = constant 0 : index
+  %c32 = constant 32 : index
+  %c1024 = constant 1024 : index
+//   CHECK-NOT: tensor.cast
+//       CHECK: %[[FOR_RES:.*]] = scf.for {{.*}} iter_args(%[[ITER_T0:.*]] = %[[T0]]) -> (tensor<32x1024xf32>) {
+//       CHECK:   %[[CAST:.*]] = tensor.cast %[[ITER_T0]] : tensor<32x1024xf32> to tensor<?x?xf32>
+//       CHECK:   %[[DONE:.*]] = call @do(%[[CAST]]) : (tensor<?x?xf32>) -> tensor<?x?xf32>
+//       CHECK:   %[[UNCAST:.*]] = tensor.cast %[[DONE]] : tensor<?x?xf32> to tensor<32x1024xf32>
+//       CHECK:   scf.yield %[[UNCAST]] : tensor<32x1024xf32>
+  %0 = tensor.cast %t0 : tensor<32x1024xf32> to tensor<?x?xf32>
+  %1 = scf.for %i = %c0 to %c1024 step %c32 iter_args(%iter_t0 = %0) -> (tensor<?x?xf32>) {
+    %2 = call @do(%iter_t0) : (tensor<?x?xf32>) -> tensor<?x?xf32>
+    scf.yield %2 : tensor<?x?xf32>
+  }
+//   CHECK-NOT: tensor.cast
+//       CHECK: %[[RES:.*]] = subtensor_insert %[[FOR_RES]] into %[[T1]][0, 0] [32, 1024] [1, 1] : tensor<32x1024xf32> into tensor<1024x1024xf32>
+//       CHECK: return %[[RES]] : tensor<1024x1024xf32>
+  %2 = tensor.cast %1 : tensor<?x?xf32> to tensor<32x1024xf32>
+  %res = subtensor_insert %2 into %t1[0, 0] [32, 1024] [1, 1] : tensor<32x1024xf32> into tensor<1024x1024xf32>
+  return %res : tensor<1024x1024xf32>
+}

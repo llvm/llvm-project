@@ -634,4 +634,4 @@ bool operator!= (const NonThrowingIterator<T>& a, const NonThrowingIterator<T>& 
 
 #undef DELETE_FUNCTION
 
-#endif  // ITERATORS_H
+#endif // ITERATORS_H

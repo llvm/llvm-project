@@ -458,4 +458,4 @@ public:
     TEST_CONSTEXPR_CXX20 friend bool operator!=(explicit_allocator x, explicit_allocator y) {return !(x == y);}
 };
 
-#endif  // MIN_ALLOCATOR_H
+#endif // MIN_ALLOCATOR_H

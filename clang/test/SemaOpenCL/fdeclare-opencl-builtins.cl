@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -DNO_HEADER
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header -cl-ext=-cl_khr_fp64 -DNO_FP64
 
 // Test the -fdeclare-opencl-builtins option.  This is not a completeness
 // test, so it should not test for all builtins defined by OpenCL.  Instead
@@ -121,16 +122,31 @@ void test_atomic_fetch(volatile __generic atomic_int *a_int,
 }
 #endif
 
+// Test old atomic overloaded with generic address space in C++ for OpenCL.
+#if __OPENCL_C_VERSION__ >= 200
+void test_legacy_atomics_cpp(__generic volatile unsigned int *a) {
+  atomic_add(a, 1);
+#if !defined(__cplusplus)
+  // expected-error@-2{{no matching function for call to 'atomic_add'}}
+  // expected-note@-3 4 {{candidate function not viable}}
+#endif
+}
+#endif
+
 kernel void basic_conversion() {
-  double d;
   float f;
   char2 c2;
   long2 l2;
   float4 f4;
   int4 i4;
 
+#ifdef NO_FP64
+  (void)convert_double_rtp(f);
+  // expected-error@-1{{implicit declaration of function 'convert_double_rtp' is invalid in OpenCL}}
+#else
+  double d;
   f = convert_float(d);
-  d = convert_double_rtp(f);
+#endif
   l2 = convert_long2_rtz(c2);
   i4 = convert_int4_sat(f4);
 }
@@ -271,3 +287,13 @@ kernel void basic_work_item() {
 // expected-error@-2{{implicit declaration of function 'get_enqueued_local_size' is invalid in OpenCL}}
 #endif
 }
+
+#ifdef NO_FP64
+void test_extension_types(char2 c2) {
+  // We should see 6 candidates for float and half types, and none for double types.
+  int i = isnan(c2);
+  // expected-error@-1{{no matching function for call to 'isnan'}}
+  // expected-note@-2 6 {{candidate function not viable: no known conversion from '__private char2' (vector of 2 'char' values) to 'float}}
+  // expected-note@-3 6 {{candidate function not viable: no known conversion from '__private char2' (vector of 2 'char' values) to 'half}}
+}
+#endif

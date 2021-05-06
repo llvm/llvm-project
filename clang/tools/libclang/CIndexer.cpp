@@ -163,7 +163,8 @@ LibclangInvocationReporter::LibclangInvocationReporter(
   TempPath = Path;
   llvm::sys::path::append(TempPath, "libclang-%%%%%%%%%%%%");
   int FD;
-  if (llvm::sys::fs::createUniqueFile(TempPath, FD, TempPath))
+  if (llvm::sys::fs::createUniqueFile(TempPath, FD, TempPath,
+                                      llvm::sys::fs::OF_Text))
     return;
   File = std::string(TempPath.begin(), TempPath.end());
   llvm::raw_fd_ostream OS(FD, /*ShouldClose=*/true);

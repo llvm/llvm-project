@@ -382,7 +382,7 @@ public:
   /// Returns a suitable insert point after \p I, that dominates \p
   /// MustDominate. Skips instructions inserted by the expander.
   BasicBlock::iterator findInsertPointAfter(Instruction *I,
-                                            Instruction *MustDominate);
+                                            Instruction *MustDominate) const;
 
 private:
   LLVMContext &getContext() const { return SE.getContext(); }
@@ -414,6 +414,9 @@ private:
   /// outer loop when the opportunity is there and it is safe.
   Value *InsertBinop(Instruction::BinaryOps Opcode, Value *LHS, Value *RHS,
                      SCEV::NoWrapFlags Flags, bool IsSafeToHoist);
+
+  /// We want to cast \p V. What would be the best place for such a cast?
+  BasicBlock::iterator GetOptimalInsertionPointForCastOf(Value *V) const;
 
   /// Arrange for there to be a cast of V to Ty at IP, reusing an existing
   /// cast if a suitable one exists, moving an existing cast if a suitable one

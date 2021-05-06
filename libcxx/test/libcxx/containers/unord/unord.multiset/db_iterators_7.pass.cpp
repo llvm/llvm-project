@@ -23,8 +23,10 @@
 int main(int, char**) {
     typedef int T;
     typedef std::unordered_multiset<T> C;
-    C c(1);
+    C c;
+    c.insert(42);
     C::iterator i = c.begin();
+    assert(i != c.end());
     ++i;
     assert(i == c.end());
     ++i;

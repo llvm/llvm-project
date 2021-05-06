@@ -746,6 +746,21 @@ static MDNode *findNamedMetadataNode(MDNode *LoopMD, StringRef Name) {
   return nullptr;
 }
 
+static Optional<const MDOperand *> findNamedMetadataArg(MDNode *LoopID,
+                                                        StringRef Name) {
+  MDNode *MD = findNamedMetadataNode(LoopID, Name);
+  if (!MD)
+    return None;
+  switch (MD->getNumOperands()) {
+  case 1:
+    return nullptr;
+  case 2:
+    return &MD->getOperand(1);
+  default:
+    llvm_unreachable("loop metadata has 0 or 1 operand");
+  }
+}
+
 Optional<Metadata *> polly::findMetadataOperand(MDNode *LoopMD,
                                                 StringRef Name) {
   MDNode *MD = findNamedMetadataNode(LoopMD, Name);
@@ -761,8 +776,47 @@ Optional<Metadata *> polly::findMetadataOperand(MDNode *LoopMD,
   }
 }
 
+static Optional<bool> getOptionalBoolLoopAttribute(MDNode *LoopID,
+                                                   StringRef Name) {
+  MDNode *MD = findNamedMetadataNode(LoopID, Name);
+  if (!MD)
+    return None;
+  switch (MD->getNumOperands()) {
+  case 1:
+    return true;
+  case 2:
+    if (ConstantInt *IntMD =
+            mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get()))
+      return IntMD->getZExtValue();
+    return true;
+  }
+  llvm_unreachable("unexpected number of options");
+}
+
+bool polly::getBooleanLoopAttribute(MDNode *LoopID, StringRef Name) {
+  return getOptionalBoolLoopAttribute(LoopID, Name).getValueOr(false);
+}
+
+llvm::Optional<int> polly::getOptionalIntLoopAttribute(MDNode *LoopID,
+                                                       StringRef Name) {
+  const MDOperand *AttrMD =
+      findNamedMetadataArg(LoopID, Name).getValueOr(nullptr);
+  if (!AttrMD)
+    return None;
+
+  ConstantInt *IntMD = mdconst::extract_or_null<ConstantInt>(AttrMD->get());
+  if (!IntMD)
+    return None;
+
+  return IntMD->getSExtValue();
+}
+
 bool polly::hasDisableAllTransformsHint(Loop *L) {
   return llvm::hasDisableAllTransformsHint(L);
+}
+
+bool polly::hasDisableAllTransformsHint(llvm::MDNode *LoopID) {
+  return getBooleanLoopAttribute(LoopID, "llvm.loop.disable_nonforced");
 }
 
 isl::id polly::getIslLoopAttr(isl::ctx Ctx, BandAttr *Attr) {

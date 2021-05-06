@@ -831,7 +831,10 @@ updateIDTMetaData(Instruction &Inst,
 ///
 /// \param F  Caller function.
 /// \param Candidate  ICP and inline candidate.
-/// \param Sum  Sum of target counts for indirect call.
+/// \param SumOrigin  Original sum of target counts for indirect call before
+///                   promoting given candidate.
+/// \param Sum        Prorated sum of remaining target counts for indirect call
+///                   after promoting given candidate.
 /// \param InlinedCallSite  Output vector for new call sites exposed after
 /// inlining.
 bool SampleProfileLoader::tryPromoteAndInlineCandidate(
@@ -866,13 +869,18 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
         CI, R->getValue(), Candidate.CallsiteCount, Sum, false, ORE);
     if (DI) {
       Sum -= Candidate.CallsiteCount;
-      // Prorate the indirect callsite distribution.
+      // Do not prorate the indirect callsite distribution since the original
+      // distribution will be used to scale down non-promoted profile target
+      // counts later. By doing this we lose track of the real callsite count
+      // for the leftover indirect callsite as a trade off for accurate call
+      // target counts.
+      // TODO: Ideally we would have two separate factors, one for call site
+      // counts and one is used to prorate call target counts.
       // Do not update the promoted direct callsite distribution at this
-      // point since the original distribution combined with the callee
-      // profile will be used to prorate callsites from the callee if
-      // inlined. Once not inlined, the direct callsite distribution should
-      // be prorated so that the it will reflect the real callsite counts.
-      setProbeDistributionFactor(CI, static_cast<float>(Sum) / SumOrigin);
+      // point since the original distribution combined with the callee profile
+      // will be used to prorate callsites from the callee if inlined. Once not
+      // inlined, the direct callsite distribution should be prorated so that
+      // the it will reflect the real callsite counts.
       Candidate.CallInstr = DI;
       if (isa<CallInst>(DI) || isa<InvokeInst>(DI)) {
         bool Inlined = tryInlineCandidate(Candidate, InlinedCallSite);

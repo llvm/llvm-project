@@ -136,7 +136,9 @@ Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty, const DataLayout &
 /// ConstantFoldLoadThroughGEPConstantExpr - Given a constant and a
 /// getelementptr constantexpr, return the constant value being addressed by the
 /// constant expression, or null if something is funny and we can't decide.
-Constant *ConstantFoldLoadThroughGEPConstantExpr(Constant *C, ConstantExpr *CE);
+Constant *ConstantFoldLoadThroughGEPConstantExpr(Constant *C, ConstantExpr *CE,
+                                                 Type *Ty,
+                                                 const DataLayout &DL);
 
 /// ConstantFoldLoadThroughGEPIndices - Given a constant and getelementptr
 /// indices (with an *implied* zero pointer index that is not in the list),

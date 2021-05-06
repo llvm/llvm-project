@@ -195,30 +195,36 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocLikeOp> {
   }
 };
 
-/// Fold alloc operations with no uses. Alloc has side effects on the heap,
-/// but can still be deleted if it has zero uses.
-struct SimplifyDeadAlloc : public OpRewritePattern<AllocOp> {
-  using OpRewritePattern<AllocOp>::OpRewritePattern;
+/// Fold alloc operations with no users or only store and dealloc uses.
+template <typename T>
+struct SimplifyDeadAlloc : public OpRewritePattern<T> {
+  using OpRewritePattern<T>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(AllocOp alloc,
+  LogicalResult matchAndRewrite(T alloc,
                                 PatternRewriter &rewriter) const override {
-    if (alloc.use_empty()) {
-      rewriter.eraseOp(alloc);
-      return success();
-    }
-    return failure();
+    if (llvm::any_of(alloc->getUsers(), [](Operation *op) {
+          return !isa<StoreOp, DeallocOp>(op);
+        }))
+      return failure();
+
+    for (Operation *user : llvm::make_early_inc_range(alloc->getUsers()))
+      rewriter.eraseOp(user);
+
+    rewriter.eraseOp(alloc);
+    return success();
   }
 };
 } // end anonymous namespace.
 
 void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
-  results.add<SimplifyAllocConst<AllocOp>, SimplifyDeadAlloc>(context);
+  results.add<SimplifyAllocConst<AllocOp>, SimplifyDeadAlloc<AllocOp>>(context);
 }
 
 void AllocaOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<SimplifyAllocConst<AllocaOp>>(context);
+  results.add<SimplifyAllocConst<AllocaOp>, SimplifyDeadAlloc<AllocaOp>>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -537,40 +543,11 @@ OpFoldResult CloneOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 // DeallocOp
 //===----------------------------------------------------------------------===//
-namespace {
-/// Fold Dealloc operations that are deallocating an AllocOp that is only used
-/// by other Dealloc operations.
-struct SimplifyDeadDealloc : public OpRewritePattern<DeallocOp> {
-  using OpRewritePattern<DeallocOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(DeallocOp dealloc,
-                                PatternRewriter &rewriter) const override {
-    // Check that the memref operand's defining operation is an AllocOp.
-    Value memref = dealloc.memref();
-    if (!isa_and_nonnull<AllocOp>(memref.getDefiningOp()))
-      return failure();
-
-    // Check that all of the uses of the AllocOp are other DeallocOps.
-    for (auto *user : memref.getUsers())
-      if (!isa<DeallocOp>(user))
-        return failure();
-
-    // Erase the dealloc operation.
-    rewriter.eraseOp(dealloc);
-    return success();
-  }
-};
-} // end anonymous namespace.
 
 static LogicalResult verify(DeallocOp op) {
   if (!op.memref().getType().isa<MemRefType>())
     return op.emitOpError("operand must be a memref");
   return success();
-}
-
-void DeallocOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                            MLIRContext *context) {
-  results.add<SimplifyDeadDealloc>(context);
 }
 
 LogicalResult DeallocOp::fold(ArrayRef<Attribute> cstOperands,

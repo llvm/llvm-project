@@ -23,11 +23,11 @@ private:
   using Func = T (*)(T, T, T);
   using FPBits = __llvm_libc::fputil::FPBits<T>;
   using UIntType = typename FPBits::UIntType;
-  const T nan = __llvm_libc::fputil::FPBits<T>::buildNaN(1);
-  const T inf = __llvm_libc::fputil::FPBits<T>::inf();
-  const T negInf = __llvm_libc::fputil::FPBits<T>::negInf();
-  const T zero = __llvm_libc::fputil::FPBits<T>::zero();
-  const T negZero = __llvm_libc::fputil::FPBits<T>::negZero();
+  const T nan = T(__llvm_libc::fputil::FPBits<T>::buildNaN(1));
+  const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
+  const T negInf = T(__llvm_libc::fputil::FPBits<T>::negInf());
+  const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
+  const T negZero = T(__llvm_libc::fputil::FPBits<T>::negZero());
 
   UIntType getRandomBitPattern() {
     UIntType bits{0};
@@ -50,16 +50,16 @@ public:
     EXPECT_FP_EQ(func(inf, negInf, nan), nan);
 
     // Test underflow rounding up.
-    EXPECT_FP_EQ(func(T(0.5), FPBits(FPBits::minSubnormal),
-                      FPBits(FPBits::minSubnormal)),
-                 FPBits(UIntType(2)));
+    EXPECT_FP_EQ(func(T(0.5), T(FPBits(FPBits::minSubnormal)),
+                      T(FPBits(FPBits::minSubnormal))),
+                 T(FPBits(UIntType(2))));
     // Test underflow rounding down.
-    FPBits v(FPBits::minNormal + UIntType(1));
+    T v = T(FPBits(FPBits::minNormal + UIntType(1)));
     EXPECT_FP_EQ(
-        func(T(1) / T(FPBits::minNormal << 1), v, FPBits(FPBits::minNormal)),
+        func(T(1) / T(FPBits::minNormal << 1), v, T(FPBits(FPBits::minNormal))),
         v);
     // Test overflow.
-    FPBits z(FPBits::maxNormal);
+    T z = T(FPBits(FPBits::maxNormal));
     EXPECT_FP_EQ(func(T(1.75), z, -z), T(0.75) * z);
   }
 
@@ -70,7 +70,8 @@ public:
     for (UIntType v = FPBits::minSubnormal, w = FPBits::maxSubnormal;
          v <= FPBits::maxSubnormal && w >= FPBits::minSubnormal;
          v += step, w -= step) {
-      T x = FPBits(getRandomBitPattern()), y = FPBits(v), z = FPBits(w);
+      T x = T(FPBits(getRandomBitPattern())), y = T(FPBits(v)),
+        z = T(FPBits(w));
       T result = func(x, y, z);
       mpfr::TernaryInput<T> input{x, y, z};
       ASSERT_MPFR_MATCH(mpfr::Operation::Fma, input, result, 0.5);
@@ -83,7 +84,8 @@ public:
     for (UIntType v = FPBits::minNormal, w = FPBits::maxNormal;
          v <= FPBits::maxNormal && w >= FPBits::minNormal;
          v += step, w -= step) {
-      T x = FPBits(v), y = FPBits(w), z = FPBits(getRandomBitPattern());
+      T x = T(FPBits(v)), y = T(FPBits(w)),
+        z = T(FPBits(getRandomBitPattern()));
       T result = func(x, y, z);
       mpfr::TernaryInput<T> input{x, y, z};
       ASSERT_MPFR_MATCH(mpfr::Operation::Fma, input, result, 0.5);

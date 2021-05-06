@@ -2,9 +2,7 @@
 // REQUIRES: riscv-registered-target
 // RUN: %clang_cc1 -triple riscv32 -target-feature +experimental-v -disable-O0-optnone -emit-llvm %s -o - | opt -S -mem2reg | FileCheck --check-prefix=CHECK-RV32 %s
 // RUN: %clang_cc1 -triple riscv64 -target-feature +experimental-v -disable-O0-optnone -emit-llvm %s -o - | opt -S -mem2reg | FileCheck --check-prefix=CHECK-RV64 %s
-// RUN: %clang_cc1 -triple riscv64 -target-feature +m -target-feature +experimental-v -Werror -Wall -o - %s -S >/dev/null 2>&1 | FileCheck --check-prefix=ASM --allow-empty %s
 
-// ASM-NOT: warning
 #include <riscv_vector.h>
 
 // CHECK-RV32-LABEL: @test_vasub_vv_i8mf8(

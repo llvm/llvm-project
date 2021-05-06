@@ -346,6 +346,34 @@ without using static initializers, do this manually:
 
 In C++ files, declare these as ``extern "C"``.
 
+Using the profiling runtime without a filesystem
+------------------------------------------------
+
+The profiling runtime also supports freestanding environments that lack a
+filesystem. The runtime ships as a static archive that's structured to make
+dependencies on a hosted environment optional, depending on what features
+the client application uses.
+
+The first step is to export ``__llvm_profile_runtime``, as above, to disable
+the default static initializers. Instead of calling the ``*_file()`` APIs
+described above, use the following to save the profile directly to a buffer
+under your control:
+
+* Forward-declare ``uint64_t __llvm_profile_get_size_for_buffer(void)`` and
+  call it to determine the size of the profile. You'll need to allocate a
+  buffer of this size.
+
+* Forward-declare ``int __llvm_profile_write_buffer(char *Buffer)`` and call it
+  to copy the current counters to ``Buffer``, which is expected to already be
+  allocated and big enough for the profile.
+
+* Optionally, forward-declare ``void __llvm_profile_reset_counters(void)`` and
+  call it to reset the counters before entering a specific section to be
+  profiled. This is only useful if there is some setup that should be excluded
+  from the profile.
+
+In C++ files, declare these as ``extern "C"``.
+
 Collecting coverage reports for the llvm project
 ================================================
 

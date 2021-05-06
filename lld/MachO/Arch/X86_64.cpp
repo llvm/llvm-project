@@ -51,7 +51,7 @@ const RelocAttrs &X86_64::getRelocAttrs(uint8_t type) const {
       {"BRANCH", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
       {"GOT_LOAD", B(PCREL) | B(EXTERN) | B(GOT) | B(LOAD) | B(BYTE4)},
       {"GOT", B(PCREL) | B(EXTERN) | B(GOT) | B(POINTER) | B(BYTE4)},
-      {"SUBTRACTOR", B(SUBTRAHEND) | B(BYTE4) | B(BYTE8)},
+      {"SUBTRACTOR", B(SUBTRAHEND) | B(EXTERN) | B(BYTE4) | B(BYTE8)},
       {"SIGNED_1", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
       {"SIGNED_2", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
       {"SIGNED_4", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
@@ -94,7 +94,6 @@ int64_t X86_64::getEmbeddedAddend(MemoryBufferRef mb, uint64_t offset,
 
 void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
                          uint64_t relocVA) const {
-  value += r.addend;
   if (r.pcrel) {
     uint64_t pc = relocVA + 4 + pcrelOffset(r.type);
     value -= pc;

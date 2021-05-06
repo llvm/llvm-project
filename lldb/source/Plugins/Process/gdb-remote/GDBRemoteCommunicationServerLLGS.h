@@ -78,6 +78,10 @@ public:
 
   void DidExec(NativeProcessProtocol *process) override;
 
+  void
+  NewSubprocess(NativeProcessProtocol *parent_process,
+                std::unique_ptr<NativeProcessProtocol> child_process) override;
+
   Status InitializeConnection(std::unique_ptr<Connection> connection);
 
 protected:
@@ -89,7 +93,8 @@ protected:
   NativeProcessProtocol *m_current_process;
   NativeProcessProtocol *m_continue_process;
   std::recursive_mutex m_debugged_process_mutex;
-  std::unique_ptr<NativeProcessProtocol> m_debugged_process_up;
+  std::unordered_map<lldb::pid_t, std::unique_ptr<NativeProcessProtocol>>
+      m_debugged_processes;
 
   Communication m_stdio_communication;
   MainLoop::ReadHandleUP m_stdio_handle_up;
@@ -102,6 +107,8 @@ protected:
   bool m_handshake_completed = false;
   bool m_thread_suffix_supported = false;
   bool m_list_threads_in_stop_reply = false;
+
+  NativeProcessProtocol::Extension m_extensions_supported = {};
 
   PacketResult SendONotification(const char *buffer, uint32_t len);
 
@@ -263,6 +270,9 @@ private:
   // debugged and rejects pid values that do no match that inferior.
   llvm::Expected<lldb::tid_t> ReadTid(StringExtractorGDBRemote &packet,
                                       bool allow_all, lldb::pid_t default_pid);
+
+  // Call SetEnabledExtensions() with appropriate flags on the process.
+  void SetEnabledExtensions(NativeProcessProtocol &process);
 
   // For GDBRemoteCommunicationServerLLGS only
   GDBRemoteCommunicationServerLLGS(const GDBRemoteCommunicationServerLLGS &) =

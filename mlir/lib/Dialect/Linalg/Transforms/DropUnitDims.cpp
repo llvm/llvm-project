@@ -145,6 +145,31 @@ static ArrayAttr replaceUnitDims(DenseSet<unsigned> &unitDims,
                             })));
 }
 
+/// Update the index accesses of linalg operations having index semantics.
+template <typename GenericOpTy>
+static void replaceUnitDimIndexOps(GenericOpTy op,
+                                   const DenseSet<unsigned> &unitDims,
+                                   PatternRewriter &rewriter) {
+  assert(op->getNumRegions() == 1 && op->getRegion(0).getBlocks().size() == 1 &&
+         "expected generic operation to have one block.");
+  Block &block = op->getRegion(0).front();
+
+  for (IndexOp indexOp : llvm::make_early_inc_range(block.getOps<IndexOp>())) {
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(indexOp);
+    if (unitDims.count(indexOp.dim()) != 0) {
+      rewriter.replaceOpWithNewOp<ConstantIndexOp>(indexOp, 0);
+    } else {
+      // Update the dimension of the index operation if needed.
+      unsigned droppedDims = llvm::count_if(
+          unitDims, [&](unsigned dim) { return dim < indexOp.dim(); });
+      if (droppedDims != 0)
+        rewriter.replaceOpWithNewOp<IndexOp>(indexOp,
+                                             indexOp.dim() - droppedDims);
+    }
+  }
+}
+
 /// Modify the region of indexed generic op to drop arguments corresponding to
 /// loops that are unit trip count.
 template <typename OpTy>
@@ -177,10 +202,6 @@ struct FoldUnitDimLoops : public OpRewritePattern<GenericOpTy> {
   using OpRewritePattern<GenericOpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(GenericOpTy op,
                                 PatternRewriter &rewriter) const override {
-    // TODO: remove once index ops are supported.
-    if (op.hasIndexSemantics())
-      return failure();
-
     SmallVector<AffineMap, 4> indexingMaps = op.getIndexingMaps();
     if (indexingMaps.empty())
       return failure();
@@ -253,6 +274,7 @@ struct FoldUnitDimLoops : public OpRewritePattern<GenericOpTy> {
     op.indexing_mapsAttr(newIndexingMapAttr);
     op.iterator_typesAttr(ArrayAttr::get(context, newIteratorTypes));
     (void)replaceBlockArgForUnitDimLoops(op, unitDims, rewriter);
+    replaceUnitDimIndexOps(op, unitDims, rewriter);
     rewriter.finalizeRootUpdate(op);
     return success();
   }
@@ -325,10 +347,6 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOpTy> {
   using OpRewritePattern<GenericOpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(GenericOpTy op,
                                 PatternRewriter &rewriter) const override {
-    // TODO: remove once index ops are supported.
-    if (op.hasIndexSemantics())
-      return failure();
-
     if (!op.hasTensorSemantics())
       return failure();
 
@@ -500,7 +518,16 @@ struct FoldReshapeOpWithUnitExtent : OpRewritePattern<TensorReshapeOp> {
       } else {
         return failure();
       }
+
       foldedDim++;
+      // If inner most dims are folded there shouldn't be any leading 1 dims.
+      // otherwise these dims are not mapped and will lead into an illegal
+      // reshape.
+      if (expandedDim == expandedShape.size()) {
+        if (foldedDim < foldedShape.size() && foldedShape[foldedDim] == 1) {
+          return failure();
+        }
+      }
     }
     if (expandedDim != expandedShape.size())
       return failure();

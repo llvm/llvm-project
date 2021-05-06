@@ -490,7 +490,7 @@ static T parseSymbol(StringRef inputStr, MLIRContext *context,
       inputStr, /*BufferName=*/"<mlir_parser_buffer>",
       /*RequiresNullTerminator=*/false);
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
-  ParserState state(sourceMgr, context, symbolState);
+  ParserState state(sourceMgr, context, symbolState, /*asmState=*/nullptr);
   Parser parser(state);
 
   Token startTok = parser.getToken();

@@ -66,3 +66,8 @@ extern "C" void mlirExecutionEngineRegisterSymbol(MlirExecutionEngine jit,
     return symbolMap;
   });
 }
+
+extern "C" void mlirExecutionEngineDumpToObjectFile(MlirExecutionEngine jit,
+                                                    MlirStringRef name) {
+  unwrap(jit)->dumpToObjectFile(unwrap(name));
+}

@@ -254,4 +254,4 @@ using::wcstoumax;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_CINTTYPES
+#endif // _LIBCPP_CINTTYPES

@@ -102,7 +102,7 @@ template <typename T> union FPBits {
 
   FPBits() : integer(0) {}
 
-  operator T() { return val; }
+  explicit operator T() { return val; }
 
   UIntType uintval() const { return integer; }
 
@@ -143,7 +143,7 @@ template <typename T> union FPBits {
   static T buildNaN(UIntType v) {
     FPBits<T> bits = inf();
     bits.encoding.mantissa = v;
-    return bits;
+    return T(bits);
   }
 };
 

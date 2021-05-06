@@ -1043,15 +1043,18 @@ const SCEV *SCEVAddRecExpr::evaluateAtIteration(const SCEV *It,
 //                    SCEV Expression folder implementations
 //===----------------------------------------------------------------------===//
 
-const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty,
-                                             unsigned Depth) {
-  assert(Ty->isIntegerTy() && "Target type must be an integer type!");
-  assert(Depth <= 1 && "getPtrToIntExpr() should self-recurse at most once.");
+const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op,
+                                                     unsigned Depth) {
+  assert(Depth <= 1 &&
+         "getLosslessPtrToIntExpr() should self-recurse at most once.");
 
   // We could be called with an integer-typed operands during SCEV rewrites.
   // Since the operand is an integer already, just perform zext/trunc/self cast.
   if (!Op->getType()->isPointerTy())
-    return getTruncateOrZeroExtend(Op, Ty);
+    return Op;
+
+  assert(!getDataLayout().isNonIntegralPointerType(Op->getType()) &&
+         "Source pointer type must be integral for ptrtoint!");
 
   // What would be an ID for such a SCEV cast expression?
   FoldingSetNodeID ID;
@@ -1062,22 +1065,24 @@ const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty,
 
   // Is there already an expression for such a cast?
   if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP))
-    return getTruncateOrZeroExtend(S, Ty);
+    return S;
+
+  Type *IntPtrTy = getDataLayout().getIntPtrType(Op->getType());
+
+  // We can only model ptrtoint if SCEV's effective (integer) type
+  // is sufficiently wide to represent all possible pointer values.
+  if (getDataLayout().getTypeSizeInBits(getEffectiveSCEVType(Op->getType())) !=
+      getDataLayout().getTypeSizeInBits(IntPtrTy))
+    return getCouldNotCompute();
 
   // If not, is this expression something we can't reduce any further?
   if (auto *U = dyn_cast<SCEVUnknown>(Op)) {
-    Type *IntPtrTy = getDataLayout().getIntPtrType(Op->getType());
-    assert(getDataLayout().getTypeSizeInBits(getEffectiveSCEVType(
-               Op->getType())) == getDataLayout().getTypeSizeInBits(IntPtrTy) &&
-           "We can only model ptrtoint if SCEV's effective (integer) type is "
-           "sufficiently wide to represent all possible pointer values.");
-
     // Perform some basic constant folding. If the operand of the ptr2int cast
     // is a null pointer, don't create a ptr2int SCEV expression (that will be
     // left as-is), but produce a zero constant.
     // NOTE: We could handle a more general case, but lack motivational cases.
     if (isa<ConstantPointerNull>(U->getValue()))
-      return getZero(Ty);
+      return getZero(IntPtrTy);
 
     // Create an explicit cast node.
     // We can reuse the existing insert position since if we get here,
@@ -1086,11 +1091,11 @@ const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty,
         SCEVPtrToIntExpr(ID.Intern(SCEVAllocator), Op, IntPtrTy);
     UniqueSCEVs.InsertNode(S, IP);
     addToLoopUseLists(S);
-    return getTruncateOrZeroExtend(S, Ty);
+    return S;
   }
 
-  assert(Depth == 0 &&
-         "getPtrToIntExpr() should not self-recurse for non-SCEVUnknown's.");
+  assert(Depth == 0 && "getLosslessPtrToIntExpr() should not self-recurse for "
+                       "non-SCEVUnknown's.");
 
   // Otherwise, we've got some expression that is more complex than just a
   // single SCEVUnknown. But we don't want to have a SCEVPtrToIntExpr of an
@@ -1144,11 +1149,9 @@ const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty,
     }
 
     const SCEV *visitUnknown(const SCEVUnknown *Expr) {
-      Type *ExprPtrTy = Expr->getType();
-      assert(ExprPtrTy->isPointerTy() &&
+      assert(Expr->getType()->isPointerTy() &&
              "Should only reach pointer-typed SCEVUnknown's.");
-      Type *ExprIntPtrTy = SE.getDataLayout().getIntPtrType(ExprPtrTy);
-      return SE.getPtrToIntExpr(Expr, ExprIntPtrTy, /*Depth=*/1);
+      return SE.getLosslessPtrToIntExpr(Expr, /*Depth=*/1);
     }
   };
 
@@ -1157,6 +1160,16 @@ const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty,
   assert(IntOp->getType()->isIntegerTy() &&
          "We must have succeeded in sinking the cast, "
          "and ending up with an integer-typed expression!");
+  return IntOp;
+}
+
+const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty) {
+  assert(Ty->isIntegerTy() && "Target type must be an integer type!");
+
+  const SCEV *IntOp = getLosslessPtrToIntExpr(Op);
+  if (isa<SCEVCouldNotCompute>(IntOp))
+    return IntOp;
+
   return getTruncateOrZeroExtend(IntOp, Ty);
 }
 
@@ -3503,11 +3516,6 @@ const SCEV *ScalarEvolution::getAbsExpr(const SCEV *Op, bool IsNSW) {
   return getSMaxExpr(Op, getNegativeSCEV(Op, Flags));
 }
 
-const SCEV *ScalarEvolution::getSignumExpr(const SCEV *Op) {
-  Type *Ty = Op->getType();
-  return getSMinExpr(getSMaxExpr(Op, getMinusOne(Ty)), getOne(Ty));
-}
-
 const SCEV *ScalarEvolution::getMinMaxExpr(SCEVTypes Kind,
                                            SmallVectorImpl<const SCEV *> &Ops) {
   assert(!Ops.empty() && "Cannot get empty (u|s)(min|max)!");
@@ -4559,7 +4567,6 @@ struct BinaryOp {
   Value *RHS;
   bool IsNSW = false;
   bool IsNUW = false;
-  bool IsExact = false;
 
   /// Op is set if this BinaryOp corresponds to a concrete LLVM instruction or
   /// constant expression.
@@ -4572,14 +4579,11 @@ struct BinaryOp {
       IsNSW = OBO->hasNoSignedWrap();
       IsNUW = OBO->hasNoUnsignedWrap();
     }
-    if (auto *PEO = dyn_cast<PossiblyExactOperator>(Op))
-      IsExact = PEO->isExact();
   }
 
   explicit BinaryOp(unsigned Opcode, Value *LHS, Value *RHS, bool IsNSW = false,
-                    bool IsNUW = false, bool IsExact = false)
-      : Opcode(Opcode), LHS(LHS), RHS(RHS), IsNSW(IsNSW), IsNUW(IsNUW),
-        IsExact(IsExact) {}
+                    bool IsNUW = false)
+      : Opcode(Opcode), LHS(LHS), RHS(RHS), IsNSW(IsNSW), IsNUW(IsNUW) {}
 };
 
 } // end anonymous namespace
@@ -5688,8 +5692,17 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
     // until the caller issue can be fixed.  PR49566 tracks the bug.
     return CR;
 
-  // TODO: Handle ashr and lshr cases to increase minimum value reported
-  if (BO->getOpcode() != Instruction::Shl || BO->getOperand(0) != P)
+  // TODO: Extend to other opcodes such as ashr, mul, and div
+  switch (BO->getOpcode()) {
+  default:
+    return CR;
+  case Instruction::LShr:
+  case Instruction::Shl:
+    break;
+  };
+
+  if (BO->getOperand(0) != P)
+    // TODO: Handle the power function forms some day.
     return CR;
 
   unsigned TC = getSmallConstantMaxTripCount(L);
@@ -5709,12 +5722,32 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   if (Overflow)
     return CR;
 
-  // Iff no bits are shifted out, value increases on every shift.
-  auto KnownEnd = KnownBits::shl(KnownStart,
-                                 KnownBits::makeConstant(TotalShift));
-  if (TotalShift.ult(KnownStart.countMinLeadingZeros()))
-    CR = CR.intersectWith(ConstantRange(KnownStart.getMinValue(),
-                                        KnownEnd.getMaxValue() + 1));
+  switch (BO->getOpcode()) {
+  default:
+    llvm_unreachable("filtered out above");
+  case Instruction::LShr: {
+    // For each lshr, three cases:
+    //   shift = 0 => unchanged value
+    //   saturation => 0
+    //   other => a smaller positive number
+    // Thus, the low end of the unsigned range is the last value produced.
+    auto KnownEnd = KnownBits::lshr(KnownStart,
+                                    KnownBits::makeConstant(TotalShift));
+    auto R = ConstantRange::getNonEmpty(KnownEnd.getMinValue(),
+                                        KnownStart.getMaxValue() + 1);
+    CR = CR.intersectWith(R);
+    break;
+  }
+  case Instruction::Shl: {
+    // Iff no bits are shifted out, value increases on every shift.
+    auto KnownEnd = KnownBits::shl(KnownStart,
+                                   KnownBits::makeConstant(TotalShift));
+    if (TotalShift.ult(KnownStart.countMinLeadingZeros()))
+      CR = CR.intersectWith(ConstantRange(KnownStart.getMinValue(),
+                                          KnownEnd.getMaxValue() + 1));
+    break;
+  }
+  };
   return CR;
 }
 
@@ -6745,15 +6778,6 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
           }
         }
       }
-      if (BO->IsExact) {
-        // Given exact arithmetic in-bounds right-shift by a constant,
-        // we can lower it into:  (abs(x) EXACT/u (1<<C)) * signum(x)
-        const SCEV *X = getSCEV(BO->LHS);
-        const SCEV *AbsX = getAbsExpr(X, /*IsNSW=*/false);
-        APInt Mult = APInt::getOneBitSet(BitWidth, AShrAmt);
-        const SCEV *Div = getUDivExactExpr(AbsX, getConstant(Mult));
-        return getMulExpr(Div, getSignumExpr(X), SCEV::FlagNSW);
-      }
       break;
     }
     }
@@ -6792,17 +6816,14 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
 
   case Instruction::PtrToInt: {
     // Pointer to integer cast is straight-forward, so do model it.
-    Value *Ptr = U->getOperand(0);
-    const SCEV *Op = getSCEV(Ptr);
+    const SCEV *Op = getSCEV(U->getOperand(0));
     Type *DstIntTy = U->getType();
-    Type *PtrTy = Ptr->getType();
-    Type *IntPtrTy = getDataLayout().getIntPtrType(PtrTy);
     // But only if effective SCEV (integer) type is wide enough to represent
     // all possible pointer values.
-    if (getDataLayout().getTypeSizeInBits(getEffectiveSCEVType(PtrTy)) !=
-        getDataLayout().getTypeSizeInBits(IntPtrTy))
+    const SCEV *IntOp = getPtrToIntExpr(Op, DstIntTy);
+    if (isa<SCEVCouldNotCompute>(IntOp))
       return getUnknown(V);
-    return getPtrToIntExpr(Op, DstIntTy);
+    return IntOp;
   }
   case Instruction::IntToPtr:
     // Just don't deal with inttoptr casts.

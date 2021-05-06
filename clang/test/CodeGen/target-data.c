@@ -106,10 +106,6 @@
 // RUN: FileCheck %s -check-prefix=MIPS-NACL
 // MIPS-NACL: target datalayout = "e-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64"
 
-// RUN: %clang_cc1 -triple le32-nacl -o - -emit-llvm %s | \
-// RUN: FileCheck %s -check-prefix=LE32-NACL
-// LE32-NACL: target datalayout = "e-p:32:32-i64:64"
-
 // RUN: %clang_cc1 -triple wasm32-unknown-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=WEBASSEMBLY32
 // WEBASSEMBLY32: target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"

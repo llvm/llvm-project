@@ -181,9 +181,26 @@ protected:
   /// Defaults to false.
   bool AllowAtInName = false;
 
-  /// This is true if the assembler allows $ @ ? characters at the start of
-  /// symbol names. Defaults to false.
-  bool AllowSymbolAtNameStart = false;
+  /// This is true if the assembler allows the "?" character at the start of
+  /// of a string to be lexed as an AsmToken::Identifier.
+  /// If the CommentString is also set to "?", setting this option will have
+  /// no effect, and the string will be lexed as a comment.
+  /// Defaults to false.
+  bool AllowQuestionAtStartOfIdentifier = false;
+
+  /// This is true if the assembler allows the "$" character at the start of
+  /// of a string to be lexed as an AsmToken::Identifier.
+  /// If the CommentString is also set to "$", setting this option will have
+  /// no effect, and the string will be lexed as a comment.
+  /// Defaults to false.
+  bool AllowDollarAtStartOfIdentifier = false;
+
+  /// This is true if the assembler allows the "@" character at the start of
+  /// a string to be lexed as an AsmToken::Identifier.
+  /// If the CommentString is also set to "@", setting this option will have
+  /// no effect, and the string will be lexed as a comment.
+  /// Defaults to false.
+  bool AllowAtAtStartOfIdentifier = false;
 
   /// If this is true, symbol names with invalid characters will be printed in
   /// quotes.
@@ -386,13 +403,12 @@ protected:
   /// false.
   bool SupportsDebugInformation = false;
 
-  /// True if target supports emitting .debug_frame unwind information when
-  /// ExceptionsType = ExceptionHandling::None and debug info is requested.
-  /// Defaults to false.
-  bool SupportsDebugUnwindInformation = false;
-
   /// Exception handling format for the target.  Defaults to None.
   ExceptionHandling ExceptionsType = ExceptionHandling::None;
+
+  /// True if target uses CFI unwind information for debugging purpose when
+  /// `ExceptionsType == ExceptionHandling::None`.
+  bool UsesCFIForDebug = false;
 
   /// Windows exception handling data (.pdata) encoding.  Defaults to Invalid.
   WinEH::EncodingType WinEHEncodingType = WinEH::EncodingType::Invalid;
@@ -610,7 +626,15 @@ public:
   const char *getCode64Directive() const { return Code64Directive; }
   unsigned getAssemblerDialect() const { return AssemblerDialect; }
   bool doesAllowAtInName() const { return AllowAtInName; }
-  bool doesAllowSymbolAtNameStart() const { return AllowSymbolAtNameStart; }
+  bool doesAllowQuestionAtStartOfIdentifier() const {
+    return AllowQuestionAtStartOfIdentifier;
+  }
+  bool doesAllowAtAtStartOfIdentifier() const {
+    return AllowAtAtStartOfIdentifier;
+  }
+  bool doesAllowDollarAtStartOfIdentifier() const {
+    return AllowDollarAtStartOfIdentifier;
+  }
   bool supportsNameQuoting() const { return SupportsQuotedNames; }
 
   bool doesSupportDataRegionDirectives() const {
@@ -679,10 +703,6 @@ public:
 
   bool doesSupportDebugInformation() const { return SupportsDebugInformation; }
 
-  bool doesSupportDebugUnwindInformation() const {
-    return SupportsDebugUnwindInformation;
-  }
-
   bool doesSupportExceptionHandling() const {
     return ExceptionsType != ExceptionHandling::None;
   }
@@ -693,6 +713,8 @@ public:
   void setExceptionsType(ExceptionHandling EH) {
     ExceptionsType = EH;
   }
+
+  bool doesUseCFIForDebug() const { return UsesCFIForDebug; }
 
   /// Returns true if the exception handling method for the platform uses call
   /// frame information to unwind.

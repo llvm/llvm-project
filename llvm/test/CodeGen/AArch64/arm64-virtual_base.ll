@@ -33,10 +33,10 @@
 
 define void @Precompute_Patch_Values(%struct.Bicubic_Patch_Struct* %Shape) {
 ; CHECK: Precompute_Patch_Values
-; CHECK: ldr [[VAL:x[0-9]+]], [x0, #288]
-; CHECK-NEXT: ldr [[VAL2:q[0-9]+]], [x0, #272]
-; CHECK-NEXT: str [[VAL]], [sp, #232]
+; CHECK: ldr [[VAL2:q[0-9]+]], [x0, #272]
+; CHECK-NEXT: ldr [[VAL:x[0-9]+]], [x0, #288]
 ; CHECK-NEXT: stur [[VAL2]], {{\[}}sp, #216]
+; CHECK-NEXT: str [[VAL]], [sp, #232]
 entry:
   %Control_Points = alloca [16 x [3 x double]], align 8
   %arraydecay5.3.1 = getelementptr inbounds [16 x [3 x double]], [16 x [3 x double]]* %Control_Points, i64 0, i64 9, i64 0

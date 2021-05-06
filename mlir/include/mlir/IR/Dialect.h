@@ -193,6 +193,11 @@ protected:
     (void)std::initializer_list<int>{0, (addType<Args>(), 0)...};
   }
 
+  /// Register a type instance with this dialect.
+  /// The use of this method is in general discouraged in favor of
+  /// 'addTypes<CustomType>()'.
+  void addType(TypeID typeID, AbstractType &&typeInfo);
+
   /// Register a set of attribute classes with this dialect.
   template <typename... Args> void addAttributes() {
     (void)std::initializer_list<int>{0, (addAttribute<Args>(), 0)...};
@@ -231,7 +236,6 @@ private:
     addType(T::getTypeID(), AbstractType::get<T>(*this));
     detail::TypeUniquer::registerType<T>(context);
   }
-  void addType(TypeID typeID, AbstractType &&typeInfo);
 
   /// The namespace of this dialect.
   StringRef name;

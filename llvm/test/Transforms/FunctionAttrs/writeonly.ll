@@ -27,4 +27,4 @@ nouses-argworn-funwo_entry:
 
 ; CHECK: attributes #0 = { {{.*}} readnone {{.*}} }
 ; CHECK: attributes #1 = { {{.*}} readonly {{.*}} }
-; CHECK: attributes #2 = { {{.*}} writeonly }
+; CHECK: attributes #2 = { {{.*}} writeonly {{.*}} }

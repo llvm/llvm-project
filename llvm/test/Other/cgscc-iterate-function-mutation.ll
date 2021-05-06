@@ -1,8 +1,8 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes='cgscc(function-attrs,function(simplify-cfg))' -S < %s | FileCheck %s
 
-declare void @readnone() nosync readnone
+declare void @readnone() nofree nosync readnone
 declare void @unknown()
-declare void @reference_function_pointer(void()*) nosync readnone
+declare void @reference_function_pointer(void()*) nofree nosync readnone
 
 ; The @test1_* set of functions checks that when we mutate functions with
 ; simplify-cfg to delete call edges and this ends up splitting both the SCCs
@@ -338,4 +338,4 @@ exit:
   ret void
 }
 
-; CHECK: attributes #0 = { nosync readnone }
+; CHECK: attributes #0 = { nofree nosync readnone }

@@ -11,7 +11,6 @@
 // CHECK-NEXT: gpu
 // CHECK-NEXT: linalg
 // CHECK-NEXT: llvm
-// CHECK-NEXT: llvm_arm_sve
 // CHECK-NEXT: math
 // CHECK-NEXT: memref
 // CHECK-NEXT: nvvm

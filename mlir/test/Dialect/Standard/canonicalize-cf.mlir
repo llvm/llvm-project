@@ -443,4 +443,3 @@ func @assert(%arg : i1) {
   assert %arg, "Computer says no"
   return
 }
-

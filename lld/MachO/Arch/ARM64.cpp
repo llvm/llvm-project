@@ -49,7 +49,7 @@ const RelocAttrs &ARM64::getRelocAttrs(uint8_t type) const {
 #define B(x) RelocAttrBits::x
       {"UNSIGNED",
        B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE4) | B(BYTE8)},
-      {"SUBTRACTOR", B(SUBTRAHEND) | B(BYTE4) | B(BYTE8)},
+      {"SUBTRACTOR", B(SUBTRAHEND) | B(EXTERN) | B(BYTE4) | B(BYTE8)},
       {"BRANCH26", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
       {"PAGE21", B(PCREL) | B(EXTERN) | B(BYTE4)},
       {"PAGEOFF12", B(ABSOLUTE) | B(EXTERN) | B(BYTE4)},

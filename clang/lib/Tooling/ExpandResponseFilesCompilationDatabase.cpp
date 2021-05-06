@@ -60,8 +60,8 @@ private:
         continue;
       llvm::BumpPtrAllocator Alloc;
       llvm::StringSaver Saver(Alloc);
-      llvm::cl::ExpandResponseFiles(Saver, Tokenizer, Argv, false, false, *FS,
-                                    llvm::StringRef(Cmd.Directory));
+      llvm::cl::ExpandResponseFiles(Saver, Tokenizer, Argv, false, false,
+                                    llvm::StringRef(Cmd.Directory), *FS);
       // Don't assign directly, Argv aliases CommandLine.
       std::vector<std::string> ExpandedArgv(Argv.begin(), Argv.end());
       Cmd.CommandLine = std::move(ExpandedArgv);

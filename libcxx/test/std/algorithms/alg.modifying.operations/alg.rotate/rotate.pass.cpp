@@ -423,7 +423,7 @@ test1()
     assert(*ig[5] == 2);
 }
 
-#endif  // TEST_STD_VER >= 11
+#endif // TEST_STD_VER >= 11
 
 int main(int, char**)
 {
@@ -446,7 +446,7 @@ int main(int, char**)
     static_assert(test<bidirectional_iterator<int*> >());
     static_assert(test<random_access_iterator<int*> >());
     static_assert(test<int*>());
-#endif  // TEST_STD_VER > 17
+#endif // TEST_STD_VER > 17
 
   return 0;
 }

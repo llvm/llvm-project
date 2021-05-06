@@ -5477,8 +5477,10 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
   }
   case Intrinsic::ctlz: {
     Value *X;
-    if (match(Op0, m_LShr(m_SignMask(), m_Value(X))))
+    if (match(Op0, m_LShr(m_Negative(), m_Value(X))))
       return X;
+    if (match(Op0, m_AShr(m_Negative(), m_Value())))
+      return Constant::getNullValue(ReturnType);
     break;
   }
   case Intrinsic::smax:

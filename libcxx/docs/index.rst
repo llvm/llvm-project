@@ -44,6 +44,7 @@ Getting Started with libc++
    Cxx2aStatus
    Cxx2bStatus
    RangesStatus
+   FormatStatus
 
 
 .. toctree::

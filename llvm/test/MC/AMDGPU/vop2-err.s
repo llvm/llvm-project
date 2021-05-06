@@ -56,7 +56,19 @@ v_addc_u32_e32 v1, vcc, v2, v3, s0
 v_addc_u32_e32 v1, -1, v2, v3, s0
 // CHECK: error: invalid operand for instruction
 
+v_addc_u32 v1, -1, v2, v3, vcc
+// CHECK: error: invalid operand for instruction
+
+v_addc_u32 v1, vcc, v2, v3, 0
+// CHECK: error: invalid operand for instruction
+
 v_addc_u32_e64 v1, s[0:1], v2, v3, 123
+// CHECK: error: invalid operand for instruction
+
+v_addc_u32_e64 v1, 0, v2, v3, s[0:1]
+// CHECK: error: invalid operand for instruction
+
+v_addc_u32_e64 v1, s[0:1], v2, v3, 0
 // CHECK: error: invalid operand for instruction
 
 v_addc_u32 v1, s[0:1], v2, v3, 123

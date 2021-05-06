@@ -76,7 +76,7 @@ def v16i32   : ValueType<512,   50>;  //   16 x i32 vector value
 def v32i32   : ValueType<1024,  51>;  //   32 x i32 vector value
 def v64i32   : ValueType<2048,  52>;  //   64 x i32 vector value
 def v128i32  : ValueType<4096,  53>;  //  128 x i32 vector value
-def v256i32  : ValueType<8182,  54>;  //  256 x i32 vector value
+def v256i32  : ValueType<8192,  54>;  //  256 x i32 vector value
 def v512i32  : ValueType<16384, 55>;  //  512 x i32 vector value
 def v1024i32 : ValueType<32768, 56>;  // 1024 x i32 vector value
 def v2048i32 : ValueType<65536, 57>;  // 2048 x i32 vector value
@@ -120,7 +120,7 @@ def v16f32   : ValueType<512,    91>;  //   16 x f32 vector value
 def v32f32   : ValueType<1024,   92>;  //   32 x f32 vector value
 def v64f32   : ValueType<2048,   93>;  //   64 x f32 vector value
 def v128f32  : ValueType<4096,   94>;  //  128 x f32 vector value
-def v256f32  : ValueType<8182,   95>;  //  256 x f32 vector value
+def v256f32  : ValueType<8192,   95>;  //  256 x f32 vector value
 def v512f32  : ValueType<16384,  96>;  //  512 x f32 vector value
 def v1024f32 : ValueType<32768,  97>;  // 1024 x f32 vector value
 def v2048f32 : ValueType<65536,  98>;  // 2048 x f32 vector value

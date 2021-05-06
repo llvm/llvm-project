@@ -67,7 +67,7 @@ static bool processUse(CallInst *CI) {
   const bool HasReqdWorkGroupSize = MD && MD->getNumOperands() == 3;
 
   const bool HasUniformWorkGroupSize =
-    F->getFnAttribute("uniform-work-group-size").getValueAsString() == "true";
+    F->getFnAttribute("uniform-work-group-size").getValueAsBool();
 
   if (!HasReqdWorkGroupSize && !HasUniformWorkGroupSize)
     return false;

@@ -488,6 +488,18 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
   return WaitResult;
 }
 
+std::error_code llvm::sys::ChangeStdinMode(sys::fs::OpenFlags Flags){
+  if (!(Flags & fs::OF_CRLF))
+    return ChangeStdinToBinary();
+  return std::error_code();
+}
+
+std::error_code llvm::sys::ChangeStdoutMode(sys::fs::OpenFlags Flags){
+  if (!(Flags & fs::OF_CRLF))
+    return ChangeStdoutToBinary();
+  return std::error_code();
+}
+
 std::error_code sys::ChangeStdinToBinary() {
   int result = _setmode(_fileno(stdin), _O_BINARY);
   if (result == -1)

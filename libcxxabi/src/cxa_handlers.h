@@ -52,4 +52,4 @@ _LIBCXXABI_DATA_VIS extern void (*__cxa_new_handler)();
 
 } // extern "C"
 
-#endif  // _CXA_HANDLERS_H
+#endif // _CXA_HANDLERS_H

@@ -30,7 +30,7 @@ int main(int, char**)
     {
         // test total ordering of int* for greater_equal<int*> and
         // greater_equal<void>.
-        do_pointer_comparison_test<int, std::greater_equal>();
+        do_pointer_comparison_test<std::greater_equal>();
     }
 #if TEST_STD_VER > 11
     typedef std::greater_equal<> F2;

@@ -45,9 +45,10 @@ class PseudoProbeInlineTree {
       return std::get<0>(Site) ^ std::get<1>(Site);
     }
   };
-  std::unordered_map<InlineSite, std::unique_ptr<PseudoProbeInlineTree>,
-                     InlineSiteHash>
-      Children;
+  using InlinedProbeTreeMap =
+      std::unordered_map<InlineSite, std::unique_ptr<PseudoProbeInlineTree>,
+                         InlineSiteHash>;
+  InlinedProbeTreeMap Children;
 
 public:
   // Inlinee function GUID
@@ -71,6 +72,8 @@ public:
     return Ret.first->second.get();
   }
 
+  InlinedProbeTreeMap &getChildren() { return Children; }
+  std::vector<PseudoProbe *> &getProbes() { return ProbeVector; }
   void addProbes(PseudoProbe *Probe) { ProbeVector.push_back(Probe); }
   // Return false if it's a dummy inline site
   bool hasInlineSite() const { return std::get<0>(ISite) != 0; }
@@ -91,7 +94,7 @@ struct PseudoProbeFuncDesc {
 // GUID to PseudoProbeFuncDesc map
 using GUIDProbeFunctionMap = std::unordered_map<uint64_t, PseudoProbeFuncDesc>;
 // Address to pseudo probes map.
-using AddressProbesMap = std::unordered_map<uint64_t, std::vector<PseudoProbe>>;
+using AddressProbesMap = std::unordered_map<uint64_t, std::list<PseudoProbe>>;
 
 /*
 A pseudo probe has the format like below:
@@ -134,6 +137,8 @@ struct PseudoProbe {
   bool isIndirectCall() const { return Type == PseudoProbeType::IndirectCall; }
   bool isDirectCall() const { return Type == PseudoProbeType::DirectCall; }
   bool isCall() const { return isIndirectCall() || isDirectCall(); }
+
+  PseudoProbeInlineTree *getInlineTreeNode() const { return InlineTree; }
 
   // Get the inlined context by traversing current inline tree backwards,
   // each tree node has its InlineSite which is taken as the context.

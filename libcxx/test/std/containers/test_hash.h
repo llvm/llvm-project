@@ -28,4 +28,4 @@ public:
         {return data_ == c.data_;}
 };
 
-#endif  // TEST_HASH_H
+#endif // TEST_HASH_H

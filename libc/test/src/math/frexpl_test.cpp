@@ -13,6 +13,7 @@
 #include "utils/UnitTest/Test.h"
 #include <math.h>
 
+typedef long double LD;
 using FPBits = __llvm_libc::fputil::FPBits<long double>;
 
 namespace mpfr = __llvm_libc::testing::mpfr;
@@ -20,19 +21,21 @@ namespace mpfr = __llvm_libc::testing::mpfr;
 TEST(LlvmLibcFrexplTest, SpecialNumbers) {
   int exponent;
 
-  EXPECT_TRUE(FPBits::inf() == __llvm_libc::frexpl(FPBits::inf(), &exponent));
-  EXPECT_TRUE(FPBits::negInf() ==
-              __llvm_libc::frexpl(FPBits::negInf(), &exponent));
+  EXPECT_TRUE(LD(FPBits::inf()) ==
+              __llvm_libc::frexpl(LD(FPBits::inf()), &exponent));
+  EXPECT_TRUE(LD(FPBits::negInf()) ==
+              __llvm_libc::frexpl(LD(FPBits::negInf()), &exponent));
 
-  EXPECT_TRUE(FPBits::zero() == __llvm_libc::frexpl(FPBits::zero(), &exponent));
+  EXPECT_TRUE(LD(FPBits::zero()) ==
+              __llvm_libc::frexpl(LD(FPBits::zero()), &exponent));
   EXPECT_EQ(exponent, 0);
 
-  EXPECT_TRUE(FPBits::negZero() ==
-              __llvm_libc::frexpl(FPBits::negZero(), &exponent));
+  EXPECT_TRUE(LD(FPBits::negZero()) ==
+              __llvm_libc::frexpl(LD(FPBits::negZero()), &exponent));
   EXPECT_EQ(exponent, 0);
 
   EXPECT_TRUE(
-      FPBits(__llvm_libc::frexpl(FPBits::buildNaN(1), &exponent)).isNaN());
+      FPBits(__llvm_libc::frexpl(LD(FPBits::buildNaN(1)), &exponent)).isNaN());
 }
 
 TEST(LlvmLibcFrexplTest, PowersOfTwo) {
@@ -93,7 +96,7 @@ TEST(LlvmLibcFrexplTest, LongDoubleRange) {
   constexpr UIntType count = 10000000;
   constexpr UIntType step = UIntType(-1) / count;
   for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
-    long double x = FPBits(v);
+    long double x = static_cast<long double>(FPBits(v));
     if (isnan(x) || isinf(x) || x == 0.0l)
       continue;
 

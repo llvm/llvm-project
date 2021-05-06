@@ -14,5 +14,6 @@ int __defaultparam(void *, int y = 3);
 
 void test_arg_constraint_on_fun_with_default_param() {
   __defaultparam(nullptr); // \
-  // expected-warning{{Function argument constraint is not satisfied}}
+  // expected-warning{{Function argument constraint is not satisfied}} \
+  // expected-note{{}}
 }

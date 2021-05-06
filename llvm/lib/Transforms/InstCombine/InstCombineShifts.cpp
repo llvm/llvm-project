@@ -1137,11 +1137,19 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       }
     }
 
-    // lshr i32 (X -nsw Y), 31 --> zext (X < Y)
     Value *Y;
-    if (ShAmt == BitWidth - 1 &&
-        match(Op0, m_OneUse(m_NSWSub(m_Value(X), m_Value(Y)))))
-      return new ZExtInst(Builder.CreateICmpSLT(X, Y), Ty);
+    if (ShAmt == BitWidth - 1) {
+      // lshr i32 (X -nsw Y), 31 --> zext (X < Y)
+      if (match(Op0, m_OneUse(m_NSWSub(m_Value(X), m_Value(Y)))))
+        return new ZExtInst(Builder.CreateICmpSLT(X, Y), Ty);
+
+      // Check if a number is negative and odd:
+      // lshr i32 (srem X, 2), 31 --> and (X >> 31), X
+      if (match(Op0, m_OneUse(m_SRem(m_Value(X), m_SpecificInt(2))))) {
+        Value *Signbit = Builder.CreateLShr(X, ShAmt);
+        return BinaryOperator::CreateAnd(Signbit, X);
+      }
+    }
 
     if (match(Op0, m_LShr(m_Value(X), m_APInt(ShOp1)))) {
       unsigned AmtSum = ShAmt + ShOp1->getZExtValue();

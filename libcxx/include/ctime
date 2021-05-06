@@ -92,4 +92,4 @@ using ::timespec_get;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_CTIME
+#endif // _LIBCPP_CTIME

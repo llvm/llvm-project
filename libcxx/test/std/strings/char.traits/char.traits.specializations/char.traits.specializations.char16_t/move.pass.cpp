@@ -32,7 +32,7 @@ TEST_CONSTEXPR_CXX20 bool test()
     assert(s1[2] == char16_t(3));
     assert(std::char_traits<char16_t>::move(NULL, s1, 0) == NULL);
     assert(std::char_traits<char16_t>::move(s1, NULL, 0) == s1);
-#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
 
   return true;
 }

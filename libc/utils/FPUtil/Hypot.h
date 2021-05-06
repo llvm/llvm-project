@@ -125,7 +125,7 @@ static inline T hypot(T x, T y) {
   FPBits_t x_bits(x), y_bits(y);
 
   if (x_bits.isInf() || y_bits.isInf()) {
-    return FPBits_t::inf();
+    return T(FPBits_t::inf());
   }
   if (x_bits.isNaN()) {
     return x;
@@ -208,7 +208,7 @@ static inline T hypot(T x, T y) {
       sum >>= 2;
       ++out_exp;
       if (out_exp >= FPBits_t::maxExponent) {
-        return FPBits_t::inf();
+        return T(FPBits_t::inf());
       }
     } else {
       // For denormal result, we simply move the leading bit of the result to
@@ -254,7 +254,7 @@ static inline T hypot(T x, T y) {
     Y -= one >> 1;
     ++out_exp;
     if (out_exp >= FPBits_t::maxExponent) {
-      return FPBits_t::inf();
+      return T(FPBits_t::inf());
     }
   }
 

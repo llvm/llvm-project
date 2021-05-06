@@ -93,43 +93,44 @@ v_sqrt_f64 v[4:5], v[4:5]
 # CHECK-NEXT: [2]   - HWLGKM
 # CHECK-NEXT: [3]   - HWRC
 # CHECK-NEXT: [4]   - HWSALU
-# CHECK-NEXT: [5]   - HWVALU
-# CHECK-NEXT: [6]   - HWVMEM
+# CHECK-NEXT: [5]   - HWTransVALU
+# CHECK-NEXT: [6]   - HWVALU
+# CHECK-NEXT: [7]   - HWVMEM
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]
-# CHECK-NEXT:  -      -      -     29.00  1.00   28.00   -
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
+# CHECK-NEXT:  -      -      -     29.00  1.00   3.00   28.00   -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_cvt_i32_f64_e32 v0, v[0:1]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_cvt_f64_i32_e32 v[2:3], v2
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_cvt_f32_f64_e32 v4, v[4:5]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_cvt_f64_f32_e32 v[6:7], v6
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_cvt_u32_f64_e32 v8, v[8:9]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_cvt_f64_u32_e32 v[10:11], v10
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_frexp_exp_i32_f64_e32 v0, v[0:1]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_frexp_mant_f64_e32 v[2:3], v[2:3]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_fract_f64_e32 v[4:5], v[4:5]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_trunc_f64_e32 v[0:1], v[0:1]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_ceil_f64_e32 v[2:3], v[2:3]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_rndne_f64_e32 v[4:5], v[4:5]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_floor_f64_e32 v[6:7], v[6:7]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_fma_f64 v[0:1], v[0:1], v[0:1], v[0:1]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_add_f64 v[2:3], v[2:3], v[2:3]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_mul_f64 v[4:5], v[4:5], v[4:5]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_min_f64 v[6:7], v[6:7], v[6:7]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_max_f64 v[8:9], v[8:9], v[8:9]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_div_fmas_f64 v[0:1], v[0:1], v[0:1], v[0:1]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_div_fixup_f64 v[0:1], v[0:1], v[0:1], v[0:1]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_ldexp_f64 v[2:3], v[2:3], v0
-# CHECK-NEXT:  -      -      -     2.00   1.00   1.00    -     v_div_scale_f64 v[0:1], vcc_lo, v[0:1], v[0:1], v[0:1]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_trig_preop_f64 v[2:3], v[2:3], v0
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_cmp_eq_f64_e32 vcc_lo, v[0:1], v[0:1]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_cmp_class_f64_e64 vcc_lo, v[2:3], s0
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_rcp_f64_e32 v[0:1], v[0:1]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_rsq_f64_e32 v[2:3], v[2:3]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_sqrt_f64_e32 v[4:5], v[4:5]
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_cvt_i32_f64_e32 v0, v[0:1]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_cvt_f64_i32_e32 v[2:3], v2
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_cvt_f32_f64_e32 v4, v[4:5]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_cvt_f64_f32_e32 v[6:7], v6
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_cvt_u32_f64_e32 v8, v[8:9]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_cvt_f64_u32_e32 v[10:11], v10
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_frexp_exp_i32_f64_e32 v0, v[0:1]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_frexp_mant_f64_e32 v[2:3], v[2:3]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_fract_f64_e32 v[4:5], v[4:5]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_trunc_f64_e32 v[0:1], v[0:1]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_ceil_f64_e32 v[2:3], v[2:3]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_rndne_f64_e32 v[4:5], v[4:5]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_floor_f64_e32 v[6:7], v[6:7]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_fma_f64 v[0:1], v[0:1], v[0:1], v[0:1]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_add_f64 v[2:3], v[2:3], v[2:3]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_mul_f64 v[4:5], v[4:5], v[4:5]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_min_f64 v[6:7], v[6:7], v[6:7]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_max_f64 v[8:9], v[8:9], v[8:9]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_div_fmas_f64 v[0:1], v[0:1], v[0:1], v[0:1]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_div_fixup_f64 v[0:1], v[0:1], v[0:1], v[0:1]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_ldexp_f64 v[2:3], v[2:3], v0
+# CHECK-NEXT:  -      -      -     2.00   1.00    -     1.00    -     v_div_scale_f64 v[0:1], vcc_lo, v[0:1], v[0:1], v[0:1]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_trig_preop_f64 v[2:3], v[2:3], v0
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_cmp_eq_f64_e32 vcc_lo, v[0:1], v[0:1]
+# CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_cmp_class_f64_e64 vcc_lo, v[2:3], s0
+# CHECK-NEXT:  -      -      -     1.00    -     1.00   1.00    -     v_rcp_f64_e32 v[0:1], v[0:1]
+# CHECK-NEXT:  -      -      -     1.00    -     1.00   1.00    -     v_rsq_f64_e32 v[2:3], v[2:3]
+# CHECK-NEXT:  -      -      -     1.00    -     1.00   1.00    -     v_sqrt_f64_e32 v[4:5], v[4:5]
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          0123456789          0123456789          0

@@ -273,3 +273,27 @@ s_endpgm_saved
 v_mov_b32_dpp v5, v1 dpp8:[0,1,2,3,4,5,6,7]
 // GFX6-7: error: dpp variant of this instruction is not supported
 // GFX8-9: error: not a valid operand
+
+//===----------------------------------------------------------------------===//
+// VOP2 E64.
+//===----------------------------------------------------------------------===//
+
+v_add_co_ci_u32 v5, 0, v1, v2, vcc
+// GFX6-7: error: instruction not supported on this GPU
+// GFX8-9: error: instruction not supported on this GPU
+// GFX10: error: invalid operand for instruction
+
+v_add_co_ci_u32 v5, vcc, v1, v2, 0
+// GFX6-7: error: instruction not supported on this GPU
+// GFX8-9: error: instruction not supported on this GPU
+// GFX10: error: invalid operand for instruction
+
+v_add_co_ci_u32 v5, 0, v1, v2, vcc_lo
+// GFX6-7: error: instruction not supported on this GPU
+// GFX8-9: error: instruction not supported on this GPU
+// GFX10: error: invalid operand for instruction
+
+v_add_co_ci_u32 v5, vcc_lo, v1, v2, 0
+// GFX6-7: error: instruction not supported on this GPU
+// GFX8-9: error: instruction not supported on this GPU
+// GFX10: error: invalid operand for instruction

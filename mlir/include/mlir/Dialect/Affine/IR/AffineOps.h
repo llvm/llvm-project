@@ -17,21 +17,12 @@
 #include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
-#include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace mlir {
 class AffineApplyOp;
 class AffineBound;
-class AffineDimExpr;
 class AffineValueMap;
-class AffineYieldOp;
-class FlatAffineConstraints;
-class OpBuilder;
 
 /// A utility function to check if a value is defined at the top level of an
 /// op with trait `AffineScope` or is a region argument for such an op. A value
@@ -58,9 +49,9 @@ bool isTopLevelValue(Value value);
 /// specified. The value of 'num_elements' must be a multiple of
 /// 'number_of_elements_per_stride'.
 //
-// For example, a DmaStartOp operation that transfers 256 elements of a memref
-// '%src' in memory space 0 at indices [%i + 3, %j] to memref '%dst' in memory
-// space 1 at indices [%k + 7, %l], would be specified as follows:
+// For example, an AffineDmaStartOp operation that transfers 256 elements of a
+// memref '%src' in memory space 0 at indices [%i + 3, %j] to memref '%dst' in
+// memory space 1 at indices [%k + 7, %l], would be specified as follows:
 //
 //   %num_elements = constant 256
 //   %idx = constant 0 : index
@@ -79,7 +70,6 @@ bool isTopLevelValue(Value value);
 // TODO: add additional operands to allow source and destination striding, and
 // multiple stride levels (possibly using AffineMaps to specify multiple levels
 // of striding).
-// TODO: Consider replacing src/dst memref indices with view memrefs.
 class AffineDmaStartOp
     : public Op<AffineDmaStartOp, OpTrait::MemRefsNormalizable,
                 OpTrait::VariadicOperands, OpTrait::ZeroResult,
@@ -93,7 +83,7 @@ public:
                     AffineMap tagMap, ValueRange tagIndices, Value numElements,
                     Value stride = nullptr, Value elementsPerStride = nullptr);
 
-  /// Returns the operand index of the src memref.
+  /// Returns the operand index of the source memref.
   unsigned getSrcMemRefOperandIndex() { return 0; }
 
   /// Returns the source MemRefType for this DMA operation.
@@ -105,7 +95,7 @@ public:
   /// Returns the rank (number of indices) of the source MemRefType.
   unsigned getSrcMemRefRank() { return getSrcMemRefType().getRank(); }
 
-  /// Returns the affine map used to access the src memref.
+  /// Returns the affine map used to access the source memref.
   AffineMap getSrcMap() { return getSrcMapAttr().getValue(); }
   AffineMapAttr getSrcMapAttr() {
     return (*this)->getAttr(getSrcMapAttrName()).cast<AffineMapAttr>();
@@ -118,17 +108,17 @@ public:
                 getSrcMap().getNumInputs()};
   }
 
-  /// Returns the memory space of the src memref.
+  /// Returns the memory space of the source memref.
   unsigned getSrcMemorySpace() {
     return getSrcMemRef().getType().cast<MemRefType>().getMemorySpaceAsInt();
   }
 
-  /// Returns the operand index of the dst memref.
+  /// Returns the operand index of the destination memref.
   unsigned getDstMemRefOperandIndex() {
     return getSrcMemRefOperandIndex() + 1 + getSrcMap().getNumInputs();
   }
 
-  /// Returns the destination MemRefType for this DMA operations.
+  /// Returns the destination MemRefType for this DMA operation.
   Value getDstMemRef() { return getOperand(getDstMemRefOperandIndex()); }
   MemRefType getDstMemRefType() {
     return getDstMemRef().getType().cast<MemRefType>();
@@ -139,12 +129,12 @@ public:
     return getDstMemRef().getType().cast<MemRefType>().getRank();
   }
 
-  /// Returns the memory space of the src memref.
+  /// Returns the memory space of the source memref.
   unsigned getDstMemorySpace() {
     return getDstMemRef().getType().cast<MemRefType>().getMemorySpaceAsInt();
   }
 
-  /// Returns the affine map used to access the dst memref.
+  /// Returns the affine map used to access the destination memref.
   AffineMap getDstMap() { return getDstMapAttr().getValue(); }
   AffineMapAttr getDstMapAttr() {
     return (*this)->getAttr(getDstMapAttrName()).cast<AffineMapAttr>();
@@ -198,7 +188,7 @@ public:
     if (memref == getSrcMemRef())
       return {Identifier::get(getSrcMapAttrName(), getContext()),
               getSrcMapAttr()};
-    else if (memref == getDstMemRef())
+    if (memref == getDstMemRef())
       return {Identifier::get(getDstMapAttrName(), getContext()),
               getDstMapAttr()};
     assert(memref == getTagMemRef() &&
@@ -283,7 +273,7 @@ public:
 
   static StringRef getOperationName() { return "affine.dma_wait"; }
 
-  // Returns the Tag MemRef associated with the DMA operation being waited on.
+  /// Returns the Tag MemRef associated with the DMA operation being waited on.
   Value getTagMemRef() { return getOperand(0); }
   MemRefType getTagMemRefType() {
     return getTagMemRef().getType().cast<MemRefType>();
@@ -295,26 +285,26 @@ public:
     return (*this)->getAttr(getTagMapAttrName()).cast<AffineMapAttr>();
   }
 
-  // Returns the tag memref index for this DMA operation.
+  /// Returns the tag memref index for this DMA operation.
   operand_range getTagIndices() {
     return {operand_begin() + 1,
             operand_begin() + 1 + getTagMap().getNumInputs()};
   }
 
-  // Returns the rank (number of indices) of the tag memref.
+  /// Returns the rank (number of indices) of the tag memref.
   unsigned getTagMemRefRank() {
     return getTagMemRef().getType().cast<MemRefType>().getRank();
   }
 
-  /// Impelements the AffineMapAccessInterface.
-  /// Returns the AffineMapAttr associated with 'memref'.
+  /// Impelements the AffineMapAccessInterface. Returns the AffineMapAttr
+  /// associated with 'memref'.
   NamedAttribute getAffineMapAttrForMemRef(Value memref) {
     assert(memref == getTagMemRef());
     return {Identifier::get(getTagMapAttrName(), getContext()),
             getTagMapAttr()};
   }
 
-  /// Returns the number of elements transferred in the associated DMA op.
+  /// Returns the number of elements transferred by the associated DMA op.
   Value getNumElements() { return getOperand(1 + getTagMap().getNumInputs()); }
 
   static StringRef getTagMapAttrName() { return "tag_map"; }
@@ -341,7 +331,8 @@ bool isValidSymbol(Value value);
 /// for all its uses in `region`.
 bool isValidSymbol(Value value, Region *region);
 
-/// Parses dimension and symbol list and returns true if parsing failed.
+/// Parses dimension and symbol list. `numDims` is set to the number of
+/// dimensions in the list parsed.
 ParseResult parseDimAndSymbolList(OpAsmParser &parser,
                                   SmallVectorImpl<Value> &operands,
                                   unsigned &numDims);
@@ -394,8 +385,8 @@ AffineForOp getForInductionVarOwner(Value val);
 void extractForInductionVars(ArrayRef<AffineForOp> forInsts,
                              SmallVectorImpl<Value> *ivs);
 
-/// Builds a perfect nest of affine "for" loops, i.e. each loop except the
-/// innermost only contains another loop and a terminator. The loops iterate
+/// Builds a perfect nest of affine.for loops, i.e., each loop except the
+/// innermost one contains only another loop and a terminator. The loops iterate
 /// from "lbs" to "ubs" with "steps". The body of the innermost loop is
 /// populated by calling "bodyBuilderFn" and providing it with an OpBuilder, a
 /// Location and a list of loop induction variables.

@@ -225,6 +225,11 @@ LLVM-specific variables
   targets. Case-sensitive. Defaults to *all*. Example:
   ``-DLLVM_TARGETS_TO_BUILD="X86;PowerPC"``.
 
+**LLVM_EXPERIMENTAL_TARGETS_TO_BUILD**:STRING
+  Semicolon-separated list of experimental targets to build and linked into 
+  llvm. This will build the experimental target without needing it to add to the 
+  list of all the targets available in the LLVM's main CMakeLists.txt.
+
 **LLVM_BUILD_TOOLS**:BOOL
   Build LLVM tools. Defaults to ON. Targets for building each tool are generated
   in any case. You can build a tool separately by invoking its target. For

@@ -62,12 +62,12 @@ func @main(%farg0: tensor<i32>, %farg1: tensor<i32>) -> tensor<i32> attributes {
 // DET-CF:         tensor.extract {{.*}}
 // DET-CF:         br ^[[bb1:.*]](%{{.*}} : i32)
 // DET-CF:       ^[[bb1]](%{{.*}}: i32)
-// DET-CF-DAG      tensor.from_elements {{.*}}
-// DET-CF-DAG:     linalg.tensor_reshape {{.*}}
-// DET-CF-DAG:     cmpi slt, {{.*}}
-// DET-CF:         cond_br {{.*}}, ^[[bb2:.*]](%{{.*}} : i32), ^[[bb3:.*]](%{{.*}} : tensor<i32>)
+// DET-CF:         cmpi slt, {{.*}}
+// DET-CF:         cond_br {{.*}}, ^[[bb2:.*]](%{{.*}} : i32), ^[[bb3:.*]](%{{.*}} : i32)
 // DET-CF:       ^[[bb2]](%{{.*}}: i32)
 // DET-CF:         addi {{.*}}
 // DET-CF:         br ^[[bb1]](%{{.*}} : i32)
-// DET-CF:       ^[[bb3]](%{{.*}}: tensor<i32>)
+// DET-CF:       ^[[bb3]](%{{.*}}: i32)
+// DET-CF:         tensor.from_elements %{{.*}} : tensor<1xi32>
+// DET-CF:         linalg.tensor_reshape %{{.*}} [] : tensor<1xi32> into tensor<i32>
 // DET-CF:         return %{{.*}} : tensor<i32>

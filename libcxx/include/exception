@@ -277,7 +277,7 @@ struct __throw_with_nested<_Tp, _Up, false> {
     __do_throw(_Tp&& __t)
 #else
     __do_throw (_Tp& __t)
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
     {
         throw _VSTD::forward<_Tp>(__t);
     }
@@ -330,4 +330,4 @@ rethrow_if_nested(const _Ep&,
 
 }  // std
 
-#endif  // _LIBCPP_EXCEPTION
+#endif // _LIBCPP_EXCEPTION

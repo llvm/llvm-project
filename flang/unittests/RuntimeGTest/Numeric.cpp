@@ -71,6 +71,12 @@ TEST(Numeric, Fraction) {
       std::isnan(RTNAME(Fraction8)(std::numeric_limits<Real<8>>::quiet_NaN())));
 }
 
+TEST(Numeric, IsNaN) {
+  EXPECT_FALSE(RTNAME(IsNaN4)(Real<4>{0}));
+  EXPECT_FALSE(RTNAME(IsNaN8)(std::numeric_limits<Real<8>>::infinity()));
+  EXPECT_TRUE(RTNAME(IsNaN8)(std::numeric_limits<Real<8>>::quiet_NaN()));
+}
+
 TEST(Numeric, Mod) {
   EXPECT_EQ(RTNAME(ModInteger1)(Int<1>{8}, Int<1>(5)), 3);
   EXPECT_EQ(RTNAME(ModInteger4)(Int<4>{-8}, Int<4>(5)), -3);

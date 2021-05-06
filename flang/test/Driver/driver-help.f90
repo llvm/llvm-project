@@ -91,6 +91,8 @@
 ! HELP-FC1-NEXT: -ffixed-line-length=<value>
 ! HELP-FC1-NEXT: Use <value> as character line width in fixed mode
 ! HELP-FC1-NEXT: -ffree-form            Process source files in free form
+! HELP-FC1-NEXT: -fget-definition <value> <value> <value>
+! HELP-FC1-NEXT:                        Get the symbol definition from <line> <start-column> <end-column>
 ! HELP-FC1-NEXT: -fget-symbols-sources   Dump symbols and their source code locations
 ! HELP-FC1-NEXT: -fimplicit-none        No implicit typing allowed unless overridden by IMPLICIT statements
 ! HELP-FC1-NEXT: -finput-charset=<value> Specify the default character set for source files

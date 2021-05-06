@@ -328,6 +328,12 @@ private:
   bool PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
                       UnavailBlkVect &UnavailableBlocks);
 
+  /// Try to replace a load which executes on each loop iteraiton with Phi
+  /// translation of load in preheader and load(s) in conditionally executed
+  /// paths.
+  bool performLoopLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
+                          UnavailBlkVect &UnavailableBlocks);
+
   /// Eliminates partially redundant \p Load, replacing it with \p
   /// AvailableLoads (connected by Phis if needed).
   void eliminatePartiallyRedundantLoad(

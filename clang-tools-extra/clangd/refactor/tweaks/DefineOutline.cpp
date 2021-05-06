@@ -64,9 +64,8 @@ const FunctionDecl *getSelectedFunction(const SelectionTree::Node *SelNode) {
 
 llvm::Optional<Path> getSourceFile(llvm::StringRef FileName,
                                    const Tweak::Selection &Sel) {
-  if (auto Source = getCorrespondingHeaderOrSource(
-          FileName,
-          &Sel.AST->getSourceManager().getFileManager().getVirtualFileSystem()))
+  assert(Sel.FS);
+  if (auto Source = getCorrespondingHeaderOrSource(FileName, Sel.FS))
     return *Source;
   return getCorrespondingHeaderOrSource(FileName, *Sel.AST, Sel.Index);
 }
@@ -414,12 +413,11 @@ public:
       return error("Couldn't get absolute path for main file.");
 
     auto CCFile = getSourceFile(*MainFileName, Sel);
+
     if (!CCFile)
       return error("Couldn't find a suitable implementation file.");
-
-    auto &FS =
-        Sel.AST->getSourceManager().getFileManager().getVirtualFileSystem();
-    auto Buffer = FS.getBufferForFile(*CCFile);
+    assert(Sel.FS && "FS Must be set in apply");
+    auto Buffer = Sel.FS->getBufferForFile(*CCFile);
     // FIXME: Maybe we should consider creating the implementation file if it
     // doesn't exist?
     if (!Buffer)

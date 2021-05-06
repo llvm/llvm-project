@@ -93,7 +93,7 @@ template <typename T> struct NormalFloat {
     // Max exponent is of the form 0xFF...E. That is why -2 and not -1.
     constexpr int maxExponentValue = (1 << ExponentWidth<T>::value) - 2;
     if (biasedExponent > maxExponentValue) {
-      return sign ? FPBits<T>::negInf() : FPBits<T>::inf();
+      return sign ? T(FPBits<T>::negInf()) : T(FPBits<T>::inf());
     }
 
     FPBits<T> result(T(0.0));
@@ -126,15 +126,15 @@ template <typename T> struct NormalFloat {
         // the overflow into the exponent.
         if (newMantissa == one)
           result.encoding.exponent = 1;
-        return result;
+        return T(result);
       } else {
-        return result;
+        return T(result);
       }
     }
 
     result.encoding.exponent = exponent + FPBits<T>::exponentBias;
     result.encoding.mantissa = mantissa;
-    return result;
+    return T(result);
   }
 
 private:
@@ -245,16 +245,16 @@ template <> inline NormalFloat<long double>::operator long double() const {
       } else {
         result.encoding.implicitBit = 0;
       }
-      return result;
+      return static_cast<long double>(result);
     } else {
-      return result;
+      return static_cast<long double>(result);
     }
   }
 
   result.encoding.exponent = biasedExponent;
   result.encoding.mantissa = mantissa;
   result.encoding.implicitBit = 1;
-  return result;
+  return static_cast<long double>(result);
 }
 #endif
 

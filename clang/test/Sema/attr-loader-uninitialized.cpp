@@ -5,7 +5,6 @@ static int local_ok __attribute__((loader_uninitialized));
 int hidden_ok __attribute__((visibility("hidden"))) __attribute__((loader_uninitialized));
 
 const int still_cant_be_const __attribute__((loader_uninitialized));
-// expected-error@-1 {{default initialization of an object of const type}}
 extern int external_rejected __attribute__((loader_uninitialized));
 // expected-error@-1 {{variable 'external_rejected' cannot be declared both 'extern' and with the 'loader_uninitialized' attribute}}
 

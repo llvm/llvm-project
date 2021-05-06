@@ -26,8 +26,8 @@
 # CHECK:      Name: maxlen_16ch_name
 # CHECK-NEXT: Segment: __TEXT
 # CHECK-NEXT: Address:
-# CHECK-NEXT: Size: [[#%x, LAST_SEC_SIZE:]]
-# CHECK-NEXT: Offset: [[#%u, LAST_SEC_OFF:]]
+# CHECK-NEXT: Size:
+# CHECK-NEXT: Offset:
 # CHECK-NEXT: Alignment: 3
 # CHECK-NOT:  }
 # CHECK:      Type: Regular (0x0)
@@ -38,7 +38,7 @@
 # CHECK-NEXT:  vmaddr:
 # CHECK-NEXT:  vmsize:
 # CHECK-NEXT:  fileoff: 0
-# CHECK-NEXT:  filesize: [[#%u, LAST_SEC_SIZE + LAST_SEC_OFF]]
+# CHECK-NEXT:  filesize: 4096
 
 .text
 .align 1

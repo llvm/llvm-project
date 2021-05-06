@@ -3,7 +3,6 @@
 # CHECK: %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 # CHECK: %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 # CHECK: %4:vgpr_32 = COPY %3
-# CHECK: %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 # CHECK: %6:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 # CHECK: %7:vgpr_32 = COPY %3
 

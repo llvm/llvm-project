@@ -4757,8 +4757,11 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParamType,
 
   int ParamIndex = 0;
   bool Matched = false;
+  unsigned NumArgs = Node.getNumArgs();
+  if (FProto && FProto->isVariadic())
+    NumArgs = std::min(NumArgs, FProto->getNumParams());
 
-  for (; ArgIndex < Node.getNumArgs(); ++ArgIndex, ++ParamIndex) {
+  for (; ArgIndex < NumArgs; ++ArgIndex, ++ParamIndex) {
     BoundNodesTreeBuilder ArgMatches(*Builder);
     if (ArgMatcher.matches(*(Node.getArg(ArgIndex)->IgnoreParenCasts()), Finder,
                            &ArgMatches)) {

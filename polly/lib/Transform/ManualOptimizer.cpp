@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 
 #define DEBUG_TYPE "polly-opt-manual"
 
@@ -24,42 +25,36 @@ using namespace polly;
 using namespace llvm;
 
 namespace {
-/// Extract an integer property from an LoopID metadata node.
-static llvm::Optional<int64_t> findOptionalIntOperand(MDNode *LoopMD,
-                                                      StringRef Name) {
-  Metadata *AttrMD = findMetadataOperand(LoopMD, Name).getValueOr(nullptr);
-  if (!AttrMD)
-    return None;
+/// Same as llvm::hasUnrollTransformation(), but takes a LoopID as argument
+/// instead of a Loop.
+static TransformationMode hasUnrollTransformation(MDNode *LoopID) {
+  if (getBooleanLoopAttribute(LoopID, "llvm.loop.unroll.disable"))
+    return TM_SuppressedByUser;
 
-  ConstantInt *IntMD = mdconst::extract_or_null<ConstantInt>(AttrMD);
-  if (!IntMD)
-    return None;
+  Optional<int> Count =
+      getOptionalIntLoopAttribute(LoopID, "llvm.loop.unroll.count");
+  if (Count.hasValue())
+    return Count.getValue() == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
 
-  return IntMD->getSExtValue();
-}
+  if (getBooleanLoopAttribute(LoopID, "llvm.loop.unroll.enable"))
+    return TM_ForcedByUser;
 
-/// Extract boolean property from an LoopID metadata node.
-static llvm::Optional<bool> findOptionalBoolOperand(MDNode *LoopMD,
-                                                    StringRef Name) {
-  auto MD = findOptionMDForLoopID(LoopMD, Name);
-  if (!MD)
-    return None;
+  if (getBooleanLoopAttribute(LoopID, "llvm.loop.unroll.full"))
+    return TM_ForcedByUser;
 
-  switch (MD->getNumOperands()) {
-  case 1:
-    // When the value is absent it is interpreted as 'attribute set'.
-    return true;
-  case 2:
-    ConstantInt *IntMD =
-        mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get());
-    return IntMD->getZExtValue() != 0;
-  }
-  llvm_unreachable("unexpected number of options");
+  if (hasDisableAllTransformsHint(LoopID))
+    return TM_Disable;
+
+  return TM_Unspecified;
 }
 
 /// Apply full or partial unrolling.
 static isl::schedule applyLoopUnroll(MDNode *LoopMD,
                                      isl::schedule_node BandToUnroll) {
+  TransformationMode UnrollMode = ::hasUnrollTransformation(LoopMD);
+  if (UnrollMode & TM_Disable)
+    return {};
+
   assert(BandToUnroll);
   // TODO: Isl's codegen also supports unrolling by isl_ast_build via
   // isl_schedule_node_band_set_ast_build_options({ unroll[x] }) which would be
@@ -67,10 +62,9 @@ static isl::schedule applyLoopUnroll(MDNode *LoopMD,
   // unrolled loop could be input of another loop transformation which expects
   // the explicit schedule nodes. That is, we would need this explicit expansion
   // anyway and using the ISL codegen option is a compile-time optimization.
-  int64_t Factor =
-      findOptionalIntOperand(LoopMD, "llvm.loop.unroll.count").getValueOr(0);
-  bool Full = findOptionalBoolOperand(LoopMD, "llvm.loop.unroll.full")
-                  .getValueOr(false);
+  int64_t Factor = getOptionalIntLoopAttribute(LoopMD, "llvm.loop.unroll.count")
+                       .getValueOr(0);
+  bool Full = getBooleanLoopAttribute(LoopMD, "llvm.loop.unroll.full");
   assert((!Full || !(Factor > 0)) &&
          "Cannot unroll fully and partially at the same time");
 
@@ -80,7 +74,8 @@ static isl::schedule applyLoopUnroll(MDNode *LoopMD,
   if (Factor > 0)
     return applyPartialUnroll(BandToUnroll, Factor);
 
-  llvm_unreachable("Negative unroll factor");
+  // For heuristic unrolling, fall back to LLVM's LoopUnroll pass.
+  return {};
 }
 
 // Return the properties from a LoopID. Scalar properties are ignored.
@@ -143,16 +138,18 @@ public:
         continue;
       StringRef AttrName = NameMD->getString();
 
-      if (AttrName == "llvm.loop.unroll.enable") {
-        // TODO: Handle disabling like llvm::hasUnrollTransformation().
+      // Honor transformation order; transform the first transformation in the
+      // list first.
+      if (AttrName == "llvm.loop.unroll.enable" ||
+          AttrName == "llvm.loop.unroll.count" ||
+          AttrName == "llvm.loop.unroll.full") {
         Result = applyLoopUnroll(LoopMD, Band);
-      } else {
-        // not a loop transformation; look for next property
-        continue;
+        if (Result)
+          return;
       }
 
-      assert(Result && "expecting applied transformation");
-      return;
+      // not a loop transformation; look for next property
+      continue;
     }
   }
 

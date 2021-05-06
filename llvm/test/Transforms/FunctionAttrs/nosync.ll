@@ -6,7 +6,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Base case, empty function
 define void @test1() {
-; CHECK: Function Attrs: norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    ret void
 ;
@@ -15,7 +15,7 @@ define void @test1() {
 
 ; Show the bottom up walk
 define void @test2() {
-; CHECK: Function Attrs: norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    call void @test1()
 ; CHECK-NEXT:    ret void
@@ -38,7 +38,7 @@ define void @test3() convergent {
 }
 
 define i32 @test4(i32 %a, i32 %b) {
-; CHECK: Function Attrs: norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[A]]
@@ -137,7 +137,7 @@ define i32 @load_acquire(i32* nocapture readonly %0) norecurse nounwind uwtable 
 }
 
 define i32 @load_unordered(i32* nocapture readonly %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: norecurse nosync nounwind readonly uwtable willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readonly uwtable willreturn
 ; CHECK-LABEL: @load_unordered(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, i32* [[TMP0:%.*]] unordered, align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -271,7 +271,7 @@ declare void @readnone_test() convergent readnone
 
 ; negative. Convergent
 define void @convergent_readnone(){
-; CHECK: Function Attrs: nosync readnone
+; CHECK: Function Attrs: nofree nosync readnone
 ; CHECK-LABEL: @convergent_readnone(
 ; CHECK-NEXT:    call void @readnone_test()
 ; CHECK-NEXT:    ret void
@@ -299,7 +299,7 @@ define void @i_totally_sync() {
 declare float @llvm.cos(float %val) readnone
 
 define float @cos_test(float %x) {
-; CHECK: Function Attrs: nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree nosync nounwind readnone willreturn
 ; CHECK-LABEL: @cos_test(
 ; CHECK-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[C]]

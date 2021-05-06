@@ -45,7 +45,7 @@
 # CHECK-NEXT:   Name: __bss
 # CHECK-NEXT:   Segment: __DATA
 # CHECK-NEXT:   Address:
-# CHECK-NEXT:   Size: 0x8
+# CHECK-NEXT:   Size: 0x10000
 # CHECK-NEXT:   Offset: 0
 # CHECK-NEXT:   Alignment: 0
 # CHECK-NEXT:   RelocationOffset: 0x0
@@ -92,16 +92,16 @@
 # CHECK:      Name: __DATA
 # CHECK-NEXT: Size:
 # CHECK-NEXT: vmaddr:
-# CHECK-NEXT: vmsize: 0x14
+# CHECK-NEXT: vmsize: 0x11000
 # CHECK-NEXT: fileoff:
-# CHECK-NEXT: filesize: 8
+# CHECK-NEXT: filesize: 4096
 
 # CHECK:      Name: FOO
 # CHECK-NEXT: Size:
 # CHECK-NEXT: vmaddr:
-# CHECK-NEXT: vmsize: 0x10
+# CHECK-NEXT: vmsize: 0x9000
 # CHECK-NEXT: fileoff:
-# CHECK-NEXT: filesize: 8
+# CHECK-NEXT: filesize: 4096
 
 .globl _main
 
@@ -111,15 +111,15 @@ _main:
   retq
 
 .bss
-.zero 4
+.zero 0x8000
 
 .tbss _foo, 4
-.zero 4
+.zero 0x8000
 
 .data
 .quad 0x1234
 
-.zerofill FOO,bss,_zero_foo,0x8
+.zerofill FOO,bss,_zero_foo,0x8000
 
 .section FOO,foo
 .quad 123

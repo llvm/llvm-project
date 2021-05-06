@@ -334,7 +334,7 @@ namespace exegesis {
 Expected<InstructionBenchmark>
 InstructionBenchmark::readYaml(const LLVMState &State, StringRef Filename) {
   if (auto ExpectedMemoryBuffer =
-          errorOrToExpected(MemoryBuffer::getFile(Filename))) {
+          errorOrToExpected(MemoryBuffer::getFile(Filename, /*IsText=*/true))) {
     yaml::Input Yin(*ExpectedMemoryBuffer.get());
     YamlContext Context(State);
     InstructionBenchmark Benchmark;
@@ -351,7 +351,7 @@ InstructionBenchmark::readYaml(const LLVMState &State, StringRef Filename) {
 Expected<std::vector<InstructionBenchmark>>
 InstructionBenchmark::readYamls(const LLVMState &State, StringRef Filename) {
   if (auto ExpectedMemoryBuffer =
-          errorOrToExpected(MemoryBuffer::getFile(Filename))) {
+          errorOrToExpected(MemoryBuffer::getFile(Filename, /*IsText=*/true))) {
     yaml::Input Yin(*ExpectedMemoryBuffer.get());
     YamlContext Context(State);
     std::vector<InstructionBenchmark> Benchmarks;

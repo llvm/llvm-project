@@ -507,6 +507,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 */
 
 #include <__config>
+#include <concepts>
 #include <type_traits>
 #include <typeinfo>
 #include <exception>
@@ -1652,7 +1653,7 @@ public:
 #ifndef _LIBCPP_NO_RTTI
     virtual const void* target(const type_info&) const _NOEXCEPT = 0;
     virtual const std::type_info& target_type() const _NOEXCEPT = 0;
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 };
 
 // __func implements __base for a given functor type.
@@ -1689,7 +1690,7 @@ public:
 #ifndef _LIBCPP_NO_RTTI
     virtual const void* target(const type_info&) const _NOEXCEPT;
     virtual const std::type_info& target_type() const _NOEXCEPT;
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 };
 
 template<class _Fp, class _Alloc, class _Rp, class ..._ArgTypes>
@@ -1755,7 +1756,7 @@ __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::target_type() const _NOEXCEPT
     return typeid(_Fp);
 }
 
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 
 // __value_func creates a value-type from a __func.
 
@@ -2325,10 +2326,10 @@ public:
     virtual const std::type_info& target_type() const _NOEXCEPT {
         return typeid(__func::__block_type);
     }
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 };
 
-#endif  // _LIBCPP_HAS_EXTENSION_BLOCKS && !_LIBCPP_HAS_OBJC_ARC
+#endif // _LIBCPP_HAS_EXTENSION_BLOCKS && !_LIBCPP_HAS_OBJC_ARC
 
 }  // __function
 
@@ -2431,7 +2432,7 @@ public:
     const std::type_info& target_type() const _NOEXCEPT;
     template <typename _Tp> _Tp* target() _NOEXCEPT;
     template <typename _Tp> const _Tp* target() const _NOEXCEPT;
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 };
 
 #ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
@@ -2590,7 +2591,7 @@ function<_Rp(_ArgTypes...)>::target() const _NOEXCEPT
     return __f_.template target<_Tp>();
 }
 
-#endif  // _LIBCPP_NO_RTTI
+#endif // _LIBCPP_NO_RTTI
 
 template <class _Rp, class... _ArgTypes>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -2982,7 +2983,7 @@ bind(_Fp&& __f, _BoundArgs&&... __bound_args)
     return type(_VSTD::forward<_Fp>(__f), _VSTD::forward<_BoundArgs>(__bound_args)...);
 }
 
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 14
 
@@ -3222,6 +3223,80 @@ struct identity {
 };
 #endif // _LIBCPP_STD_VER > 17
 
+#if !defined(_LIBCPP_HAS_NO_RANGES)
+
+namespace ranges {
+
+struct equal_to {
+  template <class _Tp, class _Up>
+  requires equality_comparable_with<_Tp, _Up>
+  [[nodiscard]] constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+      noexcept(noexcept(bool(_VSTD::forward<_Tp>(__t) == _VSTD::forward<_Up>(__u)))) {
+    return _VSTD::forward<_Tp>(__t) == _VSTD::forward<_Up>(__u);
+  }
+
+  using is_transparent = void;
+};
+
+struct not_equal_to {
+  template <class _Tp, class _Up>
+  requires equality_comparable_with<_Tp, _Up>
+  [[nodiscard]] constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+      noexcept(noexcept(bool(!(_VSTD::forward<_Tp>(__t) == _VSTD::forward<_Up>(__u))))) {
+    return !(_VSTD::forward<_Tp>(__t) == _VSTD::forward<_Up>(__u));
+  }
+
+  using is_transparent = void;
+};
+
+struct greater {
+  template <class _Tp, class _Up>
+  requires totally_ordered_with<_Tp, _Up>
+  [[nodiscard]] constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+      noexcept(noexcept(bool(_VSTD::forward<_Up>(__u) < _VSTD::forward<_Tp>(__t)))) {
+    return _VSTD::forward<_Up>(__u) < _VSTD::forward<_Tp>(__t);
+  }
+
+  using is_transparent = void;
+};
+
+struct less {
+  template <class _Tp, class _Up>
+  requires totally_ordered_with<_Tp, _Up>
+  [[nodiscard]] constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+      noexcept(noexcept(bool(_VSTD::forward<_Tp>(__t) < _VSTD::forward<_Up>(__u)))) {
+    return _VSTD::forward<_Tp>(__t) < _VSTD::forward<_Up>(__u);
+  }
+
+  using is_transparent = void;
+};
+
+struct greater_equal {
+  template <class _Tp, class _Up>
+  requires totally_ordered_with<_Tp, _Up>
+  [[nodiscard]] constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+      noexcept(noexcept(bool(!(_VSTD::forward<_Tp>(__t) < _VSTD::forward<_Up>(__u))))) {
+    return !(_VSTD::forward<_Tp>(__t) < _VSTD::forward<_Up>(__u));
+  }
+
+  using is_transparent = void;
+};
+
+struct less_equal {
+  template <class _Tp, class _Up>
+  requires totally_ordered_with<_Tp, _Up>
+  [[nodiscard]] constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+      noexcept(noexcept(bool(!(_VSTD::forward<_Up>(__u) < _VSTD::forward<_Tp>(__t))))) {
+    return !(_VSTD::forward<_Up>(__u) < _VSTD::forward<_Tp>(__t));
+  }
+
+  using is_transparent = void;
+};
+
+} // namespace ranges
+
+#endif // !defined(_LIBCPP_HAS_NO_RANGES)
+
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_FUNCTIONAL
+#endif // _LIBCPP_FUNCTIONAL

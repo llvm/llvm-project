@@ -13,7 +13,6 @@ unittest("IntrospectionTests") {
     "//llvm/lib/Testing/Support",
   ]
 
-
   defines = [ "SKIP_INTROSPECTION_GENERATION" ]
 
   sources = [ "IntrospectionTest.cpp" ]

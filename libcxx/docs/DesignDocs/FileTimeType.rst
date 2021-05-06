@@ -18,7 +18,7 @@ type, which is a specialization of ``chrono::time_point`` for the
   trivial-clock is an implementation-defined type that satisfies the
   Cpp17TrivialClock requirements ([time.clock.req]) and that is capable of
   representing and measuring file time values. Implementations should ensure
-  that the resolution and range of file_­time_­type reflect the operating
+  that the resolution and range of file_time_type reflect the operating
   system dependent resolution and range of file time values.
 
 

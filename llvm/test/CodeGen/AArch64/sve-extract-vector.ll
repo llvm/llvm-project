@@ -17,15 +17,9 @@ define <2 x i64> @extract_v2i64_nxv2i64_idx1(<vscale x 2 x i64> %vec) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    sub x8, x8, #1 // =1
-; CHECK-NEXT:    cmp x8, #1 // =1
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    csinc x8, x8, xzr, lo
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
-; CHECK-NEXT:    lsl x8, x8, #3
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    ldr q0, [x9, x8]
+; CHECK-NEXT:    ldur q0, [sp, #8]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -49,15 +43,9 @@ define <4 x i32> @extract_v4i32_nxv4i32_idx1(<vscale x 4 x i32> %vec) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    cntw x8
-; CHECK-NEXT:    sub x8, x8, #1 // =1
-; CHECK-NEXT:    cmp x8, #1 // =1
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    csinc x8, x8, xzr, lo
 ; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
-; CHECK-NEXT:    lsl x8, x8, #2
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    ldr q0, [x9, x8]
+; CHECK-NEXT:    ldur q0, [sp, #4]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -81,15 +69,9 @@ define <8 x i16> @extract_v8i16_nxv8i16_idx1(<vscale x 8 x i16> %vec) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    cnth x8
-; CHECK-NEXT:    sub x8, x8, #1 // =1
-; CHECK-NEXT:    cmp x8, #1 // =1
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    csinc x8, x8, xzr, lo
 ; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
-; CHECK-NEXT:    lsl x8, x8, #1
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    ldr q0, [x9, x8]
+; CHECK-NEXT:    ldur q0, [sp, #2]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -113,14 +95,9 @@ define <16 x i8> @extract_v16i8_nxv16i8_idx1(<vscale x 16 x i8> %vec) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    sub x8, x8, #1 // =1
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmp x8, #1 // =1
 ; CHECK-NEXT:    st1b { z0.b }, p0, [sp]
-; CHECK-NEXT:    csinc x8, x8, xzr, lo
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    ldr q0, [x9, x8]
+; CHECK-NEXT:    ldur q0, [sp, #1]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

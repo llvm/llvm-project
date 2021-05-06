@@ -27,7 +27,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "../types.h"
+#include "compare_types.h"
 
 template <class T, class U>
 constexpr bool check_equality_comparable_with() {

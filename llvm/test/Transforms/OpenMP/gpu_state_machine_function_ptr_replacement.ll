@@ -1,3 +1,4 @@
+; RUN: opt -S -passes=openmp-opt-cgscc -openmp-ir-builder-optimistic-attributes -pass-remarks=openmp-opt -openmp-print-gpu-kernels < %s | FileCheck %s
 ; RUN: opt -S -passes=openmp-opt-cgscc -pass-remarks=openmp-opt -openmp-print-gpu-kernels < %s | FileCheck %s
 ; RUN: opt -S        -openmp-opt-cgscc -pass-remarks=openmp-opt -openmp-print-gpu-kernels < %s | FileCheck %s
 

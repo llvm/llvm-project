@@ -89,6 +89,7 @@ static Distro::DistroType DetectLsbRelease(llvm::vfs::FileSystem &VFS) {
                     .Case("focal", Distro::UbuntuFocal)
                     .Case("groovy", Distro::UbuntuGroovy)
                     .Case("hirsute", Distro::UbuntuHirsute)
+                    .Case("impish", Distro::UbuntuImpish)
                     .Default(Distro::UnknownDistro);
   return Version;
 }

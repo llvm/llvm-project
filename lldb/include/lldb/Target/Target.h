@@ -1005,11 +1005,12 @@ public:
   // read from const sections in object files, read from the target. This
   // version of ReadMemory will try and read memory from the process if the
   // process is alive. The order is:
-  // 1 - if (prefer_file_cache == true) then read from object file cache
-  // 2 - if there is a valid process, try and read from its memory
-  // 3 - if (prefer_file_cache == false) then read from object file cache
-  size_t ReadMemory(const Address &addr, bool prefer_file_cache, void *dst,
-                    size_t dst_len, Status &error,
+  // 1 - if (force_live_memory == false) and the address falls in a read-only
+  // section, then read from the file cache
+  // 2 - if there is a process, then read from memory
+  // 3 - if there is no process, then read from the file cache
+  size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
+                    Status &error, bool force_live_memory = false,
                     lldb::addr_t *load_addr_ptr = nullptr);
 
   size_t ReadCStringFromMemory(const Address &addr, std::string &out_str,
@@ -1018,18 +1019,19 @@ public:
   size_t ReadCStringFromMemory(const Address &addr, char *dst,
                                size_t dst_max_len, Status &result_error);
 
-  size_t ReadScalarIntegerFromMemory(const Address &addr,
-                                     bool prefer_file_cache, uint32_t byte_size,
+  size_t ReadScalarIntegerFromMemory(const Address &addr, uint32_t byte_size,
                                      bool is_signed, Scalar &scalar,
-                                     Status &error);
+                                     Status &error,
+                                     bool force_live_memory = false);
 
   uint64_t ReadUnsignedIntegerFromMemory(const Address &addr,
-                                         bool prefer_file_cache,
                                          size_t integer_byte_size,
-                                         uint64_t fail_value, Status &error);
+                                         uint64_t fail_value, Status &error,
+                                         bool force_live_memory = false);
 
-  bool ReadPointerFromMemory(const Address &addr, bool prefer_file_cache,
-                             Status &error, Address &pointer_addr);
+  bool ReadPointerFromMemory(const Address &addr, Status &error,
+                             Address &pointer_addr,
+                             bool force_live_memory = false);
 
   SectionLoadList &GetSectionLoadList() {
     return m_section_load_history.GetCurrentSectionLoadList();

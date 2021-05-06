@@ -2,7 +2,7 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown -verify-machineinstrs \
 ; RUN:   -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | FileCheck %s
 ; RUN: llc -mcpu=pwr8 -mtriple=powerpc64le-unknown-unknown -verify-machineinstrs \
-; RUN:   -enable-soft-fp128 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | FileCheck %s \
+; RUN:   -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | FileCheck %s \
 ; RUN:   -check-prefix=CHECK-P8
 
 @a_qp = common dso_local global fp128 0xL00000000000000000000000000000000, align 16

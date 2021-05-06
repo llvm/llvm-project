@@ -562,6 +562,14 @@ bool hasDebugCall(ScopStmt *Stmt);
 llvm::Optional<llvm::Metadata *> findMetadataOperand(llvm::MDNode *LoopMD,
                                                      llvm::StringRef Name);
 
+/// Find a boolean property value in a LoopID. The value not being defined is
+/// interpreted as a false value.
+bool getBooleanLoopAttribute(llvm::MDNode *LoopID, llvm::StringRef Name);
+
+/// Find an integers property value in a LoopID.
+llvm::Optional<int> getOptionalIntLoopAttribute(llvm::MDNode *LoopID,
+                                                llvm::StringRef Name);
+
 /// Does the loop's LoopID contain a 'llvm.loop.disable_heuristics' property?
 ///
 /// This is equivalent to llvm::hasDisableAllTransformsHint(Loop*), but
@@ -569,6 +577,7 @@ llvm::Optional<llvm::Metadata *> findMetadataOperand(llvm::MDNode *LoopMD,
 /// which clashes with polly::MemoryAccess. Declaring this alias here avoid
 /// having to include LoopUtils.h in other files.
 bool hasDisableAllTransformsHint(llvm::Loop *L);
+bool hasDisableAllTransformsHint(llvm::MDNode *LoopID);
 
 /// Represent the attributes of a loop.
 struct BandAttr {

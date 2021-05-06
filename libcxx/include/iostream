@@ -60,4 +60,4 @@ extern _LIBCPP_FUNC_VIS wostream wclog;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_IOSTREAM
+#endif // _LIBCPP_IOSTREAM

@@ -42,7 +42,7 @@
 ## If .text is retained, its referenced qux and .fred are retained as well.
 ## fred_und is used (by .fred) and thus emitted.
 ## Note, GNU ld does not retain qux.
-# RUN: ld.lld -r --gc-sections -e _start %t.o -o %tstart.ro
+# RUN: ld.lld -r --gc-sections -z nostart-stop-gc -e _start %t.o -o %tstart.ro
 # RUN: llvm-readelf -Ss %tstart.ro | FileCheck %s --check-prefix=KEEP_START
 
 # KEEP_START:      [ 1] .text

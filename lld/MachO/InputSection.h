@@ -101,6 +101,7 @@ constexpr const char stubs[] = "__stubs";
 constexpr const char stubHelper[] = "__stub_helper";
 constexpr const char laSymbolPtr[] = "__la_symbol_ptr";
 constexpr const char data[] = "__data";
+constexpr const char bitcodeBundle[] = "__bundle";
 
 } // namespace section_names
 

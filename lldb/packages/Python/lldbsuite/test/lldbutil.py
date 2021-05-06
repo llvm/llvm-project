@@ -95,6 +95,11 @@ def get_xcode_sdk_root(sdk):
                                     ]).rstrip().decode('utf-8')
 
 
+def get_xcode_clang(sdk):
+    return subprocess.check_output(['xcrun', '-sdk', sdk, '-f', 'clang'
+                                    ]).rstrip().decode("utf-8")
+
+
 # ===================================================
 # Disassembly for an SBFunction or an SBSymbol object
 # ===================================================
@@ -247,6 +252,12 @@ def stop_reason_to_str(enum):
         return "watchpoint"
     elif enum == lldb.eStopReasonExec:
         return "exec"
+    elif enum == lldb.eStopReasonFork:
+        return "fork"
+    elif enum == lldb.eStopReasonVFork:
+        return "vfork"
+    elif enum == lldb.eStopReasonVForkDone:
+        return "vforkdone"
     elif enum == lldb.eStopReasonSignal:
         return "signal"
     elif enum == lldb.eStopReasonException:

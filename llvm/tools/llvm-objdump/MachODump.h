@@ -33,21 +33,26 @@ namespace objdump {
 void parseMachOOptions(const llvm::opt::InputArgList &InputArgs);
 
 // MachO specific options
-extern cl::OptionCategory MachOCat;
 extern bool Bind;
 extern bool DataInCode;
-extern bool DylibsUsed;
+extern std::string DisSymName;
 extern bool DylibId;
+extern bool DylibsUsed;
 extern bool ExportsTrie;
 extern bool FirstPrivateHeader;
+extern bool FullLeadingAddr;
 extern bool FunctionStarts;
 extern bool IndirectSymbols;
 extern bool InfoPlist;
 extern bool LazyBind;
+extern bool LeadingHeaders;
 extern bool LinkOptHints;
 extern bool ObjcMetaData;
 extern bool Rebase;
+extern bool Rpaths;
+extern bool SymbolicOperands;
 extern bool UniversalHeaders;
+extern bool Verbose;
 extern bool WeakBind;
 
 Error getMachORelocationValueString(const object::MachOObjectFile *Obj,

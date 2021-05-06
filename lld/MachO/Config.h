@@ -33,6 +33,7 @@ using SectionRenameMap = llvm::DenseMap<NamePair, NamePair>;
 using SegmentRenameMap = llvm::DenseMap<llvm::StringRef, llvm::StringRef>;
 
 struct PlatformInfo {
+  llvm::MachO::Target target;
   llvm::VersionTuple minimum;
   llvm::VersionTuple sdk;
 };
@@ -88,6 +89,8 @@ struct Configuration {
   bool saveTemps = false;
   bool adhocCodesign = false;
   bool emitFunctionStarts = false;
+  bool emitBitcodeBundle = false;
+  bool emitEncryptionInfo = false;
   bool timeTraceEnabled = false;
   uint32_t headerPad;
   uint32_t dylibCompatibilityVersion = 0;
@@ -100,7 +103,6 @@ struct Configuration {
   llvm::StringRef ltoObjPath;
   llvm::StringRef thinLTOJobs;
   bool demangle = false;
-  llvm::MachO::Target target;
   PlatformInfo platformInfo;
   NamespaceKind namespaceKind = NamespaceKind::twolevel;
   UndefinedSymbolTreatment undefinedSymbolTreatment =
@@ -122,6 +124,12 @@ struct Configuration {
 
   SymbolPatterns exportedSymbols;
   SymbolPatterns unexportedSymbols;
+
+  llvm::MachO::Architecture arch() const { return platformInfo.target.Arch; }
+
+  llvm::MachO::PlatformKind platform() const {
+    return platformInfo.target.Platform;
+  }
 };
 
 // The symbol with the highest priority should be ordered first in the output

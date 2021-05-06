@@ -164,5 +164,10 @@ bool mlir::isNotBranchOpInterfaceOrReturnLikeOp(Operation *op) {
   if (!block || &block->back() != op)
     return true;
 
+  // We don't want to handle terminators in nested regions, assume they are
+  // always legal.
+  if (!isa_and_nonnull<FuncOp>(op->getParentOp()))
+    return true;
+
   return false;
 }

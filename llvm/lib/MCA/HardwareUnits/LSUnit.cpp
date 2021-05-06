@@ -205,7 +205,7 @@ void LSUnitBase::onInstructionExecuted(const InstRef &IR) {
   unsigned GroupID = IR.getInstruction()->getLSUTokenID();
   auto It = Groups.find(GroupID);
   assert(It != Groups.end() && "Instruction not dispatched to the LS unit");
-  It->second->onInstructionExecuted();
+  It->second->onInstructionExecuted(IR);
   if (It->second->isExecuted())
     Groups.erase(It);
 }

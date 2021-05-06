@@ -24,6 +24,7 @@ constexpr const char linkEdit[] = "__LINKEDIT";
 constexpr const char dataConst[] = "__DATA_CONST";
 constexpr const char ld[] = "__LD"; // output only with -r
 constexpr const char dwarf[] = "__DWARF";
+constexpr const char llvm[] = "__LLVM";
 
 } // namespace segment_names
 
@@ -46,6 +47,7 @@ public:
 
   uint64_t fileOff = 0;
   uint64_t fileSize = 0;
+  uint64_t vmSize = 0;
   StringRef name;
   uint32_t maxProt = 0;
   uint32_t initProt = 0;

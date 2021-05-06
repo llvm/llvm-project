@@ -160,10 +160,15 @@ public:
       MG->onGroupIssued(CriticalMemoryInstruction, true);
   }
 
-  void onInstructionExecuted() {
+  void onInstructionExecuted(const InstRef &IR) {
     assert(isReady() && !isExecuted() && "Invalid internal state!");
     --NumExecuting;
     ++NumExecuted;
+
+    if (CriticalMemoryInstruction &&
+        CriticalMemoryInstruction.getSourceIndex() == IR.getSourceIndex()) {
+      CriticalMemoryInstruction.invalidate();
+    }
 
     if (!isExecuted())
       return;

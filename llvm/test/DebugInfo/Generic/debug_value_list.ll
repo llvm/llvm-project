@@ -8,17 +8,17 @@ target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-pc-windows-msvc19.16.27034"
 
 ; CHECK-COUNT-3: llvm.dbg.value(
-; CHECK-SAME: metadata !DIArgList(i32 %a, i32 %b)
+; CHECK-SAME: metadata !DIArgList(i32 %a, i32 %b, i32 5)
 ; CHECK-SAME: metadata !16,
-; CHECK-SAME: metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus)
+; CHECK-SAME: metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_LLVM_arg, 2, DW_OP_plus)
 define dso_local i32 @"?foo@@YAHHH@Z"(i32 %a, i32 %b) local_unnamed_addr !dbg !8 {
 entry:
   call void @llvm.dbg.value(metadata !DIArgList(i32 %b), metadata !14, metadata !DIExpression(DW_OP_LLVM_arg, 0)), !dbg !17
   call void @llvm.dbg.value(metadata !DIArgList(i32 %a), metadata !15, metadata !DIExpression(DW_OP_LLVM_arg, 0)), !dbg !17
   call void @llvm.dbg.value(
-    metadata !DIArgList(i32 %a, i32 %b),
+    metadata !DIArgList(i32 %a, i32 %b, i32 5),
     metadata !16,
-    metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus)), !dbg !17
+    metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_LLVM_arg, 2, DW_OP_plus)), !dbg !17
   %mul = mul nsw i32 %b, %a, !dbg !18
   ret i32 %mul, !dbg !18
 }

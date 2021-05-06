@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GISelMITest.h"
-#include "llvm/CodeGen/GlobalISel/ConstantFoldingMIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -22,7 +22,7 @@ TEST_F(AArch64GISelMITest, FoldWithBuilder) {
   if (!TM)
     return;
   // Try to use the FoldableInstructionsBuilder to build binary ops.
-  ConstantFoldingMIRBuilder CFB(B.getState());
+  CSEMIRBuilder CFB(B.getState());
   LLT s32 = LLT::scalar(32);
   int64_t Cst;
   auto MIBCAdd =
@@ -41,7 +41,7 @@ TEST_F(AArch64GISelMITest, FoldWithBuilder) {
 
   // Try one of the other constructors of MachineIRBuilder to make sure it's
   // compatible.
-  ConstantFoldingMIRBuilder CFB1(*MF);
+  CSEMIRBuilder CFB1(*MF);
   CFB1.setInsertPt(*EntryMBB, EntryMBB->end());
   auto MIBCSub =
       CFB1.buildInstr(TargetOpcode::G_SUB, {s32},

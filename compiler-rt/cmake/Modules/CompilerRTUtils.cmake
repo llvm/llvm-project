@@ -373,15 +373,17 @@ macro(load_llvm_config)
       set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR_CMAKE_STYLE}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
     endif()
 
-    if (EXISTS "${LLVM_CMAKE_PATH}")
+    set(LLVM_CMAKE_INCLUDE_FILE "${LLVM_CMAKE_PATH}/LLVMConfig.cmake")
+    if (EXISTS "${LLVM_CMAKE_INCLUDE_FILE}")
       list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
       # Get some LLVM variables from LLVMConfig.
-      include("${LLVM_CMAKE_PATH}/LLVMConfig.cmake")
+      include("${LLVM_CMAKE_INCLUDE_FILE}")
       set(FOUND_LLVM_CMAKE_PATH TRUE)
     else()
       set(FOUND_LLVM_CMAKE_PATH FALSE)
-      message(WARNING "LLVM CMake path (${LLVM_CMAKE_PATH}) reported by llvm-config does not exist")
+      message(WARNING "LLVM CMake path (${LLVM_CMAKE_INCLUDE_FILE}) reported by llvm-config does not exist")
     endif()
+    unset(LLVM_CMAKE_INCLUDE_FILE)
 
     set(LLVM_LIBRARY_OUTPUT_INTDIR
       ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})

@@ -143,6 +143,7 @@
 #endif
 #include <queue>
 #include <random>
+#include <ranges>
 #include <ratio>
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 #    include <regex>

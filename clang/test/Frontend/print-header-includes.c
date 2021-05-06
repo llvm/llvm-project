@@ -9,7 +9,7 @@
 // CHECK-NOT: .. {{.*test2.h}}
 
 // RUN: %clang_cc1 -I%S -isystem %S/Inputs/SystemHeaderPrefix \
-// RUN:     -E -H -show-skipped-includes -o /dev/null %s 2> %t.stderr
+// RUN:     -E -H -fshow-skipped-includes -o /dev/null %s 2> %t.stderr
 // RUN: FileCheck --check-prefix=SKIPPED < %t.stderr %s
 
 // SKIPPED-NOT: . {{.*noline.h}}

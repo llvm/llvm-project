@@ -986,9 +986,10 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   Optional<int> FPSaveIndex = FuncInfo->FramePointerSaveIndex;
   Optional<int> BPSaveIndex = FuncInfo->BasePointerSaveIndex;
 
+  // VGPRs used for SGPR->VGPR spills
   for (const SIMachineFunctionInfo::SGPRSpillVGPR &Reg :
        FuncInfo->getSGPRSpillVGPRs()) {
-    if (!Reg.FI.hasValue())
+    if (!Reg.FI)
       continue;
 
     if (!ScratchExecCopy)
@@ -1010,6 +1011,20 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     bool emitSpillsToMem = true;
     emitCFISavedRegSpills(MF, MBB, MBBI, LiveRegs, ScratchExecCopy,
                           emitSpillsToMem);
+  }
+
+  // VGPRs used for Whole Wave Mode
+  for (const auto &Reg : FuncInfo->WWMReservedRegs) {
+    auto VGPR = Reg.first;
+    auto FI = Reg.second;
+    if (!FI)
+      continue;
+
+    if (!ScratchExecCopy)
+      ScratchExecCopy =
+          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, /*IsProlog*/ true);
+
+    buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, VGPR, *FI);
   }
 
   if (ScratchExecCopy) {
@@ -1343,7 +1358,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   Register ScratchExecCopy;
   for (const SIMachineFunctionInfo::SGPRSpillVGPR &Reg :
        FuncInfo->getSGPRSpillVGPRs()) {
-    if (!Reg.FI.hasValue())
+    if (!Reg.FI)
       continue;
 
     if (!ScratchExecCopy)
@@ -1352,6 +1367,19 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
 
     buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, Reg.VGPR,
                        *Reg.FI);
+  }
+
+  for (const auto &Reg : FuncInfo->WWMReservedRegs) {
+    auto VGPR = Reg.first;
+    auto FI = Reg.second;
+    if (!FI)
+      continue;
+
+    if (!ScratchExecCopy)
+      ScratchExecCopy =
+          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, /*IsProlog*/ false);
+
+    buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, VGPR, *FI);
   }
 
   if (ScratchExecCopy) {

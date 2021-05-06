@@ -66,10 +66,8 @@ namespace llvm {
     CGFT_Null         // Do not emit any output.
   };
 
-  // Specify effect of frame pointer elimination optimization.
-  namespace FramePointer {
-    enum FP {All, NonLeaf, None};
-  }
+  // Specify what functions should keep the frame pointer.
+  enum class FramePointerKind { None, NonLeaf, All };
 
 }  // end llvm namespace
 

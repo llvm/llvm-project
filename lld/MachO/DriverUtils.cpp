@@ -140,12 +140,15 @@ std::string macho::createResponseFile(const InputArgList &args) {
         for (StringRef path : args::getLines(*buffer))
           os << quote(rewritePath(path)) << "\n";
       break;
-    case OPT_force_load:
-    case OPT_rpath:
-    case OPT_syslibroot:
     case OPT_F:
     case OPT_L:
+    case OPT_bundle_loader:
+    case OPT_exported_symbols_list:
+    case OPT_force_load:
     case OPT_order_file:
+    case OPT_rpath:
+    case OPT_syslibroot:
+    case OPT_unexported_symbols_list:
       os << arg->getSpelling() << " " << quote(rewritePath(arg->getValue()))
          << "\n";
       break;
@@ -185,8 +188,8 @@ static DenseMap<CachedHashStringRef, DylibFile *> loadedDylibs;
 Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
                                        DylibFile *umbrella,
                                        bool isBundleLoader) {
-  StringRef path = mbref.getBufferIdentifier();
-  DylibFile *&file = loadedDylibs[CachedHashStringRef(path)];
+  CachedHashStringRef path(mbref.getBufferIdentifier());
+  DylibFile *file = loadedDylibs[path];
   if (file)
     return file;
 
@@ -206,6 +209,11 @@ Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
            magic == file_magic::macho_bundle);
     file = make<DylibFile>(mbref, umbrella, isBundleLoader);
   }
+  // Note that DylibFile's ctor may recursively invoke loadDylib(), which can
+  // cause loadedDylibs to get resized and its iterators invalidated. As such,
+  // we redo the key lookup here instead of caching an iterator from our earlier
+  // lookup at the start of the function.
+  loadedDylibs[path] = file;
   return file;
 }
 

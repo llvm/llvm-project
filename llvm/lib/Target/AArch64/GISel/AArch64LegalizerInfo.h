@@ -52,6 +52,8 @@ private:
                                LegalizerHelper &Helper) const;
   bool legalizeRotate(MachineInstr &MI, MachineRegisterInfo &MRI,
                       LegalizerHelper &Helper) const;
+  bool legalizeCTPOP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     LegalizerHelper &Helper) const;
   const AArch64Subtarget *ST;
 };
 } // End llvm namespace.

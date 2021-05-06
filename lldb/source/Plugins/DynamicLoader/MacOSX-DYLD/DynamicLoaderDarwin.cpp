@@ -1086,7 +1086,7 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
     Status error;
     const size_t tsl_data_size = addr_size * 3;
     Target &target = m_process->GetTarget();
-    if (target.ReadMemory(tls_addr, false, buf, tsl_data_size, error) ==
+    if (target.ReadMemory(tls_addr, buf, tsl_data_size, error, true) ==
         tsl_data_size) {
       const ByteOrder byte_order = m_process->GetByteOrder();
       DataExtractor data(buf, sizeof(buf), byte_order, addr_size);

@@ -31,7 +31,6 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <climits>
@@ -43,6 +42,10 @@
 #include <vector>
 
 namespace llvm {
+
+namespace vfs {
+class FileSystem;
+}
 
 class StringSaver;
 
@@ -2091,11 +2094,18 @@ bool readConfigFile(StringRef CfgFileName, StringSaver &Saver,
 /// \param [in] CurrentDir Path used to resolve relative rsp files. If set to
 /// None, process' cwd is used instead.
 /// \return true if all @files were expanded successfully or there were none.
+bool ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
+                         SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
+                         bool RelativeNames,
+                         llvm::Optional<llvm::StringRef> CurrentDir,
+                         llvm::vfs::FileSystem &FS);
+
+/// An overload of ExpandResponseFiles() that uses
+/// llvm::vfs::getRealFileSystem().
 bool ExpandResponseFiles(
     StringSaver &Saver, TokenizerCallback Tokenizer,
     SmallVectorImpl<const char *> &Argv, bool MarkEOLs = false,
     bool RelativeNames = false,
-    llvm::vfs::FileSystem &FS = *llvm::vfs::getRealFileSystem(),
     llvm::Optional<llvm::StringRef> CurrentDir = llvm::None);
 
 /// A convenience helper which concatenates the options specified by the

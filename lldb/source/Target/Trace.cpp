@@ -200,7 +200,7 @@ DumpInstructionInfo(Stream &s, const SymbolContext &sc,
   // Now we try using the current function's disassembler
   if (sc.function) {
     DisassemblerSP disassembler =
-        sc.function->GetInstructions(exe_ctx, nullptr, true);
+        sc.function->GetInstructions(exe_ctx, nullptr);
     if (TryDumpInstructionInfo(s, disassembler, exe_ctx, address))
       return disassembler;
   }
@@ -209,9 +209,9 @@ DumpInstructionInfo(Stream &s, const SymbolContext &sc,
   Target &target = exe_ctx.GetTargetRef();
   const ArchSpec &arch = target.GetArchitecture();
   AddressRange range(address, arch.GetMaximumOpcodeByteSize() * 1);
-  DisassemblerSP disassembler = Disassembler::DisassembleRange(
-      arch, /*plugin_name*/ nullptr,
-      /*flavor*/ nullptr, target, range, /*prefer_file_cache*/ true);
+  DisassemblerSP disassembler =
+      Disassembler::DisassembleRange(arch, /*plugin_name*/ nullptr,
+                                     /*flavor*/ nullptr, target, range);
   if (TryDumpInstructionInfo(s, disassembler, exe_ctx, address))
     return disassembler;
   return nullptr;

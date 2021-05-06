@@ -144,6 +144,16 @@ define i8* @test3(i8* %dst, i32 %n) {
   ret i8* %ret
 }
 
+define i8* @test4(i8* %dst, i32 %n) {
+; CHECK-LABEL: @test4(
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* noalias noundef nonnull align 16 dereferenceable(5) [[DST:%.*]], i8 0, i32 5, i1 false)
+; CHECK-NEXT:    ret i8* [[DST]]
+;
+  %src = getelementptr [1 x i8], [1 x i8]* @null, i32 0, i32 0
+  %ret = call i8* @strncpy(i8* align(16) noalias nonnull %dst, i8* nonnull %src, i32 5);
+  ret i8* %ret
+}
+
 ; Check cases that shouldn't be simplified.
 
 define void @test_no_simplify1() {

@@ -56,7 +56,7 @@
 #  else
 #    define _LIBCPP_STD_VER 21  // current year, or date of c++2b ratification
 #  endif
-#endif  // _LIBCPP_STD_VER
+#endif // _LIBCPP_STD_VER
 
 #if defined(__ELF__)
 #  define _LIBCPP_OBJECT_FORMAT_ELF   1
@@ -238,13 +238,13 @@
 #  if __LITTLE_ENDIAN__
 #    define _LIBCPP_LITTLE_ENDIAN
 #  endif  // __LITTLE_ENDIAN__
-#endif  // __LITTLE_ENDIAN__
+#endif // __LITTLE_ENDIAN__
 
 #ifdef __BIG_ENDIAN__
 #  if __BIG_ENDIAN__
 #    define _LIBCPP_BIG_ENDIAN
 #  endif  // __BIG_ENDIAN__
-#endif  // __BIG_ENDIAN__
+#endif // __BIG_ENDIAN__
 
 #ifdef __BYTE_ORDER__
 #  if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
@@ -265,7 +265,7 @@
 #  ifndef __LONG_LONG_SUPPORTED
 #    define _LIBCPP_HAS_NO_LONG_LONG
 #  endif  // __LONG_LONG_SUPPORTED
-#endif  // __FreeBSD__
+#endif // __FreeBSD__
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 #  include <sys/endian.h>
@@ -274,7 +274,7 @@
 #  else  // _BYTE_ORDER == _LITTLE_ENDIAN
 #    define _LIBCPP_BIG_ENDIAN
 #  endif  // _BYTE_ORDER == _LITTLE_ENDIAN
-#endif  // defined(__NetBSD__) || defined(__OpenBSD__)
+#endif // defined(__NetBSD__) || defined(__OpenBSD__)
 
 #if defined(_WIN32)
 #  define _LIBCPP_WIN32API
@@ -343,7 +343,7 @@
 #  else  // __BYTE_ORDER == __BIG_ENDIAN
 #    error unable to determine endian
 #  endif
-#endif  // !defined(_LIBCPP_LITTLE_ENDIAN) && !defined(_LIBCPP_BIG_ENDIAN)
+#endif // !defined(_LIBCPP_LITTLE_ENDIAN) && !defined(_LIBCPP_BIG_ENDIAN)
 
 #if __has_attribute(__no_sanitize__) && !defined(_LIBCPP_COMPILER_GCC)
 #  define _LIBCPP_NO_CFI __attribute__((__no_sanitize__("cfi")))
@@ -821,7 +821,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #ifdef _LIBCPP_HAS_NO_UNICODE_CHARS
 typedef unsigned short char16_t;
 typedef unsigned int   char32_t;
-#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
 
 #ifndef __SIZEOF_INT128__
 #define _LIBCPP_HAS_NO_INT128
@@ -830,7 +830,7 @@ typedef unsigned int   char32_t;
 #ifdef _LIBCPP_CXX03_LANG
 # define static_assert(...) _Static_assert(__VA_ARGS__)
 # define decltype(...) __decltype(__VA_ARGS__)
-#endif  // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 #ifdef _LIBCPP_CXX03_LANG
 #  define _LIBCPP_CONSTEXPR
@@ -848,7 +848,7 @@ typedef unsigned int   char32_t;
 #define _LIBCPP_HAS_NO_CONCEPTS
 #endif
 
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_HAS_NO_CONCEPTS) || defined(_MSC_VER)
 #define _LIBCPP_HAS_NO_RANGES
 #endif
 
@@ -888,7 +888,7 @@ typedef unsigned int   char32_t;
 #else  // _LIBCPP_HAS_NO_STRONG_ENUMS
 #  define _LIBCPP_DECLARE_STRONG_ENUM(x) enum class _LIBCPP_ENUM_VIS x
 #  define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x)
-#endif  // _LIBCPP_HAS_NO_STRONG_ENUMS
+#endif // _LIBCPP_HAS_NO_STRONG_ENUMS
 
 // _LIBCPP_DEBUG potential values:
 //  - undefined: No assertions. This is the default.
@@ -976,7 +976,7 @@ typedef unsigned int   char32_t;
 #endif
 
 #if _LIBCPP_STD_VER <= 17 || !defined(__cpp_char8_t)
-#define _LIBCPP_NO_HAS_CHAR8_T
+#define _LIBCPP_HAS_NO_CHAR8_T
 #endif
 
 // Deprecation macros.
@@ -1019,7 +1019,7 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_DEPRECATED_IN_CXX20
 #endif
 
-#if !defined(_LIBCPP_NO_HAS_CHAR8_T)
+#if !defined(_LIBCPP_HAS_NO_CHAR8_T)
 #  define _LIBCPP_DEPRECATED_WITH_CHAR8_T _LIBCPP_DEPRECATED
 #else
 #  define _LIBCPP_DEPRECATED_WITH_CHAR8_T
@@ -1293,7 +1293,7 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #  else
 #    define _LIBCPP_THREAD_SAFETY_ANNOTATION(x)
 #  endif
-#endif  // _LIBCPP_THREAD_SAFETY_ANNOTATION
+#endif // _LIBCPP_THREAD_SAFETY_ANNOTATION
 
 #if __has_attribute(require_constant_initialization)
 #  define _LIBCPP_SAFE_STATIC __attribute__((__require_constant_initialization__))
@@ -1413,15 +1413,13 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 
 #ifndef _LIBCPP_NO_AUTO_LINK
 #  if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_BUILDING_LIBRARY)
-#    if defined(_DLL)
+#    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 #      pragma comment(lib, "c++.lib")
 #    else
 #      pragma comment(lib, "libc++.lib")
 #    endif
 #  endif // defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_BUILDING_LIBRARY)
 #endif // _LIBCPP_NO_AUTO_LINK
-
-#define _LIBCPP_UNUSED_VAR(x) ((void)(x))
 
 // Configures the fopen close-on-exec mode character, if any. This string will
 // be appended to any mode string used by fstream for fopen/fdopen.

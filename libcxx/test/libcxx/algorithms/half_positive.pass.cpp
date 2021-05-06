@@ -38,7 +38,7 @@ int main(int, char**)
         assert(test<size_t>());
 #if !defined(_LIBCPP_HAS_NO_INT128)
         assert(test<__int128_t>());
-#endif  // !defined(_LIBCPP_HAS_NO_INT128)
+#endif // !defined(_LIBCPP_HAS_NO_INT128)
     }
 
 #if TEST_STD_VER >= 11
@@ -49,7 +49,7 @@ int main(int, char**)
         static_assert(test<size_t>(), "");
 #if !defined(_LIBCPP_HAS_NO_INT128)
         static_assert(test<__int128_t>(), "");
-#endif  // !defined(_LIBCPP_HAS_NO_INT128)
+#endif // !defined(_LIBCPP_HAS_NO_INT128)
     }
 #endif // TEST_STD_VER >= 11
 

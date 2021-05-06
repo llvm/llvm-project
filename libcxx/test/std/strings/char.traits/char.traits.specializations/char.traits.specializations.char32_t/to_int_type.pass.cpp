@@ -25,7 +25,7 @@ int main(int, char**)
     assert(std::char_traits<char32_t>::to_int_type(U'A') == U'A');
 #endif
     assert(std::char_traits<char32_t>::to_int_type(0) == 0);
-#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
 
   return 0;
 }

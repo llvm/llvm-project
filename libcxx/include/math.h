@@ -373,7 +373,7 @@ typename std::enable_if<
 signbit(_A1) _NOEXCEPT
 { return false; }
 
-#endif  // signbit
+#endif // signbit
 
 // fpclassify
 
@@ -424,7 +424,7 @@ typename std::enable_if<std::is_integral<_A1>::value, int>::type
 fpclassify(_A1 __lcpp_x) _NOEXCEPT
 { return __lcpp_x == 0 ? FP_ZERO : FP_NORMAL; }
 
-#endif  // fpclassify
+#endif // fpclassify
 
 // isfinite
 
@@ -462,7 +462,7 @@ typename std::enable_if<
 isfinite(_A1) _NOEXCEPT
 { return true; }
 
-#endif  // isfinite
+#endif // isfinite
 
 // isinf
 
@@ -514,7 +514,7 @@ bool
 isinf(long double __lcpp_x) _NOEXCEPT { return __libcpp_isinf(__lcpp_x); }
 #endif
 
-#endif  // isinf
+#endif // isinf
 
 // isnan
 
@@ -562,7 +562,7 @@ bool
 isnan(long double __lcpp_x) _NOEXCEPT { return __libcpp_isnan(__lcpp_x); }
 #endif
 
-#endif  // isnan
+#endif // isnan
 
 // isnormal
 
@@ -596,7 +596,7 @@ typename std::enable_if<std::is_integral<_A1>::value, bool>::type
 isnormal(_A1 __lcpp_x) _NOEXCEPT
 { return __lcpp_x != 0; }
 
-#endif  // isnormal
+#endif // isnormal
 
 // isgreater
 
@@ -626,7 +626,7 @@ isgreater(_A1 __lcpp_x, _A2 __lcpp_y) _NOEXCEPT
     return __libcpp_isgreater((type)__lcpp_x, (type)__lcpp_y);
 }
 
-#endif  // isgreater
+#endif // isgreater
 
 // isgreaterequal
 
@@ -656,7 +656,7 @@ isgreaterequal(_A1 __lcpp_x, _A2 __lcpp_y) _NOEXCEPT
     return __libcpp_isgreaterequal((type)__lcpp_x, (type)__lcpp_y);
 }
 
-#endif  // isgreaterequal
+#endif // isgreaterequal
 
 // isless
 
@@ -686,7 +686,7 @@ isless(_A1 __lcpp_x, _A2 __lcpp_y) _NOEXCEPT
     return __libcpp_isless((type)__lcpp_x, (type)__lcpp_y);
 }
 
-#endif  // isless
+#endif // isless
 
 // islessequal
 
@@ -716,7 +716,7 @@ islessequal(_A1 __lcpp_x, _A2 __lcpp_y) _NOEXCEPT
     return __libcpp_islessequal((type)__lcpp_x, (type)__lcpp_y);
 }
 
-#endif  // islessequal
+#endif // islessequal
 
 // islessgreater
 
@@ -746,7 +746,7 @@ islessgreater(_A1 __lcpp_x, _A2 __lcpp_y) _NOEXCEPT
     return __libcpp_islessgreater((type)__lcpp_x, (type)__lcpp_y);
 }
 
-#endif  // islessgreater
+#endif // islessgreater
 
 // isunordered
 
@@ -776,7 +776,7 @@ isunordered(_A1 __lcpp_x, _A2 __lcpp_y) _NOEXCEPT
     return __libcpp_isunordered((type)__lcpp_x, (type)__lcpp_y);
 }
 
-#endif  // isunordered
+#endif // isunordered
 
 // abs
 //
@@ -1722,4 +1722,4 @@ trunc(_A1 __lcpp_x) _NOEXCEPT
 #include_next <math.h>
 #endif
 
-#endif  // _LIBCPP_MATH_H
+#endif // _LIBCPP_MATH_H

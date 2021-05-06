@@ -16,7 +16,6 @@
 
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/DataTypes.h"
-#include <string>
 
 namespace llvm {
 

@@ -10,14 +10,13 @@
 
 #include "../PassDetail.h"
 
-#include "mlir/Conversion/ArmSVEToLLVM/ArmSVEToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/AMX/AMXDialect.h"
 #include "mlir/Dialect/AMX/Transforms.h"
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
 #include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMArmSVEDialect.h"
+#include "mlir/Dialect/ArmSVE/Transforms.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -47,7 +46,7 @@ struct LowerVectorToLLVMPass
     if (enableArmNeon)
       registry.insert<arm_neon::ArmNeonDialect>();
     if (enableArmSVE)
-      registry.insert<LLVM::LLVMArmSVEDialect>();
+      registry.insert<arm_sve::ArmSVEDialect>();
     if (enableAMX)
       registry.insert<amx::AMXDialect>();
     if (enableX86Vector)
@@ -90,26 +89,8 @@ void LowerVectorToLLVMPass::runOnOperation() {
     target.addLegalDialect<arm_neon::ArmNeonDialect>();
   }
   if (enableArmSVE) {
-    target.addLegalDialect<LLVM::LLVMArmSVEDialect>();
-    target.addIllegalDialect<arm_sve::ArmSVEDialect>();
-    auto hasScalableVectorType = [](TypeRange types) {
-      for (Type type : types)
-        if (type.isa<arm_sve::ScalableVectorType>())
-          return true;
-      return false;
-    };
-    // Remove any ArmSVE-specific types from function signatures and results.
-    populateFuncOpTypeConversionPattern(patterns, converter);
-    target.addDynamicallyLegalOp<FuncOp>([hasScalableVectorType](FuncOp op) {
-      return !hasScalableVectorType(op.getType().getInputs()) &&
-             !hasScalableVectorType(op.getType().getResults());
-    });
-    target.addDynamicallyLegalOp<CallOp, CallIndirectOp, ReturnOp>(
-        [hasScalableVectorType](Operation *op) {
-          return !hasScalableVectorType(op->getOperandTypes()) &&
-                 !hasScalableVectorType(op->getResultTypes());
-        });
-    populateArmSVEToLLVMConversionPatterns(converter, patterns);
+    configureArmSVELegalizeForExportTarget(target);
+    populateArmSVELegalizeForLLVMExportPatterns(converter, patterns);
   }
   if (enableAMX) {
     configureAMXLegalizeForExportTarget(target);

@@ -36,7 +36,6 @@
 //        A list of NUM_INLINED_FUNCTIONS entries describing each of the inlined
 //        callees.  Each record contains:
 //          INLINE SITE
-//            GUID of the inlinee (uint64)
 //            ID of the callsite probe (ULEB128)
 //          FUNCTION BODY
 //            A FUNCTION BODY entry describing the inlined function.

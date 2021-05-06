@@ -189,12 +189,10 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
 
   auto FilePaths = [&](const Multilib &M) -> std::vector<std::string> {
     std::vector<std::string> FP;
-    if (D.CCCIsCXX()) {
-      if (auto CXXStdlibPath = getCXXStdlibPath()) {
-        SmallString<128> P(*CXXStdlibPath);
-        llvm::sys::path::append(P, M.gccSuffix());
-        FP.push_back(std::string(P.str()));
-      }
+    if (auto StdlibPath = getStdlibPath()) {
+      SmallString<128> P(*StdlibPath);
+      llvm::sys::path::append(P, M.gccSuffix());
+      FP.push_back(std::string(P.str()));
     }
     return FP;
   };

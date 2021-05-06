@@ -9,18 +9,18 @@ class VSCodeTestCaseBase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    def create_debug_adaptor(self):
+    def create_debug_adaptor(self, lldbVSCodeEnv=None):
         '''Create the Visual Studio Code debug adaptor'''
         self.assertTrue(os.path.exists(self.lldbVSCodeExec),
                         'lldb-vscode must exist')
         log_file_path = self.getBuildArtifact('vscode.txt')
         self.vscode = vscode.DebugAdaptor(
             executable=self.lldbVSCodeExec, init_commands=self.setUpCommands(),
-            log_file=log_file_path)
+            log_file=log_file_path, env=lldbVSCodeEnv)
 
-    def build_and_create_debug_adaptor(self):
+    def build_and_create_debug_adaptor(self, lldbVSCodeEnv=None):
         self.build()
-        self.create_debug_adaptor()
+        self.create_debug_adaptor(lldbVSCodeEnv)
 
     def set_source_breakpoints(self, source_path, lines, condition=None,
                                hitCondition=None):
@@ -85,7 +85,6 @@ class VSCodeTestCaseBase(TestBase):
                 # the right breakpoint matches and not worry about the actual
                 # location.
                 description = body['description']
-                print("description: %s" % (description))
                 for breakpoint_id in breakpoint_ids:
                     match_desc = 'breakpoint %s.' % (breakpoint_id)
                     if match_desc in description:
@@ -251,7 +250,8 @@ class VSCodeTestCaseBase(TestBase):
     def attach(self, program=None, pid=None, waitFor=None, trace=None,
                initCommands=None, preRunCommands=None, stopCommands=None,
                exitCommands=None, attachCommands=None, coreFile=None,
-               disconnectAutomatically=True, terminateCommands=None):
+               disconnectAutomatically=True, terminateCommands=None,
+               postRunCommands=None):
         '''Build the default Makefile target, create the VSCode debug adaptor,
            and attach to the process.
         '''
@@ -271,7 +271,7 @@ class VSCodeTestCaseBase(TestBase):
             initCommands=initCommands, preRunCommands=preRunCommands,
             stopCommands=stopCommands, exitCommands=exitCommands,
             attachCommands=attachCommands, terminateCommands=terminateCommands,
-            coreFile=coreFile)
+            coreFile=coreFile, postRunCommands=postRunCommands)
         if not (response and response['success']):
             self.assertTrue(response['success'],
                             'attach failed (%s)' % (response['message']))
@@ -283,7 +283,7 @@ class VSCodeTestCaseBase(TestBase):
                stopCommands=None, exitCommands=None, terminateCommands=None,
                sourcePath=None, debuggerRoot=None, launchCommands=None,
                sourceMap=None, disconnectAutomatically=True, runInTerminal=False,
-               expectFailure=False):
+               expectFailure=False, postRunCommands=None):
         '''Sending launch request to vscode
         '''
 
@@ -319,7 +319,8 @@ class VSCodeTestCaseBase(TestBase):
             launchCommands=launchCommands,
             sourceMap=sourceMap,
             runInTerminal=runInTerminal,
-            expectFailure=expectFailure)
+            expectFailure=expectFailure,
+            postRunCommands=postRunCommands)
 
         if expectFailure:
             return response
@@ -341,15 +342,17 @@ class VSCodeTestCaseBase(TestBase):
                          stopCommands=None, exitCommands=None,
                          terminateCommands=None, sourcePath=None,
                          debuggerRoot=None, runInTerminal=False,
-                         disconnectAutomatically=True):
+                         disconnectAutomatically=True, postRunCommands=None,
+                         lldbVSCodeEnv=None):
         '''Build the default Makefile target, create the VSCode debug adaptor,
            and launch the process.
         '''
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adaptor(lldbVSCodeEnv)
         self.assertTrue(os.path.exists(program), 'executable must exist')
 
         return self.launch(program, args, cwd, env, stopOnEntry, disableASLR,
                     disableSTDIO, shellExpandArguments, trace,
                     initCommands, preRunCommands, stopCommands, exitCommands,
                     terminateCommands, sourcePath, debuggerRoot, runInTerminal=runInTerminal,
-                    disconnectAutomatically=disconnectAutomatically)
+                    disconnectAutomatically=disconnectAutomatically,
+                    postRunCommands=postRunCommands)

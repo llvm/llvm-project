@@ -22,7 +22,6 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMArmSVEDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
@@ -59,7 +58,6 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   DLTIDialect,
                   gpu::GPUDialect,
                   LLVM::LLVMDialect,
-                  LLVM::LLVMArmSVEDialect,
                   linalg::LinalgDialect,
                   math::MathDialect,
                   memref::MemRefDialect,

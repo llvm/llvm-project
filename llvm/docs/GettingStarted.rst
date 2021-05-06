@@ -600,9 +600,9 @@ used by people developing LLVM.
 |                         | The default list is defined as                     |
 |                         | ``LLVM_ALL_TARGETS``, and can be set to include    |
 |                         | out-of-tree targets. The default value includes:   |
-|                         | ``AArch64, AMDGPU, ARM, BPF, Hexagon, Mips,        |
-|                         | MSP430, NVPTX, PowerPC, Sparc, SystemZ, X86,       |
-|                         | XCore``.                                           |
+|                         | ``AArch64, AMDGPU, ARM, AVR, BPF, Hexagon, Lanai,  |
+|                         | Mips, MSP430, NVPTX, PowerPC, RISCV, Sparc,        |
+|                         | SystemZ, WebAssembly, X86, XCore``.                |
 |                         |                                                    |
 +-------------------------+----------------------------------------------------+
 | LLVM_ENABLE_DOXYGEN     | Build doxygen-based documentation from the source  |

@@ -144,7 +144,9 @@ X86MCAsmInfoMicrosoftMASM::X86MCAsmInfoMicrosoftMASM(const Triple &Triple)
   DollarIsPC = true;
   SeparatorString = "\n";
   CommentString = ";";
-  AllowSymbolAtNameStart = true;
+  AllowQuestionAtStartOfIdentifier = true;
+  AllowDollarAtStartOfIdentifier = true;
+  AllowAtAtStartOfIdentifier = true;
 }
 
 void X86MCAsmInfoGNUCOFF::anchor() { }

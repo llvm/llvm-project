@@ -232,17 +232,22 @@ bool Lowerer::shouldElide(Function *F, DominatorTree &DT) const {
   // Filter out the coro.destroy that lie along exceptional paths.
   SmallPtrSet<CoroBeginInst *, 8> ReferencedCoroBegins;
   for (auto &It : DestroyAddr) {
+    // If there is any coro.destroy dominates all of the terminators for the
+    // coro.begin, we could know the corresponding coro.begin wouldn't escape.
     for (Instruction *DA : It.second) {
-      for (BasicBlock *TI : Terminators) {
-        if (DT.dominates(DA, TI->getTerminator())) {
-          ReferencedCoroBegins.insert(It.first);
-          break;
-        }
+      if (llvm::all_of(Terminators, [&](auto *TI) {
+            return DT.dominates(DA, TI->getTerminator());
+          })) {
+        ReferencedCoroBegins.insert(It.first);
+        break;
       }
     }
 
     // Whether there is any paths from coro.begin to Terminators which not pass
     // through any of the coro.destroys.
+    //
+    // hasEscapePath is relatively slow, so we avoid to run it as much as
+    // possible.
     if (!ReferencedCoroBegins.count(It.first) &&
         !hasEscapePath(It.first, Terminators))
       ReferencedCoroBegins.insert(It.first);

@@ -1609,210 +1609,199 @@ ARMTargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
 }
 
 const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
+#define MAKE_CASE(V)                                                           \
+  case V:                                                                      \
+    return #V;
   switch ((ARMISD::NodeType)Opcode) {
-  case ARMISD::FIRST_NUMBER:  break;
-  case ARMISD::Wrapper:       return "ARMISD::Wrapper";
-  case ARMISD::WrapperPIC:    return "ARMISD::WrapperPIC";
-  case ARMISD::WrapperJT:     return "ARMISD::WrapperJT";
-  case ARMISD::COPY_STRUCT_BYVAL: return "ARMISD::COPY_STRUCT_BYVAL";
-  case ARMISD::CALL:          return "ARMISD::CALL";
-  case ARMISD::CALL_PRED:     return "ARMISD::CALL_PRED";
-  case ARMISD::CALL_NOLINK:   return "ARMISD::CALL_NOLINK";
-  case ARMISD::tSECALL:       return "ARMISD::tSECALL";
-  case ARMISD::BRCOND:        return "ARMISD::BRCOND";
-  case ARMISD::BR_JT:         return "ARMISD::BR_JT";
-  case ARMISD::BR2_JT:        return "ARMISD::BR2_JT";
-  case ARMISD::RET_FLAG:      return "ARMISD::RET_FLAG";
-  case ARMISD::SERET_FLAG:    return "ARMISD::SERET_FLAG";
-  case ARMISD::INTRET_FLAG:   return "ARMISD::INTRET_FLAG";
-  case ARMISD::PIC_ADD:       return "ARMISD::PIC_ADD";
-  case ARMISD::CMP:           return "ARMISD::CMP";
-  case ARMISD::CMN:           return "ARMISD::CMN";
-  case ARMISD::CMPZ:          return "ARMISD::CMPZ";
-  case ARMISD::CMPFP:         return "ARMISD::CMPFP";
-  case ARMISD::CMPFPE:        return "ARMISD::CMPFPE";
-  case ARMISD::CMPFPw0:       return "ARMISD::CMPFPw0";
-  case ARMISD::CMPFPEw0:      return "ARMISD::CMPFPEw0";
-  case ARMISD::BCC_i64:       return "ARMISD::BCC_i64";
-  case ARMISD::FMSTAT:        return "ARMISD::FMSTAT";
-
-  case ARMISD::CMOV:          return "ARMISD::CMOV";
-  case ARMISD::SUBS:          return "ARMISD::SUBS";
-
-  case ARMISD::SSAT:          return "ARMISD::SSAT";
-  case ARMISD::USAT:          return "ARMISD::USAT";
-
-  case ARMISD::ASRL:          return "ARMISD::ASRL";
-  case ARMISD::LSRL:          return "ARMISD::LSRL";
-  case ARMISD::LSLL:          return "ARMISD::LSLL";
-
-  case ARMISD::SRL_FLAG:      return "ARMISD::SRL_FLAG";
-  case ARMISD::SRA_FLAG:      return "ARMISD::SRA_FLAG";
-  case ARMISD::RRX:           return "ARMISD::RRX";
-
-  case ARMISD::ADDC:          return "ARMISD::ADDC";
-  case ARMISD::ADDE:          return "ARMISD::ADDE";
-  case ARMISD::SUBC:          return "ARMISD::SUBC";
-  case ARMISD::SUBE:          return "ARMISD::SUBE";
-  case ARMISD::LSLS:          return "ARMISD::LSLS";
-
-  case ARMISD::VMOVRRD:       return "ARMISD::VMOVRRD";
-  case ARMISD::VMOVDRR:       return "ARMISD::VMOVDRR";
-  case ARMISD::VMOVhr:        return "ARMISD::VMOVhr";
-  case ARMISD::VMOVrh:        return "ARMISD::VMOVrh";
-  case ARMISD::VMOVSR:        return "ARMISD::VMOVSR";
-
-  case ARMISD::EH_SJLJ_SETJMP: return "ARMISD::EH_SJLJ_SETJMP";
-  case ARMISD::EH_SJLJ_LONGJMP: return "ARMISD::EH_SJLJ_LONGJMP";
-  case ARMISD::EH_SJLJ_SETUP_DISPATCH: return "ARMISD::EH_SJLJ_SETUP_DISPATCH";
-
-  case ARMISD::TC_RETURN:     return "ARMISD::TC_RETURN";
-
-  case ARMISD::THREAD_POINTER:return "ARMISD::THREAD_POINTER";
-
-  case ARMISD::DYN_ALLOC:     return "ARMISD::DYN_ALLOC";
-
-  case ARMISD::MEMBARRIER_MCR: return "ARMISD::MEMBARRIER_MCR";
-
-  case ARMISD::PRELOAD:       return "ARMISD::PRELOAD";
-
-  case ARMISD::LDRD:          return "ARMISD::LDRD";
-  case ARMISD::STRD:          return "ARMISD::STRD";
-
-  case ARMISD::WIN__CHKSTK:   return "ARMISD::WIN__CHKSTK";
-  case ARMISD::WIN__DBZCHK:   return "ARMISD::WIN__DBZCHK";
-
-  case ARMISD::PREDICATE_CAST: return "ARMISD::PREDICATE_CAST";
-  case ARMISD::VECTOR_REG_CAST: return "ARMISD::VECTOR_REG_CAST";
-  case ARMISD::VCMP:          return "ARMISD::VCMP";
-  case ARMISD::VCMPZ:         return "ARMISD::VCMPZ";
-  case ARMISD::VTST:          return "ARMISD::VTST";
-
-  case ARMISD::VSHLs:         return "ARMISD::VSHLs";
-  case ARMISD::VSHLu:         return "ARMISD::VSHLu";
-  case ARMISD::VSHLIMM:       return "ARMISD::VSHLIMM";
-  case ARMISD::VSHRsIMM:      return "ARMISD::VSHRsIMM";
-  case ARMISD::VSHRuIMM:      return "ARMISD::VSHRuIMM";
-  case ARMISD::VRSHRsIMM:     return "ARMISD::VRSHRsIMM";
-  case ARMISD::VRSHRuIMM:     return "ARMISD::VRSHRuIMM";
-  case ARMISD::VRSHRNIMM:     return "ARMISD::VRSHRNIMM";
-  case ARMISD::VQSHLsIMM:     return "ARMISD::VQSHLsIMM";
-  case ARMISD::VQSHLuIMM:     return "ARMISD::VQSHLuIMM";
-  case ARMISD::VQSHLsuIMM:    return "ARMISD::VQSHLsuIMM";
-  case ARMISD::VQSHRNsIMM:    return "ARMISD::VQSHRNsIMM";
-  case ARMISD::VQSHRNuIMM:    return "ARMISD::VQSHRNuIMM";
-  case ARMISD::VQSHRNsuIMM:   return "ARMISD::VQSHRNsuIMM";
-  case ARMISD::VQRSHRNsIMM:   return "ARMISD::VQRSHRNsIMM";
-  case ARMISD::VQRSHRNuIMM:   return "ARMISD::VQRSHRNuIMM";
-  case ARMISD::VQRSHRNsuIMM:  return "ARMISD::VQRSHRNsuIMM";
-  case ARMISD::VSLIIMM:       return "ARMISD::VSLIIMM";
-  case ARMISD::VSRIIMM:       return "ARMISD::VSRIIMM";
-  case ARMISD::VGETLANEu:     return "ARMISD::VGETLANEu";
-  case ARMISD::VGETLANEs:     return "ARMISD::VGETLANEs";
-  case ARMISD::VMOVIMM:       return "ARMISD::VMOVIMM";
-  case ARMISD::VMVNIMM:       return "ARMISD::VMVNIMM";
-  case ARMISD::VMOVFPIMM:     return "ARMISD::VMOVFPIMM";
-  case ARMISD::VDUP:          return "ARMISD::VDUP";
-  case ARMISD::VDUPLANE:      return "ARMISD::VDUPLANE";
-  case ARMISD::VEXT:          return "ARMISD::VEXT";
-  case ARMISD::VREV64:        return "ARMISD::VREV64";
-  case ARMISD::VREV32:        return "ARMISD::VREV32";
-  case ARMISD::VREV16:        return "ARMISD::VREV16";
-  case ARMISD::VZIP:          return "ARMISD::VZIP";
-  case ARMISD::VUZP:          return "ARMISD::VUZP";
-  case ARMISD::VTRN:          return "ARMISD::VTRN";
-  case ARMISD::VTBL1:         return "ARMISD::VTBL1";
-  case ARMISD::VTBL2:         return "ARMISD::VTBL2";
-  case ARMISD::VMOVN:         return "ARMISD::VMOVN";
-  case ARMISD::VQMOVNs:       return "ARMISD::VQMOVNs";
-  case ARMISD::VQMOVNu:       return "ARMISD::VQMOVNu";
-  case ARMISD::VCVTN:         return "ARMISD::VCVTN";
-  case ARMISD::VCVTL:         return "ARMISD::VCVTL";
-  case ARMISD::VMULLs:        return "ARMISD::VMULLs";
-  case ARMISD::VMULLu:        return "ARMISD::VMULLu";
-  case ARMISD::VQDMULH:       return "ARMISD::VQDMULH";
-  case ARMISD::VADDVs:        return "ARMISD::VADDVs";
-  case ARMISD::VADDVu:        return "ARMISD::VADDVu";
-  case ARMISD::VADDVps:       return "ARMISD::VADDVps";
-  case ARMISD::VADDVpu:       return "ARMISD::VADDVpu";
-  case ARMISD::VADDLVs:       return "ARMISD::VADDLVs";
-  case ARMISD::VADDLVu:       return "ARMISD::VADDLVu";
-  case ARMISD::VADDLVAs:      return "ARMISD::VADDLVAs";
-  case ARMISD::VADDLVAu:      return "ARMISD::VADDLVAu";
-  case ARMISD::VADDLVps:      return "ARMISD::VADDLVps";
-  case ARMISD::VADDLVpu:      return "ARMISD::VADDLVpu";
-  case ARMISD::VADDLVAps:     return "ARMISD::VADDLVAps";
-  case ARMISD::VADDLVApu:     return "ARMISD::VADDLVApu";
-  case ARMISD::VMLAVs:        return "ARMISD::VMLAVs";
-  case ARMISD::VMLAVu:        return "ARMISD::VMLAVu";
-  case ARMISD::VMLAVps:       return "ARMISD::VMLAVps";
-  case ARMISD::VMLAVpu:       return "ARMISD::VMLAVpu";
-  case ARMISD::VMLALVs:       return "ARMISD::VMLALVs";
-  case ARMISD::VMLALVu:       return "ARMISD::VMLALVu";
-  case ARMISD::VMLALVps:      return "ARMISD::VMLALVps";
-  case ARMISD::VMLALVpu:      return "ARMISD::VMLALVpu";
-  case ARMISD::VMLALVAs:      return "ARMISD::VMLALVAs";
-  case ARMISD::VMLALVAu:      return "ARMISD::VMLALVAu";
-  case ARMISD::VMLALVAps:     return "ARMISD::VMLALVAps";
-  case ARMISD::VMLALVApu:     return "ARMISD::VMLALVApu";
-  case ARMISD::VMINVu:        return "ARMISD::VMINVu";
-  case ARMISD::VMINVs:        return "ARMISD::VMINVs";
-  case ARMISD::VMAXVu:        return "ARMISD::VMAXVu";
-  case ARMISD::VMAXVs:        return "ARMISD::VMAXVs";
-  case ARMISD::UMAAL:         return "ARMISD::UMAAL";
-  case ARMISD::UMLAL:         return "ARMISD::UMLAL";
-  case ARMISD::SMLAL:         return "ARMISD::SMLAL";
-  case ARMISD::SMLALBB:       return "ARMISD::SMLALBB";
-  case ARMISD::SMLALBT:       return "ARMISD::SMLALBT";
-  case ARMISD::SMLALTB:       return "ARMISD::SMLALTB";
-  case ARMISD::SMLALTT:       return "ARMISD::SMLALTT";
-  case ARMISD::SMULWB:        return "ARMISD::SMULWB";
-  case ARMISD::SMULWT:        return "ARMISD::SMULWT";
-  case ARMISD::SMLALD:        return "ARMISD::SMLALD";
-  case ARMISD::SMLALDX:       return "ARMISD::SMLALDX";
-  case ARMISD::SMLSLD:        return "ARMISD::SMLSLD";
-  case ARMISD::SMLSLDX:       return "ARMISD::SMLSLDX";
-  case ARMISD::SMMLAR:        return "ARMISD::SMMLAR";
-  case ARMISD::SMMLSR:        return "ARMISD::SMMLSR";
-  case ARMISD::QADD16b:       return "ARMISD::QADD16b";
-  case ARMISD::QSUB16b:       return "ARMISD::QSUB16b";
-  case ARMISD::QADD8b:        return "ARMISD::QADD8b";
-  case ARMISD::QSUB8b:        return "ARMISD::QSUB8b";
-  case ARMISD::BUILD_VECTOR:  return "ARMISD::BUILD_VECTOR";
-  case ARMISD::BFI:           return "ARMISD::BFI";
-  case ARMISD::VORRIMM:       return "ARMISD::VORRIMM";
-  case ARMISD::VBICIMM:       return "ARMISD::VBICIMM";
-  case ARMISD::VBSP:          return "ARMISD::VBSP";
-  case ARMISD::MEMCPY:        return "ARMISD::MEMCPY";
-  case ARMISD::VLD1DUP:       return "ARMISD::VLD1DUP";
-  case ARMISD::VLD2DUP:       return "ARMISD::VLD2DUP";
-  case ARMISD::VLD3DUP:       return "ARMISD::VLD3DUP";
-  case ARMISD::VLD4DUP:       return "ARMISD::VLD4DUP";
-  case ARMISD::VLD1_UPD:      return "ARMISD::VLD1_UPD";
-  case ARMISD::VLD2_UPD:      return "ARMISD::VLD2_UPD";
-  case ARMISD::VLD3_UPD:      return "ARMISD::VLD3_UPD";
-  case ARMISD::VLD4_UPD:      return "ARMISD::VLD4_UPD";
-  case ARMISD::VLD2LN_UPD:    return "ARMISD::VLD2LN_UPD";
-  case ARMISD::VLD3LN_UPD:    return "ARMISD::VLD3LN_UPD";
-  case ARMISD::VLD4LN_UPD:    return "ARMISD::VLD4LN_UPD";
-  case ARMISD::VLD1DUP_UPD:   return "ARMISD::VLD1DUP_UPD";
-  case ARMISD::VLD2DUP_UPD:   return "ARMISD::VLD2DUP_UPD";
-  case ARMISD::VLD3DUP_UPD:   return "ARMISD::VLD3DUP_UPD";
-  case ARMISD::VLD4DUP_UPD:   return "ARMISD::VLD4DUP_UPD";
-  case ARMISD::VST1_UPD:      return "ARMISD::VST1_UPD";
-  case ARMISD::VST2_UPD:      return "ARMISD::VST2_UPD";
-  case ARMISD::VST3_UPD:      return "ARMISD::VST3_UPD";
-  case ARMISD::VST4_UPD:      return "ARMISD::VST4_UPD";
-  case ARMISD::VST2LN_UPD:    return "ARMISD::VST2LN_UPD";
-  case ARMISD::VST3LN_UPD:    return "ARMISD::VST3LN_UPD";
-  case ARMISD::VST4LN_UPD:    return "ARMISD::VST4LN_UPD";
-  case ARMISD::WLS:           return "ARMISD::WLS";
-  case ARMISD::WLSSETUP:      return "ARMISD::WLSSETUP";
-  case ARMISD::LE:            return "ARMISD::LE";
-  case ARMISD::LOOP_DEC:      return "ARMISD::LOOP_DEC";
-  case ARMISD::CSINV:         return "ARMISD::CSINV";
-  case ARMISD::CSNEG:         return "ARMISD::CSNEG";
-  case ARMISD::CSINC:         return "ARMISD::CSINC";
+  case ARMISD::FIRST_NUMBER:
+    break;
+    MAKE_CASE(ARMISD::Wrapper)
+    MAKE_CASE(ARMISD::WrapperPIC)
+    MAKE_CASE(ARMISD::WrapperJT)
+    MAKE_CASE(ARMISD::COPY_STRUCT_BYVAL)
+    MAKE_CASE(ARMISD::CALL)
+    MAKE_CASE(ARMISD::CALL_PRED)
+    MAKE_CASE(ARMISD::CALL_NOLINK)
+    MAKE_CASE(ARMISD::tSECALL)
+    MAKE_CASE(ARMISD::BRCOND)
+    MAKE_CASE(ARMISD::BR_JT)
+    MAKE_CASE(ARMISD::BR2_JT)
+    MAKE_CASE(ARMISD::RET_FLAG)
+    MAKE_CASE(ARMISD::SERET_FLAG)
+    MAKE_CASE(ARMISD::INTRET_FLAG)
+    MAKE_CASE(ARMISD::PIC_ADD)
+    MAKE_CASE(ARMISD::CMP)
+    MAKE_CASE(ARMISD::CMN)
+    MAKE_CASE(ARMISD::CMPZ)
+    MAKE_CASE(ARMISD::CMPFP)
+    MAKE_CASE(ARMISD::CMPFPE)
+    MAKE_CASE(ARMISD::CMPFPw0)
+    MAKE_CASE(ARMISD::CMPFPEw0)
+    MAKE_CASE(ARMISD::BCC_i64)
+    MAKE_CASE(ARMISD::FMSTAT)
+    MAKE_CASE(ARMISD::CMOV)
+    MAKE_CASE(ARMISD::SUBS)
+    MAKE_CASE(ARMISD::SSAT)
+    MAKE_CASE(ARMISD::USAT)
+    MAKE_CASE(ARMISD::ASRL)
+    MAKE_CASE(ARMISD::LSRL)
+    MAKE_CASE(ARMISD::LSLL)
+    MAKE_CASE(ARMISD::SRL_FLAG)
+    MAKE_CASE(ARMISD::SRA_FLAG)
+    MAKE_CASE(ARMISD::RRX)
+    MAKE_CASE(ARMISD::ADDC)
+    MAKE_CASE(ARMISD::ADDE)
+    MAKE_CASE(ARMISD::SUBC)
+    MAKE_CASE(ARMISD::SUBE)
+    MAKE_CASE(ARMISD::LSLS)
+    MAKE_CASE(ARMISD::VMOVRRD)
+    MAKE_CASE(ARMISD::VMOVDRR)
+    MAKE_CASE(ARMISD::VMOVhr)
+    MAKE_CASE(ARMISD::VMOVrh)
+    MAKE_CASE(ARMISD::VMOVSR)
+    MAKE_CASE(ARMISD::EH_SJLJ_SETJMP)
+    MAKE_CASE(ARMISD::EH_SJLJ_LONGJMP)
+    MAKE_CASE(ARMISD::EH_SJLJ_SETUP_DISPATCH)
+    MAKE_CASE(ARMISD::TC_RETURN)
+    MAKE_CASE(ARMISD::THREAD_POINTER)
+    MAKE_CASE(ARMISD::DYN_ALLOC)
+    MAKE_CASE(ARMISD::MEMBARRIER_MCR)
+    MAKE_CASE(ARMISD::PRELOAD)
+    MAKE_CASE(ARMISD::LDRD)
+    MAKE_CASE(ARMISD::STRD)
+    MAKE_CASE(ARMISD::WIN__CHKSTK)
+    MAKE_CASE(ARMISD::WIN__DBZCHK)
+    MAKE_CASE(ARMISD::PREDICATE_CAST)
+    MAKE_CASE(ARMISD::VECTOR_REG_CAST)
+    MAKE_CASE(ARMISD::VCMP)
+    MAKE_CASE(ARMISD::VCMPZ)
+    MAKE_CASE(ARMISD::VTST)
+    MAKE_CASE(ARMISD::VSHLs)
+    MAKE_CASE(ARMISD::VSHLu)
+    MAKE_CASE(ARMISD::VSHLIMM)
+    MAKE_CASE(ARMISD::VSHRsIMM)
+    MAKE_CASE(ARMISD::VSHRuIMM)
+    MAKE_CASE(ARMISD::VRSHRsIMM)
+    MAKE_CASE(ARMISD::VRSHRuIMM)
+    MAKE_CASE(ARMISD::VRSHRNIMM)
+    MAKE_CASE(ARMISD::VQSHLsIMM)
+    MAKE_CASE(ARMISD::VQSHLuIMM)
+    MAKE_CASE(ARMISD::VQSHLsuIMM)
+    MAKE_CASE(ARMISD::VQSHRNsIMM)
+    MAKE_CASE(ARMISD::VQSHRNuIMM)
+    MAKE_CASE(ARMISD::VQSHRNsuIMM)
+    MAKE_CASE(ARMISD::VQRSHRNsIMM)
+    MAKE_CASE(ARMISD::VQRSHRNuIMM)
+    MAKE_CASE(ARMISD::VQRSHRNsuIMM)
+    MAKE_CASE(ARMISD::VSLIIMM)
+    MAKE_CASE(ARMISD::VSRIIMM)
+    MAKE_CASE(ARMISD::VGETLANEu)
+    MAKE_CASE(ARMISD::VGETLANEs)
+    MAKE_CASE(ARMISD::VMOVIMM)
+    MAKE_CASE(ARMISD::VMVNIMM)
+    MAKE_CASE(ARMISD::VMOVFPIMM)
+    MAKE_CASE(ARMISD::VDUP)
+    MAKE_CASE(ARMISD::VDUPLANE)
+    MAKE_CASE(ARMISD::VEXT)
+    MAKE_CASE(ARMISD::VREV64)
+    MAKE_CASE(ARMISD::VREV32)
+    MAKE_CASE(ARMISD::VREV16)
+    MAKE_CASE(ARMISD::VZIP)
+    MAKE_CASE(ARMISD::VUZP)
+    MAKE_CASE(ARMISD::VTRN)
+    MAKE_CASE(ARMISD::VTBL1)
+    MAKE_CASE(ARMISD::VTBL2)
+    MAKE_CASE(ARMISD::VMOVN)
+    MAKE_CASE(ARMISD::VQMOVNs)
+    MAKE_CASE(ARMISD::VQMOVNu)
+    MAKE_CASE(ARMISD::VCVTN)
+    MAKE_CASE(ARMISD::VCVTL)
+    MAKE_CASE(ARMISD::VMULLs)
+    MAKE_CASE(ARMISD::VMULLu)
+    MAKE_CASE(ARMISD::VQDMULH)
+    MAKE_CASE(ARMISD::VADDVs)
+    MAKE_CASE(ARMISD::VADDVu)
+    MAKE_CASE(ARMISD::VADDVps)
+    MAKE_CASE(ARMISD::VADDVpu)
+    MAKE_CASE(ARMISD::VADDLVs)
+    MAKE_CASE(ARMISD::VADDLVu)
+    MAKE_CASE(ARMISD::VADDLVAs)
+    MAKE_CASE(ARMISD::VADDLVAu)
+    MAKE_CASE(ARMISD::VADDLVps)
+    MAKE_CASE(ARMISD::VADDLVpu)
+    MAKE_CASE(ARMISD::VADDLVAps)
+    MAKE_CASE(ARMISD::VADDLVApu)
+    MAKE_CASE(ARMISD::VMLAVs)
+    MAKE_CASE(ARMISD::VMLAVu)
+    MAKE_CASE(ARMISD::VMLAVps)
+    MAKE_CASE(ARMISD::VMLAVpu)
+    MAKE_CASE(ARMISD::VMLALVs)
+    MAKE_CASE(ARMISD::VMLALVu)
+    MAKE_CASE(ARMISD::VMLALVps)
+    MAKE_CASE(ARMISD::VMLALVpu)
+    MAKE_CASE(ARMISD::VMLALVAs)
+    MAKE_CASE(ARMISD::VMLALVAu)
+    MAKE_CASE(ARMISD::VMLALVAps)
+    MAKE_CASE(ARMISD::VMLALVApu)
+    MAKE_CASE(ARMISD::VMINVu)
+    MAKE_CASE(ARMISD::VMINVs)
+    MAKE_CASE(ARMISD::VMAXVu)
+    MAKE_CASE(ARMISD::VMAXVs)
+    MAKE_CASE(ARMISD::UMAAL)
+    MAKE_CASE(ARMISD::UMLAL)
+    MAKE_CASE(ARMISD::SMLAL)
+    MAKE_CASE(ARMISD::SMLALBB)
+    MAKE_CASE(ARMISD::SMLALBT)
+    MAKE_CASE(ARMISD::SMLALTB)
+    MAKE_CASE(ARMISD::SMLALTT)
+    MAKE_CASE(ARMISD::SMULWB)
+    MAKE_CASE(ARMISD::SMULWT)
+    MAKE_CASE(ARMISD::SMLALD)
+    MAKE_CASE(ARMISD::SMLALDX)
+    MAKE_CASE(ARMISD::SMLSLD)
+    MAKE_CASE(ARMISD::SMLSLDX)
+    MAKE_CASE(ARMISD::SMMLAR)
+    MAKE_CASE(ARMISD::SMMLSR)
+    MAKE_CASE(ARMISD::QADD16b)
+    MAKE_CASE(ARMISD::QSUB16b)
+    MAKE_CASE(ARMISD::QADD8b)
+    MAKE_CASE(ARMISD::QSUB8b)
+    MAKE_CASE(ARMISD::BUILD_VECTOR)
+    MAKE_CASE(ARMISD::BFI)
+    MAKE_CASE(ARMISD::VORRIMM)
+    MAKE_CASE(ARMISD::VBICIMM)
+    MAKE_CASE(ARMISD::VBSP)
+    MAKE_CASE(ARMISD::MEMCPY)
+    MAKE_CASE(ARMISD::VLD1DUP)
+    MAKE_CASE(ARMISD::VLD2DUP)
+    MAKE_CASE(ARMISD::VLD3DUP)
+    MAKE_CASE(ARMISD::VLD4DUP)
+    MAKE_CASE(ARMISD::VLD1_UPD)
+    MAKE_CASE(ARMISD::VLD2_UPD)
+    MAKE_CASE(ARMISD::VLD3_UPD)
+    MAKE_CASE(ARMISD::VLD4_UPD)
+    MAKE_CASE(ARMISD::VLD2LN_UPD)
+    MAKE_CASE(ARMISD::VLD3LN_UPD)
+    MAKE_CASE(ARMISD::VLD4LN_UPD)
+    MAKE_CASE(ARMISD::VLD1DUP_UPD)
+    MAKE_CASE(ARMISD::VLD2DUP_UPD)
+    MAKE_CASE(ARMISD::VLD3DUP_UPD)
+    MAKE_CASE(ARMISD::VLD4DUP_UPD)
+    MAKE_CASE(ARMISD::VST1_UPD)
+    MAKE_CASE(ARMISD::VST2_UPD)
+    MAKE_CASE(ARMISD::VST3_UPD)
+    MAKE_CASE(ARMISD::VST4_UPD)
+    MAKE_CASE(ARMISD::VST2LN_UPD)
+    MAKE_CASE(ARMISD::VST3LN_UPD)
+    MAKE_CASE(ARMISD::VST4LN_UPD)
+    MAKE_CASE(ARMISD::WLS)
+    MAKE_CASE(ARMISD::WLSSETUP)
+    MAKE_CASE(ARMISD::LE)
+    MAKE_CASE(ARMISD::LOOP_DEC)
+    MAKE_CASE(ARMISD::CSINV)
+    MAKE_CASE(ARMISD::CSNEG)
+    MAKE_CASE(ARMISD::CSINC)
+#undef MAKE_CASE
   }
   return nullptr;
 }
@@ -12733,6 +12722,27 @@ static SDValue PerformADDCombine(SDNode *N,
   return PerformADDCombineWithOperands(N, N1, N0, DCI, Subtarget);
 }
 
+// Combine (sub 0, (csinc X, Y, CC)) -> (csinv -X, Y, CC)
+//   providing -X is as cheap as X (currently, just a constant).
+static SDValue PerformSubCSINCCombine(SDNode *N,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+  if (N->getValueType(0) != MVT::i32 || !isNullConstant(N->getOperand(0)))
+    return SDValue();
+  SDValue CSINC = N->getOperand(1);
+  if (CSINC.getOpcode() != ARMISD::CSINC)
+    return SDValue();
+
+  ConstantSDNode *X = dyn_cast<ConstantSDNode>(CSINC.getOperand(0));
+  if (!X)
+    return SDValue();
+
+  return DCI.DAG.getNode(ARMISD::CSINV, SDLoc(N), MVT::i32,
+                         DCI.DAG.getNode(ISD::SUB, SDLoc(N), MVT::i32,
+                                         N->getOperand(0), CSINC.getOperand(0)),
+                         CSINC.getOperand(1), CSINC.getOperand(2),
+                         CSINC.getOperand(3));
+}
+
 /// PerformSUBCombine - Target-specific dag combine xforms for ISD::SUB.
 ///
 static SDValue PerformSUBCombine(SDNode *N,
@@ -12745,6 +12755,9 @@ static SDValue PerformSUBCombine(SDNode *N,
   if (N1.getNode()->hasOneUse())
     if (SDValue Result = combineSelectAndUse(N, N1, N0, DCI))
       return Result;
+
+  if (SDValue R = PerformSubCSINCCombine(N, DCI))
+    return R;
 
   if (!Subtarget->hasMVEIntegerOps() || !N->getValueType(0).isVector())
     return SDValue();
@@ -14057,6 +14070,70 @@ static SDValue PerformInsertEltCombine(SDNode *N,
   return DAG.getNode(ISD::BITCAST, dl, VT, InsElt);
 }
 
+// Convert a pair of extracts from the same base vector to a VMOVRRD. Either
+// directly or bitcast to an integer if the original is a float vector.
+// extract(x, n); extract(x, n+1)  ->  VMOVRRD(extract v2f64 x, n/2)
+// bitcast(extract(x, n)); bitcast(extract(x, n+1))  ->  VMOVRRD(extract x, n/2)
+static SDValue
+PerformExtractEltToVMOVRRD(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  EVT VT = N->getValueType(0);
+  SDLoc dl(N);
+
+  if (!DCI.isAfterLegalizeDAG() || VT != MVT::i32 ||
+      !DCI.DAG.getTargetLoweringInfo().isTypeLegal(MVT::f64))
+    return SDValue();
+
+  SDValue Ext = SDValue(N, 0);
+  if (Ext.getOpcode() == ISD::BITCAST &&
+      Ext.getOperand(0).getValueType() == MVT::f32)
+    Ext = Ext.getOperand(0);
+  if (Ext.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+      !isa<ConstantSDNode>(Ext.getOperand(1)) ||
+      Ext.getConstantOperandVal(1) % 2 != 0)
+    return SDValue();
+  if (Ext->use_size() == 1 &&
+      (Ext->use_begin()->getOpcode() == ISD::SINT_TO_FP ||
+       Ext->use_begin()->getOpcode() == ISD::UINT_TO_FP))
+    return SDValue();
+
+  SDValue Op0 = Ext.getOperand(0);
+  EVT VecVT = Op0.getValueType();
+  unsigned Lane = Ext.getConstantOperandVal(1);
+  if (VecVT.getVectorNumElements() != 4)
+    return SDValue();
+
+  // Find another extract, of Lane + 1
+  auto OtherIt = find_if(Op0->uses(), [&](SDNode *V) {
+    return V->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+           isa<ConstantSDNode>(V->getOperand(1)) &&
+           V->getConstantOperandVal(1) == Lane + 1;
+  });
+  if (OtherIt == Op0->uses().end())
+    return SDValue();
+
+  // For float extracts, we need to be converting to a i32 for both vector
+  // lanes.
+  SDValue OtherExt(*OtherIt, 0);
+  if (OtherExt.getValueType() != MVT::i32) {
+    if (OtherExt->use_size() != 1 ||
+        OtherExt->use_begin()->getOpcode() != ISD::BITCAST ||
+        OtherExt->use_begin()->getValueType(0) != MVT::i32)
+      return SDValue();
+    OtherExt = SDValue(*OtherExt->use_begin(), 0);
+  }
+
+  // Convert the type to a f64 and extract with a VMOVRRD.
+  SDValue F64 = DCI.DAG.getNode(
+      ISD::EXTRACT_VECTOR_ELT, dl, MVT::f64,
+      DCI.DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, MVT::v2f64, Op0),
+      DCI.DAG.getConstant(Ext.getConstantOperandVal(1) / 2, dl, MVT::i32));
+  SDValue VMOVRRD =
+      DCI.DAG.getNode(ARMISD::VMOVRRD, dl, {MVT::i32, MVT::i32}, F64);
+
+  DCI.CombineTo(OtherExt.getNode(), SDValue(VMOVRRD.getNode(), 1));
+  return VMOVRRD;
+}
+
 static SDValue PerformExtractEltCombine(SDNode *N,
                                         TargetLowering::DAGCombinerInfo &DCI,
                                         const ARMSubtarget *ST) {
@@ -14090,6 +14167,10 @@ static SDValue PerformExtractEltCombine(SDNode *N,
     if (MOV.getOpcode() == ARMISD::VMOVDRR)
       return MOV.getOperand(ST->isLittle() ? Offset % 2 : 1 - Offset % 2);
   }
+
+  // extract x, n; extract x, n+1  ->  VMOVRRD x
+  if (SDValue R = PerformExtractEltToVMOVRRD(N, DCI))
+    return R;
 
   return SDValue();
 }
@@ -16511,8 +16592,10 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
   return Res;
 }
 
-static SDValue PerformBITCASTCombine(SDNode *N, SelectionDAG &DAG,
-                                    const ARMSubtarget *ST) {
+static SDValue PerformBITCASTCombine(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     const ARMSubtarget *ST) {
+  SelectionDAG &DAG = DCI.DAG;
   SDValue Src = N->getOperand(0);
   EVT DstVT = N->getValueType(0);
 
@@ -16537,6 +16620,10 @@ static SDValue PerformBITCASTCombine(SDNode *N, SelectionDAG &DAG,
       SrcVT.getScalarSizeInBits() <= DstVT.getScalarSizeInBits() &&
       DAG.getDataLayout().isBigEndian())
     return DAG.getNode(ARMISD::VECTOR_REG_CAST, SDLoc(N), DstVT, Src);
+
+  // bitcast(extract(x, n)); bitcast(extract(x, n+1))  ->  VMOVRRD x
+  if (SDValue R = PerformExtractEltToVMOVRRD(N, DCI))
+    return R;
 
   return SDValue();
 }
@@ -16609,7 +16696,7 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ARMISD::BUILD_VECTOR:
     return PerformARMBUILD_VECTORCombine(N, DCI);
   case ISD::BITCAST:
-    return PerformBITCASTCombine(N, DCI.DAG, Subtarget);
+    return PerformBITCASTCombine(N, DCI, Subtarget);
   case ARMISD::PREDICATE_CAST:
     return PerformPREDICATE_CASTCombine(N, DCI);
   case ARMISD::VECTOR_REG_CAST:
@@ -17079,9 +17166,10 @@ bool ARMTargetLowering::allowTruncateForTailCall(Type *Ty1, Type *Ty2) const {
   return true;
 }
 
-int ARMTargetLowering::getScalingFactorCost(const DataLayout &DL,
-                                                const AddrMode &AM, Type *Ty,
-                                                unsigned AS) const {
+InstructionCost ARMTargetLowering::getScalingFactorCost(const DataLayout &DL,
+                                                        const AddrMode &AM,
+                                                        Type *Ty,
+                                                        unsigned AS) const {
   if (isLegalAddressingMode(DL, AM, Ty, AS)) {
     if (Subtarget->hasFPAO())
       return AM.Scale < 0 ? 1 : 0; // positive offsets execute faster

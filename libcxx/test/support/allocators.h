@@ -185,6 +185,6 @@ bool operator!=(const A3<T>& x, const A3<U>& y)
     return !(x == y);
 }
 
-#endif  // TEST_STD_VER >= 11
+#endif // TEST_STD_VER >= 11
 
-#endif  // ALLOCATORS_H
+#endif // ALLOCATORS_H

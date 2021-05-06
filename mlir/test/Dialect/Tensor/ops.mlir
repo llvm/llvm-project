@@ -53,3 +53,15 @@ func @tensor.generate(%m : index, %n : index)
   } : tensor<?x3x?xf32>
   return %tnsr : tensor<?x3x?xf32>
 }
+
+// CHECK-LABEL: func @tensor_reshape
+func @tensor_reshape(%unranked: tensor<*xf32>, %shape1: tensor<1xi32>,
+         %shape2: tensor<2xi32>, %shape3: tensor<?xi32>) -> tensor<*xf32> {
+  %dyn_vec = tensor.reshape %unranked(%shape1)
+               : (tensor<*xf32>, tensor<1xi32>) -> tensor<?xf32>
+  %dyn_mat = tensor.reshape %dyn_vec(%shape2)
+               : (tensor<?xf32>, tensor<2xi32>) -> tensor<?x?xf32>
+  %new_unranked = tensor.reshape %dyn_mat(%shape3)
+               : (tensor<?x?xf32>, tensor<?xi32>) -> tensor<*xf32>
+  return %new_unranked : tensor<*xf32>
+}

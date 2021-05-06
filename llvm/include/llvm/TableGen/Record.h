@@ -1470,6 +1470,10 @@ inline raw_ostream &operator<<(raw_ostream &OS, const RecordVal &RV) {
 }
 
 class Record {
+public:
+  using AssertionTuple = std::tuple<SMLoc, Init *, Init *>;
+
+private:
   static unsigned LastID;
 
   Init *Name;
@@ -1479,7 +1483,7 @@ class Record {
   SmallVector<Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
   // Vector of [source location, condition Init, message Init].
-  SmallVector<std::tuple<SMLoc, Init *, Init *>, 0> Assertions;
+  SmallVector<AssertionTuple, 0> Assertions;
 
   // All superclasses in the inheritance forest in post-order (yes, it
   // must be a forest; diamond-shaped inheritance is not allowed).
@@ -1554,9 +1558,7 @@ public:
 
   ArrayRef<RecordVal> getValues() const { return Values; }
 
-  ArrayRef<std::tuple<SMLoc, Init *, Init *>> getAssertions() const {
-    return Assertions;
-  }
+  ArrayRef<AssertionTuple> getAssertions() const { return Assertions; }
 
   ArrayRef<std::pair<Record *, SMRange>>  getSuperClasses() const {
     return SuperClasses;
@@ -1621,7 +1623,7 @@ public:
     Assertions.append(Rec->Assertions);
   }
 
-  void checkAssertions();
+  void checkRecordAssertions();
 
   bool isSubClassOf(const Record *R) const {
     for (const auto &SCPair : SuperClasses)

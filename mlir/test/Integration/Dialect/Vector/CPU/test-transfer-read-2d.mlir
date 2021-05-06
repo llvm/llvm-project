@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
+// RUN: mlir-opt %s -test-progressive-convert-vector-to-scf -lower-affine -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
@@ -7,6 +7,39 @@ func @transfer_read_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) {
   %fm42 = constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
       {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} :
+    memref<?x?xf32>, vector<4x9xf32>
+  vector.print %f: vector<4x9xf32>
+  return
+}
+
+func @transfer_read_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: index) {
+  %fm42 = constant -42.0: f32
+  %mask = constant dense<[[1, 0, 1, 0, 1, 1, 1, 0, 1],
+                          [0, 0, 1, 1, 1, 1, 1, 0, 1],
+                          [1, 1, 1, 1, 1, 1, 1, 0, 1],
+                          [0, 0, 1, 0, 1, 1, 1, 0, 1]]> : vector<4x9xi1>
+  %f = vector.transfer_read %A[%base1, %base2], %fm42, %mask
+      {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} :
+    memref<?x?xf32>, vector<4x9xf32>
+  vector.print %f: vector<4x9xf32>
+  return
+}
+
+func @transfer_read_2d_transposed(
+    %A : memref<?x?xf32>, %base1: index, %base2: index) {
+  %fm42 = constant -42.0: f32
+  %f = vector.transfer_read %A[%base1, %base2], %fm42
+      {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} :
+    memref<?x?xf32>, vector<4x9xf32>
+  vector.print %f: vector<4x9xf32>
+  return
+}
+
+func @transfer_read_2d_broadcast(
+    %A : memref<?x?xf32>, %base1: index, %base2: index) {
+  %fm42 = constant -42.0: f32
+  %f = vector.transfer_read %A[%base1, %base2], %fm42
+      {permutation_map = affine_map<(d0, d1) -> (d1, 0)>} :
     memref<?x?xf32>, vector<4x9xf32>
   vector.print %f: vector<4x9xf32>
   return
@@ -48,12 +81,28 @@ func @entry() {
   // On input, memory contains [[ 0, 1, 2, ...], [10, 11, 12, ...], ...]
   // Read shifted by 2 and pad with -42:
   call @transfer_read_2d(%A, %c1, %c2) : (memref<?x?xf32>, index, index) -> ()
+  // Same as above, but transposed
+  call @transfer_read_2d_transposed(%A, %c1, %c2)
+      : (memref<?x?xf32>, index, index) -> ()
   // Write into memory shifted by 3
   call @transfer_write_2d(%A, %c3, %c1) : (memref<?x?xf32>, index, index) -> ()
   // Read shifted by 0 and pad with -42:
   call @transfer_read_2d(%A, %c0, %c0) : (memref<?x?xf32>, index, index) -> ()
+  // Same as above, but apply a mask
+  call @transfer_read_2d_mask(%A, %c0, %c0)
+      : (memref<?x?xf32>, index, index) -> ()
+  // Same as above, but without mask and transposed
+  call @transfer_read_2d_transposed(%A, %c0, %c0)
+      : (memref<?x?xf32>, index, index) -> ()
+  // Second vector dimension is a broadcast
+  call @transfer_read_2d_broadcast(%A, %c1, %c2)
+      : (memref<?x?xf32>, index, index) -> ()
   return
 }
 
 // CHECK: ( ( 12, 13, -42, -42, -42, -42, -42, -42, -42 ), ( 22, 23, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
+// CHECK: ( ( 12, 22, -42, -42, -42, -42, -42, -42, -42 ), ( 13, 23, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
 // CHECK: ( ( 0, 1, 2, 3, -42, -42, -42, -42, -42 ), ( 10, 11, 12, 13, -42, -42, -42, -42, -42 ), ( 20, 21, 22, 23, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
+// CHECK: ( ( 0, -42, 2, -42, -42, -42, -42, -42, -42 ), ( -42, -42, 12, 13, -42, -42, -42, -42, -42 ), ( 20, 21, 22, 23, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )
+// CHECK: ( ( 0, 10, 20, -42, -42, -42, -42, -42, -42 ), ( 1, 11, 21, -42, -42, -42, -42, -42, -42 ), ( 2, 12, 22, -42, -42, -42, -42, -42, -42 ), ( 3, 13, 23, -42, -42, -42, -42, -42, -42 ) )
+// CHECK: ( ( 12, 12, 12, 12, 12, 12, 12, 12, 12 ), ( 13, 13, 13, 13, 13, 13, 13, 13, 13 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ), ( -42, -42, -42, -42, -42, -42, -42, -42, -42 ) )

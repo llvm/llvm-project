@@ -1,6 +1,6 @@
 ; RUN: %llc_dwarf %s -filetype=obj -o %t
 ; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
-; REQUIRES: default_triple
+; REQUIRES: default_triple, object-emission
 ;
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NOT: dwo_id

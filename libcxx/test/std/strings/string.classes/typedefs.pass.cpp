@@ -32,7 +32,7 @@ int main(int, char**)
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     static_assert((std::is_same<std::u16string, std::basic_string<char16_t> >::value), "");
     static_assert((std::is_same<std::u32string, std::basic_string<char32_t> >::value), "");
-#endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
 
   return 0;
 }

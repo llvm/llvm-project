@@ -86,6 +86,7 @@ entry:
 !5 = !DISubroutineType(types: !{})
 
 ; Crasher for llc.
+; REQUIRES: object-emission
 ; RUN: %llc_dwarf -filetype=obj -O0 %t1 -o %t1.o
 ; RUN: llvm-dwarfdump %t1.o --all | FileCheck %s -check-prefix=DWLW -check-prefix=DW
 ; RUN: %llc_dwarf -filetype=obj -O0 %t2 -o %t2.o

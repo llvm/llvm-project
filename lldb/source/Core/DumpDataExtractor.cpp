@@ -14,8 +14,10 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/ModuleList.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -611,6 +613,21 @@ lldb::offset_t lldb_private::DumpDataExtractor(
             so_addr.SetOffset(addr);
             so_addr.Dump(s, exe_scope,
                          Address::DumpStyleResolvedPointerDescription);
+            if (ProcessSP process_sp = exe_scope->CalculateProcess()) {
+              if (ABISP abi_sp = process_sp->GetABI()) {
+                addr_t addr_fixed = abi_sp->FixCodeAddress(addr);
+                if (target_sp->GetSectionLoadList().ResolveLoadAddress(
+                        addr_fixed, so_addr)) {
+                  s->PutChar(' ');
+                  s->Printf("(0x%*.*" PRIx64 ")", (int)(2 * item_byte_size),
+                            (int)(2 * item_byte_size), addr_fixed);
+                  s->PutChar(' ');
+                  so_addr.Dump(s, exe_scope,
+                               Address::DumpStyleResolvedDescription,
+                               Address::DumpStyleModuleWithFileAddress);
+                }
+              }
+            }
           }
         }
       }

@@ -80,6 +80,7 @@ public:
   constexpr bool IsInfinite() const {
     return Exponent() == maxExponent && GetSignificand().IsZero();
   }
+  constexpr bool IsFinite() const { return Exponent() != maxExponent; }
   constexpr bool IsZero() const {
     return Exponent() == 0 && GetSignificand().IsZero();
   }

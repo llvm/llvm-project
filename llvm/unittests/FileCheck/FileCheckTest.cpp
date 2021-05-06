@@ -1445,8 +1445,10 @@ TEST_F(FileCheckTest, Match) {
                        Succeeded());
   Tester.initNextPattern();
   // Match with substitution failure.
-  ASSERT_FALSE(Tester.parsePattern("[[#UNKNOWN]]"));
-  expectUndefErrors({"UNKNOWN"}, Tester.match("FOO").takeError());
+  ASSERT_FALSE(Tester.parsePattern("[[#UNKNOWN1+UNKNOWN2]]"));
+  expectSameErrors<ErrorDiagnostic>(
+      {"undefined variable: UNKNOWN1", "undefined variable: UNKNOWN2"},
+      Tester.match("FOO").takeError());
   Tester.initNextPattern();
   // Check that @LINE matches the later (given the calls to initNextPattern())
   // line number.

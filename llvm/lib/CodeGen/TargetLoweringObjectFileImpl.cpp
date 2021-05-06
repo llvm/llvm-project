@@ -890,9 +890,11 @@ MCSection *TargetLoweringObjectFileELF::getSectionForLSDA(
   unsigned Flags = LSDA->getFlags();
   const MCSymbolELF *LinkedToSym = nullptr;
   StringRef Group;
+  bool IsComdat = false;
   if (const Comdat *C = getELFComdat(&F)) {
     Flags |= ELF::SHF_GROUP;
     Group = C->getName();
+    IsComdat = C->getSelectionKind() == Comdat::Any;
   }
   // Use SHF_LINK_ORDER to facilitate --gc-sections if we can use GNU ld>=2.36
   // or LLD, which support mixed SHF_LINK_ORDER & non-SHF_LINK_ORDER.
@@ -908,7 +910,7 @@ MCSection *TargetLoweringObjectFileELF::getSectionForLSDA(
   return getContext().getELFSection(
       (TM.getUniqueSectionNames() ? LSDA->getName() + "." + F.getName()
                                   : LSDA->getName()),
-      LSDA->getType(), Flags, 0, Group, F.hasComdat(), MCSection::NonUniqueID,
+      LSDA->getType(), Flags, 0, Group, IsComdat, MCSection::NonUniqueID,
       LinkedToSym);
 }
 

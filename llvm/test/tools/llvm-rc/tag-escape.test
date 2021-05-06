@@ -1,4 +1,4 @@
-; RUN: llvm-rc /FO %t -- %p/Inputs/tag-escape.rc
+; RUN: llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-escape.rc
 ; RUN: llvm-readobj %t | FileCheck %s
 
 ; CHECK:      Resource type (int): MENU (ID 4)

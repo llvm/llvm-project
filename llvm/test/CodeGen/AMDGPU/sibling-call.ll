@@ -272,5 +272,35 @@ entry:
   ret i32 %ret
 }
 
+@func_ptr_gv = external unnamed_addr addrspace(4) constant i32(i32, i32)*, align 4
+
+; Do support tail calls with a uniform, but unknown, callee.
+; GCN-LABEL: {{^}}indirect_uniform_sibling_call_i32_fastcc_i32_i32:
+; GCN: s_load_dwordx2 [[GV_ADDR:s\[[0-9]+:[0-9]+\]]]
+; GCN: s_load_dwordx2 [[FUNC_PTR:s\[[0-9]+:[0-9]+\]]], [[GV_ADDR]]
+; GCN: s_setpc_b64 [[FUNC_PTR]]
+define hidden fastcc i32 @indirect_uniform_sibling_call_i32_fastcc_i32_i32(i32 %a, i32 %b, i32 %c) #1 {
+entry:
+  %func.ptr.load = load i32(i32, i32)*, i32(i32, i32)* addrspace(4)* @func_ptr_gv
+  %ret = tail call fastcc i32 %func.ptr.load(i32 %a, i32 %b)
+  ret i32 %ret
+}
+
+; We can't support a tail call to a divergent target. Use a waterfall
+; loop around a regular call
+; GCN-LABEL: {{^}}indirect_divergent_sibling_call_i32_fastcc_i32_i32:
+; GCN: v_readfirstlane_b32
+; GCN: v_readfirstlane_b32
+; GCN: s_and_saveexec_b64
+; GCN: s_swappc_b64
+; GCN: s_cbranch_execnz
+; GCN: s_setpc_b64
+define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(i32(i32, i32)* %func.ptr, i32 %a, i32 %b, i32 %c) #1 {
+entry:
+  %add = add i32 %b, %c
+  %ret = tail call fastcc i32 %func.ptr(i32 %a, i32 %add)
+  ret i32 %ret
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind noinline }

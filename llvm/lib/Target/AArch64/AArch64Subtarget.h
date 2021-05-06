@@ -214,7 +214,6 @@ protected:
   unsigned MinVectorRegisterBitWidth = 64;
 
   bool OutlineAtomics = false;
-  bool UseAA = false;
   bool PredictableSelectIsExpensive = false;
   bool BalanceFPOps = false;
   bool CustomAsCheapAsMove = false;
@@ -494,7 +493,7 @@ public:
            TargetTriple.getEnvironment() == Triple::GNUILP32;
   }
 
-  bool useAA() const override { return UseAA; }
+  bool useAA() const override;
 
   bool outlineAtomics() const { return OutlineAtomics; }
 

@@ -182,7 +182,7 @@ template <> struct MappingTraits<IFSStub> {
 static Expected<std::unique_ptr<IFSStub>> readInputFile(StringRef FilePath) {
   // Read in file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrError =
-      MemoryBuffer::getFileOrSTDIN(FilePath);
+      MemoryBuffer::getFileOrSTDIN(FilePath, /*IsText=*/true);
   if (!BufOrError)
     return createStringError(BufOrError.getError(), "Could not open `%s`",
                              FilePath.data());

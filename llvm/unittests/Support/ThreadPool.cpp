@@ -246,8 +246,10 @@ TEST_F(ThreadPoolTest, AffinityMask) {
     // Ensure the threads only ran on CPUs 0-3.
     // NOTE: Don't use ASSERT* here because this runs in a subprocess,
     // and will show up as un-executed in the parent.
-    for (auto &It : ThreadsUsed)
-      assert(It.getData().front() < 16UL);
+    assert(llvm::all_of(ThreadsUsed,
+                        [](auto &T) { return T.getData().front() < 16UL; }) &&
+           "Threads ran on more CPUs than expected! The affinity mask does not "
+           "seem to work.");
     return;
   }
   std::string Executable =

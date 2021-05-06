@@ -23,8 +23,6 @@
 
 #define AMDGPU_ARCH_PROGRAM_NAME "amdgpu-arch"
 
-#define AMDGPU_ARCH_PROGRAM_NAME "amdgpu-arch"
-
 using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang::driver::toolchains;

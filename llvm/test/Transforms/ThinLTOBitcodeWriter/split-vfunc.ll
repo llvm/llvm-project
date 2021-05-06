@@ -2,9 +2,9 @@
 ; RUN: llvm-modextract -b -n 0 -o - %t | llvm-dis | FileCheck --check-prefix=M0 %s
 ; RUN: llvm-modextract -b -n 1 -o - %t | llvm-dis | FileCheck --check-prefix=M1 %s
 
-; M0: @g = external constant [9 x i8*]{{$}}
-; M1: @g = constant [9 x i8*]
-@g = constant [9 x i8*] [
+; M0: @g = external constant [10 x i8*]{{$}}
+; M1: @g = constant [10 x i8*]
+@g = constant [10 x i8*] [
   i8* bitcast (i64 (i8*)* @ok1 to i8*),
   i8* bitcast (i64 (i8*, i64)* @ok2 to i8*),
   i8* bitcast (void (i8*)* @wrongtype1 to i8*),
@@ -13,7 +13,8 @@
   i8* bitcast (i64 (i8*, i8*)* @wrongtype4 to i8*),
   i8* bitcast (i64 (i8*, i128)* @wrongtype5 to i8*),
   i8* bitcast (i64 (i8*)* @usesthis to i8*),
-  i8* bitcast (i8 (i8*)* @reads to i8*)
+  i8* bitcast (i8 (i8*)* @reads to i8*),
+  i8* bitcast (i8* (i8*, i8)* @attributedFunc to i8*)
 ], !type !0
 
 ; M0: define i64 @ok1
@@ -75,5 +76,12 @@ define i8 @reads(i8* %this) {
   %l = load i8, i8* %this
   ret i8 %l
 }
+
+; Check function attributes are copied over splitted module
+; M0: declare dso_local noundef i8* @attributedFunc(i8* noalias, i8 zeroext) unnamed_addr #[[ATTR0:[0-9]+]]
+; M1: declare dso_local void @attributedFunc() unnamed_addr #[[ATTR1:[0-9]+]]
+declare dso_local noundef i8* @attributedFunc(i8* noalias, i8 zeroext) unnamed_addr alwaysinline willreturn
+; M0: attributes #[[ATTR0]] = { alwaysinline willreturn }
+; M1: attributes #[[ATTR1]] = { alwaysinline willreturn }
 
 !0 = !{i32 0, !"typeid"}
