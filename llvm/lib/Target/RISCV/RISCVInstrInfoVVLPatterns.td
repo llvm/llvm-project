@@ -1085,7 +1085,7 @@ foreach mti = AllMasks in {
             (!cast<Instruction>("PseudoVMXNOR_MM_" # mti.LMul.MX)
                  VR:$rs1, VR:$rs2, GPR:$vl, mti.Log2SEW)>;
 
-  // Match the not idiom to the vnot.mm pseudo.
+  // Match the not idiom to the vmnot.m pseudo.
   def : Pat<(mti.Mask (riscv_vmnot_vl VR:$rs, VLOpFrag)),
             (!cast<Instruction>("PseudoVMNAND_MM_" # mti.LMul.MX)
                  VR:$rs, VR:$rs, GPR:$vl, mti.Log2SEW)>;

@@ -37566,6 +37566,29 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     }
     return SDValue();
   }
+  case X86ISD::UNPCKL:
+  case X86ISD::UNPCKH: {
+    // unpcklo(hop(x,y),hop(z,w)) -> permute(hop(x,z)).
+    // unpckhi(hop(x,y),hop(z,w)) -> permute(hop(y,w)).
+    // Don't fold if hop(x,y) == hop(z,w).
+    // TODO: Merge this into canonicalizeShuffleMaskWithHorizOp?
+    SDValue N0 = N.getOperand(0);
+    SDValue N1 = N.getOperand(1);
+    if (VT.getScalarSizeInBits() == 32 && N0 != N1 &&
+        N0.getOpcode() == N1.getOpcode() && isHorizOp(N0.getOpcode())) {
+      unsigned LoHi = Opcode == X86ISD::UNPCKL ? 0 : 1;
+      SDValue Res = DAG.getNode(N0.getOpcode(), DL, VT, N0.getOperand(LoHi),
+                                N1.getOperand(LoHi));
+      // Use SHUFPS for the permute so this will work on SSE3 targets, shuffle
+      // combining and domain handling will simplify this later on.
+      EVT ShuffleVT = VT.changeVectorElementType(MVT::f32);
+      Res = DAG.getBitcast(ShuffleVT, Res);
+      Res = DAG.getNode(X86ISD::SHUFP, DL, ShuffleVT, Res, Res,
+                        getV4X86ShuffleImm8ForMask({0, 2, 1, 3}, DL, DAG));
+      return DAG.getBitcast(VT, Res);
+    }
+    return SDValue();
+  }
   case X86ISD::VPERMI: {
     // vpermi(bitcast(x)) -> bitcast(vpermi(x)) for same number of elements.
     // TODO: Remove when we have preferred domains in combineX86ShuffleChain.
@@ -38071,37 +38094,14 @@ static SDValue combineShuffleOfConcatUndef(SDNode *N, SelectionDAG &DAG,
 // TODO: Merge this into canonicalizeShuffleMaskWithHorizOp.
 static SDValue foldShuffleOfHorizOp(SDNode *N, SelectionDAG &DAG) {
   unsigned Opcode = N->getOpcode();
-  if (Opcode != X86ISD::UNPCKL && Opcode != X86ISD::UNPCKH)
-    if (Opcode != X86ISD::SHUFP)
-      return SDValue();
+  if (Opcode != X86ISD::SHUFP)
+    return SDValue();
 
   EVT VT = N->getValueType(0);
   SDValue HOp = N->getOperand(0);
   if (HOp.getOpcode() != X86ISD::HADD && HOp.getOpcode() != X86ISD::FHADD &&
       HOp.getOpcode() != X86ISD::HSUB && HOp.getOpcode() != X86ISD::FHSUB)
     return SDValue();
-
-  // unpcklo(hop(x,y),hop(z,w)) -> permute(hop(x,z)).
-  // unpckhi(hop(x,y),hop(z,w)) -> permute(hop(y,w)).
-  // Don't fold if hop(x,y) == hop(z,w).
-  if (Opcode == X86ISD::UNPCKL || Opcode == X86ISD::UNPCKH) {
-    SDValue HOp2 = N->getOperand(1);
-    if (HOp.getOpcode() != HOp2.getOpcode() || VT.getScalarSizeInBits() != 32)
-      return SDValue();
-    if (HOp == HOp2)
-      return SDValue();
-    SDLoc DL(HOp);
-    unsigned LoHi = Opcode == X86ISD::UNPCKL ? 0 : 1;
-    SDValue Res = DAG.getNode(HOp.getOpcode(), DL, VT, HOp.getOperand(LoHi),
-                              HOp2.getOperand(LoHi));
-    // Use SHUFPS for the permute so this will work on SSE3 targets, shuffle
-    // combining and domain handling will simplify this later on.
-    EVT ShuffleVT = VT.changeVectorElementType(MVT::f32);
-    Res = DAG.getBitcast(ShuffleVT, Res);
-    Res = DAG.getNode(X86ISD::SHUFP, DL, ShuffleVT, Res, Res,
-                      getV4X86ShuffleImm8ForMask({0, 2, 1, 3}, DL, DAG));
-    return DAG.getBitcast(VT, Res);
-  }
 
   // shufps(hop(x,y),hop(z,w)) -> permute(hop(x,z)) etc.
   // Don't fold if hop(x,y) == hop(z,w).

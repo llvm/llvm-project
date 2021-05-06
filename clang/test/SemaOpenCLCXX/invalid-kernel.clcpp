@@ -1,4 +1,9 @@
-// RUN: %clang_cc1 %s -pedantic -verify -fsyntax-only
+// RUN: %clang_cc1 %s -pedantic -verify -fsyntax-only -triple spir-unknown-unknown
+// RUN: %clang_cc1 %s -pedantic -verify -fsyntax-only -triple spir-unknown-unknown -DUNSAFEKERNELPARAMETER
+
+#ifdef UNSAFEKERNELPARAMETER
+#pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : enable
+#endif
 
 struct C {
   kernel void m(); //expected-error{{kernel functions cannot be class members}}
@@ -24,8 +29,10 @@ kernel void int_p_p(__global int *__global *in);
 kernel void int_p_r(__global int *__global &in);
 kernel void int_p_p_r(__global int *__global *__global &in);
 
-// expected-error@+1{{'__private atomic_int' (aka '__private _Atomic(int)') cannot be used as the type of a kernel parameter}}
 kernel void k_atomic_v(atomic_int in);
+#ifndef UNSAFEKERNELPARAMETER
+// expected-error@-2{{'__private atomic_int' (aka '__private _Atomic(int)') cannot be used as the type of a kernel parameter}}
+#endif
 kernel void k_atomic_p(__global atomic_int *in);
 kernel void k_atomic_r(__global atomic_int &in);
 
@@ -56,7 +63,10 @@ struct StandardLayout {
   StandardLayout(int a, int b) : a(a), b(b) {}
 };
 
-kernel void standard_v(StandardLayout in) {} //expected-error{{'__private StandardLayout' cannot be used as the type of a kernel parameter}}
+kernel void standard_v(StandardLayout in) {}
+#ifndef UNSAFEKERNELPARAMETER
+//expected-error@-2{{'__private StandardLayout' cannot be used as the type of a kernel parameter}}
+#endif
 kernel void standard_p(__global StandardLayout *in) {}
 kernel void standard_p_p(__global StandardLayout *__global *in) {}
 kernel void standard_r(__global StandardLayout &in) {}
@@ -67,7 +77,19 @@ private:
   int b;
 };
 
-kernel void trivial_v(Trivial in) {} //expected-error{{'__private Trivial' cannot be used as the type of a kernel parameter}}
-kernel void trivial_p(__global Trivial *in) {} //expected-error{{'__global Trivial *__private' cannot be used as the type of a kernel parameter}}
-kernel void trivial_p_p(__global Trivial *__global *in) {} //expected-error{{'__global Trivial *__global *__private' cannot be used as the type of a kernel parameter}}
-kernel void trivial_r(__global Trivial &in) {} //expected-error{{'__global Trivial &__private' cannot be used as the type of a kernel parameter}}
+kernel void trivial_v(Trivial in) {}
+#ifndef UNSAFEKERNELPARAMETER
+//expected-error@-2{{'__private Trivial' cannot be used as the type of a kernel parameter}}
+#endif
+kernel void trivial_p(__global Trivial *in) {}
+#ifndef UNSAFEKERNELPARAMETER
+//expected-error@-2{{'__global Trivial *__private' cannot be used as the type of a kernel parameter}}
+#endif
+kernel void trivial_p_p(__global Trivial *__global *in) {}
+#ifndef UNSAFEKERNELPARAMETER
+//expected-error@-2{{'__global Trivial *__global *__private' cannot be used as the type of a kernel parameter}}
+#endif
+kernel void trivial_r(__global Trivial &in) {}
+#ifndef UNSAFEKERNELPARAMETER
+//expected-error@-2{{'__global Trivial &__private' cannot be used as the type of a kernel parameter}}
+#endif

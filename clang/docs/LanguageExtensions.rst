@@ -1813,6 +1813,54 @@ supporting the variadic arguments e.g. majority of CPU targets.
   #pragma OPENCL EXTENSION __cl_clang_variadic_functions : disable
   void bar(int a, ...); // error - variadic prototype is not allowed
 
+``__cl_clang_non_portable_kernel_param_types``
+---------------------------------------------
+
+With this extension it is possible to enable the use of some restricted types
+in kernel parameters specified in `C++ for OpenCL v1.0 s2.4
+<https://www.khronos.org/opencl/assets/CXX_for_OpenCL.html#kernel_function>`_.
+The restrictions can be relaxed using regular OpenCL extension pragma mechanism
+detailed in `the OpenCL Extension Specification, section 1.2
+<https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#extensions-overview>`_.
+
+This is not a conformant behavior and it can only be used when the
+kernel arguments are not accessed on the host side or the data layout/size
+between the host and device is known to be compatible.
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  // Plain Old Data type.
+  struct Pod {
+    int a;
+    int b;
+  };
+
+  // Not POD type because of the constructor.
+  // Standard layout type because there is only one access control.
+  struct OnlySL {
+    int a;
+    int b;
+    NotPod() : a(0), b(0) {}
+  };
+
+  // Not standard layout type because of two different access controls.
+  struct NotSL {
+    int a;
+  private:
+    int b;
+  }
+
+  kernel void kernel_main(
+    Pod a,
+  #pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : enable
+    OnlySL b,
+    global NotSL *c,
+  #pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : disable
+    global OnlySL *d,
+  );
+
 Legacy 1.x atomics with generic address space
 ---------------------------------------------
 
