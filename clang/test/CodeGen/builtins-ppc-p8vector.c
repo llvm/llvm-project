@@ -77,12 +77,10 @@ void test1() {
   res_vsll = vec_add(vsll, vsll);
 // CHECK: add <2 x i64>
 // CHECK-LE: add <2 x i64>
-// CHECK-PPC: error: call to 'vec_add' is ambiguous
 
   res_vull = vec_add(vull, vull);
 // CHECK: add <2 x i64>
 // CHECK-LE: add <2 x i64>
-// CHECK-PPC: error: call to 'vec_add' is ambiguous
 
   res_vuc = vec_add_u128(vuc, vuc);
 // CHECK: add <1 x i128>
@@ -183,61 +181,50 @@ void test1() {
   res_vbll = vec_cmpeq(vbll, vbll);
 // CHECK: @llvm.ppc.altivec.vcmpequd
 // CHECK-LE: @llvm.ppc.altivec.vcmpequd
-// CHECK-PPC: error: call to 'vec_cmpeq' is ambiguous
 
   res_vbll = vec_cmpeq(vsll, vsll);
 // CHECK: @llvm.ppc.altivec.vcmpequd
 // CHECK-LE: @llvm.ppc.altivec.vcmpequd
-// CHECK-PPC: error: call to 'vec_cmpeq' is ambiguous
 
   res_vbll = vec_cmpeq(vull, vull);
 // CHECK: @llvm.ppc.altivec.vcmpequd
 // CHECK-LE: @llvm.ppc.altivec.vcmpequd
-// CHECK-PPC: error: call to 'vec_cmpeq' is ambiguous
 
   /* vec_cmpge */
   res_vbll = vec_cmpge(vsll, vsll);
 // CHECK: @llvm.ppc.altivec.vcmpgtsd
 // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd
-// CHECK-PPC: error: call to 'vec_cmpge' is ambiguous
 
   res_vbll = vec_cmpge(vull, vull);
 // CHECK: @llvm.ppc.altivec.vcmpgtud
 // CHECK-LE: @llvm.ppc.altivec.vcmpgtud
-// CHECK-PPC: error: call to 'vec_cmpge' is ambiguous
 
   /* vec_cmple */
   res_vbll = vec_cmple(vsll, vsll);
 // CHECK: @llvm.ppc.altivec.vcmpgtsd
 // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd
-// CHECK-PPC: error: call to 'vec_cmple' is ambiguous
 
   res_vbll = vec_cmple(vull, vull);
 // CHECK: @llvm.ppc.altivec.vcmpgtud
 // CHECK-LE: @llvm.ppc.altivec.vcmpgtud
-// CHECK-PPC: error: call to 'vec_cmple' is ambiguous
 
   /* vec_cmpgt */
   res_vbll = vec_cmpgt(vsll, vsll);
 // CHECK: @llvm.ppc.altivec.vcmpgtsd
 // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd
-// CHECK-PPC: error: call to 'vec_cmpgt' is ambiguous
 
   res_vbll = vec_cmpgt(vull, vull);
 // CHECK: @llvm.ppc.altivec.vcmpgtud
 // CHECK-LE: @llvm.ppc.altivec.vcmpgtud
-// CHECK-PPC: error: call to 'vec_cmpgt' is ambiguous
 
   /* vec_cmplt */
   res_vbll = vec_cmplt(vsll, vsll);
 // CHECK: call <2 x i64> @llvm.ppc.altivec.vcmpgtsd(<2 x i64> %{{[0-9]*}}, <2 x i64> %{{[0-9]*}})
 // CHECK-LE: call <2 x i64> @llvm.ppc.altivec.vcmpgtsd(<2 x i64> %{{[0-9]*}}, <2 x i64> %{{[0-9]*}})
-// CHECK-PPC: error: call to 'vec_cmplt' is ambiguous
 
   res_vbll = vec_cmplt(vull, vull);
 // CHECK: call <2 x i64> @llvm.ppc.altivec.vcmpgtud(<2 x i64> %{{[0-9]*}}, <2 x i64> %{{[0-9]*}})
 // CHECK-LE: call <2 x i64> @llvm.ppc.altivec.vcmpgtud(<2 x i64> %{{[0-9]*}}, <2 x i64> %{{[0-9]*}})
-// CHECK-PPC: error: call to 'vec_cmplt' is ambiguous
 
   /* vec_eqv */
   res_vsc =  vec_eqv(vsc, vsc);
@@ -1113,23 +1100,19 @@ void test1() {
   res_vsll = vec_rl(vsll, vull);
 // CHECK: @llvm.ppc.altivec.vrld
 // CHECK-LE: @llvm.ppc.altivec.vrld
-// CHECK-PPC: error: call to 'vec_rl' is ambiguous
 
   res_vull = vec_rl(vull, vull);
 // CHECK: @llvm.ppc.altivec.vrld
 // CHECK-LE: @llvm.ppc.altivec.vrld
-// CHECK-PPC: error: call to 'vec_rl' is ambiguous
 
   /* vec_sl */
   res_vsll = vec_sl(vsll, vull);
 // CHECK: shl <2 x i64>
 // CHECK-LE: shl <2 x i64>
-// CHECK-PPC: error: call to 'vec_sl' is ambiguous
 
   res_vull = vec_sl(vull, vull);
 // CHECK: shl <2 x i64>
 // CHECK-LE: shl <2 x i64>
-// CHECK-PPC: error: call to 'vec_sl' is ambiguous
 
   /* vec_sr */
   res_vsll = vec_sr(vsll, vull);
@@ -1137,25 +1120,21 @@ void test1() {
 // CHECK: lshr <2 x i64> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 // CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, <i64 64, i64 64>
 // CHECK-LE: lshr <2 x i64> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-PPC: error: call to 'vec_sr' is ambiguous
 
   res_vull = vec_sr(vull, vull);
 // CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, <i64 64, i64 64>
 // CHECK: lshr <2 x i64> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 // CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, <i64 64, i64 64>
 // CHECK-LE: lshr <2 x i64> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-PPC: error: call to 'vec_sr' is ambiguous
 
   /* vec_sra */
   res_vsll = vec_sra(vsll, vull);
 // CHECK: ashr <2 x i64>
 // CHECK-LE: ashr <2 x i64>
-// CHECK-PPC: error: call to 'vec_sra' is ambiguous
 
   res_vull = vec_sra(vull, vull);
 // CHECK: ashr <2 x i64>
 // CHECK-LE: ashr <2 x i64>
-// CHECK-PPC: error: call to 'vec_sra' is ambiguous
 
   /* vec_splats */
   res_vsll = vec_splats(sll);
