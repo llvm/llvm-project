@@ -7,8 +7,8 @@ define amdgpu_ps void @v_interp_f32(float inreg %i, float inreg %j, i32 inreg %m
 ; GCN-NEXT:    s_mov_b32 s3, exec_lo
 ; GCN-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GCN-NEXT:    s_mov_b32 m0, s2
-; GCN-NEXT:    lds_param_load v0, attr0.y
-; GCN-NEXT:    lds_param_load v1, attr1.x
+; GCN-NEXT:    lds_param_load v0, attr0.y wait_vdst:15
+; GCN-NEXT:    lds_param_load v1, attr1.x wait_vdst:15
 ; GCN-NEXT:    s_mov_b32 exec_lo, s3
 ; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    v_mov_b32_e32 v4, s1
@@ -39,7 +39,7 @@ define amdgpu_ps half @v_interp_f16(float inreg %i, float inreg %j, i32 inreg %m
 ; GCN-NEXT:    s_mov_b32 s3, exec_lo
 ; GCN-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GCN-NEXT:    s_mov_b32 m0, s2
-; GCN-NEXT:    lds_param_load v1, attr0.x
+; GCN-NEXT:    lds_param_load v1, attr0.x wait_vdst:15
 ; GCN-NEXT:    s_mov_b32 exec_lo, s3
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v2, s1
