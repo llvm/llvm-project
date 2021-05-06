@@ -848,6 +848,21 @@ public class A {
   verifyFormat(R"(var x = (int?)y;)", Style); // Cast to a nullable type.
 
   verifyFormat(R"(var x = new MyContainer<int?>();)", Style); // Generics.
+
+  verifyFormat(R"(//
+public interface I {
+  int? Function();
+})",
+               Style); // Interface methods.
+
+  Style.ColumnLimit = 10;
+  verifyFormat(R"(//
+public VeryLongType? Function(
+    int arg1,
+    int arg2) {
+  //
+})",
+               Style); // ? sticks with identifier.
 }
 
 TEST_F(FormatTestCSharp, CSharpArraySubscripts) {
