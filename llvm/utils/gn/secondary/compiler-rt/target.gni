@@ -28,6 +28,9 @@ if (clang_enable_per_target_runtime_dir) {
   }
 } else if (current_os == "ios" || current_os == "mac") {
   crt_current_out_dir = "$clang_resource_dir/lib/darwin"
+} else if (current_os == "win") {
+  crt_current_out_dir = "$clang_resource_dir/lib/windows"
+  crt_current_target_suffix = "-$crt_current_target_arch"
 } else {
   assert(false, "unimplemented current_os " + current_os)
 }
