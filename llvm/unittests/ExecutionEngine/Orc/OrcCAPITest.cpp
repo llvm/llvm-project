@@ -116,6 +116,9 @@ protected:
     // some may just be failing due to bugs in this testcase.
     if (Triple.startswith("armv7") || Triple.startswith("armv8l"))
       return false;
+    llvm::Triple T(Triple);
+    if (T.isOSAIX() && T.isPPC64())
+      return false;
     return true;
   }
 
