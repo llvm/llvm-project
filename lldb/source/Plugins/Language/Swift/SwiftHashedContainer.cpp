@@ -662,12 +662,13 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
 
   ValueObjectSP bobject_sp =
     variant_sp->GetChildAtNamePath({g_object, g_rawValue});
+  if (!bobject_sp)
+    return nullptr;
 
   lldb::addr_t storage_location =
     bobject_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-  if (storage_location == LLDB_INVALID_ADDRESS) {
+  if (storage_location == LLDB_INVALID_ADDRESS)
     return nullptr;
-  }
 
   ProcessSP process_sp = exe_ctx.GetProcessSP();
   if (!process_sp)
