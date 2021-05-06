@@ -49,9 +49,9 @@ def frmarg : Operand<XLenVT> {
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class FPFMAS_rrr_frm<RISCVOpcode opcode, string opcodestr>
-    : RVInstR4<0b00, opcode, (outs FPR32:$rd),
-               (ins FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, frmarg:$funct3),
-                opcodestr, "$rd, $rs1, $rs2, $rs3, $funct3">;
+    : RVInstR4Frm<0b00, opcode, (outs FPR32:$rd),
+                  (ins FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, frmarg:$funct3),
+                  opcodestr, "$rd, $rs1, $rs2, $rs3, $funct3">;
 
 class FPFMASDynFrmAlias<FPFMAS_rrr_frm Inst, string OpcodeStr>
     : InstAlias<OpcodeStr#" $rd, $rs1, $rs2, $rs3",
