@@ -957,12 +957,12 @@ bool CallLowering::resultsCompatible(CallLoweringInfo &Info,
     return true;
 
   SmallVector<CCValAssign, 16> ArgLocs1;
-  CCState CCInfo1(CalleeCC, false, MF, ArgLocs1, F.getContext());
+  CCState CCInfo1(CalleeCC, Info.IsVarArg, MF, ArgLocs1, F.getContext());
   if (!determineAssignments(CalleeAssigner, InArgs, CCInfo1))
     return false;
 
   SmallVector<CCValAssign, 16> ArgLocs2;
-  CCState CCInfo2(CallerCC, false, MF, ArgLocs2, F.getContext());
+  CCState CCInfo2(CallerCC, F.isVarArg(), MF, ArgLocs2, F.getContext());
   if (!determineAssignments(CallerAssigner, InArgs, CCInfo2))
     return false;
 
