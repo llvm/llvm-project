@@ -8,14 +8,17 @@ from gdbclientutils import *
 class TestHaltFails(GDBRemoteTestBase):
 
     class MyResponder(MockGDBServerResponder):
-        
+        def __init__(self, timeout):
+            MockGDBServerResponder.__init__(self)
+            self.timeout = timeout
+            
         def setBreakpoint(self, packet):
             return "OK"
         
         def interrupt(self):
             # Simulate process waiting longer than the interrupt
             # timeout to stop, then sending the reply.
-            time.sleep(14)
+            time.sleep(self.timeout)
             return "T02reason:signal"
         
         def cont(self):
@@ -30,9 +33,11 @@ class TestHaltFails(GDBRemoteTestBase):
         event_type = lldb.SBProcess.GetStateFromEvent(event)
         self.assertEqual(event_type, value)
         
-    def get_to_running(self):
-        self.server.responder = self.MyResponder()
+    def get_to_running(self, sleep_interval, interrupt_timeout = 5):
+        self.server.responder = self.MyResponder(sleep_interval)
         self.target = self.createTarget("a.yaml")
+        # Set a shorter (and known) interrupt timeout:
+        self.dbg.HandleCommand("settings set target.process.interrupt-timeout {0}".format(interrupt_timeout))
         process = self.connect(self.target)
         self.dbg.SetAsync(True)
 
@@ -46,7 +51,7 @@ class TestHaltFails(GDBRemoteTestBase):
 
     @skipIfReproducer # FIXME: Unexpected packet during (passive) replay
     def test_destroy_while_running(self):
-        process = self.get_to_running()
+        process = self.get_to_running(10)
         process.Destroy()
 
         # Again pretend that after failing to be interrupted, we delivered the stop
@@ -59,7 +64,7 @@ class TestHaltFails(GDBRemoteTestBase):
         Test that explicitly calling AsyncInterrupt, which then fails, leads
         to an "eStateExited" state.
         """
-        process = self.get_to_running()
+        process = self.get_to_running(10)
         # Now do the interrupt:
         process.SendAsyncInterrupt()
 
@@ -67,6 +72,19 @@ class TestHaltFails(GDBRemoteTestBase):
         # be in eStateExited:
         self.wait_for_and_check_event(15, lldb.eStateExited)
 
+    @skipIfReproducer # FIXME: Unexpected packet during (passive) replay
+    def test_interrupt_timeout(self):
+        """
+        Test that explicitly calling AsyncInterrupt but this time with
+        an interrupt timeout longer than we're going to wait succeeds.
+        """
+        process = self.get_to_running(10, 20)
+        # Now do the interrupt:
+        process.SendAsyncInterrupt()
+
+        # That should have caused the Halt to time out and we should
+        # be in eStateExited:
+        self.wait_for_and_check_event(20, lldb.eStateStopped)
         
 
         
