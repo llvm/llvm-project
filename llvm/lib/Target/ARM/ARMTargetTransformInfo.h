@@ -48,11 +48,6 @@ namespace TailPredication {
   };
 }
 
-// For controlling conversion of memcpy into Tail Predicated loop.
-namespace TPLoop {
-enum MemTransfer { ForceDisabled = 0, ForceEnabled, Allow };
-}
-
 class ARMTTIImpl : public BasicTTIImplBase<ARMTTIImpl> {
   using BaseT = BasicTTIImplBase<ARMTTIImpl>;
   using TTI = TargetTransformInfo;
