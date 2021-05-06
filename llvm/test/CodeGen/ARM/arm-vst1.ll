@@ -386,92 +386,535 @@ entry:
   ret void
 }
 
-define void @postinc_1x2(i8* nocapture %0, i8* %1) {
-; CHECK-LABEL: postinc_1x2:
-; CHECK:         vld1.8 {d16, d17, d18, d19}, [r1:256]
-; CHECK-NEXT:    add r1, r1, #32
-; CHECK-NEXT:    vst1.8 {d16, d17, d18, d19}, [r0:256]
-; CHECK-NEXT:    add r0, r0, #32
-; CHECK-NEXT:    vld1.8 {d16, d17, d18, d19}, [r1:256]
-; CHECK-NEXT:    vst1.8 {d16, d17, d18, d19}, [r0:256]
+; Post increment
+
+define arm_aapcs_vfpcc i8* @test_vst1_u8_x2_post_imm(i8* %a, %struct.uint8x8x2_t %b) nounwind {
+; CHECK-LABEL: test_vst1_u8_x2_post_imm:
+; CHECK:         vst1.8 {d0, d1}, [r0:64]!
 ; CHECK-NEXT:    bx lr
-  %3 = tail call { <16 x i8>, <16 x i8> } @llvm.arm.neon.vld1x2.v16i8.p0i8(i8* %1)
-  %4 = extractvalue { <16 x i8>, <16 x i8> } %3, 0
-  %5 = extractvalue { <16 x i8>, <16 x i8> } %3, 1
-  tail call void @llvm.arm.neon.vst1x2.p0i8.v16i8(i8* %0, <16 x i8> %4, <16 x i8> %5)
-  %6 = getelementptr inbounds i8, i8* %1, i32 32
-  %7 = tail call { <16 x i8>, <16 x i8> } @llvm.arm.neon.vld1x2.v16i8.p0i8(i8* nonnull %6)
-  %8 = extractvalue { <16 x i8>, <16 x i8> } %7, 0
-  %9 = extractvalue { <16 x i8>, <16 x i8> } %7, 1
-  %10 = getelementptr inbounds i8, i8* %0, i32 32
-  tail call void @llvm.arm.neon.vst1x2.p0i8.v16i8(i8* nonnull %10, <16 x i8> %8, <16 x i8> %9)
-  ret void
+entry:
+  %b0 = extractvalue %struct.uint8x8x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint8x8x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0i8.v8i8(i8* %a, <8 x i8> %b0, <8 x i8> %b1)
+  %tmp = getelementptr i8, i8* %a, i32 16
+  ret i8* %tmp
 }
 
-declare { <16 x i8>, <16 x i8> } @llvm.arm.neon.vld1x2.v16i8.p0i8(i8*)
-
-define void @postinc_1x3(i8* nocapture %0, i8* %1) {
-; CHECK-LABEL: postinc_1x3:
-; CHECK:         add r2, r1, #48
-; CHECK-NEXT:    vld1.8 {d16, d17, d18}, [r1:64]!
-; CHECK-NEXT:    vld1.8 {d19, d20, d21}, [r1:64]
-; CHECK-NEXT:    add r1, r0, #48
-; CHECK-NEXT:    vst1.8 {d16, d17, d18}, [r0:64]!
-; CHECK-NEXT:    vst1.8 {d19, d20, d21}, [r0:64]
-; CHECK-NEXT:    vld1.8 {d16, d17, d18}, [r2:64]!
-; CHECK-NEXT:    vld1.8 {d19, d20, d21}, [r2:64]
-; CHECK-NEXT:    vst1.8 {d16, d17, d18}, [r1:64]!
-; CHECK-NEXT:    vst1.8 {d19, d20, d21}, [r1:64]
+define arm_aapcs_vfpcc i8* @test_vst1_u8_x2_post_reg(i8* %a, %struct.uint8x8x2_t %b, i32 %inc) nounwind {
+; CHECK-LABEL: test_vst1_u8_x2_post_reg:
+; CHECK:         vst1.8 {d0, d1}, [r0:64], r1
 ; CHECK-NEXT:    bx lr
-  %3 = tail call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.arm.neon.vld1x3.v16i8.p0i8(i8* %1)
-  %4 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } %3, 0
-  %5 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } %3, 1
-  %a5 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } %3, 2
-  tail call void @llvm.arm.neon.vst1x3.p0i8.v16i8(i8* %0, <16 x i8> %4, <16 x i8> %5, <16 x i8> %a5)
-  %6 = getelementptr inbounds i8, i8* %1, i32 48
-  %7 = tail call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.arm.neon.vld1x3.v16i8.p0i8(i8* nonnull %6)
-  %8 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } %7, 0
-  %9 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } %7, 1
-  %a9 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } %7, 2
-  %10 = getelementptr inbounds i8, i8* %0, i32 48
-  tail call void @llvm.arm.neon.vst1x3.p0i8.v16i8(i8* nonnull %10, <16 x i8> %8, <16 x i8> %9, <16 x i8> %a9)
-  ret void
+entry:
+  %b0 = extractvalue %struct.uint8x8x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint8x8x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0i8.v8i8(i8* %a, <8 x i8> %b0, <8 x i8> %b1)
+  %tmp = getelementptr i8, i8* %a, i32 %inc
+  ret i8* %tmp
 }
 
-declare { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.arm.neon.vld1x3.v16i8.p0i8(i8*)
-
-define void @postinc_1x4(i8* nocapture %0, i8* %1) {
-; CHECK-LABEL: postinc_1x4:
-; CHECK:         add r2, r1, #64
-; CHECK-NEXT:    vld1.8 {d16, d17, d18, d19}, [r1:256]!
-; CHECK-NEXT:    vld1.8 {d20, d21, d22, d23}, [r1:256]
-; CHECK-NEXT:    add r1, r0, #64
-; CHECK-NEXT:    vst1.8 {d16, d17, d18, d19}, [r0:256]!
-; CHECK-NEXT:    vst1.8 {d20, d21, d22, d23}, [r0:256]
-; CHECK-NEXT:    vld1.8 {d16, d17, d18, d19}, [r2:256]!
-; CHECK-NEXT:    vld1.8 {d20, d21, d22, d23}, [r2:256]
-; CHECK-NEXT:    vorr q15, q11, q11
-; CHECK-NEXT:    vorr q14, q10, q10
-; CHECK-NEXT:    vorr q13, q9, q9
-; CHECK-NEXT:    vorr q12, q8, q8
-; CHECK-NEXT:    vst1.8 {d24, d25, d26, d27}, [r1:256]!
-; CHECK-NEXT:    vst1.8 {d28, d29, d30, d31}, [r1:256]
+define arm_aapcs_vfpcc i16* @test_vst1_u16_x2_post_imm(i16* %a, %struct.uint16x4x2_t %b) nounwind {
+; CHECK-LABEL: test_vst1_u16_x2_post_imm:
+; CHECK:         vst1.16 {d0, d1}, [r0:64]!
 ; CHECK-NEXT:    bx lr
-  %3 = tail call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.arm.neon.vld1x4.v16i8.p0i8(i8* %1)
-  %4 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %3, 0
-  %5 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %3, 1
-  %6 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %3, 2
-  %7 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %3, 3
-  tail call void @llvm.arm.neon.vst1x4.p0i8.v16i8(i8* %0, <16 x i8> %4, <16 x i8> %5, <16 x i8> %6, <16 x i8> %7)
-  %8 = getelementptr inbounds i8, i8* %1, i32 64
-  %9 = tail call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.arm.neon.vld1x4.v16i8.p0i8(i8* nonnull %8)
-  %10 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %9, 0
-  %11 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %9, 1
-  %12 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %9, 2
-  %13 = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %9, 3
-  %14 = getelementptr inbounds i8, i8* %0, i32 64
-  tail call void @llvm.arm.neon.vst1x4.p0i8.v16i8(i8* nonnull %14, <16 x i8> %10, <16 x i8> %11, <16 x i8> %12, <16 x i8> %13)
-  ret void
+  %b0 = extractvalue %struct.uint16x4x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint16x4x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0i16.v4i16(i16* %a, <4 x i16> %b0, <4 x i16> %b1)
+  %tmp = getelementptr i16, i16* %a, i32 8
+  ret i16* %tmp
 }
 
-declare { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.arm.neon.vld1x4.v16i8.p0i8(i8*)
+define arm_aapcs_vfpcc i16* @test_vst1_u16_x2_post_reg(i16* %a, %struct.uint16x4x2_t %b, i32 %inc) nounwind {
+; CHECK-LABEL: test_vst1_u16_x2_post_reg:
+; CHECK:         lsl r1, r1, #1
+; CHECK-NEXT:    vst1.16 {d0, d1}, [r0:64], r1
+; CHECK-NEXT:    bx lr
+  %b0 = extractvalue %struct.uint16x4x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint16x4x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0i16.v4i16(i16* %a, <4 x i16> %b0, <4 x i16> %b1)
+  %tmp = getelementptr i16, i16* %a, i32 %inc
+  ret i16* %tmp
+}
+
+define arm_aapcs_vfpcc i32* @test_vst1_u32_x2_post_imm(i32* %a, %struct.uint32x2x2_t %b) nounwind {
+; CHECK-LABEL: test_vst1_u32_x2_post_imm:
+; CHECK:         vst1.32 {d0, d1}, [r0:64]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint32x2x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint32x2x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0i32.v2i32(i32* %a, <2 x i32> %b0, <2 x i32> %b1)
+  %tmp = getelementptr i32, i32* %a, i32 4
+  ret i32* %tmp
+}
+
+define arm_aapcs_vfpcc i32* @test_vst1_u32_x2_post_reg(i32* %a, %struct.uint32x2x2_t %b, i32 %inc) nounwind {
+; CHECK-LABEL: test_vst1_u32_x2_post_reg:
+; CHECK:         lsl r1, r1, #2
+; CHECK-NEXT:    vst1.32 {d0, d1}, [r0:64], r1
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint32x2x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint32x2x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0i32.v2i32(i32* %a, <2 x i32> %b0, <2 x i32> %b1)
+  %tmp = getelementptr i32, i32* %a, i32 %inc
+  ret i32* %tmp
+}
+
+define arm_aapcs_vfpcc i64* @test_vst1_u64_x2_post_imm(i64* %a, %struct.uint64x1x2_t %b) nounwind {
+; CHECK-LABEL: test_vst1_u64_x2_post_imm:
+; CHECK:         vst1.64 {d0, d1}, [r0:64]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint64x1x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint64x1x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0i64.v1i64(i64* %a, <1 x i64> %b0, <1 x i64> %b1)
+  %tmp = getelementptr i64, i64* %a, i32 2
+  ret i64* %tmp
+}
+
+define arm_aapcs_vfpcc i64* @test_vst1_u64_x2_post_reg(i64* %a, %struct.uint64x1x2_t %b, i32 %inc) nounwind {
+; CHECK-LABEL: test_vst1_u64_x2_post_reg:
+; CHECK:         lsl r1, r1, #3
+; CHECK-NEXT:    vst1.64 {d0, d1}, [r0:64], r1
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint64x1x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint64x1x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0i64.v1i64(i64* %a, <1 x i64> %b0, <1 x i64> %b1)
+  %tmp = getelementptr i64, i64* %a, i32 %inc
+  ret i64* %tmp
+}
+
+define arm_aapcs_vfpcc i8* @test_vst1q_u8_x2_post_imm(i8* %a, %struct.uint8x16x2_t %b) nounwind {
+; CHECK-LABEL: test_vst1q_u8_x2_post_imm:
+; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0:256]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint8x16x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint8x16x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0i8.v16i8(i8* %a, <16 x i8> %b0, <16 x i8> %b1)
+  %tmp = getelementptr i8, i8* %a, i32 32
+  ret i8* %tmp
+}
+
+define arm_aapcs_vfpcc i8* @test_vst1q_u8_x2_post_reg(i8* %a, %struct.uint8x16x2_t %b, i32 %inc) nounwind {
+; CHECK-LABEL: test_vst1q_u8_x2_post_reg:
+; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0:256], r1
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint8x16x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint8x16x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0i8.v16i8(i8* %a, <16 x i8> %b0, <16 x i8> %b1)
+  %tmp = getelementptr i8, i8* %a, i32 %inc
+  ret i8* %tmp
+}
+
+define arm_aapcs_vfpcc i16* @test_vst1q_u16_x2_post_imm(i16* %a, %struct.uint16x8x2_t %b) nounwind {
+; CHECK-LABEL: test_vst1q_u16_x2_post_imm:
+; CHECK:         vst1.16 {d0, d1, d2, d3}, [r0:256]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint16x8x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint16x8x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0i16.v8i16(i16* %a, <8 x i16> %b0, <8 x i16> %b1)
+  %tmp = getelementptr i16, i16* %a, i32 16
+  ret i16* %tmp
+}
+
+define arm_aapcs_vfpcc i16* @test_vst1q_u16_x2_post_reg(i16* %a, %struct.uint16x8x2_t %b, i32 %inc) nounwind {
+; CHECK-LABEL: test_vst1q_u16_x2_post_reg:
+; CHECK:         lsl r1, r1, #1
+; CHECK-NEXT:    vst1.16 {d0, d1, d2, d3}, [r0:256], r1
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint16x8x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint16x8x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0i16.v8i16(i16* %a, <8 x i16> %b0, <8 x i16> %b1)
+  %tmp = getelementptr i16, i16* %a, i32 %inc
+  ret i16* %tmp
+}
+
+define arm_aapcs_vfpcc i32* @test_vst1q_u32_x2_post_imm(i32* %a, %struct.uint32x4x2_t %b) nounwind {
+; CHECK-LABEL: test_vst1q_u32_x2_post_imm:
+; CHECK:         vst1.32 {d0, d1, d2, d3}, [r0:256]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint32x4x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint32x4x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0i32.v4i32(i32* %a, <4 x i32> %b0, <4 x i32> %b1)
+  %tmp = getelementptr i32, i32* %a, i32 8
+  ret i32* %tmp
+}
+
+define arm_aapcs_vfpcc i32* @test_vst1q_u32_x2_post_reg(i32* %a, %struct.uint32x4x2_t %b, i32 %inc) nounwind {
+; CHECK-LABEL: test_vst1q_u32_x2_post_reg:
+; CHECK:         lsl r1, r1, #2
+; CHECK-NEXT:    vst1.32 {d0, d1, d2, d3}, [r0:256], r1
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint32x4x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint32x4x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0i32.v4i32(i32* %a, <4 x i32> %b0, <4 x i32> %b1)
+  %tmp = getelementptr i32, i32* %a, i32 %inc
+  ret i32* %tmp
+}
+
+define arm_aapcs_vfpcc i64* @test_vst1q_u64_x2_post_imm(i64* %a, %struct.uint64x2x2_t %b) nounwind {
+; CHECK-LABEL: test_vst1q_u64_x2_post_imm:
+; CHECK:         vst1.64 {d0, d1, d2, d3}, [r0:256]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint64x2x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint64x2x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0i64.v2i64(i64* %a, <2 x i64> %b0, <2 x i64> %b1)
+  %tmp = getelementptr i64, i64* %a, i32 4
+  ret i64* %tmp
+}
+
+define arm_aapcs_vfpcc i64* @test_vst1q_u64_x2_post_reg(i64* %a, %struct.uint64x2x2_t %b, i32 %inc) nounwind {
+; CHECK-LABEL: test_vst1q_u64_x2_post_reg:
+; CHECK:         lsl r1, r1, #3
+; CHECK-NEXT:    vst1.64 {d0, d1, d2, d3}, [r0:256], r1
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint64x2x2_t %b, 0, 0
+  %b1 = extractvalue %struct.uint64x2x2_t %b, 0, 1
+  tail call void @llvm.arm.neon.vst1x2.p0i64.v2i64(i64* %a, <2 x i64> %b0, <2 x i64> %b1)
+  %tmp = getelementptr i64, i64* %a, i32 %inc
+  ret i64* %tmp
+}
+
+
+define arm_aapcs_vfpcc i8* @test_vst1_u8_x3_post_imm(i8* %a, %struct.uint8x8x3_t %b) nounwind {
+; CHECK-LABEL: test_vst1_u8_x3_post_imm:
+; CHECK:         vst1.8 {d0, d1, d2}, [r0:64]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint8x8x3_t %b, 0, 0
+  %b1 = extractvalue %struct.uint8x8x3_t %b, 0, 1
+  %b2 = extractvalue %struct.uint8x8x3_t %b, 0, 2
+  tail call void @llvm.arm.neon.vst1x3.p0i8.v8i8(i8* %a, <8 x i8> %b0, <8 x i8> %b1, <8 x i8> %b2)
+  %tmp = getelementptr i8, i8* %a, i32 24
+  ret i8* %tmp
+}
+
+define arm_aapcs_vfpcc i8* @test_vst1_u8_x3_post_reg(i8* %a, %struct.uint8x8x3_t %b, i32 %inc) nounwind {
+; CHECK-LABEL: test_vst1_u8_x3_post_reg:
+; CHECK:         vst1.8 {d0, d1, d2}, [r0:64], r1
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint8x8x3_t %b, 0, 0
+  %b1 = extractvalue %struct.uint8x8x3_t %b, 0, 1
+  %b2 = extractvalue %struct.uint8x8x3_t %b, 0, 2
+  tail call void @llvm.arm.neon.vst1x3.p0i8.v8i8(i8* %a, <8 x i8> %b0, <8 x i8> %b1, <8 x i8> %b2)
+  %tmp = getelementptr i8, i8* %a, i32 %inc
+  ret i8* %tmp
+}
+
+define arm_aapcs_vfpcc i16* @test_vst1_u16_x3_post_imm(i16* %a, %struct.uint16x4x3_t %b) nounwind {
+; CHECK-LABEL: test_vst1_u16_x3_post_imm:
+; CHECK:         vst1.16 {d0, d1, d2}, [r0:64]!
+; CHECK-NEXT:    bx lr
+  %b0 = extractvalue %struct.uint16x4x3_t %b, 0, 0
+  %b1 = extractvalue %struct.uint16x4x3_t %b, 0, 1
+  %b2 = extractvalue %struct.uint16x4x3_t %b, 0, 2
+  tail call void @llvm.arm.neon.vst1x3.p0i16.v4i16(i16* %a, <4 x i16> %b0, <4 x i16> %b1, <4 x i16> %b2)
+  %tmp = getelementptr i16, i16* %a, i32 12
+  ret i16* %tmp
+}
+
+define arm_aapcs_vfpcc i16* @test_vst1_u16_x3_post_reg(i16* %a, %struct.uint16x4x3_t %b, i32 %inc) nounwind {
+; CHECK-LABEL: test_vst1_u16_x3_post_reg:
+; CHECK:         lsl r1, r1, #1
+; CHECK-NEXT:    vst1.16 {d0, d1, d2}, [r0:64], r1
+; CHECK-NEXT:    bx lr
+  %b0 = extractvalue %struct.uint16x4x3_t %b, 0, 0
+  %b1 = extractvalue %struct.uint16x4x3_t %b, 0, 1
+  %b2 = extractvalue %struct.uint16x4x3_t %b, 0, 2
+  tail call void @llvm.arm.neon.vst1x3.p0i16.v4i16(i16* %a, <4 x i16> %b0, <4 x i16> %b1, <4 x i16> %b2)
+  %tmp = getelementptr i16, i16* %a, i32 %inc
+  ret i16* %tmp
+}
+
+define arm_aapcs_vfpcc i32* @test_vst1_u32_x3_post_imm(i32* %a, %struct.uint32x2x3_t %b) nounwind {
+; CHECK-LABEL: test_vst1_u32_x3_post_imm:
+; CHECK:         vst1.32 {d0, d1, d2}, [r0:64]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint32x2x3_t %b, 0, 0
+  %b1 = extractvalue %struct.uint32x2x3_t %b, 0, 1
+  %b2 = extractvalue %struct.uint32x2x3_t %b, 0, 2
+  tail call void @llvm.arm.neon.vst1x3.p0i32.v2i32(i32* %a, <2 x i32> %b0, <2 x i32> %b1, <2 x i32> %b2)
+  %tmp = getelementptr i32, i32* %a, i32 6
+  ret i32* %tmp
+}
+
+define arm_aapcs_vfpcc i32* @test_vst1_u32_x3_post_reg(i32* %a, %struct.uint32x2x3_t %b, i32 %inc) nounwind {
+; CHECK-LABEL: test_vst1_u32_x3_post_reg:
+; CHECK:         lsl r1, r1, #2
+; CHECK-NEXT:    vst1.32 {d0, d1, d2}, [r0:64], r1
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint32x2x3_t %b, 0, 0
+  %b1 = extractvalue %struct.uint32x2x3_t %b, 0, 1
+  %b2 = extractvalue %struct.uint32x2x3_t %b, 0, 2
+  tail call void @llvm.arm.neon.vst1x3.p0i32.v2i32(i32* %a, <2 x i32> %b0, <2 x i32> %b1, <2 x i32> %b2)
+  %tmp = getelementptr i32, i32* %a, i32 %inc
+  ret i32* %tmp
+}
+
+define arm_aapcs_vfpcc i64* @test_vst1_u64_x3_post_imm(i64* %a, %struct.uint64x1x3_t %b) nounwind {
+; CHECK-LABEL: test_vst1_u64_x3_post_imm:
+; CHECK:         vst1.64 {d0, d1, d2}, [r0:64]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint64x1x3_t %b, 0, 0
+  %b1 = extractvalue %struct.uint64x1x3_t %b, 0, 1
+  %b2 = extractvalue %struct.uint64x1x3_t %b, 0, 2
+  tail call void @llvm.arm.neon.vst1x3.p0i64.v1i64(i64* %a, <1 x i64> %b0, <1 x i64> %b1, <1 x i64> %b2)
+  %tmp = getelementptr i64, i64* %a, i32 3
+  ret i64* %tmp
+}
+
+define arm_aapcs_vfpcc i64* @test_vst1_u64_x3_post_reg(i64* %a, %struct.uint64x1x3_t %b, i32 %inc) nounwind {
+; CHECK-LABEL: test_vst1_u64_x3_post_reg:
+; CHECK:         lsl r1, r1, #3
+; CHECK-NEXT:    vst1.64 {d0, d1, d2}, [r0:64], r1
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint64x1x3_t %b, 0, 0
+  %b1 = extractvalue %struct.uint64x1x3_t %b, 0, 1
+  %b2 = extractvalue %struct.uint64x1x3_t %b, 0, 2
+  tail call void @llvm.arm.neon.vst1x3.p0i64.v1i64(i64* %a, <1 x i64> %b0, <1 x i64> %b1, <1 x i64> %b2)
+  %tmp = getelementptr i64, i64* %a, i32 %inc
+  ret i64* %tmp
+}
+
+define arm_aapcs_vfpcc i8* @test_vst1q_u8_x3_post_imm(i8* %a, %struct.uint8x16x3_t %b) nounwind {
+; CHECK-LABEL: test_vst1q_u8_x3_post_imm:
+; CHECK:         vst1.8 {d0, d1, d2}, [r0:64]!
+; CHECK-NEXT:    vst1.8 {d3, d4, d5}, [r0:64]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint8x16x3_t %b, 0, 0
+  %b1 = extractvalue %struct.uint8x16x3_t %b, 0, 1
+  %b2 = extractvalue %struct.uint8x16x3_t %b, 0, 2
+  tail call void @llvm.arm.neon.vst1x3.p0i8.v16i8(i8* %a, <16 x i8> %b0, <16 x i8> %b1, <16 x i8> %b2)
+  %tmp = getelementptr i8, i8* %a, i32 48
+  ret i8* %tmp
+}
+
+define arm_aapcs_vfpcc i16* @test_vst1q_u16_x3_post_imm(i16* %a, %struct.uint16x8x3_t %b) nounwind {
+; CHECK-LABEL: test_vst1q_u16_x3_post_imm:
+; CHECK:         vst1.16 {d0, d1, d2}, [r0:64]!
+; CHECK-NEXT:    vst1.16 {d3, d4, d5}, [r0:64]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint16x8x3_t %b, 0, 0
+  %b1 = extractvalue %struct.uint16x8x3_t %b, 0, 1
+  %b2 = extractvalue %struct.uint16x8x3_t %b, 0, 2
+  tail call void @llvm.arm.neon.vst1x3.p0i16.v8i16(i16* %a, <8 x i16> %b0, <8 x i16> %b1, <8 x i16> %b2)
+  %tmp = getelementptr i16, i16* %a, i32 24
+  ret i16* %tmp
+}
+
+define arm_aapcs_vfpcc i32* @test_vst1q_u32_x3_post_imm(i32* %a, %struct.uint32x4x3_t %b) nounwind {
+; CHECK-LABEL: test_vst1q_u32_x3_post_imm:
+; CHECK:         vst1.32 {d0, d1, d2}, [r0:64]!
+; CHECK-NEXT:    vst1.32 {d3, d4, d5}, [r0:64]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint32x4x3_t %b, 0, 0
+  %b1 = extractvalue %struct.uint32x4x3_t %b, 0, 1
+  %b2 = extractvalue %struct.uint32x4x3_t %b, 0, 2
+  tail call void @llvm.arm.neon.vst1x3.p0i32.v4i32(i32* %a, <4 x i32> %b0, <4 x i32> %b1, <4 x i32> %b2)
+  %tmp = getelementptr i32, i32* %a, i32 12
+  ret i32* %tmp
+}
+
+define arm_aapcs_vfpcc i64* @test_vst1q_u64_x3_post_imm(i64* %a, %struct.uint64x2x3_t %b) nounwind {
+; CHECK-LABEL: test_vst1q_u64_x3_post_imm:
+; CHECK:         vst1.64 {d0, d1, d2}, [r0:64]!
+; CHECK-NEXT:    vst1.64 {d3, d4, d5}, [r0:64]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint64x2x3_t %b, 0, 0
+  %b1 = extractvalue %struct.uint64x2x3_t %b, 0, 1
+  %b2 = extractvalue %struct.uint64x2x3_t %b, 0, 2
+  tail call void @llvm.arm.neon.vst1x3.p0i64.v2i64(i64* %a, <2 x i64> %b0, <2 x i64> %b1, <2 x i64> %b2)
+  %tmp = getelementptr i64, i64* %a, i32 6
+  ret i64* %tmp
+}
+
+define arm_aapcs_vfpcc i8* @test_vst1_u8_x4_post_imm(i8* %a, %struct.uint8x8x4_t %b) nounwind {
+; CHECK-LABEL: test_vst1_u8_x4_post_imm:
+; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0:256]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint8x8x4_t %b, 0, 0
+  %b1 = extractvalue %struct.uint8x8x4_t %b, 0, 1
+  %b2 = extractvalue %struct.uint8x8x4_t %b, 0, 2
+  %b3 = extractvalue %struct.uint8x8x4_t %b, 0, 3
+  tail call void @llvm.arm.neon.vst1x4.p0i8.v8i8(i8* %a, <8 x i8> %b0, <8 x i8> %b1, <8 x i8> %b2, <8 x i8> %b3)
+  %tmp = getelementptr i8, i8* %a, i32 32
+  ret i8* %tmp
+}
+
+define arm_aapcs_vfpcc i8* @test_vst1_u8_x4_post_reg(i8* %a, %struct.uint8x8x4_t %b, i32 %inc) nounwind {
+; CHECK-LABEL: test_vst1_u8_x4_post_reg:
+; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0:256], r1
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint8x8x4_t %b, 0, 0
+  %b1 = extractvalue %struct.uint8x8x4_t %b, 0, 1
+  %b2 = extractvalue %struct.uint8x8x4_t %b, 0, 2
+  %b3 = extractvalue %struct.uint8x8x4_t %b, 0, 3
+  tail call void @llvm.arm.neon.vst1x4.p0i8.v8i8(i8* %a, <8 x i8> %b0, <8 x i8> %b1, <8 x i8> %b2, <8 x i8> %b3)
+  %tmp = getelementptr i8, i8* %a, i32 %inc
+  ret i8* %tmp
+}
+
+define arm_aapcs_vfpcc i16* @test_vst1_u16_x4_post_imm(i16* %a, %struct.uint16x4x4_t %b) nounwind {
+; CHECK-LABEL: test_vst1_u16_x4_post_imm:
+; CHECK:         vst1.16 {d0, d1, d2, d3}, [r0:256]!
+; CHECK-NEXT:    bx lr
+  %b0 = extractvalue %struct.uint16x4x4_t %b, 0, 0
+  %b1 = extractvalue %struct.uint16x4x4_t %b, 0, 1
+  %b2 = extractvalue %struct.uint16x4x4_t %b, 0, 2
+  %b3 = extractvalue %struct.uint16x4x4_t %b, 0, 3
+  tail call void @llvm.arm.neon.vst1x4.p0i16.v4i16(i16* %a, <4 x i16> %b0, <4 x i16> %b1, <4 x i16> %b2, <4 x i16> %b3)
+  %tmp = getelementptr i16, i16* %a, i32 16
+  ret i16* %tmp
+}
+
+define arm_aapcs_vfpcc i16* @test_vst1_u16_x4_post_reg(i16* %a, %struct.uint16x4x4_t %b, i32 %inc) nounwind {
+; CHECK-LABEL: test_vst1_u16_x4_post_reg:
+; CHECK:         lsl r1, r1, #1
+; CHECK-NEXT:    vst1.16 {d0, d1, d2, d3}, [r0:256], r1
+; CHECK-NEXT:    bx lr
+  %b0 = extractvalue %struct.uint16x4x4_t %b, 0, 0
+  %b1 = extractvalue %struct.uint16x4x4_t %b, 0, 1
+  %b2 = extractvalue %struct.uint16x4x4_t %b, 0, 2
+  %b3 = extractvalue %struct.uint16x4x4_t %b, 0, 3
+  tail call void @llvm.arm.neon.vst1x4.p0i16.v4i16(i16* %a, <4 x i16> %b0, <4 x i16> %b1, <4 x i16> %b2, <4 x i16> %b3)
+  %tmp = getelementptr i16, i16* %a, i32 %inc
+  ret i16* %tmp
+}
+
+define arm_aapcs_vfpcc i32* @test_vst1_u32_x4_post_imm(i32* %a, %struct.uint32x2x4_t %b) nounwind {
+; CHECK-LABEL: test_vst1_u32_x4_post_imm:
+; CHECK:         vst1.32 {d0, d1, d2, d3}, [r0:256]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint32x2x4_t %b, 0, 0
+  %b1 = extractvalue %struct.uint32x2x4_t %b, 0, 1
+  %b2 = extractvalue %struct.uint32x2x4_t %b, 0, 2
+  %b3 = extractvalue %struct.uint32x2x4_t %b, 0, 3
+  tail call void @llvm.arm.neon.vst1x4.p0i32.v2i32(i32* %a, <2 x i32> %b0, <2 x i32> %b1, <2 x i32> %b2, <2 x i32> %b3)
+  %tmp = getelementptr i32, i32* %a, i32 8
+  ret i32* %tmp
+}
+
+define arm_aapcs_vfpcc i32* @test_vst1_u32_x4_post_reg(i32* %a, %struct.uint32x2x4_t %b, i32 %inc) nounwind {
+; CHECK-LABEL: test_vst1_u32_x4_post_reg:
+; CHECK:         lsl r1, r1, #2
+; CHECK-NEXT:    vst1.32 {d0, d1, d2, d3}, [r0:256], r1
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint32x2x4_t %b, 0, 0
+  %b1 = extractvalue %struct.uint32x2x4_t %b, 0, 1
+  %b2 = extractvalue %struct.uint32x2x4_t %b, 0, 2
+  %b3 = extractvalue %struct.uint32x2x4_t %b, 0, 3
+  tail call void @llvm.arm.neon.vst1x4.p0i32.v2i32(i32* %a, <2 x i32> %b0, <2 x i32> %b1, <2 x i32> %b2, <2 x i32> %b3)
+  %tmp = getelementptr i32, i32* %a, i32 %inc
+  ret i32* %tmp
+}
+
+define arm_aapcs_vfpcc i64* @test_vst1_u64_x4_post_imm(i64* %a, %struct.uint64x1x4_t %b) nounwind {
+; CHECK-LABEL: test_vst1_u64_x4_post_imm:
+; CHECK:         vst1.64 {d0, d1, d2, d3}, [r0:256]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint64x1x4_t %b, 0, 0
+  %b1 = extractvalue %struct.uint64x1x4_t %b, 0, 1
+  %b2 = extractvalue %struct.uint64x1x4_t %b, 0, 2
+  %b3 = extractvalue %struct.uint64x1x4_t %b, 0, 3
+  tail call void @llvm.arm.neon.vst1x4.p0i64.v1i64(i64* %a, <1 x i64> %b0, <1 x i64> %b1, <1 x i64> %b2, <1 x i64> %b3)
+  %tmp = getelementptr i64, i64* %a, i32 4
+  ret i64* %tmp
+}
+
+define arm_aapcs_vfpcc i64* @test_vst1_u64_x4_post_reg(i64* %a, %struct.uint64x1x4_t %b, i32 %inc) nounwind {
+; CHECK-LABEL: test_vst1_u64_x4_post_reg:
+; CHECK:         lsl r1, r1, #3
+; CHECK-NEXT:    vst1.64 {d0, d1, d2, d3}, [r0:256], r1
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint64x1x4_t %b, 0, 0
+  %b1 = extractvalue %struct.uint64x1x4_t %b, 0, 1
+  %b2 = extractvalue %struct.uint64x1x4_t %b, 0, 2
+  %b3 = extractvalue %struct.uint64x1x4_t %b, 0, 3
+  tail call void @llvm.arm.neon.vst1x4.p0i64.v1i64(i64* %a, <1 x i64> %b0, <1 x i64> %b1, <1 x i64> %b2, <1 x i64> %b3)
+  %tmp = getelementptr i64, i64* %a, i32 %inc
+  ret i64* %tmp
+}
+
+define arm_aapcs_vfpcc i8* @test_vst1q_u8_x4_post_imm(i8* %a, %struct.uint8x16x4_t %b) nounwind {
+; CHECK-LABEL: test_vst1q_u8_x4_post_imm:
+; CHECK:         vst1.8 {d0, d1, d2, d3}, [r0:256]!
+; CHECK-NEXT:    vst1.8 {d4, d5, d6, d7}, [r0:256]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint8x16x4_t %b, 0, 0
+  %b1 = extractvalue %struct.uint8x16x4_t %b, 0, 1
+  %b2 = extractvalue %struct.uint8x16x4_t %b, 0, 2
+  %b3 = extractvalue %struct.uint8x16x4_t %b, 0, 3
+  tail call void @llvm.arm.neon.vst1x4.p0i8.v16i8(i8* %a, <16 x i8> %b0, <16 x i8> %b1, <16 x i8> %b2, <16 x i8> %b3)
+  %tmp = getelementptr i8, i8* %a, i32 64
+  ret i8* %tmp
+}
+
+define arm_aapcs_vfpcc i16* @test_vst1q_u16_x4_post_imm(i16* %a, %struct.uint16x8x4_t %b) nounwind {
+; CHECK-LABEL: test_vst1q_u16_x4_post_imm:
+; CHECK:         vst1.16 {d0, d1, d2, d3}, [r0:256]!
+; CHECK-NEXT:    vst1.16 {d4, d5, d6, d7}, [r0:256]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint16x8x4_t %b, 0, 0
+  %b1 = extractvalue %struct.uint16x8x4_t %b, 0, 1
+  %b2 = extractvalue %struct.uint16x8x4_t %b, 0, 2
+  %b3 = extractvalue %struct.uint16x8x4_t %b, 0, 3
+  tail call void @llvm.arm.neon.vst1x4.p0i16.v8i16(i16* %a, <8 x i16> %b0, <8 x i16> %b1, <8 x i16> %b2, <8 x i16> %b3)
+  %tmp = getelementptr i16, i16* %a, i32 32
+  ret i16* %tmp
+}
+
+define arm_aapcs_vfpcc i32* @test_vst1q_u32_x4_post_imm(i32* %a, %struct.uint32x4x4_t %b) nounwind {
+; CHECK-LABEL: test_vst1q_u32_x4_post_imm:
+; CHECK:         vst1.32 {d0, d1, d2, d3}, [r0:256]!
+; CHECK-NEXT:    vst1.32 {d4, d5, d6, d7}, [r0:256]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint32x4x4_t %b, 0, 0
+  %b1 = extractvalue %struct.uint32x4x4_t %b, 0, 1
+  %b2 = extractvalue %struct.uint32x4x4_t %b, 0, 2
+  %b3 = extractvalue %struct.uint32x4x4_t %b, 0, 3
+  tail call void @llvm.arm.neon.vst1x4.p0i32.v4i32(i32* %a, <4 x i32> %b0, <4 x i32> %b1, <4 x i32> %b2, <4 x i32> %b3)
+  %tmp = getelementptr i32, i32* %a, i32 16
+  ret i32* %tmp
+}
+
+define arm_aapcs_vfpcc i64* @test_vst1q_u64_x4_post_imm(i64* %a, %struct.uint64x2x4_t %b) nounwind {
+; CHECK-LABEL: test_vst1q_u64_x4_post_imm:
+; CHECK:         vst1.64 {d0, d1, d2, d3}, [r0:256]!
+; CHECK-NEXT:    vst1.64 {d4, d5, d6, d7}, [r0:256]!
+; CHECK-NEXT:    bx lr
+entry:
+  %b0 = extractvalue %struct.uint64x2x4_t %b, 0, 0
+  %b1 = extractvalue %struct.uint64x2x4_t %b, 0, 1
+  %b2 = extractvalue %struct.uint64x2x4_t %b, 0, 2
+  %b3 = extractvalue %struct.uint64x2x4_t %b, 0, 3
+  tail call void @llvm.arm.neon.vst1x4.p0i64.v2i64(i64* %a, <2 x i64> %b0, <2 x i64> %b1, <2 x i64> %b2, <2 x i64> %b3)
+  %tmp = getelementptr i64, i64* %a, i32 8
+  ret i64* %tmp
+}
