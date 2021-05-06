@@ -205,16 +205,20 @@ UnitMap &ExternalFileUnit::GetUnitMap() {
   }
   Terminator terminator{__FILE__, __LINE__};
   IoErrorHandler handler{terminator};
-  unitMap = New<UnitMap>{terminator}().release();
-  ExternalFileUnit &out{ExternalFileUnit::CreateNew(6, terminator)};
+  UnitMap *newUnitMap{New<UnitMap>{terminator}().release()};
+  bool wasExtant{false};
+  ExternalFileUnit &out{newUnitMap->LookUpOrCreate(6, terminator, wasExtant)};
+  RUNTIME_CHECK(terminator, !wasExtant);
   out.Predefine(1);
   out.SetDirection(Direction::Output, handler);
   defaultOutput = &out;
-  ExternalFileUnit &in{ExternalFileUnit::CreateNew(5, terminator)};
+  ExternalFileUnit &in{newUnitMap->LookUpOrCreate(5, terminator, wasExtant)};
+  RUNTIME_CHECK(terminator, !wasExtant);
   in.Predefine(0);
   in.SetDirection(Direction::Input, handler);
   defaultInput = &in;
   // TODO: Set UTF-8 mode from the environment
+  unitMap = newUnitMap;
   return *unitMap;
 }
 
