@@ -25,7 +25,7 @@ public:
   void runOnOperation() override;
 
 private:
-  mlir::spirv::OwningSPIRVModuleRef combinedModule;
+  OwningOpRef<spirv::ModuleOp> combinedModule;
 };
 } // namespace
 
