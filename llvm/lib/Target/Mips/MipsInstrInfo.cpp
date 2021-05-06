@@ -433,7 +433,28 @@ bool MipsInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
   case Mips::BNZ_D:
   case Mips::BNZ_V:
     return isInt<18>(BrOffset);
-  }
+
+  // NanoMips branches
+  case Mips::BEQC_NM:
+  case Mips::BGEC_NM:
+  case Mips::BGEUC_NM:
+  case Mips::BLTC_NM:
+  case Mips::BLTUC_NM:
+  case Mips::BNEC_NM:
+    return isInt<15>(BrOffset);
+
+  case Mips::BEQIC_NM:
+  case Mips::BGEIC_NM:
+  case Mips::BGEIUC_NM:
+  case Mips::BLTIC_NM:
+  case Mips::BLTIUC_NM:
+  case Mips::BNEIC_NM:
+    return isInt<12>(BrOffset);
+
+  case Mips::BEQZC_NM:
+  case Mips::BNEZC_NM:
+    return isInt<8>(BrOffset);
+}
 
   llvm_unreachable("Unknown branch instruction!");
 }
