@@ -93,12 +93,14 @@ public:
     LLVMOrcJITTargetMachineBuilderRef JTMB = nullptr;
     LLVMErrorRef E1 = LLVMOrcJITTargetMachineBuilderDetectHost(&JTMB);
     assert(E1 == LLVMErrorSuccess && "Expected call to detect host to succeed");
+    (void)E1;
 
     LLVMOrcLLJITBuilderRef Builder = LLVMOrcCreateLLJITBuilder();
     LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(Builder, JTMB);
     LLVMErrorRef E2 = LLVMOrcCreateLLJIT(&Jit, Builder);
     assert(E2 == LLVMErrorSuccess &&
            "Expected call to create LLJIT to succeed");
+    (void)E2;
     ExecutionSession = LLVMOrcLLJITGetExecutionSession(Jit);
     MainDylib = LLVMOrcLLJITGetMainJITDylib(Jit);
   }
