@@ -963,6 +963,7 @@ private:
   SDValue LowerXOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVSCALE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
@@ -991,6 +992,7 @@ private:
                                               SelectionDAG &DAG) const;
   SDValue LowerFixedLengthExtractVectorElt(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthInsertVectorElt(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthBitcastToSVE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                         SmallVectorImpl<SDNode *> &Created) const override;
