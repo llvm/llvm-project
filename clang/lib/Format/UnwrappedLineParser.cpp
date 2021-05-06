@@ -1316,15 +1316,7 @@ void UnwrappedLineParser::parseStructuralElement() {
     case tok::kw_struct:
     case tok::kw_union:
     case tok::kw_class:
-      // parseRecord falls through and does not yet add an unwrapped line as a
-      // record declaration or definition can start a structural element.
-      parseRecord();
-      // This does not apply for Java, JavaScript and C#.
-      if (Style.Language == FormatStyle::LK_Java ||
-          Style.Language == FormatStyle::LK_JavaScript || Style.isCSharp()) {
-        if (FormatTok->is(tok::semi))
-          nextToken();
-        addUnwrappedLine();
+      if (parseStructLike()) {
         return;
       }
       break;
@@ -1436,6 +1428,13 @@ void UnwrappedLineParser::parseStructuralElement() {
         parseRecord();
         addUnwrappedLine();
         return;
+      }
+
+      if (FormatTok->is(Keywords.kw_interface)) {
+        if (parseStructLike()) {
+          return;
+        }
+        break;
       }
 
       if (Style.isCpp() && FormatTok->is(TT_StatementMacro)) {
@@ -2523,6 +2522,21 @@ bool UnwrappedLineParser::parseEnum() {
   // There is no addUnwrappedLine() here so that we fall through to parsing a
   // structural element afterwards. Thus, in "enum A {} n, m;",
   // "} n, m;" will end up in one unwrapped line.
+}
+
+bool UnwrappedLineParser::parseStructLike() {
+  // parseRecord falls through and does not yet add an unwrapped line as a
+  // record declaration or definition can start a structural element.
+  parseRecord();
+  // This does not apply to Java, JavaScript and C#.
+  if (Style.Language == FormatStyle::LK_Java ||
+      Style.Language == FormatStyle::LK_JavaScript || Style.isCSharp()) {
+    if (FormatTok->is(tok::semi))
+      nextToken();
+    addUnwrappedLine();
+    return true;
+  }
+  return false;
 }
 
 namespace {
