@@ -6865,18 +6865,6 @@ class MVE_WLSTP<string asm, bits<2> size>
   let isTerminator = 1;
 }
 
-def SDT_MVEMEMCPYLOOPNODE
-    : SDTypeProfile<0, 3, [SDTCisPtrTy<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>]>;
-def MVE_MEMCPYLOOPNODE : SDNode<"ARMISD::MEMCPYLOOP", SDT_MVEMEMCPYLOOPNODE,
-                                [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
-
-let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
-  def MVE_MEMCPYLOOPINST : PseudoInst<(outs),
-        (ins rGPR:$dst, rGPR:$src, rGPR:$sz),
-        NoItinerary,
-        [(MVE_MEMCPYLOOPNODE rGPR:$dst, rGPR:$src, rGPR:$sz)]>;
-}
-
 def MVE_DLSTP_8  : MVE_DLSTP<"dlstp.8",  0b00>;
 def MVE_DLSTP_16 : MVE_DLSTP<"dlstp.16", 0b01>;
 def MVE_DLSTP_32 : MVE_DLSTP<"dlstp.32", 0b10>;
