@@ -1787,7 +1787,7 @@ private:
   };
 
 #ifndef NDEBUG
-  void dumpTreeCosts(TreeEntry *E, InstructionCost ReuseShuffleCost,
+  void dumpTreeCosts(const TreeEntry *E, InstructionCost ReuseShuffleCost,
                      InstructionCost VecCost,
                      InstructionCost ScalarCost) const {
     dbgs() << "SLP: Calculated costs for Tree:\n"; E->dump();
