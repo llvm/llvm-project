@@ -582,6 +582,15 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
   return new_thread_plan_sp;
 }
 
+bool SwiftLanguageRuntime::IsSymbolARuntimeThunk(const Symbol &symbol) {
+  llvm::StringRef symbol_name =
+      symbol.GetMangled().GetMangledName().GetStringRef();
+  if (symbol_name.empty())
+    return false;
+  swift::Demangle::Context demangle_ctx;
+  return demangle_ctx.isThunkSymbol(symbol_name);
+}
+
 bool SwiftLanguageRuntime::IsSwiftMangledName(llvm::StringRef name) {
   return swift::Demangle::isSwiftSymbol(name);
 }
