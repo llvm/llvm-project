@@ -116,7 +116,6 @@ namespace __ssize {
 inline namespace __cpo {
   inline constexpr const auto ssize = __ssize::__fn{};
 } // namespace __cpo
-
 } // namespace ranges
 
 // clang-format off
