@@ -1356,7 +1356,7 @@ public:
         _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
                        "Attempted to dereference a non-dereferenceable iterator");
 #endif
-        return (pointer)_VSTD::addressof(*__i);
+        return _VSTD::__to_address(__i);
     }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG __wrap_iter& operator++() _NOEXCEPT
     {
