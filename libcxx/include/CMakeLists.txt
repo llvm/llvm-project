@@ -51,6 +51,7 @@ set(files
   __ranges/enable_borrowed_range.h
   __ranges/enable_view.h
   __ranges/view_interface.h
+  __ranges/ref_view.h
   __ranges/size.h
   __ranges/subrange.h
   __split_buffer
