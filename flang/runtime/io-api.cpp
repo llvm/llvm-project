@@ -155,12 +155,15 @@ Cookie BeginExternalListIO(
     unitNumber = DIR == Direction::Input ? 5 : 6;
   }
   ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
-      unitNumber, DIR, false /*formatted*/, terminator)};
+      unitNumber, DIR, false /*!unformatted*/, terminator)};
   if (unit.access == Access::Direct) {
     terminator.Crash("List-directed I/O attempted on direct access file");
     return nullptr;
   }
-  if (unit.isUnformatted) {
+  if (!unit.isUnformatted.has_value()) {
+    unit.isUnformatted = false;
+  }
+  if (*unit.isUnformatted) {
     terminator.Crash("List-directed I/O attempted on unformatted file");
     return nullptr;
   }
@@ -191,8 +194,11 @@ Cookie BeginExternalFormattedIO(const char *format, std::size_t formatLength,
     unitNumber = DIR == Direction::Input ? 5 : 6;
   }
   ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
-      unitNumber, DIR, false /*formatted*/, terminator)};
-  if (unit.isUnformatted) {
+      unitNumber, DIR, false /*!unformatted*/, terminator)};
+  if (!unit.isUnformatted.has_value()) {
+    unit.isUnformatted = false;
+  }
+  if (*unit.isUnformatted) {
     terminator.Crash("Formatted I/O attempted on unformatted file");
     return nullptr;
   }
@@ -224,8 +230,11 @@ Cookie BeginUnformattedIO(
   Terminator terminator{sourceFile, sourceLine};
   ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
       unitNumber, DIR, true /*unformatted*/, terminator)};
-  if (!unit.isUnformatted) {
-    terminator.Crash("Unformatted output attempted on formatted file");
+  if (!unit.isUnformatted.has_value()) {
+    unit.isUnformatted = true;
+  }
+  if (!*unit.isUnformatted) {
+    terminator.Crash("Unformatted I/O attempted on formatted file");
   }
   IoStatementState &io{unit.BeginIoStatement<UnformattedIoStatementState<DIR>>(
       unit, sourceFile, sourceLine)};
@@ -310,7 +319,7 @@ Cookie IONAME(BeginEndfile)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
-      unitNumber, Direction::Output, false /*formatted*/, terminator)};
+      unitNumber, Direction::Output, std::nullopt, terminator)};
   return &unit.BeginIoStatement<ExternalMiscIoStatementState>(
       unit, ExternalMiscIoStatementState::Endfile, sourceFile, sourceLine);
 }
@@ -319,7 +328,7 @@ Cookie IONAME(BeginRewind)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
-      unitNumber, Direction::Input, false /*formatted*/, terminator)};
+      unitNumber, Direction::Input, std::nullopt, terminator)};
   return &unit.BeginIoStatement<ExternalMiscIoStatementState>(
       unit, ExternalMiscIoStatementState::Rewind, sourceFile, sourceLine);
 }

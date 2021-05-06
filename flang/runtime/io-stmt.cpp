@@ -203,10 +203,10 @@ int OpenStatementState::EndIoStatement() {
     }
     unit().access = *access_;
   }
-  if (!isUnformatted_) {
-    isUnformatted_ = unit().access != Access::Sequential;
+  if (!unit().isUnformatted) {
+    unit().isUnformatted = isUnformatted_;
   }
-  if (*isUnformatted_ != unit().isUnformatted) {
+  if (isUnformatted_ && *isUnformatted_ != *unit().isUnformatted) {
     if (wasExtant_) {
       SignalError("FORM= may not be changed on an open unit");
     }
@@ -757,7 +757,7 @@ bool InquireUnitState::Inquire(
     str = unit().mayAsynchronous() ? "YES" : "NO";
     break;
   case HashInquiryKeyword("BLANK"):
-    str = unit().isUnformatted                  ? "UNDEFINED"
+    str = unit().isUnformatted.value_or(true)   ? "UNDEFINED"
         : unit().modes.editingFlags & blankZero ? "ZERO"
                                                 : "NULL";
     break;
@@ -768,12 +768,12 @@ bool InquireUnitState::Inquire(
     str = unit().swapEndianness() ? "SWAP" : "NATIVE";
     break;
   case HashInquiryKeyword("DECIMAL"):
-    str = unit().isUnformatted                     ? "UNDEFINED"
+    str = unit().isUnformatted.value_or(true)      ? "UNDEFINED"
         : unit().modes.editingFlags & decimalComma ? "COMMA"
                                                    : "POINT";
     break;
   case HashInquiryKeyword("DELIM"):
-    if (unit().isUnformatted) {
+    if (unit().isUnformatted.value_or(true)) {
       str = "UNDEFINED";
     } else {
       switch (unit().modes.delim) {
@@ -796,15 +796,19 @@ bool InquireUnitState::Inquire(
         : "NO";
     break;
   case HashInquiryKeyword("ENCODING"):
-    str = unit().isUnformatted ? "UNDEFINED"
-        : unit().isUTF8        ? "UTF-8"
-                               : "ASCII";
+    str = unit().isUnformatted.value_or(true) ? "UNDEFINED"
+        : unit().isUTF8                       ? "UTF-8"
+                                              : "ASCII";
     break;
   case HashInquiryKeyword("FORM"):
-    str = unit().isUnformatted ? "UNFORMATTED" : "FORMATTED";
+    str = !unit().isUnformatted ? "UNKNOWN"
+        : *unit().isUnformatted ? "UNFORMATTED"
+                                : "FORMATTED";
     break;
   case HashInquiryKeyword("FORMATTED"):
-    str = !unit().isUnformatted ? "YES" : "NO";
+    str = !unit().isUnformatted ? "UNKNOWN"
+        : *unit().isUnformatted ? "NO"
+                                : "YES";
     break;
   case HashInquiryKeyword("NAME"):
     str = unit().path();
@@ -813,7 +817,9 @@ bool InquireUnitState::Inquire(
     }
     break;
   case HashInquiryKeyword("PAD"):
-    str = unit().isUnformatted ? "UNDEFINED" : unit().modes.pad ? "YES" : "NO";
+    str = unit().isUnformatted.value_or(true) ? "UNDEFINED"
+        : unit().modes.pad                    ? "YES"
+                                              : "NO";
     break;
   case HashInquiryKeyword("POSITION"):
     if (unit().access == Access::Direct) {
@@ -837,7 +843,7 @@ bool InquireUnitState::Inquire(
     str = unit().mayRead() && unit().mayWrite() ? "YES" : "NO";
     break;
   case HashInquiryKeyword("ROUND"):
-    if (unit().isUnformatted) {
+    if (unit().isUnformatted.value_or(true)) {
       str = "UNDEFINED";
     } else {
       switch (unit().modes.round) {
@@ -865,7 +871,7 @@ bool InquireUnitState::Inquire(
     str = unit().access == Access::Sequential ? "YES" : "NO";
     break;
   case HashInquiryKeyword("SIGN"):
-    str = unit().isUnformatted                 ? "UNDEFINED"
+    str = unit().isUnformatted.value_or(true)  ? "UNDEFINED"
         : unit().modes.editingFlags & signPlus ? "PLUS"
                                                : "SUPPRESS";
     break;
@@ -876,7 +882,9 @@ bool InquireUnitState::Inquire(
     str = unit().mayWrite() ? "YES" : "NO";
     break;
   case HashInquiryKeyword("UNFORMATTED"):
-    str = unit().isUnformatted ? "YES" : "NO";
+    str = !unit().isUnformatted ? "UNKNOWN"
+        : *unit().isUnformatted ? "YES"
+                                : "NO";
     break;
   }
   if (str) {
