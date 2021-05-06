@@ -3139,6 +3139,15 @@ TEST(CompletionTest, FunctionArgsExist) {
                      Kind(CompletionItemKind::Constructor))));
 }
 
+TEST(CompletionTest, NoCrashDueToMacroOrdering) {
+  EXPECT_THAT(completions(R"cpp(
+    #define ECHO(X) X
+    #define ECHO2(X) ECHO(X)
+    int finish_preamble = EC^HO(2);)cpp")
+                  .Completions,
+              UnorderedElementsAre(Labeled("ECHO(X)"), Labeled("ECHO2(X)")));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
