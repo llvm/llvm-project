@@ -34,7 +34,8 @@ static void StoreElement(
 
 template <TypeCategory CAT, int KIND, typename A>
 static OwningPtr<Descriptor> MakeArray(const std::vector<int> &shape,
-    const std::vector<A> &data, std::size_t elemLen = KIND) {
+    const std::vector<A> &data,
+    std::size_t elemLen = CAT == TypeCategory::Complex ? 2 * KIND : KIND) {
   auto rank{static_cast<int>(shape.size())};
   auto result{Descriptor::Create(TypeCode{CAT, KIND}, elemLen, nullptr, rank,
       nullptr, CFI_attribute_allocatable)};

@@ -34,11 +34,10 @@ static bool CompareFormattedStrings(
 static bool CompareFormatReal(
     const char *format, double x, const char *expect) {
   char buffer[800];
-  auto *cookie{IONAME(BeginInternalFormattedOutput)(
+  auto cookie{IONAME(BeginInternalFormattedOutput)(
       buffer, sizeof buffer, format, std::strlen(format))};
-  IONAME(OutputReal64)(cookie, x);
+  EXPECT_TRUE(IONAME(OutputReal64)(cookie, x));
   auto status{IONAME(EndIoStatement)(cookie)};
-
   EXPECT_EQ(status, 0);
   return CompareFormattedStrings(expect, std::string{buffer, sizeof buffer});
 }
@@ -61,7 +60,7 @@ TEST(IOApiTests, HelloWorldOutputTest) {
 
   // Create format for all types and values to be written
   const char *format{"(6HHELLO,,A6,2X,I3,1X,'0x',Z8,1X,L1)"};
-  auto *cookie{IONAME(BeginInternalFormattedOutput)(
+  auto cookie{IONAME(BeginInternalFormattedOutput)(
       buffer, bufferSize, format, std::strlen(format))};
 
   // Write string, integer, and logical values to buffer
@@ -86,21 +85,21 @@ TEST(IOApiTests, MultilineOutputTest) {
   // Allocate buffer for multiline output
   static constexpr int numLines{5};
   static constexpr int lineLength{32};
-  static char buffer[numLines][lineLength];
+  char buffer[numLines][lineLength];
 
   // Create descriptor for entire buffer
   static constexpr int staticDescriptorMaxRank{1};
-  static StaticDescriptor<staticDescriptorMaxRank> wholeStaticDescriptor;
-  static Descriptor &whole{wholeStaticDescriptor.descriptor()};
-  static SubscriptValue extent[]{numLines};
+  StaticDescriptor<staticDescriptorMaxRank> wholeStaticDescriptor;
+  Descriptor &whole{wholeStaticDescriptor.descriptor()};
+  static const SubscriptValue extent[]{numLines};
   whole.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/lineLength, &buffer,
       staticDescriptorMaxRank, extent, CFI_attribute_pointer);
   whole.Dump(stderr);
   whole.Check();
 
   // Create descriptor for buffer section
-  static StaticDescriptor<staticDescriptorMaxRank> sectionStaticDescriptor;
-  static Descriptor &section{sectionStaticDescriptor.descriptor()};
+  StaticDescriptor<staticDescriptorMaxRank> sectionStaticDescriptor;
+  Descriptor &section{sectionStaticDescriptor.descriptor()};
   static const SubscriptValue lowers[]{0}, uppers[]{4}, strides[]{1};
   section.Establish(whole.type(), /*elementBytes=*/whole.ElementBytes(),
       nullptr, /*maxRank=*/staticDescriptorMaxRank, extent,
@@ -116,7 +115,7 @@ TEST(IOApiTests, MultilineOutputTest) {
   // Create format string and initialize IO operation
   const char *format{
       "('?abcde,',T1,'>',T9,A,TL12,A,TR25,'<'//G0,17X,'abcd',1(2I4))"};
-  static auto *cookie{IONAME(BeginInternalArrayFormattedOutput)(
+  auto cookie{IONAME(BeginInternalArrayFormattedOutput)(
       section, format, std::strlen(format))};
 
   // Write data to buffer
@@ -138,18 +137,19 @@ TEST(IOApiTests, MultilineOutputTest) {
                                   " 888 999                        "
                                   "                                "};
   // Ensure formatted string matches expected output
-  ASSERT_TRUE(
+  EXPECT_TRUE(
       CompareFormattedStrings(expect, std::string{buffer[0], sizeof buffer}))
-      << "Expected " << expect << " but got " << buffer;
+      << "Expected '" << expect << "' but got '"
+      << std::string{buffer[0], sizeof buffer} << "'";
 }
 
 TEST(IOApiTests, ListInputTest) {
   static const char input[]{",1*,(5.,6..)"};
-  static auto *cookie{IONAME(BeginInternalListInput)(input, sizeof input - 1)};
+  auto cookie{IONAME(BeginInternalListInput)(input, sizeof input - 1)};
 
   // Create real values for IO tests
   static constexpr int numRealValues{6};
-  static float z[numRealValues];
+  float z[numRealValues];
   for (int j{0}; j < numRealValues; ++j) {
     z[j] = -(j + 1);
   }
@@ -161,13 +161,13 @@ TEST(IOApiTests, ListInputTest) {
   }
 
   // Ensure no IO errors occured during IO operations above
-  static auto status{IONAME(EndIoStatement)(cookie)};
+  auto status{IONAME(EndIoStatement)(cookie)};
   ASSERT_EQ(status, 0) << "Failed complex list-directed input, status "
                        << static_cast<int>(status);
 
   // Ensure writing complex values from floats does not result in an error
   static constexpr int bufferSize{33};
-  static char output[bufferSize];
+  char output[bufferSize];
   output[bufferSize - 1] = '\0';
   cookie = IONAME(BeginInternalListOutput)(output, bufferSize - 1);
   for (int j{0}; j < numRealValues; j += 2) {
@@ -189,22 +189,22 @@ TEST(IOApiTests, ListInputTest) {
 }
 
 TEST(IOApiTests, DescriptorOutputTest) {
-  static constexpr int bufferSize{9};
-  static char buffer[bufferSize];
-  static const char *format{"(2A4)"};
-  static auto *cookie{IONAME(BeginInternalFormattedOutput)(
+  static constexpr int bufferSize{10};
+  char buffer[bufferSize];
+  const char *format{"(2A4)"};
+  auto cookie{IONAME(BeginInternalFormattedOutput)(
       buffer, bufferSize, format, std::strlen(format))};
 
   // Create descriptor for output
   static constexpr int staticDescriptorMaxRank{1};
-  static StaticDescriptor<staticDescriptorMaxRank> staticDescriptor;
-  static Descriptor &desc{staticDescriptor.descriptor()};
+  StaticDescriptor<staticDescriptorMaxRank> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
   static constexpr int subscriptExtent{2};
   static const SubscriptValue extent[]{subscriptExtent};
 
   // Manually write to descriptor buffer
   static constexpr int dataLength{4};
-  static char data[subscriptExtent][dataLength];
+  char data[subscriptExtent][dataLength];
   std::memcpy(data[0], "ABCD", dataLength);
   std::memcpy(data[1], "EFGH", dataLength);
   desc.Establish(TypeCode{CFI_type_char}, dataLength, &data,
@@ -214,28 +214,32 @@ TEST(IOApiTests, DescriptorOutputTest) {
   IONAME(OutputDescriptor)(cookie, desc);
 
   // Ensure no errors were encountered in initializing the cookie and descriptor
-  static auto formatStatus{IONAME(EndIoStatement)(cookie)};
+  auto formatStatus{IONAME(EndIoStatement)(cookie)};
   ASSERT_EQ(formatStatus, 0)
       << "descrOutputTest: '" << format << "' failed, status "
       << static_cast<int>(formatStatus);
 
   // Ensure buffer matches expected output
-  ASSERT_TRUE(
-      CompareFormattedStrings("ABCDEFGH ", std::string{buffer, sizeof buffer}));
+  EXPECT_TRUE(
+      CompareFormattedStrings("ABCDEFGH  ", std::string{buffer, sizeof buffer}))
+      << "descrOutputTest: formatted: got '"
+      << std::string{buffer, sizeof buffer} << "'";
 
   // Begin list-directed output on cookie by descriptor
   cookie = IONAME(BeginInternalListOutput)(buffer, sizeof buffer);
   IONAME(OutputDescriptor)(cookie, desc);
 
   // Ensure list-directed output does not result in an IO error
-  static auto listDirectedStatus{IONAME(EndIoStatement)(cookie)};
+  auto listDirectedStatus{IONAME(EndIoStatement)(cookie)};
   ASSERT_EQ(listDirectedStatus, 0)
       << "descrOutputTest: list-directed failed, status "
       << static_cast<int>(listDirectedStatus);
 
   // Ensure buffer matches expected output
-  ASSERT_TRUE(
-      CompareFormattedStrings(" ABCDEFGH", std::string{buffer, sizeof buffer}));
+  EXPECT_TRUE(
+      CompareFormattedStrings(" ABCDEFGH ", std::string{buffer, sizeof buffer}))
+      << "descrOutputTest: list-directed: got '"
+      << std::string{buffer, sizeof buffer} << "'";
 }
 
 //------------------------------------------------------------------------------
@@ -608,7 +612,7 @@ TEST(IOApiTests, FormatDoubleValues) {
   }
 
   using IndividualTestCaseTy = std::tuple<const char *, double, const char *>;
-  static std::vector<IndividualTestCaseTy> individualTestCases{
+  static const std::vector<IndividualTestCaseTy> individualTestCases{
       {"(F5.3,';')", 25., "*****;"},
       {"(F5.3,';')", 2.5, "2.500;"},
       {"(F5.3,';')", 0.25, "0.250;"},
@@ -638,7 +642,7 @@ TEST(IOApiTests, FormatDoubleValues) {
 // Ensure double input values correctly map to raw uint64 values
 TEST(IOApiTests, FormatDoubleInputValues) {
   using TestCaseTy = std::tuple<const char *, const char *, std::uint64_t>;
-  static std::vector<TestCaseTy> testCases{
+  static const std::vector<TestCaseTy> testCases{
       {"(F18.0)", "                 0", 0x0},
       {"(F18.0)", "                  ", 0x0},
       {"(F18.0)", "                -0", 0x8000000000000000},
@@ -663,7 +667,7 @@ TEST(IOApiTests, FormatDoubleInputValues) {
       {"(DC,F18.0)", "              12,5", 0x4029000000000000},
   };
   for (auto const &[format, data, want] : testCases) {
-    auto *cookie{IONAME(BeginInternalFormattedInput)(
+    auto cookie{IONAME(BeginInternalFormattedInput)(
         data, std::strlen(data), format, std::strlen(format))};
     union {
       double x;
@@ -676,12 +680,12 @@ TEST(IOApiTests, FormatDoubleInputValues) {
     IONAME(InputReal64)(cookie, u.x);
 
     static constexpr int bufferSize{65};
-    static char iomsg[bufferSize];
+    char iomsg[bufferSize];
     std::memset(iomsg, '\0', bufferSize - 1);
 
     // Ensure no errors were encountered reading input buffer into union value
     IONAME(GetIoMsg)(cookie, iomsg, bufferSize - 1);
-    static auto status{IONAME(EndIoStatement)(cookie)};
+    auto status{IONAME(EndIoStatement)(cookie)};
     ASSERT_EQ(status, 0) << '\'' << format << "' failed reading '" << data
                          << "', status " << static_cast<int>(status)
                          << " iomsg '" << iomsg << "'";

@@ -18,11 +18,11 @@
 
 namespace Fortran::runtime {
 class Descriptor;
-class NamelistGroup;
 } // namespace Fortran::runtime
 
 namespace Fortran::runtime::io {
 
+class NamelistGroup;
 class IoStatementState;
 using Cookie = IoStatementState *;
 using ExternalUnit = int;
@@ -70,6 +70,10 @@ constexpr std::size_t RecommendedInternalIoScratchAreaBytes(
   return 32 + 8 * maxFormatParenthesesNestingDepth;
 }
 
+// For NAMELIST I/O, use the API for the appropriate form of list-directed
+// I/O initiation and configuration, then call OutputNamelist/InputNamelist
+// below.
+
 // Internal I/O to/from character arrays &/or non-default-kind character
 // requires a descriptor, which is copied.
 Cookie IONAME(BeginInternalArrayListOutput)(const Descriptor &,
@@ -106,16 +110,6 @@ Cookie IONAME(BeginInternalFormattedInput)(const char *internal,
     void **scratchArea = nullptr, std::size_t scratchBytes = 0,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
-// Internal namelist I/O
-Cookie IONAME(BeginInternalNamelistOutput)(const Descriptor &,
-    const NamelistGroup &, void **scratchArea = nullptr,
-    std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
-    int sourceLine = 0);
-Cookie IONAME(BeginInternalNamelistInput)(const Descriptor &,
-    const NamelistGroup &, void **scratchArea = nullptr,
-    std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
-    int sourceLine = 0);
-
 // External synchronous I/O initiation
 Cookie IONAME(BeginExternalListOutput)(ExternalUnit = DefaultUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
@@ -131,12 +125,6 @@ Cookie IONAME(BeginUnformattedOutput)(ExternalUnit = DefaultUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
 Cookie IONAME(BeginUnformattedInput)(ExternalUnit = DefaultUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
-Cookie IONAME(BeginExternalNamelistOutput)(const NamelistGroup &,
-    ExternalUnit = DefaultUnit, const char *sourceFile = nullptr,
-    int sourceLine = 0);
-Cookie IONAME(BeginExternalNamelistInput)(const NamelistGroup &,
-    ExternalUnit = DefaultUnit, const char *sourceFile = nullptr,
-    int sourceLine = 0);
 
 // Asynchronous I/O is supported (at most) for unformatted direct access
 // block transfers.
@@ -215,7 +203,7 @@ bool IONAME(SetRound)(Cookie, const char *, std::size_t);
 // SIGN=PLUS, SUPPRESS, PROCESSOR_DEFINED
 bool IONAME(SetSign)(Cookie, const char *, std::size_t);
 
-// Data item transfer for modes other than namelist.
+// Data item transfer for modes other than NAMELIST:
 // Any data object that can be passed as an actual argument without the
 // use of a temporary can be transferred by means of a descriptor;
 // vector-valued subscripts and coindexing will require elementwise
@@ -253,6 +241,11 @@ bool IONAME(InputCharacter)(Cookie, char *, std::size_t, int kind = 1);
 bool IONAME(InputAscii)(Cookie, char *, std::size_t);
 bool IONAME(OutputLogical)(Cookie, bool);
 bool IONAME(InputLogical)(Cookie, bool &);
+
+// NAMELIST I/O must be the only data item in an (otherwise)
+// list-directed I/O statement.
+bool IONAME(OutputNamelist)(Cookie, const NamelistGroup &);
+bool IONAME(InputNamelist)(Cookie, const NamelistGroup &);
 
 // Additional specifier interfaces for the connection-list of
 // on OPEN statement (only).  SetBlank(), SetDecimal(),

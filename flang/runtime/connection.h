@@ -35,6 +35,7 @@ struct ConnectionAttributes {
 struct ConnectionState : public ConnectionAttributes {
   bool IsAtEOF() const; // true when read has hit EOF or endfile record
   std::size_t RemainingSpaceInRecord() const;
+  bool NeedAdvance(std::size_t) const;
   void HandleAbsolutePosition(std::int64_t);
   void HandleRelativePosition(std::int64_t);
 
