@@ -7738,7 +7738,6 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
       // with undef.
       unionAssumedWithUndef();
     } else if (LHSAA.undefIsContained()) {
-      bool MaybeTrue = false, MaybeFalse = false;
       for (const APInt &R : RHSAAPVS) {
         bool CmpResult = calculateICmpInst(ICI, Zero, R);
         MaybeTrue |= CmpResult;
