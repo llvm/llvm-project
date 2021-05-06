@@ -689,6 +689,34 @@ func @cast_away_broadcast_leading_one_dims(
   return %0, %1, %2: vector<1x1x8xf32>, vector<1x1x4xf32>, vector<1x3x4xf32>
 }
 
+// CHECK-LABEL: func @cast_away_elementwise_leading_one_dims
+func @cast_away_elementwise_leading_one_dims(
+  %arg0: vector<1x1x8xf32>, %arg1: f32, %arg2: vector<1x4xf32>,
+  %arg3: vector<1x4xf32>, %arg4: i1) ->
+  (vector<1x1x8xf32>, vector<1x4xi1>, vector<1x4xf32>, vector<1x4xf32>) {
+  // CHECK:  vector.shape_cast %{{.*}} : vector<1x1x8xf32> to vector<8xf32>
+  // CHECK:  vector.shape_cast %{{.*}} : vector<1x1x8xf32> to vector<8xf32>
+  // CHECK:  addf %{{.*}}, %{{.*}} : vector<8xf32>
+  // CHECK:  vector.shape_cast %{{.*}} : vector<8xf32> to vector<1x1x8xf32>
+  %0 = addf %arg0, %arg0 : vector<1x1x8xf32>
+  // CHECK:  vector.shape_cast %{{.*}} : vector<1x4xf32> to vector<4xf32>
+  // CHECK:  vector.shape_cast %{{.*}} : vector<1x4xf32> to vector<4xf32>
+  // CHECK:  cmpf ogt, %{{.*}}, %{{.*}} : vector<4xf32>
+  // CHECK:  vector.shape_cast %{{.*}} : vector<4xi1> to vector<1x4xi1>
+  %1 = cmpf ogt, %arg2, %arg3 : vector<1x4xf32>
+  // CHECK:  vector.shape_cast %{{.*}} : vector<1x4xf32> to vector<4xf32>
+  // CHECK:  vector.shape_cast %{{.*}} : vector<1x4xf32> to vector<4xf32>
+  // CHECK:  select %{{.*}}, %{{.*}}, %{{.*}} : vector<4xi1>, vector<4xf32>
+  // CHECK:  vector.shape_cast %{{.*}} : vector<4xf32> to vector<1x4xf32>
+  %2 = select %1, %arg3, %arg2 : vector<1x4xi1>, vector<1x4xf32>
+  // CHECK:  vector.shape_cast %{{.*}} : vector<1x4xf32> to vector<4xf32>
+  // CHECK:  vector.shape_cast %{{.*}} : vector<1x4xf32> to vector<4xf32>
+  // CHECK:  select %arg4, %12, %{{.*}} : vector<4xf32>
+  // CHECK:  vector.shape_cast %{{.*}} : vector<4xf32> to vector<1x4xf32>
+  %3 = select %arg4, %arg3, %arg2 : vector<1x4xf32>
+  return %0, %1, %2, %3: vector<1x1x8xf32>, vector<1x4xi1>, vector<1x4xf32>, vector<1x4xf32>
+}
+
 // CHECK-LABEL: func @bubble_down_bitcast_in_extract
 //  CHECK-SAME: %[[SRC:.+]]: vector<4xf32>
 func @bubble_down_bitcast_in_extract(%src: vector<4xf32>) -> (f16, f16) {
