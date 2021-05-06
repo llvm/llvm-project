@@ -1078,7 +1078,7 @@ private:
             (Tok->Next && Tok->Next->isOneOf(tok::r_paren, tok::greater)) ||
             (Tok->Next && Tok->Next->is(tok::identifier) && Tok->Next->Next &&
              Tok->Next->Next->is(tok::equal))) {
-          Tok->setType(TT_JsTypeOptionalQuestion);
+          Tok->setType(TT_CSharpNullable);
           break;
         }
       }
@@ -3161,7 +3161,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return Style.SpacesInSquareBrackets;
 
     // No space before ? in nullable types.
-    if (Right.is(TT_JsTypeOptionalQuestion))
+    if (Right.is(TT_CSharpNullable))
       return false;
 
     // No space before null forgiving '!'.
@@ -3818,6 +3818,10 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     // Only break after commas for generic type constraints.
     if (Line.First->is(TT_CSharpGenericTypeConstraint))
       return Left.is(TT_CSharpGenericTypeConstraintComma);
+    // Keep nullable operators attached to their identifiers.
+    if (Right.is(TT_CSharpNullable)) {
+      return false;
+    }
   } else if (Style.Language == FormatStyle::LK_Java) {
     if (Left.isOneOf(Keywords.kw_throws, Keywords.kw_extends,
                      Keywords.kw_implements))
