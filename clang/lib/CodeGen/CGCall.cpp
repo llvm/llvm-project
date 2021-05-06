@@ -3712,7 +3712,7 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
   }
 
   // Deactivate the cleanup for the callee-destructed param that was pushed.
-  if (hasAggregateEvaluationKind(type) && !CurFuncIsThunk &&
+  if (type->isRecordType() && !CurFuncIsThunk &&
       type->castAs<RecordType>()->getDecl()->isParamDestroyedInCallee() &&
       param->needsDestruction(getContext())) {
     EHScopeStack::stable_iterator cleanup =
@@ -4283,7 +4283,7 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   // In the Microsoft C++ ABI, aggregate arguments are destructed by the callee.
   // However, we still have to push an EH-only cleanup in case we unwind before
   // we make it to the call.
-  if (HasAggregateEvalKind &&
+  if (type->isRecordType() &&
       type->castAs<RecordType>()->getDecl()->isParamDestroyedInCallee()) {
     // If we're using inalloca, use the argument memory.  Otherwise, use a
     // temporary.
