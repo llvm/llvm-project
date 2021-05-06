@@ -216,4 +216,8 @@
 #endif
 #endif /* __arm__ */
 
+#if defined(__ppc__) || defined(__powerpc64__)
+#define PPC_LEFT_SHIFT(index) << (index)
+#endif
+
 #endif /* UNWIND_ASSEMBLY_H */
