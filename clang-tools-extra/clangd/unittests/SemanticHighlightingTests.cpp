@@ -687,6 +687,21 @@ sizeof...($TemplateParameter[[Elements]]);
         @implementation $Class[[Foo]]($Namespace_decl[[Bar]])
         @end
       )cpp",
+      R"cpp(
+        // ObjC: Properties and Ivars.
+        @interface $Class_decl[[Foo]] {
+          int $Field_decl[[_someProperty]];
+        }
+        @property(nonatomic, assign) int $Field_decl[[someProperty]];
+        @end
+        @implementation $Class_decl[[Foo]]
+        @synthesize someProperty = _someProperty;
+        - (int)$Method_decl[[doSomething]] {
+          self.$Field[[someProperty]] = self.$Field[[someProperty]] + 1;
+          self->$Field[[_someProperty]] = $Field[[_someProperty]] + 1;
+        }
+        @end
+      )cpp",
       // Member imported from dependent base
       R"cpp(
         template <typename> struct $Class_decl[[Base]] {

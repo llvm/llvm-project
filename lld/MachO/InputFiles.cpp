@@ -102,41 +102,42 @@ static VersionTuple decodeVersion(uint32_t version) {
   return VersionTuple(major, minor, subMinor);
 }
 
-static Optional<PlatformInfo> getPlatformInfo(const InputFile *input) {
+static std::vector<PlatformInfo> getPlatformInfos(const InputFile *input) {
   if (!isa<ObjFile>(input) && !isa<DylibFile>(input))
-    return None;
+    return {};
 
   const char *hdr = input->mb.getBufferStart();
 
-  PlatformInfo platformInfo;
-  if (const auto *cmd =
-          findCommand<build_version_command>(hdr, LC_BUILD_VERSION)) {
-    platformInfo.target.Platform = static_cast<PlatformKind>(cmd->platform);
-    platformInfo.minimum = decodeVersion(cmd->minos);
-    return platformInfo;
+  std::vector<PlatformInfo> platformInfos;
+  for (auto *cmd : findCommands<build_version_command>(hdr, LC_BUILD_VERSION)) {
+    PlatformInfo info;
+    info.target.Platform = static_cast<PlatformKind>(cmd->platform);
+    info.minimum = decodeVersion(cmd->minos);
+    platformInfos.emplace_back(std::move(info));
   }
-  if (const auto *cmd = findCommand<version_min_command>(
-          hdr, LC_VERSION_MIN_MACOSX, LC_VERSION_MIN_IPHONEOS,
-          LC_VERSION_MIN_TVOS, LC_VERSION_MIN_WATCHOS)) {
+  for (auto *cmd : findCommands<version_min_command>(
+           hdr, LC_VERSION_MIN_MACOSX, LC_VERSION_MIN_IPHONEOS,
+           LC_VERSION_MIN_TVOS, LC_VERSION_MIN_WATCHOS)) {
+    PlatformInfo info;
     switch (cmd->cmd) {
     case LC_VERSION_MIN_MACOSX:
-      platformInfo.target.Platform = PlatformKind::macOS;
+      info.target.Platform = PlatformKind::macOS;
       break;
     case LC_VERSION_MIN_IPHONEOS:
-      platformInfo.target.Platform = PlatformKind::iOS;
+      info.target.Platform = PlatformKind::iOS;
       break;
     case LC_VERSION_MIN_TVOS:
-      platformInfo.target.Platform = PlatformKind::tvOS;
+      info.target.Platform = PlatformKind::tvOS;
       break;
     case LC_VERSION_MIN_WATCHOS:
-      platformInfo.target.Platform = PlatformKind::watchOS;
+      info.target.Platform = PlatformKind::watchOS;
       break;
     }
-    platformInfo.minimum = decodeVersion(cmd->version);
-    return platformInfo;
+    info.minimum = decodeVersion(cmd->version);
+    platformInfos.emplace_back(std::move(info));
   }
 
-  return None;
+  return platformInfos;
 }
 
 static PlatformKind removeSimulator(PlatformKind platform) {
@@ -153,22 +154,33 @@ static PlatformKind removeSimulator(PlatformKind platform) {
 }
 
 static bool checkCompatibility(const InputFile *input) {
-  Optional<PlatformInfo> platformInfo = getPlatformInfo(input);
-  if (!platformInfo)
+  std::vector<PlatformInfo> platformInfos = getPlatformInfos(input);
+  if (platformInfos.empty())
     return true;
 
-  if (removeSimulator(config->platform()) !=
-      removeSimulator(platformInfo->target.Platform)) {
-    error(toString(input) + " has platform " +
-          getPlatformName(platformInfo->target.Platform) +
+  auto it = find_if(platformInfos, [&](const PlatformInfo &info) {
+    return removeSimulator(info.target.Platform) ==
+           removeSimulator(config->platform());
+  });
+  if (it == platformInfos.end()) {
+    std::string platformNames;
+    raw_string_ostream os(platformNames);
+    interleave(
+        platformInfos, os,
+        [&](const PlatformInfo &info) {
+          os << getPlatformName(info.target.Platform);
+        },
+        "/");
+    error(toString(input) + " has platform " + platformNames +
           Twine(", which is different from target platform ") +
           getPlatformName(config->platform()));
     return false;
   }
-  if (platformInfo->minimum <= config->platformInfo.minimum)
+
+  if (it->minimum <= config->platformInfo.minimum)
     return true;
-  error(toString(input) + " has version " +
-        platformInfo->minimum.getAsString() +
+
+  error(toString(input) + " has version " + it->minimum.getAsString() +
         ", which is newer than target minimum of " +
         config->platformInfo.minimum.getAsString());
   return false;

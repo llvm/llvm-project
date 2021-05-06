@@ -8,10 +8,8 @@
 
 // <memory>
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
-
-// template <class T> constexpr T* to_address(T* p) noexcept;
-// template <class Ptr> constexpr auto to_address(const Ptr& p) noexcept;
+// template <class T> constexpr T* __to_address(T* p) noexcept;
+// template <class Ptr> constexpr auto __to_address(const Ptr& p) noexcept;
 
 #include <memory>
 #include <cassert>
@@ -21,37 +19,37 @@ struct Irrelevant;
 
 struct P1 {
     using element_type = Irrelevant;
-    constexpr explicit P1(int *p) : p_(p) { }
-    constexpr int *operator->() const { return p_; }
+    TEST_CONSTEXPR explicit P1(int *p) : p_(p) { }
+    TEST_CONSTEXPR int *operator->() const { return p_; }
     int *p_;
 };
 
 struct P2 {
     using element_type = Irrelevant;
-    constexpr explicit P2(int *p) : p_(p) { }
-    constexpr P1 operator->() const { return p_; }
+    TEST_CONSTEXPR explicit P2(int *p) : p_(p) { }
+    TEST_CONSTEXPR P1 operator->() const { return p_; }
     P1 p_;
 };
 
 struct P3 {
-    constexpr explicit P3(int *p) : p_(p) { }
+    TEST_CONSTEXPR explicit P3(int *p) : p_(p) { }
     int *p_;
 };
 
 template<>
 struct std::pointer_traits<P3> {
-    static constexpr int *to_address(const P3& p) { return p.p_; }
+    static TEST_CONSTEXPR int *to_address(const P3& p) { return p.p_; }
 };
 
 struct P4 {
-    constexpr explicit P4(int *p) : p_(p) { }
+    TEST_CONSTEXPR explicit P4(int *p) : p_(p) { }
     int *operator->() const;  // should never be called
     int *p_;
 };
 
 template<>
 struct std::pointer_traits<P4> {
-    static constexpr int *to_address(const P4& p) { return p.p_; }
+    static TEST_CONSTEXPR int *to_address(const P4& p) { return p.p_; }
 };
 
 struct P5 {
@@ -105,45 +103,47 @@ struct Incomplete;
 template<class T> struct Holder { T t; };
 
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX14 bool test() {
     int i = 0;
-    ASSERT_NOEXCEPT(std::to_address(&i));
-    assert(std::to_address(&i) == &i);
+    ASSERT_NOEXCEPT(std::__to_address(&i));
+    assert(std::__to_address(&i) == &i);
     P1 p1(&i);
-    ASSERT_NOEXCEPT(std::to_address(p1));
-    assert(std::to_address(p1) == &i);
+    ASSERT_NOEXCEPT(std::__to_address(p1));
+    assert(std::__to_address(p1) == &i);
     P2 p2(&i);
-    ASSERT_NOEXCEPT(std::to_address(p2));
-    assert(std::to_address(p2) == &i);
+    ASSERT_NOEXCEPT(std::__to_address(p2));
+    assert(std::__to_address(p2) == &i);
     P3 p3(&i);
-    ASSERT_NOEXCEPT(std::to_address(p3));
-    assert(std::to_address(p3) == &i);
+    ASSERT_NOEXCEPT(std::__to_address(p3));
+    assert(std::__to_address(p3) == &i);
     P4 p4(&i);
-    ASSERT_NOEXCEPT(std::to_address(p4));
-    assert(std::to_address(p4) == &i);
+    ASSERT_NOEXCEPT(std::__to_address(p4));
+    assert(std::__to_address(p4) == &i);
 
-    ASSERT_SAME_TYPE(decltype(std::to_address(std::declval<int const*>())), int const*);
-    ASSERT_SAME_TYPE(decltype(std::to_address(std::declval<P5>())), int const*);
-    ASSERT_SAME_TYPE(decltype(std::to_address(std::declval<P6>())), int const*);
+    ASSERT_SAME_TYPE(decltype(std::__to_address(std::declval<int const*>())), int const*);
+    ASSERT_SAME_TYPE(decltype(std::__to_address(std::declval<P5>())), int const*);
+    ASSERT_SAME_TYPE(decltype(std::__to_address(std::declval<P6>())), int const*);
 
     P7::CanQual<int>* p7 = nullptr;
-    assert(std::to_address(p7) == nullptr);
-    ASSERT_SAME_TYPE(decltype(std::to_address(p7)), P7::CanQual<int>*);
+    assert(std::__to_address(p7) == nullptr);
+    ASSERT_SAME_TYPE(decltype(std::__to_address(p7)), P7::CanQual<int>*);
 
     Holder<Incomplete> *p8_nil = nullptr;  // for C++03 compatibility
     P8::FancyPtrA<Holder<Incomplete> > p8a = p8_nil;
-    assert(std::to_address(p8a) == p8_nil);
-    ASSERT_SAME_TYPE(decltype(std::to_address(p8a)), decltype(p8_nil));
+    assert(std::__to_address(p8a) == p8_nil);
+    ASSERT_SAME_TYPE(decltype(std::__to_address(p8a)), decltype(p8_nil));
 
     P8::FancyPtrB<Holder<Incomplete> > p8b = p8_nil;
-    assert(std::to_address(p8b) == p8_nil);
-    ASSERT_SAME_TYPE(decltype(std::to_address(p8b)), decltype(p8_nil));
+    assert(std::__to_address(p8b) == p8_nil);
+    ASSERT_SAME_TYPE(decltype(std::__to_address(p8b)), decltype(p8_nil));
 
     return true;
 }
 
 int main(int, char**) {
     test();
-    static_assert(test());
+#if TEST_STD_VER >= 14
+    static_assert(test(), "");
+#endif
     return 0;
 }
