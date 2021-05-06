@@ -39,12 +39,10 @@ static constexpr std::tuple<
     mkIOKey(BeginInternalArrayFormattedOutput),
     mkIOKey(BeginInternalArrayFormattedInput), mkIOKey(BeginInternalListOutput),
     mkIOKey(BeginInternalListInput), mkIOKey(BeginInternalFormattedOutput),
-    mkIOKey(BeginInternalFormattedInput), mkIOKey(BeginInternalNamelistOutput),
-    mkIOKey(BeginInternalNamelistInput), mkIOKey(BeginExternalListOutput),
+    mkIOKey(BeginInternalFormattedInput), mkIOKey(BeginExternalListOutput),
     mkIOKey(BeginExternalListInput), mkIOKey(BeginExternalFormattedOutput),
     mkIOKey(BeginExternalFormattedInput), mkIOKey(BeginUnformattedOutput),
-    mkIOKey(BeginUnformattedInput), mkIOKey(BeginExternalNamelistOutput),
-    mkIOKey(BeginExternalNamelistInput), mkIOKey(BeginAsynchronousOutput),
+    mkIOKey(BeginUnformattedInput), mkIOKey(BeginAsynchronousOutput),
     mkIOKey(BeginAsynchronousInput), mkIOKey(BeginWait), mkIOKey(BeginWaitAll),
     mkIOKey(BeginClose), mkIOKey(BeginFlush), mkIOKey(BeginBackspace),
     mkIOKey(BeginEndfile), mkIOKey(BeginRewind), mkIOKey(BeginOpenUnit),
@@ -810,7 +808,7 @@ static const auto *getIOControl(const A &stmt) {
 }
 
 /// returns true iff the expression in the parse tree is not really a format but
-/// rather a namelist variable.
+/// rather a namelist group
 template <typename A>
 static bool formatIsActuallyNamelist(const A &format) {
   if (auto *e = std::get_if<Fortran::parser::Expr>(&format.u)) {
@@ -1159,26 +1157,20 @@ mlir::FuncOp getBeginDataTransfer(mlir::Location loc, FirOpBuilder &builder,
       return getIORuntimeFunc<mkIOKey(BeginAsynchronousInput)>(loc, builder);
     if (isFormatted) {
       if (isIntern) {
-        if (isNml)
-          return getIORuntimeFunc<mkIOKey(BeginInternalNamelistInput)>(loc,
-                                                                       builder);
         if (isOtherIntern) {
-          if (isList)
+          if (isList || isNml)
             return getIORuntimeFunc<mkIOKey(BeginInternalArrayListInput)>(
                 loc, builder);
           return getIORuntimeFunc<mkIOKey(BeginInternalArrayFormattedInput)>(
               loc, builder);
         }
-        if (isList)
+        if (isList || isNml)
           return getIORuntimeFunc<mkIOKey(BeginInternalListInput)>(loc,
                                                                    builder);
         return getIORuntimeFunc<mkIOKey(BeginInternalFormattedInput)>(loc,
                                                                       builder);
       }
-      if (isNml)
-        return getIORuntimeFunc<mkIOKey(BeginExternalNamelistInput)>(loc,
-                                                                     builder);
-      if (isList)
+      if (isList || isNml)
         return getIORuntimeFunc<mkIOKey(BeginExternalListInput)>(loc, builder);
       return getIORuntimeFunc<mkIOKey(BeginExternalFormattedInput)>(loc,
                                                                     builder);
@@ -1189,26 +1181,20 @@ mlir::FuncOp getBeginDataTransfer(mlir::Location loc, FirOpBuilder &builder,
       return getIORuntimeFunc<mkIOKey(BeginAsynchronousOutput)>(loc, builder);
     if (isFormatted) {
       if (isIntern) {
-        if (isNml)
-          return getIORuntimeFunc<mkIOKey(BeginInternalNamelistOutput)>(
-              loc, builder);
         if (isOtherIntern) {
-          if (isList)
+          if (isList || isNml)
             return getIORuntimeFunc<mkIOKey(BeginInternalArrayListOutput)>(
                 loc, builder);
           return getIORuntimeFunc<mkIOKey(BeginInternalArrayFormattedOutput)>(
               loc, builder);
         }
-        if (isList)
+        if (isList || isNml)
           return getIORuntimeFunc<mkIOKey(BeginInternalListOutput)>(loc,
                                                                     builder);
         return getIORuntimeFunc<mkIOKey(BeginInternalFormattedOutput)>(loc,
                                                                        builder);
       }
-      if (isNml)
-        return getIORuntimeFunc<mkIOKey(BeginExternalNamelistOutput)>(loc,
-                                                                      builder);
-      if (isList)
+      if (isList || isNml)
         return getIORuntimeFunc<mkIOKey(BeginExternalListOutput)>(loc, builder);
       return getIORuntimeFunc<mkIOKey(BeginExternalFormattedOutput)>(loc,
                                                                      builder);

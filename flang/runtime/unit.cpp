@@ -446,14 +446,16 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
         // headers &/or footers
         std::uint32_t length;
         length = furthestPositionInRecord - sizeof length;
-        ok &= Emit(reinterpret_cast<const char *>(&length), sizeof length,
-            sizeof length, handler);
+        ok = ok &&
+            Emit(reinterpret_cast<const char *>(&length), sizeof length,
+                sizeof length, handler);
         positionInRecord = 0;
-        ok &= Emit(reinterpret_cast<const char *>(&length), sizeof length,
-            sizeof length, handler);
+        ok = ok &&
+            Emit(reinterpret_cast<const char *>(&length), sizeof length,
+                sizeof length, handler);
       } else {
         // Terminate formatted variable length record
-        ok &= Emit("\n", 1, 1, handler); // TODO: Windows CR+LF
+        ok = ok && Emit("\n", 1, 1, handler); // TODO: Windows CR+LF
       }
     }
     frameOffsetInFile_ +=
