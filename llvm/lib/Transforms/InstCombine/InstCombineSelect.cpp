@@ -48,11 +48,6 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
-/// FIXME: Enabled by default until the pattern is supported well.
-static cl::opt<bool> EnableUnsafeSelectTransform(
-    "instcombine-unsafe-select-transform", cl::init(true),
-    cl::desc("Enable poison-unsafe select to and/or transform"));
-
 static Value *createMinMax(InstCombiner::BuilderTy &Builder,
                            SelectPatternFlavor SPF, Value *A, Value *B) {
   CmpInst::Predicate Pred = getMinMaxPred(SPF);
@@ -2664,32 +2659,14 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   if (SelType->isIntOrIntVectorTy(1) &&
       TrueVal->getType() == CondVal->getType()) {
-    auto IsSafeToConvert = [&](Value *OtherVal) {
-      if (impliesPoison(OtherVal, CondVal))
-        return true;
-
-      if (!EnableUnsafeSelectTransform)
-        return false;
-
-      // We block this transformation if OtherVal or its operand can create
-      // poison. See PR49688
-      if (auto *Op = dyn_cast<Operator>(OtherVal)) {
-        if (canCreatePoison(Op))
-          return false;
-        if (propagatesPoison(Op) &&
-            llvm::any_of(Op->operand_values(), [](Value *V) {
-              return isa<Operator>(V) ? canCreatePoison(cast<Operator>(V))
-                                      : false;
-            }))
-          return false;
-      }
-      return true;
-    };
-    if (match(TrueVal, m_One()) && IsSafeToConvert(FalseVal)) {
+    // Folding select to and/or i1 isn't poison safe in general. impliesPoison
+    // checks whether folding it does not convert a well-defined value into
+    // poison.
+    if (match(TrueVal, m_One()) && impliesPoison(FalseVal, CondVal)) {
       // Change: A = select B, true, C --> A = or B, C
       return BinaryOperator::CreateOr(CondVal, FalseVal);
     }
-    if (match(FalseVal, m_Zero()) && IsSafeToConvert(TrueVal)) {
+    if (match(FalseVal, m_Zero()) && impliesPoison(TrueVal, CondVal)) {
       // Change: A = select B, C, false --> A = and B, C
       return BinaryOperator::CreateAnd(CondVal, TrueVal);
     }
