@@ -38,7 +38,7 @@ template<typename T, int> struct X {};
 inline auto pack = []<typename ...T, T ...N>(T (&...)[N]) {};
 int arr1[] = {1};
 int arr2[] = {1, 2};
-// CHECK: @_ZNK4packMUlTpTyTpTnT_DpRAT0__S_E_clIJiiEJLi1ELi2EEEEDaS2_(
+// CHECK: @_ZNK4packMUlTpTyTpTnT_DpRAT0__S0_E_clIJiiEJLi1ELi2EEEEDaS3_(
 void use_pack() { pack(arr1, arr2); }
 
 inline void collision() {
