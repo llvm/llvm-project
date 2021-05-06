@@ -1729,7 +1729,7 @@ void Option::printHelpStr(StringRef HelpStr, size_t Indent,
 void Option::printEnumValHelpStr(StringRef HelpStr, size_t BaseIndent,
                                  size_t FirstLineIndentedBy) {
   const StringRef ValHelpPrefix = "  ";
-  assert(BaseIndent >= FirstLineIndentedBy + ValHelpPrefix.size());
+  assert(BaseIndent >= FirstLineIndentedBy);
   std::pair<StringRef, StringRef> Split = HelpStr.split('\n');
   outs().indent(BaseIndent - FirstLineIndentedBy)
       << ArgHelpPrefix << ValHelpPrefix << Split.first << "\n";
