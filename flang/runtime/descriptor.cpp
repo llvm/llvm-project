@@ -234,6 +234,25 @@ bool Descriptor::SubscriptsForZeroBasedElementNumber(SubscriptValue *subscript,
   return true;
 }
 
+bool Descriptor::EstablishPointerSection(const Descriptor &source,
+    const SubscriptValue *lower, const SubscriptValue *upper,
+    const SubscriptValue *stride) {
+  *this = source;
+  raw_.attribute = CFI_attribute_pointer;
+  int newRank{raw_.rank};
+  for (int j{0}; j < raw_.rank; ++j) {
+    if (!stride || stride[j] == 0) {
+      if (newRank > 0) {
+        --newRank;
+      } else {
+        return false;
+      }
+    }
+  }
+  raw_.rank = newRank;
+  return CFI_section(&raw_, &source.raw_, lower, upper, stride) == CFI_SUCCESS;
+}
+
 void Descriptor::Check() const {
   // TODO
 }

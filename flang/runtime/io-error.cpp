@@ -36,12 +36,14 @@ void IoErrorHandler::SignalError(int iostatOrErrno, const char *msg, ...) {
           va_start(ap, msg);
           std::vsnprintf(buffer, sizeof buffer, msg, ap);
           ioMsg_ = SaveDefaultCharacter(buffer, std::strlen(buffer) + 1, *this);
+          va_end(ap);
         }
       }
     } else if (msg) {
       va_list ap;
       va_start(ap, msg);
       CrashArgs(msg, ap);
+      va_end(ap);
     } else if (const char *errstr{IostatErrorString(iostatOrErrno)}) {
       Crash(errstr);
     } else {

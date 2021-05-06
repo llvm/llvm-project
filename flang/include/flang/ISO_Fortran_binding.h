@@ -13,7 +13,7 @@
 #include <stddef.h>
 
 /* Standard interface to Fortran from C and C++.
- * These interfaces are named in section 18.5 of the Fortran 2018
+ * These interfaces are named in subclause 18.5 of the Fortran 2018
  * standard, with most of the actual details being left to the
  * implementation.
  */
