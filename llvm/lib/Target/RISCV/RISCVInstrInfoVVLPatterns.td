@@ -233,11 +233,6 @@ def sew16simm5 : ComplexPattern<XLenVT, 1, "selectRVVSimm5<16>", []>;
 def sew32simm5 : ComplexPattern<XLenVT, 1, "selectRVVSimm5<32>", []>;
 def sew64simm5 : ComplexPattern<XLenVT, 1, "selectRVVSimm5<64>", []>;
 
-def sew8uimm5  : ComplexPattern<XLenVT, 1, "selectRVVUimm5<8>",  []>;
-def sew16uimm5 : ComplexPattern<XLenVT, 1, "selectRVVUimm5<16>", []>;
-def sew32uimm5 : ComplexPattern<XLenVT, 1, "selectRVVUimm5<32>", []>;
-def sew64uimm5 : ComplexPattern<XLenVT, 1, "selectRVVUimm5<64>", []>;
-
 multiclass VPatBinaryVL_VV<SDNode vop,
                            string instruction_name,
                            ValueType result_type,
