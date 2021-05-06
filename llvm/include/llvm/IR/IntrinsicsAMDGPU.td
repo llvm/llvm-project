@@ -1716,6 +1716,12 @@ def int_amdgcn_ds_bpermute :
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
      [IntrNoMem, IntrConvergent, IntrWillReturn]>;
 
+// llvm.amdgcn.perm <src0> <src1> <selector>
+def int_amdgcn_perm :
+  GCCBuiltin<"__builtin_amdgcn_perm">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+     [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
 //===----------------------------------------------------------------------===//
