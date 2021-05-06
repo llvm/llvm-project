@@ -1078,21 +1078,15 @@ extern "C" void tfoo7() {
 // CHECK1-NEXT:    ret void
 //
 //
-// CHECK2-LABEL: define {{[^@]+}}@body
-// CHECK2-SAME: (...) #[[ATTR0:[0-9]+]] {
-// CHECK2-NEXT:  entry:
-// CHECK2-NEXT:    ret void
-//
-//
 // CHECK2-LABEL: define {{[^@]+}}@__cxx_global_var_init
-// CHECK2-SAME: () #[[ATTR1:[0-9]+]] section ".text.startup" {
+// CHECK2-SAME: () #[[ATTR0:[0-9]+]] section ".text.startup" {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    call void @_ZN1SC1Ev(%struct.S* nonnull dereferenceable(4) @s)
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN1SC1Ev
-// CHECK2-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR2:[0-9]+]] comdat align 2 {
+// CHECK2-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK2-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
@@ -1102,7 +1096,7 @@ extern "C" void tfoo7() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN1SC2Ev
-// CHECK2-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// CHECK2-SAME: (%struct.S* nonnull dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S*, align 8
 // CHECK2-NEXT:    [[I:%.*]] = alloca i32*, align 8
@@ -1164,8 +1158,14 @@ extern "C" void tfoo7() {
 // CHECK2-NEXT:    ret void
 //
 //
+// CHECK2-LABEL: define {{[^@]+}}@body
+// CHECK2-SAME: (...) #[[ATTR2:[0-9]+]] {
+// CHECK2-NEXT:  entry:
+// CHECK2-NEXT:    ret void
+//
+//
 // CHECK2-LABEL: define {{[^@]+}}@foo1
-// CHECK2-SAME: (i32 [[START:%.*]], i32 [[END:%.*]], i32 [[STEP:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (i32 [[START:%.*]], i32 [[END:%.*]], i32 [[STEP:%.*]]) #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[START_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[END_ADDR:%.*]] = alloca i32, align 4
@@ -1255,7 +1255,7 @@ extern "C" void tfoo7() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@foo2
-// CHECK2-SAME: (i32 [[START:%.*]], i32 [[END:%.*]], i32 [[STEP:%.*]]) #[[ATTR0]] {
+// CHECK2-SAME: (i32 [[START:%.*]], i32 [[END:%.*]], i32 [[STEP:%.*]]) #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[START_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[END_ADDR:%.*]] = alloca i32, align 4
@@ -1368,7 +1368,7 @@ extern "C" void tfoo7() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@foo3
-// CHECK2-SAME: () #[[ATTR0]] {
+// CHECK2-SAME: () #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[TMP:%.*]] = alloca i32, align 4
@@ -1510,7 +1510,7 @@ extern "C" void tfoo7() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@foo4
-// CHECK2-SAME: () #[[ATTR0]] {
+// CHECK2-SAME: () #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[TMP:%.*]] = alloca i32, align 4
@@ -1663,7 +1663,7 @@ extern "C" void tfoo7() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@foo5
-// CHECK2-SAME: () #[[ATTR0]] {
+// CHECK2-SAME: () #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTOMP_IV:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[TMP:%.*]] = alloca i32, align 4
@@ -1872,7 +1872,7 @@ extern "C" void tfoo7() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@foo6
-// CHECK2-SAME: () #[[ATTR0]] {
+// CHECK2-SAME: () #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB2]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*))
 // CHECK2-NEXT:    ret void
@@ -1975,14 +1975,14 @@ extern "C" void tfoo7() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@tfoo7
-// CHECK2-SAME: () #[[ATTR0]] {
+// CHECK2-SAME: () #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    call void @_Z4foo7IiLi3ELi5EEvT_S0_(i32 0, i32 42)
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_Z4foo7IiLi3ELi5EEvT_S0_
-// CHECK2-SAME: (i32 [[START:%.*]], i32 [[END:%.*]]) #[[ATTR0]] comdat {
+// CHECK2-SAME: (i32 [[START:%.*]], i32 [[END:%.*]]) #[[ATTR2]] comdat {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[START_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[END_ADDR:%.*]] = alloca i32, align 4
@@ -2066,7 +2066,7 @@ extern "C" void tfoo7() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_tile_codegen.cpp
-// CHECK2-SAME: () #[[ATTR1]] section ".text.startup" {
+// CHECK2-SAME: () #[[ATTR0]] section ".text.startup" {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    call void @__cxx_global_var_init()
 // CHECK2-NEXT:    ret void
