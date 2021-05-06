@@ -1046,14 +1046,19 @@ static MachineOperand *getImmOrMaterializedImm(MachineRegisterInfo &MRI,
 // Try to simplify operations with a constant that may appear after instruction
 // selection.
 // TODO: See if a frame index with a fixed offset can fold.
-static bool tryConstantFoldOp(MachineRegisterInfo &MRI,
-                              const SIInstrInfo *TII,
-                              MachineInstr *MI,
-                              MachineOperand *ImmOp) {
+static bool tryConstantFoldOp(MachineRegisterInfo &MRI, const SIInstrInfo *TII,
+                              MachineInstr *MI) {
   unsigned Opc = MI->getOpcode();
-  if (Opc == AMDGPU::V_NOT_B32_e64 || Opc == AMDGPU::V_NOT_B32_e32 ||
-      Opc == AMDGPU::S_NOT_B32) {
-    MI->getOperand(1).ChangeToImmediate(~ImmOp->getImm());
+
+  int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+  if (Src0Idx == -1)
+    return false;
+  MachineOperand *Src0 = getImmOrMaterializedImm(MRI, MI->getOperand(Src0Idx));
+
+  if ((Opc == AMDGPU::V_NOT_B32_e64 || Opc == AMDGPU::V_NOT_B32_e32 ||
+       Opc == AMDGPU::S_NOT_B32) &&
+      Src0->isImm()) {
+    MI->getOperand(1).ChangeToImmediate(~Src0->getImm());
     mutateCopyOp(*MI, TII->get(getMovOpc(Opc == AMDGPU::S_NOT_B32)));
     return true;
   }
@@ -1061,9 +1066,6 @@ static bool tryConstantFoldOp(MachineRegisterInfo &MRI,
   int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
   if (Src1Idx == -1)
     return false;
-
-  int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
-  MachineOperand *Src0 = getImmOrMaterializedImm(MRI, MI->getOperand(Src0Idx));
   MachineOperand *Src1 = getImmOrMaterializedImm(MRI, MI->getOperand(Src1Idx));
 
   if (!Src0->isImm() && !Src1->isImm())
@@ -1195,68 +1197,59 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
   SmallVector<FoldCandidate, 4> FoldList;
   MachineOperand &Dst = MI.getOperand(0);
 
+  if (OpToFold.isImm()) {
+    for (auto &UseMI :
+         make_early_inc_range(MRI->use_nodbg_instructions(Dst.getReg()))) {
+      // Folding the immediate may reveal operations that can be constant
+      // folded or replaced with a copy. This can happen for example after
+      // frame indices are lowered to constants or from splitting 64-bit
+      // constants.
+      //
+      // We may also encounter cases where one or both operands are
+      // immediates materialized into a register, which would ordinarily not
+      // be folded due to multiple uses or operand constraints.
+      if (tryConstantFoldOp(*MRI, TII, &UseMI))
+        LLVM_DEBUG(dbgs() << "Constant folded " << UseMI);
+    }
+  }
+
   bool FoldingImm = OpToFold.isImm() || OpToFold.isFI() || OpToFold.isGlobal();
   if (FoldingImm) {
     unsigned NumLiteralUses = 0;
     MachineOperand *NonInlineUse = nullptr;
     int NonInlineUseOpNo = -1;
 
-    bool Again;
-    do {
-      Again = false;
-      for (auto &Use : make_early_inc_range(MRI->use_nodbg_operands(Dst.getReg()))) {
-        MachineInstr *UseMI = Use.getParent();
-        unsigned OpNo = UseMI->getOperandNo(&Use);
+    for (auto &Use :
+         make_early_inc_range(MRI->use_nodbg_operands(Dst.getReg()))) {
+      MachineInstr *UseMI = Use.getParent();
+      unsigned OpNo = UseMI->getOperandNo(&Use);
 
-        // Folding the immediate may reveal operations that can be constant
-        // folded or replaced with a copy. This can happen for example after
-        // frame indices are lowered to constants or from splitting 64-bit
-        // constants.
-        //
-        // We may also encounter cases where one or both operands are
-        // immediates materialized into a register, which would ordinarily not
-        // be folded due to multiple uses or operand constraints.
+      // Try to fold any inline immediate uses, and then only fold other
+      // constants if they have one use.
+      //
+      // The legality of the inline immediate must be checked based on the use
+      // operand, not the defining instruction, because 32-bit instructions
+      // with 32-bit inline immediate sources may be used to materialize
+      // constants used in 16-bit operands.
+      //
+      // e.g. it is unsafe to fold:
+      //  s_mov_b32 s0, 1.0    // materializes 0x3f800000
+      //  v_add_f16 v0, v1, s0 // 1.0 f16 inline immediate sees 0x00003c00
 
-        if (OpToFold.isImm() && tryConstantFoldOp(*MRI, TII, UseMI, &OpToFold)) {
-          LLVM_DEBUG(dbgs() << "Constant folded " << *UseMI);
-
-          // Some constant folding cases change the same immediate's use to a new
-          // instruction, e.g. and x, 0 -> 0. Make sure we re-visit the user
-          // again. The same constant folded instruction could also have a second
-          // use operand.
-          FoldList.clear();
-          Again = true;
-          break;
-        }
-
-        // Try to fold any inline immediate uses, and then only fold other
-        // constants if they have one use.
-        //
-        // The legality of the inline immediate must be checked based on the use
-        // operand, not the defining instruction, because 32-bit instructions
-        // with 32-bit inline immediate sources may be used to materialize
-        // constants used in 16-bit operands.
-        //
-        // e.g. it is unsafe to fold:
-        //  s_mov_b32 s0, 1.0    // materializes 0x3f800000
-        //  v_add_f16 v0, v1, s0 // 1.0 f16 inline immediate sees 0x00003c00
-
-        // Folding immediates with more than one use will increase program size.
-        // FIXME: This will also reduce register usage, which may be better
-        // in some cases. A better heuristic is needed.
-        if (isInlineConstantIfFolded(TII, *UseMI, OpNo, OpToFold)) {
-          foldOperand(OpToFold, UseMI, OpNo, FoldList, CopiesToReplace);
-        } else if (frameIndexMayFold(TII, *UseMI, OpNo, OpToFold)) {
-          foldOperand(OpToFold, UseMI, OpNo, FoldList,
-                      CopiesToReplace);
-        } else {
-          if (++NumLiteralUses == 1) {
-            NonInlineUse = &Use;
-            NonInlineUseOpNo = OpNo;
-          }
+      // Folding immediates with more than one use will increase program size.
+      // FIXME: This will also reduce register usage, which may be better
+      // in some cases. A better heuristic is needed.
+      if (isInlineConstantIfFolded(TII, *UseMI, OpNo, OpToFold)) {
+        foldOperand(OpToFold, UseMI, OpNo, FoldList, CopiesToReplace);
+      } else if (frameIndexMayFold(TII, *UseMI, OpNo, OpToFold)) {
+        foldOperand(OpToFold, UseMI, OpNo, FoldList, CopiesToReplace);
+      } else {
+        if (++NumLiteralUses == 1) {
+          NonInlineUse = &Use;
+          NonInlineUseOpNo = OpNo;
         }
       }
-    } while (Again);
+    }
 
     if (NumLiteralUses == 1) {
       MachineInstr *UseMI = NonInlineUse->getParent();
