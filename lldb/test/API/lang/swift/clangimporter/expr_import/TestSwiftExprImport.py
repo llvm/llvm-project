@@ -23,4 +23,5 @@ class TestSwiftExprImport(TestBase):
         lldbutil.run_to_source_breakpoint(self, "break here",
                                           lldb.SBFileSpec('main.swift'))
         self.expect("expr -- import A", error=True,
-                    substrs=['could','not','build','module'])
+                    substrs=['SYNTAX_ERROR',
+                             'could', 'not', 'build', 'module'])
