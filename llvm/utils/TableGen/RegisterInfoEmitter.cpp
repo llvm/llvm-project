@@ -305,9 +305,8 @@ EmitRegUnitPressure(raw_ostream &OS, const CodeGenRegBank &RegBank,
   for (unsigned i = 0, e = NumRCUnitSets; i != e; ++i) {
     ArrayRef<unsigned> PSetIDs = RegBank.getRCPressureSetIDs(i);
     PSets[i].reserve(PSetIDs.size());
-    for (ArrayRef<unsigned>::iterator PSetI = PSetIDs.begin(),
-           PSetE = PSetIDs.end(); PSetI != PSetE; ++PSetI) {
-      PSets[i].push_back(RegBank.getRegPressureSet(*PSetI).Order);
+    for (unsigned PSetID : PSetIDs) {
+      PSets[i].push_back(RegBank.getRegPressureSet(PSetID).Order);
     }
     llvm::sort(PSets[i]);
     PSetsSeqs.add(PSets[i]);
@@ -399,11 +398,9 @@ void RegisterInfoEmitter::EmitRegMappingTables(
     return;
 
   // Now we know maximal length of number list. Append -1's, where needed
-  for (DwarfRegNumsVecTy::iterator I = DwarfRegNums.begin(),
-                                   E = DwarfRegNums.end();
-       I != E; ++I)
-    for (unsigned i = I->second.size(), e = maxLength; i != e; ++i)
-      I->second.push_back(-1);
+  for (auto &DwarfRegNum : DwarfRegNums)
+    for (unsigned I = DwarfRegNum.second.size(), E = maxLength; I != E; ++I)
+      DwarfRegNum.second.push_back(-1);
 
   StringRef Namespace = Regs.front().TheDef->getValueAsString("Namespace");
 
@@ -411,10 +408,10 @@ void RegisterInfoEmitter::EmitRegMappingTables(
 
   // Emit reverse information about the dwarf register numbers.
   for (unsigned j = 0; j < 2; ++j) {
-    for (unsigned i = 0, e = maxLength; i != e; ++i) {
+    for (unsigned I = 0, E = maxLength; I != E; ++I) {
       OS << "extern const MCRegisterInfo::DwarfLLVMRegPair " << Namespace;
       OS << (j == 0 ? "DwarfFlavour" : "EHFlavour");
-      OS << i << "Dwarf2L[]";
+      OS << I << "Dwarf2L[]";
 
       if (!isCtor) {
         OS << " = {\n";
@@ -422,17 +419,15 @@ void RegisterInfoEmitter::EmitRegMappingTables(
         // Store the mapping sorted by the LLVM reg num so lookup can be done
         // with a binary search.
         std::map<uint64_t, Record*> Dwarf2LMap;
-        for (DwarfRegNumsVecTy::iterator
-               I = DwarfRegNums.begin(), E = DwarfRegNums.end(); I != E; ++I) {
-          int DwarfRegNo = I->second[i];
+        for (auto &DwarfRegNum : DwarfRegNums) {
+          int DwarfRegNo = DwarfRegNum.second[I];
           if (DwarfRegNo < 0)
             continue;
-          Dwarf2LMap[DwarfRegNo] = I->first;
+          Dwarf2LMap[DwarfRegNo] = DwarfRegNum.first;
         }
 
-        for (std::map<uint64_t, Record*>::iterator
-               I = Dwarf2LMap.begin(), E = Dwarf2LMap.end(); I != E; ++I)
-          OS << "  { " << I->first << "U, " << getQualifiedName(I->second)
+        for (auto &I : Dwarf2LMap)
+          OS << "  { " << I.first << "U, " << getQualifiedName(I.second)
              << " },\n";
 
         OS << "};\n";
@@ -443,11 +438,10 @@ void RegisterInfoEmitter::EmitRegMappingTables(
       // We have to store the size in a const global, it's used in multiple
       // places.
       OS << "extern const unsigned " << Namespace
-         << (j == 0 ? "DwarfFlavour" : "EHFlavour") << i << "Dwarf2LSize";
+         << (j == 0 ? "DwarfFlavour" : "EHFlavour") << I << "Dwarf2LSize";
       if (!isCtor)
         OS << " = array_lengthof(" << Namespace
-           << (j == 0 ? "DwarfFlavour" : "EHFlavour") << i
-           << "Dwarf2L);\n\n";
+           << (j == 0 ? "DwarfFlavour" : "EHFlavour") << I << "Dwarf2L);\n\n";
       else
         OS << ";\n\n";
     }
@@ -486,13 +480,12 @@ void RegisterInfoEmitter::EmitRegMappingTables(
         OS << " = {\n";
         // Store the mapping sorted by the Dwarf reg num so lookup can be done
         // with a binary search.
-        for (DwarfRegNumsVecTy::iterator
-               I = DwarfRegNums.begin(), E = DwarfRegNums.end(); I != E; ++I) {
-          int RegNo = I->second[i];
+        for (auto &DwarfRegNum : DwarfRegNums) {
+          int RegNo = DwarfRegNum.second[i];
           if (RegNo == -1) // -1 is the default value, don't emit a mapping.
             continue;
 
-          OS << "  { " << getQualifiedName(I->first) << ", " << RegNo
+          OS << "  { " << getQualifiedName(DwarfRegNum.first) << ", " << RegNo
              << "U },\n";
         }
         OS << "};\n";
