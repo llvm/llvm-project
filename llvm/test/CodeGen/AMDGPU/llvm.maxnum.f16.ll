@@ -783,6 +783,7 @@ define amdgpu_kernel void @maxnum_v3f16(
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    v_pk_max_f16 v1, v2, v1
 ; GFX11-NEXT:    v_pk_max_f16 v0, v3, v0
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    buffer_store_b16 v1, off, s[0:3], 0 offset:4
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_endpgm

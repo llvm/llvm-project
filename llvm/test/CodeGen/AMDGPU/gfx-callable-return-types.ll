@@ -1326,6 +1326,7 @@ define amdgpu_gfx <512 x i32> @return_512xi32() #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, s0
 ; GFX11-NEXT:    v_dual_mov_b32 v4, s3 :: v_dual_mov_b32 v3, s2
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
+; GFX11-NEXT:    s_clause 0x3e
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:2032
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:2016
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:2000
@@ -1389,6 +1390,7 @@ define amdgpu_gfx <512 x i32> @return_512xi32() #0 {
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1072
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1056
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1040
+; GFX11-NEXT:    s_clause 0x3e
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1024
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:1008
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:992
@@ -1452,6 +1454,7 @@ define amdgpu_gfx <512 x i32> @return_512xi32() #0 {
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:64
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:48
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:32
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:16
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0

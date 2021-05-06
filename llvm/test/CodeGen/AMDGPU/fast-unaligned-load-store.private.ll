@@ -177,6 +177,7 @@ define void @private_store_2xi16_align2(i16 addrspace(5)* %p, i16 addrspace(5)* 
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 1
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 2
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    scratch_store_b16 v1, v0, off
 ; GFX11-NEXT:    scratch_store_b16 v1, v2, off offset:2
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -188,6 +189,7 @@ define void @private_store_2xi16_align2(i16 addrspace(5)* %p, i16 addrspace(5)* 
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-FLASTSCR-NEXT:    v_mov_b32_e32 v0, 1
 ; GFX11-FLASTSCR-NEXT:    v_mov_b32_e32 v2, 2
+; GFX11-FLASTSCR-NEXT:    s_clause 0x1
 ; GFX11-FLASTSCR-NEXT:    scratch_store_b16 v1, v0, off
 ; GFX11-FLASTSCR-NEXT:    scratch_store_b16 v1, v2, off offset:2
 ; GFX11-FLASTSCR-NEXT:    s_waitcnt_vscnt null, 0x0

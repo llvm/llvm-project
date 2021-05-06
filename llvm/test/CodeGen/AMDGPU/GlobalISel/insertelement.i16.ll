@@ -3327,6 +3327,7 @@ define amdgpu_ps void @insertelement_s_v16i16_s_s(<16 x i16> addrspace(4)* inreg
 ; GFX11-NEXT:    v_dual_mov_b32 v5, s5 :: v_dual_mov_b32 v6, s6
 ; GFX11-NEXT:    v_mov_b32_e32 v7, s7
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 16
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v[8:9], v[0:3], off
 ; GFX11-NEXT:    global_store_b128 v10, v[4:7], s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -3570,6 +3571,7 @@ define amdgpu_ps void @insertelement_v_v16i16_s_s(<16 x i16> addrspace(1)* %ptr,
 ; GFX11-NEXT:    v_cndmask_b32_e64 v6, v8, v12, s6
 ; GFX11-NEXT:    v_cndmask_b32_e64 v7, v9, v12, s2
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 16
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v[10:11], v[0:3], off
 ; GFX11-NEXT:    global_store_b128 v13, v[4:7], s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -3867,6 +3869,7 @@ define amdgpu_ps void @insertelement_s_v16i16_v_s(<16 x i16> addrspace(4)* inreg
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s0, 7
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 16
 ; GFX11-NEXT:    v_cndmask_b32_e32 v7, v7, v10, vcc_lo
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v[8:9], v[0:3], off
 ; GFX11-NEXT:    global_store_b128 v11, v[4:7], s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -4157,6 +4160,7 @@ define amdgpu_ps void @insertelement_s_v16i16_s_v(<16 x i16> addrspace(4)* inreg
 ; GFX11-NEXT:    v_cndmask_b32_e64 v6, v6, v11, s4
 ; GFX11-NEXT:    v_cndmask_b32_e64 v7, v7, v11, s5
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 16
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v[8:9], v[0:3], off
 ; GFX11-NEXT:    global_store_b128 v12, v[4:7], s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -4444,6 +4448,7 @@ define amdgpu_ps void @insertelement_s_v16i16_v_v(<16 x i16> addrspace(4)* inreg
 ; GFX11-NEXT:    v_cndmask_b32_e64 v6, v6, v11, s4
 ; GFX11-NEXT:    v_cndmask_b32_e64 v7, v7, v11, s5
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 16
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v[8:9], v[0:3], off
 ; GFX11-NEXT:    global_store_b128 v12, v[4:7], s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -4687,6 +4692,7 @@ define amdgpu_ps void @insertelement_v_v16i16_s_v(<16 x i16> addrspace(1)* %ptr,
 ; GFX11-NEXT:    v_cndmask_b32_e64 v6, v9, v13, s2
 ; GFX11-NEXT:    v_cndmask_b32_e64 v7, v10, v13, s5
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 16
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v[11:12], v[0:3], off
 ; GFX11-NEXT:    global_store_b128 v14, v[4:7], s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -4926,6 +4932,7 @@ define amdgpu_ps void @insertelement_v_v16i16_v_s(<16 x i16> addrspace(1)* %ptr,
 ; GFX11-NEXT:    v_cndmask_b32_e64 v6, v9, v13, s2
 ; GFX11-NEXT:    v_cndmask_b32_e64 v7, v10, v13, s5
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 16
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v[11:12], v[0:3], off
 ; GFX11-NEXT:    global_store_b128 v14, v[4:7], s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -5165,6 +5172,7 @@ define amdgpu_ps void @insertelement_v_v16i16_v_v(<16 x i16> addrspace(1)* %ptr,
 ; GFX11-NEXT:    v_cndmask_b32_e64 v6, v10, v14, s4
 ; GFX11-NEXT:    v_cndmask_b32_e64 v7, v11, v14, s5
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 16
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v[12:13], v[0:3], off
 ; GFX11-NEXT:    global_store_b128 v15, v[4:7], s[0:1]
 ; GFX11-NEXT:    s_endpgm

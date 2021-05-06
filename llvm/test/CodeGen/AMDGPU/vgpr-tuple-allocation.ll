@@ -78,10 +78,10 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 
 ; GFX11-LABEL: non_preserved_vgpr_tuple8:
 ; GFX11: scratch_store_b32 off, v40, s32 offset:16 ; 4-byte Folded Spill
-; GFX11: scratch_store_b32 off, v41, s33 offset:12 ; 4-byte Folded Spill
-; GFX11-NEXT: scratch_store_b32 off, v42, s33 offset:8 ; 4-byte Folded Spill
-; GFX11-NEXT: scratch_store_b32 off, v43, s33 offset:4 ; 4-byte Folded Spill
-; GFX11-NEXT: scratch_store_b32 off, v44, s33         ; 4-byte Folded Spill
+; GFX11: scratch_store_b32 off, v41, s33 offset:12
+; GFX11-NEXT: scratch_store_b32 off, v42, s33 offset:8
+; GFX11-NEXT: scratch_store_b32 off, v43, s33 offset:4
+; GFX11-NEXT: scratch_store_b32 off, v44, s33
 
 ; GFX11: ;;#ASMSTART
 ; GFX11-NEXT: ;;#ASMEND
@@ -184,11 +184,11 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 
 ; GFX11-LABEL: call_preserved_vgpr_tuple8:
 ; GFX11:      scratch_store_b32 off, v40, s32 offset:20 ; 4-byte Folded Spill
-; GFX11:      scratch_store_b32 off, v41, s33 offset:16 ; 4-byte Folded Spill
-; GFX11-NEXT: scratch_store_b32 off, v42, s33 offset:12 ; 4-byte Folded Spill
-; GFX11-NEXT: scratch_store_b32 off, v43, s33 offset:8 ; 4-byte Folded Spill
-; GFX11-NEXT: scratch_store_b32 off, v44, s33 offset:4 ; 4-byte Folded Spill
-; GFX11-NEXT: scratch_store_b32 off, v45, s33         ; 4-byte Folded Spill
+; GFX11:      scratch_store_b32 off, v41, s33 offset:16
+; GFX11-NEXT: scratch_store_b32 off, v42, s33 offset:12
+; GFX11-NEXT: scratch_store_b32 off, v43, s33 offset:8
+; GFX11-NEXT: scratch_store_b32 off, v44, s33 offset:4
+; GFX11-NEXT: scratch_store_b32 off, v45, s33
 
 ; GFX11: image_gather4_c_b_cl v[0:3], v[12:16], s[36:43], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D
 ; GFX11-NEXT: s_getpc_b64 s[0:1]

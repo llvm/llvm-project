@@ -135,6 +135,7 @@ define amdgpu_kernel void @global_store_2xi16_align2(i16 addrspace(1)* %p, i16 a
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 1
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    global_store_b16 v0, v2, s[0:1] offset:2
 ; GFX11-NEXT:    s_endpgm

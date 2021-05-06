@@ -14,6 +14,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_f16(<8 x float> %A, <8 x float> %B
 ; W32-LABEL: test_wmma_f32_16x16x16_f16:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_f32_16x16x16_f16 v[16:23], v[0:7], v[8:15], v[16:23]
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; W32-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -29,6 +30,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_bf16(<8 x i32> %A, <8 x i32> %B, <
 ; W32-LABEL: test_wmma_f32_16x16x16_bf16:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_f32_16x16x16_bf16 v[16:23], v[0:7], v[8:15], v[16:23]
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; W32-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -44,6 +46,7 @@ define amdgpu_ps void @test_wmma_f16_16x16x16_f16_lo(<8 x float> %A, <8 x float>
 ; W32-LABEL: test_wmma_f16_16x16x16_f16_lo:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_f16_16x16x16_f16 v[16:23], v[0:7], v[8:15], v[16:23]
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; W32-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -57,6 +60,7 @@ define amdgpu_ps void @test_wmma_f16_16x16x16_f16_hi(<8 x float> %A, <8 x float>
 ; W32-LABEL: test_wmma_f16_16x16x16_f16_hi:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_f16_16x16x16_f16 v[16:23], v[0:7], v[8:15], v[16:23] op_sel:[0,0,1]
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; W32-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -72,6 +76,7 @@ define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_lo(<8 x i32> %A, <8 x i32> %
 ; W32-LABEL: test_wmma_bf16_16x16x16_bf16_lo:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_bf16_16x16x16_bf16 v[16:23], v[0:7], v[8:15], v[16:23]
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; W32-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -85,6 +90,7 @@ define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_hi(<8 x i32> %A, <8 x i32> %
 ; W32-LABEL: test_wmma_bf16_16x16x16_bf16_hi:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_bf16_16x16x16_bf16 v[16:23], v[0:7], v[8:15], v[16:23] op_sel:[0,0,1]
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; W32-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -100,6 +106,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_unsigned(<4 x i32> %A
 ; W32-LABEL: test_wmma_i32_16x16x16_ui8_unsigned_unsigned:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], v[8:15]
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[16:17], v[8:11], off
 ; W32-NEXT:    global_store_b128 v[16:17], v[12:15], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -113,6 +120,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_signed(<4 x i32> %A, 
 ; W32-LABEL: test_wmma_i32_16x16x16_ui8_unsigned_signed:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], v[8:15] neg_lo:[0,1,0]
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[16:17], v[8:11], off
 ; W32-NEXT:    global_store_b128 v[16:17], v[12:15], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -126,6 +134,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_unsigned(<4 x i32> %A, 
 ; W32-LABEL: test_wmma_i32_16x16x16_ui8_signed_unsigned:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], v[8:15] neg_lo:[1,0,0]
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[16:17], v[8:11], off
 ; W32-NEXT:    global_store_b128 v[16:17], v[12:15], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -139,6 +148,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_signed(<4 x i32> %A, <4
 ; W32-LABEL: test_wmma_i32_16x16x16_ui8_signed_signed:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], v[8:15] neg_lo:[1,1,0]
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[16:17], v[8:11], off
 ; W32-NEXT:    global_store_b128 v[16:17], v[12:15], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -152,6 +162,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_unsigned_clamp(<4 x i
 ; W32-LABEL: test_wmma_i32_16x16x16_ui8_unsigned_unsigned_clamp:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], v[8:15] clamp
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[16:17], v[8:11], off
 ; W32-NEXT:    global_store_b128 v[16:17], v[12:15], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -165,6 +176,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_signed_clamp(<4 x i32
 ; W32-LABEL: test_wmma_i32_16x16x16_ui8_unsigned_signed_clamp:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], v[8:15] neg_lo:[0,1,0] clamp
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[16:17], v[8:11], off
 ; W32-NEXT:    global_store_b128 v[16:17], v[12:15], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -178,6 +190,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_unsigned_clamp(<4 x i32
 ; W32-LABEL: test_wmma_i32_16x16x16_ui8_signed_unsigned_clamp:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], v[8:15] neg_lo:[1,0,0] clamp
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[16:17], v[8:11], off
 ; W32-NEXT:    global_store_b128 v[16:17], v[12:15], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -191,6 +204,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_signed_clamp(<4 x i32> 
 ; W32-LABEL: test_wmma_i32_16x16x16_ui8_signed_signed_clamp:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], v[8:15] neg_lo:[1,1,0] clamp
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[16:17], v[8:11], off
 ; W32-NEXT:    global_store_b128 v[16:17], v[12:15], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -206,6 +220,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_unsigned(<2 x i32> %A
 ; W32-LABEL: test_wmma_i32_16x16x16_ui4_unsigned_unsigned:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu4 v[4:11], v[0:1], v[2:3], v[4:11]
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[12:13], v[4:7], off
 ; W32-NEXT:    global_store_b128 v[12:13], v[8:11], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -219,6 +234,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_signed(<2 x i32> %A, 
 ; W32-LABEL: test_wmma_i32_16x16x16_ui4_unsigned_signed:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu4 v[4:11], v[0:1], v[2:3], v[4:11] neg_lo:[0,1,0]
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[12:13], v[4:7], off
 ; W32-NEXT:    global_store_b128 v[12:13], v[8:11], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -232,6 +248,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_unsigned(<2 x i32> %A, 
 ; W32-LABEL: test_wmma_i32_16x16x16_ui4_signed_unsigned:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu4 v[4:11], v[0:1], v[2:3], v[4:11] neg_lo:[1,0,0]
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[12:13], v[4:7], off
 ; W32-NEXT:    global_store_b128 v[12:13], v[8:11], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -245,6 +262,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_signed(<2 x i32> %A, <2
 ; W32-LABEL: test_wmma_i32_16x16x16_ui4_signed_signed:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu4 v[4:11], v[0:1], v[2:3], v[4:11] neg_lo:[1,1,0]
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[12:13], v[4:7], off
 ; W32-NEXT:    global_store_b128 v[12:13], v[8:11], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -259,6 +277,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_unsigned_clamp(<2 x i
 ; W32-LABEL: test_wmma_i32_16x16x16_ui4_unsigned_unsigned_clamp:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu4 v[4:11], v[0:1], v[2:3], v[4:11] clamp
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[12:13], v[4:7], off
 ; W32-NEXT:    global_store_b128 v[12:13], v[8:11], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -272,6 +291,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_signed_clamp(<2 x i32
 ; W32-LABEL: test_wmma_i32_16x16x16_ui4_unsigned_signed_clamp:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu4 v[4:11], v[0:1], v[2:3], v[4:11] neg_lo:[0,1,0] clamp
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[12:13], v[4:7], off
 ; W32-NEXT:    global_store_b128 v[12:13], v[8:11], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -285,6 +305,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_unsigned_clamp(<2 x i32
 ; W32-LABEL: test_wmma_i32_16x16x16_ui4_signed_unsigned_clamp:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu4 v[4:11], v[0:1], v[2:3], v[4:11] neg_lo:[1,0,0] clamp
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[12:13], v[4:7], off
 ; W32-NEXT:    global_store_b128 v[12:13], v[8:11], off offset:16
 ; W32-NEXT:    s_endpgm
@@ -298,6 +319,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_signed_clamp(<2 x i32> 
 ; W32-LABEL: test_wmma_i32_16x16x16_ui4_signed_signed_clamp:
 ; W32:       ; %bb.0: ; %bb
 ; W32-NEXT:    v_wmma_i32_16x16x16_iu4 v[4:11], v[0:1], v[2:3], v[4:11] neg_lo:[1,1,0] clamp
+; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[12:13], v[4:7], off
 ; W32-NEXT:    global_store_b128 v[12:13], v[8:11], off offset:16
 ; W32-NEXT:    s_endpgm

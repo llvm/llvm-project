@@ -1632,6 +1632,7 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; GFX11-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; GFX11-NEXT:    v_or_b32_e32 v5, v5, v6
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[2:3]
 ; GFX11-NEXT:    global_store_b32 v4, v5, s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -1824,6 +1825,7 @@ define amdgpu_kernel void @load_v7i8_to_v7f32(<7 x float> addrspace(1)* noalias 
 ; GFX11-NEXT:    v_cvt_f32_ubyte0_e32 v4, v4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b96 v7, v[4:6], s[0:1] offset:16
 ; GFX11-NEXT:    global_store_b128 v7, v[0:3], s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -1951,6 +1953,7 @@ define amdgpu_kernel void @load_v8i8_to_v8f32(<8 x float> addrspace(1)* noalias 
 ; GFX11-NEXT:    v_cvt_f32_ubyte2_e32 v2, v8
 ; GFX11-NEXT:    v_cvt_f32_ubyte1_e32 v1, v8
 ; GFX11-NEXT:    v_cvt_f32_ubyte0_e32 v0, v8
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v10, v[4:7], s[0:1] offset:16
 ; GFX11-NEXT:    global_store_b128 v10, v[0:3], s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -3007,6 +3010,7 @@ define amdgpu_kernel void @cvt_f32_ubyte0_vector() local_unnamed_addr {
 ; GFX11-NEXT:    v_fma_f32 v1, v3, v1, 0.5
 ; GFX11-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_clause 0x3
 ; GFX11-NEXT:    global_store_b8 v[0:1], v4, off
 ; GFX11-NEXT:    global_store_b8 v[0:1], v5, off
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
