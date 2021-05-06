@@ -1645,6 +1645,10 @@ public:
               // Add edge from 'newMemRef' node to dstNode.
               mdg->addEdge(newMemRefNodeId, dstId, newMemRef);
             }
+            // One or more entries for 'newMemRef' alloc op are inserted into
+            // the DenseMap mdg->nodes. Since an insertion may cause DenseMap to
+            // reallocate, update dstNode.
+            dstNode = mdg->getNode(dstId);
           }
 
           // Collect dst loop stats after memref privatization transformation.

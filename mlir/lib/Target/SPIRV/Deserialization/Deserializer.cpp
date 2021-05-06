@@ -14,7 +14,6 @@
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVModule.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -88,7 +87,7 @@ LogicalResult spirv::Deserializer::deserialize() {
   return success();
 }
 
-spirv::OwningSPIRVModuleRef spirv::Deserializer::collect() {
+OwningOpRef<spirv::ModuleOp> spirv::Deserializer::collect() {
   return std::move(module);
 }
 
@@ -96,7 +95,7 @@ spirv::OwningSPIRVModuleRef spirv::Deserializer::collect() {
 // Module structure
 //===----------------------------------------------------------------------===//
 
-spirv::OwningSPIRVModuleRef spirv::Deserializer::createModuleOp() {
+OwningOpRef<spirv::ModuleOp> spirv::Deserializer::createModuleOp() {
   OpBuilder builder(context);
   OperationState state(unknownLoc, spirv::ModuleOp::getOperationName());
   spirv::ModuleOp::build(builder, state);

@@ -3689,12 +3689,25 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
             __FUNCTION__, arg, process->GetID());
 
   EventSP event_sp;
+
+  // We need to ignore any packets that come in after we have
+  // have decided the process has exited.  There are some
+  // situations, for instance when we try to interrupt a running
+  // process and the interrupt fails, where another packet might
+  // get delivered after we've decided to give up on the process.
+  // But once we've decided we are done with the process we will
+  // not be in a state to do anything useful with new packets.
+  // So it is safer to simply ignore any remaining packets by
+  // explicitly checking for eStateExited before reentering the
+  // fetch loop.
+  
   bool done = false;
-  while (!done) {
+  while (!done && process->GetPrivateState() != eStateExited) {
     LLDB_LOGF(log,
               "ProcessGDBRemote::%s (arg = %p, pid = %" PRIu64
               ") listener.WaitForEvent (NULL, event_sp)...",
               __FUNCTION__, arg, process->GetID());
+
     if (process->m_async_listener_sp->GetEvent(event_sp, llvm::None)) {
       const uint32_t event_type = event_sp->GetType();
       if (event_sp->BroadcasterIs(&process->m_async_broadcaster)) {
@@ -3793,6 +3806,7 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
                 } else {
                   process->SetExitStatus(-1, "lost connection");
                 }
+                done = true;
                 break;
               }
 

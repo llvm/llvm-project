@@ -1802,6 +1802,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(ARMISD::CSINV)
     MAKE_CASE(ARMISD::CSNEG)
     MAKE_CASE(ARMISD::CSINC)
+    MAKE_CASE(ARMISD::MEMCPYLOOP)
 #undef MAKE_CASE
   }
   return nullptr;
@@ -11097,6 +11098,141 @@ static bool checkAndUpdateCPSRKill(MachineBasicBlock::iterator SelectItr,
   return true;
 }
 
+/// Adds logic in loop entry MBB to calculate loop iteration count and adds
+/// t2WhileLoopSetup and t2WhileLoopStart to generate WLS loop
+static Register genTPEntry(MachineBasicBlock *TpEntry,
+                           MachineBasicBlock *TpLoopBody,
+                           MachineBasicBlock *TpExit, Register OpSizeReg,
+                           const TargetInstrInfo *TII, DebugLoc Dl,
+                           MachineRegisterInfo &MRI) {
+
+  // Calculates loop iteration count = ceil(n/16)/16 = ((n + 15)&(-16)) / 16.
+  Register AddDestReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
+  BuildMI(TpEntry, Dl, TII->get(ARM::t2ADDri), AddDestReg)
+      .addUse(OpSizeReg)
+      .addImm(15)
+      .add(predOps(ARMCC::AL))
+      .addReg(0);
+
+  Register BicDestReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
+  BuildMI(TpEntry, Dl, TII->get(ARM::t2BICri), BicDestReg)
+      .addUse(AddDestReg, RegState::Kill)
+      .addImm(16)
+      .add(predOps(ARMCC::AL))
+      .addReg(0);
+
+  Register LsrDestReg = MRI.createVirtualRegister(&ARM::GPRlrRegClass);
+  BuildMI(TpEntry, Dl, TII->get(ARM::t2LSRri), LsrDestReg)
+      .addUse(BicDestReg, RegState::Kill)
+      .addImm(4)
+      .add(predOps(ARMCC::AL))
+      .addReg(0);
+
+  Register TotalIterationsReg = MRI.createVirtualRegister(&ARM::GPRlrRegClass);
+  BuildMI(TpEntry, Dl, TII->get(ARM::t2WhileLoopSetup), TotalIterationsReg)
+      .addUse(LsrDestReg, RegState::Kill);
+
+  BuildMI(TpEntry, Dl, TII->get(ARM::t2WhileLoopStart))
+      .addUse(TotalIterationsReg)
+      .addMBB(TpExit);
+
+  return TotalIterationsReg;
+}
+
+/// Adds logic in the loopBody MBB to generate MVE_VCTP, t2DoLoopDec and
+/// t2DoLoopEnd. These are used by later passes to generate tail predicated
+/// loops.
+static void genTPLoopBody(MachineBasicBlock *TpLoopBody,
+                          MachineBasicBlock *TpEntry, MachineBasicBlock *TpExit,
+                          const TargetInstrInfo *TII, DebugLoc Dl,
+                          MachineRegisterInfo &MRI, Register OpSrcReg,
+                          Register OpDestReg, Register ElementCountReg,
+                          Register TotalIterationsReg) {
+
+  // First insert 4 PHI nodes for: Current pointer to Src, Dest array, loop
+  // iteration counter, predication counter Current position in the src array
+  Register SrcPhiReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
+  Register CurrSrcReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
+  BuildMI(TpLoopBody, Dl, TII->get(ARM::PHI), SrcPhiReg)
+      .addUse(OpSrcReg)
+      .addMBB(TpEntry)
+      .addUse(CurrSrcReg)
+      .addMBB(TpLoopBody);
+
+  // Current position in the dest array
+  Register DestPhiReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
+  Register CurrDestReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
+  BuildMI(TpLoopBody, Dl, TII->get(ARM::PHI), DestPhiReg)
+      .addUse(OpDestReg)
+      .addMBB(TpEntry)
+      .addUse(CurrDestReg)
+      .addMBB(TpLoopBody);
+
+  // Current loop counter
+  Register LoopCounterPhiReg = MRI.createVirtualRegister(&ARM::GPRlrRegClass);
+  Register RemainingLoopIterationsReg =
+      MRI.createVirtualRegister(&ARM::GPRlrRegClass);
+  BuildMI(TpLoopBody, Dl, TII->get(ARM::PHI), LoopCounterPhiReg)
+      .addUse(TotalIterationsReg)
+      .addMBB(TpEntry)
+      .addUse(RemainingLoopIterationsReg)
+      .addMBB(TpLoopBody);
+
+  // Predication counter
+  Register PredCounterPhiReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
+  Register RemainingElementsReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
+  BuildMI(TpLoopBody, Dl, TII->get(ARM::PHI), PredCounterPhiReg)
+      .addUse(ElementCountReg)
+      .addMBB(TpEntry)
+      .addUse(RemainingElementsReg)
+      .addMBB(TpLoopBody);
+
+  // Pass predication counter to VCTP
+  Register VccrReg = MRI.createVirtualRegister(&ARM::VCCRRegClass);
+  BuildMI(TpLoopBody, Dl, TII->get(ARM::MVE_VCTP8), VccrReg)
+      .addUse(PredCounterPhiReg)
+      .addImm(ARMVCC::None)
+      .addReg(0);
+
+  BuildMI(TpLoopBody, Dl, TII->get(ARM::t2SUBri), RemainingElementsReg)
+      .addUse(PredCounterPhiReg)
+      .addImm(16)
+      .add(predOps(ARMCC::AL))
+      .addReg(0);
+
+  // VLDRB and VSTRB instructions, predicated using VPR
+  Register LoadedValueReg = MRI.createVirtualRegister(&ARM::MQPRRegClass);
+  BuildMI(TpLoopBody, Dl, TII->get(ARM::MVE_VLDRBU8_post))
+      .addDef(CurrSrcReg)
+      .addDef(LoadedValueReg)
+      .addReg(SrcPhiReg)
+      .addImm(16)
+      .addImm(ARMVCC::Then)
+      .addUse(VccrReg);
+
+  BuildMI(TpLoopBody, Dl, TII->get(ARM::MVE_VSTRBU8_post))
+      .addDef(CurrDestReg)
+      .addUse(LoadedValueReg, RegState::Kill)
+      .addReg(DestPhiReg)
+      .addImm(16)
+      .addImm(ARMVCC::Then)
+      .addUse(VccrReg);
+
+  // Add the pseudoInstrs for decrementing the loop counter and marking the
+  // end:t2DoLoopDec and t2DoLoopEnd
+  BuildMI(TpLoopBody, Dl, TII->get(ARM::t2LoopDec), RemainingLoopIterationsReg)
+      .addUse(LoopCounterPhiReg)
+      .addImm(1);
+
+  BuildMI(TpLoopBody, Dl, TII->get(ARM::t2LoopEnd))
+      .addUse(RemainingLoopIterationsReg)
+      .addMBB(TpLoopBody);
+
+  BuildMI(TpLoopBody, Dl, TII->get(ARM::t2B))
+      .addMBB(TpExit)
+      .add(predOps(ARMCC::AL));
+}
+
 MachineBasicBlock *
 ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
@@ -11121,6 +11257,95 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .cloneMemRefs(MI);
     MI.eraseFromParent();
     return BB;
+  }
+
+  case ARM::MVE_MEMCPYLOOPINST: {
+
+    // Transformation below expands MVE_MEMCPYLOOPINST Pseudo instruction
+    // into a Tail Predicated (TP) Loop. It adds the instructions to calculate
+    // the iteration count =ceil(size_in_bytes/16)) in the TP entry block and
+    // adds the relevant instructions in the TP loop Body for generation of a
+    // WLSTP loop.
+
+    // Below is relevant portion of the CFG after the transformation.
+    // The Machine Basic Blocks are shown along with branch conditions (in
+    // brackets). Note that TP entry/exit MBBs depict the entry/exit of this
+    // portion of the CFG and may not necessarily be the entry/exit of the
+    // function.
+
+    //             (Relevant) CFG after transformation:
+    //               TP entry MBB
+    //                   |
+    //          |-----------------|
+    //       (n <= 0)          (n > 0)
+    //          |                 |
+    //          |         TP loop Body MBB<--|
+    //          |                |           |
+    //           \               |___________|
+    //            \             /
+    //              TP exit MBB
+
+    MachineFunction *MF = BB->getParent();
+    MachineFunctionProperties &Properties = MF->getProperties();
+    MachineRegisterInfo &MRI = MF->getRegInfo();
+
+    Register OpDestReg = MI.getOperand(0).getReg();
+    Register OpSrcReg = MI.getOperand(1).getReg();
+    Register OpSizeReg = MI.getOperand(2).getReg();
+
+    // Allocate the required MBBs and add to parent function.
+    MachineBasicBlock *TpEntry = BB;
+    MachineBasicBlock *TpLoopBody = MF->CreateMachineBasicBlock();
+    MachineBasicBlock *TpExit;
+
+    MF->push_back(TpLoopBody);
+
+    // If any instructions are present in the current block after
+    // MVE_MEMCPYLOOPINST, split the current block and move the instructions
+    // into the newly created exit block. If there are no instructions
+    // add an explicit branch to the FallThrough block and then split.
+    //
+    // The split is required for two reasons:
+    // 1) A terminator(t2WhileLoopStart) will be placed at that site.
+    // 2) Since a TPLoopBody will be added later, any phis in successive blocks
+    //    need to be updated. splitAt() already handles this.
+    TpExit = BB->splitAt(MI, false);
+    if (TpExit == BB) {
+      assert(BB->canFallThrough() &&
+             "Exit block must be FallThrough of the block containing memcpy");
+      TpExit = BB->getFallThrough();
+      BuildMI(BB, dl, TII->get(ARM::t2B))
+          .addMBB(TpExit)
+          .add(predOps(ARMCC::AL));
+      TpExit = BB->splitAt(MI, false);
+    }
+
+    // Add logic for iteration count
+    Register TotalIterationsReg =
+        genTPEntry(TpEntry, TpLoopBody, TpExit, OpSizeReg, TII, dl, MRI);
+
+    // Add the vectorized (and predicated) loads/store instructions
+    genTPLoopBody(TpLoopBody, TpEntry, TpExit, TII, dl, MRI, OpSrcReg,
+                  OpDestReg, OpSizeReg, TotalIterationsReg);
+
+    // Required to avoid conflict with the MachineVerifier during testing.
+    Properties.reset(MachineFunctionProperties::Property::NoPHIs);
+
+    // Connect the blocks
+    TpEntry->addSuccessor(TpLoopBody);
+    TpLoopBody->addSuccessor(TpLoopBody);
+    TpLoopBody->addSuccessor(TpExit);
+
+    // Reorder for a more natural layout
+    TpLoopBody->moveAfter(TpEntry);
+    TpExit->moveAfter(TpLoopBody);
+
+    // Finally, remove the memcpy Psuedo Instruction
+    MI.eraseFromParent();
+
+    // Return the exit block as it may contain other instructions requiring a
+    // custom inserter
+    return TpExit;
   }
 
   // The Thumb2 pre-indexed stores have the same MI operands, they just
