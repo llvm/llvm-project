@@ -23,4 +23,5 @@ add_flang_library(FIRTransforms
   FIRAnalysis
   FIRDialect
   MLIRAffineToStandard
+  FIRSupport
 )
