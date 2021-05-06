@@ -49,7 +49,7 @@ class M68kAsmParser : public MCTargetAsmParser {
   // Parser functions.
   void eatComma();
 
-  bool isExpr() const;
+  bool isExpr();
   OperandMatchResultTy parseImm(OperandVector &Operands);
   OperandMatchResultTy parseMemOp(OperandVector &Operands);
 
@@ -581,11 +581,13 @@ OperandMatchResultTy M68kAsmParser::tryParseRegister(unsigned &RegNo,
   return Result;
 }
 
-bool M68kAsmParser::isExpr() const {
+bool M68kAsmParser::isExpr() {
   switch (Parser.getTok().getKind()) {
   case AsmToken::Identifier:
   case AsmToken::Integer:
     return true;
+  case AsmToken::Minus:
+    return getLexer().peekTok().getKind() == AsmToken::Integer;
 
   default:
     return false;
