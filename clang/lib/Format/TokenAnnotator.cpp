@@ -1055,13 +1055,6 @@ private:
         CurrentToken->Previous->setType(TT_OverloadedOperator);
       break;
     case tok::question:
-      if (Tok->is(TT_CSharpNullConditionalLSquare)) {
-        if (!parseSquare())
-          return false;
-        break;
-      }
-      if (Tok->isOneOf(TT_CSharpNullConditional, TT_CSharpNullCoalescing))
-        break;
       if (Style.Language == FormatStyle::LK_JavaScript && Tok->Next &&
           Tok->Next->isOneOf(tok::semi, tok::comma, tok::colon, tok::r_paren,
                              tok::r_brace)) {
@@ -1085,7 +1078,7 @@ private:
             (Tok->Next && Tok->Next->isOneOf(tok::r_paren, tok::greater)) ||
             (Tok->Next && Tok->Next->is(tok::identifier) && Tok->Next->Next &&
              Tok->Next->Next->is(tok::equal))) {
-          Tok->setType(TT_CSharpNullable);
+          Tok->setType(TT_JsTypeOptionalQuestion);
           break;
         }
       }
@@ -1571,38 +1564,28 @@ private:
       // The token type is already known.
       return;
 
-    if (Style.isCSharp() && CurrentToken->is(tok::question)) {
-      if (CurrentToken->TokenText == "??") {
-        Current.setType(TT_CSharpNullCoalescing);
-        return;
-      }
-      if (CurrentToken->TokenText == "?.") {
-        Current.setType(TT_CSharpNullConditional);
-        return;
-      }
-      if (CurrentToken->TokenText == "?[") {
-        Current.setType(TT_CSharpNullConditionalLSquare);
-        return;
-      }
-    }
-
-    if (Style.Language == FormatStyle::LK_JavaScript) {
-      if (Current.is(tok::exclaim)) {
-        if (Current.Previous &&
-            (Keywords.IsJavaScriptIdentifier(
-                 *Current.Previous, /* AcceptIdentifierName= */ true) ||
-             Current.Previous->isOneOf(
-                 tok::kw_namespace, tok::r_paren, tok::r_square, tok::r_brace,
-                 Keywords.kw_type, Keywords.kw_get, Keywords.kw_set) ||
-             Current.Previous->Tok.isLiteral())) {
+    if ((Style.Language == FormatStyle::LK_JavaScript || Style.isCSharp()) &&
+        Current.is(tok::exclaim)) {
+      if (Current.Previous) {
+        bool IsIdentifier =
+            Style.Language == FormatStyle::LK_JavaScript
+                ? Keywords.IsJavaScriptIdentifier(
+                      *Current.Previous, /* AcceptIdentifierName= */ true)
+                : Current.Previous->is(tok::identifier);
+        if (IsIdentifier ||
+            Current.Previous->isOneOf(
+                tok::kw_namespace, tok::r_paren, tok::r_square, tok::r_brace,
+                tok::kw_false, tok::kw_true, Keywords.kw_type, Keywords.kw_get,
+                Keywords.kw_set) ||
+            Current.Previous->Tok.isLiteral()) {
           Current.setType(TT_JsNonNullAssertion);
           return;
         }
-        if (Current.Next &&
-            Current.Next->isOneOf(TT_BinaryOperator, Keywords.kw_as)) {
-          Current.setType(TT_JsNonNullAssertion);
-          return;
-        }
+      }
+      if (Current.Next &&
+          Current.Next->isOneOf(TT_BinaryOperator, Keywords.kw_as)) {
+        Current.setType(TT_JsNonNullAssertion);
+        return;
       }
     }
 
@@ -3178,32 +3161,16 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return Style.SpacesInSquareBrackets;
 
     // No space before ? in nullable types.
-    if (Right.is(TT_CSharpNullable))
+    if (Right.is(TT_JsTypeOptionalQuestion))
       return false;
 
-    // Require space after ? in nullable types except in generics and casts.
-    if (Left.is(TT_CSharpNullable))
-      return !Right.isOneOf(TT_TemplateCloser, tok::r_paren);
-
-    // No space before or after '?.'.
-    if (Left.is(TT_CSharpNullConditional) || Right.is(TT_CSharpNullConditional))
-      return false;
-
-    // Space before and after '??'.
-    if (Left.is(TT_CSharpNullCoalescing) || Right.is(TT_CSharpNullCoalescing))
-      return true;
-
-    // No space before '?['.
-    if (Right.is(TT_CSharpNullConditionalLSquare))
+    // No space before null forgiving '!'.
+    if (Right.is(TT_JsNonNullAssertion))
       return false;
 
     // No space between consecutive commas '[,,]'.
     if (Left.is(tok::comma) && Right.is(tok::comma))
       return false;
-
-    // Possible space inside `?[ 0 ]`.
-    if (Left.is(TT_CSharpNullConditionalLSquare))
-      return Style.SpacesInSquareBrackets;
 
     // space after var in `var (key, value)`
     if (Left.is(Keywords.kw_var) && Right.is(tok::l_paren))

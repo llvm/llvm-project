@@ -112,9 +112,6 @@ namespace format {
   TYPE(UntouchableMacroFunc)                                                   \
   TYPE(CSharpStringLiteral)                                                    \
   TYPE(CSharpNamedArgumentColon)                                               \
-  TYPE(CSharpNullable)                                                         \
-  TYPE(CSharpNullCoalescing)                                                   \
-  TYPE(CSharpNullConditional)                                                  \
   TYPE(CSharpNullConditionalLSquare)                                           \
   TYPE(CSharpGenericTypeConstraint)                                            \
   TYPE(CSharpGenericTypeConstraintColon)                                       \

@@ -358,6 +358,39 @@ TEST_F(FormatTestCSharp, CSharpNullCoalescing) {
   verifyFormat("return _name ?? \"DEF\";");
 }
 
+TEST_F(FormatTestCSharp, CSharpNullCoalescingAssignment) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+  Style.SpaceBeforeAssignmentOperators = true;
+
+  verifyFormat(R"(test ??= ABC;)", Style);
+  verifyFormat(R"(test ??= true;)", Style);
+
+  Style.SpaceBeforeAssignmentOperators = false;
+
+  verifyFormat(R"(test??= ABC;)", Style);
+  verifyFormat(R"(test??= true;)", Style);
+}
+
+TEST_F(FormatTestCSharp, CSharpNullForgiving) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat("var test = null!;", Style);
+  verifyFormat("string test = someFunctionCall()! + \"ABC\"!", Style);
+  verifyFormat("int test = (1! + 2 + bar! + foo())!", Style);
+  verifyFormat(R"(test ??= !foo!;)", Style);
+  verifyFormat("test = !bar! ?? !foo!;", Style);
+  verifyFormat("bool test = !(!true && !true! || !null && !null! || !false && "
+               "!false! && !bar()! + (!foo()))!",
+               Style);
+
+  // Check that line break keeps identifier with the bang.
+  Style.ColumnLimit = 14;
+
+  verifyFormat("var test =\n"
+               "    foo!;",
+               Style);
+}
+
 TEST_F(FormatTestCSharp, AttributesIndentation) {
   FormatStyle Style = getMicrosoftStyle(FormatStyle::LK_CSharp);
   Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
