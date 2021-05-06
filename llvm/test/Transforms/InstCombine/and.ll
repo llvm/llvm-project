@@ -844,7 +844,7 @@ define i1 @and_orn_cmp_1_logical(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @and_orn_cmp_1_logical(
 ; CHECK-NEXT:    [[X:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i32 [[C:%.*]], 42
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[X]], i1 [[Y]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %x = icmp sgt i32 %a, %b
@@ -895,7 +895,7 @@ define i1 @and_orn_cmp_3_logical(i72 %a, i72 %b, i72 %c) {
 ; CHECK-LABEL: @and_orn_cmp_3_logical(
 ; CHECK-NEXT:    [[X:%.*]] = icmp ugt i72 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i72 [[C:%.*]], 42
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[X]], i1 [[Y]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %x = icmp ugt i72 %a, %b
@@ -946,7 +946,7 @@ define i1 @andn_or_cmp_1_logical(i37 %a, i37 %b, i37 %c) {
 ; CHECK-LABEL: @andn_or_cmp_1_logical(
 ; CHECK-NEXT:    [[X_INV:%.*]] = icmp sle i37 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i37 [[C:%.*]], 42
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X_INV]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[X_INV]], i1 [[Y]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %x = icmp sgt i37 %a, %b
@@ -979,7 +979,7 @@ define i1 @andn_or_cmp_2_logical(i16 %a, i16 %b, i16 %c) {
 ; CHECK-LABEL: @andn_or_cmp_2_logical(
 ; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt i16 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i16 [[C:%.*]], 42
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[Y]], [[X_INV]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[Y]], i1 [[X_INV]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %x = icmp sge i16 %a, %b
@@ -1030,7 +1030,7 @@ define i1 @andn_or_cmp_4_logical(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @andn_or_cmp_4_logical(
 ; CHECK-NEXT:    [[X_INV:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i32 [[C:%.*]], 42
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[Y]], [[X_INV]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[X_INV]], i1 [[Y]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %x = icmp eq i32 %a, %b
