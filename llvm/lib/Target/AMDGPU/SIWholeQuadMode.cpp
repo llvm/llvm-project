@@ -923,7 +923,7 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineBasicBlock &MBB,
     } else {
       // Static: kill does nothing
       MachineInstr *NewTerm = nullptr;
-      if (IsDemote) {
+      if (MI.getOpcode() == AMDGPU::SI_DEMOTE_I1) {
         LIS->RemoveMachineInstrFromMaps(MI);
       } else {
         assert(MBB.succ_size() == 1);
