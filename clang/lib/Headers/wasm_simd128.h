@@ -1197,8 +1197,8 @@ wasm_i8x16_narrow_i16x8(v128_t __a, v128_t __b) {
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_u8x16_narrow_i16x8(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_narrow_u_i8x16_i16x8((__u16x8)__a,
-                                                     (__u16x8)__b);
+  return (v128_t)__builtin_wasm_narrow_u_i8x16_i16x8((__i16x8)__a,
+                                                     (__i16x8)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
@@ -1209,8 +1209,8 @@ wasm_i16x8_narrow_i32x4(v128_t __a, v128_t __b) {
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_u16x8_narrow_i32x4(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_narrow_u_i16x8_i32x4((__u32x4)__a,
-                                                     (__u32x4)__b);
+  return (v128_t)__builtin_wasm_narrow_u_i16x8_i32x4((__i32x4)__a,
+                                                     (__i32x4)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
