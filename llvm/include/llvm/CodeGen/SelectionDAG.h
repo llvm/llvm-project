@@ -1014,48 +1014,17 @@ public:
   /// stack arguments from being clobbered.
   SDValue getStackArgumentTokenFactor(SDValue Chain);
 
-  LLVM_ATTRIBUTE_DEPRECATED(SDValue getMemcpy(SDValue Chain, const SDLoc &dl,
-                                              SDValue Dst, SDValue Src,
-                                              SDValue Size, unsigned Align,
-                                              bool isVol, bool AlwaysInline,
-                                              bool isTailCall,
-                                              MachinePointerInfo DstPtrInfo,
-                                              MachinePointerInfo SrcPtrInfo),
-                            "Use the version that takes Align instead") {
-    return getMemcpy(Chain, dl, Dst, Src, Size, llvm::Align(Align), isVol,
-                     AlwaysInline, isTailCall, DstPtrInfo, SrcPtrInfo);
-  }
-
   SDValue getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
                     SDValue Size, Align Alignment, bool isVol,
                     bool AlwaysInline, bool isTailCall,
                     MachinePointerInfo DstPtrInfo,
                     MachinePointerInfo SrcPtrInfo);
 
-  LLVM_ATTRIBUTE_DEPRECATED(SDValue getMemmove(SDValue Chain, const SDLoc &dl,
-                                               SDValue Dst, SDValue Src,
-                                               SDValue Size, unsigned Align,
-                                               bool isVol, bool isTailCall,
-                                               MachinePointerInfo DstPtrInfo,
-                                               MachinePointerInfo SrcPtrInfo),
-                            "Use the version that takes Align instead") {
-    return getMemmove(Chain, dl, Dst, Src, Size, llvm::Align(Align), isVol,
-                      isTailCall, DstPtrInfo, SrcPtrInfo);
-  }
   SDValue getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
                      SDValue Size, Align Alignment, bool isVol, bool isTailCall,
                      MachinePointerInfo DstPtrInfo,
                      MachinePointerInfo SrcPtrInfo);
 
-  LLVM_ATTRIBUTE_DEPRECATED(SDValue getMemset(SDValue Chain, const SDLoc &dl,
-                                              SDValue Dst, SDValue Src,
-                                              SDValue Size, unsigned Align,
-                                              bool isVol, bool isTailCall,
-                                              MachinePointerInfo DstPtrInfo),
-                            "Use the version that takes Align instead") {
-    return getMemset(Chain, dl, Dst, Src, Size, llvm::Align(Align), isVol,
-                     isTailCall, DstPtrInfo);
-  }
   SDValue getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
                     SDValue Size, Align Alignment, bool isVol, bool isTailCall,
                     MachinePointerInfo DstPtrInfo);
@@ -1175,19 +1144,6 @@ public:
     return getMemIntrinsicNode(Opcode, dl, VTList, Ops, MemVT, PtrInfo,
                                Alignment.getValueOr(getEVTAlign(MemVT)), Flags,
                                Size, AAInfo);
-  }
-
-  LLVM_ATTRIBUTE_DEPRECATED(
-      inline SDValue getMemIntrinsicNode(
-          unsigned Opcode, const SDLoc &dl, SDVTList VTList,
-          ArrayRef<SDValue> Ops, EVT MemVT, MachinePointerInfo PtrInfo,
-          unsigned Alignment,
-          MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad |
-                                           MachineMemOperand::MOStore,
-          uint64_t Size = 0, const AAMDNodes &AAInfo = AAMDNodes()),
-      "") {
-    return getMemIntrinsicNode(Opcode, dl, VTList, Ops, MemVT, PtrInfo,
-                               MaybeAlign(Alignment), Flags, Size, AAInfo);
   }
 
   SDValue getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl, SDVTList VTList,
@@ -1916,14 +1872,6 @@ public:
   /// Infer alignment of a load / store address. Return None if it cannot be
   /// inferred.
   MaybeAlign InferPtrAlign(SDValue Ptr) const;
-
-  LLVM_ATTRIBUTE_DEPRECATED(inline unsigned InferPtrAlignment(SDValue Ptr)
-                                const,
-                            "Use InferPtrAlign instead") {
-    if (auto A = InferPtrAlign(Ptr))
-      return A->value();
-    return 0;
-  }
 
   /// Compute the VTs needed for the low/hi parts of a type
   /// which is split (or expanded) into two not necessarily identical pieces.
