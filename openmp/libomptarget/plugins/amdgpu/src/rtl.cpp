@@ -72,9 +72,6 @@ hostrpc_assign_buffer(hsa_agent_t, hsa_queue_t *, uint32_t device_id) {
 
 int print_kernel_trace;
 
-// Size of the target call stack struture
-uint32_t TgtStackItemSize = 0;
-
 #undef check // Drop definition from internal.h
 #ifdef OMPTARGET_DEBUG
 #define check(msg, status)                                                     \
@@ -275,21 +272,18 @@ static void callbackQueue(hsa_status_t status, hsa_queue_t *source,
 }
 
 namespace core {
+namespace {
 void packet_store_release(uint32_t *packet, uint16_t header, uint16_t rest) {
   __atomic_store_n(packet, header | (rest << 16), __ATOMIC_RELEASE);
 }
 
-uint16_t create_header(hsa_packet_type_t type, int barrier,
-                       atmi_task_fence_scope_t acq_fence,
-                       atmi_task_fence_scope_t rel_fence) {
-  uint16_t header = type << HSA_PACKET_HEADER_TYPE;
-  header |= barrier << HSA_PACKET_HEADER_BARRIER;
-  header |= (hsa_fence_scope_t) static_cast<int>(
-      acq_fence << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE);
-  header |= (hsa_fence_scope_t) static_cast<int>(
-      rel_fence << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+uint16_t create_header() {
+  uint16_t header = HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE;
+  header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
+  header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
   return header;
 }
+} // namespace
 } // namespace core
 
 /// Class containing all the device information
@@ -1904,11 +1898,8 @@ int32_t __tgt_rtl_run_target_team_region_locked(
       hsa_signal_store_relaxed(packet->completion_signal, 1);
     }
 
-    core::packet_store_release(
-        reinterpret_cast<uint32_t *>(packet),
-        core::create_header(HSA_PACKET_TYPE_KERNEL_DISPATCH, 0,
-                            ATMI_FENCE_SCOPE_SYSTEM, ATMI_FENCE_SCOPE_SYSTEM),
-        packet->setup);
+    core::packet_store_release(reinterpret_cast<uint32_t *>(packet),
+                               core::create_header(), packet->setup);
 
     hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
 
