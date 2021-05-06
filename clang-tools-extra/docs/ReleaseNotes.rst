@@ -95,6 +95,13 @@ New checks
   Finds ``pthread_setcanceltype`` function calls where a thread's cancellation
   type is set to asynchronous.
 
+- New :doc:`altera-id-dependent-backward-branch
+  <clang-tidy/checks/altera-id-dependent-backward-branch>` check.
+
+  Finds ID-dependent variables and fields that are used within loops. This
+  causes branches to occur inside the loops, and thus leads to performance
+  degradation.
+
 - New :doc:`altera-unroll-loops
   <clang-tidy/checks/altera-unroll-loops>` check.
 
