@@ -1636,7 +1636,7 @@ private:
     void setOperand(unsigned OpIdx, ArrayRef<Value *> OpVL) {
       if (Operands.size() < OpIdx + 1)
         Operands.resize(OpIdx + 1);
-      assert(Operands[OpIdx].size() == 0 && "Already resized?");
+      assert(Operands[OpIdx].empty() && "Already resized?");
       Operands[OpIdx].resize(Scalars.size());
       for (unsigned Lane = 0, E = Scalars.size(); Lane != E; ++Lane)
         Operands[OpIdx][Lane] = OpVL[Lane];
