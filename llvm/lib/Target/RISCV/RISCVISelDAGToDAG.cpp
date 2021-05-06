@@ -1448,21 +1448,6 @@ bool RISCVDAGToDAGISel::selectRVVSimm5(SDValue N, unsigned Width,
   return false;
 }
 
-bool RISCVDAGToDAGISel::selectRVVUimm5(SDValue N, unsigned Width,
-                                       SDValue &Imm) {
-  if (auto *C = dyn_cast<ConstantSDNode>(N)) {
-    int64_t ImmVal = C->getSExtValue();
-
-    if (!isUInt<5>(ImmVal))
-      return false;
-
-    Imm = CurDAG->getTargetConstant(ImmVal, SDLoc(N), Subtarget->getXLenVT());
-    return true;
-  }
-
-  return false;
-}
-
 // Merge an ADDI into the offset of a load/store instruction where possible.
 // (load (addi base, off1), off2) -> (load base, off1+off2)
 // (store val, (addi base, off1), off2) -> (store val, base, off1+off2)

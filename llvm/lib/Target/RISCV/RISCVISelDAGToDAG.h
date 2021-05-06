@@ -74,11 +74,6 @@ public:
     return selectRVVSimm5(N, Width, Imm);
   }
 
-  bool selectRVVUimm5(SDValue N, unsigned Width, SDValue &Imm);
-  template <unsigned Width> bool selectRVVUimm5(SDValue N, SDValue &Imm) {
-    return selectRVVUimm5(N, Width, Imm);
-  }
-
   void addVectorLoadStoreOperands(SDNode *Node, unsigned SEWImm,
                                   const SDLoc &DL, unsigned CurOp,
                                   bool IsMasked, bool IsStridedOrIndexed,
