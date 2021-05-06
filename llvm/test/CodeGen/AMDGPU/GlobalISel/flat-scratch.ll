@@ -184,7 +184,6 @@ define amdgpu_kernel void @store_load_sindex_small_offset_kernel(i32 %idx) {
 ; GFX9-NEXT:    s_lshl_b32 s1, s0, 2
 ; GFX9-NEXT:    s_and_b32 s0, s0, 15
 ; GFX9-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 15
 ; GFX9-NEXT:    s_add_u32 s1, 0x104, s1
 ; GFX9-NEXT:    scratch_store_dword off, v0, s1
@@ -357,7 +356,6 @@ define amdgpu_kernel void @store_load_sindex_large_offset_kernel(i32 %idx) {
 ; GFX9-NEXT:    s_lshl_b32 s1, s0, 2
 ; GFX9-NEXT:    s_and_b32 s0, s0, 15
 ; GFX9-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 15
 ; GFX9-NEXT:    s_add_u32 s1, 0x4004, s1
 ; GFX9-NEXT:    scratch_store_dword off, v0, s1
