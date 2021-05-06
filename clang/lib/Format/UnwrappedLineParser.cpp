@@ -1480,9 +1480,9 @@ void UnwrappedLineParser::parseStructuralElement() {
     }
     case tok::equal:
       // Fat arrows (=>) have tok::TokenKind tok::equal but TokenType
-      // TT_JsFatArrow. The always start an expression or a child block if
+      // TT_FatArrow. The always start an expression or a child block if
       // followed by a curly.
-      if (FormatTok->is(TT_JsFatArrow)) {
+      if (FormatTok->is(TT_FatArrow)) {
         nextToken();
         if (FormatTok->is(tok::l_brace)) {
           // C# may break after => if the next character is a newline.
@@ -1588,7 +1588,7 @@ bool UnwrappedLineParser::tryToParsePropertyAccessor() {
       --Line->Level;
       break;
     case tok::equal:
-      if (FormatTok->is(TT_JsFatArrow)) {
+      if (FormatTok->is(TT_FatArrow)) {
         ++Line->Level;
         do {
           nextToken();
@@ -1791,7 +1791,7 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
   // replace this by using parseAssigmentExpression() inside.
   do {
     if (Style.isCSharp()) {
-      if (FormatTok->is(TT_JsFatArrow)) {
+      if (FormatTok->is(TT_FatArrow)) {
         nextToken();
         // Fat arrows can be followed by simple expressions or by child blocks
         // in curly braces.
@@ -1807,7 +1807,7 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
         tryToParseJSFunction();
         continue;
       }
-      if (FormatTok->is(TT_JsFatArrow)) {
+      if (FormatTok->is(TT_FatArrow)) {
         nextToken();
         // Fat arrows can be followed by simple expressions or by child blocks
         // in curly braces.
