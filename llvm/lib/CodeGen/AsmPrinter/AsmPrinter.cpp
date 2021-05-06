@@ -953,9 +953,9 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
     switch (Op.getType()) {
     case MachineOperand::MO_FPImmediate: {
       APFloat APF = APFloat(Op.getFPImm()->getValueAPF());
-      if (Op.getFPImm()->getType()->isFloatTy()) {
-        OS << (double)APF.convertToFloat();
-      } else if (Op.getFPImm()->getType()->isDoubleTy()) {
+      Type *ImmTy = Op.getFPImm()->getType();
+      if (ImmTy->isBFloatTy() || ImmTy->isHalfTy() || ImmTy->isFloatTy() ||
+          ImmTy->isDoubleTy()) {
         OS << APF.convertToDouble();
       } else {
         // There is no good way to print long double.  Convert a copy to
