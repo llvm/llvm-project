@@ -2017,7 +2017,7 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(
               uint32_t line_idx = line_table->FindLineEntryIndexByFileIndex(
                   0, file_idx, src_location_spec, &sc.line_entry);
               found_line = sc.line_entry.line;
-              found_column - sc.line_entry.column;
+              found_column = sc.line_entry.column;
 
               while (line_idx != UINT32_MAX) {
                 sc.function = nullptr;
@@ -2034,7 +2034,8 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(
 
                 SourceLocationSpec found_location_spec(
                     file_spec, found_line, found_column,
-                    /*check_inlines=*/false, /*exact=*/true) sc_list.Append(sc);
+                    /*check_inlines=*/false, /*exact=*/true);
+                sc_list.Append(sc);
                 line_idx = line_table->FindLineEntryIndexByFileIndex(
                     line_idx + 1, file_idx, found_location_spec,
                     &sc.line_entry);
