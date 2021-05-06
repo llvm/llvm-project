@@ -378,8 +378,8 @@ define i1 @bools(i1 %a, i1 %b, i1 %c) {
 
 define i1 @bools_logical(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @bools_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i1 [[B:%.*]], i1 [[A:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[B:%.*]], i1 [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %not = xor i1 %c, -1
   %and1 = select i1 %not, i1 %a, i1 false
@@ -409,9 +409,9 @@ define i1 @bools_multi_uses1(i1 %a, i1 %b, i1 %c) {
 define i1 @bools_multi_uses1_logical(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @bools_multi_uses1_logical(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[NOT]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C]], i1 [[B:%.*]], i1 [[A]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[TMP1]], [[AND1]]
+; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[NOT]], i1 [[A:%.*]], i1 false
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C]], i1 [[B:%.*]], i1 [[A]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[OR]], [[AND1]]
 ; CHECK-NEXT:    ret i1 [[XOR]]
 ;
   %not = xor i1 %c, -1
@@ -441,8 +441,13 @@ define i1 @bools_multi_uses2(i1 %a, i1 %b, i1 %c) {
 
 define i1 @bools_multi_uses2_logical(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @bools_multi_uses2_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i1 [[B:%.*]], i1 [[A:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[C:%.*]], true
+; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[NOT]], i1 [[A:%.*]], i1 false
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[C]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C]], i1 [[B]], i1 [[A]]
+; CHECK-NEXT:    [[ADD:%.*]] = xor i1 [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[AND3:%.*]] = select i1 [[OR]], i1 [[ADD]], i1 false
+; CHECK-NEXT:    ret i1 [[AND3]]
 ;
   %not = xor i1 %c, -1
   %and1 = select i1 %not, i1 %a, i1 false

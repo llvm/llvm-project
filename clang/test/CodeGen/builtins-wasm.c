@@ -284,28 +284,28 @@ f64x2 replace_lane_f64x2(f64x2 v, double x) {
   // WEBASSEMBLY-NEXT: ret
 }
 
-i8x16 load8_lane(signed char *p, i8x16 v) {
+i8x16 load8_lane(const signed char *p, i8x16 v) {
   return __builtin_wasm_load8_lane(p, v, 0);
   // WEBASSEMBLY: tail call <16 x i8> @llvm.wasm.load8.lane(
   // WEBASSEMBLY-SAME: i8* %p, <16 x i8> %v, i32 0)
   // WEBASSEMBLY-NEXT: ret
 }
 
-i16x8 load16_lane(short *p, i16x8 v) {
+i16x8 load16_lane(const short *p, i16x8 v) {
   return __builtin_wasm_load16_lane(p, v, 0);
   // WEBASSEMBLY: tail call <8 x i16> @llvm.wasm.load16.lane(
   // WEBASSEMBLY-SAME: i16* %p, <8 x i16> %v, i32 0)
   // WEBASSEMBLY-NEXT: ret
 }
 
-i32x4 load32_lane(int *p, i32x4 v) {
+i32x4 load32_lane(const int *p, i32x4 v) {
   return __builtin_wasm_load32_lane(p, v, 0);
   // WEBASSEMBLY: tail call <4 x i32> @llvm.wasm.load32.lane(
   // WEBASSEMBLY-SAME: i32* %p, <4 x i32> %v, i32 0)
   // WEBASSEMBLY-NEXT: ret
 }
 
-i64x2 load64_lane(long long *p, i64x2 v) {
+i64x2 load64_lane(const long long *p, i64x2 v) {
   return __builtin_wasm_load64_lane(p, v, 0);
   // WEBASSEMBLY: tail call <2 x i64> @llvm.wasm.load64.lane(
   // WEBASSEMBLY-SAME: i64* %p, <2 x i64> %v, i32 0)
@@ -857,7 +857,7 @@ i8x16 narrow_s_i8x16_i16x8(i16x8 low, i16x8 high) {
   // WEBASSEMBLY: ret
 }
 
-u8x16 narrow_u_i8x16_i16x8(u16x8 low, u16x8 high) {
+u8x16 narrow_u_i8x16_i16x8(i16x8 low, i16x8 high) {
   return __builtin_wasm_narrow_u_i8x16_i16x8(low, high);
   // WEBASSEMBLY: call <16 x i8> @llvm.wasm.narrow.unsigned.v16i8.v8i16(
   // WEBASSEMBLY-SAME: <8 x i16> %low, <8 x i16> %high)
@@ -871,7 +871,7 @@ i16x8 narrow_s_i16x8_i32x4(i32x4 low, i32x4 high) {
   // WEBASSEMBLY: ret
 }
 
-u16x8 narrow_u_i16x8_i32x4(u32x4 low, u32x4 high) {
+u16x8 narrow_u_i16x8_i32x4(i32x4 low, i32x4 high) {
   return __builtin_wasm_narrow_u_i16x8_i32x4(low, high);
   // WEBASSEMBLY: call <8 x i16> @llvm.wasm.narrow.unsigned.v8i16.v4i32(
   // WEBASSEMBLY-SAME: <4 x i32> %low, <4 x i32> %high)
@@ -904,13 +904,13 @@ f64x2 wasm_promote_low_f32x4_f64x2(f32x4 x) {
   // WEBASSEMBLY: ret
 }
 
-i32x4 load32_zero(int *p) {
+i32x4 load32_zero(const int *p) {
   return __builtin_wasm_load32_zero(p);
   // WEBASSEMBLY: call <4 x i32> @llvm.wasm.load32.zero(i32* %p)
   // WEBASSEMBLY: ret
 }
 
-i64x2 load64_zero(long long *p) {
+i64x2 load64_zero(const long long *p) {
   return __builtin_wasm_load64_zero(p);
   // WEBASSEMBLY: call <2 x i64> @llvm.wasm.load64.zero(i64* %p)
   // WEBASSEMBLY: ret

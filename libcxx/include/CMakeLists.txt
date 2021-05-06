@@ -41,7 +41,6 @@ set(files
   __ranges/view.h
   __ranges/size.h
   __split_buffer
-  __sso_allocator
   __std_stream
   __string
   __threading_support

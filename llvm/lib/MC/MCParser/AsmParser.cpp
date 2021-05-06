@@ -729,21 +729,21 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
   Out.setStartTokLocPtr(&StartTokLoc);
 
   // Initialize the platform / file format parser.
-  switch (Ctx.getObjectFileInfo()->getObjectFileType()) {
-  case MCObjectFileInfo::IsCOFF:
+  switch (Ctx.getObjectFileType()) {
+  case MCContext::IsCOFF:
     PlatformParser.reset(createCOFFAsmParser());
     break;
-  case MCObjectFileInfo::IsMachO:
+  case MCContext::IsMachO:
     PlatformParser.reset(createDarwinAsmParser());
     IsDarwin = true;
     break;
-  case MCObjectFileInfo::IsELF:
+  case MCContext::IsELF:
     PlatformParser.reset(createELFAsmParser());
     break;
-  case MCObjectFileInfo::IsWasm:
+  case MCContext::IsWasm:
     PlatformParser.reset(createWasmAsmParser());
     break;
-  case MCObjectFileInfo::IsXCOFF:
+  case MCContext::IsXCOFF:
     report_fatal_error(
         "Need to implement createXCOFFAsmParser for XCOFF format.");
     break;

@@ -77,26 +77,6 @@ static HeaderFileType getOutputType(const InputArgList &args) {
   }
 }
 
-// Search for all possible combinations of `{root}/{name}.{extension}`.
-// If \p extensions are not specified, then just search for `{root}/{name}`.
-static Optional<StringRef>
-findPathCombination(const Twine &name, const std::vector<StringRef> &roots,
-                    ArrayRef<StringRef> extensions = {""}) {
-  SmallString<261> base;
-  for (StringRef dir : roots) {
-    base = dir;
-    path::append(base, name);
-    for (StringRef ext : extensions) {
-      Twine location = base + ext;
-      if (fs::exists(location))
-        return saver.save(location.str());
-      else
-        depTracker->logFileNotFound(location);
-    }
-  }
-  return {};
-}
-
 static Optional<StringRef> findLibrary(StringRef name) {
   if (config->searchDylibsFirst) {
     if (Optional<StringRef> path = findPathCombination(
@@ -107,19 +87,6 @@ static Optional<StringRef> findLibrary(StringRef name) {
   }
   return findPathCombination("lib" + name, config->librarySearchPaths,
                              {".tbd", ".dylib", ".a"});
-}
-
-// If -syslibroot is specified, absolute paths to non-object files may be
-// rerooted.
-static StringRef rerootPath(StringRef path) {
-  if (!path::is_absolute(path, path::Style::posix) || path.endswith(".o"))
-    return path;
-
-  if (Optional<StringRef> rerootedPath =
-          findPathCombination(path, config->systemLibraryRoots))
-    return *rerootedPath;
-
-  return path;
 }
 
 static Optional<std::string> findFramework(StringRef name) {
@@ -244,7 +211,7 @@ static std::vector<ArchiveMember> getArchiveMembers(MemoryBufferRef mb) {
   std::vector<ArchiveMember> v;
   Error err = Error::success();
 
-  // Thin archives refer to .o files, so --reproduces needs the .o files too.
+  // Thin archives refer to .o files, so --reproduce needs the .o files too.
   bool addToTar = archive->isThin() && tar;
 
   for (const Archive::Child &c : archive->children(err)) {
@@ -925,6 +892,13 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     return true;
   }
 
+  config = make<Configuration>();
+  symtab = make<SymbolTable>();
+  target = createTargetInfo(args);
+  depTracker =
+      make<DependencyTracker>(args.getLastArgValue(OPT_dependency_info));
+
+  config->systemLibraryRoots = getSystemLibraryRoots(args);
   if (const char *path = getReproduceOption(args)) {
     // Note that --reproduce is a debug option so you can ignore it
     // if you are trying to understand the whole picture of the code.
@@ -938,13 +912,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       error("--reproduce: " + toString(errOrWriter.takeError()));
     }
   }
-
-  config = make<Configuration>();
-  symtab = make<SymbolTable>();
-  target = createTargetInfo(args);
-
-  depTracker =
-      make<DependencyTracker>(args.getLastArgValue(OPT_dependency_info, ""));
 
   if (auto *arg = args.getLastArg(OPT_threads_eq)) {
     StringRef v(arg->getValue());
@@ -1035,7 +1002,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   config->undefinedSymbolTreatment = getUndefinedSymbolTreatment(args);
 
-  config->systemLibraryRoots = getSystemLibraryRoots(args);
   config->librarySearchPaths =
       getLibrarySearchPaths(args, config->systemLibraryRoots);
   config->frameworkSearchPaths =

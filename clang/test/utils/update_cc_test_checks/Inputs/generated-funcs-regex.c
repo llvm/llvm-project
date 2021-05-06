@@ -9,4 +9,5 @@ void foo(int a)
         use(a);
 
     __test_offloading_42_abcdef_bar_l123();
+    int somevar_abc123_;
 }

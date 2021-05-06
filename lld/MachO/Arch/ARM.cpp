@@ -12,9 +12,11 @@
 #include "Target.h"
 
 #include "lld/Common/ErrorHandler.h"
+#include "llvm/ADT/Bitfields.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Endian.h"
 
+using namespace llvm;
 using namespace llvm::MachO;
 using namespace llvm::support::endian;
 using namespace lld;
@@ -28,7 +30,7 @@ struct ARM : TargetInfo {
   int64_t getEmbeddedAddend(MemoryBufferRef, uint64_t offset,
                             const relocation_info) const override;
   void relocateOne(uint8_t *loc, const Reloc &, uint64_t va,
-                   uint64_t relocVA) const override;
+                   uint64_t pc) const override;
 
   void writeStub(uint8_t *buf, const Symbol &) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
@@ -50,8 +52,8 @@ const RelocAttrs &ARM::getRelocAttrs(uint8_t type) const {
       {"SECTDIFF", /* FIXME populate this */ B(_0)},
       {"LOCAL_SECTDIFF", /* FIXME populate this */ B(_0)},
       {"PB_LA_PTR", /* FIXME populate this */ B(_0)},
-      {"BR24", /* FIXME populate this */ B(_0)},
-      {"BR22", /* FIXME populate this */ B(_0)},
+      {"BR24", B(PCREL) | B(LOCAL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
+      {"BR22", B(PCREL) | B(LOCAL) | B(EXTERN) | B(BRANCH) | B(BYTE4)},
       {"32BIT_BRANCH", /* FIXME populate this */ B(_0)},
       {"HALF", /* FIXME populate this */ B(_0)},
       {"HALF_SECTDIFF", /* FIXME populate this */ B(_0)},
@@ -65,12 +67,77 @@ const RelocAttrs &ARM::getRelocAttrs(uint8_t type) const {
 
 int64_t ARM::getEmbeddedAddend(MemoryBufferRef mb, uint64_t offset,
                                relocation_info rel) const {
-  fatal("TODO: implement this");
+  // FIXME: implement this
+  return 0;
 }
 
+template <int N> using BitfieldFlag = Bitfield::Element<bool, N, 1>;
+
+// ARM BL encoding:
+//
+// 30       28        24                                              0
+// +---------+---------+----------------------------------------------+
+// |  cond   | 1 0 1 1 |                  imm24                       |
+// +---------+---------+----------------------------------------------+
+//
+// `cond` here varies depending on whether we have bleq, blne, etc.
+// `imm24` encodes a 26-bit pcrel offset -- last 2 bits are zero as ARM
+// functions are 4-byte-aligned.
+//
+// ARM BLX encoding:
+//
+// 30       28        24                                              0
+// +---------+---------+----------------------------------------------+
+// | 1 1 1 1 | 1 0 1 H |                  imm24                       |
+// +---------+---------+----------------------------------------------+
+//
+// Since Thumb functions are 2-byte-aligned, we need one extra bit to encode
+// the offset -- that is the H bit.
+//
+// BLX is always unconditional, so while we can convert directly from BLX to BL,
+// we need to insert a shim if a BL's target is a Thumb function.
+//
+// Helper aliases for decoding BL / BLX:
+using Cond = Bitfield::Element<uint32_t, 28, 4>;
+using Imm24 = Bitfield::Element<int32_t, 0, 24>;
+
 void ARM::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
-                      uint64_t relocVA) const {
-  fatal("TODO: implement this");
+                      uint64_t pc) const {
+  switch (r.type) {
+  case ARM_RELOC_BR24: {
+    uint32_t base = read32le(loc);
+    bool isBlx = Bitfield::get<Cond>(base) == 0xf;
+    const Symbol *sym = r.referent.get<Symbol *>();
+    int32_t offset = value - (pc + 8);
+
+    if (auto *defined = dyn_cast<Defined>(sym)) {
+      if (!isBlx && defined->thumb) {
+        error("TODO: implement interworking shim");
+        return;
+      } else if (isBlx && !defined->thumb) {
+        Bitfield::set<Cond>(base, 0xe); // unconditional BL
+        Bitfield::set<BitfieldFlag<24>>(base, 1);
+        isBlx = false;
+      }
+    } else {
+      error("TODO: Implement ARM_RELOC_BR24 for dylib symbols");
+      return;
+    }
+
+    if (isBlx) {
+      assert((0x1 & value) == 0);
+      Bitfield::set<Imm24>(base, offset >> 2);
+      Bitfield::set<BitfieldFlag<24>>(base, (offset >> 1) & 1); // H bit
+    } else {
+      assert((0x3 & value) == 0);
+      Bitfield::set<Imm24>(base, offset >> 2);
+    }
+    write32le(loc, base);
+    break;
+  }
+  default:
+    fatal("unhandled relocation type");
+  }
 }
 
 void ARM::writeStub(uint8_t *buf, const Symbol &sym) const {

@@ -96,6 +96,13 @@ def ScalableVectorType : ArmSVE_Type<"ScalableVector"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Additional LLVM type constraints
+//===----------------------------------------------------------------------===//
+def LLVMScalableVectorType :
+  Type<CPred<"$_self.isa<::mlir::LLVM::LLVMScalableVectorType>()">,
+       "LLVM dialect scalable vector type">;
+
+//===----------------------------------------------------------------------===//
 // ArmSVE op definitions
 //===----------------------------------------------------------------------===//
 
@@ -156,6 +163,52 @@ class ScalableIOp<string mnemonic, string op_description,
   let results = (outs ScalableVectorOf<[I8, I16, I32, I64]>:$dst);
   let assemblyFormat =
     "$src1 `,` $src2 attr-dict `:` type($src1)";
+}
+
+class ScalableMaskedFOp<string mnemonic, string op_description,
+                        list<OpTrait> traits = []> :
+  ArmSVE_Op<mnemonic, !listconcat(traits,
+                       [AllTypesMatch<["src1", "src2", "res"]>,
+                        TypesMatchWith<
+                          "mask has i1 element type and same shape as operands",
+                          "src1", "mask", "getI1SameShape($_self)">])> {
+  let summary = "masked " # op_description # " for scalable vectors of floats";
+  let description = [{
+    The `arm_sve.}] # mnemonic # [{` operation takes one scalable vector mask
+    and two scalable vector operands, and perform floating point }] #
+    op_description # [{ on active lanes. Inactive lanes will keep the value of
+    the first operand.}];
+  let arguments = (ins
+          ScalableVectorOf<[I1]>:$mask,
+          ScalableVectorOf<[AnyFloat]>:$src1,
+          ScalableVectorOf<[AnyFloat]>:$src2
+  );
+  let results = (outs ScalableVectorOf<[AnyFloat]>:$res);
+  let assemblyFormat =
+    "$mask `,` $src1 `,` $src2 attr-dict `:` type($mask) `,` type($res)";
+}
+
+class ScalableMaskedIOp<string mnemonic, string op_description,
+                        list<OpTrait> traits = []> :
+  ArmSVE_Op<mnemonic, !listconcat(traits,
+                       [AllTypesMatch<["src1", "src2", "res"]>,
+                        TypesMatchWith<
+                          "mask has i1 element type and same shape as operands",
+                          "src1", "mask", "getI1SameShape($_self)">])> {
+  let summary = "masked " # op_description # " for scalable vectors of integers";
+  let description = [{
+    The `arm_sve.}] # mnemonic # [{` operation takes one scalable vector mask
+    and two scalable vector operands, and perform integer }] #
+    op_description # [{ on active lanes. Inactive lanes will keep the value of
+    the first operand.}];
+  let arguments = (ins
+          ScalableVectorOf<[I1]>:$mask,
+          ScalableVectorOf<[I8, I16, I32, I64]>:$src1,
+          ScalableVectorOf<[I8, I16, I32, I64]>:$src2
+  );
+  let results = (outs ScalableVectorOf<[I8, I16, I32, I64]>:$res);
+  let assemblyFormat =
+    "$mask `,` $src1 `,` $src2 attr-dict `:` type($mask) `,` type($res)";
 }
 
 def SdotOp : ArmSVE_Op<"sdot",
@@ -321,21 +374,94 @@ def ScalableUDivIOp : ScalableIOp<"divi_unsigned", "unsigned division">;
 
 def ScalableDivFOp : ScalableFOp<"divf", "division">;
 
+def ScalableMaskedAddIOp : ScalableMaskedIOp<"masked.addi", "addition",
+                                             [Commutative]>;
+
+def ScalableMaskedAddFOp : ScalableMaskedFOp<"masked.addf", "addition",
+                            [Commutative]>;
+
+def ScalableMaskedSubIOp : ScalableMaskedIOp<"masked.subi", "subtraction">;
+
+def ScalableMaskedSubFOp : ScalableMaskedFOp<"masked.subf", "subtraction">;
+
+def ScalableMaskedMulIOp : ScalableMaskedIOp<"masked.muli", "multiplication",
+                            [Commutative]>;
+
+def ScalableMaskedMulFOp : ScalableMaskedFOp<"masked.mulf", "multiplication",
+                            [Commutative]>;
+
+def ScalableMaskedSDivIOp : ScalableMaskedIOp<"masked.divi_signed",
+                                              "signed division">;
+
+def ScalableMaskedUDivIOp : ScalableMaskedIOp<"masked.divi_unsigned",
+                                              "unsigned division">;
+
+def ScalableMaskedDivFOp : ScalableMaskedFOp<"masked.divf", "division">;
+
 def UmmlaIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"ummla">,
-  Arguments<(ins LLVM_AnyVector, LLVM_AnyVector, LLVM_AnyVector)>;
+  Arguments<(ins LLVMScalableVectorType, LLVMScalableVectorType,
+             LLVMScalableVectorType)>;
 
 def SmmlaIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"smmla">,
-  Arguments<(ins LLVM_AnyVector, LLVM_AnyVector, LLVM_AnyVector)>;
+  Arguments<(ins LLVMScalableVectorType, LLVMScalableVectorType,
+             LLVMScalableVectorType)>;
 
 def SdotIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"sdot">,
-  Arguments<(ins LLVM_AnyVector, LLVM_AnyVector, LLVM_AnyVector)>;
+  Arguments<(ins LLVMScalableVectorType, LLVMScalableVectorType,
+             LLVMScalableVectorType)>;
 
 def UdotIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"udot">,
-  Arguments<(ins LLVM_AnyVector, LLVM_AnyVector, LLVM_AnyVector)>;
+  Arguments<(ins LLVMScalableVectorType, LLVMScalableVectorType,
+             LLVMScalableVectorType)>;
+
+def ScalableMaskedAddIIntrOp :
+  ArmSVE_IntrBinaryOverloadedOp<"add">,
+  Arguments<(ins LLVMScalableVectorType, LLVMScalableVectorType,
+             LLVMScalableVectorType)>;
+
+def ScalableMaskedAddFIntrOp :
+  ArmSVE_IntrBinaryOverloadedOp<"fadd">,
+  Arguments<(ins LLVMScalableVectorType, LLVMScalableVectorType,
+             LLVMScalableVectorType)>;
+
+def ScalableMaskedMulIIntrOp :
+  ArmSVE_IntrBinaryOverloadedOp<"mul">,
+  Arguments<(ins LLVMScalableVectorType, LLVMScalableVectorType,
+             LLVMScalableVectorType)>;
+
+def ScalableMaskedMulFIntrOp :
+  ArmSVE_IntrBinaryOverloadedOp<"fmul">,
+  Arguments<(ins LLVMScalableVectorType, LLVMScalableVectorType,
+             LLVMScalableVectorType)>;
+
+def ScalableMaskedSubIIntrOp :
+  ArmSVE_IntrBinaryOverloadedOp<"sub">,
+  Arguments<(ins LLVMScalableVectorType, LLVMScalableVectorType,
+             LLVMScalableVectorType)>;
+
+def ScalableMaskedSubFIntrOp :
+  ArmSVE_IntrBinaryOverloadedOp<"fsub">,
+  Arguments<(ins LLVMScalableVectorType, LLVMScalableVectorType,
+             LLVMScalableVectorType)>;
+
+def ScalableMaskedSDivIIntrOp :
+  ArmSVE_IntrBinaryOverloadedOp<"sdiv">,
+  Arguments<(ins LLVMScalableVectorType, LLVMScalableVectorType,
+             LLVMScalableVectorType)>;
+
+def ScalableMaskedUDivIIntrOp :
+  ArmSVE_IntrBinaryOverloadedOp<"udiv">,
+  Arguments<(ins LLVMScalableVectorType, LLVMScalableVectorType,
+             LLVMScalableVectorType)>;
+
+def ScalableMaskedDivFIntrOp :
+  ArmSVE_IntrBinaryOverloadedOp<"fdiv">,
+  Arguments<(ins LLVMScalableVectorType, LLVMScalableVectorType,
+             LLVMScalableVectorType)>;
 
 def VectorScaleIntrOp:
   ArmSVE_NonSVEIntrUnaryOverloadedOp<"vscale">;

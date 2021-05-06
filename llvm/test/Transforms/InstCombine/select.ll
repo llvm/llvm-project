@@ -25,7 +25,7 @@ define i32 @test6(i1 %C) {
 
 define i1 @trueval_is_true(i1 %C, i1 %X) {
 ; CHECK-LABEL: @trueval_is_true(
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[C:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %R = select i1 %C, i1 true, i1 %X
@@ -34,7 +34,7 @@ define i1 @trueval_is_true(i1 %C, i1 %X) {
 
 define <2 x i1> @trueval_is_true_vec(<2 x i1> %C, <2 x i1> %X) {
 ; CHECK-LABEL: @trueval_is_true_vec(
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[C:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %R = select <2 x i1> %C, <2 x i1> <i1 true, i1 true>, <2 x i1> %X
@@ -43,7 +43,7 @@ define <2 x i1> @trueval_is_true_vec(<2 x i1> %C, <2 x i1> %X) {
 
 define <2 x i1> @trueval_is_true_vec_undef_elt(<2 x i1> %C, <2 x i1> %X) {
 ; CHECK-LABEL: @trueval_is_true_vec_undef_elt(
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[C:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> <i1 undef, i1 true>, <2 x i1> [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %R = select <2 x i1> %C, <2 x i1> <i1 undef, i1 true>, <2 x i1> %X
@@ -52,7 +52,7 @@ define <2 x i1> @trueval_is_true_vec_undef_elt(<2 x i1> %C, <2 x i1> %X) {
 
 define i1 @test8(i1 %C, i1 %X) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[C:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[X:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %R = select i1 %C, i1 %X, i1 false
@@ -61,7 +61,7 @@ define i1 @test8(i1 %C, i1 %X) {
 
 define <2 x i1> @test8vec(<2 x i1> %C, <2 x i1> %X) {
 ; CHECK-LABEL: @test8vec(
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[C:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[X:%.*]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %R = select <2 x i1> %C, <2 x i1> %X, <2 x i1> <i1 false, i1 false>
@@ -70,7 +70,7 @@ define <2 x i1> @test8vec(<2 x i1> %C, <2 x i1> %X) {
 
 define <vscale x 2 x i1> @test8vvec(<vscale x 2 x i1> %C, <vscale x 2 x i1> %X) {
 ; CHECK-LABEL: @test8vvec(
-; CHECK-NEXT:    [[R:%.*]] = and <vscale x 2 x i1> [[C:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 2 x i1> [[C:%.*]], <vscale x 2 x i1> [[X:%.*]], <vscale x 2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[R]]
 ;
   %R = select <vscale x 2 x i1> %C, <vscale x 2 x i1> %X, <vscale x 2 x i1> zeroinitializer
@@ -80,7 +80,7 @@ define <vscale x 2 x i1> @test8vvec(<vscale x 2 x i1> %C, <vscale x 2 x i1> %X) 
 define i1 @test9(i1 %C, i1 %X) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOT_C]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOT_C]], i1 [[X:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %R = select i1 %C, i1 false, i1 %X
@@ -90,7 +90,7 @@ define i1 @test9(i1 %C, i1 %X) {
 define <2 x i1> @test9vec(<2 x i1> %C, <2 x i1> %X) {
 ; CHECK-LABEL: @test9vec(
 ; CHECK-NEXT:    [[NOT_C:%.*]] = xor <2 x i1> [[C:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[NOT_C]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[NOT_C]], <2 x i1> [[X:%.*]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %R = select <2 x i1> %C, <2 x i1> <i1 false, i1 false>, <2 x i1> %X
@@ -100,7 +100,7 @@ define <2 x i1> @test9vec(<2 x i1> %C, <2 x i1> %X) {
 define <vscale x 2 x i1> @test9vvec(<vscale x 2 x i1> %C, <vscale x 2 x i1> %X) {
 ; CHECK-LABEL: @test9vvec(
 ; CHECK-NEXT:    [[NOT_C:%.*]] = xor <vscale x 2 x i1> [[C:%.*]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[R:%.*]] = and <vscale x 2 x i1> [[NOT_C]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 2 x i1> [[NOT_C]], <vscale x 2 x i1> [[X:%.*]], <vscale x 2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[R]]
 ;
   %R = select <vscale x 2 x i1> %C, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> %X
@@ -110,7 +110,7 @@ define <vscale x 2 x i1> @test9vvec(<vscale x 2 x i1> %C, <vscale x 2 x i1> %X) 
 define i1 @test10(i1 %C, i1 %X) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[NOT_C]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOT_C]], i1 true, i1 [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %R = select i1 %C, i1 %X, i1 true
@@ -120,7 +120,7 @@ define i1 @test10(i1 %C, i1 %X) {
 define <2 x i1> @test10vec(<2 x i1> %C, <2 x i1> %X) {
 ; CHECK-LABEL: @test10vec(
 ; CHECK-NEXT:    [[NOT_C:%.*]] = xor <2 x i1> [[C:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[NOT_C]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[NOT_C]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %R = select <2 x i1> %C, <2 x i1> %X, <2 x i1> <i1 true, i1 true>
@@ -129,7 +129,7 @@ define <2 x i1> @test10vec(<2 x i1> %C, <2 x i1> %X) {
 
 define i1 @test23(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test23(
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %c = select i1 %a, i1 %b, i1 %a
@@ -138,7 +138,7 @@ define i1 @test23(i1 %a, i1 %b) {
 
 define <2 x i1> @test23vec(<2 x i1> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @test23vec(
-; CHECK-NEXT:    [[C:%.*]] = and <2 x i1> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %c = select <2 x i1> %a, <2 x i1> %b, <2 x i1> %a
@@ -147,7 +147,7 @@ define <2 x i1> @test23vec(<2 x i1> %a, <2 x i1> %b) {
 
 define i1 @test24(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test24(
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %c = select i1 %a, i1 %a, i1 %b
@@ -156,7 +156,7 @@ define i1 @test24(i1 %a, i1 %b) {
 
 define <2 x i1> @test24vec(<2 x i1> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @test24vec(
-; CHECK-NEXT:    [[C:%.*]] = or <2 x i1> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[A:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %c = select <2 x i1> %a, <2 x i1> %a, <2 x i1> %b
@@ -166,7 +166,7 @@ define <2 x i1> @test24vec(<2 x i1> %a, <2 x i1> %b) {
 define i1 @test62(i1 %A, i1 %B) {
 ; CHECK-LABEL: @test62(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[NOT]], [[B:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[NOT]], i1 [[B:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %not = xor i1 %A, true
@@ -177,7 +177,7 @@ define i1 @test62(i1 %A, i1 %B) {
 define <2 x i1> @test62vec(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @test62vec(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[C:%.*]] = and <2 x i1> [[NOT]], [[B:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[NOT]], <2 x i1> [[B:%.*]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %not = xor <2 x i1> %A, <i1 true, i1 true>
@@ -188,7 +188,7 @@ define <2 x i1> @test62vec(<2 x i1> %A, <2 x i1> %B) {
 define i1 @test63(i1 %A, i1 %B) {
 ; CHECK-LABEL: @test63(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[NOT]], [[B:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[NOT]], i1 true, i1 [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %not = xor i1 %A, true
@@ -199,7 +199,7 @@ define i1 @test63(i1 %A, i1 %B) {
 define <2 x i1> @test63vec(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @test63vec(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[C:%.*]] = or <2 x i1> [[NOT]], [[B:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[NOT]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %not = xor <2 x i1> %A, <i1 true, i1 true>
@@ -317,7 +317,7 @@ define i1 @test14a(i1 %C, i32 %X) {
 ; CHECK-LABEL: @test14a(
 ; CHECK-NEXT:    [[R1:%.*]] = icmp slt i32 [[X:%.*]], 1
 ; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[R1]], [[NOT_C]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOT_C]], i1 true, i1 [[R1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %V = select i1 %C, i32 %X, i32 0
@@ -329,7 +329,7 @@ define i1 @test14a(i1 %C, i32 %X) {
 define i1 @test14b(i1 %C, i32 %X) {
 ; CHECK-LABEL: @test14b(
 ; CHECK-NEXT:    [[R1:%.*]] = icmp slt i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[R1]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[R1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %V = select i1 %C, i32 0, i32 %X
@@ -400,7 +400,7 @@ define i1 @test17(i32* %X, i1 %C) {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:    [[RV1:%.*]] = icmp eq i32* [[X:%.*]], null
 ; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[RV:%.*]] = or i1 [[RV1]], [[NOT_C]]
+; CHECK-NEXT:    [[RV:%.*]] = select i1 [[NOT_C]], i1 true, i1 [[RV1]]
 ; CHECK-NEXT:    ret i1 [[RV]]
 ;
   %R = select i1 %C, i32* %X, i32* null

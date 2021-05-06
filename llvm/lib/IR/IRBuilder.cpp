@@ -1027,6 +1027,34 @@ Value *IRBuilderBase::CreateVectorReverse(Value *V, const Twine &Name) {
   return CreateShuffleVector(V, ShuffleMask, Name);
 }
 
+Value *IRBuilderBase::CreateVectorSplice(Value *V1, Value *V2, int64_t Imm,
+                                         const Twine &Name) {
+  assert(isa<VectorType>(V1->getType()) && "Unexpected type");
+  assert(V1->getType() == V2->getType() &&
+         "Splice expects matching operand types!");
+
+  if (auto *VTy = dyn_cast<ScalableVectorType>(V1->getType())) {
+    Module *M = BB->getParent()->getParent();
+    Function *F = Intrinsic::getDeclaration(
+        M, Intrinsic::experimental_vector_splice, VTy);
+
+    Value *Ops[] = {V1, V2, getInt32(Imm)};
+    return Insert(CallInst::Create(F, Ops), Name);
+  }
+
+  unsigned NumElts = cast<FixedVectorType>(V1->getType())->getNumElements();
+  assert(((-Imm <= NumElts) || (Imm < NumElts)) &&
+         "Invalid immediate for vector splice!");
+
+  // Keep the original behaviour for fixed vector
+  unsigned Idx = (NumElts + Imm) % NumElts;
+  SmallVector<int, 8> Mask;
+  for (unsigned I = 0; I < NumElts; ++I)
+    Mask.push_back(Idx + I);
+
+  return CreateShuffleVector(V1, V2, Mask);
+}
+
 Value *IRBuilderBase::CreateVectorSplat(unsigned NumElts, Value *V,
                                         const Twine &Name) {
   auto EC = ElementCount::getFixed(NumElts);

@@ -70,6 +70,8 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
     return nullptr;
   if (!forOp.getRegionIterArgs()[pos].hasOneUse())
     return nullptr;
+  if (!yielded.hasOneUse())
+    return nullptr;
 
   Optional<AtomicRMWKind> maybeKind =
       TypeSwitch<Operation *, Optional<AtomicRMWKind>>(definition)
@@ -123,6 +125,14 @@ bool mlir::isLoopParallel(AffineForOp forOp,
       return false;
   }
 
+  // Check memory dependences.
+  return isLoopMemoryParallel(forOp);
+}
+
+/// Returns true if `forOp' doesn't have memory dependences preventing
+/// parallelization. This function doesn't check iter_args and should be used
+/// only as a building block for full parallel-checking functions.
+bool mlir::isLoopMemoryParallel(AffineForOp forOp) {
   // Collect all load and store ops in loop nest rooted at 'forOp'.
   SmallVector<Operation *, 8> loadAndStoreOps;
   auto walkResult = forOp.walk([&](Operation *op) -> WalkResult {
