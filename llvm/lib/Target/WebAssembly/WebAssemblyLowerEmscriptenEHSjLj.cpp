@@ -47,7 +47,7 @@
 ///    These variables are used for both exceptions and setjmp/longjmps.
 ///    __THREW__ indicates whether an exception or a longjmp occurred or not. 0
 ///    means nothing occurred, 1 means an exception occurred, and other numbers
-///    mean a longjmp occurred. In the case of longjmp, __threwValue variable
+///    mean a longjmp occurred. In the case of longjmp, __THREW__ variable
 ///    indicates the corresponding setjmp buffer the longjmp corresponds to.
 ///
 /// * Exception handling
@@ -55,7 +55,7 @@
 /// 2) We assume the existence of setThrew and setTempRet0/getTempRet0 functions
 ///    at link time. setThrew exists in Emscripten's compiler-rt:
 ///
-///    void setThrew(int threw, int value) {
+///    void setThrew(uintptr_t threw, int value) {
 ///      if (__THREW__ == 0) {
 ///        __THREW__ = threw;
 ///        __threwValue = value;
@@ -292,13 +292,12 @@ static bool canThrow(const Value *V) {
   return true;
 }
 
-// Get a global variable with the given name.  If it doesn't exist declare it,
-// which will generate an import and asssumes that it will exist at link time.
-static GlobalVariable *getGlobalVariableI32(Module &M, IRBuilder<> &IRB,
-                                            WebAssemblyTargetMachine &TM,
-                                            const char *Name) {
-  auto Int32Ty = IRB.getInt32Ty();
-  auto *GV = dyn_cast<GlobalVariable>(M.getOrInsertGlobal(Name, Int32Ty));
+// Get a global variable with the given name. If it doesn't exist declare it,
+// which will generate an import and assume that it will exist at link time.
+static GlobalVariable *getGlobalVariable(Module &M, Type *Ty,
+                                         WebAssemblyTargetMachine &TM,
+                                         const char *Name) {
+  auto *GV = dyn_cast<GlobalVariable>(M.getOrInsertGlobal(Name, Ty));
   if (!GV)
     report_fatal_error(Twine("unable to create global: ") + Name);
 
@@ -354,6 +353,28 @@ static Function *getEmscriptenFunction(FunctionType *Ty, const Twine &Name,
   return F;
 }
 
+// Returns an integer type for the target architecture's address space.
+// i32 for wasm32 and i64 for wasm64.
+static Type *getAddrIntType(Module *M) {
+  IRBuilder<> IRB(M->getContext());
+  return IRB.getIntNTy(M->getDataLayout().getPointerSizeInBits());
+}
+
+// Returns an integer pointer type for the target architecture's address space.
+// i32* for wasm32 and i64* for wasm64.
+static Type *getAddrPtrType(Module *M) {
+  return Type::getIntNPtrTy(M->getContext(),
+                            M->getDataLayout().getPointerSizeInBits());
+}
+
+// Returns an integer whose type is the integer type for the target's address
+// space. Returns (i32 C) for wasm32 and (i64 C) for wasm64, when C is the
+// integer.
+static Value *getAddrSizeInt(Module *M, uint64_t C) {
+  IRBuilder<> IRB(M->getContext());
+  return IRB.getIntN(M->getDataLayout().getPointerSizeInBits(), C);
+}
+
 // Returns __cxa_find_matching_catch_N function, where N = NumClauses + 2.
 // This is because a landingpad instruction contains two more arguments, a
 // personality function and a cleanup bit, and __cxa_find_matching_catch_N
@@ -381,7 +402,8 @@ WebAssemblyLowerEmscriptenEHSjLj::getFindMatchingCatch(Module &M,
 // Returns %__THREW__.val, which indicates whether an exception is thrown (or
 // whether longjmp occurred), for future use.
 Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallBase *CI) {
-  LLVMContext &C = CI->getModule()->getContext();
+  Module *M = CI->getModule();
+  LLVMContext &C = M->getContext();
 
   // If we are calling a function that is noreturn, we must remove that
   // attribute. The code we insert here does expect it to return, after we
@@ -397,7 +419,7 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallBase *CI) {
 
   // Pre-invoke
   // __THREW__ = 0;
-  IRB.CreateStore(IRB.getInt32(0), ThrewGV);
+  IRB.CreateStore(getAddrSizeInt(M, 0), ThrewGV);
 
   // Invoke function wrapper in JavaScript
   SmallVector<Value *, 16> Args;
@@ -445,8 +467,8 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallBase *CI) {
   // Post-invoke
   // %__THREW__.val = __THREW__; __THREW__ = 0;
   Value *Threw =
-      IRB.CreateLoad(IRB.getInt32Ty(), ThrewGV, ThrewGV->getName() + ".val");
-  IRB.CreateStore(IRB.getInt32(0), ThrewGV);
+      IRB.CreateLoad(getAddrIntType(M), ThrewGV, ThrewGV->getName() + ".val");
+  IRB.CreateStore(getAddrSizeInt(M, 0), ThrewGV);
   return Threw;
 }
 
@@ -541,7 +563,8 @@ void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
     Value *SetjmpTableSize, Value *&Label, Value *&LongjmpResult,
     BasicBlock *&EndBB) {
   Function *F = BB->getParent();
-  LLVMContext &C = BB->getModule()->getContext();
+  Module *M = F->getParent();
+  LLVMContext &C = M->getContext();
   IRBuilder<> IRB(C);
   IRB.SetCurrentDebugLocation(DL);
 
@@ -550,7 +573,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
   BasicBlock *ThenBB1 = BasicBlock::Create(C, "if.then1", F);
   BasicBlock *ElseBB1 = BasicBlock::Create(C, "if.else1", F);
   BasicBlock *EndBB1 = BasicBlock::Create(C, "if.end", F);
-  Value *ThrewCmp = IRB.CreateICmpNE(Threw, IRB.getInt32(0));
+  Value *ThrewCmp = IRB.CreateICmpNE(Threw, getAddrSizeInt(M, 0));
   Value *ThrewValue = IRB.CreateLoad(IRB.getInt32Ty(), ThrewValueGV,
                                      ThrewValueGV->getName() + ".val");
   Value *ThrewValueCmp = IRB.CreateICmpNE(ThrewValue, IRB.getInt32(0));
@@ -562,10 +585,10 @@ void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
   IRB.SetInsertPoint(ThenBB1);
   BasicBlock *ThenBB2 = BasicBlock::Create(C, "if.then2", F);
   BasicBlock *EndBB2 = BasicBlock::Create(C, "if.end2", F);
-  Value *ThrewInt = IRB.CreateIntToPtr(Threw, Type::getInt32PtrTy(C),
-                                       Threw->getName() + ".i32p");
-  Value *LoadedThrew = IRB.CreateLoad(IRB.getInt32Ty(), ThrewInt,
-                                      ThrewInt->getName() + ".loaded");
+  Value *ThrewPtr =
+      IRB.CreateIntToPtr(Threw, getAddrPtrType(M), Threw->getName() + ".p");
+  Value *LoadedThrew = IRB.CreateLoad(getAddrIntType(M), ThrewPtr,
+                                      ThrewPtr->getName() + ".loaded");
   Value *ThenLabel = IRB.CreateCall(
       TestSetjmpF, {LoadedThrew, SetjmpTable, SetjmpTableSize}, "label");
   Value *Cmp2 = IRB.CreateICmpEQ(ThenLabel, IRB.getInt32(0));
@@ -622,11 +645,12 @@ void WebAssemblyLowerEmscriptenEHSjLj::rebuildSSA(Function &F) {
 }
 
 // Replace uses of longjmp with emscripten_longjmp. emscripten_longjmp takes
-// arguments of type {i32, i32} and longjmp takes {jmp_buf*, i32}, so we need a
-// ptrtoint instruction here to make the type match. jmp_buf* will eventually be
-// lowered to i32 in the wasm backend.
+// arguments of type {i32, i32} (wasm32) / {i64, i32} (wasm64) and longjmp takes
+// {jmp_buf*, i32}, so we need a ptrtoint instruction here to make the type
+// match. jmp_buf* will eventually be lowered to i32 in the wasm backend.
 static void replaceLongjmpWithEmscriptenLongjmp(Function *LongjmpF,
                                                 Function *EmLongjmpF) {
+  Module *M = LongjmpF->getParent();
   SmallVector<CallInst *, 8> ToErase;
   LLVMContext &C = LongjmpF->getParent()->getContext();
   IRBuilder<> IRB(C);
@@ -638,7 +662,7 @@ static void replaceLongjmpWithEmscriptenLongjmp(Function *LongjmpF,
     if (CI && CI->getCalledFunction() == LongjmpF) {
       IRB.SetInsertPoint(CI);
       Value *Jmpbuf =
-          IRB.CreatePtrToInt(CI->getArgOperand(0), IRB.getInt32Ty(), "jmpbuf");
+          IRB.CreatePtrToInt(CI->getArgOperand(0), getAddrIntType(M), "jmpbuf");
       IRB.CreateCall(EmLongjmpF, {Jmpbuf, CI->getArgOperand(1)});
       ToErase.push_back(CI);
     }
@@ -671,9 +695,6 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   assert(TPC && "Expected a TargetPassConfig");
   auto &TM = TPC->getTM<WebAssemblyTargetMachine>();
 
-  if ((EnableEH || DoSjLj) &&
-      Triple(M.getTargetTriple()).getArch() == Triple::wasm64)
-    report_fatal_error("Emscripten EH/SjLj is not supported with wasm64 yet");
   if (EnableEH && TM.Options.ExceptionModel == ExceptionHandling::Wasm)
     report_fatal_error("-exception-model=wasm not allowed with "
                        "-enable-emscripten-cxx-exceptions");
@@ -681,8 +702,8 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   // Declare (or get) global variables __THREW__, __threwValue, and
   // getTempRet0/setTempRet0 function which are used in common for both
   // exception handling and setjmp/longjmp handling
-  ThrewGV = getGlobalVariableI32(M, IRB, TM, "__THREW__");
-  ThrewValueGV = getGlobalVariableI32(M, IRB, TM, "__threwValue");
+  ThrewGV = getGlobalVariable(M, getAddrIntType(&M), TM, "__THREW__");
+  ThrewValueGV = getGlobalVariable(M, IRB.getInt32Ty(), TM, "__threwValue");
   GetTempRet0Func = getEmscriptenFunction(
       FunctionType::get(IRB.getInt32Ty(), false), "getTempRet0", &M);
   SetTempRet0Func = getEmscriptenFunction(
@@ -718,7 +739,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
 
     // Register emscripten_longjmp function
     FunctionType *FTy = FunctionType::get(
-        IRB.getVoidTy(), {IRB.getInt32Ty(), IRB.getInt32Ty()}, false);
+        IRB.getVoidTy(), {getAddrIntType(&M), IRB.getInt32Ty()}, false);
     EmLongjmpF = getEmscriptenFunction(FTy, "emscripten_longjmp", &M);
 
     if (LongjmpF)
@@ -736,7 +757,8 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
       // Register testSetjmp function
       FTy = FunctionType::get(
           IRB.getInt32Ty(),
-          {IRB.getInt32Ty(), Type::getInt32PtrTy(C), IRB.getInt32Ty()}, false);
+          {getAddrIntType(&M), Type::getInt32PtrTy(C), IRB.getInt32Ty()},
+          false);
       TestSetjmpF = getEmscriptenFunction(FTy, "testSetjmp", &M);
 
       // Only traverse functions that uses setjmp in order not to insert
@@ -794,7 +816,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
       ToErase.push_back(II);
 
       // Insert a branch based on __THREW__ variable
-      Value *Cmp = IRB.CreateICmpEQ(Threw, IRB.getInt32(1), "cmp");
+      Value *Cmp = IRB.CreateICmpEQ(Threw, getAddrSizeInt(&M, 1), "cmp");
       IRB.CreateCondBr(Cmp, II->getUnwindDest(), II->getNormalDest());
 
     } else {
@@ -1060,12 +1082,15 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
         // __THREW__ = 0;
         for (auto I = std::next(BasicBlock::iterator(ThrewLI)), IE = BB->end();
              I != IE; ++I) {
-          if (auto *SI = dyn_cast<StoreInst>(I))
-            if (auto *GV = dyn_cast<GlobalVariable>(SI->getPointerOperand()))
-              if (GV == ThrewGV && SI->getValueOperand() == IRB.getInt32(0)) {
+          if (auto *SI = dyn_cast<StoreInst>(I)) {
+            if (auto *GV = dyn_cast<GlobalVariable>(SI->getPointerOperand())) {
+              if (GV == ThrewGV &&
+                  SI->getValueOperand() == getAddrSizeInt(&M, 0)) {
                 ThrewResetSI = SI;
                 break;
               }
+            }
+          }
         }
         assert(Threw && ThrewLI && "Cannot find __THREW__ load after invoke");
         assert(ThrewResetSI && "Cannot find __THREW__ store after invoke");
