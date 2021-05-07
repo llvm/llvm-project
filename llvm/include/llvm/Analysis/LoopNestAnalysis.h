@@ -61,10 +61,12 @@ public:
   static unsigned getMaxPerfectDepth(const Loop &Root, ScalarEvolution &SE);
 
   /// Recursivelly traverse all empty 'single successor' basic blocks of \p From
-  /// (if there are any). Return the last basic block found or \p End if it was
-  /// reached during the search.
+  /// (if there are any). When \p CheckUniquePred is set to true, check if
+  /// each of the empty single successors has a unique predecessor. Return
+  /// the last basic block found or \p End if it was reached during the search.
   static const BasicBlock &skipEmptyBlockUntil(const BasicBlock *From,
-                                               const BasicBlock *End);
+                                               const BasicBlock *End,
+                                               bool CheckUniquePred = false);
 
   /// Return the outermost loop in the loop nest.
   Loop &getOutermostLoop() const { return *Loops.front(); }
