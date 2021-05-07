@@ -765,7 +765,7 @@ ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
     // node yet. In the former case we should emit an undef dbg_value, but we
     // can do it later. And for the latter we'll want to wait until all
     // dependent nodes have been visited.
-    if (HasUnknownVReg(DV))
+    if (!DV->isInvalidated() && HasUnknownVReg(DV))
       continue;
     MachineInstr *DbgMI = Emitter.EmitDbgValue(DV, VRBaseMap);
     if (!DbgMI)
