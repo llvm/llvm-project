@@ -184,6 +184,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64ExpandPseudoPass(*PR);
   initializeAArch64LoadStoreOptPass(*PR);
   initializeAArch64SIMDInstrOptPass(*PR);
+  initializeAArch64O0PreLegalizerCombinerPass(*PR);
   initializeAArch64PreLegalizerCombinerPass(*PR);
   initializeAArch64PostLegalizerCombinerPass(*PR);
   initializeAArch64PostLegalizerLoweringPass(*PR);
@@ -562,8 +563,10 @@ bool AArch64PassConfig::addIRTranslator() {
 }
 
 void AArch64PassConfig::addPreLegalizeMachineIR() {
-  bool IsOptNone = getOptLevel() == CodeGenOpt::None;
-  addPass(createAArch64PreLegalizerCombiner(IsOptNone));
+  if (getOptLevel() == CodeGenOpt::None)
+    addPass(createAArch64O0PreLegalizerCombiner());
+  else
+    addPass(createAArch64PreLegalizerCombiner());
 }
 
 bool AArch64PassConfig::addLegalizeMachineIR() {
