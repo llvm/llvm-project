@@ -10,7 +10,7 @@
 volatile int x;
 volatile int y = 1;
 
-int infinite_recursion(char *p) {
+void infinite_recursion(char *p) {
   char *buf = nullptr;
 
   if (y)
