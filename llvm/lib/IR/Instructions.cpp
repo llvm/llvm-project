@@ -1559,9 +1559,6 @@ void AtomicCmpXchgInst::Init(Value *Ptr, Value *Cmp, Value *NewVal,
          "AtomicCmpXchg instructions must be atomic!");
   assert(FailureOrdering != AtomicOrdering::NotAtomic &&
          "AtomicCmpXchg instructions must be atomic!");
-  assert(!isStrongerThan(FailureOrdering, SuccessOrdering) &&
-         "AtomicCmpXchg failure argument shall be no stronger than the success "
-         "argument");
   assert(FailureOrdering != AtomicOrdering::Release &&
          FailureOrdering != AtomicOrdering::AcquireRelease &&
          "AtomicCmpXchg failure ordering cannot include release semantics");
