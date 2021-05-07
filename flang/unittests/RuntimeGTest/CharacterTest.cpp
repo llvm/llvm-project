@@ -146,47 +146,45 @@ struct ExtremumTestCase {
   std::vector<const char *> x, y, expect;
 };
 
+// Helper for creating, allocating and filling up a descriptor with data from
+// raw character literals, converted to the CHAR type used by the test.
+template <typename CHAR>
+OwningPtr<Descriptor> CreateDescriptor(const std::vector<SubscriptValue> &shape,
+    const std::vector<const char *> &raw_strings) {
+  std::size_t length{std::strlen(raw_strings[0])};
+
+  OwningPtr<Descriptor> descriptor{Descriptor::Create(sizeof(CHAR), length,
+      nullptr, shape.size(), nullptr, CFI_attribute_allocatable)};
+  if ((shape.empty() ? descriptor->Allocate()
+                     : descriptor->Allocate(
+                           std::vector<SubscriptValue>(shape.size(), 1).data(),
+                           shape.data())) != 0) {
+    return nullptr;
+  }
+
+  std::size_t offset = 0;
+  for (const char *raw : raw_strings) {
+    std::basic_string<CHAR> converted{raw, raw + length};
+    std::copy(converted.begin(), converted.end(),
+        descriptor->OffsetElement<CHAR>(offset * length * sizeof(CHAR)));
+    ++offset;
+  }
+
+  return descriptor;
+}
+
 template <typename CHAR>
 void RunExtremumTests(const char *which,
     std::function<void(Descriptor &, const Descriptor &, const char *, int)>
         function,
     const std::vector<ExtremumTestCase> &testCases) {
-
-  // Helper for creating, allocating and filling up a descriptor with data from
-  // raw character literals, converted to the CHAR type used by the test.
-  auto CreateDescriptor = [](const std::vector<SubscriptValue> &shape,
-                              const std::vector<const char *> &raw_strings)
-      -> OwningPtr<Descriptor> {
-    std::size_t length{std::strlen(raw_strings[0])};
-
-    OwningPtr<Descriptor> descriptor{Descriptor::Create(sizeof(CHAR), length,
-        nullptr, shape.size(), nullptr, CFI_attribute_allocatable)};
-    if ((shape.empty()
-                ? descriptor->Allocate()
-                : descriptor->Allocate(
-                      std::vector<SubscriptValue>(shape.size(), 1).data(),
-                      shape.data())) != 0) {
-      return nullptr;
-    }
-
-    std::size_t offset = 0;
-    for (const char *raw : raw_strings) {
-      std::basic_string<CHAR> converted{raw, raw + length};
-      std::copy(converted.begin(), converted.end(),
-          descriptor->OffsetElement<CHAR>(offset * length * sizeof(CHAR)));
-      ++offset;
-    }
-
-    return descriptor;
-  };
-
   std::stringstream traceMessage;
   traceMessage << which << " for CHARACTER(kind=" << sizeof(CHAR) << ")";
   SCOPED_TRACE(traceMessage.str());
 
   for (const auto &t : testCases) {
-    OwningPtr<Descriptor> x = CreateDescriptor(t.shape, t.x);
-    OwningPtr<Descriptor> y = CreateDescriptor(t.shape, t.y);
+    OwningPtr<Descriptor> x = CreateDescriptor<CHAR>(t.shape, t.x);
+    OwningPtr<Descriptor> y = CreateDescriptor<CHAR>(t.shape, t.y);
 
     ASSERT_NE(x, nullptr);
     ASSERT_TRUE(x->IsAllocated());
@@ -230,6 +228,27 @@ TYPED_TEST(ExtremumTests, MaxTests) {
       {{1, 1, 1}, {"aaaaa"}, {"aazaa"}, {"aazaa"}},
   };
   RunExtremumTests<TypeParam>("MAX", RTNAME(CharacterMax), tests);
+}
+
+template <typename CHAR>
+void RunAllocationTest(const char *xRaw, const char *yRaw) {
+  OwningPtr<Descriptor> x = CreateDescriptor<CHAR>({}, {xRaw});
+  OwningPtr<Descriptor> y = CreateDescriptor<CHAR>({}, {yRaw});
+
+  ASSERT_NE(x, nullptr);
+  ASSERT_TRUE(x->IsAllocated());
+  ASSERT_NE(y, nullptr);
+  ASSERT_TRUE(y->IsAllocated());
+
+  void *old = x->raw().base_addr;
+  RTNAME(CharacterMin)
+  (*x, *y, /* sourceFile = */ nullptr, /* sourceLine = */ 0);
+  EXPECT_EQ(old, x->raw().base_addr);
+}
+
+TYPED_TEST(ExtremumTests, NoReallocate) {
+  // Test that we don't reallocate if the accumulator is already large enough.
+  RunAllocationTest<TypeParam>("loooooong", "short");
 }
 
 // Test search functions INDEX(), SCAN(), and VERIFY()
