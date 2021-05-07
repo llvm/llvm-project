@@ -946,8 +946,7 @@ private:
   SDValue LowerDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorSRA_SRL_SHL(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerShiftParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCTPOP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCTTZ(SDValue Op, SelectionDAG &DAG) const;

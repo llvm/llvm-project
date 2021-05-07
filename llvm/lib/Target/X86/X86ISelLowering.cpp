@@ -19573,50 +19573,9 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
 /// and take a 2 x i32 value to shift plus a shift amount.
 /// TODO: Can this be moved to general expansion code?
 static SDValue LowerShiftParts(SDValue Op, SelectionDAG &DAG) {
-  assert(Op.getNumOperands() == 3 && "Not a double-shift!");
-  MVT VT = Op.getSimpleValueType();
-  unsigned VTBits = VT.getSizeInBits();
-  SDLoc dl(Op);
-  bool isSRA = Op.getOpcode() == ISD::SRA_PARTS;
-  SDValue ShOpLo = Op.getOperand(0);
-  SDValue ShOpHi = Op.getOperand(1);
-  SDValue ShAmt  = Op.getOperand(2);
-  // ISD::FSHL and ISD::FSHR have defined overflow behavior but ISD::SHL and
-  // ISD::SRA/L nodes haven't. Insert an AND to be safe, it's optimized away
-  // during isel.
-  SDValue SafeShAmt = DAG.getNode(ISD::AND, dl, MVT::i8, ShAmt,
-                                  DAG.getConstant(VTBits - 1, dl, MVT::i8));
-  SDValue Tmp1 = isSRA ? DAG.getNode(ISD::SRA, dl, VT, ShOpHi,
-                                     DAG.getConstant(VTBits - 1, dl, MVT::i8))
-                       : DAG.getConstant(0, dl, VT);
-
-  SDValue Tmp2, Tmp3;
-  if (Op.getOpcode() == ISD::SHL_PARTS) {
-    Tmp2 = DAG.getNode(ISD::FSHL, dl, VT, ShOpHi, ShOpLo, ShAmt);
-    Tmp3 = DAG.getNode(ISD::SHL, dl, VT, ShOpLo, SafeShAmt);
-  } else {
-    Tmp2 = DAG.getNode(ISD::FSHR, dl, VT, ShOpHi, ShOpLo, ShAmt);
-    Tmp3 = DAG.getNode(isSRA ? ISD::SRA : ISD::SRL, dl, VT, ShOpHi, SafeShAmt);
-  }
-
-  // If the shift amount is larger or equal than the width of a part we can't
-  // rely on the results of shld/shrd. Insert a test and select the appropriate
-  // values for large shift amounts.
-  SDValue AndNode = DAG.getNode(ISD::AND, dl, MVT::i8, ShAmt,
-                                DAG.getConstant(VTBits, dl, MVT::i8));
-  SDValue Cond = DAG.getSetCC(dl, MVT::i8, AndNode,
-                             DAG.getConstant(0, dl, MVT::i8), ISD::SETNE);
-
-  SDValue Hi, Lo;
-  if (Op.getOpcode() == ISD::SHL_PARTS) {
-    Hi = DAG.getNode(ISD::SELECT, dl, VT, Cond, Tmp3, Tmp2);
-    Lo = DAG.getNode(ISD::SELECT, dl, VT, Cond, Tmp1, Tmp3);
-  } else {
-    Lo = DAG.getNode(ISD::SELECT, dl, VT, Cond, Tmp3, Tmp2);
-    Hi = DAG.getNode(ISD::SELECT, dl, VT, Cond, Tmp1, Tmp3);
-  }
-
-  return DAG.getMergeValues({ Lo, Hi }, dl);
+  SDValue Lo, Hi;
+  DAG.getTargetLoweringInfo().expandShiftParts(Op.getNode(), Lo, Hi, DAG);
+  return DAG.getMergeValues({Lo, Hi}, SDLoc(Op));
 }
 
 static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
