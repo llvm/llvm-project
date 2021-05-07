@@ -449,13 +449,15 @@ static CompilerType GetSwiftTypeForVariableValueObject(
     SwiftLanguageRuntime *runtime) {
   // Check that the passed ValueObject is valid.
   if (!valobj_sp || valobj_sp->GetError().Fail())
-    return CompilerType();
+    return {};
   CompilerType result = valobj_sp->GetCompilerType();
-  if (!result.IsValid())
-    return CompilerType();
+  if (!result)
+    return {};
   result = runtime->BindGenericTypeParameters(*stack_frame_sp, result);
+  if (!result)
+    return {};
   if (!result.GetTypeSystem()->SupportsLanguage(lldb::eLanguageTypeSwift))
-    return CompilerType();
+    return {};
   return result;
 }
 
