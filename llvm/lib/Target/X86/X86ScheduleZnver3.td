@@ -336,7 +336,9 @@ def Zn3FPCLM01 : ProcResGroup<[Zn3FPCLM0, Zn3FPCLM1]>;
 // The floating point register file has 160 vector registers
 // of 128 bits each in Zen 1 and 256 bits each in Zen 2.
 // anandtech also confirms this.
-def Zn3FpPRF : RegisterFile<160, [VR64, VR128, VR256], [1, 1, 1]>;
+def Zn3FpPRF : RegisterFile<160, [VR64, VR128, VR256], [1, 1, 1], [0, 1, 1],
+                            6,  // Max moves that can be eliminated per cycle.
+                            0>; // Restrict move elimination to zero regs.
 
 // AMD SOG 19h, 2.11 Floating-Point Unit
 // The floating-point scheduler has a 2*32 entry macro op capacity.
