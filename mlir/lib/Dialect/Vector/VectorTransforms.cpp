@@ -3837,13 +3837,14 @@ void mlir::vector::populateSplitVectorTransferPatterns(
 
 void mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<
-      CastAwayExtractStridedSliceLeadingOneDim,
-      CastAwayInsertStridedSliceLeadingOneDim,
-      CastAwayTransferReadLeadingOneDim, CastAwayTransferWriteLeadingOneDim,
-      CastAwayBroadcastLeadingOneDim<vector::BroadcastOp>,
-      CastAwayBroadcastLeadingOneDim<SplatOp>, CastAwayElementwiseLeadingOneDim,
-      ShapeCastOpFolder>(patterns.getContext());
+  patterns.add<CastAwayExtractStridedSliceLeadingOneDim,
+               CastAwayInsertStridedSliceLeadingOneDim,
+               CastAwayTransferReadLeadingOneDim,
+               CastAwayTransferWriteLeadingOneDim,
+               CastAwayBroadcastLeadingOneDim<vector::BroadcastOp>,
+               CastAwayBroadcastLeadingOneDim<SplatOp>,
+               CastAwayElementwiseLeadingOneDim, ShapeCastOpFolder>(
+      patterns.getContext());
 }
 
 void mlir::vector::populateBubbleVectorBitCastOpPatterns(
