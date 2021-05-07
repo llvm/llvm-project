@@ -2313,3 +2313,282 @@ vector double test_rsqrtd(vector double a, vector double b) {
   // CHECK-LE: fdiv fast <2 x double> <double 1.000000e+00, double 1.000000e+00>
   return vec_rsqrt(a);
 }
+
+void test_p8overloads_backwards_compat() {
+  // CHECK-LABEL: test_p8overloads_backwards_compat
+  res_vsll = vec_add(vsll, vsll);
+  // CHECK: add <4 x i32>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vaddcuw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: add <4 x i32>
+  // CHECK-LE: add <4 x i32>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vaddcuw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: add <4 x i32>
+  res_vull = vec_add(vull, vull);
+  // CHECK: add <4 x i32>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vaddcuw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: add <4 x i32>
+  // CHECK-LE: add <4 x i32>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vaddcuw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: add <4 x i32>
+  dummy();
+  // CHECK: call void @dummy()
+  // CHECK-LE: call void @dummy()
+
+  res_vbll = vec_cmpeq(vsll, vsll);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  res_vbll = vec_cmpeq(vull, vull);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  res_vbll = vec_cmpeq(vbll, vbll);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  dummy();
+  // CHECK: call void @dummy()
+  // CHECK-LE: call void @dummy()
+
+  res_vbll = vec_cmpgt(vsll, vsll);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtsw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: or <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtsw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: or <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  res_vbll = vec_cmpgt(vull, vull);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: or <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: or <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  dummy();
+  // CHECK: call void @dummy()
+  // CHECK-LE: call void @dummy()
+
+  res_vbll = vec_cmpge(vsll, vsll);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtsw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: or <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK: xor <2 x i64> {{%.*}}, <i64 -1, i64 -1>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtsw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: or <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  // CHECK-LE: xor <2 x i64> {{%.*}}, <i64 -1, i64 -1>
+  res_vbll = vec_cmpge(vull, vull);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: or <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK: xor <2 x i64> {{%.*}}, <i64 -1, i64 -1>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: or <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  // CHECK-LE: xor <2 x i64> {{%.*}}, <i64 -1, i64 -1>
+  dummy();
+  // CHECK: call void @dummy()
+  // CHECK-LE: call void @dummy()
+
+  res_vbll = vec_cmplt(vsll, vsll);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtsw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: or <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtsw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: or <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  res_vbll = vec_cmplt(vull, vull);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: or <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: or <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  dummy();
+  // CHECK: call void @dummy()
+  // CHECK-LE: call void @dummy()
+
+  res_vbll = vec_cmple(vsll, vsll);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtsw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: or <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK: xor <2 x i64> {{%.*}}, <i64 -1, i64 -1>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtsw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: or <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  // CHECK-LE: xor <2 x i64> {{%.*}}, <i64 -1, i64 -1>
+  res_vbll = vec_cmple(vull, vull);
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: and <4 x i32>
+  // CHECK: or <4 x i32>
+  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  // CHECK: xor <2 x i64> {{%.*}}, <i64 -1, i64 -1>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpgtuw
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vcmpequw
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  // CHECK-LE: and <4 x i32>
+  // CHECK-LE: or <4 x i32>
+  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  // CHECK-LE: xor <2 x i64> {{%.*}}, <i64 -1, i64 -1>
+  dummy();
+  // CHECK: call void @dummy()
+  // CHECK-LE: call void @dummy()
+
+  res_vsll = vec_sl(vsll, vull);
+  // CHECK: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vslo
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsl
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vslo
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsl
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 3>
+  // CHECK-LE: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vslo
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsl
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vslo
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsl
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 0, i32 2>
+  res_vull = vec_sl(vull, vull);
+  // CHECK: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vslo
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsl
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vslo
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsl
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 3>
+  // CHECK-LE: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vslo
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsl
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vslo
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsl
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 0, i32 2>
+  dummy();
+  // CHECK: call void @dummy()
+  // CHECK-LE: call void @dummy()
+
+  res_vsll = vec_sr(vsll, vull);
+  // CHECK: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsro
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsr
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsro
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsr
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 0, i32 2>
+  // CHECK-LE: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsro
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsr
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsro
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsr
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 3>
+  res_vull = vec_sr(vull, vull);
+  // CHECK: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsro
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsr
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsro
+  // CHECK: call <4 x i32> @llvm.ppc.altivec.vsr
+  // CHECK: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 0, i32 2>
+  // CHECK-LE: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsro
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsr
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsro
+  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vsr
+  // CHECK-LE: shufflevector <2 x i64> {{%.*}}, <2 x i64> {{%.*}}, <2 x i32> <i32 1, i32 3>
+  dummy();
+  // CHECK: call void @dummy()
+  // CHECK-LE: call void @dummy()
+
+  res_vsll = vec_sra(vsll, vull);
+  // CHECK: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK: ashr <2 x i64>
+  // CHECK-LE: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK-LE: ashr <2 x i64>
+  res_vull = vec_sra(vull, vull);
+  // CHECK: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK: ashr <2 x i64>
+  // CHECK-LE: urem <2 x i64> {{%.*}}, <i64 64, i64 64>
+  // CHECK-LE: ashr <2 x i64>
+}

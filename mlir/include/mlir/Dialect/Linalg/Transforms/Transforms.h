@@ -28,6 +28,10 @@ struct LinalgElementwiseFusionOptions;
 struct LinalgFusionOptions;
 struct LinalgTilingOptions;
 
+/// Default function to control reshape folding. Skips folding unit dimension
+/// reshapes.
+bool skipUnitDimReshape(const OpResult &producer, const OpOperand &consumer);
+
 //===----------------------------------------------------------------------===//
 // Transformations exposed as function calls.
 //===----------------------------------------------------------------------===//
@@ -42,11 +46,15 @@ void populateConvVectorizationPatterns(
 /// parallel loops.
 void populateElementwiseToLinalgConversionPatterns(RewritePatternSet &patterns);
 
+using ControlElementwiseOpsFusionFn =
+    std::function<bool(const OpResult &producer, const OpOperand &consumer)>;
+
 /// Patterns to fold an expanding (collapsing) tensor_reshape operation with its
 /// producer (consumer) generic operation by expanding the dimensionality of the
 /// loop in the generic op.
 void populateFoldReshapeOpsByExpansionPatterns(
-    RewritePatternSet &patterns, bool allowFoldingUnitDimReshapes = false);
+    RewritePatternSet &patterns,
+    ControlElementwiseOpsFusionFn controlFoldingReshapes = skipUnitDimReshape);
 
 /// Patterns to fold a collapsing (expanding) tensor_reshape operation with its
 /// producer (consumer) generic/indexed_generic operation by linearizing the
@@ -71,17 +79,15 @@ void populateLinalgBufferizePatterns(BufferizeTypeConverter &converter,
 /// tensors.
 void populateFoldUnitExtentDimsPatterns(RewritePatternSet &patterns);
 
-using ControlElementwiseOpsFusionFn =
-    std::function<bool(const OpResult &producer, const OpOperand &consumer)>;
-
 /// Options that control fusion of elementwise operations.
 struct LinalgElementwiseFusionOptions {
-  /// Enable fusion of reshapes that are introducing unit-dimensions into the
-  /// shape with elementwise operations. By default this is disabled.
-  bool allowFoldingUnitDimReshapes = false;
+  /// Enable fusion of reshapes into the shape with elementwise operations. By
+  /// default it is disabled for unit dimensions reshape.
+  ControlElementwiseOpsFusionFn controlFoldingReshapesFn = skipUnitDimReshape;
 
-  LinalgElementwiseFusionOptions &setAllowFoldingUnitDimReshapes(bool val) {
-    allowFoldingUnitDimReshapes = val;
+  LinalgElementwiseFusionOptions &
+  setControlFoldingReshapes(ControlElementwiseOpsFusionFn fun) {
+    controlFoldingReshapesFn = std::move(fun);
     return *this;
   }
 

@@ -107,10 +107,9 @@ void AArch64TargetStreamer::emitInst(uint32_t Inst) {
   getStreamer().emitBytes(StringRef(Buffer, 4));
 }
 
-namespace llvm {
-
 MCTargetStreamer *
-createAArch64ObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+llvm::createAArch64ObjectTargetStreamer(MCStreamer &S,
+                                        const MCSubtargetInfo &STI) {
   const Triple &TT = STI.getTargetTriple();
   if (TT.isOSBinFormatELF())
     return new AArch64TargetELFStreamer(S);
@@ -118,5 +117,3 @@ createAArch64ObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
     return new AArch64TargetWinCOFFStreamer(S);
   return nullptr;
 }
-
-} // end namespace llvm

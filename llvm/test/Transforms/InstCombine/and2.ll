@@ -13,7 +13,7 @@ define i1 @test2(i1 %X, i1 %Y) {
 
 define i1 @test2_logical(i1 %X, i1 %Y) {
 ; CHECK-LABEL: @test2_logical(
-; CHECK-NEXT:    [[A:%.*]] = and i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = select i1 [[X:%.*]], i1 [[Y:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = select i1 %X, i1 %Y, i1 false
@@ -46,9 +46,11 @@ define i1 @test7(i32 %i, i1 %b) {
 
 define i1 @test7_logical(i32 %i, i1 %b) {
 ; CHECK-LABEL: @test7_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[I:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[I:%.*]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[I]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[CMP1]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[AND1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[AND2]]
 ;
   %cmp1 = icmp slt i32 %i, 1
   %cmp2 = icmp sgt i32 %i, -1

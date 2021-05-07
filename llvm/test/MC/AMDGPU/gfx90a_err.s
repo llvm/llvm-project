@@ -136,13 +136,16 @@ v_mov_b32_dpp v5, v1 row_share:1 row_mask:0x0 bank_mask:0x0
 // GFX90A: error: not a valid operand
 
 v_ceil_f64_dpp v[0:1], v[2:3] quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf
-// GFX90A: error: not a valid operand.
+// GFX90A: error: 64 bit dpp only supports row_newbcast
 
 v_ceil_f64_dpp v[0:1], v[2:3] row_shl:1 row_mask:0xf bank_mask:0xf
-// GFX90A: error: not a valid operand.
+// GFX90A: error: 64 bit dpp only supports row_newbcast
 
 v_ceil_f64_dpp v[0:1], v[2:3] wave_ror:1 row_mask:0xf bank_mask:0xf
-// GFX90A: error: not a valid operand.
+// GFX90A: error: 64 bit dpp only supports row_newbcast
+
+v_cvt_u32_f64 v5, v[0:1] quad_perm:[0,2,1,1] row_mask:0xf bank_mask:0xf
+// GFX90A: error: 64 bit dpp only supports row_newbcast
 
 v_ceil_f64_dpp v[0:1], v[2:3] row_share:1 row_mask:0xf bank_mask:0xf
 // GFX90A: error: not a valid operand.

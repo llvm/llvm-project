@@ -112,3 +112,25 @@ namespace InstantiationDependent {
   _Static_assert(!A<X>::specialized, "");
   _Static_assert(A<Y>::specialized, "");
 }
+
+namespace IgnorePartialSubstitution {
+  template <typename... T> struct tuple {}; // expected-warning 0-1{{extension}}
+  template <typename> struct IsTuple {
+    enum { value = false };
+  };
+  template <typename... Us> struct IsTuple<tuple<Us...> > { // expected-warning 0-1{{extension}}
+    enum { value = true };
+  };
+
+  template <bool...> using ignore = void; // expected-warning 0-2{{extension}}
+  template <class... Pred> ignore<Pred::value...> helper(); // expected-warning 0-1{{extension}}
+
+  using S = IsTuple<tuple<int> >; // expected-warning 0-1{{extension}}
+
+  // This used to pick the primary template, because we got confused and
+  // thought that template parameter 0 was the current partially-substituted
+  // pack (from `helper`) during the deduction for the partial specialization.
+  void f() { helper<S>(); }
+
+  _Static_assert(S::value, "");
+}

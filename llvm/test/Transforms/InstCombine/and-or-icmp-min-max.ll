@@ -1067,7 +1067,9 @@ define i1 @sge_or_max_commute(i8 %x, i8 %y)  {
 define i1 @sge_or_max_commute_logical(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sge_or_max_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], 127
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp sge i8 %x, %y
   %cmpeq = icmp eq i8 %x, 127
@@ -1111,7 +1113,9 @@ define i1 @sge_swap_or_max_commute(i8 %x, i8 %y)  {
 define i1 @sge_swap_or_max_commute_logical(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sge_swap_or_max_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], 127
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp sle i8 %y, %x
   %cmpeq = icmp eq i8 %x, 127
@@ -1155,7 +1159,9 @@ define i1 @uge_or_max_commute(i8 %x, i8 %y)  {
 define i1 @uge_or_max_commute_logical(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @uge_or_max_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp uge i8 %x, %y
   %cmpeq = icmp eq i8 %x, 255
@@ -1199,7 +1205,9 @@ define i1 @uge_swap_or_max_commute(i8 %x, i8 %y)  {
 define i1 @uge_swap_or_max_commute_logical(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @uge_swap_or_max_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp ule i8 %y, %x
   %cmpeq = icmp eq i8 %x, 255
@@ -1249,7 +1257,9 @@ define i1 @sle_or_min_commute(i8 %x, i8 %y)  {
 define i1 @sle_or_min_commute_logical(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sle_or_min_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], -128
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp sle i8 %x, %y
   %cmpeq = icmp eq i8 %x, 128
@@ -1293,7 +1303,9 @@ define i1 @sle_swap_or_min_commute(i8 %x, i8 %y)  {
 define i1 @sle_swap_or_min_commute_logical(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sle_swap_or_min_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], -128
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp sge i8 %y, %x
   %cmpeq = icmp eq i8 %x, 128
@@ -1337,7 +1349,9 @@ define i1 @ule_or_min_commute(i8 %x, i8 %y)  {
 define i1 @ule_or_min_commute_logical(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ule_or_min_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp ule i8 %x, %y
   %cmpeq = icmp eq i8 %x, 0
@@ -1381,7 +1395,9 @@ define i1 @ule_swap_or_min_commute(i8 %x, i8 %y)  {
 define i1 @ule_swap_or_min_commute_logical(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ule_swap_or_min_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 true, i1 [[CMP]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp uge i8 %y, %x
   %cmpeq = icmp eq i8 %x, 0
@@ -1431,7 +1447,9 @@ define i1 @slt_and_not_max_commute(i8 %x, i8 %y)  {
 define i1 @slt_and_not_max_commute_logical(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @slt_and_not_max_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], 127
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %x, %y
   %cmpeq = icmp ne i8 %x, 127
@@ -1475,7 +1493,9 @@ define i1 @slt_swap_and_not_max_commute(i8 %x, i8 %y)  {
 define i1 @slt_swap_and_not_max_commute_logical(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @slt_swap_and_not_max_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], 127
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp sgt i8 %y, %x
   %cmpeq = icmp ne i8 %x, 127
@@ -1519,7 +1539,9 @@ define i1 @ult_and_not_max_commute(i8 %x, i8 %y)  {
 define i1 @ult_and_not_max_commute_logical(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ult_and_not_max_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp ult i8 %x, %y
   %cmpeq = icmp ne i8 %x, 255
@@ -1563,7 +1585,9 @@ define i1 @ult_swap_and_not_max_commute(i8 %x, i8 %y)  {
 define i1 @ult_swap_and_not_max_commute_logical(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ult_swap_and_not_max_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp ugt i8 %y, %x
   %cmpeq = icmp ne i8 %x, 255
@@ -1613,7 +1637,9 @@ define i1 @sgt_and_not_min_commute(i8 %x, i8 %y)  {
 define i1 @sgt_and_not_min_commute_logical(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sgt_and_not_min_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], -128
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp sgt i8 %x, %y
   %cmpeq = icmp ne i8 %x, 128
@@ -1657,7 +1683,9 @@ define i1 @sgt_swap_and_not_min_commute(i8 %x, i8 %y)  {
 define i1 @sgt_swap_and_not_min_commute_logical(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sgt_swap_and_not_min_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], -128
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp slt i8 %y, %x
   %cmpeq = icmp ne i8 %x, 128
@@ -1701,7 +1729,9 @@ define i1 @ugt_and_not_min_commute(i8 %x, i8 %y)  {
 define i1 @ugt_and_not_min_commute_logical(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ugt_and_not_min_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp ugt i8 %x, %y
   %cmpeq = icmp ne i8 %x, 0
@@ -1745,7 +1775,9 @@ define i1 @ugt_swap_and_not_min_commute(i8 %x, i8 %y)  {
 define i1 @ugt_swap_and_not_min_commute_logical(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ugt_swap_and_not_min_commute_logical(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp ult i8 %y, %x
   %cmpeq = icmp ne i8 %x, 0

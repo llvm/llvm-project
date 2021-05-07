@@ -17,9 +17,10 @@ define i1 @test1(i32 %a, i32 %b) {
 
 define i1 @test1_logical(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test1_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 true, i1 [[TMP2]]
+; CHECK-NEXT:    ret i1 [[OR_COND]]
 ;
   %1 = icmp slt i32 %a, 0
   %2 = icmp slt i32 %b, 0
@@ -41,9 +42,10 @@ define i1 @test2(i32 %a, i32 %b) {
 
 define i1 @test2_logical(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test2_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], -1
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[B:%.*]], -1
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 true, i1 [[TMP2]]
+; CHECK-NEXT:    ret i1 [[OR_COND]]
 ;
   %1 = icmp sgt i32 %a, -1
   %2 = icmp sgt i32 %b, -1
@@ -65,9 +67,10 @@ define i1 @test3(i32 %a, i32 %b) {
 
 define i1 @test3_logical(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test3_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false
+; CHECK-NEXT:    ret i1 [[OR_COND]]
 ;
   %1 = icmp slt i32 %a, 0
   %2 = icmp slt i32 %b, 0
@@ -89,9 +92,10 @@ define i1 @test4(i32 %a, i32 %b) {
 
 define i1 @test4_logical(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test4_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], -1
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[B:%.*]], -1
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false
+; CHECK-NEXT:    ret i1 [[OR_COND]]
 ;
   %1 = icmp sgt i32 %a, -1
   %2 = icmp sgt i32 %b, -1

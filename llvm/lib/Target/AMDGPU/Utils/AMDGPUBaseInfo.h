@@ -477,6 +477,14 @@ struct Waitcnt {
     return VmCnt != ~0u || ExpCnt != ~0u || LgkmCnt != ~0u || VsCnt != ~0u;
   }
 
+  bool hasWaitExceptVsCnt() const {
+    return VmCnt != ~0u || ExpCnt != ~0u || LgkmCnt != ~0u;
+  }
+
+  bool hasWaitVsCnt() const {
+    return VsCnt != ~0u;
+  }
+
   bool dominates(const Waitcnt &Other) const {
     return VmCnt <= Other.VmCnt && ExpCnt <= Other.ExpCnt &&
            LgkmCnt <= Other.LgkmCnt && VsCnt <= Other.VsCnt;

@@ -808,15 +808,11 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
 
   unsigned Imm = MI->getOperand(OpNo).getImm();
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-  int DstIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
-                                          AMDGPU::OpName::vdst);
   int Src0Idx = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
                                            AMDGPU::OpName::src0);
 
-  if (((DstIdx >= 0 &&
-        Desc.OpInfo[DstIdx].RegClass == AMDGPU::VReg_64RegClassID) ||
-      ((Src0Idx >= 0 &&
-        Desc.OpInfo[Src0Idx].RegClass == AMDGPU::VReg_64RegClassID))) &&
+  if (Src0Idx >= 0 &&
+      Desc.OpInfo[Src0Idx].RegClass == AMDGPU::VReg_64RegClassID &&
       !AMDGPU::isLegal64BitDPPControl(Imm)) {
     O << " /* 64 bit dpp only supports row_newbcast */";
     return;

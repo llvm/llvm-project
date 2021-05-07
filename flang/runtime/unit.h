@@ -41,8 +41,8 @@ public:
   static ExternalFileUnit &LookUpOrCrash(int unit, const Terminator &);
   static ExternalFileUnit &LookUpOrCreate(
       int unit, const Terminator &, bool &wasExtant);
-  static ExternalFileUnit &LookUpOrCreateAnonymous(
-      int unit, Direction, bool isUnformatted, const Terminator &);
+  static ExternalFileUnit &LookUpOrCreateAnonymous(int unit, Direction,
+      std::optional<bool> isUnformatted, const Terminator &);
   static ExternalFileUnit *LookUp(const char *path);
   static ExternalFileUnit &CreateNew(int unit, const Terminator &);
   static ExternalFileUnit *LookUpForClose(int unit);

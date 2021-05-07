@@ -11,21 +11,18 @@
 ; CHECK-NEXT:   Data alignment factor: 4
 ; CHECK-NEXT:   Return address column: 16
 ; CHECK-EMPTY:
-; CHECK-NEXT:   DW_CFA_nop:
-; CHECK-NEXT:   DW_CFA_nop:
-; CHECK-NEXT:   DW_CFA_nop:
-; CHECK-NEXT:   DW_CFA_nop:
-; CHECK-NEXT:   DW_CFA_nop:
-; CHECK-NEXT:   DW_CFA_nop:
+; CHECK:   DW_CFA_nop:
+; CHECK:   DW_CFA_nop:
+; CHECK:   DW_CFA_nop:
+; CHECK:   DW_CFA_nop:
+; CHECK:   DW_CFA_nop:
+; CHECK:   DW_CFA_nop:
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
-; CHECK-NEXT: 00000020 {{[0-9]+}} 00000000 FDE cie=00000000 pc=00000000...{{[0-9]+}}
+; CHECK: 00000020 {{[0-9]+}} 00000000 FDE cie=00000000 pc=00000000...{{[0-9]+}}
 ; CHECK-NEXT: Format:       DWARF32
 ; CHECK-NEXT: DW_CFA_LLVM_def_aspace_cfa: SGPR32_LO16 +0 as6
 ; CHECK-NEXT: DW_CFA_expression: PC_REG DW_OP_regx SGPR30_LO16, DW_OP_piece 0x4, DW_OP_regx SGPR31_LO16, DW_OP_piece 0x4
-; CHECK-NEXT: DW_CFA_nop
-; CHECK-EMPTY:
-; CHECK-NEXT: 0x0: CFA=SGPR32_LO16 +0 as6: PC_REG=[DW_OP_regx SGPR30_LO16, DW_OP_piece 0x4, DW_OP_regx SGPR31_LO16, DW_OP_piece 0x4]
+; CHECK-NEXT: DW_CFA_nop:
 ; CHECK-EMPTY:
 ; CHECK: .eh_frame contents:
 ; CHECK-NOT: CIE
@@ -39,7 +36,7 @@ attributes #0 = { nounwind }
 !llvm.module.flags = !{!0, !1}
 !llvm.dbg.cu = !{!2}
 
-!0 = !{i32 2, !"Dwarf Version", i32 4}
+!0 = !{i32 7, !"Dwarf Version", i32 5}
 !1 = !{i32 2, !"Debug Info Version", i32 3}
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, emissionKind: FullDebug)
 !3 = !DIFile(filename: "file", directory: "dir")

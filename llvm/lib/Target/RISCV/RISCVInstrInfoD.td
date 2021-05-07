@@ -31,9 +31,9 @@ def RISCVSplitF64     : SDNode<"RISCVISD::SplitF64", SDT_RISCVSplitF64>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class FPFMAD_rrr_frm<RISCVOpcode opcode, string opcodestr>
-    : RVInstR4<0b01, opcode, (outs FPR64:$rd),
-               (ins FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, frmarg:$funct3),
-                opcodestr, "$rd, $rs1, $rs2, $rs3, $funct3">;
+    : RVInstR4Frm<0b01, opcode, (outs FPR64:$rd),
+                  (ins FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, frmarg:$funct3),
+                  opcodestr, "$rd, $rs1, $rs2, $rs3, $funct3">;
 
 class FPFMADDynFrmAlias<FPFMAD_rrr_frm Inst, string OpcodeStr>
     : InstAlias<OpcodeStr#" $rd, $rs1, $rs2, $rs3",

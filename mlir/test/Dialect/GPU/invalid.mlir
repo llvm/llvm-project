@@ -458,3 +458,116 @@ func @memcpy_incompatible_shape(%dst : memref<7xf32>, %src : memref<9xf32>) {
   // expected-error @+1 {{'gpu.memcpy' op arguments have incompatible shape}}
   gpu.memcpy %dst, %src  : memref<7xf32>, memref<9xf32>
 }
+
+// -----
+
+func @mmamatrix_invalid_shape(){
+    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
+    %i = constant 16 : index
+    // expected-error @+1 {{MMAMatrixType must have exactly two dimensions}}
+    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16x16xf16, "AOp">
+    return
+}
+
+// -----
+
+func @mmamatrix_operand_type(){
+    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
+    %i = constant 16 : index
+    // expected-error @+1 {{operand expected to be one of AOp, BOp, COp or DOp}}
+    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "EOp">
+    return
+}
+
+// -----
+
+func @mmamatrix_invalid_element_type(){
+    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
+    %i = constant 16 : index
+    // expected-error @+1 {{MMAMatrixType elements must be F16 or F32}}
+    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xi32, "AOp">
+    return
+}
+
+// -----
+
+#layout_map_col_major = affine_map<(i, j) -> (j, i)>
+
+func @mmaLoadOp_identity_layout(){
+    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, #layout_map_col_major, 3>
+    %i = constant 16 : index
+    // expected-error @+1 {{expected identity layout map for source memref}}
+    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, #layout_map_col_major, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
+    return
+}
+
+// -----
+
+func @mmaLoadOp_invalid_mem_space(){
+    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 5>
+    %i = constant 16 : index
+    // expected-error @+1 {{source memorySpace kGenericMemorySpace, kSharedMemorySpace or kGlobalMemorySpace only allowed}}
+    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 5> -> !gpu.mma_matrix<16x16xf16, "AOp">
+    return
+}
+
+// -----
+
+func @mmaLoadOp_operand_type(){
+    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
+    %i = constant 16 : index
+    // expected-error @+1 {{only AOp, BOp and COp can be loaded}}
+    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "DOp">
+    return
+}
+
+// -----
+
+#layout_map_col_major = affine_map<(i, j) -> (j, i)>
+
+func @wmmaStoreOp_invalid_map(%arg0 : !gpu.mma_matrix<16x16xf16, "DOp">) -> () {
+    %sg = memref.alloca(){alignment = 32} : memref<32x32xf16, #layout_map_col_major, 3>
+    %i = constant 16 : index
+    %j = constant 16 : index
+    // expected-error @+1 {{expected identity layout map for destination memref}}
+    gpu.subgroup_mma_store_matrix %arg0, %sg[%i,%j] {leadDimension= 32 : index} : !gpu.mma_matrix<16x16xf16, "DOp">, memref<32x32xf16,#layout_map_col_major, 3>
+    return
+}
+
+// -----
+
+func @wmmaStoreOp_invalid_mem_space(%arg0 : !gpu.mma_matrix<16x16xf16, "DOp">) -> () {
+    %sg = memref.alloca(){alignment = 32} : memref<32x32xf16, 5>
+    %i = constant 16 : index
+    %j = constant 16 : index
+    // expected-error @+1 {{destination memorySpace of kGenericMemorySpace, kGlobalMemorySpace or kSharedMemorySpace only allowed}}
+    gpu.subgroup_mma_store_matrix %arg0, %sg[%i,%j] {leadDimension= 32 : index} : !gpu.mma_matrix<16x16xf16, "DOp">, memref<32x32xf16, 5>
+    return
+}
+
+// -----
+
+func @wmmaStoreOp_invalid_store_operand(%arg0 : !gpu.mma_matrix<16x16xf16, "AOp">) -> () {
+    %sg = memref.alloca(){alignment = 32} : memref<32x32xf16, 3>
+    %i = constant 16 : index
+    %j = constant 16 : index
+    // expected-error @+1 {{expected the operand matrix being stored to have 'DOp' operand type}}
+    gpu.subgroup_mma_store_matrix %arg0, %sg[%i,%j] {leadDimension= 32 : index} : !gpu.mma_matrix<16x16xf16, "AOp">, memref<32x32xf16, 3>
+    return
+}
+
+// -----
+
+func @wmmaMmaOp_invalid_operand_order(%A : !gpu.mma_matrix<16x16xf16, "AOp">, %B : !gpu.mma_matrix<16x16xf16, "BOp">, %C : !gpu.mma_matrix<16x16xf16, "COp">) -> () {
+    // expected-error @+1 {{operands must be in the order AOp, BOp, COp}}
+    %D = gpu.subgroup_mma_compute %B, %A, %C : !gpu.mma_matrix<16x16xf16, "BOp">, !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "COp"> -> !gpu.mma_matrix<16x16xf16, "DOp">
+    return
+}
+
+// -----
+
+func @wmmaMmaOp_invalid_operand_shapes(%A : !gpu.mma_matrix<16x32xf16, "AOp">, %B : !gpu.mma_matrix<16x16xf16, "BOp">, %C : !gpu.mma_matrix<16x16xf16, "COp">) -> () {
+    // expected-error @+1 {{operand shapes do not satisfy matmul constraints}}
+    %D = gpu.subgroup_mma_compute %A, %B, %C : !gpu.mma_matrix<16x32xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp">, !gpu.mma_matrix<16x16xf16, "COp"> -> !gpu.mma_matrix<16x16xf16, "DOp">
+    return
+}

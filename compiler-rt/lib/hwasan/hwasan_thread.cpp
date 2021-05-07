@@ -35,6 +35,10 @@ void Thread::InitRandomState() {
 }
 
 void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size) {
+  CHECK_EQ(0, unique_id_);  // try to catch bad stack reuse
+  CHECK_EQ(0, stack_top_);
+  CHECK_EQ(0, stack_bottom_);
+
   static u64 unique_id;
   unique_id_ = unique_id++;
   if (auto sz = flags()->heap_history_size)

@@ -165,6 +165,13 @@ public:
                                      MachinePointerInfo &MPO,
                                      ISD::ArgFlagsTy Flags) = 0;
 
+    /// Return the in-memory size to write for the argument at \p VA. This may
+    /// be smaller than the allocated stack slot size.
+    ///
+    /// This is overridable primarily for targets to maintain compatibility with
+    /// hacks around the existing DAG call lowering infrastructure.
+    virtual uint64_t getStackValueStoreSize(const CCValAssign &VA) const;
+
     /// The specified value has been assigned to a physical register,
     /// handle the appropriate COPY (either to or from) and mark any
     /// relevant uses/defines as needed.
@@ -212,7 +219,11 @@ public:
     Register extendRegister(Register ValReg, CCValAssign &VA,
                             unsigned MaxSizeBits = 0);
 
-    virtual bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
+    /// Wrap call to (typically tablegenerated CCAssignFn). This may be
+    /// overridden to track additional state information as arguments are
+    /// assigned or apply target specific hacks around the legacy
+    /// infrastructure.
+    virtual bool assignArg(unsigned ValNo, EVT OrigVT, MVT ValVT, MVT LocVT,
                            CCValAssign::LocInfo LocInfo, const ArgInfo &Info,
                            ISD::ArgFlagsTy Flags, CCState &State) {
       return AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);

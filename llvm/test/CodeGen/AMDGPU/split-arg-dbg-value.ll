@@ -20,7 +20,7 @@ define hidden <4 x float> @split_v4f32_arg(<4 x float> returned %arg) local_unna
 ; GCN-NEXT:    .loc 0 4 5 prologue_end ; /tmp/dbg.cl:4:5
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GCN-NEXT:  .Ltmp1:
-; GCN:    .cfi_endproc
+; GCN:         .cfi_endproc
   call void @llvm.dbg.value(metadata <4 x float> %arg, metadata !18, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !19
   ret <4 x float> %arg, !dbg !20
 }
@@ -57,7 +57,7 @@ define hidden <4 x float> @split_v4f32_multi_arg(<4 x float> %arg0, <2 x float> 
 ; GCN-NEXT:    .loc 0 8 5 is_stmt 0 ; /tmp/dbg.cl:8:5
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GCN-NEXT:  .Ltmp7:
-; GCN:    .cfi_endproc
+; GCN:         .cfi_endproc
   call void @llvm.dbg.value(metadata <4 x float> %arg0, metadata !29, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !31
   call void @llvm.dbg.value(metadata <2 x float> %arg1, metadata !30, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !31
   %tmp = shufflevector <2 x float> %arg1, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>, !dbg !32
@@ -80,7 +80,7 @@ define hidden <4 x half> @split_v4f16_arg(<4 x half> returned %arg) local_unname
 ; GCN-NEXT:    .loc 0 12 5 prologue_end ; /tmp/dbg.cl:12:5
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GCN-NEXT:  .Ltmp9:
-; GCN:    .cfi_endproc
+; GCN:         .cfi_endproc
   call void @llvm.dbg.value(metadata <4 x half> %arg, metadata !42, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !43
   ret <4 x half> %arg, !dbg !44
 }
@@ -100,7 +100,7 @@ define hidden double @split_f64_arg(double returned %arg) local_unnamed_addr #0 
 ; GCN-NEXT:    .loc 0 16 5 prologue_end ; /tmp/dbg.cl:16:5
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GCN-NEXT:  .Ltmp11:
-; GCN:    .cfi_endproc
+; GCN:         .cfi_endproc
   call void @llvm.dbg.value(metadata double %arg, metadata !50, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !51
   ret double %arg, !dbg !52
 }
@@ -122,7 +122,7 @@ define hidden <2 x double> @split_v2f64_arg(<2 x double> returned %arg) local_un
 ; GCN-NEXT:    .loc 0 20 5 prologue_end ; /tmp/dbg.cl:20:5
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GCN-NEXT:  .Ltmp13:
-; GCN:    .cfi_endproc
+; GCN:         .cfi_endproc
   call void @llvm.dbg.value(metadata <2 x double> %arg, metadata !59, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !60
   ret <2 x double> %arg, !dbg !61
 }
@@ -142,7 +142,7 @@ define hidden i64 @split_i64_arg(i64 returned %arg) local_unnamed_addr #0 !dbg !
 ; GCN-NEXT:    .loc 0 24 5 prologue_end ; /tmp/dbg.cl:24:5
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GCN-NEXT:  .Ltmp15:
-; GCN:    .cfi_endproc
+; GCN:         .cfi_endproc
   call void @llvm.dbg.value(metadata i64 %arg, metadata !67, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !68
   ret i64 %arg, !dbg !69
 }
@@ -162,7 +162,7 @@ define hidden i8 addrspace(1)* @split_ptr_arg(i8 addrspace(1)* readnone returned
 ; GCN-NEXT:    .loc 0 28 5 prologue_end ; /tmp/dbg.cl:28:5
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GCN-NEXT:  .Ltmp17:
-; GCN:    .cfi_endproc
+; GCN:         .cfi_endproc
   call void @llvm.dbg.value(metadata i8 addrspace(1)* %arg, metadata !76, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !77
   ret i8 addrspace(1)* %arg, !dbg !78
 }

@@ -2353,8 +2353,9 @@ declare { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld3.v4i32.p0i32(i
 define void @test_i1_arg_zext(void (i1)* %f) {
 ; CHECK-LABEL: name: test_i1_arg_zext
 ; CHECK: [[I1:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[I1]](s1)
-; CHECK: $w0 = COPY [[ZEXT]](s32)
+; CHECK: [[ZEXT0:%[0-9]+]]:_(s8) = G_ZEXT [[I1]](s1)
+; CHECK: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[ZEXT0]](s8)
+; CHECK: $w0 = COPY [[ZEXT1]](s32)
   call void %f(i1 true)
   ret void
 }

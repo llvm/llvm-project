@@ -25,6 +25,7 @@ SUBROUTINE ORDERED_BAD(N)
   !$OMP DO SIMD
   DO I = 1,N
     IF (I <= 10) THEN
+      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
       !ERROR: The ORDERED clause must be present on the loop construct if any ORDERED region ever binds to a loop region arising from the loop construct.
       !$OMP ORDERED 
       CALL WORK(I)

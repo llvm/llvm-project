@@ -14,7 +14,7 @@ extern "C" void workshareloop_unsigned(float *a, float *b, float *c, float *d) {
 
 #endif // HEADER
 // CHECK-LABEL: define {{[^@]+}}@workshareloop_unsigned
-// CHECK-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) [[ATTR0:#.*]] {
+// CHECK-SAME: (float* [[A:%.*]], float* [[B:%.*]], float* [[C:%.*]], float* [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca float*, align 8
@@ -46,8 +46,8 @@ extern "C" void workshareloop_unsigned(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[DOTCOUNT]], 1
 // CHECK-NEXT:    store i32 [[TMP3]], i32* [[P_UPPERBOUND]], align 4
 // CHECK-NEXT:    store i32 1, i32* [[P_STRIDE]], align 4
-// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* [[GLOB1:@.*]])
-// CHECK-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* [[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 34, i32* [[P_LASTITER]], i32* [[P_LOWERBOUND]], i32* [[P_UPPERBOUND]], i32* [[P_STRIDE]], i32 1, i32 1)
+// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
+// CHECK-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 34, i32* [[P_LASTITER]], i32* [[P_LOWERBOUND]], i32* [[P_UPPERBOUND]], i32* [[P_STRIDE]], i32 1, i32 1)
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[P_LOWERBOUND]], align 4
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[P_UPPERBOUND]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP5]], [[TMP4]]
@@ -89,16 +89,16 @@ extern "C" void workshareloop_unsigned(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT:    [[OMP_LOOP_NEXT]] = add nuw i32 [[OMP_LOOP_IV]], 1
 // CHECK-NEXT:    br label [[OMP_LOOP_HEADER]]
 // CHECK:       omp_loop.exit:
-// CHECK-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* [[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
-// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM9:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* [[GLOB1]])
-// CHECK-NEXT:    call void @__kmpc_barrier(%struct.ident_t* [[GLOB2:@.*]], i32 [[OMP_GLOBAL_THREAD_NUM9]])
+// CHECK-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
+// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM9:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
+// CHECK-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM9]])
 // CHECK-NEXT:    br label [[OMP_LOOP_AFTER:%.*]]
 // CHECK:       omp_loop.after:
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@__captured_stmt
-// CHECK-SAME: (i32* nonnull align 4 dereferenceable(4) [[DISTANCE:%.*]], %struct.anon* noalias [[__CONTEXT:%.*]]) [[ATTR1:#.*]] {
+// CHECK-SAME: (i32* nonnull align 4 dereferenceable(4) [[DISTANCE:%.*]], %struct.anon* noalias [[__CONTEXT:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DISTANCE_ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon*, align 8
@@ -135,7 +135,7 @@ extern "C" void workshareloop_unsigned(float *a, float *b, float *c, float *d) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@__captured_stmt.1
-// CHECK-SAME: (i32* nonnull align 4 dereferenceable(4) [[LOOPVAR:%.*]], i32 [[LOGICAL:%.*]], %struct.anon.0* noalias [[__CONTEXT:%.*]]) [[ATTR1]] {
+// CHECK-SAME: (i32* nonnull align 4 dereferenceable(4) [[LOOPVAR:%.*]], i32 [[LOGICAL:%.*]], %struct.anon.0* noalias [[__CONTEXT:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[LOOPVAR_ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:    [[LOGICAL_ADDR:%.*]] = alloca i32, align 4

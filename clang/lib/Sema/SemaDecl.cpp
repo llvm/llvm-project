@@ -18457,7 +18457,7 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(FunctionDecl *FD,
         OMPDeclareTargetDeclAttr::getDeviceType(FD->getCanonicalDecl());
     // DevTy may be changed later by
     //  #pragma omp declare target to(*) device_type(*).
-    // Therefore DevTyhaving no value does not imply host. The emission status
+    // Therefore DevTy having no value does not imply host. The emission status
     // will be checked again at the end of compilation unit with Final = true.
     if (DevTy.hasValue())
       if (*DevTy == OMPDeclareTargetDeclAttr::DT_Host)
