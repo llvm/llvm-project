@@ -210,16 +210,17 @@ exit:
   ret void
 }
 
+; TODO: we need to be more careful when trying to look through phi nodes in
+; cycles, because the condition to prove may reference the previous value of
+; the phi. So we currently fail to optimize this case.
 ; Check that we can figure out that IV is non-negative via implication through
 ; two Phi nodes, one being AddRec.
 define void @test_05(i32* %a, i32* %a_len_ptr, i1 %cond) {
 
 ; CHECK-LABEL: test_05
-; CHECK:       mainloop:
-; CHECK-NEXT:    br label %loop
-; CHECK:       loop:
-; CHECK:         br i1 true, label %in.bounds, label %out.of.bounds
-; CHECK:       loop.preloop:
+; CHECK: entry:
+; CHECK:   br label %merge
+; CHECK-NOT: mainloop
 
  entry:
   %len.a = load i32, i32* %a_len_ptr, !range !0
