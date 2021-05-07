@@ -364,6 +364,11 @@ bool RegisterFile::tryEliminateMove(WriteState &WS, ReadState &RS) {
   if (RegisterFileIndex != RRITo.IndexPlusCost.first)
     return false;
 
+  // Early exit if the destination register is from a register class that
+  // doesn't allow move elimination.
+  if (!RegisterMappings[RRITo.RenameAs].second.AllowMoveElimination)
+    return false;
+
   // We only allow move elimination for writes that update a full physical
   // register. On X86, move elimination is possible with 32-bit general purpose
   // registers because writes to those registers are not partial writes.  If a
@@ -379,9 +384,6 @@ bool RegisterFile::tryEliminateMove(WriteState &WS, ReadState &RS) {
   // that allow move elimination, and how those same registers are renamed in
   // hardware.
   if (RRITo.RenameAs && RRITo.RenameAs != WS.getRegisterID()) {
-    // Early exit if the PRF doesn't support move elimination for this register.
-    if (!RegisterMappings[RRITo.RenameAs].second.AllowMoveElimination)
-      return false;
     if (!WS.clearsSuperRegisters())
       return false;
   }

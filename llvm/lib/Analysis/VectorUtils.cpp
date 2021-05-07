@@ -708,6 +708,8 @@ MDNode *llvm::intersectAccessGroups(const Instruction *Inst1,
 
 /// \returns \p I after propagating metadata from \p VL.
 Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
+  if (VL.empty())
+    return Inst;
   Instruction *I0 = cast<Instruction>(VL[0]);
   SmallVector<std::pair<unsigned, MDNode *>, 4> Metadata;
   I0->getAllMetadataOtherThanDebugLoc(Metadata);

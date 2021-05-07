@@ -202,8 +202,7 @@ protected:
 
 public:
   CGSCCPassManagerTest()
-      : FAM(/*DebugLogging*/ true), CGAM(/*DebugLogging*/ true),
-        MAM(/*DebugLogging*/ true),
+      : FAM(), CGAM(), MAM(),
         M(parseIR(
             // Define a module with the following call graph, where calls go
             // out the bottom of nodes and enter the top:

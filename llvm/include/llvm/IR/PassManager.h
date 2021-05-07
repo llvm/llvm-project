@@ -746,9 +746,7 @@ public:
   };
 
   /// Construct an empty analysis manager.
-  ///
-  /// If \p DebugLogging is true, we'll log our progress to llvm::dbgs().
-  AnalysisManager(bool DebugLogging = false);
+  AnalysisManager();
   AnalysisManager(AnalysisManager &&);
   AnalysisManager &operator=(AnalysisManager &&);
 
@@ -910,9 +908,6 @@ private:
   /// Map from an analysis ID and IR unit to a particular cached
   /// analysis result.
   AnalysisResultMapT AnalysisResults;
-
-  /// Indicates whether we log to \c llvm::dbgs().
-  bool DebugLogging;
 };
 
 extern template class AnalysisManager<Module>;

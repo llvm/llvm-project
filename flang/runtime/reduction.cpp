@@ -10,7 +10,7 @@
 // types and shapes.
 //
 // FINDLOC, SUM, and PRODUCT are in their own eponymous source files;
-// MAXLOC, MINLOC, MAXVAL, and MINVAL are in extrema.cpp.
+// NORM2, MAXLOC, MINLOC, MAXVAL, and MINVAL are in extrema.cpp.
 
 #include "reduction.h"
 #include "reduction-templates.h"

@@ -121,11 +121,13 @@ static cl::opt<std::string> OptimizerLastEPPipeline(
 // Individual pipeline tuning options.
 extern cl::opt<bool> DisableLoopUnrolling;
 
+namespace llvm {
 extern cl::opt<PGOKind> PGOKindFlag;
 extern cl::opt<std::string> ProfileFile;
 extern cl::opt<CSPGOKind> CSPGOKindFlag;
 extern cl::opt<std::string> CSProfileGenFile;
 extern cl::opt<bool> DisableBasicAA;
+} // namespace llvm
 
 static cl::opt<std::string>
     ProfileRemappingFile("profile-remapping-file",
@@ -275,10 +277,10 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
       P->CSAction = PGOOptions::CSIRUse;
     }
   }
-  LoopAnalysisManager LAM(DebugPM);
-  FunctionAnalysisManager FAM(DebugPM);
-  CGSCCAnalysisManager CGAM(DebugPM);
-  ModuleAnalysisManager MAM(DebugPM);
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
 
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(DebugPM, VerifyEachPass);

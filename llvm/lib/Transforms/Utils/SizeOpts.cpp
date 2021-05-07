@@ -14,45 +14,45 @@
 
 using namespace llvm;
 
-cl::opt<bool> EnablePGSO(
+cl::opt<bool> llvm::EnablePGSO(
     "pgso", cl::Hidden, cl::init(true),
     cl::desc("Enable the profile guided size optimizations. "));
 
-cl::opt<bool> PGSOLargeWorkingSetSizeOnly(
+cl::opt<bool> llvm::PGSOLargeWorkingSetSizeOnly(
     "pgso-lwss-only", cl::Hidden, cl::init(true),
     cl::desc("Apply the profile guided size optimizations only "
              "if the working set size is large (except for cold code.)"));
 
-cl::opt<bool> PGSOColdCodeOnly(
+cl::opt<bool> llvm::PGSOColdCodeOnly(
     "pgso-cold-code-only", cl::Hidden, cl::init(false),
     cl::desc("Apply the profile guided size optimizations only "
              "to cold code."));
 
-cl::opt<bool> PGSOColdCodeOnlyForInstrPGO(
+cl::opt<bool> llvm::PGSOColdCodeOnlyForInstrPGO(
     "pgso-cold-code-only-for-instr-pgo", cl::Hidden, cl::init(false),
     cl::desc("Apply the profile guided size optimizations only "
              "to cold code under instrumentation PGO."));
 
-cl::opt<bool> PGSOColdCodeOnlyForSamplePGO(
+cl::opt<bool> llvm::PGSOColdCodeOnlyForSamplePGO(
     "pgso-cold-code-only-for-sample-pgo", cl::Hidden, cl::init(false),
     cl::desc("Apply the profile guided size optimizations only "
              "to cold code under sample PGO."));
 
-cl::opt<bool> PGSOColdCodeOnlyForPartialSamplePGO(
+cl::opt<bool> llvm::PGSOColdCodeOnlyForPartialSamplePGO(
     "pgso-cold-code-only-for-partial-sample-pgo", cl::Hidden, cl::init(false),
     cl::desc("Apply the profile guided size optimizations only "
              "to cold code under partial-profile sample PGO."));
 
-cl::opt<bool> ForcePGSO(
+cl::opt<bool> llvm::ForcePGSO(
     "force-pgso", cl::Hidden, cl::init(false),
     cl::desc("Force the (profiled-guided) size optimizations. "));
 
-cl::opt<int> PgsoCutoffInstrProf(
+cl::opt<int> llvm::PgsoCutoffInstrProf(
     "pgso-cutoff-instr-prof", cl::Hidden, cl::init(950000), cl::ZeroOrMore,
     cl::desc("The profile guided size optimization profile summary cutoff "
              "for instrumentation profile."));
 
-cl::opt<int> PgsoCutoffSampleProf(
+cl::opt<int> llvm::PgsoCutoffSampleProf(
     "pgso-cutoff-sample-prof", cl::Hidden, cl::init(990000), cl::ZeroOrMore,
     cl::desc("The profile guided size optimization profile summary cutoff "
              "for sample profile."));
