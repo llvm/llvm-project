@@ -57,7 +57,7 @@ func @fuse_indexed_generic_consumer(%A: memref<?x?xf32>,
 // CHECK:      linalg.generic
 // CHECK-NOT:    addi
 // CHECK:        addf
-// CHECK:      linalg.indexed_generic
+// CHECK:      linalg.generic
 // CHECK:        index_cast
 
 // -----
@@ -177,8 +177,9 @@ func @fuse_indexed_generic_producer(%A: memref<?x?xf32>,
 // CHECK-LABEL: func @fuse_indexed_generic_producer
 // CHECK:  scf.parallel ([[I:%.*]], [[J:%.*]]) =
 // CHECK-NOT:  scf.parallel
-// CHECK:      linalg.indexed_generic
-// CHECK:        ^bb0([[i:%.*]]: index, [[j:%.*]]: index
+// CHECK:      linalg.generic
+// CHECK:          [[i:%.*]] = linalg.index 0 : index
+// CHECK:          [[j:%.*]] = linalg.index 1 : index
 // CHECK:          [[i_new:%.*]] = addi [[i]], [[I]] : index
 // CHECK:          [[j_new:%.*]] = addi [[j]], [[J]] : index
 // CHECK:          {{.*}} = index_cast [[i_new]] : index to i32
@@ -295,8 +296,9 @@ func @fuse_indexed_generic_producer_tile_second_dim_only(%A: memref<?x?xf32>,
 // CHECK:  [[C0:%.*]] = constant 0 : index
 // CHECK:  scf.parallel ([[J:%.*]]) =
 // CHECK-NOT:  scf.parallel
-// CHECK:      linalg.indexed_generic
-// CHECK:        ^bb0([[i:%.*]]: index, [[j:%.*]]: index
+// CHECK:      linalg.generic
+// CHECK:          [[i:%.*]] = linalg.index 0 : index
+// CHECK:          [[j:%.*]] = linalg.index 1 : index
 // CHECK:          [[j_new:%.*]] = addi [[j]], [[J]] : index
 // CHECK:          {{.*}} = index_cast [[i]] : index to i32
 // CHECK:          {{.*}} = index_cast [[j_new]] : index to i32

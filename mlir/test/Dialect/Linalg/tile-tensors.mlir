@@ -164,7 +164,7 @@ func @indexed_generic_op_tensors(
 //       CHECK:       %[[STARG0:.+]] = subtensor %[[ARG0]][{{.+}}] : tensor<?x?x?xf32> to tensor<?x?x?xf32>
 //       CHECK:       %[[STARG1:.+]] = subtensor %[[ARG1]][{{.+}}] : tensor<?x?x?xf32> to tensor<?x?x?xf32>
 //       CHECK:       %[[STARG2:.+]] = subtensor %[[TC2]][{{.+}}] : tensor<?x?x?xf32> to tensor<?x?x?xf32>
-//       CHECK:       %[[STRETURN:.+]] = linalg.indexed_generic
+//       CHECK:       %[[STRETURN:.+]] = linalg.generic
 //  CHECK-SAME:         ins(%[[STARG0]], %[[STARG1]] : tensor<?x?x?xf32>, tensor<?x?x?xf32>)
 //  CHECK-SAME:         outs(%[[STARG2]] : tensor<?x?x?xf32>)
 //       CHECK:       %[[TD:.+]] = subtensor_insert %[[STRETURN]] into %[[TC2]]
