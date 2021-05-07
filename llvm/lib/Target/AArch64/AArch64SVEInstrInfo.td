@@ -1365,8 +1365,8 @@ let Predicates = [HasSVE] in {
   defm SQDECP_XP   : sve_int_count_r_x64<0b01010, "sqdecp", int_aarch64_sve_sqdecp_n64>;
   defm UQDECP_WP   : sve_int_count_r_u32<0b01100, "uqdecp", int_aarch64_sve_uqdecp_n32>;
   defm UQDECP_XP   : sve_int_count_r_x64<0b01110, "uqdecp", int_aarch64_sve_uqdecp_n64>;
-  defm INCP_XP     : sve_int_count_r_x64<0b10000, "incp">;
-  defm DECP_XP     : sve_int_count_r_x64<0b10100, "decp">;
+  defm INCP_XP     : sve_int_count_r_x64<0b10000, "incp", null_frag, add>;
+  defm DECP_XP     : sve_int_count_r_x64<0b10100, "decp", null_frag, sub>;
 
   defm SQINCP_ZP   : sve_int_count_v<0b00000, "sqincp", int_aarch64_sve_sqincp>;
   defm UQINCP_ZP   : sve_int_count_v<0b00100, "uqincp", int_aarch64_sve_uqincp>;
