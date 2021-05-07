@@ -23,7 +23,9 @@ static cl::opt<bool> ThinLTOSynthesizeEntryCounts(
     "thinlto-synthesize-entry-counts", cl::init(false), cl::Hidden,
     cl::desc("Synthesize entry counts based on the summary"));
 
+namespace llvm {
 extern cl::opt<int> InitialSyntheticCount;
+}
 
 static void initializeCounts(ModuleSummaryIndex &Index) {
   auto Root = Index.calculateCallGraphRoot();
