@@ -959,7 +959,7 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
   //   OpPhi | result type | result <id> | (value <id>, parent block <id>) pair
   // So we need to collect all predecessor blocks and the arguments they send
   // to this block.
-  SmallVector<std::pair<Block *, Operation::operand_iterator>, 4> predecessors;
+  SmallVector<std::pair<Block *, OperandRange>, 4> predecessors;
   for (Block *predecessor : block->getPredecessors()) {
     auto *terminator = predecessor->getTerminator();
     // The predecessor here is the immediate one according to MLIR's IR
@@ -971,7 +971,21 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
     // structured control flow op's merge block.
     predecessor = getPhiIncomingBlock(predecessor);
     if (auto branchOp = dyn_cast<spirv::BranchOp>(terminator)) {
-      predecessors.emplace_back(predecessor, branchOp.operand_begin());
+      predecessors.emplace_back(predecessor, branchOp.getOperands());
+    } else if (auto branchCondOp =
+                   dyn_cast<spirv::BranchConditionalOp>(terminator)) {
+      Optional<OperandRange> blockOperands;
+
+      for (auto successorIdx :
+           llvm::seq<unsigned>(0, predecessor->getNumSuccessors()))
+        if (predecessor->getSuccessors()[successorIdx] == block) {
+          blockOperands = branchCondOp.getSuccessorOperands(successorIdx);
+          break;
+        }
+
+      assert(blockOperands && !blockOperands->empty() &&
+             "expected non-empty block operand range");
+      predecessors.emplace_back(predecessor, *blockOperands);
     } else {
       return terminator->emitError("unimplemented terminator for Phi creation");
     }
@@ -996,7 +1010,7 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
     phiArgs.push_back(phiID);
 
     for (auto predIndex : llvm::seq<unsigned>(0, predecessors.size())) {
-      Value value = *(predecessors[predIndex].second + argIndex);
+      Value value = predecessors[predIndex].second[argIndex];
       uint32_t predBlockId = getOrCreateBlockID(predecessors[predIndex].first);
       LLVM_DEBUG(llvm::dbgs() << "[phi] use predecessor (id = " << predBlockId
                               << ") value " << value << ' ');
