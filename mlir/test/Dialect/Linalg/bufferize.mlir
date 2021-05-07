@@ -96,10 +96,10 @@ func @multiple_results(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
 // CHECK-LABEL:   func @multiple_results_indexed
 // CHECK:           %[[RESULT0:.*]] = memref.alloc() : memref<4xi32>
 // CHECK:           %[[RESULT1:.*]] = memref.alloc() : memref<4xi32>
-// CHECK:           linalg.indexed_generic
+// CHECK:           linalg.generic
 // CHECK-SAME:      ins(%{{.*}} : memref<4xi32>)
 // CHECK-SAME:      outs(%[[RESULT0]], %[[RESULT1]] : memref<4xi32>, memref<4xi32>)
-// CHECK-NEXT: ^bb0(%{{.*}}: index, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32):
+// CHECK-NEXT: ^bb0(%{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32):
 func @multiple_results_indexed(%arg0: tensor<4xi32>)
         -> (tensor<4xi32>, tensor<4xi32>) {
     %0, %1 = linalg.indexed_generic {

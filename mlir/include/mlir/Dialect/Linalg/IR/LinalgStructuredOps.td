@@ -811,7 +811,6 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
   ];
   let verifier = [{ return ::verify(*this); }];
 
-  let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
 
