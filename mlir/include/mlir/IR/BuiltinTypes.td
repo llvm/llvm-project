@@ -170,8 +170,7 @@ def Builtin_Index : Builtin_Type<"Index"> {
 
     The index type is a signless integer whose size is equal to the natural
     machine word of the target ( [rationale](https://mlir.llvm.org/docs/Rationale/Rationale/#integer-signedness-semantics) )
-    and is used by the affine constructs in MLIR. Unlike fixed-size integers,
-    it cannot be used as an element of vector ( [rationale](https://mlir.llvm.org/docs/Rationale/Rationale/#index-type-disallowed-in-vector-types) ).
+    and is used by the affine constructs in MLIR.
 
     **Rationale:** integers of platform-specific bit widths are practical to
     express sizes, dimensionalities and subscripts.
