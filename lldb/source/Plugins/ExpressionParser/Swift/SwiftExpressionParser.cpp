@@ -1483,11 +1483,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
                         retry = true;
                     },
                     [&](const SwiftASTContextError &SACE) {
-                      if (swift_ast_ctx->GetClangImporter())
-                        DiagnoseSwiftASTContextError();
-                      else
-                        // Discard the shared scratch context and retry.
-                        retry = true;
+                      DiagnoseSwiftASTContextError();
                     },
                     [&](const StringError &SE) {
                       diagnostic_manager.PutString(eDiagnosticSeverityError,
