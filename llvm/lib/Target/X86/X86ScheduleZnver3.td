@@ -1474,10 +1474,12 @@ def : IsOptimizableRegisterMove<[
     // SSE variants.
     MOVAPSrr, MOVUPSrr,
     MOVAPDrr, MOVUPDrr,
-    MOVDQArr, MOVDQUrr
+    MOVDQArr, MOVDQUrr,
 
     // AVX variants.
-    // FIXME
+    VMOVAPSrr, VMOVUPSrr,
+    VMOVAPDrr, VMOVUPDrr,
+    VMOVDQArr, VMOVDQUrr
   ], TruePred >
 ]>;
 
