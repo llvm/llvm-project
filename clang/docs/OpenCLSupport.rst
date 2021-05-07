@@ -432,7 +432,7 @@ The possible clang invocation to compile the example is as follows:
 
    .. code-block:: console
 
-     $ clang -cl-std=clc++  -I<path to libcxx checkout or installation>/include test.cl
+     $ clang -I<path to libcxx checkout or installation>/include test.clcpp
 
 Note that `type_traits` is a header only library and therefore no extra
 linking step against the standard libraries is required. See full example
