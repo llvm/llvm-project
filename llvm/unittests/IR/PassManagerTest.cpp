@@ -419,11 +419,11 @@ TEST(PreservedAnalysisTest, Abandon) {
 }
 
 TEST_F(PassManagerTest, Basic) {
-  FunctionAnalysisManager FAM(/*DebugLogging*/ true);
+  FunctionAnalysisManager FAM;
   int FunctionAnalysisRuns = 0;
   FAM.registerPass([&] { return TestFunctionAnalysis(FunctionAnalysisRuns); });
 
-  ModuleAnalysisManager MAM(/*DebugLogging*/ true);
+  ModuleAnalysisManager MAM;
   int ModuleAnalysisRuns = 0;
   MAM.registerPass([&] { return TestModuleAnalysis(ModuleAnalysisRuns); });
   MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
@@ -704,8 +704,8 @@ struct LambdaPass : public PassInfoMixin<LambdaPass> {
 };
 
 TEST_F(PassManagerTest, IndirectAnalysisInvalidation) {
-  FunctionAnalysisManager FAM(/*DebugLogging*/ true);
-  ModuleAnalysisManager MAM(/*DebugLogging*/ true);
+  FunctionAnalysisManager FAM;
+  ModuleAnalysisManager MAM;
   int FunctionAnalysisRuns = 0, ModuleAnalysisRuns = 0,
       IndirectAnalysisRuns = 0, DoublyIndirectAnalysisRuns = 0;
   FAM.registerPass([&] { return TestFunctionAnalysis(FunctionAnalysisRuns); });
@@ -823,7 +823,7 @@ TEST_F(PassManagerTest, FunctionPassCFGChecker) {
                             "}\n");
 
   auto *F = M->getFunction("foo");
-  FunctionAnalysisManager FAM(/*DebugLogging*/ true);
+  FunctionAnalysisManager FAM;
   FunctionPassManager FPM(/*DebugLogging*/ true);
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(/*DebugLogging*/ true);
@@ -869,7 +869,7 @@ TEST_F(PassManagerTest, FunctionPassCFGCheckerInvalidateAnalysis) {
                             "}\n");
 
   auto *F = M->getFunction("foo");
-  FunctionAnalysisManager FAM(/*DebugLogging*/ true);
+  FunctionAnalysisManager FAM;
   FunctionPassManager FPM(/*DebugLogging*/ true);
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(/*DebugLogging*/ true);
@@ -934,7 +934,7 @@ TEST_F(PassManagerTest, FunctionPassCFGCheckerWrapped) {
                             "}\n");
 
   auto *F = M->getFunction("foo");
-  FunctionAnalysisManager FAM(/*DebugLogging*/ true);
+  FunctionAnalysisManager FAM;
   FunctionPassManager FPM(/*DebugLogging*/ true);
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(/*DebugLogging*/ true);
