@@ -22,11 +22,15 @@ int main(int, char**)
     {
         int a1[] = {1, 3, 7, 9, 10};
         int a2[] = {0, 2, 4, 5, 6, 8, 11};
-        std::list<int> c1(a1, a1+sizeof(a1)/sizeof(a1[0]));
-        std::list<int> c2(a2, a2+sizeof(a2)/sizeof(a2[0]));
+        std::list<int> c1(a1, a1 + sizeof(a1)/sizeof(a1[0]));
+        std::list<int> c2(a2, a2 + sizeof(a2)/sizeof(a2[0]));
+        std::list<int>::iterator it1 = c1.begin();
+        std::list<int>::const_iterator it2 = c2.begin();
         swap(c1, c2);
         assert(c1 == std::list<int>(a2, a2+sizeof(a2)/sizeof(a2[0])));
         assert(c2 == std::list<int>(a1, a1+sizeof(a1)/sizeof(a1[0])));
+        assert(it1 == c2.begin()); // Iterators remain valid
+        assert(it2 == c1.begin()); // Iterators remain valid
     }
     {
         int a1[] = {1, 3, 7, 9, 10};
