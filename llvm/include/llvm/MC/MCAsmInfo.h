@@ -357,8 +357,14 @@ protected:
   LCOMM::LCOMMType LCOMMDirectiveAlignmentType = LCOMM::NoAlignment;
 
   /// True if the target only has basename for .file directive. False if the
-  /// target also needs the directory along with the basename. Default to true.
+  /// target also needs the directory along with the basename. Defaults to true.
   bool HasBasenameOnlyForFileDirective = true;
+
+  /// True if the target represents string constants as mostly raw characters in
+  /// paired double quotation with paired double quotation marks as the escape
+  /// mechanism to represent a double quotation mark within the string. Defaults
+  /// to false.
+  bool HasPairedDoubleQuoteStringConstants = false;
 
   // True if the target allows .align directives on functions. This is true for
   // most targets, so defaults to true.
@@ -696,6 +702,9 @@ public:
 
   bool hasBasenameOnlyForFileDirective() const {
     return HasBasenameOnlyForFileDirective;
+  }
+  bool hasPairedDoubleQuoteStringConstants() const {
+    return HasPairedDoubleQuoteStringConstants;
   }
   bool hasFunctionAlignment() const { return HasFunctionAlignment; }
   bool hasDotTypeDotSizeDirective() const { return HasDotTypeDotSizeDirective; }
