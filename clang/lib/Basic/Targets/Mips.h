@@ -106,7 +106,13 @@ public:
       return true;
     }
 
-    if (Name == "n32" || Name == "p32") {
+    if (Name == "p32") {
+      setP32ABITypes();
+      ABI = Name;
+      return true;
+    }
+
+    if (Name == "n32") {
       setN32ABITypes();
       ABI = Name;
       return true;
@@ -130,6 +136,20 @@ public:
     PtrDiffType = SignedInt;
     SizeType = UnsignedInt;
     SuitableAlign = 64;
+  }
+
+  void setP32ABITypes() {
+    Int64Type = SignedLongLong;
+    IntMaxType = Int64Type;
+    LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    LongDoubleWidth = LongDoubleAlign = 64;
+    LongWidth = LongAlign = 32;
+    MaxAtomicPromoteWidth = 32;
+    MaxAtomicInlineWidth = 64;
+    PointerWidth = PointerAlign = 32;
+    PtrDiffType = SignedInt;
+    SizeType = UnsignedInt;
+    SuitableAlign = 128;
   }
 
   void setN32N64ABITypes() {
