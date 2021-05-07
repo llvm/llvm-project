@@ -53,44 +53,8 @@ steps:
   #
   - wait
 
-  - label: "C++03"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx03"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
-    agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-
-  - label: "C++11"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx11"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
-    agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-
-  - label: "C++14"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx14"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
-    agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-
-  - label: "C++17"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx17"
+  - label: "C++2b"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
@@ -113,8 +77,43 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
-  - label: "C++2b"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+  - label: "C++17"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx17"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "C++14"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx14"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+  - label: "C++11"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx11"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "C++03"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx03"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
