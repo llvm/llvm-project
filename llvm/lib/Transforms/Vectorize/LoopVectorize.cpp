@@ -8900,11 +8900,10 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
              Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
       VPValue *StartV = Operands[0];
 
-      // Record the PHI and the incoming value from the backedge, so we can add
-      // the incoming value from the backedge after all recipes have been
-      // created.
       auto *PhiRecipe = new VPWidenPHIRecipe(Phi, RdxDesc, *StartV);
       PhisToFix.push_back(PhiRecipe);
+      // Record the incoming value from the backedge, so we can add the incoming
+      // value from the backedge after all recipes have been created.
       recordRecipeOf(cast<Instruction>(
           Phi->getIncomingValueForBlock(OrigLoop->getLoopLatch())));
       return toVPRecipeResult(PhiRecipe);
