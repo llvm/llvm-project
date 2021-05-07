@@ -477,7 +477,7 @@ static void MaxMinHelper(Descriptor &accumulator, const Descriptor &x,
   std::size_t xChars{x.ElementBytes() >> shift<CHAR>};
   std::size_t chars{std::max(accumChars, xChars)};
   bool reallocate{accumulator.raw().base_addr == nullptr ||
-      accumChars != xChars || (accumulator.rank() == 0 && x.rank() > 0)};
+      accumChars != chars || (accumulator.rank() == 0 && x.rank() > 0)};
   int rank{std::max(accumulator.rank(), x.rank())};
   for (int j{0}; j < rank; ++j) {
     lb[j] = 1;
