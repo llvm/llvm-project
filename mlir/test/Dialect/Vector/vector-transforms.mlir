@@ -675,7 +675,7 @@ func @cast_away_transfer_write_leading_one_dims_one_element(%arg0: memref<1x1x1x
 // CHECK-LABEL: func @cast_away_broadcast_leading_one_dims
 func @cast_away_broadcast_leading_one_dims(
   %arg0: vector<8xf32>, %arg1: f32, %arg2: vector<1x4xf32>) ->
-  (vector<1x1x8xf32>, vector<1x1x4xf32>, vector<1x3x4xf32>) {
+  (vector<1x1x8xf32>, vector<1x1x4xf32>, vector<1x3x4xf32>, vector<1x1x4xf32>) {
   // CHECK:  vector.broadcast %{{.*}} : vector<8xf32> to vector<8xf32>
   // CHECK:  vector.shape_cast %{{.*}} : vector<8xf32> to vector<1x1x8xf32>
   %0 = vector.broadcast %arg0 : vector<8xf32> to vector<1x1x8xf32>
@@ -686,7 +686,10 @@ func @cast_away_broadcast_leading_one_dims(
   // CHECK:  vector.broadcast %{{.*}} : vector<4xf32> to vector<3x4xf32>
   // CHECK:  vector.shape_cast %{{.*}} : vector<3x4xf32> to vector<1x3x4xf32>
   %2 = vector.broadcast %arg2 : vector<1x4xf32> to vector<1x3x4xf32>
-  return %0, %1, %2: vector<1x1x8xf32>, vector<1x1x4xf32>, vector<1x3x4xf32>
+  // CHECK:  splat %{{.*}} : vector<4xf32>
+  // CHECK:  vector.shape_cast %{{.*}} : vector<4xf32> to vector<1x1x4xf32>
+  %3 = splat %arg1 : vector<1x1x4xf32>
+  return %0, %1, %2, %3: vector<1x1x8xf32>, vector<1x1x4xf32>, vector<1x3x4xf32>, vector<1x1x4xf32>
 }
 
 // CHECK-LABEL: func @cast_away_elementwise_leading_one_dims
