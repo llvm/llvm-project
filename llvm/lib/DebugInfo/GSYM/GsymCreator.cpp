@@ -20,13 +20,11 @@
 using namespace llvm;
 using namespace gsym;
 
-
 GsymCreator::GsymCreator() : StrTab(StringTableBuilder::ELF) {
   insertFile(StringRef());
 }
 
-uint32_t GsymCreator::insertFile(StringRef Path,
-                                 llvm::sys::path::Style Style) {
+uint32_t GsymCreator::insertFile(StringRef Path, llvm::sys::path::Style Style) {
   llvm::StringRef directory = llvm::sys::path::parent_path(Path, Style);
   llvm::StringRef filename = llvm::sys::path::filename(Path, Style);
   // We must insert the strings first, then call the FileEntry constructor.
@@ -69,7 +67,8 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
     return createStringError(std::errc::invalid_argument,
                              "too many FunctionInfos");
 
-  const uint64_t MinAddr = BaseAddress ? *BaseAddress : Funcs.front().startAddress();
+  const uint64_t MinAddr =
+      BaseAddress ? *BaseAddress : Funcs.front().startAddress();
   const uint64_t MaxAddr = Funcs.back().startAddress();
   const uint64_t AddrDelta = MaxAddr - MinAddr;
   Header Hdr;
@@ -80,7 +79,7 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   Hdr.BaseAddress = MinAddr;
   Hdr.NumAddresses = static_cast<uint32_t>(Funcs.size());
   Hdr.StrtabOffset = 0; // We will fix this up later.
-  Hdr.StrtabSize = 0; // We will fix this up later.
+  Hdr.StrtabSize = 0;   // We will fix this up later.
   memset(Hdr.UUID, 0, sizeof(Hdr.UUID));
   if (UUID.size() > sizeof(Hdr.UUID))
     return createStringError(std::errc::invalid_argument,
@@ -106,11 +105,19 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   O.alignTo(Hdr.AddrOffSize);
   for (const auto &FuncInfo : Funcs) {
     uint64_t AddrOffset = FuncInfo.startAddress() - Hdr.BaseAddress;
-    switch(Hdr.AddrOffSize) {
-      case 1: O.writeU8(static_cast<uint8_t>(AddrOffset)); break;
-      case 2: O.writeU16(static_cast<uint16_t>(AddrOffset)); break;
-      case 4: O.writeU32(static_cast<uint32_t>(AddrOffset)); break;
-      case 8: O.writeU64(AddrOffset); break;
+    switch (Hdr.AddrOffSize) {
+    case 1:
+      O.writeU8(static_cast<uint8_t>(AddrOffset));
+      break;
+    case 2:
+      O.writeU16(static_cast<uint16_t>(AddrOffset));
+      break;
+    case 4:
+      O.writeU32(static_cast<uint32_t>(AddrOffset));
+      break;
+    case 8:
+      O.writeU64(AddrOffset);
+      break;
     }
   }
 
@@ -127,12 +134,11 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   assert(Files[0].Base == 0);
   size_t NumFiles = Files.size();
   if (NumFiles > UINT32_MAX)
-    return createStringError(std::errc::invalid_argument,
-                             "too many files");
+    return createStringError(std::errc::invalid_argument, "too many files");
   O.writeU32(static_cast<uint32_t>(NumFiles));
-  for (auto File: Files) {
-      O.writeU32(File.Dir);
-      O.writeU32(File.Base);
+  for (auto File : Files) {
+    O.writeU32(File.Dir);
+    O.writeU32(File.Base);
   }
 
   // Write out the sting table.
@@ -144,9 +150,9 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   // Write out the address infos for each function info.
   for (const auto &FuncInfo : Funcs) {
     if (Expected<uint64_t> OffsetOrErr = FuncInfo.encode(O))
-        AddrInfoOffsets.push_back(OffsetOrErr.get());
+      AddrInfoOffsets.push_back(OffsetOrErr.get());
     else
-        return OffsetOrErr.takeError();
+      return OffsetOrErr.takeError();
   }
   // Fixup the string table offset and size in the header
   O.fixup32((uint32_t)StrtabOffset, offsetof(Header, StrtabOffset));
@@ -154,7 +160,7 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
 
   // Fixup all address info offsets
   uint64_t Offset = 0;
-  for (auto AddrInfoOffset: AddrInfoOffsets) {
+  for (auto AddrInfoOffset : AddrInfoOffsets) {
     O.fixup32(AddrInfoOffset, AddrInfoOffsetsOffset + Offset);
     Offset += 4;
   }
@@ -184,8 +190,7 @@ static ForwardIt removeIfBinary(ForwardIt FirstIt, ForwardIt LastIt,
 llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
   std::lock_guard<std::recursive_mutex> Guard(Mutex);
   if (Finalized)
-    return createStringError(std::errc::invalid_argument,
-                             "already finalized");
+    return createStringError(std::errc::invalid_argument, "already finalized");
   Finalized = true;
 
   // Sort function infos so we can emit sorted functions.
@@ -275,8 +280,8 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
   // help ensure we don't cause lookups to always return the last symbol that
   // has no size when doing lookups.
   if (!Funcs.empty() && Funcs.back().Range.size() == 0 && ValidTextRanges) {
-    if (auto Range = ValidTextRanges->getRangeThatContains(
-          Funcs.back().Range.Start)) {
+    if (auto Range =
+            ValidTextRanges->getRangeThatContains(Funcs.back().Range.Start)) {
       Funcs.back().Range.End = Range->End;
     }
   }
@@ -327,7 +332,7 @@ void GsymCreator::forEachFunctionInfo(
   }
 }
 
-size_t GsymCreator::getNumFunctionInfos() const{
+size_t GsymCreator::getNumFunctionInfos() const {
   std::lock_guard<std::recursive_mutex> Guard(Mutex);
   return Funcs.size();
 }
