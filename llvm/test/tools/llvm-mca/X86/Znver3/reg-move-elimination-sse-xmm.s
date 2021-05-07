@@ -119,12 +119,12 @@ movdqu %xmm15, %xmm0
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      24000
-# CHECK-NEXT: Total Cycles:      6002
+# CHECK-NEXT: Total Cycles:      4001
 # CHECK-NEXT: Total uOps:        24000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    4.00
-# CHECK-NEXT: IPC:               4.00
+# CHECK-NEXT: uOps Per Cycle:    6.00
+# CHECK-NEXT: IPC:               6.00
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Instruction Info:
@@ -154,13 +154,17 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT:  1      0     0.25                        movaps	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    24000
-# CHECK-NEXT: Max number of mappings used:         68
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 24000
-# CHECK-NEXT:    Max number of mappings used:      68
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      24000
+# CHECK-NEXT:    Number of moves eliminated:       24000  (100.0%)
+# CHECK-NEXT:    Number of zero moves:             0  (0.0%)
+# CHECK-NEXT:    Max moves eliminated per cycle:   6
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -194,191 +198,191 @@ movdqu %xmm15, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00   4.00   4.00    -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm0, %xmm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm2, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm3, %xmm4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm4, %xmm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm5, %xmm6
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm6, %xmm7
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm7, %xmm8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm8, %xmm9
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm9, %xmm10
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm10, %xmm11
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm11, %xmm12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm12, %xmm13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm13, %xmm14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm14, %xmm15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm15, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm0, %xmm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm2, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm3, %xmm4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm4, %xmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm5, %xmm6
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm6, %xmm7
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm7, %xmm8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm8, %xmm9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm9, %xmm10
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm10, %xmm11
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm11, %xmm12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm12, %xmm13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm13, %xmm14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm14, %xmm15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm15, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          01
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          01234567
 
-# CHECK:      [0,0]     DER  .    .    .    .    .    .    .    ..   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [0,1]     DER  .    .    .    .    .    .    .    ..   movaps	%xmm1, %xmm2
-# CHECK-NEXT: [0,2]     DER  .    .    .    .    .    .    .    ..   movaps	%xmm2, %xmm3
-# CHECK-NEXT: [0,3]     DER  .    .    .    .    .    .    .    ..   movaps	%xmm3, %xmm4
-# CHECK-NEXT: [0,4]     D=ER .    .    .    .    .    .    .    ..   movaps	%xmm4, %xmm5
-# CHECK-NEXT: [0,5]     D=ER .    .    .    .    .    .    .    ..   movaps	%xmm5, %xmm6
-# CHECK-NEXT: [0,6]     .DER .    .    .    .    .    .    .    ..   movaps	%xmm6, %xmm7
-# CHECK-NEXT: [0,7]     .DER .    .    .    .    .    .    .    ..   movaps	%xmm7, %xmm8
-# CHECK-NEXT: [0,8]     .D=ER.    .    .    .    .    .    .    ..   movaps	%xmm8, %xmm9
-# CHECK-NEXT: [0,9]     .D=ER.    .    .    .    .    .    .    ..   movaps	%xmm9, %xmm10
-# CHECK-NEXT: [0,10]    .D=ER.    .    .    .    .    .    .    ..   movaps	%xmm10, %xmm11
-# CHECK-NEXT: [0,11]    .D=ER.    .    .    .    .    .    .    ..   movaps	%xmm11, %xmm12
-# CHECK-NEXT: [0,12]    . D=ER    .    .    .    .    .    .    ..   movaps	%xmm12, %xmm13
-# CHECK-NEXT: [0,13]    . D=ER    .    .    .    .    .    .    ..   movaps	%xmm13, %xmm14
-# CHECK-NEXT: [0,14]    . D=ER    .    .    .    .    .    .    ..   movaps	%xmm14, %xmm15
-# CHECK-NEXT: [0,15]    . D=ER    .    .    .    .    .    .    ..   movaps	%xmm15, %xmm0
-# CHECK-NEXT: [1,0]     . D==ER   .    .    .    .    .    .    ..   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [1,1]     . D==ER   .    .    .    .    .    .    ..   movaps	%xmm1, %xmm2
-# CHECK-NEXT: [1,2]     .  D=ER   .    .    .    .    .    .    ..   movaps	%xmm2, %xmm3
-# CHECK-NEXT: [1,3]     .  D=ER   .    .    .    .    .    .    ..   movaps	%xmm3, %xmm4
-# CHECK-NEXT: [1,4]     .  D==ER  .    .    .    .    .    .    ..   movaps	%xmm4, %xmm5
-# CHECK-NEXT: [1,5]     .  D==ER  .    .    .    .    .    .    ..   movaps	%xmm5, %xmm6
-# CHECK-NEXT: [1,6]     .  D==ER  .    .    .    .    .    .    ..   movaps	%xmm6, %xmm7
-# CHECK-NEXT: [1,7]     .  D==ER  .    .    .    .    .    .    ..   movaps	%xmm7, %xmm8
-# CHECK-NEXT: [1,8]     .   D==ER .    .    .    .    .    .    ..   movaps	%xmm8, %xmm9
-# CHECK-NEXT: [1,9]     .   D==ER .    .    .    .    .    .    ..   movaps	%xmm9, %xmm10
-# CHECK-NEXT: [1,10]    .   D==ER .    .    .    .    .    .    ..   movaps	%xmm10, %xmm11
-# CHECK-NEXT: [1,11]    .   D==ER .    .    .    .    .    .    ..   movaps	%xmm11, %xmm12
-# CHECK-NEXT: [1,12]    .   D===ER.    .    .    .    .    .    ..   movaps	%xmm12, %xmm13
-# CHECK-NEXT: [1,13]    .   D===ER.    .    .    .    .    .    ..   movaps	%xmm13, %xmm14
-# CHECK-NEXT: [1,14]    .    D==ER.    .    .    .    .    .    ..   movaps	%xmm14, %xmm15
-# CHECK-NEXT: [1,15]    .    D==ER.    .    .    .    .    .    ..   movaps	%xmm15, %xmm0
-# CHECK-NEXT: [2,0]     .    D===ER    .    .    .    .    .    ..   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [2,1]     .    D===ER    .    .    .    .    .    ..   movaps	%xmm1, %xmm2
-# CHECK-NEXT: [2,2]     .    D===ER    .    .    .    .    .    ..   movaps	%xmm2, %xmm3
-# CHECK-NEXT: [2,3]     .    D===ER    .    .    .    .    .    ..   movaps	%xmm3, %xmm4
-# CHECK-NEXT: [2,4]     .    .D===ER   .    .    .    .    .    ..   movaps	%xmm4, %xmm5
-# CHECK-NEXT: [2,5]     .    .D===ER   .    .    .    .    .    ..   movaps	%xmm5, %xmm6
-# CHECK-NEXT: [2,6]     .    .D===ER   .    .    .    .    .    ..   movaps	%xmm6, %xmm7
-# CHECK-NEXT: [2,7]     .    .D===ER   .    .    .    .    .    ..   movaps	%xmm7, %xmm8
-# CHECK-NEXT: [2,8]     .    .D====ER  .    .    .    .    .    ..   movaps	%xmm8, %xmm9
-# CHECK-NEXT: [2,9]     .    .D====ER  .    .    .    .    .    ..   movaps	%xmm9, %xmm10
-# CHECK-NEXT: [2,10]    .    . D===ER  .    .    .    .    .    ..   movaps	%xmm10, %xmm11
-# CHECK-NEXT: [2,11]    .    . D===ER  .    .    .    .    .    ..   movaps	%xmm11, %xmm12
-# CHECK-NEXT: [2,12]    .    . D====ER .    .    .    .    .    ..   movaps	%xmm12, %xmm13
-# CHECK-NEXT: [2,13]    .    . D====ER .    .    .    .    .    ..   movaps	%xmm13, %xmm14
-# CHECK-NEXT: [2,14]    .    . D====ER .    .    .    .    .    ..   movaps	%xmm14, %xmm15
-# CHECK-NEXT: [2,15]    .    . D====ER .    .    .    .    .    ..   movaps	%xmm15, %xmm0
-# CHECK-NEXT: [3,0]     .    .  D====ER.    .    .    .    .    ..   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [3,1]     .    .  D====ER.    .    .    .    .    ..   movaps	%xmm1, %xmm2
-# CHECK-NEXT: [3,2]     .    .  D====ER.    .    .    .    .    ..   movaps	%xmm2, %xmm3
-# CHECK-NEXT: [3,3]     .    .  D====ER.    .    .    .    .    ..   movaps	%xmm3, %xmm4
-# CHECK-NEXT: [3,4]     .    .  D=====ER    .    .    .    .    ..   movaps	%xmm4, %xmm5
-# CHECK-NEXT: [3,5]     .    .  D=====ER    .    .    .    .    ..   movaps	%xmm5, %xmm6
-# CHECK-NEXT: [3,6]     .    .   D====ER    .    .    .    .    ..   movaps	%xmm6, %xmm7
-# CHECK-NEXT: [3,7]     .    .   D====ER    .    .    .    .    ..   movaps	%xmm7, %xmm8
-# CHECK-NEXT: [3,8]     .    .   D=====ER   .    .    .    .    ..   movaps	%xmm8, %xmm9
-# CHECK-NEXT: [3,9]     .    .   D=====ER   .    .    .    .    ..   movaps	%xmm9, %xmm10
-# CHECK-NEXT: [3,10]    .    .   D=====ER   .    .    .    .    ..   movaps	%xmm10, %xmm11
-# CHECK-NEXT: [3,11]    .    .   D=====ER   .    .    .    .    ..   movaps	%xmm11, %xmm12
-# CHECK-NEXT: [3,12]    .    .    D=====ER  .    .    .    .    ..   movaps	%xmm12, %xmm13
-# CHECK-NEXT: [3,13]    .    .    D=====ER  .    .    .    .    ..   movaps	%xmm13, %xmm14
-# CHECK-NEXT: [3,14]    .    .    D=====ER  .    .    .    .    ..   movaps	%xmm14, %xmm15
-# CHECK-NEXT: [3,15]    .    .    D=====ER  .    .    .    .    ..   movaps	%xmm15, %xmm0
-# CHECK-NEXT: [4,0]     .    .    D======ER .    .    .    .    ..   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [4,1]     .    .    D======ER .    .    .    .    ..   movaps	%xmm1, %xmm2
-# CHECK-NEXT: [4,2]     .    .    .D=====ER .    .    .    .    ..   movaps	%xmm2, %xmm3
-# CHECK-NEXT: [4,3]     .    .    .D=====ER .    .    .    .    ..   movaps	%xmm3, %xmm4
-# CHECK-NEXT: [4,4]     .    .    .D======ER.    .    .    .    ..   movaps	%xmm4, %xmm5
-# CHECK-NEXT: [4,5]     .    .    .D======ER.    .    .    .    ..   movaps	%xmm5, %xmm6
-# CHECK-NEXT: [4,6]     .    .    .D======ER.    .    .    .    ..   movaps	%xmm6, %xmm7
-# CHECK-NEXT: [4,7]     .    .    .D======ER.    .    .    .    ..   movaps	%xmm7, %xmm8
-# CHECK-NEXT: [4,8]     .    .    . D======ER    .    .    .    ..   movaps	%xmm8, %xmm9
-# CHECK-NEXT: [4,9]     .    .    . D======ER    .    .    .    ..   movaps	%xmm9, %xmm10
-# CHECK-NEXT: [4,10]    .    .    . D======ER    .    .    .    ..   movaps	%xmm10, %xmm11
-# CHECK-NEXT: [4,11]    .    .    . D======ER    .    .    .    ..   movaps	%xmm11, %xmm12
-# CHECK-NEXT: [4,12]    .    .    . D=======ER   .    .    .    ..   movaps	%xmm12, %xmm13
-# CHECK-NEXT: [4,13]    .    .    . D=======ER   .    .    .    ..   movaps	%xmm13, %xmm14
-# CHECK-NEXT: [4,14]    .    .    .  D======ER   .    .    .    ..   movaps	%xmm14, %xmm15
-# CHECK-NEXT: [4,15]    .    .    .  D======ER   .    .    .    ..   movaps	%xmm15, %xmm0
-# CHECK-NEXT: [5,0]     .    .    .  D=======ER  .    .    .    ..   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [5,1]     .    .    .  D=======ER  .    .    .    ..   movaps	%xmm1, %xmm2
-# CHECK-NEXT: [5,2]     .    .    .  D=======ER  .    .    .    ..   movaps	%xmm2, %xmm3
-# CHECK-NEXT: [5,3]     .    .    .  D=======ER  .    .    .    ..   movaps	%xmm3, %xmm4
-# CHECK-NEXT: [5,4]     .    .    .   D=======ER .    .    .    ..   movaps	%xmm4, %xmm5
-# CHECK-NEXT: [5,5]     .    .    .   D=======ER .    .    .    ..   movaps	%xmm5, %xmm6
-# CHECK-NEXT: [5,6]     .    .    .   D=======ER .    .    .    ..   movaps	%xmm6, %xmm7
-# CHECK-NEXT: [5,7]     .    .    .   D=======ER .    .    .    ..   movaps	%xmm7, %xmm8
-# CHECK-NEXT: [5,8]     .    .    .   D========ER.    .    .    ..   movaps	%xmm8, %xmm9
-# CHECK-NEXT: [5,9]     .    .    .   D========ER.    .    .    ..   movaps	%xmm9, %xmm10
-# CHECK-NEXT: [5,10]    .    .    .    D=======ER.    .    .    ..   movaps	%xmm10, %xmm11
-# CHECK-NEXT: [5,11]    .    .    .    D=======ER.    .    .    ..   movaps	%xmm11, %xmm12
-# CHECK-NEXT: [5,12]    .    .    .    D========ER    .    .    ..   movaps	%xmm12, %xmm13
-# CHECK-NEXT: [5,13]    .    .    .    D========ER    .    .    ..   movaps	%xmm13, %xmm14
-# CHECK-NEXT: [5,14]    .    .    .    D========ER    .    .    ..   movaps	%xmm14, %xmm15
-# CHECK-NEXT: [5,15]    .    .    .    D========ER    .    .    ..   movaps	%xmm15, %xmm0
-# CHECK-NEXT: [6,0]     .    .    .    .D========ER   .    .    ..   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [6,1]     .    .    .    .D========ER   .    .    ..   movaps	%xmm1, %xmm2
-# CHECK-NEXT: [6,2]     .    .    .    .D========ER   .    .    ..   movaps	%xmm2, %xmm3
-# CHECK-NEXT: [6,3]     .    .    .    .D========ER   .    .    ..   movaps	%xmm3, %xmm4
-# CHECK-NEXT: [6,4]     .    .    .    .D=========ER  .    .    ..   movaps	%xmm4, %xmm5
-# CHECK-NEXT: [6,5]     .    .    .    .D=========ER  .    .    ..   movaps	%xmm5, %xmm6
-# CHECK-NEXT: [6,6]     .    .    .    . D========ER  .    .    ..   movaps	%xmm6, %xmm7
-# CHECK-NEXT: [6,7]     .    .    .    . D========ER  .    .    ..   movaps	%xmm7, %xmm8
-# CHECK-NEXT: [6,8]     .    .    .    . D=========ER .    .    ..   movaps	%xmm8, %xmm9
-# CHECK-NEXT: [6,9]     .    .    .    . D=========ER .    .    ..   movaps	%xmm9, %xmm10
-# CHECK-NEXT: [6,10]    .    .    .    . D=========ER .    .    ..   movaps	%xmm10, %xmm11
-# CHECK-NEXT: [6,11]    .    .    .    . D=========ER .    .    ..   movaps	%xmm11, %xmm12
-# CHECK-NEXT: [6,12]    .    .    .    .  D=========ER.    .    ..   movaps	%xmm12, %xmm13
-# CHECK-NEXT: [6,13]    .    .    .    .  D=========ER.    .    ..   movaps	%xmm13, %xmm14
-# CHECK-NEXT: [6,14]    .    .    .    .  D=========ER.    .    ..   movaps	%xmm14, %xmm15
-# CHECK-NEXT: [6,15]    .    .    .    .  D=========ER.    .    ..   movaps	%xmm15, %xmm0
-# CHECK-NEXT: [7,0]     .    .    .    .  D==========ER    .    ..   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [7,1]     .    .    .    .  D==========ER    .    ..   movaps	%xmm1, %xmm2
-# CHECK-NEXT: [7,2]     .    .    .    .   D=========ER    .    ..   movaps	%xmm2, %xmm3
-# CHECK-NEXT: [7,3]     .    .    .    .   D=========ER    .    ..   movaps	%xmm3, %xmm4
-# CHECK-NEXT: [7,4]     .    .    .    .   D==========ER   .    ..   movaps	%xmm4, %xmm5
-# CHECK-NEXT: [7,5]     .    .    .    .   D==========ER   .    ..   movaps	%xmm5, %xmm6
-# CHECK-NEXT: [7,6]     .    .    .    .   D==========ER   .    ..   movaps	%xmm6, %xmm7
-# CHECK-NEXT: [7,7]     .    .    .    .   D==========ER   .    ..   movaps	%xmm7, %xmm8
-# CHECK-NEXT: [7,8]     .    .    .    .    D==========ER  .    ..   movaps	%xmm8, %xmm9
-# CHECK-NEXT: [7,9]     .    .    .    .    D==========ER  .    ..   movaps	%xmm9, %xmm10
-# CHECK-NEXT: [7,10]    .    .    .    .    D==========ER  .    ..   movaps	%xmm10, %xmm11
-# CHECK-NEXT: [7,11]    .    .    .    .    D==========ER  .    ..   movaps	%xmm11, %xmm12
-# CHECK-NEXT: [7,12]    .    .    .    .    D===========ER .    ..   movaps	%xmm12, %xmm13
-# CHECK-NEXT: [7,13]    .    .    .    .    D===========ER .    ..   movaps	%xmm13, %xmm14
-# CHECK-NEXT: [7,14]    .    .    .    .    .D==========ER .    ..   movaps	%xmm14, %xmm15
-# CHECK-NEXT: [7,15]    .    .    .    .    .D==========ER .    ..   movaps	%xmm15, %xmm0
-# CHECK-NEXT: [8,0]     .    .    .    .    .D===========ER.    ..   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [8,1]     .    .    .    .    .D===========ER.    ..   movaps	%xmm1, %xmm2
-# CHECK-NEXT: [8,2]     .    .    .    .    .D===========ER.    ..   movaps	%xmm2, %xmm3
-# CHECK-NEXT: [8,3]     .    .    .    .    .D===========ER.    ..   movaps	%xmm3, %xmm4
-# CHECK-NEXT: [8,4]     .    .    .    .    . D===========ER    ..   movaps	%xmm4, %xmm5
-# CHECK-NEXT: [8,5]     .    .    .    .    . D===========ER    ..   movaps	%xmm5, %xmm6
-# CHECK-NEXT: [8,6]     .    .    .    .    . D===========ER    ..   movaps	%xmm6, %xmm7
-# CHECK-NEXT: [8,7]     .    .    .    .    . D===========ER    ..   movaps	%xmm7, %xmm8
-# CHECK-NEXT: [8,8]     .    .    .    .    . D============ER   ..   movaps	%xmm8, %xmm9
-# CHECK-NEXT: [8,9]     .    .    .    .    . D============ER   ..   movaps	%xmm9, %xmm10
-# CHECK-NEXT: [8,10]    .    .    .    .    .  D===========ER   ..   movaps	%xmm10, %xmm11
-# CHECK-NEXT: [8,11]    .    .    .    .    .  D===========ER   ..   movaps	%xmm11, %xmm12
-# CHECK-NEXT: [8,12]    .    .    .    .    .  D============ER  ..   movaps	%xmm12, %xmm13
-# CHECK-NEXT: [8,13]    .    .    .    .    .  D============ER  ..   movaps	%xmm13, %xmm14
-# CHECK-NEXT: [8,14]    .    .    .    .    .  D============ER  ..   movaps	%xmm14, %xmm15
-# CHECK-NEXT: [8,15]    .    .    .    .    .  D============ER  ..   movaps	%xmm15, %xmm0
-# CHECK-NEXT: [9,0]     .    .    .    .    .   D============ER ..   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [9,1]     .    .    .    .    .   D============ER ..   movaps	%xmm1, %xmm2
-# CHECK-NEXT: [9,2]     .    .    .    .    .   D============ER ..   movaps	%xmm2, %xmm3
-# CHECK-NEXT: [9,3]     .    .    .    .    .   D============ER ..   movaps	%xmm3, %xmm4
-# CHECK-NEXT: [9,4]     .    .    .    .    .   D=============ER..   movaps	%xmm4, %xmm5
-# CHECK-NEXT: [9,5]     .    .    .    .    .   D=============ER..   movaps	%xmm5, %xmm6
-# CHECK-NEXT: [9,6]     .    .    .    .    .    D============ER..   movaps	%xmm6, %xmm7
-# CHECK-NEXT: [9,7]     .    .    .    .    .    D============ER..   movaps	%xmm7, %xmm8
-# CHECK-NEXT: [9,8]     .    .    .    .    .    D=============ER.   movaps	%xmm8, %xmm9
-# CHECK-NEXT: [9,9]     .    .    .    .    .    D=============ER.   movaps	%xmm9, %xmm10
-# CHECK-NEXT: [9,10]    .    .    .    .    .    D=============ER.   movaps	%xmm10, %xmm11
-# CHECK-NEXT: [9,11]    .    .    .    .    .    D=============ER.   movaps	%xmm11, %xmm12
-# CHECK-NEXT: [9,12]    .    .    .    .    .    .D=============ER   movaps	%xmm12, %xmm13
-# CHECK-NEXT: [9,13]    .    .    .    .    .    .D=============ER   movaps	%xmm13, %xmm14
-# CHECK-NEXT: [9,14]    .    .    .    .    .    .D=============ER   movaps	%xmm14, %xmm15
-# CHECK-NEXT: [9,15]    .    .    .    .    .    .D=============ER   movaps	%xmm15, %xmm0
+# CHECK:      [0,0]     DR   .    .    .    .    . .   movaps	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DR   .    .    .    .    . .   movaps	%xmm1, %xmm2
+# CHECK-NEXT: [0,2]     DR   .    .    .    .    . .   movaps	%xmm2, %xmm3
+# CHECK-NEXT: [0,3]     DR   .    .    .    .    . .   movaps	%xmm3, %xmm4
+# CHECK-NEXT: [0,4]     DR   .    .    .    .    . .   movaps	%xmm4, %xmm5
+# CHECK-NEXT: [0,5]     DR   .    .    .    .    . .   movaps	%xmm5, %xmm6
+# CHECK-NEXT: [0,6]     .DR  .    .    .    .    . .   movaps	%xmm6, %xmm7
+# CHECK-NEXT: [0,7]     .DR  .    .    .    .    . .   movaps	%xmm7, %xmm8
+# CHECK-NEXT: [0,8]     .DR  .    .    .    .    . .   movaps	%xmm8, %xmm9
+# CHECK-NEXT: [0,9]     .DR  .    .    .    .    . .   movaps	%xmm9, %xmm10
+# CHECK-NEXT: [0,10]    .DR  .    .    .    .    . .   movaps	%xmm10, %xmm11
+# CHECK-NEXT: [0,11]    .DR  .    .    .    .    . .   movaps	%xmm11, %xmm12
+# CHECK-NEXT: [0,12]    . DR .    .    .    .    . .   movaps	%xmm12, %xmm13
+# CHECK-NEXT: [0,13]    . DR .    .    .    .    . .   movaps	%xmm13, %xmm14
+# CHECK-NEXT: [0,14]    . DR .    .    .    .    . .   movaps	%xmm14, %xmm15
+# CHECK-NEXT: [0,15]    . DR .    .    .    .    . .   movaps	%xmm15, %xmm0
+# CHECK-NEXT: [1,0]     . DR .    .    .    .    . .   movaps	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     . DR .    .    .    .    . .   movaps	%xmm1, %xmm2
+# CHECK-NEXT: [1,2]     .  DR.    .    .    .    . .   movaps	%xmm2, %xmm3
+# CHECK-NEXT: [1,3]     .  DR.    .    .    .    . .   movaps	%xmm3, %xmm4
+# CHECK-NEXT: [1,4]     .  DR.    .    .    .    . .   movaps	%xmm4, %xmm5
+# CHECK-NEXT: [1,5]     .  DR.    .    .    .    . .   movaps	%xmm5, %xmm6
+# CHECK-NEXT: [1,6]     .  DR.    .    .    .    . .   movaps	%xmm6, %xmm7
+# CHECK-NEXT: [1,7]     .  DR.    .    .    .    . .   movaps	%xmm7, %xmm8
+# CHECK-NEXT: [1,8]     .   DR    .    .    .    . .   movaps	%xmm8, %xmm9
+# CHECK-NEXT: [1,9]     .   DR    .    .    .    . .   movaps	%xmm9, %xmm10
+# CHECK-NEXT: [1,10]    .   DR    .    .    .    . .   movaps	%xmm10, %xmm11
+# CHECK-NEXT: [1,11]    .   DR    .    .    .    . .   movaps	%xmm11, %xmm12
+# CHECK-NEXT: [1,12]    .   DR    .    .    .    . .   movaps	%xmm12, %xmm13
+# CHECK-NEXT: [1,13]    .   DR    .    .    .    . .   movaps	%xmm13, %xmm14
+# CHECK-NEXT: [1,14]    .    DR   .    .    .    . .   movaps	%xmm14, %xmm15
+# CHECK-NEXT: [1,15]    .    DR   .    .    .    . .   movaps	%xmm15, %xmm0
+# CHECK-NEXT: [2,0]     .    DR   .    .    .    . .   movaps	%xmm0, %xmm1
+# CHECK-NEXT: [2,1]     .    DR   .    .    .    . .   movaps	%xmm1, %xmm2
+# CHECK-NEXT: [2,2]     .    DR   .    .    .    . .   movaps	%xmm2, %xmm3
+# CHECK-NEXT: [2,3]     .    DR   .    .    .    . .   movaps	%xmm3, %xmm4
+# CHECK-NEXT: [2,4]     .    .DR  .    .    .    . .   movaps	%xmm4, %xmm5
+# CHECK-NEXT: [2,5]     .    .DR  .    .    .    . .   movaps	%xmm5, %xmm6
+# CHECK-NEXT: [2,6]     .    .DR  .    .    .    . .   movaps	%xmm6, %xmm7
+# CHECK-NEXT: [2,7]     .    .DR  .    .    .    . .   movaps	%xmm7, %xmm8
+# CHECK-NEXT: [2,8]     .    .DR  .    .    .    . .   movaps	%xmm8, %xmm9
+# CHECK-NEXT: [2,9]     .    .DR  .    .    .    . .   movaps	%xmm9, %xmm10
+# CHECK-NEXT: [2,10]    .    . DR .    .    .    . .   movaps	%xmm10, %xmm11
+# CHECK-NEXT: [2,11]    .    . DR .    .    .    . .   movaps	%xmm11, %xmm12
+# CHECK-NEXT: [2,12]    .    . DR .    .    .    . .   movaps	%xmm12, %xmm13
+# CHECK-NEXT: [2,13]    .    . DR .    .    .    . .   movaps	%xmm13, %xmm14
+# CHECK-NEXT: [2,14]    .    . DR .    .    .    . .   movaps	%xmm14, %xmm15
+# CHECK-NEXT: [2,15]    .    . DR .    .    .    . .   movaps	%xmm15, %xmm0
+# CHECK-NEXT: [3,0]     .    .  DR.    .    .    . .   movaps	%xmm0, %xmm1
+# CHECK-NEXT: [3,1]     .    .  DR.    .    .    . .   movaps	%xmm1, %xmm2
+# CHECK-NEXT: [3,2]     .    .  DR.    .    .    . .   movaps	%xmm2, %xmm3
+# CHECK-NEXT: [3,3]     .    .  DR.    .    .    . .   movaps	%xmm3, %xmm4
+# CHECK-NEXT: [3,4]     .    .  DR.    .    .    . .   movaps	%xmm4, %xmm5
+# CHECK-NEXT: [3,5]     .    .  DR.    .    .    . .   movaps	%xmm5, %xmm6
+# CHECK-NEXT: [3,6]     .    .   DR    .    .    . .   movaps	%xmm6, %xmm7
+# CHECK-NEXT: [3,7]     .    .   DR    .    .    . .   movaps	%xmm7, %xmm8
+# CHECK-NEXT: [3,8]     .    .   DR    .    .    . .   movaps	%xmm8, %xmm9
+# CHECK-NEXT: [3,9]     .    .   DR    .    .    . .   movaps	%xmm9, %xmm10
+# CHECK-NEXT: [3,10]    .    .   DR    .    .    . .   movaps	%xmm10, %xmm11
+# CHECK-NEXT: [3,11]    .    .   DR    .    .    . .   movaps	%xmm11, %xmm12
+# CHECK-NEXT: [3,12]    .    .    DR   .    .    . .   movaps	%xmm12, %xmm13
+# CHECK-NEXT: [3,13]    .    .    DR   .    .    . .   movaps	%xmm13, %xmm14
+# CHECK-NEXT: [3,14]    .    .    DR   .    .    . .   movaps	%xmm14, %xmm15
+# CHECK-NEXT: [3,15]    .    .    DR   .    .    . .   movaps	%xmm15, %xmm0
+# CHECK-NEXT: [4,0]     .    .    DR   .    .    . .   movaps	%xmm0, %xmm1
+# CHECK-NEXT: [4,1]     .    .    DR   .    .    . .   movaps	%xmm1, %xmm2
+# CHECK-NEXT: [4,2]     .    .    .DR  .    .    . .   movaps	%xmm2, %xmm3
+# CHECK-NEXT: [4,3]     .    .    .DR  .    .    . .   movaps	%xmm3, %xmm4
+# CHECK-NEXT: [4,4]     .    .    .DR  .    .    . .   movaps	%xmm4, %xmm5
+# CHECK-NEXT: [4,5]     .    .    .DR  .    .    . .   movaps	%xmm5, %xmm6
+# CHECK-NEXT: [4,6]     .    .    .DR  .    .    . .   movaps	%xmm6, %xmm7
+# CHECK-NEXT: [4,7]     .    .    .DR  .    .    . .   movaps	%xmm7, %xmm8
+# CHECK-NEXT: [4,8]     .    .    . DR .    .    . .   movaps	%xmm8, %xmm9
+# CHECK-NEXT: [4,9]     .    .    . DR .    .    . .   movaps	%xmm9, %xmm10
+# CHECK-NEXT: [4,10]    .    .    . DR .    .    . .   movaps	%xmm10, %xmm11
+# CHECK-NEXT: [4,11]    .    .    . DR .    .    . .   movaps	%xmm11, %xmm12
+# CHECK-NEXT: [4,12]    .    .    . DR .    .    . .   movaps	%xmm12, %xmm13
+# CHECK-NEXT: [4,13]    .    .    . DR .    .    . .   movaps	%xmm13, %xmm14
+# CHECK-NEXT: [4,14]    .    .    .  DR.    .    . .   movaps	%xmm14, %xmm15
+# CHECK-NEXT: [4,15]    .    .    .  DR.    .    . .   movaps	%xmm15, %xmm0
+# CHECK-NEXT: [5,0]     .    .    .  DR.    .    . .   movaps	%xmm0, %xmm1
+# CHECK-NEXT: [5,1]     .    .    .  DR.    .    . .   movaps	%xmm1, %xmm2
+# CHECK-NEXT: [5,2]     .    .    .  DR.    .    . .   movaps	%xmm2, %xmm3
+# CHECK-NEXT: [5,3]     .    .    .  DR.    .    . .   movaps	%xmm3, %xmm4
+# CHECK-NEXT: [5,4]     .    .    .   DR    .    . .   movaps	%xmm4, %xmm5
+# CHECK-NEXT: [5,5]     .    .    .   DR    .    . .   movaps	%xmm5, %xmm6
+# CHECK-NEXT: [5,6]     .    .    .   DR    .    . .   movaps	%xmm6, %xmm7
+# CHECK-NEXT: [5,7]     .    .    .   DR    .    . .   movaps	%xmm7, %xmm8
+# CHECK-NEXT: [5,8]     .    .    .   DR    .    . .   movaps	%xmm8, %xmm9
+# CHECK-NEXT: [5,9]     .    .    .   DR    .    . .   movaps	%xmm9, %xmm10
+# CHECK-NEXT: [5,10]    .    .    .    DR   .    . .   movaps	%xmm10, %xmm11
+# CHECK-NEXT: [5,11]    .    .    .    DR   .    . .   movaps	%xmm11, %xmm12
+# CHECK-NEXT: [5,12]    .    .    .    DR   .    . .   movaps	%xmm12, %xmm13
+# CHECK-NEXT: [5,13]    .    .    .    DR   .    . .   movaps	%xmm13, %xmm14
+# CHECK-NEXT: [5,14]    .    .    .    DR   .    . .   movaps	%xmm14, %xmm15
+# CHECK-NEXT: [5,15]    .    .    .    DR   .    . .   movaps	%xmm15, %xmm0
+# CHECK-NEXT: [6,0]     .    .    .    .DR  .    . .   movaps	%xmm0, %xmm1
+# CHECK-NEXT: [6,1]     .    .    .    .DR  .    . .   movaps	%xmm1, %xmm2
+# CHECK-NEXT: [6,2]     .    .    .    .DR  .    . .   movaps	%xmm2, %xmm3
+# CHECK-NEXT: [6,3]     .    .    .    .DR  .    . .   movaps	%xmm3, %xmm4
+# CHECK-NEXT: [6,4]     .    .    .    .DR  .    . .   movaps	%xmm4, %xmm5
+# CHECK-NEXT: [6,5]     .    .    .    .DR  .    . .   movaps	%xmm5, %xmm6
+# CHECK-NEXT: [6,6]     .    .    .    . DR .    . .   movaps	%xmm6, %xmm7
+# CHECK-NEXT: [6,7]     .    .    .    . DR .    . .   movaps	%xmm7, %xmm8
+# CHECK-NEXT: [6,8]     .    .    .    . DR .    . .   movaps	%xmm8, %xmm9
+# CHECK-NEXT: [6,9]     .    .    .    . DR .    . .   movaps	%xmm9, %xmm10
+# CHECK-NEXT: [6,10]    .    .    .    . DR .    . .   movaps	%xmm10, %xmm11
+# CHECK-NEXT: [6,11]    .    .    .    . DR .    . .   movaps	%xmm11, %xmm12
+# CHECK-NEXT: [6,12]    .    .    .    .  DR.    . .   movaps	%xmm12, %xmm13
+# CHECK-NEXT: [6,13]    .    .    .    .  DR.    . .   movaps	%xmm13, %xmm14
+# CHECK-NEXT: [6,14]    .    .    .    .  DR.    . .   movaps	%xmm14, %xmm15
+# CHECK-NEXT: [6,15]    .    .    .    .  DR.    . .   movaps	%xmm15, %xmm0
+# CHECK-NEXT: [7,0]     .    .    .    .  DR.    . .   movaps	%xmm0, %xmm1
+# CHECK-NEXT: [7,1]     .    .    .    .  DR.    . .   movaps	%xmm1, %xmm2
+# CHECK-NEXT: [7,2]     .    .    .    .   DR    . .   movaps	%xmm2, %xmm3
+# CHECK-NEXT: [7,3]     .    .    .    .   DR    . .   movaps	%xmm3, %xmm4
+# CHECK-NEXT: [7,4]     .    .    .    .   DR    . .   movaps	%xmm4, %xmm5
+# CHECK-NEXT: [7,5]     .    .    .    .   DR    . .   movaps	%xmm5, %xmm6
+# CHECK-NEXT: [7,6]     .    .    .    .   DR    . .   movaps	%xmm6, %xmm7
+# CHECK-NEXT: [7,7]     .    .    .    .   DR    . .   movaps	%xmm7, %xmm8
+# CHECK-NEXT: [7,8]     .    .    .    .    DR   . .   movaps	%xmm8, %xmm9
+# CHECK-NEXT: [7,9]     .    .    .    .    DR   . .   movaps	%xmm9, %xmm10
+# CHECK-NEXT: [7,10]    .    .    .    .    DR   . .   movaps	%xmm10, %xmm11
+# CHECK-NEXT: [7,11]    .    .    .    .    DR   . .   movaps	%xmm11, %xmm12
+# CHECK-NEXT: [7,12]    .    .    .    .    DR   . .   movaps	%xmm12, %xmm13
+# CHECK-NEXT: [7,13]    .    .    .    .    DR   . .   movaps	%xmm13, %xmm14
+# CHECK-NEXT: [7,14]    .    .    .    .    .DR  . .   movaps	%xmm14, %xmm15
+# CHECK-NEXT: [7,15]    .    .    .    .    .DR  . .   movaps	%xmm15, %xmm0
+# CHECK-NEXT: [8,0]     .    .    .    .    .DR  . .   movaps	%xmm0, %xmm1
+# CHECK-NEXT: [8,1]     .    .    .    .    .DR  . .   movaps	%xmm1, %xmm2
+# CHECK-NEXT: [8,2]     .    .    .    .    .DR  . .   movaps	%xmm2, %xmm3
+# CHECK-NEXT: [8,3]     .    .    .    .    .DR  . .   movaps	%xmm3, %xmm4
+# CHECK-NEXT: [8,4]     .    .    .    .    . DR . .   movaps	%xmm4, %xmm5
+# CHECK-NEXT: [8,5]     .    .    .    .    . DR . .   movaps	%xmm5, %xmm6
+# CHECK-NEXT: [8,6]     .    .    .    .    . DR . .   movaps	%xmm6, %xmm7
+# CHECK-NEXT: [8,7]     .    .    .    .    . DR . .   movaps	%xmm7, %xmm8
+# CHECK-NEXT: [8,8]     .    .    .    .    . DR . .   movaps	%xmm8, %xmm9
+# CHECK-NEXT: [8,9]     .    .    .    .    . DR . .   movaps	%xmm9, %xmm10
+# CHECK-NEXT: [8,10]    .    .    .    .    .  DR. .   movaps	%xmm10, %xmm11
+# CHECK-NEXT: [8,11]    .    .    .    .    .  DR. .   movaps	%xmm11, %xmm12
+# CHECK-NEXT: [8,12]    .    .    .    .    .  DR. .   movaps	%xmm12, %xmm13
+# CHECK-NEXT: [8,13]    .    .    .    .    .  DR. .   movaps	%xmm13, %xmm14
+# CHECK-NEXT: [8,14]    .    .    .    .    .  DR. .   movaps	%xmm14, %xmm15
+# CHECK-NEXT: [8,15]    .    .    .    .    .  DR. .   movaps	%xmm15, %xmm0
+# CHECK-NEXT: [9,0]     .    .    .    .    .   DR .   movaps	%xmm0, %xmm1
+# CHECK-NEXT: [9,1]     .    .    .    .    .   DR .   movaps	%xmm1, %xmm2
+# CHECK-NEXT: [9,2]     .    .    .    .    .   DR .   movaps	%xmm2, %xmm3
+# CHECK-NEXT: [9,3]     .    .    .    .    .   DR .   movaps	%xmm3, %xmm4
+# CHECK-NEXT: [9,4]     .    .    .    .    .   DR .   movaps	%xmm4, %xmm5
+# CHECK-NEXT: [9,5]     .    .    .    .    .   DR .   movaps	%xmm5, %xmm6
+# CHECK-NEXT: [9,6]     .    .    .    .    .    DR.   movaps	%xmm6, %xmm7
+# CHECK-NEXT: [9,7]     .    .    .    .    .    DR.   movaps	%xmm7, %xmm8
+# CHECK-NEXT: [9,8]     .    .    .    .    .    DR.   movaps	%xmm8, %xmm9
+# CHECK-NEXT: [9,9]     .    .    .    .    .    DR.   movaps	%xmm9, %xmm10
+# CHECK-NEXT: [9,10]    .    .    .    .    .    DR.   movaps	%xmm10, %xmm11
+# CHECK-NEXT: [9,11]    .    .    .    .    .    DR.   movaps	%xmm11, %xmm12
+# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR   movaps	%xmm12, %xmm13
+# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR   movaps	%xmm13, %xmm14
+# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR   movaps	%xmm14, %xmm15
+# CHECK-NEXT: [9,15]    .    .    .    .    .    .DR   movaps	%xmm15, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -387,34 +391,34 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     10    7.3    1.0    0.0       movaps	%xmm0, %xmm1
-# CHECK-NEXT: 1.     10    7.3    0.0    0.0       movaps	%xmm1, %xmm2
-# CHECK-NEXT: 2.     10    7.0    0.0    0.0       movaps	%xmm2, %xmm3
-# CHECK-NEXT: 3.     10    7.0    0.0    0.0       movaps	%xmm3, %xmm4
-# CHECK-NEXT: 4.     10    7.7    1.0    0.0       movaps	%xmm4, %xmm5
-# CHECK-NEXT: 5.     10    7.7    0.0    0.0       movaps	%xmm5, %xmm6
-# CHECK-NEXT: 6.     10    7.3    0.0    0.0       movaps	%xmm6, %xmm7
-# CHECK-NEXT: 7.     10    7.3    0.0    0.0       movaps	%xmm7, %xmm8
-# CHECK-NEXT: 8.     10    8.0    1.0    0.0       movaps	%xmm8, %xmm9
-# CHECK-NEXT: 9.     10    8.0    0.0    0.0       movaps	%xmm9, %xmm10
-# CHECK-NEXT: 10.    10    7.7    0.0    0.0       movaps	%xmm10, %xmm11
-# CHECK-NEXT: 11.    10    7.7    0.0    0.0       movaps	%xmm11, %xmm12
-# CHECK-NEXT: 12.    10    8.3    1.0    0.0       movaps	%xmm12, %xmm13
-# CHECK-NEXT: 13.    10    8.3    0.0    0.0       movaps	%xmm13, %xmm14
-# CHECK-NEXT: 14.    10    8.0    0.0    0.0       movaps	%xmm14, %xmm15
-# CHECK-NEXT: 15.    10    8.0    0.0    0.0       movaps	%xmm15, %xmm0
-# CHECK-NEXT:        10    7.7    0.3    0.0       <total>
+# CHECK-NEXT: 0.     10    0.0    0.0    0.0       movaps	%xmm0, %xmm1
+# CHECK-NEXT: 1.     10    0.0    0.0    0.0       movaps	%xmm1, %xmm2
+# CHECK-NEXT: 2.     10    0.0    0.0    0.0       movaps	%xmm2, %xmm3
+# CHECK-NEXT: 3.     10    0.0    0.0    0.0       movaps	%xmm3, %xmm4
+# CHECK-NEXT: 4.     10    0.0    0.0    0.0       movaps	%xmm4, %xmm5
+# CHECK-NEXT: 5.     10    0.0    0.0    0.0       movaps	%xmm5, %xmm6
+# CHECK-NEXT: 6.     10    0.0    0.0    0.0       movaps	%xmm6, %xmm7
+# CHECK-NEXT: 7.     10    0.0    0.0    0.0       movaps	%xmm7, %xmm8
+# CHECK-NEXT: 8.     10    0.0    0.0    0.0       movaps	%xmm8, %xmm9
+# CHECK-NEXT: 9.     10    0.0    0.0    0.0       movaps	%xmm9, %xmm10
+# CHECK-NEXT: 10.    10    0.0    0.0    0.0       movaps	%xmm10, %xmm11
+# CHECK-NEXT: 11.    10    0.0    0.0    0.0       movaps	%xmm11, %xmm12
+# CHECK-NEXT: 12.    10    0.0    0.0    0.0       movaps	%xmm12, %xmm13
+# CHECK-NEXT: 13.    10    0.0    0.0    0.0       movaps	%xmm13, %xmm14
+# CHECK-NEXT: 14.    10    0.0    0.0    0.0       movaps	%xmm14, %xmm15
+# CHECK-NEXT: 15.    10    0.0    0.0    0.0       movaps	%xmm15, %xmm0
+# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
 
 # CHECK:      [1] Code Region
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      24000
-# CHECK-NEXT: Total Cycles:      6002
+# CHECK-NEXT: Total Cycles:      4001
 # CHECK-NEXT: Total uOps:        24000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    4.00
-# CHECK-NEXT: IPC:               4.00
+# CHECK-NEXT: uOps Per Cycle:    6.00
+# CHECK-NEXT: IPC:               6.00
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Instruction Info:
@@ -444,13 +448,17 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT:  1      0     0.25                        movups	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    24000
-# CHECK-NEXT: Max number of mappings used:         68
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 24000
-# CHECK-NEXT:    Max number of mappings used:      68
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      24000
+# CHECK-NEXT:    Number of moves eliminated:       24000  (100.0%)
+# CHECK-NEXT:    Number of zero moves:             0  (0.0%)
+# CHECK-NEXT:    Max moves eliminated per cycle:   6
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -484,191 +492,191 @@ movdqu %xmm15, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00   4.00   4.00    -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movups	%xmm0, %xmm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm2, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm3, %xmm4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movups	%xmm4, %xmm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm5, %xmm6
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm6, %xmm7
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm7, %xmm8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movups	%xmm8, %xmm9
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm9, %xmm10
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm10, %xmm11
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm11, %xmm12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movups	%xmm12, %xmm13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm13, %xmm14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm14, %xmm15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm15, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm0, %xmm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm2, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm3, %xmm4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm4, %xmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm5, %xmm6
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm6, %xmm7
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm7, %xmm8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm8, %xmm9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm9, %xmm10
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm10, %xmm11
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm11, %xmm12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm12, %xmm13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm13, %xmm14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm14, %xmm15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm15, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          01
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          01234567
 
-# CHECK:      [0,0]     DER  .    .    .    .    .    .    .    ..   movups	%xmm0, %xmm1
-# CHECK-NEXT: [0,1]     DER  .    .    .    .    .    .    .    ..   movups	%xmm1, %xmm2
-# CHECK-NEXT: [0,2]     DER  .    .    .    .    .    .    .    ..   movups	%xmm2, %xmm3
-# CHECK-NEXT: [0,3]     DER  .    .    .    .    .    .    .    ..   movups	%xmm3, %xmm4
-# CHECK-NEXT: [0,4]     D=ER .    .    .    .    .    .    .    ..   movups	%xmm4, %xmm5
-# CHECK-NEXT: [0,5]     D=ER .    .    .    .    .    .    .    ..   movups	%xmm5, %xmm6
-# CHECK-NEXT: [0,6]     .DER .    .    .    .    .    .    .    ..   movups	%xmm6, %xmm7
-# CHECK-NEXT: [0,7]     .DER .    .    .    .    .    .    .    ..   movups	%xmm7, %xmm8
-# CHECK-NEXT: [0,8]     .D=ER.    .    .    .    .    .    .    ..   movups	%xmm8, %xmm9
-# CHECK-NEXT: [0,9]     .D=ER.    .    .    .    .    .    .    ..   movups	%xmm9, %xmm10
-# CHECK-NEXT: [0,10]    .D=ER.    .    .    .    .    .    .    ..   movups	%xmm10, %xmm11
-# CHECK-NEXT: [0,11]    .D=ER.    .    .    .    .    .    .    ..   movups	%xmm11, %xmm12
-# CHECK-NEXT: [0,12]    . D=ER    .    .    .    .    .    .    ..   movups	%xmm12, %xmm13
-# CHECK-NEXT: [0,13]    . D=ER    .    .    .    .    .    .    ..   movups	%xmm13, %xmm14
-# CHECK-NEXT: [0,14]    . D=ER    .    .    .    .    .    .    ..   movups	%xmm14, %xmm15
-# CHECK-NEXT: [0,15]    . D=ER    .    .    .    .    .    .    ..   movups	%xmm15, %xmm0
-# CHECK-NEXT: [1,0]     . D==ER   .    .    .    .    .    .    ..   movups	%xmm0, %xmm1
-# CHECK-NEXT: [1,1]     . D==ER   .    .    .    .    .    .    ..   movups	%xmm1, %xmm2
-# CHECK-NEXT: [1,2]     .  D=ER   .    .    .    .    .    .    ..   movups	%xmm2, %xmm3
-# CHECK-NEXT: [1,3]     .  D=ER   .    .    .    .    .    .    ..   movups	%xmm3, %xmm4
-# CHECK-NEXT: [1,4]     .  D==ER  .    .    .    .    .    .    ..   movups	%xmm4, %xmm5
-# CHECK-NEXT: [1,5]     .  D==ER  .    .    .    .    .    .    ..   movups	%xmm5, %xmm6
-# CHECK-NEXT: [1,6]     .  D==ER  .    .    .    .    .    .    ..   movups	%xmm6, %xmm7
-# CHECK-NEXT: [1,7]     .  D==ER  .    .    .    .    .    .    ..   movups	%xmm7, %xmm8
-# CHECK-NEXT: [1,8]     .   D==ER .    .    .    .    .    .    ..   movups	%xmm8, %xmm9
-# CHECK-NEXT: [1,9]     .   D==ER .    .    .    .    .    .    ..   movups	%xmm9, %xmm10
-# CHECK-NEXT: [1,10]    .   D==ER .    .    .    .    .    .    ..   movups	%xmm10, %xmm11
-# CHECK-NEXT: [1,11]    .   D==ER .    .    .    .    .    .    ..   movups	%xmm11, %xmm12
-# CHECK-NEXT: [1,12]    .   D===ER.    .    .    .    .    .    ..   movups	%xmm12, %xmm13
-# CHECK-NEXT: [1,13]    .   D===ER.    .    .    .    .    .    ..   movups	%xmm13, %xmm14
-# CHECK-NEXT: [1,14]    .    D==ER.    .    .    .    .    .    ..   movups	%xmm14, %xmm15
-# CHECK-NEXT: [1,15]    .    D==ER.    .    .    .    .    .    ..   movups	%xmm15, %xmm0
-# CHECK-NEXT: [2,0]     .    D===ER    .    .    .    .    .    ..   movups	%xmm0, %xmm1
-# CHECK-NEXT: [2,1]     .    D===ER    .    .    .    .    .    ..   movups	%xmm1, %xmm2
-# CHECK-NEXT: [2,2]     .    D===ER    .    .    .    .    .    ..   movups	%xmm2, %xmm3
-# CHECK-NEXT: [2,3]     .    D===ER    .    .    .    .    .    ..   movups	%xmm3, %xmm4
-# CHECK-NEXT: [2,4]     .    .D===ER   .    .    .    .    .    ..   movups	%xmm4, %xmm5
-# CHECK-NEXT: [2,5]     .    .D===ER   .    .    .    .    .    ..   movups	%xmm5, %xmm6
-# CHECK-NEXT: [2,6]     .    .D===ER   .    .    .    .    .    ..   movups	%xmm6, %xmm7
-# CHECK-NEXT: [2,7]     .    .D===ER   .    .    .    .    .    ..   movups	%xmm7, %xmm8
-# CHECK-NEXT: [2,8]     .    .D====ER  .    .    .    .    .    ..   movups	%xmm8, %xmm9
-# CHECK-NEXT: [2,9]     .    .D====ER  .    .    .    .    .    ..   movups	%xmm9, %xmm10
-# CHECK-NEXT: [2,10]    .    . D===ER  .    .    .    .    .    ..   movups	%xmm10, %xmm11
-# CHECK-NEXT: [2,11]    .    . D===ER  .    .    .    .    .    ..   movups	%xmm11, %xmm12
-# CHECK-NEXT: [2,12]    .    . D====ER .    .    .    .    .    ..   movups	%xmm12, %xmm13
-# CHECK-NEXT: [2,13]    .    . D====ER .    .    .    .    .    ..   movups	%xmm13, %xmm14
-# CHECK-NEXT: [2,14]    .    . D====ER .    .    .    .    .    ..   movups	%xmm14, %xmm15
-# CHECK-NEXT: [2,15]    .    . D====ER .    .    .    .    .    ..   movups	%xmm15, %xmm0
-# CHECK-NEXT: [3,0]     .    .  D====ER.    .    .    .    .    ..   movups	%xmm0, %xmm1
-# CHECK-NEXT: [3,1]     .    .  D====ER.    .    .    .    .    ..   movups	%xmm1, %xmm2
-# CHECK-NEXT: [3,2]     .    .  D====ER.    .    .    .    .    ..   movups	%xmm2, %xmm3
-# CHECK-NEXT: [3,3]     .    .  D====ER.    .    .    .    .    ..   movups	%xmm3, %xmm4
-# CHECK-NEXT: [3,4]     .    .  D=====ER    .    .    .    .    ..   movups	%xmm4, %xmm5
-# CHECK-NEXT: [3,5]     .    .  D=====ER    .    .    .    .    ..   movups	%xmm5, %xmm6
-# CHECK-NEXT: [3,6]     .    .   D====ER    .    .    .    .    ..   movups	%xmm6, %xmm7
-# CHECK-NEXT: [3,7]     .    .   D====ER    .    .    .    .    ..   movups	%xmm7, %xmm8
-# CHECK-NEXT: [3,8]     .    .   D=====ER   .    .    .    .    ..   movups	%xmm8, %xmm9
-# CHECK-NEXT: [3,9]     .    .   D=====ER   .    .    .    .    ..   movups	%xmm9, %xmm10
-# CHECK-NEXT: [3,10]    .    .   D=====ER   .    .    .    .    ..   movups	%xmm10, %xmm11
-# CHECK-NEXT: [3,11]    .    .   D=====ER   .    .    .    .    ..   movups	%xmm11, %xmm12
-# CHECK-NEXT: [3,12]    .    .    D=====ER  .    .    .    .    ..   movups	%xmm12, %xmm13
-# CHECK-NEXT: [3,13]    .    .    D=====ER  .    .    .    .    ..   movups	%xmm13, %xmm14
-# CHECK-NEXT: [3,14]    .    .    D=====ER  .    .    .    .    ..   movups	%xmm14, %xmm15
-# CHECK-NEXT: [3,15]    .    .    D=====ER  .    .    .    .    ..   movups	%xmm15, %xmm0
-# CHECK-NEXT: [4,0]     .    .    D======ER .    .    .    .    ..   movups	%xmm0, %xmm1
-# CHECK-NEXT: [4,1]     .    .    D======ER .    .    .    .    ..   movups	%xmm1, %xmm2
-# CHECK-NEXT: [4,2]     .    .    .D=====ER .    .    .    .    ..   movups	%xmm2, %xmm3
-# CHECK-NEXT: [4,3]     .    .    .D=====ER .    .    .    .    ..   movups	%xmm3, %xmm4
-# CHECK-NEXT: [4,4]     .    .    .D======ER.    .    .    .    ..   movups	%xmm4, %xmm5
-# CHECK-NEXT: [4,5]     .    .    .D======ER.    .    .    .    ..   movups	%xmm5, %xmm6
-# CHECK-NEXT: [4,6]     .    .    .D======ER.    .    .    .    ..   movups	%xmm6, %xmm7
-# CHECK-NEXT: [4,7]     .    .    .D======ER.    .    .    .    ..   movups	%xmm7, %xmm8
-# CHECK-NEXT: [4,8]     .    .    . D======ER    .    .    .    ..   movups	%xmm8, %xmm9
-# CHECK-NEXT: [4,9]     .    .    . D======ER    .    .    .    ..   movups	%xmm9, %xmm10
-# CHECK-NEXT: [4,10]    .    .    . D======ER    .    .    .    ..   movups	%xmm10, %xmm11
-# CHECK-NEXT: [4,11]    .    .    . D======ER    .    .    .    ..   movups	%xmm11, %xmm12
-# CHECK-NEXT: [4,12]    .    .    . D=======ER   .    .    .    ..   movups	%xmm12, %xmm13
-# CHECK-NEXT: [4,13]    .    .    . D=======ER   .    .    .    ..   movups	%xmm13, %xmm14
-# CHECK-NEXT: [4,14]    .    .    .  D======ER   .    .    .    ..   movups	%xmm14, %xmm15
-# CHECK-NEXT: [4,15]    .    .    .  D======ER   .    .    .    ..   movups	%xmm15, %xmm0
-# CHECK-NEXT: [5,0]     .    .    .  D=======ER  .    .    .    ..   movups	%xmm0, %xmm1
-# CHECK-NEXT: [5,1]     .    .    .  D=======ER  .    .    .    ..   movups	%xmm1, %xmm2
-# CHECK-NEXT: [5,2]     .    .    .  D=======ER  .    .    .    ..   movups	%xmm2, %xmm3
-# CHECK-NEXT: [5,3]     .    .    .  D=======ER  .    .    .    ..   movups	%xmm3, %xmm4
-# CHECK-NEXT: [5,4]     .    .    .   D=======ER .    .    .    ..   movups	%xmm4, %xmm5
-# CHECK-NEXT: [5,5]     .    .    .   D=======ER .    .    .    ..   movups	%xmm5, %xmm6
-# CHECK-NEXT: [5,6]     .    .    .   D=======ER .    .    .    ..   movups	%xmm6, %xmm7
-# CHECK-NEXT: [5,7]     .    .    .   D=======ER .    .    .    ..   movups	%xmm7, %xmm8
-# CHECK-NEXT: [5,8]     .    .    .   D========ER.    .    .    ..   movups	%xmm8, %xmm9
-# CHECK-NEXT: [5,9]     .    .    .   D========ER.    .    .    ..   movups	%xmm9, %xmm10
-# CHECK-NEXT: [5,10]    .    .    .    D=======ER.    .    .    ..   movups	%xmm10, %xmm11
-# CHECK-NEXT: [5,11]    .    .    .    D=======ER.    .    .    ..   movups	%xmm11, %xmm12
-# CHECK-NEXT: [5,12]    .    .    .    D========ER    .    .    ..   movups	%xmm12, %xmm13
-# CHECK-NEXT: [5,13]    .    .    .    D========ER    .    .    ..   movups	%xmm13, %xmm14
-# CHECK-NEXT: [5,14]    .    .    .    D========ER    .    .    ..   movups	%xmm14, %xmm15
-# CHECK-NEXT: [5,15]    .    .    .    D========ER    .    .    ..   movups	%xmm15, %xmm0
-# CHECK-NEXT: [6,0]     .    .    .    .D========ER   .    .    ..   movups	%xmm0, %xmm1
-# CHECK-NEXT: [6,1]     .    .    .    .D========ER   .    .    ..   movups	%xmm1, %xmm2
-# CHECK-NEXT: [6,2]     .    .    .    .D========ER   .    .    ..   movups	%xmm2, %xmm3
-# CHECK-NEXT: [6,3]     .    .    .    .D========ER   .    .    ..   movups	%xmm3, %xmm4
-# CHECK-NEXT: [6,4]     .    .    .    .D=========ER  .    .    ..   movups	%xmm4, %xmm5
-# CHECK-NEXT: [6,5]     .    .    .    .D=========ER  .    .    ..   movups	%xmm5, %xmm6
-# CHECK-NEXT: [6,6]     .    .    .    . D========ER  .    .    ..   movups	%xmm6, %xmm7
-# CHECK-NEXT: [6,7]     .    .    .    . D========ER  .    .    ..   movups	%xmm7, %xmm8
-# CHECK-NEXT: [6,8]     .    .    .    . D=========ER .    .    ..   movups	%xmm8, %xmm9
-# CHECK-NEXT: [6,9]     .    .    .    . D=========ER .    .    ..   movups	%xmm9, %xmm10
-# CHECK-NEXT: [6,10]    .    .    .    . D=========ER .    .    ..   movups	%xmm10, %xmm11
-# CHECK-NEXT: [6,11]    .    .    .    . D=========ER .    .    ..   movups	%xmm11, %xmm12
-# CHECK-NEXT: [6,12]    .    .    .    .  D=========ER.    .    ..   movups	%xmm12, %xmm13
-# CHECK-NEXT: [6,13]    .    .    .    .  D=========ER.    .    ..   movups	%xmm13, %xmm14
-# CHECK-NEXT: [6,14]    .    .    .    .  D=========ER.    .    ..   movups	%xmm14, %xmm15
-# CHECK-NEXT: [6,15]    .    .    .    .  D=========ER.    .    ..   movups	%xmm15, %xmm0
-# CHECK-NEXT: [7,0]     .    .    .    .  D==========ER    .    ..   movups	%xmm0, %xmm1
-# CHECK-NEXT: [7,1]     .    .    .    .  D==========ER    .    ..   movups	%xmm1, %xmm2
-# CHECK-NEXT: [7,2]     .    .    .    .   D=========ER    .    ..   movups	%xmm2, %xmm3
-# CHECK-NEXT: [7,3]     .    .    .    .   D=========ER    .    ..   movups	%xmm3, %xmm4
-# CHECK-NEXT: [7,4]     .    .    .    .   D==========ER   .    ..   movups	%xmm4, %xmm5
-# CHECK-NEXT: [7,5]     .    .    .    .   D==========ER   .    ..   movups	%xmm5, %xmm6
-# CHECK-NEXT: [7,6]     .    .    .    .   D==========ER   .    ..   movups	%xmm6, %xmm7
-# CHECK-NEXT: [7,7]     .    .    .    .   D==========ER   .    ..   movups	%xmm7, %xmm8
-# CHECK-NEXT: [7,8]     .    .    .    .    D==========ER  .    ..   movups	%xmm8, %xmm9
-# CHECK-NEXT: [7,9]     .    .    .    .    D==========ER  .    ..   movups	%xmm9, %xmm10
-# CHECK-NEXT: [7,10]    .    .    .    .    D==========ER  .    ..   movups	%xmm10, %xmm11
-# CHECK-NEXT: [7,11]    .    .    .    .    D==========ER  .    ..   movups	%xmm11, %xmm12
-# CHECK-NEXT: [7,12]    .    .    .    .    D===========ER .    ..   movups	%xmm12, %xmm13
-# CHECK-NEXT: [7,13]    .    .    .    .    D===========ER .    ..   movups	%xmm13, %xmm14
-# CHECK-NEXT: [7,14]    .    .    .    .    .D==========ER .    ..   movups	%xmm14, %xmm15
-# CHECK-NEXT: [7,15]    .    .    .    .    .D==========ER .    ..   movups	%xmm15, %xmm0
-# CHECK-NEXT: [8,0]     .    .    .    .    .D===========ER.    ..   movups	%xmm0, %xmm1
-# CHECK-NEXT: [8,1]     .    .    .    .    .D===========ER.    ..   movups	%xmm1, %xmm2
-# CHECK-NEXT: [8,2]     .    .    .    .    .D===========ER.    ..   movups	%xmm2, %xmm3
-# CHECK-NEXT: [8,3]     .    .    .    .    .D===========ER.    ..   movups	%xmm3, %xmm4
-# CHECK-NEXT: [8,4]     .    .    .    .    . D===========ER    ..   movups	%xmm4, %xmm5
-# CHECK-NEXT: [8,5]     .    .    .    .    . D===========ER    ..   movups	%xmm5, %xmm6
-# CHECK-NEXT: [8,6]     .    .    .    .    . D===========ER    ..   movups	%xmm6, %xmm7
-# CHECK-NEXT: [8,7]     .    .    .    .    . D===========ER    ..   movups	%xmm7, %xmm8
-# CHECK-NEXT: [8,8]     .    .    .    .    . D============ER   ..   movups	%xmm8, %xmm9
-# CHECK-NEXT: [8,9]     .    .    .    .    . D============ER   ..   movups	%xmm9, %xmm10
-# CHECK-NEXT: [8,10]    .    .    .    .    .  D===========ER   ..   movups	%xmm10, %xmm11
-# CHECK-NEXT: [8,11]    .    .    .    .    .  D===========ER   ..   movups	%xmm11, %xmm12
-# CHECK-NEXT: [8,12]    .    .    .    .    .  D============ER  ..   movups	%xmm12, %xmm13
-# CHECK-NEXT: [8,13]    .    .    .    .    .  D============ER  ..   movups	%xmm13, %xmm14
-# CHECK-NEXT: [8,14]    .    .    .    .    .  D============ER  ..   movups	%xmm14, %xmm15
-# CHECK-NEXT: [8,15]    .    .    .    .    .  D============ER  ..   movups	%xmm15, %xmm0
-# CHECK-NEXT: [9,0]     .    .    .    .    .   D============ER ..   movups	%xmm0, %xmm1
-# CHECK-NEXT: [9,1]     .    .    .    .    .   D============ER ..   movups	%xmm1, %xmm2
-# CHECK-NEXT: [9,2]     .    .    .    .    .   D============ER ..   movups	%xmm2, %xmm3
-# CHECK-NEXT: [9,3]     .    .    .    .    .   D============ER ..   movups	%xmm3, %xmm4
-# CHECK-NEXT: [9,4]     .    .    .    .    .   D=============ER..   movups	%xmm4, %xmm5
-# CHECK-NEXT: [9,5]     .    .    .    .    .   D=============ER..   movups	%xmm5, %xmm6
-# CHECK-NEXT: [9,6]     .    .    .    .    .    D============ER..   movups	%xmm6, %xmm7
-# CHECK-NEXT: [9,7]     .    .    .    .    .    D============ER..   movups	%xmm7, %xmm8
-# CHECK-NEXT: [9,8]     .    .    .    .    .    D=============ER.   movups	%xmm8, %xmm9
-# CHECK-NEXT: [9,9]     .    .    .    .    .    D=============ER.   movups	%xmm9, %xmm10
-# CHECK-NEXT: [9,10]    .    .    .    .    .    D=============ER.   movups	%xmm10, %xmm11
-# CHECK-NEXT: [9,11]    .    .    .    .    .    D=============ER.   movups	%xmm11, %xmm12
-# CHECK-NEXT: [9,12]    .    .    .    .    .    .D=============ER   movups	%xmm12, %xmm13
-# CHECK-NEXT: [9,13]    .    .    .    .    .    .D=============ER   movups	%xmm13, %xmm14
-# CHECK-NEXT: [9,14]    .    .    .    .    .    .D=============ER   movups	%xmm14, %xmm15
-# CHECK-NEXT: [9,15]    .    .    .    .    .    .D=============ER   movups	%xmm15, %xmm0
+# CHECK:      [0,0]     DR   .    .    .    .    . .   movups	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DR   .    .    .    .    . .   movups	%xmm1, %xmm2
+# CHECK-NEXT: [0,2]     DR   .    .    .    .    . .   movups	%xmm2, %xmm3
+# CHECK-NEXT: [0,3]     DR   .    .    .    .    . .   movups	%xmm3, %xmm4
+# CHECK-NEXT: [0,4]     DR   .    .    .    .    . .   movups	%xmm4, %xmm5
+# CHECK-NEXT: [0,5]     DR   .    .    .    .    . .   movups	%xmm5, %xmm6
+# CHECK-NEXT: [0,6]     .DR  .    .    .    .    . .   movups	%xmm6, %xmm7
+# CHECK-NEXT: [0,7]     .DR  .    .    .    .    . .   movups	%xmm7, %xmm8
+# CHECK-NEXT: [0,8]     .DR  .    .    .    .    . .   movups	%xmm8, %xmm9
+# CHECK-NEXT: [0,9]     .DR  .    .    .    .    . .   movups	%xmm9, %xmm10
+# CHECK-NEXT: [0,10]    .DR  .    .    .    .    . .   movups	%xmm10, %xmm11
+# CHECK-NEXT: [0,11]    .DR  .    .    .    .    . .   movups	%xmm11, %xmm12
+# CHECK-NEXT: [0,12]    . DR .    .    .    .    . .   movups	%xmm12, %xmm13
+# CHECK-NEXT: [0,13]    . DR .    .    .    .    . .   movups	%xmm13, %xmm14
+# CHECK-NEXT: [0,14]    . DR .    .    .    .    . .   movups	%xmm14, %xmm15
+# CHECK-NEXT: [0,15]    . DR .    .    .    .    . .   movups	%xmm15, %xmm0
+# CHECK-NEXT: [1,0]     . DR .    .    .    .    . .   movups	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     . DR .    .    .    .    . .   movups	%xmm1, %xmm2
+# CHECK-NEXT: [1,2]     .  DR.    .    .    .    . .   movups	%xmm2, %xmm3
+# CHECK-NEXT: [1,3]     .  DR.    .    .    .    . .   movups	%xmm3, %xmm4
+# CHECK-NEXT: [1,4]     .  DR.    .    .    .    . .   movups	%xmm4, %xmm5
+# CHECK-NEXT: [1,5]     .  DR.    .    .    .    . .   movups	%xmm5, %xmm6
+# CHECK-NEXT: [1,6]     .  DR.    .    .    .    . .   movups	%xmm6, %xmm7
+# CHECK-NEXT: [1,7]     .  DR.    .    .    .    . .   movups	%xmm7, %xmm8
+# CHECK-NEXT: [1,8]     .   DR    .    .    .    . .   movups	%xmm8, %xmm9
+# CHECK-NEXT: [1,9]     .   DR    .    .    .    . .   movups	%xmm9, %xmm10
+# CHECK-NEXT: [1,10]    .   DR    .    .    .    . .   movups	%xmm10, %xmm11
+# CHECK-NEXT: [1,11]    .   DR    .    .    .    . .   movups	%xmm11, %xmm12
+# CHECK-NEXT: [1,12]    .   DR    .    .    .    . .   movups	%xmm12, %xmm13
+# CHECK-NEXT: [1,13]    .   DR    .    .    .    . .   movups	%xmm13, %xmm14
+# CHECK-NEXT: [1,14]    .    DR   .    .    .    . .   movups	%xmm14, %xmm15
+# CHECK-NEXT: [1,15]    .    DR   .    .    .    . .   movups	%xmm15, %xmm0
+# CHECK-NEXT: [2,0]     .    DR   .    .    .    . .   movups	%xmm0, %xmm1
+# CHECK-NEXT: [2,1]     .    DR   .    .    .    . .   movups	%xmm1, %xmm2
+# CHECK-NEXT: [2,2]     .    DR   .    .    .    . .   movups	%xmm2, %xmm3
+# CHECK-NEXT: [2,3]     .    DR   .    .    .    . .   movups	%xmm3, %xmm4
+# CHECK-NEXT: [2,4]     .    .DR  .    .    .    . .   movups	%xmm4, %xmm5
+# CHECK-NEXT: [2,5]     .    .DR  .    .    .    . .   movups	%xmm5, %xmm6
+# CHECK-NEXT: [2,6]     .    .DR  .    .    .    . .   movups	%xmm6, %xmm7
+# CHECK-NEXT: [2,7]     .    .DR  .    .    .    . .   movups	%xmm7, %xmm8
+# CHECK-NEXT: [2,8]     .    .DR  .    .    .    . .   movups	%xmm8, %xmm9
+# CHECK-NEXT: [2,9]     .    .DR  .    .    .    . .   movups	%xmm9, %xmm10
+# CHECK-NEXT: [2,10]    .    . DR .    .    .    . .   movups	%xmm10, %xmm11
+# CHECK-NEXT: [2,11]    .    . DR .    .    .    . .   movups	%xmm11, %xmm12
+# CHECK-NEXT: [2,12]    .    . DR .    .    .    . .   movups	%xmm12, %xmm13
+# CHECK-NEXT: [2,13]    .    . DR .    .    .    . .   movups	%xmm13, %xmm14
+# CHECK-NEXT: [2,14]    .    . DR .    .    .    . .   movups	%xmm14, %xmm15
+# CHECK-NEXT: [2,15]    .    . DR .    .    .    . .   movups	%xmm15, %xmm0
+# CHECK-NEXT: [3,0]     .    .  DR.    .    .    . .   movups	%xmm0, %xmm1
+# CHECK-NEXT: [3,1]     .    .  DR.    .    .    . .   movups	%xmm1, %xmm2
+# CHECK-NEXT: [3,2]     .    .  DR.    .    .    . .   movups	%xmm2, %xmm3
+# CHECK-NEXT: [3,3]     .    .  DR.    .    .    . .   movups	%xmm3, %xmm4
+# CHECK-NEXT: [3,4]     .    .  DR.    .    .    . .   movups	%xmm4, %xmm5
+# CHECK-NEXT: [3,5]     .    .  DR.    .    .    . .   movups	%xmm5, %xmm6
+# CHECK-NEXT: [3,6]     .    .   DR    .    .    . .   movups	%xmm6, %xmm7
+# CHECK-NEXT: [3,7]     .    .   DR    .    .    . .   movups	%xmm7, %xmm8
+# CHECK-NEXT: [3,8]     .    .   DR    .    .    . .   movups	%xmm8, %xmm9
+# CHECK-NEXT: [3,9]     .    .   DR    .    .    . .   movups	%xmm9, %xmm10
+# CHECK-NEXT: [3,10]    .    .   DR    .    .    . .   movups	%xmm10, %xmm11
+# CHECK-NEXT: [3,11]    .    .   DR    .    .    . .   movups	%xmm11, %xmm12
+# CHECK-NEXT: [3,12]    .    .    DR   .    .    . .   movups	%xmm12, %xmm13
+# CHECK-NEXT: [3,13]    .    .    DR   .    .    . .   movups	%xmm13, %xmm14
+# CHECK-NEXT: [3,14]    .    .    DR   .    .    . .   movups	%xmm14, %xmm15
+# CHECK-NEXT: [3,15]    .    .    DR   .    .    . .   movups	%xmm15, %xmm0
+# CHECK-NEXT: [4,0]     .    .    DR   .    .    . .   movups	%xmm0, %xmm1
+# CHECK-NEXT: [4,1]     .    .    DR   .    .    . .   movups	%xmm1, %xmm2
+# CHECK-NEXT: [4,2]     .    .    .DR  .    .    . .   movups	%xmm2, %xmm3
+# CHECK-NEXT: [4,3]     .    .    .DR  .    .    . .   movups	%xmm3, %xmm4
+# CHECK-NEXT: [4,4]     .    .    .DR  .    .    . .   movups	%xmm4, %xmm5
+# CHECK-NEXT: [4,5]     .    .    .DR  .    .    . .   movups	%xmm5, %xmm6
+# CHECK-NEXT: [4,6]     .    .    .DR  .    .    . .   movups	%xmm6, %xmm7
+# CHECK-NEXT: [4,7]     .    .    .DR  .    .    . .   movups	%xmm7, %xmm8
+# CHECK-NEXT: [4,8]     .    .    . DR .    .    . .   movups	%xmm8, %xmm9
+# CHECK-NEXT: [4,9]     .    .    . DR .    .    . .   movups	%xmm9, %xmm10
+# CHECK-NEXT: [4,10]    .    .    . DR .    .    . .   movups	%xmm10, %xmm11
+# CHECK-NEXT: [4,11]    .    .    . DR .    .    . .   movups	%xmm11, %xmm12
+# CHECK-NEXT: [4,12]    .    .    . DR .    .    . .   movups	%xmm12, %xmm13
+# CHECK-NEXT: [4,13]    .    .    . DR .    .    . .   movups	%xmm13, %xmm14
+# CHECK-NEXT: [4,14]    .    .    .  DR.    .    . .   movups	%xmm14, %xmm15
+# CHECK-NEXT: [4,15]    .    .    .  DR.    .    . .   movups	%xmm15, %xmm0
+# CHECK-NEXT: [5,0]     .    .    .  DR.    .    . .   movups	%xmm0, %xmm1
+# CHECK-NEXT: [5,1]     .    .    .  DR.    .    . .   movups	%xmm1, %xmm2
+# CHECK-NEXT: [5,2]     .    .    .  DR.    .    . .   movups	%xmm2, %xmm3
+# CHECK-NEXT: [5,3]     .    .    .  DR.    .    . .   movups	%xmm3, %xmm4
+# CHECK-NEXT: [5,4]     .    .    .   DR    .    . .   movups	%xmm4, %xmm5
+# CHECK-NEXT: [5,5]     .    .    .   DR    .    . .   movups	%xmm5, %xmm6
+# CHECK-NEXT: [5,6]     .    .    .   DR    .    . .   movups	%xmm6, %xmm7
+# CHECK-NEXT: [5,7]     .    .    .   DR    .    . .   movups	%xmm7, %xmm8
+# CHECK-NEXT: [5,8]     .    .    .   DR    .    . .   movups	%xmm8, %xmm9
+# CHECK-NEXT: [5,9]     .    .    .   DR    .    . .   movups	%xmm9, %xmm10
+# CHECK-NEXT: [5,10]    .    .    .    DR   .    . .   movups	%xmm10, %xmm11
+# CHECK-NEXT: [5,11]    .    .    .    DR   .    . .   movups	%xmm11, %xmm12
+# CHECK-NEXT: [5,12]    .    .    .    DR   .    . .   movups	%xmm12, %xmm13
+# CHECK-NEXT: [5,13]    .    .    .    DR   .    . .   movups	%xmm13, %xmm14
+# CHECK-NEXT: [5,14]    .    .    .    DR   .    . .   movups	%xmm14, %xmm15
+# CHECK-NEXT: [5,15]    .    .    .    DR   .    . .   movups	%xmm15, %xmm0
+# CHECK-NEXT: [6,0]     .    .    .    .DR  .    . .   movups	%xmm0, %xmm1
+# CHECK-NEXT: [6,1]     .    .    .    .DR  .    . .   movups	%xmm1, %xmm2
+# CHECK-NEXT: [6,2]     .    .    .    .DR  .    . .   movups	%xmm2, %xmm3
+# CHECK-NEXT: [6,3]     .    .    .    .DR  .    . .   movups	%xmm3, %xmm4
+# CHECK-NEXT: [6,4]     .    .    .    .DR  .    . .   movups	%xmm4, %xmm5
+# CHECK-NEXT: [6,5]     .    .    .    .DR  .    . .   movups	%xmm5, %xmm6
+# CHECK-NEXT: [6,6]     .    .    .    . DR .    . .   movups	%xmm6, %xmm7
+# CHECK-NEXT: [6,7]     .    .    .    . DR .    . .   movups	%xmm7, %xmm8
+# CHECK-NEXT: [6,8]     .    .    .    . DR .    . .   movups	%xmm8, %xmm9
+# CHECK-NEXT: [6,9]     .    .    .    . DR .    . .   movups	%xmm9, %xmm10
+# CHECK-NEXT: [6,10]    .    .    .    . DR .    . .   movups	%xmm10, %xmm11
+# CHECK-NEXT: [6,11]    .    .    .    . DR .    . .   movups	%xmm11, %xmm12
+# CHECK-NEXT: [6,12]    .    .    .    .  DR.    . .   movups	%xmm12, %xmm13
+# CHECK-NEXT: [6,13]    .    .    .    .  DR.    . .   movups	%xmm13, %xmm14
+# CHECK-NEXT: [6,14]    .    .    .    .  DR.    . .   movups	%xmm14, %xmm15
+# CHECK-NEXT: [6,15]    .    .    .    .  DR.    . .   movups	%xmm15, %xmm0
+# CHECK-NEXT: [7,0]     .    .    .    .  DR.    . .   movups	%xmm0, %xmm1
+# CHECK-NEXT: [7,1]     .    .    .    .  DR.    . .   movups	%xmm1, %xmm2
+# CHECK-NEXT: [7,2]     .    .    .    .   DR    . .   movups	%xmm2, %xmm3
+# CHECK-NEXT: [7,3]     .    .    .    .   DR    . .   movups	%xmm3, %xmm4
+# CHECK-NEXT: [7,4]     .    .    .    .   DR    . .   movups	%xmm4, %xmm5
+# CHECK-NEXT: [7,5]     .    .    .    .   DR    . .   movups	%xmm5, %xmm6
+# CHECK-NEXT: [7,6]     .    .    .    .   DR    . .   movups	%xmm6, %xmm7
+# CHECK-NEXT: [7,7]     .    .    .    .   DR    . .   movups	%xmm7, %xmm8
+# CHECK-NEXT: [7,8]     .    .    .    .    DR   . .   movups	%xmm8, %xmm9
+# CHECK-NEXT: [7,9]     .    .    .    .    DR   . .   movups	%xmm9, %xmm10
+# CHECK-NEXT: [7,10]    .    .    .    .    DR   . .   movups	%xmm10, %xmm11
+# CHECK-NEXT: [7,11]    .    .    .    .    DR   . .   movups	%xmm11, %xmm12
+# CHECK-NEXT: [7,12]    .    .    .    .    DR   . .   movups	%xmm12, %xmm13
+# CHECK-NEXT: [7,13]    .    .    .    .    DR   . .   movups	%xmm13, %xmm14
+# CHECK-NEXT: [7,14]    .    .    .    .    .DR  . .   movups	%xmm14, %xmm15
+# CHECK-NEXT: [7,15]    .    .    .    .    .DR  . .   movups	%xmm15, %xmm0
+# CHECK-NEXT: [8,0]     .    .    .    .    .DR  . .   movups	%xmm0, %xmm1
+# CHECK-NEXT: [8,1]     .    .    .    .    .DR  . .   movups	%xmm1, %xmm2
+# CHECK-NEXT: [8,2]     .    .    .    .    .DR  . .   movups	%xmm2, %xmm3
+# CHECK-NEXT: [8,3]     .    .    .    .    .DR  . .   movups	%xmm3, %xmm4
+# CHECK-NEXT: [8,4]     .    .    .    .    . DR . .   movups	%xmm4, %xmm5
+# CHECK-NEXT: [8,5]     .    .    .    .    . DR . .   movups	%xmm5, %xmm6
+# CHECK-NEXT: [8,6]     .    .    .    .    . DR . .   movups	%xmm6, %xmm7
+# CHECK-NEXT: [8,7]     .    .    .    .    . DR . .   movups	%xmm7, %xmm8
+# CHECK-NEXT: [8,8]     .    .    .    .    . DR . .   movups	%xmm8, %xmm9
+# CHECK-NEXT: [8,9]     .    .    .    .    . DR . .   movups	%xmm9, %xmm10
+# CHECK-NEXT: [8,10]    .    .    .    .    .  DR. .   movups	%xmm10, %xmm11
+# CHECK-NEXT: [8,11]    .    .    .    .    .  DR. .   movups	%xmm11, %xmm12
+# CHECK-NEXT: [8,12]    .    .    .    .    .  DR. .   movups	%xmm12, %xmm13
+# CHECK-NEXT: [8,13]    .    .    .    .    .  DR. .   movups	%xmm13, %xmm14
+# CHECK-NEXT: [8,14]    .    .    .    .    .  DR. .   movups	%xmm14, %xmm15
+# CHECK-NEXT: [8,15]    .    .    .    .    .  DR. .   movups	%xmm15, %xmm0
+# CHECK-NEXT: [9,0]     .    .    .    .    .   DR .   movups	%xmm0, %xmm1
+# CHECK-NEXT: [9,1]     .    .    .    .    .   DR .   movups	%xmm1, %xmm2
+# CHECK-NEXT: [9,2]     .    .    .    .    .   DR .   movups	%xmm2, %xmm3
+# CHECK-NEXT: [9,3]     .    .    .    .    .   DR .   movups	%xmm3, %xmm4
+# CHECK-NEXT: [9,4]     .    .    .    .    .   DR .   movups	%xmm4, %xmm5
+# CHECK-NEXT: [9,5]     .    .    .    .    .   DR .   movups	%xmm5, %xmm6
+# CHECK-NEXT: [9,6]     .    .    .    .    .    DR.   movups	%xmm6, %xmm7
+# CHECK-NEXT: [9,7]     .    .    .    .    .    DR.   movups	%xmm7, %xmm8
+# CHECK-NEXT: [9,8]     .    .    .    .    .    DR.   movups	%xmm8, %xmm9
+# CHECK-NEXT: [9,9]     .    .    .    .    .    DR.   movups	%xmm9, %xmm10
+# CHECK-NEXT: [9,10]    .    .    .    .    .    DR.   movups	%xmm10, %xmm11
+# CHECK-NEXT: [9,11]    .    .    .    .    .    DR.   movups	%xmm11, %xmm12
+# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR   movups	%xmm12, %xmm13
+# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR   movups	%xmm13, %xmm14
+# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR   movups	%xmm14, %xmm15
+# CHECK-NEXT: [9,15]    .    .    .    .    .    .DR   movups	%xmm15, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -677,34 +685,34 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     10    7.3    1.0    0.0       movups	%xmm0, %xmm1
-# CHECK-NEXT: 1.     10    7.3    0.0    0.0       movups	%xmm1, %xmm2
-# CHECK-NEXT: 2.     10    7.0    0.0    0.0       movups	%xmm2, %xmm3
-# CHECK-NEXT: 3.     10    7.0    0.0    0.0       movups	%xmm3, %xmm4
-# CHECK-NEXT: 4.     10    7.7    1.0    0.0       movups	%xmm4, %xmm5
-# CHECK-NEXT: 5.     10    7.7    0.0    0.0       movups	%xmm5, %xmm6
-# CHECK-NEXT: 6.     10    7.3    0.0    0.0       movups	%xmm6, %xmm7
-# CHECK-NEXT: 7.     10    7.3    0.0    0.0       movups	%xmm7, %xmm8
-# CHECK-NEXT: 8.     10    8.0    1.0    0.0       movups	%xmm8, %xmm9
-# CHECK-NEXT: 9.     10    8.0    0.0    0.0       movups	%xmm9, %xmm10
-# CHECK-NEXT: 10.    10    7.7    0.0    0.0       movups	%xmm10, %xmm11
-# CHECK-NEXT: 11.    10    7.7    0.0    0.0       movups	%xmm11, %xmm12
-# CHECK-NEXT: 12.    10    8.3    1.0    0.0       movups	%xmm12, %xmm13
-# CHECK-NEXT: 13.    10    8.3    0.0    0.0       movups	%xmm13, %xmm14
-# CHECK-NEXT: 14.    10    8.0    0.0    0.0       movups	%xmm14, %xmm15
-# CHECK-NEXT: 15.    10    8.0    0.0    0.0       movups	%xmm15, %xmm0
-# CHECK-NEXT:        10    7.7    0.3    0.0       <total>
+# CHECK-NEXT: 0.     10    0.0    0.0    0.0       movups	%xmm0, %xmm1
+# CHECK-NEXT: 1.     10    0.0    0.0    0.0       movups	%xmm1, %xmm2
+# CHECK-NEXT: 2.     10    0.0    0.0    0.0       movups	%xmm2, %xmm3
+# CHECK-NEXT: 3.     10    0.0    0.0    0.0       movups	%xmm3, %xmm4
+# CHECK-NEXT: 4.     10    0.0    0.0    0.0       movups	%xmm4, %xmm5
+# CHECK-NEXT: 5.     10    0.0    0.0    0.0       movups	%xmm5, %xmm6
+# CHECK-NEXT: 6.     10    0.0    0.0    0.0       movups	%xmm6, %xmm7
+# CHECK-NEXT: 7.     10    0.0    0.0    0.0       movups	%xmm7, %xmm8
+# CHECK-NEXT: 8.     10    0.0    0.0    0.0       movups	%xmm8, %xmm9
+# CHECK-NEXT: 9.     10    0.0    0.0    0.0       movups	%xmm9, %xmm10
+# CHECK-NEXT: 10.    10    0.0    0.0    0.0       movups	%xmm10, %xmm11
+# CHECK-NEXT: 11.    10    0.0    0.0    0.0       movups	%xmm11, %xmm12
+# CHECK-NEXT: 12.    10    0.0    0.0    0.0       movups	%xmm12, %xmm13
+# CHECK-NEXT: 13.    10    0.0    0.0    0.0       movups	%xmm13, %xmm14
+# CHECK-NEXT: 14.    10    0.0    0.0    0.0       movups	%xmm14, %xmm15
+# CHECK-NEXT: 15.    10    0.0    0.0    0.0       movups	%xmm15, %xmm0
+# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
 
 # CHECK:      [2] Code Region
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      24000
-# CHECK-NEXT: Total Cycles:      6002
+# CHECK-NEXT: Total Cycles:      4001
 # CHECK-NEXT: Total uOps:        24000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    4.00
-# CHECK-NEXT: IPC:               4.00
+# CHECK-NEXT: uOps Per Cycle:    6.00
+# CHECK-NEXT: IPC:               6.00
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Instruction Info:
@@ -734,13 +742,17 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT:  1      0     0.25                        movapd	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    24000
-# CHECK-NEXT: Max number of mappings used:         68
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 24000
-# CHECK-NEXT:    Max number of mappings used:      68
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      24000
+# CHECK-NEXT:    Number of moves eliminated:       24000  (100.0%)
+# CHECK-NEXT:    Number of zero moves:             0  (0.0%)
+# CHECK-NEXT:    Max moves eliminated per cycle:   6
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -774,191 +786,191 @@ movdqu %xmm15, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00   4.00   4.00    -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm0, %xmm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm2, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm3, %xmm4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm4, %xmm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm5, %xmm6
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm6, %xmm7
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm7, %xmm8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm8, %xmm9
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm9, %xmm10
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm10, %xmm11
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm11, %xmm12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm12, %xmm13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm13, %xmm14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm14, %xmm15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm15, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm0, %xmm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm2, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm3, %xmm4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm4, %xmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm5, %xmm6
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm6, %xmm7
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm7, %xmm8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm8, %xmm9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm9, %xmm10
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm10, %xmm11
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm11, %xmm12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm12, %xmm13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm13, %xmm14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm14, %xmm15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm15, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          01
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          01234567
 
-# CHECK:      [0,0]     DER  .    .    .    .    .    .    .    ..   movapd	%xmm0, %xmm1
-# CHECK-NEXT: [0,1]     DER  .    .    .    .    .    .    .    ..   movapd	%xmm1, %xmm2
-# CHECK-NEXT: [0,2]     DER  .    .    .    .    .    .    .    ..   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [0,3]     DER  .    .    .    .    .    .    .    ..   movapd	%xmm3, %xmm4
-# CHECK-NEXT: [0,4]     D=ER .    .    .    .    .    .    .    ..   movapd	%xmm4, %xmm5
-# CHECK-NEXT: [0,5]     D=ER .    .    .    .    .    .    .    ..   movapd	%xmm5, %xmm6
-# CHECK-NEXT: [0,6]     .DER .    .    .    .    .    .    .    ..   movapd	%xmm6, %xmm7
-# CHECK-NEXT: [0,7]     .DER .    .    .    .    .    .    .    ..   movapd	%xmm7, %xmm8
-# CHECK-NEXT: [0,8]     .D=ER.    .    .    .    .    .    .    ..   movapd	%xmm8, %xmm9
-# CHECK-NEXT: [0,9]     .D=ER.    .    .    .    .    .    .    ..   movapd	%xmm9, %xmm10
-# CHECK-NEXT: [0,10]    .D=ER.    .    .    .    .    .    .    ..   movapd	%xmm10, %xmm11
-# CHECK-NEXT: [0,11]    .D=ER.    .    .    .    .    .    .    ..   movapd	%xmm11, %xmm12
-# CHECK-NEXT: [0,12]    . D=ER    .    .    .    .    .    .    ..   movapd	%xmm12, %xmm13
-# CHECK-NEXT: [0,13]    . D=ER    .    .    .    .    .    .    ..   movapd	%xmm13, %xmm14
-# CHECK-NEXT: [0,14]    . D=ER    .    .    .    .    .    .    ..   movapd	%xmm14, %xmm15
-# CHECK-NEXT: [0,15]    . D=ER    .    .    .    .    .    .    ..   movapd	%xmm15, %xmm0
-# CHECK-NEXT: [1,0]     . D==ER   .    .    .    .    .    .    ..   movapd	%xmm0, %xmm1
-# CHECK-NEXT: [1,1]     . D==ER   .    .    .    .    .    .    ..   movapd	%xmm1, %xmm2
-# CHECK-NEXT: [1,2]     .  D=ER   .    .    .    .    .    .    ..   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [1,3]     .  D=ER   .    .    .    .    .    .    ..   movapd	%xmm3, %xmm4
-# CHECK-NEXT: [1,4]     .  D==ER  .    .    .    .    .    .    ..   movapd	%xmm4, %xmm5
-# CHECK-NEXT: [1,5]     .  D==ER  .    .    .    .    .    .    ..   movapd	%xmm5, %xmm6
-# CHECK-NEXT: [1,6]     .  D==ER  .    .    .    .    .    .    ..   movapd	%xmm6, %xmm7
-# CHECK-NEXT: [1,7]     .  D==ER  .    .    .    .    .    .    ..   movapd	%xmm7, %xmm8
-# CHECK-NEXT: [1,8]     .   D==ER .    .    .    .    .    .    ..   movapd	%xmm8, %xmm9
-# CHECK-NEXT: [1,9]     .   D==ER .    .    .    .    .    .    ..   movapd	%xmm9, %xmm10
-# CHECK-NEXT: [1,10]    .   D==ER .    .    .    .    .    .    ..   movapd	%xmm10, %xmm11
-# CHECK-NEXT: [1,11]    .   D==ER .    .    .    .    .    .    ..   movapd	%xmm11, %xmm12
-# CHECK-NEXT: [1,12]    .   D===ER.    .    .    .    .    .    ..   movapd	%xmm12, %xmm13
-# CHECK-NEXT: [1,13]    .   D===ER.    .    .    .    .    .    ..   movapd	%xmm13, %xmm14
-# CHECK-NEXT: [1,14]    .    D==ER.    .    .    .    .    .    ..   movapd	%xmm14, %xmm15
-# CHECK-NEXT: [1,15]    .    D==ER.    .    .    .    .    .    ..   movapd	%xmm15, %xmm0
-# CHECK-NEXT: [2,0]     .    D===ER    .    .    .    .    .    ..   movapd	%xmm0, %xmm1
-# CHECK-NEXT: [2,1]     .    D===ER    .    .    .    .    .    ..   movapd	%xmm1, %xmm2
-# CHECK-NEXT: [2,2]     .    D===ER    .    .    .    .    .    ..   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [2,3]     .    D===ER    .    .    .    .    .    ..   movapd	%xmm3, %xmm4
-# CHECK-NEXT: [2,4]     .    .D===ER   .    .    .    .    .    ..   movapd	%xmm4, %xmm5
-# CHECK-NEXT: [2,5]     .    .D===ER   .    .    .    .    .    ..   movapd	%xmm5, %xmm6
-# CHECK-NEXT: [2,6]     .    .D===ER   .    .    .    .    .    ..   movapd	%xmm6, %xmm7
-# CHECK-NEXT: [2,7]     .    .D===ER   .    .    .    .    .    ..   movapd	%xmm7, %xmm8
-# CHECK-NEXT: [2,8]     .    .D====ER  .    .    .    .    .    ..   movapd	%xmm8, %xmm9
-# CHECK-NEXT: [2,9]     .    .D====ER  .    .    .    .    .    ..   movapd	%xmm9, %xmm10
-# CHECK-NEXT: [2,10]    .    . D===ER  .    .    .    .    .    ..   movapd	%xmm10, %xmm11
-# CHECK-NEXT: [2,11]    .    . D===ER  .    .    .    .    .    ..   movapd	%xmm11, %xmm12
-# CHECK-NEXT: [2,12]    .    . D====ER .    .    .    .    .    ..   movapd	%xmm12, %xmm13
-# CHECK-NEXT: [2,13]    .    . D====ER .    .    .    .    .    ..   movapd	%xmm13, %xmm14
-# CHECK-NEXT: [2,14]    .    . D====ER .    .    .    .    .    ..   movapd	%xmm14, %xmm15
-# CHECK-NEXT: [2,15]    .    . D====ER .    .    .    .    .    ..   movapd	%xmm15, %xmm0
-# CHECK-NEXT: [3,0]     .    .  D====ER.    .    .    .    .    ..   movapd	%xmm0, %xmm1
-# CHECK-NEXT: [3,1]     .    .  D====ER.    .    .    .    .    ..   movapd	%xmm1, %xmm2
-# CHECK-NEXT: [3,2]     .    .  D====ER.    .    .    .    .    ..   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [3,3]     .    .  D====ER.    .    .    .    .    ..   movapd	%xmm3, %xmm4
-# CHECK-NEXT: [3,4]     .    .  D=====ER    .    .    .    .    ..   movapd	%xmm4, %xmm5
-# CHECK-NEXT: [3,5]     .    .  D=====ER    .    .    .    .    ..   movapd	%xmm5, %xmm6
-# CHECK-NEXT: [3,6]     .    .   D====ER    .    .    .    .    ..   movapd	%xmm6, %xmm7
-# CHECK-NEXT: [3,7]     .    .   D====ER    .    .    .    .    ..   movapd	%xmm7, %xmm8
-# CHECK-NEXT: [3,8]     .    .   D=====ER   .    .    .    .    ..   movapd	%xmm8, %xmm9
-# CHECK-NEXT: [3,9]     .    .   D=====ER   .    .    .    .    ..   movapd	%xmm9, %xmm10
-# CHECK-NEXT: [3,10]    .    .   D=====ER   .    .    .    .    ..   movapd	%xmm10, %xmm11
-# CHECK-NEXT: [3,11]    .    .   D=====ER   .    .    .    .    ..   movapd	%xmm11, %xmm12
-# CHECK-NEXT: [3,12]    .    .    D=====ER  .    .    .    .    ..   movapd	%xmm12, %xmm13
-# CHECK-NEXT: [3,13]    .    .    D=====ER  .    .    .    .    ..   movapd	%xmm13, %xmm14
-# CHECK-NEXT: [3,14]    .    .    D=====ER  .    .    .    .    ..   movapd	%xmm14, %xmm15
-# CHECK-NEXT: [3,15]    .    .    D=====ER  .    .    .    .    ..   movapd	%xmm15, %xmm0
-# CHECK-NEXT: [4,0]     .    .    D======ER .    .    .    .    ..   movapd	%xmm0, %xmm1
-# CHECK-NEXT: [4,1]     .    .    D======ER .    .    .    .    ..   movapd	%xmm1, %xmm2
-# CHECK-NEXT: [4,2]     .    .    .D=====ER .    .    .    .    ..   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [4,3]     .    .    .D=====ER .    .    .    .    ..   movapd	%xmm3, %xmm4
-# CHECK-NEXT: [4,4]     .    .    .D======ER.    .    .    .    ..   movapd	%xmm4, %xmm5
-# CHECK-NEXT: [4,5]     .    .    .D======ER.    .    .    .    ..   movapd	%xmm5, %xmm6
-# CHECK-NEXT: [4,6]     .    .    .D======ER.    .    .    .    ..   movapd	%xmm6, %xmm7
-# CHECK-NEXT: [4,7]     .    .    .D======ER.    .    .    .    ..   movapd	%xmm7, %xmm8
-# CHECK-NEXT: [4,8]     .    .    . D======ER    .    .    .    ..   movapd	%xmm8, %xmm9
-# CHECK-NEXT: [4,9]     .    .    . D======ER    .    .    .    ..   movapd	%xmm9, %xmm10
-# CHECK-NEXT: [4,10]    .    .    . D======ER    .    .    .    ..   movapd	%xmm10, %xmm11
-# CHECK-NEXT: [4,11]    .    .    . D======ER    .    .    .    ..   movapd	%xmm11, %xmm12
-# CHECK-NEXT: [4,12]    .    .    . D=======ER   .    .    .    ..   movapd	%xmm12, %xmm13
-# CHECK-NEXT: [4,13]    .    .    . D=======ER   .    .    .    ..   movapd	%xmm13, %xmm14
-# CHECK-NEXT: [4,14]    .    .    .  D======ER   .    .    .    ..   movapd	%xmm14, %xmm15
-# CHECK-NEXT: [4,15]    .    .    .  D======ER   .    .    .    ..   movapd	%xmm15, %xmm0
-# CHECK-NEXT: [5,0]     .    .    .  D=======ER  .    .    .    ..   movapd	%xmm0, %xmm1
-# CHECK-NEXT: [5,1]     .    .    .  D=======ER  .    .    .    ..   movapd	%xmm1, %xmm2
-# CHECK-NEXT: [5,2]     .    .    .  D=======ER  .    .    .    ..   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [5,3]     .    .    .  D=======ER  .    .    .    ..   movapd	%xmm3, %xmm4
-# CHECK-NEXT: [5,4]     .    .    .   D=======ER .    .    .    ..   movapd	%xmm4, %xmm5
-# CHECK-NEXT: [5,5]     .    .    .   D=======ER .    .    .    ..   movapd	%xmm5, %xmm6
-# CHECK-NEXT: [5,6]     .    .    .   D=======ER .    .    .    ..   movapd	%xmm6, %xmm7
-# CHECK-NEXT: [5,7]     .    .    .   D=======ER .    .    .    ..   movapd	%xmm7, %xmm8
-# CHECK-NEXT: [5,8]     .    .    .   D========ER.    .    .    ..   movapd	%xmm8, %xmm9
-# CHECK-NEXT: [5,9]     .    .    .   D========ER.    .    .    ..   movapd	%xmm9, %xmm10
-# CHECK-NEXT: [5,10]    .    .    .    D=======ER.    .    .    ..   movapd	%xmm10, %xmm11
-# CHECK-NEXT: [5,11]    .    .    .    D=======ER.    .    .    ..   movapd	%xmm11, %xmm12
-# CHECK-NEXT: [5,12]    .    .    .    D========ER    .    .    ..   movapd	%xmm12, %xmm13
-# CHECK-NEXT: [5,13]    .    .    .    D========ER    .    .    ..   movapd	%xmm13, %xmm14
-# CHECK-NEXT: [5,14]    .    .    .    D========ER    .    .    ..   movapd	%xmm14, %xmm15
-# CHECK-NEXT: [5,15]    .    .    .    D========ER    .    .    ..   movapd	%xmm15, %xmm0
-# CHECK-NEXT: [6,0]     .    .    .    .D========ER   .    .    ..   movapd	%xmm0, %xmm1
-# CHECK-NEXT: [6,1]     .    .    .    .D========ER   .    .    ..   movapd	%xmm1, %xmm2
-# CHECK-NEXT: [6,2]     .    .    .    .D========ER   .    .    ..   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [6,3]     .    .    .    .D========ER   .    .    ..   movapd	%xmm3, %xmm4
-# CHECK-NEXT: [6,4]     .    .    .    .D=========ER  .    .    ..   movapd	%xmm4, %xmm5
-# CHECK-NEXT: [6,5]     .    .    .    .D=========ER  .    .    ..   movapd	%xmm5, %xmm6
-# CHECK-NEXT: [6,6]     .    .    .    . D========ER  .    .    ..   movapd	%xmm6, %xmm7
-# CHECK-NEXT: [6,7]     .    .    .    . D========ER  .    .    ..   movapd	%xmm7, %xmm8
-# CHECK-NEXT: [6,8]     .    .    .    . D=========ER .    .    ..   movapd	%xmm8, %xmm9
-# CHECK-NEXT: [6,9]     .    .    .    . D=========ER .    .    ..   movapd	%xmm9, %xmm10
-# CHECK-NEXT: [6,10]    .    .    .    . D=========ER .    .    ..   movapd	%xmm10, %xmm11
-# CHECK-NEXT: [6,11]    .    .    .    . D=========ER .    .    ..   movapd	%xmm11, %xmm12
-# CHECK-NEXT: [6,12]    .    .    .    .  D=========ER.    .    ..   movapd	%xmm12, %xmm13
-# CHECK-NEXT: [6,13]    .    .    .    .  D=========ER.    .    ..   movapd	%xmm13, %xmm14
-# CHECK-NEXT: [6,14]    .    .    .    .  D=========ER.    .    ..   movapd	%xmm14, %xmm15
-# CHECK-NEXT: [6,15]    .    .    .    .  D=========ER.    .    ..   movapd	%xmm15, %xmm0
-# CHECK-NEXT: [7,0]     .    .    .    .  D==========ER    .    ..   movapd	%xmm0, %xmm1
-# CHECK-NEXT: [7,1]     .    .    .    .  D==========ER    .    ..   movapd	%xmm1, %xmm2
-# CHECK-NEXT: [7,2]     .    .    .    .   D=========ER    .    ..   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [7,3]     .    .    .    .   D=========ER    .    ..   movapd	%xmm3, %xmm4
-# CHECK-NEXT: [7,4]     .    .    .    .   D==========ER   .    ..   movapd	%xmm4, %xmm5
-# CHECK-NEXT: [7,5]     .    .    .    .   D==========ER   .    ..   movapd	%xmm5, %xmm6
-# CHECK-NEXT: [7,6]     .    .    .    .   D==========ER   .    ..   movapd	%xmm6, %xmm7
-# CHECK-NEXT: [7,7]     .    .    .    .   D==========ER   .    ..   movapd	%xmm7, %xmm8
-# CHECK-NEXT: [7,8]     .    .    .    .    D==========ER  .    ..   movapd	%xmm8, %xmm9
-# CHECK-NEXT: [7,9]     .    .    .    .    D==========ER  .    ..   movapd	%xmm9, %xmm10
-# CHECK-NEXT: [7,10]    .    .    .    .    D==========ER  .    ..   movapd	%xmm10, %xmm11
-# CHECK-NEXT: [7,11]    .    .    .    .    D==========ER  .    ..   movapd	%xmm11, %xmm12
-# CHECK-NEXT: [7,12]    .    .    .    .    D===========ER .    ..   movapd	%xmm12, %xmm13
-# CHECK-NEXT: [7,13]    .    .    .    .    D===========ER .    ..   movapd	%xmm13, %xmm14
-# CHECK-NEXT: [7,14]    .    .    .    .    .D==========ER .    ..   movapd	%xmm14, %xmm15
-# CHECK-NEXT: [7,15]    .    .    .    .    .D==========ER .    ..   movapd	%xmm15, %xmm0
-# CHECK-NEXT: [8,0]     .    .    .    .    .D===========ER.    ..   movapd	%xmm0, %xmm1
-# CHECK-NEXT: [8,1]     .    .    .    .    .D===========ER.    ..   movapd	%xmm1, %xmm2
-# CHECK-NEXT: [8,2]     .    .    .    .    .D===========ER.    ..   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [8,3]     .    .    .    .    .D===========ER.    ..   movapd	%xmm3, %xmm4
-# CHECK-NEXT: [8,4]     .    .    .    .    . D===========ER    ..   movapd	%xmm4, %xmm5
-# CHECK-NEXT: [8,5]     .    .    .    .    . D===========ER    ..   movapd	%xmm5, %xmm6
-# CHECK-NEXT: [8,6]     .    .    .    .    . D===========ER    ..   movapd	%xmm6, %xmm7
-# CHECK-NEXT: [8,7]     .    .    .    .    . D===========ER    ..   movapd	%xmm7, %xmm8
-# CHECK-NEXT: [8,8]     .    .    .    .    . D============ER   ..   movapd	%xmm8, %xmm9
-# CHECK-NEXT: [8,9]     .    .    .    .    . D============ER   ..   movapd	%xmm9, %xmm10
-# CHECK-NEXT: [8,10]    .    .    .    .    .  D===========ER   ..   movapd	%xmm10, %xmm11
-# CHECK-NEXT: [8,11]    .    .    .    .    .  D===========ER   ..   movapd	%xmm11, %xmm12
-# CHECK-NEXT: [8,12]    .    .    .    .    .  D============ER  ..   movapd	%xmm12, %xmm13
-# CHECK-NEXT: [8,13]    .    .    .    .    .  D============ER  ..   movapd	%xmm13, %xmm14
-# CHECK-NEXT: [8,14]    .    .    .    .    .  D============ER  ..   movapd	%xmm14, %xmm15
-# CHECK-NEXT: [8,15]    .    .    .    .    .  D============ER  ..   movapd	%xmm15, %xmm0
-# CHECK-NEXT: [9,0]     .    .    .    .    .   D============ER ..   movapd	%xmm0, %xmm1
-# CHECK-NEXT: [9,1]     .    .    .    .    .   D============ER ..   movapd	%xmm1, %xmm2
-# CHECK-NEXT: [9,2]     .    .    .    .    .   D============ER ..   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [9,3]     .    .    .    .    .   D============ER ..   movapd	%xmm3, %xmm4
-# CHECK-NEXT: [9,4]     .    .    .    .    .   D=============ER..   movapd	%xmm4, %xmm5
-# CHECK-NEXT: [9,5]     .    .    .    .    .   D=============ER..   movapd	%xmm5, %xmm6
-# CHECK-NEXT: [9,6]     .    .    .    .    .    D============ER..   movapd	%xmm6, %xmm7
-# CHECK-NEXT: [9,7]     .    .    .    .    .    D============ER..   movapd	%xmm7, %xmm8
-# CHECK-NEXT: [9,8]     .    .    .    .    .    D=============ER.   movapd	%xmm8, %xmm9
-# CHECK-NEXT: [9,9]     .    .    .    .    .    D=============ER.   movapd	%xmm9, %xmm10
-# CHECK-NEXT: [9,10]    .    .    .    .    .    D=============ER.   movapd	%xmm10, %xmm11
-# CHECK-NEXT: [9,11]    .    .    .    .    .    D=============ER.   movapd	%xmm11, %xmm12
-# CHECK-NEXT: [9,12]    .    .    .    .    .    .D=============ER   movapd	%xmm12, %xmm13
-# CHECK-NEXT: [9,13]    .    .    .    .    .    .D=============ER   movapd	%xmm13, %xmm14
-# CHECK-NEXT: [9,14]    .    .    .    .    .    .D=============ER   movapd	%xmm14, %xmm15
-# CHECK-NEXT: [9,15]    .    .    .    .    .    .D=============ER   movapd	%xmm15, %xmm0
+# CHECK:      [0,0]     DR   .    .    .    .    . .   movapd	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DR   .    .    .    .    . .   movapd	%xmm1, %xmm2
+# CHECK-NEXT: [0,2]     DR   .    .    .    .    . .   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [0,3]     DR   .    .    .    .    . .   movapd	%xmm3, %xmm4
+# CHECK-NEXT: [0,4]     DR   .    .    .    .    . .   movapd	%xmm4, %xmm5
+# CHECK-NEXT: [0,5]     DR   .    .    .    .    . .   movapd	%xmm5, %xmm6
+# CHECK-NEXT: [0,6]     .DR  .    .    .    .    . .   movapd	%xmm6, %xmm7
+# CHECK-NEXT: [0,7]     .DR  .    .    .    .    . .   movapd	%xmm7, %xmm8
+# CHECK-NEXT: [0,8]     .DR  .    .    .    .    . .   movapd	%xmm8, %xmm9
+# CHECK-NEXT: [0,9]     .DR  .    .    .    .    . .   movapd	%xmm9, %xmm10
+# CHECK-NEXT: [0,10]    .DR  .    .    .    .    . .   movapd	%xmm10, %xmm11
+# CHECK-NEXT: [0,11]    .DR  .    .    .    .    . .   movapd	%xmm11, %xmm12
+# CHECK-NEXT: [0,12]    . DR .    .    .    .    . .   movapd	%xmm12, %xmm13
+# CHECK-NEXT: [0,13]    . DR .    .    .    .    . .   movapd	%xmm13, %xmm14
+# CHECK-NEXT: [0,14]    . DR .    .    .    .    . .   movapd	%xmm14, %xmm15
+# CHECK-NEXT: [0,15]    . DR .    .    .    .    . .   movapd	%xmm15, %xmm0
+# CHECK-NEXT: [1,0]     . DR .    .    .    .    . .   movapd	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     . DR .    .    .    .    . .   movapd	%xmm1, %xmm2
+# CHECK-NEXT: [1,2]     .  DR.    .    .    .    . .   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [1,3]     .  DR.    .    .    .    . .   movapd	%xmm3, %xmm4
+# CHECK-NEXT: [1,4]     .  DR.    .    .    .    . .   movapd	%xmm4, %xmm5
+# CHECK-NEXT: [1,5]     .  DR.    .    .    .    . .   movapd	%xmm5, %xmm6
+# CHECK-NEXT: [1,6]     .  DR.    .    .    .    . .   movapd	%xmm6, %xmm7
+# CHECK-NEXT: [1,7]     .  DR.    .    .    .    . .   movapd	%xmm7, %xmm8
+# CHECK-NEXT: [1,8]     .   DR    .    .    .    . .   movapd	%xmm8, %xmm9
+# CHECK-NEXT: [1,9]     .   DR    .    .    .    . .   movapd	%xmm9, %xmm10
+# CHECK-NEXT: [1,10]    .   DR    .    .    .    . .   movapd	%xmm10, %xmm11
+# CHECK-NEXT: [1,11]    .   DR    .    .    .    . .   movapd	%xmm11, %xmm12
+# CHECK-NEXT: [1,12]    .   DR    .    .    .    . .   movapd	%xmm12, %xmm13
+# CHECK-NEXT: [1,13]    .   DR    .    .    .    . .   movapd	%xmm13, %xmm14
+# CHECK-NEXT: [1,14]    .    DR   .    .    .    . .   movapd	%xmm14, %xmm15
+# CHECK-NEXT: [1,15]    .    DR   .    .    .    . .   movapd	%xmm15, %xmm0
+# CHECK-NEXT: [2,0]     .    DR   .    .    .    . .   movapd	%xmm0, %xmm1
+# CHECK-NEXT: [2,1]     .    DR   .    .    .    . .   movapd	%xmm1, %xmm2
+# CHECK-NEXT: [2,2]     .    DR   .    .    .    . .   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [2,3]     .    DR   .    .    .    . .   movapd	%xmm3, %xmm4
+# CHECK-NEXT: [2,4]     .    .DR  .    .    .    . .   movapd	%xmm4, %xmm5
+# CHECK-NEXT: [2,5]     .    .DR  .    .    .    . .   movapd	%xmm5, %xmm6
+# CHECK-NEXT: [2,6]     .    .DR  .    .    .    . .   movapd	%xmm6, %xmm7
+# CHECK-NEXT: [2,7]     .    .DR  .    .    .    . .   movapd	%xmm7, %xmm8
+# CHECK-NEXT: [2,8]     .    .DR  .    .    .    . .   movapd	%xmm8, %xmm9
+# CHECK-NEXT: [2,9]     .    .DR  .    .    .    . .   movapd	%xmm9, %xmm10
+# CHECK-NEXT: [2,10]    .    . DR .    .    .    . .   movapd	%xmm10, %xmm11
+# CHECK-NEXT: [2,11]    .    . DR .    .    .    . .   movapd	%xmm11, %xmm12
+# CHECK-NEXT: [2,12]    .    . DR .    .    .    . .   movapd	%xmm12, %xmm13
+# CHECK-NEXT: [2,13]    .    . DR .    .    .    . .   movapd	%xmm13, %xmm14
+# CHECK-NEXT: [2,14]    .    . DR .    .    .    . .   movapd	%xmm14, %xmm15
+# CHECK-NEXT: [2,15]    .    . DR .    .    .    . .   movapd	%xmm15, %xmm0
+# CHECK-NEXT: [3,0]     .    .  DR.    .    .    . .   movapd	%xmm0, %xmm1
+# CHECK-NEXT: [3,1]     .    .  DR.    .    .    . .   movapd	%xmm1, %xmm2
+# CHECK-NEXT: [3,2]     .    .  DR.    .    .    . .   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [3,3]     .    .  DR.    .    .    . .   movapd	%xmm3, %xmm4
+# CHECK-NEXT: [3,4]     .    .  DR.    .    .    . .   movapd	%xmm4, %xmm5
+# CHECK-NEXT: [3,5]     .    .  DR.    .    .    . .   movapd	%xmm5, %xmm6
+# CHECK-NEXT: [3,6]     .    .   DR    .    .    . .   movapd	%xmm6, %xmm7
+# CHECK-NEXT: [3,7]     .    .   DR    .    .    . .   movapd	%xmm7, %xmm8
+# CHECK-NEXT: [3,8]     .    .   DR    .    .    . .   movapd	%xmm8, %xmm9
+# CHECK-NEXT: [3,9]     .    .   DR    .    .    . .   movapd	%xmm9, %xmm10
+# CHECK-NEXT: [3,10]    .    .   DR    .    .    . .   movapd	%xmm10, %xmm11
+# CHECK-NEXT: [3,11]    .    .   DR    .    .    . .   movapd	%xmm11, %xmm12
+# CHECK-NEXT: [3,12]    .    .    DR   .    .    . .   movapd	%xmm12, %xmm13
+# CHECK-NEXT: [3,13]    .    .    DR   .    .    . .   movapd	%xmm13, %xmm14
+# CHECK-NEXT: [3,14]    .    .    DR   .    .    . .   movapd	%xmm14, %xmm15
+# CHECK-NEXT: [3,15]    .    .    DR   .    .    . .   movapd	%xmm15, %xmm0
+# CHECK-NEXT: [4,0]     .    .    DR   .    .    . .   movapd	%xmm0, %xmm1
+# CHECK-NEXT: [4,1]     .    .    DR   .    .    . .   movapd	%xmm1, %xmm2
+# CHECK-NEXT: [4,2]     .    .    .DR  .    .    . .   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [4,3]     .    .    .DR  .    .    . .   movapd	%xmm3, %xmm4
+# CHECK-NEXT: [4,4]     .    .    .DR  .    .    . .   movapd	%xmm4, %xmm5
+# CHECK-NEXT: [4,5]     .    .    .DR  .    .    . .   movapd	%xmm5, %xmm6
+# CHECK-NEXT: [4,6]     .    .    .DR  .    .    . .   movapd	%xmm6, %xmm7
+# CHECK-NEXT: [4,7]     .    .    .DR  .    .    . .   movapd	%xmm7, %xmm8
+# CHECK-NEXT: [4,8]     .    .    . DR .    .    . .   movapd	%xmm8, %xmm9
+# CHECK-NEXT: [4,9]     .    .    . DR .    .    . .   movapd	%xmm9, %xmm10
+# CHECK-NEXT: [4,10]    .    .    . DR .    .    . .   movapd	%xmm10, %xmm11
+# CHECK-NEXT: [4,11]    .    .    . DR .    .    . .   movapd	%xmm11, %xmm12
+# CHECK-NEXT: [4,12]    .    .    . DR .    .    . .   movapd	%xmm12, %xmm13
+# CHECK-NEXT: [4,13]    .    .    . DR .    .    . .   movapd	%xmm13, %xmm14
+# CHECK-NEXT: [4,14]    .    .    .  DR.    .    . .   movapd	%xmm14, %xmm15
+# CHECK-NEXT: [4,15]    .    .    .  DR.    .    . .   movapd	%xmm15, %xmm0
+# CHECK-NEXT: [5,0]     .    .    .  DR.    .    . .   movapd	%xmm0, %xmm1
+# CHECK-NEXT: [5,1]     .    .    .  DR.    .    . .   movapd	%xmm1, %xmm2
+# CHECK-NEXT: [5,2]     .    .    .  DR.    .    . .   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [5,3]     .    .    .  DR.    .    . .   movapd	%xmm3, %xmm4
+# CHECK-NEXT: [5,4]     .    .    .   DR    .    . .   movapd	%xmm4, %xmm5
+# CHECK-NEXT: [5,5]     .    .    .   DR    .    . .   movapd	%xmm5, %xmm6
+# CHECK-NEXT: [5,6]     .    .    .   DR    .    . .   movapd	%xmm6, %xmm7
+# CHECK-NEXT: [5,7]     .    .    .   DR    .    . .   movapd	%xmm7, %xmm8
+# CHECK-NEXT: [5,8]     .    .    .   DR    .    . .   movapd	%xmm8, %xmm9
+# CHECK-NEXT: [5,9]     .    .    .   DR    .    . .   movapd	%xmm9, %xmm10
+# CHECK-NEXT: [5,10]    .    .    .    DR   .    . .   movapd	%xmm10, %xmm11
+# CHECK-NEXT: [5,11]    .    .    .    DR   .    . .   movapd	%xmm11, %xmm12
+# CHECK-NEXT: [5,12]    .    .    .    DR   .    . .   movapd	%xmm12, %xmm13
+# CHECK-NEXT: [5,13]    .    .    .    DR   .    . .   movapd	%xmm13, %xmm14
+# CHECK-NEXT: [5,14]    .    .    .    DR   .    . .   movapd	%xmm14, %xmm15
+# CHECK-NEXT: [5,15]    .    .    .    DR   .    . .   movapd	%xmm15, %xmm0
+# CHECK-NEXT: [6,0]     .    .    .    .DR  .    . .   movapd	%xmm0, %xmm1
+# CHECK-NEXT: [6,1]     .    .    .    .DR  .    . .   movapd	%xmm1, %xmm2
+# CHECK-NEXT: [6,2]     .    .    .    .DR  .    . .   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [6,3]     .    .    .    .DR  .    . .   movapd	%xmm3, %xmm4
+# CHECK-NEXT: [6,4]     .    .    .    .DR  .    . .   movapd	%xmm4, %xmm5
+# CHECK-NEXT: [6,5]     .    .    .    .DR  .    . .   movapd	%xmm5, %xmm6
+# CHECK-NEXT: [6,6]     .    .    .    . DR .    . .   movapd	%xmm6, %xmm7
+# CHECK-NEXT: [6,7]     .    .    .    . DR .    . .   movapd	%xmm7, %xmm8
+# CHECK-NEXT: [6,8]     .    .    .    . DR .    . .   movapd	%xmm8, %xmm9
+# CHECK-NEXT: [6,9]     .    .    .    . DR .    . .   movapd	%xmm9, %xmm10
+# CHECK-NEXT: [6,10]    .    .    .    . DR .    . .   movapd	%xmm10, %xmm11
+# CHECK-NEXT: [6,11]    .    .    .    . DR .    . .   movapd	%xmm11, %xmm12
+# CHECK-NEXT: [6,12]    .    .    .    .  DR.    . .   movapd	%xmm12, %xmm13
+# CHECK-NEXT: [6,13]    .    .    .    .  DR.    . .   movapd	%xmm13, %xmm14
+# CHECK-NEXT: [6,14]    .    .    .    .  DR.    . .   movapd	%xmm14, %xmm15
+# CHECK-NEXT: [6,15]    .    .    .    .  DR.    . .   movapd	%xmm15, %xmm0
+# CHECK-NEXT: [7,0]     .    .    .    .  DR.    . .   movapd	%xmm0, %xmm1
+# CHECK-NEXT: [7,1]     .    .    .    .  DR.    . .   movapd	%xmm1, %xmm2
+# CHECK-NEXT: [7,2]     .    .    .    .   DR    . .   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [7,3]     .    .    .    .   DR    . .   movapd	%xmm3, %xmm4
+# CHECK-NEXT: [7,4]     .    .    .    .   DR    . .   movapd	%xmm4, %xmm5
+# CHECK-NEXT: [7,5]     .    .    .    .   DR    . .   movapd	%xmm5, %xmm6
+# CHECK-NEXT: [7,6]     .    .    .    .   DR    . .   movapd	%xmm6, %xmm7
+# CHECK-NEXT: [7,7]     .    .    .    .   DR    . .   movapd	%xmm7, %xmm8
+# CHECK-NEXT: [7,8]     .    .    .    .    DR   . .   movapd	%xmm8, %xmm9
+# CHECK-NEXT: [7,9]     .    .    .    .    DR   . .   movapd	%xmm9, %xmm10
+# CHECK-NEXT: [7,10]    .    .    .    .    DR   . .   movapd	%xmm10, %xmm11
+# CHECK-NEXT: [7,11]    .    .    .    .    DR   . .   movapd	%xmm11, %xmm12
+# CHECK-NEXT: [7,12]    .    .    .    .    DR   . .   movapd	%xmm12, %xmm13
+# CHECK-NEXT: [7,13]    .    .    .    .    DR   . .   movapd	%xmm13, %xmm14
+# CHECK-NEXT: [7,14]    .    .    .    .    .DR  . .   movapd	%xmm14, %xmm15
+# CHECK-NEXT: [7,15]    .    .    .    .    .DR  . .   movapd	%xmm15, %xmm0
+# CHECK-NEXT: [8,0]     .    .    .    .    .DR  . .   movapd	%xmm0, %xmm1
+# CHECK-NEXT: [8,1]     .    .    .    .    .DR  . .   movapd	%xmm1, %xmm2
+# CHECK-NEXT: [8,2]     .    .    .    .    .DR  . .   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [8,3]     .    .    .    .    .DR  . .   movapd	%xmm3, %xmm4
+# CHECK-NEXT: [8,4]     .    .    .    .    . DR . .   movapd	%xmm4, %xmm5
+# CHECK-NEXT: [8,5]     .    .    .    .    . DR . .   movapd	%xmm5, %xmm6
+# CHECK-NEXT: [8,6]     .    .    .    .    . DR . .   movapd	%xmm6, %xmm7
+# CHECK-NEXT: [8,7]     .    .    .    .    . DR . .   movapd	%xmm7, %xmm8
+# CHECK-NEXT: [8,8]     .    .    .    .    . DR . .   movapd	%xmm8, %xmm9
+# CHECK-NEXT: [8,9]     .    .    .    .    . DR . .   movapd	%xmm9, %xmm10
+# CHECK-NEXT: [8,10]    .    .    .    .    .  DR. .   movapd	%xmm10, %xmm11
+# CHECK-NEXT: [8,11]    .    .    .    .    .  DR. .   movapd	%xmm11, %xmm12
+# CHECK-NEXT: [8,12]    .    .    .    .    .  DR. .   movapd	%xmm12, %xmm13
+# CHECK-NEXT: [8,13]    .    .    .    .    .  DR. .   movapd	%xmm13, %xmm14
+# CHECK-NEXT: [8,14]    .    .    .    .    .  DR. .   movapd	%xmm14, %xmm15
+# CHECK-NEXT: [8,15]    .    .    .    .    .  DR. .   movapd	%xmm15, %xmm0
+# CHECK-NEXT: [9,0]     .    .    .    .    .   DR .   movapd	%xmm0, %xmm1
+# CHECK-NEXT: [9,1]     .    .    .    .    .   DR .   movapd	%xmm1, %xmm2
+# CHECK-NEXT: [9,2]     .    .    .    .    .   DR .   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [9,3]     .    .    .    .    .   DR .   movapd	%xmm3, %xmm4
+# CHECK-NEXT: [9,4]     .    .    .    .    .   DR .   movapd	%xmm4, %xmm5
+# CHECK-NEXT: [9,5]     .    .    .    .    .   DR .   movapd	%xmm5, %xmm6
+# CHECK-NEXT: [9,6]     .    .    .    .    .    DR.   movapd	%xmm6, %xmm7
+# CHECK-NEXT: [9,7]     .    .    .    .    .    DR.   movapd	%xmm7, %xmm8
+# CHECK-NEXT: [9,8]     .    .    .    .    .    DR.   movapd	%xmm8, %xmm9
+# CHECK-NEXT: [9,9]     .    .    .    .    .    DR.   movapd	%xmm9, %xmm10
+# CHECK-NEXT: [9,10]    .    .    .    .    .    DR.   movapd	%xmm10, %xmm11
+# CHECK-NEXT: [9,11]    .    .    .    .    .    DR.   movapd	%xmm11, %xmm12
+# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR   movapd	%xmm12, %xmm13
+# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR   movapd	%xmm13, %xmm14
+# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR   movapd	%xmm14, %xmm15
+# CHECK-NEXT: [9,15]    .    .    .    .    .    .DR   movapd	%xmm15, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -967,34 +979,34 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     10    7.3    1.0    0.0       movapd	%xmm0, %xmm1
-# CHECK-NEXT: 1.     10    7.3    0.0    0.0       movapd	%xmm1, %xmm2
-# CHECK-NEXT: 2.     10    7.0    0.0    0.0       movapd	%xmm2, %xmm3
-# CHECK-NEXT: 3.     10    7.0    0.0    0.0       movapd	%xmm3, %xmm4
-# CHECK-NEXT: 4.     10    7.7    1.0    0.0       movapd	%xmm4, %xmm5
-# CHECK-NEXT: 5.     10    7.7    0.0    0.0       movapd	%xmm5, %xmm6
-# CHECK-NEXT: 6.     10    7.3    0.0    0.0       movapd	%xmm6, %xmm7
-# CHECK-NEXT: 7.     10    7.3    0.0    0.0       movapd	%xmm7, %xmm8
-# CHECK-NEXT: 8.     10    8.0    1.0    0.0       movapd	%xmm8, %xmm9
-# CHECK-NEXT: 9.     10    8.0    0.0    0.0       movapd	%xmm9, %xmm10
-# CHECK-NEXT: 10.    10    7.7    0.0    0.0       movapd	%xmm10, %xmm11
-# CHECK-NEXT: 11.    10    7.7    0.0    0.0       movapd	%xmm11, %xmm12
-# CHECK-NEXT: 12.    10    8.3    1.0    0.0       movapd	%xmm12, %xmm13
-# CHECK-NEXT: 13.    10    8.3    0.0    0.0       movapd	%xmm13, %xmm14
-# CHECK-NEXT: 14.    10    8.0    0.0    0.0       movapd	%xmm14, %xmm15
-# CHECK-NEXT: 15.    10    8.0    0.0    0.0       movapd	%xmm15, %xmm0
-# CHECK-NEXT:        10    7.7    0.3    0.0       <total>
+# CHECK-NEXT: 0.     10    0.0    0.0    0.0       movapd	%xmm0, %xmm1
+# CHECK-NEXT: 1.     10    0.0    0.0    0.0       movapd	%xmm1, %xmm2
+# CHECK-NEXT: 2.     10    0.0    0.0    0.0       movapd	%xmm2, %xmm3
+# CHECK-NEXT: 3.     10    0.0    0.0    0.0       movapd	%xmm3, %xmm4
+# CHECK-NEXT: 4.     10    0.0    0.0    0.0       movapd	%xmm4, %xmm5
+# CHECK-NEXT: 5.     10    0.0    0.0    0.0       movapd	%xmm5, %xmm6
+# CHECK-NEXT: 6.     10    0.0    0.0    0.0       movapd	%xmm6, %xmm7
+# CHECK-NEXT: 7.     10    0.0    0.0    0.0       movapd	%xmm7, %xmm8
+# CHECK-NEXT: 8.     10    0.0    0.0    0.0       movapd	%xmm8, %xmm9
+# CHECK-NEXT: 9.     10    0.0    0.0    0.0       movapd	%xmm9, %xmm10
+# CHECK-NEXT: 10.    10    0.0    0.0    0.0       movapd	%xmm10, %xmm11
+# CHECK-NEXT: 11.    10    0.0    0.0    0.0       movapd	%xmm11, %xmm12
+# CHECK-NEXT: 12.    10    0.0    0.0    0.0       movapd	%xmm12, %xmm13
+# CHECK-NEXT: 13.    10    0.0    0.0    0.0       movapd	%xmm13, %xmm14
+# CHECK-NEXT: 14.    10    0.0    0.0    0.0       movapd	%xmm14, %xmm15
+# CHECK-NEXT: 15.    10    0.0    0.0    0.0       movapd	%xmm15, %xmm0
+# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
 
 # CHECK:      [3] Code Region
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      24000
-# CHECK-NEXT: Total Cycles:      6002
+# CHECK-NEXT: Total Cycles:      4001
 # CHECK-NEXT: Total uOps:        24000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    4.00
-# CHECK-NEXT: IPC:               4.00
+# CHECK-NEXT: uOps Per Cycle:    6.00
+# CHECK-NEXT: IPC:               6.00
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Instruction Info:
@@ -1024,13 +1036,17 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT:  1      0     0.25                        movupd	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    24000
-# CHECK-NEXT: Max number of mappings used:         68
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 24000
-# CHECK-NEXT:    Max number of mappings used:      68
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      24000
+# CHECK-NEXT:    Number of moves eliminated:       24000  (100.0%)
+# CHECK-NEXT:    Number of zero moves:             0  (0.0%)
+# CHECK-NEXT:    Max moves eliminated per cycle:   6
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -1064,191 +1080,191 @@ movdqu %xmm15, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00   4.00   4.00    -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm0, %xmm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm2, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm3, %xmm4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm4, %xmm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm5, %xmm6
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm6, %xmm7
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm7, %xmm8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm8, %xmm9
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm9, %xmm10
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm10, %xmm11
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm11, %xmm12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm12, %xmm13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm13, %xmm14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm14, %xmm15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm15, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm0, %xmm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm2, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm3, %xmm4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm4, %xmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm5, %xmm6
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm6, %xmm7
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm7, %xmm8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm8, %xmm9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm9, %xmm10
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm10, %xmm11
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm11, %xmm12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm12, %xmm13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm13, %xmm14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm14, %xmm15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm15, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          01
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          01234567
 
-# CHECK:      [0,0]     DER  .    .    .    .    .    .    .    ..   movupd	%xmm0, %xmm1
-# CHECK-NEXT: [0,1]     DER  .    .    .    .    .    .    .    ..   movupd	%xmm1, %xmm2
-# CHECK-NEXT: [0,2]     DER  .    .    .    .    .    .    .    ..   movupd	%xmm2, %xmm3
-# CHECK-NEXT: [0,3]     DER  .    .    .    .    .    .    .    ..   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [0,4]     D=ER .    .    .    .    .    .    .    ..   movupd	%xmm4, %xmm5
-# CHECK-NEXT: [0,5]     D=ER .    .    .    .    .    .    .    ..   movupd	%xmm5, %xmm6
-# CHECK-NEXT: [0,6]     .DER .    .    .    .    .    .    .    ..   movupd	%xmm6, %xmm7
-# CHECK-NEXT: [0,7]     .DER .    .    .    .    .    .    .    ..   movupd	%xmm7, %xmm8
-# CHECK-NEXT: [0,8]     .D=ER.    .    .    .    .    .    .    ..   movupd	%xmm8, %xmm9
-# CHECK-NEXT: [0,9]     .D=ER.    .    .    .    .    .    .    ..   movupd	%xmm9, %xmm10
-# CHECK-NEXT: [0,10]    .D=ER.    .    .    .    .    .    .    ..   movupd	%xmm10, %xmm11
-# CHECK-NEXT: [0,11]    .D=ER.    .    .    .    .    .    .    ..   movupd	%xmm11, %xmm12
-# CHECK-NEXT: [0,12]    . D=ER    .    .    .    .    .    .    ..   movupd	%xmm12, %xmm13
-# CHECK-NEXT: [0,13]    . D=ER    .    .    .    .    .    .    ..   movupd	%xmm13, %xmm14
-# CHECK-NEXT: [0,14]    . D=ER    .    .    .    .    .    .    ..   movupd	%xmm14, %xmm15
-# CHECK-NEXT: [0,15]    . D=ER    .    .    .    .    .    .    ..   movupd	%xmm15, %xmm0
-# CHECK-NEXT: [1,0]     . D==ER   .    .    .    .    .    .    ..   movupd	%xmm0, %xmm1
-# CHECK-NEXT: [1,1]     . D==ER   .    .    .    .    .    .    ..   movupd	%xmm1, %xmm2
-# CHECK-NEXT: [1,2]     .  D=ER   .    .    .    .    .    .    ..   movupd	%xmm2, %xmm3
-# CHECK-NEXT: [1,3]     .  D=ER   .    .    .    .    .    .    ..   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [1,4]     .  D==ER  .    .    .    .    .    .    ..   movupd	%xmm4, %xmm5
-# CHECK-NEXT: [1,5]     .  D==ER  .    .    .    .    .    .    ..   movupd	%xmm5, %xmm6
-# CHECK-NEXT: [1,6]     .  D==ER  .    .    .    .    .    .    ..   movupd	%xmm6, %xmm7
-# CHECK-NEXT: [1,7]     .  D==ER  .    .    .    .    .    .    ..   movupd	%xmm7, %xmm8
-# CHECK-NEXT: [1,8]     .   D==ER .    .    .    .    .    .    ..   movupd	%xmm8, %xmm9
-# CHECK-NEXT: [1,9]     .   D==ER .    .    .    .    .    .    ..   movupd	%xmm9, %xmm10
-# CHECK-NEXT: [1,10]    .   D==ER .    .    .    .    .    .    ..   movupd	%xmm10, %xmm11
-# CHECK-NEXT: [1,11]    .   D==ER .    .    .    .    .    .    ..   movupd	%xmm11, %xmm12
-# CHECK-NEXT: [1,12]    .   D===ER.    .    .    .    .    .    ..   movupd	%xmm12, %xmm13
-# CHECK-NEXT: [1,13]    .   D===ER.    .    .    .    .    .    ..   movupd	%xmm13, %xmm14
-# CHECK-NEXT: [1,14]    .    D==ER.    .    .    .    .    .    ..   movupd	%xmm14, %xmm15
-# CHECK-NEXT: [1,15]    .    D==ER.    .    .    .    .    .    ..   movupd	%xmm15, %xmm0
-# CHECK-NEXT: [2,0]     .    D===ER    .    .    .    .    .    ..   movupd	%xmm0, %xmm1
-# CHECK-NEXT: [2,1]     .    D===ER    .    .    .    .    .    ..   movupd	%xmm1, %xmm2
-# CHECK-NEXT: [2,2]     .    D===ER    .    .    .    .    .    ..   movupd	%xmm2, %xmm3
-# CHECK-NEXT: [2,3]     .    D===ER    .    .    .    .    .    ..   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [2,4]     .    .D===ER   .    .    .    .    .    ..   movupd	%xmm4, %xmm5
-# CHECK-NEXT: [2,5]     .    .D===ER   .    .    .    .    .    ..   movupd	%xmm5, %xmm6
-# CHECK-NEXT: [2,6]     .    .D===ER   .    .    .    .    .    ..   movupd	%xmm6, %xmm7
-# CHECK-NEXT: [2,7]     .    .D===ER   .    .    .    .    .    ..   movupd	%xmm7, %xmm8
-# CHECK-NEXT: [2,8]     .    .D====ER  .    .    .    .    .    ..   movupd	%xmm8, %xmm9
-# CHECK-NEXT: [2,9]     .    .D====ER  .    .    .    .    .    ..   movupd	%xmm9, %xmm10
-# CHECK-NEXT: [2,10]    .    . D===ER  .    .    .    .    .    ..   movupd	%xmm10, %xmm11
-# CHECK-NEXT: [2,11]    .    . D===ER  .    .    .    .    .    ..   movupd	%xmm11, %xmm12
-# CHECK-NEXT: [2,12]    .    . D====ER .    .    .    .    .    ..   movupd	%xmm12, %xmm13
-# CHECK-NEXT: [2,13]    .    . D====ER .    .    .    .    .    ..   movupd	%xmm13, %xmm14
-# CHECK-NEXT: [2,14]    .    . D====ER .    .    .    .    .    ..   movupd	%xmm14, %xmm15
-# CHECK-NEXT: [2,15]    .    . D====ER .    .    .    .    .    ..   movupd	%xmm15, %xmm0
-# CHECK-NEXT: [3,0]     .    .  D====ER.    .    .    .    .    ..   movupd	%xmm0, %xmm1
-# CHECK-NEXT: [3,1]     .    .  D====ER.    .    .    .    .    ..   movupd	%xmm1, %xmm2
-# CHECK-NEXT: [3,2]     .    .  D====ER.    .    .    .    .    ..   movupd	%xmm2, %xmm3
-# CHECK-NEXT: [3,3]     .    .  D====ER.    .    .    .    .    ..   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [3,4]     .    .  D=====ER    .    .    .    .    ..   movupd	%xmm4, %xmm5
-# CHECK-NEXT: [3,5]     .    .  D=====ER    .    .    .    .    ..   movupd	%xmm5, %xmm6
-# CHECK-NEXT: [3,6]     .    .   D====ER    .    .    .    .    ..   movupd	%xmm6, %xmm7
-# CHECK-NEXT: [3,7]     .    .   D====ER    .    .    .    .    ..   movupd	%xmm7, %xmm8
-# CHECK-NEXT: [3,8]     .    .   D=====ER   .    .    .    .    ..   movupd	%xmm8, %xmm9
-# CHECK-NEXT: [3,9]     .    .   D=====ER   .    .    .    .    ..   movupd	%xmm9, %xmm10
-# CHECK-NEXT: [3,10]    .    .   D=====ER   .    .    .    .    ..   movupd	%xmm10, %xmm11
-# CHECK-NEXT: [3,11]    .    .   D=====ER   .    .    .    .    ..   movupd	%xmm11, %xmm12
-# CHECK-NEXT: [3,12]    .    .    D=====ER  .    .    .    .    ..   movupd	%xmm12, %xmm13
-# CHECK-NEXT: [3,13]    .    .    D=====ER  .    .    .    .    ..   movupd	%xmm13, %xmm14
-# CHECK-NEXT: [3,14]    .    .    D=====ER  .    .    .    .    ..   movupd	%xmm14, %xmm15
-# CHECK-NEXT: [3,15]    .    .    D=====ER  .    .    .    .    ..   movupd	%xmm15, %xmm0
-# CHECK-NEXT: [4,0]     .    .    D======ER .    .    .    .    ..   movupd	%xmm0, %xmm1
-# CHECK-NEXT: [4,1]     .    .    D======ER .    .    .    .    ..   movupd	%xmm1, %xmm2
-# CHECK-NEXT: [4,2]     .    .    .D=====ER .    .    .    .    ..   movupd	%xmm2, %xmm3
-# CHECK-NEXT: [4,3]     .    .    .D=====ER .    .    .    .    ..   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [4,4]     .    .    .D======ER.    .    .    .    ..   movupd	%xmm4, %xmm5
-# CHECK-NEXT: [4,5]     .    .    .D======ER.    .    .    .    ..   movupd	%xmm5, %xmm6
-# CHECK-NEXT: [4,6]     .    .    .D======ER.    .    .    .    ..   movupd	%xmm6, %xmm7
-# CHECK-NEXT: [4,7]     .    .    .D======ER.    .    .    .    ..   movupd	%xmm7, %xmm8
-# CHECK-NEXT: [4,8]     .    .    . D======ER    .    .    .    ..   movupd	%xmm8, %xmm9
-# CHECK-NEXT: [4,9]     .    .    . D======ER    .    .    .    ..   movupd	%xmm9, %xmm10
-# CHECK-NEXT: [4,10]    .    .    . D======ER    .    .    .    ..   movupd	%xmm10, %xmm11
-# CHECK-NEXT: [4,11]    .    .    . D======ER    .    .    .    ..   movupd	%xmm11, %xmm12
-# CHECK-NEXT: [4,12]    .    .    . D=======ER   .    .    .    ..   movupd	%xmm12, %xmm13
-# CHECK-NEXT: [4,13]    .    .    . D=======ER   .    .    .    ..   movupd	%xmm13, %xmm14
-# CHECK-NEXT: [4,14]    .    .    .  D======ER   .    .    .    ..   movupd	%xmm14, %xmm15
-# CHECK-NEXT: [4,15]    .    .    .  D======ER   .    .    .    ..   movupd	%xmm15, %xmm0
-# CHECK-NEXT: [5,0]     .    .    .  D=======ER  .    .    .    ..   movupd	%xmm0, %xmm1
-# CHECK-NEXT: [5,1]     .    .    .  D=======ER  .    .    .    ..   movupd	%xmm1, %xmm2
-# CHECK-NEXT: [5,2]     .    .    .  D=======ER  .    .    .    ..   movupd	%xmm2, %xmm3
-# CHECK-NEXT: [5,3]     .    .    .  D=======ER  .    .    .    ..   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [5,4]     .    .    .   D=======ER .    .    .    ..   movupd	%xmm4, %xmm5
-# CHECK-NEXT: [5,5]     .    .    .   D=======ER .    .    .    ..   movupd	%xmm5, %xmm6
-# CHECK-NEXT: [5,6]     .    .    .   D=======ER .    .    .    ..   movupd	%xmm6, %xmm7
-# CHECK-NEXT: [5,7]     .    .    .   D=======ER .    .    .    ..   movupd	%xmm7, %xmm8
-# CHECK-NEXT: [5,8]     .    .    .   D========ER.    .    .    ..   movupd	%xmm8, %xmm9
-# CHECK-NEXT: [5,9]     .    .    .   D========ER.    .    .    ..   movupd	%xmm9, %xmm10
-# CHECK-NEXT: [5,10]    .    .    .    D=======ER.    .    .    ..   movupd	%xmm10, %xmm11
-# CHECK-NEXT: [5,11]    .    .    .    D=======ER.    .    .    ..   movupd	%xmm11, %xmm12
-# CHECK-NEXT: [5,12]    .    .    .    D========ER    .    .    ..   movupd	%xmm12, %xmm13
-# CHECK-NEXT: [5,13]    .    .    .    D========ER    .    .    ..   movupd	%xmm13, %xmm14
-# CHECK-NEXT: [5,14]    .    .    .    D========ER    .    .    ..   movupd	%xmm14, %xmm15
-# CHECK-NEXT: [5,15]    .    .    .    D========ER    .    .    ..   movupd	%xmm15, %xmm0
-# CHECK-NEXT: [6,0]     .    .    .    .D========ER   .    .    ..   movupd	%xmm0, %xmm1
-# CHECK-NEXT: [6,1]     .    .    .    .D========ER   .    .    ..   movupd	%xmm1, %xmm2
-# CHECK-NEXT: [6,2]     .    .    .    .D========ER   .    .    ..   movupd	%xmm2, %xmm3
-# CHECK-NEXT: [6,3]     .    .    .    .D========ER   .    .    ..   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [6,4]     .    .    .    .D=========ER  .    .    ..   movupd	%xmm4, %xmm5
-# CHECK-NEXT: [6,5]     .    .    .    .D=========ER  .    .    ..   movupd	%xmm5, %xmm6
-# CHECK-NEXT: [6,6]     .    .    .    . D========ER  .    .    ..   movupd	%xmm6, %xmm7
-# CHECK-NEXT: [6,7]     .    .    .    . D========ER  .    .    ..   movupd	%xmm7, %xmm8
-# CHECK-NEXT: [6,8]     .    .    .    . D=========ER .    .    ..   movupd	%xmm8, %xmm9
-# CHECK-NEXT: [6,9]     .    .    .    . D=========ER .    .    ..   movupd	%xmm9, %xmm10
-# CHECK-NEXT: [6,10]    .    .    .    . D=========ER .    .    ..   movupd	%xmm10, %xmm11
-# CHECK-NEXT: [6,11]    .    .    .    . D=========ER .    .    ..   movupd	%xmm11, %xmm12
-# CHECK-NEXT: [6,12]    .    .    .    .  D=========ER.    .    ..   movupd	%xmm12, %xmm13
-# CHECK-NEXT: [6,13]    .    .    .    .  D=========ER.    .    ..   movupd	%xmm13, %xmm14
-# CHECK-NEXT: [6,14]    .    .    .    .  D=========ER.    .    ..   movupd	%xmm14, %xmm15
-# CHECK-NEXT: [6,15]    .    .    .    .  D=========ER.    .    ..   movupd	%xmm15, %xmm0
-# CHECK-NEXT: [7,0]     .    .    .    .  D==========ER    .    ..   movupd	%xmm0, %xmm1
-# CHECK-NEXT: [7,1]     .    .    .    .  D==========ER    .    ..   movupd	%xmm1, %xmm2
-# CHECK-NEXT: [7,2]     .    .    .    .   D=========ER    .    ..   movupd	%xmm2, %xmm3
-# CHECK-NEXT: [7,3]     .    .    .    .   D=========ER    .    ..   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [7,4]     .    .    .    .   D==========ER   .    ..   movupd	%xmm4, %xmm5
-# CHECK-NEXT: [7,5]     .    .    .    .   D==========ER   .    ..   movupd	%xmm5, %xmm6
-# CHECK-NEXT: [7,6]     .    .    .    .   D==========ER   .    ..   movupd	%xmm6, %xmm7
-# CHECK-NEXT: [7,7]     .    .    .    .   D==========ER   .    ..   movupd	%xmm7, %xmm8
-# CHECK-NEXT: [7,8]     .    .    .    .    D==========ER  .    ..   movupd	%xmm8, %xmm9
-# CHECK-NEXT: [7,9]     .    .    .    .    D==========ER  .    ..   movupd	%xmm9, %xmm10
-# CHECK-NEXT: [7,10]    .    .    .    .    D==========ER  .    ..   movupd	%xmm10, %xmm11
-# CHECK-NEXT: [7,11]    .    .    .    .    D==========ER  .    ..   movupd	%xmm11, %xmm12
-# CHECK-NEXT: [7,12]    .    .    .    .    D===========ER .    ..   movupd	%xmm12, %xmm13
-# CHECK-NEXT: [7,13]    .    .    .    .    D===========ER .    ..   movupd	%xmm13, %xmm14
-# CHECK-NEXT: [7,14]    .    .    .    .    .D==========ER .    ..   movupd	%xmm14, %xmm15
-# CHECK-NEXT: [7,15]    .    .    .    .    .D==========ER .    ..   movupd	%xmm15, %xmm0
-# CHECK-NEXT: [8,0]     .    .    .    .    .D===========ER.    ..   movupd	%xmm0, %xmm1
-# CHECK-NEXT: [8,1]     .    .    .    .    .D===========ER.    ..   movupd	%xmm1, %xmm2
-# CHECK-NEXT: [8,2]     .    .    .    .    .D===========ER.    ..   movupd	%xmm2, %xmm3
-# CHECK-NEXT: [8,3]     .    .    .    .    .D===========ER.    ..   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [8,4]     .    .    .    .    . D===========ER    ..   movupd	%xmm4, %xmm5
-# CHECK-NEXT: [8,5]     .    .    .    .    . D===========ER    ..   movupd	%xmm5, %xmm6
-# CHECK-NEXT: [8,6]     .    .    .    .    . D===========ER    ..   movupd	%xmm6, %xmm7
-# CHECK-NEXT: [8,7]     .    .    .    .    . D===========ER    ..   movupd	%xmm7, %xmm8
-# CHECK-NEXT: [8,8]     .    .    .    .    . D============ER   ..   movupd	%xmm8, %xmm9
-# CHECK-NEXT: [8,9]     .    .    .    .    . D============ER   ..   movupd	%xmm9, %xmm10
-# CHECK-NEXT: [8,10]    .    .    .    .    .  D===========ER   ..   movupd	%xmm10, %xmm11
-# CHECK-NEXT: [8,11]    .    .    .    .    .  D===========ER   ..   movupd	%xmm11, %xmm12
-# CHECK-NEXT: [8,12]    .    .    .    .    .  D============ER  ..   movupd	%xmm12, %xmm13
-# CHECK-NEXT: [8,13]    .    .    .    .    .  D============ER  ..   movupd	%xmm13, %xmm14
-# CHECK-NEXT: [8,14]    .    .    .    .    .  D============ER  ..   movupd	%xmm14, %xmm15
-# CHECK-NEXT: [8,15]    .    .    .    .    .  D============ER  ..   movupd	%xmm15, %xmm0
-# CHECK-NEXT: [9,0]     .    .    .    .    .   D============ER ..   movupd	%xmm0, %xmm1
-# CHECK-NEXT: [9,1]     .    .    .    .    .   D============ER ..   movupd	%xmm1, %xmm2
-# CHECK-NEXT: [9,2]     .    .    .    .    .   D============ER ..   movupd	%xmm2, %xmm3
-# CHECK-NEXT: [9,3]     .    .    .    .    .   D============ER ..   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [9,4]     .    .    .    .    .   D=============ER..   movupd	%xmm4, %xmm5
-# CHECK-NEXT: [9,5]     .    .    .    .    .   D=============ER..   movupd	%xmm5, %xmm6
-# CHECK-NEXT: [9,6]     .    .    .    .    .    D============ER..   movupd	%xmm6, %xmm7
-# CHECK-NEXT: [9,7]     .    .    .    .    .    D============ER..   movupd	%xmm7, %xmm8
-# CHECK-NEXT: [9,8]     .    .    .    .    .    D=============ER.   movupd	%xmm8, %xmm9
-# CHECK-NEXT: [9,9]     .    .    .    .    .    D=============ER.   movupd	%xmm9, %xmm10
-# CHECK-NEXT: [9,10]    .    .    .    .    .    D=============ER.   movupd	%xmm10, %xmm11
-# CHECK-NEXT: [9,11]    .    .    .    .    .    D=============ER.   movupd	%xmm11, %xmm12
-# CHECK-NEXT: [9,12]    .    .    .    .    .    .D=============ER   movupd	%xmm12, %xmm13
-# CHECK-NEXT: [9,13]    .    .    .    .    .    .D=============ER   movupd	%xmm13, %xmm14
-# CHECK-NEXT: [9,14]    .    .    .    .    .    .D=============ER   movupd	%xmm14, %xmm15
-# CHECK-NEXT: [9,15]    .    .    .    .    .    .D=============ER   movupd	%xmm15, %xmm0
+# CHECK:      [0,0]     DR   .    .    .    .    . .   movupd	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DR   .    .    .    .    . .   movupd	%xmm1, %xmm2
+# CHECK-NEXT: [0,2]     DR   .    .    .    .    . .   movupd	%xmm2, %xmm3
+# CHECK-NEXT: [0,3]     DR   .    .    .    .    . .   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [0,4]     DR   .    .    .    .    . .   movupd	%xmm4, %xmm5
+# CHECK-NEXT: [0,5]     DR   .    .    .    .    . .   movupd	%xmm5, %xmm6
+# CHECK-NEXT: [0,6]     .DR  .    .    .    .    . .   movupd	%xmm6, %xmm7
+# CHECK-NEXT: [0,7]     .DR  .    .    .    .    . .   movupd	%xmm7, %xmm8
+# CHECK-NEXT: [0,8]     .DR  .    .    .    .    . .   movupd	%xmm8, %xmm9
+# CHECK-NEXT: [0,9]     .DR  .    .    .    .    . .   movupd	%xmm9, %xmm10
+# CHECK-NEXT: [0,10]    .DR  .    .    .    .    . .   movupd	%xmm10, %xmm11
+# CHECK-NEXT: [0,11]    .DR  .    .    .    .    . .   movupd	%xmm11, %xmm12
+# CHECK-NEXT: [0,12]    . DR .    .    .    .    . .   movupd	%xmm12, %xmm13
+# CHECK-NEXT: [0,13]    . DR .    .    .    .    . .   movupd	%xmm13, %xmm14
+# CHECK-NEXT: [0,14]    . DR .    .    .    .    . .   movupd	%xmm14, %xmm15
+# CHECK-NEXT: [0,15]    . DR .    .    .    .    . .   movupd	%xmm15, %xmm0
+# CHECK-NEXT: [1,0]     . DR .    .    .    .    . .   movupd	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     . DR .    .    .    .    . .   movupd	%xmm1, %xmm2
+# CHECK-NEXT: [1,2]     .  DR.    .    .    .    . .   movupd	%xmm2, %xmm3
+# CHECK-NEXT: [1,3]     .  DR.    .    .    .    . .   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [1,4]     .  DR.    .    .    .    . .   movupd	%xmm4, %xmm5
+# CHECK-NEXT: [1,5]     .  DR.    .    .    .    . .   movupd	%xmm5, %xmm6
+# CHECK-NEXT: [1,6]     .  DR.    .    .    .    . .   movupd	%xmm6, %xmm7
+# CHECK-NEXT: [1,7]     .  DR.    .    .    .    . .   movupd	%xmm7, %xmm8
+# CHECK-NEXT: [1,8]     .   DR    .    .    .    . .   movupd	%xmm8, %xmm9
+# CHECK-NEXT: [1,9]     .   DR    .    .    .    . .   movupd	%xmm9, %xmm10
+# CHECK-NEXT: [1,10]    .   DR    .    .    .    . .   movupd	%xmm10, %xmm11
+# CHECK-NEXT: [1,11]    .   DR    .    .    .    . .   movupd	%xmm11, %xmm12
+# CHECK-NEXT: [1,12]    .   DR    .    .    .    . .   movupd	%xmm12, %xmm13
+# CHECK-NEXT: [1,13]    .   DR    .    .    .    . .   movupd	%xmm13, %xmm14
+# CHECK-NEXT: [1,14]    .    DR   .    .    .    . .   movupd	%xmm14, %xmm15
+# CHECK-NEXT: [1,15]    .    DR   .    .    .    . .   movupd	%xmm15, %xmm0
+# CHECK-NEXT: [2,0]     .    DR   .    .    .    . .   movupd	%xmm0, %xmm1
+# CHECK-NEXT: [2,1]     .    DR   .    .    .    . .   movupd	%xmm1, %xmm2
+# CHECK-NEXT: [2,2]     .    DR   .    .    .    . .   movupd	%xmm2, %xmm3
+# CHECK-NEXT: [2,3]     .    DR   .    .    .    . .   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [2,4]     .    .DR  .    .    .    . .   movupd	%xmm4, %xmm5
+# CHECK-NEXT: [2,5]     .    .DR  .    .    .    . .   movupd	%xmm5, %xmm6
+# CHECK-NEXT: [2,6]     .    .DR  .    .    .    . .   movupd	%xmm6, %xmm7
+# CHECK-NEXT: [2,7]     .    .DR  .    .    .    . .   movupd	%xmm7, %xmm8
+# CHECK-NEXT: [2,8]     .    .DR  .    .    .    . .   movupd	%xmm8, %xmm9
+# CHECK-NEXT: [2,9]     .    .DR  .    .    .    . .   movupd	%xmm9, %xmm10
+# CHECK-NEXT: [2,10]    .    . DR .    .    .    . .   movupd	%xmm10, %xmm11
+# CHECK-NEXT: [2,11]    .    . DR .    .    .    . .   movupd	%xmm11, %xmm12
+# CHECK-NEXT: [2,12]    .    . DR .    .    .    . .   movupd	%xmm12, %xmm13
+# CHECK-NEXT: [2,13]    .    . DR .    .    .    . .   movupd	%xmm13, %xmm14
+# CHECK-NEXT: [2,14]    .    . DR .    .    .    . .   movupd	%xmm14, %xmm15
+# CHECK-NEXT: [2,15]    .    . DR .    .    .    . .   movupd	%xmm15, %xmm0
+# CHECK-NEXT: [3,0]     .    .  DR.    .    .    . .   movupd	%xmm0, %xmm1
+# CHECK-NEXT: [3,1]     .    .  DR.    .    .    . .   movupd	%xmm1, %xmm2
+# CHECK-NEXT: [3,2]     .    .  DR.    .    .    . .   movupd	%xmm2, %xmm3
+# CHECK-NEXT: [3,3]     .    .  DR.    .    .    . .   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [3,4]     .    .  DR.    .    .    . .   movupd	%xmm4, %xmm5
+# CHECK-NEXT: [3,5]     .    .  DR.    .    .    . .   movupd	%xmm5, %xmm6
+# CHECK-NEXT: [3,6]     .    .   DR    .    .    . .   movupd	%xmm6, %xmm7
+# CHECK-NEXT: [3,7]     .    .   DR    .    .    . .   movupd	%xmm7, %xmm8
+# CHECK-NEXT: [3,8]     .    .   DR    .    .    . .   movupd	%xmm8, %xmm9
+# CHECK-NEXT: [3,9]     .    .   DR    .    .    . .   movupd	%xmm9, %xmm10
+# CHECK-NEXT: [3,10]    .    .   DR    .    .    . .   movupd	%xmm10, %xmm11
+# CHECK-NEXT: [3,11]    .    .   DR    .    .    . .   movupd	%xmm11, %xmm12
+# CHECK-NEXT: [3,12]    .    .    DR   .    .    . .   movupd	%xmm12, %xmm13
+# CHECK-NEXT: [3,13]    .    .    DR   .    .    . .   movupd	%xmm13, %xmm14
+# CHECK-NEXT: [3,14]    .    .    DR   .    .    . .   movupd	%xmm14, %xmm15
+# CHECK-NEXT: [3,15]    .    .    DR   .    .    . .   movupd	%xmm15, %xmm0
+# CHECK-NEXT: [4,0]     .    .    DR   .    .    . .   movupd	%xmm0, %xmm1
+# CHECK-NEXT: [4,1]     .    .    DR   .    .    . .   movupd	%xmm1, %xmm2
+# CHECK-NEXT: [4,2]     .    .    .DR  .    .    . .   movupd	%xmm2, %xmm3
+# CHECK-NEXT: [4,3]     .    .    .DR  .    .    . .   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [4,4]     .    .    .DR  .    .    . .   movupd	%xmm4, %xmm5
+# CHECK-NEXT: [4,5]     .    .    .DR  .    .    . .   movupd	%xmm5, %xmm6
+# CHECK-NEXT: [4,6]     .    .    .DR  .    .    . .   movupd	%xmm6, %xmm7
+# CHECK-NEXT: [4,7]     .    .    .DR  .    .    . .   movupd	%xmm7, %xmm8
+# CHECK-NEXT: [4,8]     .    .    . DR .    .    . .   movupd	%xmm8, %xmm9
+# CHECK-NEXT: [4,9]     .    .    . DR .    .    . .   movupd	%xmm9, %xmm10
+# CHECK-NEXT: [4,10]    .    .    . DR .    .    . .   movupd	%xmm10, %xmm11
+# CHECK-NEXT: [4,11]    .    .    . DR .    .    . .   movupd	%xmm11, %xmm12
+# CHECK-NEXT: [4,12]    .    .    . DR .    .    . .   movupd	%xmm12, %xmm13
+# CHECK-NEXT: [4,13]    .    .    . DR .    .    . .   movupd	%xmm13, %xmm14
+# CHECK-NEXT: [4,14]    .    .    .  DR.    .    . .   movupd	%xmm14, %xmm15
+# CHECK-NEXT: [4,15]    .    .    .  DR.    .    . .   movupd	%xmm15, %xmm0
+# CHECK-NEXT: [5,0]     .    .    .  DR.    .    . .   movupd	%xmm0, %xmm1
+# CHECK-NEXT: [5,1]     .    .    .  DR.    .    . .   movupd	%xmm1, %xmm2
+# CHECK-NEXT: [5,2]     .    .    .  DR.    .    . .   movupd	%xmm2, %xmm3
+# CHECK-NEXT: [5,3]     .    .    .  DR.    .    . .   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [5,4]     .    .    .   DR    .    . .   movupd	%xmm4, %xmm5
+# CHECK-NEXT: [5,5]     .    .    .   DR    .    . .   movupd	%xmm5, %xmm6
+# CHECK-NEXT: [5,6]     .    .    .   DR    .    . .   movupd	%xmm6, %xmm7
+# CHECK-NEXT: [5,7]     .    .    .   DR    .    . .   movupd	%xmm7, %xmm8
+# CHECK-NEXT: [5,8]     .    .    .   DR    .    . .   movupd	%xmm8, %xmm9
+# CHECK-NEXT: [5,9]     .    .    .   DR    .    . .   movupd	%xmm9, %xmm10
+# CHECK-NEXT: [5,10]    .    .    .    DR   .    . .   movupd	%xmm10, %xmm11
+# CHECK-NEXT: [5,11]    .    .    .    DR   .    . .   movupd	%xmm11, %xmm12
+# CHECK-NEXT: [5,12]    .    .    .    DR   .    . .   movupd	%xmm12, %xmm13
+# CHECK-NEXT: [5,13]    .    .    .    DR   .    . .   movupd	%xmm13, %xmm14
+# CHECK-NEXT: [5,14]    .    .    .    DR   .    . .   movupd	%xmm14, %xmm15
+# CHECK-NEXT: [5,15]    .    .    .    DR   .    . .   movupd	%xmm15, %xmm0
+# CHECK-NEXT: [6,0]     .    .    .    .DR  .    . .   movupd	%xmm0, %xmm1
+# CHECK-NEXT: [6,1]     .    .    .    .DR  .    . .   movupd	%xmm1, %xmm2
+# CHECK-NEXT: [6,2]     .    .    .    .DR  .    . .   movupd	%xmm2, %xmm3
+# CHECK-NEXT: [6,3]     .    .    .    .DR  .    . .   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [6,4]     .    .    .    .DR  .    . .   movupd	%xmm4, %xmm5
+# CHECK-NEXT: [6,5]     .    .    .    .DR  .    . .   movupd	%xmm5, %xmm6
+# CHECK-NEXT: [6,6]     .    .    .    . DR .    . .   movupd	%xmm6, %xmm7
+# CHECK-NEXT: [6,7]     .    .    .    . DR .    . .   movupd	%xmm7, %xmm8
+# CHECK-NEXT: [6,8]     .    .    .    . DR .    . .   movupd	%xmm8, %xmm9
+# CHECK-NEXT: [6,9]     .    .    .    . DR .    . .   movupd	%xmm9, %xmm10
+# CHECK-NEXT: [6,10]    .    .    .    . DR .    . .   movupd	%xmm10, %xmm11
+# CHECK-NEXT: [6,11]    .    .    .    . DR .    . .   movupd	%xmm11, %xmm12
+# CHECK-NEXT: [6,12]    .    .    .    .  DR.    . .   movupd	%xmm12, %xmm13
+# CHECK-NEXT: [6,13]    .    .    .    .  DR.    . .   movupd	%xmm13, %xmm14
+# CHECK-NEXT: [6,14]    .    .    .    .  DR.    . .   movupd	%xmm14, %xmm15
+# CHECK-NEXT: [6,15]    .    .    .    .  DR.    . .   movupd	%xmm15, %xmm0
+# CHECK-NEXT: [7,0]     .    .    .    .  DR.    . .   movupd	%xmm0, %xmm1
+# CHECK-NEXT: [7,1]     .    .    .    .  DR.    . .   movupd	%xmm1, %xmm2
+# CHECK-NEXT: [7,2]     .    .    .    .   DR    . .   movupd	%xmm2, %xmm3
+# CHECK-NEXT: [7,3]     .    .    .    .   DR    . .   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [7,4]     .    .    .    .   DR    . .   movupd	%xmm4, %xmm5
+# CHECK-NEXT: [7,5]     .    .    .    .   DR    . .   movupd	%xmm5, %xmm6
+# CHECK-NEXT: [7,6]     .    .    .    .   DR    . .   movupd	%xmm6, %xmm7
+# CHECK-NEXT: [7,7]     .    .    .    .   DR    . .   movupd	%xmm7, %xmm8
+# CHECK-NEXT: [7,8]     .    .    .    .    DR   . .   movupd	%xmm8, %xmm9
+# CHECK-NEXT: [7,9]     .    .    .    .    DR   . .   movupd	%xmm9, %xmm10
+# CHECK-NEXT: [7,10]    .    .    .    .    DR   . .   movupd	%xmm10, %xmm11
+# CHECK-NEXT: [7,11]    .    .    .    .    DR   . .   movupd	%xmm11, %xmm12
+# CHECK-NEXT: [7,12]    .    .    .    .    DR   . .   movupd	%xmm12, %xmm13
+# CHECK-NEXT: [7,13]    .    .    .    .    DR   . .   movupd	%xmm13, %xmm14
+# CHECK-NEXT: [7,14]    .    .    .    .    .DR  . .   movupd	%xmm14, %xmm15
+# CHECK-NEXT: [7,15]    .    .    .    .    .DR  . .   movupd	%xmm15, %xmm0
+# CHECK-NEXT: [8,0]     .    .    .    .    .DR  . .   movupd	%xmm0, %xmm1
+# CHECK-NEXT: [8,1]     .    .    .    .    .DR  . .   movupd	%xmm1, %xmm2
+# CHECK-NEXT: [8,2]     .    .    .    .    .DR  . .   movupd	%xmm2, %xmm3
+# CHECK-NEXT: [8,3]     .    .    .    .    .DR  . .   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [8,4]     .    .    .    .    . DR . .   movupd	%xmm4, %xmm5
+# CHECK-NEXT: [8,5]     .    .    .    .    . DR . .   movupd	%xmm5, %xmm6
+# CHECK-NEXT: [8,6]     .    .    .    .    . DR . .   movupd	%xmm6, %xmm7
+# CHECK-NEXT: [8,7]     .    .    .    .    . DR . .   movupd	%xmm7, %xmm8
+# CHECK-NEXT: [8,8]     .    .    .    .    . DR . .   movupd	%xmm8, %xmm9
+# CHECK-NEXT: [8,9]     .    .    .    .    . DR . .   movupd	%xmm9, %xmm10
+# CHECK-NEXT: [8,10]    .    .    .    .    .  DR. .   movupd	%xmm10, %xmm11
+# CHECK-NEXT: [8,11]    .    .    .    .    .  DR. .   movupd	%xmm11, %xmm12
+# CHECK-NEXT: [8,12]    .    .    .    .    .  DR. .   movupd	%xmm12, %xmm13
+# CHECK-NEXT: [8,13]    .    .    .    .    .  DR. .   movupd	%xmm13, %xmm14
+# CHECK-NEXT: [8,14]    .    .    .    .    .  DR. .   movupd	%xmm14, %xmm15
+# CHECK-NEXT: [8,15]    .    .    .    .    .  DR. .   movupd	%xmm15, %xmm0
+# CHECK-NEXT: [9,0]     .    .    .    .    .   DR .   movupd	%xmm0, %xmm1
+# CHECK-NEXT: [9,1]     .    .    .    .    .   DR .   movupd	%xmm1, %xmm2
+# CHECK-NEXT: [9,2]     .    .    .    .    .   DR .   movupd	%xmm2, %xmm3
+# CHECK-NEXT: [9,3]     .    .    .    .    .   DR .   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [9,4]     .    .    .    .    .   DR .   movupd	%xmm4, %xmm5
+# CHECK-NEXT: [9,5]     .    .    .    .    .   DR .   movupd	%xmm5, %xmm6
+# CHECK-NEXT: [9,6]     .    .    .    .    .    DR.   movupd	%xmm6, %xmm7
+# CHECK-NEXT: [9,7]     .    .    .    .    .    DR.   movupd	%xmm7, %xmm8
+# CHECK-NEXT: [9,8]     .    .    .    .    .    DR.   movupd	%xmm8, %xmm9
+# CHECK-NEXT: [9,9]     .    .    .    .    .    DR.   movupd	%xmm9, %xmm10
+# CHECK-NEXT: [9,10]    .    .    .    .    .    DR.   movupd	%xmm10, %xmm11
+# CHECK-NEXT: [9,11]    .    .    .    .    .    DR.   movupd	%xmm11, %xmm12
+# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR   movupd	%xmm12, %xmm13
+# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR   movupd	%xmm13, %xmm14
+# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR   movupd	%xmm14, %xmm15
+# CHECK-NEXT: [9,15]    .    .    .    .    .    .DR   movupd	%xmm15, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1257,34 +1273,34 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     10    7.3    1.0    0.0       movupd	%xmm0, %xmm1
-# CHECK-NEXT: 1.     10    7.3    0.0    0.0       movupd	%xmm1, %xmm2
-# CHECK-NEXT: 2.     10    7.0    0.0    0.0       movupd	%xmm2, %xmm3
-# CHECK-NEXT: 3.     10    7.0    0.0    0.0       movupd	%xmm3, %xmm4
-# CHECK-NEXT: 4.     10    7.7    1.0    0.0       movupd	%xmm4, %xmm5
-# CHECK-NEXT: 5.     10    7.7    0.0    0.0       movupd	%xmm5, %xmm6
-# CHECK-NEXT: 6.     10    7.3    0.0    0.0       movupd	%xmm6, %xmm7
-# CHECK-NEXT: 7.     10    7.3    0.0    0.0       movupd	%xmm7, %xmm8
-# CHECK-NEXT: 8.     10    8.0    1.0    0.0       movupd	%xmm8, %xmm9
-# CHECK-NEXT: 9.     10    8.0    0.0    0.0       movupd	%xmm9, %xmm10
-# CHECK-NEXT: 10.    10    7.7    0.0    0.0       movupd	%xmm10, %xmm11
-# CHECK-NEXT: 11.    10    7.7    0.0    0.0       movupd	%xmm11, %xmm12
-# CHECK-NEXT: 12.    10    8.3    1.0    0.0       movupd	%xmm12, %xmm13
-# CHECK-NEXT: 13.    10    8.3    0.0    0.0       movupd	%xmm13, %xmm14
-# CHECK-NEXT: 14.    10    8.0    0.0    0.0       movupd	%xmm14, %xmm15
-# CHECK-NEXT: 15.    10    8.0    0.0    0.0       movupd	%xmm15, %xmm0
-# CHECK-NEXT:        10    7.7    0.3    0.0       <total>
+# CHECK-NEXT: 0.     10    0.0    0.0    0.0       movupd	%xmm0, %xmm1
+# CHECK-NEXT: 1.     10    0.0    0.0    0.0       movupd	%xmm1, %xmm2
+# CHECK-NEXT: 2.     10    0.0    0.0    0.0       movupd	%xmm2, %xmm3
+# CHECK-NEXT: 3.     10    0.0    0.0    0.0       movupd	%xmm3, %xmm4
+# CHECK-NEXT: 4.     10    0.0    0.0    0.0       movupd	%xmm4, %xmm5
+# CHECK-NEXT: 5.     10    0.0    0.0    0.0       movupd	%xmm5, %xmm6
+# CHECK-NEXT: 6.     10    0.0    0.0    0.0       movupd	%xmm6, %xmm7
+# CHECK-NEXT: 7.     10    0.0    0.0    0.0       movupd	%xmm7, %xmm8
+# CHECK-NEXT: 8.     10    0.0    0.0    0.0       movupd	%xmm8, %xmm9
+# CHECK-NEXT: 9.     10    0.0    0.0    0.0       movupd	%xmm9, %xmm10
+# CHECK-NEXT: 10.    10    0.0    0.0    0.0       movupd	%xmm10, %xmm11
+# CHECK-NEXT: 11.    10    0.0    0.0    0.0       movupd	%xmm11, %xmm12
+# CHECK-NEXT: 12.    10    0.0    0.0    0.0       movupd	%xmm12, %xmm13
+# CHECK-NEXT: 13.    10    0.0    0.0    0.0       movupd	%xmm13, %xmm14
+# CHECK-NEXT: 14.    10    0.0    0.0    0.0       movupd	%xmm14, %xmm15
+# CHECK-NEXT: 15.    10    0.0    0.0    0.0       movupd	%xmm15, %xmm0
+# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
 
 # CHECK:      [4] Code Region
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      24000
-# CHECK-NEXT: Total Cycles:      6002
+# CHECK-NEXT: Total Cycles:      4001
 # CHECK-NEXT: Total uOps:        24000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    4.00
-# CHECK-NEXT: IPC:               4.00
+# CHECK-NEXT: uOps Per Cycle:    6.00
+# CHECK-NEXT: IPC:               6.00
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Instruction Info:
@@ -1314,13 +1330,17 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT:  1      0     0.25                        movdqa	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    24000
-# CHECK-NEXT: Max number of mappings used:         68
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 24000
-# CHECK-NEXT:    Max number of mappings used:      68
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      24000
+# CHECK-NEXT:    Number of moves eliminated:       24000  (100.0%)
+# CHECK-NEXT:    Number of zero moves:             0  (0.0%)
+# CHECK-NEXT:    Max moves eliminated per cycle:   6
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -1354,191 +1374,191 @@ movdqu %xmm15, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00   4.00   4.00    -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm0, %xmm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm2, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm3, %xmm4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm4, %xmm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm5, %xmm6
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm6, %xmm7
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm7, %xmm8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm8, %xmm9
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm9, %xmm10
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm10, %xmm11
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm11, %xmm12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm12, %xmm13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm13, %xmm14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm14, %xmm15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm15, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm0, %xmm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm2, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm3, %xmm4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm4, %xmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm5, %xmm6
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm6, %xmm7
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm7, %xmm8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm8, %xmm9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm9, %xmm10
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm10, %xmm11
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm11, %xmm12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm12, %xmm13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm13, %xmm14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm14, %xmm15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm15, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          01
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          01234567
 
-# CHECK:      [0,0]     DER  .    .    .    .    .    .    .    ..   movdqa	%xmm0, %xmm1
-# CHECK-NEXT: [0,1]     DER  .    .    .    .    .    .    .    ..   movdqa	%xmm1, %xmm2
-# CHECK-NEXT: [0,2]     DER  .    .    .    .    .    .    .    ..   movdqa	%xmm2, %xmm3
-# CHECK-NEXT: [0,3]     DER  .    .    .    .    .    .    .    ..   movdqa	%xmm3, %xmm4
-# CHECK-NEXT: [0,4]     D=ER .    .    .    .    .    .    .    ..   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [0,5]     D=ER .    .    .    .    .    .    .    ..   movdqa	%xmm5, %xmm6
-# CHECK-NEXT: [0,6]     .DER .    .    .    .    .    .    .    ..   movdqa	%xmm6, %xmm7
-# CHECK-NEXT: [0,7]     .DER .    .    .    .    .    .    .    ..   movdqa	%xmm7, %xmm8
-# CHECK-NEXT: [0,8]     .D=ER.    .    .    .    .    .    .    ..   movdqa	%xmm8, %xmm9
-# CHECK-NEXT: [0,9]     .D=ER.    .    .    .    .    .    .    ..   movdqa	%xmm9, %xmm10
-# CHECK-NEXT: [0,10]    .D=ER.    .    .    .    .    .    .    ..   movdqa	%xmm10, %xmm11
-# CHECK-NEXT: [0,11]    .D=ER.    .    .    .    .    .    .    ..   movdqa	%xmm11, %xmm12
-# CHECK-NEXT: [0,12]    . D=ER    .    .    .    .    .    .    ..   movdqa	%xmm12, %xmm13
-# CHECK-NEXT: [0,13]    . D=ER    .    .    .    .    .    .    ..   movdqa	%xmm13, %xmm14
-# CHECK-NEXT: [0,14]    . D=ER    .    .    .    .    .    .    ..   movdqa	%xmm14, %xmm15
-# CHECK-NEXT: [0,15]    . D=ER    .    .    .    .    .    .    ..   movdqa	%xmm15, %xmm0
-# CHECK-NEXT: [1,0]     . D==ER   .    .    .    .    .    .    ..   movdqa	%xmm0, %xmm1
-# CHECK-NEXT: [1,1]     . D==ER   .    .    .    .    .    .    ..   movdqa	%xmm1, %xmm2
-# CHECK-NEXT: [1,2]     .  D=ER   .    .    .    .    .    .    ..   movdqa	%xmm2, %xmm3
-# CHECK-NEXT: [1,3]     .  D=ER   .    .    .    .    .    .    ..   movdqa	%xmm3, %xmm4
-# CHECK-NEXT: [1,4]     .  D==ER  .    .    .    .    .    .    ..   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [1,5]     .  D==ER  .    .    .    .    .    .    ..   movdqa	%xmm5, %xmm6
-# CHECK-NEXT: [1,6]     .  D==ER  .    .    .    .    .    .    ..   movdqa	%xmm6, %xmm7
-# CHECK-NEXT: [1,7]     .  D==ER  .    .    .    .    .    .    ..   movdqa	%xmm7, %xmm8
-# CHECK-NEXT: [1,8]     .   D==ER .    .    .    .    .    .    ..   movdqa	%xmm8, %xmm9
-# CHECK-NEXT: [1,9]     .   D==ER .    .    .    .    .    .    ..   movdqa	%xmm9, %xmm10
-# CHECK-NEXT: [1,10]    .   D==ER .    .    .    .    .    .    ..   movdqa	%xmm10, %xmm11
-# CHECK-NEXT: [1,11]    .   D==ER .    .    .    .    .    .    ..   movdqa	%xmm11, %xmm12
-# CHECK-NEXT: [1,12]    .   D===ER.    .    .    .    .    .    ..   movdqa	%xmm12, %xmm13
-# CHECK-NEXT: [1,13]    .   D===ER.    .    .    .    .    .    ..   movdqa	%xmm13, %xmm14
-# CHECK-NEXT: [1,14]    .    D==ER.    .    .    .    .    .    ..   movdqa	%xmm14, %xmm15
-# CHECK-NEXT: [1,15]    .    D==ER.    .    .    .    .    .    ..   movdqa	%xmm15, %xmm0
-# CHECK-NEXT: [2,0]     .    D===ER    .    .    .    .    .    ..   movdqa	%xmm0, %xmm1
-# CHECK-NEXT: [2,1]     .    D===ER    .    .    .    .    .    ..   movdqa	%xmm1, %xmm2
-# CHECK-NEXT: [2,2]     .    D===ER    .    .    .    .    .    ..   movdqa	%xmm2, %xmm3
-# CHECK-NEXT: [2,3]     .    D===ER    .    .    .    .    .    ..   movdqa	%xmm3, %xmm4
-# CHECK-NEXT: [2,4]     .    .D===ER   .    .    .    .    .    ..   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [2,5]     .    .D===ER   .    .    .    .    .    ..   movdqa	%xmm5, %xmm6
-# CHECK-NEXT: [2,6]     .    .D===ER   .    .    .    .    .    ..   movdqa	%xmm6, %xmm7
-# CHECK-NEXT: [2,7]     .    .D===ER   .    .    .    .    .    ..   movdqa	%xmm7, %xmm8
-# CHECK-NEXT: [2,8]     .    .D====ER  .    .    .    .    .    ..   movdqa	%xmm8, %xmm9
-# CHECK-NEXT: [2,9]     .    .D====ER  .    .    .    .    .    ..   movdqa	%xmm9, %xmm10
-# CHECK-NEXT: [2,10]    .    . D===ER  .    .    .    .    .    ..   movdqa	%xmm10, %xmm11
-# CHECK-NEXT: [2,11]    .    . D===ER  .    .    .    .    .    ..   movdqa	%xmm11, %xmm12
-# CHECK-NEXT: [2,12]    .    . D====ER .    .    .    .    .    ..   movdqa	%xmm12, %xmm13
-# CHECK-NEXT: [2,13]    .    . D====ER .    .    .    .    .    ..   movdqa	%xmm13, %xmm14
-# CHECK-NEXT: [2,14]    .    . D====ER .    .    .    .    .    ..   movdqa	%xmm14, %xmm15
-# CHECK-NEXT: [2,15]    .    . D====ER .    .    .    .    .    ..   movdqa	%xmm15, %xmm0
-# CHECK-NEXT: [3,0]     .    .  D====ER.    .    .    .    .    ..   movdqa	%xmm0, %xmm1
-# CHECK-NEXT: [3,1]     .    .  D====ER.    .    .    .    .    ..   movdqa	%xmm1, %xmm2
-# CHECK-NEXT: [3,2]     .    .  D====ER.    .    .    .    .    ..   movdqa	%xmm2, %xmm3
-# CHECK-NEXT: [3,3]     .    .  D====ER.    .    .    .    .    ..   movdqa	%xmm3, %xmm4
-# CHECK-NEXT: [3,4]     .    .  D=====ER    .    .    .    .    ..   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [3,5]     .    .  D=====ER    .    .    .    .    ..   movdqa	%xmm5, %xmm6
-# CHECK-NEXT: [3,6]     .    .   D====ER    .    .    .    .    ..   movdqa	%xmm6, %xmm7
-# CHECK-NEXT: [3,7]     .    .   D====ER    .    .    .    .    ..   movdqa	%xmm7, %xmm8
-# CHECK-NEXT: [3,8]     .    .   D=====ER   .    .    .    .    ..   movdqa	%xmm8, %xmm9
-# CHECK-NEXT: [3,9]     .    .   D=====ER   .    .    .    .    ..   movdqa	%xmm9, %xmm10
-# CHECK-NEXT: [3,10]    .    .   D=====ER   .    .    .    .    ..   movdqa	%xmm10, %xmm11
-# CHECK-NEXT: [3,11]    .    .   D=====ER   .    .    .    .    ..   movdqa	%xmm11, %xmm12
-# CHECK-NEXT: [3,12]    .    .    D=====ER  .    .    .    .    ..   movdqa	%xmm12, %xmm13
-# CHECK-NEXT: [3,13]    .    .    D=====ER  .    .    .    .    ..   movdqa	%xmm13, %xmm14
-# CHECK-NEXT: [3,14]    .    .    D=====ER  .    .    .    .    ..   movdqa	%xmm14, %xmm15
-# CHECK-NEXT: [3,15]    .    .    D=====ER  .    .    .    .    ..   movdqa	%xmm15, %xmm0
-# CHECK-NEXT: [4,0]     .    .    D======ER .    .    .    .    ..   movdqa	%xmm0, %xmm1
-# CHECK-NEXT: [4,1]     .    .    D======ER .    .    .    .    ..   movdqa	%xmm1, %xmm2
-# CHECK-NEXT: [4,2]     .    .    .D=====ER .    .    .    .    ..   movdqa	%xmm2, %xmm3
-# CHECK-NEXT: [4,3]     .    .    .D=====ER .    .    .    .    ..   movdqa	%xmm3, %xmm4
-# CHECK-NEXT: [4,4]     .    .    .D======ER.    .    .    .    ..   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [4,5]     .    .    .D======ER.    .    .    .    ..   movdqa	%xmm5, %xmm6
-# CHECK-NEXT: [4,6]     .    .    .D======ER.    .    .    .    ..   movdqa	%xmm6, %xmm7
-# CHECK-NEXT: [4,7]     .    .    .D======ER.    .    .    .    ..   movdqa	%xmm7, %xmm8
-# CHECK-NEXT: [4,8]     .    .    . D======ER    .    .    .    ..   movdqa	%xmm8, %xmm9
-# CHECK-NEXT: [4,9]     .    .    . D======ER    .    .    .    ..   movdqa	%xmm9, %xmm10
-# CHECK-NEXT: [4,10]    .    .    . D======ER    .    .    .    ..   movdqa	%xmm10, %xmm11
-# CHECK-NEXT: [4,11]    .    .    . D======ER    .    .    .    ..   movdqa	%xmm11, %xmm12
-# CHECK-NEXT: [4,12]    .    .    . D=======ER   .    .    .    ..   movdqa	%xmm12, %xmm13
-# CHECK-NEXT: [4,13]    .    .    . D=======ER   .    .    .    ..   movdqa	%xmm13, %xmm14
-# CHECK-NEXT: [4,14]    .    .    .  D======ER   .    .    .    ..   movdqa	%xmm14, %xmm15
-# CHECK-NEXT: [4,15]    .    .    .  D======ER   .    .    .    ..   movdqa	%xmm15, %xmm0
-# CHECK-NEXT: [5,0]     .    .    .  D=======ER  .    .    .    ..   movdqa	%xmm0, %xmm1
-# CHECK-NEXT: [5,1]     .    .    .  D=======ER  .    .    .    ..   movdqa	%xmm1, %xmm2
-# CHECK-NEXT: [5,2]     .    .    .  D=======ER  .    .    .    ..   movdqa	%xmm2, %xmm3
-# CHECK-NEXT: [5,3]     .    .    .  D=======ER  .    .    .    ..   movdqa	%xmm3, %xmm4
-# CHECK-NEXT: [5,4]     .    .    .   D=======ER .    .    .    ..   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [5,5]     .    .    .   D=======ER .    .    .    ..   movdqa	%xmm5, %xmm6
-# CHECK-NEXT: [5,6]     .    .    .   D=======ER .    .    .    ..   movdqa	%xmm6, %xmm7
-# CHECK-NEXT: [5,7]     .    .    .   D=======ER .    .    .    ..   movdqa	%xmm7, %xmm8
-# CHECK-NEXT: [5,8]     .    .    .   D========ER.    .    .    ..   movdqa	%xmm8, %xmm9
-# CHECK-NEXT: [5,9]     .    .    .   D========ER.    .    .    ..   movdqa	%xmm9, %xmm10
-# CHECK-NEXT: [5,10]    .    .    .    D=======ER.    .    .    ..   movdqa	%xmm10, %xmm11
-# CHECK-NEXT: [5,11]    .    .    .    D=======ER.    .    .    ..   movdqa	%xmm11, %xmm12
-# CHECK-NEXT: [5,12]    .    .    .    D========ER    .    .    ..   movdqa	%xmm12, %xmm13
-# CHECK-NEXT: [5,13]    .    .    .    D========ER    .    .    ..   movdqa	%xmm13, %xmm14
-# CHECK-NEXT: [5,14]    .    .    .    D========ER    .    .    ..   movdqa	%xmm14, %xmm15
-# CHECK-NEXT: [5,15]    .    .    .    D========ER    .    .    ..   movdqa	%xmm15, %xmm0
-# CHECK-NEXT: [6,0]     .    .    .    .D========ER   .    .    ..   movdqa	%xmm0, %xmm1
-# CHECK-NEXT: [6,1]     .    .    .    .D========ER   .    .    ..   movdqa	%xmm1, %xmm2
-# CHECK-NEXT: [6,2]     .    .    .    .D========ER   .    .    ..   movdqa	%xmm2, %xmm3
-# CHECK-NEXT: [6,3]     .    .    .    .D========ER   .    .    ..   movdqa	%xmm3, %xmm4
-# CHECK-NEXT: [6,4]     .    .    .    .D=========ER  .    .    ..   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [6,5]     .    .    .    .D=========ER  .    .    ..   movdqa	%xmm5, %xmm6
-# CHECK-NEXT: [6,6]     .    .    .    . D========ER  .    .    ..   movdqa	%xmm6, %xmm7
-# CHECK-NEXT: [6,7]     .    .    .    . D========ER  .    .    ..   movdqa	%xmm7, %xmm8
-# CHECK-NEXT: [6,8]     .    .    .    . D=========ER .    .    ..   movdqa	%xmm8, %xmm9
-# CHECK-NEXT: [6,9]     .    .    .    . D=========ER .    .    ..   movdqa	%xmm9, %xmm10
-# CHECK-NEXT: [6,10]    .    .    .    . D=========ER .    .    ..   movdqa	%xmm10, %xmm11
-# CHECK-NEXT: [6,11]    .    .    .    . D=========ER .    .    ..   movdqa	%xmm11, %xmm12
-# CHECK-NEXT: [6,12]    .    .    .    .  D=========ER.    .    ..   movdqa	%xmm12, %xmm13
-# CHECK-NEXT: [6,13]    .    .    .    .  D=========ER.    .    ..   movdqa	%xmm13, %xmm14
-# CHECK-NEXT: [6,14]    .    .    .    .  D=========ER.    .    ..   movdqa	%xmm14, %xmm15
-# CHECK-NEXT: [6,15]    .    .    .    .  D=========ER.    .    ..   movdqa	%xmm15, %xmm0
-# CHECK-NEXT: [7,0]     .    .    .    .  D==========ER    .    ..   movdqa	%xmm0, %xmm1
-# CHECK-NEXT: [7,1]     .    .    .    .  D==========ER    .    ..   movdqa	%xmm1, %xmm2
-# CHECK-NEXT: [7,2]     .    .    .    .   D=========ER    .    ..   movdqa	%xmm2, %xmm3
-# CHECK-NEXT: [7,3]     .    .    .    .   D=========ER    .    ..   movdqa	%xmm3, %xmm4
-# CHECK-NEXT: [7,4]     .    .    .    .   D==========ER   .    ..   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [7,5]     .    .    .    .   D==========ER   .    ..   movdqa	%xmm5, %xmm6
-# CHECK-NEXT: [7,6]     .    .    .    .   D==========ER   .    ..   movdqa	%xmm6, %xmm7
-# CHECK-NEXT: [7,7]     .    .    .    .   D==========ER   .    ..   movdqa	%xmm7, %xmm8
-# CHECK-NEXT: [7,8]     .    .    .    .    D==========ER  .    ..   movdqa	%xmm8, %xmm9
-# CHECK-NEXT: [7,9]     .    .    .    .    D==========ER  .    ..   movdqa	%xmm9, %xmm10
-# CHECK-NEXT: [7,10]    .    .    .    .    D==========ER  .    ..   movdqa	%xmm10, %xmm11
-# CHECK-NEXT: [7,11]    .    .    .    .    D==========ER  .    ..   movdqa	%xmm11, %xmm12
-# CHECK-NEXT: [7,12]    .    .    .    .    D===========ER .    ..   movdqa	%xmm12, %xmm13
-# CHECK-NEXT: [7,13]    .    .    .    .    D===========ER .    ..   movdqa	%xmm13, %xmm14
-# CHECK-NEXT: [7,14]    .    .    .    .    .D==========ER .    ..   movdqa	%xmm14, %xmm15
-# CHECK-NEXT: [7,15]    .    .    .    .    .D==========ER .    ..   movdqa	%xmm15, %xmm0
-# CHECK-NEXT: [8,0]     .    .    .    .    .D===========ER.    ..   movdqa	%xmm0, %xmm1
-# CHECK-NEXT: [8,1]     .    .    .    .    .D===========ER.    ..   movdqa	%xmm1, %xmm2
-# CHECK-NEXT: [8,2]     .    .    .    .    .D===========ER.    ..   movdqa	%xmm2, %xmm3
-# CHECK-NEXT: [8,3]     .    .    .    .    .D===========ER.    ..   movdqa	%xmm3, %xmm4
-# CHECK-NEXT: [8,4]     .    .    .    .    . D===========ER    ..   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [8,5]     .    .    .    .    . D===========ER    ..   movdqa	%xmm5, %xmm6
-# CHECK-NEXT: [8,6]     .    .    .    .    . D===========ER    ..   movdqa	%xmm6, %xmm7
-# CHECK-NEXT: [8,7]     .    .    .    .    . D===========ER    ..   movdqa	%xmm7, %xmm8
-# CHECK-NEXT: [8,8]     .    .    .    .    . D============ER   ..   movdqa	%xmm8, %xmm9
-# CHECK-NEXT: [8,9]     .    .    .    .    . D============ER   ..   movdqa	%xmm9, %xmm10
-# CHECK-NEXT: [8,10]    .    .    .    .    .  D===========ER   ..   movdqa	%xmm10, %xmm11
-# CHECK-NEXT: [8,11]    .    .    .    .    .  D===========ER   ..   movdqa	%xmm11, %xmm12
-# CHECK-NEXT: [8,12]    .    .    .    .    .  D============ER  ..   movdqa	%xmm12, %xmm13
-# CHECK-NEXT: [8,13]    .    .    .    .    .  D============ER  ..   movdqa	%xmm13, %xmm14
-# CHECK-NEXT: [8,14]    .    .    .    .    .  D============ER  ..   movdqa	%xmm14, %xmm15
-# CHECK-NEXT: [8,15]    .    .    .    .    .  D============ER  ..   movdqa	%xmm15, %xmm0
-# CHECK-NEXT: [9,0]     .    .    .    .    .   D============ER ..   movdqa	%xmm0, %xmm1
-# CHECK-NEXT: [9,1]     .    .    .    .    .   D============ER ..   movdqa	%xmm1, %xmm2
-# CHECK-NEXT: [9,2]     .    .    .    .    .   D============ER ..   movdqa	%xmm2, %xmm3
-# CHECK-NEXT: [9,3]     .    .    .    .    .   D============ER ..   movdqa	%xmm3, %xmm4
-# CHECK-NEXT: [9,4]     .    .    .    .    .   D=============ER..   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [9,5]     .    .    .    .    .   D=============ER..   movdqa	%xmm5, %xmm6
-# CHECK-NEXT: [9,6]     .    .    .    .    .    D============ER..   movdqa	%xmm6, %xmm7
-# CHECK-NEXT: [9,7]     .    .    .    .    .    D============ER..   movdqa	%xmm7, %xmm8
-# CHECK-NEXT: [9,8]     .    .    .    .    .    D=============ER.   movdqa	%xmm8, %xmm9
-# CHECK-NEXT: [9,9]     .    .    .    .    .    D=============ER.   movdqa	%xmm9, %xmm10
-# CHECK-NEXT: [9,10]    .    .    .    .    .    D=============ER.   movdqa	%xmm10, %xmm11
-# CHECK-NEXT: [9,11]    .    .    .    .    .    D=============ER.   movdqa	%xmm11, %xmm12
-# CHECK-NEXT: [9,12]    .    .    .    .    .    .D=============ER   movdqa	%xmm12, %xmm13
-# CHECK-NEXT: [9,13]    .    .    .    .    .    .D=============ER   movdqa	%xmm13, %xmm14
-# CHECK-NEXT: [9,14]    .    .    .    .    .    .D=============ER   movdqa	%xmm14, %xmm15
-# CHECK-NEXT: [9,15]    .    .    .    .    .    .D=============ER   movdqa	%xmm15, %xmm0
+# CHECK:      [0,0]     DR   .    .    .    .    . .   movdqa	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DR   .    .    .    .    . .   movdqa	%xmm1, %xmm2
+# CHECK-NEXT: [0,2]     DR   .    .    .    .    . .   movdqa	%xmm2, %xmm3
+# CHECK-NEXT: [0,3]     DR   .    .    .    .    . .   movdqa	%xmm3, %xmm4
+# CHECK-NEXT: [0,4]     DR   .    .    .    .    . .   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [0,5]     DR   .    .    .    .    . .   movdqa	%xmm5, %xmm6
+# CHECK-NEXT: [0,6]     .DR  .    .    .    .    . .   movdqa	%xmm6, %xmm7
+# CHECK-NEXT: [0,7]     .DR  .    .    .    .    . .   movdqa	%xmm7, %xmm8
+# CHECK-NEXT: [0,8]     .DR  .    .    .    .    . .   movdqa	%xmm8, %xmm9
+# CHECK-NEXT: [0,9]     .DR  .    .    .    .    . .   movdqa	%xmm9, %xmm10
+# CHECK-NEXT: [0,10]    .DR  .    .    .    .    . .   movdqa	%xmm10, %xmm11
+# CHECK-NEXT: [0,11]    .DR  .    .    .    .    . .   movdqa	%xmm11, %xmm12
+# CHECK-NEXT: [0,12]    . DR .    .    .    .    . .   movdqa	%xmm12, %xmm13
+# CHECK-NEXT: [0,13]    . DR .    .    .    .    . .   movdqa	%xmm13, %xmm14
+# CHECK-NEXT: [0,14]    . DR .    .    .    .    . .   movdqa	%xmm14, %xmm15
+# CHECK-NEXT: [0,15]    . DR .    .    .    .    . .   movdqa	%xmm15, %xmm0
+# CHECK-NEXT: [1,0]     . DR .    .    .    .    . .   movdqa	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     . DR .    .    .    .    . .   movdqa	%xmm1, %xmm2
+# CHECK-NEXT: [1,2]     .  DR.    .    .    .    . .   movdqa	%xmm2, %xmm3
+# CHECK-NEXT: [1,3]     .  DR.    .    .    .    . .   movdqa	%xmm3, %xmm4
+# CHECK-NEXT: [1,4]     .  DR.    .    .    .    . .   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [1,5]     .  DR.    .    .    .    . .   movdqa	%xmm5, %xmm6
+# CHECK-NEXT: [1,6]     .  DR.    .    .    .    . .   movdqa	%xmm6, %xmm7
+# CHECK-NEXT: [1,7]     .  DR.    .    .    .    . .   movdqa	%xmm7, %xmm8
+# CHECK-NEXT: [1,8]     .   DR    .    .    .    . .   movdqa	%xmm8, %xmm9
+# CHECK-NEXT: [1,9]     .   DR    .    .    .    . .   movdqa	%xmm9, %xmm10
+# CHECK-NEXT: [1,10]    .   DR    .    .    .    . .   movdqa	%xmm10, %xmm11
+# CHECK-NEXT: [1,11]    .   DR    .    .    .    . .   movdqa	%xmm11, %xmm12
+# CHECK-NEXT: [1,12]    .   DR    .    .    .    . .   movdqa	%xmm12, %xmm13
+# CHECK-NEXT: [1,13]    .   DR    .    .    .    . .   movdqa	%xmm13, %xmm14
+# CHECK-NEXT: [1,14]    .    DR   .    .    .    . .   movdqa	%xmm14, %xmm15
+# CHECK-NEXT: [1,15]    .    DR   .    .    .    . .   movdqa	%xmm15, %xmm0
+# CHECK-NEXT: [2,0]     .    DR   .    .    .    . .   movdqa	%xmm0, %xmm1
+# CHECK-NEXT: [2,1]     .    DR   .    .    .    . .   movdqa	%xmm1, %xmm2
+# CHECK-NEXT: [2,2]     .    DR   .    .    .    . .   movdqa	%xmm2, %xmm3
+# CHECK-NEXT: [2,3]     .    DR   .    .    .    . .   movdqa	%xmm3, %xmm4
+# CHECK-NEXT: [2,4]     .    .DR  .    .    .    . .   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [2,5]     .    .DR  .    .    .    . .   movdqa	%xmm5, %xmm6
+# CHECK-NEXT: [2,6]     .    .DR  .    .    .    . .   movdqa	%xmm6, %xmm7
+# CHECK-NEXT: [2,7]     .    .DR  .    .    .    . .   movdqa	%xmm7, %xmm8
+# CHECK-NEXT: [2,8]     .    .DR  .    .    .    . .   movdqa	%xmm8, %xmm9
+# CHECK-NEXT: [2,9]     .    .DR  .    .    .    . .   movdqa	%xmm9, %xmm10
+# CHECK-NEXT: [2,10]    .    . DR .    .    .    . .   movdqa	%xmm10, %xmm11
+# CHECK-NEXT: [2,11]    .    . DR .    .    .    . .   movdqa	%xmm11, %xmm12
+# CHECK-NEXT: [2,12]    .    . DR .    .    .    . .   movdqa	%xmm12, %xmm13
+# CHECK-NEXT: [2,13]    .    . DR .    .    .    . .   movdqa	%xmm13, %xmm14
+# CHECK-NEXT: [2,14]    .    . DR .    .    .    . .   movdqa	%xmm14, %xmm15
+# CHECK-NEXT: [2,15]    .    . DR .    .    .    . .   movdqa	%xmm15, %xmm0
+# CHECK-NEXT: [3,0]     .    .  DR.    .    .    . .   movdqa	%xmm0, %xmm1
+# CHECK-NEXT: [3,1]     .    .  DR.    .    .    . .   movdqa	%xmm1, %xmm2
+# CHECK-NEXT: [3,2]     .    .  DR.    .    .    . .   movdqa	%xmm2, %xmm3
+# CHECK-NEXT: [3,3]     .    .  DR.    .    .    . .   movdqa	%xmm3, %xmm4
+# CHECK-NEXT: [3,4]     .    .  DR.    .    .    . .   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [3,5]     .    .  DR.    .    .    . .   movdqa	%xmm5, %xmm6
+# CHECK-NEXT: [3,6]     .    .   DR    .    .    . .   movdqa	%xmm6, %xmm7
+# CHECK-NEXT: [3,7]     .    .   DR    .    .    . .   movdqa	%xmm7, %xmm8
+# CHECK-NEXT: [3,8]     .    .   DR    .    .    . .   movdqa	%xmm8, %xmm9
+# CHECK-NEXT: [3,9]     .    .   DR    .    .    . .   movdqa	%xmm9, %xmm10
+# CHECK-NEXT: [3,10]    .    .   DR    .    .    . .   movdqa	%xmm10, %xmm11
+# CHECK-NEXT: [3,11]    .    .   DR    .    .    . .   movdqa	%xmm11, %xmm12
+# CHECK-NEXT: [3,12]    .    .    DR   .    .    . .   movdqa	%xmm12, %xmm13
+# CHECK-NEXT: [3,13]    .    .    DR   .    .    . .   movdqa	%xmm13, %xmm14
+# CHECK-NEXT: [3,14]    .    .    DR   .    .    . .   movdqa	%xmm14, %xmm15
+# CHECK-NEXT: [3,15]    .    .    DR   .    .    . .   movdqa	%xmm15, %xmm0
+# CHECK-NEXT: [4,0]     .    .    DR   .    .    . .   movdqa	%xmm0, %xmm1
+# CHECK-NEXT: [4,1]     .    .    DR   .    .    . .   movdqa	%xmm1, %xmm2
+# CHECK-NEXT: [4,2]     .    .    .DR  .    .    . .   movdqa	%xmm2, %xmm3
+# CHECK-NEXT: [4,3]     .    .    .DR  .    .    . .   movdqa	%xmm3, %xmm4
+# CHECK-NEXT: [4,4]     .    .    .DR  .    .    . .   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [4,5]     .    .    .DR  .    .    . .   movdqa	%xmm5, %xmm6
+# CHECK-NEXT: [4,6]     .    .    .DR  .    .    . .   movdqa	%xmm6, %xmm7
+# CHECK-NEXT: [4,7]     .    .    .DR  .    .    . .   movdqa	%xmm7, %xmm8
+# CHECK-NEXT: [4,8]     .    .    . DR .    .    . .   movdqa	%xmm8, %xmm9
+# CHECK-NEXT: [4,9]     .    .    . DR .    .    . .   movdqa	%xmm9, %xmm10
+# CHECK-NEXT: [4,10]    .    .    . DR .    .    . .   movdqa	%xmm10, %xmm11
+# CHECK-NEXT: [4,11]    .    .    . DR .    .    . .   movdqa	%xmm11, %xmm12
+# CHECK-NEXT: [4,12]    .    .    . DR .    .    . .   movdqa	%xmm12, %xmm13
+# CHECK-NEXT: [4,13]    .    .    . DR .    .    . .   movdqa	%xmm13, %xmm14
+# CHECK-NEXT: [4,14]    .    .    .  DR.    .    . .   movdqa	%xmm14, %xmm15
+# CHECK-NEXT: [4,15]    .    .    .  DR.    .    . .   movdqa	%xmm15, %xmm0
+# CHECK-NEXT: [5,0]     .    .    .  DR.    .    . .   movdqa	%xmm0, %xmm1
+# CHECK-NEXT: [5,1]     .    .    .  DR.    .    . .   movdqa	%xmm1, %xmm2
+# CHECK-NEXT: [5,2]     .    .    .  DR.    .    . .   movdqa	%xmm2, %xmm3
+# CHECK-NEXT: [5,3]     .    .    .  DR.    .    . .   movdqa	%xmm3, %xmm4
+# CHECK-NEXT: [5,4]     .    .    .   DR    .    . .   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [5,5]     .    .    .   DR    .    . .   movdqa	%xmm5, %xmm6
+# CHECK-NEXT: [5,6]     .    .    .   DR    .    . .   movdqa	%xmm6, %xmm7
+# CHECK-NEXT: [5,7]     .    .    .   DR    .    . .   movdqa	%xmm7, %xmm8
+# CHECK-NEXT: [5,8]     .    .    .   DR    .    . .   movdqa	%xmm8, %xmm9
+# CHECK-NEXT: [5,9]     .    .    .   DR    .    . .   movdqa	%xmm9, %xmm10
+# CHECK-NEXT: [5,10]    .    .    .    DR   .    . .   movdqa	%xmm10, %xmm11
+# CHECK-NEXT: [5,11]    .    .    .    DR   .    . .   movdqa	%xmm11, %xmm12
+# CHECK-NEXT: [5,12]    .    .    .    DR   .    . .   movdqa	%xmm12, %xmm13
+# CHECK-NEXT: [5,13]    .    .    .    DR   .    . .   movdqa	%xmm13, %xmm14
+# CHECK-NEXT: [5,14]    .    .    .    DR   .    . .   movdqa	%xmm14, %xmm15
+# CHECK-NEXT: [5,15]    .    .    .    DR   .    . .   movdqa	%xmm15, %xmm0
+# CHECK-NEXT: [6,0]     .    .    .    .DR  .    . .   movdqa	%xmm0, %xmm1
+# CHECK-NEXT: [6,1]     .    .    .    .DR  .    . .   movdqa	%xmm1, %xmm2
+# CHECK-NEXT: [6,2]     .    .    .    .DR  .    . .   movdqa	%xmm2, %xmm3
+# CHECK-NEXT: [6,3]     .    .    .    .DR  .    . .   movdqa	%xmm3, %xmm4
+# CHECK-NEXT: [6,4]     .    .    .    .DR  .    . .   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [6,5]     .    .    .    .DR  .    . .   movdqa	%xmm5, %xmm6
+# CHECK-NEXT: [6,6]     .    .    .    . DR .    . .   movdqa	%xmm6, %xmm7
+# CHECK-NEXT: [6,7]     .    .    .    . DR .    . .   movdqa	%xmm7, %xmm8
+# CHECK-NEXT: [6,8]     .    .    .    . DR .    . .   movdqa	%xmm8, %xmm9
+# CHECK-NEXT: [6,9]     .    .    .    . DR .    . .   movdqa	%xmm9, %xmm10
+# CHECK-NEXT: [6,10]    .    .    .    . DR .    . .   movdqa	%xmm10, %xmm11
+# CHECK-NEXT: [6,11]    .    .    .    . DR .    . .   movdqa	%xmm11, %xmm12
+# CHECK-NEXT: [6,12]    .    .    .    .  DR.    . .   movdqa	%xmm12, %xmm13
+# CHECK-NEXT: [6,13]    .    .    .    .  DR.    . .   movdqa	%xmm13, %xmm14
+# CHECK-NEXT: [6,14]    .    .    .    .  DR.    . .   movdqa	%xmm14, %xmm15
+# CHECK-NEXT: [6,15]    .    .    .    .  DR.    . .   movdqa	%xmm15, %xmm0
+# CHECK-NEXT: [7,0]     .    .    .    .  DR.    . .   movdqa	%xmm0, %xmm1
+# CHECK-NEXT: [7,1]     .    .    .    .  DR.    . .   movdqa	%xmm1, %xmm2
+# CHECK-NEXT: [7,2]     .    .    .    .   DR    . .   movdqa	%xmm2, %xmm3
+# CHECK-NEXT: [7,3]     .    .    .    .   DR    . .   movdqa	%xmm3, %xmm4
+# CHECK-NEXT: [7,4]     .    .    .    .   DR    . .   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [7,5]     .    .    .    .   DR    . .   movdqa	%xmm5, %xmm6
+# CHECK-NEXT: [7,6]     .    .    .    .   DR    . .   movdqa	%xmm6, %xmm7
+# CHECK-NEXT: [7,7]     .    .    .    .   DR    . .   movdqa	%xmm7, %xmm8
+# CHECK-NEXT: [7,8]     .    .    .    .    DR   . .   movdqa	%xmm8, %xmm9
+# CHECK-NEXT: [7,9]     .    .    .    .    DR   . .   movdqa	%xmm9, %xmm10
+# CHECK-NEXT: [7,10]    .    .    .    .    DR   . .   movdqa	%xmm10, %xmm11
+# CHECK-NEXT: [7,11]    .    .    .    .    DR   . .   movdqa	%xmm11, %xmm12
+# CHECK-NEXT: [7,12]    .    .    .    .    DR   . .   movdqa	%xmm12, %xmm13
+# CHECK-NEXT: [7,13]    .    .    .    .    DR   . .   movdqa	%xmm13, %xmm14
+# CHECK-NEXT: [7,14]    .    .    .    .    .DR  . .   movdqa	%xmm14, %xmm15
+# CHECK-NEXT: [7,15]    .    .    .    .    .DR  . .   movdqa	%xmm15, %xmm0
+# CHECK-NEXT: [8,0]     .    .    .    .    .DR  . .   movdqa	%xmm0, %xmm1
+# CHECK-NEXT: [8,1]     .    .    .    .    .DR  . .   movdqa	%xmm1, %xmm2
+# CHECK-NEXT: [8,2]     .    .    .    .    .DR  . .   movdqa	%xmm2, %xmm3
+# CHECK-NEXT: [8,3]     .    .    .    .    .DR  . .   movdqa	%xmm3, %xmm4
+# CHECK-NEXT: [8,4]     .    .    .    .    . DR . .   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [8,5]     .    .    .    .    . DR . .   movdqa	%xmm5, %xmm6
+# CHECK-NEXT: [8,6]     .    .    .    .    . DR . .   movdqa	%xmm6, %xmm7
+# CHECK-NEXT: [8,7]     .    .    .    .    . DR . .   movdqa	%xmm7, %xmm8
+# CHECK-NEXT: [8,8]     .    .    .    .    . DR . .   movdqa	%xmm8, %xmm9
+# CHECK-NEXT: [8,9]     .    .    .    .    . DR . .   movdqa	%xmm9, %xmm10
+# CHECK-NEXT: [8,10]    .    .    .    .    .  DR. .   movdqa	%xmm10, %xmm11
+# CHECK-NEXT: [8,11]    .    .    .    .    .  DR. .   movdqa	%xmm11, %xmm12
+# CHECK-NEXT: [8,12]    .    .    .    .    .  DR. .   movdqa	%xmm12, %xmm13
+# CHECK-NEXT: [8,13]    .    .    .    .    .  DR. .   movdqa	%xmm13, %xmm14
+# CHECK-NEXT: [8,14]    .    .    .    .    .  DR. .   movdqa	%xmm14, %xmm15
+# CHECK-NEXT: [8,15]    .    .    .    .    .  DR. .   movdqa	%xmm15, %xmm0
+# CHECK-NEXT: [9,0]     .    .    .    .    .   DR .   movdqa	%xmm0, %xmm1
+# CHECK-NEXT: [9,1]     .    .    .    .    .   DR .   movdqa	%xmm1, %xmm2
+# CHECK-NEXT: [9,2]     .    .    .    .    .   DR .   movdqa	%xmm2, %xmm3
+# CHECK-NEXT: [9,3]     .    .    .    .    .   DR .   movdqa	%xmm3, %xmm4
+# CHECK-NEXT: [9,4]     .    .    .    .    .   DR .   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [9,5]     .    .    .    .    .   DR .   movdqa	%xmm5, %xmm6
+# CHECK-NEXT: [9,6]     .    .    .    .    .    DR.   movdqa	%xmm6, %xmm7
+# CHECK-NEXT: [9,7]     .    .    .    .    .    DR.   movdqa	%xmm7, %xmm8
+# CHECK-NEXT: [9,8]     .    .    .    .    .    DR.   movdqa	%xmm8, %xmm9
+# CHECK-NEXT: [9,9]     .    .    .    .    .    DR.   movdqa	%xmm9, %xmm10
+# CHECK-NEXT: [9,10]    .    .    .    .    .    DR.   movdqa	%xmm10, %xmm11
+# CHECK-NEXT: [9,11]    .    .    .    .    .    DR.   movdqa	%xmm11, %xmm12
+# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR   movdqa	%xmm12, %xmm13
+# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR   movdqa	%xmm13, %xmm14
+# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR   movdqa	%xmm14, %xmm15
+# CHECK-NEXT: [9,15]    .    .    .    .    .    .DR   movdqa	%xmm15, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1547,34 +1567,34 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     10    7.3    1.0    0.0       movdqa	%xmm0, %xmm1
-# CHECK-NEXT: 1.     10    7.3    0.0    0.0       movdqa	%xmm1, %xmm2
-# CHECK-NEXT: 2.     10    7.0    0.0    0.0       movdqa	%xmm2, %xmm3
-# CHECK-NEXT: 3.     10    7.0    0.0    0.0       movdqa	%xmm3, %xmm4
-# CHECK-NEXT: 4.     10    7.7    1.0    0.0       movdqa	%xmm4, %xmm5
-# CHECK-NEXT: 5.     10    7.7    0.0    0.0       movdqa	%xmm5, %xmm6
-# CHECK-NEXT: 6.     10    7.3    0.0    0.0       movdqa	%xmm6, %xmm7
-# CHECK-NEXT: 7.     10    7.3    0.0    0.0       movdqa	%xmm7, %xmm8
-# CHECK-NEXT: 8.     10    8.0    1.0    0.0       movdqa	%xmm8, %xmm9
-# CHECK-NEXT: 9.     10    8.0    0.0    0.0       movdqa	%xmm9, %xmm10
-# CHECK-NEXT: 10.    10    7.7    0.0    0.0       movdqa	%xmm10, %xmm11
-# CHECK-NEXT: 11.    10    7.7    0.0    0.0       movdqa	%xmm11, %xmm12
-# CHECK-NEXT: 12.    10    8.3    1.0    0.0       movdqa	%xmm12, %xmm13
-# CHECK-NEXT: 13.    10    8.3    0.0    0.0       movdqa	%xmm13, %xmm14
-# CHECK-NEXT: 14.    10    8.0    0.0    0.0       movdqa	%xmm14, %xmm15
-# CHECK-NEXT: 15.    10    8.0    0.0    0.0       movdqa	%xmm15, %xmm0
-# CHECK-NEXT:        10    7.7    0.3    0.0       <total>
+# CHECK-NEXT: 0.     10    0.0    0.0    0.0       movdqa	%xmm0, %xmm1
+# CHECK-NEXT: 1.     10    0.0    0.0    0.0       movdqa	%xmm1, %xmm2
+# CHECK-NEXT: 2.     10    0.0    0.0    0.0       movdqa	%xmm2, %xmm3
+# CHECK-NEXT: 3.     10    0.0    0.0    0.0       movdqa	%xmm3, %xmm4
+# CHECK-NEXT: 4.     10    0.0    0.0    0.0       movdqa	%xmm4, %xmm5
+# CHECK-NEXT: 5.     10    0.0    0.0    0.0       movdqa	%xmm5, %xmm6
+# CHECK-NEXT: 6.     10    0.0    0.0    0.0       movdqa	%xmm6, %xmm7
+# CHECK-NEXT: 7.     10    0.0    0.0    0.0       movdqa	%xmm7, %xmm8
+# CHECK-NEXT: 8.     10    0.0    0.0    0.0       movdqa	%xmm8, %xmm9
+# CHECK-NEXT: 9.     10    0.0    0.0    0.0       movdqa	%xmm9, %xmm10
+# CHECK-NEXT: 10.    10    0.0    0.0    0.0       movdqa	%xmm10, %xmm11
+# CHECK-NEXT: 11.    10    0.0    0.0    0.0       movdqa	%xmm11, %xmm12
+# CHECK-NEXT: 12.    10    0.0    0.0    0.0       movdqa	%xmm12, %xmm13
+# CHECK-NEXT: 13.    10    0.0    0.0    0.0       movdqa	%xmm13, %xmm14
+# CHECK-NEXT: 14.    10    0.0    0.0    0.0       movdqa	%xmm14, %xmm15
+# CHECK-NEXT: 15.    10    0.0    0.0    0.0       movdqa	%xmm15, %xmm0
+# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
 
 # CHECK:      [5] Code Region
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      24000
-# CHECK-NEXT: Total Cycles:      6002
+# CHECK-NEXT: Total Cycles:      4001
 # CHECK-NEXT: Total uOps:        24000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    4.00
-# CHECK-NEXT: IPC:               4.00
+# CHECK-NEXT: uOps Per Cycle:    6.00
+# CHECK-NEXT: IPC:               6.00
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Instruction Info:
@@ -1604,13 +1624,17 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT:  1      0     0.25                        movdqu	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    24000
-# CHECK-NEXT: Max number of mappings used:         68
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 24000
-# CHECK-NEXT:    Max number of mappings used:      68
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      24000
+# CHECK-NEXT:    Number of moves eliminated:       24000  (100.0%)
+# CHECK-NEXT:    Number of zero moves:             0  (0.0%)
+# CHECK-NEXT:    Max moves eliminated per cycle:   6
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -1644,191 +1668,191 @@ movdqu %xmm15, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00   4.00   4.00    -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm0, %xmm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm2, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm3, %xmm4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm4, %xmm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm5, %xmm6
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm6, %xmm7
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm7, %xmm8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm8, %xmm9
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm9, %xmm10
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm10, %xmm11
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm11, %xmm12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm12, %xmm13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm13, %xmm14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm14, %xmm15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm15, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm0, %xmm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm2, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm3, %xmm4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm4, %xmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm5, %xmm6
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm6, %xmm7
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm7, %xmm8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm8, %xmm9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm9, %xmm10
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm10, %xmm11
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm11, %xmm12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm12, %xmm13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm13, %xmm14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm14, %xmm15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm15, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          01
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          01234567
 
-# CHECK:      [0,0]     DER  .    .    .    .    .    .    .    ..   movdqu	%xmm0, %xmm1
-# CHECK-NEXT: [0,1]     DER  .    .    .    .    .    .    .    ..   movdqu	%xmm1, %xmm2
-# CHECK-NEXT: [0,2]     DER  .    .    .    .    .    .    .    ..   movdqu	%xmm2, %xmm3
-# CHECK-NEXT: [0,3]     DER  .    .    .    .    .    .    .    ..   movdqu	%xmm3, %xmm4
-# CHECK-NEXT: [0,4]     D=ER .    .    .    .    .    .    .    ..   movdqu	%xmm4, %xmm5
-# CHECK-NEXT: [0,5]     D=ER .    .    .    .    .    .    .    ..   movdqu	%xmm5, %xmm6
-# CHECK-NEXT: [0,6]     .DER .    .    .    .    .    .    .    ..   movdqu	%xmm6, %xmm7
-# CHECK-NEXT: [0,7]     .DER .    .    .    .    .    .    .    ..   movdqu	%xmm7, %xmm8
-# CHECK-NEXT: [0,8]     .D=ER.    .    .    .    .    .    .    ..   movdqu	%xmm8, %xmm9
-# CHECK-NEXT: [0,9]     .D=ER.    .    .    .    .    .    .    ..   movdqu	%xmm9, %xmm10
-# CHECK-NEXT: [0,10]    .D=ER.    .    .    .    .    .    .    ..   movdqu	%xmm10, %xmm11
-# CHECK-NEXT: [0,11]    .D=ER.    .    .    .    .    .    .    ..   movdqu	%xmm11, %xmm12
-# CHECK-NEXT: [0,12]    . D=ER    .    .    .    .    .    .    ..   movdqu	%xmm12, %xmm13
-# CHECK-NEXT: [0,13]    . D=ER    .    .    .    .    .    .    ..   movdqu	%xmm13, %xmm14
-# CHECK-NEXT: [0,14]    . D=ER    .    .    .    .    .    .    ..   movdqu	%xmm14, %xmm15
-# CHECK-NEXT: [0,15]    . D=ER    .    .    .    .    .    .    ..   movdqu	%xmm15, %xmm0
-# CHECK-NEXT: [1,0]     . D==ER   .    .    .    .    .    .    ..   movdqu	%xmm0, %xmm1
-# CHECK-NEXT: [1,1]     . D==ER   .    .    .    .    .    .    ..   movdqu	%xmm1, %xmm2
-# CHECK-NEXT: [1,2]     .  D=ER   .    .    .    .    .    .    ..   movdqu	%xmm2, %xmm3
-# CHECK-NEXT: [1,3]     .  D=ER   .    .    .    .    .    .    ..   movdqu	%xmm3, %xmm4
-# CHECK-NEXT: [1,4]     .  D==ER  .    .    .    .    .    .    ..   movdqu	%xmm4, %xmm5
-# CHECK-NEXT: [1,5]     .  D==ER  .    .    .    .    .    .    ..   movdqu	%xmm5, %xmm6
-# CHECK-NEXT: [1,6]     .  D==ER  .    .    .    .    .    .    ..   movdqu	%xmm6, %xmm7
-# CHECK-NEXT: [1,7]     .  D==ER  .    .    .    .    .    .    ..   movdqu	%xmm7, %xmm8
-# CHECK-NEXT: [1,8]     .   D==ER .    .    .    .    .    .    ..   movdqu	%xmm8, %xmm9
-# CHECK-NEXT: [1,9]     .   D==ER .    .    .    .    .    .    ..   movdqu	%xmm9, %xmm10
-# CHECK-NEXT: [1,10]    .   D==ER .    .    .    .    .    .    ..   movdqu	%xmm10, %xmm11
-# CHECK-NEXT: [1,11]    .   D==ER .    .    .    .    .    .    ..   movdqu	%xmm11, %xmm12
-# CHECK-NEXT: [1,12]    .   D===ER.    .    .    .    .    .    ..   movdqu	%xmm12, %xmm13
-# CHECK-NEXT: [1,13]    .   D===ER.    .    .    .    .    .    ..   movdqu	%xmm13, %xmm14
-# CHECK-NEXT: [1,14]    .    D==ER.    .    .    .    .    .    ..   movdqu	%xmm14, %xmm15
-# CHECK-NEXT: [1,15]    .    D==ER.    .    .    .    .    .    ..   movdqu	%xmm15, %xmm0
-# CHECK-NEXT: [2,0]     .    D===ER    .    .    .    .    .    ..   movdqu	%xmm0, %xmm1
-# CHECK-NEXT: [2,1]     .    D===ER    .    .    .    .    .    ..   movdqu	%xmm1, %xmm2
-# CHECK-NEXT: [2,2]     .    D===ER    .    .    .    .    .    ..   movdqu	%xmm2, %xmm3
-# CHECK-NEXT: [2,3]     .    D===ER    .    .    .    .    .    ..   movdqu	%xmm3, %xmm4
-# CHECK-NEXT: [2,4]     .    .D===ER   .    .    .    .    .    ..   movdqu	%xmm4, %xmm5
-# CHECK-NEXT: [2,5]     .    .D===ER   .    .    .    .    .    ..   movdqu	%xmm5, %xmm6
-# CHECK-NEXT: [2,6]     .    .D===ER   .    .    .    .    .    ..   movdqu	%xmm6, %xmm7
-# CHECK-NEXT: [2,7]     .    .D===ER   .    .    .    .    .    ..   movdqu	%xmm7, %xmm8
-# CHECK-NEXT: [2,8]     .    .D====ER  .    .    .    .    .    ..   movdqu	%xmm8, %xmm9
-# CHECK-NEXT: [2,9]     .    .D====ER  .    .    .    .    .    ..   movdqu	%xmm9, %xmm10
-# CHECK-NEXT: [2,10]    .    . D===ER  .    .    .    .    .    ..   movdqu	%xmm10, %xmm11
-# CHECK-NEXT: [2,11]    .    . D===ER  .    .    .    .    .    ..   movdqu	%xmm11, %xmm12
-# CHECK-NEXT: [2,12]    .    . D====ER .    .    .    .    .    ..   movdqu	%xmm12, %xmm13
-# CHECK-NEXT: [2,13]    .    . D====ER .    .    .    .    .    ..   movdqu	%xmm13, %xmm14
-# CHECK-NEXT: [2,14]    .    . D====ER .    .    .    .    .    ..   movdqu	%xmm14, %xmm15
-# CHECK-NEXT: [2,15]    .    . D====ER .    .    .    .    .    ..   movdqu	%xmm15, %xmm0
-# CHECK-NEXT: [3,0]     .    .  D====ER.    .    .    .    .    ..   movdqu	%xmm0, %xmm1
-# CHECK-NEXT: [3,1]     .    .  D====ER.    .    .    .    .    ..   movdqu	%xmm1, %xmm2
-# CHECK-NEXT: [3,2]     .    .  D====ER.    .    .    .    .    ..   movdqu	%xmm2, %xmm3
-# CHECK-NEXT: [3,3]     .    .  D====ER.    .    .    .    .    ..   movdqu	%xmm3, %xmm4
-# CHECK-NEXT: [3,4]     .    .  D=====ER    .    .    .    .    ..   movdqu	%xmm4, %xmm5
-# CHECK-NEXT: [3,5]     .    .  D=====ER    .    .    .    .    ..   movdqu	%xmm5, %xmm6
-# CHECK-NEXT: [3,6]     .    .   D====ER    .    .    .    .    ..   movdqu	%xmm6, %xmm7
-# CHECK-NEXT: [3,7]     .    .   D====ER    .    .    .    .    ..   movdqu	%xmm7, %xmm8
-# CHECK-NEXT: [3,8]     .    .   D=====ER   .    .    .    .    ..   movdqu	%xmm8, %xmm9
-# CHECK-NEXT: [3,9]     .    .   D=====ER   .    .    .    .    ..   movdqu	%xmm9, %xmm10
-# CHECK-NEXT: [3,10]    .    .   D=====ER   .    .    .    .    ..   movdqu	%xmm10, %xmm11
-# CHECK-NEXT: [3,11]    .    .   D=====ER   .    .    .    .    ..   movdqu	%xmm11, %xmm12
-# CHECK-NEXT: [3,12]    .    .    D=====ER  .    .    .    .    ..   movdqu	%xmm12, %xmm13
-# CHECK-NEXT: [3,13]    .    .    D=====ER  .    .    .    .    ..   movdqu	%xmm13, %xmm14
-# CHECK-NEXT: [3,14]    .    .    D=====ER  .    .    .    .    ..   movdqu	%xmm14, %xmm15
-# CHECK-NEXT: [3,15]    .    .    D=====ER  .    .    .    .    ..   movdqu	%xmm15, %xmm0
-# CHECK-NEXT: [4,0]     .    .    D======ER .    .    .    .    ..   movdqu	%xmm0, %xmm1
-# CHECK-NEXT: [4,1]     .    .    D======ER .    .    .    .    ..   movdqu	%xmm1, %xmm2
-# CHECK-NEXT: [4,2]     .    .    .D=====ER .    .    .    .    ..   movdqu	%xmm2, %xmm3
-# CHECK-NEXT: [4,3]     .    .    .D=====ER .    .    .    .    ..   movdqu	%xmm3, %xmm4
-# CHECK-NEXT: [4,4]     .    .    .D======ER.    .    .    .    ..   movdqu	%xmm4, %xmm5
-# CHECK-NEXT: [4,5]     .    .    .D======ER.    .    .    .    ..   movdqu	%xmm5, %xmm6
-# CHECK-NEXT: [4,6]     .    .    .D======ER.    .    .    .    ..   movdqu	%xmm6, %xmm7
-# CHECK-NEXT: [4,7]     .    .    .D======ER.    .    .    .    ..   movdqu	%xmm7, %xmm8
-# CHECK-NEXT: [4,8]     .    .    . D======ER    .    .    .    ..   movdqu	%xmm8, %xmm9
-# CHECK-NEXT: [4,9]     .    .    . D======ER    .    .    .    ..   movdqu	%xmm9, %xmm10
-# CHECK-NEXT: [4,10]    .    .    . D======ER    .    .    .    ..   movdqu	%xmm10, %xmm11
-# CHECK-NEXT: [4,11]    .    .    . D======ER    .    .    .    ..   movdqu	%xmm11, %xmm12
-# CHECK-NEXT: [4,12]    .    .    . D=======ER   .    .    .    ..   movdqu	%xmm12, %xmm13
-# CHECK-NEXT: [4,13]    .    .    . D=======ER   .    .    .    ..   movdqu	%xmm13, %xmm14
-# CHECK-NEXT: [4,14]    .    .    .  D======ER   .    .    .    ..   movdqu	%xmm14, %xmm15
-# CHECK-NEXT: [4,15]    .    .    .  D======ER   .    .    .    ..   movdqu	%xmm15, %xmm0
-# CHECK-NEXT: [5,0]     .    .    .  D=======ER  .    .    .    ..   movdqu	%xmm0, %xmm1
-# CHECK-NEXT: [5,1]     .    .    .  D=======ER  .    .    .    ..   movdqu	%xmm1, %xmm2
-# CHECK-NEXT: [5,2]     .    .    .  D=======ER  .    .    .    ..   movdqu	%xmm2, %xmm3
-# CHECK-NEXT: [5,3]     .    .    .  D=======ER  .    .    .    ..   movdqu	%xmm3, %xmm4
-# CHECK-NEXT: [5,4]     .    .    .   D=======ER .    .    .    ..   movdqu	%xmm4, %xmm5
-# CHECK-NEXT: [5,5]     .    .    .   D=======ER .    .    .    ..   movdqu	%xmm5, %xmm6
-# CHECK-NEXT: [5,6]     .    .    .   D=======ER .    .    .    ..   movdqu	%xmm6, %xmm7
-# CHECK-NEXT: [5,7]     .    .    .   D=======ER .    .    .    ..   movdqu	%xmm7, %xmm8
-# CHECK-NEXT: [5,8]     .    .    .   D========ER.    .    .    ..   movdqu	%xmm8, %xmm9
-# CHECK-NEXT: [5,9]     .    .    .   D========ER.    .    .    ..   movdqu	%xmm9, %xmm10
-# CHECK-NEXT: [5,10]    .    .    .    D=======ER.    .    .    ..   movdqu	%xmm10, %xmm11
-# CHECK-NEXT: [5,11]    .    .    .    D=======ER.    .    .    ..   movdqu	%xmm11, %xmm12
-# CHECK-NEXT: [5,12]    .    .    .    D========ER    .    .    ..   movdqu	%xmm12, %xmm13
-# CHECK-NEXT: [5,13]    .    .    .    D========ER    .    .    ..   movdqu	%xmm13, %xmm14
-# CHECK-NEXT: [5,14]    .    .    .    D========ER    .    .    ..   movdqu	%xmm14, %xmm15
-# CHECK-NEXT: [5,15]    .    .    .    D========ER    .    .    ..   movdqu	%xmm15, %xmm0
-# CHECK-NEXT: [6,0]     .    .    .    .D========ER   .    .    ..   movdqu	%xmm0, %xmm1
-# CHECK-NEXT: [6,1]     .    .    .    .D========ER   .    .    ..   movdqu	%xmm1, %xmm2
-# CHECK-NEXT: [6,2]     .    .    .    .D========ER   .    .    ..   movdqu	%xmm2, %xmm3
-# CHECK-NEXT: [6,3]     .    .    .    .D========ER   .    .    ..   movdqu	%xmm3, %xmm4
-# CHECK-NEXT: [6,4]     .    .    .    .D=========ER  .    .    ..   movdqu	%xmm4, %xmm5
-# CHECK-NEXT: [6,5]     .    .    .    .D=========ER  .    .    ..   movdqu	%xmm5, %xmm6
-# CHECK-NEXT: [6,6]     .    .    .    . D========ER  .    .    ..   movdqu	%xmm6, %xmm7
-# CHECK-NEXT: [6,7]     .    .    .    . D========ER  .    .    ..   movdqu	%xmm7, %xmm8
-# CHECK-NEXT: [6,8]     .    .    .    . D=========ER .    .    ..   movdqu	%xmm8, %xmm9
-# CHECK-NEXT: [6,9]     .    .    .    . D=========ER .    .    ..   movdqu	%xmm9, %xmm10
-# CHECK-NEXT: [6,10]    .    .    .    . D=========ER .    .    ..   movdqu	%xmm10, %xmm11
-# CHECK-NEXT: [6,11]    .    .    .    . D=========ER .    .    ..   movdqu	%xmm11, %xmm12
-# CHECK-NEXT: [6,12]    .    .    .    .  D=========ER.    .    ..   movdqu	%xmm12, %xmm13
-# CHECK-NEXT: [6,13]    .    .    .    .  D=========ER.    .    ..   movdqu	%xmm13, %xmm14
-# CHECK-NEXT: [6,14]    .    .    .    .  D=========ER.    .    ..   movdqu	%xmm14, %xmm15
-# CHECK-NEXT: [6,15]    .    .    .    .  D=========ER.    .    ..   movdqu	%xmm15, %xmm0
-# CHECK-NEXT: [7,0]     .    .    .    .  D==========ER    .    ..   movdqu	%xmm0, %xmm1
-# CHECK-NEXT: [7,1]     .    .    .    .  D==========ER    .    ..   movdqu	%xmm1, %xmm2
-# CHECK-NEXT: [7,2]     .    .    .    .   D=========ER    .    ..   movdqu	%xmm2, %xmm3
-# CHECK-NEXT: [7,3]     .    .    .    .   D=========ER    .    ..   movdqu	%xmm3, %xmm4
-# CHECK-NEXT: [7,4]     .    .    .    .   D==========ER   .    ..   movdqu	%xmm4, %xmm5
-# CHECK-NEXT: [7,5]     .    .    .    .   D==========ER   .    ..   movdqu	%xmm5, %xmm6
-# CHECK-NEXT: [7,6]     .    .    .    .   D==========ER   .    ..   movdqu	%xmm6, %xmm7
-# CHECK-NEXT: [7,7]     .    .    .    .   D==========ER   .    ..   movdqu	%xmm7, %xmm8
-# CHECK-NEXT: [7,8]     .    .    .    .    D==========ER  .    ..   movdqu	%xmm8, %xmm9
-# CHECK-NEXT: [7,9]     .    .    .    .    D==========ER  .    ..   movdqu	%xmm9, %xmm10
-# CHECK-NEXT: [7,10]    .    .    .    .    D==========ER  .    ..   movdqu	%xmm10, %xmm11
-# CHECK-NEXT: [7,11]    .    .    .    .    D==========ER  .    ..   movdqu	%xmm11, %xmm12
-# CHECK-NEXT: [7,12]    .    .    .    .    D===========ER .    ..   movdqu	%xmm12, %xmm13
-# CHECK-NEXT: [7,13]    .    .    .    .    D===========ER .    ..   movdqu	%xmm13, %xmm14
-# CHECK-NEXT: [7,14]    .    .    .    .    .D==========ER .    ..   movdqu	%xmm14, %xmm15
-# CHECK-NEXT: [7,15]    .    .    .    .    .D==========ER .    ..   movdqu	%xmm15, %xmm0
-# CHECK-NEXT: [8,0]     .    .    .    .    .D===========ER.    ..   movdqu	%xmm0, %xmm1
-# CHECK-NEXT: [8,1]     .    .    .    .    .D===========ER.    ..   movdqu	%xmm1, %xmm2
-# CHECK-NEXT: [8,2]     .    .    .    .    .D===========ER.    ..   movdqu	%xmm2, %xmm3
-# CHECK-NEXT: [8,3]     .    .    .    .    .D===========ER.    ..   movdqu	%xmm3, %xmm4
-# CHECK-NEXT: [8,4]     .    .    .    .    . D===========ER    ..   movdqu	%xmm4, %xmm5
-# CHECK-NEXT: [8,5]     .    .    .    .    . D===========ER    ..   movdqu	%xmm5, %xmm6
-# CHECK-NEXT: [8,6]     .    .    .    .    . D===========ER    ..   movdqu	%xmm6, %xmm7
-# CHECK-NEXT: [8,7]     .    .    .    .    . D===========ER    ..   movdqu	%xmm7, %xmm8
-# CHECK-NEXT: [8,8]     .    .    .    .    . D============ER   ..   movdqu	%xmm8, %xmm9
-# CHECK-NEXT: [8,9]     .    .    .    .    . D============ER   ..   movdqu	%xmm9, %xmm10
-# CHECK-NEXT: [8,10]    .    .    .    .    .  D===========ER   ..   movdqu	%xmm10, %xmm11
-# CHECK-NEXT: [8,11]    .    .    .    .    .  D===========ER   ..   movdqu	%xmm11, %xmm12
-# CHECK-NEXT: [8,12]    .    .    .    .    .  D============ER  ..   movdqu	%xmm12, %xmm13
-# CHECK-NEXT: [8,13]    .    .    .    .    .  D============ER  ..   movdqu	%xmm13, %xmm14
-# CHECK-NEXT: [8,14]    .    .    .    .    .  D============ER  ..   movdqu	%xmm14, %xmm15
-# CHECK-NEXT: [8,15]    .    .    .    .    .  D============ER  ..   movdqu	%xmm15, %xmm0
-# CHECK-NEXT: [9,0]     .    .    .    .    .   D============ER ..   movdqu	%xmm0, %xmm1
-# CHECK-NEXT: [9,1]     .    .    .    .    .   D============ER ..   movdqu	%xmm1, %xmm2
-# CHECK-NEXT: [9,2]     .    .    .    .    .   D============ER ..   movdqu	%xmm2, %xmm3
-# CHECK-NEXT: [9,3]     .    .    .    .    .   D============ER ..   movdqu	%xmm3, %xmm4
-# CHECK-NEXT: [9,4]     .    .    .    .    .   D=============ER..   movdqu	%xmm4, %xmm5
-# CHECK-NEXT: [9,5]     .    .    .    .    .   D=============ER..   movdqu	%xmm5, %xmm6
-# CHECK-NEXT: [9,6]     .    .    .    .    .    D============ER..   movdqu	%xmm6, %xmm7
-# CHECK-NEXT: [9,7]     .    .    .    .    .    D============ER..   movdqu	%xmm7, %xmm8
-# CHECK-NEXT: [9,8]     .    .    .    .    .    D=============ER.   movdqu	%xmm8, %xmm9
-# CHECK-NEXT: [9,9]     .    .    .    .    .    D=============ER.   movdqu	%xmm9, %xmm10
-# CHECK-NEXT: [9,10]    .    .    .    .    .    D=============ER.   movdqu	%xmm10, %xmm11
-# CHECK-NEXT: [9,11]    .    .    .    .    .    D=============ER.   movdqu	%xmm11, %xmm12
-# CHECK-NEXT: [9,12]    .    .    .    .    .    .D=============ER   movdqu	%xmm12, %xmm13
-# CHECK-NEXT: [9,13]    .    .    .    .    .    .D=============ER   movdqu	%xmm13, %xmm14
-# CHECK-NEXT: [9,14]    .    .    .    .    .    .D=============ER   movdqu	%xmm14, %xmm15
-# CHECK-NEXT: [9,15]    .    .    .    .    .    .D=============ER   movdqu	%xmm15, %xmm0
+# CHECK:      [0,0]     DR   .    .    .    .    . .   movdqu	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DR   .    .    .    .    . .   movdqu	%xmm1, %xmm2
+# CHECK-NEXT: [0,2]     DR   .    .    .    .    . .   movdqu	%xmm2, %xmm3
+# CHECK-NEXT: [0,3]     DR   .    .    .    .    . .   movdqu	%xmm3, %xmm4
+# CHECK-NEXT: [0,4]     DR   .    .    .    .    . .   movdqu	%xmm4, %xmm5
+# CHECK-NEXT: [0,5]     DR   .    .    .    .    . .   movdqu	%xmm5, %xmm6
+# CHECK-NEXT: [0,6]     .DR  .    .    .    .    . .   movdqu	%xmm6, %xmm7
+# CHECK-NEXT: [0,7]     .DR  .    .    .    .    . .   movdqu	%xmm7, %xmm8
+# CHECK-NEXT: [0,8]     .DR  .    .    .    .    . .   movdqu	%xmm8, %xmm9
+# CHECK-NEXT: [0,9]     .DR  .    .    .    .    . .   movdqu	%xmm9, %xmm10
+# CHECK-NEXT: [0,10]    .DR  .    .    .    .    . .   movdqu	%xmm10, %xmm11
+# CHECK-NEXT: [0,11]    .DR  .    .    .    .    . .   movdqu	%xmm11, %xmm12
+# CHECK-NEXT: [0,12]    . DR .    .    .    .    . .   movdqu	%xmm12, %xmm13
+# CHECK-NEXT: [0,13]    . DR .    .    .    .    . .   movdqu	%xmm13, %xmm14
+# CHECK-NEXT: [0,14]    . DR .    .    .    .    . .   movdqu	%xmm14, %xmm15
+# CHECK-NEXT: [0,15]    . DR .    .    .    .    . .   movdqu	%xmm15, %xmm0
+# CHECK-NEXT: [1,0]     . DR .    .    .    .    . .   movdqu	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     . DR .    .    .    .    . .   movdqu	%xmm1, %xmm2
+# CHECK-NEXT: [1,2]     .  DR.    .    .    .    . .   movdqu	%xmm2, %xmm3
+# CHECK-NEXT: [1,3]     .  DR.    .    .    .    . .   movdqu	%xmm3, %xmm4
+# CHECK-NEXT: [1,4]     .  DR.    .    .    .    . .   movdqu	%xmm4, %xmm5
+# CHECK-NEXT: [1,5]     .  DR.    .    .    .    . .   movdqu	%xmm5, %xmm6
+# CHECK-NEXT: [1,6]     .  DR.    .    .    .    . .   movdqu	%xmm6, %xmm7
+# CHECK-NEXT: [1,7]     .  DR.    .    .    .    . .   movdqu	%xmm7, %xmm8
+# CHECK-NEXT: [1,8]     .   DR    .    .    .    . .   movdqu	%xmm8, %xmm9
+# CHECK-NEXT: [1,9]     .   DR    .    .    .    . .   movdqu	%xmm9, %xmm10
+# CHECK-NEXT: [1,10]    .   DR    .    .    .    . .   movdqu	%xmm10, %xmm11
+# CHECK-NEXT: [1,11]    .   DR    .    .    .    . .   movdqu	%xmm11, %xmm12
+# CHECK-NEXT: [1,12]    .   DR    .    .    .    . .   movdqu	%xmm12, %xmm13
+# CHECK-NEXT: [1,13]    .   DR    .    .    .    . .   movdqu	%xmm13, %xmm14
+# CHECK-NEXT: [1,14]    .    DR   .    .    .    . .   movdqu	%xmm14, %xmm15
+# CHECK-NEXT: [1,15]    .    DR   .    .    .    . .   movdqu	%xmm15, %xmm0
+# CHECK-NEXT: [2,0]     .    DR   .    .    .    . .   movdqu	%xmm0, %xmm1
+# CHECK-NEXT: [2,1]     .    DR   .    .    .    . .   movdqu	%xmm1, %xmm2
+# CHECK-NEXT: [2,2]     .    DR   .    .    .    . .   movdqu	%xmm2, %xmm3
+# CHECK-NEXT: [2,3]     .    DR   .    .    .    . .   movdqu	%xmm3, %xmm4
+# CHECK-NEXT: [2,4]     .    .DR  .    .    .    . .   movdqu	%xmm4, %xmm5
+# CHECK-NEXT: [2,5]     .    .DR  .    .    .    . .   movdqu	%xmm5, %xmm6
+# CHECK-NEXT: [2,6]     .    .DR  .    .    .    . .   movdqu	%xmm6, %xmm7
+# CHECK-NEXT: [2,7]     .    .DR  .    .    .    . .   movdqu	%xmm7, %xmm8
+# CHECK-NEXT: [2,8]     .    .DR  .    .    .    . .   movdqu	%xmm8, %xmm9
+# CHECK-NEXT: [2,9]     .    .DR  .    .    .    . .   movdqu	%xmm9, %xmm10
+# CHECK-NEXT: [2,10]    .    . DR .    .    .    . .   movdqu	%xmm10, %xmm11
+# CHECK-NEXT: [2,11]    .    . DR .    .    .    . .   movdqu	%xmm11, %xmm12
+# CHECK-NEXT: [2,12]    .    . DR .    .    .    . .   movdqu	%xmm12, %xmm13
+# CHECK-NEXT: [2,13]    .    . DR .    .    .    . .   movdqu	%xmm13, %xmm14
+# CHECK-NEXT: [2,14]    .    . DR .    .    .    . .   movdqu	%xmm14, %xmm15
+# CHECK-NEXT: [2,15]    .    . DR .    .    .    . .   movdqu	%xmm15, %xmm0
+# CHECK-NEXT: [3,0]     .    .  DR.    .    .    . .   movdqu	%xmm0, %xmm1
+# CHECK-NEXT: [3,1]     .    .  DR.    .    .    . .   movdqu	%xmm1, %xmm2
+# CHECK-NEXT: [3,2]     .    .  DR.    .    .    . .   movdqu	%xmm2, %xmm3
+# CHECK-NEXT: [3,3]     .    .  DR.    .    .    . .   movdqu	%xmm3, %xmm4
+# CHECK-NEXT: [3,4]     .    .  DR.    .    .    . .   movdqu	%xmm4, %xmm5
+# CHECK-NEXT: [3,5]     .    .  DR.    .    .    . .   movdqu	%xmm5, %xmm6
+# CHECK-NEXT: [3,6]     .    .   DR    .    .    . .   movdqu	%xmm6, %xmm7
+# CHECK-NEXT: [3,7]     .    .   DR    .    .    . .   movdqu	%xmm7, %xmm8
+# CHECK-NEXT: [3,8]     .    .   DR    .    .    . .   movdqu	%xmm8, %xmm9
+# CHECK-NEXT: [3,9]     .    .   DR    .    .    . .   movdqu	%xmm9, %xmm10
+# CHECK-NEXT: [3,10]    .    .   DR    .    .    . .   movdqu	%xmm10, %xmm11
+# CHECK-NEXT: [3,11]    .    .   DR    .    .    . .   movdqu	%xmm11, %xmm12
+# CHECK-NEXT: [3,12]    .    .    DR   .    .    . .   movdqu	%xmm12, %xmm13
+# CHECK-NEXT: [3,13]    .    .    DR   .    .    . .   movdqu	%xmm13, %xmm14
+# CHECK-NEXT: [3,14]    .    .    DR   .    .    . .   movdqu	%xmm14, %xmm15
+# CHECK-NEXT: [3,15]    .    .    DR   .    .    . .   movdqu	%xmm15, %xmm0
+# CHECK-NEXT: [4,0]     .    .    DR   .    .    . .   movdqu	%xmm0, %xmm1
+# CHECK-NEXT: [4,1]     .    .    DR   .    .    . .   movdqu	%xmm1, %xmm2
+# CHECK-NEXT: [4,2]     .    .    .DR  .    .    . .   movdqu	%xmm2, %xmm3
+# CHECK-NEXT: [4,3]     .    .    .DR  .    .    . .   movdqu	%xmm3, %xmm4
+# CHECK-NEXT: [4,4]     .    .    .DR  .    .    . .   movdqu	%xmm4, %xmm5
+# CHECK-NEXT: [4,5]     .    .    .DR  .    .    . .   movdqu	%xmm5, %xmm6
+# CHECK-NEXT: [4,6]     .    .    .DR  .    .    . .   movdqu	%xmm6, %xmm7
+# CHECK-NEXT: [4,7]     .    .    .DR  .    .    . .   movdqu	%xmm7, %xmm8
+# CHECK-NEXT: [4,8]     .    .    . DR .    .    . .   movdqu	%xmm8, %xmm9
+# CHECK-NEXT: [4,9]     .    .    . DR .    .    . .   movdqu	%xmm9, %xmm10
+# CHECK-NEXT: [4,10]    .    .    . DR .    .    . .   movdqu	%xmm10, %xmm11
+# CHECK-NEXT: [4,11]    .    .    . DR .    .    . .   movdqu	%xmm11, %xmm12
+# CHECK-NEXT: [4,12]    .    .    . DR .    .    . .   movdqu	%xmm12, %xmm13
+# CHECK-NEXT: [4,13]    .    .    . DR .    .    . .   movdqu	%xmm13, %xmm14
+# CHECK-NEXT: [4,14]    .    .    .  DR.    .    . .   movdqu	%xmm14, %xmm15
+# CHECK-NEXT: [4,15]    .    .    .  DR.    .    . .   movdqu	%xmm15, %xmm0
+# CHECK-NEXT: [5,0]     .    .    .  DR.    .    . .   movdqu	%xmm0, %xmm1
+# CHECK-NEXT: [5,1]     .    .    .  DR.    .    . .   movdqu	%xmm1, %xmm2
+# CHECK-NEXT: [5,2]     .    .    .  DR.    .    . .   movdqu	%xmm2, %xmm3
+# CHECK-NEXT: [5,3]     .    .    .  DR.    .    . .   movdqu	%xmm3, %xmm4
+# CHECK-NEXT: [5,4]     .    .    .   DR    .    . .   movdqu	%xmm4, %xmm5
+# CHECK-NEXT: [5,5]     .    .    .   DR    .    . .   movdqu	%xmm5, %xmm6
+# CHECK-NEXT: [5,6]     .    .    .   DR    .    . .   movdqu	%xmm6, %xmm7
+# CHECK-NEXT: [5,7]     .    .    .   DR    .    . .   movdqu	%xmm7, %xmm8
+# CHECK-NEXT: [5,8]     .    .    .   DR    .    . .   movdqu	%xmm8, %xmm9
+# CHECK-NEXT: [5,9]     .    .    .   DR    .    . .   movdqu	%xmm9, %xmm10
+# CHECK-NEXT: [5,10]    .    .    .    DR   .    . .   movdqu	%xmm10, %xmm11
+# CHECK-NEXT: [5,11]    .    .    .    DR   .    . .   movdqu	%xmm11, %xmm12
+# CHECK-NEXT: [5,12]    .    .    .    DR   .    . .   movdqu	%xmm12, %xmm13
+# CHECK-NEXT: [5,13]    .    .    .    DR   .    . .   movdqu	%xmm13, %xmm14
+# CHECK-NEXT: [5,14]    .    .    .    DR   .    . .   movdqu	%xmm14, %xmm15
+# CHECK-NEXT: [5,15]    .    .    .    DR   .    . .   movdqu	%xmm15, %xmm0
+# CHECK-NEXT: [6,0]     .    .    .    .DR  .    . .   movdqu	%xmm0, %xmm1
+# CHECK-NEXT: [6,1]     .    .    .    .DR  .    . .   movdqu	%xmm1, %xmm2
+# CHECK-NEXT: [6,2]     .    .    .    .DR  .    . .   movdqu	%xmm2, %xmm3
+# CHECK-NEXT: [6,3]     .    .    .    .DR  .    . .   movdqu	%xmm3, %xmm4
+# CHECK-NEXT: [6,4]     .    .    .    .DR  .    . .   movdqu	%xmm4, %xmm5
+# CHECK-NEXT: [6,5]     .    .    .    .DR  .    . .   movdqu	%xmm5, %xmm6
+# CHECK-NEXT: [6,6]     .    .    .    . DR .    . .   movdqu	%xmm6, %xmm7
+# CHECK-NEXT: [6,7]     .    .    .    . DR .    . .   movdqu	%xmm7, %xmm8
+# CHECK-NEXT: [6,8]     .    .    .    . DR .    . .   movdqu	%xmm8, %xmm9
+# CHECK-NEXT: [6,9]     .    .    .    . DR .    . .   movdqu	%xmm9, %xmm10
+# CHECK-NEXT: [6,10]    .    .    .    . DR .    . .   movdqu	%xmm10, %xmm11
+# CHECK-NEXT: [6,11]    .    .    .    . DR .    . .   movdqu	%xmm11, %xmm12
+# CHECK-NEXT: [6,12]    .    .    .    .  DR.    . .   movdqu	%xmm12, %xmm13
+# CHECK-NEXT: [6,13]    .    .    .    .  DR.    . .   movdqu	%xmm13, %xmm14
+# CHECK-NEXT: [6,14]    .    .    .    .  DR.    . .   movdqu	%xmm14, %xmm15
+# CHECK-NEXT: [6,15]    .    .    .    .  DR.    . .   movdqu	%xmm15, %xmm0
+# CHECK-NEXT: [7,0]     .    .    .    .  DR.    . .   movdqu	%xmm0, %xmm1
+# CHECK-NEXT: [7,1]     .    .    .    .  DR.    . .   movdqu	%xmm1, %xmm2
+# CHECK-NEXT: [7,2]     .    .    .    .   DR    . .   movdqu	%xmm2, %xmm3
+# CHECK-NEXT: [7,3]     .    .    .    .   DR    . .   movdqu	%xmm3, %xmm4
+# CHECK-NEXT: [7,4]     .    .    .    .   DR    . .   movdqu	%xmm4, %xmm5
+# CHECK-NEXT: [7,5]     .    .    .    .   DR    . .   movdqu	%xmm5, %xmm6
+# CHECK-NEXT: [7,6]     .    .    .    .   DR    . .   movdqu	%xmm6, %xmm7
+# CHECK-NEXT: [7,7]     .    .    .    .   DR    . .   movdqu	%xmm7, %xmm8
+# CHECK-NEXT: [7,8]     .    .    .    .    DR   . .   movdqu	%xmm8, %xmm9
+# CHECK-NEXT: [7,9]     .    .    .    .    DR   . .   movdqu	%xmm9, %xmm10
+# CHECK-NEXT: [7,10]    .    .    .    .    DR   . .   movdqu	%xmm10, %xmm11
+# CHECK-NEXT: [7,11]    .    .    .    .    DR   . .   movdqu	%xmm11, %xmm12
+# CHECK-NEXT: [7,12]    .    .    .    .    DR   . .   movdqu	%xmm12, %xmm13
+# CHECK-NEXT: [7,13]    .    .    .    .    DR   . .   movdqu	%xmm13, %xmm14
+# CHECK-NEXT: [7,14]    .    .    .    .    .DR  . .   movdqu	%xmm14, %xmm15
+# CHECK-NEXT: [7,15]    .    .    .    .    .DR  . .   movdqu	%xmm15, %xmm0
+# CHECK-NEXT: [8,0]     .    .    .    .    .DR  . .   movdqu	%xmm0, %xmm1
+# CHECK-NEXT: [8,1]     .    .    .    .    .DR  . .   movdqu	%xmm1, %xmm2
+# CHECK-NEXT: [8,2]     .    .    .    .    .DR  . .   movdqu	%xmm2, %xmm3
+# CHECK-NEXT: [8,3]     .    .    .    .    .DR  . .   movdqu	%xmm3, %xmm4
+# CHECK-NEXT: [8,4]     .    .    .    .    . DR . .   movdqu	%xmm4, %xmm5
+# CHECK-NEXT: [8,5]     .    .    .    .    . DR . .   movdqu	%xmm5, %xmm6
+# CHECK-NEXT: [8,6]     .    .    .    .    . DR . .   movdqu	%xmm6, %xmm7
+# CHECK-NEXT: [8,7]     .    .    .    .    . DR . .   movdqu	%xmm7, %xmm8
+# CHECK-NEXT: [8,8]     .    .    .    .    . DR . .   movdqu	%xmm8, %xmm9
+# CHECK-NEXT: [8,9]     .    .    .    .    . DR . .   movdqu	%xmm9, %xmm10
+# CHECK-NEXT: [8,10]    .    .    .    .    .  DR. .   movdqu	%xmm10, %xmm11
+# CHECK-NEXT: [8,11]    .    .    .    .    .  DR. .   movdqu	%xmm11, %xmm12
+# CHECK-NEXT: [8,12]    .    .    .    .    .  DR. .   movdqu	%xmm12, %xmm13
+# CHECK-NEXT: [8,13]    .    .    .    .    .  DR. .   movdqu	%xmm13, %xmm14
+# CHECK-NEXT: [8,14]    .    .    .    .    .  DR. .   movdqu	%xmm14, %xmm15
+# CHECK-NEXT: [8,15]    .    .    .    .    .  DR. .   movdqu	%xmm15, %xmm0
+# CHECK-NEXT: [9,0]     .    .    .    .    .   DR .   movdqu	%xmm0, %xmm1
+# CHECK-NEXT: [9,1]     .    .    .    .    .   DR .   movdqu	%xmm1, %xmm2
+# CHECK-NEXT: [9,2]     .    .    .    .    .   DR .   movdqu	%xmm2, %xmm3
+# CHECK-NEXT: [9,3]     .    .    .    .    .   DR .   movdqu	%xmm3, %xmm4
+# CHECK-NEXT: [9,4]     .    .    .    .    .   DR .   movdqu	%xmm4, %xmm5
+# CHECK-NEXT: [9,5]     .    .    .    .    .   DR .   movdqu	%xmm5, %xmm6
+# CHECK-NEXT: [9,6]     .    .    .    .    .    DR.   movdqu	%xmm6, %xmm7
+# CHECK-NEXT: [9,7]     .    .    .    .    .    DR.   movdqu	%xmm7, %xmm8
+# CHECK-NEXT: [9,8]     .    .    .    .    .    DR.   movdqu	%xmm8, %xmm9
+# CHECK-NEXT: [9,9]     .    .    .    .    .    DR.   movdqu	%xmm9, %xmm10
+# CHECK-NEXT: [9,10]    .    .    .    .    .    DR.   movdqu	%xmm10, %xmm11
+# CHECK-NEXT: [9,11]    .    .    .    .    .    DR.   movdqu	%xmm11, %xmm12
+# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR   movdqu	%xmm12, %xmm13
+# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR   movdqu	%xmm13, %xmm14
+# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR   movdqu	%xmm14, %xmm15
+# CHECK-NEXT: [9,15]    .    .    .    .    .    .DR   movdqu	%xmm15, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1837,20 +1861,20 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     10    7.3    1.0    0.0       movdqu	%xmm0, %xmm1
-# CHECK-NEXT: 1.     10    7.3    0.0    0.0       movdqu	%xmm1, %xmm2
-# CHECK-NEXT: 2.     10    7.0    0.0    0.0       movdqu	%xmm2, %xmm3
-# CHECK-NEXT: 3.     10    7.0    0.0    0.0       movdqu	%xmm3, %xmm4
-# CHECK-NEXT: 4.     10    7.7    1.0    0.0       movdqu	%xmm4, %xmm5
-# CHECK-NEXT: 5.     10    7.7    0.0    0.0       movdqu	%xmm5, %xmm6
-# CHECK-NEXT: 6.     10    7.3    0.0    0.0       movdqu	%xmm6, %xmm7
-# CHECK-NEXT: 7.     10    7.3    0.0    0.0       movdqu	%xmm7, %xmm8
-# CHECK-NEXT: 8.     10    8.0    1.0    0.0       movdqu	%xmm8, %xmm9
-# CHECK-NEXT: 9.     10    8.0    0.0    0.0       movdqu	%xmm9, %xmm10
-# CHECK-NEXT: 10.    10    7.7    0.0    0.0       movdqu	%xmm10, %xmm11
-# CHECK-NEXT: 11.    10    7.7    0.0    0.0       movdqu	%xmm11, %xmm12
-# CHECK-NEXT: 12.    10    8.3    1.0    0.0       movdqu	%xmm12, %xmm13
-# CHECK-NEXT: 13.    10    8.3    0.0    0.0       movdqu	%xmm13, %xmm14
-# CHECK-NEXT: 14.    10    8.0    0.0    0.0       movdqu	%xmm14, %xmm15
-# CHECK-NEXT: 15.    10    8.0    0.0    0.0       movdqu	%xmm15, %xmm0
-# CHECK-NEXT:        10    7.7    0.3    0.0       <total>
+# CHECK-NEXT: 0.     10    0.0    0.0    0.0       movdqu	%xmm0, %xmm1
+# CHECK-NEXT: 1.     10    0.0    0.0    0.0       movdqu	%xmm1, %xmm2
+# CHECK-NEXT: 2.     10    0.0    0.0    0.0       movdqu	%xmm2, %xmm3
+# CHECK-NEXT: 3.     10    0.0    0.0    0.0       movdqu	%xmm3, %xmm4
+# CHECK-NEXT: 4.     10    0.0    0.0    0.0       movdqu	%xmm4, %xmm5
+# CHECK-NEXT: 5.     10    0.0    0.0    0.0       movdqu	%xmm5, %xmm6
+# CHECK-NEXT: 6.     10    0.0    0.0    0.0       movdqu	%xmm6, %xmm7
+# CHECK-NEXT: 7.     10    0.0    0.0    0.0       movdqu	%xmm7, %xmm8
+# CHECK-NEXT: 8.     10    0.0    0.0    0.0       movdqu	%xmm8, %xmm9
+# CHECK-NEXT: 9.     10    0.0    0.0    0.0       movdqu	%xmm9, %xmm10
+# CHECK-NEXT: 10.    10    0.0    0.0    0.0       movdqu	%xmm10, %xmm11
+# CHECK-NEXT: 11.    10    0.0    0.0    0.0       movdqu	%xmm11, %xmm12
+# CHECK-NEXT: 12.    10    0.0    0.0    0.0       movdqu	%xmm12, %xmm13
+# CHECK-NEXT: 13.    10    0.0    0.0    0.0       movdqu	%xmm13, %xmm14
+# CHECK-NEXT: 14.    10    0.0    0.0    0.0       movdqu	%xmm14, %xmm15
+# CHECK-NEXT: 15.    10    0.0    0.0    0.0       movdqu	%xmm15, %xmm0
+# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
