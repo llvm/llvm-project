@@ -5042,6 +5042,9 @@ let TargetPrefix = "x86" in {
                         [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
                          ImmArg<ArgIndex<2>>]>;
   // AMX - internal intrinsics
+  def int_x86_ldtilecfg_internal :
+              GCCBuiltin<"__builtin_ia32_tile_loadconfig_internal">,
+              Intrinsic<[], [llvm_ptr_ty], []>;
   def int_x86_tileloadd64_internal :
               GCCBuiltin<"__builtin_ia32_tileloadd64_internal">,
               Intrinsic<[llvm_x86amx_ty],
