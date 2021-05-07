@@ -2966,7 +2966,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     int FrameIdx;
     unsigned Size = RegInfo->getSpillSize(*RC);
 
-    Align Alignment(RegInfo->getSpillAlignment(*RC));
+    Align Alignment(RegInfo->getSpillAlign(*RC));
     FrameIdx = MFI.CreateStackObject(Size, Alignment, true);
     CS.setFrameIdx(FrameIdx);
 
