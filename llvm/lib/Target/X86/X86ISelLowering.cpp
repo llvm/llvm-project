@@ -32281,7 +32281,7 @@ static MachineInstrBuilder createPHIsForCMOVsInSinkBB(
     MachineBasicBlock *SinkMBB) {
   MachineFunction *MF = TrueMBB->getParent();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
-  DebugLoc DL = MIItBegin->getDebugLoc();
+  const DebugLoc &DL = MIItBegin->getDebugLoc();
 
   X86::CondCode CC = X86::CondCode(MIItBegin->getOperand(3).getImm());
   X86::CondCode OppCC = X86::GetOppositeBranchCondition(CC);
@@ -32333,7 +32333,7 @@ X86TargetLowering::EmitLoweredCascadedSelect(MachineInstr &FirstCMOV,
                                              MachineInstr &SecondCascadedCMOV,
                                              MachineBasicBlock *ThisMBB) const {
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  DebugLoc DL = FirstCMOV.getDebugLoc();
+  const DebugLoc &DL = FirstCMOV.getDebugLoc();
 
   // We lower cascaded CMOVs such as
   //
