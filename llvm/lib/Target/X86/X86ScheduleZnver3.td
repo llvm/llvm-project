@@ -504,15 +504,6 @@ defm : Zn3WriteResInt<WriteStore, [Zn3AGU012, Zn3Store], Znver3Model.StoreLatenc
 defm : Zn3WriteResInt<WriteStoreNT, [Zn3AGU012, Zn3Store], Znver3Model.StoreLatency, [1, 2], 1>;
 defm : Zn3WriteResInt<WriteMove, [Zn3ALU0123], 1, [4], 1>;
 
-def Zn3WriteMoveRenameable : SchedWriteRes<[Zn3ALU0123]> {
-  let Latency = 0;
-  let ResourceCycles = [1];
-  let NumMicroOps = 1;
-}
-def : InstRW<[Zn3WriteMoveRenameable], (instrs MOV32rr, MOV32rr_REV,
-                                               MOV64rr, MOV64rr_REV,
-                                               MOVSX32rr32)>;
-
 def Zn3WriteMOVBE16rm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3ALU0123]> {
   let Latency = Znver3Model.LoadLatency;
   let ResourceCycles = [1, 1, 4];
@@ -688,8 +679,6 @@ def Zn3WriteCMPXCHG16B_LCMPXCHG16B : SchedWriteRes<[Zn3ALU0123]> {
   let NumMicroOps = 28;
 }
 def : InstRW<[Zn3WriteCMPXCHG16B_LCMPXCHG16B], (instrs CMPXCHG16B, LCMPXCHG16B)>;
-
-defm : Zn3WriteResInt<WriteXCHG, [Zn3ALU0123], 0, [8], 2>;        // Compare+Exchange - TODO RMW support.
 
 def Zn3WriteWriteXCHGUnrenameable : SchedWriteRes<[Zn3ALU0123]> {
   let Latency = 1;
@@ -896,10 +885,6 @@ defm : Zn3WriteResXMM<WriteFMaskedStore64, [Zn3FPSt, Zn3Store], Znver3Model.Stor
 defm : Zn3WriteResYMM<WriteFMaskedStore32Y, [Zn3FPSt, Zn3Store], Znver3Model.StoreLatency, [12, 1], 42>;
 defm : Zn3WriteResYMM<WriteFMaskedStore64Y, [Zn3FPSt, Zn3Store], Znver3Model.StoreLatency, [6, 1], 18>;
 
-defm : Zn3WriteResXMM<WriteFMove, [Zn3FPVMisc0123], 0, [1], 1>;
-defm : Zn3WriteResXMM<WriteFMoveX, [Zn3FPVMisc0123], 0, [1], 1>;
-defm : Zn3WriteResYMM<WriteFMoveY, [Zn3FPVMisc0123], 0, [1], 1>;
-
 defm : Zn3WriteResXMMPair<WriteFAdd, [Zn3FPFAdd01], 3, [1], 1>;  // Floating point add/sub.
 
 def Zn3WriteX87Arith : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPU0123]> {
@@ -1049,9 +1034,7 @@ defm : Zn3WriteResXMM<WriteVecMaskedStore32, [Zn3FPSt, Zn3Store], Znver3Model.St
 defm : Zn3WriteResXMM<WriteVecMaskedStore64, [Zn3FPSt, Zn3Store], Znver3Model.StoreLatency, [4, 1], 10>;
 defm : Zn3WriteResYMM<WriteVecMaskedStore32Y, [Zn3FPSt, Zn3Store], Znver3Model.StoreLatency, [12, 1], 42>;
 defm : Zn3WriteResYMM<WriteVecMaskedStore64Y, [Zn3FPSt, Zn3Store], Znver3Model.StoreLatency, [6, 1], 18>;
-defm : Zn3WriteResXMM<WriteVecMove, [Zn3FPFMisc0123], 1, [1], 1>;
-defm : Zn3WriteResXMM<WriteVecMoveX, [Zn3FPFMisc0123], 0, [1], 1>;
-defm : Zn3WriteResYMM<WriteVecMoveY, [Zn3FPFMisc0123], 0, [1], 1>;
+
 defm : Zn3WriteResXMM<WriteVecMoveToGpr, [Zn3FPLd01], 1, [2], 1>;
 defm : Zn3WriteResXMM<WriteVecMoveFromGpr, [Zn3FPLd01], 1, [2], 1>;
 
@@ -1458,6 +1441,25 @@ defm : Zn3WriteResInt<WriteNop, [Zn3ALU0123], 0, [1], 1>; // FIXME: latency not 
 ///////////////////////////////////////////////////////////////////////////////
 // Zero Cycle Move
 ///////////////////////////////////////////////////////////////////////////////
+
+def Zn3WriteMoveRenameable : SchedWriteRes<[Zn3ALU0123]> {
+  let Latency = 0;
+  let ResourceCycles = [1];
+  let NumMicroOps = 1;
+}
+def : InstRW<[Zn3WriteMoveRenameable], (instrs MOV32rr, MOV32rr_REV,
+                                               MOV64rr, MOV64rr_REV,
+                                               MOVSX32rr32)>;
+
+defm : Zn3WriteResInt<WriteXCHG, [Zn3ALU0123], 0, [8], 2>;        // Compare+Exchange - TODO RMW support.
+
+defm : Zn3WriteResXMM<WriteFMove, [Zn3FPVMisc0123], 1, [1], 1>; // Empty sched class
+defm : Zn3WriteResXMM<WriteFMoveX, [Zn3FPVMisc0123], 0, [1], 1>;
+defm : Zn3WriteResYMM<WriteFMoveY, [Zn3FPVMisc0123], 0, [1], 1>;
+
+defm : Zn3WriteResXMM<WriteVecMove, [Zn3FPFMisc0123], 1, [1], 1>; // MMX
+defm : Zn3WriteResXMM<WriteVecMoveX, [Zn3FPFMisc0123], 0, [1], 1>;
+defm : Zn3WriteResYMM<WriteVecMoveY, [Zn3FPFMisc0123], 0, [1], 1>;
 
 def : IsOptimizableRegisterMove<[
   InstructionEquivalenceClass<[
