@@ -1534,8 +1534,7 @@ TEST(LoopInfoTest, LoopUserBranch) {
   runWithLoopInfo(*M, "foo", [&](Function &F, LoopInfo &LI) {
     Function::iterator FI = F.begin();
     FI = ++FI;
-    BasicBlock *Guard = &*FI;
-    assert(Guard->getName() == "guard");
+    assert(FI->getName() == "guard");
 
     FI = ++FI;
     BasicBlock *Header = &*(++FI);
