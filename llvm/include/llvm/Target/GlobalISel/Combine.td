@@ -149,11 +149,12 @@ def combine_indexed_load_store : GICombineRule<
          [{ return Helper.matchCombineIndexedLoadStore(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineIndexedLoadStore(*${root}, ${matchinfo}); }])>;
 
+def opt_brcond_by_inverting_cond_matchdata : GIDefMatchData<"MachineInstr *">;
 def opt_brcond_by_inverting_cond : GICombineRule<
-  (defs root:$root),
+  (defs root:$root, opt_brcond_by_inverting_cond_matchdata:$matchinfo),
   (match (wip_match_opcode G_BR):$root,
-         [{ return Helper.matchOptBrCondByInvertingCond(*${root}); }]),
-  (apply [{ Helper.applyOptBrCondByInvertingCond(*${root}); }])>;
+         [{ return Helper.matchOptBrCondByInvertingCond(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyOptBrCondByInvertingCond(*${root}, ${matchinfo}); }])>;
 
 def ptr_add_immed_matchdata : GIDefMatchData<"PtrAddChain">;
 def ptr_add_immed_chain : GICombineRule<
