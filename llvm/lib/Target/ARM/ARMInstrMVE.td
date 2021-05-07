@@ -6877,6 +6877,18 @@ let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
         [(MVE_MEMCPYLOOPNODE rGPR:$dst, rGPR:$src, rGPR:$sz)]>;
 }
 
+def SDT_MVEMEMSETLOOPNODE
+    : SDTypeProfile<0, 3, [SDTCisPtrTy<0>, SDTCisVT<1, v16i8>, SDTCisVT<2, i32>]>;
+def MVE_MEMSETLOOPNODE : SDNode<"ARMISD::MEMSETLOOP", SDT_MVEMEMSETLOOPNODE,
+                                [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
+
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
+  def MVE_MEMSETLOOPINST : PseudoInst<(outs),
+        (ins rGPR:$dst, MQPR:$src, rGPR:$sz),
+        NoItinerary,
+        [(MVE_MEMSETLOOPNODE rGPR:$dst, MQPR:$src, rGPR:$sz)]>;
+}
+
 def MVE_DLSTP_8  : MVE_DLSTP<"dlstp.8",  0b00>;
 def MVE_DLSTP_16 : MVE_DLSTP<"dlstp.16", 0b01>;
 def MVE_DLSTP_32 : MVE_DLSTP<"dlstp.32", 0b10>;
