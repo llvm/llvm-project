@@ -1464,7 +1464,7 @@ defm : Zn3WriteResYMM<WriteVecMoveY, [Zn3FPFMisc0123], 0, [1], 1>;
 def : IsOptimizableRegisterMove<[
   InstructionEquivalenceClass<[
     // GPR variants.
-    MOV32rr, MOV64rr
+    MOV32rr, MOV64rr,
     // FIXME: MOVSXD32rr, but it is only supported in disassembler.
     // FIXME: XCHG32rr/XCHG64rr after MCA is fixed
 
@@ -1472,7 +1472,9 @@ def : IsOptimizableRegisterMove<[
     // MMX moves are *NOT* eliminated.
 
     // SSE variants.
-    // FIXME
+    MOVAPSrr, MOVUPSrr,
+    MOVAPDrr, MOVUPDrr,
+    MOVDQArr, MOVDQUrr
 
     // AVX variants.
     // FIXME
