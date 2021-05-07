@@ -81,7 +81,7 @@ xchgq %r15, %rax
 # CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    6.00
 # CHECK-NEXT: IPC:               6.00
-# CHECK-NEXT: Block RThroughput: 3.5
+# CHECK-NEXT: Block RThroughput: 2.3
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -92,20 +92,20 @@ xchgq %r15, %rax
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      0     0.25                        movl	%eax, %ecx
-# CHECK-NEXT:  1      0     0.25                        movl	%ecx, %edx
-# CHECK-NEXT:  1      0     0.25                        movl	%edx, %ebp
-# CHECK-NEXT:  1      0     0.25                        movl	%ebp, %esi
-# CHECK-NEXT:  1      0     0.25                        movl	%esi, %edi
-# CHECK-NEXT:  1      0     0.25                        movl	%edi, %r8d
-# CHECK-NEXT:  1      0     0.25                        movl	%r8d, %r9d
-# CHECK-NEXT:  1      0     0.25                        movl	%r9d, %r10d
-# CHECK-NEXT:  1      0     0.25                        movl	%r10d, %r11d
-# CHECK-NEXT:  1      0     0.25                        movl	%r11d, %r12d
-# CHECK-NEXT:  1      0     0.25                        movl	%r12d, %r13d
-# CHECK-NEXT:  1      0     0.25                        movl	%r13d, %r14d
-# CHECK-NEXT:  1      0     0.25                        movl	%r14d, %r15d
-# CHECK-NEXT:  1      0     0.25                        movl	%r15d, %eax
+# CHECK-NEXT:  1      0     0.17                        movl	%eax, %ecx
+# CHECK-NEXT:  1      0     0.17                        movl	%ecx, %edx
+# CHECK-NEXT:  1      0     0.17                        movl	%edx, %ebp
+# CHECK-NEXT:  1      0     0.17                        movl	%ebp, %esi
+# CHECK-NEXT:  1      0     0.17                        movl	%esi, %edi
+# CHECK-NEXT:  1      0     0.17                        movl	%edi, %r8d
+# CHECK-NEXT:  1      0     0.17                        movl	%r8d, %r9d
+# CHECK-NEXT:  1      0     0.17                        movl	%r9d, %r10d
+# CHECK-NEXT:  1      0     0.17                        movl	%r10d, %r11d
+# CHECK-NEXT:  1      0     0.17                        movl	%r11d, %r12d
+# CHECK-NEXT:  1      0     0.17                        movl	%r12d, %r13d
+# CHECK-NEXT:  1      0     0.17                        movl	%r13d, %r14d
+# CHECK-NEXT:  1      0     0.17                        movl	%r14d, %r15d
+# CHECK-NEXT:  1      0     0.17                        movl	%r15d, %eax
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    0
@@ -349,7 +349,7 @@ xchgq %r15, %rax
 # CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    6.00
 # CHECK-NEXT: IPC:               6.00
-# CHECK-NEXT: Block RThroughput: 3.5
+# CHECK-NEXT: Block RThroughput: 2.3
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -360,20 +360,20 @@ xchgq %r15, %rax
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      0     0.25                        movq	%rax, %rcx
-# CHECK-NEXT:  1      0     0.25                        movq	%rcx, %rdx
-# CHECK-NEXT:  1      0     0.25                        movq	%rdx, %rbp
-# CHECK-NEXT:  1      0     0.25                        movq	%rbp, %rsi
-# CHECK-NEXT:  1      0     0.25                        movq	%rsi, %rdi
-# CHECK-NEXT:  1      0     0.25                        movq	%rdi, %r8
-# CHECK-NEXT:  1      0     0.25                        movq	%r8, %r9
-# CHECK-NEXT:  1      0     0.25                        movq	%r9, %r10
-# CHECK-NEXT:  1      0     0.25                        movq	%r10, %r11
-# CHECK-NEXT:  1      0     0.25                        movq	%r11, %r12
-# CHECK-NEXT:  1      0     0.25                        movq	%r12, %r13
-# CHECK-NEXT:  1      0     0.25                        movq	%r13, %r14
-# CHECK-NEXT:  1      0     0.25                        movq	%r14, %r15
-# CHECK-NEXT:  1      0     0.25                        movq	%r15, %rax
+# CHECK-NEXT:  1      0     0.17                        movq	%rax, %rcx
+# CHECK-NEXT:  1      0     0.17                        movq	%rcx, %rdx
+# CHECK-NEXT:  1      0     0.17                        movq	%rdx, %rbp
+# CHECK-NEXT:  1      0     0.17                        movq	%rbp, %rsi
+# CHECK-NEXT:  1      0     0.17                        movq	%rsi, %rdi
+# CHECK-NEXT:  1      0     0.17                        movq	%rdi, %r8
+# CHECK-NEXT:  1      0     0.17                        movq	%r8, %r9
+# CHECK-NEXT:  1      0     0.17                        movq	%r9, %r10
+# CHECK-NEXT:  1      0     0.17                        movq	%r10, %r11
+# CHECK-NEXT:  1      0     0.17                        movq	%r11, %r12
+# CHECK-NEXT:  1      0     0.17                        movq	%r12, %r13
+# CHECK-NEXT:  1      0     0.17                        movq	%r13, %r14
+# CHECK-NEXT:  1      0     0.17                        movq	%r14, %r15
+# CHECK-NEXT:  1      0     0.17                        movq	%r15, %rax
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    0
