@@ -469,11 +469,15 @@ void StubHelperSection::setup() {
   in.got->addEntry(stubBinder);
 
   inputSections.push_back(in.imageLoaderCache);
+  // Since this isn't in the symbol table or in any input file, the noDeadStrip
+  // argument doesn't matter. It's kept alive by ImageLoaderCacheSection()
+  // setting `live` to true on the backing InputSection.
   dyldPrivate =
       make<Defined>("__dyld_private", nullptr, in.imageLoaderCache, 0, 0,
                     /*isWeakDef=*/false,
                     /*isExternal=*/false, /*isPrivateExtern=*/false,
-                    /*isThumb=*/false, /*isReferencedDynamically=*/false);
+                    /*isThumb=*/false, /*isReferencedDynamically=*/false,
+                    /*noDeadStrip=*/false);
 }
 
 ImageLoaderCacheSection::ImageLoaderCacheSection() {
@@ -483,6 +487,7 @@ ImageLoaderCacheSection::ImageLoaderCacheSection() {
   memset(arr, 0, target->wordSize);
   data = {arr, target->wordSize};
   align = target->wordSize;
+  live = true;
 }
 
 LazyPointerSection::LazyPointerSection()
@@ -571,7 +576,7 @@ void ExportSection::finalizeContents() {
   trieBuilder.setImageBase(in.header->addr);
   for (const Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
-      if (defined->privateExtern)
+      if (defined->privateExtern || !defined->isLive())
         continue;
       trieBuilder.addSymbol(*defined);
       hasWeakSymbol = hasWeakSymbol || sym->isWeakDef();
@@ -590,7 +595,7 @@ void FunctionStartsSection::finalizeContents() {
   uint64_t addr = in.header->addr;
   for (const Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
-      if (!defined->isec || !isCodeSection(defined->isec))
+      if (!defined->isec || !isCodeSection(defined->isec) || !defined->isLive())
         continue;
       // TODO: Add support for thumbs, in that case
       // the lowest bit of nextAddr needs to be set to 1.
@@ -667,6 +672,8 @@ void SymtabSection::emitStabs() {
   for (const SymtabEntry &entry :
        concat<SymtabEntry>(localSymbols, externalSymbols)) {
     Symbol *sym = entry.sym;
+    assert(sym->isLive() &&
+           "dead symbols should not be in localSymbols, externalSymbols");
     if (auto *defined = dyn_cast<Defined>(sym)) {
       if (defined->isAbsolute())
         continue;
@@ -729,12 +736,8 @@ void SymtabSection::finalizeContents() {
   for (const InputFile *file : inputFiles) {
     if (auto *objFile = dyn_cast<ObjFile>(file)) {
       for (Symbol *sym : objFile->symbols) {
-        if (sym == nullptr)
-          continue;
-        // TODO: when we implement -dead_strip, we should filter out symbols
-        // that belong to dead sections.
-        if (auto *defined = dyn_cast<Defined>(sym)) {
-          if (!defined->isExternal()) {
+        if (auto *defined = dyn_cast_or_null<Defined>(sym)) {
+          if (!defined->isExternal() && defined->isLive()) {
             StringRef name = defined->getName();
             if (!name.startswith("l") && !name.startswith("L"))
               addSymbol(localSymbols, sym);
@@ -750,6 +753,8 @@ void SymtabSection::finalizeContents() {
     addSymbol(localSymbols, dyldPrivate);
 
   for (Symbol *sym : symtab->getSymbols()) {
+    if (!sym->isLive())
+      continue;
     if (auto *defined = dyn_cast<Defined>(sym)) {
       if (!defined->includeInSymtab)
         continue;

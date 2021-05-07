@@ -111,6 +111,7 @@ struct Configuration {
   llvm::StringRef thinLTOJobs;
   bool deadStripDylibs = false;
   bool demangle = false;
+  bool deadStrip = false;
   PlatformInfo platformInfo;
   NamespaceKind namespaceKind = NamespaceKind::twolevel;
   UndefinedSymbolTreatment undefinedSymbolTreatment =
