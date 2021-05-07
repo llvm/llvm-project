@@ -459,7 +459,10 @@ getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes) {
     reassociation.emplace_back(ReassociationIndices{});
     std::swap(reassociation.back(), curr);
   }
-  if (!curr.empty())
+  // When the reassociations are not empty, then fold the remaining
+  // unit-dimensions into the last dimension.  If the reassociations so far is
+  // empty, then leave it emtpy. This will fold everything to a rank-0 tensor.
+  if (!curr.empty() && !reassociation.empty())
     reassociation.back().append(curr.begin(), curr.end());
   return reassociation;
 }
