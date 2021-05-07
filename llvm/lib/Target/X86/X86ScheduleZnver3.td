@@ -1466,7 +1466,7 @@ def : IsOptimizableRegisterMove<[
     // GPR variants.
     MOV32rr, MOV32rr_REV,
     MOV64rr, MOV64rr_REV,
-    // FIXME: MOVSXD32rr, but it is only supported in disassembler.
+    MOVSX32rr32,
     // FIXME: XCHG32rr/XCHG64rr after MCA is fixed
 
     // MMX variants.
