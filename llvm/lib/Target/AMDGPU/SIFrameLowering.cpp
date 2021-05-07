@@ -525,6 +525,7 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
     // The pointer to the GIT is formed from the offset passed in and either
     // the amdgpu-git-ptr-high function attribute or the top part of the PC
     Register Rsrc01 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0_sub1);
+    Register Rsrc03 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub3);
 
     buildGitPtr(MBB, I, DL, TII, Rsrc01);
 
@@ -546,6 +547,20 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
       .addImm(0) // cpol
       .addReg(ScratchRsrcReg, RegState::ImplicitDefine)
       .addMemOperand(MMO);
+
+    // The driver will always set the SRD for wave 64 (bits 118:117 of
+    // descriptor / bits 22:21 of third sub-reg will be 0b11)
+    // If the shader is actually wave32 we have to modify the const_index_stride
+    // field of the descriptor 3rd sub-reg (bits 22:21) to 0b10 (stride=32). The
+    // reason the driver does this is that there can be cases where it presents
+    // 2 shaders with different wave size (e.g. VsFs).
+    // TODO: convert to using SCRATCH instructions or multiple SRD buffers
+    if (ST.isWave32()) {
+      const MCInstrDesc &SBitsetB32 = TII->get(AMDGPU::S_BITSET0_B32);
+      BuildMI(MBB, I, DL, SBitsetB32, Rsrc03)
+          .addImm(21)
+          .addReg(Rsrc03, RegState::ImplicitDefine);
+    }
   } else if (ST.isMesaGfxShader(Fn) || !PreloadedScratchRsrcReg) {
     assert(!ST.isAmdHsaOrMesa(Fn));
     const MCInstrDesc &SMovB32 = TII->get(AMDGPU::S_MOV_B32);
