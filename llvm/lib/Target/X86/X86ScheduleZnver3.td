@@ -1479,7 +1479,12 @@ def : IsOptimizableRegisterMove<[
     // AVX variants.
     VMOVAPSrr, VMOVUPSrr,
     VMOVAPDrr, VMOVUPDrr,
-    VMOVDQArr, VMOVDQUrr
+    VMOVDQArr, VMOVDQUrr,
+
+    // AVX YMM variants.
+    VMOVAPSYrr, VMOVUPSYrr,
+    VMOVAPDYrr, VMOVUPDYrr,
+    VMOVDQAYrr, VMOVDQUYrr
   ], TruePred >
 ]>;
 
