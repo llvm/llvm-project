@@ -75,12 +75,12 @@ xchgq %r15, %rax
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      14
-# CHECK-NEXT: Total Cycles:      6
+# CHECK-NEXT: Total Cycles:      4
 # CHECK-NEXT: Total uOps:        14
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    2.33
-# CHECK-NEXT: IPC:               2.33
+# CHECK-NEXT: uOps Per Cycle:    3.50
+# CHECK-NEXT: IPC:               3.50
 # CHECK-NEXT: Block RThroughput: 3.5
 
 # CHECK:      Instruction Info:
@@ -108,8 +108,8 @@ xchgq %r15, %rax
 # CHECK-NEXT:  1      0     0.25                        movl	%r15d, %eax
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    14
-# CHECK-NEXT: Max number of mappings used:         12
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
@@ -118,8 +118,12 @@ xchgq %r15, %rax
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
-# CHECK-NEXT:    Total number of mappings created: 14
-# CHECK-NEXT:    Max number of mappings used:      12
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      14
+# CHECK-NEXT:    Number of moves eliminated:       14  (100.0%)
+# CHECK-NEXT:    Number of zero moves:             0  (0.0%)
+# CHECK-NEXT:    Max moves eliminated per cycle:   6
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - Zn3AGU0
@@ -148,42 +152,42 @@ xchgq %r15, %rax
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -     3.00   3.00   4.00   4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%eax, %ecx
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%ecx, %edx
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%edx, %ebp
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%ebp, %esi
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%esi, %edi
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%edi, %r8d
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%r8d, %r9d
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%r9d, %r10d
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%r10d, %r11d
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%r11d, %r12d
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%r12d, %r13d
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%r13d, %r14d
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%r14d, %r15d
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%r15d, %eax
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%eax, %ecx
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%ecx, %edx
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%edx, %ebp
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%ebp, %esi
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%esi, %edi
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%edi, %r8d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%r8d, %r9d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%r9d, %r10d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%r10d, %r11d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%r11d, %r12d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%r12d, %r13d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%r13d, %r14d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%r14d, %r15d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%r15d, %eax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345
+# CHECK-NEXT: Index     0123
 
-# CHECK:      [0,0]     DER  .   movl	%eax, %ecx
-# CHECK-NEXT: [0,1]     DER  .   movl	%ecx, %edx
-# CHECK-NEXT: [0,2]     DER  .   movl	%edx, %ebp
-# CHECK-NEXT: [0,3]     DER  .   movl	%ebp, %esi
-# CHECK-NEXT: [0,4]     D=ER .   movl	%esi, %edi
-# CHECK-NEXT: [0,5]     D=ER .   movl	%edi, %r8d
-# CHECK-NEXT: [0,6]     .DER .   movl	%r8d, %r9d
-# CHECK-NEXT: [0,7]     .DER .   movl	%r9d, %r10d
-# CHECK-NEXT: [0,8]     .D=ER.   movl	%r10d, %r11d
-# CHECK-NEXT: [0,9]     .D=ER.   movl	%r11d, %r12d
-# CHECK-NEXT: [0,10]    .D=ER.   movl	%r12d, %r13d
-# CHECK-NEXT: [0,11]    .D=ER.   movl	%r13d, %r14d
-# CHECK-NEXT: [0,12]    . D=ER   movl	%r14d, %r15d
-# CHECK-NEXT: [0,13]    . D=ER   movl	%r15d, %eax
+# CHECK:      [0,0]     DR .   movl	%eax, %ecx
+# CHECK-NEXT: [0,1]     DR .   movl	%ecx, %edx
+# CHECK-NEXT: [0,2]     DR .   movl	%edx, %ebp
+# CHECK-NEXT: [0,3]     DR .   movl	%ebp, %esi
+# CHECK-NEXT: [0,4]     DR .   movl	%esi, %edi
+# CHECK-NEXT: [0,5]     DR .   movl	%edi, %r8d
+# CHECK-NEXT: [0,6]     .DR.   movl	%r8d, %r9d
+# CHECK-NEXT: [0,7]     .DR.   movl	%r9d, %r10d
+# CHECK-NEXT: [0,8]     .DR.   movl	%r10d, %r11d
+# CHECK-NEXT: [0,9]     .DR.   movl	%r11d, %r12d
+# CHECK-NEXT: [0,10]    .DR.   movl	%r12d, %r13d
+# CHECK-NEXT: [0,11]    .DR.   movl	%r13d, %r14d
+# CHECK-NEXT: [0,12]    . DR   movl	%r14d, %r15d
+# CHECK-NEXT: [0,13]    . DR   movl	%r15d, %eax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -192,32 +196,32 @@ xchgq %r15, %rax
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     1     1.0    1.0    0.0       movl	%eax, %ecx
-# CHECK-NEXT: 1.     1     1.0    0.0    0.0       movl	%ecx, %edx
-# CHECK-NEXT: 2.     1     1.0    0.0    0.0       movl	%edx, %ebp
-# CHECK-NEXT: 3.     1     1.0    0.0    0.0       movl	%ebp, %esi
-# CHECK-NEXT: 4.     1     2.0    1.0    0.0       movl	%esi, %edi
-# CHECK-NEXT: 5.     1     2.0    0.0    0.0       movl	%edi, %r8d
-# CHECK-NEXT: 6.     1     1.0    0.0    0.0       movl	%r8d, %r9d
-# CHECK-NEXT: 7.     1     1.0    0.0    0.0       movl	%r9d, %r10d
-# CHECK-NEXT: 8.     1     2.0    1.0    0.0       movl	%r10d, %r11d
-# CHECK-NEXT: 9.     1     2.0    0.0    0.0       movl	%r11d, %r12d
-# CHECK-NEXT: 10.    1     2.0    0.0    0.0       movl	%r12d, %r13d
-# CHECK-NEXT: 11.    1     2.0    0.0    0.0       movl	%r13d, %r14d
-# CHECK-NEXT: 12.    1     2.0    1.0    0.0       movl	%r14d, %r15d
-# CHECK-NEXT: 13.    1     2.0    0.0    0.0       movl	%r15d, %eax
-# CHECK-NEXT:        1     1.6    0.3    0.0       <total>
+# CHECK-NEXT: 0.     1     0.0    0.0    0.0       movl	%eax, %ecx
+# CHECK-NEXT: 1.     1     0.0    0.0    0.0       movl	%ecx, %edx
+# CHECK-NEXT: 2.     1     0.0    0.0    0.0       movl	%edx, %ebp
+# CHECK-NEXT: 3.     1     0.0    0.0    0.0       movl	%ebp, %esi
+# CHECK-NEXT: 4.     1     0.0    0.0    0.0       movl	%esi, %edi
+# CHECK-NEXT: 5.     1     0.0    0.0    0.0       movl	%edi, %r8d
+# CHECK-NEXT: 6.     1     0.0    0.0    0.0       movl	%r8d, %r9d
+# CHECK-NEXT: 7.     1     0.0    0.0    0.0       movl	%r9d, %r10d
+# CHECK-NEXT: 8.     1     0.0    0.0    0.0       movl	%r10d, %r11d
+# CHECK-NEXT: 9.     1     0.0    0.0    0.0       movl	%r11d, %r12d
+# CHECK-NEXT: 10.    1     0.0    0.0    0.0       movl	%r12d, %r13d
+# CHECK-NEXT: 11.    1     0.0    0.0    0.0       movl	%r13d, %r14d
+# CHECK-NEXT: 12.    1     0.0    0.0    0.0       movl	%r14d, %r15d
+# CHECK-NEXT: 13.    1     0.0    0.0    0.0       movl	%r15d, %eax
+# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
 
 # CHECK:      [1] Code Region
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      14
-# CHECK-NEXT: Total Cycles:      6
+# CHECK-NEXT: Total Cycles:      4
 # CHECK-NEXT: Total uOps:        14
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    2.33
-# CHECK-NEXT: IPC:               2.33
+# CHECK-NEXT: uOps Per Cycle:    3.50
+# CHECK-NEXT: IPC:               3.50
 # CHECK-NEXT: Block RThroughput: 3.5
 
 # CHECK:      Instruction Info:
@@ -245,8 +249,8 @@ xchgq %r15, %rax
 # CHECK-NEXT:  1      0     0.25                        movq	%r15, %rax
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    14
-# CHECK-NEXT: Max number of mappings used:         12
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
@@ -255,8 +259,12 @@ xchgq %r15, %rax
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
-# CHECK-NEXT:    Total number of mappings created: 14
-# CHECK-NEXT:    Max number of mappings used:      12
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      14
+# CHECK-NEXT:    Number of moves eliminated:       14  (100.0%)
+# CHECK-NEXT:    Number of zero moves:             0  (0.0%)
+# CHECK-NEXT:    Max moves eliminated per cycle:   6
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - Zn3AGU0
@@ -285,42 +293,42 @@ xchgq %r15, %rax
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -     3.00   3.00   4.00   4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%rax, %rcx
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%rcx, %rdx
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%rdx, %rbp
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%rbp, %rsi
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%rsi, %rdi
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%rdi, %r8
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%r8, %r9
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%r9, %r10
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%r10, %r11
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%r11, %r12
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%r12, %r13
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%r13, %r14
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%r14, %r15
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%r15, %rax
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%rax, %rcx
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%rcx, %rdx
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%rdx, %rbp
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%rbp, %rsi
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%rsi, %rdi
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%rdi, %r8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%r8, %r9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%r9, %r10
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%r10, %r11
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%r11, %r12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%r12, %r13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%r13, %r14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%r14, %r15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%r15, %rax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345
+# CHECK-NEXT: Index     0123
 
-# CHECK:      [0,0]     DER  .   movq	%rax, %rcx
-# CHECK-NEXT: [0,1]     DER  .   movq	%rcx, %rdx
-# CHECK-NEXT: [0,2]     DER  .   movq	%rdx, %rbp
-# CHECK-NEXT: [0,3]     DER  .   movq	%rbp, %rsi
-# CHECK-NEXT: [0,4]     D=ER .   movq	%rsi, %rdi
-# CHECK-NEXT: [0,5]     D=ER .   movq	%rdi, %r8
-# CHECK-NEXT: [0,6]     .DER .   movq	%r8, %r9
-# CHECK-NEXT: [0,7]     .DER .   movq	%r9, %r10
-# CHECK-NEXT: [0,8]     .D=ER.   movq	%r10, %r11
-# CHECK-NEXT: [0,9]     .D=ER.   movq	%r11, %r12
-# CHECK-NEXT: [0,10]    .D=ER.   movq	%r12, %r13
-# CHECK-NEXT: [0,11]    .D=ER.   movq	%r13, %r14
-# CHECK-NEXT: [0,12]    . D=ER   movq	%r14, %r15
-# CHECK-NEXT: [0,13]    . D=ER   movq	%r15, %rax
+# CHECK:      [0,0]     DR .   movq	%rax, %rcx
+# CHECK-NEXT: [0,1]     DR .   movq	%rcx, %rdx
+# CHECK-NEXT: [0,2]     DR .   movq	%rdx, %rbp
+# CHECK-NEXT: [0,3]     DR .   movq	%rbp, %rsi
+# CHECK-NEXT: [0,4]     DR .   movq	%rsi, %rdi
+# CHECK-NEXT: [0,5]     DR .   movq	%rdi, %r8
+# CHECK-NEXT: [0,6]     .DR.   movq	%r8, %r9
+# CHECK-NEXT: [0,7]     .DR.   movq	%r9, %r10
+# CHECK-NEXT: [0,8]     .DR.   movq	%r10, %r11
+# CHECK-NEXT: [0,9]     .DR.   movq	%r11, %r12
+# CHECK-NEXT: [0,10]    .DR.   movq	%r12, %r13
+# CHECK-NEXT: [0,11]    .DR.   movq	%r13, %r14
+# CHECK-NEXT: [0,12]    . DR   movq	%r14, %r15
+# CHECK-NEXT: [0,13]    . DR   movq	%r15, %rax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -329,21 +337,21 @@ xchgq %r15, %rax
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     1     1.0    1.0    0.0       movq	%rax, %rcx
-# CHECK-NEXT: 1.     1     1.0    0.0    0.0       movq	%rcx, %rdx
-# CHECK-NEXT: 2.     1     1.0    0.0    0.0       movq	%rdx, %rbp
-# CHECK-NEXT: 3.     1     1.0    0.0    0.0       movq	%rbp, %rsi
-# CHECK-NEXT: 4.     1     2.0    1.0    0.0       movq	%rsi, %rdi
-# CHECK-NEXT: 5.     1     2.0    0.0    0.0       movq	%rdi, %r8
-# CHECK-NEXT: 6.     1     1.0    0.0    0.0       movq	%r8, %r9
-# CHECK-NEXT: 7.     1     1.0    0.0    0.0       movq	%r9, %r10
-# CHECK-NEXT: 8.     1     2.0    1.0    0.0       movq	%r10, %r11
-# CHECK-NEXT: 9.     1     2.0    0.0    0.0       movq	%r11, %r12
-# CHECK-NEXT: 10.    1     2.0    0.0    0.0       movq	%r12, %r13
-# CHECK-NEXT: 11.    1     2.0    0.0    0.0       movq	%r13, %r14
-# CHECK-NEXT: 12.    1     2.0    1.0    0.0       movq	%r14, %r15
-# CHECK-NEXT: 13.    1     2.0    0.0    0.0       movq	%r15, %rax
-# CHECK-NEXT:        1     1.6    0.3    0.0       <total>
+# CHECK-NEXT: 0.     1     0.0    0.0    0.0       movq	%rax, %rcx
+# CHECK-NEXT: 1.     1     0.0    0.0    0.0       movq	%rcx, %rdx
+# CHECK-NEXT: 2.     1     0.0    0.0    0.0       movq	%rdx, %rbp
+# CHECK-NEXT: 3.     1     0.0    0.0    0.0       movq	%rbp, %rsi
+# CHECK-NEXT: 4.     1     0.0    0.0    0.0       movq	%rsi, %rdi
+# CHECK-NEXT: 5.     1     0.0    0.0    0.0       movq	%rdi, %r8
+# CHECK-NEXT: 6.     1     0.0    0.0    0.0       movq	%r8, %r9
+# CHECK-NEXT: 7.     1     0.0    0.0    0.0       movq	%r9, %r10
+# CHECK-NEXT: 8.     1     0.0    0.0    0.0       movq	%r10, %r11
+# CHECK-NEXT: 9.     1     0.0    0.0    0.0       movq	%r11, %r12
+# CHECK-NEXT: 10.    1     0.0    0.0    0.0       movq	%r12, %r13
+# CHECK-NEXT: 11.    1     0.0    0.0    0.0       movq	%r13, %r14
+# CHECK-NEXT: 12.    1     0.0    0.0    0.0       movq	%r14, %r15
+# CHECK-NEXT: 13.    1     0.0    0.0    0.0       movq	%r15, %rax
+# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
 
 # CHECK:      [2] Code Region
 

@@ -158,7 +158,9 @@ def Zn3ALU12 : ProcResGroup<[Zn3ALU1, Zn3ALU2]>;
 
 // AMD SOG 19h, 2.10.3 Retire Control Unit
 // The integer physical register file (PRF) consists of 192 registers.
-def Zn3IntegerPRF : RegisterFile<192, [GR64, CCR]>;
+def Zn3IntegerPRF : RegisterFile<192, [GR64, CCR], [1, 1], [1, 0],
+                              6,  // Max moves that can be eliminated per cycle.
+                              0>; // Restrict move elimination to zero regs.
 
 // anandtech, The integer scheduler has a 4*24 entry macro op capacity.
 // AMD SOG 19h, 2.10.1 Schedulers
@@ -1451,5 +1453,28 @@ def : InstRW<[Zn3WriteSFENCE], (instrs SFENCE)>;
 
 // Nop, not very useful expect it provides a model for nops!
 defm : Zn3WriteResInt<WriteNop, [Zn3ALU0123], 0, [1], 1>; // FIXME: latency not from llvm-exegesis
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Zero Cycle Move
+///////////////////////////////////////////////////////////////////////////////
+
+def : IsOptimizableRegisterMove<[
+  InstructionEquivalenceClass<[
+    // GPR variants.
+    MOV32rr, MOV64rr
+    // FIXME: MOVSXD32rr, but it is only supported in disassembler.
+    // FIXME: XCHG32rr/XCHG64rr after MCA is fixed
+
+    // MMX variants.
+    // MMX moves are *NOT* eliminated.
+
+    // SSE variants.
+    // FIXME
+
+    // AVX variants.
+    // FIXME
+  ], TruePred >
+]>;
 
 } // SchedModel
