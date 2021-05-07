@@ -119,13 +119,13 @@ vmovdqu %xmm15, %xmm0
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      24000
-# CHECK-NEXT: Total Cycles:      4002
+# CHECK-NEXT: Total Cycles:      4001
 # CHECK-NEXT: Total uOps:        24000
 
 # CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    6.00
 # CHECK-NEXT: IPC:               6.00
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: Block RThroughput: 2.7
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -136,22 +136,22 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%xmm0, %xmm1
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%xmm1, %xmm2
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%xmm2, %xmm3
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%xmm3, %xmm4
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%xmm4, %xmm5
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%xmm5, %xmm6
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%xmm6, %xmm7
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%xmm7, %xmm8
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%xmm8, %xmm9
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%xmm9, %xmm10
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%xmm10, %xmm11
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%xmm11, %xmm12
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%xmm12, %xmm13
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%xmm13, %xmm14
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%xmm14, %xmm15
-# CHECK-NEXT:  1      0     0.25                        vmovaps	%xmm15, %xmm0
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm0, %xmm1
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm1, %xmm2
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm2, %xmm3
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm3, %xmm4
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm4, %xmm5
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm5, %xmm6
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm6, %xmm7
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm7, %xmm8
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm8, %xmm9
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm9, %xmm10
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm10, %xmm11
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm11, %xmm12
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm12, %xmm13
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm13, %xmm14
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm14, %xmm15
+# CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    1500
@@ -198,7 +198,7 @@ vmovdqu %xmm15, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
@@ -217,172 +217,172 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovaps	%xmm12, %xmm13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovaps	%xmm13, %xmm14
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovaps	%xmm14, %xmm15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovaps	%xmm15, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovaps	%xmm15, %xmm0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012345678
+# CHECK-NEXT: Index     0123456789          01234567
 
-# CHECK:      [0,0]     DR   .    .    .    .    .  .   vmovaps	%xmm0, %xmm1
-# CHECK-NEXT: [0,1]     DR   .    .    .    .    .  .   vmovaps	%xmm1, %xmm2
-# CHECK-NEXT: [0,2]     DR   .    .    .    .    .  .   vmovaps	%xmm2, %xmm3
-# CHECK-NEXT: [0,3]     DR   .    .    .    .    .  .   vmovaps	%xmm3, %xmm4
-# CHECK-NEXT: [0,4]     DR   .    .    .    .    .  .   vmovaps	%xmm4, %xmm5
-# CHECK-NEXT: [0,5]     DR   .    .    .    .    .  .   vmovaps	%xmm5, %xmm6
-# CHECK-NEXT: [0,6]     .DR  .    .    .    .    .  .   vmovaps	%xmm6, %xmm7
-# CHECK-NEXT: [0,7]     .DR  .    .    .    .    .  .   vmovaps	%xmm7, %xmm8
-# CHECK-NEXT: [0,8]     .DR  .    .    .    .    .  .   vmovaps	%xmm8, %xmm9
-# CHECK-NEXT: [0,9]     .DR  .    .    .    .    .  .   vmovaps	%xmm9, %xmm10
-# CHECK-NEXT: [0,10]    .DR  .    .    .    .    .  .   vmovaps	%xmm10, %xmm11
-# CHECK-NEXT: [0,11]    .DR  .    .    .    .    .  .   vmovaps	%xmm11, %xmm12
-# CHECK-NEXT: [0,12]    . DR .    .    .    .    .  .   vmovaps	%xmm12, %xmm13
-# CHECK-NEXT: [0,13]    . DR .    .    .    .    .  .   vmovaps	%xmm13, %xmm14
-# CHECK-NEXT: [0,14]    . DR .    .    .    .    .  .   vmovaps	%xmm14, %xmm15
-# CHECK-NEXT: [0,15]    . DER.    .    .    .    .  .   vmovaps	%xmm15, %xmm0
-# CHECK-NEXT: [1,0]     . D-R.    .    .    .    .  .   vmovaps	%xmm0, %xmm1
-# CHECK-NEXT: [1,1]     . D-R.    .    .    .    .  .   vmovaps	%xmm1, %xmm2
-# CHECK-NEXT: [1,2]     .  DR.    .    .    .    .  .   vmovaps	%xmm2, %xmm3
-# CHECK-NEXT: [1,3]     .  DR.    .    .    .    .  .   vmovaps	%xmm3, %xmm4
-# CHECK-NEXT: [1,4]     .  DR.    .    .    .    .  .   vmovaps	%xmm4, %xmm5
-# CHECK-NEXT: [1,5]     .  DR.    .    .    .    .  .   vmovaps	%xmm5, %xmm6
-# CHECK-NEXT: [1,6]     .  DR.    .    .    .    .  .   vmovaps	%xmm6, %xmm7
-# CHECK-NEXT: [1,7]     .  D-R    .    .    .    .  .   vmovaps	%xmm7, %xmm8
-# CHECK-NEXT: [1,8]     .   DR    .    .    .    .  .   vmovaps	%xmm8, %xmm9
-# CHECK-NEXT: [1,9]     .   DR    .    .    .    .  .   vmovaps	%xmm9, %xmm10
-# CHECK-NEXT: [1,10]    .   DR    .    .    .    .  .   vmovaps	%xmm10, %xmm11
-# CHECK-NEXT: [1,11]    .   DR    .    .    .    .  .   vmovaps	%xmm11, %xmm12
-# CHECK-NEXT: [1,12]    .   DR    .    .    .    .  .   vmovaps	%xmm12, %xmm13
-# CHECK-NEXT: [1,13]    .   DR    .    .    .    .  .   vmovaps	%xmm13, %xmm14
-# CHECK-NEXT: [1,14]    .    DR   .    .    .    .  .   vmovaps	%xmm14, %xmm15
-# CHECK-NEXT: [1,15]    .    DER  .    .    .    .  .   vmovaps	%xmm15, %xmm0
-# CHECK-NEXT: [2,0]     .    D-R  .    .    .    .  .   vmovaps	%xmm0, %xmm1
-# CHECK-NEXT: [2,1]     .    D-R  .    .    .    .  .   vmovaps	%xmm1, %xmm2
-# CHECK-NEXT: [2,2]     .    D-R  .    .    .    .  .   vmovaps	%xmm2, %xmm3
-# CHECK-NEXT: [2,3]     .    D-R  .    .    .    .  .   vmovaps	%xmm3, %xmm4
-# CHECK-NEXT: [2,4]     .    .DR  .    .    .    .  .   vmovaps	%xmm4, %xmm5
-# CHECK-NEXT: [2,5]     .    .DR  .    .    .    .  .   vmovaps	%xmm5, %xmm6
-# CHECK-NEXT: [2,6]     .    .DR  .    .    .    .  .   vmovaps	%xmm6, %xmm7
-# CHECK-NEXT: [2,7]     .    .D-R .    .    .    .  .   vmovaps	%xmm7, %xmm8
-# CHECK-NEXT: [2,8]     .    .D-R .    .    .    .  .   vmovaps	%xmm8, %xmm9
-# CHECK-NEXT: [2,9]     .    .D-R .    .    .    .  .   vmovaps	%xmm9, %xmm10
-# CHECK-NEXT: [2,10]    .    . DR .    .    .    .  .   vmovaps	%xmm10, %xmm11
-# CHECK-NEXT: [2,11]    .    . DR .    .    .    .  .   vmovaps	%xmm11, %xmm12
-# CHECK-NEXT: [2,12]    .    . DR .    .    .    .  .   vmovaps	%xmm12, %xmm13
-# CHECK-NEXT: [2,13]    .    . DR .    .    .    .  .   vmovaps	%xmm13, %xmm14
-# CHECK-NEXT: [2,14]    .    . DR .    .    .    .  .   vmovaps	%xmm14, %xmm15
-# CHECK-NEXT: [2,15]    .    . DER.    .    .    .  .   vmovaps	%xmm15, %xmm0
-# CHECK-NEXT: [3,0]     .    .  DR.    .    .    .  .   vmovaps	%xmm0, %xmm1
-# CHECK-NEXT: [3,1]     .    .  DR.    .    .    .  .   vmovaps	%xmm1, %xmm2
-# CHECK-NEXT: [3,2]     .    .  DR.    .    .    .  .   vmovaps	%xmm2, %xmm3
-# CHECK-NEXT: [3,3]     .    .  DR.    .    .    .  .   vmovaps	%xmm3, %xmm4
-# CHECK-NEXT: [3,4]     .    .  DR.    .    .    .  .   vmovaps	%xmm4, %xmm5
-# CHECK-NEXT: [3,5]     .    .  DR.    .    .    .  .   vmovaps	%xmm5, %xmm6
-# CHECK-NEXT: [3,6]     .    .   DR    .    .    .  .   vmovaps	%xmm6, %xmm7
-# CHECK-NEXT: [3,7]     .    .   DR    .    .    .  .   vmovaps	%xmm7, %xmm8
-# CHECK-NEXT: [3,8]     .    .   DR    .    .    .  .   vmovaps	%xmm8, %xmm9
-# CHECK-NEXT: [3,9]     .    .   DR    .    .    .  .   vmovaps	%xmm9, %xmm10
-# CHECK-NEXT: [3,10]    .    .   DR    .    .    .  .   vmovaps	%xmm10, %xmm11
-# CHECK-NEXT: [3,11]    .    .   DR    .    .    .  .   vmovaps	%xmm11, %xmm12
-# CHECK-NEXT: [3,12]    .    .    DR   .    .    .  .   vmovaps	%xmm12, %xmm13
-# CHECK-NEXT: [3,13]    .    .    DR   .    .    .  .   vmovaps	%xmm13, %xmm14
-# CHECK-NEXT: [3,14]    .    .    DR   .    .    .  .   vmovaps	%xmm14, %xmm15
-# CHECK-NEXT: [3,15]    .    .    DER  .    .    .  .   vmovaps	%xmm15, %xmm0
-# CHECK-NEXT: [4,0]     .    .    D-R  .    .    .  .   vmovaps	%xmm0, %xmm1
-# CHECK-NEXT: [4,1]     .    .    D-R  .    .    .  .   vmovaps	%xmm1, %xmm2
-# CHECK-NEXT: [4,2]     .    .    .DR  .    .    .  .   vmovaps	%xmm2, %xmm3
-# CHECK-NEXT: [4,3]     .    .    .DR  .    .    .  .   vmovaps	%xmm3, %xmm4
-# CHECK-NEXT: [4,4]     .    .    .DR  .    .    .  .   vmovaps	%xmm4, %xmm5
-# CHECK-NEXT: [4,5]     .    .    .DR  .    .    .  .   vmovaps	%xmm5, %xmm6
-# CHECK-NEXT: [4,6]     .    .    .DR  .    .    .  .   vmovaps	%xmm6, %xmm7
-# CHECK-NEXT: [4,7]     .    .    .D-R .    .    .  .   vmovaps	%xmm7, %xmm8
-# CHECK-NEXT: [4,8]     .    .    . DR .    .    .  .   vmovaps	%xmm8, %xmm9
-# CHECK-NEXT: [4,9]     .    .    . DR .    .    .  .   vmovaps	%xmm9, %xmm10
-# CHECK-NEXT: [4,10]    .    .    . DR .    .    .  .   vmovaps	%xmm10, %xmm11
-# CHECK-NEXT: [4,11]    .    .    . DR .    .    .  .   vmovaps	%xmm11, %xmm12
-# CHECK-NEXT: [4,12]    .    .    . DR .    .    .  .   vmovaps	%xmm12, %xmm13
-# CHECK-NEXT: [4,13]    .    .    . DR .    .    .  .   vmovaps	%xmm13, %xmm14
-# CHECK-NEXT: [4,14]    .    .    .  DR.    .    .  .   vmovaps	%xmm14, %xmm15
-# CHECK-NEXT: [4,15]    .    .    .  DER    .    .  .   vmovaps	%xmm15, %xmm0
-# CHECK-NEXT: [5,0]     .    .    .  D-R    .    .  .   vmovaps	%xmm0, %xmm1
-# CHECK-NEXT: [5,1]     .    .    .  D-R    .    .  .   vmovaps	%xmm1, %xmm2
-# CHECK-NEXT: [5,2]     .    .    .  D-R    .    .  .   vmovaps	%xmm2, %xmm3
-# CHECK-NEXT: [5,3]     .    .    .  D-R    .    .  .   vmovaps	%xmm3, %xmm4
-# CHECK-NEXT: [5,4]     .    .    .   DR    .    .  .   vmovaps	%xmm4, %xmm5
-# CHECK-NEXT: [5,5]     .    .    .   DR    .    .  .   vmovaps	%xmm5, %xmm6
-# CHECK-NEXT: [5,6]     .    .    .   DR    .    .  .   vmovaps	%xmm6, %xmm7
-# CHECK-NEXT: [5,7]     .    .    .   D-R   .    .  .   vmovaps	%xmm7, %xmm8
-# CHECK-NEXT: [5,8]     .    .    .   D-R   .    .  .   vmovaps	%xmm8, %xmm9
-# CHECK-NEXT: [5,9]     .    .    .   D-R   .    .  .   vmovaps	%xmm9, %xmm10
-# CHECK-NEXT: [5,10]    .    .    .    DR   .    .  .   vmovaps	%xmm10, %xmm11
-# CHECK-NEXT: [5,11]    .    .    .    DR   .    .  .   vmovaps	%xmm11, %xmm12
-# CHECK-NEXT: [5,12]    .    .    .    DR   .    .  .   vmovaps	%xmm12, %xmm13
-# CHECK-NEXT: [5,13]    .    .    .    DR   .    .  .   vmovaps	%xmm13, %xmm14
-# CHECK-NEXT: [5,14]    .    .    .    DR   .    .  .   vmovaps	%xmm14, %xmm15
-# CHECK-NEXT: [5,15]    .    .    .    DER  .    .  .   vmovaps	%xmm15, %xmm0
-# CHECK-NEXT: [6,0]     .    .    .    .DR  .    .  .   vmovaps	%xmm0, %xmm1
-# CHECK-NEXT: [6,1]     .    .    .    .DR  .    .  .   vmovaps	%xmm1, %xmm2
-# CHECK-NEXT: [6,2]     .    .    .    .DR  .    .  .   vmovaps	%xmm2, %xmm3
-# CHECK-NEXT: [6,3]     .    .    .    .DR  .    .  .   vmovaps	%xmm3, %xmm4
-# CHECK-NEXT: [6,4]     .    .    .    .DR  .    .  .   vmovaps	%xmm4, %xmm5
-# CHECK-NEXT: [6,5]     .    .    .    .DR  .    .  .   vmovaps	%xmm5, %xmm6
-# CHECK-NEXT: [6,6]     .    .    .    . DR .    .  .   vmovaps	%xmm6, %xmm7
-# CHECK-NEXT: [6,7]     .    .    .    . DR .    .  .   vmovaps	%xmm7, %xmm8
-# CHECK-NEXT: [6,8]     .    .    .    . DR .    .  .   vmovaps	%xmm8, %xmm9
-# CHECK-NEXT: [6,9]     .    .    .    . DR .    .  .   vmovaps	%xmm9, %xmm10
-# CHECK-NEXT: [6,10]    .    .    .    . DR .    .  .   vmovaps	%xmm10, %xmm11
-# CHECK-NEXT: [6,11]    .    .    .    . DR .    .  .   vmovaps	%xmm11, %xmm12
-# CHECK-NEXT: [6,12]    .    .    .    .  DR.    .  .   vmovaps	%xmm12, %xmm13
-# CHECK-NEXT: [6,13]    .    .    .    .  DR.    .  .   vmovaps	%xmm13, %xmm14
-# CHECK-NEXT: [6,14]    .    .    .    .  DR.    .  .   vmovaps	%xmm14, %xmm15
-# CHECK-NEXT: [6,15]    .    .    .    .  DER    .  .   vmovaps	%xmm15, %xmm0
-# CHECK-NEXT: [7,0]     .    .    .    .  D-R    .  .   vmovaps	%xmm0, %xmm1
-# CHECK-NEXT: [7,1]     .    .    .    .  D-R    .  .   vmovaps	%xmm1, %xmm2
-# CHECK-NEXT: [7,2]     .    .    .    .   DR    .  .   vmovaps	%xmm2, %xmm3
-# CHECK-NEXT: [7,3]     .    .    .    .   DR    .  .   vmovaps	%xmm3, %xmm4
-# CHECK-NEXT: [7,4]     .    .    .    .   DR    .  .   vmovaps	%xmm4, %xmm5
-# CHECK-NEXT: [7,5]     .    .    .    .   DR    .  .   vmovaps	%xmm5, %xmm6
-# CHECK-NEXT: [7,6]     .    .    .    .   DR    .  .   vmovaps	%xmm6, %xmm7
-# CHECK-NEXT: [7,7]     .    .    .    .   D-R   .  .   vmovaps	%xmm7, %xmm8
-# CHECK-NEXT: [7,8]     .    .    .    .    DR   .  .   vmovaps	%xmm8, %xmm9
-# CHECK-NEXT: [7,9]     .    .    .    .    DR   .  .   vmovaps	%xmm9, %xmm10
-# CHECK-NEXT: [7,10]    .    .    .    .    DR   .  .   vmovaps	%xmm10, %xmm11
-# CHECK-NEXT: [7,11]    .    .    .    .    DR   .  .   vmovaps	%xmm11, %xmm12
-# CHECK-NEXT: [7,12]    .    .    .    .    DR   .  .   vmovaps	%xmm12, %xmm13
-# CHECK-NEXT: [7,13]    .    .    .    .    DR   .  .   vmovaps	%xmm13, %xmm14
-# CHECK-NEXT: [7,14]    .    .    .    .    .DR  .  .   vmovaps	%xmm14, %xmm15
-# CHECK-NEXT: [7,15]    .    .    .    .    .DER .  .   vmovaps	%xmm15, %xmm0
-# CHECK-NEXT: [8,0]     .    .    .    .    .D-R .  .   vmovaps	%xmm0, %xmm1
-# CHECK-NEXT: [8,1]     .    .    .    .    .D-R .  .   vmovaps	%xmm1, %xmm2
-# CHECK-NEXT: [8,2]     .    .    .    .    .D-R .  .   vmovaps	%xmm2, %xmm3
-# CHECK-NEXT: [8,3]     .    .    .    .    .D-R .  .   vmovaps	%xmm3, %xmm4
-# CHECK-NEXT: [8,4]     .    .    .    .    . DR .  .   vmovaps	%xmm4, %xmm5
-# CHECK-NEXT: [8,5]     .    .    .    .    . DR .  .   vmovaps	%xmm5, %xmm6
-# CHECK-NEXT: [8,6]     .    .    .    .    . DR .  .   vmovaps	%xmm6, %xmm7
-# CHECK-NEXT: [8,7]     .    .    .    .    . D-R.  .   vmovaps	%xmm7, %xmm8
-# CHECK-NEXT: [8,8]     .    .    .    .    . D-R.  .   vmovaps	%xmm8, %xmm9
-# CHECK-NEXT: [8,9]     .    .    .    .    . D-R.  .   vmovaps	%xmm9, %xmm10
-# CHECK-NEXT: [8,10]    .    .    .    .    .  DR.  .   vmovaps	%xmm10, %xmm11
-# CHECK-NEXT: [8,11]    .    .    .    .    .  DR.  .   vmovaps	%xmm11, %xmm12
-# CHECK-NEXT: [8,12]    .    .    .    .    .  DR.  .   vmovaps	%xmm12, %xmm13
-# CHECK-NEXT: [8,13]    .    .    .    .    .  DR.  .   vmovaps	%xmm13, %xmm14
-# CHECK-NEXT: [8,14]    .    .    .    .    .  DR.  .   vmovaps	%xmm14, %xmm15
-# CHECK-NEXT: [8,15]    .    .    .    .    .  DER  .   vmovaps	%xmm15, %xmm0
-# CHECK-NEXT: [9,0]     .    .    .    .    .   DR  .   vmovaps	%xmm0, %xmm1
-# CHECK-NEXT: [9,1]     .    .    .    .    .   DR  .   vmovaps	%xmm1, %xmm2
-# CHECK-NEXT: [9,2]     .    .    .    .    .   DR  .   vmovaps	%xmm2, %xmm3
-# CHECK-NEXT: [9,3]     .    .    .    .    .   DR  .   vmovaps	%xmm3, %xmm4
-# CHECK-NEXT: [9,4]     .    .    .    .    .   DR  .   vmovaps	%xmm4, %xmm5
-# CHECK-NEXT: [9,5]     .    .    .    .    .   DR  .   vmovaps	%xmm5, %xmm6
-# CHECK-NEXT: [9,6]     .    .    .    .    .    DR .   vmovaps	%xmm6, %xmm7
-# CHECK-NEXT: [9,7]     .    .    .    .    .    DR .   vmovaps	%xmm7, %xmm8
-# CHECK-NEXT: [9,8]     .    .    .    .    .    DR .   vmovaps	%xmm8, %xmm9
-# CHECK-NEXT: [9,9]     .    .    .    .    .    DR .   vmovaps	%xmm9, %xmm10
-# CHECK-NEXT: [9,10]    .    .    .    .    .    DR .   vmovaps	%xmm10, %xmm11
-# CHECK-NEXT: [9,11]    .    .    .    .    .    DR .   vmovaps	%xmm11, %xmm12
-# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR.   vmovaps	%xmm12, %xmm13
-# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR.   vmovaps	%xmm13, %xmm14
-# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR.   vmovaps	%xmm14, %xmm15
-# CHECK-NEXT: [9,15]    .    .    .    .    .    .DER   vmovaps	%xmm15, %xmm0
+# CHECK:      [0,0]     DR   .    .    .    .    . .   vmovaps	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DR   .    .    .    .    . .   vmovaps	%xmm1, %xmm2
+# CHECK-NEXT: [0,2]     DR   .    .    .    .    . .   vmovaps	%xmm2, %xmm3
+# CHECK-NEXT: [0,3]     DR   .    .    .    .    . .   vmovaps	%xmm3, %xmm4
+# CHECK-NEXT: [0,4]     DR   .    .    .    .    . .   vmovaps	%xmm4, %xmm5
+# CHECK-NEXT: [0,5]     DR   .    .    .    .    . .   vmovaps	%xmm5, %xmm6
+# CHECK-NEXT: [0,6]     .DR  .    .    .    .    . .   vmovaps	%xmm6, %xmm7
+# CHECK-NEXT: [0,7]     .DR  .    .    .    .    . .   vmovaps	%xmm7, %xmm8
+# CHECK-NEXT: [0,8]     .DR  .    .    .    .    . .   vmovaps	%xmm8, %xmm9
+# CHECK-NEXT: [0,9]     .DR  .    .    .    .    . .   vmovaps	%xmm9, %xmm10
+# CHECK-NEXT: [0,10]    .DR  .    .    .    .    . .   vmovaps	%xmm10, %xmm11
+# CHECK-NEXT: [0,11]    .DR  .    .    .    .    . .   vmovaps	%xmm11, %xmm12
+# CHECK-NEXT: [0,12]    . DR .    .    .    .    . .   vmovaps	%xmm12, %xmm13
+# CHECK-NEXT: [0,13]    . DR .    .    .    .    . .   vmovaps	%xmm13, %xmm14
+# CHECK-NEXT: [0,14]    . DR .    .    .    .    . .   vmovaps	%xmm14, %xmm15
+# CHECK-NEXT: [0,15]    . DR .    .    .    .    . .   vmovaps	%xmm15, %xmm0
+# CHECK-NEXT: [1,0]     . DR .    .    .    .    . .   vmovaps	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     . DR .    .    .    .    . .   vmovaps	%xmm1, %xmm2
+# CHECK-NEXT: [1,2]     .  DR.    .    .    .    . .   vmovaps	%xmm2, %xmm3
+# CHECK-NEXT: [1,3]     .  DR.    .    .    .    . .   vmovaps	%xmm3, %xmm4
+# CHECK-NEXT: [1,4]     .  DR.    .    .    .    . .   vmovaps	%xmm4, %xmm5
+# CHECK-NEXT: [1,5]     .  DR.    .    .    .    . .   vmovaps	%xmm5, %xmm6
+# CHECK-NEXT: [1,6]     .  DR.    .    .    .    . .   vmovaps	%xmm6, %xmm7
+# CHECK-NEXT: [1,7]     .  DR.    .    .    .    . .   vmovaps	%xmm7, %xmm8
+# CHECK-NEXT: [1,8]     .   DR    .    .    .    . .   vmovaps	%xmm8, %xmm9
+# CHECK-NEXT: [1,9]     .   DR    .    .    .    . .   vmovaps	%xmm9, %xmm10
+# CHECK-NEXT: [1,10]    .   DR    .    .    .    . .   vmovaps	%xmm10, %xmm11
+# CHECK-NEXT: [1,11]    .   DR    .    .    .    . .   vmovaps	%xmm11, %xmm12
+# CHECK-NEXT: [1,12]    .   DR    .    .    .    . .   vmovaps	%xmm12, %xmm13
+# CHECK-NEXT: [1,13]    .   DR    .    .    .    . .   vmovaps	%xmm13, %xmm14
+# CHECK-NEXT: [1,14]    .    DR   .    .    .    . .   vmovaps	%xmm14, %xmm15
+# CHECK-NEXT: [1,15]    .    DR   .    .    .    . .   vmovaps	%xmm15, %xmm0
+# CHECK-NEXT: [2,0]     .    DR   .    .    .    . .   vmovaps	%xmm0, %xmm1
+# CHECK-NEXT: [2,1]     .    DR   .    .    .    . .   vmovaps	%xmm1, %xmm2
+# CHECK-NEXT: [2,2]     .    DR   .    .    .    . .   vmovaps	%xmm2, %xmm3
+# CHECK-NEXT: [2,3]     .    DR   .    .    .    . .   vmovaps	%xmm3, %xmm4
+# CHECK-NEXT: [2,4]     .    .DR  .    .    .    . .   vmovaps	%xmm4, %xmm5
+# CHECK-NEXT: [2,5]     .    .DR  .    .    .    . .   vmovaps	%xmm5, %xmm6
+# CHECK-NEXT: [2,6]     .    .DR  .    .    .    . .   vmovaps	%xmm6, %xmm7
+# CHECK-NEXT: [2,7]     .    .DR  .    .    .    . .   vmovaps	%xmm7, %xmm8
+# CHECK-NEXT: [2,8]     .    .DR  .    .    .    . .   vmovaps	%xmm8, %xmm9
+# CHECK-NEXT: [2,9]     .    .DR  .    .    .    . .   vmovaps	%xmm9, %xmm10
+# CHECK-NEXT: [2,10]    .    . DR .    .    .    . .   vmovaps	%xmm10, %xmm11
+# CHECK-NEXT: [2,11]    .    . DR .    .    .    . .   vmovaps	%xmm11, %xmm12
+# CHECK-NEXT: [2,12]    .    . DR .    .    .    . .   vmovaps	%xmm12, %xmm13
+# CHECK-NEXT: [2,13]    .    . DR .    .    .    . .   vmovaps	%xmm13, %xmm14
+# CHECK-NEXT: [2,14]    .    . DR .    .    .    . .   vmovaps	%xmm14, %xmm15
+# CHECK-NEXT: [2,15]    .    . DR .    .    .    . .   vmovaps	%xmm15, %xmm0
+# CHECK-NEXT: [3,0]     .    .  DR.    .    .    . .   vmovaps	%xmm0, %xmm1
+# CHECK-NEXT: [3,1]     .    .  DR.    .    .    . .   vmovaps	%xmm1, %xmm2
+# CHECK-NEXT: [3,2]     .    .  DR.    .    .    . .   vmovaps	%xmm2, %xmm3
+# CHECK-NEXT: [3,3]     .    .  DR.    .    .    . .   vmovaps	%xmm3, %xmm4
+# CHECK-NEXT: [3,4]     .    .  DR.    .    .    . .   vmovaps	%xmm4, %xmm5
+# CHECK-NEXT: [3,5]     .    .  DR.    .    .    . .   vmovaps	%xmm5, %xmm6
+# CHECK-NEXT: [3,6]     .    .   DR    .    .    . .   vmovaps	%xmm6, %xmm7
+# CHECK-NEXT: [3,7]     .    .   DR    .    .    . .   vmovaps	%xmm7, %xmm8
+# CHECK-NEXT: [3,8]     .    .   DR    .    .    . .   vmovaps	%xmm8, %xmm9
+# CHECK-NEXT: [3,9]     .    .   DR    .    .    . .   vmovaps	%xmm9, %xmm10
+# CHECK-NEXT: [3,10]    .    .   DR    .    .    . .   vmovaps	%xmm10, %xmm11
+# CHECK-NEXT: [3,11]    .    .   DR    .    .    . .   vmovaps	%xmm11, %xmm12
+# CHECK-NEXT: [3,12]    .    .    DR   .    .    . .   vmovaps	%xmm12, %xmm13
+# CHECK-NEXT: [3,13]    .    .    DR   .    .    . .   vmovaps	%xmm13, %xmm14
+# CHECK-NEXT: [3,14]    .    .    DR   .    .    . .   vmovaps	%xmm14, %xmm15
+# CHECK-NEXT: [3,15]    .    .    DR   .    .    . .   vmovaps	%xmm15, %xmm0
+# CHECK-NEXT: [4,0]     .    .    DR   .    .    . .   vmovaps	%xmm0, %xmm1
+# CHECK-NEXT: [4,1]     .    .    DR   .    .    . .   vmovaps	%xmm1, %xmm2
+# CHECK-NEXT: [4,2]     .    .    .DR  .    .    . .   vmovaps	%xmm2, %xmm3
+# CHECK-NEXT: [4,3]     .    .    .DR  .    .    . .   vmovaps	%xmm3, %xmm4
+# CHECK-NEXT: [4,4]     .    .    .DR  .    .    . .   vmovaps	%xmm4, %xmm5
+# CHECK-NEXT: [4,5]     .    .    .DR  .    .    . .   vmovaps	%xmm5, %xmm6
+# CHECK-NEXT: [4,6]     .    .    .DR  .    .    . .   vmovaps	%xmm6, %xmm7
+# CHECK-NEXT: [4,7]     .    .    .DR  .    .    . .   vmovaps	%xmm7, %xmm8
+# CHECK-NEXT: [4,8]     .    .    . DR .    .    . .   vmovaps	%xmm8, %xmm9
+# CHECK-NEXT: [4,9]     .    .    . DR .    .    . .   vmovaps	%xmm9, %xmm10
+# CHECK-NEXT: [4,10]    .    .    . DR .    .    . .   vmovaps	%xmm10, %xmm11
+# CHECK-NEXT: [4,11]    .    .    . DR .    .    . .   vmovaps	%xmm11, %xmm12
+# CHECK-NEXT: [4,12]    .    .    . DR .    .    . .   vmovaps	%xmm12, %xmm13
+# CHECK-NEXT: [4,13]    .    .    . DR .    .    . .   vmovaps	%xmm13, %xmm14
+# CHECK-NEXT: [4,14]    .    .    .  DR.    .    . .   vmovaps	%xmm14, %xmm15
+# CHECK-NEXT: [4,15]    .    .    .  DR.    .    . .   vmovaps	%xmm15, %xmm0
+# CHECK-NEXT: [5,0]     .    .    .  DR.    .    . .   vmovaps	%xmm0, %xmm1
+# CHECK-NEXT: [5,1]     .    .    .  DR.    .    . .   vmovaps	%xmm1, %xmm2
+# CHECK-NEXT: [5,2]     .    .    .  DR.    .    . .   vmovaps	%xmm2, %xmm3
+# CHECK-NEXT: [5,3]     .    .    .  DR.    .    . .   vmovaps	%xmm3, %xmm4
+# CHECK-NEXT: [5,4]     .    .    .   DR    .    . .   vmovaps	%xmm4, %xmm5
+# CHECK-NEXT: [5,5]     .    .    .   DR    .    . .   vmovaps	%xmm5, %xmm6
+# CHECK-NEXT: [5,6]     .    .    .   DR    .    . .   vmovaps	%xmm6, %xmm7
+# CHECK-NEXT: [5,7]     .    .    .   DR    .    . .   vmovaps	%xmm7, %xmm8
+# CHECK-NEXT: [5,8]     .    .    .   DR    .    . .   vmovaps	%xmm8, %xmm9
+# CHECK-NEXT: [5,9]     .    .    .   DR    .    . .   vmovaps	%xmm9, %xmm10
+# CHECK-NEXT: [5,10]    .    .    .    DR   .    . .   vmovaps	%xmm10, %xmm11
+# CHECK-NEXT: [5,11]    .    .    .    DR   .    . .   vmovaps	%xmm11, %xmm12
+# CHECK-NEXT: [5,12]    .    .    .    DR   .    . .   vmovaps	%xmm12, %xmm13
+# CHECK-NEXT: [5,13]    .    .    .    DR   .    . .   vmovaps	%xmm13, %xmm14
+# CHECK-NEXT: [5,14]    .    .    .    DR   .    . .   vmovaps	%xmm14, %xmm15
+# CHECK-NEXT: [5,15]    .    .    .    DR   .    . .   vmovaps	%xmm15, %xmm0
+# CHECK-NEXT: [6,0]     .    .    .    .DR  .    . .   vmovaps	%xmm0, %xmm1
+# CHECK-NEXT: [6,1]     .    .    .    .DR  .    . .   vmovaps	%xmm1, %xmm2
+# CHECK-NEXT: [6,2]     .    .    .    .DR  .    . .   vmovaps	%xmm2, %xmm3
+# CHECK-NEXT: [6,3]     .    .    .    .DR  .    . .   vmovaps	%xmm3, %xmm4
+# CHECK-NEXT: [6,4]     .    .    .    .DR  .    . .   vmovaps	%xmm4, %xmm5
+# CHECK-NEXT: [6,5]     .    .    .    .DR  .    . .   vmovaps	%xmm5, %xmm6
+# CHECK-NEXT: [6,6]     .    .    .    . DR .    . .   vmovaps	%xmm6, %xmm7
+# CHECK-NEXT: [6,7]     .    .    .    . DR .    . .   vmovaps	%xmm7, %xmm8
+# CHECK-NEXT: [6,8]     .    .    .    . DR .    . .   vmovaps	%xmm8, %xmm9
+# CHECK-NEXT: [6,9]     .    .    .    . DR .    . .   vmovaps	%xmm9, %xmm10
+# CHECK-NEXT: [6,10]    .    .    .    . DR .    . .   vmovaps	%xmm10, %xmm11
+# CHECK-NEXT: [6,11]    .    .    .    . DR .    . .   vmovaps	%xmm11, %xmm12
+# CHECK-NEXT: [6,12]    .    .    .    .  DR.    . .   vmovaps	%xmm12, %xmm13
+# CHECK-NEXT: [6,13]    .    .    .    .  DR.    . .   vmovaps	%xmm13, %xmm14
+# CHECK-NEXT: [6,14]    .    .    .    .  DR.    . .   vmovaps	%xmm14, %xmm15
+# CHECK-NEXT: [6,15]    .    .    .    .  DR.    . .   vmovaps	%xmm15, %xmm0
+# CHECK-NEXT: [7,0]     .    .    .    .  DR.    . .   vmovaps	%xmm0, %xmm1
+# CHECK-NEXT: [7,1]     .    .    .    .  DR.    . .   vmovaps	%xmm1, %xmm2
+# CHECK-NEXT: [7,2]     .    .    .    .   DR    . .   vmovaps	%xmm2, %xmm3
+# CHECK-NEXT: [7,3]     .    .    .    .   DR    . .   vmovaps	%xmm3, %xmm4
+# CHECK-NEXT: [7,4]     .    .    .    .   DR    . .   vmovaps	%xmm4, %xmm5
+# CHECK-NEXT: [7,5]     .    .    .    .   DR    . .   vmovaps	%xmm5, %xmm6
+# CHECK-NEXT: [7,6]     .    .    .    .   DR    . .   vmovaps	%xmm6, %xmm7
+# CHECK-NEXT: [7,7]     .    .    .    .   DR    . .   vmovaps	%xmm7, %xmm8
+# CHECK-NEXT: [7,8]     .    .    .    .    DR   . .   vmovaps	%xmm8, %xmm9
+# CHECK-NEXT: [7,9]     .    .    .    .    DR   . .   vmovaps	%xmm9, %xmm10
+# CHECK-NEXT: [7,10]    .    .    .    .    DR   . .   vmovaps	%xmm10, %xmm11
+# CHECK-NEXT: [7,11]    .    .    .    .    DR   . .   vmovaps	%xmm11, %xmm12
+# CHECK-NEXT: [7,12]    .    .    .    .    DR   . .   vmovaps	%xmm12, %xmm13
+# CHECK-NEXT: [7,13]    .    .    .    .    DR   . .   vmovaps	%xmm13, %xmm14
+# CHECK-NEXT: [7,14]    .    .    .    .    .DR  . .   vmovaps	%xmm14, %xmm15
+# CHECK-NEXT: [7,15]    .    .    .    .    .DR  . .   vmovaps	%xmm15, %xmm0
+# CHECK-NEXT: [8,0]     .    .    .    .    .DR  . .   vmovaps	%xmm0, %xmm1
+# CHECK-NEXT: [8,1]     .    .    .    .    .DR  . .   vmovaps	%xmm1, %xmm2
+# CHECK-NEXT: [8,2]     .    .    .    .    .DR  . .   vmovaps	%xmm2, %xmm3
+# CHECK-NEXT: [8,3]     .    .    .    .    .DR  . .   vmovaps	%xmm3, %xmm4
+# CHECK-NEXT: [8,4]     .    .    .    .    . DR . .   vmovaps	%xmm4, %xmm5
+# CHECK-NEXT: [8,5]     .    .    .    .    . DR . .   vmovaps	%xmm5, %xmm6
+# CHECK-NEXT: [8,6]     .    .    .    .    . DR . .   vmovaps	%xmm6, %xmm7
+# CHECK-NEXT: [8,7]     .    .    .    .    . DR . .   vmovaps	%xmm7, %xmm8
+# CHECK-NEXT: [8,8]     .    .    .    .    . DR . .   vmovaps	%xmm8, %xmm9
+# CHECK-NEXT: [8,9]     .    .    .    .    . DR . .   vmovaps	%xmm9, %xmm10
+# CHECK-NEXT: [8,10]    .    .    .    .    .  DR. .   vmovaps	%xmm10, %xmm11
+# CHECK-NEXT: [8,11]    .    .    .    .    .  DR. .   vmovaps	%xmm11, %xmm12
+# CHECK-NEXT: [8,12]    .    .    .    .    .  DR. .   vmovaps	%xmm12, %xmm13
+# CHECK-NEXT: [8,13]    .    .    .    .    .  DR. .   vmovaps	%xmm13, %xmm14
+# CHECK-NEXT: [8,14]    .    .    .    .    .  DR. .   vmovaps	%xmm14, %xmm15
+# CHECK-NEXT: [8,15]    .    .    .    .    .  DR. .   vmovaps	%xmm15, %xmm0
+# CHECK-NEXT: [9,0]     .    .    .    .    .   DR .   vmovaps	%xmm0, %xmm1
+# CHECK-NEXT: [9,1]     .    .    .    .    .   DR .   vmovaps	%xmm1, %xmm2
+# CHECK-NEXT: [9,2]     .    .    .    .    .   DR .   vmovaps	%xmm2, %xmm3
+# CHECK-NEXT: [9,3]     .    .    .    .    .   DR .   vmovaps	%xmm3, %xmm4
+# CHECK-NEXT: [9,4]     .    .    .    .    .   DR .   vmovaps	%xmm4, %xmm5
+# CHECK-NEXT: [9,5]     .    .    .    .    .   DR .   vmovaps	%xmm5, %xmm6
+# CHECK-NEXT: [9,6]     .    .    .    .    .    DR.   vmovaps	%xmm6, %xmm7
+# CHECK-NEXT: [9,7]     .    .    .    .    .    DR.   vmovaps	%xmm7, %xmm8
+# CHECK-NEXT: [9,8]     .    .    .    .    .    DR.   vmovaps	%xmm8, %xmm9
+# CHECK-NEXT: [9,9]     .    .    .    .    .    DR.   vmovaps	%xmm9, %xmm10
+# CHECK-NEXT: [9,10]    .    .    .    .    .    DR.   vmovaps	%xmm10, %xmm11
+# CHECK-NEXT: [9,11]    .    .    .    .    .    DR.   vmovaps	%xmm11, %xmm12
+# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR   vmovaps	%xmm12, %xmm13
+# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR   vmovaps	%xmm13, %xmm14
+# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR   vmovaps	%xmm14, %xmm15
+# CHECK-NEXT: [9,15]    .    .    .    .    .    .DR   vmovaps	%xmm15, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -391,35 +391,35 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     10    0.0    0.0    0.6       vmovaps	%xmm0, %xmm1
-# CHECK-NEXT: 1.     10    0.0    0.0    0.6       vmovaps	%xmm1, %xmm2
-# CHECK-NEXT: 2.     10    0.0    0.0    0.3       vmovaps	%xmm2, %xmm3
-# CHECK-NEXT: 3.     10    0.0    0.0    0.3       vmovaps	%xmm3, %xmm4
+# CHECK-NEXT: 0.     10    0.0    0.0    0.0       vmovaps	%xmm0, %xmm1
+# CHECK-NEXT: 1.     10    0.0    0.0    0.0       vmovaps	%xmm1, %xmm2
+# CHECK-NEXT: 2.     10    0.0    0.0    0.0       vmovaps	%xmm2, %xmm3
+# CHECK-NEXT: 3.     10    0.0    0.0    0.0       vmovaps	%xmm3, %xmm4
 # CHECK-NEXT: 4.     10    0.0    0.0    0.0       vmovaps	%xmm4, %xmm5
 # CHECK-NEXT: 5.     10    0.0    0.0    0.0       vmovaps	%xmm5, %xmm6
 # CHECK-NEXT: 6.     10    0.0    0.0    0.0       vmovaps	%xmm6, %xmm7
-# CHECK-NEXT: 7.     10    0.0    0.0    0.6       vmovaps	%xmm7, %xmm8
-# CHECK-NEXT: 8.     10    0.0    0.0    0.3       vmovaps	%xmm8, %xmm9
-# CHECK-NEXT: 9.     10    0.0    0.0    0.3       vmovaps	%xmm9, %xmm10
+# CHECK-NEXT: 7.     10    0.0    0.0    0.0       vmovaps	%xmm7, %xmm8
+# CHECK-NEXT: 8.     10    0.0    0.0    0.0       vmovaps	%xmm8, %xmm9
+# CHECK-NEXT: 9.     10    0.0    0.0    0.0       vmovaps	%xmm9, %xmm10
 # CHECK-NEXT: 10.    10    0.0    0.0    0.0       vmovaps	%xmm10, %xmm11
 # CHECK-NEXT: 11.    10    0.0    0.0    0.0       vmovaps	%xmm11, %xmm12
 # CHECK-NEXT: 12.    10    0.0    0.0    0.0       vmovaps	%xmm12, %xmm13
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       vmovaps	%xmm13, %xmm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       vmovaps	%xmm14, %xmm15
-# CHECK-NEXT: 15.    10    1.0    1.0    0.0       vmovaps	%xmm15, %xmm0
-# CHECK-NEXT:        10    0.1    0.1    0.2       <total>
+# CHECK-NEXT: 15.    10    0.0    0.0    0.0       vmovaps	%xmm15, %xmm0
+# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
 
 # CHECK:      [1] Code Region
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      24000
-# CHECK-NEXT: Total Cycles:      4002
+# CHECK-NEXT: Total Cycles:      4001
 # CHECK-NEXT: Total uOps:        24000
 
 # CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    6.00
 # CHECK-NEXT: IPC:               6.00
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: Block RThroughput: 2.7
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -430,22 +430,22 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      0     0.25                        vmovups	%xmm0, %xmm1
-# CHECK-NEXT:  1      0     0.25                        vmovups	%xmm1, %xmm2
-# CHECK-NEXT:  1      0     0.25                        vmovups	%xmm2, %xmm3
-# CHECK-NEXT:  1      0     0.25                        vmovups	%xmm3, %xmm4
-# CHECK-NEXT:  1      0     0.25                        vmovups	%xmm4, %xmm5
-# CHECK-NEXT:  1      0     0.25                        vmovups	%xmm5, %xmm6
-# CHECK-NEXT:  1      0     0.25                        vmovups	%xmm6, %xmm7
-# CHECK-NEXT:  1      0     0.25                        vmovups	%xmm7, %xmm8
-# CHECK-NEXT:  1      0     0.25                        vmovups	%xmm8, %xmm9
-# CHECK-NEXT:  1      0     0.25                        vmovups	%xmm9, %xmm10
-# CHECK-NEXT:  1      0     0.25                        vmovups	%xmm10, %xmm11
-# CHECK-NEXT:  1      0     0.25                        vmovups	%xmm11, %xmm12
-# CHECK-NEXT:  1      0     0.25                        vmovups	%xmm12, %xmm13
-# CHECK-NEXT:  1      0     0.25                        vmovups	%xmm13, %xmm14
-# CHECK-NEXT:  1      0     0.25                        vmovups	%xmm14, %xmm15
-# CHECK-NEXT:  1      0     0.25                        vmovups	%xmm15, %xmm0
+# CHECK-NEXT:  1      0     0.17                        vmovups	%xmm0, %xmm1
+# CHECK-NEXT:  1      0     0.17                        vmovups	%xmm1, %xmm2
+# CHECK-NEXT:  1      0     0.17                        vmovups	%xmm2, %xmm3
+# CHECK-NEXT:  1      0     0.17                        vmovups	%xmm3, %xmm4
+# CHECK-NEXT:  1      0     0.17                        vmovups	%xmm4, %xmm5
+# CHECK-NEXT:  1      0     0.17                        vmovups	%xmm5, %xmm6
+# CHECK-NEXT:  1      0     0.17                        vmovups	%xmm6, %xmm7
+# CHECK-NEXT:  1      0     0.17                        vmovups	%xmm7, %xmm8
+# CHECK-NEXT:  1      0     0.17                        vmovups	%xmm8, %xmm9
+# CHECK-NEXT:  1      0     0.17                        vmovups	%xmm9, %xmm10
+# CHECK-NEXT:  1      0     0.17                        vmovups	%xmm10, %xmm11
+# CHECK-NEXT:  1      0     0.17                        vmovups	%xmm11, %xmm12
+# CHECK-NEXT:  1      0     0.17                        vmovups	%xmm12, %xmm13
+# CHECK-NEXT:  1      0     0.17                        vmovups	%xmm13, %xmm14
+# CHECK-NEXT:  1      0     0.17                        vmovups	%xmm14, %xmm15
+# CHECK-NEXT:  1      0     0.17                        vmovups	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    1500
@@ -492,7 +492,7 @@ vmovdqu %xmm15, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
@@ -511,172 +511,172 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovups	%xmm12, %xmm13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovups	%xmm13, %xmm14
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovups	%xmm14, %xmm15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovups	%xmm15, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovups	%xmm15, %xmm0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012345678
+# CHECK-NEXT: Index     0123456789          01234567
 
-# CHECK:      [0,0]     DR   .    .    .    .    .  .   vmovups	%xmm0, %xmm1
-# CHECK-NEXT: [0,1]     DR   .    .    .    .    .  .   vmovups	%xmm1, %xmm2
-# CHECK-NEXT: [0,2]     DR   .    .    .    .    .  .   vmovups	%xmm2, %xmm3
-# CHECK-NEXT: [0,3]     DR   .    .    .    .    .  .   vmovups	%xmm3, %xmm4
-# CHECK-NEXT: [0,4]     DR   .    .    .    .    .  .   vmovups	%xmm4, %xmm5
-# CHECK-NEXT: [0,5]     DR   .    .    .    .    .  .   vmovups	%xmm5, %xmm6
-# CHECK-NEXT: [0,6]     .DR  .    .    .    .    .  .   vmovups	%xmm6, %xmm7
-# CHECK-NEXT: [0,7]     .DR  .    .    .    .    .  .   vmovups	%xmm7, %xmm8
-# CHECK-NEXT: [0,8]     .DR  .    .    .    .    .  .   vmovups	%xmm8, %xmm9
-# CHECK-NEXT: [0,9]     .DR  .    .    .    .    .  .   vmovups	%xmm9, %xmm10
-# CHECK-NEXT: [0,10]    .DR  .    .    .    .    .  .   vmovups	%xmm10, %xmm11
-# CHECK-NEXT: [0,11]    .DR  .    .    .    .    .  .   vmovups	%xmm11, %xmm12
-# CHECK-NEXT: [0,12]    . DR .    .    .    .    .  .   vmovups	%xmm12, %xmm13
-# CHECK-NEXT: [0,13]    . DR .    .    .    .    .  .   vmovups	%xmm13, %xmm14
-# CHECK-NEXT: [0,14]    . DR .    .    .    .    .  .   vmovups	%xmm14, %xmm15
-# CHECK-NEXT: [0,15]    . DER.    .    .    .    .  .   vmovups	%xmm15, %xmm0
-# CHECK-NEXT: [1,0]     . D-R.    .    .    .    .  .   vmovups	%xmm0, %xmm1
-# CHECK-NEXT: [1,1]     . D-R.    .    .    .    .  .   vmovups	%xmm1, %xmm2
-# CHECK-NEXT: [1,2]     .  DR.    .    .    .    .  .   vmovups	%xmm2, %xmm3
-# CHECK-NEXT: [1,3]     .  DR.    .    .    .    .  .   vmovups	%xmm3, %xmm4
-# CHECK-NEXT: [1,4]     .  DR.    .    .    .    .  .   vmovups	%xmm4, %xmm5
-# CHECK-NEXT: [1,5]     .  DR.    .    .    .    .  .   vmovups	%xmm5, %xmm6
-# CHECK-NEXT: [1,6]     .  DR.    .    .    .    .  .   vmovups	%xmm6, %xmm7
-# CHECK-NEXT: [1,7]     .  D-R    .    .    .    .  .   vmovups	%xmm7, %xmm8
-# CHECK-NEXT: [1,8]     .   DR    .    .    .    .  .   vmovups	%xmm8, %xmm9
-# CHECK-NEXT: [1,9]     .   DR    .    .    .    .  .   vmovups	%xmm9, %xmm10
-# CHECK-NEXT: [1,10]    .   DR    .    .    .    .  .   vmovups	%xmm10, %xmm11
-# CHECK-NEXT: [1,11]    .   DR    .    .    .    .  .   vmovups	%xmm11, %xmm12
-# CHECK-NEXT: [1,12]    .   DR    .    .    .    .  .   vmovups	%xmm12, %xmm13
-# CHECK-NEXT: [1,13]    .   DR    .    .    .    .  .   vmovups	%xmm13, %xmm14
-# CHECK-NEXT: [1,14]    .    DR   .    .    .    .  .   vmovups	%xmm14, %xmm15
-# CHECK-NEXT: [1,15]    .    DER  .    .    .    .  .   vmovups	%xmm15, %xmm0
-# CHECK-NEXT: [2,0]     .    D-R  .    .    .    .  .   vmovups	%xmm0, %xmm1
-# CHECK-NEXT: [2,1]     .    D-R  .    .    .    .  .   vmovups	%xmm1, %xmm2
-# CHECK-NEXT: [2,2]     .    D-R  .    .    .    .  .   vmovups	%xmm2, %xmm3
-# CHECK-NEXT: [2,3]     .    D-R  .    .    .    .  .   vmovups	%xmm3, %xmm4
-# CHECK-NEXT: [2,4]     .    .DR  .    .    .    .  .   vmovups	%xmm4, %xmm5
-# CHECK-NEXT: [2,5]     .    .DR  .    .    .    .  .   vmovups	%xmm5, %xmm6
-# CHECK-NEXT: [2,6]     .    .DR  .    .    .    .  .   vmovups	%xmm6, %xmm7
-# CHECK-NEXT: [2,7]     .    .D-R .    .    .    .  .   vmovups	%xmm7, %xmm8
-# CHECK-NEXT: [2,8]     .    .D-R .    .    .    .  .   vmovups	%xmm8, %xmm9
-# CHECK-NEXT: [2,9]     .    .D-R .    .    .    .  .   vmovups	%xmm9, %xmm10
-# CHECK-NEXT: [2,10]    .    . DR .    .    .    .  .   vmovups	%xmm10, %xmm11
-# CHECK-NEXT: [2,11]    .    . DR .    .    .    .  .   vmovups	%xmm11, %xmm12
-# CHECK-NEXT: [2,12]    .    . DR .    .    .    .  .   vmovups	%xmm12, %xmm13
-# CHECK-NEXT: [2,13]    .    . DR .    .    .    .  .   vmovups	%xmm13, %xmm14
-# CHECK-NEXT: [2,14]    .    . DR .    .    .    .  .   vmovups	%xmm14, %xmm15
-# CHECK-NEXT: [2,15]    .    . DER.    .    .    .  .   vmovups	%xmm15, %xmm0
-# CHECK-NEXT: [3,0]     .    .  DR.    .    .    .  .   vmovups	%xmm0, %xmm1
-# CHECK-NEXT: [3,1]     .    .  DR.    .    .    .  .   vmovups	%xmm1, %xmm2
-# CHECK-NEXT: [3,2]     .    .  DR.    .    .    .  .   vmovups	%xmm2, %xmm3
-# CHECK-NEXT: [3,3]     .    .  DR.    .    .    .  .   vmovups	%xmm3, %xmm4
-# CHECK-NEXT: [3,4]     .    .  DR.    .    .    .  .   vmovups	%xmm4, %xmm5
-# CHECK-NEXT: [3,5]     .    .  DR.    .    .    .  .   vmovups	%xmm5, %xmm6
-# CHECK-NEXT: [3,6]     .    .   DR    .    .    .  .   vmovups	%xmm6, %xmm7
-# CHECK-NEXT: [3,7]     .    .   DR    .    .    .  .   vmovups	%xmm7, %xmm8
-# CHECK-NEXT: [3,8]     .    .   DR    .    .    .  .   vmovups	%xmm8, %xmm9
-# CHECK-NEXT: [3,9]     .    .   DR    .    .    .  .   vmovups	%xmm9, %xmm10
-# CHECK-NEXT: [3,10]    .    .   DR    .    .    .  .   vmovups	%xmm10, %xmm11
-# CHECK-NEXT: [3,11]    .    .   DR    .    .    .  .   vmovups	%xmm11, %xmm12
-# CHECK-NEXT: [3,12]    .    .    DR   .    .    .  .   vmovups	%xmm12, %xmm13
-# CHECK-NEXT: [3,13]    .    .    DR   .    .    .  .   vmovups	%xmm13, %xmm14
-# CHECK-NEXT: [3,14]    .    .    DR   .    .    .  .   vmovups	%xmm14, %xmm15
-# CHECK-NEXT: [3,15]    .    .    DER  .    .    .  .   vmovups	%xmm15, %xmm0
-# CHECK-NEXT: [4,0]     .    .    D-R  .    .    .  .   vmovups	%xmm0, %xmm1
-# CHECK-NEXT: [4,1]     .    .    D-R  .    .    .  .   vmovups	%xmm1, %xmm2
-# CHECK-NEXT: [4,2]     .    .    .DR  .    .    .  .   vmovups	%xmm2, %xmm3
-# CHECK-NEXT: [4,3]     .    .    .DR  .    .    .  .   vmovups	%xmm3, %xmm4
-# CHECK-NEXT: [4,4]     .    .    .DR  .    .    .  .   vmovups	%xmm4, %xmm5
-# CHECK-NEXT: [4,5]     .    .    .DR  .    .    .  .   vmovups	%xmm5, %xmm6
-# CHECK-NEXT: [4,6]     .    .    .DR  .    .    .  .   vmovups	%xmm6, %xmm7
-# CHECK-NEXT: [4,7]     .    .    .D-R .    .    .  .   vmovups	%xmm7, %xmm8
-# CHECK-NEXT: [4,8]     .    .    . DR .    .    .  .   vmovups	%xmm8, %xmm9
-# CHECK-NEXT: [4,9]     .    .    . DR .    .    .  .   vmovups	%xmm9, %xmm10
-# CHECK-NEXT: [4,10]    .    .    . DR .    .    .  .   vmovups	%xmm10, %xmm11
-# CHECK-NEXT: [4,11]    .    .    . DR .    .    .  .   vmovups	%xmm11, %xmm12
-# CHECK-NEXT: [4,12]    .    .    . DR .    .    .  .   vmovups	%xmm12, %xmm13
-# CHECK-NEXT: [4,13]    .    .    . DR .    .    .  .   vmovups	%xmm13, %xmm14
-# CHECK-NEXT: [4,14]    .    .    .  DR.    .    .  .   vmovups	%xmm14, %xmm15
-# CHECK-NEXT: [4,15]    .    .    .  DER    .    .  .   vmovups	%xmm15, %xmm0
-# CHECK-NEXT: [5,0]     .    .    .  D-R    .    .  .   vmovups	%xmm0, %xmm1
-# CHECK-NEXT: [5,1]     .    .    .  D-R    .    .  .   vmovups	%xmm1, %xmm2
-# CHECK-NEXT: [5,2]     .    .    .  D-R    .    .  .   vmovups	%xmm2, %xmm3
-# CHECK-NEXT: [5,3]     .    .    .  D-R    .    .  .   vmovups	%xmm3, %xmm4
-# CHECK-NEXT: [5,4]     .    .    .   DR    .    .  .   vmovups	%xmm4, %xmm5
-# CHECK-NEXT: [5,5]     .    .    .   DR    .    .  .   vmovups	%xmm5, %xmm6
-# CHECK-NEXT: [5,6]     .    .    .   DR    .    .  .   vmovups	%xmm6, %xmm7
-# CHECK-NEXT: [5,7]     .    .    .   D-R   .    .  .   vmovups	%xmm7, %xmm8
-# CHECK-NEXT: [5,8]     .    .    .   D-R   .    .  .   vmovups	%xmm8, %xmm9
-# CHECK-NEXT: [5,9]     .    .    .   D-R   .    .  .   vmovups	%xmm9, %xmm10
-# CHECK-NEXT: [5,10]    .    .    .    DR   .    .  .   vmovups	%xmm10, %xmm11
-# CHECK-NEXT: [5,11]    .    .    .    DR   .    .  .   vmovups	%xmm11, %xmm12
-# CHECK-NEXT: [5,12]    .    .    .    DR   .    .  .   vmovups	%xmm12, %xmm13
-# CHECK-NEXT: [5,13]    .    .    .    DR   .    .  .   vmovups	%xmm13, %xmm14
-# CHECK-NEXT: [5,14]    .    .    .    DR   .    .  .   vmovups	%xmm14, %xmm15
-# CHECK-NEXT: [5,15]    .    .    .    DER  .    .  .   vmovups	%xmm15, %xmm0
-# CHECK-NEXT: [6,0]     .    .    .    .DR  .    .  .   vmovups	%xmm0, %xmm1
-# CHECK-NEXT: [6,1]     .    .    .    .DR  .    .  .   vmovups	%xmm1, %xmm2
-# CHECK-NEXT: [6,2]     .    .    .    .DR  .    .  .   vmovups	%xmm2, %xmm3
-# CHECK-NEXT: [6,3]     .    .    .    .DR  .    .  .   vmovups	%xmm3, %xmm4
-# CHECK-NEXT: [6,4]     .    .    .    .DR  .    .  .   vmovups	%xmm4, %xmm5
-# CHECK-NEXT: [6,5]     .    .    .    .DR  .    .  .   vmovups	%xmm5, %xmm6
-# CHECK-NEXT: [6,6]     .    .    .    . DR .    .  .   vmovups	%xmm6, %xmm7
-# CHECK-NEXT: [6,7]     .    .    .    . DR .    .  .   vmovups	%xmm7, %xmm8
-# CHECK-NEXT: [6,8]     .    .    .    . DR .    .  .   vmovups	%xmm8, %xmm9
-# CHECK-NEXT: [6,9]     .    .    .    . DR .    .  .   vmovups	%xmm9, %xmm10
-# CHECK-NEXT: [6,10]    .    .    .    . DR .    .  .   vmovups	%xmm10, %xmm11
-# CHECK-NEXT: [6,11]    .    .    .    . DR .    .  .   vmovups	%xmm11, %xmm12
-# CHECK-NEXT: [6,12]    .    .    .    .  DR.    .  .   vmovups	%xmm12, %xmm13
-# CHECK-NEXT: [6,13]    .    .    .    .  DR.    .  .   vmovups	%xmm13, %xmm14
-# CHECK-NEXT: [6,14]    .    .    .    .  DR.    .  .   vmovups	%xmm14, %xmm15
-# CHECK-NEXT: [6,15]    .    .    .    .  DER    .  .   vmovups	%xmm15, %xmm0
-# CHECK-NEXT: [7,0]     .    .    .    .  D-R    .  .   vmovups	%xmm0, %xmm1
-# CHECK-NEXT: [7,1]     .    .    .    .  D-R    .  .   vmovups	%xmm1, %xmm2
-# CHECK-NEXT: [7,2]     .    .    .    .   DR    .  .   vmovups	%xmm2, %xmm3
-# CHECK-NEXT: [7,3]     .    .    .    .   DR    .  .   vmovups	%xmm3, %xmm4
-# CHECK-NEXT: [7,4]     .    .    .    .   DR    .  .   vmovups	%xmm4, %xmm5
-# CHECK-NEXT: [7,5]     .    .    .    .   DR    .  .   vmovups	%xmm5, %xmm6
-# CHECK-NEXT: [7,6]     .    .    .    .   DR    .  .   vmovups	%xmm6, %xmm7
-# CHECK-NEXT: [7,7]     .    .    .    .   D-R   .  .   vmovups	%xmm7, %xmm8
-# CHECK-NEXT: [7,8]     .    .    .    .    DR   .  .   vmovups	%xmm8, %xmm9
-# CHECK-NEXT: [7,9]     .    .    .    .    DR   .  .   vmovups	%xmm9, %xmm10
-# CHECK-NEXT: [7,10]    .    .    .    .    DR   .  .   vmovups	%xmm10, %xmm11
-# CHECK-NEXT: [7,11]    .    .    .    .    DR   .  .   vmovups	%xmm11, %xmm12
-# CHECK-NEXT: [7,12]    .    .    .    .    DR   .  .   vmovups	%xmm12, %xmm13
-# CHECK-NEXT: [7,13]    .    .    .    .    DR   .  .   vmovups	%xmm13, %xmm14
-# CHECK-NEXT: [7,14]    .    .    .    .    .DR  .  .   vmovups	%xmm14, %xmm15
-# CHECK-NEXT: [7,15]    .    .    .    .    .DER .  .   vmovups	%xmm15, %xmm0
-# CHECK-NEXT: [8,0]     .    .    .    .    .D-R .  .   vmovups	%xmm0, %xmm1
-# CHECK-NEXT: [8,1]     .    .    .    .    .D-R .  .   vmovups	%xmm1, %xmm2
-# CHECK-NEXT: [8,2]     .    .    .    .    .D-R .  .   vmovups	%xmm2, %xmm3
-# CHECK-NEXT: [8,3]     .    .    .    .    .D-R .  .   vmovups	%xmm3, %xmm4
-# CHECK-NEXT: [8,4]     .    .    .    .    . DR .  .   vmovups	%xmm4, %xmm5
-# CHECK-NEXT: [8,5]     .    .    .    .    . DR .  .   vmovups	%xmm5, %xmm6
-# CHECK-NEXT: [8,6]     .    .    .    .    . DR .  .   vmovups	%xmm6, %xmm7
-# CHECK-NEXT: [8,7]     .    .    .    .    . D-R.  .   vmovups	%xmm7, %xmm8
-# CHECK-NEXT: [8,8]     .    .    .    .    . D-R.  .   vmovups	%xmm8, %xmm9
-# CHECK-NEXT: [8,9]     .    .    .    .    . D-R.  .   vmovups	%xmm9, %xmm10
-# CHECK-NEXT: [8,10]    .    .    .    .    .  DR.  .   vmovups	%xmm10, %xmm11
-# CHECK-NEXT: [8,11]    .    .    .    .    .  DR.  .   vmovups	%xmm11, %xmm12
-# CHECK-NEXT: [8,12]    .    .    .    .    .  DR.  .   vmovups	%xmm12, %xmm13
-# CHECK-NEXT: [8,13]    .    .    .    .    .  DR.  .   vmovups	%xmm13, %xmm14
-# CHECK-NEXT: [8,14]    .    .    .    .    .  DR.  .   vmovups	%xmm14, %xmm15
-# CHECK-NEXT: [8,15]    .    .    .    .    .  DER  .   vmovups	%xmm15, %xmm0
-# CHECK-NEXT: [9,0]     .    .    .    .    .   DR  .   vmovups	%xmm0, %xmm1
-# CHECK-NEXT: [9,1]     .    .    .    .    .   DR  .   vmovups	%xmm1, %xmm2
-# CHECK-NEXT: [9,2]     .    .    .    .    .   DR  .   vmovups	%xmm2, %xmm3
-# CHECK-NEXT: [9,3]     .    .    .    .    .   DR  .   vmovups	%xmm3, %xmm4
-# CHECK-NEXT: [9,4]     .    .    .    .    .   DR  .   vmovups	%xmm4, %xmm5
-# CHECK-NEXT: [9,5]     .    .    .    .    .   DR  .   vmovups	%xmm5, %xmm6
-# CHECK-NEXT: [9,6]     .    .    .    .    .    DR .   vmovups	%xmm6, %xmm7
-# CHECK-NEXT: [9,7]     .    .    .    .    .    DR .   vmovups	%xmm7, %xmm8
-# CHECK-NEXT: [9,8]     .    .    .    .    .    DR .   vmovups	%xmm8, %xmm9
-# CHECK-NEXT: [9,9]     .    .    .    .    .    DR .   vmovups	%xmm9, %xmm10
-# CHECK-NEXT: [9,10]    .    .    .    .    .    DR .   vmovups	%xmm10, %xmm11
-# CHECK-NEXT: [9,11]    .    .    .    .    .    DR .   vmovups	%xmm11, %xmm12
-# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR.   vmovups	%xmm12, %xmm13
-# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR.   vmovups	%xmm13, %xmm14
-# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR.   vmovups	%xmm14, %xmm15
-# CHECK-NEXT: [9,15]    .    .    .    .    .    .DER   vmovups	%xmm15, %xmm0
+# CHECK:      [0,0]     DR   .    .    .    .    . .   vmovups	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DR   .    .    .    .    . .   vmovups	%xmm1, %xmm2
+# CHECK-NEXT: [0,2]     DR   .    .    .    .    . .   vmovups	%xmm2, %xmm3
+# CHECK-NEXT: [0,3]     DR   .    .    .    .    . .   vmovups	%xmm3, %xmm4
+# CHECK-NEXT: [0,4]     DR   .    .    .    .    . .   vmovups	%xmm4, %xmm5
+# CHECK-NEXT: [0,5]     DR   .    .    .    .    . .   vmovups	%xmm5, %xmm6
+# CHECK-NEXT: [0,6]     .DR  .    .    .    .    . .   vmovups	%xmm6, %xmm7
+# CHECK-NEXT: [0,7]     .DR  .    .    .    .    . .   vmovups	%xmm7, %xmm8
+# CHECK-NEXT: [0,8]     .DR  .    .    .    .    . .   vmovups	%xmm8, %xmm9
+# CHECK-NEXT: [0,9]     .DR  .    .    .    .    . .   vmovups	%xmm9, %xmm10
+# CHECK-NEXT: [0,10]    .DR  .    .    .    .    . .   vmovups	%xmm10, %xmm11
+# CHECK-NEXT: [0,11]    .DR  .    .    .    .    . .   vmovups	%xmm11, %xmm12
+# CHECK-NEXT: [0,12]    . DR .    .    .    .    . .   vmovups	%xmm12, %xmm13
+# CHECK-NEXT: [0,13]    . DR .    .    .    .    . .   vmovups	%xmm13, %xmm14
+# CHECK-NEXT: [0,14]    . DR .    .    .    .    . .   vmovups	%xmm14, %xmm15
+# CHECK-NEXT: [0,15]    . DR .    .    .    .    . .   vmovups	%xmm15, %xmm0
+# CHECK-NEXT: [1,0]     . DR .    .    .    .    . .   vmovups	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     . DR .    .    .    .    . .   vmovups	%xmm1, %xmm2
+# CHECK-NEXT: [1,2]     .  DR.    .    .    .    . .   vmovups	%xmm2, %xmm3
+# CHECK-NEXT: [1,3]     .  DR.    .    .    .    . .   vmovups	%xmm3, %xmm4
+# CHECK-NEXT: [1,4]     .  DR.    .    .    .    . .   vmovups	%xmm4, %xmm5
+# CHECK-NEXT: [1,5]     .  DR.    .    .    .    . .   vmovups	%xmm5, %xmm6
+# CHECK-NEXT: [1,6]     .  DR.    .    .    .    . .   vmovups	%xmm6, %xmm7
+# CHECK-NEXT: [1,7]     .  DR.    .    .    .    . .   vmovups	%xmm7, %xmm8
+# CHECK-NEXT: [1,8]     .   DR    .    .    .    . .   vmovups	%xmm8, %xmm9
+# CHECK-NEXT: [1,9]     .   DR    .    .    .    . .   vmovups	%xmm9, %xmm10
+# CHECK-NEXT: [1,10]    .   DR    .    .    .    . .   vmovups	%xmm10, %xmm11
+# CHECK-NEXT: [1,11]    .   DR    .    .    .    . .   vmovups	%xmm11, %xmm12
+# CHECK-NEXT: [1,12]    .   DR    .    .    .    . .   vmovups	%xmm12, %xmm13
+# CHECK-NEXT: [1,13]    .   DR    .    .    .    . .   vmovups	%xmm13, %xmm14
+# CHECK-NEXT: [1,14]    .    DR   .    .    .    . .   vmovups	%xmm14, %xmm15
+# CHECK-NEXT: [1,15]    .    DR   .    .    .    . .   vmovups	%xmm15, %xmm0
+# CHECK-NEXT: [2,0]     .    DR   .    .    .    . .   vmovups	%xmm0, %xmm1
+# CHECK-NEXT: [2,1]     .    DR   .    .    .    . .   vmovups	%xmm1, %xmm2
+# CHECK-NEXT: [2,2]     .    DR   .    .    .    . .   vmovups	%xmm2, %xmm3
+# CHECK-NEXT: [2,3]     .    DR   .    .    .    . .   vmovups	%xmm3, %xmm4
+# CHECK-NEXT: [2,4]     .    .DR  .    .    .    . .   vmovups	%xmm4, %xmm5
+# CHECK-NEXT: [2,5]     .    .DR  .    .    .    . .   vmovups	%xmm5, %xmm6
+# CHECK-NEXT: [2,6]     .    .DR  .    .    .    . .   vmovups	%xmm6, %xmm7
+# CHECK-NEXT: [2,7]     .    .DR  .    .    .    . .   vmovups	%xmm7, %xmm8
+# CHECK-NEXT: [2,8]     .    .DR  .    .    .    . .   vmovups	%xmm8, %xmm9
+# CHECK-NEXT: [2,9]     .    .DR  .    .    .    . .   vmovups	%xmm9, %xmm10
+# CHECK-NEXT: [2,10]    .    . DR .    .    .    . .   vmovups	%xmm10, %xmm11
+# CHECK-NEXT: [2,11]    .    . DR .    .    .    . .   vmovups	%xmm11, %xmm12
+# CHECK-NEXT: [2,12]    .    . DR .    .    .    . .   vmovups	%xmm12, %xmm13
+# CHECK-NEXT: [2,13]    .    . DR .    .    .    . .   vmovups	%xmm13, %xmm14
+# CHECK-NEXT: [2,14]    .    . DR .    .    .    . .   vmovups	%xmm14, %xmm15
+# CHECK-NEXT: [2,15]    .    . DR .    .    .    . .   vmovups	%xmm15, %xmm0
+# CHECK-NEXT: [3,0]     .    .  DR.    .    .    . .   vmovups	%xmm0, %xmm1
+# CHECK-NEXT: [3,1]     .    .  DR.    .    .    . .   vmovups	%xmm1, %xmm2
+# CHECK-NEXT: [3,2]     .    .  DR.    .    .    . .   vmovups	%xmm2, %xmm3
+# CHECK-NEXT: [3,3]     .    .  DR.    .    .    . .   vmovups	%xmm3, %xmm4
+# CHECK-NEXT: [3,4]     .    .  DR.    .    .    . .   vmovups	%xmm4, %xmm5
+# CHECK-NEXT: [3,5]     .    .  DR.    .    .    . .   vmovups	%xmm5, %xmm6
+# CHECK-NEXT: [3,6]     .    .   DR    .    .    . .   vmovups	%xmm6, %xmm7
+# CHECK-NEXT: [3,7]     .    .   DR    .    .    . .   vmovups	%xmm7, %xmm8
+# CHECK-NEXT: [3,8]     .    .   DR    .    .    . .   vmovups	%xmm8, %xmm9
+# CHECK-NEXT: [3,9]     .    .   DR    .    .    . .   vmovups	%xmm9, %xmm10
+# CHECK-NEXT: [3,10]    .    .   DR    .    .    . .   vmovups	%xmm10, %xmm11
+# CHECK-NEXT: [3,11]    .    .   DR    .    .    . .   vmovups	%xmm11, %xmm12
+# CHECK-NEXT: [3,12]    .    .    DR   .    .    . .   vmovups	%xmm12, %xmm13
+# CHECK-NEXT: [3,13]    .    .    DR   .    .    . .   vmovups	%xmm13, %xmm14
+# CHECK-NEXT: [3,14]    .    .    DR   .    .    . .   vmovups	%xmm14, %xmm15
+# CHECK-NEXT: [3,15]    .    .    DR   .    .    . .   vmovups	%xmm15, %xmm0
+# CHECK-NEXT: [4,0]     .    .    DR   .    .    . .   vmovups	%xmm0, %xmm1
+# CHECK-NEXT: [4,1]     .    .    DR   .    .    . .   vmovups	%xmm1, %xmm2
+# CHECK-NEXT: [4,2]     .    .    .DR  .    .    . .   vmovups	%xmm2, %xmm3
+# CHECK-NEXT: [4,3]     .    .    .DR  .    .    . .   vmovups	%xmm3, %xmm4
+# CHECK-NEXT: [4,4]     .    .    .DR  .    .    . .   vmovups	%xmm4, %xmm5
+# CHECK-NEXT: [4,5]     .    .    .DR  .    .    . .   vmovups	%xmm5, %xmm6
+# CHECK-NEXT: [4,6]     .    .    .DR  .    .    . .   vmovups	%xmm6, %xmm7
+# CHECK-NEXT: [4,7]     .    .    .DR  .    .    . .   vmovups	%xmm7, %xmm8
+# CHECK-NEXT: [4,8]     .    .    . DR .    .    . .   vmovups	%xmm8, %xmm9
+# CHECK-NEXT: [4,9]     .    .    . DR .    .    . .   vmovups	%xmm9, %xmm10
+# CHECK-NEXT: [4,10]    .    .    . DR .    .    . .   vmovups	%xmm10, %xmm11
+# CHECK-NEXT: [4,11]    .    .    . DR .    .    . .   vmovups	%xmm11, %xmm12
+# CHECK-NEXT: [4,12]    .    .    . DR .    .    . .   vmovups	%xmm12, %xmm13
+# CHECK-NEXT: [4,13]    .    .    . DR .    .    . .   vmovups	%xmm13, %xmm14
+# CHECK-NEXT: [4,14]    .    .    .  DR.    .    . .   vmovups	%xmm14, %xmm15
+# CHECK-NEXT: [4,15]    .    .    .  DR.    .    . .   vmovups	%xmm15, %xmm0
+# CHECK-NEXT: [5,0]     .    .    .  DR.    .    . .   vmovups	%xmm0, %xmm1
+# CHECK-NEXT: [5,1]     .    .    .  DR.    .    . .   vmovups	%xmm1, %xmm2
+# CHECK-NEXT: [5,2]     .    .    .  DR.    .    . .   vmovups	%xmm2, %xmm3
+# CHECK-NEXT: [5,3]     .    .    .  DR.    .    . .   vmovups	%xmm3, %xmm4
+# CHECK-NEXT: [5,4]     .    .    .   DR    .    . .   vmovups	%xmm4, %xmm5
+# CHECK-NEXT: [5,5]     .    .    .   DR    .    . .   vmovups	%xmm5, %xmm6
+# CHECK-NEXT: [5,6]     .    .    .   DR    .    . .   vmovups	%xmm6, %xmm7
+# CHECK-NEXT: [5,7]     .    .    .   DR    .    . .   vmovups	%xmm7, %xmm8
+# CHECK-NEXT: [5,8]     .    .    .   DR    .    . .   vmovups	%xmm8, %xmm9
+# CHECK-NEXT: [5,9]     .    .    .   DR    .    . .   vmovups	%xmm9, %xmm10
+# CHECK-NEXT: [5,10]    .    .    .    DR   .    . .   vmovups	%xmm10, %xmm11
+# CHECK-NEXT: [5,11]    .    .    .    DR   .    . .   vmovups	%xmm11, %xmm12
+# CHECK-NEXT: [5,12]    .    .    .    DR   .    . .   vmovups	%xmm12, %xmm13
+# CHECK-NEXT: [5,13]    .    .    .    DR   .    . .   vmovups	%xmm13, %xmm14
+# CHECK-NEXT: [5,14]    .    .    .    DR   .    . .   vmovups	%xmm14, %xmm15
+# CHECK-NEXT: [5,15]    .    .    .    DR   .    . .   vmovups	%xmm15, %xmm0
+# CHECK-NEXT: [6,0]     .    .    .    .DR  .    . .   vmovups	%xmm0, %xmm1
+# CHECK-NEXT: [6,1]     .    .    .    .DR  .    . .   vmovups	%xmm1, %xmm2
+# CHECK-NEXT: [6,2]     .    .    .    .DR  .    . .   vmovups	%xmm2, %xmm3
+# CHECK-NEXT: [6,3]     .    .    .    .DR  .    . .   vmovups	%xmm3, %xmm4
+# CHECK-NEXT: [6,4]     .    .    .    .DR  .    . .   vmovups	%xmm4, %xmm5
+# CHECK-NEXT: [6,5]     .    .    .    .DR  .    . .   vmovups	%xmm5, %xmm6
+# CHECK-NEXT: [6,6]     .    .    .    . DR .    . .   vmovups	%xmm6, %xmm7
+# CHECK-NEXT: [6,7]     .    .    .    . DR .    . .   vmovups	%xmm7, %xmm8
+# CHECK-NEXT: [6,8]     .    .    .    . DR .    . .   vmovups	%xmm8, %xmm9
+# CHECK-NEXT: [6,9]     .    .    .    . DR .    . .   vmovups	%xmm9, %xmm10
+# CHECK-NEXT: [6,10]    .    .    .    . DR .    . .   vmovups	%xmm10, %xmm11
+# CHECK-NEXT: [6,11]    .    .    .    . DR .    . .   vmovups	%xmm11, %xmm12
+# CHECK-NEXT: [6,12]    .    .    .    .  DR.    . .   vmovups	%xmm12, %xmm13
+# CHECK-NEXT: [6,13]    .    .    .    .  DR.    . .   vmovups	%xmm13, %xmm14
+# CHECK-NEXT: [6,14]    .    .    .    .  DR.    . .   vmovups	%xmm14, %xmm15
+# CHECK-NEXT: [6,15]    .    .    .    .  DR.    . .   vmovups	%xmm15, %xmm0
+# CHECK-NEXT: [7,0]     .    .    .    .  DR.    . .   vmovups	%xmm0, %xmm1
+# CHECK-NEXT: [7,1]     .    .    .    .  DR.    . .   vmovups	%xmm1, %xmm2
+# CHECK-NEXT: [7,2]     .    .    .    .   DR    . .   vmovups	%xmm2, %xmm3
+# CHECK-NEXT: [7,3]     .    .    .    .   DR    . .   vmovups	%xmm3, %xmm4
+# CHECK-NEXT: [7,4]     .    .    .    .   DR    . .   vmovups	%xmm4, %xmm5
+# CHECK-NEXT: [7,5]     .    .    .    .   DR    . .   vmovups	%xmm5, %xmm6
+# CHECK-NEXT: [7,6]     .    .    .    .   DR    . .   vmovups	%xmm6, %xmm7
+# CHECK-NEXT: [7,7]     .    .    .    .   DR    . .   vmovups	%xmm7, %xmm8
+# CHECK-NEXT: [7,8]     .    .    .    .    DR   . .   vmovups	%xmm8, %xmm9
+# CHECK-NEXT: [7,9]     .    .    .    .    DR   . .   vmovups	%xmm9, %xmm10
+# CHECK-NEXT: [7,10]    .    .    .    .    DR   . .   vmovups	%xmm10, %xmm11
+# CHECK-NEXT: [7,11]    .    .    .    .    DR   . .   vmovups	%xmm11, %xmm12
+# CHECK-NEXT: [7,12]    .    .    .    .    DR   . .   vmovups	%xmm12, %xmm13
+# CHECK-NEXT: [7,13]    .    .    .    .    DR   . .   vmovups	%xmm13, %xmm14
+# CHECK-NEXT: [7,14]    .    .    .    .    .DR  . .   vmovups	%xmm14, %xmm15
+# CHECK-NEXT: [7,15]    .    .    .    .    .DR  . .   vmovups	%xmm15, %xmm0
+# CHECK-NEXT: [8,0]     .    .    .    .    .DR  . .   vmovups	%xmm0, %xmm1
+# CHECK-NEXT: [8,1]     .    .    .    .    .DR  . .   vmovups	%xmm1, %xmm2
+# CHECK-NEXT: [8,2]     .    .    .    .    .DR  . .   vmovups	%xmm2, %xmm3
+# CHECK-NEXT: [8,3]     .    .    .    .    .DR  . .   vmovups	%xmm3, %xmm4
+# CHECK-NEXT: [8,4]     .    .    .    .    . DR . .   vmovups	%xmm4, %xmm5
+# CHECK-NEXT: [8,5]     .    .    .    .    . DR . .   vmovups	%xmm5, %xmm6
+# CHECK-NEXT: [8,6]     .    .    .    .    . DR . .   vmovups	%xmm6, %xmm7
+# CHECK-NEXT: [8,7]     .    .    .    .    . DR . .   vmovups	%xmm7, %xmm8
+# CHECK-NEXT: [8,8]     .    .    .    .    . DR . .   vmovups	%xmm8, %xmm9
+# CHECK-NEXT: [8,9]     .    .    .    .    . DR . .   vmovups	%xmm9, %xmm10
+# CHECK-NEXT: [8,10]    .    .    .    .    .  DR. .   vmovups	%xmm10, %xmm11
+# CHECK-NEXT: [8,11]    .    .    .    .    .  DR. .   vmovups	%xmm11, %xmm12
+# CHECK-NEXT: [8,12]    .    .    .    .    .  DR. .   vmovups	%xmm12, %xmm13
+# CHECK-NEXT: [8,13]    .    .    .    .    .  DR. .   vmovups	%xmm13, %xmm14
+# CHECK-NEXT: [8,14]    .    .    .    .    .  DR. .   vmovups	%xmm14, %xmm15
+# CHECK-NEXT: [8,15]    .    .    .    .    .  DR. .   vmovups	%xmm15, %xmm0
+# CHECK-NEXT: [9,0]     .    .    .    .    .   DR .   vmovups	%xmm0, %xmm1
+# CHECK-NEXT: [9,1]     .    .    .    .    .   DR .   vmovups	%xmm1, %xmm2
+# CHECK-NEXT: [9,2]     .    .    .    .    .   DR .   vmovups	%xmm2, %xmm3
+# CHECK-NEXT: [9,3]     .    .    .    .    .   DR .   vmovups	%xmm3, %xmm4
+# CHECK-NEXT: [9,4]     .    .    .    .    .   DR .   vmovups	%xmm4, %xmm5
+# CHECK-NEXT: [9,5]     .    .    .    .    .   DR .   vmovups	%xmm5, %xmm6
+# CHECK-NEXT: [9,6]     .    .    .    .    .    DR.   vmovups	%xmm6, %xmm7
+# CHECK-NEXT: [9,7]     .    .    .    .    .    DR.   vmovups	%xmm7, %xmm8
+# CHECK-NEXT: [9,8]     .    .    .    .    .    DR.   vmovups	%xmm8, %xmm9
+# CHECK-NEXT: [9,9]     .    .    .    .    .    DR.   vmovups	%xmm9, %xmm10
+# CHECK-NEXT: [9,10]    .    .    .    .    .    DR.   vmovups	%xmm10, %xmm11
+# CHECK-NEXT: [9,11]    .    .    .    .    .    DR.   vmovups	%xmm11, %xmm12
+# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR   vmovups	%xmm12, %xmm13
+# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR   vmovups	%xmm13, %xmm14
+# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR   vmovups	%xmm14, %xmm15
+# CHECK-NEXT: [9,15]    .    .    .    .    .    .DR   vmovups	%xmm15, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -685,35 +685,35 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     10    0.0    0.0    0.6       vmovups	%xmm0, %xmm1
-# CHECK-NEXT: 1.     10    0.0    0.0    0.6       vmovups	%xmm1, %xmm2
-# CHECK-NEXT: 2.     10    0.0    0.0    0.3       vmovups	%xmm2, %xmm3
-# CHECK-NEXT: 3.     10    0.0    0.0    0.3       vmovups	%xmm3, %xmm4
+# CHECK-NEXT: 0.     10    0.0    0.0    0.0       vmovups	%xmm0, %xmm1
+# CHECK-NEXT: 1.     10    0.0    0.0    0.0       vmovups	%xmm1, %xmm2
+# CHECK-NEXT: 2.     10    0.0    0.0    0.0       vmovups	%xmm2, %xmm3
+# CHECK-NEXT: 3.     10    0.0    0.0    0.0       vmovups	%xmm3, %xmm4
 # CHECK-NEXT: 4.     10    0.0    0.0    0.0       vmovups	%xmm4, %xmm5
 # CHECK-NEXT: 5.     10    0.0    0.0    0.0       vmovups	%xmm5, %xmm6
 # CHECK-NEXT: 6.     10    0.0    0.0    0.0       vmovups	%xmm6, %xmm7
-# CHECK-NEXT: 7.     10    0.0    0.0    0.6       vmovups	%xmm7, %xmm8
-# CHECK-NEXT: 8.     10    0.0    0.0    0.3       vmovups	%xmm8, %xmm9
-# CHECK-NEXT: 9.     10    0.0    0.0    0.3       vmovups	%xmm9, %xmm10
+# CHECK-NEXT: 7.     10    0.0    0.0    0.0       vmovups	%xmm7, %xmm8
+# CHECK-NEXT: 8.     10    0.0    0.0    0.0       vmovups	%xmm8, %xmm9
+# CHECK-NEXT: 9.     10    0.0    0.0    0.0       vmovups	%xmm9, %xmm10
 # CHECK-NEXT: 10.    10    0.0    0.0    0.0       vmovups	%xmm10, %xmm11
 # CHECK-NEXT: 11.    10    0.0    0.0    0.0       vmovups	%xmm11, %xmm12
 # CHECK-NEXT: 12.    10    0.0    0.0    0.0       vmovups	%xmm12, %xmm13
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       vmovups	%xmm13, %xmm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       vmovups	%xmm14, %xmm15
-# CHECK-NEXT: 15.    10    1.0    1.0    0.0       vmovups	%xmm15, %xmm0
-# CHECK-NEXT:        10    0.1    0.1    0.2       <total>
+# CHECK-NEXT: 15.    10    0.0    0.0    0.0       vmovups	%xmm15, %xmm0
+# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
 
 # CHECK:      [2] Code Region
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      24000
-# CHECK-NEXT: Total Cycles:      4002
+# CHECK-NEXT: Total Cycles:      4001
 # CHECK-NEXT: Total uOps:        24000
 
 # CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    6.00
 # CHECK-NEXT: IPC:               6.00
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: Block RThroughput: 2.7
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -724,22 +724,22 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%xmm0, %xmm1
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%xmm1, %xmm2
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%xmm2, %xmm3
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%xmm3, %xmm4
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%xmm4, %xmm5
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%xmm5, %xmm6
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%xmm6, %xmm7
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%xmm7, %xmm8
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%xmm8, %xmm9
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%xmm9, %xmm10
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%xmm10, %xmm11
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%xmm11, %xmm12
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%xmm12, %xmm13
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%xmm13, %xmm14
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%xmm14, %xmm15
-# CHECK-NEXT:  1      0     0.25                        vmovapd	%xmm15, %xmm0
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm0, %xmm1
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm1, %xmm2
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm2, %xmm3
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm3, %xmm4
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm4, %xmm5
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm5, %xmm6
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm6, %xmm7
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm7, %xmm8
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm8, %xmm9
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm9, %xmm10
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm10, %xmm11
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm11, %xmm12
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm12, %xmm13
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm13, %xmm14
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm14, %xmm15
+# CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    1500
@@ -786,7 +786,7 @@ vmovdqu %xmm15, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
@@ -805,172 +805,172 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovapd	%xmm12, %xmm13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovapd	%xmm13, %xmm14
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovapd	%xmm14, %xmm15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovapd	%xmm15, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovapd	%xmm15, %xmm0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012345678
+# CHECK-NEXT: Index     0123456789          01234567
 
-# CHECK:      [0,0]     DR   .    .    .    .    .  .   vmovapd	%xmm0, %xmm1
-# CHECK-NEXT: [0,1]     DR   .    .    .    .    .  .   vmovapd	%xmm1, %xmm2
-# CHECK-NEXT: [0,2]     DR   .    .    .    .    .  .   vmovapd	%xmm2, %xmm3
-# CHECK-NEXT: [0,3]     DR   .    .    .    .    .  .   vmovapd	%xmm3, %xmm4
-# CHECK-NEXT: [0,4]     DR   .    .    .    .    .  .   vmovapd	%xmm4, %xmm5
-# CHECK-NEXT: [0,5]     DR   .    .    .    .    .  .   vmovapd	%xmm5, %xmm6
-# CHECK-NEXT: [0,6]     .DR  .    .    .    .    .  .   vmovapd	%xmm6, %xmm7
-# CHECK-NEXT: [0,7]     .DR  .    .    .    .    .  .   vmovapd	%xmm7, %xmm8
-# CHECK-NEXT: [0,8]     .DR  .    .    .    .    .  .   vmovapd	%xmm8, %xmm9
-# CHECK-NEXT: [0,9]     .DR  .    .    .    .    .  .   vmovapd	%xmm9, %xmm10
-# CHECK-NEXT: [0,10]    .DR  .    .    .    .    .  .   vmovapd	%xmm10, %xmm11
-# CHECK-NEXT: [0,11]    .DR  .    .    .    .    .  .   vmovapd	%xmm11, %xmm12
-# CHECK-NEXT: [0,12]    . DR .    .    .    .    .  .   vmovapd	%xmm12, %xmm13
-# CHECK-NEXT: [0,13]    . DR .    .    .    .    .  .   vmovapd	%xmm13, %xmm14
-# CHECK-NEXT: [0,14]    . DR .    .    .    .    .  .   vmovapd	%xmm14, %xmm15
-# CHECK-NEXT: [0,15]    . DER.    .    .    .    .  .   vmovapd	%xmm15, %xmm0
-# CHECK-NEXT: [1,0]     . D-R.    .    .    .    .  .   vmovapd	%xmm0, %xmm1
-# CHECK-NEXT: [1,1]     . D-R.    .    .    .    .  .   vmovapd	%xmm1, %xmm2
-# CHECK-NEXT: [1,2]     .  DR.    .    .    .    .  .   vmovapd	%xmm2, %xmm3
-# CHECK-NEXT: [1,3]     .  DR.    .    .    .    .  .   vmovapd	%xmm3, %xmm4
-# CHECK-NEXT: [1,4]     .  DR.    .    .    .    .  .   vmovapd	%xmm4, %xmm5
-# CHECK-NEXT: [1,5]     .  DR.    .    .    .    .  .   vmovapd	%xmm5, %xmm6
-# CHECK-NEXT: [1,6]     .  DR.    .    .    .    .  .   vmovapd	%xmm6, %xmm7
-# CHECK-NEXT: [1,7]     .  D-R    .    .    .    .  .   vmovapd	%xmm7, %xmm8
-# CHECK-NEXT: [1,8]     .   DR    .    .    .    .  .   vmovapd	%xmm8, %xmm9
-# CHECK-NEXT: [1,9]     .   DR    .    .    .    .  .   vmovapd	%xmm9, %xmm10
-# CHECK-NEXT: [1,10]    .   DR    .    .    .    .  .   vmovapd	%xmm10, %xmm11
-# CHECK-NEXT: [1,11]    .   DR    .    .    .    .  .   vmovapd	%xmm11, %xmm12
-# CHECK-NEXT: [1,12]    .   DR    .    .    .    .  .   vmovapd	%xmm12, %xmm13
-# CHECK-NEXT: [1,13]    .   DR    .    .    .    .  .   vmovapd	%xmm13, %xmm14
-# CHECK-NEXT: [1,14]    .    DR   .    .    .    .  .   vmovapd	%xmm14, %xmm15
-# CHECK-NEXT: [1,15]    .    DER  .    .    .    .  .   vmovapd	%xmm15, %xmm0
-# CHECK-NEXT: [2,0]     .    D-R  .    .    .    .  .   vmovapd	%xmm0, %xmm1
-# CHECK-NEXT: [2,1]     .    D-R  .    .    .    .  .   vmovapd	%xmm1, %xmm2
-# CHECK-NEXT: [2,2]     .    D-R  .    .    .    .  .   vmovapd	%xmm2, %xmm3
-# CHECK-NEXT: [2,3]     .    D-R  .    .    .    .  .   vmovapd	%xmm3, %xmm4
-# CHECK-NEXT: [2,4]     .    .DR  .    .    .    .  .   vmovapd	%xmm4, %xmm5
-# CHECK-NEXT: [2,5]     .    .DR  .    .    .    .  .   vmovapd	%xmm5, %xmm6
-# CHECK-NEXT: [2,6]     .    .DR  .    .    .    .  .   vmovapd	%xmm6, %xmm7
-# CHECK-NEXT: [2,7]     .    .D-R .    .    .    .  .   vmovapd	%xmm7, %xmm8
-# CHECK-NEXT: [2,8]     .    .D-R .    .    .    .  .   vmovapd	%xmm8, %xmm9
-# CHECK-NEXT: [2,9]     .    .D-R .    .    .    .  .   vmovapd	%xmm9, %xmm10
-# CHECK-NEXT: [2,10]    .    . DR .    .    .    .  .   vmovapd	%xmm10, %xmm11
-# CHECK-NEXT: [2,11]    .    . DR .    .    .    .  .   vmovapd	%xmm11, %xmm12
-# CHECK-NEXT: [2,12]    .    . DR .    .    .    .  .   vmovapd	%xmm12, %xmm13
-# CHECK-NEXT: [2,13]    .    . DR .    .    .    .  .   vmovapd	%xmm13, %xmm14
-# CHECK-NEXT: [2,14]    .    . DR .    .    .    .  .   vmovapd	%xmm14, %xmm15
-# CHECK-NEXT: [2,15]    .    . DER.    .    .    .  .   vmovapd	%xmm15, %xmm0
-# CHECK-NEXT: [3,0]     .    .  DR.    .    .    .  .   vmovapd	%xmm0, %xmm1
-# CHECK-NEXT: [3,1]     .    .  DR.    .    .    .  .   vmovapd	%xmm1, %xmm2
-# CHECK-NEXT: [3,2]     .    .  DR.    .    .    .  .   vmovapd	%xmm2, %xmm3
-# CHECK-NEXT: [3,3]     .    .  DR.    .    .    .  .   vmovapd	%xmm3, %xmm4
-# CHECK-NEXT: [3,4]     .    .  DR.    .    .    .  .   vmovapd	%xmm4, %xmm5
-# CHECK-NEXT: [3,5]     .    .  DR.    .    .    .  .   vmovapd	%xmm5, %xmm6
-# CHECK-NEXT: [3,6]     .    .   DR    .    .    .  .   vmovapd	%xmm6, %xmm7
-# CHECK-NEXT: [3,7]     .    .   DR    .    .    .  .   vmovapd	%xmm7, %xmm8
-# CHECK-NEXT: [3,8]     .    .   DR    .    .    .  .   vmovapd	%xmm8, %xmm9
-# CHECK-NEXT: [3,9]     .    .   DR    .    .    .  .   vmovapd	%xmm9, %xmm10
-# CHECK-NEXT: [3,10]    .    .   DR    .    .    .  .   vmovapd	%xmm10, %xmm11
-# CHECK-NEXT: [3,11]    .    .   DR    .    .    .  .   vmovapd	%xmm11, %xmm12
-# CHECK-NEXT: [3,12]    .    .    DR   .    .    .  .   vmovapd	%xmm12, %xmm13
-# CHECK-NEXT: [3,13]    .    .    DR   .    .    .  .   vmovapd	%xmm13, %xmm14
-# CHECK-NEXT: [3,14]    .    .    DR   .    .    .  .   vmovapd	%xmm14, %xmm15
-# CHECK-NEXT: [3,15]    .    .    DER  .    .    .  .   vmovapd	%xmm15, %xmm0
-# CHECK-NEXT: [4,0]     .    .    D-R  .    .    .  .   vmovapd	%xmm0, %xmm1
-# CHECK-NEXT: [4,1]     .    .    D-R  .    .    .  .   vmovapd	%xmm1, %xmm2
-# CHECK-NEXT: [4,2]     .    .    .DR  .    .    .  .   vmovapd	%xmm2, %xmm3
-# CHECK-NEXT: [4,3]     .    .    .DR  .    .    .  .   vmovapd	%xmm3, %xmm4
-# CHECK-NEXT: [4,4]     .    .    .DR  .    .    .  .   vmovapd	%xmm4, %xmm5
-# CHECK-NEXT: [4,5]     .    .    .DR  .    .    .  .   vmovapd	%xmm5, %xmm6
-# CHECK-NEXT: [4,6]     .    .    .DR  .    .    .  .   vmovapd	%xmm6, %xmm7
-# CHECK-NEXT: [4,7]     .    .    .D-R .    .    .  .   vmovapd	%xmm7, %xmm8
-# CHECK-NEXT: [4,8]     .    .    . DR .    .    .  .   vmovapd	%xmm8, %xmm9
-# CHECK-NEXT: [4,9]     .    .    . DR .    .    .  .   vmovapd	%xmm9, %xmm10
-# CHECK-NEXT: [4,10]    .    .    . DR .    .    .  .   vmovapd	%xmm10, %xmm11
-# CHECK-NEXT: [4,11]    .    .    . DR .    .    .  .   vmovapd	%xmm11, %xmm12
-# CHECK-NEXT: [4,12]    .    .    . DR .    .    .  .   vmovapd	%xmm12, %xmm13
-# CHECK-NEXT: [4,13]    .    .    . DR .    .    .  .   vmovapd	%xmm13, %xmm14
-# CHECK-NEXT: [4,14]    .    .    .  DR.    .    .  .   vmovapd	%xmm14, %xmm15
-# CHECK-NEXT: [4,15]    .    .    .  DER    .    .  .   vmovapd	%xmm15, %xmm0
-# CHECK-NEXT: [5,0]     .    .    .  D-R    .    .  .   vmovapd	%xmm0, %xmm1
-# CHECK-NEXT: [5,1]     .    .    .  D-R    .    .  .   vmovapd	%xmm1, %xmm2
-# CHECK-NEXT: [5,2]     .    .    .  D-R    .    .  .   vmovapd	%xmm2, %xmm3
-# CHECK-NEXT: [5,3]     .    .    .  D-R    .    .  .   vmovapd	%xmm3, %xmm4
-# CHECK-NEXT: [5,4]     .    .    .   DR    .    .  .   vmovapd	%xmm4, %xmm5
-# CHECK-NEXT: [5,5]     .    .    .   DR    .    .  .   vmovapd	%xmm5, %xmm6
-# CHECK-NEXT: [5,6]     .    .    .   DR    .    .  .   vmovapd	%xmm6, %xmm7
-# CHECK-NEXT: [5,7]     .    .    .   D-R   .    .  .   vmovapd	%xmm7, %xmm8
-# CHECK-NEXT: [5,8]     .    .    .   D-R   .    .  .   vmovapd	%xmm8, %xmm9
-# CHECK-NEXT: [5,9]     .    .    .   D-R   .    .  .   vmovapd	%xmm9, %xmm10
-# CHECK-NEXT: [5,10]    .    .    .    DR   .    .  .   vmovapd	%xmm10, %xmm11
-# CHECK-NEXT: [5,11]    .    .    .    DR   .    .  .   vmovapd	%xmm11, %xmm12
-# CHECK-NEXT: [5,12]    .    .    .    DR   .    .  .   vmovapd	%xmm12, %xmm13
-# CHECK-NEXT: [5,13]    .    .    .    DR   .    .  .   vmovapd	%xmm13, %xmm14
-# CHECK-NEXT: [5,14]    .    .    .    DR   .    .  .   vmovapd	%xmm14, %xmm15
-# CHECK-NEXT: [5,15]    .    .    .    DER  .    .  .   vmovapd	%xmm15, %xmm0
-# CHECK-NEXT: [6,0]     .    .    .    .DR  .    .  .   vmovapd	%xmm0, %xmm1
-# CHECK-NEXT: [6,1]     .    .    .    .DR  .    .  .   vmovapd	%xmm1, %xmm2
-# CHECK-NEXT: [6,2]     .    .    .    .DR  .    .  .   vmovapd	%xmm2, %xmm3
-# CHECK-NEXT: [6,3]     .    .    .    .DR  .    .  .   vmovapd	%xmm3, %xmm4
-# CHECK-NEXT: [6,4]     .    .    .    .DR  .    .  .   vmovapd	%xmm4, %xmm5
-# CHECK-NEXT: [6,5]     .    .    .    .DR  .    .  .   vmovapd	%xmm5, %xmm6
-# CHECK-NEXT: [6,6]     .    .    .    . DR .    .  .   vmovapd	%xmm6, %xmm7
-# CHECK-NEXT: [6,7]     .    .    .    . DR .    .  .   vmovapd	%xmm7, %xmm8
-# CHECK-NEXT: [6,8]     .    .    .    . DR .    .  .   vmovapd	%xmm8, %xmm9
-# CHECK-NEXT: [6,9]     .    .    .    . DR .    .  .   vmovapd	%xmm9, %xmm10
-# CHECK-NEXT: [6,10]    .    .    .    . DR .    .  .   vmovapd	%xmm10, %xmm11
-# CHECK-NEXT: [6,11]    .    .    .    . DR .    .  .   vmovapd	%xmm11, %xmm12
-# CHECK-NEXT: [6,12]    .    .    .    .  DR.    .  .   vmovapd	%xmm12, %xmm13
-# CHECK-NEXT: [6,13]    .    .    .    .  DR.    .  .   vmovapd	%xmm13, %xmm14
-# CHECK-NEXT: [6,14]    .    .    .    .  DR.    .  .   vmovapd	%xmm14, %xmm15
-# CHECK-NEXT: [6,15]    .    .    .    .  DER    .  .   vmovapd	%xmm15, %xmm0
-# CHECK-NEXT: [7,0]     .    .    .    .  D-R    .  .   vmovapd	%xmm0, %xmm1
-# CHECK-NEXT: [7,1]     .    .    .    .  D-R    .  .   vmovapd	%xmm1, %xmm2
-# CHECK-NEXT: [7,2]     .    .    .    .   DR    .  .   vmovapd	%xmm2, %xmm3
-# CHECK-NEXT: [7,3]     .    .    .    .   DR    .  .   vmovapd	%xmm3, %xmm4
-# CHECK-NEXT: [7,4]     .    .    .    .   DR    .  .   vmovapd	%xmm4, %xmm5
-# CHECK-NEXT: [7,5]     .    .    .    .   DR    .  .   vmovapd	%xmm5, %xmm6
-# CHECK-NEXT: [7,6]     .    .    .    .   DR    .  .   vmovapd	%xmm6, %xmm7
-# CHECK-NEXT: [7,7]     .    .    .    .   D-R   .  .   vmovapd	%xmm7, %xmm8
-# CHECK-NEXT: [7,8]     .    .    .    .    DR   .  .   vmovapd	%xmm8, %xmm9
-# CHECK-NEXT: [7,9]     .    .    .    .    DR   .  .   vmovapd	%xmm9, %xmm10
-# CHECK-NEXT: [7,10]    .    .    .    .    DR   .  .   vmovapd	%xmm10, %xmm11
-# CHECK-NEXT: [7,11]    .    .    .    .    DR   .  .   vmovapd	%xmm11, %xmm12
-# CHECK-NEXT: [7,12]    .    .    .    .    DR   .  .   vmovapd	%xmm12, %xmm13
-# CHECK-NEXT: [7,13]    .    .    .    .    DR   .  .   vmovapd	%xmm13, %xmm14
-# CHECK-NEXT: [7,14]    .    .    .    .    .DR  .  .   vmovapd	%xmm14, %xmm15
-# CHECK-NEXT: [7,15]    .    .    .    .    .DER .  .   vmovapd	%xmm15, %xmm0
-# CHECK-NEXT: [8,0]     .    .    .    .    .D-R .  .   vmovapd	%xmm0, %xmm1
-# CHECK-NEXT: [8,1]     .    .    .    .    .D-R .  .   vmovapd	%xmm1, %xmm2
-# CHECK-NEXT: [8,2]     .    .    .    .    .D-R .  .   vmovapd	%xmm2, %xmm3
-# CHECK-NEXT: [8,3]     .    .    .    .    .D-R .  .   vmovapd	%xmm3, %xmm4
-# CHECK-NEXT: [8,4]     .    .    .    .    . DR .  .   vmovapd	%xmm4, %xmm5
-# CHECK-NEXT: [8,5]     .    .    .    .    . DR .  .   vmovapd	%xmm5, %xmm6
-# CHECK-NEXT: [8,6]     .    .    .    .    . DR .  .   vmovapd	%xmm6, %xmm7
-# CHECK-NEXT: [8,7]     .    .    .    .    . D-R.  .   vmovapd	%xmm7, %xmm8
-# CHECK-NEXT: [8,8]     .    .    .    .    . D-R.  .   vmovapd	%xmm8, %xmm9
-# CHECK-NEXT: [8,9]     .    .    .    .    . D-R.  .   vmovapd	%xmm9, %xmm10
-# CHECK-NEXT: [8,10]    .    .    .    .    .  DR.  .   vmovapd	%xmm10, %xmm11
-# CHECK-NEXT: [8,11]    .    .    .    .    .  DR.  .   vmovapd	%xmm11, %xmm12
-# CHECK-NEXT: [8,12]    .    .    .    .    .  DR.  .   vmovapd	%xmm12, %xmm13
-# CHECK-NEXT: [8,13]    .    .    .    .    .  DR.  .   vmovapd	%xmm13, %xmm14
-# CHECK-NEXT: [8,14]    .    .    .    .    .  DR.  .   vmovapd	%xmm14, %xmm15
-# CHECK-NEXT: [8,15]    .    .    .    .    .  DER  .   vmovapd	%xmm15, %xmm0
-# CHECK-NEXT: [9,0]     .    .    .    .    .   DR  .   vmovapd	%xmm0, %xmm1
-# CHECK-NEXT: [9,1]     .    .    .    .    .   DR  .   vmovapd	%xmm1, %xmm2
-# CHECK-NEXT: [9,2]     .    .    .    .    .   DR  .   vmovapd	%xmm2, %xmm3
-# CHECK-NEXT: [9,3]     .    .    .    .    .   DR  .   vmovapd	%xmm3, %xmm4
-# CHECK-NEXT: [9,4]     .    .    .    .    .   DR  .   vmovapd	%xmm4, %xmm5
-# CHECK-NEXT: [9,5]     .    .    .    .    .   DR  .   vmovapd	%xmm5, %xmm6
-# CHECK-NEXT: [9,6]     .    .    .    .    .    DR .   vmovapd	%xmm6, %xmm7
-# CHECK-NEXT: [9,7]     .    .    .    .    .    DR .   vmovapd	%xmm7, %xmm8
-# CHECK-NEXT: [9,8]     .    .    .    .    .    DR .   vmovapd	%xmm8, %xmm9
-# CHECK-NEXT: [9,9]     .    .    .    .    .    DR .   vmovapd	%xmm9, %xmm10
-# CHECK-NEXT: [9,10]    .    .    .    .    .    DR .   vmovapd	%xmm10, %xmm11
-# CHECK-NEXT: [9,11]    .    .    .    .    .    DR .   vmovapd	%xmm11, %xmm12
-# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR.   vmovapd	%xmm12, %xmm13
-# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR.   vmovapd	%xmm13, %xmm14
-# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR.   vmovapd	%xmm14, %xmm15
-# CHECK-NEXT: [9,15]    .    .    .    .    .    .DER   vmovapd	%xmm15, %xmm0
+# CHECK:      [0,0]     DR   .    .    .    .    . .   vmovapd	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DR   .    .    .    .    . .   vmovapd	%xmm1, %xmm2
+# CHECK-NEXT: [0,2]     DR   .    .    .    .    . .   vmovapd	%xmm2, %xmm3
+# CHECK-NEXT: [0,3]     DR   .    .    .    .    . .   vmovapd	%xmm3, %xmm4
+# CHECK-NEXT: [0,4]     DR   .    .    .    .    . .   vmovapd	%xmm4, %xmm5
+# CHECK-NEXT: [0,5]     DR   .    .    .    .    . .   vmovapd	%xmm5, %xmm6
+# CHECK-NEXT: [0,6]     .DR  .    .    .    .    . .   vmovapd	%xmm6, %xmm7
+# CHECK-NEXT: [0,7]     .DR  .    .    .    .    . .   vmovapd	%xmm7, %xmm8
+# CHECK-NEXT: [0,8]     .DR  .    .    .    .    . .   vmovapd	%xmm8, %xmm9
+# CHECK-NEXT: [0,9]     .DR  .    .    .    .    . .   vmovapd	%xmm9, %xmm10
+# CHECK-NEXT: [0,10]    .DR  .    .    .    .    . .   vmovapd	%xmm10, %xmm11
+# CHECK-NEXT: [0,11]    .DR  .    .    .    .    . .   vmovapd	%xmm11, %xmm12
+# CHECK-NEXT: [0,12]    . DR .    .    .    .    . .   vmovapd	%xmm12, %xmm13
+# CHECK-NEXT: [0,13]    . DR .    .    .    .    . .   vmovapd	%xmm13, %xmm14
+# CHECK-NEXT: [0,14]    . DR .    .    .    .    . .   vmovapd	%xmm14, %xmm15
+# CHECK-NEXT: [0,15]    . DR .    .    .    .    . .   vmovapd	%xmm15, %xmm0
+# CHECK-NEXT: [1,0]     . DR .    .    .    .    . .   vmovapd	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     . DR .    .    .    .    . .   vmovapd	%xmm1, %xmm2
+# CHECK-NEXT: [1,2]     .  DR.    .    .    .    . .   vmovapd	%xmm2, %xmm3
+# CHECK-NEXT: [1,3]     .  DR.    .    .    .    . .   vmovapd	%xmm3, %xmm4
+# CHECK-NEXT: [1,4]     .  DR.    .    .    .    . .   vmovapd	%xmm4, %xmm5
+# CHECK-NEXT: [1,5]     .  DR.    .    .    .    . .   vmovapd	%xmm5, %xmm6
+# CHECK-NEXT: [1,6]     .  DR.    .    .    .    . .   vmovapd	%xmm6, %xmm7
+# CHECK-NEXT: [1,7]     .  DR.    .    .    .    . .   vmovapd	%xmm7, %xmm8
+# CHECK-NEXT: [1,8]     .   DR    .    .    .    . .   vmovapd	%xmm8, %xmm9
+# CHECK-NEXT: [1,9]     .   DR    .    .    .    . .   vmovapd	%xmm9, %xmm10
+# CHECK-NEXT: [1,10]    .   DR    .    .    .    . .   vmovapd	%xmm10, %xmm11
+# CHECK-NEXT: [1,11]    .   DR    .    .    .    . .   vmovapd	%xmm11, %xmm12
+# CHECK-NEXT: [1,12]    .   DR    .    .    .    . .   vmovapd	%xmm12, %xmm13
+# CHECK-NEXT: [1,13]    .   DR    .    .    .    . .   vmovapd	%xmm13, %xmm14
+# CHECK-NEXT: [1,14]    .    DR   .    .    .    . .   vmovapd	%xmm14, %xmm15
+# CHECK-NEXT: [1,15]    .    DR   .    .    .    . .   vmovapd	%xmm15, %xmm0
+# CHECK-NEXT: [2,0]     .    DR   .    .    .    . .   vmovapd	%xmm0, %xmm1
+# CHECK-NEXT: [2,1]     .    DR   .    .    .    . .   vmovapd	%xmm1, %xmm2
+# CHECK-NEXT: [2,2]     .    DR   .    .    .    . .   vmovapd	%xmm2, %xmm3
+# CHECK-NEXT: [2,3]     .    DR   .    .    .    . .   vmovapd	%xmm3, %xmm4
+# CHECK-NEXT: [2,4]     .    .DR  .    .    .    . .   vmovapd	%xmm4, %xmm5
+# CHECK-NEXT: [2,5]     .    .DR  .    .    .    . .   vmovapd	%xmm5, %xmm6
+# CHECK-NEXT: [2,6]     .    .DR  .    .    .    . .   vmovapd	%xmm6, %xmm7
+# CHECK-NEXT: [2,7]     .    .DR  .    .    .    . .   vmovapd	%xmm7, %xmm8
+# CHECK-NEXT: [2,8]     .    .DR  .    .    .    . .   vmovapd	%xmm8, %xmm9
+# CHECK-NEXT: [2,9]     .    .DR  .    .    .    . .   vmovapd	%xmm9, %xmm10
+# CHECK-NEXT: [2,10]    .    . DR .    .    .    . .   vmovapd	%xmm10, %xmm11
+# CHECK-NEXT: [2,11]    .    . DR .    .    .    . .   vmovapd	%xmm11, %xmm12
+# CHECK-NEXT: [2,12]    .    . DR .    .    .    . .   vmovapd	%xmm12, %xmm13
+# CHECK-NEXT: [2,13]    .    . DR .    .    .    . .   vmovapd	%xmm13, %xmm14
+# CHECK-NEXT: [2,14]    .    . DR .    .    .    . .   vmovapd	%xmm14, %xmm15
+# CHECK-NEXT: [2,15]    .    . DR .    .    .    . .   vmovapd	%xmm15, %xmm0
+# CHECK-NEXT: [3,0]     .    .  DR.    .    .    . .   vmovapd	%xmm0, %xmm1
+# CHECK-NEXT: [3,1]     .    .  DR.    .    .    . .   vmovapd	%xmm1, %xmm2
+# CHECK-NEXT: [3,2]     .    .  DR.    .    .    . .   vmovapd	%xmm2, %xmm3
+# CHECK-NEXT: [3,3]     .    .  DR.    .    .    . .   vmovapd	%xmm3, %xmm4
+# CHECK-NEXT: [3,4]     .    .  DR.    .    .    . .   vmovapd	%xmm4, %xmm5
+# CHECK-NEXT: [3,5]     .    .  DR.    .    .    . .   vmovapd	%xmm5, %xmm6
+# CHECK-NEXT: [3,6]     .    .   DR    .    .    . .   vmovapd	%xmm6, %xmm7
+# CHECK-NEXT: [3,7]     .    .   DR    .    .    . .   vmovapd	%xmm7, %xmm8
+# CHECK-NEXT: [3,8]     .    .   DR    .    .    . .   vmovapd	%xmm8, %xmm9
+# CHECK-NEXT: [3,9]     .    .   DR    .    .    . .   vmovapd	%xmm9, %xmm10
+# CHECK-NEXT: [3,10]    .    .   DR    .    .    . .   vmovapd	%xmm10, %xmm11
+# CHECK-NEXT: [3,11]    .    .   DR    .    .    . .   vmovapd	%xmm11, %xmm12
+# CHECK-NEXT: [3,12]    .    .    DR   .    .    . .   vmovapd	%xmm12, %xmm13
+# CHECK-NEXT: [3,13]    .    .    DR   .    .    . .   vmovapd	%xmm13, %xmm14
+# CHECK-NEXT: [3,14]    .    .    DR   .    .    . .   vmovapd	%xmm14, %xmm15
+# CHECK-NEXT: [3,15]    .    .    DR   .    .    . .   vmovapd	%xmm15, %xmm0
+# CHECK-NEXT: [4,0]     .    .    DR   .    .    . .   vmovapd	%xmm0, %xmm1
+# CHECK-NEXT: [4,1]     .    .    DR   .    .    . .   vmovapd	%xmm1, %xmm2
+# CHECK-NEXT: [4,2]     .    .    .DR  .    .    . .   vmovapd	%xmm2, %xmm3
+# CHECK-NEXT: [4,3]     .    .    .DR  .    .    . .   vmovapd	%xmm3, %xmm4
+# CHECK-NEXT: [4,4]     .    .    .DR  .    .    . .   vmovapd	%xmm4, %xmm5
+# CHECK-NEXT: [4,5]     .    .    .DR  .    .    . .   vmovapd	%xmm5, %xmm6
+# CHECK-NEXT: [4,6]     .    .    .DR  .    .    . .   vmovapd	%xmm6, %xmm7
+# CHECK-NEXT: [4,7]     .    .    .DR  .    .    . .   vmovapd	%xmm7, %xmm8
+# CHECK-NEXT: [4,8]     .    .    . DR .    .    . .   vmovapd	%xmm8, %xmm9
+# CHECK-NEXT: [4,9]     .    .    . DR .    .    . .   vmovapd	%xmm9, %xmm10
+# CHECK-NEXT: [4,10]    .    .    . DR .    .    . .   vmovapd	%xmm10, %xmm11
+# CHECK-NEXT: [4,11]    .    .    . DR .    .    . .   vmovapd	%xmm11, %xmm12
+# CHECK-NEXT: [4,12]    .    .    . DR .    .    . .   vmovapd	%xmm12, %xmm13
+# CHECK-NEXT: [4,13]    .    .    . DR .    .    . .   vmovapd	%xmm13, %xmm14
+# CHECK-NEXT: [4,14]    .    .    .  DR.    .    . .   vmovapd	%xmm14, %xmm15
+# CHECK-NEXT: [4,15]    .    .    .  DR.    .    . .   vmovapd	%xmm15, %xmm0
+# CHECK-NEXT: [5,0]     .    .    .  DR.    .    . .   vmovapd	%xmm0, %xmm1
+# CHECK-NEXT: [5,1]     .    .    .  DR.    .    . .   vmovapd	%xmm1, %xmm2
+# CHECK-NEXT: [5,2]     .    .    .  DR.    .    . .   vmovapd	%xmm2, %xmm3
+# CHECK-NEXT: [5,3]     .    .    .  DR.    .    . .   vmovapd	%xmm3, %xmm4
+# CHECK-NEXT: [5,4]     .    .    .   DR    .    . .   vmovapd	%xmm4, %xmm5
+# CHECK-NEXT: [5,5]     .    .    .   DR    .    . .   vmovapd	%xmm5, %xmm6
+# CHECK-NEXT: [5,6]     .    .    .   DR    .    . .   vmovapd	%xmm6, %xmm7
+# CHECK-NEXT: [5,7]     .    .    .   DR    .    . .   vmovapd	%xmm7, %xmm8
+# CHECK-NEXT: [5,8]     .    .    .   DR    .    . .   vmovapd	%xmm8, %xmm9
+# CHECK-NEXT: [5,9]     .    .    .   DR    .    . .   vmovapd	%xmm9, %xmm10
+# CHECK-NEXT: [5,10]    .    .    .    DR   .    . .   vmovapd	%xmm10, %xmm11
+# CHECK-NEXT: [5,11]    .    .    .    DR   .    . .   vmovapd	%xmm11, %xmm12
+# CHECK-NEXT: [5,12]    .    .    .    DR   .    . .   vmovapd	%xmm12, %xmm13
+# CHECK-NEXT: [5,13]    .    .    .    DR   .    . .   vmovapd	%xmm13, %xmm14
+# CHECK-NEXT: [5,14]    .    .    .    DR   .    . .   vmovapd	%xmm14, %xmm15
+# CHECK-NEXT: [5,15]    .    .    .    DR   .    . .   vmovapd	%xmm15, %xmm0
+# CHECK-NEXT: [6,0]     .    .    .    .DR  .    . .   vmovapd	%xmm0, %xmm1
+# CHECK-NEXT: [6,1]     .    .    .    .DR  .    . .   vmovapd	%xmm1, %xmm2
+# CHECK-NEXT: [6,2]     .    .    .    .DR  .    . .   vmovapd	%xmm2, %xmm3
+# CHECK-NEXT: [6,3]     .    .    .    .DR  .    . .   vmovapd	%xmm3, %xmm4
+# CHECK-NEXT: [6,4]     .    .    .    .DR  .    . .   vmovapd	%xmm4, %xmm5
+# CHECK-NEXT: [6,5]     .    .    .    .DR  .    . .   vmovapd	%xmm5, %xmm6
+# CHECK-NEXT: [6,6]     .    .    .    . DR .    . .   vmovapd	%xmm6, %xmm7
+# CHECK-NEXT: [6,7]     .    .    .    . DR .    . .   vmovapd	%xmm7, %xmm8
+# CHECK-NEXT: [6,8]     .    .    .    . DR .    . .   vmovapd	%xmm8, %xmm9
+# CHECK-NEXT: [6,9]     .    .    .    . DR .    . .   vmovapd	%xmm9, %xmm10
+# CHECK-NEXT: [6,10]    .    .    .    . DR .    . .   vmovapd	%xmm10, %xmm11
+# CHECK-NEXT: [6,11]    .    .    .    . DR .    . .   vmovapd	%xmm11, %xmm12
+# CHECK-NEXT: [6,12]    .    .    .    .  DR.    . .   vmovapd	%xmm12, %xmm13
+# CHECK-NEXT: [6,13]    .    .    .    .  DR.    . .   vmovapd	%xmm13, %xmm14
+# CHECK-NEXT: [6,14]    .    .    .    .  DR.    . .   vmovapd	%xmm14, %xmm15
+# CHECK-NEXT: [6,15]    .    .    .    .  DR.    . .   vmovapd	%xmm15, %xmm0
+# CHECK-NEXT: [7,0]     .    .    .    .  DR.    . .   vmovapd	%xmm0, %xmm1
+# CHECK-NEXT: [7,1]     .    .    .    .  DR.    . .   vmovapd	%xmm1, %xmm2
+# CHECK-NEXT: [7,2]     .    .    .    .   DR    . .   vmovapd	%xmm2, %xmm3
+# CHECK-NEXT: [7,3]     .    .    .    .   DR    . .   vmovapd	%xmm3, %xmm4
+# CHECK-NEXT: [7,4]     .    .    .    .   DR    . .   vmovapd	%xmm4, %xmm5
+# CHECK-NEXT: [7,5]     .    .    .    .   DR    . .   vmovapd	%xmm5, %xmm6
+# CHECK-NEXT: [7,6]     .    .    .    .   DR    . .   vmovapd	%xmm6, %xmm7
+# CHECK-NEXT: [7,7]     .    .    .    .   DR    . .   vmovapd	%xmm7, %xmm8
+# CHECK-NEXT: [7,8]     .    .    .    .    DR   . .   vmovapd	%xmm8, %xmm9
+# CHECK-NEXT: [7,9]     .    .    .    .    DR   . .   vmovapd	%xmm9, %xmm10
+# CHECK-NEXT: [7,10]    .    .    .    .    DR   . .   vmovapd	%xmm10, %xmm11
+# CHECK-NEXT: [7,11]    .    .    .    .    DR   . .   vmovapd	%xmm11, %xmm12
+# CHECK-NEXT: [7,12]    .    .    .    .    DR   . .   vmovapd	%xmm12, %xmm13
+# CHECK-NEXT: [7,13]    .    .    .    .    DR   . .   vmovapd	%xmm13, %xmm14
+# CHECK-NEXT: [7,14]    .    .    .    .    .DR  . .   vmovapd	%xmm14, %xmm15
+# CHECK-NEXT: [7,15]    .    .    .    .    .DR  . .   vmovapd	%xmm15, %xmm0
+# CHECK-NEXT: [8,0]     .    .    .    .    .DR  . .   vmovapd	%xmm0, %xmm1
+# CHECK-NEXT: [8,1]     .    .    .    .    .DR  . .   vmovapd	%xmm1, %xmm2
+# CHECK-NEXT: [8,2]     .    .    .    .    .DR  . .   vmovapd	%xmm2, %xmm3
+# CHECK-NEXT: [8,3]     .    .    .    .    .DR  . .   vmovapd	%xmm3, %xmm4
+# CHECK-NEXT: [8,4]     .    .    .    .    . DR . .   vmovapd	%xmm4, %xmm5
+# CHECK-NEXT: [8,5]     .    .    .    .    . DR . .   vmovapd	%xmm5, %xmm6
+# CHECK-NEXT: [8,6]     .    .    .    .    . DR . .   vmovapd	%xmm6, %xmm7
+# CHECK-NEXT: [8,7]     .    .    .    .    . DR . .   vmovapd	%xmm7, %xmm8
+# CHECK-NEXT: [8,8]     .    .    .    .    . DR . .   vmovapd	%xmm8, %xmm9
+# CHECK-NEXT: [8,9]     .    .    .    .    . DR . .   vmovapd	%xmm9, %xmm10
+# CHECK-NEXT: [8,10]    .    .    .    .    .  DR. .   vmovapd	%xmm10, %xmm11
+# CHECK-NEXT: [8,11]    .    .    .    .    .  DR. .   vmovapd	%xmm11, %xmm12
+# CHECK-NEXT: [8,12]    .    .    .    .    .  DR. .   vmovapd	%xmm12, %xmm13
+# CHECK-NEXT: [8,13]    .    .    .    .    .  DR. .   vmovapd	%xmm13, %xmm14
+# CHECK-NEXT: [8,14]    .    .    .    .    .  DR. .   vmovapd	%xmm14, %xmm15
+# CHECK-NEXT: [8,15]    .    .    .    .    .  DR. .   vmovapd	%xmm15, %xmm0
+# CHECK-NEXT: [9,0]     .    .    .    .    .   DR .   vmovapd	%xmm0, %xmm1
+# CHECK-NEXT: [9,1]     .    .    .    .    .   DR .   vmovapd	%xmm1, %xmm2
+# CHECK-NEXT: [9,2]     .    .    .    .    .   DR .   vmovapd	%xmm2, %xmm3
+# CHECK-NEXT: [9,3]     .    .    .    .    .   DR .   vmovapd	%xmm3, %xmm4
+# CHECK-NEXT: [9,4]     .    .    .    .    .   DR .   vmovapd	%xmm4, %xmm5
+# CHECK-NEXT: [9,5]     .    .    .    .    .   DR .   vmovapd	%xmm5, %xmm6
+# CHECK-NEXT: [9,6]     .    .    .    .    .    DR.   vmovapd	%xmm6, %xmm7
+# CHECK-NEXT: [9,7]     .    .    .    .    .    DR.   vmovapd	%xmm7, %xmm8
+# CHECK-NEXT: [9,8]     .    .    .    .    .    DR.   vmovapd	%xmm8, %xmm9
+# CHECK-NEXT: [9,9]     .    .    .    .    .    DR.   vmovapd	%xmm9, %xmm10
+# CHECK-NEXT: [9,10]    .    .    .    .    .    DR.   vmovapd	%xmm10, %xmm11
+# CHECK-NEXT: [9,11]    .    .    .    .    .    DR.   vmovapd	%xmm11, %xmm12
+# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR   vmovapd	%xmm12, %xmm13
+# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR   vmovapd	%xmm13, %xmm14
+# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR   vmovapd	%xmm14, %xmm15
+# CHECK-NEXT: [9,15]    .    .    .    .    .    .DR   vmovapd	%xmm15, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -979,35 +979,35 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     10    0.0    0.0    0.6       vmovapd	%xmm0, %xmm1
-# CHECK-NEXT: 1.     10    0.0    0.0    0.6       vmovapd	%xmm1, %xmm2
-# CHECK-NEXT: 2.     10    0.0    0.0    0.3       vmovapd	%xmm2, %xmm3
-# CHECK-NEXT: 3.     10    0.0    0.0    0.3       vmovapd	%xmm3, %xmm4
+# CHECK-NEXT: 0.     10    0.0    0.0    0.0       vmovapd	%xmm0, %xmm1
+# CHECK-NEXT: 1.     10    0.0    0.0    0.0       vmovapd	%xmm1, %xmm2
+# CHECK-NEXT: 2.     10    0.0    0.0    0.0       vmovapd	%xmm2, %xmm3
+# CHECK-NEXT: 3.     10    0.0    0.0    0.0       vmovapd	%xmm3, %xmm4
 # CHECK-NEXT: 4.     10    0.0    0.0    0.0       vmovapd	%xmm4, %xmm5
 # CHECK-NEXT: 5.     10    0.0    0.0    0.0       vmovapd	%xmm5, %xmm6
 # CHECK-NEXT: 6.     10    0.0    0.0    0.0       vmovapd	%xmm6, %xmm7
-# CHECK-NEXT: 7.     10    0.0    0.0    0.6       vmovapd	%xmm7, %xmm8
-# CHECK-NEXT: 8.     10    0.0    0.0    0.3       vmovapd	%xmm8, %xmm9
-# CHECK-NEXT: 9.     10    0.0    0.0    0.3       vmovapd	%xmm9, %xmm10
+# CHECK-NEXT: 7.     10    0.0    0.0    0.0       vmovapd	%xmm7, %xmm8
+# CHECK-NEXT: 8.     10    0.0    0.0    0.0       vmovapd	%xmm8, %xmm9
+# CHECK-NEXT: 9.     10    0.0    0.0    0.0       vmovapd	%xmm9, %xmm10
 # CHECK-NEXT: 10.    10    0.0    0.0    0.0       vmovapd	%xmm10, %xmm11
 # CHECK-NEXT: 11.    10    0.0    0.0    0.0       vmovapd	%xmm11, %xmm12
 # CHECK-NEXT: 12.    10    0.0    0.0    0.0       vmovapd	%xmm12, %xmm13
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       vmovapd	%xmm13, %xmm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       vmovapd	%xmm14, %xmm15
-# CHECK-NEXT: 15.    10    1.0    1.0    0.0       vmovapd	%xmm15, %xmm0
-# CHECK-NEXT:        10    0.1    0.1    0.2       <total>
+# CHECK-NEXT: 15.    10    0.0    0.0    0.0       vmovapd	%xmm15, %xmm0
+# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
 
 # CHECK:      [3] Code Region
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      24000
-# CHECK-NEXT: Total Cycles:      4002
+# CHECK-NEXT: Total Cycles:      4001
 # CHECK-NEXT: Total uOps:        24000
 
 # CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    6.00
 # CHECK-NEXT: IPC:               6.00
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: Block RThroughput: 2.7
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -1018,22 +1018,22 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%xmm0, %xmm1
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%xmm1, %xmm2
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%xmm2, %xmm3
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%xmm3, %xmm4
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%xmm4, %xmm5
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%xmm5, %xmm6
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%xmm6, %xmm7
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%xmm7, %xmm8
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%xmm8, %xmm9
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%xmm9, %xmm10
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%xmm10, %xmm11
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%xmm11, %xmm12
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%xmm12, %xmm13
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%xmm13, %xmm14
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%xmm14, %xmm15
-# CHECK-NEXT:  1      0     0.25                        vmovupd	%xmm15, %xmm0
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm0, %xmm1
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm1, %xmm2
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm2, %xmm3
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm3, %xmm4
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm4, %xmm5
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm5, %xmm6
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm6, %xmm7
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm7, %xmm8
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm8, %xmm9
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm9, %xmm10
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm10, %xmm11
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm11, %xmm12
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm12, %xmm13
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm13, %xmm14
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm14, %xmm15
+# CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    1500
@@ -1080,7 +1080,7 @@ vmovdqu %xmm15, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
@@ -1099,172 +1099,172 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovupd	%xmm12, %xmm13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovupd	%xmm13, %xmm14
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovupd	%xmm14, %xmm15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovupd	%xmm15, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovupd	%xmm15, %xmm0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012345678
+# CHECK-NEXT: Index     0123456789          01234567
 
-# CHECK:      [0,0]     DR   .    .    .    .    .  .   vmovupd	%xmm0, %xmm1
-# CHECK-NEXT: [0,1]     DR   .    .    .    .    .  .   vmovupd	%xmm1, %xmm2
-# CHECK-NEXT: [0,2]     DR   .    .    .    .    .  .   vmovupd	%xmm2, %xmm3
-# CHECK-NEXT: [0,3]     DR   .    .    .    .    .  .   vmovupd	%xmm3, %xmm4
-# CHECK-NEXT: [0,4]     DR   .    .    .    .    .  .   vmovupd	%xmm4, %xmm5
-# CHECK-NEXT: [0,5]     DR   .    .    .    .    .  .   vmovupd	%xmm5, %xmm6
-# CHECK-NEXT: [0,6]     .DR  .    .    .    .    .  .   vmovupd	%xmm6, %xmm7
-# CHECK-NEXT: [0,7]     .DR  .    .    .    .    .  .   vmovupd	%xmm7, %xmm8
-# CHECK-NEXT: [0,8]     .DR  .    .    .    .    .  .   vmovupd	%xmm8, %xmm9
-# CHECK-NEXT: [0,9]     .DR  .    .    .    .    .  .   vmovupd	%xmm9, %xmm10
-# CHECK-NEXT: [0,10]    .DR  .    .    .    .    .  .   vmovupd	%xmm10, %xmm11
-# CHECK-NEXT: [0,11]    .DR  .    .    .    .    .  .   vmovupd	%xmm11, %xmm12
-# CHECK-NEXT: [0,12]    . DR .    .    .    .    .  .   vmovupd	%xmm12, %xmm13
-# CHECK-NEXT: [0,13]    . DR .    .    .    .    .  .   vmovupd	%xmm13, %xmm14
-# CHECK-NEXT: [0,14]    . DR .    .    .    .    .  .   vmovupd	%xmm14, %xmm15
-# CHECK-NEXT: [0,15]    . DER.    .    .    .    .  .   vmovupd	%xmm15, %xmm0
-# CHECK-NEXT: [1,0]     . D-R.    .    .    .    .  .   vmovupd	%xmm0, %xmm1
-# CHECK-NEXT: [1,1]     . D-R.    .    .    .    .  .   vmovupd	%xmm1, %xmm2
-# CHECK-NEXT: [1,2]     .  DR.    .    .    .    .  .   vmovupd	%xmm2, %xmm3
-# CHECK-NEXT: [1,3]     .  DR.    .    .    .    .  .   vmovupd	%xmm3, %xmm4
-# CHECK-NEXT: [1,4]     .  DR.    .    .    .    .  .   vmovupd	%xmm4, %xmm5
-# CHECK-NEXT: [1,5]     .  DR.    .    .    .    .  .   vmovupd	%xmm5, %xmm6
-# CHECK-NEXT: [1,6]     .  DR.    .    .    .    .  .   vmovupd	%xmm6, %xmm7
-# CHECK-NEXT: [1,7]     .  D-R    .    .    .    .  .   vmovupd	%xmm7, %xmm8
-# CHECK-NEXT: [1,8]     .   DR    .    .    .    .  .   vmovupd	%xmm8, %xmm9
-# CHECK-NEXT: [1,9]     .   DR    .    .    .    .  .   vmovupd	%xmm9, %xmm10
-# CHECK-NEXT: [1,10]    .   DR    .    .    .    .  .   vmovupd	%xmm10, %xmm11
-# CHECK-NEXT: [1,11]    .   DR    .    .    .    .  .   vmovupd	%xmm11, %xmm12
-# CHECK-NEXT: [1,12]    .   DR    .    .    .    .  .   vmovupd	%xmm12, %xmm13
-# CHECK-NEXT: [1,13]    .   DR    .    .    .    .  .   vmovupd	%xmm13, %xmm14
-# CHECK-NEXT: [1,14]    .    DR   .    .    .    .  .   vmovupd	%xmm14, %xmm15
-# CHECK-NEXT: [1,15]    .    DER  .    .    .    .  .   vmovupd	%xmm15, %xmm0
-# CHECK-NEXT: [2,0]     .    D-R  .    .    .    .  .   vmovupd	%xmm0, %xmm1
-# CHECK-NEXT: [2,1]     .    D-R  .    .    .    .  .   vmovupd	%xmm1, %xmm2
-# CHECK-NEXT: [2,2]     .    D-R  .    .    .    .  .   vmovupd	%xmm2, %xmm3
-# CHECK-NEXT: [2,3]     .    D-R  .    .    .    .  .   vmovupd	%xmm3, %xmm4
-# CHECK-NEXT: [2,4]     .    .DR  .    .    .    .  .   vmovupd	%xmm4, %xmm5
-# CHECK-NEXT: [2,5]     .    .DR  .    .    .    .  .   vmovupd	%xmm5, %xmm6
-# CHECK-NEXT: [2,6]     .    .DR  .    .    .    .  .   vmovupd	%xmm6, %xmm7
-# CHECK-NEXT: [2,7]     .    .D-R .    .    .    .  .   vmovupd	%xmm7, %xmm8
-# CHECK-NEXT: [2,8]     .    .D-R .    .    .    .  .   vmovupd	%xmm8, %xmm9
-# CHECK-NEXT: [2,9]     .    .D-R .    .    .    .  .   vmovupd	%xmm9, %xmm10
-# CHECK-NEXT: [2,10]    .    . DR .    .    .    .  .   vmovupd	%xmm10, %xmm11
-# CHECK-NEXT: [2,11]    .    . DR .    .    .    .  .   vmovupd	%xmm11, %xmm12
-# CHECK-NEXT: [2,12]    .    . DR .    .    .    .  .   vmovupd	%xmm12, %xmm13
-# CHECK-NEXT: [2,13]    .    . DR .    .    .    .  .   vmovupd	%xmm13, %xmm14
-# CHECK-NEXT: [2,14]    .    . DR .    .    .    .  .   vmovupd	%xmm14, %xmm15
-# CHECK-NEXT: [2,15]    .    . DER.    .    .    .  .   vmovupd	%xmm15, %xmm0
-# CHECK-NEXT: [3,0]     .    .  DR.    .    .    .  .   vmovupd	%xmm0, %xmm1
-# CHECK-NEXT: [3,1]     .    .  DR.    .    .    .  .   vmovupd	%xmm1, %xmm2
-# CHECK-NEXT: [3,2]     .    .  DR.    .    .    .  .   vmovupd	%xmm2, %xmm3
-# CHECK-NEXT: [3,3]     .    .  DR.    .    .    .  .   vmovupd	%xmm3, %xmm4
-# CHECK-NEXT: [3,4]     .    .  DR.    .    .    .  .   vmovupd	%xmm4, %xmm5
-# CHECK-NEXT: [3,5]     .    .  DR.    .    .    .  .   vmovupd	%xmm5, %xmm6
-# CHECK-NEXT: [3,6]     .    .   DR    .    .    .  .   vmovupd	%xmm6, %xmm7
-# CHECK-NEXT: [3,7]     .    .   DR    .    .    .  .   vmovupd	%xmm7, %xmm8
-# CHECK-NEXT: [3,8]     .    .   DR    .    .    .  .   vmovupd	%xmm8, %xmm9
-# CHECK-NEXT: [3,9]     .    .   DR    .    .    .  .   vmovupd	%xmm9, %xmm10
-# CHECK-NEXT: [3,10]    .    .   DR    .    .    .  .   vmovupd	%xmm10, %xmm11
-# CHECK-NEXT: [3,11]    .    .   DR    .    .    .  .   vmovupd	%xmm11, %xmm12
-# CHECK-NEXT: [3,12]    .    .    DR   .    .    .  .   vmovupd	%xmm12, %xmm13
-# CHECK-NEXT: [3,13]    .    .    DR   .    .    .  .   vmovupd	%xmm13, %xmm14
-# CHECK-NEXT: [3,14]    .    .    DR   .    .    .  .   vmovupd	%xmm14, %xmm15
-# CHECK-NEXT: [3,15]    .    .    DER  .    .    .  .   vmovupd	%xmm15, %xmm0
-# CHECK-NEXT: [4,0]     .    .    D-R  .    .    .  .   vmovupd	%xmm0, %xmm1
-# CHECK-NEXT: [4,1]     .    .    D-R  .    .    .  .   vmovupd	%xmm1, %xmm2
-# CHECK-NEXT: [4,2]     .    .    .DR  .    .    .  .   vmovupd	%xmm2, %xmm3
-# CHECK-NEXT: [4,3]     .    .    .DR  .    .    .  .   vmovupd	%xmm3, %xmm4
-# CHECK-NEXT: [4,4]     .    .    .DR  .    .    .  .   vmovupd	%xmm4, %xmm5
-# CHECK-NEXT: [4,5]     .    .    .DR  .    .    .  .   vmovupd	%xmm5, %xmm6
-# CHECK-NEXT: [4,6]     .    .    .DR  .    .    .  .   vmovupd	%xmm6, %xmm7
-# CHECK-NEXT: [4,7]     .    .    .D-R .    .    .  .   vmovupd	%xmm7, %xmm8
-# CHECK-NEXT: [4,8]     .    .    . DR .    .    .  .   vmovupd	%xmm8, %xmm9
-# CHECK-NEXT: [4,9]     .    .    . DR .    .    .  .   vmovupd	%xmm9, %xmm10
-# CHECK-NEXT: [4,10]    .    .    . DR .    .    .  .   vmovupd	%xmm10, %xmm11
-# CHECK-NEXT: [4,11]    .    .    . DR .    .    .  .   vmovupd	%xmm11, %xmm12
-# CHECK-NEXT: [4,12]    .    .    . DR .    .    .  .   vmovupd	%xmm12, %xmm13
-# CHECK-NEXT: [4,13]    .    .    . DR .    .    .  .   vmovupd	%xmm13, %xmm14
-# CHECK-NEXT: [4,14]    .    .    .  DR.    .    .  .   vmovupd	%xmm14, %xmm15
-# CHECK-NEXT: [4,15]    .    .    .  DER    .    .  .   vmovupd	%xmm15, %xmm0
-# CHECK-NEXT: [5,0]     .    .    .  D-R    .    .  .   vmovupd	%xmm0, %xmm1
-# CHECK-NEXT: [5,1]     .    .    .  D-R    .    .  .   vmovupd	%xmm1, %xmm2
-# CHECK-NEXT: [5,2]     .    .    .  D-R    .    .  .   vmovupd	%xmm2, %xmm3
-# CHECK-NEXT: [5,3]     .    .    .  D-R    .    .  .   vmovupd	%xmm3, %xmm4
-# CHECK-NEXT: [5,4]     .    .    .   DR    .    .  .   vmovupd	%xmm4, %xmm5
-# CHECK-NEXT: [5,5]     .    .    .   DR    .    .  .   vmovupd	%xmm5, %xmm6
-# CHECK-NEXT: [5,6]     .    .    .   DR    .    .  .   vmovupd	%xmm6, %xmm7
-# CHECK-NEXT: [5,7]     .    .    .   D-R   .    .  .   vmovupd	%xmm7, %xmm8
-# CHECK-NEXT: [5,8]     .    .    .   D-R   .    .  .   vmovupd	%xmm8, %xmm9
-# CHECK-NEXT: [5,9]     .    .    .   D-R   .    .  .   vmovupd	%xmm9, %xmm10
-# CHECK-NEXT: [5,10]    .    .    .    DR   .    .  .   vmovupd	%xmm10, %xmm11
-# CHECK-NEXT: [5,11]    .    .    .    DR   .    .  .   vmovupd	%xmm11, %xmm12
-# CHECK-NEXT: [5,12]    .    .    .    DR   .    .  .   vmovupd	%xmm12, %xmm13
-# CHECK-NEXT: [5,13]    .    .    .    DR   .    .  .   vmovupd	%xmm13, %xmm14
-# CHECK-NEXT: [5,14]    .    .    .    DR   .    .  .   vmovupd	%xmm14, %xmm15
-# CHECK-NEXT: [5,15]    .    .    .    DER  .    .  .   vmovupd	%xmm15, %xmm0
-# CHECK-NEXT: [6,0]     .    .    .    .DR  .    .  .   vmovupd	%xmm0, %xmm1
-# CHECK-NEXT: [6,1]     .    .    .    .DR  .    .  .   vmovupd	%xmm1, %xmm2
-# CHECK-NEXT: [6,2]     .    .    .    .DR  .    .  .   vmovupd	%xmm2, %xmm3
-# CHECK-NEXT: [6,3]     .    .    .    .DR  .    .  .   vmovupd	%xmm3, %xmm4
-# CHECK-NEXT: [6,4]     .    .    .    .DR  .    .  .   vmovupd	%xmm4, %xmm5
-# CHECK-NEXT: [6,5]     .    .    .    .DR  .    .  .   vmovupd	%xmm5, %xmm6
-# CHECK-NEXT: [6,6]     .    .    .    . DR .    .  .   vmovupd	%xmm6, %xmm7
-# CHECK-NEXT: [6,7]     .    .    .    . DR .    .  .   vmovupd	%xmm7, %xmm8
-# CHECK-NEXT: [6,8]     .    .    .    . DR .    .  .   vmovupd	%xmm8, %xmm9
-# CHECK-NEXT: [6,9]     .    .    .    . DR .    .  .   vmovupd	%xmm9, %xmm10
-# CHECK-NEXT: [6,10]    .    .    .    . DR .    .  .   vmovupd	%xmm10, %xmm11
-# CHECK-NEXT: [6,11]    .    .    .    . DR .    .  .   vmovupd	%xmm11, %xmm12
-# CHECK-NEXT: [6,12]    .    .    .    .  DR.    .  .   vmovupd	%xmm12, %xmm13
-# CHECK-NEXT: [6,13]    .    .    .    .  DR.    .  .   vmovupd	%xmm13, %xmm14
-# CHECK-NEXT: [6,14]    .    .    .    .  DR.    .  .   vmovupd	%xmm14, %xmm15
-# CHECK-NEXT: [6,15]    .    .    .    .  DER    .  .   vmovupd	%xmm15, %xmm0
-# CHECK-NEXT: [7,0]     .    .    .    .  D-R    .  .   vmovupd	%xmm0, %xmm1
-# CHECK-NEXT: [7,1]     .    .    .    .  D-R    .  .   vmovupd	%xmm1, %xmm2
-# CHECK-NEXT: [7,2]     .    .    .    .   DR    .  .   vmovupd	%xmm2, %xmm3
-# CHECK-NEXT: [7,3]     .    .    .    .   DR    .  .   vmovupd	%xmm3, %xmm4
-# CHECK-NEXT: [7,4]     .    .    .    .   DR    .  .   vmovupd	%xmm4, %xmm5
-# CHECK-NEXT: [7,5]     .    .    .    .   DR    .  .   vmovupd	%xmm5, %xmm6
-# CHECK-NEXT: [7,6]     .    .    .    .   DR    .  .   vmovupd	%xmm6, %xmm7
-# CHECK-NEXT: [7,7]     .    .    .    .   D-R   .  .   vmovupd	%xmm7, %xmm8
-# CHECK-NEXT: [7,8]     .    .    .    .    DR   .  .   vmovupd	%xmm8, %xmm9
-# CHECK-NEXT: [7,9]     .    .    .    .    DR   .  .   vmovupd	%xmm9, %xmm10
-# CHECK-NEXT: [7,10]    .    .    .    .    DR   .  .   vmovupd	%xmm10, %xmm11
-# CHECK-NEXT: [7,11]    .    .    .    .    DR   .  .   vmovupd	%xmm11, %xmm12
-# CHECK-NEXT: [7,12]    .    .    .    .    DR   .  .   vmovupd	%xmm12, %xmm13
-# CHECK-NEXT: [7,13]    .    .    .    .    DR   .  .   vmovupd	%xmm13, %xmm14
-# CHECK-NEXT: [7,14]    .    .    .    .    .DR  .  .   vmovupd	%xmm14, %xmm15
-# CHECK-NEXT: [7,15]    .    .    .    .    .DER .  .   vmovupd	%xmm15, %xmm0
-# CHECK-NEXT: [8,0]     .    .    .    .    .D-R .  .   vmovupd	%xmm0, %xmm1
-# CHECK-NEXT: [8,1]     .    .    .    .    .D-R .  .   vmovupd	%xmm1, %xmm2
-# CHECK-NEXT: [8,2]     .    .    .    .    .D-R .  .   vmovupd	%xmm2, %xmm3
-# CHECK-NEXT: [8,3]     .    .    .    .    .D-R .  .   vmovupd	%xmm3, %xmm4
-# CHECK-NEXT: [8,4]     .    .    .    .    . DR .  .   vmovupd	%xmm4, %xmm5
-# CHECK-NEXT: [8,5]     .    .    .    .    . DR .  .   vmovupd	%xmm5, %xmm6
-# CHECK-NEXT: [8,6]     .    .    .    .    . DR .  .   vmovupd	%xmm6, %xmm7
-# CHECK-NEXT: [8,7]     .    .    .    .    . D-R.  .   vmovupd	%xmm7, %xmm8
-# CHECK-NEXT: [8,8]     .    .    .    .    . D-R.  .   vmovupd	%xmm8, %xmm9
-# CHECK-NEXT: [8,9]     .    .    .    .    . D-R.  .   vmovupd	%xmm9, %xmm10
-# CHECK-NEXT: [8,10]    .    .    .    .    .  DR.  .   vmovupd	%xmm10, %xmm11
-# CHECK-NEXT: [8,11]    .    .    .    .    .  DR.  .   vmovupd	%xmm11, %xmm12
-# CHECK-NEXT: [8,12]    .    .    .    .    .  DR.  .   vmovupd	%xmm12, %xmm13
-# CHECK-NEXT: [8,13]    .    .    .    .    .  DR.  .   vmovupd	%xmm13, %xmm14
-# CHECK-NEXT: [8,14]    .    .    .    .    .  DR.  .   vmovupd	%xmm14, %xmm15
-# CHECK-NEXT: [8,15]    .    .    .    .    .  DER  .   vmovupd	%xmm15, %xmm0
-# CHECK-NEXT: [9,0]     .    .    .    .    .   DR  .   vmovupd	%xmm0, %xmm1
-# CHECK-NEXT: [9,1]     .    .    .    .    .   DR  .   vmovupd	%xmm1, %xmm2
-# CHECK-NEXT: [9,2]     .    .    .    .    .   DR  .   vmovupd	%xmm2, %xmm3
-# CHECK-NEXT: [9,3]     .    .    .    .    .   DR  .   vmovupd	%xmm3, %xmm4
-# CHECK-NEXT: [9,4]     .    .    .    .    .   DR  .   vmovupd	%xmm4, %xmm5
-# CHECK-NEXT: [9,5]     .    .    .    .    .   DR  .   vmovupd	%xmm5, %xmm6
-# CHECK-NEXT: [9,6]     .    .    .    .    .    DR .   vmovupd	%xmm6, %xmm7
-# CHECK-NEXT: [9,7]     .    .    .    .    .    DR .   vmovupd	%xmm7, %xmm8
-# CHECK-NEXT: [9,8]     .    .    .    .    .    DR .   vmovupd	%xmm8, %xmm9
-# CHECK-NEXT: [9,9]     .    .    .    .    .    DR .   vmovupd	%xmm9, %xmm10
-# CHECK-NEXT: [9,10]    .    .    .    .    .    DR .   vmovupd	%xmm10, %xmm11
-# CHECK-NEXT: [9,11]    .    .    .    .    .    DR .   vmovupd	%xmm11, %xmm12
-# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR.   vmovupd	%xmm12, %xmm13
-# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR.   vmovupd	%xmm13, %xmm14
-# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR.   vmovupd	%xmm14, %xmm15
-# CHECK-NEXT: [9,15]    .    .    .    .    .    .DER   vmovupd	%xmm15, %xmm0
+# CHECK:      [0,0]     DR   .    .    .    .    . .   vmovupd	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DR   .    .    .    .    . .   vmovupd	%xmm1, %xmm2
+# CHECK-NEXT: [0,2]     DR   .    .    .    .    . .   vmovupd	%xmm2, %xmm3
+# CHECK-NEXT: [0,3]     DR   .    .    .    .    . .   vmovupd	%xmm3, %xmm4
+# CHECK-NEXT: [0,4]     DR   .    .    .    .    . .   vmovupd	%xmm4, %xmm5
+# CHECK-NEXT: [0,5]     DR   .    .    .    .    . .   vmovupd	%xmm5, %xmm6
+# CHECK-NEXT: [0,6]     .DR  .    .    .    .    . .   vmovupd	%xmm6, %xmm7
+# CHECK-NEXT: [0,7]     .DR  .    .    .    .    . .   vmovupd	%xmm7, %xmm8
+# CHECK-NEXT: [0,8]     .DR  .    .    .    .    . .   vmovupd	%xmm8, %xmm9
+# CHECK-NEXT: [0,9]     .DR  .    .    .    .    . .   vmovupd	%xmm9, %xmm10
+# CHECK-NEXT: [0,10]    .DR  .    .    .    .    . .   vmovupd	%xmm10, %xmm11
+# CHECK-NEXT: [0,11]    .DR  .    .    .    .    . .   vmovupd	%xmm11, %xmm12
+# CHECK-NEXT: [0,12]    . DR .    .    .    .    . .   vmovupd	%xmm12, %xmm13
+# CHECK-NEXT: [0,13]    . DR .    .    .    .    . .   vmovupd	%xmm13, %xmm14
+# CHECK-NEXT: [0,14]    . DR .    .    .    .    . .   vmovupd	%xmm14, %xmm15
+# CHECK-NEXT: [0,15]    . DR .    .    .    .    . .   vmovupd	%xmm15, %xmm0
+# CHECK-NEXT: [1,0]     . DR .    .    .    .    . .   vmovupd	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     . DR .    .    .    .    . .   vmovupd	%xmm1, %xmm2
+# CHECK-NEXT: [1,2]     .  DR.    .    .    .    . .   vmovupd	%xmm2, %xmm3
+# CHECK-NEXT: [1,3]     .  DR.    .    .    .    . .   vmovupd	%xmm3, %xmm4
+# CHECK-NEXT: [1,4]     .  DR.    .    .    .    . .   vmovupd	%xmm4, %xmm5
+# CHECK-NEXT: [1,5]     .  DR.    .    .    .    . .   vmovupd	%xmm5, %xmm6
+# CHECK-NEXT: [1,6]     .  DR.    .    .    .    . .   vmovupd	%xmm6, %xmm7
+# CHECK-NEXT: [1,7]     .  DR.    .    .    .    . .   vmovupd	%xmm7, %xmm8
+# CHECK-NEXT: [1,8]     .   DR    .    .    .    . .   vmovupd	%xmm8, %xmm9
+# CHECK-NEXT: [1,9]     .   DR    .    .    .    . .   vmovupd	%xmm9, %xmm10
+# CHECK-NEXT: [1,10]    .   DR    .    .    .    . .   vmovupd	%xmm10, %xmm11
+# CHECK-NEXT: [1,11]    .   DR    .    .    .    . .   vmovupd	%xmm11, %xmm12
+# CHECK-NEXT: [1,12]    .   DR    .    .    .    . .   vmovupd	%xmm12, %xmm13
+# CHECK-NEXT: [1,13]    .   DR    .    .    .    . .   vmovupd	%xmm13, %xmm14
+# CHECK-NEXT: [1,14]    .    DR   .    .    .    . .   vmovupd	%xmm14, %xmm15
+# CHECK-NEXT: [1,15]    .    DR   .    .    .    . .   vmovupd	%xmm15, %xmm0
+# CHECK-NEXT: [2,0]     .    DR   .    .    .    . .   vmovupd	%xmm0, %xmm1
+# CHECK-NEXT: [2,1]     .    DR   .    .    .    . .   vmovupd	%xmm1, %xmm2
+# CHECK-NEXT: [2,2]     .    DR   .    .    .    . .   vmovupd	%xmm2, %xmm3
+# CHECK-NEXT: [2,3]     .    DR   .    .    .    . .   vmovupd	%xmm3, %xmm4
+# CHECK-NEXT: [2,4]     .    .DR  .    .    .    . .   vmovupd	%xmm4, %xmm5
+# CHECK-NEXT: [2,5]     .    .DR  .    .    .    . .   vmovupd	%xmm5, %xmm6
+# CHECK-NEXT: [2,6]     .    .DR  .    .    .    . .   vmovupd	%xmm6, %xmm7
+# CHECK-NEXT: [2,7]     .    .DR  .    .    .    . .   vmovupd	%xmm7, %xmm8
+# CHECK-NEXT: [2,8]     .    .DR  .    .    .    . .   vmovupd	%xmm8, %xmm9
+# CHECK-NEXT: [2,9]     .    .DR  .    .    .    . .   vmovupd	%xmm9, %xmm10
+# CHECK-NEXT: [2,10]    .    . DR .    .    .    . .   vmovupd	%xmm10, %xmm11
+# CHECK-NEXT: [2,11]    .    . DR .    .    .    . .   vmovupd	%xmm11, %xmm12
+# CHECK-NEXT: [2,12]    .    . DR .    .    .    . .   vmovupd	%xmm12, %xmm13
+# CHECK-NEXT: [2,13]    .    . DR .    .    .    . .   vmovupd	%xmm13, %xmm14
+# CHECK-NEXT: [2,14]    .    . DR .    .    .    . .   vmovupd	%xmm14, %xmm15
+# CHECK-NEXT: [2,15]    .    . DR .    .    .    . .   vmovupd	%xmm15, %xmm0
+# CHECK-NEXT: [3,0]     .    .  DR.    .    .    . .   vmovupd	%xmm0, %xmm1
+# CHECK-NEXT: [3,1]     .    .  DR.    .    .    . .   vmovupd	%xmm1, %xmm2
+# CHECK-NEXT: [3,2]     .    .  DR.    .    .    . .   vmovupd	%xmm2, %xmm3
+# CHECK-NEXT: [3,3]     .    .  DR.    .    .    . .   vmovupd	%xmm3, %xmm4
+# CHECK-NEXT: [3,4]     .    .  DR.    .    .    . .   vmovupd	%xmm4, %xmm5
+# CHECK-NEXT: [3,5]     .    .  DR.    .    .    . .   vmovupd	%xmm5, %xmm6
+# CHECK-NEXT: [3,6]     .    .   DR    .    .    . .   vmovupd	%xmm6, %xmm7
+# CHECK-NEXT: [3,7]     .    .   DR    .    .    . .   vmovupd	%xmm7, %xmm8
+# CHECK-NEXT: [3,8]     .    .   DR    .    .    . .   vmovupd	%xmm8, %xmm9
+# CHECK-NEXT: [3,9]     .    .   DR    .    .    . .   vmovupd	%xmm9, %xmm10
+# CHECK-NEXT: [3,10]    .    .   DR    .    .    . .   vmovupd	%xmm10, %xmm11
+# CHECK-NEXT: [3,11]    .    .   DR    .    .    . .   vmovupd	%xmm11, %xmm12
+# CHECK-NEXT: [3,12]    .    .    DR   .    .    . .   vmovupd	%xmm12, %xmm13
+# CHECK-NEXT: [3,13]    .    .    DR   .    .    . .   vmovupd	%xmm13, %xmm14
+# CHECK-NEXT: [3,14]    .    .    DR   .    .    . .   vmovupd	%xmm14, %xmm15
+# CHECK-NEXT: [3,15]    .    .    DR   .    .    . .   vmovupd	%xmm15, %xmm0
+# CHECK-NEXT: [4,0]     .    .    DR   .    .    . .   vmovupd	%xmm0, %xmm1
+# CHECK-NEXT: [4,1]     .    .    DR   .    .    . .   vmovupd	%xmm1, %xmm2
+# CHECK-NEXT: [4,2]     .    .    .DR  .    .    . .   vmovupd	%xmm2, %xmm3
+# CHECK-NEXT: [4,3]     .    .    .DR  .    .    . .   vmovupd	%xmm3, %xmm4
+# CHECK-NEXT: [4,4]     .    .    .DR  .    .    . .   vmovupd	%xmm4, %xmm5
+# CHECK-NEXT: [4,5]     .    .    .DR  .    .    . .   vmovupd	%xmm5, %xmm6
+# CHECK-NEXT: [4,6]     .    .    .DR  .    .    . .   vmovupd	%xmm6, %xmm7
+# CHECK-NEXT: [4,7]     .    .    .DR  .    .    . .   vmovupd	%xmm7, %xmm8
+# CHECK-NEXT: [4,8]     .    .    . DR .    .    . .   vmovupd	%xmm8, %xmm9
+# CHECK-NEXT: [4,9]     .    .    . DR .    .    . .   vmovupd	%xmm9, %xmm10
+# CHECK-NEXT: [4,10]    .    .    . DR .    .    . .   vmovupd	%xmm10, %xmm11
+# CHECK-NEXT: [4,11]    .    .    . DR .    .    . .   vmovupd	%xmm11, %xmm12
+# CHECK-NEXT: [4,12]    .    .    . DR .    .    . .   vmovupd	%xmm12, %xmm13
+# CHECK-NEXT: [4,13]    .    .    . DR .    .    . .   vmovupd	%xmm13, %xmm14
+# CHECK-NEXT: [4,14]    .    .    .  DR.    .    . .   vmovupd	%xmm14, %xmm15
+# CHECK-NEXT: [4,15]    .    .    .  DR.    .    . .   vmovupd	%xmm15, %xmm0
+# CHECK-NEXT: [5,0]     .    .    .  DR.    .    . .   vmovupd	%xmm0, %xmm1
+# CHECK-NEXT: [5,1]     .    .    .  DR.    .    . .   vmovupd	%xmm1, %xmm2
+# CHECK-NEXT: [5,2]     .    .    .  DR.    .    . .   vmovupd	%xmm2, %xmm3
+# CHECK-NEXT: [5,3]     .    .    .  DR.    .    . .   vmovupd	%xmm3, %xmm4
+# CHECK-NEXT: [5,4]     .    .    .   DR    .    . .   vmovupd	%xmm4, %xmm5
+# CHECK-NEXT: [5,5]     .    .    .   DR    .    . .   vmovupd	%xmm5, %xmm6
+# CHECK-NEXT: [5,6]     .    .    .   DR    .    . .   vmovupd	%xmm6, %xmm7
+# CHECK-NEXT: [5,7]     .    .    .   DR    .    . .   vmovupd	%xmm7, %xmm8
+# CHECK-NEXT: [5,8]     .    .    .   DR    .    . .   vmovupd	%xmm8, %xmm9
+# CHECK-NEXT: [5,9]     .    .    .   DR    .    . .   vmovupd	%xmm9, %xmm10
+# CHECK-NEXT: [5,10]    .    .    .    DR   .    . .   vmovupd	%xmm10, %xmm11
+# CHECK-NEXT: [5,11]    .    .    .    DR   .    . .   vmovupd	%xmm11, %xmm12
+# CHECK-NEXT: [5,12]    .    .    .    DR   .    . .   vmovupd	%xmm12, %xmm13
+# CHECK-NEXT: [5,13]    .    .    .    DR   .    . .   vmovupd	%xmm13, %xmm14
+# CHECK-NEXT: [5,14]    .    .    .    DR   .    . .   vmovupd	%xmm14, %xmm15
+# CHECK-NEXT: [5,15]    .    .    .    DR   .    . .   vmovupd	%xmm15, %xmm0
+# CHECK-NEXT: [6,0]     .    .    .    .DR  .    . .   vmovupd	%xmm0, %xmm1
+# CHECK-NEXT: [6,1]     .    .    .    .DR  .    . .   vmovupd	%xmm1, %xmm2
+# CHECK-NEXT: [6,2]     .    .    .    .DR  .    . .   vmovupd	%xmm2, %xmm3
+# CHECK-NEXT: [6,3]     .    .    .    .DR  .    . .   vmovupd	%xmm3, %xmm4
+# CHECK-NEXT: [6,4]     .    .    .    .DR  .    . .   vmovupd	%xmm4, %xmm5
+# CHECK-NEXT: [6,5]     .    .    .    .DR  .    . .   vmovupd	%xmm5, %xmm6
+# CHECK-NEXT: [6,6]     .    .    .    . DR .    . .   vmovupd	%xmm6, %xmm7
+# CHECK-NEXT: [6,7]     .    .    .    . DR .    . .   vmovupd	%xmm7, %xmm8
+# CHECK-NEXT: [6,8]     .    .    .    . DR .    . .   vmovupd	%xmm8, %xmm9
+# CHECK-NEXT: [6,9]     .    .    .    . DR .    . .   vmovupd	%xmm9, %xmm10
+# CHECK-NEXT: [6,10]    .    .    .    . DR .    . .   vmovupd	%xmm10, %xmm11
+# CHECK-NEXT: [6,11]    .    .    .    . DR .    . .   vmovupd	%xmm11, %xmm12
+# CHECK-NEXT: [6,12]    .    .    .    .  DR.    . .   vmovupd	%xmm12, %xmm13
+# CHECK-NEXT: [6,13]    .    .    .    .  DR.    . .   vmovupd	%xmm13, %xmm14
+# CHECK-NEXT: [6,14]    .    .    .    .  DR.    . .   vmovupd	%xmm14, %xmm15
+# CHECK-NEXT: [6,15]    .    .    .    .  DR.    . .   vmovupd	%xmm15, %xmm0
+# CHECK-NEXT: [7,0]     .    .    .    .  DR.    . .   vmovupd	%xmm0, %xmm1
+# CHECK-NEXT: [7,1]     .    .    .    .  DR.    . .   vmovupd	%xmm1, %xmm2
+# CHECK-NEXT: [7,2]     .    .    .    .   DR    . .   vmovupd	%xmm2, %xmm3
+# CHECK-NEXT: [7,3]     .    .    .    .   DR    . .   vmovupd	%xmm3, %xmm4
+# CHECK-NEXT: [7,4]     .    .    .    .   DR    . .   vmovupd	%xmm4, %xmm5
+# CHECK-NEXT: [7,5]     .    .    .    .   DR    . .   vmovupd	%xmm5, %xmm6
+# CHECK-NEXT: [7,6]     .    .    .    .   DR    . .   vmovupd	%xmm6, %xmm7
+# CHECK-NEXT: [7,7]     .    .    .    .   DR    . .   vmovupd	%xmm7, %xmm8
+# CHECK-NEXT: [7,8]     .    .    .    .    DR   . .   vmovupd	%xmm8, %xmm9
+# CHECK-NEXT: [7,9]     .    .    .    .    DR   . .   vmovupd	%xmm9, %xmm10
+# CHECK-NEXT: [7,10]    .    .    .    .    DR   . .   vmovupd	%xmm10, %xmm11
+# CHECK-NEXT: [7,11]    .    .    .    .    DR   . .   vmovupd	%xmm11, %xmm12
+# CHECK-NEXT: [7,12]    .    .    .    .    DR   . .   vmovupd	%xmm12, %xmm13
+# CHECK-NEXT: [7,13]    .    .    .    .    DR   . .   vmovupd	%xmm13, %xmm14
+# CHECK-NEXT: [7,14]    .    .    .    .    .DR  . .   vmovupd	%xmm14, %xmm15
+# CHECK-NEXT: [7,15]    .    .    .    .    .DR  . .   vmovupd	%xmm15, %xmm0
+# CHECK-NEXT: [8,0]     .    .    .    .    .DR  . .   vmovupd	%xmm0, %xmm1
+# CHECK-NEXT: [8,1]     .    .    .    .    .DR  . .   vmovupd	%xmm1, %xmm2
+# CHECK-NEXT: [8,2]     .    .    .    .    .DR  . .   vmovupd	%xmm2, %xmm3
+# CHECK-NEXT: [8,3]     .    .    .    .    .DR  . .   vmovupd	%xmm3, %xmm4
+# CHECK-NEXT: [8,4]     .    .    .    .    . DR . .   vmovupd	%xmm4, %xmm5
+# CHECK-NEXT: [8,5]     .    .    .    .    . DR . .   vmovupd	%xmm5, %xmm6
+# CHECK-NEXT: [8,6]     .    .    .    .    . DR . .   vmovupd	%xmm6, %xmm7
+# CHECK-NEXT: [8,7]     .    .    .    .    . DR . .   vmovupd	%xmm7, %xmm8
+# CHECK-NEXT: [8,8]     .    .    .    .    . DR . .   vmovupd	%xmm8, %xmm9
+# CHECK-NEXT: [8,9]     .    .    .    .    . DR . .   vmovupd	%xmm9, %xmm10
+# CHECK-NEXT: [8,10]    .    .    .    .    .  DR. .   vmovupd	%xmm10, %xmm11
+# CHECK-NEXT: [8,11]    .    .    .    .    .  DR. .   vmovupd	%xmm11, %xmm12
+# CHECK-NEXT: [8,12]    .    .    .    .    .  DR. .   vmovupd	%xmm12, %xmm13
+# CHECK-NEXT: [8,13]    .    .    .    .    .  DR. .   vmovupd	%xmm13, %xmm14
+# CHECK-NEXT: [8,14]    .    .    .    .    .  DR. .   vmovupd	%xmm14, %xmm15
+# CHECK-NEXT: [8,15]    .    .    .    .    .  DR. .   vmovupd	%xmm15, %xmm0
+# CHECK-NEXT: [9,0]     .    .    .    .    .   DR .   vmovupd	%xmm0, %xmm1
+# CHECK-NEXT: [9,1]     .    .    .    .    .   DR .   vmovupd	%xmm1, %xmm2
+# CHECK-NEXT: [9,2]     .    .    .    .    .   DR .   vmovupd	%xmm2, %xmm3
+# CHECK-NEXT: [9,3]     .    .    .    .    .   DR .   vmovupd	%xmm3, %xmm4
+# CHECK-NEXT: [9,4]     .    .    .    .    .   DR .   vmovupd	%xmm4, %xmm5
+# CHECK-NEXT: [9,5]     .    .    .    .    .   DR .   vmovupd	%xmm5, %xmm6
+# CHECK-NEXT: [9,6]     .    .    .    .    .    DR.   vmovupd	%xmm6, %xmm7
+# CHECK-NEXT: [9,7]     .    .    .    .    .    DR.   vmovupd	%xmm7, %xmm8
+# CHECK-NEXT: [9,8]     .    .    .    .    .    DR.   vmovupd	%xmm8, %xmm9
+# CHECK-NEXT: [9,9]     .    .    .    .    .    DR.   vmovupd	%xmm9, %xmm10
+# CHECK-NEXT: [9,10]    .    .    .    .    .    DR.   vmovupd	%xmm10, %xmm11
+# CHECK-NEXT: [9,11]    .    .    .    .    .    DR.   vmovupd	%xmm11, %xmm12
+# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR   vmovupd	%xmm12, %xmm13
+# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR   vmovupd	%xmm13, %xmm14
+# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR   vmovupd	%xmm14, %xmm15
+# CHECK-NEXT: [9,15]    .    .    .    .    .    .DR   vmovupd	%xmm15, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1273,35 +1273,35 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     10    0.0    0.0    0.6       vmovupd	%xmm0, %xmm1
-# CHECK-NEXT: 1.     10    0.0    0.0    0.6       vmovupd	%xmm1, %xmm2
-# CHECK-NEXT: 2.     10    0.0    0.0    0.3       vmovupd	%xmm2, %xmm3
-# CHECK-NEXT: 3.     10    0.0    0.0    0.3       vmovupd	%xmm3, %xmm4
+# CHECK-NEXT: 0.     10    0.0    0.0    0.0       vmovupd	%xmm0, %xmm1
+# CHECK-NEXT: 1.     10    0.0    0.0    0.0       vmovupd	%xmm1, %xmm2
+# CHECK-NEXT: 2.     10    0.0    0.0    0.0       vmovupd	%xmm2, %xmm3
+# CHECK-NEXT: 3.     10    0.0    0.0    0.0       vmovupd	%xmm3, %xmm4
 # CHECK-NEXT: 4.     10    0.0    0.0    0.0       vmovupd	%xmm4, %xmm5
 # CHECK-NEXT: 5.     10    0.0    0.0    0.0       vmovupd	%xmm5, %xmm6
 # CHECK-NEXT: 6.     10    0.0    0.0    0.0       vmovupd	%xmm6, %xmm7
-# CHECK-NEXT: 7.     10    0.0    0.0    0.6       vmovupd	%xmm7, %xmm8
-# CHECK-NEXT: 8.     10    0.0    0.0    0.3       vmovupd	%xmm8, %xmm9
-# CHECK-NEXT: 9.     10    0.0    0.0    0.3       vmovupd	%xmm9, %xmm10
+# CHECK-NEXT: 7.     10    0.0    0.0    0.0       vmovupd	%xmm7, %xmm8
+# CHECK-NEXT: 8.     10    0.0    0.0    0.0       vmovupd	%xmm8, %xmm9
+# CHECK-NEXT: 9.     10    0.0    0.0    0.0       vmovupd	%xmm9, %xmm10
 # CHECK-NEXT: 10.    10    0.0    0.0    0.0       vmovupd	%xmm10, %xmm11
 # CHECK-NEXT: 11.    10    0.0    0.0    0.0       vmovupd	%xmm11, %xmm12
 # CHECK-NEXT: 12.    10    0.0    0.0    0.0       vmovupd	%xmm12, %xmm13
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       vmovupd	%xmm13, %xmm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       vmovupd	%xmm14, %xmm15
-# CHECK-NEXT: 15.    10    1.0    1.0    0.0       vmovupd	%xmm15, %xmm0
-# CHECK-NEXT:        10    0.1    0.1    0.2       <total>
+# CHECK-NEXT: 15.    10    0.0    0.0    0.0       vmovupd	%xmm15, %xmm0
+# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
 
 # CHECK:      [4] Code Region
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      24000
-# CHECK-NEXT: Total Cycles:      4002
+# CHECK-NEXT: Total Cycles:      4001
 # CHECK-NEXT: Total uOps:        24000
 
 # CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    6.00
 # CHECK-NEXT: IPC:               6.00
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: Block RThroughput: 2.7
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -1312,22 +1312,22 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%xmm0, %xmm1
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%xmm1, %xmm2
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%xmm2, %xmm3
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%xmm3, %xmm4
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%xmm4, %xmm5
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%xmm5, %xmm6
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%xmm6, %xmm7
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%xmm7, %xmm8
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%xmm8, %xmm9
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%xmm9, %xmm10
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%xmm10, %xmm11
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%xmm11, %xmm12
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%xmm12, %xmm13
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%xmm13, %xmm14
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%xmm14, %xmm15
-# CHECK-NEXT:  1      0     0.25                        vmovdqa	%xmm15, %xmm0
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm0, %xmm1
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm1, %xmm2
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm2, %xmm3
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm3, %xmm4
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm4, %xmm5
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm5, %xmm6
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm6, %xmm7
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm7, %xmm8
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm8, %xmm9
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm9, %xmm10
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm10, %xmm11
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm11, %xmm12
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm12, %xmm13
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm13, %xmm14
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm14, %xmm15
+# CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    1500
@@ -1374,7 +1374,7 @@ vmovdqu %xmm15, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
@@ -1393,172 +1393,172 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovdqa	%xmm12, %xmm13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovdqa	%xmm13, %xmm14
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovdqa	%xmm14, %xmm15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovdqa	%xmm15, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovdqa	%xmm15, %xmm0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012345678
+# CHECK-NEXT: Index     0123456789          01234567
 
-# CHECK:      [0,0]     DR   .    .    .    .    .  .   vmovdqa	%xmm0, %xmm1
-# CHECK-NEXT: [0,1]     DR   .    .    .    .    .  .   vmovdqa	%xmm1, %xmm2
-# CHECK-NEXT: [0,2]     DR   .    .    .    .    .  .   vmovdqa	%xmm2, %xmm3
-# CHECK-NEXT: [0,3]     DR   .    .    .    .    .  .   vmovdqa	%xmm3, %xmm4
-# CHECK-NEXT: [0,4]     DR   .    .    .    .    .  .   vmovdqa	%xmm4, %xmm5
-# CHECK-NEXT: [0,5]     DR   .    .    .    .    .  .   vmovdqa	%xmm5, %xmm6
-# CHECK-NEXT: [0,6]     .DR  .    .    .    .    .  .   vmovdqa	%xmm6, %xmm7
-# CHECK-NEXT: [0,7]     .DR  .    .    .    .    .  .   vmovdqa	%xmm7, %xmm8
-# CHECK-NEXT: [0,8]     .DR  .    .    .    .    .  .   vmovdqa	%xmm8, %xmm9
-# CHECK-NEXT: [0,9]     .DR  .    .    .    .    .  .   vmovdqa	%xmm9, %xmm10
-# CHECK-NEXT: [0,10]    .DR  .    .    .    .    .  .   vmovdqa	%xmm10, %xmm11
-# CHECK-NEXT: [0,11]    .DR  .    .    .    .    .  .   vmovdqa	%xmm11, %xmm12
-# CHECK-NEXT: [0,12]    . DR .    .    .    .    .  .   vmovdqa	%xmm12, %xmm13
-# CHECK-NEXT: [0,13]    . DR .    .    .    .    .  .   vmovdqa	%xmm13, %xmm14
-# CHECK-NEXT: [0,14]    . DR .    .    .    .    .  .   vmovdqa	%xmm14, %xmm15
-# CHECK-NEXT: [0,15]    . DER.    .    .    .    .  .   vmovdqa	%xmm15, %xmm0
-# CHECK-NEXT: [1,0]     . D-R.    .    .    .    .  .   vmovdqa	%xmm0, %xmm1
-# CHECK-NEXT: [1,1]     . D-R.    .    .    .    .  .   vmovdqa	%xmm1, %xmm2
-# CHECK-NEXT: [1,2]     .  DR.    .    .    .    .  .   vmovdqa	%xmm2, %xmm3
-# CHECK-NEXT: [1,3]     .  DR.    .    .    .    .  .   vmovdqa	%xmm3, %xmm4
-# CHECK-NEXT: [1,4]     .  DR.    .    .    .    .  .   vmovdqa	%xmm4, %xmm5
-# CHECK-NEXT: [1,5]     .  DR.    .    .    .    .  .   vmovdqa	%xmm5, %xmm6
-# CHECK-NEXT: [1,6]     .  DR.    .    .    .    .  .   vmovdqa	%xmm6, %xmm7
-# CHECK-NEXT: [1,7]     .  D-R    .    .    .    .  .   vmovdqa	%xmm7, %xmm8
-# CHECK-NEXT: [1,8]     .   DR    .    .    .    .  .   vmovdqa	%xmm8, %xmm9
-# CHECK-NEXT: [1,9]     .   DR    .    .    .    .  .   vmovdqa	%xmm9, %xmm10
-# CHECK-NEXT: [1,10]    .   DR    .    .    .    .  .   vmovdqa	%xmm10, %xmm11
-# CHECK-NEXT: [1,11]    .   DR    .    .    .    .  .   vmovdqa	%xmm11, %xmm12
-# CHECK-NEXT: [1,12]    .   DR    .    .    .    .  .   vmovdqa	%xmm12, %xmm13
-# CHECK-NEXT: [1,13]    .   DR    .    .    .    .  .   vmovdqa	%xmm13, %xmm14
-# CHECK-NEXT: [1,14]    .    DR   .    .    .    .  .   vmovdqa	%xmm14, %xmm15
-# CHECK-NEXT: [1,15]    .    DER  .    .    .    .  .   vmovdqa	%xmm15, %xmm0
-# CHECK-NEXT: [2,0]     .    D-R  .    .    .    .  .   vmovdqa	%xmm0, %xmm1
-# CHECK-NEXT: [2,1]     .    D-R  .    .    .    .  .   vmovdqa	%xmm1, %xmm2
-# CHECK-NEXT: [2,2]     .    D-R  .    .    .    .  .   vmovdqa	%xmm2, %xmm3
-# CHECK-NEXT: [2,3]     .    D-R  .    .    .    .  .   vmovdqa	%xmm3, %xmm4
-# CHECK-NEXT: [2,4]     .    .DR  .    .    .    .  .   vmovdqa	%xmm4, %xmm5
-# CHECK-NEXT: [2,5]     .    .DR  .    .    .    .  .   vmovdqa	%xmm5, %xmm6
-# CHECK-NEXT: [2,6]     .    .DR  .    .    .    .  .   vmovdqa	%xmm6, %xmm7
-# CHECK-NEXT: [2,7]     .    .D-R .    .    .    .  .   vmovdqa	%xmm7, %xmm8
-# CHECK-NEXT: [2,8]     .    .D-R .    .    .    .  .   vmovdqa	%xmm8, %xmm9
-# CHECK-NEXT: [2,9]     .    .D-R .    .    .    .  .   vmovdqa	%xmm9, %xmm10
-# CHECK-NEXT: [2,10]    .    . DR .    .    .    .  .   vmovdqa	%xmm10, %xmm11
-# CHECK-NEXT: [2,11]    .    . DR .    .    .    .  .   vmovdqa	%xmm11, %xmm12
-# CHECK-NEXT: [2,12]    .    . DR .    .    .    .  .   vmovdqa	%xmm12, %xmm13
-# CHECK-NEXT: [2,13]    .    . DR .    .    .    .  .   vmovdqa	%xmm13, %xmm14
-# CHECK-NEXT: [2,14]    .    . DR .    .    .    .  .   vmovdqa	%xmm14, %xmm15
-# CHECK-NEXT: [2,15]    .    . DER.    .    .    .  .   vmovdqa	%xmm15, %xmm0
-# CHECK-NEXT: [3,0]     .    .  DR.    .    .    .  .   vmovdqa	%xmm0, %xmm1
-# CHECK-NEXT: [3,1]     .    .  DR.    .    .    .  .   vmovdqa	%xmm1, %xmm2
-# CHECK-NEXT: [3,2]     .    .  DR.    .    .    .  .   vmovdqa	%xmm2, %xmm3
-# CHECK-NEXT: [3,3]     .    .  DR.    .    .    .  .   vmovdqa	%xmm3, %xmm4
-# CHECK-NEXT: [3,4]     .    .  DR.    .    .    .  .   vmovdqa	%xmm4, %xmm5
-# CHECK-NEXT: [3,5]     .    .  DR.    .    .    .  .   vmovdqa	%xmm5, %xmm6
-# CHECK-NEXT: [3,6]     .    .   DR    .    .    .  .   vmovdqa	%xmm6, %xmm7
-# CHECK-NEXT: [3,7]     .    .   DR    .    .    .  .   vmovdqa	%xmm7, %xmm8
-# CHECK-NEXT: [3,8]     .    .   DR    .    .    .  .   vmovdqa	%xmm8, %xmm9
-# CHECK-NEXT: [3,9]     .    .   DR    .    .    .  .   vmovdqa	%xmm9, %xmm10
-# CHECK-NEXT: [3,10]    .    .   DR    .    .    .  .   vmovdqa	%xmm10, %xmm11
-# CHECK-NEXT: [3,11]    .    .   DR    .    .    .  .   vmovdqa	%xmm11, %xmm12
-# CHECK-NEXT: [3,12]    .    .    DR   .    .    .  .   vmovdqa	%xmm12, %xmm13
-# CHECK-NEXT: [3,13]    .    .    DR   .    .    .  .   vmovdqa	%xmm13, %xmm14
-# CHECK-NEXT: [3,14]    .    .    DR   .    .    .  .   vmovdqa	%xmm14, %xmm15
-# CHECK-NEXT: [3,15]    .    .    DER  .    .    .  .   vmovdqa	%xmm15, %xmm0
-# CHECK-NEXT: [4,0]     .    .    D-R  .    .    .  .   vmovdqa	%xmm0, %xmm1
-# CHECK-NEXT: [4,1]     .    .    D-R  .    .    .  .   vmovdqa	%xmm1, %xmm2
-# CHECK-NEXT: [4,2]     .    .    .DR  .    .    .  .   vmovdqa	%xmm2, %xmm3
-# CHECK-NEXT: [4,3]     .    .    .DR  .    .    .  .   vmovdqa	%xmm3, %xmm4
-# CHECK-NEXT: [4,4]     .    .    .DR  .    .    .  .   vmovdqa	%xmm4, %xmm5
-# CHECK-NEXT: [4,5]     .    .    .DR  .    .    .  .   vmovdqa	%xmm5, %xmm6
-# CHECK-NEXT: [4,6]     .    .    .DR  .    .    .  .   vmovdqa	%xmm6, %xmm7
-# CHECK-NEXT: [4,7]     .    .    .D-R .    .    .  .   vmovdqa	%xmm7, %xmm8
-# CHECK-NEXT: [4,8]     .    .    . DR .    .    .  .   vmovdqa	%xmm8, %xmm9
-# CHECK-NEXT: [4,9]     .    .    . DR .    .    .  .   vmovdqa	%xmm9, %xmm10
-# CHECK-NEXT: [4,10]    .    .    . DR .    .    .  .   vmovdqa	%xmm10, %xmm11
-# CHECK-NEXT: [4,11]    .    .    . DR .    .    .  .   vmovdqa	%xmm11, %xmm12
-# CHECK-NEXT: [4,12]    .    .    . DR .    .    .  .   vmovdqa	%xmm12, %xmm13
-# CHECK-NEXT: [4,13]    .    .    . DR .    .    .  .   vmovdqa	%xmm13, %xmm14
-# CHECK-NEXT: [4,14]    .    .    .  DR.    .    .  .   vmovdqa	%xmm14, %xmm15
-# CHECK-NEXT: [4,15]    .    .    .  DER    .    .  .   vmovdqa	%xmm15, %xmm0
-# CHECK-NEXT: [5,0]     .    .    .  D-R    .    .  .   vmovdqa	%xmm0, %xmm1
-# CHECK-NEXT: [5,1]     .    .    .  D-R    .    .  .   vmovdqa	%xmm1, %xmm2
-# CHECK-NEXT: [5,2]     .    .    .  D-R    .    .  .   vmovdqa	%xmm2, %xmm3
-# CHECK-NEXT: [5,3]     .    .    .  D-R    .    .  .   vmovdqa	%xmm3, %xmm4
-# CHECK-NEXT: [5,4]     .    .    .   DR    .    .  .   vmovdqa	%xmm4, %xmm5
-# CHECK-NEXT: [5,5]     .    .    .   DR    .    .  .   vmovdqa	%xmm5, %xmm6
-# CHECK-NEXT: [5,6]     .    .    .   DR    .    .  .   vmovdqa	%xmm6, %xmm7
-# CHECK-NEXT: [5,7]     .    .    .   D-R   .    .  .   vmovdqa	%xmm7, %xmm8
-# CHECK-NEXT: [5,8]     .    .    .   D-R   .    .  .   vmovdqa	%xmm8, %xmm9
-# CHECK-NEXT: [5,9]     .    .    .   D-R   .    .  .   vmovdqa	%xmm9, %xmm10
-# CHECK-NEXT: [5,10]    .    .    .    DR   .    .  .   vmovdqa	%xmm10, %xmm11
-# CHECK-NEXT: [5,11]    .    .    .    DR   .    .  .   vmovdqa	%xmm11, %xmm12
-# CHECK-NEXT: [5,12]    .    .    .    DR   .    .  .   vmovdqa	%xmm12, %xmm13
-# CHECK-NEXT: [5,13]    .    .    .    DR   .    .  .   vmovdqa	%xmm13, %xmm14
-# CHECK-NEXT: [5,14]    .    .    .    DR   .    .  .   vmovdqa	%xmm14, %xmm15
-# CHECK-NEXT: [5,15]    .    .    .    DER  .    .  .   vmovdqa	%xmm15, %xmm0
-# CHECK-NEXT: [6,0]     .    .    .    .DR  .    .  .   vmovdqa	%xmm0, %xmm1
-# CHECK-NEXT: [6,1]     .    .    .    .DR  .    .  .   vmovdqa	%xmm1, %xmm2
-# CHECK-NEXT: [6,2]     .    .    .    .DR  .    .  .   vmovdqa	%xmm2, %xmm3
-# CHECK-NEXT: [6,3]     .    .    .    .DR  .    .  .   vmovdqa	%xmm3, %xmm4
-# CHECK-NEXT: [6,4]     .    .    .    .DR  .    .  .   vmovdqa	%xmm4, %xmm5
-# CHECK-NEXT: [6,5]     .    .    .    .DR  .    .  .   vmovdqa	%xmm5, %xmm6
-# CHECK-NEXT: [6,6]     .    .    .    . DR .    .  .   vmovdqa	%xmm6, %xmm7
-# CHECK-NEXT: [6,7]     .    .    .    . DR .    .  .   vmovdqa	%xmm7, %xmm8
-# CHECK-NEXT: [6,8]     .    .    .    . DR .    .  .   vmovdqa	%xmm8, %xmm9
-# CHECK-NEXT: [6,9]     .    .    .    . DR .    .  .   vmovdqa	%xmm9, %xmm10
-# CHECK-NEXT: [6,10]    .    .    .    . DR .    .  .   vmovdqa	%xmm10, %xmm11
-# CHECK-NEXT: [6,11]    .    .    .    . DR .    .  .   vmovdqa	%xmm11, %xmm12
-# CHECK-NEXT: [6,12]    .    .    .    .  DR.    .  .   vmovdqa	%xmm12, %xmm13
-# CHECK-NEXT: [6,13]    .    .    .    .  DR.    .  .   vmovdqa	%xmm13, %xmm14
-# CHECK-NEXT: [6,14]    .    .    .    .  DR.    .  .   vmovdqa	%xmm14, %xmm15
-# CHECK-NEXT: [6,15]    .    .    .    .  DER    .  .   vmovdqa	%xmm15, %xmm0
-# CHECK-NEXT: [7,0]     .    .    .    .  D-R    .  .   vmovdqa	%xmm0, %xmm1
-# CHECK-NEXT: [7,1]     .    .    .    .  D-R    .  .   vmovdqa	%xmm1, %xmm2
-# CHECK-NEXT: [7,2]     .    .    .    .   DR    .  .   vmovdqa	%xmm2, %xmm3
-# CHECK-NEXT: [7,3]     .    .    .    .   DR    .  .   vmovdqa	%xmm3, %xmm4
-# CHECK-NEXT: [7,4]     .    .    .    .   DR    .  .   vmovdqa	%xmm4, %xmm5
-# CHECK-NEXT: [7,5]     .    .    .    .   DR    .  .   vmovdqa	%xmm5, %xmm6
-# CHECK-NEXT: [7,6]     .    .    .    .   DR    .  .   vmovdqa	%xmm6, %xmm7
-# CHECK-NEXT: [7,7]     .    .    .    .   D-R   .  .   vmovdqa	%xmm7, %xmm8
-# CHECK-NEXT: [7,8]     .    .    .    .    DR   .  .   vmovdqa	%xmm8, %xmm9
-# CHECK-NEXT: [7,9]     .    .    .    .    DR   .  .   vmovdqa	%xmm9, %xmm10
-# CHECK-NEXT: [7,10]    .    .    .    .    DR   .  .   vmovdqa	%xmm10, %xmm11
-# CHECK-NEXT: [7,11]    .    .    .    .    DR   .  .   vmovdqa	%xmm11, %xmm12
-# CHECK-NEXT: [7,12]    .    .    .    .    DR   .  .   vmovdqa	%xmm12, %xmm13
-# CHECK-NEXT: [7,13]    .    .    .    .    DR   .  .   vmovdqa	%xmm13, %xmm14
-# CHECK-NEXT: [7,14]    .    .    .    .    .DR  .  .   vmovdqa	%xmm14, %xmm15
-# CHECK-NEXT: [7,15]    .    .    .    .    .DER .  .   vmovdqa	%xmm15, %xmm0
-# CHECK-NEXT: [8,0]     .    .    .    .    .D-R .  .   vmovdqa	%xmm0, %xmm1
-# CHECK-NEXT: [8,1]     .    .    .    .    .D-R .  .   vmovdqa	%xmm1, %xmm2
-# CHECK-NEXT: [8,2]     .    .    .    .    .D-R .  .   vmovdqa	%xmm2, %xmm3
-# CHECK-NEXT: [8,3]     .    .    .    .    .D-R .  .   vmovdqa	%xmm3, %xmm4
-# CHECK-NEXT: [8,4]     .    .    .    .    . DR .  .   vmovdqa	%xmm4, %xmm5
-# CHECK-NEXT: [8,5]     .    .    .    .    . DR .  .   vmovdqa	%xmm5, %xmm6
-# CHECK-NEXT: [8,6]     .    .    .    .    . DR .  .   vmovdqa	%xmm6, %xmm7
-# CHECK-NEXT: [8,7]     .    .    .    .    . D-R.  .   vmovdqa	%xmm7, %xmm8
-# CHECK-NEXT: [8,8]     .    .    .    .    . D-R.  .   vmovdqa	%xmm8, %xmm9
-# CHECK-NEXT: [8,9]     .    .    .    .    . D-R.  .   vmovdqa	%xmm9, %xmm10
-# CHECK-NEXT: [8,10]    .    .    .    .    .  DR.  .   vmovdqa	%xmm10, %xmm11
-# CHECK-NEXT: [8,11]    .    .    .    .    .  DR.  .   vmovdqa	%xmm11, %xmm12
-# CHECK-NEXT: [8,12]    .    .    .    .    .  DR.  .   vmovdqa	%xmm12, %xmm13
-# CHECK-NEXT: [8,13]    .    .    .    .    .  DR.  .   vmovdqa	%xmm13, %xmm14
-# CHECK-NEXT: [8,14]    .    .    .    .    .  DR.  .   vmovdqa	%xmm14, %xmm15
-# CHECK-NEXT: [8,15]    .    .    .    .    .  DER  .   vmovdqa	%xmm15, %xmm0
-# CHECK-NEXT: [9,0]     .    .    .    .    .   DR  .   vmovdqa	%xmm0, %xmm1
-# CHECK-NEXT: [9,1]     .    .    .    .    .   DR  .   vmovdqa	%xmm1, %xmm2
-# CHECK-NEXT: [9,2]     .    .    .    .    .   DR  .   vmovdqa	%xmm2, %xmm3
-# CHECK-NEXT: [9,3]     .    .    .    .    .   DR  .   vmovdqa	%xmm3, %xmm4
-# CHECK-NEXT: [9,4]     .    .    .    .    .   DR  .   vmovdqa	%xmm4, %xmm5
-# CHECK-NEXT: [9,5]     .    .    .    .    .   DR  .   vmovdqa	%xmm5, %xmm6
-# CHECK-NEXT: [9,6]     .    .    .    .    .    DR .   vmovdqa	%xmm6, %xmm7
-# CHECK-NEXT: [9,7]     .    .    .    .    .    DR .   vmovdqa	%xmm7, %xmm8
-# CHECK-NEXT: [9,8]     .    .    .    .    .    DR .   vmovdqa	%xmm8, %xmm9
-# CHECK-NEXT: [9,9]     .    .    .    .    .    DR .   vmovdqa	%xmm9, %xmm10
-# CHECK-NEXT: [9,10]    .    .    .    .    .    DR .   vmovdqa	%xmm10, %xmm11
-# CHECK-NEXT: [9,11]    .    .    .    .    .    DR .   vmovdqa	%xmm11, %xmm12
-# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR.   vmovdqa	%xmm12, %xmm13
-# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR.   vmovdqa	%xmm13, %xmm14
-# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR.   vmovdqa	%xmm14, %xmm15
-# CHECK-NEXT: [9,15]    .    .    .    .    .    .DER   vmovdqa	%xmm15, %xmm0
+# CHECK:      [0,0]     DR   .    .    .    .    . .   vmovdqa	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DR   .    .    .    .    . .   vmovdqa	%xmm1, %xmm2
+# CHECK-NEXT: [0,2]     DR   .    .    .    .    . .   vmovdqa	%xmm2, %xmm3
+# CHECK-NEXT: [0,3]     DR   .    .    .    .    . .   vmovdqa	%xmm3, %xmm4
+# CHECK-NEXT: [0,4]     DR   .    .    .    .    . .   vmovdqa	%xmm4, %xmm5
+# CHECK-NEXT: [0,5]     DR   .    .    .    .    . .   vmovdqa	%xmm5, %xmm6
+# CHECK-NEXT: [0,6]     .DR  .    .    .    .    . .   vmovdqa	%xmm6, %xmm7
+# CHECK-NEXT: [0,7]     .DR  .    .    .    .    . .   vmovdqa	%xmm7, %xmm8
+# CHECK-NEXT: [0,8]     .DR  .    .    .    .    . .   vmovdqa	%xmm8, %xmm9
+# CHECK-NEXT: [0,9]     .DR  .    .    .    .    . .   vmovdqa	%xmm9, %xmm10
+# CHECK-NEXT: [0,10]    .DR  .    .    .    .    . .   vmovdqa	%xmm10, %xmm11
+# CHECK-NEXT: [0,11]    .DR  .    .    .    .    . .   vmovdqa	%xmm11, %xmm12
+# CHECK-NEXT: [0,12]    . DR .    .    .    .    . .   vmovdqa	%xmm12, %xmm13
+# CHECK-NEXT: [0,13]    . DR .    .    .    .    . .   vmovdqa	%xmm13, %xmm14
+# CHECK-NEXT: [0,14]    . DR .    .    .    .    . .   vmovdqa	%xmm14, %xmm15
+# CHECK-NEXT: [0,15]    . DR .    .    .    .    . .   vmovdqa	%xmm15, %xmm0
+# CHECK-NEXT: [1,0]     . DR .    .    .    .    . .   vmovdqa	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     . DR .    .    .    .    . .   vmovdqa	%xmm1, %xmm2
+# CHECK-NEXT: [1,2]     .  DR.    .    .    .    . .   vmovdqa	%xmm2, %xmm3
+# CHECK-NEXT: [1,3]     .  DR.    .    .    .    . .   vmovdqa	%xmm3, %xmm4
+# CHECK-NEXT: [1,4]     .  DR.    .    .    .    . .   vmovdqa	%xmm4, %xmm5
+# CHECK-NEXT: [1,5]     .  DR.    .    .    .    . .   vmovdqa	%xmm5, %xmm6
+# CHECK-NEXT: [1,6]     .  DR.    .    .    .    . .   vmovdqa	%xmm6, %xmm7
+# CHECK-NEXT: [1,7]     .  DR.    .    .    .    . .   vmovdqa	%xmm7, %xmm8
+# CHECK-NEXT: [1,8]     .   DR    .    .    .    . .   vmovdqa	%xmm8, %xmm9
+# CHECK-NEXT: [1,9]     .   DR    .    .    .    . .   vmovdqa	%xmm9, %xmm10
+# CHECK-NEXT: [1,10]    .   DR    .    .    .    . .   vmovdqa	%xmm10, %xmm11
+# CHECK-NEXT: [1,11]    .   DR    .    .    .    . .   vmovdqa	%xmm11, %xmm12
+# CHECK-NEXT: [1,12]    .   DR    .    .    .    . .   vmovdqa	%xmm12, %xmm13
+# CHECK-NEXT: [1,13]    .   DR    .    .    .    . .   vmovdqa	%xmm13, %xmm14
+# CHECK-NEXT: [1,14]    .    DR   .    .    .    . .   vmovdqa	%xmm14, %xmm15
+# CHECK-NEXT: [1,15]    .    DR   .    .    .    . .   vmovdqa	%xmm15, %xmm0
+# CHECK-NEXT: [2,0]     .    DR   .    .    .    . .   vmovdqa	%xmm0, %xmm1
+# CHECK-NEXT: [2,1]     .    DR   .    .    .    . .   vmovdqa	%xmm1, %xmm2
+# CHECK-NEXT: [2,2]     .    DR   .    .    .    . .   vmovdqa	%xmm2, %xmm3
+# CHECK-NEXT: [2,3]     .    DR   .    .    .    . .   vmovdqa	%xmm3, %xmm4
+# CHECK-NEXT: [2,4]     .    .DR  .    .    .    . .   vmovdqa	%xmm4, %xmm5
+# CHECK-NEXT: [2,5]     .    .DR  .    .    .    . .   vmovdqa	%xmm5, %xmm6
+# CHECK-NEXT: [2,6]     .    .DR  .    .    .    . .   vmovdqa	%xmm6, %xmm7
+# CHECK-NEXT: [2,7]     .    .DR  .    .    .    . .   vmovdqa	%xmm7, %xmm8
+# CHECK-NEXT: [2,8]     .    .DR  .    .    .    . .   vmovdqa	%xmm8, %xmm9
+# CHECK-NEXT: [2,9]     .    .DR  .    .    .    . .   vmovdqa	%xmm9, %xmm10
+# CHECK-NEXT: [2,10]    .    . DR .    .    .    . .   vmovdqa	%xmm10, %xmm11
+# CHECK-NEXT: [2,11]    .    . DR .    .    .    . .   vmovdqa	%xmm11, %xmm12
+# CHECK-NEXT: [2,12]    .    . DR .    .    .    . .   vmovdqa	%xmm12, %xmm13
+# CHECK-NEXT: [2,13]    .    . DR .    .    .    . .   vmovdqa	%xmm13, %xmm14
+# CHECK-NEXT: [2,14]    .    . DR .    .    .    . .   vmovdqa	%xmm14, %xmm15
+# CHECK-NEXT: [2,15]    .    . DR .    .    .    . .   vmovdqa	%xmm15, %xmm0
+# CHECK-NEXT: [3,0]     .    .  DR.    .    .    . .   vmovdqa	%xmm0, %xmm1
+# CHECK-NEXT: [3,1]     .    .  DR.    .    .    . .   vmovdqa	%xmm1, %xmm2
+# CHECK-NEXT: [3,2]     .    .  DR.    .    .    . .   vmovdqa	%xmm2, %xmm3
+# CHECK-NEXT: [3,3]     .    .  DR.    .    .    . .   vmovdqa	%xmm3, %xmm4
+# CHECK-NEXT: [3,4]     .    .  DR.    .    .    . .   vmovdqa	%xmm4, %xmm5
+# CHECK-NEXT: [3,5]     .    .  DR.    .    .    . .   vmovdqa	%xmm5, %xmm6
+# CHECK-NEXT: [3,6]     .    .   DR    .    .    . .   vmovdqa	%xmm6, %xmm7
+# CHECK-NEXT: [3,7]     .    .   DR    .    .    . .   vmovdqa	%xmm7, %xmm8
+# CHECK-NEXT: [3,8]     .    .   DR    .    .    . .   vmovdqa	%xmm8, %xmm9
+# CHECK-NEXT: [3,9]     .    .   DR    .    .    . .   vmovdqa	%xmm9, %xmm10
+# CHECK-NEXT: [3,10]    .    .   DR    .    .    . .   vmovdqa	%xmm10, %xmm11
+# CHECK-NEXT: [3,11]    .    .   DR    .    .    . .   vmovdqa	%xmm11, %xmm12
+# CHECK-NEXT: [3,12]    .    .    DR   .    .    . .   vmovdqa	%xmm12, %xmm13
+# CHECK-NEXT: [3,13]    .    .    DR   .    .    . .   vmovdqa	%xmm13, %xmm14
+# CHECK-NEXT: [3,14]    .    .    DR   .    .    . .   vmovdqa	%xmm14, %xmm15
+# CHECK-NEXT: [3,15]    .    .    DR   .    .    . .   vmovdqa	%xmm15, %xmm0
+# CHECK-NEXT: [4,0]     .    .    DR   .    .    . .   vmovdqa	%xmm0, %xmm1
+# CHECK-NEXT: [4,1]     .    .    DR   .    .    . .   vmovdqa	%xmm1, %xmm2
+# CHECK-NEXT: [4,2]     .    .    .DR  .    .    . .   vmovdqa	%xmm2, %xmm3
+# CHECK-NEXT: [4,3]     .    .    .DR  .    .    . .   vmovdqa	%xmm3, %xmm4
+# CHECK-NEXT: [4,4]     .    .    .DR  .    .    . .   vmovdqa	%xmm4, %xmm5
+# CHECK-NEXT: [4,5]     .    .    .DR  .    .    . .   vmovdqa	%xmm5, %xmm6
+# CHECK-NEXT: [4,6]     .    .    .DR  .    .    . .   vmovdqa	%xmm6, %xmm7
+# CHECK-NEXT: [4,7]     .    .    .DR  .    .    . .   vmovdqa	%xmm7, %xmm8
+# CHECK-NEXT: [4,8]     .    .    . DR .    .    . .   vmovdqa	%xmm8, %xmm9
+# CHECK-NEXT: [4,9]     .    .    . DR .    .    . .   vmovdqa	%xmm9, %xmm10
+# CHECK-NEXT: [4,10]    .    .    . DR .    .    . .   vmovdqa	%xmm10, %xmm11
+# CHECK-NEXT: [4,11]    .    .    . DR .    .    . .   vmovdqa	%xmm11, %xmm12
+# CHECK-NEXT: [4,12]    .    .    . DR .    .    . .   vmovdqa	%xmm12, %xmm13
+# CHECK-NEXT: [4,13]    .    .    . DR .    .    . .   vmovdqa	%xmm13, %xmm14
+# CHECK-NEXT: [4,14]    .    .    .  DR.    .    . .   vmovdqa	%xmm14, %xmm15
+# CHECK-NEXT: [4,15]    .    .    .  DR.    .    . .   vmovdqa	%xmm15, %xmm0
+# CHECK-NEXT: [5,0]     .    .    .  DR.    .    . .   vmovdqa	%xmm0, %xmm1
+# CHECK-NEXT: [5,1]     .    .    .  DR.    .    . .   vmovdqa	%xmm1, %xmm2
+# CHECK-NEXT: [5,2]     .    .    .  DR.    .    . .   vmovdqa	%xmm2, %xmm3
+# CHECK-NEXT: [5,3]     .    .    .  DR.    .    . .   vmovdqa	%xmm3, %xmm4
+# CHECK-NEXT: [5,4]     .    .    .   DR    .    . .   vmovdqa	%xmm4, %xmm5
+# CHECK-NEXT: [5,5]     .    .    .   DR    .    . .   vmovdqa	%xmm5, %xmm6
+# CHECK-NEXT: [5,6]     .    .    .   DR    .    . .   vmovdqa	%xmm6, %xmm7
+# CHECK-NEXT: [5,7]     .    .    .   DR    .    . .   vmovdqa	%xmm7, %xmm8
+# CHECK-NEXT: [5,8]     .    .    .   DR    .    . .   vmovdqa	%xmm8, %xmm9
+# CHECK-NEXT: [5,9]     .    .    .   DR    .    . .   vmovdqa	%xmm9, %xmm10
+# CHECK-NEXT: [5,10]    .    .    .    DR   .    . .   vmovdqa	%xmm10, %xmm11
+# CHECK-NEXT: [5,11]    .    .    .    DR   .    . .   vmovdqa	%xmm11, %xmm12
+# CHECK-NEXT: [5,12]    .    .    .    DR   .    . .   vmovdqa	%xmm12, %xmm13
+# CHECK-NEXT: [5,13]    .    .    .    DR   .    . .   vmovdqa	%xmm13, %xmm14
+# CHECK-NEXT: [5,14]    .    .    .    DR   .    . .   vmovdqa	%xmm14, %xmm15
+# CHECK-NEXT: [5,15]    .    .    .    DR   .    . .   vmovdqa	%xmm15, %xmm0
+# CHECK-NEXT: [6,0]     .    .    .    .DR  .    . .   vmovdqa	%xmm0, %xmm1
+# CHECK-NEXT: [6,1]     .    .    .    .DR  .    . .   vmovdqa	%xmm1, %xmm2
+# CHECK-NEXT: [6,2]     .    .    .    .DR  .    . .   vmovdqa	%xmm2, %xmm3
+# CHECK-NEXT: [6,3]     .    .    .    .DR  .    . .   vmovdqa	%xmm3, %xmm4
+# CHECK-NEXT: [6,4]     .    .    .    .DR  .    . .   vmovdqa	%xmm4, %xmm5
+# CHECK-NEXT: [6,5]     .    .    .    .DR  .    . .   vmovdqa	%xmm5, %xmm6
+# CHECK-NEXT: [6,6]     .    .    .    . DR .    . .   vmovdqa	%xmm6, %xmm7
+# CHECK-NEXT: [6,7]     .    .    .    . DR .    . .   vmovdqa	%xmm7, %xmm8
+# CHECK-NEXT: [6,8]     .    .    .    . DR .    . .   vmovdqa	%xmm8, %xmm9
+# CHECK-NEXT: [6,9]     .    .    .    . DR .    . .   vmovdqa	%xmm9, %xmm10
+# CHECK-NEXT: [6,10]    .    .    .    . DR .    . .   vmovdqa	%xmm10, %xmm11
+# CHECK-NEXT: [6,11]    .    .    .    . DR .    . .   vmovdqa	%xmm11, %xmm12
+# CHECK-NEXT: [6,12]    .    .    .    .  DR.    . .   vmovdqa	%xmm12, %xmm13
+# CHECK-NEXT: [6,13]    .    .    .    .  DR.    . .   vmovdqa	%xmm13, %xmm14
+# CHECK-NEXT: [6,14]    .    .    .    .  DR.    . .   vmovdqa	%xmm14, %xmm15
+# CHECK-NEXT: [6,15]    .    .    .    .  DR.    . .   vmovdqa	%xmm15, %xmm0
+# CHECK-NEXT: [7,0]     .    .    .    .  DR.    . .   vmovdqa	%xmm0, %xmm1
+# CHECK-NEXT: [7,1]     .    .    .    .  DR.    . .   vmovdqa	%xmm1, %xmm2
+# CHECK-NEXT: [7,2]     .    .    .    .   DR    . .   vmovdqa	%xmm2, %xmm3
+# CHECK-NEXT: [7,3]     .    .    .    .   DR    . .   vmovdqa	%xmm3, %xmm4
+# CHECK-NEXT: [7,4]     .    .    .    .   DR    . .   vmovdqa	%xmm4, %xmm5
+# CHECK-NEXT: [7,5]     .    .    .    .   DR    . .   vmovdqa	%xmm5, %xmm6
+# CHECK-NEXT: [7,6]     .    .    .    .   DR    . .   vmovdqa	%xmm6, %xmm7
+# CHECK-NEXT: [7,7]     .    .    .    .   DR    . .   vmovdqa	%xmm7, %xmm8
+# CHECK-NEXT: [7,8]     .    .    .    .    DR   . .   vmovdqa	%xmm8, %xmm9
+# CHECK-NEXT: [7,9]     .    .    .    .    DR   . .   vmovdqa	%xmm9, %xmm10
+# CHECK-NEXT: [7,10]    .    .    .    .    DR   . .   vmovdqa	%xmm10, %xmm11
+# CHECK-NEXT: [7,11]    .    .    .    .    DR   . .   vmovdqa	%xmm11, %xmm12
+# CHECK-NEXT: [7,12]    .    .    .    .    DR   . .   vmovdqa	%xmm12, %xmm13
+# CHECK-NEXT: [7,13]    .    .    .    .    DR   . .   vmovdqa	%xmm13, %xmm14
+# CHECK-NEXT: [7,14]    .    .    .    .    .DR  . .   vmovdqa	%xmm14, %xmm15
+# CHECK-NEXT: [7,15]    .    .    .    .    .DR  . .   vmovdqa	%xmm15, %xmm0
+# CHECK-NEXT: [8,0]     .    .    .    .    .DR  . .   vmovdqa	%xmm0, %xmm1
+# CHECK-NEXT: [8,1]     .    .    .    .    .DR  . .   vmovdqa	%xmm1, %xmm2
+# CHECK-NEXT: [8,2]     .    .    .    .    .DR  . .   vmovdqa	%xmm2, %xmm3
+# CHECK-NEXT: [8,3]     .    .    .    .    .DR  . .   vmovdqa	%xmm3, %xmm4
+# CHECK-NEXT: [8,4]     .    .    .    .    . DR . .   vmovdqa	%xmm4, %xmm5
+# CHECK-NEXT: [8,5]     .    .    .    .    . DR . .   vmovdqa	%xmm5, %xmm6
+# CHECK-NEXT: [8,6]     .    .    .    .    . DR . .   vmovdqa	%xmm6, %xmm7
+# CHECK-NEXT: [8,7]     .    .    .    .    . DR . .   vmovdqa	%xmm7, %xmm8
+# CHECK-NEXT: [8,8]     .    .    .    .    . DR . .   vmovdqa	%xmm8, %xmm9
+# CHECK-NEXT: [8,9]     .    .    .    .    . DR . .   vmovdqa	%xmm9, %xmm10
+# CHECK-NEXT: [8,10]    .    .    .    .    .  DR. .   vmovdqa	%xmm10, %xmm11
+# CHECK-NEXT: [8,11]    .    .    .    .    .  DR. .   vmovdqa	%xmm11, %xmm12
+# CHECK-NEXT: [8,12]    .    .    .    .    .  DR. .   vmovdqa	%xmm12, %xmm13
+# CHECK-NEXT: [8,13]    .    .    .    .    .  DR. .   vmovdqa	%xmm13, %xmm14
+# CHECK-NEXT: [8,14]    .    .    .    .    .  DR. .   vmovdqa	%xmm14, %xmm15
+# CHECK-NEXT: [8,15]    .    .    .    .    .  DR. .   vmovdqa	%xmm15, %xmm0
+# CHECK-NEXT: [9,0]     .    .    .    .    .   DR .   vmovdqa	%xmm0, %xmm1
+# CHECK-NEXT: [9,1]     .    .    .    .    .   DR .   vmovdqa	%xmm1, %xmm2
+# CHECK-NEXT: [9,2]     .    .    .    .    .   DR .   vmovdqa	%xmm2, %xmm3
+# CHECK-NEXT: [9,3]     .    .    .    .    .   DR .   vmovdqa	%xmm3, %xmm4
+# CHECK-NEXT: [9,4]     .    .    .    .    .   DR .   vmovdqa	%xmm4, %xmm5
+# CHECK-NEXT: [9,5]     .    .    .    .    .   DR .   vmovdqa	%xmm5, %xmm6
+# CHECK-NEXT: [9,6]     .    .    .    .    .    DR.   vmovdqa	%xmm6, %xmm7
+# CHECK-NEXT: [9,7]     .    .    .    .    .    DR.   vmovdqa	%xmm7, %xmm8
+# CHECK-NEXT: [9,8]     .    .    .    .    .    DR.   vmovdqa	%xmm8, %xmm9
+# CHECK-NEXT: [9,9]     .    .    .    .    .    DR.   vmovdqa	%xmm9, %xmm10
+# CHECK-NEXT: [9,10]    .    .    .    .    .    DR.   vmovdqa	%xmm10, %xmm11
+# CHECK-NEXT: [9,11]    .    .    .    .    .    DR.   vmovdqa	%xmm11, %xmm12
+# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR   vmovdqa	%xmm12, %xmm13
+# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR   vmovdqa	%xmm13, %xmm14
+# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR   vmovdqa	%xmm14, %xmm15
+# CHECK-NEXT: [9,15]    .    .    .    .    .    .DR   vmovdqa	%xmm15, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1567,35 +1567,35 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     10    0.0    0.0    0.6       vmovdqa	%xmm0, %xmm1
-# CHECK-NEXT: 1.     10    0.0    0.0    0.6       vmovdqa	%xmm1, %xmm2
-# CHECK-NEXT: 2.     10    0.0    0.0    0.3       vmovdqa	%xmm2, %xmm3
-# CHECK-NEXT: 3.     10    0.0    0.0    0.3       vmovdqa	%xmm3, %xmm4
+# CHECK-NEXT: 0.     10    0.0    0.0    0.0       vmovdqa	%xmm0, %xmm1
+# CHECK-NEXT: 1.     10    0.0    0.0    0.0       vmovdqa	%xmm1, %xmm2
+# CHECK-NEXT: 2.     10    0.0    0.0    0.0       vmovdqa	%xmm2, %xmm3
+# CHECK-NEXT: 3.     10    0.0    0.0    0.0       vmovdqa	%xmm3, %xmm4
 # CHECK-NEXT: 4.     10    0.0    0.0    0.0       vmovdqa	%xmm4, %xmm5
 # CHECK-NEXT: 5.     10    0.0    0.0    0.0       vmovdqa	%xmm5, %xmm6
 # CHECK-NEXT: 6.     10    0.0    0.0    0.0       vmovdqa	%xmm6, %xmm7
-# CHECK-NEXT: 7.     10    0.0    0.0    0.6       vmovdqa	%xmm7, %xmm8
-# CHECK-NEXT: 8.     10    0.0    0.0    0.3       vmovdqa	%xmm8, %xmm9
-# CHECK-NEXT: 9.     10    0.0    0.0    0.3       vmovdqa	%xmm9, %xmm10
+# CHECK-NEXT: 7.     10    0.0    0.0    0.0       vmovdqa	%xmm7, %xmm8
+# CHECK-NEXT: 8.     10    0.0    0.0    0.0       vmovdqa	%xmm8, %xmm9
+# CHECK-NEXT: 9.     10    0.0    0.0    0.0       vmovdqa	%xmm9, %xmm10
 # CHECK-NEXT: 10.    10    0.0    0.0    0.0       vmovdqa	%xmm10, %xmm11
 # CHECK-NEXT: 11.    10    0.0    0.0    0.0       vmovdqa	%xmm11, %xmm12
 # CHECK-NEXT: 12.    10    0.0    0.0    0.0       vmovdqa	%xmm12, %xmm13
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       vmovdqa	%xmm13, %xmm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       vmovdqa	%xmm14, %xmm15
-# CHECK-NEXT: 15.    10    1.0    1.0    0.0       vmovdqa	%xmm15, %xmm0
-# CHECK-NEXT:        10    0.1    0.1    0.2       <total>
+# CHECK-NEXT: 15.    10    0.0    0.0    0.0       vmovdqa	%xmm15, %xmm0
+# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
 
 # CHECK:      [5] Code Region
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      24000
-# CHECK-NEXT: Total Cycles:      4002
+# CHECK-NEXT: Total Cycles:      4001
 # CHECK-NEXT: Total uOps:        24000
 
 # CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    6.00
 # CHECK-NEXT: IPC:               6.00
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: Block RThroughput: 2.7
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -1606,22 +1606,22 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%xmm0, %xmm1
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%xmm1, %xmm2
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%xmm2, %xmm3
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%xmm3, %xmm4
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%xmm4, %xmm5
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%xmm5, %xmm6
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%xmm6, %xmm7
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%xmm7, %xmm8
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%xmm8, %xmm9
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%xmm9, %xmm10
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%xmm10, %xmm11
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%xmm11, %xmm12
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%xmm12, %xmm13
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%xmm13, %xmm14
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%xmm14, %xmm15
-# CHECK-NEXT:  1      0     0.25                        vmovdqu	%xmm15, %xmm0
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm0, %xmm1
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm1, %xmm2
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm2, %xmm3
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm3, %xmm4
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm4, %xmm5
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm5, %xmm6
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm6, %xmm7
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm7, %xmm8
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm8, %xmm9
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm9, %xmm10
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm10, %xmm11
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm11, %xmm12
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm12, %xmm13
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm13, %xmm14
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm14, %xmm15
+# CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    1500
@@ -1668,7 +1668,7 @@ vmovdqu %xmm15, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
@@ -1687,172 +1687,172 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovdqu	%xmm12, %xmm13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovdqu	%xmm13, %xmm14
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovdqu	%xmm14, %xmm15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     vmovdqu	%xmm15, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovdqu	%xmm15, %xmm0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012345678
+# CHECK-NEXT: Index     0123456789          01234567
 
-# CHECK:      [0,0]     DR   .    .    .    .    .  .   vmovdqu	%xmm0, %xmm1
-# CHECK-NEXT: [0,1]     DR   .    .    .    .    .  .   vmovdqu	%xmm1, %xmm2
-# CHECK-NEXT: [0,2]     DR   .    .    .    .    .  .   vmovdqu	%xmm2, %xmm3
-# CHECK-NEXT: [0,3]     DR   .    .    .    .    .  .   vmovdqu	%xmm3, %xmm4
-# CHECK-NEXT: [0,4]     DR   .    .    .    .    .  .   vmovdqu	%xmm4, %xmm5
-# CHECK-NEXT: [0,5]     DR   .    .    .    .    .  .   vmovdqu	%xmm5, %xmm6
-# CHECK-NEXT: [0,6]     .DR  .    .    .    .    .  .   vmovdqu	%xmm6, %xmm7
-# CHECK-NEXT: [0,7]     .DR  .    .    .    .    .  .   vmovdqu	%xmm7, %xmm8
-# CHECK-NEXT: [0,8]     .DR  .    .    .    .    .  .   vmovdqu	%xmm8, %xmm9
-# CHECK-NEXT: [0,9]     .DR  .    .    .    .    .  .   vmovdqu	%xmm9, %xmm10
-# CHECK-NEXT: [0,10]    .DR  .    .    .    .    .  .   vmovdqu	%xmm10, %xmm11
-# CHECK-NEXT: [0,11]    .DR  .    .    .    .    .  .   vmovdqu	%xmm11, %xmm12
-# CHECK-NEXT: [0,12]    . DR .    .    .    .    .  .   vmovdqu	%xmm12, %xmm13
-# CHECK-NEXT: [0,13]    . DR .    .    .    .    .  .   vmovdqu	%xmm13, %xmm14
-# CHECK-NEXT: [0,14]    . DR .    .    .    .    .  .   vmovdqu	%xmm14, %xmm15
-# CHECK-NEXT: [0,15]    . DER.    .    .    .    .  .   vmovdqu	%xmm15, %xmm0
-# CHECK-NEXT: [1,0]     . D-R.    .    .    .    .  .   vmovdqu	%xmm0, %xmm1
-# CHECK-NEXT: [1,1]     . D-R.    .    .    .    .  .   vmovdqu	%xmm1, %xmm2
-# CHECK-NEXT: [1,2]     .  DR.    .    .    .    .  .   vmovdqu	%xmm2, %xmm3
-# CHECK-NEXT: [1,3]     .  DR.    .    .    .    .  .   vmovdqu	%xmm3, %xmm4
-# CHECK-NEXT: [1,4]     .  DR.    .    .    .    .  .   vmovdqu	%xmm4, %xmm5
-# CHECK-NEXT: [1,5]     .  DR.    .    .    .    .  .   vmovdqu	%xmm5, %xmm6
-# CHECK-NEXT: [1,6]     .  DR.    .    .    .    .  .   vmovdqu	%xmm6, %xmm7
-# CHECK-NEXT: [1,7]     .  D-R    .    .    .    .  .   vmovdqu	%xmm7, %xmm8
-# CHECK-NEXT: [1,8]     .   DR    .    .    .    .  .   vmovdqu	%xmm8, %xmm9
-# CHECK-NEXT: [1,9]     .   DR    .    .    .    .  .   vmovdqu	%xmm9, %xmm10
-# CHECK-NEXT: [1,10]    .   DR    .    .    .    .  .   vmovdqu	%xmm10, %xmm11
-# CHECK-NEXT: [1,11]    .   DR    .    .    .    .  .   vmovdqu	%xmm11, %xmm12
-# CHECK-NEXT: [1,12]    .   DR    .    .    .    .  .   vmovdqu	%xmm12, %xmm13
-# CHECK-NEXT: [1,13]    .   DR    .    .    .    .  .   vmovdqu	%xmm13, %xmm14
-# CHECK-NEXT: [1,14]    .    DR   .    .    .    .  .   vmovdqu	%xmm14, %xmm15
-# CHECK-NEXT: [1,15]    .    DER  .    .    .    .  .   vmovdqu	%xmm15, %xmm0
-# CHECK-NEXT: [2,0]     .    D-R  .    .    .    .  .   vmovdqu	%xmm0, %xmm1
-# CHECK-NEXT: [2,1]     .    D-R  .    .    .    .  .   vmovdqu	%xmm1, %xmm2
-# CHECK-NEXT: [2,2]     .    D-R  .    .    .    .  .   vmovdqu	%xmm2, %xmm3
-# CHECK-NEXT: [2,3]     .    D-R  .    .    .    .  .   vmovdqu	%xmm3, %xmm4
-# CHECK-NEXT: [2,4]     .    .DR  .    .    .    .  .   vmovdqu	%xmm4, %xmm5
-# CHECK-NEXT: [2,5]     .    .DR  .    .    .    .  .   vmovdqu	%xmm5, %xmm6
-# CHECK-NEXT: [2,6]     .    .DR  .    .    .    .  .   vmovdqu	%xmm6, %xmm7
-# CHECK-NEXT: [2,7]     .    .D-R .    .    .    .  .   vmovdqu	%xmm7, %xmm8
-# CHECK-NEXT: [2,8]     .    .D-R .    .    .    .  .   vmovdqu	%xmm8, %xmm9
-# CHECK-NEXT: [2,9]     .    .D-R .    .    .    .  .   vmovdqu	%xmm9, %xmm10
-# CHECK-NEXT: [2,10]    .    . DR .    .    .    .  .   vmovdqu	%xmm10, %xmm11
-# CHECK-NEXT: [2,11]    .    . DR .    .    .    .  .   vmovdqu	%xmm11, %xmm12
-# CHECK-NEXT: [2,12]    .    . DR .    .    .    .  .   vmovdqu	%xmm12, %xmm13
-# CHECK-NEXT: [2,13]    .    . DR .    .    .    .  .   vmovdqu	%xmm13, %xmm14
-# CHECK-NEXT: [2,14]    .    . DR .    .    .    .  .   vmovdqu	%xmm14, %xmm15
-# CHECK-NEXT: [2,15]    .    . DER.    .    .    .  .   vmovdqu	%xmm15, %xmm0
-# CHECK-NEXT: [3,0]     .    .  DR.    .    .    .  .   vmovdqu	%xmm0, %xmm1
-# CHECK-NEXT: [3,1]     .    .  DR.    .    .    .  .   vmovdqu	%xmm1, %xmm2
-# CHECK-NEXT: [3,2]     .    .  DR.    .    .    .  .   vmovdqu	%xmm2, %xmm3
-# CHECK-NEXT: [3,3]     .    .  DR.    .    .    .  .   vmovdqu	%xmm3, %xmm4
-# CHECK-NEXT: [3,4]     .    .  DR.    .    .    .  .   vmovdqu	%xmm4, %xmm5
-# CHECK-NEXT: [3,5]     .    .  DR.    .    .    .  .   vmovdqu	%xmm5, %xmm6
-# CHECK-NEXT: [3,6]     .    .   DR    .    .    .  .   vmovdqu	%xmm6, %xmm7
-# CHECK-NEXT: [3,7]     .    .   DR    .    .    .  .   vmovdqu	%xmm7, %xmm8
-# CHECK-NEXT: [3,8]     .    .   DR    .    .    .  .   vmovdqu	%xmm8, %xmm9
-# CHECK-NEXT: [3,9]     .    .   DR    .    .    .  .   vmovdqu	%xmm9, %xmm10
-# CHECK-NEXT: [3,10]    .    .   DR    .    .    .  .   vmovdqu	%xmm10, %xmm11
-# CHECK-NEXT: [3,11]    .    .   DR    .    .    .  .   vmovdqu	%xmm11, %xmm12
-# CHECK-NEXT: [3,12]    .    .    DR   .    .    .  .   vmovdqu	%xmm12, %xmm13
-# CHECK-NEXT: [3,13]    .    .    DR   .    .    .  .   vmovdqu	%xmm13, %xmm14
-# CHECK-NEXT: [3,14]    .    .    DR   .    .    .  .   vmovdqu	%xmm14, %xmm15
-# CHECK-NEXT: [3,15]    .    .    DER  .    .    .  .   vmovdqu	%xmm15, %xmm0
-# CHECK-NEXT: [4,0]     .    .    D-R  .    .    .  .   vmovdqu	%xmm0, %xmm1
-# CHECK-NEXT: [4,1]     .    .    D-R  .    .    .  .   vmovdqu	%xmm1, %xmm2
-# CHECK-NEXT: [4,2]     .    .    .DR  .    .    .  .   vmovdqu	%xmm2, %xmm3
-# CHECK-NEXT: [4,3]     .    .    .DR  .    .    .  .   vmovdqu	%xmm3, %xmm4
-# CHECK-NEXT: [4,4]     .    .    .DR  .    .    .  .   vmovdqu	%xmm4, %xmm5
-# CHECK-NEXT: [4,5]     .    .    .DR  .    .    .  .   vmovdqu	%xmm5, %xmm6
-# CHECK-NEXT: [4,6]     .    .    .DR  .    .    .  .   vmovdqu	%xmm6, %xmm7
-# CHECK-NEXT: [4,7]     .    .    .D-R .    .    .  .   vmovdqu	%xmm7, %xmm8
-# CHECK-NEXT: [4,8]     .    .    . DR .    .    .  .   vmovdqu	%xmm8, %xmm9
-# CHECK-NEXT: [4,9]     .    .    . DR .    .    .  .   vmovdqu	%xmm9, %xmm10
-# CHECK-NEXT: [4,10]    .    .    . DR .    .    .  .   vmovdqu	%xmm10, %xmm11
-# CHECK-NEXT: [4,11]    .    .    . DR .    .    .  .   vmovdqu	%xmm11, %xmm12
-# CHECK-NEXT: [4,12]    .    .    . DR .    .    .  .   vmovdqu	%xmm12, %xmm13
-# CHECK-NEXT: [4,13]    .    .    . DR .    .    .  .   vmovdqu	%xmm13, %xmm14
-# CHECK-NEXT: [4,14]    .    .    .  DR.    .    .  .   vmovdqu	%xmm14, %xmm15
-# CHECK-NEXT: [4,15]    .    .    .  DER    .    .  .   vmovdqu	%xmm15, %xmm0
-# CHECK-NEXT: [5,0]     .    .    .  D-R    .    .  .   vmovdqu	%xmm0, %xmm1
-# CHECK-NEXT: [5,1]     .    .    .  D-R    .    .  .   vmovdqu	%xmm1, %xmm2
-# CHECK-NEXT: [5,2]     .    .    .  D-R    .    .  .   vmovdqu	%xmm2, %xmm3
-# CHECK-NEXT: [5,3]     .    .    .  D-R    .    .  .   vmovdqu	%xmm3, %xmm4
-# CHECK-NEXT: [5,4]     .    .    .   DR    .    .  .   vmovdqu	%xmm4, %xmm5
-# CHECK-NEXT: [5,5]     .    .    .   DR    .    .  .   vmovdqu	%xmm5, %xmm6
-# CHECK-NEXT: [5,6]     .    .    .   DR    .    .  .   vmovdqu	%xmm6, %xmm7
-# CHECK-NEXT: [5,7]     .    .    .   D-R   .    .  .   vmovdqu	%xmm7, %xmm8
-# CHECK-NEXT: [5,8]     .    .    .   D-R   .    .  .   vmovdqu	%xmm8, %xmm9
-# CHECK-NEXT: [5,9]     .    .    .   D-R   .    .  .   vmovdqu	%xmm9, %xmm10
-# CHECK-NEXT: [5,10]    .    .    .    DR   .    .  .   vmovdqu	%xmm10, %xmm11
-# CHECK-NEXT: [5,11]    .    .    .    DR   .    .  .   vmovdqu	%xmm11, %xmm12
-# CHECK-NEXT: [5,12]    .    .    .    DR   .    .  .   vmovdqu	%xmm12, %xmm13
-# CHECK-NEXT: [5,13]    .    .    .    DR   .    .  .   vmovdqu	%xmm13, %xmm14
-# CHECK-NEXT: [5,14]    .    .    .    DR   .    .  .   vmovdqu	%xmm14, %xmm15
-# CHECK-NEXT: [5,15]    .    .    .    DER  .    .  .   vmovdqu	%xmm15, %xmm0
-# CHECK-NEXT: [6,0]     .    .    .    .DR  .    .  .   vmovdqu	%xmm0, %xmm1
-# CHECK-NEXT: [6,1]     .    .    .    .DR  .    .  .   vmovdqu	%xmm1, %xmm2
-# CHECK-NEXT: [6,2]     .    .    .    .DR  .    .  .   vmovdqu	%xmm2, %xmm3
-# CHECK-NEXT: [6,3]     .    .    .    .DR  .    .  .   vmovdqu	%xmm3, %xmm4
-# CHECK-NEXT: [6,4]     .    .    .    .DR  .    .  .   vmovdqu	%xmm4, %xmm5
-# CHECK-NEXT: [6,5]     .    .    .    .DR  .    .  .   vmovdqu	%xmm5, %xmm6
-# CHECK-NEXT: [6,6]     .    .    .    . DR .    .  .   vmovdqu	%xmm6, %xmm7
-# CHECK-NEXT: [6,7]     .    .    .    . DR .    .  .   vmovdqu	%xmm7, %xmm8
-# CHECK-NEXT: [6,8]     .    .    .    . DR .    .  .   vmovdqu	%xmm8, %xmm9
-# CHECK-NEXT: [6,9]     .    .    .    . DR .    .  .   vmovdqu	%xmm9, %xmm10
-# CHECK-NEXT: [6,10]    .    .    .    . DR .    .  .   vmovdqu	%xmm10, %xmm11
-# CHECK-NEXT: [6,11]    .    .    .    . DR .    .  .   vmovdqu	%xmm11, %xmm12
-# CHECK-NEXT: [6,12]    .    .    .    .  DR.    .  .   vmovdqu	%xmm12, %xmm13
-# CHECK-NEXT: [6,13]    .    .    .    .  DR.    .  .   vmovdqu	%xmm13, %xmm14
-# CHECK-NEXT: [6,14]    .    .    .    .  DR.    .  .   vmovdqu	%xmm14, %xmm15
-# CHECK-NEXT: [6,15]    .    .    .    .  DER    .  .   vmovdqu	%xmm15, %xmm0
-# CHECK-NEXT: [7,0]     .    .    .    .  D-R    .  .   vmovdqu	%xmm0, %xmm1
-# CHECK-NEXT: [7,1]     .    .    .    .  D-R    .  .   vmovdqu	%xmm1, %xmm2
-# CHECK-NEXT: [7,2]     .    .    .    .   DR    .  .   vmovdqu	%xmm2, %xmm3
-# CHECK-NEXT: [7,3]     .    .    .    .   DR    .  .   vmovdqu	%xmm3, %xmm4
-# CHECK-NEXT: [7,4]     .    .    .    .   DR    .  .   vmovdqu	%xmm4, %xmm5
-# CHECK-NEXT: [7,5]     .    .    .    .   DR    .  .   vmovdqu	%xmm5, %xmm6
-# CHECK-NEXT: [7,6]     .    .    .    .   DR    .  .   vmovdqu	%xmm6, %xmm7
-# CHECK-NEXT: [7,7]     .    .    .    .   D-R   .  .   vmovdqu	%xmm7, %xmm8
-# CHECK-NEXT: [7,8]     .    .    .    .    DR   .  .   vmovdqu	%xmm8, %xmm9
-# CHECK-NEXT: [7,9]     .    .    .    .    DR   .  .   vmovdqu	%xmm9, %xmm10
-# CHECK-NEXT: [7,10]    .    .    .    .    DR   .  .   vmovdqu	%xmm10, %xmm11
-# CHECK-NEXT: [7,11]    .    .    .    .    DR   .  .   vmovdqu	%xmm11, %xmm12
-# CHECK-NEXT: [7,12]    .    .    .    .    DR   .  .   vmovdqu	%xmm12, %xmm13
-# CHECK-NEXT: [7,13]    .    .    .    .    DR   .  .   vmovdqu	%xmm13, %xmm14
-# CHECK-NEXT: [7,14]    .    .    .    .    .DR  .  .   vmovdqu	%xmm14, %xmm15
-# CHECK-NEXT: [7,15]    .    .    .    .    .DER .  .   vmovdqu	%xmm15, %xmm0
-# CHECK-NEXT: [8,0]     .    .    .    .    .D-R .  .   vmovdqu	%xmm0, %xmm1
-# CHECK-NEXT: [8,1]     .    .    .    .    .D-R .  .   vmovdqu	%xmm1, %xmm2
-# CHECK-NEXT: [8,2]     .    .    .    .    .D-R .  .   vmovdqu	%xmm2, %xmm3
-# CHECK-NEXT: [8,3]     .    .    .    .    .D-R .  .   vmovdqu	%xmm3, %xmm4
-# CHECK-NEXT: [8,4]     .    .    .    .    . DR .  .   vmovdqu	%xmm4, %xmm5
-# CHECK-NEXT: [8,5]     .    .    .    .    . DR .  .   vmovdqu	%xmm5, %xmm6
-# CHECK-NEXT: [8,6]     .    .    .    .    . DR .  .   vmovdqu	%xmm6, %xmm7
-# CHECK-NEXT: [8,7]     .    .    .    .    . D-R.  .   vmovdqu	%xmm7, %xmm8
-# CHECK-NEXT: [8,8]     .    .    .    .    . D-R.  .   vmovdqu	%xmm8, %xmm9
-# CHECK-NEXT: [8,9]     .    .    .    .    . D-R.  .   vmovdqu	%xmm9, %xmm10
-# CHECK-NEXT: [8,10]    .    .    .    .    .  DR.  .   vmovdqu	%xmm10, %xmm11
-# CHECK-NEXT: [8,11]    .    .    .    .    .  DR.  .   vmovdqu	%xmm11, %xmm12
-# CHECK-NEXT: [8,12]    .    .    .    .    .  DR.  .   vmovdqu	%xmm12, %xmm13
-# CHECK-NEXT: [8,13]    .    .    .    .    .  DR.  .   vmovdqu	%xmm13, %xmm14
-# CHECK-NEXT: [8,14]    .    .    .    .    .  DR.  .   vmovdqu	%xmm14, %xmm15
-# CHECK-NEXT: [8,15]    .    .    .    .    .  DER  .   vmovdqu	%xmm15, %xmm0
-# CHECK-NEXT: [9,0]     .    .    .    .    .   DR  .   vmovdqu	%xmm0, %xmm1
-# CHECK-NEXT: [9,1]     .    .    .    .    .   DR  .   vmovdqu	%xmm1, %xmm2
-# CHECK-NEXT: [9,2]     .    .    .    .    .   DR  .   vmovdqu	%xmm2, %xmm3
-# CHECK-NEXT: [9,3]     .    .    .    .    .   DR  .   vmovdqu	%xmm3, %xmm4
-# CHECK-NEXT: [9,4]     .    .    .    .    .   DR  .   vmovdqu	%xmm4, %xmm5
-# CHECK-NEXT: [9,5]     .    .    .    .    .   DR  .   vmovdqu	%xmm5, %xmm6
-# CHECK-NEXT: [9,6]     .    .    .    .    .    DR .   vmovdqu	%xmm6, %xmm7
-# CHECK-NEXT: [9,7]     .    .    .    .    .    DR .   vmovdqu	%xmm7, %xmm8
-# CHECK-NEXT: [9,8]     .    .    .    .    .    DR .   vmovdqu	%xmm8, %xmm9
-# CHECK-NEXT: [9,9]     .    .    .    .    .    DR .   vmovdqu	%xmm9, %xmm10
-# CHECK-NEXT: [9,10]    .    .    .    .    .    DR .   vmovdqu	%xmm10, %xmm11
-# CHECK-NEXT: [9,11]    .    .    .    .    .    DR .   vmovdqu	%xmm11, %xmm12
-# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR.   vmovdqu	%xmm12, %xmm13
-# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR.   vmovdqu	%xmm13, %xmm14
-# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR.   vmovdqu	%xmm14, %xmm15
-# CHECK-NEXT: [9,15]    .    .    .    .    .    .DER   vmovdqu	%xmm15, %xmm0
+# CHECK:      [0,0]     DR   .    .    .    .    . .   vmovdqu	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DR   .    .    .    .    . .   vmovdqu	%xmm1, %xmm2
+# CHECK-NEXT: [0,2]     DR   .    .    .    .    . .   vmovdqu	%xmm2, %xmm3
+# CHECK-NEXT: [0,3]     DR   .    .    .    .    . .   vmovdqu	%xmm3, %xmm4
+# CHECK-NEXT: [0,4]     DR   .    .    .    .    . .   vmovdqu	%xmm4, %xmm5
+# CHECK-NEXT: [0,5]     DR   .    .    .    .    . .   vmovdqu	%xmm5, %xmm6
+# CHECK-NEXT: [0,6]     .DR  .    .    .    .    . .   vmovdqu	%xmm6, %xmm7
+# CHECK-NEXT: [0,7]     .DR  .    .    .    .    . .   vmovdqu	%xmm7, %xmm8
+# CHECK-NEXT: [0,8]     .DR  .    .    .    .    . .   vmovdqu	%xmm8, %xmm9
+# CHECK-NEXT: [0,9]     .DR  .    .    .    .    . .   vmovdqu	%xmm9, %xmm10
+# CHECK-NEXT: [0,10]    .DR  .    .    .    .    . .   vmovdqu	%xmm10, %xmm11
+# CHECK-NEXT: [0,11]    .DR  .    .    .    .    . .   vmovdqu	%xmm11, %xmm12
+# CHECK-NEXT: [0,12]    . DR .    .    .    .    . .   vmovdqu	%xmm12, %xmm13
+# CHECK-NEXT: [0,13]    . DR .    .    .    .    . .   vmovdqu	%xmm13, %xmm14
+# CHECK-NEXT: [0,14]    . DR .    .    .    .    . .   vmovdqu	%xmm14, %xmm15
+# CHECK-NEXT: [0,15]    . DR .    .    .    .    . .   vmovdqu	%xmm15, %xmm0
+# CHECK-NEXT: [1,0]     . DR .    .    .    .    . .   vmovdqu	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     . DR .    .    .    .    . .   vmovdqu	%xmm1, %xmm2
+# CHECK-NEXT: [1,2]     .  DR.    .    .    .    . .   vmovdqu	%xmm2, %xmm3
+# CHECK-NEXT: [1,3]     .  DR.    .    .    .    . .   vmovdqu	%xmm3, %xmm4
+# CHECK-NEXT: [1,4]     .  DR.    .    .    .    . .   vmovdqu	%xmm4, %xmm5
+# CHECK-NEXT: [1,5]     .  DR.    .    .    .    . .   vmovdqu	%xmm5, %xmm6
+# CHECK-NEXT: [1,6]     .  DR.    .    .    .    . .   vmovdqu	%xmm6, %xmm7
+# CHECK-NEXT: [1,7]     .  DR.    .    .    .    . .   vmovdqu	%xmm7, %xmm8
+# CHECK-NEXT: [1,8]     .   DR    .    .    .    . .   vmovdqu	%xmm8, %xmm9
+# CHECK-NEXT: [1,9]     .   DR    .    .    .    . .   vmovdqu	%xmm9, %xmm10
+# CHECK-NEXT: [1,10]    .   DR    .    .    .    . .   vmovdqu	%xmm10, %xmm11
+# CHECK-NEXT: [1,11]    .   DR    .    .    .    . .   vmovdqu	%xmm11, %xmm12
+# CHECK-NEXT: [1,12]    .   DR    .    .    .    . .   vmovdqu	%xmm12, %xmm13
+# CHECK-NEXT: [1,13]    .   DR    .    .    .    . .   vmovdqu	%xmm13, %xmm14
+# CHECK-NEXT: [1,14]    .    DR   .    .    .    . .   vmovdqu	%xmm14, %xmm15
+# CHECK-NEXT: [1,15]    .    DR   .    .    .    . .   vmovdqu	%xmm15, %xmm0
+# CHECK-NEXT: [2,0]     .    DR   .    .    .    . .   vmovdqu	%xmm0, %xmm1
+# CHECK-NEXT: [2,1]     .    DR   .    .    .    . .   vmovdqu	%xmm1, %xmm2
+# CHECK-NEXT: [2,2]     .    DR   .    .    .    . .   vmovdqu	%xmm2, %xmm3
+# CHECK-NEXT: [2,3]     .    DR   .    .    .    . .   vmovdqu	%xmm3, %xmm4
+# CHECK-NEXT: [2,4]     .    .DR  .    .    .    . .   vmovdqu	%xmm4, %xmm5
+# CHECK-NEXT: [2,5]     .    .DR  .    .    .    . .   vmovdqu	%xmm5, %xmm6
+# CHECK-NEXT: [2,6]     .    .DR  .    .    .    . .   vmovdqu	%xmm6, %xmm7
+# CHECK-NEXT: [2,7]     .    .DR  .    .    .    . .   vmovdqu	%xmm7, %xmm8
+# CHECK-NEXT: [2,8]     .    .DR  .    .    .    . .   vmovdqu	%xmm8, %xmm9
+# CHECK-NEXT: [2,9]     .    .DR  .    .    .    . .   vmovdqu	%xmm9, %xmm10
+# CHECK-NEXT: [2,10]    .    . DR .    .    .    . .   vmovdqu	%xmm10, %xmm11
+# CHECK-NEXT: [2,11]    .    . DR .    .    .    . .   vmovdqu	%xmm11, %xmm12
+# CHECK-NEXT: [2,12]    .    . DR .    .    .    . .   vmovdqu	%xmm12, %xmm13
+# CHECK-NEXT: [2,13]    .    . DR .    .    .    . .   vmovdqu	%xmm13, %xmm14
+# CHECK-NEXT: [2,14]    .    . DR .    .    .    . .   vmovdqu	%xmm14, %xmm15
+# CHECK-NEXT: [2,15]    .    . DR .    .    .    . .   vmovdqu	%xmm15, %xmm0
+# CHECK-NEXT: [3,0]     .    .  DR.    .    .    . .   vmovdqu	%xmm0, %xmm1
+# CHECK-NEXT: [3,1]     .    .  DR.    .    .    . .   vmovdqu	%xmm1, %xmm2
+# CHECK-NEXT: [3,2]     .    .  DR.    .    .    . .   vmovdqu	%xmm2, %xmm3
+# CHECK-NEXT: [3,3]     .    .  DR.    .    .    . .   vmovdqu	%xmm3, %xmm4
+# CHECK-NEXT: [3,4]     .    .  DR.    .    .    . .   vmovdqu	%xmm4, %xmm5
+# CHECK-NEXT: [3,5]     .    .  DR.    .    .    . .   vmovdqu	%xmm5, %xmm6
+# CHECK-NEXT: [3,6]     .    .   DR    .    .    . .   vmovdqu	%xmm6, %xmm7
+# CHECK-NEXT: [3,7]     .    .   DR    .    .    . .   vmovdqu	%xmm7, %xmm8
+# CHECK-NEXT: [3,8]     .    .   DR    .    .    . .   vmovdqu	%xmm8, %xmm9
+# CHECK-NEXT: [3,9]     .    .   DR    .    .    . .   vmovdqu	%xmm9, %xmm10
+# CHECK-NEXT: [3,10]    .    .   DR    .    .    . .   vmovdqu	%xmm10, %xmm11
+# CHECK-NEXT: [3,11]    .    .   DR    .    .    . .   vmovdqu	%xmm11, %xmm12
+# CHECK-NEXT: [3,12]    .    .    DR   .    .    . .   vmovdqu	%xmm12, %xmm13
+# CHECK-NEXT: [3,13]    .    .    DR   .    .    . .   vmovdqu	%xmm13, %xmm14
+# CHECK-NEXT: [3,14]    .    .    DR   .    .    . .   vmovdqu	%xmm14, %xmm15
+# CHECK-NEXT: [3,15]    .    .    DR   .    .    . .   vmovdqu	%xmm15, %xmm0
+# CHECK-NEXT: [4,0]     .    .    DR   .    .    . .   vmovdqu	%xmm0, %xmm1
+# CHECK-NEXT: [4,1]     .    .    DR   .    .    . .   vmovdqu	%xmm1, %xmm2
+# CHECK-NEXT: [4,2]     .    .    .DR  .    .    . .   vmovdqu	%xmm2, %xmm3
+# CHECK-NEXT: [4,3]     .    .    .DR  .    .    . .   vmovdqu	%xmm3, %xmm4
+# CHECK-NEXT: [4,4]     .    .    .DR  .    .    . .   vmovdqu	%xmm4, %xmm5
+# CHECK-NEXT: [4,5]     .    .    .DR  .    .    . .   vmovdqu	%xmm5, %xmm6
+# CHECK-NEXT: [4,6]     .    .    .DR  .    .    . .   vmovdqu	%xmm6, %xmm7
+# CHECK-NEXT: [4,7]     .    .    .DR  .    .    . .   vmovdqu	%xmm7, %xmm8
+# CHECK-NEXT: [4,8]     .    .    . DR .    .    . .   vmovdqu	%xmm8, %xmm9
+# CHECK-NEXT: [4,9]     .    .    . DR .    .    . .   vmovdqu	%xmm9, %xmm10
+# CHECK-NEXT: [4,10]    .    .    . DR .    .    . .   vmovdqu	%xmm10, %xmm11
+# CHECK-NEXT: [4,11]    .    .    . DR .    .    . .   vmovdqu	%xmm11, %xmm12
+# CHECK-NEXT: [4,12]    .    .    . DR .    .    . .   vmovdqu	%xmm12, %xmm13
+# CHECK-NEXT: [4,13]    .    .    . DR .    .    . .   vmovdqu	%xmm13, %xmm14
+# CHECK-NEXT: [4,14]    .    .    .  DR.    .    . .   vmovdqu	%xmm14, %xmm15
+# CHECK-NEXT: [4,15]    .    .    .  DR.    .    . .   vmovdqu	%xmm15, %xmm0
+# CHECK-NEXT: [5,0]     .    .    .  DR.    .    . .   vmovdqu	%xmm0, %xmm1
+# CHECK-NEXT: [5,1]     .    .    .  DR.    .    . .   vmovdqu	%xmm1, %xmm2
+# CHECK-NEXT: [5,2]     .    .    .  DR.    .    . .   vmovdqu	%xmm2, %xmm3
+# CHECK-NEXT: [5,3]     .    .    .  DR.    .    . .   vmovdqu	%xmm3, %xmm4
+# CHECK-NEXT: [5,4]     .    .    .   DR    .    . .   vmovdqu	%xmm4, %xmm5
+# CHECK-NEXT: [5,5]     .    .    .   DR    .    . .   vmovdqu	%xmm5, %xmm6
+# CHECK-NEXT: [5,6]     .    .    .   DR    .    . .   vmovdqu	%xmm6, %xmm7
+# CHECK-NEXT: [5,7]     .    .    .   DR    .    . .   vmovdqu	%xmm7, %xmm8
+# CHECK-NEXT: [5,8]     .    .    .   DR    .    . .   vmovdqu	%xmm8, %xmm9
+# CHECK-NEXT: [5,9]     .    .    .   DR    .    . .   vmovdqu	%xmm9, %xmm10
+# CHECK-NEXT: [5,10]    .    .    .    DR   .    . .   vmovdqu	%xmm10, %xmm11
+# CHECK-NEXT: [5,11]    .    .    .    DR   .    . .   vmovdqu	%xmm11, %xmm12
+# CHECK-NEXT: [5,12]    .    .    .    DR   .    . .   vmovdqu	%xmm12, %xmm13
+# CHECK-NEXT: [5,13]    .    .    .    DR   .    . .   vmovdqu	%xmm13, %xmm14
+# CHECK-NEXT: [5,14]    .    .    .    DR   .    . .   vmovdqu	%xmm14, %xmm15
+# CHECK-NEXT: [5,15]    .    .    .    DR   .    . .   vmovdqu	%xmm15, %xmm0
+# CHECK-NEXT: [6,0]     .    .    .    .DR  .    . .   vmovdqu	%xmm0, %xmm1
+# CHECK-NEXT: [6,1]     .    .    .    .DR  .    . .   vmovdqu	%xmm1, %xmm2
+# CHECK-NEXT: [6,2]     .    .    .    .DR  .    . .   vmovdqu	%xmm2, %xmm3
+# CHECK-NEXT: [6,3]     .    .    .    .DR  .    . .   vmovdqu	%xmm3, %xmm4
+# CHECK-NEXT: [6,4]     .    .    .    .DR  .    . .   vmovdqu	%xmm4, %xmm5
+# CHECK-NEXT: [6,5]     .    .    .    .DR  .    . .   vmovdqu	%xmm5, %xmm6
+# CHECK-NEXT: [6,6]     .    .    .    . DR .    . .   vmovdqu	%xmm6, %xmm7
+# CHECK-NEXT: [6,7]     .    .    .    . DR .    . .   vmovdqu	%xmm7, %xmm8
+# CHECK-NEXT: [6,8]     .    .    .    . DR .    . .   vmovdqu	%xmm8, %xmm9
+# CHECK-NEXT: [6,9]     .    .    .    . DR .    . .   vmovdqu	%xmm9, %xmm10
+# CHECK-NEXT: [6,10]    .    .    .    . DR .    . .   vmovdqu	%xmm10, %xmm11
+# CHECK-NEXT: [6,11]    .    .    .    . DR .    . .   vmovdqu	%xmm11, %xmm12
+# CHECK-NEXT: [6,12]    .    .    .    .  DR.    . .   vmovdqu	%xmm12, %xmm13
+# CHECK-NEXT: [6,13]    .    .    .    .  DR.    . .   vmovdqu	%xmm13, %xmm14
+# CHECK-NEXT: [6,14]    .    .    .    .  DR.    . .   vmovdqu	%xmm14, %xmm15
+# CHECK-NEXT: [6,15]    .    .    .    .  DR.    . .   vmovdqu	%xmm15, %xmm0
+# CHECK-NEXT: [7,0]     .    .    .    .  DR.    . .   vmovdqu	%xmm0, %xmm1
+# CHECK-NEXT: [7,1]     .    .    .    .  DR.    . .   vmovdqu	%xmm1, %xmm2
+# CHECK-NEXT: [7,2]     .    .    .    .   DR    . .   vmovdqu	%xmm2, %xmm3
+# CHECK-NEXT: [7,3]     .    .    .    .   DR    . .   vmovdqu	%xmm3, %xmm4
+# CHECK-NEXT: [7,4]     .    .    .    .   DR    . .   vmovdqu	%xmm4, %xmm5
+# CHECK-NEXT: [7,5]     .    .    .    .   DR    . .   vmovdqu	%xmm5, %xmm6
+# CHECK-NEXT: [7,6]     .    .    .    .   DR    . .   vmovdqu	%xmm6, %xmm7
+# CHECK-NEXT: [7,7]     .    .    .    .   DR    . .   vmovdqu	%xmm7, %xmm8
+# CHECK-NEXT: [7,8]     .    .    .    .    DR   . .   vmovdqu	%xmm8, %xmm9
+# CHECK-NEXT: [7,9]     .    .    .    .    DR   . .   vmovdqu	%xmm9, %xmm10
+# CHECK-NEXT: [7,10]    .    .    .    .    DR   . .   vmovdqu	%xmm10, %xmm11
+# CHECK-NEXT: [7,11]    .    .    .    .    DR   . .   vmovdqu	%xmm11, %xmm12
+# CHECK-NEXT: [7,12]    .    .    .    .    DR   . .   vmovdqu	%xmm12, %xmm13
+# CHECK-NEXT: [7,13]    .    .    .    .    DR   . .   vmovdqu	%xmm13, %xmm14
+# CHECK-NEXT: [7,14]    .    .    .    .    .DR  . .   vmovdqu	%xmm14, %xmm15
+# CHECK-NEXT: [7,15]    .    .    .    .    .DR  . .   vmovdqu	%xmm15, %xmm0
+# CHECK-NEXT: [8,0]     .    .    .    .    .DR  . .   vmovdqu	%xmm0, %xmm1
+# CHECK-NEXT: [8,1]     .    .    .    .    .DR  . .   vmovdqu	%xmm1, %xmm2
+# CHECK-NEXT: [8,2]     .    .    .    .    .DR  . .   vmovdqu	%xmm2, %xmm3
+# CHECK-NEXT: [8,3]     .    .    .    .    .DR  . .   vmovdqu	%xmm3, %xmm4
+# CHECK-NEXT: [8,4]     .    .    .    .    . DR . .   vmovdqu	%xmm4, %xmm5
+# CHECK-NEXT: [8,5]     .    .    .    .    . DR . .   vmovdqu	%xmm5, %xmm6
+# CHECK-NEXT: [8,6]     .    .    .    .    . DR . .   vmovdqu	%xmm6, %xmm7
+# CHECK-NEXT: [8,7]     .    .    .    .    . DR . .   vmovdqu	%xmm7, %xmm8
+# CHECK-NEXT: [8,8]     .    .    .    .    . DR . .   vmovdqu	%xmm8, %xmm9
+# CHECK-NEXT: [8,9]     .    .    .    .    . DR . .   vmovdqu	%xmm9, %xmm10
+# CHECK-NEXT: [8,10]    .    .    .    .    .  DR. .   vmovdqu	%xmm10, %xmm11
+# CHECK-NEXT: [8,11]    .    .    .    .    .  DR. .   vmovdqu	%xmm11, %xmm12
+# CHECK-NEXT: [8,12]    .    .    .    .    .  DR. .   vmovdqu	%xmm12, %xmm13
+# CHECK-NEXT: [8,13]    .    .    .    .    .  DR. .   vmovdqu	%xmm13, %xmm14
+# CHECK-NEXT: [8,14]    .    .    .    .    .  DR. .   vmovdqu	%xmm14, %xmm15
+# CHECK-NEXT: [8,15]    .    .    .    .    .  DR. .   vmovdqu	%xmm15, %xmm0
+# CHECK-NEXT: [9,0]     .    .    .    .    .   DR .   vmovdqu	%xmm0, %xmm1
+# CHECK-NEXT: [9,1]     .    .    .    .    .   DR .   vmovdqu	%xmm1, %xmm2
+# CHECK-NEXT: [9,2]     .    .    .    .    .   DR .   vmovdqu	%xmm2, %xmm3
+# CHECK-NEXT: [9,3]     .    .    .    .    .   DR .   vmovdqu	%xmm3, %xmm4
+# CHECK-NEXT: [9,4]     .    .    .    .    .   DR .   vmovdqu	%xmm4, %xmm5
+# CHECK-NEXT: [9,5]     .    .    .    .    .   DR .   vmovdqu	%xmm5, %xmm6
+# CHECK-NEXT: [9,6]     .    .    .    .    .    DR.   vmovdqu	%xmm6, %xmm7
+# CHECK-NEXT: [9,7]     .    .    .    .    .    DR.   vmovdqu	%xmm7, %xmm8
+# CHECK-NEXT: [9,8]     .    .    .    .    .    DR.   vmovdqu	%xmm8, %xmm9
+# CHECK-NEXT: [9,9]     .    .    .    .    .    DR.   vmovdqu	%xmm9, %xmm10
+# CHECK-NEXT: [9,10]    .    .    .    .    .    DR.   vmovdqu	%xmm10, %xmm11
+# CHECK-NEXT: [9,11]    .    .    .    .    .    DR.   vmovdqu	%xmm11, %xmm12
+# CHECK-NEXT: [9,12]    .    .    .    .    .    .DR   vmovdqu	%xmm12, %xmm13
+# CHECK-NEXT: [9,13]    .    .    .    .    .    .DR   vmovdqu	%xmm13, %xmm14
+# CHECK-NEXT: [9,14]    .    .    .    .    .    .DR   vmovdqu	%xmm14, %xmm15
+# CHECK-NEXT: [9,15]    .    .    .    .    .    .DR   vmovdqu	%xmm15, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1861,20 +1861,20 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     10    0.0    0.0    0.6       vmovdqu	%xmm0, %xmm1
-# CHECK-NEXT: 1.     10    0.0    0.0    0.6       vmovdqu	%xmm1, %xmm2
-# CHECK-NEXT: 2.     10    0.0    0.0    0.3       vmovdqu	%xmm2, %xmm3
-# CHECK-NEXT: 3.     10    0.0    0.0    0.3       vmovdqu	%xmm3, %xmm4
+# CHECK-NEXT: 0.     10    0.0    0.0    0.0       vmovdqu	%xmm0, %xmm1
+# CHECK-NEXT: 1.     10    0.0    0.0    0.0       vmovdqu	%xmm1, %xmm2
+# CHECK-NEXT: 2.     10    0.0    0.0    0.0       vmovdqu	%xmm2, %xmm3
+# CHECK-NEXT: 3.     10    0.0    0.0    0.0       vmovdqu	%xmm3, %xmm4
 # CHECK-NEXT: 4.     10    0.0    0.0    0.0       vmovdqu	%xmm4, %xmm5
 # CHECK-NEXT: 5.     10    0.0    0.0    0.0       vmovdqu	%xmm5, %xmm6
 # CHECK-NEXT: 6.     10    0.0    0.0    0.0       vmovdqu	%xmm6, %xmm7
-# CHECK-NEXT: 7.     10    0.0    0.0    0.6       vmovdqu	%xmm7, %xmm8
-# CHECK-NEXT: 8.     10    0.0    0.0    0.3       vmovdqu	%xmm8, %xmm9
-# CHECK-NEXT: 9.     10    0.0    0.0    0.3       vmovdqu	%xmm9, %xmm10
+# CHECK-NEXT: 7.     10    0.0    0.0    0.0       vmovdqu	%xmm7, %xmm8
+# CHECK-NEXT: 8.     10    0.0    0.0    0.0       vmovdqu	%xmm8, %xmm9
+# CHECK-NEXT: 9.     10    0.0    0.0    0.0       vmovdqu	%xmm9, %xmm10
 # CHECK-NEXT: 10.    10    0.0    0.0    0.0       vmovdqu	%xmm10, %xmm11
 # CHECK-NEXT: 11.    10    0.0    0.0    0.0       vmovdqu	%xmm11, %xmm12
 # CHECK-NEXT: 12.    10    0.0    0.0    0.0       vmovdqu	%xmm12, %xmm13
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       vmovdqu	%xmm13, %xmm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       vmovdqu	%xmm14, %xmm15
-# CHECK-NEXT: 15.    10    1.0    1.0    0.0       vmovdqu	%xmm15, %xmm0
-# CHECK-NEXT:        10    0.1    0.1    0.2       <total>
+# CHECK-NEXT: 15.    10    0.0    0.0    0.0       vmovdqu	%xmm15, %xmm0
+# CHECK-NEXT:        10    0.0    0.0    0.0       <total>

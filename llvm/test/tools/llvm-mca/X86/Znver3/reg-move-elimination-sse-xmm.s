@@ -125,7 +125,7 @@ movdqu %xmm15, %xmm0
 # CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    6.00
 # CHECK-NEXT: IPC:               6.00
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: Block RThroughput: 2.7
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -136,22 +136,22 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      0     0.25                        movaps	%xmm0, %xmm1
-# CHECK-NEXT:  1      0     0.25                        movaps	%xmm1, %xmm2
-# CHECK-NEXT:  1      0     0.25                        movaps	%xmm2, %xmm3
-# CHECK-NEXT:  1      0     0.25                        movaps	%xmm3, %xmm4
-# CHECK-NEXT:  1      0     0.25                        movaps	%xmm4, %xmm5
-# CHECK-NEXT:  1      0     0.25                        movaps	%xmm5, %xmm6
-# CHECK-NEXT:  1      0     0.25                        movaps	%xmm6, %xmm7
-# CHECK-NEXT:  1      0     0.25                        movaps	%xmm7, %xmm8
-# CHECK-NEXT:  1      0     0.25                        movaps	%xmm8, %xmm9
-# CHECK-NEXT:  1      0     0.25                        movaps	%xmm9, %xmm10
-# CHECK-NEXT:  1      0     0.25                        movaps	%xmm10, %xmm11
-# CHECK-NEXT:  1      0     0.25                        movaps	%xmm11, %xmm12
-# CHECK-NEXT:  1      0     0.25                        movaps	%xmm12, %xmm13
-# CHECK-NEXT:  1      0     0.25                        movaps	%xmm13, %xmm14
-# CHECK-NEXT:  1      0     0.25                        movaps	%xmm14, %xmm15
-# CHECK-NEXT:  1      0     0.25                        movaps	%xmm15, %xmm0
+# CHECK-NEXT:  1      0     0.17                        movaps	%xmm0, %xmm1
+# CHECK-NEXT:  1      0     0.17                        movaps	%xmm1, %xmm2
+# CHECK-NEXT:  1      0     0.17                        movaps	%xmm2, %xmm3
+# CHECK-NEXT:  1      0     0.17                        movaps	%xmm3, %xmm4
+# CHECK-NEXT:  1      0     0.17                        movaps	%xmm4, %xmm5
+# CHECK-NEXT:  1      0     0.17                        movaps	%xmm5, %xmm6
+# CHECK-NEXT:  1      0     0.17                        movaps	%xmm6, %xmm7
+# CHECK-NEXT:  1      0     0.17                        movaps	%xmm7, %xmm8
+# CHECK-NEXT:  1      0     0.17                        movaps	%xmm8, %xmm9
+# CHECK-NEXT:  1      0     0.17                        movaps	%xmm9, %xmm10
+# CHECK-NEXT:  1      0     0.17                        movaps	%xmm10, %xmm11
+# CHECK-NEXT:  1      0     0.17                        movaps	%xmm11, %xmm12
+# CHECK-NEXT:  1      0     0.17                        movaps	%xmm12, %xmm13
+# CHECK-NEXT:  1      0     0.17                        movaps	%xmm13, %xmm14
+# CHECK-NEXT:  1      0     0.17                        movaps	%xmm14, %xmm15
+# CHECK-NEXT:  1      0     0.17                        movaps	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    0
@@ -419,7 +419,7 @@ movdqu %xmm15, %xmm0
 # CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    6.00
 # CHECK-NEXT: IPC:               6.00
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: Block RThroughput: 2.7
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -430,22 +430,22 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      0     0.25                        movups	%xmm0, %xmm1
-# CHECK-NEXT:  1      0     0.25                        movups	%xmm1, %xmm2
-# CHECK-NEXT:  1      0     0.25                        movups	%xmm2, %xmm3
-# CHECK-NEXT:  1      0     0.25                        movups	%xmm3, %xmm4
-# CHECK-NEXT:  1      0     0.25                        movups	%xmm4, %xmm5
-# CHECK-NEXT:  1      0     0.25                        movups	%xmm5, %xmm6
-# CHECK-NEXT:  1      0     0.25                        movups	%xmm6, %xmm7
-# CHECK-NEXT:  1      0     0.25                        movups	%xmm7, %xmm8
-# CHECK-NEXT:  1      0     0.25                        movups	%xmm8, %xmm9
-# CHECK-NEXT:  1      0     0.25                        movups	%xmm9, %xmm10
-# CHECK-NEXT:  1      0     0.25                        movups	%xmm10, %xmm11
-# CHECK-NEXT:  1      0     0.25                        movups	%xmm11, %xmm12
-# CHECK-NEXT:  1      0     0.25                        movups	%xmm12, %xmm13
-# CHECK-NEXT:  1      0     0.25                        movups	%xmm13, %xmm14
-# CHECK-NEXT:  1      0     0.25                        movups	%xmm14, %xmm15
-# CHECK-NEXT:  1      0     0.25                        movups	%xmm15, %xmm0
+# CHECK-NEXT:  1      0     0.17                        movups	%xmm0, %xmm1
+# CHECK-NEXT:  1      0     0.17                        movups	%xmm1, %xmm2
+# CHECK-NEXT:  1      0     0.17                        movups	%xmm2, %xmm3
+# CHECK-NEXT:  1      0     0.17                        movups	%xmm3, %xmm4
+# CHECK-NEXT:  1      0     0.17                        movups	%xmm4, %xmm5
+# CHECK-NEXT:  1      0     0.17                        movups	%xmm5, %xmm6
+# CHECK-NEXT:  1      0     0.17                        movups	%xmm6, %xmm7
+# CHECK-NEXT:  1      0     0.17                        movups	%xmm7, %xmm8
+# CHECK-NEXT:  1      0     0.17                        movups	%xmm8, %xmm9
+# CHECK-NEXT:  1      0     0.17                        movups	%xmm9, %xmm10
+# CHECK-NEXT:  1      0     0.17                        movups	%xmm10, %xmm11
+# CHECK-NEXT:  1      0     0.17                        movups	%xmm11, %xmm12
+# CHECK-NEXT:  1      0     0.17                        movups	%xmm12, %xmm13
+# CHECK-NEXT:  1      0     0.17                        movups	%xmm13, %xmm14
+# CHECK-NEXT:  1      0     0.17                        movups	%xmm14, %xmm15
+# CHECK-NEXT:  1      0     0.17                        movups	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    0
@@ -713,7 +713,7 @@ movdqu %xmm15, %xmm0
 # CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    6.00
 # CHECK-NEXT: IPC:               6.00
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: Block RThroughput: 2.7
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -724,22 +724,22 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      0     0.25                        movapd	%xmm0, %xmm1
-# CHECK-NEXT:  1      0     0.25                        movapd	%xmm1, %xmm2
-# CHECK-NEXT:  1      0     0.25                        movapd	%xmm2, %xmm3
-# CHECK-NEXT:  1      0     0.25                        movapd	%xmm3, %xmm4
-# CHECK-NEXT:  1      0     0.25                        movapd	%xmm4, %xmm5
-# CHECK-NEXT:  1      0     0.25                        movapd	%xmm5, %xmm6
-# CHECK-NEXT:  1      0     0.25                        movapd	%xmm6, %xmm7
-# CHECK-NEXT:  1      0     0.25                        movapd	%xmm7, %xmm8
-# CHECK-NEXT:  1      0     0.25                        movapd	%xmm8, %xmm9
-# CHECK-NEXT:  1      0     0.25                        movapd	%xmm9, %xmm10
-# CHECK-NEXT:  1      0     0.25                        movapd	%xmm10, %xmm11
-# CHECK-NEXT:  1      0     0.25                        movapd	%xmm11, %xmm12
-# CHECK-NEXT:  1      0     0.25                        movapd	%xmm12, %xmm13
-# CHECK-NEXT:  1      0     0.25                        movapd	%xmm13, %xmm14
-# CHECK-NEXT:  1      0     0.25                        movapd	%xmm14, %xmm15
-# CHECK-NEXT:  1      0     0.25                        movapd	%xmm15, %xmm0
+# CHECK-NEXT:  1      0     0.17                        movapd	%xmm0, %xmm1
+# CHECK-NEXT:  1      0     0.17                        movapd	%xmm1, %xmm2
+# CHECK-NEXT:  1      0     0.17                        movapd	%xmm2, %xmm3
+# CHECK-NEXT:  1      0     0.17                        movapd	%xmm3, %xmm4
+# CHECK-NEXT:  1      0     0.17                        movapd	%xmm4, %xmm5
+# CHECK-NEXT:  1      0     0.17                        movapd	%xmm5, %xmm6
+# CHECK-NEXT:  1      0     0.17                        movapd	%xmm6, %xmm7
+# CHECK-NEXT:  1      0     0.17                        movapd	%xmm7, %xmm8
+# CHECK-NEXT:  1      0     0.17                        movapd	%xmm8, %xmm9
+# CHECK-NEXT:  1      0     0.17                        movapd	%xmm9, %xmm10
+# CHECK-NEXT:  1      0     0.17                        movapd	%xmm10, %xmm11
+# CHECK-NEXT:  1      0     0.17                        movapd	%xmm11, %xmm12
+# CHECK-NEXT:  1      0     0.17                        movapd	%xmm12, %xmm13
+# CHECK-NEXT:  1      0     0.17                        movapd	%xmm13, %xmm14
+# CHECK-NEXT:  1      0     0.17                        movapd	%xmm14, %xmm15
+# CHECK-NEXT:  1      0     0.17                        movapd	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    0
@@ -1007,7 +1007,7 @@ movdqu %xmm15, %xmm0
 # CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    6.00
 # CHECK-NEXT: IPC:               6.00
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: Block RThroughput: 2.7
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -1018,22 +1018,22 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      0     0.25                        movupd	%xmm0, %xmm1
-# CHECK-NEXT:  1      0     0.25                        movupd	%xmm1, %xmm2
-# CHECK-NEXT:  1      0     0.25                        movupd	%xmm2, %xmm3
-# CHECK-NEXT:  1      0     0.25                        movupd	%xmm3, %xmm4
-# CHECK-NEXT:  1      0     0.25                        movupd	%xmm4, %xmm5
-# CHECK-NEXT:  1      0     0.25                        movupd	%xmm5, %xmm6
-# CHECK-NEXT:  1      0     0.25                        movupd	%xmm6, %xmm7
-# CHECK-NEXT:  1      0     0.25                        movupd	%xmm7, %xmm8
-# CHECK-NEXT:  1      0     0.25                        movupd	%xmm8, %xmm9
-# CHECK-NEXT:  1      0     0.25                        movupd	%xmm9, %xmm10
-# CHECK-NEXT:  1      0     0.25                        movupd	%xmm10, %xmm11
-# CHECK-NEXT:  1      0     0.25                        movupd	%xmm11, %xmm12
-# CHECK-NEXT:  1      0     0.25                        movupd	%xmm12, %xmm13
-# CHECK-NEXT:  1      0     0.25                        movupd	%xmm13, %xmm14
-# CHECK-NEXT:  1      0     0.25                        movupd	%xmm14, %xmm15
-# CHECK-NEXT:  1      0     0.25                        movupd	%xmm15, %xmm0
+# CHECK-NEXT:  1      0     0.17                        movupd	%xmm0, %xmm1
+# CHECK-NEXT:  1      0     0.17                        movupd	%xmm1, %xmm2
+# CHECK-NEXT:  1      0     0.17                        movupd	%xmm2, %xmm3
+# CHECK-NEXT:  1      0     0.17                        movupd	%xmm3, %xmm4
+# CHECK-NEXT:  1      0     0.17                        movupd	%xmm4, %xmm5
+# CHECK-NEXT:  1      0     0.17                        movupd	%xmm5, %xmm6
+# CHECK-NEXT:  1      0     0.17                        movupd	%xmm6, %xmm7
+# CHECK-NEXT:  1      0     0.17                        movupd	%xmm7, %xmm8
+# CHECK-NEXT:  1      0     0.17                        movupd	%xmm8, %xmm9
+# CHECK-NEXT:  1      0     0.17                        movupd	%xmm9, %xmm10
+# CHECK-NEXT:  1      0     0.17                        movupd	%xmm10, %xmm11
+# CHECK-NEXT:  1      0     0.17                        movupd	%xmm11, %xmm12
+# CHECK-NEXT:  1      0     0.17                        movupd	%xmm12, %xmm13
+# CHECK-NEXT:  1      0     0.17                        movupd	%xmm13, %xmm14
+# CHECK-NEXT:  1      0     0.17                        movupd	%xmm14, %xmm15
+# CHECK-NEXT:  1      0     0.17                        movupd	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    0
@@ -1301,7 +1301,7 @@ movdqu %xmm15, %xmm0
 # CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    6.00
 # CHECK-NEXT: IPC:               6.00
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: Block RThroughput: 2.7
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -1312,22 +1312,22 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      0     0.25                        movdqa	%xmm0, %xmm1
-# CHECK-NEXT:  1      0     0.25                        movdqa	%xmm1, %xmm2
-# CHECK-NEXT:  1      0     0.25                        movdqa	%xmm2, %xmm3
-# CHECK-NEXT:  1      0     0.25                        movdqa	%xmm3, %xmm4
-# CHECK-NEXT:  1      0     0.25                        movdqa	%xmm4, %xmm5
-# CHECK-NEXT:  1      0     0.25                        movdqa	%xmm5, %xmm6
-# CHECK-NEXT:  1      0     0.25                        movdqa	%xmm6, %xmm7
-# CHECK-NEXT:  1      0     0.25                        movdqa	%xmm7, %xmm8
-# CHECK-NEXT:  1      0     0.25                        movdqa	%xmm8, %xmm9
-# CHECK-NEXT:  1      0     0.25                        movdqa	%xmm9, %xmm10
-# CHECK-NEXT:  1      0     0.25                        movdqa	%xmm10, %xmm11
-# CHECK-NEXT:  1      0     0.25                        movdqa	%xmm11, %xmm12
-# CHECK-NEXT:  1      0     0.25                        movdqa	%xmm12, %xmm13
-# CHECK-NEXT:  1      0     0.25                        movdqa	%xmm13, %xmm14
-# CHECK-NEXT:  1      0     0.25                        movdqa	%xmm14, %xmm15
-# CHECK-NEXT:  1      0     0.25                        movdqa	%xmm15, %xmm0
+# CHECK-NEXT:  1      0     0.17                        movdqa	%xmm0, %xmm1
+# CHECK-NEXT:  1      0     0.17                        movdqa	%xmm1, %xmm2
+# CHECK-NEXT:  1      0     0.17                        movdqa	%xmm2, %xmm3
+# CHECK-NEXT:  1      0     0.17                        movdqa	%xmm3, %xmm4
+# CHECK-NEXT:  1      0     0.17                        movdqa	%xmm4, %xmm5
+# CHECK-NEXT:  1      0     0.17                        movdqa	%xmm5, %xmm6
+# CHECK-NEXT:  1      0     0.17                        movdqa	%xmm6, %xmm7
+# CHECK-NEXT:  1      0     0.17                        movdqa	%xmm7, %xmm8
+# CHECK-NEXT:  1      0     0.17                        movdqa	%xmm8, %xmm9
+# CHECK-NEXT:  1      0     0.17                        movdqa	%xmm9, %xmm10
+# CHECK-NEXT:  1      0     0.17                        movdqa	%xmm10, %xmm11
+# CHECK-NEXT:  1      0     0.17                        movdqa	%xmm11, %xmm12
+# CHECK-NEXT:  1      0     0.17                        movdqa	%xmm12, %xmm13
+# CHECK-NEXT:  1      0     0.17                        movdqa	%xmm13, %xmm14
+# CHECK-NEXT:  1      0     0.17                        movdqa	%xmm14, %xmm15
+# CHECK-NEXT:  1      0     0.17                        movdqa	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    0
@@ -1595,7 +1595,7 @@ movdqu %xmm15, %xmm0
 # CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    6.00
 # CHECK-NEXT: IPC:               6.00
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: Block RThroughput: 2.7
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -1606,22 +1606,22 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      0     0.25                        movdqu	%xmm0, %xmm1
-# CHECK-NEXT:  1      0     0.25                        movdqu	%xmm1, %xmm2
-# CHECK-NEXT:  1      0     0.25                        movdqu	%xmm2, %xmm3
-# CHECK-NEXT:  1      0     0.25                        movdqu	%xmm3, %xmm4
-# CHECK-NEXT:  1      0     0.25                        movdqu	%xmm4, %xmm5
-# CHECK-NEXT:  1      0     0.25                        movdqu	%xmm5, %xmm6
-# CHECK-NEXT:  1      0     0.25                        movdqu	%xmm6, %xmm7
-# CHECK-NEXT:  1      0     0.25                        movdqu	%xmm7, %xmm8
-# CHECK-NEXT:  1      0     0.25                        movdqu	%xmm8, %xmm9
-# CHECK-NEXT:  1      0     0.25                        movdqu	%xmm9, %xmm10
-# CHECK-NEXT:  1      0     0.25                        movdqu	%xmm10, %xmm11
-# CHECK-NEXT:  1      0     0.25                        movdqu	%xmm11, %xmm12
-# CHECK-NEXT:  1      0     0.25                        movdqu	%xmm12, %xmm13
-# CHECK-NEXT:  1      0     0.25                        movdqu	%xmm13, %xmm14
-# CHECK-NEXT:  1      0     0.25                        movdqu	%xmm14, %xmm15
-# CHECK-NEXT:  1      0     0.25                        movdqu	%xmm15, %xmm0
+# CHECK-NEXT:  1      0     0.17                        movdqu	%xmm0, %xmm1
+# CHECK-NEXT:  1      0     0.17                        movdqu	%xmm1, %xmm2
+# CHECK-NEXT:  1      0     0.17                        movdqu	%xmm2, %xmm3
+# CHECK-NEXT:  1      0     0.17                        movdqu	%xmm3, %xmm4
+# CHECK-NEXT:  1      0     0.17                        movdqu	%xmm4, %xmm5
+# CHECK-NEXT:  1      0     0.17                        movdqu	%xmm5, %xmm6
+# CHECK-NEXT:  1      0     0.17                        movdqu	%xmm6, %xmm7
+# CHECK-NEXT:  1      0     0.17                        movdqu	%xmm7, %xmm8
+# CHECK-NEXT:  1      0     0.17                        movdqu	%xmm8, %xmm9
+# CHECK-NEXT:  1      0     0.17                        movdqu	%xmm9, %xmm10
+# CHECK-NEXT:  1      0     0.17                        movdqu	%xmm10, %xmm11
+# CHECK-NEXT:  1      0     0.17                        movdqu	%xmm11, %xmm12
+# CHECK-NEXT:  1      0     0.17                        movdqu	%xmm12, %xmm13
+# CHECK-NEXT:  1      0     0.17                        movdqu	%xmm13, %xmm14
+# CHECK-NEXT:  1      0     0.17                        movdqu	%xmm14, %xmm15
+# CHECK-NEXT:  1      0     0.17                        movdqu	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    0

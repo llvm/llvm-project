@@ -1454,12 +1454,12 @@ def : InstRW<[Zn3WriteMoveRenameable], (instrs MOV32rr, MOV32rr_REV,
 defm : Zn3WriteResInt<WriteXCHG, [Zn3ALU0123], 0, [8], 2>;        // Compare+Exchange - TODO RMW support.
 
 defm : Zn3WriteResXMM<WriteFMove, [Zn3FPVMisc0123], 1, [1], 1>; // Empty sched class
-defm : Zn3WriteResXMM<WriteFMoveX, [Zn3FPVMisc0123], 0, [1], 1>;
-defm : Zn3WriteResYMM<WriteFMoveY, [Zn3FPVMisc0123], 0, [1], 1>;
+defm : Zn3WriteResXMM<WriteFMoveX, [], 0, [], 1>;
+defm : Zn3WriteResYMM<WriteFMoveY, [], 0, [], 1>;
 
 defm : Zn3WriteResXMM<WriteVecMove, [Zn3FPFMisc0123], 1, [1], 1>; // MMX
-defm : Zn3WriteResXMM<WriteVecMoveX, [Zn3FPFMisc0123], 0, [1], 1>;
-defm : Zn3WriteResYMM<WriteVecMoveY, [Zn3FPFMisc0123], 0, [1], 1>;
+defm : Zn3WriteResXMM<WriteVecMoveX, [], 0, [], 1>;
+defm : Zn3WriteResYMM<WriteVecMoveY, [], 0, [], 1>;
 
 def : IsOptimizableRegisterMove<[
   InstructionEquivalenceClass<[
