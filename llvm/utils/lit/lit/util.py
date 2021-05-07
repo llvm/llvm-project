@@ -119,12 +119,6 @@ def usable_core_count():
         n = len(os.sched_getaffinity(0))
     except AttributeError:
         n = os.cpu_count() or 1
-
-    # On Windows, with more than 32 processes, process creation often fails with
-    # "Too many open files".  FIXME: Check if there's a better fix.
-    if platform.system() == 'Windows':
-        return min(n, 32)
-
     return n
 
 
