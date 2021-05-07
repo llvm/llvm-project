@@ -2822,8 +2822,34 @@ TypeSystemSwiftTypeRef::GetReferentType(opaque_compiler_type_t type) {
 
 CompilerType
 TypeSystemSwiftTypeRef::GetInstanceType(opaque_compiler_type_t type) {
-  return m_swift_ast_context->GetInstanceType(ReconstructType(type));
+  auto impl = [&]() -> CompilerType {
+    using namespace swift::Demangle;
+    Demangler dem;
+    NodePointer node = DemangleCanonicalType(dem, type);
+
+    if (!node)
+      return {};
+    if (ContainsUnresolvedTypeAlias(node)) {
+      // If we couldn't resolve all type aliases, we might be in a REPL session
+      // where getting to the debug information necessary for resolving that
+      // type alias isn't possible, or the user might have defined the
+      // type alias in the REPL. In these cases, fallback to asking the AST
+      // for the canonical type.
+      return m_swift_ast_context->GetInstanceType(ReconstructType(type));
+    }
+
+    if (node->getKind() == Node::Kind::Metatype) {
+      for (NodePointer child : *node)
+        if (child->getKind() == Node::Kind::Type)
+          return RemangleAsType(dem, child);
+      return {};
+    }
+    return {this, type};
+  };
+  VALIDATE_AND_RETURN(impl, GetInstanceType, type, (ReconstructType(type)),
+                      (ReconstructType(type)));
 }
+
 TypeSystemSwift::TypeAllocationStrategy
 TypeSystemSwiftTypeRef::GetAllocationStrategy(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetAllocationStrategy(ReconstructType(type));
