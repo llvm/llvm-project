@@ -473,7 +473,7 @@ public:
                        BlockSkipInstsMap &BBSkipInstsMap);
 
   /// Return DebugLoc of this UserValue.
-  DebugLoc getDebugLoc() { return dl;}
+  const DebugLoc &getDebugLoc() { return dl; }
 
   void print(raw_ostream &, const TargetRegisterInfo *);
 };
@@ -506,7 +506,7 @@ public:
                       BlockSkipInstsMap &BBSkipInstsMap);
 
   /// Return DebugLoc of this UserLabel.
-  DebugLoc getDebugLoc() { return dl; }
+  const DebugLoc &getDebugLoc() { return dl; }
 
   void print(raw_ostream &, const TargetRegisterInfo *);
 };
