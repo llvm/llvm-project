@@ -3175,7 +3175,7 @@ struct CastAwayTransferWriteLeadingOneDim
   }
 };
 
-struct CastAwayBrodcastLeadingOneDim
+struct CastAwayBroadcastLeadingOneDim
     : public OpRewritePattern<vector::BroadcastOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -3196,6 +3196,44 @@ struct CastAwayBrodcastLeadingOneDim
         rewriter.create<vector::BroadcastOp>(loc, newDstType, source);
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
         broadcastOp, broadcastOp.getVectorType(), newBroadcastOp);
+    return success();
+  }
+};
+
+class CastAwayElementwiseLeadingOneDim : public RewritePattern {
+public:
+  CastAwayElementwiseLeadingOneDim(MLIRContext *context)
+      : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    if (!OpTrait::hasElementwiseMappableTraits(op) || op->getNumResults() != 1)
+      return failure();
+    auto vecType = op->getResultTypes()[0].dyn_cast<VectorType>();
+    if (!vecType)
+      return failure();
+    VectorType newVecType = trimLeadingOneDims(vecType);
+    if (newVecType == vecType)
+      return failure();
+
+    SmallVector<Value, 4> newOperands;
+    for (Value operand : op->getOperands()) {
+      if (auto opVecType = operand.getType().dyn_cast<VectorType>()) {
+        auto newType =
+            VectorType::get(newVecType.getShape(), opVecType.getElementType());
+        newOperands.push_back(rewriter.create<vector::ShapeCastOp>(
+            op->getLoc(), newType, operand));
+      } else {
+        newOperands.push_back(operand);
+      }
+    }
+    OperationState state(op->getLoc(), op->getName());
+    state.addAttributes(op->getAttrs());
+    state.addOperands(newOperands);
+    state.addTypes(newVecType);
+    Operation *newOp = rewriter.createOperation(state);
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, vecType,
+                                                     newOp->getResult(0));
     return success();
   }
 };
@@ -3795,12 +3833,13 @@ void mlir::vector::populateSplitVectorTransferPatterns(
 
 void mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<CastAwayExtractStridedSliceLeadingOneDim,
-               CastAwayInsertStridedSliceLeadingOneDim,
-               CastAwayTransferReadLeadingOneDim,
-               CastAwayTransferWriteLeadingOneDim,
-               CastAwayBrodcastLeadingOneDim, ShapeCastOpFolder>(
-      patterns.getContext());
+  patterns
+      .add<CastAwayExtractStridedSliceLeadingOneDim,
+           CastAwayInsertStridedSliceLeadingOneDim,
+           CastAwayTransferReadLeadingOneDim,
+           CastAwayTransferWriteLeadingOneDim, CastAwayBroadcastLeadingOneDim,
+           CastAwayElementwiseLeadingOneDim, ShapeCastOpFolder>(
+          patterns.getContext());
 }
 
 void mlir::vector::populateBubbleVectorBitCastOpPatterns(
