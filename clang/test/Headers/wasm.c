@@ -420,7 +420,7 @@ v128_t test_i64x2_const_splat() {
 
 // CHECK-LABEL: @test_f32x4_const_splat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret <4 x i32> <i32 42, i32 42, i32 42, i32 42>
+// CHECK-NEXT:    ret <4 x i32> <i32 1109917696, i32 1109917696, i32 1109917696, i32 1109917696>
 //
 v128_t test_f32x4_const_splat() {
   return wasm_f32x4_const_splat(42);
@@ -428,7 +428,7 @@ v128_t test_f32x4_const_splat() {
 
 // CHECK-LABEL: @test_f64x2_const_splat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret <4 x i32> <i32 42, i32 0, i32 42, i32 0>
+// CHECK-NEXT:    ret <4 x i32> <i32 0, i32 1078263808, i32 0, i32 1078263808>
 //
 v128_t test_f64x2_const_splat() {
   return wasm_f64x2_const_splat(42);
