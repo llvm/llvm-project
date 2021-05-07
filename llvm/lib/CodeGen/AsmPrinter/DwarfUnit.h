@@ -76,6 +76,13 @@ protected:
 
   bool isShareableAcrossCUs(const DINode *D) const;
 
+  template <typename T>
+  void addAttribute(DIEValueList &Die, dwarf::Attribute Attribute,
+                    dwarf::Form Form, T &&Value) {
+    Die.addValue(DIEValueAllocator,
+                 DIEValue(Attribute, Form, std::forward<T>(Value)));
+  }
+
 public:
   // Accessors.
   AsmPrinter* getAsmPrinter() const { return Asm; }
