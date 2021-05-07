@@ -1442,9 +1442,9 @@ defm : Zn3WriteResInt<WriteNop, [Zn3ALU0123], 0, [1], 1>; // FIXME: latency not 
 // Zero Cycle Move
 ///////////////////////////////////////////////////////////////////////////////
 
-def Zn3WriteMoveRenameable : SchedWriteRes<[Zn3ALU0123]> {
+def Zn3WriteMoveRenameable : SchedWriteRes<[]> {
   let Latency = 0;
-  let ResourceCycles = [1];
+  let ResourceCycles = [];
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn3WriteMoveRenameable], (instrs MOV32rr, MOV32rr_REV,
