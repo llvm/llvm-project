@@ -595,6 +595,9 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
           CurPPLexer->LexingRawMode = false;
           IdentifierInfo *IfNDefMacro = nullptr;
           DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
+          // Stop if Lexer became invalid after hitting code completion token.
+          if (!CurPPLexer)
+            return;
           const bool CondValue = DER.Conditional;
           CurPPLexer->LexingRawMode = true;
           if (Callbacks) {
@@ -3023,6 +3026,10 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
   IdentifierInfo *IfNDefMacro = nullptr;
   const DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
   const bool ConditionalTrue = DER.Conditional;
+  // Lexer might become invalid if we hit code completion point while evaluating
+  // expression.
+  if (!CurPPLexer)
+    return;
 
   // If this condition is equivalent to #ifndef X, and if this is the first
   // directive seen, handle it for the multiple-include optimization.
