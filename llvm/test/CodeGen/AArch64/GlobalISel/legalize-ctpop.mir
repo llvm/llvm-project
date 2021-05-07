@@ -77,3 +77,114 @@ body:             |
     %ctpop:_(s64) = G_CTPOP %copy(s64)
     $x0 = COPY %ctpop(s64)
     RET_ReallyLR implicit $x0
+
+...
+---
+name:            widen_s16
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: widen_s16
+    ; CHECK: liveins: $w0
+    ; CHECK: %copy:_(s32) = COPY $w0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[AND]](s64)
+    ; CHECK: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
+    ; CHECK: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlv), [[CTPOP]](<8 x s8>)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[INT]](s32)
+    ; CHECK: %ext:_(s32) = COPY [[COPY]](s32)
+    ; CHECK: $w0 = COPY %ext(s32)
+    ; CHECK: RET_ReallyLR implicit $w0
+    %copy:_(s32) = COPY $w0
+    %trunc:_(s16) = G_TRUNC %copy(s32)
+    %ctpop:_(s16) = G_CTPOP %trunc(s16)
+    %ext:_(s32) = G_ANYEXT %ctpop(s16)
+    $w0 = COPY %ext(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            widen_s8
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: widen_s8
+    ; CHECK: liveins: $w0
+    ; CHECK: %copy:_(s32) = COPY $w0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[AND]](s64)
+    ; CHECK: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
+    ; CHECK: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlv), [[CTPOP]](<8 x s8>)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[INT]](s32)
+    ; CHECK: %ext:_(s32) = COPY [[COPY]](s32)
+    ; CHECK: $w0 = COPY %ext(s32)
+    ; CHECK: RET_ReallyLR implicit $w0
+    %copy:_(s32) = COPY $w0
+    %trunc:_(s8) = G_TRUNC %copy(s32)
+    %ctpop:_(s8) = G_CTPOP %trunc(s8)
+    %ext:_(s32) = G_ANYEXT %ctpop(s8)
+    $w0 = COPY %ext(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            widen_s3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: widen_s3
+    ; CHECK: liveins: $w0
+    ; CHECK: %copy:_(s32) = COPY $w0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[AND]](s64)
+    ; CHECK: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
+    ; CHECK: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlv), [[CTPOP]](<8 x s8>)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[INT]](s32)
+    ; CHECK: %ext:_(s32) = COPY [[COPY]](s32)
+    ; CHECK: $w0 = COPY %ext(s32)
+    ; CHECK: RET_ReallyLR implicit $w0
+    %copy:_(s32) = COPY $w0
+    %trunc:_(s3) = G_TRUNC %copy(s32)
+    %ctpop:_(s3) = G_CTPOP %trunc(s3)
+    %ext:_(s32) = G_ANYEXT %ctpop(s3)
+    $w0 = COPY %ext(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            different_sizes
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: name: different_sizes
+    ; CHECK: liveins: $w0
+    ; CHECK: %copy:_(s32) = COPY $w0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %copy(s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[AND]](s64)
+    ; CHECK: [[CTPOP:%[0-9]+]]:_(<8 x s8>) = G_CTPOP [[BITCAST]](<8 x s8>)
+    ; CHECK: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlv), [[CTPOP]](<8 x s8>)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[INT]](s32)
+    ; CHECK: %ext:_(s32) = COPY [[COPY]](s32)
+    ; CHECK: $w0 = COPY %ext(s32)
+    ; CHECK: RET_ReallyLR implicit $w0
+    %copy:_(s32) = COPY $w0
+    %trunc:_(s8) = G_TRUNC %copy(s32)
+    %ctpop:_(s16) = G_CTPOP %trunc(s8)
+    %ext:_(s32) = G_ANYEXT %ctpop(s16)
+    $w0 = COPY %ext(s32)
+    RET_ReallyLR implicit $w0
