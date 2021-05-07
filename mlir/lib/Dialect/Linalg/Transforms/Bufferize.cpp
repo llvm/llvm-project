@@ -149,6 +149,23 @@ public:
   }
 };
 
+/// Conversion pattern that replaces `linalg.tensor_reshape` with
+/// `linalg.reshape`.
+class BufferizeTensorReshapeOp : public OpConversionPattern<TensorReshapeOp> {
+public:
+  using OpConversionPattern<TensorReshapeOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(TensorReshapeOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    linalg::TensorReshapeOpAdaptor adaptor(operands, op->getAttrDictionary());
+    rewriter.replaceOpWithNewOp<linalg::ReshapeOp>(
+        op, getTypeConverter()->convertType(op.getType()).cast<MemRefType>(),
+        adaptor.src(), adaptor.reassociation());
+    return success();
+  }
+};
+
 /// Conversion pattern that bufferizes `linalg.fill` operation.
 class BufferizeFillOp : public OpConversionPattern<FillOp> {
 public:
@@ -336,6 +353,7 @@ void mlir::linalg::populateLinalgBufferizePatterns(
       BufferizeAnyLinalgOp,
       BufferizeFillOp,
       BufferizeInitTensorOp,
+      BufferizeTensorReshapeOp,
       SubTensorOpConverter,
       SubTensorInsertOpConverter
     >(typeConverter, patterns.getContext());
