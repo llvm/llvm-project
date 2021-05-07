@@ -453,7 +453,8 @@ define i32 @exit_cond_depends_on_inner_loop() {
 ; CHECK-NEXT:    br i1 [[INNER_COND]], label [[INNER]], label [[OUTER_EXITING_1:%.*]]
 ; CHECK:       outer.exiting.1:
 ; CHECK-NEXT:    [[X_LCSSA:%.*]] = phi i32 [ [[X]], [[INNER]] ]
-; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[OUTER_LATCH]]
+; CHECK-NEXT:    [[OUTER_COND_1:%.*]] = icmp sgt i32 [[X_LCSSA]], -1
+; CHECK-NEXT:    br i1 [[OUTER_COND_1]], label [[EXIT:%.*]], label [[OUTER_LATCH]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[IV_OUTER_NEXT]] = add nuw nsw i32 [[IV_OUTER]], 1
 ; CHECK-NEXT:    [[OUTER_COND_2:%.*]] = icmp ult i32 [[IV_OUTER]], 100
