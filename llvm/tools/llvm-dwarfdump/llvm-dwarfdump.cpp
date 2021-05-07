@@ -130,7 +130,8 @@ cl::OptionCategory SectionCategory("Section-specific Dump Options",
 
 static opt<bool> DumpAll("all", desc("Dump all debug info sections"),
                          cat(SectionCategory));
-static alias DumpAllAlias("a", desc("Alias for -all"), aliasopt(DumpAll));
+static alias DumpAllAlias("a", desc("Alias for --all"), aliasopt(DumpAll),
+                          cl::NotHidden);
 
 // Options for dumping specific sections.
 static unsigned DumpType = DIDT_Null;
@@ -143,7 +144,7 @@ static std::array<llvm::Optional<uint64_t>, (unsigned)DIDT_ID_Count>
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
 
-static alias DumpDebugFrameAlias("eh-frame", desc("Alias for -debug-frame"),
+static alias DumpDebugFrameAlias("eh-frame", desc("Alias for --debug-frame"),
                                  NotHidden, cat(SectionCategory),
                                  aliasopt(DumpDebugFrame));
 static list<std::string>
@@ -164,19 +165,21 @@ static list<std::string>
               "accelerator tables are available, the slower but more complete "
               "-name option can be used instead."),
          value_desc("name"), cat(DwarfDumpCategory));
-static alias FindAlias("f", desc("Alias for -find."), aliasopt(Find));
+static alias FindAlias("f", desc("Alias for --find."), aliasopt(Find),
+                       cl::NotHidden);
 static opt<bool> IgnoreCase("ignore-case",
                             desc("Ignore case distinctions when searching."),
                             value_desc("i"), cat(DwarfDumpCategory));
-static alias IgnoreCaseAlias("i", desc("Alias for -ignore-case."),
-                             aliasopt(IgnoreCase));
+static alias IgnoreCaseAlias("i", desc("Alias for --ignore-case."),
+                             aliasopt(IgnoreCase), cl::NotHidden);
 static list<std::string> Name(
     "name",
     desc("Find and print all debug info entries whose name (DW_AT_name "
          "attribute) matches the exact text in <pattern>.  When used with the "
          "the -regex option <pattern> is interpreted as a regular expression."),
     value_desc("pattern"), cat(DwarfDumpCategory));
-static alias NameAlias("n", desc("Alias for -name"), aliasopt(Name));
+static alias NameAlias("n", desc("Alias for --name"), aliasopt(Name),
+                       cl::NotHidden);
 static opt<uint64_t>
     Lookup("lookup",
            desc("Lookup <address> in the debug information and print out any "
@@ -193,34 +196,36 @@ static opt<bool>
              desc("Treat any <pattern> strings as regular expressions when "
                   "searching instead of just as an exact string match."),
              cat(DwarfDumpCategory));
-static alias RegexAlias("x", desc("Alias for -regex"), aliasopt(UseRegex));
+static alias RegexAlias("x", desc("Alias for --regex"), aliasopt(UseRegex),
+                        cl::NotHidden);
 static opt<bool>
     ShowChildren("show-children",
                  desc("Show a debug info entry's children when selectively "
                       "printing entries."),
                  cat(DwarfDumpCategory));
-static alias ShowChildrenAlias("c", desc("Alias for -show-children."),
-                               aliasopt(ShowChildren));
+static alias ShowChildrenAlias("c", desc("Alias for --show-children."),
+                               aliasopt(ShowChildren), cl::NotHidden);
 static opt<bool>
     ShowParents("show-parents",
                 desc("Show a debug info entry's parents when selectively "
                      "printing entries."),
                 cat(DwarfDumpCategory));
-static alias ShowParentsAlias("p", desc("Alias for -show-parents."),
-                              aliasopt(ShowParents));
+static alias ShowParentsAlias("p", desc("Alias for --show-parents."),
+                              aliasopt(ShowParents), cl::NotHidden);
 static opt<bool>
     ShowForm("show-form",
              desc("Show DWARF form types after the DWARF attribute types."),
              cat(DwarfDumpCategory));
-static alias ShowFormAlias("F", desc("Alias for -show-form."),
-                           aliasopt(ShowForm), cat(DwarfDumpCategory));
+static alias ShowFormAlias("F", desc("Alias for --show-form."),
+                           aliasopt(ShowForm), cat(DwarfDumpCategory),
+                           cl::NotHidden);
 static opt<unsigned>
     ChildRecurseDepth("recurse-depth",
                       desc("Only recurse to a depth of N when displaying "
                            "children of debug info entries."),
                       cat(DwarfDumpCategory), init(-1U), value_desc("N"));
-static alias ChildRecurseDepthAlias("r", desc("Alias for -recurse-depth."),
-                                    aliasopt(ChildRecurseDepth));
+static alias ChildRecurseDepthAlias("r", desc("Alias for --recurse-depth."),
+                                    aliasopt(ChildRecurseDepth), cl::NotHidden);
 static opt<unsigned>
     ParentRecurseDepth("parent-recurse-depth",
                        desc("Only recurse to a depth of N when displaying "
@@ -245,12 +250,13 @@ static opt<bool> Quiet("quiet", desc("Use with -verify to not emit to STDOUT."),
                        cat(DwarfDumpCategory));
 static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture."),
                           cat(DwarfDumpCategory));
-static alias DumpUUIDAlias("u", desc("Alias for -uuid."), aliasopt(DumpUUID));
+static alias DumpUUIDAlias("u", desc("Alias for --uuid."), aliasopt(DumpUUID),
+                           cl::NotHidden);
 static opt<bool> Verbose("verbose",
                          desc("Print more low-level encoding details."),
                          cat(DwarfDumpCategory));
-static alias VerboseAlias("v", desc("Alias for -verbose."), aliasopt(Verbose),
-                          cat(DwarfDumpCategory));
+static alias VerboseAlias("v", desc("Alias for --verbose."), aliasopt(Verbose),
+                          cat(DwarfDumpCategory), cl::NotHidden);
 static cl::extrahelp
     HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
 } // namespace
