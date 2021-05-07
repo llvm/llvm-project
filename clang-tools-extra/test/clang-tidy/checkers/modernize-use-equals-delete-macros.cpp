@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-equals-delete %t -- \
-// RUN:   -config="{CheckOptions: [{key: modernize-use-equals-delete.IgnoreMacros, value: 0}]}"
+// RUN:   -config="{CheckOptions: [{key: modernize-use-equals-delete.IgnoreMacros, value: false}]}"
 
 #define MACRO(type) void operator=(type const &)
 class C {

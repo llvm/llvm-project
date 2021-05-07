@@ -470,6 +470,16 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Converts std.splat to spv.CompositeConstruct.
+class SplatPattern final : public OpConversionPattern<SplatOp> {
+public:
+  using OpConversionPattern<SplatOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(SplatOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 /// Converts memref.store to spv.Store on integers.
 class IntStoreOpPattern final : public OpConversionPattern<memref::StoreOp> {
 public:
@@ -1128,6 +1138,23 @@ SelectOpPattern::matchAndRewrite(SelectOp op, ArrayRef<Value> operands,
 }
 
 //===----------------------------------------------------------------------===//
+// SplatOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+SplatPattern::matchAndRewrite(SplatOp op, ArrayRef<Value> operands,
+                              ConversionPatternRewriter &rewriter) const {
+  auto dstVecType = op.getType().dyn_cast<VectorType>();
+  if (!dstVecType || !spirv::CompositeType::isValid(dstVecType))
+    return failure();
+  SplatOp::Adaptor adaptor(operands);
+  SmallVector<Value, 4> source(dstVecType.getNumElements(), adaptor.input());
+  rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, dstVecType,
+                                                           source);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // StoreOp
 //===----------------------------------------------------------------------===//
 
@@ -1332,7 +1359,7 @@ void populateStandardToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
       AllocOpPattern, DeallocOpPattern, IntLoadOpPattern, IntStoreOpPattern,
       LoadOpPattern, StoreOpPattern,
 
-      ReturnOpPattern, SelectOpPattern,
+      ReturnOpPattern, SelectOpPattern, SplatPattern,
 
       // Type cast patterns
       UIToFPI1Pattern, ZeroExtendI1Pattern, TruncI1Pattern,

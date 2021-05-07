@@ -101,8 +101,7 @@ public:
                                 lldb::SymbolContextItem resolve_scope,
                                 SymbolContext &sc) override;
 
-  uint32_t ResolveSymbolContext(const FileSpec &file_spec, uint32_t line,
-                                bool check_inlines,
+  uint32_t ResolveSymbolContext(const SourceLocationSpec &src_location_spec,
                                 lldb::SymbolContextItem resolve_scope,
                                 SymbolContextList &sc_list) override;
 

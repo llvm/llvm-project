@@ -140,6 +140,216 @@ sanitizer) passes to various parts of the pipeline.
 ``AMDGPUTargetMachine::registerPassBuilderCallbacks()`` is an example of a
 backend adding passes to various parts of the pipeline.
 
+Using Analyses
+==============
+
+LLVM provides many analyses that passes can use, such as a dominator tree.
+Calculating these can be expensive, so the new pass manager has
+infrastructure to cache analyses and reuse them when possible.
+
+When a pass runs on some IR, it also receives an analysis manager which it can
+query for analyses. Querying for an analysis will cause the manager to check if
+it has already computed the result for the requested IR. If it already has and
+the result is still valid, it will return that. Otherwise it will construct a
+new result by calling the analysis's ``run()`` method, cache it, and return it.
+You can also ask the analysis manager to only return an analysis if it's
+already cached.
+
+The analysis manager only provides analysis results for the same IR type as
+what the pass runs on. For example, a function pass receives an analysis
+manager that only provides function-level analyses. This works for many
+passes which work on a fixed scope. However, some passes want to peek up or
+down the IR hierarchy. For example, an SCC pass may want to look at function
+analyses for the functions inside the SCC. Or it may want to look at some
+immutable global analysis. In these cases, the analysis manager can provide a
+proxy to an outer or inner level analysis manager. For example, to get a
+``FunctionAnalysisManager`` from a ``CGSCCAnalysisManager``, you can call
+
+.. code-block:: c++
+
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerCGSCCProxy>(InitialC, CG)
+          .getManager();
+
+and use ``FAM`` as a typical ``FunctionAnalysisManager`` that a function pass
+would have access to. To get access to an outer level IR analysis, you can
+call
+
+.. code-block:: c++
+
+  const auto &MAMProxy =
+      AM.getResult<ModuleAnalysisManagerCGSCCProxy>(InitialC, CG);
+  FooAnalysisResult *AR = MAMProxy.getCachedResult<FooAnalysis>(M);
+
+Getting direct access to an outer level IR analysis manager is not allowed.
+This is to keep in mind potential future pass concurrency, for example
+parallelizing function passes over different functions in a CGSCC or module.
+Since passes can ask for a cached analysis result, allowing passes to trigger
+outer level analysis computation could result in non-determinism if
+concurrency was supported. Therefore a pass running on inner level IR cannot
+change the state of outer level IR analyses. Another limitation is that outer
+level IR analyses that are used must be immutable, or else they could be
+invalidated by changes to inner level IR. Outer analyses unused by inner
+passes can and often will be invalidated by changes to inner level IR. These
+invalidations happen after the inner pass manager finishes, so accessing
+mutable analyses would give invalid results.
+
+The exception to the above is accessing function analyses in loop passes.
+Loop passes inherently require modifying the function the loop is in, and
+that includes some function analyses the loop analyses depend on. This
+discounts future concurrency over separate loops in a function, but that's a
+tradeoff due to how tightly a loop and its function are coupled. To make sure
+the function analyses loop passes use are valid, they are manually updated in
+the loop passes to ensure that invalidation is not necessary. There is a set
+of common function analyses that loop passes and analyses have access to
+which is passed into loop passes as a ``LoopStandardAnalysisResults``
+parameter. Other function analyses are not accessible from loop passes.
+
+As with any caching mechanism, we need some way to tell analysis managers
+when results are no longer valid. Much of the analysis manager complexity
+comes from trying to invalidate as few analysis results as possible to keep
+compile times as low as possible.
+
+There are two ways to deal with potentially invalid analysis results. One is
+to simply force clear the results. This should generally only be used when
+the IR that the result is keyed on becomes invalid. For example, a function
+is deleted, or a CGSCC has become invalid due to call graph changes.
+
+The typical way to invalidate analysis results is for a pass to declare what
+types of analyses it preserves and what types it does not. When transforming
+IR, a pass either has the option to update analyses alongside the IR
+transformation, or tell the analysis manager that analyses are no longer
+valid and should be invalidated. If a pass wants to keep some specific
+analysis up to date, such as when updating it would be faster than
+invalidating and recalculating it, the analysis itself may have methods to
+update it for specific transformations, or there may be helper updaters like
+``DomTreeUpdater`` for a ``DominatorTree``. Otherwise to mark some analysis
+as no longer valid, the pass can return a ``PreservedAnalyses`` with the
+proper analyses invalidated.
+
+.. code-block:: c++
+
+  // We've made no transformations that can affect any analyses.
+  return PreservedAnalyses::all();
+
+  // We've made transformations and don't want to bother to update any analyses.
+  return PreservedAnalyses::none();
+
+  // We've specifically updated the dominator tree alongside any transformations, but other analysis results may be invalid.
+  PreservedAnalyses PA;
+  PA.preserve<DominatorAnalysis>();
+  return PA;
+
+  // We haven't made any control flow changes, any analyses that only care about the control flow are still valid.
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+  
+The pass manager will call the analysis manager's ``invalidate()`` method
+with the pass's returned ``PreservedAnalyses``. This can be also done
+manually within the pass:
+
+.. code-block:: c++
+
+  FooModulePass::run(Module& M, ModuleAnalysisManager& AM) {
+    auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+    // Invalidate all analysis results for function F
+    FAM.invalidate(F, PreservedAnalyses::none());
+
+    // Invalidate all analysis results
+    AM.invalidate(M, PreservedAnalyses::none());
+
+    ...
+  }
+
+This is especially important when a pass removes then adds a function. The
+analysis manager may store a pointer to a function that has been deleted, and
+if the pass creates a new function before invalidating analysis results, the
+new function may be at the same address as the old one, causing invalid
+cached results. This is also useful for being more precise about
+invalidation. Selectively invalidating analysis results only for functions
+modified in an SCC pass can allow more analysis results to remain. But except
+for complex fine-grain invalidation with inner proxies, passes should
+typically just return a proper ``PreservedAnalyses`` and let the pass manager
+deal with proper invalidation.
+
+Implementing Analysis Invalidation
+==================================
+
+By default, an analysis is invalidated if ``PreservedAnalyses`` says that
+analyses on the IR unit it runs on are not preserved (see
+``AnalysisResultModel::invalidate()``). An analysis can implement
+``invalidate()`` to be more conservative when it comes to invalidation. For
+example,
+
+.. code-block:: c++
+
+  bool FooAnalysisResult::invalidate(Function &F, const PreservedAnalyses &PA,
+                                     FunctionAnalysisManager::Invalidator &) {
+    auto PAC = PA.getChecker<FooAnalysis>();
+    // the default would be:
+    // return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>());
+    return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>()
+        || PAC.preservedSet<CFGAnalyses>());
+  }
+
+says that if the ``PreservedAnalyses`` specifically preserves
+``FooAnalysis``, or if ``PreservedAnalyses`` preserves all analyses (implicit
+in ``PAC.preserved()``), or if ``PreservedAnalyses`` preserves all function
+analyses, or ``PreservedAnalyses`` preserves all analyses that only care
+about the CFG, the ``FooAnalysisResult`` should not be invalidated.
+
+If an analysis is stateless and generally shouldn't be invalidated, use the
+following:
+
+.. code-block:: c++
+
+  bool FooAnalysisResult::invalidate(Function &F, const PreservedAnalyses &PA,
+                                     FunctionAnalysisManager::Invalidator &) {
+    // Check whether the analysis has been explicitly invalidated. Otherwise, it's
+    // stateless and remains preserved.
+    auto PAC = PA.getChecker<FooAnalysis>();
+    return !PAC.preservedWhenStateless();
+  }
+
+If an analysis depends on other analyses, those analyses also need to be
+checked if they are invalidated:
+
+.. code-block:: c++
+
+  bool FooAnalysisResult::invalidate(Function &F, const PreservedAnalyses &PA,
+                                     FunctionAnalysisManager::Invalidator &) {
+    auto PAC = PA.getChecker<FooAnalysis>();
+    if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Function>>())
+      return true;
+
+    // Check transitive dependencies.
+    return Inv.invalidate<BarAnalysis>(F, PA) ||
+          Inv.invalidate<BazAnalysis>(F, PA);
+  }
+
+Combining invalidation and analysis manager proxies results in some
+complexity. For example, when we invalidate all analyses in a module pass,
+we have to make sure that we also invalidate function analyses accessible via
+any existing inner proxies. The inner proxy's ``invalidate()`` first checks
+if the proxy itself should be invalidated. If so, that means the proxy may
+contain pointers to IR that is no longer valid, meaning that the inner proxy
+needs to completely clear all relevant analysis results. Otherwise the proxy
+simply forwards the invalidation to the inner analysis manager.
+
+Generally for outer proxies, analysis results from the outer analysis manager
+should be immutable, so invalidation shouldn't be a concern. However, it is
+possible for some inner analysis to depend on some outer analysis, and when
+the outer analysis is invalidated, we need to make sure that dependent inner
+analyses are also invalidated. This actually happens with alias analysis
+results. Alias analysis is a function-level analysis, but there are
+module-level implementations of specific types of alias analysis. Currently
+``GlobalsAA`` is the only module-level alias analysis and it generally is not
+invalidated so this is not so much of a concern. See
+``OuterAnalysisManagerProxy::Result::registerOuterAnalysisInvalidation()``
+for more details.
+
 Status of the New and Legacy Pass Managers
 ==========================================
 

@@ -133,13 +133,20 @@ NativeProcessNetBSD::Factory::Attach(
   return std::move(process_up);
 }
 
+NativeProcessNetBSD::Extension
+NativeProcessNetBSD::Factory::GetSupportedExtensions() const {
+  return Extension::multiprocess | Extension::fork | Extension::vfork |
+         Extension::pass_signals | Extension::auxv | Extension::libraries_svr4;
+}
+
 // Public Instance Methods
 
 NativeProcessNetBSD::NativeProcessNetBSD(::pid_t pid, int terminal_fd,
                                          NativeDelegate &delegate,
                                          const ArchSpec &arch,
                                          MainLoop &mainloop)
-    : NativeProcessELF(pid, terminal_fd, delegate), m_arch(arch) {
+    : NativeProcessELF(pid, terminal_fd, delegate), m_arch(arch),
+      m_main_loop(mainloop) {
   if (m_terminal_fd != -1) {
     Status status = EnsureFDFlags(m_terminal_fd, O_NONBLOCK);
     assert(status.Success());
@@ -264,14 +271,23 @@ void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
       return;
     }
 
+    assert(thread);
     if (pst.pe_report_event == PTRACE_VFORK_DONE) {
-      Status error =
-          PtraceWrapper(PT_CONTINUE, pid, reinterpret_cast<void *>(1), 0);
-      if (error.Fail())
-        SetState(StateType::eStateInvalid);
-      return;
-    } else
-      MonitorClone(pst.pe_other_pid);
+      if ((m_enabled_extensions & Extension::vfork) == Extension::vfork) {
+        thread->SetStoppedByVForkDone();
+        SetState(StateType::eStateStopped, true);
+      } else {
+        Status error =
+            PtraceWrapper(PT_CONTINUE, pid, reinterpret_cast<void *>(1), 0);
+        if (error.Fail())
+          SetState(StateType::eStateInvalid);
+      }
+    } else {
+      assert(pst.pe_report_event == PTRACE_FORK ||
+             pst.pe_report_event == PTRACE_VFORK);
+      MonitorClone(pst.pe_other_pid, pst.pe_report_event == PTRACE_VFORK,
+                   *thread);
+    }
     return;
   }
   case TRAP_LWP: {
@@ -994,7 +1010,8 @@ Status NativeProcessNetBSD::ReinitializeThreads() {
   return error;
 }
 
-void NativeProcessNetBSD::MonitorClone(::pid_t child_pid) {
+void NativeProcessNetBSD::MonitorClone(::pid_t child_pid, bool is_vfork,
+                                       NativeThreadNetBSD &parent_thread) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
   LLDB_LOG(log, "clone, child_pid={0}", child_pid);
 
@@ -1016,16 +1033,43 @@ void NativeProcessNetBSD::MonitorClone(::pid_t child_pid) {
     return;
   }
 
-  MainLoop unused_loop;
-  NativeProcessNetBSD child_process{static_cast<::pid_t>(child_pid),
-                                    m_terminal_fd, m_delegate, m_arch,
-                                    unused_loop};
-  child_process.Detach();
-  Status pt_error =
-      PtraceWrapper(PT_CONTINUE, GetID(), reinterpret_cast<void *>(1), 0);
-  if (pt_error.Fail()) {
-    LLDB_LOG_ERROR(log, std::move(pt_error.ToError()),
-                   "unable to resume parent process {1}: {0}", GetID());
-    SetState(StateType::eStateInvalid);
+  ptrace_siginfo_t info;
+  const auto siginfo_err =
+      PtraceWrapper(PT_GET_SIGINFO, child_pid, &info, sizeof(info));
+  if (siginfo_err.Fail()) {
+    LLDB_LOG(log, "PT_GET_SIGINFO failed {0}", siginfo_err);
+    return;
+  }
+  assert(info.psi_lwpid >= 0);
+  lldb::tid_t child_tid = info.psi_lwpid;
+
+  std::unique_ptr<NativeProcessNetBSD> child_process{
+      new NativeProcessNetBSD(static_cast<::pid_t>(child_pid), m_terminal_fd,
+                              m_delegate, m_arch, m_main_loop)};
+  if (!is_vfork)
+    child_process->m_software_breakpoints = m_software_breakpoints;
+
+  Extension expected_ext = is_vfork ? Extension::vfork : Extension::fork;
+  if ((m_enabled_extensions & expected_ext) == expected_ext) {
+    child_process->SetupTrace();
+    for (const auto &thread : child_process->m_threads)
+      static_cast<NativeThreadNetBSD &>(*thread).SetStoppedBySignal(SIGSTOP);
+    child_process->SetState(StateType::eStateStopped, false);
+
+    m_delegate.NewSubprocess(this, std::move(child_process));
+    if (is_vfork)
+      parent_thread.SetStoppedByVFork(child_pid, child_tid);
+    else
+      parent_thread.SetStoppedByFork(child_pid, child_tid);
+    SetState(StateType::eStateStopped, true);
+  } else {
+    child_process->Detach();
+    Status pt_error =
+        PtraceWrapper(PT_CONTINUE, GetID(), reinterpret_cast<void *>(1), 0);
+    if (pt_error.Fail()) {
+      LLDB_LOG_ERROR(log, std::move(pt_error.ToError()),
+                     "unable to resume parent process {1}: {0}", GetID());
+      SetState(StateType::eStateInvalid);
+    }
   }
 }

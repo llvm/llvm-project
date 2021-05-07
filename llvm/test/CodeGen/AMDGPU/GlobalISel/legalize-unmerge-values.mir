@@ -1028,6 +1028,7 @@ body: |
     S_NOP 0, implicit %2
 ...
 
+---
 name: test_unmerge_s8_v4s8
 body: |
   bb.0:

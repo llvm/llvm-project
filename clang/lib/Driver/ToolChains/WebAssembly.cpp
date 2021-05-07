@@ -26,9 +26,9 @@ using namespace llvm::opt;
 
 /// Following the conventions in https://wiki.debian.org/Multiarch/Tuples,
 /// we remove the vendor field to form the multiarch triple.
-static std::string getMultiarchTriple(const Driver &D,
-                                      const llvm::Triple &TargetTriple,
-                                      StringRef SysRoot) {
+std::string WebAssembly::getMultiarchTriple(const Driver &D,
+                                            const llvm::Triple &TargetTriple,
+                                            StringRef SysRoot) const {
     return (TargetTriple.getArchName() + "-" +
             TargetTriple.getOSAndEnvironmentName()).str();
 }

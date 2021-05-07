@@ -63,7 +63,7 @@ static void writeCFGToDotFile(Function &F, BlockFrequencyInfo *BFI,
   errs() << "Writing '" << Filename << "'...";
 
   std::error_code EC;
-  raw_fd_ostream File(Filename, EC, sys::fs::F_Text);
+  raw_fd_ostream File(Filename, EC, sys::fs::OF_Text);
 
   DOTFuncInfo CFGInfo(&F, BFI, BPI, MaxFreq);
   CFGInfo.setHeatColors(ShowHeatColors);

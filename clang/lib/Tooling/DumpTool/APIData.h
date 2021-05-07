@@ -22,7 +22,7 @@ struct ClassData {
   std::vector<std::string> TypeSourceInfos;
   std::vector<std::string> TypeLocs;
   std::vector<std::string> NestedNameLocs;
-  // TODO: Extend this with locations available via typelocs etc.
+  std::vector<std::string> DeclNameInfos;
 };
 
 } // namespace tooling

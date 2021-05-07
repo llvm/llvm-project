@@ -88,6 +88,7 @@ llvm_config.use_default_substitutions()
 # Add site-specific substitutions.
 config.substitutions.append(('%llvmshlibdir', config.llvm_shlib_dir))
 config.substitutions.append(('%shlibext', config.llvm_shlib_ext))
+config.substitutions.append(('%pluginext', config.llvm_plugin_ext))
 config.substitutions.append(('%exeext', config.llvm_exe_ext))
 
 
@@ -163,7 +164,8 @@ tools.extend([
     'llvm-modextract', 'llvm-nm', 'llvm-objcopy', 'llvm-objdump', 'llvm-otool',
     'llvm-pdbutil', 'llvm-profdata', 'llvm-profgen', 'llvm-ranlib', 'llvm-rc', 'llvm-readelf',
     'llvm-readobj', 'llvm-rtdyld', 'llvm-size', 'llvm-split', 'llvm-strings',
-    'llvm-strip', 'llvm-tblgen', 'llvm-undname', 'llvm-c-test', 'llvm-cxxfilt',
+    'llvm-strip', 'llvm-tblgen', 'llvm-undname', 'llvm-windres',
+    'llvm-c-test', 'llvm-cxxfilt',
     'llvm-xray', 'yaml2obj', 'obj2yaml', 'yaml-bench', 'verify-uselistorder',
     'bugpoint', 'llc', 'llvm-symbolizer', 'opt', 'sancov', 'sanstats'])
 

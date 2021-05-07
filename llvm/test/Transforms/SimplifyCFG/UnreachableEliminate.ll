@@ -84,6 +84,41 @@ bb2:
   ret void
 }
 
+declare void @llvm.assume(i1)
+declare i1 @llvm.type.test(i8*, metadata) nounwind readnone
+
+;; Same as the above test but make sure the unreachable control flow is still
+;; removed in the presence of a type test / assume sequence.
+
+define void @test5_type_test_assume(i1 %cond, i8* %ptr, [3 x i8*]* %vtable) {
+; CHECK-LABEL: @test5_type_test_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    [[VTABLE:%.*]] = bitcast [3 x i8*]* %vtable to i8*
+; CHECK-NEXT:    [[P:%.*]] = call i1 @llvm.type.test(i8* [[VTABLE]], metadata !"foo")
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[P]])
+; CHECK-NEXT:    store i8 2, i8* [[PTR:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %bb1, label %bb3
+
+bb3:
+  br label %bb2
+
+bb1:
+  br label %bb2
+
+bb2:
+  %ptr.2 = phi i8* [ %ptr, %bb3 ], [ null, %bb1 ]
+  %vtablei8 = bitcast [3 x i8*]* %vtable to i8*
+  %p = call i1 @llvm.type.test(i8* %vtablei8, metadata !"foo")
+  tail call void @llvm.assume(i1 %p)
+  store i8 2, i8* %ptr.2, align 8
+  ret void
+}
+
 define void @test5_no_null_opt(i1 %cond, i8* %ptr) #0 {
 ; CHECK-LABEL: @test5_no_null_opt(
 ; CHECK-NEXT:  entry:

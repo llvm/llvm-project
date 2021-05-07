@@ -5464,7 +5464,6 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP1(vabsq_v, arm_neon_vabs, 0),
   NEONMAP0(vadd_v),
   NEONMAP0(vaddhn_v),
-  NEONMAP0(vaddq_p128),
   NEONMAP0(vaddq_v),
   NEONMAP1(vaesdq_v, arm_neon_aesd, 0),
   NEONMAP1(vaeseq_v, arm_neon_aese, 0),
@@ -15118,6 +15117,25 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, X);
   }
 
+  // Fastmath by default
+  case PPC::BI__builtin_ppc_recipdivf:
+  case PPC::BI__builtin_ppc_recipdivd:
+  case PPC::BI__builtin_ppc_rsqrtf:
+  case PPC::BI__builtin_ppc_rsqrtd: {
+    Builder.getFastMathFlags().setFast();
+    llvm::Type *ResultType = ConvertType(E->getType());
+    Value *X = EmitScalarExpr(E->getArg(0));
+
+    if (BuiltinID == PPC::BI__builtin_ppc_recipdivf ||
+        BuiltinID == PPC::BI__builtin_ppc_recipdivd) {
+      Value *Y = EmitScalarExpr(E->getArg(1));
+      return Builder.CreateFDiv(X, Y, "recipdiv");
+    }
+    auto *One = ConstantFP::get(ResultType, 1.0);
+    llvm::Function *F = CGM.getIntrinsic(Intrinsic::sqrt, ResultType);
+    return Builder.CreateFDiv(One, Builder.CreateCall(F, X), "rsqrt");
+  }
+
   // FMA variations
   case PPC::BI__builtin_vsx_xvmaddadp:
   case PPC::BI__builtin_vsx_xvmaddasp:
@@ -17848,6 +17866,10 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_clmul:
   case RISCV::BI__builtin_riscv_clmulh:
   case RISCV::BI__builtin_riscv_clmulr:
+  case RISCV::BI__builtin_riscv_bcompress_32:
+  case RISCV::BI__builtin_riscv_bcompress_64:
+  case RISCV::BI__builtin_riscv_bdecompress_32:
+  case RISCV::BI__builtin_riscv_bdecompress_64:
   case RISCV::BI__builtin_riscv_grev_32:
   case RISCV::BI__builtin_riscv_grev_64:
   case RISCV::BI__builtin_riscv_gorc_32:
@@ -17885,6 +17907,16 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       break;
     case RISCV::BI__builtin_riscv_clmulr:
       ID = Intrinsic::riscv_clmulr;
+      break;
+
+    // Zbe
+    case RISCV::BI__builtin_riscv_bcompress_32:
+    case RISCV::BI__builtin_riscv_bcompress_64:
+      ID = Intrinsic::riscv_bcompress;
+      break;
+    case RISCV::BI__builtin_riscv_bdecompress_32:
+    case RISCV::BI__builtin_riscv_bdecompress_64:
+      ID = Intrinsic::riscv_bdecompress;
       break;
 
     // Zbp

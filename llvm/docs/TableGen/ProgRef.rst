@@ -218,13 +218,13 @@ TableGen provides "bang operators" that have a wide variety of uses:
 .. productionlist::
    BangOperator: one of
                : !add        !and         !cast        !con         !dag 
-               : !empty      !eq          !foldl       !foreach     !filter
-               : !ge         !getdagop    !gt          !head        !if
-               : !interleave !isa         !le          !listconcat  !listsplat
-               : !lt         !mul         !ne          !not         !or
-               : !setdagop   !shl         !size        !sra         !srl
-               : !strconcat  !sub         !subst       !substr      !tail
-               : !xor
+               : !empty      !eq          !filter      !find        !foldl
+               : !foreach    !ge          !getdagop    !gt          !head
+               : !if         !interleave  !isa         !le          !listconcat
+               : !listsplat  !lt          !mul         !ne          !not
+               : !or         !setdagop    !shl         !size        !sra
+               : !srl        !strconcat   !sub         !subst       !substr
+               : !tail       !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1638,6 +1638,12 @@ and non-0 as true.
     interpreted as with ``!if``:
     if the value is 0, the element is not included in the new list. If the value
     is anything else, the element is included.
+
+``!find(``\ *string1*\ ``,`` *string2*\ [``,`` *start*]\ ``)``
+    This operator searches for *string2* in *string1* and produces its
+    position. The starting position of the search may be specified by *start*,
+    which can range between 0 and the length of *string1*; the default is 0.
+    If the string is not found, the result is -1.
 
 ``!foldl(``\ *init*\ ``,`` *list*\ ``,`` *acc*\ ``,`` *var*\ ``,`` *expr*\ ``)``
     This operator performs a left-fold over the items in *list*. The

@@ -105,18 +105,6 @@ void RTNAME(CharacterMax)(Descriptor &accumulator, const Descriptor &x,
     const char *sourceFile = nullptr, int sourceLine = 0);
 void RTNAME(CharacterMin)(Descriptor &accumulator, const Descriptor &x,
     const char *sourceFile = nullptr, int sourceLine = 0);
-void RTNAME(CharacterMaxVal)(Descriptor &result, const Descriptor &x,
-    int dim = 0, const Descriptor *mask = nullptr,
-    const char *sourceFile = nullptr, int sourceLine = 0);
-void RTNAME(CharacterMinVal)(Descriptor &result, const Descriptor &x,
-    int dim = 0, const Descriptor *mask = nullptr,
-    const char *sourceFile = nullptr, int sourceLine = 0);
-void RTNAME(CharacterMaxLoc)(Descriptor &result, const Descriptor &x,
-    int dim = 0, const Descriptor *mask = nullptr, int kind = sizeof(int),
-    bool back = false, const char *sourceFile = nullptr, int sourceLine = 0);
-void RTNAME(CharacterMinLoc)(Descriptor &result, const Descriptor &x,
-    int dim = 0, const Descriptor *mask = nullptr, int kind = sizeof(int),
-    bool back = false, const char *sourceFile = nullptr, int sourceLine = 0);
 
 std::size_t RTNAME(Index1)(const char *, std::size_t, const char *substring,
     std::size_t, bool back = false);

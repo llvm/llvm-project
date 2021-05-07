@@ -75,10 +75,9 @@ define <3 x half> @v_constained_fma_v3f16_fpexcept_strict(<3 x half> %x, <3 x ha
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_mov_b32_e32 v6, v5
+; GFX10-NEXT:    v_fmac_f16_e32 v5, v1, v3
 ; GFX10-NEXT:    v_pk_fma_f16 v0, v0, v2, v4
-; GFX10-NEXT:    v_fmac_f16_e32 v6, v1, v3
-; GFX10-NEXT:    v_mov_b32_e32 v1, v6
+; GFX10-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %val = call <3 x half> @llvm.experimental.constrained.fma.v3f16(<3 x half> %x, <3 x half> %y, <3 x half> %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <3 x half> %val
@@ -128,23 +127,21 @@ define <4 x half> @v_constained_fma_v4f16_fpexcept_strict(<4 x half> %x, <4 x ha
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_mov_b32_e32 v14, v5
-; GFX10-NEXT:    v_mov_b32_e32 v15, v4
+; GFX10-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
+; GFX10-NEXT:    v_lshrrev_b32_e32 v9, 16, v4
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
-; GFX10-NEXT:    v_lshrrev_b32_e32 v5, 16, v14
-; GFX10-NEXT:    v_lshrrev_b32_e32 v4, 16, v15
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v11, 16, v0
-; GFX10-NEXT:    v_fmac_f16_e32 v15, v0, v2
+; GFX10-NEXT:    v_fmac_f16_e32 v4, v0, v2
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffff
-; GFX10-NEXT:    v_fmac_f16_e32 v14, v1, v3
-; GFX10-NEXT:    v_fmac_f16_e32 v5, v8, v7
-; GFX10-NEXT:    v_fmac_f16_e32 v4, v11, v10
-; GFX10-NEXT:    v_and_b32_e32 v1, v0, v15
-; GFX10-NEXT:    v_and_b32_e32 v2, v0, v14
-; GFX10-NEXT:    v_lshl_or_b32 v0, v4, 16, v1
-; GFX10-NEXT:    v_lshl_or_b32 v1, v5, 16, v2
+; GFX10-NEXT:    v_fmac_f16_e32 v5, v1, v3
+; GFX10-NEXT:    v_fmac_f16_e32 v6, v8, v7
+; GFX10-NEXT:    v_fmac_f16_e32 v9, v11, v10
+; GFX10-NEXT:    v_and_b32_e32 v1, v0, v4
+; GFX10-NEXT:    v_and_b32_e32 v2, v0, v5
+; GFX10-NEXT:    v_lshl_or_b32 v0, v9, 16, v1
+; GFX10-NEXT:    v_lshl_or_b32 v1, v6, 16, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %val = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> %x, <4 x half> %y, <4 x half> %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <4 x half> %val

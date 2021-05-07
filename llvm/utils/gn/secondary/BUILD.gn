@@ -76,6 +76,9 @@ group("llvm-objcopy") {
 group("llvm-objdump") {
   deps = [ "//llvm/tools/llvm-objdump:symlinks" ]
 }
+group("llvm-rc") {
+  deps = [ "//llvm/tools/llvm-rc:symlinks" ]
+}
 group("llvm-readobj") {
   deps = [ "//llvm/tools/llvm-readobj:symlinks" ]
 }

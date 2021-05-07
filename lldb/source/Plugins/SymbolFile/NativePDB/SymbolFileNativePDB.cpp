@@ -1001,7 +1001,7 @@ uint32_t SymbolFileNativePDB::ResolveSymbolContext(
 }
 
 uint32_t SymbolFileNativePDB::ResolveSymbolContext(
-    const FileSpec &file_spec, uint32_t line, bool check_inlines,
+    const SourceLocationSpec &src_location_spec,
     lldb::SymbolContextItem resolve_scope, SymbolContextList &sc_list) {
   return 0;
 }

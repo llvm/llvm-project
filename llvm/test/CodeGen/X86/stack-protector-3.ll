@@ -4,6 +4,7 @@
 ; RUN: llc -mtriple=x86_64-pc-linux-gnu -stack-protector-guard-reg=fs -o - < %s | FileCheck --check-prefix=CHECK-TLS-FS-40 %s
 ; RUN: llc -mtriple=x86_64-pc-linux-gnu -stack-protector-guard-reg=gs -o - < %s | FileCheck --check-prefix=CHECK-GS %s
 ; RUN: llc -mtriple=x86_64-pc-linux-gnu -stack-protector-guard-offset=20 -o - < %s | FileCheck --check-prefix=CHECK-OFFSET %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -stack-protector-guard-offset=-20 -o - < %s | FileCheck --check-prefix=CHECK-NEGATIVE-OFFSET %s
 
 ; CHECK-TLS-FS-40:       movq    %fs:40, %rax
 ; CHECK-TLS-FS-40:       movq    %fs:40, %rax
@@ -28,6 +29,15 @@
 ; CHECK-OFFSET:       .LBB0_2:
 ; CHECK-OFFSET-NEXT:  .cfi_def_cfa_offset 32
 ; CHECK-OFFSET-NEXT:  callq   __stack_chk_fail
+
+; CHECK-NEGATIVE-OFFSET:       movl    $4294967276, %eax               # imm = 0xFFFFFFEC
+; CHECK-NEGATIVE-OFFSET:       movq    %fs:(%rax), %rcx
+; CHECK-NEGATIVE-OFFSET:       movq    %fs:(%rax), %rax
+; CHECK-NEGATIVE-OFFSET-NEXT:  cmpq    16(%rsp), %rax
+; CHECK-NEGATIVE-OFFSET-NEXT:  jne     .LBB0_2
+; CHECK-NEGATIVE-OFFSET:       .LBB0_2:
+; CHECK-NEGATIVE-OFFSET-NEXT:  .cfi_def_cfa_offset 32
+; CHECK-NEGATIVE-OFFSET-NEXT:  callq   __stack_chk_fail
 
 ; CHECK-GLOBAL:       movq    __stack_chk_guard(%rip), %rax
 ; CHECK-GLOBAL:       movq    __stack_chk_guard(%rip), %rax

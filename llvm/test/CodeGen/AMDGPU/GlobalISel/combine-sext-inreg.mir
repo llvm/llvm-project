@@ -370,3 +370,4 @@ body:             |
     %assert_sext:_(s32) = G_ASSERT_SEXT %copy, 8
     %sext_inreg:_(s32) = G_SEXT_INREG %assert_sext, 7
     $vgpr0 = COPY %sext_inreg
+...

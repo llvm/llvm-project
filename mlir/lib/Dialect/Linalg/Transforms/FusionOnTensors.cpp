@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -144,11 +145,12 @@ generateFusedElementwiseOpRegion(PatternRewriter &rewriter, Operation *fusedOp,
         fusedBlock->getArguments().take_front(numFusedOpIndices));
     mapper.map(std::get<0>(it), newIndex);
   }
-  // 2b. Replace the producer index operations by index operations placed in the
-  // fused block using the `consumerToProducerLoopsMap` to map the index spaces.
-  unsigned numFusedOpLoops =
-      std::max(producer.getNumLoops(), consumer.getNumLoops());
+  // 2b. Add an index operation for every fused loop dimension and use the
+  // `consumerToProducerLoopsMap` to map the producer indices.
   if (producer.hasIndexSemantics()) {
+    // Add an index operation for every fused loop dimension.
+    unsigned numFusedOpLoops =
+        std::max(producer.getNumLoops(), consumer.getNumLoops());
     SmallVector<Value> fusedIndices;
     fusedIndices.reserve(numFusedOpLoops);
     llvm::transform(llvm::seq<int64_t>(0, numFusedOpLoops),
@@ -160,10 +162,7 @@ generateFusedElementwiseOpRegion(PatternRewriter &rewriter, Operation *fusedOp,
       Value newIndex = rewriter.create<mlir::AffineApplyOp>(
           producer.getLoc(),
           consumerToProducerLoopsMap.getSubMap(indexOp.dim()), fusedIndices);
-      // Replace the producer index operation by the index value computed in the
-      // fused block. All remaining operations in the producer block are later
-      // on cloned to the fused block.
-      rewriter.replaceOp(indexOp, newIndex);
+      mapper.map(indexOp.getResult(), newIndex);
     }
   }
   // TODO: allow fusing the producer of an output operand.
@@ -209,10 +208,12 @@ generateFusedElementwiseOpRegion(PatternRewriter &rewriter, Operation *fusedOp,
   // TODO: allow fusion of multi-result producers.
   assert(producer->getNumResults() == 1 && "expected single result producer");
 
-  // 8. Clone operations from producer (except the yield operation) to the fused
-  // op.
-  for (auto &op : producerBlock.without_terminator())
-    rewriter.clone(op, mapper);
+  // 8. Clone all producer operations except for the yield and index operations
+  // to the fused operation.
+  for (auto &op : producerBlock.without_terminator()) {
+    if (!isa<IndexOp>(op))
+      rewriter.clone(op, mapper);
+  }
   // 9. Now we can map the consumerBlock's `consumerIdx` block argument. Just
   // forward the yield operand.
   auto yieldOp = cast<linalg::YieldOp>(producerBlock.getTerminator());
@@ -1311,10 +1312,12 @@ public:
       return failure();
     LinalgOp linalgOp = cast<LinalgOp>(op.getOperation());
     for (auto operand : llvm::enumerate(linalgOp.getInputOpOperands())) {
-      ConstantOp constantOp = operand.value().get().getDefiningOp<ConstantOp>();
-      if (!constantOp ||
-          !constantOp.value().cast<DenseElementsAttr>().isSplat() ||
-          !controlFn(constantOp->getResult(0), operand.value()))
+      Operation *def = operand.value().get().getDefiningOp();
+      DenseElementsAttr constantAttr;
+      if (!def ||
+          !matchPattern(def, m_Constant<DenseElementsAttr>(&constantAttr)) ||
+          !constantAttr.isSplat() ||
+          !controlFn(def->getResult(0), operand.value()))
         continue;
 
       // The indexing_maps for the operands of the fused operation are same as
@@ -1337,8 +1340,7 @@ public:
 
       // Create a constant scalar value from the splat constant.
       Value scalarConstant = rewriter.create<ConstantOp>(
-          constantOp.getLoc(),
-          constantOp.value().cast<DenseElementsAttr>().getSplatValue());
+          def->getLoc(), constantAttr.getSplatValue());
 
       LinalgOp fusedOp = createLinalgOpOfSameType(
           linalgOp, rewriter, rewriter.getUnknownLoc(),

@@ -40,6 +40,7 @@ program omp_workshare
   !$omp end single
   !$omp end parallel
 
+  !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
   !$omp parallel sections
   !$omp section
   aa = my_func()

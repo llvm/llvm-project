@@ -96,7 +96,7 @@ static Triple GetTriple(StringRef ProgName, opt::InputArgList &Args) {
 
 static std::unique_ptr<ToolOutputFile> GetOutputStream(StringRef Path) {
   std::error_code EC;
-  auto Out = std::make_unique<ToolOutputFile>(Path, EC, sys::fs::F_None);
+  auto Out = std::make_unique<ToolOutputFile>(Path, EC, sys::fs::OF_None);
   if (EC) {
     WithColor::error() << EC.message() << '\n';
     return nullptr;
@@ -275,11 +275,15 @@ int main(int Argc, char **Argv) {
 
   MAI->setPreserveAsmComments(InputArgs.hasArg(OPT_preserve_comments));
 
+  std::unique_ptr<MCSubtargetInfo> STI(TheTarget->createMCSubtargetInfo(
+      TripleName, /*CPU=*/"", /*Features=*/""));
+  assert(STI && "Unable to create subtarget info!");
+
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
   MCObjectFileInfo MOFI;
-  MCContext Ctx(MAI.get(), MRI.get(), &MOFI, &SrcMgr);
-  MOFI.InitMCObjectFileInfo(TheTriple, /*PIC=*/false, Ctx,
+  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), &MOFI, STI.get(), &SrcMgr);
+  MOFI.initMCObjectFileInfo(Ctx, /*PIC=*/false,
                             /*LargeCodeModel=*/true);
 
   if (InputArgs.hasArg(OPT_save_temp_labels))
@@ -311,10 +315,6 @@ int main(int Argc, char **Argv) {
 
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
   assert(MCII && "Unable to create instruction info!");
-
-  std::unique_ptr<MCSubtargetInfo> STI(TheTarget->createMCSubtargetInfo(
-      TripleName, /*CPU=*/"", /*Features=*/""));
-  assert(STI && "Unable to create subtarget info!");
 
   MCInstPrinter *IP = nullptr;
   if (FileType == "s") {

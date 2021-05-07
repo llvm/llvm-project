@@ -365,6 +365,14 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
   return ValueAndVReg{Val, VReg};
 }
 
+const ConstantInt *llvm::getConstantIntVRegVal(Register VReg,
+                                               const MachineRegisterInfo &MRI) {
+  MachineInstr *MI = MRI.getVRegDef(VReg);
+  if (MI->getOpcode() != TargetOpcode::G_CONSTANT)
+    return nullptr;
+  return MI->getOperand(1).getCImm();
+}
+
 const ConstantFP *
 llvm::getConstantFPVRegVal(Register VReg, const MachineRegisterInfo &MRI) {
   MachineInstr *MI = MRI.getVRegDef(VReg);

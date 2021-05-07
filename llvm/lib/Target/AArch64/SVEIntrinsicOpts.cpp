@@ -11,18 +11,13 @@
 //
 // This pass performs the following optimizations:
 //
-// - removes unnecessary reinterpret intrinsics
-//   (llvm.aarch64.sve.convert.[to|from].svbool), e.g:
-//     %1 = @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %a)
-//     %2 = @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %1)
-//
 // - removes unnecessary ptrue intrinsics (llvm.aarch64.sve.ptrue), e.g:
 //     %1 = @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
 //     %2 = @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
 //     ; (%1 can be replaced with a reinterpret of %2)
 //
-// - optimizes ptest intrinsics and phi instructions where the operands are
-//   being needlessly converted to and from svbool_t.
+// - optimizes ptest intrinsics where the operands are being needlessly
+//   converted to and from svbool_t.
 //
 //===----------------------------------------------------------------------===//
 
@@ -60,8 +55,6 @@ struct SVEIntrinsicOpts : public ModulePass {
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
-  static IntrinsicInst *isReinterpretToSVBool(Value *V);
-
   bool coalescePTrueIntrinsicCalls(BasicBlock &BB,
                                    SmallSetVector<IntrinsicInst *, 4> &PTrues);
   bool optimizePTrueIntrinsicCalls(SmallSetVector<Function *, 4> &Functions);
@@ -75,12 +68,9 @@ private:
   /// the functions themselves.
   bool optimizeFunctions(SmallSetVector<Function *, 4> &Functions);
 
-  static bool optimizeConvertFromSVBool(IntrinsicInst *I);
   static bool optimizePTest(IntrinsicInst *I);
   static bool optimizeVectorMul(IntrinsicInst *I);
   static bool optimizeTBL(IntrinsicInst *I);
-
-  static bool processPhiNode(IntrinsicInst *I);
 };
 } // end anonymous namespace
 
@@ -98,19 +88,6 @@ INITIALIZE_PASS_END(SVEIntrinsicOpts, DEBUG_TYPE, name, false, false)
 namespace llvm {
 ModulePass *createSVEIntrinsicOptsPass() { return new SVEIntrinsicOpts(); }
 } // namespace llvm
-
-/// Returns V if it's a cast from <n x 16 x i1> (aka svbool_t), nullptr
-/// otherwise.
-IntrinsicInst *SVEIntrinsicOpts::isReinterpretToSVBool(Value *V) {
-  IntrinsicInst *I = dyn_cast<IntrinsicInst>(V);
-  if (!I)
-    return nullptr;
-
-  if (I->getIntrinsicID() != Intrinsic::aarch64_sve_convert_to_svbool)
-    return nullptr;
-
-  return I;
-}
 
 /// Checks if a ptrue intrinsic call is promoted. The act of promoting a
 /// ptrue will introduce zeroing. For example:
@@ -197,16 +174,29 @@ bool SVEIntrinsicOpts::coalescePTrueIntrinsicCalls(
       Intrinsic::aarch64_sve_convert_to_svbool, {MostEncompassingPTrueVTy},
       {MostEncompassingPTrue});
 
+  bool ConvertFromCreated = false;
   for (auto *PTrue : PTrues) {
     auto *PTrueVTy = cast<VectorType>(PTrue->getType());
 
-    Builder.SetInsertPoint(&BB, ++ConvertToSVBool->getIterator());
-    auto *ConvertFromSVBool =
-        Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool,
-                                {PTrueVTy}, {ConvertToSVBool});
-    PTrue->replaceAllUsesWith(ConvertFromSVBool);
+    // Only create the converts if the types are not already the same, otherwise
+    // just use the most encompassing ptrue.
+    if (MostEncompassingPTrueVTy != PTrueVTy) {
+      ConvertFromCreated = true;
+
+      Builder.SetInsertPoint(&BB, ++ConvertToSVBool->getIterator());
+      auto *ConvertFromSVBool =
+          Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool,
+                                  {PTrueVTy}, {ConvertToSVBool});
+      PTrue->replaceAllUsesWith(ConvertFromSVBool);
+    } else
+      PTrue->replaceAllUsesWith(MostEncompassingPTrue);
+
     PTrue->eraseFromParent();
   }
+
+  // We never used the ConvertTo so remove it
+  if (!ConvertFromCreated)
+    ConvertToSVBool->eraseFromParent();
 
   return true;
 }
@@ -292,51 +282,6 @@ bool SVEIntrinsicOpts::optimizePTrueIntrinsicCalls(
   }
 
   return Changed;
-}
-
-/// The function will remove redundant reinterprets casting in the presence
-/// of the control flow
-bool SVEIntrinsicOpts::processPhiNode(IntrinsicInst *X) {
-
-  SmallVector<Instruction *, 32> Worklist;
-  auto RequiredType = X->getType();
-
-  auto *PN = dyn_cast<PHINode>(X->getArgOperand(0));
-  assert(PN && "Expected Phi Node!");
-
-  // Don't create a new Phi unless we can remove the old one.
-  if (!PN->hasOneUse())
-    return false;
-
-  for (Value *IncValPhi : PN->incoming_values()) {
-    auto *Reinterpret = isReinterpretToSVBool(IncValPhi);
-    if (!Reinterpret ||
-        RequiredType != Reinterpret->getArgOperand(0)->getType())
-      return false;
-  }
-
-  // Create the new Phi
-  LLVMContext &Ctx = PN->getContext();
-  IRBuilder<> Builder(Ctx);
-  Builder.SetInsertPoint(PN);
-  PHINode *NPN = Builder.CreatePHI(RequiredType, PN->getNumIncomingValues());
-  Worklist.push_back(PN);
-
-  for (unsigned I = 0; I < PN->getNumIncomingValues(); I++) {
-    auto *Reinterpret = cast<Instruction>(PN->getIncomingValue(I));
-    NPN->addIncoming(Reinterpret->getOperand(0), PN->getIncomingBlock(I));
-    Worklist.push_back(Reinterpret);
-  }
-
-  // Cleanup Phi Node and reinterprets
-  X->replaceAllUsesWith(NPN);
-  X->eraseFromParent();
-
-  for (auto &I : Worklist)
-    if (I->use_empty())
-      I->eraseFromParent();
-
-  return true;
 }
 
 bool SVEIntrinsicOpts::optimizePTest(IntrinsicInst *I) {
@@ -473,69 +418,12 @@ bool SVEIntrinsicOpts::optimizeTBL(IntrinsicInst *I) {
   return true;
 }
 
-bool SVEIntrinsicOpts::optimizeConvertFromSVBool(IntrinsicInst *I) {
-  assert(I->getIntrinsicID() == Intrinsic::aarch64_sve_convert_from_svbool &&
-         "Unexpected opcode");
-
-  // If the reinterpret instruction operand is a PHI Node
-  if (isa<PHINode>(I->getArgOperand(0)))
-    return processPhiNode(I);
-
-  SmallVector<Instruction *, 32> CandidatesForRemoval;
-  Value *Cursor = I->getOperand(0), *EarliestReplacement = nullptr;
-
-  const auto *IVTy = cast<VectorType>(I->getType());
-
-  // Walk the chain of conversions.
-  while (Cursor) {
-    // If the type of the cursor has fewer lanes than the final result, zeroing
-    // must take place, which breaks the equivalence chain.
-    const auto *CursorVTy = cast<VectorType>(Cursor->getType());
-    if (CursorVTy->getElementCount().getKnownMinValue() <
-        IVTy->getElementCount().getKnownMinValue())
-      break;
-
-    // If the cursor has the same type as I, it is a viable replacement.
-    if (Cursor->getType() == IVTy)
-      EarliestReplacement = Cursor;
-
-    auto *IntrinsicCursor = dyn_cast<IntrinsicInst>(Cursor);
-
-    // If this is not an SVE conversion intrinsic, this is the end of the chain.
-    if (!IntrinsicCursor || !(IntrinsicCursor->getIntrinsicID() ==
-                                  Intrinsic::aarch64_sve_convert_to_svbool ||
-                              IntrinsicCursor->getIntrinsicID() ==
-                                  Intrinsic::aarch64_sve_convert_from_svbool))
-      break;
-
-    CandidatesForRemoval.insert(CandidatesForRemoval.begin(), IntrinsicCursor);
-    Cursor = IntrinsicCursor->getOperand(0);
-  }
-
-  // If no viable replacement in the conversion chain was found, there is
-  // nothing to do.
-  if (!EarliestReplacement)
-    return false;
-
-  I->replaceAllUsesWith(EarliestReplacement);
-  I->eraseFromParent();
-
-  while (!CandidatesForRemoval.empty()) {
-    Instruction *Candidate = CandidatesForRemoval.pop_back_val();
-    if (Candidate->use_empty())
-      Candidate->eraseFromParent();
-  }
-  return true;
-}
-
 bool SVEIntrinsicOpts::optimizeIntrinsic(Instruction *I) {
   IntrinsicInst *IntrI = dyn_cast<IntrinsicInst>(I);
   if (!IntrI)
     return false;
 
   switch (IntrI->getIntrinsicID()) {
-  case Intrinsic::aarch64_sve_convert_from_svbool:
-    return optimizeConvertFromSVBool(IntrI);
   case Intrinsic::aarch64_sve_fmul:
   case Intrinsic::aarch64_sve_mul:
     return optimizeVectorMul(IntrI);
@@ -591,7 +479,6 @@ bool SVEIntrinsicOpts::runOnModule(Module &M) {
       continue;
 
     switch (F.getIntrinsicID()) {
-    case Intrinsic::aarch64_sve_convert_from_svbool:
     case Intrinsic::aarch64_sve_ptest_any:
     case Intrinsic::aarch64_sve_ptest_first:
     case Intrinsic::aarch64_sve_ptest_last:

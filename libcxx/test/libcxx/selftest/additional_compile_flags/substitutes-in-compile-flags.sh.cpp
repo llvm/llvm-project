@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This test greps for %t, which is expanded to a path with backslashes. When
+// that is passed to grep, those backslashes would have to be escaped, which we
+// don't do right now.
+// UNSUPPORTED: windows
+
 // Make sure that substitutions are performed inside additional compiler flags.
 
 // ADDITIONAL_COMPILE_FLAGS: -I %t.1

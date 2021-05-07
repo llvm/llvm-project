@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // <filesystem>
 
 // class path
@@ -30,7 +28,9 @@ int main(int, char**) {
   assert(globalMemCounter.checkOutstandingNewEq(0));
   const std::string s("we really really really really really really really "
                       "really really long string so that we allocate");
-  assert(globalMemCounter.checkOutstandingNewEq(1));
+  // On windows, the operator new from count_new.h can't override the default
+  // operator for calls within the libc++ DLL.
+  TEST_NOT_WIN32_DLL(assert(globalMemCounter.checkOutstandingNewEq(1)));
   const fs::path::string_type ps(s.begin(), s.end());
   path p(s);
   {

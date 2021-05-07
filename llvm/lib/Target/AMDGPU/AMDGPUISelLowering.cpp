@@ -1257,8 +1257,9 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::SINT_TO_FP: return LowerSINT_TO_FP(Op, DAG);
   case ISD::UINT_TO_FP: return LowerUINT_TO_FP(Op, DAG);
   case ISD::FP_TO_FP16: return LowerFP_TO_FP16(Op, DAG);
-  case ISD::FP_TO_SINT: return LowerFP_TO_SINT(Op, DAG);
-  case ISD::FP_TO_UINT: return LowerFP_TO_UINT(Op, DAG);
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+    return LowerFP_TO_INT(Op, DAG);
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTLZ:
@@ -2707,44 +2708,37 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) con
   return DAG.getZExtOrTrunc(V, DL, Op.getValueType());
 }
 
-SDValue AMDGPUTargetLowering::LowerFP_TO_SINT(SDValue Op,
-                                              SelectionDAG &DAG) const {
+SDValue AMDGPUTargetLowering::LowerFP_TO_INT(SDValue Op,
+                                             SelectionDAG &DAG) const {
   SDValue Src = Op.getOperand(0);
-
-  // TODO: Factor out code common with LowerFP_TO_UINT.
-
+  unsigned OpOpcode = Op.getOpcode();
   EVT SrcVT = Src.getValueType();
+  EVT DestVT = Op.getValueType();
+
+  // Will be selected natively
+  if (SrcVT == MVT::f16 && DestVT == MVT::i16)
+    return Op;
+
+  // Promote i16 to i32
+  if (DestVT == MVT::i16 && (SrcVT == MVT::f32 || SrcVT == MVT::f64)) {
+    SDLoc DL(Op);
+
+    SDValue FpToInt32 = DAG.getNode(OpOpcode, DL, MVT::i32, Src);
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToInt32);
+  }
+
   if (SrcVT == MVT::f16 ||
       (SrcVT == MVT::f32 && Src.getOpcode() == ISD::FP16_TO_FP)) {
     SDLoc DL(Op);
 
-    SDValue FpToInt32 = DAG.getNode(Op.getOpcode(), DL, MVT::i32, Src);
-    return DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, FpToInt32);
+    SDValue FpToInt32 = DAG.getNode(OpOpcode, DL, MVT::i32, Src);
+    unsigned Ext =
+        OpOpcode == ISD::FP_TO_SINT ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+    return DAG.getNode(Ext, DL, MVT::i64, FpToInt32);
   }
 
-  if (Op.getValueType() == MVT::i64 && Src.getValueType() == MVT::f64)
-    return LowerFP64_TO_INT(Op, DAG, true);
-
-  return SDValue();
-}
-
-SDValue AMDGPUTargetLowering::LowerFP_TO_UINT(SDValue Op,
-                                              SelectionDAG &DAG) const {
-  SDValue Src = Op.getOperand(0);
-
-  // TODO: Factor out code common with LowerFP_TO_SINT.
-
-  EVT SrcVT = Src.getValueType();
-  if (SrcVT == MVT::f16 ||
-      (SrcVT == MVT::f32 && Src.getOpcode() == ISD::FP16_TO_FP)) {
-    SDLoc DL(Op);
-
-    SDValue FpToUInt32 = DAG.getNode(Op.getOpcode(), DL, MVT::i32, Src);
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, FpToUInt32);
-  }
-
-  if (Op.getValueType() == MVT::i64 && Src.getValueType() == MVT::f64)
-    return LowerFP64_TO_INT(Op, DAG, false);
+  if (DestVT == MVT::i64 && SrcVT == MVT::f64)
+    return LowerFP64_TO_INT(Op, DAG, OpOpcode == ISD::FP_TO_SINT);
 
   return SDValue();
 }

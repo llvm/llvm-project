@@ -203,3 +203,17 @@ let Predicates = [HasNEON] in {
             (XTNv2i32 (FCVTZUv2f64 V128:$src))>;
 
 }
+
+let Predicates = [HasNoLSE] in {
+def : Pat<(atomic_cmp_swap_8 GPR64:$addr, GPR32:$desired, GPR32:$new),
+          (CMP_SWAP_8 GPR64:$addr, GPR32:$desired, GPR32:$new)>;
+
+def : Pat<(atomic_cmp_swap_16 GPR64:$addr, GPR32:$desired, GPR32:$new),
+          (CMP_SWAP_16 GPR64:$addr, GPR32:$desired, GPR32:$new)>;
+
+def : Pat<(atomic_cmp_swap_32 GPR64:$addr, GPR32:$desired, GPR32:$new),
+          (CMP_SWAP_32 GPR64:$addr, GPR32:$desired, GPR32:$new)>;
+
+def : Pat<(atomic_cmp_swap_64 GPR64:$addr, GPR64:$desired, GPR64:$new),
+          (CMP_SWAP_64 GPR64:$addr, GPR64:$desired, GPR64:$new)>;
+}

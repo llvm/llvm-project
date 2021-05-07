@@ -208,8 +208,8 @@ compilers, so we suggest to use it together with
 The same attribute used on a global variable prevents AddressSanitizer
 from adding redzones around it and detecting out of bounds accesses.
 
-Suppressing Errors in Recompiled Code (Blacklist)
--------------------------------------------------
+Suppressing Errors in Recompiled Code (Ignorelist)
+--------------------------------------------------
 
 AddressSanitizer supports ``src`` and ``fun`` entity types in
 :doc:`SanitizerSpecialCaseList`, that can be used to suppress error reports

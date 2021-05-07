@@ -15,6 +15,7 @@ subroutine workshare(aa, bb, cc, dd, ee, ff, n)
   end do
 
   !$omp critical
+  !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
   !$omp single
   aa = bb
   !$omp end single

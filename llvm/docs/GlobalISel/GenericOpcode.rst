@@ -186,10 +186,18 @@ Extract a register of the specified size, starting from the block given by
 index. This will almost certainly be mapped to sub-register COPYs after
 register banks have been selected.
 
+.. code-block:: none
+
+  %3:_(s32) = G_EXTRACT %2:_(s64), 32
+
 G_INSERT
 ^^^^^^^^
 
 Insert a smaller register into a larger one at the specified bit-index.
+
+.. code-block:: none
+
+  %2:_(s64) = G_INSERT %0:(_s64), %1:_(s32), 0
 
 G_MERGE_VALUES
 ^^^^^^^^^^^^^^

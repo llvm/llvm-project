@@ -57,7 +57,7 @@ bool LoopVectorizeHints::Hint::validate(unsigned Val) {
   switch (Kind) {
   case HK_WIDTH:
     return isPowerOf2_32(Val) && Val <= VectorizerParams::MaxVectorWidth;
-  case HK_UNROLL:
+  case HK_INTERLEAVE:
     return isPowerOf2_32(Val) && Val <= MaxInterleaveFactor;
   case HK_FORCE:
     return (Val <= 1);
@@ -73,7 +73,7 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
                                        bool InterleaveOnlyWhenForced,
                                        OptimizationRemarkEmitter &ORE)
     : Width("vectorize.width", VectorizerParams::VectorizationFactor, HK_WIDTH),
-      Interleave("interleave.count", InterleaveOnlyWhenForced, HK_UNROLL),
+      Interleave("interleave.count", InterleaveOnlyWhenForced, HK_INTERLEAVE),
       Force("vectorize.enable", FK_Undefined, HK_FORCE),
       IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
       Predicate("vectorize.predicate.enable", FK_Undefined, HK_PREDICATE),
@@ -91,8 +91,8 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
     // consider the loop to have been already vectorized because there's
     // nothing more that we can do.
     IsVectorized.Value =
-        getWidth() == ElementCount::getFixed(1) && Interleave.Value == 1;
-  LLVM_DEBUG(if (InterleaveOnlyWhenForced && Interleave.Value == 1) dbgs()
+        getWidth() == ElementCount::getFixed(1) && getInterleave() == 1;
+  LLVM_DEBUG(if (InterleaveOnlyWhenForced && getInterleave() == 1) dbgs()
              << "LV: Interleaving disabled by the pass manager\n");
 }
 
@@ -165,8 +165,8 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
         R << " (Force=" << NV("Force", true);
         if (Width.Value != 0)
           R << ", Vector Width=" << NV("VectorWidth", getWidth());
-        if (Interleave.Value != 0)
-          R << ", Interleave Count=" << NV("InterleaveCount", Interleave.Value);
+        if (getInterleave() != 0)
+          R << ", Interleave Count=" << NV("InterleaveCount", getInterleave());
         R << ")";
       }
       return R;

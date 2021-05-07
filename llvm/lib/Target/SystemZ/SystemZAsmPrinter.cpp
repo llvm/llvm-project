@@ -739,7 +739,7 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                                               unsigned OpNo,
                                               const char *ExtraCode,
                                               raw_ostream &OS) {
-  SystemZInstPrinter::printAddress(MI->getOperand(OpNo).getReg(),
+  SystemZInstPrinter::printAddress(MAI, MI->getOperand(OpNo).getReg(),
                                    MI->getOperand(OpNo + 1).getImm(),
                                    MI->getOperand(OpNo + 2).getReg(), OS);
   return false;

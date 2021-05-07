@@ -490,6 +490,8 @@ GlobalOp Importer::processGlobal(llvm::GlobalVariable *GV) {
   if (GV->hasAtLeastLocalUnnamedAddr())
     op.unnamed_addrAttr(UnnamedAddrAttr::get(
         context, convertUnnamedAddrFromLLVM(GV->getUnnamedAddr())));
+  if (GV->hasSection())
+    op.sectionAttr(b.getStringAttr(GV->getSection()));
   return globals[GV] = op;
 }
 

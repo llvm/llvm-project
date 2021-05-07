@@ -23,19 +23,18 @@ ASTSrcLocProcessor::ASTSrcLocProcessor(StringRef JsonPath)
 
   Finder = std::make_unique<MatchFinder>(std::move(FinderOptions));
   Finder->addMatcher(
-          cxxRecordDecl(
-              isDefinition(),
-              isSameOrDerivedFrom(
-                  // TODO: Extend this with other clades
-                  namedDecl(hasAnyName("clang::Stmt", "clang::Decl",
-                                       "clang::CXXCtorInitializer",
-                                       "clang::NestedNameSpecifierLoc",
-                                       "clang::TemplateArgumentLoc",
-                                       "clang::CXXBaseSpecifier",
-                                       "clang::TypeLoc"))
-                      .bind("nodeClade")),
-              optionally(isDerivedFrom(cxxRecordDecl().bind("derivedFrom"))))
-              .bind("className"),
+      cxxRecordDecl(
+          isDefinition(),
+          isSameOrDerivedFrom(
+              namedDecl(
+                  hasAnyName(
+                      "clang::Stmt", "clang::Decl", "clang::CXXCtorInitializer",
+                      "clang::NestedNameSpecifierLoc",
+                      "clang::TemplateArgumentLoc", "clang::CXXBaseSpecifier",
+                      "clang::DeclarationNameInfo", "clang::TypeLoc"))
+                  .bind("nodeClade")),
+          optionally(isDerivedFrom(cxxRecordDecl().bind("derivedFrom"))))
+          .bind("className"),
       this);
   Finder->addMatcher(
           cxxRecordDecl(isDefinition(), hasAnyName("clang::PointerLikeTypeLoc",
@@ -85,6 +84,8 @@ llvm::json::Object toJSON(ClassData const &Obj) {
     JsonObj["typeLocs"] = Obj.TypeLocs;
   if (!Obj.NestedNameLocs.empty())
     JsonObj["nestedNameLocs"] = Obj.NestedNameLocs;
+  if (!Obj.DeclNameInfos.empty())
+    JsonObj["declNameInfos"] = Obj.DeclNameInfos;
   return JsonObj;
 }
 
@@ -121,7 +122,7 @@ void WriteJSON(StringRef JsonPath, llvm::json::Object &&ClassInheritance,
   }
 
   std::error_code EC;
-  llvm::raw_fd_ostream JsonOut(JsonPath, EC, llvm::sys::fs::F_Text);
+  llvm::raw_fd_ostream JsonOut(JsonPath, EC, llvm::sys::fs::OF_Text);
   if (EC)
     return;
 
@@ -222,6 +223,11 @@ void ASTSrcLocProcessor::run(const MatchFinder::MatchResult &Result) {
   CD.TypeLocs = CaptureMethods("class clang::TypeLoc", ASTClass, Result);
   CD.NestedNameLocs =
       CaptureMethods("class clang::NestedNameSpecifierLoc", ASTClass, Result);
+  CD.DeclNameInfos =
+      CaptureMethods("struct clang::DeclarationNameInfo", ASTClass, Result);
+  auto DI = CaptureMethods("const struct clang::DeclarationNameInfo &",
+                           ASTClass, Result);
+  CD.DeclNameInfos.insert(CD.DeclNameInfos.end(), DI.begin(), DI.end());
 
   if (const auto *DerivedFrom =
           Result.Nodes.getNodeAs<clang::CXXRecordDecl>("derivedFrom")) {

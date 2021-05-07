@@ -51,7 +51,7 @@ void test_stability(bool expect_stable) {
 
 int main(int, char**) {
   test_stability<forward_iterator<int *>, output_iterator<int *> >(true);
-  test_stability<input_iterator<int *>, random_access_iterator<int *> >(false);
+  test_stability<cpp17_input_iterator<int *>, random_access_iterator<int *> >(false);
 
   return 0;
 }

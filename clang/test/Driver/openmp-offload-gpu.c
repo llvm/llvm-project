@@ -2,9 +2,6 @@
 /// Perform several driver tests for OpenMP offloading
 ///
 
-// https://PR46644
-// XFAIL: arm64-apple
-
 // REQUIRES: clang-driver
 // REQUIRES: x86-registered-target
 // REQUIRES: powerpc-registered-target

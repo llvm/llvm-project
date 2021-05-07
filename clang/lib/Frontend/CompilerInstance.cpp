@@ -133,6 +133,11 @@ bool CompilerInstance::createTarget() {
     // FIXME: can we disable FEnvAccess?
   }
 
+  // We should do it here because target knows nothing about
+  // language options when it's being created.
+  if (getLangOpts().OpenCL)
+    getTarget().validateOpenCLTarget(getLangOpts(), getDiagnostics());
+
   // Inform the target of the language options.
   // FIXME: We shouldn't need to do this, the target should be immutable once
   // created. This complexity should be lifted elsewhere.
@@ -1885,8 +1890,6 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       return Result;
     Module = Result;
     MM.cacheModuleLoad(*Path[0].first, Module);
-    if (!Module)
-      return Module;
   }
 
   // If we never found the module, fail.  Otherwise, verify the module and link

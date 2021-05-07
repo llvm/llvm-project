@@ -86,6 +86,12 @@ void fn_tmpl() {}
 template void fn_tmpl<int, freefunc>();
 // CHECK-DAG: "fn_tmpl<int,&freefunc>"
 
+template <typename T, void (*)(void)>
+void fn_tmpl_typecheck() {}
+
+template void fn_tmpl_typecheck<int, &freefunc>();
+// CHECK-DAG: "fn_tmpl_typecheck<int,&freefunc>"
+
 template <typename A, typename B, typename C> struct ClassTemplate { A a; B b; C c; };
 ClassTemplate<char, short, ClassTemplate<int, int, int> > f;
 // This will only show up in normal debug builds.  The space in `> >` is

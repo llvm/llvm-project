@@ -9,8 +9,8 @@ CI-LABEL: @X = internal global i32 5
 CU-LABEL:@U = global i32 6
 CI-LABEL:@U = internal global i32 6
 CN-NOT:@U
-DI-LABEL: @Y = global i8 42
 DI-LABEL: @llvm.used = appending global [2 x i8*] [i8* @Y, i8* bitcast (i64 ()* @foo to i8*)], section "llvm.metadata"
+DI-LABEL: @Y = global i8 42
 
 B-LABEL: define void @bar() {
 

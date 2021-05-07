@@ -113,6 +113,30 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,INST
 
+// Test -fast-math
+// RUN: %clang -### -target x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -ffast-math --rocm-path=%S/Inputs/rocm \
+// RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FAST
+
+// Test -ffinite-math-only
+// RUN: %clang -### -target x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -ffinite-math-only --rocm-path=%S/Inputs/rocm \
+// RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FINITE
+
+// Test -funsafe-math-optimizations
+// RUN: %clang -### -target x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -funsafe-math-optimizations --rocm-path=%S/Inputs/rocm \
+// RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=UNSAFE
+
+// Test -fno-hip-fp32-correctly-rounded-divide-sqrt
+// RUN: %clang -### -target x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -fno-hip-fp32-correctly-rounded-divide-sqrt \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=DIVSQRT
+
 // ALL-NOT: error:
 // ALL: {{"[^"]*clang[^"]*"}}
 // ALL-SAME: "-mlink-builtin-bitcode" "{{.*}}hip.bc"
@@ -128,3 +152,23 @@
 // ALL-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_wavefrontsize64_on.bc"
 // ALL-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_isa_version_{{[0-9]+}}.bc"
 // INST-SAME: "-mlink-builtin-bitcode" "{{.*}}instrument.bc"
+
+// FAST: "-mlink-builtin-bitcode" "{{.*}}oclc_daz_opt_off.bc"
+// FAST-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_unsafe_math_on.bc"
+// FAST-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_finite_only_on.bc"
+// FAST-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_correctly_rounded_sqrt_on.bc"
+
+// FINITE: "-mlink-builtin-bitcode" "{{.*}}oclc_daz_opt_off.bc"
+// FINITE-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_unsafe_math_off.bc"
+// FINITE-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_finite_only_on.bc"
+// FINITE-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_correctly_rounded_sqrt_on.bc"
+
+// UNSAFE: "-mlink-builtin-bitcode" "{{.*}}oclc_daz_opt_off.bc"
+// UNSAFE-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_unsafe_math_on.bc"
+// UNSAFE-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_finite_only_off.bc"
+// UNSAFE-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_correctly_rounded_sqrt_on.bc"
+
+// DIVSQRT: "-mlink-builtin-bitcode" "{{.*}}oclc_daz_opt_off.bc"
+// DIVSQRT-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_unsafe_math_off.bc"
+// DIVSQRT-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_finite_only_off.bc"
+// DIVSQRT-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_correctly_rounded_sqrt_off.bc"

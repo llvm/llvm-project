@@ -41,7 +41,6 @@ int main(int, char**)
     std::basic_string s1{NotAnItertor{}, NotAnItertor{}, std::allocator<char>{}}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'basic_string'}}
     }
     { // Not an input iterator
-    const char16_t* s = u"12345678901234";
     std::basic_string<char16_t> s0;
     std::basic_string s1{std::back_insert_iterator(s0), //  expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'basic_string'}}
                          std::back_insert_iterator(s0),
@@ -49,6 +48,7 @@ int main(int, char**)
     }
     { // Not an allocator
     const wchar_t* s = L"12345678901234";
+    (void)s;
     std::basic_string s1{s, s+10, NotAnAllocator<wchar_t>{}}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'basic_string'}}
     }
 

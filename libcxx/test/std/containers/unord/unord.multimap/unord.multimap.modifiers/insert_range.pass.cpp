@@ -41,7 +41,7 @@ int main(int, char**)
             P(2, "four"),
         };
         C c;
-        c.insert(input_iterator<P*>(a), input_iterator<P*>(a + sizeof(a)/sizeof(a[0])));
+        c.insert(cpp17_input_iterator<P*>(a), cpp17_input_iterator<P*>(a + sizeof(a)/sizeof(a[0])));
         assert(c.size() == 6);
         typedef std::pair<C::iterator, C::iterator> Eq;
         Eq eq = c.equal_range(1);
@@ -83,7 +83,7 @@ int main(int, char**)
             P(2, "four"),
         };
         C c;
-        c.insert(input_iterator<P*>(a), input_iterator<P*>(a + sizeof(a)/sizeof(a[0])));
+        c.insert(cpp17_input_iterator<P*>(a), cpp17_input_iterator<P*>(a + sizeof(a)/sizeof(a[0])));
         assert(c.size() == 6);
         typedef std::pair<C::iterator, C::iterator> Eq;
         Eq eq = c.equal_range(1);

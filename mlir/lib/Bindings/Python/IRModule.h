@@ -473,6 +473,10 @@ public:
   /// Creates an OpView suitable for this operation.
   pybind11::object createOpView();
 
+  /// Erases the underlying MlirOperation, removes its pointer from the
+  /// parent context's live operations map, and sets the valid bit false.
+  void erase();
+
 private:
   PyOperation(PyMlirContextRef contextRef, MlirOperation operation);
   static PyOperationRef createInstance(PyMlirContextRef contextRef,
@@ -705,6 +709,49 @@ private:
   MlirType type;
 };
 
+/// CRTP base classes for Python types that subclass Type and should be
+/// castable from it (i.e. via something like IntegerType(t)).
+/// By default, type class hierarchies are one level deep (i.e. a
+/// concrete type class extends PyType); however, intermediate python-visible
+/// base classes can be modeled by specifying a BaseTy.
+template <typename DerivedTy, typename BaseTy = PyType>
+class PyConcreteType : public BaseTy {
+public:
+  // Derived classes must define statics for:
+  //   IsAFunctionTy isaFunction
+  //   const char *pyClassName
+  using ClassTy = pybind11::class_<DerivedTy, BaseTy>;
+  using IsAFunctionTy = bool (*)(MlirType);
+
+  PyConcreteType() = default;
+  PyConcreteType(PyMlirContextRef contextRef, MlirType t)
+      : BaseTy(std::move(contextRef), t) {}
+  PyConcreteType(PyType &orig)
+      : PyConcreteType(orig.getContext(), castFrom(orig)) {}
+
+  static MlirType castFrom(PyType &orig) {
+    if (!DerivedTy::isaFunction(orig)) {
+      auto origRepr = pybind11::repr(pybind11::cast(orig)).cast<std::string>();
+      throw SetPyError(PyExc_ValueError, llvm::Twine("Cannot cast type to ") +
+                                             DerivedTy::pyClassName +
+                                             " (from " + origRepr + ")");
+    }
+    return orig;
+  }
+
+  static void bind(pybind11::module &m) {
+    auto cls = ClassTy(m, DerivedTy::pyClassName);
+    cls.def(pybind11::init<PyType &>(), pybind11::keep_alive<0, 1>());
+    cls.def_static("isinstance", [](PyType &otherType) -> bool {
+      return DerivedTy::isaFunction(otherType);
+    });
+    DerivedTy::bindDerived(cls);
+  }
+
+  /// Implemented by derived classes to add methods to the Python subclass.
+  static void bindDerived(ClassTy &m) {}
+};
+
 /// Wrapper around the generic MlirValue.
 /// Values are managed completely by the operation that resulted in their
 /// definition. For op result value, this is the operation that defines the
@@ -720,6 +767,13 @@ public:
   PyOperationRef &getParentOperation() { return parentOperation; }
 
   void checkValid() { return parentOperation->checkValid(); }
+
+  /// Gets a capsule wrapping the void* within the MlirValue.
+  pybind11::object getCapsule();
+
+  /// Creates a PyValue from the MlirValue wrapped by a capsule. Ownership of
+  /// the underlying MlirValue is still tied to the owning operation.
+  static PyValue createFromCapsule(pybind11::object capsule);
 
 private:
   PyOperationRef parentOperation;

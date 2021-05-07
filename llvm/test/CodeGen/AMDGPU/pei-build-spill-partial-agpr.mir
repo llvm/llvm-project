@@ -43,6 +43,7 @@
   attributes #2 = { nounwind "amdgpu-num-vgpr"="3" }
   attributes #3 = { nounwind "amdgpu-num-vgpr"="4" }
   attributes #4 = { nounwind "amdgpu-num-vgpr"="5" }
+...
 
 ---
 name:            test_spill_v2_partial_agpr

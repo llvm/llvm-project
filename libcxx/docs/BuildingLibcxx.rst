@@ -98,7 +98,10 @@ CMake + ninja (MSVC)
 ~~~~~~~~~~~~~~~~~~~~
 
 Building with ninja is required for development to enable tests.
-Running the tests also requires a Bash shell and Python to be available.
+A couple of tests require Bash to be available, and a couple dozens
+of tests require other posix tools (cp, grep and similar - LLVM's tests
+require the same). Without those tools the vast majority of tests
+can still be ran successfully.
 
 If Git for Windows is available, that can be used to provide the bash
 shell by adding the right bin directory to the path, e.g.

@@ -13,6 +13,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
@@ -466,6 +467,12 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
     if (!EC)
       return std::move(Result);
   }
+
+#ifdef __MVS__
+  // Set codepage auto-conversion for z/OS.
+  if (auto EC = llvm::enableAutoConversion(FD))
+    return EC;
+#endif
 
   auto Buf = WritableMemoryBuffer::getNewUninitMemBuffer(MapSize, Filename);
   if (!Buf) {

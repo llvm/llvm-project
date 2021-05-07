@@ -661,6 +661,11 @@ bool AMDGPUPromoteAllocaImpl::collectUsesWithPtrTypes(
       continue;
     }
 
+    // Do not promote vector/aggregate type instructions. It is hard to track
+    // their users.
+    if (isa<InsertValueInst>(User) || isa<InsertElementInst>(User))
+      return false;
+
     if (!User->getType()->isPointerTy())
       continue;
 

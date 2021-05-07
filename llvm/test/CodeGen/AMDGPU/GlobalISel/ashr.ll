@@ -1643,12 +1643,8 @@ define <2 x i64> @v_ashr_v2i64(<2 x i64> %value, <2 x i64> %amount) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_mov_b32_e32 v10, v0
-; GFX10-NEXT:    v_mov_b32_e32 v11, v1
-; GFX10-NEXT:    v_mov_b32_e32 v7, v2
-; GFX10-NEXT:    v_mov_b32_e32 v8, v3
-; GFX10-NEXT:    v_ashrrev_i64 v[0:1], v4, v[10:11]
-; GFX10-NEXT:    v_ashrrev_i64 v[2:3], v6, v[7:8]
+; GFX10-NEXT:    v_ashrrev_i64 v[0:1], v4, v[0:1]
+; GFX10-NEXT:    v_ashrrev_i64 v[2:3], v6, v[2:3]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %result = ashr <2 x i64> %value, %amount
   ret <2 x i64> %result

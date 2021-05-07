@@ -333,8 +333,8 @@ getOutputStream(StringRef Path, DiagnosticsEngine &Diags, bool Binary) {
   return Out;
 }
 
-static bool ExecuteAssembler(AssemblerInvocation &Opts,
-                             DiagnosticsEngine &Diags) {
+static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
+                                 DiagnosticsEngine &Diags) {
   // Get the target specific parser.
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(Opts.Triple, Error);
@@ -387,7 +387,15 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
   std::unique_ptr<MCObjectFileInfo> MOFI(new MCObjectFileInfo());
 
-  MCContext Ctx(MAI.get(), MRI.get(), MOFI.get(), &SrcMgr, &MCOptions);
+  // Build up the feature string from the target feature list.
+  std::string FS = llvm::join(Opts.Features, ",");
+
+  std::unique_ptr<MCSubtargetInfo> STI(
+      TheTarget->createMCSubtargetInfo(Opts.Triple, Opts.CPU, FS));
+  assert(STI && "Unable to create subtarget info!");
+
+  MCContext Ctx(Triple(Opts.Triple), MAI.get(), MRI.get(), MOFI.get(),
+                STI.get(), &SrcMgr, &MCOptions);
 
   bool PIC = false;
   if (Opts.RelocationModel == "static") {
@@ -400,7 +408,7 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
     PIC = false;
   }
 
-  MOFI->InitMCObjectFileInfo(Triple(Opts.Triple), PIC, Ctx);
+  MOFI->initMCObjectFileInfo(Ctx, PIC);
   if (Opts.SaveTemporaryLabels)
     Ctx.setAllowTemporaryLabels(false);
   if (Opts.GenDwarfForAssembly)
@@ -428,17 +436,10 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
     Ctx.setGenDwarfRootFile(Opts.InputFile,
                             SrcMgr.getMemoryBuffer(BufferIndex)->getBuffer());
 
-  // Build up the feature string from the target feature list.
-  std::string FS = llvm::join(Opts.Features, ",");
-
   std::unique_ptr<MCStreamer> Str;
 
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
   assert(MCII && "Unable to create instruction info!");
-
-  std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(Opts.Triple, Opts.CPU, FS));
-  assert(STI && "Unable to create subtarget info!");
 
   raw_pwrite_stream *Out = FDOS.get();
   std::unique_ptr<buffer_ostream> BOS;
@@ -493,8 +494,7 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
 
   // When -fembed-bitcode is passed to clang_as, a 1-byte marker
   // is emitted in __LLVM,__asm section if the object file is MachO format.
-  if (Opts.EmbedBitcode && Ctx.getObjectFileInfo()->getObjectFileType() ==
-                               MCObjectFileInfo::IsMachO) {
+  if (Opts.EmbedBitcode && Ctx.getObjectFileType() == MCContext::IsMachO) {
     MCSection *AsmLabel = Ctx.getMachOSection(
         "__LLVM", "__asm", MachO::S_REGULAR, 4, SectionKind::getReadOnly());
     Str.get()->SwitchSection(AsmLabel);
@@ -531,12 +531,12 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
     Failed = Parser->Run(Opts.NoInitialTextSection);
   }
 
-  // Parser has a reference to the output stream (Str), so close Parser first.
-  Parser.reset();
-  Str.reset();
-  // Close the output stream early.
-  BOS.reset();
-  FDOS.reset();
+  return Failed;
+}
+
+static bool ExecuteAssembler(AssemblerInvocation &Opts,
+                             DiagnosticsEngine &Diags) {
+  bool Failed = ExecuteAssemblerImpl(Opts, Diags);
 
   // Delete output file if there were errors.
   if (Failed) {

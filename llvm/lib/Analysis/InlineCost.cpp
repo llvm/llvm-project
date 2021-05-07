@@ -390,7 +390,6 @@ protected:
   bool visitPtrToInt(PtrToIntInst &I);
   bool visitIntToPtr(IntToPtrInst &I);
   bool visitCastInst(CastInst &I);
-  bool visitUnaryInstruction(UnaryInstruction &I);
   bool visitCmpInst(CmpInst &I);
   bool visitSub(BinaryOperator &I);
   bool visitBinaryOperator(BinaryOperator &I);
@@ -1040,6 +1039,8 @@ bool CallAnalyzer::isGEPFree(GetElementPtrInst &GEP) {
 }
 
 bool CallAnalyzer::visitAlloca(AllocaInst &I) {
+  disableSROA(I.getOperand(0));
+
   // Check whether inlining will turn a dynamic alloca into a static
   // alloca and handle that case.
   if (I.isArrayAllocation()) {
@@ -1057,11 +1058,9 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
       AllocatedSize = SaturatingMultiplyAdd(
           AllocSize->getLimitedValue(), DL.getTypeAllocSize(Ty).getKnownMinSize(),
           AllocatedSize);
-      if (AllocatedSize > InlineConstants::MaxSimplifiedDynamicAllocaToInline) {
+      if (AllocatedSize > InlineConstants::MaxSimplifiedDynamicAllocaToInline)
         HasDynamicAlloca = true;
-        return false;
-      }
-      return Base::visitAlloca(I);
+      return false;
     }
   }
 
@@ -1072,15 +1071,13 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
         SaturatingAdd(DL.getTypeAllocSize(Ty).getKnownMinSize(), AllocatedSize);
   }
 
-  // We will happily inline static alloca instructions.
-  if (I.isStaticAlloca())
-    return Base::visitAlloca(I);
-
   // FIXME: This is overly conservative. Dynamic allocas are inefficient for
   // a variety of reasons, and so we would like to not inline them into
   // functions which don't currently have a dynamic alloca. This simply
   // disables inlining altogether in the presence of a dynamic alloca.
-  HasDynamicAlloca = true;
+  if (!I.isStaticAlloca())
+    HasDynamicAlloca = true;
+
   return false;
 }
 
@@ -1365,19 +1362,6 @@ bool CallAnalyzer::visitCastInst(CastInst &I) {
 
   return TTI.getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency) ==
          TargetTransformInfo::TCC_Free;
-}
-
-bool CallAnalyzer::visitUnaryInstruction(UnaryInstruction &I) {
-  Value *Operand = I.getOperand(0);
-  if (simplifyInstruction(I, [&](SmallVectorImpl<Constant *> &COps) {
-        return ConstantFoldInstOperands(&I, COps[0], DL);
-      }))
-    return true;
-
-  // Disable any SROA on the argument to arbitrary unary instructions.
-  disableSROA(Operand);
-
-  return false;
 }
 
 bool CallAnalyzer::paramHasAttr(Argument *A, Attribute::AttrKind Attr) {
@@ -1775,8 +1759,8 @@ bool CallAnalyzer::visitExtractValue(ExtractValueInst &I) {
       }))
     return true;
 
-  // SROA can look through these but give them a cost.
-  return false;
+  // SROA can't look through these, but they may be free.
+  return Base::visitExtractValue(I);
 }
 
 bool CallAnalyzer::visitInsertValue(InsertValueInst &I) {
@@ -1788,8 +1772,8 @@ bool CallAnalyzer::visitInsertValue(InsertValueInst &I) {
       }))
     return true;
 
-  // SROA can look through these but give them a cost.
-  return false;
+  // SROA can't look through these, but they may be free.
+  return Base::visitInsertValue(I);
 }
 
 /// Try to simplify a call site.
@@ -2460,7 +2444,7 @@ int llvm::getCallsiteCost(CallBase &Call, const DataLayout &DL) {
       // We approximate the number of loads and stores needed by dividing the
       // size of the byval type by the target's pointer size.
       PointerType *PTy = cast<PointerType>(Call.getArgOperand(I)->getType());
-      unsigned TypeSize = DL.getTypeSizeInBits(PTy->getElementType());
+      unsigned TypeSize = DL.getTypeSizeInBits(Call.getParamByValType(I));
       unsigned AS = PTy->getAddressSpace();
       unsigned PointerSize = DL.getPointerSizeInBits(AS);
       // Ceiling division.

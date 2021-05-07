@@ -26,7 +26,7 @@ certain source-level entities to:
 
 To achieve this, user may create a file listing the entities they want to
 ignore, and pass it to clang at compile-time using
-``-fsanitize-blacklist`` flag. See :doc:`UsersManual` for details.
+``-fsanitize-ignorelist`` flag. See :doc:`UsersManual` for details.
 
 Example
 =======
@@ -40,19 +40,19 @@ Example
     a[10] = 1;
   }
   int main() { bad_foo(); }
-  $ cat blacklist.txt
+  $ cat ignorelist.txt
   # Ignore reports from bad_foo function.
   fun:bad_foo
   $ clang -fsanitize=address foo.c ; ./a.out
   # AddressSanitizer prints an error report.
-  $ clang -fsanitize=address -fsanitize-blacklist=blacklist.txt foo.c ; ./a.out
+  $ clang -fsanitize=address -fsanitize-ignorelist=ignorelist.txt foo.c ; ./a.out
   # No error report here.
 
 Format
 ======
 
-Blacklists consist of entries, optionally grouped into sections. Empty lines and
-lines starting with "#" are ignored.
+Ignorelists consist of entries, optionally grouped into sections. Empty lines
+and lines starting with "#" are ignored.
 
 Section names are regular expressions written in square brackets that denote
 which sanitizer the following entries apply to. For example, ``[address]``
@@ -86,7 +86,7 @@ tool-specific docs.
     fun:*BadFunction*
     # Specific sanitizer tools may introduce categories.
     src:/special/path/*=special_sources
-    # Sections can be used to limit blacklist entries to specific sanitizers
+    # Sections can be used to limit ignorelist entries to specific sanitizers
     [address]
     fun:*BadASanFunc*
     # Section names are regular expressions

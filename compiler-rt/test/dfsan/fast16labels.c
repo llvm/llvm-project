@@ -1,6 +1,8 @@
 // RUN: %clang_dfsan %s -mllvm -dfsan-fast-16-labels -o %t
 // RUN: %run %t
 //
+// REQUIRES: x86_64-target-arch
+//
 // Tests fast16labels mode.
 
 #include <sanitizer/dfsan_interface.h>

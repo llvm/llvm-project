@@ -14,9 +14,9 @@ body:             |
     ; CHECK-LABEL: name: sextinreg_ashr_to_sbfx
     ; CHECK: liveins: $w0
     ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 14
-    ; CHECK: %sext_inreg:_(s32) = G_SBFX %x, [[C]](s32), [[C1]]
+    ; CHECK: %lsb:_(s32) = G_CONSTANT i32 5
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
+    ; CHECK: %sext_inreg:_(s32) = G_SBFX %x, %lsb(s32), [[C]]
     ; CHECK: $w0 = COPY %sext_inreg(s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
@@ -37,9 +37,9 @@ body:             |
     ; CHECK-LABEL: name: sextinreg_lshr_to_sbfx
     ; CHECK: liveins: $w0
     ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 14
-    ; CHECK: %sext_inreg:_(s32) = G_SBFX %x, [[C]](s32), [[C1]]
+    ; CHECK: %lsb:_(s32) = G_CONSTANT i32 5
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
+    ; CHECK: %sext_inreg:_(s32) = G_SBFX %x, %lsb(s32), [[C]]
     ; CHECK: $w0 = COPY %sext_inreg(s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0

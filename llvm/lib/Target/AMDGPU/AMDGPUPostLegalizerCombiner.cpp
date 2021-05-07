@@ -66,6 +66,8 @@ public:
   bool matchCvtF32UByteN(MachineInstr &MI, CvtF32UByteMatchInfo &MatchInfo);
   void applyCvtF32UByteN(MachineInstr &MI,
                          const CvtF32UByteMatchInfo &MatchInfo);
+
+  bool matchRemoveFcanonicalize(MachineInstr &MI, Register &Reg);
 };
 
 bool AMDGPUPostLegalizerCombinerHelper::matchFMinFMaxLegacy(
@@ -243,6 +245,14 @@ void AMDGPUPostLegalizerCombinerHelper::applyCvtF32UByteN(
   assert(MI.getOpcode() != NewOpc);
   B.buildInstr(NewOpc, {MI.getOperand(0)}, {CvtSrc}, MI.getFlags());
   MI.eraseFromParent();
+}
+
+bool AMDGPUPostLegalizerCombinerHelper::matchRemoveFcanonicalize(
+    MachineInstr &MI, Register &Reg) {
+  const SITargetLowering *TLI = static_cast<const SITargetLowering *>(
+      MF.getSubtarget().getTargetLowering());
+  Reg = MI.getOperand(1).getReg();
+  return TLI->isCanonicalized(Reg, MF);
 }
 
 class AMDGPUPostLegalizerCombinerHelperState {

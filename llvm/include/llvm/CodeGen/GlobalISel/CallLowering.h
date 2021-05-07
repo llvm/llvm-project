@@ -104,7 +104,7 @@ public:
     ArgInfo OrigRet;
 
     /// List of descriptors of the arguments passed to the function.
-    SmallVector<ArgInfo, 8> OrigArgs;
+    SmallVector<ArgInfo, 32> OrigArgs;
 
     /// Valid if the call has a swifterror inout parameter, and contains the
     /// vreg that the swifterror should be copied into after the call.

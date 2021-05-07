@@ -29,7 +29,7 @@ test()
 
 int main(int, char**)
 {
-    test<input_iterator<char*> >();
+    test<cpp17_input_iterator<char*> >();
     test<forward_iterator<char*> >();
     test<bidirectional_iterator<char*> >();
     test<random_access_iterator<char*> >();

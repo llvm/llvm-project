@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s hicpp-multiway-paths-covered %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: hicpp-multiway-paths-covered.WarnOnMissingElse, value: 1}]}'\
+// RUN:  [{key: hicpp-multiway-paths-covered.WarnOnMissingElse, value: true}]}'\
 // RUN: --
 
 enum OS { Mac,

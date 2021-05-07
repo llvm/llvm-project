@@ -2438,6 +2438,20 @@ TEST(Hover, DocsFromAST) {
   }
 }
 
+TEST(Hover, NoCrash) {
+  Annotations T(R"cpp(
+    /* error-ok */
+    template<typename T> T foo(T);
+
+    // Setter variable heuristic might fail if the callexpr is broken.
+    struct X { int Y; void [[^setY]](float) { Y = foo(undefined); } };)cpp");
+
+  TestTU TU = TestTU::withCode(T.code());
+  auto AST = TU.build();
+  for (const auto &P : T.points())
+    getHover(AST, P, format::getLLVMStyle(), nullptr);
+}
+
 TEST(Hover, DocsFromMostSpecial) {
   Annotations T(R"cpp(
   // doc1

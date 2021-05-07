@@ -1,6 +1,6 @@
 ; Test that llvm-reduce can remove dso_local.
 ;
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=global-values --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefix=CHECK-FINAL %s < %t
 
 ; CHECK-INTERESTINGNESS: declare
@@ -22,3 +22,7 @@ declare dso_local void @f0(i32, i32)
 
 declare dso_local void @f1(i32, i32)
 
+; CHECK-INTERESTINGNESS: define {{.*}} @f2
+define private void @f2(i32, i32) {
+  ret void
+}

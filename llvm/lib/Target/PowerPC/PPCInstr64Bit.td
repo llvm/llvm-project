@@ -229,42 +229,42 @@ def : Pat<(PPCcall_nop (i64 mcsym:$dst)),
 let Defs = [CR0] in {
   def ATOMIC_LOAD_ADD_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_ADD_I64",
-    [(set i64:$dst, (atomic_load_add_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_add_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_SUB_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_SUB_I64",
-    [(set i64:$dst, (atomic_load_sub_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_sub_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_OR_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_OR_I64",
-    [(set i64:$dst, (atomic_load_or_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_or_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_XOR_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_XOR_I64",
-    [(set i64:$dst, (atomic_load_xor_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_xor_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_AND_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_AND_i64",
-    [(set i64:$dst, (atomic_load_and_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_and_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_NAND_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_NAND_I64",
-    [(set i64:$dst, (atomic_load_nand_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_nand_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_MIN_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_MIN_I64",
-    [(set i64:$dst, (atomic_load_min_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_min_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_MAX_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_MAX_I64",
-    [(set i64:$dst, (atomic_load_max_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_max_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_UMIN_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_UMIN_I64",
-    [(set i64:$dst, (atomic_load_umin_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_umin_64 ForceXForm:$ptr, i64:$incr))]>;
   def ATOMIC_LOAD_UMAX_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_UMAX_I64",
-    [(set i64:$dst, (atomic_load_umax_64 xoaddr:$ptr, i64:$incr))]>;
+    [(set i64:$dst, (atomic_load_umax_64 ForceXForm:$ptr, i64:$incr))]>;
 
   def ATOMIC_CMP_SWAP_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$old, g8rc:$new), "#ATOMIC_CMP_SWAP_I64",
-    [(set i64:$dst, (atomic_cmp_swap_64 xoaddr:$ptr, i64:$old, i64:$new))]>;
+    [(set i64:$dst, (atomic_cmp_swap_64 ForceXForm:$ptr, i64:$old, i64:$new))]>;
 
   def ATOMIC_SWAP_I64 : PPCCustomInserterPseudo<
     (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$new), "#ATOMIC_SWAP_I64",
-    [(set i64:$dst, (atomic_swap_64 xoaddr:$ptr, i64:$new))]>;
+    [(set i64:$dst, (atomic_swap_64 ForceXForm:$ptr, i64:$new))]>;
 }
 
 // Instructions to support atomic operations
@@ -1062,21 +1062,21 @@ let PPC970_Unit = 2 in {
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in
 def LHA8: DForm_1<42, (outs g8rc:$rD), (ins memri:$src),
                   "lha $rD, $src", IIC_LdStLHA,
-                  [(set i64:$rD, (sextloadi16 iaddr:$src))]>,
+                  [(set i64:$rD, (sextloadi16 DForm:$src))]>,
                   PPC970_DGroup_Cracked;
 def LWA  : DSForm_1<58, 2, (outs g8rc:$rD), (ins memrix:$src),
                     "lwa $rD, $src", IIC_LdStLWA,
                     [(set i64:$rD,
-                          (DSFormSextLoadi32 iaddrX4:$src))]>, isPPC64,
+                          (sextloadi32 DSForm:$src))]>, isPPC64,
                     PPC970_DGroup_Cracked;
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in
 def LHAX8: XForm_1_memOp<31, 343, (outs g8rc:$rD), (ins memrr:$src),
                         "lhax $rD, $src", IIC_LdStLHA,
-                        [(set i64:$rD, (sextloadi16 xaddr:$src))]>,
+                        [(set i64:$rD, (sextloadi16 XForm:$src))]>,
                         PPC970_DGroup_Cracked;
 def LWAX : XForm_1_memOp<31, 341, (outs g8rc:$rD), (ins memrr:$src),
                         "lwax $rD, $src", IIC_LdStLHA,
-                        [(set i64:$rD, (sextloadi32 xaddrX4:$src))]>, isPPC64,
+                        [(set i64:$rD, (sextloadi32 XForm:$src))]>, isPPC64,
                         PPC970_DGroup_Cracked;
 // For fast-isel:
 let isCodeGenOnly = 1, mayLoad = 1, hasSideEffects = 0 in {
@@ -1117,23 +1117,23 @@ let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 let PPC970_Unit = 2 in {
 def LBZ8 : DForm_1<34, (outs g8rc:$rD), (ins memri:$src),
                   "lbz $rD, $src", IIC_LdStLoad,
-                  [(set i64:$rD, (zextloadi8 iaddr:$src))]>;
+                  [(set i64:$rD, (zextloadi8 DForm:$src))]>;
 def LHZ8 : DForm_1<40, (outs g8rc:$rD), (ins memri:$src),
                   "lhz $rD, $src", IIC_LdStLoad,
-                  [(set i64:$rD, (zextloadi16 iaddr:$src))]>;
+                  [(set i64:$rD, (zextloadi16 DForm:$src))]>;
 def LWZ8 : DForm_1<32, (outs g8rc:$rD), (ins memri:$src),
                   "lwz $rD, $src", IIC_LdStLoad,
-                  [(set i64:$rD, (zextloadi32 iaddr:$src))]>, isPPC64;
+                  [(set i64:$rD, (zextloadi32 DForm:$src))]>, isPPC64;
 
 def LBZX8 : XForm_1_memOp<31,  87, (outs g8rc:$rD), (ins memrr:$src),
                           "lbzx $rD, $src", IIC_LdStLoad,
-                          [(set i64:$rD, (zextloadi8 xaddr:$src))]>;
+                          [(set i64:$rD, (zextloadi8 XForm:$src))]>;
 def LHZX8 : XForm_1_memOp<31, 279, (outs g8rc:$rD), (ins memrr:$src),
                           "lhzx $rD, $src", IIC_LdStLoad,
-                          [(set i64:$rD, (zextloadi16 xaddr:$src))]>;
+                          [(set i64:$rD, (zextloadi16 XForm:$src))]>;
 def LWZX8 : XForm_1_memOp<31,  23, (outs g8rc:$rD), (ins memrr:$src),
                           "lwzx $rD, $src", IIC_LdStLoad,
-                          [(set i64:$rD, (zextloadi32 xaddr:$src))]>;
+                          [(set i64:$rD, (zextloadi32 XForm:$src))]>;
                    
                    
 // Update forms.
@@ -1178,7 +1178,7 @@ def LWZUX8 : XForm_1_memOp<31, 55, (outs g8rc:$rD, ptr_rc_nor0:$ea_result),
 let PPC970_Unit = 2 in {
 def LD   : DSForm_1<58, 0, (outs g8rc:$rD), (ins memrix:$src),
                     "ld $rD, $src", IIC_LdStLD,
-                    [(set i64:$rD, (DSFormLoad iaddrX4:$src))]>, isPPC64;
+                    [(set i64:$rD, (load DSForm:$src))]>, isPPC64;
 // The following four definitions are selected for small code model only.
 // Otherwise, we need to create two instructions to form a 32-bit offset,
 // so we have a custom matcher for TOC_ENTRY in PPCDAGToDAGIsel::Select().
@@ -1201,10 +1201,10 @@ def LDtocBA: PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc:$reg),
 
 def LDX  : XForm_1_memOp<31,  21, (outs g8rc:$rD), (ins memrr:$src),
                         "ldx $rD, $src", IIC_LdStLD,
-                        [(set i64:$rD, (load xaddrX4:$src))]>, isPPC64;
+                        [(set i64:$rD, (load XForm:$src))]>, isPPC64;
 def LDBRX : XForm_1_memOp<31,  532, (outs g8rc:$rD), (ins memrr:$src),
                           "ldbrx $rD, $src", IIC_LdStLoad,
-                          [(set i64:$rD, (PPClbrx xoaddr:$src, i64))]>, isPPC64;
+                          [(set i64:$rD, (PPClbrx ForceXForm:$src, i64))]>, isPPC64;
 
 let mayLoad = 1, hasSideEffects = 0, isCodeGenOnly = 1 in {
 def LHBRX8 : XForm_1_memOp<31, 790, (outs g8rc:$rD), (ins memrr:$src),
@@ -1380,38 +1380,38 @@ let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 // Truncating stores.                       
 def STB8 : DForm_1<38, (outs), (ins g8rc:$rS, memri:$src),
                    "stb $rS, $src", IIC_LdStStore,
-                   [(truncstorei8 i64:$rS, iaddr:$src)]>;
+                   [(truncstorei8 i64:$rS, DForm:$src)]>;
 def STH8 : DForm_1<44, (outs), (ins g8rc:$rS, memri:$src),
                    "sth $rS, $src", IIC_LdStStore,
-                   [(truncstorei16 i64:$rS, iaddr:$src)]>;
+                   [(truncstorei16 i64:$rS, DForm:$src)]>;
 def STW8 : DForm_1<36, (outs), (ins g8rc:$rS, memri:$src),
                    "stw $rS, $src", IIC_LdStStore,
-                   [(truncstorei32 i64:$rS, iaddr:$src)]>;
+                   [(truncstorei32 i64:$rS, DForm:$src)]>;
 def STBX8 : XForm_8_memOp<31, 215, (outs), (ins g8rc:$rS, memrr:$dst),
                           "stbx $rS, $dst", IIC_LdStStore,
-                          [(truncstorei8 i64:$rS, xaddr:$dst)]>,
+                          [(truncstorei8 i64:$rS, XForm:$dst)]>,
                           PPC970_DGroup_Cracked;
 def STHX8 : XForm_8_memOp<31, 407, (outs), (ins g8rc:$rS, memrr:$dst),
                           "sthx $rS, $dst", IIC_LdStStore,
-                          [(truncstorei16 i64:$rS, xaddr:$dst)]>,
+                          [(truncstorei16 i64:$rS, XForm:$dst)]>,
                           PPC970_DGroup_Cracked;
 def STWX8 : XForm_8_memOp<31, 151, (outs), (ins g8rc:$rS, memrr:$dst),
                           "stwx $rS, $dst", IIC_LdStStore,
-                          [(truncstorei32 i64:$rS, xaddr:$dst)]>,
+                          [(truncstorei32 i64:$rS, XForm:$dst)]>,
                           PPC970_DGroup_Cracked;
 } // Interpretation64Bit
 
 // Normal 8-byte stores.
 def STD  : DSForm_1<62, 0, (outs), (ins g8rc:$rS, memrix:$dst),
                     "std $rS, $dst", IIC_LdStSTD,
-                    [(DSFormStore i64:$rS, iaddrX4:$dst)]>, isPPC64;
+                    [(store i64:$rS, DSForm:$dst)]>, isPPC64;
 def STDX  : XForm_8_memOp<31, 149, (outs), (ins g8rc:$rS, memrr:$dst),
                           "stdx $rS, $dst", IIC_LdStSTD,
-                          [(store i64:$rS, xaddrX4:$dst)]>, isPPC64,
+                          [(store i64:$rS, XForm:$dst)]>, isPPC64,
                           PPC970_DGroup_Cracked;
 def STDBRX: XForm_8_memOp<31, 660, (outs), (ins g8rc:$rS, memrr:$dst),
                           "stdbrx $rS, $dst", IIC_LdStStore,
-                          [(PPCstbrx i64:$rS, xoaddr:$dst, i64)]>, isPPC64,
+                          [(PPCstbrx i64:$rS, ForceXForm:$dst, i64)]>, isPPC64,
                           PPC970_DGroup_Cracked;
 }
 
@@ -1567,26 +1567,26 @@ def        : Pat<(not i64:$in),
                  (i64not $in)>;
 
 // Extending loads with i64 targets.
-def : Pat<(zextloadi1 iaddr:$src),
-          (LBZ8 iaddr:$src)>;
-def : Pat<(zextloadi1 xaddr:$src),
-          (LBZX8 xaddr:$src)>;
-def : Pat<(extloadi1 iaddr:$src),
-          (LBZ8 iaddr:$src)>;
-def : Pat<(extloadi1 xaddr:$src),
-          (LBZX8 xaddr:$src)>;
-def : Pat<(extloadi8 iaddr:$src),
-          (LBZ8 iaddr:$src)>;
-def : Pat<(extloadi8 xaddr:$src),
-          (LBZX8 xaddr:$src)>;
-def : Pat<(extloadi16 iaddr:$src),
-          (LHZ8 iaddr:$src)>;
-def : Pat<(extloadi16 xaddr:$src),
-          (LHZX8 xaddr:$src)>;
-def : Pat<(extloadi32 iaddr:$src),
-          (LWZ8 iaddr:$src)>;
-def : Pat<(extloadi32 xaddr:$src),
-          (LWZX8 xaddr:$src)>;
+def : Pat<(zextloadi1 DForm:$src),
+          (LBZ8 DForm:$src)>;
+def : Pat<(zextloadi1 XForm:$src),
+          (LBZX8 XForm:$src)>;
+def : Pat<(extloadi1 DForm:$src),
+          (LBZ8 DForm:$src)>;
+def : Pat<(extloadi1 XForm:$src),
+          (LBZX8 XForm:$src)>;
+def : Pat<(extloadi8 DForm:$src),
+          (LBZ8 DForm:$src)>;
+def : Pat<(extloadi8 XForm:$src),
+          (LBZX8 XForm:$src)>;
+def : Pat<(extloadi16 DForm:$src),
+          (LHZ8 DForm:$src)>;
+def : Pat<(extloadi16 XForm:$src),
+          (LHZX8 XForm:$src)>;
+def : Pat<(extloadi32 DForm:$src),
+          (LWZ8 DForm:$src)>;
+def : Pat<(extloadi32 XForm:$src),
+          (LWZX8 XForm:$src)>;
 
 // Standard shifts.  These are represented separately from the real shifts above
 // so that we can distinguish between shifts that allow 6-bit and 7-bit shift
@@ -1640,21 +1640,12 @@ def : Pat<(add i64:$in, (PPChi tblockaddress:$g, 0)),
 def : Pat<(i64 (PPCtoc_entry tglobaltlsaddr:$disp, i64:$reg)),
           (i64 (LDtoc tglobaltlsaddr:$disp, i64:$reg))>;
 
-// Patterns to match r+r indexed loads and stores for
-// addresses without at least 4-byte alignment.
-def : Pat<(i64 (NonDSFormSextLoadi32 xoaddr:$src)),
-          (LWAX xoaddr:$src)>;
-def : Pat<(i64 (NonDSFormLoad xoaddr:$src)),
-          (LDX xoaddr:$src)>;
-def : Pat<(NonDSFormStore i64:$rS, xoaddr:$dst),
-          (STDX $rS, xoaddr:$dst)>;
-
 // 64-bits atomic loads and stores
-def : Pat<(atomic_load_64 iaddrX4:$src), (LD  memrix:$src)>;
-def : Pat<(atomic_load_64 xaddrX4:$src),  (LDX memrr:$src)>;
+def : Pat<(atomic_load_64 DSForm:$src), (LD  memrix:$src)>;
+def : Pat<(atomic_load_64 XForm:$src),  (LDX memrr:$src)>;
 
-def : Pat<(atomic_store_64 iaddrX4:$ptr, i64:$val), (STD  g8rc:$val, memrix:$ptr)>;
-def : Pat<(atomic_store_64 xaddrX4:$ptr,  i64:$val), (STDX g8rc:$val, memrr:$ptr)>;
+def : Pat<(atomic_store_64 DSForm:$ptr, i64:$val), (STD  g8rc:$val, memrix:$ptr)>;
+def : Pat<(atomic_store_64 XForm:$ptr,  i64:$val), (STDX g8rc:$val, memrr:$ptr)>;
 
 let Predicates = [IsISA3_0] in {
 // DARN (deliver random number)

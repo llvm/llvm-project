@@ -204,11 +204,6 @@ public:
 
   void replaceVariableLocationOp(Value *OldValue, Value *NewValue);
   void replaceVariableLocationOp(unsigned OpIdx, Value *NewValue);
-  /// Adding a new location operand will always result in this intrinsic using
-  /// an ArgList, and must always be accompanied by a new expression that uses
-  /// the new operand.
-  void addVariableLocationOps(ArrayRef<Value *> NewValues,
-                              DIExpression *NewExpr);
 
   void setVariable(DILocalVariable *NewVar) {
     setArgOperand(1, MetadataAsValue::get(NewVar->getContext(), NewVar));
@@ -400,9 +395,11 @@ public:
 
   /// \return the mask parameter or nullptr.
   Value *getMaskParam() const;
+  void setMaskParam(Value *);
 
   /// \return the vector length parameter or nullptr.
   Value *getVectorLengthParam() const;
+  void setVectorLengthParam(Value *);
 
   /// \return whether the vector length param can be ignored.
   bool canIgnoreVectorLengthParam() const;

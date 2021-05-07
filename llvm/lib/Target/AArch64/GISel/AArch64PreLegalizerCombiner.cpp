@@ -118,6 +118,8 @@ static bool matchFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
   MachineFunction &MF = *MI.getMF();
   auto &GlobalOp = MI.getOperand(1);
   auto *GV = GlobalOp.getGlobal();
+  if (GV->isThreadLocal())
+    return false;
 
   // Don't allow anything that could represent offsets etc.
   if (MF.getSubtarget<AArch64Subtarget>().ClassifyGlobalReference(

@@ -24,6 +24,31 @@ func @log1p(%arg0 : f32) {
 
 // -----
 
+// CHECK-LABEL: func @log1p_2dvector(
+func @log1p_2dvector(%arg0 : vector<4x3xf32>) {
+  // CHECK: %[[EXTRACT:.*]] = llvm.extractvalue %arg0[0] : !llvm.array<4 x vector<3xf32>>
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<3xf32>) : vector<3xf32>
+  // CHECK: %[[ADD:.*]] = llvm.fadd %[[ONE]], %[[EXTRACT]] : vector<3xf32>
+  // CHECK: %[[LOG:.*]] = "llvm.intr.log"(%[[ADD]]) : (vector<3xf32>) -> vector<3xf32>
+  // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[LOG]], %0[0] : !llvm.array<4 x vector<3xf32>>
+  %0 = math.log1p %arg0 : vector<4x3xf32>
+  std.return
+}
+
+// -----
+
+// CHECK-LABEL: func @expm1(
+// CHECK-SAME: f32
+func @expm1(%arg0 : f32) {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
+  // CHECK: %[[EXP:.*]] = "llvm.intr.exp"(%arg0) : (f32) -> f32
+  // CHECK: %[[SUB:.*]] = llvm.fsub %[[EXP]], %[[ONE]] : f32
+  %0 = math.expm1 %arg0 : f32
+  std.return
+}
+
+// -----
+
 // CHECK-LABEL: func @rsqrt(
 // CHECK-SAME: f32
 func @rsqrt(%arg0 : f32) {
@@ -261,3 +286,39 @@ func @index_vector(%arg0: vector<4xindex>) {
   std.return
 }
 
+// -----
+
+// CHECK-LABEL: func @cmpf_2dvector(
+func @cmpf_2dvector(%arg0 : vector<4x3xf32>, %arg1 : vector<4x3xf32>) {
+  // CHECK: %[[EXTRACT1:.*]] = llvm.extractvalue %arg0[0] : !llvm.array<4 x vector<3xf32>>
+  // CHECK: %[[EXTRACT2:.*]] = llvm.extractvalue %arg1[0] : !llvm.array<4 x vector<3xf32>>
+  // CHECK: %[[CMP:.*]] = llvm.fcmp "olt" %[[EXTRACT1]], %[[EXTRACT2]] : vector<3xf32>
+  // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[CMP]], %0[0] : !llvm.array<4 x vector<3xi1>>
+  %0 = cmpf olt, %arg0, %arg1 : vector<4x3xf32>
+  std.return
+}
+
+// -----
+
+// CHECK-LABEL: func @cmpi_2dvector(
+func @cmpi_2dvector(%arg0 : vector<4x3xi32>, %arg1 : vector<4x3xi32>) {
+  // CHECK: %[[EXTRACT1:.*]] = llvm.extractvalue %arg0[0] : !llvm.array<4 x vector<3xi32>>
+  // CHECK: %[[EXTRACT2:.*]] = llvm.extractvalue %arg1[0] : !llvm.array<4 x vector<3xi32>>
+  // CHECK: %[[CMP:.*]] = llvm.icmp "ult" %[[EXTRACT1]], %[[EXTRACT2]] : vector<3xi32>
+  // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[CMP]], %0[0] : !llvm.array<4 x vector<3xi1>>
+  %0 = cmpi ult, %arg0, %arg1 : vector<4x3xi32>
+  std.return
+}
+
+// -----
+
+// CHECK-LABEL: func @select_2dvector(
+func @select_2dvector(%arg0 : vector<4x3xi1>, %arg1 : vector<4x3xi32>, %arg2 : vector<4x3xi32>) {
+  // CHECK: %[[EXTRACT1:.*]] = llvm.extractvalue %arg0[0] : !llvm.array<4 x vector<3xi1>>
+  // CHECK: %[[EXTRACT2:.*]] = llvm.extractvalue %arg1[0] : !llvm.array<4 x vector<3xi32>>
+  // CHECK: %[[EXTRACT3:.*]] = llvm.extractvalue %arg2[0] : !llvm.array<4 x vector<3xi32>>
+  // CHECK: %[[SELECT:.*]] = llvm.select %[[EXTRACT1]], %[[EXTRACT2]], %[[EXTRACT3]] : vector<3xi1>, vector<3xi32>
+  // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[SELECT]], %0[0] : !llvm.array<4 x vector<3xi32>>
+  %0 = select %arg0, %arg1, %arg2 : vector<4x3xi1>, vector<4x3xi32>
+  std.return
+}

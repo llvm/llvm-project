@@ -371,9 +371,14 @@ BreakpointSP Target::CreateBreakpoint(const FileSpecList *containingModules,
   if (move_to_nearest_code == eLazyBoolCalculate)
     move_to_nearest_code = GetMoveToNearestCode() ? eLazyBoolYes : eLazyBoolNo;
 
+  SourceLocationSpec location_spec(remapped_file, line_no, column,
+                                   check_inlines,
+                                   !static_cast<bool>(move_to_nearest_code));
+  if (!location_spec)
+    return nullptr;
+
   BreakpointResolverSP resolver_sp(new BreakpointResolverFileLine(
-      nullptr, remapped_file, line_no, column, offset, check_inlines,
-      skip_prologue, !static_cast<bool>(move_to_nearest_code)));
+      nullptr, offset, skip_prologue, location_spec));
   return CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true);
 }
 

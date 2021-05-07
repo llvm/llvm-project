@@ -44,9 +44,9 @@ int main(int, char**)
 {
     char s[] = "123";
 #if TEST_STD_VER > 17
-    test_single_pass(input_iterator<char*>(s), input_iterator<char*>(s + 1));
+    test_single_pass(cpp17_input_iterator<char*>(s), cpp17_input_iterator<char*>(s + 1));
 #else
-    test(input_iterator<char*>(s), input_iterator<char*>(s+1));
+    test(cpp17_input_iterator<char*>(s), cpp17_input_iterator<char*>(s+1));
 #endif
     test(forward_iterator<char*>(s), forward_iterator<char*>(s+1));
     test(bidirectional_iterator<char*>(s), bidirectional_iterator<char*>(s+1));

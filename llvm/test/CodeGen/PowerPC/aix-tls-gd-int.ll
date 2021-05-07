@@ -27,7 +27,7 @@ define void @storesTGUninit(i32 %Val) #0 {
 ; SMALL32-NEXT:    mr 6, 3
 ; SMALL32-NEXT:    lwz 3, L..C0(2)
 ; SMALL32-NEXT:    lwz 4, L..C1(2)
-; SMALL32-NEXT:    bla .__tls_get_addr
+; SMALL32-NEXT:    bla .__tls_get_addr[PR]
 ; SMALL32-NEXT:    stw 6, 0(3)
 ; SMALL32-NEXT:    addi 1, 1, 32
 ; SMALL32-NEXT:    lwz 0, 8(1)
@@ -44,7 +44,7 @@ define void @storesTGUninit(i32 %Val) #0 {
 ; LARGE32-NEXT:    addis 4, L..C1@u(2)
 ; LARGE32-NEXT:    lwz 3, L..C0@l(3)
 ; LARGE32-NEXT:    lwz 4, L..C1@l(4)
-; LARGE32-NEXT:    bla .__tls_get_addr
+; LARGE32-NEXT:    bla .__tls_get_addr[PR]
 ; LARGE32-NEXT:    stw 6, 0(3)
 ; LARGE32-NEXT:    addi 1, 1, 32
 ; LARGE32-NEXT:    lwz 0, 8(1)
@@ -59,7 +59,7 @@ define void @storesTGUninit(i32 %Val) #0 {
 ; SMALL64-NEXT:    mr 6, 3
 ; SMALL64-NEXT:    ld 3, L..C0(2)
 ; SMALL64-NEXT:    ld 4, L..C1(2)
-; SMALL64-NEXT:    bla .__tls_get_addr
+; SMALL64-NEXT:    bla .__tls_get_addr[PR]
 ; SMALL64-NEXT:    stw 6, 0(3)
 ; SMALL64-NEXT:    addi 1, 1, 48
 ; SMALL64-NEXT:    ld 0, 16(1)
@@ -76,7 +76,7 @@ define void @storesTGUninit(i32 %Val) #0 {
 ; LARGE64-NEXT:    addis 4, L..C1@u(2)
 ; LARGE64-NEXT:    ld 3, L..C0@l(3)
 ; LARGE64-NEXT:    ld 4, L..C1@l(4)
-; LARGE64-NEXT:    bla .__tls_get_addr
+; LARGE64-NEXT:    bla .__tls_get_addr[PR]
 ; LARGE64-NEXT:    stw 6, 0(3)
 ; LARGE64-NEXT:    addi 1, 1, 48
 ; LARGE64-NEXT:    ld 0, 16(1)
@@ -97,7 +97,7 @@ define void @storesTGInit(i32 %Val) #0 {
 ; SMALL32-NEXT:    mr 6, 3
 ; SMALL32-NEXT:    lwz 3, L..C2(2)
 ; SMALL32-NEXT:    lwz 4, L..C3(2)
-; SMALL32-NEXT:    bla .__tls_get_addr
+; SMALL32-NEXT:    bla .__tls_get_addr[PR]
 ; SMALL32-NEXT:    stw 6, 0(3)
 ; SMALL32-NEXT:    addi 1, 1, 32
 ; SMALL32-NEXT:    lwz 0, 8(1)
@@ -114,7 +114,7 @@ define void @storesTGInit(i32 %Val) #0 {
 ; LARGE32-NEXT:    addis 4, L..C3@u(2)
 ; LARGE32-NEXT:    lwz 3, L..C2@l(3)
 ; LARGE32-NEXT:    lwz 4, L..C3@l(4)
-; LARGE32-NEXT:    bla .__tls_get_addr
+; LARGE32-NEXT:    bla .__tls_get_addr[PR]
 ; LARGE32-NEXT:    stw 6, 0(3)
 ; LARGE32-NEXT:    addi 1, 1, 32
 ; LARGE32-NEXT:    lwz 0, 8(1)
@@ -129,7 +129,7 @@ define void @storesTGInit(i32 %Val) #0 {
 ; SMALL64-NEXT:    mr 6, 3
 ; SMALL64-NEXT:    ld 3, L..C2(2)
 ; SMALL64-NEXT:    ld 4, L..C3(2)
-; SMALL64-NEXT:    bla .__tls_get_addr
+; SMALL64-NEXT:    bla .__tls_get_addr[PR]
 ; SMALL64-NEXT:    stw 6, 0(3)
 ; SMALL64-NEXT:    addi 1, 1, 48
 ; SMALL64-NEXT:    ld 0, 16(1)
@@ -146,7 +146,7 @@ define void @storesTGInit(i32 %Val) #0 {
 ; LARGE64-NEXT:    addis 4, L..C3@u(2)
 ; LARGE64-NEXT:    ld 3, L..C2@l(3)
 ; LARGE64-NEXT:    ld 4, L..C3@l(4)
-; LARGE64-NEXT:    bla .__tls_get_addr
+; LARGE64-NEXT:    bla .__tls_get_addr[PR]
 ; LARGE64-NEXT:    stw 6, 0(3)
 ; LARGE64-NEXT:    addi 1, 1, 48
 ; LARGE64-NEXT:    ld 0, 16(1)
@@ -167,7 +167,7 @@ define void @storesTIUninit(i32 %Val) #0 {
 ; SMALL32-NEXT:    mr 6, 3
 ; SMALL32-NEXT:    lwz 3, L..C4(2)
 ; SMALL32-NEXT:    lwz 4, L..C5(2)
-; SMALL32-NEXT:    bla .__tls_get_addr
+; SMALL32-NEXT:    bla .__tls_get_addr[PR]
 ; SMALL32-NEXT:    stw 6, 0(3)
 ; SMALL32-NEXT:    addi 1, 1, 32
 ; SMALL32-NEXT:    lwz 0, 8(1)
@@ -184,7 +184,7 @@ define void @storesTIUninit(i32 %Val) #0 {
 ; LARGE32-NEXT:    addis 4, L..C5@u(2)
 ; LARGE32-NEXT:    lwz 3, L..C4@l(3)
 ; LARGE32-NEXT:    lwz 4, L..C5@l(4)
-; LARGE32-NEXT:    bla .__tls_get_addr
+; LARGE32-NEXT:    bla .__tls_get_addr[PR]
 ; LARGE32-NEXT:    stw 6, 0(3)
 ; LARGE32-NEXT:    addi 1, 1, 32
 ; LARGE32-NEXT:    lwz 0, 8(1)
@@ -199,7 +199,7 @@ define void @storesTIUninit(i32 %Val) #0 {
 ; SMALL64-NEXT:    mr 6, 3
 ; SMALL64-NEXT:    ld 3, L..C4(2)
 ; SMALL64-NEXT:    ld 4, L..C5(2)
-; SMALL64-NEXT:    bla .__tls_get_addr
+; SMALL64-NEXT:    bla .__tls_get_addr[PR]
 ; SMALL64-NEXT:    stw 6, 0(3)
 ; SMALL64-NEXT:    addi 1, 1, 48
 ; SMALL64-NEXT:    ld 0, 16(1)
@@ -216,7 +216,7 @@ define void @storesTIUninit(i32 %Val) #0 {
 ; LARGE64-NEXT:    addis 4, L..C5@u(2)
 ; LARGE64-NEXT:    ld 3, L..C4@l(3)
 ; LARGE64-NEXT:    ld 4, L..C5@l(4)
-; LARGE64-NEXT:    bla .__tls_get_addr
+; LARGE64-NEXT:    bla .__tls_get_addr[PR]
 ; LARGE64-NEXT:    stw 6, 0(3)
 ; LARGE64-NEXT:    addi 1, 1, 48
 ; LARGE64-NEXT:    ld 0, 16(1)
@@ -237,7 +237,7 @@ define void @storesTWUninit(i32 %Val) #0 {
 ; SMALL32-NEXT:    mr 6, 3
 ; SMALL32-NEXT:    lwz 3, L..C6(2)
 ; SMALL32-NEXT:    lwz 4, L..C7(2)
-; SMALL32-NEXT:    bla .__tls_get_addr
+; SMALL32-NEXT:    bla .__tls_get_addr[PR]
 ; SMALL32-NEXT:    stw 6, 0(3)
 ; SMALL32-NEXT:    addi 1, 1, 32
 ; SMALL32-NEXT:    lwz 0, 8(1)
@@ -254,7 +254,7 @@ define void @storesTWUninit(i32 %Val) #0 {
 ; LARGE32-NEXT:    addis 4, L..C7@u(2)
 ; LARGE32-NEXT:    lwz 3, L..C6@l(3)
 ; LARGE32-NEXT:    lwz 4, L..C7@l(4)
-; LARGE32-NEXT:    bla .__tls_get_addr
+; LARGE32-NEXT:    bla .__tls_get_addr[PR]
 ; LARGE32-NEXT:    stw 6, 0(3)
 ; LARGE32-NEXT:    addi 1, 1, 32
 ; LARGE32-NEXT:    lwz 0, 8(1)
@@ -269,7 +269,7 @@ define void @storesTWUninit(i32 %Val) #0 {
 ; SMALL64-NEXT:    mr 6, 3
 ; SMALL64-NEXT:    ld 3, L..C6(2)
 ; SMALL64-NEXT:    ld 4, L..C7(2)
-; SMALL64-NEXT:    bla .__tls_get_addr
+; SMALL64-NEXT:    bla .__tls_get_addr[PR]
 ; SMALL64-NEXT:    stw 6, 0(3)
 ; SMALL64-NEXT:    addi 1, 1, 48
 ; SMALL64-NEXT:    ld 0, 16(1)
@@ -286,7 +286,7 @@ define void @storesTWUninit(i32 %Val) #0 {
 ; LARGE64-NEXT:    addis 4, L..C7@u(2)
 ; LARGE64-NEXT:    ld 3, L..C6@l(3)
 ; LARGE64-NEXT:    ld 4, L..C7@l(4)
-; LARGE64-NEXT:    bla .__tls_get_addr
+; LARGE64-NEXT:    bla .__tls_get_addr[PR]
 ; LARGE64-NEXT:    stw 6, 0(3)
 ; LARGE64-NEXT:    addi 1, 1, 48
 ; LARGE64-NEXT:    ld 0, 16(1)
@@ -306,7 +306,7 @@ define i32 @loadsTGUninit() #1 {
 ; SMALL32-NEXT:    stwu 1, -32(1)
 ; SMALL32-NEXT:    lwz 3, L..C0(2)
 ; SMALL32-NEXT:    lwz 4, L..C1(2)
-; SMALL32-NEXT:    bla .__tls_get_addr
+; SMALL32-NEXT:    bla .__tls_get_addr[PR]
 ; SMALL32-NEXT:    lwz 4, L..C8(2)
 ; SMALL32-NEXT:    lwz 3, 0(3)
 ; SMALL32-NEXT:    lwz 4, 0(4)
@@ -325,7 +325,7 @@ define i32 @loadsTGUninit() #1 {
 ; LARGE32-NEXT:    addis 4, L..C1@u(2)
 ; LARGE32-NEXT:    lwz 3, L..C0@l(3)
 ; LARGE32-NEXT:    lwz 4, L..C1@l(4)
-; LARGE32-NEXT:    bla .__tls_get_addr
+; LARGE32-NEXT:    bla .__tls_get_addr[PR]
 ; LARGE32-NEXT:    lwz 3, 0(3)
 ; LARGE32-NEXT:    addis 4, L..C8@u(2)
 ; LARGE32-NEXT:    lwz 4, L..C8@l(4)
@@ -343,7 +343,7 @@ define i32 @loadsTGUninit() #1 {
 ; SMALL64-NEXT:    stdu 1, -48(1)
 ; SMALL64-NEXT:    ld 3, L..C0(2)
 ; SMALL64-NEXT:    ld 4, L..C1(2)
-; SMALL64-NEXT:    bla .__tls_get_addr
+; SMALL64-NEXT:    bla .__tls_get_addr[PR]
 ; SMALL64-NEXT:    ld 4, L..C8(2)
 ; SMALL64-NEXT:    lwz 3, 0(3)
 ; SMALL64-NEXT:    lwz 4, 0(4)
@@ -362,7 +362,7 @@ define i32 @loadsTGUninit() #1 {
 ; LARGE64-NEXT:    addis 4, L..C1@u(2)
 ; LARGE64-NEXT:    ld 3, L..C0@l(3)
 ; LARGE64-NEXT:    ld 4, L..C1@l(4)
-; LARGE64-NEXT:    bla .__tls_get_addr
+; LARGE64-NEXT:    bla .__tls_get_addr[PR]
 ; LARGE64-NEXT:    addis 4, L..C8@u(2)
 ; LARGE64-NEXT:    lwz 3, 0(3)
 ; LARGE64-NEXT:    ld 4, L..C8@l(4)
@@ -388,7 +388,7 @@ define i32 @loadsTGInit() #1 {
 ; SMALL32-NEXT:    stwu 1, -32(1)
 ; SMALL32-NEXT:    lwz 3, L..C2(2)
 ; SMALL32-NEXT:    lwz 4, L..C3(2)
-; SMALL32-NEXT:    bla .__tls_get_addr
+; SMALL32-NEXT:    bla .__tls_get_addr[PR]
 ; SMALL32-NEXT:    lwz 4, L..C8(2)
 ; SMALL32-NEXT:    lwz 3, 0(3)
 ; SMALL32-NEXT:    lwz 4, 0(4)
@@ -407,7 +407,7 @@ define i32 @loadsTGInit() #1 {
 ; LARGE32-NEXT:    addis 4, L..C3@u(2)
 ; LARGE32-NEXT:    lwz 3, L..C2@l(3)
 ; LARGE32-NEXT:    lwz 4, L..C3@l(4)
-; LARGE32-NEXT:    bla .__tls_get_addr
+; LARGE32-NEXT:    bla .__tls_get_addr[PR]
 ; LARGE32-NEXT:    lwz 3, 0(3)
 ; LARGE32-NEXT:    addis 4, L..C8@u(2)
 ; LARGE32-NEXT:    lwz 4, L..C8@l(4)
@@ -425,7 +425,7 @@ define i32 @loadsTGInit() #1 {
 ; SMALL64-NEXT:    stdu 1, -48(1)
 ; SMALL64-NEXT:    ld 3, L..C2(2)
 ; SMALL64-NEXT:    ld 4, L..C3(2)
-; SMALL64-NEXT:    bla .__tls_get_addr
+; SMALL64-NEXT:    bla .__tls_get_addr[PR]
 ; SMALL64-NEXT:    ld 4, L..C8(2)
 ; SMALL64-NEXT:    lwz 3, 0(3)
 ; SMALL64-NEXT:    lwz 4, 0(4)
@@ -444,7 +444,7 @@ define i32 @loadsTGInit() #1 {
 ; LARGE64-NEXT:    addis 4, L..C3@u(2)
 ; LARGE64-NEXT:    ld 3, L..C2@l(3)
 ; LARGE64-NEXT:    ld 4, L..C3@l(4)
-; LARGE64-NEXT:    bla .__tls_get_addr
+; LARGE64-NEXT:    bla .__tls_get_addr[PR]
 ; LARGE64-NEXT:    addis 4, L..C8@u(2)
 ; LARGE64-NEXT:    lwz 3, 0(3)
 ; LARGE64-NEXT:    ld 4, L..C8@l(4)
@@ -470,7 +470,7 @@ define i32 @loadsTIUninit() #1 {
 ; SMALL32-NEXT:    stwu 1, -32(1)
 ; SMALL32-NEXT:    lwz 3, L..C4(2)
 ; SMALL32-NEXT:    lwz 4, L..C5(2)
-; SMALL32-NEXT:    bla .__tls_get_addr
+; SMALL32-NEXT:    bla .__tls_get_addr[PR]
 ; SMALL32-NEXT:    lwz 4, L..C8(2)
 ; SMALL32-NEXT:    lwz 3, 0(3)
 ; SMALL32-NEXT:    lwz 4, 0(4)
@@ -489,7 +489,7 @@ define i32 @loadsTIUninit() #1 {
 ; LARGE32-NEXT:    addis 4, L..C5@u(2)
 ; LARGE32-NEXT:    lwz 3, L..C4@l(3)
 ; LARGE32-NEXT:    lwz 4, L..C5@l(4)
-; LARGE32-NEXT:    bla .__tls_get_addr
+; LARGE32-NEXT:    bla .__tls_get_addr[PR]
 ; LARGE32-NEXT:    lwz 3, 0(3)
 ; LARGE32-NEXT:    addis 4, L..C8@u(2)
 ; LARGE32-NEXT:    lwz 4, L..C8@l(4)
@@ -507,7 +507,7 @@ define i32 @loadsTIUninit() #1 {
 ; SMALL64-NEXT:    stdu 1, -48(1)
 ; SMALL64-NEXT:    ld 3, L..C4(2)
 ; SMALL64-NEXT:    ld 4, L..C5(2)
-; SMALL64-NEXT:    bla .__tls_get_addr
+; SMALL64-NEXT:    bla .__tls_get_addr[PR]
 ; SMALL64-NEXT:    ld 4, L..C8(2)
 ; SMALL64-NEXT:    lwz 3, 0(3)
 ; SMALL64-NEXT:    lwz 4, 0(4)
@@ -526,7 +526,7 @@ define i32 @loadsTIUninit() #1 {
 ; LARGE64-NEXT:    addis 4, L..C5@u(2)
 ; LARGE64-NEXT:    ld 3, L..C4@l(3)
 ; LARGE64-NEXT:    ld 4, L..C5@l(4)
-; LARGE64-NEXT:    bla .__tls_get_addr
+; LARGE64-NEXT:    bla .__tls_get_addr[PR]
 ; LARGE64-NEXT:    addis 4, L..C8@u(2)
 ; LARGE64-NEXT:    lwz 3, 0(3)
 ; LARGE64-NEXT:    ld 4, L..C8@l(4)
@@ -552,7 +552,7 @@ define i32 @loadsTWUninit() #1 {
 ; SMALL32-NEXT:    stwu 1, -32(1)
 ; SMALL32-NEXT:    lwz 3, L..C6(2)
 ; SMALL32-NEXT:    lwz 4, L..C7(2)
-; SMALL32-NEXT:    bla .__tls_get_addr
+; SMALL32-NEXT:    bla .__tls_get_addr[PR]
 ; SMALL32-NEXT:    lwz 4, L..C8(2)
 ; SMALL32-NEXT:    lwz 3, 0(3)
 ; SMALL32-NEXT:    lwz 4, 0(4)
@@ -571,7 +571,7 @@ define i32 @loadsTWUninit() #1 {
 ; LARGE32-NEXT:    addis 4, L..C7@u(2)
 ; LARGE32-NEXT:    lwz 3, L..C6@l(3)
 ; LARGE32-NEXT:    lwz 4, L..C7@l(4)
-; LARGE32-NEXT:    bla .__tls_get_addr
+; LARGE32-NEXT:    bla .__tls_get_addr[PR]
 ; LARGE32-NEXT:    lwz 3, 0(3)
 ; LARGE32-NEXT:    addis 4, L..C8@u(2)
 ; LARGE32-NEXT:    lwz 4, L..C8@l(4)
@@ -589,7 +589,7 @@ define i32 @loadsTWUninit() #1 {
 ; SMALL64-NEXT:    stdu 1, -48(1)
 ; SMALL64-NEXT:    ld 3, L..C6(2)
 ; SMALL64-NEXT:    ld 4, L..C7(2)
-; SMALL64-NEXT:    bla .__tls_get_addr
+; SMALL64-NEXT:    bla .__tls_get_addr[PR]
 ; SMALL64-NEXT:    ld 4, L..C8(2)
 ; SMALL64-NEXT:    lwz 3, 0(3)
 ; SMALL64-NEXT:    lwz 4, 0(4)
@@ -608,7 +608,7 @@ define i32 @loadsTWUninit() #1 {
 ; LARGE64-NEXT:    addis 4, L..C7@u(2)
 ; LARGE64-NEXT:    ld 3, L..C6@l(3)
 ; LARGE64-NEXT:    ld 4, L..C7@l(4)
-; LARGE64-NEXT:    bla .__tls_get_addr
+; LARGE64-NEXT:    bla .__tls_get_addr[PR]
 ; LARGE64-NEXT:    addis 4, L..C8@u(2)
 ; LARGE64-NEXT:    lwz 3, 0(3)
 ; LARGE64-NEXT:    ld 4, L..C8@l(4)
@@ -625,25 +625,32 @@ entry:
   ret i32 %add
 }
 
+; External symbol reference checks for .__tls_get_addr
+
+; SMALL32: .extern .__tls_get_addr[PR]
+; SMALL64: .extern .__tls_get_addr[PR]
+; LARGE32: .extern .__tls_get_addr[PR]
+; LARGE64: .extern .__tls_get_addr[PR]
+
 ; TOC entry checks
 
 ; SMALL32-LABEL: .toc
 ; SMALL32-LABEL: L..C0:
 ; SMALL32-NEXT:	 .tc .TGUninit[TC],TGUninit[TL]@m
 ; SMALL32-LABEL: L..C1:
-; SMALL32-NEXT:	 .tc TGUninit[TC],TGUninit[TL]
+; SMALL32-NEXT:	 .tc TGUninit[TC],TGUninit[TL]@gd
 ; SMALL32-LABEL: L..C2:
 ; SMALL32-NEXT:	 .tc .TGInit[TC],TGInit[TL]@m
 ; SMALL32-LABEL: L..C3:
-; SMALL32-NEXT:	 .tc TGInit[TC],TGInit[TL]
+; SMALL32-NEXT:	 .tc TGInit[TC],TGInit[TL]@gd
 ; SMALL32-LABEL: L..C4:
 ; SMALL32-NEXT:	 .tc .TIUninit[TC],TIUninit[UL]@m
 ; SMALL32-LABEL: L..C5:
-; SMALL32-NEXT:	 .tc TIUninit[TC],TIUninit[UL]
+; SMALL32-NEXT:	 .tc TIUninit[TC],TIUninit[UL]@gd
 ; SMALL32-LABEL: L..C6:
 ; SMALL32-NEXT:	 .tc .TWUninit[TC],TWUninit[TL]@m
 ; SMALL32-LABEL: L..C7:
-; SMALL32-NEXT:	 .tc TWUninit[TC],TWUninit[TL]
+; SMALL32-NEXT:	 .tc TWUninit[TC],TWUninit[TL]@gd
 ; SMALL32-LABEL: L..C8:
 ; SMALL32-NEXT:	 .tc GInit[TC],GInit[RW]
 
@@ -651,19 +658,19 @@ entry:
 ; LARGE32-LABEL: L..C0:
 ; LARGE32-NEXT:  .tc .TGUninit[TE],TGUninit[TL]@m
 ; LARGE32-LABEL: L..C1:
-; LARGE32-NEXT:  .tc TGUninit[TE],TGUninit[TL]
+; LARGE32-NEXT:  .tc TGUninit[TE],TGUninit[TL]@gd
 ; LARGE32-LABEL: L..C2:
 ; LARGE32-NEXT:  .tc .TGInit[TE],TGInit[TL]@m
 ; LARGE32-LABEL: L..C3:
-; LARGE32-NEXT:  .tc TGInit[TE],TGInit[TL]
+; LARGE32-NEXT:  .tc TGInit[TE],TGInit[TL]@gd
 ; LARGE32-LABEL: L..C4:
 ; LARGE32-NEXT:  .tc .TIUninit[TE],TIUninit[UL]@m
 ; LARGE32-LABEL: L..C5:
-; LARGE32-NEXT:  .tc TIUninit[TE],TIUninit[UL]
+; LARGE32-NEXT:  .tc TIUninit[TE],TIUninit[UL]@gd
 ; LARGE32-LABEL: L..C6:
 ; LARGE32-NEXT:  .tc .TWUninit[TE],TWUninit[TL]@m
 ; LARGE32-LABEL: L..C7:
-; LARGE32-NEXT:  .tc TWUninit[TE],TWUninit[TL]
+; LARGE32-NEXT:  .tc TWUninit[TE],TWUninit[TL]@gd
 ; LARGE32-LABEL: L..C8:
 ; LARGE32-NEXT:  .tc GInit[TE],GInit[RW]
 
@@ -671,19 +678,19 @@ entry:
 ; SMALL64-LABEL:  L..C0:
 ; SMALL64-NEXT:   .tc .TGUninit[TC],TGUninit[TL]@m
 ; SMALL64-LABEL:  L..C1:
-; SMALL64-NEXT:   .tc TGUninit[TC],TGUninit[TL]
+; SMALL64-NEXT:   .tc TGUninit[TC],TGUninit[TL]@gd
 ; SMALL64-LABEL:  L..C2:
 ; SMALL64-NEXT:   .tc .TGInit[TC],TGInit[TL]@m
 ; SMALL64-LABEL:  L..C3:
-; SMALL64-NEXT:   .tc TGInit[TC],TGInit[TL]
+; SMALL64-NEXT:   .tc TGInit[TC],TGInit[TL]@gd
 ; SMALL64-LABEL:  L..C4:
 ; SMALL64-NEXT:   .tc .TIUninit[TC],TIUninit[UL]@m
 ; SMALL64-LABEL:  L..C5:
-; SMALL64-NEXT:   .tc TIUninit[TC],TIUninit[UL]
+; SMALL64-NEXT:   .tc TIUninit[TC],TIUninit[UL]@gd
 ; SMALL64-LABEL:  L..C6:
 ; SMALL64-NEXT:   .tc .TWUninit[TC],TWUninit[TL]@m
 ; SMALL64-LABEL:  L..C7:
-; SMALL64-NEXT:   .tc TWUninit[TC],TWUninit[TL]
+; SMALL64-NEXT:   .tc TWUninit[TC],TWUninit[TL]@gd
 ; SMALL64-LABEL:  L..C8:
 ; SMALL64-NEXT:   .tc GInit[TC],GInit[RW]
 
@@ -691,19 +698,19 @@ entry:
 ; LARGE64-LABEL:  L..C0:
 ; LARGE64-NEXT:  .tc .TGUninit[TE],TGUninit[TL]@m
 ; LARGE64-LABEL:  L..C1:
-; LARGE64-NEXT:  .tc TGUninit[TE],TGUninit[TL]
+; LARGE64-NEXT:  .tc TGUninit[TE],TGUninit[TL]@gd
 ; LARGE64-LABEL:  L..C2:
 ; LARGE64-NEXT:  .tc .TGInit[TE],TGInit[TL]@m
 ; LARGE64-LABEL:  L..C3:
-; LARGE64-NEXT:  .tc TGInit[TE],TGInit[TL]
+; LARGE64-NEXT:  .tc TGInit[TE],TGInit[TL]@gd
 ; LARGE64-LABEL:  L..C4:
 ; LARGE64-NEXT:  .tc .TIUninit[TE],TIUninit[UL]@m
 ; LARGE64-LABEL:  L..C5:
-; LARGE64-NEXT:  .tc TIUninit[TE],TIUninit[UL]
+; LARGE64-NEXT:  .tc TIUninit[TE],TIUninit[UL]@gd
 ; LARGE64-LABEL:  L..C6:
 ; LARGE64-NEXT:  .tc .TWUninit[TE],TWUninit[TL]@m
 ; LARGE64-LABEL:  L..C7:
-; LARGE64-NEXT:  .tc TWUninit[TE],TWUninit[TL]
+; LARGE64-NEXT:  .tc TWUninit[TE],TWUninit[TL]@gd
 ; LARGE64-LABEL:  L..C8:
 ; LARGE64-NEXT:  .tc GInit[TE],GInit[RW]
 

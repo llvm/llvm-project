@@ -2188,15 +2188,11 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
   //
   if (VD && !VD->hasLocalStorage() &&
       (getCurCapturedRegion() || getCurBlock() || getCurLambda())) {
-    if (isInOpenMPDeclareTargetContext()) {
-      // Try to mark variable as declare target if it is used in capturing
-      // regions.
-      if (LangOpts.OpenMP <= 45 &&
-          !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD))
-        checkDeclIsAllowedInOpenMPTarget(nullptr, VD);
-      return nullptr;
-    }
     if (isInOpenMPTargetExecutionDirective()) {
+      DSAStackTy::DSAVarData DVarTop =
+          DSAStack->getTopDSA(D, DSAStack->isClauseParsingMode());
+      if (DVarTop.CKind != OMPC_unknown && DVarTop.RefExpr)
+        return VD;
       // If the declaration is enclosed in a 'declare target' directive,
       // then it should not be captured.
       //
@@ -2220,6 +2216,14 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
                               DSAStack->getDirective(CSI->OpenMPLevel));
       if (Regions[CSI->OpenMPCaptureLevel] != OMPD_task)
         return VD;
+    }
+    if (isInOpenMPDeclareTargetContext()) {
+      // Try to mark variable as declare target if it is used in capturing
+      // regions.
+      if (LangOpts.OpenMP <= 45 &&
+          !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD))
+        checkDeclIsAllowedInOpenMPTarget(nullptr, VD);
+      return nullptr;
     }
   }
 
@@ -2524,6 +2528,7 @@ void Sema::StartOpenMPClause(OpenMPClauseKind K) {
 
 void Sema::EndOpenMPClause() {
   DSAStack->setClauseParsingMode(/*K=*/OMPC_unknown);
+  CleanupVarDeclMarking();
 }
 
 static std::pair<ValueDecl *, bool>

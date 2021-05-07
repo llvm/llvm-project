@@ -524,21 +524,28 @@ public:
   // applies to.  nullptr if there is no 'musttail' on the current statement.
   const CallExpr *MustTailCall = nullptr;
 
-  /// True if the current function should be marked mustprogress.
-  bool FnIsMustProgress = false;
-
-  /// True if the C++ Standard Requires Progress.
-  bool CPlusPlusWithProgress() {
+  /// Returns true if a function must make progress, which means the
+  /// mustprogress attribute can be added.
+  bool checkIfFunctionMustProgress() {
     if (CGM.getCodeGenOpts().getFiniteLoops() ==
         CodeGenOptions::FiniteLoopsKind::Never)
       return false;
 
-    return getLangOpts().CPlusPlus11 || getLangOpts().CPlusPlus14 ||
-           getLangOpts().CPlusPlus17 || getLangOpts().CPlusPlus20;
+    // C++11 and later guarantees that a thread eventually will do one of the
+    // following (6.9.2.3.1 in C++11):
+    // - terminate,
+    //  - make a call to a library I/O function,
+    //  - perform an access through a volatile glvalue, or
+    //  - perform a synchronization operation or an atomic operation.
+    //
+    // Hence each function is 'mustprogress' in C++11 or later.
+    return getLangOpts().CPlusPlus11;
   }
 
-  /// True if the C Standard Requires Progress.
-  bool CWithProgress() {
+  /// Returns true if a loop must make progress, which means the mustprogress
+  /// attribute can be added. \p HasConstantCond indicates whether the branch
+  /// condition is a known constant.
+  bool checkIfLoopMustProgress(bool HasConstantCond) {
     if (CGM.getCodeGenOpts().getFiniteLoops() ==
         CodeGenOptions::FiniteLoopsKind::Always)
       return true;
@@ -546,13 +553,19 @@ public:
         CodeGenOptions::FiniteLoopsKind::Never)
       return false;
 
-    return getLangOpts().C11 || getLangOpts().C17 || getLangOpts().C2x;
-  }
+    // If the containing function must make progress, loops also must make
+    // progress (as in C++11 and later).
+    if (checkIfFunctionMustProgress())
+      return true;
 
-  /// True if the language standard requires progress in functions or
-  /// in infinite loops with non-constant conditionals.
-  bool LanguageRequiresProgress() {
-    return CWithProgress() || CPlusPlusWithProgress();
+    // Now apply rules for plain C (see  6.8.5.6 in C11).
+    // Loops with constant conditions do not have to make progress in any C
+    // version.
+    if (HasConstantCond)
+      return false;
+
+    // Loops with non-constant conditions must make progress in C11 and later.
+    return getLangOpts().C11;
   }
 
   const CodeGen::CGBlockInfo *BlockInfo = nullptr;

@@ -47,7 +47,7 @@ int main(int, char**)
             P(1),
             P(2)
         };
-        C c(input_iterator<P*>(a), input_iterator<P*>(a + sizeof(a)/sizeof(a[0])),
+        C c(cpp17_input_iterator<P*>(a), cpp17_input_iterator<P*>(a + sizeof(a)/sizeof(a[0])),
             7,
             test_hash<std::hash<int> >(8),
             test_compare<std::equal_to<int> >(9)
@@ -84,7 +84,7 @@ int main(int, char**)
             P(1),
             P(2)
         };
-        C c(input_iterator<P*>(a), input_iterator<P*>(a + sizeof(a)/sizeof(a[0])),
+        C c(cpp17_input_iterator<P*>(a), cpp17_input_iterator<P*>(a + sizeof(a)/sizeof(a[0])),
             7,
             test_hash<std::hash<int> >(8),
             test_compare<std::equal_to<int> >(9)

@@ -68,7 +68,7 @@
 // RUN:     {key: readability-identifier-naming.MacroDefinitionCase, value: UPPER_CASE}, \
 // RUN:     {key: readability-identifier-naming.TypeAliasCase, value: camel_Snake_Back}, \
 // RUN:     {key: readability-identifier-naming.TypeAliasSuffix, value: '_t'}, \
-// RUN:     {key: readability-identifier-naming.IgnoreFailedSplit, value: 0}, \
+// RUN:     {key: readability-identifier-naming.IgnoreFailedSplit, value: false}, \
 // RUN:     {key: readability-identifier-naming.GlobalPointerCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.GlobalPointerSuffix, value: '_Ptr'}, \
 // RUN:     {key: readability-identifier-naming.GlobalConstantPointerCase, value: UPPER_CASE}, \

@@ -107,7 +107,7 @@ bool getXCOFFTracebackTable();
 std::string getBBSections();
 
 std::string getStackProtectorGuard();
-unsigned getStackProtectorGuardOffset();
+int getStackProtectorGuardOffset();
 std::string getStackProtectorGuardReg();
 
 unsigned getTLSSize();

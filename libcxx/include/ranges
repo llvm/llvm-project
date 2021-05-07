@@ -17,15 +17,70 @@
 #include <iterator>             // see [iterator.synopsis]
 
 namespace std::ranges {
+  inline namespace unspecified {
+    // [range.access], range access
+    inline constexpr unspecified begin = unspecified;
+    inline constexpr unspecified end = unspecified;
+    inline constexpr unspecified cbegin = unspecified;
+    inline constexpr unspecified cend = unspecified;
+
+    inline constexpr unspecified size = unspecified;
+    inline constexpr unspecified ssize = unspecified;
+  }
+
   // [range.range], ranges
   template<class T>
+    concept range = see below;
+
+  template<class T>
     inline constexpr bool enable_borrowed_range = false;
+
+  template<class T>
+    using iterator_t = decltype(ranges::begin(declval<T&>()));
+  template<class T>
+    using iterator_t = decltype(ranges::begin(declval<T&>()));
+  template<range R>
+    using sentinel_t = decltype(ranges::end(declval<R&>()));
+  template<range R>
+    using range_difference_t = iter_difference_t<iterator_t<R>>;
+  template<range R>
+    using range_value_t = iter_value_t<iterator_t<R>>;
+  template<range R>
+    using range_reference_t = iter_reference_t<iterator_t<R>>;
+  template<range R>
+    using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<R>>;
+
+  // [range.view], views
+  template<class T>
+    inline constexpr bool enable_view = ...;
+
+  struct view_base { };
+
+  template<class T>
+    concept view = ...;
+
+  // [range.refinements], other range refinements
+  template<class T>
+    concept input_range = see below;
+
+  template<class T>
+    concept forward_range = see below;
+
+  template<class T>
+  concept bidirectional_range = see below;
+
+  template <class _Tp>
+    concept common_range = see below;
 }
 
 */
 
 #include <__config>
+#include <__ranges/access.h>
+#include <__ranges/concepts.h>
 #include <__ranges/enable_borrowed_range.h>
+#include <__ranges/view.h>
+#include <__ranges/size.h>
 #include <compare>          // Required by the standard.
 #include <initializer_list> // Required by the standard.
 #include <iterator>         // Required by the standard.

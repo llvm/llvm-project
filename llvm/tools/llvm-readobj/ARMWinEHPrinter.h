@@ -146,6 +146,16 @@ class Decoder {
   getRelocatedSymbol(const object::COFFObjectFile &COFF,
                      const object::SectionRef &Section, uint64_t Offset);
 
+  ErrorOr<object::SymbolRef>
+  getSymbolForLocation(const object::COFFObjectFile &COFF,
+                       const object::SectionRef &Section,
+                       uint64_t OffsetInSection, uint64_t ImmediateOffset,
+                       uint64_t &SymbolAddress, uint64_t &SymbolOffset,
+                       bool FunctionOnly = false);
+
+  object::SymbolRef getPreferredSymbol(const object::COFFObjectFile &COFF,
+                                       object::SymbolRef Sym);
+
   bool dumpXDataRecord(const object::COFFObjectFile &COFF,
                        const object::SectionRef &Section,
                        uint64_t FunctionAddress, uint64_t VA);

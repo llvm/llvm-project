@@ -2549,6 +2549,7 @@ void ARMDAGToDAGISel::SelectMVE_WB(SDNode *N, const uint16_t *Opcodes,
   ReplaceUses(SDValue(N, 0), SDValue(New, 1));
   ReplaceUses(SDValue(N, 1), SDValue(New, 0));
   ReplaceUses(SDValue(N, 2), SDValue(New, 2));
+  transferMemOperands(N, New);
   CurDAG->RemoveDeadNode(N);
 }
 
@@ -2764,6 +2765,7 @@ void ARMDAGToDAGISel::SelectMVE_VLD(SDNode *N, unsigned NumVecs,
         CurDAG->getMachineNode(OurOpcodes[Stage], Loc, ResultTys, Ops);
     Data = SDValue(LoadInst, 0);
     Chain = SDValue(LoadInst, 1);
+    transferMemOperands(N, LoadInst);
   }
   // The last may need a writeback on it
   if (HasWriteback)
@@ -2771,6 +2773,7 @@ void ARMDAGToDAGISel::SelectMVE_VLD(SDNode *N, unsigned NumVecs,
   SDValue Ops[] = {Data, N->getOperand(PtrOperand), Chain};
   auto LoadInst =
       CurDAG->getMachineNode(OurOpcodes[NumVecs - 1], Loc, ResultTys, Ops);
+  transferMemOperands(N, LoadInst);
 
   unsigned i;
   for (i = 0; i < NumVecs; i++)

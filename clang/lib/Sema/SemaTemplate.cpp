@@ -1677,6 +1677,9 @@ Sema::ActOnTemplateParameterList(unsigned Depth,
   if (ExportLoc.isValid())
     Diag(ExportLoc, diag::warn_template_export_unsupported);
 
+  for (NamedDecl *P : Params)
+    warnOnReservedIdentifier(P);
+
   return TemplateParameterList::Create(
       Context, TemplateLoc, LAngleLoc,
       llvm::makeArrayRef(Params.data(), Params.size()),

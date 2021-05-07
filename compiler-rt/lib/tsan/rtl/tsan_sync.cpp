@@ -53,8 +53,8 @@ void SyncVar::Reset(Processor *proc) {
 }
 
 MetaMap::MetaMap()
-    : block_alloc_("heap block allocator")
-    , sync_alloc_("sync allocator") {
+    : block_alloc_(LINKER_INITIALIZED, "heap block allocator"),
+      sync_alloc_(LINKER_INITIALIZED, "sync allocator") {
   atomic_store(&uid_gen_, 0, memory_order_relaxed);
 }
 

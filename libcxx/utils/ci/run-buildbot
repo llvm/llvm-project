@@ -9,6 +9,9 @@
 
 set -ex
 set -o pipefail
+unset LANG
+unset LC_ALL
+unset LC_COLLATE
 
 PROGNAME="$(basename "${0}")"
 
@@ -133,18 +136,21 @@ check-format)
     ! grep -q '^--- a' ${BUILD_DIR}/clang-format.patch
 ;;
 check-generated-output)
+    # `! foo` doesn't work properly with `set -e`, use `! foo || false` instead.
+    # https://stackoverflow.com/questions/57681955/set-e-does-not-respect-logical-not
     clean
     echo "+++ Checking the output of the generator scripts"
     mkdir -p ${BUILD_DIR}
-    # Reject patches that introduce non-ASCII characters or hard tabs.
-    ! grep -rn '[^ -~]' libcxx/include/
     # Reject patches that don't update the generated output correctly.
     python3 libcxx/utils/generate_feature_test_macro_components.py
     python3 libcxx/utils/generate_header_inclusion_tests.py
     python3 libcxx/utils/generate_header_tests.py
     git diff | tee ${BUILD_DIR}/generated_output.patch
     # Check if the diffs are empty, fail otherwise.
-    ! grep -q '^--- a' ${BUILD_DIR}/generated_output.patch
+    ! grep -q '^--- a' ${BUILD_DIR}/generated_output.patch || false
+    # Reject patches that introduce non-ASCII characters or hard tabs.
+    # Depends on LC_COLLATE set at the top of this script.
+    ! grep -rn '[^ -~]' libcxx/include/ || false
     # Check that no dependency cycles have been introduced.
     python3 libcxx/utils/graph_header_deps.py >/dev/null
 ;;
@@ -193,6 +199,14 @@ generic-cxx2b)
     export CXX=clang++-tot
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx2b.cmake"
+    check-cxx-cxxabi
+    check-abi-list
+;;
+generic-debug-iterators)
+    export CC=clang-tot
+    export CXX=clang++-tot
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-debug-iterators.cmake"
     check-cxx-cxxabi
     check-abi-list
 ;;
@@ -473,10 +487,6 @@ armv7-noexceptions)
 ;;
 generic-win)
     clean
-    # TODO: The CI runner doesn't have bash in the path currently, and it's
-    # needed for running tests. Once it's available out of the box, remove this.
-    export PATH="$PATH:/c/Program Files/Git/usr/bin"
-
     # TODO: Clang-cl in MSVC configurations don't have access to compiler_rt
     # builtins helpers for int128 division. See
     # https://reviews.llvm.org/D91139#2429595 for a comment about longterm
@@ -484,12 +494,6 @@ generic-win)
     # -D_LIBCPP_HAS_NO_INT128 (both when building the library itself and
     # when building tests) to allow enabling filesystem for running tests,
     # even if it uses a non-permanent ABI.
-
-    # TODO: The CI runner currently uses Clang 11, which doesn't implicitly
-    # link in oldnames.lib (which is needed for some tests) when compiling
-    # with the plain "clang" driver, as the tests do (as opposed to using
-    # the "clang-cl" driver for compiling). When the CI runner runs
-    # Clang 12, the "-loldnames" option can be dropped.
 
     # TODO: Currently, building with the experimental library breaks running
     # tests (the test linking look for the c++experimental library with the
@@ -509,8 +513,7 @@ generic-win)
           -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO \
           -DLIBCXX_ENABLE_FILESYSTEM=YES \
           -DCMAKE_CXX_FLAGS="-D_LIBCPP_HAS_NO_INT128" \
-          -DLIBCXX_TEST_COMPILER_FLAGS="-D_LIBCPP_HAS_NO_INT128" \
-          -DLIBCXX_TEST_LINKER_FLAGS="-loldnames"
+          -DLIBCXX_TEST_COMPILER_FLAGS="-D_LIBCPP_HAS_NO_INT128"
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;

@@ -333,8 +333,8 @@ void ProfiledBinary::setUpDisassembler(const ELFObjectFileBase *Obj) {
     exitWithError("no instruction info for target " + TripleName, FileName);
 
   MCObjectFileInfo MOFI;
-  MCContext Ctx(AsmInfo.get(), MRI.get(), &MOFI);
-  MOFI.InitMCObjectFileInfo(Triple(TripleName), false, Ctx);
+  MCContext Ctx(Triple(TripleName), AsmInfo.get(), MRI.get(), &MOFI, STI.get());
+  MOFI.initMCObjectFileInfo(Ctx, /*PIC=*/false);
   DisAsm.reset(TheTarget->createMCDisassembler(*STI, Ctx));
   if (!DisAsm)
     exitWithError("no disassembler for target " + TripleName, FileName);

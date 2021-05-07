@@ -13,7 +13,7 @@ Section,Description,Dependencies,Assignee,Patch,Complete
 [iterator.cust.move],Implement iter_move.,,Christopher Di Bella,`D99873 <https://llvm.org/D99873>`_,
 [iterator.cust.swap],Implement iter_swap.,"[concepts], [readable.traits]: iter_value_t",,,
 [iterator.concepts],"indirectly_readable, indirectly_writable, weakly_incrementable, incrementable, input_or_output_iterator, sentinel_for, sized_sentinel_for, input_iterator, output_iterator, forward_iterator, bidirectional_iterator, random_access_iterator, and contiguous_iterator.","[concepts], [readable.traits]: iter_value_t, [iterator.traits]",Christopher Di Bella,"indirectly_readable: `D100073 <https://llvm.org/D100073>`_
-indirectly_wriatable: `D100078 <https://llvm.org/D100078>`_ weakly_incrementable, incrementable: `D100080 <https://llvm.org/D100080>`_ input_or_output_iterator, sentinel_for: `D100160 <https://llvm.org/D100160>`_
+indirectly_writable: `D100078 <https://llvm.org/D100078>`_ weakly_incrementable, incrementable: `D100080 <https://llvm.org/D100080>`_ input_or_output_iterator, sentinel_for: `D100160 <https://llvm.org/D100160>`_
 input_iterator: `D100271 <https://llvm.org/D100271>`_
 forward_iterator: `D100275 <https://llvm.org/D100275>`_
 bidirectional_iterator: `D100278 <https://llvm.org/D100278>`_",
@@ -40,19 +40,19 @@ bidirectional_iterator: `D100278 <https://llvm.org/D100278>`_",
 [ranges.primitives],"size, empty, data, and cdata",[iterator.concepts],Zoe Carver,,
 [range.range],,[range.access],,,
 [range.sized],,"[range.primitives], [range.range]",,,
-[range.view],View and enable_view,[range.range],,,
+[range.view],View and enable_view,[range.range],Louis Dionne,https://reviews.llvm.org/D101547,✅
 [range.refinements],"OutputRange, InputRange, ForwardRange, BidirectionalRange, RandomAccessRange, ContiguousRange, CommonRange, ViewableRange","[ranges.syn]: pt. 2, [range.range]",Christopher Di Bella,"input_range: `D100271 <https://llvm.org/D100271>`_
 forward_range: `D100275 <https://llvm.org/D100275>`_
 bidirectional_range: `D100278 <https://llvm.org/D100278>`_",
-[view.interface],[range.utility.helpers] and view_interface,"[ranges.syn]: pt. 2, [range.view], [range.iterator.operations.prev], [range.refinements]",,,
+[view.interface],[range.utility.helpers] and view_interface,"[ranges.syn]: pt. 2, [range.view], [range.iterator.operations.prev], [range.refinements]",,Zoe Carver,
 [range.subrange],,[view.interface],,,
-[range.all],view::all,"[range.subrange], [range.view.ref]",,,
-[range.view.ref],ref-view,[view.interface],,,
-[range.filter],filter_view,[range.all],,,
+[range.all],view::all,"[range.subrange], [range.view.ref]",,Christopher Di Bella,
+[range.view.ref],ref-view,[view.interface],,Christopher Di Bella,
+[range.filter],filter_view,[range.all],,Louis Dionne,
 [range.transform],transform_view,[range.all],,,
-[range.iota],iota_view,[range.all],,,
+[range.iota],iota_view,[range.all],,Louis Dionne,
 [range.take],take_view,[range.all],,,
-[range.join],join_view,[range.all],,,
+[range.join],join_view,[range.all],,Christopher Di Bella,
 [range.empty],empty_view,[view.interface],,,
 [range.single],single_view,[view.interface],,,
 [range.split],split_view,[range.all],,,

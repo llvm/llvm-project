@@ -270,8 +270,8 @@ This attribute may not be
 supported by other compilers, so consider using it together with
 ``#if defined(__clang__)``.
 
-Suppressing Errors in Recompiled Code (Blacklist)
--------------------------------------------------
+Suppressing Errors in Recompiled Code (Ignorelist)
+--------------------------------------------------
 
 UndefinedBehaviorSanitizer supports ``src`` and ``fun`` entity types in
 :doc:`SanitizerSpecialCaseList`, that can be used to suppress error reports

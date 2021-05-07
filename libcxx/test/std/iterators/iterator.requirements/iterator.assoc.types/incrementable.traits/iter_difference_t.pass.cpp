@@ -9,7 +9,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
-// XFAIL: msvc && clang
 
 // template<class T>
 // using iter_difference_t;
@@ -37,7 +36,7 @@ template <class T, class Expected>
 
 static_assert(check_iter_difference_t<int, int>());
 static_assert(check_iter_difference_t<int*, std::ptrdiff_t>());
-static_assert(check_iter_difference_t<std::vector<int>::iterator, std::vector<int>::iterator::difference_type>());
+static_assert(check_iter_difference_t<std::vector<int>::iterator, std::ptrdiff_t>());
 
 struct int_subtraction {
   friend int operator-(int_subtraction, int_subtraction) noexcept;

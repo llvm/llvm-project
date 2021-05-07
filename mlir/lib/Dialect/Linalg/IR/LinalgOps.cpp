@@ -136,7 +136,7 @@ static void dispatchIndexOpFoldResult(OpFoldResult ofr,
 
 /// This is a common class used for patterns of the form
 /// ```
-///    someop(memrefcast) -> someop
+///    someop(memrefcast(%src)) -> someop(%src)
 /// ```
 /// It folds the source of the memref.cast into the root operation directly.
 static LogicalResult foldMemRefCast(Operation *op) {
@@ -145,6 +145,44 @@ static LogicalResult foldMemRefCast(Operation *op) {
     auto castOp = operand.get().getDefiningOp<memref::CastOp>();
     if (castOp && memref::CastOp::canFoldIntoConsumerOp(castOp)) {
       operand.set(castOp.getOperand());
+      folded = true;
+    }
+  }
+  return success(folded);
+}
+
+/// This is a specialization of `foldMemRefCast` used for patterns of the form
+/// ```
+///    tiled_loop(memrefcast(%src)) -> tiled_loop(%src)
+/// ```
+/// It folds the source of the memref.cast into the root operation directly.
+static LogicalResult foldMemRefCastInTiledLoopOp(TiledLoopOp op) {
+  bool folded = false;
+  Location loc = op->getLoc();
+
+  Block *body = op.getBody();
+  OpBuilder b = OpBuilder::atBlockBegin(body);
+
+  // Update `input` and `output` operands and block arguments if necessary.
+  // Operands list: [lbs, ubs, steps, inputs, outputs].
+  // Block args list: [ivs, inputs, outputs].
+  for (size_t operandIndex = op.getNumControlOperands(),
+              bbArgIndex = op.getNumLoops(), e = op.getNumOperands();
+       operandIndex < e; ++operandIndex, ++bbArgIndex) {
+    OpOperand &operand = op->getOpOperand(operandIndex);
+
+    auto castOp = operand.get().getDefiningOp<memref::CastOp>();
+    if (castOp && memref::CastOp::canFoldIntoConsumerOp(castOp)) {
+      operand.set(castOp.getOperand());
+      BlockArgument newBbArg =
+          body->insertArgument(bbArgIndex, castOp.getOperand().getType());
+      BlockArgument oldBbArg = body->getArgument(newBbArg.getArgNumber() + 1);
+
+      // Insert memref.cast back to the original type.
+      oldBbArg.replaceAllUsesWith(
+          b.create<memref::CastOp>(loc, oldBbArg.getType(), newBbArg));
+      body->eraseArgument(oldBbArg.getArgNumber());
+
       folded = true;
     }
   }
@@ -1050,6 +1088,161 @@ LogicalResult PadTensorOp::reifyReturnTypeShapesPerResultDim(
 // ReshapeOp
 //===----------------------------------------------------------------------===//
 
+Optional<SmallVector<ReassociationIndices>>
+mlir::linalg::getReassociationIndicesForReshape(ShapedType sourceType,
+                                                ShapedType targetType) {
+  // Make the sourceType greater rank than the targetType. If they are same
+  // rank, then its an unsupported reshape op.
+  if (sourceType.getRank() == targetType.getRank())
+    return llvm::None;
+  if (sourceType.getRank() < targetType.getRank())
+    std::swap(sourceType, targetType);
+
+  ArrayRef<int64_t> sourceShape = sourceType.getShape();
+  ArrayRef<int64_t> targetShape = targetType.getShape();
+  unsigned sourceDim = 0;
+  SmallVector<ReassociationIndices> reassociationMap;
+  reassociationMap.reserve(targetType.getRank());
+
+  ReassociationIndices currIndices;
+  int64_t prodOfCollapsedDims = 1;
+  while (sourceDim < sourceShape.size()) {
+    unsigned targetDim = reassociationMap.size();
+
+    // If all the dimensions of the targetShape are exhausted, then the
+    // remaining dims in the source shape must be all 1s. So for such cases, set
+    // 1 as the target shape. The actual reassociation indices will be handled
+    // later.
+    int64_t currTargetShape =
+        (targetDim < targetType.getRank() ? targetShape[targetDim] : 1);
+    while (sourceShape[sourceDim] != ShapedType::kDynamicSize &&
+           prodOfCollapsedDims * sourceShape[sourceDim] < currTargetShape &&
+           sourceDim < sourceShape.size()) {
+      prodOfCollapsedDims *= sourceShape[sourceDim];
+      currIndices.push_back(sourceDim++);
+    }
+
+    // If the current expanded dimension is dynamic, then the collapsed
+    // dimensions should also be dynamic and product of all previous unprocessed
+    // dimensions of the expanded shape should be 1.
+    if (sourceShape[sourceDim] == ShapedType::kDynamicSize &&
+        (currTargetShape != ShapedType::kDynamicSize ||
+         prodOfCollapsedDims != 1))
+      return llvm::None;
+
+    // If the collapsed dim is dynamic, the current expanded dim should also
+    // be dynamic.
+    if (currTargetShape == ShapedType::kDynamicSize &&
+        sourceShape[sourceDim] != ShapedType::kDynamicSize)
+      return llvm::None;
+
+    // For static shapes, if the product of dimensions of the expanded shape
+    // should match the collapsed dimension shape.
+    if (prodOfCollapsedDims * sourceShape[sourceDim] != currTargetShape)
+      return llvm::None;
+
+    currIndices.push_back(sourceDim++);
+    // If there are no dimensions in the target to match, then append the
+    // `currIndices` to the last element of the reassociationMap.
+    if (targetDim == targetShape.size()) {
+      reassociationMap.back().append(currIndices.begin(), currIndices.end());
+      // Break out of the loops. We should be done here.
+      break;
+    }
+    reassociationMap.emplace_back(ReassociationIndices{});
+    std::swap(reassociationMap.back(), currIndices);
+    prodOfCollapsedDims = 1;
+  }
+  // All the dimensions in the two shapes must have been processed.
+  if (reassociationMap.size() != targetShape.size() ||
+      sourceDim != sourceShape.size())
+    return llvm::None;
+  return reassociationMap;
+}
+
+template <typename ReshapeLikeOp>
+static void print(OpAsmPrinter &p, ReshapeLikeOp op) {
+  p << op.getOperationName() << ' ' << op.src() << " [";
+
+  llvm::interleaveComma(op.reassociation(), p, [&](const Attribute &attr) {
+    p << '[';
+    auto arrayAttr = attr.template cast<ArrayAttr>();
+    llvm::interleaveComma(arrayAttr, p, [&](const Attribute &attr) {
+      p << attr.cast<IntegerAttr>().getInt();
+    });
+    p << ']';
+  });
+
+  p << "] ";
+  p.printOptionalAttrDict(op->getAttrs(),
+                          /*elidedAttrs=*/{op.getReassociationAttrName()});
+  p << ": " << op.src().getType() << " into " << op.getType();
+}
+
+static void print(OpAsmPrinter &p, linalg::ReshapeOp op) {
+  print<linalg::ReshapeOp>(p, op);
+}
+
+static void print(OpAsmPrinter &p, linalg::TensorReshapeOp op) {
+  print<linalg::TensorReshapeOp>(p, op);
+}
+
+static ParseResult parseReshapeLikeOp(OpAsmParser &parser,
+                                      OperationState &result) {
+  // Parse the operand.
+  OpAsmParser::OperandType src;
+  if (parser.parseOperand(src))
+    return failure();
+
+  // Parse reassociation indices.
+  Builder &b = parser.getBuilder();
+  SmallVector<Attribute, 4> reassociation;
+  if (parser.parseLSquare())
+    return failure();
+
+  while (true) {
+    if (succeeded(parser.parseOptionalRSquare()))
+      break;
+    if (parser.parseLSquare())
+      return failure();
+    SmallVector<int64_t> indices;
+    while (true) {
+      int64_t index;
+      if (parser.parseInteger(index))
+        return failure();
+      indices.push_back(index);
+
+      if (succeeded(parser.parseOptionalComma()))
+        continue;
+      if (failed(parser.parseRSquare()))
+        return failure();
+      break;
+    }
+    reassociation.push_back(b.getI64ArrayAttr(indices));
+    if (succeeded(parser.parseOptionalComma()))
+      continue;
+    if (failed(parser.parseRSquare()))
+      return failure();
+    break;
+  }
+
+  result.addAttribute(ReshapeOp::getReassociationAttrName(),
+                      b.getArrayAttr(reassociation));
+
+  // Parse optional attributes.
+  parser.parseOptionalAttrDict(result.attributes);
+
+  // Parse types.
+  Type srcType;
+  Type resultType;
+  if (parser.parseColon() || parser.parseType(srcType) ||
+      parser.resolveOperand(src, srcType, result.operands) ||
+      parser.parseKeyword("into") || parser.parseType(resultType))
+    return failure();
+  result.addTypes(resultType);
+  return success();
+}
+
 /// Collapse reassociation maps that are used in pair of reshape ops where one
 /// is a producer and other is the consumer. Only valid to use this method when
 /// both the producer and consumer are collapsing dimensions or both are
@@ -1066,34 +1259,37 @@ LogicalResult PadTensorOp::reifyReturnTypeShapesPerResultDim(
 ///
 ///   result = [affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>,
 ///             affine_map<(d0, d1, d2, d3, d4) -> (d3, d4)>]
-static ArrayAttr collapseReassociationMaps(ArrayRef<AffineMap> mapsProducer,
-                                           ArrayRef<AffineMap> mapsConsumer,
-                                           MLIRContext *context) {
+static Optional<SmallVector<ReassociationIndices>>
+collapseReassociationIndices(ArrayRef<AffineMap> mapsProducer,
+                             ArrayRef<AffineMap> mapsConsumer,
+                             MLIRContext *context) {
+  // Make the producer the larger sized vector. If they are of same size, the
+  // resulting reshape is not a supported reshape op.
+  if (mapsProducer.size() == mapsConsumer.size())
+    return llvm::None;
+  if (mapsProducer.size() < mapsConsumer.size())
+    std::swap(mapsProducer, mapsConsumer);
+
   // Handle the corner case of the result being a rank 0 shaped type. Return an
-  // emtpy ArrayAttr.
-  if (mapsConsumer.empty() && !mapsProducer.empty())
-    return ArrayAttr::get(context, ArrayRef<Attribute>());
-  if (mapsProducer.empty() || mapsConsumer.empty() ||
-      mapsProducer[0].getNumDims() < mapsConsumer[0].getNumDims() ||
-      mapsProducer.size() != mapsConsumer[0].getNumDims())
-    return nullptr;
-  unsigned numLhsDims = mapsProducer[0].getNumDims();
+  // empty reassociation.
+  if (mapsConsumer.empty())
+    return SmallVector<ReassociationIndices>{};
+  if (mapsProducer.size() != mapsConsumer[0].getNumDims())
+    return llvm::None;
+
   unsigned currDim = 0;
-  SmallVector<AffineExpr, 4> reassociations;
-  SmallVector<Attribute, 4> reassociationMaps;
+  SmallVector<ReassociationIndices> reassociationMaps;
   for (AffineMap rhs : mapsConsumer) {
+    ReassociationIndices reassociations;
     for (AffineExpr rhsExpr : rhs.getResults()) {
       AffineDimExpr dimExpr = rhsExpr.cast<AffineDimExpr>();
       for (int i = 0, e = mapsProducer[dimExpr.getPosition()].getNumResults();
-           i < e; ++i) {
-        reassociations.push_back(getAffineDimExpr(currDim++, context));
-      }
+           i < e; ++i)
+        reassociations.push_back(currDim++);
     }
-    reassociationMaps.push_back(AffineMapAttr::get(AffineMap::get(
-        numLhsDims, /*numSymbols =*/0, reassociations, context)));
-    reassociations.clear();
+    reassociationMaps.push_back(std::move(reassociations));
   }
-  return ArrayAttr::get(context, reassociationMaps);
+  return reassociationMaps;
 }
 
 namespace {
@@ -1108,33 +1304,44 @@ struct CollapseReshapeOps : public OpRewritePattern<ReshapeOpTy> {
     if (!srcReshapeOp)
       return failure();
 
+    ShapedType srcReshapeSrcType = srcReshapeOp.getSrcType();
+    ShapedType intermediateType = reshapeOp.getSrcType();
+    ShapedType resultType = reshapeOp.getResultType();
+
     auto areReshapeOpsFoldable = [](ShapedType largerType,
                                     ShapedType intermediateType,
                                     ShapedType smallerType) -> bool {
       return largerType.getRank() > intermediateType.getRank() &&
              intermediateType.getRank() > smallerType.getRank();
     };
-    // Check if producer and consumer are both expanding dims.
-    if (areReshapeOpsFoldable(reshapeOp.getResultType(), reshapeOp.getSrcType(),
-                              srcReshapeOp.getSrcType())) {
-      rewriter.replaceOpWithNewOp<ReshapeOpTy>(
-          reshapeOp, reshapeOp.getResultType(), srcReshapeOp.src(),
-          collapseReassociationMaps(reshapeOp.getReassociationMaps(),
-                                    srcReshapeOp.getReassociationMaps(),
-                                    rewriter.getContext()));
-      return success();
+    Optional<SmallVector<ReassociationIndices>> reassociationIndices =
+        llvm::None;
+    // Check if producer and consumer are both expanding dims or both collapsing
+    // dims. In this case, try to compose the affine maps. This works for
+    // dynamic shapes too.
+    if (areReshapeOpsFoldable(resultType, intermediateType,
+                              srcReshapeSrcType) ||
+        areReshapeOpsFoldable(srcReshapeSrcType, intermediateType,
+                              resultType)) {
+      reassociationIndices = collapseReassociationIndices(
+          srcReshapeOp.getReassociationMaps(), reshapeOp.getReassociationMaps(),
+          rewriter.getContext());
     }
-    // Check if producer and consumer are both collapsing dims.
-    if (areReshapeOpsFoldable(srcReshapeOp.getSrcType(), reshapeOp.getSrcType(),
-                              reshapeOp.getResultType())) {
-      rewriter.replaceOpWithNewOp<ReshapeOpTy>(
-          reshapeOp, reshapeOp.getResultType(), srcReshapeOp.src(),
-          collapseReassociationMaps(srcReshapeOp.getReassociationMaps(),
-                                    reshapeOp.getReassociationMaps(),
-                                    rewriter.getContext()));
-      return success();
+    if (!reassociationIndices) {
+      // If the source reshape can be collapsed/expanded into the target reshape
+      // they can still be folded. This can only be reasoned about statically
+      // for cases where
+      // - either all shapes are static, or
+      // - The number of dynamic dimensions matches in the source of source and
+      //   result with all other dimensions being 1.
+      reassociationIndices =
+          getReassociationIndicesForReshape(srcReshapeSrcType, resultType);
     }
-    return failure();
+    if (!reassociationIndices)
+      return failure();
+    rewriter.replaceOpWithNewOp<ReshapeOpTy>(
+        reshapeOp, resultType, srcReshapeOp.src(), *reassociationIndices);
+    return success();
   }
 };
 } // namespace
@@ -1275,14 +1482,6 @@ computeReshapeCollapsedType(MemRefType type,
       MemRefType::Builder(type).setShape(newSizes).setAffineMaps({layout}));
 }
 
-/// Helper functions assert Attribute of the proper type in attr and returns the
-/// corresponding vector.
-/// TODO: this should be evolved into a generic
-/// `getRangeOfType<AffineMap>(ArrayAttr attrs)` that does not copy.
-static SmallVector<AffineMap, 4> getAffineMaps(ArrayAttr attrs) {
-  return llvm::to_vector<8>(llvm::map_range(
-      attrs, [](Attribute a) { return a.cast<AffineMapAttr>().getValue(); }));
-}
 
 template <typename AffineExprTy>
 unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
@@ -1312,8 +1511,21 @@ getSymbolLessAffineMaps(ArrayRef<ReassociationExprs> reassociation) {
   return maps;
 }
 
+static SmallVector<ReassociationIndices, 2> convertReassociationMapsToIndices(
+    OpBuilder &b, ArrayRef<ReassociationExprs> reassociationExprs) {
+  SmallVector<ReassociationIndices, 2> reassociationIndices;
+  for (const auto &exprs : reassociationExprs) {
+    ReassociationIndices indices;
+    indices.reserve(exprs.size());
+    for (const auto &expr : exprs)
+      indices.push_back(expr.cast<AffineDimExpr>().getPosition());
+    reassociationIndices.push_back(indices);
+  }
+  return reassociationIndices;
+}
+
 static SmallVector<SmallVector<AffineExpr, 2>, 2>
-convertReassociationIndicesToMaps(
+convertReassociationIndicesToExprs(
     OpBuilder &b, ArrayRef<ReassociationIndices> reassociationIndices) {
   SmallVector<SmallVector<AffineExpr, 2>, 2> reassociationMaps;
   for (const auto &indices : reassociationIndices) {
@@ -1326,6 +1538,20 @@ convertReassociationIndicesToMaps(
   return reassociationMaps;
 }
 
+SmallVector<AffineMap, 4> ReshapeOp::getReassociationMaps() {
+  return getSymbolLessAffineMaps(getReassociationExprs());
+}
+SmallVector<ReassociationExprs, 4> ReshapeOp::getReassociationExprs() {
+  OpBuilder b(this->getContext());
+  return convertReassociationIndicesToExprs(b, getReassociationIndices());
+}
+SmallVector<AffineMap, 4> TensorReshapeOp::getReassociationMaps() {
+  return getSymbolLessAffineMaps(getReassociationExprs());
+}
+SmallVector<ReassociationExprs, 4> TensorReshapeOp::getReassociationExprs() {
+  OpBuilder b(this->getContext());
+  return convertReassociationIndicesToExprs(b, getReassociationIndices());
+}
 /// For reshape op compute the shape at dimension `dimIndex` of the output in
 /// terms of shape of the `src`, when the reshape op is a collapsing
 /// operation. It is the product of the shape of the collapsed dimensions of the
@@ -1445,26 +1671,37 @@ getReshapeOutputShapeFromInputShape(OpBuilder &builder, Location loc, Value src,
                    builder, loc, src, dstStaticShape, reassocation);
 }
 
-void mlir::linalg::ReshapeOp::build(OpBuilder &b, OperationState &result,
-                                    Value src,
-                                    ArrayRef<ReassociationExprs> reassociation,
-                                    ArrayRef<NamedAttribute> attrs) {
-  auto maps = getSymbolLessAffineMaps(reassociation);
-  auto memRefType = src.getType().cast<MemRefType>();
-  auto resultType = computeReshapeCollapsedType(memRefType, maps);
-  build(b, result, resultType, src, attrs);
-  result.addAttribute(ReshapeOp::getReassociationAttrName(),
-                      b.getAffineMapArrayAttr(maps));
+static ArrayAttr
+getReassociationIndicesAttribute(OpBuilder &b,
+                                 ArrayRef<ReassociationIndices> reassociation) {
+  SmallVector<Attribute, 4> reassociationAttr =
+      llvm::to_vector<4>(llvm::map_range(
+          reassociation, [&](ReassociationIndices indices) -> Attribute {
+            return b.getI64ArrayAttr(indices).cast<Attribute>();
+          }));
+  return b.getArrayAttr(reassociationAttr);
 }
 
-void mlir::linalg::ReshapeOp::build(OpBuilder &b, OperationState &result,
-                                    Type resultType, Value src,
-                                    ArrayRef<ReassociationExprs> reassociation,
-                                    ArrayRef<NamedAttribute> attrs) {
-  auto maps = getSymbolLessAffineMaps(reassociation);
+void mlir::linalg::ReshapeOp::build(
+    OpBuilder &b, OperationState &result, Value src,
+    ArrayRef<ReassociationIndices> reassociation,
+    ArrayRef<NamedAttribute> attrs) {
+  auto memRefType = src.getType().cast<MemRefType>();
+  auto resultType = computeReshapeCollapsedType(
+      memRefType, getSymbolLessAffineMaps(
+                      convertReassociationIndicesToExprs(b, reassociation)));
   build(b, result, resultType, src, attrs);
   result.addAttribute(ReshapeOp::getReassociationAttrName(),
-                      b.getAffineMapArrayAttr(maps));
+                      getReassociationIndicesAttribute(b, reassociation));
+}
+
+void mlir::linalg::ReshapeOp::build(
+    OpBuilder &b, OperationState &result, Type resultType, Value src,
+    ArrayRef<ReassociationIndices> reassociation,
+    ArrayRef<NamedAttribute> attrs) {
+  build(b, result, resultType, src, attrs);
+  result.addAttribute(ReshapeOp::getReassociationAttrName(),
+                      getReassociationIndicesAttribute(b, reassociation));
 }
 
 Value mlir::linalg::ReshapeOp::getViewSource() { return src(); }
@@ -1544,16 +1781,15 @@ static LogicalResult verifyReshapeLikeTypes(Op op, T &expandedType,
     // sizes 1.
     if (llvm::any_of(expandedType.getShape(),
                      [](int64_t dim) -> bool { return dim != 1; }))
-      return op.emitOpError(
-          "invalid to reshape tensor/memref with non-unit extent dimensions to "
-          "zero-rank tensor/memref");
+      return op.emitOpError("invalid to reshape tensor/memref with non-unit "
+                            "extent dimensions to zero-rank tensor/memref");
     return success();
   }
   if (collapsedRank != op.reassociation().size())
     return op.emitOpError("expected rank of the collapsed type(")
            << collapsedRank << ") to be the number of reassociation maps("
            << op.reassociation().size() << ")";
-  auto maps = getAffineMaps(op.reassociation());
+  auto maps = op.getReassociationMaps();
   for (auto it : llvm::enumerate(maps))
     if (it.value().getNumDims() != expandedRank)
       return op.emitOpError("expected reassociation map #")
@@ -1570,7 +1806,7 @@ static LogicalResult verify(ReshapeOp op) {
   MemRefType expandedType, collapsedType;
   if (failed(verifyReshapeLikeTypes(op, expandedType, collapsedType)))
     return failure();
-  auto maps = getAffineMaps(op.reassociation());
+  auto maps = op.getReassociationMaps();
   MemRefType expectedType = computeReshapeCollapsedType(expandedType, maps);
   if (collapsedType != expectedType)
     return op.emitOpError("expected collapsed type to be ")
@@ -1617,31 +1853,32 @@ computeTensorReshapeCollapsedType(RankedTensorType type,
 
 void mlir::linalg::TensorReshapeOp::build(
     OpBuilder &b, OperationState &result, Value src,
-    ArrayRef<ReassociationExprs> reassociation,
+    ArrayRef<ReassociationIndices> reassociation,
     ArrayRef<NamedAttribute> attrs) {
-  auto maps = getSymbolLessAffineMaps(reassociation);
   auto resultType = computeTensorReshapeCollapsedType(
-      src.getType().cast<RankedTensorType>(), maps);
+      src.getType().cast<RankedTensorType>(),
+      getSymbolLessAffineMaps(
+          convertReassociationIndicesToExprs(b, reassociation)));
   build(b, result, resultType, src, attrs);
-  result.addAttribute(TensorReshapeOp::getReassociationAttrName(),
-                      b.getAffineMapArrayAttr(maps));
+  result.addAttribute(ReshapeOp::getReassociationAttrName(),
+                      getReassociationIndicesAttribute(b, reassociation));
 }
 
 void mlir::linalg::TensorReshapeOp::build(
     OpBuilder &b, OperationState &result, Type resultType, Value src,
-    ArrayRef<ReassociationExprs> reassociation,
+    ArrayRef<ReassociationIndices> reassociation,
     ArrayRef<NamedAttribute> attrs) {
-  auto maps = getSymbolLessAffineMaps(reassociation);
   build(b, result, resultType, src, attrs);
-  result.addAttribute(TensorReshapeOp::getReassociationAttrName(),
-                      b.getAffineMapArrayAttr(maps));
+  result.addAttribute(ReshapeOp::getReassociationAttrName(),
+                      getReassociationIndicesAttribute(b, reassociation));
 }
 
 static LogicalResult verify(TensorReshapeOp op) {
   RankedTensorType expandedType, collapsedType;
   if (failed(verifyReshapeLikeTypes(op, expandedType, collapsedType)))
     return failure();
-  auto maps = getAffineMaps(op.reassociation());
+
+  auto maps = op.getReassociationMaps();
   RankedTensorType expectedType =
       computeTensorReshapeCollapsedType(expandedType, maps);
   if (collapsedType != expectedType)
@@ -2054,6 +2291,62 @@ static LogicalResult verify(TiledLoopOp op) {
 
 namespace {
 
+static constexpr int64_t kNoMatch = -1;
+
+// Folds away TiledLoopOp inputs if they have no uses within the body.
+//
+// Example:
+//
+// %0 = linalg.tiled_loop ...  ins (%in_ = %in: tensor<...>,
+//                                  %in_buf_ = %in_buf: memref<...>) {...}
+// Becomes
+//
+// linalg.tiled_loop ...  ins (%in_buf_ = %in_buf: memref<...>) {...}
+struct TiledLoopInputsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
+  using OpRewritePattern<linalg::TiledLoopOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::TiledLoopOp tiledLoop,
+                                PatternRewriter &rewriter) const final {
+    SmallVector<Value, 2> newInputs, regionInputTensorArgs;
+    // Store ids of the corresponding old and new input operands.
+    SmallVector<int64_t, 2> oldInputIdToNew(tiledLoop.inputs().size(),
+                                            kNoMatch);
+    for (auto en : llvm::enumerate(
+             llvm::zip(tiledLoop.inputs(), tiledLoop.getRegionInputArgs()))) {
+      Value in, bbArg;
+      size_t index = en.index();
+      std::tie(in, bbArg) = en.value();
+      if (!bbArg.use_empty()) {
+        oldInputIdToNew[index] = newInputs.size();
+        newInputs.push_back(in);
+      }
+    }
+    if (newInputs.size() == tiledLoop.inputs().size())
+      return failure();
+    Location loc = tiledLoop.getLoc();
+    auto newTiledLoop = rewriter.create<TiledLoopOp>(
+        loc, tiledLoop.lowerBound(), tiledLoop.upperBound(), tiledLoop.step(),
+        newInputs, tiledLoop.outputs(), tiledLoop.iterator_types());
+
+    // Clone the region.
+    BlockAndValueMapping bvm;
+    bvm.map(tiledLoop.getInductionVars(), newTiledLoop.getInductionVars());
+    bvm.map(tiledLoop.getRegionOutputArgs(),
+            newTiledLoop.getRegionOutputArgs());
+    for (const auto &en : llvm::enumerate(oldInputIdToNew))
+      if (en.value() != kNoMatch)
+        bvm.map(tiledLoop.getRegionInputArgs()[en.index()],
+                newTiledLoop.getRegionInputArgs()[en.value()]);
+    OpBuilder innerBuilder =
+        OpBuilder::atBlockEnd(newTiledLoop.getBody(), rewriter.getListener());
+    for (auto &op : *tiledLoop.getBody())
+      innerBuilder.clone(op, bvm);
+    rewriter.replaceOp(tiledLoop, newTiledLoop.getResults());
+
+    return success();
+  }
+};
+
 // Folds away TiledLoopOp output tensors when the following conditions are met:
 // * result of `linalg.tiled_loop` has no uses
 // * output tensor is the argument of `linalg.yield`
@@ -2085,27 +2378,32 @@ struct TiledLoopResultsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
 
     // Match the pattern and collect output buffers that will replace the output
     // tensors and also the ops that will be ignored when cloning the body.
-    SmallVector<Value, 2> newOutputOperands, newYieldArgs,
-        regionOutputTensorArgs;
+    SmallVector<Value, 2> newOutputOperands, newYieldArgs;
     int resultId = 0;
     // Store ids of the corresponding old and new output operands.
-    SmallVector<std::pair<size_t, size_t>, 2> old_out_id_to_new;
-    for (auto item : llvm::enumerate(
+    SmallVector<int64_t, 2> oldOutputIdToNew(tiledLoop.outputs().size(),
+                                             kNoMatch);
+    // Store ids of the corresponding old and new results.
+    SmallVector<int64_t, 2> oldResultIdToNew(tiledLoop.getNumResults(),
+                                             kNoMatch);
+    SmallVector<Value, 2> resultReplacement(tiledLoop.getNumResults());
+    for (auto en : llvm::enumerate(
              llvm::zip(tiledLoop.outputs(), tiledLoop.getRegionOutputArgs()))) {
-      size_t index = item.index();
-      Value out = std::get<0>(item.value());
-      Value outRegionArg = std::get<1>(item.value());
+      size_t index = en.index();
+      Value out = std::get<0>(en.value());
+      Value outRegionArg = std::get<1>(en.value());
 
       if (!out.getType().isa<RankedTensorType>()) {
-        old_out_id_to_new.push_back({index, newOutputOperands.size()});
+        oldOutputIdToNew[index] = newOutputOperands.size();
         newOutputOperands.push_back(out);
-        regionOutputTensorArgs.push_back(outRegionArg);
         continue;
       }
       Value result = tiledLoop.getResult(resultId);
       Value yieldArg = yieldOp.getOperand(resultId);
       if (yieldArg != outRegionArg || !result.use_empty()) {
-        old_out_id_to_new.push_back({index, newOutputOperands.size()});
+        oldOutputIdToNew[index] = newOutputOperands.size();
+        oldResultIdToNew[resultId] = newYieldArgs.size();
+        resultReplacement[resultId] = out;
         newOutputOperands.push_back(out);
         newYieldArgs.push_back(yieldArg);
       }
@@ -2119,20 +2417,30 @@ struct TiledLoopResultsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
         loc, tiledLoop.lowerBound(), tiledLoop.upperBound(), tiledLoop.step(),
         tiledLoop.inputs(), newOutputOperands, tiledLoop.iterator_types());
 
-    // Clone the region ignoring the def-chain for linalg.yield args:
-    // unnecessary `subtensor_insert`, `tensor_load` and `cast` ops.
+    // Clone the region.
     BlockAndValueMapping bvm;
     bvm.map(tiledLoop.getInductionVars(), newTiledLoop.getInductionVars());
     bvm.map(tiledLoop.getRegionInputArgs(), newTiledLoop.getRegionInputArgs());
-    for (const auto &item : old_out_id_to_new)
-      bvm.map(tiledLoop.getRegionOutputArgs()[item.first],
-              newTiledLoop.getRegionOutputArgs()[item.second]);
+    for (const auto &en : llvm::enumerate(oldOutputIdToNew)) {
+      if (en.value() != kNoMatch)
+        bvm.map(tiledLoop.getRegionOutputArgs()[en.index()],
+                newTiledLoop.getRegionOutputArgs()[en.value()]);
+      else
+        bvm.map(tiledLoop.getRegionOutputArgs()[en.index()],
+                tiledLoop.outputs()[en.index()]);
+    }
     OpBuilder innerBuilder =
         OpBuilder::atBlockEnd(newTiledLoop.getBody(), rewriter.getListener());
     for (auto &op : tiledLoop.getBody()->without_terminator())
       innerBuilder.clone(op, bvm);
-    innerBuilder.create<linalg::YieldOp>(loc, newYieldArgs);
-    rewriter.eraseOp(tiledLoop);
+    innerBuilder.create<linalg::YieldOp>(
+        loc, llvm::to_vector<2>(llvm::map_range(
+                 newYieldArgs, [&](Value arg) { return bvm.lookup(arg); })));
+
+    for (const auto &en : llvm::enumerate(oldResultIdToNew))
+      if (en.value() != kNoMatch)
+        resultReplacement[en.index()] = newTiledLoop.getResult(en.value());
+    rewriter.replaceOp(tiledLoop, resultReplacement);
 
     return success();
   }
@@ -2141,12 +2449,12 @@ struct TiledLoopResultsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
 
 void TiledLoopOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                               MLIRContext *context) {
-  results.insert<TiledLoopResultsFolder>(context);
+  results.insert<TiledLoopInputsFolder, TiledLoopResultsFolder>(context);
 }
 
 LogicalResult TiledLoopOp::fold(ArrayRef<Attribute>,
                                 SmallVectorImpl<OpFoldResult> &) {
-  return foldMemRefCast(*this);
+  return foldMemRefCastInTiledLoopOp(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2200,8 +2508,8 @@ static LogicalResult verify(ConvOp op) {
   if (oType.getRank() != iType.getRank() || oType.getRank() != fType.getRank())
     return op.emitOpError("expects memref ranks to match");
   if (auto strides = op.strides()) {
-    if (failed(
-            verifyStrideOrDilation(op, strides->getValue(), /*isStride=*/true)))
+    if (failed(verifyStrideOrDilation(op, strides->getValue(),
+                                      /*isStride=*/true)))
       return failure();
   }
   if (auto dilations = op.dilations()) {
@@ -2225,8 +2533,8 @@ static LogicalResult verifySingleInputPoolingOp(PoolingOp op) {
     return op.emitOpError("expects memref ranks to match");
 
   if (auto strides = op.strides()) {
-    if (failed(
-            verifyStrideOrDilation(op, strides->getValue(), /*isStride=*/true)))
+    if (failed(verifyStrideOrDilation(op, strides->getValue(),
+                                      /*isStride=*/true)))
       return failure();
   }
   if (auto dilations = op.dilations()) {
@@ -2274,9 +2582,6 @@ struct FoldTensorCastOp;
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-
-#define GET_OP_CLASSES
-#include "mlir/Dialect/Linalg/IR/LinalgSparseOps.cpp.inc"
 
 /// Return the dims that are `iteratorTypeName` loops in the LinalgOp `op`.
 /// Assumes `op` is a LinalgOp.

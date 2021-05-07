@@ -87,6 +87,7 @@ OPENCL_EXTENSION(cl_khr_subgroups, true, 200)
 OPENCL_EXTENSION(cl_clang_storage_class_specifiers, true, 100)
 OPENCL_EXTENSION(__cl_clang_function_pointers, true, 100)
 OPENCL_EXTENSION(__cl_clang_variadic_functions, true, 100)
+OPENCL_EXTENSION(__cl_clang_non_portable_kernel_param_types, true, 100)
 
 // AMD OpenCL extensions
 OPENCL_EXTENSION(cl_amd_media_ops, true, 100)

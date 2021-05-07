@@ -17,6 +17,10 @@
 
 using namespace llvm;
 
+static bool isValidDSOLocalReductionGV(GlobalValue &GV) {
+  return GV.isDSOLocal() && !GV.isImplicitDSOLocal();
+}
+
 /// Sets dso_local to false for all global values.
 static void extractGVsFromModule(std::vector<Chunk> ChunksToKeep,
                                  Module *Program) {
@@ -24,7 +28,7 @@ static void extractGVsFromModule(std::vector<Chunk> ChunksToKeep,
 
   // remove dso_local from global values
   for (auto &GV : Program->global_values())
-    if (GV.isDSOLocal() && !O.shouldKeep()) {
+    if (isValidDSOLocalReductionGV(GV) && !O.shouldKeep()) {
       GV.setDSOLocal(false);
     }
 }
@@ -37,7 +41,7 @@ static int countGVs(Module *Program) {
   outs() << "GlobalValue Index Reference:\n";
   int GVCount = 0;
   for (auto &GV : Program->global_values())
-    if (GV.isDSOLocal())
+    if (isValidDSOLocalReductionGV(GV))
       outs() << "\t" << ++GVCount << ": " << GV.getName() << "\n";
   outs() << "----------------------------\n";
   return GVCount;

@@ -39,7 +39,7 @@ class SymbolTable {
 public:
   Defined *addDefined(StringRef name, InputFile *, InputSection *,
                       uint64_t value, uint64_t size, bool isWeakDef,
-                      bool isPrivateExtern);
+                      bool isPrivateExtern, bool isThumb);
 
   Symbol *addUndefined(StringRef name, InputFile *, bool isWeakRef);
 

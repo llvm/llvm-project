@@ -220,8 +220,8 @@ void ARR38_C_F(FILE *file) {
   enum { BUFFER_SIZE = 1024 };
   wchar_t wbuf[BUFFER_SIZE]; // bugpath-note{{'wbuf' initialized here}}
 
-  const size_t size = sizeof(*wbuf);
-  const size_t nitems = sizeof(wbuf);
+  const size_t size = sizeof(*wbuf);   // bugpath-note{{'size' initialized to}}
+  const size_t nitems = sizeof(wbuf);  // bugpath-note{{'nitems' initialized to}}
 
   // The 3rd parameter should be the number of elements to read, not
   // the size in bytes.

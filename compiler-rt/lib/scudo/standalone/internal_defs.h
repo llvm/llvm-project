@@ -48,6 +48,34 @@
 #define USED __attribute__((used))
 #define NOEXCEPT noexcept
 
+// This check is only available on Clang. This is essentially an alias of
+// C++20's 'constinit' specifier which will take care of this when (if?) we can
+// ask all libc's that use Scudo to compile us with C++20. Dynamic
+// initialization is bad; Scudo is designed to be lazy-initializated on the
+// first call to malloc/free (and friends), and this generally happens in the
+// loader somewhere in libdl's init. After the loader is done, control is
+// transferred to libc's initialization, and the dynamic initializers are run.
+// If there's a dynamic initializer for Scudo, then it will clobber the
+// already-initialized Scudo, and re-initialize all its members back to default
+// values, causing various explosions. Unfortunately, marking
+// scudo::Allocator<>'s constructor as 'constexpr' isn't sufficient to prevent
+// dynamic initialization, as default initialization is fine under 'constexpr'
+// (but not 'constinit'). Clang at -O0, and gcc at all opt levels will emit a
+// dynamic initializer for any constant-initialized variables if there is a mix
+// of default-initialized and constant-initialized variables.
+//
+// If you're looking at this because your build failed, you probably introduced
+// a new member to scudo::Allocator<> (possibly transiently) that didn't have an
+// initializer. The fix is easy - just add one.
+#if defined(__has_attribute)
+#if __has_attribute(require_constant_initialization)
+#define SCUDO_REQUIRE_CONSTANT_INITIALIZATION                                  \
+  __attribute__((__require_constant_initialization__))
+#else
+#define SCUDO_REQUIRE_CONSTANT_INITIALIZATION
+#endif
+#endif
+
 namespace scudo {
 
 typedef unsigned long uptr;

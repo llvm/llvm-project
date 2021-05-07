@@ -181,27 +181,34 @@ class VirtRegRewriter : public MachineFunctionPass {
   SlotIndexes *Indexes;
   LiveIntervals *LIS;
   VirtRegMap *VRM;
+  DenseSet<Register> RewriteRegs;
+  bool ClearVirtRegs;
 
   void rewrite();
   void addMBBLiveIns();
   bool readsUndefSubreg(const MachineOperand &MO) const;
-  void addLiveInsForSubRanges(const LiveInterval &LI, Register PhysReg) const;
-  void handleIdentityCopy(MachineInstr &MI) const;
+  void addLiveInsForSubRanges(const LiveInterval &LI, MCRegister PhysReg) const;
+  void handleIdentityCopy(MachineInstr &MI);
   void expandCopyBundle(MachineInstr &MI) const;
   bool subRegLiveThrough(const MachineInstr &MI, MCRegister SuperPhysReg) const;
 
 public:
   static char ID;
-
-  VirtRegRewriter() : MachineFunctionPass(ID) {}
+  VirtRegRewriter(bool ClearVirtRegs_ = true) :
+    MachineFunctionPass(ID),
+    ClearVirtRegs(ClearVirtRegs_) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   bool runOnMachineFunction(MachineFunction&) override;
 
   MachineFunctionProperties getSetProperties() const override {
-    return MachineFunctionProperties().set(
+    if (ClearVirtRegs) {
+      return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::NoVRegs);
+    }
+
+    return MachineFunctionProperties();
   }
 };
 
@@ -224,6 +231,7 @@ INITIALIZE_PASS_END(VirtRegRewriter, "virtregrewriter",
 void VirtRegRewriter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<LiveIntervals>();
+  AU.addPreserved<LiveIntervals>();
   AU.addRequired<SlotIndexes>();
   AU.addPreserved<SlotIndexes>();
   AU.addRequired<LiveDebugVariables>();
@@ -257,15 +265,18 @@ bool VirtRegRewriter::runOnMachineFunction(MachineFunction &fn) {
   // Write out new DBG_VALUE instructions.
   getAnalysis<LiveDebugVariables>().emitDebugValues(VRM);
 
-  // All machine operands and other references to virtual registers have been
-  // replaced. Remove the virtual registers and release all the transient data.
-  VRM->clearAllVirt();
-  MRI->clearVirtRegs();
+  if (ClearVirtRegs) {
+    // All machine operands and other references to virtual registers have been
+    // replaced. Remove the virtual registers and release all the transient data.
+    VRM->clearAllVirt();
+    MRI->clearVirtRegs();
+  }
+
   return true;
 }
 
 void VirtRegRewriter::addLiveInsForSubRanges(const LiveInterval &LI,
-                                             Register PhysReg) const {
+                                             MCRegister PhysReg) const {
   assert(!LI.empty());
   assert(LI.hasSubRanges());
 
@@ -321,7 +332,12 @@ void VirtRegRewriter::addMBBLiveIns() {
     // This is a virtual register that is live across basic blocks. Its
     // assigned PhysReg must be marked as live-in to those blocks.
     Register PhysReg = VRM->getPhys(VirtReg);
-    assert(PhysReg != VirtRegMap::NO_PHYS_REG && "Unmapped virtual register.");
+    if (PhysReg == VirtRegMap::NO_PHYS_REG) {
+      // There may be no physical register assigned if only some register
+      // classes were already allocated.
+      assert(!ClearVirtRegs && "Unmapped virtual register");
+      continue;
+    }
 
     if (LI.hasSubRanges()) {
       addLiveInsForSubRanges(LI, PhysReg);
@@ -372,11 +388,20 @@ bool VirtRegRewriter::readsUndefSubreg(const MachineOperand &MO) const {
   return true;
 }
 
-void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) const {
+void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) {
   if (!MI.isIdentityCopy())
     return;
   LLVM_DEBUG(dbgs() << "Identity copy: " << MI);
   ++NumIdCopies;
+
+  Register DstReg = MI.getOperand(0).getReg();
+
+  // We may have deferred allocation of the virtual register, and the rewrite
+  // regs code doesn't handle the liveness update.
+  if (DstReg.isVirtual())
+    return;
+
+  RewriteRegs.insert(DstReg);
 
   // Copies like:
   //    %r0 = COPY undef %r0
@@ -517,8 +542,12 @@ void VirtRegRewriter::rewrite() {
           continue;
         Register VirtReg = MO.getReg();
         MCRegister PhysReg = VRM->getPhys(VirtReg);
-        assert(PhysReg != VirtRegMap::NO_PHYS_REG &&
-               "Instruction uses unmapped VirtReg");
+        if (PhysReg == VirtRegMap::NO_PHYS_REG)
+          continue;
+
+        assert(Register(PhysReg).isPhysical());
+
+        RewriteRegs.insert(PhysReg);
         assert(!MRI->isReserved(PhysReg) && "Reserved register assignment");
 
         // Preserve semantics of sub-register operands.
@@ -590,4 +619,21 @@ void VirtRegRewriter::rewrite() {
       handleIdentityCopy(*MI);
     }
   }
+
+  if (LIS) {
+    // Don't bother maintaining accurate LiveIntervals for registers which were
+    // already allocated.
+    for (Register PhysReg : RewriteRegs) {
+      for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid();
+           ++Units) {
+        LIS->removeRegUnit(*Units);
+      }
+    }
+  }
+
+  RewriteRegs.clear();
+}
+
+FunctionPass *llvm::createVirtRegRewriter(bool ClearVirtRegs) {
+  return new VirtRegRewriter(ClearVirtRegs);
 }
