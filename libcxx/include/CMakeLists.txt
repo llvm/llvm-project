@@ -141,6 +141,7 @@ set(files
   __ranges/all.h
   __ranges/concepts.h
   __ranges/data.h
+  __ranges/drop_view.h
   __ranges/empty.h
   __ranges/empty_view.h
   __ranges/enable_borrowed_range.h
