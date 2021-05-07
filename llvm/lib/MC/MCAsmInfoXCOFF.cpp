@@ -20,6 +20,11 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   IsLittleEndian = false;
   HasVisibilityOnlyWithLinkage = true;
   HasBasenameOnlyForFileDirective = false;
+
+  // For XCOFF, string constant consists of any number of characters enclosed in
+  // "" (double quotation marks).
+  HasPairedDoubleQuoteStringConstants = true;
+
   PrivateGlobalPrefix = "L..";
   PrivateLabelPrefix = "L..";
   SupportsQuotedNames = false;
