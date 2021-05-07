@@ -207,13 +207,14 @@ bool Symbol::isExported() const {
   if (!isDefined() || isLocal())
     return false;
 
-  if (forceExport || config->exportAll)
+  if (config->exportAll || (config->exportDynamic && !isHidden()))
     return true;
 
-  if (config->exportDynamic && !isHidden())
-    return true;
+  return isExportedExplicit();
+}
 
-  return flags & WASM_SYMBOL_EXPORTED;
+bool Symbol::isExportedExplicit() const {
+  return forceExport || flags & WASM_SYMBOL_EXPORTED;
 }
 
 bool Symbol::isNoStrip() const {
