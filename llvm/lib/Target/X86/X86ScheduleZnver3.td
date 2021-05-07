@@ -1464,7 +1464,8 @@ defm : Zn3WriteResYMM<WriteVecMoveY, [], 0, [], 1>;
 def : IsOptimizableRegisterMove<[
   InstructionEquivalenceClass<[
     // GPR variants.
-    MOV32rr, MOV64rr,
+    MOV32rr, MOV32rr_REV,
+    MOV64rr, MOV64rr_REV,
     // FIXME: MOVSXD32rr, but it is only supported in disassembler.
     // FIXME: XCHG32rr/XCHG64rr after MCA is fixed
 
@@ -1472,19 +1473,28 @@ def : IsOptimizableRegisterMove<[
     // MMX moves are *NOT* eliminated.
 
     // SSE variants.
-    MOVAPSrr, MOVUPSrr,
-    MOVAPDrr, MOVUPDrr,
-    MOVDQArr, MOVDQUrr,
+    MOVAPSrr, MOVAPSrr_REV,
+    MOVUPSrr, MOVUPSrr_REV,
+    MOVAPDrr, MOVAPDrr_REV,
+    MOVUPDrr, MOVUPDrr_REV,
+    MOVDQArr, MOVDQArr_REV,
+    MOVDQUrr, MOVDQUrr_REV,
 
     // AVX variants.
-    VMOVAPSrr, VMOVUPSrr,
-    VMOVAPDrr, VMOVUPDrr,
-    VMOVDQArr, VMOVDQUrr,
+    VMOVAPSrr, VMOVAPSrr_REV,
+    VMOVUPSrr, VMOVUPSrr_REV,
+    VMOVAPDrr, VMOVAPDrr_REV,
+    VMOVUPDrr, VMOVUPDrr_REV,
+    VMOVDQArr, VMOVDQArr_REV,
+    VMOVDQUrr, VMOVDQUrr_REV,
 
     // AVX YMM variants.
-    VMOVAPSYrr, VMOVUPSYrr,
-    VMOVAPDYrr, VMOVUPDYrr,
-    VMOVDQAYrr, VMOVDQUYrr
+    VMOVAPSYrr, VMOVAPSYrr_REV,
+    VMOVUPSYrr, VMOVUPSYrr_REV,
+    VMOVAPDYrr, VMOVAPDYrr_REV,
+    VMOVUPDYrr, VMOVUPDYrr_REV,
+    VMOVDQAYrr, VMOVDQAYrr_REV,
+    VMOVDQUYrr, VMOVDQUYrr_REV,
   ], TruePred >
 ]>;
 
