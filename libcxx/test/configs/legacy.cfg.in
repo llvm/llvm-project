@@ -21,7 +21,8 @@ config.use_sanitizer            = "@LLVM_USE_SANITIZER@"
 config.sanitizer_library        = "@LIBCXX_SANITIZER_LIBRARY@"
 config.configuration_variant    = "@LIBCXX_LIT_VARIANT@"
 config.host_triple              = "@LLVM_HOST_TRIPLE@"
-config.target_triple            = "@TARGET_TRIPLE@"
+if "@TARGET_TRIPLE@":
+    config.target_triple        = "@TARGET_TRIPLE@"
 config.sysroot                  = "@LIBCXX_SYSROOT@"
 config.gcc_toolchain            = "@LIBCXX_GCC_TOOLCHAIN@"
 config.generate_coverage        = @LIBCXX_GENERATE_COVERAGE@
