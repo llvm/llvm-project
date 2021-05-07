@@ -599,6 +599,8 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       // There are 3 cases where we do not need to create a new subsection:
       //   1. If the input file does not use subsections-via-symbols.
       //   2. Multiple symbols at the same address only induce one subsection.
+      //      (The symbolOffset == 0 check covers both this case as well as
+      //      the first loop iteration.)
       //   3. Alternative entry points do not induce new subsections.
       if (!subsectionsViaSymbols || symbolOffset == 0 ||
           sym.n_desc & N_ALT_ENTRY) {
@@ -609,6 +611,8 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
 
       auto *nextIsec = make<InputSection>(*isec);
       nextIsec->data = isec->data.slice(symbolOffset);
+      nextIsec->numRefs = 0;
+      nextIsec->canOmitFromOutput = false;
       isec->data = isec->data.slice(0, symbolOffset);
 
       // By construction, the symbol will be at offset zero in the new

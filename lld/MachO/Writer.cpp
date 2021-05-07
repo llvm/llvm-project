@@ -570,6 +570,9 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
 void Writer::scanRelocations() {
   TimeTraceScope timeScope("Scan relocations");
   for (InputSection *isec : inputSections) {
+    if (isec->shouldOmitFromOutput())
+      continue;
+
     if (isec->segname == segment_names::ld) {
       in.unwindInfo->prepareRelocations(isec);
       continue;
@@ -581,7 +584,7 @@ void Writer::scanRelocations() {
         // Skip over the following UNSIGNED relocation -- it's just there as the
         // minuend, and doesn't have the usual UNSIGNED semantics. We don't want
         // to emit rebase opcodes for it.
-        it = std::next(it);
+        it++;
         continue;
       }
       if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
@@ -592,6 +595,7 @@ void Writer::scanRelocations() {
           prepareSymbolRelocation(sym, isec, r);
       } else {
         assert(r.referent.is<InputSection *>());
+        assert(!r.referent.get<InputSection *>()->shouldOmitFromOutput());
         if (!r.pcrel)
           in.rebase->addEntry(isec, r.offset);
       }
@@ -894,6 +898,8 @@ template <class LP> void Writer::createOutputSections() {
   // Then merge input sections into output sections.
   MapVector<NamePair, MergedOutputSection *> mergedOutputSections;
   for (InputSection *isec : inputSections) {
+    if (isec->shouldOmitFromOutput())
+      continue;
     NamePair names = maybeRenameSection({isec->segname, isec->name});
     MergedOutputSection *&osec = mergedOutputSections[names];
     if (osec == nullptr)

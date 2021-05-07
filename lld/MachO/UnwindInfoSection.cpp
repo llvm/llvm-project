@@ -143,6 +143,8 @@ template <class Ptr>
 void UnwindInfoSectionImpl<Ptr>::prepareRelocations(InputSection *isec) {
   assert(isec->segname == segment_names::ld &&
          isec->name == section_names::compactUnwind);
+  assert(!isec->shouldOmitFromOutput() &&
+         "__compact_unwind section should not be omitted");
 
   for (Reloc &r : isec->relocs) {
     assert(target->hasAttr(r.type, RelocAttrBits::UNSIGNED));
@@ -175,6 +177,8 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(InputSection *isec) {
     }
 
     if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
+      assert(!referentIsec->shouldOmitFromOutput());
+
       // Personality functions can be referenced via section relocations
       // if they live in the same object file. Create placeholder synthetic
       // symbols for them in the GOT.
@@ -211,6 +215,8 @@ static void
 relocateCompactUnwind(MergedOutputSection *compactUnwindSection,
                       std::vector<CompactUnwindEntry<Ptr>> &cuVector) {
   for (const InputSection *isec : compactUnwindSection->inputs) {
+    assert(isec->parent == compactUnwindSection);
+
     uint8_t *buf =
         reinterpret_cast<uint8_t *>(cuVector.data()) + isec->outSecFileOff;
     memcpy(buf, isec->data.data(), isec->data.size());
@@ -229,7 +235,10 @@ relocateCompactUnwind(MergedOutputSection *compactUnwindSection,
         }
       } else if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
         checkTextSegment(referentIsec);
-        referentVA = referentIsec->getVA() + r.addend;
+        if (referentIsec->shouldOmitFromOutput())
+          referentVA = UINT64_MAX; // Tombstone value
+        else
+          referentVA = referentIsec->getVA() + r.addend;
       }
 
       writeAddress(buf + r.offset, referentVA, r.length);
@@ -294,6 +303,18 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
                              const CompactUnwindEntry<Ptr> *b) {
     return a->functionAddress < b->functionAddress;
   });
+
+  // Dead-stripped functions get a functionAddress of UINT64_MAX in
+  // relocateCompactUnwind(). Filter them out here.
+  CompactUnwindEntry<Ptr> tombstone;
+  tombstone.functionAddress = static_cast<Ptr>(UINT64_MAX);
+  cuPtrVector.erase(
+      std::lower_bound(cuPtrVector.begin(), cuPtrVector.end(), &tombstone,
+                       [](const CompactUnwindEntry<Ptr> *a,
+                          const CompactUnwindEntry<Ptr> *b) {
+                         return a->functionAddress < b->functionAddress;
+                       }),
+      cuPtrVector.end());
 
   // Fold adjacent entries with matching encoding+personality+lsda
   // We use three iterators on the same cuPtrVector to fold in-situ:
