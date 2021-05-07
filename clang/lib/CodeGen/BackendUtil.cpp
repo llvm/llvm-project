@@ -873,10 +873,6 @@ static void setCommandLineOpts(const CodeGenOptions &CodeGenOpts) {
   if (!CodeGenOpts.DebugPass.empty()) {
     BackendArgs.push_back("-debug-pass");
     BackendArgs.push_back(CodeGenOpts.DebugPass.c_str());
-    // New PM supports structure dumping. Old PM is still used for codegen,
-    // so we need to pass both options.
-    if (!CodeGenOpts.LegacyPassManager && CodeGenOpts.DebugPass == "Structure")
-      BackendArgs.push_back("-debug-pass-structure");
   }
   if (!CodeGenOpts.LimitFloatPrecision.empty()) {
     BackendArgs.push_back("-limit-float-precision");
@@ -1284,8 +1280,14 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
 
+  bool DebugPassStructure = CodeGenOpts.DebugPass == "Structure";
   PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI(CodeGenOpts.DebugPassManager);
+  PrintPassOptions PrintPassOpts;
+  PrintPassOpts.Indent = DebugPassStructure;
+  PrintPassOpts.SkipAnalyses = DebugPassStructure;
+  StandardInstrumentations SI(CodeGenOpts.DebugPassManager ||
+                                  DebugPassStructure,
+                              /*VerifyEach*/ false, PrintPassOpts);
   SI.registerCallbacks(PIC, &FAM);
   PassBuilder PB(TM.get(), PTO, PGOOpt, &PIC);
 
