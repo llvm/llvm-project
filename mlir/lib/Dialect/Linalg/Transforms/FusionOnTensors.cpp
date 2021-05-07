@@ -153,8 +153,8 @@ generateFusedElementwiseOpRegion(PatternRewriter &rewriter, Operation *fusedOp,
         std::max(producer.getNumLoops(), consumer.getNumLoops());
     SmallVector<Value> fusedIndices;
     fusedIndices.reserve(numFusedOpLoops);
-    llvm::transform(llvm::seq<int64_t>(0, numFusedOpLoops),
-                    std::back_inserter(fusedIndices), [&](int64_t dim) {
+    llvm::transform(llvm::seq<uint64_t>(0, numFusedOpLoops),
+                    std::back_inserter(fusedIndices), [&](uint64_t dim) {
                       return rewriter.create<IndexOp>(producer.getLoc(), dim);
                     });
     for (IndexOp indexOp :

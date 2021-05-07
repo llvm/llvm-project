@@ -42,6 +42,7 @@ int main(int, char**)
             test_compare<std::equal_to<int> >(9),
             test_allocator<std::pair<const int, std::string> >(10)
            );
+        C::iterator it0 = c0.begin();
         C c = std::move(c0);
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 0);
@@ -54,6 +55,7 @@ int main(int, char**)
         assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(c.load_factor() == 0);
         assert(c.max_load_factor() == 1);
+        assert(it0 == c.begin()); // Iterators remain valid
 
         assert(c0.empty());
     }
@@ -79,6 +81,7 @@ int main(int, char**)
             test_compare<std::equal_to<int> >(9),
             test_allocator<std::pair<const int, std::string> >(10)
            );
+        C::iterator it0 = c0.begin();
         C c = std::move(c0);
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 4);
@@ -95,6 +98,7 @@ int main(int, char**)
         assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
+        assert(it0 == c.begin()); // Iterators remain valid
 
         assert(c0.empty());
     }
@@ -109,6 +113,7 @@ int main(int, char**)
             test_compare<std::equal_to<int> >(9),
             min_allocator<std::pair<const int, std::string> >()
            );
+        C::iterator it0 = c0.begin();
         C c = std::move(c0);
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 0);
@@ -121,6 +126,7 @@ int main(int, char**)
         assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(c.load_factor() == 0);
         assert(c.max_load_factor() == 1);
+        assert(it0 == c.begin()); // Iterators remain valid
 
         assert(c0.empty());
     }
@@ -146,6 +152,7 @@ int main(int, char**)
             test_compare<std::equal_to<int> >(9),
             min_allocator<std::pair<const int, std::string> >()
            );
+        C::iterator it0 = c0.begin();
         C c = std::move(c0);
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 4);
@@ -162,6 +169,7 @@ int main(int, char**)
         assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
+        assert(it0 == c.begin()); // Iterators remain valid
 
         assert(c0.empty());
     }

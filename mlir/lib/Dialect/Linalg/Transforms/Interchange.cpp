@@ -93,8 +93,8 @@ void mlir::linalg::interchange(PatternRewriter &rewriter, LinalgOp op,
       rewriter.setInsertionPoint(indexOp);
       SmallVector<Value> allIndices;
       allIndices.reserve(op.getNumLoops());
-      llvm::transform(llvm::seq<int64_t>(0, op.getNumLoops()),
-                      std::back_inserter(allIndices), [&](int64_t dim) {
+      llvm::transform(llvm::seq<uint64_t>(0, op.getNumLoops()),
+                      std::back_inserter(allIndices), [&](uint64_t dim) {
                         return rewriter.create<IndexOp>(indexOp->getLoc(), dim);
                       });
       rewriter.replaceOpWithNewOp<AffineApplyOp>(

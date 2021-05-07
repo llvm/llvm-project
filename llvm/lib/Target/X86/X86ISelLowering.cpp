@@ -46998,15 +46998,17 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   // Fold xor(truncate(xor(x,c1)),c2) -> xor(truncate(x),xor(truncate(c1),c2))
   // TODO: Under what circumstances could this be performed in DAGCombine?
   if ((N0.getOpcode() == ISD::TRUNCATE || N0.getOpcode() == ISD::ZERO_EXTEND) &&
-      N0.getOperand(0).getOpcode() == N->getOpcode() &&
-      isa<ConstantSDNode>(N1) &&
-      isa<ConstantSDNode>(N0.getOperand(0).getOperand(1))) {
-    SDLoc DL(N);
+      N0.getOperand(0).getOpcode() == N->getOpcode()) {
     SDValue TruncExtSrc = N0.getOperand(0);
-    SDValue LHS = DAG.getZExtOrTrunc(TruncExtSrc.getOperand(0), DL, VT);
-    SDValue RHS = DAG.getZExtOrTrunc(TruncExtSrc.getOperand(1), DL, VT);
-    return DAG.getNode(ISD::XOR, DL, VT, LHS,
-                       DAG.getNode(ISD::XOR, DL, VT, RHS, N1));
+    auto *N1C = dyn_cast<ConstantSDNode>(N1);
+    auto *N001C = dyn_cast<ConstantSDNode>(TruncExtSrc.getOperand(1));
+    if (N1C && !N1C->isOpaque() && N001C && !N001C->isOpaque()) {
+      SDLoc DL(N);
+      SDValue LHS = DAG.getZExtOrTrunc(TruncExtSrc.getOperand(0), DL, VT);
+      SDValue RHS = DAG.getZExtOrTrunc(TruncExtSrc.getOperand(1), DL, VT);
+      return DAG.getNode(ISD::XOR, DL, VT, LHS,
+                         DAG.getNode(ISD::XOR, DL, VT, RHS, N1));
+    }
   }
 
   if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, Subtarget))
