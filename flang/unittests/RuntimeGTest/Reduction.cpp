@@ -47,17 +47,25 @@ TEST(Reductions, DimMaskProductInt4) {
   prod.Destroy();
 }
 
-TEST(Reductions, DoubleMaxMin) {
+TEST(Reductions, DoubleMaxMinNorm2) {
   std::vector<int> shape{3, 4, 2}; // rows, columns, planes
   //   0  -3   6  -9     12 -15  18 -21
   //  -1   4  -7  10    -13  16 -19  22
   //   2  -5   8 -11     14 -17  20  22   <- note last two are equal to test
   //   BACK=
-  auto array{MakeArray<TypeCategory::Real, 8>(shape,
-      std::vector<double>{0, -1, 2, -3, 4, -5, 6, -7, 8, -9, 10, -11, 12, -13,
-          14, -15, 16, -17, 18, -19, 20, -21, 22, 22})};
+  std::vector<double> rawData{0, -1, 2, -3, 4, -5, 6, -7, 8, -9, 10, -11, 12,
+      -13, 14, -15, 16, -17, 18, -19, 20, -21, 22, 22};
+  auto array{MakeArray<TypeCategory::Real, 8>(shape, rawData)};
   EXPECT_EQ(RTNAME(MaxvalReal8)(*array, __FILE__, __LINE__), 22.0);
   EXPECT_EQ(RTNAME(MinvalReal8)(*array, __FILE__, __LINE__), -21.0);
+  double naiveNorm2{0};
+  for (auto x : rawData) {
+    naiveNorm2 += x * x;
+  }
+  naiveNorm2 = std::sqrt(naiveNorm2);
+  double norm2Error{
+      std::abs(naiveNorm2 - RTNAME(Norm2_8)(*array, __FILE__, __LINE__))};
+  EXPECT_LE(norm2Error, 0.000001 * naiveNorm2);
   StaticDescriptor<2> statDesc;
   Descriptor &loc{statDesc.descriptor()};
   RTNAME(Maxloc)
