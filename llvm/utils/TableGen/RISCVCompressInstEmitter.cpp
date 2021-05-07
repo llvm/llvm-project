@@ -273,8 +273,8 @@ static bool verifyDagOpCount(CodeGenInstruction &Inst, DagInit *Dag,
   // The Instruction might have tied operands so the Dag might have
   //  a fewer operand count.
   unsigned RealCount = Inst.Operands.size();
-  for (unsigned i = 0; i < Inst.Operands.size(); i++)
-    if (Inst.Operands[i].getTiedRegister() != -1)
+  for (const auto &Operand : Inst.Operands)
+    if (Operand.getTiedRegister() != -1)
       --RealCount;
 
   if (Dag->getNumArgs() != RealCount)

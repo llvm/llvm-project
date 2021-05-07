@@ -698,8 +698,8 @@ void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
         ModRMDecision.push_back(decision.instructionIDs[index]);
       break;
     case MODRM_FULL:
-      for (unsigned index = 0; index < 256; ++index)
-        ModRMDecision.push_back(decision.instructionIDs[index]);
+      for (unsigned short InstructionID : decision.instructionIDs)
+        ModRMDecision.push_back(InstructionID);
       break;
   }
 
@@ -710,10 +710,9 @@ void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
     ModRMTableNum += ModRMDecision.size();
     o1 << "/*Table" << EntryNumber << "*/\n";
     i1++;
-    for (std::vector<unsigned>::const_iterator I = ModRMDecision.begin(),
-           E = ModRMDecision.end(); I != E; ++I) {
-      o1.indent(i1 * 2) << format("0x%hx", *I) << ", /*"
-                        << InstructionSpecifiers[*I].name << "*/\n";
+    for (unsigned I : ModRMDecision) {
+      o1.indent(i1 * 2) << format("0x%hx", I) << ", /*"
+                        << InstructionSpecifiers[I].name << "*/\n";
     }
     i1--;
   }
@@ -823,12 +822,9 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
   for (unsigned Index = 0; Index < NumInstructions; ++Index) {
     OperandListTy OperandList;
 
-    for (unsigned OperandIndex = 0; OperandIndex < X86_MAX_OPERANDS;
-         ++OperandIndex) {
-      OperandEncoding Encoding = (OperandEncoding)InstructionSpecifiers[Index]
-                                 .operands[OperandIndex].encoding;
-      OperandType Type = (OperandType)InstructionSpecifiers[Index]
-                         .operands[OperandIndex].type;
+    for (auto Operand : InstructionSpecifiers[Index].operands) {
+      OperandEncoding Encoding = (OperandEncoding)Operand.encoding;
+      OperandType Type = (OperandType)Operand.type;
       OperandList.push_back(std::make_pair(Encoding, Type));
     }
     unsigned &N = OperandSets[OperandList];
@@ -856,12 +852,9 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     i++;
 
     OperandListTy OperandList;
-    for (unsigned OperandIndex = 0; OperandIndex < X86_MAX_OPERANDS;
-         ++OperandIndex) {
-      OperandEncoding Encoding = (OperandEncoding)InstructionSpecifiers[index]
-                                 .operands[OperandIndex].encoding;
-      OperandType Type = (OperandType)InstructionSpecifiers[index]
-                         .operands[OperandIndex].type;
+    for (auto Operand : InstructionSpecifiers[index].operands) {
+      OperandEncoding Encoding = (OperandEncoding)Operand.encoding;
+      OperandType Type = (OperandType)Operand.type;
       OperandList.push_back(std::make_pair(Encoding, Type));
     }
     o.indent(i * 2) << (OperandSets[OperandList] - 1) << ",\n";

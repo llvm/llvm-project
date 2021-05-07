@@ -872,6 +872,8 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
 
     if (CInfo.Kind == BPFPreserveFieldInfoAI) {
       InfoKind = CInfo.AccessIndex;
+      if (InfoKind == BPFCoreSharedInfo::FIELD_EXISTENCE)
+        PatchImm = 1;
       break;
     }
 

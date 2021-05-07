@@ -24,8 +24,9 @@ func @indexed_generic_vector(%operand: memref<50xf32>, %result: memref<50xf32>) 
 // TILE-10n25-LABEL: func @indexed_generic_vector
 // TILE-10n25: %[[C10:.*]] = constant 10 : index
 // TILE-10n25: scf.for %[[J:.*]] = {{.*}} step %[[C10]]
-// TILE-10n25:   linalg.indexed_generic
-// TILE-10n25:   ^bb0(%[[I:.*]]: index, %[[IN:.*]]: f32, %[[OUT:.*]]: f32)
+// TILE-10n25:   linalg.generic
+// TILE-10n25:   ^bb0(%[[IN:.*]]: f32, %[[OUT:.*]]: f32)
+// TILE-10n25:     %[[I:.*]] = linalg.index 0 : index
 // TILE-10n25:     %[[NEW_I:.*]] = addi %[[I]], %[[J]] : index
 // TILE-10n25:     %[[NEW_I_INT:.*]] = index_cast %[[NEW_I]] : index to i32
 // TILE-10n25:     %[[NEW_I_FLOAT:.*]] = sitofp %[[NEW_I_INT]] : i32 to f32
@@ -34,8 +35,9 @@ func @indexed_generic_vector(%operand: memref<50xf32>, %result: memref<50xf32>) 
 // TILE-25n0-LABEL: func @indexed_generic_vector
 // TILE-25n0: %[[C25:.*]] = constant 25 : index
 // TILE-25n0: scf.for %[[J:.*]] = {{.*}} step %[[C25]]
-// TILE-25n0:   linalg.indexed_generic
-// TILE-25n0:   ^bb0(%[[I:.*]]: index, %[[IN:.*]]: f32, %[[OUT:.*]]: f32)
+// TILE-25n0:   linalg.generic
+// TILE-25n0:   ^bb0(%[[IN:.*]]: f32, %[[OUT:.*]]: f32)
+// TILE-25n0:    %[[I:.*]] = linalg.index 0 : index
 // TILE-25n0:     %[[NEW_I:.*]] = addi %[[I]], %[[J]] : index
 // TILE-25n0:     %[[NEW_I_INT:.*]] = index_cast %[[NEW_I]] : index to i32
 // TILE-25n0:     %[[NEW_I_FLOAT:.*]] = sitofp %[[NEW_I_INT]] : i32 to f32
@@ -43,7 +45,7 @@ func @indexed_generic_vector(%operand: memref<50xf32>, %result: memref<50xf32>) 
 
 // TILE-0n25-LABEL: func @indexed_generic_vector
 // TILE-0n25-NOT: scf.for %[[J:.*]] = {{.*}} step %
-// TILE-0n25: linalg.indexed_generic
+// TILE-0n25: linalg.generic
 
 #combined_indices_trait = {
   args_in = 1,
@@ -73,8 +75,10 @@ func @indexed_generic_matrix(%operand: memref<50x99xf32>, %result: memref<50x50x
 // TILE-10n25-DAG: %[[C10:.*]] = constant 10 : index
 // TILE-10n25: scf.for %[[K:.*]] = {{.*}} step %[[C10]]
 // TILE-10n25:   scf.for %[[L:.*]] = {{.*}} step %[[C25]]
-// TILE-10n25:     linalg.indexed_generic
-// TILE-10n25:     ^bb0(%[[I:.*]]: index, %[[J:.*]]: index, %[[IN:.*]]: f32, %[[OUT:.*]]: f32):
+// TILE-10n25:     linalg.generic
+// TILE-10n25:     ^bb0(%[[IN:.*]]: f32, %[[OUT:.*]]: f32):
+// TILE-10n25:       %[[I:.*]] = linalg.index 0 : index
+// TILE-10n25:       %[[J:.*]] = linalg.index 1 : index
 // TILE-10n25:       %[[NEW_I:.*]] = addi %[[I]], %[[K]] : index
 // TILE-10n25:       %[[NEW_J:.*]] = addi %[[J]], %[[L]] : index
 // TILE-10n25:       %[[NEW_INT_I:.*]] = index_cast %[[NEW_I]] : index to i32
@@ -86,8 +90,10 @@ func @indexed_generic_matrix(%operand: memref<50x99xf32>, %result: memref<50x50x
 // TILE-25n0-LABEL: func @indexed_generic_matrix
 // TILE-25n0: %[[C25:.*]] = constant 25 : index
 // TILE-25n0: scf.for %[[L:.*]] = {{.*}} step %[[C25]]
-// TILE-25n0:   linalg.indexed_generic
-// TILE-25n0:   ^bb0(%[[I:.*]]: index, %[[J:.*]]: index, %[[IN:.*]]: f32, %[[OUT:.*]]: f32):
+// TILE-25n0:   linalg.generic
+// TILE-25n0:   ^bb0(%[[IN:.*]]: f32, %[[OUT:.*]]: f32):
+// TILE-25n0:     %[[I:.*]] = linalg.index 0 : index
+// TILE-25n0:     %[[J:.*]] = linalg.index 1 : index
 // TILE-25n0:     %[[NEW_I:.*]] = addi %[[I]], %[[L]] : index
 // TILE-25n0:     %[[NEW_INT_I:.*]] = index_cast %[[NEW_I]] : index to i32
 // TILE-25n0:     %[[NEW_FLOAT_I:.*]] = sitofp %[[NEW_INT_I]] : i32 to f32
@@ -98,8 +104,10 @@ func @indexed_generic_matrix(%operand: memref<50x99xf32>, %result: memref<50x50x
 // TILE-0n25-LABEL: func @indexed_generic_matrix
 // TILE-0n25: %[[C25:.*]] = constant 25 : index
 // TILE-0n25: scf.for %[[L:.*]] = {{.*}} step %[[C25]]
-// TILE-0n25:   linalg.indexed_generic
-// TILE-0n25:   ^bb0(%[[I:.*]]: index, %[[J:.*]]: index, %[[IN:.*]]: f32, %[[OUT:.*]]: f32):
+// TILE-0n25:   linalg.generic
+// TILE-0n25:   ^bb0(%[[IN:.*]]: f32, %[[OUT:.*]]: f32):
+// TILE-0n25:     %[[I:.*]] = linalg.index 0 : index
+// TILE-0n25:     %[[J:.*]] = linalg.index 1 : index
 // TILE-0n25:     %[[NEW_J:.*]] = addi %[[J]], %[[L]] : index
 // TILE-0n25:     %[[INT_I:.*]] = index_cast %[[I]] : index to i32
 // TILE-0n25:     %[[FLOAT_I:.*]] = sitofp %[[INT_I]] : i32 to f32

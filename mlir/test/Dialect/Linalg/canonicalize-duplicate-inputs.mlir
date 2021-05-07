@@ -100,8 +100,8 @@ func @multiple_different_redundant_args(%arg0: tensor<?xf32>, %arg1: tensor<?xf3
 // CHECK: #[[$MAP:.*]] = affine_map<(d0) -> (d0)>
 // CHECK-LABEL: @indexed_generic
 func @indexed_generic(%arg0: tensor<?xf32>) -> tensor<?xf32> {
-  // CHECK: linalg.indexed_generic
-  // CHECK:   ^bb0(%{{.*}}: index, %[[BBARG:.*]]: f32, %{{[a-zA-Z0-9]+}}: f32):
+  // CHECK: linalg.generic
+  // CHECK:   ^bb0(%[[BBARG:.*]]: f32, %{{[a-zA-Z0-9]+}}: f32):
   // CHECK:     addf %[[BBARG]], %[[BBARG]]
   %0 = linalg.indexed_generic {indexing_maps = [#map, #map, #map], iterator_types = ["parallel"]}
       ins(%arg0, %arg0 : tensor<?xf32>, tensor<?xf32>)

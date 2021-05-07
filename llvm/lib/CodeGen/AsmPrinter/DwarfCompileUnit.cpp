@@ -83,7 +83,7 @@ void DwarfCompileUnit::addLabelAddress(DIE &Die, dwarf::Attribute Attribute,
 
   if (!Base || Base == Label) {
     unsigned idx = DD->getAddressPool().getIndex(Label);
-    Die.addValue(DIEValueAllocator, Attribute,
+    addAttribute(Die, Attribute,
                  DD->getDwarfVersion() >= 5 ? dwarf::DW_FORM_addrx
                                             : dwarf::DW_FORM_GNU_addr_index,
                  DIEInteger(idx));
@@ -100,7 +100,7 @@ void DwarfCompileUnit::addLabelAddress(DIE &Die, dwarf::Attribute Attribute,
     addPoolOpAddress(*Loc, Label);
     addBlock(Die, Attribute, dwarf::DW_FORM_exprloc, Loc);
   } else
-    Die.addValue(DIEValueAllocator, Attribute, dwarf::DW_FORM_LLVM_addrx_offset,
+    addAttribute(Die, Attribute, dwarf::DW_FORM_LLVM_addrx_offset,
                  new (DIEValueAllocator) DIEAddrOffset(
                      DD->getAddressPool().getIndex(Base), Label, Base));
 }
@@ -112,11 +112,9 @@ void DwarfCompileUnit::addLocalLabelAddress(DIE &Die,
     DD->addArangeLabel(SymbolCU(this, Label));
 
   if (Label)
-    Die.addValue(DIEValueAllocator, Attribute, dwarf::DW_FORM_addr,
-                 DIELabel(Label));
+    addAttribute(Die, Attribute, dwarf::DW_FORM_addr, DIELabel(Label));
   else
-    Die.addValue(DIEValueAllocator, Attribute, dwarf::DW_FORM_addr,
-                 DIEInteger(0));
+    addAttribute(Die, Attribute, dwarf::DW_FORM_addr, DIEInteger(0));
 }
 
 unsigned DwarfCompileUnit::getOrCreateSourceID(const DIFile *File) {
@@ -1472,7 +1470,7 @@ void DwarfCompileUnit::addLocationList(DIE &Die, dwarf::Attribute Attribute,
   dwarf::Form Form = (DD->getDwarfVersion() >= 5)
                          ? dwarf::DW_FORM_loclistx
                          : DD->getDwarfSectionOffsetForm();
-  Die.addValue(DIEValueAllocator, Attribute, Form, DIELocList(Index));
+  addAttribute(Die, Attribute, Form, DIELocList(Index));
 }
 
 void DwarfCompileUnit::applyVariableAttributes(const DbgVariable &Var,
@@ -1504,7 +1502,7 @@ void DwarfCompileUnit::applyLabelAttributes(const DbgLabel &Label,
 /// Add a Dwarf expression attribute data and value.
 void DwarfCompileUnit::addExpr(DIELoc &Die, dwarf::Form Form,
                                const MCExpr *Expr) {
-  Die.addValue(DIEValueAllocator, (dwarf::Attribute)0, Form, DIEExpr(Expr));
+  addAttribute(Die, (dwarf::Attribute)0, Form, DIEExpr(Expr));
 }
 
 void DwarfCompileUnit::applySubprogramAttributesToDefinition(
@@ -1538,7 +1536,7 @@ void DwarfCompileUnit::addAddrTableBase() {
 }
 
 void DwarfCompileUnit::addBaseTypeRef(DIEValueList &Die, int64_t Idx) {
-  Die.addValue(DIEValueAllocator, (dwarf::Attribute)0, dwarf::DW_FORM_udata,
+  addAttribute(Die, (dwarf::Attribute)0, dwarf::DW_FORM_udata,
                new (DIEValueAllocator) DIEBaseTypeRef(this, Idx));
 }
 
