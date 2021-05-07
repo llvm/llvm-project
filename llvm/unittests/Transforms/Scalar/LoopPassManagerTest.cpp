@@ -297,7 +297,7 @@ public:
                   "end:\n"
                   "  ret void\n"
                   "}\n")),
-        LAM(true), FAM(true), MAM(true) {
+        LAM(), FAM(), MAM() {
     // Register our mock analysis.
     LAM.registerPass([&] { return MLAHandle.getAnalysis(); });
 
