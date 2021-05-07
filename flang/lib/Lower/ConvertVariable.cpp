@@ -141,11 +141,10 @@ static mlir::Type unwrapElementType(mlir::Type type) {
   return type;
 }
 
-/// Helper to create initial-data-target fir.box in a global initializer region.
-static mlir::Value
-genInitialDataTarget(Fortran::lower::AbstractConverter &converter,
-                     mlir::Location loc, mlir::Type boxType,
-                     const Fortran::lower::SomeExpr &initialTarget) {
+/// create initial-data-target fir.box in a global initializer region.
+mlir::Value Fortran::lower::genInitialDataTarget(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    mlir::Type boxType, const Fortran::lower::SomeExpr &initialTarget) {
   Fortran::lower::SymMap globalOpSymMap;
   Fortran::lower::AggregateStoreMap storeMap;
   Fortran::lower::StatementContext stmtCtx;
@@ -240,7 +239,8 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
     if (details && details->init()) {
       auto expr = *details->init();
       auto init = [&](Fortran::lower::FirOpBuilder &b) {
-        auto box = genInitialDataTarget(converter, loc, symTy, expr);
+        auto box =
+            Fortran::lower::genInitialDataTarget(converter, loc, symTy, expr);
         b.create<fir::HasValueOp>(loc, box);
       };
       global =
@@ -732,8 +732,8 @@ defineCommonBlock(Fortran::lower::AbstractConverter &converter,
           auto initExpr = memDet->init().value();
           auto initVal =
               Fortran::semantics::IsPointer(*mem)
-                  ? genInitialDataTarget(converter, loc,
-                                         converter.genType(*mem), initExpr)
+                  ? Fortran::lower::genInitialDataTarget(
+                        converter, loc, converter.genType(*mem), initExpr)
                   : genInitializerExprValue(converter, loc, initExpr, stmtCtx);
           auto offVal = builder.createIntegerConstant(loc, idxTy, tupIdx);
           auto castVal = builder.createConvert(loc, commonTy.getType(tupIdx),

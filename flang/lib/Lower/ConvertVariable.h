@@ -29,6 +29,11 @@ namespace Fortran {
 namespace semantics {
 class Scope;
 }
+namespace evaluate {
+template <typename T>
+class Expr;
+struct SomeType;
+} // namespace evaluate
 namespace lower {
 class AbstractConverter;
 class CallerInterface;
@@ -71,6 +76,13 @@ void mapSymbolAttributes(AbstractConverter &, const pft::Variable &, SymMap &,
 void mapCallInterfaceSymbols(AbstractConverter &,
                              const Fortran::lower::CallerInterface &caller,
                              SymMap &symMap);
+
+/// Create initial-data-target fir.box in a global initializer region.
+/// This handles the local instantiation of the target variable.
+mlir::Value
+genInitialDataTarget(Fortran::lower::AbstractConverter &, mlir::Location,
+                     mlir::Type boxType,
+                     const evaluate::Expr<evaluate::SomeType> &initialTarget);
 
 } // namespace lower
 } // namespace Fortran

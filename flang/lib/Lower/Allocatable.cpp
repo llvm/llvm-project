@@ -387,15 +387,20 @@ private:
     // Ignore lengths if already constant in the box type (this would trigger an
     // error in the embox).
     llvm::SmallVector<mlir::Value> cleanedLengths;
+    auto cleanedAddr = addr;
     if (auto charTy = box.getEleTy().dyn_cast<fir::CharacterType>()) {
+      // Cast address to box type so that both input and output type have
+      // unknown or constant lengths.
+      cleanedAddr =
+          builder.createConvert(loc, builder.getRefType(box.getBaseTy()), addr);
       if (charTy.getLen() == fir::CharacterType::unknownLen())
         cleanedLengths.append(lengths.begin(), lengths.end());
-    } else if (box.isDerived()) {
-      // TODO: derived type lengths clean-up
+    } else if (box.isDerivedWithLengthParameters()) {
+      TODO(loc, "updating mutablebox of derived type with length parameters");
       cleanedLengths = lengths;
     }
-    auto irBox = builder.create<fir::EmboxOp>(loc, box.getBoxTy(), addr, shape,
-                                              emptySlice, cleanedLengths);
+    auto irBox = builder.create<fir::EmboxOp>(
+        loc, box.getBoxTy(), cleanedAddr, shape, emptySlice, cleanedLengths);
     builder.create<fir::StoreOp>(loc, irBox, box.getAddr());
   }
   /// Update the set of property variables of the MutableBoxValue.
@@ -450,28 +455,13 @@ unwrapSymbol(const Fortran::parser::AllocateObject &allocObj) {
   return *lastName.symbol;
 }
 
-// TODO: the front-end needs to store the AllocateObject as an expressions.
-// When derived type are supported, the allocatable can be describe by a non
-// trivial expression that would need to be computed e.g `A(foo(B+C),
-// 1)%alloc_component` For now, getting the last name symbol is OK since there
-// is only one name.
 static fir::MutableBoxValue
 genMutableBoxValue(Fortran::lower::AbstractConverter &converter,
                    mlir::Location loc,
                    const Fortran::parser::AllocateObject &allocObj) {
-  if (std::holds_alternative<Fortran::parser::StructureComponent>(allocObj.u))
-    TODO(loc, "allocatable or pointer components");
-  const auto &symbol = unwrapSymbol(allocObj);
-  Fortran::evaluate::DataRef ref(symbol);
-  auto dyType = Fortran::evaluate::DynamicType::From(symbol);
-  if (dyType)
-    if (auto maybeExpr =
-            Fortran::evaluate::TypedWrapper<Fortran::evaluate::Designator,
-                                            Fortran::evaluate::DataRef>(
-                *dyType, std::move(ref)))
-      return converter.genExprMutableBox(loc, *maybeExpr);
-  fir::emitFatalError(
-      loc, "could not build expression from symbol in allocate statement");
+  const auto *expr = Fortran::semantics::GetExpr(allocObj);
+  assert(expr && "semantic analysis failure");
+  return converter.genExprMutableBox(loc, *expr);
 }
 
 /// Implement Allocate statement lowering.

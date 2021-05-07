@@ -51,8 +51,9 @@ subroutine test_array_char(p, x)
   character(:), pointer :: p(:)
   ! CHECK: %[[c:.*]]:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   ! CHECK: %[[xaddr:.*]] = fir.convert %[[c]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<100x!fir.char<1,?>>>
-  ! CHECK: %[[shape:.*]] = fir.shape %c100{{.*}}
-  ! CHECK: %[[box:.*]] = fir.embox %[[xaddr]](%[[shape]]) typeparams %[[c]]#1
+  ! CHECK-DAG: %[[xaddr2:.*]] = fir.convert %[[xaddr]] : (!fir.ref<!fir.array<100x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
+  ! CHECK-DAG: %[[shape:.*]] = fir.shape %c100{{.*}}
+  ! CHECK: %[[box:.*]] = fir.embox %[[xaddr2]](%[[shape]]) typeparams %[[c]]#1
   ! CHECK: fir.store %[[box]] to %[[p]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
   p => x
 end subroutine

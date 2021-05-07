@@ -1537,28 +1537,11 @@ private:
   /// We do this by setting each pointer to null.
   void genFIR(const Fortran::parser::NullifyStmt &stmt) {
     auto loc = toLocation();
-    for (auto &po : stmt.v) {
-      std::visit(
-          Fortran::common::visitors{
-              [&](const Fortran::parser::Name &name) {
-                assert(name.symbol);
-                auto pointer = lookupSymbol(*name.symbol);
-                pointer.match(
-                    [&](const fir::MutableBoxValue &box) {
-                      Fortran::lower::disassociateMutableBox(*builder, loc,
-                                                             box);
-                    },
-                    [&](const auto &) {
-                      fir::emitFatalError(
-                          loc,
-                          "entity in nullify was not lowered as a pointer");
-                    });
-              },
-              [&](const Fortran::parser::StructureComponent &) {
-                TODO(loc, "StructureComponent NullifyStmt lowering");
-              },
-          },
-          po.u);
+    for (auto &pointerObject : stmt.v) {
+      const auto *expr = Fortran::semantics::GetExpr(pointerObject);
+      assert(expr);
+      auto box = genExprMutableBox(loc, *expr);
+      Fortran::lower::disassociateMutableBox(*builder, loc, box);
     }
   }
 
@@ -1654,6 +1637,18 @@ private:
     }
   }
 
+  [[maybe_unused]] static bool
+  isFuncResultDesignator(const Fortran::lower::SomeExpr &expr) {
+    const auto *sym = Fortran::evaluate::GetFirstSymbol(expr);
+    return sym && sym->IsFuncResult();
+  }
+
+  static bool isWholeAllocatable(const Fortran::lower::SomeExpr &expr) {
+    const auto *sym =
+        Fortran::evaluate::UnwrapWholeSymbolOrComponentDataRef(expr);
+    return sym && Fortran::semantics::IsAllocatable(*sym);
+  }
+
   /// Shared for both assignments and pointer assignments.
   void genAssignment(const Fortran::evaluate::Assignment &assign) {
     Fortran::lower::StatementContext stmtCtx;
@@ -1661,13 +1656,14 @@ private:
     std::visit(
         Fortran::common::visitors{
             [&](const Fortran::evaluate::Assignment::Intrinsic &) {
-              const auto *sym =
-                  Fortran::evaluate::UnwrapWholeSymbolDataRef(assign.lhs);
+              const auto *sym = Fortran::evaluate::GetLastSymbol(assign.lhs);
+
+              if (!sym)
+                TODO(loc, "assignment to pointer result of function reference");
+
               // Assignment of allocatable are more complex, the lhs may need to
               // be deallocated/reallocated. See Fortran 2018 10.2.1.3 p3
-              const bool isHeap =
-                  sym && Fortran::semantics::IsAllocatable(*sym);
-              if (isHeap) {
+              if (isWholeAllocatable(assign.lhs)) {
                 TODO(loc, "assignment to allocatable not implemented");
               }
               // Nothing to do for pointers, the target will be assigned.
@@ -1698,7 +1694,7 @@ private:
                 auto toTy = genType(assign.lhs);
                 auto cast = builder->convertWithSemantics(loc, toTy, val);
                 if (fir::dyn_cast_ptrEleTy(addr.getType()) != toTy) {
-                  assert(sym->IsFuncResult() && "type mismatch");
+                  assert(isFuncResultDesignator(assign.lhs) && "type mismatch");
                   addr = builder->createConvert(
                       toLocation(), builder->getRefType(toTy), addr);
                 }
