@@ -1,8 +1,9 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN,GFX10 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: hazard_smem_war
 # GCN:      S_LOAD_DWORD_IMM
-# GCN:      $sgpr_null = S_MOV_B32 0
+# GFX10:    $sgpr_null = S_MOV_B32 0
 # GCN-NEXT: V_CMP_EQ_F32
 ---
 name: hazard_smem_war
@@ -64,10 +65,10 @@ body: |
 ...
 
 # GCN-LABEL: name: hazard_smem_war_only_smem
-# GCN:      S_LOAD_DWORD_IMM
-# GCN-NEXT: S_LOAD_DWORD_IMM
-# GCN-NEXT: $sgpr_null = S_MOV_B32 0
-# GCN-NEXT: V_CMP_EQ_F32
+# GCN:        S_LOAD_DWORD_IMM
+# GCN-NEXT:   S_LOAD_DWORD_IMM
+# GFX10-NEXT: $sgpr_null = S_MOV_B32 0
+# GCN-NEXT:   V_CMP_EQ_F32
 ---
 name: hazard_smem_war_only_smem
 body: |
@@ -95,10 +96,10 @@ body: |
 ...
 
 # GCN-LABEL: name: hazard_smem_war_only_vmcnt_0
-# GCN:      S_LOAD_DWORD_IMM
-# GCN-NEXT: S_WAITCNT 3952{{$}}
-# GCN-NEXT: $sgpr_null = S_MOV_B32 0
-# GCN-NEXT: V_CMP_EQ_F32
+# GCN:        S_LOAD_DWORD_IMM
+# GCN-NEXT:   S_WAITCNT 3952{{$}}
+# GFX10-NEXT: $sgpr_null = S_MOV_B32 0
+# GCN-NEXT:   V_CMP_EQ_F32
 ---
 name: hazard_smem_war_only_vmcnt_0
 body: |
@@ -111,10 +112,10 @@ body: |
 ...
 
 # GCN-LABEL: name: hazard_smem_war_only_expcnt_0
-# GCN:      S_LOAD_DWORD_IMM
-# GCN-NEXT: S_WAITCNT 53007{{$}}
-# GCN-NEXT: $sgpr_null = S_MOV_B32 0
-# GCN-NEXT: V_CMP_EQ_F32
+# GCN:        S_LOAD_DWORD_IMM
+# GCN-NEXT:   S_WAITCNT 53007{{$}}
+# GFX10-NEXT: $sgpr_null = S_MOV_B32 0
+# GCN-NEXT:   V_CMP_EQ_F32
 ---
 name: hazard_smem_war_only_expcnt_0
 body: |
@@ -157,10 +158,10 @@ body: |
 ...
 
 # GCN-LABEL: name: hazard_smem_war_only_waitcnt_lgkmcnt_1
-# GCN:      S_LOAD_DWORD_IMM
-# GCN-NEXT: S_WAITCNT_LGKMCNT
-# GCN-NEXT: $sgpr_null = S_MOV_B32 0
-# GCN-NEXT: V_CMP_EQ_F32
+# GCN:        S_LOAD_DWORD_IMM
+# GCN-NEXT:   S_WAITCNT_LGKMCNT
+# GFX10-NEXT: $sgpr_null = S_MOV_B32 0
+# GCN-NEXT:   V_CMP_EQ_F32
 ---
 name: hazard_smem_war_only_waitcnt_lgkmcnt_1
 body: |
@@ -174,8 +175,8 @@ body: |
 
 # GCN-LABEL: name: hazard_smem_war_branch
 # GCN:      S_LOAD_DWORD_IMM
-# GCN:      $sgpr_null = S_MOV_B32 0
-# GCN-NEXT: V_CMP_EQ_F32
+# GFX10:    $sgpr_null = S_MOV_B32 0
+# GCN:      V_CMP_EQ_F32
 ---
 name: hazard_smem_war_branch
 body: |
@@ -198,8 +199,8 @@ body: |
 # GCN-NOT:  $sgpr_null = S_MOV_B32 0
 # GCN:      V_CMP_EQ_F32
 # GCN:      S_ENDPGM 0
-# GCN:      $sgpr_null = S_MOV_B32 0
-# GCN-NEXT: V_CMP_EQ_F32
+# GFX10:    $sgpr_null = S_MOV_B32 0
+# GCN:      V_CMP_EQ_F32
 ---
 name: hazard_smem_war_cbranch
 body: |
@@ -230,8 +231,8 @@ body: |
 # GCN-NEXT: S_ENDPGM 0
 # GCN-NOT:  $sgpr_null = S_MOV_B32 0
 # GCN:      V_CMP_EQ_F32
-# GCN:      $sgpr_null = S_MOV_B32 0
-# GCN-NEXT: V_CMP_EQ_F32
+# GFX10:    $sgpr_null = S_MOV_B32 0
+# GCN:      V_CMP_EQ_F32
 ---
 name: hazard_smem_war_cbranch_carry
 body: |
@@ -259,8 +260,8 @@ body: |
 ...
 
 # GCN-LABEL: name: hazard_smem_war_backedge
-# GCN:      $sgpr_null = S_MOV_B32 0
-# GCN-NEXT: V_CMP_EQ_F32
+# GFX10:    $sgpr_null = S_MOV_B32 0
+# GCN:      V_CMP_EQ_F32
 # GCN:      S_LOAD_DWORD_IMM
 ---
 name: hazard_smem_war_backedge
@@ -278,7 +279,7 @@ body: |
 
 # GCN-LABEL: name: hazard_smem_war_impdef
 # GCN:      S_LOAD_DWORD_IMM
-# GCN:      $sgpr_null = S_MOV_B32 0
+# GFX10:    $sgpr_null = S_MOV_B32 0
 # GCN-NEXT: V_CMP_EQ_F32
 ---
 name: hazard_smem_war_impdef
@@ -292,7 +293,7 @@ body: |
 
 # GCN-LABEL: name: hazard_smem_war_readlane
 # GCN:      S_LOAD_DWORD_IMM
-# GCN:      $sgpr_null = S_MOV_B32 0
+# GFX10:    $sgpr_null = S_MOV_B32 0
 # GCN-NEXT: V_READLANE_B32
 ---
 name: hazard_smem_war_readlane
@@ -306,7 +307,7 @@ body: |
 
 # GCN-LABEL: name: hazard_smem_war_readfirstlane
 # GCN:      S_LOAD_DWORD_IMM
-# GCN:      $sgpr_null = S_MOV_B32 0
+# GFX10:    $sgpr_null = S_MOV_B32 0
 # GCN-NEXT: V_READFIRSTLANE_B32
 ---
 name: hazard_smem_war_readfirstlane

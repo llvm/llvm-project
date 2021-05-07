@@ -1,6 +1,8 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=W64
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -verify-machineinstrs -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=W32
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=W64
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -verify-machineinstrs -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=W32
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=W64
 ; RUN: llc -O0 -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=W64-O0
 
 ; Test that we correctly legalize VGPR Rsrc operands in MUBUF instructions.
@@ -79,8 +81,8 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; W64: s_cbranch_execnz [[LOOPBB1]]
 
 ; W64: s_mov_b64 exec, [[SAVEEXEC]]
-; W64-DAG: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RES0]], off
-; W64-DAG: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RES1]], off
+; W64-DAG: global_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[RES0]], off
+; W64-DAG: global_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[RES1]], off
 
 
 ; W32-LABEL: mubuf_vgpr_adjacent_in_block
@@ -117,8 +119,8 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; W32: s_cbranch_execnz [[LOOPBB1]]
 
 ; W32: s_mov_b32 exec_lo, [[SAVEEXEC]]
-; W32-DAG: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RES0]], off
-; W32-DAG: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RES1]], off
+; W32-DAG: global_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[RES0]], off
+; W32-DAG: global_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[RES1]], off
 
 define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, float addrspace(1)* %out0, float addrspace(1)* %out1) #0 {
 entry:
@@ -171,7 +173,7 @@ entry:
 ; W64: s_mov_b64 exec, [[SAVEEXEC]]
 
 ; W64: [[TERMBB]]:
-; W64: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RES]], off
+; W64: global_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[RES]], off
 
 
 ; W32-LABEL: mubuf_vgpr_outside_entry
@@ -215,7 +217,7 @@ entry:
 ; W32: s_mov_b32 exec_lo, [[SAVEEXEC]]
 
 ; W32: [[TERMBB]]:
-; W32: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RES]], off
+; W32: global_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[RES]], off
 
 
 ; Confirm spills do not occur between the XOR and branch that terminate the

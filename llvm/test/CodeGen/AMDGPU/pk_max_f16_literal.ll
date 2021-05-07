@@ -1,8 +1,9 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9_10,GFX9 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9_10,GFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS %s
 
 ; GCN-LABEL: {{^}}test_pk_max_f16_literal_0_1:
-; GFX9_10: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, 1.0 op_sel:[0,1] op_sel_hi:[1,0]{{$}}
+; GCN: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, 1.0 op_sel:[0,1] op_sel_hi:[1,0]{{$}}
 define amdgpu_kernel void @test_pk_max_f16_literal_0_1(<2 x half> addrspace(1)* nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -15,7 +16,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_pk_max_f16_literal_1_0:
-; GFX9_10: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, 1.0{{$}}
+; GCN: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, 1.0{{$}}
 define amdgpu_kernel void @test_pk_max_f16_literal_1_0(<2 x half> addrspace(1)* nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -28,7 +29,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_pk_max_f16_literal_1_1:
-; GFX9_10: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, 1.0 op_sel_hi:[1,0]{{$}}
+; GCN: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, 1.0 op_sel_hi:[1,0]{{$}}
 define amdgpu_kernel void @test_pk_max_f16_literal_1_1(<2 x half> addrspace(1)* nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -41,7 +42,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_pk_max_f16_literal_0_m1:
-; GFX9_10: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, -1.0 op_sel:[0,1] op_sel_hi:[1,0]{{$}}
+; GCN: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, -1.0 op_sel:[0,1] op_sel_hi:[1,0]{{$}}
 define amdgpu_kernel void @test_pk_max_f16_literal_0_m1(<2 x half> addrspace(1)* nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -54,7 +55,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_pk_max_f16_literal_m1_0:
-; GFX9_10: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, -1.0{{$}}
+; GCN: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, -1.0{{$}}
 define amdgpu_kernel void @test_pk_max_f16_literal_m1_0(<2 x half> addrspace(1)* nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -67,7 +68,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_pk_max_f16_literal_m1_m1:
-; GFX9_10: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, -1.0 op_sel_hi:[1,0]{{$}}
+; GCN: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, -1.0 op_sel_hi:[1,0]{{$}}
 define amdgpu_kernel void @test_pk_max_f16_literal_m1_m1(<2 x half> addrspace(1)* nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -80,7 +81,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_pk_max_f16_literal_0_0:
-; GFX9_10: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, 0{{$}}
+; GCN: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, 0{{$}}
 define amdgpu_kernel void @test_pk_max_f16_literal_0_0(<2 x half> addrspace(1)* nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -95,7 +96,7 @@ bb:
 ; GCN-LABEL: {{^}}test_pk_max_f16_literal_0_41c8:
 ; GFX9:  s_mov_b32 [[C:s[0-9]+]], 0x41c80000
 ; GFX9:  v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, [[C]]{{$}}
-; GFX10: v_pk_max_f16 v{{[0-9]+}}, 0x41c8, v{{[0-9]+}} op_sel:[1,0] op_sel_hi:[0,1]{{$}}
+; GFX10PLUS: v_pk_max_f16 v{{[0-9]+}}, 0x41c8, v{{[0-9]+}} op_sel:[1,0] op_sel_hi:[0,1]{{$}}
 define amdgpu_kernel void @test_pk_max_f16_literal_0_41c8(<2 x half> addrspace(1)* nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -110,7 +111,7 @@ bb:
 ; GCN-LABEL: {{^}}test_pk_max_f16_literal_41c8_0:
 ; GFX9:  s_movk_i32 [[C:s[0-9]+]], 0x41c8
 ; GFX9:  v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, [[C]]{{$}}
-; GFX10: v_pk_max_f16 v{{[0-9]+}}, 0x41c8, v{{[0-9]+}}{{$}}
+; GFX10PLUS: v_pk_max_f16 v{{[0-9]+}}, 0x41c8, v{{[0-9]+}}{{$}}
 define amdgpu_kernel void @test_pk_max_f16_literal_41c8_0(<2 x half> addrspace(1)* nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -125,7 +126,7 @@ bb:
 ; GCN-LABEL: {{^}}test_pk_max_f16_literal_42ca_41c8:
 ; GFX9:  s_mov_b32 [[C:s[0-9]+]], 0x41c842ca
 ; GFX9:  v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, [[C]]{{$}}
-; GFX10: v_pk_max_f16 v{{[0-9]+}}, 0x41c842ca, v{{[0-9]+}}{{$}}
+; GFX10PLUS: v_pk_max_f16 v{{[0-9]+}}, 0x41c842ca, v{{[0-9]+}}{{$}}
 define amdgpu_kernel void @test_pk_max_f16_literal_42ca_41c8(<2 x half> addrspace(1)* nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()

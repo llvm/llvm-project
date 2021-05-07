@@ -1,4 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=-flat-for-global,-xnack -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10PLUS %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=-flat-for-global,-xnack -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10PLUS %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=-flat-for-global,-xnack -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global,-xnack -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-flat-for-global -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
@@ -6,7 +7,7 @@
 
 ; GCN-LABEL: {{^}}store_inline_imm_neg_0.0_v2i16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x80008000 ; encoding
-; GCN: buffer_store_dword [[REG]]
+; GCN: buffer_store_{{dword|b32}} [[REG]]
 define amdgpu_kernel void @store_inline_imm_neg_0.0_v2i16(<2 x i16> addrspace(1)* %out) #0 {
   store <2 x i16> <i16 -32768, i16 -32768>, <2 x i16> addrspace(1)* %out
   ret void
@@ -14,7 +15,7 @@ define amdgpu_kernel void @store_inline_imm_neg_0.0_v2i16(<2 x i16> addrspace(1)
 
 ; GCN-LABEL: {{^}}store_inline_imm_0.0_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0 ; encoding
-; GCN: buffer_store_dword [[REG]]
+; GCN: buffer_store_{{dword|b32}} [[REG]]
 define amdgpu_kernel void @store_inline_imm_0.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half 0.0, half 0.0>, <2 x half> addrspace(1)* %out
   ret void
@@ -22,7 +23,7 @@ define amdgpu_kernel void @store_inline_imm_0.0_v2f16(<2 x half> addrspace(1)* %
 
 ; GCN-LABEL: {{^}}store_imm_neg_0.0_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x80008000 ; encoding
-; GCN: buffer_store_dword [[REG]]
+; GCN: buffer_store_{{dword|b32}} [[REG]]
 define amdgpu_kernel void @store_imm_neg_0.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half -0.0, half -0.0>, <2 x half> addrspace(1)* %out
   ret void
@@ -30,7 +31,7 @@ define amdgpu_kernel void @store_imm_neg_0.0_v2f16(<2 x half> addrspace(1)* %out
 
 ; GCN-LABEL: {{^}}store_inline_imm_0.5_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x38003800 ; encoding
-; GCN: buffer_store_dword [[REG]]
+; GCN: buffer_store_{{dword|b32}} [[REG]]
 define amdgpu_kernel void @store_inline_imm_0.5_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half 0.5, half 0.5>, <2 x half> addrspace(1)* %out
   ret void
@@ -38,7 +39,7 @@ define amdgpu_kernel void @store_inline_imm_0.5_v2f16(<2 x half> addrspace(1)* %
 
 ; GCN-LABEL: {{^}}store_inline_imm_m_0.5_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0xb800b800 ; encoding
-; GCN: buffer_store_dword [[REG]]
+; GCN: buffer_store_{{dword|b32}} [[REG]]
 define amdgpu_kernel void @store_inline_imm_m_0.5_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half -0.5, half -0.5>, <2 x half> addrspace(1)* %out
   ret void
@@ -46,7 +47,7 @@ define amdgpu_kernel void @store_inline_imm_m_0.5_v2f16(<2 x half> addrspace(1)*
 
 ; GCN-LABEL: {{^}}store_inline_imm_1.0_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x3c003c00 ; encoding
-; GCN: buffer_store_dword [[REG]]
+; GCN: buffer_store_{{dword|b32}} [[REG]]
 define amdgpu_kernel void @store_inline_imm_1.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half 1.0, half 1.0>, <2 x half> addrspace(1)* %out
   ret void
@@ -54,7 +55,7 @@ define amdgpu_kernel void @store_inline_imm_1.0_v2f16(<2 x half> addrspace(1)* %
 
 ; GCN-LABEL: {{^}}store_inline_imm_m_1.0_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0xbc00bc00 ; encoding
-; GCN: buffer_store_dword [[REG]]
+; GCN: buffer_store_{{dword|b32}} [[REG]]
 define amdgpu_kernel void @store_inline_imm_m_1.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half -1.0, half -1.0>, <2 x half> addrspace(1)* %out
   ret void
@@ -62,7 +63,7 @@ define amdgpu_kernel void @store_inline_imm_m_1.0_v2f16(<2 x half> addrspace(1)*
 
 ; GCN-LABEL: {{^}}store_inline_imm_2.0_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x40004000 ; encoding
-; GCN: buffer_store_dword [[REG]]
+; GCN: buffer_store_{{dword|b32}} [[REG]]
 define amdgpu_kernel void @store_inline_imm_2.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half 2.0, half 2.0>, <2 x half> addrspace(1)* %out
   ret void
@@ -70,7 +71,7 @@ define amdgpu_kernel void @store_inline_imm_2.0_v2f16(<2 x half> addrspace(1)* %
 
 ; GCN-LABEL: {{^}}store_inline_imm_m_2.0_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0xc000c000 ; encoding
-; GCN: buffer_store_dword [[REG]]
+; GCN: buffer_store_{{dword|b32}} [[REG]]
 define amdgpu_kernel void @store_inline_imm_m_2.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half -2.0, half -2.0>, <2 x half> addrspace(1)* %out
   ret void
@@ -78,7 +79,7 @@ define amdgpu_kernel void @store_inline_imm_m_2.0_v2f16(<2 x half> addrspace(1)*
 
 ; GCN-LABEL: {{^}}store_inline_imm_4.0_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x44004400 ; encoding
-; GCN: buffer_store_dword [[REG]]
+; GCN: buffer_store_{{dword|b32}} [[REG]]
 define amdgpu_kernel void @store_inline_imm_4.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half 4.0, half 4.0>, <2 x half> addrspace(1)* %out
   ret void
@@ -86,7 +87,7 @@ define amdgpu_kernel void @store_inline_imm_4.0_v2f16(<2 x half> addrspace(1)* %
 
 ; GCN-LABEL: {{^}}store_inline_imm_m_4.0_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0xc400c400 ; encoding
-; GCN: buffer_store_dword [[REG]]
+; GCN: buffer_store_{{dword|b32}} [[REG]]
 define amdgpu_kernel void @store_inline_imm_m_4.0_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half -4.0, half -4.0>, <2 x half> addrspace(1)* %out
   ret void
@@ -94,7 +95,7 @@ define amdgpu_kernel void @store_inline_imm_m_4.0_v2f16(<2 x half> addrspace(1)*
 
 ; GCN-LABEL: {{^}}store_inline_imm_inv_2pi_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x31183118 ; encoding
-; GCN: buffer_store_dword [[REG]]
+; GCN: buffer_store_{{dword|b32}} [[REG]]
 define amdgpu_kernel void @store_inline_imm_inv_2pi_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half 0xH3118, half 0xH3118>, <2 x half> addrspace(1)* %out
   ret void
@@ -102,7 +103,7 @@ define amdgpu_kernel void @store_inline_imm_inv_2pi_v2f16(<2 x half> addrspace(1
 
 ; GCN-LABEL: {{^}}store_inline_imm_m_inv_2pi_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0xb118b118 ; encoding
-; GCN: buffer_store_dword [[REG]]
+; GCN: buffer_store_{{dword|b32}} [[REG]]
 define amdgpu_kernel void @store_inline_imm_m_inv_2pi_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half 0xHB118, half 0xHB118>, <2 x half> addrspace(1)* %out
   ret void
@@ -110,7 +111,7 @@ define amdgpu_kernel void @store_inline_imm_m_inv_2pi_v2f16(<2 x half> addrspace
 
 ; GCN-LABEL: {{^}}store_literal_imm_v2f16:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x6c006c00
-; GCN: buffer_store_dword [[REG]]
+; GCN: buffer_store_{{dword|b32}} [[REG]]
 define amdgpu_kernel void @store_literal_imm_v2f16(<2 x half> addrspace(1)* %out) #0 {
   store <2 x half> <half 4096.0, half 4096.0>, <2 x half> addrspace(1)* %out
   ret void
@@ -138,9 +139,9 @@ define amdgpu_kernel void @add_inline_imm_0.0_v2f16(<2 x half> addrspace(1)* %ou
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_0.5_v2f16:
-; GFX10: s_load_dword [[VAL:s[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x0f,0xcc,0x02,0xe0,0x01,0x08]
-; GFX10: buffer_store_dword [[REG]]
+; GFX10PLUS: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
+; GFX10PLUS: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x0f,0xcc,0x02,0xe0,0x01,0x08]
+; GFX10PLUS: buffer_store_{{dword|b32}} [[REG]]
 
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x8f,0xd3,0x04,0xe0,0x01,0x08]
@@ -163,9 +164,9 @@ define amdgpu_kernel void @add_inline_imm_0.5_v2f16(<2 x half> addrspace(1)* %ou
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_0.5_v2f16:
-; GFX10: s_load_dword [[VAL:s[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x0f,0xcc,0x02,0xe2,0x01,0x08]
-; GFX10: buffer_store_dword [[REG]]
+; GFX10PLUS: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
+; GFX10PLUS: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x0f,0xcc,0x02,0xe2,0x01,0x08]
+; GFX10PLUS: buffer_store_{{dword|b32}} [[REG]]
 
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x8f,0xd3,0x04,0xe2,0x01,0x08]
@@ -188,6 +189,10 @@ define amdgpu_kernel void @add_inline_imm_neg_0.5_v2f16(<2 x half> addrspace(1)*
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_1.0_v2f16:
+; GFX10PLUS: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
+; GFX10PLUS: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 1.0 op_sel_hi:[1,0] ; encoding:
+; GFX10PLUS: buffer_store_{{dword|b32}} [[REG]]
+
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 1.0 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
@@ -209,6 +214,10 @@ define amdgpu_kernel void @add_inline_imm_1.0_v2f16(<2 x half> addrspace(1)* %ou
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_1.0_v2f16:
+; GFX10PLUS: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
+; GFX10PLUS: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -1.0 op_sel_hi:[1,0] ; encoding
+; GFX10PLUS: buffer_store_{{dword|b32}} [[REG]]
+
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -1.0 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
@@ -231,6 +240,10 @@ define amdgpu_kernel void @add_inline_imm_neg_1.0_v2f16(<2 x half> addrspace(1)*
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_2.0_v2f16:
+; GFX10PLUS: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
+; GFX10PLUS: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 2.0 op_sel_hi:[1,0] ; encoding
+; GFX10PLUS: buffer_store_{{dword|b32}} [[REG]]
+
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 2.0 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
@@ -252,6 +265,10 @@ define amdgpu_kernel void @add_inline_imm_2.0_v2f16(<2 x half> addrspace(1)* %ou
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_2.0_v2f16:
+; GFX10PLUS: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
+; GFX10PLUS: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -2.0 op_sel_hi:[1,0] ; encoding
+; GFX10PLUS: buffer_store_{{dword|b32}} [[REG]]
+
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -2.0 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
@@ -273,6 +290,10 @@ define amdgpu_kernel void @add_inline_imm_neg_2.0_v2f16(<2 x half> addrspace(1)*
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_4.0_v2f16:
+; GFX10PLUS: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
+; GFX10PLUS: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 4.0 op_sel_hi:[1,0] ; encoding
+; GFX10PLUS: buffer_store_{{dword|b32}} [[REG]]
+
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 4.0 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
@@ -294,6 +315,10 @@ define amdgpu_kernel void @add_inline_imm_4.0_v2f16(<2 x half> addrspace(1)* %ou
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_4.0_v2f16:
+; GFX10PLUS: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
+; GFX10PLUS: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -4.0 op_sel_hi:[1,0] ; encoding
+; GFX10PLUS: buffer_store_{{dword|b32}} [[REG]]
+
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -4.0 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
@@ -315,6 +340,10 @@ define amdgpu_kernel void @add_inline_imm_neg_4.0_v2f16(<2 x half> addrspace(1)*
 }
 
 ; GCN-LABEL: {{^}}commute_add_inline_imm_0.5_v2f16:
+; GFX10PLUS: buffer_load_{{dword|b32}} [[VAL:v[0-9]+]]
+; GFX10PLUS: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0.5
+; GFX10PLUS: buffer_store_{{dword|b32}} [[REG]]
+
 ; GFX9: buffer_load_dword [[VAL:v[0-9]+]]
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0.5
 ; GFX9: buffer_store_dword [[REG]]
@@ -334,7 +363,7 @@ define amdgpu_kernel void @commute_add_inline_imm_0.5_v2f16(<2 x half> addrspace
 }
 
 ; GCN-LABEL: {{^}}commute_add_literal_v2f16:
-; GFX10: v_pk_add_f16 v0, 0x6400, v0 op_sel_hi:[0,1] ; encoding: [0x00,0x40,0x0f,0xcc,0xff,0x00,0x02,0x10,0x00,0x64,0x00,0x00]
+; GFX10PLUS: v_pk_add_f16 v0, 0x6400, v0 op_sel_hi:[0,1] ; encoding: [0x00,0x40,0x0f,0xcc,0xff,0x00,0x02,0x10,0x00,0x64,0x00,0x00]
 
 ; GFX9-DAG: buffer_load_dword [[VAL:v[0-9]+]]
 ; GFX9-DAG: s_movk_i32 [[K:s[0-9]+]], 0x6400 ; encoding
@@ -358,6 +387,10 @@ define amdgpu_kernel void @commute_add_literal_v2f16(<2 x half> addrspace(1)* %o
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_1_v2f16:
+; GFX10PLUS: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
+; GFX10PLUS: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 1 op_sel_hi:[1,0] ; encoding
+; GFX10PLUS: buffer_store_{{dword|b32}} [[REG]]
+
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 1 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
@@ -379,6 +412,10 @@ define amdgpu_kernel void @add_inline_imm_1_v2f16(<2 x half> addrspace(1)* %out,
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_2_v2f16:
+; GFX10PLUS: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
+; GFX10PLUS: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 2 op_sel_hi:[1,0] ; encoding
+; GFX10PLUS: buffer_store_{{dword|b32}} [[REG]]
+
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 2 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
@@ -401,6 +438,10 @@ define amdgpu_kernel void @add_inline_imm_2_v2f16(<2 x half> addrspace(1)* %out,
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_16_v2f16:
+; GFX10PLUS: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
+; GFX10PLUS: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 16 op_sel_hi:[1,0] ; encoding
+; GFX10PLUS: buffer_store_{{dword|b32}} [[REG]]
+
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 16 op_sel_hi:[1,0] ; encoding
 ; GFX9: buffer_store_dword [[REG]]
@@ -423,6 +464,10 @@ define amdgpu_kernel void @add_inline_imm_16_v2f16(<2 x half> addrspace(1)* %out
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_1_v2f16:
+; GFX10PLUS: s_add_i32 [[VAL:s[0-9]+]], s{{[0-9]+}}, -1
+; GFX10PLUS: v_mov_b32_e32 [[REG:v[0-9]+]], [[VAL]]
+; GFX10PLUS: buffer_store_{{dword|b32}} [[REG]]
+
 ; GFX9: s_add_i32 [[VAL:s[0-9]+]], s4, -1
 ; GFX9: v_mov_b32_e32 [[REG:v[0-9]+]], [[VAL]]
 ; GFX9: buffer_store_dword [[REG]]
@@ -440,6 +485,10 @@ define amdgpu_kernel void @add_inline_imm_neg_1_v2f16(<2 x half> addrspace(1)* %
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_2_v2f16:
+; GFX10PLUS: s_add_i32 [[VAL:s[0-9]+]], s{{[0-9]+}}, 0xfffefffe
+; GFX10PLUS: v_mov_b32_e32 [[REG:v[0-9]+]], [[VAL]]
+; GFX10PLUS: buffer_store_{{dword|b32}} [[REG]]
+
 ; GFX9: s_add_i32 [[VAL:s[0-9]+]], s4, 0xfffefffe
 ; GFX9: v_mov_b32_e32 [[REG:v[0-9]+]], [[VAL]]
 ; GFX9: buffer_store_dword [[REG]]
@@ -457,6 +506,10 @@ define amdgpu_kernel void @add_inline_imm_neg_2_v2f16(<2 x half> addrspace(1)* %
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_16_v2f16:
+; GFX10PLUS: s_add_i32 [[VAL:s[0-9]+]], s{{[0-9]+}}, 0xfff0fff0
+; GFX10PLUS: v_mov_b32_e32 [[REG:v[0-9]+]], [[VAL]]
+; GFX10PLUS: buffer_store_{{dword|b32}} [[REG]]
+
 ; GFX9: s_add_i32 [[VAL:s[0-9]+]], s4, 0xfff0fff0
 ; GFX9: v_mov_b32_e32 [[REG:v[0-9]+]], [[VAL]]
 ; GFX9: buffer_store_dword [[REG]]
@@ -475,6 +528,10 @@ define amdgpu_kernel void @add_inline_imm_neg_16_v2f16(<2 x half> addrspace(1)* 
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_63_v2f16:
+; GFX10PLUS: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
+; GFX10PLUS: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 63
+; GFX10PLUS: buffer_store_{{dword|b32}} [[REG]]
+
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 63
 ; GFX9: buffer_store_dword [[REG]]
@@ -496,6 +553,10 @@ define amdgpu_kernel void @add_inline_imm_63_v2f16(<2 x half> addrspace(1)* %out
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_64_v2f16:
+; GFX10PLUS: s_load_{{dword|b32}} [[VAL:s[0-9]+]]
+; GFX10PLUS: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 64
+; GFX10PLUS: buffer_store_{{dword|b32}} [[REG]]
+
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 64
 ; GFX9: buffer_store_dword [[REG]]
@@ -520,7 +581,7 @@ define amdgpu_kernel void @add_inline_imm_64_v2f16(<2 x half> addrspace(1)* %out
 ; GFX9: s_mov_b32 [[K:s[0-9]+]], 0x38003800
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0x3800, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0x38,0x00,0x00]
+; GFX10PLUS: v_pk_mul_lo_u16 v0, 0x3800, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0x38,0x00,0x00]
 define <2 x i16> @mul_inline_imm_0.5_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half 0.5, half 0.5> to <2 x i16>)
   ret <2 x i16> %y
@@ -530,7 +591,7 @@ define <2 x i16> @mul_inline_imm_0.5_v2i16(<2 x i16> %x) {
 ; GFX9: s_mov_b32 [[K:s[0-9]+]], 0xb800b800
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0xb800, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0xb8,0x00,0x00]
+; GFX10PLUS: v_pk_mul_lo_u16 v0, 0xb800, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0xb8,0x00,0x00]
 define <2 x i16> @mul_inline_imm_neg_0.5_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half -0.5, half -0.5> to <2 x i16>)
   ret <2 x i16> %y
@@ -540,7 +601,7 @@ define <2 x i16> @mul_inline_imm_neg_0.5_v2i16(<2 x i16> %x) {
 ; GFX9: s_mov_b32 [[K:s[0-9]+]], 0x3c003c00
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0x3c00, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0x3c,0x00,0x00]
+; GFX10PLUS: v_pk_mul_lo_u16 v0, 0x3c00, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0x3c,0x00,0x00]
 define <2 x i16> @mul_inline_imm_1.0_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half 1.0, half 1.0> to <2 x i16>)
   ret <2 x i16> %y
@@ -550,7 +611,7 @@ define <2 x i16> @mul_inline_imm_1.0_v2i16(<2 x i16> %x) {
 ; GFX9: s_mov_b32 [[K:s[0-9]+]], 0xbc00bc00
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0xbc00, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0xbc,0x00,0x00]
+; GFX10PLUS: v_pk_mul_lo_u16 v0, 0xbc00, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0xbc,0x00,0x00]
 define <2 x i16> @mul_inline_imm_neg_1.0_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half -1.0, half -1.0> to <2 x i16>)
   ret <2 x i16> %y
@@ -560,7 +621,7 @@ define <2 x i16> @mul_inline_imm_neg_1.0_v2i16(<2 x i16> %x) {
 ; GFX9: s_mov_b32 [[K:s[0-9]+]], 0x40004000
 ; GFX9: v_pk_lshlrev_b16 v0, v0, [[K]]
 
-; GFX10: v_pk_lshlrev_b16 v0, v0, 0x4000 op_sel_hi:[1,0] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0x40,0x00,0x00]
+; GFX10PLUS: v_pk_lshlrev_b16 v0, v0, 0x4000 op_sel_hi:[1,0] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0x40,0x00,0x00]
 define <2 x i16> @shl_inline_imm_2.0_v2i16(<2 x i16> %x) {
   %y = shl <2 x i16> bitcast (<2 x half> <half 2.0, half 2.0> to <2 x i16>), %x
   ret <2 x i16> %y
@@ -570,7 +631,7 @@ define <2 x i16> @shl_inline_imm_2.0_v2i16(<2 x i16> %x) {
 ; GFX9: s_mov_b32 [[K:s[0-9]+]], 0xc000c000
 ; GFX9: v_pk_lshlrev_b16 v0, v0, [[K]]
 
-; GFX10: v_pk_lshlrev_b16 v0, v0, 0xc000 op_sel_hi:[1,0] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0xc0,0x00,0x00]
+; GFX10PLUS: v_pk_lshlrev_b16 v0, v0, 0xc000 op_sel_hi:[1,0] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0xc0,0x00,0x00]
 define <2 x i16> @shl_inline_imm_neg_2.0_v2i16(<2 x i16> %x) {
   %y = shl <2 x i16> bitcast (<2 x half> <half -2.0, half -2.0> to <2 x i16>), %x
   ret <2 x i16> %y
@@ -580,7 +641,7 @@ define <2 x i16> @shl_inline_imm_neg_2.0_v2i16(<2 x i16> %x) {
 ; GFX9: s_mov_b32 [[K:s[0-9]+]], 0x44004400
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0x4400, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0x44,0x00,0x00]
+; GFX10PLUS: v_pk_mul_lo_u16 v0, 0x4400, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0x44,0x00,0x00]
 define <2 x i16> @mul_inline_imm_4.0_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half 4.0, half 4.0> to <2 x i16>)
   ret <2 x i16> %y
@@ -591,7 +652,7 @@ define <2 x i16> @mul_inline_imm_4.0_v2i16(<2 x i16> %x) {
 ; GFX9: s_mov_b32 [[K:s[0-9]+]], 0xc400c400
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0xc400, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0xc4,0x00,0x00]
+; GFX10PLUS: v_pk_mul_lo_u16 v0, 0xc400, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x00,0xc4,0x00,0x00]
 define <2 x i16> @mul_inline_imm_neg_4.0_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half -4.0, half -4.0> to <2 x i16>)
   ret <2 x i16> %y
@@ -601,7 +662,7 @@ define <2 x i16> @mul_inline_imm_neg_4.0_v2i16(<2 x i16> %x) {
 ; GFX9: s_mov_b32 [[K:s[0-9]+]], 0x31183118
 ; GFX9: v_pk_mul_lo_u16 v0, v0, [[K]]
 
-; GFX10: v_pk_mul_lo_u16 v0, 0x3118, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x18,0x31,0x00,0x00]
+; GFX10PLUS: v_pk_mul_lo_u16 v0, 0x3118, v0 op_sel_hi:[0,1] ; encoding: [0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0xff,0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x{{[0-9a-f]+}},0x18,0x31,0x00,0x00]
 define <2 x i16> @mul_inline_imm_inv2pi_v2i16(<2 x i16> %x) {
   %y = mul <2 x i16> %x, bitcast (<2 x half> <half 0xH3118, half 0xH3118> to <2 x i16>)
   ret <2 x i16> %y

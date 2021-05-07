@@ -3,3 +3,4 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -o - -verify-machineinstrs < %S/../llvm.amdgcn.ds.gws.init.ll | FileCheck -enable-var-scope -check-prefixes=GCN,LOOP %S/../llvm.amdgcn.ds.gws.init.ll
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -o - -verify-machineinstrs < %S/../llvm.amdgcn.ds.gws.init.ll | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP,NOLOOP-GISEL %S/../llvm.amdgcn.ds.gws.init.ll
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -asm-verbose=0 -o - -verify-machineinstrs < %S/../llvm.amdgcn.ds.gws.init.ll | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP,NOLOOP-GISEL %S/../llvm.amdgcn.ds.gws.init.ll
+; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -asm-verbose=0 -o - -verify-machineinstrs < %S/../llvm.amdgcn.ds.gws.init.ll | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP,NOLOOP-GISEL %S/../llvm.amdgcn.ds.gws.init.ll

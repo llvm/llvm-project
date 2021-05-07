@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN %s
 
 ; GCN-LABEL: {{^}}ds_ordered_add:
 ; GCN-DAG: v_mov_b32_e32 v[[INCR:[0-9]+]], 31
