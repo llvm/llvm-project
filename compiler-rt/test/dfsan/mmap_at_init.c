@@ -6,9 +6,7 @@
 //
 // Tests that calling mmap() during during dfsan initialization works.
 
-#include <assert.h>
 #include <sanitizer/dfsan_interface.h>
-#include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -23,7 +21,9 @@ void *calloc(size_t Num, size_t Size) {
   Size = (Size + PageSize - 1) & ~(PageSize - 1); // Round up to PageSize.
   void *Ret = mmap(NULL, Size, PROT_READ | PROT_WRITE,
                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  assert(Ret != MAP_FAILED);
+  // Use assert may cause link errors that require -Wl,-z,notext.
+  // Do not know the root cause yet.
+  if (Ret == MAP_FAILED) exit(-1);
   return Ret;
 }
 
