@@ -9118,12 +9118,13 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
     // If the target is in a replication region, make sure to move Sink to the
     // block after it, not into the replication region itself.
-    if (auto *Region =
+    if (auto *TargetRegion =
             dyn_cast_or_null<VPRegionBlock>(Target->getParent()->getParent())) {
-      if (Region->isReplicator()) {
-        assert(Region->getNumSuccessors() == 1 && "Expected SESE region!");
+      if (TargetRegion->isReplicator()) {
+        assert(TargetRegion->getNumSuccessors() == 1 &&
+               "Expected SESE region!");
         VPBasicBlock *NextBlock =
-            cast<VPBasicBlock>(Region->getSuccessors().front());
+            cast<VPBasicBlock>(TargetRegion->getSuccessors().front());
         Sink->moveBefore(*NextBlock, NextBlock->getFirstNonPhi());
         continue;
       }
