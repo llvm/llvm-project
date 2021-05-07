@@ -277,10 +277,10 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
       P->CSAction = PGOOptions::CSIRUse;
     }
   }
-  LoopAnalysisManager LAM(DebugPM);
-  FunctionAnalysisManager FAM(DebugPM);
-  CGSCCAnalysisManager CGAM(DebugPM);
-  ModuleAnalysisManager MAM(DebugPM);
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
 
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(DebugPM, VerifyEachPass);

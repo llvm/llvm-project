@@ -467,7 +467,7 @@ protected:
                   "}\n")),
         CallbacksHandle(), PB(false, nullptr, PipelineTuningOptions(), None,
                               &CallbacksHandle.Callbacks),
-        PM(true), LAM(true), FAM(true), CGAM(true), AM(true) {
+        PM(true), LAM(), FAM(), CGAM(), AM() {
 
     EXPECT_TRUE(&CallbacksHandle.Callbacks ==
                 PB.getPassInstrumentationCallbacks());
