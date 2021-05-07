@@ -113,6 +113,8 @@ protected:
   bool GFX10_3Insts;
   bool GFX7GFX8GFX9Insts;
   bool SGPRInitBug;
+  bool NegativeScratchOffsetBug;
+  bool NegativeUnalignedScratchOffsetBug;
   bool HasSMemRealTime;
   bool HasIntClamp;
   bool HasFmaMixInsts;
@@ -888,6 +890,12 @@ public:
 
   bool hasSGPRInitBug() const {
     return SGPRInitBug;
+  }
+
+  bool hasNegativeScratchOffsetBug() const { return NegativeScratchOffsetBug; }
+
+  bool hasNegativeUnalignedScratchOffsetBug() const {
+    return NegativeUnalignedScratchOffsetBug;
   }
 
   bool hasMFMAInlineLiteralBug() const {
