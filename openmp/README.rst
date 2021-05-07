@@ -243,6 +243,15 @@ These flags are **appended**, they do not overwrite any of the preset flags.
 Options for ``libomptarget``
 ----------------------------
 
+An installed LLVM package is a prerequisite for building ``libomptarget``
+library. So ``libomptarget`` may only be built in two cases:
+
+- As a project of a regular LLVM build via **LLVM_ENABLE_PROJECTS**,
+  **LLVM_EXTERNAL_PROJECTS**, or **LLVM_ENABLE_RUNTIMES** or
+- as a standalone project build that uses a pre-installed LLVM package.
+  In this mode one has to make sure that the default CMake
+  ``find_package(LLVM)`` call `succeeds <https://cmake.org/cmake/help/latest/command/find_package.html#search-procedure>`_.
+
 **LIBOMPTARGET_OPENMP_HEADER_FOLDER** = ``""``
   Path of the folder that contains ``omp.h``.  This is required for testing
   out-of-tree builds.
