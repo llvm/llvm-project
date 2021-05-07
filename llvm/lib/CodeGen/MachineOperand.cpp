@@ -1060,10 +1060,6 @@ void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
   }
 }
 
-/// getAlignment - Return the minimum known alignment in bytes of the
-/// actual memory reference.
-uint64_t MachineMemOperand::getAlignment() const { return getAlign().value(); }
-
 /// getAlign - Return the minimum known alignment in bytes of the
 /// actual memory reference.
 Align MachineMemOperand::getAlign() const {
