@@ -63,6 +63,7 @@ add_clang_library(clangDriver
   ToolChains/MSVC.cpp
   ToolChains/Myriad.cpp
   ToolChains/NaCl.cpp
+  ToolChains/NanoMips.cpp
   ToolChains/NetBSD.cpp
   ToolChains/OpenBSD.cpp
   ToolChains/PS4CPU.cpp
