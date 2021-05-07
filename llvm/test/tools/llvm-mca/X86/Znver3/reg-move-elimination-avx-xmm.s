@@ -154,15 +154,15 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT:  1      0     0.17                        vmovaps	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    1000
-# CHECK-NEXT: Max number of mappings used:         1
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 1000
-# CHECK-NEXT:    Max number of mappings used:      1
-# CHECK-NEXT:    Number of optimizable moves:      15000
-# CHECK-NEXT:    Number of moves eliminated:       15000  (100.0%)
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      16000
+# CHECK-NEXT:    Number of moves eliminated:       16000  (100.0%)
 # CHECK-NEXT:    Number of zero moves:             0  (0.0%)
 # CHECK-NEXT:    Max moves eliminated per cycle:   6
 
@@ -448,15 +448,15 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT:  1      0     0.17                        vmovups	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    1000
-# CHECK-NEXT: Max number of mappings used:         1
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 1000
-# CHECK-NEXT:    Max number of mappings used:      1
-# CHECK-NEXT:    Number of optimizable moves:      15000
-# CHECK-NEXT:    Number of moves eliminated:       15000  (100.0%)
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      16000
+# CHECK-NEXT:    Number of moves eliminated:       16000  (100.0%)
 # CHECK-NEXT:    Number of zero moves:             0  (0.0%)
 # CHECK-NEXT:    Max moves eliminated per cycle:   6
 
@@ -742,15 +742,15 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT:  1      0     0.17                        vmovapd	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    1000
-# CHECK-NEXT: Max number of mappings used:         1
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 1000
-# CHECK-NEXT:    Max number of mappings used:      1
-# CHECK-NEXT:    Number of optimizable moves:      15000
-# CHECK-NEXT:    Number of moves eliminated:       15000  (100.0%)
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      16000
+# CHECK-NEXT:    Number of moves eliminated:       16000  (100.0%)
 # CHECK-NEXT:    Number of zero moves:             0  (0.0%)
 # CHECK-NEXT:    Max moves eliminated per cycle:   6
 
@@ -1036,15 +1036,15 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT:  1      0     0.17                        vmovupd	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    1000
-# CHECK-NEXT: Max number of mappings used:         1
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 1000
-# CHECK-NEXT:    Max number of mappings used:      1
-# CHECK-NEXT:    Number of optimizable moves:      15000
-# CHECK-NEXT:    Number of moves eliminated:       15000  (100.0%)
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      16000
+# CHECK-NEXT:    Number of moves eliminated:       16000  (100.0%)
 # CHECK-NEXT:    Number of zero moves:             0  (0.0%)
 # CHECK-NEXT:    Max moves eliminated per cycle:   6
 
@@ -1330,15 +1330,15 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT:  1      0     0.17                        vmovdqa	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    1000
-# CHECK-NEXT: Max number of mappings used:         1
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 1000
-# CHECK-NEXT:    Max number of mappings used:      1
-# CHECK-NEXT:    Number of optimizable moves:      15000
-# CHECK-NEXT:    Number of moves eliminated:       15000  (100.0%)
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      16000
+# CHECK-NEXT:    Number of moves eliminated:       16000  (100.0%)
 # CHECK-NEXT:    Number of zero moves:             0  (0.0%)
 # CHECK-NEXT:    Max moves eliminated per cycle:   6
 
@@ -1624,15 +1624,15 @@ vmovdqu %xmm15, %xmm0
 # CHECK-NEXT:  1      0     0.17                        vmovdqu	%xmm15, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    1000
-# CHECK-NEXT: Max number of mappings used:         1
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
-# CHECK-NEXT:    Total number of mappings created: 1000
-# CHECK-NEXT:    Max number of mappings used:      1
-# CHECK-NEXT:    Number of optimizable moves:      15000
-# CHECK-NEXT:    Number of moves eliminated:       15000  (100.0%)
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      16000
+# CHECK-NEXT:    Number of moves eliminated:       16000  (100.0%)
 # CHECK-NEXT:    Number of zero moves:             0  (0.0%)
 # CHECK-NEXT:    Max moves eliminated per cycle:   6
 
