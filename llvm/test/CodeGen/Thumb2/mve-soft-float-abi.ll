@@ -520,3 +520,24 @@ entry:
   %sum = fadd <2 x double> %lhs, %rhs
   ret <2 x double> %sum
 }
+
+define <4 x i32> @insertextract(i32 %x, i32 %y) {
+; CHECK-LE-LABEL: insertextract:
+; CHECK-LE:       @ %bb.0:
+; CHECK-LE-NEXT:    mov r3, r1
+; CHECK-LE-NEXT:    mov r1, r0
+; CHECK-LE-NEXT:    mov r2, r0
+; CHECK-LE-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: insertextract:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    mov r3, r1
+; CHECK-BE-NEXT:    mov r1, r0
+; CHECK-BE-NEXT:    mov r2, r0
+; CHECK-BE-NEXT:    bx lr
+  %1 = insertelement <4 x i32> undef, i32 %x, i32 0
+  %2 = insertelement <4 x i32> %1, i32 %x, i32 1
+  %3 = insertelement <4 x i32> %2, i32 %x, i32 2
+  %4 = insertelement <4 x i32> %3, i32 %y, i32 3
+  ret <4 x i32> %4
+}

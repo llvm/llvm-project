@@ -54,6 +54,9 @@ using namespace llvm;
 namespace {
 
 class AMDGPUUnifyDivergentExitNodes : public FunctionPass {
+private:
+  const TargetTransformInfo *TTI = nullptr;
+
 public:
   static char ID; // Pass identification, replacement for typeid
 
@@ -63,6 +66,9 @@ public:
 
   // We can preserve non-critical-edgeness when we unify function exit nodes
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+  BasicBlock *unifyReturnBlockSet(Function &F, DomTreeUpdater &DTU,
+                                  ArrayRef<BasicBlock *> ReturningBlocks,
+                                  bool InsertExport, StringRef Name);
   bool runOnFunction(Function &F) override;
 };
 
@@ -142,11 +148,9 @@ static void removeDoneExport(Function &F) {
   }
 }
 
-static BasicBlock *unifyReturnBlockSet(Function &F, DomTreeUpdater &DTU,
-                                       ArrayRef<BasicBlock *> ReturningBlocks,
-                                       bool InsertExport,
-                                       const TargetTransformInfo &TTI,
-                                       StringRef Name) {
+BasicBlock *AMDGPUUnifyDivergentExitNodes::unifyReturnBlockSet(
+    Function &F, DomTreeUpdater &DTU, ArrayRef<BasicBlock *> ReturningBlocks,
+    bool InsertExport, StringRef Name) {
   // Otherwise, we need to insert a new basic block into the function, add a PHI
   // nodes (if the function returns values), and convert all of the return
   // instructions into unconditional branches.
@@ -203,7 +207,7 @@ static BasicBlock *unifyReturnBlockSet(Function &F, DomTreeUpdater &DTU,
 
   for (BasicBlock *BB : ReturningBlocks) {
     // Cleanup possible branch to unconditional branch to the return.
-    simplifyCFG(BB, TTI, RequireAndPreserveDomTree ? &DTU : nullptr,
+    simplifyCFG(BB, *TTI, RequireAndPreserveDomTree ? &DTU : nullptr,
                 SimplifyCFGOptions().bonusInstThreshold(2));
   }
 
@@ -224,6 +228,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
     return false;
 
   LegacyDivergenceAnalysis &DA = getAnalysis<LegacyDivergenceAnalysis>();
+  TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
   // Loop over all of the blocks in a function, tracking all of the blocks that
   // return.
@@ -380,9 +385,6 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   if (ReturningBlocks.size() == 1 && !InsertExport)
     return Changed; // Already has a single return block
 
-  const TargetTransformInfo &TTI
-    = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-
   // Unify returning blocks. If we are going to insert the export it is also
   // necessary to include blocks that are uniformly reached, because in addition
   // to inserting the export the "done" bits on existing exports will be cleared
@@ -393,7 +395,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
     llvm::append_range(BlocksToUnify, UniformlyReachedRetBlocks);
   }
 
-  unifyReturnBlockSet(F, DTU, BlocksToUnify, InsertExport, TTI,
+  unifyReturnBlockSet(F, DTU, BlocksToUnify, InsertExport,
                       "UnifiedReturnBlock");
   return true;
 }

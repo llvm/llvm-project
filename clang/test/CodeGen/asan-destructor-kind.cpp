@@ -1,9 +1,9 @@
 // Frontend rejects invalid option
 // RUN: not %clang_cc1 -fsanitize=address \
-// RUN:   -fsanitize-address-destructor-kind=bad_arg -emit-llvm -o - \
+// RUN:   -fsanitize-address-destructor=bad_arg -emit-llvm -o - \
 // RUN:   -triple x86_64-apple-macosx10.15 %s 2>&1 | \
 // RUN:   FileCheck %s --check-prefixes=CHECK-BAD-ARG
-// CHECK-BAD-ARG: invalid value 'bad_arg' in '-fsanitize-address-destructor-kind=bad_arg'
+// CHECK-BAD-ARG: invalid value 'bad_arg' in '-fsanitize-address-destructor=bad_arg'
 
 // Default is global dtor
 // RUN: %clang_cc1 -fsanitize=address -emit-llvm -o - -triple x86_64-apple-macosx10.15 \
@@ -16,12 +16,12 @@
 
 // Explictly ask for global dtor
 // RUN: %clang_cc1 -fsanitize=address \
-// RUN:   -fsanitize-address-destructor-kind=global -emit-llvm -o - \
+// RUN:   -fsanitize-address-destructor=global -emit-llvm -o - \
 // RUN:   -triple x86_64-apple-macosx10.15 -fno-legacy-pass-manager %s | \
 // RUN:   FileCheck %s --check-prefixes=CHECK-GLOBAL-DTOR
 //
 // RUN: %clang_cc1 -fsanitize=address \
-// RUN:   -fsanitize-address-destructor-kind=global -emit-llvm -o - \
+// RUN:   -fsanitize-address-destructor=global -emit-llvm -o - \
 // RUN:   -triple x86_64-apple-macosx10.15 -flegacy-pass-manager %s | \
 // RUN:   FileCheck %s --check-prefixes=CHECK-GLOBAL-DTOR
 
@@ -30,12 +30,12 @@
 
 // Explictly ask for no dtors
 // RUN: %clang_cc1 -fsanitize=address \
-// RUN:   -fsanitize-address-destructor-kind=none -emit-llvm -o - \
+// RUN:   -fsanitize-address-destructor=none -emit-llvm -o - \
 // RUN:   -triple x86_64-apple-macosx10.15 -fno-legacy-pass-manager %s | \
 // RUN:   FileCheck %s --check-prefixes=CHECK-NONE-DTOR
 //
 // RUN: %clang_cc1 -fsanitize=address \
-// RUN:   -fsanitize-address-destructor-kind=none -emit-llvm -o - \
+// RUN:   -fsanitize-address-destructor=none -emit-llvm -o - \
 // RUN:   -triple x86_64-apple-macosx10.15 -flegacy-pass-manager %s | \
 // RUN:   FileCheck %s --check-prefixes=CHECK-NONE-DTOR
 

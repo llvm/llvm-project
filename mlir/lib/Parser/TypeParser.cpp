@@ -13,6 +13,7 @@
 #include "Parser.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/TensorEncoding.h"
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -412,8 +413,14 @@ Type Parser::parseTensorType() {
 
   // Parse an optional encoding attribute.
   Attribute encoding;
-  if (consumeIf(Token::comma))
+  if (consumeIf(Token::comma)) {
     encoding = parseAttribute();
+    if (auto v = encoding.dyn_cast_or_null<VerifiableTensorEncoding>()) {
+      if (failed(v.verifyEncoding(dimensions, elementType,
+                                  [&] { return emitError(); })))
+        return nullptr;
+    }
+  }
 
   if (!elementType || parseToken(Token::greater, "expected '>' in tensor type"))
     return nullptr;

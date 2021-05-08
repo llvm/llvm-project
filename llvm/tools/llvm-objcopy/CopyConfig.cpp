@@ -700,8 +700,14 @@ parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
           "bad format for --add-section: missing file name");
     Config.AddSection.push_back(ArgValue);
   }
-  for (auto Arg : InputArgs.filtered(OBJCOPY_dump_section))
-    Config.DumpSection.push_back(Arg->getValue());
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_dump_section)) {
+    StringRef Value(Arg->getValue());
+    if (Value.split('=').second.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "bad format for --dump-section, expected section=file");
+    Config.DumpSection.push_back(Value);
+  }
   Config.StripAll = InputArgs.hasArg(OBJCOPY_strip_all);
   Config.StripAllGNU = InputArgs.hasArg(OBJCOPY_strip_all_gnu);
   Config.StripDebug = InputArgs.hasArg(OBJCOPY_strip_debug);

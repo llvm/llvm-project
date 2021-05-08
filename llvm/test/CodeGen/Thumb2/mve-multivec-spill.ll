@@ -19,16 +19,16 @@ define arm_aapcs_vfpcc void @spill_multivector(<4 x i32>* %p) {
 ; CHECK-NEXT:    vld21.32 {q0, q1}, [r5]!
 ; CHECK-NEXT:    adds r0, #64
 ; CHECK-NEXT:    vstmia lr, {d0, d1, d2, d3} @ 32-byte Spill
-; CHECK-NEXT:    add.w lr, sp, #32
 ; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
+; CHECK-NEXT:    add.w lr, sp, #32
 ; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]
 ; CHECK-NEXT:    add.w r0, r4, #128
 ; CHECK-NEXT:    vstmia lr, {d0, d1, d2, d3} @ 32-byte Spill
 ; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
 ; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]
 ; CHECK-NEXT:    add.w r0, r4, #192
-; CHECK-NEXT:    vstmia sp, {d0, d1, d2, d3} @ 32-byte Spill
 ; CHECK-NEXT:    vld20.32 {q6, q7}, [r0]
+; CHECK-NEXT:    vstmia sp, {d0, d1, d2, d3} @ 32-byte Spill
 ; CHECK-NEXT:    vld21.32 {q6, q7}, [r0]
 ; CHECK-NEXT:    add.w r0, r4, #256
 ; CHECK-NEXT:    vld20.32 {q4, q5}, [r0]

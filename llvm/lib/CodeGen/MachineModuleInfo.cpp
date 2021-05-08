@@ -217,8 +217,9 @@ void MachineModuleInfo::finalize() {
 
 MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
     : TM(std::move(MMI.TM)),
-      Context(MMI.TM.getMCAsmInfo(), MMI.TM.getMCRegisterInfo(),
-              MMI.TM.getObjFileLowering(), nullptr, nullptr, false),
+      Context(MMI.TM.getTargetTriple(), MMI.TM.getMCAsmInfo(),
+              MMI.TM.getMCRegisterInfo(), MMI.TM.getObjFileLowering(),
+              MMI.TM.getMCSubtargetInfo(), nullptr, nullptr, false),
       MachineFunctions(std::move(MMI.MachineFunctions)) {
   ObjFileMMI = MMI.ObjFileMMI;
   CurCallSite = MMI.CurCallSite;
@@ -232,15 +233,17 @@ MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
 }
 
 MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM)
-    : TM(*TM), Context(TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
-                       TM->getObjFileLowering(), nullptr, nullptr, false) {
+    : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                       TM->getMCRegisterInfo(), TM->getObjFileLowering(),
+                       TM->getMCSubtargetInfo(), nullptr, nullptr, false) {
   initialize();
 }
 
 MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM,
                                      MCContext *ExtContext)
-    : TM(*TM), Context(TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
-                       TM->getObjFileLowering(), nullptr, nullptr, false),
+    : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
+                       TM->getMCRegisterInfo(), TM->getObjFileLowering(),
+                       TM->getMCSubtargetInfo(), nullptr, nullptr, false),
       ExternalContext(ExtContext) {
   initialize();
 }

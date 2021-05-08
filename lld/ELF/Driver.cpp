@@ -1690,7 +1690,7 @@ static void handleLibcall(StringRef name) {
 // easily.
 static void writeDependencyFile() {
   std::error_code ec;
-  raw_fd_ostream os(config->dependencyFile, ec, sys::fs::F_None);
+  raw_fd_ostream os(config->dependencyFile, ec, sys::fs::OF_None);
   if (ec) {
     error("cannot open " + config->dependencyFile + ": " + ec.message());
     return;

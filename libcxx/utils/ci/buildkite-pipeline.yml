@@ -163,6 +163,18 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
+  - label: "Debug iterators"
+    command: "libcxx/utils/ci/run-buildbot generic-debug-iterators"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
   - label: "ASAN"
     command: "libcxx/utils/ci/run-buildbot generic-asan"
     artifact_paths:
@@ -317,10 +329,19 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
-  - label: "Windows"
-    # TODO: The CI runner doesn't have bash in the path currently. Once it
-    # has that, remove the absolute path and just call 'bash' here.
-    command: "\"\\Program Files\\Git\\usr\\bin\\bash\" libcxx/utils/ci/run-buildbot generic-win"
+  - label: "Windows (DLL)"
+    command: "bash libcxx/utils/ci/run-buildbot windows-dll"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "windows"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Windows (Static)"
+    command: "bash libcxx/utils/ci/run-buildbot windows-static"
     artifact_paths:
       - "**/test-results.xml"
     agents:

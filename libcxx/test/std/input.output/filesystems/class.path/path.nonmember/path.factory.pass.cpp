@@ -42,7 +42,7 @@ int main(int, char**)
     assert(p == In1);
   }
   {
-    path p = fs::u8path(In3);
+    path p = fs::u8path(In2.data());
     assert(p == In1);
   }
   {
@@ -65,7 +65,7 @@ int main(int, char**)
     assert(p == In1);
   }
   {
-    path p = fs::u8path(u8In3);
+    path p = fs::u8path(u8In2.data());
     assert(p == In1);
   }
   {

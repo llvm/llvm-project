@@ -120,7 +120,7 @@ target(asan_target_type, "asan") {
   # FIXME: add_sanitizer_rt_version_list (cf hwasan)
   # FIXME: need libclang_rt.asan*.a.syms?
   # FIXME: windows flags (-Zl -nodefaultlibs)
-  # FIXME: asan_blacklist.txt
+  # FIXME: asan_ignorelist.txt
 
   if (target_os == "android") {
     ldflags = [ "-Wl,-z,global" ]

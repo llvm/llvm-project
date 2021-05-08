@@ -1938,7 +1938,18 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
       if (blockNeedsPredication(ST->getParent(), TheLoop, DT))
         Loc.AATags.TBAA = nullptr;
 
-      Accesses.addStore(Loc);
+      // SCEV does not look through non-header PHIs inside the loop. Such phis
+      // can be analyzed by adding separate accesses for each incoming pointer
+      // value.
+      auto *PN = dyn_cast<PHINode>(Loc.Ptr);
+      if (PN && TheLoop->contains(PN->getParent()) &&
+          PN->getParent() != TheLoop->getHeader()) {
+        for (const Use &Inc : PN->incoming_values()) {
+          MemoryLocation NewLoc = Loc.getWithNewPtr(Inc);
+          Accesses.addStore(NewLoc);
+        }
+      } else
+        Accesses.addStore(Loc);
     }
   }
 
@@ -1982,7 +1993,17 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
     if (blockNeedsPredication(LD->getParent(), TheLoop, DT))
       Loc.AATags.TBAA = nullptr;
 
-    Accesses.addLoad(Loc, IsReadOnlyPtr);
+    // SCEV does not look through non-header PHIs inside the loop. Such phis can
+    // be analyzed by adding separate accesses for each incoming pointer value.
+    auto *PN = dyn_cast<PHINode>(Loc.Ptr);
+    if (PN && TheLoop->contains(PN->getParent()) &&
+        PN->getParent() != TheLoop->getHeader()) {
+      for (const Use &Inc : PN->incoming_values()) {
+        MemoryLocation NewLoc = Loc.getWithNewPtr(Inc);
+        Accesses.addLoad(NewLoc, IsReadOnlyPtr);
+      }
+    } else
+      Accesses.addLoad(Loc, IsReadOnlyPtr);
   }
 
   // If we write (or read-write) to a single destination and there are no
@@ -2260,12 +2281,12 @@ bool LoopAccessLegacyAnalysis::runOnFunction(Function &F) {
 }
 
 void LoopAccessLegacyAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
+  AU.addRequiredTransitive<ScalarEvolutionWrapperPass>();
+  AU.addRequiredTransitive<AAResultsWrapperPass>();
+  AU.addRequiredTransitive<DominatorTreeWrapperPass>();
+  AU.addRequiredTransitive<LoopInfoWrapperPass>();
 
-    AU.setPreservesAll();
+  AU.setPreservesAll();
 }
 
 char LoopAccessLegacyAnalysis::ID = 0;

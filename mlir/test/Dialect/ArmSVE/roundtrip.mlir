@@ -36,6 +36,73 @@ func @arm_sve_ummla(%a: !arm_sve.vector<16xi8>,
   return %0 : !arm_sve.vector<4xi32>
 }
 
+func @arm_sve_arithi(%a: !arm_sve.vector<4xi32>,
+                     %b: !arm_sve.vector<4xi32>,
+                     %c: !arm_sve.vector<4xi32>) -> !arm_sve.vector<4xi32> {
+  // CHECK: arm_sve.muli {{.*}}: !arm_sve.vector<4xi32>
+  %0 = arm_sve.muli %a, %b : !arm_sve.vector<4xi32>
+  // CHECK: arm_sve.addi {{.*}}: !arm_sve.vector<4xi32>
+  %1 = arm_sve.addi %0, %c : !arm_sve.vector<4xi32>
+  return %1 : !arm_sve.vector<4xi32>
+}
+
+func @arm_sve_arithf(%a: !arm_sve.vector<4xf32>,
+                     %b: !arm_sve.vector<4xf32>,
+                     %c: !arm_sve.vector<4xf32>) -> !arm_sve.vector<4xf32> {
+  // CHECK: arm_sve.mulf {{.*}}: !arm_sve.vector<4xf32>
+  %0 = arm_sve.mulf %a, %b : !arm_sve.vector<4xf32>
+  // CHECK: arm_sve.addf {{.*}}: !arm_sve.vector<4xf32>
+  %1 = arm_sve.addf %0, %c : !arm_sve.vector<4xf32>
+  return %1 : !arm_sve.vector<4xf32>
+}
+
+func @arm_sve_masked_arithi(%a: !arm_sve.vector<4xi32>,
+                            %b: !arm_sve.vector<4xi32>,
+                            %c: !arm_sve.vector<4xi32>,
+                            %d: !arm_sve.vector<4xi32>,
+                            %e: !arm_sve.vector<4xi32>,
+                            %mask: !arm_sve.vector<4xi1>)
+                            -> !arm_sve.vector<4xi32> {
+  // CHECK: arm_sve.masked.muli {{.*}}: !arm_sve.vector<4xi1>, !arm_sve.vector
+  %0 = arm_sve.masked.muli %mask, %a, %b : !arm_sve.vector<4xi1>,
+                                           !arm_sve.vector<4xi32>
+  // CHECK: arm_sve.masked.addi {{.*}}: !arm_sve.vector<4xi1>, !arm_sve.vector
+  %1 = arm_sve.masked.addi %mask, %0, %c : !arm_sve.vector<4xi1>,
+                                           !arm_sve.vector<4xi32>
+  // CHECK: arm_sve.masked.subi {{.*}}: !arm_sve.vector<4xi1>, !arm_sve.vector
+  %2 = arm_sve.masked.subi %mask, %1, %d : !arm_sve.vector<4xi1>,
+                                           !arm_sve.vector<4xi32>
+  // CHECK: arm_sve.masked.divi_signed
+  %3 = arm_sve.masked.divi_signed %mask, %2, %e : !arm_sve.vector<4xi1>,
+                                                  !arm_sve.vector<4xi32>
+  // CHECK: arm_sve.masked.divi_unsigned
+  %4 = arm_sve.masked.divi_unsigned %mask, %3, %e : !arm_sve.vector<4xi1>,
+                                                    !arm_sve.vector<4xi32>
+  return %2 : !arm_sve.vector<4xi32>
+}
+
+func @arm_sve_masked_arithf(%a: !arm_sve.vector<4xf32>,
+                            %b: !arm_sve.vector<4xf32>,
+                            %c: !arm_sve.vector<4xf32>,
+                            %d: !arm_sve.vector<4xf32>,
+                            %e: !arm_sve.vector<4xf32>,
+                            %mask: !arm_sve.vector<4xi1>)
+                            -> !arm_sve.vector<4xf32> {
+  // CHECK: arm_sve.masked.mulf {{.*}}: !arm_sve.vector<4xi1>, !arm_sve.vector
+  %0 = arm_sve.masked.mulf %mask, %a, %b : !arm_sve.vector<4xi1>,
+                                           !arm_sve.vector<4xf32>
+  // CHECK: arm_sve.masked.addf {{.*}}: !arm_sve.vector<4xi1>, !arm_sve.vector
+  %1 = arm_sve.masked.addf %mask, %0, %c : !arm_sve.vector<4xi1>,
+                                           !arm_sve.vector<4xf32>
+  // CHECK: arm_sve.masked.subf {{.*}}: !arm_sve.vector<4xi1>, !arm_sve.vector
+  %2 = arm_sve.masked.subf %mask, %1, %d : !arm_sve.vector<4xi1>,
+                                           !arm_sve.vector<4xf32>
+  // CHECK: arm_sve.masked.divf {{.*}}: !arm_sve.vector<4xi1>, !arm_sve.vector
+  %3 = arm_sve.masked.divf %mask, %2, %e : !arm_sve.vector<4xi1>,
+                                           !arm_sve.vector<4xf32>
+  return %3 : !arm_sve.vector<4xf32>
+}
+
 func @get_vector_scale() -> index {
   // CHECK: arm_sve.vector_scale : index
   %0 = arm_sve.vector_scale : index

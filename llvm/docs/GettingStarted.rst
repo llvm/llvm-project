@@ -817,7 +817,21 @@ layout:
 ``llvm/examples``
 -----------------
 
-Simple examples using the LLVM IR and JIT.
+- Some simple examples showing how to use LLVM as a compiler for a custom 
+  language - including lowering, optimization, and code generation.
+
+- Kaleidoscope Tutorial: Kaleidoscope language tutorial run through the 
+  implementation of a nice little compiler for a non-trivial language 
+  including a hand-written lexer, parser, AST, as well as code generation 
+  support using LLVM- both static (ahead of time) and various approaches to 
+  Just In Time (JIT) compilation. 
+  `Kaleidoscope Tutorial for complete beginner 
+  <https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html>`_.
+
+- BuildingAJIT: Examples of the `BuildingAJIT tutorial 
+  <https://llvm.org/docs/tutorial/BuildingAJIT1.html>`_ that shows how LLVM’s 
+  ORC JIT APIs interact with other parts of LLVM. It also, teaches how to 
+  recombine them to build a custom JIT that is suited to your use-case.
 
 ``llvm/include``
 ----------------
@@ -895,6 +909,14 @@ share code among the `tools`_.
 
   Source code that corresponding to the header files in ``llvm/include/ADT/``
   and ``llvm/include/Support/``.
+
+``llvm/bindings``
+----------------------
+
+Contains bindings for the LLVM compiler infrastructure to allow
+programs written in languages other than C or C++ to take advantage of the LLVM
+infrastructure.
+LLVM project provides language bindings for Go, OCaml and Python.
 
 ``llvm/projects``
 -----------------

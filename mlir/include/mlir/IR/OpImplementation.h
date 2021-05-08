@@ -113,6 +113,13 @@ public:
   virtual void printAffineMapOfSSAIds(AffineMapAttr mapAttr,
                                       ValueRange operands) = 0;
 
+  /// Prints an affine expression of SSA ids with SSA id names used instead of
+  /// dims and symbols.
+  /// Operand values must come from single-result sources, and be valid
+  /// dimensions/symbol identifiers according to mlir::isValidDim/Symbol.
+  virtual void printAffineExprOfSSAIds(AffineExpr expr, ValueRange dimOperands,
+                                       ValueRange symOperands) = 0;
+
   /// Print an optional arrow followed by a type list.
   template <typename TypeRange>
   void printOptionalArrowTypeList(TypeRange &&types) {
@@ -679,6 +686,14 @@ public:
   parseAffineMapOfSSAIds(SmallVectorImpl<OperandType> &operands, Attribute &map,
                          StringRef attrName, NamedAttrList &attrs,
                          Delimiter delimiter = Delimiter::Square) = 0;
+
+  /// Parses an affine expression where dims and symbols are SSA operands.
+  /// Operand values must come from single-result sources, and be valid
+  /// dimensions/symbol identifiers according to mlir::isValidDim/Symbol.
+  virtual ParseResult
+  parseAffineExprOfSSAIds(SmallVectorImpl<OperandType> &dimOperands,
+                          SmallVectorImpl<OperandType> &symbOperands,
+                          AffineExpr &expr) = 0;
 
   //===--------------------------------------------------------------------===//
   // Region Parsing

@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -41,24 +42,53 @@ static LogicalResult
 resolveSourceIndices(Location loc, PatternRewriter &rewriter,
                      memref::SubViewOp subViewOp, ValueRange indices,
                      SmallVectorImpl<Value> &sourceIndices) {
-  // TODO: Aborting when the offsets are static. There might be a way to fold
-  // the subview op with load even if the offsets have been canonicalized
-  // away.
-  SmallVector<Range, 4> opRanges = subViewOp.getOrCreateRanges(rewriter, loc);
-  auto opOffsets = llvm::map_range(opRanges, [](Range r) { return r.offset; });
-  auto opStrides = llvm::map_range(opRanges, [](Range r) { return r.stride; });
-  assert(opRanges.size() == indices.size() &&
-         "expected as many indices as rank of subview op result type");
+  SmallVector<OpFoldResult> mixedOffsets = subViewOp.getMixedOffsets();
+  SmallVector<OpFoldResult> mixedSizes = subViewOp.getMixedSizes();
+  SmallVector<OpFoldResult> mixedStrides = subViewOp.getMixedStrides();
 
-  // New indices for the load are the current indices * subview_stride +
-  // subview_offset.
-  sourceIndices.resize(indices.size());
-  for (auto index : llvm::enumerate(indices)) {
-    auto offset = *(opOffsets.begin() + index.index());
-    auto stride = *(opStrides.begin() + index.index());
-    auto mul = rewriter.create<MulIOp>(loc, index.value(), stride);
-    sourceIndices[index.index()] =
-        rewriter.create<AddIOp>(loc, offset, mul).getResult();
+  SmallVector<Value> useIndices;
+  // Check if this is rank-reducing case. Then for every unit-dim size add a
+  // zero to the indices.
+  ArrayRef<int64_t> resultShape = subViewOp.getType().getShape();
+  unsigned resultDim = 0;
+  for (auto size : llvm::enumerate(mixedSizes)) {
+    auto attr = size.value().dyn_cast<Attribute>();
+    // Check if this dimension has been dropped, i.e. the size is 1, but the
+    // associated dimension is not 1.
+    if (attr && attr.cast<IntegerAttr>().getInt() == 1 &&
+        (resultDim >= resultShape.size() || resultShape[resultDim] != 1))
+      useIndices.push_back(rewriter.create<ConstantIndexOp>(loc, 0));
+    else if (resultDim < resultShape.size()) {
+      useIndices.push_back(indices[resultDim++]);
+    }
+  }
+  if (useIndices.size() != mixedOffsets.size())
+    return failure();
+  sourceIndices.resize(useIndices.size());
+  for (auto index : llvm::seq<size_t>(0, mixedOffsets.size())) {
+    SmallVector<Value> dynamicOperands;
+    AffineExpr expr = rewriter.getAffineDimExpr(0);
+    unsigned numSymbols = 0;
+    dynamicOperands.push_back(useIndices[index]);
+
+    // Multiply the stride;
+    if (auto attr = mixedStrides[index].dyn_cast<Attribute>()) {
+      expr = expr * attr.cast<IntegerAttr>().getInt();
+    } else {
+      dynamicOperands.push_back(mixedStrides[index].get<Value>());
+      expr = expr * rewriter.getAffineSymbolExpr(numSymbols++);
+    }
+
+    // Add the offset.
+    if (auto attr = mixedOffsets[index].dyn_cast<Attribute>()) {
+      expr = expr + attr.cast<IntegerAttr>().getInt();
+    } else {
+      dynamicOperands.push_back(mixedOffsets[index].get<Value>());
+      expr = expr + rewriter.getAffineSymbolExpr(numSymbols++);
+    }
+    Location loc = subViewOp.getLoc();
+    sourceIndices[index] = rewriter.create<AffineApplyOp>(
+        loc, AffineMap::get(1, numSymbols, expr), dynamicOperands);
   }
   return success();
 }

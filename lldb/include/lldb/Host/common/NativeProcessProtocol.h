@@ -240,8 +240,11 @@ public:
     multiprocess = (1u << 0),
     fork = (1u << 1),
     vfork = (1u << 2),
+    pass_signals = (1u << 3),
+    auxv = (1u << 4),
+    libraries_svr4 = (1u << 5),
 
-    LLVM_MARK_AS_BITMASK_ENUM(vfork)
+    LLVM_MARK_AS_BITMASK_ENUM(libraries_svr4)
   };
 
   class Factory {

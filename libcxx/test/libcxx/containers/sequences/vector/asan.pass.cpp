@@ -42,7 +42,7 @@ int main(int, char**)
 #endif
 
     {
-        typedef input_iterator<int*> MyInputIter;
+        typedef cpp17_input_iterator<int*> MyInputIter;
         // Sould not trigger ASan.
         std::vector<int> v;
         v.reserve(1);

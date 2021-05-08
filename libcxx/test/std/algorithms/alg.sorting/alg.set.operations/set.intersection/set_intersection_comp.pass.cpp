@@ -63,7 +63,7 @@ TEST_CONSTEXPR_CXX20 void test3()
 template<class T, class Iter1>
 TEST_CONSTEXPR_CXX20 void test2()
 {
-    test3<T, Iter1, input_iterator<const T*> >();
+    test3<T, Iter1, cpp17_input_iterator<const T*> >();
     test3<T, Iter1, forward_iterator<const T*> >();
     test3<T, Iter1, bidirectional_iterator<const T*> >();
     test3<T, Iter1, random_access_iterator<const T*> >();
@@ -73,7 +73,7 @@ TEST_CONSTEXPR_CXX20 void test2()
 template<class T>
 TEST_CONSTEXPR_CXX20 void test1()
 {
-    test2<T, input_iterator<const T*> >();
+    test2<T, cpp17_input_iterator<const T*> >();
     test2<T, forward_iterator<const T*> >();
     test2<T, bidirectional_iterator<const T*> >();
     test2<T, random_access_iterator<const T*> >();

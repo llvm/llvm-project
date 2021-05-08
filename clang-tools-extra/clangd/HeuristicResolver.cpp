@@ -115,7 +115,7 @@ std::vector<const NamedDecl *> HeuristicResolver::resolveDeclRefExpr(
 }
 
 std::vector<const NamedDecl *>
-HeuristicResolver::resolveCallExpr(const CallExpr *CE) const {
+HeuristicResolver::resolveTypeOfCallExpr(const CallExpr *CE) const {
   const auto *CalleeType = resolveExprToType(CE->getCallee());
   if (!CalleeType)
     return {};
@@ -128,6 +128,15 @@ HeuristicResolver::resolveCallExpr(const CallExpr *CE) const {
     }
   }
   return {};
+}
+
+std::vector<const NamedDecl *>
+HeuristicResolver::resolveCalleeOfCallExpr(const CallExpr *CE) const {
+  if (const auto *ND = dyn_cast_or_null<NamedDecl>(CE->getCalleeDecl())) {
+    return {ND};
+  }
+
+  return resolveExprToDecls(CE->getCallee());
 }
 
 std::vector<const NamedDecl *> HeuristicResolver::resolveUsingValueDecl(
@@ -163,18 +172,30 @@ const Type *resolveDeclsToType(const std::vector<const NamedDecl *> &Decls) {
   return nullptr;
 }
 
-const Type *HeuristicResolver::resolveExprToType(const Expr *E) const {
+std::vector<const NamedDecl *>
+HeuristicResolver::resolveExprToDecls(const Expr *E) const {
   if (const auto *ME = dyn_cast<CXXDependentScopeMemberExpr>(E)) {
-    return resolveDeclsToType(resolveMemberExpr(ME));
+    return resolveMemberExpr(ME);
   }
   if (const auto *RE = dyn_cast<DependentScopeDeclRefExpr>(E)) {
-    return resolveDeclsToType(resolveDeclRefExpr(RE));
+    return resolveDeclRefExpr(RE);
+  }
+  if (const auto *OE = dyn_cast<OverloadExpr>(E)) {
+    return {OE->decls_begin(), OE->decls_end()};
   }
   if (const auto *CE = dyn_cast<CallExpr>(E)) {
-    return resolveDeclsToType(resolveCallExpr(CE));
+    return resolveTypeOfCallExpr(CE);
   }
   if (const auto *ME = dyn_cast<MemberExpr>(E))
-    return resolveDeclsToType({ME->getMemberDecl()});
+    return {ME->getMemberDecl()};
+
+  return {};
+}
+
+const Type *HeuristicResolver::resolveExprToType(const Expr *E) const {
+  std::vector<const NamedDecl *> Decls = resolveExprToDecls(E);
+  if (!Decls.empty())
+    return resolveDeclsToType(Decls);
 
   return E->getType().getTypePtr();
 }

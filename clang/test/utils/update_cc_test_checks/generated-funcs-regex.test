@@ -1,7 +1,7 @@
 ## Test that CHECK lines are generated for clang-generated functions replaced
 ## by regex
 
-## RUN: cp %S/Inputs/generated-funcs-regex.c %t-generated-funcs-regex.c && %update_cc_test_checks --include-generated-funcs --replace-function-regex "__([a-z]+)_offloading_[a-z0-9]+_[a-z0-9]+_(.*)_l[0-9]+" -- %t-generated-funcs-regex.c
+## RUN: cp %S/Inputs/generated-funcs-regex.c %t-generated-funcs-regex.c && %update_cc_test_checks --include-generated-funcs --replace-value-regex "__([a-z]+)_offloading_[a-z0-9]+_[a-z0-9]+_(.*)_l[0-9]+" "somevar_[a-z0-9]+_" -- %t-generated-funcs-regex.c
 # RUN: diff -u %S/Inputs/generated-funcs-regex.c.expected %t-generated-funcs-regex.c
 
 ## Check that re-running update_cc_test_checks doesn't change the output

@@ -26,6 +26,15 @@ TARGET_BUILTIN(__builtin_riscv_clmul, "LiLiLi", "nc", "experimental-zbc")
 TARGET_BUILTIN(__builtin_riscv_clmulh, "LiLiLi", "nc", "experimental-zbc")
 TARGET_BUILTIN(__builtin_riscv_clmulr, "LiLiLi", "nc", "experimental-zbc")
 
+// Zbe extension
+TARGET_BUILTIN(__builtin_riscv_bcompress_32, "ZiZiZi", "nc", "experimental-zbe")
+TARGET_BUILTIN(__builtin_riscv_bcompress_64, "WiWiWi", "nc",
+               "experimental-zbe,64bit")
+TARGET_BUILTIN(__builtin_riscv_bdecompress_32, "ZiZiZi", "nc",
+               "experimental-zbe")
+TARGET_BUILTIN(__builtin_riscv_bdecompress_64, "WiWiWi", "nc",
+               "experimental-zbe,64bit")
+
 // Zbp extension
 TARGET_BUILTIN(__builtin_riscv_grev_32, "ZiZiZi", "nc", "experimental-zbp")
 TARGET_BUILTIN(__builtin_riscv_grev_64, "WiWiWi", "nc", "experimental-zbp,64bit")

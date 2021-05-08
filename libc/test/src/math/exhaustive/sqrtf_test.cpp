@@ -19,8 +19,8 @@ namespace mpfr = __llvm_libc::testing::mpfr;
 TEST(LlvmLibcSqrtfExhaustiveTest, AllValues) {
   uint32_t bits = 0;
   do {
-    FPBits x(bits);
-    ASSERT_MPFR_MATCH(mpfr::Operation::Sqrt, float(x), __llvm_libc::sqrtf(x),
-                      0.5);
+    FPBits xbits(bits);
+    float x = float(xbits);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Sqrt, x, __llvm_libc::sqrtf(x), 0.5);
   } while (bits++ < 0xffff'ffffU);
 }

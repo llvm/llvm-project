@@ -215,6 +215,9 @@ class VectorType;
            // lanes
     VCVTL, // MVE vcvt f16 -> f32, extending from either the bottom or top lanes
 
+    // MVE VIDUP instruction, taking a start value and increment.
+    VIDUP,
+
     // Vector multiply long:
     VMULLs, // ...signed
     VMULLu, // ...unsigned
@@ -296,6 +299,10 @@ class VectorType;
     // Pseudo-instruction representing a memory copy using ldm/stm
     // instructions.
     MEMCPY,
+
+    // Pseudo-instruction representing a memory copy using a tail predicated
+    // loop
+    MEMCPYLOOP,
 
     // V8.1MMainline condition select
     CSINV, // Conditional select invert.

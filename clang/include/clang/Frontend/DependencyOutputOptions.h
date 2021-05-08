@@ -22,7 +22,7 @@ enum class DependencyOutputFormat { Make, NMake };
 
 /// ExtraDepKind - The kind of extra dependency file.
 enum ExtraDepKind {
-  EDK_SanitizeBlacklist,
+  EDK_SanitizeIgnorelist,
   EDK_ProfileList,
   EDK_ModuleFile,
   EDK_DepFileEntry,

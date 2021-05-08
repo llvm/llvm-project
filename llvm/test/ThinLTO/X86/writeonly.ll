@@ -11,8 +11,8 @@
 ; RUN: llvm-dis %t1.imported.bc -o - | FileCheck %s --check-prefix=IMPORT
 ; RUN: llvm-lto -thinlto-action=optimize %t1.imported.bc -o - | llvm-dis - -o - | FileCheck %s --check-prefix=OPTIMIZE
 
-; IMPORT: @gFoo.llvm.0 = internal unnamed_addr global i32 0, align 4, !dbg !0
-; IMPORT-NEXT: @gBar = internal local_unnamed_addr global i32 0, align 4, !dbg !5
+; IMPORT:      @gBar = internal local_unnamed_addr global i32 0, align 4, !dbg !0
+; IMPORT-NEXT: @gFoo.llvm.0 = internal unnamed_addr global i32 0, align 4, !dbg !5
 ; IMPORT: !DICompileUnit({{.*}})
 
 ; STATS:  2 module-summary-index - Number of live global variables marked write only 
@@ -29,8 +29,8 @@
 ; RUN: llvm-lto -propagate-attrs=false -thinlto-action=import -exported-symbol=main  %t1.bc -thinlto-index=%t3.index.bc -o %t1.imported.bc -stats 2>&1 | FileCheck %s --check-prefix=STATS-NOPROP
 ; RUN: llvm-dis %t1.imported.bc -o - | FileCheck %s --check-prefix=IMPORT-NOPROP
 ; STATS-NOPROP-NOT: Number of live global variables marked write only
-; IMPORT-NOPROP: @gFoo.llvm.0 = available_externally
-; IMPORT-NOPROP-NEXT: @gBar = available_externally
+; IMPORT-NOPROP:      @gBar = available_externally
+; IMPORT-NOPROP-NEXT: @gFoo.llvm.0 = available_externally
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"

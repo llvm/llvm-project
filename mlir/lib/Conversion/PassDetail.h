@@ -36,6 +36,10 @@ namespace NVVM {
 class NVVMDialect;
 } // end namespace NVVM
 
+namespace math {
+class MathDialect;
+} // end namespace math
+
 namespace memref {
 class MemRefDialect;
 } // end namespace memref

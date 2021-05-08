@@ -487,6 +487,18 @@ private:
   std::unique_ptr<PassConceptT> Pass;
 };
 
+/// A 'signaling' analysis to indicate whether a function has been changed. It
+/// is meant to control the runs of the function pass(es) managed by the
+/// FunctionAnalysisManagerCGSCCProxy.
+class FunctionStatusAnalysis
+    : public AnalysisInfoMixin<FunctionStatusAnalysis> {
+public:
+  static AnalysisKey Key;
+  struct Result {};
+
+  Result run(Function &F, FunctionAnalysisManager &FAM) { return Result(); }
+};
+
 /// A function to deduce a function pass type and wrap it in the
 /// templated adaptor.
 template <typename FunctionPassT>

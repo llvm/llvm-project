@@ -10,17 +10,6 @@
 // CHECK-DAG: #[[$id_1d:.*]] = affine_map<(d0, d1, d2) -> (d1)>
 // CHECK-DAG: #[[$permute_0:.*]] = affine_map<(d0, d1, d2) -> (d0, d2, d1)>
 // CHECK-DAG: #[[$permute_1:.*]] = affine_map<(d0, d1, d2) -> (d2, d1, d0)>
-// CHECK-DAG: #[[$reshape5D01:.*]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1)>
-// CHECK-DAG: #[[$reshape5D0:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0)>
-// CHECK-DAG: #[[$reshape5D1:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d1)>
-// CHECK-DAG: #[[$reshape5D2:.*]] = affine_map<(d0, d1, d2, d3, d4) -> (d2)>
-// CHECK-DAG: #[[$reshape5D345:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d4)>
-// CHECK-DAG: #[[$reshape5D34:.*]] = affine_map<(d0, d1, d2, d3, d4) -> (d3, d4)>
-// CHECK-DAG: #[[$reshapeD012:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-// CHECK-DAG: #[[$reshapeD01:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
-// CHECK-DAG: #[[$reshapeD0:.*]] = affine_map<(d0, d1, d2) -> (d0)>
-// CHECK-DAG: #[[$reshapeD12:.*]] = affine_map<(d0, d1, d2) -> (d1, d2)>
-// CHECK-DAG: #[[$reshapeD2:.*]] = affine_map<(d0, d1, d2) -> (d2)>
 // CHECK-DAG: #[[$strided1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 // CHECK-DAG: #[[$strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 // CHECK-DAG: #[[$strided2DOFF0:.*]] = affine_map<(d0, d1)[s0] -> (d0 * s0 + d1)>
@@ -571,68 +560,53 @@ func @indexed_generic(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 
 
 // -----
 
-func @reshape_static(%arg0: memref<3x4x5xf32>, %arg1: tensor<3x4x5xf32>, %arg2: tensor<3x?x5xf32>) {
+func @reshape_static(%arg0: memref<3x4x5xf32>, %arg1: tensor<3x4x5xf32>,
+                     %arg2: tensor<3x?x5xf32>) {
   // Reshapes that collapse and expand back a contiguous buffer.
-  %0 = linalg.reshape %arg0 [affine_map<(i, j, k) -> (i, j)>,
-                             affine_map<(i, j, k) -> (k)>] :
+  %0 = linalg.reshape %arg0 [[0, 1], [2]] :
     memref<3x4x5xf32> into memref<12x5xf32>
-  %r0 = linalg.reshape %0 [affine_map<(i, j, k) -> (i, j)>,
-                           affine_map<(i, j, k) -> (k)>] :
+  %r0 = linalg.reshape %0 [[0, 1], [2]] :
     memref<12x5xf32> into memref<3x4x5xf32>
-  %1 = linalg.reshape %arg0 [affine_map<(i, j, k) -> (i)>,
-                             affine_map<(i, j, k) -> (j, k)>] :
+  %1 = linalg.reshape %arg0 [[0], [1, 2]] :
     memref<3x4x5xf32> into memref<3x20xf32>
-  %r1 = linalg.reshape %1 [affine_map<(i, j, k) -> (i)>,
-                           affine_map<(i, j, k) -> (j, k)>] :
+  %r1 = linalg.reshape %1 [[0], [1, 2]] :
     memref<3x20xf32> into memref<3x4x5xf32>
-  %2 = linalg.reshape %arg0 [affine_map<(i, j, k) -> (i, j, k)>] :
+  %2 = linalg.reshape %arg0 [[0, 1, 2]] :
     memref<3x4x5xf32> into memref<60xf32>
-  %r2 = linalg.reshape %2 [affine_map<(i, j, k) -> (i, j, k)>] :
+  %r2 = linalg.reshape %2 [[0, 1, 2]] :
     memref<60xf32> into memref<3x4x5xf32>
   // Reshapes that expand and collapse back a contiguous buffer with some 1's.
-  %3 = linalg.reshape %arg0 [affine_map<(i, j, k, l, m) -> (i, j)>,
-                             affine_map<(i, j, k, l, m) -> (k)>,
-                             affine_map<(i, j, k, l, m) -> (l, m)>] :
+  %3 = linalg.reshape %arg0 [[0, 1], [2], [3, 4]] :
     memref<3x4x5xf32> into memref<1x3x4x1x5xf32>
-  %r3 = linalg.reshape %3 [affine_map<(i, j, k, l, m) -> (i, j)>,
-                           affine_map<(i, j, k, l, m) -> (k)>,
-                           affine_map<(i, j, k, l, m) -> (l, m)>] :
+  %r3 = linalg.reshape %3 [[0, 1], [2], [3, 4]] :
     memref<1x3x4x1x5xf32> into memref<3x4x5xf32>
   // Reshapes on tensors.
-  %t0 = linalg.tensor_reshape %arg1 [affine_map<(i, j, k, l, m) -> (i, j)>,
-                                     affine_map<(i, j, k, l, m) -> (k)>,
-                                     affine_map<(i, j, k, l, m) -> (l, m)>] :
+  %t0 = linalg.tensor_reshape %arg1 [[0, 1], [2], [3, 4]] :
     tensor<3x4x5xf32> into tensor<1x3x4x1x5xf32>
-  %rt0 = linalg.tensor_reshape %t0 [affine_map<(i, j, k, l, m) -> (i, j)>,
-                                    affine_map<(i, j, k, l, m) -> (k)>,
-                                    affine_map<(i, j, k, l, m) -> (l, m)>] :
+  %rt0 = linalg.tensor_reshape %t0 [[0, 1], [2], [3, 4]] :
     tensor<1x3x4x1x5xf32> into tensor<3x4x5xf32>
-  %t1 = linalg.tensor_reshape %arg2 [affine_map<(i, j, k, l, m) -> (i, j)>,
-                                     affine_map<(i, j, k, l, m) -> (k)>,
-                                     affine_map<(i, j, k, l, m) -> (l, m)>] :
+  %t1 = linalg.tensor_reshape %arg2 [[0, 1], [2], [3, 4]] :
     tensor<3x?x5xf32> into tensor<1x3x?x1x5xf32>
-  %rt1 = linalg.tensor_reshape %t1 [affine_map<(i, j, k, l, m) -> (i)>,
-                                    affine_map<(i, j, k, l, m) -> (j, k)>,
-                                    affine_map<(i, j, k, l, m) -> (l, m)>] :
+  %rt1 = linalg.tensor_reshape %t1 [[0], [1, 2], [3, 4]] :
     tensor<1x3x?x1x5xf32> into tensor<1x?x5xf32>
   return
 }
 // CHECK-LABEL: func @reshape_static
-//       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD01]], #[[$reshapeD2]]]
+//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<3x4x5xf32> into memref<12x5xf32>
-//       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD01]], #[[$reshapeD2]]]
+//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<12x5xf32> into memref<3x4x5xf32>
-//       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD0]], #[[$reshapeD12]]]
+//       CHECK:   linalg.reshape {{.*}} {{\[}}[0], [1, 2]]
 //  CHECK-SAME:     memref<3x4x5xf32> into memref<3x20xf32>
-//       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD0]], #[[$reshapeD12]]]
+//       CHECK:   linalg.reshape {{.*}} {{\[}}[0], [1, 2]]
 //  CHECK-SAME:     memref<3x20xf32> into memref<3x4x5xf32>
-//       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD012]]]
+//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1, 2]]
 //  CHECK-SAME:     memref<3x4x5xf32> into memref<60xf32>
-//       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD012]]]
+//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1, 2]]
 //  CHECK-SAME:     memref<60xf32> into memref<3x4x5xf32>
-//       CHECK:   linalg.reshape {{.*}} [#[[$reshape5D01]], #[[$reshape5D2]], #[[$reshape5D34]]]
+//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2], [3, 4]]
 //  CHECK-SAME:     memref<3x4x5xf32> into memref<1x3x4x1x5xf32>
-//       CHECK:   linalg.reshape {{.*}} [#[[$reshape5D01]], #[[$reshape5D2]], #[[$reshape5D34]]]
+//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2], [3, 4]]
 //  CHECK-SAME:     memref<1x3x4x1x5xf32> into memref<3x4x5xf32>
 //
 //       CHECK:   linalg.tensor_reshape {{.*}}: tensor<3x4x5xf32> into tensor<1x3x4x1x5xf32>
@@ -645,43 +619,36 @@ func @reshape_static(%arg0: memref<3x4x5xf32>, %arg1: tensor<3x4x5xf32>, %arg2: 
 func @reshape_dynamic(%arg0: memref<?x?x?xf32>,
                       %arg1: memref<?x?x?xf32, offset : 0, strides : [?, ?, 1]>,
                       %arg2: memref<?x?x?xf32, offset : ?, strides : [?, ?, 1]>) {
-  %0 = linalg.reshape %arg0 [affine_map<(i, j, k) -> (i, j)>,
-                             affine_map<(i, j, k) -> (k)>] :
+  %0 = linalg.reshape %arg0 [[0, 1], [2]] :
     memref<?x?x?xf32> into memref<?x?xf32>
-  %r0 = linalg.reshape %0 [affine_map<(i, j, k) -> (i, j)>,
-                           affine_map<(i, j, k) -> (k)>] :
+  %r0 = linalg.reshape %0 [[0, 1], [2]] :
     memref<?x?xf32> into memref<?x4x?xf32>
-  %1 = linalg.reshape %arg1 [affine_map<(i, j, k) -> (i, j)>,
-                             affine_map<(i, j, k) -> (k)>] :
+  %1 = linalg.reshape %arg1 [[0, 1], [2]] :
     memref<?x?x?xf32, offset : 0, strides : [?, ?, 1]> into
     memref<?x?xf32, offset : 0, strides : [?, 1]>
-  %r1 = linalg.reshape %1 [affine_map<(i, j, k) -> (i, j)>,
-                           affine_map<(i, j, k) -> (k)>] :
+  %r1 = linalg.reshape %1 [[0, 1], [2]] :
     memref<?x?xf32, offset : 0, strides : [?, 1]> into
     memref<?x4x?xf32, offset : 0, strides : [?, ?, 1]>
-  %2 = linalg.reshape %arg2 [affine_map<(i, j, k) -> (i, j)>,
-                             affine_map<(i, j, k) -> (k)>] :
+  %2 = linalg.reshape %arg2 [[0, 1], [2]] :
     memref<?x?x?xf32, offset : ?, strides : [?, ?, 1]> into
     memref<?x?xf32, offset : ?, strides : [?, 1]>
-  %r2 = linalg.reshape %2 [affine_map<(i, j, k) -> (i, j)>,
-                           affine_map<(i, j, k) -> (k)>] :
+  %r2 = linalg.reshape %2 [[0, 1], [2]] :
     memref<?x?xf32, offset : ?, strides : [?, 1]> into
     memref<?x4x?xf32, offset : ?, strides : [?, ?, 1]>
   return
 }
-
 // CHECK-LABEL: func @reshape
-//       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD01]], #[[$reshapeD2]]]
+//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?x?xf32> into memref<?x?xf32>
-//       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD01]], #[[$reshapeD2]]]
+//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?xf32> into memref<?x4x?xf32>
-//       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD01]], #[[$reshapeD2]]]
+//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?x?xf32, #[[$strided3DOFF0]]> into memref<?x?xf32, #[[$strided2DOFF0]]>
-//       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD01]], #[[$reshapeD2]]]
+//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?xf32, #[[$strided2DOFF0]]> into memref<?x4x?xf32, #[[$strided3DOFF0]]>
-//       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD01]], #[[$reshapeD2]]]
+//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?x?xf32, #[[$strided3D]]> into memref<?x?xf32, #[[$strided2D]]>
-//       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD01]], #[[$reshapeD2]]]
+//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?xf32, #[[$strided2D]]> into memref<?x4x?xf32, #[[$strided3D]]>
 
 func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref<?x?x?xf32>,
@@ -749,30 +716,26 @@ func @init_tensor(%arg0 : index, %arg1 : index)
 func @legal_collapsing_reshape_dynamic_tensor
   (%arg0: tensor<?x?x?x4x?xf32>) -> tensor<?x?x?xf32>
 {
-  %0 = linalg.tensor_reshape %arg0
-    [affine_map<(d0, d1, d2, d3, d4) -> (d0)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d1)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d4)>] :
+  %0 = linalg.tensor_reshape %arg0 [[0], [1], [2, 3, 4]] :
     tensor<?x?x?x4x?xf32> into tensor<?x?x?xf32>
   return %0 : tensor<?x?x?xf32>
 }
-//     CHECK: func @legal_collapsing_reshape_dynamic_tensor
-//     CHECK:   linalg.tensor_reshape %{{.+}} [#[[$reshape5D0]], #[[$reshape5D1]], #[[$reshape5D345]]]
+//      CHECK: func @legal_collapsing_reshape_dynamic_tensor
+//      CHECK:   linalg.tensor_reshape
+// CHECK-SAME:    [0], [1], [2, 3, 4]
 
 // -----
 
 func @legal_collapsing_reshape_dynamic_memref
   (%arg0: memref<?x?x?x4x?xf32>) -> memref<?x?x?xf32>
 {
-  %0 = linalg.reshape %arg0
-    [affine_map<(d0, d1, d2, d3, d4) -> (d0)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d1)>,
-     affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d4)>] :
+  %0 = linalg.reshape %arg0 [[0], [1], [2, 3, 4]] :
     memref<?x?x?x4x?xf32> into memref<?x?x?xf32>
   return %0 : memref<?x?x?xf32>
 }
-//     CHECK: func @legal_collapsing_reshape_dynamic_memref
-//     CHECK:   linalg.reshape %{{.+}} [#[[$reshape5D0]], #[[$reshape5D1]], #[[$reshape5D345]]]
+//      CHECK: func @legal_collapsing_reshape_dynamic_memref
+//      CHECK:   linalg.reshape
+// CHECK-SAME:    [0], [1], [2, 3, 4]
 
 // -----
 

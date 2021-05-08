@@ -88,21 +88,3 @@ class TestGdbRemote_QPassSignals(gdbremote_testcase.GdbRemoteTestCaseBase):
             signo = lldbutil.get_signal_number(signal_name)
             self.expect_signal(signo)
         self.expect_exit_code(0)
-
-
-    @skipUnlessPlatform(["linux", "android"])
-    def test_support_q_pass_signals(self):
-        self.build()
-
-        # Start up the stub and start/prep the inferior.
-        self.set_inferior_startup_launch()
-        procs = self.prep_debug_monitor_and_inferior()
-        self.add_qSupported_packets()
-
-        # Run the packet stream.
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-
-        # Retrieve the qSupported features and check QPassSignals+
-        supported_dict = self.parse_qSupported_response(context)
-        self.assertEqual(supported_dict["QPassSignals"], "+")

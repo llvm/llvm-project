@@ -218,7 +218,7 @@ def main():
 
   for ti in common.itertests(initial_args.tests, parser, 'utils/' + script_name,
                              comment_prefix='//', argparse_callback=infer_dependent_args):
-    # Build a list of clang command lines and check prefixes from RUN lines.
+    # Build a list of filechecked and non-filechecked RUN lines.
     run_list = []
     line2spell_and_mangled_list = collections.defaultdict(list)
 
@@ -240,11 +240,10 @@ def main():
       exec_args = shlex.split(commands[0])
       # Execute non-clang runline.
       if exec_args[0] not in SUBST:
-        print('NOTE: Executing non-clang RUN line: ' + l, file=sys.stderr)
         # Do lit-like substitutions.
         for s in subs:
           exec_args = [i.replace(s, subs[s]) if s in i else i for i in exec_args]
-        exec_run_line(exec_args)
+        run_list.append((None, exec_args, None, None))
         continue
       # This is a clang runline, apply %clang substitution rule, do lit-like substitutions,
       # and append args.clang_args
@@ -258,10 +257,9 @@ def main():
       filecheck_cmd = commands[-1]
       common.verify_filecheck_prefixes(filecheck_cmd)
       if not filecheck_cmd.startswith('FileCheck '):
-        print('NOTE: Executing non-FileChecked clang RUN line: ' + l, file=sys.stderr)
         # Execute non-filechecked clang runline.
         exe = [ti.args.clang] + clang_args
-        exec_run_line(exe)
+        run_list.append((None, exe, None, None))
         continue
 
       check_prefixes = [item for m in common.CHECK_PREFIX_RE.finditer(filecheck_cmd)
@@ -272,12 +270,21 @@ def main():
 
     # Execute clang, generate LLVM IR, and extract functions.
 
+    # Store only filechecked runlines.
+    filecheck_run_list = [i for i in run_list if i[0]]
     builder = common.FunctionTestBuilder(
-      run_list=run_list,
+      run_list=filecheck_run_list,
       flags=ti.args,
       scrubber_args=[])
 
-    for prefixes, clang_args, extra_commands, triple_in_cmd in run_list:
+    for prefixes, args, extra_commands, triple_in_cmd in run_list:
+      # Execute non-filechecked runline.
+      if not prefixes:
+        print('NOTE: Executing non-FileChecked RUN line: ' + ' '.join(args), file=sys.stderr)
+        exec_run_line(args)
+        continue
+
+      clang_args = args
       common.debug('Extracted clang cmd: clang {}'.format(clang_args))
       common.debug('Extracted FileCheck prefixes: {}'.format(prefixes))
 
@@ -291,7 +298,7 @@ def main():
 
     func_dict = builder.finish_and_get_func_dict()
     global_vars_seen_dict = {}
-    prefix_set = set([prefix for p in run_list for prefix in p[0]])
+    prefix_set = set([prefix for p in filecheck_run_list for prefix in p[0]])
     output_lines = []
 
     include_generated_funcs = common.find_arg_in_test(ti,
@@ -325,7 +332,7 @@ def main():
                              prefixes,
                              func_dict, func)
 
-      common.add_checks_at_end(output_lines, run_list, builder.func_order(),
+      common.add_checks_at_end(output_lines, filecheck_run_list, builder.func_order(),
                                '//', lambda my_output_lines, prefixes, func:
                                check_generator(my_output_lines,
                                                prefixes, func))
@@ -359,7 +366,7 @@ def main():
               if added:
                 output_lines.append('//')
               added.add(mangled)
-              common.add_ir_checks(output_lines, '//', run_list, func_dict, mangled,
+              common.add_ir_checks(output_lines, '//', filecheck_run_list, func_dict, mangled,
                                    False, args.function_signature, global_vars_seen_dict)
               if line.rstrip('\n') == '//':
                 include_line = False

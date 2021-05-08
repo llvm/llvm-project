@@ -147,12 +147,12 @@ define amdgpu_kernel void @store_lds_v3i32_align1(<3 x i32> addrspace(3)* %out, 
 ; GFX10-NEXT:    s_lshr_b32 s3, s12, 24
 ; GFX10-NEXT:    s_lshr_b32 s6, s14, 8
 ; GFX10-NEXT:    v_mov_b32_e32 v4, s0
-; GFX10-NEXT:    v_mov_b32_e32 v15, s5
+; GFX10-NEXT:    v_mov_b32_e32 v9, s5
 ; GFX10-NEXT:    s_lshr_b32 s2, s13, 8
 ; GFX10-NEXT:    s_lshr_b32 s4, s13, 16
 ; GFX10-NEXT:    s_lshr_b32 s7, s14, 16
 ; GFX10-NEXT:    v_mov_b32_e32 v3, s14
-; GFX10-NEXT:    v_mov_b32_e32 v11, s1
+; GFX10-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX10-NEXT:    s_lshr_b32 s8, s14, 24
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX10-NEXT:    v_mov_b32_e32 v10, s6
@@ -161,13 +161,13 @@ define amdgpu_kernel void @store_lds_v3i32_align1(<3 x i32> addrspace(3)* %out, 
 ; GFX10-NEXT:    ds_write_b8 v1, v0
 ; GFX10-NEXT:    ds_write_b8 v1, v2 offset:4
 ; GFX10-NEXT:    ds_write_b8 v1, v4 offset:1
-; GFX10-NEXT:    ds_write_b8 v1, v11 offset:2
+; GFX10-NEXT:    ds_write_b8 v1, v5 offset:2
 ; GFX10-NEXT:    ds_write_b8 v1, v6 offset:3
 ; GFX10-NEXT:    ds_write_b8 v1, v7 offset:5
 ; GFX10-NEXT:    ds_write_b8 v1, v8 offset:6
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s7
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s8
-; GFX10-NEXT:    ds_write_b8 v1, v15 offset:7
+; GFX10-NEXT:    ds_write_b8 v1, v9 offset:7
 ; GFX10-NEXT:    ds_write_b8 v1, v3 offset:8
 ; GFX10-NEXT:    ds_write_b8 v1, v10 offset:9
 ; GFX10-NEXT:    ds_write_b8 v1, v0 offset:10
@@ -239,13 +239,13 @@ define amdgpu_kernel void @store_lds_v3i32_align2(<3 x i32> addrspace(3)* %out, 
 ; GFX10-NEXT:    v_mov_b32_e32 v3, s14
 ; GFX10-NEXT:    s_lshr_b32 s2, s14, 16
 ; GFX10-NEXT:    v_mov_b32_e32 v4, s0
-; GFX10-NEXT:    v_mov_b32_e32 v7, s1
+; GFX10-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s2
 ; GFX10-NEXT:    ds_write_b16 v1, v0
 ; GFX10-NEXT:    ds_write_b16 v1, v2 offset:4
 ; GFX10-NEXT:    ds_write_b16 v1, v3 offset:8
 ; GFX10-NEXT:    ds_write_b16 v1, v4 offset:2
-; GFX10-NEXT:    ds_write_b16 v1, v7 offset:6
+; GFX10-NEXT:    ds_write_b16 v1, v5 offset:6
 ; GFX10-NEXT:    ds_write_b16 v1, v6 offset:10
 ; GFX10-NEXT:    s_endpgm
   store <3 x i32> %x, <3 x i32> addrspace(3)* %out, align 2

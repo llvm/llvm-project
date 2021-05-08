@@ -1088,6 +1088,12 @@ let Extension = FuncExtOpenCLCxx in {
                     "atomic_or", "atomic_xor"] in {
       def : Builtin<name, [Type, PointerType<VolatileType<Type>, GenericAS>, Type]>;
     }
+    foreach name = ["atomic_inc", "atomic_dec"] in {
+      def : Builtin<name, [Type, PointerType<VolatileType<Type>, GenericAS>]>;
+    }
+    foreach name = ["atomic_cmpxchg"] in {
+      def : Builtin<name, [Type, PointerType<VolatileType<Type>, GenericAS>, Type, Type]>;
+    }
   }
 }
 

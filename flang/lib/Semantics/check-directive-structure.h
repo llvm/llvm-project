@@ -203,6 +203,12 @@ protected:
     GetContext().actualClauses.push_back(type);
   }
 
+  void EnterSIMDNest() { simdNest_++; }
+
+  void ExitSIMDNest() { simdNest_--; }
+
+  int GetSIMDNest() { return simdNest_; }
+
   // Check if the given clause is present in the current context
   const PC *FindClause(C type) {
     auto it{GetContext().clauseInfo.find(type)};
@@ -314,6 +320,7 @@ protected:
       directiveClausesMap_;
 
   std::string ClauseSetToString(const common::EnumSet<C, ClauseEnumSize> set);
+  int simdNest_{0};
 };
 
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>

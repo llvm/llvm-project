@@ -46,6 +46,7 @@ namespace format {
   TYPE(DesignatedInitializerLSquare)                                           \
   TYPE(DesignatedInitializerPeriod)                                            \
   TYPE(DictLiteral)                                                            \
+  TYPE(FatArrow)                                                               \
   TYPE(ForEachMacro)                                                           \
   TYPE(FunctionAnnotationRParen)                                               \
   TYPE(FunctionDeclarationName)                                                \
@@ -61,17 +62,12 @@ namespace format {
   TYPE(JsComputedPropertyName)                                                 \
   TYPE(JsExponentiation)                                                       \
   TYPE(JsExponentiationEqual)                                                  \
-  TYPE(JsFatArrow)                                                             \
-  TYPE(JsNonNullAssertion)                                                     \
-  TYPE(JsNullishCoalescingOperator)                                            \
-  TYPE(JsNullPropagatingOperator)                                              \
+  TYPE(JsPipePipeEqual)                                                        \
   TYPE(JsPrivateIdentifier)                                                    \
   TYPE(JsTypeColon)                                                            \
   TYPE(JsTypeOperator)                                                         \
   TYPE(JsTypeOptionalQuestion)                                                 \
   TYPE(JsAndAndEqual)                                                          \
-  TYPE(JsPipePipeEqual)                                                        \
-  TYPE(JsNullishCoalescingEqual)                                               \
   TYPE(LambdaArrow)                                                            \
   TYPE(LambdaLBrace)                                                           \
   TYPE(LambdaLSquare)                                                          \
@@ -80,6 +76,10 @@ namespace format {
   TYPE(MacroBlockBegin)                                                        \
   TYPE(MacroBlockEnd)                                                          \
   TYPE(NamespaceMacro)                                                         \
+  TYPE(NonNullAssertion)                                                       \
+  TYPE(NullCoalescingEqual)                                                    \
+  TYPE(NullCoalescingOperator)                                                 \
+  TYPE(NullPropagatingOperator)                                                \
   TYPE(ObjCBlockLBrace)                                                        \
   TYPE(ObjCBlockLParen)                                                        \
   TYPE(ObjCDecl)                                                               \
@@ -113,8 +113,6 @@ namespace format {
   TYPE(CSharpStringLiteral)                                                    \
   TYPE(CSharpNamedArgumentColon)                                               \
   TYPE(CSharpNullable)                                                         \
-  TYPE(CSharpNullCoalescing)                                                   \
-  TYPE(CSharpNullConditional)                                                  \
   TYPE(CSharpNullConditionalLSquare)                                           \
   TYPE(CSharpGenericTypeConstraint)                                            \
   TYPE(CSharpGenericTypeConstraintColon)                                       \

@@ -276,6 +276,7 @@ static void fillL1TilingAndMatmulToVectorPatterns(
 // Allocation call back
 static Optional<Value> allocCallBackFn(OpBuilder &b, memref::SubViewOp subView,
                                        ArrayRef<Value> boundingSubViewSize,
+                                       DataLayout &layout,
                                        OperationFolder *folder) {
   SmallVector<int64_t, 4> shape(boundingSubViewSize.size(), -1);
   return b

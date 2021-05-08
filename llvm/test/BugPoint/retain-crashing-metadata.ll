@@ -1,5 +1,5 @@
 ; REQUIRES: plugins
-; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t-notype -bugpoint-crashmetadata -silence-passes > /dev/null
+; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%pluginext %s -output-prefix %t-notype -bugpoint-crashmetadata -silence-passes > /dev/null
 ; RUN: llvm-dis %t-notype-reduced-simplified.bc -o - | FileCheck %s
 ;
 ; Make sure BugPoint retains metadata contributing to a crash.

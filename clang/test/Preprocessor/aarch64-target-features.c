@@ -15,6 +15,7 @@
 // CHECK-NOT: __ARM_FEATURE_SAT
 // CHECK-NOT: __ARM_FEATURE_SIMD32
 // CHECK: __ARM_ARCH_PROFILE 'A'
+// CHECK-NOT: __ARM_FEATURE_AES
 // CHECK-NOT: __ARM_FEATURE_BIG_ENDIAN
 // CHECK: __ARM_FEATURE_CLZ 1
 // CHECK-NOT: __ARM_FEATURE_CRC32 1
@@ -25,6 +26,11 @@
 // CHECK: __ARM_FEATURE_IDIV 1
 // CHECK: __ARM_FEATURE_LDREX 0xF
 // CHECK: __ARM_FEATURE_NUMERIC_MAXMIN 1
+// CHECK-NOT: __ARM_FEATURE_SHA2 1
+// CHECK-NOT: __ARM_FEATURE_SHA3 1
+// CHECK-NOT: __ARM_FEATURE_SHA512 1
+// CHECK-NOT: __ARM_FEATURE_SM3 1
+// CHECK-NOT: __ARM_FEATURE_SM4 1
 // CHECK: __ARM_FEATURE_UNALIGNED 1
 // CHECK: __ARM_FP 0xE
 // CHECK: __ARM_FP16_ARGS 1
@@ -54,9 +60,36 @@
 // RUN: %clang -target aarch64_be-eabi -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-BIGENDIAN
 // CHECK-BIGENDIAN: __ARM_BIG_ENDIAN 1
 
-// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+crypto -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRYPTO %s
-// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+crypto -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRYPTO %s
-// CHECK-CRYPTO: __ARM_FEATURE_CRYPTO 1
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+crypto -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FEAT-CRYPTO %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+crypto -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FEAT-CRYPTO %s
+// CHECK-FEAT-CRYPTO: __ARM_FEATURE_AES 1
+// CHECK-FEAT-CRYPTO: __ARM_FEATURE_CRYPTO 1
+// CHECK-FEAT-CRYPTO: __ARM_FEATURE_SHA2 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.4-a+crypto -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FEAT-CRYPTO-8_4 %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8.4-a+crypto -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FEAT-CRYPTO-8_4 %s
+// CHECK-FEAT-CRYPTO-8_4: __ARM_FEATURE_AES 1
+// CHECK-FEAT-CRYPTO-8_4: __ARM_FEATURE_CRYPTO 1
+// CHECK-FEAT-CRYPTO-8_4: __ARM_FEATURE_SHA2 1
+// CHECK-FEAT-CRYPTO-8_4: __ARM_FEATURE_SHA3 1
+// CHECK-FEAT-CRYPTO-8_4: __ARM_FEATURE_SHA512 1
+// CHECK-FEAT-CRYPTO-8_4: __ARM_FEATURE_SM3 1
+// CHECK-FEAT-CRYPTO-8_4: __ARM_FEATURE_SM4 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FEAT-AES %s
+// CHECK-FEAT-AES: __ARM_FEATURE_AES 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sha2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FEAT-SHA2 %s
+// CHECK-FEAT-SHA2: __ARM_FEATURE_SHA2 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sha3 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FEAT-SHA3 %s
+// CHECK-FEAT-SHA3: __ARM_FEATURE_SHA2 1
+// CHECK-FEAT-SHA3: __ARM_FEATURE_SHA3 1
+// CHECK-FEAT-SHA3: __ARM_FEATURE_SHA512 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sm4 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FEAT-SM4 %s
+// CHECK-FEAT-SM4: __ARM_FEATURE_SM3 1
+// CHECK-FEAT-SM4: __ARM_FEATURE_SM4 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.5-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-8_5 %s
 // CHECK-8_5: __ARM_FEATURE_FRINT 1
@@ -174,8 +207,8 @@
 // RUN: %clang -target aarch64-none-linux-gnueabi -march=armv8.4-a+fp16+nofp16fml -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FULLFP16-NOFML --check-prefix=CHECK-FULLFP16-VECTOR-SCALAR %s
 // RUN: %clang -target aarch64-none-linux-gnueabi -march=armv8.4-a+fp16fml -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FULLFP16-FML --check-prefix=CHECK-FULLFP16-VECTOR-SCALAR %s
 // RUN: %clang -target aarch64-none-linux-gnueabi -march=armv8.4-a+fp16 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FULLFP16-FML --check-prefix=CHECK-FULLFP16-VECTOR-SCALAR %s
-// CHECK-FULLFP16-FML:           #define __ARM_FEATURE_FP16FML 1
-// CHECK-FULLFP16-NOFML-NOT:     #define __ARM_FEATURE_FP16FML 1
+// CHECK-FULLFP16-FML:           #define __ARM_FEATURE_FP16_FML 1
+// CHECK-FULLFP16-NOFML-NOT:     #define __ARM_FEATURE_FP16_FML 1
 // CHECK-FULLFP16-VECTOR-SCALAR: #define __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
 // CHECK-FULLFP16-VECTOR-SCALAR: #define __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
 // CHECK-FULLFP16-VECTOR-SCALAR: #define __ARM_FP 0xE
@@ -187,7 +220,7 @@
 // RUN: %clang -target aarch64-none-linux-gnueabi -march=armv8-a+fp16+nosimd -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FULLFP16-SCALAR %s
 // RUN: %clang -target aarch64-none-linux-gnueabi -march=armv8.4-a+fp16fml+nosimd -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FULLFP16-SCALAR %s
 // RUN: %clang -target aarch64-none-linux-gnueabi -march=armv8.4-a+fp16+nosimd -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FULLFP16-SCALAR %s
-// CHECK-FULLFP16-SCALAR-NOT:   #define __ARM_FEATURE_FP16FML 1
+// CHECK-FULLFP16-SCALAR-NOT:   #define __ARM_FEATURE_FP16_FML 1
 // CHECK-FULLFP16-SCALAR:       #define __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
 // CHECK-FULLFP16-SCALAR-NOT:   #define __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
 // CHECK-FULLFP16-SCALAR:       #define __ARM_FP 0xE
@@ -201,7 +234,7 @@
 // RUN: %clang -target aarch64-none-linux-gnueabi -march=armv8.4-a+nofp16 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FULLFP16-NOFML-VECTOR-SCALAR %s
 // RUN: %clang -target aarch64-none-linux-gnueabi -march=armv8.4-a+nofp16fml -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FULLFP16-NOFML-VECTOR-SCALAR %s
 // RUN: %clang -target aarch64-none-linux-gnueabi -march=armv8.4-a+fp16fml+nofp16 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FULLFP16-NOFML-VECTOR-SCALAR %s
-// CHECK-FULLFP16-NOFML-VECTOR-SCALAR-NOT: #define __ARM_FEATURE_FP16FML 1
+// CHECK-FULLFP16-NOFML-VECTOR-SCALAR-NOT: #define __ARM_FEATURE_FP16_FML 1
 // CHECK-FULLFP16-NOFML-VECTOR-SCALAR-NOT: #define __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
 // CHECK-FULLFP16-NOFML-VECTOR-SCALAR-NOT: #define __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
 // CHECK-FULLFP16-NOFML-VECTOR-SCALAR:     #define __ARM_FP 0xE

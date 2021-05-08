@@ -367,49 +367,6 @@ public:
   }
 };
 
-/// Returns the identity value associated with an AtomicRMWKind op.
-static Value getIdentityValue(AtomicRMWKind op, Type resultType,
-                              OpBuilder &builder, Location loc) {
-  switch (op) {
-  case AtomicRMWKind::addf:
-    return builder.create<ConstantOp>(loc, builder.getFloatAttr(resultType, 0));
-  case AtomicRMWKind::addi:
-    return builder.create<ConstantOp>(loc,
-                                      builder.getIntegerAttr(resultType, 0));
-  case AtomicRMWKind::mulf:
-    return builder.create<ConstantOp>(loc, builder.getFloatAttr(resultType, 1));
-  case AtomicRMWKind::muli:
-    return builder.create<ConstantOp>(loc,
-                                      builder.getIntegerAttr(resultType, 1));
-  // TODO: Add remaining reduction operations.
-  default:
-    (void)emitOptionalError(loc, "Reduction operation type not supported");
-    break;
-  }
-  return nullptr;
-}
-
-/// Return the value obtained by applying the reduction operation kind
-/// associated with a binary AtomicRMWKind op to `lhs` and `rhs`.
-static Value getReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
-                            Value lhs, Value rhs) {
-  switch (op) {
-  case AtomicRMWKind::addf:
-    return builder.create<AddFOp>(loc, lhs, rhs);
-  case AtomicRMWKind::addi:
-    return builder.create<AddIOp>(loc, lhs, rhs);
-  case AtomicRMWKind::mulf:
-    return builder.create<MulFOp>(loc, lhs, rhs);
-  case AtomicRMWKind::muli:
-    return builder.create<MulIOp>(loc, lhs, rhs);
-  // TODO: Add remaining reduction operations.
-  default:
-    (void)emitOptionalError(loc, "Reduction operation type not supported");
-    break;
-  }
-  return nullptr;
-}
-
 /// Convert an `affine.parallel` (loop nest) operation into a `scf.parallel`
 /// operation.
 class AffineParallelLowering : public OpRewritePattern<AffineParallelOp> {
@@ -423,20 +380,28 @@ public:
     SmallVector<Value, 8> upperBoundTuple;
     SmallVector<Value, 8> lowerBoundTuple;
     SmallVector<Value, 8> identityVals;
-    // Finding lower and upper bound by expanding the map expression.
-    // Checking if expandAffineMap is not giving NULL.
-    Optional<SmallVector<Value, 8>> lowerBound = expandAffineMap(
-        rewriter, loc, op.lowerBoundsMap(), op.getLowerBoundsOperands());
-    Optional<SmallVector<Value, 8>> upperBound = expandAffineMap(
-        rewriter, loc, op.upperBoundsMap(), op.getUpperBoundsOperands());
-    if (!lowerBound || !upperBound)
-      return failure();
-    upperBoundTuple = *upperBound;
-    lowerBoundTuple = *lowerBound;
+    // Emit IR computing the lower and upper bound by expanding the map
+    // expression.
+    lowerBoundTuple.reserve(op.getNumDims());
+    upperBoundTuple.reserve(op.getNumDims());
+    for (unsigned i = 0, e = op.getNumDims(); i < e; ++i) {
+      Value lower = lowerAffineMapMax(rewriter, loc, op.getLowerBoundMap(i),
+                                      op.getLowerBoundsOperands());
+      if (!lower)
+        return rewriter.notifyMatchFailure(op, "couldn't convert lower bounds");
+      lowerBoundTuple.push_back(lower);
+
+      Value upper = lowerAffineMapMin(rewriter, loc, op.getUpperBoundMap(i),
+                                      op.getUpperBoundsOperands());
+      if (!upper)
+        return rewriter.notifyMatchFailure(op, "couldn't convert upper bounds");
+      upperBoundTuple.push_back(upper);
+    }
     steps.reserve(op.steps().size());
     for (Attribute step : op.steps())
       steps.push_back(rewriter.create<ConstantIndexOp>(
           loc, step.cast<IntegerAttr>().getInt()));
+
     // Get the terminator op.
     Operation *affineParOpTerminator = op.getBody()->getTerminator();
     scf::ParallelOp parOp;

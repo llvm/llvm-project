@@ -466,7 +466,7 @@ public:
             _IsImpDefault<_Tp>... // explicit check
         >::value
     , int> = 0>
-    _LIBCPP_INLINE_VISIBILITY constexpr
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     tuple()
         _NOEXCEPT_(_And<is_nothrow_default_constructible<_Tp>...>::value)
     { }
@@ -675,12 +675,12 @@ public:
     // tuple(const tuple<U...>&) constructors (including allocator_arg_t variants)
     template <class ..._Up>
     struct _EnableCopyFromOtherTuple : _And<
-        _Or<
+        _Not<is_same<tuple<_Tp...>, tuple<_Up...> > >,
+        _Lazy<_Or,
             _BoolConstant<sizeof...(_Tp) != 1>,
             // _Tp and _Up are 1-element packs - the pack expansions look
             // weird to avoid tripping up the type traits in degenerate cases
             _Lazy<_And,
-                _Not<is_same<_Tp, _Up> >...,
                 _Not<is_convertible<const tuple<_Up>&, _Tp> >...,
                 _Not<is_constructible<_Tp, const tuple<_Up>&> >...
             >
@@ -741,12 +741,12 @@ public:
     // tuple(tuple<U...>&&) constructors (including allocator_arg_t variants)
     template <class ..._Up>
     struct _EnableMoveFromOtherTuple : _And<
-        _Or<
+        _Not<is_same<tuple<_Tp...>, tuple<_Up...> > >,
+        _Lazy<_Or,
             _BoolConstant<sizeof...(_Tp) != 1>,
             // _Tp and _Up are 1-element packs - the pack expansions look
             // weird to avoid tripping up the type traits in degenerate cases
             _Lazy<_And,
-                _Not<is_same<_Tp, _Up> >...,
                 _Not<is_convertible<tuple<_Up>, _Tp> >...,
                 _Not<is_constructible<_Tp, tuple<_Up> > >...
             >
@@ -896,7 +896,7 @@ public:
             _EnableImplicitMoveFromPair<_Up1, _Up2, _Tp...>
         >::value
     , int> = 0>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     tuple(pair<_Up1, _Up2>&& __p)
         _NOEXCEPT_((_And<
             is_nothrow_constructible<_FirstType<_Tp...>, _Up1>,
@@ -911,7 +911,7 @@ public:
             _EnableExplicitMoveFromPair<_Up1, _Up2, _Tp...>
         >::value
     , int> = 0>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     explicit tuple(pair<_Up1, _Up2>&& __p)
         _NOEXCEPT_((_And<
             is_nothrow_constructible<_FirstType<_Tp...>, _Up1>,

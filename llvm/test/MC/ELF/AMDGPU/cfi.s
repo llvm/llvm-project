@@ -1,5 +1,6 @@
-// RUN: llvm-mc -filetype=asm -mcpu=gfx900 -triple amdgcn-amd-amdhsa %s -o - | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -filetype=obj -mcpu=gfx900 -triple amdgcn-amd-amdhsa %s -o - | llvm-readobj -S --sr --sd - | FileCheck --check-prefix=READOBJ %s
+# RUN: llvm-mc -filetype=asm -mcpu=gfx900 -triple amdgcn-amd-amdhsa %s -o - | FileCheck --check-prefix=ASM %s
+# RUN: llvm-mc -filetype=obj -mcpu=gfx900 -triple amdgcn-amd-amdhsa %s -o %t
+# RUN: llvm-readelf -S -r -x .debug_frame %t | FileCheck --check-prefix=READELF %s
 
 f:
 	.cfi_sections .debug_frame
@@ -7,48 +8,23 @@ f:
 	s_nop 0
 	.cfi_endproc
 
-// ASM: f:
-// ASM-NEXT: .cfi_sections .debug_frame
-// ASM-NEXT: .cfi_startproc
-// ASM-NEXT: s_nop 0
-// ASM-NEXT: .cfi_endproc
+# ASM: f:
+# ASM-NEXT: .cfi_sections .debug_frame
+# ASM-NEXT: .cfi_startproc
+# ASM-NEXT: s_nop 0
+# ASM-NEXT: .cfi_endproc
 
-// READOBJ:        Section {
-// READOBJ:          Name: .debug_frame
-// READOBJ-NEXT:     Type: SHT_PROGBITS
-// READOBJ-NEXT:     Flags [
-// READOBJ-NEXT:     ]
-// READOBJ-NEXT:     Address: 0x0
-// READOBJ-NEXT:     Offset: 0x48
-// READOBJ-NEXT:     Size: 56
-// READOBJ-NEXT:     Link: 0
-// READOBJ-NEXT:     Info: 0
-// READOBJ-NEXT:     AddressAlignment: 8
-// READOBJ-NEXT:     EntrySize: 0
-// READOBJ-NEXT:     Relocations [
-// READOBJ-NEXT:     ]
-// READOBJ-NEXT:     SectionData (
-// READOBJ-NEXT:       0000: 1C000000 FFFFFFFF 045B6C6C 766D3A76  |.........[llvm:v|
-// READOBJ-NEXT:       0010: 302E305D 00080004 04100000 00000000  |0.0]............|
-// READOBJ-NEXT:       0020: 14000000 00000000 00000000 00000000  |................|
-// READOBJ-NEXT:       0030: 04000000 00000000                    |........|
-// READOBJ-NEXT:     )
-// READOBJ-NEXT:   }
+# READELF: Section Headers:
+# READELF: Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+# READELF: .debug_frame      PROGBITS        0000000000000000 000048 000038 00      0   0  8
 
-// READOBJ:        Section {
-// READOBJ:          Name: .rela.debug_frame
-// READOBJ-NEXT:     Type: SHT_RELA
-// READOBJ-NEXT:     Flags [
-// READOBJ-NEXT:     ]
-// READOBJ-NEXT:     Address: 0x0
-// READOBJ-NEXT:     Offset:
-// READOBJ-NEXT:     Size: 48
-// READOBJ-NEXT:     Link:
-// READOBJ-NEXT:     Info:
-// READOBJ-NEXT:     AddressAlignment: 8
-// READOBJ-NEXT:     EntrySize: 24
-// READOBJ-NEXT:     Relocations [
-// READOBJ-NEXT:       0x24 R_AMDGPU_ABS32 .debug_frame 0x0
-// READOBJ-NEXT:       0x28 R_AMDGPU_ABS64 .text 0x0
-// READOBJ-NEXT:     ]
-// READOBJ:        }
+# READELF: Relocation section '.rela.debug_frame' at offset 0xe0 contains 2 entries:
+# READELF-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# READELF-NEXT: 0000000000000024  0000000300000006 R_AMDGPU_ABS32         0000000000000000 .debug_frame + 0
+# READELF-NEXT: 0000000000000028  0000000100000003 R_AMDGPU_ABS64         0000000000000000 .text + 0
+
+# READELF: Hex dump of section '.debug_frame':
+# READELF-NEXT: 0x00000000 1c000000 ffffffff 045b6c6c 766d3a76 .........[llvm:v
+# READELF-NEXT: 0x00000010 302e305d 00080004 04100000 00000000 0.0]............
+# READELF-NEXT: 0x00000020 14000000 00000000 00000000 00000000 ................
+# READELF-NEXT: 0x00000030 04000000 00000000                   ........

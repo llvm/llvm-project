@@ -18,6 +18,100 @@ program omp_do
   end do
   !$omp end do
 
+  !$omp parallel do
+  do i=1,10
+    !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+    !$omp single
+    do j=1,10
+      print *,"hello"
+    end do
+    !$omp end single
+  end do
+  !$omp end parallel do
+
+  !$omp parallel do simd
+  do i=1,10
+    !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+    !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+    !$omp single
+    do j=1,10
+      print *,"hello"
+    end do
+    !$omp end single
+  end do
+  !$omp end parallel do simd
+
+  !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
+  !$omp distribute parallel do
+  do i=1,10
+    !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+    !$omp single
+    do j=1,10
+      print *,"hello"
+    end do
+    !$omp end single
+  end do
+  !$omp end distribute parallel do
+
+  !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
+  !$omp distribute parallel do simd
+  do i=1,10
+    !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+    !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+    !$omp single
+    do j=1,10
+      print *,"hello"
+    end do
+    !$omp end single
+  end do
+  !$omp end distribute parallel do simd
+
+  !$omp target parallel do 
+  do i=1,10
+    !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+    !$omp single
+    do j=1,10
+      print *,"hello"
+    end do
+    !$omp end single
+  end do
+  !$omp end target parallel do
+
+  !$omp target parallel do simd
+  do i=1,10
+    !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+    !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+    !$omp single
+    do j=1,10
+      print *,"hello"
+    end do
+    !$omp end single
+  end do
+  !$omp end target parallel do simd
+
+  !$omp target teams distribute parallel do
+  do i=1,10
+    !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+    !$omp single
+    do j=1,10
+      print *,"hello"
+    end do
+    !$omp end single
+  end do
+  !$omp end target teams distribute parallel do
+
+  !$omp target teams distribute parallel do simd
+  do i=1,10
+    !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+    !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
+    !$omp single
+    do j=1,10
+      print *,"hello"
+    end do
+    !$omp end single
+  end do
+  !$omp end target teams distribute parallel do simd
+
   !$omp do
   do i=1,10
     !$omp task

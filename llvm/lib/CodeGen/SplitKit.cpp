@@ -118,6 +118,13 @@ InsertPointAnalysis::computeLastInsertPoint(const LiveInterval &CurLI,
   if (!VNI)
     return LIP.first;
 
+  // The def of statepoint instruction is a gc relocation and it should be alive
+  // in landing pad. So we cannot split interval after statepoint instruction.
+  if (SlotIndex::isSameInstr(VNI->def, LIP.second))
+    if (auto *I = LIS.getInstructionFromIndex(LIP.second))
+      if (I->getOpcode() == TargetOpcode::STATEPOINT)
+        return LIP.second;
+
   // If the value leaving MBB was defined after the call in MBB, it can't
   // really be live-in to the landing pad.  This can happen if the landing pad
   // has a PHI, and this register is undef on the exceptional edge.
@@ -695,6 +702,23 @@ SlotIndex SplitEditor::enterIntvAtEnd(MachineBasicBlock &MBB) {
     LLVM_DEBUG(dbgs() << ": not live\n");
     return End;
   }
+  SlotIndex LSP = SA.getLastSplitPoint(&MBB);
+  if (LSP < Last) {
+    // It could be that the use after LSP is a def, and thus the ParentVNI
+    // just selected starts at that def.  For this case to exist, the def
+    // must be part of a tied def/use pair (as otherwise we'd have split
+    // distinct live ranges into individual live intervals), and thus we
+    // can insert the def into the VNI of the use and the tied def/use
+    // pair can live in the resulting interval.
+    Last = LSP;
+    ParentVNI = Edit->getParent().getVNInfoAt(Last);
+    if (!ParentVNI) {
+      // undef use --> undef tied def
+      LLVM_DEBUG(dbgs() << ": tied use not live\n");
+      return End;
+    }
+  }
+
   LLVM_DEBUG(dbgs() << ": valno " << ParentVNI->id);
   VNInfo *VNI = defFromParent(OpenIdx, ParentVNI, Last, MBB,
                               SA.getLastSplitPointIter(&MBB));
@@ -784,6 +808,12 @@ SlotIndex SplitEditor::leaveIntvAtTop(MachineBasicBlock &MBB) {
   return VNI->def;
 }
 
+static bool hasTiedUseOf(MachineInstr &MI, unsigned Reg) {
+  return any_of(MI.defs(), [Reg](const MachineOperand &MO) {
+    return MO.isReg() && MO.isTied() && MO.getReg() == Reg;
+  });
+}
+
 void SplitEditor::overlapIntv(SlotIndex Start, SlotIndex End) {
   assert(OpenIdx && "openIntv not called before overlapIntv");
   const VNInfo *ParentVNI = Edit->getParent().getVNInfoAt(Start);
@@ -795,6 +825,16 @@ void SplitEditor::overlapIntv(SlotIndex Start, SlotIndex End) {
   // The complement interval will be extended as needed by LICalc.extend().
   if (ParentVNI)
     forceRecompute(0, *ParentVNI);
+
+  // If the last use is tied to a def, we can't mark it as live for the
+  // interval which includes only the use.  That would cause the tied pair
+  // to end up in two different intervals.
+  if (auto *MI = LIS.getInstructionFromIndex(End))
+    if (hasTiedUseOf(*MI, Edit->getReg())) {
+      LLVM_DEBUG(dbgs() << "skip overlap due to tied def at end\n");
+      return;
+    }
+
   LLVM_DEBUG(dbgs() << "    overlapIntv [" << Start << ';' << End << "):");
   RegAssign.insert(Start, End, OpenIdx);
   LLVM_DEBUG(dump());
@@ -835,12 +875,18 @@ void SplitEditor::removeBackCopies(SmallVectorImpl<VNInfo*> &Copies) {
     if (AssignI.stop() != Def)
       continue;
     unsigned RegIdx = AssignI.value();
-    if (AtBegin || !MBBI->readsVirtualRegister(Edit->getReg())) {
+    // We could hoist back-copy right after another back-copy. As a result
+    // MMBI points to copy instruction which is actually dead now.
+    // We cannot set its stop to MBBI which will be the same as start and
+    // interval does not support that.
+    SlotIndex Kill =
+        AtBegin ? SlotIndex() : LIS.getInstructionIndex(*MBBI).getRegSlot();
+    if (AtBegin || !MBBI->readsVirtualRegister(Edit->getReg()) ||
+        Kill <= AssignI.start()) {
       LLVM_DEBUG(dbgs() << "  cannot find simple kill of RegIdx " << RegIdx
                         << '\n');
       forceRecompute(RegIdx, *Edit->getParent().getVNInfoAt(Def));
     } else {
-      SlotIndex Kill = LIS.getInstructionIndex(*MBBI).getRegSlot();
       LLVM_DEBUG(dbgs() << "  move kill to " << Kill << '\t' << *MBBI);
       AssignI.setStop(Kill);
     }
@@ -1046,10 +1092,13 @@ void SplitEditor::hoistCopies() {
       NotToHoistSet.insert(ParentVNI->id);
       continue;
     }
-    SlotIndex Last = LIS.getMBBEndIdx(Dom.first).getPrevSlot();
-    Dom.second =
-      defFromParent(0, ParentVNI, Last, *Dom.first,
-                    SA.getLastSplitPointIter(Dom.first))->def;
+    SlotIndex LSP = SA.getLastSplitPoint(Dom.first);
+    if (LSP <= ParentVNI->def) {
+      NotToHoistSet.insert(ParentVNI->id);
+      continue;
+    }
+    Dom.second = defFromParent(0, ParentVNI, LSP, *Dom.first,
+                               SA.getLastSplitPointIter(Dom.first))->def;
   }
 
   // Remove redundant back-copies that are now known to be dominated by another

@@ -147,7 +147,7 @@ llvm::Optional<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
 
   StringRef Value = Iter->getValue().Value;
   StringRef Closest;
-  unsigned EditDistance = -1;
+  unsigned EditDistance = 3;
   for (const auto &NameAndEnum : Mapping) {
     if (IgnoreCase) {
       if (Value.equals_lower(NameAndEnum.second))
@@ -159,7 +159,8 @@ llvm::Optional<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
       EditDistance = 0;
       continue;
     }
-    unsigned Distance = Value.edit_distance(NameAndEnum.second);
+    unsigned Distance =
+        Value.edit_distance(NameAndEnum.second, true, EditDistance);
     if (Distance < EditDistance) {
       EditDistance = Distance;
       Closest = NameAndEnum.second;

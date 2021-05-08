@@ -411,6 +411,9 @@ module std [system] {
   }
   module ranges {
     header "ranges"
+    export compare
+    export initializer_list
+    export iterator
     export *
   }
   module ratio {
@@ -539,7 +542,6 @@ module std [system] {
   module __locale { header "__locale" export * }
   module __mutex_base { header "__mutex_base" export * }
   module __split_buffer { header "__split_buffer" export * }
-  module __sso_allocator { header "__sso_allocator" export * }
   module __std_stream { header "__std_stream" export * }
   module __string { header "__string" export * }
   module __tree { header "__tree" export * }

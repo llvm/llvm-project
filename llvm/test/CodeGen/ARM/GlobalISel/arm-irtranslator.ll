@@ -159,14 +159,15 @@ define i16 @test_stack_args_signext(i32 %p0, i16 %p1, i8 %p2, i1 %p3,
                                     i8 signext %p4, i16 signext %p5) {
 ; CHECK-LABEL: name: test_stack_args_signext
 ; CHECK: fixedStack:
-; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 1
-; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 2
+; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 4
+; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 4
 ; CHECK: liveins: $r0, $r1, $r2, $r3
 ; CHECK: [[VREGR1:%[0-9]+]]:_(s32) = COPY $r1
 ; CHECK: [[VREGP1:%[0-9]+]]:_(s16) = G_TRUNC [[VREGR1]]
 ; CHECK: [[FIP5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.[[P5]]
 ; CHECK: [[VREGP5EXT:%[0-9]+]]:_(s32) = G_LOAD [[FIP5]](p0){{.*}}load 4
-; CHECK: [[VREGP5:%[0-9]+]]:_(s16) = G_TRUNC [[VREGP5EXT]]
+; CHECK: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[VREGP5EXT]], 16
+; CHECK: [[VREGP5:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_SEXT]]
 ; CHECK: [[SUM:%[0-9]+]]:_(s16) = G_ADD [[VREGP1]], [[VREGP5]]
 ; CHECK: [[SUM_EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SUM]]
 ; CHECK: $r0 = COPY [[SUM_EXT]](s32)
@@ -180,14 +181,15 @@ define i8 @test_stack_args_zeroext(i32 %p0, i16 %p1, i8 %p2, i1 %p3,
                                     i8 zeroext %p4, i16 zeroext %p5) {
 ; CHECK-LABEL: name: test_stack_args_zeroext
 ; CHECK: fixedStack:
-; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 1
-; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 2
+; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 4
+; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 4
 ; CHECK: liveins: $r0, $r1, $r2, $r3
 ; CHECK: [[VREGR2:%[0-9]+]]:_(s32) = COPY $r2
 ; CHECK: [[VREGP2:%[0-9]+]]:_(s8) = G_TRUNC [[VREGR2]]
 ; CHECK: [[FIP4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.[[P4]]
 ; CHECK: [[VREGP4EXT:%[0-9]+]]:_(s32) = G_LOAD [[FIP4]](p0){{.*}}load 4
-; CHECK: [[VREGP4:%[0-9]+]]:_(s8) = G_TRUNC [[VREGP4EXT]]
+; CHECK: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[VREGP4EXT]], 8
+; CHECK: [[VREGP4:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_ZEXT]]
 ; CHECK: [[SUM:%[0-9]+]]:_(s8) = G_ADD [[VREGP2]], [[VREGP4]]
 ; CHECK: [[SUM_EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SUM]]
 ; CHECK: $r0 = COPY [[SUM_EXT]](s32)
@@ -201,14 +203,15 @@ define i8 @test_stack_args_noext(i32 %p0, i16 %p1, i8 %p2, i1 %p3,
                                  i8 %p4, i16 %p5) {
 ; CHECK-LABEL: name: test_stack_args_noext
 ; CHECK: fixedStack:
-; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 1
-; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 2
+; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0, size: 4, alignment: 8,
+; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4, size: 4, alignment: 4,
 ; CHECK: liveins: $r0, $r1, $r2, $r3
 ; CHECK: [[VREGR2:%[0-9]+]]:_(s32) = COPY $r2
 ; CHECK: [[VREGP2:%[0-9]+]]:_(s8) = G_TRUNC [[VREGR2]]
 ; CHECK: [[FIP4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.[[P4]]
-; CHECK: [[VREGP4:%[0-9]+]]:_(s8) = G_LOAD [[FIP4]](p0){{.*}}load 1
-; CHECK: [[SUM:%[0-9]+]]:_(s8) = G_ADD [[VREGP2]], [[VREGP4]]
+; CHECK: [[VREGP4:%[0-9]+]]:_(s32) = G_LOAD [[FIP4]](p0){{.*}}load 4
+; CHECK: [[TRUNC_VREGP4:%[0-9]+]]:_(s8) = G_TRUNC [[VREGP4]]
+; CHECK: [[SUM:%[0-9]+]]:_(s8) = G_ADD [[VREGP2]], [[TRUNC_VREGP4]]
 ; CHECK: [[SUM_EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SUM]]
 ; CHECK: $r0 = COPY [[SUM_EXT]](s32)
 ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
@@ -221,12 +224,13 @@ define zeroext i16 @test_stack_args_extend_the_extended(i32 %p0, i16 %p1, i8 %p2
                                                         i8 signext %p4, i16 signext %p5) {
 ; CHECK-LABEL: name: test_stack_args_extend_the_extended
 ; CHECK: fixedStack:
-; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 1
-; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 2
+; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 4, alignment: 8
+; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 4, alignment: 4
 ; CHECK: liveins: $r0, $r1, $r2, $r3
 ; CHECK: [[FIP5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.[[P5]]
 ; CHECK: [[VREGP5SEXT:%[0-9]+]]:_(s32) = G_LOAD [[FIP5]](p0){{.*}}load 4
-; CHECK: [[VREGP5:%[0-9]+]]:_(s16) = G_TRUNC [[VREGP5SEXT]]
+; CHECK: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[VREGP5SEXT]], 16
+; CHECK: [[VREGP5:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_SEXT]]
 ; CHECK: [[VREGP5ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[VREGP5]]
 ; CHECK: $r0 = COPY [[VREGP5ZEXT]]
 ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0

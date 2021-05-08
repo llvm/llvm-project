@@ -1092,8 +1092,8 @@ defm "" : SIMDConvert<I32x4, F32x4, fp_to_sint, "trunc_sat_f32x4_s", 248>;
 defm "" : SIMDConvert<I32x4, F32x4, fp_to_uint, "trunc_sat_f32x4_u", 249>;
 
 // Support the saturating variety as well.
-def trunc_s_sat32 : PatFrag<(ops node:$x), (fp_to_sint_sat $x, (i32 32))>;
-def trunc_u_sat32 : PatFrag<(ops node:$x), (fp_to_uint_sat $x, (i32 32))>;
+def trunc_s_sat32 : PatFrag<(ops node:$x), (fp_to_sint_sat $x, i32)>;
+def trunc_u_sat32 : PatFrag<(ops node:$x), (fp_to_uint_sat $x, i32)>;
 def : Pat<(v4i32 (trunc_s_sat32 (v4f32 V128:$src))), (fp_to_sint_I32x4 $src)>;
 def : Pat<(v4i32 (trunc_u_sat32 (v4f32 V128:$src))), (fp_to_uint_I32x4 $src)>;
 

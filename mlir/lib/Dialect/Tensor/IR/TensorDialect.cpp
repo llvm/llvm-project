@@ -30,6 +30,10 @@ struct TensorInlinerInterface : public DialectInlinerInterface {
 };
 } // end anonymous namespace
 
+//===----------------------------------------------------------------------===//
+// TensorDialect Methods
+//===----------------------------------------------------------------------===//
+
 void TensorDialect::initialize() {
   addOperations<
 #define GET_OP_LIST

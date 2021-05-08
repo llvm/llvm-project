@@ -989,8 +989,8 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_v(<8 x double> inreg %vec, do
 ; MOVREL-NEXT:    s_mov_b32 s14, s16
 ; MOVREL-NEXT:    v_mov_b32_e32 v16, s15
 ; MOVREL-NEXT:    v_mov_b32_e32 v2, s1
-; MOVREL-NEXT:    v_mov_b32_e32 v1, s0
 ; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; MOVREL-NEXT:    v_mov_b32_e32 v1, s0
 ; MOVREL-NEXT:    v_mov_b32_e32 v15, s14
 ; MOVREL-NEXT:    v_mov_b32_e32 v14, s13
 ; MOVREL-NEXT:    v_mov_b32_e32 v13, s12
@@ -1005,30 +1005,28 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_v(<8 x double> inreg %vec, do
 ; MOVREL-NEXT:    v_mov_b32_e32 v4, s3
 ; MOVREL-NEXT:    v_mov_b32_e32 v3, s2
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s0, 1, v0
-; MOVREL-NEXT:    s_mov_b32 s30, s18
-; MOVREL-NEXT:    s_mov_b32 s31, s19
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s1, 2, v0
-; MOVREL-NEXT:    v_cndmask_b32_e64 v1, v1, s30, vcc_lo
-; MOVREL-NEXT:    v_cndmask_b32_e64 v2, v2, s31, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e64 v1, v1, s18, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e64 v2, v2, s19, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s2, 5, v0
-; MOVREL-NEXT:    v_cndmask_b32_e64 v3, v3, s30, s0
-; MOVREL-NEXT:    v_cndmask_b32_e64 v4, v4, s31, s0
+; MOVREL-NEXT:    v_cndmask_b32_e64 v3, v3, s18, s0
+; MOVREL-NEXT:    v_cndmask_b32_e64 v4, v4, s19, s0
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s0, 4, v0
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s3, 6, v0
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s4, 7, v0
-; MOVREL-NEXT:    v_cndmask_b32_e64 v5, v5, s30, s1
-; MOVREL-NEXT:    v_cndmask_b32_e64 v6, v6, s31, s1
-; MOVREL-NEXT:    v_cndmask_b32_e64 v7, v7, s30, vcc_lo
-; MOVREL-NEXT:    v_cndmask_b32_e64 v8, v8, s31, vcc_lo
-; MOVREL-NEXT:    v_cndmask_b32_e64 v9, v9, s30, s0
-; MOVREL-NEXT:    v_cndmask_b32_e64 v10, v10, s31, s0
-; MOVREL-NEXT:    v_cndmask_b32_e64 v11, v11, s30, s2
-; MOVREL-NEXT:    v_cndmask_b32_e64 v12, v12, s31, s2
-; MOVREL-NEXT:    v_cndmask_b32_e64 v13, v13, s30, s3
-; MOVREL-NEXT:    v_cndmask_b32_e64 v14, v14, s31, s3
-; MOVREL-NEXT:    v_cndmask_b32_e64 v15, v15, s30, s4
-; MOVREL-NEXT:    v_cndmask_b32_e64 v16, v16, s31, s4
+; MOVREL-NEXT:    v_cndmask_b32_e64 v5, v5, s18, s1
+; MOVREL-NEXT:    v_cndmask_b32_e64 v6, v6, s19, s1
+; MOVREL-NEXT:    v_cndmask_b32_e64 v7, v7, s18, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e64 v8, v8, s19, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e64 v9, v9, s18, s0
+; MOVREL-NEXT:    v_cndmask_b32_e64 v10, v10, s19, s0
+; MOVREL-NEXT:    v_cndmask_b32_e64 v11, v11, s18, s2
+; MOVREL-NEXT:    v_cndmask_b32_e64 v12, v12, s19, s2
+; MOVREL-NEXT:    v_cndmask_b32_e64 v13, v13, s18, s3
+; MOVREL-NEXT:    v_cndmask_b32_e64 v14, v14, s19, s3
+; MOVREL-NEXT:    v_cndmask_b32_e64 v15, v15, s18, s4
+; MOVREL-NEXT:    v_cndmask_b32_e64 v16, v16, s19, s4
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[1:4], off
 ; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[5:8], off
@@ -1525,19 +1523,17 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v(<8 x double> %vec, double %
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f64_v_v_v:
 ; MOVREL:       ; %bb.0: ; %entry
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 s0, 1, v18
-; MOVREL-NEXT:    v_mov_b32_e32 v19, v0
 ; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v18
-; MOVREL-NEXT:    v_mov_b32_e32 v23, v1
+; MOVREL-NEXT:    v_cmp_eq_u32_e64 s0, 1, v18
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s1, 2, v18
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s2, 3, v18
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s3, 4, v18
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s4, 5, v18
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s5, 7, v18
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s6, 6, v18
-; MOVREL-NEXT:    v_cndmask_b32_e32 v0, v19, v16, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v0, v0, v16, vcc_lo
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v2, v2, v16, s0
-; MOVREL-NEXT:    v_cndmask_b32_e32 v1, v23, v17, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v1, v1, v17, vcc_lo
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v3, v3, v17, s0
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v4, v4, v16, s1
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v6, v6, v16, s2
@@ -2161,8 +2157,6 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v_add_1(<8 x double> %vec, do
 ; MOVREL-LABEL: dyn_insertelement_v8f64_v_v_v_add_1:
 ; MOVREL:       ; %bb.0: ; %entry
 ; MOVREL-NEXT:    v_add_nc_u32_e32 v18, 1, v18
-; MOVREL-NEXT:    v_mov_b32_e32 v19, v0
-; MOVREL-NEXT:    v_mov_b32_e32 v23, v1
 ; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v18
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s0, 1, v18
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s1, 2, v18
@@ -2171,9 +2165,9 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v_add_1(<8 x double> %vec, do
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s4, 5, v18
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s5, 7, v18
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s6, 6, v18
-; MOVREL-NEXT:    v_cndmask_b32_e32 v0, v19, v16, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v0, v0, v16, vcc_lo
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v2, v2, v16, s0
-; MOVREL-NEXT:    v_cndmask_b32_e32 v1, v23, v17, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v1, v1, v17, vcc_lo
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v3, v3, v17, s0
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v4, v4, v16, s1
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v6, v6, v16, s2
@@ -3550,28 +3544,28 @@ define amdgpu_ps <7 x float> @dyn_insertelement_v7f32_s_v_s(<7 x float> inreg %v
 ; MOVREL-NEXT:    s_mov_b32 s4, s6
 ; MOVREL-NEXT:    s_mov_b32 s5, s7
 ; MOVREL-NEXT:    s_mov_b32 s6, s8
-; MOVREL-NEXT:    v_mov_b32_e32 v16, s7
-; MOVREL-NEXT:    v_mov_b32_e32 v9, s0
+; MOVREL-NEXT:    v_mov_b32_e32 v14, s7
+; MOVREL-NEXT:    v_mov_b32_e32 v7, s0
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s9, 0
-; MOVREL-NEXT:    v_mov_b32_e32 v10, s1
-; MOVREL-NEXT:    v_mov_b32_e32 v11, s2
-; MOVREL-NEXT:    v_mov_b32_e32 v12, s3
-; MOVREL-NEXT:    v_mov_b32_e32 v13, s4
-; MOVREL-NEXT:    v_cndmask_b32_e32 v7, v9, v0, vcc_lo
+; MOVREL-NEXT:    v_mov_b32_e32 v8, s1
+; MOVREL-NEXT:    v_mov_b32_e32 v9, s2
+; MOVREL-NEXT:    v_mov_b32_e32 v10, s3
+; MOVREL-NEXT:    v_mov_b32_e32 v11, s4
+; MOVREL-NEXT:    v_cndmask_b32_e32 v7, v7, v0, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s9, 1
-; MOVREL-NEXT:    v_mov_b32_e32 v14, s5
-; MOVREL-NEXT:    v_mov_b32_e32 v15, s6
-; MOVREL-NEXT:    v_cndmask_b32_e32 v1, v10, v0, vcc_lo
+; MOVREL-NEXT:    v_mov_b32_e32 v12, s5
+; MOVREL-NEXT:    v_mov_b32_e32 v13, s6
+; MOVREL-NEXT:    v_cndmask_b32_e32 v1, v8, v0, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s9, 2
-; MOVREL-NEXT:    v_cndmask_b32_e32 v2, v11, v0, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v2, v9, v0, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s9, 3
-; MOVREL-NEXT:    v_cndmask_b32_e32 v3, v12, v0, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v3, v10, v0, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s9, 4
-; MOVREL-NEXT:    v_cndmask_b32_e32 v4, v13, v0, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v4, v11, v0, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s9, 5
-; MOVREL-NEXT:    v_cndmask_b32_e32 v5, v14, v0, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v5, v12, v0, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s9, 6
-; MOVREL-NEXT:    v_cndmask_b32_e32 v6, v15, v0, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v6, v13, v0, vcc_lo
 ; MOVREL-NEXT:    v_mov_b32_e32 v0, v7
 ; MOVREL-NEXT:    ; return to shader part epilog
 entry:
@@ -3624,29 +3618,29 @@ define amdgpu_ps <7 x float> @dyn_insertelement_v7f32_s_v_v(<7 x float> inreg %v
 ; MOVREL-NEXT:    s_mov_b32 s4, s6
 ; MOVREL-NEXT:    s_mov_b32 s5, s7
 ; MOVREL-NEXT:    s_mov_b32 s6, s8
-; MOVREL-NEXT:    v_mov_b32_e32 v16, s7
-; MOVREL-NEXT:    v_mov_b32_e32 v9, s0
+; MOVREL-NEXT:    v_mov_b32_e32 v15, s7
+; MOVREL-NEXT:    v_mov_b32_e32 v8, s0
 ; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
-; MOVREL-NEXT:    v_mov_b32_e32 v10, s1
-; MOVREL-NEXT:    v_mov_b32_e32 v11, s2
-; MOVREL-NEXT:    v_mov_b32_e32 v12, s3
-; MOVREL-NEXT:    v_mov_b32_e32 v13, s4
-; MOVREL-NEXT:    v_cndmask_b32_e32 v8, v9, v0, vcc_lo
+; MOVREL-NEXT:    v_mov_b32_e32 v9, s1
+; MOVREL-NEXT:    v_mov_b32_e32 v10, s2
+; MOVREL-NEXT:    v_mov_b32_e32 v11, s3
+; MOVREL-NEXT:    v_mov_b32_e32 v12, s4
+; MOVREL-NEXT:    v_cndmask_b32_e32 v8, v8, v0, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
-; MOVREL-NEXT:    v_mov_b32_e32 v14, s5
-; MOVREL-NEXT:    v_mov_b32_e32 v15, s6
-; MOVREL-NEXT:    v_cndmask_b32_e32 v7, v10, v0, vcc_lo
+; MOVREL-NEXT:    v_mov_b32_e32 v13, s5
+; MOVREL-NEXT:    v_mov_b32_e32 v14, s6
+; MOVREL-NEXT:    v_cndmask_b32_e32 v7, v9, v0, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v1
-; MOVREL-NEXT:    v_cndmask_b32_e32 v2, v11, v0, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v2, v10, v0, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v1
-; MOVREL-NEXT:    v_cndmask_b32_e32 v3, v12, v0, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v3, v11, v0, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v1
-; MOVREL-NEXT:    v_cndmask_b32_e32 v4, v13, v0, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v4, v12, v0, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v1
-; MOVREL-NEXT:    v_cndmask_b32_e32 v5, v14, v0, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v5, v13, v0, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v1
 ; MOVREL-NEXT:    v_mov_b32_e32 v1, v7
-; MOVREL-NEXT:    v_cndmask_b32_e32 v6, v15, v0, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v6, v14, v0, vcc_lo
 ; MOVREL-NEXT:    v_mov_b32_e32 v0, v8
 ; MOVREL-NEXT:    ; return to shader part epilog
 entry:
@@ -4128,23 +4122,21 @@ define amdgpu_ps <7 x double> @dyn_insertelement_v7f64_v_v_v(<7 x double> %vec, 
 ; MOVREL-LABEL: dyn_insertelement_v7f64_v_v_v:
 ; MOVREL:       ; %bb.0: ; %entry
 ; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v16
+; MOVREL-NEXT:    v_cmp_eq_u32_e64 s0, 1, v16
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s1, 2, v16
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s2, 3, v16
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s3, 4, v16
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s4, 5, v16
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s5, 6, v16
-; MOVREL-NEXT:    v_mov_b32_e32 v19, v2
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 s0, 1, v16
-; MOVREL-NEXT:    v_mov_b32_e32 v18, v3
+; MOVREL-NEXT:    v_cndmask_b32_e32 v0, v0, v14, vcc_lo
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v6, v6, v14, s2
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v8, v8, v14, s3
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v10, v10, v14, s4
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v12, v12, v14, s5
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v7, v7, v15, s2
-; MOVREL-NEXT:    v_cndmask_b32_e64 v2, v19, v14, s0
+; MOVREL-NEXT:    v_cndmask_b32_e64 v2, v2, v14, s0
+; MOVREL-NEXT:    v_cndmask_b32_e64 v3, v3, v15, s0
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v9, v9, v15, s3
-; MOVREL-NEXT:    v_cndmask_b32_e64 v3, v18, v15, s0
-; MOVREL-NEXT:    v_cndmask_b32_e32 v0, v0, v14, vcc_lo
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v11, v11, v15, s4
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v4, v4, v14, s1
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v13, v13, v15, s5
@@ -4271,38 +4263,38 @@ define amdgpu_ps <5 x double> @dyn_insertelement_v5f64_s_v_s(<5 x double> inreg 
 ; MOVREL-NEXT:    s_mov_b32 s7, s9
 ; MOVREL-NEXT:    s_mov_b32 s8, s10
 ; MOVREL-NEXT:    s_mov_b32 s9, s11
-; MOVREL-NEXT:    v_mov_b32_e32 v20, s15
-; MOVREL-NEXT:    v_mov_b32_e32 v19, s14
-; MOVREL-NEXT:    v_mov_b32_e32 v18, s13
-; MOVREL-NEXT:    v_mov_b32_e32 v17, s12
-; MOVREL-NEXT:    v_mov_b32_e32 v16, s11
-; MOVREL-NEXT:    v_mov_b32_e32 v15, s10
-; MOVREL-NEXT:    v_mov_b32_e32 v14, s9
-; MOVREL-NEXT:    v_mov_b32_e32 v13, s8
-; MOVREL-NEXT:    v_mov_b32_e32 v12, s7
-; MOVREL-NEXT:    v_mov_b32_e32 v11, s6
-; MOVREL-NEXT:    v_mov_b32_e32 v10, s5
-; MOVREL-NEXT:    v_mov_b32_e32 v9, s4
-; MOVREL-NEXT:    v_mov_b32_e32 v8, s3
-; MOVREL-NEXT:    v_mov_b32_e32 v7, s2
-; MOVREL-NEXT:    v_mov_b32_e32 v6, s1
-; MOVREL-NEXT:    v_mov_b32_e32 v5, s0
+; MOVREL-NEXT:    v_mov_b32_e32 v17, s15
+; MOVREL-NEXT:    v_mov_b32_e32 v16, s14
+; MOVREL-NEXT:    v_mov_b32_e32 v15, s13
+; MOVREL-NEXT:    v_mov_b32_e32 v14, s12
+; MOVREL-NEXT:    v_mov_b32_e32 v13, s11
+; MOVREL-NEXT:    v_mov_b32_e32 v12, s10
+; MOVREL-NEXT:    v_mov_b32_e32 v11, s9
+; MOVREL-NEXT:    v_mov_b32_e32 v10, s8
+; MOVREL-NEXT:    v_mov_b32_e32 v9, s7
+; MOVREL-NEXT:    v_mov_b32_e32 v8, s6
+; MOVREL-NEXT:    v_mov_b32_e32 v7, s5
+; MOVREL-NEXT:    v_mov_b32_e32 v6, s4
+; MOVREL-NEXT:    v_mov_b32_e32 v5, s3
+; MOVREL-NEXT:    v_mov_b32_e32 v4, s2
+; MOVREL-NEXT:    v_mov_b32_e32 v3, s1
+; MOVREL-NEXT:    v_mov_b32_e32 v2, s0
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s12, 0
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s0, s12, 1
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s1, s12, 4
-; MOVREL-NEXT:    v_cndmask_b32_e32 v2, v5, v0, vcc_lo
-; MOVREL-NEXT:    v_cndmask_b32_e32 v3, v6, v1, vcc_lo
-; MOVREL-NEXT:    v_cndmask_b32_e64 v4, v7, v0, s0
+; MOVREL-NEXT:    v_cndmask_b32_e32 v2, v2, v0, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s12, 2
-; MOVREL-NEXT:    v_cndmask_b32_e64 v5, v8, v1, s0
+; MOVREL-NEXT:    v_cndmask_b32_e64 v4, v4, v0, s0
+; MOVREL-NEXT:    v_cndmask_b32_e64 v5, v5, v1, s0
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 s0, s12, 3
+; MOVREL-NEXT:    v_cndmask_b32_e32 v6, v6, v0, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v7, v7, v1, vcc_lo
 ; MOVREL-NEXT:    v_readfirstlane_b32 s2, v4
-; MOVREL-NEXT:    v_cndmask_b32_e32 v6, v9, v0, vcc_lo
-; MOVREL-NEXT:    v_cndmask_b32_e32 v7, v10, v1, vcc_lo
-; MOVREL-NEXT:    v_cndmask_b32_e64 v8, v11, v0, s0
-; MOVREL-NEXT:    v_cndmask_b32_e64 v9, v12, v1, s0
-; MOVREL-NEXT:    v_cndmask_b32_e64 v0, v13, v0, s1
-; MOVREL-NEXT:    v_cndmask_b32_e64 v1, v14, v1, s1
+; MOVREL-NEXT:    v_cndmask_b32_e64 v8, v8, v0, s0
+; MOVREL-NEXT:    v_cndmask_b32_e64 v9, v9, v1, s0
+; MOVREL-NEXT:    v_cndmask_b32_e64 v0, v10, v0, s1
+; MOVREL-NEXT:    v_cndmask_b32_e64 v1, v11, v1, s1
 ; MOVREL-NEXT:    v_readfirstlane_b32 s0, v2
 ; MOVREL-NEXT:    v_readfirstlane_b32 s1, v3
 ; MOVREL-NEXT:    v_readfirstlane_b32 s3, v5
@@ -4466,15 +4458,13 @@ define amdgpu_ps <5 x double> @dyn_insertelement_v5f64_v_v_s(<5 x double> %vec, 
 ; MOVREL-LABEL: dyn_insertelement_v5f64_v_v_s:
 ; MOVREL:       ; %bb.0: ; %entry
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 0
-; MOVREL-NEXT:    v_mov_b32_e32 v15, v2
-; MOVREL-NEXT:    v_mov_b32_e32 v14, v3
 ; MOVREL-NEXT:    v_cndmask_b32_e32 v0, v0, v10, vcc_lo
 ; MOVREL-NEXT:    v_cndmask_b32_e32 v1, v1, v11, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 1
 ; MOVREL-NEXT:    v_readfirstlane_b32 s0, v0
 ; MOVREL-NEXT:    v_readfirstlane_b32 s1, v1
-; MOVREL-NEXT:    v_cndmask_b32_e32 v3, v14, v11, vcc_lo
-; MOVREL-NEXT:    v_cndmask_b32_e32 v2, v15, v10, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v3, v3, v11, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v2, v2, v10, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 2
 ; MOVREL-NEXT:    v_readfirstlane_b32 s3, v3
 ; MOVREL-NEXT:    v_cndmask_b32_e32 v4, v4, v10, vcc_lo
@@ -4531,15 +4521,13 @@ define amdgpu_ps <5 x double> @dyn_insertelement_v5f64_v_v_v(<5 x double> %vec, 
 ; MOVREL-LABEL: dyn_insertelement_v5f64_v_v_v:
 ; MOVREL:       ; %bb.0: ; %entry
 ; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v12
-; MOVREL-NEXT:    v_mov_b32_e32 v15, v2
-; MOVREL-NEXT:    v_mov_b32_e32 v14, v3
 ; MOVREL-NEXT:    v_cndmask_b32_e32 v0, v0, v10, vcc_lo
 ; MOVREL-NEXT:    v_cndmask_b32_e32 v1, v1, v11, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v12
 ; MOVREL-NEXT:    v_readfirstlane_b32 s0, v0
 ; MOVREL-NEXT:    v_readfirstlane_b32 s1, v1
-; MOVREL-NEXT:    v_cndmask_b32_e32 v2, v15, v10, vcc_lo
-; MOVREL-NEXT:    v_cndmask_b32_e32 v3, v14, v11, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v2, v2, v10, vcc_lo
+; MOVREL-NEXT:    v_cndmask_b32_e32 v3, v3, v11, vcc_lo
 ; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v12
 ; MOVREL-NEXT:    v_readfirstlane_b32 s2, v2
 ; MOVREL-NEXT:    v_readfirstlane_b32 s3, v3

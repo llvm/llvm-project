@@ -176,8 +176,9 @@ bool GetSysctl(std::string const& Name, std::string* Out) {
   return true;
 }
 
-template <class Tp, class = std::enable_if_t<std::is_integral<Tp>::value>>
-bool GetSysctl(std::string const &Name, Tp *Out) {
+template <class Tp,
+          class = typename std::enable_if<std::is_integral<Tp>::value>::type>
+bool GetSysctl(std::string const& Name, Tp* Out) {
   *Out = 0;
   auto Buff = GetSysctlImp(Name);
   if (!Buff) return false;

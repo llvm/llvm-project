@@ -53,7 +53,7 @@ list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS -g)
 # Use -D instead of definitions to please custom compile command.
 list(APPEND ASAN_UNITTEST_COMMON_CFLAGS
   ${COMPILER_RT_ASAN_SHADOW_SCALE_FLAG}
-  -DASAN_HAS_BLACKLIST=1
+  -DASAN_HAS_IGNORELIST=1
   -DASAN_HAS_EXCEPTIONS=1
   -DASAN_UAR=0
   )
@@ -68,11 +68,11 @@ if(APPLE)
   list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS})
 endif()
 
-set(ASAN_BLACKLIST_FILE "${CMAKE_CURRENT_SOURCE_DIR}/asan_test.ignore")
+set(ASAN_IGNORELIST_FILE "${CMAKE_CURRENT_SOURCE_DIR}/asan_test.ignore")
 set(ASAN_UNITTEST_INSTRUMENTED_CFLAGS
   ${ASAN_UNITTEST_COMMON_CFLAGS}
   -fsanitize=address
-  "-fsanitize-blacklist=${ASAN_BLACKLIST_FILE}"
+  "-fsanitize-ignorelist=${ASAN_IGNORELIST_FILE}"
 )
 if(NOT MSVC)
   list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS --driver-mode=g++)
@@ -166,7 +166,7 @@ function(add_asan_tests arch test_runtime)
   # Closure to keep the values.
   function(generate_asan_tests test_objects test_suite testname)
     generate_compiler_rt_tests(${test_objects} ${test_suite} ${testname} ${arch}
-      COMPILE_DEPS ${ASAN_UNITTEST_HEADERS} ${ASAN_BLACKLIST_FILE}
+      COMPILE_DEPS ${ASAN_UNITTEST_HEADERS} ${ASAN_IGNORELIST_FILE}
       DEPS gtest asan
       KIND ${TEST_KIND}
       ${ARGN}

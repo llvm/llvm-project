@@ -9,7 +9,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
-// XFAIL: msvc && clang
 
 // template<class T>
 // struct iterator_traits;
@@ -612,7 +611,7 @@ static_assert(!has_iterator_concept_v<LegacyRandomAccessSpecializedTraits>);
 
 // Other test iterators.
 
-using InputTestItereatorTraits = std::iterator_traits<input_iterator<int*> >;
+using InputTestItereatorTraits = std::iterator_traits<cpp17_input_iterator<int*> >;
 static_assert(std::same_as<InputTestItereatorTraits::iterator_category,
                            std::input_iterator_tag>);
 static_assert(std::same_as<InputTestItereatorTraits::value_type, int>);

@@ -30,19 +30,29 @@ test(S s, typename S::difference_type pos, It first, It last, S expected)
 }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
+struct Widget { operator char() const { throw 42; } };
+
 template <class S, class It>
 void
 test_exceptions(S s, typename S::difference_type pos, It first, It last)
 {
     typename S::const_iterator p = s.cbegin() + pos;
-    S aCopy = s;
+
+    S original = s;
+    typename S::iterator begin = s.begin();
+    typename S::iterator end = s.end();
+
     try {
         s.insert(p, first, last);
         assert(false);
-        }
-    catch (...) {}
+    } catch (...) {}
+
+    // Part of "no effects" is that iterators and pointers
+    // into the string must not have been invalidated.
     LIBCPP_ASSERT(s.__invariants());
-    assert(s == aCopy);
+    assert(s == original);
+    assert(s.begin() == begin);
+    assert(s.end() == end);
 }
 #endif
 
@@ -72,25 +82,25 @@ int main(int, char**)
     test(S("12345678901234567890"), 20, s, s+52,
          S("12345678901234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
 
-    test(S(), 0, input_iterator<const char*>(s), input_iterator<const char*>(s), S());
-    test(S(), 0, input_iterator<const char*>(s), input_iterator<const char*>(s+1), S("A"));
-    test(S(), 0, input_iterator<const char*>(s), input_iterator<const char*>(s+10), S("ABCDEFGHIJ"));
-    test(S(), 0, input_iterator<const char*>(s), input_iterator<const char*>(s+52), S("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
+    test(S(), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s), S());
+    test(S(), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+1), S("A"));
+    test(S(), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10), S("ABCDEFGHIJ"));
+    test(S(), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52), S("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
 
-    test(S("12345"), 0, input_iterator<const char*>(s), input_iterator<const char*>(s), S("12345"));
-    test(S("12345"), 1, input_iterator<const char*>(s), input_iterator<const char*>(s+1), S("1A2345"));
-    test(S("12345"), 4, input_iterator<const char*>(s), input_iterator<const char*>(s+10), S("1234ABCDEFGHIJ5"));
-    test(S("12345"), 5, input_iterator<const char*>(s), input_iterator<const char*>(s+52), S("12345ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
+    test(S("12345"), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s), S("12345"));
+    test(S("12345"), 1, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+1), S("1A2345"));
+    test(S("12345"), 4, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10), S("1234ABCDEFGHIJ5"));
+    test(S("12345"), 5, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52), S("12345ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
 
-    test(S("1234567890"), 0, input_iterator<const char*>(s), input_iterator<const char*>(s), S("1234567890"));
-    test(S("1234567890"), 1, input_iterator<const char*>(s), input_iterator<const char*>(s+1), S("1A234567890"));
-    test(S("1234567890"), 10, input_iterator<const char*>(s), input_iterator<const char*>(s+10), S("1234567890ABCDEFGHIJ"));
-    test(S("1234567890"), 8, input_iterator<const char*>(s), input_iterator<const char*>(s+52), S("12345678ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz90"));
+    test(S("1234567890"), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s), S("1234567890"));
+    test(S("1234567890"), 1, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+1), S("1A234567890"));
+    test(S("1234567890"), 10, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10), S("1234567890ABCDEFGHIJ"));
+    test(S("1234567890"), 8, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52), S("12345678ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz90"));
 
-    test(S("12345678901234567890"), 3, input_iterator<const char*>(s), input_iterator<const char*>(s), S("12345678901234567890"));
-    test(S("12345678901234567890"), 3, input_iterator<const char*>(s), input_iterator<const char*>(s+1), S("123A45678901234567890"));
-    test(S("12345678901234567890"), 15, input_iterator<const char*>(s), input_iterator<const char*>(s+10), S("123456789012345ABCDEFGHIJ67890"));
-    test(S("12345678901234567890"), 20, input_iterator<const char*>(s), input_iterator<const char*>(s+52),
+    test(S("12345678901234567890"), 3, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s), S("12345678901234567890"));
+    test(S("12345678901234567890"), 3, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+1), S("123A45678901234567890"));
+    test(S("12345678901234567890"), 15, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10), S("123456789012345ABCDEFGHIJ67890"));
+    test(S("12345678901234567890"), 20, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52),
          S("12345678901234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
     }
 #if TEST_STD_VER >= 11
@@ -118,25 +128,25 @@ int main(int, char**)
     test(S("12345678901234567890"), 20, s, s+52,
          S("12345678901234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
 
-    test(S(), 0, input_iterator<const char*>(s), input_iterator<const char*>(s), S());
-    test(S(), 0, input_iterator<const char*>(s), input_iterator<const char*>(s+1), S("A"));
-    test(S(), 0, input_iterator<const char*>(s), input_iterator<const char*>(s+10), S("ABCDEFGHIJ"));
-    test(S(), 0, input_iterator<const char*>(s), input_iterator<const char*>(s+52), S("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
+    test(S(), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s), S());
+    test(S(), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+1), S("A"));
+    test(S(), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10), S("ABCDEFGHIJ"));
+    test(S(), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52), S("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
 
-    test(S("12345"), 0, input_iterator<const char*>(s), input_iterator<const char*>(s), S("12345"));
-    test(S("12345"), 1, input_iterator<const char*>(s), input_iterator<const char*>(s+1), S("1A2345"));
-    test(S("12345"), 4, input_iterator<const char*>(s), input_iterator<const char*>(s+10), S("1234ABCDEFGHIJ5"));
-    test(S("12345"), 5, input_iterator<const char*>(s), input_iterator<const char*>(s+52), S("12345ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
+    test(S("12345"), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s), S("12345"));
+    test(S("12345"), 1, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+1), S("1A2345"));
+    test(S("12345"), 4, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10), S("1234ABCDEFGHIJ5"));
+    test(S("12345"), 5, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52), S("12345ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
 
-    test(S("1234567890"), 0, input_iterator<const char*>(s), input_iterator<const char*>(s), S("1234567890"));
-    test(S("1234567890"), 1, input_iterator<const char*>(s), input_iterator<const char*>(s+1), S("1A234567890"));
-    test(S("1234567890"), 10, input_iterator<const char*>(s), input_iterator<const char*>(s+10), S("1234567890ABCDEFGHIJ"));
-    test(S("1234567890"), 8, input_iterator<const char*>(s), input_iterator<const char*>(s+52), S("12345678ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz90"));
+    test(S("1234567890"), 0, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s), S("1234567890"));
+    test(S("1234567890"), 1, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+1), S("1A234567890"));
+    test(S("1234567890"), 10, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10), S("1234567890ABCDEFGHIJ"));
+    test(S("1234567890"), 8, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52), S("12345678ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz90"));
 
-    test(S("12345678901234567890"), 3, input_iterator<const char*>(s), input_iterator<const char*>(s), S("12345678901234567890"));
-    test(S("12345678901234567890"), 3, input_iterator<const char*>(s), input_iterator<const char*>(s+1), S("123A45678901234567890"));
-    test(S("12345678901234567890"), 15, input_iterator<const char*>(s), input_iterator<const char*>(s+10), S("123456789012345ABCDEFGHIJ67890"));
-    test(S("12345678901234567890"), 20, input_iterator<const char*>(s), input_iterator<const char*>(s+52),
+    test(S("12345678901234567890"), 3, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s), S("12345678901234567890"));
+    test(S("12345678901234567890"), 3, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+1), S("123A45678901234567890"));
+    test(S("12345678901234567890"), 15, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+10), S("123456789012345ABCDEFGHIJ67890"));
+    test(S("12345678901234567890"), 20, cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s+52),
          S("12345678901234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
     }
 #endif
@@ -144,7 +154,7 @@ int main(int, char**)
     { // test iterator operations that throw
     typedef std::string S;
     typedef ThrowingIterator<char> TIter;
-    typedef input_iterator<TIter> IIter;
+    typedef cpp17_input_iterator<TIter> IIter;
     const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     test_exceptions(S(), 0, IIter(TIter(s, s+10, 4, TIter::TAIncrement)), IIter());
     test_exceptions(S(), 0, IIter(TIter(s, s+10, 5, TIter::TADereference)), IIter());
@@ -153,6 +163,9 @@ int main(int, char**)
     test_exceptions(S(), 0, TIter(s, s+10, 4, TIter::TAIncrement), TIter());
     test_exceptions(S(), 0, TIter(s, s+10, 5, TIter::TADereference), TIter());
     test_exceptions(S(), 0, TIter(s, s+10, 6, TIter::TAComparison), TIter());
+
+    Widget w[100];
+    test_exceptions(S(), 0, w, w+100);
     }
 #endif
 
@@ -181,8 +194,21 @@ int main(int, char**)
     assert(s == "ABCD");
     }
 
+    { // regression-test inserting into self in sneaky ways
+    std::string s_short = "hello";
+    std::string s_long = "Lorem ipsum dolor sit amet, consectetur/";
+    std::string s_othertype = "hello";
+    const unsigned char *first = reinterpret_cast<const unsigned char*>(s_othertype.data());
+
+    test(s_short, 0, s_short.data() + s_short.size(), s_short.data() + s_short.size() + 1,
+         std::string("\0hello", 6));
+    test(s_long, 0, s_long.data() + s_long.size(), s_long.data() + s_long.size() + 1,
+         std::string("\0Lorem ipsum dolor sit amet, consectetur/", 41));
+    test(s_othertype, 1, first + 2, first + 5, std::string("hlloello"));
+    }
+
   { // test with a move iterator that returns char&&
-    typedef input_iterator<const char*> It;
+    typedef cpp17_input_iterator<const char*> It;
     typedef std::move_iterator<It> MoveIt;
     const char p[] = "ABCD";
     std::string s;

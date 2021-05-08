@@ -573,7 +573,7 @@ static MachineInstr* matchSwap(MachineInstr &MovT, MachineRegisterInfo &MRI,
     dropInstructionKeepingImpDefs(*MovY, TII);
     MachineInstr *Next = &*std::next(MovT.getIterator());
 
-    if (MRI.use_nodbg_empty(T)) {
+    if (T.isVirtual() && MRI.use_nodbg_empty(T)) {
       dropInstructionKeepingImpDefs(MovT, TII);
     } else {
       Xop.setIsKill(false);

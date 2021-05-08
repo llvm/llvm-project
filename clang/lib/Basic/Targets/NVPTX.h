@@ -35,6 +35,9 @@ static const unsigned NVPTXAddrSpaceMap[] = {
     1, // cuda_device
     4, // cuda_constant
     3, // cuda_shared
+    1, // sycl_global
+    3, // sycl_local
+    0, // sycl_private
     0, // ptr32_sptr
     0, // ptr32_uptr
     0  // ptr64
@@ -130,6 +133,7 @@ public:
     Opts["cl_clang_storage_class_specifiers"] = true;
     Opts["__cl_clang_function_pointers"] = true;
     Opts["__cl_clang_variadic_functions"] = true;
+    Opts["__cl_clang_non_portable_kernel_param_types"] = true;
 
     Opts["cl_khr_fp64"] = true;
     Opts["cl_khr_byte_addressable_store"] = true;

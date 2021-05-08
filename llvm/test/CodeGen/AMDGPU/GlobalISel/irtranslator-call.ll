@@ -570,8 +570,9 @@ define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
-  ; CHECK:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[LOAD]](s8)
-  ; CHECK:   $vgpr0 = COPY [[SEXT]](s32)
+  ; CHECK:   [[SEXT:%[0-9]+]]:_(s16) = G_SEXT [[LOAD]](s8)
+  ; CHECK:   [[SEXT1:%[0-9]+]]:_(s32) = G_SEXT [[SEXT]](s16)
+  ; CHECK:   $vgpr0 = COPY [[SEXT1]](s32)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY20]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
@@ -627,8 +628,9 @@ define amdgpu_kernel void @test_call_external_void_func_i8_zeroext(i32) #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
-  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD]](s8)
-  ; CHECK:   $vgpr0 = COPY [[ZEXT]](s32)
+  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[LOAD]](s8)
+  ; CHECK:   [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[ZEXT]](s16)
+  ; CHECK:   $vgpr0 = COPY [[ZEXT1]](s32)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY20]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)

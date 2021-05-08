@@ -581,9 +581,9 @@ define i16 @extractelement_vgpr_v8i16_vgpr_idx(<8 x i16> addrspace(1)* %ptr, i32
 ; GFX10-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_cndmask_b32_e32 v3, v3, v4, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, v3, v4, vcc_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, v3, v5, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v1, v6, vcc_lo
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 4, v2

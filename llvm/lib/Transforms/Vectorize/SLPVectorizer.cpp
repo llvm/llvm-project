@@ -1516,7 +1516,7 @@ private:
   bool areAllUsersVectorized(Instruction *I) const;
 
   /// \returns the cost of the vectorizable entry.
-  InstructionCost getEntryCost(TreeEntry *E);
+  InstructionCost getEntryCost(const TreeEntry *E);
 
   /// This is the recursive part of buildTree.
   void buildTree_rec(ArrayRef<Value *> Roots, unsigned Depth,
@@ -1557,7 +1557,7 @@ private:
 
   /// Set the Builder insert point to one after the last instruction in
   /// the bundle
-  void setInsertPointAfterBundle(TreeEntry *E);
+  void setInsertPointAfterBundle(const TreeEntry *E);
 
   /// \returns a vector from a collection of scalars in \p VL.
   Value *gather(ArrayRef<Value *> VL);
@@ -1636,7 +1636,7 @@ private:
     void setOperand(unsigned OpIdx, ArrayRef<Value *> OpVL) {
       if (Operands.size() < OpIdx + 1)
         Operands.resize(OpIdx + 1);
-      assert(Operands[OpIdx].size() == 0 && "Already resized?");
+      assert(Operands[OpIdx].empty() && "Already resized?");
       Operands[OpIdx].resize(Scalars.size());
       for (unsigned Lane = 0, E = Scalars.size(); Lane != E; ++Lane)
         Operands[OpIdx][Lane] = OpVL[Lane];
@@ -1787,7 +1787,7 @@ private:
   };
 
 #ifndef NDEBUG
-  void dumpTreeCosts(TreeEntry *E, InstructionCost ReuseShuffleCost,
+  void dumpTreeCosts(const TreeEntry *E, InstructionCost ReuseShuffleCost,
                      InstructionCost VecCost,
                      InstructionCost ScalarCost) const {
     dbgs() << "SLP: Calculated costs for Tree:\n"; E->dump();
@@ -3518,7 +3518,7 @@ computeExtractCost(ArrayRef<Value *> VL, FixedVectorType *VecTy,
   return Cost;
 }
 
-InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
+InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E) {
   ArrayRef<Value*> VL = E->Scalars;
 
   Type *ScalarTy = VL[0]->getType();
@@ -3589,13 +3589,27 @@ InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
     for (const auto &Data : ExtractVectorsTys) {
       auto *EEVTy = cast<FixedVectorType>(Data.first->getType());
       unsigned NumElts = VecTy->getNumElements();
-      if (TTIRef.getNumberOfParts(EEVTy) > TTIRef.getNumberOfParts(VecTy))
-        Cost += TTIRef.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
-                                      EEVTy, None,
-                                      (Data.second / NumElts) * NumElts, VecTy);
-      else
+      if (TTIRef.getNumberOfParts(EEVTy) > TTIRef.getNumberOfParts(VecTy)) {
+        unsigned Idx = (Data.second / NumElts) * NumElts;
+        unsigned EENumElts = EEVTy->getNumElements();
+        if (Idx + NumElts <= EENumElts) {
+          Cost +=
+              TTIRef.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                                    EEVTy, None, Idx, VecTy);
+        } else {
+          // Need to round up the subvector type vectorization factor to avoid a
+          // crash in cost model functions. Make SubVT so that Idx + VF of SubVT
+          // <= EENumElts.
+          auto *SubVT =
+              FixedVectorType::get(VecTy->getElementType(), EENumElts - Idx);
+          Cost +=
+              TTIRef.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                                    EEVTy, None, Idx, SubVT);
+        }
+      } else {
         Cost += TTIRef.getShuffleCost(TargetTransformInfo::SK_InsertSubvector,
                                       VecTy, None, 0, EEVTy);
+      }
     }
   };
   if (E->State == TreeEntry::NeedToGather) {
@@ -4032,10 +4046,15 @@ bool BoUpSLP::isFullyVectorizableTinyTree() const {
   if (VectorizableTree.size() != 2)
     return false;
 
-  // Handle splat and all-constants stores.
+  // Handle splat and all-constants stores. Also try to vectorize tiny trees
+  // with the second gather nodes if they have less scalar operands rather than
+  // the initial tree element (may be profitable to shuffle the second gather).
   if (VectorizableTree[0]->State == TreeEntry::Vectorize &&
       (allConstant(VectorizableTree[1]->Scalars) ||
-       isSplat(VectorizableTree[1]->Scalars)))
+       isSplat(VectorizableTree[1]->Scalars) ||
+       (VectorizableTree[1]->State == TreeEntry::NeedToGather &&
+        VectorizableTree[1]->Scalars.size() <
+            VectorizableTree[0]->Scalars.size())))
     return true;
 
   // Gathering cost would be too much for tiny trees.
@@ -4296,75 +4315,69 @@ InstructionCost BoUpSLP::getTreeCost() {
 Optional<TargetTransformInfo::ShuffleKind>
 BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, SmallVectorImpl<int> &Mask,
                                SmallVectorImpl<const TreeEntry *> &Entries) {
-  auto *VLIt = find_if(VectorizableTree,
-                       [TE](const std::unique_ptr<TreeEntry> &EntryPtr) {
-                         return EntryPtr.get() == TE;
-                       });
-  assert(VLIt != VectorizableTree.end() &&
-         "Gathered values should be in the tree.");
   Mask.assign(TE->Scalars.size(), UndefMaskElem);
   Entries.clear();
-  DenseMap<const TreeEntry *, int> Used;
-  int NumShuffles = 0;
+  DenseMap<Value *, const TreeEntry *> UsedValuesEntry;
+  unsigned VF = 0;
+  // FIXME: Shall be replaced by GetVF function once non-power-2 patch is
+  // landed.
+  auto &&GetVF = [](const TreeEntry *TE) {
+    if (!TE->ReuseShuffleIndices.empty())
+      return TE->ReuseShuffleIndices.size();
+    return TE->Scalars.size();
+  };
   for (int I = 0, E = TE->Scalars.size(); I < E; ++I) {
     Value *V = TE->Scalars[I];
     if (isa<UndefValue>(V))
       continue;
-    const TreeEntry *VTE = getTreeEntry(V);
+    const TreeEntry *VTE = UsedValuesEntry.lookup(V);
     if (!VTE) {
-      // Check if it is used in one of the gathered entries.
-      const auto *It =
-          find_if(make_range(VectorizableTree.begin(), VLIt),
-                  [V](const std::unique_ptr<TreeEntry> &EntryPtr) {
-                    return EntryPtr->State == TreeEntry::NeedToGather &&
-                           is_contained(EntryPtr->Scalars, V);
-                  });
-      if (It != VLIt)
-        VTE = It->get();
-    }
-    if (VTE) {
-      auto Res = Used.try_emplace(VTE, NumShuffles);
-      if (Res.second) {
-        Entries.push_back(VTE);
-        ++NumShuffles;
-        if (NumShuffles > 2)
-          return None;
-        if (NumShuffles == 2) {
-          unsigned FirstSz = Entries.front()->Scalars.size();
-          if (!Entries.front()->ReuseShuffleIndices.empty())
-            FirstSz = Entries.front()->ReuseShuffleIndices.size();
-          unsigned SecondSz = Entries.back()->Scalars.size();
-          if (!Entries.back()->ReuseShuffleIndices.empty())
-            SecondSz = Entries.back()->ReuseShuffleIndices.size();
-          if (FirstSz != SecondSz)
-            return None;
-        }
-      }
-      int FoundLane =
-          findLaneForValue(VTE->Scalars, VTE->ReuseShuffleIndices, V);
-      unsigned Sz = VTE->Scalars.size();
-      if (!VTE->ReuseShuffleIndices.empty())
-        Sz = VTE->ReuseShuffleIndices.size();
-      Mask[I] = Res.first->second * Sz + FoundLane;
-      // Extra check required by isSingleSourceMaskImpl function (called by
-      // ShuffleVectorInst::isSingleSourceMask).
-      if (Mask[I] >= 2 * E)
+      if (Entries.size() == 2)
         return None;
-      continue;
+      VTE = getTreeEntry(V);
+      if (!VTE || find_if(
+                      VectorizableTree,
+                      [VTE, TE](const std::unique_ptr<TreeEntry> &EntryPtr) {
+                        return EntryPtr.get() == VTE || EntryPtr.get() == TE;
+                      })->get() == TE) {
+        // Check if it is used in one of the gathered entries.
+        const auto *It =
+            find_if(VectorizableTree,
+                    [V, TE](const std::unique_ptr<TreeEntry> &EntryPtr) {
+                      return EntryPtr.get() == TE ||
+                             (EntryPtr->State == TreeEntry::NeedToGather &&
+                              is_contained(EntryPtr->Scalars, V));
+                    });
+        // The vector factor of shuffled entries must be the same.
+        if (It->get() == TE)
+          return None;
+        VTE = It->get();
+      }
+      Entries.push_back(VTE);
+      if (Entries.size() == 1) {
+        VF = GetVF(VTE);
+      } else if (VF != GetVF(VTE)) {
+        assert(Entries.size() == 2 && "Expected shuffle of 1 or 2 entries.");
+        assert(VF > 0 && "Expected non-zero vector factor.");
+        return None;
+      }
+      for (Value *SV : VTE->Scalars)
+        UsedValuesEntry.try_emplace(SV, VTE);
     }
-    return None;
+    int FoundLane = findLaneForValue(VTE->Scalars, VTE->ReuseShuffleIndices, V);
+    Mask[I] = (Entries.front() == VTE ? 0 : VF) + FoundLane;
+    // Extra check required by isSingleSourceMaskImpl function (called by
+    // ShuffleVectorInst::isSingleSourceMask).
+    if (Mask[I] >= 2 * E)
+      return None;
   }
-  if (NumShuffles == 1) {
-    if (ShuffleVectorInst::isReverseMask(Mask))
-      return TargetTransformInfo::SK_Reverse;
+  switch (Entries.size()) {
+  case 1:
     return TargetTransformInfo::SK_PermuteSingleSrc;
-  }
-  if (NumShuffles == 2) {
-    if (ShuffleVectorInst::isSelectMask(Mask))
-      return TargetTransformInfo::SK_Select;
-    if (ShuffleVectorInst::isTransposeMask(Mask))
-      return TargetTransformInfo::SK_Transpose;
+  case 2:
     return TargetTransformInfo::SK_PermuteTwoSrc;
+  default:
+    break;
   }
   return None;
 }
@@ -4422,7 +4435,7 @@ void BoUpSLP::reorderInputsAccordingToOpcode(ArrayRef<Value *> VL,
   Right = Ops.getVL(1);
 }
 
-void BoUpSLP::setInsertPointAfterBundle(TreeEntry *E) {
+void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   // Get the basic block this bundle is in. All instructions in the bundle
   // should be in this block.
   auto *Front = E->getMainOp();

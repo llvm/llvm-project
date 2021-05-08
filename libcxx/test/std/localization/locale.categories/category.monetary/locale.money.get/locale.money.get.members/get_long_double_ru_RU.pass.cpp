@@ -48,7 +48,7 @@
 #   define APPLE_FIXME
 #endif
 
-typedef std::money_get<char, input_iterator<const char*> > Fn;
+typedef std::money_get<char, cpp17_input_iterator<const char*> > Fn;
 
 class my_facet
     : public Fn
@@ -58,7 +58,7 @@ public:
         : Fn(refs) {}
 };
 
-typedef std::money_get<wchar_t, input_iterator<const wchar_t*> > Fw;
+typedef std::money_get<wchar_t, cpp17_input_iterator<const wchar_t*> > Fw;
 
 class my_facetw
     : public Fw
@@ -85,7 +85,7 @@ int main(int, char**)
         // char, national
         {   // zero
             std::string v = "0,00 ";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -96,7 +96,7 @@ int main(int, char**)
         }
         {   // negative one
             std::string v = "-0,01 ";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -107,7 +107,7 @@ int main(int, char**)
         }
         {   // positive
             std::string v = "1 234 567,89 ";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -118,7 +118,7 @@ int main(int, char**)
         }
         {   // negative
             std::string v = "-1 234 567,89 ";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -129,7 +129,7 @@ int main(int, char**)
         }
         {   // negative
             std::string v = "-1234567,89 ";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -140,7 +140,7 @@ int main(int, char**)
         }
         {   // zero, showbase
             std::string v = "0,00 \xD1\x80\xD1\x83\xD0\xB1"".";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -152,7 +152,7 @@ int main(int, char**)
         {   // zero, showbase
             std::string v = "0,00 \xD1\x80\xD1\x83\xD0\xB1"".";
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -164,7 +164,7 @@ int main(int, char**)
         }
         {   // negative one, showbase
             std::string v = "-0,01 \xD1\x80\xD1\x83\xD0\xB1"".";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -176,7 +176,7 @@ int main(int, char**)
         {   // negative one, showbase
             std::string v = "-0,01 \xD1\x80\xD1\x83\xD0\xB1"".";
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -188,7 +188,7 @@ int main(int, char**)
         }
         {   // positive, showbase
             std::string v = "1 234 567,89 \xD1\x80\xD1\x83\xD0\xB1"".";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -200,7 +200,7 @@ int main(int, char**)
         {   // positive, showbase
             std::string v = "1 234 567,89 \xD1\x80\xD1\x83\xD0\xB1"".";
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -213,7 +213,7 @@ int main(int, char**)
         {   // negative, showbase
             std::string v = "-1 234 567,89 \xD1\x80\xD1\x83\xD0\xB1"".";
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -226,7 +226,7 @@ int main(int, char**)
         {   // negative, showbase
             std::string v = "-1 234 567,89 RUB ";
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -237,7 +237,7 @@ int main(int, char**)
         }
         {   // negative, showbase
             std::string v = "-1 234 567,89 RUB ";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -252,7 +252,7 @@ int main(int, char**)
         // char, international
         {   // zero
             std::string v = "0,00";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -263,7 +263,7 @@ int main(int, char**)
         }
         {   // negative one
             std::string v = "-0,01 ";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -274,7 +274,7 @@ int main(int, char**)
         }
         {   // positive
             std::string v = "1 234 567,89 ";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -285,7 +285,7 @@ int main(int, char**)
         }
         {   // negative
             std::string v = "-1 234 567,89 ";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -296,7 +296,7 @@ int main(int, char**)
         }
         {   // negative
             std::string v = "-1234567,89 ";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -307,7 +307,7 @@ int main(int, char**)
         }
         {   // zero, showbase
             std::string v = "0,00 RUB ";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -320,7 +320,7 @@ int main(int, char**)
         {   // zero, showbase
             std::string v = "0,00 RUB ";
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -333,7 +333,7 @@ int main(int, char**)
 #endif
         {   // negative one, showbase
             std::string v = "-0,01 RUB ";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -346,7 +346,7 @@ int main(int, char**)
         {   // negative one, showbase
             std::string v = "-0,01 RUB ";
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -359,7 +359,7 @@ int main(int, char**)
 #endif
         {   // positive, showbase
             std::string v = "1 234 567,89 RUB ";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -372,7 +372,7 @@ int main(int, char**)
         {   // positive, showbase
             std::string v = "1 234 567,89 RUB ";
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -387,7 +387,7 @@ int main(int, char**)
         {   // negative, showbase
             std::string v = "-1 234 567,89 RUB ";
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -401,7 +401,7 @@ int main(int, char**)
         {   // negative, showbase
             std::string v = "-1 234 567,89 \xD1\x80\xD1\x83\xD0\xB1"".";
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -412,7 +412,7 @@ int main(int, char**)
         }
         {   // negative, showbase
             std::string v = "-1 234 567,89 \xD1\x80\xD1\x83\xD0\xB1"".";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -427,7 +427,7 @@ int main(int, char**)
         // wchar_t, national
         {   // zero
             std::wstring v = L"0,00";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -438,7 +438,7 @@ int main(int, char**)
         }
         {   // negative one
             std::wstring v = L"-0,01 ";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -449,7 +449,7 @@ int main(int, char**)
         }
         {   // positive
             std::wstring v = L"1 234 567,89 ";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -460,7 +460,7 @@ int main(int, char**)
         }
         {   // negative
             std::wstring v = L"-1 234 567,89 ";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -471,7 +471,7 @@ int main(int, char**)
         }
         {   // negative
             std::wstring v = L"-1234567,89 ";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -482,7 +482,7 @@ int main(int, char**)
         }
         {   // zero, showbase
             std::wstring v = L"0,00 \x440\x443\x431"".";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -494,7 +494,7 @@ int main(int, char**)
         {   // zero, showbase
             std::wstring v = L"0,00 \x440\x443\x431"".";
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -506,7 +506,7 @@ int main(int, char**)
         }
         {   // negative one, showbase
             std::wstring v = L"-0,01 \x440\x443\x431"".";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -518,7 +518,7 @@ int main(int, char**)
         {   // negative one, showbase
             std::wstring v = L"-0,01 \x440\x443\x431"".";
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -530,7 +530,7 @@ int main(int, char**)
         }
         {   // positive, showbase
             std::wstring v = L"1 234 567,89 \x440\x443\x431"".";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -542,7 +542,7 @@ int main(int, char**)
         {   // positive, showbase
             std::wstring v = L"1 234 567,89 \x440\x443\x431"".";
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -555,7 +555,7 @@ int main(int, char**)
         {   // negative, showbase
             std::wstring v = L"-1 234 567,89 \x440\x443\x431"".";
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -568,7 +568,7 @@ int main(int, char**)
         {   // negative, showbase
             std::wstring v = L"-1 234 567,89 RUB ";
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -579,7 +579,7 @@ int main(int, char**)
         }
         {   // negative, showbase
             std::wstring v = L"-1 234 567,89 RUB ";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -594,7 +594,7 @@ int main(int, char**)
         // wchar_t, international
         {   // zero
             std::wstring v = L"0,00";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -605,7 +605,7 @@ int main(int, char**)
         }
         {   // negative one
             std::wstring v = L"-0,01 ";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -616,7 +616,7 @@ int main(int, char**)
         }
         {   // positive
             std::wstring v = L"1 234 567,89 ";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -627,7 +627,7 @@ int main(int, char**)
         }
         {   // negative
             std::wstring v = L"-1 234 567,89 ";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -638,7 +638,7 @@ int main(int, char**)
         }
         {   // negative
             std::wstring v = L"-1234567,89 ";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -649,7 +649,7 @@ int main(int, char**)
         }
         {   // zero, showbase
             std::wstring v = L"0,00 RUB ";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -662,7 +662,7 @@ int main(int, char**)
         {   // zero, showbase
             std::wstring v = L"0,00 RUB ";
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -675,7 +675,7 @@ int main(int, char**)
 #endif
         {   // negative one, showbase
             std::wstring v = L"-0,01 RUB ";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -688,7 +688,7 @@ int main(int, char**)
         {   // negative one, showbase
             std::wstring v = L"-0,01 RUB ";
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -701,7 +701,7 @@ int main(int, char**)
 #endif
         {   // positive, showbase
             std::wstring v = L"1 234 567,89 RUB ";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -714,7 +714,7 @@ int main(int, char**)
         {   // positive, showbase
             std::wstring v = L"1 234 567,89 RUB ";
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -729,7 +729,7 @@ int main(int, char**)
         {   // negative, showbase
             std::wstring v = L"-1 234 567,89 RUB ";
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -743,7 +743,7 @@ int main(int, char**)
         {   // negative, showbase
             std::wstring v = L"-1 234 567,89 \x440\x443\x431"".";
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -754,7 +754,7 @@ int main(int, char**)
         }
         {   // negative, showbase
             std::wstring v = L"-1 234 567,89 \x440\x443\x431"".";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),

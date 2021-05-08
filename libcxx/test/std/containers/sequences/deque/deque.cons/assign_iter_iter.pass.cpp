@@ -67,7 +67,7 @@ void
 testI(C& c1, const C& c2)
 {
     typedef typename C::const_iterator CI;
-    typedef input_iterator<CI> ICI;
+    typedef cpp17_input_iterator<CI> ICI;
     c1.assign(ICI(c2.begin()), ICI(c2.end()));
     assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
     assert(c1 == c2);
@@ -128,7 +128,7 @@ void test_emplacable_concept() {
   }
   {
     using T = EmplaceConstructibleMoveableAndAssignable<int>;
-    using It = input_iterator<int*>;
+    using It = cpp17_input_iterator<int*>;
     {
       std::deque<T> v;
       v.assign(It(arr1), It(std::end(arr1)));

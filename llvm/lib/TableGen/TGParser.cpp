@@ -292,6 +292,9 @@ bool TGParser::AddSubClass(RecordsEntry &Entry, SubClassReference &SubClass) {
   if (Entry.Rec)
     return AddSubClass(Entry.Rec.get(), SubClass);
 
+  if (Entry.Assertion)
+    return false;
+
   for (auto &E : Entry.Loop->Entries) {
     if (AddSubClass(E, SubClass))
       return true;
@@ -365,8 +368,7 @@ bool TGParser::addEntry(RecordsEntry E) {
 
   // If it is an assertion, then it's a top-level one, so check it.
   if (E.Assertion) {
-    CheckAssert(std::get<0>(*E.Assertion), std::get<1>(*E.Assertion), 
-                std::get<2>(*E.Assertion));
+    CheckAssert(E.Assertion->Loc, E.Assertion->Condition, E.Assertion->Message);
     return false;
   }
 
@@ -430,18 +432,14 @@ bool TGParser::resolve(const std::vector<RecordsEntry> &Source,
       MapResolver R;
       for (const auto &S : Substs)
         R.set(S.first, S.second);
-      Init *Condition = std::get<1>(*E.Assertion)->resolveReferences(R);
-      Init *Message = std::get<2>(*E.Assertion)->resolveReferences(R);
+      Init *Condition = E.Assertion->Condition->resolveReferences(R);
+      Init *Message = E.Assertion->Message->resolveReferences(R);
 
-      if (Dest) {
-        std::unique_ptr<Record::AssertionTuple> Tuple =
-            std::make_unique<Record::AssertionTuple>(std::get<0>(*E.Assertion),
-                                                     std::move(Condition),
-                                                     std::move(Message));
-        Dest->push_back(std::move(Tuple));
-      } else {
-        CheckAssert(std::get<0>(*E.Assertion), Condition, Message);
-      }
+      if (Dest)
+        Dest->push_back(std::make_unique<Record::AssertionInfo>(
+            E.Assertion->Loc, Condition, Message));
+      else
+        CheckAssert(E.Assertion->Loc, Condition, Message);
 
     } else {
       auto Rec = std::make_unique<Record>(*E.Rec);
@@ -1513,6 +1511,9 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
   case tgtok::XSubstr:
     return ParseOperationSubstr(CurRec, ItemType);
 
+  case tgtok::XFind:
+    return ParseOperationFind(CurRec, ItemType);
+
   case tgtok::XCond:
     return ParseOperationCond(CurRec, ItemType);
 
@@ -1749,6 +1750,94 @@ Init *TGParser::ParseOperationSubstr(Record *CurRec, RecTy *ItemType) {
     TypedInit *RHSt = dyn_cast<TypedInit>(RHS);
     if (!RHSt && !isa<UnsetInit>(RHS)) {
       TokError("could not determine type of the length in !substr");
+      return nullptr;
+    }
+    if (RHSt && !isa<IntRecTy>(RHSt->getType())) {
+      TokError(Twine("expected int, got type '") +
+               RHSt->getType()->getAsString() + "'");
+      return nullptr;
+    }
+  }
+
+  return (TernOpInit::get(Code, LHS, MHS, RHS, Type))->Fold(CurRec);
+}
+
+/// Parse the !find operation. Return null on error.
+///
+/// Substr ::= !find(string, string [, start-int]) => int
+Init *TGParser::ParseOperationFind(Record *CurRec, RecTy *ItemType) {
+  TernOpInit::TernaryOp Code = TernOpInit::FIND;
+  RecTy *Type = IntRecTy::get();
+
+  Lex.Lex(); // eat the operation
+
+  if (!consume(tgtok::l_paren)) {
+    TokError("expected '(' after !find operator");
+    return nullptr;
+  }
+
+  Init *LHS = ParseValue(CurRec);
+  if (!LHS)
+    return nullptr;
+
+  if (!consume(tgtok::comma)) {
+    TokError("expected ',' in !find operator");
+    return nullptr;
+  }
+
+  SMLoc MHSLoc = Lex.getLoc();
+  Init *MHS = ParseValue(CurRec);
+  if (!MHS)
+    return nullptr;
+
+  SMLoc RHSLoc = Lex.getLoc();
+  Init *RHS;
+  if (consume(tgtok::comma)) {
+    RHSLoc = Lex.getLoc();
+    RHS = ParseValue(CurRec);
+    if (!RHS)
+      return nullptr;
+  } else {
+    RHS = IntInit::get(0);
+  }
+
+  if (!consume(tgtok::r_paren)) {
+    TokError("expected ')' in !find operator");
+    return nullptr;
+  }
+
+  if (ItemType && !Type->typeIsConvertibleTo(ItemType)) {
+    Error(RHSLoc, Twine("expected value of type '") +
+                  ItemType->getAsString() + "', got '" +
+                  Type->getAsString() + "'");
+  }
+
+  TypedInit *LHSt = dyn_cast<TypedInit>(LHS);
+  if (!LHSt && !isa<UnsetInit>(LHS)) {
+    TokError("could not determine type of the source string in !find");
+    return nullptr;
+  }
+  if (LHSt && !isa<StringRecTy>(LHSt->getType())) {
+    TokError(Twine("expected string, got type '") +
+             LHSt->getType()->getAsString() + "'");
+    return nullptr;
+  }
+
+  TypedInit *MHSt = dyn_cast<TypedInit>(MHS);
+  if (!MHSt && !isa<UnsetInit>(MHS)) {
+    TokError("could not determine type of the target string in !find");
+    return nullptr;
+  }
+  if (MHSt && !isa<StringRecTy>(MHSt->getType())) {
+    Error(MHSLoc, Twine("expected string, got type '") +
+                      MHSt->getType()->getAsString() + "'");
+    return nullptr;
+  }
+
+  if (RHS) {
+    TypedInit *RHSt = dyn_cast<TypedInit>(RHS);
+    if (!RHSt && !isa<UnsetInit>(RHS)) {
+      TokError("could not determine type of the start position in !find");
       return nullptr;
     }
     if (RHSt && !isa<IntRecTy>(RHSt->getType())) {
@@ -2061,8 +2150,6 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
 
     // Loop through the arguments that were not specified and make sure
     // they have a complete value.
-    // TODO: If we just keep a required argument count, we can do away
-    //       with this checking.
     ArrayRef<Init *> TArgs = Class->getTemplateArgs();
     for (unsigned I = Args.size(), E = TArgs.size(); I < E; ++I) {
       RecordVal *Arg = Class->getValue(TArgs[I]);
@@ -2289,7 +2376,8 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   case tgtok::XForEach:
   case tgtok::XFilter:
   case tgtok::XSubst:
-  case tgtok::XSubstr: { // Value ::= !ternop '(' Value ',' Value ',' Value ')'
+  case tgtok::XSubstr:
+  case tgtok::XFind: { // Value ::= !ternop '(' Value ',' Value ',' Value ')'
     return ParseOperation(CurRec, ItemType);
   }
   }
@@ -3219,14 +3307,11 @@ bool TGParser::ParseAssert(MultiClass *CurMultiClass, Record *CurRec) {
   if (!consume(tgtok::semi))
     return TokError("expected ';'");
 
-  if (CurRec) {
+  if (CurRec)
     CurRec->addAssertion(ConditionLoc, Condition, Message);
-  } else {
-    std::unique_ptr<Record::AssertionTuple> Tuple =
-         std::make_unique<Record::AssertionTuple>(ConditionLoc, Condition, Message);
-    addEntry(std::move(Tuple));
-  }
- 
+  else
+    addEntry(std::make_unique<Record::AssertionInfo>(ConditionLoc, Condition,
+                                                     Message));
   return false;
 }
 

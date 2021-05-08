@@ -42,6 +42,10 @@ struct LinkOptions {
   /// Do not check swiftmodule timestamp
   bool NoTimestamp = false;
 
+  /// Whether we want a static variable to force us to keep its enclosing
+  /// function.
+  bool KeepFunctionForStatic = false;
+
   /// Number of threads.
   unsigned Threads = 1;
 

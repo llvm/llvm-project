@@ -46,16 +46,16 @@
 // MS-STDERR: Note: including file:  {{[^ ]*test2.h}}
 // MS-STDERR-NOT: Note
 
-// RUN: echo "fun:foo" > %t.blacklist
+// RUN: echo "fun:foo" > %t.ignorelist
 // RUN: %clang_cc1 -I%S -isystem %S/Inputs/SystemHeaderPrefix \
-// RUN:     -fsanitize=address -fdepfile-entry=%t.blacklist \
+// RUN:     -fsanitize=address -fdepfile-entry=%t.ignorelist \
 // RUN:     --show-includes -o /dev/null %s | \
-// RUN:     FileCheck --strict-whitespace --check-prefix=MS-BLACKLIST %s
-// MS-BLACKLIST: Note: including file: {{[^ ]*\.blacklist}}
-// MS-BLACKLIST-NOT: Note: including file: {{[^ ]*noline.h}}
-// MS-BLACKLIST: Note: including file: {{[^ ]*test.h}}
-// MS-BLACKLIST: Note: including file:  {{[^ ]*test2.h}}
-// MS-BLACKLIST-NOT: Note
+// RUN:     FileCheck --strict-whitespace --check-prefix=MS-IGNORELIST %s
+// MS-IGNORELIST: Note: including file: {{[^ ]*\.ignorelist}}
+// MS-IGNORELIST-NOT: Note: including file: {{[^ ]*noline.h}}
+// MS-IGNORELIST: Note: including file: {{[^ ]*test.h}}
+// MS-IGNORELIST: Note: including file:  {{[^ ]*test2.h}}
+// MS-IGNORELIST-NOT: Note
 
 #include <noline.h>
 #include "Inputs/test.h"

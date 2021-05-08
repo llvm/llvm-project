@@ -6,6 +6,7 @@
 
     %opaque = type opaque
     @unsized = external hidden global %opaque
+    @thread_local = thread_local global i32 0
 
     define void @one_ptr_add() { ret void }
     define void @add_to_offset() { ret void }
@@ -18,6 +19,7 @@
     define void @dont_fold_max_offset() { ret void }
     define void @dont_fold_offset_larger_than_type_alloc() { ret void }
     define void @dont_fold_unsized_type() { ret void }
+    define void @dont_fold_thread_local() { ret void }
 ...
 ---
 name:            one_ptr_add
@@ -278,6 +280,28 @@ body:             |
     ; CHECK: $x0 = COPY %ptr_add(p0)
     ; CHECK: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @unsized
+    %offset:_(s64) = G_CONSTANT i64 16
+    %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    $x0 = COPY %ptr_add(p0)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            dont_fold_thread_local
+alignment:       4
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    ; Check that we don't touch thread-local globals.
+
+    ; CHECK-LABEL: name: dont_fold_thread_local
+    ; CHECK: %global:_(p0) = G_GLOBAL_VALUE @thread_local
+    ; CHECK: %offset:_(s64) = G_CONSTANT i64 16
+    ; CHECK: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    ; CHECK: $x0 = COPY %ptr_add(p0)
+    ; CHECK: RET_ReallyLR implicit $x0
+    %global:_(p0) = G_GLOBAL_VALUE @thread_local
     %offset:_(s64) = G_CONSTANT i64 16
     %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
     $x0 = COPY %ptr_add(p0)

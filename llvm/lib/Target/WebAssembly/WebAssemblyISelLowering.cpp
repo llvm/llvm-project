@@ -149,7 +149,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         setOperationAction(Op, T, Legal);
 
     // Support integer abs
-    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
+    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64})
       setOperationAction(ISD::ABS, T, Legal);
 
     // Custom lower BUILD_VECTORs to minimize number of replace_lanes
@@ -724,7 +724,7 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = Intrinsic == Intrinsic::wasm_load32_zero ? MVT::i32 : MVT::i64;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.align = Info.memVT == MVT::i32 ? Align(4) : Align(8);
+    Info.align = Align(1);
     Info.flags = MachineMemOperand::MOLoad;
     return true;
   case Intrinsic::wasm_load8_lane:
@@ -736,27 +736,22 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::wasm_store32_lane:
   case Intrinsic::wasm_store64_lane: {
     MVT MemVT;
-    Align MemAlign;
     switch (Intrinsic) {
     case Intrinsic::wasm_load8_lane:
     case Intrinsic::wasm_store8_lane:
       MemVT = MVT::i8;
-      MemAlign = Align(1);
       break;
     case Intrinsic::wasm_load16_lane:
     case Intrinsic::wasm_store16_lane:
       MemVT = MVT::i16;
-      MemAlign = Align(2);
       break;
     case Intrinsic::wasm_load32_lane:
     case Intrinsic::wasm_store32_lane:
       MemVT = MVT::i32;
-      MemAlign = Align(4);
       break;
     case Intrinsic::wasm_load64_lane:
     case Intrinsic::wasm_store64_lane:
       MemVT = MVT::i64;
-      MemAlign = Align(8);
       break;
     default:
       llvm_unreachable("unexpected intrinsic");
@@ -774,7 +769,7 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(0);
     Info.memVT = MemVT;
     Info.offset = 0;
-    Info.align = MemAlign;
+    Info.align = Align(1);
     return true;
   }
   default:
@@ -1973,12 +1968,13 @@ SDValue WebAssemblyTargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
                                                       SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT ResT = Op.getValueType();
-  uint64_t Width = Op.getConstantOperandVal(1);
+  EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
 
-  if ((ResT == MVT::i32 || ResT == MVT::i64) && (Width == 32 || Width == 64))
+  if ((ResT == MVT::i32 || ResT == MVT::i64) &&
+      (SatVT == MVT::i32 || SatVT == MVT::i64))
     return Op;
 
-  if (ResT == MVT::v4i32 && Width == 32)
+  if (ResT == MVT::v4i32 && SatVT == MVT::i32)
     return Op;
 
   return SDValue();
@@ -2143,7 +2139,7 @@ performVectorTruncSatLowCombine(SDNode *N,
   auto FPToIntOp = FPToInt.getOpcode();
   if (FPToIntOp != ISD::FP_TO_SINT_SAT && FPToIntOp != ISD::FP_TO_UINT_SAT)
     return SDValue();
-  if (FPToInt.getConstantOperandVal(1) != 32)
+  if (cast<VTSDNode>(FPToInt.getOperand(1))->getVT() != MVT::i32)
     return SDValue();
 
   auto Source = FPToInt.getOperand(0);

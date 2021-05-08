@@ -13,6 +13,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Thread.h"
@@ -101,6 +102,157 @@ static int GetNumberOfDigits(size_t num) {
   return num == 0 ? 1 : static_cast<int>(log10(num)) + 1;
 }
 
+/// \return
+///     \b true if the provided line entries match line, column and source file.
+///     This function assumes that the line entries are valid.
+static bool FileLineAndColumnMatches(const LineEntry &a, const LineEntry &b) {
+  if (a.line != b.line)
+    return false;
+  if (a.column != b.column)
+    return false;
+  return a.file == b.file;
+}
+
+// This custom LineEntry validator is neded because some line_entries have
+// 0 as line, which is meaningless. Notice that LineEntry::IsValid only
+// checks that line is not LLDB_INVALID_LINE_NUMBER, i.e. UINT32_MAX.
+static bool IsLineEntryValid(const LineEntry &line_entry) {
+  return line_entry.IsValid() && line_entry.line > 0;
+}
+
+/// Helper structure for \a TraverseInstructionsWithSymbolInfo.
+struct InstructionSymbolInfo {
+  SymbolContext sc;
+  Address address;
+  lldb::addr_t load_address;
+  lldb::DisassemblerSP disassembler;
+  lldb::InstructionSP instruction;
+  lldb_private::ExecutionContext exe_ctx;
+};
+
+/// InstructionSymbolInfo object with symbol information for the given
+/// instruction, calculated efficiently.
+///
+/// \param[in] symbol_scope
+///     If not \b 0, then the \a InstructionSymbolInfo will have its
+///     SymbolContext calculated up to that level.
+///
+/// \param[in] include_disassembler
+///     If \b true, then the \a InstructionSymbolInfo will have the
+///     \a disassembler and \a instruction objects calculated.
+static void TraverseInstructionsWithSymbolInfo(
+    Trace &trace, Thread &thread, size_t position,
+    Trace::TraceDirection direction, SymbolContextItem symbol_scope,
+    bool include_disassembler,
+    std::function<bool(size_t index, Expected<InstructionSymbolInfo> insn)>
+        callback) {
+  InstructionSymbolInfo prev_insn;
+
+  Target &target = thread.GetProcess()->GetTarget();
+  ExecutionContext exe_ctx;
+  target.CalculateExecutionContext(exe_ctx);
+  const ArchSpec &arch = target.GetArchitecture();
+
+  // Find the symbol context for the given address reusing the previous
+  // instruction's symbol context when possible.
+  auto calculate_symbol_context = [&](const Address &address) {
+    AddressRange range;
+    if (prev_insn.sc.GetAddressRange(symbol_scope, 0,
+                                     /*inline_block_range*/ false, range) &&
+        range.Contains(address))
+      return prev_insn.sc;
+
+    SymbolContext sc;
+    address.CalculateSymbolContext(&sc, symbol_scope);
+    return sc;
+  };
+
+  // Find the disassembler for the given address reusing the previous
+  // instruction's disassembler when possible.
+  auto calculate_disass = [&](const Address &address, const SymbolContext &sc) {
+    if (prev_insn.disassembler) {
+      if (InstructionSP instruction =
+              prev_insn.disassembler->GetInstructionList()
+                  .GetInstructionAtAddress(address))
+        return std::make_tuple(prev_insn.disassembler, instruction);
+    }
+
+    if (sc.function) {
+      if (DisassemblerSP disassembler =
+              sc.function->GetInstructions(exe_ctx, nullptr)) {
+        if (InstructionSP instruction =
+                disassembler->GetInstructionList().GetInstructionAtAddress(
+                    address))
+          return std::make_tuple(disassembler, instruction);
+      }
+    }
+    // We fallback to a single instruction disassembler
+    AddressRange range(address, arch.GetMaximumOpcodeByteSize());
+    DisassemblerSP disassembler =
+        Disassembler::DisassembleRange(arch, /*plugin_name*/ nullptr,
+                                       /*flavor*/ nullptr, target, range);
+    return std::make_tuple(disassembler,
+                           disassembler ? disassembler->GetInstructionList()
+                                              .GetInstructionAtAddress(address)
+                                        : InstructionSP());
+  };
+
+  trace.TraverseInstructions(
+      thread, position, direction,
+      [&](size_t index, Expected<lldb::addr_t> load_address) -> bool {
+        if (!load_address)
+          return callback(index, load_address.takeError());
+
+        InstructionSymbolInfo insn;
+        insn.load_address = *load_address;
+        insn.exe_ctx = exe_ctx;
+        insn.address.SetLoadAddress(*load_address, &target);
+        if (symbol_scope != 0)
+          insn.sc = calculate_symbol_context(insn.address);
+        if (include_disassembler)
+          std::tie(insn.disassembler, insn.instruction) =
+              calculate_disass(insn.address, insn.sc);
+        prev_insn = insn;
+        return callback(index, insn);
+      });
+}
+
+/// Compare the symbol contexts of the provided \a InstructionSymbolInfo
+/// objects.
+///
+/// \return
+///     \a true if both instructions belong to the same scope level analized
+///     in the following order:
+///       - module
+///       - symbol
+///       - function
+///       - line
+static bool
+IsSameInstructionSymbolContext(const InstructionSymbolInfo &prev_insn,
+                               const InstructionSymbolInfo &insn) {
+  // module checks
+  if (insn.sc.module_sp != prev_insn.sc.module_sp)
+    return false;
+
+  // symbol checks
+  if (insn.sc.symbol != prev_insn.sc.symbol)
+    return false;
+
+  // function checks
+  if (!insn.sc.function && !prev_insn.sc.function)
+    return true;
+  else if (insn.sc.function != prev_insn.sc.function)
+    return false;
+
+  // line entry checks
+  const bool curr_line_valid = IsLineEntryValid(insn.sc.line_entry);
+  const bool prev_line_valid = IsLineEntryValid(prev_insn.sc.line_entry);
+  if (curr_line_valid && prev_line_valid)
+    return FileLineAndColumnMatches(insn.sc.line_entry,
+                                    prev_insn.sc.line_entry);
+  return curr_line_valid == prev_line_valid;
+}
+
 /// Dump the symbol context of the given instruction address if it's different
 /// from the symbol context of the previous instruction in the trace.
 ///
@@ -113,177 +265,92 @@ static int GetNumberOfDigits(size_t num) {
 /// \return
 ///     The symbol context of the current address, which might differ from the
 ///     previous one.
-static SymbolContext DumpSymbolContext(Stream &s, const SymbolContext &prev_sc,
-                                       Target &target, const Address &address) {
-  AddressRange range;
-  if (prev_sc.GetAddressRange(eSymbolContextEverything, 0,
-                              /*inline_block_range*/ false, range) &&
-      range.ContainsFileAddress(address))
-    return prev_sc;
-
-  SymbolContext sc;
-  address.CalculateSymbolContext(&sc, eSymbolContextEverything);
-
-  if (!prev_sc.module_sp && !sc.module_sp)
-    return sc;
-  if (prev_sc.module_sp == sc.module_sp && !sc.function && !sc.symbol &&
-      !prev_sc.function && !prev_sc.symbol)
-    return sc;
+static void
+DumpInstructionSymbolContext(Stream &s,
+                             Optional<InstructionSymbolInfo> prev_insn,
+                             InstructionSymbolInfo &insn) {
+  if (prev_insn && IsSameInstructionSymbolContext(*prev_insn, insn))
+    return;
 
   s.Printf("  ");
 
-  if (!sc.module_sp)
+  if (!insn.sc.module_sp)
     s.Printf("(none)");
-  else if (!sc.function && !sc.symbol)
+  else if (!insn.sc.function && !insn.sc.symbol)
     s.Printf("%s`(none)",
-             sc.module_sp->GetFileSpec().GetFilename().AsCString());
+             insn.sc.module_sp->GetFileSpec().GetFilename().AsCString());
   else
-    sc.DumpStopContext(&s, &target, address, /*show_fullpath*/ false,
-                       /*show_module*/ true, /*show_inlined_frames*/ false,
-                       /*show_function_arguments*/ true,
-                       /*show_function_name*/ true);
+    insn.sc.DumpStopContext(&s, insn.exe_ctx.GetTargetPtr(), insn.address,
+                            /*show_fullpath*/ false,
+                            /*show_module*/ true, /*show_inlined_frames*/ false,
+                            /*show_function_arguments*/ true,
+                            /*show_function_name*/ true);
   s.Printf("\n");
-  return sc;
 }
 
-/// Dump an instruction given by its address using a given disassembler, unless
-/// the instruction is not present in the disassembler.
-///
-/// \param[in] disassembler
-///     A disassembler containing a certain instruction list.
-///
-/// \param[in] address
-///     The address of the instruction to dump.
-///
-/// \return
-///     \b true if the information could be dumped, \b false otherwise.
-static bool TryDumpInstructionInfo(Stream &s,
-                                   const DisassemblerSP &disassembler,
-                                   const ExecutionContext &exe_ctx,
-                                   const Address &address) {
-  if (!disassembler)
-    return false;
-
-  if (InstructionSP instruction =
-          disassembler->GetInstructionList().GetInstructionAtAddress(address)) {
-    instruction->Dump(&s, /*show_address*/ false, /*show_bytes*/ false,
-                      /*max_opcode_byte_size*/ 0, &exe_ctx,
-                      /*sym_ctx*/ nullptr, /*prev_sym_ctx*/ nullptr,
-                      /*disassembly_addr_format*/ nullptr,
-                      /*max_address_text_size*/ 0);
-    return true;
-  }
-
-  return false;
-}
-
-/// Dump an instruction instruction given by its address.
-///
-/// \param[in] prev_disassembler
-///     The disassembler that was used to dump the previous instruction in the
-///     trace. It is useful to avoid recomputations.
-///
-/// \param[in] address
-///     The address of the instruction to dump.
-///
-/// \return
-///     A disassembler that contains the given instruction, which might differ
-///     from the previous disassembler.
-static DisassemblerSP
-DumpInstructionInfo(Stream &s, const SymbolContext &sc,
-                    const DisassemblerSP &prev_disassembler,
-                    ExecutionContext &exe_ctx, const Address &address) {
-  // We first try to use the previous disassembler
-  if (TryDumpInstructionInfo(s, prev_disassembler, exe_ctx, address))
-    return prev_disassembler;
-
-  // Now we try using the current function's disassembler
-  if (sc.function) {
-    DisassemblerSP disassembler =
-        sc.function->GetInstructions(exe_ctx, nullptr);
-    if (TryDumpInstructionInfo(s, disassembler, exe_ctx, address))
-      return disassembler;
-  }
-
-  // We fallback to disassembly one instruction
-  Target &target = exe_ctx.GetTargetRef();
-  const ArchSpec &arch = target.GetArchitecture();
-  AddressRange range(address, arch.GetMaximumOpcodeByteSize() * 1);
-  DisassemblerSP disassembler =
-      Disassembler::DisassembleRange(arch, /*plugin_name*/ nullptr,
-                                     /*flavor*/ nullptr, target, range);
-  if (TryDumpInstructionInfo(s, disassembler, exe_ctx, address))
-    return disassembler;
-  return nullptr;
+static void DumpInstructionDisassembly(Stream &s, InstructionSymbolInfo &insn) {
+  if (!insn.instruction)
+    return;
+  insn.instruction->Dump(&s, /*show_address*/ false, /*show_bytes*/ false,
+                         /*max_opcode_byte_size*/ 0, &insn.exe_ctx, &insn.sc,
+                         /*prev_sym_ctx*/ nullptr,
+                         /*disassembly_addr_format*/ nullptr,
+                         /*max_address_text_size*/ 0);
 }
 
 void Trace::DumpTraceInstructions(Thread &thread, Stream &s, size_t count,
                                   size_t end_position, bool raw) {
-  if (!IsTraced(thread)) {
+  Optional<size_t> instructions_count = GetInstructionCount(thread);
+  if (!instructions_count) {
     s.Printf("thread #%u: tid = %" PRIu64 ", not traced\n", thread.GetIndexID(),
              thread.GetID());
     return;
   }
 
-  size_t instructions_count = GetInstructionCount(thread);
   s.Printf("thread #%u: tid = %" PRIu64 ", total instructions = %zu\n",
-           thread.GetIndexID(), thread.GetID(), instructions_count);
+           thread.GetIndexID(), thread.GetID(), *instructions_count);
 
-  if (count == 0 || end_position >= instructions_count)
+  if (count == 0 || end_position >= *instructions_count)
     return;
 
+  int digits_count = GetNumberOfDigits(end_position);
   size_t start_position =
       end_position + 1 < count ? 0 : end_position + 1 - count;
-
-  int digits_count = GetNumberOfDigits(end_position);
   auto printInstructionIndex = [&](size_t index) {
     s.Printf("    [%*zu] ", digits_count, index);
   };
 
   bool was_prev_instruction_an_error = false;
-  Target &target = thread.GetProcess()->GetTarget();
+  Optional<InstructionSymbolInfo> prev_insn;
 
-  SymbolContext sc;
-  DisassemblerSP disassembler;
-  ExecutionContext exe_ctx;
-  target.CalculateExecutionContext(exe_ctx);
+  TraverseInstructionsWithSymbolInfo(
+      *this, thread, start_position, TraceDirection::Forwards,
+      eSymbolContextEverything, /*disassembler*/ true,
+      [&](size_t index, Expected<InstructionSymbolInfo> insn) -> bool {
+        if (!insn) {
+          printInstructionIndex(index);
+          s << toString(insn.takeError());
 
-  TraverseInstructions(
-      thread, start_position, TraceDirection::Forwards,
-      [&](size_t index, Expected<lldb::addr_t> load_address) -> bool {
-        if (load_address) {
-          // We print an empty line after a sequence of errors to show more
-          // clearly that there's a gap in the trace
+          prev_insn = None;
+          was_prev_instruction_an_error = true;
+        } else {
           if (was_prev_instruction_an_error)
             s.Printf("    ...missing instructions\n");
 
-          Address address;
-          if (!raw) {
-            target.GetSectionLoadList().ResolveLoadAddress(*load_address,
-                                                           address);
-
-            sc = DumpSymbolContext(s, sc, target, address);
-          }
-
-          printInstructionIndex(index);
-          s.Printf("0x%016" PRIx64 "    ", *load_address);
-
-          if (!raw) {
-            disassembler =
-                DumpInstructionInfo(s, sc, disassembler, exe_ctx, address);
-          }
-
-          was_prev_instruction_an_error = false;
-        } else {
-          printInstructionIndex(index);
-          s << toString(load_address.takeError());
-          was_prev_instruction_an_error = true;
           if (!raw)
-            sc = SymbolContext();
+            DumpInstructionSymbolContext(s, prev_insn, *insn);
+
+          printInstructionIndex(index);
+          s.Printf("0x%016" PRIx64 "    ", insn->load_address);
+
+          if (!raw)
+            DumpInstructionDisassembly(s, *insn);
+
+          prev_insn = *insn;
+          was_prev_instruction_an_error = false;
         }
 
         s.Printf("\n");
-
         return index < end_position;
       });
 }

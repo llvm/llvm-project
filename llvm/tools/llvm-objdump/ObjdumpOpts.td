@@ -1,312 +1,208 @@
 include "llvm/Option/OptParser.td"
 
-def grp_generic : OptionGroup<"kind">, HelpText<"Generic Options">;
-
 def help : Flag<["--"], "help">,
-  HelpText<"Display available options (--help-hidden for more)">,
-  Group<grp_generic>;
+  HelpText<"Display available options (--help-hidden for more)">;
 
 def help_hidden : Flag<["--"], "help-hidden">,
   Flags<[HelpHidden]>,
-  HelpText<"Display all available options">,
-  Group<grp_generic>;
+  HelpText<"Display all available options">;
 
 def version : Flag<["--"], "version">,
-  HelpText<"Display the version of this program">,
-  Group<grp_generic>;
-
-
-
-def grp_objdump : OptionGroup<"objdump">, HelpText<"llvm-objdump Options">;
+  HelpText<"Display the version of this program">;
+def : Flag<["-"], "v">, Alias<version>, HelpText<"Alias for --version">;
 
 def adjust_vma_EQ : Joined<["--"], "adjust-vma=">,
   MetaVarName<"offset">,
-  HelpText<"Increase the displayed address by the specified offset">,
-  Group<grp_objdump>;
+  HelpText<"Increase the displayed address by the specified offset">;
 
 def all_headers : Flag<["--"], "all-headers">,
-  HelpText<"Display all available header information">,
-  Group<grp_objdump>;
-def : Flag<["-"], "x">, Alias<all_headers>, HelpText<"Alias for --all-headers">,
-  Group<grp_objdump>;
+  HelpText<"Display all available header information">;
+def : Flag<["-"], "x">, Alias<all_headers>, HelpText<"Alias for --all-headers">;
 
 def arch_name_EQ : Joined<["--"], "arch-name=">,
   HelpText<"Target arch to disassemble for, "
-            "see --version for available targets">,
-  Group<grp_objdump>;
-
+            "see --version for available targets">;
 def archive_headers : Flag<["--"], "archive-headers">,
-  HelpText<"Display archive header information">,
-  Group<grp_objdump>;
-def : Flag<["-"], "a">, Alias<all_headers>,
-  HelpText<"Alias for --archive-headers">,
-  Group<grp_objdump>;
+  HelpText<"Display archive header information">;
 
-def demangle : Flag<["--"], "demangle">, HelpText<"Demangle symbol names">,
-  Group<grp_objdump>;
-def : Flag<["-"], "C">, Alias<demangle>, HelpText<"Alias for --demangle">,
-  Group<grp_objdump>;
+def : Flag<["-"], "a">, Alias<archive_headers>,
+  HelpText<"Alias for --archive-headers">;
+
+def demangle : Flag<["--"], "demangle">, HelpText<"Demangle symbol names">;
+def : Flag<["-"], "C">, Alias<demangle>, HelpText<"Alias for --demangle">;
 
 def disassemble : Flag<["--"], "disassemble">,
-  HelpText<"Display assembler mnemonics for the machine instructions">,
-  Group<grp_objdump>;
-def : Flag<["-"], "d">, Alias<disassemble>, HelpText<"Alias for --disassemble">,
-  Group<grp_objdump>;
+  HelpText<"Display assembler mnemonics for the machine instructions">;
+def : Flag<["-"], "d">, Alias<disassemble>, HelpText<"Alias for --disassemble">;
 
 def disassemble_all : Flag<["--"], "disassemble-all">,
-  HelpText<"Display assembler mnemonics for the machine instructions">,
-  Group<grp_objdump>;
+  HelpText<"Display assembler mnemonics for the machine instructions">;
 def : Flag<["-"], "D">, Alias<disassemble_all>,
-  HelpText<"Alias for --disassemble-all">,
-  Group<grp_objdump>;
+  HelpText<"Alias for --disassemble-all">;
 
 def symbol_description : Flag<["--"], "symbol-description">,
   HelpText<"Add symbol description for disassembly. This "
-           "option is for XCOFF files only.">,
-  Group<grp_objdump>;
+           "option is for XCOFF files only.">;
 
 def disassemble_symbols_EQ : Joined<["--"], "disassemble-symbols=">,
   HelpText<"List of symbols to disassemble. "
            "Accept demangled names when --demangle is "
-           "specified, otherwise accept mangled names">,
-  Group<grp_objdump>;
+           "specified, otherwise accept mangled names">;
 
 def disassemble_zeroes : Flag<["--"], "disassemble-zeroes">,
-  HelpText<"Do not skip blocks of zeroes when disassembling">,
-  Group<grp_objdump>;
+  HelpText<"Do not skip blocks of zeroes when disassembling">;
 def : Flag<["-"], "z">, Alias<disassemble_zeroes>,
-  HelpText<"Alias for --disassemble-zeroes">,
-  Group<grp_objdump>;
+  HelpText<"Alias for --disassemble-zeroes">;
 
 def disassembler_options_EQ : Joined<["--"], "disassembler-options=">,
   MetaVarName<"options">,
-  HelpText<"Pass target specific disassembler options">,
-  Group<grp_objdump>;
+  HelpText<"Pass target specific disassembler options">;
 def : JoinedOrSeparate<["-"], "M">, Alias<disassembler_options_EQ>,
-  HelpText<"Alias for --disassembler-options=">,
-  Group<grp_objdump>;
+  HelpText<"Alias for --disassembler-options=">;
 
 def dynamic_reloc : Flag<["--"], "dynamic-reloc">,
-  HelpText<"Display the dynamic relocation entries in the file">,
-  Group<grp_objdump>;
+  HelpText<"Display the dynamic relocation entries in the file">;
 def : Flag<["-"], "R">, Alias<dynamic_reloc>,
-  HelpText<"Alias for --dynamic-reloc">,
-  Group<grp_objdump>;
+  HelpText<"Alias for --dynamic-reloc">;
 
 def dwarf_EQ : Joined<["--"], "dwarf=">,
-  HelpText<"Dump of dwarf debug sections">, Values<"frames">,
-  Group<grp_objdump>;
+  HelpText<"Dump of dwarf debug sections">, Values<"frames">;
 
 def fault_map_section : Flag<["--"], "fault-map-section">,
-  HelpText<"Display contents of faultmap section">,
-  Group<grp_objdump>;
+  HelpText<"Display contents of faultmap section">;
 
 def file_headers : Flag<["--"], "file-headers">,
-  HelpText<"Display the contents of the overall file header">,
-  Group<grp_objdump>;
+  HelpText<"Display the contents of the overall file header">;
 def : Flag<["-"], "f">, Alias<file_headers>,
-  HelpText<"Alias for --file-headers">,
-  Group<grp_objdump>;
+  HelpText<"Alias for --file-headers">;
 
 def full_contents : Flag<["--"], "full-contents">,
-  HelpText<"Display the content of each section">,
-  Group<grp_objdump>;
+  HelpText<"Display the content of each section">;
 def : Flag<["-"], "s">, Alias<full_contents>,
-  HelpText<"Alias for --full-contents">,
-  Group<grp_objdump>;
+  HelpText<"Alias for --full-contents">;
 
 def line_numbers : Flag<["--"], "line-numbers">,
   HelpText<"Display source line numbers with "
-            "disassembly. Implies disassemble object">,
-  Group<grp_objdump>;
+            "disassembly. Implies disassemble object">;
 def : Flag<["-"], "l">, Alias<line_numbers>,
-  HelpText<"Alias for --line-numbers">,
-  Group<grp_objdump>;
+  HelpText<"Alias for --line-numbers">;
 
 def macho : Flag<["--"], "macho">,
-  HelpText<"Use MachO specific object file parser">,
-  Group<grp_objdump>;
-def : Flag<["-"], "m">, Alias<macho>, HelpText<"Alias for --macho">,
-  Group<grp_objdump>;
+  HelpText<"Use MachO specific object file parser">;
+def : Flag<["-"], "m">, Alias<macho>, HelpText<"Alias for --macho">;
 
 def mcpu_EQ : Joined<["--"], "mcpu=">,
   MetaVarName<"cpu-name">,
-  HelpText<"Target a specific cpu type (--mcpu=help for details)">,
-  Group<grp_objdump>;
+  HelpText<"Target a specific cpu type (--mcpu=help for details)">;
 
 def mattr_EQ : Joined<["--"], "mattr=">,
   MetaVarName<"a1,+a2,-a3,...">,
-  HelpText<"Target specific attributes (--mattr=help for details)">,
-  Group<grp_objdump>;
+  HelpText<"Target specific attributes (--mattr=help for details)">;
 
 def no_show_raw_insn : Flag<["--"], "no-show-raw-insn">,
   HelpText<"When disassembling instructions, "
-           "do not print the instruction bytes.">,
-  Group<grp_objdump>;
+           "do not print the instruction bytes.">;
 
 def no_leading_addr : Flag<["--"], "no-leading-addr">,
-  HelpText<"Print no leading address">,
-  Group<grp_objdump>;
+  HelpText<"Print no leading address">;
 
 def raw_clang_ast : Flag<["--"], "raw-clang-ast">,
-  HelpText<"Dump the raw binary contents of the clang AST section">,
-  Group<grp_objdump>;
+  HelpText<"Dump the raw binary contents of the clang AST section">;
 
 def reloc : Flag<["--"], "reloc">,
-  HelpText<"Display the relocation entries in the file">,
-  Group<grp_objdump>;
-def : Flag<["-"], "r">, Alias<reloc>, HelpText<"Alias for --reloc">,
-  Group<grp_objdump>;
+  HelpText<"Display the relocation entries in the file">;
+def : Flag<["-"], "r">, Alias<reloc>, HelpText<"Alias for --reloc">;
 
 def print_imm_hex : Flag<["--"], "print-imm-hex">,
-  HelpText<"Use hex format for immediate values">,
-  Group<grp_objdump>;
+  HelpText<"Use hex format for immediate values">;
 
 def no_print_imm_hex : Flag<["--"], "no-print-imm-hex">,
-  HelpText<"Do not use hex format for immediate values (default)">,
-  Group<grp_objdump>;
-def : Flag<["--"], "print-imm-hex=false">, Alias<no_print_imm_hex>,
-  Group<grp_objdump>;
+  HelpText<"Do not use hex format for immediate values (default)">;
+def : Flag<["--"], "print-imm-hex=false">, Alias<no_print_imm_hex>;
 
 def private_headers : Flag<["--"], "private-headers">,
-  HelpText<"Display format specific file headers">,
-  Group<grp_objdump>;
+  HelpText<"Display format specific file headers">;
 def : Flag<["-"], "p">, Alias<private_headers>,
-  HelpText<"Alias for --private-headers">,
-  Group<grp_objdump>;
+  HelpText<"Alias for --private-headers">;
 
 def section_EQ : Joined<["--"], "section=">,
   HelpText<"Operate on the specified sections only. "
-           "With --macho dump segment,section">,
-  Group<grp_objdump>;
-def : Separate<["--"], "section">, Alias<section_EQ>,
-  Group<grp_objdump>;
+           "With --macho dump segment,section">;
+def : Separate<["--"], "section">, Alias<section_EQ>;
 def : JoinedOrSeparate<["-"], "j">, Alias<section_EQ>,
-  HelpText<"Alias for --section">,
-  Group<grp_objdump>;
+  HelpText<"Alias for --section">;
 
 def section_headers : Flag<["--"], "section-headers">,
-  HelpText<"Display summaries of the headers for each section.">,
-  Group<grp_objdump>;
+  HelpText<"Display summaries of the headers for each section.">;
 def : Flag<["--"], "headers">, Alias<section_headers>,
-  HelpText<"Alias for --section-headers">,
-  Group<grp_objdump>;
+  HelpText<"Alias for --section-headers">;
 def : Flag<["-"], "h">, Alias<section_headers>,
-  HelpText<"Alias for --section-headers">,
-  Group<grp_objdump>;
+  HelpText<"Alias for --section-headers">;
 
 def show_lma : Flag<["--"], "show-lma">,
-  HelpText<"Display LMA column when dumping ELF section headers">,
-  Group<grp_objdump>;
+  HelpText<"Display LMA column when dumping ELF section headers">;
 
 def source : Flag<["--"], "source">,
-  HelpText<"Display source inlined with disassembly. Implies disassemble object">,
-  Group<grp_objdump>;
-def : Flag<["-"], "S">, Alias<source>, HelpText<"Alias for --source">,
-  Group<grp_objdump>;
+  HelpText<"Display source inlined with disassembly. Implies disassemble object">;
+def : Flag<["-"], "S">, Alias<source>, HelpText<"Alias for --source">;
 
 def start_address_EQ : Joined<["--"], "start-address=">,
   MetaVarName<"address">,
-  HelpText<"Disassemble beginning at address">,
-  Group<grp_objdump>;
+  HelpText<"Disassemble beginning at address">;
 def stop_address_EQ : Joined<["--"], "stop-address=">,
   MetaVarName<"address">,
-  HelpText<"Stop disassembly at address">,
-  Group<grp_objdump>;
+  HelpText<"Stop disassembly at address">;
 
 def syms : Flag<["--"], "syms">,
-  HelpText<"Display the symbol table">,
-  Group<grp_objdump>;
-def : Flag<["-"], "t">, Alias<syms>, HelpText<"Alias for --syms">,
-  Group<grp_objdump>;
+  HelpText<"Display the symbol table">;
+def : Flag<["-"], "t">, Alias<syms>, HelpText<"Alias for --syms">;
 
 def symbolize_operands : Flag<["--"], "symbolize-operands">,
-  HelpText<"Symbolize instruction operands when disassembling">,
-  Group<grp_objdump>;
+  HelpText<"Symbolize instruction operands when disassembling">;
 
 def dynamic_syms : Flag<["--"], "dynamic-syms">,
-  HelpText<"Display the contents of the dynamic symbol table">,
-  Group<grp_objdump>;
+  HelpText<"Display the contents of the dynamic symbol table">;
 def : Flag<["-"], "T">, Alias<dynamic_syms>,
-  HelpText<"Alias for --dynamic-syms">,
-  Group<grp_objdump>;
+  HelpText<"Alias for --dynamic-syms">;
 
 def triple_EQ : Joined<["--"], "triple=">,
   HelpText<"Target triple to disassemble for, "
-            "see --version for available targets">,
-  Group<grp_objdump>;
+            "see --version for available targets">;
 def : Separate<["--"], "triple">,
-  Alias<triple_EQ>,
-  Group<grp_objdump>;
+  Alias<triple_EQ>;
 
 def unwind_info : Flag<["--"], "unwind-info">,
-  HelpText<"Display unwind information">,
-  Group<grp_objdump>;
+  HelpText<"Display unwind information">;
 def : Flag<["-"], "u">, Alias<unwind_info>,
-  HelpText<"Alias for --unwind-info">,
-  Group<grp_objdump>;
+  HelpText<"Alias for --unwind-info">;
 
 def wide : Flag<["--"], "wide">,
-  HelpText<"Ignored for compatibility with GNU objdump">,
-  Group<grp_objdump>;
-def : Flag<["-"], "w">, Alias<wide>,
-  Group<grp_objdump>;
+  HelpText<"Ignored for compatibility with GNU objdump">;
+def : Flag<["-"], "w">, Alias<wide>;
 
 def prefix : Separate<["--"], "prefix">,
-  HelpText<"Add prefix to absolute paths">,
-  Group<grp_objdump>;
+  HelpText<"Add prefix to absolute paths">;
 
 def prefix_strip : Separate<["--"], "prefix-strip">,
   HelpText<"Strip out initial directories from absolute "
-           "paths. No effect without --prefix">,
-  Group<grp_objdump>;
+           "paths. No effect without --prefix">;
 
 def debug_vars_EQ : Joined<["--"], "debug-vars=">,
-  Values<"unicode,ascii">,
-  Group<grp_objdump>;
+  Values<"unicode,ascii">;
 def : Flag<["--"], "debug-vars">,
   HelpText<"Print the locations (in registers or memory) of "
            "source-level variables alongside disassembly">,
-  Alias<debug_vars_EQ>, AliasArgs<["unicode"]>,
-  Group<grp_objdump>;
+  Alias<debug_vars_EQ>, AliasArgs<["unicode"]>;
 
 def debug_vars_indent_EQ : Joined<["--"], "debug-vars-indent=">,
   HelpText<"Distance to indent the source-level variable display, "
-           "relative to the start of the disassembly">,
-  Group<grp_objdump>;
+           "relative to the start of the disassembly">;
 
 def x86_asm_syntax_att : Flag<["--"], "x86-asm-syntax=att">,
-  HelpText<"Emit AT&T-style disassembly">,
-  Group<grp_objdump>;
+  HelpText<"Emit AT&T-style disassembly">;
 
 def x86_asm_syntax_intel : Flag<["--"], "x86-asm-syntax=intel">,
-  HelpText<"Emit Intel-style disassembly">,
-  Group<grp_objdump>;
-
-def mhvx : Flag<["--"], "mhvx">, HelpText<"Enable Hexagon Vector eXtensions">,
-  Group<grp_objdump>;
-
-def mhvx_v66 : Flag<["--"], "mhvx=v66">,
-  Group<grp_objdump>;
-
-def mv60 : Flag<["--"], "mv60">, HelpText<"Build for Hexagon V60">,
-  Group<grp_objdump>;
-
-def mv65 : Flag<["--"], "mv65">, HelpText<"Build for Hexagon V65">,
-  Group<grp_objdump>;
-
-def mv66 : Flag<["--"], "mv66">, HelpText<"Build for Hexagon V66">,
-  Group<grp_objdump>;
-
-def mv67 : Flag<["--"], "mv67">, HelpText<"Build for Hexagon V67">,
-  Group<grp_objdump>;
-
-def mv67t : Flag<["--"], "mv67t">, HelpText<"Build for Hexagon V67T">,
-  Group<grp_objdump>;
-
-def riscv_no_aliases : Flag<["--"], "riscv-no-aliases">,
-  HelpText<"Disable the emission of assembler pseudo instructions">,
-  Group<grp_objdump>;
+  HelpText<"Emit Intel-style disassembly">;
 
 
 def grp_mach_o : OptionGroup<"kind">, HelpText<"llvm-objdump MachO Specific Options">;

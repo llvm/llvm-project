@@ -17,7 +17,7 @@ from lldbsuite.support import seven
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbdwarf import *
-from lldbsuite.test import lldbutil
+from lldbsuite.test import lldbutil, lldbplatformutil
 
 
 class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcodeParser):
@@ -973,6 +973,25 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         supported_dict = self.get_qSupported_dict()
         self.assertIsNotNone(supported_dict)
         self.assertTrue(len(supported_dict) > 0)
+
+    def test_qSupported_auvx(self):
+        expected = ('+' if lldbplatformutil.getPlatform()
+                    in ["freebsd", "linux", "netbsd"] else '-')
+        supported_dict = self.get_qSupported_dict()
+        self.assertEqual(supported_dict.get('qXfer:auxv:read', '-'), expected)
+
+    def test_qSupported_libraries_svr4(self):
+        expected = ('+' if lldbplatformutil.getPlatform()
+                    in ["freebsd", "linux", "netbsd"] else '-')
+        supported_dict = self.get_qSupported_dict()
+        self.assertEqual(supported_dict.get('qXfer:libraries-svr4:read', '-'),
+                         expected)
+
+    def test_qSupported_QPassSignals(self):
+        expected = ('+' if lldbplatformutil.getPlatform()
+                    in ["freebsd", "linux", "netbsd"] else '-')
+        supported_dict = self.get_qSupported_dict()
+        self.assertEqual(supported_dict.get('QPassSignals', '-'), expected)
 
     @add_test_categories(["fork"])
     def test_qSupported_fork_events(self):

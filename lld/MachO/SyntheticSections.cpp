@@ -71,22 +71,8 @@ void MachHeaderSection::addLoadCommand(LoadCommand *lc) {
   sizeOfCmds += lc->getSize();
 }
 
-// This serves to hide (type-erase) the template parameter from
-// MachHeaderSection.
-template <class LP> class MachHeaderSectionImpl : public MachHeaderSection {
-public:
-  MachHeaderSectionImpl() = default;
-  uint64_t getSize() const override;
-  void writeTo(uint8_t *buf) const override;
-};
-
-template <class LP> MachHeaderSection *macho::makeMachHeaderSection() {
-  return make<MachHeaderSectionImpl<LP>>();
-}
-
-template <class LP> uint64_t MachHeaderSectionImpl<LP>::getSize() const {
-  uint64_t size =
-      sizeof(typename LP::mach_header) + sizeOfCmds + config->headerPad;
+uint64_t MachHeaderSection::getSize() const {
+  uint64_t size = target->headerSize + sizeOfCmds + config->headerPad;
   // If we are emitting an encryptable binary, our load commands must have a
   // separate (non-encrypted) page to themselves.
   if (config->emitEncryptionInfo)
@@ -106,10 +92,9 @@ static uint32_t cpuSubtype() {
   return subtype;
 }
 
-template <class LP>
-void MachHeaderSectionImpl<LP>::writeTo(uint8_t *buf) const {
-  auto *hdr = reinterpret_cast<typename LP::mach_header *>(buf);
-  hdr->magic = LP::magic;
+void MachHeaderSection::writeTo(uint8_t *buf) const {
+  auto *hdr = reinterpret_cast<mach_header *>(buf);
+  hdr->magic = target->magic;
   hdr->cputype = target->cpuType;
   hdr->cpusubtype = cpuSubtype();
   hdr->filetype = config->outputType;
@@ -144,7 +129,7 @@ void MachHeaderSectionImpl<LP>::writeTo(uint8_t *buf) const {
     }
   }
 
-  uint8_t *p = reinterpret_cast<uint8_t *>(hdr + 1);
+  uint8_t *p = reinterpret_cast<uint8_t *>(hdr) + target->headerSize;
   for (const LoadCommand *lc : loadCommands) {
     lc->writeTo(p);
     p += lc->getSize();
@@ -420,7 +405,7 @@ void WeakBindingSection::writeTo(uint8_t *buf) const {
 }
 
 StubsSection::StubsSection()
-    : SyntheticSection(segment_names::text, "__stubs") {
+    : SyntheticSection(segment_names::text, section_names::stubs) {
   flags = S_SYMBOL_STUBS | S_ATTR_SOME_INSTRUCTIONS | S_ATTR_PURE_INSTRUCTIONS;
   // The stubs section comprises machine instructions, which are aligned to
   // 4 bytes on the archs we care about.
@@ -448,7 +433,7 @@ bool StubsSection::addEntry(Symbol *sym) {
 }
 
 StubHelperSection::StubHelperSection()
-    : SyntheticSection(segment_names::text, "__stub_helper") {
+    : SyntheticSection(segment_names::text, section_names::stubHelper) {
   flags = S_ATTR_SOME_INSTRUCTIONS | S_ATTR_PURE_INSTRUCTIONS;
   align = 4; // This section comprises machine instructions
 }
@@ -483,12 +468,13 @@ void StubHelperSection::setup() {
   dyldPrivate =
       make<Defined>("__dyld_private", nullptr, in.imageLoaderCache, 0, 0,
                     /*isWeakDef=*/false,
-                    /*isExternal=*/false, /*isPrivateExtern=*/false);
+                    /*isExternal=*/false, /*isPrivateExtern=*/false,
+                    /*isThumb=*/false);
 }
 
 ImageLoaderCacheSection::ImageLoaderCacheSection() {
   segname = segment_names::data;
-  name = "__data";
+  name = section_names::data;
   uint8_t *arr = bAlloc.Allocate<uint8_t>(target->wordSize);
   memset(arr, 0, target->wordSize);
   data = {arr, target->wordSize};
@@ -496,7 +482,7 @@ ImageLoaderCacheSection::ImageLoaderCacheSection() {
 }
 
 LazyPointerSection::LazyPointerSection()
-    : SyntheticSection(segment_names::data, "__la_symbol_ptr") {
+    : SyntheticSection(segment_names::data, section_names::lazySymbolPtr) {
   align = target->wordSize;
   flags = S_LAZY_SYMBOL_POINTERS;
 }
@@ -865,6 +851,7 @@ template <class LP> void SymtabSectionImpl<LP>::writeTo(uint8_t *buf) const {
         // For the N_SECT symbol type, n_value is the address of the symbol
         nList->n_value = defined->getVA();
       }
+      nList->n_desc |= defined->thumb ? N_ARM_THUMB_DEF : 0;
       nList->n_desc |= defined->isExternalWeakDef() ? N_WEAK_DEF : 0;
     } else if (auto *dysym = dyn_cast<DylibSymbol>(entry.sym)) {
       uint16_t n_desc = nList->n_desc;
@@ -1152,7 +1139,5 @@ void macho::createSyntheticSymbols() {
   addHeaderSymbol("___dso_handle");
 }
 
-template MachHeaderSection *macho::makeMachHeaderSection<LP64>();
-template MachHeaderSection *macho::makeMachHeaderSection<ILP32>();
 template SymtabSection *macho::makeSymtabSection<LP64>(StringTableSection &);
 template SymtabSection *macho::makeSymtabSection<ILP32>(StringTableSection &);

@@ -28,8 +28,8 @@ using std::string;
 # error "please define ASAN_HAS_EXCEPTIONS"
 #endif
 
-#ifndef ASAN_HAS_BLACKLIST
-# error "please define ASAN_HAS_BLACKLIST"
+#ifndef ASAN_HAS_IGNORELIST
+# error "please define ASAN_HAS_IGNORELIST"
 #endif
 
 #ifndef ASAN_NEEDS_SEGV

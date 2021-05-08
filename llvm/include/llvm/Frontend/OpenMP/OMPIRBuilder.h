@@ -104,6 +104,14 @@ public:
       function_ref<void(InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
                         BasicBlock &ContinuationBB)>;
 
+  // This is created primarily for sections construct as llvm::function_ref
+  // (BodyGenCallbackTy) is not storable (as described in the comments of
+  // function_ref class - function_ref contains non-ownable reference
+  // to the callable.
+  using StorableBodyGenCallbackTy =
+      std::function<void(InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                         BasicBlock &ContinuationBB)>;
+
   /// Callback type for loop body code generation.
   ///
   /// \param CodeGenIP is the insertion point where the loop's body code must be
@@ -615,6 +623,15 @@ public:
   /// variables.
   StringMap<AssertingVH<Constant>, BumpPtrAllocator> InternalVars;
 
+  /// Create the global variable holding the offload mappings information.
+  GlobalVariable *createOffloadMaptypes(SmallVectorImpl<uint64_t> &Mappings,
+                                        std::string VarName);
+
+  /// Create the global variable holding the offload names information.
+  GlobalVariable *
+  createOffloadMapnames(SmallVectorImpl<llvm::Constant *> &Names,
+                        std::string VarName);
+
 public:
   /// Generator for __kmpc_copyprivate
   ///
@@ -677,6 +694,34 @@ public:
                                BodyGenCallbackTy BodyGenCB,
                                FinalizeCallbackTy FiniCB,
                                StringRef CriticalName, Value *HintInst);
+
+  /// Generator for '#omp sections'
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param AllocaIP The insertion points to be used for alloca instructions.
+  /// \param SectionCBs Callbacks that will generate body of each section.
+  /// \param PrivCB Callback to copy a given variable (think copy constructor).
+  /// \param FiniCB Callback to finalize variable copies.
+  /// \param IsCancellable Flag to indicate a cancellable parallel region.
+  /// \param IsNowait If true, barrier - to ensure all sections are executed
+  /// before moving forward will not be generated.
+  /// \returns The insertion position *after* the sections.
+  InsertPointTy createSections(const LocationDescription &Loc,
+                               InsertPointTy AllocaIP,
+                               ArrayRef<StorableBodyGenCallbackTy> SectionCBs,
+                               PrivatizeCallbackTy PrivCB,
+                               FinalizeCallbackTy FiniCB, bool IsCancellable,
+                               bool IsNowait);
+
+  /// Generator for '#omp section'
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param BodyGenCB Callback that will generate the region body code.
+  /// \param FiniCB Callback to finalize variable copies.
+  /// \returns The insertion position *after* the section.
+  InsertPointTy createSection(const LocationDescription &Loc,
+                              BodyGenCallbackTy BodyGenCB,
+                              FinalizeCallbackTy FiniCB);
 
   /// Generate conditional branch and relevant BasicBlocks through which private
   /// threads copy the 'copyin' variables from Master copy to threadprivate
@@ -797,16 +842,17 @@ private:
   ///        to evaluate a conditional of whether a thread will execute
   ///        body code or not.
   /// \param HasFinalize indicate if the directive will require finalization
-  ///         and has a finalization callback in the stack that
-  /// should        be called.
-  ///
+  ///        and has a finalization callback in the stack that
+  ///        should be called.
+  /// \param IsCancellable if HasFinalize is set to true, indicate if the
+  ///        the directive should be cancellable.
   /// \return The insertion point after the region
 
   InsertPointTy
   EmitOMPInlinedRegion(omp::Directive OMPD, Instruction *EntryCall,
                        Instruction *ExitCall, BodyGenCallbackTy BodyGenCB,
                        FinalizeCallbackTy FiniCB, bool Conditional = false,
-                       bool HasFinalize = true);
+                       bool HasFinalize = true, bool IsCancellable = false);
 
   /// Get the platform-specific name separator.
   /// \param Parts different parts of the final name that needs separation

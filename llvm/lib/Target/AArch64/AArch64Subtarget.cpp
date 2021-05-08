@@ -89,9 +89,8 @@ void AArch64Subtarget::initializeProperties() {
   case CortexA35:
     break;
   case CortexA53:
-    PrefFunctionLogAlignment = 3;
-    break;
   case CortexA55:
+    PrefFunctionLogAlignment = 4;
     break;
   case CortexA57:
     MaxInterleaveFactor = 4;

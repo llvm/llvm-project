@@ -8548,7 +8548,8 @@ SDValue TargetLowering::expandFP_TO_INT_SAT(SDNode *Node,
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Node->getValueType(0);
 
-  unsigned SatWidth = Node->getConstantOperandVal(1);
+  EVT SatVT = cast<VTSDNode>(Node->getOperand(1))->getVT();
+  unsigned SatWidth = SatVT.getScalarSizeInBits();
   unsigned DstWidth = DstVT.getScalarSizeInBits();
   assert(SatWidth <= DstWidth &&
          "Expected saturation width smaller than result width");

@@ -81,7 +81,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfig.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/AddMLIR.cmake
-    ${CMAKE_CURRENT_SOURCE_DIR}/AddMLIRPythonExtension.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/AddMLIRPython.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/MLIRDetectPythonEnv.cmake
     DESTINATION ${MLIR_INSTALL_PACKAGE_DIR}
     COMPONENT mlir-cmake-exports)

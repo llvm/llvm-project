@@ -459,10 +459,10 @@ define i64 @vreduce_add_v1i64(<1 x i64>* %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a1, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vle64.v v25, (a0)
+; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    vsrl.vx v26, v25, a0
+; RV32-NEXT:    vmv.x.s a1, v26
 ; RV32-NEXT:    vmv.x.s a0, v25
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsrl.vx v25, v25, a1
-; RV32-NEXT:    vmv.x.s a1, v25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_add_v1i64:
@@ -1165,10 +1165,10 @@ define i64 @vreduce_and_v1i64(<1 x i64>* %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a1, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vle64.v v25, (a0)
+; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    vsrl.vx v26, v25, a0
+; RV32-NEXT:    vmv.x.s a1, v26
 ; RV32-NEXT:    vmv.x.s a0, v25
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsrl.vx v25, v25, a1
-; RV32-NEXT:    vmv.x.s a1, v25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_and_v1i64:
@@ -1871,10 +1871,10 @@ define i64 @vreduce_or_v1i64(<1 x i64>* %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a1, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vle64.v v25, (a0)
+; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    vsrl.vx v26, v25, a0
+; RV32-NEXT:    vmv.x.s a1, v26
 ; RV32-NEXT:    vmv.x.s a0, v25
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsrl.vx v25, v25, a1
-; RV32-NEXT:    vmv.x.s a1, v25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_or_v1i64:
@@ -2577,10 +2577,10 @@ define i64 @vreduce_xor_v1i64(<1 x i64>* %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a1, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vle64.v v25, (a0)
+; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    vsrl.vx v26, v25, a0
+; RV32-NEXT:    vmv.x.s a1, v26
 ; RV32-NEXT:    vmv.x.s a0, v25
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsrl.vx v25, v25, a1
-; RV32-NEXT:    vmv.x.s a1, v25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_xor_v1i64:
@@ -3505,10 +3505,10 @@ define i64 @vreduce_smin_v1i64(<1 x i64>* %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a1, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vle64.v v25, (a0)
+; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    vsrl.vx v26, v25, a0
+; RV32-NEXT:    vmv.x.s a1, v26
 ; RV32-NEXT:    vmv.x.s a0, v25
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsrl.vx v25, v25, a1
-; RV32-NEXT:    vmv.x.s a1, v25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_smin_v1i64:
@@ -3527,24 +3527,26 @@ declare i64 @llvm.vector.reduce.smin.v2i64(<2 x i64>)
 define i64 @vreduce_smin_v2i64(<2 x i64>* %x) {
 ; RV32-LABEL: vreduce_smin_v2i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; RV32-NEXT:    vle64.v v25, (a0)
-; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
-; RV32-NEXT:    vmv.v.i v26, -1
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsll.vx v26, v26, a1
-; RV32-NEXT:    vsrl.vx v26, v26, a1
+; RV32-NEXT:    addi a0, zero, -1
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    lui a0, 524288
 ; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    vmv.v.x v27, a0
-; RV32-NEXT:    vsll.vx v27, v27, a1
-; RV32-NEXT:    vor.vv v26, v26, v27
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v26, (a0), zero
 ; RV32-NEXT:    vsetivli a0, 2, e64,m1,ta,mu
 ; RV32-NEXT:    vredmin.vs v25, v25, v26
 ; RV32-NEXT:    vmv.x.s a0, v25
+; RV32-NEXT:    addi a1, zero, 32
 ; RV32-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vsrl.vx v25, v25, a1
 ; RV32-NEXT:    vmv.x.s a1, v25
+; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_smin_v2i64:
@@ -3569,25 +3571,27 @@ declare i64 @llvm.vector.reduce.smin.v4i64(<4 x i64>)
 define i64 @vreduce_smin_v4i64(<4 x i64>* %x) {
 ; RV32-LABEL: vreduce_smin_v4i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli a1, 4, e64,m2,ta,mu
 ; RV32-NEXT:    vle64.v v26, (a0)
-; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
-; RV32-NEXT:    vmv.v.i v25, -1
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsll.vx v25, v25, a1
-; RV32-NEXT:    vsrl.vx v25, v25, a1
+; RV32-NEXT:    addi a0, zero, -1
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    lui a0, 524288
 ; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    vmv.v.x v28, a0
-; RV32-NEXT:    vsll.vx v28, v28, a1
-; RV32-NEXT:    vor.vv v25, v25, v28
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v25, (a0), zero
 ; RV32-NEXT:    vsetivli a0, 4, e64,m2,ta,mu
 ; RV32-NEXT:    vredmin.vs v25, v26, v25
 ; RV32-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v25
+; RV32-NEXT:    addi a1, zero, 32
 ; RV32-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vsrl.vx v25, v25, a1
 ; RV32-NEXT:    vmv.x.s a1, v25
+; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_smin_v4i64:
@@ -3613,25 +3617,27 @@ declare i64 @llvm.vector.reduce.smin.v8i64(<8 x i64>)
 define i64 @vreduce_smin_v8i64(<8 x i64>* %x) {
 ; RV32-LABEL: vreduce_smin_v8i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli a1, 8, e64,m4,ta,mu
 ; RV32-NEXT:    vle64.v v28, (a0)
-; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
-; RV32-NEXT:    vmv.v.i v25, -1
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsll.vx v25, v25, a1
-; RV32-NEXT:    vsrl.vx v25, v25, a1
+; RV32-NEXT:    addi a0, zero, -1
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    lui a0, 524288
 ; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    vmv.v.x v26, a0
-; RV32-NEXT:    vsll.vx v26, v26, a1
-; RV32-NEXT:    vor.vv v25, v25, v26
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v25, (a0), zero
 ; RV32-NEXT:    vsetivli a0, 8, e64,m4,ta,mu
 ; RV32-NEXT:    vredmin.vs v25, v28, v25
 ; RV32-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v25
+; RV32-NEXT:    addi a1, zero, 32
 ; RV32-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vsrl.vx v25, v25, a1
 ; RV32-NEXT:    vmv.x.s a1, v25
+; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_smin_v8i64:
@@ -3657,25 +3663,27 @@ declare i64 @llvm.vector.reduce.smin.v16i64(<16 x i64>)
 define i64 @vreduce_smin_v16i64(<16 x i64>* %x) {
 ; RV32-LABEL: vreduce_smin_v16i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli a1, 16, e64,m8,ta,mu
 ; RV32-NEXT:    vle64.v v8, (a0)
-; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
-; RV32-NEXT:    vmv.v.i v25, -1
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsll.vx v25, v25, a1
-; RV32-NEXT:    vsrl.vx v25, v25, a1
+; RV32-NEXT:    addi a0, zero, -1
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    lui a0, 524288
 ; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    vmv.v.x v26, a0
-; RV32-NEXT:    vsll.vx v26, v26, a1
-; RV32-NEXT:    vor.vv v25, v25, v26
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v25, (a0), zero
 ; RV32-NEXT:    vsetivli a0, 16, e64,m8,ta,mu
 ; RV32-NEXT:    vredmin.vs v25, v8, v25
 ; RV32-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v25
+; RV32-NEXT:    addi a1, zero, 32
 ; RV32-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vsrl.vx v25, v25, a1
 ; RV32-NEXT:    vmv.x.s a1, v25
+; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_smin_v16i64:
@@ -3701,28 +3709,30 @@ declare i64 @llvm.vector.reduce.smin.v32i64(<32 x i64>)
 define i64 @vreduce_smin_v32i64(<32 x i64>* %x) {
 ; RV32-LABEL: vreduce_smin_v32i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli a1, 16, e64,m8,ta,mu
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    addi a0, a0, 128
 ; RV32-NEXT:    vle64.v v16, (a0)
-; RV32-NEXT:    vmin.vv v8, v8, v16
-; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
-; RV32-NEXT:    vmv.v.i v25, -1
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsll.vx v25, v25, a1
-; RV32-NEXT:    vsrl.vx v25, v25, a1
+; RV32-NEXT:    addi a0, zero, -1
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    lui a0, 524288
 ; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    vmv.v.x v26, a0
-; RV32-NEXT:    vsll.vx v26, v26, a1
-; RV32-NEXT:    vor.vv v25, v25, v26
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    vmin.vv v8, v8, v16
+; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v25, (a0), zero
 ; RV32-NEXT:    vsetivli a0, 16, e64,m8,ta,mu
 ; RV32-NEXT:    vredmin.vs v25, v8, v25
 ; RV32-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v25
+; RV32-NEXT:    addi a1, zero, 32
 ; RV32-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vsrl.vx v25, v25, a1
 ; RV32-NEXT:    vmv.x.s a1, v25
+; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_smin_v32i64:
@@ -3751,34 +3761,35 @@ declare i64 @llvm.vector.reduce.smin.v64i64(<64 x i64>)
 define i64 @vreduce_smin_v64i64(<64 x i64>* %x) nounwind {
 ; RV32-LABEL: vreduce_smin_v64i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    vsetivli a1, 16, e64,m8,ta,mu
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    addi a1, a0, 256
-; RV32-NEXT:    addi a2, a0, 384
-; RV32-NEXT:    vle64.v v16, (a2)
+; RV32-NEXT:    vle64.v v16, (a1)
+; RV32-NEXT:    addi a1, a0, 384
+; RV32-NEXT:    vle64.v v24, (a1)
 ; RV32-NEXT:    addi a0, a0, 128
-; RV32-NEXT:    vle64.v v24, (a0)
-; RV32-NEXT:    vle64.v v0, (a1)
-; RV32-NEXT:    vmin.vv v16, v24, v16
-; RV32-NEXT:    vmin.vv v8, v8, v0
-; RV32-NEXT:    vmin.vv v8, v8, v16
-; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
-; RV32-NEXT:    vmv.v.i v25, -1
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsll.vx v25, v25, a1
-; RV32-NEXT:    vsrl.vx v25, v25, a1
+; RV32-NEXT:    vle64.v v0, (a0)
+; RV32-NEXT:    addi a0, zero, -1
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    lui a0, 524288
 ; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    vmv.v.x v26, a0
-; RV32-NEXT:    vsll.vx v26, v26, a1
-; RV32-NEXT:    vor.vv v25, v25, v26
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    vmin.vv v24, v0, v24
+; RV32-NEXT:    vmin.vv v8, v8, v16
+; RV32-NEXT:    vmin.vv v8, v8, v24
+; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v25, (a0), zero
 ; RV32-NEXT:    vsetivli a0, 16, e64,m8,ta,mu
 ; RV32-NEXT:    vredmin.vs v25, v8, v25
 ; RV32-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v25
+; RV32-NEXT:    addi a1, zero, 32
 ; RV32-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vsrl.vx v25, v25, a1
 ; RV32-NEXT:    vmv.x.s a1, v25
+; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_smin_v64i64:
@@ -4286,10 +4297,10 @@ define i64 @vreduce_smax_v1i64(<1 x i64>* %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a1, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vle64.v v25, (a0)
+; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    vsrl.vx v26, v25, a0
+; RV32-NEXT:    vmv.x.s a1, v26
 ; RV32-NEXT:    vmv.x.s a0, v25
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsrl.vx v25, v25, a1
-; RV32-NEXT:    vmv.x.s a1, v25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_smax_v1i64:
@@ -4308,23 +4319,24 @@ declare i64 @llvm.vector.reduce.smax.v2i64(<2 x i64>)
 define i64 @vreduce_smax_v2i64(<2 x i64>* %x) {
 ; RV32-LABEL: vreduce_smax_v2i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; RV32-NEXT:    vle64.v v25, (a0)
 ; RV32-NEXT:    lui a0, 524288
-; RV32-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
-; RV32-NEXT:    vmv.v.x v26, a0
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsll.vx v26, v26, a1
-; RV32-NEXT:    vmv.v.i v27, 0
-; RV32-NEXT:    vsll.vx v27, v27, a1
-; RV32-NEXT:    vsrl.vx v27, v27, a1
-; RV32-NEXT:    vor.vv v26, v27, v26
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    sw zero, 8(sp)
+; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v26, (a0), zero
 ; RV32-NEXT:    vsetivli a0, 2, e64,m1,ta,mu
 ; RV32-NEXT:    vredmax.vs v25, v25, v26
 ; RV32-NEXT:    vmv.x.s a0, v25
+; RV32-NEXT:    addi a1, zero, 32
 ; RV32-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vsrl.vx v25, v25, a1
 ; RV32-NEXT:    vmv.x.s a1, v25
+; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_smax_v2i64:
@@ -4349,24 +4361,25 @@ declare i64 @llvm.vector.reduce.smax.v4i64(<4 x i64>)
 define i64 @vreduce_smax_v4i64(<4 x i64>* %x) {
 ; RV32-LABEL: vreduce_smax_v4i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli a1, 4, e64,m2,ta,mu
 ; RV32-NEXT:    vle64.v v26, (a0)
 ; RV32-NEXT:    lui a0, 524288
-; RV32-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
-; RV32-NEXT:    vmv.v.x v25, a0
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsll.vx v25, v25, a1
-; RV32-NEXT:    vmv.v.i v28, 0
-; RV32-NEXT:    vsll.vx v28, v28, a1
-; RV32-NEXT:    vsrl.vx v28, v28, a1
-; RV32-NEXT:    vor.vv v25, v28, v25
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    sw zero, 8(sp)
+; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v25, (a0), zero
 ; RV32-NEXT:    vsetivli a0, 4, e64,m2,ta,mu
 ; RV32-NEXT:    vredmax.vs v25, v26, v25
 ; RV32-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v25
+; RV32-NEXT:    addi a1, zero, 32
 ; RV32-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vsrl.vx v25, v25, a1
 ; RV32-NEXT:    vmv.x.s a1, v25
+; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_smax_v4i64:
@@ -4392,24 +4405,25 @@ declare i64 @llvm.vector.reduce.smax.v8i64(<8 x i64>)
 define i64 @vreduce_smax_v8i64(<8 x i64>* %x) {
 ; RV32-LABEL: vreduce_smax_v8i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli a1, 8, e64,m4,ta,mu
 ; RV32-NEXT:    vle64.v v28, (a0)
 ; RV32-NEXT:    lui a0, 524288
-; RV32-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
-; RV32-NEXT:    vmv.v.x v25, a0
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsll.vx v25, v25, a1
-; RV32-NEXT:    vmv.v.i v26, 0
-; RV32-NEXT:    vsll.vx v26, v26, a1
-; RV32-NEXT:    vsrl.vx v26, v26, a1
-; RV32-NEXT:    vor.vv v25, v26, v25
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    sw zero, 8(sp)
+; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v25, (a0), zero
 ; RV32-NEXT:    vsetivli a0, 8, e64,m4,ta,mu
 ; RV32-NEXT:    vredmax.vs v25, v28, v25
 ; RV32-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v25
+; RV32-NEXT:    addi a1, zero, 32
 ; RV32-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vsrl.vx v25, v25, a1
 ; RV32-NEXT:    vmv.x.s a1, v25
+; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_smax_v8i64:
@@ -4435,24 +4449,25 @@ declare i64 @llvm.vector.reduce.smax.v16i64(<16 x i64>)
 define i64 @vreduce_smax_v16i64(<16 x i64>* %x) {
 ; RV32-LABEL: vreduce_smax_v16i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli a1, 16, e64,m8,ta,mu
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    lui a0, 524288
-; RV32-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
-; RV32-NEXT:    vmv.v.x v25, a0
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsll.vx v25, v25, a1
-; RV32-NEXT:    vmv.v.i v26, 0
-; RV32-NEXT:    vsll.vx v26, v26, a1
-; RV32-NEXT:    vsrl.vx v26, v26, a1
-; RV32-NEXT:    vor.vv v25, v26, v25
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    sw zero, 8(sp)
+; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v25, (a0), zero
 ; RV32-NEXT:    vsetivli a0, 16, e64,m8,ta,mu
 ; RV32-NEXT:    vredmax.vs v25, v8, v25
 ; RV32-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v25
+; RV32-NEXT:    addi a1, zero, 32
 ; RV32-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vsrl.vx v25, v25, a1
 ; RV32-NEXT:    vmv.x.s a1, v25
+; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_smax_v16i64:
@@ -4478,27 +4493,28 @@ declare i64 @llvm.vector.reduce.smax.v32i64(<32 x i64>)
 define i64 @vreduce_smax_v32i64(<32 x i64>* %x) {
 ; RV32-LABEL: vreduce_smax_v32i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    vsetivli a1, 16, e64,m8,ta,mu
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    addi a0, a0, 128
 ; RV32-NEXT:    vle64.v v16, (a0)
-; RV32-NEXT:    vmax.vv v8, v8, v16
 ; RV32-NEXT:    lui a0, 524288
-; RV32-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
-; RV32-NEXT:    vmv.v.x v25, a0
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsll.vx v25, v25, a1
-; RV32-NEXT:    vmv.v.i v26, 0
-; RV32-NEXT:    vsll.vx v26, v26, a1
-; RV32-NEXT:    vsrl.vx v26, v26, a1
-; RV32-NEXT:    vor.vv v25, v26, v25
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    sw zero, 8(sp)
+; RV32-NEXT:    vmax.vv v8, v8, v16
+; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v25, (a0), zero
 ; RV32-NEXT:    vsetivli a0, 16, e64,m8,ta,mu
 ; RV32-NEXT:    vredmax.vs v25, v8, v25
 ; RV32-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v25
+; RV32-NEXT:    addi a1, zero, 32
 ; RV32-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vsrl.vx v25, v25, a1
 ; RV32-NEXT:    vmv.x.s a1, v25
+; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_smax_v32i64:
@@ -4527,33 +4543,33 @@ declare i64 @llvm.vector.reduce.smax.v64i64(<64 x i64>)
 define i64 @vreduce_smax_v64i64(<64 x i64>* %x) nounwind {
 ; RV32-LABEL: vreduce_smax_v64i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    vsetivli a1, 16, e64,m8,ta,mu
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    addi a1, a0, 256
-; RV32-NEXT:    addi a2, a0, 384
-; RV32-NEXT:    vle64.v v16, (a2)
+; RV32-NEXT:    vle64.v v16, (a1)
+; RV32-NEXT:    addi a1, a0, 384
+; RV32-NEXT:    vle64.v v24, (a1)
 ; RV32-NEXT:    addi a0, a0, 128
-; RV32-NEXT:    vle64.v v24, (a0)
-; RV32-NEXT:    vle64.v v0, (a1)
-; RV32-NEXT:    vmax.vv v16, v24, v16
-; RV32-NEXT:    vmax.vv v8, v8, v0
-; RV32-NEXT:    vmax.vv v8, v8, v16
+; RV32-NEXT:    vle64.v v0, (a0)
 ; RV32-NEXT:    lui a0, 524288
-; RV32-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
-; RV32-NEXT:    vmv.v.x v25, a0
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsll.vx v25, v25, a1
-; RV32-NEXT:    vmv.v.i v26, 0
-; RV32-NEXT:    vsll.vx v26, v26, a1
-; RV32-NEXT:    vsrl.vx v26, v26, a1
-; RV32-NEXT:    vor.vv v25, v26, v25
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    sw zero, 8(sp)
+; RV32-NEXT:    vmax.vv v24, v0, v24
+; RV32-NEXT:    vmax.vv v8, v8, v16
+; RV32-NEXT:    vmax.vv v8, v8, v24
+; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v25, (a0), zero
 ; RV32-NEXT:    vsetivli a0, 16, e64,m8,ta,mu
 ; RV32-NEXT:    vredmax.vs v25, v8, v25
 ; RV32-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v25
+; RV32-NEXT:    addi a1, zero, 32
 ; RV32-NEXT:    vsetivli a2, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vsrl.vx v25, v25, a1
 ; RV32-NEXT:    vmv.x.s a1, v25
+; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_smax_v64i64:
@@ -5040,10 +5056,10 @@ define i64 @vreduce_umin_v1i64(<1 x i64>* %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a1, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vle64.v v25, (a0)
+; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    vsrl.vx v26, v25, a0
+; RV32-NEXT:    vmv.x.s a1, v26
 ; RV32-NEXT:    vmv.x.s a0, v25
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsrl.vx v25, v25, a1
-; RV32-NEXT:    vmv.x.s a1, v25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_umin_v1i64:
@@ -5746,10 +5762,10 @@ define i64 @vreduce_umax_v1i64(<1 x i64>* %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a1, 1, e64,m1,ta,mu
 ; RV32-NEXT:    vle64.v v25, (a0)
+; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    vsrl.vx v26, v25, a0
+; RV32-NEXT:    vmv.x.s a1, v26
 ; RV32-NEXT:    vmv.x.s a0, v25
-; RV32-NEXT:    addi a1, zero, 32
-; RV32-NEXT:    vsrl.vx v25, v25, a1
-; RV32-NEXT:    vmv.x.s a1, v25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_umax_v1i64:

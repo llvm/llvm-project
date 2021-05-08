@@ -216,6 +216,9 @@ STRING_LOCATION_STDPAIR(MethodDecl, getBodyRBrace()),
 STRING_LOCATION_STDPAIR(MethodDecl, getEndLoc()),
 STRING_LOCATION_STDPAIR(MethodDecl, getInnerLocStart()),
 STRING_LOCATION_STDPAIR(MethodDecl, getLocation()),
+STRING_LOCATION_STDPAIR(MethodDecl, getNameInfo().getBeginLoc()),
+STRING_LOCATION_STDPAIR(MethodDecl, getNameInfo().getEndLoc()),
+STRING_LOCATION_STDPAIR(MethodDecl, getNameInfo().getLoc()),
 STRING_LOCATION_STDPAIR(MethodDecl, getOuterLocStart()),
 STRING_LOCATION_STDPAIR(MethodDecl, getQualifierLoc().getBeginLoc()),
 STRING_LOCATION_STDPAIR(MethodDecl, getQualifierLoc().getEndLoc()),
@@ -305,6 +308,7 @@ STRING_LOCATION_STDPAIR(MethodDecl, getTypeSpecStartLoc())
             llvm::makeArrayRef(ExpectedRanges),
       (ArrayRef<std::pair<std::string, SourceRange>>{
 STRING_LOCATION_STDPAIR(MethodDecl, getExceptionSpecSourceRange()),
+STRING_LOCATION_STDPAIR(MethodDecl, getNameInfo().getSourceRange()),
 STRING_LOCATION_STDPAIR(MethodDecl, getParametersSourceRange()),
 STRING_LOCATION_STDPAIR(MethodDecl, getQualifierLoc().getLocalSourceRange()),
 STRING_LOCATION_STDPAIR(MethodDecl, getQualifierLoc().getPrefix().getLocalSourceRange()),
@@ -1395,3 +1399,208 @@ typeof (static_cast<void *>(0)) i;
                       TL, getAs<clang::TypeOfExprTypeLoc>().getParensRange())));
 }
 #endif
+
+TEST(Introspection, SourceLocations_DeclarationNameInfo_Dtor) {
+  if (!NodeIntrospection::hasIntrospectionSupport())
+    return;
+  auto AST =
+      buildASTFromCode(R"cpp(
+class Foo
+{
+  ~Foo() {}
+};
+)cpp",
+                       "foo.cpp", std::make_shared<PCHContainerOperations>());
+  auto &Ctx = AST->getASTContext();
+  auto &TU = *Ctx.getTranslationUnitDecl();
+
+  auto BoundNodes = ast_matchers::match(
+      decl(hasDescendant(cxxDestructorDecl(hasName("~Foo")).bind("dtor"))), TU,
+      Ctx);
+
+  EXPECT_EQ(BoundNodes.size(), 1u);
+
+  const auto *Dtor = BoundNodes[0].getNodeAs<CXXDestructorDecl>("dtor");
+  auto NI = Dtor->getNameInfo();
+  auto Result = NodeIntrospection::GetLocations(NI);
+
+  auto ExpectedLocations =
+      FormatExpected<SourceLocation>(Result.LocationAccessors);
+
+  llvm::sort(ExpectedLocations);
+
+  // clang-format off
+  EXPECT_EQ(
+      llvm::makeArrayRef(ExpectedLocations),
+      (ArrayRef<std::pair<std::string, SourceLocation>>{
+          STRING_LOCATION_STDPAIR((&NI), getBeginLoc()),
+          STRING_LOCATION_STDPAIR((&NI), getEndLoc()),
+          STRING_LOCATION_STDPAIR((&NI), getLoc()),
+          STRING_LOCATION_STDPAIR((&NI),
+getNamedTypeInfo()->getTypeLoc().getAs<clang::TypeSpecTypeLoc>().getNameLoc()),
+          STRING_LOCATION_STDPAIR(
+              (&NI), getNamedTypeInfo()->getTypeLoc().getBeginLoc()),
+          STRING_LOCATION_STDPAIR(
+              (&NI), getNamedTypeInfo()->getTypeLoc().getEndLoc())}));
+  // clang-format on
+
+  auto ExpectedRanges = FormatExpected<SourceRange>(Result.RangeAccessors);
+
+  EXPECT_THAT(
+      ExpectedRanges,
+      UnorderedElementsAre(
+          STRING_LOCATION_PAIR(
+              (&NI), getNamedTypeInfo()->getTypeLoc().getLocalSourceRange()),
+          STRING_LOCATION_PAIR(
+              (&NI), getNamedTypeInfo()->getTypeLoc().getSourceRange()),
+          STRING_LOCATION_PAIR((&NI), getSourceRange())));
+}
+
+TEST(Introspection, SourceLocations_DeclarationNameInfo_CRef) {
+  if (!NodeIntrospection::hasIntrospectionSupport())
+    return;
+
+  auto AST = buildASTFromCodeWithArgs(
+      R"cpp(
+template<typename T>
+struct MyContainer
+{
+    template <typename U>
+    void pushBack();
+};
+
+template<typename T>
+void foo()
+{
+    MyContainer<T> mc;
+    mc.template pushBack<int>();
+}
+)cpp",
+      {"-fno-delayed-template-parsing"}, "foo.cpp", "clang-tool",
+      std::make_shared<PCHContainerOperations>());
+
+  auto &Ctx = AST->getASTContext();
+  auto &TU = *Ctx.getTranslationUnitDecl();
+
+  auto BoundNodes = ast_matchers::match(
+      decl(hasDescendant(cxxDependentScopeMemberExpr(hasMemberName("pushBack")).bind("member"))), TU,
+      Ctx);
+
+  EXPECT_EQ(BoundNodes.size(), 1u);
+
+  const auto *Member = BoundNodes[0].getNodeAs<CXXDependentScopeMemberExpr>("member");
+  auto Result = NodeIntrospection::GetLocations(Member);
+
+  auto ExpectedLocations =
+      FormatExpected<SourceLocation>(Result.LocationAccessors);
+
+  llvm::sort(ExpectedLocations);
+
+  EXPECT_EQ(
+      llvm::makeArrayRef(ExpectedLocations),
+      (ArrayRef<std::pair<std::string, SourceLocation>>{
+    STRING_LOCATION_STDPAIR(Member, getBeginLoc()),
+    STRING_LOCATION_STDPAIR(Member, getEndLoc()),
+    STRING_LOCATION_STDPAIR(Member, getExprLoc()),
+    STRING_LOCATION_STDPAIR(Member, getLAngleLoc()),
+    STRING_LOCATION_STDPAIR(Member, getMemberLoc()),
+    STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getBeginLoc()),
+    STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getEndLoc()),
+    STRING_LOCATION_STDPAIR(Member, getMemberNameInfo().getLoc()),
+    STRING_LOCATION_STDPAIR(Member, getOperatorLoc()),
+    STRING_LOCATION_STDPAIR(Member, getRAngleLoc()),
+    STRING_LOCATION_STDPAIR(Member, getTemplateKeywordLoc())
+        }));
+
+  auto ExpectedRanges = FormatExpected<SourceRange>(Result.RangeAccessors);
+
+  EXPECT_THAT(
+      ExpectedRanges,
+      UnorderedElementsAre(
+          STRING_LOCATION_PAIR(Member, getMemberNameInfo().getSourceRange()),
+          STRING_LOCATION_PAIR(Member, getSourceRange())
+          ));
+}
+
+TEST(Introspection, SourceLocations_DeclarationNameInfo_ConvOp) {
+  if (!NodeIntrospection::hasIntrospectionSupport())
+    return;
+  auto AST =
+      buildASTFromCode(R"cpp(
+class Foo
+{
+  bool operator==(const Foo&) const { return false; }
+};
+)cpp",
+                       "foo.cpp", std::make_shared<PCHContainerOperations>());
+  auto &Ctx = AST->getASTContext();
+  auto &TU = *Ctx.getTranslationUnitDecl();
+
+  auto BoundNodes = ast_matchers::match(
+      decl(hasDescendant(cxxMethodDecl().bind("opeq"))), TU, Ctx);
+
+  EXPECT_EQ(BoundNodes.size(), 1u);
+
+  const auto *Opeq = BoundNodes[0].getNodeAs<CXXMethodDecl>("opeq");
+  auto NI = Opeq->getNameInfo();
+  auto Result = NodeIntrospection::GetLocations(NI);
+
+  auto ExpectedLocations =
+      FormatExpected<SourceLocation>(Result.LocationAccessors);
+
+  llvm::sort(ExpectedLocations);
+
+  EXPECT_EQ(llvm::makeArrayRef(ExpectedLocations),
+            (ArrayRef<std::pair<std::string, SourceLocation>>{
+                STRING_LOCATION_STDPAIR((&NI), getBeginLoc()),
+                STRING_LOCATION_STDPAIR((&NI), getEndLoc()),
+                STRING_LOCATION_STDPAIR((&NI), getLoc())}));
+
+  auto ExpectedRanges = FormatExpected<SourceRange>(Result.RangeAccessors);
+
+  EXPECT_THAT(ExpectedRanges,
+              UnorderedElementsAre(
+                  STRING_LOCATION_PAIR((&NI), getSourceRange()),
+                  STRING_LOCATION_PAIR((&NI), getCXXOperatorNameRange())));
+}
+
+TEST(Introspection, SourceLocations_DeclarationNameInfo_LitOp) {
+  if (!NodeIntrospection::hasIntrospectionSupport())
+    return;
+  auto AST =
+      buildASTFromCode(R"cpp(
+long double operator"" _identity ( long double val )
+{
+    return val;
+}
+)cpp",
+                       "foo.cpp", std::make_shared<PCHContainerOperations>());
+  auto &Ctx = AST->getASTContext();
+  auto &TU = *Ctx.getTranslationUnitDecl();
+
+  auto BoundNodes = ast_matchers::match(
+      decl(hasDescendant(functionDecl().bind("litop"))), TU, Ctx);
+
+  EXPECT_EQ(BoundNodes.size(), 1u);
+
+  const auto *LitOp = BoundNodes[0].getNodeAs<FunctionDecl>("litop");
+  auto NI = LitOp->getNameInfo();
+  auto Result = NodeIntrospection::GetLocations(NI);
+
+  auto ExpectedLocations =
+      FormatExpected<SourceLocation>(Result.LocationAccessors);
+
+  llvm::sort(ExpectedLocations);
+
+  EXPECT_EQ(llvm::makeArrayRef(ExpectedLocations),
+            (ArrayRef<std::pair<std::string, SourceLocation>>{
+                STRING_LOCATION_STDPAIR((&NI), getBeginLoc()),
+                STRING_LOCATION_STDPAIR((&NI), getCXXLiteralOperatorNameLoc()),
+                STRING_LOCATION_STDPAIR((&NI), getEndLoc()),
+                STRING_LOCATION_STDPAIR((&NI), getLoc())}));
+
+  auto ExpectedRanges = FormatExpected<SourceRange>(Result.RangeAccessors);
+
+  EXPECT_THAT(ExpectedRanges, UnorderedElementsAre(STRING_LOCATION_PAIR(
+                                  (&NI), getSourceRange())));
+}

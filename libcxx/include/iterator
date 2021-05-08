@@ -52,7 +52,7 @@ template<class In>
 template<class Out, class T>
   concept indirectly_writable = see below;                // since C++20
 
-// [iterator.concept.winc], concept weakly_­incrementable
+// [iterator.concept.winc], concept weakly_incrementable
 template<class I>
   concept weakly_incrementable = see below;                // since C++20
 
@@ -60,13 +60,36 @@ template<class I>
 template<class I>
   concept incrementable = see below;                       // since C++20
 
-// [iterator.concept.iterator], concept input_­or_­output_­iterator
+// [iterator.concept.iterator], concept input_or_output_iterator
   template<class I>
     concept input_or_output_iterator = see below;          // since C++20
 
-// [iterator.concept.sentinel], concept sentinel_­for
+// [iterator.concept.sentinel], concept sentinel_for
 template<class S, class I>
   concept sentinel_for = see below;                        // since C++20
+
+// [iterator.concept.sizedsentinel], concept sized_sentinel_for
+template<class S, class I>
+  inline constexpr bool disable_sized_sentinel_for = false;
+
+template<class S, class I>
+  concept sized_sentinel_for = see below;
+
+// [iterator.concept.input], concept input_iterator
+template<class I>
+  concept input_iterator = see below;                      // since C++20
+
+// [iterator.concept.forward], concept forward_iterator
+template<class I>
+  concept forward_iterator = see below;                    // since C++20
+
+// [iterator.concept.bidir], concept bidirectional_iterator
+template<class I>
+  concept bidirectional_iterator = see below;              // since C++20
+
+// [iterator.concept.random.access], concept random_access_iterator
+template<class I>
+  concept random_access_iterator = see below;              // since C++20
 
 template<class Category, class T, class Distance = ptrdiff_t,
          class Pointer = T*, class Reference = T&>
@@ -447,13 +470,8 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 */
 
 #include <__config>
-#include <iosfwd> // for forward declarations of vector and string.
+#include <__debug>
 #include <__functional_base>
-#include <type_traits>
-#include <compare>
-#include <concepts> // Mandated by the Standard.
-#include <cstddef>
-#include <initializer_list>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>
@@ -461,9 +479,13 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__iterator/readable_traits.h>
 #include <__memory/addressof.h>
 #include <__memory/pointer_traits.h>
+#include <compare>
+#include <concepts> // Mandated by the Standard.
+#include <cstddef>
+#include <initializer_list>
+#include <iosfwd> // for forward declarations of vector and string
+#include <type_traits>
 #include <version>
-
-#include <__debug>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -516,10 +538,10 @@ template <class _InputIter, class _Distance>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 void advance(_InputIter& __i, _Distance __orig_n)
 {
-    _LIBCPP_ASSERT(__orig_n >= 0 || __is_cpp17_bidirectional_iterator<_InputIter>::value,
-                   "Attempt to advance(it, n) with negative n on a non-bidirectional iterator");
     typedef decltype(_VSTD::__convert_to_integral(__orig_n)) _IntegralSize;
     _IntegralSize __n = __orig_n;
+    _LIBCPP_ASSERT(__n >= 0 || __is_cpp17_bidirectional_iterator<_InputIter>::value,
+                   "Attempt to advance(it, n) with negative n on a non-bidirectional iterator");
     _VSTD::__advance(__i, __n, typename iterator_traits<_InputIter>::iterator_category());
 }
 
@@ -1334,7 +1356,7 @@ public:
         _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
                        "Attempted to dereference a non-dereferenceable iterator");
 #endif
-        return (pointer)_VSTD::addressof(*__i);
+        return _VSTD::__to_address(__i);
     }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG __wrap_iter& operator++() _NOEXCEPT
     {
@@ -1447,11 +1469,6 @@ private:
     _LIBCPP_CONSTEXPR_IF_NODEBUG friend
     __wrap_iter<_Iter1>
     operator+(typename __wrap_iter<_Iter1>::difference_type, __wrap_iter<_Iter1>) _NOEXCEPT;
-
-    template <class _Ip, class _Op> friend _LIBCPP_CONSTEXPR_AFTER_CXX17 _Op copy(_Ip, _Ip, _Op);
-    template <class _B1, class _B2> friend _LIBCPP_CONSTEXPR_AFTER_CXX17 _B2 copy_backward(_B1, _B1, _B2);
-    template <class _Ip, class _Op> friend _LIBCPP_CONSTEXPR_AFTER_CXX17 _Op move(_Ip, _Ip, _Op);
-    template <class _B1, class _B2> friend _LIBCPP_CONSTEXPR_AFTER_CXX17 _B2 move_backward(_B1, _B1, _B2);
 };
 
 #if _LIBCPP_STD_VER <= 17
@@ -1586,23 +1603,6 @@ operator+(typename __wrap_iter<_Iter>::difference_type __n,
     __x += __n;
     return __x;
 }
-
-template <class _Iter>
-struct __libcpp_is_trivial_iterator
-    : public _LIBCPP_BOOL_CONSTANT(is_pointer<_Iter>::value) {};
-
-template <class _Iter>
-struct __libcpp_is_trivial_iterator<move_iterator<_Iter> >
-    : public _LIBCPP_BOOL_CONSTANT(__libcpp_is_trivial_iterator<_Iter>::value) {};
-
-template <class _Iter>
-struct __libcpp_is_trivial_iterator<reverse_iterator<_Iter> >
-    : public _LIBCPP_BOOL_CONSTANT(__libcpp_is_trivial_iterator<_Iter>::value) {};
-
-template <class _Iter>
-struct __libcpp_is_trivial_iterator<__wrap_iter<_Iter> >
-    : public _LIBCPP_BOOL_CONSTANT(__libcpp_is_trivial_iterator<_Iter>::value) {};
-
 
 template <class _Tp, size_t _Np>
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11

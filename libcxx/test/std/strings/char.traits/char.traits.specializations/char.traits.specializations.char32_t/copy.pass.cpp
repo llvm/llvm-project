@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: LIBCXX-DEBUG-FIXME
+
 // <string>
 
 // template<> struct char_traits<char32_t>

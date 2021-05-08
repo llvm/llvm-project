@@ -239,113 +239,137 @@ if (host_os == "mac") {
   }
 }
 
-toolchain("win") {
-  cl = "cl"
-  link = "link"
+template("win_toolchain") {
+  toolchain(target_name) {
+    # https://groups.google.com/a/chromium.org/d/msg/gn-dev/F_lv5T-tNDM
+    forward_variables_from(invoker.toolchain_args, "*")
+    not_needed("*")
 
-  if (clang_base_path != "") {
-    cl = rebase_path(clang_base_path, root_build_dir) + "/bin/clang-cl"
-    if (use_lld) {
-      link = rebase_path(clang_base_path, root_build_dir) + "/bin/lld-link"
+    forward_variables_from(invoker, "*")
+
+    cl = "cl"
+    link = "link"
+
+    if (clang_base_path != "") {
+      cl = rebase_path(clang_base_path, root_build_dir) + "/bin/clang-cl"
+      if (use_lld) {
+        link = rebase_path(clang_base_path, root_build_dir) + "/bin/lld-link"
+      }
+    }
+
+    if (use_goma) {
+      cl = "$goma_dir/gomacc $cl"
+    }
+
+    tool("cc") {
+      command = "$cl /nologo /showIncludes /Fo{{output}} /c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}}"
+      depsformat = "msvc"
+      description = "CC {{output}}"
+      outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.obj" ]
+    }
+
+    tool("cxx") {
+      command = "$cl /nologo /showIncludes /Fo{{output}} /c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}}"
+      depsformat = "msvc"
+      description = "CXX {{output}}"
+      outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.obj" ]
+    }
+
+    tool("alink") {
+      command = "$link /lib /nologo {{arflags}} /out:{{output}} {{inputs}}"
+      description = "LIB {{output}}"
+      outputs = [ "{{output_dir}}/{{target_output_name}}.lib" ]
+      default_output_dir = "{{root_out_dir}}/lib"
+    }
+
+    tool("solink") {
+      outprefix = "{{output_dir}}/{{target_output_name}}"
+      dllfile = "$outprefix{{output_extension}}"
+      libfile = "$outprefix.lib"
+      pdbfile = "$outprefix.pdb"
+      command = "$link /nologo /dll {{ldflags}} /out:$dllfile /implib:$libfile /pdb:$pdbfile {{inputs}} {{libs}} "
+      description = "LINK $dllfile"
+      link_output = libfile
+      depend_output = libfile
+      runtime_outputs = [ dllfile ]
+      outputs = [
+        dllfile,
+        libfile,
+      ]
+      lib_switch = ""
+      default_output_extension = ".dll"
+      restat = true
+
+      # Put dlls next to the executables in bin/ on Windows, since Windows
+      # doesn't have a configurable rpath. This matches initialization of
+      # module_dir to bin/ in AddLLVM.cmake's set_output_directory().
+      default_output_dir = "{{root_out_dir}}/bin"
+    }
+
+    # Plugins for opt and clang and so on don't work in LLVM's Windows build
+    # since the code doesn't have export annotations, but there are a few
+    # standalone loadable modules used for unit-testing LLVM's dynamic library
+    # loading code.
+    tool("solink_module") {
+      outprefix = "{{output_dir}}/{{target_output_name}}"
+      dllfile = "$outprefix{{output_extension}}"
+      pdbfile = "$outprefix.pdb"
+      command = "$link /nologo /dll {{ldflags}} /out:$dllfile /pdb:$pdbfile {{inputs}} {{libs}} "
+      description = "LINK_MODULE $dllfile"
+      outputs = [ dllfile ]
+      lib_switch = ""
+      runtime_outputs = outputs
+      default_output_extension = ".dll"
+
+      # No default_output_dir, all clients set output_dir.
+    }
+
+    tool("link") {
+      outprefix = "{{output_dir}}/{{target_output_name}}"
+      outfile = "$outprefix{{output_extension}}"
+      pdbfile = "$outprefix.pdb"
+      command = "$link /nologo {{ldflags}} /out:$outfile /pdb:$pdbfile {{inputs}} {{libs}}"
+      description = "LINK $outfile"
+      outputs = [ outfile ]
+      lib_switch = ""
+      default_output_extension = ".exe"
+
+      # Setting this allows targets to override the default executable output by
+      # setting output_dir.
+      default_output_dir = "{{root_out_dir}}/bin"
+    }
+
+    tool("copy") {
+      # GN hands out slash-using paths, but cmd's copy needs backslashes.
+      # Use cmd's %foo:a=b% substitution feature to convert.
+      command = "cmd /c set source=\"{{source}}\" & set output=\"{{output}}\" & call copy /Y %source:/=\% %output:\=/% > nul"
+      description = "COPY {{source}} {{output}}"
+    }
+
+    tool("stamp") {
+      command = "cmd /c type nul > {{output}}"
+      description = "STAMP {{output}}"
     }
   }
+}
 
-  if (use_goma) {
-    cl = "$goma_dir/gomacc $cl"
-  }
-
-  tool("cc") {
-    command = "$cl /nologo /showIncludes /Fo{{output}} /c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}}"
-    depsformat = "msvc"
-    description = "CC {{output}}"
-    outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.obj" ]
-  }
-
-  tool("cxx") {
-    command = "$cl /nologo /showIncludes /Fo{{output}} /c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}}"
-    depsformat = "msvc"
-    description = "CXX {{output}}"
-    outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.obj" ]
-  }
-
-  tool("alink") {
-    command = "$link /lib /nologo {{arflags}} /out:{{output}} {{inputs}}"
-    description = "LIB {{output}}"
-    outputs = [ "{{output_dir}}/{{target_output_name}}.lib" ]
-    default_output_dir = "{{root_out_dir}}/lib"
-  }
-
-  tool("solink") {
-    outprefix = "{{output_dir}}/{{target_output_name}}"
-    dllfile = "$outprefix{{output_extension}}"
-    libfile = "$outprefix.lib"
-    pdbfile = "$outprefix.pdb"
-    command = "$link /nologo /dll {{ldflags}} /out:$dllfile /implib:$libfile /pdb:$pdbfile {{inputs}} {{libs}} "
-    description = "LINK $dllfile"
-    link_output = libfile
-    depend_output = libfile
-    runtime_outputs = [ dllfile ]
-    outputs = [
-      dllfile,
-      libfile,
-    ]
-    lib_switch = ""
-    default_output_extension = ".dll"
-    restat = true
-
-    # Put dlls next to the executables in bin/ on Windows, since Windows
-    # doesn't have a configurable rpath. This matches initialization of
-    # module_dir to bin/ in AddLLVM.cmake's set_output_directory().
-    default_output_dir = "{{root_out_dir}}/bin"
-  }
-
-  # Plugins for opt and clang and so on don't work in LLVM's Windows build
-  # since the code doesn't have export annotations, but there are a few
-  # standalone loadable modules used for unit-testing LLVM's dynamic library
-  # loading code.
-  tool("solink_module") {
-    outprefix = "{{output_dir}}/{{target_output_name}}"
-    dllfile = "$outprefix{{output_extension}}"
-    pdbfile = "$outprefix.pdb"
-    command = "$link /nologo /dll {{ldflags}} /out:$dllfile /pdb:$pdbfile {{inputs}} {{libs}} "
-    description = "LINK_MODULE $dllfile"
-    outputs = [ dllfile ]
-    lib_switch = ""
-    runtime_outputs = outputs
-    default_output_extension = ".dll"
-
-    # No default_output_dir, all clients set output_dir.
-  }
-
-  tool("link") {
-    outprefix = "{{output_dir}}/{{target_output_name}}"
-    outfile = "$outprefix{{output_extension}}"
-    pdbfile = "$outprefix.pdb"
-    command = "$link /nologo {{ldflags}} /out:$outfile /pdb:$pdbfile {{inputs}} {{libs}}"
-    description = "LINK $outfile"
-    outputs = [ outfile ]
-    lib_switch = ""
-    default_output_extension = ".exe"
-
-    # Setting this allows targets to override the default executable output by
-    # setting output_dir.
-    default_output_dir = "{{root_out_dir}}/bin"
-  }
-
-  tool("copy") {
-    # GN hands out slash-using paths, but cmd's copy needs backslashes.
-    # Use cmd's %foo:a=b% substitution feature to convert.
-    command = "cmd /c set source=\"{{source}}\" & set output=\"{{output}}\" & call copy /Y %source:/=\% %output:\=/% > nul"
-    description = "COPY {{source}} {{output}}"
-  }
-
-  tool("stamp") {
-    command = "cmd /c type nul > {{output}}"
-    description = "STAMP {{output}}"
-  }
-
+win_toolchain("win") {
   toolchain_args = {
     current_os = "win"
     current_cpu = host_cpu
   }
+}
+
+win_toolchain("stage2_win") {
+  toolchain_args = {
+    current_os = host_os
+    current_cpu = host_cpu
+
+    clang_base_path = root_build_dir
+    use_goma = false
+  }
+  deps = [
+    "//:clang($host_toolchain)",
+    "//:lld($host_toolchain)",
+  ]
 }

@@ -24,6 +24,8 @@ declare void @printf(i8*, ...)
 ; CHECK: @[[CHARSTR:[a-zA-Z0-9_$"\\.-]+]] = constant [2 x i8] c"a\00"
 ; CHECK: @[[EMPTY:[a-zA-Z0-9_$"\\.-]+]] = constant [1 x i8] zeroinitializer
 ; CHECK: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr constant [12 x i8] c"hello world\00", align 1
+; CHECK: @[[STR_1:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr constant [12 x i8] c"hello world\00", align 1
+; CHECK: @[[STR_2:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr constant [12 x i8] c"hello world\00", align 1
 ;.
 define void @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
@@ -67,9 +69,10 @@ define void @test_simplify7() {
   ret void
 }
 
+; printf("%s", "") --> noop
+
 define void @test_simplify8() {
 ; CHECK-LABEL: @test_simplify8(
-; CHECK-NEXT:    call void (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([3 x i8], [3 x i8]* @format_str, i32 0, i32 0), i8* getelementptr inbounds ([1 x i8], [1 x i8]* @empty, i32 0, i32 0))
 ; CHECK-NEXT:    ret void
 ;
   %fmt = getelementptr [3 x i8], [3 x i8]* @format_str, i32 0, i32 0
@@ -78,9 +81,11 @@ define void @test_simplify8() {
   ret void
 }
 
+; printf("%s", str"\n") --> puts(str)
+
 define void @test_simplify9() {
 ; CHECK-LABEL: @test_simplify9(
-; CHECK-NEXT:    call void (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([3 x i8], [3 x i8]* @format_str, i32 0, i32 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0))
+; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @str.1, i32 0, i32 0))
 ; CHECK-NEXT:    ret void
 ;
   %fmt = getelementptr [3 x i8], [3 x i8]* @format_str, i32 0, i32 0
@@ -89,11 +94,14 @@ define void @test_simplify9() {
   ret void
 }
 
+; printf("%s", "", ...) --> noop
+; printf("%s", "a", ...) --> putchar('a')
+; printf("%s", str"\n", ...) --> puts(str)
+
 define void @test_simplify10() {
 ; CHECK-LABEL: @test_simplify10(
-; CHECK-NEXT:    call void (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([3 x i8], [3 x i8]* @format_str, i32 0, i32 0), i8* getelementptr inbounds ([1 x i8], [1 x i8]* @empty, i32 0, i32 0), i32 42, double 0x40091EB860000000)
 ; CHECK-NEXT:    [[PUTCHAR:%.*]] = call i32 @putchar(i32 97)
-; CHECK-NEXT:    call void (i8*, ...) @printf(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([3 x i8], [3 x i8]* @format_str, i32 0, i32 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 42, double 0x40091EB860000000)
+; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @str.2, i32 0, i32 0))
 ; CHECK-NEXT:    ret void
 ;
   %fmt = getelementptr [3 x i8], [3 x i8]* @format_str, i32 0, i32 0

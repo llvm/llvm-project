@@ -24,6 +24,11 @@
 #endif
 #pragma OPENCL EXTENSION __cl_clang_variadic_functions : enable
 
+#ifndef __cl_clang_non_portable_kernel_param_types
+#error "Missing __cl_clang_non_portable_kernel_param_types define"
+#endif
+#pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : enable
+
 #ifndef cl_khr_fp16
 #error "Missing cl_khr_fp16 define"
 #endif

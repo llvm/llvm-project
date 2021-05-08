@@ -1324,10 +1324,10 @@ bool RAGreedy::addThroughConstraints(InterferenceCache::Cursor Intf,
 
     // Abort if the spill cannot be inserted at the MBB' start
     MachineBasicBlock *MBB = MF->getBlockNumbered(Number);
-    if (!MBB->empty() &&
-        SlotIndex::isEarlierInstr(
-            LIS->getInstructionIndex(*MBB->getFirstNonDebugInstr()),
-            SA->getFirstSplitPoint(Number)))
+    auto FirstNonDebugInstr = MBB->getFirstNonDebugInstr();
+    if (FirstNonDebugInstr != MBB->end() &&
+        SlotIndex::isEarlierInstr(LIS->getInstructionIndex(*FirstNonDebugInstr),
+                                  SA->getFirstSplitPoint(Number)))
       return false;
     // Interference for the live-in value.
     if (Intf.first() <= Indexes->getMBBStartIdx(Number))

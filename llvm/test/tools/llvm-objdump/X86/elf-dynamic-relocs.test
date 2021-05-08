@@ -3,14 +3,14 @@
 ## properly identify relocation tables.
 
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-objdump --dynamic-reloc %t | FileCheck --implicit-check-not=R_X86 %s
-# RUN: llvm-objdump -R %t | FileCheck --implicit-check-not=R_X86 %s
+# RUN: llvm-objdump --dynamic-reloc %t | FileCheck %s
+# RUN: llvm-objdump -R %t | FileCheck %s
 
-# CHECK:      file format elf64-x86-64
 # CHECK:      DYNAMIC RELOCATION RECORDS
 # CHECK-NEXT: 0000000000000000 R_X86_64_RELATIVE *ABS*
 # CHECK-NEXT: 0000000000000000 R_X86_64_JUMP_SLOT bar
 # CHECK-NEXT: 0000000000000008 R_X86_64_NONE foo
+# CHECK-EMPTY:
 
 --- !ELF
 FileHeader:
@@ -50,7 +50,7 @@ Sections:
     Flags:        [SHF_ALLOC]
     Relocations:
       - Offset: 0
-        Symbol: 2 # bar
+        Symbol: bar
         Type:   R_X86_64_JUMP_SLOT
   - Name:         .rel.dyn
     Type:         SHT_REL
@@ -61,7 +61,7 @@ Sections:
     Flags:        [SHF_ALLOC]
     Relocations:
       - Offset: 8
-        Symbol: 1 # foo
+        Symbol: foo
         Type:   R_X86_64_NONE
   - Name:         .dynamic
     Type:         SHT_DYNAMIC

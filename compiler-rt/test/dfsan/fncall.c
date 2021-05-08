@@ -1,6 +1,8 @@
 // RUN: %clang_dfsan %s -o %t && %run %t
 // RUN: %clang_dfsan -mllvm -dfsan-args-abi %s -o %t && %run %t
-
+//
+// REQUIRES: x86_64-target-arch
+//
 // Tests that labels are propagated through function calls.
 
 #include <sanitizer/dfsan_interface.h>

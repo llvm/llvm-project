@@ -8,7 +8,9 @@
 
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
+#include "llvm/Support/MD5.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -144,28 +146,51 @@ private:
 };
 } // namespace
 
+// Computes a string representation of a hash of the specified name, suitable
+// for use when emitting CodeView type names.
+static void computeHashString(StringRef Name,
+                              SmallString<32> &StringifiedHash) {
+  llvm::MD5 Hash;
+  llvm::MD5::MD5Result Result;
+  Hash.update(Name);
+  Hash.final(Result);
+  Hash.stringifyResult(Result, StringifiedHash);
+}
+
 static Error mapNameAndUniqueName(CodeViewRecordIO &IO, StringRef &Name,
                                   StringRef &UniqueName, bool HasUniqueName) {
   if (IO.isWriting()) {
     // Try to be smart about what we write here.  We can't write anything too
-    // large, so if we're going to go over the limit, truncate both the name
-    // and unique name by the same amount.
+    // large, so if we're going to go over the limit, replace lengthy names with
+    // a stringified hash value.
     size_t BytesLeft = IO.maxFieldLength();
     if (HasUniqueName) {
       size_t BytesNeeded = Name.size() + UniqueName.size() + 2;
-      StringRef N = Name;
-      StringRef U = UniqueName;
       if (BytesNeeded > BytesLeft) {
-        size_t BytesToDrop = (BytesNeeded - BytesLeft);
-        size_t DropN = std::min(N.size(), BytesToDrop / 2);
-        size_t DropU = std::min(U.size(), BytesToDrop - DropN);
+        // The minimum space required for emitting hashes of both names.
+        assert(BytesLeft >= 70);
 
-        N = N.drop_back(DropN);
-        U = U.drop_back(DropU);
+        // Replace the entire unique name with a hash of the unique name.
+        SmallString<32> Hash;
+        computeHashString(UniqueName, Hash);
+        std::string UniqueB = Twine("??@" + Hash + "@").str();
+        assert(UniqueB.size() == 36);
+
+        // Truncate the name if necessary and append a hash of the name.
+        // The name length, hash included, is limited to 4096 bytes.
+        const size_t MaxTakeN = 4096;
+        size_t TakeN = std::min(MaxTakeN, BytesLeft - UniqueB.size() - 2) - 32;
+        computeHashString(Name, Hash);
+        std::string NameB = (Name.take_front(TakeN) + Hash).str();
+
+        StringRef N = NameB;
+        StringRef U = UniqueB;
+        error(IO.mapStringZ(N));
+        error(IO.mapStringZ(U));
+      } else {
+        error(IO.mapStringZ(Name));
+        error(IO.mapStringZ(UniqueName));
       }
-
-      error(IO.mapStringZ(N));
-      error(IO.mapStringZ(U));
     } else {
       // Cap the length of the string at however many bytes we have available,
       // plus one for the required null terminator.

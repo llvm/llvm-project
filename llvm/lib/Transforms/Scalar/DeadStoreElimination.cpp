@@ -1770,6 +1770,25 @@ struct DSEState {
   bool storeIsNoop(MemoryDef *Def, const MemoryLocation &DefLoc,
                    const Value *DefUO) {
     StoreInst *Store = dyn_cast<StoreInst>(Def->getMemoryInst());
+    MemSetInst *MemSet = dyn_cast<MemSetInst>(Def->getMemoryInst());
+    Constant *StoredConstant = nullptr;
+    if (Store)
+      StoredConstant = dyn_cast<Constant>(Store->getOperand(0));
+    if (MemSet)
+      StoredConstant = dyn_cast<Constant>(MemSet->getValue());
+
+    if (StoredConstant && StoredConstant->isNullValue()) {
+      auto *DefUOInst = dyn_cast<Instruction>(DefUO);
+      if (DefUOInst && isCallocLikeFn(DefUOInst, &TLI)) {
+        auto *UnderlyingDef = cast<MemoryDef>(MSSA.getMemoryAccess(DefUOInst));
+        // If UnderlyingDef is the clobbering access of Def, no instructions
+        // between them can modify the memory location.
+        auto *ClobberDef =
+            MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def);
+        return UnderlyingDef == ClobberDef;
+      }
+    }
+
     if (!Store)
       return false;
 
@@ -1817,18 +1836,6 @@ struct DSEState {
       }
     }
 
-    Constant *StoredConstant = dyn_cast<Constant>(Store->getOperand(0));
-    if (StoredConstant && StoredConstant->isNullValue()) {
-      auto *DefUOInst = dyn_cast<Instruction>(DefUO);
-      if (DefUOInst && isCallocLikeFn(DefUOInst, &TLI)) {
-        auto *UnderlyingDef = cast<MemoryDef>(MSSA.getMemoryAccess(DefUOInst));
-        // If UnderlyingDef is the clobbering access of Def, no instructions
-        // between them can modify the memory location.
-        auto *ClobberDef =
-            MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def);
-        return UnderlyingDef == ClobberDef;
-      }
-    }
     return false;
   }
 };

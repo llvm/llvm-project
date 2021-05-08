@@ -52,6 +52,51 @@ define <vscale x 8 x i8> @stepvector_nxv8i8() {
   ret <vscale x 8 x i8> %v
 }
 
+define <vscale x 8 x i8> @add_stepvector_nxv8i8() {
+; CHECK-LABEL: add_stepvector_nxv8i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
+; CHECK-NEXT:    vid.v v25
+; CHECK-NEXT:    vsll.vi v8, v25, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <vscale x 8 x i8> @llvm.experimental.stepvector.nxv8i8()
+  %1 = call <vscale x 8 x i8> @llvm.experimental.stepvector.nxv8i8()
+  %2 = add <vscale x 8 x i8> %0, %1
+  ret <vscale x 8 x i8> %2
+}
+
+define <vscale x 8 x i8> @mul_stepvector_nxv8i8() {
+; CHECK-LABEL: mul_stepvector_nxv8i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
+; CHECK-NEXT:    vid.v v25
+; CHECK-NEXT:    addi a0, zero, 3
+; CHECK-NEXT:    vmul.vx v8, v25, a0
+; CHECK-NEXT:    ret
+entry:
+  %0 = insertelement <vscale x 8 x i8> poison, i8 3, i32 0
+  %1 = shufflevector <vscale x 8 x i8> %0, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
+  %2 = call <vscale x 8 x i8> @llvm.experimental.stepvector.nxv8i8()
+  %3 = mul <vscale x 8 x i8> %2, %1
+  ret <vscale x 8 x i8> %3
+}
+
+define <vscale x 8 x i8> @shl_stepvector_nxv8i8() {
+; CHECK-LABEL: shl_stepvector_nxv8i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
+; CHECK-NEXT:    vid.v v25
+; CHECK-NEXT:    vsll.vi v8, v25, 2
+; CHECK-NEXT:    ret
+entry:
+  %0 = insertelement <vscale x 8 x i8> poison, i8 2, i32 0
+  %1 = shufflevector <vscale x 8 x i8> %0, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
+  %2 = call <vscale x 8 x i8> @llvm.experimental.stepvector.nxv8i8()
+  %3 = shl <vscale x 8 x i8> %2, %1
+  ret <vscale x 8 x i8> %3
+}
+
 declare <vscale x 16 x i8> @llvm.experimental.stepvector.nxv16i8()
 
 define <vscale x 16 x i8> @stepvector_nxv16i8() {
@@ -148,6 +193,51 @@ define <vscale x 16 x i16> @stepvector_nxv16i16() {
   ret <vscale x 16 x i16> %v
 }
 
+define <vscale x 16 x i16> @add_stepvector_nxv16i16() {
+; CHECK-LABEL: add_stepvector_nxv16i16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, zero, e16,m4,ta,mu
+; CHECK-NEXT:    vid.v v28
+; CHECK-NEXT:    vsll.vi v8, v28, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <vscale x 16 x i16> @llvm.experimental.stepvector.nxv16i16()
+  %1 = call <vscale x 16 x i16> @llvm.experimental.stepvector.nxv16i16()
+  %2 = add <vscale x 16 x i16> %0, %1
+  ret <vscale x 16 x i16> %2
+}
+
+define <vscale x 16 x i16> @mul_stepvector_nxv16i16() {
+; CHECK-LABEL: mul_stepvector_nxv16i16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, zero, e16,m4,ta,mu
+; CHECK-NEXT:    vid.v v28
+; CHECK-NEXT:    addi a0, zero, 3
+; CHECK-NEXT:    vmul.vx v8, v28, a0
+; CHECK-NEXT:    ret
+entry:
+  %0 = insertelement <vscale x 16 x i16> poison, i16 3, i32 0
+  %1 = shufflevector <vscale x 16 x i16> %0, <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer
+  %2 = call <vscale x 16 x i16> @llvm.experimental.stepvector.nxv16i16()
+  %3 = mul <vscale x 16 x i16> %2, %1
+  ret <vscale x 16 x i16> %3
+}
+
+define <vscale x 16 x i16> @shl_stepvector_nxv16i16() {
+; CHECK-LABEL: shl_stepvector_nxv16i16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, zero, e16,m4,ta,mu
+; CHECK-NEXT:    vid.v v28
+; CHECK-NEXT:    vsll.vi v8, v28, 2
+; CHECK-NEXT:    ret
+entry:
+  %0 = insertelement <vscale x 16 x i16> poison, i16 2, i32 0
+  %1 = shufflevector <vscale x 16 x i16> %0, <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer
+  %2 = call <vscale x 16 x i16> @llvm.experimental.stepvector.nxv16i16()
+  %3 = shl <vscale x 16 x i16> %2, %1
+  ret <vscale x 16 x i16> %3
+}
+
 declare <vscale x 32 x i16> @llvm.experimental.stepvector.nxv32i16()
 
 define <vscale x 32 x i16> @stepvector_nxv32i16() {
@@ -220,6 +310,51 @@ define <vscale x 16 x i32> @stepvector_nxv16i32() {
   ret <vscale x 16 x i32> %v
 }
 
+define <vscale x 16 x i32> @add_stepvector_nxv16i32() {
+; CHECK-LABEL: add_stepvector_nxv16i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, zero, e32,m8,ta,mu
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vsll.vi v8, v8, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <vscale x 16 x i32> @llvm.experimental.stepvector.nxv16i32()
+  %1 = call <vscale x 16 x i32> @llvm.experimental.stepvector.nxv16i32()
+  %2 = add <vscale x 16 x i32> %0, %1
+  ret <vscale x 16 x i32> %2
+}
+
+define <vscale x 16 x i32> @mul_stepvector_nxv16i32() {
+; CHECK-LABEL: mul_stepvector_nxv16i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, zero, e32,m8,ta,mu
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    addi a0, zero, 3
+; CHECK-NEXT:    vmul.vx v8, v8, a0
+; CHECK-NEXT:    ret
+entry:
+  %0 = insertelement <vscale x 16 x i32> poison, i32 3, i32 0
+  %1 = shufflevector <vscale x 16 x i32> %0, <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
+  %2 = call <vscale x 16 x i32> @llvm.experimental.stepvector.nxv16i32()
+  %3 = mul <vscale x 16 x i32> %2, %1
+  ret <vscale x 16 x i32> %3
+}
+
+define <vscale x 16 x i32> @shl_stepvector_nxv16i32() {
+; CHECK-LABEL: shl_stepvector_nxv16i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, zero, e32,m8,ta,mu
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vsll.vi v8, v8, 2
+; CHECK-NEXT:    ret
+entry:
+  %0 = insertelement <vscale x 16 x i32> poison, i32 2, i32 0
+  %1 = shufflevector <vscale x 16 x i32> %0, <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
+  %2 = call <vscale x 16 x i32> @llvm.experimental.stepvector.nxv16i32()
+  %3 = shl <vscale x 16 x i32> %2, %1
+  ret <vscale x 16 x i32> %3
+}
+
 declare <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
 
 define <vscale x 1 x i64> @stepvector_nxv1i64() {
@@ -268,6 +403,51 @@ define <vscale x 8 x i64> @stepvector_nxv8i64() {
   ret <vscale x 8 x i64> %v
 }
 
+define <vscale x 8 x i64> @add_stepvector_nxv8i64() {
+; CHECK-LABEL: add_stepvector_nxv8i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vsll.vi v8, v8, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <vscale x 8 x i64> @llvm.experimental.stepvector.nxv8i64()
+  %1 = call <vscale x 8 x i64> @llvm.experimental.stepvector.nxv8i64()
+  %2 = add <vscale x 8 x i64> %0, %1
+  ret <vscale x 8 x i64> %2
+}
+
+define <vscale x 8 x i64> @mul_stepvector_nxv8i64() {
+; CHECK-LABEL: mul_stepvector_nxv8i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    addi a0, zero, 3
+; CHECK-NEXT:    vmul.vx v8, v8, a0
+; CHECK-NEXT:    ret
+entry:
+  %0 = insertelement <vscale x 8 x i64> poison, i64 3, i32 0
+  %1 = shufflevector <vscale x 8 x i64> %0, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
+  %2 = call <vscale x 8 x i64> @llvm.experimental.stepvector.nxv8i64()
+  %3 = mul <vscale x 8 x i64> %2, %1
+  ret <vscale x 8 x i64> %3
+}
+
+define <vscale x 8 x i64> @shl_stepvector_nxv8i64() {
+; CHECK-LABEL: shl_stepvector_nxv8i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vsll.vi v8, v8, 2
+; CHECK-NEXT:    ret
+entry:
+  %0 = insertelement <vscale x 8 x i64> poison, i64 2, i32 0
+  %1 = shufflevector <vscale x 8 x i64> %0, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
+  %2 = call <vscale x 8 x i64> @llvm.experimental.stepvector.nxv8i64()
+  %3 = shl <vscale x 8 x i64> %2, %1
+  ret <vscale x 8 x i64> %3
+}
+
 declare <vscale x 16 x i64> @llvm.experimental.stepvector.nxv16i64()
 
 define <vscale x 16 x i64> @stepvector_nxv16i64() {
@@ -280,4 +460,105 @@ define <vscale x 16 x i64> @stepvector_nxv16i64() {
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i64> @llvm.experimental.stepvector.nxv16i64()
   ret <vscale x 16 x i64> %v
+}
+
+define <vscale x 16 x i64> @add_stepvector_nxv16i64() {
+; RV32-LABEL: add_stepvector_nxv16i64:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    slli a0, a0, 1
+; RV32-NEXT:    vsetvli a1, zero, e64,m8,ta,mu
+; RV32-NEXT:    vmv.v.x v8, a0
+; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    vsll.vx v8, v8, a0
+; RV32-NEXT:    vsrl.vx v16, v8, a0
+; RV32-NEXT:    vid.v v8
+; RV32-NEXT:    vsll.vi v8, v8, 1
+; RV32-NEXT:    vadd.vv v16, v8, v16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: add_stepvector_nxv16i64:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    csrr a0, vlenb
+; RV64-NEXT:    slli a0, a0, 1
+; RV64-NEXT:    vsetvli a1, zero, e64,m8,ta,mu
+; RV64-NEXT:    vid.v v8
+; RV64-NEXT:    vsll.vi v8, v8, 1
+; RV64-NEXT:    vadd.vx v16, v8, a0
+; RV64-NEXT:    ret
+entry:
+  %0 = call <vscale x 16 x i64> @llvm.experimental.stepvector.nxv16i64()
+  %1 = call <vscale x 16 x i64> @llvm.experimental.stepvector.nxv16i64()
+  %2 = add <vscale x 16 x i64> %0, %1
+  ret <vscale x 16 x i64> %2
+}
+
+define <vscale x 16 x i64> @mul_stepvector_nxv16i64() {
+; RV32-LABEL: mul_stepvector_nxv16i64:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; RV32-NEXT:    vid.v v8
+; RV32-NEXT:    addi a0, zero, 3
+; RV32-NEXT:    vmul.vx v8, v8, a0
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    srli a0, a0, 3
+; RV32-NEXT:    addi a1, zero, 24
+; RV32-NEXT:    mul a0, a0, a1
+; RV32-NEXT:    vmv.v.x v16, a0
+; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    vsll.vx v16, v16, a0
+; RV32-NEXT:    vsrl.vx v16, v16, a0
+; RV32-NEXT:    vadd.vv v16, v8, v16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mul_stepvector_nxv16i64:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; RV64-NEXT:    vid.v v8
+; RV64-NEXT:    addi a0, zero, 3
+; RV64-NEXT:    vmul.vx v8, v8, a0
+; RV64-NEXT:    csrr a0, vlenb
+; RV64-NEXT:    srli a0, a0, 3
+; RV64-NEXT:    addi a1, zero, 24
+; RV64-NEXT:    mul a0, a0, a1
+; RV64-NEXT:    vadd.vx v16, v8, a0
+; RV64-NEXT:    ret
+entry:
+  %0 = insertelement <vscale x 16 x i64> poison, i64 3, i32 0
+  %1 = shufflevector <vscale x 16 x i64> %0, <vscale x 16 x i64> poison, <vscale x 16 x i32> zeroinitializer
+  %2 = call <vscale x 16 x i64> @llvm.experimental.stepvector.nxv16i64()
+  %3 = mul <vscale x 16 x i64> %2, %1
+  ret <vscale x 16 x i64> %3
+}
+
+define <vscale x 16 x i64> @shl_stepvector_nxv16i64() {
+; RV32-LABEL: shl_stepvector_nxv16i64:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    slli a0, a0, 2
+; RV32-NEXT:    vsetvli a1, zero, e64,m8,ta,mu
+; RV32-NEXT:    vmv.v.x v8, a0
+; RV32-NEXT:    addi a0, zero, 32
+; RV32-NEXT:    vsll.vx v8, v8, a0
+; RV32-NEXT:    vsrl.vx v16, v8, a0
+; RV32-NEXT:    vid.v v8
+; RV32-NEXT:    vsll.vi v8, v8, 2
+; RV32-NEXT:    vadd.vv v16, v8, v16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: shl_stepvector_nxv16i64:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    csrr a0, vlenb
+; RV64-NEXT:    slli a0, a0, 2
+; RV64-NEXT:    vsetvli a1, zero, e64,m8,ta,mu
+; RV64-NEXT:    vid.v v8
+; RV64-NEXT:    vsll.vi v8, v8, 2
+; RV64-NEXT:    vadd.vx v16, v8, a0
+; RV64-NEXT:    ret
+entry:
+  %0 = insertelement <vscale x 16 x i64> poison, i64 2, i32 0
+  %1 = shufflevector <vscale x 16 x i64> %0, <vscale x 16 x i64> poison, <vscale x 16 x i32> zeroinitializer
+  %2 = call <vscale x 16 x i64> @llvm.experimental.stepvector.nxv16i64()
+  %3 = shl <vscale x 16 x i64> %2, %1
+  ret <vscale x 16 x i64> %3
 }

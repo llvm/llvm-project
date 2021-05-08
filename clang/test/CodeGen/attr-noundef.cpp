@@ -11,7 +11,7 @@ struct Trivial {
 Trivial ret_trivial() { return {}; }
 void pass_trivial(Trivial e) {}
 // CHECK-INTEL: [[DEFINE:define( dso_local)?]] i32 @{{.*}}ret_trivial
-// CHECK-AARCH: [[DEFINE:define( dso_local)?]] i64 @{{.*}}ret_trivial
+// CHECK-AARCH: [[DEFINE:define( dso_local)?]] i32 @{{.*}}ret_trivial
 // CHECK-INTEL: [[DEFINE]] void @{{.*}}pass_trivial{{.*}}(i32 %
 // CHECK-AARCH: [[DEFINE]] void @{{.*}}pass_trivial{{.*}}(i64 %
 
@@ -43,7 +43,7 @@ union Trivial {
 Trivial ret_trivial() { return {}; }
 void pass_trivial(Trivial e) {}
 // CHECK-INTEL: [[DEFINE]] i32 @{{.*}}ret_trivial
-// CHECK-AARCH: [[DEFINE]] i64 @{{.*}}ret_trivial
+// CHECK-AARCH: [[DEFINE]] i32 @{{.*}}ret_trivial
 // CHECK-INTEL: [[DEFINE]] void @{{.*}}pass_trivial{{.*}}(i32 %
 // CHECK-AARCH: [[DEFINE]] void @{{.*}}pass_trivial{{.*}}(i64 %
 

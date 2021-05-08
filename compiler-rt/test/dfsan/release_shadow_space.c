@@ -1,5 +1,9 @@
 // DFSAN_OPTIONS=no_huge_pages_for_shadow=false RUN: %clang_dfsan %s -o %t && setarch `uname -m` -R %run %t
 // DFSAN_OPTIONS=no_huge_pages_for_shadow=true RUN: %clang_dfsan %s -o %t && setarch `uname -m` -R %run %t
+// DFSAN_OPTIONS=no_huge_pages_for_shadow=false RUN: %clang_dfsan %s -DORIGIN_TRACKING -mllvm -dfsan-fast-16-labels -mllvm -dfsan-track-origins=1 -o %t && setarch `uname -m` -R %run %t
+// DFSAN_OPTIONS=no_huge_pages_for_shadow=true RUN: %clang_dfsan %s -DORIGIN_TRACKING -mllvm -dfsan-fast-16-labels -mllvm -dfsan-track-origins=1 -o %t && setarch `uname -m` -R %run %t
+//
+// REQUIRES: x86_64-target-arch
 
 #include <assert.h>
 #include <sanitizer/dfsan_interface.h>
@@ -70,9 +74,16 @@ int main(int argc, char **argv) {
 
   const size_t mmap_cost_kb = map_size >> 10;
   const size_t mmap_shadow_cost_kb = sizeof(dfsan_label) * mmap_cost_kb;
+#ifdef ORIGIN_TRACKING
+  const size_t mmap_origin_cost_kb = mmap_cost_kb;
+#else
+  const size_t mmap_origin_cost_kb = 0;
+#endif
   assert(after_mmap >= before + mmap_cost_kb);
-  assert(after_mmap_and_set_label >= after_mmap + mmap_shadow_cost_kb);
-  assert(after_mmap_and_set_label2 >= before + mmap_cost_kb + mmap_shadow_cost_kb);
+  assert(after_mmap_and_set_label >=
+         after_mmap + mmap_shadow_cost_kb + mmap_origin_cost_kb);
+  assert(after_mmap_and_set_label2 >=
+         before + mmap_cost_kb + mmap_shadow_cost_kb + mmap_origin_cost_kb);
 
   // RSS may not change memory amount after munmap to the same level as the
   // start of the program. The assert checks the memory up to a delta.

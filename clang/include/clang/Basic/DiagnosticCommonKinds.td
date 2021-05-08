@@ -360,4 +360,8 @@ def note_suggest_disabling_all_checkers : Note<
 def warn_poison_system_directories : Warning <
   "include location '%0' is unsafe for cross-compilation">,
   InGroup<DiagGroup<"poison-system-directories">>, DefaultIgnore;
+
+def warn_opencl_unsupported_core_feature : Warning<
+  "%0 is a core feature in %select{OpenCL C|C++ for OpenCL}1 version %2 but not supported on this target">,
+  InGroup<OpenCLCoreFeaturesDiagGroup>, DefaultIgnore;
 }

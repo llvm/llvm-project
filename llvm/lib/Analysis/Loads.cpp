@@ -532,7 +532,7 @@ Value *llvm::findAvailablePtrLoadStore(
     // We must ignore debug info directives when counting (otherwise they
     // would affect codegen).
     Instruction *Inst = &*--ScanFrom;
-    if (isa<DbgInfoIntrinsic>(Inst))
+    if (Inst->isDebugOrPseudoInst())
       continue;
 
     // Restore ScanFrom to expected value in case next test succeeds
@@ -620,7 +620,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, AAResults &AA,
   SmallVector<Instruction *> MustNotAliasInsts;
   for (Instruction &Inst : make_range(++Load->getReverseIterator(),
                                       ScanBB->rend())) {
-    if (isa<DbgInfoIntrinsic>(&Inst))
+    if (Inst.isDebugOrPseudoInst())
       continue;
 
     if (MaxInstsToScan-- == 0)

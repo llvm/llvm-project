@@ -8,7 +8,8 @@
 
 // REQUIRES: locale.en_US.UTF-8
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
+// https://llvm.org/PR41018
+// XFAIL: windows-dll
 
 // <locale>
 

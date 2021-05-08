@@ -45,7 +45,7 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name,
 Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                                  InputSection *isec, uint64_t value,
                                  uint64_t size, bool isWeakDef,
-                                 bool isPrivateExtern) {
+                                 bool isPrivateExtern, bool isThumb) {
   Symbol *s;
   bool wasInserted;
   bool overridesWeakDef = false;
@@ -73,7 +73,7 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
 
   Defined *defined =
       replaceSymbol<Defined>(s, name, file, isec, value, size, isWeakDef,
-                             /*isExternal=*/true, isPrivateExtern);
+                             /*isExternal=*/true, isPrivateExtern, isThumb);
   defined->overridesWeakDef = overridesWeakDef;
   return defined;
 }
@@ -167,7 +167,8 @@ Defined *SymbolTable::addSynthetic(StringRef name, InputSection *isec,
                                    uint64_t value, bool isPrivateExtern,
                                    bool includeInSymtab) {
   Defined *s = addDefined(name, nullptr, isec, value, /*size=*/0,
-                          /*isWeakDef=*/false, isPrivateExtern);
+                          /*isWeakDef=*/false, isPrivateExtern,
+                          /*isThumb=*/false);
   s->includeInSymtab = includeInSymtab;
   return s;
 }

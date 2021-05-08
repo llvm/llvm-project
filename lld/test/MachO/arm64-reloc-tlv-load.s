@@ -28,6 +28,7 @@
 # DYLIB-NEXT:  adrp x8, [[#]] ; 0x[[#TLV]]
 # DYLIB-NEXT:  ldr  x8, [x8] ; literal pool symbol address: _bar
 # DYLIB-NEXT:  ret
+# DYLIB-EMPTY:
 # DYLIB-NEXT:  Sections:
 # DYLIB-NEXT:  Idx   Name          Size     VMA              Type
 # DYLIB:       [[#]] __thread_ptrs 00000010 {{0*}}[[#TLV]]   DATA

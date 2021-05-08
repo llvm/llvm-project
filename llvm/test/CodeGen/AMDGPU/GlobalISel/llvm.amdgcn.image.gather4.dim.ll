@@ -80,7 +80,7 @@ define amdgpu_ps <4 x float> @gather4_2d_tfe(<8 x i32> inreg %rsrc, <4 x i32> in
 ;
 ; GFX10NSA-LABEL: gather4_2d_tfe:
 ; GFX10NSA:       ; %bb.0: ; %main_body
-; GFX10NSA-NEXT:    s_mov_b32 s28, exec_lo
+; GFX10NSA-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX10NSA-NEXT:    s_mov_b32 s0, s2
 ; GFX10NSA-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10NSA-NEXT:    v_mov_b32_e32 v5, v0
@@ -101,7 +101,7 @@ define amdgpu_ps <4 x float> @gather4_2d_tfe(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX10NSA-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX10NSA-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX10NSA-NEXT:    v_mov_b32_e32 v4, v0
-; GFX10NSA-NEXT:    s_and_b32 exec_lo, exec_lo, s28
+; GFX10NSA-NEXT:    s_and_b32 exec_lo, exec_lo, s14
 ; GFX10NSA-NEXT:    image_gather4 v[0:4], v[5:6], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe
 ; GFX10NSA-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10NSA-NEXT:    ; return to shader part epilog

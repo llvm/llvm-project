@@ -656,7 +656,7 @@ provided by community members.
 
 The Buildbot tracks the commits on the main branch and the release branches. 
 This means that patches are built and tested after they are merged to the these
-branches (aka. post-merge testing). This also means it's okay to break the build
+branches (aka post-merge testing). This also means it's okay to break the build
 occasionally, as it's unreasonable to expect contributors to build and test
 their patch with every possible configuration. 
 
@@ -664,7 +664,7 @@ their patch with every possible configuration.
 
 * Fix the build as soon as possible as this might block other contributors or
   downstream users.
-* If you need more time analyze and fix the bug, please revert your change to
+* If you need more time to analyze and fix the bug, please revert your change to
   unblock others.
 
 *If someone else broke the build and this blocks your work*

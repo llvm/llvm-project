@@ -5,7 +5,7 @@ define void @test(i32* %P, i32* %Q, i1 %A, i1 %B) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[A_NOT]], [[B:%.*]]
+; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[A_NOT]], i1 true, i1 [[B:%.*]]
 ; CHECK-NEXT:    br i1 [[BRMERGE]], label [[B:%.*]], label [[C:%.*]]
 ; CHECK:       b:
 ; CHECK-NEXT:    store i32 123, i32* [[P:%.*]], align 4

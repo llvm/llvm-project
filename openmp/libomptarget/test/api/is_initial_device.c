@@ -1,6 +1,9 @@
 // RUN: %libomptarget-compile-run-and-check-x86_64-pc-linux-gnu
 // RUN: %libomptarget-compile-x86_64-pc-linux-gnu -DUNUSED -Wall -Werror
 
+// only run for x86_64 host offloading:
+// REQUIRES: x86_64-pc-linux-gnu
+
 #include <omp.h>
 #include <stdio.h>
 

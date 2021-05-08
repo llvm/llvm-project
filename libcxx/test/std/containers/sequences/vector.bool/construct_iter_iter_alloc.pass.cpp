@@ -37,7 +37,7 @@ int main(int, char**)
     bool* an = a + sizeof(a)/sizeof(a[0]);
     {
     std::allocator<bool> alloc;
-    test<std::vector<bool> >(input_iterator<const bool*>(a), input_iterator<const bool*>(an), alloc);
+    test<std::vector<bool> >(cpp17_input_iterator<const bool*>(a), cpp17_input_iterator<const bool*>(an), alloc);
     test<std::vector<bool> >(forward_iterator<const bool*>(a), forward_iterator<const bool*>(an), alloc);
     test<std::vector<bool> >(bidirectional_iterator<const bool*>(a), bidirectional_iterator<const bool*>(an), alloc);
     test<std::vector<bool> >(random_access_iterator<const bool*>(a), random_access_iterator<const bool*>(an), alloc);
@@ -46,7 +46,7 @@ int main(int, char**)
 #if TEST_STD_VER >= 11
     {
     min_allocator<bool> alloc;
-    test<std::vector<bool, min_allocator<bool>> >(input_iterator<const bool*>(a), input_iterator<const bool*>(an), alloc);
+    test<std::vector<bool, min_allocator<bool>> >(cpp17_input_iterator<const bool*>(a), cpp17_input_iterator<const bool*>(an), alloc);
     test<std::vector<bool, min_allocator<bool>> >(forward_iterator<const bool*>(a), forward_iterator<const bool*>(an), alloc);
     test<std::vector<bool, min_allocator<bool>> >(bidirectional_iterator<const bool*>(a), bidirectional_iterator<const bool*>(an), alloc);
     test<std::vector<bool, min_allocator<bool>> >(random_access_iterator<const bool*>(a), random_access_iterator<const bool*>(an), alloc);

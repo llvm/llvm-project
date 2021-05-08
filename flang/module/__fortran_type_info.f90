@@ -53,7 +53,7 @@ module __Fortran_type_info
     character(len=:), pointer :: name
   end type
 
-  ! Array bounds and type parameters of ocmponents are deferred
+  ! Array bounds and type parameters of components are deferred
   ! (for allocatables and pointers), explicit constants, or
   ! taken from LEN type parameters for automatic components.
   enum, bind(c) ! Value::Genre

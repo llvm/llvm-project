@@ -38,6 +38,7 @@
 
 #include "dfsan/dfsan.h"
 #include "dfsan/dfsan_chained_origin_depot.h"
+#include "dfsan/dfsan_flags.h"
 #include "dfsan/dfsan_thread.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"

@@ -470,14 +470,14 @@ bool TargetTransformInfo::useColdCCForColdCall(Function &F) const {
   return TTIImpl->useColdCCForColdCall(F);
 }
 
-unsigned
+InstructionCost
 TargetTransformInfo::getScalarizationOverhead(VectorType *Ty,
                                               const APInt &DemandedElts,
                                               bool Insert, bool Extract) const {
   return TTIImpl->getScalarizationOverhead(Ty, DemandedElts, Insert, Extract);
 }
 
-unsigned TargetTransformInfo::getOperandsScalarizationOverhead(
+InstructionCost TargetTransformInfo::getOperandsScalarizationOverhead(
     ArrayRef<const Value *> Args, ArrayRef<Type *> Tys) const {
   return TTIImpl->getOperandsScalarizationOverhead(Args, Tys);
 }
@@ -1026,6 +1026,11 @@ bool TargetTransformInfo::preferPredicatedReductionSelect(
   return TTIImpl->preferPredicatedReductionSelect(Opcode, Ty, Flags);
 }
 
+TargetTransformInfo::VPLegalization
+TargetTransformInfo::getVPLegalizationStrategy(const VPIntrinsic &VPI) const {
+  return TTIImpl->getVPLegalizationStrategy(VPI);
+}
+
 bool TargetTransformInfo::shouldExpandReduction(const IntrinsicInst *II) const {
   return TTIImpl->shouldExpandReduction(II);
 }
@@ -1036,6 +1041,10 @@ unsigned TargetTransformInfo::getGISelRematGlobalCost() const {
 
 bool TargetTransformInfo::supportsScalableVectors() const {
   return TTIImpl->supportsScalableVectors();
+}
+
+bool TargetTransformInfo::hasActiveVectorLength() const {
+  return TTIImpl->hasActiveVectorLength();
 }
 
 InstructionCost

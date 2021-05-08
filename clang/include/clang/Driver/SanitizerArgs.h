@@ -25,10 +25,10 @@ class SanitizerArgs {
   SanitizerSet RecoverableSanitizers;
   SanitizerSet TrapSanitizers;
 
-  std::vector<std::string> UserBlacklistFiles;
-  std::vector<std::string> SystemBlacklistFiles;
+  std::vector<std::string> UserIgnorelistFiles;
+  std::vector<std::string> SystemIgnorelistFiles;
   std::vector<std::string> CoverageAllowlistFiles;
-  std::vector<std::string> CoverageBlocklistFiles;
+  std::vector<std::string> CoverageIgnorelistFiles;
   int CoverageFeatures = 0;
   int MsanTrackOrigins = 0;
   bool MsanUseAfterDtor = true;

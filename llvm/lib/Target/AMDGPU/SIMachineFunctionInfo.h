@@ -17,6 +17,7 @@
 #include "AMDGPUMachineFunction.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/Support/raw_ostream.h"
@@ -463,7 +464,7 @@ public:
 
   // Map WWM VGPR to a stack slot that is used to save/restore it in the
   // prolog/epilog.
-  SmallDenseMap<Register, Optional<int>> WWMReservedRegs;
+  MapVector<Register, Optional<int>> WWMReservedRegs;
 
 private:
   // Track VGPR + wave index for each subregister of the SGPR spilled to

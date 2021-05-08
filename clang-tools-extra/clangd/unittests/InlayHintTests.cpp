@@ -244,19 +244,35 @@ TEST(ParameterHints, LeadingUnderscore) {
                        ExpectedHint{"p3: ", "p3"});
 }
 
-TEST(ParameterHints, DependentCall) {
-  // FIXME: This doesn't currently produce a hint but should.
+TEST(ParameterHints, DependentCalls) {
   assertParameterHints(R"cpp(
     template <typename T>
-    void foo(T param);
+    void nonmember(T par1);
+
+    template <typename T>
+    struct A {
+      void member(T par2);
+      static void static_member(T par3);
+    };
+
+    void overload(int anInt);
+    void overload(double aDouble);
 
     template <typename T>
     struct S {
-      void bar(T par) {
-        foo($param[[par]]);
+      void bar(A<T> a, T t) {
+        nonmember($par1[[t]]);
+        a.member($par2[[t]]);
+        // FIXME: This one does not work yet.
+        A<T>::static_member($par3[[t]]);
+        // We don't want to arbitrarily pick between
+        // "anInt" or "aDouble", so just show no hint.
+        overload(T{});
       }
     };
-  )cpp");
+  )cpp",
+                       ExpectedHint{"par1: ", "par1"},
+                       ExpectedHint{"par2: ", "par2"});
 }
 
 TEST(ParameterHints, VariadicFunction) {
@@ -320,6 +336,44 @@ TEST(ParameterHints, UserDefinedLiteral) {
       1.2_w;
     }
   )cpp");
+}
+
+TEST(ParameterHints, ParamNameComment) {
+  // Do not hint an argument which already has a comment
+  // with the parameter name preceding it.
+  assertParameterHints(R"cpp(
+    void foo(int param);
+    void bar() {
+      foo(/*param*/42);
+      foo( /* param = */ 42);
+      foo(/* the answer */$param[[42]]);
+    }
+  )cpp",
+                       ExpectedHint{"param: ", "param"});
+}
+
+TEST(ParameterHints, SetterFunctions) {
+  assertParameterHints(R"cpp(
+    struct S {
+      void setParent(S* parent);
+      void set_parent(S* parent);
+      void setTimeout(int timeoutMillis);
+      void setTimeoutMillis(int timeout_millis);
+    };
+    void bar() {
+      S s;
+      // Parameter name matches setter name - omit hint.
+      s.setParent(nullptr);
+      // Support snake_case
+      s.set_parent(nullptr);
+      // Parameter name may contain extra info - show hint.
+      s.setTimeout($timeoutMillis[[120]]);
+      // FIXME: Ideally we'd want to omit this.
+      s.setTimeoutMillis($timeout_millis[[120]]);
+    }
+  )cpp",
+                       ExpectedHint{"timeoutMillis: ", "timeoutMillis"},
+                       ExpectedHint{"timeout_millis: ", "timeout_millis"});
 }
 
 } // namespace

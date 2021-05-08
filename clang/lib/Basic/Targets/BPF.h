@@ -76,7 +76,7 @@ public:
     return None;
   }
 
-  bool allowDebugInfoForExternalVar() const override { return true; }
+  bool allowDebugInfoForExternalRef() const override { return true; }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
     switch (CC) {

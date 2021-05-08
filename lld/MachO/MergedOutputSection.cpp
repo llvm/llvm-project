@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MergedOutputSection.h"
+#include "OutputSegment.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -21,8 +23,8 @@ void MergedOutputSection::mergeInput(InputSection *input) {
     align = input->align;
     flags = input->flags;
   } else {
-    mergeFlags(input->flags);
     align = std::max(align, input->align);
+    mergeFlags(input);
   }
 
   inputs.push_back(input);
@@ -52,21 +54,25 @@ void MergedOutputSection::writeTo(uint8_t *buf) const {
 // TODO: this is most likely wrong; reconsider how section flags
 // are actually merged. The logic presented here was written without
 // any form of informed research.
-void MergedOutputSection::mergeFlags(uint32_t inputFlags) {
-  uint8_t sectionFlag = SECTION_TYPE & inputFlags;
-  if (sectionFlag != (SECTION_TYPE & flags))
-    error("Cannot add merge section; inconsistent type flags " +
-          Twine(sectionFlag));
+void MergedOutputSection::mergeFlags(InputSection *input) {
+  uint8_t baseType = flags & SECTION_TYPE;
+  uint8_t inputType = input->flags & SECTION_TYPE;
+  if (baseType != inputType)
+    error("Cannot merge section " + input->name + " (type=0x" +
+          to_hexString(inputType) + ") into " + name + " (type=0x" +
+          to_hexString(baseType) + "): inconsistent types");
 
-  uint32_t inconsistentFlags = S_ATTR_DEBUG | S_ATTR_STRIP_STATIC_SYMS |
-                               S_ATTR_NO_DEAD_STRIP | S_ATTR_LIVE_SUPPORT;
-  if ((inputFlags ^ flags) & inconsistentFlags)
-    error("Cannot add merge section; cannot merge inconsistent flags");
+  constexpr uint32_t strictFlags = S_ATTR_DEBUG | S_ATTR_STRIP_STATIC_SYMS |
+                                   S_ATTR_NO_DEAD_STRIP | S_ATTR_LIVE_SUPPORT;
+  if ((input->flags ^ flags) & strictFlags)
+    error("Cannot merge section " + input->name + " (flags=0x" +
+          to_hexString(input->flags) + ") into " + name + " (flags=0x" +
+          to_hexString(flags) + "): strict flags differ");
 
   // Negate pure instruction presence if any section isn't pure.
-  uint32_t pureMask = ~S_ATTR_PURE_INSTRUCTIONS | (inputFlags & flags);
+  uint32_t pureMask = ~S_ATTR_PURE_INSTRUCTIONS | (input->flags & flags);
 
   // Merge the rest
-  flags |= inputFlags;
+  flags |= input->flags;
   flags &= pureMask;
 }
