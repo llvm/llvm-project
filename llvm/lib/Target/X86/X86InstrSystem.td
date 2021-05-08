@@ -47,14 +47,11 @@ let Uses = [EFLAGS] in
   def INTO : I<0xce, RawFrm, (outs), (ins), "into", []>, Requires<[Not64BitMode]>;
 
 def INT3 : I<0xcc, RawFrm, (outs), (ins), "int3", [(int_x86_int (i8 3))]>;
-} // SchedRW
 
 def UBSAN_UD1 : PseudoI<(outs), (ins i32imm:$kind), [(ubsantrap (i32 timm:$kind))]>;
 // The long form of "int $3" turns into int3 as a size optimization.
 // FIXME: This doesn't work because InstAlias can't match immediate constants.
 //def : InstAlias<"int\t$3", (INT3)>;
-
-let SchedRW = [WriteSystem] in {
 
 def INT : Ii8<0xcd, RawFrm, (outs), (ins u8imm:$trap), "int\t$trap",
               [(int_x86_int timm:$trap)]>;
