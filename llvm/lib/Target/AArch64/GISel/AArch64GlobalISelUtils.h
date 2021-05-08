@@ -13,6 +13,7 @@
 #define LLVM_LIB_TARGET_AARCH64_GISEL_AARCH64GLOBALISELUTILS_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/Register.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
@@ -43,6 +44,14 @@ Optional<int64_t> getAArch64VectorSplatScalar(const MachineInstr &MI,
 /// integer compare.
 bool isCMN(const MachineInstr *MaybeSub, const CmpInst::Predicate &Pred,
            const MachineRegisterInfo &MRI);
+
+/// Replace a G_MEMSET with a value of 0 with a G_BZERO instruction if it is
+/// supported and beneficial to do so.
+///
+/// \note This only applies on Darwin.
+///
+/// \returns true if \p MI was replaced with a G_BZERO.
+bool tryEmitBZero(MachineInstr &MI, MachineIRBuilder &MIRBuilder, bool MinSize);
 
 } // namespace AArch64GISelUtils
 } // namespace llvm
