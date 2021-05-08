@@ -13,12 +13,12 @@
 // The roundtrip test uses to_chars, which requires functions in the dylib
 // that were introduced in Mac OS 10.15.
 //
-// XFAIL: with_system_cxx_lib=macosx10.14
-// XFAIL: with_system_cxx_lib=macosx10.13
-// XFAIL: with_system_cxx_lib=macosx10.12
-// XFAIL: with_system_cxx_lib=macosx10.11
-// XFAIL: with_system_cxx_lib=macosx10.10
-// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.14
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.13
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.12
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9
 
 // <charconv>
 
