@@ -589,7 +589,7 @@ void AsmPrinter::PrintSpecial(const MachineInstr *MI, raw_ostream &OS,
 
 void AsmPrinter::PrintSymbolOperand(const MachineOperand &MO, raw_ostream &OS) {
   assert(MO.isGlobal() && "caller should check MO.isGlobal");
-  getSymbol(MO.getGlobal())->print(OS, MAI);
+  getSymbolPreferLocal(*MO.getGlobal())->print(OS, MAI);
   printOffset(MO.getOffset(), OS);
 }
 

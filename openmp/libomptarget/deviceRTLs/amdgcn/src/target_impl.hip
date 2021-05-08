@@ -75,6 +75,19 @@ DEVICE void __kmpc_impl_target_init() {
   __atomic_store_n(&L1_Barrier, 0u, __ATOMIC_RELEASE);
 }
 
+#ifdef FIXME_BREAKS // reduction_teams
+ uint32_t __kmpc_L0_Barrier [[clang::loader_uninitialized]];
+ #pragma allocate(__kmpc_L0_Barrier) allocator(omp_pteam_mem_alloc)
+
+ EXTERN void __kmpc_impl_target_init() {
+   // Don't have global ctors, and shared memory is not zero init
+   __atomic_store_n(&__kmpc_L0_Barrier, 0u, __ATOMIC_RELEASE);
+ }
+
+ EXTERN void __kmpc_impl_named_sync(uint32_t num_threads) {
+   pteam_mem_barrier(num_threads, &__kmpc_L0_Barrier);
+#endif
+
 DEVICE void __kmpc_impl_named_sync(uint32_t num_threads) {
   __atomic_thread_fence(__ATOMIC_ACQUIRE);
 
@@ -123,6 +136,7 @@ DEVICE void __kmpc_impl_named_sync(uint32_t num_threads) {
   }
   __atomic_thread_fence(__ATOMIC_RELEASE);
 }
+
 
 namespace {
 uint32_t get_grid_dim(uint32_t n, uint16_t d) {

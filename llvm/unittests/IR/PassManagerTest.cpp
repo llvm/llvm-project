@@ -419,11 +419,11 @@ TEST(PreservedAnalysisTest, Abandon) {
 }
 
 TEST_F(PassManagerTest, Basic) {
-  FunctionAnalysisManager FAM(/*DebugLogging*/ true);
+  FunctionAnalysisManager FAM;
   int FunctionAnalysisRuns = 0;
   FAM.registerPass([&] { return TestFunctionAnalysis(FunctionAnalysisRuns); });
 
-  ModuleAnalysisManager MAM(/*DebugLogging*/ true);
+  ModuleAnalysisManager MAM;
   int ModuleAnalysisRuns = 0;
   MAM.registerPass([&] { return TestModuleAnalysis(ModuleAnalysisRuns); });
   MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
@@ -440,11 +440,11 @@ TEST_F(PassManagerTest, Basic) {
   int AnalyzedFunctionCount1 = 0;
   {
     // Pointless scoped copy to test move assignment.
-    ModulePassManager NestedMPM(/*DebugLogging*/ true);
+    ModulePassManager NestedMPM;
     FunctionPassManager FPM;
     {
       // Pointless scope to test move assignment.
-      FunctionPassManager NestedFPM(/*DebugLogging*/ true);
+      FunctionPassManager NestedFPM;
       NestedFPM.addPass(TestFunctionPass(FunctionPassRunCount1,
                                          AnalyzedInstrCount1,
                                          AnalyzedFunctionCount1, MAM));
@@ -463,7 +463,7 @@ TEST_F(PassManagerTest, Basic) {
   int AnalyzedInstrCount2 = 0;
   int AnalyzedFunctionCount2 = 0;
   {
-    FunctionPassManager FPM(/*DebugLogging*/ true);
+    FunctionPassManager FPM;
     FPM.addPass(TestFunctionPass(FunctionPassRunCount2, AnalyzedInstrCount2,
                                  AnalyzedFunctionCount2, MAM));
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
@@ -476,7 +476,7 @@ TEST_F(PassManagerTest, Basic) {
   int AnalyzedInstrCount3 = 0;
   int AnalyzedFunctionCount3 = 0;
   {
-    FunctionPassManager FPM(/*DebugLogging*/ true);
+    FunctionPassManager FPM;
     FPM.addPass(TestFunctionPass(FunctionPassRunCount3, AnalyzedInstrCount3,
                                  AnalyzedFunctionCount3, MAM));
     FPM.addPass(TestInvalidationFunctionPass("f"));
@@ -502,7 +502,7 @@ TEST_F(PassManagerTest, Basic) {
   int AnalyzedInstrCount5 = 0;
   int AnalyzedFunctionCount5 = 0;
   {
-    FunctionPassManager FPM(/*DebugLogging*/ true);
+    FunctionPassManager FPM;
     FPM.addPass(TestInvalidationFunctionPass("f"));
     FPM.addPass(TestFunctionPass(FunctionPassRunCount5, AnalyzedInstrCount5,
                                  AnalyzedFunctionCount5, MAM,
@@ -704,8 +704,8 @@ struct LambdaPass : public PassInfoMixin<LambdaPass> {
 };
 
 TEST_F(PassManagerTest, IndirectAnalysisInvalidation) {
-  FunctionAnalysisManager FAM(/*DebugLogging*/ true);
-  ModuleAnalysisManager MAM(/*DebugLogging*/ true);
+  FunctionAnalysisManager FAM;
+  ModuleAnalysisManager MAM;
   int FunctionAnalysisRuns = 0, ModuleAnalysisRuns = 0,
       IndirectAnalysisRuns = 0, DoublyIndirectAnalysisRuns = 0;
   FAM.registerPass([&] { return TestFunctionAnalysis(FunctionAnalysisRuns); });
@@ -724,8 +724,8 @@ TEST_F(PassManagerTest, IndirectAnalysisInvalidation) {
   FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
 
   int InstrCount = 0, FunctionCount = 0;
-  ModulePassManager MPM(/*DebugLogging*/ true);
-  FunctionPassManager FPM(/*DebugLogging*/ true);
+  ModulePassManager MPM;
+  FunctionPassManager FPM;
   // First just use the analysis to get the instruction count, and preserve
   // everything.
   FPM.addPass(LambdaPass([&](Function &F, FunctionAnalysisManager &AM) {
@@ -768,7 +768,7 @@ TEST_F(PassManagerTest, IndirectAnalysisInvalidation) {
   // invalidation to occur, which will force yet another invalidation of the
   // indirect function-level analysis as the module analysis it depends on gets
   // invalidated.
-  FunctionPassManager FPM2(/*DebugLogging*/ true);
+  FunctionPassManager FPM2;
   FPM2.addPass(LambdaPass([&](Function &F, FunctionAnalysisManager &AM) {
     auto &DoublyIndirectResult =
         AM.getResult<TestDoublyIndirectFunctionAnalysis>(F);
@@ -823,8 +823,8 @@ TEST_F(PassManagerTest, FunctionPassCFGChecker) {
                             "}\n");
 
   auto *F = M->getFunction("foo");
-  FunctionAnalysisManager FAM(/*DebugLogging*/ true);
-  FunctionPassManager FPM(/*DebugLogging*/ true);
+  FunctionAnalysisManager FAM;
+  FunctionPassManager FPM;
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(/*DebugLogging*/ true);
   SI.registerCallbacks(PIC, &FAM);
@@ -869,8 +869,8 @@ TEST_F(PassManagerTest, FunctionPassCFGCheckerInvalidateAnalysis) {
                             "}\n");
 
   auto *F = M->getFunction("foo");
-  FunctionAnalysisManager FAM(/*DebugLogging*/ true);
-  FunctionPassManager FPM(/*DebugLogging*/ true);
+  FunctionAnalysisManager FAM;
+  FunctionPassManager FPM;
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(/*DebugLogging*/ true);
   SI.registerCallbacks(PIC, &FAM);
@@ -934,8 +934,8 @@ TEST_F(PassManagerTest, FunctionPassCFGCheckerWrapped) {
                             "}\n");
 
   auto *F = M->getFunction("foo");
-  FunctionAnalysisManager FAM(/*DebugLogging*/ true);
-  FunctionPassManager FPM(/*DebugLogging*/ true);
+  FunctionAnalysisManager FAM;
+  FunctionPassManager FPM;
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(/*DebugLogging*/ true);
   SI.registerCallbacks(PIC, &FAM);
@@ -944,7 +944,7 @@ TEST_F(PassManagerTest, FunctionPassCFGCheckerWrapped) {
   FAM.registerPass([&] { return AssumptionAnalysis(); });
   FAM.registerPass([&] { return TargetIRAnalysis(); });
 
-  FunctionPassManager InnerFPM(/*DebugLogging*/ true);
+  FunctionPassManager InnerFPM;
   InnerFPM.addPass(SimplifyCFGPass());
 
   FPM.addPass(TestSimplifyCFGWrapperPass(InnerFPM));

@@ -3331,7 +3331,7 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
      return SemaBuiltinConstantArgRange(TheCall, 2, 0, 7);
   case PPC::BI__builtin_vsx_xxpermx:
      return SemaBuiltinConstantArgRange(TheCall, 3, 0, 7);
-#define CUSTOM_BUILTIN(Name, Types, Acc) \
+#define CUSTOM_BUILTIN(Name, Intr, Types, Acc) \
   case PPC::BI__builtin_##Name: \
     return SemaBuiltinPPCMMACall(TheCall, Types);
 #include "clang/Basic/BuiltinsPPC.def"

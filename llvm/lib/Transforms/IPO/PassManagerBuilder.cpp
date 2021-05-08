@@ -29,6 +29,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/Attributor.h"
@@ -59,9 +60,10 @@ static cl::opt<bool> EnableInlineAggressive(
 
 // AOCC END
 
-cl::opt<bool>
-    RunPartialInlining("enable-partial-inlining", cl::init(false), cl::Hidden,
-                       cl::ZeroOrMore, cl::desc("Run Partial inlinining pass"));
+namespace llvm {
+cl::opt<bool> RunPartialInlining("enable-partial-inlining", cl::init(false),
+                                 cl::Hidden, cl::ZeroOrMore,
+                                 cl::desc("Run Partial inlinining pass"));
 
 static cl::opt<bool>
 UseGVNAfterVectorization("use-gvn-after-vectorization",
@@ -80,7 +82,6 @@ cl::opt<bool> RunNewGVN("enable-newgvn", cl::init(false), cl::Hidden,
                         cl::desc("Run the NewGVN pass"));
 
 // Experimental option to use CFL-AA
-enum class CFLAAType { None, Steensgaard, Andersen, Both };
 static cl::opt<::CFLAAType>
     UseCFLAA("use-cfl-aa", cl::init(::CFLAAType::None), cl::Hidden,
              cl::desc("Enable the new, experimental CFL alias analysis"),
@@ -186,6 +187,7 @@ cl::opt<AttributorRunOption> AttributorRun(
                           "disable attributor runs")));
 
 extern cl::opt<bool> EnableKnowledgeRetention;
+} // namespace llvm
 
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;

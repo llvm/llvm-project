@@ -208,10 +208,10 @@ TEST_F(PassManagerTest, Basic) {
   LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
   M->setDataLayout(TM->createDataLayout());
 
-  LoopAnalysisManager LAM(/*DebugLogging=*/true);
-  FunctionAnalysisManager FAM(/*DebugLogging=*/true);
-  CGSCCAnalysisManager CGAM(/*DebugLogging=*/true);
-  ModuleAnalysisManager MAM(/*DebugLogging=*/true);
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
   PassBuilder PB(TM.get());
   PB.registerModuleAnalyses(MAM);
   PB.registerFunctionAnalyses(FAM);
@@ -225,8 +225,7 @@ TEST_F(PassManagerTest, Basic) {
   MachineFunctionAnalysisManager MFAM;
   {
     // Test move assignment.
-    MachineFunctionAnalysisManager NestedMFAM(FAM, MAM,
-                                              /*DebugLogging*/ true);
+    MachineFunctionAnalysisManager NestedMFAM(FAM, MAM);
     NestedMFAM.registerPass([&] { return PassInstrumentationAnalysis(); });
     NestedMFAM.registerPass([&] { return TestMachineFunctionAnalysis(); });
     MFAM = std::move(NestedMFAM);
@@ -241,7 +240,7 @@ TEST_F(PassManagerTest, Basic) {
   MachineFunctionPassManager MFPM;
   {
     // Test move assignment.
-    MachineFunctionPassManager NestedMFPM(/*DebugLogging*/ true);
+    MachineFunctionPassManager NestedMFPM;
     NestedMFPM.addPass(TestMachineModulePass(Count, TestMachineModuleCount[0]));
     NestedMFPM.addPass(TestMachineFunctionPass(Count, BeforeInitialization[0],
                                                BeforeFinalization[0],

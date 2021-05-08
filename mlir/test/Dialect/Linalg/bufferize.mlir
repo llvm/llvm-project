@@ -96,10 +96,10 @@ func @multiple_results(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
 // CHECK-LABEL:   func @multiple_results_indexed
 // CHECK:           %[[RESULT0:.*]] = memref.alloc() : memref<4xi32>
 // CHECK:           %[[RESULT1:.*]] = memref.alloc() : memref<4xi32>
-// CHECK:           linalg.indexed_generic
+// CHECK:           linalg.generic
 // CHECK-SAME:      ins(%{{.*}} : memref<4xi32>)
 // CHECK-SAME:      outs(%[[RESULT0]], %[[RESULT1]] : memref<4xi32>, memref<4xi32>)
-// CHECK-NEXT: ^bb0(%{{.*}}: index, %{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32):
+// CHECK-NEXT: ^bb0(%{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i32):
 func @multiple_results_indexed(%arg0: tensor<4xi32>)
         -> (tensor<4xi32>, tensor<4xi32>) {
     %0, %1 = linalg.indexed_generic {
@@ -278,3 +278,18 @@ func @bufferize_fill(%arg0: tensor<?xf32>) -> tensor<?xf32> {
   %0 = linalg.fill(%arg0, %c0) : tensor<?xf32>, f32 -> tensor<?xf32>
   return %0 : tensor<?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @bufferize_tensor_reshape(
+// CHECK-SAME:    %[[IN:.*]]: tensor<4x5xf32>
+func @bufferize_tensor_reshape(%arg0: tensor<4x5xf32>) -> tensor<20xf32> {
+  %out = linalg.tensor_reshape %arg0 [[0, 1]] :
+     tensor<4x5xf32> into tensor<20xf32>
+  return %out : tensor<20xf32>
+}
+// CHECK: %[[MEMREF:.*]] = memref.buffer_cast %[[IN]] : memref<4x5xf32>
+// CHECK: %[[RESHAPE:.*]] = linalg.reshape %[[MEMREF]] {{\[}}[0, 1]]
+// CHECK-SAME: : memref<4x5xf32> into memref<20xf32>
+// CHECK: %[[TENSOR:.*]] = memref.tensor_load %[[RESHAPE]] : memref<20xf32>
+// CHECK: return %[[TENSOR]]

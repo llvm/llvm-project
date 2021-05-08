@@ -735,6 +735,48 @@ static LogicalResult verify(GenericOp op) { return verifyGenericOp(op); }
 
 static LogicalResult verify(IndexedGenericOp op) { return verifyGenericOp(op); }
 
+namespace {
+
+/// Replace indexed_generic ops by generic ops that access the iteration indices
+/// using index operation calls.
+struct ConvertIndexedToGenericOp : OpRewritePattern<IndexedGenericOp> {
+  using OpRewritePattern<IndexedGenericOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(IndexedGenericOp indexedOp,
+                                PatternRewriter &rewriter) const override {
+    // Replace all uses of the index block arguments.
+    BlockAndValueMapping bvm;
+    if (Block *body = indexedOp.getBody()) {
+      rewriter.setInsertionPointToStart(body);
+      for (const auto &en : llvm::enumerate(
+               body->getArguments().take_front(indexedOp.getNumLoops()))) {
+        Value index = rewriter.create<IndexOp>(indexedOp.getLoc(), en.index());
+        bvm.map(en.value(), index);
+      }
+    }
+
+    // Create a generic replacement operation and clone the body.
+    rewriter.setInsertionPointAfter(indexedOp);
+    SmallVector<StringRef> iterators = llvm::to_vector<4>(
+        indexedOp.iterator_types().getAsValueRange<StringAttr>());
+    GenericOp genericOp = rewriter.create<GenericOp>(
+        indexedOp.getLoc(), indexedOp->getResultTypes(), indexedOp.getInputs(),
+        indexedOp.getOutputs(), indexedOp.getIndexingMaps(), iterators);
+    Region &genericRegion = genericOp.region();
+    Region &indexedRegion = indexedOp.region();
+    rewriter.cloneRegionBefore(indexedRegion, genericRegion,
+                               genericRegion.begin(), bvm);
+
+    rewriter.replaceOp(indexedOp, genericOp->getResults());
+    return success();
+  }
+};
+} // namespace
+
+void IndexedGenericOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                   MLIRContext *context) {
+  results.add<ConvertIndexedToGenericOp>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // InitTensorOp
 //===----------------------------------------------------------------------===//
@@ -3161,7 +3203,6 @@ CANONICALIZERS_AND_FOLDERS(PoolingSumOp)
 CANONICALIZERS_AND_FOLDERS(CopyOp)
 CANONICALIZERS_AND_FOLDERS(FillOp)
 CANONICALIZERS_AND_FOLDERS(GenericOp)
-CANONICALIZERS_AND_FOLDERS(IndexedGenericOp)
 
 // All named ops canonicalizers and folders are auto-generated in the
 // .cpp.inc.

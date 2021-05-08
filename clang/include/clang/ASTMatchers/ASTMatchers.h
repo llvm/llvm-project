@@ -3896,20 +3896,51 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
   return false;
 }
 
-/// Matches if the type location of the declarator decl's type matches
-/// the inner matcher.
+/// Matches if the type location of a node matches the inner matcher.
 ///
-/// Given
+/// Examples:
 /// \code
 ///   int x;
 /// \endcode
 /// declaratorDecl(hasTypeLoc(loc(asString("int"))))
 ///   matches int x
-AST_MATCHER_P(DeclaratorDecl, hasTypeLoc, internal::Matcher<TypeLoc>, Inner) {
-  if (!Node.getTypeSourceInfo())
+///
+/// \code
+/// auto x = int(3);
+/// \code
+/// cxxTemporaryObjectExpr(hasTypeLoc(loc(asString("int"))))
+///   matches int(3)
+///
+/// \code
+/// struct Foo { Foo(int, int); };
+/// auto x = Foo(1, 2);
+/// \code
+/// cxxFunctionalCastExpr(hasTypeLoc(loc(asString("struct Foo"))))
+///   matches Foo(1, 2)
+///
+/// Usable as: Matcher<BlockDecl>, Matcher<CXXBaseSpecifier>,
+///   Matcher<CXXCtorInitializer>, Matcher<CXXFunctionalCastExpr>,
+///   Matcher<CXXNewExpr>, Matcher<CXXTemporaryObjectExpr>,
+///   Matcher<CXXUnresolvedConstructExpr>,
+///   Matcher<ClassTemplateSpecializationDecl>, Matcher<CompoundLiteralExpr>,
+///   Matcher<DeclaratorDecl>, Matcher<ExplicitCastExpr>,
+///   Matcher<ObjCPropertyDecl>, Matcher<TemplateArgumentLoc>,
+///   Matcher<TypedefNameDecl>
+AST_POLYMORPHIC_MATCHER_P(
+    hasTypeLoc,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(
+        BlockDecl, CXXBaseSpecifier, CXXCtorInitializer, CXXFunctionalCastExpr,
+        CXXNewExpr, CXXTemporaryObjectExpr, CXXUnresolvedConstructExpr,
+        ClassTemplateSpecializationDecl, CompoundLiteralExpr, DeclaratorDecl,
+        ExplicitCastExpr, ObjCPropertyDecl, TemplateArgumentLoc,
+        TypedefNameDecl),
+    internal::Matcher<TypeLoc>, Inner) {
+  TypeSourceInfo *source = internal::GetTypeSourceInfo(Node);
+  if (source == nullptr) {
     // This happens for example for implicit destructors.
     return false;
-  return Inner.matches(Node.getTypeSourceInfo()->getTypeLoc(), Finder, Builder);
+  }
+  return Inner.matches(source->getTypeLoc(), Finder, Builder);
 }
 
 /// Matches if the matched type is represented by the given string.

@@ -560,8 +560,10 @@ private:
   // Header block to its merge (and continue) target mapping.
   BlockMergeInfoMap blockMergeInfo;
 
-  // Block to its phi (block argument) mapping.
-  DenseMap<Block *, BlockPhiInfo> blockPhiInfo;
+  // For each pair of {predecessor, target} blocks, maps the pair of blocks to
+  // the list of phi arguments passed from predecessor to target.
+  DenseMap<std::pair<Block * /*predecessor*/, Block * /*target*/>, BlockPhiInfo>
+      blockPhiInfo;
 
   // Result <id> to value mapping.
   DenseMap<uint32_t, Value> valueMap;

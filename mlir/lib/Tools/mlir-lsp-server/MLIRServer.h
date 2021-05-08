@@ -16,6 +16,7 @@ namespace mlir {
 class DialectRegistry;
 
 namespace lsp {
+struct Hover;
 struct Location;
 struct Position;
 class URIForFile;
@@ -42,6 +43,10 @@ public:
   /// Find all references of the object pointed at by the given position.
   void findReferencesOf(const URIForFile &uri, const Position &pos,
                         std::vector<Location> &references);
+
+  /// Find a hover description for the given hover position, or None if one
+  /// couldn't be found.
+  Optional<Hover> findHover(const URIForFile &uri, const Position &hoverPos);
 
 private:
   struct Impl;

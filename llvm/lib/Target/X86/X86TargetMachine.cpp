@@ -64,6 +64,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeX86LowerAMXIntrinsicsLegacyPassPass(PR);
   initializeX86LowerAMXTypeLegacyPassPass(PR);
+  initializeX86PreAMXConfigPassPass(PR);
   initializeGlobalISel(PR);
   initializeWinEHStatePassPass(PR);
   initializeFixupBWInstPassPass(PR);
@@ -74,6 +75,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializeX86CallFrameOptimizationPass(PR);
   initializeX86CmovConverterPassPass(PR);
   initializeX86TileConfigPass(PR);
+  initializeX86FastTileConfigPass(PR);
   initializeX86LowerTileCopyPass(PR);
   initializeX86ExpandPseudoPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
@@ -377,6 +379,7 @@ public:
   bool addPreISel() override;
   void addMachineSSAOptimization() override;
   void addPreRegAlloc() override;
+  bool addPostFastRegAllocRewrite() override;
   void addPostRegAlloc() override;
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
@@ -415,6 +418,9 @@ void X86PassConfig::addIRPasses() {
   // based on the option level and option attribute.
   addPass(createX86LowerAMXIntrinsicsPass());
   addPass(createX86LowerAMXTypePass());
+
+  if (TM->getOptLevel() == CodeGenOpt::None)
+    addPass(createX86PreAMXConfigPass());
 
   TargetPassConfig::addIRPasses();
 
@@ -581,6 +587,11 @@ void X86PassConfig::addPreEmitPass2() {
     addPass(createEHContGuardCatchretPass());
   }
   addPass(createX86LoadValueInjectionRetHardeningPass());
+}
+
+bool X86PassConfig::addPostFastRegAllocRewrite() {
+  addPass(createX86FastTileConfigPass());
+  return true;
 }
 
 bool X86PassConfig::addPreRewrite() {

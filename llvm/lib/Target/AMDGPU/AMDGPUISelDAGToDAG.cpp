@@ -1669,7 +1669,7 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(SDNode *N, SDValue Addr,
   if (Subtarget->hasFlatInstOffsets() && !CanHaveFlatSegmentOffsetBug) {
     SDValue N0, N1;
     if (isBaseWithConstantOffset64(Addr, N0, N1)) {
-      uint64_t COffsetVal = cast<ConstantSDNode>(N1)->getSExtValue();
+      int64_t COffsetVal = cast<ConstantSDNode>(N1)->getSExtValue();
 
       const SIInstrInfo *TII = Subtarget->getInstrInfo();
       if (TII->isLegalFLATOffset(COffsetVal, AS, FlatVariant)) {
@@ -1911,17 +1911,11 @@ bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *N,
 
   if (!TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS,
                               SIInstrFlags::FlatScratch)) {
-    const unsigned NumBits = AMDGPU::getNumFlatOffsetBits(*Subtarget, true);
-    // Use signed division by a power of two to truncate towards 0.
-    int64_t D = 1LL << (NumBits - 1);
-    int64_t RemainderOffset = (COffsetVal / D) * D;
-    int64_t ImmField = COffsetVal - RemainderOffset;
+    int64_t SplitImmOffset, RemainderOffset;
+    std::tie(SplitImmOffset, RemainderOffset) = TII->splitFlatOffset(
+        COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, SIInstrFlags::FlatScratch);
 
-    assert(TII->isLegalFLATOffset(ImmField, AMDGPUAS::PRIVATE_ADDRESS,
-                                  SIInstrFlags::FlatScratch));
-    assert(RemainderOffset + ImmField == COffsetVal);
-
-    COffsetVal = ImmField;
+    COffsetVal = SplitImmOffset;
 
     SDLoc DL(N);
     SDValue AddOffset =

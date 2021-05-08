@@ -8,6 +8,7 @@
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i32, i1 immarg) #1
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg)
 
 define void @test1(i8* noalias nocapture %X, i8* noalias nocapture readonly %Y, i32 %n){
 ; CHECK-LABEL: test1:
@@ -278,6 +279,133 @@ for.body:                                         ; preds = %for.body, %prehead
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 
 for.cond.cleanup:                                 ; preds = %entry
+  ret void
+}
+
+; Check that WLSTP loop is generated for simplest case of align = 1
+define void @test12(i8* %X, i8 zeroext %c, i32 %n) {
+; CHECK-LABEL: test12:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    vdup.8 q0, r1
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB11_2
+; CHECK-NEXT:  .LBB11_1: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vstrb.8 q0, [r0], #16
+; CHECK-NEXT:    letp lr, .LBB11_1
+; CHECK-NEXT:  .LBB11_2: @ %entry
+; CHECK-NEXT:    pop {r7, pc}
+entry:
+  call void @llvm.memset.p0i8.i32(i8* align 1 %X, i8 %c, i32 %n, i1 false)
+  ret void
+}
+
+
+; Check that WLSTP loop is generated for alignment >= 4
+define void @test13(i32* %X, i8 zeroext %c, i32 %n) {
+; CHECK-LABEL: test13:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    vdup.8 q0, r1
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB12_2
+; CHECK-NEXT:  .LBB12_1: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vstrb.8 q0, [r0], #16
+; CHECK-NEXT:    letp lr, .LBB12_1
+; CHECK-NEXT:  .LBB12_2: @ %entry
+; CHECK-NEXT:    pop {r7, pc}
+entry:
+  %0 = bitcast i32* %X to i8*
+  call void @llvm.memset.p0i8.i32(i8* align 4 %0, i8 %c, i32 %n, i1 false)
+  ret void
+}
+
+
+; Checks that transform correctly handles input with some arithmetic on input arguments.
+; void test14(int* X, char c, int n)
+; {
+;     memset(X+2, c, (n*2)+10);
+; }
+
+define void @test14(i32* %X, i8 zeroext %c, i32 %n) {
+; CHECK-LABEL: test14:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    movs r3, #10
+; CHECK-NEXT:    add.w r2, r3, r2, lsl #1
+; CHECK-NEXT:    vdup.8 q0, r1
+; CHECK-NEXT:    adds r0, #8
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB13_2
+; CHECK-NEXT:  .LBB13_1: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vstrb.8 q0, [r0], #16
+; CHECK-NEXT:    letp lr, .LBB13_1
+; CHECK-NEXT:  .LBB13_2: @ %entry
+; CHECK-NEXT:    pop {r7, pc}
+entry:
+  %add.ptr = getelementptr inbounds i32, i32* %X, i32 2
+  %0 = bitcast i32* %add.ptr to i8*
+  %mul = shl nsw i32 %n, 1
+  %add = add nsw i32 %mul, 10
+  call void @llvm.memset.p0i8.i32(i8* nonnull align 4 %0, i8 %c, i32 %add, i1 false)
+  ret void
+}
+
+
+
+
+; Checks that transform handles for-loops (that get implicitly converted to memset)
+; void test15(int* X, char Y, int n){
+;     for(int i = 0; i < n; ++i){
+;         X[i] = c;
+;     }
+; }
+
+define void @test15(i8* nocapture %X, i8 zeroext %c, i32 %n) {
+; CHECK-LABEL: test15:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    cmp r2, #1
+; CHECK-NEXT:    it lt
+; CHECK-NEXT:    bxlt lr
+; CHECK-NEXT:  .LBB14_1: @ %for.body.preheader
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    vdup.8 q0, r1
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB14_3
+; CHECK-NEXT:  .LBB14_2: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vstrb.8 q0, [r0], #16
+; CHECK-NEXT:    letp lr, .LBB14_2
+; CHECK-NEXT:  .LBB14_3: @ %for.body.preheader
+; CHECK-NEXT:    pop.w {r7, lr}
+; CHECK-NEXT:    bx lr
+entry:
+  %cmp4 = icmp sgt i32 %n, 0
+  br i1 %cmp4, label %for.body.preheader, label %for.cond.cleanup
+
+for.body.preheader:                               ; preds = %entry
+  call void @llvm.memset.p0i8.i32(i8* align 4 %X, i8 %c, i32 %n, i1 false)
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.body.preheader, %entry
+  ret void
+}
+
+; Checks that transform handles case with 0 as src value. No difference is expected.
+define void @test16(i32* %X, i8 zeroext %c, i32 %n) {
+; CHECK-LABEL: test16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB15_2
+; CHECK-NEXT:  .LBB15_1: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vstrb.8 q0, [r0], #16
+; CHECK-NEXT:    letp lr, .LBB15_1
+; CHECK-NEXT:  .LBB15_2: @ %entry
+; CHECK-NEXT:    pop {r7, pc}
+entry:
+  %0 = bitcast i32* %X to i8*
+  call void @llvm.memset.p0i8.i32(i8* align 4 %0, i8 0, i32 %n, i1 false)
   ret void
 }
 

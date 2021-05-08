@@ -330,8 +330,7 @@ public:
 
   /// Allow the target to modify the pass pipeline with New Pass Manager
   /// (similar to adjustPassManager for Legacy Pass manager).
-  virtual void registerPassBuilderCallbacks(PassBuilder &,
-                                            bool DebugPassManager) {}
+  virtual void registerPassBuilderCallbacks(PassBuilder &) {}
 
   /// Allow the target to register alias analyses with the AAManager for use
   /// with the new pass manager. Only affects the "default" AAManager.

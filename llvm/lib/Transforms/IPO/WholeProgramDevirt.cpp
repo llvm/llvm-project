@@ -145,20 +145,20 @@ static cl::opt<bool>
 /// This is needed to support legacy tests that don't contain
 /// !vcall_visibility metadata (the mere presense of type tests
 /// previously implied hidden visibility).
-cl::opt<bool>
+static cl::opt<bool>
     WholeProgramVisibility("whole-program-visibility", cl::init(false),
                            cl::Hidden, cl::ZeroOrMore,
                            cl::desc("Enable whole program visibility"));
 
 /// Provide a way to force disable whole program for debugging or workarounds,
 /// when enabled via the linker.
-cl::opt<bool> DisableWholeProgramVisibility(
+static cl::opt<bool> DisableWholeProgramVisibility(
     "disable-whole-program-visibility", cl::init(false), cl::Hidden,
     cl::ZeroOrMore,
     cl::desc("Disable whole program visibility (overrides enabling options)"));
 
 /// Provide way to prevent certain function from being devirtualized
-cl::list<std::string>
+static cl::list<std::string>
     SkipFunctionNames("wholeprogramdevirt-skip",
                       cl::desc("Prevent function(s) from being devirtualized"),
                       cl::Hidden, cl::ZeroOrMore, cl::CommaSeparated);
@@ -166,7 +166,7 @@ cl::list<std::string>
 /// Mechanism to add runtime checking of devirtualization decisions, trapping on
 /// any that are not correct. Useful for debugging undefined behavior leading to
 /// failures with WPD.
-cl::opt<bool>
+static cl::opt<bool>
     CheckDevirt("wholeprogramdevirt-check", cl::init(false), cl::Hidden,
                 cl::ZeroOrMore,
                 cl::desc("Add code to trap on incorrect devirtualizations"));
