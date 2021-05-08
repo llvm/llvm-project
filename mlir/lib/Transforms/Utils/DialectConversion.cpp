@@ -2628,15 +2628,15 @@ struct FunctionLikeSignatureConversion : public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    FunctionType type = mlir::impl::getFunctionType(op);
+    FunctionType type = function_like_impl::getFunctionType(op);
 
     // Convert the original function types.
     TypeConverter::SignatureConversion result(type.getNumInputs());
     SmallVector<Type, 1> newResults;
     if (failed(typeConverter->convertSignatureArgs(type.getInputs(), result)) ||
         failed(typeConverter->convertTypes(type.getResults(), newResults)) ||
-        failed(rewriter.convertRegionTypes(&mlir::impl::getFunctionBody(op),
-                                           *typeConverter, &result)))
+        failed(rewriter.convertRegionTypes(
+            &function_like_impl::getFunctionBody(op), *typeConverter, &result)))
       return failure();
 
     // Update the function signature in-place.
@@ -2644,7 +2644,7 @@ struct FunctionLikeSignatureConversion : public ConversionPattern {
                                      result.getConvertedTypes(), newResults);
 
     rewriter.updateRootInPlace(
-        op, [&] { mlir::impl::setFunctionType(op, newType); });
+        op, [&] { function_like_impl::setFunctionType(op, newType); });
 
     return success();
   }

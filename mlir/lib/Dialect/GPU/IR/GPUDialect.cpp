@@ -599,9 +599,9 @@ parseLaunchFuncOperands(OpAsmParser &parser,
     return success();
   SmallVector<NamedAttrList, 4> argAttrs;
   bool isVariadic = false;
-  return impl::parseFunctionArgumentList(parser, /*allowAttributes=*/false,
-                                         /*allowVariadic=*/false, argNames,
-                                         argTypes, argAttrs, isVariadic);
+  return function_like_impl::parseFunctionArgumentList(
+      parser, /*allowAttributes=*/false,
+      /*allowVariadic=*/false, argNames, argTypes, argAttrs, isVariadic);
 }
 
 static void printLaunchFuncOperands(OpAsmPrinter &printer, Operation *,
@@ -717,7 +717,7 @@ static ParseResult parseGPUFuncOp(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   auto signatureLocation = parser.getCurrentLocation();
-  if (failed(impl::parseFunctionSignature(
+  if (failed(function_like_impl::parseFunctionSignature(
           parser, /*allowVariadic=*/false, entryArgs, argTypes, argAttrs,
           isVariadic, resultTypes, resultAttrs)))
     return failure();
@@ -756,7 +756,8 @@ static ParseResult parseGPUFuncOp(OpAsmParser &parser, OperationState &result) {
   // Parse attributes.
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
     return failure();
-  mlir::impl::addArgAndResultAttrs(builder, result, argAttrs, resultAttrs);
+  function_like_impl::addArgAndResultAttrs(builder, result, argAttrs,
+                                           resultAttrs);
 
   // Parse the region. If no argument names were provided, take all names
   // (including those of attributions) from the entry block.
@@ -781,31 +782,20 @@ static void printGPUFuncOp(OpAsmPrinter &p, GPUFuncOp op) {
   p.printSymbolName(op.getName());
 
   FunctionType type = op.getType();
-  impl::printFunctionSignature(p, op.getOperation(), type.getInputs(),
-                               /*isVariadic=*/false, type.getResults());
+  function_like_impl::printFunctionSignature(
+      p, op.getOperation(), type.getInputs(),
+      /*isVariadic=*/false, type.getResults());
 
   printAttributions(p, op.getWorkgroupKeyword(), op.getWorkgroupAttributions());
   printAttributions(p, op.getPrivateKeyword(), op.getPrivateAttributions());
   if (op.isKernel())
     p << ' ' << op.getKernelKeyword();
 
-  impl::printFunctionAttributes(p, op.getOperation(), type.getNumInputs(),
-                                type.getNumResults(),
-                                {op.getNumWorkgroupAttributionsAttrName(),
-                                 GPUDialect::getKernelFuncAttrName()});
+  function_like_impl::printFunctionAttributes(
+      p, op.getOperation(), type.getNumInputs(), type.getNumResults(),
+      {op.getNumWorkgroupAttributionsAttrName(),
+       GPUDialect::getKernelFuncAttrName()});
   p.printRegion(op.getBody(), /*printEntryBlockArgs=*/false);
-}
-
-void GPUFuncOp::setType(FunctionType newType) {
-  auto oldType = getType();
-  assert(newType.getNumResults() == oldType.getNumResults() &&
-         "unimplemented: changes to the number of results");
-
-  SmallVector<char, 16> nameBuf;
-  for (int i = newType.getNumInputs(), e = oldType.getNumInputs(); i < e; i++)
-    (*this)->removeAttr(getArgAttrName(i, nameBuf));
-
-  (*this)->setAttr(getTypeAttrName(), TypeAttr::get(newType));
 }
 
 /// Hook for FunctionLike verifier.
