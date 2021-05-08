@@ -3791,9 +3791,8 @@ struct TwoDimMultiReductionToReduction
         return "or";
       case vector::CombiningKind::XOR:
         return "xor";
-      default:
-        llvm_unreachable("unknown combining kind");
       }
+      llvm_unreachable("unknown combining kind");
     };
 
     for (int i = 0; i < outerDim; ++i) {
