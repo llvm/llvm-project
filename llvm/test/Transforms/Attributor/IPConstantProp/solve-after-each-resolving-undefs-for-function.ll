@@ -5,18 +5,6 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_OPM,IS__CGSCC____,IS________NPM,IS__CGSCC_NPM
 
 define internal i32 @testf(i1 %c) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@testf
-; IS__TUNIT____-SAME: (i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    br i1 [[C]], label [[IF_COND:%.*]], label [[IF_END:%.*]]
-; IS__TUNIT____:       if.cond:
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       if.then:
-; IS__TUNIT____-NEXT:    ret i32 11
-; IS__TUNIT____:       if.end:
-; IS__TUNIT____-NEXT:    ret i32 10
-;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@testf
 ; IS__CGSCC____-SAME: (i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -25,9 +13,9 @@ define internal i32 @testf(i1 %c) {
 ; IS__CGSCC____:       if.cond:
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       if.then:
-; IS__CGSCC____-NEXT:    ret i32 11
+; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       if.end:
-; IS__CGSCC____-NEXT:    ret i32 10
+; IS__CGSCC____-NEXT:    ret i32 undef
 ;
 entry:
   br i1 %c, label %if.cond, label %if.end
@@ -43,33 +31,17 @@ if.end:                                          ; preds = %if.then1, %entry
 }
 
 define internal i32 @test1(i1 %c) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@test1
-; IS__TUNIT____-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    br label [[IF_THEN:%.*]]
-; IS__TUNIT____:       if.then:
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32 @testf(i1 [[C]]) #[[ATTR0]], !range [[RNG0:![0-9]+]]
-; IS__TUNIT____-NEXT:    [[RES:%.*]] = icmp eq i32 [[CALL]], 10
-; IS__TUNIT____-NEXT:    br i1 [[RES]], label [[RET1:%.*]], label [[RET2:%.*]]
-; IS__TUNIT____:       ret1:
-; IS__TUNIT____-NEXT:    ret i32 99
-; IS__TUNIT____:       ret2:
-; IS__TUNIT____-NEXT:    ret i32 0
-;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test1
 ; IS__CGSCC____-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    br label [[IF_THEN:%.*]]
 ; IS__CGSCC____:       if.then:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 @testf(i1 [[C]]) #[[ATTR1:[0-9]+]], !range [[RNG0:![0-9]+]]
-; IS__CGSCC____-NEXT:    [[RES:%.*]] = icmp eq i32 [[CALL]], 10
-; IS__CGSCC____-NEXT:    br i1 [[RES]], label [[RET1:%.*]], label [[RET2:%.*]]
+; IS__CGSCC____-NEXT:    br label [[RET1:%.*]]
 ; IS__CGSCC____:       ret1:
-; IS__CGSCC____-NEXT:    ret i32 99
+; IS__CGSCC____-NEXT:    ret i32 undef
 ; IS__CGSCC____:       ret2:
-; IS__CGSCC____-NEXT:    ret i32 0
+; IS__CGSCC____-NEXT:    unreachable
 ;
 entry:
   br label %if.then
@@ -89,15 +61,13 @@ ret2:                                           ; preds = %if.then, %entry
 define i32 @main(i1 %c) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@main
-; IS__TUNIT____-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    [[RES:%.*]] = call i32 @test1(i1 [[C]]) #[[ATTR0]], !range [[RNG1:![0-9]+]]
-; IS__TUNIT____-NEXT:    ret i32 [[RES]]
+; IS__TUNIT____-SAME: (i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; IS__TUNIT____-NEXT:    ret i32 99
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@main
 ; IS__CGSCC____-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    [[RES:%.*]] = call i32 @test1(i1 [[C]]) #[[ATTR1]], !range [[RNG1:![0-9]+]]
-; IS__CGSCC____-NEXT:    ret i32 [[RES]]
+; IS__CGSCC____-NEXT:    ret i32 99
 ;
   %res = call i32 @test1(i1 %c)
   ret i32 %res
@@ -106,8 +76,4 @@ define i32 @main(i1 %c) {
 ; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { readnone willreturn }
-;.
-; CHECK: [[META0:![0-9]+]] = !{i32 10, i32 12}
-; CHECK: [[META1:![0-9]+]] = !{i32 0, i32 100}
 ;.
