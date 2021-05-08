@@ -1732,21 +1732,19 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
   if (argAttrs.empty())
     return;
 
-  unsigned numInputs = type.cast<LLVMFunctionType>().getNumParams();
-  assert(numInputs == argAttrs.size() &&
+  assert(type.cast<LLVMFunctionType>().getNumParams() == argAttrs.size() &&
          "expected as many argument attribute lists as arguments");
-  SmallString<8> argAttrName;
-  for (unsigned i = 0; i < numInputs; ++i)
-    if (DictionaryAttr argDict = argAttrs[i])
-      result.addAttribute(getArgAttrName(i, argAttrName), argDict);
+  function_like_impl::addArgAndResultAttrs(builder, result, argAttrs,
+                                           /*resultAttrs=*/llvm::None);
 }
 
 // Builds an LLVM function type from the given lists of input and output types.
 // Returns a null type if any of the types provided are non-LLVM types, or if
 // there is more than one output type.
-static Type buildLLVMFunctionType(OpAsmParser &parser, llvm::SMLoc loc,
-                                  ArrayRef<Type> inputs, ArrayRef<Type> outputs,
-                                  impl::VariadicFlag variadicFlag) {
+static Type
+buildLLVMFunctionType(OpAsmParser &parser, llvm::SMLoc loc,
+                      ArrayRef<Type> inputs, ArrayRef<Type> outputs,
+                      function_like_impl::VariadicFlag variadicFlag) {
   Builder &b = parser.getBuilder();
   if (outputs.size() > 1) {
     parser.emitError(loc, "failed to construct function type: expected zero or "
@@ -1803,22 +1801,23 @@ static ParseResult parseLLVMFuncOp(OpAsmParser &parser,
   auto signatureLocation = parser.getCurrentLocation();
   if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
                              result.attributes) ||
-      impl::parseFunctionSignature(parser, /*allowVariadic=*/true, entryArgs,
-                                   argTypes, argAttrs, isVariadic, resultTypes,
-                                   resultAttrs))
+      function_like_impl::parseFunctionSignature(
+          parser, /*allowVariadic=*/true, entryArgs, argTypes, argAttrs,
+          isVariadic, resultTypes, resultAttrs))
     return failure();
 
   auto type =
       buildLLVMFunctionType(parser, signatureLocation, argTypes, resultTypes,
-                            impl::VariadicFlag(isVariadic));
+                            function_like_impl::VariadicFlag(isVariadic));
   if (!type)
     return failure();
-  result.addAttribute(impl::getTypeAttrName(), TypeAttr::get(type));
+  result.addAttribute(function_like_impl::getTypeAttrName(),
+                      TypeAttr::get(type));
 
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
     return failure();
-  impl::addArgAndResultAttrs(parser.getBuilder(), result, argAttrs,
-                             resultAttrs);
+  function_like_impl::addArgAndResultAttrs(parser.getBuilder(), result,
+                                           argAttrs, resultAttrs);
 
   auto *body = result.addRegion();
   OptionalParseResult parseResult = parser.parseOptionalRegion(
@@ -1846,9 +1845,10 @@ static void printLLVMFuncOp(OpAsmPrinter &p, LLVMFuncOp op) {
   if (!returnType.isa<LLVMVoidType>())
     resTypes.push_back(returnType);
 
-  impl::printFunctionSignature(p, op, argTypes, op.isVarArg(), resTypes);
-  impl::printFunctionAttributes(p, op, argTypes.size(), resTypes.size(),
-                                {getLinkageAttrName()});
+  function_like_impl::printFunctionSignature(p, op, argTypes, op.isVarArg(),
+                                             resTypes);
+  function_like_impl::printFunctionAttributes(
+      p, op, argTypes.size(), resTypes.size(), {getLinkageAttrName()});
 
   // Print the body if this is not an external function.
   Region &body = op.body();
