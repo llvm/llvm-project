@@ -120,10 +120,10 @@ def usable_core_count():
     except AttributeError:
         n = os.cpu_count() or 1
 
-    # On Windows, with more than 32 processes, process creation often fails with
-    # "Too many open files".  FIXME: Check if there's a better fix.
+    # On Windows with more than 60 processes, multiprocessing's call to
+    # _winapi.WaitForMultipleObjects() prints an error and lit hangs.
     if platform.system() == 'Windows':
-        return min(n, 32)
+        return min(n, 60)
 
     return n
 
