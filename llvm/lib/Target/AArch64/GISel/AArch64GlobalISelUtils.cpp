@@ -11,6 +11,7 @@
 #include "AArch64GlobalISelUtils.h"
 #include "AArch64InstrInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -56,4 +57,39 @@ bool AArch64GISelUtils::isCMN(const MachineInstr *MaybeSub,
   auto MaybeZero =
       getConstantVRegValWithLookThrough(MaybeSub->getOperand(1).getReg(), MRI);
   return MaybeZero && MaybeZero->Value.getZExtValue() == 0;
+}
+
+bool AArch64GISelUtils::tryEmitBZero(MachineInstr &MI,
+                                     MachineIRBuilder &MIRBuilder,
+                                     bool MinSize) {
+  assert(MI.getOpcode() == TargetOpcode::G_MEMSET);
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
+  if (!TLI.getLibcallName(RTLIB::BZERO))
+    return false;
+  auto Zero = getConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI);
+  if (!Zero || Zero->Value.getSExtValue() != 0)
+    return false;
+
+  // It's not faster to use bzero rather than memset for sizes <= 256.
+  // However, it *does* save us a mov from wzr, so if we're going for
+  // minsize, use bzero even if it's slower.
+  if (!MinSize) {
+    // If the size is known, check it. If it is not known, assume using bzero is
+    // better.
+    if (auto Size =
+            getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI)) {
+      if (Size->Value.getSExtValue() <= 256)
+        return false;
+    }
+  }
+
+  MIRBuilder.setInstrAndDebugLoc(MI);
+  MIRBuilder
+      .buildInstr(TargetOpcode::G_BZERO, {},
+                  {MI.getOperand(0), MI.getOperand(2)})
+      .addImm(MI.getOperand(3).getImm())
+      .addMemOperand(*MI.memoperands_begin());
+  MI.eraseFromParent();
+  return true;
 }
