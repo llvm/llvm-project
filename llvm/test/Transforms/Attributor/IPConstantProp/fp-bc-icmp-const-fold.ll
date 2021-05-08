@@ -7,59 +7,71 @@ target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux"
 
 define void @test(i32 signext %n) {
-; IS__TUNIT____: Function Attrs: nofree noreturn nosync nounwind readnone
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test
 ; IS__TUNIT____-SAME: (i32 signext [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       if.then:
-; IS__TUNIT____-NEXT:    unreachable
+; IS__TUNIT____-NEXT:    ret void
 ; IS__TUNIT____:       if.end:
 ; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       if.then2:
 ; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       if.end4:
-; IS__TUNIT____-NEXT:    unreachable
+; IS__TUNIT____-NEXT:    [[SUB_N:%.*]] = select i1 undef, i32 undef, i32 [[N]]
+; IS__TUNIT____-NEXT:    switch i32 [[SUB_N]], label [[IF_ELSE14:%.*]] [
+; IS__TUNIT____-NEXT:    i32 0, label [[IF_THEN9:%.*]]
+; IS__TUNIT____-NEXT:    i32 1, label [[IF_THEN12:%.*]]
+; IS__TUNIT____-NEXT:    ]
 ; IS__TUNIT____:       if.then9:
 ; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       if.then12:
 ; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       if.else14:
-; IS__TUNIT____-NEXT:    unreachable
+; IS__TUNIT____-NEXT:    br label [[DO_BODY:%.*]]
 ; IS__TUNIT____:       do.body:
 ; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       if.then33:
 ; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       cond.false.i28:
-; IS__TUNIT____-NEXT:    unreachable
+; IS__TUNIT____-NEXT:    [[TMP0:%.*]] = bitcast ppc_fp128 0xM3FF00000000000000000000000000000 to i128
+; IS__TUNIT____-NEXT:    [[TOBOOL_I26:%.*]] = icmp slt i128 [[TMP0]], 0
+; IS__TUNIT____-NEXT:    br label [[_ZN5BOOST4MATH4SIGNIGEEIRKT__EXIT30:%.*]]
 ; IS__TUNIT____:       _ZN5boost4math4signIgEEiRKT_.exit30:
 ; IS__TUNIT____-NEXT:    unreachable
 ;
-; IS__CGSCC____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test
 ; IS__CGSCC____-SAME: (i32 signext [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       if.then:
-; IS__CGSCC____-NEXT:    unreachable
+; IS__CGSCC____-NEXT:    ret void
 ; IS__CGSCC____:       if.end:
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       if.then2:
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       if.end4:
-; IS__CGSCC____-NEXT:    unreachable
+; IS__CGSCC____-NEXT:    [[SUB_N:%.*]] = select i1 undef, i32 undef, i32 [[N]]
+; IS__CGSCC____-NEXT:    switch i32 [[SUB_N]], label [[IF_ELSE14:%.*]] [
+; IS__CGSCC____-NEXT:    i32 0, label [[IF_THEN9:%.*]]
+; IS__CGSCC____-NEXT:    i32 1, label [[IF_THEN12:%.*]]
+; IS__CGSCC____-NEXT:    ]
 ; IS__CGSCC____:       if.then9:
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       if.then12:
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       if.else14:
-; IS__CGSCC____-NEXT:    unreachable
+; IS__CGSCC____-NEXT:    br label [[DO_BODY:%.*]]
 ; IS__CGSCC____:       do.body:
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       if.then33:
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       cond.false.i28:
-; IS__CGSCC____-NEXT:    unreachable
+; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = bitcast ppc_fp128 0xM3FF00000000000000000000000000000 to i128
+; IS__CGSCC____-NEXT:    [[TOBOOL_I26:%.*]] = icmp slt i128 [[TMP0]], 0
+; IS__CGSCC____-NEXT:    br label [[_ZN5BOOST4MATH4SIGNIGEEIRKT__EXIT30:%.*]]
 ; IS__CGSCC____:       _ZN5boost4math4signIgEEiRKT_.exit30:
 ; IS__CGSCC____-NEXT:    unreachable
 ;
@@ -109,7 +121,7 @@ _ZN5boost4math4signIgEEiRKT_.exit30:              ; preds = %cond.false.i28, %if
 }
 
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree noreturn nosync nounwind readnone }
+; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind readnone }
+; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone }
 ;.

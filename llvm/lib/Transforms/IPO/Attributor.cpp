@@ -558,7 +558,7 @@ Attributor::getAssumedConstant(const Value &V, const AbstractAttribute &AA,
   }
   if (isa_and_nonnull<UndefValue>(SimplifiedV.getValue())) {
     recordDependence(ValueSimplifyAA, AA, DepClassTy::OPTIONAL);
-    return llvm::None;
+    return UndefValue::get(V.getType());
   }
   Constant *CI = dyn_cast_or_null<Constant>(SimplifiedV.getValue());
   if (CI && CI->getType() != V.getType()) {

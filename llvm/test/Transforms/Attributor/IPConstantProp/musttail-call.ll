@@ -36,8 +36,7 @@ define i8* @start(i8 %v) {
 ; IS__CGSCC____-NEXT:    [[C2:%.*]] = icmp eq i8 [[V]], 1
 ; IS__CGSCC____-NEXT:    br i1 [[C2]], label [[C2_TRUE:%.*]], label [[C2_FALSE:%.*]]
 ; IS__CGSCC____:       c2_true:
-; IS__CGSCC____-NEXT:    [[CA1:%.*]] = musttail call i8* @no_side_effects(i8 undef)
-; IS__CGSCC____-NEXT:    ret i8* [[CA1]]
+; IS__CGSCC____-NEXT:    ret i8* undef
 ; IS__CGSCC____:       c2_false:
 ; IS__CGSCC____-NEXT:    [[CA2:%.*]] = musttail call i8* @dont_zap_me(i8 undef)
 ; IS__CGSCC____-NEXT:    ret i8* [[CA2]]
