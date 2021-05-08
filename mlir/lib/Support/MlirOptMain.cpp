@@ -202,7 +202,6 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   std::string helpHeader = (toolName + "\nAvailable Dialects: ").str();
   {
     llvm::raw_string_ostream os(helpHeader);
-    MLIRContext context;
     interleaveComma(registry.getDialectNames(), os,
                     [&](auto name) { os << name; });
   }

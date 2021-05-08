@@ -274,8 +274,8 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
   for (MCSubRegIterator I(ZeroRegisterID, &MRI); I.isValid(); ++I)
     ZeroRegisters.setBitVal(*I, IsWriteZero);
 
-  // If this is move has been eliminated, then the call to tryEliminateMove
-  // should have already updated all the register mappings.
+  // If this move has been eliminated, then method tryEliminateMoveOrSwap should
+  // have already updated all the register mappings.
   if (!IsEliminated) {
     // Update the mapping for register RegID including its sub-registers.
     RegisterMappings[RegID].first = Write;
@@ -353,15 +353,19 @@ void RegisterFile::removeRegisterWrite(
   }
 }
 
-bool RegisterFile::tryEliminateMove(WriteState &WS, ReadState &RS) {
+bool RegisterFile::canEliminateMove(const WriteState &WS, const ReadState &RS,
+                                    unsigned RegisterFileIndex) const {
   const RegisterMapping &RMFrom = RegisterMappings[RS.getRegisterID()];
   const RegisterMapping &RMTo = RegisterMappings[WS.getRegisterID()];
+  const RegisterMappingTracker &RMT = RegisterFiles[RegisterFileIndex];
 
-  // From and To must be owned by the same PRF.
+  // From and To must be owned by the PRF at index `RegisterFileIndex`.
   const RegisterRenamingInfo &RRIFrom = RMFrom.second;
+  if (RRIFrom.IndexPlusCost.first != RegisterFileIndex)
+    return false;
+
   const RegisterRenamingInfo &RRITo = RMTo.second;
-  unsigned RegisterFileIndex = RRIFrom.IndexPlusCost.first;
-  if (RegisterFileIndex != RRITo.IndexPlusCost.first)
+  if (RRITo.IndexPlusCost.first != RegisterFileIndex)
     return false;
 
   // Early exit if the destination register is from a register class that
@@ -383,39 +387,74 @@ bool RegisterFile::tryEliminateMove(WriteState &WS, ReadState &RS) {
   // For now, we assume that there is a strong correlation between registers
   // that allow move elimination, and how those same registers are renamed in
   // hardware.
-  if (RRITo.RenameAs && RRITo.RenameAs != WS.getRegisterID()) {
+  if (RRITo.RenameAs && RRITo.RenameAs != WS.getRegisterID())
     if (!WS.clearsSuperRegisters())
+      return false;
+
+  bool IsZeroMove = ZeroRegisters[RS.getRegisterID()];
+  return (!RMT.AllowZeroMoveEliminationOnly || IsZeroMove);
+}
+
+bool RegisterFile::tryEliminateMoveOrSwap(MutableArrayRef<WriteState> Writes,
+                                          MutableArrayRef<ReadState> Reads) {
+  if (Writes.size() != Reads.size())
+    return false;
+
+  // This logic assumes that writes and reads are contributed by a register move
+  // or a register swap operation. In particular, it assumes a simple register
+  // move if there is only one write.  It assumes a swap operation if there are
+  // exactly two writes.
+  if (Writes.empty() || Writes.size() > 2)
+    return false;
+
+  // All registers must be owned by the same PRF.
+  const RegisterRenamingInfo &RRInfo =
+      RegisterMappings[Writes[0].getRegisterID()].second;
+  unsigned RegisterFileIndex = RRInfo.IndexPlusCost.first;
+  RegisterMappingTracker &RMT = RegisterFiles[RegisterFileIndex];
+
+  // Early exit if the PRF cannot eliminate more moves/xchg in this cycle.
+  if (RMT.MaxMoveEliminatedPerCycle &&
+      (RMT.NumMoveEliminated + Writes.size()) > RMT.MaxMoveEliminatedPerCycle)
+    return false;
+
+  for (size_t I = 0, E = Writes.size(); I < E; ++I) {
+    const ReadState &RS = Reads[I];
+    const WriteState &WS = Writes[E - (I + 1)];
+    if (!canEliminateMove(WS, RS, RegisterFileIndex))
       return false;
   }
 
-  RegisterMappingTracker &RMT = RegisterFiles[RegisterFileIndex];
-  if (RMT.MaxMoveEliminatedPerCycle &&
-      RMT.NumMoveEliminated == RMT.MaxMoveEliminatedPerCycle)
-    return false;
+  for (size_t I = 0, E = Writes.size(); I < E; ++I) {
+    ReadState &RS = Reads[I];
+    WriteState &WS = Writes[E - (I + 1)];
 
-  bool IsZeroMove = ZeroRegisters[RS.getRegisterID()];
-  if (RMT.AllowZeroMoveEliminationOnly && !IsZeroMove)
-    return false;
+    const RegisterMapping &RMFrom = RegisterMappings[RS.getRegisterID()];
+    const RegisterMapping &RMTo = RegisterMappings[WS.getRegisterID()];
+    const RegisterRenamingInfo &RRIFrom = RMFrom.second;
+    const RegisterRenamingInfo &RRITo = RMTo.second;
 
-  // Construct an alias.
-  MCPhysReg AliasedReg =
-      RRIFrom.RenameAs ? RRIFrom.RenameAs : RS.getRegisterID();
-  MCPhysReg AliasReg = RRITo.RenameAs ? RRITo.RenameAs : WS.getRegisterID();
+    // Construct an alias.
+    MCPhysReg AliasedReg =
+        RRIFrom.RenameAs ? RRIFrom.RenameAs : RS.getRegisterID();
+    MCPhysReg AliasReg = RRITo.RenameAs ? RRITo.RenameAs : WS.getRegisterID();
 
-  const RegisterRenamingInfo &RMAlias = RegisterMappings[AliasedReg].second;
-  if (RMAlias.AliasRegID)
-    AliasedReg = RMAlias.AliasRegID;
+    const RegisterRenamingInfo &RMAlias = RegisterMappings[AliasedReg].second;
+    if (RMAlias.AliasRegID)
+      AliasedReg = RMAlias.AliasRegID;
 
-  RegisterMappings[AliasReg].second.AliasRegID = AliasedReg;
-  for (MCSubRegIterator I(AliasReg, &MRI); I.isValid(); ++I)
-    RegisterMappings[*I].second.AliasRegID = AliasedReg;
+    RegisterMappings[AliasReg].second.AliasRegID = AliasedReg;
+    for (MCSubRegIterator I(AliasReg, &MRI); I.isValid(); ++I)
+      RegisterMappings[*I].second.AliasRegID = AliasedReg;
 
-  if (IsZeroMove) {
-    WS.setWriteZero();
-    RS.setReadZero();
+    if (ZeroRegisters[RS.getRegisterID()]) {
+      WS.setWriteZero();
+      RS.setReadZero();
+    }
+
+    WS.setEliminated();
+    RMT.NumMoveEliminated++;
   }
-  WS.setEliminated();
-  RMT.NumMoveEliminated++;
 
   return true;
 }

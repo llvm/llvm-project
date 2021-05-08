@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03
 
 // This test requires the dylib support introduced in D92769.
-// XFAIL: with_system_cxx_lib=macosx10.15
+// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.15
 
 // <filesystem>
 
