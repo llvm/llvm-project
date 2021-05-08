@@ -95,6 +95,10 @@ public:
   /// Return a range of the BlockDefinitions held by the current parser state.
   iterator_range<BlockDefIterator> getBlockDefs() const;
 
+  /// Return the definition for the given block, or nullptr if the given
+  /// block does not have a definition.
+  const BlockDefinition *getBlockDef(Block *block) const;
+
   /// Return a range of the OperationDefinitions held by the current parser
   /// state.
   iterator_range<OperationDefIterator> getOpDefs() const;
