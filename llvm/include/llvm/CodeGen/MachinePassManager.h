@@ -135,7 +135,7 @@ public:
   MachineFunctionPassManager(bool DebugLogging = false,
                              bool RequireCodeGenSCCOrder = false,
                              bool VerifyMachineFunction = false)
-      : Base(DebugLogging), RequireCodeGenSCCOrder(RequireCodeGenSCCOrder),
+      : Base(), RequireCodeGenSCCOrder(RequireCodeGenSCCOrder),
         VerifyMachineFunction(VerifyMachineFunction) {}
   MachineFunctionPassManager(MachineFunctionPassManager &&) = default;
   MachineFunctionPassManager &

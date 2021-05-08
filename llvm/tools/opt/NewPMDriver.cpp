@@ -295,7 +295,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   // option has been enabled.
   PTO.LoopUnrolling = !DisableLoopUnrolling;
   PTO.Coroutines = Coroutines;
-  PassBuilder PB(DebugPM, TM, PTO, P, &PIC);
+  PassBuilder PB(TM, PTO, P, &PIC);
   registerEPCallbacks(PB);
 
   // Load requested pass plugins and let them register pass builder callbacks
@@ -392,7 +392,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-  ModulePassManager MPM(DebugPM);
+  ModulePassManager MPM;
   if (VK > VK_NoVerifier)
     MPM.addPass(VerifierPass());
   if (EnableDebugify)
