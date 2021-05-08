@@ -106,27 +106,25 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
   if (argAttrs.empty())
     return;
   assert(type.getNumInputs() == argAttrs.size());
-  SmallString<8> argAttrName;
-  for (unsigned i = 0, e = type.getNumInputs(); i != e; ++i)
-    if (DictionaryAttr argDict = argAttrs[i])
-      state.addAttribute(getArgAttrName(i, argAttrName), argDict);
+  function_like_impl::addArgAndResultAttrs(builder, state, argAttrs,
+                                           /*resultAttrs=*/llvm::None);
 }
 
 static ParseResult parseFuncOp(OpAsmParser &parser, OperationState &result) {
   auto buildFuncType = [](Builder &builder, ArrayRef<Type> argTypes,
-                          ArrayRef<Type> results, impl::VariadicFlag,
-                          std::string &) {
+                          ArrayRef<Type> results,
+                          function_like_impl::VariadicFlag, std::string &) {
     return builder.getFunctionType(argTypes, results);
   };
 
-  return impl::parseFunctionLikeOp(parser, result, /*allowVariadic=*/false,
-                                   buildFuncType);
+  return function_like_impl::parseFunctionLikeOp(
+      parser, result, /*allowVariadic=*/false, buildFuncType);
 }
 
 static void print(FuncOp op, OpAsmPrinter &p) {
   FunctionType fnType = op.getType();
-  impl::printFunctionLikeOp(p, op, fnType.getInputs(), /*isVariadic=*/false,
-                            fnType.getResults());
+  function_like_impl::printFunctionLikeOp(
+      p, op, fnType.getInputs(), /*isVariadic=*/false, fnType.getResults());
 }
 
 static LogicalResult verify(FuncOp op) {
@@ -170,29 +168,38 @@ void FuncOp::cloneInto(FuncOp dest, BlockAndValueMapping &mapper) {
 /// to cloned sub-values with the corresponding value that is copied, and adds
 /// those mappings to the mapper.
 FuncOp FuncOp::clone(BlockAndValueMapping &mapper) {
-  FunctionType newType = getType();
+  // Create the new function.
+  FuncOp newFunc = cast<FuncOp>(getOperation()->cloneWithoutRegions());
 
   // If the function has a body, then the user might be deleting arguments to
   // the function by specifying them in the mapper. If so, we don't add the
   // argument to the input type vector.
-  bool isExternalFn = isExternal();
-  if (!isExternalFn) {
-    SmallVector<Type, 4> inputTypes;
-    inputTypes.reserve(newType.getNumInputs());
-    for (unsigned i = 0, e = getNumArguments(); i != e; ++i)
+  if (!isExternal()) {
+    FunctionType oldType = getType();
+
+    unsigned oldNumArgs = oldType.getNumInputs();
+    SmallVector<Type, 4> newInputs;
+    newInputs.reserve(oldNumArgs);
+    for (unsigned i = 0; i != oldNumArgs; ++i)
       if (!mapper.contains(getArgument(i)))
-        inputTypes.push_back(newType.getInput(i));
-    newType = FunctionType::get(getContext(), inputTypes, newType.getResults());
+        newInputs.push_back(oldType.getInput(i));
+
+    /// If any of the arguments were dropped, update the type and drop any
+    /// necessary argument attributes.
+    if (newInputs.size() != oldNumArgs) {
+      newFunc.setType(FunctionType::get(oldType.getContext(), newInputs,
+                                        oldType.getResults()));
+
+      if (ArrayAttr argAttrs = getAllArgAttrs()) {
+        SmallVector<Attribute> newArgAttrs;
+        newArgAttrs.reserve(newInputs.size());
+        for (unsigned i = 0; i != oldNumArgs; ++i)
+          if (!mapper.contains(getArgument(i)))
+            newArgAttrs.push_back(argAttrs[i]);
+        newFunc.setAllArgAttrs(newArgAttrs);
+      }
+    }
   }
-
-  // Create the new function.
-  FuncOp newFunc = cast<FuncOp>(getOperation()->cloneWithoutRegions());
-  newFunc.setType(newType);
-
-  /// Set the argument attributes for arguments that aren't being replaced.
-  for (unsigned i = 0, e = getNumArguments(), destI = 0; i != e; ++i)
-    if (isExternalFn || !mapper.contains(getArgument(i)))
-      newFunc.setArgAttrs(destI++, getArgAttrs(i));
 
   /// Clone the current function into the new one and return it.
   cloneInto(newFunc, mapper);

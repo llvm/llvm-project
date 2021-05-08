@@ -1211,8 +1211,10 @@ static void filterFuncAttributes(ArrayRef<NamedAttribute> attrs,
                                  SmallVectorImpl<NamedAttribute> &result) {
   for (const auto &attr : attrs) {
     if (attr.first == SymbolTable::getSymbolAttrName() ||
-        attr.first == impl::getTypeAttrName() || attr.first == "std.varargs" ||
-        (filterArgAttrs && impl::isArgAttrName(attr.first.strref())))
+        attr.first == function_like_impl::getTypeAttrName() ||
+        attr.first == "std.varargs" ||
+        (filterArgAttrs &&
+         attr.first == function_like_impl::getArgDictAttrName()))
       continue;
     result.push_back(attr);
   }
@@ -1395,19 +1397,19 @@ protected:
     SmallVector<NamedAttribute, 4> attributes;
     filterFuncAttributes(funcOp->getAttrs(), /*filterArgAttrs=*/true,
                          attributes);
-    for (unsigned i = 0, e = funcOp.getNumArguments(); i < e; ++i) {
-      auto attr = impl::getArgAttrDict(funcOp, i);
-      if (!attr)
-        continue;
-
-      auto mapping = result.getInputMapping(i);
-      assert(mapping.hasValue() && "unexpected deletion of function argument");
-
-      SmallString<8> name;
-      for (size_t j = 0; j < mapping->size; ++j) {
-        impl::getArgAttrName(mapping->inputNo + j, name);
-        attributes.push_back(rewriter.getNamedAttr(name, attr));
+    if (ArrayAttr argAttrDicts = funcOp.getAllArgAttrs()) {
+      SmallVector<Attribute, 4> newArgAttrs(
+          llvmType.cast<LLVM::LLVMFunctionType>().getNumParams());
+      for (unsigned i = 0, e = funcOp.getNumArguments(); i < e; ++i) {
+        auto mapping = result.getInputMapping(i);
+        assert(mapping.hasValue() &&
+               "unexpected deletion of function argument");
+        for (size_t j = 0; j < mapping->size; ++j)
+          newArgAttrs[mapping->inputNo + j] = argAttrDicts[i];
       }
+      attributes.push_back(
+          rewriter.getNamedAttr(function_like_impl::getArgDictAttrName(),
+                                rewriter.getArrayAttr(newArgAttrs)));
     }
 
     // Create an LLVM function, use external linkage by default until MLIR
