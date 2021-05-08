@@ -447,6 +447,84 @@ TEST(DWARFDebugFrame, RegisterLocations) {
   expectDumpResult(Locs, "");
 }
 
+// Test that empty rows are not added to UnwindTable when
+// dwarf::CIE::CFIs or dwarf::FDE::CFIs is empty.
+TEST(DWARFDebugFrame, UnwindTableEmptyRows) {
+  dwarf::CIE TestCIE = createCIE(/*IsDWARF64=*/false,
+                                 /*Offset=*/0x0,
+                                 /*Length=*/0xff);
+
+  // Having an empty instructions list is fine.
+  EXPECT_THAT_ERROR(parseCFI(TestCIE, {}), Succeeded());
+  EXPECT_TRUE(TestCIE.cfis().empty());
+
+  // Verify dwarf::UnwindTable::create() won't result in errors and
+  // and empty rows are not added to CIE UnwindTable.
+  Expected<dwarf::UnwindTable> RowsOrErr = dwarf::UnwindTable::create(&TestCIE);
+  EXPECT_THAT_ERROR(RowsOrErr.takeError(), Succeeded());
+  const size_t ExpectedNumOfRows = 0;
+  EXPECT_EQ(RowsOrErr->size(), ExpectedNumOfRows);
+
+  dwarf::FDE TestFDE(/*IsDWARF64=*/true,
+                     /*Offset=*/0x3333abcdabcd,
+                     /*Length=*/0x4444abcdabcd,
+                     /*CIEPointer=*/0x1111abcdabcd,
+                     /*InitialLocation=*/0x1000,
+                     /*AddressRange=*/0x1000,
+                     /*Cie=*/&TestCIE,
+                     /*LSDAAddress=*/None,
+                     /*Arch=*/Triple::x86_64);
+
+  // Having an empty instructions list is fine.
+  EXPECT_THAT_ERROR(parseCFI(TestFDE, {}), Succeeded());
+  EXPECT_TRUE(TestFDE.cfis().empty());
+
+  // Verify dwarf::UnwindTable::create() won't result in errors and
+  // and empty rows are not added to FDE UnwindTable.
+  RowsOrErr = dwarf::UnwindTable::create(&TestFDE);
+  EXPECT_THAT_ERROR(RowsOrErr.takeError(), Succeeded());
+  EXPECT_EQ(RowsOrErr->size(), ExpectedNumOfRows);
+}
+
+// Test that empty rows are not added to UnwindTable when dwarf::CIE::CFIs
+// or dwarf::FDE::CFIs is not empty but has only DW_CFA_nop instructions.
+TEST(DWARFDebugFrame, UnwindTableEmptyRows_NOPs) {
+  dwarf::CIE TestCIE = createCIE(/*IsDWARF64=*/false,
+                                 /*Offset=*/0x0,
+                                 /*Length=*/0xff);
+
+  // Make a CIE that has only DW_CFA_nop instructions.
+  EXPECT_THAT_ERROR(parseCFI(TestCIE, {dwarf::DW_CFA_nop}), Succeeded());
+  EXPECT_TRUE(!TestCIE.cfis().empty());
+
+  // Verify dwarf::UnwindTable::create() won't result in errors and
+  // and empty rows are not added to CIE UnwindTable.
+  Expected<dwarf::UnwindTable> RowsOrErr = dwarf::UnwindTable::create(&TestCIE);
+  EXPECT_THAT_ERROR(RowsOrErr.takeError(), Succeeded());
+  const size_t ExpectedNumOfRows = 0;
+  EXPECT_EQ(RowsOrErr->size(), ExpectedNumOfRows);
+
+  dwarf::FDE TestFDE(/*IsDWARF64=*/true,
+                     /*Offset=*/0x3333abcdabcd,
+                     /*Length=*/0x4444abcdabcd,
+                     /*CIEPointer=*/0x1111abcdabcd,
+                     /*InitialLocation=*/0x1000,
+                     /*AddressRange=*/0x1000,
+                     /*Cie=*/&TestCIE,
+                     /*LSDAAddress=*/None,
+                     /*Arch=*/Triple::x86_64);
+
+  // Make an FDE that has only DW_CFA_nop instructions.
+  EXPECT_THAT_ERROR(parseCFI(TestFDE, {dwarf::DW_CFA_nop}), Succeeded());
+  EXPECT_TRUE(!TestFDE.cfis().empty());
+
+  // Verify dwarf::UnwindTable::create() won't result in errors and
+  // and empty rows are not added to FDE UnwindTable.
+  RowsOrErr = dwarf::UnwindTable::create(&TestFDE);
+  EXPECT_THAT_ERROR(RowsOrErr.takeError(), Succeeded());
+  EXPECT_EQ(RowsOrErr->size(), ExpectedNumOfRows);
+}
+
 TEST(DWARFDebugFrame, UnwindTableErrorNonAscendingFDERows) {
   dwarf::CIE TestCIE = createCIE(/*IsDWARF64=*/false,
                                  /*Offset=*/0x0,
