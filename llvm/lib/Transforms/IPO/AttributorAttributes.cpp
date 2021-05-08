@@ -1002,22 +1002,11 @@ AAReturnedValuesImpl::getAssumedUniqueReturnValue(Attributor &A) const {
   // multiple, a nullptr is returned indicating there cannot be a unique
   // returned value.
   Optional<Value *> UniqueRV;
+  Type *Ty = getAssociatedFunction()->getReturnType();
 
   auto Pred = [&](Value &RV) -> bool {
-    // If we found a second returned value and neither the current nor the saved
-    // one is an undef, there is no unique returned value. Undefs are special
-    // since we can pretend they have any value.
-    if (UniqueRV.hasValue() && UniqueRV != &RV &&
-        !(isa<UndefValue>(RV) || isa<UndefValue>(UniqueRV.getValue()))) {
-      UniqueRV = nullptr;
-      return false;
-    }
-
-    // Do not overwrite a value with an undef.
-    if (!UniqueRV.hasValue() || !isa<UndefValue>(RV))
-      UniqueRV = &RV;
-
-    return true;
+    UniqueRV = AA::combineOptionalValuesInAAValueLatice(UniqueRV, &RV, Ty);
+    return UniqueRV != Optional<Value *>(nullptr);
   };
 
   if (!A.checkForAllReturnedValues(Pred, *this))
@@ -4515,26 +4504,18 @@ struct AANoCaptureCallSiteReturned final : AANoCaptureImpl {
 
 bool ValueSimplifyStateType::unionAssumed(Optional<Value *> Other) {
   // FIXME: Add a typecast support.
-  if (!Other.hasValue())
-    return true;
-
-  if (!Other.getValue())
+  SimplifiedAssociatedValue = AA::combineOptionalValuesInAAValueLatice(
+      SimplifiedAssociatedValue, Other, Ty);
+  if (SimplifiedAssociatedValue == Optional<Value *>(nullptr))
     return false;
 
-  Value &QueryingValueSimplifiedUnwrapped = *Other.getValue();
-
-  if (SimplifiedAssociatedValue.hasValue() &&
-      !isa<UndefValue>(SimplifiedAssociatedValue.getValue()) &&
-      !isa<UndefValue>(QueryingValueSimplifiedUnwrapped))
-    return SimplifiedAssociatedValue == Other;
-  if (SimplifiedAssociatedValue.hasValue() &&
-      isa<UndefValue>(QueryingValueSimplifiedUnwrapped))
-    return true;
-
-  LLVM_DEBUG(dbgs() << "[ValueSimplify] is assumed to be "
-                    << QueryingValueSimplifiedUnwrapped << "\n");
-
-  SimplifiedAssociatedValue = Other;
+  LLVM_DEBUG({
+    if (SimplifiedAssociatedValue.hasValue())
+      dbgs() << "[ValueSimplify] is assumed to be "
+             << **SimplifiedAssociatedValue << "\n";
+    else
+      dbgs() << "[ValueSimplify] is assumed to be <none>\n";
+  });
   return true;
 }
 
