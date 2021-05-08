@@ -213,16 +213,6 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
           GPUDialect::getKernelFuncAttrName()) != nullptr;
     }
 
-    /// Change the type of this function in place. This is an extremely
-    /// dangerous operation and it is up to the caller to ensure that this is
-    /// legal for this function, and to restore invariants:
-    ///  - the entry block args must be updated to match the function params.
-    ///  - the argument/result attributes may need an update: if the new type
-    ///  has less parameters we drop the extra attributes, if there are more
-    ///  parameters they won't have any attributes.
-    // TODO: consider removing this function thanks to rewrite patterns.
-    void setType(FunctionType newType);
-
     /// Returns the number of buffers located in the workgroup memory.
     unsigned getNumWorkgroupAttributions() {
       return (*this)->getAttrOfType<IntegerAttr>(

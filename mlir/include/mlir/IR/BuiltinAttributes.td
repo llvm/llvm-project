@@ -300,7 +300,7 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary"> {
   }];
   let parameters = (ins ArrayRefParameter<"NamedAttribute", "">:$value);
   let builders = [
-    AttrBuilder<(ins "ArrayRef<NamedAttribute>":$value)>
+    AttrBuilder<(ins CArg<"ArrayRef<NamedAttribute>", "llvm::None">:$value)>
   ];
   let extraClassDeclaration = [{
     using ValueType = ArrayRef<NamedAttribute>;
