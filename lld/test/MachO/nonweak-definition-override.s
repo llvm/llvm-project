@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: split-file %s %t
+# RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/libfoo.s -o %t/libfoo.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/nonweakdef.s -o %t/nonweakdef.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/weakdef.s -o %t/weakdef.o
