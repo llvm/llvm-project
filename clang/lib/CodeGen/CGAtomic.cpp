@@ -451,47 +451,38 @@ static void emitAtomicCmpXchgFailureSet(CodeGenFunction &CGF, AtomicExpr *E,
   }
 
   // Create all the relevant BB's
-  llvm::BasicBlock *MonotonicBB = nullptr, *AcquireBB = nullptr,
-                   *SeqCstBB = nullptr;
-  MonotonicBB = CGF.createBasicBlock("monotonic_fail", CGF.CurFn);
-  if (SuccessOrder != llvm::AtomicOrdering::Monotonic)
-    AcquireBB = CGF.createBasicBlock("acquire_fail", CGF.CurFn);
-  if (SuccessOrder == llvm::AtomicOrdering::SequentiallyConsistent)
-    SeqCstBB = CGF.createBasicBlock("seqcst_fail", CGF.CurFn);
-
-  llvm::BasicBlock *ContBB = CGF.createBasicBlock("atomic.continue", CGF.CurFn);
-
-  llvm::SwitchInst *SI = CGF.Builder.CreateSwitch(FailureOrderVal, MonotonicBB);
-
-  // Emit all the different atomics
+  auto *MonotonicBB = CGF.createBasicBlock("monotonic_fail", CGF.CurFn);
+  auto *AcquireBB = CGF.createBasicBlock("acquire_fail", CGF.CurFn);
+  auto *SeqCstBB = CGF.createBasicBlock("seqcst_fail", CGF.CurFn);
+  auto *ContBB = CGF.createBasicBlock("atomic.continue", CGF.CurFn);
 
   // MonotonicBB is arbitrarily chosen as the default case; in practice, this
   // doesn't matter unless someone is crazy enough to use something that
   // doesn't fold to a constant for the ordering.
+  llvm::SwitchInst *SI = CGF.Builder.CreateSwitch(FailureOrderVal, MonotonicBB);
+  // Implemented as acquire, since it's the closest in LLVM.
+  SI->addCase(CGF.Builder.getInt32((int)llvm::AtomicOrderingCABI::consume),
+              AcquireBB);
+  SI->addCase(CGF.Builder.getInt32((int)llvm::AtomicOrderingCABI::acquire),
+              AcquireBB);
+  SI->addCase(CGF.Builder.getInt32((int)llvm::AtomicOrderingCABI::seq_cst),
+              SeqCstBB);
+
+  // Emit all the different atomics
   CGF.Builder.SetInsertPoint(MonotonicBB);
   emitAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2,
                     Size, SuccessOrder, llvm::AtomicOrdering::Monotonic, Scope);
   CGF.Builder.CreateBr(ContBB);
 
-  if (AcquireBB) {
-    CGF.Builder.SetInsertPoint(AcquireBB);
-    emitAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2,
-                      Size, SuccessOrder, llvm::AtomicOrdering::Acquire, Scope);
-    CGF.Builder.CreateBr(ContBB);
-    if (SuccessOrder != llvm::AtomicOrdering::Release)
-      SI->addCase(CGF.Builder.getInt32((int)llvm::AtomicOrderingCABI::consume),
-                  AcquireBB);
-    SI->addCase(CGF.Builder.getInt32((int)llvm::AtomicOrderingCABI::acquire),
-                AcquireBB);
-  }
-  if (SeqCstBB) {
-    CGF.Builder.SetInsertPoint(SeqCstBB);
-    emitAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size, SuccessOrder,
-                      llvm::AtomicOrdering::SequentiallyConsistent, Scope);
-    CGF.Builder.CreateBr(ContBB);
-    SI->addCase(CGF.Builder.getInt32((int)llvm::AtomicOrderingCABI::seq_cst),
-                SeqCstBB);
-  }
+  CGF.Builder.SetInsertPoint(AcquireBB);
+  emitAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size, SuccessOrder,
+                    llvm::AtomicOrdering::Acquire, Scope);
+  CGF.Builder.CreateBr(ContBB);
+
+  CGF.Builder.SetInsertPoint(SeqCstBB);
+  emitAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size, SuccessOrder,
+                    llvm::AtomicOrdering::SequentiallyConsistent, Scope);
+  CGF.Builder.CreateBr(ContBB);
 
   CGF.Builder.SetInsertPoint(ContBB);
 }

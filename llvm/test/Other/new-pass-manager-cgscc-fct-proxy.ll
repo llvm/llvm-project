@@ -1,6 +1,6 @@
-; RUN: opt %s -disable-verify -disable-output -passes='default<O2>' -debug-pass-manager -cgscc-npm-no-fp-rerun=1 \
+; RUN: opt %s -disable-verify -disable-output -passes='default<O2>' -debug-pass-manager -debug-pass-manager-verbose -cgscc-npm-no-fp-rerun=1 \
 ; RUN:  2>&1 | FileCheck %s -check-prefixes=CHECK,NOREPS
-; RUN: opt %s -disable-verify -disable-output -passes='default<O2>' -debug-pass-manager -cgscc-npm-no-fp-rerun=0 \
+; RUN: opt %s -disable-verify -disable-output -passes='default<O2>' -debug-pass-manager -debug-pass-manager-verbose -cgscc-npm-no-fp-rerun=0 \
 ; RUN:  2>&1 | FileCheck %s -check-prefixes=CHECK,REPS
 
 ; Pre-attribute the functions to avoid the PostOrderFunctionAttrsPass cause
@@ -23,22 +23,19 @@ define void @f3() #0 {
   ret void
 }
 
-; CHECK:          Starting CGSCC pass manager run
+; CHECK:          Running pass: PassManager{{.*}}CGSCC
 ; CHECK-NEXT:     Running pass: InlinerPass on (f1)
 ; NOREPS:         Running analysis: FunctionStatusAnalysis on f1
-; CHECK:          Finished CGSCC pass manager run.
 
-; CHECK:          Starting CGSCC pass manager run
+; CHECK:          Running pass: PassManager{{.*}}CGSCC
 ; CHECK-NEXT:     Running pass: InlinerPass on (f2, f3)
 ; NOREPS:         Running analysis: FunctionStatusAnalysis on f2
-; CHECK:          Finished CGSCC pass manager run.
 
-; CHECK:          Starting CGSCC pass manager run
+; CHECK:          Running pass: PassManager{{.*}}CGSCC
 ; CHECK-NEXT:     Running pass: InlinerPass on (f2)
 ; REPS:           Running pass: SROA on f2
 ; NOREPS-NOT:     Running pass: SROA on f2
-; CHECK:          Finished CGSCC pass manager run.
 
-; CHECK:          Starting CGSCC pass manager run.
+; CHECK:          Running pass: PassManager{{.*}}CGSCC
 ; CHECK-NEXT:     Running pass: InlinerPass on (f3)
 ; CHECK:          Running pass: SROA on f3

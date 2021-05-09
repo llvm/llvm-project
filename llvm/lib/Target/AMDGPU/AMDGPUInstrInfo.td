@@ -313,7 +313,7 @@ def AMDGPUfdot2_impl : SDNode<"AMDGPUISD::FDOT2",
                                        SDTCisInt<4>]>,
                   []>;
 
-def AMDGPUperm : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
+def AMDGPUperm_impl : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
 
 // SI+ export
 def AMDGPUExportOp : SDTypeProfile<0, 8, [
@@ -463,3 +463,7 @@ def AMDGPUfdot2 : PatFrags<(ops node:$src0, node:$src1, node:$src2, node:$clamp)
 def AMDGPUdiv_fmas : PatFrags<(ops node:$src0, node:$src1, node:$src2, node:$vcc),
   [(int_amdgcn_div_fmas node:$src0, node:$src1, node:$src2, node:$vcc),
    (AMDGPUdiv_fmas_impl node:$src0, node:$src1, node:$src2, node:$vcc)]>;
+
+def AMDGPUperm : PatFrags<(ops node:$src0, node:$src1, node:$src2),
+  [(int_amdgcn_perm node:$src0, node:$src1, node:$src2),
+   (AMDGPUperm_impl node:$src0, node:$src1, node:$src2)]>;

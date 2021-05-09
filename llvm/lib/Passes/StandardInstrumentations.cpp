@@ -876,9 +876,11 @@ void PrintPassInstrumentation::registerCallbacks(
   if (!DebugLogging)
     return;
 
-  std::vector<StringRef> SpecialPasses = {"PassManager"};
-  if (!DebugPMVerbose)
+  std::vector<StringRef> SpecialPasses;
+  if (!DebugPMVerbose) {
+    SpecialPasses.emplace_back("PassManager");
     SpecialPasses.emplace_back("PassAdaptor");
+  }
 
   PIC.registerBeforeSkippedPassCallback(
       [SpecialPasses](StringRef PassID, Any IR) {
@@ -899,6 +901,14 @@ void PrintPassInstrumentation::registerCallbacks(
 
   PIC.registerBeforeAnalysisCallback([](StringRef PassID, Any IR) {
     dbgs() << "Running analysis: " << PassID << " on " << getIRName(IR) << "\n";
+  });
+
+  PIC.registerAnalysisInvalidatedCallback([](StringRef PassID, Any IR) {
+    dbgs() << "Invalidating analysis: " << PassID << " on " << getIRName(IR)
+           << "\n";
+  });
+  PIC.registerAnalysesClearedCallback([](StringRef IRName) {
+    dbgs() << "Clearing all analysis results for: " << IRName << "\n";
   });
 }
 

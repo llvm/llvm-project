@@ -221,15 +221,15 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
                         PGOOptions::IRUse, PGOOptions::CSIRUse);
   }
 
-  LoopAnalysisManager LAM(Conf.DebugPassManager);
-  FunctionAnalysisManager FAM(Conf.DebugPassManager);
-  CGSCCAnalysisManager CGAM(Conf.DebugPassManager);
-  ModuleAnalysisManager MAM(Conf.DebugPassManager);
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
 
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(Conf.DebugPassManager);
   SI.registerCallbacks(PIC, &FAM);
-  PassBuilder PB(Conf.DebugPassManager, TM, Conf.PTO, PGOOpt, &PIC);
+  PassBuilder PB(TM, Conf.PTO, PGOOpt, &PIC);
 
   RegisterPassPlugins(Conf.PassPlugins, PB);
 
@@ -259,7 +259,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-  ModulePassManager MPM(Conf.DebugPassManager);
+  ModulePassManager MPM;
 
   if (!Conf.DisableVerify)
     MPM.addPass(VerifierPass());

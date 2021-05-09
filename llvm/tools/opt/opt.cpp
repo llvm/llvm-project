@@ -313,6 +313,7 @@ static cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
+namespace llvm {
 cl::opt<PGOKind>
     PGOKindFlag("pgo-kind", cl::init(NoPGO), cl::Hidden,
                 cl::desc("The kind of profile guided optimization"),
@@ -341,6 +342,7 @@ cl::opt<std::string> CSProfileGenFile(
     "cs-profilegen-file",
     cl::desc("Path to the instrumented context sensitive profile."),
     cl::Hidden);
+} // namespace llvm
 
 static inline void addPass(legacy::PassManagerBase &PM, Pass *P) {
   // Add the pass to the pass manager...
@@ -520,8 +522,8 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "expand-reductions",    "indirectbr-expand",
       "generic-to-nvvm",      "expandmemcmp",
       "loop-reduce",          "lower-amx-type",
-      "lower-amx-intrinsics", "polyhedral-info",
-      "replace-with-veclib"};
+      "pre-amx-config",       "lower-amx-intrinsics",
+      "polyhedral-info",      "replace-with-veclib"};
   for (const auto &P : PassNamePrefix)
     if (Pass.startswith(P))
       return true;

@@ -202,17 +202,20 @@ raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS, const UnwindTable &Rows) {
 }
 
 Expected<UnwindTable> UnwindTable::create(const FDE *Fde) {
-  UnwindTable UT;
-  UnwindRow Row;
-  Row.setAddress(Fde->getInitialLocation());
-  UT.EndAddress = Fde->getInitialLocation() + Fde->getAddressRange();
-
   const CIE *Cie = Fde->getLinkedCIE();
   if (Cie == nullptr)
     return createStringError(errc::invalid_argument,
                              "unable to get CIE for FDE at offset 0x%" PRIx64,
                              Fde->getOffset());
 
+  // Rows will be empty if there are no CFI instructions.
+  if (Cie->cfis().empty() && Fde->cfis().empty())
+    return UnwindTable();
+
+  UnwindTable UT;
+  UnwindRow Row;
+  Row.setAddress(Fde->getInitialLocation());
+  UT.EndAddress = Fde->getInitialLocation() + Fde->getAddressRange();
   if (Error CieError = UT.parseRows(Cie->cfis(), Row, nullptr))
     return std::move(CieError);
   // We need to save the initial locations of registers from the CIE parsing
@@ -220,7 +223,8 @@ Expected<UnwindTable> UnwindTable::create(const FDE *Fde) {
   const RegisterLocations InitialLocs = Row.getRegisterLocations();
   if (Error FdeError = UT.parseRows(Fde->cfis(), Row, &InitialLocs))
     return std::move(FdeError);
-  // Do not add empty row
+  // May be all the CFI instructions were DW_CFA_nop amd Row becomes empty.
+  // Do not add that to the unwind table.
   if (Row.getRegisterLocations().hasLocations() ||
       Row.getCFAValue().getLocation() != UnwindLocation::Unspecified)
     UT.Rows.push_back(Row);
@@ -228,11 +232,16 @@ Expected<UnwindTable> UnwindTable::create(const FDE *Fde) {
 }
 
 Expected<UnwindTable> UnwindTable::create(const CIE *Cie) {
+  // Rows will be empty if there are no CFI instructions.
+  if (Cie->cfis().empty())
+    return UnwindTable();
+
   UnwindTable UT;
   UnwindRow Row;
   if (Error CieError = UT.parseRows(Cie->cfis(), Row, nullptr))
     return std::move(CieError);
-  // Do not add empty row
+  // May be all the CFI instructions were DW_CFA_nop amd Row becomes empty.
+  // Do not add that to the unwind table.
   if (Row.getRegisterLocations().hasLocations() ||
       Row.getCFAValue().getLocation() != UnwindLocation::Unspecified)
     UT.Rows.push_back(Row);

@@ -358,6 +358,41 @@ struct DidChangeTextDocumentParams {
 bool fromJSON(const llvm::json::Value &value,
               DidChangeTextDocumentParams &result, llvm::json::Path path);
 
+//===----------------------------------------------------------------------===//
+// MarkupContent
+//===----------------------------------------------------------------------===//
+
+/// Describes the content type that a client supports in various result literals
+/// like `Hover`.
+enum class MarkupKind {
+  PlainText,
+  Markdown,
+};
+raw_ostream &operator<<(raw_ostream &os, MarkupKind kind);
+
+struct MarkupContent {
+  MarkupKind kind = MarkupKind::PlainText;
+  std::string value;
+};
+llvm::json::Value toJSON(const MarkupContent &mc);
+
+//===----------------------------------------------------------------------===//
+// Hover
+//===----------------------------------------------------------------------===//
+
+struct Hover {
+  /// Construct a default hover with the given range that uses Markdown content.
+  Hover(Range range) : contents{MarkupKind::Markdown, ""}, range(range) {}
+
+  /// The hover's content.
+  MarkupContent contents;
+
+  /// An optional range is a range inside a text document that is used to
+  /// visualize a hover, e.g. by changing the background color.
+  Optional<Range> range;
+};
+llvm::json::Value toJSON(const Hover &hover);
+
 } // namespace lsp
 } // namespace mlir
 

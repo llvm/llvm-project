@@ -77,7 +77,9 @@ int main(int, char**)
             test_compare<std::equal_to<int> >(9),
             test_allocator<int>(10)
            );
+        C::iterator it0 = c0.begin();
         C c = std::move(c0);
+        assert(it0 == c.begin()); // Iterators remain valid
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 4);
         assert(c.count(1) == 1);
@@ -142,7 +144,9 @@ int main(int, char**)
             test_compare<std::equal_to<int> >(9),
             min_allocator<int>()
            );
+        C::iterator it0 = c0.begin();
         C c = std::move(c0);
+        assert(it0 == c.begin()); // Iterators remain valid
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 4);
         assert(c.count(1) == 1);

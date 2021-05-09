@@ -11165,6 +11165,12 @@ bool ARMAsmParser::parseDirectiveThumbFunc(SMLoc L) {
                  "unexpected token in '.thumb_func' directive"))
     return true;
 
+  // .thumb_func implies .thumb
+  if (!isThumb())
+    SwitchMode();
+
+  getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
+
   NextSymbolIsThumb = true;
   return false;
 }

@@ -1803,6 +1803,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(ARMISD::CSNEG)
     MAKE_CASE(ARMISD::CSINC)
     MAKE_CASE(ARMISD::MEMCPYLOOP)
+    MAKE_CASE(ARMISD::MEMSETLOOP)
 #undef MAKE_CASE
   }
   return nullptr;
@@ -11105,7 +11106,6 @@ static Register genTPEntry(MachineBasicBlock *TpEntry,
                            MachineBasicBlock *TpExit, Register OpSizeReg,
                            const TargetInstrInfo *TII, DebugLoc Dl,
                            MachineRegisterInfo &MRI) {
-
   // Calculates loop iteration count = ceil(n/16)/16 = ((n + 15)&(-16)) / 16.
   Register AddDestReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
   BuildMI(TpEntry, Dl, TII->get(ARM::t2ADDri), AddDestReg)
@@ -11147,17 +11147,21 @@ static void genTPLoopBody(MachineBasicBlock *TpLoopBody,
                           const TargetInstrInfo *TII, DebugLoc Dl,
                           MachineRegisterInfo &MRI, Register OpSrcReg,
                           Register OpDestReg, Register ElementCountReg,
-                          Register TotalIterationsReg) {
+                          Register TotalIterationsReg, bool IsMemcpy) {
+  // First insert 4 PHI nodes for: Current pointer to Src (if memcpy), Dest
+  // array, loop iteration counter, predication counter.
 
-  // First insert 4 PHI nodes for: Current pointer to Src, Dest array, loop
-  // iteration counter, predication counter Current position in the src array
-  Register SrcPhiReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
-  Register CurrSrcReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
-  BuildMI(TpLoopBody, Dl, TII->get(ARM::PHI), SrcPhiReg)
-      .addUse(OpSrcReg)
-      .addMBB(TpEntry)
-      .addUse(CurrSrcReg)
-      .addMBB(TpLoopBody);
+  Register SrcPhiReg, CurrSrcReg;
+  if (IsMemcpy) {
+    //  Current position in the src array
+    SrcPhiReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
+    CurrSrcReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
+    BuildMI(TpLoopBody, Dl, TII->get(ARM::PHI), SrcPhiReg)
+        .addUse(OpSrcReg)
+        .addMBB(TpEntry)
+        .addUse(CurrSrcReg)
+        .addMBB(TpLoopBody);
+  }
 
   // Current position in the dest array
   Register DestPhiReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
@@ -11200,19 +11204,23 @@ static void genTPLoopBody(MachineBasicBlock *TpLoopBody,
       .add(predOps(ARMCC::AL))
       .addReg(0);
 
-  // VLDRB and VSTRB instructions, predicated using VPR
-  Register LoadedValueReg = MRI.createVirtualRegister(&ARM::MQPRRegClass);
-  BuildMI(TpLoopBody, Dl, TII->get(ARM::MVE_VLDRBU8_post))
-      .addDef(CurrSrcReg)
-      .addDef(LoadedValueReg)
-      .addReg(SrcPhiReg)
-      .addImm(16)
-      .addImm(ARMVCC::Then)
-      .addUse(VccrReg);
+  // VLDRB (only if memcpy) and VSTRB instructions, predicated using VPR
+  Register SrcValueReg;
+  if (IsMemcpy) {
+    SrcValueReg = MRI.createVirtualRegister(&ARM::MQPRRegClass);
+    BuildMI(TpLoopBody, Dl, TII->get(ARM::MVE_VLDRBU8_post))
+        .addDef(CurrSrcReg)
+        .addDef(SrcValueReg)
+        .addReg(SrcPhiReg)
+        .addImm(16)
+        .addImm(ARMVCC::Then)
+        .addUse(VccrReg);
+  } else
+    SrcValueReg = OpSrcReg;
 
   BuildMI(TpLoopBody, Dl, TII->get(ARM::MVE_VSTRBU8_post))
       .addDef(CurrDestReg)
-      .addUse(LoadedValueReg, RegState::Kill)
+      .addUse(SrcValueReg)
       .addReg(DestPhiReg)
       .addImm(16)
       .addImm(ARMVCC::Then)
@@ -11259,9 +11267,10 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return BB;
   }
 
-  case ARM::MVE_MEMCPYLOOPINST: {
+  case ARM::MVE_MEMCPYLOOPINST:
+  case ARM::MVE_MEMSETLOOPINST: {
 
-    // Transformation below expands MVE_MEMCPYLOOPINST Pseudo instruction
+    // Transformation below expands MVE_MEMCPYLOOPINST/MVE_MEMSETLOOPINST Pseudo
     // into a Tail Predicated (TP) Loop. It adds the instructions to calculate
     // the iteration count =ceil(size_in_bytes/16)) in the TP entry block and
     // adds the relevant instructions in the TP loop Body for generation of a
@@ -11301,23 +11310,24 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MF->push_back(TpLoopBody);
 
     // If any instructions are present in the current block after
-    // MVE_MEMCPYLOOPINST, split the current block and move the instructions
-    // into the newly created exit block. If there are no instructions
-    // add an explicit branch to the FallThrough block and then split.
+    // MVE_MEMCPYLOOPINST or MVE_MEMSETLOOPINST, split the current block and
+    // move the instructions into the newly created exit block. If there are no
+    // instructions add an explicit branch to the FallThrough block and then
+    // split.
     //
     // The split is required for two reasons:
     // 1) A terminator(t2WhileLoopStart) will be placed at that site.
     // 2) Since a TPLoopBody will be added later, any phis in successive blocks
     //    need to be updated. splitAt() already handles this.
-    TpExit = BB->splitAt(MI, false);
+    TpExit = BB->splitAt(MI);
     if (TpExit == BB) {
-      assert(BB->canFallThrough() &&
-             "Exit block must be FallThrough of the block containing memcpy");
+      assert(BB->canFallThrough() && "Exit Block must be Fallthrough of the "
+                                     "block containing memcpy/memset Pseudo");
       TpExit = BB->getFallThrough();
       BuildMI(BB, dl, TII->get(ARM::t2B))
           .addMBB(TpExit)
           .add(predOps(ARMCC::AL));
-      TpExit = BB->splitAt(MI, false);
+      TpExit = BB->splitAt(MI);
     }
 
     // Add logic for iteration count
@@ -11325,8 +11335,9 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         genTPEntry(TpEntry, TpLoopBody, TpExit, OpSizeReg, TII, dl, MRI);
 
     // Add the vectorized (and predicated) loads/store instructions
+    bool IsMemcpy = MI.getOpcode() == ARM::MVE_MEMCPYLOOPINST;
     genTPLoopBody(TpLoopBody, TpEntry, TpExit, TII, dl, MRI, OpSrcReg,
-                  OpDestReg, OpSizeReg, TotalIterationsReg);
+                  OpDestReg, OpSizeReg, TotalIterationsReg, IsMemcpy);
 
     // Required to avoid conflict with the MachineVerifier during testing.
     Properties.reset(MachineFunctionProperties::Property::NoPHIs);

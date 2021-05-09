@@ -3175,27 +3175,69 @@ struct CastAwayTransferWriteLeadingOneDim
   }
 };
 
-struct CastAwayBrodcastLeadingOneDim
-    : public OpRewritePattern<vector::BroadcastOp> {
-  using OpRewritePattern::OpRewritePattern;
+template <typename BroadCastType>
+struct CastAwayBroadcastLeadingOneDim : public OpRewritePattern<BroadCastType> {
+  using OpRewritePattern<BroadCastType>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::BroadcastOp broadcastOp,
+  LogicalResult matchAndRewrite(BroadCastType broadcastOp,
                                 PatternRewriter &rewriter) const override {
-    VectorType newDstType = trimLeadingOneDims(broadcastOp.getVectorType());
-    if (newDstType == broadcastOp.getVectorType())
+    VectorType dstType =
+        broadcastOp.getResult().getType().template dyn_cast<VectorType>();
+    if (!dstType)
+      return failure();
+    VectorType newDstType = trimLeadingOneDims(dstType);
+    if (newDstType == dstType)
       return failure();
     Location loc = broadcastOp.getLoc();
-    VectorType srcVecType = broadcastOp.getSourceType().dyn_cast<VectorType>();
+    Value source = broadcastOp->getOperand(0);
+    VectorType srcVecType = source.getType().template dyn_cast<VectorType>();
     if (srcVecType)
       srcVecType = trimLeadingOneDims(srcVecType);
-    Value source = broadcastOp.source();
-    if (srcVecType && srcVecType != broadcastOp.getSourceType()) {
+    if (srcVecType && srcVecType != source.getType()) {
       source = rewriter.create<vector::ShapeCastOp>(loc, srcVecType, source);
     }
     Value newBroadcastOp =
-        rewriter.create<vector::BroadcastOp>(loc, newDstType, source);
-    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
-        broadcastOp, broadcastOp.getVectorType(), newBroadcastOp);
+        rewriter.create<BroadCastType>(loc, newDstType, source);
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(broadcastOp, dstType,
+                                                     newBroadcastOp);
+    return success();
+  }
+};
+
+class CastAwayElementwiseLeadingOneDim : public RewritePattern {
+public:
+  CastAwayElementwiseLeadingOneDim(MLIRContext *context)
+      : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    if (!OpTrait::hasElementwiseMappableTraits(op) || op->getNumResults() != 1)
+      return failure();
+    auto vecType = op->getResultTypes()[0].dyn_cast<VectorType>();
+    if (!vecType)
+      return failure();
+    VectorType newVecType = trimLeadingOneDims(vecType);
+    if (newVecType == vecType)
+      return failure();
+
+    SmallVector<Value, 4> newOperands;
+    for (Value operand : op->getOperands()) {
+      if (auto opVecType = operand.getType().dyn_cast<VectorType>()) {
+        auto newType =
+            VectorType::get(newVecType.getShape(), opVecType.getElementType());
+        newOperands.push_back(rewriter.create<vector::ShapeCastOp>(
+            op->getLoc(), newType, operand));
+      } else {
+        newOperands.push_back(operand);
+      }
+    }
+    OperationState state(op->getLoc(), op->getName());
+    state.addAttributes(op->getAttrs());
+    state.addOperands(newOperands);
+    state.addTypes(newVecType);
+    Operation *newOp = rewriter.createOperation(state);
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, vecType,
+                                                     newOp->getResult(0));
     return success();
   }
 };
@@ -3749,9 +3791,8 @@ struct TwoDimMultiReductionToReduction
         return "or";
       case vector::CombiningKind::XOR:
         return "xor";
-      default:
-        llvm_unreachable("unknown combining kind");
       }
+      llvm_unreachable("unknown combining kind");
     };
 
     for (int i = 0; i < outerDim; ++i) {
@@ -3799,7 +3840,9 @@ void mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(
                CastAwayInsertStridedSliceLeadingOneDim,
                CastAwayTransferReadLeadingOneDim,
                CastAwayTransferWriteLeadingOneDim,
-               CastAwayBrodcastLeadingOneDim, ShapeCastOpFolder>(
+               CastAwayBroadcastLeadingOneDim<vector::BroadcastOp>,
+               CastAwayBroadcastLeadingOneDim<SplatOp>,
+               CastAwayElementwiseLeadingOneDim, ShapeCastOpFolder>(
       patterns.getContext());
 }
 

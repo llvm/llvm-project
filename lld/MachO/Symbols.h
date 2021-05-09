@@ -106,7 +106,10 @@ public:
       : Symbol(DefinedKind, name, file), isec(isec), value(value), size(size),
         overridesWeakDef(false), privateExtern(isPrivateExtern),
         includeInSymtab(true), thumb(isThumb), weakDef(isWeakDef),
-        external(isExternal) {}
+        external(isExternal) {
+    if (isec)
+      isec->numRefs++;
+  }
 
   bool isWeakDef() const override { return weakDef; }
   bool isExternalWeakDef() const {

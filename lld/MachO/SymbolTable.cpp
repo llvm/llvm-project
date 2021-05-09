@@ -51,13 +51,26 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   bool overridesWeakDef = false;
   std::tie(s, wasInserted) = insert(name, file);
 
+  assert(!isWeakDef || (isa<BitcodeFile>(file) && !isec) ||
+         (isa<ObjFile>(file) && file == isec->file));
+
   if (!wasInserted) {
     if (auto *defined = dyn_cast<Defined>(s)) {
       if (isWeakDef) {
         // Both old and new symbol weak (e.g. inline function in two TUs):
         // If one of them isn't private extern, the merged symbol isn't.
-        if (defined->isWeakDef())
+        if (defined->isWeakDef()) {
           defined->privateExtern &= isPrivateExtern;
+
+          // FIXME: Handle this for bitcode files.
+          // FIXME: We currently only do this if both symbols are weak.
+          //        We could do this if either is weak (but getting the
+          //        case where !isWeakDef && defined->isWeakDef() right
+          //        requires some care and testing).
+          if (isec)
+            isec->canOmitFromOutput = true;
+        }
+
         return defined;
       }
       if (!defined->isWeakDef())

@@ -7,6 +7,7 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 typedef unsigned long ulong;
+typedef unsigned int  uint;
 
 // CHECK-LABEL: @test_div_fixup_f16
 // CHECK: call half @llvm.amdgcn.div.fixup.f16
@@ -136,4 +137,11 @@ void test_ds_fmaxf(local float *out, float src) {
 void test_s_memtime(global ulong* out)
 {
   *out = __builtin_amdgcn_s_memtime();
+}
+
+// CHECK-LABEL: @test_perm
+// CHECK: call i32 @llvm.amdgcn.perm(i32 %a, i32 %b, i32 %s)
+void test_perm(global uint* out, uint a, uint b, uint s)
+{
+  *out = __builtin_amdgcn_perm(a, b, s);
 }
