@@ -579,7 +579,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     element_type* operator->() const _NOEXCEPT
     {
-        static_assert(!_VSTD::is_array<_Tp>::value,
+        static_assert(!is_array<_Tp>::value,
                       "std::shared_ptr<T>::operator-> is only valid when T is not an array type.");
         return __ptr_;
     }
@@ -607,7 +607,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     operator[](ptrdiff_t __i) const
     {
-            static_assert(_VSTD::is_array<_Tp>::value,
+            static_assert(is_array<_Tp>::value,
                           "std::shared_ptr<T>::operator[] is only valid when T is an array type.");
             return __ptr_[__i];
     }
