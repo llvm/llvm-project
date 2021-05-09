@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: rm -rf %t
-# RUN: split-file %s %t
+# RUN: rm -rf %t; split-file %s %t
 
 # RUN: llvm-as %t/framework.ll -o %t/framework.o
 # RUN: %lld %t/framework.o -o %t/frame

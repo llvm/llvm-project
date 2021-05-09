@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: split-file %s %t
+# RUN: rm -rf %t; split-file %s %t
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/libweak-defines.s -o %t/libweak-defines.o
 # RUN: %lld -dylib %t/libweak-defines.o -o %t/libweak-defines.dylib
