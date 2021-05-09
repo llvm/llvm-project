@@ -139,7 +139,8 @@ public:
   virtual ParseResult parseFloat(double &result) = 0;
 
   /// Parse an integer value from the stream.
-  template <typename IntT> ParseResult parseInteger(IntT &result) {
+  template <typename IntT>
+  ParseResult parseInteger(IntT &result) {
     auto loc = getCurrentLocation();
     OptionalParseResult parseResult = parseOptionalInteger(result);
     if (!parseResult.hasValue())
@@ -148,21 +149,24 @@ public:
   }
 
   /// Parse an optional integer value from the stream.
-  virtual OptionalParseResult parseOptionalInteger(uint64_t &result) = 0;
+  virtual OptionalParseResult parseOptionalInteger(APInt &result) = 0;
 
   template <typename IntT>
   OptionalParseResult parseOptionalInteger(IntT &result) {
     auto loc = getCurrentLocation();
 
     // Parse the unsigned variant.
-    uint64_t uintResult;
+    APInt uintResult;
     OptionalParseResult parseResult = parseOptionalInteger(uintResult);
     if (!parseResult.hasValue() || failed(*parseResult))
       return parseResult;
 
-    // Try to convert to the provided integer type.
-    result = IntT(uintResult);
-    if (uint64_t(result) != uintResult)
+    // Try to convert to the provided integer type.  sextOrTrunc is correct even
+    // for unsigned types because parseOptionalInteger ensures the sign bit is
+    // zero for non-negated integers.
+    result =
+        (IntT)uintResult.sextOrTrunc(sizeof(IntT) * CHAR_BIT).getLimitedValue();
+    if (APInt(uintResult.getBitWidth(), result) != uintResult)
       return emitError(loc, "integer value too large");
     return success();
   }
@@ -172,13 +176,14 @@ public:
   /// unlike `OpBuilder::getType`, this method does not implicitly insert a
   /// context parameter.
   template <typename T, typename... ParamsT>
-  T getChecked(llvm::SMLoc loc, ParamsT &&...params) {
+  T getChecked(llvm::SMLoc loc, ParamsT &&... params) {
     return T::getChecked([&] { return emitError(loc); },
                          std::forward<ParamsT>(params)...);
   }
   /// A variant of `getChecked` that uses the result of `getNameLoc` to emit
   /// errors.
-  template <typename T, typename... ParamsT> T getChecked(ParamsT &&...params) {
+  template <typename T, typename... ParamsT>
+  T getChecked(ParamsT &&... params) {
     return T::getChecked([&] { return emitError(getNameLoc()); },
                          std::forward<ParamsT>(params)...);
   }
@@ -331,7 +336,8 @@ public:
   virtual ParseResult parseType(Type &result) = 0;
 
   /// Parse a type of a specific kind, e.g. a FunctionType.
-  template <typename TypeType> ParseResult parseType(TypeType &result) {
+  template <typename TypeType>
+  ParseResult parseType(TypeType &result) {
     llvm::SMLoc loc = getCurrentLocation();
 
     // Parse any kind of type.
