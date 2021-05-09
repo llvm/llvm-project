@@ -57,10 +57,6 @@ def Znver3Model : SchedMachineModel {
 
   let PostRAScheduler = 1; // Enable Post RegAlloc Scheduler pass.
 
-  // FIXME: This variable is required for incomplete model.
-  // We haven't catered all instructions.
-  // So, we reset the value of this variable so as to
-  // say that the model is incomplete.
   let CompleteModel = 1;
 }
 
