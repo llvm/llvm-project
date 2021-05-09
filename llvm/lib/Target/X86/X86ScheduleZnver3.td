@@ -1456,6 +1456,14 @@ def : InstRW<[Zn3WriteMoveRenameable], (instrs MOV32rr, MOV32rr_REV,
                                                MOV64rr, MOV64rr_REV,
                                                MOVSX32rr32)>;
 
+def Zn3WriteSwapRenameable : SchedWriteRes<[]> {
+  let Latency = 0;
+  let ResourceCycles = [];
+  let NumMicroOps = 2;
+}
+def : InstRW<[Zn3WriteSwapRenameable], (instrs XCHG32rr, XCHG32ar,
+                                               XCHG64rr, XCHG64ar)>;
+
 defm : Zn3WriteResInt<WriteXCHG, [Zn3ALU0123], 0, [8], 2>;        // Compare+Exchange - TODO RMW support.
 
 defm : Zn3WriteResXMM<WriteFMove, [Zn3FPVMisc0123], 1, [1], 1>; // Empty sched class
@@ -1472,7 +1480,8 @@ def : IsOptimizableRegisterMove<[
     MOV32rr, MOV32rr_REV,
     MOV64rr, MOV64rr_REV,
     MOVSX32rr32,
-    // FIXME: XCHG32rr/XCHG64rr after MCA is fixed
+    XCHG32rr, XCHG32ar,
+    XCHG64rr, XCHG64ar,
 
     // MMX variants.
     // MMX moves are *NOT* eliminated.

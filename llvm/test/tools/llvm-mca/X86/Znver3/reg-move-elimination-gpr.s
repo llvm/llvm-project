@@ -611,13 +611,13 @@ xchgq %r15, %rax
 
 # CHECK:      Iterations:        1000
 # CHECK-NEXT: Instructions:      14000
-# CHECK-NEXT: Total Cycles:      27996
+# CHECK-NEXT: Total Cycles:      4668
 # CHECK-NEXT: Total uOps:        28000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               0.50
-# CHECK-NEXT: Block RThroughput: 28.0
+# CHECK-NEXT: uOps Per Cycle:    6.00
+# CHECK-NEXT: IPC:               3.00
+# CHECK-NEXT: Block RThroughput: 4.7
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -628,24 +628,24 @@ xchgq %r15, %rax
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      0     2.00                        xchgl	%ecx, %eax
-# CHECK-NEXT:  2      0     2.00                        xchgl	%ecx, %edx
-# CHECK-NEXT:  2      0     2.00                        xchgl	%edx, %ebp
-# CHECK-NEXT:  2      0     2.00                        xchgl	%ebp, %esi
-# CHECK-NEXT:  2      0     2.00                        xchgl	%esi, %edi
-# CHECK-NEXT:  2      0     2.00                        xchgl	%edi, %r8d
-# CHECK-NEXT:  2      0     2.00                        xchgl	%r8d, %r9d
-# CHECK-NEXT:  2      0     2.00                        xchgl	%r9d, %r10d
-# CHECK-NEXT:  2      0     2.00                        xchgl	%r10d, %r11d
-# CHECK-NEXT:  2      0     2.00                        xchgl	%r11d, %r12d
-# CHECK-NEXT:  2      0     2.00                        xchgl	%r12d, %r13d
-# CHECK-NEXT:  2      0     2.00                        xchgl	%r13d, %r14d
-# CHECK-NEXT:  2      0     2.00                        xchgl	%r14d, %r15d
-# CHECK-NEXT:  2      0     2.00                        xchgl	%r15d, %eax
+# CHECK-NEXT:  2      0     0.33                        xchgl	%ecx, %eax
+# CHECK-NEXT:  2      0     0.33                        xchgl	%ecx, %edx
+# CHECK-NEXT:  2      0     0.33                        xchgl	%edx, %ebp
+# CHECK-NEXT:  2      0     0.33                        xchgl	%ebp, %esi
+# CHECK-NEXT:  2      0     0.33                        xchgl	%esi, %edi
+# CHECK-NEXT:  2      0     0.33                        xchgl	%edi, %r8d
+# CHECK-NEXT:  2      0     0.33                        xchgl	%r8d, %r9d
+# CHECK-NEXT:  2      0     0.33                        xchgl	%r9d, %r10d
+# CHECK-NEXT:  2      0     0.33                        xchgl	%r10d, %r11d
+# CHECK-NEXT:  2      0     0.33                        xchgl	%r11d, %r12d
+# CHECK-NEXT:  2      0     0.33                        xchgl	%r12d, %r13d
+# CHECK-NEXT:  2      0     0.33                        xchgl	%r13d, %r14d
+# CHECK-NEXT:  2      0     0.33                        xchgl	%r14d, %r15d
+# CHECK-NEXT:  2      0     0.33                        xchgl	%r15d, %eax
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    28000
-# CHECK-NEXT: Max number of mappings used:         192
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
@@ -654,8 +654,12 @@ xchgq %r15, %rax
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
-# CHECK-NEXT:    Total number of mappings created: 28000
-# CHECK-NEXT:    Max number of mappings used:      192
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      28000
+# CHECK-NEXT:    Number of moves eliminated:       28000  (100.0%)
+# CHECK-NEXT:    Number of zero moves:             0  (0.0%)
+# CHECK-NEXT:    Max moves eliminated per cycle:   6
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - Zn3AGU0
@@ -684,69 +688,169 @@ xchgq %r15, %rax
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -     28.00  28.00  28.00  28.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%ecx, %eax
-# CHECK-NEXT:  -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%ecx, %edx
-# CHECK-NEXT:  -      -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%edx, %ebp
-# CHECK-NEXT:  -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%ebp, %esi
-# CHECK-NEXT:  -      -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%esi, %edi
-# CHECK-NEXT:  -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%edi, %r8d
-# CHECK-NEXT:  -      -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%r8d, %r9d
-# CHECK-NEXT:  -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%r9d, %r10d
-# CHECK-NEXT:  -      -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%r10d, %r11d
-# CHECK-NEXT:  -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%r11d, %r12d
-# CHECK-NEXT:  -      -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%r12d, %r13d
-# CHECK-NEXT:  -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%r13d, %r14d
-# CHECK-NEXT:  -      -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%r14d, %r15d
-# CHECK-NEXT:  -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%r15d, %eax
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%ecx, %eax
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%ecx, %edx
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%edx, %ebp
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%ebp, %esi
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%esi, %edi
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%edi, %r8d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%r8d, %r9d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%r9d, %r10d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%r10d, %r11d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%r11d, %r12d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%r12d, %r13d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%r13d, %r14d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%r14d, %r15d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%r15d, %eax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789          0123456789          012345
-# CHECK-NEXT: Index     0123456789          0123456789          0123456789          0123456789
+# CHECK-NEXT:                     0123456789          0123456789
+# CHECK-NEXT: Index     0123456789          0123456789          01234567
 
-# CHECK:      [0,0]     DER  .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   xchgl	%ecx, %eax
-# CHECK-NEXT: [0,1]     DER  .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   xchgl	%ecx, %edx
-# CHECK-NEXT: [0,2]     DER  .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   xchgl	%edx, %ebp
-# CHECK-NEXT: [0,3]     .DER .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   xchgl	%ebp, %esi
-# CHECK-NEXT: [0,4]     .D=======ER    .    .    .    .    .    .    .    .    .    .    .    .    .   xchgl	%esi, %edi
-# CHECK-NEXT: [0,5]     .D=======ER    .    .    .    .    .    .    .    .    .    .    .    .    .   xchgl	%edi, %r8d
-# CHECK-NEXT: [0,6]     . D======ER    .    .    .    .    .    .    .    .    .    .    .    .    .   xchgl	%r8d, %r9d
-# CHECK-NEXT: [0,7]     . D=======ER   .    .    .    .    .    .    .    .    .    .    .    .    .   xchgl	%r9d, %r10d
-# CHECK-NEXT: [0,8]     . D==============ER .    .    .    .    .    .    .    .    .    .    .    .   xchgl	%r10d, %r11d
-# CHECK-NEXT: [0,9]     .  D=============ER .    .    .    .    .    .    .    .    .    .    .    .   xchgl	%r11d, %r12d
-# CHECK-NEXT: [0,10]    .  D=============ER .    .    .    .    .    .    .    .    .    .    .    .   xchgl	%r12d, %r13d
-# CHECK-NEXT: [0,11]    .  D==============ER.    .    .    .    .    .    .    .    .    .    .    .   xchgl	%r13d, %r14d
-# CHECK-NEXT: [0,12]    .   D====================ER   .    .    .    .    .    .    .    .    .    .   xchgl	%r14d, %r15d
-# CHECK-NEXT: [0,13]    .   D====================ER   .    .    .    .    .    .    .    .    .    .   xchgl	%r15d, %eax
-# CHECK-NEXT: [1,0]     .   D====================ER   .    .    .    .    .    .    .    .    .    .   xchgl	%ecx, %eax
-# CHECK-NEXT: [1,1]     .    D====================ER  .    .    .    .    .    .    .    .    .    .   xchgl	%ecx, %edx
-# CHECK-NEXT: [1,2]     .    D===========================ER.    .    .    .    .    .    .    .    .   xchgl	%edx, %ebp
-# CHECK-NEXT: [1,3]     .    D===========================ER.    .    .    .    .    .    .    .    .   xchgl	%ebp, %esi
-# CHECK-NEXT: [1,4]     .    .D==========================ER.    .    .    .    .    .    .    .    .   xchgl	%esi, %edi
-# CHECK-NEXT: [1,5]     .    .D===========================ER    .    .    .    .    .    .    .    .   xchgl	%edi, %r8d
-# CHECK-NEXT: [1,6]     .    .D==================================ER  .    .    .    .    .    .    .   xchgl	%r8d, %r9d
-# CHECK-NEXT: [1,7]     .    . D=================================ER  .    .    .    .    .    .    .   xchgl	%r9d, %r10d
-# CHECK-NEXT: [1,8]     .    . D=================================ER  .    .    .    .    .    .    .   xchgl	%r10d, %r11d
-# CHECK-NEXT: [1,9]     .    . D==================================ER .    .    .    .    .    .    .   xchgl	%r11d, %r12d
-# CHECK-NEXT: [1,10]    .    .  D========================================ER    .    .    .    .    .   xchgl	%r12d, %r13d
-# CHECK-NEXT: [1,11]    .    .  D========================================ER    .    .    .    .    .   xchgl	%r13d, %r14d
-# CHECK-NEXT: [1,12]    .    .  D========================================ER    .    .    .    .    .   xchgl	%r14d, %r15d
-# CHECK-NEXT: [1,13]    .    .   D========================================ER   .    .    .    .    .   xchgl	%r15d, %eax
-# CHECK-NEXT: [2,0]     .    .   D===============================================ER .    .    .    .   xchgl	%ecx, %eax
-# CHECK-NEXT: [2,1]     .    .   D===============================================ER .    .    .    .   xchgl	%ecx, %edx
-# CHECK-NEXT: [2,2]     .    .    D==============================================ER .    .    .    .   xchgl	%edx, %ebp
-# CHECK-NEXT: [2,3]     .    .    D===============================================ER.    .    .    .   xchgl	%ebp, %esi
-# CHECK-NEXT: [2,4]     .    .    D======================================================ER   .    .   xchgl	%esi, %edi
-# CHECK-NEXT: [2,5]     .    .    .D=====================================================ER   .    .   xchgl	%edi, %r8d
-# CHECK-NEXT: [2,6]     .    .    .D=====================================================ER   .    .   xchgl	%r8d, %r9d
-# CHECK-NEXT: [2,7]     .    .    .D======================================================ER  .    .   xchgl	%r9d, %r10d
-# CHECK-NEXT: [2,8]     .    .    . D============================================================ER.   xchgl	%r10d, %r11d
-# CHECK-NEXT: [2,9]     .    .    . D============================================================ER.   xchgl	%r11d, %r12d
-# CHECK-NEXT: [2,10]    .    .    . D============================================================ER.   xchgl	%r12d, %r13d
-# CHECK-NEXT: [2,11]    .    .    .  D============================================================ER   xchgl	%r13d, %r14d
+# CHECK:      [0,0]     DR   .    .    .    .    .    .    .    .    . .   xchgl	%ecx, %eax
+# CHECK-NEXT: [0,1]     DR   .    .    .    .    .    .    .    .    . .   xchgl	%ecx, %edx
+# CHECK-NEXT: [0,2]     DR   .    .    .    .    .    .    .    .    . .   xchgl	%edx, %ebp
+# CHECK-NEXT: [0,3]     .DR  .    .    .    .    .    .    .    .    . .   xchgl	%ebp, %esi
+# CHECK-NEXT: [0,4]     .DR  .    .    .    .    .    .    .    .    . .   xchgl	%esi, %edi
+# CHECK-NEXT: [0,5]     .DR  .    .    .    .    .    .    .    .    . .   xchgl	%edi, %r8d
+# CHECK-NEXT: [0,6]     . DR .    .    .    .    .    .    .    .    . .   xchgl	%r8d, %r9d
+# CHECK-NEXT: [0,7]     . DR .    .    .    .    .    .    .    .    . .   xchgl	%r9d, %r10d
+# CHECK-NEXT: [0,8]     . DR .    .    .    .    .    .    .    .    . .   xchgl	%r10d, %r11d
+# CHECK-NEXT: [0,9]     .  DR.    .    .    .    .    .    .    .    . .   xchgl	%r11d, %r12d
+# CHECK-NEXT: [0,10]    .  DR.    .    .    .    .    .    .    .    . .   xchgl	%r12d, %r13d
+# CHECK-NEXT: [0,11]    .  DR.    .    .    .    .    .    .    .    . .   xchgl	%r13d, %r14d
+# CHECK-NEXT: [0,12]    .   DR    .    .    .    .    .    .    .    . .   xchgl	%r14d, %r15d
+# CHECK-NEXT: [0,13]    .   DR    .    .    .    .    .    .    .    . .   xchgl	%r15d, %eax
+# CHECK-NEXT: [1,0]     .   DR    .    .    .    .    .    .    .    . .   xchgl	%ecx, %eax
+# CHECK-NEXT: [1,1]     .    DR   .    .    .    .    .    .    .    . .   xchgl	%ecx, %edx
+# CHECK-NEXT: [1,2]     .    DR   .    .    .    .    .    .    .    . .   xchgl	%edx, %ebp
+# CHECK-NEXT: [1,3]     .    DR   .    .    .    .    .    .    .    . .   xchgl	%ebp, %esi
+# CHECK-NEXT: [1,4]     .    .DR  .    .    .    .    .    .    .    . .   xchgl	%esi, %edi
+# CHECK-NEXT: [1,5]     .    .DR  .    .    .    .    .    .    .    . .   xchgl	%edi, %r8d
+# CHECK-NEXT: [1,6]     .    .DR  .    .    .    .    .    .    .    . .   xchgl	%r8d, %r9d
+# CHECK-NEXT: [1,7]     .    . DR .    .    .    .    .    .    .    . .   xchgl	%r9d, %r10d
+# CHECK-NEXT: [1,8]     .    . DR .    .    .    .    .    .    .    . .   xchgl	%r10d, %r11d
+# CHECK-NEXT: [1,9]     .    . DR .    .    .    .    .    .    .    . .   xchgl	%r11d, %r12d
+# CHECK-NEXT: [1,10]    .    .  DR.    .    .    .    .    .    .    . .   xchgl	%r12d, %r13d
+# CHECK-NEXT: [1,11]    .    .  DR.    .    .    .    .    .    .    . .   xchgl	%r13d, %r14d
+# CHECK-NEXT: [1,12]    .    .  DR.    .    .    .    .    .    .    . .   xchgl	%r14d, %r15d
+# CHECK-NEXT: [1,13]    .    .   DR    .    .    .    .    .    .    . .   xchgl	%r15d, %eax
+# CHECK-NEXT: [2,0]     .    .   DR    .    .    .    .    .    .    . .   xchgl	%ecx, %eax
+# CHECK-NEXT: [2,1]     .    .   DR    .    .    .    .    .    .    . .   xchgl	%ecx, %edx
+# CHECK-NEXT: [2,2]     .    .    DR   .    .    .    .    .    .    . .   xchgl	%edx, %ebp
+# CHECK-NEXT: [2,3]     .    .    DR   .    .    .    .    .    .    . .   xchgl	%ebp, %esi
+# CHECK-NEXT: [2,4]     .    .    DR   .    .    .    .    .    .    . .   xchgl	%esi, %edi
+# CHECK-NEXT: [2,5]     .    .    .DR  .    .    .    .    .    .    . .   xchgl	%edi, %r8d
+# CHECK-NEXT: [2,6]     .    .    .DR  .    .    .    .    .    .    . .   xchgl	%r8d, %r9d
+# CHECK-NEXT: [2,7]     .    .    .DR  .    .    .    .    .    .    . .   xchgl	%r9d, %r10d
+# CHECK-NEXT: [2,8]     .    .    . DR .    .    .    .    .    .    . .   xchgl	%r10d, %r11d
+# CHECK-NEXT: [2,9]     .    .    . DR .    .    .    .    .    .    . .   xchgl	%r11d, %r12d
+# CHECK-NEXT: [2,10]    .    .    . DR .    .    .    .    .    .    . .   xchgl	%r12d, %r13d
+# CHECK-NEXT: [2,11]    .    .    .  DR.    .    .    .    .    .    . .   xchgl	%r13d, %r14d
+# CHECK-NEXT: [2,12]    .    .    .  DR.    .    .    .    .    .    . .   xchgl	%r14d, %r15d
+# CHECK-NEXT: [2,13]    .    .    .  DR.    .    .    .    .    .    . .   xchgl	%r15d, %eax
+# CHECK-NEXT: [3,0]     .    .    .   DR    .    .    .    .    .    . .   xchgl	%ecx, %eax
+# CHECK-NEXT: [3,1]     .    .    .   DR    .    .    .    .    .    . .   xchgl	%ecx, %edx
+# CHECK-NEXT: [3,2]     .    .    .   DR    .    .    .    .    .    . .   xchgl	%edx, %ebp
+# CHECK-NEXT: [3,3]     .    .    .    DR   .    .    .    .    .    . .   xchgl	%ebp, %esi
+# CHECK-NEXT: [3,4]     .    .    .    DR   .    .    .    .    .    . .   xchgl	%esi, %edi
+# CHECK-NEXT: [3,5]     .    .    .    DR   .    .    .    .    .    . .   xchgl	%edi, %r8d
+# CHECK-NEXT: [3,6]     .    .    .    .DR  .    .    .    .    .    . .   xchgl	%r8d, %r9d
+# CHECK-NEXT: [3,7]     .    .    .    .DR  .    .    .    .    .    . .   xchgl	%r9d, %r10d
+# CHECK-NEXT: [3,8]     .    .    .    .DR  .    .    .    .    .    . .   xchgl	%r10d, %r11d
+# CHECK-NEXT: [3,9]     .    .    .    . DR .    .    .    .    .    . .   xchgl	%r11d, %r12d
+# CHECK-NEXT: [3,10]    .    .    .    . DR .    .    .    .    .    . .   xchgl	%r12d, %r13d
+# CHECK-NEXT: [3,11]    .    .    .    . DR .    .    .    .    .    . .   xchgl	%r13d, %r14d
+# CHECK-NEXT: [3,12]    .    .    .    .  DR.    .    .    .    .    . .   xchgl	%r14d, %r15d
+# CHECK-NEXT: [3,13]    .    .    .    .  DR.    .    .    .    .    . .   xchgl	%r15d, %eax
+# CHECK-NEXT: [4,0]     .    .    .    .  DR.    .    .    .    .    . .   xchgl	%ecx, %eax
+# CHECK-NEXT: [4,1]     .    .    .    .   DR    .    .    .    .    . .   xchgl	%ecx, %edx
+# CHECK-NEXT: [4,2]     .    .    .    .   DR    .    .    .    .    . .   xchgl	%edx, %ebp
+# CHECK-NEXT: [4,3]     .    .    .    .   DR    .    .    .    .    . .   xchgl	%ebp, %esi
+# CHECK-NEXT: [4,4]     .    .    .    .    DR   .    .    .    .    . .   xchgl	%esi, %edi
+# CHECK-NEXT: [4,5]     .    .    .    .    DR   .    .    .    .    . .   xchgl	%edi, %r8d
+# CHECK-NEXT: [4,6]     .    .    .    .    DR   .    .    .    .    . .   xchgl	%r8d, %r9d
+# CHECK-NEXT: [4,7]     .    .    .    .    .DR  .    .    .    .    . .   xchgl	%r9d, %r10d
+# CHECK-NEXT: [4,8]     .    .    .    .    .DR  .    .    .    .    . .   xchgl	%r10d, %r11d
+# CHECK-NEXT: [4,9]     .    .    .    .    .DR  .    .    .    .    . .   xchgl	%r11d, %r12d
+# CHECK-NEXT: [4,10]    .    .    .    .    . DR .    .    .    .    . .   xchgl	%r12d, %r13d
+# CHECK-NEXT: [4,11]    .    .    .    .    . DR .    .    .    .    . .   xchgl	%r13d, %r14d
+# CHECK-NEXT: [4,12]    .    .    .    .    . DR .    .    .    .    . .   xchgl	%r14d, %r15d
+# CHECK-NEXT: [4,13]    .    .    .    .    .  DR.    .    .    .    . .   xchgl	%r15d, %eax
+# CHECK-NEXT: [5,0]     .    .    .    .    .  DR.    .    .    .    . .   xchgl	%ecx, %eax
+# CHECK-NEXT: [5,1]     .    .    .    .    .  DR.    .    .    .    . .   xchgl	%ecx, %edx
+# CHECK-NEXT: [5,2]     .    .    .    .    .   DR    .    .    .    . .   xchgl	%edx, %ebp
+# CHECK-NEXT: [5,3]     .    .    .    .    .   DR    .    .    .    . .   xchgl	%ebp, %esi
+# CHECK-NEXT: [5,4]     .    .    .    .    .   DR    .    .    .    . .   xchgl	%esi, %edi
+# CHECK-NEXT: [5,5]     .    .    .    .    .    DR   .    .    .    . .   xchgl	%edi, %r8d
+# CHECK-NEXT: [5,6]     .    .    .    .    .    DR   .    .    .    . .   xchgl	%r8d, %r9d
+# CHECK-NEXT: [5,7]     .    .    .    .    .    DR   .    .    .    . .   xchgl	%r9d, %r10d
+# CHECK-NEXT: [5,8]     .    .    .    .    .    .DR  .    .    .    . .   xchgl	%r10d, %r11d
+# CHECK-NEXT: [5,9]     .    .    .    .    .    .DR  .    .    .    . .   xchgl	%r11d, %r12d
+# CHECK-NEXT: [5,10]    .    .    .    .    .    .DR  .    .    .    . .   xchgl	%r12d, %r13d
+# CHECK-NEXT: [5,11]    .    .    .    .    .    . DR .    .    .    . .   xchgl	%r13d, %r14d
+# CHECK-NEXT: [5,12]    .    .    .    .    .    . DR .    .    .    . .   xchgl	%r14d, %r15d
+# CHECK-NEXT: [5,13]    .    .    .    .    .    . DR .    .    .    . .   xchgl	%r15d, %eax
+# CHECK-NEXT: [6,0]     .    .    .    .    .    .  DR.    .    .    . .   xchgl	%ecx, %eax
+# CHECK-NEXT: [6,1]     .    .    .    .    .    .  DR.    .    .    . .   xchgl	%ecx, %edx
+# CHECK-NEXT: [6,2]     .    .    .    .    .    .  DR.    .    .    . .   xchgl	%edx, %ebp
+# CHECK-NEXT: [6,3]     .    .    .    .    .    .   DR    .    .    . .   xchgl	%ebp, %esi
+# CHECK-NEXT: [6,4]     .    .    .    .    .    .   DR    .    .    . .   xchgl	%esi, %edi
+# CHECK-NEXT: [6,5]     .    .    .    .    .    .   DR    .    .    . .   xchgl	%edi, %r8d
+# CHECK-NEXT: [6,6]     .    .    .    .    .    .    DR   .    .    . .   xchgl	%r8d, %r9d
+# CHECK-NEXT: [6,7]     .    .    .    .    .    .    DR   .    .    . .   xchgl	%r9d, %r10d
+# CHECK-NEXT: [6,8]     .    .    .    .    .    .    DR   .    .    . .   xchgl	%r10d, %r11d
+# CHECK-NEXT: [6,9]     .    .    .    .    .    .    .DR  .    .    . .   xchgl	%r11d, %r12d
+# CHECK-NEXT: [6,10]    .    .    .    .    .    .    .DR  .    .    . .   xchgl	%r12d, %r13d
+# CHECK-NEXT: [6,11]    .    .    .    .    .    .    .DR  .    .    . .   xchgl	%r13d, %r14d
+# CHECK-NEXT: [6,12]    .    .    .    .    .    .    . DR .    .    . .   xchgl	%r14d, %r15d
+# CHECK-NEXT: [6,13]    .    .    .    .    .    .    . DR .    .    . .   xchgl	%r15d, %eax
+# CHECK-NEXT: [7,0]     .    .    .    .    .    .    . DR .    .    . .   xchgl	%ecx, %eax
+# CHECK-NEXT: [7,1]     .    .    .    .    .    .    .  DR.    .    . .   xchgl	%ecx, %edx
+# CHECK-NEXT: [7,2]     .    .    .    .    .    .    .  DR.    .    . .   xchgl	%edx, %ebp
+# CHECK-NEXT: [7,3]     .    .    .    .    .    .    .  DR.    .    . .   xchgl	%ebp, %esi
+# CHECK-NEXT: [7,4]     .    .    .    .    .    .    .   DR    .    . .   xchgl	%esi, %edi
+# CHECK-NEXT: [7,5]     .    .    .    .    .    .    .   DR    .    . .   xchgl	%edi, %r8d
+# CHECK-NEXT: [7,6]     .    .    .    .    .    .    .   DR    .    . .   xchgl	%r8d, %r9d
+# CHECK-NEXT: [7,7]     .    .    .    .    .    .    .    DR   .    . .   xchgl	%r9d, %r10d
+# CHECK-NEXT: [7,8]     .    .    .    .    .    .    .    DR   .    . .   xchgl	%r10d, %r11d
+# CHECK-NEXT: [7,9]     .    .    .    .    .    .    .    DR   .    . .   xchgl	%r11d, %r12d
+# CHECK-NEXT: [7,10]    .    .    .    .    .    .    .    .DR  .    . .   xchgl	%r12d, %r13d
+# CHECK-NEXT: [7,11]    .    .    .    .    .    .    .    .DR  .    . .   xchgl	%r13d, %r14d
+# CHECK-NEXT: [7,12]    .    .    .    .    .    .    .    .DR  .    . .   xchgl	%r14d, %r15d
+# CHECK-NEXT: [7,13]    .    .    .    .    .    .    .    . DR .    . .   xchgl	%r15d, %eax
+# CHECK-NEXT: [8,0]     .    .    .    .    .    .    .    . DR .    . .   xchgl	%ecx, %eax
+# CHECK-NEXT: [8,1]     .    .    .    .    .    .    .    . DR .    . .   xchgl	%ecx, %edx
+# CHECK-NEXT: [8,2]     .    .    .    .    .    .    .    .  DR.    . .   xchgl	%edx, %ebp
+# CHECK-NEXT: [8,3]     .    .    .    .    .    .    .    .  DR.    . .   xchgl	%ebp, %esi
+# CHECK-NEXT: [8,4]     .    .    .    .    .    .    .    .  DR.    . .   xchgl	%esi, %edi
+# CHECK-NEXT: [8,5]     .    .    .    .    .    .    .    .   DR    . .   xchgl	%edi, %r8d
+# CHECK-NEXT: [8,6]     .    .    .    .    .    .    .    .   DR    . .   xchgl	%r8d, %r9d
+# CHECK-NEXT: [8,7]     .    .    .    .    .    .    .    .   DR    . .   xchgl	%r9d, %r10d
+# CHECK-NEXT: [8,8]     .    .    .    .    .    .    .    .    DR   . .   xchgl	%r10d, %r11d
+# CHECK-NEXT: [8,9]     .    .    .    .    .    .    .    .    DR   . .   xchgl	%r11d, %r12d
+# CHECK-NEXT: [8,10]    .    .    .    .    .    .    .    .    DR   . .   xchgl	%r12d, %r13d
+# CHECK-NEXT: [8,11]    .    .    .    .    .    .    .    .    .DR  . .   xchgl	%r13d, %r14d
+# CHECK-NEXT: [8,12]    .    .    .    .    .    .    .    .    .DR  . .   xchgl	%r14d, %r15d
+# CHECK-NEXT: [8,13]    .    .    .    .    .    .    .    .    .DR  . .   xchgl	%r15d, %eax
+# CHECK-NEXT: [9,0]     .    .    .    .    .    .    .    .    . DR . .   xchgl	%ecx, %eax
+# CHECK-NEXT: [9,1]     .    .    .    .    .    .    .    .    . DR . .   xchgl	%ecx, %edx
+# CHECK-NEXT: [9,2]     .    .    .    .    .    .    .    .    . DR . .   xchgl	%edx, %ebp
+# CHECK-NEXT: [9,3]     .    .    .    .    .    .    .    .    .  DR. .   xchgl	%ebp, %esi
+# CHECK-NEXT: [9,4]     .    .    .    .    .    .    .    .    .  DR. .   xchgl	%esi, %edi
+# CHECK-NEXT: [9,5]     .    .    .    .    .    .    .    .    .  DR. .   xchgl	%edi, %r8d
+# CHECK-NEXT: [9,6]     .    .    .    .    .    .    .    .    .   DR .   xchgl	%r8d, %r9d
+# CHECK-NEXT: [9,7]     .    .    .    .    .    .    .    .    .   DR .   xchgl	%r9d, %r10d
+# CHECK-NEXT: [9,8]     .    .    .    .    .    .    .    .    .   DR .   xchgl	%r10d, %r11d
+# CHECK-NEXT: [9,9]     .    .    .    .    .    .    .    .    .    DR.   xchgl	%r11d, %r12d
+# CHECK-NEXT: [9,10]    .    .    .    .    .    .    .    .    .    DR.   xchgl	%r12d, %r13d
+# CHECK-NEXT: [9,11]    .    .    .    .    .    .    .    .    .    DR.   xchgl	%r13d, %r14d
+# CHECK-NEXT: [9,12]    .    .    .    .    .    .    .    .    .    .DR   xchgl	%r14d, %r15d
+# CHECK-NEXT: [9,13]    .    .    .    .    .    .    .    .    .    .DR   xchgl	%r15d, %eax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -755,33 +859,33 @@ xchgq %r15, %rax
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     10    102.7  2.9    0.0       xchgl	%ecx, %eax
-# CHECK-NEXT: 1.     10    102.8  0.5    0.0       xchgl	%ecx, %edx
-# CHECK-NEXT: 2.     10    105.3  3.5    0.0       xchgl	%edx, %ebp
-# CHECK-NEXT: 3.     10    105.5  0.5    0.0       xchgl	%ebp, %esi
-# CHECK-NEXT: 4.     10    108.3  3.5    0.0       xchgl	%esi, %edi
-# CHECK-NEXT: 5.     10    108.5  0.5    0.0       xchgl	%edi, %r8d
-# CHECK-NEXT: 6.     10    111.0  3.5    0.0       xchgl	%r8d, %r9d
-# CHECK-NEXT: 7.     10    111.1  0.5    0.0       xchgl	%r9d, %r10d
-# CHECK-NEXT: 8.     10    113.7  3.5    0.0       xchgl	%r10d, %r11d
-# CHECK-NEXT: 9.     10    113.8  0.5    0.0       xchgl	%r11d, %r12d
-# CHECK-NEXT: 10.    10    116.3  3.5    0.0       xchgl	%r12d, %r13d
-# CHECK-NEXT: 11.    10    116.5  0.5    0.0       xchgl	%r13d, %r14d
-# CHECK-NEXT: 12.    10    119.0  3.5    0.0       xchgl	%r14d, %r15d
-# CHECK-NEXT: 13.    10    119.1  0.5    0.0       xchgl	%r15d, %eax
-# CHECK-NEXT:        10    111.0  2.0    0.0       <total>
+# CHECK-NEXT: 0.     10    0.0    0.0    0.0       xchgl	%ecx, %eax
+# CHECK-NEXT: 1.     10    0.0    0.0    0.0       xchgl	%ecx, %edx
+# CHECK-NEXT: 2.     10    0.0    0.0    0.0       xchgl	%edx, %ebp
+# CHECK-NEXT: 3.     10    0.0    0.0    0.0       xchgl	%ebp, %esi
+# CHECK-NEXT: 4.     10    0.0    0.0    0.0       xchgl	%esi, %edi
+# CHECK-NEXT: 5.     10    0.0    0.0    0.0       xchgl	%edi, %r8d
+# CHECK-NEXT: 6.     10    0.0    0.0    0.0       xchgl	%r8d, %r9d
+# CHECK-NEXT: 7.     10    0.0    0.0    0.0       xchgl	%r9d, %r10d
+# CHECK-NEXT: 8.     10    0.0    0.0    0.0       xchgl	%r10d, %r11d
+# CHECK-NEXT: 9.     10    0.0    0.0    0.0       xchgl	%r11d, %r12d
+# CHECK-NEXT: 10.    10    0.0    0.0    0.0       xchgl	%r12d, %r13d
+# CHECK-NEXT: 11.    10    0.0    0.0    0.0       xchgl	%r13d, %r14d
+# CHECK-NEXT: 12.    10    0.0    0.0    0.0       xchgl	%r14d, %r15d
+# CHECK-NEXT: 13.    10    0.0    0.0    0.0       xchgl	%r15d, %eax
+# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
 
 # CHECK:      [3] Code Region
 
 # CHECK:      Iterations:        1000
 # CHECK-NEXT: Instructions:      14000
-# CHECK-NEXT: Total Cycles:      27996
+# CHECK-NEXT: Total Cycles:      4668
 # CHECK-NEXT: Total uOps:        28000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               0.50
-# CHECK-NEXT: Block RThroughput: 28.0
+# CHECK-NEXT: uOps Per Cycle:    6.00
+# CHECK-NEXT: IPC:               3.00
+# CHECK-NEXT: Block RThroughput: 4.7
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -792,24 +896,24 @@ xchgq %r15, %rax
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      0     2.00                        xchgq	%rcx, %rax
-# CHECK-NEXT:  2      0     2.00                        xchgq	%rcx, %rdx
-# CHECK-NEXT:  2      0     2.00                        xchgq	%rdx, %rbp
-# CHECK-NEXT:  2      0     2.00                        xchgq	%rbp, %rsi
-# CHECK-NEXT:  2      0     2.00                        xchgq	%rsi, %rdi
-# CHECK-NEXT:  2      0     2.00                        xchgq	%rdi, %r8
-# CHECK-NEXT:  2      0     2.00                        xchgq	%r8, %r9
-# CHECK-NEXT:  2      0     2.00                        xchgq	%r9, %r10
-# CHECK-NEXT:  2      0     2.00                        xchgq	%r10, %r11
-# CHECK-NEXT:  2      0     2.00                        xchgq	%r11, %r12
-# CHECK-NEXT:  2      0     2.00                        xchgq	%r12, %r13
-# CHECK-NEXT:  2      0     2.00                        xchgq	%r13, %r14
-# CHECK-NEXT:  2      0     2.00                        xchgq	%r14, %r15
-# CHECK-NEXT:  2      0     2.00                        xchgq	%r15, %rax
+# CHECK-NEXT:  2      0     0.33                        xchgq	%rcx, %rax
+# CHECK-NEXT:  2      0     0.33                        xchgq	%rcx, %rdx
+# CHECK-NEXT:  2      0     0.33                        xchgq	%rdx, %rbp
+# CHECK-NEXT:  2      0     0.33                        xchgq	%rbp, %rsi
+# CHECK-NEXT:  2      0     0.33                        xchgq	%rsi, %rdi
+# CHECK-NEXT:  2      0     0.33                        xchgq	%rdi, %r8
+# CHECK-NEXT:  2      0     0.33                        xchgq	%r8, %r9
+# CHECK-NEXT:  2      0     0.33                        xchgq	%r9, %r10
+# CHECK-NEXT:  2      0     0.33                        xchgq	%r10, %r11
+# CHECK-NEXT:  2      0     0.33                        xchgq	%r11, %r12
+# CHECK-NEXT:  2      0     0.33                        xchgq	%r12, %r13
+# CHECK-NEXT:  2      0     0.33                        xchgq	%r13, %r14
+# CHECK-NEXT:  2      0     0.33                        xchgq	%r14, %r15
+# CHECK-NEXT:  2      0     0.33                        xchgq	%r15, %rax
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    28000
-# CHECK-NEXT: Max number of mappings used:         192
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
@@ -818,8 +922,12 @@ xchgq %r15, %rax
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
-# CHECK-NEXT:    Total number of mappings created: 28000
-# CHECK-NEXT:    Max number of mappings used:      192
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      28000
+# CHECK-NEXT:    Number of moves eliminated:       28000  (100.0%)
+# CHECK-NEXT:    Number of zero moves:             0  (0.0%)
+# CHECK-NEXT:    Max moves eliminated per cycle:   6
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - Zn3AGU0
@@ -848,69 +956,169 @@ xchgq %r15, %rax
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -     28.00  28.00  28.00  28.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%rcx, %rax
-# CHECK-NEXT:  -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%rcx, %rdx
-# CHECK-NEXT:  -      -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%rdx, %rbp
-# CHECK-NEXT:  -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%rbp, %rsi
-# CHECK-NEXT:  -      -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%rsi, %rdi
-# CHECK-NEXT:  -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%rdi, %r8
-# CHECK-NEXT:  -      -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%r8, %r9
-# CHECK-NEXT:  -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%r9, %r10
-# CHECK-NEXT:  -      -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%r10, %r11
-# CHECK-NEXT:  -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%r11, %r12
-# CHECK-NEXT:  -      -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%r12, %r13
-# CHECK-NEXT:  -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%r13, %r14
-# CHECK-NEXT:  -      -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%r14, %r15
-# CHECK-NEXT:  -      -      -     4.00    -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%r15, %rax
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%rcx, %rax
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%rcx, %rdx
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%rdx, %rbp
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%rbp, %rsi
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%rsi, %rdi
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%rdi, %r8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%r8, %r9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%r9, %r10
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%r10, %r11
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%r11, %r12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%r12, %r13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%r13, %r14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%r14, %r15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%r15, %rax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789          0123456789          012345
-# CHECK-NEXT: Index     0123456789          0123456789          0123456789          0123456789
+# CHECK-NEXT:                     0123456789          0123456789
+# CHECK-NEXT: Index     0123456789          0123456789          01234567
 
-# CHECK:      [0,0]     DER  .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   xchgq	%rcx, %rax
-# CHECK-NEXT: [0,1]     DER  .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   xchgq	%rcx, %rdx
-# CHECK-NEXT: [0,2]     DER  .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   xchgq	%rdx, %rbp
-# CHECK-NEXT: [0,3]     .DER .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   xchgq	%rbp, %rsi
-# CHECK-NEXT: [0,4]     .D=======ER    .    .    .    .    .    .    .    .    .    .    .    .    .   xchgq	%rsi, %rdi
-# CHECK-NEXT: [0,5]     .D=======ER    .    .    .    .    .    .    .    .    .    .    .    .    .   xchgq	%rdi, %r8
-# CHECK-NEXT: [0,6]     . D======ER    .    .    .    .    .    .    .    .    .    .    .    .    .   xchgq	%r8, %r9
-# CHECK-NEXT: [0,7]     . D=======ER   .    .    .    .    .    .    .    .    .    .    .    .    .   xchgq	%r9, %r10
-# CHECK-NEXT: [0,8]     . D==============ER .    .    .    .    .    .    .    .    .    .    .    .   xchgq	%r10, %r11
-# CHECK-NEXT: [0,9]     .  D=============ER .    .    .    .    .    .    .    .    .    .    .    .   xchgq	%r11, %r12
-# CHECK-NEXT: [0,10]    .  D=============ER .    .    .    .    .    .    .    .    .    .    .    .   xchgq	%r12, %r13
-# CHECK-NEXT: [0,11]    .  D==============ER.    .    .    .    .    .    .    .    .    .    .    .   xchgq	%r13, %r14
-# CHECK-NEXT: [0,12]    .   D====================ER   .    .    .    .    .    .    .    .    .    .   xchgq	%r14, %r15
-# CHECK-NEXT: [0,13]    .   D====================ER   .    .    .    .    .    .    .    .    .    .   xchgq	%r15, %rax
-# CHECK-NEXT: [1,0]     .   D====================ER   .    .    .    .    .    .    .    .    .    .   xchgq	%rcx, %rax
-# CHECK-NEXT: [1,1]     .    D====================ER  .    .    .    .    .    .    .    .    .    .   xchgq	%rcx, %rdx
-# CHECK-NEXT: [1,2]     .    D===========================ER.    .    .    .    .    .    .    .    .   xchgq	%rdx, %rbp
-# CHECK-NEXT: [1,3]     .    D===========================ER.    .    .    .    .    .    .    .    .   xchgq	%rbp, %rsi
-# CHECK-NEXT: [1,4]     .    .D==========================ER.    .    .    .    .    .    .    .    .   xchgq	%rsi, %rdi
-# CHECK-NEXT: [1,5]     .    .D===========================ER    .    .    .    .    .    .    .    .   xchgq	%rdi, %r8
-# CHECK-NEXT: [1,6]     .    .D==================================ER  .    .    .    .    .    .    .   xchgq	%r8, %r9
-# CHECK-NEXT: [1,7]     .    . D=================================ER  .    .    .    .    .    .    .   xchgq	%r9, %r10
-# CHECK-NEXT: [1,8]     .    . D=================================ER  .    .    .    .    .    .    .   xchgq	%r10, %r11
-# CHECK-NEXT: [1,9]     .    . D==================================ER .    .    .    .    .    .    .   xchgq	%r11, %r12
-# CHECK-NEXT: [1,10]    .    .  D========================================ER    .    .    .    .    .   xchgq	%r12, %r13
-# CHECK-NEXT: [1,11]    .    .  D========================================ER    .    .    .    .    .   xchgq	%r13, %r14
-# CHECK-NEXT: [1,12]    .    .  D========================================ER    .    .    .    .    .   xchgq	%r14, %r15
-# CHECK-NEXT: [1,13]    .    .   D========================================ER   .    .    .    .    .   xchgq	%r15, %rax
-# CHECK-NEXT: [2,0]     .    .   D===============================================ER .    .    .    .   xchgq	%rcx, %rax
-# CHECK-NEXT: [2,1]     .    .   D===============================================ER .    .    .    .   xchgq	%rcx, %rdx
-# CHECK-NEXT: [2,2]     .    .    D==============================================ER .    .    .    .   xchgq	%rdx, %rbp
-# CHECK-NEXT: [2,3]     .    .    D===============================================ER.    .    .    .   xchgq	%rbp, %rsi
-# CHECK-NEXT: [2,4]     .    .    D======================================================ER   .    .   xchgq	%rsi, %rdi
-# CHECK-NEXT: [2,5]     .    .    .D=====================================================ER   .    .   xchgq	%rdi, %r8
-# CHECK-NEXT: [2,6]     .    .    .D=====================================================ER   .    .   xchgq	%r8, %r9
-# CHECK-NEXT: [2,7]     .    .    .D======================================================ER  .    .   xchgq	%r9, %r10
-# CHECK-NEXT: [2,8]     .    .    . D============================================================ER.   xchgq	%r10, %r11
-# CHECK-NEXT: [2,9]     .    .    . D============================================================ER.   xchgq	%r11, %r12
-# CHECK-NEXT: [2,10]    .    .    . D============================================================ER.   xchgq	%r12, %r13
-# CHECK-NEXT: [2,11]    .    .    .  D============================================================ER   xchgq	%r13, %r14
+# CHECK:      [0,0]     DR   .    .    .    .    .    .    .    .    . .   xchgq	%rcx, %rax
+# CHECK-NEXT: [0,1]     DR   .    .    .    .    .    .    .    .    . .   xchgq	%rcx, %rdx
+# CHECK-NEXT: [0,2]     DR   .    .    .    .    .    .    .    .    . .   xchgq	%rdx, %rbp
+# CHECK-NEXT: [0,3]     .DR  .    .    .    .    .    .    .    .    . .   xchgq	%rbp, %rsi
+# CHECK-NEXT: [0,4]     .DR  .    .    .    .    .    .    .    .    . .   xchgq	%rsi, %rdi
+# CHECK-NEXT: [0,5]     .DR  .    .    .    .    .    .    .    .    . .   xchgq	%rdi, %r8
+# CHECK-NEXT: [0,6]     . DR .    .    .    .    .    .    .    .    . .   xchgq	%r8, %r9
+# CHECK-NEXT: [0,7]     . DR .    .    .    .    .    .    .    .    . .   xchgq	%r9, %r10
+# CHECK-NEXT: [0,8]     . DR .    .    .    .    .    .    .    .    . .   xchgq	%r10, %r11
+# CHECK-NEXT: [0,9]     .  DR.    .    .    .    .    .    .    .    . .   xchgq	%r11, %r12
+# CHECK-NEXT: [0,10]    .  DR.    .    .    .    .    .    .    .    . .   xchgq	%r12, %r13
+# CHECK-NEXT: [0,11]    .  DR.    .    .    .    .    .    .    .    . .   xchgq	%r13, %r14
+# CHECK-NEXT: [0,12]    .   DR    .    .    .    .    .    .    .    . .   xchgq	%r14, %r15
+# CHECK-NEXT: [0,13]    .   DR    .    .    .    .    .    .    .    . .   xchgq	%r15, %rax
+# CHECK-NEXT: [1,0]     .   DR    .    .    .    .    .    .    .    . .   xchgq	%rcx, %rax
+# CHECK-NEXT: [1,1]     .    DR   .    .    .    .    .    .    .    . .   xchgq	%rcx, %rdx
+# CHECK-NEXT: [1,2]     .    DR   .    .    .    .    .    .    .    . .   xchgq	%rdx, %rbp
+# CHECK-NEXT: [1,3]     .    DR   .    .    .    .    .    .    .    . .   xchgq	%rbp, %rsi
+# CHECK-NEXT: [1,4]     .    .DR  .    .    .    .    .    .    .    . .   xchgq	%rsi, %rdi
+# CHECK-NEXT: [1,5]     .    .DR  .    .    .    .    .    .    .    . .   xchgq	%rdi, %r8
+# CHECK-NEXT: [1,6]     .    .DR  .    .    .    .    .    .    .    . .   xchgq	%r8, %r9
+# CHECK-NEXT: [1,7]     .    . DR .    .    .    .    .    .    .    . .   xchgq	%r9, %r10
+# CHECK-NEXT: [1,8]     .    . DR .    .    .    .    .    .    .    . .   xchgq	%r10, %r11
+# CHECK-NEXT: [1,9]     .    . DR .    .    .    .    .    .    .    . .   xchgq	%r11, %r12
+# CHECK-NEXT: [1,10]    .    .  DR.    .    .    .    .    .    .    . .   xchgq	%r12, %r13
+# CHECK-NEXT: [1,11]    .    .  DR.    .    .    .    .    .    .    . .   xchgq	%r13, %r14
+# CHECK-NEXT: [1,12]    .    .  DR.    .    .    .    .    .    .    . .   xchgq	%r14, %r15
+# CHECK-NEXT: [1,13]    .    .   DR    .    .    .    .    .    .    . .   xchgq	%r15, %rax
+# CHECK-NEXT: [2,0]     .    .   DR    .    .    .    .    .    .    . .   xchgq	%rcx, %rax
+# CHECK-NEXT: [2,1]     .    .   DR    .    .    .    .    .    .    . .   xchgq	%rcx, %rdx
+# CHECK-NEXT: [2,2]     .    .    DR   .    .    .    .    .    .    . .   xchgq	%rdx, %rbp
+# CHECK-NEXT: [2,3]     .    .    DR   .    .    .    .    .    .    . .   xchgq	%rbp, %rsi
+# CHECK-NEXT: [2,4]     .    .    DR   .    .    .    .    .    .    . .   xchgq	%rsi, %rdi
+# CHECK-NEXT: [2,5]     .    .    .DR  .    .    .    .    .    .    . .   xchgq	%rdi, %r8
+# CHECK-NEXT: [2,6]     .    .    .DR  .    .    .    .    .    .    . .   xchgq	%r8, %r9
+# CHECK-NEXT: [2,7]     .    .    .DR  .    .    .    .    .    .    . .   xchgq	%r9, %r10
+# CHECK-NEXT: [2,8]     .    .    . DR .    .    .    .    .    .    . .   xchgq	%r10, %r11
+# CHECK-NEXT: [2,9]     .    .    . DR .    .    .    .    .    .    . .   xchgq	%r11, %r12
+# CHECK-NEXT: [2,10]    .    .    . DR .    .    .    .    .    .    . .   xchgq	%r12, %r13
+# CHECK-NEXT: [2,11]    .    .    .  DR.    .    .    .    .    .    . .   xchgq	%r13, %r14
+# CHECK-NEXT: [2,12]    .    .    .  DR.    .    .    .    .    .    . .   xchgq	%r14, %r15
+# CHECK-NEXT: [2,13]    .    .    .  DR.    .    .    .    .    .    . .   xchgq	%r15, %rax
+# CHECK-NEXT: [3,0]     .    .    .   DR    .    .    .    .    .    . .   xchgq	%rcx, %rax
+# CHECK-NEXT: [3,1]     .    .    .   DR    .    .    .    .    .    . .   xchgq	%rcx, %rdx
+# CHECK-NEXT: [3,2]     .    .    .   DR    .    .    .    .    .    . .   xchgq	%rdx, %rbp
+# CHECK-NEXT: [3,3]     .    .    .    DR   .    .    .    .    .    . .   xchgq	%rbp, %rsi
+# CHECK-NEXT: [3,4]     .    .    .    DR   .    .    .    .    .    . .   xchgq	%rsi, %rdi
+# CHECK-NEXT: [3,5]     .    .    .    DR   .    .    .    .    .    . .   xchgq	%rdi, %r8
+# CHECK-NEXT: [3,6]     .    .    .    .DR  .    .    .    .    .    . .   xchgq	%r8, %r9
+# CHECK-NEXT: [3,7]     .    .    .    .DR  .    .    .    .    .    . .   xchgq	%r9, %r10
+# CHECK-NEXT: [3,8]     .    .    .    .DR  .    .    .    .    .    . .   xchgq	%r10, %r11
+# CHECK-NEXT: [3,9]     .    .    .    . DR .    .    .    .    .    . .   xchgq	%r11, %r12
+# CHECK-NEXT: [3,10]    .    .    .    . DR .    .    .    .    .    . .   xchgq	%r12, %r13
+# CHECK-NEXT: [3,11]    .    .    .    . DR .    .    .    .    .    . .   xchgq	%r13, %r14
+# CHECK-NEXT: [3,12]    .    .    .    .  DR.    .    .    .    .    . .   xchgq	%r14, %r15
+# CHECK-NEXT: [3,13]    .    .    .    .  DR.    .    .    .    .    . .   xchgq	%r15, %rax
+# CHECK-NEXT: [4,0]     .    .    .    .  DR.    .    .    .    .    . .   xchgq	%rcx, %rax
+# CHECK-NEXT: [4,1]     .    .    .    .   DR    .    .    .    .    . .   xchgq	%rcx, %rdx
+# CHECK-NEXT: [4,2]     .    .    .    .   DR    .    .    .    .    . .   xchgq	%rdx, %rbp
+# CHECK-NEXT: [4,3]     .    .    .    .   DR    .    .    .    .    . .   xchgq	%rbp, %rsi
+# CHECK-NEXT: [4,4]     .    .    .    .    DR   .    .    .    .    . .   xchgq	%rsi, %rdi
+# CHECK-NEXT: [4,5]     .    .    .    .    DR   .    .    .    .    . .   xchgq	%rdi, %r8
+# CHECK-NEXT: [4,6]     .    .    .    .    DR   .    .    .    .    . .   xchgq	%r8, %r9
+# CHECK-NEXT: [4,7]     .    .    .    .    .DR  .    .    .    .    . .   xchgq	%r9, %r10
+# CHECK-NEXT: [4,8]     .    .    .    .    .DR  .    .    .    .    . .   xchgq	%r10, %r11
+# CHECK-NEXT: [4,9]     .    .    .    .    .DR  .    .    .    .    . .   xchgq	%r11, %r12
+# CHECK-NEXT: [4,10]    .    .    .    .    . DR .    .    .    .    . .   xchgq	%r12, %r13
+# CHECK-NEXT: [4,11]    .    .    .    .    . DR .    .    .    .    . .   xchgq	%r13, %r14
+# CHECK-NEXT: [4,12]    .    .    .    .    . DR .    .    .    .    . .   xchgq	%r14, %r15
+# CHECK-NEXT: [4,13]    .    .    .    .    .  DR.    .    .    .    . .   xchgq	%r15, %rax
+# CHECK-NEXT: [5,0]     .    .    .    .    .  DR.    .    .    .    . .   xchgq	%rcx, %rax
+# CHECK-NEXT: [5,1]     .    .    .    .    .  DR.    .    .    .    . .   xchgq	%rcx, %rdx
+# CHECK-NEXT: [5,2]     .    .    .    .    .   DR    .    .    .    . .   xchgq	%rdx, %rbp
+# CHECK-NEXT: [5,3]     .    .    .    .    .   DR    .    .    .    . .   xchgq	%rbp, %rsi
+# CHECK-NEXT: [5,4]     .    .    .    .    .   DR    .    .    .    . .   xchgq	%rsi, %rdi
+# CHECK-NEXT: [5,5]     .    .    .    .    .    DR   .    .    .    . .   xchgq	%rdi, %r8
+# CHECK-NEXT: [5,6]     .    .    .    .    .    DR   .    .    .    . .   xchgq	%r8, %r9
+# CHECK-NEXT: [5,7]     .    .    .    .    .    DR   .    .    .    . .   xchgq	%r9, %r10
+# CHECK-NEXT: [5,8]     .    .    .    .    .    .DR  .    .    .    . .   xchgq	%r10, %r11
+# CHECK-NEXT: [5,9]     .    .    .    .    .    .DR  .    .    .    . .   xchgq	%r11, %r12
+# CHECK-NEXT: [5,10]    .    .    .    .    .    .DR  .    .    .    . .   xchgq	%r12, %r13
+# CHECK-NEXT: [5,11]    .    .    .    .    .    . DR .    .    .    . .   xchgq	%r13, %r14
+# CHECK-NEXT: [5,12]    .    .    .    .    .    . DR .    .    .    . .   xchgq	%r14, %r15
+# CHECK-NEXT: [5,13]    .    .    .    .    .    . DR .    .    .    . .   xchgq	%r15, %rax
+# CHECK-NEXT: [6,0]     .    .    .    .    .    .  DR.    .    .    . .   xchgq	%rcx, %rax
+# CHECK-NEXT: [6,1]     .    .    .    .    .    .  DR.    .    .    . .   xchgq	%rcx, %rdx
+# CHECK-NEXT: [6,2]     .    .    .    .    .    .  DR.    .    .    . .   xchgq	%rdx, %rbp
+# CHECK-NEXT: [6,3]     .    .    .    .    .    .   DR    .    .    . .   xchgq	%rbp, %rsi
+# CHECK-NEXT: [6,4]     .    .    .    .    .    .   DR    .    .    . .   xchgq	%rsi, %rdi
+# CHECK-NEXT: [6,5]     .    .    .    .    .    .   DR    .    .    . .   xchgq	%rdi, %r8
+# CHECK-NEXT: [6,6]     .    .    .    .    .    .    DR   .    .    . .   xchgq	%r8, %r9
+# CHECK-NEXT: [6,7]     .    .    .    .    .    .    DR   .    .    . .   xchgq	%r9, %r10
+# CHECK-NEXT: [6,8]     .    .    .    .    .    .    DR   .    .    . .   xchgq	%r10, %r11
+# CHECK-NEXT: [6,9]     .    .    .    .    .    .    .DR  .    .    . .   xchgq	%r11, %r12
+# CHECK-NEXT: [6,10]    .    .    .    .    .    .    .DR  .    .    . .   xchgq	%r12, %r13
+# CHECK-NEXT: [6,11]    .    .    .    .    .    .    .DR  .    .    . .   xchgq	%r13, %r14
+# CHECK-NEXT: [6,12]    .    .    .    .    .    .    . DR .    .    . .   xchgq	%r14, %r15
+# CHECK-NEXT: [6,13]    .    .    .    .    .    .    . DR .    .    . .   xchgq	%r15, %rax
+# CHECK-NEXT: [7,0]     .    .    .    .    .    .    . DR .    .    . .   xchgq	%rcx, %rax
+# CHECK-NEXT: [7,1]     .    .    .    .    .    .    .  DR.    .    . .   xchgq	%rcx, %rdx
+# CHECK-NEXT: [7,2]     .    .    .    .    .    .    .  DR.    .    . .   xchgq	%rdx, %rbp
+# CHECK-NEXT: [7,3]     .    .    .    .    .    .    .  DR.    .    . .   xchgq	%rbp, %rsi
+# CHECK-NEXT: [7,4]     .    .    .    .    .    .    .   DR    .    . .   xchgq	%rsi, %rdi
+# CHECK-NEXT: [7,5]     .    .    .    .    .    .    .   DR    .    . .   xchgq	%rdi, %r8
+# CHECK-NEXT: [7,6]     .    .    .    .    .    .    .   DR    .    . .   xchgq	%r8, %r9
+# CHECK-NEXT: [7,7]     .    .    .    .    .    .    .    DR   .    . .   xchgq	%r9, %r10
+# CHECK-NEXT: [7,8]     .    .    .    .    .    .    .    DR   .    . .   xchgq	%r10, %r11
+# CHECK-NEXT: [7,9]     .    .    .    .    .    .    .    DR   .    . .   xchgq	%r11, %r12
+# CHECK-NEXT: [7,10]    .    .    .    .    .    .    .    .DR  .    . .   xchgq	%r12, %r13
+# CHECK-NEXT: [7,11]    .    .    .    .    .    .    .    .DR  .    . .   xchgq	%r13, %r14
+# CHECK-NEXT: [7,12]    .    .    .    .    .    .    .    .DR  .    . .   xchgq	%r14, %r15
+# CHECK-NEXT: [7,13]    .    .    .    .    .    .    .    . DR .    . .   xchgq	%r15, %rax
+# CHECK-NEXT: [8,0]     .    .    .    .    .    .    .    . DR .    . .   xchgq	%rcx, %rax
+# CHECK-NEXT: [8,1]     .    .    .    .    .    .    .    . DR .    . .   xchgq	%rcx, %rdx
+# CHECK-NEXT: [8,2]     .    .    .    .    .    .    .    .  DR.    . .   xchgq	%rdx, %rbp
+# CHECK-NEXT: [8,3]     .    .    .    .    .    .    .    .  DR.    . .   xchgq	%rbp, %rsi
+# CHECK-NEXT: [8,4]     .    .    .    .    .    .    .    .  DR.    . .   xchgq	%rsi, %rdi
+# CHECK-NEXT: [8,5]     .    .    .    .    .    .    .    .   DR    . .   xchgq	%rdi, %r8
+# CHECK-NEXT: [8,6]     .    .    .    .    .    .    .    .   DR    . .   xchgq	%r8, %r9
+# CHECK-NEXT: [8,7]     .    .    .    .    .    .    .    .   DR    . .   xchgq	%r9, %r10
+# CHECK-NEXT: [8,8]     .    .    .    .    .    .    .    .    DR   . .   xchgq	%r10, %r11
+# CHECK-NEXT: [8,9]     .    .    .    .    .    .    .    .    DR   . .   xchgq	%r11, %r12
+# CHECK-NEXT: [8,10]    .    .    .    .    .    .    .    .    DR   . .   xchgq	%r12, %r13
+# CHECK-NEXT: [8,11]    .    .    .    .    .    .    .    .    .DR  . .   xchgq	%r13, %r14
+# CHECK-NEXT: [8,12]    .    .    .    .    .    .    .    .    .DR  . .   xchgq	%r14, %r15
+# CHECK-NEXT: [8,13]    .    .    .    .    .    .    .    .    .DR  . .   xchgq	%r15, %rax
+# CHECK-NEXT: [9,0]     .    .    .    .    .    .    .    .    . DR . .   xchgq	%rcx, %rax
+# CHECK-NEXT: [9,1]     .    .    .    .    .    .    .    .    . DR . .   xchgq	%rcx, %rdx
+# CHECK-NEXT: [9,2]     .    .    .    .    .    .    .    .    . DR . .   xchgq	%rdx, %rbp
+# CHECK-NEXT: [9,3]     .    .    .    .    .    .    .    .    .  DR. .   xchgq	%rbp, %rsi
+# CHECK-NEXT: [9,4]     .    .    .    .    .    .    .    .    .  DR. .   xchgq	%rsi, %rdi
+# CHECK-NEXT: [9,5]     .    .    .    .    .    .    .    .    .  DR. .   xchgq	%rdi, %r8
+# CHECK-NEXT: [9,6]     .    .    .    .    .    .    .    .    .   DR .   xchgq	%r8, %r9
+# CHECK-NEXT: [9,7]     .    .    .    .    .    .    .    .    .   DR .   xchgq	%r9, %r10
+# CHECK-NEXT: [9,8]     .    .    .    .    .    .    .    .    .   DR .   xchgq	%r10, %r11
+# CHECK-NEXT: [9,9]     .    .    .    .    .    .    .    .    .    DR.   xchgq	%r11, %r12
+# CHECK-NEXT: [9,10]    .    .    .    .    .    .    .    .    .    DR.   xchgq	%r12, %r13
+# CHECK-NEXT: [9,11]    .    .    .    .    .    .    .    .    .    DR.   xchgq	%r13, %r14
+# CHECK-NEXT: [9,12]    .    .    .    .    .    .    .    .    .    .DR   xchgq	%r14, %r15
+# CHECK-NEXT: [9,13]    .    .    .    .    .    .    .    .    .    .DR   xchgq	%r15, %rax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -919,18 +1127,18 @@ xchgq %r15, %rax
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     10    102.7  2.9    0.0       xchgq	%rcx, %rax
-# CHECK-NEXT: 1.     10    102.8  0.5    0.0       xchgq	%rcx, %rdx
-# CHECK-NEXT: 2.     10    105.3  3.5    0.0       xchgq	%rdx, %rbp
-# CHECK-NEXT: 3.     10    105.5  0.5    0.0       xchgq	%rbp, %rsi
-# CHECK-NEXT: 4.     10    108.3  3.5    0.0       xchgq	%rsi, %rdi
-# CHECK-NEXT: 5.     10    108.5  0.5    0.0       xchgq	%rdi, %r8
-# CHECK-NEXT: 6.     10    111.0  3.5    0.0       xchgq	%r8, %r9
-# CHECK-NEXT: 7.     10    111.1  0.5    0.0       xchgq	%r9, %r10
-# CHECK-NEXT: 8.     10    113.7  3.5    0.0       xchgq	%r10, %r11
-# CHECK-NEXT: 9.     10    113.8  0.5    0.0       xchgq	%r11, %r12
-# CHECK-NEXT: 10.    10    116.3  3.5    0.0       xchgq	%r12, %r13
-# CHECK-NEXT: 11.    10    116.5  0.5    0.0       xchgq	%r13, %r14
-# CHECK-NEXT: 12.    10    119.0  3.5    0.0       xchgq	%r14, %r15
-# CHECK-NEXT: 13.    10    119.1  0.5    0.0       xchgq	%r15, %rax
-# CHECK-NEXT:        10    111.0  2.0    0.0       <total>
+# CHECK-NEXT: 0.     10    0.0    0.0    0.0       xchgq	%rcx, %rax
+# CHECK-NEXT: 1.     10    0.0    0.0    0.0       xchgq	%rcx, %rdx
+# CHECK-NEXT: 2.     10    0.0    0.0    0.0       xchgq	%rdx, %rbp
+# CHECK-NEXT: 3.     10    0.0    0.0    0.0       xchgq	%rbp, %rsi
+# CHECK-NEXT: 4.     10    0.0    0.0    0.0       xchgq	%rsi, %rdi
+# CHECK-NEXT: 5.     10    0.0    0.0    0.0       xchgq	%rdi, %r8
+# CHECK-NEXT: 6.     10    0.0    0.0    0.0       xchgq	%r8, %r9
+# CHECK-NEXT: 7.     10    0.0    0.0    0.0       xchgq	%r9, %r10
+# CHECK-NEXT: 8.     10    0.0    0.0    0.0       xchgq	%r10, %r11
+# CHECK-NEXT: 9.     10    0.0    0.0    0.0       xchgq	%r11, %r12
+# CHECK-NEXT: 10.    10    0.0    0.0    0.0       xchgq	%r12, %r13
+# CHECK-NEXT: 11.    10    0.0    0.0    0.0       xchgq	%r13, %r14
+# CHECK-NEXT: 12.    10    0.0    0.0    0.0       xchgq	%r14, %r15
+# CHECK-NEXT: 13.    10    0.0    0.0    0.0       xchgq	%r15, %rax
+# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
