@@ -13,7 +13,7 @@ define i16 @test(%struct.test* %ts2.i) {
 ; CHECK-NEXT:    [[S_SROA_0_0__SROA_IDX:%.*]] = getelementptr inbounds [3 x i8], [3 x i8]* [[S_SROA_0]], i32 0, i32 0
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[S_SROA_0_0__SROA_CAST]], i8* align 8 [[S_SROA_0_0__SROA_IDX]], i32 3, i1 false)
 ; CHECK-NEXT:    [[X1_I_I:%.*]] = getelementptr inbounds [[STRUCT_TEST:%.*]], %struct.test* [[TS2_I]], i32 0, i32 0, i32 0
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[X1_I_I]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[X1_I_I]], align 2
 ; CHECK-NEXT:    ret i16 [[TMP0]]
 ;
 entry:
