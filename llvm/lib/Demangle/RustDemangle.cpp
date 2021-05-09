@@ -132,7 +132,7 @@ void Demangler::demanglePath() {
     Error = true;
     return;
   }
-  RecursionLevel += 1;
+  SwapAndRestore<size_t> SaveRecursionLevel(RecursionLevel, RecursionLevel + 1);
 
   switch (consume()) {
   case 'C': {
@@ -149,15 +149,31 @@ void Demangler::demanglePath() {
     }
     demanglePath();
 
-    parseOptionalBase62Number('s');
+    uint64_t Disambiguator = parseOptionalBase62Number('s');
     Identifier Ident = parseIdentifier();
 
-    if (!Ident.empty()) {
-      // FIXME print special namespaces:
-      // * "C" closures
-      // * "S" shim
-      print("::");
-      print(Ident.Name);
+    if (isUpper(NS)) {
+      // Special namespaces
+      print("::{");
+      if (NS == 'C')
+        print("closure");
+      else if (NS == 'S')
+        print("shim");
+      else
+        print(NS);
+      if (!Ident.empty()) {
+        print(":");
+        print(Ident.Name);
+      }
+      print('#');
+      printDecimalNumber(Disambiguator);
+      print('}');
+    } else {
+      // Implementation internal namespaces.
+      if (!Ident.empty()) {
+        print("::");
+        print(Ident.Name);
+      }
     }
     break;
   }
@@ -166,8 +182,6 @@ void Demangler::demanglePath() {
     Error = true;
     break;
   }
-
-  RecursionLevel -= 1;
 }
 
 // <undisambiguated-identifier> = ["u"] <decimal-number> ["_"] <bytes>
@@ -195,11 +209,16 @@ Identifier Demangler::parseIdentifier() {
 }
 
 // Parses optional base 62 number. The presence of a number is determined using
-// Tag.
-void Demangler::parseOptionalBase62Number(char Tag) {
-  // Parsing result is currently unused.
-  if (consumeIf(Tag))
-    parseBase62Number();
+// Tag. Returns 0 when tag is absent and parsed value + 1 otherwise.
+uint64_t Demangler::parseOptionalBase62Number(char Tag) {
+  if (!consumeIf(Tag))
+    return 0;
+
+  uint64_t N = parseBase62Number();
+  if (Error || !addAssign(N, 1))
+    return 0;
+
+  return N;
 }
 
 // Parses base 62 number with <0-9a-zA-Z> as digits. Number is terminated by
