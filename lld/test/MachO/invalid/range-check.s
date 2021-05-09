@@ -1,6 +1,6 @@
 # REQUIRES: x86
 
-# RUN: split-file %s %t
+# RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/bar.s -o %t/bar.o
 # RUN: %lld -dylib %t/bar.o -o %t/libbar.dylib
