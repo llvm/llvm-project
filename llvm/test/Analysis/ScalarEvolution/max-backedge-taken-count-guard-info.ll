@@ -489,14 +489,14 @@ define void @test_guard_if_and_enter(i32* nocapture readonly %data, i64 %count) 
 ; CHECK-NEXT:    %cmp.and = and i1 %cmp.ult, %cmp.ne
 ; CHECK-NEXT:    --> %cmp.and U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,-1) S: [0,-1) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,4) S: [0,4) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
-; CHECK-NEXT:    --> {%data,+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%data,+,4}<nuw><%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %count LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,5) S: [1,5) Exits: %count LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_and_enter
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 3
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -563,14 +563,14 @@ define void @test_guard_if_and_and(i32* nocapture readonly %data, i64 %count, i1
 ; CHECK-NEXT:    %cmp.and = and i1 %cmp.ult, %cmp.and1
 ; CHECK-NEXT:    --> %cmp.and U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,-1) S: [0,-1) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,4) S: [0,4) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
-; CHECK-NEXT:    --> {%data,+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%data,+,4}<nuw><%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %count LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,5) S: [1,5) Exits: %count LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_and_and
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 3
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -639,14 +639,14 @@ define void @test_guard_if_or_skip(i32* nocapture readonly %data, i64 %count) {
 ; CHECK-NEXT:    %cmp.or = or i1 %cmp.uge, %cmp.eq
 ; CHECK-NEXT:    --> %cmp.or U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,-1) S: [0,-1) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,4) S: [0,4) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
-; CHECK-NEXT:    --> {%data,+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%data,+,4}<nuw><%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %count LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,5) S: [1,5) Exits: %count LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_or_skip
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 3
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -713,14 +713,14 @@ define void @test_guard_if_or_or(i32* nocapture readonly %data, i64 %count, i1 %
 ; CHECK-NEXT:    %cmp.or = or i1 %cmp.uge, %cmp.or1
 ; CHECK-NEXT:    --> %cmp.or U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,-1) S: [0,-1) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,4) S: [0,4) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
-; CHECK-NEXT:    --> {%data,+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%data,+,4}<nuw><%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %count LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,5) S: [1,5) Exits: %count LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_if_or_or
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 3
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
