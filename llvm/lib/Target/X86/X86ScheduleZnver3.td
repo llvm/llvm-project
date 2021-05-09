@@ -1521,6 +1521,13 @@ def : InstRW<[Zn3WriteZeroIdiom], (instrs XOR32rr, XOR32rr_REV,
                                           SUB32rr, SUB32rr_REV,
                                           SUB64rr, SUB64rr_REV)>;
 
+def Zn3WriteZeroIdiomEFLAGS : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<CheckSameRegOperand<0, 1>>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                                 [WriteALU]>
+]>;
+def : InstRW<[Zn3WriteZeroIdiomEFLAGS], (instrs CMP32rr, CMP32rr_REV,
+                                                CMP64rr, CMP64rr_REV)>;
+
 def : IsZeroIdiomFunction<[
   // GPR Zero-idioms.
   DepBreakingClass<[ XOR32rr, XOR32rr_REV,
@@ -1533,6 +1540,10 @@ def : IsDepBreakingFunction<[
   // GPR
   DepBreakingClass<[ SBB32rr, SBB32rr_REV,
                      SBB64rr, SBB64rr_REV ], ZeroIdiomPredicate>,
+  DepBreakingClass<[ CMP32rr, CMP32rr_REV,
+                     CMP64rr, CMP64rr_REV ], CheckSameRegOperand<0, 1> >,
+
+
 ]>;
 
 } // SchedModel
