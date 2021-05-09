@@ -715,6 +715,16 @@ static mlir::FunctionType genF64F64FuncType(mlir::MLIRContext *context) {
   return mlir::FunctionType::get(context, {t}, {t});
 }
 
+static mlir::FunctionType genF32F32F32FuncType(mlir::MLIRContext *context) {
+  auto t = mlir::FloatType::getF32(context);
+  return mlir::FunctionType::get(context, {t, t}, {t});
+}
+
+static mlir::FunctionType genF64F64F64FuncType(mlir::MLIRContext *context) {
+  auto t = mlir::FloatType::getF64(context);
+  return mlir::FunctionType::get(context, {t, t}, {t});
+}
+
 template <int Bits>
 static mlir::FunctionType genIntF64FuncType(mlir::MLIRContext *context) {
   auto t = mlir::FloatType::getF64(context);
@@ -739,11 +749,17 @@ static constexpr RuntimeFunction llvmIntrinsics[] = {
     {"aint", "llvm.trunc.f64", genF64F64FuncType},
     {"anint", "llvm.round.f32", genF32F32FuncType},
     {"anint", "llvm.round.f64", genF64F64FuncType},
+    {"atan", "atanf", genF32F32FuncType},
+    {"atan", "atan", genF64F64FuncType},
     // ceil is used for CEILING but is different, it returns a real.
     {"ceil", "llvm.ceil.f32", genF32F32FuncType},
     {"ceil", "llvm.ceil.f64", genF64F64FuncType},
     {"cos", "llvm.cos.f32", genF32F32FuncType},
     {"cos", "llvm.cos.f64", genF64F64FuncType},
+    {"cosh", "coshf", genF32F32FuncType},
+    {"cosh", "cosh", genF64F64FuncType},
+    {"exp", "llvm.exp.f32", genF32F32FuncType},
+    {"exp", "llvm.exp.f64", genF64F64FuncType},
     // llvm.floor is used for FLOOR, but returns real.
     {"floor", "llvm.floor.f32", genF32F32FuncType},
     {"floor", "llvm.floor.f64", genF64F64FuncType},
@@ -755,8 +771,12 @@ static constexpr RuntimeFunction llvmIntrinsics[] = {
     {"nint", "llvm.lround.i64.f32", genIntF32FuncType<64>},
     {"nint", "llvm.lround.i32.f64", genIntF64FuncType<32>},
     {"nint", "llvm.lround.i32.f32", genIntF32FuncType<32>},
+    {"pow", "llvm.pow.f32", genF32F32F32FuncType},
+    {"pow", "llvm.pow.f64", genF64F64F64FuncType},
     {"sin", "llvm.sin.f32", genF32F32FuncType},
     {"sin", "llvm.sin.f64", genF64F64FuncType},
+    {"sinh", "sinhf", genF32F32FuncType},
+    {"sinh", "sinh", genF64F64FuncType},
     {"sqrt", "llvm.sqrt.f32", genF32F32FuncType},
     {"sqrt", "llvm.sqrt.f64", genF64F64FuncType},
 };
