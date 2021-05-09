@@ -1641,11 +1641,11 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      1     0.50                        xchgw	%bx, %ax
 # CHECK-NEXT:  2      1     0.50                        xchgw	%bx, %cx
 # CHECK-NEXT:  5      7     0.50    *      *            xchgw	%ax, (%rbx)
-# CHECK-NEXT:  2      0     2.00                        xchgl	%ebx, %eax
-# CHECK-NEXT:  2      0     2.00                        xchgl	%ebx, %ecx
+# CHECK-NEXT:  2      0     0.33                        xchgl	%ebx, %eax
+# CHECK-NEXT:  2      0     0.33                        xchgl	%ebx, %ecx
 # CHECK-NEXT:  2      6     0.50    *      *            xchgl	%eax, (%rbx)
-# CHECK-NEXT:  2      0     2.00                        xchgq	%rbx, %rax
-# CHECK-NEXT:  2      0     2.00                        xchgq	%rbx, %rcx
+# CHECK-NEXT:  2      0     0.33                        xchgq	%rbx, %rax
+# CHECK-NEXT:  2      0     0.33                        xchgq	%rbx, %rcx
 # CHECK-NEXT:  2      6     0.50    *      *            xchgq	%rax, (%rbx)
 # CHECK-NEXT:  1      5     0.33    *                   xlatb
 # CHECK-NEXT:  1      1     1.00                        xorb	$7, %al
@@ -1706,7 +1706,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT: 176.00 176.00 176.00 1677.50 1832.50 1712.50 1475.50  -   -     -      -      -      -      -      -     175.33 175.33 175.33 109.00 109.00 109.00 99.50  99.50
+# CHECK-NEXT: 176.00 176.00 176.00 1669.50 1824.50 1704.50 1467.50  -   -     -      -      -      -      -      -     175.33 175.33 175.33 109.00 109.00 109.00 99.50  99.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
@@ -2452,11 +2452,11 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgw	%bx, %ax
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgw	%bx, %cx
 # CHECK-NEXT: 0.33   0.33   0.33   0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     xchgw	%ax, (%rbx)
-# CHECK-NEXT:  -      -      -     2.00   2.00   2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%ebx, %eax
-# CHECK-NEXT:  -      -      -     2.00   2.00   2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%ebx, %ecx
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%ebx, %eax
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgl	%ebx, %ecx
 # CHECK-NEXT: 0.33   0.33   0.33   0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     xchgl	%eax, (%rbx)
-# CHECK-NEXT:  -      -      -     2.00   2.00   2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%rbx, %rax
-# CHECK-NEXT:  -      -      -     2.00   2.00   2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%rbx, %rcx
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%rbx, %rax
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xchgq	%rbx, %rcx
 # CHECK-NEXT: 0.33   0.33   0.33   0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     xchgq	%rax, (%rbx)
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     xlatb
 # CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xorb	$7, %al
