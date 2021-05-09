@@ -15,12 +15,12 @@ mulxq %rax, %rax, %rax
 
 # CHECK:      Iterations:        1000
 # CHECK-NEXT: Instructions:      2000
-# CHECK-NEXT: Total Cycles:      4003
+# CHECK-NEXT: Total Cycles:      1259
 # CHECK-NEXT: Total uOps:        3000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    0.75
-# CHECK-NEXT: IPC:               0.50
+# CHECK-NEXT: uOps Per Cycle:    2.38
+# CHECK-NEXT: IPC:               1.59
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
@@ -33,7 +33,7 @@ mulxq %rax, %rax, %rax
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      1     1.00                        sbbl	%eax, %eax
-# CHECK-NEXT:  2      3     1.00                        mulxl	%eax, %eax, %eax
+# CHECK-NEXT:  2      4     1.00                        mulxl	%eax, %eax, %eax
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - Zn3AGU0
@@ -62,21 +62,20 @@ mulxq %rax, %rax, %rax
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -     1.33   1.00   1.33   1.34    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -     1.25   1.25   1.25   1.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -     1.33    -     1.33   1.34    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sbbl	%eax, %eax
+# CHECK-NEXT:  -      -      -     1.25   0.25   1.25   1.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sbbl	%eax, %eax
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mulxl	%eax, %eax, %eax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: Index     012345678
 
-# CHECK:      [0,0]     DeER .    .   sbbl	%eax, %eax
-# CHECK-NEXT: [0,1]     D=eeeER   .   mulxl	%eax, %eax, %eax
-# CHECK-NEXT: [1,0]     D====eER  .   sbbl	%eax, %eax
-# CHECK-NEXT: [1,1]     D=====eeeER   mulxl	%eax, %eax, %eax
+# CHECK:      [0,0]     DeER .  .   sbbl	%eax, %eax
+# CHECK-NEXT: [0,1]     D=eeeeER.   mulxl	%eax, %eax, %eax
+# CHECK-NEXT: [1,0]     D=eE---R.   sbbl	%eax, %eax
+# CHECK-NEXT: [1,1]     D==eeeeER   mulxl	%eax, %eax, %eax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -85,20 +84,20 @@ mulxq %rax, %rax, %rax
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     3.0    0.5    0.0       sbbl	%eax, %eax
-# CHECK-NEXT: 1.     2     4.0    0.0    0.0       mulxl	%eax, %eax, %eax
-# CHECK-NEXT:        2     3.5    0.3    0.0       <total>
+# CHECK-NEXT: 0.     2     1.5    0.5    1.5       sbbl	%eax, %eax
+# CHECK-NEXT: 1.     2     2.5    0.0    0.0       mulxl	%eax, %eax, %eax
+# CHECK-NEXT:        2     2.0    0.3    0.8       <total>
 
 # CHECK:      [1] Code Region
 
 # CHECK:      Iterations:        1000
 # CHECK-NEXT: Instructions:      2000
-# CHECK-NEXT: Total Cycles:      5003
+# CHECK-NEXT: Total Cycles:      1259
 # CHECK-NEXT: Total uOps:        3000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    0.60
-# CHECK-NEXT: IPC:               0.40
+# CHECK-NEXT: uOps Per Cycle:    2.38
+# CHECK-NEXT: IPC:               1.59
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
@@ -140,21 +139,20 @@ mulxq %rax, %rax, %rax
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -     1.33   1.00   1.33   1.34    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -     1.25   1.25   1.25   1.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -     1.33    -     1.33   1.34    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sbbq	%rax, %rax
+# CHECK-NEXT:  -      -      -     1.25   0.25   1.25   1.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sbbq	%rax, %rax
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mulxq	%rax, %rax, %rax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: Index     012345678
 
-# CHECK:      [0,0]     DeER .    . .   sbbq	%rax, %rax
-# CHECK-NEXT: [0,1]     D=eeeeER  . .   mulxq	%rax, %rax, %rax
-# CHECK-NEXT: [1,0]     D=====eER . .   sbbq	%rax, %rax
-# CHECK-NEXT: [1,1]     D======eeeeER   mulxq	%rax, %rax, %rax
+# CHECK:      [0,0]     DeER .  .   sbbq	%rax, %rax
+# CHECK-NEXT: [0,1]     D=eeeeER.   mulxq	%rax, %rax, %rax
+# CHECK-NEXT: [1,0]     D=eE---R.   sbbq	%rax, %rax
+# CHECK-NEXT: [1,1]     D==eeeeER   mulxq	%rax, %rax, %rax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -163,6 +161,6 @@ mulxq %rax, %rax, %rax
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     3.5    0.5    0.0       sbbq	%rax, %rax
-# CHECK-NEXT: 1.     2     4.5    0.0    0.0       mulxq	%rax, %rax, %rax
-# CHECK-NEXT:        2     4.0    0.3    0.0       <total>
+# CHECK-NEXT: 0.     2     1.5    0.5    1.5       sbbq	%rax, %rax
+# CHECK-NEXT: 1.     2     2.5    0.0    0.0       mulxq	%rax, %rax, %rax
+# CHECK-NEXT:        2     2.0    0.3    0.8       <total>
