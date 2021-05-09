@@ -3156,6 +3156,14 @@ static void handleWarnUnusedResult(Sema &S, Decl *D, const ParsedAttr &AL) {
       S.Diag(AL.getLoc(), diag::ext_cxx17_attr) << AL;
   }
 
+  if ((!AL.isGNUAttribute() &&
+       !(AL.isStandardAttributeSyntax() && AL.isClangScope())) &&
+      isa<TypedefNameDecl>(D)) {
+    S.Diag(AL.getLoc(), diag::warn_unused_result_typedef_unsupported_spelling)
+        << AL.isGNUScope();
+    return;
+  }
+
   D->addAttr(::new (S.Context) WarnUnusedResultAttr(S.Context, AL, Str));
 }
 

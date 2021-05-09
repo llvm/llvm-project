@@ -8734,6 +8734,10 @@ def warn_unused_result : Warning<
 def warn_unused_result_msg : Warning<
   "ignoring return value of function declared with %0 attribute: %1">,
   InGroup<UnusedResult>;
+def warn_unused_result_typedef_unsupported_spelling : Warning<
+  "'[[%select{nodiscard|gnu::warn_unused_result}0]]' attribute ignored when "
+  "applied to a typedef; consider using '__attribute__((warn_unused_result))' "
+  "or '[[clang::warn_unused_result]]' instead">, InGroup<IgnoredAttributes>;
 def warn_unused_volatile : Warning<
   "expression result unused; assign into a variable to force a volatile load">,
   InGroup<DiagGroup<"unused-volatile-lvalue">>;
