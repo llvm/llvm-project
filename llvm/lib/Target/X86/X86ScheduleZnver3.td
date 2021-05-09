@@ -1443,12 +1443,12 @@ defm : Zn3WriteResInt<WriteNop, [Zn3ALU0123], 0, [1], 1>; // FIXME: latency not 
 // Zero Cycle Move
 ///////////////////////////////////////////////////////////////////////////////
 
-def Zn3WriteMoveRenameable : SchedWriteRes<[]> {
+def Zn3WriteZeroLatency : SchedWriteRes<[]> {
   let Latency = 0;
   let ResourceCycles = [];
   let NumMicroOps = 1;
 }
-def : InstRW<[Zn3WriteMoveRenameable], (instrs MOV32rr, MOV32rr_REV,
+def : InstRW<[Zn3WriteZeroLatency], (instrs MOV32rr, MOV32rr_REV,
                                                MOV64rr, MOV64rr_REV,
                                                MOVSX32rr32)>;
 
@@ -1506,6 +1506,27 @@ def : IsOptimizableRegisterMove<[
     VMOVDQAYrr, VMOVDQAYrr_REV,
     VMOVDQUYrr, VMOVDQUYrr_REV,
   ], TruePred >
+]>;
+
+///////////////////////////////////////////////////////////////////////////////
+// Dependency breaking instructions.
+///////////////////////////////////////////////////////////////////////////////
+
+def Zn3WriteZeroIdiom : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteALU]>
+]>;
+def : InstRW<[Zn3WriteZeroIdiom], (instrs XOR32rr, XOR32rr_REV,
+                                          XOR64rr, XOR64rr_REV,
+                                          SUB32rr, SUB32rr_REV,
+                                          SUB64rr, SUB64rr_REV)>;
+
+def : IsZeroIdiomFunction<[
+  // GPR Zero-idioms.
+  DepBreakingClass<[ XOR32rr, XOR32rr_REV,
+                     XOR64rr, XOR64rr_REV,
+                     SUB32rr, SUB32rr_REV,
+                     SUB64rr, SUB64rr_REV ], ZeroIdiomPredicate>,
 ]>;
 
 } // SchedModel
