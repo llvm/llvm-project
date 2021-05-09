@@ -819,13 +819,10 @@ public:
   ///        resolved.
   bool isComplete() const { return OutstandingSymbolsCount == 0; }
 
-  /// Call the NotifyComplete callback.
-  ///
-  /// This should only be called if all symbols covered by the query have
-  /// reached the specified state.
-  void handleComplete();
 
 private:
+  void handleComplete(ExecutionSession &ES);
+
   SymbolState getRequiredState() { return RequiredState; }
 
   void addQueryDependence(JITDylib &JD, SymbolStringPtr Name);
