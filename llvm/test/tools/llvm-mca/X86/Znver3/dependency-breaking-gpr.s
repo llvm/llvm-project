@@ -181,7 +181,7 @@ cmovaeq %rax, %rcx
 
 # CHECK:      Iterations:        1000
 # CHECK-NEXT: Instructions:      3000
-# CHECK-NEXT: Total Cycles:      4005
+# CHECK-NEXT: Total Cycles:      4004
 # CHECK-NEXT: Total uOps:        4000
 
 # CHECK:      Dispatch Width:    6
@@ -199,7 +199,7 @@ cmovaeq %rax, %rcx
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  2      4     1.00                        mulxl	%eax, %eax, %eax
-# CHECK-NEXT:  1      1     0.25                        cmpl	%eax, %eax
+# CHECK-NEXT:  1      0     0.17                        cmpl	%eax, %eax
 # CHECK-NEXT:  1      1     0.50                        cmovael	%eax, %ecx
 
 # CHECK:      Resources:
@@ -229,24 +229,24 @@ cmovaeq %rax, %rcx
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -     0.67   1.00   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -     0.50   1.00    -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mulxl	%eax, %eax, %eax
-# CHECK-NEXT:  -      -      -      -      -     0.67   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmpl	%eax, %eax
-# CHECK-NEXT:  -      -      -     0.67    -      -     0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmovael	%eax, %ecx
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmpl	%eax, %eax
+# CHECK-NEXT:  -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmovael	%eax, %ecx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT:                     01
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   . .   mulxl	%eax, %eax, %eax
-# CHECK-NEXT: [0,1]     D====eER  . .   cmpl	%eax, %eax
-# CHECK-NEXT: [0,2]     D=====eER . .   cmovael	%eax, %ecx
-# CHECK-NEXT: [1,0]     D====eeeeER .   mulxl	%eax, %eax, %eax
-# CHECK-NEXT: [1,1]     .D=======eER.   cmpl	%eax, %eax
-# CHECK-NEXT: [1,2]     .D========eER   cmovael	%eax, %ecx
+# CHECK:      [0,0]     DeeeeER   ..   mulxl	%eax, %eax, %eax
+# CHECK-NEXT: [0,1]     D-----R   ..   cmpl	%eax, %eax
+# CHECK-NEXT: [0,2]     D====eER  ..   cmovael	%eax, %ecx
+# CHECK-NEXT: [1,0]     D====eeeeER.   mulxl	%eax, %eax, %eax
+# CHECK-NEXT: [1,1]     .D--------R.   cmpl	%eax, %eax
+# CHECK-NEXT: [1,2]     .D=======eER   cmovael	%eax, %ecx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -256,15 +256,15 @@ cmovaeq %rax, %rcx
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     3.0    0.5    0.0       mulxl	%eax, %eax, %eax
-# CHECK-NEXT: 1.     2     6.5    0.0    0.0       cmpl	%eax, %eax
-# CHECK-NEXT: 2.     2     7.5    0.0    0.0       cmovael	%eax, %ecx
-# CHECK-NEXT:        2     5.7    0.2    0.0       <total>
+# CHECK-NEXT: 1.     2     0.0    0.0    6.5       cmpl	%eax, %eax
+# CHECK-NEXT: 2.     2     6.5    0.0    0.0       cmovael	%eax, %ecx
+# CHECK-NEXT:        2     3.2    0.2    2.2       <total>
 
 # CHECK:      [3] Code Region
 
 # CHECK:      Iterations:        1000
 # CHECK-NEXT: Instructions:      3000
-# CHECK-NEXT: Total Cycles:      4005
+# CHECK-NEXT: Total Cycles:      4004
 # CHECK-NEXT: Total uOps:        4000
 
 # CHECK:      Dispatch Width:    6
@@ -282,7 +282,7 @@ cmovaeq %rax, %rcx
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  2      4     1.00                        mulxq	%rax, %rax, %rax
-# CHECK-NEXT:  1      1     0.25                        cmpq	%rax, %rax
+# CHECK-NEXT:  1      0     0.17                        cmpq	%rax, %rax
 # CHECK-NEXT:  1      1     0.50                        cmovaeq	%rax, %rcx
 
 # CHECK:      Resources:
@@ -312,24 +312,24 @@ cmovaeq %rax, %rcx
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -     0.67   1.00   0.67   0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -     0.50   1.00    -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mulxq	%rax, %rax, %rax
-# CHECK-NEXT:  -      -      -      -      -     0.67   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmpq	%rax, %rax
-# CHECK-NEXT:  -      -      -     0.67    -      -     0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmovaeq	%rax, %rcx
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmpq	%rax, %rax
+# CHECK-NEXT:  -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmovaeq	%rax, %rcx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT:                     01
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   . .   mulxq	%rax, %rax, %rax
-# CHECK-NEXT: [0,1]     D====eER  . .   cmpq	%rax, %rax
-# CHECK-NEXT: [0,2]     D=====eER . .   cmovaeq	%rax, %rcx
-# CHECK-NEXT: [1,0]     D====eeeeER .   mulxq	%rax, %rax, %rax
-# CHECK-NEXT: [1,1]     .D=======eER.   cmpq	%rax, %rax
-# CHECK-NEXT: [1,2]     .D========eER   cmovaeq	%rax, %rcx
+# CHECK:      [0,0]     DeeeeER   ..   mulxq	%rax, %rax, %rax
+# CHECK-NEXT: [0,1]     D-----R   ..   cmpq	%rax, %rax
+# CHECK-NEXT: [0,2]     D====eER  ..   cmovaeq	%rax, %rcx
+# CHECK-NEXT: [1,0]     D====eeeeER.   mulxq	%rax, %rax, %rax
+# CHECK-NEXT: [1,1]     .D--------R.   cmpq	%rax, %rax
+# CHECK-NEXT: [1,2]     .D=======eER   cmovaeq	%rax, %rcx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -339,6 +339,6 @@ cmovaeq %rax, %rcx
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     3.0    0.5    0.0       mulxq	%rax, %rax, %rax
-# CHECK-NEXT: 1.     2     6.5    0.0    0.0       cmpq	%rax, %rax
-# CHECK-NEXT: 2.     2     7.5    0.0    0.0       cmovaeq	%rax, %rcx
-# CHECK-NEXT:        2     5.7    0.2    0.0       <total>
+# CHECK-NEXT: 1.     2     0.0    0.0    6.5       cmpq	%rax, %rax
+# CHECK-NEXT: 2.     2     6.5    0.0    0.0       cmovaeq	%rax, %rcx
+# CHECK-NEXT:        2     3.2    0.2    2.2       <total>
