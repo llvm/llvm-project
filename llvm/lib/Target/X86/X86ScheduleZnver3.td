@@ -611,7 +611,7 @@ defm : Zn3WriteResIntPair<WriteIMul16Reg, [Zn3Multiplier], 3, [1], 1>; // Intege
 defm : Zn3WriteResIntPair<WriteIMul32, [Zn3Multiplier], 3, [3], 2>;    // Integer 32-bit multiplication.
 
 def Zn3MULX32rr : SchedWriteRes<[Zn3Multiplier]> {
-  let Latency = 3;
+  let Latency = 4;
   let ResourceCycles = [1];
   let NumMicroOps = 2;
 }
@@ -1527,6 +1527,12 @@ def : IsZeroIdiomFunction<[
                      XOR64rr, XOR64rr_REV,
                      SUB32rr, SUB32rr_REV,
                      SUB64rr, SUB64rr_REV ], ZeroIdiomPredicate>,
+]>;
+
+def : IsDepBreakingFunction<[
+  // GPR
+  DepBreakingClass<[ SBB32rr, SBB32rr_REV,
+                     SBB64rr, SBB64rr_REV ], ZeroIdiomPredicate>,
 ]>;
 
 } // SchedModel
