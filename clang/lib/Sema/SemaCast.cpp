@@ -1179,6 +1179,13 @@ void CastOperation::CheckStaticCast() {
       return;
   }
 
+  if (DestType->getAs<MatrixType>() ||
+      SrcExpr.get()->getType()->getAs<MatrixType>()) {
+    if (Self.CheckMatrixCast(OpRange, DestType, SrcExpr.get()->getType(), Kind))
+      SrcExpr = ExprError();
+    return;
+  }
+
   // This test is outside everything else because it's the only case where
   // a non-lvalue-reference target type does not lead to decay.
   // C++ 5.2.9p4: Any expression can be explicitly converted to type "cv void".
