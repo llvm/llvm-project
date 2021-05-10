@@ -9,6 +9,7 @@ add_mlir_python_extension(MLIRCoreBindingsPythonExtension _mlir
     python
   SOURCES
     DialectLinalg.cpp
+    DialectSparseTensor.cpp
     MainModule.cpp
     IRAffine.cpp
     IRAttributes.cpp
