@@ -1019,12 +1019,11 @@ TEST_F(CoreAPIsStandardTest, TestBasicWeakSymbolMaterialization) {
 
 TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {
   bool ExpectNoMoreMaterialization = false;
-  ES.setDispatchMaterialization(
-      [&](std::unique_ptr<MaterializationUnit> MU,
-          std::unique_ptr<MaterializationResponsibility> MR) {
+  ES.setDispatchTask(
+      [&](std::unique_ptr<Task> T) {
         if (ExpectNoMoreMaterialization)
           ADD_FAILURE() << "Unexpected materialization";
-        MU->materialize(std::move(MR));
+        T->run();
       });
 
   auto MU = std::make_unique<SimpleMaterializationUnit>(
@@ -1252,12 +1251,11 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
 #if LLVM_ENABLE_THREADS
 
   std::thread MaterializationThread;
-  ES.setDispatchMaterialization(
-      [&](std::unique_ptr<MaterializationUnit> MU,
-          std::unique_ptr<MaterializationResponsibility> MR) {
+  ES.setDispatchTask(
+      [&](std::unique_ptr<Task> T) {
         MaterializationThread =
-            std::thread([MU = std::move(MU), MR = std::move(MR)]() mutable {
-              MU->materialize(std::move(MR));
+            std::thread([T = std::move(T)]() mutable {
+              T->run();
             });
       });
 
