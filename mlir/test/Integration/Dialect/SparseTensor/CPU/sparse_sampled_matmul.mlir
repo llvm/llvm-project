@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:   --sparsification="ptr-type=2 ind-type=2 fast-output" --sparse-tensor-conversion \
+// RUN:   --sparsification="fast-output" --sparse-tensor-conversion \
 // RUN:   --convert-linalg-to-loops --convert-vector-to-scf --convert-scf-to-std \
 // RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
 // RUN:   --std-bufferize --finalizing-bufferize  \
@@ -10,11 +10,13 @@
 // RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-//
-// Use descriptive names for opaque pointers.
-//
-!Filename     = type !llvm.ptr<i8>
-!SparseTensor = type !llvm.ptr<i8>
+!Filename = type !llvm.ptr<i8>
+
+#SparseMatrix = #sparse_tensor.encoding<{
+  dimLevelType = [ "compressed", "compressed" ],
+  pointerBitWidth = 32,
+  indexBitWidth = 32
+}>
 
 #trait_sampled_dense_dense = {
   indexing_maps = [
@@ -22,12 +24,6 @@
     affine_map<(i,j,k) -> (i,k)>,  // A
     affine_map<(i,j,k) -> (k,j)>,  // B
     affine_map<(i,j,k) -> (i,j)>   // X (out)
-  ],
-  sparse = [
-    [ "S", "S" ],  // S
-    [ "D", "D" ],  // A
-    [ "D", "D" ],  // B
-    [ "D", "D" ]   // X
   ],
   iterator_types = ["parallel", "parallel", "reduction"],
   doc = "X(i,j) += S(i,j) SUM_k A(i,k) B(k,j)"
@@ -40,16 +36,14 @@
 //
 module {
   //
-  // The kernel expressed as an annotated Linalg op. The kernel
-  // computes a sampled matrix matrix multiplication.
+  // A kernel that computes a sampled matrix matrix multiplication.
   //
-  func @sampled_dense_dense(%argS: !SparseTensor,
+  func @sampled_dense_dense(%args: tensor<?x?xf32, #SparseMatrix>,
                             %arga: tensor<?x?xf32>,
                             %argb: tensor<?x?xf32>,
                             %argx: tensor<?x?xf32>) -> tensor<?x?xf32> {
-    %args = sparse_tensor.fromPtr %argS : !SparseTensor to tensor<?x?xf32>
     %0 = linalg.generic #trait_sampled_dense_dense
-      ins(%args, %arga, %argb: tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>)
+      ins(%args, %arga, %argb: tensor<?x?xf32, #SparseMatrix>, tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%argx: tensor<?x?xf32>) {
         ^bb(%s: f32, %a: f32, %b: f32, %x: f32):
           %0 = mulf %a, %b : f32
@@ -60,12 +54,7 @@ module {
     return %0 : tensor<?x?xf32>
   }
 
-  //
-  // Runtime support library that is called directly from here.
-  //
   func private @getTensorFilename(index) -> (!Filename)
-  func private @newSparseTensor(!Filename, memref<?xi1>, index, index, index) -> (!SparseTensor)
-  func private @delSparseTensor(!SparseTensor) -> ()
 
   //
   // Main driver that reads matrix from file and calls the sparse kernel.
@@ -74,19 +63,8 @@ module {
     %d0 = constant 0.0 : f32
     %c0 = constant 0 : index
     %c1 = constant 1 : index
-    %c2 = constant 2 : index
     %c5 = constant 5 : index
     %c10 = constant 10 : index
-
-    // Mark both dimensions of the matrix as sparse and encode the
-    // storage scheme types (this must match the metadata in the
-    // trait and compiler switches).
-    %annotations = memref.alloc(%c2) : memref<?xi1>
-    %sparse = constant true
-    memref.store %sparse, %annotations[%c0] : memref<?xi1>
-    memref.store %sparse, %annotations[%c1] : memref<?xi1>
-    %i32 = constant 2 : index
-    %f32 = constant 2 : index
 
     // Setup memory for the dense matrices and initialize.
     %adata = memref.alloc(%c5, %c10) : memref<?x?xf32>
@@ -108,13 +86,14 @@ module {
     %b = memref.tensor_load %bdata : memref<?x?xf32>
     %x = memref.tensor_load %xdata : memref<?x?xf32>
 
-    // Read the sparse matrix from file, construct sparse storage
-    // according to <sparse,sparse> in memory, and call the kernel.
+    // Read the sparse matrix from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
-    %s = call @newSparseTensor(%fileName, %annotations, %i32, %i32, %f32)
-      : (!Filename, memref<?xi1>, index, index, index) -> (!SparseTensor)
+    %s = sparse_tensor.new %fileName : !llvm.ptr<i8> to tensor<?x?xf32, #SparseMatrix>
+
+    // Call the kernel.
     %0 = call @sampled_dense_dense(%s, %a, %b, %x)
-       : (!SparseTensor, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>) -> tensor<?x?xf32>
+       : (tensor<?x?xf32, #SparseMatrix>,
+          tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>) -> tensor<?x?xf32>
 
     // Print the result for verification.
     //
@@ -131,7 +110,6 @@ module {
     }
 
     // Release the resources.
-    call @delSparseTensor(%s) : (!SparseTensor) -> ()
     memref.dealloc %adata : memref<?x?xf32>
     memref.dealloc %bdata : memref<?x?xf32>
     memref.dealloc %xdata : memref<?x?xf32>
