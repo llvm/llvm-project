@@ -442,6 +442,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
 
+      setOperationAction(ISD::SELECT, VT, Expand);
+      setOperationAction(ISD::SELECT_CC, VT, Expand);
+
       setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
       setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
       setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
@@ -517,6 +520,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
+      setOperationAction(ISD::SELECT, VT, Expand);
+      setOperationAction(ISD::SELECT_CC, VT, Expand);
+
       setOperationAction(ISD::STEP_VECTOR, VT, Custom);
       setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
 
@@ -570,6 +576,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MSTORE, VT, Custom);
       setOperationAction(ISD::MGATHER, VT, Custom);
       setOperationAction(ISD::MSCATTER, VT, Custom);
+
+      setOperationAction(ISD::SELECT, VT, Expand);
+      setOperationAction(ISD::SELECT_CC, VT, Expand);
 
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
@@ -695,6 +704,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::FP_TO_UINT, VT, Custom);
 
         setOperationAction(ISD::VSELECT, VT, Custom);
+        setOperationAction(ISD::SELECT, VT, Expand);
+        setOperationAction(ISD::SELECT_CC, VT, Expand);
 
         setOperationAction(ISD::ANY_EXTEND, VT, Custom);
         setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
@@ -762,6 +773,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           setCondCodeAction(CC, VT, Expand);
 
         setOperationAction(ISD::VSELECT, VT, Custom);
+        setOperationAction(ISD::SELECT, VT, Expand);
+        setOperationAction(ISD::SELECT_CC, VT, Expand);
 
         setOperationAction(ISD::BITCAST, VT, Custom);
 
