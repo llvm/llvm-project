@@ -2,6 +2,10 @@
 ; RUN: llc < %s -mtriple=i686-apple-darwin -mattr=+avx2 | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx2 | FileCheck %s
 
+;
+; 128-bit Vectors
+;
+
 define <16 x i8> @permute_packss_packss_128(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, <4 x i32> %a3) {
 ; CHECK-LABEL: permute_packss_packss_128:
 ; CHECK:       ## %bb.0:
@@ -31,6 +35,27 @@ define <16 x i8> @permute_packss_packus_128(<4 x i32> %a0, <4 x i32> %a1, <4 x i
   %4 = shufflevector <16 x i8> %3, <16 x i8> poison, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3>
   ret <16 x i8> %4
 }
+
+;
+; 256-bit Vectors
+;
+
+define <8 x float> @permute_hadd_hadd_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2, <8 x float> %a3) {
+; CHECK-LABEL: permute_hadd_hadd_256:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vhaddps %ymm3, %ymm2, %ymm1
+; CHECK-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,2,3,0,5,6,7,4]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %a0, <8 x float> %a1)
+  %2 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %a2, <8 x float> %a3)
+  %3 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %1, <8 x float> %2)
+  %4 = shufflevector <8 x float> %3, <8 x float> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 0, i32 5, i32 6, i32 7, i32 4>
+  ret <8 x float> %4
+}
+
+declare <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float>, <8 x float>)
 
 declare <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16>, <8 x i16>)
 declare <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32>, <4 x i32>)
