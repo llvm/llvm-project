@@ -387,6 +387,7 @@ public:
   /// \param CLI      A descriptor of the canonical loop to workshare.
   /// \param AllocaIP An insertion point for Alloca instructions usable in the
   ///                 preheader of the loop.
+  /// \param SchedType Type of scheduling to be passed to the init function.
   /// \param NeedsBarrier Indicates whether a barrier must be insterted after
   ///                     the loop.
   /// \param Chunk    The size of loop chunk considered as a unit when
@@ -396,6 +397,7 @@ public:
   InsertPointTy createDynamicWorkshareLoop(const LocationDescription &Loc,
                                            CanonicalLoopInfo *CLI,
                                            InsertPointTy AllocaIP,
+                                           omp::OMPScheduleType SchedType,
                                            bool NeedsBarrier,
                                            Value *Chunk = nullptr);
 

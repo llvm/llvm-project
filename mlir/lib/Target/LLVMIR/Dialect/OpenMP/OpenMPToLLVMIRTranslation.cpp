@@ -216,17 +216,11 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   if (loop.getNumLoops() != 1)
     return opInst.emitOpError("collapsed loops not yet supported");
 
-  bool isStatic = true;
-
-  if (loop.schedule_val().hasValue()) {
-    auto schedule =
-        omp::symbolizeClauseScheduleKind(loop.schedule_val().getValue());
-    if (schedule != omp::ClauseScheduleKind::Static &&
-        schedule != omp::ClauseScheduleKind::Dynamic)
-      return opInst.emitOpError("only static (default) and dynamic loop "
-                                "schedule is currently supported");
-    isStatic = (schedule == omp::ClauseScheduleKind::Static);
-  }
+  // Static is the default.
+  omp::ClauseScheduleKind schedule = omp::ClauseScheduleKind::Static;
+  if (loop.schedule_val().hasValue())
+    schedule =
+        *omp::symbolizeClauseScheduleKind(loop.schedule_val().getValue());
 
   // Find the loop configuration.
   llvm::Value *lowerBound = moduleTranslation.lookupValue(loop.lowerBound()[0]);
@@ -281,13 +275,32 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
       findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::InsertPointTy afterIP;
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  if (isStatic) {
+  if (schedule == omp::ClauseScheduleKind::Static) {
     loopInfo = ompBuilder->createStaticWorkshareLoop(ompLoc, loopInfo, allocaIP,
                                                      !loop.nowait(), chunk);
     afterIP = loopInfo->getAfterIP();
   } else {
-    afterIP = ompBuilder->createDynamicWorkshareLoop(ompLoc, loopInfo, allocaIP,
-                                                     !loop.nowait(), chunk);
+    llvm::omp::OMPScheduleType schedType;
+    switch (schedule) {
+    case omp::ClauseScheduleKind::Dynamic:
+      schedType = llvm::omp::OMPScheduleType::DynamicChunked;
+      break;
+    case omp::ClauseScheduleKind::Guided:
+      schedType = llvm::omp::OMPScheduleType::GuidedChunked;
+      break;
+    case omp::ClauseScheduleKind::Auto:
+      schedType = llvm::omp::OMPScheduleType::Auto;
+      break;
+    case omp::ClauseScheduleKind::Runtime:
+      schedType = llvm::omp::OMPScheduleType::Runtime;
+      break;
+    default:
+      llvm_unreachable("Unknown schedule value");
+      break;
+    }
+
+    afterIP = ompBuilder->createDynamicWorkshareLoop(
+        ompLoc, loopInfo, allocaIP, schedType, !loop.nowait(), chunk);
   }
 
   // Continue building IR after the loop.

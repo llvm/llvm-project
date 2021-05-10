@@ -416,3 +416,53 @@ llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr<f32>) {
   }) {inclusive, operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0]> : vector<9xi32>} : (i64, i64, i64) -> ()
   llvm.return
 }
+
+llvm.func @body(i64)
+
+llvm.func @test_omp_wsloop_dynamic(%lb : i64, %ub : i64, %step : i64) -> () {
+ omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic) {
+  // CHECK: call void @__kmpc_dispatch_init_8u
+  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+  // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+   llvm.call @body(%iv) : (i64) -> ()
+   omp.yield
+ }
+ llvm.return
+}
+
+llvm.func @test_omp_wsloop_auto(%lb : i64, %ub : i64, %step : i64) -> () {
+ omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(auto) {
+  // CHECK: call void @__kmpc_dispatch_init_8u
+  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+  // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+   llvm.call @body(%iv) : (i64) -> ()
+   omp.yield
+ }
+ llvm.return
+}
+
+llvm.func @test_omp_wsloop_runtime(%lb : i64, %ub : i64, %step : i64) -> () {
+ omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(runtime) {
+  // CHECK: call void @__kmpc_dispatch_init_8u
+  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+  // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+   llvm.call @body(%iv) : (i64) -> ()
+   omp.yield
+ }
+ llvm.return
+}
+
+llvm.func @test_omp_wsloop_guided(%lb : i64, %ub : i64, %step : i64) -> () {
+ omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(guided) {
+  // CHECK: call void @__kmpc_dispatch_init_8u
+  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+  // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+   llvm.call @body(%iv) : (i64) -> ()
+   omp.yield
+ }
+ llvm.return
+}
