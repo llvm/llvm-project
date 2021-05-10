@@ -247,7 +247,7 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
     // files created before we introduced TLS relocations.
     // TODO(sbc): Remove this legacy behaviour one day.  This will break
     // backward compat with old object files built with `-fPIC`.
-    if (D->segment && D->segment->outputSeg->name == ".tdata")
+    if (D->segment && D->segment->outputSeg->isTLS())
       return D->getOutputSegmentOffset() + reloc.Addend;
 
     uint64_t value = D->getVA(reloc.Addend);

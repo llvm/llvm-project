@@ -52,6 +52,8 @@ public:
 
 private:
   void demanglePath();
+  void demangleGenericArg();
+  void demangleType();
 
   Identifier parseIdentifier();
   uint64_t parseOptionalBase62Number(char Tag);
