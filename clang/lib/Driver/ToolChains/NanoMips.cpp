@@ -39,6 +39,12 @@ void NanoMips::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
 
   // Add the obvious include dir from the GCC install.
   if (GCCInstallation.isValid()) {
+    // Standard libs includes in, eg. <install>/nanomips-elf/include
+    llvm::Triple Triple = GCCInstallation.getTriple();
+    std::string Install = getDriver().getInstalledDir();
+    addSystemInclude(DriverArgs, CC1Args, Install + "/../" + Triple.str() + "/include");
+
+    // GCC's includes dir for multilibs
     addSystemInclude(DriverArgs, CC1Args, GCCInstallation.getInstallPath() + "/include");
   }
 
