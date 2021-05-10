@@ -2009,10 +2009,13 @@ static const Comdat *getWasmComdat(const GlobalValue *GV) {
 static unsigned getWasmSectionFlags(SectionKind K) {
   unsigned Flags = 0;
 
-  // TODO(sbc): Add suport for K.isMergeableConst()
+  if (K.isThreadLocal())
+    Flags |= wasm::WASM_SEG_FLAG_TLS;
 
   if (K.isMergeableCString())
     Flags |= wasm::WASM_SEG_FLAG_STRINGS;
+
+  // TODO(sbc): Add suport for K.isMergeableConst()
 
   return Flags;
 }

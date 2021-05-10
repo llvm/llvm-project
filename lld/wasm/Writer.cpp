@@ -461,9 +461,7 @@ void Writer::populateTargetFeatures() {
 
     // Find TLS data segments
     auto isTLS = [](InputSegment *segment) {
-      StringRef name = segment->getName();
-      return segment->live &&
-             (name.startswith(".tdata") || name.startswith(".tbss"));
+      return segment->live && segment->isTLS();
     };
     tlsUsed = tlsUsed ||
               std::any_of(file->segments.begin(), file->segments.end(), isTLS);
@@ -818,12 +816,12 @@ void Writer::assignIndexes() {
   out.tableSec->assignIndexes();
 }
 
-static StringRef getOutputDataSegmentName(StringRef name) {
-  // We only support one thread-local segment, so we must merge the segments
-  // despite --no-merge-data-segments.
-  // We also need to merge .tbss into .tdata so they share the same offsets.
-  if (name.startswith(".tdata") || name.startswith(".tbss"))
+static StringRef getOutputDataSegmentName(const InputSegment &seg) {
+  // We always merge .tbss and .tdata into a single TLS segment so all TLS
+  // symbols are be relative to single __tls_base.
+  if (seg.isTLS())
     return ".tdata";
+  StringRef name = seg.getName();
   if (!config->mergeDataSegments)
     return name;
   if (name.startswith(".text."))
@@ -857,7 +855,7 @@ void Writer::createOutputSegments() {
     for (InputSegment *segment : file->segments) {
       if (!segment->live)
         continue;
-      StringRef name = getOutputDataSegmentName(segment->getName());
+      StringRef name = getOutputDataSegmentName(*segment);
       OutputSegment *s = nullptr;
       // When running in relocatable mode we can't merge segments that are part
       // of comdat groups since the ultimate linker needs to be able exclude or
