@@ -35,9 +35,7 @@ func @main(%farg0 : tensor<i32>) -> (tensor<i1>) attributes {} {
 // DET-ALL-NEXT:  }
 
 // DET-CF-LABEL: func @main(%{{.*}}: tensor<i32>)
-// DET-CF-NEXT:    constant 10 : i32
-// DET-CF-NEXT:    tensor.from_elements %{{.*}}
-// DET-CF-NEXT:    linalg.tensor_reshape %{{.*}}
+// DET-CF-NEXT:    constant dense<10> : tensor<i32>
 // DET-CF-NEXT:    linalg.init_tensor [] : tensor<i1>
 // DET-CF-NEXT:    linalg.generic
 // DET-CF-NEXT:    ^{{.*}}(%{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i1)

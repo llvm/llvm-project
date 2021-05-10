@@ -321,8 +321,7 @@ fuseElementwiseOpsImpl(LinalgOp producer, OpOperand &consumerOpOperand,
         consumer.getOutputs(), rewriter.getAffineMapArrayAttr(fusedIndexMaps),
         consumer.iterator_types(),
         /*doc=*/nullptr,
-        /*library_call=*/nullptr,
-        /*sparse=*/nullptr);
+        /*library_call=*/nullptr);
   } else {
     fusedOp = rewriter.create<IndexedGenericOp>(
         consumer.getLoc(), consumer->getResultTypes(),
@@ -331,8 +330,7 @@ fuseElementwiseOpsImpl(LinalgOp producer, OpOperand &consumerOpOperand,
         consumer.getOutputs(), rewriter.getAffineMapArrayAttr(fusedIndexMaps),
         consumer.iterator_types(),
         /*doc=*/nullptr,
-        /*library_call=*/nullptr,
-        /*sparse=*/nullptr);
+        /*library_call=*/nullptr);
   }
 
   // Construct an AffineMap from consumer loops to producer loops.
@@ -1260,8 +1258,7 @@ struct FoldConsumerReshapeOpByLinearization
         /*outputs=*/output, rewriter.getAffineMapArrayAttr(fusedIndexMaps),
         producer.iterator_types(),
         /*doc=*/nullptr,
-        /*library_call=*/nullptr,
-        /*sparse=*/nullptr);
+        /*library_call=*/nullptr);
     auto &fusedRegion = fusedOp->getRegion(0);
     rewriter.cloneRegionBefore(producer->getRegion(0), fusedRegion,
                                fusedRegion.begin());
@@ -1352,8 +1349,7 @@ public:
           rewriter.getAffineMapArrayAttr(fusedIndexMaps),
           linalgOp.iterator_types(),
           /*doc=*/nullptr,
-          /*library_call=*/nullptr,
-          /*sparse=*/nullptr);
+          /*library_call=*/nullptr);
 
       // Map the block argument corresponding to the replaced argument with the
       // scalar constant.
