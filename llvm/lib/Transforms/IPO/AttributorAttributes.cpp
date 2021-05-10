@@ -4631,10 +4631,10 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     auto *C = SimplifiedAssociatedValue.hasValue()
                   ? dyn_cast<Constant>(SimplifiedAssociatedValue.getValue())
                   : UndefValue::get(V.getType());
-    if (C && C != &V) {
+    if (C && C != &V && !V.user_empty()) {
       Value *NewV = AA::getWithType(*C, *V.getType());
       // We can replace the AssociatedValue with the constant.
-      if (!V.user_empty() && &V != C && NewV) {
+      if (NewV && NewV != &V) {
         LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *NewV
                           << " :: " << *this << "\n");
         if (A.changeValueAfterManifest(V, *NewV))
@@ -4773,35 +4773,34 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
 
     if (SimplifiedAssociatedValue.hasValue() &&
         !SimplifiedAssociatedValue.getValue())
-      return Changed;
+      return Changed | AAValueSimplify::manifest(A);
 
-    Value &V = getAssociatedValue();
     auto *C = SimplifiedAssociatedValue.hasValue()
                   ? dyn_cast<Constant>(SimplifiedAssociatedValue.getValue())
-                  : UndefValue::get(V.getType());
-    if (C && C != &V) {
-      auto PredForReturned =
-          [&](Value &V, const SmallSetVector<ReturnInst *, 4> &RetInsts) {
-            // We can replace the AssociatedValue with the constant.
-            if (&V == C || isa<UndefValue>(V))
-              return true;
+                  : UndefValue::get(getAssociatedType());
+    if (!C || C == &getAssociatedValue())
+      return Changed | AAValueSimplify::manifest(A);
 
-            for (ReturnInst *RI : RetInsts) {
-              if (RI->getFunction() != getAnchorScope())
-                continue;
-              Value *NewV =
-                  AA::getWithType(*C, *RI->getReturnValue()->getType());
-              if (!NewV)
-                continue;
-              LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *NewV
-                                << " in " << *RI << " :: " << *this << "\n");
-              if (A.changeUseAfterManifest(RI->getOperandUse(0), *NewV))
-                Changed = ChangeStatus::CHANGED;
-            }
+    auto PredForReturned =
+        [&](Value &V, const SmallSetVector<ReturnInst *, 4> &RetInsts) {
+          // We can replace the AssociatedValue with the constant.
+          if (&V == C || isa<UndefValue>(V))
             return true;
-          };
-      A.checkForAllReturnedValuesAndReturnInsts(PredForReturned, *this);
-    }
+
+          for (ReturnInst *RI : RetInsts) {
+            if (RI->getFunction() != getAnchorScope())
+              continue;
+            Value *NewV = AA::getWithType(*C, *RI->getReturnValue()->getType());
+            if (!NewV)
+              continue;
+            LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *NewV
+                              << " in " << *RI << " :: " << *this << "\n");
+            if (A.changeUseAfterManifest(RI->getOperandUse(0), *NewV))
+              Changed = ChangeStatus::CHANGED;
+          }
+          return true;
+        };
+    A.checkForAllReturnedValuesAndReturnInsts(PredForReturned, *this);
 
     return Changed | AAValueSimplify::manifest(A);
   }
