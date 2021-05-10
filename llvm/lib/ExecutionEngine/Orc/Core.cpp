@@ -170,13 +170,30 @@ void AsynchronousSymbolQuery::notifySymbolMetRequiredState(
   --OutstandingSymbolsCount;
 }
 
-void AsynchronousSymbolQuery::handleComplete() {
+void AsynchronousSymbolQuery::handleComplete(ExecutionSession &ES) {
   assert(OutstandingSymbolsCount == 0 &&
          "Symbols remain, handleComplete called prematurely");
 
-  auto TmpNotifyComplete = std::move(NotifyComplete);
+  class RunQueryCompleteTask : public Task {
+  public:
+    RunQueryCompleteTask(SymbolMap ResolvedSymbols,
+                         SymbolsResolvedCallback NotifyComplete)
+        : ResolvedSymbols(std::move(ResolvedSymbols)),
+          NotifyComplete(std::move(NotifyComplete)) {}
+    void printDescription(raw_ostream &OS) override {
+      OS << "Execute query complete callback for " << ResolvedSymbols;
+    }
+    void run() override { NotifyComplete(std::move(ResolvedSymbols)); }
+
+  private:
+    SymbolMap ResolvedSymbols;
+    SymbolsResolvedCallback NotifyComplete;
+  };
+
+  auto T = std::make_unique<RunQueryCompleteTask>(std::move(ResolvedSymbols),
+                                                  std::move(NotifyComplete));
   NotifyComplete = SymbolsResolvedCallback();
-  TmpNotifyComplete(std::move(ResolvedSymbols));
+  ES.dispatchTask(std::move(T));
 }
 
 void AsynchronousSymbolQuery::handleFailed(Error Err) {
@@ -969,7 +986,7 @@ Error JITDylib::resolve(MaterializationResponsibility &MR,
   // Otherwise notify all the completed queries.
   for (auto &Q : CompletedQueries) {
     assert(Q->isComplete() && "Q not completed");
-    Q->handleComplete();
+    Q->handleComplete(ES);
   }
 
   return Error::success();
@@ -1120,7 +1137,7 @@ Error JITDylib::emit(MaterializationResponsibility &MR,
   // Otherwise notify all the completed queries.
   for (auto &Q : CompletedQueries) {
     assert(Q->isComplete() && "Q is not complete");
-    Q->handleComplete();
+    Q->handleComplete(ES);
   }
 
   return Error::success();
@@ -2541,7 +2558,7 @@ void ExecutionSession::OL_completeLookup(
 
   if (QueryComplete) {
     LLVM_DEBUG(dbgs() << "Completing query\n");
-    Q->handleComplete();
+    Q->handleComplete(*this);
   }
 
   dispatchOutstandingMUs();

@@ -1019,12 +1019,11 @@ TEST_F(CoreAPIsStandardTest, TestBasicWeakSymbolMaterialization) {
 
 TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {
   bool ExpectNoMoreMaterialization = false;
-  ES.setDispatchTask(
-      [&](std::unique_ptr<Task> T) {
-        if (ExpectNoMoreMaterialization)
-          ADD_FAILURE() << "Unexpected materialization";
-        T->run();
-      });
+  ES.setDispatchTask([&](std::unique_ptr<Task> T) {
+    if (ExpectNoMoreMaterialization && isa<MaterializationTask>(*T))
+      ADD_FAILURE() << "Unexpected materialization";
+    T->run();
+  });
 
   auto MU = std::make_unique<SimpleMaterializationUnit>(
       SymbolFlagsMap({{Foo, FooSym.getFlags()}}),
@@ -1250,14 +1249,11 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithUnthreadedMaterialization) {
 TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
 #if LLVM_ENABLE_THREADS
 
-  std::thread MaterializationThread;
-  ES.setDispatchTask(
-      [&](std::unique_ptr<Task> T) {
-        MaterializationThread =
-            std::thread([T = std::move(T)]() mutable {
-              T->run();
-            });
-      });
+  std::vector<std::thread> WorkThreads;
+  ES.setDispatchTask([&](std::unique_ptr<Task> T) {
+    WorkThreads.push_back(
+        std::thread([T = std::move(T)]() mutable { T->run(); }));
+  });
 
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
 
@@ -1267,7 +1263,9 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
       << "lookup returned an incorrect address";
   EXPECT_EQ(FooLookupResult.getFlags(), FooSym.getFlags())
       << "lookup returned incorrect flags";
-  MaterializationThread.join();
+
+  for (auto &WT : WorkThreads)
+    WT.join();
 #endif
 }
 
