@@ -61,6 +61,7 @@
 ## Make sure we don't emit rebase opcodes for relocations in __thread_vars.
 # LINKEDIT:       Rebase table:
 # LINKEDIT-NEXT:  segment  section            address     type
+# LINKEDIT-EMPTY:
 # LINKEDIT-NEXT:  Bind table:
 # LINKEDIT:       __DATA  __thread_vars   0x{{[0-9a-f]*}}  pointer 0 libSystem __tlv_bootstrap
 # LINKEDIT:       __DATA  __thread_vars   0x{{[0-9a-f]*}}  pointer 0 libSystem __tlv_bootstrap
