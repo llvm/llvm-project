@@ -15360,19 +15360,6 @@ static SDValue performGlobalAddressCombine(SDNode *N, SelectionDAG &DAG,
                      DAG.getConstant(MinOffset, DL, MVT::i64));
 }
 
-static SDValue performStepVectorCombine(SDNode *N,
-                                        TargetLowering::DAGCombinerInfo &DCI,
-                                        SelectionDAG &DAG) {
-  if (!DCI.isAfterLegalizeDAG())
-    return SDValue();
-
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  SDValue StepVal = N->getOperand(0);
-  SDValue Zero = DAG.getConstant(0, DL, StepVal.getValueType());
-  return DAG.getNode(AArch64ISD::INDEX_VECTOR, DL, VT, Zero, StepVal);
-}
-
 // Turns the vector of indices into a vector of byte offstes by scaling Offset
 // by (BitWidth / 8).
 static SDValue getScaledOffsetForBitWidth(SelectionDAG &DAG, SDValue Offset,
@@ -15956,8 +15943,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performExtractVectorEltCombine(N, DAG);
   case ISD::VECREDUCE_ADD:
     return performVecReduceAddCombine(N, DCI.DAG, Subtarget);
-  case ISD::STEP_VECTOR:
-    return performStepVectorCombine(N, DCI, DAG);
   case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN:
     switch (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue()) {

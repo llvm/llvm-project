@@ -259,10 +259,8 @@ def AArch64ptest     : SDNode<"AArch64ISD::PTEST", SDT_AArch64PTest>;
 def SDT_AArch64DUP_PRED  : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0, 3>, SDTCisVec<1>, SDTCVecEltisVT<1,i1>]>;
 def AArch64dup_mt : SDNode<"AArch64ISD::DUP_MERGE_PASSTHRU", SDT_AArch64DUP_PRED>;
 
-def SDT_IndexVector : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<1, 2>, SDTCisInt<2>]>;
-def index_vector : SDNode<"AArch64ISD::INDEX_VECTOR", SDT_IndexVector, []>;
-def index_vector_oneuse : PatFrag<(ops node:$base, node:$idx),
-                                  (index_vector node:$base, node:$idx), [{
+def step_vector_oneuse : PatFrag<(ops node:$idx),
+                                  (step_vector node:$idx), [{
   return N->hasOneUse();
 }]>;
 
@@ -1370,10 +1368,10 @@ let Predicates = [HasSVE] in {
   defm INCP_ZP     : sve_int_count_v<0b10000, "incp">;
   defm DECP_ZP     : sve_int_count_v<0b10100, "decp">;
 
-  defm INDEX_RR : sve_int_index_rr<"index", index_vector, index_vector_oneuse, AArch64mul_p_oneuse>;
-  defm INDEX_IR : sve_int_index_ir<"index", index_vector, index_vector_oneuse, AArch64mul_p, AArch64mul_p_oneuse>;
-  defm INDEX_RI : sve_int_index_ri<"index", index_vector, index_vector_oneuse>;
-  defm INDEX_II : sve_int_index_ii<"index", index_vector, index_vector_oneuse>;
+  defm INDEX_RR : sve_int_index_rr<"index", step_vector, step_vector_oneuse, AArch64mul_p_oneuse>;
+  defm INDEX_IR : sve_int_index_ir<"index", step_vector, step_vector_oneuse, AArch64mul_p, AArch64mul_p_oneuse>;
+  defm INDEX_RI : sve_int_index_ri<"index", step_vector, step_vector_oneuse>;
+  defm INDEX_II : sve_int_index_ii<"index", step_vector, step_vector_oneuse>;
 
   // Unpredicated shifts
   defm ASR_ZZI : sve_int_bin_cons_shift_imm_right<0b00, "asr", AArch64asr_p>;
