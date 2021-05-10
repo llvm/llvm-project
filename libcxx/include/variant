@@ -1182,7 +1182,7 @@ struct __narrowing_check {
   template <class _Dest>
   static auto __test_impl(_Dest (&&)[1]) -> __identity<_Dest>;
   template <class _Dest, class _Source>
-  using _Apply _LIBCPP_NODEBUG_TYPE = decltype(__test_impl<_Dest>({_VSTD::declval<_Source>()}));
+  using _Apply _LIBCPP_NODEBUG_TYPE = decltype(__test_impl<_Dest>({declval<_Source>()}));
 };
 
 template <class _Dest, class _Source>
@@ -1678,7 +1678,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 
 template <
     class _Visitor, class... _Vs,
-    typename = void_t<decltype(_VSTD::__as_variant(_VSTD::declval<_Vs>()))...> >
+    typename = void_t<decltype(_VSTD::__as_variant(declval<_Vs>()))...> >
 inline _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS constexpr
     decltype(auto) visit(_Visitor&& __visitor, _Vs&&... __vs) {
@@ -1691,7 +1691,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 #if _LIBCPP_STD_VER > 17
 template <
     class _Rp, class _Visitor, class... _Vs,
-    typename = void_t<decltype(_VSTD::__as_variant(_VSTD::declval<_Vs>()))...> >
+    typename = void_t<decltype(_VSTD::__as_variant(declval<_Vs>()))...> >
 inline _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS constexpr _Rp
     visit(_Visitor&& __visitor, _Vs&&... __vs) {
