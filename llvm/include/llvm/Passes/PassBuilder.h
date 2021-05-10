@@ -713,6 +713,9 @@ private:
 
   void addRequiredLTOPreLinkPasses(ModulePassManager &MPM);
 
+  void addVectorPasses(OptimizationLevel Level, FunctionPassManager &FPM,
+                       bool IsLTO);
+
   static Optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);
 
