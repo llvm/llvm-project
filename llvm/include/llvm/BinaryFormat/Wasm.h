@@ -154,7 +154,7 @@ struct WasmDataSegment {
   ArrayRef<uint8_t> Content;
   StringRef Name; // from the "segment info" section
   uint32_t Alignment;
-  uint32_t LinkingFlags;
+  uint32_t LinkerFlags;
   uint32_t Comdat; // from the "comdat info" section
 };
 
@@ -355,10 +355,6 @@ enum WasmSymbolType : unsigned {
   WASM_SYMBOL_TYPE_SECTION = 0x3,
   WASM_SYMBOL_TYPE_EVENT = 0x4,
   WASM_SYMBOL_TYPE_TABLE = 0x5,
-};
-
-enum WasmSegmentFlag : unsigned {
-  WASM_SEG_FLAG_STRINGS = 0x1,
 };
 
 // Kinds of event attributes.

@@ -385,7 +385,7 @@ static void readConfigs(opt::InputArgList &args) {
                    LLVM_ENABLE_NEW_PASS_MANAGER);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->mapFile = args.getLastArgValue(OPT_Map);
-  config->optimize = args::getInteger(args, OPT_O, 1);
+  config->optimize = args::getInteger(args, OPT_O, 0);
   config->outputFile = args.getLastArgValue(OPT_o);
   config->relocatable = args.hasArg(OPT_relocatable);
   config->gcSections =
@@ -795,18 +795,6 @@ static void wrapSymbols(ArrayRef<WrappedSymbol> wrapped) {
     symtab->wrap(w.sym, w.real, w.wrap);
 }
 
-static void splitSections() {
-  // splitIntoPieces needs to be called on each MergeInputSection
-  // before calling finalizeContents().
-  LLVM_DEBUG(llvm::dbgs() << "splitSections\n");
-  parallelForEach(symtab->objectFiles, [](ObjFile *file) {
-    for (InputSegment *seg : file->segments) {
-      if (auto *s = dyn_cast<MergeInputSegment>(seg))
-        s->splitIntoPieces();
-    }
-  });
-}
-
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   WasmOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
@@ -992,10 +980,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (errorCount())
     return;
-
-  // Split WASM_SEG_FLAG_STRINGS sections into pieces in preparation for garbage
-  // collection.
-  splitSections();
 
   // Do size optimizations: garbage collection
   markLive();

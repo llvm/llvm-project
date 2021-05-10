@@ -146,7 +146,6 @@ bool Symbol::isLive() const {
 
 void Symbol::markLive() {
   assert(!isDiscarded());
-  referenced = true;
   if (file != NULL && isDefined())
     file->markLive();
   if (auto *g = dyn_cast<DefinedGlobal>(this))
@@ -155,17 +154,9 @@ void Symbol::markLive() {
     e->event->live = true;
   if (auto *t = dyn_cast<DefinedTable>(this))
     t->table->live = true;
-  if (InputChunk *c = getChunk()) {
-    // Usually, a whole chunk is marked as live or dead, but in mergeable
-    // (splittable) sections, each piece of data has independent liveness bit.
-    // So we explicitly tell it which offset is in use.
-    if (auto *d = dyn_cast<DefinedData>(this)) {
-      if (auto *ms = dyn_cast<MergeInputSegment>(c)) {
-        ms->getSegmentPiece(d->value)->live = true;
-      }
-    }
+  if (InputChunk *c = getChunk())
     c->live = true;
-  }
+  referenced = true;
 }
 
 uint32_t Symbol::getOutputSymbolIndex() const {
