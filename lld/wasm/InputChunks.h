@@ -117,6 +117,9 @@ public:
   const OutputSegment *outputSeg = nullptr;
   uint32_t outputSegmentOffset = 0;
   uint32_t alignment = 0;
+  bool isTLS() {
+    return getName().startswith(".tdata") || getName().startswith(".tbss");
+  }
 
 protected:
   ArrayRef<uint8_t> data() const override { return segment.Data.Content; }

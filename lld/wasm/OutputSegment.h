@@ -32,6 +32,8 @@ public:
     size += inSeg->getSize();
   }
 
+  bool isTLS() const { return name == ".tdata"; }
+
   StringRef name;
   bool isBss = false;
   uint32_t index = 0;
