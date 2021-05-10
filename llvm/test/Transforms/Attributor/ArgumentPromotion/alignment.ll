@@ -11,12 +11,17 @@ define void @f() {
 ; IS________OPM-NEXT:    call void @g(i32* noalias nocapture nofree noundef nonnull readonly dereferenceable(4) [[A]])
 ; IS________OPM-NEXT:    ret void
 ;
-; IS________NPM-LABEL: define {{[^@]+}}@f() {
-; IS________NPM-NEXT:  entry:
-; IS________NPM-NEXT:    [[A:%.*]] = alloca i32, align 1
-; IS________NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A]], align 1
-; IS________NPM-NEXT:    call void @g(i32 [[TMP0]])
-; IS________NPM-NEXT:    ret void
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@f() {
+; IS__TUNIT_NPM-NEXT:  entry:
+; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = alloca i32, align 1
+; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A]], align 1
+; IS__TUNIT_NPM-NEXT:    call void @g(i32 [[TMP0]])
+; IS__TUNIT_NPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f() {
+; IS__CGSCC_NPM-NEXT:  entry:
+; IS__CGSCC_NPM-NEXT:    call void @g(i32 undef)
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
 entry:
   %a = alloca i32, align 1
@@ -42,7 +47,7 @@ define internal void @g(i32* %a) {
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@g
 ; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]]) {
 ; IS__CGSCC_NPM-NEXT:    [[A_PRIV:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[A_PRIV]], align 4
+; IS__CGSCC_NPM-NEXT:    store i32 undef, i32* [[A_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[AA:%.*]] = load i32, i32* [[A_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    call void @z(i32 [[AA]])
 ; IS__CGSCC_NPM-NEXT:    ret void
