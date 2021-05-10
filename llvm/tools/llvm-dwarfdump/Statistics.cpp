@@ -30,11 +30,11 @@ constexpr int NumOfCoverageCategories = 12;
 constexpr unsigned ZeroCoverageBucket = 0;
 
 /// This represents variables DIE offsets.
-using InlinedVarsTy = llvm::SmallVector<uint64_t>;
+using AbstractOriginVarsTy = llvm::SmallVector<uint64_t>;
 /// This maps function DIE offset to its variables.
-using InlinedVarsTyMap = llvm::DenseMap<uint64_t, InlinedVarsTy>;
-/// This represents inlined_subroutine DIE offsets.
-using InlinedFnInstacesTy = llvm::SmallVector<uint64_t>;
+using AbstractOriginVarsTyMap = llvm::DenseMap<uint64_t, AbstractOriginVarsTy>;
+/// This represents function DIE offsets containing an abstract_origin.
+using FunctionsWithAbstractOriginTy = llvm::SmallVector<uint64_t>;
 
 /// Holds statistics for one function (or other entity that has a PC range and
 /// contains variables, such as a compile unit).
@@ -226,7 +226,7 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
                                StringMap<PerFunctionStats> &FnStatMap,
                                GlobalStats &GlobalStats,
                                LocationStats &LocStats,
-                               InlinedVarsTy *InlinedVariables) {
+                               AbstractOriginVarsTy *AbstractOriginVariables) {
   const dwarf::Tag Tag = Die.getTag();
   // Skip CU node.
   if (Tag == dwarf::DW_TAG_compile_unit)
@@ -275,21 +275,19 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
   if (Die.findRecursively(dwarf::DW_AT_type))
     HasType = true;
 
-  // Check if it is an inlined variable.
   if (Die.find(dwarf::DW_AT_abstract_origin)) {
-      if (Die.find(dwarf::DW_AT_location) ||
-          Die.find(dwarf::DW_AT_const_value)) {
-        if (InlinedVariables) {
-          auto Offset = Die.find(dwarf::DW_AT_abstract_origin);
-          // Do not track this inlined var any more, since it has location
-          // coverage.
-          llvm::erase_value(*InlinedVariables, (*Offset).getRawUValue());
-        }
-      } else {
-        // The locstats will be handled at the end of
-        // the collectStatsRecursive().
-        DeferLocStats = true;
+    if (Die.find(dwarf::DW_AT_location) || Die.find(dwarf::DW_AT_const_value)) {
+      if (AbstractOriginVariables) {
+        auto Offset = Die.find(dwarf::DW_AT_abstract_origin);
+        // Do not track this variable any more, since it has location
+        // coverage.
+        llvm::erase_value(*AbstractOriginVariables, (*Offset).getRawUValue());
       }
+    } else {
+      // The locstats will be handled at the end of
+      // the collectStatsRecursive().
+      DeferLocStats = true;
+    }
   }
 
   auto IsEntryValue = [&](ArrayRef<uint8_t> D) -> bool {
@@ -425,33 +423,31 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
   }
 }
 
-/// Recursively collect variables from subprogram with
-/// DW_AT_inline attribute.
-static void collectInlinedFnInfo(DWARFDie Die,
-                                 uint64_t SPOffset,
-                                 InlinedVarsTyMap &GlobalInlinedFnInfo) {
+/// Recursively collect variables from subprogram with DW_AT_inline attribute.
+static void collectAbstractOriginFnInfo(
+    DWARFDie Die, uint64_t SPOffset,
+    AbstractOriginVarsTyMap &GlobalAbstractOriginFnInfo) {
   DWARFDie Child = Die.getFirstChild();
   while (Child) {
     const dwarf::Tag ChildTag = Child.getTag();
     if (ChildTag == dwarf::DW_TAG_formal_parameter ||
         ChildTag == dwarf::DW_TAG_variable)
-      GlobalInlinedFnInfo[SPOffset].push_back(Child.getOffset());
+      GlobalAbstractOriginFnInfo[SPOffset].push_back(Child.getOffset());
     else if (ChildTag == dwarf::DW_TAG_lexical_block)
-      collectInlinedFnInfo(Child, SPOffset, GlobalInlinedFnInfo);
+      collectAbstractOriginFnInfo(Child, SPOffset, GlobalAbstractOriginFnInfo);
     Child = Child.getSibling();
   }
 }
 
 /// Recursively collect debug info quality metrics.
-static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
-                                  std::string VarPrefix, uint64_t BytesInScope,
-                                  uint32_t InlineDepth,
-                                  StringMap<PerFunctionStats> &FnStatMap,
-                                  GlobalStats &GlobalStats,
-                                  LocationStats &LocStats,
-                                  InlinedVarsTyMap &GlobalInlinedFnInfo,
-                                  InlinedFnInstacesTy &InlinedFnsToBeProcessed,
-                                  InlinedVarsTy *InlinedVarsPtr = nullptr) {
+static void collectStatsRecursive(
+    DWARFDie Die, std::string FnPrefix, std::string VarPrefix,
+    uint64_t BytesInScope, uint32_t InlineDepth,
+    StringMap<PerFunctionStats> &FnStatMap, GlobalStats &GlobalStats,
+    LocationStats &LocStats,
+    AbstractOriginVarsTyMap &GlobalAbstractOriginFnInfo,
+    FunctionsWithAbstractOriginTy &FnsWithAbstractOriginToBeProcessed,
+    AbstractOriginVarsTy *AbstractOriginVarsPtr = nullptr) {
   // Skip NULL nodes.
   if (Die.isNULL())
     return;
@@ -465,21 +461,22 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
   const bool IsFunction = Tag == dwarf::DW_TAG_subprogram;
   const bool IsBlock = Tag == dwarf::DW_TAG_lexical_block;
   const bool IsInlinedFunction = Tag == dwarf::DW_TAG_inlined_subroutine;
-  InlinedVarsTy InlinedVars;
+  AbstractOriginVarsTy AbstractOriginVars;
+
   // Get the vars of the inlined fn, so the locstats
   // reports the missing vars (with coverage 0%).
   if (IsInlinedFunction) {
     auto OffsetFn = Die.find(dwarf::DW_AT_abstract_origin);
     if (OffsetFn) {
       uint64_t OffsetOfInlineFnCopy = (*OffsetFn).getRawUValue();
-      if (GlobalInlinedFnInfo.count(OffsetOfInlineFnCopy)) {
-        InlinedVars = GlobalInlinedFnInfo[OffsetOfInlineFnCopy];
-        InlinedVarsPtr = &InlinedVars;
+      if (GlobalAbstractOriginFnInfo.count(OffsetOfInlineFnCopy)) {
+        AbstractOriginVars = GlobalAbstractOriginFnInfo[OffsetOfInlineFnCopy];
+        AbstractOriginVarsPtr = &AbstractOriginVars;
       } else {
         // This means that the DW_AT_inline fn copy is out of order,
-        // so this inlined instance will be processed later.
-        InlinedFnsToBeProcessed.push_back(Die.getOffset());
-        InlinedVarsPtr = nullptr;
+        // so this abstract origin instance will be processed later.
+        FnsWithAbstractOriginToBeProcessed.push_back(Die.getOffset());
+        AbstractOriginVarsPtr = nullptr;
       }
     }
   }
@@ -516,7 +513,7 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
       // for inlined instancies.
       if (Die.find(dwarf::DW_AT_inline)) {
         uint64_t SPOffset = Die.getOffset();
-        collectInlinedFnInfo(Die, SPOffset, GlobalInlinedFnInfo);
+        collectAbstractOriginFnInfo(Die, SPOffset, GlobalAbstractOriginFnInfo);
         return;
       }
 
@@ -548,7 +545,7 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
   } else {
     // Not a scope, visit the Die itself. It could be a variable.
     collectStatsForDie(Die, FnPrefix, VarPrefix, BytesInScope, InlineDepth,
-                       FnStatMap, GlobalStats, LocStats, InlinedVarsPtr);
+                       FnStatMap, GlobalStats, LocStats, AbstractOriginVarsPtr);
   }
 
   // Set InlineDepth correctly for child recursion
@@ -568,10 +565,10 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
     if (Child.getTag() == dwarf::DW_TAG_formal_parameter)
       ChildVarPrefix += 'p' + toHex(FormalParameterIndex++) + '.';
 
-    collectStatsRecursive(Child, FnPrefix, ChildVarPrefix, BytesInScope,
-                          InlineDepth, FnStatMap, GlobalStats, LocStats,
-                          GlobalInlinedFnInfo, InlinedFnsToBeProcessed,
-                          InlinedVarsPtr);
+    collectStatsRecursive(
+        Child, FnPrefix, ChildVarPrefix, BytesInScope, InlineDepth, FnStatMap,
+        GlobalStats, LocStats, GlobalAbstractOriginFnInfo,
+        FnsWithAbstractOriginToBeProcessed, AbstractOriginVarsPtr);
     Child = Child.getSibling();
   }
 
@@ -580,13 +577,13 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
 
   // After we have processed all vars of the inlined function,
   // we want to know how many variables have no location.
-  for (auto Offset : InlinedVars) {
+  for (auto Offset : AbstractOriginVars) {
     LocStats.NumVarParam++;
     LocStats.VarParamLocStats[ZeroCoverageBucket]++;
-    auto InlineDie = Die.getDwarfUnit()->getDIEForOffset(Offset);
-    if (!InlineDie)
+    auto FnDie = Die.getDwarfUnit()->getDIEForOffset(Offset);
+    if (!FnDie)
       continue;
-    auto Tag = InlineDie.getTag();
+    auto Tag = FnDie.getTag();
     if (Tag == dwarf::DW_TAG_formal_parameter) {
       LocStats.NumParam++;
       LocStats.ParamLocStats[ZeroCoverageBucket]++;
@@ -646,11 +643,12 @@ static void printSectionSizes(json::OStream &J, const SectionSizes &Sizes) {
     J.attribute((Twine("#bytes in ") + It.first).str(), int64_t(It.second));
 }
 
-/// Stop tracking inlined variables with a location.
+/// Stop tracking variables that contain abstract_origin with a location.
 /// This is used for out-of-order DW_AT_inline subprograms only.
-static void updateInlinedVarsCovInfo(DWARFDie InlinedFnDie,
-                                     InlinedVarsTy &InlinedVars) {
-  DWARFDie Child = InlinedFnDie.getFirstChild();
+static void updateVarsWithAbstractOriginLocCovInfo(
+    DWARFDie FnDieWithAbstractOrigin,
+    AbstractOriginVarsTy &AbstractOriginVars) {
+  DWARFDie Child = FnDieWithAbstractOrigin.getFirstChild();
   while (Child) {
     const dwarf::Tag ChildTag = Child.getTag();
     if ((ChildTag == dwarf::DW_TAG_formal_parameter ||
@@ -659,31 +657,31 @@ static void updateInlinedVarsCovInfo(DWARFDie InlinedFnDie,
          Child.find(dwarf::DW_AT_const_value))) {
       auto OffsetVar = Child.find(dwarf::DW_AT_abstract_origin);
       if (OffsetVar)
-        llvm::erase_value(InlinedVars, (*OffsetVar).getRawUValue());
+        llvm::erase_value(AbstractOriginVars, (*OffsetVar).getRawUValue());
     } else if (ChildTag == dwarf::DW_TAG_lexical_block)
-      updateInlinedVarsCovInfo(Child, InlinedVars);
+      updateVarsWithAbstractOriginLocCovInfo(Child, AbstractOriginVars);
     Child = Child.getSibling();
   }
 }
 
 /// Collect zero location coverage for inlined variables which refer to
 /// a DW_AT_inline copy of subprogram that is out of order in the DWARF.
-static void
-collectZeroCovInlinedVars(DWARFUnit *DwUnit, GlobalStats &GlobalStats,
-                          LocationStats &LocStats,
-                          InlinedVarsTyMap &GlobalInlinedFnInfo,
-                          InlinedFnInstacesTy &InlinedFnsToBeProcessed) {
-  for (auto FnOffset : InlinedFnsToBeProcessed) {
-    DWARFDie InlinedFnDie = DwUnit->getDIEForOffset(FnOffset);
-    auto InlinedCopy = InlinedFnDie.find(dwarf::DW_AT_abstract_origin);
-    InlinedVarsTy InlinedVars;
-    if (!InlinedCopy)
+static void collectZeroLocCovForVarsWithAbstractOrigin(
+    DWARFUnit *DwUnit, GlobalStats &GlobalStats, LocationStats &LocStats,
+    AbstractOriginVarsTyMap &GlobalAbstractOriginFnInfo,
+    FunctionsWithAbstractOriginTy &FnsWithAbstractOriginToBeProcessed) {
+  for (auto FnOffset : FnsWithAbstractOriginToBeProcessed) {
+    DWARFDie FnDieWithAbstractOrigin = DwUnit->getDIEForOffset(FnOffset);
+    auto FnCopy = FnDieWithAbstractOrigin.find(dwarf::DW_AT_abstract_origin);
+    AbstractOriginVarsTy AbstractOriginVars;
+    if (!FnCopy)
       continue;
 
-    InlinedVars = GlobalInlinedFnInfo[(*InlinedCopy).getRawUValue()];
-    updateInlinedVarsCovInfo(InlinedFnDie, InlinedVars);
+    AbstractOriginVars = GlobalAbstractOriginFnInfo[(*FnCopy).getRawUValue()];
+    updateVarsWithAbstractOriginLocCovInfo(FnDieWithAbstractOrigin,
+                                           AbstractOriginVars);
 
-    for (auto Offset : InlinedVars) {
+    for (auto Offset : AbstractOriginVars) {
       LocStats.NumVarParam++;
       LocStats.VarParamLocStats[ZeroCoverageBucket]++;
       auto Tag = DwUnit->getDIEForOffset(Offset).getTag();
@@ -720,19 +718,20 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
       // These variables are being reset for each CU, since there could be
       // a situation where we have two subprogram DIEs with the same offsets
       // in two diferent CUs, and we can end up using wrong variables info
-      // when trying to resolve abstract_orign attribute.
+      // when trying to resolve abstract_origin attribute.
       // TODO: Handle LTO cases where the abstract origin of
       // the function is in a different CU than the one it's
       // referenced from or inlined into.
-      InlinedVarsTyMap GlobalInlinedFnInfo;
-      InlinedFnInstacesTy InlinedFnsToBeProcessed;
+      AbstractOriginVarsTyMap GlobalAbstractOriginFnInfo;
+      FunctionsWithAbstractOriginTy FnsWithAbstractOriginToBeProcessed;
 
       collectStatsRecursive(CUDie, "/", "g", 0, 0, Statistics, GlobalStats,
-                            LocStats, GlobalInlinedFnInfo,
-                            InlinedFnsToBeProcessed);
+                            LocStats, GlobalAbstractOriginFnInfo,
+                            FnsWithAbstractOriginToBeProcessed);
 
-      collectZeroCovInlinedVars(CUDie.getDwarfUnit(), GlobalStats, LocStats,
-                                GlobalInlinedFnInfo, InlinedFnsToBeProcessed);
+      collectZeroLocCovForVarsWithAbstractOrigin(
+          CUDie.getDwarfUnit(), GlobalStats, LocStats,
+          GlobalAbstractOriginFnInfo, FnsWithAbstractOriginToBeProcessed);
     }
   }
 
