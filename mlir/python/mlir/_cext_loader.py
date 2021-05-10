@@ -45,7 +45,10 @@ def _reexport_cext(cext_module_name, target_module_name):
   """
   import sys
   target_module = sys.modules[target_module_name]
-  source_module = getattr(_cext, cext_module_name)
+  submodule_names = cext_module_name.split(".")
+  source_module = _cext
+  for submodule_name in submodule_names:
+    source_module = getattr(source_module, submodule_name)
   for attr_name in dir(source_module):
     if not attr_name.startswith("__"):
       setattr(target_module, attr_name, getattr(source_module, attr_name))
