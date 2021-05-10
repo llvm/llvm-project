@@ -820,6 +820,8 @@ public:
     return 128;
   }
 
+  bool isAllActivePredicate(SDValue N) const;
+
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.
