@@ -222,7 +222,7 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
       return None;
     }
 
-    if (read32be(&arch[i].cputype) != target->cpuType ||
+    if (read32be(&arch[i].cputype) != static_cast<uint32_t>(target->cpuType) ||
         read32be(&arch[i].cpusubtype) != target->cpuSubtype)
       continue;
 
