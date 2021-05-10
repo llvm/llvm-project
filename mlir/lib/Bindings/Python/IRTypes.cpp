@@ -338,10 +338,11 @@ public:
     c.def_static(
         "get",
         [](std::vector<int64_t> shape, PyType &elementType,
+           llvm::Optional<PyAttribute> &encodingAttr,
            DefaultingPyLocation loc) {
-          MlirAttribute encodingAttr = mlirAttributeGetNull();
           MlirType t = mlirRankedTensorTypeGetChecked(
-              loc, shape.size(), shape.data(), elementType, encodingAttr);
+              loc, shape.size(), shape.data(), elementType,
+              encodingAttr ? encodingAttr->get() : mlirAttributeGetNull());
           // TODO: Rework error reporting once diagnostic engine is exposed
           // in C API.
           if (mlirTypeIsNull(t)) {
@@ -355,8 +356,17 @@ public:
           }
           return PyRankedTensorType(elementType.getContext(), t);
         },
-        py::arg("shape"), py::arg("element_type"), py::arg("loc") = py::none(),
+        py::arg("shape"), py::arg("element_type"),
+        py::arg("encoding") = py::none(), py::arg("loc") = py::none(),
         "Create a ranked tensor type");
+    c.def_property_readonly(
+        "encoding",
+        [](PyRankedTensorType &self) -> llvm::Optional<PyAttribute> {
+          MlirAttribute encoding = mlirRankedTensorTypeGetEncoding(self.get());
+          if (mlirAttributeIsNull(encoding))
+            return llvm::None;
+          return PyAttribute(self.getContext(), encoding);
+        });
   }
 };
 
