@@ -17,7 +17,7 @@ if (ROCM_CCACHE_BUILD)
   endif() # if (CCACHE_PROGRAM)
 endif() # if (ROCM_CCACHE_BUILD)
 
-find_package(ROCM PATHS "/opt/rocm")
+find_package(ROCM QUIET)
 if (ROCM_FOUND)
   include(ROCMSetupVersion)
   rocm_setup_version(VERSION "${amd_comgr_VERSION}")
@@ -156,6 +156,16 @@ if (UNIX)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS "/W0" "/wd4244")
   list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS _HAS_EXCEPTIONS=0)
+endif()
+
+if (ROCM_FOUND)
+  get_filename_component(ROCM_INSTALL_PATH "${ROCM_DIR}/../../.." ABSOLUTE)
+  list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS
+    ROCM_INSTALL_PATH=\"${ROCM_INSTALL_PATH}\")
+else()
+  message("ROCM not FOUND")
+  list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS
+    ROCM_INSTALL_PATH=\"\")
 endif()
 
 # Windows is strict about visibility of exports in shared libraries, so we ask

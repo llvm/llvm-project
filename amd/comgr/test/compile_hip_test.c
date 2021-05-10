@@ -47,8 +47,7 @@ int main(int argc, char *argv[]) {
   amd_comgr_action_info_t DataAction;
   amd_comgr_status_t Status;
   size_t Count;
-  const char *Options[] = {"--amdgpu-target=gfx900", "-hip-path",
-                           "/opt/rocm/hip"};
+  const char *Options[] = {"--amdgpu-target=gfx900"};
   size_t OptionsCount = sizeof(Options) / sizeof(Options[0]);
 
   SizeSource1 = setBuf(TEST_OBJ_DIR "/source1.hip", &BufSource1);
