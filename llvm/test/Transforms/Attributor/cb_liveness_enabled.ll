@@ -68,10 +68,10 @@ define i32 @test(i32 %0, i32 %1) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP6:%.*]]
 ; CHECK:       4:
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @test_range1(i32 [[TMP0]]) #[[ATTR1:[0-9]+]], !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call noundef i32 @test_range1(i32 [[TMP0]]) #[[ATTR1:[0-9]+]], !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    br label [[TMP8:%.*]]
 ; CHECK:       6:
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @test_range2(i32 [[TMP0]]) #[[ATTR1]], !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call noundef i32 @test_range2(i32 [[TMP0]]) #[[ATTR1]], !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    br label [[TMP8]]
 ; CHECK:       8:
 ; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ [[TMP5]], [[TMP4]] ], [ [[TMP7]], [[TMP6]] ]
@@ -94,16 +94,12 @@ define i32 @test(i32 %0, i32 %1) #0 {
 }
 
 define i32 @test_pcheck1(i32 %0) #0 {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@test_pcheck1
-; IS__TUNIT____-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    ret i32 1
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@test_pcheck1
-; IS__CGSCC____-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = call i32 @test(i32 [[TMP0]], i32 noundef 1) #[[ATTR1]], !range [[RNG2:![0-9]+]]
-; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 101
-; IS__CGSCC____-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
-; IS__CGSCC____-NEXT:    ret i32 [[TMP4]]
+; CHECK-LABEL: define {{[^@]+}}@test_pcheck1
+; CHECK-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @test(i32 [[TMP0]], i32 noundef 1) #[[ATTR1]], !range [[RNG2:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 101
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
 ; IS__TUNIT_____ENABLED-LABEL: define {{[^@]+}}@test_pcheck1
 ; IS__TUNIT_____ENABLED-SAME: (i32 [[TMP0:%.*]])
@@ -115,16 +111,12 @@ define i32 @test_pcheck1(i32 %0) #0 {
 }
 
 define i32 @test_pcheck2(i32 %0) #0 {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@test_pcheck2
-; IS__TUNIT____-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    ret i32 1
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@test_pcheck2
-; IS__CGSCC____-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = call i32 @test(i32 [[TMP0]], i32 noundef 0) #[[ATTR1]], !range [[RNG2]]
-; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP2]], 99
-; IS__CGSCC____-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
-; IS__CGSCC____-NEXT:    ret i32 [[TMP4]]
+; CHECK-LABEL: define {{[^@]+}}@test_pcheck2
+; CHECK-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @test(i32 [[TMP0]], i32 noundef 0) #[[ATTR1]], !range [[RNG2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP2]], 99
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
   %2 = call i32 @test(i32 %0, i32 0)
   %3 = icmp sgt i32 %2, 99
@@ -133,19 +125,12 @@ define i32 @test_pcheck2(i32 %0) #0 {
 }
 
 define i32 @test_ncheck1(i32 %0) #0 {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@test_ncheck1
-; IS__TUNIT____-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = call i32 @test(i32 [[TMP0]], i32 noundef 1) #[[ATTR1]], !range [[RNG0]]
-; IS__TUNIT____-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP2]], 50
-; IS__TUNIT____-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
-; IS__TUNIT____-NEXT:    ret i32 [[TMP4]]
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@test_ncheck1
-; IS__CGSCC____-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = call i32 @test(i32 [[TMP0]], i32 noundef 1) #[[ATTR1]], !range [[RNG2]]
-; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP2]], 50
-; IS__CGSCC____-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
-; IS__CGSCC____-NEXT:    ret i32 [[TMP4]]
+; CHECK-LABEL: define {{[^@]+}}@test_ncheck1
+; CHECK-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @test(i32 [[TMP0]], i32 noundef 1) #[[ATTR1]], !range [[RNG2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP2]], 50
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
   %2 = call i32 @test(i32 %0, i32 1)
   %3 = icmp sgt i32 %2, 50
@@ -154,19 +139,12 @@ define i32 @test_ncheck1(i32 %0) #0 {
 }
 
 define i32 @test_ncheck2(i32 %0) #0 {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@test_ncheck2
-; IS__TUNIT____-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = call i32 @test(i32 [[TMP0]], i32 noundef 0) #[[ATTR1]], !range [[RNG1]]
-; IS__TUNIT____-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP2]], 150
-; IS__TUNIT____-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
-; IS__TUNIT____-NEXT:    ret i32 [[TMP4]]
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@test_ncheck2
-; IS__CGSCC____-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = call i32 @test(i32 [[TMP0]], i32 noundef 0) #[[ATTR1]], !range [[RNG2]]
-; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP2]], 150
-; IS__CGSCC____-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
-; IS__CGSCC____-NEXT:    ret i32 [[TMP4]]
+; CHECK-LABEL: define {{[^@]+}}@test_ncheck2
+; CHECK-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @test(i32 [[TMP0]], i32 noundef 0) #[[ATTR1]], !range [[RNG2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP2]], 150
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
   %2 = call i32 @test(i32 %0, i32 0)
   %3 = icmp sgt i32 %2, 150
@@ -185,10 +163,7 @@ attributes #0 = { noinline nounwind sspstrong uwtable}
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone sspstrong uwtable willreturn }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { readnone willreturn }
 ;.
-; IS__TUNIT____: [[RNG0]] = !{i32 0, i32 101}
-; IS__TUNIT____: [[RNG1]] = !{i32 100, i32 201}
-;.
-; IS__CGSCC____: [[RNG0]] = !{i32 0, i32 101}
-; IS__CGSCC____: [[RNG1]] = !{i32 100, i32 201}
-; IS__CGSCC____: [[RNG2]] = !{i32 0, i32 201}
+; CHECK: [[RNG0]] = !{i32 0, i32 101}
+; CHECK: [[RNG1]] = !{i32 100, i32 201}
+; CHECK: [[RNG2]] = !{i32 0, i32 201}
 ;.

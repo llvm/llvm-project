@@ -245,27 +245,23 @@ define i32 @nc1(i32* %q, i32* %p, i1 %b) {
 ; IS__TUNIT____-NEXT:  e:
 ; IS__TUNIT____-NEXT:    br label [[L:%.*]]
 ; IS__TUNIT____:       l:
-; IS__TUNIT____-NEXT:    [[X:%.*]] = phi i32* [ [[P]], [[E:%.*]] ]
-; IS__TUNIT____-NEXT:    [[Y:%.*]] = phi i32* [ [[Q]], [[E]] ]
-; IS__TUNIT____-NEXT:    [[TMP:%.*]] = bitcast i32* [[X]] to i32*
-; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = select i1 [[B]], i32* [[TMP]], i32* [[Y]]
+; IS__TUNIT____-NEXT:    [[Y:%.*]] = phi i32* [ [[Q]], [[E:%.*]] ]
+; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = select i1 [[B]], i32* [[P]], i32* [[Y]]
 ; IS__TUNIT____-NEXT:    [[VAL:%.*]] = load i32, i32* [[TMP2]], align 4
-; IS__TUNIT____-NEXT:    store i32 0, i32* [[TMP]], align 4
+; IS__TUNIT____-NEXT:    store i32 0, i32* [[P]], align 4
 ; IS__TUNIT____-NEXT:    store i32* [[Y]], i32** @g, align 8
 ; IS__TUNIT____-NEXT:    ret i32 [[VAL]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@nc1
-; IS__CGSCC____-SAME: (i32* nofree [[Q:%.*]], i32* nocapture nofree [[P:%.*]], i1 [[B:%.*]]) #[[ATTR5:[0-9]+]] {
+; IS__CGSCC____-SAME: (i32* nofree [[Q:%.*]], i32* nocapture nofree align 4 [[P:%.*]], i1 [[B:%.*]]) #[[ATTR5:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  e:
 ; IS__CGSCC____-NEXT:    br label [[L:%.*]]
 ; IS__CGSCC____:       l:
-; IS__CGSCC____-NEXT:    [[X:%.*]] = phi i32* [ [[P]], [[E:%.*]] ]
-; IS__CGSCC____-NEXT:    [[Y:%.*]] = phi i32* [ [[Q]], [[E]] ]
-; IS__CGSCC____-NEXT:    [[TMP:%.*]] = bitcast i32* [[X]] to i32*
-; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = select i1 [[B]], i32* [[TMP]], i32* [[Y]]
+; IS__CGSCC____-NEXT:    [[Y:%.*]] = phi i32* [ [[Q]], [[E:%.*]] ]
+; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = select i1 [[B]], i32* [[P]], i32* [[Y]]
 ; IS__CGSCC____-NEXT:    [[VAL:%.*]] = load i32, i32* [[TMP2]], align 4
-; IS__CGSCC____-NEXT:    store i32 0, i32* [[TMP]], align 4
+; IS__CGSCC____-NEXT:    store i32 0, i32* [[P]], align 4
 ; IS__CGSCC____-NEXT:    store i32* [[Y]], i32** @g, align 8
 ; IS__CGSCC____-NEXT:    ret i32 [[VAL]]
 ;
@@ -335,8 +331,8 @@ define void @nc2(i32* %p, i32* %q) {
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@nc2
-; IS__CGSCC____-SAME: (i32* nocapture nofree [[P:%.*]], i32* nofree [[Q:%.*]]) #[[ATTR5]] {
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i32 @nc1(i32* nofree [[Q]], i32* nocapture nofree [[P]], i1 noundef false) #[[ATTR16:[0-9]+]]
+; IS__CGSCC____-SAME: (i32* nocapture nofree align 4 [[P:%.*]], i32* nofree [[Q:%.*]]) #[[ATTR5]] {
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i32 @nc1(i32* nofree [[Q]], i32* nocapture nofree align 4 [[P]], i1 noundef false) #[[ATTR16:[0-9]+]]
 ; IS__CGSCC____-NEXT:    ret void
 ;
   %1 = call i32 @nc1(i32* %q, i32* %p, i1 0)		; <i32> [#uses=0]
@@ -826,7 +822,7 @@ define i8* @test_returned1(i8* %A, i8* returned %B) nounwind readonly {
 ; CHECK-SAME: (i8* nocapture readonly [[A:%.*]], i8* readonly returned [[B:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P:%.*]] = call i8* @unknownpi8pi8(i8* [[A]], i8* [[B]])
-; CHECK-NEXT:    ret i8* [[P]]
+; CHECK-NEXT:    ret i8* [[B]]
 ;
 entry:
   %p = call i8* @unknownpi8pi8(i8* %A, i8* %B)
@@ -839,7 +835,7 @@ define i8* @test_returned2(i8* %A, i8* %B) {
 ; CHECK-SAME: (i8* nocapture readonly [[A:%.*]], i8* readonly returned [[B:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P:%.*]] = call i8* @unknownpi8pi8(i8* readonly [[A]], i8* readonly [[B]]) #[[ATTR4]]
-; CHECK-NEXT:    ret i8* [[P]]
+; CHECK-NEXT:    ret i8* [[B]]
 ;
 entry:
   %p = call i8* @unknownpi8pi8(i8* %A, i8* %B) nounwind readonly

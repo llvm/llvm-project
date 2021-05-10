@@ -68,10 +68,10 @@ define i32 @test(i32 %0, i32 %1) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP6:%.*]]
 ; CHECK:       4:
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @test_range1(i32 [[TMP0]]) #[[ATTR1:[0-9]+]], !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call noundef i32 @test_range1(i32 [[TMP0]]) #[[ATTR1:[0-9]+]], !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    br label [[TMP8:%.*]]
 ; CHECK:       6:
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @test_range2(i32 [[TMP0]]) #[[ATTR1]], !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call noundef i32 @test_range2(i32 [[TMP0]]) #[[ATTR1]], !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    br label [[TMP8]]
 ; CHECK:       8:
 ; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ [[TMP5]], [[TMP4]] ], [ [[TMP7]], [[TMP6]] ]
