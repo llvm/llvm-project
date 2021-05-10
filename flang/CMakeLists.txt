@@ -201,6 +201,7 @@ else()
   include_directories(SYSTEM ${MLIR_INCLUDE_DIR})
   include_directories(SYSTEM ${MLIR_TABLEGEN_OUTPUT_DIR})
 endif()
+set(FLANG_INCLUDE_DIR ${FLANG_BINARY_DIR}/include)
 
 if(FLANG_BUILD_NEW_DRIVER)
     # TODO: Remove when libclangDriver is lifted out of Clang
@@ -471,4 +472,11 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN ".git"     EXCLUDE
     PATTERN "CMakeFiles" EXCLUDE
     PATTERN "*")
+    
+  install(DIRECTORY ${FLANG_INCLUDE_DIR}/flang
+    DESTINATION include
+    COMPONENT flang-headers
+    FILES_MATCHING
+    PATTERN "*.inc"
+    )
 endif()
