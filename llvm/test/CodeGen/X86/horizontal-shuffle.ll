@@ -138,6 +138,36 @@ define <16 x i8> @test_unpackh_packus_128(<8 x i16> %a0, <8 x i16> %a1, <8 x i16
   ret <16 x i8> %3
 }
 
+define <4 x float> @test_shufps_packss_128(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, <4 x i32> %a3) {
+; CHECK-LABEL: test_shufps_packss_128:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpackssdw %xmm3, %xmm3, %xmm1
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,2]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %a0, <4 x i32> %a1)
+  %2 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %a2, <4 x i32> %a3)
+  %3 = bitcast <8 x i16> %1 to <4 x float>
+  %4 = bitcast <8 x i16> %2 to <4 x float>
+  %5 = shufflevector <4 x float> %3, <4 x float> %4, <4 x i32> <i32 0, i32 1, i32 6, i32 6>
+  ret <4 x float> %5
+}
+
+define <4 x float> @test_shufps_packus_128(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2, <8 x i16> %a3) {
+; CHECK-LABEL: test_shufps_packus_128:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpackuswb %xmm2, %xmm2, %xmm1
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,0],xmm1[0,0]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> %a0, <8 x i16> %a1)
+  %2 = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> %a2, <8 x i16> %a3)
+  %3 = bitcast <16 x i8> %1 to <4 x float>
+  %4 = bitcast <16 x i8> %2 to <4 x float>
+  %5 = shufflevector <4 x float> %3, <4 x float> %4, <4 x i32> <i32 1, i32 0, i32 4, i32 4>
+  ret <4 x float> %5
+}
+
 ;
 ; 256-bit Vectors
 ;
@@ -272,6 +302,36 @@ define <32 x i8> @test_unpackh_packus_256(<16 x i16> %a0, <16 x i16> %a1, <16 x 
   %2 = call <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16> %a2, <16 x i16> %a3)
   %3 = shufflevector <32 x i8> %1, <32 x i8> %2, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
   ret <32 x i8> %3
+}
+
+define <8 x float> @test_shufps_packss_256(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32> %a3) {
+; CHECK-LABEL: test_shufps_packss_256:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpackssdw %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    vpackssdw %ymm3, %ymm0, %ymm1
+; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,2],ymm0[4,5],ymm1[6,6]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a0, <8 x i32> %a1)
+  %2 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a2, <8 x i32> %a3)
+  %3 = bitcast <16 x i16> %1 to <8 x float>
+  %4 = bitcast <16 x i16> %2 to <8 x float>
+  %5 = shufflevector <8 x float> %3, <8 x float> %4, <8 x i32> <i32 0, i32 1, i32 10, i32 10, i32 4, i32 5, i32 14, i32 14>
+  ret <8 x float> %5
+}
+
+define <8 x float> @test_shufps_packus_256(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> %a2, <16 x i16> %a3) {
+; CHECK-LABEL: test_shufps_packus_256:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpackuswb %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    vpackuswb %ymm0, %ymm2, %ymm1
+; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,0],ymm1[0,0],ymm0[5,4],ymm1[4,4]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = call <32 x i8> @llvm.x86.avx2.packuswb(<16 x i16> %a0, <16 x i16> %a1)
+  %2 = call <32 x i8> @llvm.x86.avx2.packuswb(<16 x i16> %a2, <16 x i16> %a3)
+  %3 = bitcast <32 x i8> %1 to <8 x float>
+  %4 = bitcast <32 x i8> %2 to <8 x float>
+  %5 = shufflevector <8 x float> %3, <8 x float> %4, <8 x i32> <i32 1, i32 0, i32 8, i32 8, i32 5, i32 4, i32 12, i32 12>
+  ret <8 x float> %5
 }
 
 declare <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float>, <4 x float>)
