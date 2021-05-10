@@ -196,8 +196,6 @@ function(add_libc_multi_impl_test name)
           libc_string_unittests
         DEPENDS
           ${fq_config_name}
-        COMPILE_OPTIONS
-          ${LIBC_COMPILE_OPTIONS_NATIVE}
         ${ARGN}
       )
     else()
