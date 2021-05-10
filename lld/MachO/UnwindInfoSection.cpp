@@ -306,6 +306,9 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
 
   // Dead-stripped functions get a functionAddress of UINT64_MAX in
   // relocateCompactUnwind(). Filter them out here.
+  // FIXME: This doesn't yet collect associated data like LSDAs kept
+  // alive only by a now-removed CompactUnwindEntry or other comdat-like
+  // data (`kindNoneGroupSubordinate*` in ld64).
   CompactUnwindEntry<Ptr> tombstone;
   tombstone.functionAddress = static_cast<Ptr>(UINT64_MAX);
   cuPtrVector.erase(

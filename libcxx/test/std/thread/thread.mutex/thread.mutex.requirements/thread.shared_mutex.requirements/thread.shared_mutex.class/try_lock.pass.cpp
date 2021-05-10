@@ -12,9 +12,9 @@
 // ALLOW_RETRIES: 2
 
 // shared_mutex was introduced in macosx10.12
-// UNSUPPORTED: with_system_cxx_lib=macosx10.11
-// UNSUPPORTED: with_system_cxx_lib=macosx10.10
-// UNSUPPORTED: with_system_cxx_lib=macosx10.9
+// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.11
+// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.10
+// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.9
 
 // <shared_mutex>
 

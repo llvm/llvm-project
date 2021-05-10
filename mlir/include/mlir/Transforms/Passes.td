@@ -136,6 +136,7 @@ def AffineLoopFusion : FunctionPass<"affine-loop-fusion"> {
     Option<"maximalFusion", "fusion-maximal", "bool", /*default=*/"false",
            "Enables maximal loop fusion">,
   ];
+  let dependentDialects = ["memref::MemRefDialect"];
 }
 
 def AffinePipelineDataTransfer
