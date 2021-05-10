@@ -1378,9 +1378,9 @@ let Predicates = [HasSVE] in {
   defm LSR_ZZI : sve_int_bin_cons_shift_imm_right<0b01, "lsr", AArch64lsr_p>;
   defm LSL_ZZI : sve_int_bin_cons_shift_imm_left< 0b11, "lsl", AArch64lsl_p>;
 
-  defm ASR_WIDE_ZZZ : sve_int_bin_cons_shift_wide<0b00, "asr">;
-  defm LSR_WIDE_ZZZ : sve_int_bin_cons_shift_wide<0b01, "lsr">;
-  defm LSL_WIDE_ZZZ : sve_int_bin_cons_shift_wide<0b11, "lsl">;
+  defm ASR_WIDE_ZZZ : sve_int_bin_cons_shift_wide<0b00, "asr", int_aarch64_sve_asr_wide>;
+  defm LSR_WIDE_ZZZ : sve_int_bin_cons_shift_wide<0b01, "lsr", int_aarch64_sve_lsr_wide>;
+  defm LSL_WIDE_ZZZ : sve_int_bin_cons_shift_wide<0b11, "lsl", int_aarch64_sve_lsl_wide>;
 
   // Predicated shifts
   defm ASR_ZPmI  : sve_int_bin_pred_shift_imm_right_dup<0b0000, "asr",  "ASR_ZPZI",  int_aarch64_sve_asr>;
@@ -2409,24 +2409,6 @@ let Predicates = [HasSVE2] in {
   defm SMULH_ZZZ  : sve2_int_mul<0b010,  "smulh", null_frag, AArch64smulh_p>;
   defm UMULH_ZZZ  : sve2_int_mul<0b011,  "umulh", null_frag, AArch64umulh_p>;
   defm PMUL_ZZZ   : sve2_int_mul_single<0b001, "pmul", int_aarch64_sve_pmul>;
-
-  // Add patterns for unpredicated version of smulh and umulh.
-  def : Pat<(nxv16i8 (int_aarch64_sve_smulh (nxv16i1 (AArch64ptrue 31)), nxv16i8:$Op1, nxv16i8:$Op2)),
-            (SMULH_ZZZ_B $Op1, $Op2)>;
-  def : Pat<(nxv8i16 (int_aarch64_sve_smulh (nxv8i1 (AArch64ptrue 31)), nxv8i16:$Op1, nxv8i16:$Op2)),
-            (SMULH_ZZZ_H $Op1, $Op2)>;
-  def : Pat<(nxv4i32 (int_aarch64_sve_smulh (nxv4i1 (AArch64ptrue 31)), nxv4i32:$Op1, nxv4i32:$Op2)),
-            (SMULH_ZZZ_S $Op1, $Op2)>;
-  def : Pat<(nxv2i64 (int_aarch64_sve_smulh (nxv2i1 (AArch64ptrue 31)), nxv2i64:$Op1, nxv2i64:$Op2)),
-            (SMULH_ZZZ_D $Op1, $Op2)>;
-  def : Pat<(nxv16i8 (int_aarch64_sve_umulh (nxv16i1 (AArch64ptrue 31)), nxv16i8:$Op1, nxv16i8:$Op2)),
-            (UMULH_ZZZ_B $Op1, $Op2)>;
-  def : Pat<(nxv8i16 (int_aarch64_sve_umulh (nxv8i1 (AArch64ptrue 31)), nxv8i16:$Op1, nxv8i16:$Op2)),
-            (UMULH_ZZZ_H $Op1, $Op2)>;
-  def : Pat<(nxv4i32 (int_aarch64_sve_umulh (nxv4i1 (AArch64ptrue 31)), nxv4i32:$Op1, nxv4i32:$Op2)),
-            (UMULH_ZZZ_S $Op1, $Op2)>;
-  def : Pat<(nxv2i64 (int_aarch64_sve_umulh (nxv2i1 (AArch64ptrue 31)), nxv2i64:$Op1, nxv2i64:$Op2)),
-            (UMULH_ZZZ_D $Op1, $Op2)>;
 
   // SVE2 complex integer dot product (indexed)
   defm CDOT_ZZZI : sve2_cintx_dot_by_indexed_elem<"cdot", int_aarch64_sve_cdot_lane>;
