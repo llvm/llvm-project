@@ -10,6 +10,7 @@ add_lld_library(lldWasm
   MapFile.cpp
   MarkLive.cpp
   OutputSections.cpp
+  OutputSegment.cpp
   Relocations.cpp
   SymbolTable.cpp
   Symbols.cpp

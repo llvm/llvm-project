@@ -119,17 +119,26 @@ void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
   Alignment = Attrs.getParamStackAlignment(ArgIdx);
 
   IsByVal = Attrs.hasParamAttribute(ArgIdx, Attribute::ByVal);
-  ByValType = nullptr;
+  IsInAlloca = Attrs.hasParamAttribute(ArgIdx, Attribute::InAlloca);
+  IsPreallocated = Attrs.hasParamAttribute(ArgIdx, Attribute::Preallocated);
+
+  assert(IsByVal + IsInAlloca + IsPreallocated <= 1 &&
+         "can't have multiple indirect attributes");
+  IndirectType = nullptr;
   if (IsByVal) {
-    ByValType = Call->getParamByValType(ArgIdx);
+    IndirectType = Call->getParamByValType(ArgIdx);
+    assert(IndirectType && "no byval type?");
     if (!Alignment)
       Alignment = Call->getParamAlign(ArgIdx);
   }
-  IsInAlloca = Attrs.hasParamAttribute(ArgIdx, Attribute::InAlloca);
-  IsPreallocated = Attrs.hasParamAttribute(ArgIdx, Attribute::Preallocated);
-  PreallocatedType = nullptr;
-  if (IsPreallocated)
-    PreallocatedType = Call->getParamPreallocatedType(ArgIdx);
+  if (IsInAlloca) {
+    IndirectType = Call->getParamInAllocaType(ArgIdx);
+    assert(IndirectType && "no inalloca type?");
+  }
+  if (IsPreallocated) {
+    IndirectType = Call->getParamPreallocatedType(ArgIdx);
+    assert(IndirectType && "no preallocated type?");
+  }
 }
 
 /// Generate a libcall taking the given operands as arguments and returning a

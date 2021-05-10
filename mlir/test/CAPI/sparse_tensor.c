@@ -43,7 +43,7 @@ static int testRoundtripEncoding(MlirContext ctx) {
   // CHECK: level_type: 2
   int numLevelTypes = mlirSparseTensorEncodingGetNumDimLevelTypes(originalAttr);
   enum MlirSparseTensorDimLevelType *levelTypes =
-      alloca(sizeof(enum MlirSparseTensorDimLevelType) * numLevelTypes);
+      malloc(sizeof(enum MlirSparseTensorDimLevelType) * numLevelTypes);
   for (int i = 0; i < numLevelTypes; ++i) {
     levelTypes[i] =
         mlirSparseTensorEncodingAttrGetDimLevelType(originalAttr, i);
@@ -64,6 +64,8 @@ static int testRoundtripEncoding(MlirContext ctx) {
   mlirAttributeDump(newAttr); // For debugging filecheck output.
   // CHECK: equal: 1
   fprintf(stderr, "equal: %d\n", mlirAttributeEqual(originalAttr, newAttr));
+
+  free(levelTypes);
   return 0;
 }
 

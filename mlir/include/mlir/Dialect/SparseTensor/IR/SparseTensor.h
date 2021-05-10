@@ -24,4 +24,12 @@
 
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorOpsDialect.h.inc"
 
+namespace mlir {
+namespace sparse_tensor {
+/// Convenience method to get a sparse encoding attribute from a type.
+/// Returns null-attribute for any type without an encoding.
+SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
+} // namespace sparse_tensor
+} // namespace mlir
+
 #endif // MLIR_DIALECT_SPARSETENSOR_IR_SPARSETENSOR_H_

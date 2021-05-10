@@ -1547,7 +1547,25 @@ def : IsDepBreakingFunction<[
                      CMP32rr, CMP32rr_REV,
                      CMP64rr, CMP64rr_REV ], CheckSameRegOperand<0, 1> >,
 
+  // MMX
+  DepBreakingClass<[
+    MMX_PCMPEQBirr, MMX_PCMPEQWirr, MMX_PCMPEQDirr
+  ], ZeroIdiomPredicate>,
 
+  // SSE
+  DepBreakingClass<[
+    PCMPEQBrr, PCMPEQWrr, PCMPEQDrr, PCMPEQQrr
+  ], ZeroIdiomPredicate>,
+
+  // AVX XMM
+  DepBreakingClass<[
+    VPCMPEQBrr, VPCMPEQWrr, VPCMPEQDrr, VPCMPEQQrr
+  ], ZeroIdiomPredicate>,
+
+  // AVX YMM
+  DepBreakingClass<[
+    VPCMPEQBYrr, VPCMPEQWYrr, VPCMPEQDYrr, VPCMPEQQYrr
+  ], ZeroIdiomPredicate>,
 ]>;
 
 } // SchedModel
