@@ -100,26 +100,6 @@ enum MacroDiag {
   MD_ReservedMacro  //> #define of #undef reserved id, disabled by default
 };
 
-/// Checks if the specified identifier is reserved in the specified
-/// language.
-/// This function does not check if the identifier is a keyword.
-static bool isReservedId(StringRef Text, const LangOptions &Lang) {
-  // C++ [macro.names], C11 7.1.3:
-  // All identifiers that begin with an underscore and either an uppercase
-  // letter or another underscore are always reserved for any use.
-  if (Text.size() >= 2 && Text[0] == '_' &&
-      (isUppercase(Text[1]) || Text[1] == '_'))
-      return true;
-  // C++ [global.names]
-  // Each name that contains a double underscore ... is reserved to the
-  // implementation for any use.
-  if (Lang.CPlusPlus) {
-    if (Text.find("__") != StringRef::npos)
-      return true;
-  }
-  return false;
-}
-
 // The -fmodule-name option tells the compiler to textually include headers in
 // the specified module, meaning clang won't build the specified module. This is
 // useful in a number of situations, for instance, when building a library that
@@ -141,9 +121,9 @@ static bool isForModuleBuilding(Module *M, StringRef CurrentModule,
 
 static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
-  StringRef Text = II->getName();
-  if (isReservedId(Text, Lang))
+  if (II->isReserved(Lang) != ReservedIdentifierStatus::NotReserved)
     return MD_ReservedMacro;
+  StringRef Text = II->getName();
   if (II->isKeyword(Lang))
     return MD_KeywordDef;
   if (Lang.CPlusPlus11 && (Text.equals("override") || Text.equals("final")))
@@ -153,9 +133,8 @@ static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
 
 static MacroDiag shouldWarnOnMacroUndef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
-  StringRef Text = II->getName();
   // Do not warn on keyword undef.  It is generally harmless and widely used.
-  if (isReservedId(Text, Lang))
+  if (II->isReserved(Lang) != ReservedIdentifierStatus::NotReserved)
     return MD_ReservedMacro;
   return MD_NoWarn;
 }
