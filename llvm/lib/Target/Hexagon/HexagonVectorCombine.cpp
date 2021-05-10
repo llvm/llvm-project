@@ -837,7 +837,7 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
 
     // Create an extra "undef" sector at the beginning and at the end.
     // They will be used as the left/right filler in the vlalign step.
-    for (int i = -DoAlign; i != NumSectors + DoAlign; ++i) {
+    for (int i = (DoAlign ? -1 : 0); i != NumSectors + DoAlign; ++i) {
       // For stores, the size of each section is an aligned vector length.
       // Adjust the store offsets relative to the section start offset.
       ByteSpan VSection = VSpan.section(i * ScLen, ScLen).shift(-i * ScLen);
