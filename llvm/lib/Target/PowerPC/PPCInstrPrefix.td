@@ -1,3 +1,6 @@
+//-------------------------- Predicate definitions ---------------------------//
+def IsPPC32 : Predicate<"!Subtarget->isPPC64()">;
+
 // Mask immediates for MMA instructions (2, 4 and 8 bits).
 def Msk2Imm : ImmLeaf<i32, [{ return isUInt<2>(Imm); }]>;
 def Msk4Imm : ImmLeaf<i32, [{ return isUInt<4>(Imm); }]>;
@@ -2752,7 +2755,44 @@ let Predicates = [IsISA3_1, HasVSX, IsLittleEndian] in {
               (VINSD $vDi, !mul(!sub(1, i), 8), $rA)>;
 }
 
-let Predicates = [IsISA3_1, HasVSX, IsBigEndian] in {
+let Predicates = [IsISA3_1, HasVSX, IsBigEndian, IsPPC32] in {
+  // Indexed vector insert element
+  def : Pat<(v16i8 (PPCvecinsertelt v16i8:$vDi, i32:$rA, i32:$rB)),
+            (VINSBLX $vDi, $rB, $rA)>;
+  def : Pat<(v8i16 (PPCvecinsertelt v8i16:$vDi, i32:$rA, i32:$rB)),
+            (VINSHLX $vDi, $rB, $rA)>;
+  def : Pat<(v4i32 (PPCvecinsertelt v4i32:$vDi, i32:$rA, i32:$rB)),
+            (VINSWLX $vDi, $rB, $rA)>;
+
+  def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi,  f32:$A, i32:$rB)),
+            (VINSWLX $vDi, $rB, Bitcast.FltToInt)>;
+  def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load iaddr:$rA)),
+                                    i32:$rB)),
+            (VINSWLX $vDi, $rB, (LWZ memri:$rA))>;
+  def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load iaddrX34:$rA)),
+                                    i32:$rB)),
+            (VINSWLX $vDi, $rB, (PLWZ memri34:$rA))>;
+  def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load xaddr:$rA)),
+                                    i32:$rB)),
+            (VINSWLX $vDi, $rB, (LWZX memrr:$rA))>;
+
+  // Immediate vector insert element
+  foreach i = [0, 1, 2, 3] in {
+    def : Pat<(v4i32 (PPCvecinsertelt v4i32:$vDi, i32:$rA, (i32 i))),
+              (VINSW $vDi, !mul(i, 4), $rA)>;
+    def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load iaddr:$rA)),
+                                     (i32 i))),
+              (VINSW $vDi, !mul(i, 4), (LWZ memri:$rA))>;
+    def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load iaddrX34:$rA)),
+                                     (i32 i))),
+              (VINSW $vDi, !mul(i, 4), (PLWZ memri34:$rA))>;
+    def : Pat<(v4f32 (PPCvecinsertelt v4f32:$vDi, (f32 (load xaddr:$rA)),
+                                     (i32 i))),
+              (VINSW $vDi, !mul(i, 4), (LWZX memrr:$rA))>;
+  }
+}
+
+let Predicates = [IsISA3_1, HasVSX, IsBigEndian, IsPPC64] in {
   // Indexed vector insert element
   def : Pat<(v16i8 (PPCvecinsertelt v16i8:$vDi, i32:$rA, i64:$rB)),
             (VINSBLX $vDi, InsertEltShift.Sub32Left0, $rA)>;
