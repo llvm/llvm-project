@@ -21,8 +21,14 @@
 # RUN:     FileCheck --check-prefix=UNDEF %s
 
 # UNDEF: error: undefined symbol: absent_literal
-# UNDEF-NEXT: >>> referenced from option -exported_symbol(s_list)
+# UNDEF-NEXT: >>> referenced by -exported_symbol(s_list)
 # UNDEF-NOT: error: {{.*}} absent_gl{{.}}b
+
+## Check that dynamic_lookup suppresses the error
+# RUN: %lld -dylib %t/default.o -undefined dynamic_lookup -o %t/dyn-lookup \
+# RUN:      -exported_symbol absent_literal
+# RUN: llvm-objdump --macho --syms %t/dyn-lookup | FileCheck %s --check-prefix=DYN
+# DYN: *UND* absent_literal
 
 ## Check that exported literal symbols are present in output's
 ## symbol table, even lazy symbols which would otherwise be omitted

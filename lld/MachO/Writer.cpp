@@ -1055,7 +1055,7 @@ void Writer::writeOutputFile() {
 }
 
 template <class LP> void Writer::run() {
-  if (config->entry)
+  if (config->entry && !isa<Undefined>(config->entry))
     prepareBranchTarget(config->entry);
   scanRelocations();
   if (in.stubHelper->isNeeded())
