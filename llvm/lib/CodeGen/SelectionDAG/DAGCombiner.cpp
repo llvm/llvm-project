@@ -20214,7 +20214,8 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   // Try to move vector bitcast after extract_subv by scaling extraction index:
   // extract_subv (bitcast X), Index --> bitcast (extract_subv X, Index')
   if (V.getOpcode() == ISD::BITCAST &&
-      V.getOperand(0).getValueType().isVector()) {
+      V.getOperand(0).getValueType().isVector() &&
+      (!LegalOperations || TLI.isOperationLegal(ISD::BITCAST, NVT))) {
     SDValue SrcOp = V.getOperand(0);
     EVT SrcVT = SrcOp.getValueType();
     unsigned SrcNumElts = SrcVT.getVectorMinNumElements();
