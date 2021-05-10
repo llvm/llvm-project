@@ -1525,7 +1525,9 @@ def Zn3WriteZeroIdiomEFLAGS : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<CheckSameRegOperand<0, 1>>, [Zn3WriteZeroLatency]>,
     SchedVar<NoSchedPred,                                 [WriteALU]>
 ]>;
-def : InstRW<[Zn3WriteZeroIdiomEFLAGS], (instrs CMP32rr, CMP32rr_REV,
+def : InstRW<[Zn3WriteZeroIdiomEFLAGS], (instrs CMP8rr,  CMP8rr_REV,
+                                                CMP16rr, CMP16rr_REV,
+                                                CMP32rr, CMP32rr_REV,
                                                 CMP64rr, CMP64rr_REV)>;
 
 def : IsZeroIdiomFunction<[
@@ -1540,7 +1542,9 @@ def : IsDepBreakingFunction<[
   // GPR
   DepBreakingClass<[ SBB32rr, SBB32rr_REV,
                      SBB64rr, SBB64rr_REV ], ZeroIdiomPredicate>,
-  DepBreakingClass<[ CMP32rr, CMP32rr_REV,
+  DepBreakingClass<[ CMP8rr,  CMP8rr_REV,
+                     CMP16rr, CMP16rr_REV,
+                     CMP32rr, CMP32rr_REV,
                      CMP64rr, CMP64rr_REV ], CheckSameRegOperand<0, 1> >,
 
 
