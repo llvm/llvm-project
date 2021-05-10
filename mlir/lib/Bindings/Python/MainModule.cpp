@@ -10,7 +10,7 @@
 
 #include "PybindUtils.h"
 
-#include "DialectLinalg.h"
+#include "Dialects.h"
 #include "ExecutionEngine.h"
 #include "Globals.h"
 #include "IRModule.h"
@@ -98,8 +98,10 @@ PYBIND11_MODULE(_mlir, m) {
       m.def_submodule("execution_engine", "MLIR JIT Execution Engine");
   populateExecutionEngineSubmodule(executionEngineModule);
 
-  // Define and populate Linalg submodule.
+  // Define and populate dialect submodules.
   auto dialectsModule = m.def_submodule("dialects");
   auto linalgModule = dialectsModule.def_submodule("linalg");
   populateDialectLinalgSubmodule(linalgModule);
+  populateDialectSparseTensorSubmodule(
+      dialectsModule.def_submodule("sparse_tensor"), irModule);
 }
