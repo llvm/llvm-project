@@ -247,8 +247,7 @@ OPTIONS
   * Does not add an empty line after the report for an address.
 
   * Does not replace the name of an inlined function with the name of the
-    topmost caller when inlined frames are not shown and :option:`--use-symbol-table`
-    is on.
+    topmost caller when inlined frames are not shown.
 
   * Prints an address's debug-data discriminator when it is non-zero. One way to
     produce discriminators is to compile with clang's -fdebug-info-for-profiling.
@@ -320,13 +319,6 @@ OPTIONS
   Print the file's path relative to the compilation directory, instead
   of the absolute path. If the command-line to the compiler included
   the full path, this will be the same as the default.
-
-.. _llvm-symbolizer-opt-use-symbol-table:
-
-.. option:: --use-symbol-table
-
-  Prefer function names stored in symbol table to function names in debug info
-  sections. Defaults to true.
 
 .. option:: --verbose
 
