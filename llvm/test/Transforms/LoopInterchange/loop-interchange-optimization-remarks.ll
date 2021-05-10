@@ -178,12 +178,12 @@ for.body4:                                        ; preds = %for.body4, %for.con
   br i1 %exitcond, label %for.body4, label %for.cond.loopexit
 }
 
-; CHECK: --- !Missed
+; CHECK: --- !Passed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            Dependence
+; CHECK-NEXT: Name:            Interchanged
 ; CHECK-NEXT: Function:        test03
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
+; CHECK-NEXT:   - String:          Loop interchanged with enclosing loop.
 ; CHECK-NEXT: ...
 
 ; DELIN: --- !Passed
