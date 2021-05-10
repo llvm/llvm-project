@@ -646,25 +646,47 @@ TEST_F(TestTypeSystemSwiftTypeRef, GetInstanceType) {
   NodeBuilder b(dem);
   {
     NodePointer n = b.GlobalType(
-            b.Node(Node::Kind::Metatype,
-              b.Node(Node::Kind::MetatypeRepresentation, "@thin"),
-              b.Node(Node::Kind::Type,
-                b.Node(Node::Kind::Structure,
-                  b.Node(Node::Kind::Module, "Swift"),
-                  b.Node(Node::Kind::Identifier, "String")))));
+        b.Node(Node::Kind::Metatype,
+               b.Node(Node::Kind::MetatypeRepresentation, "@thin"),
+               b.Node(Node::Kind::Type,
+                      b.Node(Node::Kind::Structure,
+                             b.Node(Node::Kind::Module, "Swift"),
+                             b.Node(Node::Kind::Identifier, "String")))));
 
     CompilerType t = GetCompilerType(b.Mangle(n));
-    CompilerType instance_type = m_swift_ts.GetInstanceType(t.GetOpaqueQualType());
+    CompilerType instance_type =
+        m_swift_ts.GetInstanceType(t.GetOpaqueQualType());
     ASSERT_EQ(instance_type.GetMangledTypeName(), "$sSSD");
   };
   {
     NodePointer n = b.GlobalType(
-        b.Node(Node::Kind::Structure,
-          b.Node(Node::Kind::Module, "Swift"),
-          b.Node(Node::Kind::Identifier, "String")));
+        b.Node(Node::Kind::Structure, b.Node(Node::Kind::Module, "Swift"),
+               b.Node(Node::Kind::Identifier, "String")));
 
     CompilerType t = GetCompilerType(b.Mangle(n));
-    CompilerType instance_type = m_swift_ts.GetInstanceType(t.GetOpaqueQualType());
+    CompilerType instance_type =
+        m_swift_ts.GetInstanceType(t.GetOpaqueQualType());
     ASSERT_EQ(instance_type.GetMangledTypeName(), "$sSSD");
   };
 };
+
+TEST_F(TestTypeSystemSwiftTypeRef, IsTypedefType) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  {
+    NodePointer n = b.GlobalType(
+        b.Node(Node::Kind::TypeAlias, b.Node(Node::Kind::Module, "module"),
+               b.Node(Node::Kind::Identifier, "Alias")));
+    CompilerType t = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(t.IsTypedefType());
+  };
+  {
+    NodePointer n = b.GlobalType(
+        b.Node(Node::Kind::Structure, b.Node(Node::Kind::Module, "module"),
+               b.Node(Node::Kind::Identifier, "SomeNotAliasedType")));
+    CompilerType t = GetCompilerType(b.Mangle(n));
+    ASSERT_FALSE(t.IsTypedefType());
+  };
+};
+
