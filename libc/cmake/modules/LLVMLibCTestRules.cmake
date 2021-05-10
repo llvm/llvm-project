@@ -127,6 +127,10 @@ function(add_libc_unittest target_name)
       ${LIBC_BUILD_DIR}
       ${LIBC_BUILD_DIR}/include
   )
+  target_compile_options(
+    ${fq_target_name}
+    PRIVATE ${LIBC_COMPILE_OPTIONS_DEFAULT}
+  )
   if(LIBC_UNITTEST_COMPILE_OPTIONS)
     target_compile_options(
       ${fq_target_name}
