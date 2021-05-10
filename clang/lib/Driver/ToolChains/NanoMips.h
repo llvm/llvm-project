@@ -11,6 +11,7 @@
 
 #include "Gnu.h"
 #include "clang/Driver/ToolChain.h"
+#include "llvm/Support/Debug.h"
 
 namespace clang {
 namespace driver {
@@ -20,6 +21,10 @@ class LLVM_LIBRARY_VISIBILITY NanoMips : public Generic_ELF {
  public:
   NanoMips(const Driver &D, const llvm::Triple &Triple,
            const llvm::opt::ArgList &Args);
+
+  void
+    AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                              llvm::opt::ArgStringList &CC1Args) const override;
 };
 
 }

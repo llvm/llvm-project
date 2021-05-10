@@ -26,6 +26,20 @@ NanoMips::NanoMips(const Driver &D, const llvm::Triple &Triple,
   GCCInstallation.init(Triple, Args);
   Multilibs = GCCInstallation.getMultilibs();
   SelectedMultilib = GCCInstallation.getMultilib();
-
 }
 
+
+void NanoMips::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                                         llvm::opt::ArgStringList &CC1Args) const
+{
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
+    return;
+
+  AddMultilibIncludeArgs(DriverArgs, CC1Args);
+
+  // Add the obvious include dir from the GCC install.
+  if (GCCInstallation.isValid()) {
+    addSystemInclude(DriverArgs, CC1Args, GCCInstallation.getInstallPath() + "/include");
+  }
+
+}
