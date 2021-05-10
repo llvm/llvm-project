@@ -6561,7 +6561,7 @@ const Stmt *CGOpenMPRuntime::getSingleCompoundChild(ASTContext &Ctx,
         continue;
       // Analyze declarations.
       if (const auto *DS = dyn_cast<DeclStmt>(S)) {
-        if (llvm::all_of(DS->decls(), [&Ctx](const Decl *D) {
+        if (llvm::all_of(DS->decls(), [](const Decl *D) {
               if (isa<EmptyDecl>(D) || isa<DeclContext>(D) ||
                   isa<TypeDecl>(D) || isa<PragmaCommentDecl>(D) ||
                   isa<PragmaDetectMismatchDecl>(D) || isa<UsingDecl>(D) ||
@@ -6572,10 +6572,7 @@ const Stmt *CGOpenMPRuntime::getSingleCompoundChild(ASTContext &Ctx,
               const auto *VD = dyn_cast<VarDecl>(D);
               if (!VD)
                 return false;
-              return VD->isConstexpr() ||
-                     ((VD->getType().isTrivialType(Ctx) ||
-                       VD->getType()->isReferenceType()) &&
-                      (!VD->hasInit() || isTrivial(Ctx, VD->getInit())));
+              return VD->hasGlobalStorage() || !VD->isUsed();
             }))
           continue;
       }
