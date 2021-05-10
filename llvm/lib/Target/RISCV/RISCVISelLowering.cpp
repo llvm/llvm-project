@@ -4437,21 +4437,23 @@ SDValue RISCVTargetLowering::lowerMSCATTER(SDValue Op,
   if (VT.isFixedLengthVector()) {
     // We need to use the larger of the value and index type to determine the
     // scalable type to use so we don't increase LMUL for any operand/result.
+    MVT ContainerVT;
     if (VT.bitsGE(IndexVT)) {
-      VT = getContainerForFixedLengthVector(VT);
+      ContainerVT = getContainerForFixedLengthVector(VT);
       IndexVT = MVT::getVectorVT(IndexVT.getVectorElementType(),
-                                 VT.getVectorElementCount());
+                                 ContainerVT.getVectorElementCount());
     } else {
       IndexVT = getContainerForFixedLengthVector(IndexVT);
-      VT = MVT::getVectorVT(VT.getVectorElementType(),
-                            IndexVT.getVectorElementCount());
+      ContainerVT = MVT::getVectorVT(VT.getVectorElementType(),
+                                     IndexVT.getVectorElementCount());
     }
 
     Index = convertToScalableVector(IndexVT, Index, DAG, Subtarget);
-    Val = convertToScalableVector(VT, Val, DAG, Subtarget);
+    Val = convertToScalableVector(ContainerVT, Val, DAG, Subtarget);
 
     if (!IsUnmasked) {
-      MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorElementCount());
+      MVT MaskVT =
+          MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
       Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
     }
 
