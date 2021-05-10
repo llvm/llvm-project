@@ -3493,7 +3493,7 @@ public:
     auto idxTy = builder.getIndexType();
     auto one = builder.createIntegerConstant(loc, idxTy, 1);
 
-    // Lambda to lower a constant abstract array box value.
+    // Lambda to lower an abstract array box value.
     auto doAbstractArray = [&](const auto &v) {
       // Compute the array size.
       auto arrSz = one;
