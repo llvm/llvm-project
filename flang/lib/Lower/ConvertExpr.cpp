@@ -2006,6 +2006,12 @@ private:
 };
 } // namespace
 
+//===----------------------------------------------------------------------===//
+//
+// Lowering of array expressions.
+//
+//===----------------------------------------------------------------------===//
+
 // Helper for changing the semantics in a given context. Preserves the current
 // semantics which is resumed when the "push" goes out of scope.
 #define PushSemantics(PushVal)                                                 \

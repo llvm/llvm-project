@@ -513,38 +513,7 @@ public:
     auto load = mlir::cast<ArrayLoadOp>(loadOp);
     LLVM_DEBUG(llvm::outs() << "does " << load << " have a conflict?\n");
     auto loc = update.getLoc();
-    if (analysis.hasPotentialConflict(loadOp)) {
-      LLVM_DEBUG(llvm::outs() << "Yes, conflict was found\n");
-      rewriter.setInsertionPoint(loadOp);
-      // Copy in.
-      llvm::SmallVector<mlir::Value> extents;
-      auto shapeOp = getOrReadExtentsAndShapeOp(loc, rewriter, load, extents);
-      auto allocmem = rewriter.create<AllocMemOp>(
-          loc, dyn_cast_ptrOrBoxEleTy(load.memref().getType()),
-          load.typeparams(), extents);
-      genArrayCopy(load.getLoc(), rewriter, allocmem, load.memref(), shapeOp,
-                   load.getType());
-      rewriter.setInsertionPoint(op);
-      auto coor = rewriter.create<ArrayCoorOp>(
-          loc, getEleTy(load.getType()), allocmem, shapeOp, load.slice(),
-          originateIndices(loc, rewriter, shapeOp, update.indices()),
-          load.typeparams());
-      rewriter.create<fir::StoreOp>(loc, update.merge(), coor);
-      auto *storeOp = useMap.lookup(loadOp);
-      rewriter.setInsertionPoint(storeOp);
-      // Copy out.
-      auto store = mlir::cast<ArrayMergeStoreOp>(storeOp);
-      genArrayCopy(store.getLoc(), rewriter, store.memref(), allocmem, shapeOp,
-                   load.getType());
-      rewriter.create<FreeMemOp>(loc, allocmem);
-    } else {
-      LLVM_DEBUG(llvm::outs() << "No, conflict wasn't found\n");
-      rewriter.setInsertionPoint(op);
-      auto coorTy = getEleTy(load.getType());
-      auto coor = rewriter.create<ArrayCoorOp>(
-          loc, coorTy, load.memref(), load.shape(), load.slice(),
-          originateIndices(loc, rewriter, load.shape(), update.indices()),
-          load.typeparams());
+    auto copyElement = [&](mlir::Value coor) {
       auto input = update.merge();
       if (auto inEleTy = fir::dyn_cast_ptrEleTy(input.getType())) {
         auto outEleTy = fir::unwrapSequenceType(update.getType());
@@ -560,6 +529,46 @@ public:
       } else {
         rewriter.create<fir::StoreOp>(loc, input, coor);
       }
+    };
+
+    if (analysis.hasPotentialConflict(loadOp)) {
+      // If there is a conflict between the arrays, then we copy the lhs array
+      // to a temporary, update the temporary, and copy the temporary back to
+      // the lhs array. This yields Fortran's copy-in copy-out array semantics.
+      LLVM_DEBUG(llvm::outs() << "Yes, conflict was found\n");
+      rewriter.setInsertionPoint(loadOp);
+      // Copy in.
+      llvm::SmallVector<mlir::Value> extents;
+      auto shapeOp = getOrReadExtentsAndShapeOp(loc, rewriter, load, extents);
+      auto allocmem = rewriter.create<AllocMemOp>(
+          loc, dyn_cast_ptrOrBoxEleTy(load.memref().getType()),
+          load.typeparams(), extents);
+      genArrayCopy(load.getLoc(), rewriter, allocmem, load.memref(), shapeOp,
+                   load.getType());
+      rewriter.setInsertionPoint(op);
+      auto coor = rewriter.create<ArrayCoorOp>(
+          loc, getEleTy(load.getType()), allocmem, shapeOp, load.slice(),
+          originateIndices(loc, rewriter, shapeOp, update.indices()),
+          load.typeparams());
+      copyElement(coor);
+      auto *storeOp = useMap.lookup(loadOp);
+      rewriter.setInsertionPoint(storeOp);
+      // Copy out.
+      auto store = mlir::cast<ArrayMergeStoreOp>(storeOp);
+      genArrayCopy(store.getLoc(), rewriter, store.memref(), allocmem, shapeOp,
+                   load.getType());
+      rewriter.create<FreeMemOp>(loc, allocmem);
+    } else {
+      // Otherwise, when there is no conflict (a possible loop-carried
+      // dependence), the lhs array can be updated in place.
+      LLVM_DEBUG(llvm::outs() << "No, conflict wasn't found\n");
+      rewriter.setInsertionPoint(op);
+      auto coorTy = getEleTy(load.getType());
+      auto coor = rewriter.create<ArrayCoorOp>(
+          loc, coorTy, load.memref(), load.shape(), load.slice(),
+          originateIndices(loc, rewriter, load.shape(), update.indices()),
+          load.typeparams());
+      copyElement(coor);
     }
     update.replaceAllUsesWith(load.getResult());
     rewriter.replaceOp(update, load.getResult());
