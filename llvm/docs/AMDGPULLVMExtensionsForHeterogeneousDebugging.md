@@ -27,6 +27,7 @@
     - [`DIExpr`](#diexpr)
       - [`DIOpReferrer`](#diopreferrer)
       - [`DIOpArg`](#dioparg)
+      - [`DIOpTypeObject`](#dioptypeobject)
       - [`DIOpConstant`](#diopconstant)
       - [`DIOpConvert`](#diopconvert)
       - [`DIOpReinterpret`](#diopreinterpret)
@@ -358,18 +359,42 @@ storage kinds.
 The definition of "global variable" is the one from the [LLVM Language Reference
 Manual][13] with the following addition.
 
-The optional `dbg.default` metadata attachment can be used to specify a
-`DILifetime` as the default lifetime segment of the global variable.
+The optional `dbg.def` metadata attachment can be used to specify a `DIFragment`
+termed a global variable fragment. The location description of a global variable
+fragment is a memory location description for a pointer to the global variable
+that references it.
+
+If a global variable fragment is referenced by more than one global variable
+`dbg.def` field, then it is not well-formed. If a global variable fragment is
+referenced by the `object` field of a `DILifetime` then it is not well-formed.
 
 _[Note: Global variables in LLVM exist for the duration of the program. The
-default lifetime can be used to specify the location for that entire duration.
-However, the location of a global variable may exist in a different location for
-a given part of a subprogram. This can be expressed using bounded lifetime
-segments. If the default lifetime segment is specified, it only applies for the
-program locations not covered by a bounded lifetime segment. If the default
-lifetime segment is not specified, and no bounded lifetime segment covers the
-program location, then the global variable location is the undefined location
-description for that program location.]_
+global variable fragment can be referenced by the `argObjects` field of a
+computed lifetime segment to specify the location for a `DIGlobalVariable` for
+that entire program duration. However, the global variable may exist in a
+different location for a given part of the subprogram. This can be expressed
+using bounded lifetime segments for the `DIGlobalVariable`. If the computed
+lifetime segment is specified, it only applies for the program locations not
+covered by a bounded lifetime segments. If the computed lifetime segment is not
+specified, and no bounded lifetime segment covers the program location, then the
+`DIGlobalVariable` location is the undefined location description for that
+program location. The bounded lifetime segments of a `DIGlobalVariable` can also
+reference the global variable fragment. This allows the same LLVM global
+variable to be used for different `DIGlobalVariable`s over different program
+locations.]_
+
+> TODO: Should there be a separate `DIGlobalFragment` for this since it is not
+> allowed to have any bounded lifetime segments referencing it? Of should a
+> `DIFragment` have a `kind` field that indicates if it is a `computed`,
+> `bounded`, or `global` fragment?
+
+> TODO: Should the global variable fragment be the location description of the
+> LLVM global variable rather than an implicit location desiption that is a
+> pointer to it? That would void needing the `DIOpDeref` when referencing the
+> global variable fragment. Seems can use `DIOpAddrOf` if need the address, and
+> all other uses need the location description of the actual LLVM global
+> variable. But DWARF has limitations in supporting `DIAddrOf` due to
+> limitations in creating implicit pointer location descriptions.
 
 ## Metadata
 
@@ -449,14 +474,24 @@ A `DICompositeType` represents the identity of a composite source program type.
 See [DICompositeType][14].
 
 For `DICompositeType` with a `tag` field of `DW_TAG_array_type`, the optional
-`dataLocation`, `associated`, and `rank` fields specify a `DILifetime` as a type
-lifetime segment. _[Note: The `argObjects` of the type lifetime segment can be
-used to specify other `DIVariable`s if necessary.]_
+`dataLocation`, `associated`, and `rank` fields specify a `DIFragment` which is
+termed a type property fragment.
+
+If a type property fragment is referenced by the `argObjects` field of a
+`DILifetime` or by more than one `DICompositeType` field, then the metadata is
+not well-formed.
+
+_[Note: The `DILifetime`(s) that reference the type property fragment specify
+the location description of the type property. Their `location` field expression
+can use the [`DIOpTypeObject`](#dioptypeobject) operation to get the location
+description of the instance of the composite type for which the property is
+being evaluated. Their `argObjects` field can be used to specify other
+`DIObject`s if necessary.]_
 
 ### `DILifetime`
 
 ```llvm
-distinct !DILifetime(object: !DIObject, location: !DIExpr, argObjects: {!DIObject,...})
+distinct !DILifetime(object: !DIObject, location: !DIExpr [, argObjects: {!DIObject,...} ] )
 ```
 
 Represents a lifetime segment of a data object. A lifetime segment specifies a
@@ -465,56 +500,60 @@ implicitly, and defines when the lifetime segment applies. The location
 description of a data object is defined by the, possibly empty, set of lifetime
 segments that reference it.
 
-There are four kinds of lifetime segment:
+There are two kinds of lifetime segment:
 
-- A _type lifetime segment_ is one referenced by a `DICompositeType`. If
-  referenced by more than one `DICompositeType` it is not well-formed. See
-  [`DICompositeType`](#dicompileunit).
-- A _default lifetime segment_ is one referenced by the `dbg.default` field of a
-  global variable. If referenced by more than one global variable it is not
-  well-formed. See [global variable](#global-variable).
 - A _bounded lifetime segment_ is one referenced by the first argument of a call
-  to the `llvm.dbg.def` or `llvm.dbg.kill` intrinsic. If not referenced by
-  exactly one call to the `llvm.dbg.def` intrinsic it is not well-formed. See
-  [`llvm.dbg.def`](#llvmdbgdef) and  [`llvm.dbg.kill`](#llvmdbgkill).
+  to the `llvm.dbg.def` or `llvm.dbg.kill` intrinsic.
+
+  A bounded lifetime segment is termed active if the current program location's
+  instruction is in the range covered. The call to the `llvm.dbg.def` intrinsic
+  which specifies the `DILifetime` is the start of the range, which extends
+  along all forward control flow paths until either a call to a `llvm.dbg.kill`
+  intrinsic which specifies the same `DILifetime`, or to the end of an exit
+  basic block.
+
+  If a bounded lifetime segment is not referenced by exactly one call `D` to the
+  `llvm.dbg.def` intrinsic, then the metadata is not well-formed.
+
+  A bounded lifetime segment can be referenced by zero or more `llvm.dbg.kill`
+  intrinsics `K`. If any member of `K` is not reachable from `D` by following
+  control flow, or if every control flow path for every member of `K` passes
+  through another member of `K`, then the metadata is not well-formed.
+
+  See [`llvm.dbg.def`](#llvmdbgdef) and [`llvm.dbg.kill`](#llvmdbgkill).
 - A _computed lifetime segment_ is one not referenced.
 
 A `DILifetime` which does not match exactly one of the above kinds is not
 well-formed.
 
-The `object` field is required for a default, bounded, and computed lifetime
-segment. It explicitly specifies the data object of the lifetime segment.
-
-The `object` field is omitted for a type lifetime segment. The data object is
-implicitly the instance of the type being accessed with the lifetime segment.
-
-A bounded lifetime segment is only active if the current program location's
-instruction is in the range covered. The call to the `llvm.dbg.def` intrinsic
-which specifies the `DILifetime` is the start of the range, which extends along
-all forward control flow paths until either a call to a `llvm.dbg.kill`
-intrinsic which specifies the same `DILifetime`, or to the end of an exit basic
-block.
+The required `object` field specifies the data object of the lifetime segment.
 
 The location description of a `DIObject` is a function of the current program
 location's instruction and the, possibly empty, set of lifetime segments with an
 `object` field that references the `DIObject`:
 
-- If there is a computed lifetime segment, then the location description is
-  comprised of the location description of the computed lifetime segment. If the
-  `DIObject` has any other lifetime segments it is not well-formed.
-- If the current program location is defined, and any bounded lifetime segment
-  is active, then the location description is comprised of all of the location
-  descriptions of all active bounded lifetime segments.
-- Otherwise, if there is a default lifetime segment, then the location
-  description is comprised of the location description of that default lifetime
-  segment.
+- If the `DIObject` is a global variable fragment, then the location description
+  is comprised of an implicit location description that has a pointer value to
+  the global variable that has a `dbg.def` metadata attachment that references
+  it. If a global variable fragment is referenced by more than one global
+  variable `dbg.def` metadata attachment or is referenced by the `object` field
+  of a `DILifetime`, then the metadata is not well-formed.
+- Otherwise, if the current program location is defined, and any bounded
+  lifetime segment is active, then the location description is comprised of all
+  of the location descriptions of all active bounded lifetime segments.
+- Otherwise, if there is a computed lifetime segment, then the location
+  description is comprised of the location description of the computed lifetime
+  segment. _[Note: A computed lifetime segment corresponds to the DWARF
+  `loclist` default location description.]
 - Otherwise, the location description is the undefined location description.
 
-_[Note: When multiple bounded lifetime segments for the same DIObject are active
-at a given instruction, it describes the situation where an object exists
-simultaneously in more than one place. For example, if a variable exists both in
-memory and in a register after the value is spilled but before the register is
-clobbered.]_
+_[Note: When multiple bounded lifetime segments for the same `DIObject` are
+active at a given instruction, it describes the situation where an object exists
+simultaneously in more than one place. For example, a variable may exist in
+memory and then be promoted to a register where it is only read before being
+clobbered and reverting to using the memory location. While promoted to the
+register, a debugger must update both the register and memory if the value of
+the variable needs to be changed.]_
 
 _[Note: A `DIObject` with no `DILifetime`s has an undefined location
 description. If the `argObjects` field of a `DILifetime` references such a
@@ -526,43 +565,41 @@ The optional `argObjects` field specifies a tuple of zero or more input
 `argObjects` field is equivalent to specifying it to be the empty tuple.
 
 The required `location` field specifies the expression which evaluates to the
-location description of the lifetime segment. The expression may refer to the
-arguments specified by the `argObjects` field using their position in the tuple.
+location description of the lifetime segment.
 
-The expression may refer to the lifetime segment's _referrer_ (see
-[`DIOpReferrer`](#diopreferrer)):
+_[Note: The expression may refer to an argument specified by the `argObjects`
+field using the [`DIOpArg`](#dioparg) operation and specifying its zero-based
+position in the tuple._
 
-- The referrer of a type lifetime segment is defined as the object that is being
-  accessed using the type.
-- The referrer of a default lifetime segment is defined as the global variable
-  that references it.
-- The referrer of a bounded lifetime segment is the LLVM entity specified by the
-  second argument of the call to the `llvm.dbg.def` intrinsic that references
-  it.
-- A computed lifetime segment does not have a referrer and the expression is not
-  well-formed if it uses the `DIOpReferrer` operation.
+_The expression of a bounded lifetime segment may refer to the LLVM entity
+specified by the second argument of the call to the `llvm.dbg.def` intrinsic
+that references it using the [`DIOpReferrer`](#diopreferrer) operation._
+
+_The expression of a lifetime segment may refer to the object instance of a type
+for which a type property is being specified using the
+[`DIOpTypeObject`](#dioptypeobject) operation._
+
+_The expression of a lifetime segment may refer to a global variable in LLVM by
+using the [`DIOpArg`](#dioparg) operation to refer to a global variable fragment
+referenced in the `argObjects` field.]_
 
 The reachable lifetime graph is the transitive closure of the graph formed by
 the edges:
 
-- from each `DIVariable` (termed root nodes and also termed reachable
+- From each `DIVariable` (termed root nodes and also termed reachable
   `DIObject`s) to the `DILifetime`s that reference them (termed reachable
-  `DILifetime`s)
-- from each `DICompositeType` (termed root nodes) to the `DILifetime`s that are
+  `DILifetime`s).
+- From each `DICompositeType` (termed root nodes) to the `DIFragment`s that are
   referenced by the optional `dataLocation`, `associated`, and `rank` fields
-  (termed reachable `DILifetime`s)
-- from each reachable `DILifetime` to the `DIObject`s referenced by their
+  (termed reachable `DIVariable`s).
+- From each reachable `DILifetime` to the `DIObject`s referenced by their
   `argObjects` fields (termed reachable `DIObject`s).
-- from each reachable `DIObject` to the reachable `DILifetime`s that reference
-  them (termed reachable `DILifetime`s)
+- From each reachable `DIObject` to the `DILifetime`s that reference them
+  (termed reachable `DILifetime`s).
 
 If the reachable lifetime graph has any cycles or if any `DILifetime` or
 `DIFragment` are not in the reachable lifetime graph then then the metadata is
 not well-formed.
-
-When the LLVM IR is serialized to bit code, all `DILifetime` and `DIFragment` in
-the reachable lifetime graph are retained even if not accessible by following
-references from root nodes.
 
 _[Note: In current debug information the `DILifetime` information is part of the
 debug intrinsics. A new lifetime for an object is defined by using a debug
@@ -731,7 +768,7 @@ DIOpReferrer(T:type)
 ```
 
 `L` is the location description of the referrer `R` of the associated lifetime
-segment `LS`. If `LS` is a computed lifetime segment, then the expression is
+segment `LS`. If `LS` is not a bounded lifetime segment, then the expression is
 ill-formed.
 
 If `bitsizeof(T)` is not equal to `bitsizeof(R)`, then the expression is not
@@ -758,6 +795,30 @@ object. This implies that when reading from them, any of the single location
 descriptions may be chosen, whereas when writing to them the write needs to be
 performed into each single location description.]_
 
+#### `DIOpTypeObject`
+
+```llvm
+DIOpTypeObject(T:type)
+{ -> L:T }
+```
+
+`LS` is the lifetime segment associated with the expression containing
+`DIOpTypeObject`. `TPF` is the type property fragment that is evaluating `LS`.
+`LT` is the `DIType` that has a type property field `TP` that references `TPF`.
+`L` is the location description of the instance `O` of an object of type `LT`
+for which the type property `TP` is being evaluated. See
+[`DICompositeType`](#dicompositetype).
+
+If `LS` can be evaluated other than to obtain the location description of a type
+property fragment, then the expression is ill-formed. _[Note: This implies that
+a type property fragment cannot be referenced by the `argObjects` field of a
+`DILifetime`.]_ If `bitsizeof(T)` is not equal to `bitsizeof(LT)`, then the
+expression is not well-formed.
+
+> TODO: Should a distinguished `DIFragment` be used for this like for LLVM
+> global variables? There could be a uniqued type object fragment referenced by
+> the `!llvm.dbg.typeObject` named metadata node of the LLVM module.
+
 #### `DIOpConstant`
 
 ```llvm
@@ -772,6 +833,12 @@ If `V` is `undef`, then `L` comprises one undefined location description `IL`.
 Otherwise, `L` comprises one implicit location description `IL`. `IL` specifies
 implicit location storage `ILS` and offset 0. `ILS` has value `V` and size
 `bitsizeof(T)`.
+
+> TODO: Can `V` be a label? `blockaddr(func, label)` seems to be a way to get
+> the address of a label in a function. Or can there be a `DIOpLabel(T:type
+> F:function L:label)` operation? Using `DILabel` does not seem the best choice
+> as it is intended for source program labels that have names. How is a LLVM
+> function label associated with a `DILabel`?
 
 #### `DIOpConvert`
 
@@ -850,6 +917,18 @@ and no padding between the parts.
 
 If the sum of `bitsizeof(TM)` for `M` from 1 to `N` does not equal
 `bitsizeof(T)`, then the expression is not well-formed.
+
+If there are multiple parts that ultimately, after expanding referenced
+composites, refer to the same bits of a non-implicit location storage, then the
+expression in not well-formed.
+
+_[Note: A debugger could not in general assign a value to such a composite
+location description as different parts of the assigned value may have different
+values but map to different parts of the composite location description that are
+associated with same bits of a location storage. Any given bits of location
+storage can only hold a single value at a time. An implicit location description
+does not permit assignment, and so the same bits of its value can be present in
+multiple parts of a composite location description.]_
 
 #### `DIOpAddrOf`
 
@@ -1393,34 +1472,52 @@ cases.
 ## Global Variable Broken Into Two Scalars
 
 ```llvm
-@g = i64 !dbg.default !2
+@g = i64 !dbg.def !2
 
 !llvm.dbg.cu = !{!0}
+!llvm.dbg.retainedNodes = !{!3}
 !0 = !DICompileUnit(..., globals: !{!1})
 !1 = !DIGlobalVariable("g")
-!2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpReferrer(i64 addrspace(1)*), DIDeref()))
+!2 = distinct DIFragment()
+!3 = distinct !DILifetime(
+       object: !1,
+       location: !DIExpr(
+         DIOpArg(0, i64 addrspace(1)*),
+         DIDeref()
+       ),
+       argObjects: {!2}
+     )
 ```
 
 Becomes:
 
 ```llvm
-@g.lo = i32 !dbg.default !4
-@g.hi = i32 !dbg.default !6
+@g.lo = i32 !dbg.def !2
+@g.hi = i32 !dbg.def !3
 
 !llvm.dbg.cu = !{!0}
-!llvm.dbg.retainedNodes = !{!2}
+!llvm.dbg.retainedNodes = !{!4}
 !0 = !DICompileUnit(..., globals: !{!1})
 !1 = !DIGlobalVariable("g")
-!2 = distinct !DILifetime(object: !1, location: !DIExpr(DIOpArg(1, i32), DIOpArg(0, i32), DIOpComposite(2, i64)), argObjects: {!3, !5})
+!2 = distinct !DIFragment()
 !3 = distinct !DIFragment()
-!4 = distinct !DILifetime(object: !3, location: !DIExpr(DIOpReferrer(i32 addrspace(1)*), DIDeref()))
-!5 = distinct !DIFragment()
-!6 = distinct !DILifetime(object: !5, location: !DIExpr(DIOpReferrer(i32 addrspace(1)*), DIDeref()))
+!4 = distinct !DILifetime(
+       object: !1,
+       location: !DIExpr(
+         DIOpArg(1, i32 addrspace(1)*),
+         DIDeref(),
+         DIOpArg(0, i32 addrspace(1)*),
+         DIDeref(),
+         DIOpComposite(2, i64)
+       ),
+       argObjects: {!2, !3}
+     )
 ```
 
-`!dbg.default` is "hidden" when any other lifetime is in effect. This allows,
-for example, a function to override the location of a global over some range
-without needing to "kill" and "def" a global lifetime.
+A function can specify the location of the global variable `!1` over some range
+by simply defining bounded lifetime segments that also reference `!1`. These
+will override the "default" location description specified by the computed
+lifetime segment `!4'.
 
 ## Induction Variable
 
@@ -1786,12 +1883,23 @@ after the common load.
 
 > TODO: Define algorithm for computing DWARF location descriptions and loclists.
 >
-> - Define rule for implicit pointers (`DIOpAddrof` applied to a referrer)
->   - Look for a compatible, existing program object
->   - If not, generate an artificial one
+> - Define rule for implicit pointers (`DIOpAddrof` operation applied to a
+>   ``DIOpReferrer`` operation):
+>   - Look for a compatible, existing program object.
+>   - If not, generate an artificial one.
 >   - This could be bubbled up to DWARF itself, to allow implicits to hold
 >     arbitrary location descriptions, eliminating the need for the artificial
 >     variable, and make translation simpler.
+> - Define rule for `DIFragment`:
+>   - If referenced by multiple `argObjects`, then use a `DW_TAG_DWARF_procedure`.
+>   - If only referenced by a `DIVariable` or `DIComposite` field, then use
+>     `expr` or `loclist` form that specifies the location description
+>     expression directly.
+> - Define rule for computed lifetime:
+>   - If referenced `DIObject` has no bounded lifetime segments, then use `expr`
+>     form.
+>   - If referenced `DIObject` has bounded lifetime segments, then use `loclist`
+>     form.
 
 ## Translating To PDB (CodeView)
 
