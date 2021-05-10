@@ -33,9 +33,9 @@ def riscv_fmv_x_anyexth
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class FPFMAH_rrr_frm<RISCVOpcode opcode, string opcodestr>
-    : RVInstR4<0b10, opcode, (outs FPR16:$rd),
-               (ins FPR16:$rs1, FPR16:$rs2, FPR16:$rs3, frmarg:$funct3),
-                opcodestr, "$rd, $rs1, $rs2, $rs3, $funct3">;
+    : RVInstR4Frm<0b10, opcode, (outs FPR16:$rd),
+                  (ins FPR16:$rs1, FPR16:$rs2, FPR16:$rs3, frmarg:$funct3),
+                  opcodestr, "$rd, $rs1, $rs2, $rs3, $funct3">;
 
 class FPFMAHDynFrmAlias<FPFMAH_rrr_frm Inst, string OpcodeStr>
     : InstAlias<OpcodeStr#" $rd, $rs1, $rs2, $rs3",

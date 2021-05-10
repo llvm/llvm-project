@@ -1713,6 +1713,13 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   if (Result->containsErrors())
     declarator.setInvalidType();
 
+  if (S.getLangOpts().OpenCL && Result->isOCLImage3dWOType() &&
+      !S.getOpenCLOptions().isSupported("cl_khr_3d_image_writes", S.getLangOpts())) {
+        S.Diag(DS.getTypeSpecTypeLoc(), diag::err_opencl_requires_extension)
+        << 0 << Result << "cl_khr_3d_image_writes";
+        declarator.setInvalidType();
+  }
+
   if (S.getLangOpts().OpenCL &&
       S.checkOpenCLDisabledTypeDeclSpec(DS, Result))
     declarator.setInvalidType(true);

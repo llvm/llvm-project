@@ -22,17 +22,7 @@ extern ATLMachine g_atl_machine;
 namespace core {
 void allow_access_to_all_gpu_agents(void *ptr);
 
-const char *getPlaceStr(atmi_devtype_t type) {
-  switch (type) {
-  case ATMI_DEVTYPE_CPU:
-    return "CPU";
-  case ATMI_DEVTYPE_GPU:
-    return "GPU";
-  default:
-    return NULL;
-  }
-}
-
+namespace {
 ATLProcessor &get_processor_by_mem_place(atmi_mem_place_t place) {
   int dev_id = place.dev_id;
   switch (place.dev_type) {
@@ -47,6 +37,7 @@ hsa_amd_memory_pool_t get_memory_pool_by_mem_place(atmi_mem_place_t place) {
   ATLProcessor &proc = get_processor_by_mem_place(place);
   return get_memory_pool(proc, place.mem_id);
 }
+} // namespace
 
 void register_allocation(void *ptr, size_t size, atmi_mem_place_t place) {
   if (place.dev_type == ATMI_DEVTYPE_CPU)

@@ -107,6 +107,9 @@ public:
   bool isFloatVector(unsigned Width) const {
     return isVector() && isFloat() && ElementBitwidth == Width;
   }
+  bool isFloat(unsigned Width) const {
+    return isFloat() && ElementBitwidth == Width;
+  }
 
 private:
   // Verify RVV vector type and set Valid.
@@ -765,11 +768,11 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
   }
   // Init RISC-V extensions
   for (const auto &T : OutInTypes) {
-    if (T->isFloatVector(16))
+    if (T->isFloatVector(16) || T->isFloat(16))
       RISCVExtensions |= RISCVExtension::Zfh;
-    else if (T->isFloatVector(32))
+    else if (T->isFloatVector(32) || T->isFloat(32))
       RISCVExtensions |= RISCVExtension::F;
-    else if (T->isFloatVector(64))
+    else if (T->isFloatVector(64) || T->isFloat(64))
       RISCVExtensions |= RISCVExtension::D;
   }
   if (RequiredExtension == "Zvamo")

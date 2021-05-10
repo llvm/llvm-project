@@ -927,9 +927,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   if (!get_threadpool_strategy(config->thinLTOJobs))
     error("--thinlto-jobs: invalid job count: " + config->thinLTOJobs);
 
-  config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
-                                       /*file=*/nullptr,
-                                       /*isWeakRef=*/false);
   for (const Arg *arg : args.filtered(OPT_u)) {
     config->explicitUndefineds.push_back(symtab->addUndefined(
         arg->getValue(), /*file=*/nullptr, /*isWeakRef=*/false));
@@ -1002,6 +999,11 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   config->undefinedSymbolTreatment = getUndefinedSymbolTreatment(args);
 
+  if (config->outputType == MH_EXECUTE)
+    config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
+                                         /*file=*/nullptr,
+                                         /*isWeakRef=*/false);
+
   config->librarySearchPaths =
       getLibrarySearchPaths(args, config->systemLibraryRoots);
   config->frameworkSearchPaths =
@@ -1059,6 +1061,12 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
           ">>> ignoring unexports");
     config->unexportedSymbols.clear();
   }
+  // Explicitly-exported literal symbols must be defined, but might
+  // languish in an archive if unreferenced elsewhere. Light a fire
+  // under those lazy symbols!
+  for (const CachedHashStringRef &cachedName : config->exportedSymbols.literals)
+    symtab->addUndefined(cachedName.val(), /*file=*/nullptr,
+                         /*isWeakRef=*/false);
 
   config->saveTemps = args.hasArg(OPT_save_temps);
 
@@ -1156,7 +1164,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       if (const Symbol *sym = symtab->find(cachedName))
         if (isa<Defined>(sym))
           continue;
-      error("undefined symbol " + cachedName.val() +
+      error("undefined symbol: " + cachedName.val() +
             "\n>>> referenced from option -exported_symbol(s_list)");
     }
 

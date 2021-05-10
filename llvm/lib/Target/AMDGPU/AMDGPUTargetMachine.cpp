@@ -502,8 +502,7 @@ void AMDGPUTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
   AAM.registerFunctionAnalysis<AMDGPUAA>();
 }
 
-void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
-                                                       bool DebugPassManager) {
+void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerPipelineParsingCallback(
       [this](StringRef PassName, ModulePassManager &PM,
              ArrayRef<PassBuilder::PipelineElement>) {
@@ -571,16 +570,16 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
     return false;
   });
 
-  PB.registerPipelineStartEPCallback([this, DebugPassManager](
-                                         ModulePassManager &PM,
-                                         PassBuilder::OptimizationLevel Level) {
-    FunctionPassManager FPM(DebugPassManager);
-    FPM.addPass(AMDGPUPropagateAttributesEarlyPass(*this));
-    FPM.addPass(AMDGPUUseNativeCallsPass());
-    if (EnableLibCallSimplify && Level != PassBuilder::OptimizationLevel::O0)
-      FPM.addPass(AMDGPUSimplifyLibCallsPass(*this));
-    PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-  });
+  PB.registerPipelineStartEPCallback(
+      [this](ModulePassManager &PM, PassBuilder::OptimizationLevel Level) {
+        FunctionPassManager FPM;
+        FPM.addPass(AMDGPUPropagateAttributesEarlyPass(*this));
+        FPM.addPass(AMDGPUUseNativeCallsPass());
+        if (EnableLibCallSimplify &&
+            Level != PassBuilder::OptimizationLevel::O0)
+          FPM.addPass(AMDGPUSimplifyLibCallsPass(*this));
+        PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+      });
 
   PB.registerPipelineEarlySimplificationEPCallback(
       [this](ModulePassManager &PM, PassBuilder::OptimizationLevel Level) {
@@ -605,12 +604,11 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
       });
 
   PB.registerCGSCCOptimizerLateEPCallback(
-      [this, DebugPassManager](CGSCCPassManager &PM,
-                               PassBuilder::OptimizationLevel Level) {
+      [this](CGSCCPassManager &PM, PassBuilder::OptimizationLevel Level) {
         if (Level == PassBuilder::OptimizationLevel::O0)
           return;
 
-        FunctionPassManager FPM(DebugPassManager);
+        FunctionPassManager FPM;
 
         // Add infer address spaces pass to the opt pipeline after inlining
         // but before SROA to increase SROA opportunities.
@@ -1261,8 +1259,8 @@ yaml::MachineFunctionInfo *GCNTargetMachine::createDefaultFuncInfoYAML() const {
 yaml::MachineFunctionInfo *
 GCNTargetMachine::convertFuncInfoToYAML(const MachineFunction &MF) const {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  return new yaml::SIMachineFunctionInfo(*MFI,
-                                         *MF.getSubtarget().getRegisterInfo());
+  return new yaml::SIMachineFunctionInfo(
+      *MFI, *MF.getSubtarget().getRegisterInfo(), MF);
 }
 
 bool GCNTargetMachine::parseMachineFunctionInfo(
@@ -1273,7 +1271,8 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
   MachineFunction &MF = PFS.MF;
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
-  MFI->initializeBaseYamlFields(YamlMFI);
+  if (MFI->initializeBaseYamlFields(YamlMFI, MF, PFS, Error, SourceRange))
+    return true;
 
   if (MFI->Occupancy == 0) {
     // Fixup the subtarget dependent default value.

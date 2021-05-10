@@ -1144,9 +1144,9 @@ bool AMDGPURegisterBankInfo::applyMappingLoad(MachineInstr &MI,
   unsigned LoadSize = LoadTy.getSizeInBits();
   const unsigned MaxNonSmrdLoadSize = 128;
 
-  const RegisterBank *PtrBank =
-    OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
-  if (PtrBank == &AMDGPU::SGPRRegBank) {
+  const RegisterBank *DstBank =
+      OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
+  if (DstBank == &AMDGPU::SGPRRegBank) {
     // There are some special cases that we need to look at for 32 bit and 96
     // bit SGPR loads otherwise we have nothing to do.
     if (LoadSize != 32 && LoadSize != 96)
@@ -3962,6 +3962,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cvt_pk_u8_f32:
     case Intrinsic::amdgcn_alignbit:
     case Intrinsic::amdgcn_alignbyte:
+    case Intrinsic::amdgcn_perm:
     case Intrinsic::amdgcn_fdot2:
     case Intrinsic::amdgcn_sdot2:
     case Intrinsic::amdgcn_udot2:

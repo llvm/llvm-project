@@ -31,7 +31,7 @@ public:
 
   /// Allocate a memory of size \p Size . \p HstPtr is used to assist the
   /// allocation.
-  virtual void *allocate(size_t Size, void *HstPtr) = 0;
+  virtual void *allocate(size_t Size, void *HstPtr, TargetAllocTy Kind) = 0;
 
   /// Delete the pointer \p TgtPtr on the device
   virtual int free(void *TgtPtr) = 0;
@@ -133,7 +133,7 @@ class MemoryManagerTy {
 
   /// Request memory from target device
   void *allocateOnDevice(size_t Size, void *HstPtr) const {
-    return DeviceAllocator.allocate(Size, HstPtr);
+    return DeviceAllocator.allocate(Size, HstPtr, TARGET_ALLOC_DEVICE);
   }
 
   /// Deallocate data on device

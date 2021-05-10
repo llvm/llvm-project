@@ -14,7 +14,6 @@
 #include "mlir/Target/SPIRV/Serialization.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVModule.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/Builders.h"
@@ -102,7 +101,7 @@ protected:
 
 protected:
   MLIRContext context;
-  spirv::OwningSPIRVModuleRef module;
+  OwningOpRef<spirv::ModuleOp> module;
   SmallVector<uint32_t, 0> binary;
 };
 

@@ -12,7 +12,9 @@
 
 using namespace llvm;
 
+namespace llvm {
 extern cl::opt<cl::boolOrDefault> UseLEB128Directives;
+}
 
 void MCAsmInfoXCOFF::anchor() {}
 
@@ -20,6 +22,11 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   IsLittleEndian = false;
   HasVisibilityOnlyWithLinkage = true;
   HasBasenameOnlyForFileDirective = false;
+
+  // For XCOFF, string constant consists of any number of characters enclosed in
+  // "" (double quotation marks).
+  HasPairedDoubleQuoteStringConstants = true;
+
   PrivateGlobalPrefix = "L..";
   PrivateLabelPrefix = "L..";
   SupportsQuotedNames = false;

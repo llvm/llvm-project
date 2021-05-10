@@ -99,7 +99,7 @@ struct FunctionNonEntryBlockConversion : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.startRootUpdate(op);
-    Region &region = mlir::impl::getFunctionBody(op);
+    Region &region = function_like_impl::getFunctionBody(op);
     SmallVector<TypeConverter::SignatureConversion, 2> conversions;
 
     for (Block &block : llvm::drop_begin(region, 1)) {

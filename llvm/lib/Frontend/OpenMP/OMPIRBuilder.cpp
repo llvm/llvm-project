@@ -1384,7 +1384,8 @@ getKmpcForDynamicNextForType(Type *Ty, Module &M, OpenMPIRBuilder &OMPBuilder) {
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createDynamicWorkshareLoop(
     const LocationDescription &Loc, CanonicalLoopInfo *CLI,
-    InsertPointTy AllocaIP, bool NeedsBarrier, Value *Chunk) {
+    InsertPointTy AllocaIP, OMPScheduleType SchedType, bool NeedsBarrier,
+    Value *Chunk) {
   // Set up the source location value for OpenMP runtime.
   Builder.SetCurrentDebugLocation(Loc.DL);
 
@@ -1431,7 +1432,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createDynamicWorkshareLoop(
   Value *ThreadNum = getOrCreateThreadID(SrcLoc);
 
   OMPScheduleType DynamicSchedType =
-      OMPScheduleType::DynamicChunked | OMPScheduleType::ModifierNonmonotonic;
+      SchedType | OMPScheduleType::ModifierNonmonotonic;
   Constant *SchedulingType =
       ConstantInt::get(I32Type, static_cast<int>(DynamicSchedType));
 

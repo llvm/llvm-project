@@ -83,6 +83,37 @@ class BoundNodes;
 
 namespace internal {
 
+/// A type-list implementation.
+///
+/// A "linked list" of types, accessible by using the ::head and ::tail
+/// typedefs.
+template <typename... Ts> struct TypeList {}; // Empty sentinel type list.
+
+template <typename T1, typename... Ts> struct TypeList<T1, Ts...> {
+  /// The first type on the list.
+  using head = T1;
+
+  /// A sublist with the tail. ie everything but the head.
+  ///
+  /// This type is used to do recursion. TypeList<>/EmptyTypeList indicates the
+  /// end of the list.
+  using tail = TypeList<Ts...>;
+};
+
+/// The empty type list.
+using EmptyTypeList = TypeList<>;
+
+/// Helper meta-function to determine if some type \c T is present or
+///   a parent type in the list.
+template <typename AnyTypeList, typename T> struct TypeListContainsSuperOf {
+  static const bool value =
+      std::is_base_of<typename AnyTypeList::head, T>::value ||
+      TypeListContainsSuperOf<typename AnyTypeList::tail, T>::value;
+};
+template <typename T> struct TypeListContainsSuperOf<EmptyTypeList, T> {
+  static const bool value = false;
+};
+
 /// Variadic function object.
 ///
 /// Most of the functions below that use VariadicFunction could be implemented
@@ -133,6 +164,35 @@ inline QualType getUnderlyingType(const FriendDecl &Node) {
 }
 inline QualType getUnderlyingType(const CXXBaseSpecifier &Node) {
   return Node.getType();
+}
+
+/// Unifies obtaining a `TypeSourceInfo` from different node types.
+template <typename T,
+          std::enable_if_t<TypeListContainsSuperOf<
+              TypeList<CXXBaseSpecifier, CXXCtorInitializer,
+                       CXXTemporaryObjectExpr, CXXUnresolvedConstructExpr,
+                       CompoundLiteralExpr, DeclaratorDecl, ObjCPropertyDecl,
+                       TemplateArgumentLoc, TypedefNameDecl>,
+              T>::value> * = nullptr>
+inline TypeSourceInfo *GetTypeSourceInfo(const T &Node) {
+  return Node.getTypeSourceInfo();
+}
+template <typename T,
+          std::enable_if_t<TypeListContainsSuperOf<
+              TypeList<CXXFunctionalCastExpr, ExplicitCastExpr>, T>::value> * =
+              nullptr>
+inline TypeSourceInfo *GetTypeSourceInfo(const T &Node) {
+  return Node.getTypeInfoAsWritten();
+}
+inline TypeSourceInfo *GetTypeSourceInfo(const BlockDecl &Node) {
+  return Node.getSignatureAsWritten();
+}
+inline TypeSourceInfo *GetTypeSourceInfo(const CXXNewExpr &Node) {
+  return Node.getAllocatedTypeSourceInfo();
+}
+inline TypeSourceInfo *
+GetTypeSourceInfo(const ClassTemplateSpecializationDecl &Node) {
+  return Node.getTypeAsWritten();
 }
 
 /// Unifies obtaining the FunctionProtoType pointer from both
@@ -1119,39 +1179,6 @@ struct IsBaseType {
 };
 template <typename T>
 const bool IsBaseType<T>::value;
-
-/// A type-list implementation.
-///
-/// A "linked list" of types, accessible by using the ::head and ::tail
-/// typedefs.
-template <typename... Ts> struct TypeList {}; // Empty sentinel type list.
-
-template <typename T1, typename... Ts> struct TypeList<T1, Ts...> {
-  /// The first type on the list.
-  using head = T1;
-
-  /// A sublist with the tail. ie everything but the head.
-  ///
-  /// This type is used to do recursion. TypeList<>/EmptyTypeList indicates the
-  /// end of the list.
-  using tail = TypeList<Ts...>;
-};
-
-/// The empty type list.
-using EmptyTypeList = TypeList<>;
-
-/// Helper meta-function to determine if some type \c T is present or
-///   a parent type in the list.
-template <typename AnyTypeList, typename T>
-struct TypeListContainsSuperOf {
-  static const bool value =
-      std::is_base_of<typename AnyTypeList::head, T>::value ||
-      TypeListContainsSuperOf<typename AnyTypeList::tail, T>::value;
-};
-template <typename T>
-struct TypeListContainsSuperOf<EmptyTypeList, T> {
-  static const bool value = false;
-};
 
 /// A "type list" that contains all types.
 ///

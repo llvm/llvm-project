@@ -252,7 +252,6 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
   // TODO(suderman): iterate through arguments, determine their types, output
   // names.
   SmallVector<std::string, 8> capture;
-  capture.push_back(opName.str());
 
   raw_indented_ostream::DelimitedScope scope(os);
 
@@ -265,8 +264,8 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
       auto leaf = tree.getArgAsLeaf(i);
       if (leaf.isAttrMatcher() || leaf.isConstantAttr()) {
         os << "Attribute " << argName << ";\n";
-      } else if (leaf.isOperandMatcher()) {
-        os << "Operation " << argName << ";\n";
+      } else {
+        os << "Value " << argName << ";\n";
       }
     }
 
@@ -278,20 +277,25 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
   std::tie(hasLocationDirective, locToUse) = getLocation(tree);
 
   auto fmt = tree.getNativeCodeTemplate();
-  auto nativeCodeCall =
-      std::string(tgfmt(fmt, &fmtCtx.addSubst("_loc", locToUse), capture));
+  if (fmt.count("$_self") != 1) {
+    PrintFatalError(loc, "NativeCodeCall must have $_self as argument for "
+                         "passing the defining Operation");
+  }
+
+  auto nativeCodeCall = std::string(tgfmt(
+      fmt, &fmtCtx.addSubst("_loc", locToUse).withSelf(opName.str()), capture));
 
   os << "if (failed(" << nativeCodeCall << ")) return ::mlir::failure();\n";
 
   for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
     auto name = tree.getArgName(i);
     if (!name.empty() && name != "_") {
-      os << formatv("{0} = {1};\n", name, capture[i + 1]);
+      os << formatv("{0} = {1};\n", name, capture[i]);
     }
   }
 
   for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
-    std::string argName = capture[i + 1];
+    std::string argName = capture[i];
 
     // Handle nested DAG construct first
     if (DagNode argTree = tree.getArgAsNestedDag(i)) {
@@ -302,9 +306,18 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
     }
 
     DagLeaf leaf = tree.getArgAsLeaf(i);
+
+    // The parameter for native function doesn't bind any constraints.
+    if (leaf.isUnspecified())
+      continue;
+
     auto constraint = leaf.getAsConstraint();
 
-    auto self = formatv("{0}", argName);
+    std::string self;
+    if (leaf.isAttrMatcher() || leaf.isConstantAttr())
+      self = argName;
+    else
+      self = formatv("{0}.getType()", argName);
     emitMatchCheck(
         opName,
         tgfmt(constraint.getConditionTemplate(), &fmtCtx.withSelf(self)),
@@ -362,6 +375,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
       os << "{\n";
 
       // Attributes don't count for getODSOperands.
+      // TODO: Operand is a Value, check if we should remove `getDefiningOp()`.
       os.indent() << formatv(
           "auto *{0} = "
           "(*{1}.getODSOperands({2}).begin()).getDefiningOp();\n",
@@ -929,7 +943,13 @@ std::string PatternEmitter::handleReplaceWithNativeCodeCall(DagNode tree,
                             << " replacement: " << attrs[i] << "\n");
   }
 
-  return std::string(tgfmt(fmt, &fmtCtx.addSubst("_loc", locToUse), attrs));
+  std::string symbol = tgfmt(fmt, &fmtCtx.addSubst("_loc", locToUse), attrs);
+  if (!tree.getSymbol().empty()) {
+    os << formatv("auto {0} = {1};\n", tree.getSymbol(), symbol);
+    symbol = tree.getSymbol().str();
+  }
+
+  return symbol;
 }
 
 int PatternEmitter::getNodeValueCount(DagNode node) {

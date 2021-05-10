@@ -208,7 +208,7 @@ class Addr2LineSymbolizer(Symbolizer):
       # EPIPE happens if addr2line exits early (which some implementations do
       # if an invalid file is passed).
       if e.errno == errno.EPIPE:
-        logging.debug("addr2line exited early (broken pipe), returncode=%d" % self.pipe.poll())
+        logging.debug(f"addr2line exited early (broken pipe) returncode={self.pipe.poll()}")
       else:
         logging.debug("unexpected I/O exception communicating with addr2line", exc_info=e)
       lines.append(('??', '??:0'))

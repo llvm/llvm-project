@@ -759,7 +759,7 @@ bool IndexingContext::indexDeclContext(const DeclContext *DC) {
 }
 
 bool IndexingContext::indexTopLevelDecl(const Decl *D) {
-  if (D->getLocation().isInvalid())
+  if (!D || D->getLocation().isInvalid())
     return true;
 
   if (isa<ObjCMethodDecl>(D))

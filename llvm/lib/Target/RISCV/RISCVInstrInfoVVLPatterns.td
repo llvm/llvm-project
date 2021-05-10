@@ -233,11 +233,6 @@ def sew16simm5 : ComplexPattern<XLenVT, 1, "selectRVVSimm5<16>", []>;
 def sew32simm5 : ComplexPattern<XLenVT, 1, "selectRVVSimm5<32>", []>;
 def sew64simm5 : ComplexPattern<XLenVT, 1, "selectRVVSimm5<64>", []>;
 
-def sew8uimm5  : ComplexPattern<XLenVT, 1, "selectRVVUimm5<8>",  []>;
-def sew16uimm5 : ComplexPattern<XLenVT, 1, "selectRVVUimm5<16>", []>;
-def sew32uimm5 : ComplexPattern<XLenVT, 1, "selectRVVUimm5<32>", []>;
-def sew64uimm5 : ComplexPattern<XLenVT, 1, "selectRVVUimm5<64>", []>;
-
 multiclass VPatBinaryVL_VV<SDNode vop,
                            string instruction_name,
                            ValueType result_type,
@@ -262,7 +257,7 @@ multiclass VPatBinaryVL_VV<SDNode vop,
                          (mask_type VMV0:$vm),
                          VLOpFrag)),
         (!cast<Instruction>(instruction_name#"_VV_"# vlmul.MX#"_MASK")
-                     (op_type (IMPLICIT_DEF)),
+                     (result_type (IMPLICIT_DEF)),
                      op_reg_class:$rs1,
                      op_reg_class:$rs2,
                      VMV0:$vm, GPR:$vl, sew)>;
@@ -295,7 +290,7 @@ multiclass VPatBinaryVL_XI<SDNode vop,
                      (mask_type VMV0:$vm),
                      VLOpFrag)),
         (!cast<Instruction>(instruction_name#_#suffix#_# vlmul.MX#"_MASK")
-                     (vop_type (IMPLICIT_DEF)),
+                     (result_type (IMPLICIT_DEF)),
                      vop_reg_class:$rs1,
                      xop_kind:$rs2,
                      VMV0:$vm, GPR:$vl, sew)>;
@@ -314,15 +309,9 @@ multiclass VPatBinaryVL_VV_VX<SDNode vop, string instruction_name> {
 }
 
 multiclass VPatBinaryVL_VV_VX_VI<SDNode vop, string instruction_name,
-                                 Operand ImmType = simm5> {
+                                 Operand ImmType = simm5>
+    : VPatBinaryVL_VV_VX<vop, instruction_name> {
   foreach vti = AllIntegerVectors in {
-    defm : VPatBinaryVL_VV<vop, instruction_name,
-                           vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                           vti.LMul, vti.RegClass, vti.RegClass>;
-    defm : VPatBinaryVL_XI<vop, instruction_name, "VX",
-                           vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                           vti.LMul, vti.RegClass, vti.RegClass,
-                           SplatPat, GPR>;
     defm : VPatBinaryVL_XI<vop, instruction_name, "VI",
                            vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
                            vti.LMul, vti.RegClass, vti.RegClass,

@@ -24,6 +24,10 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -DOMP5 -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefix=CHECK13
 // RUN: %clang_cc1 -fopenmp-simd -DOMP5 -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp-simd -DOMP5 -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK14
+
+/// The RUN using flags "-triple x86_64-apple-darwin10 -O1 -fopenmp-simd" generates different IR when there is no X86 backend.
+// REQUIRES: x86-registered-target
+
 #ifndef HEADER
 #define HEADER
 

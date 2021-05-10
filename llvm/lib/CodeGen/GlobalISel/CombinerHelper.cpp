@@ -482,10 +482,13 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
     if (UseMI.getOpcode() == TargetOpcode::G_SEXT ||
         UseMI.getOpcode() == TargetOpcode::G_ZEXT ||
         (UseMI.getOpcode() == TargetOpcode::G_ANYEXT)) {
+      const auto &MMO = **MI.memoperands_begin();
+      // For atomics, only form anyextending loads.
+      if (MMO.isAtomic() && UseMI.getOpcode() != TargetOpcode::G_ANYEXT)
+        continue;
       // Check for legality.
       if (LI) {
         LegalityQuery::MemDesc MMDesc;
-        const auto &MMO = **MI.memoperands_begin();
         MMDesc.SizeInBits = MMO.getSizeInBits();
         MMDesc.AlignInBits = MMO.getAlign().value() * 8;
         MMDesc.Ordering = MMO.getOrdering();
@@ -1033,9 +1036,9 @@ void CombinerHelper::applyCombineDivRem(MachineInstr &MI,
   OtherMI->eraseFromParent();
 }
 
-bool CombinerHelper::matchOptBrCondByInvertingCond(MachineInstr &MI) {
-  if (MI.getOpcode() != TargetOpcode::G_BR)
-    return false;
+bool CombinerHelper::matchOptBrCondByInvertingCond(MachineInstr &MI,
+                                                   MachineInstr *&BrCond) {
+  assert(MI.getOpcode() == TargetOpcode::G_BR);
 
   // Try to match the following:
   // bb1:
@@ -1056,7 +1059,7 @@ bool CombinerHelper::matchOptBrCondByInvertingCond(MachineInstr &MI) {
     return false;
   assert(std::next(BrIt) == MBB->end() && "expected G_BR to be a terminator");
 
-  MachineInstr *BrCond = &*std::prev(BrIt);
+  BrCond = &*std::prev(BrIt);
   if (BrCond->getOpcode() != TargetOpcode::G_BRCOND)
     return false;
 
@@ -1067,11 +1070,9 @@ bool CombinerHelper::matchOptBrCondByInvertingCond(MachineInstr &MI) {
          MBB->isLayoutSuccessor(BrCondTarget);
 }
 
-void CombinerHelper::applyOptBrCondByInvertingCond(MachineInstr &MI) {
+void CombinerHelper::applyOptBrCondByInvertingCond(MachineInstr &MI,
+                                                   MachineInstr *&BrCond) {
   MachineBasicBlock *BrTarget = MI.getOperand(0).getMBB();
-  MachineBasicBlock::iterator BrIt(MI);
-  MachineInstr *BrCond = &*std::prev(BrIt);
-
   Builder.setInstrAndDebugLoc(*BrCond);
   LLT Ty = MRI.getType(BrCond->getOperand(0).getReg());
   // FIXME: Does int/fp matter for this? If so, we might need to restrict

@@ -43,6 +43,13 @@ def AArch64PreLegalizerCombinerHelper: GICombinerHelper<
   let AdditionalArguments = [];
 }
 
+def AArch64O0PreLegalizerCombinerHelper: GICombinerHelper<
+  "AArch64GenO0PreLegalizerCombinerHelper", [optnone_combines]> {
+  let DisableRuleOption = "aarch64O0prelegalizercombiner-disable-rule";
+  let StateClass = "AArch64O0PreLegalizerCombinerHelperState";
+  let AdditionalArguments = [];
+}
+
 // Matchdata for combines which replace a G_SHUFFLE_VECTOR with a
 // target-specific opcode.
 def shuffle_matchdata : GIDefMatchData<"ShuffleVectorPseudo">;

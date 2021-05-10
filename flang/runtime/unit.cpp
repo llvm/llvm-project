@@ -53,8 +53,9 @@ ExternalFileUnit &ExternalFileUnit::LookUpOrCreate(
   return GetUnitMap().LookUpOrCreate(unit, terminator, wasExtant);
 }
 
-ExternalFileUnit &ExternalFileUnit::LookUpOrCreateAnonymous(
-    int unit, Direction dir, bool isUnformatted, const Terminator &terminator) {
+ExternalFileUnit &ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
+    Direction dir, std::optional<bool> isUnformatted,
+    const Terminator &terminator) {
   bool exists{false};
   ExternalFileUnit &result{
       GetUnitMap().LookUpOrCreate(unit, terminator, exists)};
@@ -204,16 +205,20 @@ UnitMap &ExternalFileUnit::GetUnitMap() {
   }
   Terminator terminator{__FILE__, __LINE__};
   IoErrorHandler handler{terminator};
-  unitMap = New<UnitMap>{terminator}().release();
-  ExternalFileUnit &out{ExternalFileUnit::CreateNew(6, terminator)};
+  UnitMap *newUnitMap{New<UnitMap>{terminator}().release()};
+  bool wasExtant{false};
+  ExternalFileUnit &out{newUnitMap->LookUpOrCreate(6, terminator, wasExtant)};
+  RUNTIME_CHECK(terminator, !wasExtant);
   out.Predefine(1);
   out.SetDirection(Direction::Output, handler);
   defaultOutput = &out;
-  ExternalFileUnit &in{ExternalFileUnit::CreateNew(5, terminator)};
+  ExternalFileUnit &in{newUnitMap->LookUpOrCreate(5, terminator, wasExtant)};
+  RUNTIME_CHECK(terminator, !wasExtant);
   in.Predefine(0);
   in.SetDirection(Direction::Input, handler);
   defaultInput = &in;
   // TODO: Set UTF-8 mode from the environment
+  unitMap = newUnitMap;
   return *unitMap;
 }
 
@@ -313,7 +318,7 @@ std::optional<char32_t> ExternalFileUnit::GetCurrentChar(
 
 const char *ExternalFileUnit::FrameNextInput(
     IoErrorHandler &handler, std::size_t bytes) {
-  RUNTIME_CHECK(handler, !isUnformatted);
+  RUNTIME_CHECK(handler, isUnformatted.has_value() && !*isUnformatted);
   if (static_cast<std::int64_t>(positionInRecord + bytes) <=
       recordLength.value_or(positionInRecord + bytes)) {
     auto at{recordOffsetInFrame_ + positionInRecord};
@@ -367,10 +372,13 @@ bool ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
         if (got < need) {
           handler.SignalEnd();
         }
-      } else if (isUnformatted) {
-        BeginSequentialVariableUnformattedInputRecord(handler);
-      } else { // formatted
-        BeginSequentialVariableFormattedInputRecord(handler);
+      } else {
+        RUNTIME_CHECK(handler, isUnformatted.has_value());
+        if (isUnformatted.value_or(false)) {
+          BeginSequentialVariableUnformattedInputRecord(handler);
+        } else { // formatted
+          BeginSequentialVariableFormattedInputRecord(handler);
+        }
       }
     }
   }
@@ -390,18 +398,21 @@ void ExternalFileUnit::FinishReadingRecord(IoErrorHandler &handler) {
     if (isFixedRecordLength) {
       frameOffsetInFile_ += recordOffsetInFrame_ + *recordLength;
       recordOffsetInFrame_ = 0;
-    } else if (isUnformatted) {
-      // Retain footer in frame for more efficient BACKSPACE
-      frameOffsetInFile_ += recordOffsetInFrame_ + *recordLength;
-      recordOffsetInFrame_ = sizeof(std::uint32_t);
-      recordLength.reset();
-    } else { // formatted
-      if (Frame()[recordOffsetInFrame_ + *recordLength] == '\r') {
-        ++recordOffsetInFrame_;
+    } else {
+      RUNTIME_CHECK(handler, isUnformatted.has_value());
+      if (isUnformatted.value_or(false)) {
+        // Retain footer in frame for more efficient BACKSPACE
+        frameOffsetInFile_ += recordOffsetInFrame_ + *recordLength;
+        recordOffsetInFrame_ = sizeof(std::uint32_t);
+        recordLength.reset();
+      } else { // formatted
+        if (Frame()[recordOffsetInFrame_ + *recordLength] == '\r') {
+          ++recordOffsetInFrame_;
+        }
+        recordOffsetInFrame_ += *recordLength + 1;
+        RUNTIME_CHECK(handler, Frame()[recordOffsetInFrame_ - 1] == '\n');
+        recordLength.reset();
       }
-      recordOffsetInFrame_ += *recordLength + 1;
-      RUNTIME_CHECK(handler, Frame()[recordOffsetInFrame_ - 1] == '\n');
-      recordLength.reset();
     }
   }
   ++currentRecordNumber;
@@ -414,17 +425,19 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
     return BeginReadingRecord(handler);
   } else { // Direction::Output
     bool ok{true};
+    RUNTIME_CHECK(handler, isUnformatted.has_value());
     if (isFixedRecordLength && recordLength) {
       // Pad remainder of fixed length record
       if (furthestPositionInRecord < *recordLength) {
         WriteFrame(
             frameOffsetInFile_, recordOffsetInFrame_ + *recordLength, handler);
         std::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord,
-            isUnformatted ? 0 : ' ', *recordLength - furthestPositionInRecord);
+            isUnformatted.value_or(false) ? 0 : ' ',
+            *recordLength - furthestPositionInRecord);
       }
     } else {
       positionInRecord = furthestPositionInRecord;
-      if (isUnformatted) {
+      if (isUnformatted.value_or(false)) {
         // Append the length of a sequential unformatted variable-length record
         // as its footer, then overwrite the reserved first four bytes of the
         // record with its length as its header.  These four bytes were skipped
@@ -433,14 +446,16 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
         // headers &/or footers
         std::uint32_t length;
         length = furthestPositionInRecord - sizeof length;
-        ok &= Emit(reinterpret_cast<const char *>(&length), sizeof length,
-            sizeof length, handler);
+        ok = ok &&
+            Emit(reinterpret_cast<const char *>(&length), sizeof length,
+                sizeof length, handler);
         positionInRecord = 0;
-        ok &= Emit(reinterpret_cast<const char *>(&length), sizeof length,
-            sizeof length, handler);
+        ok = ok &&
+            Emit(reinterpret_cast<const char *>(&length), sizeof length,
+                sizeof length, handler);
       } else {
         // Terminate formatted variable length record
-        ok &= Emit("\n", 1, 1, handler); // TODO: Windows CR+LF
+        ok = ok && Emit("\n", 1, 1, handler); // TODO: Windows CR+LF
       }
     }
     frameOffsetInFile_ +=
@@ -466,10 +481,13 @@ void ExternalFileUnit::BackspaceRecord(IoErrorHandler &handler) {
         --currentRecordNumber;
         if (isFixedRecordLength) {
           BackspaceFixedRecord(handler);
-        } else if (isUnformatted) {
-          BackspaceVariableUnformattedRecord(handler);
         } else {
-          BackspaceVariableFormattedRecord(handler);
+          RUNTIME_CHECK(handler, isUnformatted.has_value());
+          if (isUnformatted.value_or(false)) {
+            BackspaceVariableUnformattedRecord(handler);
+          } else {
+            BackspaceVariableFormattedRecord(handler);
+          }
         }
       }
     }

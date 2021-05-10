@@ -34,13 +34,14 @@ struct MutableModes {
   bool pad{true}; // PAD= mode on READ
   char delim{'\0'}; // DELIM=
   short scale{0}; // kP
+  bool inNamelist{false}; // skip ! comments
 };
 
 // A single edit descriptor extracted from a FORMAT
 struct DataEdit {
   char descriptor; // capitalized: one of A, I, B, O, Z, F, E(N/S/X), D, G
 
-  // Special internal data edit descriptors for list-directed I/O
+  // Special internal data edit descriptors for list-directed & NAMELIST I/O
   static constexpr char ListDirected{'g'}; // non-COMPLEX list-directed
   static constexpr char ListDirectedRealPart{'r'}; // emit "(r," or "(r;"
   static constexpr char ListDirectedImaginaryPart{'z'}; // emit "z)"

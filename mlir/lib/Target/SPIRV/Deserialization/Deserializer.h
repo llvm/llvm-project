@@ -14,7 +14,6 @@
 #define MLIR_TARGET_SPIRV_DESERIALIZER_H
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVModule.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -142,7 +141,7 @@ public:
   LogicalResult deserialize();
 
   /// Collects the final SPIR-V ModuleOp.
-  spirv::OwningSPIRVModuleRef collect();
+  OwningOpRef<spirv::ModuleOp> collect();
 
 private:
   //===--------------------------------------------------------------------===//
@@ -150,7 +149,7 @@ private:
   //===--------------------------------------------------------------------===//
 
   /// Initializes the `module` ModuleOp in this deserializer instance.
-  spirv::OwningSPIRVModuleRef createModuleOp();
+  OwningOpRef<spirv::ModuleOp> createModuleOp();
 
   /// Processes SPIR-V module header in `binary`.
   LogicalResult processHeader();
@@ -507,7 +506,7 @@ private:
   Location unknownLoc;
 
   /// The SPIR-V ModuleOp.
-  spirv::OwningSPIRVModuleRef module;
+  OwningOpRef<spirv::ModuleOp> module;
 
   /// The current function under construction.
   Optional<spirv::FuncOp> curFunction;
@@ -561,8 +560,10 @@ private:
   // Header block to its merge (and continue) target mapping.
   BlockMergeInfoMap blockMergeInfo;
 
-  // Block to its phi (block argument) mapping.
-  DenseMap<Block *, BlockPhiInfo> blockPhiInfo;
+  // For each pair of {predecessor, target} blocks, maps the pair of blocks to
+  // the list of phi arguments passed from predecessor to target.
+  DenseMap<std::pair<Block * /*predecessor*/, Block * /*target*/>, BlockPhiInfo>
+      blockPhiInfo;
 
   // Result <id> to value mapping.
   DenseMap<uint32_t, Value> valueMap;

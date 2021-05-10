@@ -9,6 +9,30 @@ CHECK: hello::rust
 CHECK: a::b::c
        _RNvNvC1a1b1c
 
+; Closure namespace
+
+CHECK: crate::{closure#0}
+       _RNCC5crate0
+
+CHECK: crate::{closure#1}
+       _RNCC5crates_0
+
+CHECK: crate::{closure:foo#0}
+       _RNCC5crate3foo
+
+CHECK: crate::{closure:foo#1}
+       _RNCC5crates_3foo
+
+; Shim namespace
+
+CHECK: crate::{shim:reify#0}
+       _RNSC5crate5reify
+
+; Unrecognized special namespace
+
+CHECK: crate::{Z:ident#10}
+       _RNZC5crates8_5ident
+
 ; Invalid mangled characters
 
 CHECK: _RNvC2a.1c
@@ -16,6 +40,11 @@ CHECK: _RNvC2a.1c
 
 CHECK: _RNvC2a$1c
        _RNvC2a$1c
+
+; Invalid namespace (not in [a-zA-Z]).
+
+CHECK: _RN_C5crate4main
+       _RN_C5crate4main
 
 ; Invalid identifier length (UINT64_MAX + 3, which happens to be ok after a wraparound).
 

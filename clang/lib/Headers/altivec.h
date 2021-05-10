@@ -1750,7 +1750,7 @@ vec_cmpeq(vector bool long long __a, vector bool long long __b) {
   return (vector bool long long)__builtin_altivec_vcmpequd(
       (vector long long)__a, (vector long long)__b);
 }
-#else
+#elif defined(__VSX__)
 static __inline__ vector bool long long __ATTRS_o_ai
 vec_cmpeq(vector signed long long __a, vector signed long long __b) {
   vector bool int __wordcmp =
@@ -2062,7 +2062,7 @@ vec_cmpne(vector unsigned long long __a, vector unsigned long long __b) {
   return (vector bool long long)
     ~(__builtin_altivec_vcmpequd((vector long long)__a, (vector long long)__b));
 }
-#else
+#elif defined(__VSX__)
 static __inline__ vector bool long long __ATTRS_o_ai
 vec_cmpne(vector bool long long __a, vector bool long long __b) {
   return (vector bool long long)~(
@@ -2132,15 +2132,15 @@ static __inline__ vector bool long long __ATTRS_o_ai
 vec_cmpgt(vector unsigned long long __a, vector unsigned long long __b) {
   return (vector bool long long)__builtin_altivec_vcmpgtud(__a, __b);
 }
-#else
+#elif defined(__VSX__)
 static __inline__ vector bool long long __ATTRS_o_ai
 vec_cmpgt(vector signed long long __a, vector signed long long __b) {
-  vector signed int __sgtw =
-      vec_cmpgt((vector signed int)__a, (vector signed int)__b);
-  vector unsigned int __ugtw =
-      vec_cmpgt((vector unsigned int)__a, (vector unsigned int)__b);
-  vector bool int __eqw =
-      vec_cmpeq((vector signed int)__a, (vector signed int)__b);
+  vector signed int __sgtw = (vector signed int)vec_cmpgt(
+      (vector signed int)__a, (vector signed int)__b);
+  vector unsigned int __ugtw = (vector unsigned int)vec_cmpgt(
+      (vector unsigned int)__a, (vector unsigned int)__b);
+  vector unsigned int __eqw = (vector unsigned int)vec_cmpeq(
+      (vector signed int)__a, (vector signed int)__b);
 #ifdef __LITTLE_ENDIAN__
   __ugtw = __builtin_shufflevector(__ugtw, __ugtw, 3, 0, 1, 2) & __eqw;
   __sgtw |= (vector signed int)__ugtw;
@@ -2156,10 +2156,10 @@ vec_cmpgt(vector signed long long __a, vector signed long long __b) {
 
 static __inline__ vector bool long long __ATTRS_o_ai
 vec_cmpgt(vector unsigned long long __a, vector unsigned long long __b) {
-  vector unsigned int __ugtw =
-      vec_cmpgt((vector unsigned int)__a, (vector unsigned int)__b);
-  vector bool int __eqw =
-      vec_cmpeq((vector signed int)__a, (vector signed int)__b);
+  vector unsigned int __ugtw = (vector unsigned int)vec_cmpgt(
+      (vector unsigned int)__a, (vector unsigned int)__b);
+  vector unsigned int __eqw = (vector unsigned int)vec_cmpeq(
+      (vector signed int)__a, (vector signed int)__b);
 #ifdef __LITTLE_ENDIAN__
   __eqw = __builtin_shufflevector(__ugtw, __ugtw, 3, 0, 1, 2) & __eqw;
   __ugtw |= __eqw;
@@ -2250,7 +2250,6 @@ static __inline__ vector bool long long __ATTRS_o_ai
 vec_cmpge(vector double __a, vector double __b) {
   return (vector bool long long)__builtin_vsx_xvcmpgedp(__a, __b);
 }
-#endif
 
 static __inline__ vector bool long long __ATTRS_o_ai
 vec_cmpge(vector signed long long __a, vector signed long long __b) {
@@ -2261,6 +2260,7 @@ static __inline__ vector bool long long __ATTRS_o_ai
 vec_cmpge(vector unsigned long long __a, vector unsigned long long __b) {
   return ~(vec_cmpgt(__b, __a));
 }
+#endif
 
 #if defined(__POWER10_VECTOR__) && defined(__SIZEOF_INT128__)
 static __inline__ vector bool __int128 __ATTRS_o_ai
@@ -2372,7 +2372,6 @@ static __inline__ vector bool long long __ATTRS_o_ai
 vec_cmple(vector double __a, vector double __b) {
   return vec_cmpge(__b, __a);
 }
-#endif
 
 static __inline__ vector bool long long __ATTRS_o_ai
 vec_cmple(vector signed long long __a, vector signed long long __b) {
@@ -2383,6 +2382,7 @@ static __inline__ vector bool long long __ATTRS_o_ai
 vec_cmple(vector unsigned long long __a, vector unsigned long long __b) {
   return vec_cmpge(__b, __a);
 }
+#endif
 
 #if defined(__POWER10_VECTOR__) && defined(__SIZEOF_INT128__)
 static __inline__ vector bool __int128 __ATTRS_o_ai
@@ -2452,6 +2452,7 @@ vec_cmplt(vector unsigned __int128 __a, vector unsigned __int128 __b) {
 }
 #endif
 
+#ifdef __VSX__
 static __inline__ vector bool long long __ATTRS_o_ai
 vec_cmplt(vector signed long long __a, vector signed long long __b) {
   return vec_cmpgt(__b, __a);
@@ -2461,6 +2462,7 @@ static __inline__ vector bool long long __ATTRS_o_ai
 vec_cmplt(vector unsigned long long __a, vector unsigned long long __b) {
   return vec_cmpgt(__b, __a);
 }
+#endif
 
 #ifdef __POWER8_VECTOR__
 /* vec_popcnt */
@@ -8842,10 +8844,12 @@ vec_sl(vector unsigned long long __a, vector unsigned long long __b) {
                                                       (vector signed int)__b);
 #ifdef __LITTLE_ENDIAN__
   __rightelt = (vector signed long long)__builtin_altivec_vsl(
-      (vector signed int)__rightelt, vec_vspltb((vector unsigned char)__b, 0));
+      (vector signed int)__rightelt,
+      (vector signed int)vec_vspltb((vector unsigned char)__b, 0));
 #else
   __rightelt = (vector signed long long)__builtin_altivec_vsl(
-      (vector signed int)__rightelt, vec_vspltb((vector unsigned char)__b, 15));
+      (vector signed int)__rightelt,
+      (vector signed int)vec_vspltb((vector unsigned char)__b, 15));
 #endif
   __a = __builtin_shufflevector(__a, __a, 1, 0);
   __b = __builtin_shufflevector(__b, __b, 1, 0);
@@ -8854,12 +8858,16 @@ vec_sl(vector unsigned long long __a, vector unsigned long long __b) {
                                                       (vector signed int)__b);
 #ifdef __LITTLE_ENDIAN__
   __leftelt = (vector signed long long)__builtin_altivec_vsl(
-      (vector signed int)__leftelt, vec_vspltb((vector unsigned char)__b, 0));
-  return __builtin_shufflevector(__rightelt, __leftelt, 0, 2);
+      (vector signed int)__leftelt,
+      (vector signed int)vec_vspltb((vector unsigned char)__b, 0));
+  return (vector unsigned long long)__builtin_shufflevector(__rightelt,
+                                                            __leftelt, 0, 2);
 #else
   __leftelt = (vector signed long long)__builtin_altivec_vsl(
-      (vector signed int)__leftelt, vec_vspltb((vector unsigned char)__b, 15));
-  return __builtin_shufflevector(__leftelt, __rightelt, 1, 3);
+      (vector signed int)__leftelt,
+      (vector signed int)vec_vspltb((vector unsigned char)__b, 15));
+  return (vector unsigned long long)__builtin_shufflevector(__leftelt,
+                                                            __rightelt, 1, 3);
 #endif
 }
 
@@ -10341,30 +10349,33 @@ vec_sr(vector unsigned long long __a, vector unsigned long long __b) {
   // However the shift amount must be in the right doubleword.
   // The other element needs to be swapped into the left doubleword and
   // shifted. Then the left doublewords of the two result vectors are merged.
-  vector signed long long __swapshift = __builtin_shufflevector(__b, __b, 1, 0);
-  vector signed long long __leftelt =
-      (vector signed long long)__builtin_altivec_vsro((vector signed int)__a,
-                                                      __swapshift);
+  vector unsigned long long __swapshift =
+      __builtin_shufflevector(__b, __b, 1, 0);
+  vector unsigned long long __leftelt =
+      (vector unsigned long long)__builtin_altivec_vsro(
+          (vector signed int)__a, (vector signed int)__swapshift);
 #ifdef __LITTLE_ENDIAN__
-  __leftelt = (vector signed long long)__builtin_altivec_vsr(
+  __leftelt = (vector unsigned long long)__builtin_altivec_vsr(
       (vector signed int)__leftelt,
-      vec_vspltb((vector unsigned char)__swapshift, 0));
+      (vector signed int)vec_vspltb((vector unsigned char)__swapshift, 0));
 #else
-  __leftelt = (vector signed long long)__builtin_altivec_vsr(
+  __leftelt = (vector unsigned long long)__builtin_altivec_vsr(
       (vector signed int)__leftelt,
-      vec_vspltb((vector unsigned char)__swapshift, 15));
+      (vector signed int)vec_vspltb((vector unsigned char)__swapshift, 15));
 #endif
   __a = __builtin_shufflevector(__a, __a, 1, 0);
-  vector signed long long __rightelt =
-      (vector signed long long)__builtin_altivec_vsro((vector signed int)__a,
-                                                      (vector signed int)__b);
+  vector unsigned long long __rightelt =
+      (vector unsigned long long)__builtin_altivec_vsro((vector signed int)__a,
+                                                        (vector signed int)__b);
 #ifdef __LITTLE_ENDIAN__
-  __rightelt = (vector signed long long)__builtin_altivec_vsr(
-      (vector signed int)__rightelt, vec_vspltb((vector unsigned char)__b, 0));
+  __rightelt = (vector unsigned long long)__builtin_altivec_vsr(
+      (vector signed int)__rightelt,
+      (vector signed int)vec_vspltb((vector unsigned char)__b, 0));
   return __builtin_shufflevector(__rightelt, __leftelt, 1, 3);
 #else
-  __rightelt = (vector signed long long)__builtin_altivec_vsr(
-      (vector signed int)__rightelt, vec_vspltb((vector unsigned char)__b, 15));
+  __rightelt = (vector unsigned long long)__builtin_altivec_vsr(
+      (vector signed int)__rightelt,
+      (vector signed int)vec_vspltb((vector unsigned char)__b, 15));
   return __builtin_shufflevector(__leftelt, __rightelt, 0, 2);
 #endif
 }

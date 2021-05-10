@@ -4392,7 +4392,6 @@ void InnerLoopVectorizer::fixReduction(VPWidenPHIRecipe *PhiR,
   // entire expression in the smaller type.
   if (VF.isVector() && PhiTy != RdxDesc.getRecurrenceType()) {
     assert(!IsInLoopReductionPhi && "Unexpected truncated inloop reduction!");
-    assert(!VF.isScalable() && "scalable vectors not yet supported.");
     Type *RdxVecTy = VectorType::get(RdxDesc.getRecurrenceType(), VF);
     Builder.SetInsertPoint(
         LI->getLoopFor(LoopVectorBody)->getLoopLatch()->getTerminator());
@@ -8901,11 +8900,10 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
              Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
       VPValue *StartV = Operands[0];
 
-      // Record the PHI and the incoming value from the backedge, so we can add
-      // the incoming value from the backedge after all recipes have been
-      // created.
       auto *PhiRecipe = new VPWidenPHIRecipe(Phi, RdxDesc, *StartV);
       PhisToFix.push_back(PhiRecipe);
+      // Record the incoming value from the backedge, so we can add the incoming
+      // value from the backedge after all recipes have been created.
       recordRecipeOf(cast<Instruction>(
           Phi->getIncomingValueForBlock(OrigLoop->getLoopLatch())));
       return toVPRecipeResult(PhiRecipe);
@@ -9117,24 +9115,30 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     VPRecipeBase *Sink = RecipeBuilder.getRecipe(Entry.first);
     VPRecipeBase *Target = RecipeBuilder.getRecipe(Entry.second);
 
+    auto GetReplicateRegion = [](VPRecipeBase *R) -> VPRegionBlock * {
+      auto *Region =
+          dyn_cast_or_null<VPRegionBlock>(R->getParent()->getParent());
+      if (Region && Region->isReplicator())
+        return Region;
+      return nullptr;
+    };
+
     // If the target is in a replication region, make sure to move Sink to the
     // block after it, not into the replication region itself.
-    if (auto *Region =
-            dyn_cast_or_null<VPRegionBlock>(Target->getParent()->getParent())) {
-      if (Region->isReplicator()) {
-        assert(Region->getNumSuccessors() == 1 && "Expected SESE region!");
-        VPBasicBlock *NextBlock =
-            cast<VPBasicBlock>(Region->getSuccessors().front());
-        Sink->moveBefore(*NextBlock, NextBlock->getFirstNonPhi());
-        continue;
-      }
+    if (auto *TargetRegion = GetReplicateRegion(Target)) {
+      assert(TargetRegion->getNumSuccessors() == 1 && "Expected SESE region!");
+      assert(!GetReplicateRegion(Sink) &&
+             "cannot sink a region into another region yet");
+      VPBasicBlock *NextBlock =
+          cast<VPBasicBlock>(TargetRegion->getSuccessors().front());
+      Sink->moveBefore(*NextBlock, NextBlock->getFirstNonPhi());
+      continue;
     }
 
-    auto *SinkRegion =
-        dyn_cast_or_null<VPRegionBlock>(Sink->getParent()->getParent());
+    auto *SinkRegion = GetReplicateRegion(Sink);
     // Unless the sink source is in a replicate region, sink the recipe
     // directly.
-    if (!SinkRegion || !SinkRegion->isReplicator()) {
+    if (!SinkRegion) {
       Sink->moveAfter(Target);
       continue;
     }

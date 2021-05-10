@@ -224,7 +224,7 @@ void OperationState::addRegions(
 //===----------------------------------------------------------------------===//
 
 detail::OperandStorage::OperandStorage(Operation *owner, ValueRange values)
-    : representation(0) {
+    : inlineStorage() {
   auto &inlineStorage = getInlineStorage();
   inlineStorage.numOperands = inlineStorage.capacity = values.size();
   auto *operandPtrBegin = getTrailingObjects<OpOperand>();
@@ -380,8 +380,7 @@ MutableArrayRef<OpOperand> detail::OperandStorage::resize(Operation *owner,
   }
 
   // Update the storage representation to use the new dynamic storage.
-  representation = reinterpret_cast<intptr_t>(newStorage);
-  representation |= DynamicStorageBit;
+  dynamicStorage.setPointerAndInt(newStorage, true);
   return newOperands;
 }
 

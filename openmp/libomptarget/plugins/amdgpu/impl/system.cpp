@@ -172,12 +172,12 @@ atmi_machine_t *Runtime::GetMachineInfo() {
   return &g_atmi_machine;
 }
 
-void atl_set_atmi_initialized() {
+static void atl_set_atmi_initialized() {
   // FIXME: thread safe? locks?
   g_atmi_initialized = true;
 }
 
-void atl_reset_atmi_initialized() {
+static void atl_reset_atmi_initialized() {
   // FIXME: thread safe? locks?
   g_atmi_initialized = false;
 }
@@ -233,7 +233,7 @@ atmi_status_t Runtime::Finalize() {
   return ATMI_STATUS_SUCCESS;
 }
 
-void atmi_init_context_structs() {
+static void atmi_init_context_structs() {
   atlc_p = &atlc;
   atlc.struct_initialized = true; /* This only gets called one time */
   atlc.g_hsa_initialized = false;
@@ -609,7 +609,7 @@ atmi_status_t atl_init_gpu_context() {
     return ATMI_STATUS_SUCCESS;
 }
 
-bool isImplicit(KernelArgMD::ValueKind value_kind) {
+static bool isImplicit(KernelArgMD::ValueKind value_kind) {
   switch (value_kind) {
   case KernelArgMD::ValueKind::HiddenGlobalOffsetX:
   case KernelArgMD::ValueKind::HiddenGlobalOffsetY:

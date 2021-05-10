@@ -73,7 +73,7 @@ public:
 };
 
 struct Configuration {
-  Symbol *entry;
+  Symbol *entry = nullptr;
   bool hasReexports = false;
   bool allLoad = false;
   bool forceLoadObjC = false;

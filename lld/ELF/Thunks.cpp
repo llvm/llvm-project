@@ -312,6 +312,8 @@ public:
   uint32_t size() override { return getMayUseShortThunk() ? 8 : 32; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
+  bool isCompatibleWith(const InputSection &isec,
+                        const Relocation &rel) const override;
 
 private:
   // Transitioning from long to short can create layout oscillations in
@@ -333,6 +335,8 @@ public:
   uint32_t size() override { return 32; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
+  bool isCompatibleWith(const InputSection &isec,
+                        const Relocation &rel) const override;
 };
 
 // PPC64 PC-relative PLT Stub
@@ -965,6 +969,11 @@ void PPC64R2SaveStub::addSymbols(ThunkSection &isec) {
   s->needsTocRestore = true;
 }
 
+bool PPC64R2SaveStub::isCompatibleWith(const InputSection &isec,
+                                       const Relocation &rel) const {
+  return rel.type == R_PPC64_REL24 || rel.type == R_PPC64_REL14;
+}
+
 void PPC64R12SetupStub::writeTo(uint8_t *buf) {
   int64_t offset = destination.getVA() - getThunkTargetSym()->getVA();
   if (!isInt<34>(offset))
@@ -993,6 +1002,11 @@ void PPC64R12SetupStub::writeTo(uint8_t *buf) {
 void PPC64R12SetupStub::addSymbols(ThunkSection &isec) {
   addSymbol(saver.save("__gep_setup_" + destination.getName()), STT_FUNC, 0,
             isec);
+}
+
+bool PPC64R12SetupStub::isCompatibleWith(const InputSection &isec,
+                                         const Relocation &rel) const {
+  return rel.type == R_PPC64_REL24_NOTOC;
 }
 
 void PPC64PCRelPLTStub::writeTo(uint8_t *buf) {

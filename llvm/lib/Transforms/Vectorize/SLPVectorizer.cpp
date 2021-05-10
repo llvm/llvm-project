@@ -1516,7 +1516,7 @@ private:
   bool areAllUsersVectorized(Instruction *I) const;
 
   /// \returns the cost of the vectorizable entry.
-  InstructionCost getEntryCost(TreeEntry *E);
+  InstructionCost getEntryCost(const TreeEntry *E);
 
   /// This is the recursive part of buildTree.
   void buildTree_rec(ArrayRef<Value *> Roots, unsigned Depth,
@@ -1557,7 +1557,7 @@ private:
 
   /// Set the Builder insert point to one after the last instruction in
   /// the bundle
-  void setInsertPointAfterBundle(TreeEntry *E);
+  void setInsertPointAfterBundle(const TreeEntry *E);
 
   /// \returns a vector from a collection of scalars in \p VL.
   Value *gather(ArrayRef<Value *> VL);
@@ -1636,7 +1636,7 @@ private:
     void setOperand(unsigned OpIdx, ArrayRef<Value *> OpVL) {
       if (Operands.size() < OpIdx + 1)
         Operands.resize(OpIdx + 1);
-      assert(Operands[OpIdx].size() == 0 && "Already resized?");
+      assert(Operands[OpIdx].empty() && "Already resized?");
       Operands[OpIdx].resize(Scalars.size());
       for (unsigned Lane = 0, E = Scalars.size(); Lane != E; ++Lane)
         Operands[OpIdx][Lane] = OpVL[Lane];
@@ -1787,7 +1787,7 @@ private:
   };
 
 #ifndef NDEBUG
-  void dumpTreeCosts(TreeEntry *E, InstructionCost ReuseShuffleCost,
+  void dumpTreeCosts(const TreeEntry *E, InstructionCost ReuseShuffleCost,
                      InstructionCost VecCost,
                      InstructionCost ScalarCost) const {
     dbgs() << "SLP: Calculated costs for Tree:\n"; E->dump();
@@ -3518,7 +3518,7 @@ computeExtractCost(ArrayRef<Value *> VL, FixedVectorType *VecTy,
   return Cost;
 }
 
-InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
+InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E) {
   ArrayRef<Value*> VL = E->Scalars;
 
   Type *ScalarTy = VL[0]->getType();
@@ -4435,7 +4435,7 @@ void BoUpSLP::reorderInputsAccordingToOpcode(ArrayRef<Value *> VL,
   Right = Ops.getVL(1);
 }
 
-void BoUpSLP::setInsertPointAfterBundle(TreeEntry *E) {
+void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   // Get the basic block this bundle is in. All instructions in the bundle
   // should be in this block.
   auto *Front = E->getMainOp();

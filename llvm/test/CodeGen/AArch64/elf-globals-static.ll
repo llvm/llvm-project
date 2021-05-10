@@ -78,16 +78,6 @@ define i64* @test_addr() {
 ; CHECK-FAST: add x0, [[HIREG]], :lo12:var64
 }
 
-@hiddenvar = hidden global i32 0, align 4
-@protectedvar = protected global i32 0, align 4
-
-define i32 @test_vis() {
-  %lhs = load i32, i32* @hiddenvar, align 4
-  %rhs = load i32, i32* @protectedvar, align 4
-  %ret = add i32 %lhs, %rhs
-  ret i32 %ret
-}
-
 @var_default = external dso_local global [2 x i32]
 
 define i32 @test_default_align() {

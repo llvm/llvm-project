@@ -35,7 +35,7 @@ module {
   // CHECK: attributes {xxx = {yyy = 42 : i64}}
   "llvm.func"() ({
   }) {sym_name = "qux", type = !llvm.func<void (ptr<i64>, i64)>,
-      arg0 = {llvm.noalias = true}, xxx = {yyy = 42}} : () -> ()
+      arg_attrs = [{llvm.noalias = true}, {}], xxx = {yyy = 42}} : () -> ()
 
   // CHECK: llvm.func @roundtrip1()
   llvm.func @roundtrip1()

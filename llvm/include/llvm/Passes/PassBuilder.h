@@ -137,7 +137,6 @@ public:
 /// of the built-in passes, and those may reference these members during
 /// construction.
 class PassBuilder {
-  bool DebugLogging;
   TargetMachine *TM;
   PipelineTuningOptions PTO;
   Optional<PGOOptions> PGOOpt;
@@ -267,7 +266,7 @@ public:
     unsigned getSizeLevel() const { return SizeLevel; }
   };
 
-  explicit PassBuilder(bool DebugLogging = false, TargetMachine *TM = nullptr,
+  explicit PassBuilder(TargetMachine *TM = nullptr,
                        PipelineTuningOptions PTO = PipelineTuningOptions(),
                        Optional<PGOOptions> PGOOpt = None,
                        PassInstrumentationCallbacks *PIC = nullptr);
@@ -688,8 +687,8 @@ public:
   /// text, this Callback should be used to determine the appropriate stack of
   /// PassManagers and populate the passed ModulePassManager.
   void registerParseTopLevelPipelineCallback(
-      const std::function<bool(ModulePassManager &, ArrayRef<PipelineElement>,
-                               bool DebugLogging)> &C);
+      const std::function<bool(ModulePassManager &, ArrayRef<PipelineElement>)>
+          &C);
 
   /// Add PGOInstrumenation passes for O0 only.
   void addPGOInstrPassesForO0(ModulePassManager &MPM, bool RunProfileGen,
@@ -709,6 +708,9 @@ private:
                                         ThinOrFullLTOPhase Phase);
 
   void addRequiredLTOPreLinkPasses(ModulePassManager &MPM);
+
+  void addVectorPasses(OptimizationLevel Level, FunctionPassManager &FPM,
+                       bool IsLTO);
 
   static Optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);
@@ -760,9 +762,8 @@ private:
                                  ArrayRef<PipelineElement>)>,
               2>
       ModulePipelineParsingCallbacks;
-  SmallVector<std::function<bool(ModulePassManager &, ArrayRef<PipelineElement>,
-                                 bool DebugLogging)>,
-              2>
+  SmallVector<
+      std::function<bool(ModulePassManager &, ArrayRef<PipelineElement>)>, 2>
       TopLevelPipelineParsingCallbacks;
   // CGSCC callbacks
   SmallVector<std::function<void(CGSCCAnalysisManager &)>, 2>

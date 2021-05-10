@@ -434,3 +434,42 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
   return o && o.map("textDocument", result.textDocument) &&
          o.map("contentChanges", result.contentChanges);
 }
+
+//===----------------------------------------------------------------------===//
+// MarkupContent
+//===----------------------------------------------------------------------===//
+
+static llvm::StringRef toTextKind(MarkupKind kind) {
+  switch (kind) {
+  case MarkupKind::PlainText:
+    return "plaintext";
+  case MarkupKind::Markdown:
+    return "markdown";
+  }
+  llvm_unreachable("Invalid MarkupKind");
+}
+
+raw_ostream &mlir::lsp::operator<<(raw_ostream &os, MarkupKind kind) {
+  return os << toTextKind(kind);
+}
+
+llvm::json::Value mlir::lsp::toJSON(const MarkupContent &mc) {
+  if (mc.value.empty())
+    return nullptr;
+
+  return llvm::json::Object{
+      {"kind", toTextKind(mc.kind)},
+      {"value", mc.value},
+  };
+}
+
+//===----------------------------------------------------------------------===//
+// Hover
+//===----------------------------------------------------------------------===//
+
+llvm::json::Value mlir::lsp::toJSON(const Hover &hover) {
+  llvm::json::Object result{{"contents", toJSON(hover.contents)}};
+  if (hover.range.hasValue())
+    result["range"] = toJSON(*hover.range);
+  return std::move(result);
+}

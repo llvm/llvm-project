@@ -3071,6 +3071,19 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
     SourceLocation Loc = Tok.getLocation();
 
+    // Helper for image types in OpenCL.
+    auto handleOpenCLImageKW = [&] (StringRef Ext, TypeSpecifierType ImageTypeSpec) {
+      // Check if the image type is supported and otherwise turn the keyword into an identifier
+      // because image types from extensions are not reserved identifiers.
+      if (!StringRef(Ext).empty() && !getActions().getOpenCLOptions().isSupported(Ext, getLangOpts())) {
+        Tok.getIdentifierInfo()->revertTokenIDToIdentifier();
+        Tok.setKind(tok::identifier);
+        return false;
+      }
+      isInvalid = DS.SetTypeSpecType(ImageTypeSpec, Loc, PrevSpec, DiagID, Policy);
+      return true;
+    };
+
     switch (Tok.getKind()) {
     default:
     DoneWithDeclSpec:
@@ -3935,11 +3948,14 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       }
       isInvalid = DS.SetTypePipe(true, Loc, PrevSpec, DiagID, Policy);
       break;
-#define GENERIC_IMAGE_TYPE(ImgType, Id) \
-  case tok::kw_##ImgType##_t: \
-    isInvalid = DS.SetTypeSpecType(DeclSpec::TST_##ImgType##_t, Loc, PrevSpec, \
-                                   DiagID, Policy); \
-    break;
+// We only need to enumerate each image type once.
+#define IMAGE_READ_WRITE_TYPE(Type, Id, Ext)
+#define IMAGE_WRITE_TYPE(Type, Id, Ext)
+#define IMAGE_READ_TYPE(ImgType, Id, Ext) \
+    case tok::kw_##ImgType##_t: \
+      if (!handleOpenCLImageKW(Ext, DeclSpec::TST_##ImgType##_t)) \
+        goto DoneWithDeclSpec; \
+      break;
 #include "clang/Basic/OpenCLImageTypes.def"
     case tok::kw___unknown_anytype:
       isInvalid = DS.SetTypeSpecType(TST_unknown_anytype, Loc,

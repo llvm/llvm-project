@@ -51,25 +51,6 @@ typedef enum atmi_memtype_s {
   ATMI_MEMTYPE_ANY
 } atmi_memtype_t;
 
-/**
- * @brief ATMI Memory Fences for Tasks.
- */
-typedef enum atmi_task_fence_scope_s {
-  /**
-   * No memory fence applied; external fences have to be applied around the task
-   * launch/completion.
-   */
-  ATMI_FENCE_SCOPE_NONE = 0,
-  /**
-   * The fence is applied to the device.
-   */
-  ATMI_FENCE_SCOPE_DEVICE = 1,
-  /**
-   * The fence is applied to the entire system.
-   */
-  ATMI_FENCE_SCOPE_SYSTEM = 2
-} atmi_task_fence_scope_t;
-
 /** @} */
 
 /** \defgroup common Common ATMI Structures
@@ -164,20 +145,9 @@ typedef struct atmi_machine_s {
 
 // Below are some helper macros that can be used to setup
 // some of the ATMI data structures.
-#define ATMI_PLACE_CPU(node, cpu_id)                                           \
-  { .node_id = node, .type = ATMI_DEVTYPE_CPU, .device_id = cpu_id }
 #define ATMI_PLACE_GPU(node, gpu_id)                                           \
   { .node_id = node, .type = ATMI_DEVTYPE_GPU, .device_id = gpu_id }
-#define ATMI_MEM_PLACE_CPU(node, cpu_id)                                       \
-  {                                                                            \
-    .node_id = node, .dev_type = ATMI_DEVTYPE_CPU, .dev_id = cpu_id,           \
-    .mem_id = -1                                                               \
-  }
-#define ATMI_MEM_PLACE_GPU(node, gpu_id)                                       \
-  {                                                                            \
-    .node_id = node, .dev_type = ATMI_DEVTYPE_GPU, .dev_id = gpu_id,           \
-    .mem_id = -1                                                               \
-  }
+
 #define ATMI_MEM_PLACE_CPU_MEM(node, cpu_id, cpu_mem_id)                       \
   {                                                                            \
     .node_id = node, .dev_type = ATMI_DEVTYPE_CPU, .dev_id = cpu_id,           \
