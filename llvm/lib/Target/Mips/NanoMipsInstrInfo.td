@@ -207,3 +207,13 @@ def BC_NM       : JumpFJ<jmptarget, "bc", br, bb, "b">, IsBranch, ISA_NANOMIPS;
 //def JAL  : MMRel, JumpLink<"jal", calltarget>, FJ<3>, ISA_MIPS1;
 
 }
+
+// Reversed branch conditions:
+def : Pat<(brcond (i32 (setugt GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
+          (BLTUC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>, ISA_NANOMIPS;
+def : Pat<(brcond (i32 (setgt GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
+          (BLTC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>, ISA_NANOMIPS;
+def : Pat<(brcond (i32 (setule GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
+          (BGEUC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>, ISA_NANOMIPS;
+def : Pat<(brcond (i32 (setle GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
+          (BGEC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>, ISA_NANOMIPS;
