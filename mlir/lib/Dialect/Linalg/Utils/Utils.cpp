@@ -205,21 +205,39 @@ void GenerateLoopNest<scf::ForOp>::doit(
   // Create procInfo so it dominates loops, if appropriate.
   OpBuilder &builder = edsc::ScopedContext::getBuilderRef();
   Location loc = edsc::ScopedContext::getLocation();
-  SmallVector<ProcInfo, 2> procInfo;
-  if (distributionOptions.hasValue())
-    procInfo = distributionOptions->procInfo(builder, loc, loopRanges);
+
+  SmallVector<ProcInfo, 4> procInfo;
+  SmallVector<DistributionMethod, 0> distributionMethod;
+  if (distributionOptions.hasValue()) {
+    // Collect loop ranges for parallel dimensions.
+    SmallVector<Range, 2> parallelLoopRanges;
+    for (auto iteratorType : enumerate(iteratorTypes))
+      if (isParallelIteratorType(iteratorType.value()))
+        parallelLoopRanges.push_back(loopRanges[iteratorType.index()]);
+
+    // Get their distribution schemes.
+    distributionMethod = distributionOptions->distributionMethod;
+    if (distributionMethod.size() < parallelLoopRanges.size())
+      parallelLoopRanges.resize(distributionMethod.size());
+    procInfo = distributionOptions->procInfo(builder, loc, parallelLoopRanges);
+  }
 
   SmallVector<Value, 4> lbs, ubs, steps;
   unpackRanges(loopRanges, lbs, ubs, steps);
   LoopNest loopNest =
       edsc::loopNestBuilder(lbs, ubs, steps, iterArgInitValues, bodyBuilderFn);
 
-  if (!distributionOptions.hasValue() || loopNest.loops.empty())
+  if (!distributionOptions || loopNest.loops.empty())
     return;
 
-  // Only supports cyclic distribution for now.
-  for (auto it : llvm::zip(loopNest.loops, procInfo,
-                           distributionOptions->distributionMethod))
+  // Filter out scf.for loops that were created out of parallel dimensions.
+  SmallVector<scf::ForOp, 4> loops;
+  for (auto iteratorType : enumerate(iteratorTypes))
+    if (isParallelIteratorType(iteratorType.value()))
+      loops.push_back(loopNest.loops[iteratorType.index()]);
+
+  // Distribute - only supports cyclic distribution for now.
+  for (auto it : llvm::zip(loops, procInfo, distributionMethod))
     if (std::get<2>(it) == DistributionMethod::Cyclic)
       mapLoopToProcessorIds(std::get<0>(it), std::get<1>(it).procId,
                             std::get<1>(it).nprocs);
