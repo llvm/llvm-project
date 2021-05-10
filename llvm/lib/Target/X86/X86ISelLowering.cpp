@@ -36228,6 +36228,7 @@ static SDValue canonicalizeShuffleMaskWithHorizOp(
   // See if we can remove the shuffle by resorting the HOP chain so that
   // the HOP args are pre-shuffled.
   // TODO: Generalize to any sized/depth chain.
+  // TODO: Add support for 256/512-bit vectors.
   // TODO: Add support for PACKSS/PACKUS.
   if (isHoriz && NumEltsPerLane == 4 && VT0.is128BitVector() &&
       shouldUseHorizontalOp(Ops.size() == 1, DAG, Subtarget)) {
