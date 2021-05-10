@@ -41,9 +41,10 @@ public:
   NamespaceEmitter(raw_ostream &os, const Dialect &dialect) : os(os) {
     if (!dialect)
       return;
-    llvm::SplitString(dialect.getCppNamespace(), namespaces, "::");
-    for (StringRef ns : namespaces)
-      os << "namespace " << ns << " {\n";
+    emitNamespaceStarts(os, dialect.getCppNamespace());
+  }
+  NamespaceEmitter(raw_ostream &os, StringRef cppNamespace) : os(os) {
+    emitNamespaceStarts(os, cppNamespace);
   }
 
   ~NamespaceEmitter() {
@@ -52,6 +53,11 @@ public:
   }
 
 private:
+  void emitNamespaceStarts(raw_ostream &os, StringRef cppNamespace) {
+    llvm::SplitString(cppNamespace, namespaces, "::");
+    for (StringRef ns : namespaces)
+      os << "namespace " << ns << " {\n";
+  }
   raw_ostream &os;
   SmallVector<StringRef, 2> namespaces;
 };

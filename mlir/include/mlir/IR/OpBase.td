@@ -2123,6 +2123,9 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   // The mnemonic of the op.
   string opName = mnemonic;
 
+  // The C++ namespace to use for this op.
+  string cppNamespace = dialect.cppNamespace;
+
   // One-line human-readable description of what the op does.
   string summary = "";
 

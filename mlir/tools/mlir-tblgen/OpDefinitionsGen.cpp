@@ -174,7 +174,7 @@ StaticVerifierFunctionEmitter::StaticVerifierFunctionEmitter(
   llvm::Optional<NamespaceEmitter> namespaceEmitter;
   if (!emitDecl) {
     os << formatv(opCommentHeader, "Local Utility Method", "Definitions");
-    namespaceEmitter.emplace(os, Operator(*opDefs[0]).getDialect());
+    namespaceEmitter.emplace(os, Operator(*opDefs[0]).getCppNamespace());
   }
 
   emitTypeConstraintMethods(opDefs, os, emitDecl);
@@ -2423,7 +2423,7 @@ static void emitOpClasses(const RecordKeeper &recordKeeper,
     os << "#undef GET_OP_FWD_DEFINES\n";
     for (auto *def : defs) {
       Operator op(*def);
-      NamespaceEmitter emitter(os, op.getDialect());
+      NamespaceEmitter emitter(os, op.getCppNamespace());
       os << "class " << op.getCppClassName() << ";\n";
     }
     os << "#endif\n\n";
@@ -2438,7 +2438,7 @@ static void emitOpClasses(const RecordKeeper &recordKeeper,
                                                       emitDecl);
   for (auto *def : defs) {
     Operator op(*def);
-    NamespaceEmitter emitter(os, op.getDialect());
+    NamespaceEmitter emitter(os, op.getCppNamespace());
     if (emitDecl) {
       os << formatv(opCommentHeader, op.getQualCppClassName(), "declarations");
       OpOperandAdaptorEmitter::emitDecl(op, os);
