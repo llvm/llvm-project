@@ -3891,7 +3891,8 @@ MipsTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       llvm_unreachable("sret virtual register not created in the entry block");
     SDValue Val =
         DAG.getCopyFromReg(Chain, DL, Reg, getPointerTy(DAG.getDataLayout()));
-    unsigned V0 = ABI.IsN64() ? Mips::V0_64 : Mips::V0;
+    unsigned V0 =
+        ABI.IsN64() ? Mips::V0_64 : ABI.IsP32() ? Mips::A0_NM : Mips::V0;
 
     Chain = DAG.getCopyToReg(Chain, DL, V0, Val, Flag);
     Flag = Chain.getValue(1);
