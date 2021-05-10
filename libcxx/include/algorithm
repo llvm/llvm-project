@@ -3195,7 +3195,7 @@ _SampleIterator __sample(_PopulationIterator __first,
     __output_iter[__k] = *__first;
   _Distance __sz = __k;
   for (; __first != __last; ++__first, (void) ++__k) {
-    _Distance __r = _VSTD::uniform_int_distribution<_Distance>(0, __k)(__g);
+    _Distance __r = uniform_int_distribution<_Distance>(0, __k)(__g);
     if (__r < __sz)
       __output_iter[__r] = *__first;
   }
@@ -3212,8 +3212,7 @@ _SampleIterator __sample(_PopulationIterator __first,
                          forward_iterator_tag) {
   _Distance __unsampled_sz = _VSTD::distance(__first, __last);
   for (__n = _VSTD::min(__n, __unsampled_sz); __n != 0; ++__first) {
-    _Distance __r =
-        _VSTD::uniform_int_distribution<_Distance>(0, --__unsampled_sz)(__g);
+    _Distance __r = uniform_int_distribution<_Distance>(0, --__unsampled_sz)(__g);
     if (__r < __n) {
       *__output_iter++ = *__first;
       --__n;
@@ -4914,7 +4913,7 @@ template <class _RandomAccessIterator, class _Compare>
 _LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_AFTER_CXX17 _RandomAccessIterator
 is_heap_until(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
-    typedef typename _VSTD::iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+    typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
     difference_type __len = __last - __first;
     difference_type __p = 0;
     difference_type __c = 1;

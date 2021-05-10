@@ -863,7 +863,7 @@ void __swap_allocator(_Alloc & __a1, _Alloc & __a2)
 #endif
 {
     _VSTD::__swap_allocator(__a1, __a2,
-      integral_constant<bool, _VSTD::allocator_traits<_Alloc>::propagate_on_container_swap::value>());
+      integral_constant<bool, allocator_traits<_Alloc>::propagate_on_container_swap::value>());
 }
 
 template <typename _Alloc, typename _Traits=allocator_traits<_Alloc> >

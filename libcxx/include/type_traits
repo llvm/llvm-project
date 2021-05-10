@@ -580,7 +580,7 @@ using _IsSame = _BoolConstant<
 #ifdef __clang__
     __is_same(_Tp, _Up)
 #else
-    _VSTD::is_same<_Tp, _Up>::value
+    is_same<_Tp, _Up>::value
 #endif
 >;
 
@@ -589,7 +589,7 @@ using _IsNotSame = _BoolConstant<
 #ifdef __clang__
     !__is_same(_Tp, _Up)
 #else
-    !_VSTD::is_same<_Tp, _Up>::value
+    !is_same<_Tp, _Up>::value
 #endif
 >;
 
@@ -1344,7 +1344,7 @@ template <class _Tp> _Tp   __declval(long);
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 template <class _Tp>
-decltype(_VSTD::__declval<_Tp>(0))
+decltype(__declval<_Tp>(0))
 declval() _NOEXCEPT;
 
 // __uncvref
@@ -1712,7 +1712,7 @@ struct __is_convertible_test : public false_type {};
 
 template <class _From, class _To>
 struct __is_convertible_test<_From, _To,
-    decltype(_VSTD::__is_convertible_imp::__test_convert<_To>(declval<_From>()))> : public true_type
+    decltype(__is_convertible_imp::__test_convert<_To>(declval<_From>()))> : public true_type
 {};
 
 template <class _Tp, bool _IsArray =    is_array<_Tp>::value,
@@ -2752,33 +2752,33 @@ struct __destructible_imp;
 
 template <class _Tp>
 struct __destructible_imp<_Tp, false>
-   : public _VSTD::integral_constant<bool,
-        __is_destructor_wellformed<typename _VSTD::remove_all_extents<_Tp>::type>::value> {};
+   : public integral_constant<bool,
+        __is_destructor_wellformed<typename remove_all_extents<_Tp>::type>::value> {};
 
 template <class _Tp>
 struct __destructible_imp<_Tp, true>
-    : public _VSTD::true_type {};
+    : public true_type {};
 
 template <class _Tp, bool>
 struct __destructible_false;
 
 template <class _Tp>
-struct __destructible_false<_Tp, false> : public __destructible_imp<_Tp, _VSTD::is_reference<_Tp>::value> {};
+struct __destructible_false<_Tp, false> : public __destructible_imp<_Tp, is_reference<_Tp>::value> {};
 
 template <class _Tp>
-struct __destructible_false<_Tp, true> : public _VSTD::false_type {};
+struct __destructible_false<_Tp, true> : public false_type {};
 
 template <class _Tp>
 struct is_destructible
-    : public __destructible_false<_Tp, _VSTD::is_function<_Tp>::value> {};
+    : public __destructible_false<_Tp, is_function<_Tp>::value> {};
 
 template <class _Tp>
 struct is_destructible<_Tp[]>
-    : public _VSTD::false_type {};
+    : public false_type {};
 
 template <>
 struct is_destructible<void>
-    : public _VSTD::false_type {};
+    : public false_type {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp>
