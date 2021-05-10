@@ -927,9 +927,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   if (!get_threadpool_strategy(config->thinLTOJobs))
     error("--thinlto-jobs: invalid job count: " + config->thinLTOJobs);
 
-  config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
-                                       /*file=*/nullptr,
-                                       /*isWeakRef=*/false);
   for (const Arg *arg : args.filtered(OPT_u)) {
     config->explicitUndefineds.push_back(symtab->addUndefined(
         arg->getValue(), /*file=*/nullptr, /*isWeakRef=*/false));
@@ -1001,6 +998,11 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
                                 : NamespaceKind::flat;
 
   config->undefinedSymbolTreatment = getUndefinedSymbolTreatment(args);
+
+  if (config->outputType == MH_EXECUTE)
+    config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
+                                         /*file=*/nullptr,
+                                         /*isWeakRef=*/false);
 
   config->librarySearchPaths =
       getLibrarySearchPaths(args, config->systemLibraryRoots);

@@ -14641,6 +14641,9 @@ static SDValue CombineBaseUpdate(SDNode *N,
       case Intrinsic::arm_neon_vld1x2:
       case Intrinsic::arm_neon_vld1x3:
       case Intrinsic::arm_neon_vld1x4:
+      case Intrinsic::arm_neon_vst1x2:
+      case Intrinsic::arm_neon_vst1x3:
+      case Intrinsic::arm_neon_vst1x4:
       case Intrinsic::arm_neon_vld2dup:
       case Intrinsic::arm_neon_vld3dup:
       case Intrinsic::arm_neon_vld4dup:

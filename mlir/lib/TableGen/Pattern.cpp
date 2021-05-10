@@ -232,7 +232,7 @@ std::string SymbolInfoMap::SymbolInfo::getVarDecl(StringRef name) const {
                 getVarName(name)));
   }
   case Kind::Value: {
-    return std::string(formatv("::llvm::ArrayRef<::mlir::Value> {0};\n", name));
+    return std::string(formatv("::mlir::Value {0};\n", name));
   }
   case Kind::Result: {
     // Use the op itself for captured results.
@@ -626,11 +626,16 @@ void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
 
   if (tree.isNativeCodeCall()) {
     if (!treeName.empty()) {
-      PrintFatalError(
-          &def,
-          formatv(
-              "binding symbol '{0}' to native code call unsupported right now",
-              treeName));
+      if (!isSrcPattern) {
+        LLVM_DEBUG(llvm::dbgs() << "found symbol bound to NativeCodeCall: "
+                                << treeName << '\n');
+        verifyBind(infoMap.bindValue(treeName), treeName);
+      } else {
+        PrintFatalError(&def,
+                        formatv("binding symbol '{0}' to NativecodeCall in "
+                                "MatchPattern is not supported",
+                                treeName));
+      }
     }
 
     for (int i = 0; i != numTreeArgs; ++i) {
@@ -649,24 +654,27 @@ void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
 
       // `$_` is a special symbol meaning ignore the current argument.
       if (!treeArgName.empty() && treeArgName != "_") {
-        if (tree.isNestedDagArg(i)) {
-          auto err = formatv("cannot bind '{0}' for nested native call arg",
-                             treeArgName);
-          PrintFatalError(&def, err);
-        }
-
         DagLeaf leaf = tree.getArgAsLeaf(i);
-        auto constraint = leaf.getAsConstraint();
-        bool isAttr = leaf.isAttrMatcher() || leaf.isEnumAttrCase() ||
-                      leaf.isConstantAttr() ||
-                      constraint.getKind() == Constraint::Kind::CK_Attr;
 
-        if (isAttr) {
-          verifyBind(infoMap.bindAttr(treeArgName), treeArgName);
-          continue;
+        // In (NativeCodeCall<"Foo($_self, $0, $1, $2)"> I8Attr:$a, I8:$b, $c),
+        if (leaf.isUnspecified()) {
+          // This is case of $c, a Value without any constraints.
+          verifyBind(infoMap.bindValue(treeArgName), treeArgName);
+        } else {
+          auto constraint = leaf.getAsConstraint();
+          bool isAttr = leaf.isAttrMatcher() || leaf.isEnumAttrCase() ||
+                        leaf.isConstantAttr() ||
+                        constraint.getKind() == Constraint::Kind::CK_Attr;
+
+          if (isAttr) {
+            // This is case of $a, a binding to a certain attribute.
+            verifyBind(infoMap.bindAttr(treeArgName), treeArgName);
+            continue;
+          }
+
+          // This is case of $b, a binding to a certain type.
+          verifyBind(infoMap.bindValue(treeArgName), treeArgName);
         }
-
-        verifyBind(infoMap.bindValue(treeArgName), treeArgName);
       }
     }
 

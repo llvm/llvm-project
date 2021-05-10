@@ -4,10 +4,12 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/libfoo.s -o %t/libfoo.o
 # RUN: %lld -lSystem -dylib %t/libfoo.o -o %t/libfoo.dylib
 
-# RUN: %lld -o %t/not-main %t/not-main.o -e _not_main
+# RUN: %lld -lSystem -o %t/not-main %t/not-main.o -e _not_main
 # RUN: llvm-objdump --macho --all-headers --syms %t/not-main | FileCheck %s
+
 # CHECK-LABEL: SYMBOL TABLE
-# CHECK-NEXT: {{0*}}[[#%x, ENTRY_ADDR:]] {{.*}} __TEXT,__text _not_main
+# CHECK:       {{0*}}[[#%x, ENTRY_ADDR:]] {{.*}} __TEXT,__text _not_main
+
 # CHECK:      sectname __text
 # CHECK-NEXT: segname __TEXT
 ## Note: the following checks assume that the entry symbol is right at the
@@ -45,6 +47,10 @@
 # WEAK-DYSYM-LABEL: Weak bind table:
 # WEAK-DYSYM-NEXT:  segment  section          address  type     addend  symbol
 # WEAK-DYSYM-NEXT:  __DATA   __la_symbol_ptr  {{.*}}   pointer       0  _weak_dysym_main
+
+# RUN: %lld -dylib -lSystem -o %t/dysym-main.dylib %t/not-main.o %t/libfoo.dylib -e _dysym_main
+# RUN: llvm-objdump --macho --indirect-symbols --lazy-bind %t/dysym-main.dylib | FileCheck %s --check-prefix=DYLIB-NO-MAIN
+# DYLIB-NO-MAIN-NOT: _dysym_main
 
 # RUN: not %lld -o /dev/null %t/not-main.o -e _missing 2>&1 | FileCheck %s --check-prefix=UNDEFINED
 # UNDEFINED: error: undefined symbol: _missing
