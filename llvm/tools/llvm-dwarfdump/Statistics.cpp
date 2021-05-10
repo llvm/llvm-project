@@ -458,14 +458,20 @@ static void collectStatsRecursive(
     return;
 
   // Handle any kind of lexical scope.
+  const bool HasAbstractOrigin = Die.find(dwarf::DW_AT_abstract_origin) != None;
   const bool IsFunction = Tag == dwarf::DW_TAG_subprogram;
   const bool IsBlock = Tag == dwarf::DW_TAG_lexical_block;
   const bool IsInlinedFunction = Tag == dwarf::DW_TAG_inlined_subroutine;
+  // We want to know how many variables (with abstract_origin) don't have
+  // location info.
+  const bool IsCandidateForZeroLocCovTracking =
+      (IsInlinedFunction || (IsFunction && HasAbstractOrigin));
+
   AbstractOriginVarsTy AbstractOriginVars;
 
   // Get the vars of the inlined fn, so the locstats
   // reports the missing vars (with coverage 0%).
-  if (IsInlinedFunction) {
+  if (IsCandidateForZeroLocCovTracking) {
     auto OffsetFn = Die.find(dwarf::DW_AT_abstract_origin);
     if (OffsetFn) {
       uint64_t OffsetOfInlineFnCopy = (*OffsetFn).getRawUValue();
@@ -572,11 +578,11 @@ static void collectStatsRecursive(
     Child = Child.getSibling();
   }
 
-  if (!IsInlinedFunction)
+  if (!IsCandidateForZeroLocCovTracking)
     return;
 
-  // After we have processed all vars of the inlined function,
-  // we want to know how many variables have no location.
+  // After we have processed all vars of the inlined function (or function with
+  // an abstract_origin), we want to know how many variables have no location.
   for (auto Offset : AbstractOriginVars) {
     LocStats.NumVarParam++;
     LocStats.VarParamLocStats[ZeroCoverageBucket]++;
@@ -666,6 +672,8 @@ static void updateVarsWithAbstractOriginLocCovInfo(
 
 /// Collect zero location coverage for inlined variables which refer to
 /// a DW_AT_inline copy of subprogram that is out of order in the DWARF.
+/// Also cover the variables of a concrete function (represented with
+/// the DW_TAG_subprogram) with an abstract_origin attribute.
 static void collectZeroLocCovForVarsWithAbstractOrigin(
     DWARFUnit *DwUnit, GlobalStats &GlobalStats, LocationStats &LocStats,
     AbstractOriginVarsTyMap &GlobalAbstractOriginFnInfo,
@@ -742,7 +750,7 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   /// The version number should be increased every time the algorithm is changed
   /// (including bug fixes). New metrics may be added without increasing the
   /// version.
-  unsigned Version = 7;
+  unsigned Version = 8;
   unsigned VarParamTotal = 0;
   unsigned VarParamUnique = 0;
   unsigned VarParamWithLoc = 0;
