@@ -1144,9 +1144,9 @@ bool AMDGPURegisterBankInfo::applyMappingLoad(MachineInstr &MI,
   unsigned LoadSize = LoadTy.getSizeInBits();
   const unsigned MaxNonSmrdLoadSize = 128;
 
-  const RegisterBank *PtrBank =
-    OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
-  if (PtrBank == &AMDGPU::SGPRRegBank) {
+  const RegisterBank *DstBank =
+      OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
+  if (DstBank == &AMDGPU::SGPRRegBank) {
     // There are some special cases that we need to look at for 32 bit and 96
     // bit SGPR loads otherwise we have nothing to do.
     if (LoadSize != 32 && LoadSize != 96)

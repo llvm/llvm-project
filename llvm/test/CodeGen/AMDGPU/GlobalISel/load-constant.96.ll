@@ -446,13 +446,10 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align1(<3 x i32> addrspace(4)*
 ;
 ; GFX7-UNALIGNED-LABEL: s_load_constant_v3i32_align1:
 ; GFX7-UNALIGNED:       ; %bb.0:
-; GFX7-UNALIGNED-NEXT:    s_load_dwordx2 s[6:7], s[0:1], 0x0
-; GFX7-UNALIGNED-NEXT:    s_load_dword s0, s[0:1], 0x2
-; GFX7-UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v0, s6
-; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v2, s8
-; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v2, s0
-; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-UNALIGNED-NEXT:    s_mov_b32 s2, -1
+; GFX7-UNALIGNED-NEXT:    s_mov_b32 s3, 0xf000
+; GFX7-UNALIGNED-NEXT:    buffer_load_dwordx3 v[0:2], off, s[0:3], 0
+; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX7-UNALIGNED-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX7-UNALIGNED-NEXT:    v_readfirstlane_b32 s2, v2
@@ -564,13 +561,10 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align2(<3 x i32> addrspace(4)*
 ;
 ; GFX7-UNALIGNED-LABEL: s_load_constant_v3i32_align2:
 ; GFX7-UNALIGNED:       ; %bb.0:
-; GFX7-UNALIGNED-NEXT:    s_load_dwordx2 s[6:7], s[0:1], 0x0
-; GFX7-UNALIGNED-NEXT:    s_load_dword s0, s[0:1], 0x2
-; GFX7-UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v0, s6
-; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v2, s8
-; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v2, s0
-; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-UNALIGNED-NEXT:    s_mov_b32 s2, -1
+; GFX7-UNALIGNED-NEXT:    s_mov_b32 s3, 0xf000
+; GFX7-UNALIGNED-NEXT:    buffer_load_dwordx3 v[0:2], off, s[0:3], 0
+; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX7-UNALIGNED-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX7-UNALIGNED-NEXT:    v_readfirstlane_b32 s2, v2
