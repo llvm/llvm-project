@@ -924,11 +924,16 @@ SDValue VectorLegalizer::ExpandSELECT(SDNode *Node) {
   // AND,OR,XOR, we will have to scalarize the op.
   // Notice that the operation may be 'promoted' which means that it is
   // 'bitcasted' to another type which is handled.
-  // Also, we need to be able to construct a splat vector using BUILD_VECTOR.
+  // Also, we need to be able to construct a splat vector using either
+  // BUILD_VECTOR or SPLAT_VECTOR.
+  // FIXME: Should we also permit fixed-length SPLAT_VECTOR as a fallback to
+  // BUILD_VECTOR?
   if (TLI.getOperationAction(ISD::AND, VT) == TargetLowering::Expand ||
       TLI.getOperationAction(ISD::XOR, VT) == TargetLowering::Expand ||
-      TLI.getOperationAction(ISD::OR,  VT) == TargetLowering::Expand ||
-      TLI.getOperationAction(ISD::BUILD_VECTOR,  VT) == TargetLowering::Expand)
+      TLI.getOperationAction(ISD::OR, VT) == TargetLowering::Expand ||
+      TLI.getOperationAction(VT.isFixedLengthVector() ? ISD::BUILD_VECTOR
+                                                      : ISD::SPLAT_VECTOR,
+                             VT) == TargetLowering::Expand)
     return DAG.UnrollVectorOp(Node);
 
   // Generate a mask operand.
@@ -942,8 +947,11 @@ SDValue VectorLegalizer::ExpandSELECT(SDNode *Node) {
                           BitTy),
           DAG.getConstant(0, DL, BitTy));
 
-  // Broadcast the mask so that the entire vector is all-one or all zero.
-  Mask = DAG.getSplatBuildVector(MaskTy, DL, Mask);
+  // Broadcast the mask so that the entire vector is all one or all zero.
+  if (VT.isFixedLengthVector())
+    Mask = DAG.getSplatBuildVector(MaskTy, DL, Mask);
+  else
+    Mask = DAG.getSplatVector(MaskTy, DL, Mask);
 
   // Bitcast the operands to be the same type as the mask.
   // This is needed when we select between FP types because
