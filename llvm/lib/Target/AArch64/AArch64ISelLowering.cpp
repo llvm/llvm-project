@@ -1185,15 +1185,20 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
-    for (auto VT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv8f16, MVT::nxv2f32,
-                    MVT::nxv4f32, MVT::nxv2f64}) {
-      for (auto InnerVT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv8f16,
-                           MVT::nxv2f32, MVT::nxv4f32, MVT::nxv2f64}) {
+    for (MVT VT : MVT::fp_scalable_vector_valuetypes()) {
+      for (MVT InnerVT : MVT::fp_scalable_vector_valuetypes()) {
         // Avoid marking truncating FP stores as legal to prevent the
         // DAGCombiner from creating unsupported truncating stores.
         setTruncStoreAction(VT, InnerVT, Expand);
+        // SVE does not have floating-point extending loads.
+        setLoadExtAction(ISD::SEXTLOAD, VT, InnerVT, Expand);
+        setLoadExtAction(ISD::ZEXTLOAD, VT, InnerVT, Expand);
+        setLoadExtAction(ISD::EXTLOAD, VT, InnerVT, Expand);
       }
+    }
 
+    for (auto VT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv8f16, MVT::nxv2f32,
+                    MVT::nxv4f32, MVT::nxv2f64}) {
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::MGATHER, VT, Custom);
