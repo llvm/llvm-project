@@ -421,13 +421,13 @@ static void parseOrderFile(StringRef path) {
                           .StartsWith("ppc:", CPU_TYPE_POWERPC)
                           .StartsWith("ppc64:", CPU_TYPE_POWERPC64)
                           .Default(CPU_TYPE_ANY);
+
+    if (cpuType != CPU_TYPE_ANY && cpuType != target->cpuType)
+      continue;
+
     // Drop the CPU type as well as the colon
     if (cpuType != CPU_TYPE_ANY)
       line = line.drop_until([](char c) { return c == ':'; }).drop_front();
-    // TODO: Update when we extend support for other CPUs
-    if (cpuType != CPU_TYPE_ANY && cpuType != CPU_TYPE_X86_64 &&
-        cpuType != CPU_TYPE_ARM64)
-      continue;
 
     constexpr std::array<StringRef, 2> fileEnds = {".o:", ".o):"};
     for (StringRef fileEnd : fileEnds) {
@@ -869,7 +869,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   errorHandler().logName = args::getFilenameWithoutExe(argsArr[0]);
   stderrOS.enable_colors(stderrOS.has_colors());
-  // TODO: Set up error handler properly, e.g. the errorLimitExceededMsg
 
   MachOOptTable parser;
   InputArgList args = parser.parse(argsArr.slice(1));
@@ -1144,29 +1143,27 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     if (!orderFile.empty())
       parseOrderFile(orderFile);
 
-    if (config->outputType == MH_EXECUTE && isa<Undefined>(config->entry)) {
-      error("undefined symbol: " + toString(*config->entry));
-      return false;
-    }
+    if (config->entry)
+      if (auto *undefined = dyn_cast<Undefined>(config->entry))
+        treatUndefinedSymbol(*undefined, "the entry point");
+
     // FIXME: This prints symbols that are undefined both in input files and
     // via -u flag twice.
-    for (const Symbol *undefined : config->explicitUndefineds) {
-      if (isa<Undefined>(undefined)) {
-        error("undefined symbol: " + toString(*undefined) +
-              "\n>>> referenced by flag -u " + toString(*undefined));
-        return false;
-      }
+    for (const Symbol *sym : config->explicitUndefineds) {
+      if (const auto *undefined = dyn_cast<Undefined>(sym))
+        treatUndefinedSymbol(*undefined, "-u");
     }
     // Literal exported-symbol names must be defined, but glob
     // patterns need not match.
     for (const CachedHashStringRef &cachedName :
          config->exportedSymbols.literals) {
       if (const Symbol *sym = symtab->find(cachedName))
-        if (isa<Defined>(sym))
-          continue;
-      error("undefined symbol: " + cachedName.val() +
-            "\n>>> referenced from option -exported_symbol(s_list)");
+        if (const auto *undefined = dyn_cast<Undefined>(sym))
+          treatUndefinedSymbol(*undefined, "-exported_symbol(s_list)");
     }
+
+    // FIXME: should terminate the link early based on errors encountered so
+    // far?
 
     createSyntheticSections();
     createSyntheticSymbols();

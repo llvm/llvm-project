@@ -1,8 +1,7 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 from mlir.ir import *
-# TODO: Import this into the user-package vs the cext.
-from _mlir.dialects import sparse_tensor as st
+from mlir.dialects import sparse_tensor as st
 
 def run(f):
   print("\nTEST:", f.__name__)

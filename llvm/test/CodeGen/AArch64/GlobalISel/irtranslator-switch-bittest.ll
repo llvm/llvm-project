@@ -175,3 +175,60 @@ sw.epilog:
 cb1:
   ret i32 42
 }
+
+define void @bit_test_block_incomplete_phi() {
+  ; CHECK-LABEL: name: bit_test_block_incomplete_phi
+  ; CHECK: bb.1.entry:
+  ; CHECK:   successors: %bb.5(0x80000000)
+  ; CHECK:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+  ; CHECK:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+  ; CHECK:   [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+  ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK:   [[SUB:%[0-9]+]]:_(s32) = G_SUB [[DEF]], [[C2]]
+  ; CHECK: bb.5.entry:
+  ; CHECK:   successors: %bb.3(0x51745d17), %bb.4(0x2e8ba2e9)
+  ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[C3]], [[SUB]](s32)
+  ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 491
+  ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[SHL]], [[C4]]
+  ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[AND]](s32), [[C5]]
+  ; CHECK:   G_BRCOND [[ICMP]](s1), %bb.3
+  ; CHECK:   G_BR %bb.4
+  ; CHECK: bb.6.entry:
+  ; CHECK:   successors:
+  ; CHECK: bb.2.sw.epilog.i:
+  ; CHECK:   successors:
+  ; CHECK: bb.3.if.end:
+  ; CHECK:   successors: %bb.4(0x80000000)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[DEF1]](p0) :: (load 8 from `i8** undef`)
+  ; CHECK: bb.4.return:
+  ; CHECK:   [[PHI:%[0-9]+]]:_(s1) = G_PHI [[C]](s1), %bb.3, [[C1]](s1), %bb.5
+  ; CHECK:   RET_ReallyLR
+entry:
+  switch i32 undef, label %sw.epilog.i [
+    i32 4, label %return
+    i32 2, label %return
+    i32 10, label %return
+    i32 9, label %return
+    i32 1, label %if.end
+    i32 3, label %if.end
+    i32 5, label %if.end
+    i32 0, label %if.end
+    i32 6, label %if.end
+    i32 7, label %if.end
+    i32 8, label %if.end
+  ]
+
+sw.epilog.i:                                      ; preds = %entry
+  unreachable
+
+if.end:                                           ; preds = %entry, %entry, %entry, %entry, %entry, %entry, %entry
+  %0 = load i8*, i8** undef, align 8
+  br label %return
+
+return:                                           ; preds = %if.end, %entry, %entry, %entry, %entry
+  %retval.0 = phi i1 [ false, %if.end ], [ true, %entry ], [ true, %entry ], [ true, %entry ], [ true, %entry ]
+  ret void
+}
