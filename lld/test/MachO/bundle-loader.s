@@ -5,23 +5,19 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/3.s -o %t/3.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/main.s -o %t/main.o
 
-# RUN: %lld  -lSystem -dylib -install_name %t/my_lib.dylib -o %t/mylib.dylib %t/2.o
-# RUN: %lld %t/2.o %t/main.o -o %t/main
+# RUN: %lld -lSystem -dylib -install_name %t/my_lib.dylib -o %t/mylib.dylib %t/2.o
+# RUN: %lld -lSystem %t/2.o %t/main.o -o %t/main
 # RUN: %lld -lSystem -bundle -bundle_loader %t/main -o %t/bundle.bundle %t/3.o %t/mylib.dylib
-# Check bundle.bundle to ensure the `my_func` symbol is from executable
-# RUN: llvm-nm -m %t/bundle.bundle |  FileCheck %s --check-prefix BUNDLE
-# BUNDLE: (undefined) external _main (from executable)
+## Check bundle.bundle to ensure the `my_func` symbol is from executable
+# RUN: llvm-nm -m %t/bundle.bundle | FileCheck %s --check-prefix BUNDLE
 # BUNDLE: (undefined) external my_func (from executable)
 # RUN: llvm-objdump  --macho --lazy-bind %t/bundle.bundle | FileCheck %s --check-prefix BUNDLE-OBJ
 # BUNDLE-OBJ: segment  section             address            dylib                 symbol
 # BUNDLE-OBJ: __DATA   __la_symbol_ptr     0x{{[0-9a-f]*}}    main-executable       my_fun
 
-
 # RUN: %lld -lSystem -bundle -bundle_loader %t/main -o %t/bundle2.bundle %t/3.o %t/2.o
-# Check bundle2.bundle to ensure that _main is still from executable
-# but my_func is not.
+## Check bundle.bundle to ensure the `my_func` symbol is not from executable
 # RUN: llvm-nm -m %t/bundle2.bundle | FileCheck %s --check-prefix BUNDLE2
-# BUNDLE2: (undefined) external _main (from executable)
 # BUNDLE2: (__TEXT,__text) external my_func
 
 # Test that bundle_loader can only be used with MachO bundle output.

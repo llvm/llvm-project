@@ -534,6 +534,8 @@ static void prepareBranchTarget(Symbol *sym) {
                                  sym->stubsIndex * target->wordSize);
       }
     }
+  } else {
+    assert(false && "invalid symbol type for branch");
   }
 }
 
@@ -1053,7 +1055,8 @@ void Writer::writeOutputFile() {
 }
 
 template <class LP> void Writer::run() {
-  prepareBranchTarget(config->entry);
+  if (config->entry)
+    prepareBranchTarget(config->entry);
   scanRelocations();
   if (in.stubHelper->isNeeded())
     in.stubHelper->setup();
