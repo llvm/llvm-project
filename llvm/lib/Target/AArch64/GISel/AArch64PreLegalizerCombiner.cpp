@@ -279,7 +279,7 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
     // heuristics decide.
     unsigned MaxLen = EnableOpt ? 0 : 32;
     // Try to inline memcpy type calls if optimizations are enabled.
-    if (!EnableMinSize && Helper.tryCombineMemCpyFamily(MI, MaxLen))
+    if (Helper.tryCombineMemCpyFamily(MI, MaxLen))
       return true;
     if (Opc == TargetOpcode::G_MEMSET)
       return llvm::AArch64GISelUtils::tryEmitBZero(MI, B, EnableMinSize);
