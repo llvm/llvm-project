@@ -18,4 +18,16 @@ foreach(arch ${SCUDO_STANDALONE_SUPPORTED_ARCH})
                 $<TARGET_OBJECTS:RTScudoStandalone.${arch}>)
   set_property(TARGET ScudoBenchmarks.${arch} APPEND_STRING PROPERTY
                COMPILE_FLAGS "${SCUDO_BENCHMARK_CFLAGS}")
+
+  if (COMPILER_RT_HAS_GWP_ASAN)
+    add_benchmark(
+      ScudoBenchmarksWithGwpAsan.${arch} malloc_benchmark.cpp
+      $<TARGET_OBJECTS:RTScudoStandalone.${arch}>
+      $<TARGET_OBJECTS:RTGwpAsan.${arch}>
+      $<TARGET_OBJECTS:RTGwpAsanBacktraceLibc.${arch}>
+      $<TARGET_OBJECTS:RTGwpAsanSegvHandler.${arch}>)
+    set_property(
+      TARGET ScudoBenchmarksWithGwpAsan.${arch} APPEND_STRING PROPERTY
+      COMPILE_FLAGS "${SCUDO_BENCHMARK_CFLAGS} -DGWP_ASAN_HOOKS")
+  endif()
 endforeach()

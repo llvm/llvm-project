@@ -51,8 +51,7 @@ public:
   typedef typename Params::template TSDRegistryT<ThisT> TSDRegistryT;
 
   void callPostInitCallback() {
-    static pthread_once_t OnceControl = PTHREAD_ONCE_INIT;
-    pthread_once(&OnceControl, PostInitCallback);
+    pthread_once(&PostInitNonce, PostInitCallback);
   }
 
   struct QuarantineCallback {
@@ -952,6 +951,7 @@ private:
   SecondaryT Secondary;
   QuarantineT Quarantine;
   TSDRegistryT TSDRegistry;
+  pthread_once_t PostInitNonce = PTHREAD_ONCE_INIT;
 
 #ifdef GWP_ASAN_HOOKS
   gwp_asan::GuardedPoolAllocator GuardedAlloc;
