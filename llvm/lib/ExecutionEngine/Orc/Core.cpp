@@ -29,6 +29,8 @@ char SymbolsNotFound::ID = 0;
 char SymbolsCouldNotBeRemoved::ID = 0;
 char MissingSymbolDefinitions::ID = 0;
 char UnexpectedSymbolDefinitions::ID = 0;
+char Task::ID = 0;
+char MaterializationTask::ID = 0;
 
 RegisterDependenciesFunction NoDependenciesToRegister =
     RegisterDependenciesFunction();
@@ -750,7 +752,8 @@ Error JITDylib::replace(MaterializationResponsibility &FromMR,
 
   if (MustRunMU) {
     assert(MustRunMR && "MustRunMU set implies MustRunMR set");
-    ES.dispatchMaterialization(std::move(MustRunMU), std::move(MustRunMR));
+    ES.dispatchTask(std::make_unique<MaterializationTask>(
+        std::move(MustRunMU), std::move(MustRunMR)));
   } else {
     assert(!MustRunMR && "MustRunMU unset implies MustRunMR unset");
   }
@@ -1730,6 +1733,15 @@ Expected<DenseMap<JITDylib *, SymbolMap>> Platform::lookupInitSymbols(
   return std::move(CompoundResult);
 }
 
+void Task::anchor() {}
+
+void MaterializationTask::printDescription(raw_ostream &OS) {
+  OS << "Materialization task: " << MU->getName() << " in "
+     << MR->getTargetJITDylib().getName() << "\n";
+}
+
+void MaterializationTask::run() { MU->materialize(std::move(MR)); }
+
 ExecutionSession::ExecutionSession(std::shared_ptr<SymbolStringPool> SSP)
     : SSP(SSP ? std::move(SSP) : std::make_shared<SymbolStringPool>()) {}
 
@@ -2003,7 +2015,8 @@ void ExecutionSession::dispatchOutstandingMUs() {
 
     assert(JMU->first && "No MU?");
     LLVM_DEBUG(dbgs() << "  Dispatching \"" << JMU->first->getName() << "\"\n");
-    dispatchMaterialization(std::move(JMU->first), std::move(JMU->second));
+    dispatchTask(std::make_unique<MaterializationTask>(std::move(JMU->first),
+                                                       std::move(JMU->second)));
   }
   LLVM_DEBUG(dbgs() << "Done dispatching MaterializationUnits.\n");
 }
@@ -2776,9 +2789,10 @@ void ExecutionSession::OL_addDependenciesForAll(
 }
 
 #ifndef NDEBUG
-void ExecutionSession::dumpDispatchInfo(JITDylib &JD, MaterializationUnit &MU) {
+void ExecutionSession::dumpDispatchInfo(Task &T) {
   runSessionLocked([&]() {
-    dbgs() << "Dispatching " << MU << " for " << JD.getName() << "\n";
+    dbgs() << "Dispatching: ";
+    T.printDescription(dbgs());
   });
 }
 #endif // NDEBUG
