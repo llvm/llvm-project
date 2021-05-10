@@ -186,20 +186,15 @@ function(add_implementation name impl_name)
   cmake_parse_arguments(
     "ADD_IMPL"
     "" # Optional arguments
-    "MARCH" # Single value arguments
-    "REQUIRE;REJECT;SRCS;HDRS;DEPENDS;COMPILE_OPTIONS" # Multi value arguments
+    "" # Single value arguments
+    "REQUIRE;SRCS;HDRS;DEPENDS;COMPILE_OPTIONS" # Multi value arguments
     ${ARGN})
-  compute_flags(flags
-    MARCH ${ADD_IMPL_MARCH}
-    REQUIRE ${ADD_IMPL_REQUIRE}
-    REJECT ${ADD_IMPL_REJECT}
-  )
   add_entrypoint_object(${impl_name}
     NAME ${name}
     SRCS ${ADD_IMPL_SRCS}
     HDRS ${ADD_IMPL_HDRS}
     DEPENDS ${ADD_IMPL_DEPENDS}
-    COMPILE_OPTIONS ${ADD_IMPL_COMPILE_OPTIONS} ${flags} -O2
+    COMPILE_OPTIONS ${ADD_IMPL_COMPILE_OPTIONS}
   )
   get_fq_target_name(${impl_name} fq_target_name)
   set_target_properties(${fq_target_name} PROPERTIES REQUIRE_CPU_FEATURES "${ADD_IMPL_REQUIRE}")
@@ -209,17 +204,6 @@ endfunction()
 # ------------------------------------------------------------------------------
 # memcpy
 # ------------------------------------------------------------------------------
-
-# include the relevant architecture specific implementations
-if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
-  set(MEMCPY_SRC ${LIBC_SOURCE_DIR}/src/string/${LIBC_TARGET_ARCHITECTURE}/memcpy.cpp)
-elseif(${LIBC_TARGET_ARCHITECTURE_IS_AARCH64})
-  set(MEMCPY_SRC ${LIBC_SOURCE_DIR}/src/string/${LIBC_TARGET_ARCHITECTURE}/memcpy.cpp)
-#Disable tail merging as it leads to lower performance
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mllvm --tail-merge-threshold=0")
-else()
-  set(MEMCPY_SRC ${LIBC_SOURCE_DIR}/src/string/memcpy.cpp)
-endif()
 
 function(add_memcpy memcpy_name)
   add_implementation(memcpy ${memcpy_name}
@@ -235,8 +219,23 @@ function(add_memcpy memcpy_name)
 endfunction()
 
 if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
-  add_memcpy(memcpy MARCH native)
+  set(MEMCPY_SRC ${LIBC_SOURCE_DIR}/src/string/x86_64/memcpy.cpp)
+  add_memcpy(memcpy_x86_64_opt_sse2   COMPILE_OPTIONS -march=x86-64    REQUIRE SSE2)
+  add_memcpy(memcpy_x86_64_opt_sse4   COMPILE_OPTIONS -march=x86-64-v2 REQUIRE SSE4_2)
+  add_memcpy(memcpy_x86_64_opt_avx2   COMPILE_OPTIONS -march=x86-64-v3 REQUIRE AVX2)
+  add_memcpy(memcpy_x86_64_opt_avx512 COMPILE_OPTIONS -march=x86-64-v4 REQUIRE AVX512F)
+  add_memcpy(memcpy_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
+  add_memcpy(memcpy)
+elseif(${LIBC_TARGET_ARCHITECTURE_IS_AARCH64})
+  set(MEMCPY_SRC ${LIBC_SOURCE_DIR}/src/string/aarch64/memcpy.cpp)
+  # Disable tail merging as it leads to lower performance.
+  # Note that '-mllvm' needs to be prefixed with 'SHELL:' to prevent CMake flag deduplication.
+  add_memcpy(memcpy_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE}
+                                      COMPILE_OPTIONS "SHELL:-mllvm --tail-merge-threshold=0")
+  add_memcpy(memcpy                   COMPILE_OPTIONS "SHELL:-mllvm --tail-merge-threshold=0")
 else()
+  set(MEMCPY_SRC ${LIBC_SOURCE_DIR}/src/string/memcpy.cpp)
+  add_memcpy(memcpy_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memcpy(memcpy)
 endif()
 
@@ -258,8 +257,14 @@ function(add_memset memset_name)
 endfunction()
 
 if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
-  add_memset(memset MARCH native)
+  add_memset(memset_x86_64_opt_sse2   COMPILE_OPTIONS -march=x86-64    REQUIRE SSE2)
+  add_memset(memset_x86_64_opt_sse4   COMPILE_OPTIONS -march=x86-64-v2 REQUIRE SSE4_2)
+  add_memset(memset_x86_64_opt_avx2   COMPILE_OPTIONS -march=x86-64-v3 REQUIRE AVX2)
+  add_memset(memset_x86_64_opt_avx512 COMPILE_OPTIONS -march=x86-64-v4 REQUIRE AVX512F)
+  add_memset(memset_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
+  add_memset(memset)
 else()
+  add_memset(memset_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memset(memset)
 endif()
 
@@ -282,15 +287,13 @@ function(add_bzero bzero_name)
 endfunction()
 
 if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
-  add_bzero(bzero MARCH native)
-else()
+  add_bzero(bzero_x86_64_opt_sse2   COMPILE_OPTIONS -march=x86-64    REQUIRE SSE2)
+  add_bzero(bzero_x86_64_opt_sse4   COMPILE_OPTIONS -march=x86-64-v2 REQUIRE SSE4_2)
+  add_bzero(bzero_x86_64_opt_avx2   COMPILE_OPTIONS -march=x86-64-v3 REQUIRE AVX2)
+  add_bzero(bzero_x86_64_opt_avx512 COMPILE_OPTIONS -march=x86-64-v4 REQUIRE AVX512F)
+  add_bzero(bzero_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_bzero(bzero)
-endif()
-
-# ------------------------------------------------------------------------------
-# Add all other relevant implementations for the native target.
-# ------------------------------------------------------------------------------
-
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
-  include(${LIBC_TARGET_ARCHITECTURE}/CMakeLists.txt)
+else()
+  add_bzero(bzero_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
+  add_bzero(bzero)
 endif()

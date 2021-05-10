@@ -81,11 +81,7 @@ function(add_entrypoint_library target_name)
     STATIC
     ${objects}
   )
-  set_target_properties(
-    ${target_name}
-    PROPERTIES
-      ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  )
+  set_target_properties(${target_name}  PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endfunction(add_entrypoint_library)
 
 # Rule to build a shared library of redirector objects.
@@ -112,18 +108,9 @@ function(add_redirector_library target_name)
     SHARED
     ${obj_files}
   )
-  set_target_properties(${target_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-
-  target_link_libraries(
-    ${target_name}
-    -nostdlib -lc -lm
-  )
-
-  set_target_properties(
-    ${target_name}
-    PROPERTIES
-      LINKER_LANGUAGE "C"
-  )
+  set_target_properties(${target_name}  PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  target_link_libraries(${target_name}  -nostdlib -lc -lm)
+  set_target_properties(${target_name}  PROPERTIES LINKER_LANGUAGE "C")
 endfunction(add_redirector_library)
 
 set(HDR_LIBRARY_TARGET_TYPE "HDR_LIBRARY")
