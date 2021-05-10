@@ -969,18 +969,6 @@ define <vscale x 2 x i1> @ignore_scalable_undef(<vscale x 2 x i1> %cond) {
   ret <vscale x 2 x i1> %s
 }
 
-define i32 @select_ctpop_zero(i32 %x) {
-; CHECK-LABEL: @select_ctpop_zero(
-; CHECK-NEXT:    [[T1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[T1]]
-;
-  %t0 = icmp eq i32 %x, 0
-  %t1 = call i32 @llvm.ctpop.i32(i32 %x)
-  %sel = select i1 %t0, i32 0, i32 %t1
-  ret i32 %sel
-}
-declare i32 @llvm.ctpop.i32(i32)
-
 define <2 x i32> @vec_select_no_equivalence(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @vec_select_no_equivalence(
 ; CHECK-NEXT:    [[X10:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> undef, <2 x i32> <i32 1, i32 0>
