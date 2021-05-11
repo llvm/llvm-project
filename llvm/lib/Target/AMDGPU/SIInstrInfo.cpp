@@ -5034,8 +5034,24 @@ bool SIInstrInfo::moveFlatAddrToVGPR(MachineInstr &Inst) const {
   } else {
     assert(OldSAddrIdx == NewVAddrIdx);
 
-    if (OldVAddrIdx >= 0)
+    if (OldVAddrIdx >= 0) {
+      int NewVDstIn = AMDGPU::getNamedOperandIdx(NewOpc,
+                                                 AMDGPU::OpName::vdst_in);
+
+      // RemoveOperand doesn't try to fixup tied operand indexes at it goes, so
+      // it asserts. Untie the operands for now and retie them afterwards.
+      if (NewVDstIn != -1) {
+        int OldVDstIn = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in);
+        Inst.untieRegOperand(OldVDstIn);
+      }
+
       Inst.RemoveOperand(OldVAddrIdx);
+
+      if (NewVDstIn != -1) {
+        int NewVDst = AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::vdst);
+        Inst.tieOperands(NewVDst, NewVDstIn);
+      }
+    }
   }
 
   if (VAddrDef && MRI.use_nodbg_empty(VAddrDef->getOperand(0).getReg()))
