@@ -870,6 +870,7 @@ void Writer::createOutputSegments() {
         s = segmentMap[name];
       }
       s->addInputSegment(segment);
+      LLVM_DEBUG(dbgs() << "added data: " << name << ": " << s->size << "\n");
     }
   }
 
@@ -889,11 +890,6 @@ void Writer::createOutputSegments() {
 
   for (size_t i = 0; i < segments.size(); ++i)
     segments[i]->index = i;
-
-  // Merge MergeInputSections into a single MergeSyntheticSection.
-  LLVM_DEBUG(dbgs() << "-- finalize input semgments\n");
-  for (OutputSegment *seg : segments)
-    seg->finalizeInputSegments();
 }
 
 void Writer::combineOutputSegments() {
@@ -914,7 +910,6 @@ void Writer::combineOutputSegments() {
       new_segments.push_back(s);
     } else {
       if (!combined) {
-        LLVM_DEBUG(dbgs() << "created combined output segment: .data\n");
         combined = make<OutputSegment>(".data");
         combined->startVA = s->startVA;
         if (config->sharedMemory)
@@ -931,8 +926,6 @@ void Writer::combineOutputSegments() {
         combined->addInputSegment(inSeg);
 #ifndef NDEBUG
         uint64_t newVA = inSeg->getVA();
-        LLVM_DEBUG(dbgs() << "added input segment. name=" << inSeg->getName()
-                          << " oldVA=" << oldVA << " newVA=" << newVA << "\n");
         assert(oldVA == newVA);
 #endif
       }

@@ -425,29 +425,6 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
   config->legacyFunctionTable = true;
 }
 
-static bool shouldMerge(const WasmSegment &seg) {
-  // As of now we only support merging strings, and only with single byte
-  // alignment (2^0).
-  if (!(seg.Data.LinkingFlags & WASM_SEG_FLAG_STRINGS) ||
-      (seg.Data.Alignment != 0))
-    return false;
-
-  // On a regular link we don't merge sections if -O0 (default is -O1). This
-  // sometimes makes the linker significantly faster, although the output will
-  // be bigger.
-  if (config->optimize == 0)
-    return false;
-
-  // A mergeable section with size 0 is useless because they don't have
-  // any data to merge. A mergeable string section with size 0 can be
-  // argued as invalid because it doesn't end with a null character.
-  // We'll avoid a mess by handling them as if they were non-mergeable.
-  if (seg.Data.Content.size() == 0)
-    return false;
-
-  return true;
-}
-
 void ObjFile::parse(bool ignoreComdats) {
   // Parse a memory buffer as a wasm file.
   LLVM_DEBUG(dbgs() << "Parsing object: " << toString(this) << "\n");
@@ -529,13 +506,8 @@ void ObjFile::parse(bool ignoreComdats) {
 
   // Populate `Segments`.
   for (const WasmSegment &s : wasmObj->dataSegments()) {
-    InputSegment *seg;
-    if (shouldMerge(s)) {
-      seg = make<MergeInputSegment>(&s, this);
-    } else
-      seg = make<InputSegment>(&s, this);
+    auto* seg = make<InputSegment>(s, this);
     seg->discarded = isExcludedByComdat(seg);
-
     segments.emplace_back(seg);
   }
   setRelocs(segments, dataSection);
