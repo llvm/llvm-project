@@ -4066,21 +4066,27 @@ bool BoUpSLP::isFullyVectorizableTinyTree() const {
 }
 
 static bool isLoadCombineCandidateImpl(Value *Root, unsigned NumElts,
-                                       TargetTransformInfo *TTI) {
+                                       TargetTransformInfo *TTI,
+                                       bool MustMatchOrInst) {
   // Look past the root to find a source value. Arbitrarily follow the
   // path through operand 0 of any 'or'. Also, peek through optional
   // shift-left-by-multiple-of-8-bits.
   Value *ZextLoad = Root;
   const APInt *ShAmtC;
+  bool FoundOr = false;
   while (!isa<ConstantExpr>(ZextLoad) &&
          (match(ZextLoad, m_Or(m_Value(), m_Value())) ||
           (match(ZextLoad, m_Shl(m_Value(), m_APInt(ShAmtC))) &&
-           ShAmtC->urem(8) == 0)))
-    ZextLoad = cast<BinaryOperator>(ZextLoad)->getOperand(0);
-
+           ShAmtC->urem(8) == 0))) {
+    auto *BinOp = cast<BinaryOperator>(ZextLoad);
+    ZextLoad = BinOp->getOperand(0);
+    if (BinOp->getOpcode() == Instruction::Or)
+      FoundOr = true;
+  }
   // Check if the input is an extended load of the required or/shift expression.
   Value *LoadPtr;
-  if (ZextLoad == Root || !match(ZextLoad, m_ZExt(m_Load(m_Value(LoadPtr)))))
+  if ((MustMatchOrInst && !FoundOr) || ZextLoad == Root ||
+      !match(ZextLoad, m_ZExt(m_Load(m_Value(LoadPtr)))))
     return false;
 
   // Require that the total load bit width is a legal integer type.
@@ -4105,7 +4111,8 @@ bool BoUpSLP::isLoadCombineReductionCandidate(RecurKind RdxKind) const {
 
   unsigned NumElts = VectorizableTree[0]->Scalars.size();
   Value *FirstReduced = VectorizableTree[0]->Scalars[0];
-  return isLoadCombineCandidateImpl(FirstReduced, NumElts, TTI);
+  return isLoadCombineCandidateImpl(FirstReduced, NumElts, TTI,
+                                    /* MatchOr */ false);
 }
 
 bool BoUpSLP::isLoadCombineCandidate() const {
@@ -4115,7 +4122,7 @@ bool BoUpSLP::isLoadCombineCandidate() const {
   for (Value *Scalar : VectorizableTree[0]->Scalars) {
     Value *X;
     if (!match(Scalar, m_Store(m_Value(X), m_Value())) ||
-        !isLoadCombineCandidateImpl(X, NumElts, TTI))
+        !isLoadCombineCandidateImpl(X, NumElts, TTI, /* MatchOr */ true))
       return false;
   }
   return true;
