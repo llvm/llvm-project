@@ -20,12 +20,12 @@ paddd %mm0, %mm0
 
 # CHECK:      Iterations:        1000
 # CHECK-NEXT: Instructions:      2000
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      504
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               1.00
+# CHECK-NEXT: uOps Per Cycle:    3.97
+# CHECK-NEXT: IPC:               3.97
 # CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Instruction Info:
@@ -42,12 +42,12 @@ paddd %mm0, %mm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    2000
-# CHECK-NEXT: Max number of mappings used:         66
+# CHECK-NEXT: Max number of mappings used:         74
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
 # CHECK-NEXT:    Total number of mappings created: 2000
-# CHECK-NEXT:    Max number of mappings used:      66
+# CHECK-NEXT:    Max number of mappings used:      74
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -85,16 +85,16 @@ paddd %mm0, %mm0
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -     pcmpeqb	%mm0, %mm0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     paddb	%mm0, %mm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.50    -      -      -      -      -      -      -      -      -      -      -      -     pcmpeqb	%mm0, %mm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25    -     0.50    -      -      -      -      -      -      -      -      -      -      -     paddb	%mm0, %mm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: Index     01234
 
-# CHECK:      [0,0]     DeER ..   pcmpeqb	%mm0, %mm0
-# CHECK-NEXT: [0,1]     D=eER..   paddb	%mm0, %mm0
-# CHECK-NEXT: [1,0]     D==eER.   pcmpeqb	%mm0, %mm0
-# CHECK-NEXT: [1,1]     D===eER   paddb	%mm0, %mm0
+# CHECK:      [0,0]     DeER.   pcmpeqb	%mm0, %mm0
+# CHECK-NEXT: [0,1]     D=eER   paddb	%mm0, %mm0
+# CHECK-NEXT: [1,0]     DeE-R   pcmpeqb	%mm0, %mm0
+# CHECK-NEXT: [1,1]     D=eER   paddb	%mm0, %mm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -103,20 +103,20 @@ paddd %mm0, %mm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     2.0    0.5    0.0       pcmpeqb	%mm0, %mm0
-# CHECK-NEXT: 1.     2     3.0    0.0    0.0       paddb	%mm0, %mm0
-# CHECK-NEXT:        2     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 0.     2     1.0    1.0    0.5       pcmpeqb	%mm0, %mm0
+# CHECK-NEXT: 1.     2     2.0    0.0    0.0       paddb	%mm0, %mm0
+# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
 
 # CHECK:      [1] Code Region
 
 # CHECK:      Iterations:        1000
 # CHECK-NEXT: Instructions:      2000
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      504
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               1.00
+# CHECK-NEXT: uOps Per Cycle:    3.97
+# CHECK-NEXT: IPC:               3.97
 # CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Instruction Info:
@@ -133,12 +133,12 @@ paddd %mm0, %mm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    2000
-# CHECK-NEXT: Max number of mappings used:         66
+# CHECK-NEXT: Max number of mappings used:         74
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
 # CHECK-NEXT:    Total number of mappings created: 2000
-# CHECK-NEXT:    Max number of mappings used:      66
+# CHECK-NEXT:    Max number of mappings used:      74
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -176,16 +176,16 @@ paddd %mm0, %mm0
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -     pcmpeqw	%mm0, %mm0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     paddw	%mm0, %mm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.50    -      -      -      -      -      -      -      -      -      -      -      -     pcmpeqw	%mm0, %mm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25    -     0.50    -      -      -      -      -      -      -      -      -      -      -     paddw	%mm0, %mm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: Index     01234
 
-# CHECK:      [0,0]     DeER ..   pcmpeqw	%mm0, %mm0
-# CHECK-NEXT: [0,1]     D=eER..   paddw	%mm0, %mm0
-# CHECK-NEXT: [1,0]     D==eER.   pcmpeqw	%mm0, %mm0
-# CHECK-NEXT: [1,1]     D===eER   paddw	%mm0, %mm0
+# CHECK:      [0,0]     DeER.   pcmpeqw	%mm0, %mm0
+# CHECK-NEXT: [0,1]     D=eER   paddw	%mm0, %mm0
+# CHECK-NEXT: [1,0]     DeE-R   pcmpeqw	%mm0, %mm0
+# CHECK-NEXT: [1,1]     D=eER   paddw	%mm0, %mm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -194,20 +194,20 @@ paddd %mm0, %mm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     2.0    0.5    0.0       pcmpeqw	%mm0, %mm0
-# CHECK-NEXT: 1.     2     3.0    0.0    0.0       paddw	%mm0, %mm0
-# CHECK-NEXT:        2     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 0.     2     1.0    1.0    0.5       pcmpeqw	%mm0, %mm0
+# CHECK-NEXT: 1.     2     2.0    0.0    0.0       paddw	%mm0, %mm0
+# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
 
 # CHECK:      [2] Code Region
 
 # CHECK:      Iterations:        1000
 # CHECK-NEXT: Instructions:      2000
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      504
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               1.00
+# CHECK-NEXT: uOps Per Cycle:    3.97
+# CHECK-NEXT: IPC:               3.97
 # CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Instruction Info:
@@ -224,12 +224,12 @@ paddd %mm0, %mm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    2000
-# CHECK-NEXT: Max number of mappings used:         66
+# CHECK-NEXT: Max number of mappings used:         74
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
 # CHECK-NEXT:    Total number of mappings created: 2000
-# CHECK-NEXT:    Max number of mappings used:      66
+# CHECK-NEXT:    Max number of mappings used:      74
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -267,16 +267,16 @@ paddd %mm0, %mm0
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -     pcmpeqd	%mm0, %mm0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     paddd	%mm0, %mm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.50    -      -      -      -      -      -      -      -      -      -      -      -     pcmpeqd	%mm0, %mm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25    -     0.50    -      -      -      -      -      -      -      -      -      -      -     paddd	%mm0, %mm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: Index     01234
 
-# CHECK:      [0,0]     DeER ..   pcmpeqd	%mm0, %mm0
-# CHECK-NEXT: [0,1]     D=eER..   paddd	%mm0, %mm0
-# CHECK-NEXT: [1,0]     D==eER.   pcmpeqd	%mm0, %mm0
-# CHECK-NEXT: [1,1]     D===eER   paddd	%mm0, %mm0
+# CHECK:      [0,0]     DeER.   pcmpeqd	%mm0, %mm0
+# CHECK-NEXT: [0,1]     D=eER   paddd	%mm0, %mm0
+# CHECK-NEXT: [1,0]     DeE-R   pcmpeqd	%mm0, %mm0
+# CHECK-NEXT: [1,1]     D=eER   paddd	%mm0, %mm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -285,6 +285,6 @@ paddd %mm0, %mm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     2.0    0.5    0.0       pcmpeqd	%mm0, %mm0
-# CHECK-NEXT: 1.     2     3.0    0.0    0.0       paddd	%mm0, %mm0
-# CHECK-NEXT:        2     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 0.     2     1.0    1.0    0.5       pcmpeqd	%mm0, %mm0
+# CHECK-NEXT: 1.     2     2.0    0.0    0.0       paddd	%mm0, %mm0
+# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
