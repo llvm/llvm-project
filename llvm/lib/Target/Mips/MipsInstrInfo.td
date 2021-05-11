@@ -3159,11 +3159,13 @@ def : MipsPat<(mul GPR32:$lhs, GPR32:$rhs),
 def : MipsPat<(MipsSync (i32 immz)),
               (SYNC 0)>, ISA_MIPS2;
 
+let AdditionalPredicates = [NotNanoMips] in {
 // Call
 def : MipsPat<(MipsJmpLink (i32 texternalsym:$dst)),
               (JAL texternalsym:$dst)>, ISA_MIPS1;
 //def : MipsPat<(MipsJmpLink GPR32:$dst),
 //              (JALR GPR32:$dst)>;
+}
 
 // Tail call
 let AdditionalPredicates = [NotInMicroMips, NotNanoMips] in {
