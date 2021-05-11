@@ -73,3 +73,18 @@ def testEncodingAttr2D():
     print(created)
     # CHECK: created_equal: True
     print(f"created_equal: {created == casted}")
+
+
+# CHECK-LABEL: TEST: testEncodingAttrOnTensor
+@run
+def testEncodingAttrOnTensor():
+  with Context() as ctx, Location.unknown():
+    encoding = st.EncodingAttr(Attribute.parse(
+      '#sparse_tensor.encoding<{ dimLevelType = [ "compressed" ], '
+      'pointerBitWidth = 16, indexBitWidth = 32 }>'))
+    tt = RankedTensorType.get((1024,), F32Type.get(), encoding=encoding)
+    # CHECK: tensor<1024xf32, #sparse_tensor
+    print(tt)
+    # CHECK: #sparse_tensor.encoding
+    print(tt.encoding)
+    assert tt.encoding == encoding
