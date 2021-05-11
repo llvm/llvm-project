@@ -300,14 +300,19 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset.getFixed());
   }
 
-  MachineFrameInfo &MFI = MF.getFrameInfo();
   auto ZvlssegInfo = TII->isRVVSpillForZvlsseg(MI.getOpcode());
   if (ZvlssegInfo) {
-    int64_t ScalableValue = MFI.getObjectSize(FrameIndex) / ZvlssegInfo->first;
-    Register FactorRegister =
-        TII->getVLENFactoredAmount(MF, MBB, II, ScalableValue);
-    MI.getOperand(FIOperandNum + 1)
-        .ChangeToRegister(FactorRegister, /*isDef=*/false);
+    Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), VL);
+    uint32_t ShiftAmount = Log2_32(ZvlssegInfo->second);
+    if (ShiftAmount != 0)
+      BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), VL)
+          .addReg(VL)
+          .addImm(ShiftAmount);
+    // The last argument of pseudo spilling opcode for zvlsseg is the length of
+    // one element of zvlsseg types. For example, for vint32m2x2_t, it will be
+    // the length of vint32m2_t.
+    MI.getOperand(FIOperandNum + 1).ChangeToRegister(VL, /*isDef=*/false);
   }
 }
 
