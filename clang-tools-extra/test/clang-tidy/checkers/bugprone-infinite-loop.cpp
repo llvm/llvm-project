@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s bugprone-infinite-loop %t -- -- -fexceptions
+// RUN: %check_clang_tidy %s bugprone-infinite-loop %t \
+// RUN:                   -- -- -fexceptions -fblocks
 
 void simple_infinite_loop1() {
   int i = 0;
@@ -376,6 +377,84 @@ void lambda_capture() {
     int *p = &i;
     (*p)++;
   } while (i < Limit);
+}
+
+template <typename T> void accept_callback(T t) {
+  // Potentially call the callback.
+  // Possibly on a background thread or something.
+}
+
+void accept_block(void (^)(void)) {
+  // Potentially call the callback.
+  // Possibly on a background thread or something.
+}
+
+void wait(void) {
+  // Wait for the previously passed callback to be called.
+}
+
+void lambda_capture_from_outside() {
+  bool finished = false;
+  accept_callback([&]() {
+    finished = true;
+  });
+  while (!finished) {
+    wait();
+  }
+}
+
+void lambda_capture_from_outside_by_value() {
+  bool finished = false;
+  accept_callback([finished]() {
+    if (finished) {}
+  });
+  while (!finished) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (finished) are updated in the loop body [bugprone-infinite-loop]
+    wait();
+  }
+}
+
+void lambda_capture_from_outside_but_unchanged() {
+  bool finished = false;
+  accept_callback([&finished]() {
+    if (finished) {}
+  });
+  while (!finished) {
+    // FIXME: Should warn.
+    wait();
+  }
+}
+
+void block_capture_from_outside() {
+  __block bool finished = false;
+  accept_block(^{
+    finished = true;
+  });
+  while (!finished) {
+    wait();
+  }
+}
+
+void block_capture_from_outside_by_value() {
+  bool finished = false;
+  accept_block(^{
+    if (finished) {}
+  });
+  while (!finished) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (finished) are updated in the loop body [bugprone-infinite-loop]
+    wait();
+  }
+}
+
+void block_capture_from_outside_but_unchanged() {
+  __block bool finished = false;
+  accept_block(^{
+    if (finished) {}
+  });
+  while (!finished) {
+    // FIXME: Should warn.
+    wait();
+  }
 }
 
 void evaluatable(bool CondVar) {

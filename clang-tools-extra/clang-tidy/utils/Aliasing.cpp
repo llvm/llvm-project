@@ -9,6 +9,7 @@
 #include "Aliasing.h"
 
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 
 namespace clang {
 namespace tidy {
@@ -24,6 +25,10 @@ static bool isAccessForVar(const Stmt *S, const VarDecl *Var) {
 
 /// Return whether \p Var has a pointer or reference in \p S.
 static bool isPtrOrReferenceForVar(const Stmt *S, const VarDecl *Var) {
+  // Treat block capture by reference as a form of taking a reference.
+  if (Var->isEscapingByref())
+    return true;
+
   if (const auto *DS = dyn_cast<DeclStmt>(S)) {
     for (const Decl *D : DS->getDeclGroup()) {
       if (const auto *LeftVar = dyn_cast<VarDecl>(D)) {
@@ -35,6 +40,12 @@ static bool isPtrOrReferenceForVar(const Stmt *S, const VarDecl *Var) {
   } else if (const auto *UnOp = dyn_cast<UnaryOperator>(S)) {
     if (UnOp->getOpcode() == UO_AddrOf)
       return isAccessForVar(UnOp->getSubExpr(), Var);
+  } else if (const auto *LE = dyn_cast<LambdaExpr>(S)) {
+    // Treat lambda capture by reference as a form of taking a reference.
+    return llvm::any_of(LE->captures(), [Var](const LambdaCapture &C) {
+      return C.capturesVariable() && C.getCaptureKind() == LCK_ByRef &&
+             C.getCapturedVar() == Var;
+    });
   }
 
   return false;
