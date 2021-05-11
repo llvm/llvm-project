@@ -7,7 +7,7 @@ declare <2 x i8> @llvm.experimental.stepvector.v2i8()
 define <2 x i8> @stepvector_v2i8() {
 ; CHECK-LABEL: stepvector_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
   %v = call <2 x i8> @llvm.experimental.stepvector.v2i8()
@@ -19,7 +19,7 @@ declare <4 x i8> @llvm.experimental.stepvector.v4i8()
 define <4 x i8> @stepvector_v4i8() {
 ; CHECK-LABEL: stepvector_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
   %v = call <4 x i8> @llvm.experimental.stepvector.v4i8()
@@ -31,7 +31,7 @@ declare <8 x i8> @llvm.experimental.stepvector.v8i8()
 define <8 x i8> @stepvector_v8i8() {
 ; CHECK-LABEL: stepvector_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
   %v = call <8 x i8> @llvm.experimental.stepvector.v8i8()
@@ -55,7 +55,7 @@ declare <2 x i16> @llvm.experimental.stepvector.v2i16()
 define <2 x i16> @stepvector_v2i16() {
 ; CHECK-LABEL: stepvector_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
   %v = call <2 x i16> @llvm.experimental.stepvector.v2i16()
@@ -67,7 +67,7 @@ declare <4 x i16> @llvm.experimental.stepvector.v4i16()
 define <4 x i16> @stepvector_v4i16() {
 ; CHECK-LABEL: stepvector_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
   %v = call <4 x i16> @llvm.experimental.stepvector.v4i16()
@@ -112,7 +112,7 @@ declare <2 x i32> @llvm.experimental.stepvector.v2i32()
 define <2 x i32> @stepvector_v2i32() {
 ; CHECK-LABEL: stepvector_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
   %v = call <2 x i32> @llvm.experimental.stepvector.v2i32()

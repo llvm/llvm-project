@@ -7,7 +7,7 @@ declare i8 @llvm.vector.reduce.add.v1i8(<1 x i8>)
 define i8 @vreduce_add_v1i8(<1 x i8>* %x) {
 ; CHECK-LABEL: vreduce_add_v1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -21,12 +21,13 @@ declare i8 @llvm.vector.reduce.add.v2i8(<2 x i8>)
 define i8 @vreduce_add_v2i8(<2 x i8>* %x) {
 ; CHECK-LABEL: vreduce_add_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vredsum.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, <2 x i8>* %x
@@ -39,12 +40,13 @@ declare i8 @llvm.vector.reduce.add.v4i8(<4 x i8>)
 define i8 @vreduce_add_v4i8(<4 x i8>* %x) {
 ; CHECK-LABEL: vreduce_add_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vredsum.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <4 x i8>, <4 x i8>* %x
@@ -57,12 +59,13 @@ declare i8 @llvm.vector.reduce.add.v8i8(<8 x i8>)
 define i8 @vreduce_add_v8i8(<8 x i8>* %x) {
 ; CHECK-LABEL: vreduce_add_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vredsum.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <8 x i8>, <8 x i8>* %x
@@ -176,7 +179,7 @@ declare i16 @llvm.vector.reduce.add.v1i16(<1 x i16>)
 define i16 @vreduce_add_v1i16(<1 x i16>* %x) {
 ; CHECK-LABEL: vreduce_add_v1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -190,12 +193,13 @@ declare i16 @llvm.vector.reduce.add.v2i16(<2 x i16>)
 define i16 @vreduce_add_v2i16(<2 x i16>* %x) {
 ; CHECK-LABEL: vreduce_add_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vredsum.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i16>, <2 x i16>* %x
@@ -208,12 +212,13 @@ declare i16 @llvm.vector.reduce.add.v4i16(<4 x i16>)
 define i16 @vreduce_add_v4i16(<4 x i16>* %x) {
 ; CHECK-LABEL: vreduce_add_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vredsum.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <4 x i16>, <4 x i16>* %x
@@ -326,7 +331,7 @@ declare i32 @llvm.vector.reduce.add.v1i32(<1 x i32>)
 define i32 @vreduce_add_v1i32(<1 x i32>* %x) {
 ; CHECK-LABEL: vreduce_add_v1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -340,12 +345,13 @@ declare i32 @llvm.vector.reduce.add.v2i32(<2 x i32>)
 define i32 @vreduce_add_v2i32(<2 x i32>* %x) {
 ; CHECK-LABEL: vreduce_add_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vredsum.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i32>, <2 x i32>* %x
@@ -713,7 +719,7 @@ declare i8 @llvm.vector.reduce.and.v1i8(<1 x i8>)
 define i8 @vreduce_and_v1i8(<1 x i8>* %x) {
 ; CHECK-LABEL: vreduce_and_v1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -727,12 +733,13 @@ declare i8 @llvm.vector.reduce.and.v2i8(<2 x i8>)
 define i8 @vreduce_and_v2i8(<2 x i8>* %x) {
 ; CHECK-LABEL: vreduce_and_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, -1
-; CHECK-NEXT:    vsetivli a0, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vredand.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, <2 x i8>* %x
@@ -745,12 +752,13 @@ declare i8 @llvm.vector.reduce.and.v4i8(<4 x i8>)
 define i8 @vreduce_and_v4i8(<4 x i8>* %x) {
 ; CHECK-LABEL: vreduce_and_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, -1
-; CHECK-NEXT:    vsetivli a0, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vredand.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <4 x i8>, <4 x i8>* %x
@@ -763,12 +771,13 @@ declare i8 @llvm.vector.reduce.and.v8i8(<8 x i8>)
 define i8 @vreduce_and_v8i8(<8 x i8>* %x) {
 ; CHECK-LABEL: vreduce_and_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, -1
-; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vredand.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <8 x i8>, <8 x i8>* %x
@@ -882,7 +891,7 @@ declare i16 @llvm.vector.reduce.and.v1i16(<1 x i16>)
 define i16 @vreduce_and_v1i16(<1 x i16>* %x) {
 ; CHECK-LABEL: vreduce_and_v1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -896,12 +905,13 @@ declare i16 @llvm.vector.reduce.and.v2i16(<2 x i16>)
 define i16 @vreduce_and_v2i16(<2 x i16>* %x) {
 ; CHECK-LABEL: vreduce_and_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, -1
-; CHECK-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vredand.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i16>, <2 x i16>* %x
@@ -914,12 +924,13 @@ declare i16 @llvm.vector.reduce.and.v4i16(<4 x i16>)
 define i16 @vreduce_and_v4i16(<4 x i16>* %x) {
 ; CHECK-LABEL: vreduce_and_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, -1
-; CHECK-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vredand.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <4 x i16>, <4 x i16>* %x
@@ -1032,7 +1043,7 @@ declare i32 @llvm.vector.reduce.and.v1i32(<1 x i32>)
 define i32 @vreduce_and_v1i32(<1 x i32>* %x) {
 ; CHECK-LABEL: vreduce_and_v1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -1046,12 +1057,13 @@ declare i32 @llvm.vector.reduce.and.v2i32(<2 x i32>)
 define i32 @vreduce_and_v2i32(<2 x i32>* %x) {
 ; CHECK-LABEL: vreduce_and_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, -1
-; CHECK-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vredand.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i32>, <2 x i32>* %x
@@ -1419,7 +1431,7 @@ declare i8 @llvm.vector.reduce.or.v1i8(<1 x i8>)
 define i8 @vreduce_or_v1i8(<1 x i8>* %x) {
 ; CHECK-LABEL: vreduce_or_v1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -1433,12 +1445,13 @@ declare i8 @llvm.vector.reduce.or.v2i8(<2 x i8>)
 define i8 @vreduce_or_v2i8(<2 x i8>* %x) {
 ; CHECK-LABEL: vreduce_or_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vredor.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, <2 x i8>* %x
@@ -1451,12 +1464,13 @@ declare i8 @llvm.vector.reduce.or.v4i8(<4 x i8>)
 define i8 @vreduce_or_v4i8(<4 x i8>* %x) {
 ; CHECK-LABEL: vreduce_or_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vredor.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <4 x i8>, <4 x i8>* %x
@@ -1469,12 +1483,13 @@ declare i8 @llvm.vector.reduce.or.v8i8(<8 x i8>)
 define i8 @vreduce_or_v8i8(<8 x i8>* %x) {
 ; CHECK-LABEL: vreduce_or_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vredor.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <8 x i8>, <8 x i8>* %x
@@ -1588,7 +1603,7 @@ declare i16 @llvm.vector.reduce.or.v1i16(<1 x i16>)
 define i16 @vreduce_or_v1i16(<1 x i16>* %x) {
 ; CHECK-LABEL: vreduce_or_v1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -1602,12 +1617,13 @@ declare i16 @llvm.vector.reduce.or.v2i16(<2 x i16>)
 define i16 @vreduce_or_v2i16(<2 x i16>* %x) {
 ; CHECK-LABEL: vreduce_or_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vredor.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i16>, <2 x i16>* %x
@@ -1620,12 +1636,13 @@ declare i16 @llvm.vector.reduce.or.v4i16(<4 x i16>)
 define i16 @vreduce_or_v4i16(<4 x i16>* %x) {
 ; CHECK-LABEL: vreduce_or_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vredor.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <4 x i16>, <4 x i16>* %x
@@ -1738,7 +1755,7 @@ declare i32 @llvm.vector.reduce.or.v1i32(<1 x i32>)
 define i32 @vreduce_or_v1i32(<1 x i32>* %x) {
 ; CHECK-LABEL: vreduce_or_v1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -1752,12 +1769,13 @@ declare i32 @llvm.vector.reduce.or.v2i32(<2 x i32>)
 define i32 @vreduce_or_v2i32(<2 x i32>* %x) {
 ; CHECK-LABEL: vreduce_or_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vredor.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i32>, <2 x i32>* %x
@@ -2125,7 +2143,7 @@ declare i8 @llvm.vector.reduce.xor.v1i8(<1 x i8>)
 define i8 @vreduce_xor_v1i8(<1 x i8>* %x) {
 ; CHECK-LABEL: vreduce_xor_v1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -2139,12 +2157,13 @@ declare i8 @llvm.vector.reduce.xor.v2i8(<2 x i8>)
 define i8 @vreduce_xor_v2i8(<2 x i8>* %x) {
 ; CHECK-LABEL: vreduce_xor_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vredxor.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, <2 x i8>* %x
@@ -2157,12 +2176,13 @@ declare i8 @llvm.vector.reduce.xor.v4i8(<4 x i8>)
 define i8 @vreduce_xor_v4i8(<4 x i8>* %x) {
 ; CHECK-LABEL: vreduce_xor_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vredxor.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <4 x i8>, <4 x i8>* %x
@@ -2175,12 +2195,13 @@ declare i8 @llvm.vector.reduce.xor.v8i8(<8 x i8>)
 define i8 @vreduce_xor_v8i8(<8 x i8>* %x) {
 ; CHECK-LABEL: vreduce_xor_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vredxor.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <8 x i8>, <8 x i8>* %x
@@ -2294,7 +2315,7 @@ declare i16 @llvm.vector.reduce.xor.v1i16(<1 x i16>)
 define i16 @vreduce_xor_v1i16(<1 x i16>* %x) {
 ; CHECK-LABEL: vreduce_xor_v1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -2308,12 +2329,13 @@ declare i16 @llvm.vector.reduce.xor.v2i16(<2 x i16>)
 define i16 @vreduce_xor_v2i16(<2 x i16>* %x) {
 ; CHECK-LABEL: vreduce_xor_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vredxor.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i16>, <2 x i16>* %x
@@ -2326,12 +2348,13 @@ declare i16 @llvm.vector.reduce.xor.v4i16(<4 x i16>)
 define i16 @vreduce_xor_v4i16(<4 x i16>* %x) {
 ; CHECK-LABEL: vreduce_xor_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vredxor.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <4 x i16>, <4 x i16>* %x
@@ -2444,7 +2467,7 @@ declare i32 @llvm.vector.reduce.xor.v1i32(<1 x i32>)
 define i32 @vreduce_xor_v1i32(<1 x i32>* %x) {
 ; CHECK-LABEL: vreduce_xor_v1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -2458,12 +2481,13 @@ declare i32 @llvm.vector.reduce.xor.v2i32(<2 x i32>)
 define i32 @vreduce_xor_v2i32(<2 x i32>* %x) {
 ; CHECK-LABEL: vreduce_xor_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vredxor.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i32>, <2 x i32>* %x
@@ -2831,7 +2855,7 @@ declare i8 @llvm.vector.reduce.smin.v1i8(<1 x i8>)
 define i8 @vreduce_smin_v1i8(<1 x i8>* %x) {
 ; CHECK-LABEL: vreduce_smin_v1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -2845,13 +2869,14 @@ declare i8 @llvm.vector.reduce.smin.v2i8(<2 x i8>)
 define i8 @vreduce_smin_v2i8(<2 x i8>* %x) {
 ; CHECK-LABEL: vreduce_smin_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    addi a0, zero, 127
 ; CHECK-NEXT:    vsetvli a1, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.x v26, a0
-; CHECK-NEXT:    vsetivli a0, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vredmin.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, <2 x i8>* %x
@@ -2864,13 +2889,14 @@ declare i8 @llvm.vector.reduce.smin.v4i8(<4 x i8>)
 define i8 @vreduce_smin_v4i8(<4 x i8>* %x) {
 ; CHECK-LABEL: vreduce_smin_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    addi a0, zero, 127
 ; CHECK-NEXT:    vsetvli a1, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.x v26, a0
-; CHECK-NEXT:    vsetivli a0, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vredmin.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <4 x i8>, <4 x i8>* %x
@@ -2883,13 +2909,14 @@ declare i8 @llvm.vector.reduce.smin.v8i8(<8 x i8>)
 define i8 @vreduce_smin_v8i8(<8 x i8>* %x) {
 ; CHECK-LABEL: vreduce_smin_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    addi a0, zero, 127
 ; CHECK-NEXT:    vsetvli a1, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.x v26, a0
-; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vredmin.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <8 x i8>, <8 x i8>* %x
@@ -3008,7 +3035,7 @@ declare i16 @llvm.vector.reduce.smin.v1i16(<1 x i16>)
 define i16 @vreduce_smin_v1i16(<1 x i16>* %x) {
 ; CHECK-LABEL: vreduce_smin_v1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -3022,27 +3049,29 @@ declare i16 @llvm.vector.reduce.smin.v2i16(<2 x i16>)
 define i16 @vreduce_smin_v2i16(<2 x i16>* %x) {
 ; RV32-LABEL: vreduce_smin_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a1, 2, e16,m1,ta,mu
+; RV32-NEXT:    vsetivli a1, 2, e16,mf4,ta,mu
 ; RV32-NEXT:    vle16.v v25, (a0)
 ; RV32-NEXT:    lui a0, 8
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    vsetvli a1, zero, e16,m1,ta,mu
 ; RV32-NEXT:    vmv.v.x v26, a0
-; RV32-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; RV32-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; RV32-NEXT:    vredmin.vs v25, v25, v26
+; RV32-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_smin_v2i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli a1, 2, e16,m1,ta,mu
+; RV64-NEXT:    vsetivli a1, 2, e16,mf4,ta,mu
 ; RV64-NEXT:    vle16.v v25, (a0)
 ; RV64-NEXT:    lui a0, 8
 ; RV64-NEXT:    addiw a0, a0, -1
 ; RV64-NEXT:    vsetvli a1, zero, e16,m1,ta,mu
 ; RV64-NEXT:    vmv.v.x v26, a0
-; RV64-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; RV64-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; RV64-NEXT:    vredmin.vs v25, v25, v26
+; RV64-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; RV64-NEXT:    vmv.x.s a0, v25
 ; RV64-NEXT:    ret
   %v = load <2 x i16>, <2 x i16>* %x
@@ -3055,27 +3084,29 @@ declare i16 @llvm.vector.reduce.smin.v4i16(<4 x i16>)
 define i16 @vreduce_smin_v4i16(<4 x i16>* %x) {
 ; RV32-LABEL: vreduce_smin_v4i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a1, 4, e16,m1,ta,mu
+; RV32-NEXT:    vsetivli a1, 4, e16,mf2,ta,mu
 ; RV32-NEXT:    vle16.v v25, (a0)
 ; RV32-NEXT:    lui a0, 8
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    vsetvli a1, zero, e16,m1,ta,mu
 ; RV32-NEXT:    vmv.v.x v26, a0
-; RV32-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
+; RV32-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; RV32-NEXT:    vredmin.vs v25, v25, v26
+; RV32-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_smin_v4i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli a1, 4, e16,m1,ta,mu
+; RV64-NEXT:    vsetivli a1, 4, e16,mf2,ta,mu
 ; RV64-NEXT:    vle16.v v25, (a0)
 ; RV64-NEXT:    lui a0, 8
 ; RV64-NEXT:    addiw a0, a0, -1
 ; RV64-NEXT:    vsetvli a1, zero, e16,m1,ta,mu
 ; RV64-NEXT:    vmv.v.x v26, a0
-; RV64-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
+; RV64-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; RV64-NEXT:    vredmin.vs v25, v25, v26
+; RV64-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; RV64-NEXT:    vmv.x.s a0, v25
 ; RV64-NEXT:    ret
   %v = load <4 x i16>, <4 x i16>* %x
@@ -3273,7 +3304,7 @@ declare i32 @llvm.vector.reduce.smin.v1i32(<1 x i32>)
 define i32 @vreduce_smin_v1i32(<1 x i32>* %x) {
 ; CHECK-LABEL: vreduce_smin_v1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -3287,27 +3318,29 @@ declare i32 @llvm.vector.reduce.smin.v2i32(<2 x i32>)
 define i32 @vreduce_smin_v2i32(<2 x i32>* %x) {
 ; RV32-LABEL: vreduce_smin_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a1, 2, e32,m1,ta,mu
+; RV32-NEXT:    vsetivli a1, 2, e32,mf2,ta,mu
 ; RV32-NEXT:    vle32.v v25, (a0)
 ; RV32-NEXT:    lui a0, 524288
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    vsetvli a1, zero, e32,m1,ta,mu
 ; RV32-NEXT:    vmv.v.x v26, a0
-; RV32-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; RV32-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; RV32-NEXT:    vredmin.vs v25, v25, v26
+; RV32-NEXT:    vsetvli zero, zero, e32,m1,ta,mu
 ; RV32-NEXT:    vmv.x.s a0, v25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_smin_v2i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli a1, 2, e32,m1,ta,mu
+; RV64-NEXT:    vsetivli a1, 2, e32,mf2,ta,mu
 ; RV64-NEXT:    vle32.v v25, (a0)
 ; RV64-NEXT:    lui a0, 524288
 ; RV64-NEXT:    addiw a0, a0, -1
 ; RV64-NEXT:    vsetvli a1, zero, e32,m1,ta,mu
 ; RV64-NEXT:    vmv.v.x v26, a0
-; RV64-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; RV64-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; RV64-NEXT:    vredmin.vs v25, v25, v26
+; RV64-NEXT:    vsetvli zero, zero, e32,m1,ta,mu
 ; RV64-NEXT:    vmv.x.s a0, v25
 ; RV64-NEXT:    ret
   %v = load <2 x i32>, <2 x i32>* %x
@@ -3824,7 +3857,7 @@ declare i8 @llvm.vector.reduce.smax.v1i8(<1 x i8>)
 define i8 @vreduce_smax_v1i8(<1 x i8>* %x) {
 ; CHECK-LABEL: vreduce_smax_v1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -3838,13 +3871,14 @@ declare i8 @llvm.vector.reduce.smax.v2i8(<2 x i8>)
 define i8 @vreduce_smax_v2i8(<2 x i8>* %x) {
 ; CHECK-LABEL: vreduce_smax_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    addi a0, zero, -128
 ; CHECK-NEXT:    vsetvli a1, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.x v26, a0
-; CHECK-NEXT:    vsetivli a0, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vredmax.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, <2 x i8>* %x
@@ -3857,13 +3891,14 @@ declare i8 @llvm.vector.reduce.smax.v4i8(<4 x i8>)
 define i8 @vreduce_smax_v4i8(<4 x i8>* %x) {
 ; CHECK-LABEL: vreduce_smax_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    addi a0, zero, -128
 ; CHECK-NEXT:    vsetvli a1, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.x v26, a0
-; CHECK-NEXT:    vsetivli a0, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vredmax.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <4 x i8>, <4 x i8>* %x
@@ -3876,13 +3911,14 @@ declare i8 @llvm.vector.reduce.smax.v8i8(<8 x i8>)
 define i8 @vreduce_smax_v8i8(<8 x i8>* %x) {
 ; CHECK-LABEL: vreduce_smax_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    addi a0, zero, -128
 ; CHECK-NEXT:    vsetvli a1, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.x v26, a0
-; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vredmax.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <8 x i8>, <8 x i8>* %x
@@ -4001,7 +4037,7 @@ declare i16 @llvm.vector.reduce.smax.v1i16(<1 x i16>)
 define i16 @vreduce_smax_v1i16(<1 x i16>* %x) {
 ; CHECK-LABEL: vreduce_smax_v1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -4015,13 +4051,14 @@ declare i16 @llvm.vector.reduce.smax.v2i16(<2 x i16>)
 define i16 @vreduce_smax_v2i16(<2 x i16>* %x) {
 ; CHECK-LABEL: vreduce_smax_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    lui a0, 1048568
 ; CHECK-NEXT:    vsetvli a1, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.x v26, a0
-; CHECK-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vredmax.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i16>, <2 x i16>* %x
@@ -4034,13 +4071,14 @@ declare i16 @llvm.vector.reduce.smax.v4i16(<4 x i16>)
 define i16 @vreduce_smax_v4i16(<4 x i16>* %x) {
 ; CHECK-LABEL: vreduce_smax_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    lui a0, 1048568
 ; CHECK-NEXT:    vsetvli a1, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.x v26, a0
-; CHECK-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vredmax.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <4 x i16>, <4 x i16>* %x
@@ -4158,7 +4196,7 @@ declare i32 @llvm.vector.reduce.smax.v1i32(<1 x i32>)
 define i32 @vreduce_smax_v1i32(<1 x i32>* %x) {
 ; CHECK-LABEL: vreduce_smax_v1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -4172,13 +4210,14 @@ declare i32 @llvm.vector.reduce.smax.v2i32(<2 x i32>)
 define i32 @vreduce_smax_v2i32(<2 x i32>* %x) {
 ; CHECK-LABEL: vreduce_smax_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    lui a0, 524288
 ; CHECK-NEXT:    vsetvli a1, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.x v26, a0
-; CHECK-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vredmax.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i32>, <2 x i32>* %x
@@ -4604,7 +4643,7 @@ declare i8 @llvm.vector.reduce.umin.v1i8(<1 x i8>)
 define i8 @vreduce_umin_v1i8(<1 x i8>* %x) {
 ; CHECK-LABEL: vreduce_umin_v1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -4618,12 +4657,13 @@ declare i8 @llvm.vector.reduce.umin.v2i8(<2 x i8>)
 define i8 @vreduce_umin_v2i8(<2 x i8>* %x) {
 ; CHECK-LABEL: vreduce_umin_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, -1
-; CHECK-NEXT:    vsetivli a0, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vredminu.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, <2 x i8>* %x
@@ -4636,12 +4676,13 @@ declare i8 @llvm.vector.reduce.umin.v4i8(<4 x i8>)
 define i8 @vreduce_umin_v4i8(<4 x i8>* %x) {
 ; CHECK-LABEL: vreduce_umin_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, -1
-; CHECK-NEXT:    vsetivli a0, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vredminu.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <4 x i8>, <4 x i8>* %x
@@ -4654,12 +4695,13 @@ declare i8 @llvm.vector.reduce.umin.v8i8(<8 x i8>)
 define i8 @vreduce_umin_v8i8(<8 x i8>* %x) {
 ; CHECK-LABEL: vreduce_umin_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, -1
-; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vredminu.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <8 x i8>, <8 x i8>* %x
@@ -4773,7 +4815,7 @@ declare i16 @llvm.vector.reduce.umin.v1i16(<1 x i16>)
 define i16 @vreduce_umin_v1i16(<1 x i16>* %x) {
 ; CHECK-LABEL: vreduce_umin_v1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -4787,12 +4829,13 @@ declare i16 @llvm.vector.reduce.umin.v2i16(<2 x i16>)
 define i16 @vreduce_umin_v2i16(<2 x i16>* %x) {
 ; CHECK-LABEL: vreduce_umin_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, -1
-; CHECK-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vredminu.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i16>, <2 x i16>* %x
@@ -4805,12 +4848,13 @@ declare i16 @llvm.vector.reduce.umin.v4i16(<4 x i16>)
 define i16 @vreduce_umin_v4i16(<4 x i16>* %x) {
 ; CHECK-LABEL: vreduce_umin_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, -1
-; CHECK-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vredminu.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <4 x i16>, <4 x i16>* %x
@@ -4923,7 +4967,7 @@ declare i32 @llvm.vector.reduce.umin.v1i32(<1 x i32>)
 define i32 @vreduce_umin_v1i32(<1 x i32>* %x) {
 ; CHECK-LABEL: vreduce_umin_v1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -4937,12 +4981,13 @@ declare i32 @llvm.vector.reduce.umin.v2i32(<2 x i32>)
 define i32 @vreduce_umin_v2i32(<2 x i32>* %x) {
 ; CHECK-LABEL: vreduce_umin_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, -1
-; CHECK-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vredminu.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i32>, <2 x i32>* %x
@@ -5310,7 +5355,7 @@ declare i8 @llvm.vector.reduce.umax.v1i8(<1 x i8>)
 define i8 @vreduce_umax_v1i8(<1 x i8>* %x) {
 ; CHECK-LABEL: vreduce_umax_v1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -5324,12 +5369,13 @@ declare i8 @llvm.vector.reduce.umax.v2i8(<2 x i8>)
 define i8 @vreduce_umax_v2i8(<2 x i8>* %x) {
 ; CHECK-LABEL: vreduce_umax_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vredmaxu.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, <2 x i8>* %x
@@ -5342,12 +5388,13 @@ declare i8 @llvm.vector.reduce.umax.v4i8(<4 x i8>)
 define i8 @vreduce_umax_v4i8(<4 x i8>* %x) {
 ; CHECK-LABEL: vreduce_umax_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vredmaxu.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <4 x i8>, <4 x i8>* %x
@@ -5360,12 +5407,13 @@ declare i8 @llvm.vector.reduce.umax.v8i8(<8 x i8>)
 define i8 @vreduce_umax_v8i8(<8 x i8>* %x) {
 ; CHECK-LABEL: vreduce_umax_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vredmaxu.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <8 x i8>, <8 x i8>* %x
@@ -5479,7 +5527,7 @@ declare i16 @llvm.vector.reduce.umax.v1i16(<1 x i16>)
 define i16 @vreduce_umax_v1i16(<1 x i16>* %x) {
 ; CHECK-LABEL: vreduce_umax_v1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -5493,12 +5541,13 @@ declare i16 @llvm.vector.reduce.umax.v2i16(<2 x i16>)
 define i16 @vreduce_umax_v2i16(<2 x i16>* %x) {
 ; CHECK-LABEL: vreduce_umax_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vredmaxu.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i16>, <2 x i16>* %x
@@ -5511,12 +5560,13 @@ declare i16 @llvm.vector.reduce.umax.v4i16(<4 x i16>)
 define i16 @vreduce_umax_v4i16(<4 x i16>* %x) {
 ; CHECK-LABEL: vreduce_umax_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vredmaxu.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <4 x i16>, <4 x i16>* %x
@@ -5629,7 +5679,7 @@ declare i32 @llvm.vector.reduce.umax.v1i32(<1 x i32>)
 define i32 @vreduce_umax_v1i32(<1 x i32>* %x) {
 ; CHECK-LABEL: vreduce_umax_v1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -5643,12 +5693,13 @@ declare i32 @llvm.vector.reduce.umax.v2i32(<2 x i32>)
 define i32 @vreduce_umax_v2i32(<2 x i32>* %x) {
 ; CHECK-LABEL: vreduce_umax_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vredmaxu.vs v25, v25, v26
+; CHECK-NEXT:    vsetvli zero, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %v = load <2 x i32>, <2 x i32>* %x

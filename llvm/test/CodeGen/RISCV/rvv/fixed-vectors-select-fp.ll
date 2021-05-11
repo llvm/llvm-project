@@ -7,7 +7,7 @@
 define <2 x half> @select_v2f16(i1 zeroext %c, <2 x half> %a, <2 x half> %b) {
 ; CHECK-LABEL: select_v2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfmv.f.s ft1, v9
 ; CHECK-NEXT:    vfmv.f.s ft0, v8
 ; CHECK-NEXT:    vslidedown.vi v25, v9, 1
@@ -19,7 +19,7 @@ define <2 x half> @select_v2f16(i1 zeroext %c, <2 x half> %a, <2 x half> %b) {
 ; CHECK-NEXT:    fmv.h ft0, ft1
 ; CHECK-NEXT:    fmv.h ft2, ft3
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v8, ft2
 ; CHECK-NEXT:    vfmv.s.f v8, ft0
 ; CHECK-NEXT:    ret
@@ -31,7 +31,7 @@ define <2 x half> @selectcc_v2f16(half %a, half %b, <2 x half> %c, <2 x half> %d
 ; CHECK-LABEL: selectcc_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    feq.h a0, fa0, fa1
-; CHECK-NEXT:    vsetivli a1, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v9, 1
 ; CHECK-NEXT:    vfmv.f.s ft1, v25
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 1
@@ -40,7 +40,7 @@ define <2 x half> @selectcc_v2f16(half %a, half %b, <2 x half> %c, <2 x half> %d
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    fmv.h ft0, ft1
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    vsetivli a1, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v25, ft0
 ; CHECK-NEXT:    vfmv.f.s ft1, v9
 ; CHECK-NEXT:    vfmv.f.s ft0, v8
@@ -48,7 +48,7 @@ define <2 x half> @selectcc_v2f16(half %a, half %b, <2 x half> %c, <2 x half> %d
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    fmv.h ft0, ft1
 ; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    vsetivli a0, 2, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfmv.s.f v25, ft0
 ; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    ret
@@ -62,7 +62,7 @@ define <4 x half> @select_v4f16(i1 zeroext %c, <4 x half> %a, <4 x half> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,mf2,ta,mu
 ; CHECK-NEXT:    vfmv.f.s ft1, v9
 ; CHECK-NEXT:    vfmv.f.s ft0, v8
 ; CHECK-NEXT:    bnez a0, .LBB2_2
@@ -70,7 +70,7 @@ define <4 x half> @select_v4f16(i1 zeroext %c, <4 x half> %a, <4 x half> %b) {
 ; CHECK-NEXT:    fmv.h ft0, ft1
 ; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    fsh ft0, 8(sp)
-; CHECK-NEXT:    vsetivli a1, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v9, 3
 ; CHECK-NEXT:    vfmv.f.s ft0, v25
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 3
@@ -80,7 +80,7 @@ define <4 x half> @select_v4f16(i1 zeroext %c, <4 x half> %a, <4 x half> %b) {
 ; CHECK-NEXT:    fmv.h ft1, ft0
 ; CHECK-NEXT:  .LBB2_4:
 ; CHECK-NEXT:    fsh ft1, 14(sp)
-; CHECK-NEXT:    vsetivli a1, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v9, 2
 ; CHECK-NEXT:    vfmv.f.s ft0, v25
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 2
@@ -90,7 +90,7 @@ define <4 x half> @select_v4f16(i1 zeroext %c, <4 x half> %a, <4 x half> %b) {
 ; CHECK-NEXT:    fmv.h ft1, ft0
 ; CHECK-NEXT:  .LBB2_6:
 ; CHECK-NEXT:    fsh ft1, 12(sp)
-; CHECK-NEXT:    vsetivli a1, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v9, 1
 ; CHECK-NEXT:    vfmv.f.s ft0, v25
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 1
@@ -100,7 +100,7 @@ define <4 x half> @select_v4f16(i1 zeroext %c, <4 x half> %a, <4 x half> %b) {
 ; CHECK-NEXT:    fmv.h ft1, ft0
 ; CHECK-NEXT:  .LBB2_8:
 ; CHECK-NEXT:    fsh ft1, 10(sp)
-; CHECK-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    addi a0, sp, 8
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -115,7 +115,7 @@ define <4 x half> @selectcc_v4f16(half %a, half %b, <4 x half> %c, <4 x half> %d
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    feq.h a0, fa0, fa1
-; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,mf2,ta,mu
 ; CHECK-NEXT:    vfmv.f.s ft1, v9
 ; CHECK-NEXT:    vfmv.f.s ft0, v8
 ; CHECK-NEXT:    bnez a0, .LBB3_2
@@ -123,7 +123,7 @@ define <4 x half> @selectcc_v4f16(half %a, half %b, <4 x half> %c, <4 x half> %d
 ; CHECK-NEXT:    fmv.h ft0, ft1
 ; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    fsh ft0, 8(sp)
-; CHECK-NEXT:    vsetivli a1, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v9, 3
 ; CHECK-NEXT:    vfmv.f.s ft0, v25
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 3
@@ -133,7 +133,7 @@ define <4 x half> @selectcc_v4f16(half %a, half %b, <4 x half> %c, <4 x half> %d
 ; CHECK-NEXT:    fmv.h ft1, ft0
 ; CHECK-NEXT:  .LBB3_4:
 ; CHECK-NEXT:    fsh ft1, 14(sp)
-; CHECK-NEXT:    vsetivli a1, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v9, 2
 ; CHECK-NEXT:    vfmv.f.s ft0, v25
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 2
@@ -143,7 +143,7 @@ define <4 x half> @selectcc_v4f16(half %a, half %b, <4 x half> %c, <4 x half> %d
 ; CHECK-NEXT:    fmv.h ft1, ft0
 ; CHECK-NEXT:  .LBB3_6:
 ; CHECK-NEXT:    fsh ft1, 12(sp)
-; CHECK-NEXT:    vsetivli a1, 1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v9, 1
 ; CHECK-NEXT:    vfmv.f.s ft0, v25
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 1
@@ -153,7 +153,7 @@ define <4 x half> @selectcc_v4f16(half %a, half %b, <4 x half> %c, <4 x half> %d
 ; CHECK-NEXT:    fmv.h ft1, ft0
 ; CHECK-NEXT:  .LBB3_8:
 ; CHECK-NEXT:    fsh ft1, 10(sp)
-; CHECK-NEXT:    vsetivli a0, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    addi a0, sp, 8
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -1069,7 +1069,7 @@ define <16 x half> @selectcc_v16f16(half %a, half %b, <16 x half> %c, <16 x half
 define <2 x float> @select_v2f32(i1 zeroext %c, <2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: select_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, zero, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfmv.f.s ft1, v9
 ; CHECK-NEXT:    vfmv.f.s ft0, v8
 ; CHECK-NEXT:    vslidedown.vi v25, v9, 1
@@ -1081,7 +1081,7 @@ define <2 x float> @select_v2f32(i1 zeroext %c, <2 x float> %a, <2 x float> %b) 
 ; CHECK-NEXT:    fmv.s ft0, ft1
 ; CHECK-NEXT:    fmv.s ft2, ft3
 ; CHECK-NEXT:  .LBB8_2:
-; CHECK-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v8, ft2
 ; CHECK-NEXT:    vfmv.s.f v8, ft0
 ; CHECK-NEXT:    ret
@@ -1093,7 +1093,7 @@ define <2 x float> @selectcc_v2f32(float %a, float %b, <2 x float> %c, <2 x floa
 ; CHECK-LABEL: selectcc_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    feq.s a0, fa0, fa1
-; CHECK-NEXT:    vsetivli a1, 1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vslidedown.vi v25, v9, 1
 ; CHECK-NEXT:    vfmv.f.s ft1, v25
 ; CHECK-NEXT:    vslidedown.vi v25, v8, 1
@@ -1102,7 +1102,7 @@ define <2 x float> @selectcc_v2f32(float %a, float %b, <2 x float> %c, <2 x floa
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    fmv.s ft0, ft1
 ; CHECK-NEXT:  .LBB9_2:
-; CHECK-NEXT:    vsetivli a1, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a1, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v25, ft0
 ; CHECK-NEXT:    vfmv.f.s ft1, v9
 ; CHECK-NEXT:    vfmv.f.s ft0, v8
@@ -1110,7 +1110,7 @@ define <2 x float> @selectcc_v2f32(float %a, float %b, <2 x float> %c, <2 x floa
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    fmv.s ft0, ft1
 ; CHECK-NEXT:  .LBB9_4:
-; CHECK-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfmv.s.f v25, ft0
 ; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    ret

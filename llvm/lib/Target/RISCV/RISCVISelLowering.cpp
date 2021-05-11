@@ -1216,14 +1216,7 @@ static MVT getContainerForFixedLengthVector(const TargetLowering &TLI, MVT VT,
   switch (EltVT.SimpleTy) {
   default:
     llvm_unreachable("unexpected element type for RVV container");
-  case MVT::i1: {
-    // Masks are calculated assuming 8-bit elements since that's when we need
-    // the most elements.
-    MinVLen /= 8;
-    unsigned LMul = divideCeil(VT.getSizeInBits(), MinVLen);
-    unsigned EltsPerBlock = RISCV::RVVBitsPerBlock / 8;
-    return MVT::getScalableVectorVT(MVT::i1, LMul * EltsPerBlock);
-  }
+  case MVT::i1:
   case MVT::i8:
   case MVT::i16:
   case MVT::i32:
@@ -1231,9 +1224,12 @@ static MVT getContainerForFixedLengthVector(const TargetLowering &TLI, MVT VT,
   case MVT::f16:
   case MVT::f32:
   case MVT::f64: {
-    unsigned LMul = divideCeil(VT.getSizeInBits(), MinVLen);
-    unsigned EltsPerBlock = RISCV::RVVBitsPerBlock / EltVT.getSizeInBits();
-    return MVT::getScalableVectorVT(EltVT, LMul * EltsPerBlock);
+    // We prefer to use LMUL=1 for VLEN sized types. Use fractional lmuls for
+    // narrower types, but we can't have a fractional LMUL with demoninator less
+    // than 64/SEW.
+    unsigned NumElts =
+        divideCeil(VT.getVectorNumElements(), MinVLen / RISCV::RVVBitsPerBlock);
+    return MVT::getScalableVectorVT(EltVT, NumElts);
   }
   }
 }

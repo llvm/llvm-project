@@ -381,7 +381,7 @@ define void @bitreverse_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX2-RV32-NEXT:    lui a4, 4080
 ; LMULMAX2-RV32-NEXT:    vand.vx v27, v27, a4
 ; LMULMAX2-RV32-NEXT:    addi a5, zero, 5
-; LMULMAX2-RV32-NEXT:    vsetivli a1, 1, e8,m1,ta,mu
+; LMULMAX2-RV32-NEXT:    vsetivli a1, 1, e8,mf8,ta,mu
 ; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a5
 ; LMULMAX2-RV32-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; LMULMAX2-RV32-NEXT:    vmv.v.i v28, 0
@@ -581,7 +581,7 @@ define void @bitreverse_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX1-RV32-NEXT:    lui a4, 4080
 ; LMULMAX1-RV32-NEXT:    vand.vx v27, v27, a4
 ; LMULMAX1-RV32-NEXT:    addi a5, zero, 5
-; LMULMAX1-RV32-NEXT:    vsetivli a1, 1, e8,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a1, 1, e8,mf8,ta,mu
 ; LMULMAX1-RV32-NEXT:    vmv.s.x v0, a5
 ; LMULMAX1-RV32-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vmv.v.i v28, 0
@@ -1245,7 +1245,7 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX2-RV32-NEXT:    lui a4, 4080
 ; LMULMAX2-RV32-NEXT:    vand.vx v30, v30, a4
 ; LMULMAX2-RV32-NEXT:    addi a5, zero, 85
-; LMULMAX2-RV32-NEXT:    vsetivli a1, 1, e8,m1,ta,mu
+; LMULMAX2-RV32-NEXT:    vsetivli a1, 1, e8,mf8,ta,mu
 ; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a5
 ; LMULMAX2-RV32-NEXT:    vsetivli a1, 8, e32,m2,ta,mu
 ; LMULMAX2-RV32-NEXT:    vmv.v.i v8, 0
@@ -1447,7 +1447,7 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV32-NEXT:    lui a6, 4080
 ; LMULMAX1-RV32-NEXT:    vand.vx v28, v26, a6
 ; LMULMAX1-RV32-NEXT:    addi a5, zero, 5
-; LMULMAX1-RV32-NEXT:    vsetivli a2, 1, e8,m1,ta,mu
+; LMULMAX1-RV32-NEXT:    vsetivli a2, 1, e8,mf8,ta,mu
 ; LMULMAX1-RV32-NEXT:    vmv.s.x v0, a5
 ; LMULMAX1-RV32-NEXT:    vsetivli a2, 4, e32,m1,ta,mu
 ; LMULMAX1-RV32-NEXT:    vmv.v.i v26, 0

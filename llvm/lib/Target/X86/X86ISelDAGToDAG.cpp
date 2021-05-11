@@ -3854,14 +3854,29 @@ bool X86DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
       // If we are shifting by N-X where N == 0 mod Size, then just shift by -X
       // to generate a NEG instead of a SUB of a constant.
     } else if (ShiftAmt->getOpcode() == ISD::SUB && Add0C &&
-               Add0C->getAPIntValue() != 0 &&
-               Add0C->getAPIntValue().urem(Size) == 0) {
+               Add0C->getZExtValue() != 0) {
+      EVT SubVT = ShiftAmt.getValueType();
+      SDValue X;
+      if (Add0C->getZExtValue() % Size == 0)
+        X = Add1;
+      else if (ShiftAmt.hasOneUse() && Size == 64 &&
+               Add0C->getZExtValue() % 32 == 0) {
+        // We have a 64-bit shift by (n*32-x), turn it into -(x+n*32).
+        // This is mainly beneficial if we already compute (x+n*32).
+        if (Add1.getOpcode() == ISD::TRUNCATE) {
+          Add1 = Add1.getOperand(0);
+          SubVT = Add1.getValueType();
+        }
+        X = CurDAG->getNode(ISD::ADD, DL, SubVT, Add1,
+                            CurDAG->getZExtOrTrunc(Add0, DL, SubVT));
+        insertDAGNode(*CurDAG, OrigShiftAmt, X);
+      } else
+        return false;
       // Insert a negate op.
       // TODO: This isn't guaranteed to replace the sub if there is a logic cone
       // that uses it that's not a shift.
-      EVT SubVT = ShiftAmt.getValueType();
       SDValue Zero = CurDAG->getConstant(0, DL, SubVT);
-      SDValue Neg = CurDAG->getNode(ISD::SUB, DL, SubVT, Zero, Add1);
+      SDValue Neg = CurDAG->getNode(ISD::SUB, DL, SubVT, Zero, X);
       NewShiftAmt = Neg;
 
       // Insert these operands into a valid topological order so they can

@@ -1,3 +1,5 @@
+include(CompilerRTCompile)
+
 include_directories(..)
 
 add_custom_target(OrcRTUnitTests)

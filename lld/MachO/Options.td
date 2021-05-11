@@ -778,7 +778,6 @@ def segalign : Separate<["-"], "segalign">,
 def sectalign : MultiArg<["-"], "sectalign", 3>,
     MetaVarName<"<segment> <section> <boundary>">,
     HelpText<"Align <section> within <segment> to hex power-of-2 <boundary>">,
-    Flags<[HelpHidden]>,
     Group<grp_rare>;
 def stack_addr : Separate<["-"], "stack_addr">,
     MetaVarName<"<address>">,
