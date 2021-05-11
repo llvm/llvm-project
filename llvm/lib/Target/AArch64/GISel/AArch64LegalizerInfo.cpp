@@ -306,11 +306,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_STORE)
       .legalForTypesWithMemDesc({{s8, p0, 8, 8},
+                                 {s16, p0, 8, 8}, // truncstorei8 from s16
+                                 {s32, p0, 8, 8}, // truncstorei8 from s32
+                                 {s64, p0, 8, 8}, // truncstorei8 from s64
                                  {s16, p0, 16, 8},
+                                 {s32, p0, 16, 8}, // truncstorei16 from s32
+                                 {s64, p0, 16, 8}, // truncstorei16 from s64
                                  {s32, p0, 8, 8},
                                  {s32, p0, 16, 8},
                                  {s32, p0, 32, 8},
                                  {s64, p0, 64, 8},
+                                 {s64, p0, 32, 8}, // truncstorei32 from s64
                                  {p0, p0, 64, 8},
                                  {s128, p0, 128, 8},
                                  {v16s8, p0, 128, 8},
