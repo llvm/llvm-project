@@ -1,6 +1,6 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics
 
-// expected-error@+1{{llvm.noalias argument attribute of non boolean type}}
+// expected-error@+1{{expected llvm.noalias argument attribute to be a unit attribute}}
 func @invalid_noalias(%arg0: i32 {llvm.noalias = 3}) {
   "llvm.return"() : () -> ()
 }
