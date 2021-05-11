@@ -121,7 +121,7 @@ public:
     if (kernarg_region) {
       auto r = hsa_amd_memory_pool_free(kernarg_region);
       assert(r == HSA_STATUS_SUCCESS);
-      ErrorCheck(Memory pool free, r);
+      ErrorCheck("Memory pool free", r);
     }
   }
 
@@ -140,7 +140,7 @@ public:
           atl_gpu_kernarg_pools[0],
           kernarg_size_including_implicit() * MAX_NUM_KERNELS, 0,
           &kernarg_region);
-      ErrorCheck(Allocating memory for the executable-kernel, err);
+      ErrorCheck("Allocating memory for the executable-kernel", err);
       core::allow_access_to_all_gpu_agents(kernarg_region);
 
       for (int i = 0; i < MAX_NUM_KERNELS; i++) {
@@ -473,7 +473,7 @@ public:
         hsa_status_t err;
         err = hsa_agent_get_info(HSAAgents[i], HSA_AGENT_INFO_QUEUE_MAX_SIZE,
                                  &queue_size);
-        ErrorCheck(Querying the agent maximum queue size, err);
+        ErrorCheck("Querying the agent maximum queue size", err);
         if (queue_size > core::Runtime::getInstance().getMaxQueueSize()) {
           queue_size = core::Runtime::getInstance().getMaxQueueSize();
         }
