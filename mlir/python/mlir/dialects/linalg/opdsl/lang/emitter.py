@@ -89,12 +89,10 @@ def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
        for am in AffineMap.compress_unused_symbols(op_config.indexing_maps, Context.current)])
   iterator_types_attr = ArrayAttr.get(
       [StringAttr.get(s) for s in op_config.iterator_types])
-  # TODO: Add support for sparse operands once there is a stable interface.
-  sparse_attr = None
 
   return (all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types,
           type_mapping, capture_arg_mapping, indexing_maps_attr,
-          iterator_types_attr, sparse_attr)
+          iterator_types_attr)
 
 
 def emit_generic_structured_op(op_config: LinalgStructuredOpConfig,
@@ -102,7 +100,7 @@ def emit_generic_structured_op(op_config: LinalgStructuredOpConfig,
                                outs: Sequence[Value] = (),
                                captures: Sequence[Value] = ()):
   all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types, type_mapping, \
-  capture_arg_mapping, indexing_maps_attr, iterator_types_attr, sparse_attr = \
+  capture_arg_mapping, indexing_maps_attr, iterator_types_attr = \
      prepare_common_structured_op(op_config, *ins, outs = outs,
                                   captures=captures)
 
@@ -113,8 +111,7 @@ def emit_generic_structured_op(op_config: LinalgStructuredOpConfig,
       indexing_maps=indexing_maps_attr,
       iterator_types=iterator_types_attr,
       doc=None,  # TODO: Make optional.
-      library_call=None,  # TODO: Make optional.
-      sparse=sparse_attr)  # TODO: Make optional.
+      library_call=None)  # TODO: Make optional.
 
   # Construct the body.
   block_arg_names = _get_tensor_def_names(*in_arg_defs, *out_arg_defs)
@@ -141,7 +138,7 @@ def emit_named_structured_op(op_config: LinalgStructuredOpConfig,
                              outs: Sequence[Value] = (),
                              captures: Sequence[Value] = ()):
   all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types, type_mapping, \
-  capture_arg_mapping, indexing_maps_attr, iterator_types_attr, sparse_attr = \
+  capture_arg_mapping, indexing_maps_attr, iterator_types_attr = \
      prepare_common_structured_op(op_config, *ins, outs = outs,
                                   captures = captures)
 
@@ -351,8 +348,8 @@ def _get_tensor_def_names(
 def _add_type_mapping(name: str, type: Type, type_mapping: Dict[str, Type]):
   if name in type_mapping:
     if type_mapping[name] != type:
-        raise ValueError(f"Cannot overwrite type mapping {name} = "
-                         f"{type_mapping[name]} by type {type}")
+      raise ValueError(f"Cannot overwrite type mapping {name} = "
+                       f"{type_mapping[name]} by type {type}")
   type_mapping[name] = type
 
 def _is_floating_point_type(t: Type) -> bool:
