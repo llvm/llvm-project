@@ -21,6 +21,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -2005,6 +2006,17 @@ static const Comdat *getWasmComdat(const GlobalValue *GV) {
   return C;
 }
 
+static unsigned getWasmSectionFlags(SectionKind K) {
+  unsigned Flags = 0;
+
+  // TODO(sbc): Add suport for K.isMergeableConst()
+
+  if (K.isMergeableCString())
+    Flags |= wasm::WASM_SEG_FLAG_STRINGS;
+
+  return Flags;
+}
+
 MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   // We don't support explict section names for functions in the wasm object
@@ -2028,9 +2040,9 @@ MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
     Group = C->getName();
   }
 
-  MCSectionWasm* Section =
-      getContext().getWasmSection(Name, Kind, Group,
-                                  MCContext::GenericSectionID);
+  unsigned Flags = getWasmSectionFlags(Kind);
+  MCSectionWasm *Section = getContext().getWasmSection(
+      Name, Kind, Flags, Group, MCContext::GenericSectionID);
 
   return Section;
 }
@@ -2062,7 +2074,8 @@ static MCSectionWasm *selectWasmSectionForGlobal(
     (*NextUniqueID)++;
   }
 
-  return Ctx.getWasmSection(Name, Kind, Group, UniqueID);
+  unsigned Flags = getWasmSectionFlags(Kind);
+  return Ctx.getWasmSection(Name, Kind, Flags, Group, UniqueID);
 }
 
 MCSection *TargetLoweringObjectFileWasm::SelectSectionForGlobal(
