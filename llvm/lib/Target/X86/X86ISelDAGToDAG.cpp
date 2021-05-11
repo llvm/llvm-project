@@ -3845,17 +3845,17 @@ bool X86DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
   if (ShiftAmt->getOpcode() == ISD::ADD || ShiftAmt->getOpcode() == ISD::SUB) {
     SDValue Add0 = ShiftAmt->getOperand(0);
     SDValue Add1 = ShiftAmt->getOperand(1);
+    auto *Add0C = dyn_cast<ConstantSDNode>(Add0);
+    auto *Add1C = dyn_cast<ConstantSDNode>(Add1);
     // If we are shifting by X+/-N where N == 0 mod Size, then just shift by X
     // to avoid the ADD/SUB.
-    if (isa<ConstantSDNode>(Add1) &&
-        cast<ConstantSDNode>(Add1)->getZExtValue() % Size == 0) {
+    if (Add1C && Add1C->getAPIntValue().urem(Size) == 0) {
       NewShiftAmt = Add0;
-    // If we are shifting by N-X where N == 0 mod Size, then just shift by -X to
-    // generate a NEG instead of a SUB of a constant.
-    } else if (ShiftAmt->getOpcode() == ISD::SUB &&
-               isa<ConstantSDNode>(Add0) &&
-               cast<ConstantSDNode>(Add0)->getZExtValue() != 0 &&
-               cast<ConstantSDNode>(Add0)->getZExtValue() % Size == 0) {
+      // If we are shifting by N-X where N == 0 mod Size, then just shift by -X
+      // to generate a NEG instead of a SUB of a constant.
+    } else if (ShiftAmt->getOpcode() == ISD::SUB && Add0C &&
+               Add0C->getAPIntValue() != 0 &&
+               Add0C->getAPIntValue().urem(Size) == 0) {
       // Insert a negate op.
       // TODO: This isn't guaranteed to replace the sub if there is a logic cone
       // that uses it that's not a shift.
