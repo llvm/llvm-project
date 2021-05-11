@@ -382,15 +382,15 @@ struct __compatible_with
 template <class _Ptr, class = void>
 struct __is_deletable : false_type { };
 template <class _Ptr>
-struct __is_deletable<_Ptr, decltype(delete _VSTD::declval<_Ptr>())> : true_type { };
+struct __is_deletable<_Ptr, decltype(delete declval<_Ptr>())> : true_type { };
 
 template <class _Ptr, class = void>
 struct __is_array_deletable : false_type { };
 template <class _Ptr>
-struct __is_array_deletable<_Ptr, decltype(delete[] _VSTD::declval<_Ptr>())> : true_type { };
+struct __is_array_deletable<_Ptr, decltype(delete[] declval<_Ptr>())> : true_type { };
 
 template <class _Dp, class _Pt,
-    class = decltype(_VSTD::declval<_Dp>()(_VSTD::declval<_Pt>()))>
+    class = decltype(declval<_Dp>()(declval<_Pt>()))>
 static true_type __well_formed_deleter_test(int);
 
 template <class, class>
