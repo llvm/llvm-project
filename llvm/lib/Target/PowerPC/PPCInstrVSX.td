@@ -4214,7 +4214,7 @@ foreach Idx = 0-3 in {
             (f128 (XSCVUDQP (XXEXTRACTUW $src, !shl(Idx, 2))))>;
 }
 
-// (Un)Signed HWord vector extract -> QP
+// (Un)Signed HWord vector extract -> QP/DP/SP
 foreach Idx = 0-7 in {
   def : Pat<(f128 (sint_to_fp
                     (i32 (sext_inreg
@@ -4227,6 +4227,31 @@ foreach Idx = 0-7 in {
                     (and (i32 (vector_extract v8i16:$src, Idx)), 65535))),
             (f128 (XSCVUDQP (EXTRACT_SUBREG
                               (VEXTRACTUH !add(Idx, Idx), $src), sub_64)))>;
+  def : Pat<(f32 (PPCfcfidus
+                   (f64 (PPCmtvsrz (and (i32 (vector_extract v8i16:$src, Idx)),
+                                        65535))))),
+            (f32 (XSCVUXDSP (EXTRACT_SUBREG
+                              (VEXTRACTUH !add(Idx, Idx), $src), sub_64)))>;
+  def : Pat<(f32 (PPCfcfids
+                   (f64 (PPCmtvsra
+                          (i32 (sext_inreg (vector_extract v8i16:$src, Idx),
+                               i16)))))),
+          (f32 (XSCVSXDSP (EXTRACT_SUBREG
+                            (VEXTSH2D (VEXTRACTUH !add(Idx, Idx), $src)),
+                            sub_64)))>;
+  def : Pat<(f64 (PPCfcfidu
+                   (f64 (PPCmtvsrz
+                          (and (i32 (vector_extract v8i16:$src, Idx)),
+                               65535))))),
+            (f64 (XSCVUXDDP (EXTRACT_SUBREG
+                              (VEXTRACTUH !add(Idx, Idx), $src), sub_64)))>;
+  def : Pat<(f64 (PPCfcfid
+                   (f64 (PPCmtvsra
+                          (i32 (sext_inreg (vector_extract v8i16:$src, Idx),
+                               i16)))))),
+          (f64 (XSCVSXDDP (EXTRACT_SUBREG
+                            (VEXTSH2D (VEXTRACTUH !add(Idx, Idx), $src)),
+                            sub_64)))>;
 }
 
 // (Un)Signed Byte vector extract -> QP
@@ -4240,6 +4265,33 @@ foreach Idx = 0-15 in {
                     (and (i32 (vector_extract v16i8:$src, Idx)), 255))),
             (f128 (XSCVUDQP
                     (EXTRACT_SUBREG (VEXTRACTUB Idx, $src), sub_64)))>;
+
+  def : Pat<(f32 (PPCfcfidus
+                   (f64 (PPCmtvsrz
+                          (and (i32 (vector_extract v16i8:$src, Idx)),
+                               255))))),
+            (f32 (XSCVUXDSP (EXTRACT_SUBREG
+                              (VEXTRACTUB !add(Idx, Idx), $src), sub_64)))>;
+  def : Pat<(f32 (PPCfcfids
+                   (f64 (PPCmtvsra
+                          (i32 (sext_inreg (vector_extract v16i8:$src, Idx),
+                               i8)))))),
+          (f32 (XSCVSXDSP (EXTRACT_SUBREG
+                            (VEXTSH2D (VEXTRACTUB !add(Idx, Idx), $src)),
+                            sub_64)))>;
+  def : Pat<(f64 (PPCfcfidu
+                   (f64 (PPCmtvsrz
+                          (and (i32 (vector_extract v16i8:$src, Idx)),
+                          255))))),
+            (f64 (XSCVUXDDP (EXTRACT_SUBREG
+                              (VEXTRACTUB !add(Idx, Idx), $src), sub_64)))>;
+  def : Pat<(f64 (PPCfcfid
+                   (f64 (PPCmtvsra
+                          (i32 (sext_inreg (vector_extract v16i8:$src, Idx),
+                               i8)))))),
+          (f64 (XSCVSXDDP (EXTRACT_SUBREG
+                            (VEXTSH2D (VEXTRACTUB !add(Idx, Idx), $src)),
+                            sub_64)))>;
 }
 
 // Unsiged int in vsx register -> QP
@@ -4410,7 +4462,7 @@ foreach Idx = [[0,12],[1,8],[2,4],[3,0]] in {
             (f128 (XSCVUDQP (XXEXTRACTUW $src, !head(!tail(Idx)))))>;
 }
 
-// (Un)Signed HWord vector extract -> QP
+// (Un)Signed HWord vector extract -> QP/DP/SP
 // The Nested foreach lists identifies the vector element and corresponding
 // register byte location.
 foreach Idx = [[0,14],[1,12],[2,10],[3,8],[4,6],[5,4],[6,2],[7,0]] in {
@@ -4426,9 +4478,37 @@ foreach Idx = [[0,14],[1,12],[2,10],[3,8],[4,6],[5,4],[6,2],[7,0]] in {
                          65535))),
             (f128 (XSCVUDQP (EXTRACT_SUBREG
                               (VEXTRACTUH !head(!tail(Idx)), $src), sub_64)))>;
+  def : Pat<(f32 (PPCfcfidus
+                   (f64 (PPCmtvsrz
+                          (and (i32 (vector_extract v8i16:$src, !head(Idx))),
+                          65535))))),
+            (f32 (XSCVUXDSP (EXTRACT_SUBREG
+                              (VEXTRACTUH !head(!tail(Idx)), $src), sub_64)))>;
+  def : Pat<(f32 (PPCfcfids
+                   (f64 (PPCmtvsra
+                          (i32 (sext_inreg (vector_extract v8i16:$src,
+                                           !head(Idx)), i16)))))),
+            (f32 (XSCVSXDSP
+                    (EXTRACT_SUBREG
+                     (VEXTSH2D (VEXTRACTUH !head(!tail(Idx)), $src)),
+                     sub_64)))>;
+  def : Pat<(f64 (PPCfcfidu
+                   (f64 (PPCmtvsrz
+                          (and (i32 (vector_extract v8i16:$src, !head(Idx))),
+                          65535))))),
+            (f64 (XSCVUXDDP (EXTRACT_SUBREG
+                              (VEXTRACTUH !head(!tail(Idx)), $src), sub_64)))>;
+  def : Pat<(f64 (PPCfcfid
+                   (f64 (PPCmtvsra
+                        (i32 (sext_inreg
+                            (vector_extract v8i16:$src, !head(Idx)), i16)))))),
+            (f64 (XSCVSXDDP
+                    (EXTRACT_SUBREG (VEXTSH2D
+                                      (VEXTRACTUH !head(!tail(Idx)), $src)),
+                                    sub_64)))>;
 }
 
-// (Un)Signed Byte vector extract -> QP
+// (Un)Signed Byte vector extract -> QP/DP/SP
 foreach Idx = [[0,15],[1,14],[2,13],[3,12],[4,11],[5,10],[6,9],[7,8],[8,7],
                [9,6],[10,5],[11,4],[12,3],[13,2],[14,1],[15,0]] in {
   def : Pat<(f128 (sint_to_fp
@@ -4444,6 +4524,44 @@ foreach Idx = [[0,15],[1,14],[2,13],[3,12],[4,11],[5,10],[6,9],[7,8],[8,7],
             (f128 (XSCVUDQP
                     (EXTRACT_SUBREG
                       (VEXTRACTUB !head(!tail(Idx)), $src), sub_64)))>;
+
+  def : Pat<(f32 (PPCfcfidus
+                   (f64 (PPCmtvsrz
+                          (and (i32 (vector_extract v16i8:$src, !head(Idx))),
+                          255))))),
+            (f32 (XSCVUXDSP (EXTRACT_SUBREG
+                              (VEXTRACTUB !head(!tail(Idx)), $src), sub_64)))>;
+  def : Pat<(f32 (PPCfcfids
+                   (f64 (PPCmtvsra
+                          (i32 (sext_inreg
+                            (vector_extract v16i8:$src, !head(Idx)), i8)))))),
+            (f32 (XSCVSXDSP
+                    (EXTRACT_SUBREG (VEXTSH2D
+                                      (VEXTRACTUB !head(!tail(Idx)), $src)),
+                                    sub_64)))>;
+  def : Pat<(f64 (PPCfcfidu
+                   (f64 (PPCmtvsrz
+                          (and (i32
+                            (vector_extract v16i8:$src, !head(Idx))), 255))))),
+            (f64 (XSCVUXDDP (EXTRACT_SUBREG
+                              (VEXTRACTUB !head(!tail(Idx)), $src), sub_64)))>;
+  def : Pat<(f64 (PPCfcfidu
+                   (f64 (PPCmtvsra
+                        (i32 (sext_inreg
+                            (vector_extract v16i8:$src, !head(Idx)), i8)))))),
+            (f64 (XSCVSXDDP
+                    (EXTRACT_SUBREG (VEXTSH2D
+                                      (VEXTRACTUB !head(!tail(Idx)), $src)),
+                                    sub_64)))>;
+
+  def : Pat<(f64 (PPCfcfid
+                   (f64 (PPCmtvsra
+                        (i32 (sext_inreg
+                          (vector_extract v16i8:$src, !head(Idx)), i8)))))),
+            (f64 (XSCVSXDDP
+                    (EXTRACT_SUBREG (VEXTSH2D
+                                      (VEXTRACTUH !head(!tail(Idx)), $src)),
+                                    sub_64)))>;
 }
 
 // Unsiged int in vsx register -> QP

@@ -832,6 +832,39 @@ static inline kmp_cmplx128_a16_t operator/(kmp_cmplx128_a16_t &lhs,
 // end of the first part of the workaround for C78287
 #endif // USE_CMPXCHG_FIX
 
+#if KMP_OS_WINDOWS && KMP_ARCH_AARCH64
+// Undo explicit type casts to get MSVC ARM64 to build. Uses
+// OP_CMPXCHG_WORKAROUND definition for OP_CMPXCHG
+#undef OP_CMPXCHG
+#define OP_CMPXCHG(TYPE, BITS, OP)                                             \
+  {                                                                            \
+    struct _sss {                                                              \
+      TYPE cmp;                                                                \
+      kmp_int##BITS *vvv;                                                      \
+    };                                                                         \
+    struct _sss old_value, new_value;                                          \
+    old_value.vvv = (kmp_int##BITS *)&old_value.cmp;                           \
+    new_value.vvv = (kmp_int##BITS *)&new_value.cmp;                           \
+    *old_value.vvv = *(volatile kmp_int##BITS *)lhs;                           \
+    new_value.cmp = old_value.cmp OP rhs;                                      \
+    while (!KMP_COMPARE_AND_STORE_ACQ##BITS(                                   \
+        (kmp_int##BITS *)lhs, *VOLATILE_CAST(kmp_int##BITS *) old_value.vvv,   \
+        *VOLATILE_CAST(kmp_int##BITS *) new_value.vvv)) {                      \
+      KMP_DO_PAUSE;                                                            \
+                                                                               \
+      *old_value.vvv = *(volatile kmp_int##BITS *)lhs;                         \
+      new_value.cmp = old_value.cmp OP rhs;                                    \
+    }                                                                          \
+  }
+
+#undef OP_UPDATE_CRITICAL
+#define OP_UPDATE_CRITICAL(TYPE, OP, LCK_ID)                                   \
+  __kmp_acquire_atomic_lock(&ATOMIC_LOCK##LCK_ID, gtid);                       \
+  (*lhs) = (*lhs)OP rhs;                                                       \
+  __kmp_release_atomic_lock(&ATOMIC_LOCK##LCK_ID, gtid);
+
+#endif // KMP_OS_WINDOWS && KMP_ARCH_AARCH64
+
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
 
 // ------------------------------------------------------------------------

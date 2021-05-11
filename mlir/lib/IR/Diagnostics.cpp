@@ -126,7 +126,7 @@ Diagnostic &Diagnostic::operator<<(OperationName val) {
 Diagnostic &Diagnostic::operator<<(Operation &val) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  os << val;
+  val.print(os, OpPrintingFlags().useLocalScope().elideLargeElementsAttrs());
   return *this << os.str();
 }
 
