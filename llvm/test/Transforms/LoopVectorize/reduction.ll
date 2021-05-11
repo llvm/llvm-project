@@ -542,5 +542,66 @@ entry:
   ret void
 }
 
+; Can vectorize reduction with redundant single-operand phi input.
+define i64 @reduction_with_phi_with_one_incoming_on_backedge(i16 %n, i64* %A) {
+; CHECK-LABEL: @reduction_with_phi_with_one_incoming_on_backedge
+; CHECK: add <4 x i64>
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i16 [ 1, %entry ], [ %iv.next, %loop.latch ]
+  %sum = phi i64 [ 0, %entry ], [ %phi.sum.next, %loop.latch ]
+  %gep.A = getelementptr i64, i64* %A, i16 %iv
+  %lv.A = load i64, i64* %gep.A
+  %sum.next = add nsw i64 %sum, %lv.A
+  br label %loop.bb
+
+loop.bb:
+  %phi.sum.next = phi i64 [ %sum.next, %loop.header ]
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add nsw i16 %iv, 1
+  %cond = icmp slt i16 %iv.next, %n
+  br i1 %cond, label %loop.header, label %exit
+
+exit:
+  %lcssa.exit = phi i64 [ %phi.sum.next, %loop.latch ]
+  ret i64 %lcssa.exit
+}
+
+; Can vectorize reduction with redundant two-operand phi input.
+define i64 @reduction_with_phi_with_two_incoming_on_backedge(i16 %n, i64* %A) {
+; CHECK-LABEL: @reduction_with_phi_with_two_incoming_on_backedge
+; CHECK: add <4 x i64>
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i16 [ 1, %entry ], [ %iv.next, %loop.latch ]
+  %sum = phi i64 [ 0, %entry ], [ %phi.sum.next, %loop.latch ]
+  %gep.A = getelementptr i64, i64* %A, i16 %iv
+  %lv.A = load i64, i64* %gep.A
+  %sum.next = add nsw i64 %sum, %lv.A
+  %cmp.0 = icmp eq i64 %lv.A, 29
+  br i1 %cmp.0, label %loop.bb, label %loop.latch
+
+loop.bb:
+  br label %loop.latch
+
+loop.latch:
+  %phi.sum.next = phi i64 [ %sum.next, %loop.bb ], [ %sum.next, %loop.header ]
+  %iv.next = add nsw i16 %iv, 1
+  %cond = icmp slt i16 %iv.next, %n
+  br i1 %cond, label %loop.header, label %exit
+
+exit:
+  %lcssa.exit = phi i64 [ %phi.sum.next, %loop.latch ]
+  ret i64 %lcssa.exit
+}
+
 ; Make sure any check-not directives are not triggered by function declarations.
 ; CHECK: declare
