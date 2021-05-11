@@ -57,70 +57,6 @@ StringRef InputChunk::getComdatName() const {
   return file->getWasmObj()->linkingData().Comdats[index];
 }
 
-void InputChunk::verifyRelocTargets() const {
-  for (const WasmRelocation &rel : relocations) {
-    uint64_t existingValue;
-    unsigned bytesRead = 0;
-    unsigned paddedLEBWidth = 5;
-    auto offset = rel.Offset - getInputSectionOffset();
-    const uint8_t *loc = data().data() + offset;
-    switch (rel.Type) {
-    case R_WASM_TYPE_INDEX_LEB:
-    case R_WASM_FUNCTION_INDEX_LEB:
-    case R_WASM_GLOBAL_INDEX_LEB:
-    case R_WASM_EVENT_INDEX_LEB:
-    case R_WASM_MEMORY_ADDR_LEB:
-    case R_WASM_TABLE_NUMBER_LEB:
-      existingValue = decodeULEB128(loc, &bytesRead);
-      break;
-    case R_WASM_MEMORY_ADDR_LEB64:
-      existingValue = decodeULEB128(loc, &bytesRead);
-      paddedLEBWidth = 10;
-      break;
-    case R_WASM_TABLE_INDEX_SLEB:
-    case R_WASM_TABLE_INDEX_REL_SLEB:
-    case R_WASM_MEMORY_ADDR_SLEB:
-    case R_WASM_MEMORY_ADDR_REL_SLEB:
-    case R_WASM_MEMORY_ADDR_TLS_SLEB:
-      existingValue = static_cast<uint64_t>(decodeSLEB128(loc, &bytesRead));
-      break;
-    case R_WASM_TABLE_INDEX_SLEB64:
-    case R_WASM_MEMORY_ADDR_SLEB64:
-    case R_WASM_MEMORY_ADDR_REL_SLEB64:
-      existingValue = static_cast<uint64_t>(decodeSLEB128(loc, &bytesRead));
-      paddedLEBWidth = 10;
-      break;
-    case R_WASM_TABLE_INDEX_I32:
-    case R_WASM_MEMORY_ADDR_I32:
-    case R_WASM_FUNCTION_OFFSET_I32:
-    case R_WASM_SECTION_OFFSET_I32:
-    case R_WASM_GLOBAL_INDEX_I32:
-    case R_WASM_MEMORY_ADDR_LOCREL_I32:
-      existingValue = read32le(loc);
-      break;
-    case R_WASM_TABLE_INDEX_I64:
-    case R_WASM_MEMORY_ADDR_I64:
-    case R_WASM_FUNCTION_OFFSET_I64:
-      existingValue = read64le(loc);
-      break;
-    default:
-      llvm_unreachable("unknown relocation type");
-    }
-
-    if (bytesRead && bytesRead != paddedLEBWidth)
-      warn("expected LEB at relocation site be 5/10-byte padded");
-
-    if (rel.Type != R_WASM_GLOBAL_INDEX_LEB &&
-        rel.Type != R_WASM_GLOBAL_INDEX_I32) {
-      auto expectedValue = file->calcExpectedValue(rel);
-      if (expectedValue != existingValue)
-        warn(toString(this) + ": unexpected existing value for " +
-             relocTypeToString(rel.Type) + ": existing=" +
-             Twine(existingValue) + " expected=" + Twine(expectedValue));
-    }
-  }
-}
-
 // Copy this input chunk to an mmap'ed output file and apply relocations.
 void InputChunk::writeTo(uint8_t *buf) const {
   // Copy contents
@@ -133,10 +69,6 @@ void InputChunk::writeTo(uint8_t *buf) const {
 void InputChunk::relocate(uint8_t *buf) const {
   if (relocations.empty())
     return;
-
-#ifndef NDEBUG
-  verifyRelocTargets();
-#endif
 
   LLVM_DEBUG(dbgs() << "applying relocations: " << toString(this)
                     << " count=" << relocations.size() << "\n");

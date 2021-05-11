@@ -23,9 +23,20 @@ bar:
   .int32  foo+64
   .size bar, 4
 
+# Check that negative addends also work here
+  .section  .data.negative_addend,"",@
+  .p2align  2
+negative_addend:
+  .int32  foo-16
+  .size negative_addend, 4
+
 # CHECK:        - Type:            DATA
 # CHECK-NEXT:     Relocations:
 # CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_I32
 # CHECK-NEXT:         Index:           0
 # CHECK-NEXT:         Offset:          0x6
 # CHECK-NEXT:         Addend:          64
+# CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_I32
+# CHECK-NEXT:         Index:           0
+# CHECK-NEXT:         Offset:          0xF
+# CHECK-NEXT:         Addend:          -16
