@@ -600,6 +600,23 @@ inline bool PathEqIgnoreSep(fs::path LHS, fs::path RHS) {
   return LHS.native() == RHS.native();
 }
 
+inline fs::perms NormalizeExpectedPerms(fs::perms P) {
+#ifdef _WIN32
+  // On Windows, fs::perms only maps down to one bit stored in the filesystem,
+  // a boolean readonly flag.
+  // Normalize permissions to the format it gets returned; all fs entries are
+  // read+exec for all users; writable ones also have the write bit set for
+  // all users.
+  P |= fs::perms::owner_read | fs::perms::group_read | fs::perms::others_read;
+  P |= fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec;
+  fs::perms Write =
+      fs::perms::owner_write | fs::perms::group_write | fs::perms::others_write;
+  if ((P & Write) != fs::perms::none)
+    P |= Write;
+#endif
+  return P;
+}
+
 struct ExceptionChecker {
   std::errc expected_err;
   fs::path expected_path1;
