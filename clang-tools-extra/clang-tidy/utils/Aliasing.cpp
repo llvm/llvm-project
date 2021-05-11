@@ -23,6 +23,13 @@ static bool isAccessForVar(const Stmt *S, const VarDecl *Var) {
   return false;
 }
 
+static bool capturesByRef(const CXXRecordDecl *RD, const VarDecl *Var) {
+  return llvm::any_of(RD->captures(), [Var](const LambdaCapture &C) {
+    return C.capturesVariable() && C.getCaptureKind() == LCK_ByRef &&
+           C.getCapturedVar() == Var;
+  });
+}
+
 /// Return whether \p Var has a pointer or reference in \p S.
 static bool isPtrOrReferenceForVar(const Stmt *S, const VarDecl *Var) {
   // Treat block capture by reference as a form of taking a reference.
@@ -42,10 +49,7 @@ static bool isPtrOrReferenceForVar(const Stmt *S, const VarDecl *Var) {
       return isAccessForVar(UnOp->getSubExpr(), Var);
   } else if (const auto *LE = dyn_cast<LambdaExpr>(S)) {
     // Treat lambda capture by reference as a form of taking a reference.
-    return llvm::any_of(LE->captures(), [Var](const LambdaCapture &C) {
-      return C.capturesVariable() && C.getCaptureKind() == LCK_ByRef &&
-             C.getCapturedVar() == Var;
-    });
+    return capturesByRef(LE->getLambdaClass(), Var);
   }
 
   return false;
@@ -67,8 +71,22 @@ static bool hasPtrOrReferenceInStmt(const Stmt *S, const VarDecl *Var) {
   return false;
 }
 
+static bool refersToEnclosingLambdaCaptureByRef(const FunctionDecl *Func,
+                                                const VarDecl *Var) {
+  const auto *MD = dyn_cast<CXXMethodDecl>(Func);
+  if (!MD)
+    return false;
+
+  const CXXRecordDecl *RD = MD->getParent();
+  if (!RD->isLambda())
+    return false;
+
+  return capturesByRef(RD, Var);
+}
+
 bool hasPtrOrReferenceInFunc(const FunctionDecl *Func, const VarDecl *Var) {
-  return hasPtrOrReferenceInStmt(Func->getBody(), Var);
+  return hasPtrOrReferenceInStmt(Func->getBody(), Var) ||
+         refersToEnclosingLambdaCaptureByRef(Func, Var);
 }
 
 } // namespace utils

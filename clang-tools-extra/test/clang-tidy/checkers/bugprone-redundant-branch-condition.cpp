@@ -1260,6 +1260,71 @@ void capture_by_block_but_not_mutate() {
   }
 }
 
+void mutate_at_any_time(bool *x);
+
+void capture_with_branches_inside_lambda_bad() {
+  bool x = true;
+  accept_callback([=]() {
+    if (x) {
+      wait();
+      if (x) {
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'x' [bugprone-redundant-branch-condition]
+      }
+    }
+  });
+  mutate_at_any_time(&x);
+}
+
+void capture_with_branches_inside_lambda_good() {
+  bool x = true;
+  accept_callback([&]() {
+    if (x) {
+      wait();
+      if (x) {
+      }
+    }
+  });
+  mutate_at_any_time(&x);
+}
+
+void capture_with_branches_inside_block_bad() {
+  bool x = true;
+  accept_callback(^{
+    if (x) {
+      wait();
+      if (x) {
+         // FIXME: Should warn. It currently reacts to &x outside the block
+         // which ideally shouldn't have any effect.
+      }
+    }
+  });
+  mutate_at_any_time(&x);
+}
+
+void capture_with_branches_inside_block_bad_simpler() {
+  bool x = true;
+  accept_callback(^{
+    if (x) {
+      wait();
+      if (x) {
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'x' [bugprone-redundant-branch-condition]
+      }
+    }
+  });
+}
+
+void capture_with_branches_inside_block_good() {
+  __block bool x = true;
+  accept_callback(^{
+    if (x) {
+      wait();
+      if (x) {
+      }
+    }
+  });
+  mutate_at_any_time(&x);
+}
+
 // GNU Expression Statements
 
 void negative_gnu_expression_statement() {
