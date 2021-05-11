@@ -598,11 +598,8 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
 
   if (Ctx->shouldAddDefaultTargetPasses(G->getTargetTriple())) {
     // Add eh-frame passses.
-    StringRef EHFrameSectionName = "__TEXT,__eh_frame";
-    Config.PrePrunePasses.push_back(EHFrameSplitter(EHFrameSectionName));
-    Config.PrePrunePasses.push_back(
-        EHFrameEdgeFixer(EHFrameSectionName, G->getPointerSize(),
-                         x86_64::Delta64, x86_64::Delta32, x86_64::NegDelta32));
+    Config.PrePrunePasses.push_back(createEHFrameSplitterPass_MachO_x86_64());
+    Config.PrePrunePasses.push_back(createEHFrameEdgeFixerPass_MachO_x86_64());
 
     // Add a mark-live pass.
     if (auto MarkLive = Ctx->getMarkLivePass(G->getTargetTriple()))
@@ -623,6 +620,15 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
 
   // Construct a JITLinker and run the link function.
   MachOJITLinker_x86_64::link(std::move(Ctx), std::move(G), std::move(Config));
+}
+
+LinkGraphPassFunction createEHFrameSplitterPass_MachO_x86_64() {
+  return EHFrameSplitter("__TEXT,__eh_frame");
+}
+
+LinkGraphPassFunction createEHFrameEdgeFixerPass_MachO_x86_64() {
+  return EHFrameEdgeFixer("__TEXT,__eh_frame", x86_64::PointerSize,
+                          x86_64::Delta64, x86_64::Delta32, x86_64::NegDelta32);
 }
 
 } // end namespace jitlink
