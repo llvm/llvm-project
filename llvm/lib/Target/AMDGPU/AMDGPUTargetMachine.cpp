@@ -1046,6 +1046,7 @@ bool GCNPassConfig::addPreISel() {
   // FIXME: We need to run a pass to propagate the attributes when calls are
   // supported.
 
+  addPass(createSinkingPass());
   addPass(createAMDGPUConditionalDiscardPass());
 
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
@@ -1058,7 +1059,6 @@ bool GCNPassConfig::addPreISel() {
     }
     addPass(createStructurizeCFGPass(false)); // true -> SkipUniformRegions
   }
-  addPass(createSinkingPass());
 
   // This is a temporary fix for the issue of dealing with in loop uniform values
   // where the uses out of the loop are non-uniform. LCSSA creates a PHI at the
