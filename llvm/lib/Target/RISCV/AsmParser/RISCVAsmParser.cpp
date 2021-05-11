@@ -1589,9 +1589,9 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
 
     unsigned SewLog2 = Log2_32(Sew / 8);
     unsigned LmulLog2 = Log2_32(Lmul);
-    RISCVVSEW VSEW = static_cast<RISCVVSEW>(SewLog2);
-    RISCVVLMUL VLMUL =
-        static_cast<RISCVVLMUL>(Fractional ? 8 - LmulLog2 : LmulLog2);
+    RISCVII::VSEW VSEW = static_cast<RISCVII::VSEW>(SewLog2);
+    RISCVII::VLMUL VLMUL =
+        static_cast<RISCVII::VLMUL>(Fractional ? 8 - LmulLog2 : LmulLog2);
 
     unsigned VTypeI =
         RISCVVType::encodeVTYPE(VLMUL, VSEW, TailAgnostic, MaskAgnostic);
@@ -2479,8 +2479,8 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   }
 
   const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
-  unsigned Constraints =
-      (MCID.TSFlags & RISCVII::ConstraintMask) >> RISCVII::ConstraintShift;
+  RISCVII::VConstraintType Constraints =
+      RISCVII::getConstraint(MCID.TSFlags);
   if (Constraints == RISCVII::NoConstraint)
     return false;
 

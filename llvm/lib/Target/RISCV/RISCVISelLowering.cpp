@@ -1033,7 +1033,7 @@ static unsigned getBranchOpcodeForIntCondCode(ISD::CondCode CC) {
   }
 }
 
-RISCVVLMUL RISCVTargetLowering::getLMUL(MVT VT) {
+RISCVII::VLMUL RISCVTargetLowering::getLMUL(MVT VT) {
   assert(VT.isScalableVector() && "Expecting a scalable vector type");
   unsigned KnownSize = VT.getSizeInBits().getKnownMinValue();
   if (VT.getVectorElementType() == MVT::i1)
@@ -1043,54 +1043,56 @@ RISCVVLMUL RISCVTargetLowering::getLMUL(MVT VT) {
   default:
     llvm_unreachable("Invalid LMUL.");
   case 8:
-    return RISCVVLMUL::LMUL_F8;
+    return RISCVII::VLMUL::LMUL_F8;
   case 16:
-    return RISCVVLMUL::LMUL_F4;
+    return RISCVII::VLMUL::LMUL_F4;
   case 32:
-    return RISCVVLMUL::LMUL_F2;
+    return RISCVII::VLMUL::LMUL_F2;
   case 64:
-    return RISCVVLMUL::LMUL_1;
+    return RISCVII::VLMUL::LMUL_1;
   case 128:
-    return RISCVVLMUL::LMUL_2;
+    return RISCVII::VLMUL::LMUL_2;
   case 256:
-    return RISCVVLMUL::LMUL_4;
+    return RISCVII::VLMUL::LMUL_4;
   case 512:
-    return RISCVVLMUL::LMUL_8;
+    return RISCVII::VLMUL::LMUL_8;
   }
 }
 
-unsigned RISCVTargetLowering::getRegClassIDForLMUL(RISCVVLMUL LMul) {
+unsigned RISCVTargetLowering::getRegClassIDForLMUL(RISCVII::VLMUL LMul) {
   switch (LMul) {
   default:
     llvm_unreachable("Invalid LMUL.");
-  case RISCVVLMUL::LMUL_F8:
-  case RISCVVLMUL::LMUL_F4:
-  case RISCVVLMUL::LMUL_F2:
-  case RISCVVLMUL::LMUL_1:
+  case RISCVII::VLMUL::LMUL_F8:
+  case RISCVII::VLMUL::LMUL_F4:
+  case RISCVII::VLMUL::LMUL_F2:
+  case RISCVII::VLMUL::LMUL_1:
     return RISCV::VRRegClassID;
-  case RISCVVLMUL::LMUL_2:
+  case RISCVII::VLMUL::LMUL_2:
     return RISCV::VRM2RegClassID;
-  case RISCVVLMUL::LMUL_4:
+  case RISCVII::VLMUL::LMUL_4:
     return RISCV::VRM4RegClassID;
-  case RISCVVLMUL::LMUL_8:
+  case RISCVII::VLMUL::LMUL_8:
     return RISCV::VRM8RegClassID;
   }
 }
 
 unsigned RISCVTargetLowering::getSubregIndexByMVT(MVT VT, unsigned Index) {
-  RISCVVLMUL LMUL = getLMUL(VT);
-  if (LMUL == RISCVVLMUL::LMUL_F8 || LMUL == RISCVVLMUL::LMUL_F4 ||
-      LMUL == RISCVVLMUL::LMUL_F2 || LMUL == RISCVVLMUL::LMUL_1) {
+  RISCVII::VLMUL LMUL = getLMUL(VT);
+  if (LMUL == RISCVII::VLMUL::LMUL_F8 ||
+      LMUL == RISCVII::VLMUL::LMUL_F4 ||
+      LMUL == RISCVII::VLMUL::LMUL_F2 ||
+      LMUL == RISCVII::VLMUL::LMUL_1) {
     static_assert(RISCV::sub_vrm1_7 == RISCV::sub_vrm1_0 + 7,
                   "Unexpected subreg numbering");
     return RISCV::sub_vrm1_0 + Index;
   }
-  if (LMUL == RISCVVLMUL::LMUL_2) {
+  if (LMUL == RISCVII::VLMUL::LMUL_2) {
     static_assert(RISCV::sub_vrm2_3 == RISCV::sub_vrm2_0 + 3,
                   "Unexpected subreg numbering");
     return RISCV::sub_vrm2_0 + Index;
   }
-  if (LMUL == RISCVVLMUL::LMUL_4) {
+  if (LMUL == RISCVII::VLMUL::LMUL_4) {
     static_assert(RISCV::sub_vrm4_1 == RISCV::sub_vrm4_0 + 1,
                   "Unexpected subreg numbering");
     return RISCV::sub_vrm4_0 + Index;
@@ -3721,10 +3723,10 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
       RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
           VecVT, SubVecVT, OrigIdx, TRI);
 
-  RISCVVLMUL SubVecLMUL = RISCVTargetLowering::getLMUL(SubVecVT);
-  bool IsSubVecPartReg = SubVecLMUL == RISCVVLMUL::LMUL_F2 ||
-                         SubVecLMUL == RISCVVLMUL::LMUL_F4 ||
-                         SubVecLMUL == RISCVVLMUL::LMUL_F8;
+  RISCVII::VLMUL SubVecLMUL = RISCVTargetLowering::getLMUL(SubVecVT);
+  bool IsSubVecPartReg = SubVecLMUL == RISCVII::VLMUL::LMUL_F2 ||
+                         SubVecLMUL == RISCVII::VLMUL::LMUL_F4 ||
+                         SubVecLMUL == RISCVII::VLMUL::LMUL_F8;
 
   // 1. If the Idx has been completely eliminated and this subvector's size is
   // a vector register or a multiple thereof, or the surrounding elements are
@@ -6447,14 +6449,15 @@ static MachineInstr *elideCopies(MachineInstr *MI,
 
 static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
                                     int VLIndex, unsigned SEWIndex,
-                                    RISCVVLMUL VLMul, bool ForceTailAgnostic) {
+                                    RISCVII::VLMUL VLMul,
+                                    bool ForceTailAgnostic) {
   MachineFunction &MF = *BB->getParent();
   DebugLoc DL = MI.getDebugLoc();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
   unsigned Log2SEW = MI.getOperand(SEWIndex).getImm();
   assert(RISCVVType::isValidSEW(1 << Log2SEW) && "Unexpected SEW");
-  RISCVVSEW ElementWidth = static_cast<RISCVVSEW>(Log2SEW - 3);
+  RISCVII::VSEW ElementWidth = static_cast<RISCVII::VSEW>(Log2SEW - 3);
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
@@ -6522,14 +6525,13 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                  MachineBasicBlock *BB) const {
   uint64_t TSFlags = MI.getDesc().TSFlags;
 
-  if (TSFlags & RISCVII::HasSEWOpMask) {
+  if (RISCVII::hasSEWOp(TSFlags)) {
     unsigned NumOperands = MI.getNumExplicitOperands();
-    int VLIndex = (TSFlags & RISCVII::HasVLOpMask) ? NumOperands - 2 : -1;
+    int VLIndex = RISCVII::hasVLOp(TSFlags) ? NumOperands - 2 : -1;
     unsigned SEWIndex = NumOperands - 1;
-    bool ForceTailAgnostic = TSFlags & RISCVII::ForceTailAgnosticMask;
+    bool ForceTailAgnostic = RISCVII::doesForceTailAgnostic(TSFlags);
 
-    RISCVVLMUL VLMul = static_cast<RISCVVLMUL>((TSFlags & RISCVII::VLMulMask) >>
-                                               RISCVII::VLMulShift);
+    RISCVII::VLMUL VLMul = RISCVII::getLMul(TSFlags);
     return addVSetVL(MI, BB, VLIndex, SEWIndex, VLMul, ForceTailAgnostic);
   }
 
