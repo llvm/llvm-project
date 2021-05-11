@@ -4686,6 +4686,10 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
 
   unsigned VF = VecTy->getNumElements() / Factor;
   Type *ScalarTy = VecTy->getElementType();
+  // Deduplicate entries, model floats/pointers as appropriately-sized integers.
+  if (!ScalarTy->isIntegerTy())
+    ScalarTy =
+        Type::getIntNTy(ScalarTy->getContext(), DL.getTypeSizeInBits(ScalarTy));
 
   // Get the cost of all the memory operations.
   InstructionCost MemOpCosts = getMemoryOpCost(
@@ -4699,22 +4703,22 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
                                              CostKind);
 
   // TODO: Complete for other data-types and strides.
-  // Each combination of Stride, ElementTy and VF results in a different
+  // Each combination of Stride, element bit width and VF results in a different
   // sequence; The cost tables are therefore accessed with:
-  // Factor (stride) and VectorType=VFxElemType.
+  // Factor (stride) and VectorType=VFxiN.
   // The Cost accounts only for the shuffle sequence;
   // The cost of the loads/stores is accounted for separately.
   //
   static const CostTblEntry AVX2InterleavedLoadTbl[] = {
     { 2, MVT::v4i64, 6 }, //(load 8i64 and) deinterleave into 2 x 4i64
-    { 2, MVT::v4f64, 6 }, //(load 8f64 and) deinterleave into 2 x 4f64
 
     { 3, MVT::v2i8,  10 }, //(load 6i8 and)  deinterleave into 3 x 2i8
     { 3, MVT::v4i8,  4 },  //(load 12i8 and) deinterleave into 3 x 4i8
     { 3, MVT::v8i8,  9 },  //(load 24i8 and) deinterleave into 3 x 8i8
     { 3, MVT::v16i8, 11},  //(load 48i8 and) deinterleave into 3 x 16i8
     { 3, MVT::v32i8, 13},  //(load 96i8 and) deinterleave into 3 x 32i8
-    { 3, MVT::v8f32, 17 }, //(load 24f32 and)deinterleave into 3 x 8f32
+
+    { 3, MVT::v8i32, 17 }, //(load 24i32 and)deinterleave into 3 x 8i32
 
     { 4, MVT::v2i8,  12 }, //(load 8i8 and)   deinterleave into 4 x 2i8
     { 4, MVT::v4i8,  4 },  //(load 16i8 and)  deinterleave into 4 x 4i8
@@ -4722,12 +4726,11 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
     { 4, MVT::v16i8, 39 }, //(load 64i8 and)  deinterleave into 4 x 16i8
     { 4, MVT::v32i8, 80 }, //(load 128i8 and) deinterleave into 4 x 32i8
 
-    { 8, MVT::v8f32, 40 }  //(load 64f32 and)deinterleave into 8 x 8f32
+    { 8, MVT::v8i32, 40 }  //(load 64i32 and)deinterleave into 8 x 8i32
   };
 
   static const CostTblEntry AVX2InterleavedStoreTbl[] = {
     { 2, MVT::v4i64, 6 }, //interleave into 2 x 4i64 into 8i64 (and store)
-    { 2, MVT::v4f64, 6 }, //interleave into 2 x 4f64 into 8f64 (and store)
 
     { 3, MVT::v2i8,  7 },  //interleave 3 x 2i8  into 6i8 (and store)
     { 3, MVT::v4i8,  8 },  //interleave 3 x 4i8  into 12i8 (and store)
