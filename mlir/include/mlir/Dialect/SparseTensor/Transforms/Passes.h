@@ -18,6 +18,9 @@
 
 namespace mlir {
 
+// Forward.
+class TypeConverter;
+
 /// Defines a parallelization strategy. Any independent loop is a candidate
 /// for parallelization. The loop is made parallel if (1) allowed by the
 /// strategy (e.g., AnyStorageOuterLoop considers either a dense or sparse
@@ -42,32 +45,18 @@ enum class SparseVectorizationStrategy {
   kAnyStorageInnerLoop
 };
 
-/// Defines a type for "pointer" and "index" storage in the sparse storage
-/// scheme, with a choice between the native platform-dependent index width
-/// or any of 64-/32-/16-/8-bit integers. A narrow width obviously reduces
-/// the memory footprint of the sparse storage scheme, but the width should
-/// suffice to define the total required range (viz. the maximum number of
-/// stored entries per indirection level for the "pointers" and the maximum
-/// value of each tensor index over all dimensions for the "indices").
-enum class SparseIntType { kNative, kI64, kI32, kI16, kI8 };
-
 /// Sparsification options.
 struct SparsificationOptions {
   SparsificationOptions(SparseParallelizationStrategy p,
-                        SparseVectorizationStrategy v, unsigned vl,
-                        SparseIntType pt, SparseIntType it, bool fo)
+                        SparseVectorizationStrategy v, unsigned vl, bool fo)
       : parallelizationStrategy(p), vectorizationStrategy(v), vectorLength(vl),
-        ptrType(pt), indType(it), fastOutput(fo) {}
+        fastOutput(fo) {}
   SparsificationOptions()
       : SparsificationOptions(SparseParallelizationStrategy::kNone,
-                              SparseVectorizationStrategy::kNone, 1u,
-                              SparseIntType::kNative, SparseIntType::kNative,
-                              false) {}
+                              SparseVectorizationStrategy::kNone, 1u, false) {}
   SparseParallelizationStrategy parallelizationStrategy;
   SparseVectorizationStrategy vectorizationStrategy;
   unsigned vectorLength;
-  SparseIntType ptrType;
-  SparseIntType indType;
   bool fastOutput; // experimental: fast output buffers
 };
 
@@ -77,7 +66,8 @@ void populateSparsificationPatterns(
     const SparsificationOptions &options = SparsificationOptions());
 
 /// Sets up sparse tensor conversion rules.
-void populateSparseTensorConversionPatterns(RewritePatternSet &patterns);
+void populateSparseTensorConversionPatterns(TypeConverter &typeConverter,
+                                            RewritePatternSet &patterns);
 
 std::unique_ptr<Pass> createSparsificationPass();
 std::unique_ptr<Pass> createSparseTensorConversionPass();

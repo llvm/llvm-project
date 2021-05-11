@@ -1,4 +1,4 @@
-//===- Sparsification.cpp - Implementation of linalg sparsification -------===//
+//===- Sparsification.cpp - Implementation of sparsification --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements lowering annotated linalg dialect to sparse code.
+// This file implements lowering sparse tensor types to actual sparse code.
 //
 // The concept of letting a compiler generate sparse code automatically was
 // pioneered for dense linear algebra code in Fortran by [Bik96] in MT1 and
@@ -49,14 +49,16 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/TensorEncoding.h"
 #include "llvm/ADT/SmallBitVector.h"
 
 using namespace mlir;
+using namespace mlir::sparse_tensor;
 
 namespace {
 
 enum class Kind { kTensor, kInvariant, kMulF, kMulI, kAddF, kAddI };
-enum class Dim { kSparse, kDense, kUndef };
+enum class Dim { kSparse, kDense, kSingle, kUndef };
 
 /// Tensor expression. Represents a MLIR expression in tensor index notation.
 /// For tensors, e0 denotes the tensor index. For invariants, the IR value is
@@ -270,11 +272,6 @@ public:
     return false;
   }
 
-  /// Returns true if tensor has any sparse dimension.
-  bool isSparseTensor(unsigned t) const {
-    return llvm::any_of(dims[t], [](Dim d) { return d == Dim::kSparse; });
-  }
-
   /// Setter
   void setDim(unsigned t, unsigned i, Dim d) { dims[t][i] = d; }
 
@@ -296,7 +293,7 @@ private:
 
 // Code generation.
 struct CodeGen {
-  CodeGen(mlir::SparsificationOptions o, unsigned numTensors, unsigned numLoops)
+  CodeGen(SparsificationOptions o, unsigned numTensors, unsigned numLoops)
       : options(o), loops(numLoops), sizes(numLoops), buffers(numTensors),
         pointers(numTensors, std::vector<Value>(numLoops)),
         indices(numTensors, std::vector<Value>(numLoops)),
@@ -305,7 +302,7 @@ struct CodeGen {
         idxs(numTensors, std::vector<Value>(numLoops)), redExp(-1u), redVal(),
         curVecLength(1), curVecMask() {}
   /// Sparsification options.
-  mlir::SparsificationOptions options;
+  SparsificationOptions options;
   /// Universal dense indices and upper bounds (by index). The loops array
   /// is updated with the value of the universal dense index in the current
   /// loop. The sizes array is set once with the inferred dimension sizes.
@@ -336,35 +333,31 @@ struct CodeGen {
 
 } // namespace
 
-/// Helper method to inspect sparse annotations in the linalg operation.
+// Helper method to translate dim level type to internal representation.
+static Dim toDim(SparseTensorEncodingAttr &enc, unsigned d) {
+  if (enc) {
+    SparseTensorEncodingAttr::DimLevelType tp = enc.getDimLevelType()[d];
+    if (tp == SparseTensorEncodingAttr::DimLevelType::Compressed)
+      return Dim::kSparse;
+    if (tp == SparseTensorEncodingAttr::DimLevelType::Singleton)
+      return Dim::kSingle;
+  }
+  return Dim::kDense;
+}
+
+/// Helper method to inspect sparse encodings in the tensor types.
 /// Fills the per-dimension sparsity information for all tensors.
 static void findSparseAnnotations(Merger &merger, linalg::GenericOp op) {
   unsigned numTensors = op.getNumShapedOperands();
-  ArrayAttr sparseAttr = op.sparseAttr();
   for (unsigned t = 0; t < numTensors; t++) {
     auto map = op.getIndexingMap(t);
-    auto dimAttr = sparseAttr[t].cast<ArrayAttr>();
-    // For each tensor, we accept a per-dimension Sparse or Dense annotation.
-    // This is translated to the loop index that indexes that dimension.
     unsigned rank = op.getShapedType(t).getRank();
+    auto enc = getSparseTensorEncoding(op.getShapedType(t));
     for (unsigned d = 0; d < rank; d++) {
       unsigned idx = map.getDimPosition(d);
-      if (isSparseDim(dimAttr[d])) {
-        merger.setDim(t, idx, Dim::kSparse);
-      } else {
-        assert(isDenseDim(dimAttr[d]));
-        merger.setDim(t, idx, Dim::kDense);
-      }
+      merger.setDim(t, idx, toDim(enc, d));
     }
   }
-}
-
-/// Returns true if tensor was set up with sparse storage scheme.
-static bool linkedSparse(linalg::GenericOp op, unsigned tensor) {
-  if (tensor < op.getNumInputs())
-    return isa_and_nonnull<sparse_tensor::FromPointerOp>(
-        op.getInput(tensor).getDefiningOp());
-  return false;
 }
 
 /// A DFS helper to compute a topological sort. Note that recursion is
@@ -404,7 +397,7 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
     auto map = op.getIndexingMap(t);
     assert(map.getNumDims() == n);
     // Skip dense tensor constraints when sparse only is requested.
-    if (sparseOnly && !merger.isSparseTensor(t) && !linkedSparse(op, t))
+    if (sparseOnly && !getSparseTensorEncoding(op.getShapedType(t)))
       continue;
     // At the moment, we take the index variables in the tensor access
     // expression in the order in which they appear (conceptually a
@@ -507,20 +500,10 @@ static unsigned buildLattices(Merger &merger, linalg::GenericOp op,
 }
 
 /// Maps sparse integer option to actual integral storage type.
-static Type genIntType(PatternRewriter &rewriter, SparseIntType tp) {
-  switch (tp) {
-  case SparseIntType::kNative:
+static Type genIntType(PatternRewriter &rewriter, unsigned width) {
+  if (width == 0)
     return rewriter.getIndexType();
-  case SparseIntType::kI64:
-    return rewriter.getIntegerType(64);
-  case SparseIntType::kI32:
-    return rewriter.getIntegerType(32);
-  case SparseIntType::kI16:
-    return rewriter.getIntegerType(16);
-  case SparseIntType::kI8:
-    return rewriter.getIntegerType(8);
-  }
-  llvm_unreachable("unexpected SparseIntType");
+  return rewriter.getIntegerType(width);
 }
 
 /// Generates buffer for the output tensor.
@@ -563,25 +546,24 @@ static void genBuffers(Merger &merger, CodeGen &codegen,
     auto tensorType = op.getShapedType(t);
     auto shape = tensorType.getShape();
     auto map = op.getIndexingMap(t);
+    auto enc = getSparseTensorEncoding(tensorType);
     // Scan all dimensions of current tensor.
-    bool dense = !linkedSparse(op, t);
     args.clear();
     for (unsigned d = 0, rank = shape.size(); d < rank; d++) {
       unsigned i = map.getDimPosition(d);
       // Handle sparse storage schemes.
       if (merger.isDim(t, i, Dim::kSparse)) {
-        dense = false;
         auto dynShape = {ShapedType::kDynamicSize};
         auto ptrTp = MemRefType::get(
-            dynShape, genIntType(rewriter, codegen.options.ptrType));
+            dynShape, genIntType(rewriter, enc.getPointerBitWidth()));
         auto indTp = MemRefType::get(
-            dynShape, genIntType(rewriter, codegen.options.indType));
+            dynShape, genIntType(rewriter, enc.getIndexBitWidth()));
         Value dim = rewriter.create<ConstantIndexOp>(loc, d);
         // Generate sparse primitives to obtains pointer and indices.
-        codegen.pointers[t][i] = rewriter.create<sparse_tensor::ToPointersOp>(
-            loc, ptrTp, tensor, dim);
-        codegen.indices[t][i] = rewriter.create<sparse_tensor::ToIndicesOp>(
-            loc, indTp, tensor, dim);
+        codegen.pointers[t][i] =
+            rewriter.create<ToPointersOp>(loc, ptrTp, tensor, dim);
+        codegen.indices[t][i] =
+            rewriter.create<ToIndicesOp>(loc, indTp, tensor, dim);
       }
       // Find lower and upper bound in current dimension.
       Value up;
@@ -596,7 +578,7 @@ static void genBuffers(Merger &merger, CodeGen &codegen,
     // Perform the required bufferization. All dense inputs materialize
     // from the input tensor. The dense output tensor needs special
     // handling. Sparse inputs use a sparse primitive to obtain the values.
-    if (dense) {
+    if (!enc) {
       auto denseTp = MemRefType::get(shape, tensorType.getElementType());
       if (t < numInputs)
         codegen.buffers[t] =
@@ -607,8 +589,7 @@ static void genBuffers(Merger &merger, CodeGen &codegen,
     } else {
       auto dynShape = {ShapedType::kDynamicSize};
       auto sparseTp = MemRefType::get(dynShape, tensorType.getElementType());
-      codegen.buffers[t] =
-          rewriter.create<sparse_tensor::ToValuesOp>(loc, sparseTp, tensor);
+      codegen.buffers[t] = rewriter.create<ToValuesOp>(loc, sparseTp, tensor);
     }
   }
 }
@@ -704,12 +685,11 @@ static Value genTensorLoad(Merger &merger, CodeGen &codegen,
   SmallVector<Value, 4> args;
   unsigned tensor = merger.exp(exp).e0;
   auto map = op.getIndexingMap(tensor);
-  bool sparse = linkedSparse(op, tensor);
+  auto enc = getSparseTensorEncoding(op.getShapedType(tensor));
   for (unsigned i = 0, m = map.getNumResults(); i < m; ++i) {
     unsigned idx = map.getDimPosition(i);
     args.push_back(codegen.loops[idx]); // universal dense index
-    if (sparse || merger.isDim(tensor, idx, Dim::kSparse)) {
-      sparse = true;
+    if (enc) {
       args.clear();
       args.push_back(codegen.pidxs[tensor][idx]); // position index
     }
@@ -1000,7 +980,7 @@ static bool denseUnitStrides(Merger &merger, linalg::GenericOp op,
                              unsigned idx) {
   unsigned numTensors = op.getNumShapedOperands();
   for (unsigned t = 0; t < numTensors; t++) {
-    if (!merger.isSparseTensor(t) && !linkedSparse(op, t)) {
+    if (!getSparseTensorEncoding(op.getShapedType(t))) {
       auto map = op.getIndexingMap(t);
       unsigned r = map.getNumResults();
       for (unsigned i = 0; i < r; i++) {
@@ -1363,8 +1343,6 @@ public:
                                 PatternRewriter &rewriter) const override {
     // Detects sparse annotations and translate the per-dimension sparsity
     // information for all tensors to loop indices in the kernel.
-    if (!op.hasSparseSemantics())
-      return failure();
     assert(op.getNumOutputs() == 1);
     unsigned numTensors = op.getNumShapedOperands();
     unsigned numLoops = op.iterator_types().getValue().size();

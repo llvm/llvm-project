@@ -1,8 +1,10 @@
-// RUN: mlir-opt <%s | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s -split-input-file | mlir-opt | FileCheck %s
 
 // CHECK-LABEL: func private @sparse_1d_tensor(
 // CHECK-SAME: tensor<32xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ], pointerBitWidth = 0, indexBitWidth = 0 }>>)
 func private @sparse_1d_tensor(tensor<32xf64, #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>>)
+
+// -----
 
 #CSR = #sparse_tensor.encoding<{
   dimLevelType = [ "dense", "compressed" ],

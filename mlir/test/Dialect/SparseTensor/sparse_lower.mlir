@@ -1,21 +1,19 @@
-// RUN: mlir-opt %s -sparsification | \
-// RUN:   FileCheck %s --check-prefix=CHECK-HIR
+// RUN: mlir-opt %s -sparsification | FileCheck %s --check-prefix=CHECK-HIR
 //
-// RUN: mlir-opt %s -sparsification \
-// RUN:   --sparse-tensor-conversion --convert-linalg-to-loops | \
-// RUN:   FileCheck %s --check-prefix=CHECK-MIR
+// RUN: mlir-opt %s -sparsification --sparse-tensor-conversion                 \
+// RUN: --convert-linalg-to-loops | FileCheck %s --check-prefix=CHECK-MIR
 //
-// RUN: mlir-opt %s -sparsification \
-// RUN:   --sparse-tensor-conversion --convert-linalg-to-loops \
-// RUN:   --func-bufferize --tensor-constant-bufferize \
-// RUN:   --tensor-bufferize --finalizing-bufferize  | \
-// RUN:   FileCheck %s --check-prefix=CHECK-LIR
+// RUN: mlir-opt %s -sparsification --sparse-tensor-conversion                 \
+// RUN: --convert-linalg-to-loops --func-bufferize --tensor-constant-bufferize \
+// RUN: --tensor-bufferize --finalizing-bufferize |                            \
+// RUN: FileCheck %s --check-prefix=CHECK-LIR
 //
-// RUN: mlir-opt %s -sparsification="fast-output" \
-// RUN:   --sparse-tensor-conversion --convert-linalg-to-loops \
-// RUN:   --func-bufferize --tensor-constant-bufferize \
-// RUN:   --tensor-bufferize --finalizing-bufferize  | \
-// RUN:   FileCheck %s --check-prefix=CHECK-FAST
+// RUN: mlir-opt %s -sparsification="fast-output" --sparse-tensor-conversion   \
+// RUN: --convert-linalg-to-loops --func-bufferize --tensor-constant-bufferize \
+// RUN: --tensor-bufferize --finalizing-bufferize |                            \
+// RUN: FileCheck %s --check-prefix=CHECK-FAST
+
+#CSR = #sparse_tensor.encoding<{dimLevelType = [ "dense", "compressed" ]}>
 
 #trait_matvec = {
   indexing_maps = [
@@ -24,30 +22,19 @@
     affine_map<(i,j) -> (i)>     // x (out)
   ],
   iterator_types = ["parallel","reduction"],
-  sparse = [
-    [ "D", "S" ],  // A
-    [ "D" ],       // b
-    [ "D" ]        // x (out)
-  ],
-  sparse_dim_map = [
-    affine_map<(i,j) -> (j,i)>,  // A: column-wise
-    affine_map<(i)   -> (i)>,    // x
-    affine_map<(i)   -> (i)>     // b
-  ],
   doc = "x(i) += A(i,j) * b(j)"
 }
 
 // CHECK-HIR-LABEL:   func @matvec(
-// CHECK-HIR-SAME:                 %[[VAL_0:.*]]: !llvm.ptr<i8>,
+// CHECK-HIR-SAME:                 %[[VAL_0:.*]]: tensor<64x64xf64, #sparse_tensor.encoding<{{.*}}>>,
 // CHECK-HIR-SAME:                 %[[VAL_1:.*]]: tensor<64xf64>,
 // CHECK-HIR-SAME:                 %[[VAL_2:.*]]: tensor<64xf64>) -> tensor<64xf64> {
 // CHECK-HIR:           %[[VAL_3:.*]] = constant 64 : index
 // CHECK-HIR:           %[[VAL_4:.*]] = constant 0 : index
 // CHECK-HIR:           %[[VAL_5:.*]] = constant 1 : index
-// CHECK-HIR:           %[[VAL_6:.*]] = sparse_tensor.fromPtr %[[VAL_0]] : !llvm.ptr<i8> to tensor<64x64xf64>
-// CHECK-HIR:           %[[VAL_7:.*]] = sparse_tensor.pointers %[[VAL_6]], %[[VAL_5]] : tensor<64x64xf64> to memref<?xindex>
-// CHECK-HIR:           %[[VAL_8:.*]] = sparse_tensor.indices %[[VAL_6]], %[[VAL_5]] : tensor<64x64xf64> to memref<?xindex>
-// CHECK-HIR:           %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_6]] : tensor<64x64xf64> to memref<?xf64>
+// CHECK-HIR:           %[[VAL_7:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_5]] : tensor<64x64xf64, #{{.*}}> to memref<?xindex>
+// CHECK-HIR:           %[[VAL_8:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_5]] : tensor<64x64xf64, #{{.*}}> to memref<?xindex>
+// CHECK-HIR:           %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<64x64xf64, #{{.*}}> to memref<?xf64>
 // CHECK-HIR:           %[[VAL_10:.*]] = memref.buffer_cast %[[VAL_1]] : memref<64xf64>
 // CHECK-HIR:           %[[VAL_11:.*]] = memref.buffer_cast %[[VAL_2]] : memref<64xf64>
 // CHECK-HIR:           %[[VAL_12:.*]] = memref.alloc() : memref<64xf64>
@@ -78,8 +65,8 @@
 // CHECK-MIR:           %[[VAL_3:.*]] = constant 64 : index
 // CHECK-MIR:           %[[VAL_4:.*]] = constant 0 : index
 // CHECK-MIR:           %[[VAL_5:.*]] = constant 1 : index
-// CHECK-MIR:           %[[VAL_6:.*]] = call @sparsePointers64(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK-MIR:           %[[VAL_7:.*]] = call @sparseIndices64(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-MIR:           %[[VAL_6:.*]] = call @sparsePointers(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-MIR:           %[[VAL_7:.*]] = call @sparseIndices(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-MIR:           %[[VAL_8:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
 // CHECK-MIR:           %[[VAL_9:.*]] = memref.buffer_cast %[[VAL_1]] : memref<64xf64>
 // CHECK-MIR:           %[[VAL_10:.*]] = memref.buffer_cast %[[VAL_2]] : memref<64xf64>
@@ -114,8 +101,8 @@
 // CHECK-LIR:           %[[VAL_3:.*]] = constant 64 : index
 // CHECK-LIR:           %[[VAL_4:.*]] = constant 0 : index
 // CHECK-LIR:           %[[VAL_5:.*]] = constant 1 : index
-// CHECK-LIR:           %[[VAL_6:.*]] = call @sparsePointers64(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK-LIR:           %[[VAL_7:.*]] = call @sparseIndices64(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-LIR:           %[[VAL_6:.*]] = call @sparsePointers(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-LIR:           %[[VAL_7:.*]] = call @sparseIndices(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-LIR:           %[[VAL_8:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
 // CHECK-LIR:           %[[VAL_9:.*]] = memref.alloc() : memref<64xf64>
 // CHECK-LIR:           scf.for %[[VAL_10:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
@@ -147,8 +134,8 @@
 // CHECK-FAST:           %[[VAL_3:.*]] = constant 64 : index
 // CHECK-FAST:           %[[VAL_4:.*]] = constant 0 : index
 // CHECK-FAST:           %[[VAL_5:.*]] = constant 1 : index
-// CHECK-FAST:           %[[VAL_6:.*]] = call @sparsePointers64(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK-FAST:           %[[VAL_7:.*]] = call @sparseIndices64(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-FAST:           %[[VAL_6:.*]] = call @sparsePointers(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-FAST:           %[[VAL_7:.*]] = call @sparseIndices(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-FAST:           %[[VAL_8:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
 // CHECK-FAST:           scf.for %[[VAL_9:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK-FAST:             %[[VAL_10:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_9]]] : memref<?xindex>
@@ -168,12 +155,9 @@
 // CHECK-FAST:           return %[[VAL_2]] : memref<64xf64>
 // CHECK-FAST:         }
 
-!SparseTensor = type !llvm.ptr<i8>
-
-func @matvec(%argA: !SparseTensor, %argb: tensor<64xf64>, %argx: tensor<64xf64>) -> tensor<64xf64> {
-  %arga = sparse_tensor.fromPtr %argA : !SparseTensor to tensor<64x64xf64>
+func @matvec(%arga: tensor<64x64xf64, #CSR>, %argb: tensor<64xf64>, %argx: tensor<64xf64>) -> tensor<64xf64> {
   %0 = linalg.generic #trait_matvec
-      ins(%arga, %argb : tensor<64x64xf64>, tensor<64xf64>)
+      ins(%arga, %argb : tensor<64x64xf64, #CSR>, tensor<64xf64>)
       outs(%argx: tensor<64xf64>) {
     ^bb(%A: f64, %b: f64, %x: f64):
       %0 = mulf %A, %b : f64
