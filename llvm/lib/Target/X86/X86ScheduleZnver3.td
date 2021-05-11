@@ -1556,6 +1556,11 @@ def : IsDepBreakingFunction<[
   DepBreakingClass<[
     PCMPEQBrr, PCMPEQWrr, PCMPEQDrr, PCMPEQQrr
   ], ZeroIdiomPredicate>,
+
+  // AVX XMM
+  DepBreakingClass<[
+    VPCMPEQBrr, VPCMPEQWrr, VPCMPEQDrr, VPCMPEQQrr
+  ], ZeroIdiomPredicate>,
 ]>;
 
 } // SchedModel

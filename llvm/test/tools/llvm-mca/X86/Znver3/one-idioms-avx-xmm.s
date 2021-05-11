@@ -25,12 +25,12 @@ vpaddq %xmm0, %xmm0, %xmm0
 
 # CHECK:      Iterations:        1000
 # CHECK-NEXT: Instructions:      2000
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      504
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               1.00
+# CHECK-NEXT: uOps Per Cycle:    3.97
+# CHECK-NEXT: IPC:               3.97
 # CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Instruction Info:
@@ -47,12 +47,12 @@ vpaddq %xmm0, %xmm0, %xmm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    2000
-# CHECK-NEXT: Max number of mappings used:         66
+# CHECK-NEXT: Max number of mappings used:         74
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
 # CHECK-NEXT:    Total number of mappings created: 2000
-# CHECK-NEXT:    Max number of mappings used:      66
+# CHECK-NEXT:    Max number of mappings used:      74
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -90,16 +90,16 @@ vpaddq %xmm0, %xmm0, %xmm0
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -     vpcmpeqb	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     vpaddb	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.50    -      -      -      -      -      -      -      -      -      -      -      -     vpcmpeqb	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25    -     0.50    -      -      -      -      -      -      -      -      -      -      -     vpaddb	%xmm0, %xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: Index     01234
 
-# CHECK:      [0,0]     DeER ..   vpcmpeqb	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [0,1]     D=eER..   vpaddb	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [1,0]     D==eER.   vpcmpeqb	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [1,1]     D===eER   vpaddb	%xmm0, %xmm0, %xmm0
+# CHECK:      [0,0]     DeER.   vpcmpeqb	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [0,1]     D=eER   vpaddb	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [1,0]     DeE-R   vpcmpeqb	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [1,1]     D=eER   vpaddb	%xmm0, %xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -108,20 +108,20 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     2.0    0.5    0.0       vpcmpeqb	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: 1.     2     3.0    0.0    0.0       vpaddb	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT:        2     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 0.     2     1.0    1.0    0.5       vpcmpeqb	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: 1.     2     2.0    0.0    0.0       vpaddb	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
 
 # CHECK:      [1] Code Region
 
 # CHECK:      Iterations:        1000
 # CHECK-NEXT: Instructions:      2000
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      504
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               1.00
+# CHECK-NEXT: uOps Per Cycle:    3.97
+# CHECK-NEXT: IPC:               3.97
 # CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Instruction Info:
@@ -138,12 +138,12 @@ vpaddq %xmm0, %xmm0, %xmm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    2000
-# CHECK-NEXT: Max number of mappings used:         66
+# CHECK-NEXT: Max number of mappings used:         74
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
 # CHECK-NEXT:    Total number of mappings created: 2000
-# CHECK-NEXT:    Max number of mappings used:      66
+# CHECK-NEXT:    Max number of mappings used:      74
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -181,16 +181,16 @@ vpaddq %xmm0, %xmm0, %xmm0
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -     vpcmpeqw	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     vpaddw	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.50    -      -      -      -      -      -      -      -      -      -      -      -     vpcmpeqw	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25    -     0.50    -      -      -      -      -      -      -      -      -      -      -     vpaddw	%xmm0, %xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: Index     01234
 
-# CHECK:      [0,0]     DeER ..   vpcmpeqw	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [0,1]     D=eER..   vpaddw	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [1,0]     D==eER.   vpcmpeqw	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [1,1]     D===eER   vpaddw	%xmm0, %xmm0, %xmm0
+# CHECK:      [0,0]     DeER.   vpcmpeqw	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [0,1]     D=eER   vpaddw	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [1,0]     DeE-R   vpcmpeqw	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [1,1]     D=eER   vpaddw	%xmm0, %xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -199,20 +199,20 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     2.0    0.5    0.0       vpcmpeqw	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: 1.     2     3.0    0.0    0.0       vpaddw	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT:        2     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 0.     2     1.0    1.0    0.5       vpcmpeqw	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: 1.     2     2.0    0.0    0.0       vpaddw	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
 
 # CHECK:      [2] Code Region
 
 # CHECK:      Iterations:        1000
 # CHECK-NEXT: Instructions:      2000
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      504
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               1.00
+# CHECK-NEXT: uOps Per Cycle:    3.97
+# CHECK-NEXT: IPC:               3.97
 # CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Instruction Info:
@@ -229,12 +229,12 @@ vpaddq %xmm0, %xmm0, %xmm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    2000
-# CHECK-NEXT: Max number of mappings used:         66
+# CHECK-NEXT: Max number of mappings used:         74
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
 # CHECK-NEXT:    Total number of mappings created: 2000
-# CHECK-NEXT:    Max number of mappings used:      66
+# CHECK-NEXT:    Max number of mappings used:      74
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -272,16 +272,16 @@ vpaddq %xmm0, %xmm0, %xmm0
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -     vpcmpeqd	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     vpaddd	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25   0.50    -      -      -      -      -      -      -      -      -      -      -      -     vpcmpeqd	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25    -     0.50    -      -      -      -      -      -      -      -      -      -      -     vpaddd	%xmm0, %xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: Index     01234
 
-# CHECK:      [0,0]     DeER ..   vpcmpeqd	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [0,1]     D=eER..   vpaddd	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [1,0]     D==eER.   vpcmpeqd	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [1,1]     D===eER   vpaddd	%xmm0, %xmm0, %xmm0
+# CHECK:      [0,0]     DeER.   vpcmpeqd	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [0,1]     D=eER   vpaddd	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [1,0]     DeE-R   vpcmpeqd	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [1,1]     D=eER   vpaddd	%xmm0, %xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -290,20 +290,20 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     2.0    0.5    0.0       vpcmpeqd	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: 1.     2     3.0    0.0    0.0       vpaddd	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT:        2     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 0.     2     1.0    1.0    0.5       vpcmpeqd	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: 1.     2     2.0    0.0    0.0       vpaddd	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
 
 # CHECK:      [3] Code Region
 
 # CHECK:      Iterations:        1000
 # CHECK-NEXT: Instructions:      2000
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      504
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               1.00
+# CHECK-NEXT: uOps Per Cycle:    3.97
+# CHECK-NEXT: IPC:               3.97
 # CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Instruction Info:
@@ -320,12 +320,12 @@ vpaddq %xmm0, %xmm0, %xmm0
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    2000
-# CHECK-NEXT: Max number of mappings used:         66
+# CHECK-NEXT: Max number of mappings used:         73
 
 # CHECK:      *  Register File #1 -- Zn3FpPRF:
 # CHECK-NEXT:    Number of physical registers:     160
 # CHECK-NEXT:    Total number of mappings created: 2000
-# CHECK-NEXT:    Max number of mappings used:      66
+# CHECK-NEXT:    Max number of mappings used:      73
 
 # CHECK:      *  Register File #2 -- Zn3IntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     192
@@ -367,12 +367,12 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vpaddq	%xmm0, %xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: Index     01234
 
-# CHECK:      [0,0]     DeER ..   vpcmpeqq	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [0,1]     D=eER..   vpaddq	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [1,0]     D==eER.   vpcmpeqq	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [1,1]     D===eER   vpaddq	%xmm0, %xmm0, %xmm0
+# CHECK:      [0,0]     DeER.   vpcmpeqq	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [0,1]     D=eER   vpaddq	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [1,0]     DeE-R   vpcmpeqq	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [1,1]     D=eER   vpaddq	%xmm0, %xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -381,6 +381,6 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     2.0    0.5    0.0       vpcmpeqq	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: 1.     2     3.0    0.0    0.0       vpaddq	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT:        2     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 0.     2     1.0    1.0    0.5       vpcmpeqq	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: 1.     2     2.0    0.0    0.0       vpaddq	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
