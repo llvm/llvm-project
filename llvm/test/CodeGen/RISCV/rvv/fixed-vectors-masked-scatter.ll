@@ -9,7 +9,7 @@ declare void @llvm.masked.scatter.v1i8.v1p0i8(<1 x i8>, <1 x i8*>, i32, <1 x i1>
 define void @mscatter_v1i8(<1 x i8> %val, <1 x i8*> %ptrs, <1 x i1> %m) {
 ; RV32-LABEL: mscatter_v1i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 1, e8,mf4,ta,mu
+; RV32-NEXT:    vsetivli a0, 1, e8,mf8,ta,mu
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -27,7 +27,7 @@ declare void @llvm.masked.scatter.v2i8.v2p0i8(<2 x i8>, <2 x i8*>, i32, <2 x i1>
 define void @mscatter_v2i8(<2 x i8> %val, <2 x i8*> %ptrs, <2 x i1> %m) {
 ; RV32-LABEL: mscatter_v2i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e8,mf4,ta,mu
+; RV32-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -43,17 +43,15 @@ define void @mscatter_v2i8(<2 x i8> %val, <2 x i8*> %ptrs, <2 x i1> %m) {
 define void @mscatter_v2i16_truncstore_v2i8(<2 x i16> %val, <2 x i8*> %ptrs, <2 x i1> %m) {
 ; RV32-LABEL: mscatter_v2i16_truncstore_v2i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e8,mf2,ta,mu
+; RV32-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
 ; RV32-NEXT:    vnsrl.wi v25, v8, 0
-; RV32-NEXT:    vsetivli a0, 2, e8,mf4,ta,mu
 ; RV32-NEXT:    vsoxei32.v v25, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mscatter_v2i16_truncstore_v2i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli a0, 2, e8,mf2,ta,mu
-; RV64-NEXT:    vnsrl.wi v25, v8, 0
 ; RV64-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
+; RV64-NEXT:    vnsrl.wi v25, v8, 0
 ; RV64-NEXT:    vsoxei64.v v25, (zero), v9, v0.t
 ; RV64-NEXT:    ret
   %tval = trunc <2 x i16> %val to <2 x i8>
@@ -64,20 +62,19 @@ define void @mscatter_v2i16_truncstore_v2i8(<2 x i16> %val, <2 x i8*> %ptrs, <2 
 define void @mscatter_v2i32_truncstore_v2i8(<2 x i32> %val, <2 x i8*> %ptrs, <2 x i1> %m) {
 ; RV32-LABEL: mscatter_v2i32_truncstore_v2i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e16,mf2,ta,mu
+; RV32-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; RV32-NEXT:    vnsrl.wi v25, v8, 0
-; RV32-NEXT:    vsetivli a0, 2, e8,mf4,ta,mu
+; RV32-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
 ; RV32-NEXT:    vnsrl.wi v26, v25, 0
 ; RV32-NEXT:    vsoxei32.v v26, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mscatter_v2i32_truncstore_v2i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli a0, 2, e16,mf2,ta,mu
+; RV64-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; RV64-NEXT:    vnsrl.wi v25, v8, 0
-; RV64-NEXT:    vsetivli a0, 2, e8,mf4,ta,mu
-; RV64-NEXT:    vnsrl.wi v26, v25, 0
 ; RV64-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
+; RV64-NEXT:    vnsrl.wi v26, v25, 0
 ; RV64-NEXT:    vsoxei64.v v26, (zero), v9, v0.t
 ; RV64-NEXT:    ret
   %tval = trunc <2 x i32> %val to <2 x i8>
@@ -94,7 +91,6 @@ define void @mscatter_v2i64_truncstore_v2i8(<2 x i64> %val, <2 x i8*> %ptrs, <2 
 ; RV32-NEXT:    vnsrl.wi v26, v25, 0
 ; RV32-NEXT:    vsetivli a0, 2, e8,mf8,ta,mu
 ; RV32-NEXT:    vnsrl.wi v25, v26, 0
-; RV32-NEXT:    vsetivli a0, 2, e8,mf4,ta,mu
 ; RV32-NEXT:    vsoxei32.v v25, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -205,7 +201,7 @@ declare void @llvm.masked.scatter.v1i16.v1p0i16(<1 x i16>, <1 x i16*>, i32, <1 x
 define void @mscatter_v1i16(<1 x i16> %val, <1 x i16*> %ptrs, <1 x i1> %m) {
 ; RV32-LABEL: mscatter_v1i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 1, e16,mf2,ta,mu
+; RV32-NEXT:    vsetivli a0, 1, e16,mf4,ta,mu
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -223,7 +219,7 @@ declare void @llvm.masked.scatter.v2i16.v2p0i16(<2 x i16>, <2 x i16*>, i32, <2 x
 define void @mscatter_v2i16(<2 x i16> %val, <2 x i16*> %ptrs, <2 x i1> %m) {
 ; RV32-LABEL: mscatter_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e16,mf2,ta,mu
+; RV32-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -239,16 +235,15 @@ define void @mscatter_v2i16(<2 x i16> %val, <2 x i16*> %ptrs, <2 x i1> %m) {
 define void @mscatter_v2i32_truncstore_v2i16(<2 x i32> %val, <2 x i16*> %ptrs, <2 x i1> %m) {
 ; RV32-LABEL: mscatter_v2i32_truncstore_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e16,mf2,ta,mu
+; RV32-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; RV32-NEXT:    vnsrl.wi v25, v8, 0
 ; RV32-NEXT:    vsoxei32.v v25, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mscatter_v2i32_truncstore_v2i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli a0, 2, e16,mf2,ta,mu
-; RV64-NEXT:    vnsrl.wi v25, v8, 0
 ; RV64-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
+; RV64-NEXT:    vnsrl.wi v25, v8, 0
 ; RV64-NEXT:    vsoxei64.v v25, (zero), v9, v0.t
 ; RV64-NEXT:    ret
   %tval = trunc <2 x i32> %val to <2 x i16>
@@ -263,7 +258,6 @@ define void @mscatter_v2i64_truncstore_v2i16(<2 x i64> %val, <2 x i16*> %ptrs, <
 ; RV32-NEXT:    vnsrl.wi v25, v8, 0
 ; RV32-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; RV32-NEXT:    vnsrl.wi v26, v25, 0
-; RV32-NEXT:    vsetivli a0, 2, e16,mf2,ta,mu
 ; RV32-NEXT:    vsoxei32.v v26, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -445,7 +439,7 @@ declare void @llvm.masked.scatter.v1i32.v1p0i32(<1 x i32>, <1 x i32*>, i32, <1 x
 define void @mscatter_v1i32(<1 x i32> %val, <1 x i32*> %ptrs, <1 x i1> %m) {
 ; RV32-LABEL: mscatter_v1i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 1, e32,m1,ta,mu
+; RV32-NEXT:    vsetivli a0, 1, e32,mf2,ta,mu
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -463,7 +457,7 @@ declare void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32>, <2 x i32*>, i32, <2 x
 define void @mscatter_v2i32(<2 x i32> %val, <2 x i32*> %ptrs, <2 x i1> %m) {
 ; RV32-LABEL: mscatter_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; RV32-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -481,7 +475,6 @@ define void @mscatter_v2i64_truncstore_v2i32(<2 x i64> %val, <2 x i32*> %ptrs, <
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; RV32-NEXT:    vnsrl.wi v25, v8, 0
-; RV32-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
 ; RV32-NEXT:    vsoxei32.v v25, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -1042,7 +1035,7 @@ declare void @llvm.masked.scatter.v1f16.v1p0f16(<1 x half>, <1 x half*>, i32, <1
 define void @mscatter_v1f16(<1 x half> %val, <1 x half*> %ptrs, <1 x i1> %m) {
 ; RV32-LABEL: mscatter_v1f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 1, e16,mf2,ta,mu
+; RV32-NEXT:    vsetivli a0, 1, e16,mf4,ta,mu
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -1060,7 +1053,7 @@ declare void @llvm.masked.scatter.v2f16.v2p0f16(<2 x half>, <2 x half*>, i32, <2
 define void @mscatter_v2f16(<2 x half> %val, <2 x half*> %ptrs, <2 x i1> %m) {
 ; RV32-LABEL: mscatter_v2f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e16,mf2,ta,mu
+; RV32-NEXT:    vsetivli a0, 2, e16,mf4,ta,mu
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -1238,7 +1231,7 @@ declare void @llvm.masked.scatter.v1f32.v1p0f32(<1 x float>, <1 x float*>, i32, 
 define void @mscatter_v1f32(<1 x float> %val, <1 x float*> %ptrs, <1 x i1> %m) {
 ; RV32-LABEL: mscatter_v1f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 1, e32,m1,ta,mu
+; RV32-NEXT:    vsetivli a0, 1, e32,mf2,ta,mu
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -1256,7 +1249,7 @@ declare void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float>, <2 x float*>, i32, 
 define void @mscatter_v2f32(<2 x float> %val, <2 x float*> %ptrs, <2 x i1> %m) {
 ; RV32-LABEL: mscatter_v2f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli a0, 2, e32,m1,ta,mu
+; RV32-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -1856,7 +1849,7 @@ define void @mscatter_baseidx_v32i8(<32 x i8> %val, i8* %base, <32 x i8> %idxs, 
 ; RV64-NEXT:    vslidedown.vi v28, v10, 16
 ; RV64-NEXT:    vsetivli a1, 16, e64,m8,ta,mu
 ; RV64-NEXT:    vsext.vf8 v8, v28
-; RV64-NEXT:    vsetivli a1, 2, e8,m1,ta,mu
+; RV64-NEXT:    vsetivli a1, 2, e8,mf4,ta,mu
 ; RV64-NEXT:    vslidedown.vi v0, v0, 2
 ; RV64-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
 ; RV64-NEXT:    vsoxei64.v v26, (a0), v8, v0.t
