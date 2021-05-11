@@ -216,9 +216,9 @@ namespace std
       using add_pointer_t    = typename add_pointer<T>::type;  // C++14
 
     // other transformations:
-    template <size_t Len, std::size_t Align=default-alignment>
+    template <size_t Len, size_t Align=default-alignment>
       using aligned_storage_t = typename aligned_storage<Len,Align>::type;  // C++14
-    template <std::size_t Len, class... Types>
+    template <size_t Len, class... Types>
       using aligned_union_t   = typename aligned_union<Len,Types...>::type;  // C++14
     template <class T>
       using remove_cvref_t    = typename remove_cvref<T>::type;  // C++20
