@@ -1231,60 +1231,6 @@ static AArch64CC::CondCode changeICMPPredToAArch64CC(CmpInst::Predicate P) {
   }
 }
 
-static void changeFCMPPredToAArch64CC(CmpInst::Predicate P,
-                                      AArch64CC::CondCode &CondCode,
-                                      AArch64CC::CondCode &CondCode2) {
-  CondCode2 = AArch64CC::AL;
-  switch (P) {
-  default:
-    llvm_unreachable("Unknown FP condition!");
-  case CmpInst::FCMP_OEQ:
-    CondCode = AArch64CC::EQ;
-    break;
-  case CmpInst::FCMP_OGT:
-    CondCode = AArch64CC::GT;
-    break;
-  case CmpInst::FCMP_OGE:
-    CondCode = AArch64CC::GE;
-    break;
-  case CmpInst::FCMP_OLT:
-    CondCode = AArch64CC::MI;
-    break;
-  case CmpInst::FCMP_OLE:
-    CondCode = AArch64CC::LS;
-    break;
-  case CmpInst::FCMP_ONE:
-    CondCode = AArch64CC::MI;
-    CondCode2 = AArch64CC::GT;
-    break;
-  case CmpInst::FCMP_ORD:
-    CondCode = AArch64CC::VC;
-    break;
-  case CmpInst::FCMP_UNO:
-    CondCode = AArch64CC::VS;
-    break;
-  case CmpInst::FCMP_UEQ:
-    CondCode = AArch64CC::EQ;
-    CondCode2 = AArch64CC::VS;
-    break;
-  case CmpInst::FCMP_UGT:
-    CondCode = AArch64CC::HI;
-    break;
-  case CmpInst::FCMP_UGE:
-    CondCode = AArch64CC::PL;
-    break;
-  case CmpInst::FCMP_ULT:
-    CondCode = AArch64CC::LT;
-    break;
-  case CmpInst::FCMP_ULE:
-    CondCode = AArch64CC::LE;
-    break;
-  case CmpInst::FCMP_UNE:
-    CondCode = AArch64CC::NE;
-    break;
-  }
-}
-
 /// Return a register which can be used as a bit to test in a TB(N)Z.
 static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
                               MachineRegisterInfo &MRI) {
