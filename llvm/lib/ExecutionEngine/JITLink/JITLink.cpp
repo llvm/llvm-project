@@ -93,7 +93,7 @@ const char *getScopeName(Scope S) {
 raw_ostream &operator<<(raw_ostream &OS, const Block &B) {
   return OS << formatv("{0:x16}", B.getAddress()) << " -- "
             << formatv("{0:x8}", B.getAddress() + B.getSize()) << ": "
-            << "size = " << formatv("{0:8x}", B.getSize()) << ", "
+            << "size = " << formatv("{0:x8}", B.getSize()) << ", "
             << (B.isZeroFill() ? "zero-fill" : "content")
             << ", align = " << B.getAlignment()
             << ", align-ofs = " << B.getAlignmentOffset()
