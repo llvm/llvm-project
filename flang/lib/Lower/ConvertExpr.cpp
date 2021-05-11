@@ -3410,34 +3410,29 @@ public:
 
   // Lower the expr cases in an ac-value-list.
   template <typename A>
-  ExtValue genArrayCtorInitializer(const Fortran::evaluate::Expr<A> &x,
-                                   mlir::Type, mlir::Value, mlir::Value,
-                                   mlir::Value,
-                                   Fortran::lower::StatementContext &stmtCtx) {
+  std::pair<ExtValue, bool>
+  genArrayCtorInitializer(const Fortran::evaluate::Expr<A> &x, mlir::Type,
+                          mlir::Value, mlir::Value, mlir::Value,
+                          Fortran::lower::StatementContext &stmtCtx) {
     if (isArray(x)) {
       auto e = toEvExpr(x);
       auto sh = Fortran::evaluate::GetShape(converter.getFoldingContext(), e);
-      return lowerSomeNewArrayExpression(converter, symMap, stmtCtx, sh, e);
+      return {lowerSomeNewArrayExpression(converter, symMap, stmtCtx, sh, e),
+              /*needCopy=*/true};
     }
-    return asScalar(x);
+    return {asScalar(x), /*needCopy=*/true};
   }
 
   // Target agnostic computation of the size of an element in the array.
-  mlir::Value computeElementSize(mlir::Type eleTy, mlir::Type eleRefTy,
-                                 mlir::Type resRefTy, mlir::Value mem) {
+  mlir::Value computeElementSize(mlir::Type eleRefTy, mlir::Type resRefTy,
+                                 mlir::Value mem) {
     auto loc = getLoc();
-    auto intptrTy = builder.getIntPtrType();
-    auto castMem = builder.createConvert(loc, resRefTy, mem);
-    auto zero = builder.createIntegerConstant(loc, intptrTy, 0);
-    auto one = builder.createIntegerConstant(loc, intptrTy, 1);
-    auto b0 = builder.create<fir::CoordinateOp>(loc, eleRefTy, castMem,
-                                                mlir::ValueRange{zero});
-    auto buff0 = builder.createConvert(loc, intptrTy, b0);
-    auto b1 = builder.create<fir::CoordinateOp>(loc, eleRefTy, castMem,
-                                                mlir::ValueRange{one});
-    auto buff1 = builder.createConvert(loc, intptrTy, b1);
-    auto diff = builder.create<mlir::SubIOp>(loc, buff1, buff0);
-    return builder.createConvert(loc, builder.getIndexType(), diff);
+    auto idxTy = builder.getIndexType();
+    auto nullPtr = builder.createNullConstant(loc, resRefTy);
+    auto one = builder.createIntegerConstant(loc, idxTy, 1);
+    auto offset = builder.create<fir::CoordinateOp>(loc, eleRefTy, nullPtr,
+                                                    mlir::ValueRange{one});
+    return builder.createConvert(loc, idxTy, offset);
   }
 
   /// Get the function signature of the LLVM memcpy intrinsic.
@@ -3461,8 +3456,8 @@ public:
                          mlir::Value eleSz) {
     auto loc = getLoc();
     auto reallocFunc = Fortran::lower::getRealloc(builder);
-    auto cond = builder.create<mlir::CmpIOp>(loc, mlir::CmpIPredicate::sge,
-                                             needed, bufferSize);
+    auto cond = builder.create<mlir::CmpIOp>(loc, mlir::CmpIPredicate::sle,
+                                             bufferSize, needed);
     auto ifOp = builder.create<fir::IfOp>(loc, mem.getType(), cond,
                                           /*withElseRegion=*/true);
     auto insPt = builder.saveInsertionPoint();
@@ -3529,8 +3524,11 @@ public:
     // Copy the value.
     exv.match(
         [&](const mlir::Value &v) {
+          // Increment the buffer position.
+          auto plusOne = builder.create<mlir::AddIOp>(loc, off, one);
+
           // Grow the buffer as needed.
-          mem = growBuffer(mem, off, limit, buffSize, eleSz);
+          mem = growBuffer(mem, plusOne, limit, buffSize, eleSz);
 
           // Store the element in the buffer.
           auto buff =
@@ -3540,13 +3538,14 @@ public:
           auto val = builder.createConvert(loc, eleTy, v);
           builder.create<fir::StoreOp>(loc, val, buffi);
 
-          // Increment the buffer position.
-          auto plusOne = builder.create<mlir::AddIOp>(loc, off, one);
           builder.create<fir::StoreOp>(loc, plusOne, buffPos);
         },
         [&](const fir::CharBoxValue &v) {
+          // Increment the buffer position.
+          auto plusOne = builder.create<mlir::AddIOp>(loc, off, one);
+
           // Grow the buffer as needed.
-          mem = growBuffer(mem, off, limit, buffSize, eleSz);
+          mem = growBuffer(mem, plusOne, limit, buffSize, eleSz);
 
           // Store the element in the buffer.
           auto buff =
@@ -3557,8 +3556,6 @@ public:
           auto load = builder.create<fir::LoadOp>(loc, castedStr);
           builder.create<fir::StoreOp>(loc, load, buffi);
 
-          // Increment the buffer position.
-          auto plusOne = builder.create<mlir::AddIOp>(loc, off, one);
           builder.create<fir::StoreOp>(loc, plusOne, buffPos);
         },
         [&](const fir::ArrayBoxValue &v) { doAbstractArray(v); },
@@ -3571,10 +3568,11 @@ public:
 
   // Lower an ac-implied-do in an ac-value-list.
   template <typename A>
-  ExtValue genArrayCtorInitializer(const Fortran::evaluate::ImpliedDo<A> &x,
-                                   mlir::Type resTy, mlir::Value mem,
-                                   mlir::Value buffPos, mlir::Value buffSize,
-                                   Fortran::lower::StatementContext &) {
+  std::pair<ExtValue, bool>
+  genArrayCtorInitializer(const Fortran::evaluate::ImpliedDo<A> &x,
+                          mlir::Type resTy, mlir::Value mem,
+                          mlir::Value buffPos, mlir::Value buffSize,
+                          Fortran::lower::StatementContext &) {
     auto loc = getLoc();
     auto idxTy = builder.getIndexType();
     auto lo =
@@ -3595,21 +3593,21 @@ public:
     builder.setInsertionPointToStart(loop.getBody());
 
     auto eleRefTy = builder.getRefType(eleTy);
-    auto eleSz =
-        computeElementSize(eleTy, eleRefTy, builder.getRefType(resTy), mem);
+    auto eleSz = computeElementSize(eleRefTy, builder.getRefType(resTy), mem);
 
     // Cleanups for temps in loop body. Any temps created in the loop body need
     // to be freed before the end of the loop.
     Fortran::lower::StatementContext loopCtx;
     for (const Fortran::evaluate::ArrayConstructorValue<A> &acv : x.values()) {
-      auto exv = std::visit(
+      auto [exv, copyNeeded] = std::visit(
           [&](const auto &v) {
             return genArrayCtorInitializer(v, resTy, mem, buffPos, buffSize,
                                            loopCtx);
           },
           acv.u);
-      mem = copyNextArrayCtorSection(exv, buffPos, buffSize, mem, eleSz, eleTy,
-                                     eleRefTy, resTy);
+      if (copyNeeded)
+        mem = copyNextArrayCtorSection(exv, buffPos, buffSize, mem, eleSz,
+                                       eleTy, eleRefTy, resTy);
     }
     loopCtx.finalize();
 
@@ -3625,9 +3623,9 @@ public:
             seqTy.getEleTy().template dyn_cast<fir::CharacterType>()) {
       auto len = builder.createIntegerConstant(loc, builder.getI64Type(),
                                                charTy.getLen());
-      return fir::CharArrayBoxValue{mem, len, extents};
+      return {fir::CharArrayBoxValue{mem, len, extents}, /*needCopy=*/false};
     }
-    return fir::ArrayBoxValue{mem, extents};
+    return {fir::ArrayBoxValue{mem, extents}, /*needCopy=*/false};
   }
 
   // To simplify the handling and interaction between the various cases, array
@@ -3666,19 +3664,19 @@ public:
     }
     // Compute size of element
     auto eleRefTy = builder.getRefType(eleTy);
-    auto eleSz =
-        computeElementSize(eleTy, eleRefTy, builder.getRefType(resTy), mem);
+    auto eleSz = computeElementSize(eleRefTy, builder.getRefType(resTy), mem);
 
     // Populate the buffer with the elements, growing as necessary.
     for (const auto &expr : x) {
-      auto exv = std::visit(
+      auto [exv, copyNeeded] = std::visit(
           [&](const auto &e) {
             return genArrayCtorInitializer(e, resTy, mem, buffPos, buffSize,
                                            stmtCtx);
           },
           expr.u);
-      mem = copyNextArrayCtorSection(exv, buffPos, buffSize, mem, eleSz, eleTy,
-                                     eleRefTy, resTy);
+      if (copyNeeded)
+        mem = copyNextArrayCtorSection(exv, buffPos, buffSize, mem, eleSz,
+                                       eleTy, eleRefTy, resTy);
     }
     mem = builder.createConvert(loc, fir::HeapType::get(resTy), mem);
     llvm::SmallVector<mlir::Value> extents = {

@@ -114,7 +114,6 @@ subroutine test4(a, b, n1, m1)
   ! CHECK: %[[q:.*]] = fir.coordinate_of %arg1, %{{.*}}, %{{.*}} : (!fir.box<!fir.array<?x?xf32>>, i64, i64) -> !fir.ref<f32>
   ! CHECK: %[[q2:.*]] = fir.load %[[q]] : !fir.ref<f32>
   ! CHECK: fir.store %[[q2]] to %{{.*}} : !fir.ref<f32>
-  ! CHECK: fir.call @llvm.memcpy.p0i8.p0i8.i64(%
   ! CHECK: fir.freemem %{{.*}} : !fir.heap<!fir.array<?xf32>>
   ! CHECK-NEXT: return
   a = [ ((b(i,j), j=f1(i),f2(n1),f3(m1+i)), i=1,n1,m1) ]
