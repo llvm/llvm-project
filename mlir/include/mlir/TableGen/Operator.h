@@ -58,6 +58,9 @@ public:
   // Returns this op's C++ class name prefixed with namespaces.
   std::string getQualCppClassName() const;
 
+  // Returns this op's C++ namespace.
+  StringRef getCppNamespace() const;
+
   // Returns the name of op's adaptor C++ class.
   std::string getAdaptorName() const;
 
@@ -303,6 +306,9 @@ private:
 
   // The unqualified C++ class name of the op.
   StringRef cppClassName;
+
+  // The C++ namespace for this op.
+  StringRef cppNamespace;
 
   // The operands of the op.
   SmallVector<NamedTypeConstraint, 4> operands;
