@@ -8,16 +8,17 @@ define i64 @t0(i64 %val, i64 %shamt) nounwind {
 ; X64-NOBMI2-LABEL: t0:
 ; X64-NOBMI2:       # %bb.0:
 ; X64-NOBMI2-NEXT:    movq %rdi, %rax
-; X64-NOBMI2-NEXT:    movb $32, %cl
-; X64-NOBMI2-NEXT:    subb %sil, %cl
+; X64-NOBMI2-NEXT:    leaq 32(%rsi), %rcx
+; X64-NOBMI2-NEXT:    negq %rcx
+; X64-NOBMI2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-NOBMI2-NEXT:    shlq %cl, %rax
 ; X64-NOBMI2-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: t0:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    movb $32, %al
-; X64-BMI2-NEXT:    subb %sil, %al
-; X64-BMI2-NEXT:    shlxq %rax, %rdi, %rax
+; X64-BMI2-NEXT:    addq $32, %rsi
+; X64-BMI2-NEXT:    negq %rsi
+; X64-BMI2-NEXT:    shlxq %rsi, %rdi, %rax
 ; X64-BMI2-NEXT:    retq
 ;
 ; X32-NOBMI2-LABEL: t0:
@@ -228,16 +229,17 @@ define i64 @t4(i64 %val, i64 %shamt) nounwind {
 ; X64-NOBMI2-LABEL: t4:
 ; X64-NOBMI2:       # %bb.0:
 ; X64-NOBMI2-NEXT:    movq %rdi, %rax
-; X64-NOBMI2-NEXT:    movb $96, %cl
-; X64-NOBMI2-NEXT:    subb %sil, %cl
+; X64-NOBMI2-NEXT:    leaq 96(%rsi), %rcx
+; X64-NOBMI2-NEXT:    negq %rcx
+; X64-NOBMI2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-NOBMI2-NEXT:    shlq %cl, %rax
 ; X64-NOBMI2-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: t4:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    movb $96, %al
-; X64-BMI2-NEXT:    subb %sil, %al
-; X64-BMI2-NEXT:    shlxq %rax, %rdi, %rax
+; X64-BMI2-NEXT:    addq $96, %rsi
+; X64-BMI2-NEXT:    negq %rsi
+; X64-BMI2-NEXT:    shlxq %rsi, %rdi, %rax
 ; X64-BMI2-NEXT:    retq
 ;
 ; X32-NOBMI2-LABEL: t4:
@@ -282,21 +284,21 @@ define i64 @t4(i64 %val, i64 %shamt) nounwind {
 define i64 @t5_cse(i64 %val, i64 %shamt, i64*%dst) nounwind {
 ; X64-NOBMI2-LABEL: t5_cse:
 ; X64-NOBMI2:       # %bb.0:
+; X64-NOBMI2-NEXT:    movq %rsi, %rcx
 ; X64-NOBMI2-NEXT:    movq %rdi, %rax
-; X64-NOBMI2-NEXT:    leaq 32(%rsi), %rcx
+; X64-NOBMI2-NEXT:    addq $32, %rcx
 ; X64-NOBMI2-NEXT:    movq %rcx, (%rdx)
-; X64-NOBMI2-NEXT:    movb $32, %cl
-; X64-NOBMI2-NEXT:    subb %sil, %cl
+; X64-NOBMI2-NEXT:    negq %rcx
+; X64-NOBMI2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-NOBMI2-NEXT:    shlq %cl, %rax
 ; X64-NOBMI2-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: t5_cse:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    leaq 32(%rsi), %rax
-; X64-BMI2-NEXT:    movq %rax, (%rdx)
-; X64-BMI2-NEXT:    movb $32, %al
-; X64-BMI2-NEXT:    subb %sil, %al
-; X64-BMI2-NEXT:    shlxq %rax, %rdi, %rax
+; X64-BMI2-NEXT:    addq $32, %rsi
+; X64-BMI2-NEXT:    movq %rsi, (%rdx)
+; X64-BMI2-NEXT:    negq %rsi
+; X64-BMI2-NEXT:    shlxq %rsi, %rdi, %rax
 ; X64-BMI2-NEXT:    retq
 ;
 ; X32-NOBMI2-LABEL: t5_cse:
