@@ -875,16 +875,43 @@ loadTestingFormat(StringRef Data) {
   InstrProfSymtab ProfileNames;
   if (Error E = ProfileNames.create(Data.substr(0, ProfileNamesSize), Address))
     return std::move(E);
-  StringRef CoverageMapping = Data.substr(ProfileNamesSize);
+  Data = Data.substr(ProfileNamesSize);
   // Skip the padding bytes because coverage map data has an alignment of 8.
-  if (CoverageMapping.empty())
-    return make_error<CoverageMapError>(coveragemap_error::truncated);
-  size_t Pad = offsetToAlignedAddr(CoverageMapping.data(), Align(8));
-  if (CoverageMapping.size() < Pad)
+  size_t Pad = offsetToAlignedAddr(Data.data(), Align(8));
+  if (Data.size() < Pad)
     return make_error<CoverageMapError>(coveragemap_error::malformed);
-  CoverageMapping = CoverageMapping.substr(Pad);
+  Data = Data.substr(Pad);
+  if (Data.size() < sizeof(CovMapHeader))
+    return make_error<CoverageMapError>(coveragemap_error::malformed);
+  auto const *CovHeader = reinterpret_cast<const CovMapHeader *>(
+      Data.substr(0, sizeof(CovMapHeader)).data());
+  CovMapVersion Version =
+      (CovMapVersion)CovHeader->getVersion<support::endianness::little>();
+  StringRef CoverageMapping, CoverageRecords;
+  if (Version < CovMapVersion::Version4) {
+    CoverageMapping = Data;
+    if (CoverageMapping.empty())
+      return make_error<CoverageMapError>(coveragemap_error::truncated);
+  } else {
+    uint32_t FilenamesSize =
+        CovHeader->getFilenamesSize<support::endianness::little>();
+    uint32_t CoverageMappingSize = sizeof(CovMapHeader) + FilenamesSize;
+    CoverageMapping = Data.substr(0, CoverageMappingSize);
+    if (CoverageMapping.empty())
+      return make_error<CoverageMapError>(coveragemap_error::truncated);
+    Data = Data.substr(CoverageMappingSize);
+    // Skip the padding bytes because coverage records data has an alignment
+    // of 8.
+    Pad = offsetToAlignedAddr(Data.data(), Align(8));
+    if (Data.size() < Pad)
+      return make_error<CoverageMapError>(coveragemap_error::malformed);
+    CoverageRecords = Data.substr(Pad);
+    if (CoverageRecords.empty())
+      return make_error<CoverageMapError>(coveragemap_error::truncated);
+  }
   return BinaryCoverageReader::createCoverageReaderFromBuffer(
-      CoverageMapping, "", std::move(ProfileNames), BytesInAddress, Endian);
+      CoverageMapping, CoverageRecords.str(), std::move(ProfileNames),
+      BytesInAddress, Endian);
 }
 
 /// Find all sections that match \p Name. There may be more than one if comdats
