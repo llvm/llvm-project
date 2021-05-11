@@ -363,7 +363,6 @@ private:
   PredIteratorCache PredCache;
 
   unsigned DefaultBlockScanLimit;
-  Optional<int32_t> ClobberOffset;
 
 public:
   MemoryDependenceResults(AAResults &AA, AssumptionCache &AC,
@@ -468,8 +467,6 @@ public:
 
   /// Release memory in caches.
   void releaseMemory();
-
-  Optional<int32_t> getClobberOffset() const { return ClobberOffset; }
 
 private:
   MemDepResult getCallDependencyFrom(CallBase *Call, bool isReadOnlyCall,

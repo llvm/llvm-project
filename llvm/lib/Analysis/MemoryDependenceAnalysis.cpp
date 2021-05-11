@@ -512,12 +512,16 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
         if (R == AliasResult::MustAlias)
           return MemDepResult::getDef(Inst);
 
+#if 0 // FIXME: Temporarily disabled. GVN is cleverly rewriting loads
+      // in terms of clobbering loads, but since it does this by looking
+      // at the clobbering load directly, it doesn't know about any
+      // phi translation that may have happened along the way.
+
         // If we have a partial alias, then return this as a clobber for the
         // client to handle.
-        if (R == AliasResult::PartialAlias && R.hasOffset()) {
-          ClobberOffset = R.getOffset();
+        if (R == AliasResult::PartialAlias)
           return MemDepResult::getClobber(Inst);
-        }
+#endif
 
         // Random may-alias loads don't depend on each other without a
         // dependence.
@@ -636,7 +640,6 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
 }
 
 MemDepResult MemoryDependenceResults::getDependency(Instruction *QueryInst) {
-  ClobberOffset = None;
   Instruction *ScanPos = QueryInst;
 
   // Check for a cached result
