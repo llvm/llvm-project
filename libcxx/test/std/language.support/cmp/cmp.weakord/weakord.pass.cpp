@@ -52,22 +52,6 @@ void test_signatures() {
 
 constexpr bool test_conversion() {
   static_assert(std::is_convertible<const std::weak_ordering&,
-      std::weak_equality>::value, "");
-  { // value == 0
-    auto V = std::weak_ordering::equivalent;
-    std::weak_equality WV = V;
-    assert(WV == 0);
-  }
-  std::weak_ordering WeakTestCases[] = {
-      std::weak_ordering::less,
-      std::weak_ordering::greater,
-  };
-  for (auto V : WeakTestCases)
-  { // value != 0
-    std::weak_equality WV = V;
-    assert(WV != 0);
-  }
-  static_assert(std::is_convertible<const std::weak_ordering&,
       std::partial_ordering>::value, "");
   { // value == 0
     auto V = std::weak_ordering::equivalent;
