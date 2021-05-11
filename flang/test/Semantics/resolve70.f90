@@ -24,7 +24,6 @@ subroutine s()
 
   ! ac-spec for an array constructor
   !ERROR: ABSTRACT derived type may not be used here
-  !ERROR: ABSTRACT derived type may not be used here
   type (abstractType), parameter :: abstractArray(*) = (/ abstractType :: /)
 
   class(*), allocatable :: selector
