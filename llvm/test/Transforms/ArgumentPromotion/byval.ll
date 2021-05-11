@@ -6,9 +6,9 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 
 %struct.ss = type { i32, i64 }
 
-define internal void @f(%struct.ss* byval(%struct.ss)  %b) nounwind  {
+define internal void @f(%struct.ss* byval(%struct.ss) align 4 %b) nounwind  {
 ; CHECK-LABEL: define {{[^@]+}}@f
-; CHECK-SAME: (i32 [[B_0:%.*]], i64 [[B_1:%.*]])
+; CHECK-SAME: (i32 [[B_0:%.*]], i64 [[B_1:%.*]]) [[ATTR0:#.*]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
 ; CHECK-NEXT:    [[DOT0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B]], i32 0, i32 0
@@ -32,11 +32,11 @@ entry:
 
 define internal void @g(%struct.ss* byval(%struct.ss) align 32 %b) nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@g
-; CHECK-SAME: (i32 [[B_0:%.*]], i64 [[B_1:%.*]])
+; CHECK-SAME: (i32 [[B_0:%.*]], i64 [[B_1:%.*]]) [[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_SS:%.*]], align 32
 ; CHECK-NEXT:    [[DOT0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B]], i32 0, i32 0
-; CHECK-NEXT:    store i32 [[B_0]], i32* [[DOT0]], align 4
+; CHECK-NEXT:    store i32 [[B_0]], i32* [[DOT0]], align 32
 ; CHECK-NEXT:    [[DOT1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B]], i32 0, i32 1
 ; CHECK-NEXT:    store i64 [[B_1]], i64* [[DOT1]], align 4
 ; CHECK-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B]], i32 0, i32 0
@@ -53,11 +53,28 @@ entry:
   ret void
 }
 
+; Don't transform if alignment isn't specified; the actual alignment
+; is target-specific, and not exposed anywhere.
+;
+; (If we ever change byval so a missing alignment isn't legal, we can
+; just delete this test.)
+define internal void @h(%struct.ss* byval(%struct.ss) %b) nounwind {
+; CHECK-LABEL: define {{[^@]+}}@h
+; CHECK-SAME: (%struct.ss* byval(%struct.ss) %b)
+;
+entry:
+  %tmp = getelementptr %struct.ss, %struct.ss* %b, i32 0, i32 0
+  %tmp1 = load i32, i32* %tmp, align 4
+  %tmp2 = add i32 %tmp1, 1
+  store i32 %tmp2, i32* %tmp, align 4
+  ret void
+}
 
 define i32 @main() nounwind  {
-; CHECK-LABEL: define {{[^@]+}}@main()
+; CHECK-LABEL: define {{[^@]+}}@main
+; CHECK-SAME: () [[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
+; CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 32
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
 ; CHECK-NEXT:    store i32 1, i32* [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
@@ -68,20 +85,22 @@ define i32 @main() nounwind  {
 ; CHECK-NEXT:    [[S_1_VAL:%.*]] = load i64, i64* [[S_1]], align 4
 ; CHECK-NEXT:    call void @f(i32 [[S_0_VAL]], i64 [[S_1_VAL]])
 ; CHECK-NEXT:    [[S_01:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
-; CHECK-NEXT:    [[S_01_VAL:%.*]] = load i32, i32* [[S_01]], align 4
+; CHECK-NEXT:    [[S_01_VAL:%.*]] = load i32, i32* [[S_01]], align 32
 ; CHECK-NEXT:    [[S_12:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; CHECK-NEXT:    [[S_12_VAL:%.*]] = load i64, i64* [[S_12]], align 4
 ; CHECK-NEXT:    call void @g(i32 [[S_01_VAL]], i64 [[S_12_VAL]])
+; CHECK-NEXT:    call void @h(%struct.ss* byval(%struct.ss) %S)
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  %S = alloca %struct.ss
+  %S = alloca %struct.ss, align 32
   %tmp1 = getelementptr %struct.ss, %struct.ss* %S, i32 0, i32 0
   store i32 1, i32* %tmp1, align 8
   %tmp4 = getelementptr %struct.ss, %struct.ss* %S, i32 0, i32 1
   store i64 2, i64* %tmp4, align 4
-  call void @f(%struct.ss* byval(%struct.ss) %S) nounwind
-  call void @g(%struct.ss* byval(%struct.ss) %S) nounwind
+  call void @f(%struct.ss* byval(%struct.ss) align 4 %S) nounwind
+  call void @g(%struct.ss* byval(%struct.ss) align 32 %S) nounwind
+  call void @h(%struct.ss* byval(%struct.ss) %S) nounwind
   ret i32 0
 }
 
