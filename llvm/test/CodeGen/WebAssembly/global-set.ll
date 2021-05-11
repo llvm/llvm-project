@@ -45,13 +45,18 @@ define void @set_f64_global(double %v) {
   ret void
 }
 
-;; LLVM doesn't yet declare proper WebAssembly globals for these values,
-;; instead placing them in linear memory.  To fix in a followup.
-; FIXME-CHECK: .globl i32_global
-; FIXME-CHECK: .globaltype i32_global, i32
-; FIXME-CHECK: .globl i64_global
-; FIXME-CHECK: .globaltype i64_global, i64
-; FIXME-CHECK: .globl f32_global
-; FIXME-CHECK: .globaltype f32_global, f32
-; FIXME-CHECK: .globl f64_global
-; FIXME-CHECK: .globaltype f64_global, f64
+; CHECK: .globl i32_global
+; CHECK: .globaltype i32_global, i32
+; CHECK-LABEL: i32_global:
+
+; CHECK: .globl i64_global
+; CHECK: .globaltype i64_global, i64
+; CHECK-LABEL: i64_global:
+
+; CHECK: .globl f32_global
+; CHECK: .globaltype f32_global, f32
+; CHECK-LABEL: f32_global:
+
+; CHECK: .globl f64_global
+; CHECK: .globaltype f64_global, f64
+; CHECK-LABEL: f64_global:
