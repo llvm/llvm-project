@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
-
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
@@ -17,7 +17,7 @@ using namespace mlir;
 using namespace mlir::sparse_tensor;
 
 //===----------------------------------------------------------------------===//
-// TensorDialect Attribute Methods
+// TensorDialect Attribute Methods.
 //===----------------------------------------------------------------------===//
 
 #define GET_ATTRDEF_CLASSES
@@ -178,8 +178,73 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
   return success();
 }
 
+SparseTensorEncodingAttr
+mlir::sparse_tensor::getSparseTensorEncoding(Type type) {
+  if (auto ttp = type.dyn_cast<RankedTensorType>())
+    return ttp.getEncoding().dyn_cast_or_null<SparseTensorEncodingAttr>();
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
-// TensorDialect Methods
+// TensorDialect Operations.
+//===----------------------------------------------------------------------===//
+
+static LogicalResult isInBounds(Value dim, Value tensor) {
+  if (auto constantOp = dim.getDefiningOp<ConstantOp>()) {
+    unsigned d = constantOp.getValue().cast<IntegerAttr>().getInt();
+    if (d >= tensor.getType().cast<RankedTensorType>().getRank())
+      return failure();
+  }
+  return success(); // in bounds, or symbolic
+}
+
+static LogicalResult isMatchingWidth(Value result, unsigned width) {
+  Type etp = result.getType().cast<MemRefType>().getElementType();
+  if ((width == 0 && etp.isIndex()) || (width > 0 && etp.isInteger(width)))
+    return success();
+  return failure();
+}
+
+static LogicalResult verify(NewOp op) {
+  if (!getSparseTensorEncoding(op.getResult().getType()))
+    return op.emitError("expected a sparse tensor result");
+  return success();
+}
+
+static LogicalResult verify(ToPointersOp op) {
+  if (failed(isInBounds(op.dim(), op.tensor())))
+    return op.emitError("requested pointers dimension out of bounds");
+  if (auto e = getSparseTensorEncoding(op.tensor().getType())) {
+    if (failed(isMatchingWidth(op.result(), e.getPointerBitWidth())))
+      return op.emitError("unexpected type for pointers");
+    return success();
+  }
+  return op.emitError("expected a sparse tensor to get pointers");
+}
+
+static LogicalResult verify(ToIndicesOp op) {
+  if (failed(isInBounds(op.dim(), op.tensor())))
+    return op.emitError("requested indices dimension out of bounds");
+  if (auto e = getSparseTensorEncoding(op.tensor().getType())) {
+    if (failed(isMatchingWidth(op.result(), e.getIndexBitWidth())))
+      return op.emitError("unexpected type for indices");
+    return success();
+  }
+  return op.emitError("expected a sparse tensor to get indices");
+}
+
+static LogicalResult verify(ToValuesOp op) {
+  if (!getSparseTensorEncoding(op.tensor().getType()))
+    return op.emitError("expected a sparse tensor to get values");
+  RankedTensorType ttp = op.tensor().getType().cast<RankedTensorType>();
+  MemRefType mtp = op.result().getType().cast<MemRefType>();
+  if (ttp.getElementType() != mtp.getElementType())
+    return op.emitError("unexpected mismatch in element types");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TensorDialect Methods.
 //===----------------------------------------------------------------------===//
 
 void SparseTensorDialect::initialize() {
