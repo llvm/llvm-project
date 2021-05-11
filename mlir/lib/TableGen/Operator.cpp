@@ -50,6 +50,8 @@ Operator::Operator(const llvm::Record &def)
     cppClassName = prefix;
   }
 
+  cppNamespace = def.getValueAsString("cppNamespace");
+
   populateOpStructure();
 }
 
@@ -70,11 +72,12 @@ StringRef Operator::getDialectName() const { return dialect.getName(); }
 StringRef Operator::getCppClassName() const { return cppClassName; }
 
 std::string Operator::getQualCppClassName() const {
-  auto prefix = dialect.getCppNamespace();
-  if (prefix.empty())
+  if (cppNamespace.empty())
     return std::string(cppClassName);
-  return std::string(llvm::formatv("{0}::{1}", prefix, cppClassName));
+  return std::string(llvm::formatv("{0}::{1}", cppNamespace, cppClassName));
 }
+
+StringRef Operator::getCppNamespace() const { return cppNamespace; }
 
 int Operator::getNumResults() const {
   DagInit *results = def.getValueAsDag("results");
