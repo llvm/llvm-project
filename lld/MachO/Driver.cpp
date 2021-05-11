@@ -421,13 +421,13 @@ static void parseOrderFile(StringRef path) {
                           .StartsWith("ppc:", CPU_TYPE_POWERPC)
                           .StartsWith("ppc64:", CPU_TYPE_POWERPC64)
                           .Default(CPU_TYPE_ANY);
+
+    if (cpuType != CPU_TYPE_ANY && cpuType != target->cpuType)
+      continue;
+
     // Drop the CPU type as well as the colon
     if (cpuType != CPU_TYPE_ANY)
       line = line.drop_until([](char c) { return c == ':'; }).drop_front();
-    // TODO: Update when we extend support for other CPUs
-    if (cpuType != CPU_TYPE_ANY && cpuType != CPU_TYPE_X86_64 &&
-        cpuType != CPU_TYPE_ARM64)
-      continue;
 
     constexpr std::array<StringRef, 2> fileEnds = {".o:", ".o):"};
     for (StringRef fileEnd : fileEnds) {
@@ -869,7 +869,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   errorHandler().logName = args::getFilenameWithoutExe(argsArr[0]);
   stderrOS.enable_colors(stderrOS.has_colors());
-  // TODO: Set up error handler properly, e.g. the errorLimitExceededMsg
 
   MachOOptTable parser;
   InputArgList args = parser.parse(argsArr.slice(1));
