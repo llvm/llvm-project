@@ -46,6 +46,8 @@
     ret void
   }
 
+  define void @minsize(i8* nocapture %dst) minsize { unreachable }
+
   declare void @llvm.stackprotector(i8*, i8**) #2
 
   attributes #0 = { nounwind ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="cyclone" "target-features"="+aes,+crypto,+fp-armv8,+neon,+sha2,+zcm,+zcz" "unsafe-fp-math"="false" "use-soft-float"="false" }
@@ -228,3 +230,29 @@ body:             |
     RET_ReallyLR
 
 ...
+---
+name:            minsize
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w1, $x0
+    ; CHECK-LABEL: name: minsize
+    ; CHECK: liveins: $w1, $x0
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](s8)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 72340172838076673
+    ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
+    ; CHECK: G_STORE [[MUL]](s64), [[COPY]](p0) :: (store 8 into %ir.dst, align 1)
+    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; CHECK: G_STORE [[MUL]](s64), [[PTR_ADD]](p0) :: (store 8 into %ir.dst + 8, align 1)
+    ; CHECK: RET_ReallyLR
+    %0:_(p0) = COPY $x0
+    %1:_(s32) = COPY $w1
+    %3:_(s64) = G_CONSTANT i64 16
+    %2:_(s8) = G_TRUNC %1(s32)
+    G_MEMSET %0(p0), %2(s8), %3(s64), 1 :: (store 1 into %ir.dst)
+    RET_ReallyLR
