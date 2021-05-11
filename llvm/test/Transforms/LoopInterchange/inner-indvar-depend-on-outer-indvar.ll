@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: opt < %s -basic-aa -loop-interchange -verify-dom-info -verify-loop-info \
 ; RUN:     -S -debug 2>&1 | FileCheck %s
 
