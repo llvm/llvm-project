@@ -100,7 +100,11 @@ FunctionCoverageSummary::get(const InstantiationGroup &Group,
   for (const auto &FCS : Summaries.drop_front()) {
     Summary.RegionCoverage.merge(FCS.RegionCoverage);
     Summary.LineCoverage.merge(FCS.LineCoverage);
-    Summary.BranchCoverage.merge(FCS.BranchCoverage);
+
+    // Sum branch coverage across instantiation groups for the summary rather
+    // than "merge" the maximum count. This is a clearer view into whether all
+    // created branches are covered.
+    Summary.BranchCoverage += FCS.BranchCoverage;
   }
   return Summary;
 }
