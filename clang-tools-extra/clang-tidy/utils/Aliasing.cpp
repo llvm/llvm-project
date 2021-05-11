@@ -50,6 +50,13 @@ static bool isPtrOrReferenceForVar(const Stmt *S, const VarDecl *Var) {
   } else if (const auto *LE = dyn_cast<LambdaExpr>(S)) {
     // Treat lambda capture by reference as a form of taking a reference.
     return capturesByRef(LE->getLambdaClass(), Var);
+  } else if (const auto *ILE = dyn_cast<InitListExpr>(S)) {
+    return llvm::any_of(ILE->inits(), [Var](const Expr *ChildE) {
+      // If the child expression is a reference to Var, this means that it's
+      // used as an initializer of a reference-typed field. Otherwise
+      // it would have been surrounded with an implicit lvalue-to-rvalue cast.
+      return isAccessForVar(ChildE, Var);
+    });
   }
 
   return false;

@@ -566,3 +566,29 @@ int foo(void) {
   }
   return 0;
 }
+
+struct AggregateWithReference {
+  int &y;
+};
+
+void test_structured_bindings_good() {
+  int x = 0;
+  AggregateWithReference ref { x };
+  auto &[y] = ref;
+  for (; x < 10; ++y) {
+    // No warning. The loop is finite because 'y' is a reference to 'x'.
+  }
+}
+
+struct AggregateWithValue {
+  int y;
+};
+
+void test_structured_bindings_bad() {
+  int x = 0;
+  AggregateWithValue val { x };
+  auto &[y] = val;
+  for (; x < 10; ++y) {
+      // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (x) are updated in the loop body [bugprone-infinite-loop]
+  }
+}
