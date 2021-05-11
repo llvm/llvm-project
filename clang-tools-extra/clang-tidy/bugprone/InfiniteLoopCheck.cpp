@@ -61,7 +61,8 @@ static bool isVarThatIsPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
              isChanged(LoopStmt, Var, Context);
       // FIXME: Track references.
     }
-  } else if (isa<MemberExpr>(Cond) || isa<CallExpr>(Cond)) {
+  } else if (isa<MemberExpr, CallExpr,
+                 ObjCIvarRefExpr, ObjCPropertyRefExpr, ObjCMessageExpr>(Cond)) {
     // FIXME: Handle MemberExpr.
     return true;
   }
