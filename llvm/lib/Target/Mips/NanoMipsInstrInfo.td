@@ -25,31 +25,27 @@ def MipsFullAddr : SDNode<"MipsISD::FullAddr", SDTIntUnaryOp>;
 
 // Arithmetic and logical instructions with 3 register operands.
 class ArithLogicRNM<string opstr, RegisterOperand RO,
-		    SDPatternOperator OpNode = null_frag> :
-      ArithLogicR<opstr, RO, 0, NoItinerary, OpNode> {
-  let DecoderNamespace = "NanoMips";
-  let EncodingPredicates = [HasNanoMips];
-}
+                    SDPatternOperator OpNode = null_frag>:
+  InstNM<(outs RO:$rd), (ins RO:$rs, RO:$rt),
+         !strconcat(opstr, "\t$rd, $rs, $rt"),
+         [(set RO:$rd, (OpNode RO:$rs, RO:$rt))]>, InstSize32;
 
-// Arithmetic and logical instructions with 2 register operands.
+// Arithmetic and logical instructions with 2 register operands and immediate.
 class ArithLogicINM<string opstr, Operand Od, RegisterOperand RO,
                     SDPatternOperator imm_type = null_frag,
                     SDPatternOperator OpNode = null_frag> :
-  ArithLogicI<opstr, Od, RO, NoItinerary, imm_type, OpNode> {
-  let DecoderNamespace = "NanoMips";
-  let EncodingPredicates = [HasNanoMips];
+  InstNM<(outs RO:$rt), (ins RO:$rs, Od:$imm16),
+         !strconcat(opstr, "\t$rt, $rs, $imm16"),
+         [(set RO:$rt, (OpNode RO:$rs, imm_type:$imm16))]>, InstSize32 {
+  let isReMaterializable = 1;
 }
 
 // Instructions with 1 register (dest) and 1 immediate operand.
 class RegImmNM<string opstr, Operand Od, RegisterOperand RO,
-               InstrItinClass Itin = NoItinerary,
                SDPatternOperator imm_type = null_frag,
                SDPatternOperator OpNode = null_frag> :
-  InstSE<(outs RO:$rt), (ins Od:$imm), !strconcat(opstr, "\t$rt, $imm"),
-         [(set RO:$rt, (OpNode imm_type:$imm))], Itin, FrmI, opstr> {
-  let DecoderNamespace = "NanoMips";
-  let EncodingPredicates = [HasNanoMips];
-}
+  InstNM<(outs RO:$rt), (ins Od:$imm), !strconcat(opstr, "\t$rt, $imm"),
+         [(set RO:$rt, (OpNode imm_type:$imm))]>;
 
 class LoadNM<string opstr, DAGOperand RO, SDPatternOperator OpNode = null_frag,
              InstrItinClass Itin = NoItinerary, ComplexPattern Addr = addr> :
@@ -69,8 +65,8 @@ class StoreNM<string opstr, DAGOperand RO, SDPatternOperator OpNode = null_frag,
 class CallNM<string opstr,
              SDPatternOperator OpNode = null_frag,
              SDPatternOperator imm_type = null_frag> :
-  InstSE<(outs), (ins calltarget:$addr), !strconcat(opstr, "\t$addr"),
-         [(OpNode imm_type:$addr)], NoItinerary, FrmI, opstr> {
+  InstNM<(outs), (ins calltarget:$addr), !strconcat(opstr, "\t$addr"),
+         [(OpNode imm_type:$addr)]> {
   let Namespace = "Mips";
   let DecoderNamespace = "NanoMips";
   let EncodingPredicates = [HasNanoMips];
@@ -103,9 +99,9 @@ let hasDelaySlot = 0 in
 let hasDelaySlot = 0 in
   def PseudoReturnNM : PseudoReturnBase<GPR32NMOpnd>, ISA_NANOMIPS;
 
-def BALC_NM : CallNM<"balc", MipsJmpLink, tglobaladdr>, ISA_NANOMIPS;
+def BALC_NM : CallNM<"balc", MipsJmpLink, tglobaladdr>, ISA_NANOMIPS, InstSize32;
 
-def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, ISA_NANOMIPS;
+def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, ISA_NANOMIPS, InstSize48;
 
 let Defs = [SP_NM], Uses = [SP_NM], hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
   def ADJCALLSTACKDOWN_NM : MipsPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
