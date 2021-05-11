@@ -1551,6 +1551,11 @@ def : IsDepBreakingFunction<[
   DepBreakingClass<[
     MMX_PCMPEQBirr, MMX_PCMPEQWirr, MMX_PCMPEQDirr
   ], ZeroIdiomPredicate>,
+
+  // SSE
+  DepBreakingClass<[
+    PCMPEQBrr, PCMPEQWrr, PCMPEQDrr, PCMPEQQrr
+  ], ZeroIdiomPredicate>,
 ]>;
 
 } // SchedModel
