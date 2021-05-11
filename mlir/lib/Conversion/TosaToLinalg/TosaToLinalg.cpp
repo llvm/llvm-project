@@ -522,17 +522,18 @@ static LogicalResult
 elementwiseMatchAndRewriteHelper(Operation *operation,
                                  PatternRewriter &rewriter) {
   auto loc = operation->getLoc();
+
+  assert(operation->getNumResults() == 1 &&
+         "All TOSA elementwise ops should only return a single result.");
+
   auto results = operation->getResults();
-  auto resultTy = operation->getOperand(0).getType().dyn_cast<ShapedType>();
+  auto resultTy = operation->getResult(0).getType().dyn_cast<ShapedType>();
 
   if (!resultTy)
     return rewriter.notifyMatchFailure(operation,
                                        "All results must be a shaped type");
 
   unsigned rank = resultTy.getRank();
-
-  assert(operation->getNumResults() == 1 &&
-         "All TOSA elementwise ops should only return a single result.");
 
   // Construct the indexing maps needed for linalg.generic ops.
   SmallVector<Type> bodyArgTypes;
@@ -565,11 +566,18 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
   // Input indexing maps may be broadcasted.
   for (Value operand : operation->getOperands()) {
     ShapedType type = operand.getType().cast<ShapedType>();
+
+    if (type.getShape() == resultTy.getShape()) {
+      operands.push_back(operand);
+      indexingMaps.push_back(rewriter.getMultiDimIdentityMap(rank));
+      continue;
+    }
+
     SmallVector<int64_t, 5> newShape;
     SmallVector<AffineExpr, 4> affineExprs;
     newShape.reserve(type.getRank());
     for (auto it : llvm::enumerate(type.getShape())) {
-      if (it.value() != 1) {
+      if (it.value() == resultTy.getDimSize(it.index())) {
         newShape.push_back(it.value());
         affineExprs.push_back(
             mlir::getAffineDimExpr(it.index(), rewriter.getContext()));
