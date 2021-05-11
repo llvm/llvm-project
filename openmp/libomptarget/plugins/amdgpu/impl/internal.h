@@ -236,7 +236,7 @@ const char *get_atmi_error_string(atmi_status_t err);
 
 #define ATMIErrorCheck(msg, status)                                            \
   if (status != ATMI_STATUS_SUCCESS) {                                         \
-    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, #msg,                \
+    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, msg,                 \
            get_atmi_error_string(status));                                     \
     exit(1);                                                                   \
   } else {                                                                     \
@@ -245,7 +245,7 @@ const char *get_atmi_error_string(atmi_status_t err);
 
 #define ErrorCheck(msg, status)                                                \
   if (status != HSA_STATUS_SUCCESS) {                                          \
-    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, #msg,                \
+    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, msg,                 \
            get_error_string(status));                                          \
     exit(1);                                                                   \
   } else {                                                                     \
@@ -254,7 +254,7 @@ const char *get_atmi_error_string(atmi_status_t err);
 
 #define ErrorCheckAndContinue(msg, status)                                     \
   if (status != HSA_STATUS_SUCCESS) {                                          \
-    DEBUG_PRINT("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, #msg,           \
+    DEBUG_PRINT("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, msg,            \
                 get_error_string(status));                                     \
     continue;                                                                  \
   } else {                                                                     \
