@@ -385,8 +385,9 @@ TEST_F(GDBRemoteCommunicationClientTest, SendTraceSupportedPacket) {
   TraceSupportedResponse trace_type;
   std::string error_message;
   auto callback = [&] {
+    std::chrono::seconds timeout(10);
     if (llvm::Expected<TraceSupportedResponse> trace_type_or_err =
-            client.SendTraceSupported()) {
+            client.SendTraceSupported(timeout)) {
       trace_type = *trace_type_or_err;
       error_message = "";
       return true;
