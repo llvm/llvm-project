@@ -97,6 +97,9 @@
 #if defined(_M_AMD64) || defined(__x86_64)
 #undef KMP_ARCH_X86_64
 #define KMP_ARCH_X86_64 1
+#elif defined(__aarch64__) || defined(_M_ARM64)
+#undef KMP_ARCH_AARCH64
+#define KMP_ARCH_AARCH64 1
 #else
 #undef KMP_ARCH_X86
 #define KMP_ARCH_X86 1
