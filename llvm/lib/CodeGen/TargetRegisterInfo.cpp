@@ -267,8 +267,9 @@ BitVector TargetRegisterInfo::getAllocatableSet(const MachineFunction &MF,
   }
 
   // Mask out the reserved registers
-  BitVector Reserved = getReservedRegs(MF);
-  Allocatable &= Reserved.flip();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const BitVector &Reserved = MRI.getReservedRegs();
+  Allocatable.reset(Reserved);
 
   return Allocatable;
 }
