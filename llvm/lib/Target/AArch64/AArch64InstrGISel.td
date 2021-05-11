@@ -132,28 +132,33 @@ def G_TRN2 : AArch64GenericInstruction {
 def G_EXT: AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$v1, type0:$v2, untyped_imm_0:$imm);
+  let hasSideEffects = 0;
 }
 
 // Represents a vector G_ASHR with an immediate.
 def G_VASHR : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, untyped_imm_0:$imm);
+  let hasSideEffects = 0;
 }
 
 // Represents a vector G_LSHR with an immediate.
 def G_VLSHR : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, untyped_imm_0:$imm);
+  let hasSideEffects = 0;
 }
 
 // Represents an integer to FP conversion on the FPR bank.
 def G_SITOF : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
 }
 def G_UITOF : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
 }
 
 def G_FCMEQ : AArch64GenericInstruction {
