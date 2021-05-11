@@ -4233,27 +4233,6 @@ InstructionCost BoUpSLP::getTreeCost() {
   for (unsigned I = 0, E = VectorizableTree.size(); I < E; ++I) {
     TreeEntry &TE = *VectorizableTree[I].get();
 
-    // We create duplicate tree entries for gather sequences that have multiple
-    // uses. However, we should not compute the cost of duplicate sequences.
-    // For example, if we have a build vector (i.e., insertelement sequence)
-    // that is used by more than one vector instruction, we only need to
-    // compute the cost of the insertelement instructions once. The redundant
-    // instructions will be eliminated by CSE.
-    //
-    // We should consider not creating duplicate tree entries for gather
-    // sequences, and instead add additional edges to the tree representing
-    // their uses. Since such an approach results in fewer total entries,
-    // existing heuristics based on tree size may yield different results.
-    //
-    if (TE.State == TreeEntry::NeedToGather &&
-        std::any_of(std::next(VectorizableTree.begin(), I + 1),
-                    VectorizableTree.end(),
-                    [TE](const std::unique_ptr<TreeEntry> &EntryPtr) {
-                      return EntryPtr->State == TreeEntry::NeedToGather &&
-                             EntryPtr->isSame(TE.Scalars);
-                    }))
-      continue;
-
     InstructionCost C = getEntryCost(&TE);
     Cost += C;
     LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C

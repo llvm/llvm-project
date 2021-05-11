@@ -22,9 +22,9 @@ entry:
 ; CHECKT2D: uxth r0, r0
 ; CHECKT2D: bl _identity32
 ; CHECKT2D: mov r0, [[SAVEX]]
-  %call = tail call i16 @identity16(i16 %x)
+  %call = tail call i16 @identity16(i16 returned %x)
   %b = zext i16 %call to i32
-  %call2 = tail call i32 @identity32(i32 %b)
+  %call2 = tail call i32 @identity32(i32 returned %b)
   ret i16 %x
 }
 
@@ -56,9 +56,9 @@ entry:
 ; This shouldn't be required
 ; CHECKT2D: mov r0, [[SAVEX]]
 
-  %call = tail call i16 @retzext16(i16 %x)
+  %call = tail call i16 @retzext16(i16 returned %x)
   %b = zext i16 %call to i32
-  %call2 = tail call i32 @identity32(i32 %b)
+  %call2 = tail call i32 @identity32(i32 returned %b)
   ret i16 %x
 }
 
@@ -76,9 +76,9 @@ entry:
 ; CHECKT2D: sxth r0, {{r[0-9]+}}
 ; CHECKT2D: bl _identity32
 ; CHECKT2D: mov r0, [[SAVEX]]
-  %call = tail call i16 @retzext16(i16 %x)
+  %call = tail call i16 @retzext16(i16 returned %x)
   %b = sext i16 %call to i32
-  %call2 = tail call i32 @identity32(i32 %b)
+  %call2 = tail call i32 @identity32(i32 returned %b)
   ret i16 %x
 }
 
@@ -96,10 +96,10 @@ entry:
 ; CHECKT2D: uxth r0, r0
 ; CHECKT2D: bl _identity32
 ; CHECKT2D: b.w _paramzext16
-  %call = tail call i16 @paramzext16(i16 %x)
+  %call = tail call i16 @paramzext16(i16 zeroext returned %x)
   %b = zext i16 %call to i32
-  %call2 = tail call i32 @identity32(i32 %b)
-  %call3 = tail call i16 @paramzext16(i16 %call)
+  %call2 = tail call i32 @identity32(i32 returned %b)
+  %call3 = tail call i16 @paramzext16(i16 zeroext returned %call)
   ret i16 %call3
 }
 
@@ -121,13 +121,13 @@ entry:
 ; CHECKT2D: bl _paramzext16
 ; CHECKT2D: bl _identity32
 ; CHECKT2D: b.w _paramzext16
-  %call = tail call i16 @paramzext16(i16 %x)
+  %call = tail call i16 @paramzext16(i16 zeroext returned %x)
 
 ; Should make no difference if %x is used below rather than %call, but it does
   %b = zext i16 %x to i32
 
   %call2 = tail call i32 @identity32(i32 %b)
-  %call3 = tail call i16 @paramzext16(i16 %call)
+  %call3 = tail call i16 @paramzext16(i16 zeroext returned %call)
   ret i16 %call3
 }
 
@@ -149,9 +149,9 @@ entry:
 ; FIXME: Tail call should be OK here
 ; CHECKT2D: bl _identity32
 
-  %call = tail call i16 @bothzext16(i16 %x)
+  %call = tail call i16 @bothzext16(i16 zeroext returned %x)
   %b = zext i16 %x to i32
-  %call2 = tail call i32 @identity32(i32 %b)
+  %call2 = tail call i32 @identity32(i32 returned %b)
   ret i16 %call
 }
 
@@ -171,8 +171,8 @@ entry:
 ; CHECKT2D: sxth r0, [[SAVEX]]
 ; CHECKT2D: bl _identity32
 ; CHECKT2D: mov r0, [[SAVEX]]
-  %call = tail call i16 @bothzext16(i16 %x)
+  %call = tail call i16 @bothzext16(i16 zeroext returned %x)
   %b = sext i16 %x to i32
-  %call2 = tail call i32 @identity32(i32 %b)
+  %call2 = tail call i32 @identity32(i32 returned %b)
   ret i16 %x
 }

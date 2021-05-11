@@ -128,7 +128,7 @@ public:
   ParseResult parseToken(Token::Kind expectedToken, const Twine &message);
 
   /// Parse an optional integer value from the stream.
-  OptionalParseResult parseOptionalInteger(uint64_t &result);
+  OptionalParseResult parseOptionalInteger(APInt &result);
 
   /// Parse a floating point value from an integer literal token.
   ParseResult parseFloatFromIntegerLiteral(Optional<APFloat> &result,

@@ -88,7 +88,7 @@ finalizeBufferAllocationForGenericOp(ConversionPatternRewriter &rewriter,
       /*inputs=*/inputs,
       /*outputs=*/outputs, genericOp.indexing_maps(),
       genericOp.iterator_types(), genericOp.docAttr(),
-      genericOp.library_callAttr(), genericOp.sparseAttr());
+      genericOp.library_callAttr());
 
   // Create a new block in the region of the new Generic Op.
   Block *oldBlock = genericOp.getBody();

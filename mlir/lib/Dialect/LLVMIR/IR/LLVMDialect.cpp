@@ -2306,11 +2306,11 @@ LogicalResult LLVMDialect::verifyRegionArgAttribute(Operation *op,
                                                     unsigned regionIdx,
                                                     unsigned argIdx,
                                                     NamedAttribute argAttr) {
-  // Check that llvm.noalias is a boolean attribute.
+  // Check that llvm.noalias is a unit attribute.
   if (argAttr.first == LLVMDialect::getNoAliasAttrName() &&
-      !argAttr.second.isa<BoolAttr>())
+      !argAttr.second.isa<UnitAttr>())
     return op->emitError()
-           << "llvm.noalias argument attribute of non boolean type";
+           << "expected llvm.noalias argument attribute to be a unit attribute";
   // Check that llvm.align is an integer attribute.
   if (argAttr.first == LLVMDialect::getAlignAttrName() &&
       !argAttr.second.isa<IntegerAttr>())

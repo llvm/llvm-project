@@ -73,4 +73,4 @@
 // CHECK-C: "x86_64-unknown-linux-gnu" - "offload bundler"
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-EMIT-LLVM-IR
-// CHECK-EMIT-LLVM-IR: {{.*}}clang-13" "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-emit-llvm"
+// CHECK-EMIT-LLVM-IR: clang{{.*}}"-cc1"{{.*}}"-triple" "amdgcn-amd-amdhsa"{{.*}}"-emit-llvm"

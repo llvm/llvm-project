@@ -238,3 +238,15 @@ func @static_tensor.generate(%size1: index, %size4: index) -> tensor<3x?x?x7x?xi
   // CHECK: tensor.cast %{{.*}} : tensor<3x?x5x7x?xindex> to tensor<3x?x?x7x?xindex>
   return %0 : tensor<3x?x?x7x?xindex>
 }
+
+// -----
+
+// CHECK-LABEL: @from_elements.constant
+func @from_elements.constant() -> tensor<3xindex> {
+  // CHECK: %[[CST:.*]] = constant dense<[1, 2, 1]> : tensor<3xindex>
+  // CHECK: return %[[CST]]
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  %tensor = tensor.from_elements %c1, %c2, %c1 : tensor<3xindex>
+  return %tensor : tensor<3xindex>
+}

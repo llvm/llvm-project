@@ -1726,6 +1726,12 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STORE, VT, Custom);
   }
 
+  // Custom-lower load/stores of boolean vectors.
+  for (MVT VT : {MVT::v2i1, MVT::v4i1, MVT::v8i1}) {
+    setOperationAction(ISD::LOAD,  VT, Custom);
+    setOperationAction(ISD::STORE, VT, Custom);
+  }
+
   for (MVT VT : {MVT::v2i16, MVT::v4i8, MVT::v8i8, MVT::v2i32, MVT::v4i16,
                  MVT::v2i32}) {
     setCondCodeAction(ISD::SETNE,  VT, Expand);
@@ -2878,27 +2884,62 @@ HexagonTargetLowering::allowTruncateForTailCall(Type *Ty1, Type *Ty2) const {
 
 SDValue
 HexagonTargetLowering::LowerLoad(SDValue Op, SelectionDAG &DAG) const {
+  MVT Ty = ty(Op);
+  const SDLoc &dl(Op);
+  // Lower loads of scalar predicate vectors (v2i1, v4i1, v8i1) to loads of i1
+  // followed by a TYPECAST.
   LoadSDNode *LN = cast<LoadSDNode>(Op.getNode());
+  bool DoCast = (Ty == MVT::v2i1 || Ty == MVT::v4i1 || Ty == MVT::v8i1);
+  if (DoCast) {
+    SDValue NL = DAG.getLoad(
+        LN->getAddressingMode(), LN->getExtensionType(), MVT::i1, dl,
+        LN->getChain(), LN->getBasePtr(), LN->getOffset(), LN->getPointerInfo(),
+        /*MemoryVT*/ MVT::i1, LN->getAlign(), LN->getMemOperand()->getFlags(),
+        LN->getAAInfo(), LN->getRanges());
+    LN = cast<LoadSDNode>(NL.getNode());
+  }
+
   unsigned ClaimAlign = LN->getAlignment();
-  validateConstPtrAlignment(LN->getBasePtr(), SDLoc(Op), ClaimAlign);
+  validateConstPtrAlignment(LN->getBasePtr(), dl, ClaimAlign);
   // Call LowerUnalignedLoad for all loads, it recognizes loads that
   // don't need extra aligning.
-  return LowerUnalignedLoad(Op, DAG);
+  SDValue LU = LowerUnalignedLoad(SDValue(LN, 0), DAG);
+  if (DoCast) {
+    SDValue TC = DAG.getNode(HexagonISD::TYPECAST, dl, Ty, LU);
+    SDValue Ch = cast<LoadSDNode>(LU.getNode())->getChain();
+    return DAG.getMergeValues({TC, Ch}, dl);
+  }
+  return LU;
 }
 
 SDValue
 HexagonTargetLowering::LowerStore(SDValue Op, SelectionDAG &DAG) const {
+  const SDLoc &dl(Op);
   StoreSDNode *SN = cast<StoreSDNode>(Op.getNode());
+  SDValue Val = SN->getValue();
+  MVT Ty = ty(Val);
+
+  bool DoCast = (Ty == MVT::v2i1 || Ty == MVT::v4i1 || Ty == MVT::v8i1);
+  if (DoCast) {
+    SDValue TC = DAG.getNode(HexagonISD::TYPECAST, dl, MVT::i1, Val);
+    SDValue NS = DAG.getStore(SN->getChain(), dl, TC, SN->getBasePtr(),
+                              SN->getMemOperand());
+    if (SN->isIndexed()) {
+      NS = DAG.getIndexedStore(NS, dl, SN->getBasePtr(), SN->getOffset(),
+                               SN->getAddressingMode());
+    }
+    SN = cast<StoreSDNode>(NS.getNode());
+  }
+
   unsigned ClaimAlign = SN->getAlignment();
   SDValue Ptr = SN->getBasePtr();
-  const SDLoc &dl(Op);
   validateConstPtrAlignment(Ptr, dl, ClaimAlign);
 
   MVT StoreTy = SN->getMemoryVT().getSimpleVT();
   unsigned NeedAlign = Subtarget.getTypeAlignment(StoreTy);
   if (ClaimAlign < NeedAlign)
     return expandUnalignedStore(SN, DAG);
-  return Op;
+  return SDValue(SN, 0);
 }
 
 SDValue

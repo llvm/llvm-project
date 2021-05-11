@@ -1002,19 +1002,6 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Return whether the op has sparse tensor semantics.
-      }],
-      /*retTy=*/"bool",
-      /*methodName=*/"hasSparseSemantics",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        return $_op->getAttr(getSparseAttrName()).
-          template dyn_cast_or_null<ArrayAttr>() != nullptr;
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/[{
         Return the name registered for this op when lowering to an external
         library call.
       }],

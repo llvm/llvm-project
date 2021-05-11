@@ -462,7 +462,7 @@ Error WasmObjectFile::parseLinkingSection(ReadContext &Ctx) {
       for (uint32_t I = 0; I < Count; I++) {
         DataSegments[I].Data.Name = readString(Ctx);
         DataSegments[I].Data.Alignment = readVaruint32(Ctx);
-        DataSegments[I].Data.LinkerFlags = readVaruint32(Ctx);
+        DataSegments[I].Data.LinkingFlags = readVaruint32(Ctx);
       }
       break;
     }
@@ -1431,7 +1431,7 @@ Error WasmObjectFile::parseDataSection(ReadContext &Ctx) {
     // The rest of these Data fields are set later, when reading in the linking
     // metadata section.
     Segment.Data.Alignment = 0;
-    Segment.Data.LinkerFlags = 0;
+    Segment.Data.LinkingFlags = 0;
     Segment.Data.Comdat = UINT32_MAX;
     Segment.SectionOffset = Ctx.Ptr - Ctx.Start;
     Ctx.Ptr += Size;

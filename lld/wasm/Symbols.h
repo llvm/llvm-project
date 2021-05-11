@@ -110,6 +110,7 @@ public:
 
   WasmSymbolType getWasmType() const;
   bool isExported() const;
+  bool isExportedExplicit() const;
 
   // Indicates that the symbol is used in an __attribute__((used)) directive
   // or similar.

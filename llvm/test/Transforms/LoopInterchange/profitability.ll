@@ -2,11 +2,6 @@
 ; RUN:     -pass-remarks=loop-interchange -pass-remarks-missed=loop-interchange
 ; RUN: FileCheck -input-file %t %s
 
-; RUN: opt < %s -loop-interchange -pass-remarks-output=%t -verify-dom-info -verify-loop-info \
-; RUN:     -pass-remarks=loop-interchange -pass-remarks-missed=loop-interchange \
-; RUN:     -da-disable-delinearization-checks
-; RUN: FileCheck --check-prefix=DELIN -input-file %t %s
-
 ;; We test profitability model in these test cases.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -21,11 +16,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ;;     for(int j=1;j<100;j++)
 ;;       A[j][i] = A[j - 1][i] + B[j][i];
 
-; CHECK:      Name:            Dependence
+; CHECK:      Name:            Interchanged
 ; CHECK-NEXT: Function:        interchange_01
-
-; DELIN:      Name:            Interchanged
-; DELIN-NEXT: Function:        interchange_01
 
 define void @interchange_01() {
 entry:

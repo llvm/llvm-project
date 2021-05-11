@@ -17,7 +17,7 @@ define void @sep0([100 x [100 x i32]]* %A, i32* %B, i32 %n) nounwind uwtable ssp
 entry:
   br label %for.cond1.preheader
 
-; CHECK: da analyze - output [= * * S]!
+; CHECK: da analyze - output [0 * * S]!
 ; CHECK: da analyze - flow [* * * *|<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - input [* * S *]!
@@ -92,7 +92,7 @@ define void @sep1([100 x [100 x i32]]* %A, i32* %B, i32 %n) nounwind uwtable ssp
 entry:
   br label %for.cond1.preheader
 
-; CHECK: da analyze - output [= * * S]!
+; CHECK: da analyze - output [0 * * S]!
 ; CHECK: da analyze - flow [* * * *|<]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - input [* * S *]!
@@ -166,10 +166,10 @@ define void @sep2([100 x [100 x [100 x i32]]]* %A, i32* %B, i32 %n) nounwind uwt
 entry:
   br label %for.cond1.preheader
 
-; CHECK: da analyze - output [= S = =]!
-; CHECK: da analyze - flow [* * * <>]!
+; CHECK: da analyze - consistent output [0 S 0 0]!
+; CHECK: da analyze - flow [> * * -10]!
 ; CHECK: da analyze - confused!
-; CHECK: da analyze - input [= * * *]!
+; CHECK: da analyze - input [0 * * 0]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 
@@ -240,10 +240,10 @@ define void @sep3([100 x [100 x [100 x i32]]]* %A, i32* %B, i32 %n) nounwind uwt
 entry:
   br label %for.cond1.preheader
 
-; CHECK: da analyze - output [= S = =]!
-; CHECK: da analyze - flow [* * * *|<]!
+; CHECK: da analyze - consistent output [0 S 0 0]!
+; CHECK: da analyze - flow [> * * *]!
 ; CHECK: da analyze - confused!
-; CHECK: da analyze - input [= * * *]!
+; CHECK: da analyze - input [0 * * 0]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 

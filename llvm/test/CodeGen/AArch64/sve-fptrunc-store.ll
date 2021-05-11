@@ -60,3 +60,28 @@ entry:
   store <vscale x 2 x half> %1, <vscale x 2 x half>* %dst, align 2
   ret void
 }
+
+define void @fptrunc8_f64_f16(<vscale x 8 x half> *%dst, <vscale x 8 x double> *%src) {
+; CHECK-LABEL: fptrunc8_f64_f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1, #1, mul vl]
+; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x1, #2, mul vl]
+; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x1, #3, mul vl]
+; CHECK-NEXT:    fcvt z0.h, p0/m, z0.d
+; CHECK-NEXT:    fcvt z1.h, p0/m, z1.d
+; CHECK-NEXT:    fcvt z2.h, p0/m, z2.d
+; CHECK-NEXT:    fcvt z3.h, p0/m, z3.d
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z3.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = load <vscale x 8 x double>, <vscale x 8 x double>* %src, align 8
+  %1 = fptrunc <vscale x 8 x double> %0 to <vscale x 8 x half>
+  store <vscale x 8 x half> %1, <vscale x 8 x half>* %dst, align 2
+  ret void
+}

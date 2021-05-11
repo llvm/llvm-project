@@ -2,8 +2,8 @@
 // RUN: mlir-opt -convert-std-to-llvm='use-bare-ptr-memref-call-conv=1' -split-input-file %s | FileCheck %s --check-prefix=BAREPTR
 
 // BAREPTR-LABEL: func @check_noalias
-// BAREPTR-SAME: %{{.*}}: !llvm.ptr<f32> {llvm.noalias = true}, %{{.*}}: !llvm.ptr<f32> {llvm.noalias = true}
-func @check_noalias(%static : memref<2xf32> {llvm.noalias = true}, %other : memref<2xf32> {llvm.noalias = true}) {
+// BAREPTR-SAME: %{{.*}}: !llvm.ptr<f32> {llvm.noalias}, %{{.*}}: !llvm.ptr<f32> {llvm.noalias}
+func @check_noalias(%static : memref<2xf32> {llvm.noalias}, %other : memref<2xf32> {llvm.noalias}) {
     return
 }
 

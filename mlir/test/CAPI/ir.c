@@ -690,7 +690,8 @@ static int printBuiltinTypes(MlirContext ctx) {
   MlirType rankedTensor = mlirRankedTensorTypeGet(
       sizeof(shape) / sizeof(int64_t), shape, f32, mlirAttributeGetNull());
   if (!mlirTypeIsATensor(rankedTensor) ||
-      !mlirTypeIsARankedTensor(rankedTensor))
+      !mlirTypeIsARankedTensor(rankedTensor) ||
+      !mlirAttributeIsNull(mlirRankedTensorTypeGetEncoding(rankedTensor)))
     return 16;
   mlirTypeDump(rankedTensor);
   fprintf(stderr, "\n");

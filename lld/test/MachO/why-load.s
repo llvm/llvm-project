@@ -1,5 +1,4 @@
 # REQUIRES: x86
-# RUN: rm -rf %t
 # RUN: rm -rf %t; split-file %s %t
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos -o %t/objc.o %t/objc.s

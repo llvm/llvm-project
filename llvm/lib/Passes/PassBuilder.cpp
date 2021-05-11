@@ -1201,7 +1201,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   return MPM;
 }
 
-/// FIXME: Should LTO cause any differences to this set of passes?
+/// TODO: Should LTO cause any differences to this set of passes?
 void PassBuilder::addVectorPasses(OptimizationLevel Level,
                                   FunctionPassManager &FPM, bool IsLTO) {
   FPM.addPass(LoopVectorizePass(
@@ -1255,21 +1255,25 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     FPM.addPass(InstCombinePass());
   }
 
-  // Now that we've formed fast to execute loop structures, we do further
-  // optimizations. These are run afterward as they might block doing complex
-  // analyses and transforms such as what are needed for loop vectorization.
+  if (IsLTO) {
+    FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions().hoistCommonInsts(true)));
+  } else {
+    // Now that we've formed fast to execute loop structures, we do further
+    // optimizations. These are run afterward as they might block doing complex
+    // analyses and transforms such as what are needed for loop vectorization.
 
-  // Cleanup after loop vectorization, etc. Simplification passes like CVP and
-  // GVN, loop transforms, and others have already run, so it's now better to
-  // convert to more optimized IR using more aggressive simplify CFG options.
-  // The extra sinking transform can create larger basic blocks, so do this
-  // before SLP vectorization.
-  FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
-                                  .forwardSwitchCondToPhi(true)
-                                  .convertSwitchToLookupTable(true)
-                                  .needCanonicalLoops(false)
-                                  .hoistCommonInsts(true)
-                                  .sinkCommonInsts(true)));
+    // Cleanup after loop vectorization, etc. Simplification passes like CVP and
+    // GVN, loop transforms, and others have already run, so it's now better to
+    // convert to more optimized IR using more aggressive simplify CFG options.
+    // The extra sinking transform can create larger basic blocks, so do this
+    // before SLP vectorization.
+    FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
+                                    .forwardSwitchCondToPhi(true)
+                                    .convertSwitchToLookupTable(true)
+                                    .needCanonicalLoops(false)
+                                    .hoistCommonInsts(true)
+                                    .sinkCommonInsts(true)));
+  }
   if (IsLTO) {
     FPM.addPass(SCCPPass());
     FPM.addPass(InstCombinePass());
@@ -1283,34 +1287,39 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
       FPM.addPass(EarlyCSEPass());
     }
   }
-
   // Enhance/cleanup vector code.
   FPM.addPass(VectorCombinePass());
-  if (IsLTO) {
-    // After vectorization, assume intrinsics may tell us more about pointer
-    // alignments.
-    FPM.addPass(AlignmentFromAssumptionsPass());
-  }
-
-  FPM.addPass(InstCombinePass());
 
   if (!IsLTO) {
-    // The vectorizer may have significantly shortened a loop body; unroll
-    // again. Unroll small loops to hide loop backedge latency and saturate any
+    FPM.addPass(InstCombinePass());
+    // Unroll small loops to hide loop backedge latency and saturate any
     // parallel execution resources of an out-of-order processor. We also then
     // need to clean up redundancies and loop invariant code.
     // FIXME: It would be really good to use a loop-integrated instruction
     // combiner for cleanup here so that the unrolling and LICM can be pipelined
     // across the loop nests.
     // We do UnrollAndJam in a separate LPM to ensure it happens before unroll
-    if (EnableUnrollAndJam && PTO.LoopUnrolling)
+    if (EnableUnrollAndJam && PTO.LoopUnrolling) {
       FPM.addPass(LoopUnrollAndJamPass(Level.getSpeedupLevel()));
+    }
     FPM.addPass(LoopUnrollPass(LoopUnrollOptions(
         Level.getSpeedupLevel(), /*OnlyWhenForced=*/!PTO.LoopUnrolling,
         PTO.ForgetAllSCEVInLoopUnroll)));
     FPM.addPass(WarnMissedTransformationsPass());
     FPM.addPass(InstCombinePass());
+    FPM.addPass(
+        RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
+    FPM.addPass(createFunctionToLoopPassAdaptor(
+        LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap),
+        EnableMSSALoopDependency, /*UseBlockFrequencyInfo=*/true));
   }
+
+  // Now that we've vectorized and unrolled loops, we may have more refined
+  // alignment information, try to re-derive it here.
+  FPM.addPass(AlignmentFromAssumptionsPass());
+
+  if (IsLTO)
+    FPM.addPass(InstCombinePass());
 }
 
 ModulePassManager
@@ -1408,15 +1417,6 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   OptimizePM.addPass(InjectTLIMappings());
 
   addVectorPasses(Level, OptimizePM, /* IsLTO */ false);
-
-  OptimizePM.addPass(RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
-  OptimizePM.addPass(createFunctionToLoopPassAdaptor(
-      LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap),
-      EnableMSSALoopDependency, /*UseBlockFrequencyInfo=*/true));
-
-  // Now that we've vectorized and unrolled loops, we may have more refined
-  // alignment information, try to re-derive it here.
-  OptimizePM.addPass(AlignmentFromAssumptionsPass());
 
   // Split out cold code. Splitting is done late to avoid hiding context from
   // other optimizations and inadvertently regressing performance. The tradeoff

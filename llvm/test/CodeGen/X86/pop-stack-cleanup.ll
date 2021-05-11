@@ -60,7 +60,7 @@ define void @spill(i32 inreg %a, i32 inreg %b, i32 inreg %c) minsize nounwind {
 ; CHECK-DAG: movl {{.*}}, %edx
 ; CHECK: calll _spill
   %i = call i32 @param2_ret(i32 1, i32 2)
-  call void @spill(i32 %a, i32 %b, i32 %c)
+  call void @spill(i32 inreg %a, i32 inreg %b, i32 inreg %c)
   ret void
 }
 

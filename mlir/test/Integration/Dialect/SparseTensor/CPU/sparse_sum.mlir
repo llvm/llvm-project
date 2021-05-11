@@ -10,20 +10,16 @@
 // RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-//
-// Use descriptive names for opaque pointers.
-//
-!Filename     = type !llvm.ptr<i8>
-!SparseTensor = type !llvm.ptr<i8>
+!Filename = type !llvm.ptr<i8>
+
+#SparseMatrix = #sparse_tensor.encoding<{
+  dimLevelType = [ "compressed", "compressed" ]
+}>
 
 #trait_sum_reduce = {
   indexing_maps = [
     affine_map<(i,j) -> (i,j)>, // A
     affine_map<(i,j) -> ()>     // x (out)
-  ],
-  sparse = [
-    [ "S", "S" ], // A
-    [          ]  // x
   ],
   iterator_types = ["reduction", "reduction"],
   doc = "x += A(i,j)"
@@ -36,14 +32,12 @@
 //
 module {
   //
-  // The kernel expressed as an annotated Linalg op. The kernel
-  // sum reduces a matrix to a single scalar.
+  // A kernel that sum-reduces a matrix to a single scalar.
   //
-  func @kernel_sum_reduce(%argA: !SparseTensor,
+  func @kernel_sum_reduce(%arga: tensor<?x?xf64, #SparseMatrix>,
                           %argx: tensor<f64>) -> tensor<f64> {
-    %arga = sparse_tensor.fromPtr %argA : !SparseTensor to tensor<?x?xf64>
     %0 = linalg.generic #trait_sum_reduce
-      ins(%arga: tensor<?x?xf64>)
+      ins(%arga: tensor<?x?xf64, #SparseMatrix>)
       outs(%argx: tensor<f64>) {
       ^bb(%a: f64, %x: f64):
         %0 = addf %x, %a : f64
@@ -52,12 +46,7 @@ module {
     return %0 : tensor<f64>
   }
 
-  //
-  // Runtime support library that is called directly from here.
-  //
   func private @getTensorFilename(index) -> (!Filename)
-  func private @newSparseTensor(!Filename, memref<?xi1>, index, index, index) -> (!SparseTensor)
-  func private @delSparseTensor(!SparseTensor) -> ()
 
   //
   // Main driver that reads matrix from file and calls the sparse kernel.
@@ -65,18 +54,6 @@ module {
   func @entry() {
     %d0 = constant 0.0 : f64
     %c0 = constant 0 : index
-    %c1 = constant 1 : index
-    %c2 = constant 2 : index
-
-    // Mark both dimensions of the matrix as sparse and encode the
-    // storage scheme types (this must match the metadata in the
-    // trait and compiler switches).
-    %annotations = memref.alloc(%c2) : memref<?xi1>
-    %sparse = constant true
-    memref.store %sparse, %annotations[%c0] : memref<?xi1>
-    memref.store %sparse, %annotations[%c1] : memref<?xi1>
-    %i64 = constant 1 : index
-    %f64 = constant 1 : index
 
     // Setup memory for a single reduction scalar,
     // initialized to zero.
@@ -84,13 +61,13 @@ module {
     memref.store %d0, %xdata[] : memref<f64>
     %x = memref.tensor_load %xdata : memref<f64>
 
-    // Read the sparse matrix from file, construct sparse storage
-    // according to <sparse,sparse> in memory, and call the kernel.
+    // Read the sparse matrix from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
-    %a = call @newSparseTensor(%fileName, %annotations, %i64, %i64, %f64)
-      : (!Filename, memref<?xi1>, index, index, index) -> (!SparseTensor)
+    %a = sparse_tensor.new %fileName : !llvm.ptr<i8> to tensor<?x?xf64, #SparseMatrix>
+
+    // Call the kernel.
     %0 = call @kernel_sum_reduce(%a, %x)
-      : (!SparseTensor, tensor<f64>) -> tensor<f64>
+      : (tensor<?x?xf64, #SparseMatrix>, tensor<f64>) -> tensor<f64>
 
     // Print the result for verification.
     //
@@ -101,7 +78,6 @@ module {
     vector.print %v : f64
 
     // Release the resources.
-    call @delSparseTensor(%a) : (!SparseTensor) -> ()
     memref.dealloc %xdata : memref<f64>
 
     return

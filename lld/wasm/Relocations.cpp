@@ -115,7 +115,7 @@ void scanRelocations(InputChunk *chunk) {
       break;
     case R_WASM_MEMORY_ADDR_TLS_SLEB:
       if (auto *D = dyn_cast<DefinedData>(sym)) {
-        if (D->segment->outputSeg->name != ".tdata") {
+        if (!D->segment->outputSeg->isTLS()) {
           error(toString(file) + ": relocation " +
                 relocTypeToString(reloc.Type) + " cannot be used against `" +
                 toString(*sym) +

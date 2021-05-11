@@ -360,7 +360,7 @@ public:
   Constant *getElementValue(unsigned Idx) const;
 
   /// Return the number of elements in the array, vector, or struct.
-  unsigned getNumElements() const;
+  ElementCount getElementCount() const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   ///

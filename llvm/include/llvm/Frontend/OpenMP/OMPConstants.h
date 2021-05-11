@@ -111,11 +111,11 @@ inline std::string getAllAssumeClauseOptions() {
 /// Todo: Update kmp.h to include this file, and remove the enums in kmp.h
 ///       To complete this, more enum values will need to be moved here.
 enum class OMPScheduleType {
-  Static = 34, //< static unspecialized
+  Static = 34, // static unspecialized
   DynamicChunked = 35,
-  GuidedChunked = 36, //< guided unspecialized
+  GuidedChunked = 36, // guided unspecialized
   Runtime = 37,
-  Auto = 38, //< auto
+  Auto = 38, // auto
 
   ModifierNonmonotonic =
       (1 << 30), /**< Set if the nonmonotonic schedule modifier was present */

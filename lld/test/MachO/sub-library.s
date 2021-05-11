@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: mkdir -p %t
+# RUN: rm -rf %t; mkdir -p %t
 
 ## Create a libsuper that has libgoodbye as a sub-library, which in turn has
 ## libhello as another sub-library.
