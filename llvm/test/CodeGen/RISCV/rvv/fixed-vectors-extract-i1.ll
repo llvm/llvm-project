@@ -5,7 +5,7 @@
 define i1 @extractelt_v1i1(<1 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_v1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a2, 1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vmseq.vi v0, v25, 0
 ; CHECK-NEXT:    vmv.v.i v25, 0
@@ -22,12 +22,12 @@ define i1 @extractelt_v1i1(<1 x i8>* %x, i64 %idx) nounwind {
 define i1 @extractelt_v2i1(<2 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a2, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vmseq.vi v0, v25, 0
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
-; CHECK-NEXT:    vsetivli a0, 1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v25, v25, a1
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -40,12 +40,12 @@ define i1 @extractelt_v2i1(<2 x i8>* %x, i64 %idx) nounwind {
 define i1 @extractelt_v4i1(<4 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a2, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 4, e8,mf4,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vmseq.vi v0, v25, 0
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
-; CHECK-NEXT:    vsetivli a0, 1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v25, v25, a1
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -58,12 +58,12 @@ define i1 @extractelt_v4i1(<4 x i8>* %x, i64 %idx) nounwind {
 define i1 @extractelt_v8i1(<8 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a2, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a2, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vmseq.vi v0, v25, 0
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
-; CHECK-NEXT:    vsetivli a0, 1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli a0, 1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v25, v25, a1
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
