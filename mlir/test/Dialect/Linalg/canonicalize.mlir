@@ -43,6 +43,17 @@ func @memref_cast_into_tiled_loop(%arg0: memref<192xf32>)  {
 
 // -----
 
+// CHECK-LABEL: zero_rank_reshape_multi
+func @zero_rank_reshape_multi(%arg0: tensor<f32>) -> tensor<f32> {
+  // CHECK: return %arg0
+  %0 = linalg.tensor_reshape %arg0 [] : tensor<f32> into tensor<1xf32>
+  %1 = linalg.tensor_reshape %0 [[0, 1]] : tensor<1xf32> into tensor<1x1xf32>
+  %2 = linalg.tensor_reshape %1 [] : tensor<1x1xf32> into tensor<f32>
+  return %2 : tensor<f32>
+}
+
+// -----
+
 func @collapsing_tensor_reshapes(%arg0 : tensor<?x?x?x?x?xf32>) -> tensor<?x?xf32>
 {
   %0 = linalg.tensor_reshape %arg0 [[0, 1], [2], [3, 4]]
