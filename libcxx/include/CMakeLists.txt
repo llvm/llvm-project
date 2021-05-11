@@ -37,6 +37,7 @@ set(files
   __nullptr
   __ranges/access.h
   __ranges/concepts.h
+  __ranges/empty.h
   __ranges/enable_borrowed_range.h
   __ranges/view.h
   __ranges/size.h
