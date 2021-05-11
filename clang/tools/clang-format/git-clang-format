@@ -137,10 +137,15 @@ def main():
   if opts.verbose >= 1:
     ignored_files = set(changed_lines)
   filter_by_extension(changed_lines, opts.extensions.lower().split(','))
+  # The computed diff outputs absolute paths, so we must cd before accessing
+  # those files.
+  cd_to_toplevel()
+  filter_symlinks(changed_lines)
   if opts.verbose >= 1:
     ignored_files.difference_update(changed_lines)
     if ignored_files:
-      print('Ignoring changes in the following files (wrong extension):')
+      print(
+        'Ignoring changes in the following files (wrong extension or symlink):')
       for filename in ignored_files:
         print('    %s' % filename)
     if changed_lines:
@@ -151,9 +156,6 @@ def main():
     if opts.verbose >= 0:
       print('no modified files to format')
     return
-  # The computed diff outputs absolute paths, so we must cd before accessing
-  # those files.
-  cd_to_toplevel()
   if len(commits) > 1:
     old_tree = commits[1]
     new_tree = run_clang_format_and_save_to_tree(changed_lines,
@@ -334,6 +336,13 @@ def filter_by_extension(dictionary, allowed_extensions):
     if len(base_ext) == 1 and '' in allowed_extensions:
         continue
     if len(base_ext) == 1 or base_ext[1].lower() not in allowed_extensions:
+      del dictionary[filename]
+
+
+def filter_symlinks(dictionary):
+  """Delete every key in `dictionary` that is a symlink."""
+  for filename in list(dictionary.keys()):
+    if os.path.islink(filename):
       del dictionary[filename]
 
 
