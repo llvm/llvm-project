@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-std=CL1.1
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -fsyntax-only -cl-std=CL1.1 -DNOPEDANTIC
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-std=CL1.2 -DFP64
 
 // Test with a target not supporting fp64.
@@ -43,8 +44,20 @@
 #endif
 
 #if (defined(__OPENCL_C_VERSION__) && __OPENCL_C_VERSION__ < 120)
-void f1(double da) { // expected-error {{type 'double' requires cl_khr_fp64 support}}
-  double d; // expected-error {{type 'double' requires cl_khr_fp64 support}}
+void f1(double da) {
+#ifdef NOFP64
+// expected-error@-2 {{type 'double' requires cl_khr_fp64 support}}
+#elif !defined(NOPEDANTIC)
+// expected-warning@-4{{Clang permits use of type 'double' regardless pragma if 'cl_khr_fp64' is supported}}
+#endif
+  double d;
+#ifdef NOFP64
+// expected-error@-2 {{type 'double' requires cl_khr_fp64 support}}
+#elif !defined(NOPEDANTIC)
+// expected-warning@-4{{Clang permits use of type 'double' regardless pragma if 'cl_khr_fp64' is supported}}
+#endif
+  // FIXME: this diagnostic depends on the extension pragma in the earlier versions.
+  // There is no indication that this behavior is expected.
   (void) 1.0; // expected-warning {{double precision constant requires cl_khr_fp64}}
 }
 #endif
@@ -79,13 +92,11 @@ void f2(void) {
   double4 d4 = {0.0f, 2.0f, 3.0f, 1.0f};
 #ifdef NOFP64
 // expected-error@-3 {{use of type 'double' requires cl_khr_fp64 support}}
-// expected-error@-3 {{use of type 'double4' (vector of 4 'double' values) requires cl_khr_fp64 support}}
 #endif
 
   (void) 1.0;
-
 #ifdef NOFP64
-// expected-warning@-3{{double precision constant requires cl_khr_fp64, casting to single precision}}
+// expected-warning@-2{{double precision constant requires cl_khr_fp64, casting to single precision}}
 #endif
 }
 
@@ -96,6 +107,11 @@ void f2(void) {
 
 #if (defined(__OPENCL_C_VERSION__) && __OPENCL_C_VERSION__ < 120)
 void f3(void) {
-  double d; // expected-error {{type 'double' requires cl_khr_fp64 support}}
+  double d;
+#ifdef NOFP64
+// expected-error@-2 {{type 'double' requires cl_khr_fp64 support}}
+#elif !defined(NOPEDANTIC)
+// expected-warning@-4 {{Clang permits use of type 'double' regardless pragma if 'cl_khr_fp64' is supported}}
+#endif
 }
 #endif
