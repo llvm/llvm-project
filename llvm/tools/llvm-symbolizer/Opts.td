@@ -33,9 +33,9 @@ defm obj
     : Eq<"obj", "Path to object file to be symbolized (if not provided, "
                 "object file should be specified for each input line)">, MetaVarName<"<file>">;
 defm output_style
-    : Eq<"output-style", "Specify print style. Supported styles: LLVM, GNU">,
+    : Eq<"output-style", "Specify print style. Supported styles: LLVM, GNU, JSON">,
       MetaVarName<"style">,
-      Values<"LLVM,GNU">;
+      Values<"LLVM,GNU,JSON">;
 def pretty_print : F<"pretty-print", "Make the output more human friendly">;
 defm print_source_context_lines : Eq<"print-source-context-lines", "Print N lines of source file context">;
 def relative_address : F<"relative-address", "Interpret addresses as addresses relative to the image base">;
