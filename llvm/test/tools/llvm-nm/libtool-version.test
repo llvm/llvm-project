@@ -1,0 +1,8 @@
+# Check that the output of llvm-nm -V (and --version) contains the text
+# "GNU" somewhere, to let libtool know that it is compatible with GNU nm.
+# Also check that it contains the LLVM version.
+
+RUN: llvm-nm -V | FileCheck %s
+RUN: llvm-nm --version | FileCheck %s
+CHECK: LLVM version
+CHECK: GNU
