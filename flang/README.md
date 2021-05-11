@@ -69,16 +69,17 @@ of LLVM, follow those instructions and add flang to `LLVM_ENABLE_PROJECTS`.
 We highly recommend using the same compiler to compile both llvm and flang.
 
 The flang CMakeList.txt file uses
-the variable `LLVM_DIR` to find the installed LLVM components
-and
-the variable `MLIR_DIR` to find the installed MLIR components.
+* `LLVM_DIR` to find the installed LLVM components
+* `MLIR_DIR` to find the installed MLIR components
+* `CLANG_DIR` to find the installed Clang components
 
-To get the correct LLVM and MLIR libraries included in your flang build,
-define LLVM_DIR and MLIR_DIR on the cmake command line.
+To get the correct LLVM, MLIR and Clang libraries included in your flang build,
+define `LLVM_DIR`, `MLIR_DIR` and `CLANG_DIR` on the cmake command line.
 ```
 LLVM=<LLVM_BUILD_DIR>/lib/cmake/llvm \
 MLIR=<LLVM_BUILD_DIR>/lib/cmake/mlir \
-cmake -DLLVM_DIR=$LLVM -DMLIR_DIR=$MLIR ...
+CLANG=<LLVM_BUILD_DIR>/lib/cmake/clang \
+cmake -DLLVM_DIR=$LLVM -DMLIR_DIR=$MLIR -DCLANG_DIR=$CLANG ...
 ```
 where `LLVM_BUILD_DIR` is
 the top-level directory where LLVM was built.
@@ -140,23 +141,17 @@ Release builds execute quickly.
 ### Build Flang out of tree
 ```
 cd ~/flang/build
-cmake -DLLVM_DIR=$LLVM -DMLIR_DIR=$MLIR ~/flang/src
+cmake -DLLVM_DIR=$LLVM -DMLIR_DIR=$MLIR -DCLANG_DIR=$CLANG ~/flang/src
 make
 ```
 
-### Build The New Flang Driver
-The new Flang driver, `flang-new`, is currently under active development and
-should be considered as an experimental feature. For this reason it is disabled
-by default. This will change once the new driver replaces the _throwaway_
-driver, `flang`.
-
-In order to build the new driver, add `-DFLANG_BUILD_NEW_DRIVER=ON` to your
-CMake invocation line. Additionally, when building out-of-tree, use `CLANG_DIR`
-(similarly to `LLVM_DIR` and `MLIR_DIR`) to find the installed Clang
-components.
-
-**Note:** `CLANG_DIR` is only required when building the new Flang driver,
-which currently depends on Clang.
+### Disable The New Flang Driver
+The new Flang compiler driver, `flang-new`, is implemented in terms of
+`clangDriver` and hence it introduces a dependency on Clang. This dependency is
+otherwise not required. If you do not require the new driver, you can disable
+it by adding `-DFLANG_BUILD_NEW_DRIVER=OFF` to your CMake invocation. With the
+new driver disabled, you no longer need to add `clang` to
+`LLVM_ENABLE_PROJECTS` (or to specify `CLANG_DIR` when building out-of-tree).
 
 # How to Run Tests
 

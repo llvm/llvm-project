@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.13.4)
 
 set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 
-option(FLANG_BUILD_NEW_DRIVER "Build the flang compiler driver" OFF)
-
 # Flang requires C++17.
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)

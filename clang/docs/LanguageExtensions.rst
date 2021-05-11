@@ -1814,7 +1814,7 @@ supporting the variadic arguments e.g. majority of CPU targets.
   void bar(int a, ...); // error - variadic prototype is not allowed
 
 ``__cl_clang_non_portable_kernel_param_types``
----------------------------------------------
+----------------------------------------------
 
 With this extension it is possible to enable the use of some restricted types
 in kernel parameters specified in `C++ for OpenCL v1.0 s2.4

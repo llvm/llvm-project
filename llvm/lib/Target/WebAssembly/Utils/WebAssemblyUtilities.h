@@ -28,6 +28,26 @@ class WebAssemblySubtarget;
 
 namespace WebAssembly {
 
+enum WasmAddressSpace : unsigned {
+  // Default address space, for pointers to linear memory (stack, heap, data).
+  WASM_ADDRESS_SPACE_DEFAULT = 0,
+  // A non-integral address space for pointers to named objects outside of
+  // linear memory: WebAssembly globals or WebAssembly locals.  Loads and stores
+  // to these pointers are lowered to global.get / global.set or local.get /
+  // local.set, as appropriate.
+  WASM_ADDRESS_SPACE_WASM_VAR = 1
+};
+
+inline bool isDefaultAddressSpace(unsigned AS) {
+  return AS == WASM_ADDRESS_SPACE_DEFAULT;
+}
+inline bool isWasmVarAddressSpace(unsigned AS) {
+  return AS == WASM_ADDRESS_SPACE_WASM_VAR;
+}
+inline bool isValidAddressSpace(unsigned AS) {
+  return isDefaultAddressSpace(AS) || isWasmVarAddressSpace(AS);
+}
+
 bool isChild(const MachineInstr &MI, const WebAssemblyFunctionInfo &MFI);
 bool mayThrow(const MachineInstr &MI);
 
