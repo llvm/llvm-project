@@ -25,8 +25,10 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if _LIBCPP_STD_VER <= 17
+
 template <class _OutputIterator, class _Tp>
-class _LIBCPP_TEMPLATE_VIS raw_storage_iterator
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 raw_storage_iterator
     : public iterator<output_iterator_tag,
                       _Tp,                                         // purposefully not C++03
                       ptrdiff_t,                                   // purposefully not C++03
@@ -51,6 +53,8 @@ public:
     _LIBCPP_INLINE_VISIBILITY _OutputIterator base() const { return __x_; }
 #endif
 };
+
+#endif // _LIBCPP_STD_VER <= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

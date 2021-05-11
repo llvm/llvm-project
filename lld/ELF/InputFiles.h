@@ -381,11 +381,12 @@ public:
 
   template <typename ELFT> void parse();
 
-  // Used for --no-allow-shlib-undefined.
-  bool allNeededIsKnown;
-
   // Used for --as-needed
   bool isNeeded;
+
+  // Non-weak undefined symbols which are not yet resolved when the SO is
+  // parsed. Only filled for `--no-allow-shlib-undefined`.
+  std::vector<Symbol *> requiredSymbols;
 
 private:
   template <typename ELFT>
