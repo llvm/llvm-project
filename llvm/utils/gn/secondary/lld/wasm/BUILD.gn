@@ -25,6 +25,7 @@ static_library("wasm") {
     "MapFile.cpp",
     "MarkLive.cpp",
     "OutputSections.cpp",
+    "OutputSegment.cpp",
     "Relocations.cpp",
     "SymbolTable.cpp",
     "Symbols.cpp",
