@@ -133,6 +133,18 @@ template<>
 inline constexpr bool std::disable_sized_range<DisabledSizeRangeWithBeginEnd> = true;
 static_assert(!std::is_invocable_v<RangeSizeT, DisabledSizeRangeWithBeginEnd&>);
 
+struct BeginEndAndEmpty {
+  int* begin();
+  int* end();
+  constexpr bool empty() { return true; }
+};
+
+struct BeginEndAndConstEmpty {
+  int* begin();
+  int* end();
+  constexpr bool empty() const { return true; }
+};
+
 constexpr bool testBeginEqualsEnd() {
   BeginEndNotSizedSentinel a;
   assert(std::ranges::empty(a) == true);
@@ -145,6 +157,13 @@ constexpr bool testBeginEqualsEnd() {
 
   DisabledSizeRangeWithBeginEnd d;
   assert(std::ranges::empty(d) == true);
+
+  BeginEndAndEmpty e;
+  assert(std::ranges::empty(e) == true);
+
+  BeginEndAndConstEmpty f;
+  assert(std::ranges::empty(f) == true);
+  assert(std::ranges::empty(std::as_const(f)) == true);
 
   return true;
 }
