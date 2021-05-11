@@ -127,15 +127,6 @@ void InstallAtExitHandler();
   if (hwasan_inited)                                     \
     stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal)
 
-#define GET_FATAL_STACK_TRACE_HERE \
-  GET_FATAL_STACK_TRACE_PC_BP(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME())
-
-#define PRINT_CURRENT_STACK_CHECK() \
-  {                                 \
-    GET_FATAL_STACK_TRACE_HERE;     \
-    stack.Print();                  \
-  }
-
 void HwasanTSDInit();
 void HwasanTSDThreadInit();
 
