@@ -457,6 +457,92 @@ void block_capture_from_outside_but_unchanged() {
   }
 }
 
+void finish_at_any_time(bool *finished);
+
+void lambda_capture_with_loop_inside_lambda_bad() {
+  bool finished = false;
+  auto lambda = [=]() {
+    while (!finished) {
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: this loop is infinite; none of its condition variables (finished) are updated in the loop body [bugprone-infinite-loop]
+      wait();
+    }
+  };
+  finish_at_any_time(&finished);
+  lambda();
+}
+
+void lambda_capture_with_loop_inside_lambda_bad_init_capture() {
+  bool finished = false;
+  auto lambda = [captured_finished=finished]() {
+    while (!captured_finished) {
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: this loop is infinite; none of its condition variables (captured_finished) are updated in the loop body [bugprone-infinite-loop]
+      wait();
+    }
+  };
+  finish_at_any_time(&finished);
+  lambda();
+}
+
+void lambda_capture_with_loop_inside_lambda_good() {
+  bool finished = false;
+  auto lambda = [&]() {
+    while (!finished) {
+      wait(); // No warning: the variable may be updated
+              // from outside the lambda.
+    }
+  };
+  finish_at_any_time(&finished);
+  lambda();
+}
+
+void lambda_capture_with_loop_inside_lambda_good_init_capture() {
+  bool finished = false;
+  auto lambda = [&captured_finished=finished]() {
+    while (!captured_finished) {
+      wait(); // No warning: the variable may be updated
+              // from outside the lambda.
+    }
+  };
+  finish_at_any_time(&finished);
+  lambda();
+}
+
+void block_capture_with_loop_inside_block_bad() {
+  bool finished = false;
+  auto block = ^() {
+    while (!finished) {
+      // FIXME: This should warn. It currently reacts to &finished
+      // outside the block which ideally shouldn't have any effect.
+      wait();
+    }
+  };
+  finish_at_any_time(&finished);
+  block();
+}
+
+void block_capture_with_loop_inside_block_bad_simpler() {
+  bool finished = false;
+  auto block = ^() {
+    while (!finished) {
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: this loop is infinite; none of its condition variables (finished) are updated in the loop body [bugprone-infinite-loop]
+      wait();
+    }
+  };
+  block();
+}
+
+void block_capture_with_loop_inside_block_good() {
+  __block bool finished = false;
+  auto block = ^() {
+    while (!finished) {
+      wait(); // No warning: the variable may be updated
+              // from outside the block.
+    }
+  };
+  finish_at_any_time(&finished);
+  block();
+}
+
 void evaluatable(bool CondVar) {
   for (; false && CondVar;) {
   }
