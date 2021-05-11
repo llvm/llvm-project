@@ -378,84 +378,6 @@ static void emitScalarImplementation(ArrayRef<Value> allIvs, PoolingSumOp op) {
       getPoolingInput<IndexedValueType>(op, indices.inputs);
 }
 
-/// Emits the MLIR for the scalar part of the indexed generic op by:
-///   1. Emitting load ops for each input and output view in order. This is
-///      achieved by applying the appropriate input or output map to the
-///      enclosing induction variables.
-///   2. Emitting a call to `op.fun()` that takes as arguments the induction
-///      variables and the scalars from point 1. above.
-///   3. Emitting store ops to store the results of 2. to the output views.
-///
-/// An example output may resemble:
-///
-/// ```
-///    scf.for %i = %c0 to %0 step %c1 {
-///      scf.for %j = %c0 to %1 step %c1 {
-///        scf.for %k = %c0 to %4 step %c1 {
-///          %11 = load %arg0[%i, %j] :
-///            memref<?x?xf32, stride_specification>
-///          %12 = load %arg1[%i, %j, %k] :
-///            memref<?x?x?xf32, stride_specification>
-///          %13 = load %arg2[%i, %k, %j] :
-///            memref<?x?x?xf32, stride_specification>
-///          %14:2 = call @foo(%i, %j, %k, %11, %12, %13) :
-///            (index, index, index, f32, f32, f32) -> (f32, f32)
-///          store %14#0, %arg1[%i, %j, %k] :
-///            memref<?x?x?Xf32, stride_specification>
-///          store %14#1, %arg2[%i, %k, %j] :
-///            memref<?x?x?Xf32, stride_specification>
-///       }
-///      }
-///    }
-/// ```
-template <typename IndexedValueType>
-static void emitScalarImplementation(ArrayRef<Value> allIvs,
-                                     IndexedGenericOp indexedGenericOp) {
-  assert(indexedGenericOp.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
-  auto &b = ScopedContext::getBuilderRef();
-  auto loc = ScopedContext::getLocation();
-  unsigned nInputs = indexedGenericOp.getNumInputs();
-  unsigned nOutputs = indexedGenericOp.getNumOutputs();
-  unsigned nLoops = allIvs.size();
-  SmallVector<Value, 4> indexedValues;
-  indexedValues.reserve(nLoops + nInputs + nOutputs);
-  for (unsigned i = 0; i < nLoops; ++i)
-    indexedValues.push_back(allIvs[i]);
-
-  // TODO: Avoid the loads if the corresponding argument of the
-  // region has no uses.
-  // 1.a. Emit load from input views.
-  for (unsigned i = 0; i < nInputs; ++i) {
-    auto indexing = makeCanonicalAffineApplies(
-        b, loc, indexedGenericOp.getInputIndexingMap(i), allIvs);
-    // Pass input i through IndexedValueType emits the proper load operation.
-    indexedValues.push_back(
-        IndexedValueType(indexedGenericOp.getInput(i))(indexing));
-  }
-  // 1.b. Emit load from output views.
-  for (unsigned i = 0; i < nOutputs; ++i) {
-    auto indexing = makeCanonicalAffineApplies(
-        b, loc, indexedGenericOp.getOutputIndexingMap(i), allIvs);
-    // Pass output i through IndexedValueType emits the proper load operation.
-    indexedValues.push_back(
-        IndexedValueType(indexedGenericOp.getOutputBuffer(i))(indexing));
-  }
-
-  // TODO: When a region inliner exists, use it.
-  // 2. Inline region, currently only works for a single basic block.
-  // 3. Emit store.
-  SmallVector<SmallVector<Value, 8>, 8> indexing;
-  SmallVector<Value, 8> outputBuffers;
-  for (unsigned i = 0; i < nOutputs; ++i) {
-    indexing.push_back(makeCanonicalAffineApplies(
-        b, loc, indexedGenericOp.getOutputIndexingMap(i), allIvs));
-    outputBuffers.push_back(indexedGenericOp.getOutputBuffer(i));
-  }
-  inlineRegionAndEmitStore<IndexedValueType>(indexedGenericOp, indexedValues,
-                                             indexing, outputBuffers);
-}
-
 template <typename LoopTy>
 static Optional<LinalgLoops> linalgOpToLoopsImpl(LinalgOp linalgOp,
                                                  OpBuilder &builder) {
@@ -477,10 +399,10 @@ static Optional<LinalgLoops> linalgOpToLoopsImpl(LinalgOp linalgOp,
         assert(iterArgs.empty() && "unexpected iterArgs");
         allIvs.append(ivs.begin(), ivs.end());
         llvm::TypeSwitch<Operation *>(linalgOp)
-            .Case<ConvOp, PoolingMaxOp, PoolingMinOp, PoolingSumOp,
-                  IndexedGenericOp, LinalgOp>([&](auto op) {
-              emitScalarImplementation<IndexedValueTy>(allIvs, op);
-            })
+            .Case<ConvOp, PoolingMaxOp, PoolingMinOp, PoolingSumOp, LinalgOp>(
+                [&](auto op) {
+                  emitScalarImplementation<IndexedValueTy>(allIvs, op);
+                })
             .Default([&](Operation *op) { assert(false && "unexpected op"); });
         return scf::ValueVector{};
       });
@@ -697,6 +619,10 @@ template <typename LoopTy>
 Optional<LinalgLoops>
 mlir::linalg::linalgLowerOpToLoops(PatternRewriter &rewriter,
                                    LinalgOp linalgOp) {
+  // Convert indexed_generic ops to generic ops before lowering them to loops.
+  if (isa<IndexedGenericOp>(linalgOp))
+    return llvm::None;
+
   Optional<LinalgLoops> loopOps =
       linalgOpToLoopsImpl<LoopTy>(linalgOp.getOperation(), rewriter);
   if (loopOps.hasValue())
