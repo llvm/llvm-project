@@ -1144,29 +1144,27 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     if (!orderFile.empty())
       parseOrderFile(orderFile);
 
-    if (config->outputType == MH_EXECUTE && isa<Undefined>(config->entry)) {
-      error("undefined symbol: " + toString(*config->entry));
-      return false;
-    }
+    if (config->entry)
+      if (auto *undefined = dyn_cast<Undefined>(config->entry))
+        treatUndefinedSymbol(*undefined, "the entry point");
+
     // FIXME: This prints symbols that are undefined both in input files and
     // via -u flag twice.
-    for (const Symbol *undefined : config->explicitUndefineds) {
-      if (isa<Undefined>(undefined)) {
-        error("undefined symbol: " + toString(*undefined) +
-              "\n>>> referenced by flag -u " + toString(*undefined));
-        return false;
-      }
+    for (const Symbol *sym : config->explicitUndefineds) {
+      if (const auto *undefined = dyn_cast<Undefined>(sym))
+        treatUndefinedSymbol(*undefined, "-u");
     }
     // Literal exported-symbol names must be defined, but glob
     // patterns need not match.
     for (const CachedHashStringRef &cachedName :
          config->exportedSymbols.literals) {
       if (const Symbol *sym = symtab->find(cachedName))
-        if (isa<Defined>(sym))
-          continue;
-      error("undefined symbol: " + cachedName.val() +
-            "\n>>> referenced from option -exported_symbol(s_list)");
+        if (const auto *undefined = dyn_cast<Undefined>(sym))
+          treatUndefinedSymbol(*undefined, "-exported_symbol(s_list)");
     }
+
+    // FIXME: should terminate the link early based on errors encountered so
+    // far?
 
     createSyntheticSections();
     createSyntheticSymbols();
