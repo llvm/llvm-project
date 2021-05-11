@@ -525,6 +525,8 @@ public:
       if (e.forwardChunk) {
         write32le(p, e.forwardChunk->getRVA() | bit);
       } else {
+        assert(cast<Defined>(e.sym)->getRVA() != 0 &&
+               "Exported symbol unmapped");
         write32le(p, cast<Defined>(e.sym)->getRVA() | bit);
       }
     }
