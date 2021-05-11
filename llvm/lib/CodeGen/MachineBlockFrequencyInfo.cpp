@@ -233,14 +233,20 @@ MachineBlockFrequencyInfo::getBlockFreq(const MachineBasicBlock *MBB) const {
 
 Optional<uint64_t> MachineBlockFrequencyInfo::getBlockProfileCount(
     const MachineBasicBlock *MBB) const {
+  if (!MBFI)
+    return None;
+
   const Function &F = MBFI->getFunction()->getFunction();
-  return MBFI ? MBFI->getBlockProfileCount(F, MBB) : None;
+  return MBFI->getBlockProfileCount(F, MBB);
 }
 
 Optional<uint64_t>
 MachineBlockFrequencyInfo::getProfileCountFromFreq(uint64_t Freq) const {
+  if (!MBFI)
+    return None;
+
   const Function &F = MBFI->getFunction()->getFunction();
-  return MBFI ? MBFI->getProfileCountFromFreq(F, Freq) : None;
+  return MBFI->getProfileCountFromFreq(F, Freq);
 }
 
 bool MachineBlockFrequencyInfo::isIrrLoopHeader(
