@@ -1,3 +1,6 @@
+;; This test takes a very long time
+; REQUIRES: expensive_checks
+
 ;; This test generates 65535 relocation entries in a single section,
 ;; which would trigger an overflow section to be generated in 32-bit mode.
 ;; Since overflow section is not supported yet, we will emit an error instead of
