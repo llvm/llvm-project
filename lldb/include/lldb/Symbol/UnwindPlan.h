@@ -322,8 +322,6 @@ public:
 
     Row();
 
-    Row(const UnwindPlan::Row &rhs) = default;
-
     bool operator==(const Row &rhs) const;
 
     bool GetRegisterInfo(uint32_t reg_num,
