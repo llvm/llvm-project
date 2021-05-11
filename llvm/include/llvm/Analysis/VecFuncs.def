@@ -64,6 +64,59 @@ TLI_DEFINE_VECFUNC("asinhf", "vasinhf", FIXED(4))
 TLI_DEFINE_VECFUNC("acoshf", "vacoshf", FIXED(4))
 TLI_DEFINE_VECFUNC("atanhf", "vatanhf", FIXED(4))
 
+#elif defined(TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS)
+// Darwin libsystem_m vector functions.
+
+// Exponential and Logarithmic Functions
+TLI_DEFINE_VECFUNC("exp", "_simd_exp_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("llvm.exp.f64", "_simd_exp_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("expf", "_simd_exp_f4", FIXED(4))
+TLI_DEFINE_VECFUNC("llvm.exp.f32", "_simd_exp_f4", FIXED(4))
+
+// Trigonometric Functions
+TLI_DEFINE_VECFUNC("acos", "_simd_acos_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("acosf", "_simd_acos_f4", FIXED(4))
+TLI_DEFINE_VECFUNC("asin", "_simd_asin_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("asinf", "_simd_asin_f4", FIXED(4))
+
+TLI_DEFINE_VECFUNC("atan", "_simd_atan_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("atanf", "_simd_atan_f4", FIXED(4))
+TLI_DEFINE_VECFUNC("atan2", "_simd_atan2_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("atan2f", "_simd_atan2_f4", FIXED(4))
+
+TLI_DEFINE_VECFUNC("cos", "_simd_cos_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("llvm.cos.f64", "_simd_cos_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("cosf", "_simd_cos_f4", FIXED(4))
+TLI_DEFINE_VECFUNC("llvm.cos.f32", "_simd_cos_f4", FIXED(4))
+
+TLI_DEFINE_VECFUNC("sin", "_simd_sin_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("llvm.sin.f64", "_simd_sin_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("sinf", "_simd_sin_f4", FIXED(4))
+TLI_DEFINE_VECFUNC("llvm.sin.f32", "_simd_sin_f4", FIXED(4))
+
+// Floating-Point Arithmetic and Auxiliary Functions
+TLI_DEFINE_VECFUNC("cbrt", "_simd_cbrt_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("cbrtf", "_simd_cbrt_f4", FIXED(4))
+TLI_DEFINE_VECFUNC("erf", "_simd_erf_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("erff", "_simd_erf_f4", FIXED(4))
+TLI_DEFINE_VECFUNC("pow", "_simd_pow_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("llvm.pow.f64", "_simd_pow_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("powf", "_simd_pow_f4", FIXED(4))
+TLI_DEFINE_VECFUNC("llvm.pow.f32", "_simd_pow_f4", FIXED(4))
+
+// Hyperbolic Functions
+TLI_DEFINE_VECFUNC("sinh", "_simd_sinh_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("sinhf", "_simd_sinh_f4", FIXED(4))
+TLI_DEFINE_VECFUNC("cosh", "_simd_cosh_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("coshf", "_simd_cosh_f4", FIXED(4))
+TLI_DEFINE_VECFUNC("tanh", "_simd_tanh_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("tanhf", "_simd_tanh_f4", FIXED(4))
+TLI_DEFINE_VECFUNC("asinh", "_simd_asinh_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("asinhf", "_simd_asinh_f4", FIXED(4))
+TLI_DEFINE_VECFUNC("acosh", "_simd_acosh_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("acoshf", "_simd_acosh_f4", FIXED(4))
+TLI_DEFINE_VECFUNC("atanh", "_simd_atanh_d2", FIXED(2))
+TLI_DEFINE_VECFUNC("atanhf", "_simd_atanh_f4", FIXED(4))
 
 #elif defined(TLI_DEFINE_LIBMVEC_X86_VECFUNCS)
 // GLIBC Vector math Functions
@@ -419,6 +472,7 @@ TLI_DEFINE_VECFUNC("__exp2f_finite", "__svml_exp2f16", FIXED(16))
 
 #undef TLI_DEFINE_VECFUNC
 #undef TLI_DEFINE_ACCELERATE_VECFUNCS
+#undef TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
 #undef TLI_DEFINE_LIBMVEC_X86_VECFUNCS
 #undef TLI_DEFINE_MASSV_VECFUNCS
 #undef TLI_DEFINE_SVML_VECFUNCS
