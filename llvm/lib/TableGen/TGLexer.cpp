@@ -108,19 +108,16 @@ int TGLexer::getNextChar() {
   switch (CurChar) {
   default:
     return (unsigned char)CurChar;
-
   case 0: {
-    // A NUL character in the stream is either the end of the current buffer or
-    // a spurious NUL in the file.  Disambiguate that here.
-    if (CurPtr - 1 == CurBuf.end()) {
-      --CurPtr; // Arrange for another call to return EOF again.
-      return EOF;
-    }
-    PrintError(getLoc(),
-               "NUL character is invalid in source; treated as space");
-    return ' ';
-  }
+    // A nul character in the stream is either the end of the current buffer or
+    // a random nul in the file.  Disambiguate that here.
+    if (CurPtr-1 != CurBuf.end())
+      return 0;  // Just whitespace.
 
+    // Otherwise, return end of file.
+    --CurPtr;  // Another call to lex will return EOF again.
+    return EOF;
+  }
   case '\n':
   case '\r':
     // Handle the newline character by ignoring it and incrementing the line
@@ -200,6 +197,7 @@ tgtok::TokKind TGLexer::LexToken(bool FileOrLineStart) {
     PrintFatalError("getNextChar() must never return '\r'");
     return tgtok::Error;
 
+  case 0:
   case ' ':
   case '\t':
     // Ignore whitespace.
@@ -417,12 +415,22 @@ bool TGLexer::LexInclude() {
   return false;
 }
 
-/// SkipBCPLComment - Skip over the comment by finding the next CR or LF.
-/// Or we may end up at the end of the buffer.
 void TGLexer::SkipBCPLComment() {
   ++CurPtr;  // skip the second slash.
-  auto EOLPos = CurBuf.find_first_of("\r\n", CurPtr - CurBuf.data());
-  CurPtr = (EOLPos == StringRef::npos) ? CurBuf.end() : CurBuf.data() + EOLPos;
+  while (true) {
+    switch (*CurPtr) {
+    case '\n':
+    case '\r':
+      return;  // Newline is end of comment.
+    case 0:
+      // If this is the end of the buffer, end the comment.
+      if (CurPtr == CurBuf.end())
+        return;
+      break;
+    }
+    // Otherwise, skip the character.
+    ++CurPtr;
+  }
 }
 
 /// SkipCComment - This skips C-style /**/ comments.  The only difference from C
