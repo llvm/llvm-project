@@ -751,6 +751,30 @@ static uint32_t parseProtection(StringRef protStr) {
   return prot;
 }
 
+static std::vector<SectionAlign> parseSectAlign(const opt::InputArgList &args) {
+  std::vector<SectionAlign> sectAligns;
+  for (const Arg *arg : args.filtered(OPT_sectalign)) {
+    StringRef segName = arg->getValue(0);
+    StringRef sectName = arg->getValue(1);
+    StringRef alignStr = arg->getValue(2);
+    if (alignStr.startswith("0x") || alignStr.startswith("0X"))
+      alignStr = alignStr.drop_front(2);
+    uint32_t align;
+    if (alignStr.getAsInteger(16, align)) {
+      error("-sectalign: failed to parse '" + StringRef(arg->getValue(2)) +
+            "' as number");
+      continue;
+    }
+    if (!isPowerOf2_32(align)) {
+      error("-sectalign: '" + StringRef(arg->getValue(2)) +
+            "' (in base 16) not a power of two");
+      continue;
+    }
+    sectAligns.push_back({segName, sectName, align});
+  }
+  return sectAligns;
+}
+
 static bool dataConstDefault(const InputArgList &args) {
   switch (config->outputType) {
   case MH_EXECUTE:
@@ -1038,6 +1062,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     config->segmentRenameMap[validName(arg->getValue(0))] =
         validName(arg->getValue(1));
   }
+
+  config->sectionAlignments = parseSectAlign(args);
 
   for (const Arg *arg : args.filtered(OPT_segprot)) {
     StringRef segName = arg->getValue(0);
