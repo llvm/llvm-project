@@ -19,7 +19,7 @@ HANDLE_NODETYPE(RETURN)
 HANDLE_NODETYPE(ARGUMENT)
 // A wrapper node for TargetExternalSymbol, TargetGlobalAddress, and MCSymbol
 HANDLE_NODETYPE(Wrapper)
-// A special wapper used in PIC code for __memory_base/__table_base relcative
+// A special wapper used in PIC code for __memory_base/__table_base relative
 // access.
 HANDLE_NODETYPE(WrapperPIC)
 HANDLE_NODETYPE(BR_IF)
@@ -44,3 +44,5 @@ HANDLE_NODETYPE(MEMORY_FILL)
 
 // Memory intrinsics
 HANDLE_MEM_NODETYPE(LOAD_SPLAT)
+HANDLE_MEM_NODETYPE(GLOBAL_GET)
+HANDLE_MEM_NODETYPE(GLOBAL_SET)
